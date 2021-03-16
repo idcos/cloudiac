@@ -1,0 +1,129 @@
+package services
+
+// 用户管理示例
+
+import (
+	"fmt"
+	"strings"
+
+	//"errors"
+	"cloudiac/consts/e"
+	"cloudiac/libs/db"
+	"cloudiac/models"
+	"cloudiac/utils"
+	"cloudiac/consts"
+)
+
+func CreateUser(tx *db.Session, tid uint, user models.User, isAdmin bool) (*models.User, e.Error) {
+	// 创建用户时自动设置默认 tenantId
+	user.DefaultTid = tid
+	if err := models.Create(tx, &user); err != nil {
+		if e.IsDuplicate(err) {
+			return nil, e.New(e.UserAlreadyExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+
+	return &user, nil
+}
+
+func UpdateUser(tx *db.Session, id uint, attrs models.Attrs) (user *models.User, re e.Error) {
+	user = &models.User{}
+	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.User{}, attrs); err != nil {
+		if e.IsDuplicate(err) {
+			return nil, e.New(e.UserEmailDuplicate)
+		}
+		return nil, e.New(e.DBError, fmt.Errorf("update user error: %v", err))
+	}
+	if err := tx.Where("id = ?", id).First(user); err != nil {
+		return nil, e.New(e.DBError, fmt.Errorf("query user error: %v", err))
+	}
+	return
+}
+
+func DeleteUser(tx *db.Session, id uint) e.Error {
+	if _, err := tx.Where("id = ?", id).Delete(&models.User{}); err != nil {
+		return e.New(e.DBError, fmt.Errorf("delete user error: %v", err))
+	}
+	return nil
+}
+
+func GetUserById(tx *db.Session, id uint) (*models.User, e.Error) {
+	u := models.User{}
+	if err := tx.Where("id = ?", id).First(&u); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.UserNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &u, nil
+}
+
+func GetUserByName(tx *db.Session, name string) (*models.User, error) {
+	u := models.User{}
+	if err := tx.Where("username = ?", name).First(&u); err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func GetUserByEmail(tx *db.Session, email string) (*models.User, error) {
+	u := models.User{}
+	if err := tx.Where("email = ?", email).First(&u); err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func FindUsers(query *db.Session) (users []*models.User, err error) {
+	err = query.Find(&users)
+	return
+}
+
+func QueryUser(query *db.Session) *db.Session {
+	return query.Model(&models.User{})
+}
+
+func CheckUserStatus(status int) e.Error {
+	switch status {
+	case models.UserStatusNormal:
+		return nil
+	case models.UserStatusInactive:
+		return e.New(e.UserInactive)
+	case models.UserStatusDisabled:
+		return e.New(e.UserDisabled)
+	default:
+		return e.New(e.UserInvalidStatus)
+	}
+}
+
+func HashPassword(password string) (string, e.Error) {
+	if er := CheckPasswordFormat(password); er != nil {
+		return "", er
+	}
+
+	hashed, err := utils.HashPassword(password)
+	if err != nil {
+		return "", e.New(e.InternalError, err)
+	}
+	return hashed, nil
+}
+
+func CheckPasswordFormat(password string) e.Error {
+	//密码校验规则：数字、大写字母、小写字母两种及两种以上组合，且长度在6~30之间
+	if len(password) < 6 || len(password) > 30 {
+		return e.New(e.InvalidPasswordFormat, fmt.Errorf("error: password length"))
+	}
+
+	typeCount := 0
+	for _, chars := range []string{consts.LowerCaseLetter, consts.UpperCaseLetter, consts.DigitChars} {
+		if strings.ContainsAny(password, chars) {
+			typeCount += 1
+		}
+	}
+	if typeCount < 2 {
+		return e.New(e.InvalidPasswordFormat, fmt.Errorf("error: password strength"))
+	}
+
+	return nil
+}

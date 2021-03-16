@@ -1,0 +1,17 @@
+# 部署的版本(容器部署时有效)
+VERSION=latest
+
+# 存放应用配置和数据的目录
+APP_DIR=./
+DATA_DIR=./data/
+
+# mysql 配置
+MYSQL_ROOT_PASSWORD=
+
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_DATABASE=iac
+MYSQL_USER=root
+MYSQL_PASSWORD=Passw0rd
+
+
