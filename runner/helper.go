@@ -1,0 +1,215 @@
+package runner
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"strings"
+)
+
+type IaCTemplate struct {
+	TemplateUUID string
+	TaskId       string
+}
+
+type StateStore struct {
+	SaveState           bool   `json:save_state`
+	Backend             string `json:"backend" default:"consul"`
+	Schema              string `json:"schema" default:"http"`
+	StateKey            string `json:"state_key"`
+	StateBackendAddress string `json:"state_backend_address"`
+	Lock                bool   `json:"lock" defalt:true`
+}
+
+// ReqBody from reqeust
+type ReqBody struct {
+	Repo         string     `json:"repo"`
+	TemplateUUID string     `json:"template_uuid"`
+	TaskID       string     `json:"task_id"`
+	DockerImage  string     `json:"docker_image" defalut:"mt5225/tf-ansible:v0.0.1"`
+	StateStore   StateStore `json:"state_store"`
+	Env          map[string]string
+	Timeout      int    `json:"timeout" default:"600"`
+	Mode         string `json:"mode" default:"plan"`
+	Varfile      string `json:"varfile"`
+	Extra        string `json:"extra"`
+}
+
+type CommitedTask struct {
+	TemplateUUID     string `json:"template_uuid"`
+	TaskId           string `json:"task_id"`
+	ContainerId      string `json:"container_id"`
+	LogContentOffset int    `json:"offset"`
+}
+
+// 判断目录是否存在
+func PathExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}
+
+// 创建目录
+func PathCreate(path string) error {
+	pathExists, err := PathExists(path)
+	if err != nil {
+		return err
+	}
+	if pathExists == true {
+		return nil
+	} else {
+		err := os.MkdirAll(path, os.ModePerm)
+		return err
+	}
+}
+
+// 从指定位置读取日志文件
+func ReadLogFile(filepath string, offset int, maxLines int) ([]string, error) {
+	var lines []string
+	// TODO(ZhengYue): 优化文件读取，考虑使用seek跳过偏移行数
+	file, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		return lines, err
+	}
+	buf := bytes.NewBuffer(file)
+	lineCount := 0
+	for {
+		line, err := buf.ReadString('\n')
+		if len(line) == 0 {
+			if err != nil {
+				if err == io.EOF {
+					break
+				}
+				return lines, err
+			}
+		}
+		lineCount += 1
+		if lineCount > offset {
+			// 未达到偏移位置，继续读取
+			lines = append(lines, line)
+		}
+		if len(lines) == maxLines {
+			// 达到最大行数，立即返回
+			return lines, err
+		}
+		if err != nil && err != io.EOF {
+			return lines, err
+		}
+	}
+	return lines, nil
+}
+
+func GetTemplateTaskPath(templateUUID string, taskId string) string {
+	templateDir := fmt.Sprintf("%s/%s/%s", StaticFilePath, templateUUID, taskId)
+	return templateDir
+}
+
+func FetchTaskLog(templateUUID string, taskId string, contentOffset int) ([]string, error) {
+	templateDir := fmt.Sprintf("%s/%s/%s", StaticFilePath, templateUUID, taskId)
+	logFile := fmt.Sprintf("%s/%s", templateDir, ContainerLogFileName)
+	lines, err := ReadLogFile(logFile, contentOffset, MaxLinesPreRead)
+	return lines, err
+}
+
+func CreateTemplatePath(templateUUID string, taskId string) (string, error) {
+	templateDir := fmt.Sprintf("%s/%s/%s", StaticFilePath, templateUUID, taskId)
+	err := PathCreate(templateDir)
+	return templateDir, err
+}
+
+func ReqToTask(req *http.Request) (*CommitedTask, error) {
+	var d CommitedTask
+	if err := json.NewDecoder(req.Body).Decode(&d); err != nil {
+		req.Body.Close()
+		return nil, err
+	}
+	return &d, nil
+}
+
+// ReqToCommand create command structure to run container
+// from POST request
+func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error) {
+	var d ReqBody
+	if err := json.NewDecoder(req.Body).Decode(&d); err != nil {
+		req.Body.Close()
+		return nil, nil, nil, err
+	}
+
+	c := new(Command)
+
+	state := new(StateStore)
+	state.SaveState = d.StateStore.SaveState
+	state.Backend = d.StateStore.Backend
+	state.StateBackendAddress = d.StateStore.StateBackendAddress
+	state.StateKey = d.StateStore.StateKey
+	iaCTemplate := new(IaCTemplate)
+	iaCTemplate.TemplateUUID = d.TemplateUUID
+	iaCTemplate.TaskId = d.TaskID
+
+	if d.DockerImage == "" {
+		c.Image = DefaultImage
+	} else {
+		c.Image = d.DockerImage
+	}
+
+	var env []string
+	for k, v := range d.Env {
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
+	}
+	c.Env = env
+
+	// TODO(ZhengYue): 优化命令组装方式
+	var cmdList []string
+	logCmd := fmt.Sprintf("> %s%s 2>&1 ", ContainerLogFilePath, ContainerLogFileName)
+	cmdList = append(cmdList, fmt.Sprintf("git clone %s %s &&", d.Repo, logCmd))
+
+	// get folder name
+	s := strings.Split(d.Repo, "/")
+	f := s[len(s)-1]
+	f = f[:len(f)-4]
+
+	cmdList = append(cmdList, fmt.Sprintf("cd %s %s &&", f, logCmd))
+	cmdList = append(cmdList, fmt.Sprintf("cp %sstate.tf . &&", ContainerLogFilePath))
+	cmdList = append(cmdList, fmt.Sprintf("terraform init %s &&", logCmd))
+	if d.Mode == "apply" {
+		log.Println("entering apply mode ...")
+		cmdList = append(cmdList, fmt.Sprintf("%s %s %s &&%s %s", "terraform apply -auto-approve -var-file", d.Varfile, logCmd, d.Extra, logCmd))
+	} else if d.Mode == "destroy" {
+		log.Println("entering destroy mode ...")
+		cmdList = append(cmdList, fmt.Sprintf("%s %s&&%s", "terraform destroy -auto-approve -var-file", d.Varfile, d.Extra))
+	} else if d.Mode == "pull" {
+		log.Println("show state info ...")
+		cmdList = append(cmdList, fmt.Sprintf("%s&&%s", "terraform state pull", d.Extra))
+	} else {
+		cmdList = append(cmdList, fmt.Sprintf("%s %s&&%s", "terraform plan -var-file", d.Varfile, d.Extra))
+	}
+
+	cmdstr := ""
+	for _, v := range cmdList {
+		cmdstr = cmdstr + v
+	}
+	var t []string
+	t = append(t, "sh")
+	t = append(t, "-c")
+	t = append(t, cmdstr)
+	c.Commands = t
+
+	// set timeout
+	c.Timeout = d.Timeout
+
+	c.ContainerInstance = new(Container)
+	c.ContainerInstance.Context = context.Background()
+	log.Printf("%#v", c)
+	return c, state, iaCTemplate, nil
+}
