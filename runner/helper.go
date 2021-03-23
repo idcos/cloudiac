@@ -19,12 +19,12 @@ type IaCTemplate struct {
 }
 
 type StateStore struct {
-	SaveState           bool   `json:save_state`
+	SaveState           bool   `json:"save_state"`
 	Backend             string `json:"backend" default:"consul"`
 	Schema              string `json:"schema" default:"http"`
 	StateKey            string `json:"state_key"`
 	StateBackendAddress string `json:"state_backend_address"`
-	Lock                bool   `json:"lock" defalt:true`
+	Lock                bool   `json:"lock" defalt:"true"`
 }
 
 // ReqBody from reqeust
@@ -148,11 +148,12 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 
 	c := new(Command)
 
-	state := new(StateStore)
-	state.SaveState = d.StateStore.SaveState
-	state.Backend = d.StateStore.Backend
-	state.StateBackendAddress = d.StateStore.StateBackendAddress
-	state.StateKey = d.StateStore.StateKey
+	// state := new(StateStore)
+	state := d.StateStore
+	// state.SaveState = d.StateStore.SaveState
+	// state.Backend = d.StateStore.Backend
+	// state.StateBackendAddress = d.StateStore.StateBackendAddress
+	// state.StateKey = d.StateStore.StateKey
 	iaCTemplate := new(IaCTemplate)
 	iaCTemplate.TemplateUUID = d.TemplateUUID
 	iaCTemplate.TaskId = d.TaskID
@@ -211,5 +212,5 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 	c.ContainerInstance = new(Container)
 	c.ContainerInstance.Context = context.Background()
 	log.Printf("%#v", c)
-	return c, state, iaCTemplate, nil
+	return c, &state, iaCTemplate, nil
 }
