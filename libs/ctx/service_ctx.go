@@ -15,9 +15,11 @@ type ServiceCtx struct {
 	logger logs.Logger
 
 	Token      string
-	TenantId   uint
+	OrgId      uint
 	UserId     uint // 登陆用户ID
 	Username   string
+	IsAdmin    bool
+	Role       string
 	user       *models.User
 	UserIpAddr string
 	UserAgent  string
@@ -45,16 +47,16 @@ func (c *ServiceCtx) DB() *db.Session {
 	return c.dbSess
 }
 
-func (c *ServiceCtx) TenantDB() *db.Session {
-	return c.DB().Where("tenant_id = ?", c.TenantId)
+func (c *ServiceCtx) OrgDB() *db.Session {
+	return c.DB().Where("org_id = ?", c.OrgId)
 }
 
 func (c *ServiceCtx) Tx() *db.Session {
 	return c.DB().Begin()
 }
 
-func (c *ServiceCtx) TenantTx() *db.Session {
-	return c.Tx().Where("tenant_id = ?", c.TenantId)
+func (c *ServiceCtx) OrgTx() *db.Session {
+	return c.Tx().Where("org_id = ?", c.OrgId)
 }
 
 func (c *ServiceCtx) Logger() logs.Logger {

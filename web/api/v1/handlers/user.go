@@ -1,6 +1,4 @@
-package v1
-
-// 用户管理示例
+package handlers
 
 import (
 	"cloudiac/apps"
@@ -15,12 +13,11 @@ type User struct {
 }
 
 func (User) Create(c *ctx.GinRequestCtx) {
-	//form := &forms.CreateUserForm{}
-	//if err := c.Bind(form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.CreateUser(c.ServiceCtx(), form))
-	c.JSONError(e.New(e.NotImplement))
+	form := &forms.CreateUserForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.CreateUser(c.ServiceCtx(), form))
 }
 
 func (User) Search(c *ctx.GinRequestCtx) {
@@ -48,10 +45,34 @@ func (User) Delete(c *ctx.GinRequestCtx) {
 	c.JSONError(e.New(e.NotImplement))
 }
 
-func (User) Detail(c *ctx.GinRequestCtx) {
+//func (User) Detail(c *ctx.GinRequestCtx) {
+//	form := forms.DetailUserForm{}
+//	if err := c.Bind(&form); err != nil {
+//		return
+//	}
+//	c.JSONResult(apps.UserDetail(c.ServiceCtx(), &form))
+//}
+
+func (User) RemoveUserForOrg(c *ctx.GinRequestCtx) {
+	form := forms.DeleteUserForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.DeleteUserOrgMap(c.ServiceCtx(), &form))
+}
+
+func (User) UserPassReset(c *ctx.GinRequestCtx) {
 	form := forms.DetailUserForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.UserDetail(c.ServiceCtx(), &form))
+	c.JSONResult(apps.UserPassReset(c.ServiceCtx(), &form))
+}
+
+func (User) Login(c *ctx.GinRequestCtx) {
+	form := forms.LoginForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.Login(c.ServiceCtx(), &form))
 }

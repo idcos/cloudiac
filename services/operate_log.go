@@ -43,7 +43,7 @@ func SendOperateLog(eventType string, resourceType string, resourceName string, 
 			Type:     "user",
 			Username: c.Username,
 		},
-		TenantId:        c.TenantId,
+		TenantId:        c.OrgId,
 		SourceIpAddress: c.UserIpAddr,
 		UserAgent:       c.UserAgent,
 	}

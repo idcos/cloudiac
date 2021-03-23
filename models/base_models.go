@@ -69,31 +69,31 @@ func (m SoftDeleteModel) AddUniqueIndex(sess *db.Session, index string, cols ...
 
 type IsolatedBaseModel struct {
 	BaseModel
-	TenantId uint `json:"tenantId" gorm:"default:'0'"`
+	OrgId uint `json:"orgId" gorm:"default:'0'"`
 }
 
 func (m IsolatedBaseModel) AddUniqueIndex(sess *db.Session, index string, cols ...string) error {
-	cols = append(cols, "tenant_id")
+	cols = append(cols, "org_id")
 	return m.BaseModel.AddUniqueIndex(sess, index, cols...)
 }
 
 type IsolatedTimedModel struct {
 	TimedModel
-	TenantId uint `json:"tenantId" gorm:"default:'0'"`
+	OrgId uint `json:"orgId" gorm:"default:'0'"`
 }
 
 func (m IsolatedTimedModel) AddUniqueIndex(sess *db.Session, index string, cols ...string) error {
-	cols = append(cols, "tenant_id")
+	cols = append(cols, "org_id")
 	return m.TimedModel.AddUniqueIndex(sess, index, cols...)
 }
 
 type IsolatedSoftDeleteModel struct {
 	SoftDeleteModel
 
-	TenantId uint
+	OrgId uint
 }
 
 func (m IsolatedSoftDeleteModel) AddUniqueIndex(sess *db.Session, index string, cols ...string) error {
-	cols = append(cols, "tenant_id")
+	cols = append(cols, "org_id")
 	return m.SoftDeleteModel.AddUniqueIndex(sess, index, cols...)
 }

@@ -1,7 +1,5 @@
 package services
 
-// 用户管理示例
-
 import (
 	"fmt"
 	"strings"
@@ -14,9 +12,7 @@ import (
 	"cloudiac/consts"
 )
 
-func CreateUser(tx *db.Session, tid uint, user models.User, isAdmin bool) (*models.User, e.Error) {
-	// 创建用户时自动设置默认 tenantId
-	user.DefaultTid = tid
+func CreateUser(tx *db.Session, user models.User) (*models.User, e.Error) {
 	if err := models.Create(tx, &user); err != nil {
 		if e.IsDuplicate(err) {
 			return nil, e.New(e.UserAlreadyExists, err)
@@ -61,7 +57,7 @@ func GetUserById(tx *db.Session, id uint) (*models.User, e.Error) {
 
 func GetUserByName(tx *db.Session, name string) (*models.User, error) {
 	u := models.User{}
-	if err := tx.Where("username = ?", name).First(&u); err != nil {
+	if err := tx.Where("name = ?", name).First(&u); err != nil {
 		return nil, err
 	}
 	return &u, nil
@@ -82,19 +78,6 @@ func FindUsers(query *db.Session) (users []*models.User, err error) {
 
 func QueryUser(query *db.Session) *db.Session {
 	return query.Model(&models.User{})
-}
-
-func CheckUserStatus(status int) e.Error {
-	switch status {
-	case models.UserStatusNormal:
-		return nil
-	case models.UserStatusInactive:
-		return e.New(e.UserInactive)
-	case models.UserStatusDisabled:
-		return e.New(e.UserDisabled)
-	default:
-		return e.New(e.UserInvalidStatus)
-	}
 }
 
 func HashPassword(password string) (string, e.Error) {
@@ -126,4 +109,29 @@ func CheckPasswordFormat(password string) e.Error {
 	}
 
 	return nil
+}
+
+func CreateUserOrgMap(tx *db.Session, userOrgMap models.UserOrgMap) (*models.UserOrgMap, e.Error) {
+	if err := models.Create(tx, &userOrgMap); err != nil {
+		if e.IsDuplicate(err) {
+			return nil, e.New(e.UserAlreadyExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+
+	return &userOrgMap, nil
+}
+
+func DeleteUserOrgMap(tx *db.Session, userId uint, orgId uint) e.Error {
+	if _, err := tx.Where("user_id = ? AND org_id = ?", userId, orgId).Debug().Delete(&models.UserOrgMap{}); err != nil {
+		return e.New(e.DBError, fmt.Errorf("delete user %d for org %d error: %v", userId, orgId, err))
+	}
+	return nil
+}
+
+func FindUsersOrgMap(query *db.Session, userId uint, orgId uint) (userOrgMap []*models.UserOrgMap, err error) {
+	if err := query.Where("user_id = ? AND org_id = ?", userId, orgId).Find(&userOrgMap); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return
 }

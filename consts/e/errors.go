@@ -38,7 +38,7 @@ const (
 	InvalidCaptcha     = 1103
 	InvalidOperation   = 1104
 	TokenExpired       = 1105
-	InvalidTenantId    = 1106 // 无效的 tenantId
+	InvalidOrgId       = 1106 // 无效的 orgId
 
 	InvalidColumn = 1201
 	DataToLong    = 1301
@@ -94,9 +94,13 @@ const (
 	LicenseResourceLimit  = 8020
 	LicenseModuleDisabled = 8021
 
-	// tenant
-	TenantNotExists = 9010
-	TenantDisabled  = 9403
+	// organization
+	OrganizationAlreadyExists  = 9010
+	OrganizationNotExists      = 9011
+	OrganizationDisabled       = 9012
+	OrganizationAliasDuplicate = 9013
+	OrganizationInvalidStatus  = 9014
+	InvalidOrganizationId      = 9015
 )
 
 var errorMsgs = map[int]map[string]string{
@@ -172,7 +176,7 @@ var errorMsgs = map[int]map[string]string{
 	InvalidTokenPrefix: {
 		"zh-cn": "凭证类型错误",
 	},
-	InvalidTenantId: {
+	InvalidOrgId: {
 		"zh-cn": "无效的组织",
 	},
 	TokenExpired: {
@@ -289,10 +293,22 @@ var errorMsgs = map[int]map[string]string{
 	LicenseModuleDisabled: {
 		"zh-cn": "功能模块未启用",
 	},
-	TenantNotExists: {
+	OrganizationAlreadyExists: {
+		"zh-cn": "组织已存在",
+	},
+	OrganizationNotExists: {
 		"zh-cn": "组织不存在",
 	},
-	TenantDisabled: {
+	OrganizationDisabled: {
 		"zh-cn": "组织被禁用",
+	},
+	OrganizationAliasDuplicate: {
+		"zh-cn": "组织别名重复",
+	},
+	OrganizationInvalidStatus: {
+		"zh-cn": "无效的组织状态",
+	},
+	InvalidOrganizationId: {
+		"zh-cn": "无效的组织ID",
 	},
 }

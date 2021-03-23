@@ -24,6 +24,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
+	"github.com/rs/xid"
 )
 
 const letterAndDigit = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -307,4 +308,9 @@ func RecoverPanic(logger logs.Logger, fn func()) {
 	}()
 
 	fn()
+}
+
+func GenGuid(v string) string {
+	guid := xid.New()
+	return fmt.Sprintf("%s-%s", v, guid.String())
 }

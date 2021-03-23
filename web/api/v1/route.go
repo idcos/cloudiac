@@ -1,25 +1,36 @@
 package v1
 
 import (
-	"github.com/gin-gonic/gin"
 	"cloudiac/libs/ctrl"
+	"cloudiac/web/api/v1/handlers"
 	"cloudiac/web/middleware"
+	"github.com/gin-gonic/gin"
 )
 
 func Register(g *gin.RouterGroup) {
 	w := ctrl.GinRequestCtxWrap
 
+	auth := g.Group("/auth")
+	auth.POST("/login", w(handlers.User{}.Login))
+
 	/////// 用户认证
 	g.Use(w(middleware.Auth))
-	// g.Use(w(middleware.AlwaysAdminAuth))
-
-	// 用户管理
+	g.Use(w(middleware.AuthOrgId))
 	user := g.Group("/")
-	//{
-		ctrl.Register(user.Group("users"), &User{})
-	//}
+	{
+		ctrl.Register(user.Group("user"), &handlers.User{})
+		user.PUT("/user/removeUserForOrg", w(handlers.User{}.RemoveUserForOrg))
+		user.PUT("/user/userPassReset", w(middleware.IsOrgOwner), w(handlers.User{}.UserPassReset))
 
-	g.Use(w(middleware.ApiAuth))
+		ctrl.Register(user.Group("org"), &handlers.Organization{})
+		user.PUT("/org/disableOrg", w(middleware.IsAdmin), w(handlers.Organization{}.DisableOrganization))
+		//root.GET("/org/detail", w(handlers.Organization{}.Detail))
+	}
+
+
+	//user.GET("/sse/hello/:filename", w(handlers.HelloSse))
+
+	//g.Use(w(middleware.ApiAuth))
 
 	//monitor := g.Group("")
 	//{

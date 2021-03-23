@@ -2,19 +2,16 @@ package forms
 
 type CreateUserForm struct {
 	BaseForm
-	UserName string `form:"username" json:"username" binding:"required"`
-	Password string `form:"password" json:"password" binding:"required"`
-	Phone    string `form:"phone" json:"phone" binding:""`
-	Email    string `form:"email" json:"email" binding:""`
-
-	TenantId uint `form:"tenantId" json:"tenantId"`
+	Name     string `form:"name" json:"name" binding:"required,gte=2,lte=32"`
+	Phone    string `form:"phone" json:"phone" binding:"max=11"`
+	Email    string `form:"email" json:"email" binding:"required,email"`
 }
 
 type UpdateUserForm struct {
 	BaseForm
 	Id          uint   `form:"id" json:"id" binding:""`
-	UserName    string `form:"username" json:"username" binding:""`
-	Phone       string `form:"phone" json:"phone" binding:""`
+	Name        string `form:"name" json:"name" binding:"gte=2,lte=32"`
+	Phone       string `form:"phone" json:"phone" binding:"max=11"`
 	//Email       string `form:"email" json:"email" binding:""`	// 邮箱不可编辑
 	OldPassword string `form:"oldPassword" json:"oldPassword" binding:""`
 	NewPassword string `form:"newPassword" json:"newPassword" binding:""`
@@ -24,8 +21,7 @@ type SearchUserForm struct {
 	BaseForm
 
 	Q          string `form:"q" json:"q" binding:""`
-	Status     int    `form:"status" json:"status"`
-	CustomerId uint   `form:"customerId" json:"customerId" binding:""`
+	Status     string `form:"status" json:"status"`
 }
 
 type DeleteUserForm struct {
@@ -36,8 +32,8 @@ type DeleteUserForm struct {
 type DisableUserForm struct {
 	BaseForm
 
-	Id     uint `form:"id" json:"id" binding:"required"`
-	Status int  `form:"status" json:"status" binding:"required"`
+	Id     uint   `form:"id" json:"id" binding:"required"`
+	Status string `form:"status" json:"status" binding:"required"`
 }
 
 type DetailUserForm struct {
@@ -54,13 +50,11 @@ type InviteUserForm struct {
 	Roles     []uint   `json:"roles" form:"role"`
 }
 
-type ActivateUserForm struct {
+type LoginForm struct {
 	BaseForm
 
-	Token    string `json:"token" form:"token" binding:"required"`
-	Username string `json:"username" form:"username" binding:""`
-	Password string `json:"password" form:"password" binding:""`
-	Phone    string `json:"phone" form:"phone" binding:""`
+	Email    string `json:"email" form:"email" binding:"required"`
+	Password string `json:"password" form:"password" binding:"required"`
 }
 
 type AdminSearchForm struct {

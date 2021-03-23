@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/patrickmn/go-cache"
 	"net/http"
 	"cloudiac/configs"
@@ -10,7 +11,11 @@ import (
 	"time"
 )
 
-var c = cache.New(5*time.Minute, 10*time.Minute)
+var (
+	c = cache.New(5*time.Minute, 10*time.Minute)
+	SecretKey = "c1c3ik8rvdg331ivogcg"
+)
+
 
 type Data struct {
 	Token string `json:"token"`
@@ -25,7 +30,7 @@ type Resp struct {
 type UserInfo struct {
 	Id                    uint    `json:"id"`
 	AppId                 uint    `json:"appId"`
-	TenantId              uint    `json:"tenantId"`
+	OrgId                 uint    `json:"orgId"`
 	Username              string `json:"username"`
 	Enabled               bool   `json:"enabled"`
 	AccountNonExpired     bool   `json:"accountNonExpired"`
@@ -73,4 +78,27 @@ func AuthTokenVerify(token string) ([]byte, error) {
 		return nil, er
 	}
 	return userInfo, nil
+}
+
+type Claims struct {
+	UserId   uint   `json:"userId"`
+	Username string `json:"username"`
+	IsAdmin  bool   `json:"isAdmin"`
+	jwt.StandardClaims
+}
+
+func GenerateToken(uid uint, name string, isAdmin bool, expireDuration time.Duration) (string, error) {
+	expire := time.Now().Add(expireDuration)
+
+	// 将 userId，姓名, 过期时间写入 token 中
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
+		UserId:  uid,
+		Username: name,
+		IsAdmin: isAdmin,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expire.Unix(),
+		},
+	})
+
+	return token.SignedString([]byte(SecretKey))
 }
