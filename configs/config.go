@@ -35,6 +35,17 @@ type yamlTimeDuration struct {
 	time.Duration
 }
 
+type ConsulConfig struct {
+	Address         string `yaml:"address"`
+	ServiceID       string `yaml:"id"`
+	ServiceIP       string `yaml:"ip"`
+	ServicePort     int    `yaml:"port"`
+	ServiceTags     string `yaml:"tags"`
+	Interval        string `yaml:"interval"`
+	Timeout         string `yaml:"timeout"`
+	DeregisterAfter string `yaml:"deregister_after"`
+}
+
 func (ut *yamlTimeDuration) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var ds string
 	if err := unmarshal(&ds); err != nil {
@@ -56,6 +67,7 @@ type Config struct {
 	Rmq                     RabbitMqConfig   `yaml:"rabbitmq"`
 	Prometheus              string           `yaml:"prometheus"`
 	CollectTaskSyncInterval yamlTimeDuration `yaml:"collectTaskSyncInterval"`
+	Consul                  ConsulConfig     `yaml:"consul"`
 }
 
 var (

@@ -4,6 +4,7 @@ import (
 	"cloudiac/libs/ctrl"
 	"cloudiac/web/api/v1/handlers"
 	"cloudiac/web/middleware"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,8 +15,8 @@ func Register(g *gin.RouterGroup) {
 	auth.POST("/login", w(handlers.User{}.Login))
 
 	/////// 用户认证
-	g.Use(w(middleware.Auth))
-	g.Use(w(middleware.AuthOrgId))
+	// g.Use(w(middleware.Auth))
+	// g.Use(w(middleware.AuthOrgId))
 	user := g.Group("/")
 	{
 		ctrl.Register(user.Group("user"), &handlers.User{})
@@ -27,15 +28,15 @@ func Register(g *gin.RouterGroup) {
 		//root.GET("/org/detail", w(handlers.Organization{}.Detail))
 	}
 
-
-	//user.GET("/sse/hello/:filename", w(handlers.HelloSse))
+	user.GET("/sse/hello/:filename", w(handlers.HelloSse))
+	user.GET("/sse/test", w(handlers.TestSSE))
 
 	//g.Use(w(middleware.ApiAuth))
 
 	//monitor := g.Group("")
 	//{
-		//ctrl.Register(monitor.Group("datasource"), &handlers.DataSource{})
-		//monitor.GET("/datasource/metric/search", w(handlers.DataSource{}.SearchMetric))
-		//monitor.GET("/datasource/relation_field/search", w(handlers.DataSource{}.SearchRelationField))
+	//ctrl.Register(monitor.Group("datasource"), &handlers.DataSource{})
+	//monitor.GET("/datasource/metric/search", w(handlers.DataSource{}.SearchMetric))
+	//monitor.GET("/datasource/relation_field/search", w(handlers.DataSource{}.SearchRelationField))
 	//}
 }
