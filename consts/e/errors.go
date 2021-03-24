@@ -101,6 +101,9 @@ const (
 	OrganizationAliasDuplicate = 9013
 	OrganizationInvalidStatus  = 9014
 	InvalidOrganizationId      = 9015
+
+	// consul
+	ConsulConnError = 10010
 )
 
 var errorMsgs = map[int]map[string]string{

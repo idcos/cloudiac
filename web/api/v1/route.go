@@ -39,4 +39,7 @@ func Register(g *gin.RouterGroup) {
 	//monitor.GET("/datasource/metric/search", w(handlers.DataSource{}.SearchMetric))
 	//monitor.GET("/datasource/relation_field/search", w(handlers.DataSource{}.SearchRelationField))
 	//}
+
+	// 系统状态
+	g.GET("/systemStatus/search", w(handlers.PortalSystemStatusSearch))
 }
