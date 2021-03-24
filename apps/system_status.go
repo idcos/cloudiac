@@ -23,42 +23,45 @@ type SystemStatusResp struct {
 }
 
 func SystemStatusSearch() (interface{}, e.Error) {
-	resp := make([]SystemStatusResp, 0)
-	serviceInfo,serviceStatus, err :=services.SystemStatusSearch()
+	resp := make([]*SystemStatusResp, 0)
+	serviceResp := make(map[string]*SystemStatusResp, 0)
+	IdInfo, serviceStatus, serviceList, err := services.SystemStatusSearch()
 	if err != nil {
-		return nil ,err
+		return nil, err
 	}
 
 	//构建返回值
-	for service, info := range serviceInfo {
-		ssr := SystemStatusResp{}
-		ssr.Service = service
-		for _, serviceInfo := range info {
-			for _, status := range serviceStatus {
-				if serviceInfo.ID == status.ServiceID {
-					ssr.Children = append(ssr.Children, struct {
-						ID      string
-						Tags    []string `json:"tags" form:"tags" `
-						Port    int      `json:"port" form:"port" `
-						Address string   `json:"address" form:"address" `
-						Status  string   `json:"status" form:"status" `
-						Node    string   `json:"node" form:"node" `
-						Notes   string   `json:"notes" form:"notes" `
-						Output  string   `json:"output" form:"output" `
-					}{
-						ID:      serviceInfo.ID,
-						Tags:    serviceInfo.Tags,
-						Port:    serviceInfo.Port,
-						Address: serviceInfo.Address,
-						Status:  status.Status,
-						Node:    status.Node,
-						Notes:   status.Notes,
-						Output:  status.Output,
-					})
-				}
-			}
+	for _, service := range serviceList {
+		serviceResp[service] = &SystemStatusResp{
+			Service: service,
 		}
-		resp = append(resp, ssr)
 	}
-	return resp,nil
+
+	for _, id := range IdInfo {
+		serviceResp[id.Service].Children = append(serviceResp[id.Service].Children, struct {
+			ID      string
+			Tags    []string `json:"tags" form:"tags" `
+			Port    int      `json:"port" form:"port" `
+			Address string   `json:"address" form:"address" `
+			Status  string   `json:"status" form:"status" `
+			Node    string   `json:"node" form:"node" `
+			Notes   string   `json:"notes" form:"notes" `
+			Output  string   `json:"output" form:"output" `
+		}{
+			ID:      id.ID,
+			Tags:    id.Tags,
+			Port:    id.Port,
+			Address: id.Address,
+			Status:  serviceStatus[id.ID].Status,
+			Node:    serviceStatus[id.ID].Node,
+			Notes:   serviceStatus[id.ID].Notes,
+			Output:  serviceStatus[id.ID].Output,
+		})
+	}
+
+	for _, service := range serviceResp {
+		resp = append(resp, service)
+	}
+
+	return resp, nil
 }
