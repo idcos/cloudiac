@@ -36,4 +36,7 @@ func Register(g *gin.RouterGroup) {
 
 	user.GET("/sse/hello/:filename", w(handlers.HelloSse))
 	user.GET("/sse/test", w(handlers.TestSSE))
+
+	// 系统状态
+	g.GET("/systemStatus/search", w(handlers.PortalSystemStatusSearch))
 }
