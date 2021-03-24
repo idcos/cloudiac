@@ -131,4 +131,6 @@ func Init(migrate bool) {
 	autoMigrate(&User{}, sess)
 	autoMigrate(&Organization{}, sess)
 	autoMigrate(&UserOrgMap{}, sess)
+	autoMigrate(&Task{}, sess)
+	autoMigrate(&Template{}, sess)
 }

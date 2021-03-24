@@ -10,8 +10,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 
-	"cloudiac/consts/e"
 	"cloudiac/configs"
+	"cloudiac/consts/e"
 	"cloudiac/utils/logs"
 )
 

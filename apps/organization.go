@@ -11,7 +11,6 @@ import (
 	"net/http"
 )
 
-
 func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (*models.Organization, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create org %s", form.Name))
 
@@ -87,6 +86,10 @@ func UpdateOrganization(c *ctx.ServiceCtx, form *forms.UpdateOrganizationForm) (
 		attrs["description"] = form.Description
 	}
 
+	if form.HasKey("vcsAuthInfo") {
+		attrs["vcs_auth_info"] = form.VcsAuthInfo
+	}
+
 	org, err = services.UpdateOrganization(c.DB(), form.Id, attrs)
 	return
 }
@@ -109,6 +112,30 @@ func ChangeOrgStatus(c *ctx.ServiceCtx, form *forms.DisableOrganizationForm) (in
 	}
 
 	return org, nil
+}
+
+func ListOrganizationRepos(c *ctx.ServiceCtx, orgId int, searchKey string) (interface{}, e.Error) {
+	repos, err := services.ListOrganizationReposById(c.DB(), orgId, searchKey)
+	if err != nil {
+		return nil, nil
+	}
+	return repos, nil
+}
+
+func ListRepositoryBranches(c *ctx.ServiceCtx, orgId int, repoId int) (interface{}, e.Error) {
+	branches, err := services.ListRepositoryBranches(c.DB(), orgId, repoId)
+	if err != nil {
+		return nil, nil
+	}
+	return branches, nil
+}
+
+func GetReadmeContent(c *ctx.ServiceCtx, orgId int, repoId int, branch string) (interface{}, e.Error) {
+	content, err := services.GetReadmeContent(c.DB(), orgId, repoId, branch)
+	if err != nil {
+		return nil, nil
+	}
+	return content, nil
 }
 
 type organizationDetailResp struct {

@@ -26,7 +26,7 @@ type BaseForm struct {
 	CurrentPage_ int    `form:"currentPage" json:"currentPage" binding:""`
 	Export_      bool   `form:"export" json:"export" binding:""`
 	SortField_   string `form:"sortField" json:"sortField"`
-	SortOrder_    string `form:"sortOrder" json:"sortOrder"`
+	SortOrder_   string `form:"sortOrder" json:"sortOrder"`
 
 	formValues url.Values
 }

@@ -23,8 +23,9 @@ func Register(g *gin.RouterGroup) {
 		org.PUT("/org/changeStatus", w(handlers.Organization{}.ChangeOrgStatus))
 	}
 
+	// user := g.Group("/", w(middleware.Auth), w(middleware.AuthOrgId))
+	user := g.Group("/")
 
-	user := g.Group("/", w(middleware.Auth), w(middleware.AuthOrgId))
 	{
 		user.GET("/user/search", w(middleware.IsOrgOwner), w(handlers.User{}.Search))
 		user.GET("/user/detail", w(middleware.IsOrgOwner), w(handlers.User{}.Detail))
@@ -32,6 +33,15 @@ func Register(g *gin.RouterGroup) {
 		user.PUT("/user/update", w(handlers.User{}.Update))
 		user.PUT("/user/removeUserForOrg", w(middleware.IsOrgOwner), w(handlers.User{}.RemoveUserForOrg))
 		user.PUT("/user/userPassReset", w(middleware.IsOrgOwner), w(handlers.User{}.UserPassReset))
+		user.GET("/org/listRepos", w(handlers.Organization{}.ListRepos))
+		user.GET("/org/listBranche", w(handlers.Organization{}.ListBranches))
+		user.GET("/org/getReadme", w(handlers.Organization{}.GetReadmeContent))
+		//root.GET("/org/detail", w(handlers.Organization{}.Detail))
+	}
+
+	template := g.Group("/")
+	{
+		ctrl.Register(template.Group("template"), &handlers.Template{})
 	}
 
 	user.GET("/sse/hello/:filename", w(handlers.HelloSse))
