@@ -314,3 +314,47 @@ func GenGuid(v string) string {
 	guid := xid.New()
 	return fmt.Sprintf("%s-%s", v, guid.String())
 }
+
+const (
+	NUmStr  = "0123456789"
+	CharStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	SpecStr = "+=-@#~,.[]()!%^*$"
+)
+
+func GenPasswd(length int, charset string) string {
+	//初始化密码切片
+	var passwd []byte = make([]byte, length, length)
+	//源字符串
+	var sourceStr string
+	//判断字符类型,如果是数字
+	if charset == "num" {
+		sourceStr = NUmStr
+		//如果选的是字符
+	} else if charset == "char" {
+		sourceStr = charset
+		//如果选的是混合模式
+	} else if charset == "mix" {
+		sourceStr = fmt.Sprintf("%s%s", NUmStr, CharStr)
+		//如果选的是高级模式
+	} else if charset == "advance" {
+		sourceStr = fmt.Sprintf("%s%s%s", NUmStr, CharStr, SpecStr)
+	} else {
+		sourceStr = NUmStr
+	}
+
+	//遍历，生成一个随机index索引,
+	for i := 0; i < length; i++ {
+		index := rand.Intn(len(sourceStr))
+		passwd[i] = sourceStr[index]
+	}
+	return string(passwd)
+}
+
+func UintIsContain(items []uint, item uint) bool {
+	for _, eachItem := range items {
+		if eachItem == item {
+			return true
+		}
+	}
+	return false
+}

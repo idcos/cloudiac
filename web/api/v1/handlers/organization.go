@@ -53,10 +53,10 @@ func (Organization) Detail(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.OrganizationDetail(c.ServiceCtx(), &form))
 }
 
-func (Organization) DisableOrganization(c *ctx.GinRequestCtx) {
+func (Organization) ChangeOrgStatus(c *ctx.GinRequestCtx) {
 	form := forms.DisableOrganizationForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DisableOrganization(c.ServiceCtx(), &form))
+	c.JSONResult(apps.ChangeOrgStatus(c.ServiceCtx(), &form))
 }

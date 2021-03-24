@@ -1,6 +1,8 @@
 package main
 
 import (
+	"cloudiac/services"
+	"fmt"
 	"os"
 
 	"cloudiac/cmds/common"
@@ -61,9 +63,29 @@ func main() {
 func appAutoInit(tx *db.Session) (err error) {
 	logger := logs.Get().WithField("func", "appAutoInit")
 	logger.Infoln("running")
-	//if models.MustInitFlag(tx) != "" {
-	//	return nil
-	//}
+
+	// dev init
+	admin, _ := services.GetUserByEmail(tx, "admin")
+	if admin != nil {
+		return nil
+	}
+
+	initPass := "Yunjikeji"
+	hashedPassword, err := services.HashPassword(initPass)
+	if err != nil {
+		fmt.Println("111", err)
+	}
+	_, err = services.CreateUser(tx, models.User{
+		Name:     "admin",
+		Password: hashedPassword,
+		Phone:    "",
+		Email:    "admin",
+		InitPass: initPass,
+		IsAdmin: true,
+	})
+	if err != nil {
+		return err
+	}
 
 	logger.Infoln("initialize ...")
 

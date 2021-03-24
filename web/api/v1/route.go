@@ -14,29 +14,26 @@ func Register(g *gin.RouterGroup) {
 	auth := g.Group("/auth")
 	auth.POST("/login", w(handlers.User{}.Login))
 
-	/////// 用户认证
-	// g.Use(w(middleware.Auth))
-	// g.Use(w(middleware.AuthOrgId))
-	user := g.Group("/")
+	g.GET("/org/search", w(middleware.Auth), w(handlers.Organization{}.Search))
+	g.GET("/org/detail", w(middleware.Auth), w(handlers.Organization{}.Detail))
+	org := g.Group("/", w(middleware.Auth), w(middleware.IsAdmin))
 	{
-		ctrl.Register(user.Group("user"), &handlers.User{})
-		user.PUT("/user/removeUserForOrg", w(handlers.User{}.RemoveUserForOrg))
-		user.PUT("/user/userPassReset", w(middleware.IsOrgOwner), w(handlers.User{}.UserPassReset))
+		org.POST("/org/create", w(handlers.Organization{}.Create))
+		org.PUT("/org/update", w(handlers.Organization{}.Update))
+		org.PUT("/org/changeStatus", w(handlers.Organization{}.ChangeOrgStatus))
+	}
 
-		ctrl.Register(user.Group("org"), &handlers.Organization{})
-		user.PUT("/org/disableOrg", w(middleware.IsAdmin), w(handlers.Organization{}.DisableOrganization))
-		//root.GET("/org/detail", w(handlers.Organization{}.Detail))
+
+	user := g.Group("/", w(middleware.Auth), w(middleware.AuthOrgId))
+	{
+		user.GET("/user/search", w(middleware.IsOrgOwner), w(handlers.User{}.Search))
+		user.GET("/user/detail", w(middleware.IsOrgOwner), w(handlers.User{}.Detail))
+		user.POST("/user/create", w(middleware.IsOrgOwner), w(handlers.User{}.Create))
+		user.PUT("/user/update", w(handlers.User{}.Update))
+		user.PUT("/user/removeUserForOrg", w(middleware.IsOrgOwner), w(handlers.User{}.RemoveUserForOrg))
+		user.PUT("/user/userPassReset", w(middleware.IsOrgOwner), w(handlers.User{}.UserPassReset))
 	}
 
 	user.GET("/sse/hello/:filename", w(handlers.HelloSse))
 	user.GET("/sse/test", w(handlers.TestSSE))
-
-	//g.Use(w(middleware.ApiAuth))
-
-	//monitor := g.Group("")
-	//{
-	//ctrl.Register(monitor.Group("datasource"), &handlers.DataSource{})
-	//monitor.GET("/datasource/metric/search", w(handlers.DataSource{}.SearchMetric))
-	//monitor.GET("/datasource/relation_field/search", w(handlers.DataSource{}.SearchRelationField))
-	//}
 }

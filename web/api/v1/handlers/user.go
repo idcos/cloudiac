@@ -13,11 +13,11 @@ type User struct {
 }
 
 func (User) Create(c *ctx.GinRequestCtx) {
-	form := &forms.CreateUserForm{}
-	if err := c.Bind(form); err != nil {
+	form := forms.CreateUserForm{}
+	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CreateUser(c.ServiceCtx(), form))
+	c.JSONResult(apps.CreateUser(c.ServiceCtx(), &form))
 }
 
 func (User) Search(c *ctx.GinRequestCtx) {
@@ -45,13 +45,13 @@ func (User) Delete(c *ctx.GinRequestCtx) {
 	c.JSONError(e.New(e.NotImplement))
 }
 
-//func (User) Detail(c *ctx.GinRequestCtx) {
-//	form := forms.DetailUserForm{}
-//	if err := c.Bind(&form); err != nil {
-//		return
-//	}
-//	c.JSONResult(apps.UserDetail(c.ServiceCtx(), &form))
-//}
+func (User) Detail(c *ctx.GinRequestCtx) {
+	form := forms.DetailUserForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.UserDetail(c.ServiceCtx(), &form))
+}
 
 func (User) RemoveUserForOrg(c *ctx.GinRequestCtx) {
 	form := forms.DeleteUserForm{}

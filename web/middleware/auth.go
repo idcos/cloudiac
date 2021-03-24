@@ -48,12 +48,16 @@ func AuthOrgId(c *ctx.GinRequestCtx) {
 		return
 	}
 	userOrgMap, err := services.FindUsersOrgMap(c.ServiceCtx().DB(), c.ServiceCtx().UserId, c.ServiceCtx().OrgId)
-	if err != nil || len(userOrgMap) == 0 {
-		c.JSONError(e.New(e.PermissionDeny), http.StatusForbidden)
+	if err == nil && len(userOrgMap) > 0 {
+		c.ServiceCtx().Role = userOrgMap[0].Role
+		c.Next()
 		return
 	}
-	c.ServiceCtx().Role = userOrgMap[0].Role
-	c.Next()
+	if c.ServiceCtx().IsAdmin == true {
+		c.Next()
+		return
+	}
+	c.JSONError(e.New(e.PermissionDeny), http.StatusForbidden)
 	return
 }
 
@@ -67,7 +71,7 @@ func IsAdmin(c *ctx.GinRequestCtx) {
 }
 
 func IsOrgOwner(c *ctx.GinRequestCtx)  {
-	if c.ServiceCtx().Role == "owner" {
+	if c.ServiceCtx().Role == "owner" || c.ServiceCtx().IsAdmin == true {
 		c.Next()
 	} else {
 		c.JSONError(e.New(e.PermissionDeny), http.StatusForbidden)

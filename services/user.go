@@ -135,3 +135,21 @@ func FindUsersOrgMap(query *db.Session, userId uint, orgId uint) (userOrgMap []*
 	}
 	return
 }
+
+func GetOrgIdsByUser(query *db.Session, userId uint) (orgIds []uint, err error) {
+	var userOrgMap []*models.UserOrgMap
+	if err := query.Where("user_id = ?", userId).Find(&userOrgMap); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	for _, o := range userOrgMap {
+		orgIds = append(orgIds, o.OrgId)
+	}
+	return
+}
+
+func GetUserByOrg(query *db.Session, orgId uint) (userOrgMap []*models.UserOrgMap, err error) {
+	if err := query.Where("org_id = ?", orgId).Find(&userOrgMap); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return
+}

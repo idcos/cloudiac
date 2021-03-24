@@ -10,8 +10,8 @@ type CreateUserForm struct {
 type UpdateUserForm struct {
 	BaseForm
 	Id          uint   `form:"id" json:"id" binding:""`
-	Name        string `form:"name" json:"name" binding:"gte=2,lte=32"`
-	Phone       string `form:"phone" json:"phone" binding:"max=11"`
+	Name        string `form:"name" json:"name" binding:""`
+	Phone       string `form:"phone" json:"phone" binding:""`
 	//Email       string `form:"email" json:"email" binding:""`	// 邮箱不可编辑
 	OldPassword string `form:"oldPassword" json:"oldPassword" binding:""`
 	NewPassword string `form:"newPassword" json:"newPassword" binding:""`

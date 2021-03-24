@@ -22,7 +22,7 @@ func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (
 		Name:        form.Name,
 		Guid:        guid,
 		Description: form.Description,
-		Creator:     c.UserId,
+		UserId:      c.UserId,
 		VcsType:     form.VcsType,
 		VcsVersion:  form.VcsVersion,
 		VcsAuthInfo: form.VcsAuthInfo,
@@ -38,6 +38,9 @@ type searchOrganizationResp struct {
 	Name        string `json:"name"`
 	Guid        string `json:"guid"`
 	Description string `json:"description"`
+	UserId      uint   `json:"userId"`
+	Status      string `json:"status"`
+	Creator     string `json:"creator"`
 }
 
 func (m *searchOrganizationResp) TableName() string {
@@ -45,19 +48,28 @@ func (m *searchOrganizationResp) TableName() string {
 }
 
 func SearchOrganization(c *ctx.ServiceCtx, form *forms.SearchOrganizationForm) (interface{}, e.Error) {
-	query := services.QueryUser(c.DB())
-	if form.Status != "" {
-		query = query.Where("status = ?", form.Status)
+	query := services.QueryOrganization(c.DB())
+	if c.IsAdmin == true {
+		if form.Status != "" {
+			query = query.Where("status = ?", form.Status)
+		}
+	} else {
+		query = query.Where("status = 'enable'")
+		orgIds, er := services.GetOrgIdsByUser(c.DB(), c.UserId)
+		if er != nil {
+			return nil, e.New(e.DBError, er)
+		}
+		query = query.Where("id in (?)", orgIds)
 	}
+
 	if form.Q != "" {
 		qs := "%" + form.Q + "%"
 		query = query.Where("name LIKE ?", qs)
 	}
 
 	query = query.Order("created_at DESC")
-	users := make([]*searchOrganizationResp, 0)
-	_ = query.Find(&users)
-	return users, nil
+	rs, _ := getPage(query, form, &searchOrganizationResp{})
+	return rs, nil
 }
 
 func UpdateOrganization(c *ctx.ServiceCtx, form *forms.UpdateOrganizationForm) (org *models.Organization, err e.Error) {
@@ -79,7 +91,7 @@ func UpdateOrganization(c *ctx.ServiceCtx, form *forms.UpdateOrganizationForm) (
 	return
 }
 
-func DisableOrganization(c *ctx.ServiceCtx, form *forms.DisableOrganizationForm) (interface{}, e.Error) {
+func ChangeOrgStatus(c *ctx.ServiceCtx, form *forms.DisableOrganizationForm) (interface{}, e.Error) {
 	org, er := services.GetOrganizationById(c.DB(), form.Id)
 	if er != nil {
 		return nil, er
@@ -101,14 +113,30 @@ func DisableOrganization(c *ctx.ServiceCtx, form *forms.DisableOrganizationForm)
 
 type organizationDetailResp struct {
 	models.Organization
-	CreateName string
+	Creator string
 }
 
 func OrganizationDetail(c *ctx.ServiceCtx, form *forms.DetailOrganizationForm) (resp interface{}, er e.Error) {
+	orgIds, err := services.GetOrgIdsByUser(c.DB(), c.UserId)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	if utils.UintIsContain(orgIds, form.Id) == false && c.IsAdmin == false {
+		return nil, nil
+	}
 	org, err := services.GetOrganizationById(c.DB(), form.Id)
 	if err != nil {
 		return nil, e.New(e.DBError, http.StatusInternalServerError, err)
 	}
+	user, err := services.GetUserById(c.DB(), org.UserId)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	var o = organizationDetailResp{
+		Organization: *org,
+		Creator: user.Name,
+	}
 
-	return org, nil
+	return o, nil
 }

@@ -15,7 +15,7 @@ import (
 func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*models.User, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create user %s", form.Name))
 
-	initPass := utils.RandomStr(6)
+	initPass := utils.GenPasswd(6, "mix")
 	hashedPassword, er := services.HashPassword(initPass)
 	if er != nil {
 		return nil, er
@@ -44,7 +44,11 @@ func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*models.User, e.
 			InitPass: initPass,
 		})
 		if err != nil {
-			return nil, err
+			if e.IsDuplicate(err) {
+				user, _ = services.GetUserByEmail(tx, form.Email)
+			} else {
+				return nil, err
+			}
 		}
 
 		// 建立用户与组织间关联
@@ -60,7 +64,7 @@ func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*models.User, e.
 	}()
 	if err != nil {
 		_ = tx.Rollback()
-		return nil, er
+		return nil, err
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -74,10 +78,20 @@ type searchUserResp struct {
 	models.User
 	Password    string `json:"-"`
 	InitPass    string `json:"-"`
+	Role        string `json:"role"`
 }
 
 func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.Error) {
+	userOrgMap, err := services.GetUserByOrg(c.DB(), c.OrgId)
+	var userIds []uint
+	for _, o := range userOrgMap {
+		userIds = append(userIds, o.UserId)
+	}
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
 	query := services.QueryUser(c.DB())
+	query = query.Where("id in (?)", userIds)
 	if form.Status != "" {
 		query = query.Where("status = ?", form.Status)
 	}
@@ -92,6 +106,14 @@ func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.E
 	if err := p.Scan(&users); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
+	for _, user := range users {
+		for _, org := range userOrgMap {
+			if user.Id == org.UserId {
+				user.Role = org.Role
+				break
+			}
+		}
+	}
 
 	return page.PageResp{
 		Total:    p.MustTotal(),
@@ -104,6 +126,15 @@ func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (user *models.Use
 	c.AddLogField("action", fmt.Sprintf("update user %d", form.Id))
 	if form.Id == 0 {
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
+	}
+	if c.IsAdmin == false && c.Role != "owner" && c.UserId != form.Id {
+		return nil, e.New(e.PermissionDeny, http.StatusForbidden)
+	}
+	if c.UserId != form.Id {
+		userOrgMap, _ := services.FindUsersOrgMap(c.DB(), form.Id, c.OrgId)
+		if len(userOrgMap) == 0 {
+			return nil, e.New(e.PermissionDeny, http.StatusForbidden)
+		}
 	}
 
 	attrs := models.Attrs{}
@@ -166,7 +197,7 @@ func DeleteUserOrgMap(c *ctx.ServiceCtx, form *forms.DeleteUserForm) (result int
 }
 
 func UserPassReset(c *ctx.ServiceCtx, form *forms.DetailUserForm) (user *models.User, err e.Error) {
-	initPass := utils.RandomStr(6)
+	initPass := utils.GenPasswd(6, "mix")
 	hashedPassword, _ := services.HashPassword(initPass)
 
 	attrs := models.Attrs{}
