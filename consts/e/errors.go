@@ -102,8 +102,15 @@ const (
 	OrganizationInvalidStatus  = 9014
 	InvalidOrganizationId      = 9015
 
+	// task
+	TaskAlreadyExists = 10010
+	TaskNotExists     = 10011
+
+	// template
+	TemplateAlreadyExists = 11010
+
 	// consul
-	ConsulConnError = 10010
+	ConsulConnError = 12010
 )
 
 var errorMsgs = map[int]map[string]string{

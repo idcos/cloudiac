@@ -1,11 +1,10 @@
 package models
 
 import (
+	"cloudiac/libs/db"
 	"time"
 
 	"github.com/jinzhu/gorm"
-
-	"cloudiac/libs/db"
 )
 
 type Attrs map[string]interface{}
