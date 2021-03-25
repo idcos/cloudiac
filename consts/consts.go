@@ -59,6 +59,14 @@ const (
 
 	DsTypeZabbix = "zabbix"
 	DsTypeProm   = "prom"
+
+	//作业状态
+	TaskPending  = "pending"
+	TaskTimeoout = "timeout"
+	TaskRunning  = "running"
+	TaskFailed   = "failed"
+	TaskComplete = "complete"
+	TaskLogName  = "runner.log"
 )
 
 var (
