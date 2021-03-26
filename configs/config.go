@@ -51,6 +51,12 @@ type GitlabConfig struct {
 	Token string `yaml:"token"`
 }
 
+type RunnerConfig struct {
+	AssetPath    string `yaml:"asset_path"`
+	LogBasePaath string `yaml:"log_base_path"`
+	DefaultImage string `yaml:"default_image"`
+}
+
 func (ut *yamlTimeDuration) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var ds string
 	if err := unmarshal(&ds); err != nil {
@@ -74,6 +80,7 @@ type Config struct {
 	CollectTaskSyncInterval yamlTimeDuration `yaml:"collectTaskSyncInterval"`
 	Consul                  ConsulConfig     `yaml:"consul"`
 	Gitlab                  GitlabConfig     `yaml:"gitlab"`
+	Runner                  RunnerConfig     `yaml:"runner"`
 }
 
 var (

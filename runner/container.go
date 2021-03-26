@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"cloudiac/configs"
 	"context"
 	"log"
 
@@ -12,7 +13,8 @@ import (
 )
 
 func (task *CommitedTask) Cancel() error {
-	cli, err := client.NewEnvClient()
+	cli, err := client.NewClientWithOpts()
+	cli.NegotiateAPIVersion(context.Background())
 	if err != nil {
 		log.Printf("Unable to create docker client")
 		panic(err)
@@ -30,7 +32,8 @@ func (task *CommitedTask) Cancel() error {
 }
 
 func (task *CommitedTask) Status() (types.ContainerJSON, error) {
-	cli, err := client.NewEnvClient()
+	cli, err := client.NewClientWithOpts()
+	cli.NegotiateAPIVersion(context.Background())
 	if err != nil {
 		log.Printf("Unable to create docker client")
 		panic(err)
@@ -46,7 +49,8 @@ func (task *CommitedTask) Status() (types.ContainerJSON, error) {
 
 func (cmd *Command) Create(dirMapping string) error {
 	// TODO(ZhengYue): Create client with params of host info
-	cli, err := client.NewEnvClient()
+	cli, err := client.NewClientWithOpts()
+	cli.NegotiateAPIVersion(context.Background())
 
 	if err != nil {
 		log.Printf("Unable to create docker client")
@@ -54,6 +58,8 @@ func (cmd *Command) Create(dirMapping string) error {
 	}
 
 	id := guuid.New()
+
+	conf := configs.Get()
 
 	cont, err := cli.ContainerCreate(
 		cmd.ContainerInstance.Context,
@@ -69,7 +75,7 @@ func (cmd *Command) Create(dirMapping string) error {
 			Mounts: []mount.Mount{
 				{
 					Type:   mount.TypeBind,
-					Source: AssetPath,
+					Source: conf.Runner.AssetPath,
 					Target: "/assets",
 				},
 				{

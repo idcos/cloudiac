@@ -97,7 +97,7 @@ func StartServer() {
 	})
 
 	apiV1.POST("/task/run", func(c *gin.Context) {
-		logger.Debug(c.Request.Body)
+		logger.Info(c.Request.Body)
 		id, err := runner.Run(c.Request)
 		if err != nil {
 			c.JSON(500, gin.H{
@@ -119,7 +119,8 @@ func StartServer() {
 			})
 		} else {
 			c.JSON(200, gin.H{
-				"status":            containerStatus.Status.ExitCode,
+				"status":            containerStatus.Status.Status,
+				"status_code":       containerStatus.Status.ExitCode,
 				"log_content":       containerStatus.LogContent,
 				"log_content_lines": containerStatus.LogContentLines,
 			})
