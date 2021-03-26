@@ -23,8 +23,7 @@ func Register(g *gin.RouterGroup) {
 		org.PUT("/org/changeStatus", w(handlers.Organization{}.ChangeOrgStatus))
 	}
 
-	// user := g.Group("/", w(middleware.Auth), w(middleware.AuthOrgId))
-	user := g.Group("/")
+	user := g.Group("/", w(middleware.Auth), w(middleware.AuthOrgId))
 
 	{
 		user.GET("/user/search", w(middleware.IsOrgOwner), w(handlers.User{}.Search))
@@ -36,6 +35,11 @@ func Register(g *gin.RouterGroup) {
 		user.GET("/org/listRepos", w(handlers.Organization{}.ListRepos))
 		user.GET("/org/listBranche", w(handlers.Organization{}.ListBranches))
 		user.GET("/org/getReadme", w(handlers.Organization{}.GetReadmeContent))
+
+		user.GET("/org/notification/search", w(handlers.Organization{}.ListNotificationCfgs))
+		user.POST("/org/notification/create", w(handlers.Organization{}.CreateNotificationCfgs))
+		user.DELETE("/org/notification/delete", w(handlers.Organization{}.DeleteNotificationCfgs))
+		user.PUT("/org/notification/update", w(handlers.Organization{}.UpdateNotificationCfgs))
 		//root.GET("/org/detail", w(handlers.Organization{}.Detail))
 	}
 

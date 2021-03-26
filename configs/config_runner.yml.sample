@@ -1,0 +1,10 @@
+listen: "0.0.0.0:19030"
+consul:
+  address: "192.168.0.19:8500"
+  id: "CT-Runner-01"
+  ip: "192.168.0.19"
+  port: 19030
+  tags: "region:DC1;someKey:someValue"
+  interval: "5s"
+  timeout: "3s"
+  deregister_after: "30s"
