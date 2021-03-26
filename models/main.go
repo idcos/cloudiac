@@ -133,4 +133,5 @@ func Init(migrate bool) {
 	autoMigrate(&UserOrgMap{}, sess)
 	autoMigrate(&Task{}, sess)
 	autoMigrate(&Template{}, sess)
+	autoMigrate(&NotificationCfg{}, sess)
 }

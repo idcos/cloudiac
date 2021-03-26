@@ -46,6 +46,11 @@ type ConsulConfig struct {
 	DeregisterAfter string `yaml:"deregister_after"`
 }
 
+type GitlabConfig struct {
+	Url   string `yaml:"url"`
+	Token string `yaml:"token"`
+}
+
 func (ut *yamlTimeDuration) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var ds string
 	if err := unmarshal(&ds); err != nil {
@@ -68,6 +73,7 @@ type Config struct {
 	Prometheus              string           `yaml:"prometheus"`
 	CollectTaskSyncInterval yamlTimeDuration `yaml:"collectTaskSyncInterval"`
 	Consul                  ConsulConfig     `yaml:"consul"`
+	Gitlab                  GitlabConfig     `yaml:"gitlab"`
 }
 
 var (
