@@ -48,7 +48,7 @@ func Register(g *gin.RouterGroup) {
 		sysConf.PUT("/system/update", w(handlers.SystemConfig{}.Update))
 	}
 
-	template := g.Group("/")
+	template := g.Group("/", w(middleware.Auth), w(middleware.IsAdmin))
 	{
 		ctrl.Register(template.Group("template"), &handlers.Template{})
 	}
