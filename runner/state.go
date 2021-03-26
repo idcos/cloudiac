@@ -22,23 +22,23 @@ terraform {
 
 type State struct {
 	Address string
-	Schema  string
+	Scheme  string
 	Path    string
 }
 
 func GenStateFile(address string, scheme string, path string, targetPath string) {
-	pwd, _ := os.Getwd()
-	fmt.Println("open failed err:", pwd)
 	state := new(State)
 	state.Address = address
-	state.Schema = scheme
+	if scheme != "" {
+		state.Scheme = scheme
+	}
 	state.Path = path
 	targetFile, err := os.OpenFile(targetPath+"/state.tf", os.O_CREATE|os.O_WRONLY, 0755)
 	if err != nil {
 		fmt.Println("open failed err:", err)
 		return
 	}
-	t, err := template.ParseFiles("./state.tf.tmpl")
+	t, err := template.ParseFiles(StaticFilePath + "/state.tf.tmpl")
 	if err != nil {
 		fmt.Println("open template file err:", err)
 		return

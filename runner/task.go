@@ -30,7 +30,7 @@ func Run(req *http.Request) (string, error) {
 	}
 
 	// if state.SaveState != false {
-	GenStateFile(state.StateBackendAddress, state.Schema, state.StateKey, templateDir)
+	GenStateFile(state.StateBackendAddress, state.Scheme, state.StateKey, templateDir)
 	// }
 	err = c.Create(templateDir)
 	return c.ContainerInstance.ID, err

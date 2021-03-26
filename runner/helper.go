@@ -2,6 +2,7 @@ package runner
 
 import (
 	"bytes"
+	"cloudiac/configs"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -21,7 +22,7 @@ type IaCTemplate struct {
 type StateStore struct {
 	SaveState           bool   `json:"save_state"`
 	Backend             string `json:"backend" default:"consul"`
-	Schema              string `json:"schema" default:"http"`
+	Scheme              string `json:"scheme" default:"http"`
 	StateKey            string `json:"state_key"`
 	StateBackendAddress string `json:"state_backend_address"`
 	Lock                bool   `json:"lock" defalt:"true"`
@@ -111,19 +112,22 @@ func ReadLogFile(filepath string, offset int, maxLines int) ([]string, error) {
 }
 
 func GetTemplateTaskPath(templateUUID string, taskId string) string {
-	templateDir := fmt.Sprintf("%s/%s/%s", StaticFilePath, templateUUID, taskId)
+	conf := configs.Get()
+	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePaath, templateUUID, taskId)
 	return templateDir
 }
 
 func FetchTaskLog(templateUUID string, taskId string, contentOffset int) ([]string, error) {
-	templateDir := fmt.Sprintf("%s/%s/%s", StaticFilePath, templateUUID, taskId)
+	conf := configs.Get()
+	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePaath, templateUUID, taskId)
 	logFile := fmt.Sprintf("%s/%s", templateDir, ContainerLogFileName)
 	lines, err := ReadLogFile(logFile, contentOffset, MaxLinesPreRead)
 	return lines, err
 }
 
 func CreateTemplatePath(templateUUID string, taskId string) (string, error) {
-	templateDir := fmt.Sprintf("%s/%s/%s", StaticFilePath, templateUUID, taskId)
+	conf := configs.Get()
+	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePaath, templateUUID, taskId)
 	err := PathCreate(templateDir)
 	return templateDir, err
 }
@@ -140,9 +144,11 @@ func ReqToTask(req *http.Request) (*CommitedTask, error) {
 // ReqToCommand create command structure to run container
 // from POST request
 func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error) {
+	log.Printf("%#v", req.Body)
 	var d ReqBody
 	if err := json.NewDecoder(req.Body).Decode(&d); err != nil {
 		req.Body.Close()
+		log.Panicln(err)
 		return nil, nil, nil, err
 	}
 
@@ -159,7 +165,8 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 	iaCTemplate.TaskId = d.TaskID
 
 	if d.DockerImage == "" {
-		c.Image = DefaultImage
+		conf := configs.Get()
+		c.Image = conf.Runner.DefaultImage
 	} else {
 		c.Image = d.DockerImage
 	}

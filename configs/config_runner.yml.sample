@@ -1,4 +1,8 @@
 listen: "0.0.0.0:19030"
+runner:
+  asset_path: "/tmp"
+  log_base_path: "/tmp"
+  default_image: "mt5225/tf-ansible:v0.0.1"
 consul:
   address: "192.168.0.19:8500"
   id: "CT-Runner-01"

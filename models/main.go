@@ -134,4 +134,5 @@ func Init(migrate bool) {
 	autoMigrate(&Task{}, sess)
 	autoMigrate(&Template{}, sess)
 	autoMigrate(&NotificationCfg{}, sess)
+	autoMigrate(&SystemCfg{}, sess)
 }

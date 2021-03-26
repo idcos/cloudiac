@@ -65,6 +65,18 @@ func appAutoInit(tx *db.Session) (err error) {
 	logger.Infoln("running")
 
 	// dev init
+	err = initAdmin(tx)
+	err = initSystemConfig(tx)
+	if err != nil {
+		return err
+	}
+
+	logger.Infoln("initialize ...")
+
+	return nil
+}
+
+func initAdmin(tx *db.Session) (err error) {
 	admin, _ := services.GetUserByEmail(tx, "admin")
 	if admin != nil {
 		return nil
@@ -81,13 +93,29 @@ func appAutoInit(tx *db.Session) (err error) {
 		Phone:    "",
 		Email:    "admin",
 		InitPass: initPass,
-		IsAdmin: true,
+		IsAdmin:  true,
 	})
-	if err != nil {
-		return err
+	return err
+}
+
+func initSystemConfig(tx *db.Session) (err error) {
+	logger := logs.Get().WithField("func", "appAutoInit")
+	cfg := []models.SystemCfg{}
+	err = services.QuerySystemConfig(tx).Find(&cfg)
+	if len(cfg) == 2 {
+		return
 	}
+	logger.Infoln("Start init system connfig...")
+	_, err = services.CreateSystemConfig(tx, models.SystemCfg{
+		Name:        "MAX_JOBS_PER_RUNNER",
+		Value:       "100",
+		Description: "每个CT-Runner同时启动的最大容器数",
+	})
 
-	logger.Infoln("initialize ...")
-
-	return nil
+	_, err = services.CreateSystemConfig(tx, models.SystemCfg{
+		Name:        "PERIOD_OF_LOG_SAVE",
+		Value:       "Permanent",
+		Description: "日志保存周期",
+	})
+	return err
 }
