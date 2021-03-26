@@ -42,8 +42,7 @@ func Register(g *gin.RouterGroup) {
 		user.PUT("/org/notification/update", w(handlers.Organization{}.UpdateNotificationCfgs))
 		//root.GET("/org/detail", w(handlers.Organization{}.Detail))
 	}
-	// sysConf := g.Group("/", w(middleware.Auth), w(middleware.IsAdmin))
-	sysConf := g.Group("/")
+	sysConf := g.Group("/", w(middleware.Auth), w(middleware.IsAdmin))
 	{
 		sysConf.GET("/system/search", w(handlers.SystemConfig{}.Search))
 		sysConf.PUT("/system/update", w(handlers.SystemConfig{}.Update))

@@ -15,7 +15,7 @@ type CreateTemplateForm struct {
 	RepoId      int    `form:"repoId" json:"repoId" binding:"required"`
 	RepoAddr    string `form:"repoAddr" json:"repoAddr" bingding:"required"`
 	RepoBranch  string `form:"repoBranch" json:"repoBranch" bingding:"required"`
-	SaveState   bool   `form:"saveState" json:"saveState" binding:"required,default:false"`
+	SaveState   bool   `form:"saveState" json:"saveState" binding:"required"`
 	Vars        []Var  `form:"vars" json:"vars"`
 	Varfile     string `form:"varfile" json:"varfile"`
 	Extra       string `form:"extra" json:"extra"`

@@ -1,7 +1,7 @@
 terraform {
   backend "consul" {
     address = "{{.Address}}"
-    scheme  = "{{.Schema}}"
+    scheme  = "{{.Scheme}}"
     path    = "{{.Path}}"
     lock    = true
     gzip    = false
