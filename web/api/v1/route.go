@@ -23,8 +23,7 @@ func Register(g *gin.RouterGroup) {
 		org.PUT("/org/changeStatus", w(handlers.Organization{}.ChangeOrgStatus))
 	}
 
-	// user := g.Group("/", w(middleware.Auth), w(middleware.AuthOrgId))
-	user := g.Group("/")
+	user := g.Group("/", w(middleware.Auth), w(middleware.AuthOrgId))
 
 	{
 		user.GET("/user/search", w(middleware.IsOrgOwner), w(handlers.User{}.Search))
