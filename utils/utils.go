@@ -2,6 +2,7 @@ package utils
 
 import (
 	"archive/zip"
+	"cloudiac/utils/logs"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/md5"
@@ -14,7 +15,6 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
-	"cloudiac/utils/logs"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -22,9 +22,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
-	"github.com/rs/xid"
 )
 
 const letterAndDigit = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

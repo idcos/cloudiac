@@ -181,6 +181,10 @@ func (s *Session) Offset(n interface{}) *Session {
 	return ToSess(s.db.Offset(n))
 }
 
+func (s *Session) Set(name string, value interface{}) *Session  {
+	return ToSess(s.db.Set(name, value))
+}
+
 func (s *Session) Count() (cnt int64, err error) {
 	err = s.db.Count(&cnt).Error
 	return
@@ -284,6 +288,8 @@ func (s *Session) CompareFieldValue(field string, q string) (*Session, error) {
 		return s.Where(fmt.Sprintf("%s = ?", field), val), nil
 	}
 }
+
+
 
 func openDB(args string) error {
 	var err error

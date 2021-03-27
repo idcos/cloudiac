@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -100,6 +101,7 @@ func StartServer() {
 		logger.Info(c.Request.Body)
 		id, err := runner.Run(c.Request)
 		if err != nil {
+			fmt.Println(err.Error())
 			c.JSON(500, gin.H{
 				"err": err.Error(),
 			})
@@ -114,6 +116,7 @@ func StartServer() {
 		logger.Debug(c.Request.Body)
 		containerStatus, err := runner.Status(c.Request)
 		if err != nil {
+			logger.Info(err.Error())
 			c.JSON(500, gin.H{
 				"status": containerStatus.Status.ExitCode,
 			})

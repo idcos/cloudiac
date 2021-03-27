@@ -200,7 +200,8 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 		log.Println("show state info ...")
 		cmdList = append(cmdList, fmt.Sprintf("%s&&%s", "terraform state pull", d.Extra))
 	} else {
-		cmdList = append(cmdList, fmt.Sprintf("%s %s&&%s", "terraform plan -var-file", d.Varfile, d.Extra))
+		cmdList = append(cmdList, fmt.Sprintf("%s %s", "terraform plan -var-file", d.Varfile))
+		//cmdList = append(cmdList, fmt.Sprintf("%s %s&&%s", "terraform plan -var-file", d.Varfile, d.Extra))
 	}
 
 	cmdstr := ""

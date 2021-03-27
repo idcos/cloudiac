@@ -50,6 +50,10 @@ type GitlabConfig struct {
 	Url   string `yaml:"url"`
 	Token string `yaml:"token"`
 }
+type TaskConfig struct {
+	TimeTicker int64  `yaml:"time_ticker"` // portal端轮训时间
+	LogPath    string `yaml:"log_path"`
+}
 
 type RunnerConfig struct {
 	AssetPath    string `yaml:"asset_path"`
@@ -81,6 +85,7 @@ type Config struct {
 	Consul                  ConsulConfig     `yaml:"consul"`
 	Gitlab                  GitlabConfig     `yaml:"gitlab"`
 	Runner                  RunnerConfig     `yaml:"runner"`
+	Task                    TaskConfig       `yaml:"task"`
 }
 
 var (
