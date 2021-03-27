@@ -32,9 +32,10 @@ func Register(g *gin.RouterGroup) {
 		user.PUT("/user/update", w(handlers.User{}.Update))
 		user.PUT("/user/removeUserForOrg", w(middleware.IsOrgOwner), w(handlers.User{}.RemoveUserForOrg))
 		user.PUT("/user/userPassReset", w(middleware.IsOrgOwner), w(handlers.User{}.UserPassReset))
-		user.GET("/org/listRepos", w(handlers.Organization{}.ListRepos))
-		user.GET("/org/listBranche", w(handlers.Organization{}.ListBranches))
-		user.GET("/org/getReadme", w(handlers.Organization{}.GetReadmeContent))
+
+		user.GET("/org/listRepos", w(handlers.GitLab{}.ListRepos))
+		user.GET("/org/listBranches", w(handlers.GitLab{}.ListBranches))
+		user.GET("/org/getReadme", w(handlers.GitLab{}.GetReadmeContent))
 
 		user.GET("/org/notification/search", w(handlers.Organization{}.ListNotificationCfgs))
 		user.POST("/org/notification/create", w(handlers.Organization{}.CreateNotificationCfgs))

@@ -102,6 +102,9 @@ const (
 	OrganizationInvalidStatus  = 9014
 	InvalidOrganizationId      = 9015
 
+	// gitlib
+	GitLabError = 9100
+
 	// task
 	TaskAlreadyExists = 10010
 	TaskNotExists     = 10011
