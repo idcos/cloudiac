@@ -14,4 +14,5 @@ MYSQL_DATABASE=iac
 MYSQL_USER=root
 MYSQL_PASSWORD=Passw0rd
 
-
+GITLAB_URL=https://git.addr
+GITLAB_TOKEN=
