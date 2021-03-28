@@ -10,6 +10,7 @@ const (
 	JSONParseError          = 1015
 	StateTryAgainLater      = 1016
 	ColValidateError        = 1017
+	NameDuplicate           = 1018
 
 	NotImplement = 1020
 
@@ -323,5 +324,8 @@ var errorMsgs = map[int]map[string]string{
 	},
 	InvalidOrganizationId: {
 		"zh-cn": "无效的组织ID",
+	},
+	NameDuplicate: {
+		"zh-cn": "名称重复",
 	},
 }

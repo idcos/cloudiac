@@ -54,10 +54,24 @@ func QueryTask(query *db.Session) *db.Session {
 	return query.Model(&models.Task{})
 }
 
-func TaskDetail(tx *db.Session, taskId uint64) *db.Session {
-	return tx.Table(models.Task{}.TableName()).
+func TaskDetail(tx *db.Session, taskId uint) *db.Session {
+	return tx.Table(models.Task{}.TableName()).Select(fmt.Sprintf("%s.*, tpl.*", models.Task{}.TableName())).
 		Joins(fmt.Sprintf("left join %s as tpl on tpl.id = %s.template_id", models.Template{}.TableName(), models.Task{}.TableName())).
 		Where(fmt.Sprintf("%s.id = %d", models.Task{}.TableName(), taskId))
+}
+
+type LastTaskInfo struct {
+	Status     string  `json:"status"`
+	Guid       string  `json:"taskGuid"`
+	UpdatedAt  time.Time `json:"updatedAt"`
+}
+func GetTaskByTplId(tx *db.Session, tplId uint) (*LastTaskInfo, e.Error) {
+	lastTaskInfo := LastTaskInfo{}
+	err := tx.Table(models.Task{}.TableName()).Select("status, guid, updated_at").Where("template_id = ?", tplId).Find(&lastTaskInfo)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return &lastTaskInfo, nil
 }
 
 //var (

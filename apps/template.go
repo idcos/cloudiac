@@ -10,23 +10,43 @@ import (
 	"cloudiac/utils"
 	"encoding/json"
 	"fmt"
+	"time"
 )
+
+type SearchTemplateResp struct {
+	Id           uint   `json:"id"`
+	Name         string `json:"name"`
+	RepoAddr     string `json:"repoAddr"`
+	TaskStatus   string `json:"taskStatus"`
+	TaskGuid     string `json:"taskGuid"`
+	TaskUpdatedAt time.Time `json:"taskUpdatedAt"`
+}
 
 func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (interface{}, e.Error) {
 	query := services.QueryTemplate(c.DB())
 	if form.Status != "" {
 		query = query.Where("status = ?", form.Status)
 	}
-	// if form.Q != "" {
-	// 	qs := "%" + form.Q + "%"
-	// 	query = query.Where("name LIKE ? OR phone LIKE ? OR email LIKE ? ", qs, qs, qs)
-	// }
+	if form.Q != "" {
+		qs := "%" + form.Q + "%"
+		query = query.Where("name LIKE ? OR description LIKE ?", qs, qs)
+	}
 
 	query = query.Order("created_at DESC")
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	templates := make([]*models.Template, 0)
+	templates := make([]*SearchTemplateResp, 0)
 	if err := p.Scan(&templates); err != nil {
 		return nil, e.New(e.DBError, err)
+	}
+
+	for _, tpl := range templates {
+		lastTaskInfo, err := services.GetTaskByTplId(c.DB(), tpl.Id)
+		if err != nil {
+			return nil, err
+		}
+		tpl.TaskGuid = lastTaskInfo.Guid
+		tpl.TaskStatus = lastTaskInfo.Status
+		tpl.TaskUpdatedAt = lastTaskInfo.UpdatedAt
 	}
 
 	return page.PageResp{
@@ -67,6 +87,7 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 		jsons, _ := json.Marshal(vars)
 
 		template, err = services.CreateTemplate(tx, models.Template{
+			OrgId:       c.OrgId,
 			Name:        form.Name,
 			Guid:        guid,
 			Description: form.Description,
@@ -78,6 +99,7 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 			Varfile:     form.Varfile,
 			Extra:       form.Extra,
 			Timeout:     form.Timeout,
+			Creator:     c.UserId,
 		})
 		if err != nil {
 			return nil, err
@@ -137,6 +159,10 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (user *mo
 
 	if form.HasKey("timeout") {
 		attrs["timeout"] = form.Timeout
+	}
+
+	if form.HasKey("status") {
+		attrs["status"] = form.Status
 	}
 
 	user, err = services.UpdateTemplate(c.DB(), form.Id, attrs)

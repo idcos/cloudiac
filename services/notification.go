@@ -7,12 +7,16 @@ import (
 	"fmt"
 )
 
-func ListNotificationCfgs(tx *db.Session, orgId int) (interface{}, error) {
-	cfgs := []*models.NotificationCfg{}
-	if err := tx.Where("org_id = ?", orgId).First(&cfgs); err != nil {
+func ListNotificationCfgs(tx *db.Session, orgId uint) (interface{}, error) {
+	users := []*models.User{}
+	err := tx.Table(models.User{}.TableName()).
+		Joins(fmt.Sprintf("right join %s as n on %s.id = n.user_id", models.NotificationCfg{}.TableName(), models.User{}.TableName())).
+		Where(fmt.Sprintf("n.org_id = %d", orgId)).Debug().Find(&users)
+	if err != nil {
 		return nil, err
 	}
-	return cfgs, nil
+
+	return users, nil
 }
 
 func UpdateNotificationCfg(tx *db.Session, id uint, attrs models.Attrs) (notificationCfg *models.NotificationCfg, err e.Error) {
@@ -33,8 +37,8 @@ func CreateNotificationCfg(tx *db.Session, cfg models.NotificationCfg) (*models.
 	return &cfg, nil
 }
 
-func DeleteOrganizationCfg(tx *db.Session, cfgId int) e.Error {
-	if _, err := tx.Where("id = ?", cfgId).Delete(&models.NotificationCfg{}); err != nil {
+func DeleteOrganizationCfg(tx *db.Session, orgId uint, userId uint) e.Error {
+	if _, err := tx.Where("org_id = ? AND user_id = ?", orgId, userId).Debug().Delete(&models.NotificationCfg{}); err != nil {
 		return e.New(e.DBError, fmt.Errorf("delete notification cfg error: %v", err))
 	}
 	return nil

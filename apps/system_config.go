@@ -20,9 +20,13 @@ func (m *searchSystemConfigResp) TableName() string {
 	return models.SystemCfg{}.TableName()
 }
 
-func SearchSystemConfig(c *ctx.ServiceCtx, form *forms.SearchSystemConfigForm) (interface{}, e.Error) {
-	query := services.QuerySystemConfig(c.DB())
-	rs, _ := getPage(query, form, &searchSystemConfigResp{})
+func SearchSystemConfig(c *ctx.ServiceCtx) (interface{}, e.Error) {
+	rs := []*searchSystemConfigResp{}
+	err := services.QuerySystemConfig(c.DB()).Find(&rs)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
 	return rs, nil
 }
 

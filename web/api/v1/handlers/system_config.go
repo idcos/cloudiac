@@ -20,11 +20,7 @@ func (SystemConfig) Create(c *ctx.GinRequestCtx) {
 }
 
 func (SystemConfig) Search(c *ctx.GinRequestCtx) {
-	form := forms.SearchSystemConfigForm{}
-	if err := c.Bind(&form); err != nil {
-		return
-	}
-	c.JSONResult(apps.SearchSystemConfig(c.ServiceCtx(), &form))
+	c.JSONResult(apps.SearchSystemConfig(c.ServiceCtx()))
 }
 
 func (SystemConfig) Update(c *ctx.GinRequestCtx) {

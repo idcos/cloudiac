@@ -5,6 +5,7 @@ import (
 	"cloudiac/consts"
 	"cloudiac/consts/e"
 	"cloudiac/libs/ctx"
+	"cloudiac/libs/page"
 	"cloudiac/models"
 	"cloudiac/models/forms"
 	"cloudiac/services"
@@ -14,13 +15,42 @@ import (
 	"os"
 )
 
-type TaskDetailResp struct {
+type SearchTaskResp struct {
+	models.Task
+}
+
+func SearchTask(c *ctx.ServiceCtx, form *forms.SearchTaskForm) (interface{}, e.Error) {
+	query := services.QueryTask(c.DB())
+	query = query.Where("template_id = ?", form.TemplateId)
+	if form.Status != "" {
+		query = query.Where("status = ?", form.Status)
+	}
+	if form.Q != "" {
+		qs := "%" + form.Q + "%"
+		query = query.Where("name LIKE ? OR description LIKE ?", qs, qs)
+	}
+
+	query = query.Order("created_at DESC")
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	tasks := make([]*models.Task, 0)
+	if err := p.Scan(&tasks); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     tasks,
+	}, nil
+}
+
+type DetailTaskResp struct {
 	models.Task
 	models.Template
 }
 
-func TaskDetail(c *ctx.ServiceCtx, form *forms.DetailTaskForm) (interface{}, e.Error) {
-	resp := TaskDetailResp{}
+func DetailTask(c *ctx.ServiceCtx, form *forms.DetailTaskForm) (interface{}, e.Error) {
+	resp := DetailTaskResp{}
 	if err := services.TaskDetail(c.DB().Debug(), form.TaskId).
 		First(&resp); err != nil {
 		return nil, e.New(e.DBError, err)
@@ -28,12 +58,13 @@ func TaskDetail(c *ctx.ServiceCtx, form *forms.DetailTaskForm) (interface{}, e.E
 	return resp, nil
 }
 
-func TaskCreate(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.Error) {
-	guid := utils.GenGuid("task")
+func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.Error) {
+	guid := utils.GenGuid("run")
 	conf := configs.Get()
 	logPath := fmt.Sprintf("%s/%s/%s", conf.Task.LogPath, form.TemplateGuid, guid)
 	b, _ := json.Marshal(map[string]interface{}{
-		"backend_url": fmt.Sprintf("http://%s:%s/api/v1", form.RunnerIp, form.RunnerPort),
+		"backend_url": fmt.Sprintf("http://%s:%s/api/v1", form.CtServiceIp, form.CtServicePort),
+		"ctServiceId": form.CtServiceId,
 		"log_file":    logPath,
 		"log_offset":  0,
 	})
@@ -48,7 +79,7 @@ func TaskCreate(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 		Guid:         guid,
 		TaskType:     form.TaskType,
 		Status:       consts.TaskPending,
-		Creator:      form.Creator,
+		Creator:      c.UserId,
 		TaskName:     form.TaskName,
 		BackendInfo:  models.JSON(b),
 	})

@@ -55,9 +55,9 @@ func main() {
 	if err := tx.Commit(); err != nil {
 		logger.Fatalln(err)
 	}
-	fmt.Println(configs.Get().Task.TimeTicker,"configs.Get().Task.TimeTicker")
-	go services.RunTaskToRunning()
-	go services.RunTaskState()
+	//fmt.Println(configs.Get().Task.TimeTicker,"configs.Get().Task.TimeTicker")
+	//go services.RunTaskToRunning()
+	//go services.RunTaskState()
 	//services.RunTaskState()
 
 	web.StartServer()

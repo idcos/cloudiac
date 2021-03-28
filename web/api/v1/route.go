@@ -16,46 +16,38 @@ func Register(g *gin.RouterGroup) {
 
 	g.GET("/org/search", w(middleware.Auth), w(handlers.Organization{}.Search))
 	g.GET("/org/detail", w(middleware.Auth), w(handlers.Organization{}.Detail))
-	org := g.Group("/", w(middleware.Auth), w(middleware.IsAdmin))
+
+	// IaC管理员权限
+	sys := g.Group("/", w(middleware.Auth), w(middleware.IsAdmin))
 	{
-		org.POST("/org/create", w(handlers.Organization{}.Create))
-		org.PUT("/org/update", w(handlers.Organization{}.Update))
-		org.PUT("/org/changeStatus", w(handlers.Organization{}.ChangeOrgStatus))
+		sys.POST("/org/create", w(handlers.Organization{}.Create))
+		sys.PUT("/org/update", w(handlers.Organization{}.Update))
+		sys.PUT("/org/changeStatus", w(handlers.Organization{}.ChangeOrgStatus))
+
+		ctrl.Register(sys.Group("system"), &handlers.SystemConfig{})
 	}
 
-	user := g.Group("/", w(middleware.Auth), w(middleware.AuthOrgId))
-
+	root := g.Group("/", w(middleware.Auth), w(middleware.AuthOrgId))
 	{
-		user.GET("/user/search", w(middleware.IsOrgOwner), w(handlers.User{}.Search))
-		user.GET("/user/detail", w(middleware.IsOrgOwner), w(handlers.User{}.Detail))
-		user.POST("/user/create", w(middleware.IsOrgOwner), w(handlers.User{}.Create))
-		user.PUT("/user/update", w(handlers.User{}.Update))
-		user.PUT("/user/removeUserForOrg", w(middleware.IsOrgOwner), w(handlers.User{}.RemoveUserForOrg))
-		user.PUT("/user/userPassReset", w(middleware.IsOrgOwner), w(handlers.User{}.UserPassReset))
+		root.GET("/user/search", w(middleware.IsOrgOwner), w(handlers.User{}.Search))
+		root.GET("/user/detail", w(middleware.IsOrgOwner), w(handlers.User{}.Detail))
+		root.POST("/user/create", w(middleware.IsOrgOwner), w(handlers.User{}.Create))
+		root.PUT("/user/update", w(handlers.User{}.Update))
+		root.PUT("/user/removeUserForOrg", w(middleware.IsOrgOwner), w(handlers.User{}.RemoveUserForOrg))
+		root.PUT("/user/userPassReset", w(middleware.IsOrgOwner), w(handlers.User{}.UserPassReset))
 
-		user.GET("/org/listRepos", w(handlers.GitLab{}.ListRepos))
-		user.GET("/org/listBranches", w(handlers.GitLab{}.ListBranches))
-		user.GET("/org/getReadme", w(handlers.GitLab{}.GetReadmeContent))
+		root.GET("/gitlab/listRepos", w(handlers.GitLab{}.ListRepos))
+		root.GET("/gitlab/listBranches", w(handlers.GitLab{}.ListBranches))
+		root.GET("/gitlab/getReadme", w(handlers.GitLab{}.GetReadmeContent))
 
-		user.GET("/org/notification/search", w(handlers.Organization{}.ListNotificationCfgs))
-		user.POST("/org/notification/create", w(handlers.Organization{}.CreateNotificationCfgs))
-		user.DELETE("/org/notification/delete", w(handlers.Organization{}.DeleteNotificationCfgs))
-		user.PUT("/org/notification/update", w(handlers.Organization{}.UpdateNotificationCfgs))
-		//root.GET("/org/detail", w(handlers.Organization{}.Detail))
-	}
-	sysConf := g.Group("/", w(middleware.Auth), w(middleware.IsAdmin))
-	{
-		sysConf.GET("/system/search", w(handlers.SystemConfig{}.Search))
-		sysConf.PUT("/system/update", w(handlers.SystemConfig{}.Update))
+		ctrl.Register(root.Group("notification"), &handlers.Notification{})
+		ctrl.Register(root.Group("resourceAccount"), &handlers.ResourceAccount{})
+		ctrl.Register(root.Group("template"), &handlers.Template{})
+		ctrl.Register(root.Group("task"), &handlers.Task{})
 	}
 
-	template := g.Group("/", w(middleware.Auth), w(middleware.IsAdmin))
-	{
-		ctrl.Register(template.Group("template"), &handlers.Template{})
-	}
-
-	user.GET("/sse/hello/:filename", w(handlers.HelloSse))
-	user.GET("/sse/test", w(handlers.TestSSE))
+	root.GET("/sse/hello/:filename", w(handlers.HelloSse))
+	root.GET("/sse/test", w(handlers.TestSSE))
 
 	// 系统状态
 	g.GET("/systemStatus/search", w(handlers.PortalSystemStatusSearch))
@@ -64,9 +56,4 @@ func Register(g *gin.RouterGroup) {
 	//实现task排队调度过程
 	//实现task detail接口
 	//实现task logs接口
-	task := g.Group("/task")
-	{
-		task.GET("/detail",w(handlers.TaskDetail))
-		task.POST("/create",w(handlers.TaskCreate))
-	}
 }

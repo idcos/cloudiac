@@ -17,10 +17,15 @@ type UpdateNotificationCfgForm struct {
 
 type CreateNotificationCfgForm struct {
 	BaseForm
-	OrgId            int     `form:"orgId" json:"orgId" binding:"required"`
 	NotificationType string  `form:"notificationType" json:"notificationType" binding:"required"`
 	EventType        string  `form:"eventType" json:"eventType" binding:"required"`
+	UserIds          []uint  `form:"userIds" json:"userIds"`
 	CfgInfo          CfgInfo `form:"cfgInfo" json:"cfgInfo"`
+}
+
+type DeleteNotificationCfgForm struct {
+	BaseForm
+	UserId  uint  `form:"userId" json:"userId" binding:"required"`
 }
 
 type CreateOrganizationForm struct {

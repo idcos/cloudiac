@@ -10,8 +10,7 @@ type Var struct {
 type CreateTemplateForm struct {
 	BaseForm
 	Name        string `form:"name" json:"name" binding:"required,gte=2,lte=32"`
-	OrgId       int    `form:"orgId" json:"orgId" binding:"required"`
-	Description string `form:"description" json:"Description" binding:"required"`
+	Description string `form:"description" json:"Description" binding:""`
 	RepoId      int    `form:"repoId" json:"repoId" binding:"required"`
 	RepoAddr    string `form:"repoAddr" json:"repoAddr" bingding:"required"`
 	RepoBranch  string `form:"repoBranch" json:"repoBranch" bingding:"required"`
@@ -38,4 +37,5 @@ type UpdateTemplateForm struct {
 	Varfile     string `form:"varfile" json:"varfile"`
 	Extra       string `form:"extra" json:"extra"`
 	Timeout     int    `form:"timeout" json:"timeout"`
+	Status      string `form:"status" json:"status"`
 }

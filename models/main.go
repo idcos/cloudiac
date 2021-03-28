@@ -135,4 +135,6 @@ func Init(migrate bool) {
 	autoMigrate(&Template{}, sess)
 	autoMigrate(&NotificationCfg{}, sess)
 	autoMigrate(&SystemCfg{}, sess)
+	autoMigrate(&ResourceAccount{}, sess)
+	autoMigrate(&CtResourceMap{}, sess)
 }
