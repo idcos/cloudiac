@@ -61,7 +61,7 @@ func getEvent(filename string) (*sse.Event, error) {
 }
 
 func TestSSE(c *ctx.GinRequestCtx) {
-	ctx, cancel := context.WithCancel(context.Background())
+	contx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	chanStream := make(chan string)
 	done := make(chan bool)
@@ -73,8 +73,8 @@ func TestSSE(c *ctx.GinRequestCtx) {
 				// client gave up
 				done <- true
 				return
-			case <-ctx.Done():
-				switch ctx.Err() {
+			case <-contx.Done():
+				switch contx.Err() {
 				case context.DeadlineExceeded:
 					log.Printf("timeout")
 				}
@@ -84,7 +84,7 @@ func TestSSE(c *ctx.GinRequestCtx) {
 		}
 	}()
 
-	f, err := os.Open("/tmp/index.html")
+	f, err := os.Open("./ct-c1el3dabtmijbv0jg70g/task-c1eqcmqbtmile018n5ng/runner.log")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -160,5 +160,83 @@ func HelloSse(c *ctx.GinRequestCtx) {
 			_ = event.Render(c.Writer)
 			c.Writer.Flush()
 		}
+	}
+}
+
+func TaskLogSSE(c *ctx.GinRequestCtx) {
+	contx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	chanStream := make(chan string)
+	done := make(chan bool)
+	go func() {
+		for {
+			select {
+			case <-c.Request.Context().Done():
+				// client gave up
+				done <- true
+				return
+			case <-contx.Done():
+				switch contx.Err() {
+				case context.DeadlineExceeded:
+					log.Printf("timeout")
+				}
+				done <- true
+				return
+			}
+		}
+	}()
+
+	logPath:=c.Query("logPath")
+	f, err := os.Open(logPath)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer f.Close()
+
+	rd := bufio.NewReader(f)
+
+	var mu sync.RWMutex
+	go func() {
+		for {
+			mu.Lock()
+			str, _, err := rd.ReadLine()
+			if err != nil {
+				if err.Error() == "EOF" {
+					time.Sleep(1000)
+					mu.Unlock()
+					continue
+				} else {
+					log.Println("Read Error:", err.Error())
+					done <- true
+					return
+				}
+			}
+			chanStream <- string(str)
+			mu.Unlock()
+		}
+	}()
+
+	count := 0 // to indicate the message id
+	isStreaming := c.Stream(func(w io.Writer) bool {
+		for {
+			select {
+			case <-done:
+				// when deadline is reached, send 'end' event
+				c.SSEvent("end", "end")
+				return false
+			case msg := <-chanStream:
+				// send events to client
+				c.Render(-1, sse.Event{
+					Id:    strconv.Itoa(count),
+					Event: "message",
+					Data:  msg,
+				})
+				count++
+				return true
+			}
+		}
+	})
+	if !isStreaming {
+		log.Println("Stream Closed!")
 	}
 }

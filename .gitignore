@@ -3,3 +3,4 @@ builds/
 .env
 config.yml
 .DS_Store
+ct-*/

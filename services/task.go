@@ -12,6 +12,7 @@ import (
 	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
+	"github.com/jinzhu/gorm"
 	"net/http"
 	"os"
 	"time"
@@ -61,10 +62,11 @@ func TaskDetail(tx *db.Session, taskId uint) *db.Session {
 }
 
 type LastTaskInfo struct {
-	Status     string  `json:"status"`
-	Guid       string  `json:"taskGuid"`
-	UpdatedAt  time.Time `json:"updatedAt"`
+	Status    string    `json:"status"`
+	Guid      string    `json:"taskGuid"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
+
 func GetTaskByTplId(tx *db.Session, tplId uint) (*LastTaskInfo, e.Error) {
 	lastTaskInfo := LastTaskInfo{}
 	err := tx.Table(models.Task{}.TableName()).Select("status, guid, updated_at").Where("template_id = ?", tplId).Find(&lastTaskInfo)
@@ -118,16 +120,14 @@ func RunTaskToRunning() {
 	logger := logs.Get().WithField("action", "RunTaskToRunning")
 	dbsess := db.Get().Debug()
 	conf := configs.Get()
-	var (
-		taskTicker *time.Ticker = time.NewTicker(time.Duration(conf.Task.TimeTicker) * time.Second)
-		runnerAddr string       = "http://127.0.0.1:19030/api/v1"
-		//runnerAddr string       = ""
-	)
+	taskTicker := time.NewTicker(time.Duration(conf.Task.TimeTicker) * time.Second)
+
 	for {
 		go func() {
 			tx := dbsess.Begin()
 			task := models.Task{}
 			tpl := models.Template{}
+			systemCfg := models.SystemCfg{}
 			//获取状态为pending的任务 查询时增加行锁
 			if err := tx.Set("gorm:query_option", "FOR UPDATE").
 				Where("status = ?", consts.TaskPending).
@@ -135,6 +135,18 @@ func RunTaskToRunning() {
 				tx.Commit()
 				return
 			}
+
+			if err := dbsess.Table(models.SystemCfg{}.TableName()).
+				Where("name = 'MAX_JOBS_PER_RUNNER'").First(&systemCfg); err != nil && err != gorm.ErrRecordNotFound {
+				logger.Debugf("db err: %v", err)
+			}
+			count, _ := dbsess.Table(models.Task{}.TableName()).Where("ct_service_id = ?", task.CtServiceId).Count()
+			if int(count) > utils.Str2int(systemCfg.Value) {
+				tx.Commit()
+				logger.Debugf("runner concurrent num gt %d")
+				return
+			}
+
 			//获取模板参数
 			if err := tx.
 				Where("id = ?", task.TemplateId).
@@ -142,14 +154,16 @@ func RunTaskToRunning() {
 				tx.Commit()
 				return
 			}
+			taskBackend := make(map[string]interface{}, 0)
+			json.Unmarshal(task.BackendInfo, &taskBackend)
+
 			//向runner下发task
+			runnerAddr := taskBackend["backend_url"]
 			addr := fmt.Sprintf("%s%s", runnerAddr, "/task/run")
-			//todo 入参
 			data := map[string]interface{}{
 				"repo":          tpl.RepoAddr,
 				"template_uuid": tpl.Guid,
 				"task_id":       task.Guid,
-				// todo taskGuid 生成
 				//"task_id":       strconv.Itoa(int(task.Id)),
 				"state_store": map[string]interface{}{
 					"save_state":            tpl.SaveState,
@@ -200,6 +214,7 @@ func RunTaskToRunning() {
 				Update(map[string]interface{}{
 					"status": status,
 					//这里是第一生成backend直接修改即可
+					"start_at":     time.Now(),
 					"backend_info": models.JSON(getBackendInfo(task.BackendInfo, runnerResp.Id)),
 				}); err != nil {
 				if err := tx.Commit(); err != nil {
@@ -215,10 +230,18 @@ func RunTaskToRunning() {
 	}
 }
 
-func writeTaskLog(contentList []string, logPath string) error {
+func writeTaskLog(contentList []string, logPath string, offset float64) error {
 	path := fmt.Sprintf("%s/%s", logPath, consts.TaskLogName)
+	var (
+		file *os.File
+		err  error
+	)
+	if offset == 0 {
+		file, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
+	} else {
+		file, err = os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0666)
+	}
 
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return err
 	}
@@ -236,7 +259,6 @@ func RunTaskState() {
 	logger := logs.Get().WithField("action", "RunTaskState")
 	dbsess := db.Get().Debug()
 	taskTicker := time.NewTicker(time.Duration(configs.Get().Task.TimeTicker) * time.Second)
-	runnerAddr := "http://127.0.0.1:19030/api/v1"
 
 	for {
 		go func() {
@@ -260,6 +282,7 @@ func RunTaskState() {
 				return
 			}
 			json.Unmarshal(task.BackendInfo, &taskBackend)
+			runnerAddr := taskBackend["backend_url"]
 			addr := fmt.Sprintf("%s%s", runnerAddr, "/task/status")
 			fmt.Println(addr)
 
@@ -296,22 +319,24 @@ func RunTaskState() {
 				logger.Errorf("unmarshal error: %v, body: %s", err, string(respData))
 			}
 
-			if err := writeTaskLog(runnerResp.LogContent, taskBackend["log_file"].(string)); err != nil {
+			if err := writeTaskLog(runnerResp.LogContent, taskBackend["log_file"].(string), taskBackend["log_offset"].(float64)); err != nil {
 				logger.Errorf("write task log error: %v", err)
 			}
 
-			if runnerResp.Status == "exised" && runnerResp.StatusCode != 0 {
+			if task.StartAt.Unix()+task.Timeout > time.Now().Unix() {
+				status = consts.TaskTimeoout
+			} else if runnerResp.Status == "exised" && runnerResp.StatusCode != 0 {
 				status = consts.TaskFailed
-			} else {
+			} else if runnerResp.Status == "exised" && runnerResp.StatusCode == 0 {
 				status = consts.TaskComplete
 			}
-			fmt.Println(status)
+
 			//更新task状态
 			if _, err := tx.
 				Table(models.Task{}.TableName()).
 				Where("id = ?", task.Id).
 				Update(map[string]interface{}{
-					//"status":       status,
+					"status":       status,
 					"backend_info": updateBackendInfo(task.BackendInfo, runnerResp.LogContentLines),
 				}); err != nil {
 				if err := tx.Commit(); err != nil {

@@ -88,11 +88,13 @@ func (cmd *Command) Create(dirMapping string) error {
 		nil,
 		nil,
 		id.String())
+	if err != nil {
+		log.Printf("ContainerCreate err: %v", err)
+		return err
+	}
 
 	cmd.ContainerInstance.ID = cont.ID
 	log.Printf("Create container ID = %s", cont.ID)
-
 	err = cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
-
 	return err
 }
