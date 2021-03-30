@@ -3,3 +3,8 @@ mysql: "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL
 gitlab:
   url: "${GITLAB_URL}"
   token: "${GITLAB_TOKEN}"
+consul:
+  address: "127.0.0.1:8500"
+task:
+  time_ticker: 300
+  log_path: "."

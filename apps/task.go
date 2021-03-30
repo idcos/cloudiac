@@ -82,5 +82,6 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 		Creator:      c.UserId,
 		TaskName:     form.TaskName,
 		BackendInfo:  models.JSON(b),
+		CtServiceId:  form.CtServiceId,
 	})
 }

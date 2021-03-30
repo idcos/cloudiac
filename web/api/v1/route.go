@@ -48,6 +48,7 @@ func Register(g *gin.RouterGroup) {
 
 	root.GET("/sse/hello/:filename", w(handlers.HelloSse))
 	root.GET("/sse/test", w(handlers.TestSSE))
+	root.GET("/task_log/sse", w(handlers.TaskLogSSE))
 
 	// 系统状态
 	g.GET("/systemStatus/search", w(handlers.PortalSystemStatusSearch))

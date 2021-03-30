@@ -56,8 +56,8 @@ func main() {
 		logger.Fatalln(err)
 	}
 	//fmt.Println(configs.Get().Task.TimeTicker,"configs.Get().Task.TimeTicker")
-	//go services.RunTaskToRunning()
-	//go services.RunTaskState()
+	go services.RunTaskToRunning()
+	go services.RunTaskState()
 	//services.RunTaskState()
 
 	web.StartServer()
