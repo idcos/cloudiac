@@ -19,8 +19,9 @@ import (
 type Option struct {
 	common.OptionVersion
 
-	Config  string `short:"c" long:"config"  default:"config.yml" description:"config file"`
-	Verbose []bool `short:"v" long:"verbose" description:"Show verbose debug message"`
+	Config     string `short:"c" long:"config"  default:"config.yml" description:"config file"`
+	Verbose    []bool `short:"v" long:"verbose" description:"Show verbose debug message"`
+	ReRegister bool `long:"re-register" description:"Re registration service to Consul"`
 }
 
 var opt = Option{}
@@ -34,10 +35,10 @@ func main() {
 
 	logs.Init(utils.LogLevel(len(opt.Verbose)))
 	configs.Init(opt.Config)
+	common.ReRegisterService(opt.ReRegister, "IaC-Portal")
 
 	db.Init()
 	models.Init(true)
-	//rabbitmq.InitAMQP(configs.Get().Rmq.Addr)
 
 	logger := logs.Get()
 	tx := db.Get().Begin()

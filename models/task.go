@@ -24,10 +24,10 @@ type Task struct {
 	TaskName     string     `json:"taskName" gorm:"not null;comment:'任务名称'"`
 	TemplateGuid string     `json:"templateGuid" gorm:"size:32;not null;comment:'模板GUID'"`
 	TemplateId   uint       `json:"templateId" gorm:"size:32;not null;comment:'模板ID'"`
-	TaskType     string     `json:"taskTupe" gorm:"type:enum('plan','apply');not null;comment:'作业类型'"`
+	TaskType     string     `json:"taskType" gorm:"type:enum('plan','apply');not null;comment:'作业类型'"`
 	Status       string     `json:"status" gorm:"type:enum('pending','running','failed','complete','timeout');default:'pending';comment:'作业状态'"`
 	BackendInfo  JSON       `json:"backendInfo" gorm:"type:json;null;comment:'执行信息'" json:"backend_info"`
-	Timeout      int64      `json:"timeout" gorm:"size:32;comment:'超时时长'"`
+	Timeout      int        `json:"timeout" gorm:"size:32;comment:'超时时长'"`
 	Creator      uint       `json:"creator" gorm:"not null;comment:'创建人'"`
 	StartAt      *time.Time `json:"startAt" gorm:"null;comment:'任务开始时间'"`
 	EndAt        *time.Time `json:"endAt" gorm:"null;comment:'任务结束时间'"`

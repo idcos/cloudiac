@@ -16,6 +16,7 @@ import (
 type SearchTemplateResp struct {
 	Id           uint   `json:"id"`
 	Name         string `json:"name"`
+	Guid         string `json:"guid"`
 	RepoAddr     string `json:"repoAddr"`
 	TaskStatus   string `json:"taskStatus"`
 	TaskGuid     string `json:"taskGuid"`
@@ -132,6 +133,10 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (user *mo
 
 	if form.HasKey("description") {
 		attrs["description"] = form.Description
+	}
+
+	if form.HasKey("saveState") {
+		attrs["saveState"] = form.SaveState
 	}
 
 	if form.HasKey("vars") {

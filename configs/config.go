@@ -50,6 +50,7 @@ type GitlabConfig struct {
 	Url   string `yaml:"url"`
 	Token string `yaml:"token"`
 }
+
 type TaskConfig struct {
 	TimeTicker int64  `yaml:"time_ticker"` // portal端轮训时间
 	LogPath    string `yaml:"log_path"`

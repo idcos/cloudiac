@@ -9,7 +9,7 @@ import (
 	consulapi "github.com/hashicorp/consul/api"
 )
 
-func Register(consulConfig configs.ConsulConfig) error {
+func Register(serviceName string, consulConfig configs.ConsulConfig) error {
 	config := consulapi.DefaultConfig()
 	config.Address = consulConfig.Address
 	client, err := consulapi.NewClient(config)
@@ -25,7 +25,7 @@ func Register(consulConfig configs.ConsulConfig) error {
 
 	registration := new(consulapi.AgentServiceRegistration)
 	registration.ID = consulConfig.ServiceID      // 服务节点的名称
-	registration.Name = "CT-Runner"               // 服务名称
+	registration.Name = serviceName               // 服务名称
 	registration.Port = consulConfig.ServicePort  // 服务端口
 	registration.Tags = tags                      // tag，可以为空
 	registration.Address = consulConfig.ServiceIP // 服务 IP

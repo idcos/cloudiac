@@ -12,6 +12,6 @@ type GetGitBranchesForm struct {
 
 type GetReadmeForm struct {
 	BaseForm
-	RepoId       int    `form:"repoId" json:"repoId"`
+	RepoId       int    `form:"repoId" json:"repoId" binding:"required"`
 	Branch       string `form:"branch" json:"branch"`
 }

@@ -11,7 +11,6 @@ import (
 	"cloudiac/configs"
 	"cloudiac/runner"
 	"cloudiac/utils"
-	"cloudiac/utils/consul"
 	"cloudiac/utils/logs"
 
 	"github.com/gin-gonic/gin"
@@ -23,6 +22,7 @@ type Option struct {
 
 	Config  string `short:"c" long:"config"  default:"config.yml" description:"config file"`
 	Verbose []bool `short:"v" long:"verbose" description:"Show verbose debug message"`
+	ReRegister bool `long:"re-register" description:"Re registration service to Consul"`
 }
 
 func main() {
@@ -36,7 +36,7 @@ func main() {
 
 	logs.Init(utils.LogLevel(len(opt.Verbose)))
 	configs.Init(opt.Config)
-	ServiceRegister()
+	common.ReRegisterService(opt.ReRegister, "CT-Runner")
 	StartServer()
 }
 
@@ -147,18 +147,5 @@ func StartServer() {
 	logger.Infof("starting runner on %v", conf.Listen)
 	if err := e.Run(conf.Listen); err != nil {
 		logger.Fatalln(err)
-	}
-}
-
-func ServiceRegister() {
-	conf := configs.Get()
-	logger := logs.Get()
-
-	logger.Debug("Start register CT-Runner service")
-	err := consul.Register(conf.Consul)
-	if err != nil {
-		logger.Debug("Service register failied: %s", err)
-	} else {
-		logger.Debug("Service register success.")
 	}
 }

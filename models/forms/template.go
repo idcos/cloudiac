@@ -30,9 +30,10 @@ type SearchTemplateForm struct {
 
 type UpdateTemplateForm struct {
 	BaseForm
-	Id          uint   `form:"id" json:"id" binding:""`
-	Name        string `form:"name" json:"name" binding:"gte=2,lte=32"`
-	Description string `form:"description" json:"Description" binding:"required"`
+	Id          uint   `form:"id" json:"id" binding:"required"`
+	Name        string `form:"name" json:"name"`
+	Description string `form:"description" json:"Description"`
+	SaveState   bool   `form:"saveState" json:"saveState"`
 	Vars        []Var  `form:"vars" json:"vars"`
 	Varfile     string `form:"varfile" json:"varfile"`
 	Extra       string `form:"extra" json:"extra"`

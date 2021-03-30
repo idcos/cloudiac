@@ -11,6 +11,11 @@ import (
 func Register(g *gin.RouterGroup) {
 	w := ctrl.GinRequestCtxWrap
 
+	g.Any("/check", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"success": true,
+		})
+	})
 	auth := g.Group("/auth")
 	auth.POST("/login", w(handlers.User{}.Login))
 

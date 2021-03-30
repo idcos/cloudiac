@@ -8,7 +8,7 @@ consul:
   id: "CT-Runner-01"
   ip: "192.168.0.19"
   port: 19030
-  tags: "region:DC1;someKey:someValue"
+  tags: "tag1;tag2"
   interval: "5s"
   timeout: "3s"
-  deregister_after: "30s"
+  deregister_after: "90m"

@@ -2,5 +2,6 @@
 builds/
 .env
 config.yml
+config-runner.yml
 .DS_Store
 ct-*/

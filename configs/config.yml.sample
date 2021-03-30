@@ -1,10 +1,20 @@
 listen: "0.0.0.0:9030"
 mysql: "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL_DATABASE}?charset=utf8mb4&parseTime=True&loc=Local"
+
 gitlab:
   url: "${GITLAB_URL}"
   token: "${GITLAB_TOKEN}"
-consul:
-  address: "127.0.0.1:8500"
+
 task:
-  time_ticker: 300
-  log_path: "."
+  time_ticker: ${TIME_TICKER}
+  log_path: "${LOG_PATH}"
+
+consul:
+  address: "192.168.0.19:8500"
+  id: "CT-Runner-01"
+  ip: "192.168.0.19"
+  port: 19030
+  tags: "tag1;tag2"
+  interval: "5s"
+  timeout: "3s"
+  deregister_after: "90m"
