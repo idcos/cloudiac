@@ -27,12 +27,12 @@ type Task struct {
 	TaskType     string     `json:"taskType" gorm:"type:enum('plan','apply');not null;comment:'作业类型'"`
 	Status       string     `json:"status" gorm:"type:enum('pending','running','failed','complete','timeout');default:'pending';comment:'作业状态'"`
 	BackendInfo  JSON       `json:"backendInfo" gorm:"type:json;null;comment:'执行信息'" json:"backend_info"`
-	Timeout      int        `json:"timeout" gorm:"size:32;comment:'超时时长'"`
+	Timeout      int64      `json:"timeout" gorm:"size:32;comment:'超时时长'"`
 	Creator      uint       `json:"creator" gorm:"not null;comment:'创建人'"`
 	StartAt      *time.Time `json:"startAt" gorm:"null;comment:'任务开始时间'"`
 	EndAt        *time.Time `json:"endAt" gorm:"null;comment:'任务结束时间'"`
 	CommitId     string     `json:"commitId" gorm:"null;comment:'COMMIT ID'"`
-	CtServiceId  string     `json:"ctServiceId" form:"ctServiceId" comment:'runnerId'"`
+	CtServiceId  string     `json:"ctServiceId" gorm:"comment:'runnerId'"`
 }
 
 func (Task) TableName() string {

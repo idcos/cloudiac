@@ -30,6 +30,7 @@ func Register(g *gin.RouterGroup) {
 		sys.PUT("/org/changeStatus", w(handlers.Organization{}.ChangeOrgStatus))
 
 		ctrl.Register(sys.Group("system"), &handlers.SystemConfig{})
+		ctrl.Register(sys.Group("token"), &handlers.Token{})
 	}
 
 	root := g.Group("/", w(middleware.Auth), w(middleware.AuthOrgId))

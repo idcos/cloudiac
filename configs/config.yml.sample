@@ -10,11 +10,11 @@ task:
   log_path: "${LOG_PATH}"
 
 consul:
-  address: "192.168.0.19:8500"
-  id: "CT-Runner-01"
-  ip: "192.168.0.19"
-  port: 19030
-  tags: "tag1;tag2"
-  interval: "5s"
-  timeout: "3s"
-  deregister_after: "90m"
+  address: "${CONSUL_ADDR}"
+  id: "${SERVICE_ID}"
+  ip: "${SERVICE_IP}"
+  port: ${SERVICE_PORT}
+  tags: "${SERVICE_TAGS}"
+  interval: "${CHECK_INTERVAL}"
+  timeout: "${CHECK_TIMEOUT}"
+  deregister_after: "${DEREGISTER_AFTER}"

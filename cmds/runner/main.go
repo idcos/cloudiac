@@ -37,6 +37,7 @@ func main() {
 	logs.Init(utils.LogLevel(len(opt.Verbose)))
 	configs.Init(opt.Config)
 	common.ReRegisterService(opt.ReRegister, "CT-Runner")
+
 	StartServer()
 }
 
