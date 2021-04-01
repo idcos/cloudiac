@@ -90,7 +90,7 @@ func runningTaskEnvParam(tpl models.Template) interface{} {
 		json.Unmarshal(varsByte, &vars)
 	}
 	for _, v := range vars {
-		if v.IsSecret {
+		if *v.IsSecret {
 			param[v.Key] = utils.AesDecrypt(v.Value)
 		} else {
 			param[v.Key] = v.Value

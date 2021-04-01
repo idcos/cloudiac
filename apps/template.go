@@ -77,7 +77,7 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 
 		vars := form.Vars
 		for index, v := range vars {
-			if v.IsSecret == true {
+			if *v.IsSecret {
 				encryptedValue, err := utils.AesEncrypt(v.Value)
 				vars[index].Value = encryptedValue
 				if err != nil {
@@ -95,7 +95,7 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 			RepoId:      form.RepoId,
 			RepoBranch:  form.RepoBranch,
 			RepoAddr:    form.RepoAddr,
-			SaveState:   form.SaveState,
+			SaveState:   *form.SaveState,
 			Vars:        models.JSON(string(jsons)),
 			Varfile:     form.Varfile,
 			Extra:       form.Extra,
@@ -142,7 +142,7 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (user *mo
 	if form.HasKey("vars") {
 		vars := form.Vars
 		for index, v := range vars {
-			if v.IsSecret == true {
+			if *v.IsSecret  {
 				encryptedValue, err := utils.AesEncrypt(v.Value)
 				vars[index].Value = encryptedValue
 				if err != nil {

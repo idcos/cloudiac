@@ -1,15 +1,14 @@
 package middleware
 
 import (
-	"net/http"
 	"cloudiac/libs/ctx"
+	"net/http"
 )
 
 var (
 	allowHeaders  = "Content-Type,AccessToken,X-CSRF-Token,Authorization,Token"
 	exposeHeaders = "Content-Length,Access-Control-Allow-Origin,Access-Control-Allow-Headers,Content-Type"
 )
-
 
 func Cors(c *ctx.GinRequestCtx) {
 	c.Header("Access-Control-Allow-Origin", "*")

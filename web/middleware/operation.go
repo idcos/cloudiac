@@ -1,6 +1,5 @@
 package middleware
 
-import "C"
 import (
 	"cloudiac/libs/ctx"
 	"cloudiac/models"
