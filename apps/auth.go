@@ -3,7 +3,6 @@ package apps
 import (
 	"cloudiac/consts/e"
 	"cloudiac/libs/ctx"
-	"cloudiac/models"
 	"cloudiac/models/forms"
 	"cloudiac/services"
 	"cloudiac/utils"
@@ -13,7 +12,7 @@ import (
 )
 
 type Data struct {
-	UserInfo *models.User
+	//UserInfo *models.User
 	Token    string  `json:"token"`
 }
 
@@ -40,7 +39,7 @@ func Login(c *ctx.ServiceCtx, form *forms.LoginForm) (resp interface{}, er e.Err
 	}
 
 	data := Data{
-		UserInfo: user,
+		//UserInfo: user,
 		Token: token,
 	}
 

@@ -50,7 +50,7 @@ func (User) Detail(c *ctx.GinRequestCtx) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.UserDetail(c.ServiceCtx(), &form))
+	c.JSONResult(apps.UserDetail(c.ServiceCtx(), form.Id))
 }
 
 func (User) RemoveUserForOrg(c *ctx.GinRequestCtx) {
@@ -75,4 +75,8 @@ func (User) Login(c *ctx.GinRequestCtx) {
 		return
 	}
 	c.JSONResult(apps.Login(c.ServiceCtx(), &form))
+}
+
+func (User) GetUserByToken(c *ctx.GinRequestCtx) {
+	c.JSONResult(apps.UserDetail(c.ServiceCtx(), c.ServiceCtx().UserId))
 }

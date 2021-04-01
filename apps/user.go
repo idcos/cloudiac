@@ -208,8 +208,8 @@ func UserPassReset(c *ctx.ServiceCtx, form *forms.DetailUserForm) (user *models.
 	return
 }
 
-func UserDetail(c *ctx.ServiceCtx, form *forms.DetailUserForm) (resp interface{}, er e.Error) {
-	user, err := services.GetUserById(c.DB(), form.Id)
+func UserDetail(c *ctx.ServiceCtx, id uint) (resp interface{}, er e.Error) {
+	user, err := services.GetUserById(c.DB(), id)
 	if err != nil {
 		return nil, e.New(e.DBError, http.StatusInternalServerError, err)
 	}

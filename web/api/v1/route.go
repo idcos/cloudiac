@@ -21,6 +21,7 @@ func Register(g *gin.RouterGroup) {
 
 	g.GET("/org/search", w(middleware.Auth), w(handlers.Organization{}.Search))
 	g.GET("/org/detail", w(middleware.Auth), w(handlers.Organization{}.Detail))
+	g.GET("/user/getUserInfo", w(middleware.Auth), w(handlers.User{}.GetUserByToken))
 
 	// IaC管理员权限
 	sys := g.Group("/", w(middleware.Auth), w(middleware.IsAdmin))
