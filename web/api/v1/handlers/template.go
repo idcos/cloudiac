@@ -44,3 +44,21 @@ func (Template) Delete(c *ctx.GinRequestCtx) {
 	//c.JSONResult(apps.DeleteUser(c.ServiceCtx(), &form))
 	c.JSONError(e.New(e.NotImplement))
 }
+
+func (Template) Detail(c *ctx.GinRequestCtx) {
+	form := forms.DetailTemplateForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.DetailTemplate(c.ServiceCtx(), &form))
+}
+
+func (Template) Overview(c *ctx.GinRequestCtx) {
+	form := forms.OverviewTemplateForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.OverviewTemplate(c.ServiceCtx(), &form))
+}
+
+
