@@ -3,7 +3,7 @@ package forms
 type Var struct {
 	Key      string `form:"key" json:"key" binding:"required"`
 	Value    string `form:"value" json:"value" binding:"required"`
-	IsSecret bool   `form:"isSecret" json:"isSecret" binding:"required,default:false"`
+	IsSecret *bool  `form:"isSecret" json:"isSecret" binding:"required,default:false"`
 	Type     string `form:"type" json:"type" binding:"required,default:env"`
 }
 
@@ -14,7 +14,7 @@ type CreateTemplateForm struct {
 	RepoId      int    `form:"repoId" json:"repoId" binding:"required"`
 	RepoAddr    string `form:"repoAddr" json:"repoAddr" bingding:"required"`
 	RepoBranch  string `form:"repoBranch" json:"repoBranch" bingding:"required"`
-	SaveState   bool   `form:"saveState" json:"saveState" binding:"required"`
+	SaveState   *bool  `form:"saveState" json:"saveState"`
 	Vars        []Var  `form:"vars" json:"vars"`
 	Varfile     string `form:"varfile" json:"varfile"`
 	Extra       string `form:"extra" json:"extra"`
