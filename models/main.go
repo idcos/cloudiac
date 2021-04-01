@@ -137,5 +137,6 @@ func Init(migrate bool) {
 	autoMigrate(&SystemCfg{}, sess)
 	autoMigrate(&ResourceAccount{}, sess)
 	autoMigrate(&CtResourceMap{}, sess)
+	autoMigrate(&OperationLog{}, sess)
 	autoMigrate(&Token{}, sess)
 }

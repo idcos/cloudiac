@@ -80,7 +80,7 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 		TaskType:     form.TaskType,
 		Status:       consts.TaskPending,
 		Creator:      c.UserId,
-		TaskName:     form.TaskName,
+		Name:         form.Name,
 		BackendInfo:  models.JSON(b),
 		CtServiceId:  form.CtServiceId,
 	})

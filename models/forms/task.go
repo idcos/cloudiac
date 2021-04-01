@@ -3,7 +3,7 @@ package forms
 type CreateTaskForm struct {
 	BaseForm
 
-	TaskName      string `json:"taskName" form:"taskName"`
+	Name          string `json:"name" form:"name" `
 	CtServiceIp   string `json:"ctServiceIp" form:"ctServiceIp" binding:"required"`
 	CtServicePort string `json:"ctServicePort" form:"ctServicePort" binding:"required"`
 	CtServiceId   string `json:"ctServiceId" form:"ctServiceId" binding:"required"`

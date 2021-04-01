@@ -11,7 +11,7 @@ type Task struct {
 	ctrl.BaseController
 }
 
-func (Task) Detail(c *ctx.GinRequestCtx)  {
+func (Task) Detail(c *ctx.GinRequestCtx) {
 	form := &forms.DetailTaskForm{}
 	if err := c.Bind(form); err != nil {
 		return
@@ -19,7 +19,7 @@ func (Task) Detail(c *ctx.GinRequestCtx)  {
 	c.JSONResult(apps.DetailTask(c.ServiceCtx(), form))
 }
 
-func (Task) Create(c *ctx.GinRequestCtx)  {
+func (Task) Create(c *ctx.GinRequestCtx) {
 	form := &forms.CreateTaskForm{}
 	if err := c.Bind(form); err != nil {
 		return
@@ -27,7 +27,7 @@ func (Task) Create(c *ctx.GinRequestCtx)  {
 	c.JSONResult(apps.CreateTask(c.ServiceCtx(), form))
 }
 
-func (Task) Search(c *ctx.GinRequestCtx)  {
+func (Task) Search(c *ctx.GinRequestCtx) {
 	form := &forms.SearchTaskForm{}
 	if err := c.Bind(form); err != nil {
 		return

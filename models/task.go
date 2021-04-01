@@ -21,7 +21,7 @@ const (
 type Task struct {
 	SoftDeleteModel
 	Guid         string     `json:"guid" gorm:"not null;comment:'任务guid'"`
-	TaskName     string     `json:"taskName" gorm:"not null;comment:'任务名称'"`
+	Name         string     `json:"name" gorm:"not null;comment:'任务名称'"`
 	TemplateGuid string     `json:"templateGuid" gorm:"size:32;not null;comment:'模板GUID'"`
 	TemplateId   uint       `json:"templateId" gorm:"size:32;not null;comment:'模板ID'"`
 	TaskType     string     `json:"taskType" gorm:"type:enum('plan','apply');not null;comment:'作业类型'"`

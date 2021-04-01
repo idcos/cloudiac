@@ -18,3 +18,8 @@ consul:
   interval: "${CHECK_INTERVAL}"
   timeout: "${CHECK_TIMEOUT}"
   deregister_after: "${DEREGISTER_AFTER}"
+
+log:
+    log_level: "info"
+    log_max_days: 7
+

@@ -60,8 +60,4 @@ func Register(g *gin.RouterGroup) {
 	// 系统状态
 	g.GET("/systemStatus/search", w(handlers.PortalSystemStatusSearch))
 
-	//实现task create接口
-	//实现task排队调度过程
-	//实现task detail接口
-	//实现task logs接口
 }

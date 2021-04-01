@@ -3,6 +3,7 @@ package configs
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"cloudiac/consts"
-	"cloudiac/utils/logs"
 )
 
 type RedisConfig struct {
@@ -62,6 +62,11 @@ type RunnerConfig struct {
 	DefaultImage string `yaml:"default_image"`
 }
 
+type LogConfig struct {
+	LogMaxDays int    `yaml:"log_max_days"` // 日志文件保留天数, 默认 7
+	LogLevel   string `yaml:"log_level"`
+}
+
 func (ut *yamlTimeDuration) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var ds string
 	if err := unmarshal(&ds); err != nil {
@@ -87,6 +92,7 @@ type Config struct {
 	Gitlab                  GitlabConfig     `yaml:"gitlab"`
 	Runner                  RunnerConfig     `yaml:"runner"`
 	Task                    TaskConfig       `yaml:"task"`
+	Log                     LogConfig        `yaml:"log"`
 }
 
 var (
@@ -135,12 +141,12 @@ func initConfig(filename string, parser func(string) error) {
 	_, err := os.Stat(".env")
 	if !os.IsNotExist(err) {
 		if err := godotenv.Load(); err != nil {
-			logs.Get().Panicln(err)
+			log.Panic(err)
 		}
 	}
 
 	if err := parser(filename); err != nil {
-		logs.Get().Panicln(err)
+		log.Panic(err)
 	}
 }
 

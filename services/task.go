@@ -180,7 +180,7 @@ func RunTaskToRunning() {
 			header := &http.Header{}
 			header.Set("Content-Type", "application/json")
 			logger.Tracef("post data: %#v", data)
-			fmt.Printf("post data: %+v /n ", data)
+			//fmt.Printf("post data: %+v /n ", data)
 
 			respData, err := utils.HttpService(addr, "POST", header, data, 20, 5)
 			if err != nil {
