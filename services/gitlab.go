@@ -10,11 +10,10 @@ import (
 	"github.com/xanzy/go-gitlab"
 )
 
-
-func ListOrganizationReposById(tx *db.Session, orgId uint, form *forms.GetGitProjectsForm) (projects []*gitlab.Project, err e.Error) {
+func ListOrganizationReposById(tx *db.Session, orgId uint, form *forms.GetGitProjectsForm) (projects []*gitlab.Project, total int, err e.Error) {
 	git, err := GetGitConn(tx, orgId)
 	if err != nil {
-		return nil, err
+		return nil, total, err
 	}
 
 	opt := &gitlab.ListProjectsOptions{}
@@ -27,11 +26,11 @@ func ListOrganizationReposById(tx *db.Session, orgId uint, form *forms.GetGitPro
 		opt.PerPage = form.PageSize_
 	}
 
-	projects, _, er := git.Projects.ListProjects(opt)
+	projects, response, er := git.Projects.ListProjects(opt)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		return nil, total, e.New(e.GitLabError, er)
 	}
-
+	total = response.TotalItems
 	return
 }
 
