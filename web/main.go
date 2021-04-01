@@ -22,7 +22,8 @@ func StartServer() {
 	e := gin.Default()
 
 	// 允许跨域
-	e.Use(ctrl.GinRequestCtxWrap(middleware.Cors))
+	e.Use(w(middleware.Cors))
+	e.Use(w(middleware.Operation))
 
 	// 普通 handler func
 	e.GET("/hello", w(api.Hello))

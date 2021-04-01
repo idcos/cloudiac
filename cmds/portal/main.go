@@ -1,17 +1,15 @@
 package main
 
 import (
-	"cloudiac/services"
-	"fmt"
-	"os"
-
 	"cloudiac/cmds/common"
 	"cloudiac/configs"
 	"cloudiac/libs/db"
 	"cloudiac/models"
-	"cloudiac/utils"
+	"cloudiac/services"
 	"cloudiac/utils/logs"
 	"cloudiac/web"
+	"fmt"
+	"os"
 
 	"github.com/jessevdk/go-flags"
 )
@@ -21,7 +19,7 @@ type Option struct {
 
 	Config     string `short:"c" long:"config"  default:"config.yml" description:"config file"`
 	Verbose    []bool `short:"v" long:"verbose" description:"Show verbose debug message"`
-	ReRegister bool `long:"re-register" description:"Re registration service to Consul"`
+	ReRegister bool   `long:"re-register" description:"Re registration service to Consul"`
 }
 
 var opt = Option{}
@@ -33,9 +31,10 @@ func main() {
 	}
 	common.ShowVersionIf(opt.Version)
 
-	logs.Init(utils.LogLevel(len(opt.Verbose)))
 	configs.Init(opt.Config)
-	common.ReRegisterService(opt.ReRegister, "IaC-Portal")
+	conf := configs.Get().Log
+	logs.Init(conf.LogLevel, conf.LogMaxDays, "iac-portal")
+	//common.ReRegisterService(opt.ReRegister, "IaC-Portal")
 
 	db.Init()
 	models.Init(true)

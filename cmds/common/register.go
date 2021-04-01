@@ -11,7 +11,7 @@ func ServiceRegister(serviceName string) {
 	conf := configs.Get()
 	logger := logs.Get()
 
-	logger.Debug("Start register %s service", serviceName)
+	logger.Debugf("Start register %s service", serviceName)
 	err := consul.Register(serviceName, conf.Consul)
 	if err != nil {
 		logger.Debug("Service register failied: %s", err)

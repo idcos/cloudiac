@@ -10,7 +10,6 @@ import (
 	"cloudiac/cmds/common"
 	"cloudiac/configs"
 	"cloudiac/runner"
-	"cloudiac/utils"
 	"cloudiac/utils/logs"
 
 	"github.com/gin-gonic/gin"
@@ -20,9 +19,9 @@ import (
 type Option struct {
 	common.OptionVersion
 
-	Config  string `short:"c" long:"config"  default:"config.yml" description:"config file"`
-	Verbose []bool `short:"v" long:"verbose" description:"Show verbose debug message"`
-	ReRegister bool `long:"re-register" description:"Re registration service to Consul"`
+	Config     string `short:"c" long:"config"  default:"config.yml" description:"config file"`
+	Verbose    []bool `short:"v" long:"verbose" description:"Show verbose debug message"`
+	ReRegister bool   `long:"re-register" description:"Re registration service to Consul"`
 }
 
 func main() {
@@ -33,9 +32,9 @@ func main() {
 	}
 
 	common.ShowVersionIf(opt.Version)
-
-	logs.Init(utils.LogLevel(len(opt.Verbose)))
 	configs.Init(opt.Config)
+	conf := configs.Get().Log
+	logs.Init(conf.LogLevel, conf.LogMaxDays, "ct-runner")
 	common.ReRegisterService(opt.ReRegister, "CT-Runner")
 	StartServer()
 }
