@@ -36,6 +36,7 @@ func main() {
 	conf := configs.Get().Log
 	logs.Init(conf.LogLevel, conf.LogMaxDays, "ct-runner")
 	common.ReRegisterService(opt.ReRegister, "CT-Runner")
+
 	StartServer()
 }
 

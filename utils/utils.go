@@ -312,7 +312,11 @@ func RecoverPanic(logger logs.Logger, fn func()) {
 
 func GenGuid(v string) string {
 	guid := xid.New()
-	return fmt.Sprintf("%s-%s", v, guid.String())
+	guidStr := guid.String()
+	if v != "" {
+		guidStr = fmt.Sprintf("%s-%s", v, guidStr)
+	}
+	return guidStr
 }
 
 const (

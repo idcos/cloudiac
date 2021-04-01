@@ -32,7 +32,7 @@ type Task struct {
 	StartAt      *time.Time `json:"startAt" gorm:"null;comment:'任务开始时间'"`
 	EndAt        *time.Time `json:"endAt" gorm:"null;comment:'任务结束时间'"`
 	CommitId     string     `json:"commitId" gorm:"null;comment:'COMMIT ID'"`
-	CtServiceId  string     `json:"ctServiceId" form:"ctServiceId" comment:'runnerId'"`
+	CtServiceId  string     `json:"ctServiceId" gorm:"comment:'runnerId'"`
 }
 
 func (Task) TableName() string {

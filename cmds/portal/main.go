@@ -34,7 +34,7 @@ func main() {
 	configs.Init(opt.Config)
 	conf := configs.Get().Log
 	logs.Init(conf.LogLevel, conf.LogMaxDays, "iac-portal")
-	//common.ReRegisterService(opt.ReRegister, "IaC-Portal")
+	common.ReRegisterService(opt.ReRegister, "IaC-Portal")
 
 	db.Init()
 	models.Init(true)
@@ -55,11 +55,10 @@ func main() {
 	if err := tx.Commit(); err != nil {
 		logger.Fatalln(err)
 	}
+
 	//fmt.Println(configs.Get().Task.TimeTicker,"configs.Get().Task.TimeTicker")
 	go services.RunTaskToRunning()
 	go services.RunTaskState()
-	//services.RunTaskState()
-
 	web.StartServer()
 }
 
