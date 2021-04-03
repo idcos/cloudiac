@@ -67,6 +67,8 @@ const (
 	TaskFailed   = "failed"
 	TaskComplete = "complete"
 	TaskLogName  = "runner.log"
+	TaskApply    = "apply"
+	TaskPlan     = "plan"
 )
 
 var (

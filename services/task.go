@@ -69,7 +69,11 @@ type LastTaskInfo struct {
 
 func GetTaskByTplId(tx *db.Session, tplId uint) (*LastTaskInfo, e.Error) {
 	lastTaskInfo := LastTaskInfo{}
-	err := tx.Table(models.Task{}.TableName()).Select("status, guid, updated_at").Where("template_id = ?", tplId).Find(&lastTaskInfo)
+	err := tx.Table(models.Task{}.TableName()).
+		Select("status, guid, updated_at").
+		Where("template_id = ?", tplId).
+		//Where("status in (?)",statusList).
+		Find(&lastTaskInfo)
 	if err != nil {
 		return nil, e.New(e.DBError, err)
 	}

@@ -51,6 +51,8 @@ func Register(g *gin.RouterGroup) {
 		ctrl.Register(root.Group("resourceAccount"), &handlers.ResourceAccount{})
 		ctrl.Register(root.Group("template"), &handlers.Template{})
 		ctrl.Register(root.Group("task"), &handlers.Task{})
+
+		root.GET("/template/overview", w(handlers.Template{}.Overview))
 	}
 
 	root.GET("/sse/hello/:filename", w(handlers.HelloSse))

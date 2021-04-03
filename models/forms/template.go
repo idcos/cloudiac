@@ -24,8 +24,9 @@ type CreateTemplateForm struct {
 type SearchTemplateForm struct {
 	BaseForm
 
-	Q      string `form:"q" json:"q" binding:""`
-	Status string `form:"status" json:"status"`
+	Q          string `form:"q" json:"q" binding:""`
+	Status     string `form:"status" json:"status"`
+	TaskStatus string `json:"taskStatus" form:"taskStatus" `
 }
 
 type UpdateTemplateForm struct {
@@ -39,4 +40,14 @@ type UpdateTemplateForm struct {
 	Extra       string `form:"extra" json:"extra"`
 	Timeout     int    `form:"timeout" json:"timeout"`
 	Status      string `form:"status" json:"status"`
+}
+
+type DetailTemplateForm struct {
+	BaseForm
+	Id          uint   `form:"id" json:"id" binding:"required"`
+}
+
+type OverviewTemplateForm struct {
+	BaseForm
+	Id          uint   `form:"id" json:"id" binding:"required"`
 }
