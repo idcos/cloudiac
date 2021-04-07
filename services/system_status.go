@@ -77,7 +77,7 @@ func RunnerListSearch() (interface{}, e.Error) {
 	}
 
 	for serviceName, _ := range services {
-		if strings.Contains(serviceName, "runner") {
+		if strings.Contains(strings.ToLower(serviceName), "runner") {
 			resp = append(resp, services[serviceName])
 		}
 	}
