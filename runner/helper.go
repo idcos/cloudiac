@@ -154,15 +154,16 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 
 	c := new(Command)
 
-	// state := new(StateStore)
+	//state := new(StateStore)
 	state := d.StateStore
 	// state.SaveState = d.StateStore.SaveState
 	// state.Backend = d.StateStore.Backend
 	// state.StateBackendAddress = d.StateStore.StateBackendAddress
 	// state.StateKey = d.StateStore.StateKey
-	iaCTemplate := new(IaCTemplate)
-	iaCTemplate.TemplateUUID = d.TemplateUUID
-	iaCTemplate.TaskId = d.TaskID
+	iaCTemplate := &IaCTemplate{
+		TemplateUUID: d.TemplateUUID,
+		TaskId:       d.TaskID,
+	}
 
 	if d.DockerImage == "" {
 		conf := configs.Get()

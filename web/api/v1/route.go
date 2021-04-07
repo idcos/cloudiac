@@ -53,6 +53,7 @@ func Register(g *gin.RouterGroup) {
 		ctrl.Register(root.Group("task"), &handlers.Task{})
 
 		root.GET("/template/overview", w(handlers.Template{}.Overview))
+		root.GET("/template/state_search", w(handlers.Template{}.Overview))
 	}
 
 	root.GET("/sse/hello/:filename", w(handlers.HelloSse))
@@ -61,5 +62,7 @@ func Register(g *gin.RouterGroup) {
 
 	// 系统状态
 	g.GET("/systemStatus/search", w(handlers.PortalSystemStatusSearch))
+	g.GET("/consul_kv/search", w(handlers.ConsulKVSearch))
+	g.GET("/runner_list/search", w(handlers.RunnerListSearch))
 
 }

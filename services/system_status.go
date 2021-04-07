@@ -4,6 +4,7 @@ import (
 	"cloudiac/configs"
 	"cloudiac/consts/e"
 	"github.com/hashicorp/consul/api"
+	"strings"
 )
 
 func SystemStatusSearch() ([]api.AgentService, map[string]api.AgentCheck, []string, e.Error) {
@@ -41,4 +42,45 @@ func SystemStatusSearch() ([]api.AgentService, map[string]api.AgentCheck, []stri
 	}
 
 	return IdInfo, serviceStatus, serviceList, nil
+}
+
+func ConsulKVSearch(key string) (interface{}, e.Error) {
+	conf := configs.Get()
+	config := api.DefaultConfig()
+	config.Address = conf.Consul.Address
+
+	client, err := api.NewClient(config)
+	if err != nil {
+		return nil, e.New(e.ConsulConnError, err)
+	}
+	value, _, err := client.KV().Get(key, nil)
+	if err != nil {
+		return nil, e.New(e.ConsulConnError, err)
+	}
+	return string(value.Value), nil
+}
+
+func RunnerListSearch() (interface{}, e.Error) {
+	resp := make([]*api.AgentService, 0)
+
+	conf := configs.Get()
+	config := api.DefaultConfig()
+	config.Address = conf.Consul.Address
+
+	client, err := api.NewClient(config)
+	if err != nil {
+		return nil, e.New(e.ConsulConnError, err)
+	}
+	services, err := client.Agent().Services()
+	if err != nil {
+		return nil, e.New(e.ConsulConnError, err)
+	}
+
+	for serviceName, _ := range services {
+		if strings.Contains(serviceName, "runner") {
+			resp = append(resp, services[serviceName])
+		}
+	}
+
+	return resp, nil
 }

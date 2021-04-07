@@ -173,7 +173,6 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (user *mo
 
 func DetailTemplate(c *ctx.ServiceCtx, form *forms.DetailTemplateForm) (interface{}, e.Error) {
 	return services.DetailTemplate(c.DB(), form.Id)
-
 }
 
 type OverviewTemplateResp struct {

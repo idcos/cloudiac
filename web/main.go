@@ -1,8 +1,6 @@
 package web
 
 import (
-	"github.com/gin-gonic/gin"
-
 	"cloudiac/configs"
 	"cloudiac/consts"
 	"cloudiac/libs/ctrl"
@@ -10,6 +8,10 @@ import (
 	"cloudiac/utils/logs"
 	"cloudiac/web/api"
 	"cloudiac/web/middleware"
+	"github.com/gin-gonic/gin"
+	"io"
+	"os"
+	"path/filepath"
 
 	api_v1 "cloudiac/web/api/v1"
 )
@@ -17,13 +19,23 @@ import (
 var logger = logs.Get()
 
 func StartServer() {
+	name := "iac-portal"
+	abs, _ := filepath.Abs(os.Args[0])
+	dir := filepath.Dir(abs)
+	ext := filepath.Ext(name)
+	execName := name[:len(name)-len(ext)]
+
+	logPath := filepath.Join(dir, "logs", execName+".log")
+	f, _ := os.OpenFile(logPath, os.O_WRONLY|os.O_APPEND, 0666)
+	gin.DefaultWriter = io.MultiWriter(f, os.Stdout)
+
 	conf := configs.Get()
 	w := ctrl.GinRequestCtxWrap
 	e := gin.Default()
 
 	// 允许跨域
 	e.Use(w(middleware.Cors))
-	//e.Use(w(middleware.Operation))
+	e.Use(w(middleware.Operation))
 
 	// 普通 handler func
 	e.GET("/hello", w(api.Hello))

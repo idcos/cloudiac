@@ -3,6 +3,7 @@ package handlers
 import (
 	"bufio"
 	"cloudiac/libs/ctx"
+	"cloudiac/utils/logs"
 	"context"
 	"fmt"
 	"io"
@@ -164,6 +165,7 @@ func HelloSse(c *ctx.GinRequestCtx) {
 }
 
 func TaskLogSSE(c *ctx.GinRequestCtx) {
+	loggers := logs.Get()
 	contx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	chanStream := make(chan string)
@@ -178,7 +180,7 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 			case <-contx.Done():
 				switch contx.Err() {
 				case context.DeadlineExceeded:
-					log.Printf("timeout")
+					loggers.Error("timeout")
 				}
 				done <- true
 				return
@@ -186,10 +188,10 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 		}
 	}()
 
-	logPath:=c.Query("logPath")
+	logPath := c.Query("logPath")
 	f, err := os.Open(logPath)
 	if err != nil {
-		fmt.Println(err)
+		loggers.Error(err)
 	}
 	defer f.Close()
 
@@ -206,7 +208,7 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 					mu.Unlock()
 					continue
 				} else {
-					log.Println("Read Error:", err.Error())
+					loggers.Error("Read Error:", err.Error())
 					done <- true
 					return
 				}
@@ -237,6 +239,6 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 		}
 	})
 	if !isStreaming {
-		log.Println("Stream Closed!")
+		loggers.Info("Stream Closed!")
 	}
 }

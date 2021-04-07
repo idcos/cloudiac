@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"cloudiac/cmds/common"
@@ -43,6 +43,16 @@ func main() {
 func StartServer() {
 	conf := configs.Get()
 	logger := logs.Get()
+
+	name := "ct-runner"
+	abs, _ := filepath.Abs(os.Args[0])
+	dir := filepath.Dir(abs)
+	ext := filepath.Ext(name)
+	execName := name[:len(name)-len(ext)]
+
+	logPath := filepath.Join(dir, "logs", execName+".log")
+	f, _ := os.OpenFile(logPath, os.O_WRONLY|os.O_APPEND, 0666)
+	gin.DefaultWriter = io.MultiWriter(f, os.Stdout)
 
 	type request struct {
 		*http.Request
@@ -101,7 +111,7 @@ func StartServer() {
 		logger.Info(c.Request.Body)
 		id, err := runner.Run(c.Request)
 		if err != nil {
-			fmt.Println(err.Error())
+			logger.Error(err.Error())
 			c.JSON(500, gin.H{
 				"err": err.Error(),
 			})

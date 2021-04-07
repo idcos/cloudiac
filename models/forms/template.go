@@ -44,10 +44,10 @@ type UpdateTemplateForm struct {
 
 type DetailTemplateForm struct {
 	BaseForm
-	Id          uint   `form:"id" json:"id" binding:"required"`
+	Id uint `form:"id" json:"id" binding:"required"`
 }
 
 type OverviewTemplateForm struct {
 	BaseForm
-	Id          uint   `form:"id" json:"id" binding:"required"`
+	Id uint `form:"id" json:"id" binding:"required"`
 }
