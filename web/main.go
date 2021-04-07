@@ -23,7 +23,7 @@ func StartServer() {
 
 	// 允许跨域
 	e.Use(w(middleware.Cors))
-	e.Use(w(middleware.Operation))
+	//e.Use(w(middleware.Operation))
 
 	// 普通 handler func
 	e.GET("/hello", w(api.Hello))

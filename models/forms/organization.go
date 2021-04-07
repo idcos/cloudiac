@@ -25,7 +25,7 @@ type CreateNotificationCfgForm struct {
 
 type DeleteNotificationCfgForm struct {
 	BaseForm
-	UserId  uint  `form:"userId" json:"userId" binding:"required"`
+	Id  uint  `form:"id" json:"id" binding:"required"`
 }
 
 type CreateOrganizationForm struct {

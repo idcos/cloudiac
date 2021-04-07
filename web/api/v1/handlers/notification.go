@@ -28,7 +28,7 @@ func (Notification) Delete(c *ctx.GinRequestCtx) {
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DeleteNotificationCfg(c.ServiceCtx(), form.UserId))
+	c.JSONResult(apps.DeleteNotificationCfg(c.ServiceCtx(), form.Id))
 }
 
 func (Notification) Update(c *ctx.GinRequestCtx) {

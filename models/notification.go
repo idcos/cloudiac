@@ -19,9 +19,5 @@ func (NotificationCfg) TableName() string {
 }
 
 func (o NotificationCfg) Migrate(sess *db.Session) (err error) {
-	if err != nil {
-		return err
-	}
-
 	return nil
 }

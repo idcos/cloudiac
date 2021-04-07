@@ -18,9 +18,9 @@ func ListNotificationCfgs(c *ctx.ServiceCtx) (interface{}, e.Error) {
 	return cfgs, nil
 }
 
-func DeleteNotificationCfg(c *ctx.ServiceCtx, userId uint) (result interface{}, err e.Error) {
-	c.AddLogField("action", fmt.Sprintf("Delete org %d notification user id: %d", c.OrgId, userId))
-	err = services.DeleteOrganizationCfg(c.DB(), c.OrgId, userId)
+func DeleteNotificationCfg(c *ctx.ServiceCtx, id uint) (result interface{}, err e.Error) {
+	c.AddLogField("action", fmt.Sprintf("Delete org notification id: %d", id))
+	err = services.DeleteOrganizationCfg(c.DB(), id, c.OrgId)
 	if err != nil {
 		return nil, err
 	}
@@ -73,14 +73,25 @@ func CreateNotificationCfg(c *ctx.ServiceCtx, form *forms.CreateNotificationCfgF
 		cfgInfo := form.CfgInfo
 		cfgJson, _ := json.Marshal(cfgInfo)
 
-		if len(form.UserIds) > 0 {
+		if form.NotificationType == "email" {
 			for _, userId := range form.UserIds {
+				isExists, _ := services.FindOrganizationCfgByUserId(tx, c.OrgId, userId, form.EventType)
+				if isExists {
+					continue
+				}
 				notificationCfg, err = services.CreateNotificationCfg(tx, models.NotificationCfg{
 					OrgId:            c.OrgId,
 					NotificationType: form.NotificationType,
 					EventType:        form.EventType,
 					UserId:           userId,
 				})
+				if err != nil {
+					if e.IsDuplicate(err) {
+						continue
+					} else {
+						return nil, err
+					}
+				}
 			}
 		} else {
 			notificationCfg, err = services.CreateNotificationCfg(tx, models.NotificationCfg{
@@ -89,10 +100,9 @@ func CreateNotificationCfg(c *ctx.ServiceCtx, form *forms.CreateNotificationCfgF
 				EventType:        form.EventType,
 				CfgInfo:          cfgJson,
 			})
-		}
-
-		if err != nil {
-			return nil, err
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		return notificationCfg, nil
