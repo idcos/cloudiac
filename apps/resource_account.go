@@ -7,6 +7,8 @@ import (
 	"cloudiac/models"
 	"cloudiac/models/forms"
 	"cloudiac/services"
+	"cloudiac/utils"
+	"encoding/json"
 	"fmt"
 )
 
@@ -28,10 +30,22 @@ func CreateResourceAccount(c *ctx.ServiceCtx, form *forms.CreateResourceAccountF
 			er          e.Error
 		)
 
+		params := form.Params
+		for index, v := range params {
+			if *v.IsSecret {
+				encryptedValue, err := utils.AesEncrypt(v.Value)
+				params[index].Value = encryptedValue
+				if err != nil {
+					return nil, nil
+				}
+			}
+		}
+		jsons, _ := json.Marshal(params)
+
 		rsAcc := &models.ResourceAccount{
 			Name:        form.Name,
 			Description: form.Description,
-			Params:      []byte(form.Params),
+			Params:      models.JSON(string(jsons)),
 		}
 		rsAcc.OrgId = c.OrgId
 

@@ -1,10 +1,16 @@
 package forms
 
+type Params struct {
+	Key       string   `json:"key"`
+	Value     string   `json:"value"`
+	IsSecret  *bool    `json:"isSecret"`
+}
+
 type CreateResourceAccountForm struct {
 	BaseForm
 	Name             string   `form:"name" json:"name" binding:"required,gte=2,lte=32"`
 	Description      string   `form:"description" json:"description"`
-	Params           string   `form:"params" json:"params"`
+	Params           []Params `form:"params" json:"params"`
 	CtServiceIds     []string `form:"ctServiceIds" json:"ctServiceIds"`
 }
 
