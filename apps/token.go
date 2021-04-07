@@ -70,3 +70,12 @@ func UpdateToken(c *ctx.ServiceCtx, form *forms.UpdateTokenForm) (token *models.
 	token, err = services.UpdateToken(c.DB(), form.Id, attrs)
 	return
 }
+
+func DeleteToken(c *ctx.ServiceCtx, form *forms.DeleteTokenForm) (result interface{}, re e.Error) {
+	c.AddLogField("action", fmt.Sprintf("delete token %d", form.Id))
+	if err := services.DeleteToken(c.DB(), form.Id); err != nil {
+		return nil, err
+	}
+
+	return
+}

@@ -58,3 +58,10 @@ func UpdateToken(tx *db.Session, id uint, attrs models.Attrs) (token *models.Tok
 func QueryToken(query *db.Session) *db.Session {
 	return query.Model(&models.Token{})
 }
+
+func DeleteToken(tx *db.Session, id uint) e.Error {
+	if _, err := tx.Where("id = ?", id).Delete(&models.Token{}); err != nil {
+		return e.New(e.DBError, fmt.Errorf("delete token error: %v", err))
+	}
+	return nil
+}

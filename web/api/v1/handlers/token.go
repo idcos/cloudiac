@@ -34,3 +34,11 @@ func (Token) Update(c *ctx.GinRequestCtx) {
 	}
 	c.JSONResult(apps.UpdateToken(c.ServiceCtx(), form))
 }
+
+func (Token) Delete(c *ctx.GinRequestCtx) {
+	form := &forms.DeleteTokenForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.DeleteToken(c.ServiceCtx(), form))
+}

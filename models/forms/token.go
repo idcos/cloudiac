@@ -18,3 +18,8 @@ type SearchTokenForm struct {
 	Q          string `form:"q" json:"q" binding:""`
 	Status     string `form:"status" json:"status"`
 }
+
+type DeleteTokenForm struct {
+	BaseForm
+	Id            uint   `fomr:"id" json:"id" binding:"required"`
+}
