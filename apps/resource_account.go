@@ -30,17 +30,7 @@ func CreateResourceAccount(c *ctx.ServiceCtx, form *forms.CreateResourceAccountF
 			er          e.Error
 		)
 
-		params := form.Params
-		for index, v := range params {
-			if *v.IsSecret {
-				encryptedValue, err := utils.AesEncrypt(v.Value)
-				params[index].Value = encryptedValue
-				if err != nil {
-					return nil, nil
-				}
-			}
-		}
-		jsons, _ := json.Marshal(params)
+		jsons, _ := parseParams(form.Params)
 
 		rsAcc := &models.ResourceAccount{
 			Name:        form.Name,
@@ -77,6 +67,23 @@ func CreateResourceAccount(c *ctx.ServiceCtx, form *forms.CreateResourceAccountF
 	}
 
 	return rsAccount, nil
+}
+
+func parseParams(params []forms.Params) ([]byte, error) {
+	for index, v := range params {
+		if *v.IsSecret {
+			encryptedValue, err := utils.AesEncrypt(v.Value)
+			params[index].Value = encryptedValue
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	jsons, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	return jsons, nil
 }
 
 type searchResourceAccountResp struct {
@@ -129,7 +136,8 @@ func UpdateResourceAccount(c *ctx.ServiceCtx, form *forms.UpdateResourceAccountF
 	}
 
 	if form.HasKey("params") {
-		attrs["params"] = []byte(form.Params)
+		jsons, _ := parseParams(form.Params)
+		attrs["params"] = models.JSON(string(jsons))
 	}
 
 	if form.HasKey("status") {

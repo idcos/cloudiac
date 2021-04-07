@@ -19,7 +19,7 @@ type UpdateResourceAccountForm struct {
 	Id              uint     `form:"id" json:"id" binding:"required"`
 	Name            string   `form:"name" json:"name" binding:""`
 	Description     string   `form:"description" json:"description"`
-	Params          string   `form:"params" json:"params"`
+	Params          []Params `form:"params" json:"params"`
 	Status          string   `form:"status" json:"status"`
 	CtServiceIds    []string `form:"ctServiceIds" json:"ctServiceIds"`
 }
