@@ -1,7 +1,7 @@
 package runner
 
 import (
-	"fmt"
+	"cloudiac/utils/logs"
 	"html/template"
 	"os"
 )
@@ -26,7 +26,8 @@ type State struct {
 	Path    string
 }
 
-func GenStateFile(address string, scheme string, path string, targetPath string) {
+func GenStateFile(address string, scheme string, path string, targetPath string, saveState bool) {
+	log := logs.Get()
 	state := new(State)
 	state.Address = address
 	if scheme != "" {
@@ -35,12 +36,12 @@ func GenStateFile(address string, scheme string, path string, targetPath string)
 	state.Path = path
 	targetFile, err := os.OpenFile(targetPath+"/state.tf", os.O_CREATE|os.O_WRONLY, 0755)
 	if err != nil {
-		fmt.Println("open failed err:", err)
+		log.Error("open failed err:", err)
 		return
 	}
 	t, err := template.ParseFiles(StaticFilePath + "/state.tf.tmpl")
 	if err != nil {
-		fmt.Println("open template file err:", err)
+		log.Error("open template file err:", err)
 		return
 	}
 	t.Execute(targetFile, state)

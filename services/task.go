@@ -164,6 +164,14 @@ func RunTaskToRunning() {
 			//向runner下发task
 			runnerAddr := taskBackend["backend_url"]
 			addr := fmt.Sprintf("%s%s", runnerAddr, "/task/run")
+			//有状态云模版，以模版ID为路径，无状态云模版，以模版ID + 作业ID 为路径
+			var stateKey string
+			if tpl.SaveState {
+				stateKey = fmt.Sprintf("%s.tfstate", tpl.Guid)
+			} else {
+				stateKey = fmt.Sprintf("%s/%s.tfstate", tpl.Guid, task.Guid)
+			}
+
 			data := map[string]interface{}{
 				"repo":          tpl.RepoAddr,
 				"template_uuid": tpl.Guid,
@@ -173,7 +181,7 @@ func RunTaskToRunning() {
 					"save_state":            tpl.SaveState,
 					"backend":               "consul",
 					"scheme":                "http",
-					"state_key":             fmt.Sprintf("%s.tfstate", tpl.Guid),
+					"state_key":             stateKey,
 					"state_backend_address": conf.Consul.Address,
 				},
 				"env":     runningTaskEnvParam(tpl),
@@ -190,7 +198,7 @@ func RunTaskToRunning() {
 			if err != nil {
 				logger.Errorf("request failed: %v", err)
 			}
-			logger.Tracef("response body: %s", string(respData))
+			logger.Debugf("response body: %s", string(respData))
 
 			var (
 				runnerResp struct {
@@ -288,7 +296,6 @@ func RunTaskState() {
 			json.Unmarshal(task.BackendInfo, &taskBackend)
 			runnerAddr := taskBackend["backend_url"]
 			addr := fmt.Sprintf("%s%s", runnerAddr, "/task/status")
-			fmt.Println(addr)
 
 			data := map[string]interface{}{
 				"template_uuid": tpl.Guid,
@@ -299,7 +306,6 @@ func RunTaskState() {
 			header := &http.Header{}
 			header.Set("Content-Type", "application/json")
 			logger.Tracef("post data: %#v", data)
-			fmt.Printf("post data: %#v /n", data)
 
 			respData, err := utils.HttpService(addr, "POST", header, data, 20, 5)
 			if err != nil {
@@ -316,7 +322,7 @@ func RunTaskState() {
 					Code            string   `json:"code" form:"code" `
 					Error           string   `json:"error" form:"error" `
 				}
-				status string = consts.TaskRunning
+				status = consts.TaskRunning
 			)
 
 			if err := json.Unmarshal(respData, &runnerResp); err != nil {
@@ -335,14 +341,20 @@ func RunTaskState() {
 				status = consts.TaskComplete
 			}
 
+			updateM := map[string]interface{}{
+				"status":       status,
+				"backend_info": updateBackendInfo(task.BackendInfo, runnerResp.LogContentLines),
+			}
+
+			if status != consts.TaskRunning {
+				updateM["end_at"] = time.Now()
+			}
+
 			//更新task状态
 			if _, err := tx.
 				Table(models.Task{}.TableName()).
 				Where("id = ?", task.Id).
-				Update(map[string]interface{}{
-					"status":       status,
-					"backend_info": updateBackendInfo(task.BackendInfo, runnerResp.LogContentLines),
-				}); err != nil {
+				Update(updateM); err != nil {
 				if err := tx.Commit(); err != nil {
 					tx.Rollback()
 				}
@@ -350,7 +362,6 @@ func RunTaskState() {
 			if err := tx.Commit(); err != nil {
 				tx.Rollback()
 			}
-			// todo log保存
 		}()
 
 		<-taskTicker.C

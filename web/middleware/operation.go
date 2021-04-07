@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"bytes"
 	"cloudiac/libs/ctx"
 	"cloudiac/models"
 	"fmt"
@@ -13,14 +14,11 @@ import (
 
 type HandleTableAndDesc map[string]string
 
-
 func Operation(c *ctx.GinRequestCtx) {
-	c.Next()
 	if c.Request.Method == "" {
 		c.Next() // 注意 next()方法的作用是跳过该调用链去直接后面的中间件以及api路由
 	}
 
-	// 获取Ip
 	opMethod := &OperationMethod{C: c}
 	// 根据method方法名确定操作行为
 	switch c.Request.Method {
@@ -50,11 +48,8 @@ type OperationMethod struct {
 }
 
 func (o *OperationMethod) putOperation() (err error) {
-	data := make(map[string]interface{}, 0)
-	if err := o.C.BindJSON(data); err != nil {
-	}
-	bodyBytes, _ := ioutil.ReadAll(o.C.Request.Body)
-
+	bodyBytes, err := ioutil.ReadAll(o.C.Request.Body)
+	o.C.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	cxt := o.C.ServiceCtx()
 	url := o.C.Request.URL.String()
 	operationLog := models.OperationLog{
@@ -77,13 +72,9 @@ func (o *OperationMethod) putOperation() (err error) {
 
 func (o *OperationMethod) postOperation() (err error) {
 	// 新建操作 需要记录新插入的数据
-	// 获取插入数据的Id
-	o.C.Next() // 直接跳过调用链 让其开始走api
-	data := make(map[string]interface{}, 0)
-	if err := o.C.BindJSON(data); err != nil {
-	}
-	bodyBytes, _ := ioutil.ReadAll(o.C.Request.Body)
-
+	name := o.C.PostForm("name")
+	bodyBytes, err := ioutil.ReadAll(o.C.Request.Body)
+	o.C.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	cxt := o.C.ServiceCtx()
 	url := o.C.Request.URL.String()
 	operationLog := models.OperationLog{
@@ -92,7 +83,7 @@ func (o *OperationMethod) postOperation() (err error) {
 		UserAddr:      cxt.UserIpAddr,
 		OperationAt:   time.Now(),
 		OperationType: "Create",
-		OperationInfo: fmt.Sprintf("创建了%s中的名称为%s数据", strings.Split(url, "/")[len(strings.Split(url, "/"))-2],),
+		OperationInfo: fmt.Sprintf("创建了%s中的名称为%s数据", strings.Split(url, "/")[len(strings.Split(url, "/"))-2],name),
 		Desc:          models.JSON(bodyBytes),
 	}
 
@@ -105,22 +96,19 @@ func (o *OperationMethod) postOperation() (err error) {
 }
 
 func (o *OperationMethod) deleteOperation() (err error) {
-	// 删除操作 需要对删除的旧数据进行记录
+	// 删除操作
 	cxt := o.C.ServiceCtx()
-	id, _ := o.C.QueryInt("id")
-	data := make(map[string]interface{}, 0)
-	if err := o.C.BindJSON(data); err != nil {
-	}
-	bodyBytes, _ := ioutil.ReadAll(o.C.Request.Body)
+	id := o.C.PostForm("id")
+	bodyBytes, err := ioutil.ReadAll(o.C.Request.Body)
+	o.C.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	url := o.C.Request.URL.String()
-
 	operationLog := models.OperationLog{
 		UserID:        cxt.UserId,
 		Username:      cxt.Username,
 		UserAddr:      cxt.UserIpAddr,
 		OperationAt:   time.Now(),
 		OperationType: "delete",
-		OperationInfo: fmt.Sprintf("删除%s中了id为%d的数据", strings.Split(url, "/")[len(strings.Split(url, "/"))-2], id),
+		OperationInfo: fmt.Sprintf("删除%s中了id为%s的数据", strings.Split(url, "/")[len(strings.Split(url, "/"))-2], id),
 		Desc:          models.JSON(bodyBytes),
 	}
 
@@ -129,5 +117,5 @@ func (o *OperationMethod) deleteOperation() (err error) {
 		return
 	}
 
-	return
+	return nil
 }

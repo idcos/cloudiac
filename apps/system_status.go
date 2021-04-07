@@ -65,3 +65,11 @@ func SystemStatusSearch() (interface{}, e.Error) {
 
 	return resp, nil
 }
+
+func ConsulKVSearch(key string) (interface{}, e.Error) {
+	return services.ConsulKVSearch(key)
+}
+
+func RunnerListSearch() (interface{}, e.Error) {
+	return services.RunnerListSearch()
+}

@@ -8,7 +8,6 @@ import (
 	"cloudiac/services"
 	"cloudiac/utils/logs"
 	"cloudiac/web"
-	"fmt"
 	"os"
 
 	"github.com/jessevdk/go-flags"
@@ -56,9 +55,9 @@ func main() {
 		logger.Fatalln(err)
 	}
 
-	//fmt.Println(configs.Get().Task.TimeTicker,"configs.Get().Task.TimeTicker")
 	go services.RunTaskToRunning()
 	go services.RunTaskState()
+
 	web.StartServer()
 }
 
@@ -68,10 +67,12 @@ func appAutoInit(tx *db.Session) (err error) {
 	logger.Infoln("running")
 
 	// dev init
-	err = initAdmin(tx)
-	err = initSystemConfig(tx)
-	if err != nil {
-		return err
+	if err := initAdmin(tx); err != nil {
+		return nil
+	}
+
+	if err := initSystemConfig(tx); err != nil {
+		return nil
 	}
 
 	logger.Infoln("initialize ...")
@@ -80,6 +81,7 @@ func appAutoInit(tx *db.Session) (err error) {
 }
 
 func initAdmin(tx *db.Session) (err error) {
+	log := logs.Get()
 	admin, _ := services.GetUserByEmail(tx, "admin")
 	if admin != nil {
 		return nil
@@ -88,7 +90,7 @@ func initAdmin(tx *db.Session) (err error) {
 	initPass := "Yunjikeji"
 	hashedPassword, err := services.HashPassword(initPass)
 	if err != nil {
-		fmt.Println("111", err)
+		log.Errorf("init admin err: %+v", err)
 	}
 	_, err = services.CreateUser(tx, models.User{
 		Name:     "admin",
