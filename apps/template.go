@@ -39,7 +39,7 @@ func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (interfac
 		statusList = strings.Split(form.TaskStatus, ",")
 	}
 
-	query, _ := services.QueryTemplate(c.DB().Debug(), form.Status, form.Q, statusList)
+	query, _ := services.QueryTemplate(c.DB().Debug(), form.Status, form.Q,form.TaskStatus ,statusList)
 
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	templates := make([]*SearchTemplateResp, 0)
