@@ -18,12 +18,17 @@ func CreateTemplate(tx *db.Session, template models.Template) (*models.Template,
 	return &template, nil
 }
 
-func QueryTemplate(tx *db.Session, status, q string, statusList []string) (*db.Session, *db.Session) {
+func QueryTemplate(tx *db.Session, status, q, taskStatus string, statusList []string) (*db.Session, *db.Session) {
 	query := tx.Debug().Model(&models.Template{}).Joins(
 		"left join (SELECT "+
 			"MAX(updated_at) as task_update_at,template_id,guid as task_guid,`status` as task_status "+
-			"from iac_task where `status` in (?) GROUP BY template_id) as task "+
-			"on task.template_id = iac_template.id", statusList)
+			"from iac_task GROUP BY template_id) as task "+
+			"on task.template_id = iac_template.id").
+		LazySelectAppend("task.*", "iac_template.*")
+
+	if taskStatus != "all" && taskStatus != "" {
+		query = query.Where("task_status in (?)", statusList)
+	}
 	if status != "" {
 		query = query.Where("status = ?", status)
 	}
@@ -55,7 +60,7 @@ func DetailTemplate(tx *db.Session, tId uint) (interface{}, e.Error) {
 	if err := tx.Table(models.Template{}.TableName()).Where("id = ?", tId).First(&tpl); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	return tpl,nil
+	return tpl, nil
 }
 
 func OverviewTemplate(tx *db.Session, tId uint) *db.Session {
