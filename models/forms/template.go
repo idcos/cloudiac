@@ -1,10 +1,12 @@
 package forms
 
 type Var struct {
-	Key      string `form:"key" json:"key" binding:"required"`
-	Value    string `form:"value" json:"value" binding:"required"`
-	IsSecret *bool  `form:"isSecret" json:"isSecret" binding:"required,default:false"`
-	Type     string `form:"type" json:"type" binding:"required,default:env"`
+	Id          string `form:"id" json:"id" binding:"required"`
+	Key         string `form:"key" json:"key" binding:"required"`
+	Value       string `form:"value" json:"value" binding:"required"`
+	IsSecret    *bool  `form:"isSecret" json:"isSecret" binding:"required,default:false"`
+	Type        string `form:"type" json:"type" binding:"required,default:env"`
+	Description string `form:"description" json:"description" binding:""`
 }
 
 type CreateTemplateForm struct {
