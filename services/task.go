@@ -15,6 +15,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -59,6 +60,14 @@ func TaskDetail(tx *db.Session, taskId uint) *db.Session {
 	return tx.Table(models.Task{}.TableName()).Select(fmt.Sprintf("%s.*, tpl.*", models.Task{}.TableName())).
 		Joins(fmt.Sprintf("left join %s as tpl on tpl.id = %s.template_id", models.Template{}.TableName(), models.Task{}.TableName())).
 		Where(fmt.Sprintf("%s.id = %d", models.Task{}.TableName(), taskId))
+}
+
+func LastTask(tx *db.Session, tplId uint) (interface{}, e.Error) {
+	m := models.Task{}
+	if err := tx.Where("template_id = ?", tplId).Last(&m); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return m, nil
 }
 
 type LastTaskInfo struct {
@@ -171,9 +180,10 @@ func RunTaskToRunning() {
 			} else {
 				stateKey = fmt.Sprintf("%s/%s.tfstate", tpl.Guid, task.Guid)
 			}
-
+			repoList := strings.Split(tpl.RepoAddr, "//")
+			repoAddr := fmt.Sprintf("%s//%s:%s@%s", repoList[0], conf.Gitlab.Username, conf.Gitlab.Token, repoList[1])
 			data := map[string]interface{}{
-				"repo":          tpl.RepoAddr,
+				"repo":          repoAddr,
 				"template_uuid": tpl.Guid,
 				"task_id":       task.Guid,
 				//"task_id":       strconv.Itoa(int(task.Id)),
@@ -333,7 +343,7 @@ func RunTaskState() {
 				logger.Errorf("write task log error: %v", err)
 			}
 
-			if task.StartAt.Unix()+task.Timeout > time.Now().Unix() {
+			if task.StartAt.Unix()+task.Timeout < time.Now().Unix() {
 				status = consts.TaskTimeoout
 			} else if runnerResp.Status == "exised" && runnerResp.StatusCode != 0 {
 				status = consts.TaskFailed

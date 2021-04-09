@@ -72,6 +72,8 @@ func OverviewTemplateTask(tx *db.Session, tId uint) (task []models.Task, err e.E
 		Where("template_id = ?", tId).
 		Where("start_at is not null").
 		Where("end_at is not null").
+		Order("updated_at desc").
+		//Limit(3).
 		Find(&task); err != nil {
 		return nil, e.New(e.DBError, err)
 	}

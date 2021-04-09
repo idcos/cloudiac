@@ -47,8 +47,9 @@ type ConsulConfig struct {
 }
 
 type GitlabConfig struct {
-	Url   string `yaml:"url"`
-	Token string `yaml:"token"`
+	Url      string `yaml:"url"`
+	Token    string `yaml:"token"`
+	Username string `yaml:"username"`
 }
 
 type TaskConfig struct {
