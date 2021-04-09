@@ -181,7 +181,7 @@ func (s *Session) Offset(n interface{}) *Session {
 	return ToSess(s.db.Offset(n))
 }
 
-func (s *Session) Set(name string, value interface{}) *Session  {
+func (s *Session) Set(name string, value interface{}) *Session {
 	return ToSess(s.db.Set(name, value))
 }
 
@@ -210,6 +210,11 @@ func (s *Session) autoLazySelect() *Session {
 func (s *Session) First(out interface{}) error {
 	qs := s.autoLazySelect()
 	return qs.db.First(out).Error
+}
+
+func (s *Session) Last(out interface{}) error {
+	qs := s.autoLazySelect()
+	return qs.db.Last(out).Error
 }
 
 func (s *Session) Find(out interface{}, where ...interface{}) error {
@@ -288,8 +293,6 @@ func (s *Session) CompareFieldValue(field string, q string) (*Session, error) {
 		return s.Where(fmt.Sprintf("%s = ?", field), val), nil
 	}
 }
-
-
 
 func openDB(args string) error {
 	var err error

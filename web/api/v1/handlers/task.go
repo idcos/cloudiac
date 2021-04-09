@@ -34,3 +34,11 @@ func (Task) Search(c *ctx.GinRequestCtx) {
 	}
 	c.JSONResult(apps.SearchTask(c.ServiceCtx(), form))
 }
+
+func (Task) LastTask(c *ctx.GinRequestCtx) {
+	form := &forms.LastTaskForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.LastTask(c.ServiceCtx(), form))
+}

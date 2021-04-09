@@ -54,6 +54,7 @@ func Register(g *gin.RouterGroup) {
 
 		root.GET("/template/overview", w(handlers.Template{}.Overview))
 		root.GET("/template/state_search", w(handlers.Template{}.Overview))
+		root.GET("/task/last", w(handlers.Task{}.LastTask))
 	}
 
 	root.GET("/sse/hello/:filename", w(handlers.HelloSse))

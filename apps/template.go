@@ -39,7 +39,7 @@ func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (interfac
 		statusList = strings.Split(form.TaskStatus, ",")
 	}
 
-	query, _ := services.QueryTemplate(c.DB().Debug(), form.Status, form.Q,form.TaskStatus ,statusList)
+	query, _ := services.QueryTemplate(c.DB().Debug(), form.Status, form.Q, form.TaskStatus, statusList)
 
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	templates := make([]*SearchTemplateResp, 0)
@@ -186,6 +186,8 @@ type OverviewTemplateResp struct {
 	TaskAvgApplyTime       int64    `json:"taskAvgApplyTime" form:"taskAvgApplyTime" `
 	TaskPlanFailedPercent  float64  `json:"taskPlanFailedPercent" form:"taskPlanFailedPercent" `
 	TaskApplyFailedPercent float64  `json:"taskApplyFailedPercent" form:"taskApplyFailedPercent" `
+	TaskPlanFailedCount    float64  `json:"taskPlanFailedCount" form:"taskPlanFailedCount" `
+	TaskApplyFailedCount   float64  `json:"taskApplyFailedCount" form:"taskApplyFailedCount" `
 	ActiveCreatorName      []string `json:"activeCreatorName" form:"activeCreatorName" `
 	Task                   []Task   `json:"task" form:"task" `
 }
@@ -225,7 +227,7 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 		return nil, e.New(e.DBError, err)
 	}
 
-	for _, task := range tasks {
+	for index, task := range tasks {
 		user, err := services.GetUserById(tx, task.Creator)
 		if err != nil {
 			return nil, e.New(e.DBError, err)
@@ -247,18 +249,18 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 		}
 
 		// timeout也算失败
-
 		activeCreatorName = append(activeCreatorName, user.Name)
-
-		taskList = append(taskList, Task{
-			Name:        task.Name,
-			Status:      task.Status,
-			Guid:        task.Guid,
-			TaskType:    task.TaskType,
-			CreateAt:    task.CreatedAt,
-			CreatorName: user.Name,
-		})
-
+		//取最新的3个任务
+		if index < 3 {
+			taskList = append(taskList, Task{
+				Name:        task.Name,
+				Status:      task.Status,
+				Guid:        task.Guid,
+				TaskType:    task.TaskType,
+				CreateAt:    task.CreatedAt,
+				CreatorName: user.Name,
+			})
+		}
 	}
 	if taskPlanCount > 0 {
 		taskPlanFailedPercent = taskPlanFailedCount / float64(taskPlanCount)
@@ -285,7 +287,9 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 		TaskAvgApplyTime:       taskAvgApplyTime,
 		TaskPlanFailedPercent:  taskPlanFailedPercent,
 		TaskApplyFailedPercent: taskApplyFailedPercent,
-		ActiveCreatorName:      activeCreatorName,
+		TaskApplyFailedCount:   taskApplyFailedCount,
+		TaskPlanFailedCount:    taskPlanFailedCount,
+		ActiveCreatorName:      utils.RemoveDuplicateElement(activeCreatorName),
 		Task:                   taskList,
 	}, nil
 }
