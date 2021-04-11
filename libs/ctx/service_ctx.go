@@ -1,11 +1,11 @@
 package ctx
 
 import (
-	"fmt"
-	"math/rand"
 	"cloudiac/libs/db"
 	"cloudiac/models"
 	"cloudiac/utils/logs"
+	"fmt"
+	"math/rand"
 )
 
 type ServiceCtx struct {
@@ -14,8 +14,10 @@ type ServiceCtx struct {
 	//rdb    *cache.Session
 	logger logs.Logger
 
-	Token      string
-	OrgId      uint
+	Token string
+	OrgId uint
+	org   *models.Organization
+	//OrgGuid    string
 	UserId     uint // 登陆用户ID
 	Username   string
 	IsAdmin    bool
@@ -81,6 +83,26 @@ func (c *ServiceCtx) User() (*models.User, error) {
 		c.user = &user
 	}
 	return c.user, nil
+}
+
+func (c *ServiceCtx) MustOrg() *models.Organization {
+	org, err := c.Org()
+	if err != nil {
+		panic(err)
+	}
+	return org
+}
+
+func (c *ServiceCtx) Org() (*models.Organization, error) {
+	if c.org == nil {
+		var org models.Organization
+		err := c.DB().Where("id = ?", c.OrgId).First(&org)
+		if err != nil {
+			return nil, err
+		}
+		c.org = &org
+	}
+	return c.org, nil
 }
 
 func (c *ServiceCtx) AddLogField(key string, val string) *ServiceCtx {

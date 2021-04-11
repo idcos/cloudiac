@@ -4,6 +4,7 @@ import (
 	"cloudiac/consts/e"
 	"cloudiac/libs/db"
 	"cloudiac/models"
+	"cloudiac/utils"
 	"fmt"
 )
 
@@ -20,6 +21,7 @@ func UpdateSystemConfig(tx *db.Session, attrs models.Attrs) (cfg *models.SystemC
 		}
 		return nil, e.New(e.DBError, fmt.Errorf("update sys config error: %v", err))
 	}
+	utils.UpdateRunnerMax(utils.Str2int(attrs["value"].(string)))
 	if err := tx.Where("name = 'MAX_JOBS_PER_RUNNER'").First(cfg); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("query sys config error: %v", err))
 	}

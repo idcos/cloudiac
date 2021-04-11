@@ -6,6 +6,7 @@ import (
 	"cloudiac/libs/db"
 	"cloudiac/models"
 	"cloudiac/services"
+	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"cloudiac/web"
 	"os"
@@ -55,9 +56,10 @@ func main() {
 		logger.Fatalln(err)
 	}
 
-	go services.RunTaskToRunning()
-	go services.RunTaskState()
-
+	//go services.RunTaskToRunning()
+	//go services.RunTaskState()
+	utils.MaintenanceRunnerPerMax()
+	go services.RunTask()
 	web.StartServer()
 }
 

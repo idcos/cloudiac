@@ -80,8 +80,7 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 	if err := os.MkdirAll(logPath, os.ModePerm); err != nil {
 		return nil, e.New(e.IOError, err)
 	}
-
-	return services.CreateTask(c.DB().Debug(), models.Task{
+	task, err := services.CreateTask(c.DB().Debug(), models.Task{
 		TemplateId:   form.TemplateId,
 		TemplateGuid: form.TemplateGuid,
 		Guid:         guid,
@@ -91,8 +90,13 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 		Name:         form.Name,
 		BackendInfo:  models.JSON(b),
 		CtServiceId:  form.CtServiceId,
-		Timeout:      form.Timeout,
 	})
+	if err != nil {
+		return nil, err
+	}
+	//todo Task数量够多的情况下需要引入第三方组件
+	go services.RunTaskToRunning(task, c.DB(), c.MustOrg().Guid)
+	return task, nil
 }
 
 func LastTask(c *ctx.ServiceCtx, form *forms.LastTaskForm) (interface{}, e.Error) {
