@@ -193,7 +193,12 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 	cmdList = append(cmdList, fmt.Sprintf("terraform init %s &&", logCmd))
 	if d.Mode == "apply" {
 		log.Println("entering apply mode ...")
-		cmdList = append(cmdList, fmt.Sprintf("%s %s %s &&%s %s", "terraform apply -auto-approve -var-file", d.Varfile, logCmd, d.Extra, logCmd))
+		if d.Varfile != "" {
+			cmdList = append(cmdList, fmt.Sprintf("%s %s %s &&%s %s", "terraform apply -auto-approve -var-file", d.Varfile, logCmd, d.Extra, logCmd))
+		} else {
+			cmdList = append(cmdList, fmt.Sprintf("%s %s &&%s %s", "terraform apply -auto-approve ", logCmd, d.Extra, logCmd))
+		}
+
 	} else if d.Mode == "destroy" {
 		log.Println("entering destroy mode ...")
 		cmdList = append(cmdList, fmt.Sprintf("%s %s&&%s", "terraform destroy -auto-approve -var-file", d.Varfile, d.Extra))
@@ -201,7 +206,12 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 		log.Println("show state info ...")
 		cmdList = append(cmdList, fmt.Sprintf("%s&&%s", "terraform state pull", d.Extra))
 	} else {
-		cmdList = append(cmdList, fmt.Sprintf("%s %s", "terraform plan -var-file", d.Varfile))
+		if d.Varfile != "" {
+			cmdList = append(cmdList, fmt.Sprintf("%s %s", "terraform plan -var-file", d.Varfile))
+		} else {
+			cmdList = append(cmdList, fmt.Sprintf("%s", "terraform plan"))
+		}
+
 		//cmdList = append(cmdList, fmt.Sprintf("%s %s&&%s", "terraform plan -var-file", d.Varfile, d.Extra))
 	}
 

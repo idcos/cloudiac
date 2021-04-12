@@ -69,6 +69,9 @@ const (
 	TaskLogName  = "runner.log"
 	TaskApply    = "apply"
 	TaskPlan     = "plan"
+
+	ResourceAccountDisable = "disable"
+	ResourceAccountEnable = "enable"
 )
 
 var (

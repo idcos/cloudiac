@@ -16,7 +16,7 @@ type Template struct {
 	Vars        JSON   `json:"vars" gorm:"type:json;null;comment:'变量'"`
 	Varfile     string `json:"varfile" gorm:"size:128;default:'';comment:'变量文件'"`
 	Extra       string `json:"extra" gorm:"size:128;default:'';comment:'附加信息'"`
-	Timeout     int    `json:"timeout" gorm:"default:300;comment:'超时时长'"`
+	Timeout     int64  `json:"timeout" gorm:"default:300;comment:'超时时长'"`
 	Status      string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'状态'"`
 	Creator     uint   `json:"creator" grom:"not null;comment:'创建人'"`
 }

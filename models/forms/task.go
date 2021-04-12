@@ -10,7 +10,6 @@ type CreateTaskForm struct {
 	TemplateId    uint   `json:"templateId" form:"templateId" binding:"required"`
 	TemplateGuid  string `json:"templateGuid" form:"templateGuid" binding:"required"`
 	TaskType      string `json:"taskType" form:"taskType" binding:"required"`
-	Timeout       int64  `json:"timeout" binding:"required"`
 }
 
 type DetailTaskForm struct {
