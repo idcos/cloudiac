@@ -51,6 +51,7 @@ func Register(g *gin.RouterGroup) {
 		ctrl.Register(root.Group("resourceAccount"), &handlers.ResourceAccount{})
 		ctrl.Register(root.Group("template"), &handlers.Template{})
 		ctrl.Register(root.Group("task"), &handlers.Task{})
+		ctrl.Register(root.Group("task_comment"), &handlers.TaskComment{})
 
 		root.GET("/template/overview", w(handlers.Template{}.Overview))
 		root.GET("/template/state_search", w(handlers.Template{}.Overview))
