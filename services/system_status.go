@@ -3,7 +3,6 @@ package services
 import (
 	"cloudiac/configs"
 	"cloudiac/consts/e"
-	"errors"
 	"github.com/hashicorp/consul/api"
 	"strings"
 )
@@ -58,10 +57,10 @@ func ConsulKVSearch(key string) (interface{}, e.Error) {
 	if err != nil {
 		return nil, e.New(e.ConsulConnError, err)
 	}
-	if value != nil && value.Value != nil{
+	if value != nil && value.Value != nil {
 		return string(value.Value), nil
 	}
-	return nil,e.New(e.BadParam,errors.New("key error"))
+	return nil, nil
 
 }
 
