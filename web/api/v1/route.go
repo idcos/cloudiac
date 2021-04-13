@@ -51,20 +51,20 @@ func Register(g *gin.RouterGroup) {
 		ctrl.Register(root.Group("resourceAccount"), &handlers.ResourceAccount{})
 		ctrl.Register(root.Group("template"), &handlers.Template{})
 		ctrl.Register(root.Group("task"), &handlers.Task{})
-		ctrl.Register(root.Group("task_comment"), &handlers.TaskComment{})
+		ctrl.Register(root.Group("taskComment"), &handlers.TaskComment{})
 
 		root.GET("/template/overview", w(handlers.Template{}.Overview))
-		root.GET("/template/state_search", w(handlers.Template{}.Overview))
+		root.GET("/template/stateSearch", w(handlers.Template{}.Overview))
 		root.GET("/task/last", w(handlers.Task{}.LastTask))
 	}
 
 	root.GET("/sse/hello/:filename", w(handlers.HelloSse))
 	root.GET("/sse/test", w(handlers.TestSSE))
-	root.GET("/task_log/sse", w(handlers.TaskLogSSE))
+	root.GET("/taskLog/sse", w(handlers.TaskLogSSE))
 
 	// 系统状态
 	g.GET("/systemStatus/search", w(handlers.PortalSystemStatusSearch))
-	g.GET("/consul_kv/search", w(handlers.ConsulKVSearch))
-	g.GET("/runner_list/search", w(handlers.RunnerListSearch))
+	g.GET("/consulKv/search", w(handlers.ConsulKVSearch))
+	g.GET("/runnerList/search", w(handlers.RunnerListSearch))
 
 }
