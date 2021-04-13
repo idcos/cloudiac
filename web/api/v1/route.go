@@ -19,9 +19,12 @@ func Register(g *gin.RouterGroup) {
 	auth := g.Group("/auth")
 	auth.POST("/login", w(handlers.User{}.Login))
 
-	g.GET("/org/search", w(middleware.Auth), w(handlers.Organization{}.Search))
-	g.GET("/org/detail", w(middleware.Auth), w(handlers.Organization{}.Detail))
-	g.GET("/user/getUserInfo", w(middleware.Auth), w(handlers.User{}.GetUserByToken))
+	o := g.Group("/", w(middleware.Auth))
+	o.GET("/org/search", w(handlers.Organization{}.Search))
+	o.GET("/org/detail", w(handlers.Organization{}.Detail))
+	o.GET("/user/getUserInfo", w(handlers.User{}.GetUserByToken))
+	o.PUT("/user/updateSelf", w(handlers.User{}.Update))
+	o.GET("/systemStatus/search", w(handlers.PortalSystemStatusSearch))
 
 	// IaC管理员权限
 	sys := g.Group("/", w(middleware.Auth), w(middleware.IsAdmin))
@@ -36,13 +39,14 @@ func Register(g *gin.RouterGroup) {
 
 	root := g.Group("/", w(middleware.Auth), w(middleware.AuthOrgId))
 	{
-		root.GET("/user/search", w(middleware.IsOrgOwner), w(handlers.User{}.Search))
-		root.GET("/user/detail", w(middleware.IsOrgOwner), w(handlers.User{}.Detail))
-		root.POST("/user/create", w(middleware.IsOrgOwner), w(handlers.User{}.Create))
-		root.PUT("/user/update", w(handlers.User{}.Update))
-		root.PUT("/user/removeUserForOrg", w(middleware.IsOrgOwner), w(handlers.User{}.RemoveUserForOrg))
-		root.PUT("/user/userPassReset", w(middleware.IsOrgOwner), w(handlers.User{}.UserPassReset))
+		owner := root.Group("/", w(middleware.IsOrgOwner))
+		owner.GET("/user/search", w(handlers.User{}.Search))
+		owner.GET("/user/detail", w(handlers.User{}.Detail))
+		owner.POST("/user/create", w(handlers.User{}.Create))
+		owner.PUT("/user/removeUserForOrg", w(handlers.User{}.RemoveUserForOrg))
+		owner.PUT("/user/userPassReset", w(handlers.User{}.UserPassReset))
 
+		root.PUT("/user/update", w(handlers.User{}.Update))
 		root.GET("/gitlab/listRepos", w(handlers.GitLab{}.ListRepos))
 		root.GET("/gitlab/listBranches", w(handlers.GitLab{}.ListBranches))
 		root.GET("/gitlab/getReadme", w(handlers.GitLab{}.GetReadmeContent))
@@ -56,15 +60,12 @@ func Register(g *gin.RouterGroup) {
 		root.GET("/template/overview", w(handlers.Template{}.Overview))
 		root.GET("/template/stateSearch", w(handlers.Template{}.Overview))
 		root.GET("/task/last", w(handlers.Task{}.LastTask))
+
+		root.GET("/consulKv/search", w(handlers.ConsulKVSearch))
+		root.GET("/runnerList/search", w(handlers.RunnerListSearch))
 	}
 
 	root.GET("/sse/hello/:filename", w(handlers.HelloSse))
 	root.GET("/sse/test", w(handlers.TestSSE))
 	root.GET("/taskLog/sse", w(handlers.TaskLogSSE))
-
-	// 系统状态
-	g.GET("/systemStatus/search", w(handlers.PortalSystemStatusSearch))
-	g.GET("/consulKv/search", w(handlers.ConsulKVSearch))
-	g.GET("/runnerList/search", w(handlers.RunnerListSearch))
-
 }
