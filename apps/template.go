@@ -39,7 +39,7 @@ func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (interfac
 		statusList = strings.Split(form.TaskStatus, ",")
 	}
 
-	query, _ := services.QueryTemplate(c.DB().Debug(), form.Status, form.Q, form.TaskStatus, statusList)
+	query, _ := services.QueryTemplate(c.DB().Debug(), form.Status, form.Q, form.TaskStatus, statusList, c.OrgId)
 
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	templates := make([]*SearchTemplateResp, 0)
@@ -176,28 +176,32 @@ func DetailTemplate(c *ctx.ServiceCtx, form *forms.DetailTemplateForm) (interfac
 }
 
 type OverviewTemplateResp struct {
-	RepoAddr               string   `json:"repoAddr" form:"repoAddr" `
-	RepoBranch             string   `json:"repoBranch" form:"repoBranch" `
-	Name                   string   `json:"name" form:"name" `
-	Guid                   string   `json:"guid" form:"guid" `
-	TaskPlanCount          int64    `json:"taskPlanCount" form:"taskPlanCount" `
-	TaskApplyCount         int64    `json:"taskApplyCount" form:"taskApplyCount" `
-	TaskAvgPlanTime        int64    `json:"taskAvgPlanTime" form:"taskAvgPlanTime" `
-	TaskAvgApplyTime       int64    `json:"taskAvgApplyTime" form:"taskAvgApplyTime" `
-	TaskPlanFailedPercent  float64  `json:"taskPlanFailedPercent" form:"taskPlanFailedPercent" `
-	TaskApplyFailedPercent float64  `json:"taskApplyFailedPercent" form:"taskApplyFailedPercent" `
-	TaskPlanFailedCount    float64  `json:"taskPlanFailedCount" form:"taskPlanFailedCount" `
-	TaskApplyFailedCount   float64  `json:"taskApplyFailedCount" form:"taskApplyFailedCount" `
-	ActiveCreatorName      []string `json:"activeCreatorName" form:"activeCreatorName" `
-	Task                   []Task   `json:"task" form:"task" `
+	RepoAddr               string    `json:"repoAddr" form:"repoAddr" `
+	RepoBranch             string    `json:"repoBranch" form:"repoBranch" `
+	Name                   string    `json:"name" form:"name" `
+	Guid                   string    `json:"guid" form:"guid" `
+	TaskPlanCount          int64     `json:"taskPlanCount" form:"taskPlanCount" `
+	TaskApplyCount         int64     `json:"taskApplyCount" form:"taskApplyCount" `
+	TaskAvgPlanTime        int64     `json:"taskAvgPlanTime" form:"taskAvgPlanTime" `
+	TaskAvgApplyTime       int64     `json:"taskAvgApplyTime" form:"taskAvgApplyTime" `
+	TaskPlanFailedPercent  float64   `json:"taskPlanFailedPercent" form:"taskPlanFailedPercent" `
+	TaskApplyFailedPercent float64   `json:"taskApplyFailedPercent" form:"taskApplyFailedPercent" `
+	TaskPlanFailedCount    float64   `json:"taskPlanFailedCount" form:"taskPlanFailedCount" `
+	TaskApplyFailedCount   float64   `json:"taskApplyFailedCount" form:"taskApplyFailedCount" `
+	ActiveCreatorName      []string  `json:"activeCreatorName" form:"activeCreatorName" `
+	Task                   []Task    `json:"task" form:"task" `
+	TaskLastUpdatedAt      time.Time `json:"taskLastUpdatedAt" form:"taskLastUpdatedAt" `
 }
 type Task struct {
 	Name        string    `json:"name" form:"name" `
 	Status      string    `json:"status" form:"status" `
 	Guid        string    `json:"guid" form:"guid" `
 	TaskType    string    `json:"taskType" form:"taskType" `
-	CreateAt    time.Time `json:"createAt" form:"createAt" `
+	CreatedAt    time.Time `json:"createdAt" form:"createdAt" `
 	CreatorName string    `json:"creatorName" form:"creatorName" `
+	CreatedTime int64     `json:"createdTime" form:"createdTime" `
+	EndTime     int64     `json:"endTime" form:"endTime" `
+	CommitId    string    `json:"commitId" gorm:"null;comment:'COMMIT ID'"`
 }
 
 func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (interface{}, e.Error) {
@@ -216,6 +220,7 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 		taskAvgApplyTime       int64
 		taskPlanFailedPercent  float64
 		taskApplyFailedPercent float64
+		taskLastUpdatedAt      time.Time
 	)
 
 	if err := services.OverviewTemplate(tx, form.Id).First(&tpl); err != nil {
@@ -228,6 +233,9 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 	}
 
 	for index, task := range tasks {
+		if index == 0 {
+			taskLastUpdatedAt = task.CreatedAt
+		}
 		user, err := services.GetUserById(tx, task.Creator)
 		if err != nil {
 			return nil, e.New(e.DBError, err)
@@ -257,20 +265,23 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 				Status:      task.Status,
 				Guid:        task.Guid,
 				TaskType:    task.TaskType,
-				CreateAt:    task.CreatedAt,
+				CreatedAt:    task.CreatedAt,
 				CreatorName: user.Name,
+				CommitId:    task.CommitId,
+				CreatedTime: time.Now().Unix() - task.CreatedAt.Unix(),
+				EndTime:     time.Now().Unix() - task.EndAt.Unix(),
 			})
 		}
 	}
 	if taskPlanCount > 0 {
-		taskPlanFailedPercent = taskPlanFailedCount / float64(taskPlanCount)
+		taskPlanFailedPercent = taskPlanFailedCount / float64(taskPlanCount) * 100
 		if taskAvgPlanTimeCount > 0 {
 			taskAvgApplyTime = taskApplyCount / taskAvgPlanTimeCount
 		}
 	}
 
 	if taskApplyCount > 0 {
-		taskApplyFailedPercent = taskApplyFailedCount / float64(taskApplyCount)
+		taskApplyFailedPercent = taskApplyFailedCount / float64(taskApplyCount) * 100
 		if taskAvgApplyTimeCount > 0 {
 			taskAvgApplyTime = taskApplyCount / taskAvgApplyTimeCount
 		}
@@ -291,5 +302,6 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 		TaskPlanFailedCount:    taskPlanFailedCount,
 		ActiveCreatorName:      utils.RemoveDuplicateElement(activeCreatorName),
 		Task:                   taskList,
+		TaskLastUpdatedAt:      taskLastUpdatedAt,
 	}, nil
 }

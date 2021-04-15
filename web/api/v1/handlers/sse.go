@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bufio"
+	"cloudiac/consts"
 	"cloudiac/libs/ctx"
 	"cloudiac/utils/logs"
 	"context"
@@ -189,7 +190,8 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 	}()
 
 	logPath := c.Query("logPath")
-	f, err := os.Open(logPath)
+	path := fmt.Sprintf("%s/%s", logPath, consts.TaskLogName)
+	f, err := os.Open(path)
 	if err != nil {
 		loggers.Error(err)
 	}

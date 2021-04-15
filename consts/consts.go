@@ -72,6 +72,9 @@ const (
 
 	ResourceAccountDisable = "disable"
 	ResourceAccountEnable = "enable"
+	DockerStatusExited = "exited"
+	Terraform = "terraform"
+	TerraformVar = "TF_VAR_"
 )
 
 var (
