@@ -13,34 +13,40 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 )
 
 type SearchTaskResp struct {
 	models.Task
+	RepoBranch  string `json:"repoBranch" form:"repoBranch" `
+	CreatorName string `json:"creatorName" form:"creatorName" `
+	CreatedTime int64  `json:"createdTime" form:"createdTime" `
+	EndTime     int64  `json:"endTime" form:"endTime" `
 }
 
 func SearchTask(c *ctx.ServiceCtx, form *forms.SearchTaskForm) (interface{}, e.Error) {
-	query := services.QueryTask(c.DB())
-	query = query.Where("template_id = ?", form.TemplateId)
-	if form.Status != "" {
-		query = query.Where("status = ?", form.Status)
-	}
-	if form.Q != "" {
-		qs := "%" + form.Q + "%"
-		query = query.Where("name LIKE ? OR description LIKE ?", qs, qs)
+	tx := c.DB().Debug()
+	query := services.QueryTask(tx, form.Status, form.Q, form.TemplateId)
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	taskResp := make([]*SearchTaskResp, 0)
+	if err := p.Scan(&taskResp); err != nil {
+		return nil, e.New(e.DBError, err)
 	}
 
-	query = query.Order("created_at DESC")
-	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	tasks := make([]*models.Task, 0)
-	if err := p.Scan(&tasks); err != nil {
-		return nil, e.New(e.DBError, err)
+	for _, resp := range taskResp {
+		user, err := services.GetUserById(tx, resp.Creator)
+		if err != nil {
+			return nil, e.New(e.DBError, err)
+		}
+		resp.CreatorName = user.Name
+		resp.CreatedTime = time.Now().Unix() - resp.CreatedAt.Unix()
+		resp.EndTime = time.Now().Unix() - resp.EndAt.Unix()
 	}
 
 	return page.PageResp{
 		Total:    p.MustTotal(),
 		PageSize: p.Size,
-		List:     tasks,
+		List:     taskResp,
 	}, nil
 }
 
@@ -55,14 +61,21 @@ type DetailTaskResp struct {
 	SaveState   *bool  `json:"saveState" gorm:"defalut:false;comment:'是否保存状态'"`
 	Varfile     string `json:"varfile" gorm:"size:128;default:'';comment:'变量文件'"`
 	Extra       string `json:"extra" gorm:"size:128;default:'';comment:'附加信息'"`
+	CreatorName string `json:"creatorName" form:"creatorName" `
 }
 
 func DetailTask(c *ctx.ServiceCtx, form *forms.DetailTaskForm) (interface{}, e.Error) {
 	resp := DetailTaskResp{}
-	if err := services.TaskDetail(c.DB().Debug(), form.TaskId).
+	tx := c.DB().Debug()
+	if err := services.TaskDetail(tx, form.TaskId).
 		First(&resp); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
+	user, err := services.GetUserById(tx, resp.Creator)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	resp.CreatorName = user.Name
 	return resp, nil
 }
 
@@ -99,6 +112,23 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 	return task, nil
 }
 
+type LastTaskResp struct {
+	models.Task
+	CreatorName string `json:"creatorName" form:"creatorName" `
+}
+
 func LastTask(c *ctx.ServiceCtx, form *forms.LastTaskForm) (interface{}, e.Error) {
-	return services.LastTask(c.DB().Debug(), form.TemplateId)
+	tx := c.DB().Debug()
+	taskResp := LastTaskResp{}
+
+	if err := services.LastTask(tx, form.TemplateId).Scan(&taskResp); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	user, err := services.GetUserById(tx, taskResp.Creator)
+	if err != nil {
+		return nil, err
+	}
+	taskResp.CreatorName = user.Name
+	return taskResp, nil
 }
