@@ -113,13 +113,13 @@ func ReadLogFile(filepath string, offset int, maxLines int) ([]string, error) {
 
 func GetTemplateTaskPath(templateUUID string, taskId string) string {
 	conf := configs.Get()
-	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePaath, templateUUID, taskId)
+	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePath, templateUUID, taskId)
 	return templateDir
 }
 
 func FetchTaskLog(templateUUID string, taskId string, contentOffset int) ([]string, error) {
 	conf := configs.Get()
-	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePaath, templateUUID, taskId)
+	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePath, templateUUID, taskId)
 	logFile := fmt.Sprintf("%s/%s", templateDir, ContainerLogFileName)
 	lines, err := ReadLogFile(logFile, contentOffset, MaxLinesPreRead)
 	return lines, err
@@ -127,7 +127,7 @@ func FetchTaskLog(templateUUID string, taskId string, contentOffset int) ([]stri
 
 func CreateTemplatePath(templateUUID string, taskId string) (string, error) {
 	conf := configs.Get()
-	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePaath, templateUUID, taskId)
+	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePath, templateUUID, taskId)
 	err := PathCreate(templateDir)
 	return templateDir, err
 }
@@ -172,17 +172,20 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 		c.Image = d.DockerImage
 	}
 
-	var env []string
+	env := []string{
+		ContainerEnvTerraform,
+	}
 	for k, v := range d.Env {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
+
 	c.Env = env
 
 	// TODO(ZhengYue): 优化命令组装方式
 	var cmdList []string
-	logCmd := fmt.Sprintf("> %s%s 2>&1 ", ContainerLogFilePath, ContainerLogFileName)
+	logCmd := fmt.Sprintf(">> %s%s 2>&1 ", ContainerLogFilePath, ContainerLogFileName)
+	ansibleCmd := fmt.Sprint(" if [ -e run.sh ];then chmod +x run.sh && ./run.sh;fi")
 	cmdList = append(cmdList, fmt.Sprintf("git clone %s %s &&", d.Repo, logCmd))
-
 	// get folder name
 	s := strings.Split(d.Repo, "/")
 	f := s[len(s)-1]
@@ -190,13 +193,14 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 
 	cmdList = append(cmdList, fmt.Sprintf("cd %s %s &&", f, logCmd))
 	cmdList = append(cmdList, fmt.Sprintf("cp %sstate.tf . &&", ContainerLogFilePath))
-	cmdList = append(cmdList, fmt.Sprintf("terraform init %s &&", logCmd))
+	cmdList = append(cmdList, fmt.Sprintf("terraform init  -plugin-dir %s %s &&", ContainerProviderPath, logCmd))
 	if d.Mode == "apply" {
 		log.Println("entering apply mode ...")
 		if d.Varfile != "" {
-			cmdList = append(cmdList, fmt.Sprintf("%s %s %s &&%s %s", "terraform apply -auto-approve -var-file", d.Varfile, logCmd, d.Extra, logCmd))
+			cmdList = append(cmdList, fmt.Sprintf("%s %s %s &&%s %s &&%s %s",
+				"terraform apply -auto-approve -var-file ", d.Varfile, logCmd, ansibleCmd, logCmd, d.Extra, logCmd))
 		} else {
-			cmdList = append(cmdList, fmt.Sprintf("%s %s &&%s %s", "terraform apply -auto-approve ", logCmd, d.Extra, logCmd))
+			cmdList = append(cmdList, fmt.Sprintf("%s %s &&%s %s &&%s %s", "terraform apply -auto-approve ", logCmd, ansibleCmd, logCmd, d.Extra, logCmd))
 		}
 
 	} else if d.Mode == "destroy" {
@@ -207,9 +211,9 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 		cmdList = append(cmdList, fmt.Sprintf("%s&&%s", "terraform state pull", d.Extra))
 	} else {
 		if d.Varfile != "" {
-			cmdList = append(cmdList, fmt.Sprintf("%s %s", "terraform plan -var-file", d.Varfile))
+			cmdList = append(cmdList, fmt.Sprintf("%s %s %s", "terraform plan -var-file ", d.Varfile, logCmd))
 		} else {
-			cmdList = append(cmdList, fmt.Sprintf("%s", "terraform plan"))
+			cmdList = append(cmdList, fmt.Sprintf("%s %s", "terraform plan  ", logCmd))
 		}
 
 		//cmdList = append(cmdList, fmt.Sprintf("%s %s&&%s", "terraform plan -var-file", d.Varfile, d.Extra))

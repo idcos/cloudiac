@@ -104,14 +104,14 @@ func GetTaskByTplId(tx *db.Session, tplId uint) (*LastTaskInfo, e.Error) {
 //	//runnerAddr string       = ""
 //)
 
-func runningTaskEnvParam(tpl *models.Template, runnerId string) interface{} {
+func runningTaskEnvParam(tpl *models.Template, runnerId string, orgId uint) interface{} {
 	vars := make([]forms.Var, 0)
 	param := make(map[string]interface{})
 	varsByte, _ := tpl.Vars.MarshalJSON()
 	if !tpl.Vars.IsNull() {
 		json.Unmarshal(varsByte, &vars)
 	}
-	vars = append(vars, resourceEnvParam(runnerId)...)
+	vars = append(vars, resourceEnvParam(runnerId, orgId)...)
 	for _, v := range vars {
 		if v.Type == consts.Terraform {
 			v.Key = fmt.Sprintf("%s%s", consts.TerraformVar, v.Key)
@@ -126,13 +126,16 @@ func runningTaskEnvParam(tpl *models.Template, runnerId string) interface{} {
 	return param
 }
 
-func resourceEnvParam(runnerId string) []forms.Var {
+func resourceEnvParam(runnerId string, orgId uint) []forms.Var {
 	vars := make([]forms.Var, 0)
 	ra := []models.ResourceAccount{}
+	//org,_:=getorg
 	if err := db.Get().Debug().Joins(fmt.Sprintf("left join %s as crm on %s.id = crm.resource_account_id",
 		models.CtResourceMap{}.TableName(), models.ResourceAccount{}.TableName())).
 		Where("crm.ct_service_id = ?", runnerId).
-		Where(fmt.Sprintf("%s.status = '%s'", models.ResourceAccount{}.TableName(), consts.ResourceAccountEnable)).Find(&ra); err != nil {
+		Where(fmt.Sprintf("%s.status = '%s'", models.ResourceAccount{}.TableName(), consts.ResourceAccountEnable)).
+		Where(fmt.Sprintf("%s.org_id = %d", models.ResourceAccount{}.TableName(), orgId)).
+		Find(&ra); err != nil {
 		logs.Get().Errorf("ResourceAccount db err %v: ", err)
 		return nil
 	}
@@ -251,7 +254,7 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 				"state_key":             stateKey,
 				"state_backend_address": conf.Consul.Address,
 			},
-			"env":     runningTaskEnvParam(tpl, task.CtServiceId),
+			"env":     runningTaskEnvParam(tpl, task.CtServiceId, tpl.OrgId),
 			"varfile": tpl.Varfile,
 			"mode":    task.TaskType,
 			"extra":   tpl.Extra,
