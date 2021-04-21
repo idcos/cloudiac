@@ -4,7 +4,7 @@ const AssetPath = "/"
 
 const ContainerLogPaht = "/var/run/"
 
-const StaticFilePath = "/usr/yunji/cloudiac"
+const StaticFilePath = "/usr/yunji/cloudiac/tmp"
 
 const DefaultImage = "mt5225/tf-ansible:v0.0.1"
 

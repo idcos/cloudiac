@@ -1,7 +1,7 @@
 listen: "0.0.0.0:19030"
 runner:
-  asset_path: "/tmp"
-  log_base_path: "/usr/yunji/cloudiac"
+  asset_path: "/usr/yunji/cloudiac/tmp"
+  log_base_path: "/usr/yunji/cloudiac/logs"
   default_image: "mt5225/tf-ansible:v0.0.1"
   provider_path: "/usr/yunji/cloudiac/provider"
 consul:
