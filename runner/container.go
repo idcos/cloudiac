@@ -83,6 +83,11 @@ func (cmd *Command) Create(dirMapping string) error {
 					Source: dirMapping,
 					Target: ContainerLogFilePath,
 				},
+				{
+					Type:   mount.TypeBind,
+					Source: conf.Runner.ProviderPath,
+					Target: ContainerProviderPath,
+				},
 			},
 		},
 		nil,

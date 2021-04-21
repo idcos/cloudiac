@@ -1,8 +1,9 @@
 listen: "0.0.0.0:19030"
 runner:
   asset_path: "/tmp"
-  log_base_path: "/tmp"
+  log_base_path: "/usr/yunji/cloudiac"
   default_image: "mt5225/tf-ansible:v0.0.1"
+  provider_path: "/usr/yunji/cloudiac/provider"
 consul:
   address: "192.168.0.19:8500"
   id: "CT-Runner-01"
@@ -12,3 +13,6 @@ consul:
   interval: "5s"
   timeout: "3s"
   deregister_after: "90m"
+log:
+  log_level: "info"
+  log_max_days: 7
