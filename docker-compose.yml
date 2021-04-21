@@ -1,0 +1,27 @@
+version: "3"
+services:
+  iac-portal:
+    container_name: iac-portal
+    image: "${DOCKER_REGISTRY}cloudiac:${VERSION}"
+    command: ["sh", "-c", "./iac-portal -c config-portal.yml"]
+    ports:
+      - "9030:9030"
+    volumes:
+      - /usr/yunji/cloudiac/.env:/usr/yunji/cloudiac/.env:ro
+      - /usr/yunji/cloudiac/config-portal.yml:/usr/yunji/cloudiac/config-portal.yml:ro
+    environment:
+      - TZ=Asia/Shanghai
+    restart: always
+
+  ct-runner:
+    container_name: ct-runner
+    image: "${DOCKER_REGISTRY}cloudiac:${VERSION}"
+    command: [ "sh", "-c", "./ct-runner -c config-runner.yml" ]
+    ports:
+      - "19030:19030"
+    volumes:
+      - /usr/yunji/cloudiac/config-runner.yml:/usr/yunji/cloudiac/config-runner.yml:ro
+      - /usr/yunji/cloudiac/provider:/usr/yunji/cloudiac/provider:rw
+    environment:
+      - TZ=Asia/Shanghai
+    restart: always

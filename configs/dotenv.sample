@@ -1,5 +1,6 @@
 # 部署的版本(容器部署时有效)
 VERSION=latest
+DOCKER_REGISTRY=registry.idcos.com/iac/
 
 # 存放应用配置和数据的目录
 APP_DIR=./
