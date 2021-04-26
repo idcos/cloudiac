@@ -8,6 +8,7 @@ import (
 	"cloudiac/utils/logs"
 	"cloudiac/web/api"
 	"cloudiac/web/middleware"
+	"cloudiac/web/openapi/v1"
 	"github.com/gin-gonic/gin"
 	"io"
 	"os"
@@ -47,6 +48,7 @@ func StartServer() {
 	}))
 
 	api_v1.Register(e.Group("/api/v1"))
+	v1.Register(e.Group("/openapi/v1"))
 
 	//// 访问上传静态文件目录
 	//e.Static(consts.UploadURLPrefix, conf.UploadDir)

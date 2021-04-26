@@ -25,9 +25,9 @@ func GenerateToken(uid uint, name string, isAdmin bool, expireDuration time.Dura
 
 	// 将 userId，姓名, 过期时间写入 token 中
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
-		UserId:  uid,
+		UserId:   uid,
 		Username: name,
-		IsAdmin: isAdmin,
+		IsAdmin:  isAdmin,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expire.Unix(),
 		},
@@ -64,4 +64,14 @@ func DeleteToken(tx *db.Session, id uint) e.Error {
 		return e.New(e.DBError, fmt.Errorf("delete token error: %v", err))
 	}
 	return nil
+}
+
+func TokenExists(query *db.Session, apiToken string) bool {
+	exists, err := query.Model(&models.Token{}).
+		Where("token = ?", apiToken).
+		Where("status = enable").Exists()
+	if err != nil {
+		return false
+	}
+	return exists
 }
