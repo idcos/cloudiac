@@ -150,6 +150,65 @@ func (c *GinRequestCtx) JSONResult(res interface{}, err e.Error) {
 	}
 }
 
+func (c *GinRequestCtx) JSONOpenError(err e.Error, statusOrResult ...interface{}) {
+	c.JSONOpen(err, nil,"result")
+	c.Abort()
+}
+
+func (c *GinRequestCtx) JSONOpen(msg interface{}, result interface{},resultType string) {
+	var (
+		status = "success"
+		message = "处理成功"
+	)
+
+	if msg != nil {
+		if er, ok := msg.(e.Error); ok {
+			message = er.Error()
+			status = "fail"
+		}
+	}
+
+	c.Context.JSON(http.StatusOK, gin.H{
+		"status":  status,
+		"message": message,
+		resultType:  result,
+	})
+}
+
+func (c *GinRequestCtx) JSONOpenSuccessItem(res ...interface{}) {
+	if len(res) == 0 {
+		c.JSONOpen(nil, nil,"item")
+	} else {
+		c.JSONOpen(nil, res[0],"item")
+	}
+	c.Abort()
+}
+
+func (c *GinRequestCtx) JSONOpenSuccessList(res ...interface{}) {
+	if len(res) == 0 {
+		c.JSONOpen(nil, nil,"list")
+	} else {
+		c.JSONOpen(nil, res[0],"list")
+	}
+	c.Abort()
+}
+
+func (c *GinRequestCtx) JSONOpenResultItem(res interface{}, err e.Error) {
+	if err != nil {
+		c.JSONOpenError(err, res)
+	} else {
+		c.JSONOpenSuccessItem(res)
+	}
+}
+
+func (c *GinRequestCtx) JSONOpenResultList(res interface{}, err e.Error) {
+	if err != nil {
+		c.JSONOpenError(err, res)
+	} else {
+		c.JSONOpenSuccessList(res)
+	}
+}
+
 func (c *GinRequestCtx) AbortIfError(err e.Error) bool {
 	if err != nil {
 		c.JSONError(err)
@@ -244,4 +303,3 @@ func (c *GinRequestCtx) PostFormInt(key string) (int, bool) {
 func (c *GinRequestCtx) PostFormUint(key string) (uint, bool) {
 	return c.convertUint(c.PostForm(key))
 }
-
