@@ -28,9 +28,9 @@ func RunnerListSearch(c *ctx.GinRequestCtx) {
 	c.JSONOpenResultList(apps.RunnerListSearch())
 }
 
-func OpenDetailTemplate(tx *db.Session, tId uint) (interface{}, e.Error) {
+func OpenDetailTemplate(tx *db.Session, gUid string) (interface{}, e.Error) {
 	tpl := OpenTemplate{}
-	if err := tx.Table(OpenTemplate{}.TableName()).Where("guid = ?", tId).First(&tpl); err != nil {
+	if err := tx.Table(OpenTemplate{}.TableName()).Where("guid = ?", gUid).First(&tpl); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 	git, err := services.GetGitConn(tx, tpl.OrgId)

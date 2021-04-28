@@ -51,7 +51,7 @@ type DetailTemplateForm struct {
 
 type OpenApiDetailTemplateForm struct {
 	BaseForm
-	Guid uint `form:"guid" json:"guid" binding:"required"`
+	Guid string `form:"guid" json:"guid" binding:"required"`
 }
 
 type OverviewTemplateForm struct {
