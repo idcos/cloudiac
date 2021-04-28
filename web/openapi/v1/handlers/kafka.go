@@ -3,20 +3,11 @@ package handlers
 import (
 	"fmt"
 	"github.com/Shopify/sarama"
-	"log"
+	"cloudiac/configs"
+	"cloudiac/utils/logs"
 )
 
-type KafkaConfig struct {
-	Brokers      []string `yaml:"brokers"`
-	Topic        string   `yaml:"topic"`
-	GroupID      string   `yaml:"group_id"`
-	Partition    int      `yaml:"partition"`
-	SaslUsername string   `yaml:"sasl_username"`
-	SaslPassword string   `yaml:"sasl_password"`
-	TLSCertFile  string   `yaml:"tls_cert_file"`
-	TLSKeyFile   string   `yaml:"tls_key_file"`
-	TLSCAFile    string   `yaml:"tls_ca_file"`
-}
+
 
 // KafkaProducer kafka 消息生产者
 type KafkaProducer struct {
@@ -28,6 +19,7 @@ type KafkaProducer struct {
 
 // ConnAndSend 连接并发送消息
 func (k *KafkaProducer) ConnAndSend(msg []byte) (err error) {
+	logger := logs.Get().WithField("kafka", "SendResultToKafka")
 	syncProducer, err := sarama.NewSyncProducer(k.Brokers, k.Conf)
 	if err != nil {
 		return err
@@ -41,12 +33,12 @@ func (k *KafkaProducer) ConnAndSend(msg []byte) (err error) {
 		return err
 	}
 	_ = syncProducer.Close()
-	log.Println(fmt.Sprintf("KafkaProducer ConnAndSend send message success: %d %d", partition, offset))
+	logger.Info(fmt.Sprintf("KafkaProducer ConnAndSend send message success: %d %d", partition, offset))
 	return nil
 }
 
 
-func InitKafkaProducerBuilder(kaConf KafkaConfig) *KafkaProducer {
+func InitKafkaProducerBuilder(kaConf configs.KafkaConfig) *KafkaProducer {
 	conf := sarama.NewConfig()
 	conf.Producer.Retry.Max = 1
 	conf.Producer.RequiredAcks = sarama.WaitForLocal

@@ -31,6 +31,18 @@ type RabbitMqConfig struct {
 	Queue string `yaml:"queue"`
 }
 
+type KafkaConfig struct {
+	Brokers      []string `yaml:"brokers"`
+	Topic        string   `yaml:"topic"`
+	GroupID      string   `yaml:"group_id"`
+	Partition    int      `yaml:"partition"`
+	SaslUsername string   `yaml:"sasl_username"`
+	SaslPassword string   `yaml:"sasl_password"`
+	TLSCertFile  string   `yaml:"tls_cert_file"`
+	TLSKeyFile   string   `yaml:"tls_key_file"`
+	TLSCAFile    string   `yaml:"tls_ca_file"`
+}
+
 type yamlTimeDuration struct {
 	time.Duration
 }

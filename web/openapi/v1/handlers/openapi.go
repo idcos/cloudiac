@@ -25,6 +25,7 @@ func TemplateDetail(c *ctx.GinRequestCtx) {
 }
 
 func RunnerListSearch(c *ctx.GinRequestCtx) {
+
 	c.JSONResult(apps.RunnerListSearch())
 }
 
