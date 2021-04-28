@@ -52,6 +52,17 @@ func GetTaskById(tx *db.Session, id uint) (*models.Task, e.Error) {
 	return &o, nil
 }
 
+func GetTaskByGuid(tx *db.Session, guid string) (*models.Task, e.Error) {
+	o := models.Task{}
+	if err := tx.Where("guid = ?", guid).First(&o); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TaskNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &o, nil
+}
+
 func QueryTask(tx *db.Session, status, q string, tplId uint) *db.Session {
 	query := tx.Table(fmt.Sprintf("%s as task", models.Task{}.TableName())).
 		Where("template_id = ?", tplId).

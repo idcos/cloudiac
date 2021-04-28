@@ -49,7 +49,7 @@ func StartServer() {
 	}))
 
 	api_v1.Register(e.Group("/api/v1"))
-	open_api_v1.Register(e.Group("/open/v1"))
+	open_api_v1.Register(e.Group("/iac/open/v1"))
 
 	//// 访问上传静态文件目录
 	//e.Static(consts.UploadURLPrefix, conf.UploadDir)
