@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/Microsoft/go-winio v0.4.16 // indirect
+	github.com/Shopify/sarama v1.28.0 // indirect
 	github.com/containerd/containerd v1.4.4 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/docker/distribution v2.7.1+incompatible // indirect
@@ -38,6 +39,11 @@ require (
 	github.com/xanzy/go-gitlab v0.47.0
 	golang.org/x/crypto v0.0.0-20210314154223-e6e6c4f2bb5b
 	google.golang.org/grpc v1.36.0 // indirect
+	gopkg.in/jcmturner/aescts.v1 v1.0.1 // indirect
+	gopkg.in/jcmturner/dnsutils.v1 v1.0.1 // indirect
+	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
+	gopkg.in/jcmturner/gokrb5.v7 v7.2.3 // indirect
+	gopkg.in/jcmturner/rpc.v1 v1.1.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools/v3 v3.0.3 // indirect
 )
