@@ -17,21 +17,20 @@ type OpenTemplate struct {
 }
 
 func TemplateDetail(c *ctx.GinRequestCtx) {
-	form := forms.DetailTemplateForm{}
+	form := forms.OpenApiDetailTemplateForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(OpenDetailTemplate(c.ServiceCtx().DB(), form.Id))
+	c.JSONResult(OpenDetailTemplate(c.ServiceCtx().DB(), form.Guid))
 }
 
 func RunnerListSearch(c *ctx.GinRequestCtx) {
-
-	c.JSONResult(apps.RunnerListSearch())
+	c.JSONOpenResultList(apps.RunnerListSearch())
 }
 
 func OpenDetailTemplate(tx *db.Session, tId uint) (interface{}, e.Error) {
 	tpl := OpenTemplate{}
-	if err := tx.Table(OpenTemplate{}.TableName()).Where("id = ?", tId).First(&tpl); err != nil {
+	if err := tx.Table(OpenTemplate{}.TableName()).Where("guid = ?", tId).First(&tpl); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 	git, err := services.GetGitConn(tx, tpl.OrgId)
