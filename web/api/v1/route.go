@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"cloudiac/configs"
 	"cloudiac/libs/ctrl"
 	"cloudiac/web/api/v1/handlers"
 	"cloudiac/web/middleware"
@@ -47,9 +48,17 @@ func Register(g *gin.RouterGroup) {
 		owner.PUT("/user/userPassReset", w(handlers.User{}.UserPassReset))
 
 		root.PUT("/user/update", w(handlers.User{}.Update))
-		root.GET("/gitlab/listRepos", w(handlers.GitLab{}.ListRepos))
-		root.GET("/gitlab/listBranches", w(handlers.GitLab{}.ListBranches))
-		root.GET("/gitlab/getReadme", w(handlers.GitLab{}.GetReadmeContent))
+		conf := configs.Get()
+		gitlabUrl := conf.Gitlab.Url
+		if gitlabUrl != "" {
+			root.GET("/gitlab/listRepos", w(handlers.GitLab{}.ListRepos))
+			root.GET("/gitlab/listBranches", w(handlers.GitLab{}.ListBranches))
+			root.GET("/gitlab/getReadme", w(handlers.GitLab{}.GetReadmeContent))
+		} else {
+			root.GET("/gitlab/listRepos", w(handlers.Gitea{}.ListGiteaRepos))
+			root.GET("/gitlab/listBranches", w(handlers.Gitea{}.ListGiteaBranches))
+			root.GET("/gitlab/getReadme", w(handlers.Gitea{}.GetGiteaReadmeContent))
+		}
 
 		ctrl.Register(root.Group("notification"), &handlers.Notification{})
 		ctrl.Register(root.Group("resourceAccount"), &handlers.ResourceAccount{})
