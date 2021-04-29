@@ -77,7 +77,7 @@ func ListGiteaRepoBranches(form *forms.GetGitBranchesForm) ([]*Branches, e.Error
 
 func GetGiteaRepoById(repoId int) (string, e.Error) {
 	conf := configs.Get()
-	path := fmt.Sprintf("http://10.0.2.135:10080/api/v1/repositories/%d", repoId)
+	path := conf.Gitea.Url +fmt.Sprintf("/api/v1/repositories/%d", repoId)
 	request, err := http.NewRequest("GET", path, nil)
 	if err != nil {
 		return "", e.New(e.BadRequest, err)
