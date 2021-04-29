@@ -5,11 +5,9 @@ gitlab:
   url: "${GITLAB_URL}"
   token: "${GITLAB_TOKEN}"
   username: "${GITLAB_USERNAME}"
+  type: "${GITLAB_TYPE}"
 
-gitea:
-  url: "${GITLAB_URL}"
-  token: "${GITLAB_TOKEN}"
-  username: "${GITLAB_USERNAME}"
+
 
 task:
   time_ticker: ${TIME_TICKER}
