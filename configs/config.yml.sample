@@ -6,6 +6,11 @@ gitlab:
   token: "${GITLAB_TOKEN}"
   username: "${GITLAB_USERNAME}"
 
+gitea:
+  url: "${GITLAB_URL}"
+  token: "${GITLAB_TOKEN}"
+  username: "${GITLAB_USERNAME}"
+
 task:
   time_ticker: ${TIME_TICKER}
   log_path: "${LOG_PATH}"
