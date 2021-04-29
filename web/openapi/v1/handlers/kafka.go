@@ -1,12 +1,12 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/Shopify/sarama"
 	"cloudiac/configs"
 	"cloudiac/utils/logs"
 )
-
 
 
 // KafkaProducer kafka 消息生产者
@@ -15,6 +15,22 @@ type KafkaProducer struct {
 	Topic     string
 	Partition int32
 	Conf      *sarama.Config
+}
+
+type IacKafkaCallbackResult struct {
+	TaskStatus string `json:"success"`
+}
+
+type IacKafkaContent struct {
+	TransactionId  string `json:"transactionId"`
+	IacKafkaCallbackResult `json:"result"`
+}
+
+
+func (k *KafkaProducer) GenerateKafkaContent(transactionId, result string) []byte {
+	a := IacKafkaContent{transactionId, IacKafkaCallbackResult{TaskStatus: result}}
+	rep, _ := json.Marshal(&a)
+	return rep
 }
 
 // ConnAndSend 连接并发送消息
