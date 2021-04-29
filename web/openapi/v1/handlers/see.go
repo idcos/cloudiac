@@ -49,7 +49,7 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 	defer f.Close()
 
 	rd := bufio.NewReader(f)
-	//fi, err := f.Stat()
+	fi, err := f.Stat()
 	if err != nil {
 		loggers.Error(err)
 		return
@@ -60,10 +60,10 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 			str, _, err := rd.ReadLine()
 			if err != nil {
 				if err.Error() == "EOF" {
-					//if time.Now().Unix()-fi.ModTime().Unix() > 60 {
-					//	done <- true
-					//	return
-					//}
+					if time.Now().Unix()-fi.ModTime().Unix() > 60 {
+						done <- true
+						return
+					}
 					time.Sleep(1000)
 					continue
 				} else {
