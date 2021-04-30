@@ -9,13 +9,13 @@ import (
 
 type GitLab struct {}
 
-var conf = configs.Get()
 
 func (GitLab) ListRepos(c *ctx.GinRequestCtx) {
 	form := forms.GetGitProjectsForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
+	conf := configs.Get()
 	if conf.Gitlab.Type == "gitlab"{
 		c.JSONResult(apps.ListOrganizationRepos(c.ServiceCtx(), &form))
 	} else if conf.Gitlab.Type == "gitea" {
@@ -25,11 +25,11 @@ func (GitLab) ListRepos(c *ctx.GinRequestCtx) {
 }
 
 func (GitLab) ListBranches(c *ctx.GinRequestCtx) {
-
 	form := forms.GetGitBranchesForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
+	conf := configs.Get()
 	if conf.Gitlab.Type == "gitlab" {
 		c.JSONResult(apps.ListRepositoryBranches(c.ServiceCtx(), &form))
 	} else if conf.Gitlab.Type == "gitea" {
@@ -43,6 +43,7 @@ func (GitLab) GetReadmeContent(c *ctx.GinRequestCtx) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
+	conf := configs.Get()
 	if conf.Gitlab.Type == "gitlab" {
 		c.JSONResult(apps.GetReadmeContent(c.ServiceCtx(), &form))
 	} else if conf.Gitlab.Type == "gitea" {
