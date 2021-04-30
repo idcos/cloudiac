@@ -93,7 +93,6 @@ type Config struct {
 	CollectTaskSyncInterval yamlTimeDuration `yaml:"collectTaskSyncInterval"`
 	Consul                  ConsulConfig     `yaml:"consul"`
 	Gitlab                  GitlabConfig     `yaml:"gitlab"`
-	Gitea                   GitlabConfig     `yaml:"gitea"`
 	Runner                  RunnerConfig     `yaml:"runner"`
 	Task                    TaskConfig       `yaml:"task"`
 	Log                     LogConfig        `yaml:"log"`

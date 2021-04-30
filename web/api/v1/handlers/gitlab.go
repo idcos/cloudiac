@@ -22,7 +22,6 @@ func (GitLab) ListRepos(c *ctx.GinRequestCtx) {
 		c.JSONResult(apps.ListGiteaOrganizationRepos(&form))
 	}
 
-
 }
 
 func (GitLab) ListBranches(c *ctx.GinRequestCtx) {
