@@ -47,10 +47,10 @@ func Register(g *gin.RouterGroup) {
 		owner.PUT("/user/userPassReset", w(handlers.User{}.UserPassReset))
 
 		root.PUT("/user/update", w(handlers.User{}.Update))
+
 		root.GET("/gitlab/listRepos", w(handlers.GitLab{}.ListRepos))
 		root.GET("/gitlab/listBranches", w(handlers.GitLab{}.ListBranches))
 		root.GET("/gitlab/getReadme", w(handlers.GitLab{}.GetReadmeContent))
-
 		ctrl.Register(root.Group("notification"), &handlers.Notification{})
 		ctrl.Register(root.Group("resourceAccount"), &handlers.ResourceAccount{})
 		ctrl.Register(root.Group("template"), &handlers.Template{})

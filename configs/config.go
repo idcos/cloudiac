@@ -50,6 +50,7 @@ type GitlabConfig struct {
 	Url      string `yaml:"url"`
 	Token    string `yaml:"token"`
 	Username string `yaml:"username"`
+	Type     string  `yaml:"type"`
 }
 
 type TaskConfig struct {

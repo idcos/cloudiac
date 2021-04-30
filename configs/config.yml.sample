@@ -5,6 +5,9 @@ gitlab:
   url: "${GITLAB_URL}"
   token: "${GITLAB_TOKEN}"
   username: "${GITLAB_USERNAME}"
+  type: "${GITLAB_TYPE}"
+
+
 
 task:
   time_ticker: ${TIME_TICKER}

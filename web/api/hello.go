@@ -12,7 +12,6 @@ import (
 
 // 简单 handler 函数
 func Hello(c *ctx.GinRequestCtx) {
-	c.Logger().Debugf("call hello handler")
 	c.JSON(http.StatusOK, "", gin.H{
 		"hello": "world",
 		"goos":  runtime.GOOS,
