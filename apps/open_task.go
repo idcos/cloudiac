@@ -35,18 +35,18 @@ func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface
 	//todo 如果cmp寻址提供runner信息需要使用寻址的runner进行作业执行
 	//暂时使用默认runner(暂时使用配置文件中的runner)
 	logPath := fmt.Sprintf("%s/%s/%s", conf.Task.LogPath, form.TemplateGuid, guid)
-	b, _ := json.Marshal(map[string]interface{}{
-		"backend_url": fmt.Sprintf("http://%s:%d/api/v1", conf.RunnerRepo.Addr, conf.RunnerRepo.Port),
-		"ctServiceId": conf.Consul.ServiceID,
-		"log_file":    logPath,
-		"log_offset":  0,
-	})
 
 	//根据模板GUID获取模板id
 	tpl, err := services.GetTemplateByGuid(tx, form.TemplateGuid)
 	if err != nil {
 		return nil, err
 	}
+	b, _ := json.Marshal(map[string]interface{}{
+		"backend_url": fmt.Sprintf("http://%s:%d/api/v1", tpl.DefaultRunnerAddr, tpl.DefaultRunnerPort),
+		"ctServiceId": conf.Consul.ServiceID,
+		"log_file":    logPath,
+		"log_offset":  0,
+	})
 
 	org, err := services.GetOrganizationById(tx, tpl.OrgId)
 	if err != nil {
@@ -75,8 +75,8 @@ func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface
 
 func GetResourceAccount(account forms.Account, open []forms.VarOpen, accountType string) (vars []forms.VarOpen) {
 	am := consts.AccountMap[accountType]
-	types := reflect.TypeOf(&account).Elem() //通过反射获取type定义
-	values := reflect.ValueOf(&account).Elem()      //通过反射获取type定义
+	types := reflect.TypeOf(&account).Elem()   //通过反射获取type定义
+	values := reflect.ValueOf(&account).Elem() //通过反射获取type定义
 	for i := 0; i < types.NumField(); i++ {
 		if _, ok := am[types.Field(i).Tag.Get("json")]; !ok {
 			continue

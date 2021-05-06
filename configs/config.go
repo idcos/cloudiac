@@ -81,10 +81,6 @@ type LogConfig struct {
 	LogLevel   string `yaml:"log_level"`
 }
 
-type Runner struct {
-	Addr string `yaml:"addr"`
-	Port uint   `yaml:"port"`
-}
 
 func (ut *yamlTimeDuration) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var ds string
@@ -113,7 +109,6 @@ type Config struct {
 	Task                    TaskConfig       `yaml:"task"`
 	Log                     LogConfig        `yaml:"log"`
 	Kafka                   KafkaConfig      `yaml:"kafka"`
-	RunnerRepo              Runner           `yaml:"runnerRepo"`
 }
 
 var (

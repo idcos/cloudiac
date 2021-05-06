@@ -31,7 +31,3 @@ kafka:
     brokers: "10.0.3.190:9092","10.0.3.190:9093","10.0.3.190:9094"
     sasl_username: admin
     sasl_password: yunjikeji
-
-runner:
-    addr: "127.0.0.1"
-    port: 19030
