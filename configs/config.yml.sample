@@ -32,3 +32,6 @@ kafka:
     sasl_username: admin
     sasl_password: yunjikeji
 
+runner:
+    addr: "127.0.0.1"
+    port: 19030

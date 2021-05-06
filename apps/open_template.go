@@ -1,10 +1,14 @@
 package apps
 
 import (
+	"cloudiac/consts"
 	"cloudiac/consts/e"
 	"cloudiac/libs/ctx"
 	"cloudiac/models"
+	"cloudiac/models/forms"
 	"cloudiac/services"
+	"encoding/json"
+	"fmt"
 	"github.com/xanzy/go-gitlab"
 )
 
@@ -24,12 +28,30 @@ type OpenTemplate struct {
 	CommitId string `json:"commit_id,omitempty"`
 }
 
+func ParseVars(vars models.JSON) models.JSON {
+	varsList := make([]forms.Var, 0)
+	_ = json.Unmarshal(vars, &varsList)
+	resultVars := make([]forms.Var, 0)
+	for _, v := range varsList {
+		if *v.IsSecret {
+			v.Value = ""
+		}
+		if v.Type == consts.Terraform {
+			v.Key = fmt.Sprintf("%s%s", consts.TerraformVar, v.Key)
+		}
+		resultVars = append(resultVars, v)
+	}
+	b, _ := json.Marshal(resultVars)
+	return models.JSON(b)
+}
+
 func OpenDetailTemplate(c *ctx.ServiceCtx, gUid string) (interface{}, e.Error) {
 	tx := c.DB()
 	tpl := OpenTemplate{}
 	if err := tx.Table(OpenTemplate{}.TableName()).Where("guid = ?", gUid).First(&tpl); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
+	tpl.Vars = ParseVars(tpl.Vars)
 	git, err := services.GetGitConn(tx, tpl.OrgId)
 	if err != nil {
 		return nil, err

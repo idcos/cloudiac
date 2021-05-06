@@ -7,8 +7,10 @@ import (
 	"cloudiac/models"
 	"cloudiac/services"
 	"cloudiac/utils"
+	"cloudiac/utils/kafka"
 	"cloudiac/utils/logs"
 	"cloudiac/web"
+	//_ "net/http/pprof"
 	"os"
 
 	"github.com/jessevdk/go-flags"
@@ -55,11 +57,12 @@ func main() {
 	if err := tx.Commit(); err != nil {
 		logger.Fatalln(err)
 	}
-
+	kafka.InitKafkaProducerBuilder()
 	//go services.RunTaskToRunning()
 	//go services.RunTaskState()
 	utils.MaintenanceRunnerPerMax()
 	go services.RunTask()
+	//go http.ListenAndServe("0.0.0.0:6060", nil)
 	web.StartServer()
 }
 

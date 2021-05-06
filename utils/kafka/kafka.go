@@ -1,4 +1,4 @@
-package handlers
+package kafka
 
 import (
 	"cloudiac/configs"
@@ -16,13 +16,15 @@ type KafkaProducer struct {
 	Conf      *sarama.Config
 }
 
+var kafka *KafkaProducer
+
 type IacKafkaCallbackResult struct {
-	TaskStatus string `json:"success"`
+	TaskStatus string `json:"taskStatus" form:"taskStatus" `
 }
 
 type IacKafkaContent struct {
-	TransactionId          string `json:"transactionId"`
-	IacKafkaCallbackResult `json:"result"`
+	TransactionId string                 `json:"transactionId"`
+	Result        IacKafkaCallbackResult `json:"result"`
 }
 
 func (k *KafkaProducer) GenerateKafkaContent(transactionId, result string) []byte {
@@ -51,7 +53,7 @@ func (k *KafkaProducer) ConnAndSend(msg []byte) (err error) {
 	return nil
 }
 
-func InitKafkaProducerBuilder() *KafkaProducer {
+func InitKafkaProducerBuilder() {
 	kaConf := configs.Get().Kafka
 	conf := sarama.NewConfig()
 	conf.Producer.Retry.Max = 1
@@ -68,11 +70,17 @@ func InitKafkaProducerBuilder() *KafkaProducer {
 		conf.Net.SASL.Handshake = true
 	}
 
-	p := &KafkaProducer{
+	kafka = &KafkaProducer{
 		Brokers:   kaConf.Brokers,
 		Topic:     kaConf.Topic,
 		Partition: int32(kaConf.Partition),
 		Conf:      conf,
 	}
-	return p
+}
+
+func Get() *KafkaProducer {
+	if kafka == nil {
+		InitKafkaProducerBuilder()
+	}
+	return kafka
 }

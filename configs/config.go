@@ -38,9 +38,9 @@ type KafkaConfig struct {
 	Partition    int      `yaml:"partition"`
 	SaslUsername string   `yaml:"sasl_username"`
 	SaslPassword string   `yaml:"sasl_password"`
-	TLSCertFile  string   `yaml:"tls_cert_file"`
-	TLSKeyFile   string   `yaml:"tls_key_file"`
-	TLSCAFile    string   `yaml:"tls_ca_file"`
+	//TLSCertFile  string   `yaml:"tls_cert_file"`
+	//TLSKeyFile   string   `yaml:"tls_key_file"`
+	//TLSCAFile    string   `yaml:"tls_ca_file"`
 }
 
 type yamlTimeDuration struct {
@@ -81,6 +81,11 @@ type LogConfig struct {
 	LogLevel   string `yaml:"log_level"`
 }
 
+type Runner struct {
+	Addr string `yaml:"addr"`
+	Port uint   `yaml:"port"`
+}
+
 func (ut *yamlTimeDuration) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var ds string
 	if err := unmarshal(&ds); err != nil {
@@ -107,6 +112,8 @@ type Config struct {
 	Runner                  RunnerConfig     `yaml:"runner"`
 	Task                    TaskConfig       `yaml:"task"`
 	Log                     LogConfig        `yaml:"log"`
+	Kafka                   KafkaConfig      `yaml:"kafka"`
+	RunnerRepo              Runner           `yaml:"runnerRepo"`
 }
 
 var (

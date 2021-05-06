@@ -241,7 +241,7 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 			return nil, e.New(e.DBError, err)
 		}
 		if task.TaskType == consts.TaskPlan {
-			if task.Status == consts.TaskFailed || task.Status == consts.TaskTimeoout {
+			if task.Status == consts.TaskFailed || task.Status == consts.TaskTimeout {
 				taskPlanFailedCount++
 			}
 			taskPlanCount++
@@ -249,7 +249,7 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 		}
 
 		if task.TaskType == consts.TaskApply {
-			if task.Status == consts.TaskFailed || task.Status == consts.TaskTimeoout {
+			if task.Status == consts.TaskFailed || task.Status == consts.TaskTimeout {
 				taskApplyFailedCount++
 			}
 			taskApplyCount++
