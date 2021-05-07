@@ -40,7 +40,7 @@ func SearchTask(c *ctx.ServiceCtx, form *forms.SearchTaskForm) (interface{}, e.E
 		}
 		resp.CreatorName = user.Name
 		resp.CreatedTime = time.Now().Unix() - resp.CreatedAt.Unix()
-		if resp.EndAt != nil{
+		if resp.EndAt != nil {
 			resp.EndTime = time.Now().Unix() - resp.EndAt.Unix()
 		}
 

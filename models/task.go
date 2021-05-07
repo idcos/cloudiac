@@ -32,6 +32,9 @@ type Task struct {
 	EndAt        *time.Time `json:"endAt" gorm:"null;comment:'任务结束时间'"`
 	CommitId     string     `json:"commitId" gorm:"null;comment:'COMMIT ID'"`
 	CtServiceId  string     `json:"ctServiceId" gorm:"comment:'runnerId'"`
+	Source       string     `json:"source" gorm:"null;comment:'来源(workflow等)'"`
+	SourceVars   JSON       `json:"sourceVars" gorm:"type:json;null;comment:'来源参数(workflow等)'"`
+	TransactionId string `json:"transactionId" gorm:"null;comment:'流水号Id(workflow用)'"`
 }
 
 func (Task) TableName() string {

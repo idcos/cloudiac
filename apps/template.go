@@ -197,7 +197,7 @@ type Task struct {
 	Status      string    `json:"status" form:"status" `
 	Guid        string    `json:"guid" form:"guid" `
 	TaskType    string    `json:"taskType" form:"taskType" `
-	CreatedAt    time.Time `json:"createdAt" form:"createdAt" `
+	CreatedAt   time.Time `json:"createdAt" form:"createdAt" `
 	CreatorName string    `json:"creatorName" form:"creatorName" `
 	CreatedTime int64     `json:"createdTime" form:"createdTime" `
 	EndTime     int64     `json:"endTime" form:"endTime" `
@@ -241,7 +241,7 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 			return nil, e.New(e.DBError, err)
 		}
 		if task.TaskType == consts.TaskPlan {
-			if task.Status == consts.TaskFailed || task.Status == consts.TaskTimeoout {
+			if task.Status == consts.TaskFailed || task.Status == consts.TaskTimeout {
 				taskPlanFailedCount++
 			}
 			taskPlanCount++
@@ -249,7 +249,7 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 		}
 
 		if task.TaskType == consts.TaskApply {
-			if task.Status == consts.TaskFailed || task.Status == consts.TaskTimeoout {
+			if task.Status == consts.TaskFailed || task.Status == consts.TaskTimeout {
 				taskApplyFailedCount++
 			}
 			taskApplyCount++
@@ -265,7 +265,7 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 				Status:      task.Status,
 				Guid:        task.Guid,
 				TaskType:    task.TaskType,
-				CreatedAt:    task.CreatedAt,
+				CreatedAt:   task.CreatedAt,
 				CreatorName: user.Name,
 				CommitId:    task.CommitId,
 				CreatedTime: time.Now().Unix() - task.CreatedAt.Unix(),
