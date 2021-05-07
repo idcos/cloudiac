@@ -66,12 +66,18 @@ func DeleteToken(tx *db.Session, id uint) e.Error {
 	return nil
 }
 
-func TokenExists(query *db.Session, apiToken string) bool {
-	exists, err := query.Model(&models.Token{}).
+func TokenExists(query *db.Session, apiToken string) (bool, *models.Token) {
+	token := &models.Token{}
+	q := query.Debug().Model(&models.Token{}).
 		Where("token = ?", apiToken).
-		Where("status = enable").Exists()
+		Where("status = 'enable'")
+	exists, err := q.Exists()
 	if err != nil {
-		return false
+		return exists, nil
 	}
-	return exists
+	if err := q.First(token); err != nil {
+		return exists, nil
+	}
+
+	return exists, token
 }

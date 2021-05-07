@@ -16,8 +16,8 @@ type Runner struct {
 }
 
 type Account struct {
-	AK string `json:"AK" form:"AK" `
-	SK string `json:"SK" form:"SK" `
+	AccessKeyId string `json:"accessKeyId" form:"accessKeyId" `
+	SecretAccessKey string `json:"secretAccessKey" form:"secretAccessKey" `
 }
 
 type CreateTaskOpenForm struct {

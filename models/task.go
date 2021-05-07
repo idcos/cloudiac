@@ -33,7 +33,7 @@ type Task struct {
 	CommitId     string     `json:"commitId" gorm:"null;comment:'COMMIT ID'"`
 	CtServiceId  string     `json:"ctServiceId" gorm:"comment:'runnerId'"`
 	Source       string     `json:"source" gorm:"null;comment:'来源(workflow等)'"`
-	SourceVars   JSON       `json:"sourceVars" gorm:"null;comment:'来源参数(workflow等)'"`
+	SourceVars   JSON       `json:"sourceVars" gorm:"type:json;null;comment:'来源参数(workflow等)'"`
 	TransactionId string `json:"transactionId" gorm:"null;comment:'流水号Id(workflow用)'"`
 }
 

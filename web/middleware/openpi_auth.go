@@ -16,8 +16,12 @@ func OpenApiAuth(c *ctx.GinRequestCtx) {
 		return
 	}
 	//校验apitoken
-	if services.TokenExists(c.ServiceCtx().DB(),tokenStr){
+	exists, tokens := services.TokenExists(c.ServiceCtx().DB(), tokenStr)
+	if !exists {
 		c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
 		return
+	}
+	if tokens != nil {
+		c.ServiceCtx().UserId = tokens.UserId
 	}
 }

@@ -63,7 +63,7 @@ func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface
 		BackendInfo:   models.JSON(b),
 		TemplateId:    tpl.Id,
 		TransactionId: form.TransactionId,
-		Creator:       1,
+		Creator:       c.UserId,
 	})
 	if err != nil {
 		return nil, err
