@@ -197,7 +197,7 @@ type Task struct {
 	Status      string    `json:"status" form:"status" `
 	Guid        string    `json:"guid" form:"guid" `
 	TaskType    string    `json:"taskType" form:"taskType" `
-	CreatedAt    time.Time `json:"createdAt" form:"createdAt" `
+	CreatedAt   time.Time `json:"createdAt" form:"createdAt" `
 	CreatorName string    `json:"creatorName" form:"creatorName" `
 	CreatedTime int64     `json:"createdTime" form:"createdTime" `
 	EndTime     int64     `json:"endTime" form:"endTime" `
@@ -265,7 +265,7 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 				Status:      task.Status,
 				Guid:        task.Guid,
 				TaskType:    task.TaskType,
-				CreatedAt:    task.CreatedAt,
+				CreatedAt:   task.CreatedAt,
 				CreatorName: user.Name,
 				CommitId:    task.CommitId,
 				CreatedTime: time.Now().Unix() - task.CreatedAt.Unix(),

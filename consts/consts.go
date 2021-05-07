@@ -82,10 +82,13 @@ var (
 	BomUtf8    = []byte{0xEF, 0xBB, 0xBF}
 	AccountMap = map[string]map[string]string{
 		"aliyun": {
-			"AK":     "ALICLOUD_ACCESS_KEY",
-			"SK":     "ALICLOUD_SECRET_KEY",
+			"accessKeyId":     "ALICLOUD_ACCESS_KEY",
+			"secretAccessKey": "ALICLOUD_SECRET_KEY",
 		},
-		"vmware":{},
-		"huawei":{},
+		"vmware": {
+			"userName": "username",
+			"password": "password",
+		},
+		"huawei": {},
 	}
 )

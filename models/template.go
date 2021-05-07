@@ -22,6 +22,7 @@ type Template struct {
 	DefaultRunnerAddr      string `json:"defaultRunnerAddr" grom:"not null;comment:'默认runner地址'"`
 	DefaultRunnerPort      uint   `json:"defaultRunnerPort" grom:"not null;comment:'默认runner端口'"`
 	DefaultRunnerServiceId string `json:"defaultRunnerServiceId" grom:"not null;comment:'默认runner-consul-serviceId'"`
+	TplType                string `json:"tplType" grom:"not null;comment:'云模板类型(aliyun，VMware等)'"`
 }
 
 func (Template) TableName() string {

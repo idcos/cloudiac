@@ -28,12 +28,8 @@ func TaskLogSSEGetPath(c *ctx.ServiceCtx, taskGuid string) string {
 func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface{}, e.Error) {
 	tx := c.DB().Debug()
 	guid := utils.GenGuid("run")
-	//todo 适配其他云商
-	vars := GetResourceAccount(form.Account, form.Vars, "aliyun")
-	jsons, _ := json.Marshal(vars)
 	conf := configs.Get()
 	//todo 如果cmp寻址提供runner信息需要使用寻址的runner进行作业执行
-	//暂时使用默认runner(暂时使用配置文件中的runner)
 	logPath := fmt.Sprintf("%s/%s/%s", conf.Task.LogPath, form.TemplateGuid, guid)
 
 	//根据模板GUID获取模板id
@@ -53,6 +49,9 @@ func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface
 		return nil, err
 	}
 
+	vars := GetResourceAccount(form.Account, form.Vars, tpl.TplType)
+	jsons, _ := json.Marshal(vars)
+
 	task, err := services.CreateTask(tx, models.Task{
 		TemplateGuid:  form.TemplateGuid,
 		TaskType:      consts.TaskApply,
@@ -64,6 +63,7 @@ func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface
 		BackendInfo:   models.JSON(b),
 		TemplateId:    tpl.Id,
 		TransactionId: form.TransactionId,
+		Creator:       1,
 	})
 	if err != nil {
 		return nil, err
