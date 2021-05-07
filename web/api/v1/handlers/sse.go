@@ -254,14 +254,14 @@ type TFLogInfo struct {
 	AllowApply string `json:"allow_apply"`
 }
 
-func GetTFLog(c *ctx.GinRequestCtx)  {
+func GetTFLog(c *ctx.GinRequestCtx) {
 	loggers := logs.Get()
 	logPath := c.Query("logPath")
 	path := fmt.Sprintf("%s/%s", logPath, consts.TaskLogName)
-
 	f, err := os.Open(path)
 	if err != nil {
 		loggers.Error(err)
+		return
 	}
 	defer f.Close()
 	result := TFLogInfo{}
