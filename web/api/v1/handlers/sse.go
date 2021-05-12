@@ -7,17 +7,14 @@ import (
 	"cloudiac/utils/logs"
 	"context"
 	"fmt"
+	"github.com/gin-contrib/sse"
 	"io"
 	"log"
 	"net/http"
 	"os"
-	"regexp"
 	"strconv"
 	"sync"
 	"time"
-	"strings"
-
-	"github.com/gin-contrib/sse"
 )
 
 var old_size = map[string]int{}
@@ -250,61 +247,4 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 	if !isStreaming {
 		loggers.Info("Stream Closed!")
 	}
-}
-
-type TFLogInfo struct {
-	Add string `json:"add"`
-	Change string `json:"change"`
-	Destroy string `json:"destroy"`
-	AllowApply string `json:"allow_apply"`
-}
-
-func GetTFLog(c *ctx.GinRequestCtx) {
-	loggers := logs.Get()
-	logPath := c.Query("logPath")
-	path := fmt.Sprintf("%s/%s", logPath, consts.TaskLogName)
-	f, err := os.Open(path)
-	if err != nil {
-		loggers.Error(err)
-		return
-	}
-	defer f.Close()
-	result := TFLogInfo{}
-	for {
-		rd := bufio.NewReader(f)
-		str, _, err := rd.ReadLine()
-		if err != nil {
-			if err.Error() == "EOF" {
-				break
-			}else {
-				loggers.Error("Read Error:", err.Error())
-				break
-			}
-		}
-		LogStr := string(str)
-		if strings.Contains(LogStr, "No changes. Infrastructure is up-to-date.") {
-			result.Add = "0"
-			result.Change = "0"
-			result.Destroy = "0"
-			result.AllowApply= "false"
-			break
-		}else if strings.Contains(LogStr, `Plan:`) {
-			r, _ := regexp.Compile(`Plan: ([\d]+) to add, ([\d]+) to change, ([\d]+) to destroy`)
-			params := r.FindStringSubmatch(LogStr)
-			result.Add = params[1]
-			result.Change = params[2]
-			result.Destroy = params[3]
-			result.AllowApply = "true"
-			break
-		}else if strings.Contains(LogStr, `Apply complete!`) {
-			r, _ := regexp.Compile(`Apply complete! Resources: ([\d]+) added, ([\d]+) changed, ([\d]+) destroyed.`)
-			params := r.FindStringSubmatch(LogStr)
-			result.Add = params[1]
-			result.Change = params[2]
-			result.Destroy = params[3]
-			result.AllowApply = "false"
-			break
-		}
-	}
-	c.JSONResult(result, nil)
 }

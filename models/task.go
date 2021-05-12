@@ -35,6 +35,10 @@ type Task struct {
 	Source       string     `json:"source" gorm:"null;comment:'来源(workflow等)'"`
 	SourceVars   JSON       `json:"sourceVars" gorm:"type:json;null;comment:'来源参数(workflow等)'"`
 	TransactionId string `json:"transactionId" gorm:"null;comment:'流水号Id(workflow用)'"`
+	Add          string   	`json:"add" gorm:"default:0"`
+	Change       string		`json:"change" gorm:"default:0"`
+	Destroy 	 string		`json:"destroy" gorm:"default:0"`
+	AllowApply   bool		`json:"allowApply" gorm:"default:false"`
 }
 
 func (Task) TableName() string {
