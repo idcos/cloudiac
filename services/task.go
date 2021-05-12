@@ -384,7 +384,7 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 		path := map[string]interface{}{}
 		json.Unmarshal(logPath, &path)
 		if logFile, ok:= path["log_file"].(string); ok {
-			runnerFilePath := logFile + "/runner.log"
+			runnerFilePath := logFile
 			tfInfo := GetTFLog(runnerFilePath)
 			models.UpdateAttr(dbsess,task, tfInfo)
 		}

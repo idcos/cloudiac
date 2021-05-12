@@ -62,7 +62,7 @@ type GitlabConfig struct {
 	Url      string `yaml:"url"`
 	Token    string `yaml:"token"`
 	Username string `yaml:"username"`
-	Type     string  `yaml:"type"`
+	Type     string `yaml:"type"`
 }
 
 type TaskConfig struct {
@@ -75,13 +75,13 @@ type RunnerConfig struct {
 	LogBasePath  string `yaml:"log_base_path"`
 	DefaultImage string `yaml:"default_image"`
 	ProviderPath string `yaml:"provider_path"`
+	MountPath    string `yaml:"mount_path" `
 }
 
 type LogConfig struct {
 	LogMaxDays int    `yaml:"log_max_days"` // 日志文件保留天数, 默认 7
 	LogLevel   string `yaml:"log_level"`
 }
-
 
 func (ut *yamlTimeDuration) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var ds string

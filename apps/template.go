@@ -151,14 +151,14 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 	if form.HasKey("vars") {
 		vars := form.Vars
 		for index, v := range vars {
-
 			if *v.IsSecret && v.Value != "" {
 				encryptedValue, err := utils.AesEncrypt(v.Value)
 				vars[index].Value = encryptedValue
 				if err != nil {
 					return nil, nil
 				}
-			}else {
+			}
+			if v.Value == "" && *v.IsSecret{
 				vars[index].Value = newVars[v.Id]
 			}
 		}
@@ -182,7 +182,7 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 		attrs["status"] = form.Status
 	}
 
-	return services.UpdateTemplate(c.DB(), form.Id, attrs)
+	return services.UpdateTemplate(c.DB().Debug(), form.Id, attrs)
 }
 
 func DetailTemplate(c *ctx.ServiceCtx, form *forms.DetailTemplateForm) (interface{}, e.Error) {
