@@ -68,5 +68,4 @@ func Register(g *gin.RouterGroup) {
 	root.GET("/sse/hello/:filename", w(handlers.HelloSse))
 	root.GET("/sse/test", w(handlers.TestSSE))
 	g.GET("/taskLog/sse", w(handlers.TaskLogSSE))
-	g.GET("/taskLog/tfStatus", w(handlers.GetTFLog))
 }
