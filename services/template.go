@@ -79,3 +79,14 @@ func OverviewTemplateTask(tx *db.Session, tId uint) (task []models.Task, err e.E
 	}
 	return
 }
+
+func GetTemplateByGuid(tx *db.Session, tGuid string) (models.Template, e.Error) {
+	tpl := models.Template{}
+	if err := tx.Table(models.Template{}.TableName()).
+		Where("guid = ?", tGuid).
+		//Limit(3).
+		Find(&tpl); err != nil {
+		return models.Template{}, e.New(e.DBError, err)
+	}
+	return tpl, nil
+}

@@ -27,3 +27,10 @@ log:
     log_level: "info"
     log_max_days: 7
 
+kafka:
+    topic: IAC_TASK_REPLY
+    group_id: hangzhou-iac-proxy-1
+    partition: 0,
+    brokers: "10.0.3.190:9092","10.0.3.190:9093","10.0.3.190:9094"
+    sasl_username: admin
+    sasl_password: yunjikeji

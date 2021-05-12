@@ -9,6 +9,7 @@ import (
 	"cloudiac/models"
 	"cloudiac/models/forms"
 	"cloudiac/utils"
+	"cloudiac/utils/kafka"
 	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
@@ -44,6 +45,17 @@ func UpdateTask(tx *db.Session, id uint, attrs models.Attrs) (org *models.Task, 
 func GetTaskById(tx *db.Session, id uint) (*models.Task, e.Error) {
 	o := models.Task{}
 	if err := tx.Where("id = ?", id).First(&o); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TaskNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &o, nil
+}
+
+func GetTaskByGuid(tx *db.Session, guid string) (*models.Task, e.Error) {
+	o := models.Task{}
+	if err := tx.Where("guid = ?", guid).First(&o); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.TaskNotExists, err)
 		}
@@ -104,19 +116,31 @@ func GetTaskByTplId(tx *db.Session, tplId uint) (*LastTaskInfo, e.Error) {
 //	//runnerAddr string       = ""
 //)
 
-func runningTaskEnvParam(tpl *models.Template, runnerId string, orgId uint) interface{} {
-	vars := make([]forms.Var, 0)
+func runningTaskEnvParam(tpl *models.Template, runnerId string, task *models.Task) interface{} {
+	tplVars := make([]forms.Var, 0)
+	taskVars := make([]forms.VarOpen, 0)
 	param := make(map[string]interface{})
-	varsByte, _ := tpl.Vars.MarshalJSON()
+
+	tplVarsByte, _ := tpl.Vars.MarshalJSON()
+	taskVarsByte, _ := task.SourceVars.MarshalJSON()
+
 	if !tpl.Vars.IsNull() {
-		json.Unmarshal(varsByte, &vars)
+		_ = json.Unmarshal(tplVarsByte, &tplVars)
 	}
-	vars = append(vars, resourceEnvParam(runnerId, orgId)...)
-	for _, v := range vars {
-		if v.Type == consts.Terraform {
+
+	if !task.SourceVars.IsNull() {
+		_ = json.Unmarshal(taskVarsByte, &taskVars)
+	}
+
+	tplVars = append(tplVars, resourceEnvParam(runnerId, tpl.OrgId)...)
+	for _, v := range varsDuplicateRemoval(taskVars, tplVars) {
+		if v.Key == "" {
+			continue
+		}
+		if v.Type == consts.Terraform && !strings.HasPrefix(v.Key, consts.TerraformVar) {
 			v.Key = fmt.Sprintf("%s%s", consts.TerraformVar, v.Key)
 		}
-		if *v.IsSecret {
+		if v.IsSecret != nil && *v.IsSecret {
 			param[v.Key] = utils.AesDecrypt(v.Value)
 		} else {
 			param[v.Key] = v.Value
@@ -124,6 +148,34 @@ func runningTaskEnvParam(tpl *models.Template, runnerId string, orgId uint) inte
 	}
 
 	return param
+}
+
+func varsDuplicateRemoval(taskVars []forms.VarOpen, tplVars []forms.Var) []forms.Var {
+	if taskVars == nil {
+		return tplVars
+	}
+	vars := make([]forms.Var, 0)
+	//taskV := make(map[string]forms.VarOpen, 0)
+	tplV := make(map[string]forms.Var, 0)
+	for _, tplv := range tplVars {
+		tplV[tplv.Key] = tplv
+	}
+	isSecret := false
+	for _, taskv := range taskVars {
+		if taskv.Name == "" {
+			continue
+		}
+		if taskv.Value == "" {
+			vars = append(vars, tplV[taskv.Name])
+		} else {
+			vars = append(vars, forms.Var{
+				Key:      taskv.Name,
+				Value:    taskv.Value,
+				IsSecret: &isSecret,
+			})
+		}
+	}
+	return vars
 }
 
 func resourceEnvParam(runnerId string, orgId uint) []forms.Var {
@@ -144,7 +196,7 @@ func resourceEnvParam(runnerId string, orgId uint) []forms.Var {
 		varsByte, _ := raInfo.Params.MarshalJSON()
 		if !raInfo.Params.IsNull() {
 			v := make([]forms.Var, 0)
-			json.Unmarshal(varsByte, &v)
+			_ = json.Unmarshal(varsByte, &v)
 			vars = append(vars, v...)
 		}
 	}
@@ -154,7 +206,7 @@ func resourceEnvParam(runnerId string, orgId uint) []forms.Var {
 
 func getBackendInfo(backendInfo models.JSON, containerId string) []byte {
 	attr := models.Attrs{}
-	json.Unmarshal(backendInfo, &attr)
+	_ = json.Unmarshal(backendInfo, &attr)
 	attr["container_id"] = containerId
 	b, _ := json.Marshal(attr)
 	return b
@@ -162,7 +214,7 @@ func getBackendInfo(backendInfo models.JSON, containerId string) []byte {
 
 func updateBackendInfo(backendInfo models.JSON, offset int) []byte {
 	attr := models.Attrs{}
-	json.Unmarshal(backendInfo, &attr)
+	_ = json.Unmarshal(backendInfo, &attr)
 	attr["log_offset"] = attr["log_offset"].(float64) + float64(offset)
 	b, _ := json.Marshal(attr)
 	return b
@@ -170,6 +222,7 @@ func updateBackendInfo(backendInfo models.JSON, offset int) []byte {
 
 func writeTaskLog(contentList []string, logPath string, offset float64) error {
 	path := fmt.Sprintf("%s/%s", logPath, consts.TaskLogName)
+	_ = os.MkdirAll(logPath,0766)
 	var (
 		file *os.File
 		err  error
@@ -202,13 +255,14 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 	tpl := &models.Template{}
 	var taskStatus string
 	for {
-		count, _ := dbsess.Table(models.Task{}.TableName()).
+
+		count, _ := dbsess.Debug().Table(models.Task{}.TableName()).
 			Where("ct_service_id = ?", task.CtServiceId).
 			Where("status = ?", consts.TaskRunning).
 			Count()
 
 		if int(count) > utils.GetRunnerMax() {
-			tx.Commit()
+			_ = tx.Commit()
 			logger.Infof("runner concurrent num gt %d", count)
 			time.Sleep(time.Second * 5)
 			continue
@@ -218,13 +272,14 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 		if err := tx.
 			Where("id = ?", task.TemplateId).
 			First(tpl); err != nil && err != gorm.ErrRecordNotFound {
-			tx.Commit()
+			_ = tx.Commit()
 			logger.Errorf("tpl db err: %v", err)
 			time.Sleep(time.Second * 5)
 			continue
 		}
+
 		taskBackend := make(map[string]interface{}, 0)
-		json.Unmarshal(task.BackendInfo, &taskBackend)
+		_ = json.Unmarshal(task.BackendInfo, &taskBackend)
 
 		//向runner下发task
 		runnerAddr := taskBackend["backend_url"]
@@ -254,11 +309,12 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 				"state_key":             stateKey,
 				"state_backend_address": conf.Consul.Address,
 			},
-			"env":     runningTaskEnvParam(tpl, task.CtServiceId, tpl.OrgId),
+			"env":     runningTaskEnvParam(tpl, task.CtServiceId, task),
 			"varfile": tpl.Varfile,
 			"mode":    task.TaskType,
 			"extra":   tpl.Extra,
 		}
+		fmt.Println(data,"data")
 		header := &http.Header{}
 		header.Set("Content-Type", "application/json")
 		logger.Tracef("post data: %#v", data)
@@ -302,14 +358,14 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 				"backend_info": models.JSON(getBackendInfo(task.BackendInfo, runnerResp.Id)),
 			}); err != nil {
 			if err := tx.Commit(); err != nil {
-				tx.Rollback()
+				_ = tx.Rollback()
 			}
 		}
 		task.Status = status
 		task.StartAt = &startAt
 		task.BackendInfo = models.JSON(getBackendInfo(task.BackendInfo, runnerResp.Id))
 		if err := tx.Commit(); err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 		}
 		taskStatus = status
 		break
@@ -327,7 +383,7 @@ func RunTaskState(task *models.Task, tpl *models.Template, dbsess *db.Session) s
 	logger := logs.Get().WithField("action", "RunTaskState")
 	tx := dbsess.Begin()
 	taskBackend := make(map[string]interface{}, 0)
-	json.Unmarshal(task.BackendInfo, &taskBackend)
+	_ = json.Unmarshal(task.BackendInfo, &taskBackend)
 	runnerAddr := taskBackend["backend_url"]
 	addr := fmt.Sprintf("%s%s", runnerAddr, "/task/status")
 
@@ -368,7 +424,7 @@ func RunTaskState(task *models.Task, tpl *models.Template, dbsess *db.Session) s
 	}
 
 	if task.StartAt.Unix()+tpl.Timeout < time.Now().Unix() {
-		status = consts.TaskTimeoout
+		status = consts.TaskTimeout
 	} else if runnerResp.Status == consts.DockerStatusExited && runnerResp.StatusCode != 0 {
 		status = consts.TaskFailed
 	} else if runnerResp.Status == consts.DockerStatusExited && runnerResp.StatusCode == 0 {
@@ -384,13 +440,19 @@ func RunTaskState(task *models.Task, tpl *models.Template, dbsess *db.Session) s
 		updateM["end_at"] = time.Now()
 	}
 
+	if status != consts.TaskRunning && task.Source == consts.WorkFlow {
+		k := kafka.Get()
+		if err := k.ConnAndSend(k.GenerateKafkaContent(task.TransactionId, status)); err != nil {
+			logger.Errorf("kafka send error: %v", err)
+		}
+	}
 	//更新task状态
 	if _, err := tx.
 		Table(models.Task{}.TableName()).
 		Where("id = ?", task.Id).
 		Update(updateM); err != nil {
 		if err := tx.Commit(); err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return status
 		}
 	}
@@ -398,7 +460,7 @@ func RunTaskState(task *models.Task, tpl *models.Template, dbsess *db.Session) s
 	task.BackendInfo = updateBackendInfo(task.BackendInfo, runnerResp.LogContentLines)
 
 	if err := tx.Commit(); err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 	}
 
 	return status

@@ -62,8 +62,8 @@ const (
 
 	//作业状态
 	TaskPending  = "pending"
-	TaskTimeoout = "timeout"
 	TaskRunning  = "running"
+	TaskTimeout  = "timeout"
 	TaskFailed   = "failed"
 	TaskComplete = "complete"
 	TaskLogName  = "runner.log"
@@ -71,12 +71,24 @@ const (
 	TaskPlan     = "plan"
 
 	ResourceAccountDisable = "disable"
-	ResourceAccountEnable = "enable"
-	DockerStatusExited = "exited"
-	Terraform = "terraform"
-	TerraformVar = "TF_VAR_"
+	ResourceAccountEnable  = "enable"
+	DockerStatusExited     = "exited"
+	Terraform              = "terraform"
+	TerraformVar           = "TF_VAR_"
+	WorkFlow               = "workflow"
 )
 
 var (
-	BomUtf8 = []byte{0xEF, 0xBB, 0xBF}
+	BomUtf8    = []byte{0xEF, 0xBB, 0xBF}
+	AccountMap = map[string]map[string]string{
+		"aliyun": {
+			"accessKeyId":     "ALICLOUD_ACCESS_KEY",
+			"secretAccessKey": "ALICLOUD_SECRET_KEY",
+		},
+		"vmware": {
+			"userName": "username",
+			"password": "password",
+		},
+		"huawei": {},
+	}
 )

@@ -171,7 +171,7 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 	loggers := logs.Get()
 	contx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	chanStream := make(chan string)
+	chanStream := make(chan string, 0)
 	done := make(chan bool)
 	go func() {
 		for {
@@ -200,16 +200,22 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 	defer f.Close()
 
 	rd := bufio.NewReader(f)
+	fi, err := f.Stat()
+	if err != nil {
+		loggers.Error(err)
+		return
+	}
 
-	var mu sync.RWMutex
 	go func() {
 		for {
-			mu.Lock()
 			str, _, err := rd.ReadLine()
 			if err != nil {
 				if err.Error() == "EOF" {
+					if time.Now().Unix()-fi.ModTime().Unix() > 60 {
+						done <- true
+						return
+					}
 					time.Sleep(1000)
-					mu.Unlock()
 					continue
 				} else {
 					loggers.Error("Read Error:", err.Error())
@@ -218,7 +224,6 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 				}
 			}
 			chanStream <- string(str)
-			mu.Unlock()
 		}
 	}()
 
