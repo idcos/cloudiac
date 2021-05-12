@@ -20,7 +20,7 @@ import (
 
 var logger = logs.Get()
 
-func StartServer() {
+func GetRouter() *gin.Engine {
 	name := "iac-portal"
 	abs, _ := filepath.Abs(os.Args[0])
 	dir := filepath.Dir(abs)
@@ -31,7 +31,7 @@ func StartServer() {
 	f, _ := os.OpenFile(logPath, os.O_WRONLY|os.O_APPEND, 0666)
 	gin.DefaultWriter = io.MultiWriter(f, os.Stdout)
 
-	conf := configs.Get()
+
 	w := ctrl.GinRequestCtxWrap
 	e := gin.Default()
 
@@ -55,7 +55,14 @@ func StartServer() {
 	//e.Static(consts.UploadURLPrefix, conf.UploadDir)
 	//// 下载包地址
 	//e.Static(consts.DownloadURLPrefix, conf.DownloadDir)
+	return e
 
+}
+
+
+func StartServer() {
+	conf := configs.Get()
+	e := GetRouter()
 	logger.Infof("starting server on %v", conf.Listen)
 	// API 接口总是使用 http 协议，ssl 证书由 nginx 管理
 	if err := e.Run(conf.Listen); err != nil {

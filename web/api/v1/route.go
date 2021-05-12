@@ -63,6 +63,7 @@ func Register(g *gin.RouterGroup) {
 
 		root.GET("/consulKv/search", w(handlers.ConsulKVSearch))
 		root.GET("/runnerList/search", w(handlers.RunnerListSearch))
+		ctrl.Register(sys.Group("vcs"), &handlers.Vcs{})
 	}
 
 	root.GET("/sse/hello/:filename", w(handlers.HelloSse))

@@ -140,4 +140,5 @@ func Init(migrate bool) {
 	autoMigrate(&OperationLog{}, sess)
 	autoMigrate(&Token{}, sess)
 	autoMigrate(&TaskComment{}, sess)
+	autoMigrate(&Vcs{}, sess)
 }
