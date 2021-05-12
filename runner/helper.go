@@ -31,6 +31,8 @@ type StateStore struct {
 // ReqBody from reqeust
 type ReqBody struct {
 	Repo         string     `json:"repo"`
+	RepoCommit   string     `json:"repo_commit"`
+	RepoBranch   string     `json:"repo_branch"`
 	TemplateUUID string     `json:"template_uuid"`
 	TaskID       string     `json:"task_id"`
 	DockerImage  string     `json:"docker_image" defalut:"mt5225/tf-ansible:v0.0.1"`
@@ -186,6 +188,8 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 	logCmd := fmt.Sprintf(">> %s%s 2>&1 ", ContainerLogFilePath, ContainerLogFileName)
 	ansibleCmd := fmt.Sprint(" if [ -e run.sh ];then chmod +x run.sh && ./run.sh;fi")
 	cmdList = append(cmdList, fmt.Sprintf("git clone %s %s &&", d.Repo, logCmd))
+	cmdList = append(cmdList, fmt.Sprintf("git checkout  %s %s &&", d.RepoBranch, logCmd))
+	cmdList = append(cmdList, fmt.Sprintf("git checkout -b run_branch %s %s &&", d.RepoCommit, logCmd))
 	// get folder name
 	s := strings.Split(d.Repo, "/")
 	f := s[len(s)-1]
@@ -227,6 +231,7 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 	t = append(t, "sh")
 	t = append(t, "-c")
 	t = append(t, cmdstr)
+	fmt.Println(t)
 	c.Commands = t
 
 	// set timeout

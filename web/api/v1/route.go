@@ -25,6 +25,7 @@ func Register(g *gin.RouterGroup) {
 	o.GET("/user/getUserInfo", w(handlers.User{}.GetUserByToken))
 	o.PUT("/user/updateSelf", w(handlers.User{}.Update))
 	o.GET("/systemStatus/search", w(handlers.PortalSystemStatusSearch))
+	o.PUT("/consulTags/update",w(handlers.ConsulTagUpdate))
 
 	// IaC管理员权限
 	sys := g.Group("/", w(middleware.Auth), w(middleware.IsAdmin))
@@ -63,6 +64,7 @@ func Register(g *gin.RouterGroup) {
 
 		root.GET("/consulKv/search", w(handlers.ConsulKVSearch))
 		root.GET("/runnerList/search", w(handlers.RunnerListSearch))
+		root.GET("/templateTfvars/search",w(handlers.TemplateTfvarsSearch))
 	}
 
 	root.GET("/sse/hello/:filename", w(handlers.HelloSse))

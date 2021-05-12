@@ -17,3 +17,5 @@ const ContainerLogFileName = "runner.log"
 const MaxLinesPreRead = 50
 
 const ContainerEnvTerraform = "TF_PLUGIN_CACHE_DIR=/usr/yunji/cloudiac/provider"
+
+const ContainerMountPath = "/usr/yunji/cloudiac"
