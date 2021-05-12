@@ -402,8 +402,8 @@ func GetTFLog(logPath string) map[string]interface{}{
 	}
 	defer f.Close()
 	result := map[string]interface{}{}
+	rd := bufio.NewReader(f)
 	for {
-		rd := bufio.NewReader(f)
 		str, _, err := rd.ReadLine()
 		if err != nil {
 			if err.Error() == "EOF" {
