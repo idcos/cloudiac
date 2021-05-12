@@ -7,6 +7,7 @@ import (
 	"cloudiac/utils/logs"
 	"context"
 	"fmt"
+	"github.com/gin-contrib/sse"
 	"io"
 	"log"
 	"net/http"
@@ -14,8 +15,6 @@ import (
 	"strconv"
 	"sync"
 	"time"
-
-	"github.com/gin-contrib/sse"
 )
 
 var old_size = map[string]int{}

@@ -16,9 +16,11 @@ import (
 	"github.com/jinzhu/gorm"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 )
+
 
 func CreateTask(tx *db.Session, task models.Task) (*models.Task, e.Error) {
 	if err := models.Create(tx, &task); err != nil {
@@ -377,7 +379,71 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 		//不能太频繁调用  这里睡一会
 		time.Sleep(time.Second * 5)
 	}
+	if taskStatus == consts.TaskComplete {
+		logPath := task.BackendInfo
+		path := map[string]interface{}{}
+		json.Unmarshal(logPath, &path)
+		if logFile, ok:= path["log_file"].(string); ok {
+			runnerFilePath := logFile + "/runner.log"
+			tfInfo := GetTFLog(runnerFilePath)
+			models.UpdateAttr(dbsess,task, tfInfo)
+		}
 
+	}
+
+}
+
+func GetTFLog(logPath string) map[string]interface{}{
+	loggers := logs.Get()
+	path := fmt.Sprintf("%s/%s", logPath, consts.TaskLogName)
+	f, err := os.Open(path)
+	if err != nil {
+		loggers.Error(err)
+		return nil
+	}
+	defer f.Close()
+	result := map[string]interface{}{}
+	for {
+		rd := bufio.NewReader(f)
+		str, _, err := rd.ReadLine()
+		if err != nil {
+			if err.Error() == "EOF" {
+				break
+			}else {
+				loggers.Error("Read Error:", err.Error())
+				break
+			}
+		}
+		LogStr := string(str)
+		if strings.Contains(LogStr, "No changes. Infrastructure is up-to-date.") {
+			result["add"] = "0"
+			result["change"] = "0"
+			result["destroy"] = "0"
+			result["allowApply"]= false
+			break
+		}else if strings.Contains(LogStr, `Plan:`) {
+			r, _ := regexp.Compile(`Plan: ([\d]+) to add, ([\d]+) to change, ([\d]+) to destroy`)
+			params := r.FindStringSubmatch(LogStr)
+			if len(params) == 4 {
+				result["add"] = params[1]
+				result["change"] = params[2]
+				result["destroy"] = params[3]
+				result["allowApply"] = true
+			}
+			break
+		}else if strings.Contains(LogStr, `Apply complete!`) {
+			r, _ := regexp.Compile(`Apply complete! Resources: ([\d]+) added, ([\d]+) changed, ([\d]+) destroyed.`)
+			params := r.FindStringSubmatch(LogStr)
+			if len(params) == 4 {
+				result["add"] = params[1]
+				result["change"] = params[2]
+				result["destroy"] = params[3]
+				result["allowApply"] = false
+			}
+			break
+		}
+	}
+	return result
 }
 
 func RunTaskState(task *models.Task, tpl *models.Template, dbsess *db.Session) string {
