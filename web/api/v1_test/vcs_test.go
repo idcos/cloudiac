@@ -36,6 +36,7 @@ func init() {
 func addHeader(r *http.Request, token string) {
 	r.Header.Add("Authorization", token)
 	r.Header.Add("Content-Type", "application/json")
+	r.Header.Add("IaC-Org-Id", "1")
 }
 
 
@@ -85,7 +86,6 @@ func vcsCreate() (result map[string]interface{},repCode int){
 		fmt.Println(err)
 	}
 	addHeader(req, token)
-	req.Header.Add("IaC-Org-Id", "1")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 	resultMap := GetIacResultMap(w.Body.Bytes())
