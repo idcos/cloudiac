@@ -15,18 +15,18 @@ func CreateVcs(tx *db.Session, vcs models.Vcs) (*models.Vcs, e.Error) {
 }
 
 func UpdateVcs(tx *db.Session, id uint, attrs models.Attrs) (vcs *models.Vcs, er e.Error) {
+	vcs = &models.Vcs{}
 	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.Vcs{}, attrs); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("update vcs error: %v", err))
 	}
-	// TODO 为什么token 改完还要在查一次啊？ 感觉完全是多此一举
-	//if err := tx.Where("id = ?", id).First(vcs); err != nil {
-	//	return nil, e.New(e.DBError, fmt.Errorf("query vcs error: %v", err))
-	//}
+	if err := tx.Where("id = ?", id).First(vcs); err != nil {
+		return nil, e.New(e.DBError, fmt.Errorf("query vcs error: %v", err))
+	}
 	return
 }
 
-func QueryVcs(query *db.Session) *db.Session {
-	return query.Model(&models.Vcs{})
+func QueryVcs(orgId uint, query *db.Session) *db.Session {
+	return query.Model(&models.Vcs{}).Where("org_id = ?", orgId)
 }
 
 func DeleteVcs(tx *db.Session, id uint) e.Error {

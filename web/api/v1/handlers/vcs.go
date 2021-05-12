@@ -5,6 +5,7 @@ import (
 	"cloudiac/libs/ctrl"
 	"cloudiac/libs/ctx"
 	"cloudiac/models/forms"
+	"fmt"
 )
 
 type Vcs struct {
@@ -14,6 +15,8 @@ type Vcs struct {
 func (Vcs) Create(c *ctx.GinRequestCtx) {
 	form := &forms.CreateVcsForm{}
 	if err := c.Bind(form); err != nil {
+		fmt.Println("这返回了嘛")
+		// TODO 所有没有bind 成功的应该加上日志，所有err 输出日志
 		return
 	}
 	c.JSONResult(apps.CreateVcs(c.ServiceCtx(), form))

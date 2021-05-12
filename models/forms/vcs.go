@@ -3,9 +3,9 @@ package forms
 type CreateVcsForm struct {
 	BaseForm
 	Name     string `form:"name" json:"name" binding:"required"`
-	VcsType  string `form:"vcs_type" json:"vcs_type" binding:"required"`
+	VcsType  string `form:"vcsType" json:"vcsType" binding:"required"`
 	Address  string `form:"address" json:"address" binding:"required"`
-	VcsToken string `form:"vcs_token" json:"vcs_token" binding:"required"`
+	VcsToken string `form:"vcsToken" json:"vcsToken" binding:"required"`
 	Status   string `form:"status" json:"status" binding:"required"`
 }
 
