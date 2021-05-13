@@ -122,17 +122,17 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 
 func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.Template, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update template %d", form.Id))
-	vars := make([]forms.Var,0)
-	newVars := make(map[string]string,0)
+	vars := make([]forms.Var, 0)
+	newVars := make(map[string]string, 0)
 	tpl, err := services.GetTemplateById(c.DB(), form.Id)
 	if err != nil {
 		return nil, err
 	}
-	if !tpl.Vars.IsNull()  {
-		_ = json.Unmarshal(tpl.Vars,&vars)
+	if !tpl.Vars.IsNull() {
+		_ = json.Unmarshal(tpl.Vars, &vars)
 	}
 
-	for _,v:=range vars{
+	for _, v := range vars {
 		newVars[v.Id] = v.Value
 	}
 	attrs := models.Attrs{}
@@ -158,7 +158,7 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 					return nil, nil
 				}
 			}
-			if v.Value == "" && *v.IsSecret{
+			if v.Value == "" && *v.IsSecret {
 				vars[index].Value = newVars[v.Id]
 			}
 		}
@@ -244,6 +244,12 @@ type Task struct {
 	EndTime     int64     `json:"endTime" form:"endTime" `
 	CommitId    string    `json:"commitId" gorm:"null;comment:'COMMIT ID'"`
 	Id          uint      `json:"id" form:"id" `
+	Add         string    `json:"add" gorm:"default:0"`
+	Change      string    `json:"change" gorm:"default:0"`
+	Destroy     string    `json:"destroy" gorm:"default:0"`
+	AllowApply  bool      `json:"allowApply" gorm:"default:false"`
+	RepoBranch  string    `json:"repoBranch" form:"repoBranch" `
+	CtServiceId  string    `json:"ctServiceId" form:"ctServiceId" `
 }
 
 func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (interface{}, e.Error) {
@@ -313,6 +319,12 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 				CreatedTime: time.Now().Unix() - task.CreatedAt.Unix(),
 				EndTime:     time.Now().Unix() - task.EndAt.Unix(),
 				Id:          task.Id,
+				Add:         task.Add,
+				Destroy:     task.Destroy,
+				Change:      task.Change,
+				AllowApply:  task.AllowApply,
+				RepoBranch:  tpl.RepoBranch,
+				CtServiceId:  task.CtServiceId,
 			})
 		}
 	}

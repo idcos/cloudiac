@@ -98,6 +98,14 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 	if err := os.MkdirAll(logPath, os.ModePerm); err != nil {
 		return nil, e.New(e.IOError, err)
 	}
+
+	path := fmt.Sprintf("%s/%s", logPath, consts.TaskLogName)
+	isExists, _ := utils.PathExists(path)
+	if !isExists {
+		file, _ := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
+		file.WriteString("")
+	}
+
 	tpl, err := services.GetTemplateByGuid(c.DB(), form.TemplateGuid)
 	if err != nil {
 		return nil, err
