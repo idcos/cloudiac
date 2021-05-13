@@ -1,17 +1,14 @@
 package services
 
 import (
-	"cloudiac/configs"
 	"cloudiac/consts/e"
-	"cloudiac/libs/db"
 	"cloudiac/models"
 	"cloudiac/models/forms"
-	"encoding/json"
 	"github.com/xanzy/go-gitlab"
 )
 
-func ListOrganizationReposById(tx *db.Session, orgId uint, form *forms.GetGitProjectsForm) (projects []*gitlab.Project, total int, err e.Error) {
-	git, err := GetGitConn(tx, orgId)
+func ListOrganizationReposById(form *forms.GetGitProjectsForm) (projects []*gitlab.Project, total int, err e.Error) {
+	git, err := GetGitConn(form.Url, form.Token)
 	if err != nil {
 		return nil, total, err
 	}
@@ -34,26 +31,25 @@ func ListOrganizationReposById(tx *db.Session, orgId uint, form *forms.GetGitPro
 	return
 }
 
-func ListRepositoryBranches(tx *db.Session, orgId uint, repoId int) (branches []*gitlab.Branch, err e.Error) {
-	git, err := GetGitConn(tx, orgId)
+func ListRepositoryBranches(form *forms.GetGitBranchesForm) (branches []*gitlab.Branch, err e.Error) {
+	git, err := GetGitConn(form.Token, form.Url)
 	if err != nil {
 		return nil, err
 	}
-
 	opt := &gitlab.ListBranchesOptions{}
-	branches, _, er := git.Branches.ListBranches(repoId, opt)
+	branches, _, er := git.Branches.ListBranches(form.RepoId, opt)
 	if er != nil {
 		return nil, e.New(e.GitLabError, er)
 	}
 	return branches, nil
 }
 
-func GetReadmeContent(tx *db.Session, orgId uint, form *forms.GetReadmeForm) (content models.FileContent, err error) {
+func GetReadmeContent(form *forms.GetReadmeForm) (content models.FileContent, err error) {
 	content = models.FileContent{
 		Content: "",
 	}
 
-	git, err := GetGitConn(tx, orgId)
+	git, err := GetGitConn(form.Token, form.Url)
 	if err != nil {
 		return content, err
 	}
@@ -70,25 +66,7 @@ func GetReadmeContent(tx *db.Session, orgId uint, form *forms.GetReadmeForm) (co
 	return res, nil
 }
 
-func GetGitConn(tx *db.Session, orgId uint) (git *gitlab.Client, err e.Error) {
-	// 优先使用配置文件中的gitlab配置
-	conf := configs.Get()
-	gitlabUrl := conf.Gitlab.Url
-	gitlabToken := conf.Gitlab.Token
-	if gitlabUrl == "" || gitlabToken == "" {
-		org := models.Organization{}
-		if er := tx.Where("id = ?", orgId).First(&org); er != nil {
-			return nil, e.New(e.DBError, er)
-		}
-		var dat map[string]string
-		vcsAuthInfo := org.VcsAuthInfo
-		if er := json.Unmarshal([]byte(vcsAuthInfo), &dat); er != nil {
-			return nil, e.New(e.JSONParseError, er)
-		}
-		gitlabUrl = dat["url"]
-		gitlabToken = dat["token"]
-	}
-
+func GetGitConn(gitlabToken, gitlabUrl string) (git *gitlab.Client, err e.Error) {
 	git, er := gitlab.NewClient(gitlabToken, gitlab.WithBaseURL(gitlabUrl+"/api/v4"))
 	if er != nil {
 		return nil, e.New(e.JSONParseError, er)

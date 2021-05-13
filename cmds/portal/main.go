@@ -51,6 +51,7 @@ func main() {
 	}()
 
 	// 自动执行平台初始化操作，只在第一次启动时执行
+	InitVcs(tx)
 	if err := appAutoInit(tx); err != nil {
 		panic(err)
 	}
@@ -64,6 +65,29 @@ func main() {
 	go services.RunTask()
 	//go http.ListenAndServe("0.0.0.0:6060", nil)
 	web.StartServer()
+}
+
+func InitVcs(tx *db.Session) {
+	logger := logs.Get()
+	vcs := models.Vcs{
+		OrgId:   0,
+		Name:    "默认仓库",
+		VcsType: configs.Get().Gitlab.Type,
+		Status:  "enable",
+		Address: configs.Get().Gitlab.Url,
+		Token:   configs.Get().Gitlab.Token,
+	}
+	exist, err := services.QueryVcs(0, tx).Exists()
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	if !exist {
+		_, err = services.CreateVcs(tx, vcs)
+		if err != nil {
+			logger.Error(err)
+		}
+	}
 }
 
 // 平台初始化

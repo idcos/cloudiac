@@ -47,3 +47,8 @@ func DeleteVcs(c *ctx.ServiceCtx, form *forms.DeleteVcsForm) (result interface{}
 	}
 	return
 }
+
+func ListEnableVcs(c *ctx.ServiceCtx) (interface{}, e.Error) {
+	return services.QueryEnableVcs(c.OrgId, c.DB())
+
+}

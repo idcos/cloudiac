@@ -104,6 +104,9 @@ func ListGiteaOrganizationRepos(form *forms.GetGitProjectsForm) (interface{}, e.
 	gitlabUrl := conf.Gitlab.Url
 	link, _ := url.Parse("/repos/search")
 	link.RawQuery = fmt.Sprintf("page=%d&limit=%d", form.CurrentPage(), form.PageSize())
+	if form.Q != "" {
+		link.RawQuery = link.RawQuery + fmt.Sprintf("&q=%s", form.Q)
+	}
 	path := gitlabUrl + "/api/v1" + link.String()
 	request, err := http.NewRequest("GET", path, nil)
 	if err != nil {
