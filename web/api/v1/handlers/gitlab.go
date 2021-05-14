@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"cloudiac/apps"
+	"cloudiac/consts/e"
 	"cloudiac/libs/ctx"
 	"cloudiac/models/forms"
 	"cloudiac/services"
@@ -20,9 +21,10 @@ func (GitLab) ListRepos(c *ctx.GinRequestCtx) {
 	if err != nil {
 		logger := logs.Get()
 		logger.Error(err)
-		return
+		c.JSONResult(nil,e.New(e.DBError, err))
 	}
-	
+
+
 	if vcs.VcsType == "gitlab"{
 		c.JSONResult(apps.ListOrganizationRepos(vcs, &form))
 	} else if vcs.VcsType == "gitea" {
@@ -41,7 +43,7 @@ func (GitLab) ListBranches(c *ctx.GinRequestCtx) {
 	if err != nil {
 		logger := logs.Get()
 		logger.Error(err)
-		return
+		c.JSONResult(nil,e.New(e.DBError, err))
 	}
 	if vcs.VcsType == "gitlab" {
 		c.JSONResult(apps.ListRepositoryBranches(vcs, &form))
@@ -60,7 +62,7 @@ func (GitLab) GetReadmeContent(c *ctx.GinRequestCtx) {
 	if err != nil {
 		logger := logs.Get()
 		logger.Error(err)
-		return
+		c.JSONResult(nil,e.New(e.DBError, err))
 	}
 	if vcs.VcsType == "gitlab" {
 		c.JSONResult(apps.GetReadmeContent(vcs, &form))
