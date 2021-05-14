@@ -6,7 +6,6 @@ import (
 	"cloudiac/libs/ctx"
 	"cloudiac/models/forms"
 	"cloudiac/services"
-	"cloudiac/utils/logs"
 )
 
 type GitLab struct {}
@@ -19,12 +18,9 @@ func (GitLab) ListRepos(c *ctx.GinRequestCtx) {
 	}
 	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().Tx())
 	if err != nil {
-		logger := logs.Get()
-		logger.Error(err)
 		c.JSONResult(nil,e.New(e.DBError, err))
+		return
 	}
-
-
 	if vcs.VcsType == "gitlab"{
 		c.JSONResult(apps.ListOrganizationRepos(vcs, &form))
 	} else if vcs.VcsType == "gitea" {
@@ -41,9 +37,8 @@ func (GitLab) ListBranches(c *ctx.GinRequestCtx) {
 	}
 	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().Tx())
 	if err != nil {
-		logger := logs.Get()
-		logger.Error(err)
 		c.JSONResult(nil,e.New(e.DBError, err))
+		return
 	}
 	if vcs.VcsType == "gitlab" {
 		c.JSONResult(apps.ListRepositoryBranches(vcs, &form))
@@ -60,9 +55,8 @@ func (GitLab) GetReadmeContent(c *ctx.GinRequestCtx) {
 	}
 	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().Tx())
 	if err != nil {
-		logger := logs.Get()
-		logger.Error(err)
 		c.JSONResult(nil,e.New(e.DBError, err))
+		return
 	}
 	if vcs.VcsType == "gitlab" {
 		c.JSONResult(apps.GetReadmeContent(vcs, &form))
@@ -79,9 +73,8 @@ func TemplateTfvarsSearch(c *ctx.GinRequestCtx){
 	}
 	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().Tx())
 	if err != nil {
-		logger := logs.Get()
-		logger.Error(err)
 		c.JSONResult(nil,e.New(e.DBError, err))
+		return
 	}
 	c.JSONResult(apps.TemplateTfvarsSearch(vcs, &form))
 }
