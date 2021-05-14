@@ -34,7 +34,7 @@ func GetGiteaReadme(vcs *models.Vcs,form *forms.GetReadmeForm) (interface{}, e.E
 	if err != nil {
 		return nil, err
 	}
-	path := vcs.Address + "api/v1" + fmt.Sprintf("/repos/%s/raw/README.md?ref=%s", repo, form.Branch)
+	path := vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/raw/README.md?ref=%s", repo, form.Branch)
 	request, er := http.NewRequest("GET", path, nil)
 	if er != nil {
 		return nil, e.New(e.BadRequest, err)
@@ -54,7 +54,7 @@ func ListGiteaRepoBranches(vcs *models.Vcs,form *forms.GetGitBranchesForm) ([]*B
 	if err != nil {
 		return nil, err
 	}
-	path := vcs.Address + "api/v1" + fmt.Sprintf("/repos/%s/branches?limit=0&page=0", repo)
+	path := vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/branches?limit=0&page=0", repo)
 	request, er := http.NewRequest("GET", path, nil)
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)
@@ -75,7 +75,7 @@ func ListGiteaRepoBranches(vcs *models.Vcs,form *forms.GetGitBranchesForm) ([]*B
 
 func GetGiteaRepoById(vcs *models.Vcs,repoId int) (string, e.Error) {
 
-	path := vcs.Address +fmt.Sprintf("api/v1/repositories/%d", repoId)
+	path := vcs.Address +fmt.Sprintf("/api/v1/repositories/%d", repoId)
 	request, err := http.NewRequest("GET", path, nil)
 	if err != nil {
 		return "", e.New(e.BadRequest, err)
@@ -103,7 +103,7 @@ func ListGiteaOrganizationRepos(vcs *models.Vcs, form *forms.GetGitProjectsForm)
 	if form.Q != "" {
 		link.RawQuery = link.RawQuery + fmt.Sprintf("&q=%s", form.Q)
 	}
-	path := vcs.Address + "api/v1" + link.String()
+	path := vcs.Address + "/api/v1" + link.String()
 	request, err := http.NewRequest("GET", path, nil)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
