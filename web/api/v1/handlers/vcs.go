@@ -43,6 +43,6 @@ func (Vcs) Delete(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.DeleteVcs(c.ServiceCtx(), form))
 }
 
-func (Vcs) ListEnableVcs(c *ctx.GinRequestCtx) {
+func ListEnableVcs(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.ListEnableVcs(c.ServiceCtx()))
 }
