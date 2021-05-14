@@ -9,7 +9,7 @@ import (
 )
 
 func ListOrganizationReposById(vcs *models.Vcs,form *forms.GetGitProjectsForm) (projects []*gitlab.Project, total int, err e.Error) {
-	git, err := GetGitConn(vcs.Address, vcs.VcsToken)
+	git, err := GetGitConn(vcs.VcsToken, vcs.Address)
 	if err != nil {
 		return nil, total, err
 	}
@@ -33,7 +33,7 @@ func ListOrganizationReposById(vcs *models.Vcs,form *forms.GetGitProjectsForm) (
 }
 
 func ListRepositoryBranches(vcs *models.Vcs, form *forms.GetGitBranchesForm) (branches []*gitlab.Branch, err e.Error) {
-	git, err := GetGitConn(vcs.Address, vcs.VcsToken)
+	git, err := GetGitConn(vcs.VcsToken, vcs.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func GetReadmeContent(vcs *models.Vcs, form *forms.GetReadmeForm) (content model
 	content = models.FileContent{
 		Content: "",
 	}
-	git, err := GetGitConn(vcs.Address, vcs.VcsToken)
+	git, err := GetGitConn(vcs.VcsToken, vcs.Address)
 	if err != nil {
 		return content, err
 	}
