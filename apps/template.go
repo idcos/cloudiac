@@ -232,6 +232,7 @@ type OverviewTemplateResp struct {
 	ActiveCreatorName      []string  `json:"activeCreatorName" form:"activeCreatorName" `
 	Task                   []Task    `json:"task" form:"task" `
 	TaskLastUpdatedAt      time.Time `json:"taskLastUpdatedAt" form:"taskLastUpdatedAt" `
+	CreatorName            string    `json:"creatorName" form:"creatorName" `
 }
 type Task struct {
 	Name        string    `json:"name" form:"name" `
@@ -249,7 +250,7 @@ type Task struct {
 	Destroy     string    `json:"destroy" gorm:"default:0"`
 	AllowApply  bool      `json:"allowApply" gorm:"default:false"`
 	RepoBranch  string    `json:"repoBranch" form:"repoBranch" `
-	CtServiceId  string    `json:"ctServiceId" form:"ctServiceId" `
+	CtServiceId string    `json:"ctServiceId" form:"ctServiceId" `
 }
 
 func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (interface{}, e.Error) {
@@ -324,7 +325,7 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 				Change:      task.Change,
 				AllowApply:  task.AllowApply,
 				RepoBranch:  tpl.RepoBranch,
-				CtServiceId:  task.CtServiceId,
+				CtServiceId: task.CtServiceId,
 			})
 		}
 	}
@@ -341,7 +342,10 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 			taskAvgApplyTime = taskApplyCount / taskAvgApplyTimeCount
 		}
 	}
-
+	user, err := services.GetUserById(tx, tpl.Creator)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
 	return OverviewTemplateResp{
 		RepoAddr:               tpl.RepoAddr,
 		RepoBranch:             tpl.RepoBranch,
@@ -358,5 +362,6 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 		ActiveCreatorName:      utils.RemoveDuplicateElement(activeCreatorName),
 		Task:                   taskList,
 		TaskLastUpdatedAt:      taskLastUpdatedAt,
+		CreatorName:            user.Name,
 	}, nil
 }
