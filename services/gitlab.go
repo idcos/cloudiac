@@ -8,6 +8,7 @@ import (
 	"cloudiac/models/forms"
 	"encoding/json"
 	"github.com/xanzy/go-gitlab"
+	"strings"
 )
 
 func ListOrganizationReposById(tx *db.Session, orgId uint, form *forms.GetGitProjectsForm) (projects []*gitlab.Project, total int, err e.Error) {
@@ -48,8 +49,8 @@ func ListRepositoryBranches(tx *db.Session, orgId uint, repoId int) (branches []
 	return branches, nil
 }
 
-func GetReadmeContent(tx *db.Session, orgId uint, form *forms.GetReadmeForm) (content models.FileContent, err error) {
-	content = models.FileContent{
+func GetReadmeContent(tx *db.Session, orgId uint, form *forms.GetReadmeForm) (models.FileContent, e.Error) {
+	content := models.FileContent{
 		Content: "",
 	}
 
@@ -59,9 +60,9 @@ func GetReadmeContent(tx *db.Session, orgId uint, form *forms.GetReadmeForm) (co
 	}
 
 	opt := &gitlab.GetRawFileOptions{Ref: gitlab.String(form.Branch)}
-	row, _, err := git.RepositoryFiles.GetRawFile(form.RepoId, "README.md", opt)
-	if err != nil {
-		return content, err
+	row, _, errs := git.RepositoryFiles.GetRawFile(form.RepoId, "README.md", opt)
+	if errs != nil {
+		return content, e.New(e.GitLabError, err)
 	}
 
 	res := models.FileContent{
@@ -94,4 +95,48 @@ func GetGitConn(tx *db.Session, orgId uint) (git *gitlab.Client, err e.Error) {
 		return nil, e.New(e.JSONParseError, er)
 	}
 	return
+}
+
+func TemplateTfvarsSearch(tx *db.Session, repoId, orgId uint, repoBranch string) (interface{}, e.Error) {
+	git, err := GetGitConn(tx, orgId)
+	if err != nil {
+		return nil, err
+	}
+	tfVarsList, errs := getTfvarsList(git, repoBranch, "", repoId)
+	if errs != nil {
+		return nil, e.New(e.GitLabError, err)
+	}
+
+	//c, _, b1 := git.RepositoryFiles.GetFile(564, "state.tf",&sss)
+	return tfVarsList, nil
+}
+
+func getTfvarsList(git *gitlab.Client, repoBranch, path string, repoId uint) ([]string, error) {
+	var fileBlob = "blob"
+	var fileTree = "tree"
+	pathList := make([]string, 0)
+	lto := &gitlab.ListTreeOptions{
+		ListOptions: gitlab.ListOptions{Page: 1, PerPage: 1000},
+		Ref:         gitlab.String(repoBranch),
+		Path:        gitlab.String(path),
+	}
+	treeNode, _, err := git.Repositories.ListTree(int(repoId), lto)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, i := range treeNode {
+		if i.Type == fileBlob && strings.Contains(i.Name, "tfvars") {
+			pathList = append(pathList, i.Path)
+		}
+		if i.Type == fileTree {
+			pl, err := getTfvarsList(git, repoBranch, i.Path, repoId)
+			if err != nil {
+				return nil, err
+			}
+			pathList = append(pathList, pl...)
+		}
+	}
+	return pathList, nil
+
 }

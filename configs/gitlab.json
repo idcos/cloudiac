@@ -1,0 +1,22 @@
+{
+  "service": {
+    "name": "gitlab",
+    "tags": [
+      "gitlab"
+    ],
+    "port": 8082,
+    "address": "gitlab.idcos.com",
+    "checks": [{
+      "id": "api",
+      "name": "HTTP API on port 8082",
+      "http": "https://gitlab.idcos.com/health",
+      "tls_skip_verify": false,
+      "method": "GET",
+      "header": {
+        "x-foo": ["bar", "baz"]
+      },
+      "interval": "10s",
+      "timeout": "1s"
+    }]
+  }
+}

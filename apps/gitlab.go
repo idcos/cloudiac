@@ -72,3 +72,7 @@ func GetReadmeContent(c *ctx.ServiceCtx, form *forms.GetReadmeForm) (interface{}
 	}
 	return content, nil
 }
+
+func TemplateTfvarsSearch(c *ctx.ServiceCtx, form *forms.TemplateTfvarsSearchForm) (interface{}, e.Error) {
+	return services.TemplateTfvarsSearch(c.DB(), form.RepoId, c.OrgId, form.RepoBranch)
+}

@@ -4,6 +4,7 @@ runner:
   log_base_path: "/usr/yunji/cloudiac/logs"
   default_image: "mt5225/tf-ansible:v0.0.1"
   provider_path: "/usr/yunji/cloudiac/provider"
+  mount_path: "/usr/yunji/cloudiac"
 consul:
   address: "192.168.0.19:8500"
   id: "CT-Runner-01"

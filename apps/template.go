@@ -85,19 +85,22 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 		jsons, _ := json.Marshal(vars)
 
 		template, err = services.CreateTemplate(tx, models.Template{
-			OrgId:       c.OrgId,
-			Name:        form.Name,
-			Guid:        guid,
-			Description: form.Description,
-			RepoId:      form.RepoId,
-			RepoBranch:  form.RepoBranch,
-			RepoAddr:    form.RepoAddr,
-			SaveState:   *form.SaveState,
-			Vars:        models.JSON(string(jsons)),
-			Varfile:     form.Varfile,
-			Extra:       form.Extra,
-			Timeout:     form.Timeout,
-			Creator:     c.UserId,
+			OrgId:                  c.OrgId,
+			Name:                   form.Name,
+			Guid:                   guid,
+			Description:            form.Description,
+			RepoId:                 form.RepoId,
+			RepoBranch:             form.RepoBranch,
+			RepoAddr:               form.RepoAddr,
+			SaveState:              *form.SaveState,
+			Vars:                   models.JSON(string(jsons)),
+			Varfile:                form.Varfile,
+			Extra:                  form.Extra,
+			Timeout:                form.Timeout,
+			Creator:                c.UserId,
+			DefaultRunnerAddr:      form.DefaultRunnerAddr,
+			DefaultRunnerPort:      form.DefaultRunnerPort,
+			DefaultRunnerServiceId: form.DefaultRunnerServiceId,
 		})
 		if err != nil {
 			return nil, err
@@ -117,12 +120,21 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 	return template, nil
 }
 
-func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (user *models.Template, err e.Error) {
+func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.Template, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update template %d", form.Id))
-	if form.Id == 0 {
-		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
+	vars := make([]forms.Var, 0)
+	newVars := make(map[string]string, 0)
+	tpl, err := services.GetTemplateById(c.DB(), form.Id)
+	if err != nil {
+		return nil, err
+	}
+	if !tpl.Vars.IsNull() {
+		_ = json.Unmarshal(tpl.Vars, &vars)
 	}
 
+	for _, v := range vars {
+		newVars[v.Id] = v.Value
+	}
 	attrs := models.Attrs{}
 	if form.HasKey("name") {
 		attrs["name"] = form.Name
@@ -139,12 +151,15 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (user *mo
 	if form.HasKey("vars") {
 		vars := form.Vars
 		for index, v := range vars {
-			if *v.IsSecret {
+			if *v.IsSecret && v.Value != "" {
 				encryptedValue, err := utils.AesEncrypt(v.Value)
 				vars[index].Value = encryptedValue
 				if err != nil {
 					return nil, nil
 				}
+			}
+			if v.Value == "" && *v.IsSecret {
+				vars[index].Value = newVars[v.Id]
 			}
 		}
 		jsons, _ := json.Marshal(vars)
@@ -167,12 +182,38 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (user *mo
 		attrs["status"] = form.Status
 	}
 
-	user, err = services.UpdateTemplate(c.DB(), form.Id, attrs)
-	return
+	return services.UpdateTemplate(c.DB().Debug(), form.Id, attrs)
 }
 
 func DetailTemplate(c *ctx.ServiceCtx, form *forms.DetailTemplateForm) (interface{}, e.Error) {
-	return services.DetailTemplate(c.DB(), form.Id)
+	vars := make([]forms.Var, 0)
+	newVars := make([]forms.Var, 0)
+	tpl, err := services.DetailTemplate(c.DB(), form.Id)
+	if err != nil {
+		return nil, err
+	}
+	if !tpl.Vars.IsNull() {
+		_ = json.Unmarshal(tpl.Vars, &vars)
+	}
+	for _, v := range vars {
+		if *v.IsSecret {
+			newVars = append(newVars, forms.Var{
+				Key:         v.Key,
+				Value:       "",
+				IsSecret:    v.IsSecret,
+				Type:        v.Type,
+				Description: v.Description,
+				Id:          v.Id,
+			})
+		} else {
+			newVars = append(newVars, v)
+		}
+	}
+	b, _ := json.Marshal(newVars)
+
+	tpl.Vars = models.JSON(b)
+
+	return tpl, nil
 }
 
 type OverviewTemplateResp struct {
@@ -202,6 +243,13 @@ type Task struct {
 	CreatedTime int64     `json:"createdTime" form:"createdTime" `
 	EndTime     int64     `json:"endTime" form:"endTime" `
 	CommitId    string    `json:"commitId" gorm:"null;comment:'COMMIT ID'"`
+	Id          uint      `json:"id" form:"id" `
+	Add         string    `json:"add" gorm:"default:0"`
+	Change      string    `json:"change" gorm:"default:0"`
+	Destroy     string    `json:"destroy" gorm:"default:0"`
+	AllowApply  bool      `json:"allowApply" gorm:"default:false"`
+	RepoBranch  string    `json:"repoBranch" form:"repoBranch" `
+	CtServiceId  string    `json:"ctServiceId" form:"ctServiceId" `
 }
 
 func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (interface{}, e.Error) {
@@ -270,6 +318,13 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 				CommitId:    task.CommitId,
 				CreatedTime: time.Now().Unix() - task.CreatedAt.Unix(),
 				EndTime:     time.Now().Unix() - task.EndAt.Unix(),
+				Id:          task.Id,
+				Add:         task.Add,
+				Destroy:     task.Destroy,
+				Change:      task.Change,
+				AllowApply:  task.AllowApply,
+				RepoBranch:  tpl.RepoBranch,
+				CtServiceId:  task.CtServiceId,
 			})
 		}
 	}

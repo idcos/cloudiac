@@ -51,3 +51,11 @@ func (GitLab) GetReadmeContent(c *ctx.GinRequestCtx) {
 	}
 
 }
+
+func TemplateTfvarsSearch(c *ctx.GinRequestCtx){
+	form := forms.TemplateTfvarsSearchForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.TemplateTfvarsSearch(c.ServiceCtx(), &form))
+}

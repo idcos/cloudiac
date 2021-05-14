@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"cloudiac/consts"
 	"cloudiac/libs/ctx"
+	"cloudiac/services"
 	"cloudiac/utils/logs"
 	"context"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -189,6 +191,13 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 	}()
 
 	logPath := c.Query("logPath")
+	l := strings.Split(logPath, "/")
+	var taskGuid string
+	if len(l) >= 3 {
+		taskGuid = l[2]
+	}
+
+	task, _ := services.GetTaskByGuid(c.ServiceCtx().DB().Debug(), taskGuid)
 	path := fmt.Sprintf("%s/%s", logPath, consts.TaskLogName)
 	f, err := os.Open(path)
 	if err != nil {
@@ -197,18 +206,13 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 	defer f.Close()
 
 	rd := bufio.NewReader(f)
-	fi, err := f.Stat()
-	if err != nil {
-		loggers.Error(err)
-		return
-	}
 
 	go func() {
 		for {
 			str, _, err := rd.ReadLine()
 			if err != nil {
 				if err.Error() == "EOF" {
-					if time.Now().Unix()-fi.ModTime().Unix() > 60 {
+					if task !=nil && task.Status != consts.TaskRunning {
 						done <- true
 						return
 					}
