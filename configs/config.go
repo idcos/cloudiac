@@ -83,6 +83,15 @@ type LogConfig struct {
 	LogLevel   string `yaml:"log_level"`
 }
 
+type SMTPServerConfig struct {
+	Addr     string `yaml:"addr"`
+	UserName string `yaml:"username"`
+	Password string `yaml:"password"`
+
+	From     string `yaml:"from"`
+	FromName string `yaml:"fromName"`
+}
+
 func (ut *yamlTimeDuration) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var ds string
 	if err := unmarshal(&ds); err != nil {
@@ -110,6 +119,7 @@ type Config struct {
 	Task                    TaskConfig       `yaml:"task"`
 	Log                     LogConfig        `yaml:"log"`
 	Kafka                   KafkaConfig      `yaml:"kafka"`
+	SMTPServer              SMTPServerConfig `yaml:"smtpServer"`
 }
 
 var (

@@ -7,8 +7,6 @@ gitlab:
   username: "${GITLAB_USERNAME}"
   type: "${GITLAB_TYPE}"
 
-
-
 task:
   time_ticker: ${TIME_TICKER}
   log_path: "${LOG_PATH}"
@@ -34,3 +32,10 @@ kafka:
     brokers: "10.0.3.190:9092","10.0.3.190:9093","10.0.3.190:9094"
     sasl_username: admin
     sasl_password: yunjikeji
+
+smtpServer:
+  addr: smtp.example.com:25
+  username: user@example.com
+  password: qwer1234
+  fromName: "Migration Tools" # 邮件发送方的名称，不配置则为空
+  from: support@example.com   # 邮件显示的发送方，不配置则使用 username 值
