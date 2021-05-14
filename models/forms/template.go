@@ -21,6 +21,7 @@ type CreateTemplateForm struct {
 	Varfile     string `form:"varfile" json:"varfile"`
 	Extra       string `form:"extra" json:"extra"`
 	Timeout     int64  `form:"timeout" json:"timeout"`
+	VcsId       uint   `json:"vcsId"`
 }
 
 type SearchTemplateForm struct {

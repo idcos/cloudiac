@@ -75,7 +75,7 @@ func InitVcs(tx *db.Session) {
 		VcsType: configs.Get().Gitlab.Type,
 		Status:  "enable",
 		Address: configs.Get().Gitlab.Url,
-		Token:   configs.Get().Gitlab.Token,
+		VcsToken:   configs.Get().Gitlab.Token,
 	}
 	exist, err := services.QueryVcs(0, tx).Exists()
 	if err != nil {
@@ -84,6 +84,16 @@ func InitVcs(tx *db.Session) {
 	}
 	if !exist {
 		_, err = services.CreateVcs(tx, vcs)
+		if err != nil {
+			logger.Error(err)
+		}
+	} else {
+		attrs := models.Attrs{
+			"vcsType": configs.Get().Gitlab.Type,
+			"address": configs.Get().Gitlab.Url,
+			"VcsToken":   configs.Get().Gitlab.Token,
+		}
+		_, err = services.UpdateVcs(tx, 0, attrs)
 		if err != nil {
 			logger.Error(err)
 		}

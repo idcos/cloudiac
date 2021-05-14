@@ -3,6 +3,7 @@ package apps
 import (
 	"cloudiac/consts/e"
 	"cloudiac/libs/page"
+	"cloudiac/models"
 	"cloudiac/models/forms"
 	"cloudiac/services"
 	"encoding/json"
@@ -19,8 +20,8 @@ type Projects struct {
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 }
 
-func ListOrganizationRepos(form *forms.GetGitProjectsForm) (interface{}, e.Error) {
-	projects, total, err := services.ListOrganizationReposById(form)
+func ListOrganizationRepos(vcs *models.Vcs,form *forms.GetGitProjectsForm) (interface{}, e.Error) {
+	projects, total, err := services.ListOrganizationReposById(vcs, form)
 	if err != nil {
 		return nil, err
 	}
@@ -46,8 +47,8 @@ type Branches struct {
 	Name string `json:"name"`
 }
 
-func ListRepositoryBranches(form *forms.GetGitBranchesForm) (brans []*Branches, err e.Error) {
-	branches, err := services.ListRepositoryBranches(form)
+func ListRepositoryBranches(vcs *models.Vcs, form *forms.GetGitBranchesForm) (brans []*Branches, err e.Error) {
+	branches, err := services.ListRepositoryBranches(vcs, form)
 	if err != nil {
 		return nil, err
 	}
@@ -64,8 +65,8 @@ func ListRepositoryBranches(form *forms.GetGitBranchesForm) (brans []*Branches, 
 	return brans, nil
 }
 
-func GetReadmeContent(form *forms.GetReadmeForm) (interface{}, e.Error) {
-	content, err := services.GetReadmeContent(form)
+func GetReadmeContent(vcs *models.Vcs, form *forms.GetReadmeForm) (interface{}, e.Error) {
+	content, err := services.GetReadmeContent(vcs, form)
 	if err != nil {
 		return nil, nil
 	}

@@ -15,7 +15,7 @@ func CreateVcs(c *ctx.ServiceCtx, form *forms.CreateVcsForm) (interface{}, e.Err
 		VcsType: form.VcsType,
 		Status:  form.Status,
 		Address: form.Address,
-		Token:   form.VcsToken,
+		VcsToken:   form.VcsToken,
 	})
 	if err != nil {
 		return nil, e.AutoNew(err, e.DBError)
@@ -29,7 +29,18 @@ func UpdateVcs(c *ctx.ServiceCtx, form *forms.UpdateVcsForm) (vcs *models.Vcs, e
 	if form.HasKey("status") {
 		attrs["status"] = form.Status
 	}
-
+	if form.HasKey("name") {
+		attrs["name"] = form.Name
+	}
+	if form.HasKey("vcsType") {
+		attrs["vcsType"] = form.VcsType
+	}
+	if form.HasKey("address") {
+		attrs["address"] = form.Address
+	}
+	if form.HasKey("vcsToken") {
+		attrs["vcsToken"] = form.VcsToken
+	}
 	vcs, err = services.UpdateVcs(c.DB(), form.Id, attrs)
 	return
 }

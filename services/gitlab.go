@@ -7,8 +7,8 @@ import (
 	"github.com/xanzy/go-gitlab"
 )
 
-func ListOrganizationReposById(form *forms.GetGitProjectsForm) (projects []*gitlab.Project, total int, err e.Error) {
-	git, err := GetGitConn(form.Url, form.Token)
+func ListOrganizationReposById(vcs *models.Vcs,form *forms.GetGitProjectsForm) (projects []*gitlab.Project, total int, err e.Error) {
+	git, err := GetGitConn(vcs.Address, vcs.VcsToken)
 	if err != nil {
 		return nil, total, err
 	}
@@ -31,8 +31,8 @@ func ListOrganizationReposById(form *forms.GetGitProjectsForm) (projects []*gitl
 	return
 }
 
-func ListRepositoryBranches(form *forms.GetGitBranchesForm) (branches []*gitlab.Branch, err e.Error) {
-	git, err := GetGitConn(form.Token, form.Url)
+func ListRepositoryBranches(vcs *models.Vcs, form *forms.GetGitBranchesForm) (branches []*gitlab.Branch, err e.Error) {
+	git, err := GetGitConn(vcs.Address, vcs.VcsToken)
 	if err != nil {
 		return nil, err
 	}
@@ -44,12 +44,12 @@ func ListRepositoryBranches(form *forms.GetGitBranchesForm) (branches []*gitlab.
 	return branches, nil
 }
 
-func GetReadmeContent(form *forms.GetReadmeForm) (content models.FileContent, err error) {
+func GetReadmeContent(vcs *models.Vcs, form *forms.GetReadmeForm) (content models.FileContent, err error) {
 	content = models.FileContent{
 		Content: "",
 	}
 
-	git, err := GetGitConn(form.Token, form.Url)
+	git, err := GetGitConn(vcs.Address, vcs.VcsToken)
 	if err != nil {
 		return content, err
 	}

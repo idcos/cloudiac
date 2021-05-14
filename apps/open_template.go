@@ -52,7 +52,12 @@ func OpenDetailTemplate(c *ctx.ServiceCtx, gUid string) (interface{}, e.Error) {
 		return nil, e.New(e.DBError, err)
 	}
 	tpl.Vars = ParseVars(tpl.Vars)
-	git, err := services.GetGitConn(tx, tpl.OrgId)
+
+	vcs, er := services.QueryVcsByVcsId(tpl.VcsId, tx)
+	if er != nil {
+		return nil, e.New(e.DBError, fmt.Errorf("query vcs detail error: %v", er))
+	}
+	git, err := services.GetGitConn(vcs.VcsToken, vcs.Address)
 	if err != nil {
 		return nil, err
 	}

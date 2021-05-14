@@ -98,6 +98,7 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 			Extra:       form.Extra,
 			Timeout:     form.Timeout,
 			Creator:     c.UserId,
+			VcsId:       form.VcsId,
 		})
 		if err != nil {
 			return nil, err
