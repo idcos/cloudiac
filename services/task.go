@@ -421,7 +421,7 @@ func GetTFLog(logPath string) map[string]interface{}{
 			result["allowApply"]= false
 			break
 		}else if strings.Contains(LogStr, `Plan:`) {
-			r, _ := regexp.Compile(`Plan: ([\d]+) to add, ([\d]+) to change, ([\d]+) to destroy`)
+			r, _ := regexp.Compile(`([\d]+) to add, ([\d]+) to change, ([\d]+) to destroy`)
 			params := r.FindStringSubmatch(LogStr)
 			if len(params) == 4 {
 				result["add"] = params[1]
