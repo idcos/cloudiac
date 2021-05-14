@@ -85,14 +85,20 @@ func (cmd *Command) Create(dirMapping string) error {
 				},
 				{
 					Type:   mount.TypeBind,
-					Source: conf.Runner.ProviderPath,
-					Target: ContainerProviderPath,
+					Source: conf.Runner.MountPath,
+					Target: ContainerMountPath,
 				},
-				{
-					Type:   mount.TypeBind,
-					Source: "/root/.ssh",
-					Target: "/root/.ssh",
-				},
+
+				//{
+				//	Type:   mount.TypeBind,
+				//	Source: conf.Runner.ProviderPath,
+				//	Target: ContainerProviderPath,
+				//},
+				//{
+				//	Type:   mount.TypeBind,
+				//	Source: conf.Runner.KeysPath,
+				//	Target: ContainerKeysPath,
+				//},
 			},
 		},
 		nil,

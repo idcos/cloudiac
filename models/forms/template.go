@@ -22,6 +22,9 @@ type CreateTemplateForm struct {
 	Extra       string `form:"extra" json:"extra"`
 	Timeout     int64  `form:"timeout" json:"timeout"`
 	VcsId       uint   `json:"vcsId"`
+	DefaultRunnerAddr      string `json:"defaultRunnerAddr" `
+	DefaultRunnerPort      uint   `json:"defaultRunnerPort" `
+	DefaultRunnerServiceId string `json:"defaultRunnerServiceId"`
 }
 
 type SearchTemplateForm struct {
@@ -58,4 +61,11 @@ type OpenApiDetailTemplateForm struct {
 type OverviewTemplateForm struct {
 	BaseForm
 	Id uint `form:"id" json:"id" binding:"required"`
+}
+type TemplateTfvarsSearchForm struct {
+	BaseForm
+	RepoId     uint   `json:"repoId" form:"repoId" `
+	RepoBranch string `json:"repoBranch" form:"repoBranch" `
+	RepoType   string `json:"repoType" form:"repoType" `
+	VcsId      uint `json:"vcsId" form:"vcsId"`
 }

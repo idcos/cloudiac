@@ -98,7 +98,6 @@ func vcsCreate() (result map[string]interface{},repCode int){
 	addHeader(req, token)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
-	fmt.Println(w)
 	resultMap := GetIacResultMap(w.Body.Bytes())
 	return resultMap, w.Code
 

@@ -148,12 +148,11 @@ func runningTaskEnvParam(tpl *models.Template, runnerId string, task *models.Tas
 			param[v.Key] = v.Value
 		}
 	}
-
 	return param
 }
 
 func varsDuplicateRemoval(taskVars []forms.VarOpen, tplVars []forms.Var) []forms.Var {
-	if taskVars == nil {
+	if taskVars == nil || len(taskVars) == 0 {
 		return tplVars
 	}
 	vars := make([]forms.Var, 0)
@@ -224,7 +223,7 @@ func updateBackendInfo(backendInfo models.JSON, offset int) []byte {
 
 func writeTaskLog(contentList []string, logPath string, offset float64) error {
 	path := fmt.Sprintf("%s/%s", logPath, consts.TaskLogName)
-	_ = os.MkdirAll(logPath,0766)
+	_ = os.MkdirAll(logPath, 0766)
 	var (
 		file *os.File
 		err  error
@@ -301,6 +300,8 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 
 		data := map[string]interface{}{
 			"repo":          repoAddr,
+			"repo_branch":   tpl.RepoBranch,
+			"repo_commit":   task.CommitId,
 			"template_uuid": tpl.Guid,
 			"task_id":       task.Guid,
 			//"task_id":       strconv.Itoa(int(task.Id)),
@@ -316,7 +317,7 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 			"mode":    task.TaskType,
 			"extra":   tpl.Extra,
 		}
-		fmt.Println(data,"data")
+		fmt.Println(data, "data")
 		header := &http.Header{}
 		header.Set("Content-Type", "application/json")
 		logger.Tracef("post data: %#v", data)
@@ -383,7 +384,7 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 		path := map[string]interface{}{}
 		json.Unmarshal(logPath, &path)
 		if logFile, ok:= path["log_file"].(string); ok {
-			runnerFilePath := logFile + "/runner.log"
+			runnerFilePath := logFile
 			tfInfo := GetTFLog(runnerFilePath)
 			models.UpdateAttr(dbsess,task, tfInfo)
 		}

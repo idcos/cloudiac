@@ -29,7 +29,7 @@ func QueryVcs(orgId uint, query *db.Session) *db.Session {
 	return query.Model(&models.Vcs{}).Where("org_id = ?", orgId)
 }
 
-func QueryVcsByVcsId(vcsId uint, query *db.Session) (*models.Vcs, error) {
+func QueryVcsByVcsId(vcsId uint, query *db.Session) (*models.Vcs, e.Error) {
 	vcs := &models.Vcs{}
 	err := query.Where("id = ?", vcsId).First(vcs)
 	if err != nil {

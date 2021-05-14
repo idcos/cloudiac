@@ -25,12 +25,11 @@ func CreateResourceAccount(c *ctx.ServiceCtx, form *forms.CreateResourceAccountF
 
 	rsAccount, err := func() (*models.ResourceAccount, e.Error) {
 		var (
-			rsAccount   *models.ResourceAccount
-			err         e.Error
-			er          e.Error
+			rsAccount *models.ResourceAccount
+			err       e.Error
+			er        e.Error
 		)
-
-		jsons, _ := parseParams(form.Params)
+		jsons, _ := parseParams(form.Params, map[string]string{})
 
 		rsAcc := &models.ResourceAccount{
 			Name:        form.Name,
@@ -48,7 +47,7 @@ func CreateResourceAccount(c *ctx.ServiceCtx, form *forms.CreateResourceAccountF
 		for _, ctServiceId := range form.CtServiceIds {
 			_, er = services.CreateCtResourceMap(tx, models.CtResourceMap{
 				ResourceAccountId: rsAccount.Id,
-				CtServiceId: ctServiceId,
+				CtServiceId:       ctServiceId,
 			})
 			if er != nil {
 				return nil, er
@@ -69,14 +68,17 @@ func CreateResourceAccount(c *ctx.ServiceCtx, form *forms.CreateResourceAccountF
 	return rsAccount, nil
 }
 
-func parseParams(params []forms.Params) ([]byte, error) {
+func parseParams(params []forms.Params, newVars map[string]string) ([]byte, error) {
 	for index, v := range params {
-		if *v.IsSecret {
+		if *v.IsSecret && v.Value != "" {
 			encryptedValue, err := utils.AesEncrypt(v.Value)
 			params[index].Value = encryptedValue
 			if err != nil {
 				return nil, err
 			}
+		}
+		if v.Value == "" && *v.IsSecret {
+			params[index].Value = newVars[v.Id]
 		}
 	}
 	jsons, err := json.Marshal(params)
@@ -88,7 +90,7 @@ func parseParams(params []forms.Params) ([]byte, error) {
 
 type searchResourceAccountResp struct {
 	models.ResourceAccount
-	CtServiceIds   []string  `json:"ctServiceIds"`
+	CtServiceIds []string `json:"ctServiceIds"`
 }
 
 func SearchResourceAccount(c *ctx.ServiceCtx, form *forms.SearchResourceAccountForm) (interface{}, e.Error) {
@@ -108,6 +110,17 @@ func SearchResourceAccount(c *ctx.ServiceCtx, form *forms.SearchResourceAccountF
 	if err := p.Scan(&rsAccounts); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
+	for index, v := range rsAccounts {
+		vars := make([]forms.Params, 0)
+		//newVars := make([]forms.Params, 0)
+		if !v.Params.IsNull() {
+			_ = json.Unmarshal(v.Params, &vars)
+		}
+		newVars := getParams(vars)
+		b, _ := json.Marshal(newVars)
+		rsAccounts[index].Params = models.JSON(b)
+	}
+
 	for _, rsAccount := range rsAccounts {
 		ctServiceIds, _ := services.FindCtResourceMap(c.DB(), rsAccount.Id)
 		rsAccount.CtServiceIds = ctServiceIds
@@ -134,9 +147,21 @@ func UpdateResourceAccount(c *ctx.ServiceCtx, form *forms.UpdateResourceAccountF
 	if form.HasKey("description") {
 		attrs["description"] = form.Description
 	}
+	newVars := make(map[string]string, 0)
+	vars := make([]forms.Params, 0)
+	ra, err := services.GetResourceAccountById(c.DB(), form.Id)
+	if err != nil {
+		return nil, err
+	}
+	if !ra.Params.IsNull() {
+		_ = json.Unmarshal(ra.Params, &vars)
+	}
 
+	for _, v := range vars {
+		newVars[v.Id] = v.Value
+	}
 	if form.HasKey("params") {
-		jsons, _ := parseParams(form.Params)
+		jsons, _ := parseParams(form.Params, newVars)
 		attrs["params"] = models.JSON(string(jsons))
 	}
 
@@ -158,7 +183,7 @@ func UpdateResourceAccount(c *ctx.ServiceCtx, form *forms.UpdateResourceAccountF
 		for _, ctServiceId := range form.CtServiceIds {
 			_, err = services.CreateCtResourceMap(c.DB(), models.CtResourceMap{
 				ResourceAccountId: rsAccount.Id,
-				CtServiceId: ctServiceId,
+				CtServiceId:       ctServiceId,
 			})
 			if err != nil {
 				return nil, err
@@ -189,4 +214,21 @@ func DeleteResourceAccount(c *ctx.ServiceCtx, form *forms.DeleteResourceAccountF
 	c.Logger().Infof("delete ResourceAccount %d", form.Id, " for org %d", c.OrgId, " succeed")
 
 	return
+}
+
+func getParams(vars []forms.Params) []forms.Params {
+	newVars := make([]forms.Params, 0)
+	for _, v := range vars {
+		if *v.IsSecret {
+			newVars = append(newVars, forms.Params{
+				Key:         v.Key,
+				Value:       "",
+				IsSecret:    v.IsSecret,
+				Id:          v.Id,
+			})
+		} else {
+			newVars = append(newVars, v)
+		}
+	}
+	return newVars
 }

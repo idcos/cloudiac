@@ -2,6 +2,7 @@ package apps
 
 import (
 	"cloudiac/consts/e"
+	"cloudiac/models/forms"
 	"cloudiac/services"
 )
 
@@ -72,4 +73,21 @@ func ConsulKVSearch(key string) (interface{}, e.Error) {
 
 func RunnerListSearch() (interface{}, e.Error) {
 	return services.RunnerListSearch()
+}
+
+func ConsulTagUpdate(form forms.ConsulTagUpdateForm) (interface{}, e.Error) {
+	//将修改后的tag存到consul中
+	if err := services.ConsulKVSave(form.ServiceId, form.Tags); err != nil {
+		return nil, err
+	}
+	//根据serviceId查询在consul中保存的数据
+	agentService, err := services.ConsulServiceInfo(form.ServiceId)
+	if err != nil {
+		return nil, err
+	}
+	//重新注册
+	if err := services.ConsulServiceRegistered(agentService, form.Tags); err != nil {
+		return nil, err
+	}
+	return nil, nil
 }

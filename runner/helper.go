@@ -31,6 +31,8 @@ type StateStore struct {
 // ReqBody from reqeust
 type ReqBody struct {
 	Repo         string     `json:"repo"`
+	RepoCommit   string     `json:"repo_commit"`
+	RepoBranch   string     `json:"repo_branch"`
 	TemplateUUID string     `json:"template_uuid"`
 	TaskID       string     `json:"task_id"`
 	DockerImage  string     `json:"docker_image" defalut:"mt5225/tf-ansible:v0.0.1"`
@@ -192,6 +194,8 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 	f = f[:len(f)-4]
 
 	cmdList = append(cmdList, fmt.Sprintf("cd %s %s &&", f, logCmd))
+	cmdList = append(cmdList, fmt.Sprintf("git checkout  %s %s &&", d.RepoBranch, logCmd))
+	cmdList = append(cmdList, fmt.Sprintf("git checkout -b run_branch %s %s &&", d.RepoCommit, logCmd))
 	cmdList = append(cmdList, fmt.Sprintf("cp %sstate.tf . &&", ContainerLogFilePath))
 	cmdList = append(cmdList, fmt.Sprintf("terraform init  -plugin-dir %s %s &&", ContainerProviderPath, logCmd))
 	if d.Mode == "apply" {
@@ -227,6 +231,7 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 	t = append(t, "sh")
 	t = append(t, "-c")
 	t = append(t, cmdstr)
+	fmt.Println(t)
 	c.Commands = t
 
 	// set timeout
