@@ -65,6 +65,7 @@ func Register(g *gin.RouterGroup) {
 		root.GET("/consulKv/search", w(handlers.ConsulKVSearch))
 		root.GET("/runnerList/search", w(handlers.RunnerListSearch))
 		root.GET("/templateTfvars/search",w(handlers.TemplateTfvarsSearch))
+		root.GET("/vcs/listEnableVcs",w(handlers.ListEnableVcs))
 		ctrl.Register(root.Group("vcs"), &handlers.Vcs{})
 	}
 

@@ -41,7 +41,7 @@ func QueryVcsByVcsId(vcsId uint, query *db.Session) (*models.Vcs, e.Error) {
 
 func QueryEnableVcs(orgId uint, query *db.Session) (interface{},e.Error){
 	vcs:=make([]models.Vcs,0)
-	if err:=query.Model(&models.Vcs{}).Where("org_id = ? or org_id = 0", orgId).Where("status = `enable`").Find(&vcs);err!=nil{
+	if err:=query.Model(&models.Vcs{}).Where("org_id = ? or org_id = 0", orgId).Where("status = 'enable'").Find(&vcs);err!=nil{
 		return nil, e.New(e.DBError,err)
 	}
 	return vcs, nil
