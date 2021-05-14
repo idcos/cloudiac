@@ -1,7 +1,6 @@
 package apps
 
 import (
-	"cloudiac/configs"
 	"cloudiac/consts/e"
 	"cloudiac/libs/page"
 	"cloudiac/models"
@@ -29,19 +28,18 @@ type Repository struct {
 	Updated       time.Time `json:"updated_at"`
 }
 
-func GetGiteaReadme(form *forms.GetReadmeForm) (interface{}, e.Error) {
-	conf := configs.Get()
-	gitlabUrl := conf.Gitlab.Url
-	repo, err := GetGiteaRepoById(form.RepoId)
+func GetGiteaReadme(vcs *models.Vcs,form *forms.GetReadmeForm) (interface{}, e.Error) {
+
+	repo, err := GetGiteaRepoById(vcs, form.RepoId)
 	if err != nil {
 		return nil, err
 	}
-	path := gitlabUrl + "/api/v1" + fmt.Sprintf("/repos/%s/raw/README.md?ref=%s", repo, form.Branch)
+	path := vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/raw/README.md?ref=%s", repo, form.Branch)
 	request, er := http.NewRequest("GET", path, nil)
 	if er != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
-	response, er := services.DoGiteaRequest(request, conf.Gitlab.Token)
+	response, er := services.DoGiteaRequest(request, vcs.VcsToken)
 	body, _ := ioutil.ReadAll(response.Body)
 
 	res := models.FileContent{
@@ -50,19 +48,18 @@ func GetGiteaReadme(form *forms.GetReadmeForm) (interface{}, e.Error) {
 	return res, nil
 }
 
-func ListGiteaRepoBranches(form *forms.GetGitBranchesForm) ([]*Branches, e.Error) {
-	conf := configs.Get()
-	gitlabUrl := conf.Gitlab.Url
-	repo, err := GetGiteaRepoById(form.RepoId)
+func ListGiteaRepoBranches(vcs *models.Vcs,form *forms.GetGitBranchesForm) ([]*Branches, e.Error) {
+
+	repo, err := GetGiteaRepoById(vcs, form.RepoId)
 	if err != nil {
 		return nil, err
 	}
-	path := gitlabUrl + "/api/v1" + fmt.Sprintf("/repos/%s/branches?limit=0&page=0", repo)
+	path := vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/branches?limit=0&page=0", repo)
 	request, er := http.NewRequest("GET", path, nil)
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)
 	}
-	response, er := services.DoGiteaRequest(request, conf.Gitlab.Token)
+	response, er := services.DoGiteaRequest(request, vcs.VcsToken)
 	defer response.Body.Close()
 	body, _ := ioutil.ReadAll(response.Body)
 	rep := []map[string]interface{}{}
@@ -76,14 +73,14 @@ func ListGiteaRepoBranches(form *forms.GetGitBranchesForm) ([]*Branches, e.Error
 
 }
 
-func GetGiteaRepoById(repoId int) (string, e.Error) {
-	conf := configs.Get()
-	path := conf.Gitlab.Url +fmt.Sprintf("/api/v1/repositories/%d", repoId)
+func GetGiteaRepoById(vcs *models.Vcs,repoId int) (string, e.Error) {
+
+	path := vcs.Address +fmt.Sprintf("/api/v1/repositories/%d", repoId)
 	request, err := http.NewRequest("GET", path, nil)
 	if err != nil {
 		return "", e.New(e.BadRequest, err)
 	}
-	response, err := services.DoGiteaRequest(request, conf.Gitlab.Token)
+	response, err := services.DoGiteaRequest(request, vcs.VcsToken)
 	if response == nil || err != nil {
 		return "", e.New(e.BadRequest, err)
 	}
@@ -99,17 +96,19 @@ func GetGiteaRepoById(repoId int) (string, e.Error) {
 
 }
 
-func ListGiteaOrganizationRepos(form *forms.GetGitProjectsForm) (interface{}, e.Error) {
-	conf := configs.Get()
-	gitlabUrl := conf.Gitlab.Url
+func ListGiteaOrganizationRepos(vcs *models.Vcs, form *forms.GetGitProjectsForm) (interface{}, e.Error) {
+
 	link, _ := url.Parse("/repos/search")
 	link.RawQuery = fmt.Sprintf("page=%d&limit=%d", form.CurrentPage(), form.PageSize())
-	path := gitlabUrl + "/api/v1" + link.String()
+	if form.Q != "" {
+		link.RawQuery = link.RawQuery + fmt.Sprintf("&q=%s", form.Q)
+	}
+	path := vcs.Address + "/api/v1" + link.String()
 	request, err := http.NewRequest("GET", path, nil)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
-	response, err := services.DoGiteaRequest(request, conf.Gitlab.Token)
+	response, err := services.DoGiteaRequest(request, vcs.VcsToken)
 	if response == nil || err != nil {
 		return "", e.New(e.BadRequest, err)
 	}

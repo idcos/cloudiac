@@ -11,16 +11,17 @@ type Var struct {
 
 type CreateTemplateForm struct {
 	BaseForm
-	Name                   string `form:"name" json:"name" binding:"required,gte=2,lte=32"`
-	Description            string `form:"description" json:"Description" binding:""`
-	RepoId                 int    `form:"repoId" json:"repoId" binding:"required"`
-	RepoAddr               string `form:"repoAddr" json:"repoAddr" binding:"required"`
-	RepoBranch             string `form:"repoBranch" json:"repoBranch" binding:"required"`
-	SaveState              *bool  `form:"saveState" json:"saveState"`
-	Vars                   []Var  `form:"vars" json:"vars"`
-	Varfile                string `form:"varfile" json:"varfile"`
-	Extra                  string `form:"extra" json:"extra"`
-	Timeout                int64  `form:"timeout" json:"timeout"`
+	Name        string `form:"name" json:"name" binding:"required,gte=2,lte=32"`
+	Description string `form:"description" json:"Description" binding:""`
+	RepoId      int    `form:"repoId" json:"repoId" binding:"required"`
+	RepoAddr    string `form:"repoAddr" json:"repoAddr" bingding:"required"`
+	RepoBranch  string `form:"repoBranch" json:"repoBranch" bingding:"required"`
+	SaveState   *bool  `form:"saveState" json:"saveState"`
+	Vars        []Var  `form:"vars" json:"vars"`
+	Varfile     string `form:"varfile" json:"varfile"`
+	Extra       string `form:"extra" json:"extra"`
+	Timeout     int64  `form:"timeout" json:"timeout"`
+	VcsId       uint   `json:"vcsId"`
 	DefaultRunnerAddr      string `json:"defaultRunnerAddr" `
 	DefaultRunnerPort      uint   `json:"defaultRunnerPort" `
 	DefaultRunnerServiceId string `json:"defaultRunnerServiceId"`
@@ -66,4 +67,5 @@ type TemplateTfvarsSearchForm struct {
 	RepoId     uint   `json:"repoId" form:"repoId" `
 	RepoBranch string `json:"repoBranch" form:"repoBranch" `
 	RepoType   string `json:"repoType" form:"repoType" `
+	VcsId      uint `json:"vcsId" form:"vcsId"`
 }

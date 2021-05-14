@@ -12,7 +12,11 @@ type CreateVcsForm struct {
 type UpdateVcsForm struct {
 	BaseForm
 	Id     uint   `form:"id" json:"id" binding:"required"`
-	Status string `form:"status" json:"status" binding:"required"`
+	Status string `form:"status" json:"status" binding:""`
+	Name     string `form:"name" json:"name" binding:""`
+	VcsType  string `form:"vcsType" json:"vcsType" binding:""`
+	Address  string `form:"address" json:"address" binding:""`
+	VcsToken string `form:"vcsToken" json:"vcsToken" binding:""`
 }
 
 type SearchVcsForm struct {

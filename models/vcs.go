@@ -9,7 +9,7 @@ type Vcs struct {
 	VcsType string `json:"vcsType" gorm:"not null;comment:'vcs代码库类型'"`
 	Status  string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'vcs状态'"`
 	Address string `json:"address" gorm:"not null;comment:'vcs代码库地址'"`
-	Token   string `json:"vcsToken" gorm:"not null; comment:'代码库的token值'"`
+	VcsToken   string `json:"vcsToken" gorm:"not null; comment:'代码库的token值'"`
 }
 
 func (Vcs) TableName() string {
