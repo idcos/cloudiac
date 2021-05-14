@@ -85,20 +85,20 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 		jsons, _ := json.Marshal(vars)
 
 		template, err = services.CreateTemplate(tx, models.Template{
-			OrgId:       c.OrgId,
-			Name:        form.Name,
-			Guid:        guid,
-			Description: form.Description,
-			RepoId:      form.RepoId,
-			RepoBranch:  form.RepoBranch,
-			RepoAddr:    form.RepoAddr,
-			SaveState:   *form.SaveState,
-			Vars:        models.JSON(string(jsons)),
-			Varfile:     form.Varfile,
-			Extra:       form.Extra,
-			Timeout:     form.Timeout,
-			Creator:     c.UserId,
-			VcsId:       form.VcsId,
+			OrgId:                  c.OrgId,
+			Name:                   form.Name,
+			Guid:                   guid,
+			Description:            form.Description,
+			RepoId:                 form.RepoId,
+			RepoBranch:             form.RepoBranch,
+			RepoAddr:               form.RepoAddr,
+			SaveState:              *form.SaveState,
+			Vars:                   models.JSON(string(jsons)),
+			Varfile:                form.Varfile,
+			Extra:                  form.Extra,
+			Timeout:                form.Timeout,
+			Creator:                c.UserId,
+			VcsId:                  form.VcsId,
 			DefaultRunnerAddr:      form.DefaultRunnerAddr,
 			DefaultRunnerPort:      form.DefaultRunnerPort,
 			DefaultRunnerServiceId: form.DefaultRunnerServiceId,
@@ -147,6 +147,18 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 
 	if form.HasKey("saveState") {
 		attrs["saveState"] = form.SaveState
+	}
+
+	if form.HasKey("defaultRunnerServiceId") {
+		attrs["defaultRunnerServiceId"] = form.DefaultRunnerServiceId
+	}
+
+	if form.HasKey("defaultRunnerPort") {
+		attrs["defaultRunnerPort"] = form.DefaultRunnerPort
+	}
+
+	if form.HasKey("defaultRunnerAddr") {
+		attrs["defaultRunnerAddr"] = form.DefaultRunnerAddr
 	}
 
 	if form.HasKey("vars") {
