@@ -110,7 +110,12 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 	if err != nil {
 		return nil, err
 	}
-	git, err := services.GetGitConn(c.DB(), c.OrgId)
+	vcs, er := services.QueryVcsByVcsId(tpl.VcsId, c.Tx())
+	if er != nil {
+		return nil, er
+	}
+
+	git, err := services.GetGitConn(vcs.VcsToken, vcs.Address)
 	if err != nil {
 		return nil, err
 	}
