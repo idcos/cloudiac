@@ -1,6 +1,10 @@
 package runner
 
 import (
+	"bytes"
+	"cloudiac/configs"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/docker/docker/api/types"
@@ -64,4 +68,36 @@ func Status(req *http.Request) (ContainerStatus, error) {
 	containerStatus.LogContentLines = len(logContent)
 	containerStatus.LogContent = logContent
 	return *containerStatus, nil
+}
+
+type TaskLogsResp struct {
+	LogContent      []string
+	LogContentLines int
+}
+
+func GetTaskLogs(req *http.Request) (TaskLogsResp, error) {
+	conf := configs.Get()
+	task, err := ReqToTask(req)
+	if err != nil {
+		return TaskLogsResp{}, err
+	}
+	tlr := TaskLogsResp{}
+	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePath, task.TemplateUUID, task.TaskId)
+	logFile := fmt.Sprintf("%s/%s", templateDir, ContainerLogFileName)
+	file, err := ioutil.ReadFile(logFile)
+	if err != nil {
+		return TaskLogsResp{}, err
+	}
+	buf := bytes.NewBuffer(file)
+	MaxLines, _ := LineCounter(buf)
+
+	lines, err := ReadLogFile(logFile, task.LogContentOffset, MaxLines)
+
+	//logContent, err := FetchTaskLog(task.TemplateUUID, task.TaskId, task.LogContentOffset)
+	if err != nil {
+		return tlr, err
+	}
+	tlr.LogContentLines = len(lines)
+	tlr.LogContent = lines
+	return tlr, nil
 }

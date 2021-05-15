@@ -151,11 +151,16 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 type LastTaskResp struct {
 	models.Task
 	CreatorName string `json:"creatorName" form:"creatorName" `
+	RepoBranch  string `json:"repoBranch" form:"repoBranch" `
 }
 
 func LastTask(c *ctx.ServiceCtx, form *forms.LastTaskForm) (interface{}, e.Error) {
 	tx := c.DB().Debug()
 	taskResp := LastTaskResp{}
+	tpl, err := services.GetTemplateById(tx, form.TemplateId)
+	if err != nil {
+		return nil, err
+	}
 	if err := services.LastTask(tx, form.TemplateId).Scan(&taskResp); err != nil && err != gorm.ErrRecordNotFound {
 		return nil, e.New(e.DBError, err)
 	}
@@ -166,6 +171,6 @@ func LastTask(c *ctx.ServiceCtx, form *forms.LastTaskForm) (interface{}, e.Error
 		}
 		taskResp.CreatorName = user.Name
 	}
-
+	taskResp.RepoBranch = tpl.RepoBranch
 	return taskResp, nil
 }

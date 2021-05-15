@@ -194,7 +194,7 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 	l := strings.Split(logPath, "/")
 	var taskGuid string
 	if len(l) >= 3 {
-		taskGuid = l[2]
+		taskGuid = l[len(l)-1]
 	}
 
 	task, _ := services.GetTaskByGuid(c.ServiceCtx().DB().Debug(), taskGuid)
@@ -212,7 +212,7 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 			str, _, err := rd.ReadLine()
 			if err != nil {
 				if err.Error() == "EOF" {
-					if task !=nil && task.Status != consts.TaskRunning {
+					if task != nil && (task.Status != consts.TaskRunning && task.Status != consts.TaskPending) {
 						done <- true
 						return
 					}
