@@ -57,16 +57,28 @@ func OpenDetailTemplate(c *ctx.ServiceCtx, gUid string) (interface{}, e.Error) {
 	if er != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("query vcs detail error: %v", er))
 	}
-	git, err := services.GetGitConn(vcs.VcsToken, vcs.Address)
-	if err != nil {
-		return nil, err
+	if vcs.VcsType == consts.GitLab {
+		git, err := services.GetGitConn(vcs.VcsToken, vcs.Address)
+		if err != nil {
+			return nil, err
+		}
+		commits, _, commitErr := git.Commits.ListCommits(tpl.RepoId, &gitlab.ListCommitsOptions{})
+		if commitErr != nil {
+			return nil, e.New(e.GitLabError, commitErr)
+		}
+		if commits != nil {
+			tpl.CommitId = commits[0].ID
+		}
 	}
-	commits, _, commitErr := git.Commits.ListCommits(tpl.RepoId, &gitlab.ListCommitsOptions{})
-	if commitErr != nil {
-		return nil, e.New(e.GitLabError, commitErr)
+
+	if vcs.VcsType == consts.GitEA {
+		commit,err:=services.GetGiteaBranchCommitId(vcs,uint(tpl.RepoId),tpl.RepoBranch)
+		if err != nil {
+			return nil, e.New(e.GitLabError, fmt.Errorf("query commit id error: %v", er))
+		}
+		tpl.CommitId = commit
 	}
-	if commits != nil {
-		tpl.CommitId = commits[0].ID
-	}
+
+
 	return tpl, nil
 }

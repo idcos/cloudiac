@@ -1,6 +1,7 @@
 package services
 
 import (
+	"cloudiac/consts"
 	"cloudiac/consts/e"
 	"cloudiac/models"
 	"cloudiac/models/forms"
@@ -78,13 +79,23 @@ func GetGitConn(gitlabToken, gitlabUrl string) (git *gitlab.Client, err e.Error)
 }
 
 func TemplateTfvarsSearch(vcs *models.Vcs,repoId uint, repoBranch string) (interface{}, e.Error) {
-	git, err := GetGitConn(vcs.VcsToken, vcs.Address)
-	if err != nil {
-		return nil, err
+	tfVarsList :=  make([]string,0)
+	var errs error
+	if vcs.VcsType == consts.GitLab{
+		git, err := GetGitConn(vcs.VcsToken, vcs.Address)
+		if err != nil {
+			return nil, err
+		}
+		tfVarsList, errs = getTfvarsList(git, repoBranch, "", repoId)
+
 	}
-	tfVarsList, errs := getTfvarsList(git, repoBranch, "", repoId)
+
+	if vcs.VcsType == consts.GitEA {
+		tfVarsList ,errs = GetGiteaTemplateTfvarsSearch(vcs,repoId,repoBranch,"")
+	}
+
 	if errs != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, errs)
 	}
 
 	//c, _, b1 := git.RepositoryFiles.GetFile(564, "state.tf",&sss)
