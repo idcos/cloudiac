@@ -10,7 +10,7 @@ import (
 	"strconv"
 )
 
-func SendMail(tos []string, subject string, content string) e.Error {
+func SendMail(tos []string, subject, content string) e.Error {
 	logs.Get().Infof("send mail:\n%s\n%s\n%s", tos, subject, content)
 
 	srv := configs.Get().SMTPServer

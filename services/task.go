@@ -378,7 +378,10 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 		//不能太频繁调用  这里睡一会
 		time.Sleep(time.Second * 5)
 	}
-	//todo 作业执行完成之后 日志有可能拿不完
+	//发送通知
+	task, _ = GetTaskByGuid(dbsess, task.Guid)
+	go SendMail(dbsess, tpl.OrgId, task)
+	//作业执行完成之后 日志有可能拿不完
 	getTaskLogs(task.TemplateGuid, task.Guid, dbsess)
 	if taskStatus == consts.TaskComplete {
 		logPath := task.BackendInfo
@@ -619,5 +622,54 @@ func getTaskLogs(tplGuid, taskGuid string, dbsess *db.Session) {
 	}
 	if err := writeTaskLog(runnerResp.LogContent, taskBackend["log_file"].(string), taskBackend["log_offset"].(float64)); err != nil {
 		logger.Errorf("write task log error: %v", err)
+	}
+}
+
+func SendMail(tx *db.Session, orgId uint, task *models.Task) {
+	tos := make([]string, 0)
+	logger := logs.Get().WithField("action", "sendMail")
+	notifier := make([]models.NotificationCfg, 0)
+	if err := tx.Where("org_id = ?", orgId).Find(&notifier); err != nil {
+		logger.Errorf("query notifier err: %v", err)
+		return
+	}
+
+	tpl, _ := GetTemplateById(tx, task.TemplateId)
+	for _, v := range notifier {
+		user, _ := GetUserById(tx, v.UserId)
+		switch task.Status {
+		case consts.TaskPending:
+			if v.EventType == "all" {
+				tos = append(tos, user.Email)
+			}
+		case consts.TaskComplete:
+			if v.EventType == "all" {
+				tos = append(tos, user.Email)
+			}
+		case consts.TaskFailed:
+			if v.EventType == "all" || v.EventType == "failure" {
+				tos = append(tos, user.Email)
+			}
+		case consts.TaskTimeout:
+			if v.EventType == "all" || v.EventType == "failure" {
+				tos = append(tos, user.Email)
+			}
+		}
+	}
+
+	tos = utils.RemoveDuplicateElement(tos)
+	if len(tos) == 0 {
+		return
+	}
+	sendMail := GetMail(tos, tpl.Name, task.Guid, task.TaskType)
+	switch task.Status {
+	case consts.TaskPending:
+		sendMail.SendMailToCreateTask()
+	case consts.TaskComplete:
+		sendMail.SendMailToSuccessTask()
+	case consts.TaskFailed:
+		sendMail.SendMailToFailTask()
+	case consts.TaskTimeout:
+		sendMail.SendMailToFailTask()
 	}
 }

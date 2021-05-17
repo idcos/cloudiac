@@ -15,15 +15,19 @@ PB_PROTOC=protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-
 BUILD_DIR=$(PWD)/builds
 
 all: portal runner
+build: portal runner
 
 build-dir:
 	mkdir -p $(BUILD_DIR)
 
 portal: build-dir
 	$(GOBUILD) -o $(BUILD_DIR)/iac-portal ./cmds/portal
+	cp ./configs/config.yml.sample $(BUILD_DIR)/config-portal.yml
+	cp ./configs/dotenv.sample $(BUILD_DIR)/.env
 
 runner: build-dir
 	$(GOBUILD) -o $(BUILD_DIR)/ct-runner ./cmds/runner
+	cp ./configs/config_runner.yml.sample $(BUILD_DIR)/config-runner.yml
 
 run: run-portal
 
