@@ -21,7 +21,6 @@ import (
 	"time"
 )
 
-
 func CreateTask(tx *db.Session, task models.Task) (*models.Task, e.Error) {
 	if err := models.Create(tx, &task); err != nil {
 		if e.IsDuplicate(err) {
@@ -379,21 +378,23 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 		//不能太频繁调用  这里睡一会
 		time.Sleep(time.Second * 5)
 	}
+	//todo 作业执行完成之后 日志有可能拿不完
+	getTaskLogs(task.TemplateGuid, task.Guid, dbsess)
 	if taskStatus == consts.TaskComplete {
 		logPath := task.BackendInfo
 		path := map[string]interface{}{}
 		json.Unmarshal(logPath, &path)
-		if logFile, ok:= path["log_file"].(string); ok {
+		if logFile, ok := path["log_file"].(string); ok {
 			runnerFilePath := logFile
 			tfInfo := GetTFLog(runnerFilePath)
-			models.UpdateAttr(dbsess,task, tfInfo)
+			models.UpdateAttr(dbsess, task, tfInfo)
 		}
 
 	}
 
 }
 
-func GetTFLog(logPath string) map[string]interface{}{
+func GetTFLog(logPath string) map[string]interface{} {
 	loggers := logs.Get()
 	path := fmt.Sprintf("%s/%s", logPath, consts.TaskLogName)
 	f, err := os.Open(path)
@@ -409,7 +410,7 @@ func GetTFLog(logPath string) map[string]interface{}{
 		if err != nil {
 			if err.Error() == "EOF" {
 				break
-			}else {
+			} else {
 				loggers.Error("Read Error:", err.Error())
 				break
 			}
@@ -419,10 +420,10 @@ func GetTFLog(logPath string) map[string]interface{}{
 			result["add"] = "0"
 			result["change"] = "0"
 			result["destroy"] = "0"
-			result["allowApply"]= false
+			result["allowApply"] = false
 			break
-		}else if strings.Contains(LogStr, `Plan:`) {
-			r, _ := regexp.Compile(`Plan: ([\d]+) to add, ([\d]+) to change, ([\d]+) to destroy`)
+		} else if strings.Contains(LogStr, `Plan:`) {
+			r, _ := regexp.Compile(`([\d]+) to add, ([\d]+) to change, ([\d]+) to destroy`)
 			params := r.FindStringSubmatch(LogStr)
 			if len(params) == 4 {
 				result["add"] = params[1]
@@ -431,7 +432,7 @@ func GetTFLog(logPath string) map[string]interface{}{
 				result["allowApply"] = true
 			}
 			break
-		}else if strings.Contains(LogStr, `Apply complete!`) {
+		} else if strings.Contains(LogStr, `Apply complete!`) {
 			r, _ := regexp.Compile(`Apply complete! Resources: ([\d]+) added, ([\d]+) changed, ([\d]+) destroyed.`)
 			params := r.FindStringSubmatch(LogStr)
 			if len(params) == 4 {
@@ -449,6 +450,13 @@ func GetTFLog(logPath string) map[string]interface{}{
 func RunTaskState(task *models.Task, tpl *models.Template, dbsess *db.Session) string {
 	logger := logs.Get().WithField("action", "RunTaskState")
 	tx := dbsess.Begin()
+	//更新task对象，让task始终都保持最新的状态
+	var err error
+	task, err = GetTaskByGuid(tx, task.Guid)
+	if err != nil {
+		logger.Errorf("db err: %v", err)
+	}
+
 	taskBackend := make(map[string]interface{}, 0)
 	_ = json.Unmarshal(task.BackendInfo, &taskBackend)
 	runnerAddr := taskBackend["backend_url"]
@@ -565,5 +573,51 @@ func RunTask() {
 			}()
 		}
 		time.Sleep(time.Second)
+	}
+}
+
+func getTaskLogs(tplGuid, taskGuid string, dbsess *db.Session) {
+	logger := logs.Get().WithField("action", "getTaskLogs")
+	task, err := GetTaskByGuid(dbsess, taskGuid)
+	if err != nil {
+		logger.Errorf("db err: %v", err)
+	}
+
+	taskBackend := make(map[string]interface{}, 0)
+	_ = json.Unmarshal(task.BackendInfo, &taskBackend)
+	runnerAddr := taskBackend["backend_url"]
+	addr := fmt.Sprintf("%s%s", runnerAddr, "/task/logs")
+
+	data := map[string]interface{}{
+		"template_uuid": tplGuid,
+		"task_id":       task.Guid,
+		"offset":        taskBackend["log_offset"],
+	}
+	header := &http.Header{}
+	header.Set("Content-Type", "application/json")
+	logger.Tracef("post data: %#v", data)
+
+	respData, er := utils.HttpService(addr, "POST", header, data, 20, 5)
+	if er != nil {
+		logger.Errorf("request failed: %v", err)
+	}
+	logger.Tracef("response body: %s", string(respData))
+
+	var (
+		runnerResp struct {
+			Status          string   `json:"status" form:"status" `
+			StatusCode      int      `json:"status_code" form:"status_code" `
+			LogContent      []string `json:"log_content" form:"log_content" `
+			LogContentLines int      `json:"log_content_lines" form:"log_content_lines" `
+			Code            string   `json:"code" form:"code" `
+			Error           string   `json:"error" form:"error" `
+		}
+	)
+
+	if err := json.Unmarshal(respData, &runnerResp); err != nil {
+		logger.Errorf("unmarshal error: %v, body: %s", err, string(respData))
+	}
+	if err := writeTaskLog(runnerResp.LogContent, taskBackend["log_file"].(string), taskBackend["log_offset"].(float64)); err != nil {
+		logger.Errorf("write task log error: %v", err)
 	}
 }

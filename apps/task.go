@@ -110,17 +110,32 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 	if err != nil {
 		return nil, err
 	}
-	git, err := services.GetGitConn(c.DB(), c.OrgId)
-	if err != nil {
-		return nil, err
-	}
-	commits, _, commitErr := git.Commits.ListCommits(tpl.RepoId, &gitlab.ListCommitsOptions{})
-	if commitErr != nil {
-		return nil, e.New(e.GitLabError, commitErr)
+	vcs, er := services.QueryVcsByVcsId(tpl.VcsId, c.Tx())
+	if er != nil {
+		return nil, er
 	}
 	var commitId string
-	if commits != nil {
-		commitId = commits[0].ID
+	if vcs.VcsType == consts.GitLab {
+		git, err := services.GetGitConn(vcs.VcsToken, vcs.Address)
+		if err != nil {
+			return nil, err
+		}
+		commits, _, commitErr := git.Commits.ListCommits(tpl.RepoId, &gitlab.ListCommitsOptions{})
+		if commitErr != nil {
+			return nil, e.New(e.GitLabError, commitErr)
+		}
+
+		if commits != nil {
+			commitId = commits[0].ID
+		}
+	}
+
+	if vcs.VcsType == consts.GitEA {
+		commit, err := services.GetGiteaBranchCommitId(vcs, uint(tpl.RepoId), tpl.RepoBranch)
+		if err != nil {
+			return nil, e.New(e.GitLabError, fmt.Errorf("query commit id error: %v", er))
+		}
+		commitId = commit
 	}
 
 	task, err := services.CreateTask(c.DB().Debug(), models.Task{
@@ -146,11 +161,16 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 type LastTaskResp struct {
 	models.Task
 	CreatorName string `json:"creatorName" form:"creatorName" `
+	RepoBranch  string `json:"repoBranch" form:"repoBranch" `
 }
 
 func LastTask(c *ctx.ServiceCtx, form *forms.LastTaskForm) (interface{}, e.Error) {
 	tx := c.DB().Debug()
 	taskResp := LastTaskResp{}
+	tpl, err := services.GetTemplateById(tx, form.TemplateId)
+	if err != nil {
+		return nil, err
+	}
 	if err := services.LastTask(tx, form.TemplateId).Scan(&taskResp); err != nil && err != gorm.ErrRecordNotFound {
 		return nil, e.New(e.DBError, err)
 	}
@@ -161,6 +181,6 @@ func LastTask(c *ctx.ServiceCtx, form *forms.LastTaskForm) (interface{}, e.Error
 		}
 		taskResp.CreatorName = user.Name
 	}
-
+	taskResp.RepoBranch = tpl.RepoBranch
 	return taskResp, nil
 }

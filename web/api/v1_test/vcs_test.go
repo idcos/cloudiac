@@ -5,6 +5,7 @@ import (
 	"cloudiac/configs"
 	"cloudiac/libs/db"
 	"cloudiac/services"
+	"cloudiac/utils/logs"
 	"cloudiac/web"
 	"encoding/json"
 	"fmt"
@@ -24,13 +25,14 @@ var (
 
 
 func init() {
-	// TODO 每次还需要init logger 和 创建表。 logger针对每个模块还要去init 重新获取一次，是为了热加载嘛？不太理解这种设计方式。
 	router = web.GetRouter()
 	base,_ := os.Getwd()
 	path := filepath.Dir(filepath.Dir(filepath.Dir(base)))
 	configPath := path + "/config.yml"
 	token, _ = services.GenerateToken(1, "yunji", true, 1*24*time.Hour)
 	configs.Init(configPath)
+	conf := configs.Get().Log
+	logs.Init(conf.LogLevel, conf.LogMaxDays, "iac-portal")
 }
 
 func addHeader(r *http.Request, token string) {
@@ -52,8 +54,15 @@ func TestHelloWorld(t *testing.T) {
 
 func GetIacResultMap(content []byte) map[string]interface{}{
 	result := map[string]interface{}{}
-	json.Unmarshal(content, &result)
-	return result["result"].(map[string]interface{})
+	err := json.Unmarshal(content, &result)
+	if err != nil {
+		fmt.Println(err)
+		return result
+	}
+	if result["result"] != nil {
+		return result["result"].(map[string]interface{})
+	}
+	return result
 
 }
 
@@ -84,6 +93,7 @@ func vcsCreate() (result map[string]interface{},repCode int){
 	req, err := http.NewRequest("POST", "/api/v1/vcs/create", reader)
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 	addHeader(req, token)
 	w := httptest.NewRecorder()
@@ -133,6 +143,7 @@ func TestVcs(t *testing.T) {
 	}()
 	resultMap, repCode := vcsCreate()
 	id := int(resultMap["id"].(float64))
+
 	assert.Equal(t, 200, repCode)
 	assert.Equal(t, "yunji", resultMap["name"])
 	assert.Equal(t, "gitlab", resultMap["vcsType"])

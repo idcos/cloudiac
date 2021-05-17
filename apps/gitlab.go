@@ -2,8 +2,8 @@ package apps
 
 import (
 	"cloudiac/consts/e"
-	"cloudiac/libs/ctx"
 	"cloudiac/libs/page"
+	"cloudiac/models"
 	"cloudiac/models/forms"
 	"cloudiac/services"
 	"encoding/json"
@@ -20,8 +20,8 @@ type Projects struct {
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 }
 
-func ListOrganizationRepos(c *ctx.ServiceCtx, form *forms.GetGitProjectsForm) (interface{}, e.Error) {
-	projects, total, err := services.ListOrganizationReposById(c.DB(), c.OrgId, form)
+func ListOrganizationRepos(vcs *models.Vcs,form *forms.GetGitProjectsForm) (interface{}, e.Error) {
+	projects, total, err := services.ListOrganizationReposById(vcs, form)
 	if err != nil {
 		return nil, err
 	}
@@ -47,8 +47,8 @@ type Branches struct {
 	Name string `json:"name"`
 }
 
-func ListRepositoryBranches(c *ctx.ServiceCtx, form *forms.GetGitBranchesForm) (brans []*Branches, err e.Error) {
-	branches, err := services.ListRepositoryBranches(c.DB(), c.OrgId, form.RepoId)
+func ListRepositoryBranches(vcs *models.Vcs, form *forms.GetGitBranchesForm) (brans []*Branches, err e.Error) {
+	branches, err := services.ListRepositoryBranches(vcs, form)
 	if err != nil {
 		return nil, err
 	}
@@ -65,14 +65,14 @@ func ListRepositoryBranches(c *ctx.ServiceCtx, form *forms.GetGitBranchesForm) (
 	return brans, nil
 }
 
-func GetReadmeContent(c *ctx.ServiceCtx, form *forms.GetReadmeForm) (interface{}, e.Error) {
-	content, err := services.GetReadmeContent(c.DB(), c.OrgId, form)
+func GetReadmeContent(vcs *models.Vcs, form *forms.GetReadmeForm) (interface{}, e.Error) {
+	content, err := services.GetReadmeContent(vcs, form)
 	if err != nil {
 		return nil, nil
 	}
 	return content, nil
 }
 
-func TemplateTfvarsSearch(c *ctx.ServiceCtx, form *forms.TemplateTfvarsSearchForm) (interface{}, e.Error) {
-	return services.TemplateTfvarsSearch(c.DB(), form.RepoId, c.OrgId, form.RepoBranch)
+func TemplateTfvarsSearch(vcs *models.Vcs,form *forms.TemplateTfvarsSearchForm) (interface{}, e.Error) {
+	return services.TemplateTfvarsSearch(vcs, form.RepoId, form.RepoBranch)
 }

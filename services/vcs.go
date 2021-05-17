@@ -29,6 +29,24 @@ func QueryVcs(orgId uint, query *db.Session) *db.Session {
 	return query.Model(&models.Vcs{}).Where("org_id = ?", orgId)
 }
 
+func QueryVcsByVcsId(vcsId uint, query *db.Session) (*models.Vcs, e.Error) {
+	vcs := &models.Vcs{}
+	err := query.Where("id = ?", vcsId).First(vcs)
+	if err != nil {
+		return nil, e.New(e.DBError, fmt.Errorf("query vcs detail error: %v", err))
+	}
+	return vcs, nil
+
+}
+
+func QueryEnableVcs(orgId uint, query *db.Session) (interface{},e.Error){
+	vcs:=make([]models.Vcs,0)
+	if err:=query.Model(&models.Vcs{}).Where("org_id = ? or org_id = 0", orgId).Where("status = 'enable'").Find(&vcs);err!=nil{
+		return nil, e.New(e.DBError,err)
+	}
+	return vcs, nil
+}
+
 func DeleteVcs(tx *db.Session, id uint) e.Error {
 	if _, err := tx.Where("id = ?", id).Delete(&models.Vcs{}); err != nil {
 		return e.New(e.DBError, fmt.Errorf("delete vcs error: %v", err))
