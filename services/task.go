@@ -593,7 +593,6 @@ func getTaskLogs(tplGuid, taskGuid string, dbsess *db.Session) {
 		"task_id":       task.Guid,
 		"offset":        taskBackend["log_offset"],
 	}
-
 	header := &http.Header{}
 	header.Set("Content-Type", "application/json")
 	logger.Tracef("post data: %#v", data)
@@ -618,7 +617,6 @@ func getTaskLogs(tplGuid, taskGuid string, dbsess *db.Session) {
 	if err := json.Unmarshal(respData, &runnerResp); err != nil {
 		logger.Errorf("unmarshal error: %v, body: %s", err, string(respData))
 	}
-
 	if err := writeTaskLog(runnerResp.LogContent, taskBackend["log_file"].(string), taskBackend["log_offset"].(float64)); err != nil {
 		logger.Errorf("write task log error: %v", err)
 	}

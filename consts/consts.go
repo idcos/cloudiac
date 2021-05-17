@@ -76,6 +76,8 @@ const (
 	Terraform              = "terraform"
 	TerraformVar           = "TF_VAR_"
 	WorkFlow               = "workflow"
+	GitLab                 = "gitlab"
+	GitEA                  = "gitea"
 )
 
 var (

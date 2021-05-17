@@ -168,9 +168,9 @@ func HelloSse(c *ctx.GinRequestCtx) {
 
 func TaskLogSSE(c *ctx.GinRequestCtx) {
 	loggers := logs.Get()
+	chanStream := make(chan string, 0)
 	contx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	chanStream := make(chan string, 0)
 	done := make(chan bool)
 	go func() {
 		for {
@@ -197,7 +197,6 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 		taskGuid = l[len(l)-1]
 	}
 
-	task, _ := services.GetTaskByGuid(c.ServiceCtx().DB().Debug(), taskGuid)
 	path := fmt.Sprintf("%s/%s", logPath, consts.TaskLogName)
 	f, err := os.Open(path)
 	if err != nil {
@@ -206,17 +205,25 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 	defer f.Close()
 
 	rd := bufio.NewReader(f)
-
+	readCount := 0
 	go func() {
 		for {
 			str, _, err := rd.ReadLine()
 			if err != nil {
 				if err.Error() == "EOF" {
+					task, _ := services.GetTaskByGuid(c.ServiceCtx().DB().Debug(), taskGuid)
 					if task != nil && (task.Status != consts.TaskRunning && task.Status != consts.TaskPending) {
+						//第一次先跳过 有可能任务状态变更了 但是日志还没有输出完
+						if readCount == 0 {
+							readCount++
+							//睡一下下 5秒会不会太长了？
+							time.Sleep(5 * time.Second)
+							continue
+						}
 						done <- true
 						return
 					}
-					time.Sleep(1000)
+					time.Sleep(1 * time.Second)
 					continue
 				} else {
 					loggers.Error("Read Error:", err.Error())
@@ -229,26 +236,21 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 	}()
 
 	count := 0 // to indicate the message id
-	isStreaming := c.Stream(func(w io.Writer) bool {
-		for {
-			select {
-			case <-done:
-				// when deadline is reached, send 'end' event
-				c.SSEvent("end", "end")
-				return false
-			case msg := <-chanStream:
-				// send events to client
-				c.Render(-1, sse.Event{
-					Id:    strconv.Itoa(count),
-					Event: "message",
-					Data:  msg,
-				})
-				count++
-				return true
-			}
+	for {
+		select {
+		case <-done:
+			// when deadline is reached, send 'end' event
+			c.SSEvent("end", "end")
+			return
+		case msg := <-chanStream:
+			// send events to client
+			c.Render(-1, sse.Event{
+				Id:    strconv.Itoa(count),
+				Event: "message",
+				Data:  msg,
+			})
+			count++
 		}
-	})
-	if !isStreaming {
-		loggers.Info("Stream Closed!")
 	}
+
 }

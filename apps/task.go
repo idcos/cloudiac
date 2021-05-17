@@ -114,18 +114,28 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 	if er != nil {
 		return nil, er
 	}
-
-	git, err := services.GetGitConn(vcs.VcsToken, vcs.Address)
-	if err != nil {
-		return nil, err
-	}
-	commits, _, commitErr := git.Commits.ListCommits(tpl.RepoId, &gitlab.ListCommitsOptions{})
-	if commitErr != nil {
-		return nil, e.New(e.GitLabError, commitErr)
-	}
 	var commitId string
-	if commits != nil {
-		commitId = commits[0].ID
+	if vcs.VcsType == consts.GitLab {
+		git, err := services.GetGitConn(vcs.VcsToken, vcs.Address)
+		if err != nil {
+			return nil, err
+		}
+		commits, _, commitErr := git.Commits.ListCommits(tpl.RepoId, &gitlab.ListCommitsOptions{})
+		if commitErr != nil {
+			return nil, e.New(e.GitLabError, commitErr)
+		}
+
+		if commits != nil {
+			commitId = commits[0].ID
+		}
+	}
+
+	if vcs.VcsType == consts.GitEA {
+		commit, err := services.GetGiteaBranchCommitId(vcs, uint(tpl.RepoId), tpl.RepoBranch)
+		if err != nil {
+			return nil, e.New(e.GitLabError, fmt.Errorf("query commit id error: %v", er))
+		}
+		commitId = commit
 	}
 
 	task, err := services.CreateTask(c.DB().Debug(), models.Task{
