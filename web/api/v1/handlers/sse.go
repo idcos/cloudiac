@@ -169,7 +169,26 @@ func HelloSse(c *ctx.GinRequestCtx) {
 func TaskLogSSE(c *ctx.GinRequestCtx) {
 	loggers := logs.Get()
 	chanStream := make(chan string, 0)
+	contx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	done := make(chan bool)
+	go func() {
+		for {
+			select {
+			case <-c.Request.Context().Done():
+				// client gave up
+				done <- true
+				return
+			case <-contx.Done():
+				switch contx.Err() {
+				case context.DeadlineExceeded:
+					loggers.Error("timeout")
+				}
+				done <- true
+				return
+			}
+		}
+	}()
 
 	logPath := c.Query("logPath")
 	l := strings.Split(logPath, "/")
@@ -217,22 +236,21 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 	}()
 
 	count := 0 // to indicate the message id
-	func()  {
-		for {
-			select {
-			case <-done:
-				// when deadline is reached, send 'end' event
-				c.SSEvent("end", "end")
-				return
-			case msg := <-chanStream:
-				// send events to client
-				c.Render(-1, sse.Event{
-					Id:    strconv.Itoa(count),
-					Event: "message",
-					Data:  msg,
-				})
-				count++
-			}
+	for {
+		select {
+		case <-done:
+			// when deadline is reached, send 'end' event
+			c.SSEvent("end", "end")
+			return
+		case msg := <-chanStream:
+			// send events to client
+			c.Render(-1, sse.Event{
+				Id:    strconv.Itoa(count),
+				Event: "message",
+				Data:  msg,
+			})
+			count++
 		}
-	}()
+	}
+
 }

@@ -593,7 +593,6 @@ func getTaskLogs(tplGuid, taskGuid string, dbsess *db.Session) {
 		"task_id":       task.Guid,
 		"offset":        taskBackend["log_offset"],
 	}
-	fmt.Println(data,"data")
 	header := &http.Header{}
 	header.Set("Content-Type", "application/json")
 	logger.Tracef("post data: %#v", data)
