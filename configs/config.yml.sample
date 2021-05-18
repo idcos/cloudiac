@@ -37,5 +37,5 @@ smtpServer:
   addr: smtp.example.com:25
   username: user@example.com
   password: qwer1234
-  fromName: "Migration Tools" # 邮件发送方的名称，不配置则为空
+  fromName: "IaC" # 邮件发送方的名称，不配置则为空
   from: support@example.com   # 邮件显示的发送方，不配置则使用 username 值
