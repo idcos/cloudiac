@@ -2,6 +2,8 @@ package consul
 
 import (
 	"cloudiac/configs"
+	"cloudiac/services"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -17,10 +19,14 @@ func Register(serviceName string, consulConfig configs.ConsulConfig) error {
 		log.Fatal("consul client error : ", err)
 		return err
 	}
-
+	consulTags, _ := services.ConsulKVSearch(consulConfig.ServiceID)
 	var tags []string
 	if consulConfig.ServiceTags != "" {
 		tags = strings.Split(consulConfig.ServiceTags, ";")
+	}
+	if consulTags != nil && consulTags.(string) != "" {
+		tags = []string{}
+		_ = json.Unmarshal([]byte(consulTags.(string)), &tags)
 	}
 
 	registration := new(consulapi.AgentServiceRegistration)
