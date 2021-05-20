@@ -661,15 +661,7 @@ func SendMail(tx *db.Session, orgId uint, task *models.Task) {
 	if len(tos) == 0 {
 		return
 	}
-	sendMail := GetMail(tos, tpl.Name, task.Guid, task.TaskType)
-	switch task.Status {
-	case consts.TaskPending:
-		sendMail.SendMailToCreateTask()
-	case consts.TaskComplete:
-		sendMail.SendMailToSuccessTask()
-	case consts.TaskFailed:
-		sendMail.SendMailToFailTask()
-	case consts.TaskTimeout:
-		sendMail.SendMailToFailTask()
-	}
+	sendMail := GetMail(tos, *task, tpl)
+	sendMail.SendMail()
+
 }

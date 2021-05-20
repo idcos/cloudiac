@@ -93,4 +93,11 @@ var (
 		},
 		"huawei": {},
 	}
+	StatusTranslation = map[string]string{
+		"complete": "成功",
+		"failed":   "失败",
+		"running":  "运行中",
+		"timeout":  "超时",
+		"pending":  "排队中",
+	}
 )
