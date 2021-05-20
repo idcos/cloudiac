@@ -264,7 +264,7 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 		if int(count) > utils.GetRunnerMax() {
 			_ = tx.Commit()
 			logger.Infof("runner concurrent num gt %d", count)
-			time.Sleep(time.Second * 5)
+			time.Sleep(500 * time.Millisecond)
 			continue
 		}
 
@@ -274,7 +274,7 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 			First(tpl); err != nil && err != gorm.ErrRecordNotFound {
 			_ = tx.Commit()
 			logger.Errorf("tpl db err: %v", err)
-			time.Sleep(time.Second * 5)
+			time.Sleep(500 * time.Millisecond)
 			continue
 		}
 
@@ -326,6 +326,9 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 
 		if err != nil {
 			logger.Errorf("request failed: %v", err)
+			time.Sleep(500 * time.Millisecond)
+			continue
+
 		}
 		logger.Debugf("response body: %s", string(respData))
 
@@ -346,6 +349,8 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 		if runnerResp.Id == "" {
 			status = consts.TaskFailed
 			logger.Errorf("Code: %s, Message: %s, Id: %s", runnerResp.Code, runnerResp.Error, runnerResp.Id)
+			time.Sleep(500 * time.Millisecond)
+			continue
 		} else {
 			status = consts.TaskRunning
 		}
@@ -361,6 +366,7 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 			}); err != nil {
 			if err := tx.Commit(); err != nil {
 				_ = tx.Rollback()
+				return
 			}
 		}
 		task.Status = status
@@ -368,6 +374,7 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 		task.BackendInfo = models.JSON(getBackendInfo(task.BackendInfo, runnerResp.Id))
 		if err := tx.Commit(); err != nil {
 			_ = tx.Rollback()
+			return
 		}
 		taskStatus = status
 		break
@@ -458,6 +465,7 @@ func RunTaskState(task *models.Task, tpl *models.Template, dbsess *db.Session) s
 	task, err = GetTaskByGuid(tx, task.Guid)
 	if err != nil {
 		logger.Errorf("db err: %v", err)
+		return consts.TaskRunning
 	}
 
 	taskBackend := make(map[string]interface{}, 0)
@@ -478,6 +486,7 @@ func RunTaskState(task *models.Task, tpl *models.Template, dbsess *db.Session) s
 	respData, err := utils.HttpService(addr, "POST", header, data, 20, 5)
 	if err != nil {
 		logger.Errorf("request failed: %v", err)
+		return consts.TaskRunning
 	}
 	logger.Tracef("response body: %s", string(respData))
 
@@ -495,10 +504,12 @@ func RunTaskState(task *models.Task, tpl *models.Template, dbsess *db.Session) s
 
 	if err := json.Unmarshal(respData, &runnerResp); err != nil {
 		logger.Errorf("unmarshal error: %v, body: %s", err, string(respData))
+		return consts.TaskRunning
 	}
 
 	if err := writeTaskLog(runnerResp.LogContent, taskBackend["log_file"].(string), taskBackend["log_offset"].(float64)); err != nil {
 		logger.Errorf("write task log error: %v", err)
+		return consts.TaskRunning
 	}
 
 	if task.StartAt.Unix()+tpl.Timeout < time.Now().Unix() {
@@ -521,6 +532,7 @@ func RunTaskState(task *models.Task, tpl *models.Template, dbsess *db.Session) s
 	if status != consts.TaskRunning && task.Source == consts.WorkFlow {
 		k := kafka.Get()
 		if err := k.ConnAndSend(k.GenerateKafkaContent(task.TransactionId, status)); err != nil {
+			//消息通知错误
 			logger.Errorf("kafka send error: %v", err)
 		}
 	}
@@ -584,6 +596,7 @@ func getTaskLogs(tplGuid, taskGuid string, dbsess *db.Session) {
 	task, err := GetTaskByGuid(dbsess, taskGuid)
 	if err != nil {
 		logger.Errorf("db err: %v", err)
+		return
 	}
 
 	taskBackend := make(map[string]interface{}, 0)
@@ -603,6 +616,7 @@ func getTaskLogs(tplGuid, taskGuid string, dbsess *db.Session) {
 	respData, er := utils.HttpService(addr, "POST", header, data, 20, 5)
 	if er != nil {
 		logger.Errorf("request failed: %v", err)
+		return
 	}
 	logger.Tracef("response body: %s", string(respData))
 
@@ -619,6 +633,7 @@ func getTaskLogs(tplGuid, taskGuid string, dbsess *db.Session) {
 
 	if err := json.Unmarshal(respData, &runnerResp); err != nil {
 		logger.Errorf("unmarshal error: %v, body: %s", err, string(respData))
+		return
 	}
 	if err := writeTaskLog(runnerResp.LogContent, taskBackend["log_file"].(string), taskBackend["log_offset"].(float64)); err != nil {
 		logger.Errorf("write task log error: %v", err)

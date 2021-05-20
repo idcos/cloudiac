@@ -32,7 +32,6 @@ func GetGiteaTemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch,fileP
 	}else {
 		path = vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/contents?limit=0&page=0", repo)
 	}
-
 	request, er := http.NewRequest("GET", path, nil)
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)
@@ -102,8 +101,8 @@ func GetGiteaBranchCommitId(vcs *models.Vcs, repoId uint, repoBranch string) (st
 	json.Unmarshal(body, &rep)
 	//return branchList, nil
 	var commit string
-	if _, ok := rep["commit"].(string); ok {
-		commit = rep["commit"].(string)
+	if _, ok := rep["commit"].(map[string]interface{}); ok {
+		commit =  rep["commit"].(map[string]interface{})["id"].(string)
 	}
 	return commit, nil
 
