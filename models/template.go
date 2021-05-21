@@ -38,3 +38,25 @@ func (o Template) Migrate(sess *db.Session) (err error) {
 
 	return nil
 }
+
+type TemplateWebhook struct {
+	SoftDeleteModel
+
+	TplId       uint   `json:"tplId" form:"tplId" grom:"not null"`
+	TplGuid     string `json:"tplGuid" form:"tplGuid" grom:"not null"`
+	AccessToken string `json:"accessToken" form:"accessToken" grom:"not null"`
+	Action      string `json:"action" form:"action"  grom:"type:enum('plan','apply','compliance');default:'plan'"`
+}
+
+func (TemplateWebhook) TableName() string {
+	return "iac_template_webhook"
+}
+
+func (o TemplateWebhook) Migrate(sess *db.Session) (err error) {
+	err = o.AddUniqueIndex(sess, "unique__guid", "access_token")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
