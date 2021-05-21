@@ -22,10 +22,7 @@ func DoGiteaRequest(request *http.Request, token string) (*http.Response, error)
 }
 
 func GetGiteaUrl(address string) string {
-	if strings.HasSuffix(address, "/") {
-		return address[:len(address)-1]
-	}
-	return address
+	return strings.TrimSuffix(address, "/")
 }
 
 func GetGiteaTemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch,filePath string) ([]string, error) {
