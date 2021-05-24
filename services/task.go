@@ -640,11 +640,18 @@ func getTaskLogs(tplGuid, taskGuid string, dbsess *db.Session) {
 	}
 }
 
+type sendMailQuery struct {
+	models.NotificationCfg
+	models.User
+}
+
 func SendMail(tx *db.Session, orgId uint, task *models.Task) {
 	tos := make([]string, 0)
 	logger := logs.Get().WithField("action", "sendMail")
-	notifier := make([]models.NotificationCfg, 0)
-	if err := tx.Where("org_id = ?", orgId).Find(&notifier); err != nil {
+	notifier := make([]sendMailQuery, 0)
+	if err := tx.Where("org_id = ?", orgId).
+		Joins("left join %s as user on user.id = %s.user_id",models.User{}.TableName(),models.NotificationCfg{}.TableName()).
+		Find(&notifier); err != nil {
 		logger.Errorf("query notifier err: %v", err)
 		return
 	}
