@@ -251,12 +251,12 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 	logger := logs.Get().WithField("action", "RunTaskToRunning")
 	conf := configs.Get()
 
-	tx := dbsess.Begin()
+
 	tpl := &models.Template{}
 	var taskStatus string
 	for {
-
-		count, _ := dbsess.Debug().Table(models.Task{}.TableName()).
+		tx := dbsess.Begin()
+		count, _ :=tx.Table(models.Task{}.TableName()).
 			Where("ct_service_id = ?", task.CtServiceId).
 			Where("status = ?", consts.TaskRunning).
 			Count()

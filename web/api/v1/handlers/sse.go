@@ -187,13 +187,13 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 
 	rd := bufio.NewReader(f)
 	readCount := 0
-	tx:=c.ServiceCtx().DB().Debug()
+	query := c.ServiceCtx().DB().Debug()
 	go func() {
 		for {
 			str, _, err := rd.ReadLine()
 			if err != nil {
 				if err.Error() == "EOF" {
-					task, _ := services.GetTaskByGuid(tx, taskGuid)
+					task, _ := services.GetTaskByGuid(query, taskGuid)
 					if task != nil && (task.Status != consts.TaskRunning && task.Status != consts.TaskPending) {
 						//第一次先跳过 有可能任务状态变更了 但是日志还没有输出完
 						if readCount == 0 {
@@ -218,7 +218,7 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 	}()
 
 	count := 0 // to indicate the message id
-	c.Stream(func(w io.Writer)bool{
+	c.Stream(func(w io.Writer) bool {
 		for {
 			select {
 			case <-done:
@@ -237,6 +237,5 @@ func TaskLogSSE(c *ctx.GinRequestCtx) {
 			}
 		}
 	})
-
 
 }
