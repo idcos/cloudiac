@@ -6,7 +6,6 @@ import (
 	"cloudiac/libs/db"
 	"cloudiac/models"
 	"cloudiac/services"
-	"cloudiac/utils"
 	"cloudiac/utils/kafka"
 	"cloudiac/utils/logs"
 	"cloudiac/web"
@@ -61,7 +60,7 @@ func main() {
 	kafka.InitKafkaProducerBuilder()
 	//go services.RunTaskToRunning()
 	//go services.RunTaskState()
-	utils.MaintenanceRunnerPerMax()
+	services.MaintenanceRunnerPerMax()
 	go services.RunTask()
 	//go http.ListenAndServe("0.0.0.0:6060", nil)
 	web.StartServer()
