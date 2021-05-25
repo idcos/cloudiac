@@ -645,20 +645,22 @@ type sendMailQuery struct {
 	models.User
 }
 
-func SendMail(tx *db.Session, orgId uint, task *models.Task) {
+func SendMail(query *db.Session, orgId uint, task *models.Task) {
 	tos := make([]string, 0)
 	logger := logs.Get().WithField("action", "sendMail")
 	notifier := make([]sendMailQuery, 0)
-	if err := tx.Where("org_id = ?", orgId).
-		Joins("left join %s as user on user.id = %s.user_id",models.User{}.TableName(),models.NotificationCfg{}.TableName()).
-		Find(&notifier); err != nil {
+	if err := query.Debug().Table(models.NotificationCfg{}.TableName()).Where("org_id = ?", orgId).
+		Joins(fmt.Sprintf("left join %s as `user` on `user`.id = %s.user_id",models.User{}.TableName(),models.NotificationCfg{}.TableName())).
+		LazySelectAppend("`user`.*").
+		LazySelectAppend("`iac_org_notification_cfg`.*").
+		Scan(&notifier); err != nil {
 		logger.Errorf("query notifier err: %v", err)
 		return
 	}
 
-	tpl, _ := GetTemplateById(tx, task.TemplateId)
+	tpl, _ := GetTemplateById(query, task.TemplateId)
 	for _, v := range notifier {
-		user, _ := GetUserById(tx, v.UserId)
+		user, _ := GetUserById(query, v.UserId)
 		switch task.Status {
 		case consts.TaskPending:
 			if v.EventType == "all" {
