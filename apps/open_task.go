@@ -68,7 +68,8 @@ func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface
 	if err != nil {
 		return nil, err
 	}
-	go services.RunTaskToRunning(task, c.DB().Debug(), org.Guid)
+	//go services.RunTaskToRunning(task, c.DB().Debug(), org.Guid)
+	go services.StartTask(c.DB(), org.Guid, *task)
 
 	return task, nil
 }

@@ -362,3 +362,30 @@ func UintIsContain(items []uint, item uint) bool {
 	}
 	return false
 }
+
+
+// RetryFunc 通用重试函数，
+// param max, 最大重试次数
+// param run: 重试执行的函数，入数 retryN 为当前重试次数(0 base)，返回值分别为(继续重试?, error)
+// return: 最终 run() 返回的 error
+func RetryFunc(max int, run func(retryN int) (bool, error)) error {
+	retryCount := 0
+	maxRetry := max // 最大重试次数(不含第一次)
+	for {
+		if retry, err := run(retryCount); err != nil && retry {
+			retryCount += 1
+			if retryCount > maxRetry {
+				return err
+			}
+
+			sleepTime := retryCount * 2
+			if sleepTime > 10 {
+				sleepTime = 10
+			}
+			time.Sleep(time.Duration(sleepTime) * time.Second)
+			continue
+		} else {
+			return err
+		}
+	}
+}

@@ -1,7 +1,9 @@
 package models
 
 import (
+	"cloudiac/consts"
 	"cloudiac/libs/db"
+	"cloudiac/utils"
 	"time"
 )
 
@@ -25,7 +27,8 @@ type Task struct {
 	TemplateGuid  string     `json:"templateGuid" gorm:"size:32;not null;comment:'模板GUID'"`
 	TemplateId    uint       `json:"templateId" gorm:"size:32;not null;comment:'模板ID'"`
 	TaskType      string     `json:"taskType" gorm:"type:enum('plan','apply');not null;comment:'作业类型'"`
-	Status        string     `json:"status" gorm:"type:enum('pending','running','failed','complete','timeout');default:'pending';comment:'作业状态'"`
+	Status        string     `json:"status"` // gorm 配置见 Migrate()
+	StatusDetail  string     `json:"statusDetail" gorm:"comment:'状态说明信息'"`
 	BackendInfo   JSON       `json:"backendInfo" gorm:"type:json;null;comment:'执行信息'" json:"backend_info"`
 	Creator       uint       `json:"creator" gorm:"not null;comment:'创建人'"`
 	StartAt       *time.Time `json:"startAt" gorm:"null;comment:'任务开始时间'"`
@@ -45,10 +48,23 @@ func (Task) TableName() string {
 	return "iac_task"
 }
 
-func (o Task) Migrate(sess *db.Session) (err error) {
-	err = o.AddUniqueIndex(sess, "unique__guid", "guid")
+func (t *Task) Exited() bool {
+	return utils.InArrayStr([]string{consts.TaskFailed, consts.TaskComplete, consts.TaskTimeout}, t.Status)
+}
+
+func (t *Task) Migrate(sess *db.Session) (err error) {
+	err = t.AddUniqueIndex(sess, "unique__guid", "guid")
 	if err != nil {
 		return err
 	}
+
+	// status 字段通过 Migrate 来维护 enum，确保新增加类型生效
+	err = sess.DB().ModifyColumn("status",
+		"ENUM('pending','running','failed','complete','timeout','assigning') " +
+		"DEFAULT 'pending' COMMENT '作业状态'").Error
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

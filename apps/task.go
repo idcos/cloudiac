@@ -154,7 +154,8 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 		return nil, err
 	}
 	//todo Task数量够多的情况下需要引入第三方组件
-	go services.RunTaskToRunning(task, c.DB(), c.MustOrg().Guid)
+	//go services.RunTaskToRunning(task, c.DB(), c.MustOrg().Guid)
+	go services.StartTask(c.DB(), c.MustOrg().Guid, *task)
 	return task, nil
 }
 

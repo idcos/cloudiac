@@ -262,7 +262,7 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 			Where("status = ?", consts.TaskRunning).
 			Count()
 
-		if int(count) > utils.GetRunnerMax() {
+		if int(count) > GetRunnerMax() {
 			_ = tx.Commit()
 			logger.Infof("runner concurrent num gt %d", count)
 			time.Sleep(time.Second * 5)
@@ -561,7 +561,8 @@ func RunTask() {
 				logger.Errorf("RunTask org db err: %v, task_id: %d, tpl_id: %d", err, taskList[index].Id, tpl.Id)
 				continue
 			}
-			go RunTaskToRunning(&taskList[index], dbsess, org.Guid)
+			//go RunTaskToRunning(&taskList[index], dbsess, org.Guid)
+			go StartTask(dbsess, org.Guid, taskList[index])
 		}
 		if taskList[index].Status == consts.TaskRunning {
 			go func() {

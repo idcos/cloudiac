@@ -61,7 +61,9 @@ const (
 	DsTypeProm   = "prom"
 
 	//作业状态
-	TaskPending  = "pending"
+	TaskPending   = "pending"
+	TaskAssigning = "assigning"
+
 	TaskRunning  = "running"
 	TaskTimeout  = "timeout"
 	TaskFailed   = "failed"
