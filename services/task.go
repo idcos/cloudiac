@@ -8,9 +8,11 @@ import (
 	"cloudiac/libs/db"
 	"cloudiac/models"
 	"cloudiac/models/forms"
+	"cloudiac/runner"
 	"cloudiac/utils"
 	"cloudiac/utils/kafka"
 	"cloudiac/utils/logs"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/jinzhu/gorm"
@@ -248,14 +250,13 @@ func writeTaskLog(contentList []string, logPath string, offset float64) error {
 }
 
 func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
-	logger := logs.Get().WithField("action", "RunTaskToRunning")
+	logger := logs.Get().WithField("action", "RunTaskToRunning").WithField("taskId", task.Guid)
 	conf := configs.Get()
 
 	tx := dbsess.Begin()
 	tpl := &models.Template{}
 	var taskStatus string
 	for {
-
 		count, _ := dbsess.Debug().Table(models.Task{}.TableName()).
 			Where("ct_service_id = ?", task.CtServiceId).
 			Where("status = ?", consts.TaskRunning).
@@ -355,7 +356,7 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 			Where("id = ?", task.Id).
 			Update(map[string]interface{}{
 				"status": status,
-				//这里是第一生成backend直接修改即可
+				//这里是第一次生成backend，直接修改即可
 				"start_at":     startAt,
 				"backend_info": models.JSON(getBackendInfo(task.BackendInfo, runnerResp.Id)),
 			}); err != nil {
@@ -373,11 +374,18 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 		break
 	}
 
-	for taskStatus == consts.TaskRunning {
-		taskStatus = RunTaskState(task, tpl, dbsess)
-		//不能太频繁调用  这里睡一会
-		time.Sleep(time.Second * 5)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if taskStatus == consts.TaskRunning {
+		var err error
+		taskStatus, err = WaitTask(ctx, task.Guid, tpl, dbsess)
+		if err != nil {
+			logger.Errorf("wait task error: %v", err)
+			return
+		}
 	}
+
 	//todo 作业执行完成之后 日志有可能拿不完
 	getTaskLogs(task.TemplateGuid, task.Guid, dbsess)
 	if taskStatus == consts.TaskComplete {
@@ -389,9 +397,7 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 			tfInfo := GetTFLog(runnerFilePath)
 			models.UpdateAttr(dbsess, task, tfInfo)
 		}
-
 	}
-
 }
 
 func GetTFLog(logPath string) map[string]interface{} {
@@ -479,15 +485,8 @@ func RunTaskState(task *models.Task, tpl *models.Template, dbsess *db.Session) s
 	logger.Tracef("response body: %s", string(respData))
 
 	var (
-		runnerResp struct {
-			Status          string   `json:"status" form:"status" `
-			StatusCode      int      `json:"status_code" form:"status_code" `
-			LogContent      []string `json:"log_content" form:"log_content" `
-			LogContentLines int      `json:"log_content_lines" form:"log_content_lines" `
-			Code            string   `json:"code" form:"code" `
-			Error           string   `json:"error" form:"error" `
-		}
-		status = consts.TaskRunning
+		runnerResp runner.TaskStatusMessage
+		status     = consts.TaskRunning
 	)
 
 	if err := json.Unmarshal(respData, &runnerResp); err != nil {
@@ -550,6 +549,7 @@ func RunTask() {
 		return
 	}
 	for index, _ := range taskList {
+		task := taskList[index]
 		tpl := models.Template{}
 		if err := dbsess.Where("id = ?", taskList[index].TemplateId).First(&tpl); err != nil {
 			logger.Errorf("RunTask tpl db err: %v, task_id: %d", err, taskList[index].Id)
@@ -565,10 +565,9 @@ func RunTask() {
 		}
 		if taskList[index].Status == consts.TaskRunning {
 			go func() {
-				taskStatus := consts.TaskRunning
-				for taskStatus == consts.TaskRunning {
-					taskStatus = RunTaskState(&taskList[index], &tpl, dbsess)
-					time.Sleep(time.Second * 5)
+				_, err := WaitTask(context.Background(), task.Guid, &tpl, dbsess)
+				if err != nil {
+					logger.WithField("taskId", task.Guid).Errorf("wait task error: %v", err)
 				}
 			}()
 		}

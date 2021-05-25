@@ -3,13 +3,13 @@ package runner
 import (
 	"cloudiac/configs"
 	"context"
-	"log"
-
+	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	guuid "github.com/google/uuid"
+	"log"
 )
 
 func (task *CommitedTask) Cancel() error {
@@ -45,6 +45,27 @@ func (task *CommitedTask) Status() (types.ContainerJSON, error) {
 		panic(err)
 	}
 	return containerInfo, nil
+}
+
+// Wait 等待任务结束，返回退出码，如果超时，返回 error context.DeadlineExceeded
+func (task *CommitedTask) Wait(ctx context.Context) (int64, error) {
+	cli, err := client.NewClientWithOpts()
+	if err != nil {
+		return 0, err
+	}
+
+	cli.NegotiateAPIVersion(ctx)
+	respCh, errCh := cli.ContainerWait(ctx, task.ContainerId, container.WaitConditionNotRunning)
+	select {
+	case resp := <-respCh:
+		if resp.Error != nil {
+			return resp.StatusCode, fmt.Errorf(resp.Error.Message)
+		} else {
+			return resp.StatusCode, nil
+		}
+	case err := <-errCh:
+		return 0, err
+	}
 }
 
 func (cmd *Command) Create(dirMapping string) error {

@@ -19,6 +19,7 @@ require (
 	github.com/gomodule/redigo v1.8.4
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/mux v1.8.0 // indirect
+	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/consul/api v1.8.1
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jinzhu/gorm v1.9.16

@@ -48,6 +48,7 @@ func Cancel(req *http.Request) error {
 	return err
 }
 
+// Deprecated:
 func Status(req *http.Request) (ContainerStatus, error) {
 	task, err := ReqToTask(req)
 	containerStatus := new(ContainerStatus)

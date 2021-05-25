@@ -1,6 +1,7 @@
 package main
 
 import (
+	v1 "cloudiac/runner/api/v1"
 	"io"
 	"net/http"
 	"os"
@@ -108,7 +109,6 @@ func StartServer() {
 	})
 
 	apiV1.POST("/task/run", func(c *gin.Context) {
-		logger.Info(c.Request.Body)
 		id, err := runner.Run(c.Request)
 		if err != nil {
 			logger.Error(err.Error())
@@ -122,23 +122,7 @@ func StartServer() {
 		}
 	})
 
-	apiV1.POST("/task/status", func(c *gin.Context) {
-		logger.Debug(c.Request.Body)
-		containerStatus, err := runner.Status(c.Request)
-		if err != nil {
-			logger.Info(err.Error())
-			c.JSON(500, gin.H{
-				"status": containerStatus.Status.ExitCode,
-			})
-		} else {
-			c.JSON(200, gin.H{
-				"status":            containerStatus.Status.Status,
-				"status_code":       containerStatus.Status.ExitCode,
-				"log_content":       containerStatus.LogContent,
-				"log_content_lines": containerStatus.LogContentLines,
-			})
-		}
-	})
+	apiV1.GET("/task/status", v1.TaskStatus)
 
 	apiV1.POST("/task/logs", func(c *gin.Context) {
 		logger.Debug(c.Request.Body)

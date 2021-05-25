@@ -3,6 +3,7 @@ package runner
 import (
 	"bytes"
 	"cloudiac/configs"
+	"cloudiac/utils/logs"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -135,9 +136,16 @@ func CreateTemplatePath(templateUUID string, taskId string) (string, error) {
 }
 
 func ReqToTask(req *http.Request) (*CommitedTask, error) {
+	bodyData, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	logger := logs.Get()
+	logger.Debugf("task status request: %s", bodyData)
+
 	var d CommitedTask
-	if err := json.NewDecoder(req.Body).Decode(&d); err != nil {
-		req.Body.Close()
+	if err := json.Unmarshal(bodyData, &d); err != nil {
 		return nil, err
 	}
 	return &d, nil
@@ -146,11 +154,15 @@ func ReqToTask(req *http.Request) (*CommitedTask, error) {
 // ReqToCommand create command structure to run container
 // from POST request
 func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error) {
-	log.Printf("%#v", req.Body)
+	bodyData, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	logger := logs.Get()
+	logger.Infof("new task request: %s", bodyData)
 	var d ReqBody
-	if err := json.NewDecoder(req.Body).Decode(&d); err != nil {
-		req.Body.Close()
-		log.Panicln(err)
+	if err := json.Unmarshal(bodyData, &d); err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -231,7 +243,7 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 	t = append(t, "sh")
 	t = append(t, "-c")
 	t = append(t, cmdstr)
-	fmt.Println(t)
+
 	c.Commands = t
 
 	// set timeout
