@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-// TaskLogFollow 读取 tas log 并 follow, 直到任务退出
+// TaskLogFollow 读取 task log 并 follow, 直到任务退出
 func TaskLogFollow(c *gin.Context) {
 	task := runner.CommitedTask{
 		TemplateId: c.Query("templateId"),
@@ -89,7 +89,7 @@ func doFollowTaskLog(wsConn *websocket.Conn, task *runner.CommitedTask, offset i
 }
 
 // 读取文件内容并 follow，直到 ctx 被 cancel
-// return: 两个 chan，一个用于返回文件内容，一个用于返回 err，chan 在函数退出时会被关闭，所以 chan 会读到 nil
+// return: 两个 chan，一个用于返回文件内容，一个用于返回 err，chan 在函数退出时会被关闭，所以会读到 nil
 func followFile(ctx context.Context, path string, offset int64) (<-chan []byte, <-chan error) {
 	logger := logs.Get().WithField("func", "followFile").WithField("path", path)
 

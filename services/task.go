@@ -81,7 +81,6 @@ func QueryTask(tx *db.Session, status, q string, tplId uint) *db.Session {
 	}
 
 	return query.Order("task.created_at DESC")
-
 }
 
 func TaskDetail(tx *db.Session, taskId uint) *db.Session {
@@ -562,9 +561,10 @@ func RunTask() {
 				continue
 			}
 			//go RunTaskToRunning(&taskList[index], dbsess, org.Guid)
-			go StartTask(dbsess, org.Guid, taskList[index])
+			//go StartTask(dbsess, taskList[index])
 		}
 		if taskList[index].Status == consts.TaskRunning {
+			// TODO 任务恢复由 taskManger 处理
 			go func() {
 				_, err := WaitTask(context.Background(), task.Guid, &tpl, dbsess)
 				if err != nil {

@@ -44,11 +44,6 @@ func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface
 		"log_offset":  0,
 	})
 
-	org, err := services.GetOrganizationById(tx, tpl.OrgId)
-	if err != nil {
-		return nil, err
-	}
-
 	vars := GetResourceAccount(form.Account, form.Vars, tpl.TplType)
 	jsons, _ := json.Marshal(vars)
 
@@ -69,7 +64,7 @@ func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface
 		return nil, err
 	}
 	//go services.RunTaskToRunning(task, c.DB().Debug(), org.Guid)
-	go services.StartTask(c.DB(), org.Guid, *task)
+	//go services.StartTask(c.DB(), *task)
 
 	return task, nil
 }

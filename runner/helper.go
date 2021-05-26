@@ -160,7 +160,7 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 	}
 
 	logger := logs.Get()
-	logger.Infof("new task request: %s", bodyData)
+	logger.Tracef("new task request: %s", bodyData)
 	var d ReqBody
 	if err := json.Unmarshal(bodyData, &d); err != nil {
 		return nil, nil, nil, err

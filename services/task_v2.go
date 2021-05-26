@@ -22,7 +22,7 @@ import (
 )
 
 // StartTask 下发任务并等待结束
-func StartTask(dbSess *db.Session, orgGuid string, task models.Task) {
+func StartTask(dbSess *db.Session, task models.Task) {
 	logger := logs.Get().WithField("action", "StartTask").WithField("taskId", task.Guid)
 
 	var (
@@ -43,35 +43,23 @@ func StartTask(dbSess *db.Session, orgGuid string, task models.Task) {
 		return
 	}
 
-	//TODO 临时方案，一直循环调用直到任务 Exited, 后续应该改由 taskManager 统一重试
-	for {
-		AssignTask(dbSess, orgGuid, task, &tpl)
-
-		if dbTask, err = GetTaskById(dbSess, task.Id); err != nil {
-			logger.Errorln(err)
-		} else if dbTask.Exited() || dbTask.Status == consts.TaskRunning {
-			break
-		}
-		time.Sleep(time.Second * 5)
+	logger.Debugf("assign task")
+	if err := AssignTask(dbSess, &tpl, task); err != nil {
+		logger.Errorf("AssignTask error: %v", err)
+		return
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var taskStatus string
-	if dbTask.Status == consts.TaskRunning {
-		var err error
-		taskStatus, err = WaitTask(ctx, task.Guid, &tpl, dbSess)
-		if err != nil {
-			logger.Errorf("wait task error: %v", err)
-			return
-		}
+	logger.Debugf("waiting task exit")
+	taskStatus, err := WaitTask(ctx, task.Guid, &tpl, dbSess)
+	if err != nil {
+		logger.Errorf("wait task error: %v", err)
+		return
 	}
-
 	logger.Infof("task exited, status: %s", taskStatus)
 
-	//todo 作业执行完成之后 日志有可能拿不完
-	getTaskLogs(task.TemplateGuid, task.Guid, dbSess)
 	if taskStatus == consts.TaskComplete {
 		logPath := task.BackendInfo
 		path := map[string]interface{}{}
@@ -85,17 +73,17 @@ func StartTask(dbSess *db.Session, orgGuid string, task models.Task) {
 }
 
 // AssignTask 将任务分派到 runner
-func AssignTask(dbSess *db.Session, orgGuid string, task models.Task, tpl *models.Template) {
+func AssignTask(dbSess *db.Session, tpl *models.Template, task models.Task) error {
 	logger := logs.Get().WithField("action", "AssignTask").WithField("taskId", task.Guid)
 
 	if task.Status != consts.TaskPending {
-		logger.Errorf("unexpected task status '%s'", task.Status)
-		return
+		return fmt.Errorf("unexpected task status '%s'", task.Status)
 	}
 
 	updateTask := func(t *models.Task) error {
 		if _, err := dbSess.Model(&models.Task{}).Update(t); err != nil {
-			logger.Errorf("update task error: %v", err)
+			err = fmt.Errorf("update task error: %v", err)
+			logger.Errorln(err)
 			return err
 		}
 		return nil
@@ -104,19 +92,17 @@ func AssignTask(dbSess *db.Session, orgGuid string, task models.Task, tpl *model
 	// 更新任务为 assigning 状态
 	task.Status = consts.TaskAssigning
 	if err := updateTask(&task); err != nil {
-		return
+		return err
 	}
 
 	now := time.Now()
 	task.StartAt = &now
-	resp, retry, err := doAssignTask(orgGuid, &task, tpl)
+	resp, retry, err := doAssignTask(tpl.Guid, &task, tpl)
 	if err == nil && resp.Error != "" {
 		err = fmt.Errorf(resp.Error)
 	}
 
 	if err != nil {
-		logger.Errorf("doAssignTask error: %v, retry=%v", err, retry)
-
 		if retry {
 			task.Status = consts.TaskPending // 恢复任务为 pending 状态，等待重试
 			task.StatusDetail = ""
@@ -134,7 +120,7 @@ func AssignTask(dbSess *db.Session, orgGuid string, task models.Task, tpl *model
 		task.BackendInfo = getBackendInfo(task.BackendInfo, resp.Id)
 		updateTask(&task)
 	}
-
+	return err
 }
 
 func doAssignTask(orgGuid string, task *models.Task, tpl *models.Template) (
@@ -358,4 +344,3 @@ forLoop:
 	}
 	return taskStatus, nil
 }
-
