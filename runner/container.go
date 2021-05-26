@@ -2,12 +2,14 @@ package runner
 
 import (
 	"cloudiac/configs"
+	"cloudiac/utils/logs"
 	"context"
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/errdefs"
 	guuid "github.com/google/uuid"
 	"log"
 )
@@ -49,6 +51,8 @@ func (task *CommitedTask) Status() (types.ContainerJSON, error) {
 
 // Wait 等待任务结束，返回退出码，如果超时，返回 error context.DeadlineExceeded
 func (task *CommitedTask) Wait(ctx context.Context) (int64, error) {
+	logger := logs.Get().WithField("taskId", task.TaskId)
+
 	cli, err := client.NewClientWithOpts()
 	if err != nil {
 		return 0, err
@@ -58,12 +62,17 @@ func (task *CommitedTask) Wait(ctx context.Context) (int64, error) {
 	respCh, errCh := cli.ContainerWait(ctx, task.ContainerId, container.WaitConditionNotRunning)
 	select {
 	case resp := <-respCh:
+		logger.Debugf("wait container resp: %#v", resp)
 		if resp.Error != nil {
 			return resp.StatusCode, fmt.Errorf(resp.Error.Message)
 		} else {
 			return resp.StatusCode, nil
 		}
 	case err := <-errCh:
+		if errdefs.IsNotFound(err) {
+			return 	0, nil
+		}
+		logger.Warnf("wait container error: %#v", err)
 		return 0, err
 	}
 }

@@ -1,0 +1,36 @@
+<html>
+<body>
+<ul id="eventList"></ul>
+
+<script type="text/javascript">
+    const logPath = "/tmp/iac/portal/ct-c2j2g5rn8qhqp9ku9a6g/run-c2mdvsmcie6qstm4u2sg";
+    const eventSource = new EventSource("http://127.0.0.1:9030/api/v1/task/log/sse?logPath="+logPath);
+    const eventList = document.getElementById("eventList")
+
+    // eventSource.onmessage = function (event) {
+    //     const newElement = document.createElement("li");
+    //     newElement.textContent = event.data;
+    //     eventList.appendChild(newElement);
+    // }
+
+    eventSource.addEventListener("message", function (event) {
+        const newElement = document.createElement("li");
+        newElement.textContent = event.data;
+        eventList.appendChild(newElement);
+    })
+
+    eventSource.addEventListener("error", function (event) {
+        const newElement = document.createElement("li");
+        newElement.textContent = event.data;
+        eventList.appendChild(newElement);
+    })
+
+    eventSource.addEventListener("end", function (event) {
+        const newElement = document.createElement("li");
+        newElement.textContent = event.data;
+        eventList.appendChild(newElement);
+        eventSource.close();
+    });
+</script>
+</body>
+</html>

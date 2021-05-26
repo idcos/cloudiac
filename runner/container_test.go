@@ -7,7 +7,7 @@ import (
 
 func ExampleContainerWait() {
 	task := CommitedTask{
-		TemplateUUID:     "tplId",
+		TemplateId:       "tplId",
 		TaskId:           "taskId",
 		ContainerId:      "",
 		LogContentOffset: 0,

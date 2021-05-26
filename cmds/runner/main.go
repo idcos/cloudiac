@@ -123,6 +123,7 @@ func StartServer() {
 	})
 
 	apiV1.GET("/task/status", v1.TaskStatus)
+	apiV1.GET("/task/log/follow", v1.TaskLogFollow)
 
 	apiV1.POST("/task/logs", func(c *gin.Context) {
 		logger.Debug(c.Request.Body)

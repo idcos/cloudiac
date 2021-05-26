@@ -27,7 +27,7 @@ func StartTask(dbSess *db.Session, orgGuid string, task models.Task) {
 
 	var (
 		dbTask *models.Task
-		err error
+		err    error
 	)
 
 	tpl := models.Template{}
@@ -72,7 +72,7 @@ func StartTask(dbSess *db.Session, orgGuid string, task models.Task) {
 
 	//todo 作业执行完成之后 日志有可能拿不完
 	getTaskLogs(task.TemplateGuid, task.Guid, dbSess)
-	if taskStatus  == consts.TaskComplete {
+	if taskStatus == consts.TaskComplete {
 		logPath := task.BackendInfo
 		path := map[string]interface{}{}
 		json.Unmarshal(logPath, &path)
@@ -258,10 +258,9 @@ func doPullTaskStatus(ctx context.Context, taskId string, tpl *models.Template, 
 	runnerAddr := taskBackend["backend_url"]
 
 	params := url.Values{}
-	params.Add("templateUuid", task.TemplateGuid)
+	params.Add("templateId", task.TemplateGuid)
 	params.Add("taskId", task.Guid)
 	params.Add("containerId", fmt.Sprintf("%s", taskBackend["container_id"]))
-
 	wsConn, err := utils.WebsocketDail(fmt.Sprintf("%s", runnerAddr), consts.RunnerTaskStateURL, params)
 	if err != nil {
 		logger.Errorln(err)
@@ -360,8 +359,10 @@ forLoop:
 	}
 
 	//更新task状态
-	if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).Update(updateM); err != nil {
+	if _, err := dbSess.Model(&models.Task{}).
+		Where("id = ?", task.Id).Update(updateM); err != nil {
 		return taskStatus, err
 	}
 	return taskStatus, nil
 }
+

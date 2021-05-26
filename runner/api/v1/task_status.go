@@ -15,10 +15,9 @@ var logger = logs.Get()
 
 func TaskStatus(c *gin.Context) {
 	task := runner.CommitedTask{
-		TemplateUUID:     c.Query("tplId"),
-		TaskId:           c.Query("taskId"),
-		ContainerId:      c.Query("containerId"),
-		LogContentOffset: 0,
+		TemplateId:  c.Query("templateId"),
+		TaskId:      c.Query("taskId"),
+		ContainerId: c.Query("containerId"),
 	}
 
 	logger := logger.WithField("taskId", task.TaskId)
@@ -79,7 +78,7 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.CommitedTask, closed <-ch
 		}
 
 		if withLog {
-			logs, err := runner.FetchTaskLog(task.TemplateUUID, task.TaskId, 0)
+			logs, err := runner.FetchTaskLog(task.TemplateId, task.TaskId, 0)
 			if err != nil {
 				logger.Errorf("fetch task log error: %v", err)
 			}
@@ -96,9 +95,10 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.CommitedTask, closed <-ch
 
 	waitCh := make(chan error)
 	go func() {
+		defer close(waitCh)
+
 		_, err := task.Wait(context.Background())
 		waitCh <- err
-		waitCh <- nil
 	}()
 
 	if err := sendStatus(false); err != nil {

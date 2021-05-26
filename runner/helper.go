@@ -46,9 +46,9 @@ type ReqBody struct {
 }
 
 type CommitedTask struct {
-	TemplateUUID     string `json:"template_uuid"`
-	TaskId           string `json:"task_id"`
-	ContainerId      string `json:"container_id"`
+	TemplateId       string `json:"templateId"`
+	TaskId           string `json:"taskId"`
+	ContainerId      string `json:"containerId"`
 	LogContentOffset int    `json:"offset"`
 }
 

@@ -13,3 +13,7 @@ type TaskStatusMessage struct {
 	Code            string   `json:"code" form:"code" `
 	Error           string   `json:"error" form:"error" `
 }
+
+type ErrorMessage struct {
+	Error string `json:"error"`
+}

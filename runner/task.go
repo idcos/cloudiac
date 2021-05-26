@@ -62,7 +62,7 @@ func Status(req *http.Request) (ContainerStatus, error) {
 
 	containerStatus.Status = containerJSON.State
 
-	logContent, err := FetchTaskLog(task.TemplateUUID, task.TaskId, task.LogContentOffset)
+	logContent, err := FetchTaskLog(task.TemplateId, task.TaskId, task.LogContentOffset)
 	if err != nil {
 		return *containerStatus, err
 	}
@@ -83,7 +83,7 @@ func GetTaskLogs(req *http.Request) (TaskLogsResp, error) {
 		return TaskLogsResp{}, err
 	}
 	tlr := TaskLogsResp{}
-	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePath, task.TemplateUUID, task.TaskId)
+	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePath, task.TemplateId, task.TaskId)
 	logFile := fmt.Sprintf("%s/%s", templateDir, ContainerLogFileName)
 	file, err := ioutil.ReadFile(logFile)
 	if err != nil {
@@ -94,7 +94,7 @@ func GetTaskLogs(req *http.Request) (TaskLogsResp, error) {
 
 	lines, err := ReadLogFile(logFile, task.LogContentOffset, MaxLines)
 
-	//logContent, err := FetchTaskLog(task.TemplateUUID, task.TaskId, task.LogContentOffset)
+	//logContent, err := FetchTaskLog(task.TemplateId, task.TaskId, task.LogContentOffset)
 	if err != nil {
 		return tlr, err
 	}
