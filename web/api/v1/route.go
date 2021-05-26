@@ -57,7 +57,7 @@ func Register(g *gin.RouterGroup) {
 		ctrl.Register(root.Group("template"), &handlers.Template{})
 		ctrl.Register(root.Group("task"), &handlers.Task{})
 		ctrl.Register(root.Group("taskComment"), &handlers.TaskComment{})
-		ctrl.Register(root.Group("webhook"), &handlers.Webhook{})
+		ctrl.Register(root.Group("webhook"), &handlers.AccessToken{})
 		ctrl.Register(root.Group("vcs"), &handlers.Vcs{})
 
 		root.GET("/template/overview", w(handlers.Template{}.Overview))

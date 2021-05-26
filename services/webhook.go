@@ -7,16 +7,16 @@ import (
 	"fmt"
 )
 
-func CreateWebhook(tx *db.Session, webhook models.TemplateWebhook) (*models.TemplateWebhook, e.Error) {
+func CreateAccessToken(tx *db.Session, webhook models.TemplateAccessToken) (*models.TemplateAccessToken, e.Error) {
 	if err := models.Create(tx, &webhook); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 	return &webhook, nil
 }
 
-func UpdateWebhook(tx *db.Session, id uint, attrs models.Attrs) (*models.TemplateWebhook, e.Error) {
-	webhook := &models.TemplateWebhook{}
-	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.TemplateWebhook{}, attrs); err != nil {
+func UpdateAccessToken(tx *db.Session, id uint, attrs models.Attrs) (*models.TemplateAccessToken, e.Error) {
+	webhook := &models.TemplateAccessToken{}
+	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.TemplateAccessToken{}, attrs); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("update vcs error: %v", err))
 	}
 	if err := tx.Where("id = ?", id).First(webhook); err != nil {
@@ -25,26 +25,27 @@ func UpdateWebhook(tx *db.Session, id uint, attrs models.Attrs) (*models.Templat
 	return webhook, nil
 }
 
-func DeleteWebhook(tx *db.Session, id uint) (interface{}, e.Error) {
-	if _, err := tx.Where("id = ?", id).Delete(&models.TemplateWebhook{}); err != nil {
+func DeleteAccessToken(tx *db.Session, id uint) (interface{}, e.Error) {
+	if _, err := tx.Where("id = ?", id).Delete(&models.TemplateAccessToken{}); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("delete vcs error: %v", err))
 	}
 	return nil, nil
 }
 
-func DetailWebhook(tx *db.Session, id uint) (interface{}, e.Error) {
-	webhook := &models.TemplateWebhook{}
-	err := tx.Where("id = ?", id).First(webhook)
+func DetailAccessToken(tx *db.Session, id uint) (interface{}, e.Error) {
+	accessToken := &models.TemplateAccessToken{}
+	err := tx.Where("id = ?", id).First(accessToken)
 	if err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	return webhook, nil
+	return accessToken, nil
 }
 
-func SearchWebhookByTplGuid(tx *db.Session, guid string) *db.Session {
-	return tx.Model(&models.TemplateWebhook{}).Where("tpl_guid = ?", guid)
+func SearchAccessTokenByTplGuid(tx *db.Session, guid string) *db.Session {
+	return tx.Model(&models.TemplateAccessToken{}).Where("tpl_guid = ?", guid)
 }
 
-func SearchWebhookByTplId(tx *db.Session, id uint) *db.Session {
-	return tx.Model(&models.TemplateWebhook{}).Where("tpl_id = ?", id)
+func SearchAccessTokenByTplId(tx *db.Session, id uint) *db.Session {
+	return tx.Model(&models.TemplateAccessToken{}).Where("tpl_id = ?", id)
 }
+

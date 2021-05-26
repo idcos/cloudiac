@@ -7,46 +7,46 @@ import (
 	"cloudiac/models/forms"
 )
 
-type Webhook struct {
+type AccessToken struct {
 	ctrl.BaseController
 }
 
-func (Webhook) Create(c *ctx.GinRequestCtx) {
-	form := &forms.CreateWebhookForm{}
+func (AccessToken) Create(c *ctx.GinRequestCtx) {
+	form := &forms.CreateAccessTokenForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CreateWebhook(c.ServiceCtx(), form))
+	c.JSONResult(apps.CreateAccessToken(c.ServiceCtx(), form))
 }
 
-func (Webhook) Search(c *ctx.GinRequestCtx) {
-	form := forms.SearchWebhookForm{}
+func (AccessToken) Search(c *ctx.GinRequestCtx) {
+	form := forms.SearchAccessTokenForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchWebhook(c.ServiceCtx(), &form))
+	c.JSONResult(apps.SearchAccessToken(c.ServiceCtx(), &form))
 }
 
-func (Webhook) Update(c *ctx.GinRequestCtx) {
-	form := forms.UpdateWebhookForm{}
+func (AccessToken) Update(c *ctx.GinRequestCtx) {
+	form := forms.UpdateAccessTokenForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.UpdateWebhook(c.ServiceCtx(), &form))
+	c.JSONResult(apps.UpdateAccessToken(c.ServiceCtx(), &form))
 }
 
-func (Webhook) Delete(c *ctx.GinRequestCtx) {
-	form := forms.DeleteWebhookForm{}
+func (AccessToken) Delete(c *ctx.GinRequestCtx) {
+	form := forms.DeleteAccessTokenForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DeleteWebhook(c.ServiceCtx(), &form))
+	c.JSONResult(apps.DeleteAccessToken(c.ServiceCtx(), &form))
 }
 
-func (Webhook) Detail(c *ctx.GinRequestCtx) {
-	form := forms.DetailWebhookForm{}
+func (AccessToken) Detail(c *ctx.GinRequestCtx) {
+	form := forms.DetailAccessTokenForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DetailWebhook(c.ServiceCtx(), &form))
+	c.JSONResult(apps.DetailAccessToken(c.ServiceCtx(), &form))
 }

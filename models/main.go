@@ -141,5 +141,5 @@ func Init(migrate bool) {
 	autoMigrate(&Token{}, sess)
 	autoMigrate(&TaskComment{}, sess)
 	autoMigrate(&Vcs{}, sess)
-	autoMigrate(&TemplateWebhook{}, sess)
+	autoMigrate(&TemplateAccessToken{}, sess)
 }
