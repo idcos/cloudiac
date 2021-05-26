@@ -3,8 +3,9 @@ package apps
 import (
 	"bufio"
 	"cloudiac/consts"
+	"cloudiac/consts/e"
 	"cloudiac/libs/ctx"
-	"cloudiac/libs/db"
+	"cloudiac/models"
 	"cloudiac/services"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
@@ -29,16 +30,24 @@ func FollowTaskLog(c *ctx.GinRequestCtx) error {
 	taskId := parts[len(parts)-1]
 	logger := logs.Get().WithField("func", "FollowTaskLog").WithField("taskId", taskId)
 
+	task, err := services.GetTaskByGuid(c.ServiceCtx().DB(), taskId)
+	if err != nil {
+		if !e.IsRecordNotFound(err) {
+			logger.Errorf("query task err: %v", err)
+		}
+		return err
+	}
+
 	pr, pw := io.Pipe()
 	go func() {
-		if err := fetchRunnerTaskLog(c.ServiceCtx().DB(), pw, taskId); err != nil {
+		if err := fetchRunnerTaskLog(pw, task); err != nil {
 			logger.Errorf("fetchRunnerTaskLog error: %v", err)
 		}
 	}()
 
 	go func() {
 		<- c.Request.Context().Done()
-		logger.Debugf("connect closed")
+		logger.Tracef("connect closed")
 		pr.Close()
 	}()
 
@@ -61,24 +70,18 @@ func FollowTaskLog(c *ctx.GinRequestCtx) error {
 }
 
 // 从 runner 获取任务日志，直到任务结束
-func fetchRunnerTaskLog(dbSess *db.Session, writer io.WriteCloser, taskId string) error {
+func fetchRunnerTaskLog(writer io.WriteCloser, task *models.Task) error {
 	// close 后 read 端会触发 EOF error
 	defer writer.Close()
 
-	logger := logs.Get().WithField("func", "fetchRunnerTaskLog").WithField("taskId", taskId)
-
-	task, er := services.GetTaskByGuid(dbSess, taskId)
-	if er != nil {
-		logger.Errorf("query task err: %v", er)
-		return er
-	}
+	logger := logs.Get().WithField("func", "fetchRunnerTaskLog").WithField("taskId", task.Guid)
 
 	taskBackend := make(map[string]interface{})
 	_ = json.Unmarshal(task.BackendInfo, &taskBackend)
 	runnerAddr := fmt.Sprintf("%v", taskBackend["backend_url"])
 
 	params := url.Values{}
-	params.Add("taskId", taskId)
+	params.Add("taskId", task.Guid)
 	params.Add("templateId", task.TemplateGuid)
 	wsConn, err := utils.WebsocketDail(runnerAddr, consts.RunnerTaskLogFollowURL, params)
 	if err != nil {

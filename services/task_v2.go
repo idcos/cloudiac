@@ -266,14 +266,7 @@ func doPullTaskStatus(ctx context.Context, taskId string, tpl *models.Template, 
 		logger.Errorln(err)
 		return taskStatus, err
 	}
-	defer func() {
-		wsConn.WriteControl(
-			websocket.CloseMessage,
-			websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
-			time.Now().Add(time.Second),
-		)
-		wsConn.Close()
-	}()
+	defer utils.WebsocketClose(wsConn)
 
 	messageChan := make(chan *runner.TaskStatusMessage)
 	readErrChan := make(chan error)

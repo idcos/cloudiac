@@ -35,3 +35,4 @@ func WebsocketCloseWithCode(conn *websocket.Conn, code int, text string) error {
 		time.Now().Add(time.Second))
 	return conn.Close()
 }
+

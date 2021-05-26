@@ -3,6 +3,7 @@ package v1
 import (
 	"cloudiac/runner"
 	"cloudiac/runner/ws"
+	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"context"
 	"github.com/gin-gonic/gin"
@@ -21,44 +22,22 @@ func TaskStatus(c *gin.Context) {
 	}
 
 	logger := logger.WithField("taskId", task.TaskId)
-	wsConn, err := ws.Upgrade(c.Writer, c.Request, nil)
+	wsConn, peerClosed, err := ws.UpgradeWithNotifyClosed(c.Writer, c.Request, nil)
 	if err != nil {
 		logger.Warnln(err)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	sendCloseMessage := func(code int, text string) {
-		message := websocket.FormatCloseMessage(code, "")
-		wsConn.WriteControl(websocket.CloseMessage, message, time.Now().Add(time.Second))
-	}
-
 	defer func() {
 		wsConn.Close()
 	}()
 
-	// 通知处理进程，对端主动断开了连接
-	peerClosed := make(chan struct{})
-	go func() {
-		for {
-			// 通过调用 ReadMessage() 来检测对端是否断开连接，
-			// 如果对端关闭连接，该调用会返回 error，其他消息我们忽略
-			_, _, err := wsConn.ReadMessage()
-			if err != nil {
-				close(peerClosed)
-				if !websocket.IsUnexpectedCloseError(err) {
-					logger.Debugf("read ws message: %v", err)
-				}
-				return
-			}
-		}
-	}()
-
 	if err := doTaskStatus(wsConn, &task, peerClosed); err != nil {
 		logger.Errorln(err)
-		sendCloseMessage(websocket.CloseInternalServerErr, err.Error())
+		utils.WebsocketCloseWithCode(wsConn, websocket.CloseInternalServerErr, err.Error())
 	} else {
-		sendCloseMessage(websocket.CloseNormalClosure, "")
+		utils.WebsocketClose(wsConn)
 	}
 }
 

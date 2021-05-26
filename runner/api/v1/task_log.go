@@ -5,6 +5,7 @@ import (
 	"cloudiac/configs"
 	"cloudiac/runner"
 	"cloudiac/runner/ws"
+	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"context"
 	"github.com/gin-gonic/gin"
@@ -24,45 +25,24 @@ func TaskLogFollow(c *gin.Context) {
 	}
 
 	logger := logger.WithField("taskId", task.TaskId)
-	wsConn, err := ws.Upgrade(c.Writer, c.Request, nil)
+
+	wsConn, peerClosed, err := ws.UpgradeWithNotifyClosed(c.Writer, c.Request, nil)
 	if err != nil {
 		logger.Warnln(err)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	defer wsConn.Close()
-
-	// 通知处理进程，对端主动断开了连接
-	peerClosed := make(chan struct{})
-	go func() {
-		for {
-			// 通过调用 ReadMessage() 来检测对端是否断开连接，
-			// 如果对端关闭连接，该调用会返回 error，其他消息我们忽略
-			_, _, err := wsConn.ReadMessage()
-			if err != nil {
-				close(peerClosed)
-				if !websocket.IsUnexpectedCloseError(err) {
-					logger.Debugf("read ws message: %v", err)
-				}
-				return
-			}
-		}
-	}()
-
-	sendCloseMessage := func(code int, text string) {
-		message := websocket.FormatCloseMessage(code, "")
-		wsConn.WriteControl(websocket.CloseMessage, message, time.Now().Add(time.Second))
-	}
+	defer utils.WebsocketClose(wsConn)
 
 	if err := doFollowTaskLog(wsConn, &task, 0, peerClosed); err != nil {
 		logger.Errorf("doFollowTaskLog error: %v", err)
-		sendCloseMessage(websocket.CloseInternalServerErr, err.Error())
+		_ = utils.WebsocketCloseWithCode(wsConn, websocket.CloseInternalServerErr, err.Error())
 	} else {
-		sendCloseMessage(websocket.CloseNormalClosure, "")
+		_ = utils.WebsocketClose(wsConn)
 	}
 }
 
-func doFollowTaskLog(wsConn *websocket.Conn, task *runner.CommitedTask, offset int64, closed <-chan struct{}) error {
+func doFollowTaskLog(wsConn *websocket.Conn, task *runner.CommitedTask, offset int64, closedCh <-chan struct{}) error {
 	logger := logger.WithField("func", "doFollowTaskLog").WithField("taskId", task.TaskId)
 
 	var (
@@ -101,8 +81,8 @@ func doFollowTaskLog(wsConn *websocket.Conn, task *runner.CommitedTask, offset i
 				logger.Errorf("wait task error: %v", err)
 			}
 			return err
-		case <-closed:
-			logger.Debugf("connection closed")
+		case <-closedCh:
+			logger.Debugf("connection closedCh")
 			return nil
 		}
 	}
@@ -165,7 +145,7 @@ func followFile(ctx context.Context, path string, offset int64) (<-chan []byte, 
 
 	go func() {
 		<-ctx.Done()
-		logger.Debugf("context done, %v", ctx.Err())
+		logger.Tracef("context done, %v", ctx.Err())
 		// 关闭文件，中断 Read()
 		_ = logFp.Close()
 	}()
