@@ -24,6 +24,10 @@ import (
 // StartTask 启动任务，并等待其结束
 func StartTask(dbSess *db.Session, task *models.Task) (timeout time.Duration, err error) {
 	logger := logs.Get().WithField("action", "StartTask").WithField("taskId", task.Guid)
+	if task.Status != consts.TaskAssigning {
+		return 0, fmt.Errorf("unexpected task status '%s'", task.Status)
+	}
+
 	logger.Infof("start task %v", task.Guid)
 
 	tpl := models.Template{}
@@ -51,10 +55,6 @@ func StartTask(dbSess *db.Session, task *models.Task) (timeout time.Duration, er
 // assignTask 将任务分派到 runner，并更新任务状态
 func assignTask(dbSess *db.Session, tpl *models.Template, task *models.Task) error {
 	logger := logs.Get().WithField("action", "AssignTask").WithField("taskId", task.Guid)
-
-	if task.Status != consts.TaskPending {
-		return fmt.Errorf("unexpected task status '%s'", task.Status)
-	}
 
 	updateTask := func(t *models.Task) error {
 		if _, err := dbSess.Model(&models.Task{}).Update(t); err != nil {

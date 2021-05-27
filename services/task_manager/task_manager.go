@@ -177,9 +177,7 @@ func (m *TaskManager) start() {
 
 func (m *TaskManager) run(ctx context.Context) {
 	tasks := make([]*models.Task, 0)
-	queryTaskLimit := 32
 
-	// TODO 查询时过滤掉己达并发限制的 runner
 	limitedRunners := make([]string, 0)
 	for runnerId, count := range m.runnerTasks {
 		if count >= m.maxTasksPerRunner {
@@ -187,10 +185,13 @@ func (m *TaskManager) run(ctx context.Context) {
 		}
 	}
 
+	queryTaskLimit := 32
 	query := m.db.Model(&models.Task{}).
 		Where("status = ?", consts.TaskPending).
 		Order("id").
 		Limit(queryTaskLimit)
+
+	// 查询时过滤掉己达并发限制的 runner
 	if len(limitedRunners) > 0 {
 		query = query.Where("ct_service_id NOT IN (?)", limitedRunners)
 	}
@@ -227,10 +228,18 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) error {
 		return ErrMaxTasksPerRunner
 	}
 
-	// start task 调用是同步阻塞的，防止任务没有及时设置为 assigning 状态导致重复启动
-	taskTimeout, err := services.StartTask(m.db, task)
-	if err != nil {
-		m.logger.Errorf("start task error: %v", err)
+
+	updateTaskStatus := func(status string) error {
+		task.Status = status
+		if _, err := m.db.Model(task).Update(task); err != nil {
+			m.logger.Errorf("update task status(%s) error: %v", consts.TaskAssigning, err)
+			return err
+		}
+		return nil
+	}
+
+	// 更新任务为 assigning 状态
+	if err := updateTaskStatus(consts.TaskAssigning); err != nil {
 		return err
 	}
 
@@ -240,6 +249,16 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) error {
 			m.wg.Done()
 			m.taskRunExitedCh <- task.Guid
 		}()
+
+		taskTimeout, err := services.StartTask(m.db, task)
+		if err != nil {
+			m.logger.Errorf("start task error: %v", err)
+			if task.Status == consts.TaskAssigning {
+				// 下发失败，还原为 pending 状态，等待下次重试
+				_ = updateTaskStatus(consts.TaskPending)
+			}
+			return
+		}
 
 		if _, err := services.WaitTaskResult(ctx, m.db, task, taskTimeout); err != nil {
 			m.logger.Errorf("wait task result error: %v", err)
