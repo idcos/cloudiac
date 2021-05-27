@@ -1,20 +1,30 @@
 package task_manager
 
 import (
-	"cloudiac/configs"
+	"context"
 	"fmt"
 	"runtime/debug"
+	"sync"
 	"time"
 
+	consulapi "github.com/hashicorp/consul/api"
+	"github.com/pkg/errors"
+
+	"cloudiac/configs"
 	"cloudiac/consts"
 	"cloudiac/libs/db"
 	"cloudiac/models"
 	"cloudiac/services"
+	"cloudiac/utils/consul"
 	"cloudiac/utils/logs"
 )
 
+const (
+	TaskManagerLockKey = "task-manager-lock"
+)
+
 var (
-	ErrMaxTasksPerRunner = fmt.Errorf("concurrent tasks is limited")
+	ErrMaxTasksPerRunner = fmt.Errorf("concurrent limite")
 )
 
 type TaskManager struct {
@@ -25,22 +35,23 @@ type TaskManager struct {
 	tasks       map[string]*models.Task
 	runnerTasks map[string]int // 每个 runner 正在执行的任务数量
 
+	wg sync.WaitGroup // 等待执行任务协程退出的 wait group
+
 	// 用于 task 管理协程通知 manager 其己退出
 	taskExitedCh chan string
 
 	maxTasksPerRunner int // 每个 runner 并发任务数量限制
 }
 
-func newTaskManager() *TaskManager {
-	id := configs.Get().Consul.ServiceID
-	return &TaskManager{
+func Start(id string) {
+	if id == "" {
+		id = configs.Get().Consul.ServiceID
+	}
+	m := TaskManager{
 		id:     id,
 		logger: logs.Get().WithField("worker", "taskManager").WithField("portalId", id),
 	}
-}
 
-func Start() {
-	m := newTaskManager()
 	recoveredRun := func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -56,7 +67,7 @@ func Start() {
 
 	for {
 		recoveredRun()
-		time.Sleep(time.Second)
+		time.Sleep(time.Second * 10)
 	}
 }
 
@@ -64,6 +75,7 @@ func (m *TaskManager) init() error {
 	m.db = db.Get()
 	m.tasks = make(map[string]*models.Task)
 	m.runnerTasks = make(map[string]int)
+	m.wg = sync.WaitGroup{}
 
 	// 关闭前一次的 chan(init 可以被重复调用)
 	if m.taskExitedCh != nil {
@@ -71,7 +83,6 @@ func (m *TaskManager) init() error {
 	}
 	m.taskExitedCh = make(chan string)
 	go m.listenTaskExited()
-
 
 	// 初始化每个 runner 运行的任务数量
 	{
@@ -98,24 +109,75 @@ func (m *TaskManager) init() error {
 	return nil
 }
 
-func (m *TaskManager) start() {
-	m.logger.Infof("task manager started")
+func (m *TaskManager) acquireLock(ctx context.Context) (<-chan struct{}, error) {
+	locker, err := consul.GetLocker(TaskManagerLockKey, []byte(m.id), configs.Get().Consul.Address)
+	if err != nil {
+		return nil, errors.Wrap(err, "get locker")
+	}
 
+	stopLockCh := make(chan struct{})
+	go func() {
+		<-ctx.Done()
+		if err := locker.Unlock(); err != nil {
+			if err != consulapi.ErrLockNotHeld {
+				m.logger.Errorf("release lock error: %v", err)
+			}
+		}
+		close(stopLockCh)
+	}()
+
+	lockLostCh, err := locker.Lock(stopLockCh)
+	if err != nil {
+		return nil, errors.Wrap(err, "acquire lock")
+	}
+
+	return lockLostCh, nil
+}
+
+func (m *TaskManager) start() {
+	// ctx 用于
+	// 	1. 通知释放锁
+	//	2. task 协程退出
+	ctx, cancel := context.WithCancel(context.Background())
+	defer func() {
+		cancel()
+		m.waitTaskRunExit()
+	}()
+
+	m.logger.Infof("acquire task manager lock ...")
+	lockLostCh, err := m.acquireLock(ctx)
+	if err != nil {
+		// 正常情况下 acquireLock 会阻塞直到成功获取锁，如果报错了就是出现了异常(可能是连接问题)
+		m.logger.Errorf("acquire task manager lock failed: %v", err)
+		return
+	}
+
+	m.logger.Infof("task manager started")
 	m.init()
+
+	go func() {
+		<-lockLostCh
+		m.logger.Warnf("task manager lock lost")
+		cancel()
+	}()
+
 	ticker := time.NewTicker(time.Millisecond * 500)
 	defer ticker.Stop()
 
 	for {
-		// TODO 使用分布式锁确保只有一个 manager 在运行
+		m.run(ctx)
 
 		select {
 		case <-ticker.C:
-			m.run()
+			continue
+		case <-ctx.Done():
+			m.logger.Infof("context done: %v", ctx.Err())
+			return
 		}
 	}
 }
 
-func (m *TaskManager) run() {
+func (m *TaskManager) run(ctx context.Context) {
 	tasks := make([]*models.Task, 0)
 	maxTasksOnce := 256
 
@@ -127,9 +189,16 @@ func (m *TaskManager) run() {
 	}
 
 	for _, task := range tasks {
-		if err := m.runTask(task); err != nil {
+		select {
+		case <-ctx.Done():
+			break
+		default:
+		}
+
+		if err := m.runTask(ctx, task); err != nil {
+			runnerId := task.CtServiceId
 			if err == ErrMaxTasksPerRunner {
-				m.logger.Debugf("runner %s: %v", task.CtServiceId, err)
+				m.logger.WithField("count", m.runnerTasks[runnerId]).Infof("runner %s: %v", runnerId, err)
 			} else {
 				m.logger.WithField("taskId", task.Guid).Errorf("run task error: %v", err)
 			}
@@ -138,20 +207,22 @@ func (m *TaskManager) run() {
 }
 
 // 启动任务
-func (m *TaskManager) runTask(task *models.Task) error {
+func (m *TaskManager) runTask(ctx context.Context, task *models.Task) error {
 	// 判断并发数量
 	n := m.runnerTasks[task.CtServiceId]
 	if n > m.maxTasksPerRunner {
 		return ErrMaxTasksPerRunner
 	}
 
+	m.wg.Add(1)
 	go func() {
 		defer func() {
+			m.wg.Done()
 			m.taskExitedCh <- task.Guid
 		}()
 
 		m.logger.Infof("start task: %v", task.Guid)
-		services.StartTask(m.db, *task)
+		services.StartTask(ctx, m.db, *task)
 	}()
 
 	m.tasks[task.Guid] = task
@@ -161,7 +232,7 @@ func (m *TaskManager) runTask(task *models.Task) error {
 
 // 任务结束，将其从 manager 管理状态中移除
 func (m *TaskManager) listenTaskExited() {
-	logger := m.logger.WithField("func", "listenTaskExited")
+	logger := m.logger
 	for {
 		taskId, ok := <-m.taskExitedCh
 		if !ok {
@@ -172,9 +243,15 @@ func (m *TaskManager) listenTaskExited() {
 			logger.Warnf("unknown task '%s'", taskId)
 			continue
 		} else {
-			m.logger.Infof("task exited: %v", taskId)
+			logger.WithField("taskId", taskId).Infof("task exited")
 			m.runnerTasks[task.CtServiceId] -= 1
 			delete(m.tasks, taskId)
 		}
 	}
+}
+
+func (m *TaskManager) waitTaskRunExit() {
+	m.logger.Infof("waiting all task goroutine exit ...")
+	m.wg.Wait()
+	m.logger.Infof("all task goroutine exited")
 }

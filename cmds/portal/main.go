@@ -64,7 +64,8 @@ func main() {
 	services.MaintenanceRunnerPerMax()
 	// TODO 任务恢复由 taskManger 来处理
 	go services.RunTask()
-	go task_manager.Start()
+
+	go task_manager.Start(configs.Get().Consul.ServiceID)
 	//go http.ListenAndServe("0.0.0.0:6060", nil)
 	web.StartServer()
 }
@@ -72,12 +73,12 @@ func main() {
 func InitVcs(tx *db.Session) {
 	logger := logs.Get()
 	vcs := models.Vcs{
-		OrgId:   0,
-		Name:    "默认仓库",
-		VcsType: configs.Get().Gitlab.Type,
-		Status:  "enable",
-		Address: configs.Get().Gitlab.Url,
-		VcsToken:   configs.Get().Gitlab.Token,
+		OrgId:    0,
+		Name:     "默认仓库",
+		VcsType:  configs.Get().Gitlab.Type,
+		Status:   "enable",
+		Address:  configs.Get().Gitlab.Url,
+		VcsToken: configs.Get().Gitlab.Token,
 	}
 	exist, err := services.QueryVcs(0, tx).Exists()
 	if err != nil {
@@ -91,9 +92,9 @@ func InitVcs(tx *db.Session) {
 		}
 	} else {
 		attrs := models.Attrs{
-			"vcsType": configs.Get().Gitlab.Type,
-			"address": configs.Get().Gitlab.Url,
-			"VcsToken":   configs.Get().Gitlab.Token,
+			"vcsType":  configs.Get().Gitlab.Type,
+			"address":  configs.Get().Gitlab.Url,
+			"VcsToken": configs.Get().Gitlab.Token,
 		}
 		_, err = services.UpdateVcs(tx, 0, attrs)
 		if err != nil {

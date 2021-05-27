@@ -5,10 +5,10 @@ import (
 	"cloudiac/services"
 	"encoding/json"
 	"fmt"
+	consulapi "github.com/hashicorp/consul/api"
 	"log"
 	"strings"
-
-	consulapi "github.com/hashicorp/consul/api"
+	"time"
 )
 
 func Register(serviceName string, consulConfig configs.ConsulConfig) error {
@@ -50,4 +50,19 @@ func Register(serviceName string, consulConfig configs.ConsulConfig) error {
 		return err
 	}
 	return nil
+}
+
+func GetLocker(key string, value []byte, address string) (*consulapi.Lock, error) {
+	client, err := consulapi.NewClient(&consulapi.Config{Address: address})
+	if err != nil {
+		return nil, err
+	}
+
+	return client.LockOpts(&consulapi.LockOptions{
+		Key:              key,
+		Value:            value,
+		LockTryOnce:      false,       // 重复尝试，直到加锁成功
+		LockWaitTime:     time.Second, // 加锁 api 请求的等待时间
+		LockDelay:        time.Second, // consul server 的加锁操作等待时间
+	})
 }

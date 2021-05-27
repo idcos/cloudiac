@@ -22,13 +22,23 @@ import (
 )
 
 // StartTask 下发任务并等待结束
-func StartTask(dbSess *db.Session, task models.Task) {
+func StartTask(ctx context.Context, dbSess *db.Session, task models.Task) {
 	logger := logs.Get().WithField("action", "StartTask").WithField("taskId", task.Guid)
 
 	var (
 		dbTask *models.Task
 		err    error
 	)
+
+	ctxDone := func() bool {
+		select {
+		case <-ctx.Done():
+			logger.Infof("context done: %v", ctx.Err())
+			return true
+		default:
+			return false
+		}
+	}
 
 	tpl := models.Template{}
 	if err = dbSess.Where("id = ?", task.TemplateId).First(&tpl); err != nil {
@@ -43,14 +53,19 @@ func StartTask(dbSess *db.Session, task models.Task) {
 		return
 	}
 
+	if ctxDone() {
+		return
+	}
+
 	logger.Debugf("assign task")
 	if err := AssignTask(dbSess, &tpl, task); err != nil {
 		logger.Errorf("AssignTask error: %v", err)
 		return
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	if ctxDone() {
+		return
+	}
 
 	logger.Debugf("waiting task exit")
 	taskStatus, err := WaitTask(ctx, task.Guid, &tpl, dbSess)
@@ -58,7 +73,7 @@ func StartTask(dbSess *db.Session, task models.Task) {
 		logger.Errorf("wait task error: %v", err)
 		return
 	}
-	logger.Infof("task exited, status: %s", taskStatus)
+	logger.Debugf("task exited, status: %s", taskStatus)
 
 	if taskStatus == consts.TaskComplete {
 		logPath := task.BackendInfo
