@@ -67,6 +67,7 @@ func Register(g *gin.RouterGroup) {
 		root.GET("/templateTfvars/search",w(handlers.TemplateTfvarsSearch))
 		root.GET("/vcs/listEnableVcs",w(handlers.ListEnableVcs))
 		ctrl.Register(root.Group("vcs"), &handlers.Vcs{})
+		root.GET("/template/playbook/search",w(handlers.TemplatePlaybookSearch))
 	}
 
 	root.GET("/sse/hello/:filename", w(handlers.HelloSse))

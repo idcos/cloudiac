@@ -78,3 +78,16 @@ func TemplateTfvarsSearch(c *ctx.GinRequestCtx){
 	}
 	c.JSONResult(apps.TemplateTfvarsSearch(vcs, &form))
 }
+
+func TemplatePlaybookSearch(c *ctx.GinRequestCtx){
+	form := forms.TemplatePlaybookSearchForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().Tx())
+	if err != nil {
+		c.JSONResult(nil,e.New(e.DBError, err))
+		return
+	}
+	c.JSONResult(apps.TemplatePlaybookSearch(vcs, &form))
+}

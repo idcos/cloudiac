@@ -21,7 +21,7 @@ func DoGiteaRequest(request *http.Request, token string) (*http.Response, error)
 	return response, nil
 }
 
-func GetGiteaTemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch,filePath string) ([]string, error) {
+func GetGiteaTemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch,filePath,fileName string) ([]string, error) {
 	repo, err := GetGiteaRepoById(vcs, int(repoId))
 	if err != nil {
 		return nil, err
@@ -48,11 +48,11 @@ func GetGiteaTemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch,fileP
 	_ = json.Unmarshal(body, &rep)
 	for _, v := range rep {
 		if _, ok := v["type"].(string); ok && v["type"].(string) == "dir" {
-			repList, _ := GetGiteaTemplateTfvarsSearch(vcs, repoId, repoBranch,v["path"].(string))
+			repList, _ := GetGiteaTemplateTfvarsSearch(vcs, repoId, repoBranch,v["path"].(string),fileName)
 			resp = append(resp, repList...)
 		}
 
-		if _, ok := v["type"].(string); ok && v["type"].(string) == "file" && strings.Contains(v["name"].(string), "tfvars") {
+		if _, ok := v["type"].(string); ok && v["type"].(string) == "file" && strings.Contains(v["name"].(string), fileName) {
 			resp = append(resp, v["name"].(string))
 		}
 
