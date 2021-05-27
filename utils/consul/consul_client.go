@@ -59,10 +59,11 @@ func GetLocker(key string, value []byte, address string) (*consulapi.Lock, error
 	}
 
 	return client.LockOpts(&consulapi.LockOptions{
-		Key:              key,
-		Value:            value,
-		LockTryOnce:      false,       // 重复尝试，直到加锁成功
-		LockWaitTime:     time.Second, // 加锁 api 请求的等待时间
-		LockDelay:        time.Second, // consul server 的加锁操作等待时间
+		Key:          key,
+		Value:        value,
+		SessionTTL:   "10s",       // session 超时时间, 超时后锁会被自动锁放
+		LockTryOnce:  false,       // 重复尝试，直到加锁成功
+		LockWaitTime: time.Second, // 加锁 api 请求的等待时间
+		LockDelay:    time.Second, // consul server 的加锁操作等待时间
 	})
 }

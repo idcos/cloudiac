@@ -378,7 +378,7 @@ func RunTaskToRunning(task *models.Task, dbsess *db.Session, orgGuid string) {
 
 	if taskStatus == consts.TaskRunning {
 		var err error
-		taskStatus, err = WaitTask(ctx, task.Guid, tpl, dbsess)
+		taskStatus, err = WaitTaskResult(ctx, dbsess, task, time.Duration(tpl.Timeout)*time.Second)
 		if err != nil {
 			logger.Errorf("wait task error: %v", err)
 			return
@@ -566,7 +566,7 @@ func RunTask() {
 		if taskList[index].Status == consts.TaskRunning {
 			// TODO 任务恢复由 taskManger 处理
 			go func() {
-				_, err := WaitTask(context.Background(), task.Guid, &tpl, dbsess)
+				_, err := WaitTaskResult(context.Background(), dbsess, &task, time.Duration(tpl.Timeout)*time.Second)
 				if err != nil {
 					logger.WithField("taskId", task.Guid).Errorf("wait task error: %v", err)
 				}

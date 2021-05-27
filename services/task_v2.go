@@ -3,13 +3,14 @@ package services
 import (
 	"cloudiac/configs"
 	"cloudiac/consts/e"
+	"cloudiac/utils/kafka"
 	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/pkg/errors"
 	"net/http"
 	"net/url"
-	"runtime/debug"
 	"time"
 
 	"cloudiac/consts"
@@ -17,31 +18,16 @@ import (
 	"cloudiac/models"
 	"cloudiac/runner"
 	"cloudiac/utils"
-	"cloudiac/utils/kafka"
 	"cloudiac/utils/logs"
 )
 
-// StartTask 下发任务并等待结束
-func StartTask(ctx context.Context, dbSess *db.Session, task models.Task) {
+// StartTask 启动任务，并等待其结束
+func StartTask(dbSess *db.Session, task *models.Task) (timeout time.Duration, err error) {
 	logger := logs.Get().WithField("action", "StartTask").WithField("taskId", task.Guid)
-
-	var (
-		dbTask *models.Task
-		err    error
-	)
-
-	ctxDone := func() bool {
-		select {
-		case <-ctx.Done():
-			logger.Infof("context done: %v", ctx.Err())
-			return true
-		default:
-			return false
-		}
-	}
+	logger.Infof("start task %v", task.Guid)
 
 	tpl := models.Template{}
-	if err = dbSess.Where("id = ?", task.TemplateId).First(&tpl); err != nil {
+	if err := dbSess.Where("id = ?", task.TemplateId).First(&tpl); err != nil {
 		if e.IsRecordNotFound(err) {
 			task.Status = consts.TaskFailed
 			task.StatusDetail = fmt.Errorf("tplId '%d' not found", task.TemplateId).Error()
@@ -50,45 +36,20 @@ func StartTask(ctx context.Context, dbSess *db.Session, task models.Task) {
 			}
 		}
 		logger.Errorf("query template '%d' error: %v", task.TemplateId, err)
-		return
-	}
-
-	if ctxDone() {
-		return
+		return 0, errors.Wrap(err, "query template error")
 	}
 
 	logger.Debugf("assign task")
-	if err := AssignTask(dbSess, &tpl, task); err != nil {
+	if err := assignTask(dbSess, &tpl, task); err != nil {
 		logger.Errorf("AssignTask error: %v", err)
-		return
+		return 0, err
 	}
 
-	if ctxDone() {
-		return
-	}
-
-	logger.Debugf("waiting task exit")
-	taskStatus, err := WaitTask(ctx, task.Guid, &tpl, dbSess)
-	if err != nil {
-		logger.Errorf("wait task error: %v", err)
-		return
-	}
-	logger.Debugf("task exited, status: %s", taskStatus)
-
-	if taskStatus == consts.TaskComplete {
-		logPath := task.BackendInfo
-		path := map[string]interface{}{}
-		json.Unmarshal(logPath, &path)
-		if logFile, ok := path["log_file"].(string); ok {
-			runnerFilePath := logFile
-			tfInfo := GetTFLog(runnerFilePath)
-			models.UpdateAttr(dbSess, dbTask, tfInfo)
-		}
-	}
+	return time.Duration(tpl.Timeout) * time.Second, nil
 }
 
-// AssignTask 将任务分派到 runner
-func AssignTask(dbSess *db.Session, tpl *models.Template, task models.Task) error {
+// assignTask 将任务分派到 runner，并更新任务状态
+func assignTask(dbSess *db.Session, tpl *models.Template, task *models.Task) error {
 	logger := logs.Get().WithField("action", "AssignTask").WithField("taskId", task.Guid)
 
 	if task.Status != consts.TaskPending {
@@ -106,13 +67,13 @@ func AssignTask(dbSess *db.Session, tpl *models.Template, task models.Task) erro
 
 	// 更新任务为 assigning 状态
 	task.Status = consts.TaskAssigning
-	if err := updateTask(&task); err != nil {
+	if err := updateTask(task); err != nil {
 		return err
 	}
 
 	now := time.Now()
 	task.StartAt = &now
-	resp, retry, err := doAssignTask(tpl.Guid, &task, tpl)
+	resp, retry, err := doAssignTask(tpl.Guid, task, tpl)
 	if err == nil && resp.Error != "" {
 		err = fmt.Errorf(resp.Error)
 	}
@@ -122,32 +83,24 @@ func AssignTask(dbSess *db.Session, tpl *models.Template, task models.Task) erro
 			task.Status = consts.TaskPending // 恢复任务为 pending 状态，等待重试
 			task.StatusDetail = ""
 			task.StartAt = nil
-			updateTask(&task)
+			updateTask(task)
 		} else {
 			// 记录任务下发失败
 			task.Status = consts.TaskFailed
 			task.StatusDetail = err.Error()
-			updateTask(&task)
+			updateTask(task)
 		}
 	} else {
 		task.Status = consts.TaskRunning
 		task.StatusDetail = ""
 		task.BackendInfo = getBackendInfo(task.BackendInfo, resp.Id)
-		updateTask(&task)
+		updateTask(task)
 	}
 	return err
 }
 
 func doAssignTask(orgGuid string, task *models.Task, tpl *models.Template) (
 	resp *runnerResp, retry bool, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			logs.Get().Debugf("stack: %s", debug.Stack())
-			retry = task.Status == consts.TaskAssigning
-			err = fmt.Errorf("panic: %v", r)
-		}
-	}()
-
 	logger := logs.Get().WithField("action", "doAssignTask").WithField("taskId", task.Guid)
 
 	//// 组装请求
@@ -214,7 +167,7 @@ type runnerResp struct {
 }
 
 func requestRunnerRunTask(url string, header *http.Header, data interface{}) (*runnerResp, error) {
-	respData, err := utils.HttpService(url, "POST", header, data, 20, 5)
+	respData, err := utils.HttpService(url, "POST", header, data, 1, 5)
 	if err != nil {
 		return nil, err
 	}
@@ -226,23 +179,55 @@ func requestRunnerRunTask(url string, header *http.Header, data interface{}) (*r
 	return &resp, nil
 }
 
-// WaitTask 等待任务结束(或超时)，返回任务最新状态
-func WaitTask(ctx context.Context, taskId string, tpl *models.Template, dbSess *db.Session) (status string, err error) {
-	logger := logs.Get().WithField("action", "WaitTask").WithField("taskId", taskId)
+// WaitTaskResult 等待任务结束(或任务超时)，返回任务最新状态
+// 该函数会更新任务状态到 db
+func WaitTaskResult(ctx context.Context, dbSess *db.Session, task *models.Task, timeout time.Duration) (status string, err error) {
+	logger := logs.Get().WithField("action", "WaitTaskResult").WithField("taskId", timeout)
 	err = utils.RetryFunc(10, func(retryN int) (bool, error) {
-		status, err = doPullTaskStatus(ctx, taskId, tpl, dbSess)
+		status, err = doPullTaskStatus(ctx, dbSess, task.Guid, timeout)
 		if err != nil {
 			logger.Errorf("pull task status error: %v, retry=%d", err, retryN)
 			return true, err
 		}
 		return false, nil
 	})
+
+	updateM := map[string]interface{}{
+		"status": status,
+		"end_at": time.Now(),
+	}
+	updateM["end_at"] = time.Now()
+	if status != consts.TaskRunning && task.Source == consts.WorkFlow {
+		k := kafka.Get()
+		if err := k.ConnAndSend(k.GenerateKafkaContent(task.TransactionId, status)); err != nil {
+			logger.Errorf("kafka send error: %v", err)
+		}
+	}
+
+	//更新task状态
+	if _, err := dbSess.Model(&models.Task{}).
+		Where("id = ?", task.Id).Update(updateM); err != nil {
+		return status, err
+	}
+
+	if status == consts.TaskComplete {
+		logPath := task.BackendInfo
+		path := map[string]interface{}{}
+		json.Unmarshal(logPath, &path)
+		if logFile, ok := path["log_file"].(string); ok {
+			// 解析日志输出，更新资源变更信息
+			runnerFilePath := logFile
+			tfInfo := GetTFLog(runnerFilePath)
+			models.UpdateAttr(dbSess.Where("id = ?", task.Id), &models.Task{}, tfInfo)
+		}
+	}
+
 	return status, err
 }
 
-// PullTaskStatus 同步任务最新状态，直到任务结束
-// 该函数允许重复调用，即使任务己结束 (runner 会在本地保存近期(约7天)任务执行信息)
-func doPullTaskStatus(ctx context.Context, taskId string, tpl *models.Template, dbSess *db.Session) (
+// PullTaskStatus 同步任务最新状态，直到任务结束(或 ctx cancel)
+// 该函数允许重复调用，即使任务己结束 (runner 会在本地保存近期(约7天)任务执行信息)，如果任务结束则写入全量日志到存储
+func doPullTaskStatus(ctx context.Context, dbSess *db.Session, taskId string, taskTimeout time.Duration) (
 	taskStatus string, err error) {
 	logger := logs.Get().WithField("action", "PullTaskState").WithField("taskId", taskId)
 
@@ -291,7 +276,7 @@ func doPullTaskStatus(ctx context.Context, taskId string, tpl *models.Template, 
 	}
 	go readMessage()
 
-	deadline := task.StartAt.Add(time.Duration(tpl.Timeout) * time.Second)
+	deadline := task.StartAt.Add(taskTimeout)
 	now := time.Now()
 	var timer *time.Timer
 	if deadline.Before(now) {
@@ -340,22 +325,5 @@ forLoop:
 		}
 	}
 
-	updateM := map[string]interface{}{
-		"status": taskStatus,
-		"end_at": time.Now(),
-	}
-	updateM["end_at"] = time.Now()
-	if taskStatus != consts.TaskRunning && task.Source == consts.WorkFlow {
-		k := kafka.Get()
-		if err := k.ConnAndSend(k.GenerateKafkaContent(task.TransactionId, taskStatus)); err != nil {
-			logger.Errorf("kafka send error: %v", err)
-		}
-	}
-
-	//更新task状态
-	if _, err := dbSess.Model(&models.Task{}).
-		Where("id = ?", task.Id).Update(updateM); err != nil {
-		return taskStatus, err
-	}
 	return taskStatus, nil
 }

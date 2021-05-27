@@ -37,8 +37,8 @@ type TaskManager struct {
 
 	wg sync.WaitGroup // 等待执行任务协程退出的 wait group
 
-	// 用于 task 管理协程通知 manager 其己退出
-	taskExitedCh chan string
+	// 用于 runTask 协程通知 manager 其己退出
+	taskRunExitedCh chan string
 
 	maxTasksPerRunner int // 每个 runner 并发任务数量限制
 }
@@ -71,17 +71,14 @@ func Start(id string) {
 	}
 }
 
+// 该函数会被重复调用
 func (m *TaskManager) init() error {
 	m.db = db.Get()
 	m.tasks = make(map[string]*models.Task)
 	m.runnerTasks = make(map[string]int)
 	m.wg = sync.WaitGroup{}
 
-	// 关闭前一次的 chan(init 可以被重复调用)
-	if m.taskExitedCh != nil {
-		close(m.taskExitedCh)
-	}
-	m.taskExitedCh = make(chan string)
+	m.taskRunExitedCh = make(chan string)
 	go m.listenTaskExited()
 
 	// 初始化每个 runner 运行的任务数量
@@ -135,13 +132,13 @@ func (m *TaskManager) acquireLock(ctx context.Context) (<-chan struct{}, error) 
 }
 
 func (m *TaskManager) start() {
-	// ctx 用于
-	// 	1. 通知释放锁
-	//	2. task 协程退出
+	// ctx 用于:
+	// 	1. 通知释放分布式锁
+	//	2. 通知所有 task 协程退出
 	ctx, cancel := context.WithCancel(context.Background())
 	defer func() {
 		cancel()
-		m.waitTaskRunExit()
+		m.stop()
 	}()
 
 	m.logger.Infof("acquire task manager lock ...")
@@ -161,7 +158,8 @@ func (m *TaskManager) start() {
 		cancel()
 	}()
 
-	ticker := time.NewTicker(time.Millisecond * 500)
+	// 查询待运行任务列表的间隔
+	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -179,11 +177,24 @@ func (m *TaskManager) start() {
 
 func (m *TaskManager) run(ctx context.Context) {
 	tasks := make([]*models.Task, 0)
-	maxTasksOnce := 256
+	queryTaskLimit := 32
 
 	// TODO 查询时过滤掉己达并发限制的 runner
-	if err := m.db.Where("status = ?", consts.TaskPending).
-		Order("id").Limit(maxTasksOnce).Find(&tasks); err != nil {
+	limitedRunners := make([]string, 0)
+	for runnerId, count := range m.runnerTasks {
+		if count >= m.maxTasksPerRunner {
+			limitedRunners = append(limitedRunners, runnerId)
+		}
+	}
+
+	query := m.db.Model(&models.Task{}).
+		Where("status = ?", consts.TaskPending).
+		Order("id").
+		Limit(queryTaskLimit)
+	if len(limitedRunners) > 0 {
+		query = query.Where("ct_service_id NOT IN (?)", limitedRunners)
+	}
+	if err := query.Find(&tasks); err != nil {
 		m.logger.Errorf("find '%s' tasks error: %v", consts.TaskPending, err)
 		return
 	}
@@ -208,21 +219,31 @@ func (m *TaskManager) run(ctx context.Context) {
 
 // 启动任务
 func (m *TaskManager) runTask(ctx context.Context, task *models.Task) error {
+	m.logger.Debugf("run task '%s'", task.Guid)
+
 	// 判断并发数量
 	n := m.runnerTasks[task.CtServiceId]
-	if n > m.maxTasksPerRunner {
+	if n >= m.maxTasksPerRunner {
 		return ErrMaxTasksPerRunner
+	}
+
+	// start task 调用是同步阻塞的，防止任务没有及时设置为 assigning 状态导致重复启动
+	taskTimeout, err := services.StartTask(m.db, task)
+	if err != nil {
+		m.logger.Errorf("start task error: %v", err)
+		return err
 	}
 
 	m.wg.Add(1)
 	go func() {
 		defer func() {
 			m.wg.Done()
-			m.taskExitedCh <- task.Guid
+			m.taskRunExitedCh <- task.Guid
 		}()
 
-		m.logger.Infof("start task: %v", task.Guid)
-		services.StartTask(ctx, m.db, *task)
+		if _, err := services.WaitTaskResult(ctx, m.db, task, taskTimeout); err != nil {
+			m.logger.Errorf("wait task result error: %v", err)
+		}
 	}()
 
 	m.tasks[task.Guid] = task
@@ -230,11 +251,11 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) error {
 	return nil
 }
 
-// 任务结束，将其从 manager 管理状态中移除
+// 等待任务结束，将其从 manager 管理状态中移除
 func (m *TaskManager) listenTaskExited() {
 	logger := m.logger
 	for {
-		taskId, ok := <-m.taskExitedCh
+		taskId, ok := <-m.taskRunExitedCh
 		if !ok {
 			break
 		}
@@ -243,15 +264,18 @@ func (m *TaskManager) listenTaskExited() {
 			logger.Warnf("unknown task '%s'", taskId)
 			continue
 		} else {
-			logger.WithField("taskId", taskId).Infof("task exited")
+			logger.WithField("taskId", taskId).Infof("task finished")
 			m.runnerTasks[task.CtServiceId] -= 1
 			delete(m.tasks, taskId)
 		}
 	}
 }
 
-func (m *TaskManager) waitTaskRunExit() {
-	m.logger.Infof("waiting all task goroutine exit ...")
+func (m *TaskManager) stop() {
+	logger := m.logger
+	logger.Infof("task manager stopping ...")
+	logger.Debugf("waiting all task goroutine exit ...")
 	m.wg.Wait()
-	m.logger.Infof("all task goroutine exited")
+	close(m.taskRunExitedCh)
+	logger.Infof("task manager stopped")
 }

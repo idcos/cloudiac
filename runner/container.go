@@ -118,6 +118,11 @@ func (cmd *Command) Create(dirMapping string) error {
 					Source: conf.Runner.MountPath,
 					Target: ContainerMountPath,
 				},
+				//{
+				//	Type:   mount.TypeBind,
+				//	Source: "/var/run/docker.sock",
+				//	Target: "/var/run/docker.sock",
+				//},
 
 				//{
 				//	Type:   mount.TypeBind,
