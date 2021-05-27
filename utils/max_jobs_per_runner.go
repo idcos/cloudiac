@@ -13,7 +13,7 @@ func GetRunnerMax() int {
 	return runnerMax
 }
 
-func UpdateRunnerMax(max int)  {
+func UpdateRunnerMax(max int) {
 	runnerMax = max
 }
 
@@ -24,6 +24,8 @@ func MaintenanceRunnerPerMax() {
 		Where("name = 'MAX_JOBS_PER_RUNNER'").First(&systemCfg); err != nil && err != gorm.ErrRecordNotFound {
 		logger.Debugf("db err: %v", err)
 	}
-	UpdateRunnerMax(Str2int(systemCfg.Value))
+	if Str2int(systemCfg.Value) > 0 {
+		UpdateRunnerMax(Str2int(systemCfg.Value))
+	}
 
 }

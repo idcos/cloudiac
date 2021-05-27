@@ -107,11 +107,11 @@ func appAutoInit(tx *db.Session) (err error) {
 
 	// dev init
 	if err := initAdmin(tx); err != nil {
-		return nil
+		return err
 	}
 
 	if err := initSystemConfig(tx); err != nil {
-		return nil
+		return err
 	}
 
 	logger.Infoln("initialize ...")
