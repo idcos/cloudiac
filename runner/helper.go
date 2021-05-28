@@ -42,6 +42,7 @@ type ReqBody struct {
 	Mode         string `json:"mode" default:"plan"`
 	Varfile      string `json:"varfile"`
 	Extra        string `json:"extra"`
+	Playbook     string `json:"playbook" form:"playbook" `
 }
 
 type CommitedTask struct {
@@ -181,12 +182,19 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 
+	for k, v := range AnsibleEnv {
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
+	}
+
 	c.Env = env
 
 	// TODO(ZhengYue): 优化命令组装方式
 	var cmdList []string
 	logCmd := fmt.Sprintf(">> %s%s 2>&1 ", ContainerLogFilePath, ContainerLogFileName)
-	ansibleCmd := fmt.Sprint(" if [ -e run.sh ];then chmod +x run.sh && ./run.sh;fi")
+	//ansibleCmd := fmt.Sprint(" if [ -e run.sh ];then chmod +x run.sh && ./run.sh;fi")
+	//ansibleCmd := fmt.Sprint("cd ansible")
+	//ansiblePlaybook:=fmt.Sprintf("ansible-playbook -i ./terraform.py playbook.yml")
+	ansiblePlaybook := fmt.Sprintf("ansible-playbook -i %s  %s", "", d.Playbook)
 	cmdList = append(cmdList, fmt.Sprintf("git clone %s %s &&", d.Repo, logCmd))
 	// get folder name
 	s := strings.Split(d.Repo, "/")
@@ -201,10 +209,10 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 	if d.Mode == "apply" {
 		log.Println("entering apply mode ...")
 		if d.Varfile != "" {
-			cmdList = append(cmdList, fmt.Sprintf("%s %s %s &&%s %s &&%s %s",
-				"terraform apply -auto-approve -var-file ", d.Varfile, logCmd, ansibleCmd, logCmd, d.Extra, logCmd))
+			cmdList = append(cmdList, fmt.Sprintf("%s %s %s && %s %s &&%s %s",
+				"terraform apply -auto-approve -var-file ", d.Varfile, logCmd, ansiblePlaybook ,logCmd, d.Extra, logCmd))
 		} else {
-			cmdList = append(cmdList, fmt.Sprintf("%s %s &&%s %s &&%s %s", "terraform apply -auto-approve ", logCmd, ansibleCmd, logCmd, d.Extra, logCmd))
+			cmdList = append(cmdList, fmt.Sprintf("%s %s &&%s %s &&%s %s", "terraform apply -auto-approve ", logCmd, ansiblePlaybook, logCmd, d.Extra, logCmd))
 		}
 
 	} else if d.Mode == "destroy" {

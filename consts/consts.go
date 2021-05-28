@@ -78,6 +78,9 @@ const (
 	WorkFlow               = "workflow"
 	GitLab                 = "gitlab"
 	GitEA                  = "gitea"
+
+	Tfvar    = ".tfvars"
+	Playbook = "playbook."
 )
 
 var (
