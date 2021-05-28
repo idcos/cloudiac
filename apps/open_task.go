@@ -41,7 +41,6 @@ func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface
 		"backend_url": fmt.Sprintf("http://%s:%d/api/v1", tpl.DefaultRunnerAddr, tpl.DefaultRunnerPort),
 		"ctServiceId": conf.Consul.ServiceID,
 		"log_file":    logPath,
-		"log_offset":  0,
 	})
 
 	vars := GetResourceAccount(form.Account, form.Vars, tpl.TplType)

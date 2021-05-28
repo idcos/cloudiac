@@ -22,6 +22,7 @@ func TaskLogFollow(c *gin.Context) {
 	task := runner.CommitedTask{
 		TemplateId: c.Query("templateId"),
 		TaskId:     c.Query("taskId"),
+		ContainerId: c.Query("containerId"),
 	}
 
 	logger := logger.WithField("taskId", task.TaskId)
@@ -56,11 +57,14 @@ func doFollowTaskLog(wsConn *websocket.Conn, task *runner.CommitedTask, offset i
 	logPath := filepath.Join(conf.Runner.LogBasePath, task.TemplateId, task.TaskId, runner.ContainerLogFileName)
 	contentChan, readErrChan := followFile(ctx, logPath, offset)
 
-	// 监听任务退出
+	// 等待任务退出协和
 	go func() {
 		defer close(taskExitChan)
 
 		_, err := task.Wait(ctx)
+		// followFile() 会在遇到 EOF 时延迟一定时间进行下一次读取，
+		// 如果这里立即发送信号 follow 会在当延迟结束后立即退出，导致最后写入的日志没有被读取
+		time.Sleep(runner.FollowLogDelay)
 		taskExitChan <- err
 	}()
 
@@ -79,6 +83,8 @@ func doFollowTaskLog(wsConn *websocket.Conn, task *runner.CommitedTask, offset i
 		case err := <-taskExitChan:
 			if err != nil {
 				logger.Errorf("wait task error: %v", err)
+			} else {
+				logger.Infof("task finshed")
 			}
 			return err
 		case <-closedCh:
@@ -132,7 +138,7 @@ func followFile(ctx context.Context, path string, offset int64) (<-chan []byte, 
 				default:
 					if err == io.EOF {
 						// 读到了文件末尾，等待一下再进行下一次读取
-						time.Sleep(time.Second)
+						time.Sleep(runner.FollowLogDelay)
 						continue
 					} else {
 						errChan <- err

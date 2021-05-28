@@ -2,14 +2,15 @@ package apps
 
 import (
 	"bufio"
+	"bytes"
 	"cloudiac/consts"
 	"cloudiac/consts/e"
 	"cloudiac/libs/ctx"
 	"cloudiac/models"
 	"cloudiac/services"
+	"cloudiac/services/logstorage"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
-	"encoding/json"
 	"fmt"
 	"github.com/gin-contrib/sse"
 	"github.com/gorilla/websocket"
@@ -32,26 +33,40 @@ func FollowTaskLog(c *ctx.GinRequestCtx) error {
 
 	task, err := services.GetTaskByGuid(c.ServiceCtx().DB(), taskId)
 	if err != nil {
-		if !e.IsRecordNotFound(err) {
-			logger.Errorf("query task err: %v", err)
+		if e.IsRecordNotFound(err) {
+			return e.New(e.TaskNotExists)
 		}
-		return err
+		logger.Errorf("query task err: %v", err)
+		return e.New(e.DBError)
 	}
 
-	pr, pw := io.Pipe()
-	go func() {
-		if err := fetchRunnerTaskLog(pw, task); err != nil {
-			logger.Errorf("fetchRunnerTaskLog error: %v", err)
+	var reader io.Reader
+
+	if task.Exited() { // 己退出的任务直接读取全量日志
+		if content, err := logstorage.Get().Read(task.FullLogPath()); err != nil {
+			logger.Errorf("read task log error: %v", err)
+			return err
+		} else {
+			reader = bytes.NewBuffer(content)
 		}
-	}()
+	} else { // 否则实时从 runner 获取日志
+		pr, pw := io.Pipe()
+		reader = pr
 
-	go func() {
-		<- c.Request.Context().Done()
-		logger.Tracef("connect closed")
-		pr.Close()
-	}()
+		go func() {
+			if err := fetchRunnerTaskLog(pw, task); err != nil {
+				logger.Errorf("fetchRunnerTaskLog error: %v", err)
+			}
+		}()
 
-	scanner := bufio.NewScanner(pr)
+		go func() {
+			<-c.Request.Context().Done()
+			logger.Tracef("connect closed")
+			pr.Close()
+		}()
+	}
+
+	scanner := bufio.NewScanner(reader)
 	eventId := 0 // to indicate the message id
 	for scanner.Scan() {
 		c.Render(-1, sse.Event{
@@ -76,13 +91,13 @@ func fetchRunnerTaskLog(writer io.WriteCloser, task *models.Task) error {
 
 	logger := logs.Get().WithField("func", "fetchRunnerTaskLog").WithField("taskId", task.Guid)
 
-	taskBackend := make(map[string]interface{})
-	_ = json.Unmarshal(task.BackendInfo, &taskBackend)
-	runnerAddr := fmt.Sprintf("%v", taskBackend["backend_url"])
+	taskBackend := task.UnmarshalBackendInfo()
+	runnerAddr := fmt.Sprintf("%v", taskBackend.BackendUrl)
 
 	params := url.Values{}
 	params.Add("taskId", task.Guid)
 	params.Add("templateId", task.TemplateGuid)
+	params.Add("containerId", task.UnmarshalBackendInfo().ContainerId)
 	wsConn, err := utils.WebsocketDail(runnerAddr, consts.RunnerTaskLogFollowURL, params)
 	if err != nil {
 		return err

@@ -120,12 +120,11 @@ func GetTemplateTaskPath(templateUUID string, taskId string) string {
 	return templateDir
 }
 
-func FetchTaskLog(templateUUID string, taskId string, contentOffset int) ([]string, error) {
+func FetchTaskLog(templateUUID string, taskId string) ([]byte, error) {
 	conf := configs.Get()
 	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePath, templateUUID, taskId)
 	logFile := fmt.Sprintf("%s/%s", templateDir, ContainerLogFileName)
-	lines, err := ReadLogFile(logFile, contentOffset, MaxLinesPreRead)
-	return lines, err
+	return ioutil.ReadFile(logFile)
 }
 
 func CreateTemplatePath(templateUUID string, taskId string) (string, error) {
@@ -199,6 +198,10 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 	var cmdList []string
 	logCmd := fmt.Sprintf(">> %s%s 2>&1 ", ContainerLogFilePath, ContainerLogFileName)
 	ansibleCmd := fmt.Sprint(" if [ -e run.sh ];then chmod +x run.sh && ./run.sh;fi")
+
+	// FIXME: FOR DEBUG
+	cmdList = append(cmdList, fmt.Sprintf("for I in `seq 1 30`; do date && sleep 1; done %s &&", logCmd))
+
 	cmdList = append(cmdList, fmt.Sprintf("git clone %s %s &&", d.Repo, logCmd))
 	// get folder name
 	s := strings.Split(d.Repo, "/")

@@ -213,15 +213,7 @@ func getBackendInfo(backendInfo models.JSON, containerId string) []byte {
 	return b
 }
 
-func updateBackendInfo(backendInfo models.JSON, offset int) []byte {
-	attr := models.Attrs{}
-	_ = json.Unmarshal(backendInfo, &attr)
-	attr["log_offset"] = attr["log_offset"].(float64) + float64(offset)
-	b, _ := json.Marshal(attr)
-	return b
-}
-
-func writeTaskLog(contentList []string, logPath string, offset float64) error {
+func writeTaskLog(contentList []byte, logPath string, offset float64) error {
 	path := fmt.Sprintf("%s/%s", logPath, consts.TaskLogName)
 	_ = os.MkdirAll(logPath, 0766)
 	var (
@@ -241,7 +233,7 @@ func writeTaskLog(contentList []string, logPath string, offset float64) error {
 	defer file.Close()
 	write := bufio.NewWriter(file)
 	for _, content := range contentList {
-		write.WriteString(content)
+		write.WriteByte(content)
 	}
 	write.Flush()
 
@@ -471,7 +463,6 @@ func RunTaskState(task *models.Task, tpl *models.Template, dbsess *db.Session) s
 		"template_uuid": tpl.Guid,
 		"task_id":       task.Guid,
 		"container_id":  taskBackend["container_id"],
-		"offset":        taskBackend["log_offset"],
 	}
 	header := &http.Header{}
 	header.Set("Content-Type", "application/json")
@@ -492,7 +483,7 @@ func RunTaskState(task *models.Task, tpl *models.Template, dbsess *db.Session) s
 		logger.Errorf("unmarshal error: %v, body: %s", err, string(respData))
 	}
 
-	if err := writeTaskLog(runnerResp.LogContent, taskBackend["log_file"].(string), taskBackend["log_offset"].(float64)); err != nil {
+	if err := writeTaskLog(runnerResp.LogContent, taskBackend["log_file"].(string), 0); err != nil {
 		logger.Errorf("write task log error: %v", err)
 	}
 
@@ -506,7 +497,6 @@ func RunTaskState(task *models.Task, tpl *models.Template, dbsess *db.Session) s
 
 	updateM := map[string]interface{}{
 		"status":       status,
-		"backend_info": updateBackendInfo(task.BackendInfo, runnerResp.LogContentLines),
 	}
 
 	if status != consts.TaskRunning {
@@ -530,7 +520,6 @@ func RunTaskState(task *models.Task, tpl *models.Template, dbsess *db.Session) s
 		}
 	}
 	task.Status = status
-	task.BackendInfo = updateBackendInfo(task.BackendInfo, runnerResp.LogContentLines)
 
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
@@ -591,7 +580,6 @@ func getTaskLogs(tplGuid, taskGuid string, dbsess *db.Session) {
 	data := map[string]interface{}{
 		"template_uuid": tplGuid,
 		"task_id":       task.Guid,
-		"offset":        taskBackend["log_offset"],
 	}
 	header := &http.Header{}
 	header.Set("Content-Type", "application/json")
@@ -604,20 +592,13 @@ func getTaskLogs(tplGuid, taskGuid string, dbsess *db.Session) {
 	logger.Tracef("response body: %s", string(respData))
 
 	var (
-		runnerResp struct {
-			Status          string   `json:"status" form:"status" `
-			StatusCode      int      `json:"status_code" form:"status_code" `
-			LogContent      []string `json:"log_content" form:"log_content" `
-			LogContentLines int      `json:"log_content_lines" form:"log_content_lines" `
-			Code            string   `json:"code" form:"code" `
-			Error           string   `json:"error" form:"error" `
-		}
+		runnerResp runner.TaskStatusMessage
 	)
 
 	if err := json.Unmarshal(respData, &runnerResp); err != nil {
 		logger.Errorf("unmarshal error: %v, body: %s", err, string(respData))
 	}
-	if err := writeTaskLog(runnerResp.LogContent, taskBackend["log_file"].(string), taskBackend["log_offset"].(float64)); err != nil {
+	if err := writeTaskLog(runnerResp.LogContent, taskBackend["log_file"].(string), 0); err != nil {
 		logger.Errorf("write task log error: %v", err)
 	}
 }

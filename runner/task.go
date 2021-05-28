@@ -13,7 +13,6 @@ import (
 type ContainerStatus struct {
 	Status          *types.ContainerState
 	LogContent      []string
-	LogContentLines int
 }
 
 func Run(req *http.Request) (string, error) {
@@ -46,29 +45,6 @@ func Cancel(req *http.Request) error {
 	}
 	err = task.Cancel()
 	return err
-}
-
-// Deprecated:
-func Status(req *http.Request) (ContainerStatus, error) {
-	task, err := ReqToTask(req)
-	containerStatus := new(ContainerStatus)
-	if err != nil {
-		return *containerStatus, err
-	}
-	containerJSON, err := task.Status()
-	if err != nil {
-		return *containerStatus, err
-	}
-
-	containerStatus.Status = containerJSON.State
-
-	logContent, err := FetchTaskLog(task.TemplateId, task.TaskId, task.LogContentOffset)
-	if err != nil {
-		return *containerStatus, err
-	}
-	containerStatus.LogContentLines = len(logContent)
-	containerStatus.LogContent = logContent
-	return *containerStatus, nil
 }
 
 type TaskLogsResp struct {

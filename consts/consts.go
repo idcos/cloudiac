@@ -80,6 +80,8 @@ const (
 	WorkFlow               = "workflow"
 	GitLab                 = "gitlab"
 	GitEA                  = "gitea"
+
+	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀
 )
 
 var (

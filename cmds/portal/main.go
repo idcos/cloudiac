@@ -1,12 +1,12 @@
 package main
 
 import (
+	task_manager2 "cloudiac/apps/task_manager"
 	"cloudiac/cmds/common"
 	"cloudiac/configs"
 	"cloudiac/libs/db"
 	"cloudiac/models"
 	"cloudiac/services"
-	"cloudiac/services/task_manager"
 	"cloudiac/utils/kafka"
 	"cloudiac/utils/logs"
 	"cloudiac/web"
@@ -65,7 +65,7 @@ func main() {
 	// TODO 任务恢复由 taskManger 来处理
 	go services.RunTask()
 
-	go task_manager.Start(configs.Get().Consul.ServiceID)
+	go task_manager2.Start(configs.Get().Consul.ServiceID)
 	//go http.ListenAndServe("0.0.0.0:6060", nil)
 	web.StartServer()
 }

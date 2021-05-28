@@ -70,6 +70,7 @@ func (task *CommitedTask) Wait(ctx context.Context) (int64, error) {
 		}
 	case err := <-errCh:
 		if errdefs.IsNotFound(err) {
+			logger.Debugf("container not found, Id: %s", task.ContainerId)
 			return 	0, nil
 		}
 		logger.Warnf("wait container error: %#v", err)

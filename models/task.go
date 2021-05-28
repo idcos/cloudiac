@@ -4,6 +4,9 @@ import (
 	"cloudiac/consts"
 	"cloudiac/libs/db"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
+	"encoding/json"
+	"path/filepath"
 	"time"
 )
 
@@ -44,12 +47,32 @@ type Task struct {
 	AllowApply    bool       `json:"allowApply" gorm:"default:false"`
 }
 
+type TaskBackendInfo struct {
+	BackendUrl  string `json:"backend_url"`
+	CtServiceId string `json:"ct_service_id"`
+	LogFile     string `json:"log_file"`
+	ContainerId string `json:"container_id"`
+}
+
 func (Task) TableName() string {
 	return "iac_task"
 }
 
 func (t *Task) Exited() bool {
 	return utils.InArrayStr([]string{consts.TaskFailed, consts.TaskComplete, consts.TaskTimeout}, t.Status)
+}
+
+func (t *Task) UnmarshalBackendInfo() *TaskBackendInfo {
+	info := TaskBackendInfo{}
+	if err := json.Unmarshal(t.BackendInfo, &info); err != nil {
+		logs.Get().WithField("taskId", t.Guid).Panicln(err)
+	}
+	return &info
+}
+
+func (t *Task) FullLogPath() string {
+	backend := t.UnmarshalBackendInfo()
+	return filepath.Join(backend.LogFile, consts.TaskLogName)
 }
 
 func (t *Task) Migrate(sess *db.Session) (err error) {
@@ -60,8 +83,8 @@ func (t *Task) Migrate(sess *db.Session) (err error) {
 
 	// status 字段通过 Migrate 来维护 enum，确保新增加类型生效
 	err = sess.DB().ModifyColumn("status",
-		"ENUM('pending','running','failed','complete','timeout','assigning') " +
-		"DEFAULT 'pending' COMMENT '作业状态'").Error
+		"ENUM('pending','running','failed','complete','timeout','assigning') "+
+			"DEFAULT 'pending' COMMENT '作业状态'").Error
 	if err != nil {
 		return err
 	}

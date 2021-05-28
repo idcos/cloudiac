@@ -3,6 +3,7 @@ package services
 import (
 	"cloudiac/configs"
 	"cloudiac/consts/e"
+	"cloudiac/services/logstorage"
 	"cloudiac/utils/kafka"
 	"context"
 	"encoding/json"
@@ -318,10 +319,10 @@ forLoop:
 	}
 
 	if taskStatus != consts.TaskRunning && len(lastMessage.LogContent) > 0 {
-		if err := writeTaskLog(lastMessage.LogContent,
-			fmt.Sprintf("%s", taskBackend["log_file"]), 0); err != nil {
-			logger.Errorf("write task log error: %v", err)
-			logger.Infof("task log content: %v", lastMessage.LogContent)
+		path := task.FullLogPath()
+		if err := logstorage.Get().Write(path, lastMessage.LogContent); err != nil {
+			logger.WithField("path", path).Errorf("write task log error: %v", err)
+			logger.Infof("log content: %s", lastMessage.LogContent)
 		}
 	}
 

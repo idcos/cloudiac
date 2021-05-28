@@ -136,7 +136,6 @@ func StartServer() {
 		} else {
 			c.JSON(200, gin.H{
 				"log_content":       containerStatus.LogContent,
-				"log_content_lines": containerStatus.LogContentLines,
 			})
 		}
 	})

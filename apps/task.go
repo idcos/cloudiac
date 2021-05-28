@@ -92,7 +92,6 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 		"backend_url": fmt.Sprintf("http://%s:%d/api/v1", form.CtServiceIp, form.CtServicePort),
 		"ctServiceId": form.CtServiceId,
 		"log_file":    logPath,
-		"log_offset":  0,
 	})
 
 	if err := os.MkdirAll(logPath, os.ModePerm); err != nil {

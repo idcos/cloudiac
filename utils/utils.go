@@ -2,6 +2,7 @@ package utils
 
 import (
 	"archive/zip"
+	"cloudiac/consts"
 	"cloudiac/utils/logs"
 	"crypto/aes"
 	"crypto/cipher"
@@ -363,7 +364,6 @@ func UintIsContain(items []uint, item uint) bool {
 	return false
 }
 
-
 // RetryFunc 通用重试函数，
 // param max, 最大重试次数
 // param run: 重试执行的函数，入数 retryN 为当前重试次数(0 base)，返回值分别为(继续重试?, error)
@@ -388,4 +388,12 @@ func RetryFunc(max int, run func(retryN int) (bool, error)) error {
 			return err
 		}
 	}
+}
+
+func TaskLogMessage(format string, args ...interface{}) string {
+	return fmt.Sprintf(consts.IacTaskLogPrefix+format, args...)
+}
+
+func TaskLogMsgBytes(format string, args ...interface{}) []byte {
+	return []byte(TaskLogMessage(format, args...))
 }
