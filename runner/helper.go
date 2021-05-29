@@ -199,9 +199,6 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 	logCmd := fmt.Sprintf(">> %s%s 2>&1 ", ContainerLogFilePath, ContainerLogFileName)
 	ansibleCmd := fmt.Sprint(" if [ -e run.sh ];then chmod +x run.sh && ./run.sh;fi")
 
-	// FIXME: FOR DEBUG
-	cmdList = append(cmdList, fmt.Sprintf("for I in `seq 1 30`; do date && sleep 1; done %s &&", logCmd))
-
 	cmdList = append(cmdList, fmt.Sprintf("git clone %s %s &&", d.Repo, logCmd))
 	// get folder name
 	s := strings.Split(d.Repo, "/")
