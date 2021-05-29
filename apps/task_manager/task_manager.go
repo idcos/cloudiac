@@ -37,8 +37,12 @@ type TaskManager struct {
 
 	wg sync.WaitGroup // 等待执行任务协程退出的 wait group
 
-	// 用于 runTask 协程通知 manager 其己退出
-	taskRunExitedCh chan string
+	// 通知任务开始执行
+	taskStartingCh chan *models.Task
+	// 通知任务己启动
+	taskStartedCh chan *models.Task
+	// 通知任务结束
+	taskExitedCh chan string
 
 	maxTasksPerRunner int // 每个 runner 并发任务数量限制
 }
@@ -78,31 +82,11 @@ func (m *TaskManager) init() error {
 	m.runnerTasks = make(map[string]int)
 	m.wg = sync.WaitGroup{}
 
-	m.taskRunExitedCh = make(chan string)
-	go m.listenTaskExited()
+	m.taskStartingCh = make(chan *models.Task)
+	m.taskStartedCh = make(chan *models.Task)
+	m.taskExitedCh = make(chan string)
 
-	// 初始化每个 runner 运行的任务数量
-	{
-		results := make([]struct {
-			CtServiceId string
-			Count       int
-		}, 0)
-
-		err := m.db.Model(&models.Task{}).
-			Where("status = ?", consts.TaskRunning).Group("ct_service_id").
-			Select("ct_service_id,COUNT(*) AS count").Scan(&results)
-		if err != nil {
-			m.logger.Errorf("count runner %s tasks error: %v", consts.TaskRunning, err)
-			return err
-		}
-
-		for _, r := range results {
-			m.runnerTasks[r.CtServiceId] = r.Count
-		}
-
-		m.maxTasksPerRunner = services.GetRunnerMax()
-	}
-
+	m.maxTasksPerRunner = services.GetRunnerMax()
 	return nil
 }
 
@@ -158,6 +142,13 @@ func (m *TaskManager) start() {
 		cancel()
 	}()
 
+	go m.listenTaskStarting()
+	go m.listenTaskStarted(ctx)
+	go m.listenTaskExited()
+
+	// 恢复执行中的任务状态
+	go m.recoverTask(ctx)
+
 	// 查询待运行任务列表的间隔
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
@@ -175,8 +166,9 @@ func (m *TaskManager) start() {
 	}
 }
 
+// run 查询数据库中待执行的任务，并启动
 func (m *TaskManager) run(ctx context.Context) {
-	tasks := make([]*models.Task, 0)
+	logger := m.logger
 
 	limitedRunners := make([]string, 0)
 	for runnerId, count := range m.runnerTasks {
@@ -185,7 +177,7 @@ func (m *TaskManager) run(ctx context.Context) {
 		}
 	}
 
-	queryTaskLimit := 32
+	queryTaskLimit := 64 // 单次查询任务数量限制
 	query := m.db.Model(&models.Task{}).
 		Where("status = ?", consts.TaskPending).
 		Order("id").
@@ -195,9 +187,10 @@ func (m *TaskManager) run(ctx context.Context) {
 	if len(limitedRunners) > 0 {
 		query = query.Where("ct_service_id NOT IN (?)", limitedRunners)
 	}
+
+	tasks := make([]*models.Task, 0)
 	if err := query.Find(&tasks); err != nil {
-		m.logger.Errorf("find '%s' tasks error: %v", consts.TaskPending, err)
-		return
+		logger.Panicf("find '%s' tasks error: %v", consts.TaskPending, err)
 	}
 
 	for _, task := range tasks {
@@ -207,27 +200,50 @@ func (m *TaskManager) run(ctx context.Context) {
 		default:
 		}
 
-		if err := m.runTask(ctx, task); err != nil {
+		if err := m.runStartTask(ctx, task); err != nil {
 			runnerId := task.CtServiceId
 			if err == ErrMaxTasksPerRunner {
-				m.logger.WithField("count", m.runnerTasks[runnerId]).Infof("runner %s: %v", runnerId, err)
+				logger.WithField("count", m.runnerTasks[runnerId]).Infof("runner %s: %v", runnerId, err)
 			} else {
-				m.logger.WithField("taskId", task.Guid).Errorf("run task error: %v", err)
+				logger.WithField("taskId", task.Guid).Errorf("run task error: %v", err)
 			}
 		}
 	}
 }
 
-// 启动任务
-func (m *TaskManager) runTask(ctx context.Context, task *models.Task) error {
-	m.logger.Infof("run task '%s'", task.Guid)
+// recoverTask 查询 db 中 running 状态的任务，并通知任务 started
+func (m *TaskManager) recoverTask(ctx context.Context) {
+	logger := m.logger
+	query := m.db.Model(&models.Task{}).
+		Where("status = ?", consts.TaskRunning)
 
-	// 判断并发数量
+	tasks := make([]*models.Task, 0)
+	if err := query.Find(&tasks); err != nil {
+		logger.Panicf("find %s tasks error: %v", consts.TaskRunning, err)
+	}
+	logger.Infof("find %d running tasks", len(tasks))
+
+	for _, task := range tasks {
+		select {
+		case <-ctx.Done():
+			break
+		default:
+			logger.Infof("recover running task %s", task.Guid)
+			m.notifyTaskStarting(task)
+			m.notifyTaskStarted(task)
+		}
+	}
+}
+
+// 启动任务
+func (m *TaskManager) runStartTask(ctx context.Context, task *models.Task) error {
+	m.logger.Infof("run task %s", task.Guid)
+
+	// 判断 runner 并发数量
 	n := m.runnerTasks[task.CtServiceId]
 	if n >= m.maxTasksPerRunner {
 		return ErrMaxTasksPerRunner
 	}
-
 
 	updateTaskStatus := func(status string) error {
 		task.Status = status
@@ -238,54 +254,109 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) error {
 		return nil
 	}
 
-	// 更新任务为 assigning 状态
+	// 先更新任务为 assigning 状态
+	// 极端情况下任务未执行好过重复执行，所以先设置状态，后发起调用
 	if err := updateTaskStatus(consts.TaskAssigning); err != nil {
 		return err
 	}
 
 	m.wg.Add(1)
 	go func() {
-		defer func() {
-			m.wg.Done()
-			m.taskRunExitedCh <- task.Guid
-		}()
+		defer m.wg.Done()
 
-		deadline, err := services.StartTask(m.db, task)
+		m.notifyTaskStarting(task)
+		_, err := services.StartTask(m.db, task)
 		if err != nil {
 			m.logger.Errorf("start task error: %v", err)
 			if task.Status == consts.TaskAssigning {
 				// 下发失败，还原为 pending 状态，等待下次重试
 				_ = updateTaskStatus(consts.TaskPending)
 			}
+			m.notifyTaskExited(task.Guid)
 			return
 		}
-
-		if _, err := services.WaitTaskResult(ctx, m.db, task, deadline); err != nil {
-			m.logger.Errorf("wait task result error: %v", err)
-		}
+		m.notifyTaskStarted(task)
 	}()
 
-	m.tasks[task.Guid] = task
-	m.runnerTasks[task.CtServiceId] += 1
 	return nil
+}
+
+func (m *TaskManager) notifyTaskStarting(task *models.Task) {
+	m.taskStartingCh <- task
+}
+
+func (m *TaskManager) listenTaskStarting() {
+	for {
+		select {
+		case task, ok := <-m.taskStartingCh:
+			if !ok {
+				return
+			}
+			m.tasks[task.Guid] = task
+			m.runnerTasks[task.CtServiceId] += 1
+		}
+	}
+}
+
+func (m *TaskManager) notifyTaskStarted(task *models.Task) {
+	m.taskStartedCh <- task
+}
+
+func (m *TaskManager) listenTaskStarted(ctx context.Context) {
+	for {
+		select {
+		case task, ok := <-m.taskStartedCh:
+			if !ok {
+				return
+			}
+			m.runWaitTask(ctx, task)
+		}
+	}
+}
+
+func (m *TaskManager) runWaitTask(ctx context.Context, task *models.Task) {
+	logger := m.logger.WithField("func", "runWaitTask")
+
+	deadline, err := services.TaskDeadline(m.db, task.Guid)
+	if err != nil {
+		logger.Errorf("get task deadline error: %v", err)
+		return
+	}
+
+	m.wg.Add(1)
+	go func() {
+		defer m.wg.Done()
+
+		if _, err := services.WaitTaskResult(ctx, m.db, task, deadline); err != nil {
+			logger.Errorf("wait task result error: %v", err)
+			return
+		}
+		m.notifyTaskExited(task.Guid)
+	}()
+}
+
+func (m *TaskManager) notifyTaskExited(taskId string) {
+	m.taskExitedCh <- taskId
 }
 
 // 等待任务结束，将其从 manager 管理状态中移除
 func (m *TaskManager) listenTaskExited() {
 	logger := m.logger.WithField("func", "listenTaskExited")
 	for {
-		taskId, ok := <-m.taskRunExitedCh
-		if !ok {
-			break
-		}
+		select {
+		case taskId, ok := <-m.taskExitedCh:
+			if !ok {
+				return
+			}
 
-		if task, ok := m.tasks[taskId]; !ok {
-			logger.Warnf("unknown task '%s'", taskId)
-			continue
-		} else {
-			logger.WithField("taskId", taskId).Infof("task finished")
-			m.runnerTasks[task.CtServiceId] -= 1
-			delete(m.tasks, taskId)
+			if task, ok := m.tasks[taskId]; !ok {
+				logger.Warnf("unknown task '%s'", taskId)
+				continue
+			} else {
+				logger.WithField("taskId", taskId).Infof("task exited")
+				m.runnerTasks[task.CtServiceId] -= 1
+				delete(m.tasks, taskId)
+			}
 		}
 	}
 }
@@ -293,8 +364,13 @@ func (m *TaskManager) listenTaskExited() {
 func (m *TaskManager) stop() {
 	logger := m.logger
 	logger.Infof("task manager stopping ...")
+
 	logger.Debugf("waiting all task goroutine exit ...")
 	m.wg.Wait()
-	close(m.taskRunExitedCh)
+
+	close(m.taskStartingCh)
+	close(m.taskStartedCh)
+	close(m.taskExitedCh)
+
 	logger.Infof("task manager stopped")
 }

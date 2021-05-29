@@ -337,3 +337,17 @@ forLoop:
 
 	return taskStatus, nil
 }
+
+func TaskDeadline(dbSess *db.Session, taskId string) (deadline time.Time, err error) {
+	result := struct {
+		StartAt time.Time
+		Timeout int64
+	}{}
+	err = dbSess.Raw("SELECT tpl.timeout, task.start_at FROM iac_template AS tpl "+
+		"JOIN iac_task AS task ON task.template_guid = tpl.guid "+
+		"WHERE task.guid = ?", taskId).Scan(&result)
+	if err != nil {
+		return
+	}
+	return result.StartAt.Add(time.Duration(result.Timeout) * time.Second), nil
+}

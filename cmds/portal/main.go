@@ -62,10 +62,11 @@ func main() {
 	//go services.RunTaskToRunning()
 	//go services.RunTaskState()
 	services.MaintenanceRunnerPerMax()
-	// TODO 任务恢复由 taskManger 来处理
-	go services.RunTask()
+
+	//go services.RunTask()
 
 	go task_manager2.Start(configs.Get().Consul.ServiceID)
+
 	//go http.ListenAndServe("0.0.0.0:6060", nil)
 	web.StartServer()
 }
