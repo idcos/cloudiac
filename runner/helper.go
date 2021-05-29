@@ -238,6 +238,24 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 		//cmdList = append(cmdList, fmt.Sprintf("%s %s&&%s", "terraform plan -var-file", d.Varfile, d.Extra))
 	}
 
+
+	// 允许为模板设置 IAC_DEBUG_TASK 环境变量来执行预设置的调试命令
+	if isDebug, ok := d.Env["IAC_DEBUG_TASK"]; ok {
+		if isDebug == "1" || strings.ToLower(isDebug) == "true" {
+			// 可以在 runner 程序启动时通过 IAC_DEBUG_COMMAND 环境变量设置 debug 命令
+			debugCommand := os.Getenv("IAC_DEBUG_COMMAND")
+			if debugCommand == "" {
+				count := d.Env["IAC_DEBUG_RUN_COUNT"]
+				if count == "" {
+					count = "60"
+				}
+				debugCommand = fmt.Sprintf("for I in `seq 1 %s`;do date && hostname && uptime; sleep 1; done", count)
+			}
+
+			cmdList = []string{fmt.Sprintf("%s %s", debugCommand, logCmd)}
+		}
+	}
+
 	cmdstr := ""
 	for _, v := range cmdList {
 		cmdstr = cmdstr + v

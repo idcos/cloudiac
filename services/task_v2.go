@@ -22,11 +22,11 @@ import (
 	"cloudiac/utils/logs"
 )
 
-// StartTask 启动任务，并等待其结束
-func StartTask(dbSess *db.Session, task *models.Task) (timeout time.Duration, err error) {
+// StartTask 启动任务(任务下发后即退出)
+func StartTask(dbSess *db.Session, task *models.Task) (deadline time.Time, err error) {
 	logger := logs.Get().WithField("action", "StartTask").WithField("taskId", task.Guid)
 	if task.Status != consts.TaskAssigning {
-		return 0, fmt.Errorf("unexpected task status '%s'", task.Status)
+		return deadline, fmt.Errorf("unexpected task status '%s'", task.Status)
 	}
 
 	logger.Infof("start task %v", task.Guid)
@@ -41,16 +41,16 @@ func StartTask(dbSess *db.Session, task *models.Task) (timeout time.Duration, er
 			}
 		}
 		logger.Errorf("query template '%d' error: %v", task.TemplateId, err)
-		return 0, errors.Wrap(err, "query template error")
+		return deadline, errors.Wrap(err, "query template error")
 	}
 
 	logger.Debugf("assign task")
 	if err := assignTask(dbSess, &tpl, task); err != nil {
 		logger.Errorf("AssignTask error: %v", err)
-		return 0, err
+		return deadline, err
 	}
 
-	return time.Duration(tpl.Timeout) * time.Second, nil
+	return task.StartAt.Add(time.Duration(tpl.Timeout) * time.Second), nil
 }
 
 // assignTask 将任务分派到 runner，并更新任务状态
@@ -180,18 +180,24 @@ func requestRunnerRunTask(url string, header *http.Header, data interface{}) (*r
 	return &resp, nil
 }
 
-// WaitTaskResult 等待任务结束(或任务超时)，返回任务最新状态
-// 该函数会更新任务状态到 db
-func WaitTaskResult(ctx context.Context, dbSess *db.Session, task *models.Task, timeout time.Duration) (status string, err error) {
-	logger := logs.Get().WithField("action", "WaitTaskResult").WithField("taskId", timeout)
-	err = utils.RetryFunc(10, func(retryN int) (bool, error) {
-		status, err = doPullTaskStatus(ctx, dbSess, task.Guid, timeout)
+// WaitTaskResult 等待任务结束(包括超时)，返回任务最新状态
+// 该函数会更新任务状态、日志等到 db
+// param: taskDeadline 任务超时时间，达到这个时间后任务会被置为 timeout 状态
+func WaitTaskResult(ctx context.Context, dbSess *db.Session, task *models.Task, taskDeadline time.Time) (status string, err error) {
+	logger := logs.Get().WithField("action", "WaitTaskResult").WithField("taskId", task.Guid)
+
+	// 当前版本实现中需要 portal 主动连接到 runner 获取状态
+	err = utils.RetryFunc(0, time.Second*10, func(retryN int) (bool, error) {
+		status, err = doPullTaskStatus(ctx, dbSess, task.Guid, taskDeadline)
 		if err != nil {
 			logger.Errorf("pull task status error: %v, retry=%d", err, retryN)
 			return true, err
 		}
 		return false, nil
 	})
+	if err != nil {
+		return "", err
+	}
 
 	updateM := map[string]interface{}{
 		"status": status,
@@ -228,7 +234,7 @@ func WaitTaskResult(ctx context.Context, dbSess *db.Session, task *models.Task, 
 
 // PullTaskStatus 同步任务最新状态，直到任务结束(或 ctx cancel)
 // 该函数允许重复调用，即使任务己结束 (runner 会在本地保存近期(约7天)任务执行信息)，如果任务结束则写入全量日志到存储
-func doPullTaskStatus(ctx context.Context, dbSess *db.Session, taskId string, taskTimeout time.Duration) (
+func doPullTaskStatus(ctx context.Context, dbSess *db.Session, taskId string, deadline time.Time) (
 	taskStatus string, err error) {
 	logger := logs.Get().WithField("action", "PullTaskState").WithField("taskId", taskId)
 
@@ -277,16 +283,17 @@ func doPullTaskStatus(ctx context.Context, dbSess *db.Session, taskId string, ta
 	}
 	go readMessage()
 
-	deadline := task.StartAt.Add(taskTimeout)
 	now := time.Now()
 	var timer *time.Timer
 	if deadline.Before(now) {
-		timer = time.NewTimer(time.Second * 10)
+		// 即使任务己超时也保证进行一次状态获取
+		timer = time.NewTimer(time.Second)
 	} else {
 		timer = time.NewTimer(deadline.Sub(now))
 	}
 	var lastMessage *runner.TaskStatusMessage
 
+	logger.Debugf("pulling task status ...")
 forLoop:
 	for {
 		select {
@@ -317,6 +324,8 @@ forLoop:
 			break forLoop
 		}
 	}
+
+	logger.Debugf("pull task status done, status=%s", taskStatus)
 
 	if taskStatus != consts.TaskRunning && len(lastMessage.LogContent) > 0 {
 		path := task.FullLogPath()

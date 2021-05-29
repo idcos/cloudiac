@@ -220,7 +220,7 @@ func (m *TaskManager) run(ctx context.Context) {
 
 // 启动任务
 func (m *TaskManager) runTask(ctx context.Context, task *models.Task) error {
-	m.logger.Debugf("run task '%s'", task.Guid)
+	m.logger.Infof("run task '%s'", task.Guid)
 
 	// 判断并发数量
 	n := m.runnerTasks[task.CtServiceId]
@@ -250,7 +250,7 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) error {
 			m.taskRunExitedCh <- task.Guid
 		}()
 
-		taskTimeout, err := services.StartTask(m.db, task)
+		deadline, err := services.StartTask(m.db, task)
 		if err != nil {
 			m.logger.Errorf("start task error: %v", err)
 			if task.Status == consts.TaskAssigning {
@@ -260,7 +260,7 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) error {
 			return
 		}
 
-		if _, err := services.WaitTaskResult(ctx, m.db, task, taskTimeout); err != nil {
+		if _, err := services.WaitTaskResult(ctx, m.db, task, deadline); err != nil {
 			m.logger.Errorf("wait task result error: %v", err)
 		}
 	}()
@@ -272,7 +272,7 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) error {
 
 // 等待任务结束，将其从 manager 管理状态中移除
 func (m *TaskManager) listenTaskExited() {
-	logger := m.logger
+	logger := m.logger.WithField("func", "listenTaskExited")
 	for {
 		taskId, ok := <-m.taskRunExitedCh
 		if !ok {
