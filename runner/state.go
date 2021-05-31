@@ -1,10 +1,9 @@
 package runner
 
 import (
-	"cloudiac/configs"
-	"cloudiac/utils/logs"
-	"html/template"
 	"os"
+	"path/filepath"
+	"text/template"
 )
 
 /*
@@ -21,30 +20,37 @@ terraform {
 }
 */
 
+const backendTemplate = `
+terraform {
+  backend "consul" {
+    address = "{{.Address}}"
+    scheme  = "{{.Scheme}}"
+    path    = "{{.Path}}"
+    lock    = true
+    gzip    = false
+  }
+}`
+
+var backendTpl = template.Must(template.New("").Parse(backendTemplate))
+
 type State struct {
 	Address string
 	Scheme  string
 	Path    string
 }
 
-func GenStateFile(address string, scheme string, path string, targetPath string, saveState bool) {
-	log := logs.Get()
+func GenBackendConfig(address string, scheme string, path string, workingDir string) error {
 	state := new(State)
 	state.Address = address
 	if scheme != "" {
 		state.Scheme = scheme
 	}
 	state.Path = path
-	targetFile, err := os.OpenFile(targetPath+"/state.tf", os.O_CREATE|os.O_WRONLY, 0755)
+	targetFile, err := os.OpenFile(filepath.Join(workingDir, BackendConfigName), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Error("open failed err:", err)
-		return
+		return err
 	}
+	defer targetFile.Close()
 
-	t, err := template.ParseFiles(configs.Get().Runner.AssetPath + "/state.tf.tmpl")
-	if err != nil {
-		log.Error("open template file err:", err)
-		return
-	}
-	t.Execute(targetFile, state)
+	return backendTpl.Execute(targetFile, state)
 }

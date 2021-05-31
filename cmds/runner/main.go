@@ -125,21 +125,6 @@ func StartServer() {
 	apiV1.GET("/task/status", v1.TaskStatus)
 	apiV1.GET("/task/log/follow", v1.TaskLogFollow)
 
-	apiV1.POST("/task/logs", func(c *gin.Context) {
-		logger.Debug(c.Request.Body)
-		containerStatus, err := runner.GetTaskLogs(c.Request)
-		if err != nil {
-			logger.Info(err.Error())
-			c.JSON(500, gin.H{
-				"err": err.Error(),
-			})
-		} else {
-			c.JSON(200, gin.H{
-				"log_content":       containerStatus.LogContent,
-			})
-		}
-	})
-
 	apiV1.POST("/task/cancel", func(c *gin.Context) {
 		logger.Debug(c.Request.Body)
 		err := runner.Cancel(c.Request)
