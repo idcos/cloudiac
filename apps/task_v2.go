@@ -117,7 +117,14 @@ func fetchRunnerTaskLog(writer io.WriteCloser, task *models.Task) error {
 				return err
 			}
 		} else {
-			io.Copy(writer, reader)
+			_, err := io.Copy(writer, reader)
+			if err != nil {
+				logger.Debugf("io.Copy: %v", err)
+				if err == io.ErrClosedPipe {
+					return nil
+				}
+				return err
+			}
 		}
 	}
 }
