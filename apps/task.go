@@ -109,7 +109,7 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 	if err != nil {
 		return nil, err
 	}
-	vcs, er := services.QueryVcsByVcsId(tpl.VcsId, c.DB().Debug())
+	vcs, er := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
 	if er != nil {
 		return nil, er
 	}
