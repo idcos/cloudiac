@@ -73,7 +73,7 @@ func (task *CommitedTask) Wait(ctx context.Context) (int64, error) {
 			logger.Debugf("container not found, Id: %s", task.ContainerId)
 			return 0, nil
 		}
-		logger.Warnf("wait container error: %#v", err)
+		logger.Warnf("wait container error: %v", err)
 		return 0, err
 	}
 }

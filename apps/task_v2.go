@@ -18,6 +18,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func FollowTaskLog(c *ctx.GinRequestCtx) error {
@@ -31,17 +32,39 @@ func FollowTaskLog(c *ctx.GinRequestCtx) error {
 	taskId := parts[len(parts)-1]
 	logger := logs.Get().WithField("func", "FollowTaskLog").WithField("taskId", taskId)
 
-	task, err := services.GetTaskByGuid(c.ServiceCtx().DB(), taskId)
-	if err != nil {
-		if e.IsRecordNotFound(err) {
-			return e.New(e.TaskNotExists)
+	var (
+		task *models.Task
+		err  error
+	)
+	 // 等待任务启动
+	for i := 0; ; i++ {
+		select {
+		case <-c.Context.Done():
+			break
+		default:
 		}
-		logger.Errorf("query task err: %v", err)
-		return e.New(e.DBError)
+
+		task, err = services.GetTaskByGuid(c.ServiceCtx().DB(), taskId)
+		if err != nil {
+			if e.IsRecordNotFound(err) {
+				return e.New(e.TaskNotExists)
+			}
+			logger.Errorf("query task err: %v", err)
+			return e.New(e.DBError)
+		}
+
+		if !task.Started() {
+			if i < 10 {
+				time.Sleep(time.Second * time.Duration(i+1))
+			} else {
+				time.Sleep(time.Second * 10)
+			}
+			continue
+		}
+		break
 	}
 
 	var reader io.Reader
-
 	if task.Exited() { // 己退出的任务直接读取全量日志
 		if content, err := logstorage.Get().Read(task.FullLogPath()); err != nil {
 			logger.Errorf("read task log error: %v", err)
@@ -117,7 +140,14 @@ func fetchRunnerTaskLog(writer io.WriteCloser, task *models.Task) error {
 				return err
 			}
 		} else {
-			io.Copy(writer, reader)
+			_, err := io.Copy(writer, reader)
+			if err != nil {
+				if err == io.ErrClosedPipe {
+					return nil
+				}
+				logger.Infof("io.Copy: %v", err)
+				return err
+			}
 		}
 	}
 }
