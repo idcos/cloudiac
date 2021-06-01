@@ -1,10 +1,7 @@
 package runner
 
 import (
-	"bytes"
-	"cloudiac/configs"
-	"fmt"
-	"io/ioutil"
+	"github.com/pkg/errors"
 	"net/http"
 
 	"github.com/docker/docker/api/types"
@@ -16,7 +13,7 @@ type ContainerStatus struct {
 }
 
 func Run(req *http.Request) (string, error) {
-	c, state, iacTemplate, err := ReqToCommand(req)
+	c, state, err := ReqToCommand(req)
 	if err != nil {
 		return "", err
 	}
@@ -25,16 +22,10 @@ func Run(req *http.Request) (string, error) {
 	// 1. 根据模板ID创建目录(目录创建规则：/{template_uuid}/{task_id}/)，用于保存日志文件及挂载provider、密钥等文件
 	// 2. 若需要保存模板状态，则根据参数生成状态配置文件，放入模板目录中，挂载至容器内部
 
-	templateUUID := iacTemplate.TemplateUUID
-	taskId := iacTemplate.TaskId
-	templateDir, err := CreateTemplatePath(templateUUID, taskId)
-	if err != nil {
-		return "", err
+	if err := GenBackendConfig(state.StateBackendAddress, state.Scheme, state.StateKey, c.TaskWorkdir); err != nil {
+		return "", errors.Wrap(err, "generate backend config error")
 	}
-	// if state.SaveState != false {
-	GenStateFile(state.StateBackendAddress, state.Scheme, state.StateKey, templateDir, state.SaveState)
-	// }
-	err = c.Create(templateDir)
+	err = c.Create()
 	return c.ContainerInstance.ID, err
 }
 
@@ -50,31 +41,4 @@ func Cancel(req *http.Request) error {
 type TaskLogsResp struct {
 	LogContent      []string
 	LogContentLines int
-}
-
-func GetTaskLogs(req *http.Request) (TaskLogsResp, error) {
-	conf := configs.Get()
-	task, err := ReqToTask(req)
-	if err != nil {
-		return TaskLogsResp{}, err
-	}
-	tlr := TaskLogsResp{}
-	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePath, task.TemplateId, task.TaskId)
-	logFile := fmt.Sprintf("%s/%s", templateDir, ContainerLogFileName)
-	file, err := ioutil.ReadFile(logFile)
-	if err != nil {
-		return TaskLogsResp{}, err
-	}
-	buf := bytes.NewBuffer(file)
-	MaxLines, _ := LineCounter(buf)
-
-	lines, err := ReadLogFile(logFile, task.LogContentOffset, MaxLines)
-
-	//logContent, err := FetchTaskLog(task.TemplateId, task.TaskId, task.LogContentOffset)
-	if err != nil {
-		return tlr, err
-	}
-	tlr.LogContentLines = len(lines)
-	tlr.LogContent = lines
-	return tlr, nil
 }

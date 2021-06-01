@@ -62,6 +62,10 @@ func (t *Task) Exited() bool {
 	return utils.InArrayStr([]string{consts.TaskFailed, consts.TaskComplete, consts.TaskTimeout}, t.Status)
 }
 
+func (t *Task) Started() bool {
+	return !utils.InArrayStr([]string{consts.TaskPending, consts.TaskAssigning}, t.Status)
+}
+
 func (t *Task) UnmarshalBackendInfo() *TaskBackendInfo {
 	info := TaskBackendInfo{}
 	if err := json.Unmarshal(t.BackendInfo, &info); err != nil {

@@ -11,10 +11,11 @@ type Command struct {
 	Commands []string
 	Cached   []string
 	Shell    string
-	Workdir  string
 	Stash    map[string]string
 	UnStash  map[string]string
 	Timeout  int
+
+	TaskWorkdir string
 
 	// for container
 	ContainerInstance *Container

@@ -71,14 +71,14 @@ func (task *CommitedTask) Wait(ctx context.Context) (int64, error) {
 	case err := <-errCh:
 		if errdefs.IsNotFound(err) {
 			logger.Debugf("container not found, Id: %s", task.ContainerId)
-			return 	0, nil
+			return 0, nil
 		}
-		logger.Warnf("wait container error: %#v", err)
+		logger.Warnf("wait container error: %v", err)
 		return 0, err
 	}
 }
 
-func (cmd *Command) Create(dirMapping string) error {
+func (cmd *Command) Create() error {
 	// TODO(ZhengYue): Create client with params of host info
 	cli, err := client.NewClientWithOpts()
 	cli.NegotiateAPIVersion(context.Background())
@@ -106,35 +106,19 @@ func (cmd *Command) Create(dirMapping string) error {
 			Mounts: []mount.Mount{
 				{
 					Type:   mount.TypeBind,
-					Source: conf.Runner.AssetPath,
-					Target: "/assets",
+					Source: cmd.TaskWorkdir,
+					Target: ContainerIaCDir,
 				},
 				{
 					Type:   mount.TypeBind,
-					Source: dirMapping,
-					Target: ContainerLogFilePath,
+					Source: "/var/run/docker.sock",
+					Target: "/var/run/docker.sock",
 				},
 				{
 					Type:   mount.TypeBind,
-					Source: conf.Runner.MountPath,
-					Target: ContainerMountPath,
+					Source: conf.Runner.ProviderPath,
+					Target: ContainerProviderPath,
 				},
-				//{
-				//	Type:   mount.TypeBind,
-				//	Source: "/var/run/docker.sock",
-				//	Target: "/var/run/docker.sock",
-				//},
-
-				//{
-				//	Type:   mount.TypeBind,
-				//	Source: conf.Runner.ProviderPath,
-				//	Target: ContainerProviderPath,
-				//},
-				//{
-				//	Type:   mount.TypeBind,
-				//	Source: conf.Runner.KeysPath,
-				//	Target: ContainerKeysPath,
-				//},
 			},
 		},
 		nil,

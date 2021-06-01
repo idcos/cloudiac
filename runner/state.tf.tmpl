@@ -1,9 +1,0 @@
-terraform {
-  backend "consul" {
-    address = "{{.Address}}"
-    scheme  = "{{.Scheme}}"
-    path    = "{{.Path}}"
-    lock    = true
-    gzip    = false
-  }
-}

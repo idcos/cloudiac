@@ -2,7 +2,6 @@ package v1
 
 import (
 	"bufio"
-	"cloudiac/configs"
 	"cloudiac/runner"
 	"cloudiac/runner/ws"
 	"cloudiac/utils"
@@ -20,8 +19,8 @@ import (
 // TaskLogFollow 读取 task log 并 follow, 直到任务退出
 func TaskLogFollow(c *gin.Context) {
 	task := runner.CommitedTask{
-		TemplateId: c.Query("templateId"),
-		TaskId:     c.Query("taskId"),
+		TemplateId:  c.Query("templateId"),
+		TaskId:      c.Query("taskId"),
 		ContainerId: c.Query("containerId"),
 	}
 
@@ -53,8 +52,7 @@ func doFollowTaskLog(wsConn *websocket.Conn, task *runner.CommitedTask, offset i
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	defer cancelCtx()
 
-	conf := configs.Get()
-	logPath := filepath.Join(conf.Runner.LogBasePath, task.TemplateId, task.TaskId, runner.ContainerLogFileName)
+	logPath := filepath.Join(runner.GetTaskWorkDir(task.TemplateId, task.TaskId), runner.TaskLogName)
 	contentChan, readErrChan := followFile(ctx, logPath, offset)
 
 	// 等待任务退出协和
