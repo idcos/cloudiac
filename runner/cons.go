@@ -1,12 +1,6 @@
 package runner
 
-const AssetPath = "/"
-
-const ContainerLogPaht = "/var/run/"
-
-const StaticFilePath = "/usr/yunji/cloudiac/tmp"
-
-const DefaultImage = "mt5225/tf-ansible:v0.0.1"
+import "time"
 
 const ContainerLogFilePath = "/usr/yunji/cloudiac/logs/"
 
@@ -20,4 +14,4 @@ const ContainerEnvTerraform = "TF_PLUGIN_CACHE_DIR=/usr/yunji/cloudiac/provider"
 
 const ContainerMountPath = "/usr/yunji/cloudiac"
 
-//const ContainerKeysPath = "/usr/yunji/cloudiac/keys"
+const FollowLogDelay = time.Second // follow 文件时读到 EOF 后进行下次读取的等待时长

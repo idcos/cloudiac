@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"cloudiac/configs"
 	"cloudiac/utils/logs"
 	"html/template"
 	"os"
@@ -39,7 +40,8 @@ func GenStateFile(address string, scheme string, path string, targetPath string,
 		log.Error("open failed err:", err)
 		return
 	}
-	t, err := template.ParseFiles(StaticFilePath + "/state.tf.tmpl")
+
+	t, err := template.ParseFiles(configs.Get().Runner.AssetPath + "/state.tf.tmpl")
 	if err != nil {
 		log.Error("open template file err:", err)
 		return

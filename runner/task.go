@@ -13,7 +13,6 @@ import (
 type ContainerStatus struct {
 	Status          *types.ContainerState
 	LogContent      []string
-	LogContentLines int
 }
 
 func Run(req *http.Request) (string, error) {
@@ -48,28 +47,6 @@ func Cancel(req *http.Request) error {
 	return err
 }
 
-func Status(req *http.Request) (ContainerStatus, error) {
-	task, err := ReqToTask(req)
-	containerStatus := new(ContainerStatus)
-	if err != nil {
-		return *containerStatus, err
-	}
-	containerJSON, err := task.Status()
-	if err != nil {
-		return *containerStatus, err
-	}
-
-	containerStatus.Status = containerJSON.State
-
-	logContent, err := FetchTaskLog(task.TemplateUUID, task.TaskId, task.LogContentOffset)
-	if err != nil {
-		return *containerStatus, err
-	}
-	containerStatus.LogContentLines = len(logContent)
-	containerStatus.LogContent = logContent
-	return *containerStatus, nil
-}
-
 type TaskLogsResp struct {
 	LogContent      []string
 	LogContentLines int
@@ -82,7 +59,7 @@ func GetTaskLogs(req *http.Request) (TaskLogsResp, error) {
 		return TaskLogsResp{}, err
 	}
 	tlr := TaskLogsResp{}
-	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePath, task.TemplateUUID, task.TaskId)
+	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePath, task.TemplateId, task.TaskId)
 	logFile := fmt.Sprintf("%s/%s", templateDir, ContainerLogFileName)
 	file, err := ioutil.ReadFile(logFile)
 	if err != nil {
@@ -93,7 +70,7 @@ func GetTaskLogs(req *http.Request) (TaskLogsResp, error) {
 
 	lines, err := ReadLogFile(logFile, task.LogContentOffset, MaxLines)
 
-	//logContent, err := FetchTaskLog(task.TemplateUUID, task.TaskId, task.LogContentOffset)
+	//logContent, err := FetchTaskLog(task.TemplateId, task.TaskId, task.LogContentOffset)
 	if err != nil {
 		return tlr, err
 	}

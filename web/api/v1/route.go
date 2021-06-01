@@ -4,7 +4,6 @@ import (
 	"cloudiac/libs/ctrl"
 	"cloudiac/web/api/v1/handlers"
 	"cloudiac/web/middleware"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,7 +24,7 @@ func Register(g *gin.RouterGroup) {
 	o.GET("/user/getUserInfo", w(handlers.User{}.GetUserByToken))
 	o.PUT("/user/updateSelf", w(handlers.User{}.Update))
 	o.GET("/systemStatus/search", w(handlers.PortalSystemStatusSearch))
-	o.PUT("/consulTags/update",w(handlers.ConsulTagUpdate))
+	o.PUT("/consulTags/update", w(handlers.ConsulTagUpdate))
 
 	// IaC管理员权限
 	sys := g.Group("/", w(middleware.Auth), w(middleware.IsAdmin))
@@ -55,7 +54,9 @@ func Register(g *gin.RouterGroup) {
 		ctrl.Register(root.Group("notification"), &handlers.Notification{})
 		ctrl.Register(root.Group("resourceAccount"), &handlers.ResourceAccount{})
 		ctrl.Register(root.Group("template"), &handlers.Template{})
+
 		ctrl.Register(root.Group("task"), &handlers.Task{})
+
 		ctrl.Register(root.Group("taskComment"), &handlers.TaskComment{})
 
 		root.GET("/template/overview", w(handlers.Template{}.Overview))
@@ -64,12 +65,15 @@ func Register(g *gin.RouterGroup) {
 
 		root.GET("/consulKv/search", w(handlers.ConsulKVSearch))
 		root.GET("/runnerList/search", w(handlers.RunnerListSearch))
-		root.GET("/templateTfvars/search",w(handlers.TemplateTfvarsSearch))
-		root.GET("/vcs/listEnableVcs",w(handlers.ListEnableVcs))
+		root.GET("/templateTfvars/search", w(handlers.TemplateTfvarsSearch))
+		root.GET("/vcs/listEnableVcs", w(handlers.ListEnableVcs))
 		ctrl.Register(root.Group("vcs"), &handlers.Vcs{})
 	}
 
 	root.GET("/sse/hello/:filename", w(handlers.HelloSse))
 	root.GET("/sse/test", w(handlers.TestSSE))
-	g.GET("/taskLog/sse", w(handlers.TaskLogSSE))
+
+	// TODO 增加鉴权
+	g.GET("/taskLog/sse", w(handlers.Task{}.FollowLogSse))
+	g.GET("/task/log/sse", w(handlers.Task{}.FollowLogSse))
 }

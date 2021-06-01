@@ -21,7 +21,7 @@ var (
 // 创建一个新的默认 logger
 func newLogger() *logrus.Logger {
 	logger := logrus.New()
-	logger.SetLevel(logrus.InfoLevel)
+	logger.SetLevel(logrus.DebugLevel)
 	logger.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp:   true,
 		TimestampFormat: "2006-01-02T15:04:05.000",

@@ -3,6 +3,7 @@ package runner
 import (
 	"bytes"
 	"cloudiac/configs"
+	"cloudiac/utils/logs"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -45,9 +46,9 @@ type ReqBody struct {
 }
 
 type CommitedTask struct {
-	TemplateUUID     string `json:"template_uuid"`
-	TaskId           string `json:"task_id"`
-	ContainerId      string `json:"container_id"`
+	TemplateId       string `json:"templateId"`
+	TaskId           string `json:"taskId"`
+	ContainerId      string `json:"containerId"`
 	LogContentOffset int    `json:"offset"`
 }
 
@@ -119,12 +120,11 @@ func GetTemplateTaskPath(templateUUID string, taskId string) string {
 	return templateDir
 }
 
-func FetchTaskLog(templateUUID string, taskId string, contentOffset int) ([]string, error) {
+func FetchTaskLog(templateUUID string, taskId string) ([]byte, error) {
 	conf := configs.Get()
 	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePath, templateUUID, taskId)
 	logFile := fmt.Sprintf("%s/%s", templateDir, ContainerLogFileName)
-	lines, err := ReadLogFile(logFile, contentOffset, MaxLinesPreRead)
-	return lines, err
+	return ioutil.ReadFile(logFile)
 }
 
 func CreateTemplatePath(templateUUID string, taskId string) (string, error) {
@@ -135,9 +135,16 @@ func CreateTemplatePath(templateUUID string, taskId string) (string, error) {
 }
 
 func ReqToTask(req *http.Request) (*CommitedTask, error) {
+	bodyData, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	logger := logs.Get()
+	logger.Debugf("task status request: %s", bodyData)
+
 	var d CommitedTask
-	if err := json.NewDecoder(req.Body).Decode(&d); err != nil {
-		req.Body.Close()
+	if err := json.Unmarshal(bodyData, &d); err != nil {
 		return nil, err
 	}
 	return &d, nil
@@ -146,11 +153,15 @@ func ReqToTask(req *http.Request) (*CommitedTask, error) {
 // ReqToCommand create command structure to run container
 // from POST request
 func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error) {
-	log.Printf("%#v", req.Body)
+	bodyData, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	logger := logs.Get()
+	logger.Tracef("new task request: %s", bodyData)
 	var d ReqBody
-	if err := json.NewDecoder(req.Body).Decode(&d); err != nil {
-		req.Body.Close()
-		log.Panicln(err)
+	if err := json.Unmarshal(bodyData, &d); err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -187,6 +198,7 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 	var cmdList []string
 	logCmd := fmt.Sprintf(">> %s%s 2>&1 ", ContainerLogFilePath, ContainerLogFileName)
 	ansibleCmd := fmt.Sprint(" if [ -e run.sh ];then chmod +x run.sh && ./run.sh;fi")
+
 	cmdList = append(cmdList, fmt.Sprintf("git clone %s %s &&", d.Repo, logCmd))
 	// get folder name
 	s := strings.Split(d.Repo, "/")
@@ -223,6 +235,24 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 		//cmdList = append(cmdList, fmt.Sprintf("%s %s&&%s", "terraform plan -var-file", d.Varfile, d.Extra))
 	}
 
+
+	// 允许为模板设置 IAC_DEBUG_TASK 环境变量来执行预设置的调试命令
+	if isDebug, ok := d.Env["IAC_DEBUG_TASK"]; ok {
+		if isDebug == "1" || strings.ToLower(isDebug) == "true" {
+			// 可以在 runner 程序启动时通过 IAC_DEBUG_COMMAND 环境变量设置 debug 命令
+			debugCommand := os.Getenv("IAC_DEBUG_COMMAND")
+			if debugCommand == "" {
+				count := d.Env["IAC_DEBUG_RUN_COUNT"]
+				if count == "" {
+					count = "60"
+				}
+				debugCommand = fmt.Sprintf("for I in `seq 1 %s`;do date && hostname && uptime; sleep 1; done", count)
+			}
+
+			cmdList = []string{fmt.Sprintf("%s %s", debugCommand, logCmd)}
+		}
+	}
+
 	cmdstr := ""
 	for _, v := range cmdList {
 		cmdstr = cmdstr + v
@@ -231,7 +261,7 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 	t = append(t, "sh")
 	t = append(t, "-c")
 	t = append(t, cmdstr)
-	fmt.Println(t)
+
 	c.Commands = t
 
 	// set timeout
