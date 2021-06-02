@@ -16,7 +16,7 @@ func (GitLab) ListRepos(c *ctx.GinRequestCtx) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().Tx())
+	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().DB())
 	if err != nil {
 		c.JSONResult(nil,e.New(e.DBError, err))
 		return
@@ -35,7 +35,7 @@ func (GitLab) ListBranches(c *ctx.GinRequestCtx) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().Tx())
+	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().DB())
 	if err != nil {
 		c.JSONResult(nil,e.New(e.DBError, err))
 		return
@@ -53,7 +53,7 @@ func (GitLab) GetReadmeContent(c *ctx.GinRequestCtx) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().Tx())
+	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().DB())
 	if err != nil {
 		c.JSONResult(nil,e.New(e.DBError, err))
 		return
@@ -71,7 +71,7 @@ func TemplateTfvarsSearch(c *ctx.GinRequestCtx){
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().Tx())
+	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().DB())
 	if err != nil {
 		c.JSONResult(nil,e.New(e.DBError, err))
 		return
