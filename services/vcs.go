@@ -25,8 +25,17 @@ func UpdateVcs(tx *db.Session, id uint, attrs models.Attrs) (vcs *models.Vcs, er
 	return
 }
 
-func QueryVcs(orgId uint, query *db.Session) *db.Session {
-	return query.Model(&models.Vcs{}).Where("org_id = ?", orgId)
+func QueryVcs(orgId uint, status, q string, query *db.Session) *db.Session {
+	query = query.Model(&models.Vcs{}).
+		Where("org_id = ?", orgId)
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+	if q != "" {
+		qs := "%" + q + "%"
+		query = query.Where("name LIKE ?", qs)
+	}
+	return query
 }
 
 func QueryVcsByVcsId(vcsId uint, query *db.Session) (*models.Vcs, e.Error) {
@@ -39,10 +48,10 @@ func QueryVcsByVcsId(vcsId uint, query *db.Session) (*models.Vcs, e.Error) {
 
 }
 
-func QueryEnableVcs(orgId uint, query *db.Session) (interface{},e.Error){
-	vcs:=make([]models.Vcs,0)
-	if err:=query.Model(&models.Vcs{}).Where("org_id = ? or org_id = 0", orgId).Where("status = 'enable'").Find(&vcs);err!=nil{
-		return nil, e.New(e.DBError,err)
+func QueryEnableVcs(orgId uint, query *db.Session) (interface{}, e.Error) {
+	vcs := make([]models.Vcs, 0)
+	if err := query.Model(&models.Vcs{}).Where("org_id = ? or org_id = 0", orgId).Where("status = 'enable'").Find(&vcs); err != nil {
+		return nil, e.New(e.DBError, err)
 	}
 	return vcs, nil
 }

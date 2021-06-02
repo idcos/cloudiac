@@ -18,27 +18,32 @@ func Register(g *gin.RouterGroup) {
 	auth := g.Group("/auth")
 	auth.POST("/login", w(handlers.User{}.Login))
 
-	o := g.Group("/", w(middleware.Auth))
-	o.GET("/org/search", w(handlers.Organization{}.Search))
-	o.GET("/org/detail", w(handlers.Organization{}.Detail))
-	o.GET("/user/getUserInfo", w(handlers.User{}.GetUserByToken))
-	o.PUT("/user/updateSelf", w(handlers.User{}.Update))
-	o.GET("/systemStatus/search", w(handlers.PortalSystemStatusSearch))
-	o.PUT("/consulTags/update", w(handlers.ConsulTagUpdate))
+	{
+		o := g.Group("/", w(middleware.Auth))
+		o.GET("/org/search", w(handlers.Organization{}.Search))
+		o.GET("/org/detail", w(handlers.Organization{}.Detail))
+		o.GET("/user/getUserInfo", w(handlers.User{}.GetUserByToken))
+		o.PUT("/user/updateSelf", w(handlers.User{}.Update))
+		o.GET("/systemStatus/search", w(handlers.PortalSystemStatusSearch))
+		o.PUT("/consulTags/update", w(handlers.ConsulTagUpdate))
+	}
 
 	// IaC管理员权限
-	sys := g.Group("/", w(middleware.Auth), w(middleware.IsAdmin))
 	{
+		sys := g.Group("/", w(middleware.Auth), w(middleware.IsAdmin))
+
 		sys.POST("/org/create", w(handlers.Organization{}.Create))
 		sys.PUT("/org/update", w(handlers.Organization{}.Update))
 		sys.PUT("/org/changeStatus", w(handlers.Organization{}.ChangeOrgStatus))
 
 		ctrl.Register(sys.Group("system"), &handlers.SystemConfig{})
 		ctrl.Register(sys.Group("token"), &handlers.Token{})
+
 	}
 
-	root := g.Group("/", w(middleware.Auth), w(middleware.AuthOrgId))
+
 	{
+		root := g.Group("/", w(middleware.Auth), w(middleware.AuthOrgId))
 		owner := root.Group("/", w(middleware.IsOrgOwner))
 		owner.GET("/user/search", w(handlers.User{}.Search))
 		owner.GET("/user/detail", w(handlers.User{}.Detail))
@@ -48,9 +53,9 @@ func Register(g *gin.RouterGroup) {
 
 		root.PUT("/user/update", w(handlers.User{}.Update))
 
-		root.GET("/gitlab/listRepos", w(handlers.GitLab{}.ListRepos))
-		root.GET("/gitlab/listBranches", w(handlers.GitLab{}.ListBranches))
-		root.GET("/gitlab/getReadme", w(handlers.GitLab{}.GetReadmeContent))
+		root.GET("/gitlab/listRepos", w(handlers.Vcs{}.ListRepos))
+		root.GET("/gitlab/listBranches", w(handlers.Vcs{}.ListBranches))
+		root.GET("/gitlab/getReadme", w(handlers.Vcs{}.GetReadmeContent))
 		ctrl.Register(root.Group("notification"), &handlers.Notification{})
 		ctrl.Register(root.Group("resourceAccount"), &handlers.ResourceAccount{})
 		ctrl.Register(root.Group("template"), &handlers.Template{})
@@ -64,16 +69,17 @@ func Register(g *gin.RouterGroup) {
 		root.GET("/task/last", w(handlers.Task{}.LastTask))
 
 		root.GET("/consulKv/search", w(handlers.ConsulKVSearch))
-		root.GET("/runnerList/search", w(handlers.RunnerListSearch))
+		root.GET("/runnerList/search", w(handlers.RunnerSearch))
 		root.GET("/templateTfvars/search", w(handlers.TemplateTfvarsSearch))
 		root.GET("/vcs/listEnableVcs", w(handlers.ListEnableVcs))
 		ctrl.Register(root.Group("vcs"), &handlers.Vcs{})
 	}
 
-	root.GET("/sse/hello/:filename", w(handlers.HelloSse))
-	root.GET("/sse/test", w(handlers.TestSSE))
+	//root.GET("/sse/hello/:filename", w(handlers.HelloSse))
+	//root.GET("/sse/test", w(handlers.TestSSE))
 
 	//api路径优化v1版本
+	o := g.Group("/", w(middleware.Auth))
 	{
 		o.GET("/org/search", w(handlers.Organization{}.Search))
 		o.GET("/org/detail", w(handlers.Organization{}.Detail))
@@ -84,6 +90,7 @@ func Register(g *gin.RouterGroup) {
 	}
 
 	// IaC管理员权限
+	sys := g.Group("/", w(middleware.Auth), w(middleware.IsAdmin))
 	{
 		sys.POST("/org/create", w(handlers.Organization{}.Create))
 		sys.PUT("/org/update", w(handlers.Organization{}.Update))
@@ -92,8 +99,10 @@ func Register(g *gin.RouterGroup) {
 		ctrl.Register(sys.Group("token"), &handlers.Token{})
 	}
 
+	root := g.Group("/", w(middleware.Auth), w(middleware.AuthOrgId))
+	owner := root.Group("/", w(middleware.IsOrgOwner))
+
 	{
-		owner := root.Group("/", w(middleware.IsOrgOwner))
 		owner.GET("/user/search", w(handlers.User{}.Search))
 		owner.GET("/user/detail", w(handlers.User{}.Detail))
 		owner.POST("/user/create", w(handlers.User{}.Create))
@@ -103,9 +112,6 @@ func Register(g *gin.RouterGroup) {
 
 	{
 		root.PUT("/user/update", w(handlers.User{}.Update))
-		root.GET("/gitlab/repos/search", w(handlers.GitLab{}.ListRepos))
-		root.GET("/gitlab/branches/search", w(handlers.GitLab{}.ListBranches))
-		root.GET("/gitlab/readme/search", w(handlers.GitLab{}.GetReadmeContent))
 		ctrl.Register(root.Group("notification"), &handlers.Notification{})
 		ctrl.Register(root.Group("resource/account"), &handlers.ResourceAccount{})
 
@@ -119,10 +125,13 @@ func Register(g *gin.RouterGroup) {
 		root.GET("/task/last", w(handlers.Task{}.LastTask))
 
 		root.GET("/consul/kv/search", w(handlers.ConsulKVSearch))
-		root.GET("/runner/list/search", w(handlers.RunnerListSearch))
+		root.GET("/runner/search", w(handlers.RunnerSearch))
 
 		ctrl.Register(root.Group("vcs"), &handlers.Vcs{})
 		root.GET("/vcs/enable/search", w(handlers.ListEnableVcs))
+		root.GET("/vcs/repo/search", w(handlers.Vcs{}.ListRepos))
+		root.GET("/vcs/branch/search", w(handlers.Vcs{}.ListBranches))
+		root.GET("/vcs/readme", w(handlers.Vcs{}.GetReadmeContent))
 
 	}
 
