@@ -61,7 +61,9 @@ const (
 	DsTypeProm   = "prom"
 
 	//作业状态
-	TaskPending  = "pending"
+	TaskPending   = "pending"
+	TaskAssigning = "assigning"
+
 	TaskRunning  = "running"
 	TaskTimeout  = "timeout"
 	TaskFailed   = "failed"
@@ -81,6 +83,7 @@ const (
 
 	Tfvar    = ".tfvars"
 	Playbook = "playbook."
+	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀
 )
 
 var (
