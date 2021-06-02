@@ -10,12 +10,12 @@ import (
 
 func CreateVcs(c *ctx.ServiceCtx, form *forms.CreateVcsForm) (interface{}, e.Error) {
 	vcs, err := services.CreateVcs(c.DB(), models.Vcs{
-		OrgId: 	  c.OrgId,
-		Name:    form.Name,
-		VcsType: form.VcsType,
-		Status:  form.Status,
-		Address: form.Address,
-		VcsToken:   form.VcsToken,
+		OrgId:    c.OrgId,
+		Name:     form.Name,
+		VcsType:  form.VcsType,
+		Status:   form.Status,
+		Address:  form.Address,
+		VcsToken: form.VcsToken,
 	})
 	if err != nil {
 		return nil, e.AutoNew(err, e.DBError)
@@ -46,8 +46,10 @@ func UpdateVcs(c *ctx.ServiceCtx, form *forms.UpdateVcsForm) (vcs *models.Vcs, e
 }
 
 func SearchVcs(c *ctx.ServiceCtx, form *forms.SearchVcsForm) (interface{}, e.Error) {
-	query := services.QueryVcs(c.OrgId, c.DB())
-	rs, _ := getPage(query, form, models.Vcs{})
+	rs, err := getPage(services.QueryVcs(c.OrgId, form.Status, form.Q, c.DB()), form, models.Vcs{})
+	if err != nil {
+		return nil, err
+	}
 	return rs, nil
 
 }
