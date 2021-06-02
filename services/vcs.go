@@ -26,10 +26,13 @@ func UpdateVcs(tx *db.Session, id uint, attrs models.Attrs) (vcs *models.Vcs, er
 }
 
 func QueryVcs(orgId uint, status, q string, query *db.Session) *db.Session {
-	query = query.Model(&models.Vcs{}).
-		Where("org_id = ?", orgId)
+	query = query.Model(&models.Vcs{})
 	if status != "" {
-		query = query.Where("status = ?", status)
+		query = query.Where("status = ?", status).
+			Where("org_id = ? or org_id = 0", orgId)
+	}else {
+		query = query.
+			Where("org_id = ?", orgId)
 	}
 	if q != "" {
 		qs := "%" + q + "%"
