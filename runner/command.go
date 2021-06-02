@@ -9,12 +9,14 @@ import (
 
 var initCommandTemplate = `set -e 
 export CLOUD_IAC_DIR={{.CloudIaCDir}}
-export TF_PLUGIN_CACHE_DIR={{.ProviderDir}}
+export CLOUD_IAC_WORKSPACE={{.Workspace}}
+export CLOUD_IAC_BACKEND_CONFIG=${CLOUD_IAC_DIR}/{{.BackendConfigName}}
+export TF_PLUGIN_CACHE_DIR={{.TFPluginCacheDir}}
 
-git clone {{.Repo}} {{.WorkingDir}} && \
-cd "{{.WorkingDir}}" && git checkout {{.RepoCommit}} && \
-ln -svf ${CLOUD_IAC_DIR}/{{.BackendConfigName}} ./_cloud_iac_backend.tf && \
-terraform init -plugin-dir=${TF_PLUGIN_CACHE_DIR} && \`
+git clone {{.Repo}} ${CLOUD_IAC_WORKSPACE} && \
+cd "${CLOUD_IAC_WORKSPACE}" && git checkout {{.RepoCommit}} && \
+ln -svf ${CLOUD_IAC_BACKEND_CONFIG}  ./_cloud_iac_backend.tf && \
+terraform init && \`
 
 const planCommandTemplate = `
 terraform plan {{if .VarFile}}-var-file={{.VarFile}}{{end}}
@@ -86,9 +88,9 @@ func GenScriptContent(context *ReqBody, saveTo string) error {
 	if err := initCommandTpl.Execute(saveFp, map[string]string{
 		"Repo":              context.Repo,
 		"RepoCommit":        context.RepoCommit,
-		"WorkingDir":        ContainerWorkingDir,
-		"ProviderDir":       ContainerProviderPath,
+		"Workspace":         ContainerWorkspace,
 		"CloudIaCDir":       ContainerIaCDir,
+		"TFPluginCacheDir":  ContainerPluginCachePath,
 		"BackendConfigName": BackendConfigName,
 	}); err != nil {
 		return err

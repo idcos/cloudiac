@@ -22,14 +22,17 @@ import (
 )
 
 func FollowTaskLog(c *ctx.GinRequestCtx) error {
-	logPath := c.Query("logPath")
-	// logPath example: "logs/ct-c2j2g5rn8qhqp9ku9a6g/run-c2mdu4ecie6qs8gmsmkgg"
-	parts := strings.Split(logPath, "/")
-	if len(parts) < 3 {
-		return fmt.Errorf("invalid log path: '%v'", logPath)
+	taskId := c.Query("taskId")
+	if taskId == "" {
+		// logPath example: "logs/ct-c2j2g5rn8qhqp9ku9a6g/run-c2mdu4ecie6qs8gmsmkgg"
+		logPath := c.Query("logPath")
+		parts := strings.Split(logPath, "/")
+		if len(parts) < 3 {
+			return fmt.Errorf("invalid log path: '%v'", logPath)
+		}
+		taskId = parts[len(parts)-1]
 	}
 
-	taskId := parts[len(parts)-1]
 	logger := logs.Get().WithField("func", "FollowTaskLog").WithField("taskId", taskId)
 
 	var (

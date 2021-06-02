@@ -2,6 +2,7 @@ package main
 
 import (
 	v1 "cloudiac/runner/api/v1"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -34,11 +35,50 @@ func main() {
 
 	common.ShowVersionIf(opt.Version)
 	configs.Init(opt.Config)
+	if err := checkConfigs(configs.Get()); err != nil {
+		panic(err)
+	}
+	ensureDirs()
+
 	conf := configs.Get().Log
 	logs.Init(conf.LogLevel, conf.LogMaxDays, "ct-runner")
-	common.ReRegisterService(opt.ReRegister, "CT-Runner")
 
+	common.ReRegisterService(opt.ReRegister, "CT-Runner")
 	StartServer()
+}
+
+func checkConfigs(c *configs.Config) error {
+	cases := []struct{
+		name string
+		value string
+	}{
+		{"runner.default_image", c.Runner.DefaultImage},
+		{"runner.provider_path", c.Runner.ProviderPath},
+		{"runner.plugin_cache_path", c.Runner.PluginCachePath},
+		{"runner.storage_path", c.Runner.StoragePath},
+	}
+
+	for _, c := range cases {
+		if c.value == "" {
+			return fmt.Errorf("configuration '%s' is empty", c.name)
+		}
+	}
+	return nil
+}
+
+// ensureDirs 确保依赖的目录存在
+func ensureDirs() error {
+	c := configs.Get().Runner
+	mkDir := func(path string) error {
+		return os.MkdirAll(c.ProviderPath, 0755)
+	}
+
+	for _, path := range []string{c.PluginCachePath, c.ProviderPath, c.StoragePath} {
+		if err := mkDir(path); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func StartServer() {

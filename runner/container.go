@@ -12,6 +12,7 @@ import (
 	"github.com/docker/docker/errdefs"
 	guuid "github.com/google/uuid"
 	"log"
+	"os"
 )
 
 func (task *CommitedTask) Cancel() error {
@@ -62,8 +63,8 @@ func (task *CommitedTask) Wait(ctx context.Context) (int64, error) {
 	respCh, errCh := cli.ContainerWait(ctx, task.ContainerId, container.WaitConditionNotRunning)
 	select {
 	case resp := <-respCh:
-		logger.Debugf("wait container resp: %#v", resp)
 		if resp.Error != nil {
+			logger.Warnf("wait container response status: %v, error: %v", resp.StatusCode, resp.Error)
 			return resp.StatusCode, fmt.Errorf(resp.Error.Message)
 		} else {
 			return resp.StatusCode, nil
@@ -89,8 +90,13 @@ func (cmd *Command) Create() error {
 	}
 
 	id := guuid.New()
-
 	conf := configs.Get()
+
+	// ensure cache path dir exist
+	if err := os.MkdirAll(conf.Runner.PluginCachePath, 0755); err != nil {
+		return err
+	}
+	log.Printf("starting command, task working directory: %s", cmd.TaskWorkdir)
 
 	cont, err := cli.ContainerCreate(
 		cmd.ContainerInstance.Context,
@@ -111,13 +117,19 @@ func (cmd *Command) Create() error {
 				},
 				{
 					Type:   mount.TypeBind,
-					Source: "/var/run/docker.sock",
-					Target: "/var/run/docker.sock",
+					Source: conf.Runner.ProviderPath,
+					Target: ContainerProviderPath,
+					ReadOnly: true,
 				},
 				{
 					Type:   mount.TypeBind,
-					Source: conf.Runner.ProviderPath,
-					Target: ContainerProviderPath,
+					Source: conf.Runner.PluginCachePath,
+					Target: ContainerPluginCachePath,
+				},
+				{
+					Type:   mount.TypeBind,
+					Source: "/var/run/docker.sock",
+					Target: "/var/run/docker.sock",
 				},
 			},
 		},

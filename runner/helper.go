@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -18,15 +17,6 @@ import (
 type IaCTemplate struct {
 	TemplateUUID string
 	TaskId       string
-}
-
-type StateStore struct {
-	SaveState           bool   `json:"save_state"`
-	Backend             string `json:"backend" default:"consul"`
-	Scheme              string `json:"scheme" default:"http"`
-	StateKey            string `json:"state_key"`
-	StateBackendAddress string `json:"state_backend_address"`
-	Lock                bool   `json:"lock" defalt:"true"`
 }
 
 // ReqBody from reqeust
@@ -195,25 +185,5 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, error) {
 	c.Timeout = d.Timeout
 	c.ContainerInstance = new(Container)
 	c.ContainerInstance.Context = context.Background()
-	log.Printf("new task command: %#v", c)
 	return c, &state, nil
-}
-
-func LineCounter(r io.Reader) (int, error) {
-	buf := make([]byte, 32*1024)
-	count := 0
-	lineSep := []byte{'\n'}
-
-	for {
-		c, err := r.Read(buf)
-		count += bytes.Count(buf[:c], lineSep)
-
-		switch {
-		case err == io.EOF:
-			return count, nil
-
-		case err != nil:
-			return count, err
-		}
-	}
 }
