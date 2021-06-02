@@ -1,8 +1,9 @@
-package utils
+package services
 
 import (
 	"cloudiac/libs/db"
 	"cloudiac/models"
+	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"github.com/jinzhu/gorm"
 )
@@ -24,8 +25,9 @@ func MaintenanceRunnerPerMax() {
 		Where("name = 'MAX_JOBS_PER_RUNNER'").First(&systemCfg); err != nil && err != gorm.ErrRecordNotFound {
 		logger.Debugf("db err: %v", err)
 	}
-	if Str2int(systemCfg.Value) > 0 {
-		UpdateRunnerMax(Str2int(systemCfg.Value))
+
+	if utils.Str2int(systemCfg.Value) > 0 {
+		UpdateRunnerMax(utils.Str2int(systemCfg.Value))
 	}
 
 }

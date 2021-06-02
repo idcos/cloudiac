@@ -1,12 +1,12 @@
 package main
 
 import (
+	task_manager2 "cloudiac/apps/task_manager"
 	"cloudiac/cmds/common"
 	"cloudiac/configs"
 	"cloudiac/libs/db"
 	"cloudiac/models"
 	"cloudiac/services"
-	"cloudiac/utils"
 	"cloudiac/utils/kafka"
 	"cloudiac/utils/logs"
 	"cloudiac/web"
@@ -61,8 +61,12 @@ func main() {
 	kafka.InitKafkaProducerBuilder()
 	//go services.RunTaskToRunning()
 	//go services.RunTaskState()
-	utils.MaintenanceRunnerPerMax()
-	go services.RunTask()
+	services.MaintenanceRunnerPerMax()
+
+	//go services.RunTask()
+
+	go task_manager2.Start(configs.Get().Consul.ServiceID)
+
 	//go http.ListenAndServe("0.0.0.0:6060", nil)
 	web.StartServer()
 }
@@ -70,12 +74,12 @@ func main() {
 func InitVcs(tx *db.Session) {
 	logger := logs.Get()
 	vcs := models.Vcs{
-		OrgId:   0,
-		Name:    "默认仓库",
-		VcsType: configs.Get().Gitlab.Type,
-		Status:  "enable",
-		Address: configs.Get().Gitlab.Url,
-		VcsToken:   configs.Get().Gitlab.Token,
+		OrgId:    0,
+		Name:     "默认仓库",
+		VcsType:  configs.Get().Gitlab.Type,
+		Status:   "enable",
+		Address:  configs.Get().Gitlab.Url,
+		VcsToken: configs.Get().Gitlab.Token,
 	}
 	exist, err := services.QueryVcs(0, tx).Exists()
 	if err != nil {
@@ -89,9 +93,9 @@ func InitVcs(tx *db.Session) {
 		}
 	} else {
 		attrs := models.Attrs{
-			"vcsType": configs.Get().Gitlab.Type,
-			"address": configs.Get().Gitlab.Url,
-			"VcsToken":   configs.Get().Gitlab.Token,
+			"vcsType":  configs.Get().Gitlab.Type,
+			"address":  configs.Get().Gitlab.Url,
+			"VcsToken": configs.Get().Gitlab.Token,
 		}
 		_, err = services.UpdateVcs(tx, 0, attrs)
 		if err != nil {

@@ -9,7 +9,7 @@ COMMIT=$(shell git rev-parse --short HEAD)
 
 GOLDFLAGS="-X cloudiac/consts.VERSION=$(VERSION) -X cloudiac/consts.BUILD=$(COMMIT)"
 GOBUILD=$(GOCMD) build -v -ldflags $(GOLDFLAGS)
-GORUN=IMS_NO_AUTH=1 $(GOCMD) run -v -ldflags $(GOLDFLAGS)
+GORUN=$(GOCMD) run -v -ldflags $(GOLDFLAGS)
 PB_PROTOC=protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative
 
 BUILD_DIR=$(PWD)/builds
@@ -32,10 +32,10 @@ runner: build-dir
 run: run-portal
 
 run-portal:
-	$(GORUN) ./cmds/portal -v
+	$(GORUN) ./cmds/portal -v -c config-portal.yml
 
 run-runner:
-	$(GORUN) ./cmds/runner -v
+	$(GORUN) ./cmds/runner -v -c config-runner.yml
 
 clean:
 	$(GOCLEAN) ./cmds/portal
