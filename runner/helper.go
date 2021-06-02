@@ -3,6 +3,7 @@ package runner
 import (
 	"bytes"
 	"cloudiac/configs"
+	"cloudiac/utils/logs"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,7 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
+	"path/filepath"
 )
 
 type IaCTemplate struct {
@@ -45,9 +46,9 @@ type ReqBody struct {
 }
 
 type CommitedTask struct {
-	TemplateUUID     string `json:"template_uuid"`
-	TaskId           string `json:"task_id"`
-	ContainerId      string `json:"container_id"`
+	TemplateId       string `json:"templateId"`
+	TaskId           string `json:"taskId"`
+	ContainerId      string `json:"containerId"`
 	LogContentOffset int    `json:"offset"`
 }
 
@@ -113,31 +114,33 @@ func ReadLogFile(filepath string, offset int, maxLines int) ([]string, error) {
 	return lines, nil
 }
 
-func GetTemplateTaskPath(templateUUID string, taskId string) string {
+func GetTaskWorkDir(templateUUID string, taskId string) string {
 	conf := configs.Get()
-	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePath, templateUUID, taskId)
-	return templateDir
+	return filepath.Join(conf.Runner.StoragePath, templateUUID, taskId)
 }
 
-func FetchTaskLog(templateUUID string, taskId string, contentOffset int) ([]string, error) {
-	conf := configs.Get()
-	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePath, templateUUID, taskId)
-	logFile := fmt.Sprintf("%s/%s", templateDir, ContainerLogFileName)
-	lines, err := ReadLogFile(logFile, contentOffset, MaxLinesPreRead)
-	return lines, err
+func FetchTaskLog(templateUUID string, taskId string) ([]byte, error) {
+	logFile := filepath.Join(GetTaskWorkDir(templateUUID, taskId), TaskLogName)
+	return ioutil.ReadFile(logFile)
 }
 
-func CreateTemplatePath(templateUUID string, taskId string) (string, error) {
-	conf := configs.Get()
-	templateDir := fmt.Sprintf("%s/%s/%s", conf.Runner.LogBasePath, templateUUID, taskId)
-	err := PathCreate(templateDir)
-	return templateDir, err
+func MakeTaskWorkDir(tplId string, taskId string) (string, error) {
+	workDir := GetTaskWorkDir(tplId, taskId)
+	err := PathCreate(workDir)
+	return workDir, err
 }
 
 func ReqToTask(req *http.Request) (*CommitedTask, error) {
+	bodyData, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	logger := logs.Get()
+	logger.Debugf("task status request: %s", bodyData)
+
 	var d CommitedTask
-	if err := json.NewDecoder(req.Body).Decode(&d); err != nil {
-		req.Body.Close()
+	if err := json.Unmarshal(bodyData, &d); err != nil {
 		return nil, err
 	}
 	return &d, nil
@@ -145,27 +148,22 @@ func ReqToTask(req *http.Request) (*CommitedTask, error) {
 
 // ReqToCommand create command structure to run container
 // from POST request
-func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error) {
-	log.Printf("%#v", req.Body)
+func ReqToCommand(req *http.Request) (*Command, *StateStore, error) {
+	bodyData, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	logger := logs.Get()
+	logger.Tracef("new task request: %s", bodyData)
 	var d ReqBody
-	if err := json.NewDecoder(req.Body).Decode(&d); err != nil {
-		req.Body.Close()
-		log.Panicln(err)
-		return nil, nil, nil, err
+	if err := json.Unmarshal(bodyData, &d); err != nil {
+		return nil, nil, err
 	}
 
 	c := new(Command)
 
-	//state := new(StateStore)
 	state := d.StateStore
-	// state.SaveState = d.StateStore.SaveState
-	// state.Backend = d.StateStore.Backend
-	// state.StateBackendAddress = d.StateStore.StateBackendAddress
-	// state.StateKey = d.StateStore.StateKey
-	iaCTemplate := &IaCTemplate{
-		TemplateUUID: d.TemplateUUID,
-		TaskId:       d.TaskID,
-	}
 
 	if d.DockerImage == "" {
 		conf := configs.Get()
@@ -174,73 +172,31 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, *IaCTemplate, error
 		c.Image = d.DockerImage
 	}
 
-	env := []string{
-		ContainerEnvTerraform,
-	}
 	for k, v := range d.Env {
-		env = append(env, fmt.Sprintf("%s=%s", k, v))
+		c.Env = append(c.Env, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	c.Env = env
-
-	// TODO(ZhengYue): 优化命令组装方式
-	var cmdList []string
-	logCmd := fmt.Sprintf(">> %s%s 2>&1 ", ContainerLogFilePath, ContainerLogFileName)
-	ansibleCmd := fmt.Sprint(" if [ -e run.sh ];then chmod +x run.sh && ./run.sh;fi")
-	cmdList = append(cmdList, fmt.Sprintf("git clone %s %s &&", d.Repo, logCmd))
-	// get folder name
-	s := strings.Split(d.Repo, "/")
-	f := s[len(s)-1]
-	f = f[:len(f)-4]
-
-	cmdList = append(cmdList, fmt.Sprintf("cd %s %s &&", f, logCmd))
-	cmdList = append(cmdList, fmt.Sprintf("git checkout  %s %s &&", d.RepoBranch, logCmd))
-	cmdList = append(cmdList, fmt.Sprintf("git checkout -b run_branch %s %s &&", d.RepoCommit, logCmd))
-	cmdList = append(cmdList, fmt.Sprintf("cp %sstate.tf . &&", ContainerLogFilePath))
-	cmdList = append(cmdList, fmt.Sprintf("terraform init  -plugin-dir %s %s &&", ContainerProviderPath, logCmd))
-	if d.Mode == "apply" {
-		log.Println("entering apply mode ...")
-		if d.Varfile != "" {
-			cmdList = append(cmdList, fmt.Sprintf("%s %s %s &&%s %s &&%s %s",
-				"terraform apply -auto-approve -var-file ", d.Varfile, logCmd, ansibleCmd, logCmd, d.Extra, logCmd))
-		} else {
-			cmdList = append(cmdList, fmt.Sprintf("%s %s &&%s %s &&%s %s", "terraform apply -auto-approve ", logCmd, ansibleCmd, logCmd, d.Extra, logCmd))
-		}
-
-	} else if d.Mode == "destroy" {
-		log.Println("entering destroy mode ...")
-		cmdList = append(cmdList, fmt.Sprintf("%s %s&&%s", "terraform destroy -auto-approve -var-file", d.Varfile, d.Extra))
-	} else if d.Mode == "pull" {
-		log.Println("show state info ...")
-		cmdList = append(cmdList, fmt.Sprintf("%s&&%s", "terraform state pull", d.Extra))
-	} else {
-		if d.Varfile != "" {
-			cmdList = append(cmdList, fmt.Sprintf("%s %s %s", "terraform plan -var-file ", d.Varfile, logCmd))
-		} else {
-			cmdList = append(cmdList, fmt.Sprintf("%s %s", "terraform plan  ", logCmd))
-		}
-
-		//cmdList = append(cmdList, fmt.Sprintf("%s %s&&%s", "terraform plan -var-file", d.Varfile, d.Extra))
+	workingDir, err := MakeTaskWorkDir(d.TemplateUUID, d.TaskID)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	cmdstr := ""
-	for _, v := range cmdList {
-		cmdstr = cmdstr + v
+	c.TaskWorkdir = workingDir
+	scriptPath := filepath.Join(c.TaskWorkdir, TaskScriptName)
+	if err := GenScriptContent(&d, scriptPath); err != nil {
+		return nil, nil, err
 	}
-	var t []string
-	t = append(t, "sh")
-	t = append(t, "-c")
-	t = append(t, cmdstr)
-	fmt.Println(t)
-	c.Commands = t
+
+	containerScriptPath := filepath.Join(ContainerIaCDir, TaskScriptName)
+	containerLogPath := filepath.Join(ContainerIaCDir, TaskLogName)
+	c.Commands = []string{"sh", "-c", fmt.Sprintf("%s >>%s 2>&1", containerScriptPath, containerLogPath)}
 
 	// set timeout
 	c.Timeout = d.Timeout
-
 	c.ContainerInstance = new(Container)
 	c.ContainerInstance.Context = context.Background()
-	log.Printf("%#v", c)
-	return c, &state, iaCTemplate, nil
+	log.Printf("new task command: %#v", c)
+	return c, &state, nil
 }
 
 func LineCounter(r io.Reader) (int, error) {
