@@ -55,6 +55,7 @@ func UpdateTemplate(tx *db.Session, id uint, attrs models.Attrs) (tpl *models.Te
 	return
 }
 
+
 func DetailTemplate(tx *db.Session, tId uint) (models.Template, e.Error) {
 	tpl := models.Template{}
 	if err := tx.Table(models.Template{}.TableName()).Where("id = ?", tId).First(&tpl); err != nil {
