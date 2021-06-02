@@ -128,7 +128,6 @@ func Register(g *gin.RouterGroup) {
 		root.GET("/runner/search", w(handlers.RunnerSearch))
 
 		ctrl.Register(root.Group("vcs"), &handlers.Vcs{})
-		root.GET("/vcs/enable/search", w(handlers.ListEnableVcs))
 		root.GET("/vcs/repo/search", w(handlers.Vcs{}.ListRepos))
 		root.GET("/vcs/branch/search", w(handlers.Vcs{}.ListBranches))
 		root.GET("/vcs/readme", w(handlers.Vcs{}.GetReadmeContent))
