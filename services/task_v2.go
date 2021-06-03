@@ -198,8 +198,6 @@ func WaitTaskResult(ctx context.Context, dbSess *db.Session, task *models.Task, 
 		return "", err
 	}
 
-	logger.Debugf("pull task status done")
-
 	updateM := map[string]interface{}{
 		"status": status,
 		"end_at": time.Now(),
@@ -212,21 +210,18 @@ func WaitTaskResult(ctx context.Context, dbSess *db.Session, task *models.Task, 
 		}
 	}
 
-	logger.Debugf("send workflow done")
 	//更新 task 状态
 	if _, err := dbSess.Model(&models.Task{}).
 		Where("id = ?", task.Id).Update(updateM); err != nil {
 		return status, err
 	}
 
-	logger.Debugf("update task status done")
 	if status == consts.TaskComplete {
 		// 解析日志输出，更新资源变更信息
 		tfInfo := ParseTfOutput(task.BackendInfo.LogFile)
 		models.UpdateAttr(dbSess.Where("id = ?", task.Id), &models.Task{}, tfInfo)
 	}
 
-	logger.Debugf("ready return")
 	return status, err
 }
 
