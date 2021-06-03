@@ -37,7 +37,7 @@ func StartTask(dbSess *db.Session, task *models.Task) (deadline time.Time, err e
 			task.Status = consts.TaskFailed
 			task.StatusDetail = fmt.Errorf("tplId '%d' not found", task.TemplateId).Error()
 			if _, err := dbSess.Model(&task).Update(&task); err != nil {
-				logger.Errorln(err)
+				logger.Errorf("update task error: %v", err)
 			}
 		}
 		logger.Errorf("query template '%d' error: %v", task.TemplateId, err)
@@ -94,7 +94,7 @@ func assignTask(dbSess *db.Session, tpl *models.Template, task *models.Task) err
 	} else {
 		task.Status = consts.TaskRunning
 		task.StatusDetail = ""
-		task.BackendInfo = getBackendInfo(task.BackendInfo, resp.Id)
+		task.BackendInfo.ContainerId = resp.Id
 		updateTask(task)
 	}
 	return err
@@ -114,8 +114,7 @@ func doAssignTask(orgGuid string, task *models.Task, tpl *models.Template) (
 		repoAddr = u.String()
 	}
 
-	taskBackend := make(map[string]interface{}, 0)
-	_ = json.Unmarshal(task.BackendInfo, &taskBackend)
+	backend := task.BackendInfo
 
 	//有状态云模版，以模版ID为路径，无状态云模版，以模版ID + 作业ID 为路径
 	var stateKey string
@@ -148,8 +147,7 @@ func doAssignTask(orgGuid string, task *models.Task, tpl *models.Template) (
 	header := &http.Header{}
 	header.Set("Content-Type", "application/json")
 
-	runnerAddr := taskBackend["backend_url"]
-	addr := fmt.Sprintf("%s%s", runnerAddr, consts.RunnerRunTaskURL)
+	addr := fmt.Sprintf("%s%s", backend.BackendUrl, consts.RunnerRunTaskURL)
 	logger.Infof("assign task to '%s'", addr)
 	logger.Debugf("post data: %s", utils.MustJSON(data))
 
@@ -200,6 +198,8 @@ func WaitTaskResult(ctx context.Context, dbSess *db.Session, task *models.Task, 
 		return "", err
 	}
 
+	logger.Debugf("pull task status done")
+
 	updateM := map[string]interface{}{
 		"status": status,
 		"end_at": time.Now(),
@@ -212,23 +212,21 @@ func WaitTaskResult(ctx context.Context, dbSess *db.Session, task *models.Task, 
 		}
 	}
 
+	logger.Debugf("send workflow done")
 	//更新 task 状态
 	if _, err := dbSess.Model(&models.Task{}).
 		Where("id = ?", task.Id).Update(updateM); err != nil {
 		return status, err
 	}
 
+	logger.Debugf("update task status done")
 	if status == consts.TaskComplete {
-		logPath := task.BackendInfo
-		path := map[string]interface{}{}
-		json.Unmarshal(logPath, &path)
-		if logFile, ok := path["log_file"].(string); ok {
-			// 解析日志输出，更新资源变更信息
-			tfInfo := ParseTfOutput(logFile)
-			models.UpdateAttr(dbSess.Where("id = ?", task.Id), &models.Task{}, tfInfo)
-		}
+		// 解析日志输出，更新资源变更信息
+		tfInfo := ParseTfOutput(task.BackendInfo.LogFile)
+		models.UpdateAttr(dbSess.Where("id = ?", task.Id), &models.Task{}, tfInfo)
 	}
 
+	logger.Debugf("ready return")
 	return status, err
 }
 
@@ -246,17 +244,15 @@ func doPullTaskStatus(ctx context.Context, dbSess *db.Session, taskId string, de
 	}
 	taskStatus = task.Status
 
-	taskBackend := make(map[string]interface{}, 0)
-	_ = json.Unmarshal(task.BackendInfo, &taskBackend)
-	runnerAddr := taskBackend["backend_url"]
-
+	backend := task.BackendInfo
+	runnerAddr := backend.BackendUrl
 	params := url.Values{}
 	params.Add("templateId", task.TemplateGuid)
 	params.Add("taskId", task.Guid)
-	params.Add("containerId", fmt.Sprintf("%s", taskBackend["container_id"]))
+	params.Add("containerId", fmt.Sprintf("%s", backend.ContainerId))
 	wsConn, err := utils.WebsocketDail(fmt.Sprintf("%s", runnerAddr), consts.RunnerTaskStateURL, params)
 	if err != nil {
-		logger.Errorln(err)
+		logger.Errorf("connect error: %v", err)
 		return taskStatus, err
 	}
 	defer utils.WebsocketClose(wsConn)
@@ -328,10 +324,10 @@ forLoop:
 	logger.Debugf("pull task status done, status=%s", taskStatus)
 
 	if taskStatus != consts.TaskRunning && len(lastMessage.LogContent) > 0 {
-		path := task.FullLogPath()
+		path := task.BackendInfo.LogFile
 		if err := logstorage.Get().Write(path, lastMessage.LogContent); err != nil {
 			logger.WithField("path", path).Errorf("write task log error: %v", err)
-			logger.Infof("log content: %s", lastMessage.LogContent)
+			logger.Infof("task log content: %s", lastMessage.LogContent)
 		}
 	}
 

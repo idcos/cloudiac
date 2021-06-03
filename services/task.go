@@ -213,13 +213,11 @@ var (
 	applyChangesLineRegex = regexp.MustCompile(`Apply complete! Resources: ([\d]+) added, ([\d]+) changed, ([\d]+) destroyed.`)
 )
 
-func ParseTfOutput(logPath string) map[string]interface{} {
+func ParseTfOutput(path string) map[string]interface{} {
 	loggers := logs.Get()
-	path := fmt.Sprintf("%s/%s", logPath, consts.TaskLogName)
-
 	content, err := logstorage.Get().Read(path)
 	if err != nil {
-		loggers.Error(err)
+		loggers.Errorf("read log file %s: %v", path, err)
 		return nil
 	}
 

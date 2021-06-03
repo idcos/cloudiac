@@ -70,9 +70,6 @@ func Register(g *gin.RouterGroup) {
 		ctrl.Register(root.Group("vcs"), &handlers.Vcs{})
 	}
 
-	root.GET("/sse/hello/:filename", w(handlers.HelloSse))
-	root.GET("/sse/test", w(handlers.TestSSE))
-
 	// TODO 增加鉴权
 	g.GET("/taskLog/sse", w(handlers.Task{}.FollowLogSse))
 	g.GET("/task/log/sse", w(handlers.Task{}.FollowLogSse))

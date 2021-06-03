@@ -1,7 +1,6 @@
 package apps
 
 import (
-	"cloudiac/configs"
 	"cloudiac/consts"
 	"cloudiac/consts/e"
 	"cloudiac/libs/ctx"
@@ -10,10 +9,10 @@ import (
 	"cloudiac/models/forms"
 	"cloudiac/services"
 	"cloudiac/utils"
-	"encoding/json"
 	"fmt"
 	"github.com/jinzhu/gorm"
 	"github.com/xanzy/go-gitlab"
+	"path/filepath"
 	"time"
 )
 
@@ -85,13 +84,13 @@ func DetailTask(c *ctx.ServiceCtx, form *forms.DetailTaskForm) (interface{}, e.E
 
 func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.Error) {
 	guid := utils.GenGuid("run")
-	conf := configs.Get()
-	logPath := fmt.Sprintf("%s/%s/%s", conf.Task.LogPath, form.TemplateGuid, guid)
-	b, _ := json.Marshal(map[string]interface{}{
-		"backend_url": fmt.Sprintf("http://%s:%d/api/v1", form.CtServiceIp, form.CtServicePort),
-		"ctServiceId": form.CtServiceId,
-		"log_file":    logPath,
-	})
+
+	logPath := filepath.Join(form.TemplateGuid, guid, consts.TaskLogName)
+	backend := models.TaskBackendInfo{
+		BackendUrl:  fmt.Sprintf("http://%s:%d/api/v1", form.CtServiceIp, form.CtServicePort),
+		CtServiceId: form.CtServiceId,
+		LogFile:     logPath,
+	}
 
 	tpl, err := services.GetTemplateByGuid(c.DB(), form.TemplateGuid)
 	if err != nil {
@@ -125,7 +124,7 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 		commitId = commit
 	}
 
-	task, err := services.CreateTask(c.DB().Debug(), models.Task{
+	task, err := services.CreateTask(c.DB(), models.Task{
 		TemplateId:   form.TemplateId,
 		TemplateGuid: form.TemplateGuid,
 		Guid:         guid,
@@ -133,16 +132,13 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 		Status:       consts.TaskPending,
 		Creator:      c.UserId,
 		Name:         form.Name,
-		BackendInfo:  models.JSON(b),
+		BackendInfo:  &backend,
 		CtServiceId:  form.CtServiceId,
 		CommitId:     commitId,
 	})
 	if err != nil {
 		return nil, err
 	}
-	//todo Task数量够多的情况下需要引入第三方组件
-	//go services.RunTaskToRunning(task, c.DB(), c.MustOrg().Guid)
-	//go services.StartTask(c.DB(), *task)
 	return task, nil
 }
 
