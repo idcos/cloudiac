@@ -38,3 +38,24 @@ func (o Template) Migrate(sess *db.Session) (err error) {
 
 	return nil
 }
+
+type TemplateAccessToken struct {
+	SoftDeleteModel
+
+	TplGuid     string `json:"tplGuid" form:"tplGuid" gorm:"not null"`
+	AccessToken string `json:"accessToken" form:"accessToken" gorm:"not null"`
+	Action      string `json:"action" form:"action"  gorm:"type:enum('plan','apply','compliance');default:'plan'"`
+}
+
+func (TemplateAccessToken) TableName() string {
+	return "iac_template_access_token"
+}
+
+func (o TemplateAccessToken) Migrate(sess *db.Session) (err error) {
+	err = o.AddUniqueIndex(sess, "unique__guid", "access_token")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
