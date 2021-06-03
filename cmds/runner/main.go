@@ -38,7 +38,9 @@ func main() {
 	if err := checkConfigs(configs.Get()); err != nil {
 		panic(err)
 	}
-	ensureDirs()
+	if err := ensureDirs(); err != nil {
+		panic(err)
+	}
 
 	conf := configs.Get().Log
 	logs.Init(conf.LogLevel, conf.LogMaxDays, "ct-runner")
