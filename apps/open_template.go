@@ -7,6 +7,7 @@ import (
 	"cloudiac/models"
 	"cloudiac/models/forms"
 	"cloudiac/services"
+	vcs2 "cloudiac/services/vcsrv"
 	"encoding/json"
 	"fmt"
 	"github.com/xanzy/go-gitlab"
@@ -58,7 +59,7 @@ func OpenDetailTemplate(c *ctx.ServiceCtx, gUid string) (interface{}, e.Error) {
 		return nil, e.New(e.DBError, fmt.Errorf("query vcs detail error: %v", er))
 	}
 	if vcs.VcsType == consts.GitLab {
-		git, err := services.GetGitConn(vcs.VcsToken, vcs.Address)
+		git, err := vcs2.GetGitConn(vcs.VcsToken, vcs.Address)
 		if err != nil {
 			return nil, err
 		}
@@ -72,7 +73,7 @@ func OpenDetailTemplate(c *ctx.ServiceCtx, gUid string) (interface{}, e.Error) {
 	}
 
 	if vcs.VcsType == consts.GitEA {
-		commit,err:=services.GetGiteaBranchCommitId(vcs,uint(tpl.RepoId),tpl.RepoBranch)
+		commit,err:= vcs2.GetGiteaBranchCommitId(vcs,uint(tpl.RepoId),tpl.RepoBranch)
 		if err != nil {
 			return nil, e.New(e.GitLabError, fmt.Errorf("query commit id error: %v", er))
 		}

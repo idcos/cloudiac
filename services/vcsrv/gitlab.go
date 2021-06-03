@@ -1,4 +1,4 @@
-package services
+package vcsrv
 
 import (
 	"cloudiac/consts"

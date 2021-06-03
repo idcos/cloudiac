@@ -5,7 +5,7 @@ import (
 	"cloudiac/libs/page"
 	"cloudiac/models"
 	"cloudiac/models/forms"
-	"cloudiac/services"
+	"cloudiac/services/vcsrv"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -39,7 +39,7 @@ func GetGiteaReadme(vcs *models.Vcs,form *forms.GetReadmeForm) (interface{}, e.E
 	if er != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
-	response, er := services.DoGiteaRequest(request, vcs.VcsToken)
+	response, er := vcsrv.DoGiteaRequest(request, vcs.VcsToken)
 	body, _ := ioutil.ReadAll(response.Body)
 
 	res := models.FileContent{
@@ -59,7 +59,7 @@ func ListGiteaRepoBranches(vcs *models.Vcs,form *forms.GetGitBranchesForm) ([]*B
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)
 	}
-	response, er := services.DoGiteaRequest(request, vcs.VcsToken)
+	response, er := vcsrv.DoGiteaRequest(request, vcs.VcsToken)
 	defer response.Body.Close()
 	body, _ := ioutil.ReadAll(response.Body)
 	rep := []map[string]interface{}{}
@@ -80,7 +80,7 @@ func GetGiteaRepoById(vcs *models.Vcs,repoId int) (string, e.Error) {
 	if err != nil {
 		return "", e.New(e.BadRequest, err)
 	}
-	response, err := services.DoGiteaRequest(request, vcs.VcsToken)
+	response, err := vcsrv.DoGiteaRequest(request, vcs.VcsToken)
 	if response == nil || err != nil {
 		return "", e.New(e.BadRequest, err)
 	}
@@ -108,7 +108,7 @@ func ListGiteaOrganizationRepos(vcs *models.Vcs, form *forms.GetGitProjectsForm)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
-	response, err := services.DoGiteaRequest(request, vcs.VcsToken)
+	response, err := vcsrv.DoGiteaRequest(request, vcs.VcsToken)
 	if response == nil || err != nil {
 		return "", e.New(e.BadRequest, err)
 	}

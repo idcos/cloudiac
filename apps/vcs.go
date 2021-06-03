@@ -21,7 +21,6 @@ func CreateVcs(c *ctx.ServiceCtx, form *forms.CreateVcsForm) (interface{}, e.Err
 		return nil, e.AutoNew(err, e.DBError)
 	}
 	return vcs, nil
-
 }
 
 func UpdateVcs(c *ctx.ServiceCtx, form *forms.UpdateVcsForm) (vcs *models.Vcs, err e.Error) {
