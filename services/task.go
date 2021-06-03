@@ -207,6 +207,7 @@ func getBackendInfo(backendInfo models.JSON, containerId string) []byte {
 	return b
 }
 
+
 func GetTFLog(logPath string) map[string]interface{} {
 	loggers := logs.Get()
 	path := fmt.Sprintf("%s/%s", logPath, consts.TaskLogName)
@@ -259,3 +260,4 @@ func GetTFLog(logPath string) map[string]interface{} {
 	}
 	return result
 }
+

@@ -253,6 +253,7 @@ type Task struct {
 	Guid        string    `json:"guid" form:"guid" `
 	TaskType    string    `json:"taskType" form:"taskType" `
 	CreatedAt   time.Time `json:"createdAt" form:"createdAt" `
+	EndAt       time.Time `json:"endAt" form:"endAt" `
 	CreatorName string    `json:"creatorName" form:"creatorName" `
 	CreatedTime int64     `json:"createdTime" form:"createdTime" `
 	EndTime     int64     `json:"endTime" form:"endTime" `
@@ -343,6 +344,7 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 				AllowApply:  task.AllowApply,
 				RepoBranch:  tpl.RepoBranch,
 				CtServiceId: task.CtServiceId,
+				EndAt:       *task.EndAt,
 			})
 		}
 	}
