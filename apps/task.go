@@ -38,6 +38,9 @@ func SearchTask(c *ctx.ServiceCtx, form *forms.SearchTaskForm) (interface{}, e.E
 		if err != nil {
 			return nil, e.New(e.DBError, err)
 		}
+		if user != nil {
+			resp.CreatorName = user.Name
+		}
 		resp.CreatorName = user.Name
 		resp.CreatedTime = time.Now().Unix() - resp.CreatedAt.Unix()
 		if resp.EndAt != nil {
@@ -77,6 +80,9 @@ func DetailTask(c *ctx.ServiceCtx, form *forms.DetailTaskForm) (interface{}, e.E
 	user, err := services.GetUserById(tx, resp.Creator)
 	if err != nil {
 		return nil, e.New(e.DBError, err)
+	}
+	if user != nil {
+		resp.CreatorName = user.Name
 	}
 	resp.CreatorName = user.Name
 	return resp, nil
@@ -139,6 +145,10 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 	if err != nil {
 		return nil, err
 	}
+
+	//发送通知
+	go services.SendMail(c.DB(), c.OrgId, task)
+
 	return task, nil
 }
 

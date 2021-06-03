@@ -13,14 +13,17 @@ const (
 type Organization struct {
 	SoftDeleteModel
 
-	Name        string `json:"name" gorm:"size:32;not null;comment:'组织名称'"`
-	Guid        string `json:"guid" gorm:"size:32;not null;comment:'组织GUID'"`
-	Description string `json:"description" gorm:"size:255;comment:'组织描述'"`
-	Status      string `json:"status" gorm:"type:enum('enable','disable','deleted');default:'enable';comment:'组织状态'"`
-	VcsType     string `json:"vcsType" gorm:"type:enum('gitlab','vmware','openstack');default:'gitlab';comment:'vcs类型'"`
-	VcsVersion  string `json:"vcsVersion" gorm:"size:32;comment:'vcs版本'"`
-	VcsAuthInfo string `json:"vcsAuthInfo" gorm:"size:128;comment:'vcs认证信息'"`
-	UserId      uint   `json:"userId" gorm:"not:null;comment:'创建人'"`
+	Name                   string `json:"name" gorm:"size:32;not null;comment:'组织名称'"`
+	Guid                   string `json:"guid" gorm:"size:32;not null;comment:'组织GUID'"`
+	Description            string `json:"description" gorm:"size:255;comment:'组织描述'"`
+	Status                 string `json:"status" gorm:"type:enum('enable','disable','deleted');default:'enable';comment:'组织状态'"`
+	VcsType                string `json:"vcsType" gorm:"type:enum('gitlab','vmware','openstack');default:'gitlab';comment:'vcs类型'"`
+	VcsVersion             string `json:"vcsVersion" gorm:"size:32;comment:'vcs版本'"`
+	VcsAuthInfo            string `json:"vcsAuthInfo" gorm:"size:128;comment:'vcs认证信息'"`
+	UserId                 uint   `json:"userId" gorm:"not:null;comment:'创建人'"`
+	DefaultRunnerAddr      string `json:"defaultRunnerAddr" grom:"not null;comment:'默认runner地址'"`
+	DefaultRunnerPort      uint   `json:"defaultRunnerPort" grom:"not null;comment:'默认runner端口'"`
+	DefaultRunnerServiceId string `json:"defaultRunnerServiceId" grom:"not null;comment:'默认runner-consul-serviceId'"`
 }
 
 type CodeRepo struct {
