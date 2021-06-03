@@ -2,6 +2,7 @@ package utils
 
 import (
 	"archive/zip"
+	"cloudiac/consts"
 	"cloudiac/utils/logs"
 	"crypto/aes"
 	"crypto/cipher"
@@ -361,4 +362,39 @@ func UintIsContain(items []uint, item uint) bool {
 		}
 	}
 	return false
+}
+
+// RetryFunc 通用重试函数，
+// param max, 最大重试次数，传 0 表示一直重试
+// param maxDelay, 最大重试等待时长
+// param run: 重试执行的函数，入数 retryN 为当前重试次数(0 base)，返回值分别为(继续重试?, error)
+// return: 最终 run() 返回的 error
+func RetryFunc(max int, maxDelay time.Duration, run func(retryN int) (bool, error)) error {
+	retryCount := 0
+	maxRetry := max // 最大重试次数(不含第一次)
+	for {
+		if retry, err := run(retryCount); err != nil && retry {
+			retryCount += 1
+			if maxRetry > 0 && retryCount > maxRetry {
+				return err
+			}
+
+			delay := time.Duration(retryCount) * 2 * time.Second
+			if delay > maxDelay { // 最大重试等待时长 10s
+				delay = maxDelay
+			}
+			time.Sleep(delay)
+			continue
+		} else {
+			return err
+		}
+	}
+}
+
+func TaskLogMessage(format string, args ...interface{}) string {
+	return fmt.Sprintf(consts.IacTaskLogPrefix+format, args...)
+}
+
+func TaskLogMsgBytes(format string, args ...interface{}) []byte {
+	return []byte(TaskLogMessage(format, args...))
 }

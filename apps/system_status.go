@@ -71,8 +71,8 @@ func ConsulKVSearch(key string) (interface{}, e.Error) {
 	return services.ConsulKVSearch(key)
 }
 
-func RunnerListSearch() (interface{}, e.Error) {
-	return services.RunnerListSearch()
+func RunnerSearch() (interface{}, e.Error) {
+	return services.RunnerSearch()
 }
 
 func ConsulTagUpdate(form forms.ConsulTagUpdateForm) (interface{}, e.Error) {
