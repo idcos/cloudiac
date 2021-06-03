@@ -94,7 +94,7 @@ func Register(g *gin.RouterGroup) {
 	{
 		sys.POST("/org/create", w(handlers.Organization{}.Create))
 		sys.PUT("/org/update", w(handlers.Organization{}.Update))
-		sys.PUT("/org/status/change", w(handlers.Organization{}.ChangeOrgStatus))
+		sys.PUT("/org/status/update", w(handlers.Organization{}.ChangeOrgStatus))
 		ctrl.Register(sys.Group("system"), &handlers.SystemConfig{})
 		ctrl.Register(sys.Group("token"), &handlers.Token{})
 	}
