@@ -63,16 +63,20 @@ func Register(g *gin.RouterGroup) {
 		//ctrl.Register(root.Group("task"), &handlers.Task{})
 
 		ctrl.Register(root.Group("taskComment"), &handlers.TaskComment{})
+		ctrl.Register(root.Group("webhook"), &handlers.AccessToken{})
 
 		//root.GET("/template/overview", w(handlers.Template{}.Overview))
 		root.GET("/template/stateSearch", w(handlers.Template{}.Overview))
 		//root.GET("/task/last", w(handlers.Task{}.LastTask))
 
 		root.GET("/consulKv/search", w(handlers.ConsulKVSearch))
+
 		root.GET("/runnerList/search", w(handlers.RunnerSearch))
 		root.GET("/templateTfvars/search", w(handlers.TemplateTfvarsSearch))
 		root.GET("/vcs/listEnableVcs", w(handlers.ListEnableVcs))
+
 		//ctrl.Register(root.Group("vcs"), &handlers.Vcs{})
+
 	}
 
 	//root.GET("/sse/hello/:filename", w(handlers.HelloSse))
