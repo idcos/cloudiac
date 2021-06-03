@@ -21,18 +21,22 @@ func DoGiteaRequest(request *http.Request, token string) (*http.Response, error)
 	return response, nil
 }
 
+func GetGiteaUrl(address string) string {
+	return strings.TrimSuffix(address, "/")
+}
+
 func GetGiteaTemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch,filePath string) ([]string, error) {
 	repo, err := GetGiteaRepoById(vcs, int(repoId))
 	if err != nil {
 		return nil, err
 	}
 	var path string
+	vcsRawPath := GetGiteaUrl(vcs.Address)
 	if filePath!="" {
-		path = vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0", repo,filePath)
+		path = vcsRawPath + "/api/v1" + fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0", repo,filePath)
 	}else {
-		path = vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/contents?limit=0&page=0", repo)
+		path = vcsRawPath + "/api/v1" + fmt.Sprintf("/repos/%s/contents?limit=0&page=0", repo)
 	}
-
 	request, er := http.NewRequest("GET", path, nil)
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)
@@ -63,8 +67,8 @@ func GetGiteaTemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch,fileP
 }
 
 func GetGiteaRepoById(vcs *models.Vcs, repoId int) (string, e.Error) {
-
-	path := vcs.Address + fmt.Sprintf("/api/v1/repositories/%d", repoId)
+	vcsRawPath := GetGiteaUrl(vcs.Address)
+	path := vcsRawPath + fmt.Sprintf("/api/v1/repositories/%d", repoId)
 	request, err := http.NewRequest("GET", path, nil)
 	if err != nil {
 		return "", e.New(e.BadRequest, err)
@@ -90,7 +94,8 @@ func GetGiteaBranchCommitId(vcs *models.Vcs, repoId uint, repoBranch string) (st
 	if err != nil {
 		return "", err
 	}
-	path := vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/branches/%s?limit=0&page=0", repo, repoBranch)
+	vcsRawPath := GetGiteaUrl(vcs.Address)
+	path := vcsRawPath + "/api/v1" + fmt.Sprintf("/repos/%s/branches/%s?limit=0&page=0", repo, repoBranch)
 	request, er := http.NewRequest("GET", path, nil)
 	if er != nil {
 		return "", e.New(e.BadRequest, er)
@@ -102,8 +107,8 @@ func GetGiteaBranchCommitId(vcs *models.Vcs, repoId uint, repoBranch string) (st
 	json.Unmarshal(body, &rep)
 	//return branchList, nil
 	var commit string
-	if _, ok := rep["commit"].(string); ok {
-		commit = rep["commit"].(string)
+	if _, ok := rep["commit"].(map[string]interface{}); ok {
+		commit =  rep["commit"].(map[string]interface{})["id"].(string)
 	}
 	return commit, nil
 

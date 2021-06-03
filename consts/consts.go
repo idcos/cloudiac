@@ -61,7 +61,9 @@ const (
 	DsTypeProm   = "prom"
 
 	//作业状态
-	TaskPending  = "pending"
+	TaskPending   = "pending"
+	TaskAssigning = "assigning"
+
 	TaskRunning  = "running"
 	TaskTimeout  = "timeout"
 	TaskFailed   = "failed"
@@ -78,6 +80,8 @@ const (
 	WorkFlow               = "workflow"
 	GitLab                 = "gitlab"
 	GitEA                  = "gitea"
+
+	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀
 )
 
 var (
@@ -92,5 +96,12 @@ var (
 			"password": "password",
 		},
 		"huawei": {},
+	}
+	StatusTranslation = map[string]string{
+		"complete": "成功",
+		"failed":   "失败",
+		"running":  "运行中",
+		"timeout":  "超时",
+		"pending":  "排队中",
 	}
 )

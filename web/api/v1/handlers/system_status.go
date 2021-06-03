@@ -15,8 +15,8 @@ func ConsulKVSearch(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.ConsulKVSearch(key))
 }
 
-func RunnerListSearch(c *ctx.GinRequestCtx) {
-	c.JSONResult(apps.RunnerListSearch())
+func RunnerSearch(c *ctx.GinRequestCtx) {
+	c.JSONResult(apps.RunnerSearch())
 }
 
 func ConsulTagUpdate(c *ctx.GinRequestCtx) {

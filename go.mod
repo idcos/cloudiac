@@ -19,6 +19,7 @@ require (
 	github.com/gomodule/redigo v1.8.4
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/mux v1.8.0 // indirect
+	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/consul/api v1.8.1
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jinzhu/gorm v1.9.16
@@ -32,6 +33,7 @@ require (
 	github.com/onsi/gomega v1.11.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rs/xid v1.2.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/streadway/amqp v1.0.0
@@ -39,6 +41,8 @@ require (
 	github.com/xanzy/go-gitlab v0.47.0
 	golang.org/x/crypto v0.0.0-20210314154223-e6e6c4f2bb5b
 	google.golang.org/grpc v1.36.0 // indirect
+	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
+	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools/v3 v3.0.3 // indirect
 )

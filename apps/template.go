@@ -253,6 +253,7 @@ type Task struct {
 	Guid        string    `json:"guid" form:"guid" `
 	TaskType    string    `json:"taskType" form:"taskType" `
 	CreatedAt   time.Time `json:"createdAt" form:"createdAt" `
+	EndAt       time.Time `json:"endAt" form:"endAt" `
 	CreatorName string    `json:"creatorName" form:"creatorName" `
 	CreatedTime int64     `json:"createdTime" form:"createdTime" `
 	EndTime     int64     `json:"endTime" form:"endTime" `
@@ -298,10 +299,8 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 		if index == 0 {
 			taskLastUpdatedAt = task.CreatedAt
 		}
-		user, err := services.GetUserById(tx, task.Creator)
-		if err != nil {
-			return nil, e.New(e.DBError, err)
-		}
+		user, _ := services.GetUserById(tx, task.Creator)
+
 		if task.TaskType == consts.TaskPlan {
 			if task.Status == consts.TaskFailed || task.Status == consts.TaskTimeout {
 				taskPlanFailedCount++
@@ -319,16 +318,22 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 		}
 
 		// timeout也算失败
-		activeCreatorName = append(activeCreatorName, user.Name)
+		if user != nil {
+			activeCreatorName = append(activeCreatorName, user.Name)
+		}
 		//取最新的3个任务
 		if index < 3 {
+			var username string
+			if user != nil {
+				username = user.Name
+			}
 			taskList = append(taskList, Task{
 				Name:        task.Name,
 				Status:      task.Status,
 				Guid:        task.Guid,
 				TaskType:    task.TaskType,
 				CreatedAt:   task.CreatedAt,
-				CreatorName: user.Name,
+				CreatorName: username,
 				CommitId:    task.CommitId,
 				CreatedTime: time.Now().Unix() - task.CreatedAt.Unix(),
 				EndTime:     time.Now().Unix() - task.EndAt.Unix(),
@@ -339,6 +344,7 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 				AllowApply:  task.AllowApply,
 				RepoBranch:  tpl.RepoBranch,
 				CtServiceId: task.CtServiceId,
+				EndAt:       *task.EndAt,
 			})
 		}
 	}
@@ -355,9 +361,10 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 			taskAvgApplyTime = taskApplyCount / taskAvgApplyTimeCount
 		}
 	}
-	user, err := services.GetUserById(tx, tpl.Creator)
-	if err != nil {
-		return nil, e.New(e.DBError, err)
+	user, _ := services.GetUserById(tx, tpl.Creator)
+	var name string
+	if user != nil {
+		name = user.Name
 	}
 	return OverviewTemplateResp{
 		RepoAddr:               tpl.RepoAddr,
@@ -375,6 +382,6 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 		ActiveCreatorName:      utils.RemoveDuplicateElement(activeCreatorName),
 		Task:                   taskList,
 		TaskLastUpdatedAt:      taskLastUpdatedAt,
-		CreatorName:            user.Name,
+		CreatorName:            name,
 	}, nil
 }

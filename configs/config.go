@@ -71,16 +71,23 @@ type TaskConfig struct {
 }
 
 type RunnerConfig struct {
-	AssetPath    string `yaml:"asset_path"`
-	LogBasePath  string `yaml:"log_base_path"`
 	DefaultImage string `yaml:"default_image"`
+	StoragePath  string `yaml:"storage_path"`
 	ProviderPath string `yaml:"provider_path"`
-	MountPath    string `yaml:"mount_path" `
 }
 
 type LogConfig struct {
 	LogMaxDays int    `yaml:"log_max_days"` // 日志文件保留天数, 默认 7
 	LogLevel   string `yaml:"log_level"`
+}
+
+type SMTPServerConfig struct {
+	Addr     string `yaml:"addr"`
+	UserName string `yaml:"username"`
+	Password string `yaml:"password"`
+
+	From     string `yaml:"from"`
+	FromName string `yaml:"fromName"`
 }
 
 func (ut *yamlTimeDuration) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -110,6 +117,7 @@ type Config struct {
 	Task                    TaskConfig       `yaml:"task"`
 	Log                     LogConfig        `yaml:"log"`
 	Kafka                   KafkaConfig      `yaml:"kafka"`
+	SMTPServer              SMTPServerConfig `yaml:"smtpServer"`
 }
 
 var (

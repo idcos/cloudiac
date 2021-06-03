@@ -66,7 +66,7 @@ func ConsulKVSearch(key string) (interface{}, e.Error) {
 
 }
 
-func RunnerListSearch() (interface{}, e.Error) {
+func RunnerSearch() (interface{}, e.Error) {
 	resp := make([]*api.AgentService, 0)
 
 	conf := configs.Get()

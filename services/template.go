@@ -55,6 +55,7 @@ func UpdateTemplate(tx *db.Session, id uint, attrs models.Attrs) (tpl *models.Te
 	return
 }
 
+
 func DetailTemplate(tx *db.Session, tId uint) (models.Template, e.Error) {
 	tpl := models.Template{}
 	if err := tx.Table(models.Template{}.TableName()).Where("id = ?", tId).First(&tpl); err != nil {
@@ -83,10 +84,8 @@ func OverviewTemplateTask(tx *db.Session, tId uint) (task []models.Task, err e.E
 func GetTemplateByGuid(tx *db.Session, tGuid string) (models.Template, e.Error) {
 	tpl := models.Template{}
 	if err := tx.Table(models.Template{}.TableName()).
-		Where("guid = ?", tGuid).
-		//Limit(3).
-		Find(&tpl); err != nil {
-		return models.Template{}, e.New(e.DBError, err)
+		Where("guid = ?", tGuid).First(&tpl); err != nil {
+		return models.Template{}, e.New(e.DBError, fmt.Errorf("template '%s' not found", tGuid))
 	}
 	return tpl, nil
 }

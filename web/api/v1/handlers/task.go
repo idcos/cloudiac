@@ -42,3 +42,11 @@ func (Task) LastTask(c *ctx.GinRequestCtx) {
 	}
 	c.JSONResult(apps.LastTask(c.ServiceCtx(), form))
 }
+
+func (Task) FollowLogSse(c *ctx.GinRequestCtx) {
+	defer c.SSEvent("end", "end")
+
+	if err := apps.FollowTaskLog(c); err != nil {
+		c.SSEvent("error", err.Error())
+	}
+}
