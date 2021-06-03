@@ -25,26 +25,32 @@ type CreateNotificationCfgForm struct {
 
 type DeleteNotificationCfgForm struct {
 	BaseForm
-	Id  uint  `form:"id" json:"id" binding:"required"`
+	Id uint `form:"id" json:"id" binding:"required"`
 }
 
 type CreateOrganizationForm struct {
 	BaseForm
-	Name        string `form:"name" json:"name" binding:"required,gte=2,lte=32"`
-	Description string `form:"description" json:"description" binding:""`
-	VcsType     string `form:"vcsType" json:"vcsType" binding:""`
-	VcsVersion  string `form:"vcsVersion" json:"vcsVersion" binding:""`
-	VcsAuthInfo string `form:"vcsAuthInfo" json:"vcsAuthInfo" binding:""`
+	Name                   string `form:"name" json:"name" binding:"required,gte=2,lte=32"`
+	Description            string `form:"description" json:"description" binding:""`
+	VcsType                string `form:"vcsType" json:"vcsType" binding:""`
+	VcsVersion             string `form:"vcsVersion" json:"vcsVersion" binding:""`
+	VcsAuthInfo            string `form:"vcsAuthInfo" json:"vcsAuthInfo" binding:""`
+	DefaultRunnerAddr      string `json:"defaultRunnerAddr" `
+	DefaultRunnerPort      uint   `json:"defaultRunnerPort" `
+	DefaultRunnerServiceId string `json:"defaultRunnerServiceId"`
 }
 
 type UpdateOrganizationForm struct {
 	BaseForm
-	Id          uint   `form:"id" json:"id" binding:""`
-	Name        string `form:"name" json:"name" binding:""`
-	Description string `form:"description" json:"description" binding:"max=255"`
-	VcsType     string `form:"vcsType" json:"vcsType" binding:""`
-	VcsVersion  string `form:"vcsVersion" json:"vcsVersion" binding:""`
-	VcsAuthInfo string `form:"vcsAuthInfo" json:"vcsAuthInfo" binding:""`
+	Id                     uint   `form:"id" json:"id" binding:""`
+	Name                   string `form:"name" json:"name" binding:""`
+	Description            string `form:"description" json:"description" binding:"max=255"`
+	VcsType                string `form:"vcsType" json:"vcsType" binding:""`
+	VcsVersion             string `form:"vcsVersion" json:"vcsVersion" binding:""`
+	VcsAuthInfo            string `form:"vcsAuthInfo" json:"vcsAuthInfo" binding:""`
+	DefaultRunnerAddr      string `json:"defaultRunnerAddr" `
+	DefaultRunnerPort      uint   `json:"defaultRunnerPort" `
+	DefaultRunnerServiceId string `json:"defaultRunnerServiceId"`
 }
 
 type SearchOrganizationForm struct {

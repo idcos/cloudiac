@@ -18,13 +18,16 @@ func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (
 
 	guid := utils.GenGuid("org")
 	org, err := services.CreateOrganization(c.DB(), models.Organization{
-		Name:        form.Name,
-		Guid:        guid,
-		Description: form.Description,
-		UserId:      c.UserId,
-		VcsType:     form.VcsType,
-		VcsVersion:  form.VcsVersion,
-		VcsAuthInfo: form.VcsAuthInfo,
+		Name:                   form.Name,
+		Guid:                   guid,
+		Description:            form.Description,
+		UserId:                 c.UserId,
+		VcsType:                form.VcsType,
+		VcsVersion:             form.VcsVersion,
+		VcsAuthInfo:            form.VcsAuthInfo,
+		DefaultRunnerServiceId: form.DefaultRunnerServiceId,
+		DefaultRunnerPort:      form.DefaultRunnerPort,
+		DefaultRunnerAddr:      form.DefaultRunnerAddr,
 	})
 	if err != nil {
 		return nil, e.AutoNew(err, e.DBError)
@@ -88,6 +91,18 @@ func UpdateOrganization(c *ctx.ServiceCtx, form *forms.UpdateOrganizationForm) (
 
 	if form.HasKey("vcsAuthInfo") {
 		attrs["vcs_auth_info"] = form.VcsAuthInfo
+	}
+
+	if form.HasKey("defaultRunnerAddr") {
+		attrs["default_runner_addr"] = form.DefaultRunnerAddr
+	}
+
+	if form.HasKey("defaultRunnerPort") {
+		attrs["default_runner_port"] = form.DefaultRunnerPort
+	}
+
+	if form.HasKey("defaultRunnerServiceId") {
+		attrs["default_runner_serviceId"] = form.DefaultRunnerServiceId
 	}
 
 	org, err = services.UpdateOrganization(c.DB(), form.Id, attrs)
