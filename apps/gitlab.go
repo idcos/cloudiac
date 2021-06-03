@@ -5,7 +5,7 @@ import (
 	"cloudiac/libs/page"
 	"cloudiac/models"
 	"cloudiac/models/forms"
-	"cloudiac/services"
+	"cloudiac/services/vcsrv"
 	"encoding/json"
 	"time"
 )
@@ -21,7 +21,7 @@ type Projects struct {
 }
 
 func ListOrganizationRepos(vcs *models.Vcs,form *forms.GetGitProjectsForm) (interface{}, e.Error) {
-	projects, total, err := services.ListOrganizationReposById(vcs, form)
+	projects, total, err := vcsrv.ListOrganizationReposById(vcs, form)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ type Branches struct {
 }
 
 func ListRepositoryBranches(vcs *models.Vcs, form *forms.GetGitBranchesForm) (brans []*Branches, err e.Error) {
-	branches, err := services.ListRepositoryBranches(vcs, form)
+	branches, err := vcsrv.ListRepositoryBranches(vcs, form)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func ListRepositoryBranches(vcs *models.Vcs, form *forms.GetGitBranchesForm) (br
 }
 
 func GetReadmeContent(vcs *models.Vcs, form *forms.GetReadmeForm) (interface{}, e.Error) {
-	content, err := services.GetReadmeContent(vcs, form)
+	content, err := vcsrv.GetReadmeContent(vcs, form)
 	if err != nil {
 		return nil, nil
 	}
@@ -74,5 +74,5 @@ func GetReadmeContent(vcs *models.Vcs, form *forms.GetReadmeForm) (interface{}, 
 }
 
 func TemplateTfvarsSearch(vcs *models.Vcs,form *forms.TemplateTfvarsSearchForm) (interface{}, e.Error) {
-	return services.TemplateTfvarsSearch(vcs, form.RepoId, form.RepoBranch)
+	return vcsrv.TemplateTfvarsSearch(vcs, form.RepoId, form.RepoBranch)
 }
