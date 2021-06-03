@@ -68,9 +68,10 @@ const (
 	TaskTimeout  = "timeout"
 	TaskFailed   = "failed"
 	TaskComplete = "complete"
-	TaskLogName  = "runner.log"
-	TaskApply    = "apply"
-	TaskPlan     = "plan"
+
+	TaskLogName = "runner.log"
+	TaskApply   = "apply"
+	TaskPlan    = "plan"
 
 	ResourceAccountDisable = "disable"
 	ResourceAccountEnable  = "enable"

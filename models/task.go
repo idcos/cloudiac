@@ -10,27 +10,14 @@ import (
 	"time"
 )
 
-const (
-	PENDING  = "pending"
-	RUNNING  = "running"
-	FAILED   = "failed"
-	COMPLETE = "complete"
-	TIMEOUT  = "timeout"
-)
-
-const (
-	PLAN  = "plan"
-	APPLY = "apply"
-)
-
 type Task struct {
 	SoftDeleteModel
 	Guid          string     `json:"guid" gorm:"not null;comment:'任务guid'"`
 	Name          string     `json:"name" gorm:"not null;comment:'任务名称'"`
 	TemplateGuid  string     `json:"templateGuid" gorm:"size:32;not null;comment:'模板GUID'"`
 	TemplateId    uint       `json:"templateId" gorm:"size:32;not null;comment:'模板ID'"`
-	TaskType      string     `json:"taskType" gorm:"type:enum('plan','apply');not null;comment:'作业类型'"`
-	Status        string     `json:"status"` // gorm 配置见 Migrate()
+	TaskType      string     `json:"taskType"` // gorm 配置见 Migrate()
+	Status        string     `json:"status"`   // gorm 配置见 Migrate()
 	StatusDetail  string     `json:"statusDetail" gorm:"comment:'状态说明信息'"`
 	BackendInfo   JSON       `json:"backendInfo" gorm:"type:json;null;comment:'执行信息'" json:"backend_info"`
 	Creator       uint       `json:"creator" gorm:"not null;comment:'创建人'"`
@@ -85,12 +72,24 @@ func (t *Task) Migrate(sess *db.Session) (err error) {
 		return err
 	}
 
-	// status 字段通过 Migrate 来维护 enum，确保新增加类型生效
-	err = sess.DB().ModifyColumn("status",
-		"ENUM('pending','running','failed','complete','timeout','assigning') "+
-			"DEFAULT 'pending' COMMENT '作业状态'").Error
-	if err != nil {
-		return err
+	// 以下 column 通过 Migrate 来维护，确保新增加的 enum 生效
+	columnDefines := []struct {
+		column     string
+		typeDefine string
+	}{
+		{
+			"status",
+			`ENUM('pending','running','failed','complete','timeout','assigning') DEFAULT 'pending' COMMENT '作业状态'`,
+		},
+		{
+			"task_type",
+			`ENUM('plan','apply','destroy','pull','debug') NOT NULL COMMENT '作业类型'`,
+		},
+	}
+	for _, cd := range columnDefines {
+		if err := sess.DB().ModifyColumn(cd.column, cd.typeDefine).Error; err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -212,7 +212,7 @@ func WaitTaskResult(ctx context.Context, dbSess *db.Session, task *models.Task, 
 		}
 	}
 
-	//更新task状态
+	//更新 task 状态
 	if _, err := dbSess.Model(&models.Task{}).
 		Where("id = ?", task.Id).Update(updateM); err != nil {
 		return status, err
@@ -224,8 +224,7 @@ func WaitTaskResult(ctx context.Context, dbSess *db.Session, task *models.Task, 
 		json.Unmarshal(logPath, &path)
 		if logFile, ok := path["log_file"].(string); ok {
 			// 解析日志输出，更新资源变更信息
-			runnerFilePath := logFile
-			tfInfo := GetTFLog(runnerFilePath)
+			tfInfo := ParseTfOutput(logFile)
 			models.UpdateAttr(dbSess.Where("id = ?", task.Id), &models.Task{}, tfInfo)
 		}
 	}
