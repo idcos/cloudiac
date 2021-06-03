@@ -41,13 +41,7 @@ func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface
 		"backend_url": fmt.Sprintf("http://%s:%d/api/v1", tpl.DefaultRunnerAddr, tpl.DefaultRunnerPort),
 		"ctServiceId": conf.Consul.ServiceID,
 		"log_file":    logPath,
-		"log_offset":  0,
 	})
-
-	org, err := services.GetOrganizationById(tx, tpl.OrgId)
-	if err != nil {
-		return nil, err
-	}
 
 	vars := GetResourceAccount(form.Account, form.Vars, tpl.TplType)
 	jsons, _ := json.Marshal(vars)
@@ -68,7 +62,8 @@ func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface
 	if err != nil {
 		return nil, err
 	}
-	go services.RunTaskToRunning(task, c.DB().Debug(), org.Guid)
+	//go services.RunTaskToRunning(task, c.DB().Debug(), org.Guid)
+	//go services.StartTask(c.DB(), *task)
 
 	return task, nil
 }

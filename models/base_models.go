@@ -18,7 +18,7 @@ type Modeler interface {
 }
 
 type BaseModel struct {
-	Id uint `gorm:"primary_key" json:"id" csv:"id" tsdb:"-"`
+	Id uint `gorm:"primary_key" json:"id"`
 }
 
 func (BaseModel) Migrate(*db.Session) error {

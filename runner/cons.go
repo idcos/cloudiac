@@ -1,23 +1,15 @@
 package runner
 
-const AssetPath = "/"
+import "time"
 
-const ContainerLogPaht = "/var/run/"
+// 以下常量定义的是 runner 启动任务后容器内部的路径，不受配置文件响应
 
-const StaticFilePath = "/usr/yunji/cloudiac/tmp"
+const ContainerWorkingDir = "/workspace"
+const ContainerIaCDir = "/iac"
+const ContainerProviderPath = "/providers"
 
-const DefaultImage = "mt5225/tf-ansible:v0.0.1"
+const TaskLogName = "runner.log"
+const TaskScriptName = "run.sh"
+const BackendConfigName = "backend.tf"
 
-const ContainerLogFilePath = "/usr/yunji/cloudiac/logs/"
-
-const ContainerProviderPath = "/usr/yunji/cloudiac/provider"
-
-const ContainerLogFileName = "runner.log"
-
-const MaxLinesPreRead = 50
-
-const ContainerEnvTerraform = "TF_PLUGIN_CACHE_DIR=/usr/yunji/cloudiac/provider"
-
-const ContainerMountPath = "/usr/yunji/cloudiac"
-
-//const ContainerKeysPath = "/usr/yunji/cloudiac/keys"
+const FollowLogDelay = time.Second // follow 文件时读到 EOF 后进行下次读取的等待时长

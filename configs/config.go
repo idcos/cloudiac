@@ -71,11 +71,9 @@ type TaskConfig struct {
 }
 
 type RunnerConfig struct {
-	AssetPath    string `yaml:"asset_path"`
-	LogBasePath  string `yaml:"log_base_path"`
 	DefaultImage string `yaml:"default_image"`
+	StoragePath  string `yaml:"storage_path"`
 	ProviderPath string `yaml:"provider_path"`
-	MountPath    string `yaml:"mount_path" `
 }
 
 type LogConfig struct {

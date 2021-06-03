@@ -7,6 +7,6 @@ import (
 
 
 func RunnerListSearch(c *ctx.GinRequestCtx) {
-	c.JSONOpenResultList(apps.RunnerListSearch())
+	c.JSONOpenResultList(apps.RunnerSearch())
 }
 
