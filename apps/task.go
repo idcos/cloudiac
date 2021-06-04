@@ -36,11 +36,10 @@ func SearchTask(c *ctx.ServiceCtx, form *forms.SearchTaskForm) (interface{}, e.E
 	}
 
 	for _, resp := range taskResp {
-		user, err := services.GetUserById(tx, resp.Creator)
-		if err != nil {
-			return nil, e.New(e.DBError, err)
+		user, _ := services.GetUserById(tx, resp.Creator)
+		if user != nil {
+			resp.CreatorName = user.Name
 		}
-		resp.CreatorName = user.Name
 		resp.CreatedTime = time.Now().Unix() - resp.CreatedAt.Unix()
 		if resp.EndAt != nil {
 			resp.EndTime = time.Now().Unix() - resp.EndAt.Unix()
@@ -76,11 +75,10 @@ func DetailTask(c *ctx.ServiceCtx, form *forms.DetailTaskForm) (interface{}, e.E
 		First(&resp); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	user, err := services.GetUserById(tx, resp.Creator)
-	if err != nil {
-		return nil, e.New(e.DBError, err)
+	user, _ := services.GetUserById(tx, resp.Creator)
+	if user != nil {
+		resp.CreatorName = user.Name
 	}
-	resp.CreatorName = user.Name
 	return resp, nil
 }
 
@@ -152,6 +150,8 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 	if err != nil {
 		return nil, err
 	}
+	//发送通知
+	go services.SendMail(c.DB(), c.OrgId, task)
 	//todo Task数量够多的情况下需要引入第三方组件
 	//go services.RunTaskToRunning(task, c.DB(), c.MustOrg().Guid)
 	//go services.StartTask(c.DB(), *task)
@@ -175,11 +175,11 @@ func LastTask(c *ctx.ServiceCtx, form *forms.LastTaskForm) (interface{}, e.Error
 		return nil, e.New(e.DBError, err)
 	}
 	if taskResp.Creator != 0 {
-		user, err := services.GetUserById(tx, taskResp.Creator)
-		if err != nil {
-			return nil, err
+		user, _ := services.GetUserById(tx, taskResp.Creator)
+		if user != nil {
+			taskResp.CreatorName = user.Name
 		}
-		taskResp.CreatorName = user.Name
+
 	}
 	taskResp.RepoBranch = tpl.RepoBranch
 	return taskResp, nil

@@ -207,6 +207,7 @@ func getBackendInfo(backendInfo models.JSON, containerId string) []byte {
 	return b
 }
 
+
 func GetTFLog(logPath string) map[string]interface{} {
 	loggers := logs.Get()
 	path := fmt.Sprintf("%s/%s", logPath, consts.TaskLogName)
@@ -258,4 +259,54 @@ func GetTFLog(logPath string) map[string]interface{} {
 		}
 	}
 	return result
+}
+
+type sendMailQuery struct {
+	models.NotificationCfg
+	models.User
+}
+
+func SendMail(query *db.Session, orgId uint, task *models.Task) {
+	tos := make([]string, 0)
+	logger := logs.Get().WithField("action", "sendMail")
+	notifier := make([]sendMailQuery, 0)
+	if err := query.Debug().Table(models.NotificationCfg{}.TableName()).Where("org_id = ?", orgId).
+		Joins(fmt.Sprintf("left join %s as `user` on `user`.id = %s.user_id",models.User{}.TableName(),models.NotificationCfg{}.TableName())).
+		LazySelectAppend("`user`.*").
+		LazySelectAppend("`iac_org_notification_cfg`.*").
+		Scan(&notifier); err != nil {
+		logger.Errorf("query notifier err: %v", err)
+		return
+	}
+
+	tpl, _ := GetTemplateById(query, task.TemplateId)
+	for _, v := range notifier {
+		user, _ := GetUserById(query, v.UserId)
+		switch task.Status {
+		case consts.TaskPending:
+			if v.EventType == "all" {
+				tos = append(tos, user.Email)
+			}
+		case consts.TaskComplete:
+			if v.EventType == "all" {
+				tos = append(tos, user.Email)
+			}
+		case consts.TaskFailed:
+			if v.EventType == "all" || v.EventType == "failure" {
+				tos = append(tos, user.Email)
+			}
+		case consts.TaskTimeout:
+			if v.EventType == "all" || v.EventType == "failure" {
+				tos = append(tos, user.Email)
+			}
+		}
+	}
+
+	tos = utils.RemoveDuplicateElement(tos)
+	if len(tos) == 0 {
+		return
+	}
+	sendMail := GetMail(tos, *task, tpl)
+	sendMail.SendMail()
+
 }

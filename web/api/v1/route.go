@@ -20,8 +20,8 @@ func Register(g *gin.RouterGroup) {
 
 	{
 		o := g.Group("/", w(middleware.Auth))
-		o.GET("/org/search", w(handlers.Organization{}.Search))
-		o.GET("/org/detail", w(handlers.Organization{}.Detail))
+		//o.GET("/org/search", w(handlers.Organization{}.Search))
+		//o.GET("/org/detail", w(handlers.Organization{}.Detail))
 		o.GET("/user/getUserInfo", w(handlers.User{}.GetUserByToken))
 		o.PUT("/user/updateSelf", w(handlers.User{}.Update))
 		o.GET("/systemStatus/search", w(handlers.PortalSystemStatusSearch))
@@ -32,12 +32,12 @@ func Register(g *gin.RouterGroup) {
 	{
 		sys := g.Group("/", w(middleware.Auth), w(middleware.IsAdmin))
 
-		sys.POST("/org/create", w(handlers.Organization{}.Create))
-		sys.PUT("/org/update", w(handlers.Organization{}.Update))
+		//sys.POST("/org/create", w(handlers.Organization{}.Create))
+		//sys.PUT("/org/update", w(handlers.Organization{}.Update))
 		sys.PUT("/org/changeStatus", w(handlers.Organization{}.ChangeOrgStatus))
 
-		ctrl.Register(sys.Group("system"), &handlers.SystemConfig{})
-		ctrl.Register(sys.Group("token"), &handlers.Token{})
+		//ctrl.Register(sys.Group("system"), &handlers.SystemConfig{})
+		//ctrl.Register(sys.Group("token"), &handlers.Token{})
 
 	}
 
@@ -45,35 +45,35 @@ func Register(g *gin.RouterGroup) {
 	{
 		root := g.Group("/", w(middleware.Auth), w(middleware.AuthOrgId))
 		owner := root.Group("/", w(middleware.IsOrgOwner))
-		owner.GET("/user/search", w(handlers.User{}.Search))
-		owner.GET("/user/detail", w(handlers.User{}.Detail))
-		owner.POST("/user/create", w(handlers.User{}.Create))
+		//owner.GET("/user/search", w(handlers.User{}.Search))
+		//owner.GET("/user/detail", w(handlers.User{}.Detail))
+		//owner.POST("/user/create", w(handlers.User{}.Create))
 		owner.PUT("/user/removeUserForOrg", w(handlers.User{}.RemoveUserForOrg))
 		owner.PUT("/user/userPassReset", w(handlers.User{}.UserPassReset))
 
-		root.PUT("/user/update", w(handlers.User{}.Update))
+		//root.PUT("/user/update", w(handlers.User{}.Update))
 
 		root.GET("/gitlab/listRepos", w(handlers.Vcs{}.ListRepos))
 		root.GET("/gitlab/listBranches", w(handlers.Vcs{}.ListBranches))
 		root.GET("/gitlab/getReadme", w(handlers.Vcs{}.GetReadmeContent))
-		ctrl.Register(root.Group("notification"), &handlers.Notification{})
+		//ctrl.Register(root.Group("notification"), &handlers.Notification{})
 		ctrl.Register(root.Group("resourceAccount"), &handlers.ResourceAccount{})
-		ctrl.Register(root.Group("template"), &handlers.Template{})
+		//ctrl.Register(root.Group("template"), &handlers.Template{})
 
-		ctrl.Register(root.Group("task"), &handlers.Task{})
+		//ctrl.Register(root.Group("task"), &handlers.Task{})
 
 		ctrl.Register(root.Group("taskComment"), &handlers.TaskComment{})
+		ctrl.Register(root.Group("webhook"), &handlers.AccessToken{})
 
-		root.GET("/template/overview", w(handlers.Template{}.Overview))
+		//root.GET("/template/overview", w(handlers.Template{}.Overview))
 		root.GET("/template/stateSearch", w(handlers.Template{}.Overview))
-		root.GET("/task/last", w(handlers.Task{}.LastTask))
+		//root.GET("/task/last", w(handlers.Task{}.LastTask))
 
 		root.GET("/consulKv/search", w(handlers.ConsulKVSearch))
+
 		root.GET("/runnerList/search", w(handlers.RunnerSearch))
 		root.GET("/templateTfvars/search", w(handlers.TemplateTfvarsSearch))
 		root.GET("/vcs/listEnableVcs", w(handlers.ListEnableVcs))
-		ctrl.Register(root.Group("vcs"), &handlers.Vcs{})
-		root.GET("/template/playbook/search",w(handlers.TemplatePlaybookSearch))
 	}
 
 	//root.GET("/sse/hello/:filename", w(handlers.HelloSse))
@@ -95,7 +95,7 @@ func Register(g *gin.RouterGroup) {
 	{
 		sys.POST("/org/create", w(handlers.Organization{}.Create))
 		sys.PUT("/org/update", w(handlers.Organization{}.Update))
-		sys.PUT("/org/status/change", w(handlers.Organization{}.ChangeOrgStatus))
+		sys.PUT("/org/status/update", w(handlers.Organization{}.ChangeOrgStatus))
 		ctrl.Register(sys.Group("system"), &handlers.SystemConfig{})
 		ctrl.Register(sys.Group("token"), &handlers.Token{})
 	}
@@ -132,6 +132,8 @@ func Register(g *gin.RouterGroup) {
 		root.GET("/vcs/repo/search", w(handlers.Vcs{}.ListRepos))
 		root.GET("/vcs/branch/search", w(handlers.Vcs{}.ListBranches))
 		root.GET("/vcs/readme", w(handlers.Vcs{}.GetReadmeContent))
+
+		root.GET("/template/playbook/search",w(handlers.TemplatePlaybookSearch))
 
 	}
 
