@@ -41,7 +41,6 @@ func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*models.User, e.
 			Password: hashedPassword,
 			Phone:    form.Phone,
 			Email:    form.Email,
-			InitPass: initPass,
 		})
 		if err != nil {
 			if e.IsDuplicate(err) {

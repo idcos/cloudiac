@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v2"
 )
 
@@ -158,13 +157,6 @@ func Get() *Config {
 }
 
 func initConfig(filename string, parser func(string) error) {
-	_, err := os.Stat(".env")
-	if !os.IsNotExist(err) {
-		if err := godotenv.Load(); err != nil {
-			log.Panic(err)
-		}
-	}
-
 	if err := parser(filename); err != nil {
 		log.Panic(err)
 	}

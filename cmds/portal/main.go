@@ -4,12 +4,19 @@ import (
 	task_manager2 "cloudiac/apps/task_manager"
 	"cloudiac/cmds/common"
 	"cloudiac/configs"
+	"cloudiac/consts"
+	"cloudiac/consts/e"
 	"cloudiac/libs/db"
 	"cloudiac/models"
 	"cloudiac/services"
 	"cloudiac/utils/kafka"
 	"cloudiac/utils/logs"
 	"cloudiac/web"
+	"fmt"
+	"github.com/joho/godotenv"
+	"github.com/pkg/errors"
+	"log"
+
 	//_ "net/http/pprof"
 	"os"
 
@@ -33,115 +40,108 @@ func main() {
 	}
 	common.ShowVersionIf(opt.Version)
 
+	if _, err := os.Stat(".env"); err == nil {
+		if err := godotenv.Load(); err != nil {
+			log.Panic(err)
+		}
+	} else {
+		log.Println(err)
+	}
+
 	configs.Init(opt.Config)
 	conf := configs.Get().Log
 	logs.Init(conf.LogLevel, conf.LogMaxDays, "iac-portal")
+
+	// 依赖中间件及数据的初始化
+	{
+		db.Init()
+		models.Init(true)
+
+		tx := db.Get().Begin()
+		defer func() {
+			if r := recover(); r != nil {
+				_ = tx.Rollback()
+				panic(r)
+			}
+		}()
+		// 自动执行平台初始化操作，只在第一次启动时执行
+		if err := appAutoInit(tx); err != nil {
+			panic(err)
+		}
+		if err := tx.Commit(); err != nil {
+			panic(err)
+		}
+
+		services.MaintenanceRunnerPerMax()
+		kafka.InitKafkaProducerBuilder()
+	}
+
+	// 注册到 consul
 	common.ReRegisterService(opt.ReRegister, "IaC-Portal")
 
-	db.Init()
-	models.Init(true)
-
-	logger := logs.Get()
-	tx := db.Get().Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			logger.Fatalln(r)
-		}
-	}()
-
-	// 自动执行平台初始化操作，只在第一次启动时执行
-	InitVcs(tx)
-	if err := appAutoInit(tx); err != nil {
-		panic(err)
-	}
-	if err := tx.Commit(); err != nil {
-		logger.Fatalln(err)
-	}
-	kafka.InitKafkaProducerBuilder()
-	//go services.RunTaskToRunning()
-	//go services.RunTaskState()
-	services.MaintenanceRunnerPerMax()
-
-	//go services.RunTask()
-
+	// 启动后台 worker
 	go task_manager2.Start(configs.Get().Consul.ServiceID)
 
-	//go http.ListenAndServe("0.0.0.0:6060", nil)
+	// 启动 web server
 	web.StartServer()
-}
-
-// InitVcs TODO: 默认使用内置 http git server
-func InitVcs(tx *db.Session) {
-	logger := logs.Get()
-	vcs := models.Vcs{
-		OrgId:    0,
-		Name:     "默认仓库",
-		VcsType:  configs.Get().Gitlab.Type,
-		Status:   "enable",
-		Address:  configs.Get().Gitlab.Url,
-		VcsToken: configs.Get().Gitlab.Token,
-	}
-	exist, err := services.QueryVcs(0, "", "", tx).Exists()
-	if err != nil {
-		logger.Error(err)
-		return
-	}
-	if !exist {
-		_, err = services.CreateVcs(tx, vcs)
-		if err != nil {
-			logger.Error(err)
-		}
-	} else {
-		attrs := models.Attrs{
-			"vcs_type":  configs.Get().Gitlab.Type,
-			"address":   configs.Get().Gitlab.Url,
-			"vcs_token": configs.Get().Gitlab.Token,
-		}
-		_, err = services.UpdateVcs(tx, 0, attrs)
-		if err != nil {
-			logger.Error(err)
-		}
-	}
 }
 
 // 平台初始化
 func appAutoInit(tx *db.Session) (err error) {
 	logger := logs.Get().WithField("func", "appAutoInit")
-	logger.Infoln("running")
+	logger.Infoln("initialize ...")
 
-	// dev init
 	if err := initAdmin(tx); err != nil {
-		return err
+		return errors.Wrap(err, "init admin account")
 	}
 
 	if err := initSystemConfig(tx); err != nil {
-		return err
+		return errors.Wrap(err, "init system config")
 	}
 
-	logger.Infoln("initialize ...")
+	if err := initVcs(tx); err != nil {
+		return errors.Wrap(err, "init vcs")
+	}
 
 	return nil
 }
 
-func initAdmin(tx *db.Session) (err error) {
-	log := logs.Get()
-	admin, _ := services.GetUserByEmail(tx, "admin")
-	if admin != nil {
+// initAdmin 初始化 admin 账号
+// 该函数读取环境变量 IAC_ADMIN_EMAIL、 IAC_ADMIN_PASSWORD 来获取初始用户的 email 和 password，
+// 如果 IAC_ADMIN_EMAIL 未设置则使用默认邮箱,
+func initAdmin(tx *db.Session) error {
+	email := os.Getenv("IAC_ADMIN_EMAIL")
+	password := os.Getenv("IAC_ADMIN_PASSWORD")
+
+	if email == "" {
+		email = consts.DefaultAdminEmail
+	}
+
+	// 通过邮箱查找账号，如果不存在则创建。
+	// 如果用户修改环境变量 IAC_ADMIN_EMAIL 则会创建一个新用户
+	admin, err := services.GetUserByEmail(tx, email)
+	if err != nil && !e.IsRecordNotFound(err) {
+		return err
+	} else if admin != nil { // 用户己存在
 		return nil
 	}
 
-	initPass := "Yunjikeji"
-	hashedPassword, err := services.HashPassword(initPass)
-	if err != nil {
-		log.Errorf("init admin err: %+v", err)
+	if password == "" {
+		return fmt.Errorf("environment variable 'IAC_ADMIN_PASSWORD' is not set")
 	}
+
+	hashedPassword, err := services.HashPassword(password)
+	if err != nil {
+		return err
+	}
+
+	logger := logs.Get()
+	logger.Infof("create admin account, email: %s", email)
 	_, err = services.CreateUser(tx, models.User{
-		Name:     "admin",
+		Name:     email,
 		Password: hashedPassword,
 		Phone:    "",
-		Email:    "admin",
-		InitPass: initPass,
+		Email:    email,
 		IsAdmin:  true,
 	})
 	return err
@@ -173,6 +173,37 @@ func initSystemConfig(tx *db.Session) (err error) {
 			if err != nil {
 				return err
 			}
+		}
+	}
+	return nil
+}
+
+// initVcs TODO: 默认使用内置 http git server
+func initVcs(tx *db.Session) error {
+	vcs := models.Vcs{
+		OrgId:    0,
+		Name:     "默认仓库",
+		VcsType:  configs.Get().Gitlab.Type,
+		Status:   "enable",
+		Address:  configs.Get().Gitlab.Url,
+		VcsToken: configs.Get().Gitlab.Token,
+	}
+
+	dbVcs := models.Vcs{}
+	err := services.QueryVcs(0, "", "", tx).First(&dbVcs)
+	if err != nil && !e.IsRecordNotFound(err) {
+		return err
+	}
+
+	if dbVcs.Id == 0 { // 未创建
+		_, err = services.CreateVcs(tx, vcs)
+		if err != nil {
+			return err
+		}
+	} else { // 己存在，进行更新
+		_, err = tx.Model(&vcs).Where("id = ?", dbVcs.Id).Update(vcs)
+		if err != nil {
+			return err
 		}
 	}
 	return nil

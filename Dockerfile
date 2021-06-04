@@ -19,8 +19,8 @@ RUN apk add netcat-openbsd curl
 
 WORKDIR /usr/yunji/cloudiac/
 
-COPY --from=builder /workspace/configs/config.yml.sample /usr/yunji/cloudiac/config-portal.yml
-COPY --from=builder /workspace/configs/config_runner.yml.sample /usr/yunji/cloudiac/config-runner.yml
+COPY --from=builder /workspace/configs/config-portal.yaml.sample /usr/yunji/cloudiac/config-portal.yaml
+COPY --from=builder /workspace/configs/config-runner.yaml.sample /usr/yunji/cloudiac/config-runner.yaml
 COPY --from=builder /workspace/configs/dotenv.sample /usr/yunji/cloudiac/.env
 
 COPY --from=builder /workspace/builds/iac-portal /usr/yunji/cloudiac/

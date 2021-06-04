@@ -13,6 +13,8 @@ const (
 
 	DefaultPageSize = 15
 	MaxPageSize     = 5000 // 同时是 csv 最大导出条数
+
+	DefaultAdminEmail = "admin@example.com"
 )
 
 const (
@@ -20,15 +22,14 @@ const (
 
 	TaskPending   = "pending"
 	TaskAssigning = "assigning"
+	TaskRunning   = "running"
+	TaskTimeout   = "timeout"
+	TaskFailed    = "failed"
+	TaskComplete  = "complete"
 
-	TaskRunning  = "running"
-	TaskTimeout  = "timeout"
-	TaskFailed   = "failed"
-	TaskComplete = "complete"
-
-	TaskLogName  = "runner.log"
-	TaskApply    = "apply"
-	TaskPlan     = "plan"
+	TaskLogName = "runner.log"
+	TaskApply   = "apply"
+	TaskPlan    = "plan"
 
 	ResourceAccountDisable = "disable"
 	ResourceAccountEnable  = "enable"
