@@ -71,6 +71,7 @@ func main() {
 	web.StartServer()
 }
 
+// InitVcs TODO: 默认使用内置 http git server
 func InitVcs(tx *db.Session) {
 	logger := logs.Get()
 	vcs := models.Vcs{
@@ -81,7 +82,7 @@ func InitVcs(tx *db.Session) {
 		Address:  configs.Get().Gitlab.Url,
 		VcsToken: configs.Get().Gitlab.Token,
 	}
-	exist, err := services.QueryVcs(0,"","", tx).Exists()
+	exist, err := services.QueryVcs(0, "", "", tx).Exists()
 	if err != nil {
 		logger.Error(err)
 		return
@@ -94,7 +95,7 @@ func InitVcs(tx *db.Session) {
 	} else {
 		attrs := models.Attrs{
 			"vcs_type":  configs.Get().Gitlab.Type,
-			"address":  configs.Get().Gitlab.Url,
+			"address":   configs.Get().Gitlab.Url,
 			"vcs_token": configs.Get().Gitlab.Token,
 		}
 		_, err = services.UpdateVcs(tx, 0, attrs)
@@ -147,23 +148,32 @@ func initAdmin(tx *db.Session) (err error) {
 }
 
 func initSystemConfig(tx *db.Session) (err error) {
-	logger := logs.Get().WithField("func", "appAutoInit")
-	cfg := []models.SystemCfg{}
-	err = services.QuerySystemConfig(tx).Find(&cfg)
-	if len(cfg) == 2 {
-		return
-	}
-	logger.Infoln("Start init system connfig...")
-	_, err = services.CreateSystemConfig(tx, models.SystemCfg{
-		Name:        "MAX_JOBS_PER_RUNNER",
-		Value:       "100",
-		Description: "每个CT-Runner同时启动的最大容器数",
-	})
+	logger := logs.Get().WithField("func", "initSystemConfig")
+	logger.Infoln("init system config...")
 
-	_, err = services.CreateSystemConfig(tx, models.SystemCfg{
-		Name:        "PERIOD_OF_LOG_SAVE",
-		Value:       "Permanent",
-		Description: "日志保存周期",
-	})
-	return err
+	initSysConfigs := []models.SystemCfg{
+		{
+			Name:        models.SysCfgNameMaxJobsPerRunner,
+			Value:       "100",
+			Description: "每个CT-Runner同时启动的最大容器数",
+		}, {
+
+			Name:        models.SysCfgNamePeriodOfLogSave,
+			Value:       "Permanent",
+			Description: "日志保存周期",
+		},
+	}
+
+	tx = tx.Model(&models.SystemCfg{})
+	for _, c := range initSysConfigs {
+		if ok, err := tx.Where("name = ?", c.Name).Exists(); err != nil {
+			return err
+		} else if !ok {
+			_, err = services.CreateSystemConfig(tx, c)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

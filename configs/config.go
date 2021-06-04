@@ -10,8 +10,6 @@ import (
 
 	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v2"
-
-	"cloudiac/consts"
 )
 
 type RedisConfig struct {
@@ -143,9 +141,6 @@ func parsePortalConfig(filename string) error {
 	cfg := Config{}
 	if err := parseConfig(filename, &cfg); err != nil {
 		return err
-	}
-	if cfg.CollectTaskSyncInterval.Duration == 0 {
-		cfg.CollectTaskSyncInterval.Duration = consts.DefaultCollectTaskSyncInterval
 	}
 
 	cfgLock.Lock()

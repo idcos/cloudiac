@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"github.com/jinzhu/gorm"
 	"github.com/xanzy/go-gitlab"
-	"os"
 	"time"
 )
 
@@ -92,17 +91,6 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 		"log_file":    logPath,
 	})
 
-	if err := os.MkdirAll(logPath, os.ModePerm); err != nil {
-		return nil, e.New(e.IOError, err)
-	}
-
-	path := fmt.Sprintf("%s/%s", logPath, consts.TaskLogName)
-	isExists, _ := utils.PathExists(path)
-	if !isExists {
-		file, _ := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
-		file.WriteString("")
-	}
-
 	tpl, err := services.GetTemplateByGuid(c.DB(), form.TemplateGuid)
 	if err != nil {
 		return nil, err
@@ -152,9 +140,6 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 	}
 	//发送通知
 	go services.SendMail(c.DB(), c.OrgId, task)
-	//todo Task数量够多的情况下需要引入第三方组件
-	//go services.RunTaskToRunning(task, c.DB(), c.MustOrg().Guid)
-	//go services.StartTask(c.DB(), *task)
 	return task, nil
 }
 
