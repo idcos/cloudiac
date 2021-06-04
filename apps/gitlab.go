@@ -75,9 +75,9 @@ func GetReadmeContent(vcs *models.Vcs, form *forms.GetReadmeForm) (interface{}, 
 }
 
 func TemplateTfvarsSearch(vcs *models.Vcs, form *forms.TemplateTfvarsSearchForm) (interface{}, e.Error) {
-	return services.TemplateTfvarsSearch(vcs, form.RepoId, form.RepoBranch, consts.Tfvar)
+	return services.TemplateTfvarsSearch(vcs, form.RepoId, form.RepoBranch,[]string{ consts.TfVarFileExt})
 }
 
 func TemplatePlaybookSearch(vcs *models.Vcs, form *forms.TemplatePlaybookSearchForm) (interface{}, e.Error) {
-	return services.TemplateTfvarsSearch(vcs, form.RepoId, form.RepoBranch, consts.Playbook)
+	return services.TemplateTfvarsSearch(vcs, form.RepoId, form.RepoBranch, []string{consts.PlaybookPrefixYml,consts.PlaybookPrefixYaml})
 }

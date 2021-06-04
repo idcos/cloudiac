@@ -5,8 +5,8 @@ import (
 	"cloudiac/consts/e"
 	"cloudiac/models"
 	"cloudiac/models/forms"
+	"cloudiac/utils"
 	"github.com/xanzy/go-gitlab"
-	"strings"
 )
 
 func ListOrganizationReposById(vcs *models.Vcs, form *forms.GetGitProjectsForm) (projects []*gitlab.Project, total int, err e.Error) {
@@ -75,7 +75,7 @@ func GetGitConn(gitlabToken, gitlabUrl string) (git *gitlab.Client, err e.Error)
 	return
 }
 
-func TemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch, fileName string) (interface{}, e.Error) {
+func TemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch string, fileName []string) (interface{}, e.Error) {
 	tfVarsList := make([]string, 0)
 	var errs error
 	if vcs.VcsType == consts.GitLab {
@@ -83,7 +83,7 @@ func TemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch, fileName str
 		if err != nil {
 			return nil, err
 		}
-		tfVarsList, errs = getTfvarsList(git, repoBranch, "", repoId)
+		tfVarsList, errs = getTfvarsList(git, repoBranch, "", repoId, fileName)
 
 	}
 
@@ -99,7 +99,7 @@ func TemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch, fileName str
 	return tfVarsList, nil
 }
 
-func getTfvarsList(git *gitlab.Client, repoBranch, path string, repoId uint) ([]string, error) {
+func getTfvarsList(git *gitlab.Client, repoBranch, path string, repoId uint, fileName []string) ([]string, error) {
 	var fileBlob = "blob"
 	var fileTree = "tree"
 	pathList := make([]string, 0)
@@ -114,11 +114,11 @@ func getTfvarsList(git *gitlab.Client, repoBranch, path string, repoId uint) ([]
 	}
 
 	for _, i := range treeNode {
-		if i.Type == fileBlob && strings.Contains(i.Name, consts.Tfvar) {
+		if i.Type == fileBlob && utils.ArrayIsHasSuffix(fileName, i.Name) {
 			pathList = append(pathList, i.Path)
 		}
 		if i.Type == fileTree {
-			pl, err := getTfvarsList(git, repoBranch, i.Path, repoId)
+			pl, err := getTfvarsList(git, repoBranch, i.Path, repoId, fileName)
 			if err != nil {
 				return nil, err
 			}
