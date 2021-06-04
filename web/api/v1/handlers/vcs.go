@@ -116,7 +116,15 @@ func TemplateTfvarsSearch(c *ctx.GinRequestCtx){
 	}
 	c.JSONResult(apps.TemplateTfvarsSearch(vcs, &form))
 }
-
+//TemplatePlaybookSearch
+// @Tags playbook列表查询
+// @Description  playbook列表接口
+// @Accept application/json
+// @Param repoId formData int true "仓库id"
+// @Param repoBranch formData int true "分支"
+// @Param vcsId formData int true "vcsID"
+// @router /api/v1/template/playbook/search [get]
+// @Success 200 {object} models.TemplateLibrary
 func TemplatePlaybookSearch(c *ctx.GinRequestCtx){
 	form := forms.TemplatePlaybookSearchForm{}
 	if err := c.Bind(&form); err != nil {
