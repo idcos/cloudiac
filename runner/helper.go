@@ -181,48 +181,6 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, error) {
 		c.Env = append(c.Env, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	// TODO(ZhengYue): 优化命令组装方式
-//	var cmdList []string
-//	logCmd := fmt.Sprintf(">> %s%s 2>&1 ", ContainerLogFilePath, ContainerLogFileName)
-//	//ansibleCmd := fmt.Sprint(" if [ -e run.sh ];then chmod +x run.sh && ./run.sh;fi")
-//	//ansibleCmd := fmt.Sprint("cd ansible")
-//	//ansiblePlaybook:=fmt.Sprintf("ansible-playbook -i ./terraform.py playbook.yml")
-//	ansiblePlaybook := fmt.Sprintf("ansible-playbook -i %s  %s", "", d.Playbook)
-//	cmdList = append(cmdList, fmt.Sprintf("git clone %s %s &&", d.Repo, logCmd))
-//	// get folder name
-//	s := strings.Split(d.Repo, "/")
-//	f := s[len(s)-1]
-//	f = f[:len(f)-4]
-//
-//	cmdList = append(cmdList, fmt.Sprintf("cd %s %s &&", f, logCmd))
-//	cmdList = append(cmdList, fmt.Sprintf("git checkout  %s %s &&", d.RepoBranch, logCmd))
-//	cmdList = append(cmdList, fmt.Sprintf("git checkout -b run_branch %s %s &&", d.RepoCommit, logCmd))
-//	cmdList = append(cmdList, fmt.Sprintf("cp %sstate.tf . &&", ContainerLogFilePath))
-//	cmdList = append(cmdList, fmt.Sprintf("terraform init  -plugin-dir %s %s &&", ContainerProviderPath, logCmd))
-//	if d.Mode == "apply" {
-//		log.Println("entering apply mode ...")
-//		if d.Varfile != "" {
-//			cmdList = append(cmdList, fmt.Sprintf("%s %s %s && %s %s &&%s %s",
-//				"terraform apply -auto-approve -var-file ", d.Varfile, logCmd, ansiblePlaybook ,logCmd, d.Extra, logCmd))
-//		} else {
-//			cmdList = append(cmdList, fmt.Sprintf("%s %s &&%s %s &&%s %s", "terraform apply -auto-approve ", logCmd, ansiblePlaybook, logCmd, d.Extra, logCmd))
-//		}
-//
-//	} else if d.Mode == "destroy" {
-//		log.Println("entering destroy mode ...")
-//		cmdList = append(cmdList, fmt.Sprintf("%s %s&&%s", "terraform destroy -auto-approve -var-file", d.Varfile, d.Extra))
-//	} else if d.Mode == "pull" {
-//		log.Println("show state info ...")
-//		cmdList = append(cmdList, fmt.Sprintf("%s&&%s", "terraform state pull", d.Extra))
-//	} else {
-//		if d.Varfile != "" {
-//			cmdList = append(cmdList, fmt.Sprintf("%s %s %s", "terraform plan -var-file ", d.Varfile, logCmd))
-//		} else {
-//			cmdList = append(cmdList, fmt.Sprintf("%s %s", "terraform plan  ", logCmd))
-//		}
-//
-//		//cmdList = append(cmdList, fmt.Sprintf("%s %s&&%s", "terraform plan -var-file", d.Varfile, d.Extra))
-//=======
 	workingDir, err := MakeTaskWorkDir(d.TemplateUUID, d.TaskID)
 	if err != nil {
 		return nil, nil, err
