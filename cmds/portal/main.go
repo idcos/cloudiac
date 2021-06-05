@@ -4,12 +4,19 @@ import (
 	task_manager2 "cloudiac/apps/task_manager"
 	"cloudiac/cmds/common"
 	"cloudiac/configs"
+	"cloudiac/consts"
+	"cloudiac/consts/e"
 	"cloudiac/libs/db"
 	"cloudiac/models"
 	"cloudiac/services"
 	"cloudiac/utils/kafka"
 	"cloudiac/utils/logs"
 	"cloudiac/web"
+	"fmt"
+	"github.com/joho/godotenv"
+	"github.com/pkg/errors"
+	"log"
+
 	//_ "net/http/pprof"
 	"os"
 
@@ -33,46 +40,146 @@ func main() {
 	}
 	common.ShowVersionIf(opt.Version)
 
+	if _, err := os.Stat(".env"); err == nil {
+		if err := godotenv.Load(); err != nil {
+			log.Panic(err)
+		}
+	} else {
+		log.Println(err)
+	}
+
 	configs.Init(opt.Config)
 	conf := configs.Get().Log
 	logs.Init(conf.LogLevel, conf.LogMaxDays, "iac-portal")
+
+	// 依赖中间件及数据的初始化
+	{
+		db.Init()
+		models.Init(true)
+
+		tx := db.Get().Begin()
+		defer func() {
+			if r := recover(); r != nil {
+				_ = tx.Rollback()
+				panic(r)
+			}
+		}()
+		// 自动执行平台初始化操作，只在第一次启动时执行
+		if err := appAutoInit(tx); err != nil {
+			panic(err)
+		}
+		if err := tx.Commit(); err != nil {
+			panic(err)
+		}
+
+		services.MaintenanceRunnerPerMax()
+		kafka.InitKafkaProducerBuilder()
+	}
+
+	// 注册到 consul
 	common.ReRegisterService(opt.ReRegister, "IaC-Portal")
 
-	db.Init()
-	models.Init(true)
-
-	logger := logs.Get()
-	tx := db.Get().Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			logger.Fatalln(r)
-		}
-	}()
-
-	// 自动执行平台初始化操作，只在第一次启动时执行
-	InitVcs(tx)
-	if err := appAutoInit(tx); err != nil {
-		panic(err)
-	}
-	if err := tx.Commit(); err != nil {
-		logger.Fatalln(err)
-	}
-	kafka.InitKafkaProducerBuilder()
-	//go services.RunTaskToRunning()
-	//go services.RunTaskState()
-	services.MaintenanceRunnerPerMax()
-
-	//go services.RunTask()
-
+	// 启动后台 worker
 	go task_manager2.Start(configs.Get().Consul.ServiceID)
 
-	//go http.ListenAndServe("0.0.0.0:6060", nil)
+	// 启动 web server
 	web.StartServer()
 }
 
-func InitVcs(tx *db.Session) {
+// 平台初始化
+func appAutoInit(tx *db.Session) (err error) {
+	logger := logs.Get().WithField("func", "appAutoInit")
+	logger.Infoln("initialize ...")
+
+	if err := initAdmin(tx); err != nil {
+		return errors.Wrap(err, "init admin account")
+	}
+
+	if err := initSystemConfig(tx); err != nil {
+		return errors.Wrap(err, "init system config")
+	}
+
+	if err := initVcs(tx); err != nil {
+		return errors.Wrap(err, "init vcs")
+	}
+
+	return nil
+}
+
+// initAdmin 初始化 admin 账号
+// 该函数读取环境变量 IAC_ADMIN_EMAIL、 IAC_ADMIN_PASSWORD 来获取初始用户的 email 和 password，
+// 如果 IAC_ADMIN_EMAIL 未设置则使用默认邮箱,
+func initAdmin(tx *db.Session) error {
+	email := os.Getenv("IAC_ADMIN_EMAIL")
+	password := os.Getenv("IAC_ADMIN_PASSWORD")
+
+	if email == "" {
+		email = consts.DefaultAdminEmail
+	}
+
+	// 通过邮箱查找账号，如果不存在则创建。
+	// 如果用户修改环境变量 IAC_ADMIN_EMAIL 则会创建一个新用户
+	admin, err := services.GetUserByEmail(tx, email)
+	if err != nil && !e.IsRecordNotFound(err) {
+		return err
+	} else if admin != nil { // 用户己存在
+		return nil
+	}
+
+	if password == "" {
+		return fmt.Errorf("environment variable 'IAC_ADMIN_PASSWORD' is not set")
+	}
+
+	hashedPassword, err := services.HashPassword(password)
+	if err != nil {
+		return err
+	}
+
 	logger := logs.Get()
+	logger.Infof("create admin account, email: %s", email)
+	_, err = services.CreateUser(tx, models.User{
+		Name:     email,
+		Password: hashedPassword,
+		Phone:    "",
+		Email:    email,
+		IsAdmin:  true,
+	})
+	return err
+}
+
+func initSystemConfig(tx *db.Session) (err error) {
+	logger := logs.Get().WithField("func", "initSystemConfig")
+	logger.Infoln("init system config...")
+
+	initSysConfigs := []models.SystemCfg{
+		{
+			Name:        models.SysCfgNameMaxJobsPerRunner,
+			Value:       "100",
+			Description: "每个CT-Runner同时启动的最大容器数",
+		}, {
+
+			Name:        models.SysCfgNamePeriodOfLogSave,
+			Value:       "Permanent",
+			Description: "日志保存周期",
+		},
+	}
+
+	tx = tx.Model(&models.SystemCfg{})
+	for _, c := range initSysConfigs {
+		if ok, err := tx.Where("name = ?", c.Name).Exists(); err != nil {
+			return err
+		} else if !ok {
+			_, err = services.CreateSystemConfig(tx, c)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// initVcs TODO: 默认使用内置 http git server
+func initVcs(tx *db.Session) error {
 	vcs := models.Vcs{
 		OrgId:    0,
 		Name:     "默认仓库",
@@ -81,89 +188,23 @@ func InitVcs(tx *db.Session) {
 		Address:  configs.Get().Gitlab.Url,
 		VcsToken: configs.Get().Gitlab.Token,
 	}
-	exist, err := services.QueryVcs(0,"","", tx).Exists()
-	if err != nil {
-		logger.Error(err)
-		return
+
+	dbVcs := models.Vcs{}
+	err := services.QueryVcs(0, "", "", tx).First(&dbVcs)
+	if err != nil && !e.IsRecordNotFound(err) {
+		return err
 	}
-	if !exist {
+
+	if dbVcs.Id == 0 { // 未创建
 		_, err = services.CreateVcs(tx, vcs)
 		if err != nil {
-			logger.Error(err)
+			return err
 		}
-	} else {
-		attrs := models.Attrs{
-			"vcs_type":  configs.Get().Gitlab.Type,
-			"address":  configs.Get().Gitlab.Url,
-			"vcs_token": configs.Get().Gitlab.Token,
-		}
-		_, err = services.UpdateVcs(tx, 0, attrs)
+	} else { // 己存在，进行更新
+		_, err = tx.Model(&vcs).Where("id = ?", dbVcs.Id).Update(vcs)
 		if err != nil {
-			logger.Error(err)
+			return err
 		}
 	}
-}
-
-// 平台初始化
-func appAutoInit(tx *db.Session) (err error) {
-	logger := logs.Get().WithField("func", "appAutoInit")
-	logger.Infoln("running")
-
-	// dev init
-	if err := initAdmin(tx); err != nil {
-		return err
-	}
-
-	if err := initSystemConfig(tx); err != nil {
-		return err
-	}
-
-	logger.Infoln("initialize ...")
-
 	return nil
-}
-
-func initAdmin(tx *db.Session) (err error) {
-	log := logs.Get()
-	admin, _ := services.GetUserByEmail(tx, "admin")
-	if admin != nil {
-		return nil
-	}
-
-	initPass := "Yunjikeji"
-	hashedPassword, err := services.HashPassword(initPass)
-	if err != nil {
-		log.Errorf("init admin err: %+v", err)
-	}
-	_, err = services.CreateUser(tx, models.User{
-		Name:     "admin",
-		Password: hashedPassword,
-		Phone:    "",
-		Email:    "admin",
-		InitPass: initPass,
-		IsAdmin:  true,
-	})
-	return err
-}
-
-func initSystemConfig(tx *db.Session) (err error) {
-	logger := logs.Get().WithField("func", "appAutoInit")
-	cfg := []models.SystemCfg{}
-	err = services.QuerySystemConfig(tx).Find(&cfg)
-	if len(cfg) == 2 {
-		return
-	}
-	logger.Infoln("Start init system connfig...")
-	_, err = services.CreateSystemConfig(tx, models.SystemCfg{
-		Name:        "MAX_JOBS_PER_RUNNER",
-		Value:       "100",
-		Description: "每个CT-Runner同时启动的最大容器数",
-	})
-
-	_, err = services.CreateSystemConfig(tx, models.SystemCfg{
-		Name:        "PERIOD_OF_LOG_SAVE",
-		Value:       "Permanent",
-		Description: "日志保存周期",
-	})
-	return err
 }

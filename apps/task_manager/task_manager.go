@@ -116,6 +116,8 @@ func (m *TaskManager) acquireLock(ctx context.Context) (<-chan struct{}, error) 
 }
 
 func (m *TaskManager) start() {
+	m.init()
+
 	// ctx 用于:
 	// 	1. 通知释放分布式锁
 	//	2. 通知所有 task 协程退出
@@ -134,7 +136,6 @@ func (m *TaskManager) start() {
 	}
 
 	m.logger.Infof("task manager started")
-	m.init()
 
 	go func() {
 		<-lockLostCh

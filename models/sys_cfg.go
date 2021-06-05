@@ -4,6 +4,11 @@ import (
 	"cloudiac/libs/db"
 )
 
+const (
+	SysCfgNameMaxJobsPerRunner = "MAX_JOBS_PER_RUNNER"
+	SysCfgNamePeriodOfLogSave  = "PERIOD_OF_LOG_SAVE"
+)
+
 type SystemCfg struct {
 	BaseModel
 

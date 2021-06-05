@@ -8,8 +8,8 @@ import (
 	"fmt"
 )
 
-func QuerySystemConfig(query *db.Session) *db.Session {
-	return query.Model(&models.SystemCfg{}).
+func QuerySystemConfig(dbSess *db.Session) *db.Session {
+	return dbSess.Model(&models.SystemCfg{}).
 		Where("name = 'MAX_JOBS_PER_RUNNER'")
 }
 

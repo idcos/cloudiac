@@ -41,6 +41,20 @@ func (b *TaskBackendInfo) Scan(value interface{}) error {
 	return json.Unmarshal(bs, b)
 }
 
+const (
+	PENDING       = consts.TaskPending
+	RUNNING       = consts.TaskRunning
+	TaskAssigning = consts.TaskAssigning
+	FAILED        = consts.TaskFailed
+	COMPLETE      = consts.TaskComplete
+	TIMEOUT       = consts.TaskTimeout
+)
+
+const (
+	PLAN  = consts.TaskPlan
+	APPLY = consts.TaskApply
+)
+
 type Task struct {
 	SoftDeleteModel
 	Guid          string     `json:"guid" gorm:"not null;comment:'任务guid'"`

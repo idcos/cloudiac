@@ -35,13 +35,12 @@ func SearchTask(c *ctx.ServiceCtx, form *forms.SearchTaskForm) (interface{}, e.E
 
 	for _, resp := range taskResp {
 		user, err := services.GetUserById(tx, resp.Creator)
-		if err != nil {
+		if err != nil && !e.IsRecordNotFound(err) {
 			return nil, e.New(e.DBError, err)
 		}
 		if user != nil {
 			resp.CreatorName = user.Name
 		}
-		resp.CreatorName = user.Name
 		resp.CreatedTime = time.Now().Unix() - resp.CreatedAt.Unix()
 		if resp.EndAt != nil {
 			resp.EndTime = time.Now().Unix() - resp.EndAt.Unix()
@@ -78,13 +77,12 @@ func DetailTask(c *ctx.ServiceCtx, form *forms.DetailTaskForm) (interface{}, e.E
 		return nil, e.New(e.DBError, err)
 	}
 	user, err := services.GetUserById(tx, resp.Creator)
-	if err != nil {
+	if err != nil && !e.IsRecordNotFound(err) {
 		return nil, e.New(e.DBError, err)
 	}
 	if user != nil {
 		resp.CreatorName = user.Name
 	}
-	resp.CreatorName = user.Name
 	return resp, nil
 }
 
@@ -170,10 +168,12 @@ func LastTask(c *ctx.ServiceCtx, form *forms.LastTaskForm) (interface{}, e.Error
 	}
 	if taskResp.Creator != 0 {
 		user, err := services.GetUserById(tx, taskResp.Creator)
-		if err != nil {
+		if err != nil && !e.IsRecordNotFound(err) {
 			return nil, err
 		}
-		taskResp.CreatorName = user.Name
+		if user != nil {
+			taskResp.CreatorName = user.Name
+		}
 	}
 	taskResp.RepoBranch = tpl.RepoBranch
 	return taskResp, nil

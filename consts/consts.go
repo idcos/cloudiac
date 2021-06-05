@@ -13,10 +13,13 @@ const (
 
 	DefaultPageSize = 15
 	MaxPageSize     = 5000 // 同时是 csv 最大导出条数
+
+	DefaultAdminEmail = "admin@example.com"
 )
 
 const (
-	//作业状态
+	// 作业状态
+
 	TaskPending   = "pending"
 	TaskAssigning = "assigning"
 

@@ -5,35 +5,42 @@ Cloud Infrastructure as code
 ## 编译
 1. 配置 go env
 ```
-export GO111MODULE="on" 
-export GOPROXY="https://goproxy.io"
+go env -w GO111MODULE="on" 
+go env -w GOPROXY="https://goproxy.io,direct"
 ```
 
 2. 执行编译
 ```
-make all|portal|runner
+make all 
+# or 'make portal' 'make runner'
 ```
-可执行文件将生成到 `./builds/` 目录
+可执行文件将生成到 `./targets/` 目录
 
+## 本地调试运行
+1. 拷贝配置模板
+```
+cp configs/config-portal.yaml.sample config-portal.yaml
+cp configs/config-runner.yaml.sample config-runner.yaml
+cp configs/dotenv.sample .env
+```
 
-## 配置
-1. 连接 mysql, 创建 db
+2. 启动 mysql 服务, 创建 db
 ```sql
 create database iac charset utf8mb4;
 ```
 
-2. 拷贝配置模板
+3. 启动 consul 服务
+
+4. 配置 
+编辑 `.env` 和 `config-runner.yaml`
+
+5. 启动
+打开两个终端，分别运行:
 ```
-cp configs/config.yml.sample config.yml
-cp configs/dotenv.sample .env
+make run-portal
 ```
 
-3. 配置 `.env`
-
-主要进行 db 信息配置
-
-## 运行
 ```
-make run
+make run-runner
 ```
 
