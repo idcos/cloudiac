@@ -53,8 +53,8 @@ type TaskConfig struct {
 
 type RunnerConfig struct {
 	DefaultImage string `yaml:"default_image"`
-	// AssetPath  预置 providers 也在该目录下
-	AssetPath       string `yaml:"asset_path"`
+	// AssetsPath  预置 providers 也在该目录下
+	AssetsPath      string `yaml:"assets_path"`
 	StoragePath     string `yaml:"storage_path"`
 	PluginCachePath string `yaml:"plugin_cache_path"`
 }
@@ -67,13 +67,13 @@ func (c *RunnerConfig) mustAbs(path string) string {
 	return p
 }
 
-func (c *RunnerConfig) AssetProviderPath() string {
+func (c *RunnerConfig) ProviderPath() string {
 	// 预置 providers 在 asset/providers 目录下，不单独提供配置
-	return filepath.Join(c.AbsAssetPath(), "providers")
+	return filepath.Join(c.AbsAssetsPath(), "providers")
 }
 
-func (c *RunnerConfig) AbsAssetPath() string {
-	return c.mustAbs(c.AssetPath)
+func (c *RunnerConfig) AbsAssetsPath() string {
+	return c.mustAbs(c.AssetsPath)
 }
 
 func (c *RunnerConfig) AbsStoragePath() string {
