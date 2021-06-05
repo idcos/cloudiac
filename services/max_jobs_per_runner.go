@@ -29,5 +29,4 @@ func MaintenanceRunnerPerMax() {
 	if utils.Str2int(systemCfg.Value) > 0 {
 		UpdateRunnerMax(utils.Str2int(systemCfg.Value))
 	}
-
 }

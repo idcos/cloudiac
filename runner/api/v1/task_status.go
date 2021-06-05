@@ -73,11 +73,12 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.CommitedTask, closed <-ch
 		return nil
 	}
 
-	waitCh := make(chan error)
+	ctx, cancelFun := context.WithCancel(context.Background())
+	waitCh := make(chan error, 1)
 	go func() {
 		defer close(waitCh)
 
-		_, err := task.Wait(context.Background())
+		_, err := task.Wait(ctx)
 		waitCh <- err
 	}()
 
@@ -93,18 +94,21 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.CommitedTask, closed <-ch
 		select {
 		case <-closed:
 			logger.Debugf("peer connection closed")
-			return nil
+			cancelFun()
+		case <-ticker.C:
+			// 定时发送最新任务状态
+			if err := sendStatus(false); err != nil {
+				logger.Warnf("send status error: %v", err)
+			}
 		case err := <-waitCh:
+			if ctx.Err() != nil { // 对端断开连接
+				return nil
+			}
 			if err != nil {
 				return err
 			}
 			// 任务结束，发送状态和全量日志
 			return sendStatus(true)
-		case <-ticker.C:
-			// 定时发送最新任务状态
-			if err := sendStatus(false); err != nil {
-				return err
-			}
 		}
 	}
 }

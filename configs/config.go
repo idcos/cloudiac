@@ -8,28 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v2"
-
-	"cloudiac/consts"
 )
-
-type RedisConfig struct {
-	IP       string `yaml:"ip"`
-	Port     string `yaml:"port"`
-	Password string `yaml:"password"`
-	DB       int    `yaml:"db"`
-}
-
-type IamConfig struct {
-	Addr    string `yaml:"addr"`
-	AuthApi string `yaml:"authApi"`
-}
-
-type RabbitMqConfig struct {
-	Addr  string `yaml:"addr"`
-	Queue string `yaml:"queue"`
-}
 
 type KafkaConfig struct {
 	Brokers      []string `yaml:"brokers"`
@@ -105,12 +85,7 @@ func (ut *yamlTimeDuration) UnmarshalYAML(unmarshal func(interface{}) error) err
 
 type Config struct {
 	Mysql                   string           `yaml:"mysql"`
-	Redis                   RedisConfig      `yaml:"redis"`
 	Listen                  string           `yaml:"listen"`
-	Iam                     IamConfig        `yaml:"iam"`
-	Rmq                     RabbitMqConfig   `yaml:"rabbitmq"`
-	Prometheus              string           `yaml:"prometheus"`
-	CollectTaskSyncInterval yamlTimeDuration `yaml:"collectTaskSyncInterval"`
 	Consul                  ConsulConfig     `yaml:"consul"`
 	Gitlab                  GitlabConfig     `yaml:"gitlab"`
 	Runner                  RunnerConfig     `yaml:"runner"`
@@ -144,9 +119,6 @@ func parsePortalConfig(filename string) error {
 	if err := parseConfig(filename, &cfg); err != nil {
 		return err
 	}
-	if cfg.CollectTaskSyncInterval.Duration == 0 {
-		cfg.CollectTaskSyncInterval.Duration = consts.DefaultCollectTaskSyncInterval
-	}
 
 	cfgLock.Lock()
 	defer cfgLock.Unlock()
@@ -163,13 +135,6 @@ func Get() *Config {
 }
 
 func initConfig(filename string, parser func(string) error) {
-	_, err := os.Stat(".env")
-	if !os.IsNotExist(err) {
-		if err := godotenv.Load(); err != nil {
-			log.Panic(err)
-		}
-	}
-
 	if err := parser(filename); err != nil {
 		log.Panic(err)
 	}

@@ -11,16 +11,17 @@ import (
 )
 
 const (
-	PENDING  = "pending"
-	RUNNING  = "running"
-	FAILED   = "failed"
-	COMPLETE = "complete"
-	TIMEOUT  = "timeout"
+	PENDING       = consts.TaskPending
+	RUNNING       = consts.TaskRunning
+	TaskAssigning = consts.TaskAssigning
+	FAILED        = consts.TaskFailed
+	COMPLETE      = consts.TaskComplete
+	TIMEOUT       = consts.TaskTimeout
 )
 
 const (
-	PLAN  = "plan"
-	APPLY = "apply"
+	PLAN  = consts.TaskPlan
+	APPLY = consts.TaskApply
 )
 
 type Task struct {
