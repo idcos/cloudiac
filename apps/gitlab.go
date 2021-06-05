@@ -76,3 +76,7 @@ func GetReadmeContent(vcs *models.Vcs, form *forms.GetReadmeForm) (interface{}, 
 func TemplateTfvarsSearch(vcs *models.Vcs,form *forms.TemplateTfvarsSearchForm) (interface{}, e.Error) {
 	return vcsrv.TemplateTfvarsSearch(vcs, form.RepoId, form.RepoBranch)
 }
+
+func TemplateVariableSearch(vcs *models.Vcs,form *forms.TemplateVariableSearchForm) (interface{}, e.Error) {
+	return vcsrv.TemplateVariableSearch(vcs, form.RepoId, form.RepoBranch)
+}
