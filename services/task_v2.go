@@ -44,8 +44,20 @@ func StartTask(dbSess *db.Session, task *models.Task) (deadline time.Time, err e
 		return deadline, errors.Wrap(err, "query template error")
 	}
 
+	org, err := GetOrganizationById(dbSess, tpl.OrgId)
+	if err != nil {
+		if e.IsRecordNotFound(err) {
+			task.Status = consts.TaskFailed
+			task.StatusDetail = fmt.Errorf("orgId '%d' not found", tpl.OrgId).Error()
+			if _, err := dbSess.Model(&task).Update(&task); err != nil {
+				logger.Errorln(err)
+			}
+		}
+		return deadline, errors.Wrap(err, "query org error")
+	}
+
 	logger.Debugf("assign task")
-	if err := assignTask(dbSess, &tpl, task); err != nil {
+	if err := assignTask(dbSess, org.Guid, &tpl, task); err != nil {
 		logger.Errorf("AssignTask error: %v", err)
 		return deadline, err
 	}
@@ -54,7 +66,7 @@ func StartTask(dbSess *db.Session, task *models.Task) (deadline time.Time, err e
 }
 
 // assignTask 将任务分派到 runner，并更新任务状态
-func assignTask(dbSess *db.Session, tpl *models.Template, task *models.Task) error {
+func assignTask(dbSess *db.Session, orgGuid string, tpl *models.Template, task *models.Task) error {
 	logger := logs.Get().WithField("action", "AssignTask").WithField("taskId", task.Guid)
 
 	updateTask := func(t *models.Task) error {
@@ -74,7 +86,7 @@ func assignTask(dbSess *db.Session, tpl *models.Template, task *models.Task) err
 
 	now := time.Now()
 	task.StartAt = &now
-	resp, retry, err := doAssignTask(tpl.Guid, task, tpl)
+	resp, retry, err := doAssignTask(orgGuid, task, tpl)
 	if err == nil && resp.Error != "" {
 		err = fmt.Errorf(resp.Error)
 	}
