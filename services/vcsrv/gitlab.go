@@ -5,11 +5,154 @@ import (
 	"cloudiac/consts/e"
 	"cloudiac/models"
 	"cloudiac/models/forms"
+	"encoding/json"
+	"fmt"
 	"github.com/xanzy/go-gitlab"
 	"strings"
+	"time"
 )
 
-func ListOrganizationReposById(vcs *models.Vcs,form *forms.GetGitProjectsForm) (projects []*gitlab.Project, total int, err e.Error) {
+func newGitlabInstance(vcs *models.Vcs) (VcsIface, error) {
+	gitConn, err := GetGitConn("", "")
+	if err != nil {
+		return nil, err
+	}
+	return &gitlabVcsIface{gitConn: gitConn}, nil
+}
+
+type gitlabVcsIface struct {
+	gitConn *gitlab.Client
+}
+
+func (git *gitlabVcsIface) GetRepo(option VcsIfaceOptions) (RepoIface, error) {
+	return &gitlabRepoIface{
+		gitConn: git.gitConn,
+	}, nil
+}
+func (git *gitlabVcsIface) ListRepos(option VcsIfaceOptions) ([]RepoIface, error) {
+	opt := &gitlab.ListProjectsOptions{}
+
+	if option.Search != "" {
+		opt.Search = gitlab.String(option.Search)
+	}
+
+	if option.Limit != 0 && option.Offset != 0 {
+		opt.Page = option.Offset
+		opt.PerPage = option.Limit
+	}
+
+	projects, response, err := git.gitConn.Projects.ListProjects(opt)
+	if err != nil {
+		return nil, err
+	}
+
+	repoList := make([]RepoIface, 0)
+	for _, project := range projects {
+		repoList = append(repoList, &gitlabRepoIface{
+			gitConn: git.gitConn,
+			Project: project,
+			Total:   response.TotalItems,
+		})
+	}
+
+	return repoList, nil
+}
+
+type gitlabRepoIface struct {
+	gitConn *gitlab.Client
+	Project *gitlab.Project
+	Total   int
+}
+
+func (git *gitlabRepoIface) ListBranches(option VcsIfaceOptions) ([]string, error) {
+	branchList := make([]string, 0)
+	opt := &gitlab.ListBranchesOptions{}
+	branches, _, er := git.gitConn.Branches.ListBranches(git.Project.ID, opt)
+	if er != nil {
+		return nil, e.New(e.GitLabError, er)
+	}
+	for _, branch := range branches {
+		branchList = append(branchList, branch.Name)
+	}
+	return branchList, nil
+}
+func (git *gitlabRepoIface) BranchCommitId(option VcsIfaceOptions) (string, error) {
+	commits, _, commitErr := git.gitConn.Commits.ListCommits(git.Project.ID, &gitlab.ListCommitsOptions{})
+	if commitErr != nil {
+		return "nil", e.New(e.GitLabError, commitErr)
+	}
+	if commits != nil {
+		return commits[0].ID, nil
+	}
+	return "", e.New(e.GitLabError, fmt.Errorf("repo %s, commit is null", git.Project.Name))
+}
+func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) {
+
+	var (
+		fileBlob = "blob"
+		fileTree = "tree"
+	)
+	pathList := make([]string, 0)
+	lto := &gitlab.ListTreeOptions{
+		ListOptions: gitlab.ListOptions{Page: 1, PerPage: 1000},
+		Ref:         gitlab.String(option.Branch),
+		Path:        gitlab.String(option.Path),
+	}
+	treeNode, _, err := git.gitConn.Repositories.ListTree(git.Project.ID, lto)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, i := range treeNode {
+		if i.Type == fileBlob && strings.Contains(i.Name, "tfvars") {
+			pathList = append(pathList, i.Path)
+		}
+		if i.Type == fileTree && option.Recursive {
+			pl, err := git.ListFiles(option)
+			if err != nil {
+				return nil, err
+			}
+			pathList = append(pathList, pl...)
+		}
+	}
+	return pathList, nil
+
+}
+func (git *gitlabRepoIface) ReadFileContent(option VcsIfaceOptions) (content []byte, err error) {
+
+	opt := &gitlab.GetRawFileOptions{Ref: gitlab.String(option.Branch)}
+	row, _, errs := git.gitConn.RepositoryFiles.GetRawFile(git.Project.ID, option.Path, opt)
+	if errs != nil {
+		return content, e.New(e.GitLabError, err)
+	}
+	return row, nil
+}
+
+type Projects struct {
+	ID             int        `json:"id"`
+	Description    string     `json:"description"`
+	DefaultBranch  string     `json:"default_branch"`
+	SSHURLToRepo   string     `json:"ssh_url_to_repo"`
+	HTTPURLToRepo  string     `json:"http_url_to_repo"`
+	Name           string     `json:"name"`
+	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+}
+
+func (gitlab *gitlabRepoIface) FormatRepoSearch(option VcsIfaceOptions) (project *Projects, err e.Error) {
+	jsonProjects, er := json.Marshal(gitlab.Project)
+	if er != nil {
+		return nil, e.New(e.JSONParseError, er)
+	}
+	repos := &Projects{}
+	er = json.Unmarshal(jsonProjects, &repos)
+	if er != nil {
+		return nil, e.New(e.JSONParseError, er)
+	}
+
+	return repos, nil
+}
+
+func ListOrganizationReposById(vcs *models.Vcs, form *forms.GetGitProjectsForm) (projects []*gitlab.Project, total int, err e.Error) {
 	git, err := GetGitConn(vcs.VcsToken, vcs.Address)
 	if err != nil {
 		return nil, total, err
@@ -46,7 +189,6 @@ func ListRepositoryBranches(vcs *models.Vcs, form *forms.GetGitBranchesForm) (br
 	return branches, nil
 }
 
-
 func GetReadmeContent(vcs *models.Vcs, form *forms.GetReadmeForm) (content models.FileContent, err error) {
 	content = models.FileContent{
 		Content: "",
@@ -68,8 +210,6 @@ func GetReadmeContent(vcs *models.Vcs, form *forms.GetReadmeForm) (content model
 	return res, nil
 }
 
-
-
 func GetGitConn(gitlabToken, gitlabUrl string) (git *gitlab.Client, err e.Error) {
 	git, er := gitlab.NewClient(gitlabToken, gitlab.WithBaseURL(gitlabUrl+"/api/v4"))
 	if er != nil {
@@ -78,10 +218,10 @@ func GetGitConn(gitlabToken, gitlabUrl string) (git *gitlab.Client, err e.Error)
 	return
 }
 
-func TemplateTfvarsSearch(vcs *models.Vcs,repoId uint, repoBranch string) (interface{}, e.Error) {
-	tfVarsList :=  make([]string,0)
+func TemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch string) (interface{}, e.Error) {
+	tfVarsList := make([]string, 0)
 	var errs error
-	if vcs.VcsType == consts.GitLab{
+	if vcs.VcsType == consts.GitLab {
 		git, err := GetGitConn(vcs.VcsToken, vcs.Address)
 		if err != nil {
 			return nil, err
@@ -91,7 +231,7 @@ func TemplateTfvarsSearch(vcs *models.Vcs,repoId uint, repoBranch string) (inter
 	}
 
 	if vcs.VcsType == consts.GitEA {
-		tfVarsList ,errs = GetGiteaTemplateTfvarsSearch(vcs,repoId,repoBranch,"")
+		tfVarsList, errs = GetGiteaTemplateTfvarsSearch(vcs, repoId, repoBranch, "")
 	}
 
 	if errs != nil {
@@ -103,8 +243,10 @@ func TemplateTfvarsSearch(vcs *models.Vcs,repoId uint, repoBranch string) (inter
 }
 
 func getTfvarsList(git *gitlab.Client, repoBranch, path string, repoId uint) ([]string, error) {
-	var fileBlob = "blob"
-	var fileTree = "tree"
+	var (
+		fileBlob = "blob"
+		fileTree = "tree"
+	)
 	pathList := make([]string, 0)
 	lto := &gitlab.ListTreeOptions{
 		ListOptions: gitlab.ListOptions{Page: 1, PerPage: 1000},
@@ -130,4 +272,13 @@ func getTfvarsList(git *gitlab.Client, repoBranch, path string, repoId uint) ([]
 	}
 	return pathList, nil
 
+}
+
+type TemplateVariable struct {
+	Description string `json:"description" form:"description" `
+	Default     string `json:"default" form:"default" `
+}
+
+func TemplateVariableSearch(vcs *models.Vcs, repoId uint, repoBranch string) (interface{}, e.Error) {
+	return
 }

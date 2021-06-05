@@ -5,10 +5,44 @@ import (
 	"cloudiac/models"
 	"encoding/json"
 	"fmt"
+	"github.com/xanzy/go-gitlab"
 	"io/ioutil"
 	"net/http"
 	"strings"
 )
+
+func newGiteaInstance(vcs *models.Vcs) (VcsIface, error) {
+	//gitConn, err := GetGitConn("", "")
+	//if err != nil {
+	//	return nil, err
+	//}
+	//return &giteaVcs{gitConn: gitConn}, nil
+	return nil, nil
+}
+
+type giteaVcs struct {
+	gitConn *gitlab.Client
+}
+
+func (gitea *giteaVcs) GetRepo(idOrPath string) (RepoIface, error) {
+	return nil, nil
+}
+func (gitea *giteaVcs) ListRepos(namespace string, search string, limit, offset int) ([]RepoIface, error) {
+	return nil, nil
+}
+
+func (gitea *giteaVcs) ListBranches(search string, limit int) ([]string, error) {
+	return nil, nil
+}
+func (gitea *giteaVcs) BranchCommitId(branch string) (string, error) {
+	return "", nil
+}
+func (gitea *giteaVcs) ListFiles(ref string, path string, search string, recursive bool, limit int) ([]string, error) {
+	return nil, nil
+}
+func (gitea *giteaVcs) ReadFileContent(path string) (content []byte, err error) {
+	return nil, nil
+}
 
 func DoGiteaRequest(request *http.Request, token string) (*http.Response, error) {
 	client := &http.Client{}
@@ -25,16 +59,16 @@ func GetGiteaUrl(address string) string {
 	return strings.TrimSuffix(address, "/")
 }
 
-func GetGiteaTemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch,filePath string) ([]string, error) {
+func GetGiteaTemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch, filePath string) ([]string, error) {
 	repo, err := GetGiteaRepoById(vcs, int(repoId))
 	if err != nil {
 		return nil, err
 	}
 	var path string
 	vcsRawPath := GetGiteaUrl(vcs.Address)
-	if filePath!="" {
-		path = vcsRawPath + "/api/v1" + fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0", repo,filePath)
-	}else {
+	if filePath != "" {
+		path = vcsRawPath + "/api/v1" + fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0", repo, filePath)
+	} else {
 		path = vcsRawPath + "/api/v1" + fmt.Sprintf("/repos/%s/contents?limit=0&page=0", repo)
 	}
 	request, er := http.NewRequest("GET", path, nil)
@@ -52,7 +86,7 @@ func GetGiteaTemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch,fileP
 	_ = json.Unmarshal(body, &rep)
 	for _, v := range rep {
 		if _, ok := v["type"].(string); ok && v["type"].(string) == "dir" {
-			repList, _ := GetGiteaTemplateTfvarsSearch(vcs, repoId, repoBranch,v["path"].(string))
+			repList, _ := GetGiteaTemplateTfvarsSearch(vcs, repoId, repoBranch, v["path"].(string))
 			resp = append(resp, repList...)
 		}
 
@@ -108,7 +142,7 @@ func GetGiteaBranchCommitId(vcs *models.Vcs, repoId uint, repoBranch string) (st
 	//return branchList, nil
 	var commit string
 	if _, ok := rep["commit"].(map[string]interface{}); ok {
-		commit =  rep["commit"].(map[string]interface{})["id"].(string)
+		commit = rep["commit"].(map[string]interface{})["id"].(string)
 	}
 	return commit, nil
 

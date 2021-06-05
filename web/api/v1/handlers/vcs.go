@@ -59,6 +59,10 @@ func (Vcs) ListRepos(c *ctx.GinRequestCtx) {
 		c.JSONResult(nil,e.New(e.DBError, err))
 		return
 	}
+	//vcsIface,errs:=vcsrv.GetVcsInstance(vcs)
+	//if errs!=nil{
+	//
+	//}
 	if vcs.VcsType == "gitlab"{
 		c.JSONResult(apps.ListOrganizationRepos(vcs, &form))
 	} else if vcs.VcsType == "gitea" {
@@ -91,7 +95,7 @@ func (Vcs) GetReadmeContent(c *ctx.GinRequestCtx) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().Tx())
+	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().DB())
 	if err != nil {
 		c.JSONResult(nil,e.New(e.DBError, err))
 		return
@@ -115,4 +119,23 @@ func TemplateTfvarsSearch(c *ctx.GinRequestCtx){
 		return
 	}
 	c.JSONResult(apps.TemplateTfvarsSearch(vcs, &form))
+}
+// TemplateVariableSearch 查询云模板TF参数
+// @Tags 触发器
+// @Description 查询触发器接口
+// @Accept application/json
+// @Param tplGuid formData string false "云模版guid"
+// @router /api/v1/webhook/search [get]
+// @Success 200 {object} models.TemplateAccessToken
+func TemplateVariableSearch(c *ctx.GinRequestCtx){
+	form := forms.TemplateVariableSearchForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().Tx())
+	if err != nil {
+		c.JSONResult(nil,e.New(e.DBError, err))
+		return
+	}
+	c.JSONResult(apps.TemplateVariableSearch(vcs, &form))
 }

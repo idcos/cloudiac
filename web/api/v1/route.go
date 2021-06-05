@@ -63,7 +63,6 @@ func Register(g *gin.RouterGroup) {
 		//ctrl.Register(root.Group("task"), &handlers.Task{})
 
 		ctrl.Register(root.Group("taskComment"), &handlers.TaskComment{})
-		ctrl.Register(root.Group("webhook"), &handlers.AccessToken{})
 
 		//root.GET("/template/overview", w(handlers.Template{}.Overview))
 		root.GET("/template/stateSearch", w(handlers.Template{}.Overview))
@@ -121,7 +120,7 @@ func Register(g *gin.RouterGroup) {
 
 		ctrl.Register(root.Group("template"), &handlers.Template{})
 		root.GET("/template/overview", w(handlers.Template{}.Overview))
-		root.GET("/template/state/search", w(handlers.Template{}.Overview))
+		//root.GET("/template/state/search", w(handlers.Template{}.Overview))
 		root.GET("/template/tfvars/search", w(handlers.TemplateTfvarsSearch))
 
 		ctrl.Register(root.Group("task"), &handlers.Task{})
@@ -136,6 +135,9 @@ func Register(g *gin.RouterGroup) {
 		root.GET("/vcs/repo/search", w(handlers.Vcs{}.ListRepos))
 		root.GET("/vcs/branch/search", w(handlers.Vcs{}.ListBranches))
 		root.GET("/vcs/readme", w(handlers.Vcs{}.GetReadmeContent))
+
+		ctrl.Register(root.Group("webhook"), &handlers.AccessToken{})
+		root.GET("/template/variable/search",w(handlers.TemplateVariableSearch))
 
 	}
 

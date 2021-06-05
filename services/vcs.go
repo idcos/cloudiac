@@ -43,7 +43,13 @@ func QueryVcs(orgId uint, status, q string, query *db.Session) *db.Session {
 
 func QueryVcsByVcsId(vcsId uint, query *db.Session) (*models.Vcs, e.Error) {
 	vcs := &models.Vcs{}
-	err := query.Where("id = ?", vcsId).First(vcs)
+	if vcsId == 0 {
+		query = query.Where("org_id = 0")
+	}else {
+		query = query.Where("id = ?", vcsId)
+	}
+
+	err := query.First(vcs)
 	if err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("query vcs detail error: %v", err))
 	}

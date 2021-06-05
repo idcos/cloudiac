@@ -55,7 +55,7 @@ func GetRouter() *gin.Engine {
 	open_api_v1.Register(e.Group("/iac/open/v1"))
 
 	e.POST("/template/library/hook", w(handlers.TemplateLibraryHandler))
-	e.GET("template/hook/send",w(handlers.AccessTokenHandler))
+	e.GET("/template/hook/send",w(handlers.AccessTokenHandler))
 
 	//// 访问上传静态文件目录
 	//e.Static(consts.UploadURLPrefix, conf.UploadDir)
