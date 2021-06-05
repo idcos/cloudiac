@@ -43,6 +43,7 @@ type ReqBody struct {
 	Mode         string `json:"mode" default:"plan"`
 	Varfile      string `json:"varfile"`
 	Extra        string `json:"extra"`
+	Playbook     string `json:"playbook" form:"playbook" `
 }
 
 type CommitedTask struct {
@@ -173,6 +174,10 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, error) {
 	}
 
 	for k, v := range d.Env {
+		c.Env = append(c.Env, fmt.Sprintf("%s=%s", k, v))
+	}
+
+	for k, v := range AnsibleEnv {
 		c.Env = append(c.Env, fmt.Sprintf("%s=%s", k, v))
 	}
 

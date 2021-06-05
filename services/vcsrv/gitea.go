@@ -3,6 +3,7 @@ package vcsrv
 import (
 	"cloudiac/consts/e"
 	"cloudiac/models"
+	"cloudiac/utils"
 	"encoding/json"
 	"fmt"
 	"github.com/xanzy/go-gitlab"
@@ -54,12 +55,12 @@ func DoGiteaRequest(request *http.Request, token string) (*http.Response, error)
 	}
 	return response, nil
 }
-
 func GetGiteaUrl(address string) string {
 	return strings.TrimSuffix(address, "/")
 }
 
-func GetGiteaTemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch, filePath string) ([]string, error) {
+
+func GetGiteaTemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch, filePath string, fileName []string) ([]string, error) {
 	repo, err := GetGiteaRepoById(vcs, int(repoId))
 	if err != nil {
 		return nil, err
@@ -86,11 +87,11 @@ func GetGiteaTemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch, file
 	_ = json.Unmarshal(body, &rep)
 	for _, v := range rep {
 		if _, ok := v["type"].(string); ok && v["type"].(string) == "dir" {
-			repList, _ := GetGiteaTemplateTfvarsSearch(vcs, repoId, repoBranch, v["path"].(string))
+			repList, _ := GetGiteaTemplateTfvarsSearch(vcs, repoId, repoBranch, v["path"].(string), fileName)
 			resp = append(resp, repList...)
 		}
 
-		if _, ok := v["type"].(string); ok && v["type"].(string) == "file" && strings.Contains(v["name"].(string), "tfvars") {
+		if _, ok := v["type"].(string); ok && v["type"].(string) == "file" && utils.ArrayIsHasSuffix(fileName,v["name"].(string)){
 			resp = append(resp, v["name"].(string))
 		}
 

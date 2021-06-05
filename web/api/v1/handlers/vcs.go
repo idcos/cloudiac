@@ -120,6 +120,7 @@ func TemplateTfvarsSearch(c *ctx.GinRequestCtx){
 	}
 	c.JSONResult(apps.TemplateTfvarsSearch(vcs, &form))
 }
+
 // TemplateVariableSearch 查询云模板TF参数
 // @Tags 触发器
 // @Description 查询触发器接口
@@ -129,6 +130,26 @@ func TemplateTfvarsSearch(c *ctx.GinRequestCtx){
 // @Success 200 {object} models.TemplateAccessToken
 func TemplateVariableSearch(c *ctx.GinRequestCtx){
 	form := forms.TemplateVariableSearchForm{}
+	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().Tx())
+	if err != nil {
+		c.JSONResult(nil,e.New(e.DBError, err))
+		return
+	}
+	c.JSONResult(apps.TemplateVariableSearch(vcs, &form))
+
+}
+//TemplatePlaybookSearch
+// @Tags playbook列表查询
+// @Description  playbook列表接口
+// @Accept application/json
+// @Param repoId formData int true "仓库id"
+// @Param repoBranch formData int true "分支"
+// @Param vcsId formData int true "vcsID"
+// @router /api/v1/template/playbook/search [get]
+// @Success 200 {object} models.TemplateLibrary
+func TemplatePlaybookSearch(c *ctx.GinRequestCtx){
+	form := forms.TemplatePlaybookSearchForm{}
+
 	if err := c.Bind(&form); err != nil {
 		return
 	}
@@ -137,5 +158,7 @@ func TemplateVariableSearch(c *ctx.GinRequestCtx){
 		c.JSONResult(nil,e.New(e.DBError, err))
 		return
 	}
-	c.JSONResult(apps.TemplateVariableSearch(vcs, &form))
+	c.JSONResult(apps.TemplatePlaybookSearch(vcs, &form))
 }
+
+

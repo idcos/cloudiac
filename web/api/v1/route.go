@@ -73,9 +73,6 @@ func Register(g *gin.RouterGroup) {
 		root.GET("/runnerList/search", w(handlers.RunnerSearch))
 		root.GET("/templateTfvars/search", w(handlers.TemplateTfvarsSearch))
 		root.GET("/vcs/listEnableVcs", w(handlers.ListEnableVcs))
-
-		//ctrl.Register(root.Group("vcs"), &handlers.Vcs{})
-
 	}
 
 	//root.GET("/sse/hello/:filename", w(handlers.HelloSse))
@@ -136,8 +133,10 @@ func Register(g *gin.RouterGroup) {
 		root.GET("/vcs/branch/search", w(handlers.Vcs{}.ListBranches))
 		root.GET("/vcs/readme", w(handlers.Vcs{}.GetReadmeContent))
 
+
 		ctrl.Register(root.Group("webhook"), &handlers.AccessToken{})
 		root.GET("/template/variable/search",w(handlers.TemplateVariableSearch))
+		root.GET("/template/playbook/search",w(handlers.TemplatePlaybookSearch))
 
 	}
 

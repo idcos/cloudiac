@@ -1,6 +1,7 @@
 package apps
 
 import (
+	"cloudiac/consts"
 	"cloudiac/consts/e"
 	"cloudiac/libs/page"
 	"cloudiac/models"
@@ -20,7 +21,7 @@ type Projects struct {
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 }
 
-func ListOrganizationRepos(vcs *models.Vcs,form *forms.GetGitProjectsForm) (interface{}, e.Error) {
+func ListOrganizationRepos(vcs *models.Vcs, form *forms.GetGitProjectsForm) (interface{}, e.Error) {
 	projects, total, err := vcsrv.ListOrganizationReposById(vcs, form)
 	if err != nil {
 		return nil, err
@@ -73,10 +74,14 @@ func GetReadmeContent(vcs *models.Vcs, form *forms.GetReadmeForm) (interface{}, 
 	return content, nil
 }
 
-func TemplateTfvarsSearch(vcs *models.Vcs,form *forms.TemplateTfvarsSearchForm) (interface{}, e.Error) {
-	return vcsrv.TemplateTfvarsSearch(vcs, form.RepoId, form.RepoBranch)
+func TemplateTfvarsSearch(vcs *models.Vcs, form *forms.TemplateTfvarsSearchForm) (interface{}, e.Error) {
+	return vcsrv.TemplateTfvarsSearch(vcs, form.RepoId, form.RepoBranch, []string{consts.TfVarFileExt})
 }
 
-func TemplateVariableSearch(vcs *models.Vcs,form *forms.TemplateVariableSearchForm) (interface{}, e.Error) {
+func TemplatePlaybookSearch(vcs *models.Vcs, form *forms.TemplatePlaybookSearchForm) (interface{}, e.Error) {
+	return vcsrv.TemplateTfvarsSearch(vcs, form.RepoId, form.RepoBranch, []string{consts.PlaybookPrefixYml, consts.PlaybookPrefixYaml})
+}
+
+func TemplateVariableSearch(vcs *models.Vcs, form *forms.TemplateVariableSearchForm) (interface{}, e.Error) {
 	return vcsrv.TemplateVariableSearch(vcs, form.RepoId, form.RepoBranch)
 }
