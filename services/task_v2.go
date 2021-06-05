@@ -150,10 +150,11 @@ func doAssignTask(orgGuid string, task *models.Task, tpl *models.Template) (
 			StateBackendAddress: configs.Get().Consul.Address,
 			Lock:                true,
 		},
-		"env":     runningTaskEnvParam(tpl, task.CtServiceId, task),
-		"varfile": tpl.Varfile,
-		"mode":    task.TaskType,
-		"extra":   tpl.Extra,
+		"env":      runningTaskEnvParam(tpl, task.CtServiceId, task),
+		"varfile":  tpl.Varfile,
+		"mode":     task.TaskType,
+		"extra":    tpl.Extra,
+		"playbook": tpl.Playbook,
 	}
 
 	header := &http.Header{}
@@ -162,7 +163,6 @@ func doAssignTask(orgGuid string, task *models.Task, tpl *models.Template) (
 	addr := fmt.Sprintf("%s%s", backend.BackendUrl, consts.RunnerRunTaskURL)
 	logger.Infof("assign task to '%s'", addr)
 	logger.Debugf("post data: %s", utils.MustJSON(data))
-
 	// 向 runner 下发 task
 	resp, err = requestRunnerRunTask(addr, header, data)
 	if err != nil {

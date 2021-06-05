@@ -35,6 +35,10 @@ const pullCommandTemplate = `
 terraform state pull
 `
 
+const ansibleCommandTemplate = `
+ {{if .Playbook}}ansible-playbook -i {{.AnsibleStateAnalysis}} {{.Playbook}}{{end}}
+`
+
 var (
 	initCommandTpl = template.Must(template.New("").Parse(initCommandTemplate))
 
@@ -42,6 +46,7 @@ var (
 	applyCommandTpl   = template.Must(template.New("").Parse(applyCommandTemplate))
 	destroyCommandTpl = template.Must(template.New("").Parse(destroyCommandTemplate))
 	pullCommandTpl    = template.Must(template.New("").Parse(pullCommandTemplate))
+	ansibleCommandTpl = template.Must(template.New("").Parse(ansibleCommandTemplate))
 
 	commandTplMap = map[string]*template.Template{
 		"plan":    planCommandTpl,
@@ -53,6 +58,7 @@ var (
 
 func GenScriptContent(context *ReqBody, saveTo string) error {
 	saveFp, err := os.OpenFile(saveTo, os.O_CREATE|os.O_WRONLY, 0755)
+
 	if err != nil {
 		return err
 	}
@@ -106,6 +112,14 @@ func GenScriptContent(context *ReqBody, saveTo string) error {
 	}); err != nil {
 		return err
 	}
+
+	if err := ansibleCommandTpl.Execute(saveFp, map[string]string{
+		"Playbook":             context.Playbook,
+		"AnsibleStateAnalysis": AnsibleStateAnalysis,
+	}); err != nil {
+		return err
+	}
+
 
 	if context.Extra != "" {
 		if _, err := fmt.Fprintf(saveFp, "\n%s\n", context.Extra); err != nil {

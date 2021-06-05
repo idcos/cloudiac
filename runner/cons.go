@@ -2,11 +2,13 @@ package runner
 
 import "time"
 
-//////
-// 以下常量定义的是 runner 启动任务后容器内部的路径，不受配置文件响应
-
-const ContainerWorkspace = "/workspace"
-const ContainerIaCDir = "/cloud_iac" // 任务相关文件(run.sh/log) 挂载目录
+var (
+	AnsibleEnv = map[string]string{
+		"ANSIBLE_HOST_KEY_CHECKING": "False",
+		"ANSIBLE_TF_DIR":            ".",
+		"ANSIBLE_NOCOWS":            "1",
+	}
+)
 
 /*
 provider 的加载逻辑:
@@ -21,11 +23,19 @@ provider 的加载逻辑:
 - https://www.terraform.io/docs/cli/config/config-file.html#provider-plugin-cache
 */
 
-const ContainerProviderPath = "/usr/local/share/terraform/plugins" // 预置 plugins(providers) 目录
-const ContainerPluginCachePath = "/terraform/cache/plugins"        // terraform plugins(providers) 缓存目录
+/////
+// 以下常量定义的是 runner 启动任务后容器内部的路径，不受配置文件响应
+const (
+	AnsibleStateAnalysis     = "/usr/yunji/cloudiac/terraform.py"
+	ContainerWorkspace       = "/workspace"
+	ContainerIaCDir          = "/cloud_iac" // 任务相关文件(run.sh/log) 挂载目录
+	ContainerProviderPath    = "/providers"
+	ContainerPluginCachePath = "/terraform/cache/plugins" // terraform plugins(providers) 缓存目录
+)
 
-const TaskLogName = "runner.log"
-const TaskScriptName = "run.sh"
-const BackendConfigName = "backend.tf"
-
-const FollowLogDelay = time.Second // follow 文件时读到 EOF 后进行下次读取的等待时长
+const (
+	TaskLogName       = "runner.log"
+	TaskScriptName    = "run.sh"
+	BackendConfigName = "backend.tf"
+	FollowLogDelay    = time.Second // follow 文件时读到 EOF 后进行下次读取的等待时长
+)

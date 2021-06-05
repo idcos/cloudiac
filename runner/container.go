@@ -131,6 +131,11 @@ func (cmd *Command) Create() error {
 					Source: "/var/run/docker.sock",
 					Target: "/var/run/docker.sock",
 				},
+				{
+					Type:   mount.TypeBind,
+					Source: AnsibleStateAnalysis,
+					Target: AnsibleStateAnalysis,
+				},
 			},
 		},
 		nil,
