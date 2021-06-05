@@ -1,7 +1,6 @@
 package runner
 
 import (
-	"bytes"
 	"cloudiac/configs"
 	"cloudiac/utils/logs"
 	"context"
@@ -69,45 +68,9 @@ func PathCreate(path string) error {
 	}
 }
 
-// 从指定位置读取日志文件
-func ReadLogFile(filepath string, offset int, maxLines int) ([]string, error) {
-	var lines []string
-	// TODO(ZhengYue): 优化文件读取，考虑使用seek跳过偏移行数
-	file, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		return lines, err
-	}
-	buf := bytes.NewBuffer(file)
-	lineCount := 0
-	for {
-		line, err := buf.ReadString('\n')
-		if len(line) == 0 {
-			if err != nil {
-				if err == io.EOF {
-					break
-				}
-				return lines, err
-			}
-		}
-		lineCount += 1
-		if lineCount > offset {
-			// 未达到偏移位置，继续读取
-			lines = append(lines, line)
-		}
-		if len(lines) == maxLines {
-			// 达到最大行数，立即返回
-			return lines, err
-		}
-		if err != nil && err != io.EOF {
-			return lines, err
-		}
-	}
-	return lines, nil
-}
-
 func GetTaskWorkDir(templateUUID string, taskId string) string {
 	conf := configs.Get()
-	return filepath.Join(conf.Runner.StoragePath, templateUUID, taskId)
+	return filepath.Join(conf.Runner.AbsStoragePath(), templateUUID, taskId)
 }
 
 func FetchTaskLog(templateUUID string, taskId string) ([]byte, error) {

@@ -3,6 +3,7 @@ package main
 import (
 	v1 "cloudiac/runner/api/v1"
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	"os"
@@ -50,14 +51,14 @@ func main() {
 }
 
 func checkConfigs(c *configs.Config) error {
-	cases := []struct{
-		name string
+	cases := []struct {
+		name  string
 		value string
 	}{
 		{"runner.default_image", c.Runner.DefaultImage},
-		{"runner.provider_path", c.Runner.ProviderPath},
-		{"runner.plugin_cache_path", c.Runner.PluginCachePath},
 		{"runner.storage_path", c.Runner.StoragePath},
+		{"runner.asset_path", c.Runner.AssetPath},
+		{"runner.plugin_cache_path", c.Runner.PluginCachePath},
 	}
 
 	for _, c := range cases {
@@ -71,15 +72,18 @@ func checkConfigs(c *configs.Config) error {
 // ensureDirs 确保依赖的目录存在
 func ensureDirs() error {
 	c := configs.Get().Runner
-	mkDir := func(path string) error {
-		return os.MkdirAll(c.ProviderPath, 0755)
-	}
 
-	for _, path := range []string{c.PluginCachePath, c.ProviderPath, c.StoragePath} {
-		if err := mkDir(path); err != nil {
+	var err error
+	for _, path := range []string{c.StoragePath, c.AssetPath, c.PluginCachePath, c.AssetProviderPath()} {
+		// 确保可以转为绝对路径，因为挂载到容器中时必须使用绝对路径
+		path, err = filepath.Abs(path)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("Abs(%s)", path))
+		} else if err = os.MkdirAll(path, 0755); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 

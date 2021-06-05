@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -51,10 +52,36 @@ type TaskConfig struct {
 }
 
 type RunnerConfig struct {
-	DefaultImage    string `yaml:"default_image"`
+	DefaultImage string `yaml:"default_image"`
+	// AssetPath  预置 providers 也在该目录下
+	AssetPath       string `yaml:"asset_path"`
 	StoragePath     string `yaml:"storage_path"`
-	ProviderPath    string `yaml:"provider_path"`
 	PluginCachePath string `yaml:"plugin_cache_path"`
+}
+
+func (c *RunnerConfig) mustAbs(path string) string {
+	p, err := filepath.Abs(path)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+func (c *RunnerConfig) AssetProviderPath() string {
+	// 预置 providers 在 asset/providers 目录下，不单独提供配置
+	return filepath.Join(c.AbsAssetPath(), "providers")
+}
+
+func (c *RunnerConfig) AbsAssetPath() string {
+	return c.mustAbs(c.AssetPath)
+}
+
+func (c *RunnerConfig) AbsStoragePath() string {
+	return c.mustAbs(c.StoragePath)
+}
+
+func (c *RunnerConfig) AbsPluginCachePath() string {
+	return c.mustAbs(c.PluginCachePath)
 }
 
 type LogConfig struct {
@@ -85,15 +112,15 @@ func (ut *yamlTimeDuration) UnmarshalYAML(unmarshal func(interface{}) error) err
 }
 
 type Config struct {
-	Mysql                   string           `yaml:"mysql"`
-	Listen                  string           `yaml:"listen"`
-	Consul                  ConsulConfig     `yaml:"consul"`
-	Gitlab                  GitlabConfig     `yaml:"gitlab"`
-	Runner                  RunnerConfig     `yaml:"runner"`
-	Task                    TaskConfig       `yaml:"task"`
-	Log                     LogConfig        `yaml:"log"`
-	Kafka                   KafkaConfig      `yaml:"kafka"`
-	SMTPServer              SMTPServerConfig `yaml:"smtpServer"`
+	Mysql      string           `yaml:"mysql"`
+	Listen     string           `yaml:"listen"`
+	Consul     ConsulConfig     `yaml:"consul"`
+	Gitlab     GitlabConfig     `yaml:"gitlab"`
+	Runner     RunnerConfig     `yaml:"runner"`
+	Task       TaskConfig       `yaml:"task"`
+	Log        LogConfig        `yaml:"log"`
+	Kafka      KafkaConfig      `yaml:"kafka"`
+	SMTPServer SMTPServerConfig `yaml:"smtpServer"`
 }
 
 var (
@@ -112,6 +139,7 @@ func parseConfig(filename string, out interface{}) error {
 	if err := yaml.Unmarshal(bs, out); err != nil {
 		return fmt.Errorf("yaml.Unmarshal: %v", err)
 	}
+
 	return nil
 }
 

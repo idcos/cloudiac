@@ -21,8 +21,10 @@ func Run(req *http.Request) (string, error) {
 	if err := GenBackendConfig(state.StateBackendAddress, state.Scheme, state.StateKey, c.TaskWorkdir); err != nil {
 		return "", errors.Wrap(err, "generate backend config error")
 	}
-	err = c.Create()
-	return c.ContainerInstance.ID, err
+	if err = c.Create(); err != nil {
+		return "", err
+	}
+	return c.ContainerInstance.ID, nil
 }
 
 func Cancel(req *http.Request) error {

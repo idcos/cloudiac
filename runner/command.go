@@ -3,6 +3,7 @@ package runner
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 )
@@ -11,11 +12,11 @@ var initCommandTemplate = `set -e
 export CLOUD_IAC_DIR={{.CloudIaCDir}}
 export CLOUD_IAC_WORKSPACE={{.Workspace}}
 export CLOUD_IAC_BACKEND_CONFIG=${CLOUD_IAC_DIR}/{{.BackendConfigName}}
-export TF_PLUGIN_CACHE_DIR={{.TFPluginCacheDir}}
+export TF_PLUGIN_CACHE_DIR={{.PluginsCachePath}}
 
+ln -svf ${CLOUD_IAC_BACKEND_CONFIG}  ./_cloud_iac_backend.tf && \
 git clone {{.Repo}} ${CLOUD_IAC_WORKSPACE} && \
 cd "${CLOUD_IAC_WORKSPACE}" && git checkout {{.RepoCommit}} && \
-ln -svf ${CLOUD_IAC_BACKEND_CONFIG}  ./_cloud_iac_backend.tf && \
 terraform init && \`
 
 const planCommandTemplate = `
@@ -96,7 +97,7 @@ func GenScriptContent(context *ReqBody, saveTo string) error {
 		"RepoCommit":        context.RepoCommit,
 		"Workspace":         ContainerWorkspace,
 		"CloudIaCDir":       ContainerIaCDir,
-		"TFPluginCacheDir":  ContainerPluginCachePath,
+		"PluginsCachePath":  ContainerPluginsCachePath,
 		"BackendConfigName": BackendConfigName,
 	}); err != nil {
 		return err
@@ -115,11 +116,10 @@ func GenScriptContent(context *ReqBody, saveTo string) error {
 
 	if err := ansibleCommandTpl.Execute(saveFp, map[string]string{
 		"Playbook":             context.Playbook,
-		"AnsibleStateAnalysis": AnsibleStateAnalysis,
+		"AnsibleStateAnalysis": filepath.Join(ContainerAssetPath, AnsibleStateAnalysisName),
 	}); err != nil {
 		return err
 	}
-
 
 	if context.Extra != "" {
 		if _, err := fmt.Fprintf(saveFp, "\n%s\n", context.Extra); err != nil {
