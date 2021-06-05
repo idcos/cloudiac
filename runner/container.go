@@ -119,6 +119,11 @@ func (cmd *Command) Create() error {
 					Source: conf.Runner.ProviderPath,
 					Target: ContainerProviderPath,
 				},
+				{
+					Type:   mount.TypeBind,
+					Source: AnsibleStateAnalysis,
+					Target: AnsibleStateAnalysis,
+				},
 			},
 		},
 		nil,
