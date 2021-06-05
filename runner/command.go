@@ -116,7 +116,7 @@ func GenScriptContent(context *ReqBody, saveTo string) error {
 
 	if err := ansibleCommandTpl.Execute(saveFp, map[string]string{
 		"Playbook":             context.Playbook,
-		"AnsibleStateAnalysis": filepath.Join(ContainerAssetPath, AnsibleStateAnalysisName),
+		"AnsibleStateAnalysis": filepath.Join(ContainerAssetsPath, AnsibleStateAnalysisName),
 	}); err != nil {
 		return err
 	}

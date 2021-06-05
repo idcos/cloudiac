@@ -5,7 +5,7 @@ runner:
   ## 保存任务运行信息(脚本、日志等)
   storage_path: "./storage"
   ## 预置资源(providers, terraform.py 等)
-  asset_path: "./asset"
+  assets_path: "./assets"
   ## plugins 缓存
   plugin_cache_path: "./plugin-cache"
 

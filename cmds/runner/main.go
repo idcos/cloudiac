@@ -57,7 +57,7 @@ func checkConfigs(c *configs.Config) error {
 	}{
 		{"runner.default_image", c.Runner.DefaultImage},
 		{"runner.storage_path", c.Runner.StoragePath},
-		{"runner.asset_path", c.Runner.AssetPath},
+		{"runner.assets_path", c.Runner.AssetsPath},
 		{"runner.plugin_cache_path", c.Runner.PluginCachePath},
 	}
 
@@ -74,7 +74,7 @@ func ensureDirs() error {
 	c := configs.Get().Runner
 
 	var err error
-	for _, path := range []string{c.StoragePath, c.AssetPath, c.PluginCachePath, c.AssetProviderPath()} {
+	for _, path := range []string{c.StoragePath, c.AssetsPath, c.PluginCachePath, c.ProviderPath()} {
 		// 确保可以转为绝对路径，因为挂载到容器中时必须使用绝对路径
 		path, err = filepath.Abs(path)
 		if err != nil {

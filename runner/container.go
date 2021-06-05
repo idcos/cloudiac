@@ -111,14 +111,14 @@ func (cmd *Command) Create() error {
 				},
 				{
 					Type:     mount.TypeBind,
-					Source:   conf.Runner.AbsAssetPath(),
-					Target:   ContainerAssetPath,
+					Source:   conf.Runner.AbsAssetsPath(),
+					Target:   ContainerAssetsPath,
 					ReadOnly: true,
 				},
 				{
 					// providers 需要挂载到指定目录才能被 terraform 查找到，所以单独再做一次挂载
 					Type:     mount.TypeBind,
-					Source:   conf.Runner.AssetProviderPath(),
+					Source:   conf.Runner.ProviderPath(),
 					Target:   ContainerPluginsPath,
 					ReadOnly: true,
 				},
