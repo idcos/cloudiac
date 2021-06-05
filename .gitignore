@@ -12,3 +12,4 @@ ct-*
 config-portal.yaml
 config-runner.yaml
 targets/
+plugin-cache/

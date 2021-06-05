@@ -12,6 +12,7 @@ import (
 	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"reflect"
 )
 
@@ -20,33 +21,31 @@ func TaskLogSSEGetPath(c *ctx.ServiceCtx, taskGuid string) string {
 	if err != nil {
 		logs.Get().Error(err)
 	}
-	taskBackend := make(map[string]interface{}, 0)
-	_ = json.Unmarshal(task.BackendInfo, &taskBackend)
-	return taskBackend["log_file"].(string)
+	return task.BackendInfo.LogFile
 }
 
 func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface{}, e.Error) {
-	tx := c.DB().Debug()
+	dbSess := c.DB()
 	guid := utils.GenGuid("run")
 	conf := configs.Get()
-	//todo 如果cmp寻址提供runner信息需要使用寻址的runner进行作业执行
-	logPath := fmt.Sprintf("%s/%s/%s", conf.Task.LogPath, form.TemplateGuid, guid)
+	logPath := filepath.Join(form.TemplateGuid, guid, consts.TaskLogName)
 
 	//根据模板GUID获取模板id
-	tpl, err := services.GetTemplateByGuid(tx, form.TemplateGuid)
+	tpl, err := services.GetTemplateByGuid(dbSess, form.TemplateGuid)
 	if err != nil {
 		return nil, err
 	}
-	b, _ := json.Marshal(map[string]interface{}{
-		"backend_url": fmt.Sprintf("http://%s:%d/api/v1", tpl.DefaultRunnerAddr, tpl.DefaultRunnerPort),
-		"ctServiceId": conf.Consul.ServiceID,
-		"log_file":    logPath,
-	})
+
+	backend := models.TaskBackendInfo{
+		BackendUrl:  fmt.Sprintf("http://%s:%d/api/v1", tpl.DefaultRunnerAddr, tpl.DefaultRunnerPort),
+		CtServiceId: conf.Consul.ServiceID,
+		LogFile:     logPath,
+	}
 
 	vars := GetResourceAccount(form.Account, form.Vars, tpl.TplType)
 	jsons, _ := json.Marshal(vars)
 
-	task, err := services.CreateTask(tx, models.Task{
+	task, err := services.CreateTask(dbSess, models.Task{
 		TemplateGuid:  form.TemplateGuid,
 		TaskType:      consts.TaskApply,
 		Guid:          guid,
@@ -54,7 +53,7 @@ func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface
 		Source:        form.Source,
 		SourceVars:    models.JSON(jsons),
 		CtServiceId:   conf.Consul.ServiceID,
-		BackendInfo:   models.JSON(b),
+		BackendInfo:   &backend,
 		TemplateId:    tpl.Id,
 		TransactionId: form.TransactionId,
 		Creator:       c.UserId,

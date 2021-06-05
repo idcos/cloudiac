@@ -22,10 +22,11 @@ const (
 
 	TaskPending   = "pending"
 	TaskAssigning = "assigning"
-	TaskRunning   = "running"
-	TaskTimeout   = "timeout"
-	TaskFailed    = "failed"
-	TaskComplete  = "complete"
+
+	TaskRunning  = "running"
+	TaskTimeout  = "timeout"
+	TaskFailed   = "failed"
+	TaskComplete = "complete"
 
 	TaskLogName = "runner.log"
 	TaskApply   = "apply"
@@ -47,6 +48,7 @@ const (
 )
 
 var (
+	BomUtf8    = []byte{0xEF, 0xBB, 0xBF}
 	AccountMap = map[string]map[string]string{
 		"aliyun": {
 			"accessKeyId":     "ALICLOUD_ACCESS_KEY",

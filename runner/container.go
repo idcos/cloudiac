@@ -19,14 +19,14 @@ func (task *CommitedTask) Cancel() error {
 	cli.NegotiateAPIVersion(context.Background())
 	if err != nil {
 		log.Printf("Unable to create docker client")
-		panic(err)
+		return err
 	}
 
-	conatinerRemoveOpts := types.ContainerRemoveOptions{
+	containerRemoveOpts := types.ContainerRemoveOptions{
 		RemoveVolumes: true,
 		Force:         true,
 	}
-	if err := cli.ContainerRemove(context.Background(), task.ContainerId, conatinerRemoveOpts); err != nil {
+	if err := cli.ContainerRemove(context.Background(), task.ContainerId, containerRemoveOpts); err != nil {
 		log.Printf("Unable to remove container: %s", err)
 		return err
 	}
@@ -49,7 +49,7 @@ func (task *CommitedTask) Status() (types.ContainerJSON, error) {
 	return containerInfo, nil
 }
 
-// Wait 等待任务结束，返回退出码，如果超时，返回 error context.DeadlineExceeded
+// Wait 等待任务结束返回退出码，若超时返回 error=context.DeadlineExceeded
 func (task *CommitedTask) Wait(ctx context.Context) (int64, error) {
 	logger := logs.Get().WithField("taskId", task.TaskId)
 
@@ -62,8 +62,8 @@ func (task *CommitedTask) Wait(ctx context.Context) (int64, error) {
 	respCh, errCh := cli.ContainerWait(ctx, task.ContainerId, container.WaitConditionNotRunning)
 	select {
 	case resp := <-respCh:
-		logger.Debugf("wait container resp: %#v", resp)
 		if resp.Error != nil {
+			logger.Warnf("wait container response status: %v, error: %v", resp.StatusCode, resp.Error)
 			return resp.StatusCode, fmt.Errorf(resp.Error.Message)
 		} else {
 			return resp.StatusCode, nil
@@ -85,13 +85,13 @@ func (cmd *Command) Create() error {
 
 	if err != nil {
 		log.Printf("Unable to create docker client")
-		panic(err)
+		return err
 	}
 
 	id := guuid.New()
-
 	conf := configs.Get()
 
+	log.Printf("starting command, task working directory: %s", cmd.TaskWorkdir)
 	cont, err := cli.ContainerCreate(
 		cmd.ContainerInstance.Context,
 		&container.Config{
@@ -110,19 +110,27 @@ func (cmd *Command) Create() error {
 					Target: ContainerIaCDir,
 				},
 				{
+					Type:     mount.TypeBind,
+					Source:   conf.Runner.AbsAssetPath(),
+					Target:   ContainerAssetPath,
+					ReadOnly: true,
+				},
+				{
+					// providers 需要挂载到指定目录才能被 terraform 查找到，所以单独再做一次挂载
+					Type:     mount.TypeBind,
+					Source:   conf.Runner.AssetProviderPath(),
+					Target:   ContainerPluginsPath,
+					ReadOnly: true,
+				},
+				{
+					Type:   mount.TypeBind,
+					Source: conf.Runner.AbsPluginCachePath(),
+					Target: ContainerPluginsCachePath,
+				},
+				{
 					Type:   mount.TypeBind,
 					Source: "/var/run/docker.sock",
 					Target: "/var/run/docker.sock",
-				},
-				{
-					Type:   mount.TypeBind,
-					Source: conf.Runner.ProviderPath,
-					Target: ContainerProviderPath,
-				},
-				{
-					Type:   mount.TypeBind,
-					Source: AnsibleStateAnalysis,
-					Target: AnsibleStateAnalysis,
 				},
 			},
 		},

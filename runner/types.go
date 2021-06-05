@@ -16,3 +16,12 @@ type TaskStatusMessage struct {
 type ErrorMessage struct {
 	Error string `json:"error"`
 }
+
+type StateStore struct {
+	SaveState           bool   `json:"save_state"`
+	Backend             string `json:"backend" default:"consul"`
+	Scheme              string `json:"scheme" default:"http"`
+	StateKey            string `json:"state_key"`
+	StateBackendAddress string `json:"state_backend_address"`
+	Lock                bool   `json:"lock"`
+}
