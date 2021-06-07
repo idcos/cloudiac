@@ -4,28 +4,30 @@ import (
 	"cloudiac/consts/e"
 	"cloudiac/models"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	fPath "path"
 	"strconv"
 	"strings"
 	"time"
 )
 
 func newGiteaInstance(vcs *models.Vcs) (VcsIface, error) {
-	return &giteaVcsIface{giteaRequest: giteaRequest, vcs: vcs}, nil
+	return &giteaVcs{giteaRequest: giteaRequest, vcs: vcs}, nil
 
 }
 
-type giteaVcsIface struct {
+type giteaVcs struct {
 	giteaRequest func(path, method, token string) (*http.Response, error)
 	vcs          *models.Vcs
 }
 
-func (gitea *giteaVcsIface) GetRepo(option VcsIfaceOptions) (RepoIface, error) {
-	repo, err := GetGiteaRepoById(gitea.vcs, utils.Str2int(option.IdOrPath))
+func (gitea *giteaVcs) GetRepo(idOrPath string) (RepoIface, error) {
+	repo, err := GetGiteaRepoById(gitea.vcs, utils.Str2int(idOrPath))
 	if err != nil {
 		return nil, err
 	}
@@ -68,11 +70,11 @@ type Repository struct {
 	Updated       time.Time `json:"updated_at"`
 }
 
-func (gitea *giteaVcsIface) ListRepos(option VcsIfaceOptions) ([]RepoIface, error) {
+func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset uint) ([]RepoIface, error) {
 	link, _ := url.Parse("/repos/search")
-	link.RawQuery = fmt.Sprintf("page=%d&limit=%d", option.Offset, option.Limit)
-	if option.Search != "" {
-		link.RawQuery = link.RawQuery + fmt.Sprintf("&q=%s", option.Search)
+	link.RawQuery = fmt.Sprintf("page=%d&limit=%d", offset, limit)
+	if search != "" {
+		link.RawQuery = link.RawQuery + fmt.Sprintf("&q=%s", search)
 	}
 	path := gitea.vcs.Address + "/api/v1" + link.String()
 	response, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
@@ -110,9 +112,9 @@ type giteaRepoIface struct {
 	total        int
 }
 
-func (gitea *giteaRepoIface) ListBranches(option VcsIfaceOptions) ([]string, error) {
+func (gitea *giteaRepoIface) ListBranches(search string, limit, offset uint) ([]string, error) {
 	path := gitea.vcs.Address + "/api/v1" +
-		fmt.Sprintf("/repos/%s/branches?limit=0&page=0", gitea.repository.Name)
+		fmt.Sprintf("/repos/%s/branches?limit=%d&page=%d", gitea.repository.Name, limit, offset)
 
 	response, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
 	if err != nil {
@@ -129,10 +131,10 @@ func (gitea *giteaRepoIface) ListBranches(option VcsIfaceOptions) ([]string, err
 	return branchList, nil
 
 }
-func (gitea *giteaRepoIface) BranchCommitId(option VcsIfaceOptions) (string, error) {
+func (gitea *giteaRepoIface) BranchCommitId(branch string) (string, error) {
 
 	path := gitea.vcs.Address + "/api/v1" +
-		fmt.Sprintf("/repos/%s/branches/%s?limit=0&page=0", gitea.repository.Name, option.Branch)
+		fmt.Sprintf("/repos/%s/branches/%s?limit=0&page=0", gitea.repository.Name, branch)
 	response, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
 	if err != nil {
 		return "", e.New(e.BadRequest, err)
@@ -174,7 +176,13 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 			resp = append(resp, repList...)
 		}
 
-		if _, ok := v["type"].(string); ok && v["type"].(string) == "file" && utils.ArrayIsHasSuffix(option.IsHasSuffixFileName, v["name"].(string)) {
+		matched, err := fPath.Match(option.Search, v["name"].(string))
+		if err != nil {
+			logs.Get().Debug("file name match err: %v", err)
+		}
+
+		if _, ok := v["type"].(string); ok && v["type"].(string) == "file" &&
+			(utils.ArrayIsHasSuffix(option.IsHasSuffixFileName, v["name"].(string)) || matched) {
 			resp = append(resp, v["name"].(string))
 		}
 
@@ -182,10 +190,10 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 
 	return resp, nil
 }
-func (gitea *giteaRepoIface) ReadFileContent(option VcsIfaceOptions) (content []byte, err error) {
-	path := gitea.vcs.Address + "/api/v1" +
-		fmt.Sprintf("/repos/%s/raw/README.md?ref=%s", gitea.repository.Name, option.Branch)
-	response, er := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
+func (gitea *giteaRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
+	pathAddr := gitea.vcs.Address + "/api/v1" +
+		fmt.Sprintf("/repos/%s/raw/%s?ref=%s", gitea.repository.Name, path, branch)
+	response, er := gitea.giteaRequest(pathAddr, "GET", gitea.vcs.VcsToken)
 	if er != nil {
 		return []byte{}, e.New(e.BadRequest, er)
 	}
@@ -195,7 +203,7 @@ func (gitea *giteaRepoIface) ReadFileContent(option VcsIfaceOptions) (content []
 	return body[:], nil
 }
 
-func (gitea *giteaRepoIface) FormatRepoSearch(option VcsIfaceOptions) (project *Projects, err e.Error) {
+func (gitea *giteaRepoIface) FormatRepoSearch() (project *Projects, err e.Error) {
 	return &Projects{
 		ID:             int(gitea.repository.ID),
 		Description:    gitea.repository.Description,

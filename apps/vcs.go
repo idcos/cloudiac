@@ -74,15 +74,15 @@ func GetReadme(c *ctx.ServiceCtx, form *forms.GetReadmeForm) (interface{}, e.Err
 	if err != nil {
 		return nil, err
 	}
-	vcsIface, er := vcsrv.GetVcsInstance(vcs)
+	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
-	repoIface, er := vcsIface.GetRepo(vcsrv.VcsIfaceOptions{IdOrPath: strconv.Itoa(form.RepoId)})
+	repo, er := vcsService.GetRepo(strconv.Itoa(form.RepoId))
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
-	b, er := repoIface.ReadFileContent(vcsrv.VcsIfaceOptions{})
+	b, er := repo.ReadFileContent(form.Branch,"README.md")
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
@@ -98,23 +98,19 @@ func ListRepos(c *ctx.ServiceCtx, form *forms.GetGitProjectsForm) (interface{}, 
 		return nil, err
 	}
 
-	vcsIface, er := vcsrv.GetVcsInstance(vcs)
+	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
-	repoIfaces, er := vcsIface.ListRepos(vcsrv.VcsIfaceOptions{
-		Search: form.Q,
-		Offset: form.CurrentPage_,
-		Limit:  form.PageSize_,
-	})
+	repo, er := vcsService.ListRepos("",form.Q,uint(form.PageSize_),uint(form.CurrentPage_))
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
 	project := make([]*vcsrv.Projects, 0)
 	var total int64
-	for _, repo := range repoIfaces {
+	for _, repo := range repo {
 		total++
-		proj, er := repo.FormatRepoSearch(vcsrv.VcsIfaceOptions{})
+		proj, er := repo.FormatRepoSearch()
 		if er != nil {
 			return nil, err
 		}
@@ -138,15 +134,15 @@ func ListRepoBranches(c *ctx.ServiceCtx, form *forms.GetGitBranchesForm) (brans 
 		return nil, err
 	}
 
-	vcsIface, er := vcsrv.GetVcsInstance(vcs)
+	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
-	repoIfaces, er := vcsIface.GetRepo(vcsrv.VcsIfaceOptions{IdOrPath: strconv.Itoa(form.RepoId)})
+	repo, er := vcsService.GetRepo(strconv.Itoa(form.RepoId))
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
-	branchList, er := repoIfaces.ListBranches(vcsrv.VcsIfaceOptions{})
+	branchList, er := repo.ListBranches("",0,0)
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
@@ -164,15 +160,15 @@ func VcsTfVarsSearch(c *ctx.ServiceCtx, form *forms.TemplateTfvarsSearchForm) (i
 		return nil, err
 	}
 
-	vcsIface, er := vcsrv.GetVcsInstance(vcs)
+	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
-	repoIfaces, er := vcsIface.GetRepo(vcsrv.VcsIfaceOptions{IdOrPath: strconv.Itoa(int(form.RepoId))})
+	repo, er := vcsService.GetRepo(strconv.Itoa(int(form.RepoId)))
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
-	listFiles, er := repoIfaces.ListFiles(vcsrv.VcsIfaceOptions{
+	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
 		Branch:              form.RepoBranch,
 		IsHasSuffixFileName: []string{consts.TfVarFileExt},
 	})
@@ -189,15 +185,15 @@ func VcsPlaybookSearch(c *ctx.ServiceCtx, form *forms.TemplatePlaybookSearchForm
 		return nil, err
 	}
 
-	vcsIface, er := vcsrv.GetVcsInstance(vcs)
+	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
-	repoIfaces, er := vcsIface.GetRepo(vcsrv.VcsIfaceOptions{IdOrPath: strconv.Itoa(int(form.RepoId))})
+	repo, er := vcsService.GetRepo(strconv.Itoa(int(form.RepoId)))
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
-	listFiles, er := repoIfaces.ListFiles(vcsrv.VcsIfaceOptions{
+	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
 		Branch:              form.RepoBranch,
 		IsHasSuffixFileName: []string{consts.PlaybookPrefixYml, consts.PlaybookPrefixYaml},
 	})
@@ -214,15 +210,15 @@ func VcsVariableSearch(c *ctx.ServiceCtx, form *forms.TemplateVariableSearchForm
 		return nil, err
 	}
 
-	vcsIface, er := vcsrv.GetVcsInstance(vcs)
+	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
-	repoIfaces, er := vcsIface.GetRepo(vcsrv.VcsIfaceOptions{IdOrPath: strconv.Itoa(int(form.RepoId))})
+	repo, er := vcsService.GetRepo(strconv.Itoa(int(form.RepoId)))
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
-	listFiles, er := repoIfaces.ListFiles(vcsrv.VcsIfaceOptions{
+	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
 		Branch:              form.RepoBranch,
 		IsHasSuffixFileName: []string{consts.VariablePrefix},
 	})
@@ -231,7 +227,7 @@ func VcsVariableSearch(c *ctx.ServiceCtx, form *forms.TemplateVariableSearchForm
 	}
 	tvl := make([]services.TemplateVariable, 0)
 	for _, file := range listFiles {
-		content, er := repoIfaces.ReadFileContent(vcsrv.VcsIfaceOptions{Path: file})
+		content, er := repo.ReadFileContent(form.RepoBranch,file)
 		if er != nil {
 			return nil, e.New(e.GitLabError, err)
 		}

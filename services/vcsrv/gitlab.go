@@ -6,9 +6,11 @@ import (
 	"cloudiac/models"
 	"cloudiac/models/forms"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
 	"github.com/xanzy/go-gitlab"
+	"path"
 	"time"
 )
 
@@ -24,8 +26,8 @@ type gitlabVcsIface struct {
 	gitConn *gitlab.Client
 }
 
-func (git *gitlabVcsIface) GetRepo(option VcsIfaceOptions) (RepoIface, error) {
-	project, response, err := git.gitConn.Projects.GetProject(option.IdOrPath, nil)
+func (git *gitlabVcsIface) GetRepo(idOrPath string) (RepoIface, error) {
+	project, response, err := git.gitConn.Projects.GetProject(idOrPath, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -35,16 +37,16 @@ func (git *gitlabVcsIface) GetRepo(option VcsIfaceOptions) (RepoIface, error) {
 		Total:   response.TotalItems,
 	}, nil
 }
-func (git *gitlabVcsIface) ListRepos(option VcsIfaceOptions) ([]RepoIface, error) {
+func (git *gitlabVcsIface) ListRepos(namespace, search string, limit, offset uint) ([]RepoIface, error) {
 	opt := &gitlab.ListProjectsOptions{}
 
-	if option.Search != "" {
-		opt.Search = gitlab.String(option.Search)
+	if search != "" {
+		opt.Search = gitlab.String(search)
 	}
 
-	if option.Limit != 0 && option.Offset != 0 {
-		opt.Page = option.Offset
-		opt.PerPage = option.Limit
+	if limit != 0 && offset != 0 {
+		opt.Page = int(offset)
+		opt.PerPage = int(limit)
 	}
 
 	projects, response, err := git.gitConn.Projects.ListProjects(opt)
@@ -70,7 +72,7 @@ type gitlabRepoIface struct {
 	Total   int
 }
 
-func (git *gitlabRepoIface) ListBranches(option VcsIfaceOptions) ([]string, error) {
+func (git *gitlabRepoIface) ListBranches(search string, limit, offset uint) ([]string, error) {
 	branchList := make([]string, 0)
 	opt := &gitlab.ListBranchesOptions{}
 	branches, _, er := git.gitConn.Branches.ListBranches(git.Project.ID, opt)
@@ -82,8 +84,11 @@ func (git *gitlabRepoIface) ListBranches(option VcsIfaceOptions) ([]string, erro
 	}
 	return branchList, nil
 }
-func (git *gitlabRepoIface) BranchCommitId(option VcsIfaceOptions) (string, error) {
-	commits, _, commitErr := git.gitConn.Commits.ListCommits(git.Project.ID, &gitlab.ListCommitsOptions{})
+func (git *gitlabRepoIface) BranchCommitId(branch string) (string, error) {
+	lco := &gitlab.ListCommitsOptions{
+		RefName: gitlab.String(branch),
+	}
+	commits, _, commitErr := git.gitConn.Commits.ListCommits(git.Project.ID, lco)
 	if commitErr != nil {
 		return "nil", e.New(e.GitLabError, commitErr)
 	}
@@ -110,7 +115,11 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 	}
 
 	for _, i := range treeNode {
-		if i.Type == fileBlob && utils.ArrayIsHasSuffix(option.IsHasSuffixFileName, i.Name)  {
+		matched, err := path.Match(option.Search, i.Name)
+		if err != nil {
+			logs.Get().Debug("file name match err: %v", err)
+		}
+		if i.Type == fileBlob && (utils.ArrayIsHasSuffix(option.IsHasSuffixFileName, i.Name) || matched) {
 			pathList = append(pathList, i.Path)
 		}
 		if i.Type == fileTree && option.Recursive {
@@ -125,9 +134,9 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 	return pathList, nil
 
 }
-func (git *gitlabRepoIface) ReadFileContent(option VcsIfaceOptions) (content []byte, err error) {
-	opt := &gitlab.GetRawFileOptions{Ref: gitlab.String(option.Branch)}
-	row, _, errs := git.gitConn.RepositoryFiles.GetRawFile(git.Project.ID, option.Path, opt)
+func (git *gitlabRepoIface) ReadFileContent(branch,path string) (content []byte, err error) {
+	opt := &gitlab.GetRawFileOptions{Ref: gitlab.String(branch)}
+	row, _, errs := git.gitConn.RepositoryFiles.GetRawFile(git.Project.ID, path, opt)
 	if errs != nil {
 		return content, e.New(e.GitLabError, err)
 	}
@@ -144,7 +153,7 @@ type Projects struct {
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 }
 
-func (gitlab *gitlabRepoIface) FormatRepoSearch(option VcsIfaceOptions) (project *Projects, err e.Error) {
+func (gitlab *gitlabRepoIface) FormatRepoSearch() (project *Projects, err e.Error) {
 	jsonProjects, er := json.Marshal(gitlab.Project)
 	if er != nil {
 		return nil, e.New(e.JSONParseError, er)
@@ -280,5 +289,3 @@ func getTfvarsList(git *gitlab.Client, repoBranch, path string, repoId uint, fil
 	return pathList, nil
 
 }
-
-

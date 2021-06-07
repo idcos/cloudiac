@@ -9,29 +9,28 @@ import (
 /*
 version control service 接口
 */
+
 type VcsIfaceOptions struct {
-	Ref       string
-	Path      string
-	Search    string
-	Recursive bool
-	Branch    string
-	IdOrPath  string
-	Namespace string
-	Limit     int
-	Offset    int
+	Ref                 string
+	Path                string
+	Search              string
+	Recursive           bool
+	Branch              string
+	Limit               int
+	Offset              int
 	IsHasSuffixFileName []string
 }
 
 type VcsIface interface {
 	// GetRepo 列出仓库
 	// param idOrPath: 仓库id或者路径
-	GetRepo(option VcsIfaceOptions) (RepoIface, error)
+	GetRepo(idOrPath string) (RepoIface, error)
 
 	// ListRepos 列出仓库列表
 	// param namespace: namespace 可用于表示用户、组织等
 	// param search: 搜索字符串
 	// param limit: 限制返回的文件数，传 0 表示无限制
-	ListRepos(option VcsIfaceOptions) ([]RepoIface, error)
+	ListRepos(namespace, search string, limit, offset uint) ([]RepoIface, error)
 }
 
 type RepoIface interface {
@@ -39,11 +38,11 @@ type RepoIface interface {
 	// param search: 搜索字符串
 	// param limit: 限制返回的文件数，传 0 表示无限制
 	// param offset: 偏移量
-	ListBranches(option VcsIfaceOptions) ([]string, error)
+	ListBranches(search string, limit, offset uint) ([]string, error)
 
 	// BranchCommitId
 	//param branch: 分支
-	BranchCommitId(option VcsIfaceOptions) (string, error)
+	BranchCommitId(branch string) (string, error)
 
 	// ListFiles 列出指定路径下的文件
 	// param ref: 分支或者 commit id
@@ -58,10 +57,10 @@ type RepoIface interface {
 	// ReadFileContent
 	// param path: 路径
 	// param branch: 分支
-	ReadFileContent(option VcsIfaceOptions) (content []byte, err error)
+	ReadFileContent(branch,path string) (content []byte, err error)
 
 	// FormatRepoSearch 格式化输出前端需要的内容
-	FormatRepoSearch(option VcsIfaceOptions) (project *Projects, err e.Error)
+	FormatRepoSearch() (project *Projects, err e.Error)
 }
 
 func GetVcsInstance(vcs *models.Vcs) (VcsIface, error) {
