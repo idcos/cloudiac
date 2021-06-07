@@ -15,6 +15,7 @@ import (
 	"github.com/gin-contrib/sse"
 	"github.com/gorilla/websocket"
 	"io"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -30,10 +31,16 @@ func FollowTaskLog(c *ctx.GinRequestCtx) error {
 		// logPath example: "logs/ct-c2j2g5rn8qhqp9ku9a6g/run-c2mdu4ecie6qs8gmsmkgg"
 		logPath := c.Query("logPath")
 		parts := strings.Split(logPath, "/")
-		if len(parts) < 3 {
-			return fmt.Errorf("invalid log path: '%v'", logPath)
+		for _, s := range parts {
+			if strings.HasPrefix(s, "run-") {
+				taskId = s
+				break
+			}
 		}
-		taskId = parts[len(parts)-1]
+	}
+
+	if taskId == "" {
+		return e.New(e.BadRequest, http.StatusBadRequest, fmt.Errorf("'taskId' or 'logPath' required"))
 	}
 
 	logger := logs.Get().WithField("func", "FollowTaskLog").WithField("taskId", taskId)
@@ -42,7 +49,7 @@ func FollowTaskLog(c *ctx.GinRequestCtx) error {
 		task *models.Task
 		err  error
 	)
-	 // 等待任务启动
+	// 等待任务启动
 	for i := 0; ; i++ {
 		select {
 		case <-c.Context.Done():
