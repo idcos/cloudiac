@@ -2,11 +2,9 @@ package handlers
 
 import (
 	"cloudiac/apps"
-	"cloudiac/consts/e"
 	"cloudiac/libs/ctrl"
 	"cloudiac/libs/ctx"
 	"cloudiac/models/forms"
-	"cloudiac/services"
 )
 
 type Vcs struct {
@@ -54,21 +52,7 @@ func (Vcs) ListRepos(c *ctx.GinRequestCtx) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().Tx())
-	if err != nil {
-		c.JSONResult(nil,e.New(e.DBError, err))
-		return
-	}
-	//vcsIface,errs:=vcsrv.GetVcsInstance(vcs)
-	//if errs!=nil{
-	//
-	//}
-	if vcs.VcsType == "gitlab"{
-		c.JSONResult(apps.ListOrganizationRepos(vcs, &form))
-	} else if vcs.VcsType == "gitea" {
-		c.JSONResult(apps.ListGiteaOrganizationRepos(vcs, &form))
-	}
-
+	c.JSONResult(apps.ListRepos(c.ServiceCtx(), &form))
 }
 
 
@@ -77,17 +61,7 @@ func (Vcs) ListBranches(c *ctx.GinRequestCtx) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().Tx())
-	if err != nil {
-		c.JSONResult(nil,e.New(e.DBError, err))
-		return
-	}
-	if vcs.VcsType == "gitlab" {
-		c.JSONResult(apps.ListRepositoryBranches(vcs, &form))
-	} else if vcs.VcsType == "gitea" {
-		c.JSONResult(apps.ListGiteaRepoBranches(vcs, &form))
-	}
-
+	c.JSONResult(apps.ListRepoBranches(c.ServiceCtx(), &form))
 }
 
 func (Vcs) GetReadmeContent(c *ctx.GinRequestCtx) {
@@ -95,17 +69,7 @@ func (Vcs) GetReadmeContent(c *ctx.GinRequestCtx) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().DB())
-	if err != nil {
-		c.JSONResult(nil,e.New(e.DBError, err))
-		return
-	}
-	if vcs.VcsType == "gitlab" {
-		c.JSONResult(apps.GetReadmeContent(vcs, &form))
-	} else if vcs.VcsType == "gitea" {
-		c.JSONResult(apps.GetGiteaReadme(vcs, &form))
-	}
-
+	c.JSONResult(apps.GetReadme(c.ServiceCtx(),&form))
 }
 
 func TemplateTfvarsSearch(c *ctx.GinRequestCtx){
@@ -113,31 +77,26 @@ func TemplateTfvarsSearch(c *ctx.GinRequestCtx){
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().Tx())
-	if err != nil {
-		c.JSONResult(nil,e.New(e.DBError, err))
-		return
-	}
-	c.JSONResult(apps.TemplateTfvarsSearch(vcs, &form))
+	c.JSONResult(apps.VcsTfVarsSearch(c.ServiceCtx(), &form))
 }
 
 // TemplateVariableSearch 查询云模板TF参数
-// @Tags 触发器
-// @Description 查询触发器接口
+// @Tags 云模板
+// @Description 云模板参数接口
 // @Accept application/json
-// @Param tplGuid formData string false "云模版guid"
-// @router /api/v1/webhook/search [get]
-// @Success 200 {object} models.TemplateAccessToken
+// @Param repoId formData int true "仓库id"
+// @Param repoBranch formData int true "分支"
+// @Param vcsId formData int true "vcsID"
+// @router /api/v1/template/variable/search [get]
+// @Success 200 {object} vcsrv.TemplateVariable
 func TemplateVariableSearch(c *ctx.GinRequestCtx){
 	form := forms.TemplateVariableSearchForm{}
-	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().Tx())
-	if err != nil {
-		c.JSONResult(nil,e.New(e.DBError, err))
+	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.TemplateVariableSearch(vcs, &form))
-
+	c.JSONResult(apps.VcsVariableSearch(c.ServiceCtx(), &form))
 }
+
 //TemplatePlaybookSearch
 // @Tags playbook列表查询
 // @Description  playbook列表接口
@@ -146,19 +105,12 @@ func TemplateVariableSearch(c *ctx.GinRequestCtx){
 // @Param repoBranch formData int true "分支"
 // @Param vcsId formData int true "vcsID"
 // @router /api/v1/template/playbook/search [get]
-// @Success 200 {object} models.TemplateLibrary
 func TemplatePlaybookSearch(c *ctx.GinRequestCtx){
 	form := forms.TemplatePlaybookSearchForm{}
-
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.ServiceCtx().Tx())
-	if err != nil {
-		c.JSONResult(nil,e.New(e.DBError, err))
-		return
-	}
-	c.JSONResult(apps.TemplatePlaybookSearch(vcs, &form))
+	c.JSONResult(apps.VcsPlaybookSearch(c.ServiceCtx(), &form))
 }
 
 

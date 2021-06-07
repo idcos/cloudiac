@@ -5,15 +5,15 @@ import (
 	"cloudiac/consts/e"
 	"cloudiac/models"
 	"cloudiac/models/forms"
+	"cloudiac/utils"
 	"encoding/json"
 	"fmt"
 	"github.com/xanzy/go-gitlab"
-	"strings"
 	"time"
 )
 
 func newGitlabInstance(vcs *models.Vcs) (VcsIface, error) {
-	gitConn, err := GetGitConn("", "")
+	gitConn, err := GetGitConn(vcs.VcsToken, vcs.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -25,8 +25,14 @@ type gitlabVcsIface struct {
 }
 
 func (git *gitlabVcsIface) GetRepo(option VcsIfaceOptions) (RepoIface, error) {
+	project, response, err := git.gitConn.Projects.GetProject(option.IdOrPath, nil)
+	if err != nil {
+		return nil, err
+	}
 	return &gitlabRepoIface{
 		gitConn: git.gitConn,
+		Project: project,
+		Total:   response.TotalItems,
 	}, nil
 }
 func (git *gitlabVcsIface) ListRepos(option VcsIfaceOptions) ([]RepoIface, error) {
@@ -104,10 +110,11 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 	}
 
 	for _, i := range treeNode {
-		if i.Type == fileBlob && strings.Contains(i.Name, "tfvars") {
+		if i.Type == fileBlob && utils.ArrayIsHasSuffix(option.IsHasSuffixFileName, i.Name)  {
 			pathList = append(pathList, i.Path)
 		}
 		if i.Type == fileTree && option.Recursive {
+			option.Path = i.Path
 			pl, err := git.ListFiles(option)
 			if err != nil {
 				return nil, err
@@ -119,7 +126,6 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 
 }
 func (git *gitlabRepoIface) ReadFileContent(option VcsIfaceOptions) (content []byte, err error) {
-
 	opt := &gitlab.GetRawFileOptions{Ref: gitlab.String(option.Branch)}
 	row, _, errs := git.gitConn.RepositoryFiles.GetRawFile(git.Project.ID, option.Path, opt)
 	if errs != nil {
@@ -164,6 +170,7 @@ func ListOrganizationReposById(vcs *models.Vcs, form *forms.GetGitProjectsForm) 
 	}
 
 	if form.PageSize_ != 0 && form.CurrentPage_ != 0 {
+		opt.Search = gitlab.String(form.Q)
 		opt.Page = form.CurrentPage_
 		opt.PerPage = form.PageSize_
 	}
@@ -218,7 +225,7 @@ func GetGitConn(gitlabToken, gitlabUrl string) (git *gitlab.Client, err e.Error)
 	return
 }
 
-func TemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch string) (interface{}, e.Error) {
+func TemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch string, fileName []string) (interface{}, e.Error) {
 	tfVarsList := make([]string, 0)
 	var errs error
 	if vcs.VcsType == consts.GitLab {
@@ -226,12 +233,12 @@ func TemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch string) (inte
 		if err != nil {
 			return nil, err
 		}
-		tfVarsList, errs = getTfvarsList(git, repoBranch, "", repoId)
+		tfVarsList, errs = getTfvarsList(git, repoBranch, "", repoId, fileName)
 
 	}
 
 	if vcs.VcsType == consts.GitEA {
-		tfVarsList, errs = GetGiteaTemplateTfvarsSearch(vcs, repoId, repoBranch, "")
+		tfVarsList, errs = GetGiteaTemplateTfvarsSearch(vcs, repoId, repoBranch, "", fileName)
 	}
 
 	if errs != nil {
@@ -242,7 +249,7 @@ func TemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch string) (inte
 	return tfVarsList, nil
 }
 
-func getTfvarsList(git *gitlab.Client, repoBranch, path string, repoId uint) ([]string, error) {
+func getTfvarsList(git *gitlab.Client, repoBranch, path string, repoId uint, fileName []string) ([]string, error) {
 	var (
 		fileBlob = "blob"
 		fileTree = "tree"
@@ -259,11 +266,11 @@ func getTfvarsList(git *gitlab.Client, repoBranch, path string, repoId uint) ([]
 	}
 
 	for _, i := range treeNode {
-		if i.Type == fileBlob && strings.Contains(i.Name, "tfvars") {
+		if i.Type == fileBlob && utils.ArrayIsHasSuffix(fileName, i.Name) {
 			pathList = append(pathList, i.Path)
 		}
 		if i.Type == fileTree {
-			pl, err := getTfvarsList(git, repoBranch, i.Path, repoId)
+			pl, err := getTfvarsList(git, repoBranch, i.Path, repoId, fileName)
 			if err != nil {
 				return nil, err
 			}
@@ -274,11 +281,4 @@ func getTfvarsList(git *gitlab.Client, repoBranch, path string, repoId uint) ([]
 
 }
 
-type TemplateVariable struct {
-	Description string `json:"description" form:"description" `
-	Default     string `json:"default" form:"default" `
-}
 
-func TemplateVariableSearch(vcs *models.Vcs, repoId uint, repoBranch string) (interface{}, e.Error) {
-	return
-}

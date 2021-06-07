@@ -1,6 +1,7 @@
 package vcsrv
 
 import (
+	"cloudiac/consts/e"
 	"cloudiac/models"
 	"github.com/pkg/errors"
 )
@@ -18,6 +19,7 @@ type VcsIfaceOptions struct {
 	Namespace string
 	Limit     int
 	Offset    int
+	IsHasSuffixFileName []string
 }
 
 type VcsIface interface {
@@ -57,6 +59,9 @@ type RepoIface interface {
 	// param path: 路径
 	// param branch: 分支
 	ReadFileContent(option VcsIfaceOptions) (content []byte, err error)
+
+	// FormatRepoSearch 格式化输出前端需要的内容
+	FormatRepoSearch(option VcsIfaceOptions) (project *Projects, err e.Error)
 }
 
 func GetVcsInstance(vcs *models.Vcs) (VcsIface, error) {

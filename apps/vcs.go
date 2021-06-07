@@ -1,11 +1,15 @@
 package apps
 
 import (
+	"cloudiac/consts"
 	"cloudiac/consts/e"
 	"cloudiac/libs/ctx"
+	"cloudiac/libs/page"
 	"cloudiac/models"
 	"cloudiac/models/forms"
 	"cloudiac/services"
+	"cloudiac/services/vcsrv"
+	"strconv"
 )
 
 func CreateVcs(c *ctx.ServiceCtx, form *forms.CreateVcsForm) (interface{}, e.Error) {
@@ -63,4 +67,180 @@ func DeleteVcs(c *ctx.ServiceCtx, form *forms.DeleteVcsForm) (result interface{}
 func ListEnableVcs(c *ctx.ServiceCtx) (interface{}, e.Error) {
 	return services.QueryEnableVcs(c.OrgId, c.DB())
 
+}
+
+func GetReadme(c *ctx.ServiceCtx, form *forms.GetReadmeForm) (interface{}, e.Error) {
+	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
+	if err != nil {
+		return nil, err
+	}
+	vcsIface, er := vcsrv.GetVcsInstance(vcs)
+	if er != nil {
+		return nil, e.New(e.GitLabError, err)
+	}
+	repoIface, er := vcsIface.GetRepo(vcsrv.VcsIfaceOptions{IdOrPath: strconv.Itoa(form.RepoId)})
+	if er != nil {
+		return nil, e.New(e.GitLabError, err)
+	}
+	b, er := repoIface.ReadFileContent(vcsrv.VcsIfaceOptions{})
+	if er != nil {
+		return nil, e.New(e.GitLabError, err)
+	}
+	res := models.FileContent{
+		Content: string(b[:]),
+	}
+	return res, nil
+}
+
+func ListRepos(c *ctx.ServiceCtx, form *forms.GetGitProjectsForm) (interface{}, e.Error) {
+	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
+	if err != nil {
+		return nil, err
+	}
+
+	vcsIface, er := vcsrv.GetVcsInstance(vcs)
+	if er != nil {
+		return nil, e.New(e.GitLabError, err)
+	}
+	repoIfaces, er := vcsIface.ListRepos(vcsrv.VcsIfaceOptions{
+		Search: form.Q,
+		Offset: form.CurrentPage_,
+		Limit:  form.PageSize_,
+	})
+	if er != nil {
+		return nil, e.New(e.GitLabError, err)
+	}
+	project := make([]*vcsrv.Projects, 0)
+	var total int64
+	for _, repo := range repoIfaces {
+		total++
+		proj, er := repo.FormatRepoSearch(vcsrv.VcsIfaceOptions{})
+		if er != nil {
+			return nil, err
+		}
+		project = append(project, proj)
+	}
+
+	return page.PageResp{
+		Total:    total,
+		PageSize: form.CurrentPage(),
+		List:     project,
+	}, nil
+}
+
+type Branches struct {
+	Name string `json:"name"`
+}
+
+func ListRepoBranches(c *ctx.ServiceCtx, form *forms.GetGitBranchesForm) (brans []*Branches, err e.Error) {
+	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
+	if err != nil {
+		return nil, err
+	}
+
+	vcsIface, er := vcsrv.GetVcsInstance(vcs)
+	if er != nil {
+		return nil, e.New(e.GitLabError, err)
+	}
+	repoIfaces, er := vcsIface.GetRepo(vcsrv.VcsIfaceOptions{IdOrPath: strconv.Itoa(form.RepoId)})
+	if er != nil {
+		return nil, e.New(e.GitLabError, err)
+	}
+	branchList, er := repoIfaces.ListBranches(vcsrv.VcsIfaceOptions{})
+	if er != nil {
+		return nil, e.New(e.GitLabError, err)
+	}
+	for _, v := range branchList {
+		brans = append(brans, &Branches{
+			v,
+		})
+	}
+	return brans, nil
+}
+
+func VcsTfVarsSearch(c *ctx.ServiceCtx, form *forms.TemplateTfvarsSearchForm) (interface{}, e.Error) {
+	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
+	if err != nil {
+		return nil, err
+	}
+
+	vcsIface, er := vcsrv.GetVcsInstance(vcs)
+	if er != nil {
+		return nil, e.New(e.GitLabError, err)
+	}
+	repoIfaces, er := vcsIface.GetRepo(vcsrv.VcsIfaceOptions{IdOrPath: strconv.Itoa(int(form.RepoId))})
+	if er != nil {
+		return nil, e.New(e.GitLabError, err)
+	}
+	listFiles, er := repoIfaces.ListFiles(vcsrv.VcsIfaceOptions{
+		Branch:              form.RepoBranch,
+		IsHasSuffixFileName: []string{consts.TfVarFileExt},
+	})
+	if er != nil {
+		return nil, e.New(e.GitLabError, err)
+	}
+
+	return listFiles, nil
+}
+
+func VcsPlaybookSearch(c *ctx.ServiceCtx, form *forms.TemplatePlaybookSearchForm) (interface{}, e.Error) {
+	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
+	if err != nil {
+		return nil, err
+	}
+
+	vcsIface, er := vcsrv.GetVcsInstance(vcs)
+	if er != nil {
+		return nil, e.New(e.GitLabError, err)
+	}
+	repoIfaces, er := vcsIface.GetRepo(vcsrv.VcsIfaceOptions{IdOrPath: strconv.Itoa(int(form.RepoId))})
+	if er != nil {
+		return nil, e.New(e.GitLabError, err)
+	}
+	listFiles, er := repoIfaces.ListFiles(vcsrv.VcsIfaceOptions{
+		Branch:              form.RepoBranch,
+		IsHasSuffixFileName: []string{consts.PlaybookPrefixYml, consts.PlaybookPrefixYaml},
+	})
+	if er != nil {
+		return nil, e.New(e.GitLabError, err)
+	}
+
+	return listFiles, nil
+}
+
+func VcsVariableSearch(c *ctx.ServiceCtx, form *forms.TemplateVariableSearchForm) (interface{}, e.Error) {
+	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
+	if err != nil {
+		return nil, err
+	}
+
+	vcsIface, er := vcsrv.GetVcsInstance(vcs)
+	if er != nil {
+		return nil, e.New(e.GitLabError, err)
+	}
+	repoIfaces, er := vcsIface.GetRepo(vcsrv.VcsIfaceOptions{IdOrPath: strconv.Itoa(int(form.RepoId))})
+	if er != nil {
+		return nil, e.New(e.GitLabError, err)
+	}
+	listFiles, er := repoIfaces.ListFiles(vcsrv.VcsIfaceOptions{
+		Branch:              form.RepoBranch,
+		IsHasSuffixFileName: []string{consts.VariablePrefix},
+	})
+	if er != nil {
+		return nil, e.New(e.GitLabError, err)
+	}
+	tvl := make([]services.TemplateVariable, 0)
+	for _, file := range listFiles {
+		content, er := repoIfaces.ReadFileContent(vcsrv.VcsIfaceOptions{Path: file})
+		if er != nil {
+			return nil, e.New(e.GitLabError, err)
+		}
+		tvs, er := services.TemplateVariableSearch(content)
+		if er != nil {
+			return nil, e.New(e.GitLabError, err)
+		}
+		tvl = append(tvl, tvs...)
+	}
+
+	return tvl, nil
 }
