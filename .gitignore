@@ -2,9 +2,14 @@
 builds/
 .env
 config.yml
+config-portal.yml
 config-runner.yml
 .DS_Store
 ct-*/
 iac-*
 ct-*
-logs/
+*.tar.gz
+config-portal.yaml
+config-runner.yaml
+targets/
+plugin-cache/

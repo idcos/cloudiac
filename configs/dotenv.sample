@@ -1,3 +1,8 @@
+# 管理员账号密码
+IAM_ADMIN_EMAIL=admin@example.com
+## 密码只在第一次启动时进行读取，之后修改或者删除不会进行同步
+IAM_ADMIN_PASSWORD=
+
 # 部署的版本(容器部署时有效)
 VERSION=latest
 DOCKER_REGISTRY=registry.idcos.com/iac/
@@ -11,23 +16,24 @@ MYSQL_HOST=127.0.0.1
 MYSQL_PORT=3306
 MYSQL_DATABASE=iac
 MYSQL_USER=root
-MYSQL_PASSWORD=Passw0rd
+MYSQL_PASSWORD=
 
 # gitlab 配置
-GITLAB_URL=https://git.addr
-GITLAB_TOKEN=token
+GITLAB_URL=http://gitlab.example.com/
 GITLAB_TYPE=gitlab
+GITLAB_USERNAME=user
+GITLAB_TOKEN=
 
 # 作业配置
 TIME_TICKER=
 LOG_PATH=
 
 # consul 配置
-CONSUL_ADDR=192.168.0.1:8500
+CONSUL_ADDR=consul.example.com:8500
 SERVICE_ID=IaC-Portal-01
-SERVICE_IP=192.168.0.1
+SERVICE_IP=portal.example.com
 SERVICE_PORT=9030
-SERVICE_TAGS=北京联通机房;vmware
+SERVICE_TAGS=tag1;tag2
 CHECK_INTERVAL=3s
 CHECK_TIMEOUT=5s
 DEREGISTER_AFTER=90m

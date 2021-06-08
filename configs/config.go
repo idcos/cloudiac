@@ -5,31 +5,12 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
-	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v2"
-
-	"cloudiac/consts"
 )
-
-type RedisConfig struct {
-	IP       string `yaml:"ip"`
-	Port     string `yaml:"port"`
-	Password string `yaml:"password"`
-	DB       int    `yaml:"db"`
-}
-
-type IamConfig struct {
-	Addr    string `yaml:"addr"`
-	AuthApi string `yaml:"authApi"`
-}
-
-type RabbitMqConfig struct {
-	Addr  string `yaml:"addr"`
-	Queue string `yaml:"queue"`
-}
 
 type KafkaConfig struct {
 	Brokers      []string `yaml:"brokers"`
@@ -72,8 +53,35 @@ type TaskConfig struct {
 
 type RunnerConfig struct {
 	DefaultImage string `yaml:"default_image"`
-	StoragePath  string `yaml:"storage_path"`
-	ProviderPath string `yaml:"provider_path"`
+	// AssetsPath  预置 providers 也在该目录下
+	AssetsPath      string `yaml:"assets_path"`
+	StoragePath     string `yaml:"storage_path"`
+	PluginCachePath string `yaml:"plugin_cache_path"`
+}
+
+func (c *RunnerConfig) mustAbs(path string) string {
+	p, err := filepath.Abs(path)
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+func (c *RunnerConfig) ProviderPath() string {
+	// 预置 providers 在 asset/providers 目录下，不单独提供配置
+	return filepath.Join(c.AbsAssetsPath(), "providers")
+}
+
+func (c *RunnerConfig) AbsAssetsPath() string {
+	return c.mustAbs(c.AssetsPath)
+}
+
+func (c *RunnerConfig) AbsStoragePath() string {
+	return c.mustAbs(c.StoragePath)
+}
+
+func (c *RunnerConfig) AbsPluginCachePath() string {
+	return c.mustAbs(c.PluginCachePath)
 }
 
 type LogConfig struct {
@@ -104,20 +112,15 @@ func (ut *yamlTimeDuration) UnmarshalYAML(unmarshal func(interface{}) error) err
 }
 
 type Config struct {
-	Mysql                   string           `yaml:"mysql"`
-	Redis                   RedisConfig      `yaml:"redis"`
-	Listen                  string           `yaml:"listen"`
-	Iam                     IamConfig        `yaml:"iam"`
-	Rmq                     RabbitMqConfig   `yaml:"rabbitmq"`
-	Prometheus              string           `yaml:"prometheus"`
-	CollectTaskSyncInterval yamlTimeDuration `yaml:"collectTaskSyncInterval"`
-	Consul                  ConsulConfig     `yaml:"consul"`
-	Gitlab                  GitlabConfig     `yaml:"gitlab"`
-	Runner                  RunnerConfig     `yaml:"runner"`
-	Task                    TaskConfig       `yaml:"task"`
-	Log                     LogConfig        `yaml:"log"`
-	Kafka                   KafkaConfig      `yaml:"kafka"`
-	SMTPServer              SMTPServerConfig `yaml:"smtpServer"`
+	Mysql      string           `yaml:"mysql"`
+	Listen     string           `yaml:"listen"`
+	Consul     ConsulConfig     `yaml:"consul"`
+	Gitlab     GitlabConfig     `yaml:"gitlab"`
+	Runner     RunnerConfig     `yaml:"runner"`
+	Task       TaskConfig       `yaml:"task"`
+	Log        LogConfig        `yaml:"log"`
+	Kafka      KafkaConfig      `yaml:"kafka"`
+	SMTPServer SMTPServerConfig `yaml:"smtpServer"`
 }
 
 var (
@@ -136,6 +139,7 @@ func parseConfig(filename string, out interface{}) error {
 	if err := yaml.Unmarshal(bs, out); err != nil {
 		return fmt.Errorf("yaml.Unmarshal: %v", err)
 	}
+
 	return nil
 }
 
@@ -143,9 +147,6 @@ func parsePortalConfig(filename string) error {
 	cfg := Config{}
 	if err := parseConfig(filename, &cfg); err != nil {
 		return err
-	}
-	if cfg.CollectTaskSyncInterval.Duration == 0 {
-		cfg.CollectTaskSyncInterval.Duration = consts.DefaultCollectTaskSyncInterval
 	}
 
 	cfgLock.Lock()
@@ -163,13 +164,6 @@ func Get() *Config {
 }
 
 func initConfig(filename string, parser func(string) error) {
-	_, err := os.Stat(".env")
-	if !os.IsNotExist(err) {
-		if err := godotenv.Load(); err != nil {
-			log.Panic(err)
-		}
-	}
-
 	if err := parser(filename); err != nil {
 		log.Panic(err)
 	}

@@ -74,9 +74,6 @@ func Register(g *gin.RouterGroup) {
 		root.GET("/runnerList/search", w(handlers.RunnerSearch))
 		root.GET("/templateTfvars/search", w(handlers.TemplateTfvarsSearch))
 		root.GET("/vcs/listEnableVcs", w(handlers.ListEnableVcs))
-
-		//ctrl.Register(root.Group("vcs"), &handlers.Vcs{})
-
 	}
 
 	//root.GET("/sse/hello/:filename", w(handlers.HelloSse))
@@ -136,10 +133,11 @@ func Register(g *gin.RouterGroup) {
 		root.GET("/vcs/branch/search", w(handlers.Vcs{}.ListBranches))
 		root.GET("/vcs/readme", w(handlers.Vcs{}.GetReadmeContent))
 
+		root.GET("/template/playbook/search",w(handlers.TemplatePlaybookSearch))
+
 	}
 
 	// TODO 增加鉴权
 	g.GET("/taskLog/sse", w(handlers.Task{}.FollowLogSse))
 	g.GET("/task/log/sse", w(handlers.Task{}.FollowLogSse))
-
 }

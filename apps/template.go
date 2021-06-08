@@ -102,6 +102,7 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 			DefaultRunnerAddr:      form.DefaultRunnerAddr,
 			DefaultRunnerPort:      form.DefaultRunnerPort,
 			DefaultRunnerServiceId: form.DefaultRunnerServiceId,
+			Playbook:               form.Playbook,
 		})
 		if err != nil {
 			return nil, err
@@ -159,6 +160,10 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 
 	if form.HasKey("defaultRunnerAddr") {
 		attrs["defaultRunnerAddr"] = form.DefaultRunnerAddr
+	}
+
+	if form.HasKey("playbook") {
+		attrs["playbook"] = form.Playbook
 	}
 
 	if form.HasKey("vars") {

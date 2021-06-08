@@ -25,6 +25,7 @@ type CreateTemplateForm struct {
 	DefaultRunnerAddr      string `json:"defaultRunnerAddr" `
 	DefaultRunnerPort      uint   `json:"defaultRunnerPort" `
 	DefaultRunnerServiceId string `json:"defaultRunnerServiceId"`
+	Playbook               string `json:"playbook" form:"playbook" `
 }
 
 type SearchTemplateForm struct {
@@ -49,6 +50,7 @@ type UpdateTemplateForm struct {
 	DefaultRunnerAddr      string `json:"defaultRunnerAddr" grom:"not null;comment:'默认runner地址'"`
 	DefaultRunnerPort      uint   `json:"defaultRunnerPort" grom:"not null;comment:'默认runner端口'"`
 	DefaultRunnerServiceId string `json:"defaultRunnerServiceId" grom:"not null;comment:'默认runner-consul-serviceId'"`
+	Playbook               string `json:"playbook" form:"playbook" `
 }
 
 type DetailTemplateForm struct {
@@ -66,6 +68,14 @@ type OverviewTemplateForm struct {
 	Id uint `form:"id" json:"id" binding:"required"`
 }
 type TemplateTfvarsSearchForm struct {
+	BaseForm
+	RepoId     uint   `json:"repoId" form:"repoId" `
+	RepoBranch string `json:"repoBranch" form:"repoBranch" `
+	RepoType   string `json:"repoType" form:"repoType" `
+	VcsId      uint   `json:"vcsId" form:"vcsId"`
+}
+
+type TemplatePlaybookSearchForm struct {
 	BaseForm
 	RepoId     uint   `json:"repoId" form:"repoId" `
 	RepoBranch string `json:"repoBranch" form:"repoBranch" `
