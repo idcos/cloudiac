@@ -22,4 +22,3 @@ consul:
 log:
   log_level: "debug"
   log_max_days: 7
-

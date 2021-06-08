@@ -38,8 +38,12 @@ const (
 	Terraform              = "terraform"
 	TerraformVar           = "TF_VAR_"
 	WorkFlow               = "workflow"
-	GitLab                 = "gitlab"
-	GitEA                  = "gitea"
+
+	GitTypeGitLab = "gitlab"
+	GitTypeGitEA  = "gitea"
+	GitTypeGithub = "github"
+	GitTypeGitee  = "gitee"
+	GitTypeLocal  = "local"
 
 	TfVarFileExt       = ".tfvars"
 	PlaybookPrefixYml  = ".yml"
@@ -47,7 +51,8 @@ const (
 
 	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀
 
-	GitReposPath = "repos" // 内置 http git server 服务目录
+	LocalGitReposPath = "repos" // 内置 http git server 服务目录
+	ReposUrlPrefix = "/repos"	// 内置 http git server url prefix
 )
 
 var (

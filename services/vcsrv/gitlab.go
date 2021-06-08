@@ -78,7 +78,7 @@ func GetGitConn(gitlabToken, gitlabUrl string) (git *gitlab.Client, err e.Error)
 func TemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch string, fileName []string) (interface{}, e.Error) {
 	tfVarsList := make([]string, 0)
 	var errs error
-	if vcs.VcsType == consts.GitLab {
+	if vcs.VcsType == consts.GitTypeGitLab {
 		git, err := GetGitConn(vcs.VcsToken, vcs.Address)
 		if err != nil {
 			return nil, err
@@ -87,8 +87,8 @@ func TemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch string, fileN
 
 	}
 
-	if vcs.VcsType == consts.GitEA {
-		tfVarsList, errs = GetGiteaTemplateTfvarsSearch(vcs, repoId, repoBranch, "", fileName)
+	if vcs.VcsType == consts.GitTypeGitEA {
+		tfVarsList ,errs = GetGiteaTemplateTfvarsSearch(vcs, repoId, repoBranch, "", fileName)
 	}
 
 	if errs != nil {

@@ -54,7 +54,7 @@ func GetRouter() *gin.Engine {
 
 	//// http git server
 	// 直接提供静态文件访问，生产环境部署时也可以使用 nginx 反代
-	e.StaticFS("/repos", gin.Dir(consts.GitReposPath, true))
+	e.StaticFS(consts.ReposUrlPrefix, gin.Dir(consts.LocalGitReposPath, true))
 	return e
 }
 

@@ -33,7 +33,7 @@ func init() {
 	defaultLogger = newLogger()
 }
 
-// 根据配置文件配置 logger
+// Init 根据配置文件配置 logger
 func Init(level string, maxDays int, name string) {
 	if maxDays == 0 {
 		maxDays = 7

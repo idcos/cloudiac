@@ -5,10 +5,14 @@ package vcsrv
 */
 
 import (
+	"cloudiac/configs"
+	"cloudiac/consts"
 	"fmt"
 	"io/fs"
+	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"cloudiac/utils/logs"
 
@@ -185,4 +189,37 @@ func (l *LocalRepo) ReadFileContent(path string) (content []byte, err error) {
 
 	c, err := file.Contents()
 	return []byte(c), err
+}
+
+type Projects struct {
+	ID             int        `json:"id"`
+	Description    string     `json:"description"`
+	DefaultBranch  string     `json:"default_branch"`
+	SSHURLToRepo   string     `json:"ssh_url_to_repo"`
+	HTTPURLToRepo  string     `json:"http_url_to_repo"`
+	Name           string     `json:"name"`
+	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+}
+
+func (l *LocalRepo) GenerateResponse() (*Projects, error) {
+	head, err := l.repo.Head()
+	if err != nil {
+		return nil, err
+	}
+
+	headCommit, err := l.repo.CommitObject(head.Hash())
+	if err != nil {
+		return nil, err
+	}
+
+	return &Projects{
+		ID:             0,
+		Description:    "",
+		DefaultBranch:  head.Name().String(),
+		SSHURLToRepo:   "",
+		// TODO 增加 portal address 配置项来确定服务地址
+		HTTPURLToRepo: path.Join(configs.Get().Portal.Address, consts.ReposUrlPrefix, l.path),
+		Name:           filepath.Base(l.path),
+		LastActivityAt: &headCommit.Author.When,
+	}, nil
 }

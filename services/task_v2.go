@@ -118,17 +118,14 @@ func doAssignTask(orgGuid string, task *models.Task, tpl *models.Template) (
 
 	//// 组装请求
 	repoAddr := tpl.RepoAddr
-	if u, err := url.Parse(repoAddr); err != nil {
+	if _, err := url.Parse(repoAddr); err != nil {	// 检查地址格式是否合法
 		return nil, false, fmt.Errorf("parse repo addr error: %v", err)
-	} else if u.User == nil { // 如果 repoAddr 没有带认证信息则使用配置文件中的默认 vcs 认证信息
-		defaultVcs := configs.Get().Gitlab
-		u.User = url.UserPassword(defaultVcs.Username, defaultVcs.Token)
-		repoAddr = u.String()
 	}
 
 	backend := task.BackendInfo
 
-	//有状态云模版，以模版ID为路径，无状态云模版，以模版ID + 作业ID 为路径
+	// 有状态云模版，以模版ID为路径，
+	// 无状态云模版，以模版ID + 作业ID 为路径
 	var stateKey string
 	if tpl.SaveState {
 		stateKey = fmt.Sprintf("%s/%s.tfstate", orgGuid, tpl.Guid)

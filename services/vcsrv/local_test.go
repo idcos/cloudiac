@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	testLocalVcs = newLocalVcs(filepath.Join("../../", consts.GitReposPath))
+	testLocalVcs = newLocalVcs(filepath.Join("../../", consts.LocalGitReposPath))
 )
 
 func TestMatchGlob(t *testing.T) {
