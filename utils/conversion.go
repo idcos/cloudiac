@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 func Str2float(s string) float64 {
@@ -37,4 +38,14 @@ func GetSumArray(s []float64) float64 {
 		sum += i
 	}
 	return sum
+}
+
+//判断某个字符串是否以数组中的元素结尾
+func ArrayIsHasSuffix(arr []string, v string) bool {
+	for i := range arr {
+		if strings.HasSuffix(v, arr[i]) {
+			return true
+		}
+	}
+	return false
 }

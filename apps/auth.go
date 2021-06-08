@@ -21,6 +21,10 @@ func Login(c *ctx.ServiceCtx, form *forms.LoginForm) (resp interface{}, er e.Err
 
 	user, err := services.GetUserByEmail(c.DB(), form.Email)
 	if err != nil {
+		if e.IsRecordNotFound(err) {
+			// 找不到账号时也返回 InvalidPassword 错误，避免暴露系统中己有用户账号
+			return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
+		}
 		return nil, e.New(e.DBError, err)
 	}
 

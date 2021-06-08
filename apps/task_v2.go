@@ -15,6 +15,7 @@ import (
 	"github.com/gin-contrib/sse"
 	"github.com/gorilla/websocket"
 	"io"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -22,21 +23,33 @@ import (
 )
 
 func FollowTaskLog(c *ctx.GinRequestCtx) error {
-	logPath := c.Query("logPath")
-	// logPath example: "logs/ct-c2j2g5rn8qhqp9ku9a6g/run-c2mdu4ecie6qs8gmsmkgg"
-	parts := strings.Split(logPath, "/")
-	if len(parts) < 3 {
-		return fmt.Errorf("invalid log path: '%v'", logPath)
+	taskId := c.Query("taskId")
+	if taskId == "" {
+		taskId = c.Query("taskGuid")
+	}
+	if taskId == "" {
+		// logPath example: "logs/ct-c2j2g5rn8qhqp9ku9a6g/run-c2mdu4ecie6qs8gmsmkgg"
+		logPath := c.Query("logPath")
+		parts := strings.Split(logPath, "/")
+		for _, s := range parts {
+			if strings.HasPrefix(s, "run-") {
+				taskId = s
+				break
+			}
+		}
 	}
 
-	taskId := parts[len(parts)-1]
+	if taskId == "" {
+		return e.New(e.BadRequest, http.StatusBadRequest, fmt.Errorf("'taskId' or 'logPath' required"))
+	}
+
 	logger := logs.Get().WithField("func", "FollowTaskLog").WithField("taskId", taskId)
 
 	var (
 		task *models.Task
 		err  error
 	)
-	 // 等待任务启动
+	// 等待任务启动
 	for i := 0; ; i++ {
 		select {
 		case <-c.Context.Done():
@@ -66,7 +79,7 @@ func FollowTaskLog(c *ctx.GinRequestCtx) error {
 
 	var reader io.Reader
 	if task.Exited() { // 己退出的任务直接读取全量日志
-		if content, err := logstorage.Get().Read(task.FullLogPath()); err != nil {
+		if content, err := logstorage.Get().Read(task.BackendInfo.LogFile); err != nil {
 			logger.Errorf("read task log error: %v", err)
 			return err
 		} else {
@@ -114,13 +127,12 @@ func fetchRunnerTaskLog(writer io.WriteCloser, task *models.Task) error {
 
 	logger := logs.Get().WithField("func", "fetchRunnerTaskLog").WithField("taskId", task.Guid)
 
-	taskBackend := task.UnmarshalBackendInfo()
-	runnerAddr := fmt.Sprintf("%v", taskBackend.BackendUrl)
+	runnerAddr := fmt.Sprintf("%v", task.BackendInfo.BackendUrl)
 
 	params := url.Values{}
 	params.Add("taskId", task.Guid)
 	params.Add("templateId", task.TemplateGuid)
-	params.Add("containerId", task.UnmarshalBackendInfo().ContainerId)
+	params.Add("containerId", task.BackendInfo.ContainerId)
 	wsConn, err := utils.WebsocketDail(runnerAddr, consts.RunnerTaskLogFollowURL, params)
 	if err != nil {
 		return err

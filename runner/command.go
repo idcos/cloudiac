@@ -3,18 +3,21 @@ package runner
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 )
 
 var initCommandTemplate = `set -e 
 export CLOUD_IAC_DIR={{.CloudIaCDir}}
-export TF_PLUGIN_CACHE_DIR={{.ProviderDir}}
+export CLOUD_IAC_WORKSPACE={{.Workspace}}
+export CLOUD_IAC_BACKEND_CONFIG=${CLOUD_IAC_DIR}/{{.BackendConfigName}}
+export TF_PLUGIN_CACHE_DIR={{.PluginsCachePath}}
 
-git clone {{.Repo}} {{.WorkingDir}} && \
-cd "{{.WorkingDir}}" && git checkout {{.RepoCommit}} && \
-ln -svf ${CLOUD_IAC_DIR}/{{.BackendConfigName}} ./_cloud_iac_backend.tf && \
-terraform init -plugin-dir=${TF_PLUGIN_CACHE_DIR} && \`
+ln -svf ${CLOUD_IAC_BACKEND_CONFIG}  ./_cloud_iac_backend.tf && \
+git clone {{.Repo}} ${CLOUD_IAC_WORKSPACE} && \
+cd "${CLOUD_IAC_WORKSPACE}" && git checkout {{.RepoCommit}} && \
+terraform init && \`
 
 const planCommandTemplate = `
 terraform plan {{if .VarFile}}-var-file={{.VarFile}}{{end}}
@@ -33,6 +36,10 @@ const pullCommandTemplate = `
 terraform state pull
 `
 
+const ansibleCommandTemplate = `
+ {{if .Playbook}}ansible-playbook -i {{.AnsibleStateAnalysis}} {{.Playbook}}{{end}}
+`
+
 var (
 	initCommandTpl = template.Must(template.New("").Parse(initCommandTemplate))
 
@@ -40,6 +47,7 @@ var (
 	applyCommandTpl   = template.Must(template.New("").Parse(applyCommandTemplate))
 	destroyCommandTpl = template.Must(template.New("").Parse(destroyCommandTemplate))
 	pullCommandTpl    = template.Must(template.New("").Parse(pullCommandTemplate))
+	ansibleCommandTpl = template.Must(template.New("").Parse(ansibleCommandTemplate))
 
 	commandTplMap = map[string]*template.Template{
 		"plan":    planCommandTpl,
@@ -51,6 +59,7 @@ var (
 
 func GenScriptContent(context *ReqBody, saveTo string) error {
 	saveFp, err := os.OpenFile(saveTo, os.O_CREATE|os.O_WRONLY, 0755)
+
 	if err != nil {
 		return err
 	}
@@ -86,9 +95,9 @@ func GenScriptContent(context *ReqBody, saveTo string) error {
 	if err := initCommandTpl.Execute(saveFp, map[string]string{
 		"Repo":              context.Repo,
 		"RepoCommit":        context.RepoCommit,
-		"WorkingDir":        ContainerWorkingDir,
-		"ProviderDir":       ContainerProviderPath,
+		"Workspace":         ContainerWorkspace,
 		"CloudIaCDir":       ContainerIaCDir,
+		"PluginsCachePath":  ContainerPluginsCachePath,
 		"BackendConfigName": BackendConfigName,
 	}); err != nil {
 		return err
@@ -101,6 +110,13 @@ func GenScriptContent(context *ReqBody, saveTo string) error {
 
 	if err := commandTpl.Execute(saveFp, map[string]string{
 		"VarFile": context.Varfile,
+	}); err != nil {
+		return err
+	}
+
+	if err := ansibleCommandTpl.Execute(saveFp, map[string]string{
+		"Playbook":             context.Playbook,
+		"AnsibleStateAnalysis": filepath.Join(ContainerAssetsPath, AnsibleStateAnalysisName),
 	}); err != nil {
 		return err
 	}

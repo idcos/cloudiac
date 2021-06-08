@@ -2,16 +2,17 @@ package services
 
 import (
 	"bufio"
+	"bytes"
 	"cloudiac/consts"
 	"cloudiac/consts/e"
 	"cloudiac/libs/db"
 	"cloudiac/models"
 	"cloudiac/models/forms"
+	"cloudiac/services/logstorage"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -180,8 +181,8 @@ func resourceEnvParam(runnerId string, orgId uint) []forms.Var {
 	if err := db.Get().Debug().Joins(fmt.Sprintf("left join %s as crm on %s.id = crm.resource_account_id",
 		models.CtResourceMap{}.TableName(), models.ResourceAccount{}.TableName())).
 		Where("crm.ct_service_id = ?", runnerId).
-		Where(fmt.Sprintf("%s.status = '%s'", models.ResourceAccount{}.TableName(), consts.ResourceAccountEnable)).
-		Where(fmt.Sprintf("%s.org_id = %d", models.ResourceAccount{}.TableName(), orgId)).
+		Where(fmt.Sprintf("%s.status = ?", models.ResourceAccount{}.TableName()), consts.ResourceAccountEnable).
+		Where(fmt.Sprintf("%s.org_id = ?", models.ResourceAccount{}.TableName()), orgId).
 		Find(&ra); err != nil {
 		logs.Get().Errorf("ResourceAccount db err %v: ", err)
 		return nil
@@ -207,18 +208,21 @@ func getBackendInfo(backendInfo models.JSON, containerId string) []byte {
 	return b
 }
 
+var (
+	planChangesLineRegex = regexp.MustCompile(`([\d]+) to add, ([\d]+) to change, ([\d]+) to destroy`)
+	applyChangesLineRegex = regexp.MustCompile(`Apply complete! Resources: ([\d]+) added, ([\d]+) changed, ([\d]+) destroyed.`)
+)
 
-func GetTFLog(logPath string) map[string]interface{} {
+func ParseTfOutput(path string) map[string]interface{} {
 	loggers := logs.Get()
-	path := fmt.Sprintf("%s/%s", logPath, consts.TaskLogName)
-	f, err := os.Open(path)
+	content, err := logstorage.Get().Read(path)
 	if err != nil {
-		loggers.Error(err)
+		loggers.Errorf("read log file %s: %v", path, err)
 		return nil
 	}
-	defer f.Close()
-	result := map[string]interface{}{}
-	rd := bufio.NewReader(f)
+
+	result := make(map[string]interface{})
+	rd := bufio.NewReader(bytes.NewBuffer(content))
 	for {
 		str, _, err := rd.ReadLine()
 		if err != nil {
@@ -237,8 +241,7 @@ func GetTFLog(logPath string) map[string]interface{} {
 			result["allowApply"] = false
 			break
 		} else if strings.Contains(LogStr, `Plan:`) {
-			r, _ := regexp.Compile(`([\d]+) to add, ([\d]+) to change, ([\d]+) to destroy`)
-			params := r.FindStringSubmatch(LogStr)
+			params := planChangesLineRegex.FindStringSubmatch(LogStr)
 			if len(params) == 4 {
 				result["add"] = params[1]
 				result["change"] = params[2]
@@ -247,8 +250,7 @@ func GetTFLog(logPath string) map[string]interface{} {
 			}
 			break
 		} else if strings.Contains(LogStr, `Apply complete!`) {
-			r, _ := regexp.Compile(`Apply complete! Resources: ([\d]+) added, ([\d]+) changed, ([\d]+) destroyed.`)
-			params := r.FindStringSubmatch(LogStr)
+			params := applyChangesLineRegex .FindStringSubmatch(LogStr)
 			if len(params) == 4 {
 				result["add"] = params[1]
 				result["change"] = params[2]

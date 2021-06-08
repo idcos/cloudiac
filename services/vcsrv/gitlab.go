@@ -5,11 +5,11 @@ import (
 	"cloudiac/consts/e"
 	"cloudiac/models"
 	"cloudiac/models/forms"
+	"cloudiac/utils"
 	"github.com/xanzy/go-gitlab"
-	"strings"
 )
 
-func ListOrganizationReposById(vcs *models.Vcs,form *forms.GetGitProjectsForm) (projects []*gitlab.Project, total int, err e.Error) {
+func ListOrganizationReposById(vcs *models.Vcs, form *forms.GetGitProjectsForm) (projects []*gitlab.Project, total int, err e.Error) {
 	git, err := GetGitConn(vcs.VcsToken, vcs.Address)
 	if err != nil {
 		return nil, total, err
@@ -46,7 +46,6 @@ func ListRepositoryBranches(vcs *models.Vcs, form *forms.GetGitBranchesForm) (br
 	return branches, nil
 }
 
-
 func GetReadmeContent(vcs *models.Vcs, form *forms.GetReadmeForm) (content models.FileContent, err error) {
 	content = models.FileContent{
 		Content: "",
@@ -68,8 +67,6 @@ func GetReadmeContent(vcs *models.Vcs, form *forms.GetReadmeForm) (content model
 	return res, nil
 }
 
-
-
 func GetGitConn(gitlabToken, gitlabUrl string) (git *gitlab.Client, err e.Error) {
 	git, er := gitlab.NewClient(gitlabToken, gitlab.WithBaseURL(gitlabUrl+"/api/v4"))
 	if er != nil {
@@ -78,20 +75,20 @@ func GetGitConn(gitlabToken, gitlabUrl string) (git *gitlab.Client, err e.Error)
 	return
 }
 
-func TemplateTfvarsSearch(vcs *models.Vcs,repoId uint, repoBranch string) (interface{}, e.Error) {
-	tfVarsList :=  make([]string,0)
+func TemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch string, fileName []string) (interface{}, e.Error) {
+	tfVarsList := make([]string, 0)
 	var errs error
-	if vcs.VcsType == consts.GitLab{
+	if vcs.VcsType == consts.GitLab {
 		git, err := GetGitConn(vcs.VcsToken, vcs.Address)
 		if err != nil {
 			return nil, err
 		}
-		tfVarsList, errs = getTfvarsList(git, repoBranch, "", repoId)
+		tfVarsList, errs = getTfvarsList(git, repoBranch, "", repoId, fileName)
 
 	}
 
 	if vcs.VcsType == consts.GitEA {
-		tfVarsList ,errs = GetGiteaTemplateTfvarsSearch(vcs,repoId,repoBranch,"")
+		tfVarsList, errs = GetGiteaTemplateTfvarsSearch(vcs, repoId, repoBranch, "", fileName)
 	}
 
 	if errs != nil {
@@ -102,7 +99,7 @@ func TemplateTfvarsSearch(vcs *models.Vcs,repoId uint, repoBranch string) (inter
 	return tfVarsList, nil
 }
 
-func getTfvarsList(git *gitlab.Client, repoBranch, path string, repoId uint) ([]string, error) {
+func getTfvarsList(git *gitlab.Client, repoBranch, path string, repoId uint, fileName []string) ([]string, error) {
 	var fileBlob = "blob"
 	var fileTree = "tree"
 	pathList := make([]string, 0)
@@ -117,11 +114,11 @@ func getTfvarsList(git *gitlab.Client, repoBranch, path string, repoId uint) ([]
 	}
 
 	for _, i := range treeNode {
-		if i.Type == fileBlob && strings.Contains(i.Name, "tfvars") {
+		if i.Type == fileBlob && utils.ArrayIsHasSuffix(fileName, i.Name) {
 			pathList = append(pathList, i.Path)
 		}
 		if i.Type == fileTree {
-			pl, err := getTfvarsList(git, repoBranch, i.Path, repoId)
+			pl, err := getTfvarsList(git, repoBranch, i.Path, repoId, fileName)
 			if err != nil {
 				return nil, err
 			}
