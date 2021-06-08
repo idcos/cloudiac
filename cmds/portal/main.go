@@ -85,37 +85,6 @@ func main() {
 	web.StartServer()
 }
 
-func InitVcs(tx *db.Session) {
-	logger := logs.Get()
-	vcs := models.Vcs{
-		OrgId:    0,
-		Name:     "默认仓库",
-		VcsType:  consts.GitTypeLocal,
-		Status:   "enable",
-		Address:  consts.LocalGitReposPath,
-		VcsToken: "",
-	}
-	exist, err := services.QueryVcs(0, "", "", tx).Exists()
-	if err != nil {
-		logger.Error(err)
-		return
-	}
-	if !exist {
-		_, err = services.CreateVcs(tx, vcs)
-		if err != nil {
-			logger.Error(err)
-		}
-	} else {
-		attrs := models.Attrs{
-			"address": consts.LocalGitReposPath,
-		}
-		_, err = services.UpdateVcs(tx, 0, attrs)
-		if err != nil {
-			logger.Error(err)
-		}
-	}
-}
-
 // 平台初始化
 func appAutoInit(tx *db.Session) (err error) {
 	logger := logs.Get().WithField("func", "appAutoInit")

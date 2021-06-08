@@ -207,6 +207,9 @@ func (l *LocalRepo) FormatRepoSearch() (*Projects, e.Error) {
 	if err != nil {
 		return nil, e.New(e.InternalError, err)
 	}
+	httpUrl := fmt.Sprintf("%s/%s",
+		strings.Trim(configs.Get().Portal.Address, "/"),
+		strings.Trim(path.Join(consts.ReposUrlPrefix, l.path), "/"))
 
 	return &Projects{
 		ID:                0,
@@ -214,9 +217,8 @@ func (l *LocalRepo) FormatRepoSearch() (*Projects, e.Error) {
 		Description:       "",
 		DefaultBranch:     filepath.Base(head.Name().String()),
 		SSHURLToRepo:      "",
-		// TODO 增加 portal address 配置项来确定服务地址
-		HTTPURLToRepo:  path.Join(configs.Get().Portal.Address, consts.ReposUrlPrefix, l.path),
-		Name:           strings.TrimSuffix(filepath.Base(l.path), ".git"),
-		LastActivityAt: &headCommit.Author.When,
+		HTTPURLToRepo:     httpUrl,
+		Name:              strings.TrimSuffix(filepath.Base(l.path), ".git"),
+		LastActivityAt:    &headCommit.Author.When,
 	}, nil
 }
