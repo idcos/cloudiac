@@ -67,7 +67,17 @@ type OverviewTemplateForm struct {
 	BaseForm
 	Id uint `form:"id" json:"id" binding:"required"`
 }
+
 type TemplateTfvarsSearchForm struct {
+	BaseForm
+	RepoId     uint   `json:"repoId" form:"repoId" `
+	RepoBranch string `json:"repoBranch" form:"repoBranch" `
+	RepoType   string `json:"repoType" form:"repoType" `
+	VcsId      uint   `json:"vcsId" form:"vcsId"`
+}
+
+
+type TemplateVariableSearchForm struct {
 	BaseForm
 	RepoId     uint   `json:"repoId" form:"repoId" `
 	RepoBranch string `json:"repoBranch" form:"repoBranch" `
@@ -82,3 +92,6 @@ type TemplatePlaybookSearchForm struct {
 	RepoType   string `json:"repoType" form:"repoType" `
 	VcsId      uint   `json:"vcsId" form:"vcsId"`
 }
+
+
+
