@@ -15,10 +15,8 @@ type VcsIfaceOptions struct {
 	Path                string
 	Search              string
 	Recursive           bool
-	Branch              string
 	Limit               int
 	Offset              int
-	IsHasSuffixFileName []string
 }
 
 type VcsIface interface {

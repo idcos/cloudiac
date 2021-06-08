@@ -152,7 +152,7 @@ func (gitea *giteaRepoIface) BranchCommitId(branch string) (string, error) {
 type giteaFiles struct {
 	Type string `json:"type" form:"type" `
 	Path string `json:"path" form:"path" `
-	Name string  `json:"name" form:"name" `
+	Name string `json:"name" form:"name" `
 }
 
 func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) {
@@ -160,21 +160,21 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 	vcsRawPath := GetGiteaUrl(gitea.vcs.Address)
 	if option.Path != "" {
 		path = vcsRawPath + "/api/v1" +
-			fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0", gitea.repository.Name, option.Path)
+			fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0&ref=%s", gitea.repository.Name, option.Path, option.Ref)
 	} else {
 		path = vcsRawPath + "/api/v1" +
-			fmt.Sprintf("/repos/%s/contents?limit=0&page=0", gitea.repository.Name)
+			fmt.Sprintf("/repos/%s/contents?limit=0&page=0&ref=%s", gitea.repository.Name,option.Ref)
 	}
-	response,body, er := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
+	response, body, er := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
 	if er != nil {
 		return []string{}, e.New(e.BadRequest, er)
 	}
 	defer response.Body.Close()
 	resp := make([]string, 0)
-	rep := make([]giteaFiles,0)
+	rep := make([]giteaFiles, 0)
 	_ = json.Unmarshal(body, &rep)
 	for _, v := range rep {
-		if v.Type == "dir" && option.Recursive{
+		if v.Type == "dir" && option.Recursive {
 			option.Path = v.Path
 			repList, _ := gitea.ListFiles(option)
 			resp = append(resp, repList...)
@@ -196,7 +196,7 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 func (gitea *giteaRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
 	pathAddr := gitea.vcs.Address + "/api/v1" +
 		fmt.Sprintf("/repos/%s/raw/%s?ref=%s", gitea.repository.Name, path, branch)
-	response,body, er := gitea.giteaRequest(pathAddr, "GET", gitea.vcs.VcsToken)
+	response, body, er := gitea.giteaRequest(pathAddr, "GET", gitea.vcs.VcsToken)
 	if er != nil {
 		return []byte{}, e.New(e.BadRequest, er)
 	}
