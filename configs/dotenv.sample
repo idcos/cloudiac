@@ -1,7 +1,7 @@
 # 管理员账号密码
-IAM_ADMIN_EMAIL=admin@example.com
+IAC_ADMIN_EMAIL=admin@example.com
 ## 密码只在第一次启动时进行读取，之后修改或者删除不会进行同步
-IAM_ADMIN_PASSWORD=
+IAC_ADMIN_PASSWORD=
 
 # 部署的版本(容器部署时有效)
 VERSION=latest
