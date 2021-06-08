@@ -16,6 +16,7 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -397,4 +398,13 @@ func TaskLogMessage(format string, args ...interface{}) string {
 
 func TaskLogMsgBytes(format string, args ...interface{}) []byte {
 	return []byte(TaskLogMessage(format, args...))
+}
+
+func GenQueryURL(address string, path string, params url.Values) string {
+	//...
+	if params != nil {
+		return fmt.Sprintf("%s%s?%s", address, path, params.Encode())
+	} else {
+		return fmt.Sprintf("%s%s", address, path)
+	}
 }

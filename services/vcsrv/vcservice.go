@@ -68,7 +68,7 @@ func GetVcsInstance(vcs *models.Vcs) (VcsIface, error) {
 	case "gitea":
 		return newGiteaInstance(vcs)
 	case "github":
-		//return newGitlabInstance(vcs)
+		return newGithubInstance(vcs)
 	case "gitee":
 		//return newGitlabInstance(vcs)
 	default:
