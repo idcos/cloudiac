@@ -169,7 +169,7 @@ func VcsTfVarsSearch(c *ctx.ServiceCtx, form *forms.TemplateTfvarsSearchForm) (i
 		return nil, e.New(e.GitLabError, err)
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
-		Branch: form.RepoBranch,
+		Ref:    form.RepoBranch,
 		Search: consts.TfVarFileMatch,
 	})
 	if er != nil {
@@ -194,7 +194,7 @@ func VcsPlaybookSearch(c *ctx.ServiceCtx, form *forms.TemplatePlaybookSearchForm
 		return nil, e.New(e.GitLabError, err)
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
-		Branch: form.RepoBranch,
+		Ref:    form.RepoBranch,
 		Search: consts.PlaybookMatch,
 	})
 	if er != nil {
@@ -219,7 +219,7 @@ func VcsVariableSearch(c *ctx.ServiceCtx, form *forms.TemplateVariableSearchForm
 		return nil, e.New(e.GitLabError, err)
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
-		Branch: form.RepoBranch,
+		Ref:    form.RepoBranch,
 		Search: consts.VariablePrefix,
 	})
 	if er != nil {

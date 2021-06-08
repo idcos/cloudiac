@@ -23,6 +23,7 @@ build-dir:
 	mkdir -p $(BUILD_DIR)
 
 portal: build-dir
+	swag init -g web/api/v1/route.go
 	$(GOBUILD) -o $(BUILD_DIR)/iac-portal ./cmds/portal
 	cp ./configs/config-portal.yaml.sample $(BUILD_DIR)/config-portal.yaml.sample
 	cp ./configs/dotenv.sample $(BUILD_DIR)/dotenv.sample
@@ -34,6 +35,7 @@ runner: build-dir
 run: run-portal
 
 run-portal:
+	swag init -g web/api/v1/route.go
 	$(GORUN) ./cmds/portal -v -c config-portal.yaml
 
 run-runner:
