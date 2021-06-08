@@ -106,7 +106,7 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 	pathList := make([]string, 0)
 	lto := &gitlab.ListTreeOptions{
 		ListOptions: gitlab.ListOptions{Page: 1, PerPage: 1000},
-		Ref:         gitlab.String(option.Branch),
+		Ref:         gitlab.String(option.Ref),
 		Path:        gitlab.String(option.Path),
 	}
 	treeNode, _, err := git.gitConn.Repositories.ListTree(git.Project.ID, lto)
@@ -146,8 +146,8 @@ func (git *gitlabRepoIface) ReadFileContent(branch, path string) (content []byte
 type Projects struct {
 	ID                int        `json:"id"`
 	Description       string     `json:"description"`
-	DefaultBranch     string     `json:"default_branch"`
 	PathWithNamespace string     `json:"path_with_namespace"`
+	DefaultBranch     string     `json:"default_branch"`
 	SSHURLToRepo      string     `json:"ssh_url_to_repo"`
 	HTTPURLToRepo     string     `json:"http_url_to_repo"`
 	Name              string     `json:"name"`
