@@ -1,10 +1,15 @@
 package services
 
 import (
+	"cloudiac/consts"
 	"cloudiac/consts/e"
 	"cloudiac/libs/db"
 	"cloudiac/models"
 	"fmt"
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/gohcl"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"log"
 )
 
 func CreateVcs(tx *db.Session, vcs models.Vcs) (*models.Vcs, e.Error) {
@@ -30,7 +35,7 @@ func QueryVcs(orgId uint, status, q string, query *db.Session) *db.Session {
 	if status != "" {
 		query = query.Where("status = ?", status).
 			Where("org_id = ? or org_id = 0", orgId)
-	}else {
+	} else {
 		query = query.
 			Where("org_id = ?", orgId)
 	}
@@ -43,7 +48,13 @@ func QueryVcs(orgId uint, status, q string, query *db.Session) *db.Session {
 
 func QueryVcsByVcsId(vcsId uint, query *db.Session) (*models.Vcs, e.Error) {
 	vcs := &models.Vcs{}
-	err := query.Where("id = ?", vcsId).First(vcs)
+	if vcsId == 0 {
+		query = query.Where("org_id = 0")
+	} else {
+		query = query.Where("id = ?", vcsId)
+	}
+
+	err := query.First(vcs)
 	if err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("query vcs detail error: %v", err))
 	}
@@ -64,4 +75,49 @@ func DeleteVcs(tx *db.Session, id uint) e.Error {
 		return e.New(e.DBError, fmt.Errorf("delete vcs error: %v", err))
 	}
 	return nil
+}
+
+type TemplateVariable struct {
+	Description string `json:"description" form:"description" `
+	Default     string `json:"default" form:"default" `
+	Name        string `json:"name" form:"name" `
+}
+
+func TemplateVariableSearch(content []byte) ([]TemplateVariable, e.Error) {
+
+	return readHCLFile(content)
+}
+
+type Config struct {
+	Upstreams []*TfVariable `hcl:"variable,block"`
+}
+
+type TfVariable struct {
+	Name string `hcl:",label"`
+	// Default     string `hcl:"default,optional"`
+	Description string `hcl:"description,attr"`
+	// validation block
+	Default string `hcl:"default"`
+}
+
+func readHCLFile(content []byte) ([]TemplateVariable, e.Error) {
+	file, diags := hclsyntax.ParseConfig(content, consts.VariablePrefix, hcl.Pos{Line: 1, Column: 1})
+	if diags.HasErrors() {
+		log.Fatal(fmt.Errorf("ParseConfig: %w", diags))
+	}
+
+	c := &Config{}
+	diags = gohcl.DecodeBody(file.Body, nil, c)
+	if diags.HasErrors() {
+		return nil, e.New(e.GitLabError, fmt.Errorf("DecodeBody: %w", diags))
+	}
+	tv := make([]TemplateVariable, 0)
+	for _, s := range c.Upstreams {
+		tv = append(tv, TemplateVariable{
+			Default:     s.Default,
+			Name:        s.Name,
+			Description: s.Description,
+		})
+	}
+	return tv,nil
 }

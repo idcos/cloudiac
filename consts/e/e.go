@@ -1,8 +1,8 @@
 package e
 
 import (
-	"fmt"
 	"cloudiac/utils/logs"
+	"fmt"
 
 	goredis "github.com/go-redis/redis"
 	"github.com/go-sql-driver/mysql"
@@ -69,7 +69,7 @@ func New(code int, errOrStatus ...interface{}) Error {
 		case error:
 			err = v.(error)
 		default:
-			logger.Errorf("'msgOrStatus' only supports 'string' or 'int'")
+			logger.Errorf("'msgOrStatus' only supports 'string' or 'error'")
 		}
 	}
 

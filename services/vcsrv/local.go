@@ -7,14 +7,13 @@ package vcsrv
 import (
 	"cloudiac/configs"
 	"cloudiac/consts"
+	"cloudiac/consts/e"
+	"cloudiac/utils/logs"
 	"fmt"
 	"io/fs"
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
-
-	"cloudiac/utils/logs"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -23,7 +22,7 @@ import (
 )
 
 type LocalVcs struct {
-	basePath string
+	absPath string // 文件系统绝对路径
 }
 
 func newLocalVcs(basePath string) *LocalVcs {
@@ -31,44 +30,44 @@ func newLocalVcs(basePath string) *LocalVcs {
 	if err != nil {
 		panic(err)
 	}
-	return &LocalVcs{basePath: absPath}
+	return &LocalVcs{absPath: absPath}
 }
 
 func (l *LocalVcs) GetRepo(path string) (RepoIface, error) {
-	return newLocalRepo(filepath.Join(l.basePath, path))
+	return newLocalRepo(l.absPath, path)
 }
 
-func (l *LocalVcs) ListRepos(namespace string, search string, limit int) ([]RepoIface, error) {
+func (l *LocalVcs) ListRepos(namespace string, search string, limit, offset uint) ([]RepoIface, error) {
 	//logger := logs.Get().WithField("namespace", namespace)
 
-	searchDir := filepath.Join(l.basePath, namespace)
+	searchDir := filepath.Join(l.absPath, namespace)
 	repoPaths := make([]string, 0)
 	err := filepath.WalkDir(searchDir, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if len(repoPaths) >= limit {
-			return filepath.SkipDir
-		}
-
-		if !d.IsDir() || p == searchDir {
+		if p == searchDir || !d.IsDir() || !strings.HasSuffix(d.Name(), ".git") {
 			return nil
 		}
 
 		if matchGlob(search, d.Name()) {
-			repoPaths = append(repoPaths, p)
+			repoPaths = append(repoPaths, strings.TrimPrefix(p, l.absPath))
 		}
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
 
+	repoPaths = repoPaths[offset:]
+	if limit != 0 {
+		repoPaths = repoPaths[:limit]
+	}
+
 	repos := make([]RepoIface, 0)
 	for _, p := range repoPaths {
-		if r, err := newLocalRepo(p); err != nil {
+		if r, err := newLocalRepo(l.absPath, p); err != nil {
 			logs.Get().Warnf("open repo '%s' error: %v", p, err)
 			continue
 		} else {
@@ -79,23 +78,26 @@ func (l *LocalVcs) ListRepos(namespace string, search string, limit int) ([]Repo
 }
 
 type LocalRepo struct {
-	path string
-	repo *git.Repository
+	absPath string // 文件系统中的绝对路径
+	path    string // vcs 下的相对路径
+	repo    *git.Repository
 }
 
-func newLocalRepo(path string) (*LocalRepo, error) {
-	repo, err := git.PlainOpen(path)
+func newLocalRepo(dir string, path string) (*LocalRepo, error) {
+	absPath := filepath.Join(dir, path)
+	repo, err := git.PlainOpen(absPath)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("plain open %s", path))
 	}
 
 	return &LocalRepo{
-		path: path,
-		repo: repo,
+		absPath: absPath,
+		path:    path,
+		repo:    repo,
 	}, nil
 }
 
-func (l *LocalRepo) ListBranches(search string, limit int) ([]string, error) {
+func (l *LocalRepo) ListBranches(search string, limit, offset uint) ([]string, error) {
 	refs, err := l.repo.Branches()
 	if err != nil {
 		return nil, err
@@ -104,19 +106,19 @@ func (l *LocalRepo) ListBranches(search string, limit int) ([]string, error) {
 
 	branches := make([]string, 0)
 	err = refs.ForEach(func(ref *plumbing.Reference) error {
-		if len(branches) >= limit {
-			return nil
-		}
-
 		name := filepath.Base(ref.Name().String())
 		if matchGlob(search, name) {
 			branches = append(branches, name)
 		}
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
+	}
+
+	branches = branches[offset:]
+	if limit != 0 {
+		branches = branches[:limit]
 	}
 	return branches, nil
 }
@@ -141,8 +143,8 @@ func (l *LocalRepo) getCommit(revision string) (*object.Commit, error) {
 	return l.repo.CommitObject(*hash)
 }
 
-func (l *LocalRepo) ListFiles(revision string, searchPath string, search string, recursive bool, limit int) ([]string, error) {
-	commit, err := l.getCommit(revision)
+func (l *LocalRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
+	commit, err := l.getCommit(opt.Ref)
 	if err != nil {
 		return nil, err
 	}
@@ -155,29 +157,33 @@ func (l *LocalRepo) ListFiles(revision string, searchPath string, search string,
 
 	results := make([]string, 0)
 	err = filesIter.ForEach(func(file *object.File) error {
-		if !strings.HasPrefix(file.Name, searchPath) || len(results) >= limit {
+		if !strings.HasPrefix(file.Name, opt.Path) {
 			return nil
 		}
 
 		// 非递归时只遍历第一层目录
-		if !recursive && (searchPath != "" && filepath.Dir(file.Name) != searchPath) {
+		if !opt.Recursive && (opt.Path != "" && filepath.Dir(file.Name) != opt.Path) {
 			return nil
 		}
 
-		if matchGlob(search, filepath.Base(file.Name)) {
+		if matchGlob(opt.Search, filepath.Base(file.Name)) {
 			results = append(results, file.Name)
 		}
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
+	}
+
+	results = results[opt.Offset:]
+	if opt.Limit != 0 {
+		results = results[:opt.Limit]
 	}
 	return results, nil
 }
 
-func (l *LocalRepo) ReadFileContent(path string) (content []byte, err error) {
-	commit, err := l.getCommit("master")
+func (l *LocalRepo) ReadFileContent(revision string, path string) (content []byte, err error) {
+	commit, err := l.getCommit(revision)
 	if err != nil {
 		return nil, err
 	}
@@ -191,35 +197,26 @@ func (l *LocalRepo) ReadFileContent(path string) (content []byte, err error) {
 	return []byte(c), err
 }
 
-type Projects struct {
-	ID             int        `json:"id"`
-	Description    string     `json:"description"`
-	DefaultBranch  string     `json:"default_branch"`
-	SSHURLToRepo   string     `json:"ssh_url_to_repo"`
-	HTTPURLToRepo  string     `json:"http_url_to_repo"`
-	Name           string     `json:"name"`
-	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
-}
-
-func (l *LocalRepo) GenerateResponse() (*Projects, error) {
+func (l *LocalRepo) FormatRepoSearch() (*Projects, e.Error) {
 	head, err := l.repo.Head()
 	if err != nil {
-		return nil, err
+		return nil, e.New(e.InternalError, err)
 	}
 
 	headCommit, err := l.repo.CommitObject(head.Hash())
 	if err != nil {
-		return nil, err
+		return nil, e.New(e.InternalError, err)
 	}
 
 	return &Projects{
-		ID:             0,
-		Description:    "",
-		DefaultBranch:  head.Name().String(),
-		SSHURLToRepo:   "",
+		ID:                0,
+		PathWithNamespace: l.path,
+		Description:       "",
+		DefaultBranch:     filepath.Base(head.Name().String()),
+		SSHURLToRepo:      "",
 		// TODO 增加 portal address 配置项来确定服务地址
-		HTTPURLToRepo: path.Join(configs.Get().Portal.Address, consts.ReposUrlPrefix, l.path),
-		Name:           filepath.Base(l.path),
+		HTTPURLToRepo:  path.Join(configs.Get().Portal.Address, consts.ReposUrlPrefix, l.path),
+		Name:           strings.TrimSuffix(filepath.Base(l.path), ".git"),
 		LastActivityAt: &headCommit.Author.When,
 	}, nil
 }

@@ -15,8 +15,11 @@ import (
 	"os"
 	"path/filepath"
 
+	_ "cloudiac/docs" // 千万不要忘了导入把你上一步生成的docs
 	api_v1 "cloudiac/web/api/v1"
 	open_api_v1 "cloudiac/web/openapi/v1"
+	gs "github.com/swaggo/gin-swagger"
+	"github.com/swaggo/gin-swagger/swaggerFiles"
 )
 
 var logger = logs.Get()
@@ -32,13 +35,13 @@ func GetRouter() *gin.Engine {
 	f, _ := os.OpenFile(logPath, os.O_WRONLY|os.O_APPEND, 0666)
 	gin.DefaultWriter = io.MultiWriter(f, os.Stdout)
 
-
 	w := ctrl.GinRequestCtxWrap
 	e := gin.Default()
 
 	// 允许跨域
 	e.Use(w(middleware.Cors))
 	e.Use(w(middleware.Operation))
+	e.GET("/swagger/*any", gs.WrapHandler(swaggerFiles.Handler))
 
 	// 普通 handler func
 	e.GET("/hello", w(api.Hello))
@@ -50,14 +53,15 @@ func GetRouter() *gin.Engine {
 	}))
 	api_v1.Register(e.Group("/api/v1"))
 	open_api_v1.Register(e.Group("/iac/open/v1"))
-	e.GET("template/hook/send",w(handlers.AccessTokenHandler))
+
+	e.POST("/template/library/hook", w(handlers.TemplateLibraryHandler))
+	e.GET("/template/hook/send",w(handlers.AccessTokenHandler))
 
 	//// http git server
 	// 直接提供静态文件访问，生产环境部署时也可以使用 nginx 反代
 	e.StaticFS(consts.ReposUrlPrefix, gin.Dir(consts.LocalGitReposPath, true))
 	return e
 }
-
 
 func StartServer() {
 	conf := configs.Get()
