@@ -144,13 +144,14 @@ func (git *gitlabRepoIface) ReadFileContent(branch, path string) (content []byte
 }
 
 type Projects struct {
-	ID             int        `json:"id"`
-	Description    string     `json:"description"`
-	DefaultBranch  string     `json:"default_branch"`
-	SSHURLToRepo   string     `json:"ssh_url_to_repo"`
-	HTTPURLToRepo  string     `json:"http_url_to_repo"`
-	Name           string     `json:"name"`
-	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+	ID                int        `json:"id"`
+	Description       string     `json:"description"`
+	PathWithNamespace string     `json:"path_with_namespace"`
+	DefaultBranch     string     `json:"default_branch"`
+	SSHURLToRepo      string     `json:"ssh_url_to_repo"`
+	HTTPURLToRepo     string     `json:"http_url_to_repo"`
+	Name              string     `json:"name"`
+	LastActivityAt    *time.Time `json:"last_activity_at,omitempty"`
 }
 
 func (gitlab *gitlabRepoIface) FormatRepoSearch() (project *Projects, err e.Error) {
@@ -237,7 +238,7 @@ func GetGitConn(gitlabToken, gitlabUrl string) (git *gitlab.Client, err e.Error)
 func TemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch string, fileName []string) (interface{}, e.Error) {
 	tfVarsList := make([]string, 0)
 	var errs error
-	if vcs.VcsType == consts.GitLab {
+	if vcs.VcsType == consts.GitTypeGitLab {
 		git, err := GetGitConn(vcs.VcsToken, vcs.Address)
 		if err != nil {
 			return nil, err
@@ -246,7 +247,7 @@ func TemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch string, fileN
 
 	}
 
-	if vcs.VcsType == consts.GitEA {
+	if vcs.VcsType == consts.GitTypeGitEA {
 		tfVarsList, errs = GetGiteaTemplateTfvarsSearch(vcs, repoId, repoBranch, "", fileName)
 	}
 

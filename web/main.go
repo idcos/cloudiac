@@ -57,12 +57,10 @@ func GetRouter() *gin.Engine {
 	e.POST("/template/library/hook", w(handlers.TemplateLibraryHandler))
 	e.GET("/template/hook/send",w(handlers.AccessTokenHandler))
 
-	//// 访问上传静态文件目录
-	//e.Static(consts.UploadURLPrefix, conf.UploadDir)
-	//// 下载包地址
-	//e.Static(consts.DownloadURLPrefix, conf.DownloadDir)
+	//// http git server
+	// 直接提供静态文件访问，生产环境部署时也可以使用 nginx 反代
+	e.StaticFS(consts.ReposUrlPrefix, gin.Dir(consts.LocalGitReposPath, true))
 	return e
-
 }
 
 func StartServer() {

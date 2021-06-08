@@ -3,7 +3,6 @@ module cloudiac
 go 1.16
 
 require (
-	github.com/Microsoft/go-winio v0.4.16 // indirect
 	github.com/Shopify/sarama v1.28.0
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/containerd/containerd v1.4.4 // indirect
@@ -14,6 +13,7 @@ require (
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/gin-contrib/sse v0.1.0
 	github.com/gin-gonic/gin v1.6.3
+	github.com/go-git/go-git/v5 v5.4.2
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gogo/protobuf v1.3.2 // indirect
@@ -23,7 +23,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/consul/api v1.8.1
 	github.com/hashicorp/hcl/v2 v2.10.0
-	github.com/jessevdk/go-flags v1.4.0
+	github.com/jessevdk/go-flags v1.5.0
 	github.com/jinzhu/gorm v1.9.16
 	github.com/joho/godotenv v1.3.0
 	github.com/jonboulle/clockwork v0.2.2 // indirect
@@ -43,7 +43,7 @@ require (
 	github.com/swaggo/gin-swagger v1.3.0
 	github.com/swaggo/swag v1.7.0
 	github.com/xanzy/go-gitlab v0.47.0
-	golang.org/x/crypto v0.0.0-20210314154223-e6e6c4f2bb5b
+	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b
 	google.golang.org/grpc v1.36.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df

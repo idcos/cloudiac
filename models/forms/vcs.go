@@ -11,8 +11,8 @@ type CreateVcsForm struct {
 
 type UpdateVcsForm struct {
 	BaseForm
-	Id     uint   `form:"id" json:"id" binding:"required"`
-	Status string `form:"status" json:"status" binding:""`
+	Id       uint   `form:"id" json:"id" binding:"required"`
+	Status   string `form:"status" json:"status" binding:""`
 	Name     string `form:"name" json:"name" binding:""`
 	VcsType  string `form:"vcsType" json:"vcsType" binding:""`
 	Address  string `form:"address" json:"address" binding:""`
@@ -32,22 +32,21 @@ type DeleteVcsForm struct {
 
 type GetGitProjectsForm struct {
 	BaseForm
-	Q            string    `form:"q" json:"q"`
-	VcsId 	     uint `form:"vcsId" json:"vcsId" binding:"required"`
-
+	Q     string `form:"q" json:"q"`
+	VcsId uint   `form:"vcsId" json:"vcsId" binding:"required"`
 }
 
 type GetGitBranchesForm struct {
 	BaseForm
-	RepoId       int    `form:"repoId" json:"repoId"`
-	VcsId 	     uint `form:"vcsId" json:"vcsId" binding:"required"`
-
+	RepoId   int    `form:"repoId" json:"repoId"`
+	RepoPath string `form:"repoPath" json:"repoPath"`
+	VcsId    uint   `form:"vcsId" json:"vcsId" binding:"required"`
 }
 
 type GetReadmeForm struct {
 	BaseForm
-	RepoId       int    `form:"repoId" json:"repoId" binding:"required"`
-	Branch       string `form:"branch" json:"branch"`
-	VcsId 	     uint `form:"vcsId" json:"vcsId" binding:""`
-
+	RepoId   int    `form:"repoId" json:"repoId" binding:""`
+	RepoPath string `form:"repoPath" json:"repoPath" binding:""`
+	Branch   string `form:"branch" json:"branch" binding:"required"`
+	VcsId    uint   `form:"vcsId" json:"vcsId" binding:"required"`
 }

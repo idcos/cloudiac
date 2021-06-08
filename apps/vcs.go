@@ -9,7 +9,7 @@ import (
 	"cloudiac/models/forms"
 	"cloudiac/services"
 	"cloudiac/services/vcsrv"
-	"strconv"
+	"fmt"
 )
 
 func CreateVcs(c *ctx.ServiceCtx, form *forms.CreateVcsForm) (interface{}, e.Error) {
@@ -76,15 +76,15 @@ func GetReadme(c *ctx.ServiceCtx, form *forms.GetReadmeForm) (interface{}, e.Err
 	}
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
-	repo, er := vcsService.GetRepo(strconv.Itoa(form.RepoId))
+	repo, er := vcsService.GetRepo(repoIdOrPath(form.RepoId, form.RepoPath))
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
 	b, er := repo.ReadFileContent(form.Branch, "README.md")
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
 	res := models.FileContent{
 		Content: string(b[:]),
@@ -128,6 +128,13 @@ type Branches struct {
 	Name string `json:"name"`
 }
 
+func repoIdOrPath(id int, path string) string {
+	if id != 0 {
+		return fmt.Sprintf("%d", id)
+	}
+	return path
+}
+
 func ListRepoBranches(c *ctx.ServiceCtx, form *forms.GetGitBranchesForm) (brans []*Branches, err e.Error) {
 	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
 	if err != nil {
@@ -136,15 +143,16 @@ func ListRepoBranches(c *ctx.ServiceCtx, form *forms.GetGitBranchesForm) (brans 
 
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
-	repo, er := vcsService.GetRepo(strconv.Itoa(form.RepoId))
+
+	repo, er := vcsService.GetRepo(repoIdOrPath(form.RepoId, form.RepoPath))
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
 	branchList, er := repo.ListBranches("", 0, 0)
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
 	for _, v := range branchList {
 		brans = append(brans, &Branches{
@@ -164,7 +172,7 @@ func VcsTfVarsSearch(c *ctx.ServiceCtx, form *forms.TemplateTfvarsSearchForm) (i
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
-	repo, er := vcsService.GetRepo(strconv.Itoa(int(form.RepoId)))
+	repo, er := vcsService.GetRepo(repoIdOrPath(int(form.RepoId), form.RepoPath))
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
@@ -189,7 +197,7 @@ func VcsPlaybookSearch(c *ctx.ServiceCtx, form *forms.TemplatePlaybookSearchForm
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
-	repo, er := vcsService.GetRepo(strconv.Itoa(int(form.RepoId)))
+	repo, er := vcsService.GetRepo(repoIdOrPath(int(form.RepoId), form.RepoPath))
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
@@ -214,7 +222,7 @@ func VcsVariableSearch(c *ctx.ServiceCtx, form *forms.TemplateVariableSearchForm
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
-	repo, er := vcsService.GetRepo(strconv.Itoa(int(form.RepoId)))
+	repo, er := vcsService.GetRepo(repoIdOrPath(int(form.RepoId), form.RepoPath))
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}

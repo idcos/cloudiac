@@ -1,7 +1,15 @@
 package main
 
 import (
-	task_manager2 "cloudiac/apps/task_manager"
+	"fmt"
+	"log"
+	"os"
+
+	"github.com/jessevdk/go-flags"
+	"github.com/joho/godotenv"
+	"github.com/pkg/errors"
+
+	"cloudiac/apps/task_manager"
 	"cloudiac/cmds/common"
 	"cloudiac/configs"
 	"cloudiac/consts"
@@ -12,15 +20,6 @@ import (
 	"cloudiac/utils/kafka"
 	"cloudiac/utils/logs"
 	"cloudiac/web"
-	"fmt"
-	"github.com/joho/godotenv"
-	"github.com/pkg/errors"
-	"log"
-
-	//_ "net/http/pprof"
-	"os"
-
-	"github.com/jessevdk/go-flags"
 )
 
 type Option struct {
@@ -80,7 +79,7 @@ func main() {
 	common.ReRegisterService(opt.ReRegister, "IaC-Portal")
 
 	// 启动后台 worker
-	go task_manager2.Start(configs.Get().Consul.ServiceID)
+	go task_manager.Start(configs.Get().Consul.ServiceID)
 
 	// 启动 web server
 	web.StartServer()
@@ -178,15 +177,14 @@ func initSystemConfig(tx *db.Session) (err error) {
 	return nil
 }
 
-// initVcs TODO: 默认使用内置 http git server
 func initVcs(tx *db.Session) error {
 	vcs := models.Vcs{
 		OrgId:    0,
 		Name:     "默认仓库",
-		VcsType:  configs.Get().Gitlab.Type,
+		VcsType:  consts.GitTypeLocal,
 		Status:   "enable",
-		Address:  configs.Get().Gitlab.Url,
-		VcsToken: configs.Get().Gitlab.Token,
+		Address:  consts.LocalGitReposPath,
+		VcsToken: "",
 	}
 
 	dbVcs := models.Vcs{}
@@ -201,6 +199,7 @@ func initVcs(tx *db.Session) error {
 			return err
 		}
 	} else { // 己存在，进行更新
+		vcs.Status = ""	// 不更新状态
 		_, err = tx.Model(&vcs).Where("id = ?", dbVcs.Id).Update(vcs)
 		if err != nil {
 			return err

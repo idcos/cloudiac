@@ -39,24 +39,16 @@ type ConsulConfig struct {
 	DeregisterAfter string `yaml:"deregister_after"`
 }
 
-type GitlabConfig struct {
-	Url      string `yaml:"url"`
-	Token    string `yaml:"token"`
-	Username string `yaml:"username"`
-	Type     string `yaml:"type"`
-}
-
-type TaskConfig struct {
-	TimeTicker int64  `yaml:"time_ticker"` // portal端轮训时间
-	LogPath    string `yaml:"log_path"`
-}
-
 type RunnerConfig struct {
 	DefaultImage string `yaml:"default_image"`
 	// AssetsPath  预置 providers 也在该目录下
 	AssetsPath      string `yaml:"assets_path"`
 	StoragePath     string `yaml:"storage_path"`
 	PluginCachePath string `yaml:"plugin_cache_path"`
+}
+
+type PortalConfig struct {
+	Address string `yaml:"address"` // portal 对外提供服务的 url
 }
 
 func (c *RunnerConfig) mustAbs(path string) string {
@@ -115,9 +107,8 @@ type Config struct {
 	Mysql      string           `yaml:"mysql"`
 	Listen     string           `yaml:"listen"`
 	Consul     ConsulConfig     `yaml:"consul"`
-	Gitlab     GitlabConfig     `yaml:"gitlab"`
+	Portal     PortalConfig     `yaml:"portal"`
 	Runner     RunnerConfig     `yaml:"runner"`
-	Task       TaskConfig       `yaml:"task"`
 	Log        LogConfig        `yaml:"log"`
 	Kafka      KafkaConfig      `yaml:"kafka"`
 	SMTPServer SMTPServerConfig `yaml:"smtpServer"`

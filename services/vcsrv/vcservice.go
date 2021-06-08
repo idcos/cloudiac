@@ -1,10 +1,14 @@
 package vcsrv
 
 import (
+	"cloudiac/consts"
 	"cloudiac/consts/e"
 	"cloudiac/models"
+	"path"
+
 	"github.com/pkg/errors"
 )
+
 
 /*
 version control service 接口
@@ -63,16 +67,29 @@ type RepoIface interface {
 
 func GetVcsInstance(vcs *models.Vcs) (VcsIface, error) {
 	switch vcs.VcsType {
-	case "gitlab":
+	case consts.GitTypeLocal:
+		return newLocalVcs(vcs.Address), nil
+	case consts.GitTypeGitLab:
 		return newGitlabInstance(vcs)
-	case "gitea":
+	case consts.GitTypeGitEA:
 		return newGiteaInstance(vcs)
-	case "github":
-		//return newGitlabInstance(vcs)
-	case "gitee":
-		//return newGitlabInstance(vcs)
+	//case consts.GitTypeGithub:
+	//	//return newGitlabInstance(vcs)
+	//case consts.GitTypeGitee:
+	//	//return newGitlabInstance(vcs)
 	default:
 		return nil, errors.New("vcs type doesn't exist")
 	}
-	return nil, nil
+}
+
+func matchGlob(pattern, name string) bool {
+	if pattern == "" {
+		return true
+	}
+
+	matched, err := path.Match(pattern, name)
+	if err != nil {
+		return false
+	}
+	return matched
 }
