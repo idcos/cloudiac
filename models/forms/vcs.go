@@ -48,6 +48,6 @@ type GetReadmeForm struct {
 	BaseForm
 	RepoId       int    `form:"repoId" json:"repoId" binding:"required"`
 	Branch       string `form:"branch" json:"branch"`
-	VcsId 	     uint `form:"vcsId" json:"vcsId" binding:"required"`
+	VcsId 	     uint `form:"vcsId" json:"vcsId" binding:""`
 
 }
