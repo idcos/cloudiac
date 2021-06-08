@@ -2,6 +2,8 @@ package main
 
 import (
 	v1 "cloudiac/runner/api/v1"
+	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	"os"
@@ -34,11 +36,55 @@ func main() {
 
 	common.ShowVersionIf(opt.Version)
 	configs.Init(opt.Config)
+	if err := checkConfigs(configs.Get()); err != nil {
+		panic(err)
+	}
+	if err := ensureDirs(); err != nil {
+		panic(err)
+	}
+
 	conf := configs.Get().Log
 	logs.Init(conf.LogLevel, conf.LogMaxDays, "ct-runner")
-	common.ReRegisterService(opt.ReRegister, "CT-Runner")
 
+	common.ReRegisterService(opt.ReRegister, "CT-Runner")
 	StartServer()
+}
+
+func checkConfigs(c *configs.Config) error {
+	cases := []struct {
+		name  string
+		value string
+	}{
+		{"runner.default_image", c.Runner.DefaultImage},
+		{"runner.storage_path", c.Runner.StoragePath},
+		{"runner.assets_path", c.Runner.AssetsPath},
+		{"runner.plugin_cache_path", c.Runner.PluginCachePath},
+	}
+
+	for _, c := range cases {
+		if c.value == "" {
+			return fmt.Errorf("configuration '%s' is empty", c.name)
+		}
+	}
+	return nil
+}
+
+// ensureDirs 确保依赖的目录存在
+func ensureDirs() error {
+	c := configs.Get().Runner
+
+	var err error
+	for _, path := range []string{c.StoragePath, c.AssetsPath, c.PluginCachePath, c.ProviderPath()} {
+		// 确保可以转为绝对路径，因为挂载到容器中时必须使用绝对路径
+		path, err = filepath.Abs(path)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("Abs(%s)", path))
+		} else if err = os.MkdirAll(path, 0755); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func StartServer() {

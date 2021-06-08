@@ -82,7 +82,7 @@ func GetReadme(c *ctx.ServiceCtx, form *forms.GetReadmeForm) (interface{}, e.Err
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
-	b, er := repo.ReadFileContent(form.Branch,"README.md")
+	b, er := repo.ReadFileContent(form.Branch, "README.md")
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
@@ -102,7 +102,7 @@ func ListRepos(c *ctx.ServiceCtx, form *forms.GetGitProjectsForm) (interface{}, 
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
-	repo, er := vcsService.ListRepos("",form.Q,uint(form.PageSize_),uint(form.CurrentPage_))
+	repo, er := vcsService.ListRepos("", form.Q, uint(form.PageSize_), uint(form.CurrentPage_))
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
@@ -142,7 +142,7 @@ func ListRepoBranches(c *ctx.ServiceCtx, form *forms.GetGitBranchesForm) (brans 
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
-	branchList, er := repo.ListBranches("",0,0)
+	branchList, er := repo.ListBranches("", 0, 0)
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
@@ -169,8 +169,8 @@ func VcsTfVarsSearch(c *ctx.ServiceCtx, form *forms.TemplateTfvarsSearchForm) (i
 		return nil, e.New(e.GitLabError, err)
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
-		Branch:              form.RepoBranch,
-		IsHasSuffixFileName: []string{consts.TfVarFileExt},
+		Branch: form.RepoBranch,
+		Search: consts.TfVarFileMatch,
 	})
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
@@ -194,8 +194,8 @@ func VcsPlaybookSearch(c *ctx.ServiceCtx, form *forms.TemplatePlaybookSearchForm
 		return nil, e.New(e.GitLabError, err)
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
-		Branch:              form.RepoBranch,
-		IsHasSuffixFileName: []string{consts.PlaybookPrefixYml, consts.PlaybookPrefixYaml},
+		Branch: form.RepoBranch,
+		Search: consts.PlaybookMatch,
 	})
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
@@ -219,15 +219,15 @@ func VcsVariableSearch(c *ctx.ServiceCtx, form *forms.TemplateVariableSearchForm
 		return nil, e.New(e.GitLabError, err)
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
-		Branch:              form.RepoBranch,
-		IsHasSuffixFileName: []string{consts.VariablePrefix},
+		Branch: form.RepoBranch,
+		Search: consts.VariablePrefix,
 	})
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
 	tvl := make([]services.TemplateVariable, 0)
 	for _, file := range listFiles {
-		content, er := repo.ReadFileContent(form.RepoBranch,file)
+		content, er := repo.ReadFileContent(form.RepoBranch, file)
 		if er != nil {
 			return nil, e.New(e.GitLabError, err)
 		}

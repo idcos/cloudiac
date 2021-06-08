@@ -31,8 +31,7 @@ const (
 	ForbiddenAccessKey     = 1082
 
 	// 登录认证
-	InvalidLogin       = 1110
-	InvalidPassword    = 1111
+	InvalidPassword    = 1110
 	InvalidToken       = 1100 // 无效 token
 	InvalidTokenScope  = 1101 // 无效 token scope
 	InvalidTokenPrefix = 1102 // 无效 token prefix
@@ -211,11 +210,8 @@ var errorMsgs = map[int]map[string]string{
 	ColValidateError: {
 		"zh-cn": "字段校验错误",
 	},
-	InvalidLogin: {
-		"zh-cn": "无效的邮箱或密码",
-	},
 	InvalidPassword: {
-		"zh-cn": "密码错误",
+		"zh-cn": "无效的邮箱或密码",
 	},
 	InvalidColumn: {
 		"zh-cn": "无效的字段名",

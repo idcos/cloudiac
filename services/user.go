@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
+	"cloudiac/consts"
 	//"errors"
 	"cloudiac/consts/e"
 	"cloudiac/libs/db"
 	"cloudiac/models"
 	"cloudiac/utils"
-	"cloudiac/consts"
 )
 
 func CreateUser(tx *db.Session, user models.User) (*models.User, e.Error) {
@@ -51,14 +51,6 @@ func GetUserById(tx *db.Session, id uint) (*models.User, e.Error) {
 			return nil, e.New(e.UserNotExists, err)
 		}
 		return nil, e.New(e.DBError, err)
-	}
-	return &u, nil
-}
-
-func GetUserByName(tx *db.Session, name string) (*models.User, error) {
-	u := models.User{}
-	if err := tx.Where("name = ?", name).First(&u); err != nil {
-		return nil, err
 	}
 	return &u, nil
 }

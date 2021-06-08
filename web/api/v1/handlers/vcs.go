@@ -88,7 +88,6 @@ func TemplateTfvarsSearch(c *ctx.GinRequestCtx){
 // @Param repoBranch formData int true "分支"
 // @Param vcsId formData int true "vcsID"
 // @router /api/v1/template/variable/search [get]
-// @Success 200 {object} vcsrv.TemplateVariable
 func TemplateVariableSearch(c *ctx.GinRequestCtx){
 	form := forms.TemplateVariableSearchForm{}
 	if err := c.Bind(&form); err != nil {

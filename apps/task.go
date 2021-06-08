@@ -1,7 +1,6 @@
 package apps
 
 import (
-	"cloudiac/configs"
 	"cloudiac/consts"
 	"cloudiac/consts/e"
 	"cloudiac/libs/ctx"
@@ -11,11 +10,10 @@ import (
 	"cloudiac/services"
 	vcs2 "cloudiac/services/vcsrv"
 	"cloudiac/utils"
-	"encoding/json"
 	"fmt"
 	"github.com/jinzhu/gorm"
 	"github.com/xanzy/go-gitlab"
-	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -37,7 +35,10 @@ func SearchTask(c *ctx.ServiceCtx, form *forms.SearchTaskForm) (interface{}, e.E
 	}
 
 	for _, resp := range taskResp {
-		user, _ := services.GetUserById(tx, resp.Creator)
+		user, err := services.GetUserById(tx, resp.Creator)
+		if err != nil && !e.IsRecordNotFound(err) {
+			return nil, e.New(e.DBError, err)
+		}
 		if user != nil {
 			resp.CreatorName = user.Name
 		}
@@ -76,7 +77,10 @@ func DetailTask(c *ctx.ServiceCtx, form *forms.DetailTaskForm) (interface{}, e.E
 		First(&resp); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	user, _ := services.GetUserById(tx, resp.Creator)
+	user, err := services.GetUserById(tx, resp.Creator)
+	if err != nil && !e.IsRecordNotFound(err) {
+		return nil, e.New(e.DBError, err)
+	}
 	if user != nil {
 		resp.CreatorName = user.Name
 	}
@@ -85,23 +89,12 @@ func DetailTask(c *ctx.ServiceCtx, form *forms.DetailTaskForm) (interface{}, e.E
 
 func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.Error) {
 	guid := utils.GenGuid("run")
-	conf := configs.Get()
-	logPath := fmt.Sprintf("%s/%s/%s", conf.Task.LogPath, form.TemplateGuid, guid)
-	b, _ := json.Marshal(map[string]interface{}{
-		"backend_url": fmt.Sprintf("http://%s:%d/api/v1", form.CtServiceIp, form.CtServicePort),
-		"ctServiceId": form.CtServiceId,
-		"log_file":    logPath,
-	})
 
-	if err := os.MkdirAll(logPath, os.ModePerm); err != nil {
-		return nil, e.New(e.IOError, err)
-	}
-
-	path := fmt.Sprintf("%s/%s", logPath, consts.TaskLogName)
-	isExists, _ := utils.PathExists(path)
-	if !isExists {
-		file, _ := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
-		file.WriteString("")
+	logPath := filepath.Join(form.TemplateGuid, guid, consts.TaskLogName)
+	backend := models.TaskBackendInfo{
+		BackendUrl:  fmt.Sprintf("http://%s:%d/api/v1", form.CtServiceIp, form.CtServicePort),
+		CtServiceId: form.CtServiceId,
+		LogFile:     logPath,
 	}
 
 	tpl, err := services.GetTemplateByGuid(c.DB(), form.TemplateGuid)
@@ -136,7 +129,7 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 		commitId = commit
 	}
 
-	task, err := services.CreateTask(c.DB().Debug(), models.Task{
+	task, err := services.CreateTask(c.DB(), models.Task{
 		TemplateId:   form.TemplateId,
 		TemplateGuid: form.TemplateGuid,
 		Guid:         guid,
@@ -144,18 +137,17 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 		Status:       consts.TaskPending,
 		Creator:      c.UserId,
 		Name:         form.Name,
-		BackendInfo:  models.JSON(b),
+		BackendInfo:  &backend,
 		CtServiceId:  form.CtServiceId,
 		CommitId:     commitId,
 	})
 	if err != nil {
 		return nil, err
 	}
+
 	//发送通知
 	go services.SendMail(c.DB(), c.OrgId, task)
-	//todo Task数量够多的情况下需要引入第三方组件
-	//go services.RunTaskToRunning(task, c.DB(), c.MustOrg().Guid)
-	//go services.StartTask(c.DB(), *task)
+
 	return task, nil
 }
 
@@ -176,11 +168,13 @@ func LastTask(c *ctx.ServiceCtx, form *forms.LastTaskForm) (interface{}, e.Error
 		return nil, e.New(e.DBError, err)
 	}
 	if taskResp.Creator != 0 {
-		user, _ := services.GetUserById(tx, taskResp.Creator)
+		user, err := services.GetUserById(tx, taskResp.Creator)
+		if err != nil && !e.IsRecordNotFound(err) {
+			return nil, err
+		}
 		if user != nil {
 			taskResp.CreatorName = user.Name
 		}
-
 	}
 	taskResp.RepoBranch = tpl.RepoBranch
 	return taskResp, nil

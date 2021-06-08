@@ -119,7 +119,7 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 		if err != nil {
 			logs.Get().Debug("file name match err: %v", err)
 		}
-		if i.Type == fileBlob && (utils.ArrayIsHasSuffix(option.IsHasSuffixFileName, i.Name) || matched) {
+		if i.Type == fileBlob && matched {
 			pathList = append(pathList, i.Path)
 		}
 		if i.Type == fileTree && option.Recursive {
@@ -134,7 +134,7 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 	return pathList, nil
 
 }
-func (git *gitlabRepoIface) ReadFileContent(branch,path string) (content []byte, err error) {
+func (git *gitlabRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
 	opt := &gitlab.GetRawFileOptions{Ref: gitlab.String(branch)}
 	row, _, errs := git.gitConn.RepositoryFiles.GetRawFile(git.Project.ID, path, opt)
 	if errs != nil {

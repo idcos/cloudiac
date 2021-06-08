@@ -13,7 +13,6 @@ type User struct {
 	Phone     string    `json:"phone" gorm:"size:16;comment:'电话'"`
 	IsAdmin   bool      `json:"isAdmin" gorm:"default:false;comment:'是否平台管理员'"`
 	Status    string    `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'用户状态'"`
-	InitPass  string    `json:"initPass" gorm:"size:16;comment:'初始密码'"`
 }
 
 func (User) TableName() string {
