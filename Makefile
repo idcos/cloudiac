@@ -7,7 +7,7 @@ GOGET=$(GOCMD) get
 ## REPO_BASE?=https://github.com/idcos
 REPO_BASE?=http://10.0.3.124:3000
 
-RM=/bin/rm -fv
+RM=/bin/rm -f
 
 VERSION=$(shell git describe --tags --abbrev=0 --always)
 COMMIT=$(shell git rev-parse --short HEAD)
@@ -19,7 +19,7 @@ PB_PROTOC=protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-
 
 BUILD_DIR=$(PWD)/targets
 
-.PHONY: all build build-dir portal runner run run-portal ru-runner clean package repos
+.PHONY: all build build-dir portal runner run run-portal ru-runner clean package repos providers
 
 all: portal runner
 build: portal runner
@@ -51,9 +51,11 @@ clean:
 	$(GOCLEAN) ./cmds/runner
 	$(RM) -r $(BUILD_DIR)
 
-package: clean build repos
-	cp -a ./repos $(BUILD_DIR) && \
-	cd $(BUILD_DIR) && tar -czvf ../cloud-iac-$(VERSION).tar.gz ./
+package: clean build
+        ## repos 和 providers 如果己存在则拷贝，但不主动构建
+	test -d './repos' && cp -a ./repos $(BUILD_DIR)
+	test -d './providers' && cp -a ./providers $(BUILD_DIR)	
+	cd $(BUILD_DIR) && tar -czf ../cloud-iac-$(VERSION).tar.gz ./
 
 repos: repos.list
 	$(RM) -r ./repos/iac
@@ -63,3 +65,8 @@ repos: repos.list
 		cp $${REPO_NAME}/hooks/post-update.sample $${REPO_NAME}/hooks/post-update && \
 		bash $${REPO_NAME}/hooks/post-update ;\
 	done
+
+
+providers: 
+	bash scripts/generate_providers_mirror.sh
+
