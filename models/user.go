@@ -7,12 +7,13 @@ import (
 type User struct {
 	SoftDeleteModel
 
-	Name      string    `json:"name" gorm:"size:32;not null;comment:'姓名'"`
-	Email     string    `json:"email" gorm:"size:64;not null;comment:'邮箱'"`
-	Password  string    `json:"-" gorm:"not null;comment:'密码'"`
-	Phone     string    `json:"phone" gorm:"size:16;comment:'电话'"`
-	IsAdmin   bool      `json:"isAdmin" gorm:"default:false;comment:'是否平台管理员'"`
-	Status    string    `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'用户状态'"`
+	Name        string `json:"name" gorm:"size:32;not null;comment:'姓名'"`
+	Email       string `json:"email" gorm:"size:64;not null;comment:'邮箱'"`
+	Password    string `json:"-" gorm:"not null;comment:'密码'"`
+	Phone       string `json:"phone" gorm:"size:16;comment:'电话'"`
+	IsAdmin     bool   `json:"isAdmin" gorm:"default:false;comment:'是否平台管理员'"`
+	Status      string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'用户状态'"`
+	NewbieGuide JSON   `json:"newbieGuide" gorm:"type:json;null;comment:'新手引导状态'"`
 }
 
 func (User) TableName() string {
@@ -31,9 +32,9 @@ func (u User) Migrate(sess *db.Session) (err error) {
 type UserOrgMap struct {
 	BaseModel
 
-	OrgId     uint    `json:"orgId" gorm:"not null;comment:'组织ID'"`
-	UserId    uint    `json:"userId" gorm:"not null;comment:'用户ID'"`
-	Role      string  `json:"role" gorm:"type:enum('owner','member');default:'member';comment:'角色'"`
+	OrgId  uint   `json:"orgId" gorm:"not null;comment:'组织ID'"`
+	UserId uint   `json:"userId" gorm:"not null;comment:'用户ID'"`
+	Role   string `json:"role" gorm:"type:enum('owner','member');default:'member';comment:'角色'"`
 }
 
 func (UserOrgMap) TableName() string {
