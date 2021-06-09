@@ -4,7 +4,10 @@ GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
 
-RM=/bin/rm -fv
+## REPO_BASE?=https://github.com/idcos
+REPO_BASE?=http://10.0.3.124:3000
+
+RM=/bin/rm -f
 
 VERSION=$(shell git describe --tags --abbrev=0 --always)
 COMMIT=$(shell git rev-parse --short HEAD)
@@ -15,6 +18,8 @@ GORUN=$(GOCMD) run -v -ldflags $(GOLDFLAGS)
 PB_PROTOC=protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative
 
 BUILD_DIR=$(PWD)/targets
+
+.PHONY: all build build-dir portal runner run run-portal ru-runner clean package repos providers
 
 all: portal runner
 build: portal runner
@@ -44,8 +49,24 @@ run-runner:
 clean:
 	$(GOCLEAN) ./cmds/portal
 	$(GOCLEAN) ./cmds/runner
-	$(RM) $(BUILD_DIR)/*
+	$(RM) -r $(BUILD_DIR)
 
 package: clean build
-	cd $(BUILD_DIR) && tar -czvf ../cloud-iac-$(VERSION).tar.gz ./
+        ## repos 和 providers 如果己存在则拷贝，但不主动构建
+	test -d './repos' && cp -a ./repos $(BUILD_DIR)
+	test -d './providers' && cp -a ./providers $(BUILD_DIR)	
+	cd $(BUILD_DIR) && tar -czf ../cloud-iac-$(VERSION).tar.gz ./
+
+repos: repos.list
+	$(RM) -r ./repos/iac
+	mkdir -p ./repos/iac
+	cd ./repos/iac/ && cat ../../repos.list | while read REPO_PATH; do \
+		git clone --bare $(REPO_BASE)$${REPO_PATH} && REPO_NAME=`basename $${REPO_PATH}` && \
+		cp $${REPO_NAME}/hooks/post-update.sample $${REPO_NAME}/hooks/post-update && \
+		bash $${REPO_NAME}/hooks/post-update ;\
+	done
+
+
+providers: 
+	bash scripts/generate_providers_mirror.sh
 
