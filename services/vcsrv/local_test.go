@@ -46,7 +46,7 @@ func TestLocalVcs(t *testing.T) {
 	}
 
 	repo := repos[0]
-	basePath := strings.Replace(repo.(*LocalRepo).path, testLocalVcs.basePath, "", -1)
+	basePath := strings.Replace(repo.(*LocalRepo).path, "", "", -1)
 	repo, err = testLocalVcs.GetRepo(basePath)
 	assert.NoError(err)
 
