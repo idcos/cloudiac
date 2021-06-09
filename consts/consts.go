@@ -49,6 +49,7 @@ const (
 	TfVarFileMatch = ".tfvars"
 	PlaybookMatch  = ".yml"
 	//end
+	MetaYmlMatch = "meta.(yaml|yml)"
 	VariablePrefix   = "variable.tf"
 
 	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀

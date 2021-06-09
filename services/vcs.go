@@ -119,5 +119,12 @@ func readHCLFile(content []byte) ([]TemplateVariable, e.Error) {
 			Description: s.Description,
 		})
 	}
-	return tv,nil
+	return tv, nil
+}
+
+func GetDefaultVcs(session *db.Session) (*models.Vcs, error) {
+	vcs := &models.Vcs{}
+	err := session.Where("org_id = 0").First(vcs)
+	return vcs, err
+
 }
