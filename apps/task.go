@@ -122,7 +122,7 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 	}
 
 	if vcs.VcsType == consts.GitTypeGitEA {
-		commit, err := vcs2.GetGiteaBranchCommitId(vcs, uint(tpl.RepoId), tpl.RepoBranch)
+		commit, err := vcs2.GetGiteaBranchCommitId(vcs, tpl.RepoId, tpl.RepoBranch)
 		if err != nil {
 			return nil, e.New(e.GitLabError, fmt.Errorf("query commit id error: %v", er))
 		}

@@ -38,15 +38,13 @@ type GetGitProjectsForm struct {
 
 type GetGitBranchesForm struct {
 	BaseForm
-	RepoId   int    `form:"repoId" json:"repoId"`
-	RepoPath string `form:"repoPath" json:"repoPath"`
+	RepoId   string `form:"repoId" json:"repoId"`
 	VcsId    uint   `form:"vcsId" json:"vcsId" binding:"required"`
 }
 
 type GetReadmeForm struct {
 	BaseForm
-	RepoId   int    `form:"repoId" json:"repoId" binding:""`
-	RepoPath string `form:"repoPath" json:"repoPath" binding:""`
+	RepoId   string `form:"repoId" json:"repoId" binding:""`
 	Branch   string `form:"branch" json:"branch" binding:"required"`
 	VcsId    uint   `form:"vcsId" json:"vcsId" binding:"required"`
 }

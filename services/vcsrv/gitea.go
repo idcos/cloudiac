@@ -27,7 +27,6 @@ type giteaVcs struct {
 }
 
 func (gitea *giteaVcs) GetRepo(idOrPath string) (RepoIface, error) {
-
 	vcsRawPath := GetGiteaUrl(gitea.vcs.Address)
 	path := vcsRawPath + fmt.Sprintf("/api/v1/repositories/%s",idOrPath)
 	response, body, er := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
@@ -204,7 +203,7 @@ func (gitea *giteaRepoIface) ReadFileContent(branch, path string) (content []byt
 
 func (gitea *giteaRepoIface) FormatRepoSearch() (project *Projects, err e.Error) {
 	return &Projects{
-		ID:             int(gitea.repository.ID),
+		ID:             fmt.Sprintf("%d", gitea.repository.ID),
 		Description:    gitea.repository.Description,
 		DefaultBranch:  gitea.repository.DefaultBranch,
 		SSHURLToRepo:   gitea.repository.SSHURL,
@@ -248,8 +247,8 @@ func GetGiteaUrl(address string) string {
 	return strings.TrimSuffix(address, "/")
 }
 
-func GetGiteaTemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch, filePath string, fileName []string) ([]string, error) {
-	repo, err := GetGiteaRepoById(vcs, int(repoId))
+func GetGiteaTemplateTfvarsSearch(vcs *models.Vcs, repoId string, repoBranch, filePath string, fileName []string) ([]string, error) {
+	repo, err := GetGiteaRepoById(vcs, repoId)
 	if err != nil {
 		return nil, err
 	}
@@ -290,9 +289,9 @@ func GetGiteaTemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch, file
 
 }
 
-func GetGiteaRepoById(vcs *models.Vcs, repoId int) (string, e.Error) {
+func GetGiteaRepoById(vcs *models.Vcs, repoId string) (string, e.Error) {
 	vcsRawPath := GetGiteaUrl(vcs.Address)
-	path := vcsRawPath + fmt.Sprintf("/api/v1/repositories/%d", repoId)
+	path := vcsRawPath + fmt.Sprintf("/api/v1/repositories/%s", repoId)
 	request, err := http.NewRequest("GET", path, nil)
 	if err != nil {
 		return "", e.New(e.BadRequest, err)
@@ -313,8 +312,8 @@ func GetGiteaRepoById(vcs *models.Vcs, repoId int) (string, e.Error) {
 
 }
 
-func GetGiteaBranchCommitId(vcs *models.Vcs, repoId uint, repoBranch string) (string, error) {
-	repo, err := GetGiteaRepoById(vcs, int(repoId))
+func GetGiteaBranchCommitId(vcs *models.Vcs, repoId string, repoBranch string) (string, error) {
+	repo, err := GetGiteaRepoById(vcs, repoId)
 	if err != nil {
 		return "", err
 	}

@@ -19,13 +19,13 @@ PB_PROTOC=protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-
 
 BUILD_DIR=$(PWD)/targets
 
-.PHONY: all build build-dir portal runner run run-portal ru-runner clean package repos providers
+.PHONY: all build build-dir portal runner run run-portal ru-runner clean package repos providers package-release
 
 all: portal runner
 build: portal runner
 
 build-dir:
-	mkdir -p $(BUILD_DIR)
+	mkdir -p $(BUILD_DIR)/assets/
 
 portal: build-dir
 	swag init -g web/api/v1/route.go
@@ -51,22 +51,28 @@ clean:
 	$(GOCLEAN) ./cmds/runner
 	$(RM) -r $(BUILD_DIR)
 
-package: clean build
+
+package: clean build-dir build
         ## repos 和 providers 如果己存在则拷贝，但不主动构建
 	test -d './repos' && cp -a ./repos $(BUILD_DIR)
-	test -d './providers' && cp -a ./providers $(BUILD_DIR)	
+	test -d './assets/providers' && cp -a ./assets/providers $(BUILD_DIR)/assets/
+	cp -a ./assets/terraform.py $(BUILD_DIR)/assets/
 	cd $(BUILD_DIR) && tar -czf ../cloud-iac-$(VERSION).tar.gz ./
+
+package-release: 
+	GOOS=linux GOARCH=amd64 $(MAKE) package
+
 
 repos: repos.list
 	$(RM) -r ./repos/iac
 	mkdir -p ./repos/iac
-	cd ./repos/iac/ && cat ../../repos.list | while read REPO_PATH; do \
+	cd ./repos/iac/ && cat ../../repos.list | while read -r REPO_PATH; do \
 		git clone --bare $(REPO_BASE)$${REPO_PATH} && REPO_NAME=`basename $${REPO_PATH}` && \
 		cp $${REPO_NAME}/hooks/post-update.sample $${REPO_NAME}/hooks/post-update && \
-		bash $${REPO_NAME}/hooks/post-update ;\
+		(cd $${REPO_NAME} && bash hooks/post-update) ;\
 	done
 
 
-providers: 
+providers: assets/providers
 	bash scripts/generate_providers_mirror.sh
 

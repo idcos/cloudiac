@@ -28,13 +28,7 @@ type SearchTemplateResp struct {
 func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (interface{}, e.Error) {
 	statusList := make([]string, 0)
 	if form.TaskStatus == "all" || form.TaskStatus == "" {
-		statusList = append(statusList, []string{
-			"pending",
-			"running",
-			"failed",
-			"complete",
-			"timeout",
-		}...)
+		statusList = append(statusList, models.TaskStatusList...)
 	} else {
 		statusList = strings.Split(form.TaskStatus, ",")
 	}

@@ -3,7 +3,7 @@
 # 下载所有内置代码库中依赖的 providers 到 TARGET_DIR 目录
 
 ## 目标目录
-TARGET_DIR=${TARGET_DIR:-./providers}
+TARGET_DIR=${TARGET_DIR:-./assets/providers}
 
 ## 内置代码库的路径
 REPOS=${REPOS:-./repos}

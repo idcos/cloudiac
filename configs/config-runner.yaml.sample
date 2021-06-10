@@ -2,12 +2,15 @@ listen: "0.0.0.0:19030"
 
 runner:
   default_image: "mt5225/tf-ansible:v0.0.1"
-  ## 保存任务运行信息(脚本、日志等)
-  storage_path: "./storage"
+
   ## 预置资源(providers, terraform.py 等)
   assets_path: "./assets"
+
   ## plugins 缓存
   plugin_cache_path: "./plugin-cache"
+
+  ## 保存任务运行信息(脚本、日志等)
+  storage_path: "./storage"
 
 consul:
   address: "consul.example.com:8500"
