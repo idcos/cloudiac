@@ -59,7 +59,7 @@ func (l *LocalVcs) ListRepos(namespace string, search string, limit, offset uint
 	if err != nil {
 		return nil, 0, err
 	}
-
+	var total = int64(len(repoPaths))
 	repoPaths = repoPaths[offset:]
 	if limit != 0 {
 		repoPaths = repoPaths[:limit]
@@ -74,7 +74,7 @@ func (l *LocalVcs) ListRepos(namespace string, search string, limit, offset uint
 			repos = append(repos, r)
 		}
 	}
-	return repos, int64(len(repoPaths)), nil
+	return repos, total, nil
 }
 
 type LocalRepo struct {

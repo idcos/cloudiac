@@ -31,6 +31,7 @@ type VcsIface interface {
 	// param namespace: namespace 可用于表示用户、组织等
 	// param search: 搜索字符串
 	// param limit: 限制返回的文件数，传 0 表示无限制
+	// return in64(分页total数量)
 	ListRepos(namespace, search string, limit, offset uint) ([]RepoIface, int64, error)
 }
 
