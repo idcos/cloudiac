@@ -49,7 +49,7 @@ func main() {
 
 	configs.Init(opt.Config)
 	conf := configs.Get().Log
-	logs.Init(conf.LogLevel, conf.LogMaxDays, "iac-portal")
+	logs.Init(conf.LogLevel, conf.LogPath, conf.LogMaxDays)
 
 	// 依赖中间件及数据的初始化
 	{

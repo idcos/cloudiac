@@ -44,7 +44,7 @@ func main() {
 	}
 
 	conf := configs.Get().Log
-	logs.Init(conf.LogLevel, conf.LogMaxDays, "ct-runner")
+	logs.Init(conf.LogLevel, conf.LogPath, conf.LogMaxDays)
 
 	common.ReRegisterService(opt.ReRegister, "CT-Runner")
 	StartServer()
