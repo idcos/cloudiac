@@ -144,14 +144,13 @@ func (git *gitlabRepoIface) ReadFileContent(branch, path string) (content []byte
 }
 
 type Projects struct {
-	ID                int        `json:"id"`
-	Description       string     `json:"description"`
-	PathWithNamespace string     `json:"path_with_namespace"`
-	DefaultBranch     string     `json:"default_branch"`
-	SSHURLToRepo      string     `json:"ssh_url_to_repo"`
-	HTTPURLToRepo     string     `json:"http_url_to_repo"`
-	Name              string     `json:"name"`
-	LastActivityAt    *time.Time `json:"last_activity_at,omitempty"`
+	ID             string     `json:"id"`
+	Description    string     `json:"description"`
+	DefaultBranch  string     `json:"default_branch"`
+	SSHURLToRepo   string     `json:"ssh_url_to_repo"`
+	HTTPURLToRepo  string     `json:"http_url_to_repo"`
+	Name           string     `json:"name"`
+	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 }
 
 func (gitlab *gitlabRepoIface) FormatRepoSearch() (project *Projects, err e.Error) {
@@ -235,7 +234,7 @@ func GetGitConn(gitlabToken, gitlabUrl string) (git *gitlab.Client, err e.Error)
 	return
 }
 
-func TemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch string, fileName []string) (interface{}, e.Error) {
+func TemplateTfvarsSearch(vcs *models.Vcs, repoId string, repoBranch string, fileName []string) (interface{}, e.Error) {
 	tfVarsList := make([]string, 0)
 	var errs error
 	if vcs.VcsType == consts.GitTypeGitLab {
@@ -259,7 +258,7 @@ func TemplateTfvarsSearch(vcs *models.Vcs, repoId uint, repoBranch string, fileN
 	return tfVarsList, nil
 }
 
-func getTfvarsList(git *gitlab.Client, repoBranch, path string, repoId uint, fileName []string) ([]string, error) {
+func getTfvarsList(git *gitlab.Client, repoBranch, path string, repoId string, fileName []string) ([]string, error) {
 	var (
 		fileBlob = "blob"
 		fileTree = "tree"
@@ -270,7 +269,7 @@ func getTfvarsList(git *gitlab.Client, repoBranch, path string, repoId uint, fil
 		Ref:         gitlab.String(repoBranch),
 		Path:        gitlab.String(path),
 	}
-	treeNode, _, err := git.Repositories.ListTree(int(repoId), lto)
+	treeNode, _, err := git.Repositories.ListTree(repoId, lto)
 	if err != nil {
 		return nil, err
 	}

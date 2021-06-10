@@ -42,13 +42,15 @@ func (b *TaskBackendInfo) Scan(value interface{}) error {
 }
 
 const (
-	PENDING       = consts.TaskPending
-	RUNNING       = consts.TaskRunning
-	TaskAssigning = consts.TaskAssigning
-	FAILED        = consts.TaskFailed
-	COMPLETE      = consts.TaskComplete
-	TIMEOUT       = consts.TaskTimeout
+	PENDING   = consts.TaskPending
+	RUNNING   = consts.TaskRunning
+	ASSIGNING = consts.TaskAssigning
+	FAILED    = consts.TaskFailed
+	COMPLETE  = consts.TaskComplete
+	TIMEOUT   = consts.TaskTimeout
 )
+
+var TaskStatusList = []string{PENDING, RUNNING, ASSIGNING, FAILED, COMPLETE, TIMEOUT}
 
 const (
 	PLAN  = consts.TaskPlan

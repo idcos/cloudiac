@@ -212,13 +212,12 @@ func (l *LocalRepo) FormatRepoSearch() (*Projects, e.Error) {
 		strings.Trim(path.Join(consts.ReposUrlPrefix, l.path), "/"))
 
 	return &Projects{
-		ID:                0,
-		PathWithNamespace: l.path,
-		Description:       "",
-		DefaultBranch:     filepath.Base(head.Name().String()),
-		SSHURLToRepo:      "",
-		HTTPURLToRepo:     httpUrl,
-		Name:              strings.TrimSuffix(filepath.Base(l.path), ".git"),
-		LastActivityAt:    &headCommit.Author.When,
+		ID:             l.path,
+		Description:    "",
+		DefaultBranch:  filepath.Base(head.Name().String()),
+		SSHURLToRepo:   "",
+		HTTPURLToRepo:  httpUrl,
+		Name:           strings.TrimSuffix(filepath.Base(l.path), ".git"),
+		LastActivityAt: &headCommit.Author.When,
 	}, nil
 }
