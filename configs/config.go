@@ -77,8 +77,9 @@ func (c *RunnerConfig) AbsPluginCachePath() string {
 }
 
 type LogConfig struct {
-	LogMaxDays int    `yaml:"log_max_days"` // 日志文件保留天数, 默认 7
 	LogLevel   string `yaml:"log_level"`
+	LogPath    string `yaml:"log_path"`
+	LogMaxDays int    `yaml:"log_max_days"` // 日志文件保留天数, 默认 7
 }
 
 type SMTPServerConfig struct {

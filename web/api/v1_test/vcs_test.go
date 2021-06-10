@@ -32,7 +32,7 @@ func init() {
 	token, _ = services.GenerateToken(1, "yunji", true, 1*24*time.Hour)
 	configs.Init(configPath)
 	conf := configs.Get().Log
-	logs.Init(conf.LogLevel, conf.LogMaxDays, "iac-portal")
+	logs.Init(conf.LogLevel, "", 0)
 }
 
 func addHeader(r *http.Request, token string) {

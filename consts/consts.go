@@ -45,12 +45,15 @@ const (
 	GitTypeGitee  = "gitee"
 	GitTypeLocal  = "local"
 
-	//todo 正则匹配表达式
-	TfVarFileMatch = ".tfvars"
-	PlaybookMatch  = ".yml"
+
+
 	//end
 	MetaYmlMatch   = "meta.y*ml"
 	VariablePrefix = "variable.tf"
+
+	TfVarFileMatch = "*.tfvars"
+	PlaybookMatch  = "*.y*ml"
+
 
 	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀
 

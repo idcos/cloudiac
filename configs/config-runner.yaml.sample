@@ -24,4 +24,5 @@ consul:
 
 log:
   log_level: "debug"
+  log_path: ""    # 日志保存路径，不指定同仅打印到标准输出
   log_max_days: 7
