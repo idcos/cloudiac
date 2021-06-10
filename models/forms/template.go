@@ -13,7 +13,7 @@ type CreateTemplateForm struct {
 	BaseForm
 	Name                   string `form:"name" json:"name" binding:"required,gte=2,lte=32"`
 	Description            string `form:"description" json:"Description" binding:""`
-	RepoId                 int    `form:"repoId" json:"repoId" binding:"required"`
+	RepoId                 string `form:"repoId" json:"repoId" binding:"required"`
 	RepoAddr               string `form:"repoAddr" json:"repoAddr" bingding:"required"`
 	RepoBranch             string `form:"repoBranch" json:"repoBranch" bingding:"required"`
 	SaveState              *bool  `form:"saveState" json:"saveState"`
@@ -70,18 +70,15 @@ type OverviewTemplateForm struct {
 
 type TemplateTfvarsSearchForm struct {
 	BaseForm
-	RepoId     uint   `json:"repoId" form:"repoId"`
-	RepoPath   string `json:"repoPath" form:"repoPath"`
+	RepoId     string `json:"repoId" form:"repoId"`
 	RepoBranch string `json:"repoBranch" form:"repoBranch" `
 	RepoType   string `json:"repoType" form:"repoType" `
 	VcsId      uint   `json:"vcsId" form:"vcsId"`
 }
 
-
 type TemplateVariableSearchForm struct {
 	BaseForm
-	RepoId     uint   `json:"repoId" form:"repoId" `
-	RepoPath   string `json:"repoPath" form:"repoPath"`
+	RepoId     string `json:"repoId" form:"repoId" `
 	RepoBranch string `json:"repoBranch" form:"repoBranch" `
 	RepoType   string `json:"repoType" form:"repoType" `
 	VcsId      uint   `json:"vcsId" form:"vcsId"`
@@ -89,12 +86,8 @@ type TemplateVariableSearchForm struct {
 
 type TemplatePlaybookSearchForm struct {
 	BaseForm
-	RepoId     uint   `json:"repoId" form:"repoId" `
-	RepoPath   string `json:"repoPath" form:"repoPath"`
+	RepoId     string `json:"repoId" form:"repoId" `
 	RepoBranch string `json:"repoBranch" form:"repoBranch" `
 	RepoType   string `json:"repoType" form:"repoType" `
 	VcsId      uint   `json:"vcsId" form:"vcsId"`
 }
-
-
-

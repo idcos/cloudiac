@@ -23,50 +23,23 @@ import (
 )
 
 // StartTask 启动任务(任务下发后即退出)
-func StartTask(dbSess *db.Session, task *models.Task) (deadline time.Time, err error) {
+func StartTask(dbSess *db.Session, task *models.Task) (err error) {
 	logger := logs.Get().WithField("action", "StartTask").WithField("taskId", task.Guid)
 	if task.Status != consts.TaskAssigning {
-		return deadline, fmt.Errorf("unexpected task status '%s'", task.Status)
+		return fmt.Errorf("unexpected task status '%s'", task.Status)
 	}
 
 	logger.Infof("start task %v", task.Guid)
-
-	tpl := models.Template{}
-	if err := dbSess.Where("id = ?", task.TemplateId).First(&tpl); err != nil {
-		if e.IsRecordNotFound(err) {
-			task.Status = consts.TaskFailed
-			task.StatusDetail = fmt.Errorf("tplId '%d' not found", task.TemplateId).Error()
-			if _, err := dbSess.Model(&task).Update(&task); err != nil {
-				logger.Errorf("update task error: %v", err)
-			}
-		}
-		logger.Errorf("query template '%d' error: %v", task.TemplateId, err)
-		return deadline, errors.Wrap(err, "query template error")
-	}
-
-	org, err := GetOrganizationById(dbSess, tpl.OrgId)
-	if err != nil {
-		if e.IsRecordNotFound(err) {
-			task.Status = consts.TaskFailed
-			task.StatusDetail = fmt.Errorf("orgId '%d' not found", tpl.OrgId).Error()
-			if _, err := dbSess.Model(&task).Update(&task); err != nil {
-				logger.Errorln(err)
-			}
-		}
-		return deadline, errors.Wrap(err, "query org error")
-	}
-
-	logger.Debugf("assign task")
-	if err := assignTask(dbSess, org.Guid, &tpl, task); err != nil {
+	if err := assignTask(dbSess, task); err != nil {
 		logger.Errorf("AssignTask error: %v", err)
-		return deadline, err
+		return err
 	}
 
-	return task.StartAt.Add(time.Duration(tpl.Timeout) * time.Second), nil
+	return nil
 }
 
 // assignTask 将任务分派到 runner，并更新任务状态
-func assignTask(dbSess *db.Session, orgGuid string, tpl *models.Template, task *models.Task) error {
+func assignTask(dbSess *db.Session, task *models.Task) error {
 	logger := logs.Get().WithField("action", "AssignTask").WithField("taskId", task.Guid)
 
 	updateTask := func(t *models.Task) error {
@@ -78,6 +51,37 @@ func assignTask(dbSess *db.Session, orgGuid string, tpl *models.Template, task *
 		return nil
 	}
 
+	tpl := models.Template{}
+	if err := dbSess.Where("id = ?", task.TemplateId).First(&tpl); err != nil {
+		if e.IsRecordNotFound(err) {
+			task.Status = consts.TaskFailed
+			task.StatusDetail = fmt.Errorf("tplId '%d' not found", task.TemplateId).Error()
+			_ = updateTask(task)
+		}
+		logger.Errorf("query template '%d' error: %v", task.TemplateId, err)
+		return errors.Wrap(err, "query template error")
+	}
+
+	org, er := GetOrganizationById(dbSess, tpl.OrgId)
+	if er != nil {
+		if e.IsRecordNotFound(er) {
+			task.Status = consts.TaskFailed
+			task.StatusDetail = fmt.Errorf("orgId '%d' not found", tpl.OrgId).Error()
+			_ = updateTask(task)
+		}
+		return errors.Wrap(er, "query org error")
+	}
+
+	vcs, er := QueryVcsByVcsId(tpl.VcsId, dbSess)
+	if er != nil {
+		if e.IsRecordNotFound(er) {
+			task.Status = consts.TaskFailed
+			task.StatusDetail = fmt.Errorf("vcsId '%d' not found", tpl.VcsId).Error()
+			_ = updateTask(task)
+		}
+		return errors.Wrap(er, "query vcs error")
+	}
+
 	// 更新任务为 assigning 状态
 	task.Status = consts.TaskAssigning
 	if err := updateTask(task); err != nil {
@@ -86,7 +90,8 @@ func assignTask(dbSess *db.Session, orgGuid string, tpl *models.Template, task *
 
 	now := time.Now()
 	task.StartAt = &now
-	resp, retry, err := doAssignTask(orgGuid, task, tpl)
+	logger.Debugf("assign task")
+	resp, retry, err := doAssignTask(org.Guid, vcs, &tpl, task)
 	if err == nil && resp.Error != "" {
 		err = fmt.Errorf(resp.Error)
 	}
@@ -96,41 +101,45 @@ func assignTask(dbSess *db.Session, orgGuid string, tpl *models.Template, task *
 			task.Status = consts.TaskPending // 恢复任务为 pending 状态，等待重试
 			task.StatusDetail = ""
 			task.StartAt = nil
-			updateTask(task)
+			_ = updateTask(task)
 		} else {
 			// 记录任务下发失败
 			task.Status = consts.TaskFailed
 			task.StatusDetail = err.Error()
-			updateTask(task)
+			_ = updateTask(task)
 		}
 	} else {
 		task.Status = consts.TaskRunning
 		task.StatusDetail = ""
 		task.BackendInfo.ContainerId = resp.Id
-		updateTask(task)
+		_ = updateTask(task)
 	}
 	return err
 }
 
-func doAssignTask(orgGuid string, task *models.Task, tpl *models.Template) (
+func doAssignTask(orgId string, vcs *models.Vcs, tpl *models.Template, task *models.Task) (
 	resp *runnerResp, retry bool, err error) {
 	logger := logs.Get().WithField("action", "doAssignTask").WithField("taskId", task.Guid)
 
 	//// 组装请求
 	repoAddr := tpl.RepoAddr
-	if _, err := url.Parse(repoAddr); err != nil {	// 检查地址格式是否合法
+	if u, err := url.Parse(repoAddr); err != nil {
 		return nil, false, fmt.Errorf("parse repo addr error: %v", err)
+	} else if u.User == nil && vcs.VcsToken != "" { // 如果 tpl.repoAddr 中没有提供认证信息则使用 vcs 的 token
+		// 使用空 username 在容器中会出现认证失败的问题，暂时将 username 设置为 "token"
+		u.User = url.UserPassword("token", vcs.VcsToken)
+		repoAddr = u.String()
 	}
 
 	backend := task.BackendInfo
 
-	// 有状态云模版，以模版ID为路径，
-	// 无状态云模版，以模版ID + 作业ID 为路径
 	var stateKey string
 	if tpl.SaveState {
-		stateKey = fmt.Sprintf("%s/%s.tfstate", orgGuid, tpl.Guid)
+		// 有状态云模版，以模版ID为路径，
+		stateKey = fmt.Sprintf("%s/%s.tfstate", orgId, tpl.Guid)
 	} else {
-		stateKey = fmt.Sprintf("%s/%s/%s.tfstate", orgGuid, tpl.Guid, task.Guid)
+		// 无状态云模版，以模版ID + 作业ID 为路径
+		stateKey = fmt.Sprintf("%s/%s/%s.tfstate", orgId, tpl.Guid, task.Guid)
 	}
 
 	data := map[string]interface{}{
