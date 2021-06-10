@@ -50,6 +50,7 @@ const (
 	PlaybookMatch  = "*.y*ml"
 
 	VariablePrefix   = "variable.tf"
+	MetaYmlMatch   = "meta.y*ml"
 
 	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀
 
