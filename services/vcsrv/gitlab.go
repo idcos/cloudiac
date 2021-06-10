@@ -7,10 +7,10 @@ import (
 	"cloudiac/models/forms"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
-	"encoding/json"
 	"fmt"
 	"github.com/xanzy/go-gitlab"
 	"path"
+	"strconv"
 	"time"
 )
 
@@ -27,17 +27,16 @@ type gitlabVcsIface struct {
 }
 
 func (git *gitlabVcsIface) GetRepo(idOrPath string) (RepoIface, error) {
-	project, response, err := git.gitConn.Projects.GetProject(idOrPath, nil)
+	project, _, err := git.gitConn.Projects.GetProject(idOrPath, nil)
 	if err != nil {
 		return nil, err
 	}
 	return &gitlabRepoIface{
 		gitConn: git.gitConn,
 		Project: project,
-		Total:   response.TotalItems,
 	}, nil
 }
-func (git *gitlabVcsIface) ListRepos(namespace, search string, limit, offset uint) ([]RepoIface, error) {
+func (git *gitlabVcsIface) ListRepos(namespace, search string, limit, offset uint) ([]RepoIface, int64, error) {
 	opt := &gitlab.ListProjectsOptions{}
 
 	if search != "" {
@@ -51,7 +50,7 @@ func (git *gitlabVcsIface) ListRepos(namespace, search string, limit, offset uin
 
 	projects, response, err := git.gitConn.Projects.ListProjects(opt)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	repoList := make([]RepoIface, 0)
@@ -59,17 +58,14 @@ func (git *gitlabVcsIface) ListRepos(namespace, search string, limit, offset uin
 		repoList = append(repoList, &gitlabRepoIface{
 			gitConn: git.gitConn,
 			Project: project,
-			Total:   response.TotalItems,
 		})
 	}
-
-	return repoList, nil
+	return repoList, int64(response.TotalItems), nil
 }
 
 type gitlabRepoIface struct {
 	gitConn *gitlab.Client
 	Project *gitlab.Project
-	Total   int
 }
 
 func (git *gitlabRepoIface) ListBranches(search string, limit, offset uint) ([]string, error) {
@@ -154,17 +150,15 @@ type Projects struct {
 }
 
 func (gitlab *gitlabRepoIface) FormatRepoSearch() (project *Projects, err e.Error) {
-	jsonProjects, er := json.Marshal(gitlab.Project)
-	if er != nil {
-		return nil, e.New(e.JSONParseError, er)
-	}
-	repos := &Projects{}
-	er = json.Unmarshal(jsonProjects, &repos)
-	if er != nil {
-		return nil, e.New(e.JSONParseError, er)
-	}
-
-	return repos, nil
+	return &Projects{
+		ID:             strconv.Itoa(gitlab.Project.ID),
+		Description:    gitlab.Project.Description,
+		DefaultBranch:  gitlab.Project.DefaultBranch,
+		SSHURLToRepo:   gitlab.Project.SSHURLToRepo,
+		HTTPURLToRepo:  gitlab.Project.HTTPURLToRepo,
+		Name:           gitlab.Project.Name,
+		LastActivityAt: gitlab.Project.LastActivityAt,
+	}, nil
 }
 
 func ListOrganizationReposById(vcs *models.Vcs, form *forms.GetGitProjectsForm) (projects []*gitlab.Project, total int, err e.Error) {

@@ -37,7 +37,7 @@ func (l *LocalVcs) GetRepo(path string) (RepoIface, error) {
 	return newLocalRepo(l.absPath, path)
 }
 
-func (l *LocalVcs) ListRepos(namespace string, search string, limit, offset uint) ([]RepoIface, error) {
+func (l *LocalVcs) ListRepos(namespace string, search string, limit, offset uint) ([]RepoIface, int64, error) {
 	//logger := logs.Get().WithField("namespace", namespace)
 
 	searchDir := filepath.Join(l.absPath, namespace)
@@ -57,7 +57,7 @@ func (l *LocalVcs) ListRepos(namespace string, search string, limit, offset uint
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	repoPaths = repoPaths[offset:]
@@ -74,7 +74,7 @@ func (l *LocalVcs) ListRepos(namespace string, search string, limit, offset uint
 			repos = append(repos, r)
 		}
 	}
-	return repos, nil
+	return repos, int64(len(repoPaths)), nil
 }
 
 type LocalRepo struct {

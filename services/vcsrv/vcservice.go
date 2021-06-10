@@ -9,18 +9,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-
 /*
 version control service 接口
 */
 
 type VcsIfaceOptions struct {
-	Ref                 string
-	Path                string
-	Search              string
-	Recursive           bool
-	Limit               int
-	Offset              int
+	Ref       string
+	Path      string
+	Search    string
+	Recursive bool
+	Limit     int
+	Offset    int
 }
 
 type VcsIface interface {
@@ -32,7 +31,7 @@ type VcsIface interface {
 	// param namespace: namespace 可用于表示用户、组织等
 	// param search: 搜索字符串
 	// param limit: 限制返回的文件数，传 0 表示无限制
-	ListRepos(namespace, search string, limit, offset uint) ([]RepoIface, error)
+	ListRepos(namespace, search string, limit, offset uint) ([]RepoIface, int64, error)
 }
 
 type RepoIface interface {
@@ -59,7 +58,7 @@ type RepoIface interface {
 	// ReadFileContent
 	// param path: 路径
 	// param branch: 分支
-	ReadFileContent(branch,path string) (content []byte, err error)
+	ReadFileContent(branch, path string) (content []byte, err error)
 
 	// FormatRepoSearch 格式化输出前端需要的内容
 	FormatRepoSearch() (project *Projects, err e.Error)
