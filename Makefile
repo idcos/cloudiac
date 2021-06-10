@@ -69,7 +69,7 @@ repos: repos.list
 	cd ./repos/iac/ && cat ../../repos.list | while read -r REPO_PATH; do \
 		git clone --bare $(REPO_BASE)$${REPO_PATH} && REPO_NAME=`basename $${REPO_PATH}` && \
 		cp $${REPO_NAME}/hooks/post-update.sample $${REPO_NAME}/hooks/post-update && \
-		bash $${REPO_NAME}/hooks/post-update ;\
+		(cd $${REPO_NAME} && bash hooks/post-update) ;\
 	done
 
 
