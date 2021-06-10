@@ -18,12 +18,12 @@ type Template struct {
 	Extra                  string `json:"extra" gorm:"size:128;default:'';comment:'附加信息'"`
 	Timeout                int64  `json:"timeout" gorm:"default:300;comment:'超时时长'"`
 	Status                 string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'状态'"`
-	Creator                uint   `json:"creator" grom:"not null;comment:'创建人'"`
-	DefaultRunnerAddr      string `json:"defaultRunnerAddr" grom:"not null;comment:'默认runner地址'"`
-	DefaultRunnerPort      uint   `json:"defaultRunnerPort" grom:"not null;comment:'默认runner端口'"`
-	DefaultRunnerServiceId string `json:"defaultRunnerServiceId" grom:"not null;comment:'默认runner-consul-serviceId'"`
-	TplType                string `json:"tplType" grom:"not null;comment:'云模板类型(aliyun，VMware等)'"`
-	VcsId                  uint   `json:"vcsId" grom:"not null;"`
+	Creator                uint   `json:"creator" gorm:"not null;comment:'创建人'"`
+	DefaultRunnerAddr      string `json:"defaultRunnerAddr" gorm:"not null;comment:'默认runner地址'"`
+	DefaultRunnerPort      uint   `json:"defaultRunnerPort" gorm:"not null;comment:'默认runner端口'"`
+	DefaultRunnerServiceId string `json:"defaultRunnerServiceId" gorm:"not null;comment:'默认runner-consul-serviceId'"`
+	TplType                string `json:"tplType" gorm:"not null;comment:'云模板类型(aliyun，VMware等)'"`
+	VcsId                  uint   `json:"vcsId" gorm:"not null;"`
 	Playbook               string `json:"playbook" form:"playbook" `
 }
 
@@ -41,7 +41,7 @@ func (o Template) Migrate(sess *db.Session) (err error) {
 }
 
 type TemplateAccessToken struct {
-	SoftDeleteModel
+	BaseModel
 
 	TplGuid     string `json:"tplGuid" form:"tplGuid" gorm:"not null"`
 	AccessToken string `json:"accessToken" form:"accessToken" gorm:"not null"`
