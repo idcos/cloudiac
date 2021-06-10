@@ -12,7 +12,7 @@ type Template struct {
 	RepoId                 string `json:"repoId"` // see Migrate()
 	RepoAddr               string `json:"repoAddr"` // see Migrate()
 	RepoBranch             string `json:"repoBranch" gorm:"size:64;default:'master';comment:'仓库分支'"`
-	SaveState              bool   `json:"saveState" gorm:"defalut:false;comment:'是否保存状态'"`
+	SaveState              bool   `json:"saveState" gorm:"default:false;comment:'是否保存状态'"`
 	Vars                   JSON   `json:"vars" gorm:"type:json;null;comment:'变量'"`
 	Varfile                string `json:"varfile" gorm:"size:128;default:'';comment:'变量文件'"`
 	Extra                  string `json:"extra" gorm:"size:128;default:'';comment:'附加信息'"`
