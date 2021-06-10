@@ -4,6 +4,7 @@ import (
 	"cloudiac/consts"
 	"cloudiac/consts/e"
 	"cloudiac/libs/ctx"
+	"cloudiac/libs/db"
 	"cloudiac/libs/page"
 	"cloudiac/models"
 	"cloudiac/models/forms"
@@ -50,7 +51,10 @@ func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (interfac
 
 func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.Template, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create template %s", form.Name))
-
+	var (
+		template *models.Template
+		err      e.Error
+	)
 	tx := c.Tx().Debug()
 	defer func() {
 		if r := recover(); r != nil {
@@ -60,50 +64,27 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 	}()
 
 	guid := utils.GenGuid("ct")
-	template, err := func() (*models.Template, e.Error) {
+
+	template, err = func() (*models.Template, e.Error) {
 		var (
 			template *models.Template
 			err      e.Error
+			tpl      models.Template
 		)
-
-		vars := form.Vars
-		for index, v := range vars {
-			if *v.IsSecret {
-				encryptedValue, err := utils.AesEncrypt(v.Value)
-				vars[index].Value = encryptedValue
-				if err != nil {
-					return nil, nil
-				}
-			}
+		if form.MetaTemplateId != 0 {
+			tpl, err = getTplData2MeatTpl(form, guid, c, tx)
+		} else {
+			tpl, err = getTplData(form, guid, c)
 		}
-		jsons, _ := json.Marshal(vars)
 
-		template, err = services.CreateTemplate(tx, models.Template{
-			OrgId:                  c.OrgId,
-			Name:                   form.Name,
-			Guid:                   guid,
-			Description:            form.Description,
-			RepoId:                 form.RepoId,
-			RepoBranch:             form.RepoBranch,
-			RepoAddr:               form.RepoAddr,
-			SaveState:              *form.SaveState,
-			Vars:                   models.JSON(string(jsons)),
-			Varfile:                form.Varfile,
-			Extra:                  form.Extra,
-			Timeout:                form.Timeout,
-			Creator:                c.UserId,
-			VcsId:                  form.VcsId,
-			DefaultRunnerAddr:      form.DefaultRunnerAddr,
-			DefaultRunnerPort:      form.DefaultRunnerPort,
-			DefaultRunnerServiceId: form.DefaultRunnerServiceId,
-			Playbook:               form.Playbook,
-		})
+		template, err = services.CreateTemplate(tx, tpl)
 		if err != nil {
 			return nil, err
 		}
 
 		return template, nil
 	}()
+
 	if err != nil {
 		_ = tx.Rollback()
 		return nil, err
@@ -114,6 +95,80 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 	}
 
 	return template, nil
+}
+
+func getTplData(form *forms.CreateTemplateForm, guid string, c *ctx.ServiceCtx) (tpl models.Template, e e.Error) {
+	vars := form.Vars
+	for index, v := range vars {
+		if *v.IsSecret {
+			encryptedValue, err := utils.AesEncrypt(v.Value)
+			vars[index].Value = encryptedValue
+			if err != nil {
+				return models.Template{}, nil
+			}
+		}
+	}
+	jsons, _ := json.Marshal(vars)
+	return models.Template{
+		OrgId:                  c.OrgId,
+		Name:                   form.Name,
+		Guid:                   guid,
+		Description:            form.Description,
+		RepoId:                 form.RepoId,
+		RepoBranch:             form.RepoBranch,
+		RepoAddr:               form.RepoAddr,
+		SaveState:              *form.SaveState,
+		Vars:                   models.JSON(string(jsons)),
+		Varfile:                form.Varfile,
+		Extra:                  form.Extra,
+		Timeout:                form.Timeout,
+		Creator:                c.UserId,
+		VcsId:                  form.VcsId,
+		DefaultRunnerAddr:      form.DefaultRunnerAddr,
+		DefaultRunnerPort:      form.DefaultRunnerPort,
+		DefaultRunnerServiceId: form.DefaultRunnerServiceId,
+		Playbook:               form.Playbook,
+	}, nil
+}
+
+func getTplData2MeatTpl(form *forms.CreateTemplateForm, guid string, c *ctx.ServiceCtx, tx *db.Session) (tpl models.Template, e e.Error) {
+	tplLibVars := make([]forms.Var, 0)
+	param := make(map[string]interface{})
+	metaTpl, err := services.GetMetaTemplateById(tx, form.MetaTemplateId)
+	if err != nil {
+		return models.Template{}, err
+	}
+	tplVarsByte, _ := metaTpl.Vars.MarshalJSON()
+	if !metaTpl.Vars.IsNull() {
+		_ = json.Unmarshal(tplVarsByte, &tplLibVars)
+	}
+
+	for index, v := range tplLibVars {
+		if *v.IsSecret {
+			encryptedValue, err := utils.AesEncrypt(v.Value)
+			if err != nil {
+				return models.Template{}, nil
+			}
+			tplLibVars[index].Value = encryptedValue
+
+		}
+	}
+	jsons, _ := json.Marshal(param)
+	return models.Template{
+		OrgId:       c.OrgId,
+		Name:        form.Name,
+		Guid:        guid,
+		Description: metaTpl.Description,
+		RepoId:      metaTpl.RepoId,
+		RepoBranch:  metaTpl.RepoBranch,
+		RepoAddr:    metaTpl.RepoAddr,
+		SaveState:   metaTpl.SaveState,
+		Vars:        models.JSON(string(jsons)),
+		Varfile:     metaTpl.Varfile,
+		Timeout:     metaTpl.Timeout,
+		Creator:     c.UserId,
+		Playbook:    metaTpl.Playbook,
+	}, nil
 }
 
 func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.Template, e.Error) {

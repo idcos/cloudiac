@@ -26,6 +26,7 @@ type CreateTemplateForm struct {
 	DefaultRunnerPort      uint   `json:"defaultRunnerPort" `
 	DefaultRunnerServiceId string `json:"defaultRunnerServiceId"`
 	Playbook               string `json:"playbook" form:"playbook" `
+	MetaTemplateId         uint   `json:"metaTemplateId" form:"metaTemplateId" `
 }
 
 type SearchTemplateForm struct {

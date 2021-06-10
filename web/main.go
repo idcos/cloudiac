@@ -54,7 +54,6 @@ func GetRouter() *gin.Engine {
 	api_v1.Register(e.Group("/api/v1"))
 	open_api_v1.Register(e.Group("/iac/open/v1"))
 
-	e.POST("/template/library/hook", w(handlers.TemplateLibraryHandler))
 	e.GET("/template/hook/send",w(handlers.AccessTokenHandler))
 
 	//// http git server

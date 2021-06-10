@@ -2,10 +2,10 @@ package services
 
 import (
 	"cloudiac/consts"
+	"cloudiac/consts/e"
 	"cloudiac/libs/db"
 	"cloudiac/models"
 	"cloudiac/services/vcsrv"
-	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
@@ -14,7 +14,32 @@ import (
 	fPath "path"
 )
 
-type MetaTemplate struct {
+func SearchMetaTemplate(query *db.Session) *db.Session {
+	return query.Table(models.MetaTemplate{}.TableName()).Order("created_at DESC")
+}
+
+func GetMetaTemplateById(query *db.Session, id uint) (models.MetaTemplate, e.Error) {
+	tplLib := models.MetaTemplate{}
+	if err := query.Table(models.MetaTemplate{}.TableName()).Where("id = ?", id).First(&tplLib); err != nil {
+		return models.MetaTemplate{}, e.New(e.DBError, err)
+	}
+
+	return tplLib, nil
+}
+
+
+func CreateMetaTemplate(tx *db.Session, metaTemplate models.MetaTemplate) (*models.MetaTemplate, e.Error) {
+	if err := models.Create(tx, &metaTemplate); err != nil {
+		if e.IsDuplicate(err) {
+			return nil, e.New(e.TemplateAlreadyExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+
+	return &metaTemplate, nil
+}
+
+type MetaTemplateParse struct {
 	Version   string    `yaml:"version"`
 	Templates Templates `yaml:"Templates"`
 }
@@ -27,9 +52,10 @@ type Templates struct {
 }
 
 type Terraform struct {
-	Workdir string                 `yaml:"workdir"`
-	Var     map[string]interface{} `yaml:"var"`
-	VarFile string                 `yaml:"var_file"`
+	Workdir   string                 `yaml:"workdir"`
+	Var       map[string]interface{} `yaml:"var"`
+	VarFile   string                 `yaml:"var_file"`
+	SaveState bool                   `json:"saveState"`
 }
 
 type Ansible struct {
@@ -38,12 +64,12 @@ type Ansible struct {
 	Inventory string `yaml:"inventory"`
 }
 
-func MetaAnalysis(content []byte) (MetaTemplate, error) {
-	var mt MetaTemplate
+func MetaAnalysis(content []byte) (MetaTemplateParse, error) {
+	var mt MetaTemplateParse
 	content = []byte(os.ExpandEnv(string(content)))
 
 	if err := yaml.Unmarshal(content, &mt); err != nil {
-		return MetaTemplate{}, fmt.Errorf("yaml.Unmarshal: %v", err)
+		return MetaTemplateParse{}, fmt.Errorf("yaml.Unmarshal: %v", err)
 	}
 
 	return mt, nil
@@ -80,7 +106,7 @@ func InitMetaTemplate() {
 		}
 	}
 }
-func fileNameMatch2Analysis(files []string, repo vcsrv.RepoIface, vcs *models.Vcs)  {
+func fileNameMatch2Analysis(files []string, repo vcsrv.RepoIface, vcs *models.Vcs) {
 	for _, file := range files {
 		matched, err := fPath.Match(consts.MetaYmlMatch, file)
 		if err != nil {
@@ -100,13 +126,12 @@ func fileNameMatch2Analysis(files []string, repo vcsrv.RepoIface, vcs *models.Vc
 			}
 			varb, _ := json.Marshal(mt.Templates.Terraform.Var)
 			//envb,_:=json.Marshal(mt.Templates.Env)
-			if _, err := CreateTemplate(db.Get(), models.Template{
-				Name:     mt.Templates.Name,
-				Guid:     utils.GenGuid("ct"),
-				OrgId:    0,
-				Vars:     models.JSON(varb),
-				VcsId:    vcs.Id,
-				Playbook: mt.Templates.Ansible.Playbook,
+			if _, err := CreateMetaTemplate(db.Get(), models.MetaTemplate{
+				Name:      mt.Templates.Name,
+				Vars:      models.JSON(varb),
+				VcsId:     vcs.Id,
+				Playbook:  mt.Templates.Ansible.Playbook,
+				SaveState: mt.Templates.Terraform.SaveState,
 			}); err != nil {
 				logs.Get().Debug("CreateTemplate err: %v", err)
 			}

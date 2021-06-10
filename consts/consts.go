@@ -49,13 +49,13 @@ const (
 	TfVarFileMatch = ".tfvars"
 	PlaybookMatch  = ".yml"
 	//end
-	MetaYmlMatch = "meta.(yaml|yml)"
-	VariablePrefix   = "variable.tf"
+	MetaYmlMatch   = "meta.y*ml"
+	VariablePrefix = "variable.tf"
 
 	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀
 
-	LocalGitReposPath = "repos" // 内置 http git server 服务目录
-	ReposUrlPrefix = "/repos"	// 内置 http git server url prefix
+	LocalGitReposPath = "repos"  // 内置 http git server 服务目录
+	ReposUrlPrefix    = "/repos" // 内置 http git server url prefix
 )
 
 var (
