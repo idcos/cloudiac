@@ -1,15 +1,14 @@
 package services
 
 import (
-	"cloudiac/consts"
 	"cloudiac/consts/e"
 	"cloudiac/libs/db"
 	"cloudiac/models"
+	"cloudiac/utils/logs"
 	"fmt"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
-	"log"
 )
 
 func CreateVcs(tx *db.Session, vcs models.Vcs) (*models.Vcs, e.Error) {
@@ -84,7 +83,6 @@ type TemplateVariable struct {
 }
 
 func TemplateVariableSearch(content []byte) ([]TemplateVariable, e.Error) {
-
 	return readHCLFile(content)
 }
 
@@ -101,11 +99,10 @@ type TfVariable struct {
 }
 
 func readHCLFile(content []byte) ([]TemplateVariable, e.Error) {
-	file, diags := hclsyntax.ParseConfig(content, consts.VariablePrefix, hcl.Pos{Line: 1, Column: 1})
+	file, diags := hclsyntax.ParseConfig(content, "", hcl.Pos{Line: 1, Column: 1})
 	if diags.HasErrors() {
-		log.Fatal(fmt.Errorf("ParseConfig: %w", diags))
+		logs.Get().Error(fmt.Errorf("ParseConfig: %w", diags))
 	}
-
 	c := &Config{}
 	diags = gohcl.DecodeBody(file.Body, nil, c)
 	if diags.HasErrors() {
