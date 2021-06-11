@@ -27,7 +27,6 @@ func GetMetaTemplateById(query *db.Session, id uint) (models.MetaTemplate, e.Err
 	return tplLib, nil
 }
 
-
 func CreateMetaTemplate(tx *db.Session, metaTemplate models.MetaTemplate) (*models.MetaTemplate, e.Error) {
 	if err := models.Create(tx, &metaTemplate); err != nil {
 		if e.IsDuplicate(err) {
@@ -89,7 +88,7 @@ func InitMetaTemplate() {
 		return
 	}
 
-	repos, err := vcsService.ListRepos("", "", 0, 0)
+	repos, _, err := vcsService.ListRepos("", "", 0, 0)
 	if err != nil {
 		logger.Errorf("vcs service new err: %v", err)
 		return
