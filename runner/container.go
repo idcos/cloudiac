@@ -2,6 +2,7 @@ package runner
 
 import (
 	"cloudiac/configs"
+	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"context"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"github.com/docker/docker/errdefs"
 	guuid "github.com/google/uuid"
 	"log"
+	"os"
 )
 
 func (task *CommitedTask) Cancel() error {
@@ -91,6 +93,11 @@ func (cmd *Command) Create() error {
 	id := guuid.New()
 	conf := configs.Get()
 
+	AutoRemove := true
+	if utils.StrInArray(os.Getenv("IAC_AUTO_REMOVE"), "off", "false", "0") {
+		AutoRemove = false
+	}
+
 	log.Printf("starting command, task working directory: %s", cmd.TaskWorkdir)
 	cont, err := cli.ContainerCreate(
 		cmd.ContainerInstance.Context,
@@ -102,7 +109,7 @@ func (cmd *Command) Create() error {
 			AttachStderr: true,
 		},
 		&container.HostConfig{
-			AutoRemove: false,
+			AutoRemove: AutoRemove,
 			Mounts: []mount.Mount{
 				{
 					Type:   mount.TypeBind,

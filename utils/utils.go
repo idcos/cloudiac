@@ -190,6 +190,10 @@ func InArrayStr(arr []string, v string) bool {
 	return false
 }
 
+func StrInArray(v string, arr ...string) bool {
+	return InArrayStr(arr, v)
+}
+
 func UnzipFile(src, dest string) error {
 	r, err := zip.OpenReader(src)
 	if err != nil {
