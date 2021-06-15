@@ -14,9 +14,9 @@ export CLOUD_IAC_WORKSPACE={{.Workspace}}
 export CLOUD_IAC_BACKEND_CONFIG=${CLOUD_IAC_DIR}/{{.BackendConfigName}}
 export TF_PLUGIN_CACHE_DIR={{.PluginsCachePath}}
 
-ln -svf ${CLOUD_IAC_BACKEND_CONFIG}  ./_cloud_iac_backend.tf && \
 git clone {{.Repo}} ${CLOUD_IAC_WORKSPACE} && \
 cd "${CLOUD_IAC_WORKSPACE}" && git checkout {{.RepoCommit}} && \
+ln -svf ${CLOUD_IAC_BACKEND_CONFIG}  ./_cloud_iac_backend.tf && \
 terraform init && \`
 
 const planCommandTemplate = `

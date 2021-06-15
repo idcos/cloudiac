@@ -9,6 +9,7 @@ import (
 	"cloudiac/models/forms"
 	"cloudiac/services"
 	"cloudiac/services/vcsrv"
+	"strings"
 )
 
 func CreateVcs(c *ctx.ServiceCtx, form *forms.CreateVcsForm) (interface{}, e.Error) {
@@ -83,7 +84,11 @@ func GetReadme(c *ctx.ServiceCtx, form *forms.GetReadmeForm) (interface{}, e.Err
 	}
 	b, er := repo.ReadFileContent(form.Branch, "README.md")
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		if strings.Contains(er.Error(), "not found") {
+			b = make([]byte, 0)
+		} else {
+			return nil, e.New(e.GitLabError, er)
+		}
 	}
 	res := models.FileContent{
 		Content: string(b[:]),

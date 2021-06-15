@@ -59,15 +59,15 @@ func SearchTask(c *ctx.ServiceCtx, form *forms.SearchTaskForm) (interface{}, e.E
 type DetailTaskResp struct {
 	models.Task
 
-	OrgId       uint   `json:"orgId" gorm:"size:32;not null;comment:'组织ID'"`
-	Description string `json:"description" gorm:"size:255;comment:'描述'"`
-	RepoId      int    `json:"repoId" gorm:"size:32;comment:'仓库ID'"`
-	RepoAddr    string `json:"repoAddr" gorm:"size:128;default:'';comment:'仓库地址'"`
-	RepoBranch  string `json:"repoBranch" gorm:"size:64;default:'master';comment:'仓库分支'"`
-	SaveState   *bool  `json:"saveState" gorm:"defalut:false;comment:'是否保存状态'"`
-	Varfile     string `json:"varfile" gorm:"size:128;default:'';comment:'变量文件'"`
-	Extra       string `json:"extra" gorm:"size:128;default:'';comment:'附加信息'"`
-	CreatorName string `json:"creatorName" form:"creatorName" `
+	OrgId       uint   `json:"orgId"`
+	Description string `json:"description"`
+	RepoId      string `json:"repoId"`
+	RepoAddr    string `json:"repoAddr"`
+	RepoBranch  string `json:"repoBranch"`
+	SaveState   bool   `json:"saveState"`
+	Varfile     string `json:"varfile"`
+	Extra       string `json:"extra"`
+	CreatorName string `json:"creatorName"`
 }
 
 func DetailTask(c *ctx.ServiceCtx, form *forms.DetailTaskForm) (interface{}, e.Error) {
