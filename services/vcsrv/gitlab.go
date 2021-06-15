@@ -70,7 +70,9 @@ type gitlabRepoIface struct {
 
 func (git *gitlabRepoIface) ListBranches(search string, limit, offset uint) ([]string, error) {
 	branchList := make([]string, 0)
-	opt := &gitlab.ListBranchesOptions{}
+	opt := &gitlab.ListBranchesOptions{
+		Search: gitlab.String(search),
+	}
 	branches, _, er := git.gitConn.Branches.ListBranches(git.Project.ID, opt)
 	if er != nil {
 		return nil, e.New(e.GitLabError, er)
