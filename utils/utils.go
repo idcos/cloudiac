@@ -398,3 +398,18 @@ func TaskLogMessage(format string, args ...interface{}) string {
 func TaskLogMsgBytes(format string, args ...interface{}) []byte {
 	return []byte(TaskLogMessage(format, args...))
 }
+
+// LimitOffset2Page
+// offset 必须为 limit 的整数倍，否则会 panic
+// page 从 1 开始
+func LimitOffset2Page(limit int, offset int) (page int) {
+	if offset%limit != 0 {
+		panic(fmt.Errorf("LimitOffset2Page: offset(%d) %% limit(%d) != 0", offset, limit))
+	}
+	return (offset / limit) + 1
+}
+
+// PageSize2Offset page 从 1 开始
+func PageSize2Offset(page int, pageSize int) (offset int) {
+	return (page - 1) * pageSize
+}

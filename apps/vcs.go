@@ -9,6 +9,7 @@ import (
 	"cloudiac/models/forms"
 	"cloudiac/services"
 	"cloudiac/services/vcsrv"
+	"cloudiac/utils"
 	"strings"
 )
 
@@ -106,7 +107,9 @@ func ListRepos(c *ctx.ServiceCtx, form *forms.GetGitProjectsForm) (interface{}, 
 	if er != nil {
 		return nil, e.New(e.GitLabError, er)
 	}
-	repo,total, er := vcsService.ListRepos("", form.Q, uint(form.PageSize_), uint(form.CurrentPage_))
+	limit := form.PageSize()
+	offset := utils.PageSize2Offset(form.CurrentPage(), limit)
+	repo, total, er := vcsService.ListRepos("", form.Q, limit, offset)
 	if er != nil {
 		return nil, e.New(e.GitLabError, er)
 	}
