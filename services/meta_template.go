@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"gopkg.in/yaml.v2"
 	"os"
-	fPath "path"
 )
 
 func SearchMetaTemplate(query *db.Session) *db.Session {
@@ -38,37 +37,37 @@ func CreateMetaTemplate(tx *db.Session, metaTemplate models.MetaTemplate) (*mode
 	return &metaTemplate, nil
 }
 
-type MetaTemplateParse struct {
-	Version   string    `yaml:"version"`
-	Templates Templates `yaml:"Templates"`
+type MetaFile struct {
+	Version   string             `yaml:"version"`
+	Templates []MetaFileTemplate `yaml:"templates"`
 }
 
-type Templates struct {
-	Name      string                 `yaml:"name"`
-	Terraform Terraform              `yaml:"terraform"`
-	Ansible   Ansible                `yaml:"ansible"`
-	Env       map[string]interface{} `yaml:"env"`
+type MetaFileTemplate struct {
+	Name      string            `yaml:"name"`
+	Terraform MetaFileTerraform `yaml:"terraform"`
+	Ansible   MetaFileAnsible   `yaml:"ansible"`
+	Env       map[string]string `yaml:"env"`
 }
 
-type Terraform struct {
-	Workdir   string                 `yaml:"workdir"`
-	Var       map[string]interface{} `yaml:"var"`
-	VarFile   string                 `yaml:"var_file"`
-	SaveState bool                   `json:"saveState"`
+type MetaFileTerraform struct {
+	Workdir   string            `yaml:"workdir"`
+	Vars      map[string]string `yaml:"vars"`
+	VarFile   string            `yaml:"var_file"`
+	SaveState bool              `yaml:"save_state"`
 }
 
-type Ansible struct {
+type MetaFileAnsible struct {
 	Workdir   string `yaml:"workdir"`
 	Playbook  string `yaml:"playbook"`
 	Inventory string `yaml:"inventory"`
 }
 
-func MetaAnalysis(content []byte) (MetaTemplateParse, error) {
-	var mt MetaTemplateParse
+func MetaAnalysis(content []byte) (MetaFile, error) {
+	var mt MetaFile
 	content = []byte(os.ExpandEnv(string(content)))
 
 	if err := yaml.Unmarshal(content, &mt); err != nil {
-		return MetaTemplateParse{}, fmt.Errorf("yaml.Unmarshal: %v", err)
+		return MetaFile{}, fmt.Errorf("yaml.Unmarshal: %v", err)
 	}
 
 	return mt, nil
@@ -88,52 +87,74 @@ func InitMetaTemplate() {
 		return
 	}
 
-	repos, _, err := vcsService.ListRepos("", "", 0, 0)
+	repos, _, err := vcsService.ListRepos("iac", "", 0, 0)
 	if err != nil {
 		logger.Errorf("vcs service new err: %v", err)
 		return
 	}
 
 	for _, repo := range repos {
+		project, _ := repo.FormatRepoSearch()
 		files, err := repo.ListFiles(vcsrv.VcsIfaceOptions{
-			Search: consts.TfVarFileMatch,
+			Search: consts.MetaYmlMatch,
+			Ref:    "master",
 		})
-		fileNameMatch2Analysis(files, repo, vcs)
+		fileNameMatch2Analysis(files, repo, vcs, project)
 		if err != nil {
-			logger.Debug("vcs get files err: %v", err)
+			logger.Debugf("vcs get files err: %v", err)
 			continue
 		}
 	}
 }
-func fileNameMatch2Analysis(files []string, repo vcsrv.RepoIface, vcs *models.Vcs) {
+func fileNameMatch2Analysis(files []string, repo vcsrv.RepoIface, vcs *models.Vcs, project *vcsrv.Projects) {
 	for _, file := range files {
-		matched, err := fPath.Match(consts.MetaYmlMatch, file)
+		content, err := repo.ReadFileContent("master", file)
 		if err != nil {
-			logs.Get().Debug("file name match err: %v", err)
+			logs.Get().Debugf("ReadFileContent err: %v", err)
 			continue
 		}
-		if matched {
-			content, err := repo.ReadFileContent("", file)
-			if err != nil {
-				logs.Get().Debug("ReadFileContent err: %v", err)
-				continue
-			}
-			mt, err := MetaAnalysis(content)
-			if err != nil {
-				logs.Get().Debug("MetaAnalysis err: %v", err)
-				continue
-			}
-			varb, _ := json.Marshal(mt.Templates.Terraform.Var)
-			//envb,_:=json.Marshal(mt.Templates.Env)
-			if _, err := CreateMetaTemplate(db.Get(), models.MetaTemplate{
-				Name:      mt.Templates.Name,
-				Vars:      models.JSON(varb),
-				VcsId:     vcs.Id,
-				Playbook:  mt.Templates.Ansible.Playbook,
-				SaveState: mt.Templates.Terraform.SaveState,
+		mt, err := MetaAnalysis(content)
+		if err != nil {
+			logs.Get().Debugf("MetaAnalysis err: %v", err)
+			continue
+		}
+		for _, template := range mt.Templates {
+			if _, err := CreateMetaTemplate(db.Get().Debug(), models.MetaTemplate{
+				Name:       template.Name,
+				Vars:       models.JSON(var2TerraformVar(template.Terraform.Vars, template.Env)),
+				VcsId:      vcs.Id,
+				Playbook:   template.Ansible.Playbook,
+				SaveState:  template.Terraform.SaveState,
+				RepoBranch: project.DefaultBranch,
+				RepoAddr:   project.HTTPURLToRepo,
+				RepoId:     project.ID,
 			}); err != nil {
-				logs.Get().Debug("CreateTemplate err: %v", err)
+				logs.Get().Debugf("CreateTemplate err: %v", err)
 			}
 		}
 	}
+}
+
+//将terraform变量和环境变量进行格式转换
+func var2TerraformVar(vars, env map[string]string) []byte {
+	//{"id": "7894bfc3-813d-453a-8f12-8d6be1428408", "key": "ALICLOUD_ACCESS_KEY", "value": "be7baaff819dc6edc3ee71022ed5310c03636f174e828a3069d52884243a33332e53938c431fa8dc", "isSecret": true}
+	envNew := make([]map[string]string, 0)
+	for k, v := range vars {
+		envNew = append(envNew, map[string]string{
+			"key":   k,
+			"value": v,
+			"type":  consts.Terraform,
+		})
+	}
+	for k, v := range env {
+		envNew = append(envNew, map[string]string{
+			"key":   k,
+			"value": v,
+			"type":  consts.Env,
+		})
+	}
+
+	b, _ := json.Marshal(envNew)
+	return b
+
 }

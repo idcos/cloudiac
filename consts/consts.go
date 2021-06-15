@@ -36,6 +36,7 @@ const (
 	ResourceAccountEnable  = "enable"
 	DockerStatusExited     = "exited"
 	Terraform              = "terraform"
+	Env                    = "env"
 	TerraformVar           = "TF_VAR_"
 	WorkFlow               = "workflow"
 
@@ -45,15 +46,12 @@ const (
 	GitTypeGitee  = "gitee"
 	GitTypeLocal  = "local"
 
-
-
 	//end
 	MetaYmlMatch   = "meta.y*ml"
 	VariablePrefix = "variable.tf"
 
 	TfVarFileMatch = "*.tfvars"
 	PlaybookMatch  = "*.y*ml"
-
 
 	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀
 
