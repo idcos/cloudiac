@@ -73,24 +73,24 @@ func MetaAnalysis(content []byte) (MetaFile, error) {
 	return mt, nil
 }
 
-func InitMetaTemplate() {
+func InitMetaTemplate() error {
 	dbSess := db.Get()
 	logger := logs.Get()
 	vcs, err := GetDefaultVcs(dbSess)
 	if err != nil {
 		logger.Errorf("vcs query err: %v", err)
-		return
+		return  err
 	}
 	vcsService, err := vcsrv.GetVcsInstance(vcs)
 	if err != nil {
 		logger.Errorf("vcs service new err: %v", err)
-		return
+		return err
 	}
 
 	repos, _, err := vcsService.ListRepos("iac", "", 0, 0)
 	if err != nil {
 		logger.Errorf("vcs service new err: %v", err)
-		return
+		return err
 	}
 
 	for _, repo := range repos {
