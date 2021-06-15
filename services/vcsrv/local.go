@@ -37,7 +37,7 @@ func (l *LocalVcs) GetRepo(path string) (RepoIface, error) {
 	return newLocalRepo(l.absPath, path)
 }
 
-func (l *LocalVcs) ListRepos(namespace string, search string, limit, offset uint) ([]RepoIface, int64, error) {
+func (l *LocalVcs) ListRepos(namespace string, search string, limit, offset int) ([]RepoIface, int64, error) {
 	//logger := logs.Get().WithField("namespace", namespace)
 
 	searchDir := filepath.Join(l.absPath, namespace)
@@ -61,7 +61,7 @@ func (l *LocalVcs) ListRepos(namespace string, search string, limit, offset uint
 	}
 	var total = int64(len(repoPaths))
 	repoPaths = repoPaths[offset:]
-	if limit != 0 {
+	if limit != 0 && len(repoPaths) > limit  {
 		repoPaths = repoPaths[:limit]
 	}
 
@@ -97,7 +97,7 @@ func newLocalRepo(dir string, path string) (*LocalRepo, error) {
 	}, nil
 }
 
-func (l *LocalRepo) ListBranches(search string, limit, offset uint) ([]string, error) {
+func (l *LocalRepo) ListBranches(search string, limit, offset int) ([]string, error) {
 	refs, err := l.repo.Branches()
 	if err != nil {
 		return nil, err
@@ -117,7 +117,7 @@ func (l *LocalRepo) ListBranches(search string, limit, offset uint) ([]string, e
 	}
 
 	branches = branches[offset:]
-	if limit != 0 {
+	if limit != 0 && len(branches) > limit {
 		branches = branches[:limit]
 	}
 	return branches, nil
