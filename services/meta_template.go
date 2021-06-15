@@ -105,6 +105,7 @@ func InitMetaTemplate() error {
 			continue
 		}
 	}
+	return nil
 }
 func fileNameMatch2Analysis(files []string, repo vcsrv.RepoIface, vcs *models.Vcs, project *vcsrv.Projects) {
 	for _, file := range files {
