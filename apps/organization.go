@@ -36,13 +36,16 @@ func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (
 }
 
 type searchOrganizationResp struct {
-	Id          uint   `json:"id"`
-	Name        string `json:"name"`
-	Guid        string `json:"guid"`
-	Description string `json:"description"`
-	UserId      uint   `json:"userId"`
-	Status      string `json:"status"`
-	Creator     string `json:"creator"`
+	Id                     uint   `json:"id"`
+	Name                   string `json:"name"`
+	Guid                   string `json:"guid"`
+	Description            string `json:"description"`
+	UserId                 uint   `json:"userId"`
+	Status                 string `json:"status"`
+	Creator                string `json:"creator"`
+	DefaultRunnerAddr      string `json:"defaultRunnerAddr" grom:"not null;comment:'默认runner地址'"`
+	DefaultRunnerPort      uint   `json:"defaultRunnerPort" grom:"not null;comment:'默认runner端口'"`
+	DefaultRunnerServiceId string `json:"defaultRunnerServiceId" grom:"not null;comment:'默认runner-consul-serviceId'"`
 }
 
 func (m *searchOrganizationResp) TableName() string {

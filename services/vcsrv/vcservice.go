@@ -4,6 +4,7 @@ import (
 	"cloudiac/consts"
 	"cloudiac/consts/e"
 	"cloudiac/models"
+	"fmt"
 	"path"
 
 	"github.com/pkg/errors"
@@ -32,15 +33,12 @@ type VcsIface interface {
 	// param search: 搜索字符串
 	// param limit: 限制返回的文件数，传 0 表示无限制
 	// return in64(分页total数量)
-	ListRepos(namespace, search string, limit, offset uint) ([]RepoIface, int64, error)
+	ListRepos(namespace, search string, limit, offset int) ([]RepoIface, int64, error)
 }
 
 type RepoIface interface {
 	// ListBranches
-	// param search: 搜索字符串
-	// param limit: 限制返回的文件数，传 0 表示无限制
-	// param offset: 偏移量
-	ListBranches(search string, limit, offset uint) ([]string, error)
+	ListBranches() ([]string, error)
 
 	// BranchCommitId
 	//param branch: 分支
@@ -82,11 +80,12 @@ func GetVcsInstance(vcs *models.Vcs) (VcsIface, error) {
 	}
 }
 
-func matchGlob(pattern, name string) bool {
-	if pattern == "" {
+func matchGlob(search, name string) bool {
+	if search == "" {
 		return true
 	}
 
+	pattern := fmt.Sprintf("*%s*", search)
 	matched, err := path.Match(pattern, name)
 	if err != nil {
 		return false

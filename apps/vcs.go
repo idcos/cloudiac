@@ -9,6 +9,8 @@ import (
 	"cloudiac/models/forms"
 	"cloudiac/services"
 	"cloudiac/services/vcsrv"
+	"cloudiac/utils"
+	"strings"
 )
 
 func CreateVcs(c *ctx.ServiceCtx, form *forms.CreateVcsForm) (interface{}, e.Error) {
@@ -83,7 +85,11 @@ func GetReadme(c *ctx.ServiceCtx, form *forms.GetReadmeForm) (interface{}, e.Err
 	}
 	b, er := repo.ReadFileContent(form.Branch, "README.md")
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		if strings.Contains(er.Error(), "not found") {
+			b = make([]byte, 0)
+		} else {
+			return nil, e.New(e.GitLabError, er)
+		}
 	}
 	res := models.FileContent{
 		Content: string(b[:]),
@@ -101,7 +107,9 @@ func ListRepos(c *ctx.ServiceCtx, form *forms.GetGitProjectsForm) (interface{}, 
 	if er != nil {
 		return nil, e.New(e.GitLabError, er)
 	}
-	repo,total, er := vcsService.ListRepos("", form.Q, uint(form.PageSize_), uint(form.CurrentPage_))
+	limit := form.PageSize()
+	offset := utils.PageSize2Offset(form.CurrentPage(), limit)
+	repo, total, er := vcsService.ListRepos("", form.Q, limit, offset)
 	if er != nil {
 		return nil, e.New(e.GitLabError, er)
 	}
@@ -140,7 +148,7 @@ func ListRepoBranches(c *ctx.ServiceCtx, form *forms.GetGitBranchesForm) (brans 
 	if er != nil {
 		return nil, e.New(e.GitLabError, er)
 	}
-	branchList, er := repo.ListBranches("", 0, 0)
+	branchList, er := repo.ListBranches()
 	if er != nil {
 		return nil, e.New(e.GitLabError, er)
 	}

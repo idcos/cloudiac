@@ -102,6 +102,10 @@ func appAutoInit(tx *db.Session) (err error) {
 		return errors.Wrap(err, "init vcs")
 	}
 
+	if err := initMeatTemplate(); err != nil {
+
+	}
+
 	return nil
 }
 
@@ -199,11 +203,15 @@ func initVcs(tx *db.Session) error {
 			return err
 		}
 	} else { // 己存在，进行更新
-		vcs.Status = ""	// 不更新状态
+		vcs.Status = "" // 不更新状态
 		_, err = tx.Model(&vcs).Where("id = ?", dbVcs.Id).Update(vcs)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func initMeatTemplate() error {
+	return services.InitMetaTemplate()
 }

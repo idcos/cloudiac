@@ -4,13 +4,11 @@ import (
 	"cloudiac/consts/e"
 	"cloudiac/models"
 	"cloudiac/utils"
-	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	fPath "path"
 	"strconv"
 	"strings"
 	"time"
@@ -59,9 +57,10 @@ type Repository struct {
 }
 
 //Fixme ListRepos中的数据不能直接调用repo接口的方法
-func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset uint) ([]RepoIface,int64, error) {
+func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([]RepoIface,int64, error) {
 	link, _ := url.Parse("/repos/search")
-	link.RawQuery = fmt.Sprintf("page=%d&limit=%d", offset, limit)
+	page := utils.LimitOffset2Page(limit, offset)
+	link.RawQuery = fmt.Sprintf("page=%d&limit=%d", page, limit)
 	if search != "" {
 		link.RawQuery = link.RawQuery + fmt.Sprintf("&q=%s", search)
 	}
@@ -103,9 +102,9 @@ type giteaBranch struct {
 	Name string `json:"name" form:"name" `
 }
 
-func (gitea *giteaRepoIface) ListBranches(search string, limit, offset uint) ([]string, error) {
+func (gitea *giteaRepoIface) ListBranches() ([]string, error) {
 	path := gitea.vcs.Address + "/api/v1" +
-		fmt.Sprintf("/repos/%s/branches?limit=%d&page=%d", gitea.repository.FullName, limit, offset)
+		fmt.Sprintf("/repos/%s/branches?limit=0&page=0", gitea.repository.FullName)
 
 	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
 	if err != nil {
@@ -173,12 +172,7 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 			resp = append(resp, repList...)
 		}
 
-		matched, err := fPath.Match(option.Search, v.Name)
-		if err != nil {
-			logs.Get().Debug("file name match err: %v", err)
-		}
-
-		if v.Type == "file" && matched {
+		if v.Type == "file" && matchGlob(option.Search, v.Name) {
 			resp = append(resp, v.Name)
 		}
 
