@@ -19,8 +19,8 @@ make all
 ## 本地调试运行
 1. 拷贝配置模板
 ```
-cp configs/config-portal.yaml.sample config-portal.yaml
-cp configs/config-runner.yaml.sample config-runner.yaml
+cp configs/config-portal.yml.sample config-portal.yml
+cp configs/config-runner.yml.sample config-runner.yml
 cp configs/dotenv.sample .env
 ```
 
@@ -32,7 +32,7 @@ create database iac charset utf8mb4;
 3. 启动 consul 服务
 
 4. 配置 
-编辑 `.env` 和 `config-runner.yaml`
+编辑 `.env` 和 `config-runner.yml`
 
 5. 启动
 打开两个终端，分别运行:

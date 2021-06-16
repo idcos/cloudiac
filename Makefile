@@ -29,21 +29,21 @@ reset-build-dir:
 portal: reset-build-dir
 	swag init -g web/api/v1/route.go
 	$(GOBUILD) -o $(BUILD_DIR)/iac-portal ./cmds/portal
-	cp ./configs/config-portal.yaml.sample $(BUILD_DIR)/config-portal.yaml.sample
+	cp ./configs/config-portal.yml.sample $(BUILD_DIR)/config-portal.yml.sample
 	cp ./configs/dotenv.sample $(BUILD_DIR)/dotenv.sample
 
 runner: reset-build-dir
 	$(GOBUILD) -o $(BUILD_DIR)/ct-runner ./cmds/runner
-	cp ./configs/config-runner.yaml.sample $(BUILD_DIR)/config-runner.yaml.sample
+	cp ./configs/config-runner.yml.sample $(BUILD_DIR)/config-runner.yml.sample
 
 run: run-portal
 
 run-portal:
 	swag init -g web/api/v1/route.go
-	$(GORUN) ./cmds/portal -v -c config-portal.yaml
+	$(GORUN) ./cmds/portal -v -c config-portal.yml
 
 run-runner:
-	$(GORUN) ./cmds/runner -v -c config-runner.yaml
+	$(GORUN) ./cmds/runner -v -c config-runner.yml
 
 clean: reset-build-dir
 	$(GOCLEAN) ./cmds/portal
@@ -66,8 +66,7 @@ repos: repos.list
 	cd ./repos/cloud-iac && bash ../../scripts/clone-repos.sh
 
 REPOS_PACKAGE_NAME=cloud-iac-repos-$(VERSION)-$(DATE_VER).tar.gz
-#repos-package: repos
-repos-package:
+repos-package: repos
 	@tar -czf $(REPOS_PACKAGE_NAME) ./repos && echo Package: $(REPOS_PACKAGE_NAME)
 
 

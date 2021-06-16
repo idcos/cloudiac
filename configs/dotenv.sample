@@ -11,7 +11,9 @@ DOCKER_REGISTRY=registry.idcos.com/iac/
 APP_DIR=./
 DATA_DIR=./data/
 
-PORTAL_ADDRESS=http://portal.example.com
+# Portal 对外提供服务的地址
+## example PORTAL_ADDRESS=http://portal.example.com
+PORTAL_ADDRESS=http://portal
 
 # mysql 配置
 MYSQL_HOST=127.0.0.1
@@ -21,11 +23,7 @@ MYSQL_USER=root
 MYSQL_PASSWORD=
 
 # consul 配置
-CONSUL_ADDR=consul.example.com:8500
+CONSUL_ADDR=consul:8500
+SERVICE_IP=portal
 SERVICE_ID=IaC-Portal-01
-SERVICE_IP=portal.example.com
-SERVICE_PORT=9030
-SERVICE_TAGS=tag1;tag2
-CHECK_INTERVAL=3s
-CHECK_TIMEOUT=5s
-DEREGISTER_AFTER=90m
+SERVICE_TAGS=iac-porta;portal-01
