@@ -200,8 +200,9 @@ func VcsPlaybookSearch(c *ctx.ServiceCtx, form *forms.TemplatePlaybookSearchForm
 		return nil, e.New(e.GitLabError, er)
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
-		Ref:    form.RepoBranch,
-		Search: consts.PlaybookMatch,
+		Ref:       form.RepoBranch,
+		Search:    consts.PlaybookMatch,
+		Recursive: true,
 	})
 	if er != nil {
 		return nil, e.New(e.GitLabError, er)

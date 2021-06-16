@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"cloudiac/consts"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,8 +25,7 @@ terraform plan {{if .VarFile}}-var-file={{.VarFile}}{{end}}
 `
 
 const applyCommandTemplate = `
-terraform apply -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}} && \
-if [ -e run.sh ];then chmod +x run.sh && ./run.sh;fi
+terraform apply -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}} 
 `
 
 const destroyCommandTemplate = `
@@ -113,12 +113,14 @@ func GenScriptContent(context *ReqBody, saveTo string) error {
 	}); err != nil {
 		return err
 	}
-
-	if err := ansibleCommandTpl.Execute(saveFp, map[string]string{
-		"Playbook":             context.Playbook,
-		"AnsibleStateAnalysis": filepath.Join(ContainerAssetsPath, AnsibleStateAnalysisName),
-	}); err != nil {
-		return err
+	// ansible动作只应该在apply触发
+	if context.Mode == consts.TaskApply {
+		if err := ansibleCommandTpl.Execute(saveFp, map[string]string{
+			"Playbook":             context.Playbook,
+			"AnsibleStateAnalysis": filepath.Join(ContainerAssetsPath, AnsibleStateAnalysisName),
+		}); err != nil {
+			return err
+		}
 	}
 
 	if context.Extra != "" {
