@@ -34,7 +34,7 @@ func (git *gitlabVcsIface) GetRepo(idOrPath string) (RepoIface, error) {
 		Project: project,
 	}, nil
 }
-func (git *gitlabVcsIface) ListRepos(namespace, search string, limit, offset uint) ([]RepoIface, int64, error) {
+func (git *gitlabVcsIface) ListRepos(namespace, search string, limit, offset int) ([]RepoIface, int64, error) {
 	opt := &gitlab.ListProjectsOptions{}
 
 	if search != "" {
@@ -42,8 +42,8 @@ func (git *gitlabVcsIface) ListRepos(namespace, search string, limit, offset uin
 	}
 
 	if limit != 0 && offset != 0 {
-		opt.Page = int(offset)
-		opt.PerPage = int(limit)
+		opt.Page = utils.LimitOffset2Page(limit, offset)
+		opt.PerPage = limit
 	}
 
 	projects, response, err := git.gitConn.Projects.ListProjects(opt)
@@ -66,7 +66,7 @@ type gitlabRepoIface struct {
 	Project *gitlab.Project
 }
 
-func (git *gitlabRepoIface) ListBranches(search string, limit, offset uint) ([]string, error) {
+func (git *gitlabRepoIface) ListBranches() ([]string, error) {
 	branchList := make([]string, 0)
 	opt := &gitlab.ListBranchesOptions{}
 	branches, _, er := git.gitConn.Branches.ListBranches(git.Project.ID, opt)
