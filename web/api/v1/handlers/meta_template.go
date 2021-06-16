@@ -7,14 +7,10 @@ import (
 	"cloudiac/models/forms"
 )
 
-type TemplateLibrary struct {
+type MetaTemplate struct {
 	ctrl.BaseController
 }
 
-func TemplateLibraryHandler(c *ctx.GinRequestCtx) {
-	c.JSONResult("",nil)
-
-}
 
 // Create
 // @Tags 云模板库
@@ -22,24 +18,25 @@ func TemplateLibraryHandler(c *ctx.GinRequestCtx) {
 // @Accept application/json
 // @Param id formData int false "云模板库id"
 // @router /api/v1/template/library/create [post]
-// @Success 200 {object} models.TemplateLibrary
-func (TemplateLibrary) Create(c *ctx.GinRequestCtx) {
-	form := &forms.CreateTemplateLibraryForm{}
-	if err := c.Bind(form); err != nil {
-		return
-	}
-	c.JSONResult(apps.CreateTemplateLibrary(c.ServiceCtx(), form))
-}
+// @Success 200 {object} models.MetaTemplate
+//func (MetaTemplate) Create(c *ctx.GinRequestCtx) {
+//	form := &forms.CreateTemplateLibraryForm{}
+//	if err := c.Bind(form); err != nil {
+//		return
+//	}
+//	c.JSONResult(apps.CreateTemplateLibrary(c.ServiceCtx(), form))
+//}
+
 // Search
 // @Accept application/json
 // @Tags 云模板库
 // @Description 通过云模板库列表查询接口
 // @router /api/v1/template/library/search [get]
-// @Success 200 {object} models.TemplateLibrary
-func (TemplateLibrary) Search(c *ctx.GinRequestCtx) {
+// @Success 200 {object} models.MetaTemplate
+func (MetaTemplate) Search(c *ctx.GinRequestCtx) {
 	form := &forms.SearchTemplateLibraryForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchTemplateLibrary(c.ServiceCtx(), form))
+	c.JSONResult(apps.SearchMetaTemplate(c.ServiceCtx(), form))
 }

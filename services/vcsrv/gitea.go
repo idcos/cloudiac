@@ -4,13 +4,11 @@ import (
 	"cloudiac/consts/e"
 	"cloudiac/models"
 	"cloudiac/utils"
-	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	fPath "path"
 	"strconv"
 	"strings"
 	"time"
@@ -174,12 +172,7 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 			resp = append(resp, repList...)
 		}
 
-		matched, err := fPath.Match(option.Search, v.Name)
-		if err != nil {
-			logs.Get().Debug("file name match err: %v", err)
-		}
-
-		if v.Type == "file" && matched {
+		if v.Type == "file" && matchGlob(option.Search, v.Name) {
 			resp = append(resp, v.Name)
 		}
 

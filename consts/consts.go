@@ -36,6 +36,7 @@ const (
 	ResourceAccountEnable  = "enable"
 	DockerStatusExited     = "exited"
 	Terraform              = "terraform"
+	Env                    = "env"
 	TerraformVar           = "TF_VAR_"
 	WorkFlow               = "workflow"
 
@@ -45,18 +46,17 @@ const (
 	GitTypeGitee  = "gitee"
 	GitTypeLocal  = "local"
 
+	//end
+	MetaYmlMatch   = "meta.y*ml"
+	VariablePrefix = "variable.tf"
 
 	TfVarFileMatch = "*.tfvars"
 	PlaybookMatch  = "*.y*ml"
 
-
-	MetaYmlMatch   = "meta.y*ml"
-	VariablePrefix = "variables.tf"
-
 	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀
 
-	LocalGitReposPath = "repos" // 内置 http git server 服务目录
-	ReposUrlPrefix = "/repos"	// 内置 http git server url prefix
+	LocalGitReposPath = "repos"  // 内置 http git server 服务目录
+	ReposUrlPrefix    = "/repos" // 内置 http git server url prefix
 )
 
 var (

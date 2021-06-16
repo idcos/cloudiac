@@ -70,11 +70,11 @@ func Register(g *gin.RouterGroup) {
 		root.GET("/consul/kv/search", w(handlers.ConsulKVSearch))
 
 		ctrl.Register(root.Group("vcs"), &handlers.Vcs{})
-		ctrl.Register(root.Group("template/library"), &handlers.TemplateLibrary{})
+		//todo 修改api路径与前端联调
+		ctrl.Register(root.Group("template/library"), &handlers.MetaTemplate{})
 		root.GET("/vcs/repo/search", w(handlers.Vcs{}.ListRepos))
 		root.GET("/vcs/branch/search", w(handlers.Vcs{}.ListBranches))
 		root.GET("/vcs/readme", w(handlers.Vcs{}.GetReadmeContent))
-
 
 		ctrl.Register(root.Group("webhook"), &handlers.AccessToken{})
 		root.GET("/template/variable/search",w(handlers.TemplateVariableSearch))

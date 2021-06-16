@@ -6,10 +6,8 @@ import (
 	"cloudiac/models"
 	"cloudiac/models/forms"
 	"cloudiac/utils"
-	"cloudiac/utils/logs"
 	"fmt"
 	"github.com/xanzy/go-gitlab"
-	"path"
 	"strconv"
 	"time"
 )
@@ -111,11 +109,7 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 	}
 
 	for _, i := range treeNode {
-		matched, err := path.Match(option.Search, i.Name)
-		if err != nil {
-			logs.Get().Debug("file name match err: %v", err)
-		}
-		if i.Type == fileBlob && matched {
+		if i.Type == fileBlob && matchGlob(option.Search, i.Name) {
 			pathList = append(pathList, i.Path)
 		}
 		if i.Type == fileTree && option.Recursive {

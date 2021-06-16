@@ -10,13 +10,13 @@ import (
 	"encoding/json"
 )
 
-func SearchTemplateLibrary(c *ctx.ServiceCtx, form *forms.SearchTemplateLibraryForm) (interface{}, e.Error) {
-	query := services.SearchTemplateLibrary(c.DB().Debug())
-	rs, _ := getPage(query, form, models.TemplateLibrary{})
+func SearchMetaTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateLibraryForm) (interface{}, e.Error) {
+	query := services.SearchMetaTemplate(c.DB().Debug())
+	rs, _ := getPage(query, form, models.MetaTemplate{})
 	return rs, nil
 }
 
-func CreateTemplateLibrary(c *ctx.ServiceCtx, form *forms.CreateTemplateLibraryForm) (interface{}, e.Error) {
+func CreateMetaTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateLibraryForm) (interface{}, e.Error) {
 	tx := c.Tx().Debug()
 	tplLibVars := make([]forms.Var, 0)
 	param := make(map[string]interface{})
@@ -26,7 +26,7 @@ func CreateTemplateLibrary(c *ctx.ServiceCtx, form *forms.CreateTemplateLibraryF
 			panic(r)
 		}
 	}()
-	tplLib, err := services.GetTemplateLibraryById(tx, form.Id)
+	tplLib, err := services.GetMetaTemplateById(tx, form.Id)
 	if err != nil {
 		return nil, err
 	}
