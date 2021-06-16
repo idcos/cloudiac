@@ -111,11 +111,12 @@ func InitMetaTemplate() error {
 			Search: consts.MetaYmlMatch,
 			Ref:    "master",
 		})
-		fileNameMatch2Analysis(files, repo, vcs, project)
 		if err != nil {
 			logger.Debugf("vcs get files err: %v", err)
 			continue
 		}
+
+		fileNameMatch2Analysis(files, repo, vcs, project)
 	}
 	return nil
 }
@@ -135,9 +136,9 @@ func fileNameMatch2Analysis(files []string, repo vcsrv.RepoIface, vcs *models.Vc
 			if _, err := CreateMetaTemplate(db.Get().Debug(), models.MetaTemplate{
 				Name:       template.Name,
 				Vars:       models.JSON(var2TerraformVar(template.Terraform.Vars, template.Env)),
-				VcsId:      vcs.Id,
 				Playbook:   template.Ansible.Playbook,
 				SaveState:  template.Terraform.SaveState,
+				VcsId:      vcs.Id,
 				RepoBranch: project.DefaultBranch,
 				RepoAddr:   project.HTTPURLToRepo,
 				RepoId:     project.ID,
