@@ -148,7 +148,7 @@ func ListRepoBranches(c *ctx.ServiceCtx, form *forms.GetGitBranchesForm) (brans 
 	if er != nil {
 		return nil, e.New(e.GitLabError, er)
 	}
-	branchList, er := repo.ListBranches("", 0, 0)
+	branchList, er := repo.ListBranches()
 	if er != nil {
 		return nil, e.New(e.GitLabError, er)
 	}

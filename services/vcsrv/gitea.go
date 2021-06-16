@@ -104,10 +104,9 @@ type giteaBranch struct {
 	Name string `json:"name" form:"name" `
 }
 
-func (gitea *giteaRepoIface) ListBranches(search string, limit, offset int) ([]string, error) {
-	page := utils.LimitOffset2Page(limit, offset)
+func (gitea *giteaRepoIface) ListBranches() ([]string, error) {
 	path := gitea.vcs.Address + "/api/v1" +
-		fmt.Sprintf("/repos/%s/branches?limit=%d&page=%d", gitea.repository.FullName, limit, page)
+		fmt.Sprintf("/repos/%s/branches?limit=0&page=0", gitea.repository.FullName)
 
 	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
 	if err != nil {

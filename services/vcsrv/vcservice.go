@@ -38,10 +38,7 @@ type VcsIface interface {
 
 type RepoIface interface {
 	// ListBranches
-	// param search: 搜索字符串
-	// param limit: 限制返回的文件数，传 0 表示无限制
-	// param offset: 偏移量
-	ListBranches(search string, limit, offset int) ([]string, error)
+	ListBranches() ([]string, error)
 
 	// BranchCommitId
 	//param branch: 分支

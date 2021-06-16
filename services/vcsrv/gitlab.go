@@ -68,13 +68,9 @@ type gitlabRepoIface struct {
 	Project *gitlab.Project
 }
 
-func (git *gitlabRepoIface) ListBranches(search string, limit, offset int) ([]string, error) {
+func (git *gitlabRepoIface) ListBranches() ([]string, error) {
 	branchList := make([]string, 0)
 	opt := &gitlab.ListBranchesOptions{}
-	if limit != 0 {
-		opt.Page = utils.LimitOffset2Page(limit, offset)
-		opt.PerPage = limit
-	}
 	branches, _, er := git.gitConn.Branches.ListBranches(git.Project.ID, opt)
 	if er != nil {
 		return nil, e.New(e.GitLabError, er)

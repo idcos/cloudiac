@@ -61,7 +61,7 @@ func (l *LocalVcs) ListRepos(namespace string, search string, limit, offset int)
 	}
 	var total = int64(len(repoPaths))
 	repoPaths = repoPaths[offset:]
-	if limit != 0 && len(repoPaths) > limit  {
+	if limit != 0 && len(repoPaths) > limit {
 		repoPaths = repoPaths[:limit]
 	}
 
@@ -97,7 +97,7 @@ func newLocalRepo(dir string, path string) (*LocalRepo, error) {
 	}, nil
 }
 
-func (l *LocalRepo) ListBranches(search string, limit, offset int) ([]string, error) {
+func (l *LocalRepo) ListBranches() ([]string, error) {
 	refs, err := l.repo.Branches()
 	if err != nil {
 		return nil, err
@@ -106,19 +106,11 @@ func (l *LocalRepo) ListBranches(search string, limit, offset int) ([]string, er
 
 	branches := make([]string, 0)
 	err = refs.ForEach(func(ref *plumbing.Reference) error {
-		name := filepath.Base(ref.Name().String())
-		if matchGlob(search, name) {
-			branches = append(branches, name)
-		}
+		branches = append(branches, filepath.Base(ref.Name().String()))
 		return nil
 	})
 	if err != nil {
 		return nil, err
-	}
-
-	branches = branches[offset:]
-	if limit != 0 && len(branches) > limit {
-		branches = branches[:limit]
 	}
 	return branches, nil
 }
