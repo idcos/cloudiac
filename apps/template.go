@@ -77,6 +77,9 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 			tpl, err = getTplData(form, guid, c)
 		}
 
+		if err != nil {
+			return nil, err
+		}
 		template, err = services.CreateTemplate(tx, tpl)
 		if err != nil {
 			return nil, err
@@ -132,28 +135,11 @@ func getTplData(form *forms.CreateTemplateForm, guid string, c *ctx.ServiceCtx) 
 }
 
 func getTplData2MeatTpl(form *forms.CreateTemplateForm, guid string, c *ctx.ServiceCtx, tx *db.Session) (tpl models.Template, e e.Error) {
-	tplLibVars := make([]forms.Var, 0)
-	param := make(map[string]interface{})
 	metaTpl, err := services.GetMetaTemplateById(tx, form.MetaTemplateId)
 	if err != nil {
 		return models.Template{}, err
 	}
-	tplVarsByte, _ := metaTpl.Vars.MarshalJSON()
-	if !metaTpl.Vars.IsNull() {
-		_ = json.Unmarshal(tplVarsByte, &tplLibVars)
-	}
 
-	for index, v := range tplLibVars {
-		if *v.IsSecret {
-			encryptedValue, err := utils.AesEncrypt(v.Value)
-			if err != nil {
-				return models.Template{}, nil
-			}
-			tplLibVars[index].Value = encryptedValue
-
-		}
-	}
-	jsons, _ := json.Marshal(param)
 	return models.Template{
 		OrgId:       c.OrgId,
 		Name:        form.Name,
@@ -163,7 +149,7 @@ func getTplData2MeatTpl(form *forms.CreateTemplateForm, guid string, c *ctx.Serv
 		RepoBranch:  metaTpl.RepoBranch,
 		RepoAddr:    metaTpl.RepoAddr,
 		SaveState:   metaTpl.SaveState,
-		Vars:        models.JSON(string(jsons)),
+		Vars:        metaTpl.Vars,
 		Varfile:     metaTpl.Varfile,
 		Timeout:     metaTpl.Timeout,
 		Creator:     c.UserId,

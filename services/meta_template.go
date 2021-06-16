@@ -6,6 +6,7 @@ import (
 	"cloudiac/libs/db"
 	"cloudiac/models"
 	"cloudiac/services/vcsrv"
+	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
@@ -35,6 +36,11 @@ func CreateMetaTemplate(tx *db.Session, metaTemplate models.MetaTemplate) (*mode
 	}
 
 	return &metaTemplate, nil
+}
+
+func DeleteMetaTemplate(tx *db.Session) error {
+	_, err := tx.Delete(&models.MetaTemplate{})
+	return err
 }
 
 type MetaFile struct {
@@ -76,10 +82,16 @@ func MetaAnalysis(content []byte) (MetaFile, error) {
 func InitMetaTemplate() error {
 	dbSess := db.Get()
 	logger := logs.Get()
+	//清空meta template 数据库
+	err := DeleteMetaTemplate(dbSess)
+	if err != nil {
+		logger.Errorf("meta template delete err: %v", err)
+		return err
+	}
 	vcs, err := GetDefaultVcs(dbSess)
 	if err != nil {
 		logger.Errorf("vcs query err: %v", err)
-		return  err
+		return err
 	}
 	vcsService, err := vcsrv.GetVcsInstance(vcs)
 	if err != nil {
@@ -145,6 +157,7 @@ func var2TerraformVar(vars, env map[string]string) []byte {
 			"key":   k,
 			"value": v,
 			"type":  consts.Terraform,
+			"id":    utils.GenGuid(""),
 		})
 	}
 	for k, v := range env {
@@ -152,6 +165,7 @@ func var2TerraformVar(vars, env map[string]string) []byte {
 			"key":   k,
 			"value": v,
 			"type":  consts.Env,
+			"id":    utils.GenGuid(""),
 		})
 	}
 
