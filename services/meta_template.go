@@ -80,7 +80,7 @@ func MetaAnalysis(content []byte) (MetaFile, error) {
 }
 
 func InitMetaTemplate() error {
-	dbSess := db.Get()
+	dbSess := db.Get().Debug()
 	logger := logs.Get()
 	//清空meta template 数据库
 	err := DeleteMetaTemplate(dbSess)
@@ -151,21 +151,23 @@ func fileNameMatch2Analysis(files []string, repo vcsrv.RepoIface, vcs *models.Vc
 //将terraform变量和环境变量进行格式转换
 func var2TerraformVar(vars, env map[string]string) []byte {
 	//{"id": "7894bfc3-813d-453a-8f12-8d6be1428408", "key": "ALICLOUD_ACCESS_KEY", "value": "be7baaff819dc6edc3ee71022ed5310c03636f174e828a3069d52884243a33332e53938c431fa8dc", "isSecret": true}
-	envNew := make([]map[string]string, 0)
+	envNew := make([]map[string]interface{}, 0)
 	for k, v := range vars {
-		envNew = append(envNew, map[string]string{
-			"key":   k,
-			"value": v,
-			"type":  consts.Terraform,
-			"id":    utils.GenGuid(""),
+		envNew = append(envNew, map[string]interface{}{
+			"key":      k,
+			"value":    v,
+			"type":     consts.Terraform,
+			"id":       utils.GenGuid(""),
+			"isSecret": false,
 		})
 	}
 	for k, v := range env {
-		envNew = append(envNew, map[string]string{
-			"key":   k,
-			"value": v,
-			"type":  consts.Env,
-			"id":    utils.GenGuid(""),
+		envNew = append(envNew, map[string]interface{}{
+			"key":      k,
+			"value":    v,
+			"type":     consts.Env,
+			"id":       utils.GenGuid(""),
+			"isSecret": false,
 		})
 	}
 

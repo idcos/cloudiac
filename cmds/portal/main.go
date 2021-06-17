@@ -103,7 +103,7 @@ func appAutoInit(tx *db.Session) (err error) {
 	}
 
 	if err := initMeatTemplate(); err != nil {
-
+		return errors.Wrap(err, "init meat template")
 	}
 
 	return nil

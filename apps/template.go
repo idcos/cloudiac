@@ -154,6 +154,7 @@ func getTplData2MeatTpl(form *forms.CreateTemplateForm, guid string, c *ctx.Serv
 		Timeout:     metaTpl.Timeout,
 		Creator:     c.UserId,
 		Playbook:    metaTpl.Playbook,
+		VcsId:       metaTpl.VcsId,
 	}, nil
 }
 
