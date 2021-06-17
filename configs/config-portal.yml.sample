@@ -8,11 +8,11 @@ consul:
   address: "${CONSUL_ADDR}"
   id: "${SERVICE_ID}"
   ip: "${SERVICE_IP}"
-  port: ${SERVICE_PORT}
   tags: "${SERVICE_TAGS}"
-  interval: "${CHECK_INTERVAL}"
-  timeout: "${CHECK_TIMEOUT}"
-  deregister_after: "${DEREGISTER_AFTER}"
+  port: 9030
+  interval: "3s"
+  timeout: "5s"
+  deregister_after: "90m"
 
 log:
     log_level: "debug"
@@ -23,7 +23,8 @@ kafka:
     topic: IAC_TASK_REPLY
     group_id: ""
     partition: 0
-    brokers: ["kafka.example.com:9092", "kafka.example.com:9093","kafka.example.com:9094"]
+    // brokers: ["kafka.example.com:9092", "kafka.example.com:9093","kafka.example.com:9094"]
+    brokers: []
     sasl_username: admin
     sasl_password: ""
 

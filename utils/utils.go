@@ -190,6 +190,10 @@ func InArrayStr(arr []string, v string) bool {
 	return false
 }
 
+func StrInArray(v string, arr ...string) bool {
+	return InArrayStr(arr, v)
+}
+
 func UnzipFile(src, dest string) error {
 	r, err := zip.OpenReader(src)
 	if err != nil {
@@ -419,4 +423,11 @@ func PageSize2Offset(page int, pageSize int) (offset int) {
 		return 0
 	}
 	return (page - 1) * pageSize
+}
+
+func ShortContainerId(id string) string {
+	if len(id) < 12 {
+		return id
+	}
+	return 	id[:12]
 }

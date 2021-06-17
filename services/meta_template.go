@@ -99,7 +99,8 @@ func InitMetaTemplate() error {
 		return err
 	}
 
-	repos, _, err := vcsService.ListRepos("iac", "", 0, 0)
+	// 内置代码库统一在 cloud-iac 目录下，`make repos` 会将代码库 clone 到该目录
+	repos, _, err := vcsService.ListRepos("cloud-iac", "", 0, 0)
 	if err != nil {
 		logger.Errorf("vcs service new err: %v", err)
 		return err

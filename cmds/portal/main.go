@@ -25,7 +25,7 @@ import (
 type Option struct {
 	common.OptionVersion
 
-	Config     string `short:"c" long:"config"  default:"config.yml" description:"config file"`
+	Config     string `short:"c" long:"config"  default:"config-portal.yml" description:"config file"`
 	Verbose    []bool `short:"v" long:"verbose" description:"Show verbose debug message"`
 	ReRegister bool   `long:"re-register" description:"Re registration service to Consul"`
 }
