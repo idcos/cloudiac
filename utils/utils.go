@@ -191,6 +191,10 @@ func InArrayStr(arr []string, v string) bool {
 	return false
 }
 
+func StrInArray(v string, arr ...string) bool {
+	return InArrayStr(arr, v)
+}
+
 func UnzipFile(src, dest string) error {
 	r, err := zip.OpenReader(src)
 	if err != nil {
@@ -422,10 +426,18 @@ func PageSize2Offset(page int, pageSize int) (offset int) {
 	return (page - 1) * pageSize
 }
 
+
 // GenQueryURL url拼接
 // todo 将外部vsc中直接调用api的逻辑重新封装
 func GenQueryURL(address string, path string, params url.Values) string {
 	//...
 	return ""
+}
+
+func ShortContainerId(id string) string {
+	if len(id) < 12 {
+		return id
+	}
+	return 	id[:12]
 }
 

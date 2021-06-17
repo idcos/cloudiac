@@ -13,11 +13,11 @@ runner:
   storage_path: "./storage"
 
 consul:
-  address: "consul.example.com:8500"
+  address: "consul:8500"
   id: "CT-Runner-01"
-  ip: "runner01.example.com"
+  ip: "runner"
   port: 19030
-  tags: "tag1;tag2"
+  tags: "ct-runner;runner-01"
   interval: 5s
   timeout: 3s
   deregister_after: "90m"
