@@ -99,7 +99,7 @@ func InitMetaTemplate() error {
 		return err
 	}
 
-	repos, _, err := vcsService.ListRepos("iac", "", 0, 0)
+	repos, _, err := vcsService.ListRepos("cloud-iac", "", 0, 0)
 	if err != nil {
 		logger.Errorf("vcs service new err: %v", err)
 		return err

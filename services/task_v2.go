@@ -344,6 +344,14 @@ forLoop:
 		}
 	}
 
+	if taskStatus != consts.TaskRunning && len(lastMessage.StateListContent) > 0 {
+		path := fmt.Sprintf("%s/%s/%s", task.TemplateGuid, task.Guid, consts.TerraformStateListName)
+		if err := logstorage.Get().Write(path, lastMessage.StateListContent); err != nil {
+			logger.WithField("path", path).Errorf("write task log error: %v", err)
+			logger.Infof("task log content: %s", lastMessage.LogContent)
+		}
+	}
+
 	return taskStatus, nil
 }
 

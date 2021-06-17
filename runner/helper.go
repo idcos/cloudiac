@@ -78,6 +78,11 @@ func FetchTaskLog(templateUUID string, taskId string) ([]byte, error) {
 	return ioutil.ReadFile(logFile)
 }
 
+func FetchStateList(templateUUID string, taskId string) ([]byte, error) {
+	logFile := filepath.Join(GetTaskWorkDir(templateUUID, taskId), TerraformStateListName)
+	return ioutil.ReadFile(logFile)
+}
+
 func MakeTaskWorkDir(tplId string, taskId string) (string, error) {
 	workDir := GetTaskWorkDir(tplId, taskId)
 	err := PathCreate(workDir)

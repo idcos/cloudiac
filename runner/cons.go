@@ -35,6 +35,7 @@ const (
 
 const (
 	TaskLogName              = "runner.log"
+	TerraformStateListName   = "state_list.log"
 	TaskScriptName           = "run.sh"
 	BackendConfigName        = "backend.tf"
 	AnsibleStateAnalysisName = "terraform.py"

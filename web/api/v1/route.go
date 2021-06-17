@@ -79,6 +79,7 @@ func Register(g *gin.RouterGroup) {
 		ctrl.Register(root.Group("webhook"), &handlers.AccessToken{})
 		root.GET("/template/variable/search",w(handlers.TemplateVariableSearch))
 		root.GET("/template/playbook/search",w(handlers.TemplatePlaybookSearch))
+		root.GET("/task/state/search",w(handlers.Task{}.TaskStateListSearch))
 
 	}
 

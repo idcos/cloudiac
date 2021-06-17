@@ -179,3 +179,13 @@ func LastTask(c *ctx.ServiceCtx, form *forms.LastTaskForm) (interface{}, e.Error
 	taskResp.RepoBranch = tpl.RepoBranch
 	return taskResp, nil
 }
+
+func TaskStateListSearch(c *ctx.ServiceCtx, form *forms.TaskStateListSearchForm) (interface{}, e.Error) {
+	query := c.DB()
+	task, err := services.GetTaskByGuid(query.Debug(), form.TaskGuid)
+	if err != nil {
+		return nil, err
+	}
+
+	return services.TaskStateListSearch(task)
+}

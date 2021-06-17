@@ -46,12 +46,13 @@ const (
 	GitTypeGitee  = "gitee"
 	GitTypeLocal  = "local"
 
-	//end
 	MetaYmlMatch   = "meta.y*ml"
 	VariablePrefix = "variable.tf"
 
 	TfVarFileMatch = "*.tfvars"
 	PlaybookMatch  = "playbook.y*ml"
+
+	TerraformStateListName = "state_list.log" //terraform state list 文件名称
 
 	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀
 
