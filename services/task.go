@@ -211,6 +211,7 @@ func getBackendInfo(backendInfo models.JSON, containerId string) []byte {
 var (
 	planChangesLineRegex = regexp.MustCompile(`([\d]+) to add, ([\d]+) to change, ([\d]+) to destroy`)
 	applyChangesLineRegex = regexp.MustCompile(`Apply complete! Resources: ([\d]+) added, ([\d]+) changed, ([\d]+) destroyed.`)
+	destroyChangesLineRegex = regexp.MustCompile(`Destroy complete! Resources: ([\d]+) destroyed.`)
 )
 
 func ParseTfOutput(path string) map[string]interface{} {
@@ -255,6 +256,15 @@ func ParseTfOutput(path string) map[string]interface{} {
 				result["add"] = params[1]
 				result["change"] = params[2]
 				result["destroy"] = params[3]
+				result["allowApply"] = false
+			}
+			break
+		} else if strings.Contains(LogStr, `Destroy complete!`) {
+			params := destroyChangesLineRegex .FindStringSubmatch(LogStr)
+			if len(params) == 2 {
+				result["add"] = 0
+				result["change"] = 0
+				result["destroy"] = params[1]
 				result["allowApply"] = false
 			}
 			break
