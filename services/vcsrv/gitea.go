@@ -171,9 +171,8 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 			repList, _ := gitea.ListFiles(option)
 			resp = append(resp, repList...)
 		}
-
 		if v.Type == "file" && matchGlob(option.Search, v.Name) {
-			resp = append(resp, v.Name)
+			resp = append(resp, v.Path)
 		}
 
 	}
