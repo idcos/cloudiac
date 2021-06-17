@@ -424,3 +424,10 @@ func PageSize2Offset(page int, pageSize int) (offset int) {
 	}
 	return (page - 1) * pageSize
 }
+
+func ShortContainerId(id string) string {
+	if len(id) < 12 {
+		return id
+	}
+	return 	id[:12]
+}
