@@ -262,8 +262,8 @@ func ParseTfOutput(path string) map[string]interface{} {
 		} else if strings.Contains(LogStr, `Destroy complete!`) {
 			params := destroyChangesLineRegex .FindStringSubmatch(LogStr)
 			if len(params) == 2 {
-				result["add"] = 0
-				result["change"] = 0
+				result["add"] = "0"
+				result["change"] = "0"
 				result["destroy"] = params[1]
 				result["allowApply"] = false
 			}
