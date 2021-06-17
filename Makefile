@@ -53,6 +53,7 @@ clean: reset-build-dir
 PACKAGE_NAME=cloud-iac-$(VERSION).tar.gz
 package-local: reset-build-dir clean build
 	cp -a ./assets/terraform.py $(BUILD_DIR)/assets/
+	cp ./scripts/iac-portal.service ./scripts/ct-runner.service $(BUILD_DIR)/
 	@cd $(BUILD_DIR) && tar -czf ../cloud-iac-$(VERSION).tar.gz ./ && echo "Package: $(PACKAGE_NAME)"
 
 package-linux-amd64:

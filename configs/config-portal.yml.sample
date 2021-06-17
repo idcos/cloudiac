@@ -23,7 +23,8 @@ kafka:
     topic: IAC_TASK_REPLY
     group_id: ""
     partition: 0
-    brokers: ["kafka.example.com:9092", "kafka.example.com:9093","kafka.example.com:9094"]
+    // brokers: ["kafka.example.com:9092", "kafka.example.com:9093","kafka.example.com:9094"]
+    brokers: []
     sasl_username: admin
     sasl_password: ""
 

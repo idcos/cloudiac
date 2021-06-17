@@ -12,7 +12,6 @@ APP_DIR=./
 DATA_DIR=./data/
 
 # Portal 对外提供服务的地址
-## example PORTAL_ADDRESS=http://portal.example.com
 PORTAL_ADDRESS=http://portal
 
 # mysql 配置
