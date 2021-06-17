@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+//newGiteeInstance
+//gitee open api文档: https://gitee.com/api/v5/swagger#/getV5ReposOwnerRepoBranches
 func newGiteeInstance(vcs *models.Vcs) (VcsIface, error) {
 	vcs.Address = fmt.Sprintf("%s/api/v5", utils.GetUrl(vcs.Address))
 	return &giteeVcs{giteeRequest: giteeRequest, vcs: vcs}, nil
@@ -26,11 +28,11 @@ type giteeVcs struct {
 
 func (gitee *giteeVcs) GetRepo(idOrPath string) (RepoIface, error) {
 	path := gitee.vcs.Address + fmt.Sprintf("/repos/%s?access_token=%s", idOrPath, gitee.vcs.VcsToken)
-	response, body, er := gitee.giteeRequest(path, "GET")
+	_, body, er := gitee.giteeRequest(path, "GET")
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)
 	}
-	defer response.Body.Close()
+
 	rep := RepositoryGitee{}
 	_ = json.Unmarshal(body, &rep)
 	return &giteeRepoIface{
@@ -66,7 +68,6 @@ func (gitee *giteeVcs) ListRepos(namespace, search string, limit, offset int) ([
 		return nil, 0, e.New(e.BadRequest, err)
 	}
 
-	defer response.Body.Close()
 	var total int64
 	if len(response.Header["Total_count"]) != 0 {
 		total, _ = strconv.ParseInt(response.Header["Total_count"][0], 10, 64)
@@ -99,11 +100,11 @@ type giteeBranch struct {
 func (gitee *giteeRepoIface) ListBranches() ([]string, error) {
 	path := gitee.vcs.Address +
 		fmt.Sprintf("/repos/%s/branches?access_token=%s", gitee.repository.FullName, gitee.vcs.VcsToken)
-	response, body, err := gitee.giteaRequest(path, "GET")
+	_, body, err := gitee.giteaRequest(path, "GET")
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
-	defer response.Body.Close()
+
 	rep := make([]giteeBranch, 0)
 
 	_ = json.Unmarshal(body, &rep)
@@ -122,11 +123,11 @@ func (gitee *giteeRepoIface) BranchCommitId(branch string) (string, error) {
 
 	path := gitee.vcs.Address +
 		fmt.Sprintf("/repos/%s/commits/%s?access_token=%s", gitee.repository.FullName, branch, gitee.vcs.VcsToken)
-	response, body, err := gitee.giteaRequest(path, "GET")
+	_, body, err := gitee.giteaRequest(path, "GET")
 	if err != nil {
 		return "", e.New(e.BadRequest, err)
 	}
-	defer response.Body.Close()
+
 	rep := giteeCommit{}
 	_ = json.Unmarshal(body, &rep)
 	return rep.CommitId, nil
@@ -145,11 +146,11 @@ func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 	} else {
 		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", gitee.repository.FullName, "%2F", gitee.vcs.VcsToken, option.Ref)
 	}
-	response, body, er := gitee.giteaRequest(path, "GET")
+	_, body, er := gitee.giteaRequest(path, "GET")
 	if er != nil {
 		return []string{}, e.New(e.BadRequest, er)
 	}
-	defer response.Body.Close()
+
 	resp := make([]string, 0)
 	rep := make([]giteeFiles, 0)
 	_ = json.Unmarshal(body, &rep)
@@ -173,21 +174,18 @@ type giteeReadContent struct {
 	Content string `json:"content" form:"content" `
 }
 
-
 func (gitee *giteeRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
 	pathAddr := gitee.vcs.Address +
-		fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", gitee.repository.FullName, path, gitee.vcs.VcsToken,branch)
-	fmt.Println(pathAddr)
-	response, body, er := gitee.giteaRequest(pathAddr, "GET")
+		fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", gitee.repository.FullName, path, gitee.vcs.VcsToken, branch)
+	_, body, er := gitee.giteaRequest(pathAddr, "GET")
 	if er != nil {
-		return []byte{}, e.New(e.BadRequest, er)
+		return nil, e.New(e.BadRequest, er)
 	}
-	grc:=giteeReadContent{}
-	defer response.Body.Close()
-	_ = json.Unmarshal(body[:],&grc)
+	grc := giteeReadContent{}
+	_ = json.Unmarshal(body[:], &grc)
 	decoded, err := base64.StdEncoding.DecodeString(grc.Content)
 	if err != nil {
-		return []byte{}, e.New(e.BadRequest, er)
+		return nil, e.New(e.BadRequest, er)
 	}
 	return decoded[:], nil
 }
@@ -218,6 +216,7 @@ func giteeRequest(path, method string) (*http.Response, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	defer response.Body.Close()
 	body, _ := ioutil.ReadAll(response.Body)
 	return response, body, nil
 

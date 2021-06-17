@@ -16,6 +16,7 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -420,3 +421,11 @@ func PageSize2Offset(page int, pageSize int) (offset int) {
 	}
 	return (page - 1) * pageSize
 }
+
+// GenQueryURL url拼接
+// todo 将外部vsc中直接调用api的逻辑重新封装
+func GenQueryURL(address string, path string, params url.Values) string {
+	//...
+	return ""
+}
+
