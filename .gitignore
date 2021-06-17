@@ -9,8 +9,8 @@ ct-*/
 iac-*
 ct-*
 *.tar.gz
-config-portal.yaml
-config-runner.yaml
+config-portal.yml
+config-runner.yml
 targets/
 plugin-cache/
 /repos/

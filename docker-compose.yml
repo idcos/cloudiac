@@ -8,7 +8,7 @@ services:
       - "9030:9030"
     volumes:
       - .env:/usr/yunji/cloudiac/.env:ro
-      - config-portal.yaml:/usr/yunji/cloudiac/config-portal.yaml:ro
+      - config-portal.yml:/usr/yunji/cloudiac/config-portal.yml:ro
     environment:
       - TZ=Asia/Shanghai
     restart: always
@@ -20,7 +20,7 @@ services:
     ports:
       - "19030:19030"
     volumes:
-      - config-runner.yml:/usr/yunji/cloudiac/config-runner.yaml:ro
+      - config-runner.yml:/usr/yunji/cloudiac/config-runner.yml:ro
       - provider:/usr/yunji/cloudiac/provider:rw
     environment:
       - TZ=Asia/Shanghai

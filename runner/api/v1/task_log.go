@@ -55,7 +55,7 @@ func doFollowTaskLog(wsConn *websocket.Conn, task *runner.CommitedTask, offset i
 	logPath := filepath.Join(runner.GetTaskWorkDir(task.TemplateId, task.TaskId), runner.TaskLogName)
 	contentChan, readErrChan := followFile(ctx, logPath, offset)
 
-	// 等待任务退出协和
+	// 等待任务退出协程
 	go func() {
 		defer close(taskExitChan)
 
