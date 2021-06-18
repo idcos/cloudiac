@@ -356,7 +356,7 @@ forLoop:
 
 	if taskStatus != consts.TaskRunning && (taskType == consts.TaskApply || taskType == consts.TaskDestroy) &&
 		len(lastMessage.StateListContent) > 0 {
-		taskPath := utils.GetTaskWorkDir(task.TemplateGuid, task.Guid)
+		taskPath := runner.GetTaskWorkDir(task.TemplateGuid, task.Guid)
 		path := filepath.Join(taskPath, consts.TerraformStateListName)
 		if err := logstorage.Get().Write(path, lastMessage.StateListContent); err != nil {
 			logger.WithField("path", path).Errorf("write task log error: %v", err)

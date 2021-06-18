@@ -25,8 +25,8 @@ terraform plan {{if .VarFile}}-var-file={{.VarFile}}{{end}}
 `
 
 const applyCommandTemplate = `
-terraform apply -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}} 
-terraform state list >{{.ContainerStateListPath}} 2>&1 {{if .Playbook}}&& \
+terraform apply -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}} && \
+terraform state list >{{.ContainerStateListPath}} 2>&1 {{- if .Playbook}} && \
 ansible-playbook -i {{.AnsibleStateAnalysis}} {{.Playbook}}
 {{- end}}
 `

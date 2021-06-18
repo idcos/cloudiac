@@ -465,8 +465,3 @@ func GetBoolEnv(key string, _default bool) bool {
 	// 其他情况返回默认值
 	return _default
 }
-
-
-func GetTaskWorkDir(templateUUID string, taskId string) string {
-	return filepath.Join(templateUUID, taskId)
-}

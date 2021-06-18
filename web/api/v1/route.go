@@ -18,7 +18,6 @@ func Register(g *gin.RouterGroup) {
 	auth := g.Group("/auth")
 	auth.POST("/login", w(handlers.User{}.Login))
 
-
 	//api路径优化v1版本
 	o := g.Group("/", w(middleware.Auth))
 	{
@@ -77,8 +76,9 @@ func Register(g *gin.RouterGroup) {
 		root.GET("/vcs/readme", w(handlers.Vcs{}.GetReadmeContent))
 
 		ctrl.Register(root.Group("webhook"), &handlers.AccessToken{})
-		root.GET("/template/variable/search",w(handlers.TemplateVariableSearch))
-		root.GET("/template/playbook/search",w(handlers.TemplatePlaybookSearch))
+		root.GET("/template/variable/search", w(handlers.TemplateVariableSearch))
+		root.GET("/template/playbook/search", w(handlers.TemplatePlaybookSearch))
+		root.GET("/template/state_list", w(handlers.Task{}.TaskStateListSearch))
 	}
 
 	// TODO 增加鉴权
