@@ -404,6 +404,7 @@ func TaskLogMsgBytes(format string, args ...interface{}) []byte {
 	return []byte(TaskLogMessage(format, args...))
 }
 
+
 // LimitOffset2Page
 // offset 必须为 limit 的整数倍，否则会 panic
 // page 从 1 开始
@@ -428,10 +429,13 @@ func PageSize2Offset(page int, pageSize int) (offset int) {
 
 
 // GenQueryURL url拼接
-// todo 将外部vsc中直接调用api的逻辑重新封装
 func GenQueryURL(address string, path string, params url.Values) string {
-	//...
-	return ""
+	address = GetUrl(address)
+	if params != nil {
+		return fmt.Sprintf("%s%s?%s", address, path, params.Encode())
+	} else {
+		return fmt.Sprintf("%s%s", address, path)
+	}
 }
 
 func ShortContainerId(id string) string {
