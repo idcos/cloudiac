@@ -3,7 +3,7 @@ package models
 import "cloudiac/libs/db"
 
 type MetaTemplate struct {
-	BaseModel
+	TimedModel
 	Name        string `json:"name" gorm:"size:32;not null;comment:'模版名称'"`
 	Description string `json:"description" gorm:"size:255;comment:'描述'"`
 	RepoId      string `json:"repoId" gorm:"size:128;comment:'仓库ID'"`

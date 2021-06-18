@@ -103,7 +103,7 @@ func appAutoInit(tx *db.Session) (err error) {
 		return errors.Wrap(err, "init vcs")
 	}
 
-	if err := initMeatTemplate(); err != nil {
+	if err := initMeatTemplate(tx); err != nil {
 		return errors.Wrap(err, "init meat template")
 	}
 
@@ -217,8 +217,8 @@ func initVcs(tx *db.Session) error {
 	return nil
 }
 
-func initMeatTemplate() error {
-	return services.InitMetaTemplate()
+func initMeatTemplate(tx *db.Session) error {
+	return services.InitMetaTemplate(tx)
 }
 
 func initSSHKeyPair() error {

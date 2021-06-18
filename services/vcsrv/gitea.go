@@ -10,11 +10,11 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 )
 
 func newGiteaInstance(vcs *models.Vcs) (VcsIface, error) {
+	vcs.Address = utils.GetUrl(vcs.Address)
 	return &giteaVcs{giteaRequest: giteaRequest, vcs: vcs}, nil
 
 }
@@ -25,8 +25,7 @@ type giteaVcs struct {
 }
 
 func (gitea *giteaVcs) GetRepo(idOrPath string) (RepoIface, error) {
-	vcsRawPath := GetGiteaUrl(gitea.vcs.Address)
-	path := vcsRawPath + fmt.Sprintf("/api/v1/repositories/%s",idOrPath)
+	path := gitea.vcs.Address + fmt.Sprintf("/api/v1/repositories/%s", idOrPath)
 	response, body, er := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)
@@ -57,7 +56,7 @@ type Repository struct {
 }
 
 //Fixme ListRepos中的数据不能直接调用repo接口的方法
-func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([]RepoIface,int64, error) {
+func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([]RepoIface, int64, error) {
 	link, _ := url.Parse("/repos/search")
 	page := utils.LimitOffset2Page(limit, offset)
 	link.RawQuery = fmt.Sprintf("page=%d&limit=%d", page, limit)
@@ -68,7 +67,7 @@ func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([
 	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
 
 	if err != nil {
-		return nil,0, e.New(e.BadRequest, err)
+		return nil, 0, e.New(e.BadRequest, err)
 	}
 
 	defer response.Body.Close()
@@ -89,7 +88,7 @@ func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([
 		})
 	}
 
-	return repoList,total, nil
+	return repoList, total, nil
 }
 
 type giteaRepoIface struct {
@@ -128,7 +127,6 @@ type giteaCommit struct {
 }
 
 func (gitea *giteaRepoIface) BranchCommitId(branch string) (string, error) {
-
 	path := gitea.vcs.Address + "/api/v1" +
 		fmt.Sprintf("/repos/%s/branches/%s?limit=0&page=0", gitea.repository.FullName, branch)
 	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
@@ -148,13 +146,12 @@ type giteaFiles struct {
 }
 
 func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) {
-	var path string
-	vcsRawPath := GetGiteaUrl(gitea.vcs.Address)
+	var path string = gitea.vcs.Address
 	if option.Path != "" {
-		path = vcsRawPath + "/api/v1" +
+		path += "/api/v1" +
 			fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0&ref=%s", gitea.repository.FullName, option.Path, option.Ref)
 	} else {
-		path = vcsRawPath + "/api/v1" +
+		path += "/api/v1" +
 			fmt.Sprintf("/repos/%s/contents?limit=0&page=0&ref=%s", gitea.repository.FullName, option.Ref)
 	}
 	response, body, er := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
@@ -203,7 +200,7 @@ func (gitea *giteaRepoIface) FormatRepoSearch() (project *Projects, err e.Error)
 	}, nil
 }
 
-//giteaRequest
+//giteeRequest
 //param path : gitea api路径
 //param method 请求方式
 func giteaRequest(path, method, token string) (*http.Response, []byte, error) {
@@ -233,9 +230,6 @@ func DoGiteaRequest(request *http.Request, token string) (*http.Response, error)
 	}
 	return response, nil
 }
-func GetGiteaUrl(address string) string {
-	return strings.TrimSuffix(address, "/")
-}
 
 func GetGiteaTemplateTfvarsSearch(vcs *models.Vcs, repoId string, repoBranch, filePath string, fileName []string) ([]string, error) {
 	repo, err := GetGiteaRepoById(vcs, repoId)
@@ -243,7 +237,7 @@ func GetGiteaTemplateTfvarsSearch(vcs *models.Vcs, repoId string, repoBranch, fi
 		return nil, err
 	}
 	var path string
-	vcsRawPath := GetGiteaUrl(vcs.Address)
+	vcsRawPath := utils.GetUrl(vcs.Address)
 	if filePath != "" {
 		path = vcsRawPath + "/api/v1" + fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0", repo, filePath)
 	} else {
@@ -280,7 +274,7 @@ func GetGiteaTemplateTfvarsSearch(vcs *models.Vcs, repoId string, repoBranch, fi
 }
 
 func GetGiteaRepoById(vcs *models.Vcs, repoId string) (string, e.Error) {
-	vcsRawPath := GetGiteaUrl(vcs.Address)
+	vcsRawPath := utils.GetUrl(vcs.Address)
 	path := vcsRawPath + fmt.Sprintf("/api/v1/repositories/%s", repoId)
 	request, err := http.NewRequest("GET", path, nil)
 	if err != nil {
@@ -307,7 +301,7 @@ func GetGiteaBranchCommitId(vcs *models.Vcs, repoId string, repoBranch string) (
 	if err != nil {
 		return "", err
 	}
-	vcsRawPath := GetGiteaUrl(vcs.Address)
+	vcsRawPath := utils.GetUrl(vcs.Address)
 	path := vcsRawPath + "/api/v1" + fmt.Sprintf("/repos/%s/branches/%s?limit=0&page=0", repo, repoBranch)
 	request, er := http.NewRequest("GET", path, nil)
 	if er != nil {

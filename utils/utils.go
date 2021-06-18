@@ -16,6 +16,7 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -410,6 +411,7 @@ func TaskLogMsgBytes(format string, args ...interface{}) []byte {
 	return []byte(TaskLogMessage(format, args...))
 }
 
+
 // LimitOffset2Page
 // offset 必须为 limit 的整数倍，否则会 panic
 // page 从 1 开始
@@ -432,6 +434,17 @@ func PageSize2Offset(page int, pageSize int) (offset int) {
 	return (page - 1) * pageSize
 }
 
+
+// GenQueryURL url拼接
+func GenQueryURL(address string, path string, params url.Values) string {
+	address = GetUrl(address)
+	if params != nil {
+		return fmt.Sprintf("%s%s?%s", address, path, params.Encode())
+	} else {
+		return fmt.Sprintf("%s%s", address, path)
+	}
+}
+
 func ShortContainerId(id string) string {
 	if len(id) < 12 {
 		return id
@@ -451,4 +464,9 @@ func GetBoolEnv(key string, _default bool) bool {
 	}
 	// 其他情况返回默认值
 	return _default
+}
+
+
+func GetTaskWorkDir(templateUUID string, taskId string) string {
+	return filepath.Join(templateUUID, taskId)
 }

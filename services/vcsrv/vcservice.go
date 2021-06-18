@@ -71,10 +71,10 @@ func GetVcsInstance(vcs *models.Vcs) (VcsIface, error) {
 		return newGitlabInstance(vcs)
 	case consts.GitTypeGitEA:
 		return newGiteaInstance(vcs)
-	//case consts.GitTypeGithub:
-	//	//return newGitlabInstance(vcs)
-	//case consts.GitTypeGitee:
-	//	//return newGitlabInstance(vcs)
+	case consts.GitTypeGithub:
+		return newGithubInstance(vcs)
+	case consts.GitTypeGitee:
+		return newGiteeInstance(vcs)
 	default:
 		return nil, errors.New("vcs type doesn't exist")
 	}

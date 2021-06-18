@@ -35,6 +35,7 @@ const (
 
 const (
 	TaskLogName              = "runner.log"
+	TerraformStateListName   = "state_list.log"
 	TaskScriptName           = "run.sh"
 	CloudIacTFName           = "_cloud_iac.tf"
 	CloudInitScriptName      = "_cloud_iac_cloud_init.sh"

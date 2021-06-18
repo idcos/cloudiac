@@ -49,3 +49,8 @@ func ArrayIsHasSuffix(arr []string, v string) bool {
 	}
 	return false
 }
+
+//去掉url路径结尾的'/'
+func GetUrl(address string) string {
+	return strings.TrimSuffix(address, "/")
+}

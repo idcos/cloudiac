@@ -79,16 +79,15 @@ func MetaAnalysis(content []byte) (MetaFile, error) {
 	return mt, nil
 }
 
-func InitMetaTemplate() error {
-	dbSess := db.Get().Debug()
+func InitMetaTemplate(tx *db.Session) error {
 	logger := logs.Get()
 	//清空meta template 数据库
-	err := DeleteMetaTemplate(dbSess)
+	err := DeleteMetaTemplate(tx)
 	if err != nil {
 		logger.Errorf("meta template delete err: %v", err)
 		return err
 	}
-	vcs, err := GetDefaultVcs(dbSess)
+	vcs, err := GetDefaultVcs(tx)
 	if err != nil {
 		logger.Errorf("vcs query err: %v", err)
 		return err
@@ -112,15 +111,16 @@ func InitMetaTemplate() error {
 			Search: consts.MetaYmlMatch,
 			Ref:    "master",
 		})
-		fileNameMatch2Analysis(files, repo, vcs, project)
 		if err != nil {
 			logger.Debugf("vcs get files err: %v", err)
 			continue
 		}
+
+		fileNameMatch2Analysis(files, repo, vcs, project,tx)
 	}
 	return nil
 }
-func fileNameMatch2Analysis(files []string, repo vcsrv.RepoIface, vcs *models.Vcs, project *vcsrv.Projects) {
+func fileNameMatch2Analysis(files []string, repo vcsrv.RepoIface, vcs *models.Vcs, project *vcsrv.Projects,tx *db.Session) {
 	for _, file := range files {
 		content, err := repo.ReadFileContent("master", file)
 		if err != nil {
@@ -133,12 +133,12 @@ func fileNameMatch2Analysis(files []string, repo vcsrv.RepoIface, vcs *models.Vc
 			continue
 		}
 		for _, template := range mt.Templates {
-			if _, err := CreateMetaTemplate(db.Get().Debug(), models.MetaTemplate{
+			if _, err := CreateMetaTemplate(tx.Debug(), models.MetaTemplate{
 				Name:       template.Name,
 				Vars:       models.JSON(var2TerraformVar(template.Terraform.Vars, template.Env)),
-				VcsId:      vcs.Id,
 				Playbook:   template.Ansible.Playbook,
 				SaveState:  template.Terraform.SaveState,
+				VcsId:      vcs.Id,
 				RepoBranch: project.DefaultBranch,
 				RepoAddr:   project.HTTPURLToRepo,
 				RepoId:     project.ID,
