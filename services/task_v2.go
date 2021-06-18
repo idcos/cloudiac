@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"time"
 
 	"cloudiac/consts"
@@ -256,6 +257,7 @@ func doPullTaskStatus(ctx context.Context, dbSess *db.Session, taskId string, de
 		return "", err
 	}
 	taskStatus = task.Status
+	taskType := task.TaskType
 
 	backend := task.BackendInfo
 	runnerAddr := backend.BackendUrl
@@ -343,6 +345,17 @@ forLoop:
 			logger.Infof("task log content: %s", lastMessage.LogContent)
 		}
 	}
+
+	if taskStatus != consts.TaskRunning && (taskType == consts.TaskApply || taskType == consts.TaskDestroy) &&
+		len(lastMessage.StateListContent) > 0 {
+		taskPath := utils.GetTaskWorkDir(task.TemplateGuid, task.Guid)
+		path := filepath.Join(taskPath, consts.TerraformStateListName)
+		if err := logstorage.Get().Write(path, lastMessage.StateListContent); err != nil {
+			logger.WithField("path", path).Errorf("write task log error: %v", err)
+			logger.Infof("task log content: %s", lastMessage.LogContent)
+		}
+	}
+
 
 	return taskStatus, nil
 }

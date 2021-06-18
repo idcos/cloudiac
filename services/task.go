@@ -13,6 +13,8 @@ import (
 	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
+	"io"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -86,6 +88,35 @@ func TaskDetail(tx *db.Session, taskId uint) *db.Session {
 
 func LastTask(tx *db.Session, tplId uint) *db.Session {
 	return tx.Table(models.Task{}.TableName()).Where("template_id = ?", tplId)
+}
+
+func GetLastTaskByTemplateGuid(tx *db.Session, tplGuid string) (*models.Task, e.Error) {
+	task := &models.Task{}
+	if err := tx.Table(models.Task{}.TableName()).Where("template_guid = ?", tplGuid).Last(task); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return task, nil
+}
+
+func TaskStateList(query *db.Session, tplGuid string) (interface{}, e.Error) {
+	stateList := make([]string, 0)
+	var reader io.Reader
+	lastTask, err := GetLastTaskByTemplateGuid(query, tplGuid)
+	if err != nil {
+		return nil, err
+	}
+	taskPath := utils.GetTaskWorkDir(lastTask.TemplateGuid, lastTask.Guid)
+	path := filepath.Join(taskPath, consts.TerraformStateListName)
+	if content, err := logstorage.Get().Read(path); err != nil {
+		return nil, e.New(e.TaskNotExists, err)
+	} else {
+		reader = bytes.NewBuffer(content)
+	}
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		stateList = append(stateList, scanner.Text())
+	}
+	return stateList, nil
 }
 
 type LastTaskInfo struct {
@@ -209,8 +240,8 @@ func getBackendInfo(backendInfo models.JSON, containerId string) []byte {
 }
 
 var (
-	planChangesLineRegex = regexp.MustCompile(`([\d]+) to add, ([\d]+) to change, ([\d]+) to destroy`)
-	applyChangesLineRegex = regexp.MustCompile(`Apply complete! Resources: ([\d]+) added, ([\d]+) changed, ([\d]+) destroyed.`)
+	planChangesLineRegex    = regexp.MustCompile(`([\d]+) to add, ([\d]+) to change, ([\d]+) to destroy`)
+	applyChangesLineRegex   = regexp.MustCompile(`Apply complete! Resources: ([\d]+) added, ([\d]+) changed, ([\d]+) destroyed.`)
 	destroyChangesLineRegex = regexp.MustCompile(`Destroy complete! Resources: ([\d]+) destroyed.`)
 )
 
@@ -251,7 +282,7 @@ func ParseTfOutput(path string) map[string]interface{} {
 			}
 			break
 		} else if strings.Contains(LogStr, `Apply complete!`) {
-			params := applyChangesLineRegex .FindStringSubmatch(LogStr)
+			params := applyChangesLineRegex.FindStringSubmatch(LogStr)
 			if len(params) == 4 {
 				result["add"] = params[1]
 				result["change"] = params[2]
@@ -260,7 +291,7 @@ func ParseTfOutput(path string) map[string]interface{} {
 			}
 			break
 		} else if strings.Contains(LogStr, `Destroy complete!`) {
-			params := destroyChangesLineRegex .FindStringSubmatch(LogStr)
+			params := destroyChangesLineRegex.FindStringSubmatch(LogStr)
 			if len(params) == 2 {
 				result["add"] = "0"
 				result["change"] = "0"
@@ -283,7 +314,7 @@ func SendMail(query *db.Session, orgId uint, task *models.Task) {
 	logger := logs.Get().WithField("action", "sendMail")
 	notifier := make([]sendMailQuery, 0)
 	if err := query.Debug().Table(models.NotificationCfg{}.TableName()).Where("org_id = ?", orgId).
-		Joins(fmt.Sprintf("left join %s as `user` on `user`.id = %s.user_id",models.User{}.TableName(),models.NotificationCfg{}.TableName())).
+		Joins(fmt.Sprintf("left join %s as `user` on `user`.id = %s.user_id", models.User{}.TableName(), models.NotificationCfg{}.TableName())).
 		LazySelectAppend("`user`.*").
 		LazySelectAppend("`iac_org_notification_cfg`.*").
 		Scan(&notifier); err != nil {

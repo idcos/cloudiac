@@ -179,3 +179,7 @@ func LastTask(c *ctx.ServiceCtx, form *forms.LastTaskForm) (interface{}, e.Error
 	taskResp.RepoBranch = tpl.RepoBranch
 	return taskResp, nil
 }
+
+func TaskStateList(c *ctx.ServiceCtx, form *forms.TaskStateListForm) (interface{}, e.Error) {
+	return services.TaskStateList(c.DB(),form.TemplateGuid)
+}

@@ -25,11 +25,13 @@ terraform plan {{if .VarFile}}-var-file={{.VarFile}}{{end}}
 `
 
 const applyCommandTemplate = `
-terraform apply -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}} 
+terraform apply -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}} && \
+terraform state list > {{.ContainerStateListPath}} 2>&1
 `
 
 const destroyCommandTemplate = `
-terraform destroy -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}}
+terraform destroy -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}} && \
+terraform state list > {{.ContainerStateListPath}} 2>&1
 `
 
 const pullCommandTemplate = `
@@ -107,9 +109,11 @@ func GenScriptContent(context *ReqBody, saveTo string) error {
 	if !ok {
 		return fmt.Errorf("unsupported mode '%s'", context.Mode)
 	}
-
+	containerStateListPath := filepath.Join(ContainerIaCDir, TerraformStateListName)
 	if err := commandTpl.Execute(saveFp, map[string]string{
 		"VarFile": context.Varfile,
+		// 存储terraform state list输出内容弄的文件路径
+		"ContainerStateListPath": containerStateListPath,
 	}); err != nil {
 		return err
 	}

@@ -50,3 +50,17 @@ func (Task) FollowLogSse(c *ctx.GinRequestCtx) {
 		c.SSEvent("error", err.Error())
 	}
 }
+
+// TaskStateListSearch
+// @Tags 作业详情State List
+// @Description 作业详情State List
+// @Accept application/json
+// @Param taskGuid formData int true "作业guid"
+// @router /api/v1/template/state_list [get]
+func (Task) TaskStateListSearch(c *ctx.GinRequestCtx) {
+	form := &forms.TaskStateListForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.TaskStateList(c.ServiceCtx(), form))
+}

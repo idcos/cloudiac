@@ -441,3 +441,6 @@ func ShortContainerId(id string) string {
 	return 	id[:12]
 }
 
+func GetTaskWorkDir(templateUUID string, taskId string) string {
+	return filepath.Join(templateUUID, taskId)
+}
