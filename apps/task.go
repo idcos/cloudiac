@@ -181,11 +181,5 @@ func LastTask(c *ctx.ServiceCtx, form *forms.LastTaskForm) (interface{}, e.Error
 }
 
 func TaskStateList(c *ctx.ServiceCtx, form *forms.TaskStateListForm) (interface{}, e.Error) {
-	query := c.DB()
-	task, err := services.GetTaskByGuid(query.Debug(), form.TaskGuid)
-	if err != nil && !e.IsRecordNotFound(err){
-		return nil, err
-	}
-
-	return services.TaskStateList(task)
+	return services.TaskStateList(c.DB(),form.TemplateGuid)
 }

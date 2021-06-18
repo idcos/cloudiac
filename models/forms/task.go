@@ -31,5 +31,6 @@ type LastTaskForm struct {
 
 type TaskStateListForm struct {
 	BaseForm
-	TaskGuid string `json:"taskGuid" form:"taskGuid" binding:"required"`
+	TemplateGuid string `json:"templateGuid" form:"templateGuid" `
+	TaskGuid     string `json:"taskGuid" form:"taskGuid" binding:"required"`
 }

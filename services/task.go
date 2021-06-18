@@ -98,10 +98,10 @@ func GetLastTaskByTemplateGuid(tx *db.Session, tplGuid string) (*models.Task, e.
 	return task, nil
 }
 
-func TaskStateList(task *models.Task) (interface{}, e.Error) {
+func TaskStateList(query *db.Session, tplGuid string) (interface{}, e.Error) {
 	stateList := make([]string, 0)
 	var reader io.Reader
-	lastTask, err := GetLastTaskByTemplateGuid(db.Get(), task.TemplateGuid)
+	lastTask, err := GetLastTaskByTemplateGuid(query, tplGuid)
 	if err != nil {
 		return nil, err
 	}
