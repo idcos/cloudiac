@@ -56,12 +56,11 @@ func (Task) FollowLogSse(c *ctx.GinRequestCtx) {
 // @Description 作业详情State List
 // @Accept application/json
 // @Param taskGuid formData int true "作业guid"
-// @router /api/v1/task/state/search [get]
+// @router /api/v1/task/state/list [get]
 func (Task) TaskStateListSearch(c *ctx.GinRequestCtx) {
-	form := &forms.TaskStateListSearchForm{}
+	form := &forms.TaskStateListForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-
-	c.JSONResult(apps.TaskStateListSearch(c.ServiceCtx(), form))
+	c.JSONResult(apps.TaskStateList(c.ServiceCtx(), form))
 }

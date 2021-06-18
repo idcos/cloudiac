@@ -31,6 +31,7 @@ const (
 	TaskLogName = "runner.log"
 	TaskApply   = "apply"
 	TaskPlan    = "plan"
+	TaskDestroy = "destroy"
 
 	ResourceAccountDisable = "disable"
 	ResourceAccountEnable  = "enable"

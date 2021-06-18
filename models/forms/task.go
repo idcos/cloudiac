@@ -29,7 +29,7 @@ type LastTaskForm struct {
 	TemplateId uint `json:"templateId" form:"templateId" binding:"required"`
 }
 
-type TaskStateListSearchForm struct {
+type TaskStateListForm struct {
 	BaseForm
 	TaskGuid string `json:"taskGuid" form:"taskGuid" binding:"required"`
 }

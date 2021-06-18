@@ -89,11 +89,10 @@ func LastTask(tx *db.Session, tplId uint) *db.Session {
 	return tx.Table(models.Task{}.TableName()).Where("template_id = ?", tplId)
 }
 
-func TaskStateListSearch(task *models.Task) (interface{}, e.Error) {
+func TaskStateList(task *models.Task) (interface{}, e.Error) {
 	stateList := make([]string, 0)
 	var reader io.Reader
-	path := fmt.Sprintf("%s/%s/%s", task.TemplateGuid, task.Guid, consts.TerraformStateListName)
-	if content, err := logstorage.Get().Read(path); err != nil {
+	if content, err := logstorage.Get().ReadStateList(task.TemplateGuid); err != nil {
 		return nil, e.New(e.TaskNotExists, err)
 	} else {
 		reader = bytes.NewBuffer(content)
@@ -226,8 +225,8 @@ func getBackendInfo(backendInfo models.JSON, containerId string) []byte {
 }
 
 var (
-	planChangesLineRegex  = regexp.MustCompile(`([\d]+) to add, ([\d]+) to change, ([\d]+) to destroy`)
-	applyChangesLineRegex = regexp.MustCompile(`Apply complete! Resources: ([\d]+) added, ([\d]+) changed, ([\d]+) destroyed.`)
+	planChangesLineRegex    = regexp.MustCompile(`([\d]+) to add, ([\d]+) to change, ([\d]+) to destroy`)
+	applyChangesLineRegex   = regexp.MustCompile(`Apply complete! Resources: ([\d]+) added, ([\d]+) changed, ([\d]+) destroyed.`)
 	destroyChangesLineRegex = regexp.MustCompile(`Destroy complete! Resources: ([\d]+) destroyed.`)
 )
 
@@ -277,7 +276,7 @@ func ParseTfOutput(path string) map[string]interface{} {
 			}
 			break
 		} else if strings.Contains(LogStr, `Destroy complete!`) {
-			params := destroyChangesLineRegex .FindStringSubmatch(LogStr)
+			params := destroyChangesLineRegex.FindStringSubmatch(LogStr)
 			if len(params) == 2 {
 				result["add"] = "0"
 				result["change"] = "0"

@@ -67,7 +67,7 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.CommitedTask, closed <-ch
 
 			stateList, err := runner.FetchStateList(task.TemplateId, task.TaskId)
 			if err != nil {
-				logger.Errorf("fetch task log error: %v", err)
+				logger.Errorf("Fetch state list error: %v", err)
 				msg.StateListContent = utils.TaskLogMsgBytes("Fetch state list error: %v", err)
 			} else {
 				msg.StateListContent = stateList
