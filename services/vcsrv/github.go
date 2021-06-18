@@ -74,7 +74,6 @@ func (github *githubVcs) ListRepos(namespace, search string, limit, offset int) 
 	if len(response.Header["X-Total-Count"]) != 0 {
 		total, _ = strconv.ParseInt(response.Header["X-Total-Count"][0], 10, 64)
 	}
-	//fmt.Println(string(body))
 	rep := make([]*RepositoryGithub, 0)
 	_ = json.Unmarshal(body, &rep)
 	repoList := make([]RepoIface, 0)
@@ -153,13 +152,12 @@ func (github *githubRepoIface) ListFiles(option VcsIfaceOptions) ([]string, erro
 			fmt.Sprintf("/repos/%s/contents/%s", github.repository.FullName, option.Path), urlParam)
 	} else {
 		path = utils.GenQueryURL(github.vcs.Address,
-			fmt.Sprintf("/repos/%s/contents/%s", github.repository.FullName, "%2F"), urlParam)
+			fmt.Sprintf("/repos/%s/contents", github.repository.FullName), urlParam)
 	}
 	_, body, er := github.githubRequest(path, "GET", github.vcs.VcsToken)
 	if er != nil {
 		return []string{}, e.New(e.BadRequest, er)
 	}
-
 	resp := make([]string, 0)
 	rep := make([]githubFiles, 0)
 	_ = json.Unmarshal(body, &rep)
