@@ -51,7 +51,7 @@ func (o Template) Migrate(sess *db.Session) (err error) {
 }
 
 type TemplateAccessToken struct {
-	BaseModel
+	TimedModel
 
 	TplGuid     string `json:"tplGuid" form:"tplGuid" gorm:"not null"`
 	AccessToken string `json:"accessToken" form:"accessToken" gorm:"not null"`

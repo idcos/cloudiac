@@ -11,7 +11,7 @@ import (
 )
 
 func SearchAccessToken(c *ctx.ServiceCtx, form *forms.SearchAccessTokenForm) (interface{}, e.Error) {
-	query := services.SearchAccessTokenByTplGuid(c.DB(), form.TplGuid)
+	query := services.SearchAccessTokenByTplGuid(c.DB(), form.TplGuid).Order("created_at DESC")
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	webhookResp := make([]*models.TemplateAccessToken, 0)
 	if err := p.Scan(&webhookResp); err != nil {
