@@ -93,9 +93,9 @@ type Config struct {
 type TfVariable struct {
 	Name string `hcl:",label"`
 	// Default     string `hcl:"default,optional"`
-	Description string `hcl:"description,attr"`
+	Description string `hcl:"description,optional"`
 	// validation block
-	Default string `hcl:"default"`
+	Default string `hcl:"default,optional"`
 }
 
 func readHCLFile(content []byte) ([]TemplateVariable, e.Error) {
