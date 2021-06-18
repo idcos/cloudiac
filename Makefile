@@ -6,7 +6,8 @@ GOGET=$(GOCMD) get
 
 RM=/bin/rm -f
 
-VERSION=$(shell git describe --tags --abbrev=0 --always)
+## VERSION=$(shell git describe --tags --abbrev=0 --always)
+VERSION=$(shell cat VERSION)
 DATE_VER=$(shell date "+%Y%m%d")
 COMMIT=$(shell git rev-parse --short HEAD)
 

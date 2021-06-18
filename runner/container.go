@@ -143,15 +143,18 @@ func (task *CommitedTask) Wait(ctx context.Context) (int64, error) {
 					logger.Warnf("write container info error: %v", err)
 				}
 
-				// 删除容器
-				err := cli.ContainerRemove(context.Background(), task.ContainerId,
-					types.ContainerRemoveOptions{
-						RemoveVolumes: true,
-						RemoveLinks:   false,
-						Force:         false,
-					})
-				if err != nil {
-					logger.Warnf("remove container error: %v", err)
+				autoRemove := utils.GetBoolEnv("IAC_AUTO_REMOVE", true)
+				if autoRemove {
+					// 删除容器
+					err := cli.ContainerRemove(context.Background(), task.ContainerId,
+						types.ContainerRemoveOptions{
+							RemoveVolumes: true,
+							RemoveLinks:   false,
+							Force:         false,
+						})
+					if err != nil {
+						logger.Warnf("remove container error: %v", err)
+					}
 				}
 			}
 
@@ -180,11 +183,6 @@ func (cmd *Command) Create() error {
 	id := guuid.New()
 	conf := configs.Get()
 
-	AutoRemove := false
-	if utils.StrInArray(os.Getenv("IAC_AUTO_REMOVE"), "on", "true", "1") {
-		AutoRemove = true
-	}
-
 	log.Printf("starting command, task working directory: %s", cmd.TaskWorkdir)
 	cont, err := cli.ContainerCreate(
 		cmd.ContainerInstance.Context,
@@ -196,17 +194,17 @@ func (cmd *Command) Create() error {
 			AttachStderr: true,
 		},
 		&container.HostConfig{
-			AutoRemove: AutoRemove,
+			AutoRemove: false,
 			Mounts: []mount.Mount{
 				{
 					Type:   mount.TypeBind,
 					Source: cmd.TaskWorkdir,
-					Target: ContainerIaCDir,
+					Target: ContainerTaskDir,
 				},
 				{
 					Type:     mount.TypeBind,
 					Source:   conf.Runner.AbsAssetsPath(),
-					Target:   ContainerAssetsPath,
+					Target:   ContainerAssetsDir,
 					ReadOnly: true,
 				},
 				{

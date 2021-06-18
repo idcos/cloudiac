@@ -41,7 +41,7 @@ func TaskStatus(c *gin.Context) {
 	}
 }
 
-func doTaskStatus(wsConn *websocket.Conn, task *runner.CommitedTask, closed <-chan struct{}) error {
+func doTaskStatus(wsConn *websocket.Conn, task *runner.CommitedTask, closedCh <-chan struct{}) error {
 	logger := logger.WithField("taskId", task.TaskId)
 
 	// 获取任务最新状态并通过 websocket 发送
@@ -93,11 +93,21 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.CommitedTask, closed <-ch
 
 	logger.Infof("watching task status")
 	defer logger.Infof("watch task status done")
+
+	closed := false
 	for {
+		if !closed {
+			select {
+			case <-closedCh:
+				// 对端断开连接，我们只是通知 ctx canceled，然后继续等待 Wait 协程退出
+				logger.Debugf("connection closed")
+				cancelFun()
+				closed = true
+			default:
+			}
+		}
+
 		select {
-		case <-closed:
-			logger.Debugf("connection closed")
-			cancelFun()
 		case <-ticker.C:
 			// 定时发送最新任务状态
 			if err := sendStatus(false); err != nil {

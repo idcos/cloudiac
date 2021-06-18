@@ -4,6 +4,7 @@ import (
 	"cloudiac/configs"
 	"cloudiac/consts/e"
 	"cloudiac/services/logstorage"
+	"cloudiac/services/sshkey"
 	"cloudiac/utils/kafka"
 	"context"
 	"encoding/json"
@@ -121,6 +122,11 @@ func doAssignTask(orgId string, vcs *models.Vcs, tpl *models.Template, task *mod
 	resp *runnerResp, retry bool, err error) {
 	logger := logs.Get().WithField("action", "doAssignTask").WithField("taskId", task.Guid)
 
+	privateKey, err := sshkey.LoadPrivateKeyPem()
+	if err != nil {
+		return nil, true, err
+	}
+
 	//// 组装请求
 	repoAddr := tpl.RepoAddr
 	if u, err := url.Parse(repoAddr); err != nil {
@@ -161,6 +167,8 @@ func doAssignTask(orgId string, vcs *models.Vcs, tpl *models.Template, task *mod
 		"mode":     task.TaskType,
 		"extra":    tpl.Extra,
 		"playbook": tpl.Playbook,
+
+		"privateKey": string(privateKey),
 	}
 
 	header := &http.Header{}

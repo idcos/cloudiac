@@ -52,7 +52,7 @@ func TestLocalVcs(t *testing.T) {
 	repo, err = testLocalVcs.GetRepo(basePath)
 	assert.NoError(err)
 
-	branches, err := repo.ListBranches("mast*", 1, 0)
+	branches, err := repo.ListBranches()
 	assert.NoError(err)
 	if !assert.Equal(1, len(branches)) {
 		t.Failed()

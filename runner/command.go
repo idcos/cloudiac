@@ -1,7 +1,6 @@
 package runner
 
 import (
-	"cloudiac/consts"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,14 +9,15 @@ import (
 )
 
 var initCommandTemplate = `set -e 
-export CLOUD_IAC_DIR={{.CloudIaCDir}}
+export CLOUD_IAC_TASK_DIR={{.TaskDir}}
 export CLOUD_IAC_WORKSPACE={{.Workspace}}
-export CLOUD_IAC_BACKEND_CONFIG=${CLOUD_IAC_DIR}/{{.BackendConfigName}}
+export CLOUD_IAC_PRIVATE_KEY={{.TaskDir}}/ssh_key
 export TF_PLUGIN_CACHE_DIR={{.PluginsCachePath}}
 
 git clone {{.Repo}} ${CLOUD_IAC_WORKSPACE} && \
 cd "${CLOUD_IAC_WORKSPACE}" && git checkout {{.RepoCommit}} && \
-ln -svf ${CLOUD_IAC_BACKEND_CONFIG}  ./_cloud_iac_backend.tf && \
+ln -sv ${CLOUD_IAC_TASK_DIR}/{{.CloudIacTFName}}  ./ && \
+ln -sv ${CLOUD_IAC_TASK_DIR}/{{.CloudInitScriptName}} ./ && \
 terraform init && \`
 
 const planCommandTemplate = `
@@ -25,7 +25,9 @@ terraform plan {{if .VarFile}}-var-file={{.VarFile}}{{end}}
 `
 
 const applyCommandTemplate = `
-terraform apply -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}} 
+terraform apply -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}} {{if .Playbook}}&& \
+ansible-playbook -i {{.AnsibleStateAnalysis}} {{.Playbook}}
+{{- end}}
 `
 
 const destroyCommandTemplate = `
@@ -36,10 +38,6 @@ const pullCommandTemplate = `
 terraform state pull
 `
 
-const ansibleCommandTemplate = `
- {{if .Playbook}}ansible-playbook -i {{.AnsibleStateAnalysis}} {{.Playbook}}{{end}}
-`
-
 var (
 	initCommandTpl = template.Must(template.New("").Parse(initCommandTemplate))
 
@@ -47,7 +45,6 @@ var (
 	applyCommandTpl   = template.Must(template.New("").Parse(applyCommandTemplate))
 	destroyCommandTpl = template.Must(template.New("").Parse(destroyCommandTemplate))
 	pullCommandTpl    = template.Must(template.New("").Parse(pullCommandTemplate))
-	ansibleCommandTpl = template.Must(template.New("").Parse(ansibleCommandTemplate))
 
 	commandTplMap = map[string]*template.Template{
 		"plan":    planCommandTpl,
@@ -93,12 +90,13 @@ func GenScriptContent(context *ReqBody, saveTo string) error {
 	}
 
 	if err := initCommandTpl.Execute(saveFp, map[string]string{
-		"Repo":              context.Repo,
-		"RepoCommit":        context.RepoCommit,
-		"Workspace":         ContainerWorkspace,
-		"CloudIaCDir":       ContainerIaCDir,
-		"PluginsCachePath":  ContainerPluginsCachePath,
-		"BackendConfigName": BackendConfigName,
+		"Repo":                context.Repo,
+		"RepoCommit":          context.RepoCommit,
+		"Workspace":           ContainerWorkspace,
+		"TaskDir":             ContainerTaskDir,
+		"PluginsCachePath":    ContainerPluginsCachePath,
+		"CloudIacTFName":      CloudIacTFName,
+		"CloudInitScriptName": CloudInitScriptName,
 	}); err != nil {
 		return err
 	}
@@ -109,18 +107,11 @@ func GenScriptContent(context *ReqBody, saveTo string) error {
 	}
 
 	if err := commandTpl.Execute(saveFp, map[string]string{
-		"VarFile": context.Varfile,
+		"VarFile":              context.Varfile,
+		"Playbook":             context.Playbook,
+		"AnsibleStateAnalysis": filepath.Join(ContainerAssetsDir, AnsibleStateAnalysisName),
 	}); err != nil {
 		return err
-	}
-	// ansible动作只应该在apply触发
-	if context.Mode == consts.TaskApply {
-		if err := ansibleCommandTpl.Execute(saveFp, map[string]string{
-			"Playbook":             context.Playbook,
-			"AnsibleStateAnalysis": filepath.Join(ContainerAssetsPath, AnsibleStateAnalysisName),
-		}); err != nil {
-			return err
-		}
 	}
 
 	if context.Extra != "" {

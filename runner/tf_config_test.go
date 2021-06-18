@@ -1,0 +1,79 @@
+package runner
+
+import (
+	"github.com/stretchr/testify/assert"
+	"os"
+	"testing"
+)
+
+const testPrivatePem = `-----BEGIN RSA PRIVATE KEY-----
+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
+-----END RSA PRIVATE KEY-----`
+
+func TestGenBackendConfig(t *testing.T) {
+	workDir, err := os.MkdirTemp(os.TempDir(), "")
+	if !assert.NoError(t, err) {
+		t.Fatal(err)
+	}
+	t.Log(workDir)
+
+	ctx := InjectConfigContext{
+		WorkDir:          workDir,
+		BackendAddress:   "consul:8500",
+		BackendScheme:    "http",
+		BackendPath:      "/path/to/state",
+	}
+
+	err = GenInjectTfConfig(ctx, testPrivatePem)
+	if !assert.NoError(t, err){
+		t.Fatal(err)
+	}
+}

@@ -34,6 +34,8 @@ type ReqBody struct {
 	Varfile      string `json:"varfile"`
 	Extra        string `json:"extra"`
 	Playbook     string `json:"playbook" form:"playbook" `
+
+	PrivateKey string `json:"privateKey"`
 }
 
 type CommitedTask struct {
@@ -141,14 +143,16 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, error) {
 		return nil, nil, err
 	}
 
+	c.PrivateKey = d.PrivateKey
+
 	c.TaskWorkdir = workingDir
 	scriptPath := filepath.Join(c.TaskWorkdir, TaskScriptName)
 	if err := GenScriptContent(&d, scriptPath); err != nil {
 		return nil, nil, err
 	}
 
-	containerScriptPath := filepath.Join(ContainerIaCDir, TaskScriptName)
-	containerLogPath := filepath.Join(ContainerIaCDir, TaskLogName)
+	containerScriptPath := filepath.Join(ContainerTaskDir, TaskScriptName)
+	containerLogPath := filepath.Join(ContainerTaskDir, TaskLogName)
 	c.Commands = []string{"sh", "-c", fmt.Sprintf("%s >>%s 2>&1", containerScriptPath, containerLogPath)}
 
 	// set timeout
