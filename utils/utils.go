@@ -191,6 +191,10 @@ func InArrayStr(arr []string, v string) bool {
 	return false
 }
 
+func StrInArray(v string, arr ...string) bool {
+	return InArrayStr(arr, v)
+}
+
 func UnzipFile(src, dest string) error {
 	r, err := zip.OpenReader(src)
 	if err != nil {
@@ -400,11 +404,48 @@ func TaskLogMsgBytes(format string, args ...interface{}) []byte {
 	return []byte(TaskLogMessage(format, args...))
 }
 
+
+// LimitOffset2Page
+// offset 必须为 limit 的整数倍，否则会 panic
+// page 从 1 开始
+func LimitOffset2Page(limit int, offset int) (page int) {
+	if limit <= 0 {
+		return 1
+	}
+
+	if offset%limit != 0 {
+		panic(fmt.Errorf("LimitOffset2Page: offset(%d) %% limit(%d) != 0", offset, limit))
+	}
+	return (offset / limit) + 1
+}
+
+// PageSize2Offset page 从 1 开始
+func PageSize2Offset(page int, pageSize int) (offset int) {
+	if page <= 1 {
+		return 0
+	}
+	return (page - 1) * pageSize
+}
+
+
+// GenQueryURL url拼接
+// todo 将外部vsc中直接调用api的逻辑重新封装
 func GenQueryURL(address string, path string, params url.Values) string {
-	//...
+	address = GetUrl(address)
 	if params != nil {
 		return fmt.Sprintf("%s%s?%s", address, path, params.Encode())
 	} else {
 		return fmt.Sprintf("%s%s", address, path)
 	}
+}
+
+func ShortContainerId(id string) string {
+	if len(id) < 12 {
+		return id
+	}
+	return 	id[:12]
+}
+
+func GetTaskWorkDir(templateUUID string, taskId string) string {
+	return filepath.Join(templateUUID, taskId)
 }

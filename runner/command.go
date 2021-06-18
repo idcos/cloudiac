@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"cloudiac/consts"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,9 +15,9 @@ export CLOUD_IAC_WORKSPACE={{.Workspace}}
 export CLOUD_IAC_BACKEND_CONFIG=${CLOUD_IAC_DIR}/{{.BackendConfigName}}
 export TF_PLUGIN_CACHE_DIR={{.PluginsCachePath}}
 
-ln -svf ${CLOUD_IAC_BACKEND_CONFIG}  ./_cloud_iac_backend.tf && \
 git clone {{.Repo}} ${CLOUD_IAC_WORKSPACE} && \
 cd "${CLOUD_IAC_WORKSPACE}" && git checkout {{.RepoCommit}} && \
+ln -svf ${CLOUD_IAC_BACKEND_CONFIG}  ./_cloud_iac_backend.tf && \
 terraform init && \`
 
 const planCommandTemplate = `
@@ -25,11 +26,12 @@ terraform plan {{if .VarFile}}-var-file={{.VarFile}}{{end}}
 
 const applyCommandTemplate = `
 terraform apply -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}} && \
-if [ -e run.sh ];then chmod +x run.sh && ./run.sh;fi
+terraform state list > {{.ContainerStateListPath}} 2>&1
 `
 
 const destroyCommandTemplate = `
-terraform destroy -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}}
+terraform destroy -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}} && \
+terraform state list > {{.ContainerStateListPath}} 2>&1
 `
 
 const pullCommandTemplate = `
@@ -107,18 +109,22 @@ func GenScriptContent(context *ReqBody, saveTo string) error {
 	if !ok {
 		return fmt.Errorf("unsupported mode '%s'", context.Mode)
 	}
-
+	containerStateListPath := filepath.Join(ContainerIaCDir, TerraformStateListName)
 	if err := commandTpl.Execute(saveFp, map[string]string{
 		"VarFile": context.Varfile,
+		// 存储terraform state list输出内容弄的文件路径
+		"ContainerStateListPath": containerStateListPath,
 	}); err != nil {
 		return err
 	}
-
-	if err := ansibleCommandTpl.Execute(saveFp, map[string]string{
-		"Playbook":             context.Playbook,
-		"AnsibleStateAnalysis": filepath.Join(ContainerAssetsPath, AnsibleStateAnalysisName),
-	}); err != nil {
-		return err
+	// ansible动作只应该在apply触发
+	if context.Mode == consts.TaskApply {
+		if err := ansibleCommandTpl.Execute(saveFp, map[string]string{
+			"Playbook":             context.Playbook,
+			"AnsibleStateAnalysis": filepath.Join(ContainerAssetsPath, AnsibleStateAnalysisName),
+		}); err != nil {
+			return err
+		}
 	}
 
 	if context.Extra != "" {

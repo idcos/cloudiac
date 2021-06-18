@@ -31,22 +31,34 @@ const (
 	TaskLogName = "runner.log"
 	TaskApply   = "apply"
 	TaskPlan    = "plan"
+	TaskDestroy = "destroy"
 
 	ResourceAccountDisable = "disable"
 	ResourceAccountEnable  = "enable"
 	DockerStatusExited     = "exited"
 	Terraform              = "terraform"
+	Env                    = "env"
 	TerraformVar           = "TF_VAR_"
 	WorkFlow               = "workflow"
-	GitLab                 = "gitlab"
-	GitEA                  = "gitea"
 
-	//todo 正则匹配表达式
-	TfVarFileMatch = ".tfvars"
-	PlaybookMatch  = ".yml"
-	//end
-	VariablePrefix   = "variable.tf"
+	GitTypeGitLab = "gitlab"
+	GitTypeGitEA  = "gitea"
+	GitTypeGithub = "github"
+	GitTypeGitee  = "gitee"
+	GitTypeLocal  = "local"
+
+	MetaYmlMatch   = "meta.y*ml"
+	VariablePrefix = "variable.tf"
+
+	TfVarFileMatch = "*.tfvars"
+	PlaybookMatch  = "playbook.y*ml"
+
+	TerraformStateListName = "state_list.log" //terraform state list 文件名称
+
 	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀
+
+	LocalGitReposPath = "repos"  // 内置 http git server 服务目录
+	ReposUrlPrefix    = "/repos" // 内置 http git server url prefix
 )
 
 var (

@@ -1,35 +1,30 @@
 listen: "0.0.0.0:9030"
 mysql: "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL_DATABASE}?charset=utf8mb4&parseTime=True&loc=Local"
 
-gitlab:
-  url: "${GITLAB_URL}"
-  token: "${GITLAB_TOKEN}"
-  username: "${GITLAB_USERNAME}"
-  type: "${GITLAB_TYPE}"
-
-task:
-  time_ticker: ${TIME_TICKER}
-  log_path: "${LOG_PATH}"
+portal:
+    address: ${PORTAL_ADDRESS}
 
 consul:
   address: "${CONSUL_ADDR}"
   id: "${SERVICE_ID}"
   ip: "${SERVICE_IP}"
-  port: ${SERVICE_PORT}
   tags: "${SERVICE_TAGS}"
-  interval: "${CHECK_INTERVAL}"
-  timeout: "${CHECK_TIMEOUT}"
-  deregister_after: "${DEREGISTER_AFTER}"
+  port: 9030
+  interval: "3s"
+  timeout: "5s"
+  deregister_after: "90m"
 
 log:
     log_level: "debug"
+    log_path: ""    # 日志保存路径，不指定同仅打印到标准输出
     log_max_days: 7
 
 kafka:
     topic: IAC_TASK_REPLY
     group_id: ""
     partition: 0
-    brokers: ["kafka.example.com:9092", "kafka.example.com:9093","kafka.example.com:9094"]
+    // brokers: ["kafka.example.com:9092", "kafka.example.com:9093","kafka.example.com:9094"]
+    brokers: []
     sasl_username: admin
     sasl_password: ""
 

@@ -22,7 +22,7 @@ import (
 type Option struct {
 	common.OptionVersion
 
-	Config     string `short:"c" long:"config"  default:"config.yml" description:"config file"`
+	Config     string `short:"c" long:"config"  default:"config-runner.yml" description:"config file"`
 	Verbose    []bool `short:"v" long:"verbose" description:"Show verbose debug message"`
 	ReRegister bool   `long:"re-register" description:"Re registration service to Consul"`
 }
@@ -44,7 +44,7 @@ func main() {
 	}
 
 	conf := configs.Get().Log
-	logs.Init(conf.LogLevel, conf.LogMaxDays, "ct-runner")
+	logs.Init(conf.LogLevel, conf.LogPath, conf.LogMaxDays)
 
 	common.ReRegisterService(opt.ReRegister, "CT-Runner")
 	StartServer()

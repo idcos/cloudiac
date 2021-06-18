@@ -13,9 +13,9 @@ type CreateTemplateForm struct {
 	BaseForm
 	Name                   string `form:"name" json:"name" binding:"required,gte=2,lte=32"`
 	Description            string `form:"description" json:"Description" binding:""`
-	RepoId                 int    `form:"repoId" json:"repoId" binding:"required"`
-	RepoAddr               string `form:"repoAddr" json:"repoAddr" bingding:"required"`
-	RepoBranch             string `form:"repoBranch" json:"repoBranch" bingding:"required"`
+	RepoId                 string `form:"repoId" json:"repoId" binding:""`
+	RepoAddr               string `form:"repoAddr" json:"repoAddr" bingding:""`
+	RepoBranch             string `form:"repoBranch" json:"repoBranch" bingding:""`
 	SaveState              *bool  `form:"saveState" json:"saveState"`
 	Vars                   []Var  `form:"vars" json:"vars"`
 	Varfile                string `form:"varfile" json:"varfile"`
@@ -26,6 +26,7 @@ type CreateTemplateForm struct {
 	DefaultRunnerPort      uint   `json:"defaultRunnerPort" `
 	DefaultRunnerServiceId string `json:"defaultRunnerServiceId"`
 	Playbook               string `json:"playbook" form:"playbook" `
+	MetaTemplateId         uint   `json:"metaTemplateId" form:"metaTemplateId" `
 }
 
 type SearchTemplateForm struct {
@@ -70,16 +71,15 @@ type OverviewTemplateForm struct {
 
 type TemplateTfvarsSearchForm struct {
 	BaseForm
-	RepoId     uint   `json:"repoId" form:"repoId" `
+	RepoId     string `json:"repoId" form:"repoId"`
 	RepoBranch string `json:"repoBranch" form:"repoBranch" `
 	RepoType   string `json:"repoType" form:"repoType" `
 	VcsId      uint   `json:"vcsId" form:"vcsId"`
 }
 
-
 type TemplateVariableSearchForm struct {
 	BaseForm
-	RepoId     uint   `json:"repoId" form:"repoId" `
+	RepoId     string `json:"repoId" form:"repoId" `
 	RepoBranch string `json:"repoBranch" form:"repoBranch" `
 	RepoType   string `json:"repoType" form:"repoType" `
 	VcsId      uint   `json:"vcsId" form:"vcsId"`
@@ -87,11 +87,8 @@ type TemplateVariableSearchForm struct {
 
 type TemplatePlaybookSearchForm struct {
 	BaseForm
-	RepoId     uint   `json:"repoId" form:"repoId" `
+	RepoId     string `json:"repoId" form:"repoId" `
 	RepoBranch string `json:"repoBranch" form:"repoBranch" `
 	RepoType   string `json:"repoType" form:"repoType" `
 	VcsId      uint   `json:"vcsId" form:"vcsId"`
 }
-
-
-

@@ -6,7 +6,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"io"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -33,31 +32,29 @@ func init() {
 	defaultLogger = newLogger()
 }
 
-// 根据配置文件配置 logger
-func Init(level string, maxDays int, name string) {
-	if maxDays == 0 {
-		maxDays = 7
-	}
-	abs, _ := filepath.Abs(os.Args[0])
-	dir := filepath.Dir(abs)
-	ext := filepath.Ext(name)
-	execName := name[:len(name)-len(ext)]
+// Init 根据配置文件配置 logger
+func Init(level string, path string, maxDays int) {
+	writers := []io.Writer{os.Stdout}
 
-	logPath := filepath.Join(dir, "logs", execName+".log")
-	//日志按天切割
-	rl, err := rotatelogs.New(
-		fmt.Sprintf("%s.%%Y%%m%%d", logPath),
-		rotatelogs.WithLinkName(logPath),
-		rotatelogs.WithRotationTime(time.Hour*24),
-		rotatelogs.WithMaxAge(time.Hour*24*time.Duration(maxDays)),
-	)
-	if err != nil {
-		logrus.Fatalf("failed to open log file: %v", err)
+	if path != "" {
+		if maxDays == 0 {
+			maxDays = 7
+		}
+		//日志按天切割
+		rl, err := rotatelogs.New(
+			fmt.Sprintf("%s.%%Y%%m%%d", path),
+			rotatelogs.WithLinkName(path),
+			rotatelogs.WithRotationTime(time.Hour*24),
+			rotatelogs.WithMaxAge(time.Hour*24*time.Duration(maxDays)),
+		)
+		if err != nil {
+			logrus.Fatalf("failed to open log file: %v", err)
+		} else {
+			writers = append(writers, rl)
+		}
 	}
-	// 同时进行标准输出
-	writers := io.MultiWriter(rl, os.Stdout)
 
-	defaultLogger.SetOutput(writers)
+	defaultLogger.SetOutput(io.MultiWriter(writers...))
 	if level != "" {
 		lvl, err := logrus.ParseLevel(level)
 		if err != nil {
@@ -70,7 +67,3 @@ func Init(level string, maxDays int, name string) {
 func Get() Logger {
 	return defaultLogger
 }
-
-//func init() {
-//	Init("DEBUG")
-//}

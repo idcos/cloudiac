@@ -58,7 +58,7 @@ func OpenDetailTemplate(c *ctx.ServiceCtx, gUid string) (interface{}, e.Error) {
 	if er != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("query vcs detail error: %v", er))
 	}
-	if vcs.VcsType == consts.GitLab {
+	if vcs.VcsType == consts.GitTypeGitLab {
 		git, err := vcs2.GetGitConn(vcs.VcsToken, vcs.Address)
 		if err != nil {
 			return nil, err
@@ -72,8 +72,8 @@ func OpenDetailTemplate(c *ctx.ServiceCtx, gUid string) (interface{}, e.Error) {
 		}
 	}
 
-	if vcs.VcsType == consts.GitEA {
-		commit,err:= vcs2.GetGiteaBranchCommitId(vcs,uint(tpl.RepoId),tpl.RepoBranch)
+	if vcs.VcsType == consts.GitTypeGitEA {
+		commit, err := vcs2.GetGiteaBranchCommitId(vcs, tpl.RepoId, tpl.RepoBranch)
 		if err != nil {
 			return nil, e.New(e.GitLabError, fmt.Errorf("query commit id error: %v", er))
 		}

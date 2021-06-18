@@ -4,14 +4,12 @@ import (
 	"cloudiac/consts/e"
 	"cloudiac/models"
 	"cloudiac/utils"
-	"cloudiac/utils/logs"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	fPath "path"
 	"strconv"
 	"time"
 )
@@ -29,7 +27,7 @@ type githubVcs struct {
 }
 
 func (github *githubVcs) GetRepo(idOrPath string) (RepoIface, error) {
-	path := utils.GenQueryURL(GetGiteaUrl(github.vcs.Address), fmt.Sprintf("/repos/%s", idOrPath), nil)
+	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s", idOrPath), nil)
 	_, body, er := github.githubRequest(path, "GET", github.vcs.VcsToken)
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)
@@ -57,18 +55,19 @@ type RepositoryGithub struct {
 	FullName      string    `json:"full_name"`
 }
 
-func (github *githubVcs) ListRepos(namespace, search string, limit, offset uint) ([]RepoIface, error) {
+func (github *githubVcs) ListRepos(namespace, search string, limit, offset int) ([]RepoIface, int64, error) {
+	page := utils.LimitOffset2Page(limit, offset)
 	urlParam := url.Values{}
-	urlParam.Set("page", strconv.Itoa(int(offset)))
-	urlParam.Set("per_page", strconv.Itoa(int(limit)))
+	urlParam.Set("page", strconv.Itoa(page))
+	urlParam.Set("per_page", strconv.Itoa(limit))
 
 	if search != "" {
 		urlParam.Set("q", search)
 	}
-	path := utils.GenQueryURL(GetGiteaUrl(github.vcs.Address), "/user/repos", urlParam)
+	path := utils.GenQueryURL(github.vcs.Address, "/user/repos", urlParam)
 	response, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken)
 	if err != nil {
-		return nil, e.New(e.BadRequest, err)
+		return nil, 0, e.New(e.BadRequest, err)
 	}
 
 	var total int64
@@ -88,7 +87,7 @@ func (github *githubVcs) ListRepos(namespace, search string, limit, offset uint)
 		})
 	}
 
-	return repoList, nil
+	return repoList, total, nil
 }
 
 type githubRepoIface struct {
@@ -102,13 +101,10 @@ type githubBranch struct {
 	Name string `json:"name" form:"name" `
 }
 
-func (github *githubRepoIface) ListBranches(search string, limit, offset uint) ([]string, error) {
-	urlParam := url.Values{}
-	urlParam.Set("page", strconv.Itoa(int(offset)))
-	urlParam.Set("per_page", strconv.Itoa(int(limit)))
+func (github *githubRepoIface) ListBranches() ([]string, error) {
 
-	path := utils.GenQueryURL(GetGiteaUrl(github.vcs.Address),
-		fmt.Sprintf("/repos/%s/branches", github.repository.FullName), urlParam)
+	path := utils.GenQueryURL(github.vcs.Address,
+		fmt.Sprintf("/repos/%s/branches", github.repository.FullName), nil)
 	_, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
@@ -130,7 +126,7 @@ type githubCommit struct {
 }
 
 func (github *githubRepoIface) BranchCommitId(branch string) (string, error) {
-	path := utils.GenQueryURL(GetGiteaUrl(github.vcs.Address),
+	path := utils.GenQueryURL(github.vcs.Address,
 		fmt.Sprintf("/repos/%s/commits/%s", github.repository.FullName, branch), nil)
 	_, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken)
 	if err != nil {
@@ -153,10 +149,10 @@ func (github *githubRepoIface) ListFiles(option VcsIfaceOptions) ([]string, erro
 	urlParam.Set("ref", option.Ref)
 	var path string
 	if option.Path != "" {
-		path = utils.GenQueryURL(GetGiteaUrl(github.vcs.Address),
+		path = utils.GenQueryURL(github.vcs.Address,
 			fmt.Sprintf("/repos/%s/contents/%s", github.repository.FullName, option.Path), urlParam)
 	} else {
-		path = utils.GenQueryURL(GetGiteaUrl(github.vcs.Address),
+		path = utils.GenQueryURL(github.vcs.Address,
 			fmt.Sprintf("/repos/%s/contents/%s", github.repository.FullName, "%2F"), urlParam)
 	}
 	_, body, er := github.githubRequest(path, "GET", github.vcs.VcsToken)
@@ -191,7 +187,7 @@ type githubReadContent struct {
 func (github *githubRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
 	urlParam := url.Values{}
 	urlParam.Set("ref", branch)
-	pathAddr := utils.GenQueryURL(GetGiteaUrl(github.vcs.Address),
+	pathAddr := utils.GenQueryURL(github.vcs.Address,
 		fmt.Sprintf("/repos/%s/contents/%s", github.repository.FullName, path), urlParam)
 	_, body, er := github.githubRequest(pathAddr, "GET", github.vcs.VcsToken)
 	if er != nil {

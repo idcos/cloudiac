@@ -266,8 +266,7 @@ func (m *TaskManager) runStartTask(ctx context.Context, task *models.Task) error
 		defer m.wg.Done()
 
 		m.notifyTaskStarting(task)
-		_, err := services.StartTask(m.db, task)
-		if err != nil {
+		if err := services.StartTask(m.db, task); err != nil {
 			m.logger.Errorf("start task error: %v", err)
 			if task.Status == consts.TaskAssigning {
 				// 下发失败，还原为 pending 状态，等待下次重试

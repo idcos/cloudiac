@@ -1,8 +1,12 @@
 package vcsrv
 
 import (
+	"cloudiac/consts"
 	"cloudiac/consts/e"
 	"cloudiac/models"
+	"fmt"
+	"path"
+
 	"github.com/pkg/errors"
 )
 
@@ -11,12 +15,12 @@ version control service 接口
 */
 
 type VcsIfaceOptions struct {
-	Ref                 string
-	Path                string
-	Search              string
-	Recursive           bool
-	Limit               int
-	Offset              int
+	Ref       string
+	Path      string
+	Search    string
+	Recursive bool
+	Limit     int
+	Offset    int
 }
 
 type VcsIface interface {
@@ -28,15 +32,13 @@ type VcsIface interface {
 	// param namespace: namespace 可用于表示用户、组织等
 	// param search: 搜索字符串
 	// param limit: 限制返回的文件数，传 0 表示无限制
-	ListRepos(namespace, search string, limit, offset uint) ([]RepoIface, error)
+	// return in64(分页total数量)
+	ListRepos(namespace, search string, limit, offset int) ([]RepoIface, int64, error)
 }
 
 type RepoIface interface {
 	// ListBranches
-	// param search: 搜索字符串
-	// param limit: 限制返回的文件数，传 0 表示无限制
-	// param offset: 偏移量
-	ListBranches(search string, limit, offset uint) ([]string, error)
+	ListBranches() ([]string, error)
 
 	// BranchCommitId
 	//param branch: 分支
@@ -55,7 +57,7 @@ type RepoIface interface {
 	// ReadFileContent
 	// param path: 路径
 	// param branch: 分支
-	ReadFileContent(branch,path string) (content []byte, err error)
+	ReadFileContent(branch, path string) (content []byte, err error)
 
 	// FormatRepoSearch 格式化输出前端需要的内容
 	FormatRepoSearch() (project *Projects, err e.Error)
@@ -63,16 +65,30 @@ type RepoIface interface {
 
 func GetVcsInstance(vcs *models.Vcs) (VcsIface, error) {
 	switch vcs.VcsType {
-	case "gitlab":
+	case consts.GitTypeLocal:
+		return newLocalVcs(vcs.Address), nil
+	case consts.GitTypeGitLab:
 		return newGitlabInstance(vcs)
-	case "gitea":
+	case consts.GitTypeGitEA:
 		return newGiteaInstance(vcs)
-	case "github":
+	case consts.GitTypeGithub:
 		return newGithubInstance(vcs)
-	case "gitee":
-		//return newGitlabInstance(vcs)
+	case consts.GitTypeGitee:
+		return newGiteeInstance(vcs)
 	default:
 		return nil, errors.New("vcs type doesn't exist")
 	}
-	return nil, nil
+}
+
+func matchGlob(search, name string) bool {
+	if search == "" {
+		return true
+	}
+
+	pattern := fmt.Sprintf("*%s*", search)
+	matched, err := path.Match(pattern, name)
+	if err != nil {
+		return false
+	}
+	return matched
 }

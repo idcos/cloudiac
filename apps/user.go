@@ -8,6 +8,7 @@ import (
 	"cloudiac/models/forms"
 	"cloudiac/services"
 	"cloudiac/utils"
+	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -32,8 +33,8 @@ func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*models.User, e.
 	user, err := func() (*models.User, e.Error) {
 		var (
 			user *models.User
-			err    e.Error
-			er     e.Error
+			err  e.Error
+			er   e.Error
 		)
 
 		user, err = services.CreateUser(tx, models.User{
@@ -52,7 +53,7 @@ func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*models.User, e.
 
 		// 建立用户与组织间关联
 		_, er = services.CreateUserOrgMap(tx, models.UserOrgMap{
-			OrgId: c.OrgId,
+			OrgId:  c.OrgId,
 			UserId: user.Id,
 		})
 		if er != nil {
@@ -75,9 +76,9 @@ func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*models.User, e.
 
 type searchUserResp struct {
 	models.User
-	Password    string `json:"-"`
-	InitPass    string `json:"-"`
-	Role        string `json:"role"`
+	Password string `json:"-"`
+	InitPass string `json:"-"`
+	Role     string `json:"role"`
 }
 
 func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.Error) {
@@ -121,6 +122,7 @@ func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.E
 	}, nil
 }
 
+
 func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (user *models.User, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update user %d", form.Id))
 	if form.Id == 0 {
@@ -143,6 +145,11 @@ func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (user *models.Use
 
 	if form.HasKey("phone") {
 		attrs["phone"] = form.Phone
+	}
+
+	if form.HasKey("newbieGuide") {
+		b, _ := json.Marshal(form.NewbieGuide)
+		attrs["newbie_guide"] = b
 	}
 
 	if form.HasKey("oldPassword") {
@@ -169,8 +176,7 @@ func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (user *models.Use
 		attrs["password"] = newPassword
 	}
 
-	user, err = services.UpdateUser(c.DB(), form.Id, attrs)
-	return
+	return services.UpdateUser(c.DB().Debug(), form.Id, attrs)
 }
 
 func DeleteUserOrgMap(c *ctx.ServiceCtx, form *forms.DeleteUserForm) (result interface{}, re e.Error) {

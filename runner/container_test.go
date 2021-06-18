@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"log"
 	"time"
 )
@@ -10,10 +11,10 @@ func ExampleContainerWait() {
 		TemplateId:       "tplId",
 		TaskId:           "taskId",
 		ContainerId:      "",
-		LogContentOffset: 0,
 	}
 
-	_, err := task.Wait(time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	_, err := task.Wait(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}

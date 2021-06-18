@@ -64,6 +64,15 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.CommitedTask, closed <-ch
 			} else {
 				msg.LogContent = logs
 			}
+
+			stateList, err := runner.FetchStateList(task.TemplateId, task.TaskId)
+			if err != nil {
+				logger.Errorf("Fetch state list error: %v", err)
+				msg.StateListContent = utils.TaskLogMsgBytes("Fetch state list error: %v", err)
+			} else {
+				msg.StateListContent = stateList
+			}
+
 		}
 
 		if err := wsConn.WriteJSON(msg); err != nil {
@@ -74,6 +83,8 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.CommitedTask, closed <-ch
 	}
 
 	ctx, cancelFun := context.WithCancel(context.Background())
+	defer cancelFun()
+
 	waitCh := make(chan error, 1)
 	go func() {
 		defer close(waitCh)
@@ -90,10 +101,11 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.CommitedTask, closed <-ch
 	defer ticker.Stop()
 
 	logger.Infof("watching task status")
+	defer logger.Infof("watch task status done")
 	for {
 		select {
 		case <-closed:
-			logger.Debugf("peer connection closed")
+			logger.Debugf("connection closed")
 			cancelFun()
 		case <-ticker.C:
 			// 定时发送最新任务状态

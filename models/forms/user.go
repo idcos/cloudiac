@@ -2,26 +2,28 @@ package forms
 
 type CreateUserForm struct {
 	BaseForm
-	Name     string `form:"name" json:"name" binding:"required,gte=2,lte=32"`
-	Phone    string `form:"phone" json:"phone" binding:"max=11"`
-	Email    string `form:"email" json:"email" binding:"required,email"`
+	Name  string `form:"name" json:"name" binding:"required,gte=2,lte=32"`
+	Phone string `form:"phone" json:"phone" binding:"max=11"`
+	Email string `form:"email" json:"email" binding:"required,email"`
 }
 
 type UpdateUserForm struct {
 	BaseForm
-	Id          uint   `form:"id" json:"id" binding:""`
-	Name        string `form:"name" json:"name" binding:""`
-	Phone       string `form:"phone" json:"phone" binding:""`
+	Id    uint   `form:"id" json:"id" binding:""`
+	Name  string `form:"name" json:"name" binding:""`
+	Phone string `form:"phone" json:"phone" binding:""`
 	//Email       string `form:"email" json:"email" binding:""`	// 邮箱不可编辑
-	OldPassword string `form:"oldPassword" json:"oldPassword" binding:""`
-	NewPassword string `form:"newPassword" json:"newPassword" binding:""`
+	OldPassword string      `form:"oldPassword" json:"oldPassword" binding:""`
+	NewPassword string      `form:"newPassword" json:"newPassword" binding:""`
+	NewbieGuide map[string]uint64 `json:"newbieGuide" form:"newbieGuide" `
 }
+
 
 type SearchUserForm struct {
 	BaseForm
 
-	Q          string `form:"q" json:"q" binding:""`
-	Status     string `form:"status" json:"status"`
+	Q      string `form:"q" json:"q" binding:""`
+	Status string `form:"status" json:"status"`
 }
 
 type DeleteUserForm struct {

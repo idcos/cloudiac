@@ -9,7 +9,8 @@ import (
 	"cloudiac/models/forms"
 	"cloudiac/services"
 	"cloudiac/services/vcsrv"
-	"strconv"
+	"cloudiac/utils"
+	"strings"
 )
 
 func CreateVcs(c *ctx.ServiceCtx, form *forms.CreateVcsForm) (interface{}, e.Error) {
@@ -76,15 +77,19 @@ func GetReadme(c *ctx.ServiceCtx, form *forms.GetReadmeForm) (interface{}, e.Err
 	}
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
-	repo, er := vcsService.GetRepo(strconv.Itoa(form.RepoId))
+	repo, er := vcsService.GetRepo(form.RepoId)
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
 	b, er := repo.ReadFileContent(form.Branch, "README.md")
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		if strings.Contains(er.Error(), "not found") {
+			b = make([]byte, 0)
+		} else {
+			return nil, e.New(e.GitLabError, er)
+		}
 	}
 	res := models.FileContent{
 		Content: string(b[:]),
@@ -100,19 +105,19 @@ func ListRepos(c *ctx.ServiceCtx, form *forms.GetGitProjectsForm) (interface{}, 
 
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
-	repo, er := vcsService.ListRepos("", form.Q, uint(form.PageSize_), uint(form.CurrentPage_))
+	limit := form.PageSize()
+	offset := utils.PageSize2Offset(form.CurrentPage(), limit)
+	repo, total, er := vcsService.ListRepos("", form.Q, limit, offset)
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
 	project := make([]*vcsrv.Projects, 0)
-	var total int64
 	for _, repo := range repo {
-		total++
 		proj, er := repo.FormatRepoSearch()
 		if er != nil {
-			return nil, err
+			return nil, er
 		}
 		project = append(project, proj)
 	}
@@ -136,15 +141,16 @@ func ListRepoBranches(c *ctx.ServiceCtx, form *forms.GetGitBranchesForm) (brans 
 
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
-	repo, er := vcsService.GetRepo(strconv.Itoa(form.RepoId))
+
+	repo, er := vcsService.GetRepo(form.RepoId)
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
-	branchList, er := repo.ListBranches("", 0, 0)
+	branchList, er := repo.ListBranches()
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
 	for _, v := range branchList {
 		brans = append(brans, &Branches{
@@ -162,18 +168,18 @@ func VcsTfVarsSearch(c *ctx.ServiceCtx, form *forms.TemplateTfvarsSearchForm) (i
 
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
-	repo, er := vcsService.GetRepo(strconv.Itoa(int(form.RepoId)))
+	repo, er := vcsService.GetRepo(form.RepoId)
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
 		Ref:    form.RepoBranch,
 		Search: consts.TfVarFileMatch,
 	})
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
 
 	return listFiles, nil
@@ -187,18 +193,19 @@ func VcsPlaybookSearch(c *ctx.ServiceCtx, form *forms.TemplatePlaybookSearchForm
 
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
-	repo, er := vcsService.GetRepo(strconv.Itoa(int(form.RepoId)))
+	repo, er := vcsService.GetRepo(form.RepoId)
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
-		Ref:    form.RepoBranch,
-		Search: consts.PlaybookMatch,
+		Ref:       form.RepoBranch,
+		Search:    consts.PlaybookMatch,
+		Recursive: true,
 	})
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
 
 	return listFiles, nil
@@ -212,9 +219,9 @@ func VcsVariableSearch(c *ctx.ServiceCtx, form *forms.TemplateVariableSearchForm
 
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
-	repo, er := vcsService.GetRepo(strconv.Itoa(int(form.RepoId)))
+	repo, er := vcsService.GetRepo(form.RepoId)
 	if er != nil {
 		return nil, e.New(e.GitLabError, err)
 	}
@@ -223,17 +230,17 @@ func VcsVariableSearch(c *ctx.ServiceCtx, form *forms.TemplateVariableSearchForm
 		Search: consts.VariablePrefix,
 	})
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.GitLabError, er)
 	}
 	tvl := make([]services.TemplateVariable, 0)
 	for _, file := range listFiles {
 		content, er := repo.ReadFileContent(form.RepoBranch, file)
 		if er != nil {
-			return nil, e.New(e.GitLabError, err)
+			return nil, e.New(e.GitLabError, er)
 		}
 		tvs, er := services.TemplateVariableSearch(content)
 		if er != nil {
-			return nil, e.New(e.GitLabError, err)
+			return nil, e.New(e.GitLabError, er)
 		}
 		tvl = append(tvl, tvs...)
 	}

@@ -42,13 +42,15 @@ func (b *TaskBackendInfo) Scan(value interface{}) error {
 }
 
 const (
-	PENDING       = consts.TaskPending
-	RUNNING       = consts.TaskRunning
-	TaskAssigning = consts.TaskAssigning
-	FAILED        = consts.TaskFailed
-	COMPLETE      = consts.TaskComplete
-	TIMEOUT       = consts.TaskTimeout
+	PENDING   = consts.TaskPending
+	RUNNING   = consts.TaskRunning
+	ASSIGNING = consts.TaskAssigning
+	FAILED    = consts.TaskFailed
+	COMPLETE  = consts.TaskComplete
+	TIMEOUT   = consts.TaskTimeout
 )
+
+var TaskStatusList = []string{PENDING, RUNNING, ASSIGNING, FAILED, COMPLETE, TIMEOUT}
 
 const (
 	PLAN  = consts.TaskPlan
@@ -71,12 +73,12 @@ type Task struct {
 	CtServiceId   string     `json:"ctServiceId" gorm:"comment:'runnerId'"`
 	Source        string     `json:"source" gorm:"null;comment:'来源(workflow等)'"`
 	TransactionId string     `json:"transactionId" gorm:"null;comment:'流水号Id(workflow用)'"`
-	Add           string     `json:"add" gorm:"default:0"`
-	Change        string     `json:"change" gorm:"default:0"`
-	Destroy       string     `json:"destroy" gorm:"default:0"`
+	Add           string     `json:"add" gorm:"default:'0'"`
+	Change        string     `json:"change" gorm:"default:'0'"`
+	Destroy       string     `json:"destroy" gorm:"default:'0'"`
 	AllowApply    bool       `json:"allowApply" gorm:"default:false"`
 
-	SourceVars  JSON            `json:"sourceVars" gorm:"type:json;null;comment:'来源参数(workflow等)'"`
+	SourceVars  JSON             `json:"sourceVars" gorm:"type:json;null;comment:'来源参数(workflow等)'"`
 	BackendInfo *TaskBackendInfo `json:"backendInfo" gorm:"type:json;null;comment:'执行信息'" json:"backend_info"`
 }
 

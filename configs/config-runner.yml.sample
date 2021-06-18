@@ -2,24 +2,27 @@ listen: "0.0.0.0:19030"
 
 runner:
   default_image: "mt5225/tf-ansible:v0.0.1"
-  ## 保存任务运行信息(脚本、日志等)
-  storage_path: "./storage"
+
   ## 预置资源(providers, terraform.py 等)
   assets_path: "./assets"
+
   ## plugins 缓存
   plugin_cache_path: "./plugin-cache"
 
+  ## 保存任务运行信息(脚本、日志等)
+  storage_path: "./storage"
+
 consul:
-  address: "consul.example.com:8500"
+  address: "consul:8500"
   id: "CT-Runner-01"
-  ip: "runner01.example.com"
+  ip: "runner"
   port: 19030
-  tags: "tag1;tag2"
+  tags: "ct-runner;runner-01"
   interval: 5s
   timeout: 3s
   deregister_after: "90m"
 
 log:
   log_level: "debug"
+  log_path: ""    # 日志保存路径，不指定同仅打印到标准输出
   log_max_days: 7
-

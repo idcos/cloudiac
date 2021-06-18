@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 type IaCTemplate struct {
@@ -36,10 +37,11 @@ type ReqBody struct {
 }
 
 type CommitedTask struct {
-	TemplateId       string `json:"templateId"`
-	TaskId           string `json:"taskId"`
-	ContainerId      string `json:"containerId"`
-	LogContentOffset int    `json:"offset"`
+	TemplateId  string `json:"templateId"`
+	TaskId      string `json:"taskId"`
+	ContainerId string `json:"containerId"`
+
+	containerInfoLock sync.RWMutex `json:"-"`
 }
 
 // 判断目录是否存在
@@ -75,6 +77,11 @@ func GetTaskWorkDir(templateUUID string, taskId string) string {
 
 func FetchTaskLog(templateUUID string, taskId string) ([]byte, error) {
 	logFile := filepath.Join(GetTaskWorkDir(templateUUID, taskId), TaskLogName)
+	return ioutil.ReadFile(logFile)
+}
+
+func FetchStateList(templateUUID string, taskId string) ([]byte, error) {
+	logFile := filepath.Join(GetTaskWorkDir(templateUUID, taskId), TerraformStateListName)
 	return ioutil.ReadFile(logFile)
 }
 
