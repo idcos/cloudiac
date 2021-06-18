@@ -108,12 +108,18 @@ func TaskStateList(query *db.Session, tplGuid string) (interface{}, e.Error) {
 	stateList := make([]string, 0)
 	var reader io.Reader
 	lastTask, err := GetLastTaskByTemplateGuid(query, tplGuid)
-	if err != nil && !e.IsRecordNotFound(err) {
+	if err != nil {
+		if !e.IsRecordNotFound(err) {
+			return stateList, nil
+		}
 		return nil, err
 	}
 	taskPath := utils.GetTaskWorkDir(lastTask.TemplateGuid, lastTask.Guid)
 	path := filepath.Join(taskPath, consts.TerraformStateListName)
-	if content, err := logstorage.Get().Read(path); err != nil && !e.IsRecordNotFound(err) {
+	if content, err := logstorage.Get().Read(path); err != nil {
+		if !e.IsRecordNotFound(err) {
+			return stateList, nil
+		}
 		return nil, e.New(e.TaskNotExists, err)
 	} else {
 		reader = bytes.NewBuffer(content)
