@@ -48,7 +48,7 @@ const (
 	GitTypeLocal  = "local"
 
 	MetaYmlMatch   = "meta.y*ml"
-	VariablePrefix = "variable.tf"
+	VariablePrefix = "variables.tf"
 
 	TfVarFileMatch = "*.tfvars"
 	PlaybookMatch  = "playbook.y*ml"

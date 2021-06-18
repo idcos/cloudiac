@@ -92,7 +92,13 @@ func LastTask(tx *db.Session, tplId uint) *db.Session {
 
 func GetLastTaskByTemplateGuid(tx *db.Session, tplGuid string) (*models.Task, e.Error) {
 	task := &models.Task{}
-	if err := tx.Table(models.Task{}.TableName()).Where("template_guid = ?", tplGuid).Last(task); err != nil {
+	if err := tx.Table(models.Task{}.TableName()).
+		Where("template_guid = ?", tplGuid).
+		Where("task_type in (?)", []string{
+			consts.TaskApply,
+			consts.TaskDestroy,
+		}).
+		Last(task); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 	return task, nil
@@ -102,12 +108,12 @@ func TaskStateList(query *db.Session, tplGuid string) (interface{}, e.Error) {
 	stateList := make([]string, 0)
 	var reader io.Reader
 	lastTask, err := GetLastTaskByTemplateGuid(query, tplGuid)
-	if err != nil {
+	if err != nil && !e.IsRecordNotFound(err) {
 		return nil, err
 	}
 	taskPath := utils.GetTaskWorkDir(lastTask.TemplateGuid, lastTask.Guid)
 	path := filepath.Join(taskPath, consts.TerraformStateListName)
-	if content, err := logstorage.Get().Read(path); err != nil {
+	if content, err := logstorage.Get().Read(path); err != nil && !e.IsRecordNotFound(err) {
 		return nil, e.New(e.TaskNotExists, err)
 	} else {
 		reader = bytes.NewBuffer(content)
