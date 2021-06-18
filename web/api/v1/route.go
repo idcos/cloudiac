@@ -84,6 +84,6 @@ func Register(g *gin.RouterGroup) {
 	}
 
 	// TODO 增加鉴权
-	g.GET("/taskLog/sse", w(handlers.Task{}.FollowLogSse))
+	//g.GET("/taskLog/sse", w(handlers.Task{}.FollowLogSse))
 	g.GET("/task/log/sse", w(handlers.Task{}.FollowLogSse))
 }
