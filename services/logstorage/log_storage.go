@@ -8,7 +8,6 @@ import (
 type LogStorage interface {
 	Write(path string, content []byte) error
 	Read(path string) ([]byte, error)
-	ReadStateList(path string) ([]byte, error)
 }
 
 var (

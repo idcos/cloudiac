@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -89,10 +90,24 @@ func LastTask(tx *db.Session, tplId uint) *db.Session {
 	return tx.Table(models.Task{}.TableName()).Where("template_id = ?", tplId)
 }
 
+func GetLastTaskByTemplateGuid(tx *db.Session, tplGuid string) (*models.Task, e.Error) {
+	task := &models.Task{}
+	if err := tx.Table(models.Task{}.TableName()).Where("template_guid = ?", tplGuid).Last(task); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return task, nil
+}
+
 func TaskStateList(task *models.Task) (interface{}, e.Error) {
 	stateList := make([]string, 0)
 	var reader io.Reader
-	if content, err := logstorage.Get().ReadStateList(task.TemplateGuid); err != nil {
+	lastTask, err := GetLastTaskByTemplateGuid(db.Get(), task.TemplateGuid)
+	if err != nil {
+		return nil, err
+	}
+	taskPath := utils.GetTaskWorkDir(lastTask.TemplateGuid, lastTask.Guid)
+	path := filepath.Join(taskPath, consts.TerraformStateListName)
+	if content, err := logstorage.Get().Read(path); err != nil {
 		return nil, e.New(e.TaskNotExists, err)
 	} else {
 		reader = bytes.NewBuffer(content)
