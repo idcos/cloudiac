@@ -57,7 +57,7 @@ type MetaFileTemplate struct {
 
 type MetaFileTerraform struct {
 	Workdir   string            `yaml:"workdir"`
-	Vars      map[string]string `yaml:"vars"`
+	Var       map[string]string `yaml:"var"`
 	VarFile   string            `yaml:"var_file"`
 	SaveState bool              `yaml:"save_state"`
 }
@@ -116,11 +116,11 @@ func InitMetaTemplate(tx *db.Session) error {
 			continue
 		}
 
-		fileNameMatch2Analysis(files, repo, vcs, project,tx)
+		fileNameMatch2Analysis(files, repo, vcs, project, tx)
 	}
 	return nil
 }
-func fileNameMatch2Analysis(files []string, repo vcsrv.RepoIface, vcs *models.Vcs, project *vcsrv.Projects,tx *db.Session) {
+func fileNameMatch2Analysis(files []string, repo vcsrv.RepoIface, vcs *models.Vcs, project *vcsrv.Projects, tx *db.Session) {
 	for _, file := range files {
 		content, err := repo.ReadFileContent("master", file)
 		if err != nil {
@@ -135,7 +135,7 @@ func fileNameMatch2Analysis(files []string, repo vcsrv.RepoIface, vcs *models.Vc
 		for _, template := range mt.Templates {
 			if _, err := CreateMetaTemplate(tx.Debug(), models.MetaTemplate{
 				Name:       template.Name,
-				Vars:       models.JSON(var2TerraformVar(template.Terraform.Vars, template.Env)),
+				Vars:       models.JSON(var2TerraformVar(template.Terraform.Var, template.Env)),
 				Playbook:   template.Ansible.Playbook,
 				SaveState:  template.Terraform.SaveState,
 				VcsId:      vcs.Id,
