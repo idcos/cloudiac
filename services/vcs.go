@@ -82,32 +82,37 @@ type TemplateVariable struct {
 	Name        string `json:"name" form:"name" `
 }
 
-func TemplateVariableSearch(content []byte) ([]TemplateVariable, e.Error) {
-	return readHCLFile(content)
+type tfVariableConfig struct {
+	Upstreams []*tfVariableBlock `hcl:"variable,block"`
 }
 
-type Config struct {
-	Upstreams []*TfVariable `hcl:"variable,block"`
+type tfVariableBlock struct {
+	Name        string      `hcl:",label"`
+	Default     string      `hcl:"default,optional"`
+	Type        interface{} `hcl:"type,optional"`
+	Description string      `hcl:"description,optional"`
+	Sensitive   bool        `hcl:"sensitive,optional"`
+	Validation  *struct {
+		Condition    interface{} `hcl:"condition,attr"`
+		ErrorMessage string      `hcl:"error_message,optional"`
+	} `hcl:"validation,block"`
 }
 
-type TfVariable struct {
-	Name string `hcl:",label"`
-	// Default     string `hcl:"default,optional"`
-	Description string `hcl:"description,optional"`
-	// validation block
-	Default string `hcl:"default,optional"`
-}
-
-func readHCLFile(content []byte) ([]TemplateVariable, e.Error) {
-	file, diags := hclsyntax.ParseConfig(content, "", hcl.Pos{Line: 1, Column: 1})
-	if diags.HasErrors() {
-		logs.Get().Error(fmt.Errorf("ParseConfig: %w", diags))
+// ParseTfVariables hcl parse doc: https://pkg.go.dev/github.com/hashicorp/hcl/v2/gohcl
+func ParseTfVariables(filename string, content []byte) ([]TemplateVariable, e.Error) {
+	logger := logs.Get().WithField("filename", filename)
+	file, diagErrs := hclsyntax.ParseConfig(content, filename, hcl.Pos{Line: 1, Column: 1})
+	if diagErrs != nil && diagErrs.HasErrors() {
+		logger.Error(fmt.Errorf("ParseConfig: %w", diagErrs))
+		return nil, e.New(e.HCLParseError, diagErrs)
 	}
-	c := &Config{}
-	diags = gohcl.DecodeBody(file.Body, nil, c)
-	if diags.HasErrors() {
-		return nil, e.New(e.GitLabError, fmt.Errorf("DecodeBody: %w", diags))
+
+	c := &tfVariableConfig{}
+	diagErrs = gohcl.DecodeBody(file.Body, nil, c)
+	for _, d := range diagErrs {
+		logger.Warnf(d.Error())
 	}
+
 	tv := make([]TemplateVariable, 0)
 	for _, s := range c.Upstreams {
 		tv = append(tv, TemplateVariable{
