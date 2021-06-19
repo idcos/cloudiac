@@ -14,6 +14,8 @@ const (
 	DefaultPageSize = 15
 	MaxPageSize     = 5000 // 同时是 csv 最大导出条数
 
+	MaxLogContentSize = 1024 * 1024 // 最大日志文件大小，超限会被截断
+
 	DefaultAdminEmail = "admin@example.com"
 )
 
