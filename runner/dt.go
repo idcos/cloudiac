@@ -16,6 +16,7 @@ type Command struct {
 	Timeout  int
 
 	TaskWorkdir string
+	PrivateKey  string
 
 	// for container
 	ContainerInstance *Container

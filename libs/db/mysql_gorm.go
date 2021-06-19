@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -314,7 +315,7 @@ type sqlLogger struct {
 
 func (sqlLogger) Print(v ...interface{}) {
 	var (
-		typ      string
+		level    string
 		fileLine string
 		ok       bool
 	)
@@ -323,7 +324,7 @@ func (sqlLogger) Print(v ...interface{}) {
 		goto end
 	}
 
-	typ, ok = v[0].(string)
+	level, ok = v[0].(string)
 	if !ok {
 		goto end
 	}
@@ -334,13 +335,16 @@ func (sqlLogger) Print(v ...interface{}) {
 	}
 
 	// see gorm/main.go:DB.logs()
-	if typ == "sql" || typ == "logs" {
-		for i := 7; i < 32; i++ {
+	// 除了以下两种还有 error 级别，但 error 级日志是使用协程调用 s.print() 的，无法获取到业务层面的调用栈
+	if level == "sql" || level == "logs" {
+		// 前几层都是底层库调用，先跳过
+		for i := 4; i < 32; i++ {
 			_, file, line, ok := runtime.Caller(i)
 			if ok && fmt.Sprintf("%s:%d", file, line) == fileLine {
 				_, file, line, ok = runtime.Caller(i + 1)
-				if ok {
-					v[1] = fmt.Sprintf("%s:%d", file, line)
+				// 我们需要展示业务层调用行而非 db 库调用行，所以跳过指定文件
+				if ok && !strings.HasSuffix(file, "db/mysql_gorm.go") {
+					v[1] = fmt.Sprintf("%s:%d", sqlLogger{}.baseFilePath(file), line)
 				}
 				break
 			}
@@ -349,6 +353,17 @@ func (sqlLogger) Print(v ...interface{}) {
 
 end:
 	logger.Debugln(gorm.LogFormatter(v...)...)
+}
+
+// 返回路径最后两层
+func (sqlLogger) baseFilePath(p string) string {
+	base := filepath.Base(p)
+	baseDir := filepath.Base(filepath.Dir(p))
+	if baseDir == base {
+		return base
+	} else {
+		return filepath.Join(baseDir, base)
+	}
 }
 
 func Get() *Session {

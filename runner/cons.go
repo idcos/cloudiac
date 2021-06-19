@@ -26,9 +26,9 @@ provider plugin 的查找逻辑:
 /////
 // 以下常量定义的是 runner 启动任务后容器内部的路径，不受配置文件响应
 const (
-	ContainerWorkspace        = "/workspace"
-	ContainerIaCDir           = "/cloud_iac"                   // 挂载 iac 任务相关文件, 任务脚本、日志等
-	ContainerAssetsPath       = "/assets"                      // 挂载依赖资源，如 terraform.py 等(可以考虑打包到镜像?)
+	ContainerWorkspace        = "/cloud-iac/workspace"
+	ContainerTaskDir          = "/cloud-iac/task"              // 挂载 iac 任务相关文件, 任务脚本、日志等
+	ContainerAssetsDir        = "/cloud-iac/assets"            // 挂载依赖资源，如 terraform.py 等(可以考虑打包到镜像?)
 	ContainerPluginsPath      = "/usr/share/terraform/plugins" // 预置 providers 目录(可以考虑打包到镜像?)
 	ContainerPluginsCachePath = "/terraform/plugins-cache"     // terraform plugins 缓存目录
 )
@@ -37,7 +37,8 @@ const (
 	TaskLogName              = "runner.log"
 	TerraformStateListName   = "state_list.log"
 	TaskScriptName           = "run.sh"
-	BackendConfigName        = "backend.tf"
+	CloudIacTFName           = "_cloud_iac.tf"
+	CloudInitScriptName      = "_cloud_iac_cloud_init.sh"
 	AnsibleStateAnalysisName = "terraform.py"
 
 	FollowLogDelay = time.Second // follow 文件时读到 EOF 后进行下次读取的等待时长

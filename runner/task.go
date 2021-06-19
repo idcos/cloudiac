@@ -8,8 +8,8 @@ import (
 )
 
 type ContainerStatus struct {
-	Status          *types.ContainerState
-	LogContent      []string
+	Status     *types.ContainerState
+	LogContent []string
 }
 
 func Run(req *http.Request) (string, error) {
@@ -18,8 +18,13 @@ func Run(req *http.Request) (string, error) {
 		return "", err
 	}
 
-	if err := GenBackendConfig(state.StateBackendAddress, state.Scheme, state.StateKey, c.TaskWorkdir); err != nil {
-		return "", errors.Wrap(err, "generate backend config error")
+	if err := GenInjectTfConfig(InjectConfigContext{
+		WorkDir:          c.TaskWorkdir,
+		BackendAddress:   state.StateBackendAddress,
+		BackendScheme:    state.Scheme,
+		BackendPath:      state.StateKey,
+	}, c.PrivateKey); err != nil {
+		return "", errors.Wrap(err, "generate inject config error")
 	}
 	if err = c.Create(); err != nil {
 		return "", err

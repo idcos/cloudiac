@@ -2,10 +2,12 @@ package runner
 
 import (
 	"cloudiac/configs"
+	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/joho/godotenv"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -34,6 +36,8 @@ type ReqBody struct {
 	Varfile      string `json:"varfile"`
 	Extra        string `json:"extra"`
 	Playbook     string `json:"playbook" form:"playbook" `
+
+	PrivateKey string `json:"privateKey"`
 }
 
 type CommitedTask struct {
@@ -145,10 +149,26 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, error) {
 		c.Env = append(c.Env, fmt.Sprintf("%s=%s", k, v))
 	}
 
+	// 可以指定一个 env 文件导入环境变量。
+	// 比如将 ak/sk 配置到 env 文件中，方便测试
+	path := os.Getenv("IAC_RUNNER_DOT_ENV")
+	if path != "" && utils.FileExist(path) {
+		m, err := godotenv.Read(path)
+		if err != nil {
+			logger.Errorf("read '%s' error: %v", path, err)
+		} else {
+			for k, v := range m {
+				c.Env = append(c.Env, fmt.Sprintf("%s=%s", k, v))
+			}
+		}
+	}
+
 	workingDir, err := MakeTaskWorkDir(d.TemplateUUID, d.TaskID)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	c.PrivateKey = d.PrivateKey
 
 	c.TaskWorkdir = workingDir
 	scriptPath := filepath.Join(c.TaskWorkdir, TaskScriptName)
@@ -156,8 +176,8 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, error) {
 		return nil, nil, err
 	}
 
-	containerScriptPath := filepath.Join(ContainerIaCDir, TaskScriptName)
-	containerLogPath := filepath.Join(ContainerIaCDir, TaskLogName)
+	containerScriptPath := filepath.Join(ContainerTaskDir, TaskScriptName)
+	containerLogPath := filepath.Join(ContainerTaskDir, TaskLogName)
 	c.Commands = []string{"sh", "-c", fmt.Sprintf("%s >>%s 2>&1", containerScriptPath, containerLogPath)}
 
 	// set timeout

@@ -162,7 +162,14 @@ func (t JSONTime) MarshalJSON() ([]byte, error) {
 
 func FileExist(p string) bool {
 	_, err := os.Stat(p)
-	return err == nil || os.IsExist(err)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		} else {
+			panic(err)
+		}
+	}
+	return true
 }
 
 func JoinUint(ids []uint, sep string) string {
@@ -442,9 +449,19 @@ func ShortContainerId(id string) string {
 	if len(id) < 12 {
 		return id
 	}
-	return 	id[:12]
+	return id[:12]
 }
 
-func GetTaskWorkDir(templateUUID string, taskId string) string {
-	return filepath.Join(templateUUID, taskId)
+// GetBoolEnv 判断环境变量 bool 值
+func GetBoolEnv(key string, _default bool) bool {
+	val := os.Getenv(key)
+	if StrInArray(val, "off", "false", "0") {
+		// 明确设置了 "false" 值则返回 false
+		return false
+	} else if StrInArray(val, "on", "true", "1") {
+		// 明确设置了 "true" 值则返回 true
+		return true
+	}
+	// 其他情况返回默认值
+	return _default
 }

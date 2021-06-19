@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cloudiac/services/sshkey"
 	"fmt"
 	"log"
 	"os"
@@ -63,7 +64,7 @@ func main() {
 				panic(r)
 			}
 		}()
-		// 自动执行平台初始化操作，只在第一次启动时执行
+		// 自动执行平台初始化操作
 		if err := appAutoInit(tx); err != nil {
 			panic(err)
 		}
@@ -104,6 +105,10 @@ func appAutoInit(tx *db.Session) (err error) {
 
 	if err := initMeatTemplate(tx); err != nil {
 		return errors.Wrap(err, "init meat template")
+	}
+
+	if err := initSSHKeyPair(); err != nil {
+		return errors.Wrap(err, "init ssh key pair")
 	}
 
 	return nil
@@ -214,4 +219,8 @@ func initVcs(tx *db.Session) error {
 
 func initMeatTemplate(tx *db.Session) error {
 	return services.InitMetaTemplate(tx)
+}
+
+func initSSHKeyPair() error {
+	return sshkey.InitSSHKeyPair()
 }

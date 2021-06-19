@@ -2,6 +2,18 @@
 
 terraform {
   required_providers {
+    ansible = {
+      source = "nbering/ansible"
+    }
+
+    cloudinitvlatest = {
+      source = "hashicorp/cloudinit"
+    }
+
+    aliyunvlatest = {
+      source = "aliyun/alicloud"
+    }
+
     huaweicloudv1dot24dot2 = {
       source  = "huaweicloud/huaweicloud"
       version = "1.24.2"

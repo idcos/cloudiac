@@ -48,7 +48,9 @@ type RunnerConfig struct {
 }
 
 type PortalConfig struct {
-	Address string `yaml:"address"` // portal 对外提供服务的 url
+	Address       string `yaml:"address"` // portal 对外提供服务的 url
+	SSHPrivateKey string `yaml:"sshPrivateKey"`
+	SSHPublicKey  string `yaml:"sshPublicKey"`
 }
 
 func (c *RunnerConfig) mustAbs(path string) string {
@@ -116,8 +118,15 @@ type Config struct {
 }
 
 var (
-	gConfig *Config
-	cfgLock sync.RWMutex
+	config *Config
+	lock   sync.RWMutex
+
+	defaultConfig = Config{
+		Portal: PortalConfig{
+			SSHPrivateKey: ".ssh_key",
+			SSHPublicKey:  ".ssh_key.pub",
+		},
+	}
 )
 
 func parseConfig(filename string, out interface{}) error {
@@ -136,23 +145,23 @@ func parseConfig(filename string, out interface{}) error {
 }
 
 func parsePortalConfig(filename string) error {
-	cfg := Config{}
+	cfg := defaultConfig
 	if err := parseConfig(filename, &cfg); err != nil {
 		return err
 	}
 
-	cfgLock.Lock()
-	defer cfgLock.Unlock()
-	gConfig = &cfg
+	lock.Lock()
+	defer lock.Unlock()
+	config = &cfg
 
 	return nil
 }
 
 func Get() *Config {
-	cfgLock.RLock()
-	defer cfgLock.RUnlock()
+	lock.RLock()
+	defer lock.RUnlock()
 
-	return gConfig
+	return config
 }
 
 func initConfig(filename string, parser func(string) error) {
