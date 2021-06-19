@@ -20,8 +20,8 @@ BUILD_DIR=$(PWD)/targets
 
 .PHONY: all build portal runner run run-portal ru-runner clean package repos providers package-release
 
-all: portal runner
-build: portal runner
+all: build
+build: portal runner tool
 
 reset-build-dir:
 	$(RM) -r $(BUILD_DIR)
@@ -37,6 +37,11 @@ runner: reset-build-dir
 	$(GOBUILD) -o $(BUILD_DIR)/ct-runner ./cmds/runner
 	cp ./configs/config-runner.yml.sample $(BUILD_DIR)/config-runner.yml.sample
 
+tool: 
+	$(GOBUILD) -o $(BUILD_DIR)/iac-tool ./cmds/tool
+
+
+
 run: run-portal
 
 run-portal:
@@ -46,9 +51,13 @@ run-portal:
 run-runner:
 	$(GORUN) ./cmds/runner -v -c config-runner.yml
 
+run-tool:
+	$(GORUN) ./cmds/tool -v -c config-portal.yml
+
 clean: reset-build-dir
 	$(GOCLEAN) ./cmds/portal
 	$(GOCLEAN) ./cmds/runner
+	$(GOCLEAN) ./cmds/tool
 
 
 PACKAGE_NAME=cloud-iac-$(VERSION).tar.gz
