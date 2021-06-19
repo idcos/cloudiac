@@ -340,7 +340,8 @@ forLoop:
 
 	if taskStatus != consts.TaskRunning && len(lastMessage.LogContent) > 0 {
 		path := task.BackendInfo.LogFile
-		if err := logstorage.Get().Write(path, lastMessage.LogContent); err != nil {
+		content := logstorage.CutLogContent(lastMessage.LogContent)
+		if err := logstorage.Get().Write(path, content); err != nil {
 			logger.WithField("path", path).Errorf("write task log error: %v", err)
 			logger.Infof("task log content: %s", lastMessage.LogContent)
 		}
@@ -350,8 +351,9 @@ forLoop:
 		len(lastMessage.StateListContent) > 0 {
 		taskPath := utils.GetTaskWorkDir(task.TemplateGuid, task.Guid)
 		path := filepath.Join(taskPath, consts.TerraformStateListName)
-		if err := logstorage.Get().Write(path, lastMessage.StateListContent); err != nil {
-			logger.WithField("path", path).Errorf("write task log error: %v", err)
+		content := logstorage.CutLogContent(lastMessage.StateListContent)
+		if err := logstorage.Get().Write(path, content); err != nil {
+			logger.WithField("path", path).Errorf("write state_list error: %v", err)
 			logger.Infof("task log content: %s", lastMessage.LogContent)
 		}
 	}
