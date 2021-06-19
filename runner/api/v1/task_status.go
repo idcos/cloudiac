@@ -122,7 +122,7 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.CommitedTask, closedCh <-
 				logger.Warnf("send status error: %v", err)
 			}
 		case err := <-waitCh:
-			if ctx.Err() != nil { // 对端断开连接
+			if closed { // 对端己断开连接
 				return nil
 			}
 			if err != nil {

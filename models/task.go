@@ -87,11 +87,19 @@ func (Task) TableName() string {
 }
 
 func (t *Task) Exited() bool {
-	return utils.InArrayStr([]string{consts.TaskFailed, consts.TaskComplete, consts.TaskTimeout}, t.Status)
+	return t.IsExitedStatus(t.Status)
 }
 
 func (t *Task) Started() bool {
-	return !utils.InArrayStr([]string{consts.TaskPending, consts.TaskAssigning}, t.Status)
+	return t.IsStartedStatus(t.Status)
+}
+
+func (Task) IsStartedStatus(status string) bool {
+	return !utils.InArrayStr([]string{consts.TaskPending, consts.TaskAssigning}, status)
+}
+
+func (Task) IsExitedStatus(status string) bool {
+	return utils.InArrayStr([]string{consts.TaskFailed, consts.TaskComplete, consts.TaskTimeout}, status)
 }
 
 func (t *Task) Migrate(sess *db.Session) (err error) {
