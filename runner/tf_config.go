@@ -58,6 +58,10 @@ EOT
   }
 }
 
+variable "cloudiac_ssh_user" {
+	default = "root"
+} 
+
 variable "cloudiac_private_key" {
 	default = "{{.ContainerTaskDir}}/ssh_key"
 }

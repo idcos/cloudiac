@@ -2,10 +2,12 @@ package runner
 
 import (
 	"cloudiac/configs"
+	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/joho/godotenv"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -141,6 +143,20 @@ func ReqToCommand(req *http.Request) (*Command, *StateStore, error) {
 
 	for k, v := range AnsibleEnv {
 		c.Env = append(c.Env, fmt.Sprintf("%s=%s", k, v))
+	}
+
+	// 可以指定一个 env 文件导入环境变量。
+	// 比如将 ak/sk 配置到 env 文件中，方便测试
+	path := os.Getenv("IAC_RUNNER_DOT_ENV")
+	if path != "" && utils.FileExist(path) {
+		m, err := godotenv.Read(path)
+		if err != nil {
+			logger.Errorf("read '%s' error: %v", path, err)
+		} else {
+			for k, v := range m {
+				c.Env = append(c.Env, fmt.Sprintf("%s=%s", k, v))
+			}
+		}
 	}
 
 	workingDir, err := MakeTaskWorkDir(d.TemplateUUID, d.TaskID)
