@@ -1,11 +1,14 @@
 package services
 
 import (
-	"cloudiac/libs/db"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"cloudiac/configs"
+	"cloudiac/libs/db"
+	"cloudiac/utils/logs"
 )
 
 func init() {
@@ -32,8 +35,8 @@ func TestMetaAnalysis(t *testing.T) {
 	contentByte, err := ioutil.ReadAll(f)
 	//fmt.Println(string(contentByte))
 
-	mt,er:=MetaAnalysis(contentByte)
-	if er!=nil{
+	mt, er := MetaAnalysis(contentByte)
+	if er != nil {
 		fmt.Println(mt)
 	}
 	fmt.Println(mt)
