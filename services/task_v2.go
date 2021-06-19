@@ -213,11 +213,18 @@ func WaitTaskResult(ctx context.Context, dbSess *db.Session, task *models.Task, 
 	logger := logs.Get().WithField("action", "WaitTaskResult").WithField("taskId", task.Guid)
 
 	// 当前版本实现中需要 portal 主动连接到 runner 获取状态
-	err = utils.RetryFunc(0, time.Second*10, func(retryN int) (bool, error) {
-		status, err = doPullTaskStatus(ctx, dbSess, task.Guid, taskDeadline)
-		if err != nil {
-			logger.Errorf("pull task status error: %v, retry=%d", err, retryN)
-			return true, err
+	err = utils.RetryFunc(0, time.Second*10, func(retryN int) (retry bool, er error) {
+		status, er = doPullTaskStatus(ctx, dbSess, task.Guid, taskDeadline)
+		if er != nil {
+			logger.Errorf("pull task status error: %v, retry(%d)", er, retryN)
+			return true, er
+		}
+
+		// 正常情况下 doPullTaskStatus() 应该在 runner 任务退出后才返回，
+		// 但发现有任务在 running 状态时函数返回的情况，所以这里进行一次状态检查，如果任务不是退出状态则继续重试
+		if !task.IsExitedStatus(status) {
+			logger.Warnf("pull task status done, but task is %s, retry(%d)", status, retryN)
+			return true, nil
 		}
 		return false, nil
 	})
@@ -303,16 +310,21 @@ func doPullTaskStatus(ctx context.Context, dbSess *db.Session, taskId string, de
 	go readMessage()
 
 	now := time.Now()
-	var timer *time.Timer
+	var timeout *time.Timer
 	if deadline.Before(now) {
 		// 即使任务己超时也保证进行一次状态获取
-		timer = time.NewTimer(time.Second)
+		timeout = time.NewTimer(time.Second)
 	} else {
-		timer = time.NewTimer(deadline.Sub(now))
+		timeout = time.NewTimer(deadline.Sub(now))
 	}
 	var lastMessage *runner.TaskStatusMessage
 
 	logger.Debugf("pulling task status ...")
+	defer func() {
+		// 需要放到函数内部，否则 taskStatus 传入的是 defer 执行时的值
+		logger.Infof("pull task status done, status=%s", taskStatus)
+	}()
+
 forLoop:
 	for {
 		select {
@@ -322,7 +334,7 @@ forLoop:
 			}
 
 			lastMessage = msg
-			if lastMessage.Status == consts.DockerStatusExited {
+			if msg.Status == consts.DockerStatusExited {
 				if msg.StatusCode == 0 {
 					taskStatus = consts.TaskComplete
 				} else {
@@ -338,13 +350,11 @@ forLoop:
 			logger.Infof("context done with: %v", ctx.Err())
 			return taskStatus, nil
 
-		case <-timer.C:
+		case <-timeout.C:
 			taskStatus = consts.TaskTimeout
 			break forLoop
 		}
 	}
-
-	logger.Debugf("pull task status done, status=%s", taskStatus)
 
 	if taskStatus != consts.TaskRunning && len(lastMessage.LogContent) > 0 {
 		path := task.BackendInfo.LogFile
