@@ -238,9 +238,9 @@ func VcsVariableSearch(c *ctx.ServiceCtx, form *forms.TemplateVariableSearchForm
 		if er != nil {
 			return nil, e.New(e.GitLabError, er)
 		}
-		tvs, er := services.TemplateVariableSearch(content)
+		tvs, er := services.ParseTfVariables(file, content)
 		if er != nil {
-			return nil, e.New(e.GitLabError, er)
+			return nil, e.AutoNew(er, e.GitLabError)
 		}
 		tvl = append(tvl, tvs...)
 	}

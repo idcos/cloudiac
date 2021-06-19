@@ -1,9 +1,7 @@
 package services
 
 import (
-	"cloudiac/configs"
 	"cloudiac/libs/db"
-	"cloudiac/utils/logs"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -19,7 +17,9 @@ func init() {
 }
 
 func TestInitMetaTemplate(t *testing.T) {
-	InitMetaTemplate()
+	tx := db.Get().Begin()
+	defer tx.Rollback()
+	InitMetaTemplate(tx)
 }
 
 func TestMetaAnalysis(t *testing.T) {

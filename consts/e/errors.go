@@ -11,6 +11,7 @@ const (
 	StateTryAgainLater      = 1016
 	ColValidateError        = 1017
 	NameDuplicate           = 1018
+	HCLParseError			= 1019
 
 	NotImplement = 1020
 
