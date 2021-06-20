@@ -28,13 +28,15 @@ type Option struct {
 }
 
 func main() {
+	common.LoadDotEnv()
+
 	opt := Option{}
 	_, err := flags.Parse(&opt)
 	if err != nil {
 		os.Exit(1)
 	}
-
 	common.ShowVersionIf(opt.Version)
+
 	configs.Init(opt.Config)
 	if err := checkConfigs(configs.Get()); err != nil {
 		panic(err)

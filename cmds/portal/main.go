@@ -3,11 +3,9 @@ package main
 import (
 	"cloudiac/services/sshkey"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/jessevdk/go-flags"
-	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
 
 	"cloudiac/apps/task_manager"
@@ -34,23 +32,21 @@ type Option struct {
 var opt = Option{}
 
 func main() {
+	common.LoadDotEnv()
+
 	_, err := flags.Parse(&opt)
 	if err != nil {
 		os.Exit(1)
 	}
 	common.ShowVersionIf(opt.Version)
 
-	if _, err := os.Stat(".env"); err == nil {
-		if err := godotenv.Load(); err != nil {
-			log.Panic(err)
-		}
-	} else {
-		log.Println(err)
-	}
-
 	configs.Init(opt.Config)
 	conf := configs.Get().Log
 	logs.Init(conf.LogLevel, conf.LogPath, conf.LogMaxDays)
+
+	if err := initSSHKeyPair(); err != nil {
+		panic(errors.Wrap(err, "init ssh key pair"))
+	}
 
 	// 依赖中间件及数据的初始化
 	{
@@ -107,17 +103,19 @@ func appAutoInit(tx *db.Session) (err error) {
 		return errors.Wrap(err, "init meat template")
 	}
 
-	if err := initSSHKeyPair(); err != nil {
-		return errors.Wrap(err, "init ssh key pair")
-	}
-
 	return nil
 }
 
 // initAdmin 初始化 admin 账号
 // 该函数读取环境变量 IAC_ADMIN_EMAIL、 IAC_ADMIN_PASSWORD 来获取初始用户的 email 和 password，
-// 如果 IAC_ADMIN_EMAIL 未设置则使用默认邮箱,
+// 如果 IAC_ADMIN_EMAIL 未设置则使用默认邮箱, IAC_ADMIN_PASSWORD 未设置则报错
 func initAdmin(tx *db.Session) error {
+	if ok, err := services.QueryUser(tx).Exists(); err != nil {
+		return err
+	} else if ok {	// 己存在用户，跳过
+		return nil
+	}
+
 	email := os.Getenv("IAC_ADMIN_EMAIL")
 	password := os.Getenv("IAC_ADMIN_PASSWORD")
 
@@ -126,7 +124,6 @@ func initAdmin(tx *db.Session) error {
 	}
 
 	// 通过邮箱查找账号，如果不存在则创建。
-	// 如果用户修改环境变量 IAC_ADMIN_EMAIL 则会创建一个新用户
 	admin, err := services.GetUserByEmail(tx, email)
 	if err != nil && !e.IsRecordNotFound(err) {
 		return err

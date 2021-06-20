@@ -1,6 +1,5 @@
-# 管理员账号密码
+# 管理员账号密码，只在初始化启动时进行读取
 IAC_ADMIN_EMAIL=admin@example.com
-## 密码只在第一次启动时进行读取，之后修改或者删除不会进行同步
 IAC_ADMIN_PASSWORD=
 
 # 部署的版本(容器部署时有效)
@@ -23,6 +22,8 @@ MYSQL_PASSWORD=
 
 # consul 配置
 CONSUL_ADDR=consul:8500
+
+# portl 服务注册信息配置
 SERVICE_IP=portal
 SERVICE_ID=IaC-Portal-01
 SERVICE_TAGS=iac-porta;portal-01
