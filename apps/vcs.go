@@ -203,6 +203,7 @@ func VcsPlaybookSearch(c *ctx.ServiceCtx, form *forms.TemplatePlaybookSearchForm
 		Ref:       form.RepoBranch,
 		Search:    consts.PlaybookMatch,
 		Recursive: true,
+		Path:      consts.Ansible,
 	})
 	if er != nil {
 		return nil, e.New(e.GitLabError, er)

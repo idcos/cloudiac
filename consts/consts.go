@@ -53,7 +53,8 @@ const (
 	VariablePrefix = "variables.tf"
 
 	TfVarFileMatch = "*.tfvars"
-	PlaybookMatch  = "playbook.y*ml"
+	PlaybookMatch  = "*.y*ml"
+	Ansible        = "ansible"
 
 	TerraformStateListName = "state_list.log" //terraform state list 文件名称
 
