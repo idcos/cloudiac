@@ -7,10 +7,9 @@ import (
 	"cloudiac/models"
 	"cloudiac/models/forms"
 	"cloudiac/services"
-	vcs2 "cloudiac/services/vcsrv"
+	"cloudiac/services/vcsrv"
 	"encoding/json"
 	"fmt"
-	"github.com/xanzy/go-gitlab"
 )
 
 func OpenSearchTemplate(c *ctx.ServiceCtx) (interface{}, e.Error) {
@@ -58,28 +57,23 @@ func OpenDetailTemplate(c *ctx.ServiceCtx, gUid string) (interface{}, e.Error) {
 	if er != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("query vcs detail error: %v", er))
 	}
-	if vcs.VcsType == consts.GitTypeGitLab {
-		git, err := vcs2.GetGitConn(vcs.VcsToken, vcs.Address)
-		if err != nil {
-			return nil, err
-		}
-		commits, _, commitErr := git.Commits.ListCommits(tpl.RepoId, &gitlab.ListCommitsOptions{})
-		if commitErr != nil {
-			return nil, e.New(e.GitLabError, commitErr)
-		}
-		if commits != nil {
-			tpl.CommitId = commits[0].ID
-		}
+
+	vcsService, vcsErr := vcsrv.GetVcsInstance(vcs)
+	if vcsErr != nil {
+		return nil, e.New(e.GitLabError, vcsErr)
 	}
 
-	if vcs.VcsType == consts.GitTypeGitEA {
-		commit, err := vcs2.GetGiteaBranchCommitId(vcs, tpl.RepoId, tpl.RepoBranch)
-		if err != nil {
-			return nil, e.New(e.GitLabError, fmt.Errorf("query commit id error: %v", er))
-		}
-		tpl.CommitId = commit
+	repo, vcsErr := vcsService.GetRepo(tpl.RepoId)
+	if vcsErr != nil {
+		return nil, e.New(e.GitLabError, vcsErr)
 	}
 
+	commitId, vcsErr := repo.BranchCommitId(tpl.RepoBranch)
+	if vcsErr != nil {
+		return nil, e.New(e.GitLabError, vcsErr)
+	}
+
+	tpl.CommitId = commitId
 
 	return tpl, nil
 }
