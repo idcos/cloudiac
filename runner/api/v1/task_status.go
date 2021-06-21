@@ -51,9 +51,10 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.CommitedTask, closedCh <-
 			return err
 		}
 
+		state := containerJSON.State
 		msg := runner.TaskStatusMessage{
-			Status:     containerJSON.State.Status,
-			StatusCode: containerJSON.State.ExitCode,
+			Exited:   !state.Running,
+			ExitCode: state.ExitCode,
 		}
 
 		if withLog {
