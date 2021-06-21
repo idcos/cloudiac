@@ -8,11 +8,10 @@ import (
 	"cloudiac/models"
 	"cloudiac/models/forms"
 	"cloudiac/services"
-	vcs2 "cloudiac/services/vcsrv"
+	"cloudiac/services/vcsrv"
 	"cloudiac/utils"
 	"fmt"
 	"github.com/jinzhu/gorm"
-	"github.com/xanzy/go-gitlab"
 	"path/filepath"
 	"time"
 )
@@ -105,28 +104,18 @@ func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (interface{}, e.E
 	if er != nil {
 		return nil, er
 	}
-	var commitId string
-	if vcs.VcsType == consts.GitTypeGitLab {
-		git, err := vcs2.GetGitConn(vcs.VcsToken, vcs.Address)
-		if err != nil {
-			return nil, err
-		}
-		commits, _, commitErr := git.Commits.ListCommits(tpl.RepoId, &gitlab.ListCommitsOptions{})
-		if commitErr != nil {
-			return nil, e.New(e.GitLabError, commitErr)
-		}
 
-		if commits != nil {
-			commitId = commits[0].ID
-		}
+	vcsService, vcsErr := vcsrv.GetVcsInstance(vcs)
+	if vcsErr != nil {
+		return nil, e.New(e.GitLabError, vcsErr)
 	}
-
-	if vcs.VcsType == consts.GitTypeGitEA {
-		commit, err := vcs2.GetGiteaBranchCommitId(vcs, tpl.RepoId, tpl.RepoBranch)
-		if err != nil {
-			return nil, e.New(e.GitLabError, fmt.Errorf("query commit id error: %v", er))
-		}
-		commitId = commit
+	repo, vcsErr:=vcsService.GetRepo(tpl.RepoId)
+	if vcsErr != nil {
+		return nil, e.New(e.GitLabError, vcsErr)
+	}
+	commitId,vcsErr:=repo.BranchCommitId(tpl.RepoBranch)
+	if vcsErr != nil {
+		return nil, e.New(e.GitLabError, vcsErr)
 	}
 
 	task, err := services.CreateTask(c.DB(), models.Task{
@@ -181,5 +170,5 @@ func LastTask(c *ctx.ServiceCtx, form *forms.LastTaskForm) (interface{}, e.Error
 }
 
 func TaskStateList(c *ctx.ServiceCtx, form *forms.TaskStateListForm) (interface{}, e.Error) {
-	return services.TaskStateList(c.DB(),form.TemplateGuid)
+	return services.TaskStateList(c.DB(), form.TemplateGuid)
 }
