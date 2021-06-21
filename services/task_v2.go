@@ -287,8 +287,23 @@ func doPullTaskStatus(ctx context.Context, dbSess *db.Session, taskId string, de
 	}
 	defer utils.WebsocketClose(wsConn)
 
-	messageChan := make(chan *runner.TaskStatusMessage)
-	readErrChan := make(chan error)
+	// 通知函数退出的 channel
+	doneChan := make(chan struct{})
+	defer close(doneChan)
+
+	// 子协程在往 channel 写数据前先调用该函数检查主函数是否退出，若己退出则立即退出执行
+	checkDone := func() bool {
+		select {
+		case <-doneChan:
+			return true
+		default:
+			return false
+		}
+	}
+
+	messageChan := make(chan *runner.TaskStatusMessage, 1)
+	readErrChan := make(chan error, 1)
+
 	readMessage := func() {
 		defer close(messageChan)
 
@@ -299,10 +314,16 @@ func doPullTaskStatus(ctx context.Context, dbSess *db.Session, taskId string, de
 					logger.Tracef("read message error: %v", err)
 				} else {
 					logger.Errorf("read message error: %v", err)
+					if checkDone() {
+						return
+					}
 					readErrChan <- err
 				}
 				break
 			} else {
+				if checkDone() {
+					return
+				}
 				messageChan <- &message
 			}
 		}
@@ -319,42 +340,40 @@ func doPullTaskStatus(ctx context.Context, dbSess *db.Session, taskId string, de
 	}
 	var lastMessage *runner.TaskStatusMessage
 
-	logger.Debugf("pulling task status ...")
-	defer func() {
-		// 需要放到函数内部，否则 taskStatus 传入的是 defer 执行时的值
-		logger.Infof("pull task status done, status=%s", taskStatus)
-	}()
-
-forLoop:
-	for {
-		select {
-		case msg := <-messageChan:
-			if msg == nil { // closed
-				break forLoop
-			}
-
-			lastMessage = msg
-			if msg.Status == consts.DockerStatusExited {
-				if msg.StatusCode == 0 {
-					taskStatus = consts.TaskComplete
-				} else {
-					taskStatus = consts.TaskFailed
+	selectLoop := func() error {
+		for {
+			select {
+			case msg := <-messageChan:
+				if msg == nil { // closed
+					return nil
 				}
-				break
+
+				lastMessage = msg
+				if msg.Exited {
+					if msg.ExitCode == 0 {
+						taskStatus = consts.TaskComplete
+					} else {
+						taskStatus = consts.TaskFailed
+					}
+					return nil
+				}
+			case err = <-readErrChan:
+				return fmt.Errorf("read message error: %v", err)
+
+			case <-ctx.Done():
+				logger.Infof("context done with: %v", ctx.Err())
+				return nil
+
+			case <-timeout.C:
+				taskStatus = consts.TaskTimeout
+				return nil
 			}
-
-		case err = <-readErrChan:
-			return taskStatus, fmt.Errorf("read message error: %v", err)
-
-		case <-ctx.Done():
-			logger.Infof("context done with: %v", ctx.Err())
-			return taskStatus, nil
-
-		case <-timeout.C:
-			taskStatus = consts.TaskTimeout
-			break forLoop
 		}
 	}
+
+	logger.Debugf("pulling task status ...")
+	err = selectLoop()
+	logger.Infof("pull task status done, status=%s", taskStatus)
 
 	if taskStatus != consts.TaskRunning && len(lastMessage.LogContent) > 0 {
 		path := task.BackendInfo.LogFile
@@ -375,7 +394,6 @@ forLoop:
 			logger.Infof("task log content: %s", lastMessage.LogContent)
 		}
 	}
-
 
 	return taskStatus, nil
 }

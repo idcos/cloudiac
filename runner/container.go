@@ -13,16 +13,17 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
 	guuid "github.com/google/uuid"
-	"log"
 	"os"
 	"path/filepath"
 )
+
+var logger = logs.Get()
 
 func (task *CommitedTask) Cancel() error {
 	cli, err := client.NewClientWithOpts()
 	cli.NegotiateAPIVersion(context.Background())
 	if err != nil {
-		log.Printf("Unable to create docker client")
+		logger.Warnf("unable to create docker client, error: %v", err)
 		return err
 	}
 
@@ -46,14 +47,15 @@ func (task *CommitedTask) Status() (types.ContainerJSON, error) {
 
 	cli, err := client.NewClientWithOpts()
 	if err != nil {
-		log.Printf("Unable to create docker client, error: %v", err)
+		logger.Warnf("unable to create docker client, error: %v", err)
 		return types.ContainerJSON{}, err
 	}
 
 	cli.NegotiateAPIVersion(context.Background())
 	containerInfo, err := cli.ContainerInspect(context.Background(), task.ContainerId)
 	if err != nil {
-		log.Printf("Failed to inspect for container id: %s, error: %v ", task.ContainerId, err)
+		logger.Errorf("failed to inspect for container: %s, error: %v ",
+			utils.ShortContainerId(task.ContainerId), err)
 		return types.ContainerJSON{}, err
 	}
 
@@ -111,7 +113,7 @@ func (task *CommitedTask) readContainerInfo() (info types.ContainerJSON, err err
 // Wait 等待任务结束返回退出码，若超时返回 error=context.DeadlineExceeded
 // 如果等待到任务结束则会将容器状态信息写入到文件，然后删除容器
 func (task *CommitedTask) Wait(ctx context.Context) (int64, error) {
-	logger := logs.Get().WithField("taskId", task.TaskId).
+	logger := logger.WithField("taskId", task.TaskId).
 		WithField("containerId", utils.ShortContainerId(task.ContainerId))
 
 	if task.hasContainerInfo() {
@@ -162,7 +164,7 @@ func (task *CommitedTask) Wait(ctx context.Context) (int64, error) {
 		}
 	case err := <-errCh:
 		if errdefs.IsNotFound(err) {
-			logger.Debugf("container not found, Id: %s", task.ContainerId)
+			logger.Infof("container not found, Id: %s", task.ContainerId)
 			return 0, nil
 		}
 		logger.Warnf("wait container error: %v", err)
@@ -171,19 +173,21 @@ func (task *CommitedTask) Wait(ctx context.Context) (int64, error) {
 }
 
 func (cmd *Command) Create() error {
+	logger := logger.WithField("taskId", filepath.Base(cmd.TaskWorkdir))
+
 	// TODO(ZhengYue): Create client with params of host info
 	cli, err := client.NewClientWithOpts()
 	cli.NegotiateAPIVersion(context.Background())
 
 	if err != nil {
-		log.Printf("Unable to create docker client")
+		logger.Errorf("unable to create docker client")
 		return err
 	}
 
 	id := guuid.New()
 	conf := configs.Get()
 
-	log.Printf("starting command, task working directory: %s", cmd.TaskWorkdir)
+	logger.Infof("starting task, working directory: %s", cmd.TaskWorkdir)
 	cont, err := cli.ContainerCreate(
 		cmd.ContainerInstance.Context,
 		&container.Config{
@@ -230,12 +234,12 @@ func (cmd *Command) Create() error {
 		nil,
 		id.String())
 	if err != nil {
-		log.Printf("ContainerCreate err: %v", err)
+		logger.Errorf("create container err: %v", err)
 		return err
 	}
 
 	cmd.ContainerInstance.ID = cont.ID
-	log.Printf("Create container ID = %s", cont.ID)
+	logger.Infof("container id: %s", utils.ShortContainerId(cont.ID))
 	err = cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
 	return err
 }
