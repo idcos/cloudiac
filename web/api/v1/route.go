@@ -2,9 +2,13 @@ package v1
 
 import (
 	"cloudiac/libs/ctrl"
+	"cloudiac/libs/ctx"
 	"cloudiac/web/api/v1/handlers"
 	"cloudiac/web/middleware"
+	"github.com/gin-contrib/sse"
 	"github.com/gin-gonic/gin"
+	"strconv"
+	"time"
 )
 
 func Register(g *gin.RouterGroup) {
@@ -83,4 +87,27 @@ func Register(g *gin.RouterGroup) {
 
 	// TODO 增加鉴权
 	g.GET("/task/log/sse", w(handlers.Task{}.FollowLogSse))
+
+	g.GET("/sse/test", w(func(c *ctx.GinRequestCtx) {
+		defer c.SSEvent("end", "end")
+
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+
+		eventId := 0 // to indicate the message id
+		for {
+			select {
+			case <-c.Request.Context().Done():
+				return
+			case <-ticker.C:
+				c.Render(-1, sse.Event{
+					Id:    strconv.Itoa(eventId),
+					Event: "message",
+					Data:  time.Now().Format(time.RFC3339),
+				})
+				c.Writer.Flush()
+				eventId += 1
+			}
+		}
+	}))
 }
