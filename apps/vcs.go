@@ -124,7 +124,7 @@ func ListRepos(c *ctx.ServiceCtx, form *forms.GetGitProjectsForm) (interface{}, 
 
 	return page.PageResp{
 		Total:    total,
-		PageSize: form.CurrentPage(),
+		PageSize: form.PageSize(),
 		List:     project,
 	}, nil
 }
