@@ -6,12 +6,12 @@ config-portal.yml
 config-runner.yml
 .DS_Store
 ct-*/
-iac-*
-ct-*
+iac-*/
 *.tar.gz
-config-portal.yml
-config-runner.yml
 targets/
 plugin-cache/
 /repos/
 /assets/providers/
+/docs/docs.go
+/docs/swagger.json
+/docs/swagger.yaml
