@@ -24,7 +24,7 @@ provider plugin 的查找逻辑:
 */
 
 /////
-// 以下常量定义的是 runner 启动任务后容器内部的路径，不受配置文件响应
+// 以下定义的是 runner 启动任务后容器内部的路径，直接以常量配置即可
 const (
 	ContainerWorkspace        = "/cloud-iac/workspace"
 	ContainerTaskDir          = "/cloud-iac/task"              // 挂载 iac 任务相关文件, 任务脚本、日志等
@@ -38,7 +38,6 @@ const (
 	TerraformStateListName   = "state_list.log"
 	TaskScriptName           = "run.sh"
 	CloudIacTFName           = "_cloud_iac.tf"
-	CloudInitScriptName      = "_cloud_iac_cloud_init.sh"
 	AnsibleStateAnalysisName = "terraform.py"
 
 	FollowLogDelay = time.Second // follow 文件时读到 EOF 后进行下次读取的等待时长
