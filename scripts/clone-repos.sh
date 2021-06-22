@@ -11,7 +11,13 @@ REPOS_LIST=${REPOS_LIST:-$MY_PATH/../repos.list}
 function clone() {
   local REPO_PATH=$1
   local REPO_NAME=$(basename "${REPO_PATH}")
-  local REPO_ADDRESS="${REPO_BASE}${REPO_PATH}"
+
+  if echo "$REPO_PATH" | grep '://' >/dev/null; then 
+    local REPO_ADDRESS="${REPO_PATH}"
+  else
+    local REPO_ADDRESS="${REPO_BASE}${REPO_PATH}"
+  fi
+
   if [[ -d "$REPO_PATH" ]]; then
     git fetch "$REPO_ADDRESS" || return $?
   else

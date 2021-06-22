@@ -11,13 +11,14 @@ import (
 var initCommandTemplate = `set -e 
 export CLOUD_IAC_TASK_DIR={{.TaskDir}}
 export CLOUD_IAC_WORKSPACE={{.Workspace}}
+export CLOUD_IAC_SSH_USER="root"
 export CLOUD_IAC_PRIVATE_KEY={{.TaskDir}}/ssh_key
+
 export TF_PLUGIN_CACHE_DIR={{.PluginsCachePath}}
 
 git clone {{.Repo}} ${CLOUD_IAC_WORKSPACE} && \
 cd "${CLOUD_IAC_WORKSPACE}" && git checkout {{.RepoCommit}} && \
 ln -sv ${CLOUD_IAC_TASK_DIR}/{{.CloudIacTFName}}  ./ && \
-ln -sv ${CLOUD_IAC_TASK_DIR}/{{.CloudInitScriptName}} ./ && \
 terraform init && \`
 
 const planCommandTemplate = `
@@ -26,8 +27,14 @@ terraform plan {{if .VarFile}}-var-file={{.VarFile}}{{end}}
 
 const applyCommandTemplate = `
 terraform apply -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}} && \
-terraform state list >{{.ContainerStateListPath}} 2>&1 {{- if .Playbook}} && \
-ansible-playbook -i {{.AnsibleStateAnalysis}} {{.Playbook}}
+terraform state list >{{.ContainerStateListPath}} 2>&1 {{- if .AnsiblePlaybook}} && (
+  export ANSIBLE_TF_DIR="${CLOUD_IAC_WORKSPACE}"
+  cd {{.AnsibleWorkdir}} && ansible-playbook \
+    --inventory {{.AnsibleStateAnalysis}} \
+    --user "${CLOUD_IAC_SSH_USER}" \
+    --private-key "${CLOUD_IAC_PRIVATE_KEY}" \
+    {{.AnsiblePlaybook}}
+)
 {{- end}}
 `
 
@@ -92,13 +99,12 @@ func GenScriptContent(context *ReqBody, saveTo string) error {
 	}
 
 	if err := initCommandTpl.Execute(saveFp, map[string]string{
-		"Repo":                context.Repo,
-		"RepoCommit":          context.RepoCommit,
-		"Workspace":           ContainerWorkspace,
-		"TaskDir":             ContainerTaskDir,
-		"PluginsCachePath":    ContainerPluginsCachePath,
-		"CloudIacTFName":      CloudIacTFName,
-		"CloudInitScriptName": CloudInitScriptName,
+		"Repo":             context.Repo,
+		"RepoCommit":       context.RepoCommit,
+		"Workspace":        ContainerWorkspace,
+		"TaskDir":          ContainerTaskDir,
+		"PluginsCachePath": ContainerPluginsCachePath,
+		"CloudIacTFName":   CloudIacTFName,
 	}); err != nil {
 		return err
 	}
@@ -112,7 +118,8 @@ func GenScriptContent(context *ReqBody, saveTo string) error {
 		"VarFile": context.Varfile,
 		// 存储terraform state list输出内容弄的文件路径
 		"ContainerStateListPath": containerStateListPath,
-		"Playbook":               context.Playbook,
+		"AnsibleWorkdir":         filepath.Dir(context.Playbook),
+		"AnsiblePlaybook":        filepath.Base(context.Playbook),
 		"AnsibleStateAnalysis":   filepath.Join(ContainerAssetsDir, AnsibleStateAnalysisName),
 	}); err != nil {
 		return err

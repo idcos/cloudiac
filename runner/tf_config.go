@@ -64,6 +64,7 @@ variable "cloudiac_ssh_user" {
 
 variable "cloudiac_private_key" {
 	default = "{{.ContainerTaskDir}}/ssh_key"
+	sensitive = true
 }
 `
 
