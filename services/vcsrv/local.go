@@ -136,7 +136,8 @@ func (l *LocalRepo) getCommit(revision string) (*object.Commit, error) {
 }
 
 func (l *LocalRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
-	commit, err := l.getCommit(opt.Ref)
+	branch := getBranch(l, opt.Ref)
+	commit, err := l.getCommit(branch)
 	if err != nil {
 		return nil, err
 	}
@@ -212,4 +213,9 @@ func (l *LocalRepo) FormatRepoSearch() (*Projects, e.Error) {
 		Name:           strings.TrimSuffix(filepath.Base(l.path), ".git"),
 		LastActivityAt: &headCommit.Author.When,
 	}, nil
+}
+
+func (l *LocalRepo) DefaultBranch() string {
+	head, _ := l.repo.Head()
+	return head.Name().Short()
 }
