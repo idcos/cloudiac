@@ -100,7 +100,7 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 	pathList := make([]string, 0)
 	lto := &gitlab.ListTreeOptions{
 		ListOptions: gitlab.ListOptions{Page: 1, PerPage: 1000},
-		Ref:         gitlab.String(git.getBranch(option.Ref)),
+		Ref:         gitlab.String(getBranch(git, option.Ref)),
 		Path:        gitlab.String(option.Path),
 	}
 	treeNode, _, err := git.gitConn.Repositories.ListTree(git.Project.ID, lto)
@@ -123,14 +123,6 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 	}
 	return pathList, nil
 
-}
-
-// 如果ref为空则返回默认分支
-func (git *gitlabRepoIface) getBranch(branch string) string {
-	if branch != "" {
-		return branch
-	}
-	return git.GetDefaultBranch()
 }
 
 func (git *gitlabRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
@@ -164,7 +156,7 @@ func (gitlab *gitlabRepoIface) FormatRepoSearch() (project *Projects, err e.Erro
 	}, nil
 }
 
-func (gitlab *gitlabRepoIface) GetDefaultBranch() string {
+func (gitlab *gitlabRepoIface) DefaultBranch() string {
 	return gitlab.Project.DefaultBranch
 }
 

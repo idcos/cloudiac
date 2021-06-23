@@ -135,20 +135,8 @@ func (l *LocalRepo) getCommit(revision string) (*object.Commit, error) {
 	return l.repo.CommitObject(*hash)
 }
 
-// 如果ref为空则返回默认分支
-func (l *LocalRepo) getBranch(branch string) (string, error) {
-	if branch != "" {
-		return branch, nil
-	}
-	return l.GetDefaultBranch(), nil
-}
-
 func (l *LocalRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
-	branch, err := l.getBranch(opt.Ref)
-	if err != nil {
-		return nil, err
-	}
-
+	branch := getBranch(l, opt.Ref)
 	commit, err := l.getCommit(branch)
 	if err != nil {
 		return nil, err
@@ -227,7 +215,7 @@ func (l *LocalRepo) FormatRepoSearch() (*Projects, e.Error) {
 	}, nil
 }
 
-func (l *LocalRepo) GetDefaultBranch() string {
+func (l *LocalRepo) DefaultBranch() string {
 	head, _ := l.repo.Head()
 	return head.Name().Short()
 }

@@ -141,7 +141,7 @@ type giteeFiles struct {
 
 func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) {
 	var path string = gitee.vcs.Address
-	branch := gitee.getBranch(option.Ref)
+	branch := getBranch(gitee, option.Ref)
 	if option.Path != "" {
 		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s",
 			gitee.repository.FullName, option.Path, gitee.vcs.VcsToken, branch)
@@ -172,15 +172,6 @@ func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 
 	return resp, nil
 }
-
-// 如果ref为空则返回默认分支
-func (gitee *giteeRepoIface) getBranch(branch string) string {
-	if branch != "" {
-		return branch
-	}
-	return gitee.GetDefaultBranch()
-}
-
 
 type giteeReadContent struct {
 	Content string `json:"content" form:"content" `
@@ -214,7 +205,7 @@ func (gitee *giteeRepoIface) FormatRepoSearch() (project *Projects, err e.Error)
 	}, nil
 }
 
-func (gitee *giteeRepoIface) GetDefaultBranch() string {
+func (gitee *giteeRepoIface) DefaultBranch() string {
 	return gitee.repository.DefaultBranch
 }
 

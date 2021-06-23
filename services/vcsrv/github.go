@@ -145,7 +145,7 @@ type githubFiles struct {
 
 func (github *githubRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) {
 	urlParam := url.Values{}
-	urlParam.Set("ref", github.getBranch(option.Ref))
+	urlParam.Set("ref", getBranch(github, option.Ref))
 	var path string
 	if option.Path != "" {
 		path = utils.GenQueryURL(github.vcs.Address,
@@ -176,14 +176,6 @@ func (github *githubRepoIface) ListFiles(option VcsIfaceOptions) ([]string, erro
 
 	return resp, nil
 
-}
-
-// 如果ref为空则返回默认分支
-func (github *githubRepoIface) getBranch(branch string) string {
-	if branch != "" {
-		return branch
-	}
-	return github.GetDefaultBranch()
 }
 
 type githubReadContent struct {
@@ -221,10 +213,9 @@ func (github *githubRepoIface) FormatRepoSearch() (project *Projects, err e.Erro
 	}, nil
 }
 
-func (github *githubRepoIface) GetDefaultBranch() string {
+func (github *githubRepoIface) DefaultBranch() string {
 	return github.repository.DefaultBranch
 }
-
 
 //giteaRequest
 //param path : gitea api路径
