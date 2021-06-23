@@ -25,7 +25,7 @@ func TaskLogSSEGetPath(c *ctx.ServiceCtx, taskGuid string) string {
 }
 
 func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface{}, e.Error) {
-	dbSess := c.DB()
+	dbSess := c.DB().Debug()
 	guid := utils.GenGuid("run")
 	conf := configs.Get()
 	logPath := filepath.Join(form.TemplateGuid, guid, consts.TaskLogName)
@@ -44,7 +44,7 @@ func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface
 
 	vars := GetResourceAccount(form.Account, form.Vars, tpl.TplType)
 	jsons, _ := json.Marshal(vars)
-
+	fmt.Println(9999999)
 	task, err := services.CreateTask(dbSess, models.Task{
 		TemplateGuid:  form.TemplateGuid,
 		TaskType:      consts.TaskApply,
@@ -57,10 +57,24 @@ func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface
 		TemplateId:    tpl.Id,
 		TransactionId: form.TransactionId,
 		Creator:       c.UserId,
+		Status:       consts.TaskPending,
 	})
+
+	/*TemplateId:   form.TemplateId,
+	TemplateGuid: form.TemplateGuid,
+		Guid:         guid,
+		TaskType:     form.TaskType,
+		Status:       consts.TaskPending,
+		Creator:      c.UserId,
+		Name:         form.Name,
+		BackendInfo:  &backend,
+		CtServiceId:  form.CtServiceId,
+		CommitId:     commitId,*/
+	fmt.Println(888888888)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(77777777)
 	//go services.RunTaskToRunning(task, c.DB().Debug(), org.Guid)
 	//go services.StartTask(c.DB(), *task)
 
