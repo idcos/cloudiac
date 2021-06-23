@@ -53,7 +53,7 @@ type MetaFileTemplate struct {
 	Terraform   MetaFileTerraform `yaml:"terraform"`
 	Ansible     MetaFileAnsible   `yaml:"ansible"`
 	Env         map[string]string `yaml:"env"`
-	RepoBranch  string            `yaml:"repo_branch"`
+	Branch      string            `yaml:"branch"`
 	Description string            `yaml:"description"`
 	Timeout     int64             `yaml:"timeout"`
 }
@@ -135,7 +135,7 @@ func fileNameMatch2Analysis(files []string, repo vcsrv.RepoIface, vcs *models.Vc
 			continue
 		}
 		for _, template := range mt.Templates {
-			var branch string = template.RepoBranch
+			var branch string = template.Branch
 			if branch == "" {
 				branch = project.DefaultBranch
 			}
