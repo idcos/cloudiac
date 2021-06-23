@@ -135,8 +135,24 @@ func (l *LocalRepo) getCommit(revision string) (*object.Commit, error) {
 	return l.repo.CommitObject(*hash)
 }
 
+func (l *LocalRepo) getBranch(branch string) (string, error) {
+	if branch != "" {
+		return branch, nil
+	}
+	c, err := l.repo.Config()
+	if err != nil {
+		return "", err
+	}
+	return c.Init.DefaultBranch, nil
+}
+
 func (l *LocalRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
-	commit, err := l.getCommit(opt.Ref)
+	branch, err := l.getBranch(opt.Ref)
+	if err != nil {
+		return nil, err
+	}
+
+	commit, err := l.getCommit(branch)
 	if err != nil {
 		return nil, err
 	}

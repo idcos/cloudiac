@@ -89,16 +89,18 @@ func (git *gitlabRepoIface) BranchCommitId(branch string) (string, error) {
 	}
 	return "", e.New(e.GitLabError, fmt.Errorf("repo %s, commit is null", git.Project.Name))
 }
+
 func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) {
 
 	var (
 		fileBlob = "blob"
 		fileTree = "tree"
 	)
+
 	pathList := make([]string, 0)
 	lto := &gitlab.ListTreeOptions{
 		ListOptions: gitlab.ListOptions{Page: 1, PerPage: 1000},
-		Ref:         gitlab.String(option.Ref),
+		Ref:         gitlab.String(git.getBranch(option.Ref)),
 		Path:        gitlab.String(option.Path),
 	}
 	treeNode, _, err := git.gitConn.Repositories.ListTree(git.Project.ID, lto)
@@ -122,6 +124,13 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 	return pathList, nil
 
 }
+func (git *gitlabRepoIface) getBranch(branch string) string {
+	if branch != "" {
+		return branch
+	}
+	return git.Project.DefaultBranch
+}
+
 func (git *gitlabRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
 	opt := &gitlab.GetRawFileOptions{Ref: gitlab.String(branch)}
 	row, _, errs := git.gitConn.RepositoryFiles.GetRawFile(git.Project.ID, path, opt)
@@ -153,7 +162,6 @@ func (gitlab *gitlabRepoIface) FormatRepoSearch() (project *Projects, err e.Erro
 	}, nil
 }
 
-
 func GetGitConn(gitlabToken, gitlabUrl string) (git *gitlab.Client, err e.Error) {
 	git, er := gitlab.NewClient(gitlabToken, gitlab.WithBaseURL(gitlabUrl+"/api/v4"))
 	if er != nil {
@@ -161,4 +169,3 @@ func GetGitConn(gitlabToken, gitlabUrl string) (git *gitlab.Client, err e.Error)
 	}
 	return
 }
-

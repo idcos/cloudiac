@@ -141,10 +141,13 @@ type giteeFiles struct {
 
 func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) {
 	var path string = gitee.vcs.Address
+	branch := gitee.getBranch(option.Ref)
 	if option.Path != "" {
-		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", gitee.repository.FullName, option.Path, gitee.vcs.VcsToken, option.Ref)
+		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s",
+			gitee.repository.FullName, option.Path, gitee.vcs.VcsToken, branch)
 	} else {
-		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", gitee.repository.FullName, "%2F", gitee.vcs.VcsToken, option.Ref)
+		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s",
+			gitee.repository.FullName, "%2F", gitee.vcs.VcsToken, branch)
 	}
 	_, body, er := gitee.giteaRequest(path, "GET")
 	if er != nil {
@@ -169,6 +172,14 @@ func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 
 	return resp, nil
 }
+
+func (gitee *giteeRepoIface) getBranch(branch string) string {
+	if branch != "" {
+		return branch
+	}
+	return gitee.repository.DefaultBranch
+}
+
 
 type giteeReadContent struct {
 	Content string `json:"content" form:"content" `

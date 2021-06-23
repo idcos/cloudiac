@@ -147,12 +147,15 @@ type giteaFiles struct {
 
 func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) {
 	var path string = gitea.vcs.Address
+	branch := gitea.getBranch(option.Ref)
 	if option.Path != "" {
 		path += "/api/v1" +
-			fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0&ref=%s", gitea.repository.FullName, option.Path, option.Ref)
+			fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0&ref=%s",
+				gitea.repository.FullName, option.Path, branch)
 	} else {
 		path += "/api/v1" +
-			fmt.Sprintf("/repos/%s/contents?limit=0&page=0&ref=%s", gitea.repository.FullName, option.Ref)
+			fmt.Sprintf("/repos/%s/contents?limit=0&page=0&ref=%s",
+				gitea.repository.FullName, branch)
 	}
 	response, body, er := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
 	if er != nil {
@@ -176,6 +179,14 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 
 	return resp, nil
 }
+
+func (gitea *giteaRepoIface) getBranch(branch string) string {
+	if branch != "" {
+		return branch
+	}
+	return gitea.repository.DefaultBranch
+}
+
 func (gitea *giteaRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
 	pathAddr := gitea.vcs.Address + "/api/v1" +
 		fmt.Sprintf("/repos/%s/raw/%s?ref=%s", gitea.repository.FullName, path, branch)
@@ -219,4 +230,3 @@ func giteaRequest(path, method, token string) (*http.Response, []byte, error) {
 	return response, body, nil
 
 }
-
