@@ -36,15 +36,19 @@ func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface
 		return nil, err
 	}
 
+	runnerAddr, runnerPort, err := services.DefaultRunner(dbSess, "", 0, tpl.Id, tpl.OrgId)
+	if err != nil {
+		return nil, err
+	}
+
 	backend := models.TaskBackendInfo{
-		BackendUrl:  fmt.Sprintf("http://%s:%d/api/v1", tpl.DefaultRunnerAddr, tpl.DefaultRunnerPort),
+		BackendUrl:  fmt.Sprintf("http://%s:%d/api/v1", runnerAddr, runnerPort),
 		CtServiceId: conf.Consul.ServiceID,
 		LogFile:     logPath,
 	}
 
 	vars := GetResourceAccount(form.Account, form.Vars, tpl.TplType)
 	jsons, _ := json.Marshal(vars)
-	fmt.Println(9999999)
 	task, err := services.CreateTask(dbSess, models.Task{
 		TemplateGuid:  form.TemplateGuid,
 		TaskType:      consts.TaskApply,
@@ -57,26 +61,12 @@ func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface
 		TemplateId:    tpl.Id,
 		TransactionId: form.TransactionId,
 		Creator:       c.UserId,
-		Status:       consts.TaskPending,
+		Status:        consts.TaskPending,
 	})
 
-	/*TemplateId:   form.TemplateId,
-	TemplateGuid: form.TemplateGuid,
-		Guid:         guid,
-		TaskType:     form.TaskType,
-		Status:       consts.TaskPending,
-		Creator:      c.UserId,
-		Name:         form.Name,
-		BackendInfo:  &backend,
-		CtServiceId:  form.CtServiceId,
-		CommitId:     commitId,*/
-	fmt.Println(888888888)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(77777777)
-	//go services.RunTaskToRunning(task, c.DB().Debug(), org.Guid)
-	//go services.StartTask(c.DB(), *task)
 
 	return task, nil
 }

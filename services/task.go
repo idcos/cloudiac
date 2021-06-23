@@ -366,3 +366,25 @@ func SendMail(query *db.Session, orgId uint, task *models.Task) {
 	sendMail.SendMail()
 
 }
+
+func DefaultRunner(dbSess *db.Session, runnerAddr string, runnerPort uint, tplId, orgId uint) (string, uint, e.Error) {
+	if runnerAddr != "" && runnerPort != 0 {
+		return runnerAddr, runnerPort, nil
+	}
+	if tplId != 0 {
+		tpl, err := GetTemplateById(dbSess, tplId)
+		if err != nil {
+			return "", 0, err
+		}
+		return tpl.DefaultRunnerAddr, tpl.DefaultRunnerPort, nil
+	}
+
+	if orgId != 0 {
+		org, err := GetOrganizationById(dbSess, tplId)
+		if err != nil {
+			return "", 0, err
+		}
+		return org.DefaultRunnerAddr, org.DefaultRunnerPort, nil
+	}
+	return "", 0, nil
+}
