@@ -37,21 +37,27 @@ cloudiac 部署后自带一个演示模板，可以基于该模板进行开发�
 创建新模板可以在 cloudiac-example 项目基础上修改，或者创建一个全新项目，但**必须符合以上目录结构规范**。
 
 下面以基于 cloudiac-example 开发为例演示模板开发过程：
-1. 在您使用的 VCS 中创建远程仓库    
-    目前支持的 vcs 类型有: gitlab, github, gitee, gitea
 
-2. 基于 cloudiac-example 创建项目
+1. 基于 cloudiac-example 创建项目
 ```shell
 # mv cloudiac-example tf-webapp
 # cd tf-webapp 
 # rm -rf .git && git init .
-# git remote add origin https://github.com/my/tf-webapp
 ```
 
-3. 进行云模板开发，完成后并将代码推送到远程仓库
+2. 进行云模板开发，并提交代码
 ```shell
 # git add .
 # git commit -m "Initial commit"
+```
+
+3. 创建远程仓库
+选择一个熟悉的 vcs 服务，在其上新建一个代码库。
+目前 IaC 支持的 vcs 类型有: gitlab、github、gitee、gitea。
+
+4. 将代码推送到远程仓库
+```shell
+# git remote add origin https://github.com/my/tf-webapp
 # git push origin master
 ```
 
