@@ -173,11 +173,12 @@ func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 	return resp, nil
 }
 
+// 如果ref为空则返回默认分支
 func (gitee *giteeRepoIface) getBranch(branch string) string {
 	if branch != "" {
 		return branch
 	}
-	return gitee.repository.DefaultBranch
+	return gitee.GetDefaultBranch()
 }
 
 
@@ -211,6 +212,10 @@ func (gitee *giteeRepoIface) FormatRepoSearch() (project *Projects, err e.Error)
 		Name:           gitee.repository.Name,
 		LastActivityAt: &gitee.repository.Updated,
 	}, nil
+}
+
+func (gitee *giteeRepoIface) GetDefaultBranch() string {
+	return gitee.repository.DefaultBranch
 }
 
 //giteeRequest

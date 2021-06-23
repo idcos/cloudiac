@@ -180,11 +180,12 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 	return resp, nil
 }
 
-func (gitea *giteaRepoIface) getBranch(branch string) string {
-	if branch != "" {
-		return branch
+// 如果ref为空则返回默认分支
+func (gitea *giteaRepoIface) getBranch(ref string) string {
+	if ref != "" {
+		return ref
 	}
-	return gitea.repository.DefaultBranch
+	return gitea.GetDefaultBranch()
 }
 
 func (gitea *giteaRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
@@ -209,6 +210,10 @@ func (gitea *giteaRepoIface) FormatRepoSearch() (project *Projects, err e.Error)
 		Name:           gitea.repository.Name,
 		LastActivityAt: &gitea.repository.Updated,
 	}, nil
+}
+
+func (gitea *giteaRepoIface) GetDefaultBranch() string {
+	return gitea.repository.DefaultBranch
 }
 
 //giteeRequest

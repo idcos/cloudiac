@@ -61,6 +61,9 @@ type RepoIface interface {
 
 	// FormatRepoSearch 格式化输出前端需要的内容
 	FormatRepoSearch() (project *Projects, err e.Error)
+
+	// GetDefaultBranch 获取默认分支
+	GetDefaultBranch() string
 }
 
 func GetVcsInstance(vcs *models.Vcs) (VcsIface, error) {

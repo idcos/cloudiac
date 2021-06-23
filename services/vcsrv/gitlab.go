@@ -124,11 +124,13 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 	return pathList, nil
 
 }
+
+// 如果ref为空则返回默认分支
 func (git *gitlabRepoIface) getBranch(branch string) string {
 	if branch != "" {
 		return branch
 	}
-	return git.Project.DefaultBranch
+	return git.GetDefaultBranch()
 }
 
 func (git *gitlabRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
@@ -160,6 +162,10 @@ func (gitlab *gitlabRepoIface) FormatRepoSearch() (project *Projects, err e.Erro
 		Name:           gitlab.Project.Name,
 		LastActivityAt: gitlab.Project.LastActivityAt,
 	}, nil
+}
+
+func (gitlab *gitlabRepoIface) GetDefaultBranch() string {
+	return gitlab.Project.DefaultBranch
 }
 
 func GetGitConn(gitlabToken, gitlabUrl string) (git *gitlab.Client, err e.Error) {

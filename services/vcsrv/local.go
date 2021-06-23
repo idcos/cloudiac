@@ -135,15 +135,12 @@ func (l *LocalRepo) getCommit(revision string) (*object.Commit, error) {
 	return l.repo.CommitObject(*hash)
 }
 
+// 如果ref为空则返回默认分支
 func (l *LocalRepo) getBranch(branch string) (string, error) {
 	if branch != "" {
 		return branch, nil
 	}
-	c, err := l.repo.Config()
-	if err != nil {
-		return "", err
-	}
-	return c.Init.DefaultBranch, nil
+	return l.GetDefaultBranch(), nil
 }
 
 func (l *LocalRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
@@ -228,4 +225,9 @@ func (l *LocalRepo) FormatRepoSearch() (*Projects, e.Error) {
 		Name:           strings.TrimSuffix(filepath.Base(l.path), ".git"),
 		LastActivityAt: &headCommit.Author.When,
 	}, nil
+}
+
+func (l *LocalRepo) GetDefaultBranch() string {
+	head, _ := l.repo.Head()
+	return head.Name().Short()
 }

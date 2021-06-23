@@ -178,11 +178,12 @@ func (github *githubRepoIface) ListFiles(option VcsIfaceOptions) ([]string, erro
 
 }
 
+// 如果ref为空则返回默认分支
 func (github *githubRepoIface) getBranch(branch string) string {
 	if branch != "" {
 		return branch
 	}
-	return github.repository.DefaultBranch
+	return github.GetDefaultBranch()
 }
 
 type githubReadContent struct {
@@ -219,6 +220,11 @@ func (github *githubRepoIface) FormatRepoSearch() (project *Projects, err e.Erro
 		LastActivityAt: &github.repository.Updated,
 	}, nil
 }
+
+func (github *githubRepoIface) GetDefaultBranch() string {
+	return github.repository.DefaultBranch
+}
+
 
 //giteaRequest
 //param path : gitea api路径
