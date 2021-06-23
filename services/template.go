@@ -21,11 +21,15 @@ func CreateTemplate(tx *db.Session, template models.Template) (*models.Template,
 func QueryTemplate(tx *db.Session, status, q, taskStatus string, statusList []string, orgId uint) (*db.Session, *db.Session) {
 	query := tx.Debug().Model(&models.Template{}).Joins(
 		"left join" +
-			" (SELECT task.updated_at as task_updated_at,task.template_id,task.guid as task_guid,task.`status` as task_status from " +
-			"(select * FROM iac_task ORDER BY id desc LIMIT 100000)" +
-			" as task GROUP BY task.template_id)  as task on task.template_id = iac_template.id").
+			" (SELECT " +
+			"MAX(id), iac_task.updated_at as task_updated_at,iac_task.template_id,iac_task.guid as task_guid," +
+			"iac_task.`status` as task_status FROM iac_task GROUP BY template_id)  as task" +
+			" on task.template_id = iac_template.id").
 		LazySelectAppend("task.*", "iac_template.*")
-
+/*	SELECT
+	MAX(id), task.updated_at as task_updated_at,task.template_id,task.guid as task_guid,task.`status` as task_status
+	FROM iac_task
+	GROUP BY template_id*/
 	if taskStatus != "all" && taskStatus != "" {
 		query = query.Where("task_status in (?)", statusList)
 	}
