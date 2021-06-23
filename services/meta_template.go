@@ -124,12 +124,12 @@ func fileNameMatch2Analysis(files []string, repo vcsrv.RepoIface, vcs *models.Vc
 	for _, file := range files {
 		content, err := repo.ReadFileContent("master", file)
 		if err != nil {
-			logs.Get().Debugf("ReadFileContent err: %v", err)
+			logs.Get().Debugf("repo: %s  ReadFileContent err: %v", project.Name, err)
 			continue
 		}
 		mt, err := MetaAnalysis(content)
 		if err != nil {
-			logs.Get().Debugf("MetaAnalysis err: %v", err)
+			logs.Get().Debugf("repo: %s MetaAnalysis err: %v", project.Name, err)
 			continue
 		}
 		for _, template := range mt.Templates {
@@ -143,7 +143,7 @@ func fileNameMatch2Analysis(files []string, repo vcsrv.RepoIface, vcs *models.Vc
 				RepoAddr:   project.HTTPURLToRepo,
 				RepoId:     project.ID,
 			}); err != nil {
-				logs.Get().Debugf("CreateTemplate err: %v", err)
+				logs.Get().Debugf("repo: %s  CreateMetaTemplate err: %v", project.Name, err)
 			}
 		}
 	}
