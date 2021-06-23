@@ -22,11 +22,11 @@ ln -sv ${CLOUD_IAC_TASK_DIR}/{{.CloudIacTFName}}  ./ && \
 terraform init && \`
 
 const planCommandTemplate = `
-terraform plan {{if .VarFile}}-var-file={{.VarFile}}{{end}}
+terraform plan -input=false {{if .VarFile}}-var-file={{.VarFile}}{{end}}
 `
 
 const applyCommandTemplate = `
-terraform apply -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}} && \
+terraform apply -input=false -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}} && \
 terraform state list >{{.ContainerStateListPath}} 2>&1 {{- if .AnsiblePlaybook}} && (
   export ANSIBLE_TF_DIR="${CLOUD_IAC_WORKSPACE}"
   cd {{.AnsibleWorkdir}} && ansible-playbook \
@@ -39,7 +39,7 @@ terraform state list >{{.ContainerStateListPath}} 2>&1 {{- if .AnsiblePlaybook}}
 `
 
 const destroyCommandTemplate = `
-terraform destroy -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}} && \
+terraform destroy -input=false -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}} && \
 terraform state list > {{.ContainerStateListPath}} 2>&1
 `
 

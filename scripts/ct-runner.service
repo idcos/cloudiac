@@ -1,0 +1,10 @@
+[Unit]
+Description=ct-runner
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/cloudiac
+ExecStart=/opt/cloudiac/ct-runner -c /opt/cloudiac/config-runner.yml
+
+[Install]
+WantedBy=multi-user.target
