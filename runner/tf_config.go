@@ -58,13 +58,10 @@ EOT
   }
 }
 
-variable "cloudiac_ssh_user" {
-	default = "root"
-} 
-
-variable "cloudiac_private_key" {
-	default = "{{.ContainerTaskDir}}/ssh_key"
-	sensitive = true
+locals {
+	cloudiac_ssh_user    = "root"
+	cloudiac_private_key = "{{.ContainerTaskDir}}/ssh_key"
+	cloudiac_user_data   = data.cloudinit_config.cloudiac.rendered
 }
 `
 

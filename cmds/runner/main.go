@@ -93,24 +93,14 @@ func StartServer() {
 	conf := configs.Get()
 	logger := logs.Get()
 
-	name := "ct-runner"
-	abs, _ := filepath.Abs(os.Args[0])
-	dir := filepath.Dir(abs)
-	ext := filepath.Ext(name)
-	execName := name[:len(name)-len(ext)]
-
-	logPath := filepath.Join(dir, "logs", execName+".log")
-	f, _ := os.OpenFile(logPath, os.O_WRONLY|os.O_APPEND, 0666)
-	gin.DefaultWriter = io.MultiWriter(f, os.Stdout)
-
 	type request struct {
 		*http.Request
 		doneCh chan struct{}
 	}
 
 	requestChan := make(chan request, 32)
-	e := gin.Default()
 
+	e := gin.Default()
 	apiV1 := e.Group("/api/v1")
 	apiV1.Any("/check", func(c *gin.Context) {
 		c.JSON(200, gin.H{
