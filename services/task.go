@@ -384,7 +384,7 @@ func DefaultRunner(dbSess *db.Session, runnerAddr string, runnerPort uint, tplId
 	}
 
 	if orgId != 0 {
-		org, err := GetOrganizationById(dbSess, tplId)
+		org, err := GetOrganizationById(dbSess, orgId)
 		if err != nil {
 			return "", 0, err
 		}
