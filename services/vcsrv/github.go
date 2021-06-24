@@ -145,7 +145,7 @@ type githubFiles struct {
 
 func (github *githubRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) {
 	urlParam := url.Values{}
-	urlParam.Set("ref", option.Ref)
+	urlParam.Set("ref", getBranch(github, option.Ref))
 	var path string
 	if option.Path != "" {
 		path = utils.GenQueryURL(github.vcs.Address,
@@ -211,6 +211,10 @@ func (github *githubRepoIface) FormatRepoSearch() (project *Projects, err e.Erro
 		Name:           github.repository.Name,
 		LastActivityAt: &github.repository.Updated,
 	}, nil
+}
+
+func (github *githubRepoIface) DefaultBranch() string {
+	return github.repository.DefaultBranch
 }
 
 //giteaRequest

@@ -147,12 +147,15 @@ type giteaFiles struct {
 
 func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) {
 	var path string = gitea.vcs.Address
+	branch := getBranch(gitea,option.Ref)
 	if option.Path != "" {
 		path += "/api/v1" +
-			fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0&ref=%s", gitea.repository.FullName, option.Path, option.Ref)
+			fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0&ref=%s",
+				gitea.repository.FullName, option.Path, branch)
 	} else {
 		path += "/api/v1" +
-			fmt.Sprintf("/repos/%s/contents?limit=0&page=0&ref=%s", gitea.repository.FullName, option.Ref)
+			fmt.Sprintf("/repos/%s/contents?limit=0&page=0&ref=%s",
+				gitea.repository.FullName, branch)
 	}
 	response, body, er := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
 	if er != nil {
@@ -176,6 +179,7 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 
 	return resp, nil
 }
+
 func (gitea *giteaRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
 	pathAddr := gitea.vcs.Address + "/api/v1" +
 		fmt.Sprintf("/repos/%s/raw/%s?ref=%s", gitea.repository.FullName, path, branch)
@@ -200,6 +204,10 @@ func (gitea *giteaRepoIface) FormatRepoSearch() (project *Projects, err e.Error)
 	}, nil
 }
 
+func (gitea *giteaRepoIface) DefaultBranch() string {
+	return gitea.repository.DefaultBranch
+}
+
 //giteeRequest
 //param path : gitea api路径
 //param method 请求方式
@@ -219,4 +227,3 @@ func giteaRequest(path, method, token string) (*http.Response, []byte, error) {
 	return response, body, nil
 
 }
-

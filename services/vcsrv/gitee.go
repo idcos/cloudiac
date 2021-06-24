@@ -141,10 +141,13 @@ type giteeFiles struct {
 
 func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) {
 	var path string = gitee.vcs.Address
+	branch := getBranch(gitee, option.Ref)
 	if option.Path != "" {
-		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", gitee.repository.FullName, option.Path, gitee.vcs.VcsToken, option.Ref)
+		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s",
+			gitee.repository.FullName, option.Path, gitee.vcs.VcsToken, branch)
 	} else {
-		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", gitee.repository.FullName, "%2F", gitee.vcs.VcsToken, option.Ref)
+		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s",
+			gitee.repository.FullName, "%2F", gitee.vcs.VcsToken, branch)
 	}
 	_, body, er := gitee.giteaRequest(path, "GET")
 	if er != nil {
@@ -200,6 +203,10 @@ func (gitee *giteeRepoIface) FormatRepoSearch() (project *Projects, err e.Error)
 		Name:           gitee.repository.Name,
 		LastActivityAt: &gitee.repository.Updated,
 	}, nil
+}
+
+func (gitee *giteeRepoIface) DefaultBranch() string {
+	return gitee.repository.DefaultBranch
 }
 
 //giteeRequest

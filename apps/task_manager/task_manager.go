@@ -139,7 +139,7 @@ func (m *TaskManager) start() {
 
 	go func() {
 		<-lockLostCh
-		m.logger.Warnf("task manager lock lost")
+		m.logger.Infof("task manager lock lost")
 		cancel()
 	}()
 
@@ -148,7 +148,10 @@ func (m *TaskManager) start() {
 	go m.listenTaskExited()
 
 	// 恢复执行中的任务状态
-	go m.recoverTask(ctx)
+	if err = m.recoverTask(ctx); err != nil {
+		m.logger.Errorf("recover task error: %v", err)
+		return
+	}
 
 	// 查询待运行任务列表的间隔
 	ticker := time.NewTicker(time.Second)
@@ -213,27 +216,32 @@ func (m *TaskManager) run(ctx context.Context) {
 }
 
 // recoverTask 查询 db 中 running 状态的任务，并通知任务 started
-func (m *TaskManager) recoverTask(ctx context.Context) {
+func (m *TaskManager) recoverTask(ctx context.Context) error {
 	logger := m.logger
 	query := m.db.Model(&models.Task{}).
 		Where("status = ?", consts.TaskRunning)
 
 	tasks := make([]*models.Task, 0)
 	if err := query.Find(&tasks); err != nil {
-		logger.Panicf("find %s tasks error: %v", consts.TaskRunning, err)
+		logger.Errorf("find %s tasks error: %v", consts.TaskRunning, err)
+		return err
 	}
-	logger.Infof("find %d running tasks", len(tasks))
 
-	for _, task := range tasks {
-		select {
-		case <-ctx.Done():
-			break
-		default:
-			logger.Infof("recover running task %s", task.Guid)
-			m.notifyTaskStarting(task)
-			m.notifyTaskStarted(task)
+	logger.Infof("find %d running tasks", len(tasks))
+	go func() {
+		for _, task := range tasks {
+			select {
+			case <-ctx.Done():
+				break
+			default:
+				logger.Infof("recover running task %s", task.Guid)
+				m.notifyTaskStarting(task)
+				m.notifyTaskStarted(task)
+			}
 		}
-	}
+	}()
+
+	return nil
 }
 
 // 启动任务

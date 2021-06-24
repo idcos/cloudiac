@@ -49,10 +49,13 @@ type MetaFile struct {
 }
 
 type MetaFileTemplate struct {
-	Name      string            `yaml:"name"`
-	Terraform MetaFileTerraform `yaml:"terraform"`
-	Ansible   MetaFileAnsible   `yaml:"ansible"`
-	Env       map[string]string `yaml:"env"`
+	Name        string            `yaml:"name"`
+	Terraform   MetaFileTerraform `yaml:"terraform"`
+	Ansible     MetaFileAnsible   `yaml:"ansible"`
+	Env         map[string]string `yaml:"env"`
+	Branch      string            `yaml:"branch"`
+	Description string            `yaml:"description"`
+	Timeout     int64             `yaml:"timeout"`
 }
 
 type MetaFileTerraform struct {
@@ -109,7 +112,6 @@ func InitMetaTemplate(tx *db.Session) error {
 		project, _ := repo.FormatRepoSearch()
 		files, err := repo.ListFiles(vcsrv.VcsIfaceOptions{
 			Search: consts.MetaYmlMatch,
-			Ref:    "master",
 		})
 		if err != nil {
 			logger.Debugf("vcs get files err: %v", err)
@@ -133,15 +135,21 @@ func fileNameMatch2Analysis(files []string, repo vcsrv.RepoIface, vcs *models.Vc
 			continue
 		}
 		for _, template := range mt.Templates {
+			var branch string = template.Branch
+			if branch == "" {
+				branch = project.DefaultBranch
+			}
 			if _, err := CreateMetaTemplate(tx.Debug(), models.MetaTemplate{
-				Name:       template.Name,
-				Vars:       models.JSON(var2TerraformVar(template.Terraform.Var, template.Env)),
-				Playbook:   template.Ansible.Playbook,
-				SaveState:  template.Terraform.SaveState,
-				VcsId:      vcs.Id,
-				RepoBranch: project.DefaultBranch,
-				RepoAddr:   project.HTTPURLToRepo,
-				RepoId:     project.ID,
+				Name:        template.Name,
+				Vars:        models.JSON(var2TerraformVar(template.Terraform.Var, template.Env)),
+				Playbook:    template.Ansible.Playbook,
+				SaveState:   template.Terraform.SaveState,
+				VcsId:       vcs.Id,
+				RepoBranch:  branch,
+				RepoAddr:    project.HTTPURLToRepo,
+				RepoId:      project.ID,
+				Timeout:     template.Timeout,
+				Description: template.Description,
 			}); err != nil {
 				logs.Get().Debugf("CreateTemplate err: %v", err)
 			}

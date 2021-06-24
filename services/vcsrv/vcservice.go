@@ -37,7 +37,7 @@ type VcsIface interface {
 }
 
 type RepoIface interface {
-	// ListBranches
+	// ListBranches 获取分支列表
 	ListBranches() ([]string, error)
 
 	// BranchCommitId
@@ -61,6 +61,9 @@ type RepoIface interface {
 
 	// FormatRepoSearch 格式化输出前端需要的内容
 	FormatRepoSearch() (project *Projects, err e.Error)
+
+	// DefaultBranch 获取默认分支
+	DefaultBranch() string
 }
 
 func GetVcsInstance(vcs *models.Vcs) (VcsIface, error) {
@@ -91,4 +94,12 @@ func matchGlob(search, name string) bool {
 		return false
 	}
 	return matched
+}
+
+//校验ref是否为空 空则返回默认分支
+func getBranch(repo RepoIface, ref string) string {
+	if ref == "" {
+		return repo.DefaultBranch()
+	}
+	return ref
 }
