@@ -371,10 +371,14 @@ func DefaultRunner(dbSess *db.Session, runnerAddr string, runnerPort uint, tplId
 	if runnerAddr != "" && runnerPort != 0 {
 		return runnerAddr, runnerPort, nil
 	}
+
 	if tplId != 0 {
 		tpl, err := GetTemplateById(dbSess, tplId)
 		if err != nil {
 			return "", 0, err
+		}
+		if tpl.DefaultRunnerAddr == "" || tpl.DefaultRunnerPort == 0 {
+			return DefaultRunner(dbSess, "", 0, 0, orgId)
 		}
 		return tpl.DefaultRunnerAddr, tpl.DefaultRunnerPort, nil
 	}
@@ -386,5 +390,6 @@ func DefaultRunner(dbSess *db.Session, runnerAddr string, runnerPort uint, tplId
 		}
 		return org.DefaultRunnerAddr, org.DefaultRunnerPort, nil
 	}
+
 	return "", 0, nil
 }
