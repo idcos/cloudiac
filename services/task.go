@@ -377,10 +377,9 @@ func DefaultRunner(dbSess *db.Session, runnerAddr string, runnerPort uint, tplId
 		if err != nil {
 			return "", 0, err
 		}
-		if tpl.DefaultRunnerAddr == "" || tpl.DefaultRunnerPort == 0 {
-			return DefaultRunner(dbSess, "", 0, 0, orgId)
+		if tpl.DefaultRunnerAddr != "" || tpl.DefaultRunnerPort != 0 {
+			return tpl.DefaultRunnerAddr, tpl.DefaultRunnerPort, nil
 		}
-		return tpl.DefaultRunnerAddr, tpl.DefaultRunnerPort, nil
 	}
 
 	if orgId != 0 {
