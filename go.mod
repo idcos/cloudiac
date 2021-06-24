@@ -23,6 +23,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/consul/api v1.8.1
 	github.com/hashicorp/hcl/v2 v2.10.0
+	github.com/hashicorp/terraform-config-inspect v0.0.0-20210511202847-ad33d83d7650
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/jinzhu/gorm v1.9.16
 	github.com/joho/godotenv v1.3.0
