@@ -14,8 +14,10 @@ import (
 
 func OpenSearchTemplate(c *ctx.ServiceCtx) (interface{}, e.Error) {
 	resp := make([]struct {
-		Name string `json:"name"`
-		Guid string `json:"guid"`
+		Name        string `json:"name"`
+		Guid        string `json:"guid"`
+		TplType     string `json:"tplType"`
+		Description string `json:"description"`
 	}, 0)
 	if err := services.OpenSearchTemplate(c.DB()).Scan(&resp); err != nil {
 		return nil, e.New(e.DBError, err)
