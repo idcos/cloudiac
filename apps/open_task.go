@@ -25,7 +25,7 @@ func TaskLogSSEGetPath(c *ctx.ServiceCtx, taskGuid string) string {
 }
 
 func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface{}, e.Error) {
-	dbSess := c.DB()
+	dbSess := c.DB().Debug()
 	guid := utils.GenGuid("run")
 	conf := configs.Get()
 	logPath := filepath.Join(form.TemplateGuid, guid, consts.TaskLogName)
@@ -36,15 +36,19 @@ func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface
 		return nil, err
 	}
 
+	runnerAddr, runnerPort, err := services.DefaultRunner(dbSess, "", 0, tpl.Id, tpl.OrgId)
+	if err != nil {
+		return nil, err
+	}
+
 	backend := models.TaskBackendInfo{
-		BackendUrl:  fmt.Sprintf("http://%s:%d/api/v1", tpl.DefaultRunnerAddr, tpl.DefaultRunnerPort),
+		BackendUrl:  fmt.Sprintf("http://%s:%d/api/v1", runnerAddr, runnerPort),
 		CtServiceId: conf.Consul.ServiceID,
 		LogFile:     logPath,
 	}
 
 	vars := GetResourceAccount(form.Account, form.Vars, tpl.TplType)
 	jsons, _ := json.Marshal(vars)
-
 	task, err := services.CreateTask(dbSess, models.Task{
 		TemplateGuid:  form.TemplateGuid,
 		TaskType:      consts.TaskApply,
@@ -57,12 +61,12 @@ func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface
 		TemplateId:    tpl.Id,
 		TransactionId: form.TransactionId,
 		Creator:       c.UserId,
+		Status:        consts.TaskPending,
 	})
+
 	if err != nil {
 		return nil, err
 	}
-	//go services.RunTaskToRunning(task, c.DB().Debug(), org.Guid)
-	//go services.StartTask(c.DB(), *task)
 
 	return task, nil
 }
