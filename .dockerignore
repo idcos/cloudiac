@@ -1,0 +1,6 @@
+.idea/
+*.tar.gz
+/plugin-cache/
+/storage/
+/run/
+/var/

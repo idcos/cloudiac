@@ -1,21 +1,21 @@
 listen: "0.0.0.0:19030"
 
 runner:
-  default_image: "mt5225/tf-ansible:v0.0.1"
-
-  ## 预置资源(providers, terraform.py 等)
-  assets_path: "./assets"
-
-  ## plugins 缓存
-  plugin_cache_path: "./plugin-cache"
+  default_image: "cloudiac/ct-worker:latest"
 
   ## 保存任务运行信息(脚本、日志等)
-  storage_path: "./storage"
+  storage_path: "var/storage"
+
+  ## 预置资源(providers, terraform.py 等)
+  assets_path: "assets"
+
+  ## plugins 缓存
+  plugin_cache_path: "var/plugin-cache"
 
 consul:
   address: "consul:8500"
   id: "CT-Runner-01"
-  ip: "runner"
+  ip: "ct-runner"
   port: 19030
   tags: "ct-runner;runner-01"
   interval: 5s
@@ -24,5 +24,6 @@ consul:
 
 log:
   log_level: "debug"
-  log_path: ""    # 日志保存路径，不指定同仅打印到标准输出
+  ## 日志保存路径，不指定则仅打印到标准输出
+  log_path: ""
   log_max_days: 7

@@ -181,10 +181,11 @@ func doAssignTask(orgId string, vcs *models.Vcs, tpl *models.Template, task *mod
 	// 向 runner 下发 task
 	resp, err = requestRunnerRunTask(addr, header, data)
 	if err != nil {
-		return resp, true, fmt.Errorf("request runner failed: %v", err)
+		return nil, false, fmt.Errorf("request runner failed: %v", err)
 	}
+
 	logger.Infof("runner response: %#v", resp)
-	return resp, false, err
+	return resp, false, nil
 }
 
 type runnerResp struct {

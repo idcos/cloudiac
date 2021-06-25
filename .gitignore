@@ -15,3 +15,5 @@ plugin-cache/
 /docs/docs.go
 /docs/swagger.json
 /docs/swagger.yaml
+/var/
+/run/

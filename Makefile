@@ -16,12 +16,18 @@ GOBUILD=$(GOCMD) build -v -ldflags $(GOLDFLAGS)
 GORUN=$(GOCMD) run -v -ldflags $(GOLDFLAGS)
 PB_PROTOC=protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative
 
+WORKDIR?=/usr/yunji/cloudiac
+DOCKER_BUILD=docker build --build-arg WORKDIR=$(WORKDIR)
+
 BUILD_DIR=$(PWD)/targets
 
 .PHONY: all build portal runner run run-portal ru-runner clean package repos providers package-release
 
 all: build
 build: portal runner tool
+
+build-linux-amd64: 
+	GOOS=linux GOARCH=amd64 $(MAKE) build
 
 reset-build-dir:
 	$(RM) -r $(BUILD_DIR)
@@ -88,3 +94,19 @@ PROVIDERS_PACKAGE_NAME=cloud-iac-providers-$(VERSION)-$(DATE_VER).tar.gz
 providers-package: providers
 	@tar -czf $(PROVIDERS_PACKAGE_NAME) ./assets/providers && echo Package: $(PROVIDERS_PACKAGE_NAME)
 
+
+docker-image: build-linux-amd64
+	$(DOCKER_BUILD) -t cloudiac/iac-portal:$(VERSION) -f docker/portal/Dockerfile . && \
+	$(DOCKER_BUILD) -t cloudiac/ct-runner:$(VERSION) -f docker/runner/Dockerfile . && \
+	$(DOCKER_BUILD) -t cloudiac/ct-worker:$(VERSION) -f docker/worker/Dockerfile .
+
+docker-push: 
+	for NAME in iac-portal ct-runner ct-worker; do \
+	  docker push cloudiac/$${NAME}:$(VERSION) || exit $$?; \
+	done
+
+docker-push-latest:
+	for NAME in iac-portal ct-runner ct-worker; do \
+	  docker tag cloudiac/$${NAME}:$(VERSION) cloudiac/$${NAME}:latest && \
+	  docker push cloudiac/$${NAME}:latest || exit $$?; \
+	done

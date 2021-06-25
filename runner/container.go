@@ -12,7 +12,6 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
-	guuid "github.com/google/uuid"
 	"os"
 	"path/filepath"
 )
@@ -174,20 +173,53 @@ func (task *CommitedTask) Wait(ctx context.Context) (int64, error) {
 
 func (cmd *Command) Create() error {
 	logger := logger.WithField("taskId", filepath.Base(cmd.TaskWorkdir))
-
-	// TODO(ZhengYue): Create client with params of host info
 	cli, err := client.NewClientWithOpts()
-	cli.NegotiateAPIVersion(context.Background())
-
 	if err != nil {
 		logger.Errorf("unable to create docker client")
 		return err
 	}
-
-	id := guuid.New()
-	conf := configs.Get()
+	cli.NegotiateAPIVersion(context.Background())
 
 	logger.Infof("starting task, working directory: %s", cmd.TaskWorkdir)
+
+	conf := configs.Get()
+	mountConfigs := []mount.Mount{
+		{
+			Type:   mount.TypeBind,
+			Source: cmd.TaskWorkdir,
+			Target: ContainerTaskDir,
+		},
+		{
+			Type:   mount.TypeBind,
+			Source: conf.Runner.AbsPluginCachePath(),
+			Target: ContainerPluginsCachePath,
+		},
+		{
+			Type:   mount.TypeBind,
+			Source: "/var/run/docker.sock",
+			Target: "/var/run/docker.sock",
+		},
+	}
+
+	// assets_path 配置为空则表示直接使用 worker 容器中打包的 assets。
+	// 在 runner 容器化部署时运行 runner 的宿主机(docker host)并没有 assets 目录，
+	// 如果配置了 assets 路径，进行 bind mount 时会因为源目录不存在而报错。
+	if conf.Runner.AssetsPath != "" {
+		mountConfigs = append(mountConfigs, mount.Mount{
+			Type:     mount.TypeBind,
+			Source:   conf.Runner.AbsAssetsPath(),
+			Target:   ContainerAssetsDir,
+			ReadOnly: true,
+		})
+		mountConfigs = append(mountConfigs, mount.Mount{
+			// providers 需要挂载到指定目录才能被 terraform 查找到，所以单独做一次挂载
+			Type:     mount.TypeBind,
+			Source:   conf.Runner.ProviderPath(),
+			Target:   ContainerPluginsPath,
+			ReadOnly: true,
+		})
+	}
+
 	cont, err := cli.ContainerCreate(
 		cmd.ContainerInstance.Context,
 		&container.Config{
@@ -199,40 +231,11 @@ func (cmd *Command) Create() error {
 		},
 		&container.HostConfig{
 			AutoRemove: false,
-			Mounts: []mount.Mount{
-				{
-					Type:   mount.TypeBind,
-					Source: cmd.TaskWorkdir,
-					Target: ContainerTaskDir,
-				},
-				{
-					Type:     mount.TypeBind,
-					Source:   conf.Runner.AbsAssetsPath(),
-					Target:   ContainerAssetsDir,
-					ReadOnly: true,
-				},
-				{
-					// providers 需要挂载到指定目录才能被 terraform 查找到，所以单独再做一次挂载
-					Type:     mount.TypeBind,
-					Source:   conf.Runner.ProviderPath(),
-					Target:   ContainerPluginsPath,
-					ReadOnly: true,
-				},
-				{
-					Type:   mount.TypeBind,
-					Source: conf.Runner.AbsPluginCachePath(),
-					Target: ContainerPluginsCachePath,
-				},
-				{
-					Type:   mount.TypeBind,
-					Source: "/var/run/docker.sock",
-					Target: "/var/run/docker.sock",
-				},
-			},
+			Mounts:     mountConfigs,
 		},
 		nil,
 		nil,
-		id.String())
+		"")
 	if err != nil {
 		logger.Errorf("create container err: %v", err)
 		return err
