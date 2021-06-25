@@ -126,8 +126,8 @@ var (
 
 	defaultConfig = Config{
 		Portal: PortalConfig{
-			SSHPrivateKey: "run/private_key",
-			SSHPublicKey:  "run/private_key.pub",
+			SSHPrivateKey: "var/private_key",
+			SSHPublicKey:  "var/private_key.pub",
 		},
 	}
 )
