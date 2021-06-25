@@ -38,7 +38,7 @@ func GetProvider(dbSess *db.Session ,form *forms.CreateTemplateForm) (string, e.
 	if er != nil {
 		return "", e.New(e.GitLabError, er)
 	}
-	b, er := repo.ReadFileContent(form.RepoBranch, "README.md")
+	b, er := repo.ReadFileContent(form.RepoBranch, "versions.tf")
 	if er != nil {
 		if strings.Contains(er.Error(), "not found") {
 			b = make([]byte, 0)
