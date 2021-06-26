@@ -11,14 +11,16 @@ type AccessToken struct {
 	ctrl.BaseController
 }
 
-// Create 创建webhook
-// @Tags 触发器
+// Create 创建触发器
+// @Summary 创建触发器
 // @Description 创建触发器接口
-// @Accept application/json
-// @Param tplGuid formData string false "云模版guid"
-// @Param action formData string false "动作"
-// @router /api/v1/webhook/create [post]
+// @Tags 触发器
+// @Accept   json
+// @Produce  json
+// @Param Authorization header string true "Bearer token"
+// @Param data body forms.CreateAccessTokenForm true "触发器信息"
 // @Success 200 {object} models.TemplateAccessToken
+// @Router  /webhook/create [post]
 func (AccessToken) Create(c *ctx.GinRequestCtx) {
 	form := &forms.CreateAccessTokenForm{}
 	if err := c.Bind(form); err != nil {
@@ -27,13 +29,16 @@ func (AccessToken) Create(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.CreateAccessToken(c.ServiceCtx(), form))
 }
 
-// Search 查询webhook
-// @Tags 触发器
+// Search 查询触发器
+// @Summary 查询触发器
 // @Description 查询触发器接口
-// @Accept application/json
-// @Param tplGuid formData string false "云模版guid"
-// @router /api/v1/webhook/search [get]
+// @Tags 触发器
+// @Accept   json
+// @Produce  json
+// @Param Authorization header string true "Bearer token"
+// @Param tplGuid query string true "云模版guid"
 // @Success 200 {object} models.TemplateAccessToken
+// @Router  /webhook/search [get]
 func (AccessToken) Search(c *ctx.GinRequestCtx) {
 	form := forms.SearchAccessTokenForm{}
 	if err := c.Bind(&form); err != nil {
@@ -42,14 +47,16 @@ func (AccessToken) Search(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.SearchAccessToken(c.ServiceCtx(), &form))
 }
 
-// Update 修改webhook
-// @Tags 触发器
+// Update 修改触发器
+// @Summary 修改触发器
 // @Description 修改触发器接口
-// @Accept application/json
-// @Param id formData int false "触发器id"
-// @Param action formData string false "动作"
-// @router /api/v1/webhook/update [put]
+// @Tags 触发器
+// @Accept   json
+// @Produce  json
+// @Param Authorization header string true "Bearer token"
+// @Param data body forms.UpdateAccessTokenForm true "触发器信息"
 // @Success 200 {object} models.TemplateAccessToken
+// @Router  /webhook/update [put]
 func (AccessToken) Update(c *ctx.GinRequestCtx) {
 	form := forms.UpdateAccessTokenForm{}
 	if err := c.Bind(&form); err != nil {
@@ -58,13 +65,16 @@ func (AccessToken) Update(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.UpdateAccessToken(c.ServiceCtx(), &form))
 }
 
-// Delete 删除webhook
-// @Tags 触发器
+// Delete 删除触发器
+// @Summary 删除触发器
 // @Description 删除触发器接口
-// @Accept application/json
-// @Param id formData int false "触发器id"
-// @router /api/v1/webhook/delete [delete]
+// @Tags 触发器
+// @Accept   json
+// @Produce  json
+// @Param Authorization header string true "Bearer token"
+// @Param data body forms.DeleteAccessTokenForm true "触发器信息"
 // @Success 200 {object} models.TemplateAccessToken
+// @Router  /webhook/delete [delete]
 func (AccessToken) Delete(c *ctx.GinRequestCtx) {
 	form := forms.DeleteAccessTokenForm{}
 	if err := c.Bind(&form); err != nil {
@@ -73,13 +83,16 @@ func (AccessToken) Delete(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.DeleteAccessToken(c.ServiceCtx(), &form))
 }
 
-// Detail webhook详情
-// @Tags 触发器
+// Detail 触发器详情
+// @Summary 触发器详情
 // @Description 触发器详情接口
-// @Accept application/json
-// @Param id formData int false "触发器id"
-// @router /api/v1/webhook/detail [get]
+// @Tags 触发器
+// @Accept   json
+// @Produce  json
+// @Param Authorization header string true "Bearer token"
+// @Param id query string true "触发器id"
 // @Success 200 {object} models.TemplateAccessToken
+// @Router  /webhook/detail [get]
 func (AccessToken) Detail(c *ctx.GinRequestCtx) {
 	form := forms.DetailAccessTokenForm{}
 	if err := c.Bind(&form); err != nil {

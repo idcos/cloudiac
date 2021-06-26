@@ -13,8 +13,8 @@ import (
 	"cloudiac/web/middleware"
 	open_api_v1 "cloudiac/web/openapi/v1"
 	"github.com/gin-gonic/gin"
+	"github.com/swaggo/files"
 	gs "github.com/swaggo/gin-swagger"
-	"github.com/swaggo/gin-swagger/swaggerFiles"
 )
 
 var logger = logs.Get()
@@ -39,7 +39,7 @@ func GetRouter() *gin.Engine {
 	api_v1.Register(e.Group("/api/v1"))
 	open_api_v1.Register(e.Group("/iac/open/v1"))
 
-	e.GET("/template/hook/send",w(handlers.AccessTokenHandler))
+	e.GET("/template/hook/send", w(handlers.AccessTokenHandler))
 
 	//// http git server
 	// 直接提供静态文件访问，生产环境部署时也可以使用 nginx 反代

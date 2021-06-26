@@ -28,11 +28,15 @@ type MetaTemplate struct {
 //}
 
 // Search
-// @Accept application/json
-// @Tags 云模板库
-// @Description 通过云模板库列表查询接口
-// @router /api/v1/template/library/search [get]
+// Detail 查询云模板库列表
+// @Summary 查询云模板库列表
+// @Description 查询云模板库列表
+// @Tags 云模板
+// @Accept  json
+// @Produce  json
+// @Param Authorization header string true "Bearer token"
 // @Success 200 {object} models.MetaTemplate
+// @router /template/library/search [get]
 func (MetaTemplate) Search(c *ctx.GinRequestCtx) {
 	form := &forms.SearchTemplateLibraryForm{}
 	if err := c.Bind(form); err != nil {
