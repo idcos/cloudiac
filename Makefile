@@ -66,11 +66,11 @@ clean: reset-build-dir
 	$(GOCLEAN) ./cmds/tool
 
 
-PACKAGE_NAME=cloud-iac-$(VERSION).tar.gz
+PACKAGE_NAME=cloudiac-$(VERSION).tar.gz
 package-local: reset-build-dir clean build
 	cp -a ./assets/terraform.py $(BUILD_DIR)/assets/
 	cp ./scripts/iac-portal.service ./scripts/ct-runner.service $(BUILD_DIR)/
-	@cd $(BUILD_DIR) && tar -czf ../cloud-iac-$(VERSION).tar.gz ./ && echo "Package: $(PACKAGE_NAME)"
+	@cd $(BUILD_DIR) && tar -czf ../$(PACKAGE_NAME) ./ && echo "Package: $(PACKAGE_NAME)"
 
 package-linux-amd64:
 	GOOS=linux GOARCH=amd64 $(MAKE) package-local
@@ -82,7 +82,7 @@ repos: repos.list
 	mkdir -p ./repos/cloud-iac && \
 	cd ./repos/cloud-iac && bash ../../scripts/clone-repos.sh
 
-REPOS_PACKAGE_NAME=cloud-iac-repos-$(VERSION)-$(DATE_VER).tar.gz
+REPOS_PACKAGE_NAME=cloudiac-repos-$(VERSION)-$(DATE_VER).tar.gz
 repos-package: repos
 	@tar -czf $(REPOS_PACKAGE_NAME) ./repos && echo Package: $(REPOS_PACKAGE_NAME)
 
@@ -90,7 +90,7 @@ repos-package: repos
 providers: 
 	bash scripts/generate-providers-mirror.sh
 
-PROVIDERS_PACKAGE_NAME=cloud-iac-providers-$(VERSION)-$(DATE_VER).tar.gz
+PROVIDERS_PACKAGE_NAME=cloudiac-providers-$(VERSION)-$(DATE_VER).tar.gz
 providers-package: providers
 	@tar -czf $(PROVIDERS_PACKAGE_NAME) ./assets/providers && echo Package: $(PROVIDERS_PACKAGE_NAME)
 

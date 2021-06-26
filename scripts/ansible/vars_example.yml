@@ -1,0 +1,30 @@
+## 包地址可以定义为 http 地址或者本地文件路径，playbook 会根据地址类型自动进行下载或者从本地拷贝
+#iac_package_url: 'http://ip/repos/cloud-iac-v0.3.0.tar.gz'
+#iac_repos_package_url: 'http://ip/repos/cloud-iac-repos-v0.3.0-20210623.tar.gz'
+
+iac_package_url: '/path/to/cloudiac-v0.3.0.tar.gz'
+iac_repos_package_url: '/path/to/cloudiac-repos-v0.3.0-20210626.tar.gz'
+
+## 管理员账号配置
+admin_email: "admin@example.com"
+admin_password: ""
+
+## iac 对外提供服务的地址
+portal_address: "http://public.ip"
+
+## consul 服务地址，该地址需要保证 portal 和 runner 都能访问到
+consul_address: "private.ip:8500"
+
+## portal 的内网地址
+portal_private_ip: "private.ip"
+
+mysql_password: ""
+
+## mysql 配置信息
+mysql_db: "iac"
+mysql_host: "127.0.0.1"
+mysql_user: "iac"
+
+## 超时时间
+wait_connection_timeout: 300
+

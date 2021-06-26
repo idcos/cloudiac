@@ -1,0 +1,88 @@
+- name: Install docker
+  become: yes
+  shell: which docker || curl -fsSL https://get.docker.com | bash -s docker
+
+- name: Start docker
+  become: yes
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: "Create {{WORKDIR}}/var/"
+  file:
+    path: "{{WORKDIR}}/var"
+    state: directory
+
+- name: Download iac package
+  get_url:
+    url: "{{iac_package_url}}"
+    dest: "{{WORKDIR}}"
+  register: iac_package
+  when: "'://' in iac_package_url"
+
+- name: Copy iac package
+  copy:
+    src: "{{iac_package_url}}"
+    dest: "{{WORKDIR}}"
+  register: iac_package
+  when: "'://' not in iac_package_url"
+
+- name: Extract iac package
+  command: "tar -xf {{iac_package.dest}} -C {{WORKDIR}}"
+  when: iac_package.changed
+  notify: Restart ct-runner
+
+## providers 当前版本己打包到 worker 镜像
+#- name: Download iac-providers package
+##  get_url:
+##    url: "{{iac_providers_package_url}}"
+##    dest: "{{WORKDIR}}"
+#  copy:
+#    src: "{{iac_providers_package_url}}"
+#    dest: "{{WORKDIR}}"
+#  register: iac_providers_package
+#
+#- name: Extract iac-providers package
+#  command: "tar -xf {{iac_providers_package.dest}} -C {{WORKDIR}}"
+#  when: iac_providers_package.changed
+
+- name: Copy config-runner.yml
+  copy:
+    src: "{{WORKDIR}}/config-runner.yml.sample"
+    dest: "{{WORKDIR}}/config-runner.yml"
+    force: no
+    remote_src: yes
+  notify: Restart ct-runner
+
+- name: Config .env
+  blockinfile:
+    dest: "{{WORKDIR}}/.env"
+    create: yes
+    marker: "# {mark} ANSIBLE MANAGED BLOCK (CT RUNNER)"
+    block: |
+      CONSUL_ADDR={{consul_address}}
+      RUNNER_SERVICE_IP={{ansible_default_ipv4.address}}
+      RUNNER_SERVICE_ID={{runner_service_id}}
+      RUNNER_SERVICE_TAGS={{runner_service_tags}}
+  notify: Restart ct-runner
+
+- name: Install ct-runner service
+  become: yes
+  copy:
+    src:  "{{WORKDIR}}/ct-runner.service"
+    dest: /etc/systemd/system/
+    remote_src: yes
+
+- name: Start ct-runner
+  service:
+    name: ct-runner
+    state: started
+    enabled: yes
+  when: not iac_package.changed
+
+- name: Pull docker image ct-worker(async)
+  command: docker pull cloudiac/ct-worker
+  async: 1800
+  poll: 0
+  register: pull_ct_worker
