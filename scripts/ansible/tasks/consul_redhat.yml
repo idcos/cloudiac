@@ -1,0 +1,12 @@
+- name: Add hashicorp yum repo
+  become: yes
+  yum_repository:
+    name: hashicorp
+    description: "Hashicorp Stable - $basearch"
+    baseurl: "https://rpm.releases.hashicorp.com/RHEL/$releasever/$basearch/stable"
+    gpgkey: https://rpm.releases.hashicorp.com/gpg
+    gpgcheck: 1
+    state: present
+
+- name: Inital consul
+  import_tasks: consul_init.yml

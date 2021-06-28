@@ -1,0 +1,68 @@
+---
+- hosts: db
+  gather_facts: no
+  tasks:
+    - import_tasks: setup.yml
+    - name: Install mysql-server for redhat
+      import_tasks: tasks/mysql_redhat.yml
+
+  handlers:
+    - name: Restart mysqld
+      become: yes
+      service:
+        name: mysqld
+        state: restarted
+        enabled: yes
+
+- hosts: consul
+  gather_facts: no
+  tasks:
+    - import_tasks: setup.yml
+    - name: Install consul
+      import_tasks: tasks/consul_redhat.yml
+      when: ansible_os_family | lower == 'redhat'
+
+- hosts: portal
+  gather_facts: no
+  vars:
+    WORKDIR: /opt/cloudiac
+  tasks:
+    - import_tasks: setup.yml
+    - import_tasks: tasks/portal.yml
+  handlers:
+    - name: Restart iac-portal
+      service:
+        name: iac-portal
+        state: restarted
+        enabled: yes
+
+- hosts: runner
+  gather_facts: no
+  vars:
+    WORKDIR: /opt/cloudiac
+  tasks:
+    - import_tasks: setup.yml
+    - import_tasks: tasks/runner.yml
+  handlers:
+    - name: Restart ct-runner
+      service:
+        name: ct-runner
+        state: restarted
+        enabled: yes
+
+- hosts: web
+  gather_facts: no
+  tasks:
+    - import_tasks: setup.yml
+    - import_tasks: tasks/web.yml
+
+- hosts: runner
+  gather_facts: no
+  tasks:
+    - name: Wait pull ct-worker
+      async_status:
+        jid: "{{pull_ct_worker.ansible_job_id}}"
+      register: wait_pull_ct_worker
+      delay: 10
+      retries: 180
+      until: wait_pull_ct_worker.finished

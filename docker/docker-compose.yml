@@ -1,0 +1,78 @@
+version: "3"
+services:
+  iac-portal:
+    container_name: iac-portal
+    image: "cloudiac/iac-portal:${IAC_VERSION}"
+    volumes:
+      - type: bind
+        source: /usr/yunji/cloudiac/var
+        target: /usr/yunji/cloudiac/var
+      - type: bind
+        source: /usr/yunji/cloudiac/.env
+        target: /usr/yunji/cloudiac/.env
+    ports:
+      - "9030:9030"
+    environment:
+      - TZ=Asia/Shanghai
+    depends_on:
+      - mysql
+      - consul
+    restart: always
+
+  ct-runner:
+    container_name: ct-runner
+    image: "cloudiac/ct-runner:${IAC_VERSION}"
+    volumes:
+      - type: bind
+        source: /usr/yunji/cloudiac/var
+        target: /usr/yunji/cloudiac/var
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+    ports:
+      - "19030:19030"
+    environment:
+      - TZ=Asia/Shanghai
+    depends_on:
+      - consul
+    restart: always
+
+  iac-web:
+    container_name: iac-web
+    image: "cloudiac/iac-web:latest"
+    ports:
+      - 18080:80
+    restart: always
+
+  mysql:
+    container_name: mysql
+    image: "mysql:5.7"
+    command: [
+        "--character-set-server=utf8mb4",
+        "--collation-server=utf8mb4_unicode_ci",
+        "--sql_mode=STRICT_TRANS_TABLES,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION"
+    ]
+
+    volumes:
+      - type: bind
+        source: /usr/yunji/cloudiac/var/mysql
+        target: /var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE
+      - TZ=Asia/Shanghai
+    restart: always
+
+  consul:
+    container_name: consul
+    image: "consul:latest"
+    volumes:
+      - type: bind
+        source: /usr/yunji/cloudiac/var/consul
+        target: /consul/data
+    ports:
+      - "${CONSUL_ADDR}:8500"
+    command: >
+      consul agent -server -bootstrap-expect=1 -ui -bind=0.0.0.0
+      -client=0.0.0.0 -enable-script-checks=true -data-dir=/consul/data
+    restart: always

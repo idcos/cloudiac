@@ -1,0 +1,17 @@
+cloudiac ansible_host=host.ip
+
+[portal]
+cloudiac portal_service_id=iac-portal-01 portal_service_tags=iac-portal;portal-01
+
+[runner]
+cloudiac runner_service_id=ct-runner-01 runner_service_tags=ct-runner;runner-01
+
+[consul]
+cloudiac
+
+[db]
+cloudiac
+
+[web]
+cloudiac
+
