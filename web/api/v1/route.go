@@ -11,6 +11,12 @@ import (
 	"time"
 )
 
+// @title cloudIaC 接口文档
+// @version 0.3
+// @description 统一没有特殊说明的情况下规范说明：<br> 1. 没有特殊说明的情况下，返回数据格式均为`json` <br> 2. 返回 json 最外层均包含`status`和`message`字段 <br> 3. http code [200]: 正常；[400]: 请求参数错误；[401]: 当前请求无token或token过期；[403]: 无访问权限；[404]: 请求资源不存在；[500]: 服务器异常错误；调用方需要对返回http code做好处理。
+// @host localhost:9030
+// @license.name cloudIaC
+// @BasePath /api/v1
 func Register(g *gin.RouterGroup) {
 	w := ctrl.GinRequestCtxWrap
 
