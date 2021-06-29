@@ -1,0 +1,47 @@
+- name: Install docker
+  become: yes
+  shell: which docker || curl -fsSL https://get.docker.com | bash -s docker
+
+- name: Start docker
+  become: yes
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: List container iac-web
+  command: docker container list --all --latest --no-trunc -f 'name=iac-web'
+  register: list_iac_web
+
+- name: Start container iac-web
+  command: docker run --name iac-web --add-host iac-portal:{{portal_private_ip}} -p 80:80 -d cloudiac/iac-web
+  when: "'iac-web' not in list_iac_web.stdout"
+
+- name: Run container iac-web
+  command: docker start iac-web
+  when: "'iac-web' in list_iac_web.stdout and 'Up ' not in list_iac_web.stdout"
+
+## TODO: 安装了 docker 和 docker-py python 包，使用 docker_xxx 模块依然报错: The error was: No module named selectors
+#- name: Install python2-pip
+#  package:
+#    name: python2-pip
+#
+#- name: Pip install docker
+#  pip:
+#    name: docker
+#
+#- name: Pip install docker-py
+#  pip:
+#    name: docker-py
+#  ignore_errors: yes
+#
+#- name: Start container iac-web
+#  docker_container:
+#    name: "iac-web"
+#    image: "cloudiac/iac-web"
+#    pull: true
+#    etc_hosts:
+#      iac-portal: "{{portal_private_ip}}"
+#    published_ports:
+#      - "80:80"
+#    state: started

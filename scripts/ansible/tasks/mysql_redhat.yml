@@ -1,0 +1,22 @@
+- name: Install mysql repo
+  become: yes
+  yum:
+    name: https://repo.mysql.com/mysql57-community-release-el7.rpm
+    state: present
+
+- name: Install mysql-server
+  become: yes
+  yum:
+    name: mysql-server
+    state: present
+  register: install_mysql
+
+## ansible mysql_xxx module 依赖这个库
+- name: Install python2-PyMySQL
+  become: yes
+  yum:
+    name: python2-PyMySQL
+    state: present
+
+- name: Initial mysql-server
+  import_tasks: mysql_init.yml

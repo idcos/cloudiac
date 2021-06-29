@@ -1,0 +1,31 @@
+- name: Config mysqld
+  become: yes
+  ini_file:
+    path: /etc/my.cnf
+    section: mysqld
+    option: sql-mode
+    value: "STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION"
+    state: present
+  notify: Restart mysqld
+
+- name: Check mysql user(ignore errors)
+  mysql_query:
+    login_user: "{{mysql_user}}"
+    login_password: "{{mysql_password}}"
+    login_db: "{{mysql_db}}"
+    query: SELECT 1
+  ignore_errors: yes
+  register: check_mysql_user
+
+- name: Create mysql user
+  import_tasks: mysql_create_user.yml
+  when: check_mysql_user is failed
+
+- name: Create mysql database
+  mysql_db:
+    login_user: "{{mysql_user}}"
+    login_password: "{{mysql_password}}"
+    name: "{{ mysql_db }}"
+    encoding: utf8mb4
+    state: present
+    check_implicit_admin: yes

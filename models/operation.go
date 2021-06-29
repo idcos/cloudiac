@@ -24,3 +24,10 @@ func (o *OperationLog) InsertLog() error {
 func (OperationLog) TableName() string {
 	return "iac_operation_log"
 }
+
+func (OperationLog) Migrate(s *db.Session) error {
+	if err := s.DB().ModifyColumn("desc", "text").Error; err != nil {
+		return err
+	}
+	return nil
+}

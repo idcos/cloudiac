@@ -115,6 +115,9 @@ const (
 
 	// consul
 	ConsulConnError = 12010
+
+	// terraform hcl err
+	TerraformHclErr = 13010
 )
 
 var errorMsgs = map[int]map[string]string{

@@ -1,0 +1,42 @@
+- name: Add skip-grant-tables
+  become: yes
+  ini_file:
+    path: /etc/my.cnf
+    section: mysqld
+    option: skip-grant-tables
+    allow_no_value: yes
+    state: present
+
+- name: Restart mysqld
+  become: yes
+  service:
+    name: mysqld
+    state: restarted
+    enabled: yes
+
+## TODO: 该方式会报错:
+##   The MySQL server is running with the --skip-grant-tables option so it cannot execute this statement
+#- name: Create mysql user
+#  mysql_user:
+#    login_user: root
+#    name: "{{mysql_user}}"
+#    host: "%"
+#    password: "{{mysql_password}}"
+#    priv: "*.*:ALL"
+#    check_implicit_admin: yes
+#    state: present
+
+- name: Create mysql user
+  command: >
+    mysql -u root -e "FLUSH PRIVILEGES;
+    GRANT ALL PRIVILEGES ON *.* TO '{{mysql_user}}'@'%' IDENTIFIED BY '{{mysql_password}}';"
+
+- name: Remove skip-grant-tables
+  become: yes
+  ini_file:
+    path: /etc/my.cnf
+    section: mysqld
+    option: skip-grant-tables
+    allow_no_value: yes
+    state: absent
+  notify: Restart mysqld

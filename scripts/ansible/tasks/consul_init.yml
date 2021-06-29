@@ -1,0 +1,25 @@
+- name: Install consul
+  become: yes
+  package:
+    name: consul
+    state: present
+  register: install_consul
+
+- name: Config consul server
+  become: yes
+  blockinfile:
+    path: /etc/consul.d/consul.hcl
+    block: |
+      ui = true
+      server = true
+      bind_addr = "0.0.0.0"
+      client_addr = "0.0.0.0"
+      bootstrap_expect = 1
+      enable_script_checks = true
+
+- name: Start consul
+  become: yes
+  service:
+    name: consul
+    state: started
+    enabled: yes

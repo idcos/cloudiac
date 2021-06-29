@@ -9,6 +9,7 @@ import (
 	"cloudiac/models"
 	"cloudiac/models/forms"
 	"cloudiac/services"
+	"cloudiac/services/terraformhcl"
 	"cloudiac/utils"
 	"encoding/json"
 	"fmt"
@@ -64,7 +65,10 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 	}()
 
 	guid := utils.GenGuid("ct")
-
+	providers, err := terraformhcl.GetProvider(tx, form)
+	if err != nil {
+		return nil, err
+	}
 	template, err = func() (*models.Template, e.Error) {
 		var (
 			template *models.Template
@@ -80,6 +84,7 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 		if err != nil {
 			return nil, err
 		}
+		tpl.TplType = providers
 		template, err = services.CreateTemplate(tx, tpl)
 		if err != nil {
 			return nil, err

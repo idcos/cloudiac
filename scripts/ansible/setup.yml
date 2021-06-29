@@ -1,0 +1,16 @@
+## 执行 PLAY 前的统一 setup 任务
+
+## 机器创建需要一段时间，所以先尝试连接, 确保连接可用再执行后续操作
+- name: Wait connection for {{inventory_hostname}}
+  ## 每秒尝试进行一次连接直到连接成功或者超时
+  wait_for_connection:
+    sleep: 1
+    timeout: "{{ wait_connection_timeout }}"
+
+- name: Gathering facts
+  setup: ""
+
+- fail:
+    ## 目前只支持在 redhat 7 系统(包括 centos)中部署
+    msg: "Only RedHat/Centos 7 are supported"
+  when: ansible_os_family | lower != 'redhat' or ansible_distribution_major_version != "7"

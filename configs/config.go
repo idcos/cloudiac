@@ -49,8 +49,8 @@ type RunnerConfig struct {
 
 type PortalConfig struct {
 	Address       string `yaml:"address"` // portal 对外提供服务的 url
-	SSHPrivateKey string `yaml:"sshPrivateKey"`
-	SSHPublicKey  string `yaml:"sshPublicKey"`
+	SSHPrivateKey string `yaml:"ssh_private_key"`
+	SSHPublicKey  string `yaml:"ssh_public_key"`
 }
 
 func (c *RunnerConfig) mustAbs(path string) string {
@@ -62,7 +62,10 @@ func (c *RunnerConfig) mustAbs(path string) string {
 }
 
 func (c *RunnerConfig) ProviderPath() string {
-	// 预置 providers 在 asset/providers 目录下，不单独提供配置
+	if c.AssetsPath == "" {
+		return ""
+	}
+	// 预置 providers 打包在 assets/providers 目录下，不单独提供配置
 	return filepath.Join(c.AbsAssetsPath(), "providers")
 }
 
@@ -123,8 +126,8 @@ var (
 
 	defaultConfig = Config{
 		Portal: PortalConfig{
-			SSHPrivateKey: ".ssh_key",
-			SSHPublicKey:  ".ssh_key.pub",
+			SSHPrivateKey: "var/private_key",
+			SSHPublicKey:  "var/private_key.pub",
 		},
 	}
 )
