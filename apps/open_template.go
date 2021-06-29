@@ -12,14 +12,14 @@ import (
 	"fmt"
 )
 
-func OpenSearchTemplate(c *ctx.ServiceCtx) (interface{}, e.Error) {
+func OpenSearchTemplate(c *ctx.ServiceCtx,form *forms.OpenApiSearchTemplateForm) (interface{}, e.Error) {
 	resp := make([]struct {
 		Name        string `json:"name"`
 		Guid        string `json:"guid"`
 		TplType     string `json:"tplType"`
 		Description string `json:"description"`
 	}, 0)
-	if err := services.OpenSearchTemplate(c.DB()).Scan(&resp); err != nil {
+	if err := services.OpenSearchTemplate(c.DB(),form.Q).Scan(&resp); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 	return resp, nil

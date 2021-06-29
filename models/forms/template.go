@@ -59,6 +59,11 @@ type DetailTemplateForm struct {
 	Id uint `form:"id" json:"id" binding:"required"`
 }
 
+type OpenApiSearchTemplateForm struct {
+	BaseForm
+	Q string `form:"q" json:"q"`
+}
+
 type OpenApiDetailTemplateForm struct {
 	BaseForm
 	Guid string `form:"guid" json:"guid" binding:"required"`

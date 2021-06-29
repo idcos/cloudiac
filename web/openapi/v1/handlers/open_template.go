@@ -7,7 +7,11 @@ import (
 )
 
 func OpenTemplateSearch(c *ctx.GinRequestCtx) {
-	c.JSONOpenResultList(apps.OpenSearchTemplate(c.ServiceCtx()))
+	form := &forms.OpenApiSearchTemplateForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONOpenResultList(apps.OpenSearchTemplate(c.ServiceCtx(),form))
 }
 
 func TemplateDetail(c *ctx.GinRequestCtx) {
