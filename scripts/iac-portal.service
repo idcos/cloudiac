@@ -1,0 +1,13 @@
+[Unit]
+Description=iac-portal
+Wants=mysqld.service
+After=mysqld.service
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=simple
+WorkingDirectory=/usr/yunji/cloudiac
+ExecStart=/usr/yunji/cloudiac/iac-portal -c config-portal.yml
+Restart=on-failure

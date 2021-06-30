@@ -1,0 +1,37 @@
+<html>
+<body>
+<ul id="eventList"></ul>
+
+<script type="text/javascript">
+    // example url: "task_log_sse.html?run-c2s53mmcie6q4oo9o6m0"
+    const taskId = window.location.search.slice(1)
+    const eventSource = new EventSource("http://127.0.0.1:9030/api/v1/task/log/sse?taskId="+taskId);
+    const eventList = document.getElementById("eventList")
+
+    // eventSource.onmessage = function (event) {
+    //     const newElement = document.createElement("li");
+    //     newElement.textContent = event.data;
+    //     eventList.appendChild(newElement);
+    // }
+
+    eventSource.addEventListener("message", function (event) {
+        const newElement = document.createElement("li");
+        newElement.textContent = event.data;
+        eventList.appendChild(newElement);
+    })
+
+    eventSource.addEventListener("error", function (event) {
+        const newElement = document.createElement("li");
+        newElement.textContent = event.data;
+        eventList.appendChild(newElement);
+    })
+
+    eventSource.addEventListener("end", function (event) {
+        const newElement = document.createElement("li");
+        newElement.textContent = event.data;
+        eventList.appendChild(newElement);
+        eventSource.close();
+    });
+</script>
+</body>
+</html>

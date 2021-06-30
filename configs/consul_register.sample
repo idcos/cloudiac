@@ -1,0 +1,22 @@
+{
+  "service": {
+    "name": "gitlab",
+    "tags": [
+      "gitlab"
+    ],
+    "port": 8082,
+    "address": "127.0.0.1",
+    "checks": [{
+      "id": "api", // 健康检查项的id，唯一
+      "name": "HTTP API on port 8082", // 检查项的名字
+      "http": "https://localhost:5000/health", // 定期访问的Url,通过这个url请求结果确定服务是否正常
+      "tls_skip_verify": false, // 关闭tls验证
+      "method": "POST", // 设置http请求方式，默认是GET
+      "header": { // 可以自定义请求头，可以不配置
+        "x-foo": ["bar", "baz"]
+      },
+      "interval": "10s", // 定期检查的时间间隔，这里是10秒
+      "timeout": "1s" // 请求超时时间，1秒
+    }]
+  }
+}
