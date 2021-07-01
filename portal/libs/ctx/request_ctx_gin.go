@@ -4,6 +4,8 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/models/forms"
 	"cloudiac/utils/logs"
+	"reflect"
+
 	//"bufio"
 	"bytes"
 	"encoding/json"
@@ -21,7 +23,7 @@ import (
 type GinRequestCtx struct {
 	*gin.Context
 	sc   *ServiceCtx
-	form forms.Former
+	form forms.BaseFormer
 }
 
 type SysRequestCtx struct {
@@ -81,11 +83,18 @@ func convertMessage(i interface{}) string {
 	}
 }
 
+type JSONResult struct {
+	Code          int         `json:"code" example:"200"`
+	Message       string      `json:"message" example:"ok"`
+	MessageDetail string      `json:"message_detail,omitempty" example:"ok"`
+	Result        interface{} `json:",omitempty"`
+}
+
 func (c *GinRequestCtx) JSON(status int, msg interface{}, result interface{}) {
 	var (
 		message = ""
 		code    = 0
-		detail  interface{}
+		detail  string
 	)
 
 	if msg != nil {
@@ -107,12 +116,15 @@ func (c *GinRequestCtx) JSON(status int, msg interface{}, result interface{}) {
 	} else {
 		code = status
 	}
-	c.Context.JSON(status, gin.H{
-		"code":           code,
-		"message":        message,
-		"message_detail": detail,
-		"result":         result,
-	})
+
+	jsonResult := JSONResult{
+		Code:          code,
+		Message:       message,
+		MessageDetail: detail,
+		Result:        result,
+	}
+
+	c.Context.JSON(status, jsonResult)
 }
 
 func (c *GinRequestCtx) JSONError(err e.Error, statusOrResult ...interface{}) {
@@ -217,12 +229,33 @@ func (c *GinRequestCtx) AbortIfError(err e.Error) bool {
 	return false
 }
 
-func (c *GinRequestCtx) Bind(form forms.Former) error {
+// HasUriParam 是否有 uri 参数
+func HasUriParam(b forms.BaseFormer) bool {
+	typ := reflect.TypeOf(b).Elem()
+	for i := 0; i < typ.NumField(); i++ {
+		if _, ok := typ.Field(i).Tag.Lookup("uri"); ok {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *GinRequestCtx) Bind(form forms.BaseFormer) error {
 	var body []byte
 	if c.ContentType() == "application/json" {
 		body, _ = ioutil.ReadAll(c.Request.Body)
 		// Write body back for ShouldBind() call
 		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
+	}
+
+	// 判断是否需要处理 uri 参数，如果在 path 定义了动态参数，则执行 uri 参数绑定
+	if HasUriParam(form) {
+		if err := c.Context.ShouldBindUri(form); err != nil {
+			// TODO: uri 不对是否应该报 404
+			c.JSON(http.StatusBadRequest, e.New(e.BadParam, err), nil)
+			c.Abort()
+			return err
+		}
 	}
 
 	if err := c.Context.ShouldBind(form); err != nil {

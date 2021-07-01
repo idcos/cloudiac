@@ -10,12 +10,21 @@ import (
 	"net/http"
 )
 
+// CreateOrganization 创建组织
+// @Tags 组织
+// @Description 创建组织接口
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "认证令牌"
+// @Param form formData forms.CreateOrganizationForm true "parameter"
+// @router /api/v1/orgs [post]
+// @Success 200 {object} ctx.JSONResult{result=models.Organization}
 func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (*models.Organization, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create org %s", form.Name))
 
 	org, err := services.CreateOrganization(c.DB(), models.Organization{
 		Name:        form.Name,
-		RunnerId:    form.RunnerId,
 		CreatorId:   c.UserId,
 		Description: form.Description,
 	})
@@ -25,22 +34,15 @@ func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (
 	return org, nil
 }
 
-type searchOrganizationResp struct {
-	Id                     models.Id `json:"id"`
-	Name                   string    `json:"name"`
-	Description            string    `json:"description"`
-	UserId                 models.Id `json:"userId"`
-	Status                 string    `json:"status"`
-	Creator                string    `json:"creator"`
-	DefaultRunnerAddr      string    `json:"defaultRunnerAddr" grom:"not null;comment:'默认runner地址'"`
-	DefaultRunnerPort      uint      `json:"defaultRunnerPort" grom:"not null;comment:'默认runner端口'"`
-	DefaultRunnerServiceId string    `json:"defaultRunnerServiceId" grom:"not null;comment:'默认runner-consul-serviceId'"`
-}
-
-func (m *searchOrganizationResp) TableName() string {
-	return models.Organization{}.TableName()
-}
-
+// SearchOrganization 组织查询
+// @Tags 组织
+// @Description 组织查询接口
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Param Authorization header string true "认证令牌"
+// @Param form query forms.SearchOrganizationForm true "parameter"
+// @router /api/v1/orgs [get]
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Organization}}
 func SearchOrganization(c *ctx.ServiceCtx, form *forms.SearchOrganizationForm) (interface{}, e.Error) {
 	query := services.QueryOrganization(c.DB())
 	if c.IsSuperAdmin == true {
@@ -58,17 +60,31 @@ func SearchOrganization(c *ctx.ServiceCtx, form *forms.SearchOrganizationForm) (
 
 	if form.Q != "" {
 		qs := "%" + form.Q + "%"
-		query = query.Where("name LIKE ?", qs)
+		query = query.WhereLike("name", qs)
 	}
 
-	query = query.Order("created_at DESC")
-	rs, _ := getPage(query, form, &searchOrganizationResp{})
+	// 默认按创建时间逆序排序
+	if form.SortField() == "" {
+		query = query.Order("created_at DESC")
+	}
+	rs, _ := getPage(query, form, &models.Organization{})
 	return rs, nil
 }
 
-func UpdateOrganization(c *ctx.ServiceCtx, form *forms.UpdateOrganizationForm) (org *models.Organization, err e.Error) {
-	c.AddLogField("action", fmt.Sprintf("update org %d", form.Id))
-	if form.Id == "" {
+// UpdateOrganization 组织编辑
+// @Tags 组织
+// @Description 组织信息编辑接口
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "认证令牌"
+// @Param orgId path string true "组织ID"
+// @Param form formData forms.UpdateOrganizationForm true "parameter"
+// @router /api/v1/orgs/{orgId} [put]
+// @Success 200 {object} ctx.JSONResult{result=models.Organization}
+func UpdateOrganization(c *ctx.ServiceCtx, orgId models.Id, form *forms.UpdateOrganizationForm) (org *models.Organization, err e.Error) {
+	c.AddLogField("action", fmt.Sprintf("update org %d", orgId))
+	if orgId == "" {
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
 	}
 
@@ -81,33 +97,43 @@ func UpdateOrganization(c *ctx.ServiceCtx, form *forms.UpdateOrganizationForm) (
 		attrs["description"] = form.Description
 	}
 
-	if form.HasKey("vcsAuthInfo") {
-		attrs["vcs_auth_info"] = form.VcsAuthInfo
-	}
-
 	if form.HasKey("runnerId") {
 		attrs["runner_id"] = form.RunnerId
 	}
 
-	org, err = services.UpdateOrganization(c.DB(), form.Id, attrs)
+	// 变更组织状态
+	if form.HasKey("status") {
+		if _, err := ChangeOrgStatus(c, orgId, &forms.DisableOrganizationForm{Status: form.Status}); err != nil {
+			return nil, err
+		}
+	}
+
+	org, err = services.UpdateOrganization(c.DB(), orgId, attrs)
 	return
 }
 
-func ChangeOrgStatus(c *ctx.ServiceCtx, form *forms.DisableOrganizationForm) (interface{}, e.Error) {
-	org, er := services.GetOrganizationById(c.DB(), form.Id)
-	if er != nil {
-		return nil, er
+func ChangeOrgStatus(c *ctx.ServiceCtx, orgId models.Id, form *forms.DisableOrganizationForm) (org *models.Organization, err e.Error) {
+	c.AddLogField("action", fmt.Sprintf("change org status %s", orgId))
+
+	if form.Status != models.OrgEnable && form.Status != models.OrgDisable {
+		return nil, e.New(e.OrganizationInvalidStatus, http.StatusBadRequest)
+	}
+
+	org, err = services.GetOrganizationById(c.DB(), orgId)
+	if err != nil {
+		if err.Code() == e.OrganizationNotExists {
+			return nil, e.New(err.Code(), err, http.StatusBadRequest)
+		}
+		return nil, err
 	}
 
 	if org.Status == form.Status {
 		return org, nil
-	} else if form.Status != models.OrgEnable && form.Status != models.OrgDisable {
-		return nil, e.New(e.OrganizationInvalidStatus)
 	}
 
-	org, err := services.UpdateOrganization(c.DB(), form.Id, models.Attrs{"status": form.Status})
+	org, err = services.UpdateOrganization(c.DB(), orgId, models.Attrs{"status": form.Status})
 	if err != nil {
-		return nil, err
+		return nil, e.New(e.DBError, err)
 	}
 
 	return org, nil
@@ -115,7 +141,7 @@ func ChangeOrgStatus(c *ctx.ServiceCtx, form *forms.DisableOrganizationForm) (in
 
 type organizationDetailResp struct {
 	models.Organization
-	Creator string
+	Creator string `example:"超级管理员"`
 }
 
 func ModelIdInArray(v models.Id, arr ...models.Id) bool {
@@ -127,21 +153,39 @@ func ModelIdInArray(v models.Id, arr ...models.Id) bool {
 	return false
 }
 
-func OrganizationDetail(c *ctx.ServiceCtx, form *forms.DetailOrganizationForm) (resp interface{}, er e.Error) {
+// OrganizationDetail 组织信息详情
+// @Tags 组织
+// @Description 组织信息详情查询接口
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Param Authorization header string true "认证令牌"
+// @Param orgId path string true "组织ID"
+// @router /api/v1/orgs/{orgId} [get]
+// @Success 200 {object} ctx.JSONResult{result=organizationDetailResp}
+func OrganizationDetail(c *ctx.ServiceCtx, form forms.DetailOrganizationForm) (resp interface{}, er e.Error) {
 	orgIds, err := services.GetOrgIdsByUser(c.DB(), c.UserId)
 	if err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 
 	if ModelIdInArray(form.Id, orgIds...) == false && c.IsSuperAdmin == false {
-		return nil, nil
+		return nil, e.New(e.OrganizationNotExists, http.StatusNotFound)
 	}
-	org, err := services.GetOrganizationById(c.DB(), form.Id)
-	if err != nil {
-		return nil, e.New(e.DBError, http.StatusInternalServerError, err)
+	org, err2 := services.GetOrganizationById(c.DB(), form.Id)
+	if err2 != nil {
+		if err2.Code() == e.OrganizationNotExists {
+			return nil, e.New(e.OrganizationNotExists, err2, http.StatusNotFound)
+		}
+		c.Logger().Error("db error while get org detail, err %s", err)
+		return nil, e.New(e.DBError, err)
 	}
-	user, err := services.GetUserById(c.DB(), org.CreatorId)
-	if err != nil {
+	user, err3 := services.GetUserById(c.DB(), org.CreatorId)
+	if err3 != nil {
+		if err3.Code() == e.UserNotExists {
+			// 报 500 错误，正常情况用户不应该找不到
+			return nil, e.New(e.UserNotExists, err3, http.StatusInternalServerError)
+		}
+		c.Logger().Error("db error while get detail, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
 	var o = organizationDetailResp{

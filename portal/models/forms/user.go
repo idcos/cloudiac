@@ -4,6 +4,7 @@ import "cloudiac/portal/models"
 
 type CreateUserForm struct {
 	BaseForm
+
 	Name  string `form:"name" json:"name" binding:"required,gte=2,lte=32"`
 	Phone string `form:"phone" json:"phone" binding:"max=11"`
 	Email string `form:"email" json:"email" binding:"required,email"`
@@ -11,6 +12,7 @@ type CreateUserForm struct {
 
 type UpdateUserForm struct {
 	BaseForm
+
 	Id    models.Id `form:"id" json:"id" binding:""`
 	Name  string    `form:"name" json:"name" binding:""`
 	Phone string    `form:"phone" json:"phone" binding:""`
@@ -21,7 +23,7 @@ type UpdateUserForm struct {
 }
 
 type SearchUserForm struct {
-	BaseForm
+	PageForm
 
 	Q      string `form:"q" json:"q" binding:""`
 	Status string `form:"status" json:"status"`
@@ -61,5 +63,5 @@ type LoginForm struct {
 }
 
 type AdminSearchForm struct {
-	BaseForm
+	PageForm
 }

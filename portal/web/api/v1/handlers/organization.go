@@ -13,11 +13,12 @@ type Organization struct {
 }
 
 func (Organization) Create(c *ctx.GinRequestCtx) {
-	form := &forms.CreateOrganizationForm{}
-	if err := c.Bind(form); err != nil {
+	form := forms.CreateOrganizationForm{}
+	form.Bind(nil)
+	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CreateOrganization(c.ServiceCtx(), form))
+	c.JSONResult(apps.CreateOrganization(c.ServiceCtx(), &form))
 }
 
 func (Organization) Search(c *ctx.GinRequestCtx) {
@@ -30,18 +31,20 @@ func (Organization) Search(c *ctx.GinRequestCtx) {
 
 func (Organization) Update(c *ctx.GinRequestCtx) {
 	form := forms.UpdateOrganizationForm{}
+	param := forms.UpdateOrganizationParam{}
+	if err := c.BindUri(&param); err != nil {
+		// 如果 uri 参数不对不应该进到这里
+		c.Logger().Panic(err)
+		return
+	}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.UpdateOrganization(c.ServiceCtx(), &form))
+	c.JSONResult(apps.UpdateOrganization(c.ServiceCtx(), param.Id, &form))
 }
 
 func (Organization) Delete(c *ctx.GinRequestCtx) {
-	//form := forms.DeleteUserForm{}
-	//if err := c.Bind(&form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.DeleteUser(c.ServiceCtx(), &form))
+	// 组织不允许删除
 	c.JSONError(e.New(e.NotImplement))
 }
 
@@ -50,13 +53,19 @@ func (Organization) Detail(c *ctx.GinRequestCtx) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.OrganizationDetail(c.ServiceCtx(), &form))
+	c.JSONResult(apps.OrganizationDetail(c.ServiceCtx(), form))
 }
 
 func (Organization) ChangeOrgStatus(c *ctx.GinRequestCtx) {
 	form := forms.DisableOrganizationForm{}
+	param := forms.UpdateOrganizationParam{}
+	if err := c.BindUri(&param); err != nil {
+		// 如果 uri 参数不对不应该进到这里
+		c.Logger().Panic(err)
+		return
+	}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.ChangeOrgStatus(c.ServiceCtx(), &form))
+	c.JSONResult(apps.ChangeOrgStatus(c.ServiceCtx(), param.Id, &form))
 }

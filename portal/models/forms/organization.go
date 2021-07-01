@@ -10,7 +10,7 @@ type CfgInfo struct {
 }
 
 type UpdateNotificationCfgForm struct {
-	BaseForm
+	PageForm
 	NotificationId   models.Id `form:"notificationId" json:"notificationId" binding:"required"`
 	NotificationType string    `form:"notificationType" json:"notificationType" binding:"required"`
 	EventType        string    `form:"eventType" json:"eventType" binding:"required"`
@@ -18,7 +18,7 @@ type UpdateNotificationCfgForm struct {
 }
 
 type CreateNotificationCfgForm struct {
-	BaseForm
+	PageForm
 	NotificationType string      `form:"notificationType" json:"notificationType" binding:"required"`
 	EventType        string      `form:"eventType" json:"eventType" binding:"required"`
 	UserIds          []models.Id `form:"userIds" json:"userIds"`
@@ -26,48 +26,50 @@ type CreateNotificationCfgForm struct {
 }
 
 type DeleteNotificationCfgForm struct {
-	BaseForm
+	PageForm
 	Id models.Id `form:"id" json:"id" binding:"required"`
 }
 
 type CreateOrganizationForm struct {
 	BaseForm
-	Name        string `form:"name" json:"name" binding:"required,gte=2,lte=32"`
-	Description string `form:"description" json:"description" binding:""`
-	RunnerId    string `form:"runnerId" json:"runnerId"`
+	Name        string `form:"name" json:"name" binding:"required,gte=2,lte=32"` // 组织名称
+	Description string `form:"description" json:"description" binding:""`        // 组织描述
+	RunnerId    string `form:"runnerId" json:"runnerId" binding:""`              // 组织默认部署通道
+}
+
+type UpdateOrganizationParam struct {
+	BaseFormer
+
+	Id models.Id `uri:"id" json:"id" binding:""` // 组织ID
 }
 
 type UpdateOrganizationForm struct {
 	BaseForm
-	Id          models.Id `form:"id" json:"id" binding:""`
-	Name        string    `form:"name" json:"name" binding:""`
-	Description string    `form:"description" json:"description" binding:"max=255"`
-	VcsType     string    `form:"vcsType" json:"vcsType" binding:""`
-	VcsVersion  string    `form:"vcsVersion" json:"vcsVersion" binding:""`
-	VcsAuthInfo string    `form:"vcsAuthInfo" json:"vcsAuthInfo" binding:""`
-	RunnerId    string    `json:"runnerId"`
+	Name        string `form:"name" json:"name" binding:""`                      // 组织名称
+	Description string `form:"description" json:"description" binding:"max=255"` // 组织描述
+	RunnerId    string `form:"runnerId" json:"runnerId" binding:""`              // 组织默认部署通道
+	Status      string `form:"status" json:"status" enums:"enable,disable"`      // 组织状态
 }
 
 type SearchOrganizationForm struct {
-	BaseForm
+	PageForm
 
-	Q      string `form:"q" json:"q" binding:""`
-	Status string `form:"status" json:"status"`
+	Q      string `form:"q" json:"q" binding:""`                       // 组织名称，支持模糊查询
+	Status string `form:"status" json:"status" enums:"enable,disable"` // 组织状态
 }
 
 type DeleteOrganizationForm struct {
-	BaseForm
-	Id models.Id `form:"id" json:"id" binding:"required"`
+	PageForm
+	Id models.Id `form:"id" json:"id" binding:"required"` // 组织ID
 }
 
 type DisableOrganizationForm struct {
-	BaseForm
+	PageForm
 
-	Id     models.Id `form:"id" json:"id" binding:"required"`
-	Status string    `form:"status" json:"status" binding:"required"`
+	Status string `form:"status" json:"status" binding:"required"` // 组织状态
 }
 
 type DetailOrganizationForm struct {
-	BaseForm
-	Id models.Id `form:"id" json:"id" binding:"required"`
+	PageForm
+	Id models.Id `uri:"id" json:"id" binding:"required"` // 组织ID
 }

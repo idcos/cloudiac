@@ -11,11 +11,19 @@ import (
 	"time"
 )
 
-type Data struct {
+type LoginResp struct {
 	//UserInfo *models.User
 	Token string `json:"token"`
 }
 
+// Login 用户登陆
+// @Tags 鉴权
+// @Description 用户登陆接口
+// @Accept multipart/form-data
+// @Accept json
+// @Param body formData forms.LoginForm true "parameter"
+// @router /api/v1/auth/login [post]
+// @Success 200 {object} LoginResp
 func Login(c *ctx.ServiceCtx, form *forms.LoginForm) (resp interface{}, er e.Error) {
 	c.AddLogField("action", fmt.Sprintf("user login: %s", form.Email))
 
@@ -42,7 +50,7 @@ func Login(c *ctx.ServiceCtx, form *forms.LoginForm) (resp interface{}, er e.Err
 		return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
 	}
 
-	data := Data{
+	data := LoginResp{
 		//UserInfo: user,
 		Token: token,
 	}

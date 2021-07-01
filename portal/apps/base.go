@@ -14,9 +14,10 @@ type TableIface interface {
 }
 
 // 传入的 model 必须保证有 TableName() 方法，以确保可以获得要查询的表名
-func getPage(query *db.Session, form forms.Former, model TableIface) (interface{}, e.Error) {
+func getPage(query *db.Session, form forms.PageFormer, model TableIface) (interface{}, e.Error) {
 	pageSize := form.PageSize()
 	currentPage := form.CurrentPage()
+	query = form.Order(query)
 	p := page.New(currentPage, pageSize, query)
 
 	typ := reflect.TypeOf(model)
@@ -32,7 +33,7 @@ func getPage(query *db.Session, form forms.Former, model TableIface) (interface{
 	return result, nil
 }
 
-func getEmptyListResult(form forms.Former) (interface{}, e.Error) {
+func getEmptyListResult(form forms.PageFormer) (interface{}, e.Error) {
 	pageSize := form.PageSize()
 	currentPage := form.CurrentPage()
 	p := page.New(currentPage, pageSize, nil)

@@ -12,7 +12,7 @@ type Var struct {
 }
 
 type CreateTemplateForm struct {
-	BaseForm
+	PageForm
 	Name                   string    `form:"name" json:"name" binding:"required,gte=2,lte=32"`
 	Description            string    `form:"description" json:"Description" binding:""`
 	RepoId                 string    `form:"repoId" json:"repoId" binding:""`
@@ -31,7 +31,7 @@ type CreateTemplateForm struct {
 }
 
 type SearchTemplateForm struct {
-	BaseForm
+	PageForm
 
 	Q          string `form:"q" json:"q" binding:""`
 	Status     string `form:"status" json:"status"`
@@ -39,7 +39,7 @@ type SearchTemplateForm struct {
 }
 
 type UpdateTemplateForm struct {
-	BaseForm
+	PageForm
 	Id                     models.Id `form:"id" json:"id" binding:"required"`
 	Name                   string    `form:"name" json:"name"`
 	Description            string    `form:"description" json:"Description"`
@@ -56,22 +56,22 @@ type UpdateTemplateForm struct {
 }
 
 type DetailTemplateForm struct {
-	BaseForm
+	PageForm
 	Id models.Id `form:"id" json:"id" binding:"required"`
 }
 
 type OpenApiDetailTemplateForm struct {
-	BaseForm
+	PageForm
 	Id models.Id `form:"id" json:"id" binding:"required"`
 }
 
 type OverviewTemplateForm struct {
-	BaseForm
+	PageForm
 	Id models.Id `form:"id" json:"id" binding:"required"`
 }
 
 type TemplateTfvarsSearchForm struct {
-	BaseForm
+	PageForm
 	RepoId     string    `json:"repoId" form:"repoId"`
 	RepoBranch string    `json:"repoBranch" form:"repoBranch" `
 	RepoType   string    `json:"repoType" form:"repoType" `
@@ -79,7 +79,7 @@ type TemplateTfvarsSearchForm struct {
 }
 
 type TemplateVariableSearchForm struct {
-	BaseForm
+	PageForm
 	RepoId     string    `json:"repoId" form:"repoId" `
 	RepoBranch string    `json:"repoBranch" form:"repoBranch" `
 	RepoType   string    `json:"repoType" form:"repoType" `
@@ -87,7 +87,7 @@ type TemplateVariableSearchForm struct {
 }
 
 type TemplatePlaybookSearchForm struct {
-	BaseForm
+	PageForm
 	RepoId     string    `json:"repoId" form:"repoId" `
 	RepoBranch string    `json:"repoBranch" form:"repoBranch" `
 	RepoType   string    `json:"repoType" form:"repoType" `

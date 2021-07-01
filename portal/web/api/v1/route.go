@@ -21,8 +21,8 @@ func Register(g *gin.RouterGroup) {
 	//api路径优化v1版本
 	o := g.Group("/", w(middleware.Auth))
 	{
-		o.GET("/org/search", w(handlers.Organization{}.Search))
-		o.GET("/org/detail", w(handlers.Organization{}.Detail))
+		o.GET("/orgs", w(handlers.Organization{}.Search))
+		o.GET("/orgs/:id", w(handlers.Organization{}.Detail))
 		o.GET("/user/info/search", w(handlers.User{}.GetUserByToken))
 		o.PUT("/user/self/update", w(handlers.User{}.Update))
 		o.GET("/system/status/search", w(handlers.PortalSystemStatusSearch))
@@ -34,9 +34,9 @@ func Register(g *gin.RouterGroup) {
 	// IaC管理员权限
 	sys := g.Group("/", w(middleware.Auth), w(middleware.IsSuperAdmin))
 	{
-		sys.POST("/org/create", w(handlers.Organization{}.Create))
-		sys.PUT("/org/update", w(handlers.Organization{}.Update))
-		sys.PUT("/org/status/update", w(handlers.Organization{}.ChangeOrgStatus))
+		sys.POST("/orgs", w(handlers.Organization{}.Create))
+		sys.PUT("/orgs/:id/status/update", w(handlers.Organization{}.ChangeOrgStatus)) // Deprecated
+		sys.PUT("/orgs/:id", w(handlers.Organization{}.Update))
 		ctrl.Register(sys.Group("system"), &handlers.SystemConfig{})
 		ctrl.Register(sys.Group("token"), &handlers.Token{})
 	}

@@ -21,7 +21,7 @@ type Account struct {
 }
 
 type CreateTaskOpenForm struct {
-	BaseForm
+	PageForm
 	TemplateGuid  string    `json:"templateGuid" form:"templateGuid" binding:"required"`
 	Vars          []VarOpen `form:"vars" json:"vars"`
 	Account       Account   `json:"account" form:"account" `
