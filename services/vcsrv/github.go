@@ -4,9 +4,12 @@ import (
 	"cloudiac/consts/e"
 	"cloudiac/models"
 	"cloudiac/utils"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	git "github.com/google/go-github/github"
+	"golang.org/x/oauth2"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -65,14 +68,25 @@ func (github *githubVcs) ListRepos(namespace, search string, limit, offset int) 
 		urlParam.Set("q", search)
 	}
 	path := utils.GenQueryURL(github.vcs.Address, "/user/repos", urlParam)
-	response, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken)
+	_, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken)
 	if err != nil {
 		return nil, 0, e.New(e.BadRequest, err)
 	}
 
-	var total int64
-	if len(response.Header["X-Total-Count"]) != 0 {
-		total, _ = strconv.ParseInt(response.Header["X-Total-Count"][0], 10, 64)
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: github.vcs.VcsToken},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+	client := git.NewClient(tc)
+	_, r, err := client.Repositories.List(ctx, "", &git.RepositoryListOptions{
+		ListOptions: git.ListOptions{
+			Page:    1,
+			PerPage: 1,
+		},
+	})
+	if err != nil {
+		return nil, 0, e.New(e.BadRequest, err)
 	}
 	rep := make([]*RepositoryGithub, 0)
 	_ = json.Unmarshal(body, &rep)
@@ -82,11 +96,11 @@ func (github *githubVcs) ListRepos(namespace, search string, limit, offset int) 
 			githubRequest: github.githubRequest,
 			vcs:           github.vcs,
 			repository:    v,
-			total:         int(total),
+			total:         r.LastPage,
 		})
 	}
 
-	return repoList, total, nil
+	return repoList, int64(r.LastPage), nil
 }
 
 type githubRepoIface struct {

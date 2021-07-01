@@ -18,7 +18,8 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/gomodule/redigo v1.8.4
-	github.com/google/uuid v1.1.2
+	github.com/google/go-cmp v0.5.6 // indirect
+	github.com/google/go-github v17.0.0+incompatible
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/consul/api v1.8.1
@@ -46,6 +47,7 @@ require (
 	github.com/swaggo/swag v1.7.0
 	github.com/xanzy/go-gitlab v0.47.0
 	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b
+	golang.org/x/oauth2 v0.0.0-20210628180205-a41e5a781914
 	google.golang.org/grpc v1.36.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
