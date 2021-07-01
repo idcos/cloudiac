@@ -5,8 +5,7 @@ import "cloudiac/portal/libs/db"
 type Project struct {
 	SoftDeleteModel
 
-	OrgId       uint   `gorm:"not null"`
-	Guid        string `gorm:"size:32;not null;unique"`
+	OrgId       Id     `gorm:"size:32;not null"`
 	Name        string `gorm:"not null;"`
 	Description string `json:"description" gorm:"type:text"`
 }

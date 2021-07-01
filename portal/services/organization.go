@@ -9,6 +9,9 @@ import (
 )
 
 func CreateOrganization(tx *db.Session, org models.Organization) (*models.Organization, e.Error) {
+	if org.Id == "" {
+		org.Id = models.NewId("org")
+	}
 	if err := models.Create(tx, &org); err != nil {
 		if e.IsDuplicate(err) {
 			return nil, e.New(e.OrganizationAlreadyExists, err)
@@ -19,7 +22,7 @@ func CreateOrganization(tx *db.Session, org models.Organization) (*models.Organi
 	return &org, nil
 }
 
-func UpdateOrganization(tx *db.Session, id uint, attrs models.Attrs) (org *models.Organization, re e.Error) {
+func UpdateOrganization(tx *db.Session, id models.Id, attrs models.Attrs) (org *models.Organization, re e.Error) {
 	org = &models.Organization{}
 	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.Organization{}, attrs); err != nil {
 		if e.IsDuplicate(err) {
@@ -33,14 +36,14 @@ func UpdateOrganization(tx *db.Session, id uint, attrs models.Attrs) (org *model
 	return
 }
 
-func DeleteOrganization(tx *db.Session, id uint) e.Error {
+func DeleteOrganization(tx *db.Session, id models.Id) e.Error {
 	if _, err := tx.Where("id = ?", id).Delete(&models.Organization{}); err != nil {
 		return e.New(e.DBError, fmt.Errorf("delete org error: %v", err))
 	}
 	return nil
 }
 
-func GetOrganizationById(tx *db.Session, id uint) (*models.Organization, e.Error) {
+func GetOrganizationById(tx *db.Session, id models.Id) (*models.Organization, e.Error) {
 	o := models.Organization{}
 	if err := tx.Where("id = ?", id).First(&o); err != nil {
 		if e.IsRecordNotFound(err) {

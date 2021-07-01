@@ -3,7 +3,6 @@ package e
 import (
 	"cloudiac/utils/logs"
 	"fmt"
-
 	goredis "github.com/go-redis/redis"
 	"github.com/go-sql-driver/mysql"
 	redisgo "github.com/gomodule/redigo/redis"

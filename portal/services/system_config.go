@@ -29,6 +29,9 @@ func UpdateSystemConfig(tx *db.Session, attrs models.Attrs) (cfg *models.SystemC
 }
 
 func CreateSystemConfig(tx *db.Session, cfg models.SystemCfg) (*models.SystemCfg, e.Error) {
+	if cfg.Id == "" {
+		cfg.Id = models.NewId("")
+	}
 	if err := models.Create(tx, &cfg); err != nil {
 		return nil, e.New(e.DBError, err)
 	}

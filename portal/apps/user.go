@@ -83,7 +83,7 @@ type searchUserResp struct {
 
 func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.Error) {
 	userOrgRel, err := services.GetUserByOrg(c.DB(), c.OrgId)
-	var userIds []uint
+	var userIds []models.Id
 	for _, o := range userOrgRel {
 		userIds = append(userIds, o.UserId)
 	}
@@ -124,7 +124,7 @@ func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.E
 
 func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (user *models.User, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update user %d", form.Id))
-	if form.Id == 0 {
+	if form.Id == "" {
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
 	}
 	if c.IsSuperAdmin == false && c.Role != "owner" && c.UserId != form.Id {
@@ -212,7 +212,7 @@ func UserPassReset(c *ctx.ServiceCtx, form *forms.DetailUserForm) (user *models.
 	return
 }
 
-func UserDetail(c *ctx.ServiceCtx, id uint) (resp interface{}, er e.Error) {
+func UserDetail(c *ctx.ServiceCtx, id models.Id) (resp interface{}, er e.Error) {
 	user, err := services.GetUserById(c.DB(), id)
 	if err != nil {
 		return nil, e.New(e.DBError, http.StatusInternalServerError, err)

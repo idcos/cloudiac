@@ -1,5 +1,7 @@
 package forms
 
+import "cloudiac/portal/models"
+
 type SearchSystemConfigForm struct {
 	BaseForm
 
@@ -8,8 +10,8 @@ type SearchSystemConfigForm struct {
 
 type UpdateSystemConfigForm struct {
 	BaseForm
-	Id          uint   `form:"id" json:"id" binding:""`
-	Name        string `form:"name" json:"name" binding:""`
-	Value       string `form:"value" json:"value" binding:"required"`
-	Description string `form:"description" json:"description"`
+	Id          models.Id `form:"id" json:"id" binding:""`
+	Name        string    `form:"name" json:"name" binding:""`
+	Value       string    `form:"value" json:"value" binding:"required"`
+	Description string    `form:"description" json:"description"`
 }

@@ -14,7 +14,7 @@ func CreateAccessToken(tx *db.Session, webhook models.TemplateAccessToken) (*mod
 	return &webhook, nil
 }
 
-func UpdateAccessToken(tx *db.Session, id uint, attrs models.Attrs) (*models.TemplateAccessToken, e.Error) {
+func UpdateAccessToken(tx *db.Session, id models.Id, attrs models.Attrs) (*models.TemplateAccessToken, e.Error) {
 	webhook := &models.TemplateAccessToken{}
 	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.TemplateAccessToken{}, attrs); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("update vcs error: %v", err))
@@ -25,14 +25,14 @@ func UpdateAccessToken(tx *db.Session, id uint, attrs models.Attrs) (*models.Tem
 	return webhook, nil
 }
 
-func DeleteAccessToken(tx *db.Session, id uint) (interface{}, e.Error) {
+func DeleteAccessToken(tx *db.Session, id models.Id) (interface{}, e.Error) {
 	if _, err := tx.Where("id = ?", id).Delete(&models.TemplateAccessToken{}); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("delete vcs error: %v", err))
 	}
 	return nil, nil
 }
 
-func DetailAccessToken(tx *db.Session, id uint) (interface{}, e.Error) {
+func DetailAccessToken(tx *db.Session, id models.Id) (interface{}, e.Error) {
 	accessToken := &models.TemplateAccessToken{}
 	err := tx.Where("id = ?", id).First(accessToken)
 	if err != nil {
@@ -45,6 +45,6 @@ func SearchAccessTokenByTplGuid(tx *db.Session, guid string) *db.Session {
 	return tx.Model(&models.TemplateAccessToken{}).Where("tpl_guid = ?", guid)
 }
 
-func SearchAccessTokenByTplId(tx *db.Session, id uint) *db.Session {
+func SearchAccessTokenByTplId(tx *db.Session, id models.Id) *db.Session {
 	return tx.Model(&models.TemplateAccessToken{}).Where("tpl_id = ?", id)
 }

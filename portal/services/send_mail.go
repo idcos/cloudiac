@@ -20,13 +20,13 @@ func (sm *sendMail) SendMail() {
 	logger := logs.Get()
 	tmpl, err := template.New("sendMail").Parse("<table>" +
 		"<tr><td>模板名称: </td><td>{{.Name}}</td></tr>" +
-		"<tr><td>模板guid: </td><td>{{.Guid}}</td></tr>" +
-		"<tr><td>作业guid: </td><td>{{.TaskGuid}}</td></tr>" +
+		"<tr><td>模板 Id: </td><td>{{.Id}}</td></tr>" +
+		"<tr><td>作业 Id: </td><td>{{.TaskId}}</td></tr>" +
 		"<tr><td>作业类型: </td><td>{{.TaskType}}</td></tr>" +
 		"<tr><td>作业状态: </td><td>{{.Status}}</td></tr>" +
-		"<tr><td>CtRunnerId: </td><td>{{.CtServiceId}}</td></tr>" +
+		"<tr><td>runnerId: </td><td>{{.RunnerId}}</td></tr>" +
 		"<tr><td>CommitId: </td><td>{{.CommitId}}</td></tr>" +
-		"<tr><td>Branch: </td><td>{{.RepoRevision}}</td></tr>" +
+		"<tr><td>Revision: </td><td>{{.RepoRevision}}</td></tr>" +
 		"</table>")
 	if err != nil {
 		logger.Errorf("get template %+v", err)
@@ -34,21 +34,21 @@ func (sm *sendMail) SendMail() {
 	}
 	buffer := bytes.NewBuffer(nil)
 	if err := tmpl.Execute(buffer, struct {
-		CtServiceId string `json:"ctServiceId" form:"ctServiceId" `
-		CommitId    string `json:"commitId" form:"commitId" `
-		TaskType    string `json:"taskType" form:"taskType" `
-		Status      string `json:"status" form:"status" `
-		TaskGuid    string `json:"taskGuid" form:"taskGuid" `
-		TaskName    string `json:"taskName" form:"taskName" `
+		RunnerId string
+		CommitId string
+		TaskType string
+		Status   string
+		TaskId   models.Id
+		TaskName string
 		models.Template
 	}{
-		//CtServiceId: sm.Task.CtServiceId,
-		CommitId:    sm.Task.CommitId,
+		RunnerId: sm.Task.RunnerId,
+		CommitId: sm.Task.CommitId,
 		//TaskType:    sm.Task.TaskType,
-		Status:      sm.Task.Status,
-		TaskGuid:    sm.Task.Guid,
-		TaskName:    sm.Task.Name,
-		Template:    sm.Tpl,
+		Status:   sm.Task.Status,
+		TaskId:   sm.Task.Id,
+		TaskName: sm.Task.Name,
+		Template: sm.Tpl,
 	}); err != nil {
 		logger.Errorf("get template %+v", err)
 		return
@@ -70,11 +70,11 @@ func (sm *sendMail) SendMail() {
 			"<tr><td>Branch: </td><td>%s</td></tr>"+
 			"</table>",
 		sm.Tpl.Name,
-		sm.Tpl.Guid,
-		sm.Task.Guid,
+		sm.Tpl.Id,
+		sm.Task.Id,
 		//sm.Task.TaskType,
 		sm.Task.Status,
-		//sm.Task.CtServiceId,
+		sm.Task.RunnerId,
 		sm.Task.CommitId,
 		sm.Tpl.RepoRevision,
 	)

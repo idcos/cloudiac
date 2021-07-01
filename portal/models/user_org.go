@@ -5,8 +5,8 @@ import "cloudiac/portal/libs/db"
 type UserOrg struct {
 	BaseModel
 
-	UserId uint   `json:"userId" gorm:"not null;comment:'用户ID'"`
-	OrgId  uint   `json:"orgId" gorm:"not null;comment:'组织ID'"`
+	UserId Id     `json:"userId" gorm:"size:32;not null;comment:'用户ID'"`
+	OrgId  Id     `json:"orgId" gorm:"size:32;not null;comment:'组织ID'"`
 	Role   string `json:"role" gorm:"type:enum('owner','member');default:'member'"`
 }
 

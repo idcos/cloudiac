@@ -1,5 +1,7 @@
 package forms
 
+import "cloudiac/portal/models"
+
 type Params struct {
 	Id       string `json:"id" form:"id" `
 	Key      string `json:"key"`
@@ -17,12 +19,12 @@ type CreateResourceAccountForm struct {
 
 type UpdateResourceAccountForm struct {
 	BaseForm
-	Id           uint     `form:"id" json:"id" binding:"required"`
-	Name         string   `form:"name" json:"name" binding:""`
-	Description  string   `form:"description" json:"description"`
-	Params       []Params `form:"params" json:"params"`
-	Status       string   `form:"status" json:"status"`
-	CtServiceIds []string `form:"ctServiceIds" json:"ctServiceIds"`
+	Id           models.Id `form:"id" json:"id" binding:"required"`
+	Name         string    `form:"name" json:"name" binding:""`
+	Description  string    `form:"description" json:"description"`
+	Params       []Params  `form:"params" json:"params"`
+	Status       string    `form:"status" json:"status"`
+	CtServiceIds []string  `form:"ctServiceIds" json:"ctServiceIds"`
 }
 
 type SearchResourceAccountForm struct {
@@ -34,5 +36,5 @@ type SearchResourceAccountForm struct {
 
 type DeleteResourceAccountForm struct {
 	BaseForm
-	Id uint `form:"id" json:"id" binding:"required"`
+	Id models.Id `form:"id" json:"id" binding:"required"`
 }

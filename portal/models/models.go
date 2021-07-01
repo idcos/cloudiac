@@ -1,6 +1,7 @@
 package models
 
 import (
+	"cloudiac/utils/logs"
 	"fmt"
 
 	"cloudiac/portal/consts/e"
@@ -120,10 +121,15 @@ func Init(migrate bool) {
 
 	sess := db.ToSess(db.Get().DB().Set("gorm:table_options", "ENGINE=InnoDB")).Begin().Debug()
 	defer func() {
+		logger := logs.Get().WithField("func", "models.Init")
 		if r := recover(); r != nil {
-			_ = sess.Rollback()
+			logger.Infof("recover: %v", r)
+			if err := sess.Rollback(); err != nil {
+				logger.Errorf("rollback error: %v", err)
+			}
 			panic(r)
 		} else if err := sess.Commit(); err != nil {
+			logger.Errorf("commit error: %v", err)
 			panic(err)
 		}
 	}()

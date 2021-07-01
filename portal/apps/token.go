@@ -54,7 +54,7 @@ func CreateToken(c *ctx.ServiceCtx, form *forms.CreateTokenForm) (interface{}, e
 
 func UpdateToken(c *ctx.ServiceCtx, form *forms.UpdateTokenForm) (token *models.Token, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update token %d", form.Id))
-	if form.Id == 0 {
+	if form.Id == "" {
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
 	}
 

@@ -18,7 +18,7 @@ func ListNotificationCfgs(c *ctx.ServiceCtx) (interface{}, e.Error) {
 	return cfgs, nil
 }
 
-func DeleteNotificationCfg(c *ctx.ServiceCtx, id uint) (result interface{}, err e.Error) {
+func DeleteNotificationCfg(c *ctx.ServiceCtx, id models.Id) (result interface{}, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("Delete org notification id: %d", id))
 	err = services.DeleteOrganizationCfg(c.DB(), id, c.OrgId)
 	if err != nil {
@@ -30,7 +30,7 @@ func DeleteNotificationCfg(c *ctx.ServiceCtx, id uint) (result interface{}, err 
 func UpdateNotificationCfg(c *ctx.ServiceCtx, form *forms.UpdateNotificationCfgForm) (cfg *models.NotificationCfg, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update org notification cfg id: %s", form.NotificationId))
 
-	if form.NotificationId == 0 {
+	if form.NotificationId == "" {
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
 	}
 
@@ -49,7 +49,7 @@ func UpdateNotificationCfg(c *ctx.ServiceCtx, form *forms.UpdateNotificationCfgF
 		attrs["cfgInfo"] = cfgJson
 	}
 
-	cfg, err = services.UpdateNotificationCfg(c.DB(), uint(form.NotificationId), attrs)
+	cfg, err = services.UpdateNotificationCfg(c.DB(), form.NotificationId, attrs)
 	return cfg, err
 }
 

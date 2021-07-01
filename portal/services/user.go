@@ -13,6 +13,9 @@ import (
 )
 
 func CreateUser(tx *db.Session, user models.User) (*models.User, e.Error) {
+	if user.Id == "" {
+		user.Id = models.NewId("u")
+	}
 	if err := models.Create(tx, &user); err != nil {
 		if e.IsDuplicate(err) {
 			return nil, e.New(e.UserAlreadyExists, err)
@@ -23,7 +26,7 @@ func CreateUser(tx *db.Session, user models.User) (*models.User, e.Error) {
 	return &user, nil
 }
 
-func UpdateUser(tx *db.Session, id uint, attrs models.Attrs) (user *models.User, re e.Error) {
+func UpdateUser(tx *db.Session, id models.Id, attrs models.Attrs) (user *models.User, re e.Error) {
 	user = &models.User{}
 	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.User{}, attrs); err != nil {
 		if e.IsDuplicate(err) {
@@ -37,14 +40,14 @@ func UpdateUser(tx *db.Session, id uint, attrs models.Attrs) (user *models.User,
 	return
 }
 
-func DeleteUser(tx *db.Session, id uint) e.Error {
+func DeleteUser(tx *db.Session, id models.Id) e.Error {
 	if _, err := tx.Where("id = ?", id).Delete(&models.User{}); err != nil {
 		return e.New(e.DBError, fmt.Errorf("delete user error: %v", err))
 	}
 	return nil
 }
 
-func GetUserById(tx *db.Session, id uint) (*models.User, e.Error) {
+func GetUserById(tx *db.Session, id models.Id) (*models.User, e.Error) {
 	u := models.User{}
 	if err := tx.Where("id = ?", id).First(&u); err != nil {
 		if e.IsRecordNotFound(err) {
@@ -114,21 +117,21 @@ func CreateUserOrgRel(tx *db.Session, userOrg models.UserOrg) (*models.UserOrg, 
 	return &userOrg, nil
 }
 
-func DeleteUserOrgRel(tx *db.Session, userId uint, orgId uint) e.Error {
+func DeleteUserOrgRel(tx *db.Session, userId models.Id, orgId models.Id) e.Error {
 	if _, err := tx.Where("user_id = ? AND org_id = ?", userId, orgId).Debug().Delete(&models.UserOrg{}); err != nil {
 		return e.New(e.DBError, fmt.Errorf("delete user %d for org %d error: %v", userId, orgId, err))
 	}
 	return nil
 }
 
-func FindUsersOrgRel(query *db.Session, userId uint, orgId uint) (userOrgRel []*models.UserOrg, err error) {
+func FindUsersOrgRel(query *db.Session, userId models.Id, orgId models.Id) (userOrgRel []*models.UserOrg, err error) {
 	if err := query.Where("user_id = ? AND org_id = ?", userId, orgId).Find(&userOrgRel); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 	return
 }
 
-func GetOrgIdsByUser(query *db.Session, userId uint) (orgIds []uint, err error) {
+func GetOrgIdsByUser(query *db.Session, userId models.Id) (orgIds []models.Id, err error) {
 	var userOrgRel []*models.UserOrg
 	if err := query.Where("user_id = ?", userId).Find(&userOrgRel); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
@@ -139,7 +142,7 @@ func GetOrgIdsByUser(query *db.Session, userId uint) (orgIds []uint, err error) 
 	return
 }
 
-func GetUserByOrg(query *db.Session, orgId uint) (userOrgRel []*models.UserOrg, err error) {
+func GetUserByOrg(query *db.Session, orgId models.Id) (userOrgRel []*models.UserOrg, err error) {
 	if err := query.Where("org_id = ?", orgId).Find(&userOrgRel); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}

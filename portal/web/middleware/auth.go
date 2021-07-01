@@ -3,11 +3,10 @@ package middleware
 import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/models"
 	"cloudiac/portal/services"
-	"net/http"
-	"strconv"
-
 	"github.com/dgrijalva/jwt-go"
+	"net/http"
 )
 
 // 用户认证
@@ -28,8 +27,8 @@ func Auth(c *ctx.GinRequestCtx) {
 	}
 
 	if claims, ok := token.Claims.(*services.Claims); ok && token.Valid {
-		orgId, _ := strconv.ParseUint(c.GetHeader("IaC-Org-Id"), 10, 32)
-		c.ServiceCtx().OrgId = uint(orgId)
+		orgId := models.Id(c.GetHeader("IaC-Org-Id"))
+		c.ServiceCtx().OrgId = orgId
 		c.ServiceCtx().UserId = claims.UserId
 		c.ServiceCtx().Username = claims.Username
 		c.ServiceCtx().IsSuperAdmin = claims.IsAdmin
@@ -43,7 +42,7 @@ func Auth(c *ctx.GinRequestCtx) {
 
 // 验证组织ID是否有效
 func AuthOrgId(c *ctx.GinRequestCtx) {
-	if c.ServiceCtx().OrgId == 0 {
+	if c.ServiceCtx().OrgId == "" {
 		c.JSONError(e.New(e.InvalidOrganizationId), http.StatusForbidden)
 		return
 	}

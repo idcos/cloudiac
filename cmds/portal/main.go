@@ -184,7 +184,7 @@ func initSystemConfig(tx *db.Session) (err error) {
 
 func initVcs(tx *db.Session) error {
 	vcs := models.Vcs{
-		OrgId:    0,
+		OrgId:    "",
 		Name:     "默认仓库",
 		VcsType:  consts.GitTypeLocal,
 		Status:   "enable",
@@ -193,12 +193,12 @@ func initVcs(tx *db.Session) error {
 	}
 
 	dbVcs := models.Vcs{}
-	err := services.QueryVcs(0, "", "", tx).First(&dbVcs)
+	err := services.QueryVcs("", "", "", tx).First(&dbVcs)
 	if err != nil && !e.IsRecordNotFound(err) {
 		return err
 	}
 
-	if dbVcs.Id == 0 { // 未创建
+	if dbVcs.Id == "" { // 未创建
 		_, err = services.CreateVcs(tx, vcs)
 		if err != nil {
 			return err

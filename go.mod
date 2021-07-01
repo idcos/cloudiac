@@ -24,7 +24,7 @@ require (
 	github.com/hashicorp/consul/api v1.8.1
 	github.com/hashicorp/hcl/v2 v2.10.0
 	github.com/jessevdk/go-flags v1.5.0
-	github.com/jinzhu/gorm v1.9.16
+	github.com/jinzhu/gorm v1.9.16 // indirect
 	github.com/joho/godotenv v1.3.0
 	github.com/jonboulle/clockwork v0.2.2 // indirect
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible

@@ -1,5 +1,7 @@
 package forms
 
+import "cloudiac/portal/models"
+
 type CreateTokenForm struct {
 	BaseForm
 
@@ -8,9 +10,9 @@ type CreateTokenForm struct {
 
 type UpdateTokenForm struct {
 	BaseForm
-	Id          uint   `fomr:"id" json:"id" binding:"required"`
-	Status      string `form:"status" json:"status" binding:"required"`
-	Description string `form:"description" json:"description" binding:""`
+	Id          models.Id `form:"id" json:"id" binding:"required"`
+	Status      string    `form:"status" json:"status" binding:"required"`
+	Description string    `form:"description" json:"description" binding:""`
 }
 
 type SearchTokenForm struct {
@@ -21,5 +23,5 @@ type SearchTokenForm struct {
 
 type DeleteTokenForm struct {
 	BaseForm
-	Id uint `fomr:"id" json:"id" binding:"required"`
+	Id models.Id `form:"id" json:"id" binding:"required"`
 }

@@ -6,7 +6,6 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
-	"cloudiac/utils"
 	"fmt"
 	"net/http"
 )
@@ -14,15 +13,11 @@ import (
 func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (*models.Organization, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create org %s", form.Name))
 
-	// todo: 验证vcs_provider信息是否有效，一期固定使用内部gitlab，暂不实现
-
-	guid := utils.GenGuid("org")
 	org, err := services.CreateOrganization(c.DB(), models.Organization{
 		Name:        form.Name,
-		Guid:        guid,
-		Description: form.Description,
-		CreatorId:   c.UserId,
 		RunnerId:    form.RunnerId,
+		CreatorId:   c.UserId,
+		Description: form.Description,
 	})
 	if err != nil {
 		return nil, e.AutoNew(err, e.DBError)
@@ -31,16 +26,15 @@ func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (
 }
 
 type searchOrganizationResp struct {
-	Id                     uint   `json:"id"`
-	Name                   string `json:"name"`
-	Guid                   string `json:"guid"`
-	Description            string `json:"description"`
-	UserId                 uint   `json:"userId"`
-	Status                 string `json:"status"`
-	Creator                string `json:"creator"`
-	DefaultRunnerAddr      string `json:"defaultRunnerAddr" grom:"not null;comment:'默认runner地址'"`
-	DefaultRunnerPort      uint   `json:"defaultRunnerPort" grom:"not null;comment:'默认runner端口'"`
-	DefaultRunnerServiceId string `json:"defaultRunnerServiceId" grom:"not null;comment:'默认runner-consul-serviceId'"`
+	Id                     models.Id `json:"id"`
+	Name                   string    `json:"name"`
+	Description            string    `json:"description"`
+	UserId                 models.Id `json:"userId"`
+	Status                 string    `json:"status"`
+	Creator                string    `json:"creator"`
+	DefaultRunnerAddr      string    `json:"defaultRunnerAddr" grom:"not null;comment:'默认runner地址'"`
+	DefaultRunnerPort      uint      `json:"defaultRunnerPort" grom:"not null;comment:'默认runner端口'"`
+	DefaultRunnerServiceId string    `json:"defaultRunnerServiceId" grom:"not null;comment:'默认runner-consul-serviceId'"`
 }
 
 func (m *searchOrganizationResp) TableName() string {
@@ -74,7 +68,7 @@ func SearchOrganization(c *ctx.ServiceCtx, form *forms.SearchOrganizationForm) (
 
 func UpdateOrganization(c *ctx.ServiceCtx, form *forms.UpdateOrganizationForm) (org *models.Organization, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update org %d", form.Id))
-	if form.Id == 0 {
+	if form.Id == "" {
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
 	}
 
@@ -124,13 +118,22 @@ type organizationDetailResp struct {
 	Creator string
 }
 
+func ModelIdInArray(v models.Id, arr ...models.Id) bool {
+	for i := range arr {
+		if arr[i] == v {
+			return true
+		}
+	}
+	return false
+}
+
 func OrganizationDetail(c *ctx.ServiceCtx, form *forms.DetailOrganizationForm) (resp interface{}, er e.Error) {
 	orgIds, err := services.GetOrgIdsByUser(c.DB(), c.UserId)
 	if err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 
-	if utils.UintIsContain(orgIds, form.Id) == false && c.IsSuperAdmin == false {
+	if ModelIdInArray(form.Id, orgIds...) == false && c.IsSuperAdmin == false {
 		return nil, nil
 	}
 	org, err := services.GetOrganizationById(c.DB(), form.Id)

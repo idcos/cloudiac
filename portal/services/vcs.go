@@ -18,7 +18,7 @@ func CreateVcs(tx *db.Session, vcs models.Vcs) (*models.Vcs, e.Error) {
 	return &vcs, nil
 }
 
-func UpdateVcs(tx *db.Session, id uint, attrs models.Attrs) (vcs *models.Vcs, er e.Error) {
+func UpdateVcs(tx *db.Session, id models.Id, attrs models.Attrs) (vcs *models.Vcs, er e.Error) {
 	vcs = &models.Vcs{}
 	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.Vcs{}, attrs); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("update vcs error: %v", err))
@@ -29,7 +29,7 @@ func UpdateVcs(tx *db.Session, id uint, attrs models.Attrs) (vcs *models.Vcs, er
 	return
 }
 
-func QueryVcs(orgId uint, status, q string, query *db.Session) *db.Session {
+func QueryVcs(orgId models.Id, status, q string, query *db.Session) *db.Session {
 	query = query.Model(&models.Vcs{})
 	if status != "" {
 		query = query.Where("status = ?", status).
@@ -45,9 +45,9 @@ func QueryVcs(orgId uint, status, q string, query *db.Session) *db.Session {
 	return query
 }
 
-func QueryVcsByVcsId(vcsId uint, query *db.Session) (*models.Vcs, e.Error) {
+func QueryVcsByVcsId(vcsId models.Id, query *db.Session) (*models.Vcs, e.Error) {
 	vcs := &models.Vcs{}
-	if vcsId == 0 {
+	if vcsId == "" {
 		query = query.Where("org_id = 0")
 	} else {
 		query = query.Where("id = ?", vcsId)
@@ -61,7 +61,7 @@ func QueryVcsByVcsId(vcsId uint, query *db.Session) (*models.Vcs, e.Error) {
 
 }
 
-func QueryEnableVcs(orgId uint, query *db.Session) (interface{}, e.Error) {
+func QueryEnableVcs(orgId models.Id, query *db.Session) (interface{}, e.Error) {
 	vcs := make([]models.Vcs, 0)
 	if err := query.Model(&models.Vcs{}).Where("org_id = ? or org_id = 0", orgId).Where("status = 'enable'").Find(&vcs); err != nil {
 		return nil, e.New(e.DBError, err)
@@ -69,7 +69,7 @@ func QueryEnableVcs(orgId uint, query *db.Session) (interface{}, e.Error) {
 	return vcs, nil
 }
 
-func DeleteVcs(tx *db.Session, id uint) e.Error {
+func DeleteVcs(tx *db.Session, id models.Id) e.Error {
 	if _, err := tx.Where("id = ?", id).Delete(&models.Vcs{}); err != nil {
 		return e.New(e.DBError, fmt.Errorf("delete vcs error: %v", err))
 	}

@@ -60,13 +60,12 @@ const (
 type Task struct {
 	SoftDeleteModel
 
-	OrgId     uint `json:"orgId" gorm:"not null"`
-	ProjectId uint `json:"projectId" gorm:"not null"`
-	EnvId     uint `json:"envId" gorm:"not null"`
+	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
+	ProjectId Id `json:"projectId" gorm:"size:32;not null"`
+	EnvId     Id `json:"envId" gorm:"size:32;not null"`
 
-	Guid      string `json:"guid" gorm:"size:32;not null;unique;comment:'任务guid'"`
 	Name      string `json:"name" gorm:"not null;comment:'任务名称'"`
-	CreatorId uint   `json:"creatorId"`
+	CreatorId Id   `json:"size:32;creatorId"`
 	RunnerId  string `json:"runnerId" gorm:"not null"`
 	CommitId  string `json:"commitId" gorm:"not null"`
 	Status    string `json:"status"`  // gorm 配置见 Migrate()
@@ -132,10 +131,10 @@ func (t *Task) Migrate(sess *db.Session) (err error) {
 
 type TaskStep struct {
 	BaseModel
-	OrgId     uint   `json:"orgId" gorm:"not null"`
-	ProjectId uint   `json:"projectId" gorm:"not null"`
-	TaskId    uint   `json:"taskId" gorm:"not null"`
-	Index     uint   `json:"index" gorm:"not null"`
+	OrgId     Id   `json:"orgId" gorm:"size:32;not null"`
+	ProjectId Id   `json:"projectId" gorm:"size:32;not null"`
+	TaskId    Id   `json:"taskId" gorm:"size:32;not null"`
+	Index     Id   `json:"index" gorm:"size:32;not null"`
 	Type      string `json:"type" gorm:"size:16"`
 	Status    string `json:"status" gorm:"type:enum('pending','running','failed','done')"`
 	LogPath   string `json:"logPath" gorm:""`

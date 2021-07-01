@@ -19,7 +19,7 @@ func CreateResourceAccount(tx *db.Session, rsAccount *models.ResourceAccount) (*
 	return rsAccount, nil
 }
 
-func UpdateResourceAccount(tx *db.Session, id uint, attrs models.Attrs) (rsAccount *models.ResourceAccount, re e.Error) {
+func UpdateResourceAccount(tx *db.Session, id models.Id, attrs models.Attrs) (rsAccount *models.ResourceAccount, re e.Error) {
 	rsAccount = &models.ResourceAccount{}
 	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.ResourceAccount{}, attrs); err != nil {
 		if e.IsDuplicate(err) {
@@ -33,14 +33,14 @@ func UpdateResourceAccount(tx *db.Session, id uint, attrs models.Attrs) (rsAccou
 	return
 }
 
-func DeleteResourceAccount(tx *db.Session, id uint, orgId uint) e.Error {
+func DeleteResourceAccount(tx *db.Session, id models.Id, orgId models.Id) e.Error {
 	if _, err := tx.Where("id = ? AND org_id = ?", id, orgId).Delete(&models.ResourceAccount{}); err != nil {
 		return e.New(e.DBError, fmt.Errorf("delete resourceAccount error: %v", err))
 	}
 	return nil
 }
 
-func GetResourceAccountById(tx *db.Session, id uint) (*models.ResourceAccount, e.Error) {
+func GetResourceAccountById(tx *db.Session, id models.Id) (*models.ResourceAccount, e.Error) {
 	r := models.ResourceAccount{}
 	if err := tx.Where("id = ?", id).First(&r); err != nil {
 		if e.IsRecordNotFound(err) {
@@ -79,7 +79,7 @@ func CreateCtResourceMap(tx *db.Session, ctResourceMap models.CtResourceMap) (*m
 	return &ctResourceMap, nil
 }
 
-func FindCtResourceMap(query *db.Session, rsAccountId uint) (ctServiceIds []string, err error) {
+func FindCtResourceMap(query *db.Session, rsAccountId models.Id) (ctServiceIds []string, err error) {
 	ctResourceMap := []*models.CtResourceMap{}
 	if err := query.Where("resource_account_id = ?", rsAccountId).Find(&ctResourceMap); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
@@ -90,7 +90,7 @@ func FindCtResourceMap(query *db.Session, rsAccountId uint) (ctServiceIds []stri
 	return
 }
 
-func DeleteCtResourceMap(tx *db.Session, rsAccountId uint) e.Error {
+func DeleteCtResourceMap(tx *db.Session, rsAccountId models.Id) e.Error {
 	if _, err := tx.Where("resource_account_id = ?", rsAccountId).Delete(&models.CtResourceMap{}); err != nil {
 		return e.New(e.DBError, fmt.Errorf("delete CtResourceMap error: %v", err))
 	}

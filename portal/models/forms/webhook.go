@@ -1,5 +1,7 @@
 package forms
 
+import "cloudiac/portal/models"
+
 type CreateAccessTokenForm struct {
 	BaseForm
 	TplGuid string `json:"tplGuid" form:"tplGuid" `
@@ -8,8 +10,8 @@ type CreateAccessTokenForm struct {
 
 type UpdateAccessTokenForm struct {
 	BaseForm
-	Id     uint   `form:"id" json:"id" binding:"required"`
-	Action string `json:"action" form:"action" `
+	Id     models.Id `form:"id" json:"id" binding:"required"`
+	Action string    `json:"action" form:"action" `
 }
 
 type SearchAccessTokenForm struct {
@@ -19,10 +21,10 @@ type SearchAccessTokenForm struct {
 
 type DeleteAccessTokenForm struct {
 	BaseForm
-	Id uint `form:"id" json:"id" binding:"required"`
+	Id models.Id `form:"id" json:"id" binding:"required"`
 }
 
 type DetailAccessTokenForm struct {
 	BaseForm
-	Id uint `form:"id" json:"id" binding:"required"`
+	Id models.Id `form:"id" json:"id" binding:"required"`
 }

@@ -4,8 +4,8 @@ import "cloudiac/portal/libs/db"
 
 type Vcs struct {
 	BaseModel
-	OrgId     uint   `json:"orgId" gorm:"not null"`
-	ProjectId uint   `json:"projectId" gorm:"not null"`
+	OrgId     Id   `json:"orgId" gorm:"size:32;not null"`	// 默认仓库的 orgId 为 ""
+	ProjectId Id   `json:"projectId" gorm:"size:32;not null"`
 	Name      string `json:"name" gorm:"not null;comment:'vcs名称'"`
 	Status    string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'vcs状态'"`
 	VcsType   string `json:"vcsType" gorm:"not null;comment:'vcs代码库类型'"`

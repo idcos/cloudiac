@@ -14,13 +14,13 @@ var (
 )
 
 type Claims struct {
-	UserId   uint   `json:"userId"`
-	Username string `json:"username"`
-	IsAdmin  bool   `json:"isAdmin"`
+	UserId   models.Id `json:"userId"`
+	Username string    `json:"username"`
+	IsAdmin  bool      `json:"isAdmin"`
 	jwt.StandardClaims
 }
 
-func GenerateToken(uid uint, name string, isAdmin bool, expireDuration time.Duration) (string, error) {
+func GenerateToken(uid models.Id, name string, isAdmin bool, expireDuration time.Duration) (string, error) {
 	expire := time.Now().Add(expireDuration)
 
 	// 将 userId，姓名, 过期时间写入 token 中
@@ -44,7 +44,7 @@ func CreateToken(tx *db.Session, token models.Token) (*models.Token, e.Error) {
 	return &token, nil
 }
 
-func UpdateToken(tx *db.Session, id uint, attrs models.Attrs) (token *models.Token, er e.Error) {
+func UpdateToken(tx *db.Session, id models.Id, attrs models.Attrs) (token *models.Token, er e.Error) {
 	token = &models.Token{}
 	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.Token{}, attrs); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("update token error: %v", err))
@@ -59,7 +59,7 @@ func QueryToken(query *db.Session) *db.Session {
 	return query.Model(&models.Token{})
 }
 
-func DeleteToken(tx *db.Session, id uint) e.Error {
+func DeleteToken(tx *db.Session, id models.Id) e.Error {
 	if _, err := tx.Where("id = ?", id).Delete(&models.Token{}); err != nil {
 		return e.New(e.DBError, fmt.Errorf("delete token error: %v", err))
 	}

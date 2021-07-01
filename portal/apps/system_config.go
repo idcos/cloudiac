@@ -10,7 +10,7 @@ import (
 )
 
 type searchSystemConfigResp struct {
-	Id          uint   `json:"id"`
+	Id          models.Id   `json:"id"`
 	Name        string `json:"name"`
 	Value       string `json:"value"`
 	Description string `json:"description"`

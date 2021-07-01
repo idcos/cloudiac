@@ -1,9 +1,12 @@
 package models
 
 import (
-	"cloudiac/portal/libs/db"
+	"database/sql/driver"
+	"fmt"
 	"time"
 
+	"cloudiac/portal/libs/db"
+	"cloudiac/utils"
 	"github.com/jinzhu/gorm"
 )
 
@@ -17,8 +20,43 @@ type Modeler interface {
 	//AddUniqueIndex(*db.Session) error
 }
 
+type ModelIdGenerator interface {
+	NewId() string
+}
+
+type Id string
+
+func (i Id) Value() (driver.Value, error) {
+	return string(i), nil
+}
+
+func (i *Id) Scan(value interface{}) error {
+	*i = ""
+	switch v := value.(type) {
+	case []byte:
+		*i = Id(v)
+	case string:
+		*i = Id(v)
+	default:
+		return fmt.Errorf("invalid type %T, value: %T", value, value)
+	}
+	return nil
+}
+
+func NewId(prefix string) Id {
+	return Id(utils.GenGuid(prefix))
+}
+
 type BaseModel struct {
-	Id uint `gorm:"primary_key" json:"id"`
+	Id Id `gorm:"size:32;primary_key" json:"id"`
+}
+
+func (base *BaseModel) BeforeCreate(scope *gorm.Scope) error {
+	if base.Id == "" {
+		base.Id = NewId("")
+	}
+	//return scope.SetColumn("id", )
+	return nil
 }
 
 func (BaseModel) Migrate(*db.Session) error {
@@ -54,11 +92,8 @@ type SoftDeleteModel struct {
 	DeletedAtT int64 `json:"-" csv:"-" gorm:"default:0"`
 }
 
-func (SoftDeleteModel) AfterDelete(scope *gorm.Scope) error {
-	if scope.Search.Unscoped {
-		return nil
-	}
-	return scope.DB().Unscoped().UpdateColumn("deleted_at_t", time.Now().Unix()).Error
+func (SoftDeleteModel) AfterDelete(db *gorm.DB) error {
+	return db.Unscoped().UpdateColumn("deleted_at_t", time.Now().Unix()).Error
 }
 
 func (m SoftDeleteModel) AddUniqueIndex(sess *db.Session, index string, cols ...string) error {

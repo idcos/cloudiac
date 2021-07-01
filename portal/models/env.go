@@ -15,10 +15,9 @@ const (
 
 type Env struct {
 	SoftDeleteModel
-	Guid      string `json:"guid" gorm:"size:32;not null;unique"`
-	OrgId     uint   `json:"orgId" gorm:"not null"`
-	ProjectId uint   `json:"projectId" gorm:"not null"`
-	TplId     uint   `json:"tplId" gorm:"not null"`
+	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
+	ProjectId Id `json:"projectId" gorm:"size:32;not null"`
+	TplId     Id `json:"tplId" gorm:"size:32;not null"`
 
 	Name        string `json:"name" gorm:"not null"`
 	Description string `json:"description" gorm:"type:text"`
@@ -28,7 +27,7 @@ type Env struct {
 	OneTime     bool   `json:"oneTime" gorm:"default:'0'"`
 
 	// 最后一次部署或销毁任务的 id(plan 作业不记录)
-	LastTaskId uint `json:"lastTaskId" gorm:"default:'0'"`
+	LastTaskId Id `json:"lastTaskId" gorm:"size:32;default:'0'"`
 
 	// AutoDestroyAt 自动销毁时间，这里存绝对时间，1小时、2小时的相对时间选择由前端转换
 	AutoDestroyAt *time.Time `json:"autoDestroyAt"`
@@ -52,15 +51,14 @@ func (e *Env) Migrate(sess *db.Session) (err error) {
 type EnvRes struct {
 	BaseModel
 
-	Guid      string `json:"guid" gorm:"size:32;not null;unique"`
-	OrgId     uint   `json:"orgId" gorm:"not null"`
-	ProjectId uint   `json:"projectId" gorm:"not null"`
-	EnvId     uint   `json:"envId" gorm:"not null"`
+	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
+	ProjectId Id `json:"projectId" gorm:"size:32;not null"`
+	EnvId     Id `json:"envId" gorm:"size:32;not null"`
 
 	Provider string `json:"provider" gorm:"not null"`
 	Type     string `json:"type" gorm:"not null"`
 	Name     string `json:"name" gorm:"not null"`
-	Index    uint   `json:"index" gorm:"not null"`
+	Index    int    `json:"index" gorm:"not null"`
 	Attrs    JSON   `json:"attrs" gorm:"type:text"`
 }
 

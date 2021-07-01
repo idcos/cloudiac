@@ -1,5 +1,7 @@
 package forms
 
+import "cloudiac/portal/models"
+
 type CreateVcsForm struct {
 	BaseForm
 	Name     string `form:"name" json:"name" binding:"required"`
@@ -11,12 +13,12 @@ type CreateVcsForm struct {
 
 type UpdateVcsForm struct {
 	BaseForm
-	Id       uint   `form:"id" json:"id" binding:"required"`
-	Status   string `form:"status" json:"status" binding:""`
-	Name     string `form:"name" json:"name" binding:""`
-	VcsType  string `form:"vcsType" json:"vcsType" binding:""`
-	Address  string `form:"address" json:"address" binding:""`
-	VcsToken string `form:"vcsToken" json:"vcsToken" binding:""`
+	Id       models.Id `form:"id" json:"id" binding:"required"`
+	Status   string    `form:"status" json:"status" binding:""`
+	Name     string    `form:"name" json:"name" binding:""`
+	VcsType  string    `form:"vcsType" json:"vcsType" binding:""`
+	Address  string    `form:"address" json:"address" binding:""`
+	VcsToken string    `form:"vcsToken" json:"vcsToken" binding:""`
 }
 
 type SearchVcsForm struct {
@@ -27,24 +29,24 @@ type SearchVcsForm struct {
 
 type DeleteVcsForm struct {
 	BaseForm
-	Id uint `form:"id" json:"id" binding:"required"`
+	Id models.Id `form:"id" json:"id" binding:"required"`
 }
 
 type GetGitProjectsForm struct {
 	BaseForm
-	Q     string `form:"q" json:"q"`
-	VcsId uint   `form:"vcsId" json:"vcsId" binding:"required"`
+	Q     string    `form:"q" json:"q"`
+	VcsId models.Id `form:"vcsId" json:"vcsId" binding:"required"`
 }
 
 type GetGitBranchesForm struct {
 	BaseForm
-	RepoId string `form:"repoId" json:"repoId"`
-	VcsId  uint   `form:"vcsId" json:"vcsId" binding:"required"`
+	RepoId string    `form:"repoId" json:"repoId"`
+	VcsId  models.Id `form:"vcsId" json:"vcsId" binding:"required"`
 }
 
 type GetReadmeForm struct {
 	BaseForm
-	RepoId string `form:"repoId" json:"repoId" binding:""`
-	Branch string `form:"branch" json:"branch" binding:"required"`
-	VcsId  uint   `form:"vcsId" json:"vcsId" binding:"required"`
+	RepoId string    `form:"repoId" json:"repoId" binding:""`
+	Branch string    `form:"branch" json:"branch" binding:"required"`
+	VcsId  models.Id `form:"vcsId" json:"vcsId" binding:"required"`
 }

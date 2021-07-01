@@ -135,7 +135,7 @@ func SearchResourceAccount(c *ctx.ServiceCtx, form *forms.SearchResourceAccountF
 
 func UpdateResourceAccount(c *ctx.ServiceCtx, form *forms.UpdateResourceAccountForm) (rsAccount *models.ResourceAccount, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update rsAccount %d", form.Id))
-	if form.Id == 0 {
+	if form.Id == "" {
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
 	}
 

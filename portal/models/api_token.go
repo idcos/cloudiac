@@ -5,10 +5,10 @@ import "time"
 type ApiToken struct {
 	BaseModel
 
-	OrgId     uint `json:"orgId" gorm:"not null"`
-	ProjectId uint `json:"projectId" gorm:"default:'0'"`
-	TplId     uint `json:"tplId" gorm:"default:'0'"`
-	EnvId     uint `json:"envId" gorm:"default:'0'"`
+	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
+	ProjectId Id `json:"projectId" gorm:"size:32;default:'0'"`
+	TplId     Id `json:"tplId" gorm:"size:32;default:'0'"`
+	EnvId     Id `json:"envId" gorm:"size:32;default:'0'"`
 
 	Token  string `json:"token" gorm:"not null;comment:'Token'"`
 	Type   string `json:"type" gorm:"not null;type:enum('api','trigger')"`

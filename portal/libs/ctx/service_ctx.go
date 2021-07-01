@@ -15,10 +15,10 @@ type ServiceCtx struct {
 	logger logs.Logger
 
 	Token string
-	OrgId uint
+	OrgId models.Id
 	org   *models.Organization
 	//OrgGuid    string
-	UserId       uint // 登陆用户ID
+	UserId       models.Id // 登陆用户ID
 	Username     string
 	IsSuperAdmin bool
 	Role         string
