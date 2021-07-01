@@ -59,6 +59,21 @@ func Create(tx *db.Session, o Modeler) error {
 	return err
 }
 
+func CreateBatch(tx *db.Session, o []Modeler) error {
+	_, err := withTx(tx, func(x *db.Session) (int64, error) {
+		for _, v := range o {
+			if err := v.Validate(); err != nil {
+				return 0, err
+			}
+		}
+		if err := x.Insert(o); err != nil {
+			return 0, err
+		}
+		return 0, nil
+	})
+	return err
+}
+
 func Save(tx *db.Session, o Modeler) error {
 	_, err := withTx(tx, func(x *db.Session) (int64, error) {
 		if err := o.Validate(); err != nil {
