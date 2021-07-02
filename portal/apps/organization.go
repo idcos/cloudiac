@@ -11,15 +11,6 @@ import (
 )
 
 // CreateOrganization 创建组织
-// @Tags 组织
-// @Description 创建组织接口
-// @Accept multipart/form-data
-// @Accept json
-// @Produce json
-// @Param Authorization header string true "认证令牌"
-// @Param form formData forms.CreateOrganizationForm true "parameter"
-// @router /api/v1/orgs [post]
-// @Success 200 {object} ctx.JSONResult{result=models.Organization}
 func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (*models.Organization, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create org %s", form.Name))
 
@@ -38,14 +29,6 @@ func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (
 }
 
 // SearchOrganization 组织查询
-// @Tags 组织
-// @Description 组织查询接口
-// @Accept application/x-www-form-urlencoded
-// @Produce json
-// @Param Authorization header string true "认证令牌"
-// @Param form query forms.SearchOrganizationForm true "parameter"
-// @router /api/v1/orgs [get]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Organization}}
 func SearchOrganization(c *ctx.ServiceCtx, form *forms.SearchOrganizationForm) (interface{}, e.Error) {
 	query := services.QueryOrganization(c.DB())
 	if c.IsSuperAdmin == true {
@@ -79,18 +62,8 @@ func SearchOrganization(c *ctx.ServiceCtx, form *forms.SearchOrganizationForm) (
 }
 
 // UpdateOrganization 组织编辑
-// @Tags 组织
-// @Description 组织信息编辑接口
-// @Accept multipart/form-data
-// @Accept json
-// @Produce json
-// @Param Authorization header string true "认证令牌"
-// @Param orgId path string true "组织ID"
-// @Param form formData forms.UpdateOrganizationForm true "parameter"
-// @router /api/v1/orgs/{orgId} [put]
-// @Success 200 {object} ctx.JSONResult{result=models.Organization}
-func UpdateOrganization(c *ctx.ServiceCtx, orgId models.Id, form *forms.UpdateOrganizationForm) (*models.Organization, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("update org %s", orgId))
+func UpdateOrganization(c *ctx.ServiceCtx, form *forms.UpdateOrganizationForm) (*models.Organization, e.Error) {
+	c.AddLogField("action", fmt.Sprintf("update org %s", form.Id))
 
 	attrs := models.Attrs{}
 	if form.HasKey("name") {
@@ -107,12 +80,12 @@ func UpdateOrganization(c *ctx.ServiceCtx, orgId models.Id, form *forms.UpdateOr
 
 	// 变更组织状态
 	if form.HasKey("status") {
-		if _, err := ChangeOrgStatus(c, orgId, &forms.DisableOrganizationForm{Status: form.Status}); err != nil {
+		if _, err := ChangeOrgStatus(c, &forms.DisableOrganizationForm{Id: form.Id, Status: form.Status}); err != nil {
 			return nil, err
 		}
 	}
 
-	org, err := services.UpdateOrganization(c.DB(), orgId, attrs)
+	org, err := services.UpdateOrganization(c.DB(), form.Id, attrs)
 	if err != nil && err.Code() == e.OrganizationAliasDuplicate {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
@@ -123,14 +96,14 @@ func UpdateOrganization(c *ctx.ServiceCtx, orgId models.Id, form *forms.UpdateOr
 }
 
 //ChangeOrgStatus 修改组织启用/禁用状态
-func ChangeOrgStatus(c *ctx.ServiceCtx, orgId models.Id, form *forms.DisableOrganizationForm) (*models.Organization, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("change org status %s", orgId))
+func ChangeOrgStatus(c *ctx.ServiceCtx, form *forms.DisableOrganizationForm) (*models.Organization, e.Error) {
+	c.AddLogField("action", fmt.Sprintf("change org status %s", form.Id))
 
 	if form.Status != models.OrgEnable && form.Status != models.OrgDisable {
 		return nil, e.New(e.OrganizationInvalidStatus, http.StatusBadRequest)
 	}
 
-	org, err := services.GetOrganizationById(c.DB(), orgId)
+	org, err := services.GetOrganizationById(c.DB(), form.Id)
 	if err != nil && err.Code() == e.OrganizationNotExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
@@ -142,7 +115,7 @@ func ChangeOrgStatus(c *ctx.ServiceCtx, orgId models.Id, form *forms.DisableOrga
 		return org, nil
 	}
 
-	org, err = services.UpdateOrganization(c.DB(), orgId, models.Attrs{"status": form.Status})
+	org, err = services.UpdateOrganization(c.DB(), form.Id, models.Attrs{"status": form.Status})
 	if err != nil && err.Code() == e.OrganizationAliasDuplicate {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
@@ -155,18 +128,10 @@ func ChangeOrgStatus(c *ctx.ServiceCtx, orgId models.Id, form *forms.DisableOrga
 
 type organizationDetailResp struct {
 	models.Organization
-	Creator string `example:"超级管理员"`
+	Creator string `json:"creator" example:"超级管理员"`
 }
 
 // OrganizationDetail 组织信息详情
-// @Tags 组织
-// @Description 组织信息详情查询接口
-// @Accept application/x-www-form-urlencoded
-// @Produce json
-// @Param Authorization header string true "认证令牌"
-// @Param orgId path string true "组织ID"
-// @router /api/v1/orgs/{orgId} [get]
-// @Success 200 {object} ctx.JSONResult{result=organizationDetailResp}
 func OrganizationDetail(c *ctx.ServiceCtx, form forms.DetailOrganizationForm) (*organizationDetailResp, e.Error) {
 	orgIds, er := services.GetOrgIdsByUser(c.DB(), c.UserId)
 	if er != nil {
@@ -208,17 +173,8 @@ func OrganizationDetail(c *ctx.ServiceCtx, form forms.DetailOrganizationForm) (*
 }
 
 // DeleteOrganization 删除组织
-// @Tags 组织
-// @Description 删除组织接口
-// @Accept multipart/form-data
-// @Accept json
-// @Produce json
-// @Param Authorization header string true "认证令牌"
-// @Param orgId path string true "组织ID"
-// @Param form formData forms.DeleteOrganizationForm true "parameter"
-// @router /api/v1/orgs/{orgId} [delete]
-// @Success 501 {object} ctx.JSONResult
-func DeleteOrganization(c *ctx.ServiceCtx, orgId models.Id, form *forms.DeleteOrganizationForm) (org *models.Organization, err e.Error) {
-	c.AddLogField("action", fmt.Sprintf("delete org %s", orgId))
+func DeleteOrganization(c *ctx.ServiceCtx, form *forms.DeleteOrganizationForm) (org *models.Organization, err e.Error) {
+	c.AddLogField("action", fmt.Sprintf("delete org %s", form.Id))
+	c.Logger().Errorf("del id %s", form.Id)
 	return nil, e.New(e.BadRequest, http.StatusNotImplemented)
 }

@@ -35,7 +35,7 @@ func Register(g *gin.RouterGroup) {
 	sys := g.Group("/", w(middleware.Auth), w(middleware.IsSuperAdmin))
 	{
 		sys.POST("/orgs", w(handlers.Organization{}.Create))
-		sys.PUT("/orgs/:id/status/update", w(handlers.Organization{}.ChangeOrgStatus)) // Deprecated
+		sys.PUT("/orgs/:id/status", w(handlers.Organization{}.ChangeOrgStatus))
 		sys.PUT("/orgs/:id", w(handlers.Organization{}.Update))
 		sys.DELETE("/orgs/:id", w(handlers.Organization{}.Delete))
 		ctrl.Register(sys.Group("system"), &handlers.SystemConfig{})

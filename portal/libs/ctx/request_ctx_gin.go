@@ -229,15 +229,23 @@ func (c *GinRequestCtx) AbortIfError(err e.Error) bool {
 	return false
 }
 
-// HasUriParam 是否有 uri 参数
-func HasUriParam(b forms.BaseFormer) bool {
-	typ := reflect.TypeOf(b).Elem()
-	for i := 0; i < typ.NumField(); i++ {
-		if _, ok := typ.Field(i).Tag.Lookup("uri"); ok {
-			return true
+//BindUriTagOnly 将 context.Params 绑定到标记了 uri 标签的 form 字段
+func BindUriTagOnly(c *GinRequestCtx, b interface{}) error {
+	if len(c.Params) == 0 {
+		return nil
+	}
+	typs := reflect.TypeOf(b).Elem()
+	vals := reflect.ValueOf(b).Elem()
+	for _, p := range c.Params {
+		for i := 0; i < typs.NumField(); i++ {
+			if _, ok := typs.Field(i).Tag.Lookup("uri"); ok {
+				v := reflect.ValueOf(p.Value)
+				vals.Field(i).Set(v.Convert(vals.Field(i).Type()))
+			}
 		}
 	}
-	return false
+
+	return nil
 }
 
 func (c *GinRequestCtx) Bind(form forms.BaseFormer) error {
@@ -248,14 +256,13 @@ func (c *GinRequestCtx) Bind(form forms.BaseFormer) error {
 		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
 	}
 
-	// 判断是否需要处理 uri 参数，如果在 path 定义了动态参数，则执行 uri 参数绑定
-	if HasUriParam(form) {
-		if err := c.Context.ShouldBindUri(form); err != nil {
-			// TODO: uri 不对是否应该报 404
-			c.JSON(http.StatusBadRequest, e.New(e.BadParam, err), nil)
-			c.Abort()
-			return err
-		}
+	// 将 Params 绑定到 form 里面标记了 uri 的字段
+	if err := BindUriTagOnly(c, form); err != nil {
+		// URI 参数不对，按路径不对处理
+		c.Logger().Errorf("bind uri error %s", err)
+		c.JSON(http.StatusNotFound, e.New(e.BadParam, err), nil)
+		c.Abort()
+		return err
 	}
 
 	if err := c.Context.ShouldBind(form); err != nil {
@@ -283,6 +290,9 @@ func (c *GinRequestCtx) Bind(form forms.BaseFormer) error {
 		for k := range jsObj {
 			values[k] = []string{fmt.Sprintf("%v", jsObj[k])}
 		}
+	}
+	for _, p := range c.Params {
+		values[p.Key] = []string{fmt.Sprintf("%v", p.Value)}
 	}
 
 	form.Bind(values)
