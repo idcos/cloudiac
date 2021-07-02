@@ -81,12 +81,12 @@ func TemplateTfvarsSearch(c *ctx.GinRequestCtx) {
 
 // TemplateVariableSearch 查询云模板TF参数
 // @Tags 云模板
-// @Description 云模板参数接口
+// @Summary 云模板参数接口
 // @Accept application/json
 // @Param repoId formData int true "仓库id"
 // @Param repoBranch formData int true "分支"
 // @Param vcsId formData int true "vcsID"
-// @router /api/v1/template/variable/search [get]
+// @router /template/variable/search [get]
 func TemplateVariableSearch(c *ctx.GinRequestCtx) {
 	form := forms.TemplateVariableSearchForm{}
 	if err := c.Bind(&form); err != nil {
@@ -97,12 +97,12 @@ func TemplateVariableSearch(c *ctx.GinRequestCtx) {
 
 //TemplatePlaybookSearch
 // @Tags playbook列表查询
-// @Description  playbook列表接口
+// @Summary  playbook列表接口
 // @Accept application/json
 // @Param repoId formData int true "仓库id"
 // @Param repoBranch formData int true "分支"
 // @Param vcsId formData int true "vcsID"
-// @router /api/v1/template/playbook/search [get]
+// @router /template/playbook/search [get]
 func TemplatePlaybookSearch(c *ctx.GinRequestCtx) {
 	form := forms.TemplatePlaybookSearchForm{}
 	if err := c.Bind(&form); err != nil {

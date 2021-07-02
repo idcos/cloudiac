@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"cloudiac/portal/consts"
-	//"errors"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"

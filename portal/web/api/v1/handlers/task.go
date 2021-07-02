@@ -56,10 +56,10 @@ func (Task) FollowLogSse(c *ctx.GinRequestCtx) {
 
 // TaskStateListSearch
 // @Tags 作业详情State List
-// @Description 作业详情State List
+// @Summary 作业详情State List
 // @Accept application/json
 // @Param taskGuid formData int true "作业guid"
-// @router /api/v1/template/state_list [get]
+// @router /template/state_list [get]
 func (Task) TaskStateListSearch(c *ctx.GinRequestCtx) {
 	// TODO 待实现
 	//form := &forms.TaskStateListForm{}

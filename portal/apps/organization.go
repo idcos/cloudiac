@@ -178,3 +178,49 @@ func DeleteOrganization(c *ctx.ServiceCtx, form *forms.DeleteOrganizationForm) (
 	c.Logger().Errorf("del id %s", form.Id)
 	return nil, e.New(e.BadRequest, http.StatusNotImplemented)
 }
+
+// DeleteUserOrgRel 从组织移除用户
+func DeleteUserOrgRel(c *ctx.ServiceCtx, form *forms.DeleteUserOrgRelForm) (result interface{}, re e.Error) {
+	c.AddLogField("action", fmt.Sprintf("delete user %s for org %s", form.Id, c.OrgId))
+
+	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	if err := services.DeleteUserOrgRel(tx, form.Id, c.OrgId); err != nil {
+		tx.Rollback()
+		return nil, err
+	} else if err := tx.Commit(); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	c.Logger().Infof("delete user ", form.Id, " for org ", c.OrgId, " succeed")
+
+	return
+}
+
+// AddUserOrgRel 添加用户到组织
+func AddUserOrgRel(c *ctx.ServiceCtx, form *forms.AddUserOrgRelForm) (interface{}, e.Error) {
+	c.AddLogField("action", fmt.Sprintf("add user %s to org %s", form.Id, c.OrgId))
+
+	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	if _, err := services.CreateUserOrgRel(tx, models.UserOrg{OrgId: c.OrgId, UserId: form.Id}); err != nil {
+		tx.Rollback()
+		return nil, err
+	} else if err := tx.Commit(); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	c.Logger().Infof("delete user ", form.Id, " for org ", c.OrgId, " succeed")
+
+	return nil, nil
+}

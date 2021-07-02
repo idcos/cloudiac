@@ -5,63 +5,56 @@ import "cloudiac/portal/models"
 type CreateUserForm struct {
 	BaseForm
 
-	Name  string `form:"name" json:"name" binding:"required,gte=2,lte=32"`
-	Phone string `form:"phone" json:"phone" binding:"max=11"`
-	Email string `form:"email" json:"email" binding:"required,email"`
+	Name  string `form:"name" json:"name" binding:"required,gte=2,lte=32"` // 用户名
+	Phone string `form:"phone" json:"phone" binding:"max=11"`              // 电话
+	Email string `form:"email" json:"email" binding:"required,email"`      // 电子邮件地址
 }
 
 type UpdateUserForm struct {
 	BaseForm
 
-	Id    models.Id `form:"id" json:"id" binding:""`
-	Name  string    `form:"name" json:"name" binding:""`
-	Phone string    `form:"phone" json:"phone" binding:""`
-	//Email       string `form:"email" json:"email" binding:""`	// 邮箱不可编辑
-	OldPassword string            `form:"oldPassword" json:"oldPassword" binding:""`
-	NewPassword string            `form:"newPassword" json:"newPassword" binding:""`
-	NewbieGuide map[string]uint64 `json:"newbieGuide" form:"newbieGuide" `
+	Id          models.Id         `uri:"id" json:"id" binding:"" swaggerignore:"true"` // 用户ID
+	Name        string            `form:"name" json:"name" binding:",gte=2,lte=32"`    // 用户名
+	Phone       string            `form:"phone" json:"phone" binding:"max=11"`         // 电话
+	OldPassword string            `form:"oldPassword" json:"oldPassword" binding:""`   // 原始密码
+	NewPassword string            `form:"newPassword" json:"newPassword" binding:""`   // 新密码
+	NewbieGuide map[string]uint64 `json:"newbieGuide" form:"newbieGuide" `             // 新用户向导内容
 }
 
 type SearchUserForm struct {
 	PageForm
 
-	Q      string `form:"q" json:"q" binding:""`
-	Status string `form:"status" json:"status"`
+	Q      string `form:"q" json:"q" binding:""`                       // 用户名，支持模糊查询
+	Status string `form:"status" json:"status" enums:"enable,disable"` // 状态
 }
 
 type DeleteUserForm struct {
 	BaseForm
-	Id models.Id `form:"id" json:"id" binding:"required"`
+
+	Id models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"` // 用户ID
 }
 
 type DisableUserForm struct {
 	BaseForm
 
-	Id     models.Id `form:"id" json:"id" binding:"required"`
-	Status string    `form:"status" json:"status" binding:"required"`
+	Id     models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`                    // 用户ID
+	Status string    `form:"status" json:"status" binding:"required" enums:"enable,disable"` // 状态
 }
 
 type DetailUserForm struct {
 	BaseForm
-	Id models.Id `form:"id" json:"id" binding:"required"`
+
+	Id models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"` // 用户ID
 }
 
-type InviteUserForm struct {
+type AddUserOrgRelForm struct {
 	BaseForm
 
-	BaseURL   string      `json:"baseURL" form:"baseURL" binding:"required"`
-	Emails    []string    `json:"emails" form:"email" binding:"required"`
-	Customers []models.Id `json:"customers" form:"customer" binding:""`
-	Roles     []string    `json:"roles" form:"role"`
+	Id models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"` // 用户ID
 }
 
-type LoginForm struct {
+type DeleteUserOrgRelForm struct {
 	BaseForm
 
-	Email    string `json:"email" form:"email" binding:"required"`
-	Password string `json:"password" form:"password" binding:"required"`
-}
-
-type AdminSearchForm struct {
-	PageForm
+	Id models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"` // 用户ID
 }

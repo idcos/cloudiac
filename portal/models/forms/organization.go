@@ -50,5 +50,5 @@ type DetailOrganizationForm struct {
 type OrganizationParam struct {
 	BaseForm
 
-	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 组织ID
+	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 组织ID，swagger 参数通过 param path 指定，这里忽略
 }

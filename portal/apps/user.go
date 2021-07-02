@@ -13,6 +13,7 @@ import (
 	"net/http"
 )
 
+// CreateUser 创建用户
 func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*models.User, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create user %s", form.Name))
 
@@ -81,6 +82,7 @@ type searchUserResp struct {
 	Role     string `json:"role"`
 }
 
+// SearchUser 查询用户列表
 func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.Error) {
 	userOrgRel, err := services.GetUserByOrg(c.DB(), c.OrgId)
 	var userIds []models.Id
@@ -100,7 +102,9 @@ func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.E
 		query = query.Where("name LIKE ? OR phone LIKE ? OR email LIKE ? ", qs, qs, qs)
 	}
 
-	query = query.Order("created_at DESC")
+	if form.SortField() == "" {
+		query = query.Order("created_at DESC")
+	}
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	users := make([]*searchUserResp, 0)
 	if err := p.Scan(&users); err != nil {
@@ -122,6 +126,7 @@ func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.E
 	}, nil
 }
 
+// UpdateUser 用户信息编辑
 func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (user *models.User, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update user %d", form.Id))
 	if form.Id == "" {
@@ -178,44 +183,22 @@ func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (user *models.Use
 	return services.UpdateUser(c.DB().Debug(), form.Id, attrs)
 }
 
-func DeleteUserOrgRel(c *ctx.ServiceCtx, form *forms.DeleteUserForm) (result interface{}, re e.Error) {
-	c.AddLogField("action", fmt.Sprintf("delete user %d for org %d", form.Id, c.OrgId))
-
-	tx := c.Tx()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		}
-	}()
-
-	if err := services.DeleteUserOrgRel(tx, form.Id, c.OrgId); err != nil {
-		tx.Rollback()
-		return nil, err
-	} else if err := tx.Commit(); err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-	c.Logger().Infof("delete user ", form.Id, " for org ", c.OrgId, " succeed")
-
-	return
-}
-
-func UserPassReset(c *ctx.ServiceCtx, form *forms.DetailUserForm) (user *models.User, err e.Error) {
-	initPass := utils.GenPasswd(6, "mix")
-	hashedPassword, _ := services.HashPassword(initPass)
-
-	attrs := models.Attrs{}
-	attrs["init_pass"] = initPass
-	attrs["password"] = hashedPassword
-
-	user, err = services.UpdateUser(c.DB(), form.Id, attrs)
-	return
-}
-
-func UserDetail(c *ctx.ServiceCtx, id models.Id) (resp interface{}, er e.Error) {
+// UserDetail 获取单个用户详情
+func UserDetail(c *ctx.ServiceCtx, id models.Id) (*models.User, e.Error) {
 	user, err := services.GetUserById(c.DB(), id)
-	if err != nil {
-		return nil, e.New(e.DBError, http.StatusInternalServerError, err)
+	if err != nil && err.Code() == e.UserNotExists {
+		// 通过 /auth/me 或者 /users/:userId 访问
+		return nil, e.New(err.Code(), err, http.StatusNotFound)
+	} else if err != nil {
+		c.Logger().Errorf("error get user by id, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 	return user, nil
+}
+
+// DeleteUser 删除用户
+func DeleteUser(c *ctx.ServiceCtx, form *forms.DeleteUserForm) (interface{}, e.Error) {
+	c.AddLogField("action", fmt.Sprintf("delete user %s", form.Id))
+	// TODO
+	return nil, nil
 }

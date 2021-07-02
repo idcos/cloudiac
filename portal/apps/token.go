@@ -79,3 +79,22 @@ func DeleteToken(c *ctx.ServiceCtx, form *forms.DeleteTokenForm) (result interfa
 
 	return
 }
+
+// UserPassReset 用户重置密码
+func UserPassReset(c *ctx.ServiceCtx, form *forms.DetailUserForm) (*models.User, e.Error) {
+	initPass := utils.GenPasswd(6, "mix")
+	hashedPassword, err := services.HashPassword(initPass)
+	if err != nil {
+		c.Logger().Errorf("error hash password %s", err)
+		return nil, err
+	}
+
+	attrs := models.Attrs{}
+	attrs["init_pass"] = initPass
+	attrs["password"] = hashedPassword
+
+	user, err := services.UpdateUser(c.DB(), form.Id, attrs)
+
+	// TODO 是不是应该给用户发一封邮件。。。
+	return user, err
+}
