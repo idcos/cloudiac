@@ -3,6 +3,7 @@ package terraformhcl
 import (
 	"cloudiac/consts/e"
 	"cloudiac/libs/db"
+	"cloudiac/models"
 	"cloudiac/models/forms"
 	"cloudiac/services"
 	"cloudiac/services/vcsrv"
@@ -25,7 +26,18 @@ func LoadModuleFromFile(content []byte) (*tfconfig.Module, e.Error) {
 	return mod, nil
 }
 
-func GetProvider(dbSess *db.Session ,form *forms.CreateTemplateForm) (string, e.Error) {
+func GetProvider(dbSess *db.Session, form *forms.CreateTemplateForm, metaTpl models.MetaTemplate) (string, e.Error) {
+	var (
+		repoId string = form.RepoId
+		branch string = form.RepoBranch
+	)
+	if repoId == "" {
+		repoId = metaTpl.RepoId
+	}
+	if branch == "" {
+		branch = metaTpl.RepoBranch
+	}
+
 	vcs, err := services.QueryVcsByVcsId(form.VcsId, dbSess)
 	if err != nil {
 		return "", err
@@ -34,11 +46,12 @@ func GetProvider(dbSess *db.Session ,form *forms.CreateTemplateForm) (string, e.
 	if er != nil {
 		return "", e.New(e.GitLabError, er)
 	}
-	repo, er := vcsService.GetRepo(form.RepoId)
+
+	repo, er := vcsService.GetRepo(repoId)
 	if er != nil {
 		return "", e.New(e.GitLabError, er)
 	}
-	b, er := repo.ReadFileContent(form.RepoBranch, "versions.tf")
+	b, er := repo.ReadFileContent(branch, "versions.tf")
 	if er != nil {
 		if strings.Contains(er.Error(), "not found") {
 			b = make([]byte, 0)

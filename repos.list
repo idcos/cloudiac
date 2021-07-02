@@ -23,3 +23,8 @@ tf-log.git
 tf-aliyunecs-ansible.git
 alicloud-landingzone-foundation.git
 tf-gateway.git
+iac_k8s_deploy.git
+iac_ci_cd.git
+iac_docker_build.git
+f5_update_demo.git
+f5_create_demo.git

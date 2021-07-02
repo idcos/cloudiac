@@ -20,6 +20,9 @@ func SearchMetaTemplate(query *db.Session) *db.Session {
 
 func GetMetaTemplateById(query *db.Session, id uint) (models.MetaTemplate, e.Error) {
 	tplLib := models.MetaTemplate{}
+	if id == 0 {
+		return tplLib, nil
+	}
 	if err := query.Table(models.MetaTemplate{}.TableName()).Where("id = ?", id).First(&tplLib); err != nil {
 		return models.MetaTemplate{}, e.New(e.DBError, err)
 	}
