@@ -52,10 +52,11 @@ type BaseModel struct {
 }
 
 func (base *BaseModel) BeforeCreate(scope *gorm.Scope) error {
+	// 为设置 Id 值的情况下默认生成一个无前缀的 id，如果对前缀有要求主动设置一个 Id 值,
+	// 或者在 Model 层定义自己的 BeforeCreate() 方法
 	if base.Id == "" {
 		base.Id = NewId("")
 	}
-	//return scope.SetColumn("id", )
 	return nil
 }
 
