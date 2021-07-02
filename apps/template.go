@@ -299,7 +299,7 @@ type Task struct {
 	Guid        string    `json:"guid" form:"guid" `
 	TaskType    string    `json:"taskType" form:"taskType" `
 	CreatedAt   time.Time `json:"createdAt" form:"createdAt" `
-	EndAt       time.Time `json:"endAt" form:"endAt" `
+	EndAt       *time.Time `json:"endAt" form:"endAt" `
 	CreatorName string    `json:"creatorName" form:"creatorName" `
 	CreatedTime int64     `json:"createdTime" form:"createdTime" `
 	EndTime     int64     `json:"endTime" form:"endTime" `
@@ -347,7 +347,7 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 		}
 		user, _ := services.GetUserById(tx, task.Creator)
 
-		if task.TaskType == consts.TaskPlan {
+		if task.TaskType == consts.TaskPlan && task.EndAt != nil && task.StartAt != nil {
 			if task.Status == consts.TaskFailed || task.Status == consts.TaskTimeout {
 				taskPlanFailedCount++
 			}
@@ -355,7 +355,7 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 			taskAvgPlanTimeCount += task.EndAt.Unix() - task.StartAt.Unix()
 		}
 
-		if task.TaskType == consts.TaskApply {
+		if task.TaskType == consts.TaskApply && task.EndAt != nil && task.StartAt != nil {
 			if task.Status == consts.TaskFailed || task.Status == consts.TaskTimeout {
 				taskApplyFailedCount++
 			}
@@ -369,7 +369,14 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 		}
 		//取最新的3个任务
 		if index < 3 {
-			var username string
+			var (
+				username    string
+				EndTime     int64
+			)
+
+			if task.EndAt != nil {
+				EndTime = time.Now().Unix() - task.EndAt.Unix()
+			}
 			if user != nil {
 				username = user.Name
 			}
@@ -382,7 +389,7 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 				CreatorName: username,
 				CommitId:    task.CommitId,
 				CreatedTime: time.Now().Unix() - task.CreatedAt.Unix(),
-				EndTime:     time.Now().Unix() - task.EndAt.Unix(),
+				EndTime:     EndTime,
 				Id:          task.Id,
 				Add:         task.Add,
 				Destroy:     task.Destroy,
@@ -390,21 +397,21 @@ func OverviewTemplate(c *ctx.ServiceCtx, form *forms.OverviewTemplateForm) (inte
 				AllowApply:  task.AllowApply,
 				RepoBranch:  tpl.RepoBranch,
 				CtServiceId: task.CtServiceId,
-				EndAt:       *task.EndAt,
+				EndAt:       task.EndAt,
 			})
 		}
 	}
 	if taskPlanCount > 0 {
 		taskPlanFailedPercent = taskPlanFailedCount / float64(taskPlanCount) * 100
 		if taskAvgPlanTimeCount > 0 {
-			taskAvgApplyTime = taskApplyCount / taskAvgPlanTimeCount
+			taskAvgPlanTime = taskAvgPlanTimeCount / taskPlanCount
 		}
 	}
 
 	if taskApplyCount > 0 {
 		taskApplyFailedPercent = taskApplyFailedCount / float64(taskApplyCount) * 100
 		if taskAvgApplyTimeCount > 0 {
-			taskAvgApplyTime = taskApplyCount / taskAvgApplyTimeCount
+			taskAvgApplyTime = taskAvgApplyTimeCount / taskApplyCount
 		}
 	}
 	user, _ := services.GetUserById(tx, tpl.Creator)
