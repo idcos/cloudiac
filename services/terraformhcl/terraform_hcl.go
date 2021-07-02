@@ -52,8 +52,8 @@ func GetProvider(dbSess *db.Session ,form *forms.CreateTemplateForm) (string, e.
 		return "", err
 	}
 
-	for _, v := range mod.ProviderConfigs {
-		providers = append(providers, v.Name)
+	for provider, _ := range mod.RequiredProviders {
+		providers = append(providers, provider)
 	}
 
 	return strings.Join(providers, ","), nil
