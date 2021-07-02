@@ -43,6 +43,16 @@ func (i *Id) Scan(value interface{}) error {
 	return nil
 }
 
+// InArray 检查 id 是否在数组中
+func (i *Id) InArray(arr ...Id) bool {
+	for idx := range arr {
+		if arr[idx] == *i {
+			return true
+		}
+	}
+	return false
+}
+
 func NewId(prefix string) Id {
 	return Id(utils.GenGuid(prefix))
 }

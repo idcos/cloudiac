@@ -28,7 +28,10 @@ func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (
 		CreatorId:   c.UserId,
 		Description: form.Description,
 	})
-	if err != nil {
+	if err != nil && err.Code() == e.OrganizationAlreadyExists {
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		c.Logger().Errorf("error creating org, err %s", err)
 		return nil, e.AutoNew(err, e.DBError)
 	}
 	return org, nil
@@ -53,6 +56,7 @@ func SearchOrganization(c *ctx.ServiceCtx, form *forms.SearchOrganizationForm) (
 		query = query.Where("status = 'enable'")
 		orgIds, er := services.GetOrgIdsByUser(c.DB(), c.UserId)
 		if er != nil {
+			c.Logger().Errorf("error get org id by user, err %s", er)
 			return nil, e.New(e.DBError, er)
 		}
 		query = query.Where("id in (?)", orgIds)
@@ -67,8 +71,11 @@ func SearchOrganization(c *ctx.ServiceCtx, form *forms.SearchOrganizationForm) (
 	if form.SortField() == "" {
 		query = query.Order("created_at DESC")
 	}
-	rs, _ := getPage(query, form, &models.Organization{})
-	return rs, nil
+	rs, err := getPage(query, form, &models.Organization{})
+	if err != nil {
+		c.Logger().Errorf("error get page, err %s", err)
+	}
+	return rs, err
 }
 
 // UpdateOrganization 组织编辑
@@ -82,11 +89,8 @@ func SearchOrganization(c *ctx.ServiceCtx, form *forms.SearchOrganizationForm) (
 // @Param form formData forms.UpdateOrganizationForm true "parameter"
 // @router /api/v1/orgs/{orgId} [put]
 // @Success 200 {object} ctx.JSONResult{result=models.Organization}
-func UpdateOrganization(c *ctx.ServiceCtx, orgId models.Id, form *forms.UpdateOrganizationForm) (org *models.Organization, err e.Error) {
+func UpdateOrganization(c *ctx.ServiceCtx, orgId models.Id, form *forms.UpdateOrganizationForm) (*models.Organization, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update org %s", orgId))
-	if orgId == "" {
-		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
-	}
 
 	attrs := models.Attrs{}
 	if form.HasKey("name") {
@@ -108,22 +112,29 @@ func UpdateOrganization(c *ctx.ServiceCtx, orgId models.Id, form *forms.UpdateOr
 		}
 	}
 
-	org, err = services.UpdateOrganization(c.DB(), orgId, attrs)
-	return
+	org, err := services.UpdateOrganization(c.DB(), orgId, attrs)
+	if err != nil && err.Code() == e.OrganizationAliasDuplicate {
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		c.Logger().Errorf("error update org, err %s", err)
+		return nil, err
+	}
+	return org, nil
 }
 
-func ChangeOrgStatus(c *ctx.ServiceCtx, orgId models.Id, form *forms.DisableOrganizationForm) (org *models.Organization, err e.Error) {
+//ChangeOrgStatus 修改组织启用/禁用状态
+func ChangeOrgStatus(c *ctx.ServiceCtx, orgId models.Id, form *forms.DisableOrganizationForm) (*models.Organization, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("change org status %s", orgId))
 
 	if form.Status != models.OrgEnable && form.Status != models.OrgDisable {
 		return nil, e.New(e.OrganizationInvalidStatus, http.StatusBadRequest)
 	}
 
-	org, err = services.GetOrganizationById(c.DB(), orgId)
-	if err != nil {
-		if err.Code() == e.OrganizationNotExists {
-			return nil, e.New(err.Code(), err, http.StatusBadRequest)
-		}
+	org, err := services.GetOrganizationById(c.DB(), orgId)
+	if err != nil && err.Code() == e.OrganizationNotExists {
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		c.Logger().Errorf("error get org by id, err %s", err)
 		return nil, err
 	}
 
@@ -132,7 +143,10 @@ func ChangeOrgStatus(c *ctx.ServiceCtx, orgId models.Id, form *forms.DisableOrga
 	}
 
 	org, err = services.UpdateOrganization(c.DB(), orgId, models.Attrs{"status": form.Status})
-	if err != nil {
+	if err != nil && err.Code() == e.OrganizationAliasDuplicate {
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		c.Logger().Errorf("error update org, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
 
@@ -144,15 +158,6 @@ type organizationDetailResp struct {
 	Creator string `example:"超级管理员"`
 }
 
-func ModelIdInArray(v models.Id, arr ...models.Id) bool {
-	for i := range arr {
-		if arr[i] == v {
-			return true
-		}
-	}
-	return false
-}
-
 // OrganizationDetail 组织信息详情
 // @Tags 组织
 // @Description 组织信息详情查询接口
@@ -162,38 +167,44 @@ func ModelIdInArray(v models.Id, arr ...models.Id) bool {
 // @Param orgId path string true "组织ID"
 // @router /api/v1/orgs/{orgId} [get]
 // @Success 200 {object} ctx.JSONResult{result=organizationDetailResp}
-func OrganizationDetail(c *ctx.ServiceCtx, form forms.DetailOrganizationForm) (resp interface{}, er e.Error) {
-	orgIds, err := services.GetOrgIdsByUser(c.DB(), c.UserId)
-	if err != nil {
+func OrganizationDetail(c *ctx.ServiceCtx, form forms.DetailOrganizationForm) (*organizationDetailResp, e.Error) {
+	orgIds, er := services.GetOrgIdsByUser(c.DB(), c.UserId)
+	if er != nil {
+		c.Logger().Errorf("error get org id by user, err %s", er)
+		return nil, e.New(e.DBError, er)
+	}
+	if form.Id.InArray(orgIds...) == false && c.IsSuperAdmin == false {
+		// 请求了一个不存在的 org，因为 org id 是在 path 传入，这里我们返回 404
+		return nil, e.New(e.OrganizationNotExists, http.StatusNotFound)
+	}
+
+	var (
+		org  *models.Organization
+		user *models.User
+		err  e.Error
+	)
+	org, err = services.GetOrganizationById(c.DB(), form.Id)
+	if err != nil && err.Code() == e.OrganizationNotExists {
+		return nil, e.New(e.OrganizationNotExists, err, http.StatusNotFound)
+	} else if err != nil {
+		c.Logger().Errorf("error get org by id, err %s", err)
+		return nil, e.New(e.DBError, err)
+	}
+	user, err = services.GetUserById(c.DB(), org.CreatorId)
+	if err != nil && err.Code() == e.UserNotExists {
+		// 报 500 错误，正常情况用户不应该找不到，除非被意外删除
+		return nil, e.New(e.UserNotExists, err, http.StatusInternalServerError)
+	} else if err != nil {
+		c.Logger().Errorf("error get user by id, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
 
-	if ModelIdInArray(form.Id, orgIds...) == false && c.IsSuperAdmin == false {
-		return nil, e.New(e.OrganizationNotExists, http.StatusNotFound)
-	}
-	org, err2 := services.GetOrganizationById(c.DB(), form.Id)
-	if err2 != nil {
-		if err2.Code() == e.OrganizationNotExists {
-			return nil, e.New(e.OrganizationNotExists, err2, http.StatusNotFound)
-		}
-		c.Logger().Error("db error while get org detail, err %s", err)
-		return nil, e.New(e.DBError, err)
-	}
-	user, err3 := services.GetUserById(c.DB(), org.CreatorId)
-	if err3 != nil {
-		if err3.Code() == e.UserNotExists {
-			// 报 500 错误，正常情况用户不应该找不到
-			return nil, e.New(e.UserNotExists, err3, http.StatusInternalServerError)
-		}
-		c.Logger().Error("db error while get detail, err %s", err)
-		return nil, e.New(e.DBError, err)
-	}
 	var o = organizationDetailResp{
 		Organization: *org,
 		Creator:      user.Name,
 	}
 
-	return o, nil
+	return &o, nil
 }
 
 // DeleteOrganization 删除组织
@@ -206,7 +217,7 @@ func OrganizationDetail(c *ctx.ServiceCtx, form forms.DetailOrganizationForm) (r
 // @Param orgId path string true "组织ID"
 // @Param form formData forms.DeleteOrganizationForm true "parameter"
 // @router /api/v1/orgs/{orgId} [delete]
-// @Success 200 {object} ctx.JSONResult
+// @Success 501 {object} ctx.JSONResult
 func DeleteOrganization(c *ctx.ServiceCtx, orgId models.Id, form *forms.DeleteOrganizationForm) (org *models.Organization, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("delete org %s", orgId))
 	return nil, e.New(e.BadRequest, http.StatusNotImplemented)
