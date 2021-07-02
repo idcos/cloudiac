@@ -4,7 +4,6 @@ import (
 	"cloudiac/consts"
 	"cloudiac/consts/e"
 	"cloudiac/libs/ctx"
-	"cloudiac/libs/db"
 	"cloudiac/libs/page"
 	"cloudiac/models"
 	"cloudiac/models/forms"
@@ -65,8 +64,15 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 	}()
 
 	guid := utils.GenGuid("ct")
-	providers, err := terraformhcl.GetProvider(tx, form)
+
+	metaTpl, err := services.GetMetaTemplateById(tx, form.MetaTemplateId)
 	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+	providers, err := terraformhcl.GetProvider(tx, form, metaTpl)
+	if err != nil {
+		_ = tx.Rollback()
 		return nil, err
 	}
 	template, err = func() (*models.Template, e.Error) {
@@ -76,7 +82,7 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 			tpl      models.Template
 		)
 		if form.MetaTemplateId != 0 {
-			tpl, err = getTplData2MeatTpl(form, guid, c, tx)
+			tpl, err = getTplData2MeatTpl(form.Name, guid, c, metaTpl)
 		} else {
 			tpl, err = getTplData(form, guid, c)
 		}
@@ -139,15 +145,10 @@ func getTplData(form *forms.CreateTemplateForm, guid string, c *ctx.ServiceCtx) 
 	}, nil
 }
 
-func getTplData2MeatTpl(form *forms.CreateTemplateForm, guid string, c *ctx.ServiceCtx, tx *db.Session) (tpl models.Template, e e.Error) {
-	metaTpl, err := services.GetMetaTemplateById(tx, form.MetaTemplateId)
-	if err != nil {
-		return models.Template{}, err
-	}
-
+func getTplData2MeatTpl(name, guid string, c *ctx.ServiceCtx, metaTpl models.MetaTemplate) (tpl models.Template, e e.Error) {
 	return models.Template{
 		OrgId:       c.OrgId,
-		Name:        form.Name,
+		Name:        name,
 		Guid:        guid,
 		Description: metaTpl.Description,
 		RepoId:      metaTpl.RepoId,
