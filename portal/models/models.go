@@ -1,7 +1,10 @@
 package models
 
 import (
+	"cloudiac/utils"
 	"cloudiac/utils/logs"
+	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 
 	"cloudiac/portal/consts/e"
@@ -98,6 +101,51 @@ func UpdateModel(tx *db.Session, o Modeler, query ...interface{}) (int64, error)
 			return x.Model(o).Where(query[0], query[1:]...).Update(o)
 		}
 	})
+}
+
+// InArray 检查 id 是否在数组中
+func (i *Id) InArray(arr ...Id) bool {
+	for idx := range arr {
+		if arr[idx] == *i {
+			return true
+		}
+	}
+	return false
+}
+
+func NewId(prefix string) Id {
+	return Id(utils.GenGuid(prefix))
+}
+
+func MustMarshalValue(v interface{}) driver.Value {
+	dv, err := MarshalValue(v)
+	if err != nil {
+		panic(err)
+	}
+	return dv
+}
+
+func MarshalValue(v interface{}) (driver.Value, error) {
+	if v == nil {
+		return nil, nil
+	}
+	bs, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	return bs, nil
+}
+
+func UnmarshalValue(src interface{}, dst interface{}) error {
+	if src == nil {
+		return nil
+	}
+
+	bs, ok := src.([]byte)
+	if !ok {
+		return fmt.Errorf("invalid type %T, value: %T", src, src)
+	}
+	return json.Unmarshal(bs, dst)
 }
 
 var autoMigration = false
