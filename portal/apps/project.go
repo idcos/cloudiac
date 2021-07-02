@@ -3,6 +3,7 @@ package apps
 import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
@@ -25,6 +26,7 @@ func CreateProject(c *ctx.ServiceCtx, form *forms.CreateProjectForm) (interface{
 		CreatorId:   c.UserId,
 	})
 	if err != nil {
+		_ = tx.Rollback()
 		return nil, err
 	}
 	userProject := make([]models.Modeler, 0)
@@ -35,9 +37,12 @@ func CreateProject(c *ctx.ServiceCtx, form *forms.CreateProjectForm) (interface{
 			Role:      v.Role,
 		})
 	}
+
 	if err := services.CreateUserProject(tx, userProject); err != nil {
+		_ = tx.Rollback()
 		return nil, err
 	}
+
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
 		return nil, e.New(e.DBError, err)
@@ -78,11 +83,36 @@ func UpdateProject(c *ctx.ServiceCtx, form *forms.UpdateProjectForm) (interface{
 			panic(r)
 		}
 	}()
+	// 删除项目和用户角色表数据
+	if err := services.DeleteUserProject(tx, form.Id); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+	// 重新创建用户角色与项目的关系
+	if err := CreateUserProject(tx, form.UserAuthorization, form.Id); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	//修改项目数据
+	attrs := models.Attrs{}
+	if form.HasKey("name") {
+		attrs["name"] = form.Name
+	}
+
+	if form.HasKey("description") {
+		attrs["description"] = form.Description
+	}
+
+	if err := services.UpdateProject(tx, &models.Project{}, attrs); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
 		return nil, e.New(e.DBError, err)
 	}
-	//services.DeleteUserProject()
 	return nil, nil
 }
 
@@ -92,6 +122,22 @@ func DeleteProject(c *ctx.ServiceCtx, form *forms.DeleteProjectForm) (interface{
 }
 
 func DetailProject(c *ctx.ServiceCtx, form *forms.DetailProjectForm) (interface{}, e.Error) {
+	return services.DetailProject(c.DB(), form.Id)
+}
 
-	return nil, nil
+func CreateUserProject(tx *db.Session, authorization []forms.UserAuthorization, projectId models.Id) e.Error {
+	userProject := make([]models.Modeler, 0)
+	for _, v := range authorization {
+		userProject = append(userProject, &models.UserProject{
+			UserId:    v.UserId,
+			ProjectId: projectId,
+			Role:      v.Role,
+		})
+	}
+
+	if err := services.CreateUserProject(tx, userProject); err != nil {
+		return err
+	}
+
+	return nil
 }

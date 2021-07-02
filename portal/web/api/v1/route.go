@@ -79,6 +79,15 @@ func Register(g *gin.RouterGroup) {
 		root.GET("/template/state_list", w(handlers.Task{}.TaskStateListSearch))
 	}
 
+	{
+		owner.GET("/project", w(handlers.Project{}.Search))
+		owner.POST("/project", w(handlers.Project{}.Create))
+		owner.PUT("/project/:id", w(handlers.Project{}.Update))
+		owner.DELETE("/project", w(handlers.Project{}.Delete))
+		owner.GET("/project/:id", w(handlers.Project{}.Detail))
+
+	}
+
 	// TODO 增加鉴权
 	g.GET("/task/log/sse", w(handlers.Task{}.FollowLogSse))
 }

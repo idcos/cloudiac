@@ -64,7 +64,7 @@ func (Project) Search(c *ctx.GinRequestCtx) {
 // @Param description body string false "项目描述"
 // @Param userAuthorization body []forms.UserAuthorization false "用户授权"
 // @Success 200 {object} models.Project
-// @Router /project/update [put]
+// @Router /project/{projectId}  [put]
 func (Project) Update(c *ctx.GinRequestCtx) {
 	form := &forms.UpdateProjectForm{}
 	if err := c.Bind(form); err != nil {
@@ -82,7 +82,7 @@ func (Project) Update(c *ctx.GinRequestCtx) {
 // @Param Authorization header string true "Bearer token"
 // @Param id body string true "项目id"
 // @Success 200
-// @Router /project/delete [delete]
+// @Router /project/{projectId} [delete]
 func (Project) Delete(c *ctx.GinRequestCtx) {
 	form := &forms.DeleteProjectForm{}
 	if err := c.Bind(form); err != nil {
@@ -100,7 +100,7 @@ func (Project) Delete(c *ctx.GinRequestCtx) {
 // @Param Authorization header string true "Bearer token"
 // @Param id query string true "项目id"
 // @Success 200 {object} models.Project
-// @Router /project/detail [get]
+// @Router /project/{projectId}  [get]
 func (Project) Detail(c *ctx.GinRequestCtx) {
 	form := &forms.DetailProjectForm{}
 	if err := c.Bind(form); err != nil {

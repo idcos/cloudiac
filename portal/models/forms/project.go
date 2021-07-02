@@ -4,7 +4,7 @@ import "cloudiac/portal/models"
 
 type UserAuthorization struct {
 	UserId models.Id `json:"userId" form:"userId" `
-	Role   string `json:"role" form:"role" `
+	Role   string    `json:"role" form:"role" `
 }
 
 type CreateProjectForm struct {
@@ -24,7 +24,7 @@ type SearchProjectForm struct {
 type UpdateProjectForm struct {
 	BaseForm
 
-	Id                string              `json:"id" form:"id" binding:"required"`
+	Id                models.Id           `json:"id" form:"id" binding:"required"`
 	Name              string              `json:"name" form:"name"`
 	Description       string              `json:"description" form:"description" `
 	UserAuthorization []UserAuthorization `json:"userAuthorization" form:"userAuthorization" `
