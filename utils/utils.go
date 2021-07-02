@@ -8,6 +8,7 @@ import (
 	"crypto/cipher"
 	"crypto/md5"
 	crand "crypto/rand"
+	"database/sql/driver"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -158,6 +159,26 @@ type JSONTime time.Time
 func (t JSONTime) MarshalJSON() ([]byte, error) {
 	stamp := fmt.Sprintf("\"%s\"", time.Time(t).Format("2006-01-02 15:04:05"))
 	return []byte(stamp), nil
+}
+
+// Value 获取时间值
+// mysql 插入数据库的时候使用该函数
+func (t JSONTime) Value() (driver.Value, error) {
+	var zeroTime time.Time
+	if time.Time(t).UnixNano() == zeroTime.UnixNano() {
+		return nil, nil
+	}
+	return time.Time(t), nil
+}
+
+// Scan 转换为 time.Time
+func (t *JSONTime) Scan(v interface{}) error {
+	value, ok := v.(time.Time)
+	if ok {
+		*t = JSONTime(value)
+		return nil
+	}
+	return fmt.Errorf("can not convert %v to timestamp", v)
 }
 
 func FileExist(p string) bool {

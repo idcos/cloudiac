@@ -12,8 +12,8 @@ type Paginator struct {
 }
 
 type PageResp struct {
-	Total    int64       `json:"total"`
-	PageSize int         `json:"pageSize"`
+	Total    int64       `json:"total" example:"1"`
+	PageSize int         `json:"pageSize" example:"15"`
 	List     interface{} `json:"list"`
 }
 

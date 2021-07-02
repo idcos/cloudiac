@@ -3,7 +3,7 @@ package forms
 import "cloudiac/portal/models"
 
 type CreateVcsForm struct {
-	BaseForm
+	PageForm
 	Name     string `form:"name" json:"name" binding:"required"`
 	VcsType  string `form:"vcsType" json:"vcsType" binding:"required"`
 	Address  string `form:"address" json:"address" binding:"required"`
@@ -12,7 +12,7 @@ type CreateVcsForm struct {
 }
 
 type UpdateVcsForm struct {
-	BaseForm
+	PageForm
 	Id       models.Id `form:"id" json:"id" binding:"required"`
 	Status   string    `form:"status" json:"status" binding:""`
 	Name     string    `form:"name" json:"name" binding:""`
@@ -22,30 +22,30 @@ type UpdateVcsForm struct {
 }
 
 type SearchVcsForm struct {
-	BaseForm
+	PageForm
 	Q      string `form:"q" json:"q" binding:""`
 	Status string `form:"status" json:"status"`
 }
 
 type DeleteVcsForm struct {
-	BaseForm
+	PageForm
 	Id models.Id `form:"id" json:"id" binding:"required"`
 }
 
 type GetGitProjectsForm struct {
-	BaseForm
+	PageForm
 	Q     string    `form:"q" json:"q"`
 	VcsId models.Id `form:"vcsId" json:"vcsId" binding:"required"`
 }
 
 type GetGitBranchesForm struct {
-	BaseForm
+	PageForm
 	RepoId string    `form:"repoId" json:"repoId"`
 	VcsId  models.Id `form:"vcsId" json:"vcsId" binding:"required"`
 }
 
 type GetReadmeForm struct {
-	BaseForm
+	PageForm
 	RepoId string    `form:"repoId" json:"repoId" binding:""`
 	Branch string    `form:"branch" json:"branch" binding:"required"`
 	VcsId  models.Id `form:"vcsId" json:"vcsId" binding:"required"`

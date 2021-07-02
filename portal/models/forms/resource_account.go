@@ -10,7 +10,7 @@ type Params struct {
 }
 
 type CreateResourceAccountForm struct {
-	BaseForm
+	PageForm
 	Name         string   `form:"name" json:"name" binding:"required,gte=2,lte=32"`
 	Description  string   `form:"description" json:"description"`
 	Params       []Params `form:"params" json:"params"`
@@ -18,7 +18,7 @@ type CreateResourceAccountForm struct {
 }
 
 type UpdateResourceAccountForm struct {
-	BaseForm
+	PageForm
 	Id           models.Id `form:"id" json:"id" binding:"required"`
 	Name         string    `form:"name" json:"name" binding:""`
 	Description  string    `form:"description" json:"description"`
@@ -28,13 +28,13 @@ type UpdateResourceAccountForm struct {
 }
 
 type SearchResourceAccountForm struct {
-	BaseForm
+	PageForm
 
 	Q      string `form:"q" json:"q" binding:""`
 	Status string `form:"status" json:"status"`
 }
 
 type DeleteResourceAccountForm struct {
-	BaseForm
+	PageForm
 	Id models.Id `form:"id" json:"id" binding:"required"`
 }
