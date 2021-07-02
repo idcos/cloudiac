@@ -3,7 +3,7 @@ package forms
 import "cloudiac/portal/models"
 
 type CreateTaskForm struct {
-	BaseForm
+	PageForm
 
 	Name          string    `json:"name" form:"name" `
 	CtServiceIp   string    `json:"ctServiceIp" form:"ctServiceIp" binding:"required"`
@@ -14,24 +14,24 @@ type CreateTaskForm struct {
 }
 
 type DetailTaskForm struct {
-	BaseForm
+	PageForm
 	TaskId models.Id `json:"taskId" form:"taskId" binding:"required"`
 }
 
 type SearchTaskForm struct {
-	BaseForm
+	PageForm
 	TemplateId models.Id `json:"templateId" form:"templateId" binding:"required"`
 	Q          string    `form:"q" json:"q" binding:""`
 	Status     string    `form:"status" json:"status"`
 }
 
 type LastTaskForm struct {
-	BaseForm
+	PageForm
 	TemplateId models.Id `json:"templateId" form:"templateId" binding:"required"`
 }
 
 type TaskStateListForm struct {
-	BaseForm
+	PageForm
 	TemplateId models.Id `json:"templateId" form:"templateId" `
 	TaskId     models.Id `json:"taskId" form:"taskId" binding:"required"`
 }

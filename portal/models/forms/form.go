@@ -9,26 +9,34 @@ import (
 	"strings"
 )
 
-type Former interface {
+type BaseFormer interface {
 	Bind(url.Values)
 	Get(string) (string, bool)
 	HasKey(string) bool
+}
+
+type PageFormer interface {
+	BaseFormer
 
 	CurrentPage() int
 	PageSize() int
 	Export() bool
-
 	Order(*db.Session) *db.Session
 }
 
 type BaseForm struct {
-	PageSize_    int    `form:"pageSize" json:"pageSize" binding:""`
-	CurrentPage_ int    `form:"currentPage" json:"currentPage" binding:""`
-	Export_      bool   `form:"export" json:"export" binding:""`
-	SortField_   string `form:"sortField" json:"sortField"`
-	SortOrder_   string `form:"sortOrder" json:"sortOrder"`
-
 	formValues url.Values
+}
+
+type PageForm struct {
+	BaseForm
+
+	PageSize_    int  `form:"pageSize" json:"pageSize" binding:""`       // 分页大小，默认 15 条
+	CurrentPage_ int  `form:"currentPage" json:"currentPage" binding:""` // 当前分页，从 1 开始
+	Export_      bool `form:"export" json:"export" binding:""`           // 是否导出 csv 文件
+
+	SortField_ string `form:"sortField" json:"sortField"`                  // 排序字段名称
+	SortOrder_ string `form:"sortOrder" json:"sortOrder" enums:"asc,desc"` // 排序顺序
 }
 
 func (b *BaseForm) Bind(values url.Values) {
@@ -51,7 +59,7 @@ func (b *BaseForm) HasKey(k string) bool {
 	return ok
 }
 
-func (b *BaseForm) CurrentPage() int {
+func (b *PageForm) CurrentPage() int {
 	if b.Export_ {
 		// 导出 csv 总是从第一页开始
 		return 1
@@ -62,7 +70,7 @@ func (b *BaseForm) CurrentPage() int {
 	return b.CurrentPage_
 }
 
-func (b *BaseForm) PageSize() int {
+func (b *PageForm) PageSize() int {
 	if b.Export_ {
 		// 导出 csv 时设定为最大单页数量
 		return consts.MaxPageSize
@@ -76,15 +84,15 @@ func (b *BaseForm) PageSize() int {
 	return b.PageSize_
 }
 
-func (b *BaseForm) Export() bool {
+func (b *PageForm) Export() bool {
 	return b.Export_
 }
 
-func (b *BaseForm) SortField() string {
+func (b *PageForm) SortField() string {
 	return db.ToColName(b.SortField_)
 }
 
-func (b *BaseForm) SortOrder() string {
+func (b *PageForm) SortOrder() string {
 	switch b.SortOrder_ {
 	case "asc", "ascending":
 		return "asc"
@@ -95,7 +103,7 @@ func (b *BaseForm) SortOrder() string {
 	}
 }
 
-func (b *BaseForm) Order(query *db.Session) *db.Session {
+func (b *PageForm) Order(query *db.Session) *db.Session {
 	if b.SortField() == "" {
 		return query
 	}

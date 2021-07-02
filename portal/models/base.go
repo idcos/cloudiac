@@ -43,12 +43,22 @@ func (i *Id) Scan(value interface{}) error {
 	return nil
 }
 
+// InArray 检查 id 是否在数组中
+func (i *Id) InArray(arr ...Id) bool {
+	for idx := range arr {
+		if arr[idx] == *i {
+			return true
+		}
+	}
+	return false
+}
+
 func NewId(prefix string) Id {
 	return Id(utils.GenGuid(prefix))
 }
 
 type BaseModel struct {
-	Id Id `gorm:"size:32;primary_key" json:"id"`
+	Id Id `gorm:"size:32;primary_key" json:"id" example:"x-c3ek0co6n88ldvq1n6ag"` //ID
 }
 
 func (base *BaseModel) BeforeCreate(scope *gorm.Scope) error {
@@ -79,8 +89,8 @@ func (BaseModel) AddUniqueIndex(sess *db.Session, index string, cols ...string) 
 type TimedModel struct {
 	BaseModel
 
-	CreatedAt time.Time `json:"createdAt" csv:"-" tsdb:"-"`
-	UpdatedAt time.Time `json:"updatedAt" csv:"-" tsdb:"-"`
+	CreatedAt utils.JSONTime `json:"createdAt" csv:"-" tsdb:"-" example:"2006-01-02 15:04:05"` // 创建时间
+	UpdatedAt utils.JSONTime `json:"updatedAt" csv:"-" tsdb:"-" example:"2006-01-02 15:04:05"` // 更新时间
 }
 
 type SoftDeleteModel struct {
