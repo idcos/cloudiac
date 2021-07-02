@@ -83,7 +83,7 @@ func SearchOrganization(c *ctx.ServiceCtx, form *forms.SearchOrganizationForm) (
 // @router /api/v1/orgs/{orgId} [put]
 // @Success 200 {object} ctx.JSONResult{result=models.Organization}
 func UpdateOrganization(c *ctx.ServiceCtx, orgId models.Id, form *forms.UpdateOrganizationForm) (org *models.Organization, err e.Error) {
-	c.AddLogField("action", fmt.Sprintf("update org %d", orgId))
+	c.AddLogField("action", fmt.Sprintf("update org %s", orgId))
 	if orgId == "" {
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
 	}
@@ -194,4 +194,20 @@ func OrganizationDetail(c *ctx.ServiceCtx, form forms.DetailOrganizationForm) (r
 	}
 
 	return o, nil
+}
+
+// DeleteOrganization 删除组织
+// @Tags 组织
+// @Description 删除组织接口
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "认证令牌"
+// @Param orgId path string true "组织ID"
+// @Param form formData forms.DeleteOrganizationForm true "parameter"
+// @router /api/v1/orgs/{orgId} [delete]
+// @Success 200 {object} ctx.JSONResult
+func DeleteOrganization(c *ctx.ServiceCtx, orgId models.Id, form *forms.DeleteOrganizationForm) (org *models.Organization, err e.Error) {
+	c.AddLogField("action", fmt.Sprintf("delete org %s", orgId))
+	return nil, e.New(e.BadRequest, http.StatusNotImplemented)
 }

@@ -37,6 +37,7 @@ func Register(g *gin.RouterGroup) {
 		sys.POST("/orgs", w(handlers.Organization{}.Create))
 		sys.PUT("/orgs/:id/status/update", w(handlers.Organization{}.ChangeOrgStatus)) // Deprecated
 		sys.PUT("/orgs/:id", w(handlers.Organization{}.Update))
+		sys.DELETE("/orgs/:id", w(handlers.Organization{}.Delete))
 		ctrl.Register(sys.Group("system"), &handlers.SystemConfig{})
 		ctrl.Register(sys.Group("token"), &handlers.Token{})
 	}

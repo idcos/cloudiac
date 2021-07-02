@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"cloudiac/portal/apps"
-	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
@@ -31,7 +30,7 @@ func (Organization) Search(c *ctx.GinRequestCtx) {
 
 func (Organization) Update(c *ctx.GinRequestCtx) {
 	form := forms.UpdateOrganizationForm{}
-	param := forms.UpdateOrganizationParam{}
+	param := forms.OrganizationParam{}
 	if err := c.BindUri(&param); err != nil {
 		// 如果 uri 参数不对不应该进到这里
 		c.Logger().Panic(err)
@@ -44,8 +43,17 @@ func (Organization) Update(c *ctx.GinRequestCtx) {
 }
 
 func (Organization) Delete(c *ctx.GinRequestCtx) {
-	// 组织不允许删除
-	c.JSONError(e.New(e.NotImplement))
+	form := forms.DeleteOrganizationForm{}
+	param := forms.OrganizationParam{}
+	if err := c.BindUri(&param); err != nil {
+		// 如果 uri 参数不对不应该进到这里
+		c.Logger().Panic(err)
+		return
+	}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.DeleteOrganization(c.ServiceCtx(), param.Id, &form))
 }
 
 func (Organization) Detail(c *ctx.GinRequestCtx) {
@@ -58,7 +66,7 @@ func (Organization) Detail(c *ctx.GinRequestCtx) {
 
 func (Organization) ChangeOrgStatus(c *ctx.GinRequestCtx) {
 	form := forms.DisableOrganizationForm{}
-	param := forms.UpdateOrganizationParam{}
+	param := forms.OrganizationParam{}
 	if err := c.BindUri(&param); err != nil {
 		// 如果 uri 参数不对不应该进到这里
 		c.Logger().Panic(err)

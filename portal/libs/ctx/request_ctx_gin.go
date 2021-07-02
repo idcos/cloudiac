@@ -87,7 +87,7 @@ type JSONResult struct {
 	Code          int         `json:"code" example:"200"`
 	Message       string      `json:"message" example:"ok"`
 	MessageDetail string      `json:"message_detail,omitempty" example:"ok"`
-	Result        interface{} `json:",omitempty"`
+	Result        interface{} `json:"result,omitempty"`
 }
 
 func (c *GinRequestCtx) JSON(status int, msg interface{}, result interface{}) {

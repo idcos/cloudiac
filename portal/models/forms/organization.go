@@ -37,8 +37,8 @@ type CreateOrganizationForm struct {
 	RunnerId    string `form:"runnerId" json:"runnerId" binding:""`              // 组织默认部署通道
 }
 
-type UpdateOrganizationParam struct {
-	BaseFormer
+type OrganizationParam struct {
+	BaseForm
 
 	Id models.Id `uri:"id" json:"id" binding:""` // 组织ID
 }
@@ -59,17 +59,16 @@ type SearchOrganizationForm struct {
 }
 
 type DeleteOrganizationForm struct {
-	PageForm
-	Id models.Id `form:"id" json:"id" binding:"required"` // 组织ID
+	BaseForm
 }
 
 type DisableOrganizationForm struct {
-	PageForm
+	BaseForm
 
 	Status string `form:"status" json:"status" binding:"required"` // 组织状态
 }
 
 type DetailOrganizationForm struct {
-	PageForm
+	BaseForm
 	Id models.Id `uri:"id" json:"id" binding:"required"` // 组织ID
 }
