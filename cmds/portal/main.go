@@ -49,7 +49,7 @@ func main() {
 
 	// 依赖中间件及数据的初始化
 	{
-		db.Init()
+		db.Init(configs.Get().Mysql)
 		models.Init(true)
 
 		tx := db.Get().Begin()
