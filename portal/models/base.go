@@ -24,7 +24,6 @@ type ModelIdGenerator interface {
 	NewId() string
 }
 
-
 type Id string
 
 func NewId(prefix string) Id {
@@ -104,8 +103,11 @@ type SoftDeleteModel struct {
 	DeletedAtT int64 `json:"-" csv:"-" gorm:"default:0"`
 }
 
-func (SoftDeleteModel) AfterDelete(db *gorm.DB) error {
-	return db.Unscoped().UpdateColumn("deleted_at_t", time.Now().Unix()).Error
+func (SoftDeleteModel) AfterDelete(scope *gorm.Scope) error {
+	if scope.Search.Unscoped {
+		return nil
+	}
+	return scope.DB().Unscoped().UpdateColumn("deleted_at_t", time.Now().Unix()).Error
 }
 
 func (m SoftDeleteModel) AddUniqueIndex(sess *db.Session, index string, cols ...string) error {

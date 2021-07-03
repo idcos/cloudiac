@@ -1,7 +1,6 @@
 package models
 
 import (
-	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"database/sql/driver"
 	"encoding/json"
