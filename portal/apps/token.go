@@ -7,7 +7,13 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/utils"
+	"cloudiac/utils/mail"
 	"fmt"
+)
+
+var (
+	emailSubjectResetPassword = "重置密码"
+	emailBodyResetPassword    = "尊敬的 {{.Name}}：\n\n您的密码已经被重置，这是您的新密码：\n\n密码：\t{{.InitPass}}\n\n请使用新密码登陆系统。\n\n为了保障您的安全，请立即登陆您的账号并修改密码。"
 )
 
 func SearchToken(c *ctx.ServiceCtx, form *forms.SearchTokenForm) (interface{}, e.Error) {
@@ -95,6 +101,21 @@ func UserPassReset(c *ctx.ServiceCtx, form *forms.DetailUserForm) (*models.User,
 
 	user, err := services.UpdateUser(c.DB(), form.Id, attrs)
 
-	// TODO 是不是应该给用户发一封邮件。。。
+	resp := struct {
+		*models.User
+		InitPass string
+	}{
+		User:     user,
+		InitPass: initPass,
+	}
+
+	// TODO: 需确定邮件内容
+	go func() {
+		err := mail.SendMail([]string{user.Email}, emailSubjectResetPassword, utils.SprintTemplate(emailBodyResetPassword, resp))
+		if err != nil {
+			c.Logger().Errorf("error send mail to %s, err %s", user.Email, err)
+		}
+	}()
+
 	return user, err
 }

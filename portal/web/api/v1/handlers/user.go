@@ -5,6 +5,7 @@ import (
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
+	"github.com/gin-gonic/gin"
 )
 
 type User struct {
@@ -18,9 +19,10 @@ type User struct {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param Iac-Org-Id header string true "组织ID"
 // @Param form formData forms.CreateUserForm true "parameter"
 // @router /users [post]
-// @Success 200 {object} ctx.JSONResult{result=models.User}
+// @Success 200 {object} ctx.JSONResult{result=apps.CreateUserResp}
 func (User) Create(c *ctx.GinRequestCtx) {
 	form := forms.CreateUserForm{}
 	if err := c.Bind(&form); err != nil {
@@ -35,7 +37,7 @@ func (User) Create(c *ctx.GinRequestCtx) {
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
-// @Param form query forms.SearchOrganizationForm true "parameter"
+// @Param Iac-Org-Id header string true "组织ID"
 // @Param form query forms.SearchUserForm true "parameter"
 // @router /users [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.User}}
@@ -54,6 +56,7 @@ func (User) Search(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param Iac-Org-Id header string true "组织ID"
 // @Param userId path string true "用户ID"
 // @Param form formData forms.UpdateUserForm true "parameter"
 // @router /users/{userId} [put]
@@ -64,6 +67,26 @@ func (User) Update(c *ctx.GinRequestCtx) {
 		return
 	}
 	c.JSONResult(apps.UpdateUser(c.ServiceCtx(), &form))
+}
+
+// ChangeUserStatus 启用/禁用用户
+// @Tags 用户
+// @Summary 启用/禁用用户
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param Iac-Org-Id header string true "组织ID"
+// @Param userId path string true "用户ID"
+// @Param form formData forms.DisableUserForm true "parameter"
+// @router /users/{userId}/status [put]
+// @Success 200 {object} ctx.JSONResult{result=models.User}
+func (User) ChangeUserStatus(c *ctx.GinRequestCtx) {
+	form := forms.DisableUserForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.ChangeUserStatus(c.ServiceCtx(), &form))
 }
 
 // UpdateSelf 用户自身信息编辑
@@ -77,8 +100,9 @@ func (User) Update(c *ctx.GinRequestCtx) {
 // @router /users/self [put]
 // @Success 200 {object} ctx.JSONResult{result=models.User}
 func (u User) UpdateSelf(c *ctx.GinRequestCtx) {
+	// 将调用者 id 加入 Params 模拟 path 参数
+	c.Params = append(c.Params, gin.Param{Key: "id", Value: string(c.ServiceCtx().UserId)})
 	u.Update(c)
-	return
 }
 
 // Delete 删除用户
@@ -89,10 +113,11 @@ func (u User) UpdateSelf(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param Iac-Org-Id header string true "组织ID"
 // @Param userId path string true "用户ID"
 // @Param form formData forms.DeleteUserForm true "parameter"
 // @router /users/{userId} [delete]
-// @Success 501 {object} ctx.JSONResult
+// @Success 200 {object} ctx.JSONResult
 func (User) Delete(c *ctx.GinRequestCtx) {
 	form := forms.DeleteUserForm{}
 	if err := c.Bind(&form); err != nil {

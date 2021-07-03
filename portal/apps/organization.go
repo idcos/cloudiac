@@ -1,6 +1,7 @@
 package apps
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
@@ -180,8 +181,8 @@ func DeleteOrganization(c *ctx.ServiceCtx, form *forms.DeleteOrganizationForm) (
 }
 
 // DeleteUserOrgRel 从组织移除用户
-func DeleteUserOrgRel(c *ctx.ServiceCtx, form *forms.DeleteUserOrgRelForm) (result interface{}, re e.Error) {
-	c.AddLogField("action", fmt.Sprintf("delete user %s for org %s", form.Id, c.OrgId))
+func DeleteUserOrgRel(c *ctx.ServiceCtx, form *forms.DeleteUserOrgRelForm) (interface{}, e.Error) {
+	c.AddLogField("action", fmt.Sprintf("delete user %s for org %s", form.UserId, c.OrgId))
 
 	tx := c.Tx()
 	defer func() {
@@ -191,19 +192,23 @@ func DeleteUserOrgRel(c *ctx.ServiceCtx, form *forms.DeleteUserOrgRelForm) (resu
 		}
 	}()
 
-	if err := services.DeleteUserOrgRel(tx, form.Id, c.OrgId); err != nil {
+	if err := services.DeleteUserOrgRel(tx, form.UserId, c.OrgId); err != nil {
 		tx.Rollback()
+		c.Logger().Errorf("error del user org rel, err %s", err)
 		return nil, err
 	} else if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		c.Logger().Errorf("error commit del user org rel, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
-	c.Logger().Infof("delete user ", form.Id, " for org ", c.OrgId, " succeed")
+	c.Logger().Infof("delete user ", form.UserId, " for org ", c.OrgId, " succeed")
 
-	return
+	user, _ := services.GetUserById(tx, form.UserId)
+	return user, nil
 }
 
 // AddUserOrgRel 添加用户到组织
-func AddUserOrgRel(c *ctx.ServiceCtx, form *forms.AddUserOrgRelForm) (interface{}, e.Error) {
+func AddUserOrgRel(c *ctx.ServiceCtx, form *forms.AddUserOrgRelForm) (*UserWithRoleResp, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("add user %s to org %s", form.Id, c.OrgId))
 
 	tx := c.Tx()
@@ -214,13 +219,59 @@ func AddUserOrgRel(c *ctx.ServiceCtx, form *forms.AddUserOrgRelForm) (interface{
 		}
 	}()
 
-	if _, err := services.CreateUserOrgRel(tx, models.UserOrg{OrgId: c.OrgId, UserId: form.Id}); err != nil {
+	if form.Role != consts.OrgRoleMember && form.Role != consts.OrgRoleOwner {
+		return nil, e.New(e.InvalidRoleName, http.StatusBadRequest)
+	}
+
+	_, err := services.CreateUserOrgRel(tx, models.UserOrg{OrgId: c.OrgId, UserId: form.Id, Role: form.Role})
+	if err != nil && err.Code() != e.UserAlreadyExists {
 		tx.Rollback()
+		c.Logger().Errorf("error create user org rel, err %s", err)
 		return nil, err
 	} else if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		c.Logger().Errorf("error commit add user org rel, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
-	c.Logger().Infof("delete user ", form.Id, " for org ", c.OrgId, " succeed")
+	c.Logger().Infof("add user ", form.Id, " to org ", c.OrgId, " succeed")
 
-	return nil, nil
+	user, _ := services.GetUserById(tx, form.Id)
+	resp := UserWithRoleResp{
+		User: *user,
+		Role: form.Role,
+	}
+
+	return &resp, nil
+}
+
+// UpdateUserOrgRel 更新用户组织角色
+func UpdateUserOrgRel(c *ctx.ServiceCtx, form *forms.UpdateUserOrgRelForm) (*UserWithRoleResp, e.Error) {
+	c.AddLogField("action", fmt.Sprintf("update user %s in org %s to role %s", form.UserId, c.OrgId, form.Role))
+
+	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	if err := services.UpdateUserOrgRel(tx, models.UserOrg{OrgId: c.OrgId, UserId: form.UserId, Role: form.Role}); err != nil {
+		tx.Rollback()
+		c.Logger().Errorf("error create user org rel, err %s", err)
+		return nil, err
+	} else if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		c.Logger().Errorf("error commit add user org rel, err %s", err)
+		return nil, e.New(e.DBError, err)
+	}
+	c.Logger().Infof("add user ", form.UserId, " to org ", c.OrgId, " succeed")
+
+	user, _ := services.GetUserById(tx, form.UserId)
+	resp := UserWithRoleResp{
+		User: *user,
+		Role: form.Role,
+	}
+
+	return &resp, nil
 }

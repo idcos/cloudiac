@@ -2,12 +2,17 @@ package models
 
 import "cloudiac/portal/libs/db"
 
+var (
+	orgRoleOwner  = "owner"
+	orgRoleMember = "member"
+)
+
 type UserOrg struct {
 	BaseModel
 
-	UserId Id     `json:"userId" gorm:"size:32;not null;comment:'用户ID'"`
-	OrgId  Id     `json:"orgId" gorm:"size:32;not null;comment:'组织ID'"`
-	Role   string `json:"role" gorm:"type:enum('owner','member');default:'member'"`
+	UserId Id     `json:"userId" gorm:"size:32;not null;comment:'用户ID'"`            // 用户ID
+	OrgId  Id     `json:"orgId" gorm:"size:32;not null;comment:'组织ID'"`             // 组织ID
+	Role   string `json:"role" gorm:"type:enum('owner','member');default:'member'"` // 角色
 }
 
 func (UserOrg) TableName() string {

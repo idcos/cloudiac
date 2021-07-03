@@ -14,11 +14,11 @@ type UpdateUserForm struct {
 	BaseForm
 
 	Id          models.Id         `uri:"id" json:"id" binding:"" swaggerignore:"true"` // 用户ID
-	Name        string            `form:"name" json:"name" binding:",gte=2,lte=32"`    // 用户名
+	Name        string            `form:"name" json:"name" binding:"gte=2,lte=32"`     // 用户名
 	Phone       string            `form:"phone" json:"phone" binding:"max=11"`         // 电话
 	OldPassword string            `form:"oldPassword" json:"oldPassword" binding:""`   // 原始密码
 	NewPassword string            `form:"newPassword" json:"newPassword" binding:""`   // 新密码
-	NewbieGuide map[string]uint64 `json:"newbieGuide" form:"newbieGuide" `             // 新用户向导内容
+	NewbieGuide map[string]uint64 `form:"newbieGuide" json:"newbieGuide"`              // 新用户向导内容
 }
 
 type SearchUserForm struct {
@@ -50,11 +50,21 @@ type DetailUserForm struct {
 type AddUserOrgRelForm struct {
 	BaseForm
 
-	Id models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"` // 用户ID
+	Id   models.Id `form:"id" json:"id" binding:"required" swaggerignore:"true"` // 用户ID
+	Role string    `form:"role" json:"role" binding:"" enums:"owner,member"`     // 角色，默认 member
 }
 
 type DeleteUserOrgRelForm struct {
 	BaseForm
 
-	Id models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"` // 用户ID
+	Id     models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`         // 组织ID
+	UserId models.Id `uri:"userId" json:"userId" binding:"" swaggerignore:"true"` // 用户ID
+}
+
+type UpdateUserOrgRelForm struct {
+	BaseForm
+
+	Id     models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`              // 组织ID
+	UserId models.Id `uri:"userId" json:"userId" binding:"" swaggerignore:"true"`      // 用户ID
+	Role   string    `form:"role" json:"role" binding:"required" enums:"owner,member"` // 角色
 }

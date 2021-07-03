@@ -130,11 +130,11 @@ func (Organization) ChangeOrgStatus(c *ctx.GinRequestCtx) {
 // @Produce json
 // @Security AuthToken
 // @Param orgId path string true "组织ID"
-// @Param form formData forms.DisableOrganizationForm true "parameter"
-// @router /orgs/{orgId}/status [put]
-// @Success 200 {object} ctx.JSONResult{result=models.Organization}
+// @Param form formData forms.AddUserOrgRelForm true "parameter"
+// @router /orgs/{orgId}/users [put]
+// @Success 200 {object} ctx.JSONResult{result=apps.UserWithRoleResp}
 func (Organization) AddUserToOrg(c *ctx.GinRequestCtx) {
-	form := forms.AddUserOrgRelForm{} // TODO
+	form := forms.AddUserOrgRelForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
@@ -149,33 +149,35 @@ func (Organization) AddUserToOrg(c *ctx.GinRequestCtx) {
 // @Produce json
 // @Security AuthToken
 // @Param orgId path string true "组织ID"
-// @Param form formData forms.DisableOrganizationForm true "parameter"
-// @router /orgs/{orgId}/status [put]
-// @Success 200 {object} ctx.JSONResult{result=models.Organization}
+// @Param userId path string true "用户ID"
+// @Param form formData forms.DeleteUserOrgRelForm true "parameter"
+// @router /orgs/{orgId}/users/{userId} [delete]
+// @Success 200 {object} ctx.JSONResult{}
 func (Organization) RemoveUserForOrg(c *ctx.GinRequestCtx) {
-	form := forms.DeleteUserOrgRelForm{} // TODO
+	form := forms.DeleteUserOrgRelForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
 	c.JSONResult(apps.DeleteUserOrgRel(c.ServiceCtx(), &form))
 }
 
-// SetOrganizationAdmin 设置组织管理员
+// UpdateUserOrgRel 编辑用户组织角色
 // @Tags 组织
-// @Summary 设置组织管理员
-// @Description 设置一个用户是否为管理员。一个组织必须保持至少一个组织管理员。
+// @Summary 编辑用户组织角色
+// @Description 修改用户在组织中的角色。操作人需要拥有组织管理权限。
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
 // @Security AuthToken
 // @Param orgId path string true "组织ID"
-// @Param form formData forms.BaseForm true "parameter"
-// @router /orgs/{orgId}/status [put]
-// @Success 200 {object} ctx.JSONResult{result=models.User}
-func (Organization) SetOrganizationAdmin(c *ctx.GinRequestCtx) {
-	form := forms.BaseForm{} // TODO
+// @Param userId path string true "用户ID"
+// @Param form formData forms.UpdateUserOrgRelForm true "parameter"
+// @router /orgs/{orgId}/users/{userId}/role [put]
+// @Success 200 {object} ctx.JSONResult{result=apps.UserWithRoleResp}
+func (Organization) UpdateUserOrgRel(c *ctx.GinRequestCtx) {
+	form := forms.UpdateUserOrgRelForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.BaseHandler(c.ServiceCtx(), &form))
+	c.JSONResult(apps.UpdateUserOrgRel(c.ServiceCtx(), &form))
 }
