@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
+	"strings"
 )
 
 func TaskLogSSEGetPath(c *ctx.ServiceCtx, taskGuid string) string {
@@ -46,8 +47,11 @@ func CreateTaskOpen(c *ctx.ServiceCtx, form forms.CreateTaskOpenForm) (interface
 		CtServiceId: conf.Consul.ServiceID,
 		LogFile:     logPath,
 	}
+	vars := make([]forms.VarOpen, 0)
+	for _, v := range strings.Split(tpl.TplType, ",") {
+		vars = append(vars, GetResourceAccount(form.Account, form.Vars, v)...)
+	}
 
-	vars := GetResourceAccount(form.Account, form.Vars, tpl.TplType)
 	jsons, _ := json.Marshal(vars)
 	task, err := services.CreateTask(dbSess, models.Task{
 		TemplateGuid:  form.TemplateGuid,
