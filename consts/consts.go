@@ -67,11 +67,11 @@ const (
 var (
 	BomUtf8    = []byte{0xEF, 0xBB, 0xBF}
 	AccountMap = map[string]map[string]string{
-		"aliyun": {
+		"alicloud": {
 			"accessKeyId":     "ALICLOUD_ACCESS_KEY",
 			"secretAccessKey": "ALICLOUD_SECRET_KEY",
 		},
-		"vmware": {
+		"vsphere": {
 			"userName": "username",
 			"password": "password",
 		},
