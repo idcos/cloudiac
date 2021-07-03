@@ -3,7 +3,7 @@ package models
 import "cloudiac/portal/libs/db"
 
 type VariableBody struct {
-	Scope       string `json:"scope" gorm:"not null;type:enum('org', 'project', 'template', 'env')"`
+	Scope       string `json:"scope" gorm:"not null;type:enum('org','project','template','env')"`
 	Type        string `json:"type" gorm:"not null;type:enum('environment','terraform','ansible')"`
 	Name        string `json:"name" gorm:"size:64;not null"`
 	Value       string `json:"value" gorm:"default:''"`

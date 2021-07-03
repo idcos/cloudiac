@@ -24,7 +24,22 @@ type ModelIdGenerator interface {
 	NewId() string
 }
 
+
 type Id string
+
+func NewId(prefix string) Id {
+	return Id(utils.GenGuid(prefix))
+}
+
+// InArray 检查 id 是否在数组中
+func (i *Id) InArray(arr ...Id) bool {
+	for idx := range arr {
+		if arr[idx] == *i {
+			return true
+		}
+	}
+	return false
+}
 
 func (i Id) Value() (driver.Value, error) {
 	return string(i), nil
@@ -48,7 +63,7 @@ type BaseModel struct {
 }
 
 func (base *BaseModel) BeforeCreate(scope *gorm.Scope) error {
-	// 为设置 Id 值的情况下默认生成一个无前缀的 id，如果对前缀有要求主动设置一个 Id 值,
+	// 未设置 Id 值的情况下默认生成一个无前缀的 id，如果对前缀有要求请主动为对象设置 Id 值,
 	// 或者在 Model 层定义自己的 BeforeCreate() 方法
 	if base.Id == "" {
 		base.Id = NewId("")
