@@ -21,19 +21,7 @@ const (
 
 const (
 	// 作业状态
-
-	TaskPending   = "pending"
-	TaskAssigning = "assigning"
-
-	TaskRunning  = "running"
-	TaskTimeout  = "timeout"
-	TaskFailed   = "failed"
-	TaskComplete = "complete"
-
 	TaskLogName = "runner.log"
-	TaskApply   = "apply"
-	TaskPlan    = "plan"
-	TaskDestroy = "destroy"
 
 	ResourceAccountDisable = "disable"
 	ResourceAccountEnable  = "enable"

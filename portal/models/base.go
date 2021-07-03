@@ -26,6 +26,20 @@ type ModelIdGenerator interface {
 
 type Id string
 
+func NewId(prefix string) Id {
+	return Id(utils.GenGuid(prefix))
+}
+
+// InArray 检查 id 是否在数组中
+func (i *Id) InArray(arr ...Id) bool {
+	for idx := range arr {
+		if arr[idx] == *i {
+			return true
+		}
+	}
+	return false
+}
+
 func (i Id) Value() (driver.Value, error) {
 	return string(i), nil
 }
@@ -43,29 +57,16 @@ func (i *Id) Scan(value interface{}) error {
 	return nil
 }
 
-// InArray 检查 id 是否在数组中
-func (i *Id) InArray(arr ...Id) bool {
-	for idx := range arr {
-		if arr[idx] == *i {
-			return true
-		}
-	}
-	return false
-}
-
-func NewId(prefix string) Id {
-	return Id(utils.GenGuid(prefix))
-}
-
 type BaseModel struct {
 	Id Id `gorm:"size:32;primary_key" json:"id" example:"x-c3ek0co6n88ldvq1n6ag"` //ID
 }
 
 func (base *BaseModel) BeforeCreate(scope *gorm.Scope) error {
+	// 未设置 Id 值的情况下默认生成一个无前缀的 id，如果对前缀有要求请主动为对象设置 Id 值,
+	// 或者在 Model 层定义自己的 BeforeCreate() 方法
 	if base.Id == "" {
 		base.Id = NewId("")
 	}
-	//return scope.SetColumn("id", )
 	return nil
 }
 
@@ -88,8 +89,8 @@ func (BaseModel) AddUniqueIndex(sess *db.Session, index string, cols ...string) 
 type TimedModel struct {
 	BaseModel
 
-	CreatedAt utils.JSONTime `json:"createdAt" csv:"-" tsdb:"-" example:"2006-01-02 15:04:05"` // 创建时间
-	UpdatedAt utils.JSONTime `json:"updatedAt" csv:"-" tsdb:"-" example:"2006-01-02 15:04:05"` // 更新时间
+	CreatedAt utils.JSONTime `json:"createdAt" gorm:"type:datetime" example:"2006-01-02 15:04:05"` // 创建时间
+	UpdatedAt utils.JSONTime `json:"updatedAt" gorm:"type:datetime" example:"2006-01-02 15:04:05"` // 更新时间
 }
 
 type SoftDeleteModel struct {
@@ -102,8 +103,11 @@ type SoftDeleteModel struct {
 	DeletedAtT int64 `json:"-" csv:"-" gorm:"default:0"`
 }
 
-func (SoftDeleteModel) AfterDelete(db *gorm.DB) error {
-	return db.Unscoped().UpdateColumn("deleted_at_t", time.Now().Unix()).Error
+func (SoftDeleteModel) AfterDelete(scope *gorm.Scope) error {
+	if scope.Search.Unscoped {
+		return nil
+	}
+	return scope.DB().Unscoped().UpdateColumn("deleted_at_t", time.Now().Unix()).Error
 }
 
 func (m SoftDeleteModel) AddUniqueIndex(sess *db.Session, index string, cols ...string) error {

@@ -3,6 +3,7 @@ module cloudiac
 go 1.16
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.0 // indirect
 	github.com/Shopify/sarama v1.28.0
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/containerd/containerd v1.4.4 // indirect

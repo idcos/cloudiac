@@ -132,7 +132,7 @@ func vcsDelete(id int) int {
 
 func TestVcs(t *testing.T) {
 	defer func() {
-		db.Init()
+		db.Init(configs.Get().Mysql)
 		rows, _ := db.Get().Raw("truncate iac_vcs;").Rows()
 		defer rows.Close()
 	}()
