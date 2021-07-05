@@ -110,7 +110,7 @@ func Register(g *gin.RouterGroup) {
 		root.GET("/project", w(handlers.Project{}.Search))
 		root.POST("/project", w(handlers.Project{}.Create))
 		root.PUT("/project/:id", w(handlers.Project{}.Update))
-		root.DELETE("/project", w(handlers.Project{}.Delete))
+		root.DELETE("/project/:id", w(handlers.Project{}.Delete))
 		root.GET("/project/:id", w(handlers.Project{}.Detail))
 	}
 

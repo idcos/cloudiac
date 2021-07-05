@@ -17,7 +17,8 @@ type Project struct {
 // @Tags 项目
 // @Accept  json
 // @Produce  json
-// @Param Authorization header string true "Bearer token"
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
 // @Param json body forms.CreateProjectForm true "parameter"
 // @Success 200 {object}  ctx.JSONResult{result=models.Project}
 // @Router /project [post]
@@ -27,7 +28,6 @@ func (Project) Create(c *ctx.GinRequestCtx) {
 		return
 	}
 	c.JSONResult(apps.CreateProject(c.ServiceCtx(), form))
-
 }
 
 // Search 查询项目列表
@@ -36,7 +36,8 @@ func (Project) Create(c *ctx.GinRequestCtx) {
 // @Tags 项目
 // @Accept  json
 // @Produce  json
-// @Param Authorization header string true "Bearer token"
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
 // @Param q query string false "模糊搜索"
 // @Param currentPage query int false "分页页码"
 // @Param pageSize query int false "分页页数"
@@ -56,7 +57,8 @@ func (Project) Search(c *ctx.GinRequestCtx) {
 // @Tags 项目
 // @Accept  json
 // @Produce  json
-// @Param Authorization header string true "Bearer token"
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
 // @Param id body string true "项目id"
 // @Param name body string false "项目名称"
 // @Param description body string false "项目描述"
@@ -77,8 +79,9 @@ func (Project) Update(c *ctx.GinRequestCtx) {
 // @Tags 项目
 // @Accept  json
 // @Produce  json
-// @Param Authorization header string true "Bearer token"
-// @Param id body string true "项目id"
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
+// @Param id query string true "项目id"
 // @Success 200
 // @Router /project/{projectId} [delete]
 func (Project) Delete(c *ctx.GinRequestCtx) {
@@ -95,7 +98,8 @@ func (Project) Delete(c *ctx.GinRequestCtx) {
 // @Tags 项目
 // @Accept  json
 // @Produce  json
-// @Param Authorization header string true "Bearer token"
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
 // @Param id query string true "项目id"
 // @Success 200 {object} models.Project
 // @Router /project/{projectId}  [get]

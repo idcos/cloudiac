@@ -8,14 +8,17 @@ import (
 )
 
 func CreateProject(tx *db.Session, project *models.Project) (*models.Project, e.Error) {
+	if project.Id == "" {
+		project.Id = models.NewId("p")
+	}
 	if err := models.Create(tx, project); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 	return project, nil
 }
 
-func CreateUserProject(tx *db.Session, userProjects []models.Modeler) e.Error {
-	if err := models.CreateBatch(tx, userProjects); err != nil {
+func CreateUserProject(tx *db.Session, userProjects models.Modeler) e.Error {
+	if err := models.Create(tx, userProjects); err != nil {
 		return e.New(e.DBError, err)
 	}
 	return nil
@@ -54,7 +57,7 @@ func DetailProject(dbSess *db.Session, projectId models.Id) (interface{}, e.Erro
 }
 
 func DeleteProject(tx *db.Session, projectId models.Id) e.Error {
-	if _, err := tx.Where("id = ？", projectId).Delete(&models.Project{}); err != nil {
+	if _, err := tx.Where("id = ?", projectId).Delete(&models.Project{}); err != nil {
 		return e.New(e.DBError, err)
 	}
 	return nil

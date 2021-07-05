@@ -11,7 +11,6 @@ import (
 )
 
 func CreateProject(c *ctx.ServiceCtx, form *forms.CreateProjectForm) (interface{}, e.Error) {
-
 	tx := c.DB().Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -29,16 +28,7 @@ func CreateProject(c *ctx.ServiceCtx, form *forms.CreateProjectForm) (interface{
 		_ = tx.Rollback()
 		return nil, err
 	}
-	userProject := make([]models.Modeler, 0)
-	for _, v := range form.UserAuthorization {
-		userProject = append(userProject, &models.UserProject{
-			UserId:    v.UserId,
-			ProjectId: project.Id,
-			Role:      v.Role,
-		})
-	}
-
-	if err := services.CreateUserProject(tx, userProject); err != nil {
+	if err := CreateUserProject(tx, form.UserAuthorization, project.Id); err != nil {
 		_ = tx.Rollback()
 		return nil, err
 	}
@@ -107,8 +97,9 @@ func UpdateProject(c *ctx.ServiceCtx, form *forms.UpdateProjectForm) (interface{
 	if form.HasKey("description") {
 		attrs["description"] = form.Description
 	}
-
-	if err := services.UpdateProject(tx, &models.Project{}, attrs); err != nil {
+	project := &models.Project{}
+	project.Id = form.Id
+	if err := services.UpdateProject(tx, project, attrs); err != nil {
 		_ = tx.Rollback()
 		return nil, err
 	}
@@ -128,6 +119,7 @@ func DeleteProject(c *ctx.ServiceCtx, form *forms.DeleteProjectForm) (interface{
 			panic(r)
 		}
 	}()
+	//todo 检验环境是否活跃
 	//项目是逻辑删除，用户和项目的角色关系是直接删除
 	if err := services.DeleteProject(tx, form.Id); err != nil {
 		_ = tx.Rollback()
@@ -152,18 +144,32 @@ func DetailProject(c *ctx.ServiceCtx, form *forms.DetailProjectForm) (interface{
 }
 
 func CreateUserProject(tx *db.Session, authorization []forms.UserAuthorization, projectId models.Id) e.Error {
-	userProject := make([]models.Modeler, 0)
 	for _, v := range authorization {
-		userProject = append(userProject, &models.UserProject{
+		if err := services.CreateUserProject(tx, &models.UserProject{
 			UserId:    v.UserId,
 			ProjectId: projectId,
 			Role:      v.Role,
-		})
+		}); err != nil {
+			_ = tx.Rollback()
+			return err
+		}
 	}
 
-	if err := services.CreateUserProject(tx, userProject); err != nil {
-		return err
-	}
+	/*
+		gorm1.9.16版本不支持批量创建
+		userProject := make([]models.Modeler, 0)
+		for _, v := range form.UserAuthorization {
+			userProject = append(userProject, &models.UserProject{
+				UserId:    v.UserId,
+				ProjectId: project.Id,
+				Role:      v.Role,
+			})
+		}
+		if err := services.CreateUserProject(tx, userProject); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+	*/
 
 	return nil
 }
