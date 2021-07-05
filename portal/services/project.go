@@ -52,3 +52,10 @@ func DetailProject(dbSess *db.Session, projectId models.Id) (interface{}, e.Erro
 	}
 	return project, nil
 }
+
+func DeleteProject(tx *db.Session, projectId models.Id) e.Error {
+	if _, err := tx.Where("id = ？", projectId).Delete(&models.Project{}); err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}

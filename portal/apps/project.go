@@ -117,6 +117,28 @@ func UpdateProject(c *ctx.ServiceCtx, form *forms.UpdateProjectForm) (interface{
 }
 
 func DeleteProject(c *ctx.ServiceCtx, form *forms.DeleteProjectForm) (interface{}, e.Error) {
+	tx := c.DB().Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+	//项目是逻辑删除，用户和项目的角色关系是直接删除
+	if err := services.DeleteProject(tx, form.Id); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	if err := services.DeleteUserProject(tx, form.Id); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
 
 	return nil, nil
 }
