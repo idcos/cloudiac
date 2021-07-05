@@ -122,7 +122,7 @@ func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.E
 	}
 
 	query := services.QueryUser(c.DB())
-	query = query.Where("id in (?)", userIds)
+	query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
 	if form.Status != "" {
 		query = query.Where("status = ?", form.Status)
 	}
@@ -134,19 +134,16 @@ func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.E
 	if form.SortField() == "" {
 		query = query.Order("created_at DESC")
 	}
+
+	// 查找用户角色
+	query = query.Joins(fmt.Sprintf("left join %s as o on %s.id = o.user_id", models.UserOrg{}.TableName(), models.User{}.TableName())).
+		LazySelectAppend(fmt.Sprintf("o.role,%s.*", models.User{}.TableName()))
+
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	users := make([]*UserWithRoleResp, 0)
 	if err := p.Scan(&users); err != nil {
 		c.Logger().Errorf("error get users, err %s", err)
 		return nil, e.New(e.DBError, err)
-	}
-	for _, user := range users {
-		for _, org := range userOrgRel {
-			if user.Id == org.UserId {
-				user.Role = org.Role
-				break
-			}
-		}
 	}
 
 	return page.PageResp{
