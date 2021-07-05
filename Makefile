@@ -34,7 +34,7 @@ reset-build-dir:
 	mkdir -p $(BUILD_DIR)/assets/
 
 swag-docs:
-	swag init -g ../../portal/web/api/v1/route.go -d cmds/portal
+	 swag init -g portal/web/api/v1/route.go
 
 portal: reset-build-dir swag-docs
 	$(GOBUILD) -o $(BUILD_DIR)/iac-portal ./cmds/portal

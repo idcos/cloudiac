@@ -69,7 +69,7 @@ func IsSuperAdmin(c *ctx.GinRequestCtx) {
 	return
 }
 
-func IsOrgOwner(c *ctx.GinRequestCtx) {
+func IsOrgAdmin(c *ctx.GinRequestCtx) {
 	if c.ServiceCtx().Role == "owner" || c.ServiceCtx().IsSuperAdmin == true {
 		c.Next()
 	} else {

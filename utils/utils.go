@@ -2,6 +2,7 @@ package utils
 
 import (
 	"archive/zip"
+	"bytes"
 	"cloudiac/portal/consts"
 	"cloudiac/utils/logs"
 	"crypto/aes"
@@ -23,6 +24,7 @@ import (
 	"runtime/debug"
 	"sort"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/rs/xid"
@@ -483,4 +485,15 @@ func GetBoolEnv(key string, _default bool) bool {
 	}
 	// 其他情况返回默认值
 	return _default
+}
+
+// SprintTemplate 用模板参数格式化字符串
+func SprintTemplate(format string, data interface{}) (str string) {
+	if tmpl, err := template.New("").Parse(format); err != nil {
+		return format
+	} else {
+		var msg bytes.Buffer
+		tmpl.Execute(&msg, data)
+		return msg.String()
+	}
 }

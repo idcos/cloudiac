@@ -18,11 +18,9 @@ type Project struct {
 // @Accept  json
 // @Produce  json
 // @Param Authorization header string true "Bearer token"
-// @Param name body string true "项目名称"
-// @Param description body string false "项目描述"
-// @Param userAuthorization body forms.UserAuthorization false "用户授权"
-// @Success 200 {object} models.Project
-// @Router /project/create [post]
+// @Param json body forms.CreateProjectForm true "parameter"
+// @Success 200 {object}  ctx.JSONResult{result=models.Project}
+// @Router /project [post]
 func (Project) Create(c *ctx.GinRequestCtx) {
 	form := &forms.CreateProjectForm{}
 	if err := c.Bind(form); err != nil {
@@ -43,7 +41,7 @@ func (Project) Create(c *ctx.GinRequestCtx) {
 // @Param currentPage query int false "分页页码"
 // @Param pageSize query int false "分页页数"
 // @Success 200 {object} models.Project
-// @Router /project/search [get]
+// @Router /project [get]
 func (Project) Search(c *ctx.GinRequestCtx) {
 	form := &forms.SearchProjectForm{}
 	if err := c.Bind(form); err != nil {

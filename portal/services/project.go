@@ -26,7 +26,7 @@ func SearchProject(dbSess *db.Session, orgId models.Id, q string) *db.Session {
 	if q != "" {
 		query = query.Where("name like ?", fmt.Sprintf("%%%s%%", q))
 	}
-	return query.Order("created_at DESC")
+	return query
 }
 
 func DeleteUserProject(tx *db.Session, projectId models.Id) e.Error {

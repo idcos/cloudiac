@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"cloudiac/portal/consts"
-	//"errors"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
@@ -104,47 +103,4 @@ func CheckPasswordFormat(password string) e.Error {
 	}
 
 	return nil
-}
-
-func CreateUserOrgRel(tx *db.Session, userOrg models.UserOrg) (*models.UserOrg, e.Error) {
-	if err := models.Create(tx, &userOrg); err != nil {
-		if e.IsDuplicate(err) {
-			return nil, e.New(e.UserAlreadyExists, err)
-		}
-		return nil, e.New(e.DBError, err)
-	}
-
-	return &userOrg, nil
-}
-
-func DeleteUserOrgRel(tx *db.Session, userId models.Id, orgId models.Id) e.Error {
-	if _, err := tx.Where("user_id = ? AND org_id = ?", userId, orgId).Debug().Delete(&models.UserOrg{}); err != nil {
-		return e.New(e.DBError, fmt.Errorf("delete user %d for org %d error: %v", userId, orgId, err))
-	}
-	return nil
-}
-
-func FindUsersOrgRel(query *db.Session, userId models.Id, orgId models.Id) (userOrgRel []*models.UserOrg, err error) {
-	if err := query.Where("user_id = ? AND org_id = ?", userId, orgId).Find(&userOrgRel); err != nil {
-		return nil, e.AutoNew(err, e.DBError)
-	}
-	return
-}
-
-func GetOrgIdsByUser(query *db.Session, userId models.Id) (orgIds []models.Id, err error) {
-	var userOrgRel []*models.UserOrg
-	if err := query.Where("user_id = ?", userId).Find(&userOrgRel); err != nil {
-		return nil, e.AutoNew(err, e.DBError)
-	}
-	for _, o := range userOrgRel {
-		orgIds = append(orgIds, o.OrgId)
-	}
-	return
-}
-
-func GetUserByOrg(query *db.Session, orgId models.Id) (userOrgRel []*models.UserOrg, err error) {
-	if err := query.Where("org_id = ?", orgId).Find(&userOrgRel); err != nil {
-		return nil, e.AutoNew(err, e.DBError)
-	}
-	return
 }

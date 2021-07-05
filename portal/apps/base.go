@@ -1,6 +1,8 @@
 package apps
 
 import (
+	"cloudiac/portal/libs/ctx"
+	"fmt"
 	"reflect"
 
 	"cloudiac/portal/consts/e"
@@ -43,4 +45,9 @@ func getEmptyListResult(form forms.PageFormer) (interface{}, e.Error) {
 		PageSize: p.Size,
 		List:     []string{},
 	}, nil
+}
+
+func BaseHandler(c *ctx.ServiceCtx, form *forms.BaseForm) (interface{}, e.Error) {
+	c.AddLogField("action", fmt.Sprintf("base"))
+	return nil, nil
 }

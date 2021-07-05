@@ -27,7 +27,6 @@ func (AccessToken) Search(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.SearchAccessToken(c.ServiceCtx(), &form))
 }
 
-
 func (AccessToken) Update(c *ctx.GinRequestCtx) {
 	form := forms.UpdateAccessTokenForm{}
 	if err := c.Bind(&form); err != nil {
@@ -43,7 +42,6 @@ func (AccessToken) Delete(c *ctx.GinRequestCtx) {
 	}
 	c.JSONResult(apps.DeleteAccessToken(c.ServiceCtx(), &form))
 }
-
 
 func (AccessToken) Detail(c *ctx.GinRequestCtx) {
 	form := forms.DetailAccessTokenForm{}

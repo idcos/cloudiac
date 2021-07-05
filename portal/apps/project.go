@@ -57,6 +57,10 @@ type ProjectResp struct {
 
 func SearchProject(c *ctx.ServiceCtx, form *forms.SearchProjectForm) (interface{}, e.Error) {
 	query := services.SearchProject(c.DB(), c.OrgId, form.Q)
+	// 默认按创建时间逆序排序
+	if form.SortField() == "" {
+		query = query.Order("created_at DESC")
+	}
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	projectResp := make([]ProjectResp, 0)
 	if err := p.Scan(&projectResp); err != nil {
