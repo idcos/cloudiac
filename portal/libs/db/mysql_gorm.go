@@ -11,7 +11,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 
-	"cloudiac/configs"
 	"cloudiac/portal/consts/e"
 	"cloudiac/utils/logs"
 )
@@ -295,9 +294,9 @@ func (s *Session) CompareFieldValue(field string, q string) (*Session, error) {
 	}
 }
 
-func openDB(args string) error {
+func openDB(args ...interface{}) error {
 	var err error
-	db, err = gorm.Open("mysql", args)
+	db, err = gorm.Open("mysql", args...)
 	return err
 }
 
@@ -367,18 +366,13 @@ func (sqlLogger) baseFilePath(p string) string {
 }
 
 func Get() *Session {
-	if db == nil {
-		conf := configs.Get()
-		if err := openDB(conf.Mysql); err != nil {
-			logger.Panicln(err)
-		}
-		db.SetLogger(sqlLogger{logger})
-	}
-
 	return ToSess(db)
 }
 
-func Init() {
+func Init(args ...interface{}) {
 	logger = logs.Get()
-	Get()
+	if err := openDB(args...); err != nil {
+		logger.Fatalln(err)
+	}
+	db.SetLogger(sqlLogger{logger})
 }

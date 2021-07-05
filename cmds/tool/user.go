@@ -26,7 +26,7 @@ func (p *ChangePassword) Execute(args []string) error {
 	}
 
 	configs.Init(opt.Config)
-	db.Init()
+	db.Init(configs.Get().Mysql)
 	models.Init(false)
 
 	password := args[0]

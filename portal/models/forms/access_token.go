@@ -1,6 +1,6 @@
 package forms
 
 type AccessTokenHandler struct {
-	BaseForm
+	PageForm
 	AccessToken string `json:"accessToken" form:"accessToken" binding:"required"`
 }

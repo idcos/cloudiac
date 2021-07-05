@@ -11,7 +11,7 @@ const (
 	UpperCaseLetter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	DigitChars      = "0123456789"
 
-	DefaultPageSize = 15
+	DefaultPageSize = 15 // 默认分页大小
 	MaxPageSize     = 5000 // 同时是 csv 最大导出条数
 
 	MaxLogContentSize = 1024 * 1024 // 最大日志文件大小，超限会被截断
@@ -21,19 +21,7 @@ const (
 
 const (
 	// 作业状态
-
-	TaskPending   = "pending"
-	TaskAssigning = "assigning"
-
-	TaskRunning  = "running"
-	TaskTimeout  = "timeout"
-	TaskFailed   = "failed"
-	TaskComplete = "complete"
-
 	TaskLogName = "runner.log"
-	TaskApply   = "apply"
-	TaskPlan    = "plan"
-	TaskDestroy = "destroy"
 
 	ResourceAccountDisable = "disable"
 	ResourceAccountEnable  = "enable"

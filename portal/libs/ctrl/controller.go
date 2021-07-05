@@ -27,24 +27,24 @@ func cloneCtrl(ctrl Controller) Controller {
 }
 
 func Register(group *gin.RouterGroup, ctrl Controller) {
-	group.POST("/create", func(c *gin.Context) {
+	group.POST("", func(c *gin.Context) {
 		cloneCtrl(ctrl).Create(ctx.NewRequestCtx(c))
 	})
-	group.DELETE("/delete", func(c *gin.Context) {
+	group.DELETE("/:id", func(c *gin.Context) {
 		cloneCtrl(ctrl).Delete(ctx.NewRequestCtx(c))
 	})
-	group.PUT("/update", func(c *gin.Context) {
+	group.PUT("/:id", func(c *gin.Context) {
 		cloneCtrl(ctrl).Update(ctx.NewRequestCtx(c))
 	})
-	group.GET("/search", func(c *gin.Context) {
-		cloneCtrl(ctrl).Search(ctx.NewRequestCtx(c))
-	})
-	group.GET("/detail", func(c *gin.Context) {
+	group.GET("/:id", func(c *gin.Context) {
 		cloneCtrl(ctrl).Detail(ctx.NewRequestCtx(c))
+	})
+	group.GET("", func(c *gin.Context) {
+		cloneCtrl(ctrl).Search(ctx.NewRequestCtx(c))
 	})
 }
 
-// 包装我们自己接收 ctx.GinRequestCtx 的 handler，返回 gin.HandlerFunc
+// GinRequestCtxWrap 包装我们自己接收 ctx.GinRequestCtx 的 handler，返回 gin.HandlerFunc
 func GinRequestCtxWrap(handler func(*ctx.GinRequestCtx)) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		handler(ctx.NewRequestCtx(c))

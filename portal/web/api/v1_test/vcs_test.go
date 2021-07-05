@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"cloudiac/configs"
 	"cloudiac/portal/libs/db"
+	"cloudiac/portal/models"
 	"cloudiac/portal/services"
 	"cloudiac/portal/web"
 	"cloudiac/utils/logs"
@@ -29,7 +30,7 @@ func init() {
 	base, _ := os.Getwd()
 	path := filepath.Dir(filepath.Dir(filepath.Dir(base)))
 	configPath := path + "/config.yml"
-	token, _ = services.GenerateToken(1, "yunji", true, 1*24*time.Hour)
+	token, _ = services.GenerateToken(models.NewId(""), "yunji", true, 1*24*time.Hour)
 	configs.Init(configPath)
 	conf := configs.Get().Log
 	logs.Init(conf.LogLevel, "", 0)
@@ -131,7 +132,7 @@ func vcsDelete(id int) int {
 
 func TestVcs(t *testing.T) {
 	defer func() {
-		db.Init()
+		db.Init(configs.Get().Mysql)
 		rows, _ := db.Get().Raw("truncate iac_vcs;").Rows()
 		defer rows.Close()
 	}()

@@ -4,6 +4,8 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/models/forms"
 	"cloudiac/utils/logs"
+	"reflect"
+
 	//"bufio"
 	"bytes"
 	"encoding/json"
@@ -21,7 +23,7 @@ import (
 type GinRequestCtx struct {
 	*gin.Context
 	sc   *ServiceCtx
-	form forms.Former
+	form forms.BaseFormer
 }
 
 type SysRequestCtx struct {
@@ -81,11 +83,18 @@ func convertMessage(i interface{}) string {
 	}
 }
 
+type JSONResult struct {
+	Code          int         `json:"code" example:"200"`
+	Message       string      `json:"message" example:"ok"`
+	MessageDetail string      `json:"message_detail,omitempty" example:"ok"`
+	Result        interface{} `json:"result,omitempty"`
+}
+
 func (c *GinRequestCtx) JSON(status int, msg interface{}, result interface{}) {
 	var (
 		message = ""
 		code    = 0
-		detail  interface{}
+		detail  string
 	)
 
 	if msg != nil {
@@ -107,12 +116,15 @@ func (c *GinRequestCtx) JSON(status int, msg interface{}, result interface{}) {
 	} else {
 		code = status
 	}
-	c.Context.JSON(status, gin.H{
-		"code":           code,
-		"message":        message,
-		"message_detail": detail,
-		"result":         result,
-	})
+
+	jsonResult := JSONResult{
+		Code:          code,
+		Message:       message,
+		MessageDetail: detail,
+		Result:        result,
+	}
+
+	c.Context.JSON(status, jsonResult)
 }
 
 func (c *GinRequestCtx) JSONError(err e.Error, statusOrResult ...interface{}) {
@@ -217,12 +229,40 @@ func (c *GinRequestCtx) AbortIfError(err e.Error) bool {
 	return false
 }
 
-func (c *GinRequestCtx) Bind(form forms.Former) error {
+//BindUriTagOnly 将 context.Params 绑定到标记了 uri 标签的 form 字段
+func BindUriTagOnly(c *GinRequestCtx, b interface{}) error {
+	if len(c.Params) == 0 {
+		return nil
+	}
+	typs := reflect.TypeOf(b).Elem()
+	vals := reflect.ValueOf(b).Elem()
+	for _, p := range c.Params {
+		for i := 0; i < typs.NumField(); i++ {
+			if _, ok := typs.Field(i).Tag.Lookup("uri"); ok {
+				v := reflect.ValueOf(p.Value)
+				vals.Field(i).Set(v.Convert(vals.Field(i).Type()))
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *GinRequestCtx) Bind(form forms.BaseFormer) error {
 	var body []byte
 	if c.ContentType() == "application/json" {
 		body, _ = ioutil.ReadAll(c.Request.Body)
 		// Write body back for ShouldBind() call
 		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
+	}
+
+	// 将 Params 绑定到 form 里面标记了 uri 的字段
+	if err := BindUriTagOnly(c, form); err != nil {
+		// URI 参数不对，按路径不对处理
+		c.Logger().Errorf("bind uri error %s", err)
+		c.JSON(http.StatusNotFound, e.New(e.BadParam, err), nil)
+		c.Abort()
+		return err
 	}
 
 	if err := c.Context.ShouldBind(form); err != nil {
@@ -250,6 +290,9 @@ func (c *GinRequestCtx) Bind(form forms.Former) error {
 		for k := range jsObj {
 			values[k] = []string{fmt.Sprintf("%v", jsObj[k])}
 		}
+	}
+	for _, p := range c.Params {
+		values[p.Key] = []string{fmt.Sprintf("%v", p.Value)}
 	}
 
 	form.Bind(values)
