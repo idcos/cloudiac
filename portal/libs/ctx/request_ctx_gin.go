@@ -278,6 +278,10 @@ func (c *GinRequestCtx) Bind(form forms.BaseFormer) error {
 	}
 
 	values := url.Values{}
+	// path 参数可以被 post 参数覆盖
+	for _, p := range c.Params {
+		values[p.Key] = []string{fmt.Sprintf("%v", p.Value)}
+	}
 	for k, v := range c.Request.Form {
 		values[k] = v
 	}
@@ -290,9 +294,6 @@ func (c *GinRequestCtx) Bind(form forms.BaseFormer) error {
 		for k := range jsObj {
 			values[k] = []string{fmt.Sprintf("%v", jsObj[k])}
 		}
-	}
-	for _, p := range c.Params {
-		values[p.Key] = []string{fmt.Sprintf("%v", p.Value)}
 	}
 
 	form.Bind(values)

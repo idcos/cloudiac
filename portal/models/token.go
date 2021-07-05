@@ -24,3 +24,8 @@ func (o Token) Migrate(sess *db.Session) (err error) {
 	}
 	return nil
 }
+
+type LoginResp struct {
+	//UserInfo *models.User
+	Token string `json:"token" example:"eyJhbGciO..."` // 登陆令牌
+}

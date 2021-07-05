@@ -12,6 +12,11 @@ import (
 
 type Attrs map[string]interface{}
 
+const (
+	Enable  = "enable"
+	Disable = "disable"
+)
+
 type Modeler interface {
 	TableName() string
 	Validate() error

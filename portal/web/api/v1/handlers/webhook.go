@@ -13,11 +13,11 @@ type AccessToken struct {
 
 // Create 创建webhook
 // @Tags 触发器
-// @Description 创建触发器接口
+// @Summary 创建触发器接口
 // @Accept application/json
 // @Param tplGuid formData string false "云模版guid"
 // @Param action formData string false "动作"
-// @router /api/v1/webhook/create [post]
+// @router /webhook/create [post]
 // @Success 200 {object} models.TemplateAccessToken
 func (AccessToken) Create(c *ctx.GinRequestCtx) {
 	form := &forms.CreateAccessTokenForm{}
@@ -29,10 +29,10 @@ func (AccessToken) Create(c *ctx.GinRequestCtx) {
 
 // Search 查询webhook
 // @Tags 触发器
-// @Description 查询触发器接口
+// @Summary 查询触发器接口
 // @Accept application/json
 // @Param tplGuid formData string false "云模版guid"
-// @router /api/v1/webhook/search [get]
+// @router /webhook/search [get]
 // @Success 200 {object} models.TemplateAccessToken
 func (AccessToken) Search(c *ctx.GinRequestCtx) {
 	form := forms.SearchAccessTokenForm{}
@@ -44,11 +44,11 @@ func (AccessToken) Search(c *ctx.GinRequestCtx) {
 
 // Update 修改webhook
 // @Tags 触发器
-// @Description 修改触发器接口
+// @Summary 修改触发器接口
 // @Accept application/json
 // @Param id formData int false "触发器id"
 // @Param action formData string false "动作"
-// @router /api/v1/webhook/update [put]
+// @router /webhook/update [put]
 // @Success 200 {object} models.TemplateAccessToken
 func (AccessToken) Update(c *ctx.GinRequestCtx) {
 	form := forms.UpdateAccessTokenForm{}
@@ -60,10 +60,10 @@ func (AccessToken) Update(c *ctx.GinRequestCtx) {
 
 // Delete 删除webhook
 // @Tags 触发器
-// @Description 删除触发器接口
+// @Summary 删除触发器接口
 // @Accept application/json
 // @Param id formData int false "触发器id"
-// @router /api/v1/webhook/delete [delete]
+// @router /webhook/delete [delete]
 // @Success 200 {object} models.TemplateAccessToken
 func (AccessToken) Delete(c *ctx.GinRequestCtx) {
 	form := forms.DeleteAccessTokenForm{}
@@ -75,10 +75,10 @@ func (AccessToken) Delete(c *ctx.GinRequestCtx) {
 
 // Detail webhook详情
 // @Tags 触发器
-// @Description 触发器详情接口
+// @Summary 触发器详情接口
 // @Accept application/json
 // @Param id formData int false "触发器id"
-// @router /api/v1/webhook/detail [get]
+// @router /webhook/detail [get]
 // @Success 200 {object} models.TemplateAccessToken
 func (AccessToken) Detail(c *ctx.GinRequestCtx) {
 	form := forms.DetailAccessTokenForm{}
