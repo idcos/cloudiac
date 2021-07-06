@@ -77,3 +77,20 @@ func IsOrgAdmin(c *ctx.GinRequestCtx) {
 	}
 	return
 }
+
+// AuthProjectId 验证项目ID是否有效
+func AuthProjectId(c *ctx.GinRequestCtx) {
+	if c.ServiceCtx().ProjectId == "" {
+		c.JSONError(e.New(e.InvalidProjectId), http.StatusForbidden)
+		return
+	}
+	// TODO: 查找项目角色
+	//userOrgRel, err := services.FindUsersOrgRel(c.ServiceCtx().DB(), c.ServiceCtx().UserId, c.ServiceCtx().OrgId)
+	//if err == nil && len(userOrgRel) > 0 {
+	//	c.ServiceCtx().Role = userOrgRel[0].Role
+	//	c.Next()
+	//	return
+	//}
+	//c.JSONError(e.New(e.PermissionDeny), http.StatusForbidden)
+	return
+}

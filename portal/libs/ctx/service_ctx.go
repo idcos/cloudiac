@@ -5,6 +5,8 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/utils/logs"
 	"fmt"
+	"github.com/casbin/casbin/v2"
+	gormadapter "github.com/casbin/gorm-adapter/v2"
 	"math/rand"
 )
 
@@ -19,13 +21,18 @@ type ServiceCtx struct {
 	org   *models.Organization
 	//OrgGuid    string
 	UserId       models.Id // 登陆用户ID
-	Username     string
-	IsSuperAdmin bool
-	Role         string
+	Username     string    // 用户名称
+	IsSuperAdmin bool      // 是否平台管理员
+	Role         string    // 组织角色
 	user         *models.User
 	UserIpAddr   string
 	UserAgent    string
 	Perms        []string
+	ProjectId    models.Id // 项目ID
+	ProjectRole  string    // 项目角色
+
+	// Casbin
+	enforcer *casbin.Enforcer
 }
 
 func NewServiceCtx(rc RequestContextInter) *ServiceCtx {
@@ -117,3 +124,23 @@ func (c *ServiceCtx) AddLogField(key string, val string) *ServiceCtx {
 //
 //	return c.rdb
 //}
+
+// Enforcer 初始化 casbin enforcer 对象
+func (c *ServiceCtx) Enforcer() *casbin.Enforcer {
+	if c.enforcer == nil {
+		var err error
+
+		adapter, err := gormadapter.NewAdapterByDBUsePrefix(db.Get().DB(), "iac_")
+		if err != nil {
+			panic(fmt.Sprintf("error create enforcer: %v", err))
+		}
+
+		// 加载策略模型
+		// TODO: 策略模型初始化到数据库，减少外部文件
+		c.enforcer, err = casbin.NewEnforcer("configs/rbac_model.conf", adapter)
+		if err != nil {
+			panic(fmt.Sprintf("error create enforcer: %v", err))
+		}
+	}
+	return c.enforcer
+}

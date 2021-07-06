@@ -142,3 +142,21 @@ func (User) Detail(c *ctx.GinRequestCtx) {
 	}
 	c.JSONResult(apps.UserDetail(c.ServiceCtx(), form.Id))
 }
+
+// PasswordReset 重置用户密码
+// @Tags 鉴权
+// @Summary 用户重置密码
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Param userId path string true "用户ID"
+// @Param form formData forms.DetailUserForm true "parameter"
+// @router /users/{userId}/reset_password [post]
+// @Success 200 {object} ctx.JSONResult{result=apps.CreateUserResp}
+func (User) PasswordReset(c *ctx.GinRequestCtx) {
+	form := forms.DetailUserForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.UserPassReset(c.ServiceCtx(), &form))
+}

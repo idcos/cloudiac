@@ -71,20 +71,3 @@ func (Auth) Login(c *ctx.GinRequestCtx) {
 	}
 	c.JSONResult(apps.Login(c.ServiceCtx(), &form))
 }
-
-// UserPassReset 用户重置密码
-// @Tags 鉴权
-// @Summary 用户重置密码
-// @Accept multipart/form-data
-// @Accept json
-// @Produce json
-// @Param form formData forms.DetailUserForm true "parameter"
-// @router /auth/password [put]
-// @Success 200 {object} ctx.JSONResult{result=models.Organization}
-func (Auth) UserPassReset(c *ctx.GinRequestCtx) {
-	form := forms.DetailUserForm{}
-	if err := c.Bind(&form); err != nil {
-		return
-	}
-	c.JSONResult(apps.UserPassReset(c.ServiceCtx(), &form))
-}
