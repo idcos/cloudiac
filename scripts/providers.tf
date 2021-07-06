@@ -14,9 +14,24 @@ terraform {
       source = "aliyun/alicloud"
     }
 
-    huaweicloudv1dot24dot2 = {
+    aliyunv1d124d3 = {
+      source = "aliyun/alicloud"
+      version = "1.124.3"
+    }
+
+    huaweicloudv1d24d2 = {
       source  = "huaweicloud/huaweicloud"
       version = "1.24.2"
+    }
+
+    vspherev1d26d0  = {
+      source  = "hashicorp/vsphere"
+      version = "1.26.0"
+    }
+
+    aliyunhashicorpv1d124d3 = {
+      source = "hashicorp/alicloud"
+      version = "1.124.3"
     }
   }
 }
