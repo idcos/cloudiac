@@ -40,7 +40,6 @@ portal: reset-build-dir swag-docs
 	$(GOBUILD) -o $(BUILD_DIR)/iac-portal ./cmds/portal
 	cp ./configs/config-portal.yml.sample $(BUILD_DIR)/config-portal.yml.sample
 	cp ./configs/dotenv.sample $(BUILD_DIR)/dotenv.sample
-	cp ./configs/rbac.conf.sample $(BUILD_DIR)/rbac.conf.sample
 
 runner: reset-build-dir
 	$(GOBUILD) -o $(BUILD_DIR)/ct-runner ./cmds/runner
