@@ -76,7 +76,7 @@ var polices = []Policy{
 	// {"anonymous", "auth", "read"},
 	// 登陆用户
 	{"login", "token", "*"},
-	//{"login", "system", "*"},
+	{"login", "system", "*"},
 	{"login", "runner", "*"},
 	{"login", "consul", "*"},
 	{"login", "webhook", "*"},
@@ -87,8 +87,6 @@ var polices = []Policy{
 	{"admin", "orgs", "read/update/delete"},
 	{"admin", "orgs", "listuser/adduser/removeuser/updaterole"},
 	{"member", "orgs", "read"},
-	//{"admin", "users", "all"},
-	{"admin", "users", "read"},
 	{"admin", "users", "*"},
 	{"member", "users", "read"},
 
