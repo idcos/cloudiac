@@ -21,7 +21,7 @@ import (
 
 func Register(g *gin.RouterGroup) {
 	w := ctrl.GinRequestCtxWrap
-	a := middleware.AC
+	a := middleware.AccessControl
 
 	// 非授权用户相关路由
 	g.Any("/check", func(c *gin.Context) {

@@ -1,11 +1,13 @@
 package ctx
 
 import (
+	"cloudiac/configs"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/utils/logs"
 	"fmt"
 	"github.com/casbin/casbin/v2"
+	"github.com/casbin/casbin/v2/model"
 	gormadapter "github.com/casbin/gorm-adapter/v2"
 	"math/rand"
 )
@@ -136,8 +138,11 @@ func (c *ServiceCtx) Enforcer() *casbin.Enforcer {
 		}
 
 		// 加载策略模型
-		// TODO: 策略模型初始化到数据库，减少外部文件
-		c.enforcer, err = casbin.NewEnforcer("configs/rbac_model.conf", adapter)
+		m, err := model.NewModelFromString(configs.RbacModel)
+		if err != nil {
+			panic(fmt.Sprintf("error load rbac model: %v", err))
+		}
+		c.enforcer, err = casbin.NewEnforcer(m, adapter)
 		if err != nil {
 			panic(fmt.Sprintf("error create enforcer: %v", err))
 		}

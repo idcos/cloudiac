@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-// 用户认证
+// Auth 用户认证
 func Auth(c *ctx.GinRequestCtx) {
 	tokenStr := c.GetHeader("Authorization")
 	if tokenStr == "" {
@@ -40,7 +40,7 @@ func Auth(c *ctx.GinRequestCtx) {
 	}
 }
 
-// 验证组织ID是否有效
+// AuthOrgId 验证组织ID是否有效
 func AuthOrgId(c *ctx.GinRequestCtx) {
 	if c.ServiceCtx().OrgId == "" {
 		c.JSONError(e.New(e.InvalidOrganizationId), http.StatusForbidden)
