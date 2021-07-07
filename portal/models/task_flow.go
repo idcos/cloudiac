@@ -45,6 +45,7 @@ apply:
 destroy:
   steps:
     - type: init
+    - type: plan
       args: ["-destroy"]
     - type: destroy
 `

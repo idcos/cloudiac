@@ -72,8 +72,7 @@ func (t *Task) Run() (cid string, err error) {
 		filepath.Join(t.stepDirName(t.req.Step), TaskLogName),
 	)}
 
-	logger.WithField("taskId", t.req.TaskId).WithField("step", t.req.Step).
-		Infof("start task step, workdir: %s", cmd.HostWorkdir)
+	t.logger.Infof("start task step, workdir: %s", cmd.HostWorkdir)
 	if cid, err = cmd.Start(); err != nil {
 		return cid, err
 	}
@@ -85,6 +84,7 @@ func (t *Task) Run() (cid string, err error) {
 		Request:     t.req,
 		ContainerId: cid,
 	})
+
 	stepDir := GetTaskStepDir(t.req.Env.Id, t.req.TaskId, t.req.Step)
 	if er := os.WriteFile(filepath.Join(stepDir, TaskInfoFileName), infoJson, 0644); er != nil {
 		logger.Errorln(er)
@@ -292,7 +292,7 @@ cd 'code/{{.Req.Env.Workdir}}' && \
 git checkout '{{.Req.RepoRevision}}' && \
 ln -svf {{.IacTfFile}} . && \
 ln -svf {{.IacTfVars}} . && \
-terraform init -input=false
+terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }}
 `))
 
 // 将 workspace 根目录下的文件名转为可以在环境的 workdir 下访问的相对路径
@@ -317,7 +317,9 @@ func (t *Task) stepInit() (command string, err error) {
 var planCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 terraform plan -input=false \
-{{if .TfVars}}-var-file={{.TfVars}}{{end}} -var-file={{.IacTfVars}} -out=_cloudiac.plan
+{{if .TfVars}}-var-file={{.TfVars}}{{end}} -var-file={{.IacTfVars}} \
+{{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }}\
+-out=_cloudiac.plan
 `))
 
 func (t *Task) stepPlan() (command string, err error) {
@@ -331,8 +333,9 @@ func (t *Task) stepPlan() (command string, err error) {
 // 当指定了 plan 文件时不需要也不能传 -var-file 参数
 var applyCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
-terraform apply -input=false -auto-approve _cloudiac.plan && \
-terraform state list >{{.StateListPath}} 2>&1
+terraform apply -input=false -auto-approve \
+{{ range $arg := .Req.StepArgs}}{{$arg}} {{ end }} _cloudiac.plan && \
+terraform state list >{{.StateListPath}} 2>&1  
 `))
 
 func (t *Task) stepApply() (command string, err error) {
@@ -346,7 +349,9 @@ func (t *Task) stepApply() (command string, err error) {
 
 var destroyCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
-terraform destroy -input=false -auto-approve {{if .TfVars}}-var-file={{.TfVars}}{{end}} -var-file={{.IacTfVars}} && \
+terraform destroy -input=false -auto-approve \
+{{if .TfVars}}-var-file={{.TfVars}}{{end}} -var-file={{.IacTfVars}} \
+{{ range $arg := .Req.StepArgs}}{{$arg}} {{end}}&& \
 terraform state list >{{.StateListPath}} 2>&1
 `))
 
@@ -372,7 +377,8 @@ cd 'code/{{.Req.Env.Workdir}}' && ansible-playbook \
 {{ if .Req.Env.PlayVarsFile -}}
 --extra @{{.Req.Env.PlayVarsFile}} \
 {{ end -}}
-{{.Req.Env.Playbook}} {{- range $arg := .Req.StepArgs}} {{$arg}}{{end -}}
+{{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }} \
+{{.Req.Env.Playbook}} 
 `))
 
 func (t *Task) stepPlay() (command string, err error) {
