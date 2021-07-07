@@ -112,6 +112,7 @@ const (
 
 	// template
 	TemplateAlreadyExists = 11010
+	TemplateNotExists = 11020
 
 	// consul
 	ConsulConnError = 12010

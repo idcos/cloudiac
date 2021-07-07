@@ -8,7 +8,6 @@ type Template struct {
 	Name         string `json:"name" gorm:"not null;comment:'模版名称'"`
 	TplType      string `json:"tplType" gorm:"not null;comment:'云模板类型(aliyun，VMware等)'"`
 	OrgId        Id   `json:"orgId" gorm:"size:32;not null"`
-	ProjectId    Id   `json:"projectId" gorm:"size:32;not null"`
 	Description  string `json:"description" gorm:"type:text"`
 	VcsId        Id   `json:"vcsId" gorm:"size:32;not null"`
 	RepoId       string `json:"repoId" gorm:"not null"`
@@ -19,7 +18,9 @@ type Template struct {
 	Status       string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'状态'"`
 	CreatorId    Id   `json:"creatorId" gorm:"size:32;not null;comment:'创建人'"`
 	RunnerId     string `json:"runnerId" gorm:"not null;comment:'默认 runnerId'"`
+	VarFile		 string `json:"varFile" gorm:"default:''"`
 }
+
 
 func (Template) TableName() string {
 	return "iac_template"
