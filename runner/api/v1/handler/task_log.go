@@ -1,8 +1,9 @@
-package v1
+package handler
 
 import (
 	"bufio"
 	"cloudiac/runner"
+	"cloudiac/runner/api/ctx"
 	"cloudiac/runner/ws"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
@@ -17,15 +18,24 @@ import (
 )
 
 // TaskLogFollow 读取 task log 并 follow, 直到任务退出
-func TaskLogFollow(c *gin.Context) {
-	task := runner.CommitedTask{
-		TemplateId:  c.Query("templateId"),
-		TaskId:      c.Query("taskId"),
-		ContainerId: c.Query("containerId"),
+func TaskLogFollow(c *ctx.Context) {
+	req := runner.TaskStatusReq{}
+	if err := c.BindQuery(&req); err != nil {
+		c.Error(err, http.StatusBadRequest)
+		return
+	}
+
+	task, err := runner.LoadCommittedTask(req.EnvId, req.TaskId, req.Step)
+	if err != nil {
+		if os.IsNotExist(err) {
+			c.Error(err, http.StatusNotFound)
+		} else {
+			c.Error(err, http.StatusInternalServerError)
+		}
+		return
 	}
 
 	logger := logger.WithField("taskId", task.TaskId)
-
 	wsConn, peerClosed, err := ws.UpgradeWithNotifyClosed(c.Writer, c.Request, nil)
 	if err != nil {
 		logger.Warnln(err)
@@ -34,7 +44,7 @@ func TaskLogFollow(c *gin.Context) {
 	}
 	defer utils.WebsocketClose(wsConn)
 
-	if err := doFollowTaskLog(wsConn, &task, 0, peerClosed); err != nil {
+	if err := doFollowTaskLog(wsConn, task, 0, peerClosed); err != nil {
 		logger.Errorf("doFollowTaskLog error: %v", err)
 		_ = utils.WebsocketCloseWithCode(wsConn, websocket.CloseInternalServerErr, err.Error())
 	} else {
@@ -42,7 +52,7 @@ func TaskLogFollow(c *gin.Context) {
 	}
 }
 
-func doFollowTaskLog(wsConn *websocket.Conn, task *runner.CommitedTask, offset int64, closedCh <-chan struct{}) error {
+func doFollowTaskLog(wsConn *websocket.Conn, task *runner.CommittedTaskStep, offset int64, closedCh <-chan struct{}) error {
 	logger := logger.WithField("func", "doFollowTaskLog").WithField("taskId", task.TaskId)
 
 	var (
@@ -52,7 +62,7 @@ func doFollowTaskLog(wsConn *websocket.Conn, task *runner.CommitedTask, offset i
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	defer cancelCtx()
 
-	logPath := filepath.Join(runner.GetTaskWorkDir(task.TemplateId, task.TaskId), runner.TaskLogName)
+	logPath := filepath.Join(runner.GetTaskStepDir(task.EnvId, task.TaskId, task.Step), runner.TaskLogName)
 	contentChan, readErrChan := followFile(ctx, logPath, offset)
 
 	// 等待任务退出协程

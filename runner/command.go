@@ -1,143 +1,111 @@
 package runner
 
 import (
-	"fmt"
-	"os"
+	"cloudiac/configs"
+	"cloudiac/utils"
+	"context"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/client"
 	"path/filepath"
-	"strings"
-	"text/template"
 )
 
-var initCommandTemplate = `set -e 
-export CLOUD_IAC_TASK_DIR={{.TaskDir}}
-export CLOUD_IAC_WORKSPACE={{.Workspace}}
-export CLOUD_IAC_SSH_USER="root"
-export CLOUD_IAC_PRIVATE_KEY={{.TaskDir}}/ssh_key
+// Command to run docker image
+type Command struct {
+	Image      string
+	Env        []string
+	Timeout    int
+	PrivateKey string
 
-export TF_PLUGIN_CACHE_DIR={{.PluginsCachePath}}
+	Commands    []string
+	HostWorkdir string // 宿主机目录
+	Workdir     string // 容器目录
+	// for container
+	//ContainerInstance *Container
+}
 
-git clone {{.Repo}} ${CLOUD_IAC_WORKSPACE} && \
-cd "${CLOUD_IAC_WORKSPACE}" && git checkout {{.RepoCommit}} && \
-ln -sv ${CLOUD_IAC_TASK_DIR}/{{.CloudIacTFName}}  ./ && \
-terraform init && \`
+// Container Info
+type Container struct {
+	Context context.Context
+	ID      string
+	RunID   string
+}
 
-const planCommandTemplate = `
-terraform plan -input=false {{if .VarFile}}-var-file={{.VarFile}}{{end}}
-`
-
-const applyCommandTemplate = `
-terraform apply -input=false -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}} && \
-terraform state list >{{.ContainerStateListPath}} 2>&1 {{- if .AnsiblePlaybook}} && (
-  export ANSIBLE_TF_DIR="${CLOUD_IAC_WORKSPACE}"
-  cd {{.AnsibleWorkdir}} && ansible-playbook \
-    --inventory {{.AnsibleStateAnalysis}} \
-    --user "${CLOUD_IAC_SSH_USER}" \
-    --private-key "${CLOUD_IAC_PRIVATE_KEY}" \
-    {{.AnsiblePlaybook}}
-)
-{{- end}}
-`
-
-const destroyCommandTemplate = `
-terraform destroy -input=false -auto-approve {{if .VarFile}}-var-file={{.VarFile}}{{end}} && \
-terraform state list > {{.ContainerStateListPath}} 2>&1
-`
-
-const pullCommandTemplate = `
-terraform state pull
-`
-
-var (
-	initCommandTpl = template.Must(template.New("").Parse(initCommandTemplate))
-
-	planCommandTpl    = template.Must(template.New("").Parse(planCommandTemplate))
-	applyCommandTpl   = template.Must(template.New("").Parse(applyCommandTemplate))
-	destroyCommandTpl = template.Must(template.New("").Parse(destroyCommandTemplate))
-	pullCommandTpl    = template.Must(template.New("").Parse(pullCommandTemplate))
-
-	commandTplMap = map[string]*template.Template{
-		"plan":    planCommandTpl,
-		"apply":   applyCommandTpl,
-		"destroy": destroyCommandTpl,
-		"pull":    pullCommandTpl,
-	}
-)
-
-func GenScriptContent(context *ReqBody, saveTo string) error {
-	saveFp, err := os.OpenFile(saveTo, os.O_CREATE|os.O_WRONLY, 0755)
-
+func (cmd *Command) Start() (string, error) {
+	logger := logger.WithField("taskId", filepath.Base(cmd.HostWorkdir))
+	cli, err := client.NewClientWithOpts()
 	if err != nil {
-		return err
+		logger.Errorf("unable to create docker client")
+		return "", err
 	}
-	defer saveFp.Close()
+	cli.NegotiateAPIVersion(context.Background())
 
-	isRunDebug := false
-	// 允许为模板设置环境变量 IAC_DEBUG_TASK=1 来执行预设置的调试命令
-	if isDebug, ok := context.Env["IAC_DEBUG_TASK"]; ok && (isDebug == "1" || strings.ToLower(isDebug) == "true") {
-		isRunDebug = true
-	} else if context.Mode == "debug" { // 或者直接传 mode=debug
-		isRunDebug = true
-	}
+	logger.Infof("starting task, working directory: %s", cmd.HostWorkdir)
 
-	if isRunDebug {
-		// runner 启动时可以通过 IAC_DEBUG_COMMAND 环境变量自定义 debug 命令。
-		// !!该变量不允许通过任务环境变量传入，避免任意命令执行
-		debugCommand := os.Getenv("IAC_DEBUG_COMMAND")
-		if debugCommand == "" {
-			// 允许通过模板环境变量设置 count
-			count := context.Env["IAC_DEBUG_RUN_COUNT"]
-			if count == "" {
-				count = "60"
-			}
-			debugCommand = fmt.Sprintf("for I in `seq 1 %s`;do date && hostname && uptime; sleep 1; done", count)
-		}
-
-		if _, err := fmt.Fprintf(saveFp, "\n%s\n", debugCommand); err != nil {
-			return err
-		}
-		return nil
+	conf := configs.Get()
+	mountConfigs := []mount.Mount{
+		{
+			Type:   mount.TypeBind,
+			Source: cmd.HostWorkdir,
+			Target: ContainerWorkspace,
+		},
+		{
+			Type:   mount.TypeBind,
+			Source: conf.Runner.AbsPluginCachePath(),
+			Target: ContainerPluginCachePath,
+		},
+		{
+			Type:   mount.TypeBind,
+			Source: "/var/run/docker.sock",
+			Target: "/var/run/docker.sock",
+		},
 	}
 
-	if err := initCommandTpl.Execute(saveFp, map[string]string{
-		"Repo":             context.Repo,
-		"RepoCommit":       context.RepoCommit,
-		"Workspace":        ContainerWorkspace,
-		"TaskDir":          ContainerTaskDir,
-		"PluginsCachePath": ContainerPluginsCachePath,
-		"CloudIacTFName":   CloudIacTFName,
-	}); err != nil {
-		return err
+	// assets_path 配置为空则表示直接使用 worker 容器中打包的 assets。
+	// 在 runner 容器化部署时运行 runner 的宿主机(docker host)并没有 assets 目录，
+	// 如果配置了 assets 路径，进行 bind mount 时会因为源目录不存在而报错。
+	if conf.Runner.AssetsPath != "" {
+		mountConfigs = append(mountConfigs, mount.Mount{
+			Type:     mount.TypeBind,
+			Source:   conf.Runner.AbsAssetsPath(),
+			Target:   ContainerAssetsDir,
+			ReadOnly: true,
+		})
+		mountConfigs = append(mountConfigs, mount.Mount{
+			// providers 需要挂载到指定目录才能被 terraform 查找到，所以单独做一次挂载
+			Type:     mount.TypeBind,
+			Source:   conf.Runner.ProviderPath(),
+			Target:   ContainerPluginPath,
+			ReadOnly: true,
+		})
 	}
 
-	commandTpl, ok := commandTplMap[context.Mode]
-	if !ok {
-		return fmt.Errorf("unsupported mode '%s'", context.Mode)
+	c, err := cli.ContainerCreate(
+		context.Background(),
+		&container.Config{
+			Image:        cmd.Image,
+			WorkingDir:   cmd.Workdir,
+			Cmd:          cmd.Commands,
+			Env:          cmd.Env,
+			AttachStdin:  false,
+			AttachStdout: true,
+			AttachStderr: true,
+		},
+		&container.HostConfig{
+			AutoRemove: false,
+			Mounts:     mountConfigs,
+		},
+		nil,
+		nil,
+		"")
+	if err != nil {
+		logger.Errorf("create container err: %v", err)
+		return "", err
 	}
 
-	var (
-		containerStateListPath = filepath.Join(ContainerTaskDir, TerraformStateListName)
-		ansibleWorkdir         = ""
-		playbookName           = ""
-	)
-	if context.Playbook != "" {
-		ansibleWorkdir = filepath.Dir(context.Playbook)
-		playbookName = filepath.Base(context.Playbook)
-	}
-	if err := commandTpl.Execute(saveFp, map[string]string{
-		"VarFile": context.Varfile,
-		// 存储terraform state list输出内容弄的文件路径
-		"ContainerStateListPath": containerStateListPath,
-		"AnsibleWorkdir":         ansibleWorkdir,
-		"AnsiblePlaybook":        playbookName,
-		"AnsibleStateAnalysis":   filepath.Join(ContainerAssetsDir, AnsibleStateAnalysisName),
-	}); err != nil {
-		return err
-	}
-
-	if context.Extra != "" {
-		if _, err := fmt.Fprintf(saveFp, "\n%s\n", context.Extra); err != nil {
-			return err
-		}
-	}
-	return nil
+	cid := utils.ShortContainerId(c.ID)
+	logger.Infof("container id: %s", cid)
+	err = cli.ContainerStart(context.Background(), c.ID, types.ContainerStartOptions{})
+	return cid, err
 }

@@ -1,7 +1,8 @@
-package v1
+package handler
 
 import (
 	"cloudiac/runner"
+	"cloudiac/runner/api/ctx"
 	"cloudiac/runner/ws"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
@@ -9,16 +10,27 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
+	"os"
 	"time"
 )
 
 var logger = logs.Get()
 
-func TaskStatus(c *gin.Context) {
-	task := runner.CommitedTask{
-		TemplateId:  c.Query("templateId"),
-		TaskId:      c.Query("taskId"),
-		ContainerId: c.Query("containerId"),
+func TaskStatus(c *ctx.Context) {
+	req := runner.TaskStatusReq{}
+	if err := c.BindQuery(&req); err != nil {
+		c.Error(err, http.StatusBadRequest)
+		return
+	}
+
+	task, err := runner.LoadCommittedTask(req.EnvId, req.TaskId, req.Step)
+	if err != nil {
+		if os.IsNotExist(err) {
+			c.Error(err, http.StatusNotFound)
+		} else {
+			c.Error(err, http.StatusInternalServerError)
+		}
+		return
 	}
 
 	logger := logger.WithField("taskId", task.TaskId)
@@ -33,16 +45,16 @@ func TaskStatus(c *gin.Context) {
 		wsConn.Close()
 	}()
 
-	if err := doTaskStatus(wsConn, &task, peerClosed); err != nil {
+	if err := doTaskStatus(wsConn, task, peerClosed); err != nil {
 		logger.Errorln(err)
-		utils.WebsocketCloseWithCode(wsConn, websocket.CloseInternalServerErr, err.Error())
+		_ = utils.WebsocketCloseWithCode(wsConn, websocket.CloseInternalServerErr, err.Error())
 	} else {
-		utils.WebsocketClose(wsConn)
+		_ = utils.WebsocketClose(wsConn)
 	}
 }
 
-func doTaskStatus(wsConn *websocket.Conn, task *runner.CommitedTask, closedCh <-chan struct{}) error {
-	logger := logger.WithField("taskId", task.TaskId)
+func doTaskStatus(wsConn *websocket.Conn, task *runner.CommittedTaskStep, closedCh <-chan struct{}) error {
+	logger := logger.WithField("taskId", task.TaskId).WithField("step", task.Step)
 
 	// 获取任务最新状态并通过 websocket 发送
 	sendStatus := func(withLog bool) error {
@@ -58,15 +70,15 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.CommitedTask, closedCh <-
 		}
 
 		if withLog {
-			logs, err := runner.FetchTaskLog(task.TemplateId, task.TaskId)
+			logContent, err := runner.FetchTaskStepLog(task.EnvId, task.TaskId, task.Step)
 			if err != nil {
 				logger.Errorf("fetch task log error: %v", err)
 				msg.LogContent = utils.TaskLogMsgBytes("Fetch task log error: %v", err)
 			} else {
-				msg.LogContent = logs
+				msg.LogContent = logContent
 			}
 
-			stateList, err := runner.FetchStateList(task.TemplateId, task.TaskId)
+			stateList, err := runner.FetchStateList(task.EnvId, task.TaskId)
 			if err != nil {
 				logger.Errorf("fetch state list error: %v", err)
 				msg.StateListContent = utils.TaskLogMsgBytes("Fetch state list error: %v", err)
@@ -76,7 +88,7 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.CommitedTask, closedCh <-
 		}
 
 		if err := wsConn.WriteJSON(msg); err != nil {
-			logger.Errorln(err)
+			logger.Errorf("write message error: %v", err)
 			return err
 		}
 		return nil

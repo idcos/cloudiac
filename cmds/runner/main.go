@@ -1,22 +1,18 @@
 package main
 
 import (
-	v1 "cloudiac/runner/api/v1"
+	"cloudiac/runner/api/v1"
 	"fmt"
-	"github.com/pkg/errors"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
-	"time"
-
-	"cloudiac/cmds/common"
-	"cloudiac/configs"
-	"cloudiac/runner"
-	"cloudiac/utils/logs"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jessevdk/go-flags"
+	"github.com/pkg/errors"
+
+	"cloudiac/cmds/common"
+	"cloudiac/configs"
+	"cloudiac/utils/logs"
 )
 
 type Option struct {
@@ -96,90 +92,8 @@ func StartServer() {
 	conf := configs.Get()
 	logger := logs.Get()
 
-	type request struct {
-		*http.Request
-		doneCh chan struct{}
-	}
-
-	requestChan := make(chan request, 32)
-
 	e := gin.Default()
-	apiV1 := e.Group("/api/v1")
-	apiV1.Any("/check", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"success": true,
-		})
-	})
-	apiV1.POST("/metrics", func(c *gin.Context) {
-		r := request{Request: c.Request, doneCh: make(chan struct{}, 0)}
-		requestChan <- r
-		<-r.doneCh
-	})
-
-	//fp, err := os.OpenFile("./metrics.txt", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0600)
-	//if err != nil {
-	//	panic(err)
-	//}
-
-	apiV1.GET("/metrics", func(c *gin.Context) {
-		timer := time.NewTimer(time.Millisecond * 100)
-		totalRead := int64(0)
-
-		defer func() {
-			logger.Debugf("total read %d bytes", totalRead)
-			c.Request.Body.Close()
-			timer.Stop()
-		}()
-
-		for {
-			select {
-			case <-timer.C:
-				return
-			case req := <-requestChan:
-				//w := io.MultiWriter(c.Writer, fp)
-				w := c.Writer
-				nr, err := io.Copy(w, req.Body)
-				//logger.Infof("copy %d bytes", nr)
-				totalRead += nr
-				if err != nil {
-					logger.Errorf("io copy error: %v", err)
-				}
-				close(req.doneCh)
-			}
-		}
-	})
-
-	apiV1.POST("/task/run", func(c *gin.Context) {
-		id, err := runner.Run(c.Request)
-		if err != nil {
-			logger.Error(err.Error())
-			c.JSON(500, gin.H{
-				"err": err.Error(),
-			})
-		} else {
-			c.JSON(200, gin.H{
-				"id": id,
-			})
-		}
-	})
-
-	apiV1.GET("/task/status", v1.TaskStatus)
-	apiV1.GET("/task/log/follow", v1.TaskLogFollow)
-
-	apiV1.POST("/task/cancel", func(c *gin.Context) {
-		logger.Debug(c.Request.Body)
-		err := runner.Cancel(c.Request)
-		if err != nil {
-			c.JSON(500, gin.H{
-				"error": err,
-			})
-		} else {
-			c.JSON(200, gin.H{
-				"error": nil,
-			})
-		}
-	})
-
+	v1.RegisterRoute(e.Group("/api/v1"))
 	logger.Infof("starting runner on %v", conf.Listen)
 	if err := e.Run(conf.Listen); err != nil {
 		logger.Fatalln(err)
