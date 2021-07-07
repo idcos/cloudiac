@@ -2,14 +2,6 @@ package runner
 
 import "time"
 
-var (
-	AnsibleEnv = map[string]string{
-		"ANSIBLE_HOST_KEY_CHECKING": "False",
-		"ANSIBLE_TF_DIR":            ".",
-		"ANSIBLE_NOCOWS":            "1",
-	}
-)
-
 /*
 provider plugin 的查找逻辑:
 1. 检查 cache 目录是否存在目标 provider，存在则直接使用，否则

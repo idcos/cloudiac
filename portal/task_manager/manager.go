@@ -291,7 +291,7 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 		}
 
 		if err = m.runTaskStep(ctx, *runTaskReq, task, step); err != nil {
-			taskFailed(errors.Wrap(err, fmt.Sprintf("run task step%d", step.Index)))
+			taskFailed(errors.Wrap(err, fmt.Sprintf("run task step %d", step.Index)))
 			return
 		}
 	}
@@ -304,8 +304,9 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 
 func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq,
 	task *models.Task, step *models.TaskStep) (err error) {
-	logger := m.logger.WithField("taskId", taskReq.TaskId).WithField("step", fmt.Sprintf("%d", step.Index))
+	logger := m.logger.WithField("taskId", taskReq.TaskId)
 	logger.Infof("run task step %d", step.Index)
+	logger = logger.WithField("func", "runTaskStep").WithField("step", fmt.Sprintf("%d", step.Index))
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -321,9 +322,13 @@ func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq
 		}
 	}
 
+	var stepResult *waitStepResult
+
+loop:
 	for {
 		select {
 		case <-ctx.Done():
+			logger.Infof("context done")
 			return ctx.Err()
 		default:
 		}
@@ -345,23 +350,41 @@ func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq
 				return err
 			}
 		case models.TaskStepRunning:
-			if _, err = WaitTaskStep(ctx, m.db, task, step); err != nil {
+			if stepResult, err = WaitTaskStep(ctx, m.db, task, step); err != nil {
 				logger.Errorf("wait task result error: %v", err)
 				step.Status = models.TaskStepFailed
 				step.Message = err.Error()
 				updateStep()
 				return err
 			}
-		case models.TaskStepComplete:
-			// TODO 步骤成功可能需要后续操作(如统计 add change destroy 资源数)
-			return nil
-		case models.TaskStepFailed:
-			// TODO 获取步骤的失败消息？
-			if step.Message != "" {
-				return fmt.Errorf(step.Message)
-			}
-			return errors.New("failed")
+		default:
+			break loop
 		}
+	}
+
+	switch step.Status {
+	case models.TaskStepComplete:
+		if len(stepResult.Result.StateListContent) > 0 {
+			task.Result.StateResList = strings.Split(string(stepResult.Result.StateListContent), "\n")
+		}
+		if stepResult.Status == models.TaskComplete {
+			////TODO 解析日志输出，更新资源变更信息到 task.Result
+			//tfInfo := ParseTfOutput(task.BackendInfo.LogFile)
+			//models.UpdateAttr(dbSess.Where("id = ?", task.Id), &models.Task{}, tfInfo)
+		}
+		if _, err = m.db.Model(&models.Task{}).Update(task); err != nil {
+			return
+		}
+		return nil
+	case models.TaskStepFailed:
+		if step.Message != "" {
+			return fmt.Errorf(step.Message)
+		}
+		return errors.New("failed")
+	case models.TaskStepTimeout:
+		return errors.New("timeout")
+	default:
+		return fmt.Errorf("unknown step status: %v", step.Status)
 	}
 }
 
@@ -374,6 +397,8 @@ func (m *TaskManager) stop() {
 	logger.Infof("task manager stopped")
 }
 
+// buildRunTaskReq 基于任务信息构建一个 RunTaskReq 对象。
+// 	注意这里不会设置 step 相关的数据，step 相关字段在 StartTaskStep() 方法中设置
 func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunTaskReq, err error) {
 	var (
 		env        *models.Env
@@ -472,7 +497,6 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		Env:          runnerEnv,
 		RunnerId:     env.RunnerId,
 		TaskId:       string(task.Id),
-		StepArgs:     nil,
 		DockerImage:  "",
 		StateStore:   stateStore,
 		RepoAddress:  repoAddr,

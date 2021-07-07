@@ -72,6 +72,8 @@ func (t *Task) Run() (cid string, err error) {
 		filepath.Join(t.stepDirName(t.req.Step), TaskLogName),
 	)}
 
+	logger.WithField("taskId", t.req.TaskId).WithField("step", t.req.Step).
+		Infof("start task step, workdir: %s", cmd.HostWorkdir)
 	if cid, err = cmd.Start(); err != nil {
 		return cid, err
 	}
@@ -358,6 +360,10 @@ func (t *Task) stepDestroy() (command string, err error) {
 }
 
 var playCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
+export ANSIBLE_HOST_KEY_CHECKING="False"
+export ANSIBLE_TF_DIR="."
+export ANSIBLE_NOCOWS="1"
+
 cd 'code/{{.Req.Env.Workdir}}' && ansible-playbook \
 --inventory {{.AnsibleStateAnalysis}} \
 --user "root" \
@@ -366,7 +372,7 @@ cd 'code/{{.Req.Env.Workdir}}' && ansible-playbook \
 {{ if .Req.Env.PlayVarsFile -}}
 --extra @{{.Req.Env.PlayVarsFile}} \
 {{ end -}}
-{{.Req.Env.Playbook}}
+{{.Req.Env.Playbook}} {{- range $arg := .Req.StepArgs}} {{$arg}}{{end -}}
 `))
 
 func (t *Task) stepPlay() (command string, err error) {
@@ -388,12 +394,8 @@ sleep 0
 
 func (t *Task) stepCommand() (command string, err error) {
 	commands := make([]string, 0)
-	if args, ok := t.req.StepArgs.([]interface{}); !ok {
-		return "", fmt.Errorf("invalid command args")
-	} else {
-		for _, c := range args {
-			commands = append(commands, fmt.Sprintf("%v", c))
-		}
+	for _, c := range t.req.StepArgs {
+		commands = append(commands, fmt.Sprintf("%v", c))
 	}
 
 	return t.executeTpl(cmdCommandTpl, map[string]interface{}{

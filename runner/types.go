@@ -27,16 +27,16 @@ type StateStore struct {
 }
 
 type RunTaskReq struct {
-	Env          TaskEnv     `json:"env" binding:"required"`
-	RunnerId     string      `json:"runnerId" binding:""`
-	TaskId       string      `json:"taskId" binding:"required"`
-	Step         int         `json:"step" binding:""`
-	StepType     string      `json:"stepType" binding:"required"`
-	StepArgs     interface{} `json:"stepArgs"`
-	DockerImage  string      `json:"dockerImage"`
-	StateStore   StateStore  `json:"stateStore" binding:"required"`
-	RepoAddress  string      `json:"repoAddress" binding:"required"` // 带 token 的完整路径
-	RepoRevision string      `json:"repoRevision" binding:"required"`
+	Env          TaskEnv    `json:"env" binding:"required"`
+	RunnerId     string     `json:"runnerId" binding:""`
+	TaskId       string     `json:"taskId" binding:"required"`
+	Step         int        `json:"step" binding:""`
+	StepType     string     `json:"stepType" binding:"required"`
+	StepArgs     []string   `json:"stepArgs"`
+	DockerImage  string     `json:"dockerImage"`
+	StateStore   StateStore `json:"stateStore" binding:"required"`
+	RepoAddress  string     `json:"repoAddress" binding:"required"` // 带 token 的完整路径
+	RepoRevision string     `json:"repoRevision" binding:"required"`
 
 	Timeout    int    `json:"timeout"`
 	PrivateKey string `json:"privateKey"`
