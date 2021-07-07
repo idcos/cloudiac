@@ -6,6 +6,7 @@ import (
 	"cloudiac/runner"
 	"cloudiac/utils"
 	"database/sql/driver"
+	"fmt"
 	"path/filepath"
 	"time"
 )
@@ -36,9 +37,10 @@ func (v *TaskVariables) Scan(value interface{}) error {
 }
 
 type TaskResult struct {
-	ResAdded     int `json:"resAdded"`
-	ResChanged   int `json:"resChanged"`
-	ResDestroyed int `json:"resDestroyed"`
+	ResAdded     int      `json:"resAdded"`
+	ResChanged   int      `json:"resChanged"`
+	ResDestroyed int      `json:"resDestroyed"`
+	StateResList []string `json:"stateResList"`
 }
 
 func (v TaskResult) Value() (driver.Value, error) {
@@ -92,9 +94,9 @@ type Task struct {
 	Status    string `json:"status"`  // gorm 配置见 Migrate()
 	Message   string `json:"message"` // 任务的状态描述信息，如失败原因
 
-	Type     string `json:"type" gorm:"not null;enum('plan', 'apply', 'destroy')"`
-	Flow     string `json:"-" gorm:"type:text"`
-	CurrStep int    `json:"currStep" gorm:"default:'0'"` // 当前在执行的流程步骤
+	Type     string   `json:"type" gorm:"not null;enum('plan', 'apply', 'destroy')"`
+	Flow     TaskFlow `json:"-" gorm:"type:text"`
+	CurrStep int      `json:"currStep" gorm:"default:'0'"` // 当前在执行的流程步骤
 
 	StartAt *time.Time `json:"startAt" gorm:"null;comment:'任务开始时间'"`
 	EndAt   *time.Time `json:"endAt" gorm:"null;comment:'任务结束时间'"`
@@ -149,11 +151,29 @@ func (t *Task) Migrate(sess *db.Session) (err error) {
 	return nil
 }
 
+type TaskStepArgs []string
+
+func (v TaskStepArgs) Value() (driver.Value, error) {
+	return MarshalValue(v)
+}
+
+func (v *TaskStepArgs) Scan(value interface{}) error {
+	return UnmarshalValue(value, v)
+}
+
+type TaskStepBody struct {
+	Type string       `json:"type" yaml:"type" gorm:"type:enum('init','plan','apply','play','command','destroy')"`
+	Name string       `json:"name" yaml:"name" gorm:""`
+	Args TaskStepArgs `json:"args" yaml:"args" gorm:"type:text"`
+}
+
 const (
-	TaskStepInit  = common.TaskStepInit
-	TaskStepPlan  = common.TaskStepPlan
-	TaskStepApply = common.TaskStepApply
-	TaskStepPlay  = common.TaskStepPlay
+	TaskStepInit    = common.TaskStepInit
+	TaskStepPlan    = common.TaskStepPlan
+	TaskStepApply   = common.TaskStepApply
+	TaskStepDestroy = common.TaskStepDestroy
+	TaskStepPlay    = common.TaskStepPlay
+	TaskStepCommand = common.TaskStepCommand
 
 	TaskStepPending  = common.TaskStepPending
 	TaskStepRunning  = common.TaskStepRunning
@@ -164,12 +184,14 @@ const (
 
 type TaskStep struct {
 	BaseModel
+	TaskStepBody
+
 	OrgId     Id         `json:"orgId" gorm:"size:32;not null"`
 	ProjectId Id         `json:"projectId" gorm:"size:32;not null"`
+	EnvId     Id         `json:"envId" gorm:"size:32; not null"`
 	TaskId    Id         `json:"taskId" gorm:"size:32;not null"`
 	Index     int        `json:"index" gorm:"size:32;not null"`
-	Type      string     `json:"type" gorm:"type:enum('init', 'plan', 'apply', 'play')"`
-	Status    string     `json:"status" gorm:"type:enum('pending','running','failed','complete', 'timeout')"`
+	Status    string     `json:"status" gorm:"type:enum('pending','running','failed','complete','timeout')"`
 	Message   string     `json:"message" gorm:"type:text"`
 	StartAt   *time.Time `json:"startAt"`
 	EndAt     *time.Time `json:"endAt"`
@@ -180,6 +202,12 @@ func (TaskStep) TableName() string {
 	return "iac_task_step"
 }
 
-func (s *TaskStep) StateListPath() string {
-	return filepath.Join(filepath.Dir(s.LogPath), runner.StateListFile)
+func (s *TaskStep) GenLogPath() string {
+	return filepath.Join(
+		s.ProjectId.String(),
+		s.EnvId.String(),
+		s.TaskId.String(),
+		fmt.Sprintf("step%d", s.Index),
+		runner.TaskLogName,
+	)
 }

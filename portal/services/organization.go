@@ -92,7 +92,7 @@ func CreateUserOrgRel(tx *db.Session, userOrg models.UserOrg) (*models.UserOrg, 
 
 func DeleteUserOrgRel(tx *db.Session, userId models.Id, orgId models.Id) e.Error {
 	if _, err := tx.Where("user_id = ? AND org_id = ?", userId, orgId).Debug().Delete(&models.UserOrg{}); err != nil {
-		return e.New(e.DBError, fmt.Errorf("delete user %d for org %d error: %v", userId, orgId, err))
+		return e.New(e.DBError, fmt.Errorf("delete user %v for org %v error: %v", userId, orgId, err))
 	}
 	return nil
 }
