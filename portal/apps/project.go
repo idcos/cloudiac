@@ -3,7 +3,6 @@ package apps
 import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
-	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
@@ -28,7 +27,7 @@ func CreateProject(c *ctx.ServiceCtx, form *forms.CreateProjectForm) (interface{
 		_ = tx.Rollback()
 		return nil, err
 	}
-	if err := CreateUserProject(tx, form.UserAuthorization, project.Id); err != nil {
+	if err := services.BindProjectUsers(tx, project.Id, form.UserAuthorization); err != nil {
 		_ = tx.Rollback()
 		return nil, err
 	}
@@ -77,13 +76,7 @@ func UpdateProject(c *ctx.ServiceCtx, form *forms.UpdateProjectForm) (interface{
 			panic(r)
 		}
 	}()
-	// 删除项目和用户角色表数据
-	if err := services.DeleteUserProject(tx, form.Id); err != nil {
-		_ = tx.Rollback()
-		return nil, err
-	}
-	// 重新创建用户角色与项目的关系
-	if err := CreateUserProject(tx, form.UserAuthorization, form.Id); err != nil {
+	if err := services.UpdateProjectUsers(tx, form.Id, form.UserAuthorization); err != nil {
 		_ = tx.Rollback()
 		return nil, err
 	}
@@ -112,64 +105,34 @@ func UpdateProject(c *ctx.ServiceCtx, form *forms.UpdateProjectForm) (interface{
 }
 
 func DeleteProject(c *ctx.ServiceCtx, form *forms.DeleteProjectForm) (interface{}, e.Error) {
-	tx := c.DB().Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			panic(r)
-		}
-	}()
-	//todo 检验环境是否活跃
-	//项目是逻辑删除，用户和项目的角色关系是直接删除
-	if err := services.DeleteProject(tx, form.Id); err != nil {
-		_ = tx.Rollback()
-		return nil, err
-	}
-
-	if err := services.DeleteUserProject(tx, form.Id); err != nil {
-		_ = tx.Rollback()
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		_ = tx.Rollback()
-		return nil, e.New(e.DBError, err)
-	}
-
-	return nil, nil
+	return nil, e.New(e.NotImplement)
+	//tx := c.DB().Begin()
+	//defer func() {
+	//	if r := recover(); r != nil {
+	//		_ = tx.Rollback()
+	//		panic(r)
+	//	}
+	//}()
+	////todo 检验环境是否活跃
+	////项目是逻辑删除，用户和项目的角色关系是直接删除
+	//if err := services.DeleteProject(tx, form.Id); err != nil {
+	//	_ = tx.Rollback()
+	//	return nil, err
+	//}
+	//
+	//if err := services.DeleteUserProject(tx, form.Id); err != nil {
+	//	_ = tx.Rollback()
+	//	return nil, err
+	//}
+	//
+	//if err := tx.Commit(); err != nil {
+	//	_ = tx.Rollback()
+	//	return nil, e.New(e.DBError, err)
+	//}
+	//
+	//return nil, nil
 }
 
 func DetailProject(c *ctx.ServiceCtx, form *forms.DetailProjectForm) (interface{}, e.Error) {
 	return services.DetailProject(c.DB(), form.Id)
-}
-
-func CreateUserProject(tx *db.Session, authorization []forms.UserAuthorization, projectId models.Id) e.Error {
-	for _, v := range authorization {
-		if err := services.CreateUserProject(tx, &models.UserProject{
-			UserId:    v.UserId,
-			ProjectId: projectId,
-			Role:      v.Role,
-		}); err != nil {
-			_ = tx.Rollback()
-			return err
-		}
-	}
-
-	/*
-		gorm1.9.16版本不支持批量创建
-		userProject := make([]models.Modeler, 0)
-		for _, v := range form.UserAuthorization {
-			userProject = append(userProject, &models.UserProject{
-				UserId:    v.UserId,
-				ProjectId: project.Id,
-				Role:      v.Role,
-			})
-		}
-		if err := services.CreateUserProject(tx, userProject); err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
-	*/
-
-	return nil
 }
