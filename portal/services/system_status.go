@@ -157,3 +157,11 @@ func ConsulServiceRegistered(serviceInfo *api.AgentService, tags []string) e.Err
 	}
 	return nil
 }
+
+func GetRunnerAddress(serviceId string) (string, error) {
+	s, err := ConsulServiceInfo(serviceId)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("http://%s:%d", s.Address, s.Port), nil
+}

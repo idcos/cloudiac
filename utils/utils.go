@@ -487,6 +487,14 @@ func GetBoolEnv(key string, _default bool) bool {
 	return _default
 }
 
+func JoinURL(address string, path ...string) string {
+	elems := append([]string{address}, path...)
+	for i := range elems {
+		elems[i] = strings.Trim(elems[i], "/")
+	}
+	return strings.Join(elems, "/")
+}
+
 // SprintTemplate 用模板参数格式化字符串
 func SprintTemplate(format string, data interface{}) (str string) {
 	if tmpl, err := template.New("").Parse(format); err != nil {
@@ -497,3 +505,4 @@ func SprintTemplate(format string, data interface{}) (str string) {
 		return msg.String()
 	}
 }
+

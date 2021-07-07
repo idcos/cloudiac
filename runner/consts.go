@@ -26,18 +26,24 @@ provider plugin 的查找逻辑:
 /////
 // 以下定义的是 runner 启动任务后容器内部的路径，直接以常量配置即可
 const (
-	ContainerWorkspace        = "/cloud-iac/workspace"
-	ContainerTaskDir          = "/cloud-iac/task"              // 挂载 iac 任务相关文件, 任务脚本、日志等
-	ContainerAssetsDir        = "/cloud-iac/assets"            // 挂载依赖资源，如 terraform.py 等(可以考虑打包到镜像?)
-	ContainerPluginsPath      = "/usr/share/terraform/plugins" // 预置 providers 目录(可以考虑打包到镜像?)
-	ContainerPluginsCachePath = "/terraform/plugins-cache"     // terraform plugins 缓存目录
+	ContainerWorkspace = "/cloudiac/workspace"
+
+	//WorkspacePrefix         = "/cloud-iac/task"              // 挂载 iac 任务相关文件, 任务脚本、日志等
+
+	ContainerAssetsDir       = "/cloudiac/assets"             // 挂载依赖资源，如 terraform.py 等(可以考虑打包到镜像?)
+	ContainerPluginPath      = "/usr/share/terraform/plugins" // 预置 providers 目录(可以考虑打包到镜像?)
+	ContainerPluginCachePath = "/terraform/plugins-cache"     // terraform plugins 缓存目录
 )
 
 const (
-	TaskLogName              = "runner.log"
-	TerraformStateListName   = "state_list.log"
-	TaskScriptName           = "run.sh"
-	CloudIacTFName           = "_cloud_iac.tf"
+	TaskScriptName   = "run.sh"
+	TaskLogName      = "output.log"
+	TaskInfoFileName = "task.json"
+
+	StateListFile            = "state_list.log"
+	CloudIacTfFile           = "_cloudiac.tf"
+	CloudIacTfVars           = "_cloudiac.tfvars"
+	CloudIacPlayVars         = "_cloudiac_play_vars.yml"
 	AnsibleStateAnalysisName = "terraform.py"
 
 	FollowLogDelay = time.Second // follow 文件时读到 EOF 后进行下次读取的等待时长

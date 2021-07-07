@@ -62,6 +62,10 @@ func (i *Id) Scan(value interface{}) error {
 	return nil
 }
 
+func (i Id) String() string {
+	return string(i)
+}
+
 type BaseModel struct {
 	Id Id `gorm:"size:32;primary_key" json:"id" example:"x-c3ek0co6n88ldvq1n6ag"` //ID
 }

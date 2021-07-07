@@ -4,6 +4,7 @@ import (
 	"cloudiac/portal/apps"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 )
 
@@ -180,4 +181,24 @@ func (Organization) UpdateUserOrgRel(c *ctx.GinRequestCtx) {
 		return
 	}
 	c.JSONResult(apps.UpdateUserOrgRel(c.ServiceCtx(), &form))
+}
+
+// SearchUser 查询组织用户列表
+// @Tags 用户
+// @Summary 用户查询
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param orgId path string true "组织ID"
+// @Param Iac-Org-Id header string true "组织ID"
+// @Param form query forms.SearchUserForm true "parameter"
+// @router /orgs/{orgId}/users [get]
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.User}}
+func (Organization) SearchUser(c *ctx.GinRequestCtx) {
+	form := forms.SearchUserForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.ServiceCtx().OrgId = models.Id(c.Param("orgId"))
+	c.JSONResult(apps.SearchUser(c.ServiceCtx(), &form))
 }
