@@ -1,7 +1,6 @@
 package runner
 
 import (
-	"cloudiac/configs"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"context"
@@ -9,16 +8,41 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 var logger = logs.Get()
 
-func (task *CommitedTask) Cancel() error {
+type CommittedTaskStep struct {
+	EnvId       string     `json:"envId"`
+	TaskId      string     `json:"taskId"`
+	Step        int        `json:"step"`
+	Request     RunTaskReq `json:"request"`
+	ContainerId string     `json:"containerId"`
+
+	containerInfoLock sync.RWMutex
+}
+
+func LoadCommittedTask(envId string, taskId string, step int) (*CommittedTaskStep, error) {
+	path := filepath.Join(GetTaskStepDir(envId, taskId, step), TaskInfoFileName)
+	fp, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer fp.Close()
+
+	task := CommittedTaskStep{}
+	if err := json.NewDecoder(fp).Decode(&task); err != nil {
+		return nil, err
+	}
+	return &task, nil
+}
+
+func (task *CommittedTaskStep) Cancel() error {
 	cli, err := client.NewClientWithOpts()
 	cli.NegotiateAPIVersion(context.Background())
 	if err != nil {
@@ -39,7 +63,7 @@ func (task *CommitedTask) Cancel() error {
 	return nil
 }
 
-func (task *CommitedTask) Status() (types.ContainerJSON, error) {
+func (task *CommittedTaskStep) Status() (types.ContainerJSON, error) {
 	if task.hasContainerInfo() {
 		return task.readContainerInfo()
 	}
@@ -61,15 +85,15 @@ func (task *CommitedTask) Status() (types.ContainerJSON, error) {
 	return containerInfo, nil
 }
 
-func (task *CommitedTask) workdir() string {
-	return GetTaskWorkDir(task.TemplateId, task.TaskId)
+func (task *CommittedTaskStep) TaskStepDir() string {
+	return GetTaskStepDir(task.EnvId, task.TaskId, task.Step)
 }
 
-func (task *CommitedTask) containerInfoPath() string {
-	return filepath.Join(task.workdir(), "container.json")
+func (task *CommittedTaskStep) containerInfoPath() string {
+	return filepath.Join(task.TaskStepDir(), "container.json")
 }
 
-func (task *CommitedTask) writeContainerInfo(info *types.ContainerJSON) error {
+func (task *CommittedTaskStep) writeContainerInfo(info *types.ContainerJSON) error {
 	task.containerInfoLock.Lock()
 	defer task.containerInfoLock.Unlock()
 
@@ -81,7 +105,7 @@ func (task *CommitedTask) writeContainerInfo(info *types.ContainerJSON) error {
 	return json.NewEncoder(fp).Encode(info)
 }
 
-func (task *CommitedTask) hasContainerInfo() bool {
+func (task *CommittedTaskStep) hasContainerInfo() bool {
 	task.containerInfoLock.RLock()
 	defer task.containerInfoLock.RUnlock()
 
@@ -95,7 +119,7 @@ func (task *CommitedTask) hasContainerInfo() bool {
 	return true
 }
 
-func (task *CommitedTask) readContainerInfo() (info types.ContainerJSON, err error) {
+func (task *CommittedTaskStep) readContainerInfo() (info types.ContainerJSON, err error) {
 	task.containerInfoLock.RLock()
 	defer task.containerInfoLock.RUnlock()
 
@@ -111,7 +135,7 @@ func (task *CommitedTask) readContainerInfo() (info types.ContainerJSON, err err
 
 // Wait 等待任务结束返回退出码，若超时返回 error=context.DeadlineExceeded
 // 如果等待到任务结束则会将容器状态信息写入到文件，然后删除容器
-func (task *CommitedTask) Wait(ctx context.Context) (int64, error) {
+func (task *CommittedTaskStep) Wait(ctx context.Context) (int64, error) {
 	logger := logger.WithField("taskId", task.TaskId).
 		WithField("containerId", utils.ShortContainerId(task.ContainerId))
 
@@ -169,80 +193,4 @@ func (task *CommitedTask) Wait(ctx context.Context) (int64, error) {
 		logger.Warnf("wait container error: %v", err)
 		return 0, err
 	}
-}
-
-func (cmd *Command) Create() error {
-	logger := logger.WithField("taskId", filepath.Base(cmd.TaskWorkdir))
-	cli, err := client.NewClientWithOpts()
-	if err != nil {
-		logger.Errorf("unable to create docker client")
-		return err
-	}
-	cli.NegotiateAPIVersion(context.Background())
-
-	logger.Infof("starting task, working directory: %s", cmd.TaskWorkdir)
-
-	conf := configs.Get()
-	mountConfigs := []mount.Mount{
-		{
-			Type:   mount.TypeBind,
-			Source: cmd.TaskWorkdir,
-			Target: ContainerTaskDir,
-		},
-		{
-			Type:   mount.TypeBind,
-			Source: conf.Runner.AbsPluginCachePath(),
-			Target: ContainerPluginsCachePath,
-		},
-		{
-			Type:   mount.TypeBind,
-			Source: "/var/run/docker.sock",
-			Target: "/var/run/docker.sock",
-		},
-	}
-
-	// assets_path 配置为空则表示直接使用 worker 容器中打包的 assets。
-	// 在 runner 容器化部署时运行 runner 的宿主机(docker host)并没有 assets 目录，
-	// 如果配置了 assets 路径，进行 bind mount 时会因为源目录不存在而报错。
-	if conf.Runner.AssetsPath != "" {
-		mountConfigs = append(mountConfigs, mount.Mount{
-			Type:     mount.TypeBind,
-			Source:   conf.Runner.AbsAssetsPath(),
-			Target:   ContainerAssetsDir,
-			ReadOnly: true,
-		})
-		mountConfigs = append(mountConfigs, mount.Mount{
-			// providers 需要挂载到指定目录才能被 terraform 查找到，所以单独做一次挂载
-			Type:     mount.TypeBind,
-			Source:   conf.Runner.ProviderPath(),
-			Target:   ContainerPluginsPath,
-			ReadOnly: true,
-		})
-	}
-
-	cont, err := cli.ContainerCreate(
-		cmd.ContainerInstance.Context,
-		&container.Config{
-			Image:        cmd.Image,
-			Cmd:          cmd.Commands,
-			Env:          cmd.Env,
-			AttachStdout: true,
-			AttachStderr: true,
-		},
-		&container.HostConfig{
-			AutoRemove: false,
-			Mounts:     mountConfigs,
-		},
-		nil,
-		nil,
-		"")
-	if err != nil {
-		logger.Errorf("create container err: %v", err)
-		return err
-	}
-
-	cmd.ContainerInstance.ID = cont.ID
-	logger.Infof("container id: %s", utils.ShortContainerId(cont.ID))
-	err = cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
-	return err
 }

@@ -24,7 +24,7 @@ func AccessTokenHandler(c *ctx.ServiceCtx, form forms.AccessTokenHandler) (inter
 	//	CtServiceIp:   tplInfo.DefaultRunnerAddr,
 	//	CtServicePort: tplInfo.DefaultRunnerPort,
 	//	CtServiceId:   tplInfo.DefaultRunnerServiceId,
-	//	TemplateId:    tplInfo.Id,
+	//	EnvId:    tplInfo.Id,
 	//	TemplateGuid:  tplInfo.Guid,
 	//	TaskType:      tplInfo.Action,
 	//}

@@ -1,9 +1,12 @@
 package models
 
 import (
+	"cloudiac/common"
 	"cloudiac/portal/libs/db"
+	"cloudiac/runner"
 	"cloudiac/utils"
 	"database/sql/driver"
+	"path/filepath"
 	"time"
 )
 
@@ -60,15 +63,15 @@ func (v *TaskExtra) Scan(value interface{}) error {
 }
 
 const (
-	TaskTypePlan    = "plan"    // 计划执行，不会修改资源或做服务配置
-	TaskTypeApply   = "apply"   // 执行 terraform apply 和 playbook
-	TaskTypeDestroy = "destroy" // 销毁，删除所有资源
+	TaskTypePlan    = common.TaskTypePlan
+	TaskTypeApply   = common.TaskTypeApply
+	TaskTypeDestroy = common.TaskTypeDestroy
 
-	TaskPending  = "pending"
-	TaskRunning  = "running"
-	TaskFailed   = "failed"
-	TaskComplete = "complete"
-	TaskTimeout  = "timeout"
+	TaskPending  = common.TaskPending
+	TaskRunning  = common.TaskRunning
+	TaskFailed   = common.TaskFailed
+	TaskComplete = common.TaskComplete
+	TaskTimeout  = common.TaskTimeout
 )
 
 var TaskStatusList = []string{TaskPending, TaskRunning, TaskFailed, TaskComplete, TaskTimeout}
@@ -78,12 +81,14 @@ type Task struct {
 
 	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
 	ProjectId Id `json:"projectId" gorm:"size:32;not null"`
+	TplId     Id `json:"TplId" gorm:"size:32;not null"`
 	EnvId     Id `json:"envId" gorm:"size:32;not null"`
 
 	Name      string `json:"name" gorm:"not null;comment:'任务名称'"`
 	CreatorId Id     `json:"size:32;creatorId"`
 	RunnerId  string `json:"runnerId" gorm:"not null"`
 	CommitId  string `json:"commitId" gorm:"not null"`
+	Timeout   int    `json:"timeout" gorm:"default:'600';comment:'执行超时'"`
 	Status    string `json:"status"`  // gorm 配置见 Migrate()
 	Message   string `json:"message"` // 任务的状态描述信息，如失败原因
 
@@ -145,28 +150,36 @@ func (t *Task) Migrate(sess *db.Session) (err error) {
 }
 
 const (
-	TaskStepInit  = "init"
-	TaskStepPlan  = "plan"
-	TaskStepApply = "apply"
-	TaskStepPlay  = "play" // play playbook
+	TaskStepInit  = common.TaskStepInit
+	TaskStepPlan  = common.TaskStepPlan
+	TaskStepApply = common.TaskStepApply
+	TaskStepPlay  = common.TaskStepPlay
 
-	TaskStepPending  = "pending"
-	TaskStepRunning  = "running"
-	TaskStepFailed   = "failed"
-	TaskStepComplete = "complete"
+	TaskStepPending  = common.TaskStepPending
+	TaskStepRunning  = common.TaskStepRunning
+	TaskStepFailed   = common.TaskStepFailed
+	TaskStepComplete = common.TaskStepComplete
+	TaskStepTimeout  = common.TaskStepTimeout
 )
 
 type TaskStep struct {
 	BaseModel
-	OrgId     Id     `json:"orgId" gorm:"size:32;not null"`
-	ProjectId Id     `json:"projectId" gorm:"size:32;not null"`
-	TaskId    Id     `json:"taskId" gorm:"size:32;not null"`
-	Index     Id     `json:"index" gorm:"size:32;not null"`
-	Type      string `json:"type" gorm:"type:enum('init', 'plan', 'apply', 'play')"`
-	Status    string `json:"status" gorm:"type:enum('pending','running','failed','complete')"`
-	LogPath   string `json:"logPath" gorm:""`
+	OrgId     Id         `json:"orgId" gorm:"size:32;not null"`
+	ProjectId Id         `json:"projectId" gorm:"size:32;not null"`
+	TaskId    Id         `json:"taskId" gorm:"size:32;not null"`
+	Index     int        `json:"index" gorm:"size:32;not null"`
+	Type      string     `json:"type" gorm:"type:enum('init', 'plan', 'apply', 'play')"`
+	Status    string     `json:"status" gorm:"type:enum('pending','running','failed','complete', 'timeout')"`
+	Message   string     `json:"message" gorm:"type:text"`
+	StartAt   *time.Time `json:"startAt"`
+	EndAt     *time.Time `json:"endAt"`
+	LogPath   string     `json:"logPath" gorm:""`
 }
 
 func (TaskStep) TableName() string {
 	return "iac_task_step"
+}
+
+func (s *TaskStep) StateListPath() string {
+	return filepath.Join(filepath.Dir(s.LogPath), runner.StateListFile)
 }

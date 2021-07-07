@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cloudiac/portal/task_manager"
 	"fmt"
 	"os"
 
@@ -75,7 +76,7 @@ func main() {
 	common.ReRegisterService(opt.ReRegister, "IaC-Portal")
 
 	// 启动后台 worker
-	//go task_manager.Start(configs.Get().Consul.ServiceID)
+	go task_manager.Start(configs.Get().Consul.ServiceID)
 
 	// 启动 web server
 	web.StartServer()
