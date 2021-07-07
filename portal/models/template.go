@@ -8,6 +8,7 @@ type Template struct {
 	Name         string `json:"name" gorm:"not null;comment:'模版名称'"`
 	TplType      string `json:"tplType" gorm:"not null;comment:'云模板类型(aliyun，VMware等)'"`
 	OrgId        Id     `json:"orgId" gorm:"size:32;not null"`
+	// TODO 模板己改为在组织层管理，是否还需要 projectId 字段？
 	ProjectId    Id     `json:"projectId" gorm:"size:32;not null"`
 	Description  string `json:"description" gorm:"type:text"`
 	VcsId        Id     `json:"vcsId" gorm:"size:32;not null"`
@@ -39,7 +40,10 @@ func (Template) TableName() string {
 }
 
 func (t *Template) Migrate(sess *db.Session) (err error) {
-	if err := t.AddUniqueIndex(sess, "unique__project__tpl__name", "project_id", "name"); err != nil {
+	if err = sess.RemoveIndex("iac_template", "unique__project__tpl__name"); err != nil {
+		return err
+	}
+	if err = t.AddUniqueIndex(sess, "unique__org__tpl__name", "org_id", "name"); err != nil {
 		return err
 	}
 	return nil
