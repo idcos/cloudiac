@@ -3,10 +3,9 @@ package main
 import (
 	"cloudiac/portal/task_manager"
 	"fmt"
-	"os"
-
 	"github.com/jessevdk/go-flags"
 	"github.com/pkg/errors"
+	"os"
 
 	"cloudiac/cmds/common"
 	"cloudiac/configs"
@@ -101,6 +100,10 @@ func appAutoInit(tx *db.Session) (err error) {
 
 	if err := initTemplates(tx); err != nil {
 		return errors.Wrap(err, "init meat template")
+	}
+
+	if err := configs.InitPolicy(tx); err != nil {
+		return errors.Wrap(err, "init rbac policy")
 	}
 
 	return nil
