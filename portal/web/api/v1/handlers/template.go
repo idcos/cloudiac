@@ -18,6 +18,7 @@ type Template struct {
 // @Param name formData string true "模版名称"
 // @Param vcsId formData int true "vcs仓库"
 // @Param tplType formData string true "云模版类型"
+// TODO 组织ID 是不需要的
 // @Param orgId formData string true "组织id"
 // @Param description formData string false "云模版描述信息"
 // @Param repoId formData string true "云模版代码仓库id"
@@ -50,6 +51,8 @@ func (Template) Create(c *ctx.GinRequestCtx) {
 // @Produce  json
 // @Param Authorization header string true "Bearer token"
 // @Param q query string false "模糊搜索"
+// @Param Iac-Org-Id header string true "组织ID"
+// @Param Iac-project-Id header string false "项目ID"
 // @Success 200 {object} apps.SearchTemplateResp
 // @Router /template/search [get]
 func (Template) Search(c *ctx.GinRequestCtx) {

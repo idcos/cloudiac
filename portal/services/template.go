@@ -52,3 +52,29 @@ func GetTemplateById(tx *db.Session, id models.Id) (*models.Template, e.Error) {
 	return &tpl, nil
 
 }
+
+func QueryTemplate(tx *db.Session, status, q, taskStatus string, statusList []string, orgId uint) (*db.Session, *db.Session) {
+	query := tx.Debug().Model(&models.Template{}).Joins(
+		"LEFT  JOIN iac_task" +
+			"  ON iac_task.template_guid = iac_template.guid" +
+			" AND iac_task.id IN " +
+			"(SELECT MAX(id)  FROM iac_task  GROUP BY template_id)").
+		LazySelectAppend(
+			"iac_task.updated_at as task_updated_at",
+			"iac_task.guid as task_guid",
+			"iac_task.`status` as task_status",
+			"iac_template.*")
+	if taskStatus != "all" && taskStatus != "" {
+		query = query.Where("iac_task.`status` in (?)", statusList)
+	}
+	if status != "" {
+		query = query.Where("iac_template.`status` = ?", status)
+	}
+	if q != "" {
+		qs := "%" + q + "%"
+		query = query.Where("iac_template.name LIKE ? OR iac_template.description LIKE ?", qs, qs)
+	}
+
+	query = query.Where("iac_template.org_id = ?", orgId).Order("iac_template.created_at DESC")
+	return query, query
+}

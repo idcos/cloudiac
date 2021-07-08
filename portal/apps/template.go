@@ -168,6 +168,7 @@ type SearchTemplateResp struct {
 	UserName 	  string    `json:"userName"`
 	CreateTime    string	`json:"createTime"`
 	// TODO 需要查询一下创建人
+	// TODO 传参要查项目
 }
 
 
@@ -175,6 +176,9 @@ type SearchTemplateResp struct {
 
 func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (interface{}, e.Error) {
 	statusList := make([]string, 0)
+
+	// TODO 这里两个query, 如果有组织无项目
+	if c.
 
 	query, _ := services.QueryTemplate(c.DB().Debug(), form.Status, form.Q, form.TaskStatus, statusList, c.OrgId)
 
