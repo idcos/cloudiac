@@ -22,6 +22,8 @@ import (
 	"cloudiac/utils/logs"
 )
 
+// StartTaskStep 启动任务的一步
+// 该函数会设置 taskReq 中 step 相关的数据
 func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error) {
 	logger := logs.Get().
 		WithField("action", "StartTaskStep").
@@ -42,7 +44,7 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error) 
 
 	taskReq.Step = step.Index
 	taskReq.StepType = step.Type
-	taskReq.StepArgs = nil // TODO 支持 step args
+	taskReq.StepArgs = step.Args
 
 	respData, err := utils.HttpService(requestUrl, "POST", header, taskReq, 1, 5)
 	if err != nil {
@@ -117,21 +119,6 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 		}
 	}
 
-	if len(stepResult.Result.StateListContent) > 0 {
-		path := step.StateListPath()
-		content := stepResult.Result.StateListContent
-		content = logstorage.CutLogContent(content)
-		if err := logstorage.Get().Write(path, content); err != nil {
-			logger.WithField("path", path).Errorf("write state_list error: %v", err)
-			logger.Infof("task log content: %s", content)
-		}
-	}
-
-	if stepResult.Status == models.TaskComplete {
-		// TODO 解析日志输出，更新资源变更信息
-		//tfInfo := ParseTfOutput(task.BackendInfo.LogFile)
-		//models.UpdateAttr(dbSess.Where("id = ?", task.Id), &models.Task{}, tfInfo)
-	}
 	return stepResult, err
 }
 

@@ -175,12 +175,19 @@ func (t JSONTime) Value() (driver.Value, error) {
 
 // Scan 转换为 time.Time
 func (t *JSONTime) Scan(v interface{}) error {
-	value, ok := v.(time.Time)
-	if ok {
+	switch value := v.(type) {
+	case []byte:
+		tv, err := time.Parse("2006-01-02 15:04:05", string(value))
+		if err != nil {
+			return err
+		}
+		*t = JSONTime(tv)
+	case time.Time:
 		*t = JSONTime(value)
-		return nil
+	default:
+		return fmt.Errorf("can not convert %v to timestamp", v)
 	}
-	return fmt.Errorf("can not convert %v to timestamp", v)
+	return nil
 }
 
 func FileExist(p string) bool {
@@ -505,4 +512,3 @@ func SprintTemplate(format string, data interface{}) (str string) {
 		return msg.String()
 	}
 }
-

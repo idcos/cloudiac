@@ -16,8 +16,8 @@ const (
 type Env struct {
 	SoftDeleteModel
 	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
-	ProjectId Id `json:"projectId" gorm:"size:32;not null"`
 	TplId     Id `json:"tplId" gorm:"size:32;not null"`
+	ProjectId Id `json:"projectId" gorm:"size:32;not null"`
 
 	Name        string `json:"name" gorm:"not null"`
 	Description string `json:"description" gorm:"type:text"`
@@ -46,7 +46,11 @@ func (Env) TableName() string {
 }
 
 func (e *Env) Migrate(sess *db.Session) (err error) {
-	if err := e.AddUniqueIndex(sess, "unique__tpl__env__name", "tpl_id", "name"); err != nil {
+	if err = sess.RemoveIndex("iac_env", "unique__tpl__env__name"); err != nil {
+		return err
+	}
+	if err = e.AddUniqueIndex(sess, "unique__project__env__name",
+		"project_id", "name"); err != nil {
 		return err
 	}
 	return nil

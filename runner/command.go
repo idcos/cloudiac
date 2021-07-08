@@ -41,8 +41,6 @@ func (cmd *Command) Start() (string, error) {
 	}
 	cli.NegotiateAPIVersion(context.Background())
 
-	logger.Infof("starting task, working directory: %s", cmd.HostWorkdir)
-
 	conf := configs.Get()
 	mountConfigs := []mount.Mount{
 		{
