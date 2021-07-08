@@ -9,8 +9,6 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"net/http"
-	"strings"
-	"time"
 )
 
 func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.Template, e.Error) {
@@ -167,20 +165,21 @@ type SearchTemplateResp struct {
 	RepoRevision  string  	`json:"repoRevision"`
 	UserName 	  string    `json:"userName"`
 	CreateTime    string	`json:"createTime"`
-	// TODO 需要查询一下创建人
-	// TODO 传参要查项目
+
 }
 
 
 
 
-func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (interface{}, e.Error) {
-	statusList := make([]string, 0)
-
-	// TODO 这里两个query, 如果有组织无项目
-	if c.
-
-	query, _ := services.QueryTemplate(c.DB().Debug(), form.Status, form.Q, form.TaskStatus, statusList, c.OrgId)
+func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (tpl interface{}, err e.Error) {
+	tplIdList := make([]string, 0)
+	if c.ProjectId != "" {
+		tplIdList, err = services.QueryTplByProjectId(c.DB(), c.ProjectId)
+		if err != nil {
+			return nil, err
+		}
+	}
+	query, _ := services.QueryTemplate(c.DB().Debug(), form.Q, c.OrgId, tplIdList)
 
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	templates := make([]*SearchTemplateResp, 0)

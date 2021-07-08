@@ -40,6 +40,7 @@ const (
 	InvalidOperation   = 1104
 	TokenExpired       = 1105
 	InvalidOrgId       = 1106 // 无效的 orgId
+	InvalidProjectId   = 1107 // 无效的 projectId
 
 	InvalidColumn = 1201
 	DataToLong    = 1301

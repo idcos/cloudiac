@@ -19,7 +19,7 @@ func ListNotificationCfgs(tx *db.Session, orgId models.Id) (interface{}, error) 
 	err := tx.Table(models.User{}.TableName()).
 		Select(fmt.Sprintf("%s.name, %s.email, n.id, n.event_type", models.User{}.TableName(), models.User{}.TableName())).
 		Joins(fmt.Sprintf("right join %s as n on %s.id = n.user_id", models.NotificationCfg{}.TableName(), models.User{}.TableName())).
-		Where(fmt.Sprintf("n.org_id = %d", orgId)).Debug().Find(&users)
+		Where(fmt.Sprintf("n.org_id = '%s'", orgId)).Debug().Find(&users)
 	if err != nil {
 		return nil, err
 	}
