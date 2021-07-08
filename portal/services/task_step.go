@@ -4,6 +4,7 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/utils"
 )
 
 func GetTaskSteps(sess *db.Session, taskId models.Id) ([]*models.TaskStep, error) {
@@ -59,4 +60,9 @@ func ApproveTaskStep(tx *db.Session, taskId models.Id, step int, userId models.I
 		return e.New(e.DBError, err)
 	}
 	return nil
+}
+
+func IsTerraformStep(typ string) bool {
+	return utils.StrInArray(typ, models.TaskStepInit, models.TaskStepPlan,
+		models.TaskStepApply, models.TaskStepDestroy)
 }

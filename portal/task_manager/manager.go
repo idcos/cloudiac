@@ -324,6 +324,11 @@ func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq
 	if !task.AutoApprove && !step.IsApproved() {
 		var newStep *models.TaskStep
 		logger.Infof("waitting task step approve")
+
+		step.Status = models.TaskStepApproving
+		step.Message = ""
+		updateStep()
+
 		if newStep, err = WaitTaskStepApprove(ctx, m.db, step.TaskId, step.Index); err != nil {
 			logger.Errorf("wait task step approve error: %v", err)
 			step.Status = models.TaskStepFailed
@@ -344,7 +349,7 @@ loop:
 		}
 
 		switch step.Status {
-		case models.TaskStepPending:
+		case models.TaskStepPending, models.TaskStepApproving:
 			now := time.Now()
 			step.Status = models.TaskStepRunning
 			step.Message = ""

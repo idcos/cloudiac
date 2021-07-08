@@ -40,7 +40,7 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error) 
 	}
 
 	requestUrl := utils.JoinURL(runnerAddr, consts.RunnerRunTaskURL)
-	logger.Infof("request runner: %s", requestUrl)
+	logger.Debugf("request runner: %s", requestUrl)
 
 	taskReq.Step = step.Index
 	taskReq.StepType = step.Type
@@ -55,7 +55,7 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error) 
 	if err := json.Unmarshal(respData, &resp); err != nil {
 		return fmt.Errorf("unexpected response: %s", respData)
 	}
-	logger.Infof("runner response: %#v", resp)
+	logger.Debugf("runner response: %#v", resp)
 	if resp.Error != "" {
 		return fmt.Errorf(resp.Error)
 	}
@@ -230,7 +230,7 @@ func pullTaskStepStatus(ctx context.Context, task *models.Task, step *models.Tas
 		}
 	}
 
-	logger.Debugf("pulling task status ...")
+	logger.Infof("pulling task status ...")
 	err = selectLoop()
 	logger.Infof("pull task status done, status=%v", stepResult.Status)
 

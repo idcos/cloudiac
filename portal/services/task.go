@@ -4,6 +4,7 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"fmt"
 	"github.com/pkg/errors"
 )
 
@@ -18,12 +19,13 @@ func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e
 		// 以下为需要外部传入的属性
 		Name:        p.Name,
 		Type:        p.Type,
-		StepTimeout: p.StepTimeout,
 		Flow:        p.Flow,
+		Targets:     p.Targets,
 		CommitId:    p.CommitId,
 		CreatorId:   p.CreatorId,
 		RunnerId:    p.RunnerId,
 		Variables:   p.Variables,
+		StepTimeout: p.StepTimeout,
 		AutoApprove: p.AutoApprove,
 
 		OrgId:     env.OrgId,
@@ -53,10 +55,18 @@ func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e
 	}
 
 	for i, step := range task.Flow.Steps {
+		if len(task.Targets) != 0 && IsTerraformStep(step.Type) {
+			if step.Type != models.TaskStepInit {
+				for _, t := range task.Targets {
+					step.Args = append(step.Args, fmt.Sprintf("-target=%s", t))
+				}
+			}
+			// TODO: tfVars, playVars 也以这种方式传入？
+		}
+
 		if _, er := createTaskStep(tx, task, step, i); er != nil {
 			return nil, e.New(er.Code(), errors.Wrapf(er, "save task step"))
 		}
 	}
 	return &task, nil
 }
-

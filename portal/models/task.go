@@ -100,8 +100,9 @@ type Task struct {
 	Message string `json:"message"` // 任务的状态描述信息，如失败原因
 
 	Type     string   `json:"type" gorm:"not null;enum('plan', 'apply', 'destroy')"`
-	Flow     TaskFlow `json:"-" gorm:"type:text"`
+	Flow     TaskFlow `json:"-" gorm:"type:json"`
 	CurrStep int      `json:"currStep" gorm:"default:'0'"` // 当前在执行的流程步骤
+	Targets  StrSlice `json:"targets" gorm:"type:json"`    // 指定 terraform target 参数
 
 	StartAt *time.Time `json:"startAt" gorm:"null;comment:'任务开始时间'"`
 	EndAt   *time.Time `json:"endAt" gorm:"null;comment:'任务结束时间'"`
@@ -156,20 +157,10 @@ func (t *Task) Migrate(sess *db.Session) (err error) {
 	return nil
 }
 
-type TaskStepArgs []string
-
-func (v TaskStepArgs) Value() (driver.Value, error) {
-	return MarshalValue(v)
-}
-
-func (v *TaskStepArgs) Scan(value interface{}) error {
-	return UnmarshalValue(value, v)
-}
-
 type TaskStepBody struct {
-	Type string       `json:"type" yaml:"type" gorm:"type:enum('init','plan','apply','play','command','destroy')"`
-	Name string       `json:"name" yaml:"name" gorm:""`
-	Args TaskStepArgs `json:"args" yaml:"args" gorm:"type:text"`
+	Type string   `json:"type" yaml:"type" gorm:"type:enum('init','plan','apply','play','command','destroy')"`
+	Name string   `json:"name" yaml:"name" gorm:""`
+	Args StrSlice `json:"args" yaml:"args" gorm:"type:text"`
 }
 
 const (
@@ -180,11 +171,12 @@ const (
 	TaskStepPlay    = common.TaskStepPlay
 	TaskStepCommand = common.TaskStepCommand
 
-	TaskStepPending  = common.TaskStepPending
-	TaskStepRunning  = common.TaskStepRunning
-	TaskStepFailed   = common.TaskStepFailed
-	TaskStepComplete = common.TaskStepComplete
-	TaskStepTimeout  = common.TaskStepTimeout
+	TaskStepPending   = common.TaskStepPending
+	TaskStepApproving = common.TaskStepApproving
+	TaskStepRunning   = common.TaskStepRunning
+	TaskStepFailed    = common.TaskStepFailed
+	TaskStepComplete  = common.TaskStepComplete
+	TaskStepTimeout   = common.TaskStepTimeout
 )
 
 type TaskStep struct {
@@ -196,7 +188,7 @@ type TaskStep struct {
 	EnvId     Id         `json:"envId" gorm:"size:32;not null"`
 	TaskId    Id         `json:"taskId" gorm:"size:32;not null"`
 	Index     int        `json:"index" gorm:"size:32;not null"`
-	Status    string     `json:"status" gorm:"type:enum('pending','running','failed','complete','timeout')"`
+	Status    string     `json:"status" gorm:"type:enum('pending','approving','running','failed','complete','timeout')"`
 	Message   string     `json:"message" gorm:"type:text"`
 	StartAt   *time.Time `json:"startAt"`
 	EndAt     *time.Time `json:"endAt"`
