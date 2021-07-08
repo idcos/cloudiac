@@ -103,6 +103,21 @@ const (
 	OrganizationInvalidStatus  = 9014
 	InvalidOrganizationId      = 9015
 
+	//variable
+	VariableAlreadyExists  = 11010
+	VariableNotExists      = 11011
+	VariableDisabled       = 11012
+	VariableAliasDuplicate = 11013
+	VariableInvalidStatus  = 11014
+	InvalidVariableId      = 11015
+
+	TokenAlreadyExists  = 12010
+	TokenNotExists      = 12011
+	TokenDisabled       = 12012
+	TokenAliasDuplicate = 12013
+	TokenInvalidStatus  = 12014
+	InvalidTokenId      = 12015
+
 	// gitlib
 	GitLabError = 9100
 

@@ -9,6 +9,7 @@ import (
 	"cloudiac/utils"
 	"cloudiac/utils/mail"
 	"fmt"
+	"net/http"
 )
 
 var (
@@ -17,8 +18,9 @@ var (
 )
 
 func SearchToken(c *ctx.ServiceCtx, form *forms.SearchTokenForm) (interface{}, e.Error) {
+	//todo 鉴权
 	query := services.QueryToken(c.DB())
-	query = query.Where("user_id = ?", c.UserId)
+	query = query.Where("org_id = ?", c.OrgId)
 	if form.Status != "" {
 		query = query.Where("status = ?", form.Status)
 	}
@@ -28,19 +30,12 @@ func SearchToken(c *ctx.ServiceCtx, form *forms.SearchTokenForm) (interface{}, e
 	}
 
 	query = query.Order("created_at DESC")
-	rs, _ := getPage(query, form, models.Token{})
+	rs, err := getPage(query, form, models.Token{})
+	if err != nil {
+		c.Logger().Errorf("error get page, err %s", err)
+		return nil, err
+	}
 	return rs, nil
-	//p := page.New(form.CurrentPage(), form.PageSize(), query)
-	//tokens := make([]*models.Token, 0)
-	//if err := p.Scan(&tokens); err != nil {
-	//	return nil, e.New(e.DBError, err)
-	//}
-	//
-	//return page.PageResp{
-	//	Total:    p.MustTotal(),
-	//	PageSize: p.Size,
-	//	List:     tokens,
-	//}, nil
 }
 
 func CreateToken(c *ctx.ServiceCtx, form *forms.CreateTokenForm) (interface{}, e.Error) {
@@ -48,18 +43,25 @@ func CreateToken(c *ctx.ServiceCtx, form *forms.CreateTokenForm) (interface{}, e
 
 	tokenStr := utils.GenGuid("")
 	token, err := services.CreateToken(c.DB(), models.Token{
+		Key:         tokenStr,
+		Type:        form.Type,
+		OrgId:       c.OrgId,
+		Role:        form.Role,
+		ExpiredAt:   form.ExpiredAt,
 		Description: form.Description,
-		UserId:      c.UserId,
-		Token:       tokenStr,
 	})
-	if err != nil {
+	if err != nil && err.Code() == e.TokenAlreadyExists {
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		c.Logger().Errorf("error creating token, err %s", err)
 		return nil, e.AutoNew(err, e.DBError)
 	}
+
 	return token, nil
 }
 
 func UpdateToken(c *ctx.ServiceCtx, form *forms.UpdateTokenForm) (token *models.Token, err e.Error) {
-	c.AddLogField("action", fmt.Sprintf("update token %d", form.Id))
+	c.AddLogField("action", fmt.Sprintf("update token %s", form.Id))
 	if form.Id == "" {
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
 	}
@@ -74,11 +76,17 @@ func UpdateToken(c *ctx.ServiceCtx, form *forms.UpdateTokenForm) (token *models.
 	}
 
 	token, err = services.UpdateToken(c.DB(), form.Id, attrs)
+	if err != nil && err.Code() == e.TokenAliasDuplicate {
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		c.Logger().Errorf("error update org, err %s", err)
+		return nil, err
+	}
 	return
 }
 
 func DeleteToken(c *ctx.ServiceCtx, form *forms.DeleteTokenForm) (result interface{}, re e.Error) {
-	c.AddLogField("action", fmt.Sprintf("delete token %d", form.Id))
+	c.AddLogField("action", fmt.Sprintf("delete token %s", form.Id))
 	if err := services.DeleteToken(c.DB(), form.Id); err != nil {
 		return nil, err
 	}

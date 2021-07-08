@@ -14,9 +14,10 @@ type ServiceCtx struct {
 	//rdb    *cache.Session
 	logger logs.Logger
 
-	Token string
-	OrgId models.Id
-	org   *models.Organization
+	Token     string
+	OrgId     models.Id
+	ProjectId models.Id
+	org       *models.Organization
 	//OrgGuid    string
 	UserId       models.Id // 登陆用户ID
 	Username     string

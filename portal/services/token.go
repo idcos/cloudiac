@@ -37,7 +37,13 @@ func GenerateToken(uid models.Id, name string, isAdmin bool, expireDuration time
 }
 
 func CreateToken(tx *db.Session, token models.Token) (*models.Token, e.Error) {
+	if token.Id == "" {
+		token.Id = models.NewId("t")
+	}
 	if err := models.Create(tx, &token); err != nil {
+		if e.IsDuplicate(err) {
+			return nil, e.New(e.TokenAlreadyExists, err)
+		}
 		return nil, e.New(e.DBError, err)
 	}
 
@@ -47,6 +53,9 @@ func CreateToken(tx *db.Session, token models.Token) (*models.Token, e.Error) {
 func UpdateToken(tx *db.Session, id models.Id, attrs models.Attrs) (token *models.Token, er e.Error) {
 	token = &models.Token{}
 	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.Token{}, attrs); err != nil {
+		if e.IsDuplicate(err) {
+			return nil, e.New(e.OrganizationAliasDuplicate)
+		}
 		return nil, e.New(e.DBError, fmt.Errorf("update token error: %v", err))
 	}
 	if err := tx.Where("id = ?", id).First(token); err != nil {

@@ -2,15 +2,19 @@ package models
 
 import (
 	"cloudiac/portal/libs/db"
+	"time"
 )
 
 type Token struct {
 	SoftDeleteModel
 
-	UserId      Id     `json:"userId" gorm:"size:32;not null;comment:'用户ID'"`
-	Token       string `json:"token" gorm:"not null;comment:'Token'"`
-	Description string `json:"description" gorm:"comment:'描述'"`
-	Status      string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'Token状态'"`
+	Key         string     `json:"key" form:"key" gorm:"not null"`
+	Type        string     `json:"type" form:"scope" gorm:"not null"`
+	OrgId       Id         `json:"orgId" form:"orgId" gorm:"not null"`
+	Role        string     `json:"role" form:"role" gorm:"not null"`
+	Status      string     `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'Token状态'"`
+	ExpiredAt   *time.Time `json:"ExpiredAt" form:"ExpiredAt" gorm:"not null"`
+	Description string     `json:"description" gorm:"comment:'描述'"`
 }
 
 func (Token) TableName() string {

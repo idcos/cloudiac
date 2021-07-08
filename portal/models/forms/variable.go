@@ -4,17 +4,24 @@ import "cloudiac/portal/models"
 
 type CreateVariableForm struct {
 	BaseForm
+	TplId     models.Id   `json:"tplId" form:"tplId" ` // 模板id
+	EnvId     models.Id   `json:"envId" form:"envId" ` // 环境id
+	Variables []Variables `json:"variables" form:"variables" `
+}
 
-	Scope       string `json:"scope" gorm:"not null;type:enum('org','project','template','env')"`
-	Type        string `json:"type" gorm:"not null;type:enum('environment','terraform','ansible')"`
-	Name        string `json:"name" gorm:"size:64;not null"`
-	Value       string `json:"value" gorm:"default:''"`
-	Sensitive   bool   `json:"sensitive" gorm:"default:'0'"`
-	Description string `json:"description" gorm:"type:text"`
+type Variables struct {
+	Id          models.Id `json:"id" form:"id" `
+	Scope       string    `json:"scope" form:"scope" `             // 应用范围
+	Type        string    `json:"type" form:"type" `               // 类型
+	Name        string    `json:"name" form:"name" `               // 名称
+	Value       string    `json:"value" form:"value" `             // VALUE
+	Sensitive   bool      `json:"sensitive" form:"sensitive" `     // 是否加密
+	Description string    `json:"description" form:"description" ` // 描述
 }
 
 type SearchVariableForm struct {
 	PageForm
-
-	Id models.Id `json:"id" form:"id" `
+	TplId models.Id `json:"tplId" form:"tplId" ` // 模板id
+	EnvId models.Id `json:"envId" form:"envId" ` // 环境id
+	Scope string    `json:"scope" form:"scope" ` // 应用范围
 }
