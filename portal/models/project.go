@@ -5,10 +5,10 @@ import "cloudiac/portal/libs/db"
 type Project struct {
 	SoftDeleteModel
 
-	OrgId       Id     `gorm:"size:32;not null"`
-	Name        string `gorm:"not null;"`
-	Description string `json:"description" gorm:"type:text"`
-	CreatorId   Id     `json:"creatorId" form:"creatorId" `
+	OrgId       Id     `gorm:"size:32;not null"`             //组织ID
+	Name        string `gorm:"not null;"`                    //组织名称
+	Description string `json:"description" gorm:"type:text"` //组织详情
+	CreatorId   Id     `json:"creatorId" form:"creatorId" `  //用户id
 	Status      string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'状态'"`
 }
 

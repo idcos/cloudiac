@@ -25,8 +25,9 @@ type UpdateProjectForm struct {
 	BaseForm
 
 	Id                models.Id           `uri:"id" json:"id" swaggerignore:"true"` // 组织ID，swagger 参数通过 param path 指定，这里忽略Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 组织ID，swagger 参数通过 param path 指定，这里忽略
-	Name              string              `json:"name" form:"name"`
-	Description       string              `json:"description" form:"description" `
+	Status            string              `json:"status" form:"status" `
+	Name              string              `json:"name" form:"name"`                // 项目名称
+	Description       string              `json:"description" form:"description" ` // 项目描述
 	UserAuthorization []UserAuthorization `json:"userAuthorization" form:"userAuthorization" `
 }
 

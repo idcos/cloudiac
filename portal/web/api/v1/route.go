@@ -31,15 +31,6 @@ func Register(g *gin.RouterGroup) {
 	})
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
 
-	//项目管理
-	{
-		root.GET("/project", w(handlers.Project{}.Search))
-		root.POST("/project", w(handlers.Project{}.Create))
-		root.PUT("/project/:id", w(handlers.Project{}.Update))
-		root.DELETE("/project/:id", w(handlers.Project{}.Delete))
-		root.GET("/project/:id", w(handlers.Project{}.Detail))
-	}
-
 	// TODO 增加鉴权
 	g.GET("/task/log/sse", w(handlers.Task{}.FollowLogSse))
 
@@ -70,10 +61,6 @@ func Register(g *gin.RouterGroup) {
 	g.PUT("/users/:id/status", ac(), w(handlers.User{}.ChangeUserStatus))
 	g.POST("/users/:id/password/reset", ac(), w(handlers.User{}.PasswordReset))
 
-	g.POST("/projects", ac(), w(handlers.Organization{}.Search))
-	g.GET("/projects", ac(), w(handlers.Organization{}.Search))
-	g.GET("/projects/:id", ac(), w(handlers.Organization{}.Search))
-
 	// 项目资源
 	// TODO: parse project header
 	g.Use(w(middleware.AuthProjectId))
@@ -96,4 +83,9 @@ func Register(g *gin.RouterGroup) {
 
 	ctrl.Register(g.Group("notification", ac()), &handlers.Notification{})
 	ctrl.Register(g.Group("resource/account", ac()), &handlers.ResourceAccount{})
+
+	//项目管理
+	{
+		ctrl.Register(g.Group("projects", ac()), &handlers.Project{})
+	}
 }

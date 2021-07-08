@@ -33,3 +33,11 @@ func UpdateProjectUsers(tx *db.Session, projectId models.Id, authorization []for
 	}
 	return BindProjectUsers(tx, projectId, authorization)
 }
+
+func SearchProjectUsers(tx *db.Session, projectId models.Id) ([]models.UserProject, e.Error) {
+	userProject := make([]models.UserProject, 0)
+	if err := tx.Where("project_id = ?", projectId).Find(&userProject); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return userProject, nil
+}

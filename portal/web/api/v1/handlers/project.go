@@ -21,7 +21,7 @@ type Project struct {
 // @Param IaC-Org-Id header string true "组织id"
 // @Param json body forms.CreateProjectForm true "parameter"
 // @Success 200 {object}  ctx.JSONResult{result=models.Project}
-// @Router /project [post]
+// @Router /projects [post]
 func (Project) Create(c *ctx.GinRequestCtx) {
 	form := &forms.CreateProjectForm{}
 	if err := c.Bind(form); err != nil {
@@ -42,7 +42,7 @@ func (Project) Create(c *ctx.GinRequestCtx) {
 // @Param currentPage query int false "分页页码"
 // @Param pageSize query int false "分页页数"
 // @Success 200 {object} models.Project
-// @Router /project [get]
+// @Router /projects [get]
 func (Project) Search(c *ctx.GinRequestCtx) {
 	form := &forms.SearchProjectForm{}
 	if err := c.Bind(form); err != nil {
@@ -64,7 +64,7 @@ func (Project) Search(c *ctx.GinRequestCtx) {
 // @Param description body string false "项目描述"
 // @Param userAuthorization body []forms.UserAuthorization false "用户授权"
 // @Success 200 {object} models.Project
-// @Router /project/{projectId}  [put]
+// @Router /projects/{projectId}  [put]
 func (Project) Update(c *ctx.GinRequestCtx) {
 	form := &forms.UpdateProjectForm{}
 	if err := c.Bind(form); err != nil {
@@ -83,7 +83,7 @@ func (Project) Update(c *ctx.GinRequestCtx) {
 // @Param IaC-Org-Id header string true "组织id"
 // @Param id query string true "项目id"
 // @Success 200
-// @Router /project/{projectId} [delete]
+// @Router /projects/{projectId} [delete]
 func (Project) Delete(c *ctx.GinRequestCtx) {
 	form := &forms.DeleteProjectForm{}
 	if err := c.Bind(form); err != nil {

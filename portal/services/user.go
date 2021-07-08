@@ -104,3 +104,14 @@ func CheckPasswordFormat(password string) e.Error {
 
 	return nil
 }
+
+func GetUserRoleByOrg(dbSess *db.Session, id models.Id, role string) ([]string, e.Error) {
+	orgIds := make([]string, 0)
+	if err := dbSess.Table(models.UserOrg{}.TableName()).
+		Where("user_id = ?", id).
+		Where("role = ?", role).
+		Pluck("org_id", &orgIds); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return orgIds, nil
+}

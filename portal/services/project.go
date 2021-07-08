@@ -12,6 +12,9 @@ func CreateProject(tx *db.Session, project *models.Project) (*models.Project, e.
 		project.Id = models.NewId("p")
 	}
 	if err := models.Create(tx, project); err != nil {
+		if e.IsDuplicate(err) {
+			return nil, e.New(e.ProjectAlreadyExists, err)
+		}
 		return nil, e.New(e.DBError, err)
 	}
 	return project, nil
@@ -32,10 +35,10 @@ func UpdateProject(tx *db.Session, project *models.Project, attrs map[string]int
 	return nil
 }
 
-func DetailProject(dbSess *db.Session, projectId models.Id) (interface{}, e.Error) {
+func DetailProject(dbSess *db.Session, projectId models.Id) (models.Project, e.Error) {
 	project := models.Project{}
 	if err := dbSess.Where("id = ?", projectId).First(&project); err != nil {
-		return nil, e.New(e.DBError, err)
+		return project, e.New(e.DBError, err)
 	}
 	return project, nil
 }
