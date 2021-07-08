@@ -15,14 +15,17 @@ func GetTask(dbSess *db.Session, id models.Id) (*models.Task, error) {
 
 func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e.Error) {
 	task := models.Task{
-		CreatorId: p.CreatorId,
-		RunnerId:  p.RunnerId,
-		CommitId:  p.CommitId,
-		Timeout:   p.Timeout,
-		Type:      p.Type,
-		Name:      p.Name,
-		Flow:      p.Flow,
-		Variables: p.Variables,
+		// 以下为需要外部传入的属性
+		Name:        p.Name,
+		Type:        p.Type,
+		StepTimeout: p.StepTimeout,
+		Flow:        p.Flow,
+		CommitId:    p.CommitId,
+		CreatorId:   p.CreatorId,
+		RunnerId:    p.RunnerId,
+		Variables:   p.Variables,
+		AutoApprove: p.AutoApprove,
+
 		OrgId:     env.OrgId,
 		ProjectId: env.ProjectId,
 		TplId:     env.TplId,
@@ -57,21 +60,3 @@ func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e
 	return &task, nil
 }
 
-func createTaskStep(tx *db.Session, task models.Task, stepBody models.TaskStepBody, index int) (*models.TaskStep, e.Error) {
-	s := models.TaskStep{
-		TaskStepBody: stepBody,
-		OrgId:        task.OrgId,
-		ProjectId:    task.ProjectId,
-		TaskId:       task.Id,
-		Index:        index,
-		Status:       models.TaskStepPending,
-		Message:      "",
-	}
-	s.Id = models.NewId("step")
-	s.LogPath = s.GenLogPath()
-
-	if _, err := tx.Save(&s); err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-	return &s, nil
-}

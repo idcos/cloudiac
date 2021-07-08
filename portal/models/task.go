@@ -90,9 +90,14 @@ type Task struct {
 	CreatorId Id     `json:"size:32;creatorId"`
 	RunnerId  string `json:"runnerId" gorm:"not null"`
 	CommitId  string `json:"commitId" gorm:"not null"`
-	Timeout   int    `json:"timeout" gorm:"default:'600';comment:'执行超时'"`
-	Status    string `json:"status"`  // gorm 配置见 Migrate()
-	Message   string `json:"message"` // 任务的状态描述信息，如失败原因
+
+	// 任务每一步的执行超时，整个任务无超时控制
+	StepTimeout int `json:"stepTimeout" gorm:"default:'600';comment:'执行超时'"`
+
+	AutoApprove bool `json:"autoApproval" gorm:"default:'0'"`
+
+	Status  string `json:"status"`  // gorm 配置见 Migrate()
+	Message string `json:"message"` // 任务的状态描述信息，如失败原因
 
 	Type     string   `json:"type" gorm:"not null;enum('plan', 'apply', 'destroy')"`
 	Flow     TaskFlow `json:"-" gorm:"type:text"`
@@ -188,7 +193,7 @@ type TaskStep struct {
 
 	OrgId     Id         `json:"orgId" gorm:"size:32;not null"`
 	ProjectId Id         `json:"projectId" gorm:"size:32;not null"`
-	EnvId     Id         `json:"envId" gorm:"size:32; not null"`
+	EnvId     Id         `json:"envId" gorm:"size:32;not null"`
 	TaskId    Id         `json:"taskId" gorm:"size:32;not null"`
 	Index     int        `json:"index" gorm:"size:32;not null"`
 	Status    string     `json:"status" gorm:"type:enum('pending','running','failed','complete','timeout')"`
@@ -196,10 +201,20 @@ type TaskStep struct {
 	StartAt   *time.Time `json:"startAt"`
 	EndAt     *time.Time `json:"endAt"`
 	LogPath   string     `json:"logPath" gorm:""`
+
+	ApproverId Id `json:"approverId" gorm:"size:32;not null"` // 审批者用户 id
 }
 
 func (TaskStep) TableName() string {
 	return "iac_task_step"
+}
+
+func (s *TaskStep) IsApproved() bool {
+	// 只有 apply 和 destroy 步骤需要审批
+	if utils.StrInArray(s.Type, TaskStepApply, TaskStepDestroy) && len(s.ApproverId) == 0 {
+		return false
+	}
+	return true
 }
 
 func (s *TaskStep) GenLogPath() string {

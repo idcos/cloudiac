@@ -305,7 +305,6 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq,
 	task *models.Task, step *models.TaskStep) (err error) {
 	logger := m.logger.WithField("taskId", taskReq.TaskId)
-	logger.Infof("run task step %d", step.Index)
 	logger = logger.WithField("func", "runTaskStep").WithField("step", fmt.Sprintf("%d", step.Index))
 
 	defer func() {
@@ -322,8 +321,19 @@ func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq
 		}
 	}
 
-	var stepResult *waitStepResult
+	if !task.AutoApprove && !step.IsApproved() {
+		var newStep *models.TaskStep
+		logger.Infof("waitting task step approve")
+		if newStep, err = WaitTaskStepApprove(ctx, m.db, step.TaskId, step.Index); err != nil {
+			logger.Errorf("wait task step approve error: %v", err)
+			step.Status = models.TaskStepFailed
+			step.Message = err.Error()
+			updateStep()
+		}
+		step = newStep
+	}
 
+	var stepResult *waitStepResult
 loop:
 	for {
 		select {
@@ -335,13 +345,13 @@ loop:
 
 		switch step.Status {
 		case models.TaskStepPending:
-			// TODO 判断审批状态
 			now := time.Now()
 			step.Status = models.TaskStepRunning
 			step.Message = ""
 			step.StartAt = &now
 			updateStep()
 
+			logger.Infof("start task step %d", step.Index)
 			if err = StartTaskStep(taskReq, *step); err != nil {
 				logger.Errorf("start task step error: %s", err.Error())
 				step.Status = models.TaskStepFailed
