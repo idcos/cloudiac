@@ -40,7 +40,6 @@ apply:
     - type: plan
     - type: apply 
     - type: play
-      args: ["-v"]
 
 destroy:
   steps:

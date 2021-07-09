@@ -23,14 +23,18 @@ func GetTask(dbSess *db.Session, id models.Id) (*models.Task, e.Error) {
 
 func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e.Error) {
 	task := models.Task{
-		CreatorId: p.CreatorId,
-		RunnerId:  p.RunnerId,
-		CommitId:  p.CommitId,
-		Timeout:   p.Timeout,
-		Type:      p.Type,
-		Name:      p.Name,
-		Flow:      p.Flow,
-		Variables: p.Variables,
+		// 以下为需要外部传入的属性
+		Name:        p.Name,
+		Type:        p.Type,
+		Flow:        p.Flow,
+		Targets:     p.Targets,
+		CommitId:    p.CommitId,
+		CreatorId:   p.CreatorId,
+		RunnerId:    p.RunnerId,
+		Variables:   p.Variables,
+		StepTimeout: p.StepTimeout,
+		AutoApprove: p.AutoApprove,
+
 		OrgId:     env.OrgId,
 		ProjectId: env.ProjectId,
 		TplId:     env.TplId,
@@ -58,6 +62,15 @@ func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e
 	}
 
 	for i, step := range task.Flow.Steps {
+		if len(task.Targets) != 0 && IsTerraformStep(step.Type) {
+			if step.Type != models.TaskStepInit {
+				for _, t := range task.Targets {
+					step.Args = append(step.Args, fmt.Sprintf("-target=%s", t))
+				}
+			}
+			// TODO: tfVars, playVars 也以这种方式传入？
+		}
+
 		if _, er := createTaskStep(tx, task, step, i); er != nil {
 			return nil, e.New(er.Code(), errors.Wrapf(er, "save task step"))
 		}
@@ -82,24 +95,6 @@ func createTaskStep(tx *db.Session, task models.Task, stepBody models.TaskStepBo
 		return nil, e.New(e.DBError, err)
 	}
 	return &s, nil
-}
-
-func UpdateTask(tx *db.Session, id models.Id, attrs models.Attrs) (task *models.Task, re e.Error) {
-	task = &models.Task{}
-	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.Task{}, attrs); err != nil {
-		return nil, e.New(e.DBError, fmt.Errorf("update task error: %v", err))
-	}
-	if err := tx.Where("id = ?", id).First(task); err != nil {
-		return nil, e.New(e.DBError, fmt.Errorf("query task error: %v", err))
-	}
-	return
-}
-
-func DeleteTask(tx *db.Session, id models.Id) e.Error {
-	if _, err := tx.Where("id = ?", id).Delete(&models.Task{}); err != nil {
-		return e.New(e.DBError, fmt.Errorf("delete task error: %v", err))
-	}
-	return nil
 }
 
 func GetTaskById(tx *db.Session, id models.Id) (*models.Task, e.Error) {

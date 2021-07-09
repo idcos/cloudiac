@@ -112,6 +112,7 @@ const (
 	TaskNotExists         = 10011
 	InvalidTaskId         = 10012
 	TaskApproveNotPending = 10013
+	TaskStepNotExists     = 10114
 
 	// template
 	TemplateAlreadyExists = 11010
@@ -335,5 +336,8 @@ var errorMsgs = map[int]map[string]string{
 	},
 	NameDuplicate: {
 		"zh-cn": "名称重复",
+	},
+	TaskStepNotExists: {
+		"zh-cn": "步骤不存在",
 	},
 }

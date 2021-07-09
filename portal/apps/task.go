@@ -10,24 +10,6 @@ import (
 	"net/http"
 )
 
-// CreateTask 创建任务
-func CreateTask(c *ctx.ServiceCtx, form *forms.CreateTaskForm) (*models.Task, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("create task %s", form.Name))
-
-	// TODO
-	task, err := services.CreateTask(c.DB(), &models.Env{Name: "env"}, models.Task{
-		Name:      form.Name,
-		CreatorId: c.UserId,
-	})
-	if err != nil && err.Code() == e.TaskAlreadyExists {
-		return nil, e.New(err.Code(), err, http.StatusBadRequest)
-	} else if err != nil {
-		c.Logger().Errorf("error creating task, err %s", err)
-		return nil, e.AutoNew(err, e.DBError)
-	}
-	return task, nil
-}
-
 // SearchTask 任务查询
 func SearchTask(c *ctx.ServiceCtx, form *forms.SearchTaskForm) (interface{}, e.Error) {
 	query := services.QueryTask(c.DB())

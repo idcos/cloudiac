@@ -45,10 +45,10 @@ type Env struct {
 	CurrentTaskId Id `json:"lastTaskId" gorm:"size:32;default:'0'"` // 最后一次部署任务ID
 
 	// AutoDestroyAt 自动销毁时间，这里存绝对时间，1小时、2小时的相对时间选择由前端转换
+	// TODO 自动销毁机制待实现
 	TTL           int        `json:"ttl" gorm:"default:'0'"`          // 生存时间
 	AutoDestroyAt *time.Time `json:"autoDestroyAt"`                   // 自动销毁时间
 	AutoApproval  bool       `json:"autoApproval" gorm:"default:'0'"` // 是否自动审批
-
 }
 
 func (Env) TableName() string {

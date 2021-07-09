@@ -123,3 +123,13 @@ func (m SoftDeleteModel) AddUniqueIndex(sess *db.Session, index string, cols ...
 	cols = append(cols, "deleted_at_t")
 	return m.TimedModel.AddUniqueIndex(sess, index, cols...)
 }
+
+type StrSlice []string
+
+func (v StrSlice) Value() (driver.Value, error) {
+	return MarshalValue(v)
+}
+
+func (v *StrSlice) Scan(value interface{}) error {
+	return UnmarshalValue(value, v)
+}

@@ -99,9 +99,15 @@ type Task struct {
 	Status    string `json:"status" enums:"'pending','running','failed','complete','timeout'"` // gorm 配置见 Migrate() // 任务状态
 	Message   string `json:"message"`                                                          // 任务的状态描述信息，如失败原因
 
+	// 任务每一步的执行超时，整个任务无超时控制
+	StepTimeout int `json:"stepTimeout" gorm:"default:'600';comment:'执行超时'"`
+
+	AutoApprove bool `json:"autoApproval" gorm:"default:'0'"`
+
 	Type     string   `json:"type" gorm:"not null;enum('plan', 'apply', 'destroy')" enums:"'plan', 'apply', 'destroy'"` // 任务类型
 	Flow     TaskFlow `json:"-" gorm:"type:text"`                                                                       // 执行流程
 	CurrStep int      `json:"currStep" gorm:"default:'0'"`                                                              // 当前在执行的流程步骤
+	Targets  StrSlice `json:"targets" gorm:"type:json"`                                                                 // 指定 terraform target 参数
 
 	StartAt *time.Time `json:"startAt" gorm:"null;comment:'任务开始时间'"` // 任务开始时间
 	EndAt   *time.Time `json:"endAt" gorm:"null;comment:'任务结束时间'"`   // 任务结束时间
@@ -169,20 +175,10 @@ func (t *Task) Migrate(sess *db.Session) (err error) {
 	return nil
 }
 
-type TaskStepArgs []string
-
-func (v TaskStepArgs) Value() (driver.Value, error) {
-	return MarshalValue(v)
-}
-
-func (v *TaskStepArgs) Scan(value interface{}) error {
-	return UnmarshalValue(value, v)
-}
-
 type TaskStepBody struct {
-	Type string       `json:"type" yaml:"type" gorm:"type:enum('init','plan','apply','play','command','destroy')"`
-	Name string       `json:"name" yaml:"name" gorm:""`
-	Args TaskStepArgs `json:"args" yaml:"args" gorm:"type:text"`
+	Type string   `json:"type" yaml:"type" gorm:"type:enum('init','plan','apply','play','command','destroy')"`
+	Name string   `json:"name" yaml:"name" gorm:""`
+	Args StrSlice `json:"args" yaml:"args" gorm:"type:text"`
 }
 
 const (
@@ -193,11 +189,12 @@ const (
 	TaskStepPlay    = common.TaskStepPlay
 	TaskStepCommand = common.TaskStepCommand
 
-	TaskStepPending  = common.TaskStepPending
-	TaskStepRunning  = common.TaskStepRunning
-	TaskStepFailed   = common.TaskStepFailed
-	TaskStepComplete = common.TaskStepComplete
-	TaskStepTimeout  = common.TaskStepTimeout
+	TaskStepPending   = common.TaskStepPending
+	TaskStepApproving = common.TaskStepApproving
+	TaskStepRunning   = common.TaskStepRunning
+	TaskStepFailed    = common.TaskStepFailed
+	TaskStepComplete  = common.TaskStepComplete
+	TaskStepTimeout   = common.TaskStepTimeout
 )
 
 type TaskStep struct {
@@ -206,18 +203,28 @@ type TaskStep struct {
 
 	OrgId     Id         `json:"orgId" gorm:"size:32;not null"`
 	ProjectId Id         `json:"projectId" gorm:"size:32;not null"`
-	EnvId     Id         `json:"envId" gorm:"size:32; not null"`
+	EnvId     Id         `json:"envId" gorm:"size:32;not null"`
 	TaskId    Id         `json:"taskId" gorm:"size:32;not null"`
 	Index     int        `json:"index" gorm:"size:32;not null"`
-	Status    string     `json:"status" gorm:"type:enum('pending','running','failed','complete','timeout')"`
+	Status    string     `json:"status" gorm:"type:enum('pending','approving','running','failed','complete','timeout')"`
 	Message   string     `json:"message" gorm:"type:text"`
 	StartAt   *time.Time `json:"startAt"`
 	EndAt     *time.Time `json:"endAt"`
 	LogPath   string     `json:"logPath" gorm:""`
+
+	ApproverId Id `json:"approverId" gorm:"size:32;not null"` // 审批者用户 id
 }
 
 func (TaskStep) TableName() string {
 	return "iac_task_step"
+}
+
+func (s *TaskStep) IsApproved() bool {
+	// 只有 apply 和 destroy 步骤需要审批
+	if utils.StrInArray(s.Type, TaskStepApply, TaskStepDestroy) && len(s.ApproverId) == 0 {
+		return false
+	}
+	return true
 }
 
 func (s *TaskStep) GenLogPath() string {
