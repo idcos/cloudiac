@@ -40,6 +40,7 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 			err      e.Error
 			tpl      models.Template
 		)
+		tpl.CreatorId = c.UserId
 		template, err = services.CreateTemplate(tx, tpl)
 		if err != nil {
 			return nil, err

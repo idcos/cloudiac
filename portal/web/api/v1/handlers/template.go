@@ -28,7 +28,6 @@ type Template struct {
 // @Param workdir formData string false "工作路径"
 // @Param playbook formData string false "ansbile playbook文件路径"
 // @Param status formData string false "云模版状态，有enable, disable两个可选值，默认值为enable"
-// @Param creatorId formData string true "创建用户ID"
 // @Param runnerId formData string true "runnerId"
 // @Router /template/create [post]
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
