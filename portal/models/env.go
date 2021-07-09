@@ -2,6 +2,8 @@ package models
 
 import (
 	"cloudiac/portal/libs/db"
+	"fmt"
+	"path"
 	"time"
 )
 
@@ -13,32 +15,40 @@ const (
 	EnvStatusInactive  = "inactive"  // 资源未部署或已销毁
 )
 
+var EnvStatus = []string{EnvStatusActive, EnvStatusDeploying, EnvStatusApproving, EnvStatusFailed, EnvStatusInactive}
+
 type Env struct {
 	SoftDeleteModel
-	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
-	TplId     Id `json:"tplId" gorm:"size:32;not null"`
-	ProjectId Id `json:"projectId" gorm:"size:32;not null"`
+	OrgId     Id `json:"orgId" gorm:"size:32;not null"`     // 组织ID
+	ProjectId Id `json:"projectId" gorm:"size:32;not null"` // 项目ID
+	TplId     Id `json:"tplId" gorm:"size:32;not null"`     // 模板ID
+	CreatorId Id `json:"creatorId" gorm:"size:32;not null"` // 创建人ID
 
-	Name        string `json:"name" gorm:"not null"`
-	Description string `json:"description" gorm:"type:text"`
-	Status      string `json:"status" gorm:"type:enum('active','deploying','approving','failed','inactive')"`
-	RunnerId    string `json:"runnerId" gorm:"size:32;not null"`
-	Timeout     int    `json:"timeout" gorm:"default:'600';comment:'部署超时'"`
-	OneTime     bool   `json:"oneTime" gorm:"default:'0'"`
+	Name        string `json:"name" gorm:"not null"`         // 环境名称
+	Description string `json:"description" gorm:"type:text"` // 环境描述
+	Status      string `json:"status" gorm:"type:enum('active','deploying','approving','failed','inactive');default:'inactive'" 
+								enums:"'active','deploying','approving','failed','inactive'"` // 环境状态
+	Archived bool   `json:"archived" gorm:"default:'0'"`                 // 是否已归档
+	RunnerId string `json:"runnerId" gorm:"size:32;not null"`            //部署通道ID
+	Timeout  int    `json:"timeout" gorm:"default:'600';comment:'部署超时'"` // 部署超时时间（单位：秒）
+	OneTime  bool   `json:"oneTime" gorm:"default:'0'"`                  // 一次性环境标识
 
-	StatePath string `json:"statePath" gorm:"not null"`
-	Outputs   string `json:"outputs" gorm:"type:text"`
+	StatePath string `json:"statePath" gorm:"not null" swaggerignore:"true"` // Terraform tfstate 文件路径（内部）
+	Outputs   string `json:"outputs" gorm:"type:text" swaggerignore:"true"`  // Terraform outputs 输出内容
 
 	// 环境可以覆盖模板中的 vars file 配置，具体说明见 Template model
-	TfVarsFile   string `json:"tfVarsFile" gorm:"default:''"`
-	PlayVarsFile string `json:"playVarsFile" gorm:"default:''"`
-
-	// 最后一次部署或销毁任务的 id(plan 作业不记录)
-	LastTaskId Id `json:"lastTaskId" gorm:"size:32;default:'0'"`
+	Variables    []VariableBody `json:"vars" gorm:"json"`               // 合并变量列表
+	TfVarsFile   string         `json:"tfVarsFile" gorm:"default:''"`   // Terraform tfvars 变量文件路径
+	PlayVarsFile string         `json:"playVarsFile" gorm:"default:''"` // Ansible 变量文件路径
+	Playbook     string         `json:"playbook" gorm:"default:''"`     // Ansible playbook 入口文件路径
+	// 最后一次部署或销毁任务的 id(plan 任务不记录)
+	CurrentTaskId Id `json:"lastTaskId" gorm:"size:32;default:'0'"` // 最后一次部署任务ID
 
 	// AutoDestroyAt 自动销毁时间，这里存绝对时间，1小时、2小时的相对时间选择由前端转换
-	AutoDestroyAt *time.Time `json:"autoDestroyAt"`
-	AutoApproval  bool       `json:"autoApproval" gorm:"default:'0'"`
+	TTL           int        `json:"ttl" gorm:"default:'0'"`          // 生存时间
+	AutoDestroyAt *time.Time `json:"autoDestroyAt"`                   // 自动销毁时间
+	AutoApproval  bool       `json:"autoApproval" gorm:"default:'0'"` // 是否自动审批
+
 }
 
 func (Env) TableName() string {
@@ -56,20 +66,33 @@ func (e *Env) Migrate(sess *db.Session) (err error) {
 	return nil
 }
 
+func (e *Env) DefaultStatPath() string {
+	return path.Join(fmt.Sprintf("env-%s", e.Id.String()), "terraform.tfstate")
+}
+
+// EnvRes 环境资源
+// 环境资源为该环境部署后 terraform 创建的资源列表
 type EnvRes struct {
 	BaseModel
 
-	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
-	ProjectId Id `json:"projectId" gorm:"size:32;not null"`
-	EnvId     Id `json:"envId" gorm:"size:32;not null"`
+	OrgId     Id `json:"orgId" gorm:"size:32;not null"`     // 组织ID
+	ProjectId Id `json:"projectId" gorm:"size:32;not null"` // 项目ID
+	EnvId     Id `json:"envId" gorm:"size:32;not null"`     // 环境ID
 
-	Provider string `json:"provider" gorm:"not null"`
-	Type     string `json:"type" gorm:"not null"`
-	Name     string `json:"name" gorm:"not null"`
-	Index    int    `json:"index" gorm:"not null"`
-	Attrs    JSON   `json:"attrs" gorm:"type:text"`
+	Provider string `json:"provider" gorm:"not null"` // Terraform provider，一般表示为云商
+	Type     string `json:"type" gorm:"not null"`     // 资源类型
+	Name     string `json:"name" gorm:"not null"`     // 资源名称
+	Index    int    `json:"index" gorm:"not null"`    // 资源序号
+	Attrs    JSON   `json:"attrs" gorm:"type:text"`   // 资源属性
 }
 
 func (EnvRes) TableName() string {
 	return "iac_env_res"
+}
+
+type EnvDetail struct {
+	Env
+	Creator       string `json:"creator"`       // 创建人
+	ResourceCount int    `json:"resourceCount"` // 资源数量
+	TemplateName  string `json:"templateName"`  // 模板名称
 }

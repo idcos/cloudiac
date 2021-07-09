@@ -4,13 +4,21 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"fmt"
 	"github.com/pkg/errors"
 )
 
-func GetTask(dbSess *db.Session, id models.Id) (*models.Task, error) {
+func GetTask(dbSess *db.Session, id models.Id) (*models.Task, e.Error) {
 	task := models.Task{}
 	err := dbSess.Where("id = ?", id).First(&task)
-	return &task, err
+	if err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TaskNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+
+	return &task, nil
 }
 
 func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e.Error) {
@@ -74,4 +82,37 @@ func createTaskStep(tx *db.Session, task models.Task, stepBody models.TaskStepBo
 		return nil, e.New(e.DBError, err)
 	}
 	return &s, nil
+}
+
+func UpdateTask(tx *db.Session, id models.Id, attrs models.Attrs) (task *models.Task, re e.Error) {
+	task = &models.Task{}
+	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.Task{}, attrs); err != nil {
+		return nil, e.New(e.DBError, fmt.Errorf("update task error: %v", err))
+	}
+	if err := tx.Where("id = ?", id).First(task); err != nil {
+		return nil, e.New(e.DBError, fmt.Errorf("query task error: %v", err))
+	}
+	return
+}
+
+func DeleteTask(tx *db.Session, id models.Id) e.Error {
+	if _, err := tx.Where("id = ?", id).Delete(&models.Task{}); err != nil {
+		return e.New(e.DBError, fmt.Errorf("delete task error: %v", err))
+	}
+	return nil
+}
+
+func GetTaskById(tx *db.Session, id models.Id) (*models.Task, e.Error) {
+	o := models.Task{}
+	if err := tx.Where("id = ?", id).First(&o); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TaskNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &o, nil
+}
+
+func QueryTask(query *db.Session) *db.Session {
+	return query.Model(&models.Task{})
 }

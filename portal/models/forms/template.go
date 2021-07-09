@@ -49,9 +49,9 @@ type UpdateTemplateForm struct {
 	Extra                  string    `form:"extra" json:"extra"`
 	Timeout                int       `form:"timeout" json:"timeout"`
 	Status                 string    `form:"status" json:"status"`
-	DefaultRunnerAddr      string    `json:"defaultRunnerAddr" grom:"not null;comment:'默认runner地址'"`
-	DefaultRunnerPort      uint      `json:"defaultRunnerPort" grom:"not null;comment:'默认runner端口'"`
-	DefaultRunnerServiceId string    `json:"defaultRunnerServiceId" grom:"not null;comment:'默认runner-consul-serviceId'"`
+	DefaultRunnerAddr      string    `json:"defaultRunnerAddr" gorm:"not null;comment:'默认runner地址'"`
+	DefaultRunnerPort      uint      `json:"defaultRunnerPort" gorm:"not null;comment:'默认runner端口'"`
+	DefaultRunnerServiceId string    `json:"defaultRunnerServiceId" gorm:"not null;comment:'默认runner-consul-serviceId'"`
 	Playbook               string    `json:"playbook" form:"playbook" `
 }
 

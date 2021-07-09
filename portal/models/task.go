@@ -69,6 +69,11 @@ const (
 	TaskTypeApply   = common.TaskTypeApply
 	TaskTypeDestroy = common.TaskTypeDestroy
 
+	// TODO: i8n
+	TaskTypePlanName    = "计划"
+	TaskTypeApplyName   = "部署"
+	TaskTypeDestroyName = "销毁"
+
 	TaskPending  = common.TaskPending
 	TaskRunning  = common.TaskRunning
 	TaskFailed   = common.TaskFailed
@@ -81,34 +86,34 @@ var TaskStatusList = []string{TaskPending, TaskRunning, TaskFailed, TaskComplete
 type Task struct {
 	SoftDeleteModel
 
-	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
-	ProjectId Id `json:"projectId" gorm:"size:32;not null"`
-	TplId     Id `json:"TplId" gorm:"size:32;not null"`
-	EnvId     Id `json:"envId" gorm:"size:32;not null"`
+	OrgId     Id `json:"orgId" gorm:"size:32;not null"`     // 组织ID
+	ProjectId Id `json:"projectId" gorm:"size:32;not null"` // 项目ID
+	TplId     Id `json:"TplId" gorm:"size:32;not null"`     // 模板ID
+	EnvId     Id `json:"envId" gorm:"size:32;not null"`     // 环境ID
 
-	Name      string `json:"name" gorm:"not null;comment:'任务名称'"`
-	CreatorId Id     `json:"size:32;creatorId"`
-	RunnerId  string `json:"runnerId" gorm:"not null"`
-	CommitId  string `json:"commitId" gorm:"not null"`
-	Timeout   int    `json:"timeout" gorm:"default:'600';comment:'执行超时'"`
-	Status    string `json:"status"`  // gorm 配置见 Migrate()
-	Message   string `json:"message"` // 任务的状态描述信息，如失败原因
+	Name      string `json:"name" gorm:"not null;comment:'任务名称'"`                              // 任务名称
+	CreatorId Id     `json:"size:32;creatorId"`                                                // 创建人ID
+	RunnerId  string `json:"runnerId" gorm:"not null"`                                         // 部署通道
+	CommitId  string `json:"commitId" gorm:"not null"`                                         // 版本 commit ID
+	Timeout   int    `json:"timeout" gorm:"default:'600';comment:'执行超时'"`                      // 超时时间（单位：秒）
+	Status    string `json:"status" enums:"'pending','running','failed','complete','timeout'"` // gorm 配置见 Migrate() // 任务状态
+	Message   string `json:"message"`                                                          // 任务的状态描述信息，如失败原因
 
-	Type     string   `json:"type" gorm:"not null;enum('plan', 'apply', 'destroy')"`
-	Flow     TaskFlow `json:"-" gorm:"type:text"`
-	CurrStep int      `json:"currStep" gorm:"default:'0'"` // 当前在执行的流程步骤
+	Type     string   `json:"type" gorm:"not null;enum('plan', 'apply', 'destroy')" enums:"'plan', 'apply', 'destroy'"` // 任务类型
+	Flow     TaskFlow `json:"-" gorm:"type:text"`                                                                       // 执行流程
+	CurrStep int      `json:"currStep" gorm:"default:'0'"`                                                              // 当前在执行的流程步骤
 
-	StartAt *time.Time `json:"startAt" gorm:"null;comment:'任务开始时间'"`
-	EndAt   *time.Time `json:"endAt" gorm:"null;comment:'任务结束时间'"`
+	StartAt *time.Time `json:"startAt" gorm:"null;comment:'任务开始时间'"` // 任务开始时间
+	EndAt   *time.Time `json:"endAt" gorm:"null;comment:'任务结束时间'"`   // 任务结束时间
 
 	// 本次执行使用的所有变量(继承、覆盖计算之后的)
-	Variables TaskVariables `json:"variables" gorm:"type:json"`
+	Variables TaskVariables `json:"variables" gorm:"type:json"` // 本次执行使用的所有变量(继承、覆盖计算之后的)
 
 	// 任务执行结果，如 add/change/delete 的资源数量等
-	Result TaskResult `json:"result" gorm:"type:json"`
+	Result TaskResult `json:"result" gorm:"type:json"` // 任务执行结果
 
 	// 扩展属性，包括 source, transitionId 等
-	Extra TaskExtra `json:"extra" gorm:"type:json"`
+	Extra TaskExtra `json:"extra" gorm:"type:json"` // 扩展属性
 }
 
 func (Task) TableName() string {
@@ -129,6 +134,19 @@ func (Task) IsStartedStatus(status string) bool {
 
 func (Task) IsExitedStatus(status string) bool {
 	return utils.InArrayStr([]string{TaskFailed, TaskComplete, TaskTimeout}, status)
+}
+
+func (Task) GetTaskNameByType(typ string) string {
+	switch typ {
+	case TaskTypePlan:
+		return TaskTypePlanName
+	case TaskTypeApply:
+		return TaskTypeApplyName
+	case TaskTypeDestroy:
+		return TaskTypeDestroyName
+	default:
+		panic("invalid task type")
+	}
 }
 
 func (t *Task) Migrate(sess *db.Session) (err error) {
