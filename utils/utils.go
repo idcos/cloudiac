@@ -175,12 +175,19 @@ func (t JSONTime) Value() (driver.Value, error) {
 
 // Scan 转换为 time.Time
 func (t *JSONTime) Scan(v interface{}) error {
-	value, ok := v.(time.Time)
-	if ok {
+	switch value := v.(type) {
+	case []byte:
+		tv, err := time.Parse("2006-01-02 15:04:05", string(value))
+		if err != nil {
+			return err
+		}
+		*t = JSONTime(tv)
+	case time.Time:
 		*t = JSONTime(value)
-		return nil
+	default:
+		return fmt.Errorf("can not convert %v to timestamp", v)
 	}
-	return fmt.Errorf("can not convert %v to timestamp", v)
+	return nil
 }
 
 func FileExist(p string) bool {
@@ -485,6 +492,14 @@ func GetBoolEnv(key string, _default bool) bool {
 	}
 	// 其他情况返回默认值
 	return _default
+}
+
+func JoinURL(address string, path ...string) string {
+	elems := append([]string{address}, path...)
+	for i := range elems {
+		elems[i] = strings.Trim(elems[i], "/")
+	}
+	return strings.Join(elems, "/")
 }
 
 // SprintTemplate 用模板参数格式化字符串

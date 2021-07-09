@@ -72,7 +72,7 @@ func (sm *sendMail) SendMail() {
 		sm.Tpl.Name,
 		sm.Tpl.Id,
 		sm.Task.Id,
-		//sm.Task.TaskType,
+		sm.Task.Type,
 		sm.Task.Status,
 		sm.Task.RunnerId,
 		sm.Task.CommitId,

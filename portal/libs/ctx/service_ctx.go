@@ -1,10 +1,14 @@
 package ctx
 
 import (
+	"cloudiac/configs"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/utils/logs"
 	"fmt"
+	"github.com/casbin/casbin/v2"
+	"github.com/casbin/casbin/v2/model"
+	gormadapter "github.com/casbin/gorm-adapter/v2"
 	"math/rand"
 )
 
@@ -14,19 +18,23 @@ type ServiceCtx struct {
 	//rdb    *cache.Session
 	logger logs.Logger
 
-	Token     string
-	OrgId     models.Id
-	ProjectId models.Id
-	org       *models.Organization
+	Token string
+	OrgId models.Id
+	org   *models.Organization
 	//OrgGuid    string
 	UserId       models.Id // 登陆用户ID
-	Username     string
-	IsSuperAdmin bool
-	Role         string
+	Username     string    // 用户名称
+	IsSuperAdmin bool      // 是否平台管理员
+	Role         string    // 组织角色
 	user         *models.User
 	UserIpAddr   string
 	UserAgent    string
 	Perms        []string
+	ProjectId    models.Id // 项目ID
+	ProjectRole  string    // 项目角色
+
+	// Casbin
+	enforcer *casbin.Enforcer
 }
 
 func NewServiceCtx(rc RequestContextInter) *ServiceCtx {
@@ -118,3 +126,26 @@ func (c *ServiceCtx) AddLogField(key string, val string) *ServiceCtx {
 //
 //	return c.rdb
 //}
+
+// Enforcer 初始化 casbin enforcer 对象
+func (c *ServiceCtx) Enforcer() *casbin.Enforcer {
+	if c.enforcer == nil {
+		var err error
+
+		adapter, err := gormadapter.NewAdapterByDBUsePrefix(db.Get().DB(), "iac_")
+		if err != nil {
+			panic(fmt.Sprintf("error create enforcer: %v", err))
+		}
+
+		// 加载策略模型
+		m, err := model.NewModelFromString(configs.RbacModel)
+		if err != nil {
+			panic(fmt.Sprintf("error load rbac model: %v", err))
+		}
+		c.enforcer, err = casbin.NewEnforcer(m, adapter)
+		if err != nil {
+			panic(fmt.Sprintf("error create enforcer: %v", err))
+		}
+	}
+	return c.enforcer
+}

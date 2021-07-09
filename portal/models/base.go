@@ -62,6 +62,10 @@ func (i *Id) Scan(value interface{}) error {
 	return nil
 }
 
+func (i Id) String() string {
+	return string(i)
+}
+
 type BaseModel struct {
 	Id Id `gorm:"size:32;primary_key" json:"id" example:"x-c3ek0co6n88ldvq1n6ag"` //ID
 }
@@ -118,4 +122,14 @@ func (SoftDeleteModel) AfterDelete(scope *gorm.Scope) error {
 func (m SoftDeleteModel) AddUniqueIndex(sess *db.Session, index string, cols ...string) error {
 	cols = append(cols, "deleted_at_t")
 	return m.TimedModel.AddUniqueIndex(sess, index, cols...)
+}
+
+type StrSlice []string
+
+func (v StrSlice) Value() (driver.Value, error) {
+	return MarshalValue(v)
+}
+
+func (v *StrSlice) Scan(value interface{}) error {
+	return UnmarshalValue(value, v)
 }

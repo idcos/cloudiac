@@ -44,8 +44,6 @@ const (
 	PlaybookMatch  = "*.y*ml"
 	Ansible        = "ansible"
 
-	TerraformStateListName = "state_list.log" //terraform state list 文件名称
-
 	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀
 
 	LocalGitReposPath = "repos"  // 内置 http git server 服务目录

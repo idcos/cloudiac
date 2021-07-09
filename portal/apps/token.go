@@ -7,8 +7,6 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
-	"cloudiac/utils"
-	"cloudiac/utils/mail"
 	"fmt"
 	"net/http"
 )
@@ -94,38 +92,4 @@ func DeleteToken(c *ctx.ServiceCtx, form *forms.DeleteTokenForm) (result interfa
 	}
 
 	return
-}
-
-// UserPassReset 用户重置密码
-func UserPassReset(c *ctx.ServiceCtx, form *forms.DetailUserForm) (*models.User, e.Error) {
-	initPass := utils.GenPasswd(6, "mix")
-	hashedPassword, err := services.HashPassword(initPass)
-	if err != nil {
-		c.Logger().Errorf("error hash password %s", err)
-		return nil, err
-	}
-
-	attrs := models.Attrs{}
-	attrs["init_pass"] = initPass
-	attrs["password"] = hashedPassword
-
-	user, err := services.UpdateUser(c.DB(), form.Id, attrs)
-
-	resp := struct {
-		*models.User
-		InitPass string
-	}{
-		User:     user,
-		InitPass: initPass,
-	}
-
-	// TODO: 需确定邮件内容
-	go func() {
-		err := mail.SendMail([]string{user.Email}, emailSubjectResetPassword, utils.SprintTemplate(emailBodyResetPassword, resp))
-		if err != nil {
-			c.Logger().Errorf("error send mail to %s, err %s", user.Email, err)
-		}
-	}()
-
-	return user, err
 }

@@ -1,11 +1,11 @@
 package main
 
 import (
+	"cloudiac/portal/task_manager"
 	"fmt"
-	"os"
-
 	"github.com/jessevdk/go-flags"
 	"github.com/pkg/errors"
+	"os"
 
 	"cloudiac/cmds/common"
 	"cloudiac/configs"
@@ -75,7 +75,7 @@ func main() {
 	common.ReRegisterService(opt.ReRegister, "IaC-Portal")
 
 	// 启动后台 worker
-	//go task_manager.Start(configs.Get().Consul.ServiceID)
+	go task_manager.Start(configs.Get().Consul.ServiceID)
 
 	// 启动 web server
 	web.StartServer()
@@ -100,6 +100,10 @@ func appAutoInit(tx *db.Session) (err error) {
 
 	if err := initTemplates(tx); err != nil {
 		return errors.Wrap(err, "init meat template")
+	}
+
+	if err := configs.InitPolicy(tx); err != nil {
+		return errors.Wrap(err, "init rbac policy")
 	}
 
 	return nil

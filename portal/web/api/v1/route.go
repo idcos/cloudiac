@@ -21,6 +21,7 @@ import (
 
 func Register(g *gin.RouterGroup) {
 	w := ctrl.GinRequestCtxWrap
+	ac := middleware.AccessControl
 
 	// 非授权用户相关路由
 	g.Any("/check", func(c *gin.Context) {
@@ -53,7 +54,7 @@ func Register(g *gin.RouterGroup) {
 		sys.PUT("/orgs/:id/status", w(handlers.Organization{}.ChangeOrgStatus))
 		sys.DELETE("/orgs/:id", w(handlers.Organization{}.Delete))
 
-		auth.PUT("/auth/password", w(handlers.Auth{}.UserPassReset))
+		//auth.PUT("/auth/password", w(handlers.Auth{}.UserPassReset))
 
 		ctrl.Register(sys.Group("system"), &handlers.SystemConfig{})
 		ctrl.Register(sys.Group("token"), &handlers.Auth{})
@@ -104,12 +105,65 @@ func Register(g *gin.RouterGroup) {
 		root.GET("/template/playbook/search", w(handlers.TemplatePlaybookSearch))
 		root.GET("/template/state_list", w(handlers.Task{}.TaskStateListSearch))
 	}
-	//变量
-	{
-		ctrl.Register(root.Group("variables"), &handlers.Variable{})
-		ctrl.Register(root.Group("tokens"), &handlers.Token{})
-	}
+
+	g.POST("/auth/login", w(handlers.Auth{}.Login))
 
 	// TODO 增加鉴权
 	g.GET("/task/log/sse", w(handlers.Task{}.FollowLogSse))
+
+	// Authorization Header 鉴权
+	g.Use(w(middleware.Auth)) // 解析 header token
+
+	ctrl.Register(g.Group("token", ac()), &handlers.Auth{})
+	ctrl.Register(g.Group("system", ac()), &handlers.SystemConfig{})
+	ctrl.Register(g.Group("webhook", ac()), &handlers.AccessToken{})
+	g.GET("/auth/me", ac("self", "read"), w(handlers.Auth{}.GetUserByToken))
+	g.PUT("/users/self", ac("self", "update"), w(handlers.User{}.UpdateSelf))
+	g.GET("/runner/search", ac(), w(handlers.RunnerSearch))
+	g.PUT("/consul/tags/update", ac(), w(handlers.ConsulTagUpdate))
+	g.GET("/consul/kv/search", ac(), w(handlers.ConsulKVSearch))
+	g.GET("/system/status/search", ac(), w(handlers.PortalSystemStatusSearch))
+
+	ctrl.Register(g.Group("orgs", ac()), &handlers.Organization{})
+	g.PUT("/orgs/:id/status", ac(), w(handlers.Organization{}.ChangeOrgStatus))
+	g.GET("/orgs/:id/users", ac("orgs", "listuser"), w(handlers.Organization{}.SearchUser))
+	g.PUT("/orgs/:id/users", ac("orgs", "adduser"), w(handlers.Organization{}.AddUserToOrg))
+	g.DELETE("/orgs/:id/users/:userId", ac("orgs", "removeuser"), w(handlers.Organization{}.RemoveUserForOrg))
+	g.PUT("/orgs/:id/users/:userId/role", ac("orgs", "updaterole"), w(handlers.Organization{}.UpdateUserOrgRel))
+
+	// 组织 header
+	g.Use(w(middleware.AuthOrgId))
+
+	ctrl.Register(g.Group("users", ac()), &handlers.User{})
+	g.PUT("/users/:id/status", ac(), w(handlers.User{}.ChangeUserStatus))
+	g.POST("/users/:id/password/reset", ac(), w(handlers.User{}.PasswordReset))
+
+	g.POST("/projects", ac(), w(handlers.Organization{}.Search))
+	g.GET("/projects", ac(), w(handlers.Organization{}.Search))
+	g.GET("/projects/:id", ac(), w(handlers.Organization{}.Search))
+
+	// 项目资源
+	// TODO: parse project header
+	g.Use(w(middleware.AuthProjectId))
+
+	ctrl.Register(g.Group("template", ac()), &handlers.Template{})
+	g.GET("/template/overview", ac(), w(handlers.Template{}.Overview))
+	g.GET("/template/tfvars/search, ac()", w(handlers.TemplateTfvarsSearch))
+	g.GET("/template/variable/search", ac(), w(handlers.TemplateVariableSearch))
+	g.GET("/template/playbook/search", ac(), w(handlers.TemplatePlaybookSearch))
+	g.GET("/template/state_list", ac(), w(handlers.Task{}.TaskStateListSearch))
+
+	ctrl.Register(g.Group("task", ac()), &handlers.Task{})
+	ctrl.Register(g.Group("task/comment", ac()), &handlers.TaskComment{})
+	g.GET("/task/last", ac(), w(handlers.Task{}.LastTask))
+
+	ctrl.Register(g.Group("vcs", ac()), &handlers.Vcs{})
+	g.GET("/vcs/repo/search", ac(), w(handlers.Vcs{}.ListRepos))
+	g.GET("/vcs/branch/search", ac(), w(handlers.Vcs{}.ListBranches))
+	g.GET("/vcs/readme", ac(), w(handlers.Vcs{}.GetReadmeContent))
+
+	ctrl.Register(g.Group("notification", ac()), &handlers.Notification{})
+	ctrl.Register(g.Group("resource/account", ac()), &handlers.ResourceAccount{})
+	ctrl.Register(g.Group("variables", ac()), &handlers.Variable{})
+	ctrl.Register(g.Group("tokens", ac()), &handlers.Token{})
 }
