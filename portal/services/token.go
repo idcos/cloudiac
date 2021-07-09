@@ -1,6 +1,7 @@
 package services
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
@@ -65,7 +66,7 @@ func UpdateToken(tx *db.Session, id models.Id, attrs models.Attrs) (token *model
 }
 
 func QueryToken(query *db.Session) *db.Session {
-	return query.Model(&models.Token{})
+	return query.Model(&models.Token{}).Where("type = ?", consts.TokenApi)
 }
 
 func DeleteToken(tx *db.Session, id models.Id) e.Error {

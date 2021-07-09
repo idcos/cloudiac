@@ -9,7 +9,7 @@ type Token struct {
 	SoftDeleteModel
 
 	Key         string     `json:"key" form:"key" gorm:"not null"`
-	Type        string     `json:"type" form:"scope" gorm:"not null"`
+	Type        string     `json:"type" form:"type" gorm:"not null"`
 	OrgId       Id         `json:"orgId" form:"orgId" gorm:"not null"`
 	Role        string     `json:"role" form:"role" gorm:"not null"`
 	Status      string     `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'Token状态'"`
