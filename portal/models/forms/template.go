@@ -21,12 +21,8 @@ type CreateTemplateForm struct {
 	RepoId                 string    `form:"repoId" json:"repoId" binding:""`
 	RepoAddr               string    `form:"repoAddr" json:"repoAddr" binding:""`
 	RepoRevision           string    `form:"repoRevision" json:"repoRevision" binding:""`
-	// TODO vars 待定
-	Vars                   []Var     `form:"vars" json:"vars"`
-	// TODO extra 待定
 	Extra                  string    `form:"extra" json:"extra"`
 	Workdir				   string    `form:"workdir" json:"workdor"`
-	VarFile                string    `form:"varFile" json:"varFile"`
 	VcsId                  models.Id `form:"vcsId" json:"vcsId" binding:"required"`
 	Playbook               string    `json:"playbook" form:"playbook"`
 	Status				   string    `json:"status" form:"status"`
@@ -47,8 +43,6 @@ type UpdateTemplateForm struct {
 	Id                     models.Id `form:"id" json:"id" binding:"required"`
 	Name                   string    `form:"name" json:"name"`
 	Description            string    `form:"description" json:"Description"`
-	Vars                   []Var     `form:"vars" json:"vars"`
-	Varfile                string    `form:"varfile" json:"varfile"`
 	Extra                  string    `form:"extra" json:"extra"`
 	Status                 string    `form:"status" json:"status"`
 	Workdir				   string    `form:"workdir" json:"workdor"`

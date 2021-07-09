@@ -11,15 +11,16 @@ type Template struct {
 	ctrl.BaseController
 }
 // 创建云模版
+// @Tags 云模版
 // @Summary 创建云模版
 // @Accept multipart/form-data
 // @Accept json
+// @Security AuthToken
 // @Produce json
 // @Param name formData string true "模版名称"
 // @Param vcsId formData int true "vcs仓库"
 // @Param tplType formData string true "云模版类型"
-// TODO 组织ID 是不需要的
-// @Param orgId formData string true "组织id"
+// @Param Iac-Org-Id header string true "组织ID"
 // @Param description formData string false "云模版描述信息"
 // @Param repoId formData string true "云模版代码仓库id"
 // @Param repoAddr formData string true "云模版代码仓库地址"
@@ -29,22 +30,21 @@ type Template struct {
 // @Param status formData string false "云模版状态，有enable, disable两个可选值，默认值为enable"
 // @Param creatorId formData string true "创建用户ID"
 // @Param runnerId formData string true "runnerId"
-// @Param varFile formData string false "tfvars 文件路径"
 // @Router /template/create [post]
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
-// TODO 少vars 和 tfvars文件，这两个不在表里面
 func (Template) Create(c *ctx.GinRequestCtx) {
 	form := &forms.CreateTemplateForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	// TODO 缺少关联项目的
 	c.JSONResult(apps.CreateTemplate(c.ServiceCtx(), form))
 }
 
 
 // Search 查询云模板列表
+// @Tags 云模版
 // @Summary 查询云模板列表
+// @Security AuthToken
 // @Description 查询云模板列表
 // @Tags 云模板
 // @Accept  json
@@ -63,17 +63,17 @@ func (Template) Search(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.SearchTemplate(c.ServiceCtx(), &form))
 }
 
-
-
 // Update 修改云模板信息
+// @Tags 云模版
 // @Summary 修改云模板信息
 // @Description 修改云模板信息
+// @Security AuthToken
 // @Tags 云模板
 // @Accept  json
 // @Produce  json
 // @Param Authorization header string true "Bearer token"
 // @Param data body forms.UpdateTemplateForm true "云模板信息"
-// @Success 200 {object} ctx.JSONResult={models.Template}
+// @Success 200 {object} ctx.JSONResult{result=models.Template}
 // @Router /template/update [put]
 func (Template) Update(c *ctx.GinRequestCtx) {
 	form := forms.UpdateTemplateForm{}
@@ -86,6 +86,7 @@ func (Template) Update(c *ctx.GinRequestCtx) {
 
 // 删除活跃云模版
 // @Summary 删除云模版
+// @Tags 云模版
 // @Description 需要组织管理员权限。
 // @Accept multipart/form-data
 // @Accept json
@@ -105,12 +106,12 @@ func (Template) Delete(c *ctx.GinRequestCtx) {
 
 // 模版详情
 // @Summary 模版详情
+// @Tags 云模版
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
 // @Param Iac-Org-Id header string true "组织ID"
-// @Param form formData forms.DetailTemplateForm true
-// @Router /template/{templateId}
+// @Router /template/{templateId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
 func (Template) Detail(c *ctx.GinRequestCtx) {
 	form := forms.DetailTemplateForm{}

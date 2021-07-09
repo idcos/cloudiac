@@ -11,6 +11,18 @@ import (
 	"net/http"
 )
 
+type SearchTemplateResp struct {
+	Id            uint      `json:"id"`
+	Name          string    `json:"name"`
+	Description   string    `json:"description"`
+	ActiveEnvironment int   `json:"activeEnvironment"`
+	VcsType		  string    `json:"vcsType"`
+	RepoRevision  string  	`json:"repoRevision"`
+	UserName 	  string    `json:"userName"`
+	CreateTime    string	`json:"createTime"`
+}
+
+
 func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.Template, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create template %s", form.Name))
 
@@ -50,31 +62,6 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 
 func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.Template, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update template %d", form.Id))
-	// TODO 变量相关的先不管
-	//vars := make([]forms.Var, 0)
-	//newVars := make(map[string]string, 0)
-	//for _, v := range vars {
-	//	newVars[v.Id] = v.Value
-	//}
-	//
-	//if form.HasKey("vars") {
-	//	vars := form.Vars
-	//	for index, v := range vars {
-	//		if *v.IsSecret && v.Value != "" {
-	//			encryptedValue, err := utils.AesEncrypt(v.Value)
-	//			vars[index].Value = encryptedValue
-	//			if err != nil {
-	//				return nil, nil
-	//			}
-	//		}
-	//		if v.Value == "" && *v.IsSecret {
-	//			vars[index].Value = newVars[v.Id]
-	//		}
-	//	}
-	//	jsons, _ := json.Marshal(vars)
-	//	attrs["vars"] = jsons
-	//}
-	//
 	attrs := models.Attrs{}
 	if form.HasKey("name") {
 		attrs["name"] = form.Name
@@ -84,14 +71,8 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 		attrs["description"] = form.Description
 	}
 
-
 	if form.HasKey("playbook") {
 		attrs["playbook"] = form.Playbook
-	}
-
-
-	if form.HasKey("varfile") {
-		attrs["varfile"] = form.Varfile
 	}
 
 	if form.HasKey("extra") {
@@ -155,22 +136,6 @@ func TemplateDetail(c *ctx.ServiceCtx, form *forms.DetailTemplateForm) (*models.
 }
 
 
-
-type SearchTemplateResp struct {
-	Id            uint      `json:"id"`
-	Name          string    `json:"name"`
-	Description   string    `json:"description"`
-	ActiveEnvironment int   `json:"activeEnvironment"`
-	VcsType		  string    `json:"vcsType"`
-	RepoRevision  string  	`json:"repoRevision"`
-	UserName 	  string    `json:"userName"`
-	CreateTime    string	`json:"createTime"`
-
-}
-
-
-
-
 func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (tpl interface{}, err e.Error) {
 	tplIdList := make([]string, 0)
 	if c.ProjectId != "" {
@@ -180,7 +145,6 @@ func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (tpl inte
 		}
 	}
 	query, _ := services.QueryTemplate(c.DB().Debug(), form.Q, c.OrgId, tplIdList)
-
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	templates := make([]*SearchTemplateResp, 0)
 	if err := p.Scan(&templates); err != nil {

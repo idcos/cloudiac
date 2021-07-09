@@ -70,7 +70,6 @@ func Register(g *gin.RouterGroup) {
 	g.Use(w(middleware.AuthProjectId))
 
 	ctrl.Register(g.Group("template", ac()), &handlers.Template{})
-	g.GET("/template/overview", ac(), w(handlers.Template{}.Overview))
 	g.GET("/template/tfvars/search, ac()", w(handlers.TemplateTfvarsSearch))
 	g.GET("/template/variable/search", ac(), w(handlers.TemplateVariableSearch))
 	g.GET("/template/playbook/search", ac(), w(handlers.TemplatePlaybookSearch))
