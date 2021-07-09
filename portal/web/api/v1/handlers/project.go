@@ -41,7 +41,7 @@ func (Project) Create(c *ctx.GinRequestCtx) {
 // @Param q query string false "模糊搜索"
 // @Param currentPage query int false "分页页码"
 // @Param pageSize query int false "分页页数"
-// @Success 200 {object} models.Project
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Project}}
 // @Router /projects [get]
 func (Project) Search(c *ctx.GinRequestCtx) {
 	form := &forms.SearchProjectForm{}
@@ -63,7 +63,7 @@ func (Project) Search(c *ctx.GinRequestCtx) {
 // @Param name body string false "项目名称"
 // @Param description body string false "项目描述"
 // @Param userAuthorization body []forms.UserAuthorization false "用户授权"
-// @Success 200 {object} models.Project
+// @Success 200 {object} ctx.JSONResult{result=models.Project}
 // @Router /projects/{projectId}  [put]
 func (Project) Update(c *ctx.GinRequestCtx) {
 	form := &forms.UpdateProjectForm{}
@@ -101,8 +101,8 @@ func (Project) Delete(c *ctx.GinRequestCtx) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
 // @Param id query string true "项目id"
-// @Success 200 {object} models.Project
-// @Router /project/{projectId}  [get]
+// @Success 200 {object} ctx.JSONResult{result=models.Project}
+// @Router /projects/{projectId}  [get]
 func (Project) Detail(c *ctx.GinRequestCtx) {
 	form := &forms.DetailProjectForm{}
 	if err := c.Bind(form); err != nil {
