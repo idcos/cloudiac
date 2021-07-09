@@ -4,9 +4,10 @@ import "cloudiac/portal/models"
 
 type CreateVariableForm struct {
 	BaseForm
-	TplId     models.Id   `json:"tplId" form:"tplId" ` // 模板id
-	EnvId     models.Id   `json:"envId" form:"envId" ` // 环境id
-	Variables []Variables `json:"variables" form:"variables" `
+	TplId           models.Id   `json:"tplId" form:"tplId" ` // 模板id
+	EnvId           models.Id   `json:"envId" form:"envId" ` // 环境id
+	Variables       []Variables `json:"variables" form:"variables" `
+	DeleteVariables []string    `json:"deleteVariables" form:"deleteVariables" `
 }
 
 type Variables struct {

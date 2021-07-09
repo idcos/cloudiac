@@ -1,6 +1,7 @@
 package apps
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
@@ -19,7 +20,7 @@ var (
 
 func SearchToken(c *ctx.ServiceCtx, form *forms.SearchTokenForm) (interface{}, e.Error) {
 	//todo 鉴权
-	query := services.QueryToken(c.DB())
+	query := services.QueryToken(c.DB(), consts.TokenApi)
 	query = query.Where("org_id = ?", c.OrgId)
 	if form.Status != "" {
 		query = query.Where("status = ?", form.Status)
@@ -41,14 +42,15 @@ func SearchToken(c *ctx.ServiceCtx, form *forms.SearchTokenForm) (interface{}, e
 func CreateToken(c *ctx.ServiceCtx, form *forms.CreateTokenForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create token for user %s", c.UserId))
 
-	tokenStr := utils.GenGuid("")
-	token, err := services.CreateToken(c.DB(), models.Token{
-		Key:         tokenStr,
+	tokenStr := models.NewId("")
+	token, err := services.CreateToken(c.DB().Debug(), models.Token{
+		Key:         string(tokenStr),
 		Type:        form.Type,
 		OrgId:       c.OrgId,
 		Role:        form.Role,
 		ExpiredAt:   form.ExpiredAt,
 		Description: form.Description,
+		CreatorId:   c.UserId,
 	})
 	if err != nil && err.Code() == e.TokenAlreadyExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
@@ -79,7 +81,7 @@ func UpdateToken(c *ctx.ServiceCtx, form *forms.UpdateTokenForm) (token *models.
 	if err != nil && err.Code() == e.TokenAliasDuplicate {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
-		c.Logger().Errorf("error update org, err %s", err)
+		c.Logger().Errorf("error update token, err %s", err)
 		return nil, err
 	}
 	return

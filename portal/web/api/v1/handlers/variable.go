@@ -19,7 +19,7 @@ type Variable struct {
 // @Produce json
 // @Security AuthToken
 // @Param form body forms.CreateVariableForm true "parameter"
-// @router /variable [post]
+// @router /variables [post]
 // @Success 200 {object} ctx.JSONResult{result=models.Variable}
 func (Variable) Create(c *ctx.GinRequestCtx) {
 	form := forms.CreateVariableForm{}
@@ -36,7 +36,7 @@ func (Variable) Create(c *ctx.GinRequestCtx) {
 // @Produce json
 // @Security AuthToken
 // @Param form body forms.SearchVariableForm true "parameter"
-// @router /variable [get]
+// @router /variables [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Variable}}
 func (Variable) Search(c *ctx.GinRequestCtx) {
 	form := forms.SearchVariableForm{}

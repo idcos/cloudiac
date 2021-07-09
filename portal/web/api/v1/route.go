@@ -104,6 +104,11 @@ func Register(g *gin.RouterGroup) {
 		root.GET("/template/playbook/search", w(handlers.TemplatePlaybookSearch))
 		root.GET("/template/state_list", w(handlers.Task{}.TaskStateListSearch))
 	}
+	//变量
+	{
+		ctrl.Register(root.Group("variables"), &handlers.Variable{})
+		ctrl.Register(root.Group("tokens"), &handlers.Token{})
+	}
 
 	// TODO 增加鉴权
 	g.GET("/task/log/sse", w(handlers.Task{}.FollowLogSse))

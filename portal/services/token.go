@@ -1,7 +1,6 @@
 package services
 
 import (
-	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
@@ -55,7 +54,7 @@ func UpdateToken(tx *db.Session, id models.Id, attrs models.Attrs) (token *model
 	token = &models.Token{}
 	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.Token{}, attrs); err != nil {
 		if e.IsDuplicate(err) {
-			return nil, e.New(e.OrganizationAliasDuplicate)
+			return nil, e.New(e.TokenAliasDuplicate)
 		}
 		return nil, e.New(e.DBError, fmt.Errorf("update token error: %v", err))
 	}
@@ -65,8 +64,12 @@ func UpdateToken(tx *db.Session, id models.Id, attrs models.Attrs) (token *model
 	return
 }
 
-func QueryToken(query *db.Session) *db.Session {
-	return query.Model(&models.Token{}).Where("type = ?", consts.TokenApi)
+func QueryToken(query *db.Session, tokenType string) *db.Session {
+	query = query.Model(&models.Token{})
+	if tokenType != "" {
+		query = query.Where("type = ?", tokenType)
+	}
+	return query
 }
 
 func DeleteToken(tx *db.Session, id models.Id) e.Error {
