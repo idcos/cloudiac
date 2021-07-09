@@ -40,7 +40,7 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error) 
 	}
 
 	requestUrl := utils.JoinURL(runnerAddr, consts.RunnerRunTaskURL)
-	logger.Infof("request runner: %s", requestUrl)
+	logger.Debugf("request runner: %s", requestUrl)
 
 	taskReq.Step = step.Index
 	taskReq.StepType = step.Type
@@ -55,7 +55,7 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error) 
 	if err := json.Unmarshal(respData, &resp); err != nil {
 		return fmt.Errorf("unexpected response: %s", respData)
 	}
-	logger.Infof("runner response: %#v", resp)
+	logger.Debugf("runner response: %#v", resp)
 	if resp.Error != "" {
 		return fmt.Errorf(resp.Error)
 	}
@@ -74,7 +74,7 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 	stepResult *waitStepResult, err error) {
 
 	logger := logs.Get().WithField("action", "WaitTaskStep").WithField("taskId", task.Id)
-	taskDeadline := task.StartAt.Add(time.Duration(task.Timeout) * time.Second)
+	taskDeadline := step.StartAt.Add(time.Duration(task.StepTimeout) * time.Second)
 
 	// 当前版本实现中需要 portal 主动连接到 runner 获取状态
 	err = utils.RetryFunc(0, time.Second*10, func(retryN int) (retry bool, er error) {
@@ -230,9 +230,33 @@ func pullTaskStepStatus(ctx context.Context, task *models.Task, step *models.Tas
 		}
 	}
 
-	logger.Debugf("pulling task status ...")
+	logger.Infof("pulling task status ...")
 	err = selectLoop()
 	logger.Infof("pull task status done, status=%v", stepResult.Status)
 
 	return stepResult, nil
+}
+
+// WaitTaskStepApprove
+// TODO: 使用注册通知机制，统一由一个 worker 来加载所有待审批的步骤最新状态，当有步骤审批通过时触发通知
+func WaitTaskStepApprove(ctx context.Context, dbSess *db.Session, taskId models.Id, step int) (
+	taskStep *models.TaskStep, err error) {
+
+	ticker := time.NewTicker(time.Second * 5)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-ticker.C:
+			taskStep, err = services.GetTaskStep(dbSess, taskId, step)
+			if err != nil {
+				return nil, err
+			}
+			if taskStep.IsApproved() {
+				return taskStep, nil
+			}
+		}
+	}
 }

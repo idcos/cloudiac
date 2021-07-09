@@ -36,9 +36,11 @@ type Env struct {
 	// 最后一次部署或销毁任务的 id(plan 作业不记录)
 	LastTaskId Id `json:"lastTaskId" gorm:"size:32;default:'0'"`
 
-	// AutoDestroyAt 自动销毁时间，这里存绝对时间，1小时、2小时的相对时间选择由前端转换
-	AutoDestroyAt *time.Time `json:"autoDestroyAt"`
-	AutoApproval  bool       `json:"autoApproval" gorm:"default:'0'"`
+	// TODO 自动销毁机制待实现
+	TTL           int        `json:"ttl" gorm:"default:'0'"` // 生存时间
+	AutoDestroyAt *time.Time `json:"autoDestroyAt"`          // 自动销毁时间
+
+	AutoApprove bool `json:"autoApprove" gorm:"default:'0'"`
 }
 
 func (Env) TableName() string {

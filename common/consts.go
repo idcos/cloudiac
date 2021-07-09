@@ -18,9 +18,10 @@ const (
 	TaskStepPlay    = "play"    // play playbook
 	TaskStepCommand = "command" // run command
 
-	TaskStepPending  = "pending"
-	TaskStepRunning  = "running"
-	TaskStepFailed   = "failed"
-	TaskStepComplete = "complete"
-	TaskStepTimeout  = "timeout"
+	TaskStepPending   = "pending"
+	TaskStepApproving = "approving"
+	TaskStepRunning   = "running"
+	TaskStepFailed    = "failed"
+	TaskStepComplete  = "complete"
+	TaskStepTimeout   = "timeout"
 )

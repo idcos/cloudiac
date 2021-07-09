@@ -4,6 +4,7 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"fmt"
 	"github.com/pkg/errors"
 )
 
@@ -15,14 +16,18 @@ func GetTask(dbSess *db.Session, id models.Id) (*models.Task, error) {
 
 func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e.Error) {
 	task := models.Task{
-		CreatorId: p.CreatorId,
-		RunnerId:  p.RunnerId,
-		CommitId:  p.CommitId,
-		Timeout:   p.Timeout,
-		Type:      p.Type,
-		Name:      p.Name,
-		Flow:      p.Flow,
-		Variables: p.Variables,
+		// 以下为需要外部传入的属性
+		Name:        p.Name,
+		Type:        p.Type,
+		Flow:        p.Flow,
+		Targets:     p.Targets,
+		CommitId:    p.CommitId,
+		CreatorId:   p.CreatorId,
+		RunnerId:    p.RunnerId,
+		Variables:   p.Variables,
+		StepTimeout: p.StepTimeout,
+		AutoApprove: p.AutoApprove,
+
 		OrgId:     env.OrgId,
 		ProjectId: env.ProjectId,
 		TplId:     env.TplId,
@@ -50,28 +55,18 @@ func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e
 	}
 
 	for i, step := range task.Flow.Steps {
+		if len(task.Targets) != 0 && IsTerraformStep(step.Type) {
+			if step.Type != models.TaskStepInit {
+				for _, t := range task.Targets {
+					step.Args = append(step.Args, fmt.Sprintf("-target=%s", t))
+				}
+			}
+			// TODO: tfVars, playVars 也以这种方式传入？
+		}
+
 		if _, er := createTaskStep(tx, task, step, i); er != nil {
 			return nil, e.New(er.Code(), errors.Wrapf(er, "save task step"))
 		}
 	}
 	return &task, nil
-}
-
-func createTaskStep(tx *db.Session, task models.Task, stepBody models.TaskStepBody, index int) (*models.TaskStep, e.Error) {
-	s := models.TaskStep{
-		TaskStepBody: stepBody,
-		OrgId:        task.OrgId,
-		ProjectId:    task.ProjectId,
-		TaskId:       task.Id,
-		Index:        index,
-		Status:       models.TaskStepPending,
-		Message:      "",
-	}
-	s.Id = models.NewId("step")
-	s.LogPath = s.GenLogPath()
-
-	if _, err := tx.Save(&s); err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-	return &s, nil
 }
