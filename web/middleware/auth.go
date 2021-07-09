@@ -4,6 +4,7 @@ import (
 	"cloudiac/consts"
 	"cloudiac/consts/e"
 	"cloudiac/libs/ctx"
+	"cloudiac/libs/db"
 	"cloudiac/services"
 	"net/http"
 	"strconv"
@@ -24,7 +25,9 @@ func Auth(c *ctx.GinRequestCtx) {
 		err error
 	)
 	if tokenStr == consts.PermanentToken {
-		tokenStr, _ = services.GenerateToken(1, "admin", true, 1*24*time.Hour)
+		// 查询管理员用户
+		user, _ := services.GetAdminUser(db.Get().Debug())
+		tokenStr, _ = services.GenerateToken(user.Id, user.Email, true, 1*24*time.Hour)
 	}
 
 	token, err := jwt.ParseWithClaims(tokenStr, &services.Claims{}, func(token *jwt.Token) (interface{}, error) {

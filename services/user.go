@@ -145,3 +145,9 @@ func GetUserByOrg(query *db.Session, orgId uint) (userOrgMap []*models.UserOrgMa
 	}
 	return
 }
+
+func GetAdminUser(session *db.Session)(*models.User,  error)  {
+	user:=models.User{}
+	err := session.Where("is_admin = 1").First(&user)
+	return &user,err
+}
