@@ -173,6 +173,7 @@ const (
 
 	TaskStepPending   = common.TaskStepPending
 	TaskStepApproving = common.TaskStepApproving
+	TaskStepRejected  = common.TaskStepRejected
 	TaskStepRunning   = common.TaskStepRunning
 	TaskStepFailed    = common.TaskStepFailed
 	TaskStepComplete  = common.TaskStepComplete
@@ -188,7 +189,7 @@ type TaskStep struct {
 	EnvId     Id         `json:"envId" gorm:"size:32;not null"`
 	TaskId    Id         `json:"taskId" gorm:"size:32;not null"`
 	Index     int        `json:"index" gorm:"size:32;not null"`
-	Status    string     `json:"status" gorm:"type:enum('pending','approving','running','failed','complete','timeout')"`
+	Status    string     `json:"status" gorm:"type:enum('pending','approving','rejected','running','failed','complete','timeout')"`
 	Message   string     `json:"message" gorm:"type:text"`
 	StartAt   *time.Time `json:"startAt"`
 	EndAt     *time.Time `json:"endAt"`
@@ -202,6 +203,9 @@ func (TaskStep) TableName() string {
 }
 
 func (s *TaskStep) IsApproved() bool {
+	if s.Status == TaskStepRejected {
+		return false
+	}
 	// 只有 apply 和 destroy 步骤需要审批
 	if utils.StrInArray(s.Type, TaskStepApply, TaskStepDestroy) && len(s.ApproverId) == 0 {
 		return false

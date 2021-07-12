@@ -20,6 +20,7 @@ const (
 
 	TaskStepPending   = "pending"
 	TaskStepApproving = "approving"
+	TaskStepRejected  = "rejected"
 	TaskStepRunning   = "running"
 	TaskStepFailed    = "failed"
 	TaskStepComplete  = "complete"
