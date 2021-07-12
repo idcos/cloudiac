@@ -114,7 +114,6 @@ func GetUserRoleByOrg(dbSess *db.Session, userId, orgId models.Id, role string) 
 	if err != nil {
 		return isExists, e.New(e.DBError, err)
 	}
-	fmt.Println(isExists, "isExists")
 	return isExists, nil
 }
 

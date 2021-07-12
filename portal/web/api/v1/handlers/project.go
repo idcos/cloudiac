@@ -57,7 +57,7 @@ func (Project) Search(c *ctx.GinRequestCtx) {
 // @Produce  json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
-// @Param request body []forms.UpdateProjectForm true "用户授权"
+// @Param request body forms.UpdateProjectForm true "用户授权"
 // @Success 200 {object} ctx.JSONResult{result=models.Project}
 // @Router /projects/{projectId}  [put]
 func (Project) Update(c *ctx.GinRequestCtx) {
