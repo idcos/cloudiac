@@ -12,15 +12,16 @@ type Vcs struct {
 }
 
 // 创建vcs仓库
-// @Tag Vcs仓库
+// @Tags Vcs仓库
 // @Summary 创建vcs仓库
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
 // @Security AuthToken
 // @Param Iac-Org-Id header string true "组织ID"
-// @Param form formData forms.CreateUserForm true "parameter"
+// @Param form formData forms.CreateVcsForm true "parameter"
 // @Router /vcs [post]
+// @Success 200 {object} ctx.JSONResult
 func (Vcs) Create(c *ctx.GinRequestCtx) {
 	form := &forms.CreateVcsForm{}
 	if err := c.Bind(form); err != nil {
@@ -30,7 +31,7 @@ func (Vcs) Create(c *ctx.GinRequestCtx) {
 }
 
 // 查询vcs仓库
-// @Tag Vcs仓库
+// @Tags Vcs仓库
 // @Summary 查询vcs仓库
 // @Accept application/x-www-form-urlencoded
 // @Accept json
@@ -39,7 +40,7 @@ func (Vcs) Create(c *ctx.GinRequestCtx) {
 // @Param Iac-Org-Id header string true "组织ID"
 // @Param form query forms.SearchVcsForm true "parameter"
 // @Router /vcs [get]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]modules.Vcs}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Vcs}}
 func (Vcs) Search(c *ctx.GinRequestCtx) {
 	form := &forms.SearchVcsForm{}
 	if err := c.Bind(form); err != nil {
@@ -50,7 +51,7 @@ func (Vcs) Search(c *ctx.GinRequestCtx) {
 
 
 // 更新vcs仓库
-// @Tag Vcs仓库
+// @Tags Vcs仓库
 // @Summary 更新vcs仓库
 // @Accept multipart/form-data
 // @Accept json
@@ -69,13 +70,14 @@ func (Vcs) Update(c *ctx.GinRequestCtx) {
 
 
 // 删除Vcs 仓库
-// @Tag Vcs仓库
+// @Tags Vcs仓库
 // @Summary 删除vcs仓库
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param /vcs/{vcsId} [delete]
+// @Param form formData forms.DeleteVcsForm true "patameter"
+// @Router /vcs/{vcsId} [delete]
 // @Success 200 {object} ctx.JSONResult
 func (Vcs) Delete(c *ctx.GinRequestCtx) {
 	form := &forms.DeleteVcsForm{}
@@ -90,12 +92,13 @@ func ListEnableVcs(c *ctx.GinRequestCtx) {
 }
 
 // 列出Vcs地址下所有的代码仓库
-// @Tag Vcs仓库
+// @Tags Vcs仓库
 // @Summary 列出vcs地址下所有代码仓库
 // @Accept application/x-www-form-urlencoded
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param form query forms.GetGitProjectsForm true "patameter"
 // @Router /vcs/repo/search [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]vcsrv.Projects}}
 func (Vcs) ListRepos(c *ctx.GinRequestCtx) {
@@ -107,7 +110,7 @@ func (Vcs) ListRepos(c *ctx.GinRequestCtx) {
 }
 
 // 列出代码仓库下所有分支
-// @Tag Vcs仓库
+// @Tags Vcs仓库
 // @Summary 列出代码仓库下所有分支
 // @Accept application/x-www-form-urlencoded
 // @Accept json
@@ -115,7 +118,7 @@ func (Vcs) ListRepos(c *ctx.GinRequestCtx) {
 // @Security AuthToken
 // @Param form query forms.GetGitBranchesForm true "parameter"
 // @Router /vcs/branch/search [get]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]vcsrv.Projects}}
+// @Success 200 {object} ctx.JSONResult{result=[]apps.Branches}
 func (Vcs) ListBranches(c *ctx.GinRequestCtx) {
 	form := forms.GetGitBranchesForm{}
 	if err := c.Bind(&form); err != nil {
@@ -125,7 +128,7 @@ func (Vcs) ListBranches(c *ctx.GinRequestCtx) {
 }
 
 // 列出代码仓库下Readme 文件内容
-// @Tag Vcs仓库
+// @Tags Vcs仓库
 // @Summary 列出代码仓库下 Readme 文件内容
 // @Accept application/x-www-form-urlencoded
 // @Accept json
@@ -133,7 +136,7 @@ func (Vcs) ListBranches(c *ctx.GinRequestCtx) {
 // @Security AuthToken
 // @Param form query forms.GetReadmeForm true "parameter"
 // @Router /vcs/readme [get]
-// @Success 200 {object} ctx.JSONResult{}
+// @Success 200 {object} ctx.JSONResult{result=string}
 func (Vcs) GetReadmeContent(c *ctx.GinRequestCtx) {
 	form := forms.GetReadmeForm{}
 	if err := c.Bind(&form); err != nil {
@@ -142,10 +145,8 @@ func (Vcs) GetReadmeContent(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.GetReadme(c.ServiceCtx(), &form))
 }
 
-// TODO 变量和playbook 相关的也放到模版下面？
-
 // 列出代码仓库下包含.tfvars 的所有文件
-// @Tag Vcs仓库
+// @Tags Vcs仓库
 // @Summary 列出代码仓库下.tfvars 的所有文件
 // @Accept application/x-www-form-urlencoded
 // @Accept json
@@ -153,7 +154,7 @@ func (Vcs) GetReadmeContent(c *ctx.GinRequestCtx) {
 // @Security AuthToken
 // @Param form query forms.TemplateTfvarsSearchForm true "parameter"
 // @Router /vcs/readme [get]
-// @Success 200 {object} ctx.JSONResult{}
+// @Success 200 {object} ctx.JSONResult{result=[]vcsrv.VcsIfaceOptions}
 func TemplateTfvarsSearch(c *ctx.GinRequestCtx) {
 	form := forms.TemplateTfvarsSearchForm{}
 	if err := c.Bind(&form); err != nil {
@@ -165,11 +166,10 @@ func TemplateTfvarsSearch(c *ctx.GinRequestCtx) {
 // TemplateVariableSearch 查询云模板TF参数
 // @Tags 云模板
 // @Summary 云模板参数接口
-// @Accept application/json
-// @Param repoId formData int true "仓库id"
-// @Param repoBranch formData int true "分支"
-// @Param vcsId formData int true "vcsID"
-// @router /template/variable/search [get]
+// @Accept application/x-www-form-urlencoded
+// @Param form query forms.TemplateVariableSearchForm true "parameter"
+// @Router /template/variable/search [get]
+// @Success 200 {object} ctx.JSONResult{result=[]services.TemplateVariable}
 func TemplateVariableSearch(c *ctx.GinRequestCtx) {
 	form := forms.TemplateVariableSearchForm{}
 	if err := c.Bind(&form); err != nil {
@@ -181,11 +181,10 @@ func TemplateVariableSearch(c *ctx.GinRequestCtx) {
 //TemplatePlaybookSearch
 // @Tags playbook列表查询
 // @Summary  playbook列表接口
-// @Accept application/json
-// @Param repoId formData int true "仓库id"
-// @Param repoBranch formData int true "分支"
-// @Param vcsId formData int true "vcsID"
+// @Accept application/x-www-form-urlencoded
+// @Param form query forms.TemplatePlaybookSearchForm true "parameter"
 // @router /template/playbook/search [get]
+// @Success 200 {object} ctx.JSONResult{result=[]vcsrv.VcsIfaceOptions}
 func TemplatePlaybookSearch(c *ctx.GinRequestCtx) {
 	form := forms.TemplatePlaybookSearchForm{}
 	if err := c.Bind(&form); err != nil {

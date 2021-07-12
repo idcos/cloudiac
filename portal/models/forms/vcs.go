@@ -3,7 +3,7 @@ package forms
 import "cloudiac/portal/models"
 
 type CreateVcsForm struct {
-	PageForm
+	BaseForm
 	Name     string `form:"name" json:"name" binding:"required"`
 	VcsType  string `form:"vcsType" json:"vcsType" binding:"required"`
 	Address  string `form:"address" json:"address" binding:"required"`
@@ -12,7 +12,7 @@ type CreateVcsForm struct {
 }
 
 type UpdateVcsForm struct {
-	PageForm
+	BaseForm
 	Id       models.Id `form:"id" json:"id" binding:"required"`
 	Status   string    `form:"status" json:"status" binding:""`
 	Name     string    `form:"name" json:"name" binding:""`
@@ -28,7 +28,7 @@ type SearchVcsForm struct {
 }
 
 type DeleteVcsForm struct {
-	PageForm
+	BaseForm
 	Id models.Id `form:"id" json:"id" binding:"required"`
 }
 
@@ -39,13 +39,13 @@ type GetGitProjectsForm struct {
 }
 
 type GetGitBranchesForm struct {
-	PageForm
-	RepoId string    `form:"repoId" json:"repoId"`
+	BaseForm
+	RepoId string    `form:"repoId" json:"repoId" binding:"required"`
 	VcsId  models.Id `form:"vcsId" json:"vcsId" binding:"required"`
 }
 
 type GetReadmeForm struct {
-	PageForm
+	BaseForm
 	RepoId string    `form:"repoId" json:"repoId" binding:""`
 	Branch string    `form:"branch" json:"branch" binding:"required"`
 	VcsId  models.Id `form:"vcsId" json:"vcsId" binding:"required"`

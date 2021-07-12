@@ -71,25 +71,25 @@ type OverviewTemplateForm struct {
 }
 
 type TemplateTfvarsSearchForm struct {
-	PageForm
-	RepoId     string    `json:"repoId" form:"repoId"`
-	RepoBranch string    `json:"repoBranch" form:"repoBranch" `
+	BaseForm
+	RepoId     string    `json:"repoId" form:"repoId" binding:"required"`
+	RepoBranch string    `json:"repoBranch" form:"repoBranch" binding:"required"`
 	RepoType   string    `json:"repoType" form:"repoType" `
-	VcsId      models.Id `json:"vcsId" form:"vcsId"`
+	VcsId      models.Id `json:"vcsId" form:"vcsId" binding:"required"`
 }
 
 type TemplateVariableSearchForm struct {
-	PageForm
-	RepoId     string    `json:"repoId" form:"repoId" `
-	RepoBranch string    `json:"repoBranch" form:"repoBranch" `
+	BaseForm
+	RepoId     string    `json:"repoId" form:"repoId" binding:"required"`
+	RepoBranch string    `json:"repoBranch" form:"repoBranch" binding:"required"`
 	RepoType   string    `json:"repoType" form:"repoType" `
-	VcsId      models.Id `json:"vcsId" form:"vcsId"`
+	VcsId      models.Id `json:"vcsId" form:"vcsId" binding:"required"`
 }
 
 type TemplatePlaybookSearchForm struct {
-	PageForm
-	RepoId     string    `json:"repoId" form:"repoId" `
-	RepoBranch string    `json:"repoBranch" form:"repoBranch" `
+	BaseForm
+	RepoId     string    `json:"repoId" form:"repoId" binding:"required"`
+	RepoBranch string    `json:"repoBranch" form:"repoBranch" binding:"required"`
 	RepoType   string    `json:"repoType" form:"repoType" `
-	VcsId      models.Id `json:"vcsId" form:"vcsId"`
+	VcsId      models.Id `json:"vcsId" form:"vcsId" binding:"required"`
 }
