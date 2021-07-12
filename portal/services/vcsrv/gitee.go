@@ -115,6 +115,11 @@ func (gitee *giteeRepoIface) ListBranches() ([]string, error) {
 	return branchList, nil
 }
 
+func (gitee *giteeRepoIface) ListTags() ([]string, error) {
+
+}
+
+
 type giteeCommit struct {
 	CommitId string `json:"sha" form:"sha" `
 }

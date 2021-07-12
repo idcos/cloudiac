@@ -119,6 +119,11 @@ func (gitea *giteaRepoIface) ListBranches() ([]string, error) {
 	}
 	return branchList, nil
 }
+// TODO gitea 请求的是API
+func (gitea *giteaRepoIface) ListTags() ([]string, error) {
+
+}
+
 
 type giteaCommit struct {
 	Commit struct {
