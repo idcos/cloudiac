@@ -36,7 +36,7 @@ func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*CreateUserResp,
 		return nil, err
 	}
 
-	tx := c.Tx().Debug()
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -184,7 +184,7 @@ func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (user *models.Use
 		attrs["newbie_guide"] = b
 	}
 
-	return services.UpdateUser(c.DB().Debug(), form.Id, attrs)
+	return services.UpdateUser(c.DB(), form.Id, attrs)
 }
 
 //ChangeUserStatus 修改用户启用/禁用状态
@@ -242,7 +242,7 @@ func DeleteUser(c *ctx.ServiceCtx, form *forms.DeleteUserForm) (interface{}, e.E
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
-	tx := c.Tx().Debug()
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()

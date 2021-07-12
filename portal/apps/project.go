@@ -15,7 +15,7 @@ import (
 )
 
 func CreateProject(c *ctx.ServiceCtx, form *forms.CreateProjectForm) (interface{}, e.Error) {
-	tx := c.DB().Begin().Debug()
+	tx := c.DB().Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -59,7 +59,7 @@ type ProjectResp struct {
 }
 
 func SearchProject(c *ctx.ServiceCtx, form *forms.SearchProjectForm) (interface{}, e.Error) {
-	query := services.SearchProject(c.DB().Debug(), c.OrgId, form.Q, form.Status)
+	query := services.SearchProject(c.DB(), c.OrgId, form.Q, form.Status)
 	// 默认按创建时间逆序排序
 	if form.SortField() == "" {
 		query = query.Order("created_at DESC")
@@ -205,7 +205,7 @@ func DetailProject(c *ctx.ServiceCtx, form *forms.DetailProjectForm) (interface{
 }
 
 func IsUserOrgPermission(dbSess *db.Session, userId, orgId models.Id, role string) bool {
-	isExists, err := services.GetUserRoleByOrg(dbSess.Debug(), userId, orgId, role)
+	isExists, err := services.GetUserRoleByOrg(dbSess, userId, orgId, role)
 	if err != nil {
 		return isExists
 	}
@@ -213,7 +213,7 @@ func IsUserOrgPermission(dbSess *db.Session, userId, orgId models.Id, role strin
 }
 
 func IsUserOrgProjectPermission(dbSess *db.Session, userId, project models.Id, role string) bool {
-	isExists, err := services.GetUserRoleByProject(dbSess.Debug(), userId, project, role)
+	isExists, err := services.GetUserRoleByProject(dbSess, userId, project, role)
 	if err != nil {
 		return isExists
 	}

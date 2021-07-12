@@ -68,7 +68,7 @@ func DeleteToken(tx *db.Session, id models.Id) e.Error {
 
 func TokenExists(query *db.Session, apiToken string) (bool, *models.Token) {
 	token := &models.Token{}
-	q := query.Debug().Model(&models.Token{}).
+	q := query.Model(&models.Token{}).
 		Where("token = ?", apiToken).
 		Where("status = 'enable'")
 	exists, err := q.Exists()
