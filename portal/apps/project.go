@@ -9,26 +9,20 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
-	"cloudiac/utils"
 	"errors"
 	"fmt"
 	"net/http"
 )
 
 func CreateProject(c *ctx.ServiceCtx, form *forms.CreateProjectForm) (interface{}, e.Error) {
-	tx := c.DB().Begin()
+	tx := c.DB().Begin().Debug()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
 			panic(r)
 		}
 	}()
-	//校验用户是否在该组织下有权限
-	isExist := IsUserOrgPermission(tx, c.UserId, consts.OrgRoleOwner)
-	if !isExist {
-		_ = tx.Rollback()
-		return nil, e.New(e.ObjectNotExistsOrNoPerm, errors.New("not permission"))
-	}
+
 	project, err := services.CreateProject(tx, &models.Project{
 		Name:        form.Name,
 		OrgId:       c.OrgId,
@@ -65,15 +59,15 @@ type ProjectResp struct {
 }
 
 func SearchProject(c *ctx.ServiceCtx, form *forms.SearchProjectForm) (interface{}, e.Error) {
-	query := services.SearchProject(c.DB(), c.OrgId, form.Q)
+	query := services.SearchProject(c.DB().Debug(), c.OrgId, form.Q, form.Status)
 	// 默认按创建时间逆序排序
 	if form.SortField() == "" {
 		query = query.Order("created_at DESC")
 	}
 	// 查询用户名称
-	query = query.Joins(fmt.Sprintf("left join %s as p on %s.creator_id = p.creatorId",
-		models.Project{}.TableName(), models.User{}.TableName())).
-		LazySelectAppend(fmt.Sprintf("p.*,%s.name as creator", models.User{}.TableName()))
+	query = query.Joins(fmt.Sprintf("left join %s as user on user.id = %s.creator_id",
+		models.User{}.TableName(), models.Project{}.TableName())).
+		LazySelectAppend(fmt.Sprintf("%s.*,user.name as creator", models.Project{}.TableName()))
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	projectResp := make([]ProjectResp, 0)
 	if err := p.Scan(&projectResp); err != nil {
@@ -98,10 +92,9 @@ func UpdateProject(c *ctx.ServiceCtx, form *forms.UpdateProjectForm) (interface{
 		}
 	}()
 
-	//校验用户是否在该组织下有权限
-	isExist := IsUserOrgPermission(tx, c.UserId, consts.OrgRoleOwner)
+	//校验用户是否在该项目下有权限
+	isExist := IsUserOrgProjectPermission(tx, c.UserId, c.ProjectId, consts.OrgRoleOwner)
 	if !isExist {
-		_ = tx.Rollback()
 		return nil, e.New(e.ObjectNotExistsOrNoPerm, errors.New("not permission"))
 	}
 
@@ -126,9 +119,15 @@ func UpdateProject(c *ctx.ServiceCtx, form *forms.UpdateProjectForm) (interface{
 
 	project := &models.Project{}
 	project.Id = form.Id
-	if err := services.UpdateProject(tx, project, attrs); err != nil {
+	err := services.UpdateProject(tx, project, attrs)
+
+	if err != nil && err.Code() == e.ProjectAliasDuplicate {
 		_ = tx.Rollback()
-		return nil, err
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error update project, err %s", err)
+		return nil, e.New(e.DBError, err)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -174,6 +173,17 @@ type DetailProjectResp struct {
 
 func DetailProject(c *ctx.ServiceCtx, form *forms.DetailProjectForm) (interface{}, e.Error) {
 	tx := c.DB().Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+	//校验用户是否在该项目下有权限
+	isExist := IsUserOrgProjectPermission(tx, c.UserId, c.ProjectId, consts.OrgRoleOwner)
+	if !isExist {
+		return nil, e.New(e.ObjectNotExistsOrNoPerm, errors.New("not permission"))
+	}
 	projectUser, err := services.SearchProjectUsers(tx, form.Id)
 	if err != nil {
 		return nil, e.New(e.DBError, err)
@@ -183,19 +193,29 @@ func DetailProject(c *ctx.ServiceCtx, form *forms.DetailProjectForm) (interface{
 		return nil, e.New(e.DBError, err)
 	}
 
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
+
 	return DetailProjectResp{
 		projet,
 		projectUser,
 	}, nil
 }
 
-func IsUserOrgPermission(dbSess *db.Session, userId models.Id, role string) bool {
-	orgIds, err := services.GetUserRoleByOrg(dbSess, userId, role)
+func IsUserOrgPermission(dbSess *db.Session, userId, orgId models.Id, role string) bool {
+	isExists, err := services.GetUserRoleByOrg(dbSess.Debug(), userId, orgId, role)
 	if err != nil {
-		return false
+		return isExists
 	}
-	if !utils.ArrayIsExistsStr(orgIds, userId.String()) {
-		return false
+	return isExists
+}
+
+func IsUserOrgProjectPermission(dbSess *db.Session, userId, project models.Id, role string) bool {
+	isExists, err := services.GetUserRoleByProject(dbSess.Debug(), userId, project, role)
+	if err != nil {
+		return isExists
 	}
-	return true
+	return isExists
 }

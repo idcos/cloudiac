@@ -101,6 +101,7 @@ func (s *Session) Raw(sql string, values ...interface{}) *Session {
 }
 
 func (s *Session) Exec(sql string, args ...interface{}) (int64, error) {
+	fmt.Println(args, "args")
 	r := s.db.Exec(sql, args...)
 	return r.RowsAffected, r.Error
 }

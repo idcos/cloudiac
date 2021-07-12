@@ -105,13 +105,27 @@ func CheckPasswordFormat(password string) e.Error {
 	return nil
 }
 
-func GetUserRoleByOrg(dbSess *db.Session, id models.Id, role string) ([]string, e.Error) {
-	orgIds := make([]string, 0)
-	if err := dbSess.Table(models.UserOrg{}.TableName()).
-		Where("user_id = ?", id).
+func GetUserRoleByOrg(dbSess *db.Session, userId, orgId models.Id, role string) (bool, e.Error) {
+	isExists, err := dbSess.Table(models.UserOrg{}.TableName()).
+		Where("user_id = ?", userId).
 		Where("role = ?", role).
-		Pluck("org_id", &orgIds); err != nil {
-		return nil, e.New(e.DBError, err)
+		Where("org_id = ?", orgId).
+		Exists()
+	if err != nil {
+		return isExists, e.New(e.DBError, err)
 	}
-	return orgIds, nil
+	fmt.Println(isExists, "isExists")
+	return isExists, nil
+}
+
+func GetUserRoleByProject(dbSess *db.Session, userId, projectId models.Id, role string) (bool, e.Error) {
+	isExists, err := dbSess.Table(models.UserProject{}.TableName()).
+		Where("user_id = ?", userId).
+		Where("role = ?", role).
+		Where("project_id = ?", projectId).
+		Exists()
+	if err != nil {
+		return isExists, e.New(e.DBError, err)
+	}
+	return isExists, nil
 }

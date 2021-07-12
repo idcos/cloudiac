@@ -18,7 +18,8 @@ type CreateProjectForm struct {
 type SearchProjectForm struct {
 	PageForm
 
-	Q string `json:"q" form:"q" `
+	Q      string `json:"q" form:"q" `
+	Status string `json:"status" form:"status"`
 }
 
 type UpdateProjectForm struct {

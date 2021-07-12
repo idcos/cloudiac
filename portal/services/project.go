@@ -20,16 +20,22 @@ func CreateProject(tx *db.Session, project *models.Project) (*models.Project, e.
 	return project, nil
 }
 
-func SearchProject(dbSess *db.Session, orgId models.Id, q string) *db.Session {
+func SearchProject(dbSess *db.Session, orgId models.Id, q, status string) *db.Session {
 	query := dbSess.Table(models.Project{}.TableName()).Where("org_id = ?", orgId)
 	if q != "" {
-		query = query.Where("name like ?", fmt.Sprintf("%%%s%%", q))
+		query = query.Where(fmt.Sprintf("%s.name like ?", models.Project{}.TableName()), fmt.Sprintf("%%%s%%", q))
+	}
+	if status != "" {
+		query = query.Where(fmt.Sprintf("%s.`status` = ?", models.Project{}.TableName()), status)
 	}
 	return query
 }
 
 func UpdateProject(tx *db.Session, project *models.Project, attrs map[string]interface{}) e.Error {
 	if _, err := models.UpdateAttr(tx, project, attrs); err != nil {
+		if e.IsDuplicate(err) {
+			return e.New(e.ProjectAliasDuplicate)
+		}
 		return e.New(e.DBError, err)
 	}
 	return nil

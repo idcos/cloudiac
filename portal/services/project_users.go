@@ -10,17 +10,18 @@ import (
 
 func BindProjectUsers(tx *db.Session, projectId models.Id, authorization []forms.UserAuthorization) e.Error {
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.UserProject{}.TableName(),
-		"user_id", "project_id", "role")
+		"id", "user_id", "project_id", "role")
 
 	for _, v := range authorization {
-		if err := bq.AddRow(v.UserId, projectId, v.Role); err != nil {
+		pId := models.NewId("p")
+		if err := bq.AddRow(pId, v.UserId, projectId, v.Role); err != nil {
 			return e.New(e.DBError, err)
 		}
 	}
 
 	for bq.HasNext() {
 		sql, args := bq.Next()
-		if _, err := tx.Exec(sql, args); err != nil {
+		if _, err := tx.Exec(sql, args...); err != nil {
 			return e.New(e.DBError, err)
 		}
 	}
