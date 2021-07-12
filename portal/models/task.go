@@ -203,10 +203,11 @@ func (TaskStep) TableName() string {
 }
 
 func (s *TaskStep) IsApproved() bool {
+	if s.Status == TaskStepRejected {
+		return false
+	}
 	// 只有 apply 和 destroy 步骤需要审批
-	if utils.StrInArray(s.Type, TaskStepApply, TaskStepDestroy) &&
-		len(s.ApproverId) == 0 &&
-		s.Status != TaskStepRejected {
+	if utils.StrInArray(s.Type, TaskStepApply, TaskStepDestroy) && len(s.ApproverId) == 0 {
 		return false
 	}
 	return true
