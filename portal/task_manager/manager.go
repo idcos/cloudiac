@@ -322,18 +322,23 @@ func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq
 	}
 
 	if !task.AutoApprove && !step.IsApproved() {
-		var newStep *models.TaskStep
 		logger.Infof("waitting task step approve")
 
 		step.Status = models.TaskStepApproving
 		step.Message = ""
 		updateStep()
 
+		var newStep *models.TaskStep
 		if newStep, err = WaitTaskStepApprove(ctx, m.db, step.TaskId, step.Index); err != nil {
 			logger.Errorf("wait task step approve error: %v", err)
-			step.Status = models.TaskStepFailed
+			if err == ErrTaskStepRejected {
+				step.Status = models.TaskStepRejected
+			} else {
+				step.Status = models.TaskStepFailed
+			}
 			step.Message = err.Error()
 			updateStep()
+			return err
 		}
 		step = newStep
 	}
@@ -442,14 +447,22 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		AnsibleVars:     make(map[string]string),
 	}
 
+	getVarValue := func(v models.VariableBody) string {
+		if v.Sensitive {
+			return utils.AesDecrypt(v.Value)
+		}
+		return v.Value
+	}
+
 	for _, v := range task.Variables {
+		value := getVarValue(v)
 		switch v.Type {
 		case consts.VarTypeEnv:
-			runnerEnv.EnvironmentVars[v.Name] = v.Value
+			runnerEnv.EnvironmentVars[v.Name] = value
 		case consts.VarTypeTerraform:
-			runnerEnv.TerraformVars[v.Name] = v.Value
+			runnerEnv.TerraformVars[v.Name] = value
 		case consts.VarTypeAnsible:
-			runnerEnv.AnsibleVars[v.Name] = v.Value
+			runnerEnv.AnsibleVars[v.Name] = value
 		default:
 			return nil, fmt.Errorf("unknown variable type: %s", v.Type)
 		}

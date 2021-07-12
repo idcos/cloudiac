@@ -28,7 +28,7 @@ func Auth(c *ctx.GinRequestCtx) {
 
 	if claims, ok := token.Claims.(*services.Claims); ok && token.Valid {
 		orgId := models.Id(c.GetHeader("IaC-Org-Id"))
-		projectId := models.Id(c.GetHeader("Iac-Project-Id"))
+		projectId := models.Id(c.GetHeader("IaC-Project-Id"))
 		c.ServiceCtx().OrgId = orgId
 		c.ServiceCtx().ProjectId = projectId
 		c.ServiceCtx().UserId = claims.UserId

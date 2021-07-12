@@ -32,8 +32,21 @@ func GetTaskStep(sess *db.Session, taskId models.Id, step int) (*models.TaskStep
 // ApproveTaskStep 标识步骤通过审批
 func ApproveTaskStep(tx *db.Session, taskId models.Id, step int, userId models.Id) e.Error {
 	if _, err := tx.Model(&models.TaskStep{}).
-		Where("task_id = ? AND index = ?", taskId, step).
+		Where("task_id = ? AND `index` = ?", taskId, step).
 		Update(&models.TaskStep{ApproverId: userId}); err != nil {
+		if e.IsRecordNotFound(err) {
+			return e.New(e.TaskStepNotExists)
+		}
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
+// RejectTaskStep 驳回步骤审批
+func RejectTaskStep(tx *db.Session, taskId models.Id, step int, userId models.Id) e.Error {
+	if _, err := tx.Model(&models.TaskStep{}).
+		Where("task_id = ? AND `index` = ?", taskId, step).
+		Update(&models.TaskStep{ApproverId: userId, Status: models.TaskStepRejected}); err != nil {
 		if e.IsRecordNotFound(err) {
 			return e.New(e.TaskStepNotExists)
 		}
