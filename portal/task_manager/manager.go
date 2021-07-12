@@ -442,14 +442,22 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		AnsibleVars:     make(map[string]string),
 	}
 
+	getVarValue := func(v models.VariableBody) string {
+		if v.Sensitive  {
+			return utils.AesDecrypt(v.Value)
+		}
+		return v.Value
+	}
+
 	for _, v := range task.Variables {
+		value := getVarValue(v)
 		switch v.Type {
 		case consts.VarTypeEnv:
-			runnerEnv.EnvironmentVars[v.Name] = v.Value
+			runnerEnv.EnvironmentVars[v.Name] = value
 		case consts.VarTypeTerraform:
-			runnerEnv.TerraformVars[v.Name] = v.Value
+			runnerEnv.TerraformVars[v.Name] = value
 		case consts.VarTypeAnsible:
-			runnerEnv.AnsibleVars[v.Name] = v.Value
+			runnerEnv.AnsibleVars[v.Name] = value
 		default:
 			return nil, fmt.Errorf("unknown variable type: %s", v.Type)
 		}
