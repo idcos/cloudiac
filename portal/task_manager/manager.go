@@ -322,18 +322,23 @@ func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq
 	}
 
 	if !task.AutoApprove && !step.IsApproved() {
-		var newStep *models.TaskStep
 		logger.Infof("waitting task step approve")
 
 		step.Status = models.TaskStepApproving
 		step.Message = ""
 		updateStep()
 
+		var newStep *models.TaskStep
 		if newStep, err = WaitTaskStepApprove(ctx, m.db, step.TaskId, step.Index); err != nil {
 			logger.Errorf("wait task step approve error: %v", err)
-			step.Status = models.TaskStepFailed
+			if err == ErrTaskStepRejected {
+				step.Status = models.TaskStepRejected
+			} else {
+				step.Status = models.TaskStepFailed
+			}
 			step.Message = err.Error()
 			updateStep()
+			return err
 		}
 		step = newStep
 	}
@@ -443,7 +448,7 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 	}
 
 	getVarValue := func(v models.VariableBody) string {
-		if v.Sensitive  {
+		if v.Sensitive {
 			return utils.AesDecrypt(v.Value)
 		}
 		return v.Value

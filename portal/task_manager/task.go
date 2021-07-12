@@ -237,6 +237,10 @@ func pullTaskStepStatus(ctx context.Context, task *models.Task, step *models.Tas
 	return stepResult, nil
 }
 
+var (
+	ErrTaskStepRejected = fmt.Errorf("rejected")
+)
+
 // WaitTaskStepApprove
 // TODO: 使用注册通知机制，统一由一个 worker 来加载所有待审批的步骤最新状态，当有步骤审批通过时触发通知
 func WaitTaskStepApprove(ctx context.Context, dbSess *db.Session, taskId models.Id, step int) (
@@ -254,7 +258,10 @@ func WaitTaskStepApprove(ctx context.Context, dbSess *db.Session, taskId models.
 			if err != nil {
 				return nil, err
 			}
-			if taskStep.IsApproved() {
+
+			if taskStep.Status == models.TaskStepRejected {
+				return nil, ErrTaskStepRejected
+			} else if taskStep.IsApproved() {
 				return taskStep, nil
 			}
 		}
