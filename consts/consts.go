@@ -62,6 +62,7 @@ const (
 
 	LocalGitReposPath = "repos"  // 内置 http git server 服务目录
 	ReposUrlPrefix    = "/repos" // 内置 http git server url prefix
+	PermanentToken = "e6d5f0b3-33a8-4176-82f0-41ad3dbac3dd"
 )
 
 var (
