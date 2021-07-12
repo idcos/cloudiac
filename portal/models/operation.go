@@ -14,7 +14,7 @@ type OperationLog struct {
 	OperationAt   time.Time `json:"operationAt" form:"operationAt" `
 	OperationType string    `json:"operationType" form:"operationType" `
 	OperationInfo string    `json:"operationInfo" form:"operationInfo" `
-	Desc          JSON      `json:"desc" form:"desc" `
+	Desc          JSON      `json:"desc" form:"desc" gorm:"type:text"`
 }
 
 func (o *OperationLog) InsertLog() error {

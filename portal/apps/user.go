@@ -36,7 +36,7 @@ func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*CreateUserResp,
 		return nil, err
 	}
 
-	tx := c.Tx().Debug()
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -136,7 +136,8 @@ func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.E
 	}
 
 	// 查找用户角色
-	query = query.Joins(fmt.Sprintf("left join %s as o on %s.id = o.user_id", models.UserOrg{}.TableName(), models.User{}.TableName())).
+	query = query.Joins(fmt.Sprintf("left join %s as o on %s.id = o.user_id",
+		models.UserOrg{}.TableName(), models.User{}.TableName())).
 		LazySelectAppend(fmt.Sprintf("o.role,%s.*", models.User{}.TableName()))
 
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
@@ -183,31 +184,7 @@ func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (user *models.Use
 		attrs["newbie_guide"] = b
 	}
 
-	if form.HasKey("oldPassword") {
-		if !form.HasKey("newPassword") {
-			return nil, e.New(e.BadParam, http.StatusBadRequest)
-		}
-		user, er := services.GetUserById(c.DB(), form.Id)
-		if er != nil {
-			return nil, er
-		}
-
-		valid, err := utils.CheckPassword(form.OldPassword, user.Password)
-		if err != nil {
-			return nil, e.New(e.DBError, http.StatusInternalServerError, err)
-		}
-		if !valid {
-			return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
-		}
-
-		newPassword, er := services.HashPassword(form.NewPassword)
-		if er != nil {
-			return nil, er
-		}
-		attrs["password"] = newPassword
-	}
-
-	return services.UpdateUser(c.DB().Debug(), form.Id, attrs)
+	return services.UpdateUser(c.DB(), form.Id, attrs)
 }
 
 //ChangeUserStatus 修改用户启用/禁用状态
@@ -265,7 +242,7 @@ func DeleteUser(c *ctx.ServiceCtx, form *forms.DeleteUserForm) (interface{}, e.E
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
-	tx := c.Tx().Debug()
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
