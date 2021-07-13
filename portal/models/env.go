@@ -8,14 +8,15 @@ import (
 )
 
 const (
-	EnvStatusActive    = "active"    // 成功部署
-	EnvStatusDeploying = "deploying" // apply 运行中(plan 作业不改变状态)
-	EnvStatusApproving = "approving" // 等待审批
-	EnvStatusFailed    = "failed"    // apply 过程中出现错误
-	EnvStatusInactive  = "inactive"  // 资源未部署或已销毁
+	EnvStatusActive   = "active"   // 成功部署
+	EnvStatusFailed   = "failed"   // apply 过程中出现错误
+	EnvStatusInactive = "inactive" // 资源未部署或已销毁
+
+	//EnvStatusDeploying = "deploying" // apply 运行中(plan 作业不改变状态)
+	//EnvStatusApproving = "approving" // 等待审批
 )
 
-var EnvStatus = []string{EnvStatusActive, EnvStatusDeploying, EnvStatusApproving, EnvStatusFailed, EnvStatusInactive}
+var EnvStatus = []string{EnvStatusActive, EnvStatusFailed, EnvStatusInactive}
 
 type Env struct {
 	SoftDeleteModel
@@ -26,12 +27,15 @@ type Env struct {
 
 	Name        string `json:"name" gorm:"not null"`         // 环境名称
 	Description string `json:"description" gorm:"type:text"` // 环境描述
-	Status      string `json:"status" gorm:"type:enum('active','deploying','approving','failed','inactive');default:'inactive'" 
-								enums:"'active','deploying','approving','failed','inactive'"` // 环境状态
-	Archived bool   `json:"archived" gorm:"default:'0'"`                 // 是否已归档
-	RunnerId string `json:"runnerId" gorm:"size:32;not null"`            //部署通道ID
-	Timeout  int    `json:"timeout" gorm:"default:'600';comment:'部署超时'"` // 部署超时时间（单位：秒）
-	OneTime  bool   `json:"oneTime" gorm:"default:'0'"`                  // 一次性环境标识
+	Status      string `json:"status" gorm:"type:enum('active','failed','inactive')"
+								enums:"'active','failed','inactive'"` // 环境状态
+	// 任务状态，只同步部署任务的状态(apply,destroy)，plan 任务不会对环境产生影响，所以不同步
+	TaskStatus string `json:"taskStatus" gorm:"type:enum('', 'pending','approving','running');default:''"`
+	Archived   bool   `json:"archived" gorm:"default:'0'"`                             // 是否已归档
+	RunnerId   string `json:"runnerId" gorm:"size:32;not null"`                        //部署通道ID
+	Timeout    int    `json:"timeout" gorm:"default:'600';comment:'部署超时'"`             // 部署超时时间（单位：秒）
+	OneTime    bool   `json:"oneTime" gorm:"default:'0'"`                              // 一次性环境标识
+	Deploying  bool   `json:"Deploying" gorm:"not null;default:'0';common:'是否正在执行部署'"` // 是否正在执行部署
 
 	StatePath string `json:"statePath" gorm:"not null" swaggerignore:"true"` // Terraform tfstate 文件路径（内部）
 	Outputs   string `json:"outputs" gorm:"type:text" swaggerignore:"true"`  // Terraform outputs 输出内容

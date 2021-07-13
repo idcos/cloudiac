@@ -74,14 +74,15 @@ const (
 	TaskTypeApplyName   = "部署"
 	TaskTypeDestroyName = "销毁"
 
-	TaskPending  = common.TaskPending
-	TaskRunning  = common.TaskRunning
-	TaskFailed   = common.TaskFailed
-	TaskComplete = common.TaskComplete
-	TaskTimeout  = common.TaskTimeout
+	TaskPending   = common.TaskPending
+	TaskRunning   = common.TaskRunning
+	TaskApproving = common.TaskApproving
+	TaskFailed    = common.TaskFailed
+	TaskComplete  = common.TaskComplete
+	//TaskTimeout   = common.TaskTimeout
 )
 
-var TaskStatusList = []string{TaskPending, TaskRunning, TaskFailed, TaskComplete, TaskTimeout}
+var TaskStatusList = []string{TaskPending, TaskRunning, TaskFailed, TaskComplete} //, TaskTimeout}
 
 type Task struct {
 	SoftDeleteModel
@@ -99,7 +100,7 @@ type Task struct {
 	Status    string `json:"status" enums:"'pending','running','failed','complete','timeout'"` // gorm 配置见 Migrate() // 任务状态
 	Message   string `json:"message"`                                                          // 任务的状态描述信息，如失败原因
 
-	// 任务每一步的执行超时，整个任务无超时控制
+	// 任务每一步的执行超时(整个任务无超时控制)
 	StepTimeout int `json:"stepTimeout" gorm:"default:'600';comment:'执行超时'"`
 
 	AutoApprove bool `json:"autoApproval" gorm:"default:'0'"`
@@ -135,11 +136,21 @@ func (t *Task) Started() bool {
 }
 
 func (Task) IsStartedStatus(status string) bool {
+	// 注意：approving 状态的任务我们也认为其 started
 	return !utils.InArrayStr([]string{TaskPending}, status)
 }
 
 func (Task) IsExitedStatus(status string) bool {
-	return utils.InArrayStr([]string{TaskFailed, TaskComplete, TaskTimeout}, status)
+	return utils.InArrayStr([]string{TaskFailed, TaskComplete}, status)
+}
+
+func (t *Task) IsEffectTask() bool {
+	return t.IsEffectTaskType(t.Type)
+}
+
+// IsEffectTaskType 是否产生实际数据变动的任务类型
+func (Task) IsEffectTaskType(typ string) bool {
+	return utils.StrInArray(typ, TaskTypeApply, TaskTypeDestroy)
 }
 
 func (Task) GetTaskNameByType(typ string) string {
@@ -163,7 +174,7 @@ func (t *Task) Migrate(sess *db.Session) (err error) {
 	}{
 		{
 			"status",
-			`ENUM('pending','running','failed','complete','timeout') DEFAULT 'pending' COMMENT '作业状态'`,
+			`ENUM('pending','running','approving','failed','complete','timeout') DEFAULT 'pending' COMMENT '作业状态'`,
 		},
 	}
 	for _, cd := range columnDefines {
@@ -206,6 +217,7 @@ type TaskStep struct {
 	ProjectId Id         `json:"projectId" gorm:"size:32;not null"`
 	EnvId     Id         `json:"envId" gorm:"size:32;not null"`
 	TaskId    Id         `json:"taskId" gorm:"size:32;not null"`
+	NextStep  Id         `json:"nextStep" gorm:"size:32;default:''"`
 	Index     int        `json:"index" gorm:"size:32;not null"`
 	Status    string     `json:"status" gorm:"type:enum('pending','approving','rejected','running','failed','complete','timeout')"`
 	Message   string     `json:"message" gorm:"type:text"`
@@ -218,6 +230,14 @@ type TaskStep struct {
 
 func (TaskStep) TableName() string {
 	return "iac_task_step"
+}
+
+func (s *TaskStep) IsStarted() bool {
+	return !utils.StrInArray(s.Status, TaskStepPending, TaskStepApproving)
+}
+
+func (s *TaskStep) IsExited() bool {
+	return utils.StrInArray(s.Status, TaskStepRejected, TaskStepCommand, TaskStepFailed, TaskStepTimeout)
 }
 
 func (s *TaskStep) IsApproved() bool {

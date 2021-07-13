@@ -5,11 +5,12 @@ const (
 	TaskTypeApply   = "apply"   // 执行 terraform apply 和 playbook
 	TaskTypeDestroy = "destroy" // 销毁，删除所有资源
 
-	TaskPending  = "pending"
-	TaskRunning  = "running"
-	TaskFailed   = "failed"
-	TaskComplete = "complete"
-	TaskTimeout  = "timeout"
+	TaskPending   = "pending"
+	TaskRunning   = "running"
+	TaskApproving = "approving"
+	TaskFailed    = "failed"
+	TaskComplete  = "complete"
+	//TaskTimeout   = "timeout"
 
 	TaskStepInit    = "init"
 	TaskStepPlan    = "plan"
