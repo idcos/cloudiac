@@ -4,7 +4,7 @@ import "cloudiac/portal/models"
 
 type UserAuthorization struct {
 	UserId models.Id `json:"userId" form:"userId" ` // 用户id
-	Role   string    `json:"role" form:"role" `     // 角色
+	Role   string    `json:"role" form:"role" `     // 角色 ('owner','manager','operator','guest')
 }
 
 type CreateProjectForm struct {
@@ -26,9 +26,9 @@ type UpdateProjectForm struct {
 	BaseForm
 
 	Id                models.Id           `uri:"id" json:"id" swaggerignore:"true"` // 组织ID，swagger 参数通过 param path 指定，这里忽略Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 组织ID，swagger 参数通过 param path 指定，这里忽略
-	Status            string              `json:"status" form:"status" `
-	Name              string              `json:"name" form:"name"`                // 项目名称
-	Description       string              `json:"description" form:"description" ` // 项目描述
+	Status            string              `json:"status" form:"status" `            // 项目状态 ('enable','disable')
+	Name              string              `json:"name" form:"name"`                 // 项目名称
+	Description       string              `json:"description" form:"description" `  // 项目描述
 	UserAuthorization []UserAuthorization `json:"userAuthorization" form:"userAuthorization" `
 }
 
