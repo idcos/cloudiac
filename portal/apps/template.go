@@ -68,6 +68,8 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 	}
 
 	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error commit create template, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
 
@@ -101,12 +103,12 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 		attrs["tfVarsFile"] = form.TfVarsFile
 	}
 
-	return services.UpdateTemplate(c.DB().Debug(), form.Id, attrs)
+	return services.UpdateTemplate(c.DB(), form.Id, attrs)
 }
 
 func DelateTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interface{}, e.Error){
-	c.AddLogField("action", fmt.Sprintf("delete template %d", form.Id))
-	tx := c.Tx().Debug()
+	c.AddLogField("action", fmt.Sprintf("delete template %s", form.Id))
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -114,11 +116,11 @@ func DelateTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interfac
 		}
 	}()
 	// 根据ID 查询云模版是否存在
-	tpl, err := services.GetTemplateById(c.DB(), form.Id)
+	tpl, err := services.GetTemplateById(tx, form.Id)
 	if err != nil && err.Code() == e.TemplateNotExists {
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
 	} else if err != nil {
-		c.Logger().Errorf("error get template by id, err %s", err)
+		c.Logger().Errorf("error get template by id, err %v", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 	// 根据云模版ID, 组织ID查询该云模版是否属于该组织
@@ -126,7 +128,7 @@ func DelateTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interfac
 		return nil, e.New(e.TemplateNotExists, http.StatusForbidden, fmt.Errorf("The organization does not have permission to delete the current template"))
 	}
 	// 查询活跃环境
-	envList, er := services.GetEnvByTplId(c.DB(), form.Id)
+	envList, er := services.GetEnvByTplId(tx, form.Id)
 	if er != nil {
 		return nil, e.AutoNew(er, e.DBError)
 	}
@@ -142,6 +144,11 @@ func DelateTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interfac
 		c.Logger().Errorf("error commit del template, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error commit del template, err %s", err)
+		return nil, e.New(e.DBError, err)
+	}
 
 	return nil, nil
 
@@ -149,7 +156,7 @@ func DelateTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interfac
 
 func TemplateDetail(c *ctx.ServiceCtx, form *forms.DetailTemplateForm) (*models.Template, e.Error) {
 	tpl, err := services.GetTemplateById(c.DB(), form.Id)
-	if err != nil && err.Code() == e.TaskNotExists {
+	if err != nil && err.Code() == e.TemplateNotExists {
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
 	} else if err != nil {
 		c.Logger().Errorf("error get template by id, err %s", err)

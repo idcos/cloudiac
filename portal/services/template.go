@@ -7,17 +7,17 @@ import (
 	"fmt"
 )
 
-func CreateTemplate(tx *db.Session, template models.Template) (*models.Template, e.Error) {
-	if template.Id == "" {
-		template.Id = models.NewId("ct")
+func CreateTemplate(tx *db.Session, tpl models.Template) (*models.Template, e.Error) {
+	if tpl.Id == "" {
+		tpl.Id = models.NewId("ct")
 	}
-	if err := models.Create(tx, &template); err != nil {
+	if err := models.Create(tx, &tpl); err != nil {
 		if e.IsDuplicate(err) {
 			return nil, e.New(e.TemplateAlreadyExists, err)
-	}
+		}
 		return nil, e.New(e.DBError, err)
 	}
-	return &template, nil
+	return &tpl, nil
 }
 
 func UpdateTemplate(tx *db.Session, id models.Id, attrs models.Attrs) (tpl *models.Template, re e.Error) {
@@ -52,6 +52,7 @@ func GetTemplateById(tx *db.Session, id models.Id) (*models.Template, e.Error) {
 	return &tpl, nil
 
 }
+
 // 这是根据orgId 去查
 func QueryTemplate(tx *db.Session, q string, orgId models.Id, templateIdList []string) (*db.Session, *db.Session) {
 	query := tx.Debug().Model(&models.Template{}).Joins(
@@ -73,19 +74,16 @@ func QueryTemplate(tx *db.Session, q string, orgId models.Id, templateIdList []s
 	return query, query
 }
 
-
 func QueryTplByProjectId(tx *db.Session, projectId models.Id) (result []string, err e.Error) {
 	pro_tpl := []models.ProjectTemplate{}
 	if err := tx.Where("projectId = ?", projectId).Find(&pro_tpl); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
-	for _, v := range pro_tpl{
+	for _, v := range pro_tpl {
 		result = append(result, v.TemplateId)
 	}
 	return
 }
-
-
 
 func GetTemplate(sess *db.Session, id models.Id) (*models.Template, error) {
 	tpl := models.Template{}

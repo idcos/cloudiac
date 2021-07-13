@@ -10,6 +10,7 @@ import (
 type Template struct {
 	ctrl.BaseController
 }
+
 // 创建云模版
 // @Tags 云模版
 // @Summary 创建云模版
@@ -19,7 +20,7 @@ type Template struct {
 // @Produce json
 // @Param Iac-Org-Id header string true "组织ID"
 // @Param form formData forms.CreateTemplateForm true "parameter"
-// @Router /template/create [post]
+// @Router /templates [post]
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
 func (Template) Create(c *ctx.GinRequestCtx) {
 	form := &forms.CreateTemplateForm{}
@@ -28,7 +29,6 @@ func (Template) Create(c *ctx.GinRequestCtx) {
 	}
 	c.JSONResult(apps.CreateTemplate(c.ServiceCtx(), form))
 }
-
 
 // Search 查询云模板列表
 // @Tags 云模版
@@ -42,7 +42,7 @@ func (Template) Create(c *ctx.GinRequestCtx) {
 // @Param Iac-Org-Id header string true "组织ID"
 // @Param Iac-project-Id header string false "项目ID"
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.SearchTemplateResp}}
-// @Router /template/search [get]
+// @Router /templates [get]
 func (Template) Search(c *ctx.GinRequestCtx) {
 	form := forms.SearchTemplateForm{}
 	if err := c.Bind(&form); err != nil {
@@ -58,9 +58,10 @@ func (Template) Search(c *ctx.GinRequestCtx) {
 // @Security AuthToken
 // @Accept  json
 // @Produce  json
+// @Param templateId path string true "云模版ID"
 // @Param data body forms.UpdateTemplateForm true "云模板信息"
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
-// @Router /template/update [put]
+// @Router /templates/{templateId} [put]
 func (Template) Update(c *ctx.GinRequestCtx) {
 	form := forms.UpdateTemplateForm{}
 	if err := c.Bind(&form); err != nil {
@@ -80,7 +81,7 @@ func (Template) Update(c *ctx.GinRequestCtx) {
 // @Security AuthToken
 // @Param Iac-Org-Id header string true "组织ID"
 // @Param form formData forms.DeleteUserForm true "parameter"
-// @Param templateId path string true "模版ID"
+// @Param templateId path string true "云模版ID"
 // @Router /template/{templateId} [delete]
 // @Success 200 {object} ctx.JSONResult
 func (Template) Delete(c *ctx.GinRequestCtx) {

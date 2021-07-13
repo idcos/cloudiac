@@ -11,17 +11,17 @@ type Template struct {
 	Description  string `json:"description" gorm:"type:text" example:"云霁阿里云模版"`
 	VcsId        Id     `json:"vcsId" gorm:"size:32;not null" example:"a1f79e8a-744d-4ea5-8d97-7e4b7b422a6c"`
 	RepoId       string `json:"repoId" gorm:"not null"`
-	RepoAddr     string `json:"repoAddr" gorm:"not null" example:"https://github.com/"`  // RepoAddr 可以为相对路径，以支持修改 vcs 的地址
-	RepoToken    string `json:"repoToken" gorm:"size:128" ` // RepoToken 若为空则使用 vcs 的 token
+	RepoAddr     string `json:"repoAddr" gorm:"not null" example:"https://github.com/"` // RepoAddr 可以为相对路径，以支持修改 vcs 的地址
+	RepoToken    string `json:"repoToken" gorm:"size:128" `                             // RepoToken 若为空则使用 vcs 的 token
 	RepoRevision string `json:"repoRevision" gorm:"size:64;default:'master'" example:"master"`
-	Status    string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'状态'"`
-	CreatorId Id     `json:"creatorId" gorm:"size:32;not null;comment:'创建人'"`
-	Workdir string `json:"workdir" gorm:"default:''" example:"/user/local/yunji"` // 是基于项目根目录的相对路径, 默认为项目根目录
+	Status       string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'状态'"`
+	CreatorId    Id     `json:"creatorId" gorm:"size:32;not null;comment:'创建人'"`
+	Workdir      string `json:"workdir" gorm:"default:''" example:"/user/local/yunji"` // 是基于项目根目录的相对路径, 默认为项目根目录
 	// 要执行的 ansible playbook 文件(相对于 workdir 的路径)
 	TfVarsFile string `json:"tfVarsFile" gorm:"default:''"`
-	Playbook string `json:"playbook" gorm:"default:''" example:"ansbile/playbook.yml"`
+	// 要执行的 ansible playbook 文件(相对于 workdir 的路径)
+	Playbook   string `json:"playbook" gorm:"default:''" example:"ansbile/playbook.yml"`
 }
-
 
 func (Template) TableName() string {
 	return "iac_template"
