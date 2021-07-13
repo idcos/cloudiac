@@ -51,25 +51,6 @@ func (Task) Detail(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.TaskDetail(c.ServiceCtx(), form))
 }
 
-// LastTask 环境最新任务详情
-// @Tags 环境
-// @Summary 环境最新任务详情
-// @Accept application/x-www-form-urlencoded
-// @Produce json
-// @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string true "项目ID"
-// @Param envId path string true "环境ID"
-// @router /envs/{envId}/tasks/last [get]
-// @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
-func (Task) LastTask(c *ctx.GinRequestCtx) {
-	form := &forms.LastTaskForm{}
-	if err := c.Bind(form); err != nil {
-		return
-	}
-	c.JSONResult(apps.LastTask(c.ServiceCtx(), form))
-}
-
 // FollowLogSse 当前任务实时日志
 // @Tags 环境
 // @Summary 当前任务实时日志

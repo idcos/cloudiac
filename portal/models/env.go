@@ -45,7 +45,7 @@ type Env struct {
 	PlayVarsFile string         `json:"playVarsFile" gorm:"default:''"` // Ansible 变量文件路径
 	Playbook     string         `json:"playbook" gorm:"default:''"`     // Ansible playbook 入口文件路径
 
-	LastTaskId Id `json:"lastTaskId" gorm:"size:32;default:'0'"` // 最后一次部署或销毁任务的 id(plan 任务不记录)
+	LastTaskId Id `json:"lastTaskId" gorm:"size:32"` // 最后一次部署或销毁任务的 id(plan 任务不记录)
 
 	// AutoDestroyAt 自动销毁时间，这里存绝对时间，1小时、2小时的相对时间选择由前端转换
 	// TODO 自动销毁机制待实现

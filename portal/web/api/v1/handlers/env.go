@@ -195,3 +195,43 @@ func (Env) SearchVariables(c *ctx.GinRequestCtx) {
 	}
 	c.JSONResult(apps.SearchEnvVariables(c.ServiceCtx(), &form))
 }
+
+// SearchTasks 部署历史
+// @Tags 环境
+// @Summary 部署历史
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param Iac-Org-Id header string true "组织ID"
+// @Param Iac-Project-Id header string true "项目ID"
+// @Param envId path string true "环境ID"
+// @Param form query forms.SearchEnvTasksForm true "parameter"
+// @router /envs/{envId}/tasks [get]
+// @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
+func (Env) SearchTasks(c *ctx.GinRequestCtx) {
+	form := &forms.SearchEnvTasksForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	f := &forms.SearchTaskForm{EnvId: form.Id}
+	c.JSONResult(apps.SearchTask(c.ServiceCtx(), f))
+}
+
+// LastTask 环境最新任务详情
+// @Tags 环境
+// @Summary 环境最新任务详情
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param Iac-Org-Id header string true "组织ID"
+// @Param Iac-Project-Id header string true "项目ID"
+// @Param envId path string true "环境ID"
+// @router /envs/{envId}/tasks/last [get]
+// @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
+func (Env) LastTask(c *ctx.GinRequestCtx) {
+	form := &forms.LastTaskForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.LastTask(c.ServiceCtx(), form))
+}

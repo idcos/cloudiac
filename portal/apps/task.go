@@ -75,7 +75,7 @@ func LastTask(c *ctx.ServiceCtx, form *forms.LastTaskForm) (*taskDetailResp, e.E
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
-	query := c.DB().Where("iac_env.org_id = ? AND iac_env.project_id = ?", c.OrgId, c.ProjectId)
+	query := c.DB().Where("org_id = ? AND project_id = ?", c.OrgId, c.ProjectId)
 	env, err := services.GetEnvById(query, form.Id)
 	if err != nil && err.Code() == e.EnvNotExists {
 		return nil, e.New(err.Code(), err, http.StatusNotFound)

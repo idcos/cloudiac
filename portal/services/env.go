@@ -54,7 +54,7 @@ func DeleteEnv(tx *db.Session, id models.Id) e.Error {
 
 func GetEnvById(tx *db.Session, id models.Id) (*models.Env, e.Error) {
 	o := models.Env{}
-	if err := tx.Where("id = ?", id).First(&o); err != nil {
+	if err := tx.Model(models.Env{}).Where("id = ?", id).First(&o); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.EnvNotExists, err)
 		}
