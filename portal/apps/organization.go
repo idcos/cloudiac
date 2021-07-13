@@ -35,8 +35,16 @@ func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (
 		err   e.Error
 	)
 
+	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
 	if form.OwnerId != "" {
-		owner, err = services.GetUserById(c.DB(), form.OwnerId)
+		owner, err = services.GetUserById(tx, form.OwnerId)
 		if err != nil && err.Code() == e.UserNotExists {
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)
 		} else if err != nil {
@@ -45,7 +53,7 @@ func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (
 		}
 	} else if form.OwnerEmail != "" {
 		// 查找系统是否已经存在该邮箱对应的用户
-		owner, err = services.GetUserByEmail(c.DB(), form.OwnerEmail)
+		owner, err = services.GetUserByEmail(tx, form.OwnerEmail)
 		if err != nil && err.Code() != e.UserNotExists {
 			c.Logger().Errorf("error get user by id, err %s", err)
 			return nil, err
@@ -53,14 +61,6 @@ func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (
 	} else if form.OwnerName == "" || form.OwnerEmail == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
-
-	tx := c.Tx()
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			panic(r)
-		}
-	}()
 
 	// 创建组织
 	org, err := services.CreateOrganization(tx, models.Organization{
