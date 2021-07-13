@@ -26,7 +26,7 @@ func (Variable) BatchUpdate(c *ctx.GinRequestCtx) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CreateVariable(c.ServiceCtx(), &form))
+	c.JSONResult(apps.BatchUpdate(c.ServiceCtx(), &form))
 }
 
 // Search 查询变量
