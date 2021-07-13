@@ -112,7 +112,7 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 		}
 	}
 
-	if er := services.ChangeTaskStepStatus(sess, step, stepResult.Status, ""); er != nil {
+	if er := services.ChangeTaskStepStatus(sess, task, step, stepResult.Status, ""); er != nil {
 		return stepResult, er
 	}
 	return stepResult, err
@@ -133,9 +133,18 @@ func pullTaskStepStatus(ctx context.Context, task *models.Task, step *models.Tas
 	params.Add("envId", string(task.EnvId))
 	params.Add("taskId", string(task.Id))
 	params.Add("step", fmt.Sprintf("%d", step.Index))
-	wsConn, err := utils.WebsocketDail(runnerAddr, consts.RunnerTaskStateURL, params)
+	wsConn, resp, err := utils.WebsocketDail(runnerAddr, consts.RunnerTaskStateURL, params)
 	if err != nil {
 		logger.Errorf("connect error: %v", err)
+		if resp != nil && resp.StatusCode >= 300 {
+			// 返回异常 http 状态码时表示请求参数有问题或者 runner 无法处理该连接，所以直接返回步骤失败
+			return &waitStepResult{Status: models.TaskStepFailed, Result: runner.TaskStatusMessage{
+				Exited:           true,
+				ExitCode:         1,
+				LogContent:       nil,
+				StateListContent: nil,
+			}}, nil
+		}
 		return stepResult, err
 	}
 	defer utils.WebsocketClose(wsConn)

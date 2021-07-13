@@ -82,7 +82,12 @@ func RejectTaskStep(dbSess *db.Session, taskId models.Id, step int, userId model
 	}
 
 	taskStep.ApproverId = userId
-	return ChangeTaskStepStatus(dbSess, taskStep, models.TaskStepRejected, "")
+
+	if task, err := GetTask(dbSess, taskStep.TaskId); err != nil {
+		return e.AutoNew(err, e.DBError)
+	} else {
+		return ChangeTaskStepStatus(dbSess, task, taskStep, models.TaskStepRejected, "")
+	}
 }
 
 func IsTerraformStep(typ string) bool {
@@ -91,7 +96,11 @@ func IsTerraformStep(typ string) bool {
 }
 
 // ChangeTaskStepStatus 修改步骤状态及 startAt、endAt，并同步修改任务状态
-func ChangeTaskStepStatus(dbSess *db.Session, taskStep *models.TaskStep, status, message string) e.Error {
+func ChangeTaskStepStatus(dbSess *db.Session, task *models.Task, taskStep *models.TaskStep, status, message string) e.Error {
+	if taskStep.Status == status && message == "" {
+		return nil
+	}
+
 	taskStep.Status = status
 	taskStep.Message = message
 
@@ -109,9 +118,10 @@ func ChangeTaskStepStatus(dbSess *db.Session, taskStep *models.TaskStep, status,
 		return e.New(e.DBError, err)
 	}
 
-	if task, err := GetTask(dbSess, taskStep.TaskId); err != nil {
-		return e.AutoNew(err, e.DBError)
-	} else {
-		return ChangeTaskStatusWithStep(dbSess, task, taskStep)
-	}
+	//if task, err := GetTask(dbSess, taskStep.TaskId); err != nil {
+	//	return e.AutoNew(err, e.DBError)
+	//} else {
+	//	return ChangeTaskStatusWithStep(dbSess, task, taskStep)
+	//}
+	return ChangeTaskStatusWithStep(dbSess, task, taskStep)
 }

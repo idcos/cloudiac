@@ -13,10 +13,13 @@ import (
 func GetTask(dbSess *db.Session, id models.Id) (*models.Task, e.Error) {
 	task := models.Task{}
 	err := dbSess.Where("id = ?", id).First(&task)
-	if e.IsRecordNotFound(err) {
-		return nil, e.New(e.TaskNotExists)
+	if err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TaskNotExists)
+		}
+		return nil, e.New(e.DBError, err)
 	}
-	return &task, e.New(e.DBError, err)
+	return &task, nil
 }
 
 func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e.Error) {
@@ -124,9 +127,12 @@ func ChangeTaskStatusWithStep(dbSess *db.Session, task *models.Task, step *model
 
 // ChangeTaskStatus 修改任务状态(同步修改 StartAt、EndAt 等)，并同步修改 env 状态
 func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message string) e.Error {
+	if task.Status == status && message == "" {
+		return nil
+	}
+
 	task.Status = status
 	task.Message = message
-
 	now := time.Now()
 	if task.StartAt == nil && task.Started() {
 		task.StartAt = &now

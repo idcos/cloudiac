@@ -238,7 +238,7 @@ func (m *TaskManager) run(ctx context.Context) {
 
 func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 	logger := m.logger.WithField("taskId", task.Id)
-	logger.Infof("run task %s", task.Id)
+	logger.Infof("run task: %s", task.Id)
 
 	changeTaskStatus := func(status, message string) error {
 		if er := services.ChangeTaskStatus(m.db, task, status, message); er != nil {
@@ -292,6 +292,7 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 			return
 		}
 	}
+	logger.Infof("task done: %s", task.Id)
 }
 
 func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq,
@@ -302,13 +303,14 @@ func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq
 
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("painc: %v", r)
+			logger.Debugf("%s", debug.Stack())
+			err = fmt.Errorf("run task step painc: %v", r)
 		}
 	}()
 
 	changeStepStatus := func(status, message string) {
 		var er error
-		if er = services.ChangeTaskStepStatus(m.db, step, status, message); er != nil {
+		if er = services.ChangeTaskStepStatus(m.db, task, step, status, message); er != nil {
 			er = errors.Wrap(er, "update step status error")
 			logger.Error(er)
 			panic(err)
@@ -368,16 +370,26 @@ loop:
 
 	switch step.Status {
 	case models.TaskStepComplete:
-		if len(stepResult.Result.StateListContent) > 0 {
-			task.Result.StateResList = strings.Split(string(stepResult.Result.StateListContent), "\n")
-		}
-		if stepResult.Status == models.TaskComplete {
-			////TODO 解析日志输出，更新资源变更信息到 task.Result
-			//tfInfo := ParseTfOutput(task.BackendInfo.LogFile)
-			//models.UpdateAttr(dbSess.Where("id = ?", task.Id), &models.Task{}, tfInfo)
-		}
-		if _, err = m.db.Model(&models.Task{}).Update(task); err != nil {
-			return
+		// 有可能步骤变为 complete 状态后程序强制退出，导致任务和环境状态未设置，
+		// 重启后任务会被恢复执行，此时 stepResult 为 nil
+		if stepResult == nil {
+			// 有可能任务状态未与步骤状态同步，这里同步一下
+			if er := services.ChangeTaskStatus(m.db, task, step.Status, ""); er != nil {
+				logger.Errorf("change task status: %v", er)
+				panic(er)
+			}
+		} else {
+			if len(stepResult.Result.StateListContent) > 0 {
+				task.Result.StateResList = strings.Split(string(stepResult.Result.StateListContent), "\n")
+			}
+			if stepResult.Status == models.TaskComplete {
+				////TODO 解析日志输出，更新资源变更信息到 task.Result
+				//tfInfo := ParseTfOutput(task.BackendInfo.LogFile)
+				//models.UpdateAttr(dbSess.Where("id = ?", task.Id), &models.Task{}, tfInfo)
+			}
+			if _, err = m.db.Model(&models.Task{}).Update(task); err != nil {
+				return
+			}
 		}
 		return nil
 	case models.TaskStepFailed:
