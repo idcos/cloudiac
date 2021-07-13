@@ -49,7 +49,6 @@ func (Vcs) Search(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.SearchVcs(c.ServiceCtx(), form))
 }
 
-
 // 更新vcs仓库
 // @Tags Vcs仓库
 // @Summary 更新vcs仓库
@@ -67,7 +66,6 @@ func (Vcs) Update(c *ctx.GinRequestCtx) {
 	}
 	c.JSONResult(apps.UpdateVcs(c.ServiceCtx(), form))
 }
-
 
 // 删除Vcs 仓库
 // @Tags Vcs仓库
@@ -187,7 +185,7 @@ func TemplateTfvarsSearch(c *ctx.GinRequestCtx) {
 // @Summary 云模板参数接口
 // @Accept application/x-www-form-urlencoded
 // @Param form query forms.TemplateVariableSearchForm true "parameter"
-// @Router /template/variable/search [get]
+// @Router /template/variable [get]
 // @Success 200 {object} ctx.JSONResult{result=[]services.TemplateVariable}
 func TemplateVariableSearch(c *ctx.GinRequestCtx) {
 	form := forms.TemplateVariableSearchForm{}
@@ -202,7 +200,7 @@ func TemplateVariableSearch(c *ctx.GinRequestCtx) {
 // @Summary  playbook列表接口
 // @Accept application/x-www-form-urlencoded
 // @Param form query forms.TemplatePlaybookSearchForm true "parameter"
-// @router /template/playbook/search [get]
+// @router /template/playbook [get]
 // @Success 200 {object} ctx.JSONResult{result=[]vcsrv.VcsIfaceOptions}
 func TemplatePlaybookSearch(c *ctx.GinRequestCtx) {
 	form := forms.TemplatePlaybookSearchForm{}

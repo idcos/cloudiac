@@ -13,7 +13,7 @@ type CreateVcsForm struct {
 
 type UpdateVcsForm struct {
 	BaseForm
-	Id       models.Id `form:"id" json:"id" binding:"required"`
+	Id       models.Id `form:"id" json:"id" binding:""`
 	Status   string    `form:"status" json:"status" binding:""`
 	Name     string    `form:"name" json:"name" binding:""`
 	VcsType  string    `form:"vcsType" json:"vcsType" binding:""`

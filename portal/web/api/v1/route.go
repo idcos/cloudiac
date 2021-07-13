@@ -71,9 +71,9 @@ func Register(g *gin.RouterGroup) {
 
 	ctrl.Register(g.Group("template", ac()), &handlers.Template{})
 	g.GET("/template/overview", ac(), w(handlers.Template{}.Overview))
-	g.GET("/template/tfvars/search",ac(), w(handlers.TemplateTfvarsSearch))
-	g.GET("/template/variable/search", ac(), w(handlers.TemplateVariableSearch))
-	g.GET("/template/playbook/search", ac(), w(handlers.TemplatePlaybookSearch))
+	g.GET("/template/tfvars/search", ac(), w(handlers.TemplateTfvarsSearch))
+	g.GET("/template/variable", ac(), w(handlers.TemplateVariableSearch))
+	g.GET("/template/playbook", ac(), w(handlers.TemplatePlaybookSearch))
 	g.GET("/template/state_list", ac(), w(handlers.Task{}.TaskStateListSearch))
 
 	ctrl.Register(g.Group("task", ac()), &handlers.Task{})
