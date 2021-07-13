@@ -14,8 +14,8 @@ type UpdateUserForm struct {
 	BaseForm
 
 	Id          models.Id         `uri:"id" json:"id" binding:"" swaggerignore:"true"`         // 用户ID
-	Name        string            `form:"name" json:"name" binding:"gte=2,lte=32"`             // 用户名
-	Phone       string            `form:"phone" json:"phone" binding:"max=11"`                 // 电话
+	Name        string            `form:"name" json:"name" binding:""`                         // 用户名
+	Phone       string            `form:"phone" json:"phone" binding:""`                       // 电话
 	OldPassword string            `form:"oldPassword" json:"oldPassword" binding:""`           // 原始密码
 	NewPassword string            `form:"newPassword" json:"newPassword" binding:""`           // 新密码
 	NewbieGuide map[string]uint64 `form:"newbieGuide" json:"newbieGuide" swaggertype:"string"` // 新用户向导内容
