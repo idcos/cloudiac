@@ -19,7 +19,7 @@ type Variable struct {
 // @Produce json
 // @Security AuthToken
 // @Param form body forms.BatchUpdateVariableForm true "parameter"
-// @router /variables [post]
+// @router /variables/batch [post]
 // @Success 200 {object} ctx.JSONResult{result=models.Variable}
 func (Variable) BatchUpdate(c *ctx.GinRequestCtx) {
 	form := forms.BatchUpdateVariableForm{}
