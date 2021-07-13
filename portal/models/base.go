@@ -95,6 +95,12 @@ func (BaseModel) AddUniqueIndex(sess *db.Session, index string, cols ...string) 
 	return sess.AddUniqueIndex(index, cols...)
 }
 
+// AutoUintIdModel  使用自增 uint id 的 model
+type AutoUintIdModel struct {
+	BaseModel
+	//Id uint `gorm:"primary_key"`
+}
+
 type TimedModel struct {
 	BaseModel
 

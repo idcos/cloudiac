@@ -119,6 +119,14 @@ const (
 	TokenInvalidStatus  = 12014
 	InvalidTokenId      = 12015
 
+	// project
+	ProjectAlreadyExists  = 10010
+	ProjectNotExists      = 10011
+	ProjectDisabled       = 10012
+	ProjectAliasDuplicate = 10013
+	ProjectInvalidStatus  = 10014
+	ProjectIdInvalid      = 10014
+
 	// gitlib
 	GitLabError = 9100
 

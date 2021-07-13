@@ -15,7 +15,7 @@ import (
 func CreateResourceAccount(c *ctx.ServiceCtx, form *forms.CreateResourceAccountForm) (*models.ResourceAccount, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create resource_account %s", form.Name))
 
-	tx := c.Tx().Debug()
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
