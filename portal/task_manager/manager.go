@@ -259,6 +259,14 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 		return
 	}
 
+	if task.IsEffectTask() {
+		if _, er := m.db.Model(&models.Env{}).Where("id = ?", task.EnvId).
+			Update(&models.Env{LastTaskId: task.Id}); er != nil {
+			logger.Errorf("update env lastTaskId: %v", er)
+			return
+		}
+	}
+
 	runTaskReq, err := buildRunTaskReq(m.db, *task)
 	if err != nil {
 		taskFailed(err)
