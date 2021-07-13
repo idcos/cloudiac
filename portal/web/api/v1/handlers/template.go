@@ -17,19 +17,8 @@ type Template struct {
 // @Accept json
 // @Security AuthToken
 // @Produce json
-// @Param name formData string true "模版名称"
-// @Param vcsId formData int true "vcs仓库"
-// @Param tplType formData string true "云模版类型"
 // @Param Iac-Org-Id header string true "组织ID"
-// @Param description formData string false "云模版描述信息"
-// @Param repoId formData string true "云模版代码仓库id"
-// @Param repoAddr formData string true "云模版代码仓库地址"
-// @Param repoRevision formData string false "云模版仓库分支,默认值为master"
-// @Param workdir formData string false "工作路径"
-// @Param playbook formData string false "ansbile playbook文件路径"
-// @Param status formData string false "云模版状态，有enable, disable两个可选值，默认值为enable"
-// @Param creatorId formData string true "创建用户ID"
-// @Param runnerId formData string true "runnerId"
+// @Param form formData forms.CreateTemplateForm true "parameter"
 // @Router /template/create [post]
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
 func (Template) Create(c *ctx.GinRequestCtx) {
@@ -44,16 +33,15 @@ func (Template) Create(c *ctx.GinRequestCtx) {
 // Search 查询云模板列表
 // @Tags 云模版
 // @Summary 查询云模板列表
+// @Accept multipart/x-www-form-urlencoded
 // @Security AuthToken
 // @Description 查询云模板列表
 // @Tags 云模板
 // @Accept  json
 // @Produce  json
-// @Param Authorization header string true "Bearer token"
-// @Param q query string false "模糊搜索"
 // @Param Iac-Org-Id header string true "组织ID"
 // @Param Iac-project-Id header string false "项目ID"
-// @Success 200 {object} apps.SearchTemplateResp
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.SearchTemplateResp}}
 // @Router /template/search [get]
 func (Template) Search(c *ctx.GinRequestCtx) {
 	form := forms.SearchTemplateForm{}
@@ -68,10 +56,8 @@ func (Template) Search(c *ctx.GinRequestCtx) {
 // @Summary 修改云模板信息
 // @Description 修改云模板信息
 // @Security AuthToken
-// @Tags 云模板
 // @Accept  json
 // @Produce  json
-// @Param Authorization header string true "Bearer token"
 // @Param data body forms.UpdateTemplateForm true "云模板信息"
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
 // @Router /template/update [put]
@@ -94,6 +80,7 @@ func (Template) Update(c *ctx.GinRequestCtx) {
 // @Security AuthToken
 // @Param Iac-Org-Id header string true "组织ID"
 // @Param form formData forms.DeleteUserForm true "parameter"
+// @Param templateId path string true "模版ID"
 // @Router /template/{templateId} [delete]
 // @Success 200 {object} ctx.JSONResult
 func (Template) Delete(c *ctx.GinRequestCtx) {
@@ -111,6 +98,7 @@ func (Template) Delete(c *ctx.GinRequestCtx) {
 // @Produce json
 // @Security AuthToken
 // @Param Iac-Org-Id header string true "组织ID"
+// @Param form formData forms.DetailTemplateForm true "parameter"
 // @Router /template/{templateId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
 func (Template) Detail(c *ctx.GinRequestCtx) {

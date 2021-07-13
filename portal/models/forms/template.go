@@ -12,22 +12,21 @@ type Var struct {
 }
 
 type CreateTemplateForm struct {
-	PageForm
+	BaseForm
 
 	Name                   string    `form:"name" json:"name" binding:"required,gte=2,lte=32"`
 	TplType     		   string    `form:"tplType" json:"tplType" binding:"required"`
-	OrgId				   string    `form:"orgId" json:"orgId" binding:"required"`
 	Description            string    `form:"description" json:"Description" binding:""`
 	RepoId                 string    `form:"repoId" json:"repoId" binding:""`
 	RepoAddr               string    `form:"repoAddr" json:"repoAddr" binding:""`
 	RepoRevision           string    `form:"repoRevision" json:"repoRevision" binding:""`
 	Extra                  string    `form:"extra" json:"extra"`
-	Workdir				   string    `form:"workdir" json:"workdor"`
+	Workdir				   string    `form:"workdir" json:"workdir"`
 	VcsId                  models.Id `form:"vcsId" json:"vcsId" binding:"required"`
 	Playbook               string    `json:"playbook" form:"playbook"`
 	Status				   string    `json:"status" form:"status"`
 	CreatorId			   string    `json:"creatorId" form:"creatorId" binding:"required"`
-	RunnerId			   string    `json:"runnerId" form:"runnerId" binding:"required"`
+	TfVarsFile             string    `form:"tfVarsFile" json:"tfVarsFile"`
 }
 
 
@@ -39,7 +38,7 @@ type SearchTemplateForm struct {
 }
 
 type UpdateTemplateForm struct {
-	PageForm
+	BaseForm
 	Id                     models.Id `form:"id" json:"id" binding:"required"`
 	Name                   string    `form:"name" json:"name"`
 	Description            string    `form:"description" json:"Description"`
@@ -48,6 +47,7 @@ type UpdateTemplateForm struct {
 	Workdir				   string    `form:"workdir" json:"workdor"`
 	RunnerId			   string    `json:"runnerId" form:"runnerId"`
 	Playbook               string    `json:"playbook" form:"playbook"`
+	TfVarsFile             string    `form:"tfVarsFile" json:"tfVarsFile"`
 }
 
 type DeleteTemplateForm struct {
@@ -57,7 +57,7 @@ type DeleteTemplateForm struct {
 
 
 type DetailTemplateForm struct {
-	PageForm
+	BaseForm
 	Id models.Id `form:"id" json:"id" binding:"required"`
 }
 

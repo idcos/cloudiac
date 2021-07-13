@@ -38,8 +38,22 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 		var (
 			template *models.Template
 			err      e.Error
-			tpl      models.Template
 		)
+		tpl := models.Template{
+			Name: form.Name,
+			TplType: form.TplType,
+			OrgId: c.OrgId,
+			Description: form.Description,
+			VcsId: form.VcsId,
+			RepoId: form.RepoId,
+			RepoAddr: form.RepoAddr,
+			RepoRevision: form.RepoRevision,
+			Status: form.Status,
+			CreatorId: c.UserId,
+			Workdir: form.Workdir,
+			Playbook: form.Playbook,
+			TfVarsFile: form.TfVarsFile,
+		}
 		template, err = services.CreateTemplate(tx, tpl)
 		if err != nil {
 			return nil, err
@@ -74,7 +88,6 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 	if form.HasKey("playbook") {
 		attrs["playbook"] = form.Playbook
 	}
-
 	if form.HasKey("extra") {
 		attrs["extra"] = form.Extra
 	}
@@ -84,8 +97,8 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 	if form.HasKey("workdir") {
 		attrs["workdir"] = form.Workdir
 	}
-	if form.HasKey("runnerId") {
-		attrs["runnerId"] = form.RunnerId
+	if form.HasKey("varfile") {
+		attrs["tfVarsFile"] = form.TfVarsFile
 	}
 
 	return services.UpdateTemplate(c.DB().Debug(), form.Id, attrs)
@@ -93,10 +106,6 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 
 func DelateTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interface{}, e.Error){
 	c.AddLogField("action", fmt.Sprintf("delete template %d", form.Id))
-
-	// TODO 判断云模版是否属于该组织
-	// TODO 判断云模版是否活跃
-
 	tx := c.Tx().Debug()
 	defer func() {
 		if r := recover(); r != nil {
@@ -104,6 +113,10 @@ func DelateTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interfac
 			panic(r)
 		}
 	}()
+
+
+
+
 	// 根据ID 查询云模版是否存在
 	tpl, err := services.GetTemplateById(c.DB(), form.Id)
 	if err != nil && err.Code() == e.UserNotExists {
@@ -111,6 +124,21 @@ func DelateTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interfac
 	} else if err != nil {
 		c.Logger().Errorf("error get template by id, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+	// 根据云模版ID, 组织ID查询该云模版是否属于该组织
+	if tpl.OrgId != c.OrgId {
+		return nil, e.New(e.TemplateNotExists, http.StatusForbidden, fmt.Errorf("The organization does not have permission to delete the current template"))
+	}
+	// 查询活跃环境
+	envList, er := services.GetEnvByTplId(c.DB(), form.Id)
+	if er != nil {
+		return nil, e.AutoNew(er, e.DBError)
+	}
+	for _, v := range(envList) {
+		if v.Status != "inactive"{
+			c.Logger().Error("error delete template by id,because the template also has an active environment" )
+			return nil, e.New(e.TemplateActiveEvcExists, http.StatusForbidden, fmt.Errorf("The cloud template cannot be deleted because there is an active environment"))
+		}
 	}
 	// 根据ID 删除云模版
 	if err := services.DeleteTemplate(tx, tpl.Id); err != nil {
