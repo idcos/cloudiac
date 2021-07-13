@@ -87,13 +87,13 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 		// 正常情况下 pullTaskStepStatus() 应该在 runner 任务退出后才返回，
 		// 但发现有任务在 running 状态时函数返回的情况，所以这里进行一次状态检查，如果任务不是退出状态则继续重试
 		if !(models.Task{}).IsExitedStatus(stepResult.Status) {
-			logger.Warnf("pull task status done, but task is %s, retry(%d)", stepResult.Status, retryN)
+			logger.Warnf("pull task status done, but task status is '%s', retry(%d)", stepResult.Status, retryN)
 			return true, nil
 		}
 		return false, nil
 	})
 	if err != nil {
-		return nil, err
+		return stepResult, err
 	}
 
 	if stepResult.Status != models.TaskRunning && task.Extra.Source == consts.WorkFlow {
@@ -101,13 +101,6 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 		if err := k.ConnAndSend(k.GenerateKafkaContent(task.Extra.TransitionId, stepResult.Status)); err != nil {
 			logger.Errorf("kafka send error: %v", err)
 		}
-	}
-
-	now := time.Now()
-	step.Status = stepResult.Status
-	step.EndAt = &now
-	if _, err = sess.Model(&models.TaskStep{}).Update(step); err != nil {
-		return nil, errors.Wrapf(err, "update step")
 	}
 
 	if len(stepResult.Result.LogContent) > 0 {
@@ -119,6 +112,9 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 		}
 	}
 
+	if er := services.ChangeTaskStepStatus(sess, step, stepResult.Status, ""); er != nil {
+		return stepResult, er
+	}
 	return stepResult, err
 }
 

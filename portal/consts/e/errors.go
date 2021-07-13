@@ -123,8 +123,12 @@ const (
 	// template
 	TemplateAlreadyExists = 11010
 
+
 	// consul
 	ConsulConnError = 12010
+
+	// env
+	EnvNotExists = 13404
 )
 
 var errorMsgs = map[int]map[string]string{
