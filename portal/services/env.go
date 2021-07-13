@@ -30,9 +30,7 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 	if task.Exited() {
 		switch task.Status {
 		case models.TaskFailed:
-			// 任务 failed 有可能是 step 超时或审批驳回等原因，
-			// 只有 step 也为 failed 状态时才应该同步修改环境状态
-			if step.Status == models.TaskStepFailed {
+			if step.Status != models.TaskStepRejected {
 				envStatus = models.EnvStatusFailed
 			}
 		case models.TaskComplete:
