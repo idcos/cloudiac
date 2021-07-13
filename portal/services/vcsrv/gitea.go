@@ -119,9 +119,26 @@ func (gitea *giteaRepoIface) ListBranches() ([]string, error) {
 	}
 	return branchList, nil
 }
-// TODO gitea 请求的是API
-func (gitea *giteaRepoIface) ListTags() ([]string, error) {
 
+type giteaTag struct {
+	Name string `json:"name" form:"name" `
+}
+
+func (gitea *giteaRepoIface) ListTags() ([]string, error) {
+	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/%s/tags", gitea.repository.FullName, gitea.repository.Name)
+	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
+	if err != nil {
+		return nil, e.New(e.BadRequest, err)
+	}
+	defer response.Body.Close()
+	rep := make([]giteaTag, 0)
+
+	_ = json.Unmarshal(body, &rep)
+	tagList := []string{}
+	for _, v := range rep {
+		tagList = append(tagList, v.Name)
+	}
+	return tagList, nil
 }
 
 

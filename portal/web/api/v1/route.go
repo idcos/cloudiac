@@ -71,7 +71,7 @@ func Register(g *gin.RouterGroup) {
 
 	ctrl.Register(g.Group("template", ac()), &handlers.Template{})
 	g.GET("/template/overview", ac(), w(handlers.Template{}.Overview))
-	g.GET("/template/tfvars/search, ac()", w(handlers.TemplateTfvarsSearch))
+	g.GET("/template/tfvars/search",ac(), w(handlers.TemplateTfvarsSearch))
 	g.GET("/template/variable/search", ac(), w(handlers.TemplateVariableSearch))
 	g.GET("/template/playbook/search", ac(), w(handlers.TemplatePlaybookSearch))
 	g.GET("/template/state_list", ac(), w(handlers.Task{}.TaskStateListSearch))
@@ -83,6 +83,7 @@ func Register(g *gin.RouterGroup) {
 	ctrl.Register(g.Group("vcs", ac()), &handlers.Vcs{})
 	g.GET("/vcs/repo/search", ac(), w(handlers.Vcs{}.ListRepos))
 	g.GET("/vcs/branch/search", ac(), w(handlers.Vcs{}.ListBranches))
+	g.GET("/vcs/tag/search", ac(), w(handlers.Vcs{}.ListTags))
 	g.GET("/vcs/readme", ac(), w(handlers.Vcs{}.GetReadmeContent))
 
 	ctrl.Register(g.Group("notification", ac()), &handlers.Notification{})

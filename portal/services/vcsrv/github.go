@@ -108,7 +108,7 @@ func (github *githubRepoIface) ListBranches() ([]string, error) {
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
-	rep := make([]giteaBranch, 0)
+	rep := make([]githubBranch, 0)
 
 	_ = json.Unmarshal(body, &rep)
 	branchList := []string{}
@@ -117,6 +117,28 @@ func (github *githubRepoIface) ListBranches() ([]string, error) {
 	}
 	return branchList, nil
 }
+
+type githubTag struct {
+	Name string `json:"name" form:"name" `
+}
+
+func (github *githubRepoIface) ListTags() ([]string, error) {
+	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/%s/tags", github.repository.FullName, github.repository.Name), nil)
+	_, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken)
+	if err != nil {
+		return nil, e.New(e.BadRequest, err)
+	}
+	rep := make([]githubTag, 0)
+
+	_ = json.Unmarshal(body, &rep)
+	tagList := []string{}
+	for _, v := range rep {
+		tagList = append(tagList, v.Name)
+	}
+	return tagList, nil
+
+}
+
 
 type githubCommit struct {
 	Commit struct {

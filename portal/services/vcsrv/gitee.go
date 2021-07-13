@@ -115,10 +115,27 @@ func (gitee *giteeRepoIface) ListBranches() ([]string, error) {
 	return branchList, nil
 }
 
-func (gitee *giteeRepoIface) ListTags() ([]string, error) {
-
+type giteeTag struct {
+	Name string `json:"name" form:"name" `
 }
 
+func (gitee *giteeRepoIface) ListTags() ([]string, error) {
+	path := gitee.vcs.Address + fmt.Sprintf("/repos/%s/%s/tags", gitee.repository.FullName, gitee.repository.Name)
+	_, body, err := gitee.giteaRequest(path, "GET")
+	if err != nil {
+		return nil, e.New(e.BadRequest, err)
+	}
+
+	rep := make([]giteeTag, 0)
+
+	_ = json.Unmarshal(body, &rep)
+	tagList := []string{}
+	for _, v := range rep {
+		tagList = append(tagList, v.Name)
+	}
+	return tagList, nil
+
+}
 
 type giteeCommit struct {
 	CommitId string `json:"sha" form:"sha" `

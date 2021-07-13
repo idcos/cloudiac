@@ -77,6 +77,7 @@ func (Vcs) Update(c *ctx.GinRequestCtx) {
 // @Produce json
 // @Security AuthToken
 // @Param form formData forms.DeleteVcsForm true "patameter"
+// @Param vcsId path string true "vcs的Id"
 // @Router /vcs/{vcsId} [delete]
 // @Success 200 {object} ctx.JSONResult
 func (Vcs) Delete(c *ctx.GinRequestCtx) {
@@ -116,15 +117,33 @@ func (Vcs) ListRepos(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param form query forms.GetGitBranchesForm true "parameter"
+// @Param form query forms.GetGitRevisionForm true "parameter"
 // @Router /vcs/branch/search [get]
-// @Success 200 {object} ctx.JSONResult{result=[]apps.Branches}
+// @Success 200 {object} ctx.JSONResult{result=[]apps.Revision}
 func (Vcs) ListBranches(c *ctx.GinRequestCtx) {
-	form := forms.GetGitBranchesForm{}
+	form := forms.GetGitRevisionForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
 	c.JSONResult(apps.ListRepoBranches(c.ServiceCtx(), &form))
+}
+
+// 列出代码仓库下tag
+// @Tags Vcs仓库
+// @Summary 列出代码仓库下所有分支
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param form query forms.GetGitRevisionForm true "parameter"
+// @Router /vcs/tag/search [get]
+// @Success 200 {object} ctx.JSONResult{result=[]apps.Revision}
+func (Vcs) ListTags(c *ctx.GinRequestCtx) {
+	form := forms.GetGitRevisionForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.ListRepoTags(c.ServiceCtx(), &form))
 }
 
 // 列出代码仓库下Readme 文件内容

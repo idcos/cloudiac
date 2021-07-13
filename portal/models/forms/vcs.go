@@ -38,7 +38,7 @@ type GetGitProjectsForm struct {
 	VcsId models.Id `form:"vcsId" json:"vcsId" binding:"required"`
 }
 
-type GetGitBranchesForm struct {
+type GetGitRevisionForm struct {
 	BaseForm
 	RepoId string    `form:"repoId" json:"repoId" binding:"required"`
 	VcsId  models.Id `form:"vcsId" json:"vcsId" binding:"required"`

@@ -84,8 +84,8 @@ func (git *gitlabRepoIface) ListTags() ([]string, error) {
 	if er != nil {
 		return nil, e.New(e.GitLabError, er)
 	}
-	for _, branch := range tags {
-		tagList = append(tagList, branch.Name)
+	for _, tag := range tags {
+		tagList = append(tagList, tag.Name)
 	}
 	return tagList, nil
 }
