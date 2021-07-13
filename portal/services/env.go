@@ -22,6 +22,7 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 		isDeploying   = false
 	)
 
+	// 不修改环境数据的任务也不会影响环境状态
 	if !task.IsEffectTask() {
 		return nil
 	}
@@ -29,11 +30,17 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 	if task.Exited() {
 		switch task.Status {
 		case models.TaskFailed:
+			// 任务 failed 有可能是 step 超时或审批驳回等原因，
+			// 只有 step 也为 failed 状态时才应该同步修改环境状态
 			if step.Status == models.TaskStepFailed {
 				envStatus = models.EnvStatusFailed
 			}
 		case models.TaskComplete:
-			envStatus = models.EnvStatusActive
+			if task.Type == models.TaskTypeApply {
+				envStatus = models.EnvStatusActive
+			} else { // destroy 任务
+				envStatus = models.EnvStatusInactive
+			}
 		default:
 			return e.New(e.InternalError, fmt.Errorf("unknown exited task status: %v", task.Status))
 		}
