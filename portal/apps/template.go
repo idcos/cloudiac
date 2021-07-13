@@ -113,13 +113,9 @@ func DelateTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interfac
 			panic(r)
 		}
 	}()
-
-
-
-
 	// 根据ID 查询云模版是否存在
 	tpl, err := services.GetTemplateById(c.DB(), form.Id)
-	if err != nil && err.Code() == e.UserNotExists {
+	if err != nil && err.Code() == e.TemplateNotExists {
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
 	} else if err != nil {
 		c.Logger().Errorf("error get template by id, err %s", err)
