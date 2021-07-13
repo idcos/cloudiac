@@ -11,18 +11,18 @@ type Variable struct {
 	ctrl.BaseController
 }
 
-// Create 创建变量
+// BatchUpdate 批量修改变量
 // @Tags 变量
-// @Summary 创建变量
+// @Summary 批量修改变量
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param form body forms.CreateVariableForm true "parameter"
+// @Param form body forms.BatchUpdateVariableForm true "parameter"
 // @router /variables [post]
 // @Success 200 {object} ctx.JSONResult{result=models.Variable}
-func (Variable) Create(c *ctx.GinRequestCtx) {
-	form := forms.CreateVariableForm{}
+func (Variable) BatchUpdate(c *ctx.GinRequestCtx) {
+	form := forms.BatchUpdateVariableForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}

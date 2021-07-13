@@ -20,7 +20,7 @@ type Token struct {
 // @Security AuthToken
 // @Param data body forms.CreateTokenForm true "ApiToken信息"
 // @Success 200 {object} ctx.JSONResult{result=models.Token}
-// @Router /token [post]
+// @Router /tokens [post]
 func (Token) Create(c *ctx.GinRequestCtx) {
 	form := &forms.CreateTokenForm{}
 	if err := c.Bind(form); err != nil {
@@ -39,7 +39,7 @@ func (Token) Create(c *ctx.GinRequestCtx) {
 // @Param q query string false "模糊搜索"
 // @Param status query string false "ApiToken状态"
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Token}}
-// @Router /token [get]
+// @Router /tokens [get]
 func (Token) Search(c *ctx.GinRequestCtx) {
 	form := &forms.SearchTokenForm{}
 	if err := c.Bind(form); err != nil {
@@ -57,7 +57,7 @@ func (Token) Search(c *ctx.GinRequestCtx) {
 // @Security AuthToken
 // @Param data body forms.UpdateTokenForm true "ApiToken信息"
 // @Success 200
-// @Router /token/{id} [put]
+// @Router /tokens/{id} [put]
 func (Token) Update(c *ctx.GinRequestCtx) {
 	form := &forms.UpdateTokenForm{}
 	if err := c.Bind(form); err != nil {
@@ -75,7 +75,7 @@ func (Token) Update(c *ctx.GinRequestCtx) {
 // @Security AuthToken
 // @Param data body forms.DeleteTokenForm true "DeleteTokenForm信息"
 // @Success 200
-// @Router /token/{id} [delete]
+// @Router /tokens/{id} [delete]
 func (Token) Delete(c *ctx.GinRequestCtx) {
 	form := &forms.DeleteTokenForm{}
 	if err := c.Bind(form); err != nil {

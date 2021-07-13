@@ -8,7 +8,7 @@ import (
 	"cloudiac/portal/services"
 )
 
-func CreateVariable(c *ctx.ServiceCtx, form *forms.CreateVariableForm) (interface{}, e.Error) {
+func CreateVariable(c *ctx.ServiceCtx, form *forms.BatchUpdateVariableForm) (interface{}, e.Error) {
 	tx := c.DB().Begin().Debug()
 	defer func() {
 		if r := recover(); r != nil {
@@ -23,7 +23,7 @@ func CreateVariable(c *ctx.ServiceCtx, form *forms.CreateVariableForm) (interfac
 		return nil, err
 	}
 
-	if err := services.DeleteVariables(tx, form.DeleteVariables); err != nil {
+	if err := services.DeleteVariables(tx, form.DeleteVariablesId); err != nil {
 		c.Logger().Errorf("error delete variable, err %s", err)
 		_ = tx.Rollback()
 		return nil, err

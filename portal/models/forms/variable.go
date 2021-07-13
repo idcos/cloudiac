@@ -2,12 +2,12 @@ package forms
 
 import "cloudiac/portal/models"
 
-type CreateVariableForm struct {
+type BatchUpdateVariableForm struct {
 	BaseForm
-	TplId           models.Id   `json:"tplId" form:"tplId" ` // 模板id
-	EnvId           models.Id   `json:"envId" form:"envId" ` // 环境id
-	Variables       []Variables `json:"variables" form:"variables" `
-	DeleteVariables []string    `json:"deleteVariables" form:"deleteVariables" `
+	TplId             models.Id   `json:"tplId" form:"tplId" ` // 模板id
+	EnvId             models.Id   `json:"envId" form:"envId" ` // 环境id
+	Variables         []Variables `json:"variables" form:"variables" `
+	DeleteVariablesId []string    `json:"deleteVariablesId" form:"deleteVariablesId" ` //变量id
 }
 
 type Variables struct {
@@ -21,7 +21,7 @@ type Variables struct {
 }
 
 type SearchVariableForm struct {
-	PageForm
+	BaseForm
 	TplId models.Id `json:"tplId" form:"tplId" ` // 模板id
 	EnvId models.Id `json:"envId" form:"envId" ` // 环境id
 	Scope string    `json:"scope" form:"scope" ` // 应用范围

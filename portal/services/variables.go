@@ -109,7 +109,7 @@ func DeleteVariables(tx *db.Session, DeleteVariables []string) e.Error {
 func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId, envId models.Id) (map[string]models.Variable, e.Error) {
 	var (
 		scopeEnv     = []string{consts.ScopeEnv, consts.ScopeTemplate, consts.ScopeProject, consts.ScopeOrg}
-		scopeTpl     = []string{consts.ScopeTemplate, consts.ScopeProject, consts.ScopeOrg}
+		scopeTpl     = []string{consts.ScopeTemplate, consts.ScopeOrg}
 		scopeProject = []string{consts.ScopeProject, consts.ScopeOrg}
 		scopeOrg     = []string{consts.ScopeOrg}
 	)
