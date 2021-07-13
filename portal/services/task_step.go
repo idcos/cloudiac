@@ -109,9 +109,9 @@ func ChangeTaskStepStatus(dbSess *db.Session, taskStep *models.TaskStep, status,
 		return e.New(e.DBError, err)
 	}
 
-	task, err := GetTask(dbSess, taskStep.TaskId)
-	if err != nil {
+	if task, err := GetTask(dbSess, taskStep.TaskId); err != nil {
 		return e.AutoNew(err, e.DBError)
+	} else {
+		return ChangeTaskStatusWithStep(dbSess, task, taskStep)
 	}
-	return ChangeTaskStatusWithStep(dbSess, task, taskStep)
 }

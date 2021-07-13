@@ -10,13 +10,13 @@ import (
 	"time"
 )
 
-func GetTask(dbSess *db.Session, id models.Id) (*models.Task, error) {
+func GetTask(dbSess *db.Session, id models.Id) (*models.Task, e.Error) {
 	task := models.Task{}
 	err := dbSess.Where("id = ?", id).First(&task)
 	if e.IsRecordNotFound(err) {
 		return nil, e.New(e.TaskNotExists)
 	}
-	return &task, err
+	return &task, e.New(e.DBError, err)
 }
 
 func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e.Error) {
