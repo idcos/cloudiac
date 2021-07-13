@@ -8,7 +8,7 @@ import (
 	"cloudiac/portal/services"
 )
 
-func CreateVariable(c *ctx.ServiceCtx, form *forms.BatchUpdateVariableForm) (interface{}, e.Error) {
+func BatchUpdate(c *ctx.ServiceCtx, form *forms.BatchUpdateVariableForm) (interface{}, e.Error) {
 	tx := c.DB().Begin().Debug()
 	defer func() {
 		if r := recover(); r != nil {
