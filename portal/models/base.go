@@ -66,7 +66,27 @@ func (i Id) String() string {
 	return string(i)
 }
 
+type AbstractModel struct {
+}
+
+func (AbstractModel) Migrate(*db.Session) error {
+	return nil
+}
+
+func (AbstractModel) Validate() error {
+	return nil
+}
+
+func (AbstractModel) ValidateAttrs(attrs Attrs) error {
+	return nil
+}
+
+func (AbstractModel) AddUniqueIndex(sess *db.Session, index string, cols ...string) error {
+	return sess.AddUniqueIndex(index, cols...)
+}
+
 type BaseModel struct {
+	AbstractModel
 	Id Id `gorm:"size:32;primary_key" json:"id" example:"x-c3ek0co6n88ldvq1n6ag"` //ID
 }
 
@@ -79,20 +99,10 @@ func (base *BaseModel) BeforeCreate(scope *gorm.Scope) error {
 	return nil
 }
 
-func (BaseModel) Migrate(*db.Session) error {
-	return nil
-}
-
-func (BaseModel) Validate() error {
-	return nil
-}
-
-func (BaseModel) ValidateAttrs(attrs Attrs) error {
-	return nil
-}
-
-func (BaseModel) AddUniqueIndex(sess *db.Session, index string, cols ...string) error {
-	return sess.AddUniqueIndex(index, cols...)
+// AutoUintIdModel  使用自增 uint id 的 model
+type AutoUintIdModel struct {
+	AbstractModel
+	Id uint `gorm:"primary_key"`
 }
 
 type TimedModel struct {
@@ -122,4 +132,14 @@ func (SoftDeleteModel) AfterDelete(scope *gorm.Scope) error {
 func (m SoftDeleteModel) AddUniqueIndex(sess *db.Session, index string, cols ...string) error {
 	cols = append(cols, "deleted_at_t")
 	return m.TimedModel.AddUniqueIndex(sess, index, cols...)
+}
+
+type StrSlice []string
+
+func (v StrSlice) Value() (driver.Value, error) {
+	return MarshalValue(v)
+}
+
+func (v *StrSlice) Scan(value interface{}) error {
+	return UnmarshalValue(value, v)
 }

@@ -1,9 +1,11 @@
 package models
 
-import "cloudiac/portal/libs/db"
+import (
+	"cloudiac/portal/libs/db"
+)
 
 type UserProject struct {
-	BaseModel
+	AutoUintIdModel
 
 	UserId    Id     `json:"userId" gorm:"size:32;not null;comment:'用户ID'"`
 	ProjectId Id     `json:"projectId" gorm:"size:32;not null"`

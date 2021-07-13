@@ -104,20 +104,33 @@ const (
 	OrganizationInvalidStatus  = 9014
 	InvalidOrganizationId      = 9015
 
+	// project
+	ProjectAlreadyExists  = 10010
+	ProjectNotExists      = 10011
+	ProjectDisabled       = 10012
+	ProjectAliasDuplicate = 10013
+	ProjectInvalidStatus  = 10014
+	ProjectIdInvalid      = 10014
+
 	// gitlib
 	GitLabError = 9100
 
 	// task
 	TaskAlreadyExists = 10010
 	TaskNotExists     = 10011
+	TaskStepNotExists = 10110
 
 	// template
 	TemplateAlreadyExists = 11010
 	TemplateNotExists = 11020
 	TemplateActiveEvcExists = 11030
 
+
 	// consul
 	ConsulConnError = 12010
+
+	// env
+	EnvNotExists = 13404
 )
 
 var errorMsgs = map[int]map[string]string{
@@ -327,5 +340,8 @@ var errorMsgs = map[int]map[string]string{
 	},
 	NameDuplicate: {
 		"zh-cn": "名称重复",
+	},
+	TaskStepNotExists: {
+		"zh-cn": "步骤不存在",
 	},
 }
