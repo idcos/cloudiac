@@ -4,9 +4,12 @@ import "cloudiac/portal/models"
 
 type CreateOrganizationForm struct {
 	BaseForm
-	Name        string `form:"name" json:"name" binding:"required,gte=2,lte=32"` // 组织名称
-	Description string `form:"description" json:"description" binding:""`        // 组织描述
-	RunnerId    string `form:"runnerId" json:"runnerId" binding:""`              // 组织默认部署通道
+	Name        string    `form:"name" json:"name" binding:"required,gte=2,lte=32"` // 组织名称
+	Description string    `form:"description" json:"description" binding:""`        // 组织描述
+	RunnerId    string    `form:"runnerId" json:"runnerId" binding:""`              // 组织默认部署通道
+	OwnerId     models.Id `form:"ownerId" json:"ownerId"`                           // 管理员ID。管理员用户ID或邀请用户必填一个，同时提供以ID优先。
+	OwnerName   string    `form:"ownerName" json:"ownerName"`                       // 邀请用户做为管理员的用户名
+	OwnerEmail  string    `form:"ownerEmail" json:"ownerEmail"`                     // 邀请用户做为管理员的用户邮箱
 }
 
 type UpdateOrganizationForm struct {

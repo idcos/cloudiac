@@ -2,11 +2,6 @@ package models
 
 import "cloudiac/portal/libs/db"
 
-var (
-	orgRoleOwner  = "owner"
-	orgRoleMember = "member"
-)
-
 type UserOrg struct {
 	BaseModel
 

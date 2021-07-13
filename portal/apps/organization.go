@@ -7,15 +7,63 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"cloudiac/utils"
+	"cloudiac/utils/mail"
 	"fmt"
 	"net/http"
+)
+
+type emailInviteUserData struct {
+	*models.User
+	Inviter      string // 邀请人名称
+	Organization string // 加入目标组织名称
+	IsNewUser    bool   // 是否创建新用户
+}
+
+var (
+	emailSubjectInviteUser = "用户邀请通知【CloudIaC】"
+	emailBodyInviteUser    = "尊敬的 {{.Name}}：\n\n{{.Inviter}} 邀请您使用 CloudIaC 服务，您将加入 {{.Organization}} 组织。\n\n{{if .IsNewUser}}这是您的登录详细信息：\n\n登录名：\t{{.Email}}\n密码：\t{{.InitPass}}\n\n为了保障您的安全，请立即登陆您的账号并修改初始密码。{{else}}请使用 {{.Email}} 登陆您的账号使用 CloudIaC 服务。{{end}}"
 )
 
 // CreateOrganization 创建组织
 func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (*models.Organization, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create org %s", form.Name))
 
-	org, err := services.CreateOrganization(c.DB(), models.Organization{
+	// 检查管理员用户是否存在
+	var (
+		owner *models.User
+		err   e.Error
+	)
+
+	if form.OwnerId != "" {
+		owner, err = services.GetUserById(c.DB(), form.OwnerId)
+		if err != nil && err.Code() == e.UserNotExists {
+			return nil, e.New(err.Code(), err, http.StatusBadRequest)
+		} else if err != nil {
+			c.Logger().Errorf("error get user by id, err %s", err)
+			return nil, err
+		}
+	} else if form.OwnerEmail != "" {
+		// 查找系统是否已经存在该邮箱对应的用户
+		owner, err = services.GetUserByEmail(c.DB(), form.OwnerEmail)
+		if err != nil && err.Code() != e.UserNotExists {
+			c.Logger().Errorf("error get user by id, err %s", err)
+			return nil, err
+		}
+	} else if form.OwnerName == "" || form.OwnerEmail == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+
+	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	// 创建组织
+	org, err := services.CreateOrganization(tx, models.Organization{
 		Name:        form.Name,
 		CreatorId:   c.UserId,
 		Description: form.Description,
@@ -23,9 +71,67 @@ func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (
 	if err != nil && err.Code() == e.OrganizationAlreadyExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
+		_ = tx.Rollback()
 		c.Logger().Errorf("error creating org, err %s", err)
 		return nil, e.AutoNew(err, e.DBError)
 	}
+
+	// 创建组织管理员
+	isNew := false
+	if owner == nil {
+		initPass := utils.GenPasswd(6, "mix")
+		hashedPassword, err := services.HashPassword(initPass)
+		if err != nil {
+			_ = tx.Rollback()
+			c.Logger().Errorf("error hash password, err %s", err)
+			return nil, err
+		}
+		owner, err = services.CreateUser(tx, models.User{
+			Name:     form.Name,
+			Password: hashedPassword,
+			Email:    form.OwnerEmail,
+		})
+		if err != nil && err.Code() != e.UserAlreadyExists {
+			_ = tx.Rollback()
+			c.Logger().Errorf("error create user, err %s", err)
+			return nil, err
+		}
+		isNew = true
+	}
+
+	// 设置管理员
+	if _, err := services.CreateUserOrgRel(tx, models.UserOrg{
+		OrgId:  org.Id,
+		UserId: owner.Id,
+		Role:   consts.OrgRoleOwner,
+	}); err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error creating user org rel, err %s", err)
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.Logger().Errorf("error commit create org, err %s", err)
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
+
+	// 发送邀请邮件
+	data := emailInviteUserData{
+		User:         owner,
+		Inviter:      c.Username,
+		Organization: org.Name,
+		IsNewUser:    isNew,
+	}
+
+	// 发送邀请邮件
+	go func() {
+		err := mail.SendMail([]string{form.OwnerEmail}, emailSubjectInviteUser, utils.SprintTemplate(emailBodyInviteUser, data))
+		if err != nil {
+			c.Logger().Errorf("error send mail to %s, err %s", owner.Email, err)
+		}
+	}()
+
 	return org, nil
 }
 
