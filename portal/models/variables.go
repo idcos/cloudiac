@@ -3,6 +3,7 @@ package models
 import "cloudiac/portal/libs/db"
 
 type VariableBody struct {
+	// 继承关系依赖数据创建枚举的顺序，后续新增枚举值时请按照新的继承顺序增加
 	Scope       string `json:"scope" gorm:"not null;type:enum('org','project','template','env')"`
 	Type        string `json:"type" gorm:"not null;type:enum('environment','terraform','ansible')"`
 	Name        string `json:"name" gorm:"size:64;not null"`

@@ -353,4 +353,7 @@ var errorMsgs = map[int]map[string]string{
 	TaskStepNotExists: {
 		"zh-cn": "步骤不存在",
 	},
+	InvalidProjectId: {
+		"zh-cn": "无效的项目id",
+	},
 }

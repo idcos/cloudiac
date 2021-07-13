@@ -1,6 +1,7 @@
 package services
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
@@ -24,7 +25,7 @@ func CreateVariable(tx *db.Session, variable models.Variable) (*models.Variable,
 	return &variable, nil
 }
 
-func SearchVariable(dbSess *db.Session, orgId, projectId, tplId, envId models.Id, scope string) ([]models.Variable, e.Error) {
+func SearchVariable(dbSess *db.Session, orgId models.Id) ([]models.Variable, e.Error) {
 	variables := make([]models.Variable, 0)
 	if err := dbSess.Model(models.Variable{}.TableName()).
 		Where("org_id = ?", orgId).
@@ -103,5 +104,59 @@ func DeleteVariables(tx *db.Session, DeleteVariables []string) e.Error {
 		return e.New(e.DBError, fmt.Errorf("delete variables error: %v", err))
 	}
 	return nil
+}
 
+func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId, envId models.Id) (map[string]models.Variable, e.Error) {
+	var (
+		scopeEnv     = []string{consts.ScopeEnv, consts.ScopeTemplate, consts.ScopeProject, consts.ScopeOrg}
+		scopeTpl     = []string{consts.ScopeTemplate, consts.ScopeProject, consts.ScopeOrg}
+		scopeProject = []string{consts.ScopeProject, consts.ScopeOrg}
+		scopeOrg     = []string{consts.ScopeOrg}
+	)
+	// 根据scope 构建变量应用范围
+	scopes := make([]string, 0)
+	switch scope {
+	case consts.ScopeEnv:
+		scopes = scopeEnv
+	case consts.ScopeTemplate:
+		scopes = scopeTpl
+	case consts.ScopeProject:
+		scopes = scopeProject
+	case consts.ScopeOrg:
+		scopes = scopeOrg
+	}
+
+	// 将组织下所有的变量查询，在代码处理变量的继承关系及是否要应用该变量
+	variables, err := SearchVariable(dbSess, orgId)
+	if err != nil {
+		return nil, err
+	}
+	variableM := make(map[string]models.Variable, 0)
+	for _, v := range variables {
+		// 过滤掉变量一部分不需要应用的变量
+		if utils.InArrayStr(scopes, v.Scope) {
+			// 根据id（envId/tplId/projectId）来确认变量是否需要应用
+			if v.EnvId != "" && v.EnvId == envId {
+				variableM[v.Name] = v
+				continue
+			}
+
+			if v.TplId != "" && v.TplId == tplId {
+				variableM[v.Name] = v
+				continue
+			}
+
+			if v.ProjectId != "" && v.ProjectId == projectId {
+				variableM[v.Name] = v
+				continue
+			}
+
+			if v.ProjectId == "" && v.TplId == "" && v.EnvId == "" {
+				variableM[v.Name] = v
+			}
+
+		}
+	}
+
+	return variableM, nil
 }
