@@ -57,10 +57,13 @@ func GetUserById(tx *db.Session, id models.Id) (*models.User, e.Error) {
 	return &u, nil
 }
 
-func GetUserByEmail(tx *db.Session, email string) (*models.User, error) {
+func GetUserByEmail(tx *db.Session, email string) (*models.User, e.Error) {
 	u := models.User{}
 	if err := tx.Where("email = ?", email).First(&u); err != nil {
-		return nil, err
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.UserNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
 	}
 	return &u, nil
 }
