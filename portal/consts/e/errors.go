@@ -121,10 +121,12 @@ const (
 	InvalidTaskId         = 10012
 	TaskApproveNotPending = 10013
 	TaskStepNotExists     = 10114
+	TaskLogInterrupted    = 10115
 
 	// template
 	TemplateAlreadyExists = 11010
 	TemplateNotExists     = 11011
+	TemplateDisabled      = 11012
 
 	// consul
 	ConsulConnError = 12010
@@ -135,6 +137,7 @@ const (
 	EnvAliasDuplicate      = 13012
 	EnvArchived            = 13013
 	EnvCannotArchiveActive = 13014
+	EnvDeploying           = 13015
 )
 
 var errorMsgs = map[int]map[string]string{

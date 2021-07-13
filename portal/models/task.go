@@ -69,11 +69,6 @@ const (
 	TaskTypeApply   = common.TaskTypeApply
 	TaskTypeDestroy = common.TaskTypeDestroy
 
-	// TODO: i8n
-	TaskTypePlanName    = "计划"
-	TaskTypeApplyName   = "部署"
-	TaskTypeDestroyName = "销毁"
-
 	TaskPending   = common.TaskPending
 	TaskRunning   = common.TaskRunning
 	TaskApproving = common.TaskApproving
@@ -81,8 +76,6 @@ const (
 	TaskComplete  = common.TaskComplete
 	//TaskTimeout   = common.TaskTimeout
 )
-
-var TaskStatusList = []string{TaskPending, TaskRunning, TaskFailed, TaskComplete} //, TaskTimeout}
 
 type Task struct {
 	SoftDeleteModel
@@ -127,6 +120,10 @@ func (Task) TableName() string {
 	return "iac_task"
 }
 
+func (Task) DefaultTaskName() string {
+	return ""
+}
+
 func (t *Task) Exited() bool {
 	return t.IsExitedStatus(t.Status)
 }
@@ -156,11 +153,11 @@ func (Task) IsEffectTaskType(typ string) bool {
 func (Task) GetTaskNameByType(typ string) string {
 	switch typ {
 	case TaskTypePlan:
-		return TaskTypePlanName
+		return common.TaskTypePlanName
 	case TaskTypeApply:
-		return TaskTypeApplyName
+		return common.TaskTypeApplyName
 	case TaskTypeDestroy:
-		return TaskTypeDestroyName
+		return common.TaskTypeDestroyName
 	default:
 		panic("invalid task type")
 	}

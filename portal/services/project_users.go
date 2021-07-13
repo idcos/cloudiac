@@ -41,3 +41,33 @@ func SearchProjectUsers(tx *db.Session, projectId models.Id) ([]models.UserProje
 	}
 	return userProject, nil
 }
+
+// GetProjectsByUser 获取用户关联的所有 project id
+func GetProjectsByUser(tx *db.Session, userId models.Id) ([]models.Id, e.Error) {
+	ids := make([]models.Id, 0)
+	if err := tx.Model(models.UserProject{}).Where("user_id = ?", userId).Find(&ids); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return ids, nil
+}
+
+// GetProjectsByUserOrg 获取用户在该组织下的 project id
+func GetProjectsByUserOrg(tx *db.Session, userId models.Id, orgId models.Id) ([]models.Id, e.Error) {
+	ids := make([]models.Id, 0)
+	if err := tx.Model(models.Project{}).Where("org_id = ?", orgId).
+		Joins("left join %s as o on o.project_id = %s.id where o.user_id = ?",
+			models.UserProject{}.TableName(), models.Project{}.TableName(), userId).
+		Find(&ids); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return ids, nil
+}
+
+// GetProjectsByOrg 获取组织下的所有 project id
+func GetProjectsByOrg(tx *db.Session, orgId models.Id) ([]models.Id, e.Error) {
+	ids := make([]models.Id, 0)
+	if err := tx.Model(models.Project{}).Where("org_id = ?", orgId).Find(&ids); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return ids, nil
+}

@@ -12,6 +12,27 @@ type User struct {
 	ctrl.BaseController
 }
 
+/**
+// InviteUser 邀请用户
+// @Tags 用户
+// @Summary 邀请用户
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param Iac-Org-Id header string true "组织ID"
+// @Param form formData forms.InviteUserForm true "parameter"
+// @router /users/invite [post]
+// @Success 200 {object} ctx.JSONResult{result=apps.CreateUserResp}
+*/
+func (User) InviteUser(c *ctx.GinRequestCtx) {
+	form := forms.InviteUserForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.InviteUser(c.ServiceCtx(), &form))
+}
+
 // Create 创建用户
 // @Tags 用户
 // @Summary 创建用户

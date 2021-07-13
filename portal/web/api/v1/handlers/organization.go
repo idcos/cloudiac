@@ -183,6 +183,7 @@ func (Organization) UpdateUserOrgRel(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.UpdateUserOrgRel(c.ServiceCtx(), &form))
 }
 
+/**
 // SearchUser 查询组织用户列表
 // @Tags 用户
 // @Summary 用户查询
@@ -194,6 +195,7 @@ func (Organization) UpdateUserOrgRel(c *ctx.GinRequestCtx) {
 // @Param form query forms.SearchUserForm true "parameter"
 // @router /orgs/{orgId}/users [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.User}}
+*/
 func (Organization) SearchUser(c *ctx.GinRequestCtx) {
 	form := forms.SearchUserForm{}
 	if err := c.Bind(&form); err != nil {

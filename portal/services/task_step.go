@@ -15,7 +15,7 @@ func GetTaskSteps(sess *db.Session, taskId models.Id) ([]*models.TaskStep, error
 	return steps, err
 }
 
-func GetTaskStep(sess *db.Session, taskId models.Id, step int) (*models.TaskStep, error) {
+func GetTaskStep(sess *db.Session, taskId models.Id, step int) (*models.TaskStep, e.Error) {
 	taskStep := models.TaskStep{}
 	err := sess.Where(models.TaskStep{
 		TaskId: taskId,

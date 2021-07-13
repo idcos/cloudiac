@@ -11,8 +11,9 @@ type Task struct {
 	ctrl.BaseController
 }
 
+/**
 // Search 任务查询
-// @Tags 任务
+// @Tags 环境
 // @Summary 任务查询
 // @Accept application/x-www-form-urlencoded
 // @Produce json
@@ -22,6 +23,7 @@ type Task struct {
 // @Param form query forms.SearchTaskForm true "parameter"
 // @router /tasks [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Task}}
+*/
 func (Task) Search(c *ctx.GinRequestCtx) {
 	form := forms.SearchTaskForm{}
 	if err := c.Bind(&form); err != nil {
@@ -31,7 +33,7 @@ func (Task) Search(c *ctx.GinRequestCtx) {
 }
 
 // Detail 任务信息详情
-// @Tags 任务
+// @Tags 环境
 // @Summary 任务信息详情
 // @Accept application/x-www-form-urlencoded
 // @Produce json
@@ -49,27 +51,27 @@ func (Task) Detail(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.TaskDetail(c.ServiceCtx(), form))
 }
 
-// CurrentTask 环境当前任务详情
+// LastTask 环境最新任务详情
 // @Tags 环境
-// @Summary 环境当前任务详情
+// @Summary 环境最新任务详情
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
 // @Param Iac-Org-Id header string true "组织ID"
 // @Param Iac-Project-Id header string true "项目ID"
 // @Param envId path string true "环境ID"
-// @router /envs/{envId}/tasks/current [get]
+// @router /envs/{envId}/tasks/last [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
-func (Task) CurrentTask(c *ctx.GinRequestCtx) {
-	form := &forms.CurrentTaskForm{}
+func (Task) LastTask(c *ctx.GinRequestCtx) {
+	form := &forms.LastTaskForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CurrentTask(c.ServiceCtx(), form))
+	c.JSONResult(apps.LastTask(c.ServiceCtx(), form))
 }
 
 // FollowLogSse 当前任务实时日志
-// @Tags 任务
+// @Tags 环境
 // @Summary 当前任务实时日志
 // @Accept application/x-www-form-urlencoded
 // @Produce json
@@ -80,31 +82,16 @@ func (Task) CurrentTask(c *ctx.GinRequestCtx) {
 // @router /tasks/{taskId}/log/sse [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
 func (Task) FollowLogSse(c *ctx.GinRequestCtx) {
-	// TODO 待实现
-	//defer c.SSEvent("end", "end")
-	//
-	//if err := apps.FollowTaskLog(c); err != nil {
-	//	c.SSEvent("error", err.Error())
-	//}
-}
+	form := forms.DetailTaskForm{}
+	defer c.SSEvent("end", "end")
 
-// TaskStateListSearch
-// @Tags 任务详情State List
-// @Summary 任务详情State List
-// @Accept application/json
-// @Param taskGuid formData int true "任务guid"
-// @router /template/state_list [get]
-func (Task) TaskStateListSearch(c *ctx.GinRequestCtx) {
-	// TODO 待实现
-	//form := &forms.TaskStateListForm{}
-	//if err := c.Bind(form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.TaskStateList(c.ServiceCtx(), form))
+	if err := apps.FollowTaskLog(c.ServiceCtx(), form); err != nil {
+		c.SSEvent("error", err.Error())
+	}
 }
 
 // TaskApprove 审批执行计划
-// @Tags 任务
+// @Tags 环境
 // @Summary 审批执行计划
 // @Accept application/x-www-form-urlencoded
 // @Produce json
@@ -124,7 +111,7 @@ func (Task) TaskApprove(c *ctx.GinRequestCtx) {
 }
 
 // Log 任务日志
-// @Tags 任务
+// @Tags 环境
 // @Summary 任务日志
 // @Accept application/x-www-form-urlencoded
 // @Produce json
@@ -144,7 +131,7 @@ func (Task) Log(c *ctx.GinRequestCtx) {
 }
 
 // Output Terraform Output
-// @Tags 任务
+// @Tags 环境
 // @Summary Terraform Output
 // @Accept application/x-www-form-urlencoded
 // @Produce json
@@ -155,10 +142,9 @@ func (Task) Log(c *ctx.GinRequestCtx) {
 // @router /tasks/{taskId}/output [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
 func (Task) Output(c *ctx.GinRequestCtx) {
-	// TODO: 待实现
-	//form := forms.DetailTaskForm{}
-	//if err := c.Bind(&form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.TaskDetail(c.ServiceCtx(), form))
+	form := forms.DetailTaskForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.TaskDetail(c.ServiceCtx(), form))
 }

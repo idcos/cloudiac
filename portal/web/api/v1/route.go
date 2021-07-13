@@ -59,6 +59,7 @@ func Register(g *gin.RouterGroup) {
 	// 组织 header
 	g.Use(w(middleware.AuthOrgId))
 
+	g.POST("/users/invite", ac(), w(handlers.User{}.InviteUser))
 	ctrl.Register(g.Group("users", ac()), &handlers.User{})
 	g.PUT("/users/:id/status", ac(), w(handlers.User{}.ChangeUserStatus))
 	g.POST("/users/:id/password/reset", ac(), w(handlers.User{}.PasswordReset))
@@ -73,11 +74,11 @@ func Register(g *gin.RouterGroup) {
 	ctrl.Register(g.Group("variables", ac()), &handlers.Template{})
 	ctrl.Register(g.Group("envs", ac()), &handlers.Env{})
 	g.PUT("/envs/:id/archive", ac(), w(handlers.Env{}.Archive))
-	g.PUT("/envs/:id/tasks/current", ac(), w(handlers.Task{}.CurrentTask))
+	g.PUT("/envs/:id/tasks/last", ac(), w(handlers.Task{}.LastTask))
 	g.POST("/envs/:id/deploy", ac(), w(handlers.Env{}.Deploy))
 	g.POST("/envs/:id/destroy", ac(), w(handlers.Env{}.Destroy))
 	g.GET("/envs/:id/resources", ac(), w(handlers.Env{}.SearchResources))
-	g.GET("/envs/:id/variables", ac(), w(handlers.Env{}.Search))
+	g.GET("/envs/:id/variables", ac(), w(handlers.Env{}.SearchVariables))
 
 	g.GET("/tasks", ac(), w(handlers.Task{}.Search))
 	g.GET("/tasks/:id", ac(), w(handlers.Task{}.Detail))
@@ -90,7 +91,6 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/template/tfvars/search", ac(), w(handlers.TemplateTfvarsSearch))
 	g.GET("/template/variable/search", ac(), w(handlers.TemplateVariableSearch))
 	g.GET("/template/playbook/search", ac(), w(handlers.TemplatePlaybookSearch))
-	g.GET("/template/state_list", ac(), w(handlers.Task{}.TaskStateListSearch))
 
 	ctrl.Register(g.Group("vcs", ac()), &handlers.Vcs{})
 	g.GET("/vcs/repo/search", ac(), w(handlers.Vcs{}.ListRepos))

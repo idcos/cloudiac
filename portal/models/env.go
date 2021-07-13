@@ -25,28 +25,27 @@ type Env struct {
 	TplId     Id `json:"tplId" gorm:"size:32;not null"`     // 模板ID
 	CreatorId Id `json:"creatorId" gorm:"size:32;not null"` // 创建人ID
 
-	Name        string `json:"name" gorm:"not null"`         // 环境名称
-	Description string `json:"description" gorm:"type:text"` // 环境描述
-	Status      string `json:"status" gorm:"type:enum('active','failed','inactive')"
-								enums:"'active','failed','inactive'"` // 环境状态
+	Name        string `json:"name" gorm:"not null"`                                                                       // 环境名称
+	Description string `json:"description" gorm:"type:text"`                                                               // 环境描述
+	Status      string `json:"status" gorm:"type:enum('active','failed','inactive')" enums:"'active','failed','inactive'"` // 环境状态
 	// 任务状态，只同步部署任务的状态(apply,destroy)，plan 任务不会对环境产生影响，所以不同步
 	TaskStatus string `json:"taskStatus" gorm:"type:enum('', 'pending','approving','running');default:''"`
 	Archived   bool   `json:"archived" gorm:"default:'0'"`                             // 是否已归档
 	RunnerId   string `json:"runnerId" gorm:"size:32;not null"`                        //部署通道ID
 	Timeout    int    `json:"timeout" gorm:"default:'600';comment:'部署超时'"`             // 部署超时时间（单位：秒）
 	OneTime    bool   `json:"oneTime" gorm:"default:'0'"`                              // 一次性环境标识
-	Deploying  bool   `json:"Deploying" gorm:"not null;default:'0';common:'是否正在执行部署'"` // 是否正在执行部署
+	Deploying  bool   `json:"deploying" gorm:"not null;default:'0';common:'是否正在执行部署'"` // 是否正在执行部署
 
 	StatePath string `json:"statePath" gorm:"not null" swaggerignore:"true"` // Terraform tfstate 文件路径（内部）
 	Outputs   string `json:"outputs" gorm:"type:text" swaggerignore:"true"`  // Terraform outputs 输出内容
 
 	// 环境可以覆盖模板中的 vars file 配置，具体说明见 Template model
-	Variables    []VariableBody `json:"vars" gorm:"json"`               // 合并变量列表
+	Variables    []VariableBody `json:"variables" gorm:"json"`          // 合并变量列表
 	TfVarsFile   string         `json:"tfVarsFile" gorm:"default:''"`   // Terraform tfvars 变量文件路径
 	PlayVarsFile string         `json:"playVarsFile" gorm:"default:''"` // Ansible 变量文件路径
 	Playbook     string         `json:"playbook" gorm:"default:''"`     // Ansible playbook 入口文件路径
-	// 最后一次部署或销毁任务的 id(plan 任务不记录)
-	CurrentTaskId Id `json:"lastTaskId" gorm:"size:32;default:'0'"` // 最后一次部署任务ID
+
+	LastTaskId Id `json:"lastTaskId" gorm:"size:32;default:'0'"` // 最后一次部署或销毁任务的 id(plan 任务不记录)
 
 	// AutoDestroyAt 自动销毁时间，这里存绝对时间，1小时、2小时的相对时间选择由前端转换
 	// TODO 自动销毁机制待实现
@@ -83,7 +82,7 @@ type EnvRes struct {
 	ProjectId Id `json:"projectId" gorm:"size:32;not null"` // 项目ID
 	EnvId     Id `json:"envId" gorm:"size:32;not null"`     // 环境ID
 
-	Provider string `json:"provider" gorm:"not null"` // Terraform provider，一般表示为云商
+	Provider string `json:"provider" gorm:"not null"` // Terraform provider，一般表示为云商/云平台
 	Type     string `json:"type" gorm:"not null"`     // 资源类型
 	Name     string `json:"name" gorm:"not null"`     // 资源名称
 	Index    int    `json:"index" gorm:"not null"`    // 资源序号

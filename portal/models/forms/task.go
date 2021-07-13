@@ -23,7 +23,7 @@ type SearchTaskForm struct {
 	EnvId models.Id `json:"envId" form:"envId" binding:"required"` // 环境ID
 }
 
-type CurrentTaskForm struct {
+type LastTaskForm struct {
 	BaseForm
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
@@ -45,6 +45,11 @@ type UpdateTaskForm struct {
 	RunnerId    string `form:"runnerId" json:"runnerId" binding:""`              // 任务默认部署通道
 	Status      string `form:"status" json:"status" enums:"enable,disable"`      // 任务状态
 }
+
+const (
+	TaskActionApproved = "approved"
+	TaskActionRejected = "rejected"
+)
 
 type ApproveTaskForm struct {
 	BaseForm

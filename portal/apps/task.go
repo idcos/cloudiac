@@ -70,8 +70,8 @@ func TaskDetail(c *ctx.ServiceCtx, form forms.DetailTaskForm) (*taskDetailResp, 
 	return &o, nil
 }
 
-// CurrentTask 当前任务信息
-func CurrentTask(c *ctx.ServiceCtx, form *forms.CurrentTaskForm) (*taskDetailResp, e.Error) {
+// LastTask 最新任务信息
+func LastTask(c *ctx.ServiceCtx, form *forms.LastTaskForm) (*taskDetailResp, e.Error) {
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
@@ -84,12 +84,12 @@ func CurrentTask(c *ctx.ServiceCtx, form *forms.CurrentTaskForm) (*taskDetailRes
 		return nil, e.New(e.DBError, err)
 	}
 
-	// FIXME: 环境处于非活跃状态，没有任何在执行的任务？
-	if env.CurrentTaskId == "" {
+	// 环境处于非活跃状态，没有任何在执行的任务
+	if env.LastTaskId == "" {
 		return nil, nil
 	}
 
-	task, err := services.GetTaskById(c.DB(), form.Id)
+	task, err := services.GetTaskById(query, env.LastTaskId)
 	if err != nil && err.Code() == e.TaskNotExists {
 		return nil, e.New(e.TaskNotExists, err, http.StatusNotFound)
 	} else if err != nil {
@@ -125,16 +125,46 @@ func ApproveTask(c *ctx.ServiceCtx, form *forms.ApproveTaskForm) (interface{}, e
 	if err != nil && err.Code() != e.TaskNotExists {
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
 	} else if err != nil {
-		c.Logger().Errorf("error get env, err %s", err)
+		c.Logger().Errorf("error get task, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
-	// FIXME
 	if task.Status != models.TaskPending {
 		return nil, e.New(e.TaskApproveNotPending, http.StatusBadRequest)
 	}
 
-	// TODO 发出审批通过/驳回信号
+	step, err := services.GetTaskStep(c.DB(), task.Id, task.CurrStep)
+	if err != nil && err.Code() == e.TaskStepNotExists {
+		c.Logger().Errorf("task %s step %d not exist", task.Id, task.CurrStep, err)
+		return nil, e.AutoNew(err, err.Code())
+	} else if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	// 非审批状态
+	if !step.IsApproved() {
+		return nil, e.New(e.TaskApproveNotPending, http.StatusBadRequest)
+	}
+
+	// 更新审批状态
+	step.ApproverId = c.UserId
+	switch form.Action {
+	case forms.TaskActionApproved:
+		err = services.ApproveTaskStep(c.DB(), task.Id, step.Index, c.UserId)
+	case forms.TaskActionRejected:
+		err = services.RejectTaskStep(c.DB(), task.Id, step.Index, c.UserId)
+	}
+	if err != nil {
+		c.Logger().Errorf("error approve task, err %s", err)
+		return nil, err
+	}
 
 	return nil, nil
+}
+
+func FollowTaskLog(c *ctx.ServiceCtx, form forms.DetailTaskForm) e.Error {
+	c.Logger().WithField("func", "FollowTaskLog").WithField("askId", form.Id)
+
+	// TODO: 获取日志
+	return nil
 }

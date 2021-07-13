@@ -1,6 +1,7 @@
 package apps
 
 import (
+	"cloudiac/common"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
@@ -10,6 +11,7 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 // CreateEnv 创建环境
@@ -20,8 +22,8 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
 
-	// 模板
-	query := c.DB().Where("status = %s", models.Enable)
+	// 检查模板
+	query := c.DB().Where("status = ?", models.Enable)
 	tpl, err := services.GetTemplateById(query, form.TplId)
 	if err != nil && err.Code() == e.TemplateNotExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
@@ -37,6 +39,9 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 	}
 	if form.Playbook == "" {
 		form.Playbook = tpl.Playbook
+	}
+	if form.Timeout == 0 {
+		form.Timeout = common.TaskStepTimeoutDuration
 	}
 
 	// 获取最新 commit id
@@ -61,17 +66,14 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		return nil, e.New(e.GitLabError, er, http.StatusInternalServerError)
 	}
 
-	// 变量
-	// TODO: 检查、保存、合并环境变量
-	vars := form.Variables
-
-	tx := c.DB()
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
 			panic(r)
 		}
 	}()
+
 	env, err := services.CreateEnv(tx, models.Env{
 		OrgId:     c.OrgId,
 		ProjectId: c.ProjectId,
@@ -88,9 +90,6 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		PlayVarsFile: form.PlayVarsFile,
 		Playbook:     form.Playbook,
 
-		// 变量参数
-		Variables: vars,
-
 		// TODO: triggers 触发器设置
 		AutoApproval: form.AutoApproval,
 		// TODO: 自动销毁设置
@@ -105,19 +104,23 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
+	// 创建变量
+	// 前端只传修改过或者新建的变量?，所有修改过的上层变量都会变成新的环境变量进行创建
+	vars := form.Variables
+	// vars, err := services.OperationVariable(tx, env.Id, form.Variables)
+	env.Variables = vars
+
 	// 创建任务
-	flow, er := models.DefaultTaskFlow(form.TaskType)
-	if er != nil {
-		return nil, e.New(e.BadParam, er, http.StatusBadRequest)
-	}
-	task, err := services.CreateTask(tx, env, models.Task{
-		CreatorId: c.UserId,
-		RunnerId:  env.RunnerId,
-		CommitId:  commitId,
-		Type:      form.TaskType,
-		Name:      models.Task{}.GetTaskNameByType(form.TaskType),
-		Flow:      flow,
-		Variables: form.Variables,
+	_, err = services.CreateTask(tx, env, models.Task{
+		Name:        models.Task{}.GetTaskNameByType(form.TaskType),
+		Type:        form.TaskType,
+		Flow:        models.TaskFlow{},
+		Targets:     strings.Split(form.Targets, ","),
+		CommitId:    commitId,
+		CreatorId:   c.UserId,
+		RunnerId:    env.RunnerId,
+		Variables:   form.Variables,
+		StepTimeout: form.Timeout,
 	})
 	if err != nil {
 		_ = tx.Rollback()
@@ -125,13 +128,7 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
-	env.CurrentTaskId = task.Id
-	if _, er = tx.Save(env); er != nil {
-		_ = tx.Rollback()
-		c.Logger().Errorf("error save env, err %s", err)
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	}
-
+	// 创建完成
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error commit env, err %s", err)
@@ -270,15 +267,22 @@ func EnvDetail(c *ctx.ServiceCtx, form forms.DetailEnvForm) (*models.EnvDetail, 
 	return envDetail, nil
 }
 
-// EnvDeploy 创建任务
+// EnvDeploy 创建新部署任务
+// 任务类型：apply, destroy
 func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create env task %s", form.Id))
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
-	query := c.DB().Where("iac_env.org_id = ? AND iac_env.project_id = ?", c.OrgId, c.ProjectId)
-	query = query.Where("iac_env.archived = 0")
-	env, err := services.GetEnvById(query, form.Id)
+
+	tx := c.Tx().Where("iac_env.org_id = ? AND iac_env.project_id = ?", c.OrgId, c.ProjectId)
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+	env, err := services.GetEnvById(tx, form.Id)
 	if err != nil && err.Code() != e.EnvNotExists {
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
 	} else if err != nil {
@@ -286,15 +290,26 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
-	// 模板
-	query = c.DB().Where("status = %s", models.Enable)
-	tpl, err := services.GetTemplateById(query, env.TplId)
+	// env 状态检查
+	if env.Archived {
+		return nil, e.New(e.EnvArchived, http.StatusBadRequest)
+	}
+	if env.Deploying {
+		return nil, e.New(e.EnvDeploying, http.StatusBadRequest)
+	}
+
+	// 模板检查
+	tpl, err := services.GetTemplateById(tx, env.TplId)
 	if err != nil && err.Code() == e.TemplateNotExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
 		c.Logger().Errorf("error get template, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
+	if tpl.Status == models.Disable {
+		return nil, e.New(e.TemplateDisabled, http.StatusBadRequest)
+	}
+
 	if form.TfVarsFile == "" {
 		form.TfVarsFile = tpl.TfVarsFile
 	}
@@ -331,13 +346,6 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	// TODO: 检查、保存、合并环境变量
 	//vars := form.Variables
 
-	tx := c.DB()
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			panic(r)
-		}
-	}()
 	if form.HasKey("name") {
 		env.Name = form.Name
 	}
@@ -365,36 +373,29 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	if form.HasKey("playbook") {
 		env.Playbook = form.Playbook
 	}
-	if form.HasKey("taskType") {
-		if form.TaskType == "" {
-			form.TaskType = models.TaskTypeApply
-		}
+	if form.TaskType == "" {
+		return nil, e.New(e.BadParam, http.StatusBadRequest)
 	}
 
 	// 创建任务
-	flow, er := models.DefaultTaskFlow(form.TaskType)
-	if er != nil {
-		return nil, e.New(e.BadParam, er, http.StatusBadRequest)
-	}
-	task, err := services.CreateTask(tx, env, models.Task{
-		CreatorId: c.UserId,
-		RunnerId:  env.RunnerId,
-		CommitId:  commitId,
-		Type:      form.TaskType,
-		Name:      models.Task{}.GetTaskNameByType(form.TaskType),
-		Flow:      flow,
-		Variables: form.Variables,
+	_, err = services.CreateTask(tx, env, models.Task{
+		Name:        models.Task{}.GetTaskNameByType(form.TaskType),
+		Type:        form.TaskType,
+		Flow:        models.TaskFlow{},
+		Targets:     strings.Split(form.Targets, ","),
+		CommitId:    commitId,
+		CreatorId:   c.UserId,
+		RunnerId:    env.RunnerId,
+		Variables:   form.Variables,
+		StepTimeout: form.Timeout,
 	})
+
 	if err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error creating task, err %s", err)
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
-	// 如果环境为不活跃或者失败状态，立即发起任务部署，设置这个任务为当前任务
-	if env.Status == models.EnvStatusInactive || env.Status == models.EnvStatusFailed {
-		env.CurrentTaskId = task.Id
-	}
 	if _, er = tx.Save(env); er != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error save env, err %s", err)
@@ -408,4 +409,44 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	}
 
 	return env, nil
+}
+
+// SearchEnvResources 查询环境资源列表
+func SearchEnvResources(c *ctx.ServiceCtx, form *forms.SearchEnvResourceForm) (interface{}, e.Error) {
+	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+	query := c.DB().Model(models.EnvRes{}).Where("org_id = ? AND project_id = ? AND env_id = ?",
+		c.OrgId, c.ProjectId, form.Id)
+
+	if form.HasKey("q") {
+		// 支持对 provider / type / name 进行模糊查询
+		query = query.Where("provider LIKE ? OR type LIKE ? OR name LIKE ?",
+			fmt.Sprintf("?%s?", form.Q),
+			fmt.Sprintf("?%s?", form.Q),
+			fmt.Sprintf("?%s?", form.Q))
+	}
+
+	if form.SortField() == "" {
+		query = query.Order("provider, type, name")
+	}
+
+	return getPage(query, form, &models.EnvRes{})
+}
+
+// SearchEnvVariables 查询环境变量列表
+func SearchEnvVariables(c *ctx.ServiceCtx, form *forms.SearchEnvVariableForm) (interface{}, e.Error) {
+	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+	query := c.DB().Where("org_id = ? AND project_id = ? AND id = ?", c.OrgId, c.ProjectId, form.Id)
+	env, err := services.GetEnvById(query, form.Id)
+	if err != nil && err.Code() == e.EnvNotExists {
+		return nil, e.New(e.EnvNotExists, err, http.NotFound)
+	} else if err != nil {
+		c.Logger().Errorf("error while get env by id, err %s", err)
+		return nil, e.New(e.DBError, err)
+	}
+
+	return env.Variables, nil
 }

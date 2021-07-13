@@ -15,13 +15,12 @@ type Env struct {
 // Create 创建环境
 // @Tags 环境
 // @Summary 创建环境
-// @Accept multipart/form-data
 // @Accept json
 // @Produce json
 // @Security AuthToken
 // @Param Iac-Org-Id header string true "组织ID"
 // @Param Iac-Project-Id header string true "项目ID"
-// @Param form formData forms.CreateEnvForm true "parameter"
+// @Param json body forms.CreateEnvForm true "环境参数"
 // @router /envs [post]
 // @Success 200 {object} ctx.JSONResult{result=models.Env}
 func (Env) Create(c *ctx.GinRequestCtx) {
@@ -164,15 +163,35 @@ func (Env) Destroy(c *ctx.GinRequestCtx) {
 // @Security AuthToken
 // @Param Iac-Org-Id header string true "组织ID"
 // @Param Iac-Project-Id header string true "项目ID"
-// @Param form formData forms.SearchEnvResourceForm true "parameter"
+// @Param form query forms.SearchEnvResourceForm true "parameter"
 // @Param envId path string true "环境ID"
-// @router /envs/{envId}/resources [post]
+// @router /envs/{envId}/resources [get]
 // @Success 200 {object} ctx.JSONResult{result=models.EnvRes}
 func (Env) SearchResources(c *ctx.GinRequestCtx) {
-	// TODO: 待实现
-	//form := forms.SearchEnvResourceForm{}
-	//if err := c.Bind(&form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.UpdateEnv(c.ServiceCtx(), &form))
+	form := forms.SearchEnvResourceForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.SearchEnvResources(c.ServiceCtx(), &form))
+}
+
+// SearchVariables 获取环境变量
+// @Tags 环境
+// @Summary 获取环境变量列表，该环境变量为当前任务所用的环境变量
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param Iac-Org-Id header string true "组织ID"
+// @Param Iac-Project-Id header string true "项目ID"
+// @Param form formData forms.SearchEnvVariableForm true "parameter"
+// @Param envId path string true "环境ID"
+// @router /envs/{envId}/variables [get]
+// @Success 200 {object} ctx.JSONResult{result=models.EnvRes}
+func (Env) SearchVariables(c *ctx.GinRequestCtx) {
+	form := forms.SearchEnvVariableForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.SearchEnvVariables(c.ServiceCtx(), &form))
 }
