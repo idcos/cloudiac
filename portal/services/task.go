@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
-	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -27,6 +27,8 @@ func GetTask(dbSess *db.Session, id models.Id) (*models.Task, e.Error) {
 }
 
 func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e.Error) {
+	logger := logs.Get().WithField("func", "CreateTask")
+
 	task := models.Task{
 		// 以下为需要外部传入的属性
 		Name:        p.Name,
@@ -53,6 +55,7 @@ func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e
 	if task.RunnerId == "" {
 		task.RunnerId = env.RunnerId
 	}
+	logger = logger.WithField("taskId", task.Id)
 
 	if len(task.Flow.Steps) == 0 {
 		var err error
@@ -66,8 +69,23 @@ func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e
 		return nil, e.New(e.DBError, errors.Wrapf(err, "save task"))
 	}
 
+	flowSteps := make([]models.TaskStepBody, 0, len(task.Flow.Steps))
+	for i := range task.Flow.Steps {
+		step := task.Flow.Steps[i]
+		if step.Type == models.TaskStepPlay && env.Playbook == "" {
+			logger.WithField("step", fmt.Sprintf("%d(%s)", i, step.Type)).
+				Infof("not have playbook, skip this step")
+			continue
+		}
+		flowSteps = append(flowSteps, step)
+	}
+
+	if len(flowSteps) == 0 {
+		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps"))
+	}
+
 	taskSteps := make([]*models.TaskStep, 0)
-	for i, step := range task.Flow.Steps {
+	for i, step := range flowSteps {
 		if len(task.Targets) != 0 && IsTerraformStep(step.Type) {
 			if step.Type != models.TaskStepInit {
 				for _, t := range task.Targets {
@@ -160,7 +178,7 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 		task.EndAt = &now
 	}
 
-	logs.Get().WithField("taskId", task.Id).Debugf("change task to '%s'", status)
+	logs.Get().WithField("taskId", task.Id).Infof("change task to '%s'", status)
 	if _, err := dbSess.Model(&models.Task{}).Update(task); err != nil {
 		return e.AutoNew(err, e.DBError)
 	}
@@ -173,28 +191,36 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 }
 
 type TfState struct {
-	FormVersion      string `json:"form_version"`
-	TerraformVersion string `json:"terraform_version"`
-	Values           struct {
-		Outputs    map[string]TfStateVariable `json:"outputs"`
-		RootModule struct {
-			Resources []TfStateResource `json:"resources"`
-		} `json:"root_module"`
-	} `json:"values"`
+	FormVersion      string        `json:"form_version"`
+	TerraformVersion string        `json:"terraform_version"`
+	Values           TfStateValues `json:"values"`
+}
+
+// TfStateValues  doc: https://www.terraform.io/docs/internals/json-format.html#values-representation
+type TfStateValues struct {
+	Outputs      map[string]TfStateVariable `json:"outputs"`
+	RootModule   TfStateModule              `json:"root_module"`
+	ChildModules []TfStateModule            `json:"child_modules,omitempty"`
+}
+
+type TfStateModule struct {
+	Address      string            `json:"address"`
+	Resources    []TfStateResource `json:"resources"`
+	ChildModules []TfStateModule   `json:"child_modules,omitempty"`
 }
 
 type TfStateVariable struct {
-	Sensitive bool        `json:"sensitive,omitempty"`
 	Value     interface{} `json:"value"`
+	Sensitive bool        `json:"sensitive,omitempty"`
 }
 
 type TfStateResource struct {
+	ProviderName string `json:"provider_name"`
 	Address      string `json:"address"`
 	Mode         string `json:"mode"` // managed、data
 	Type         string `json:"type"`
 	Name         string `json:"name"`
 	Index        int    `json:"index"`
-	ProviderName string `json:"provider_name"`
 
 	Values map[string]interface{} `json:"values"`
 }
@@ -205,14 +231,41 @@ func UnmarshalStateJson(bs []byte) (*TfState, error) {
 	return &state, err
 }
 
-func SaveTaskResources(tx *db.Session, task *models.Task, tfRes []TfStateResource) error {
+func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
+	parts := strings.Split(module.Address, ".")
+	moduleName := parts[len(parts)-1]
+	for _, r := range module.Resources {
+		rs = append(rs, &models.Resource{
+			Provider: r.ProviderName,
+			Module:   moduleName,
+			Address:  r.Address,
+			Type:     r.Type,
+			Name:     r.Name,
+			Index:    r.Index,
+			Attrs:    r.Values,
+		})
+	}
+
+	for i := range module.ChildModules {
+		rs = append(rs, traverseStateModule(&module.ChildModules[i])...)
+	}
+	return rs
+}
+
+func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues) error {
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Resource{}.TableName(),
 		"id", "org_id", "project_id", "env_id", "task_id",
-		"provider", "type", "name", "index", "attrs")
+		"provider", "module", "address", "type", "name", "index", "attrs")
 
-	for _, tr := range tfRes {
+	rs := make([]*models.Resource, 0)
+	rs = append(rs, traverseStateModule(&values.RootModule)...)
+	for i := range values.ChildModules {
+		rs = append(rs, traverseStateModule(&values.ChildModules[i])...)
+	}
+
+	for _, r := range rs {
 		err := bq.AddRow(models.NewId("r"), task.OrgId, task.ProjectId, task.EnvId, task.Id,
-			filepath.Base(tr.ProviderName), tr.Type, tr.Name, tr.Index, models.ResAttrs(tr.Values))
+			r.Provider, r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs)
 		if err != nil {
 			return err
 		}
@@ -232,7 +285,69 @@ func SaveTaskOutputs(dbSess *db.Session, task *models.Task, vars map[string]TfSt
 	for k, v := range vars {
 		task.Result.Outputs[k] = v
 	}
-	if _, err := dbSess.Model(&models.Task{}).Update(task); err != nil {
+	if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
+		Update("result", task.Result); err != nil {
+		return err
+	}
+	return nil
+}
+
+// TfPlan doc: https://www.terraform.io/docs/internals/json-format.html#plan-representation
+type TfPlan struct {
+	FormatVersion string `json:"format_version"`
+
+	ResourceChanges []TfPlanResource `json:"resource_changes"`
+}
+
+type TfPlanResource struct {
+	Address       string `json:"address"`
+	ModuleAddress string `json:"module_address,omitempty"`
+
+	Mode  string `json:"mode"` // managed、data
+	Type  string `json:"type"`
+	Name  string `json:"name"`
+	Index int    `json:"index"`
+
+	Change TfPlanResourceChange `json:"change"`
+}
+
+// TfPlanResourceChange doc: https://www.terraform.io/docs/internals/json-format.html#change-representation
+type TfPlanResourceChange struct {
+	Actions []string    `json:"actions"` // no-op, create, read, update, delete
+	Before  interface{} `json:"before"`
+	After   interface{} `json:"after"`
+}
+
+func UnmarshalPlanJson(bs []byte) (*TfPlan, error) {
+	plan := TfPlan{}
+	err := json.Unmarshal(bs, &plan)
+	return &plan, err
+}
+
+func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource) error {
+	task.Result.ResAdded = 0
+	task.Result.ResChanged = 0
+	task.Result.ResDestroyed = 0
+	for _, r := range rs {
+		actions := r.Change.Actions
+		switch {
+		case utils.SliceEqualStr(actions, []string{"no-op"}),
+			utils.SliceEqualStr(actions, []string{"create", "delete"}):
+			continue
+		case utils.SliceEqualStr(actions, []string{"create"}):
+			task.Result.ResAdded += 1
+		case utils.SliceEqualStr(actions, []string{"update"}),
+			utils.SliceEqualStr(actions, []string{"delete", "create"}):
+			task.Result.ResChanged += 1
+		case utils.SliceEqualStr(actions, []string{"delete"}):
+			task.Result.ResDestroyed += 1
+		default:
+			logs.Get().WithField("taskId", task.Id).Errorf("unknown change actions: %v", actions)
+		}
+	}
+
+	if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
+		Update("result", task.Result); err != nil {
 		return err
 	}
 	return nil

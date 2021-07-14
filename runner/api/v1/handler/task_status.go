@@ -83,6 +83,12 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.CommittedTaskStep, closed
 			} else {
 				msg.TfStateJson = stateJson
 			}
+
+			if planJson, err := runner.FetchPlanJson(task.EnvId, task.TaskId); err != nil {
+				logger.Errorf("fetch terraform state json error: %v", err)
+			} else {
+				msg.TfPlanJson = planJson
+			}
 		}
 
 		if err := wsConn.WriteJSON(msg); err != nil {

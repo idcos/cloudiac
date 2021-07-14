@@ -153,7 +153,7 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 		"deploying":   isDeploying,
 	}
 	if envStatus != "" {
-		logger.Debugf("change env to '%v'", envStatus)
+		logger.Infof("change env to '%v'", envStatus)
 		attrs["status"] = envStatus
 	}
 	_, err := tx.Model(&models.Env{}).Where("id = ?", id).Update(attrs)
