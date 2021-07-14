@@ -77,6 +77,15 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 
 func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.Template, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update template %d", form.Id))
+
+	tpl, err := services.GetTemplate(c.DB(), form.Id)
+	if err != nil {
+		return nil, e.New(e.DBError, err, e.TemplateNotExists)
+	}
+	// 根据云模版ID, 组织ID查询该云模版是否属于该组织
+	if tpl.OrgId != c.OrgId {
+		return nil, e.New(e.TemplateNotExists, http.StatusForbidden, fmt.Errorf("The organization does not have permission to delete the current template"))
+	}
 	attrs := models.Attrs{}
 	if form.HasKey("name") {
 		attrs["name"] = form.Name

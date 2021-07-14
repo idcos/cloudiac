@@ -74,7 +74,7 @@ func (Template) Update(c *ctx.GinRequestCtx) {
 // 删除活跃云模版
 // @Summary 删除云模版
 // @Tags 云模版
-// @Description 需要组织管理员权限。
+// @Description 删除云模版,需要组织管理员权限。
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
@@ -95,10 +95,12 @@ func (Template) Delete(c *ctx.GinRequestCtx) {
 // 模版详情
 // @Summary 模版详情
 // @Tags 云模版
+// @Description 获取云模版详情。
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
 // @Param Iac-Org-Id header string true "组织ID"
+// @Param templateId path string true "云模版ID"
 // @Param form formData forms.DetailTemplateForm true "parameter"
 // @Router /template/{templateId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
@@ -108,4 +110,52 @@ func (Template) Detail(c *ctx.GinRequestCtx) {
 		return
 	}
 	c.JSONResult(apps.TemplateDetail(c.ServiceCtx(), &form))
+}
+
+// 列出代码仓库下包含.tfvars 的所有文件
+// @Tags Vcs仓库
+// @Summary 列出代码仓库下.tfvars 的所有文件
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param form query forms.TemplateTfvarsSearchForm true "parameter"
+// @Router /templates/tfvars [get]
+// @Success 200 {object} ctx.JSONResult{result=[]vcsrv.VcsIfaceOptions}
+func TemplateTfvarsSearch(c *ctx.GinRequestCtx) {
+	form := forms.TemplateTfvarsSearchForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.VcsTfVarsSearch(c.ServiceCtx(), &form))
+}
+
+// TemplateVariableSearch 查询云模板TF参数
+// @Tags 云模板
+// @Summary 云模板参数接口
+// @Accept application/x-www-form-urlencoded
+// @Param form query forms.TemplateVariableSearchForm true "parameter"
+// @Router /templates/variable [get]
+// @Success 200 {object} ctx.JSONResult{result=[]services.TemplateVariable}
+func TemplateVariableSearch(c *ctx.GinRequestCtx) {
+	form := forms.TemplateVariableSearchForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.VcsVariableSearch(c.ServiceCtx(), &form))
+}
+
+// TemplatePlaybookSearch
+// @Tags playbook列表查询
+// @Summary  playbook列表接口
+// @Accept application/x-www-form-urlencoded
+// @Param form query forms.TemplatePlaybookSearchForm true "parameter"
+// @router /templates/playbook [get]
+// @Success 200 {object} ctx.JSONResult{result=[]vcsrv.VcsIfaceOptions}
+func TemplatePlaybookSearch(c *ctx.GinRequestCtx) {
+	form := forms.TemplatePlaybookSearchForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.VcsPlaybookSearch(c.ServiceCtx(), &form))
 }
