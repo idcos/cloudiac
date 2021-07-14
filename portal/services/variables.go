@@ -100,6 +100,9 @@ func UpdateVariable(tx *db.Session, variableId models.Id, attr map[string]interf
 }
 
 func DeleteVariables(tx *db.Session, DeleteVariables []string) e.Error {
+	if len(DeleteVariables) == 0 {
+		return nil
+	}
 	if _, err := tx.Where("id in (?)", DeleteVariables).Delete(&models.Variable{}); err != nil {
 		return e.New(e.DBError, fmt.Errorf("delete variables error: %v", err))
 	}

@@ -6,7 +6,7 @@ import (
 )
 
 type Token struct {
-	SoftDeleteModel
+	TimedModel
 
 	Key         string     `json:"key" form:"key" gorm:"not null"`
 	Type        string     `json:"type" form:"type" gorm:"not null"`
