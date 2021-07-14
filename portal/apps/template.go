@@ -1,27 +1,26 @@
 package apps
 
 import (
-	"cloudiac/portal/libs/page"
-	"fmt"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"fmt"
 	"net/http"
 )
 
 type SearchTemplateResp struct {
-	Id            uint      `json:"id"`
-	Name          string    `json:"name"`
-	Description   string    `json:"description"`
-	ActiveEnvironment int   `json:"activeEnvironment"`
-	VcsType		  string    `json:"vcsType"`
-	RepoRevision  string  	`json:"repoRevision"`
-	UserName 	  string    `json:"userName"`
-	CreateTime    string	`json:"createTime"`
+	Id                uint   `json:"id"`
+	Name              string `json:"name"`
+	Description       string `json:"description"`
+	ActiveEnvironment int    `json:"activeEnvironment"`
+	VcsType           string `json:"vcsType"`
+	RepoRevision      string `json:"repoRevision"`
+	UserName          string `json:"userName"`
+	CreateTime        string `json:"createTime"`
 }
-
 
 func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.Template, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create template %s", form.Name))
@@ -40,19 +39,19 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 			err      e.Error
 		)
 		tpl := models.Template{
-			Name: form.Name,
-			TplType: form.TplType,
-			OrgId: c.OrgId,
-			Description: form.Description,
-			VcsId: form.VcsId,
-			RepoId: form.RepoId,
-			RepoAddr: form.RepoAddr,
+			Name:         form.Name,
+			TplType:      form.TplType,
+			OrgId:        c.OrgId,
+			Description:  form.Description,
+			VcsId:        form.VcsId,
+			RepoId:       form.RepoId,
+			RepoAddr:     form.RepoAddr,
 			RepoRevision: form.RepoRevision,
-			Status: form.Status,
-			CreatorId: c.UserId,
-			Workdir: form.Workdir,
-			Playbook: form.Playbook,
-			TfVarsFile: form.TfVarsFile,
+			Status:       form.Status,
+			CreatorId:    c.UserId,
+			Workdir:      form.Workdir,
+			Playbook:     form.Playbook,
+			TfVarsFile:   form.TfVarsFile,
 		}
 		template, err = services.CreateTemplate(tx, tpl)
 		if err != nil {
@@ -106,7 +105,7 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 	return services.UpdateTemplate(c.DB(), form.Id, attrs)
 }
 
-func DelateTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interface{}, e.Error){
+func DelateTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("delete template %s", form.Id))
 	tx := c.Tx()
 	defer func() {
@@ -132,9 +131,9 @@ func DelateTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interfac
 	if er != nil {
 		return nil, e.AutoNew(er, e.DBError)
 	}
-	for _, v := range(envList) {
-		if v.Status != "inactive"{
-			c.Logger().Error("error delete template by id,because the template also has an active environment" )
+	for _, v := range envList {
+		if v.Status != "inactive" {
+			c.Logger().Error("error delete template by id,because the template also has an active environment")
 			return nil, e.New(e.TemplateActiveEvcExists, http.StatusForbidden, fmt.Errorf("The cloud template cannot be deleted because there is an active environment"))
 		}
 	}
@@ -166,7 +165,6 @@ func TemplateDetail(c *ctx.ServiceCtx, form *forms.DetailTemplateForm) (*models.
 
 }
 
-
 func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (tpl interface{}, err e.Error) {
 	tplIdList := make([]string, 0)
 	if c.ProjectId != "" {
@@ -188,5 +186,3 @@ func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (tpl inte
 		List:     templates,
 	}, nil
 }
-
-
