@@ -208,4 +208,5 @@ func Init(migrate bool) {
 	autoMigrate(&Token{}, sess)
 	autoMigrate(&TaskComment{}, sess)
 	autoMigrate(&TemplateAccessToken{}, sess)
+	autoMigrate(&ProjectTemplate{}, sess)
 }
