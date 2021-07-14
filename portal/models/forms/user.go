@@ -10,6 +10,14 @@ type CreateUserForm struct {
 	Email string `form:"email" json:"email" binding:"required,email"`      // 电子邮件地址
 }
 
+type InviteUserForm struct {
+	BaseForm
+
+	Name  string `form:"name" json:"name" binding:"required,gte=2,lte=32"` // 用户名
+	Email string `form:"email" json:"email" binding:"required,email"`      // 电子邮件地址
+	Role  string `form:"role" json:"role" binding:""`                      // 受邀请用户在组织中的角色
+}
+
 type UpdateUserForm struct {
 	BaseForm
 

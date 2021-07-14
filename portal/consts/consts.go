@@ -51,6 +51,9 @@ const (
 )
 
 const (
+	SuperAdmin = "root"
+
+	OrgRoleRoot   = "root"
 	OrgRoleOwner  = "owner"
 	OrgRoleMember = "member"
 

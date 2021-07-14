@@ -18,10 +18,11 @@ func GetTask(dbSess *db.Session, id models.Id) (*models.Task, e.Error) {
 	err := dbSess.Where("id = ?", id).First(&task)
 	if err != nil {
 		if e.IsRecordNotFound(err) {
-			return nil, e.New(e.TaskNotExists)
+			return nil, e.New(e.TaskNotExists, err)
 		}
 		return nil, e.New(e.DBError, err)
 	}
+
 	return &task, nil
 }
 
@@ -94,6 +95,21 @@ func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e
 	}
 
 	return &task, nil
+}
+
+func GetTaskById(tx *db.Session, id models.Id) (*models.Task, e.Error) {
+	o := models.Task{}
+	if err := tx.Where("id = ?", id).First(&o); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TaskNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &o, nil
+}
+
+func QueryTask(query *db.Session) *db.Session {
+	return query.Model(&models.Task{})
 }
 
 var stepStatus2TaskStatus = map[string]string{
@@ -190,7 +206,7 @@ func UnmarshalStateJson(bs []byte) (*TfState, error) {
 }
 
 func SaveTaskResources(tx *db.Session, task *models.Task, tfRes []TfStateResource) error {
-	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.EnvRes{}.TableName(),
+	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Resource{}.TableName(),
 		"id", "org_id", "project_id", "env_id", "task_id",
 		"provider", "type", "name", "index", "attrs")
 

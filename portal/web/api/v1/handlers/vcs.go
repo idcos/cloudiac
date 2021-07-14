@@ -11,14 +11,14 @@ type Vcs struct {
 	ctrl.BaseController
 }
 
-// 创建vcs仓库
+// Create 创建vcs仓库
 // @Tags Vcs仓库
 // @Summary 创建vcs仓库
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param form formData forms.CreateVcsForm true "parameter"
 // @Router /vcs [post]
 // @Success 200 {object} ctx.JSONResult
@@ -30,14 +30,14 @@ func (Vcs) Create(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.CreateVcs(c.ServiceCtx(), form))
 }
 
-// 查询vcs仓库
+// Search 查询vcs仓库
 // @Tags Vcs仓库
 // @Summary 查询vcs仓库
 // @Accept application/x-www-form-urlencoded
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param form query forms.SearchVcsForm true "parameter"
 // @Router /vcs [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Vcs}}
@@ -49,7 +49,7 @@ func (Vcs) Search(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.SearchVcs(c.ServiceCtx(), form))
 }
 
-// 更新vcs仓库
+// Update 更新vcs仓库
 // @Tags Vcs仓库
 // @Summary 更新vcs仓库
 // @Accept multipart/form-data
@@ -57,6 +57,7 @@ func (Vcs) Search(c *ctx.GinRequestCtx) {
 // @Produce json
 // @Security AuthToken
 // @Param form formData forms.UpdateVcsForm true "parameter"
+// @Param vcsId path string true "Vcs仓库ID"
 // @Router /vcs/{vcsId} [put]
 // @Success 200 {object} ctx.JSONResult{result=models.Vcs}
 func (Vcs) Update(c *ctx.GinRequestCtx) {
@@ -67,7 +68,7 @@ func (Vcs) Update(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.UpdateVcs(c.ServiceCtx(), form))
 }
 
-// 删除Vcs 仓库
+// Delete 删除Vcs 仓库
 // @Tags Vcs仓库
 // @Summary 删除vcs仓库
 // @Accept multipart/form-data
@@ -75,7 +76,7 @@ func (Vcs) Update(c *ctx.GinRequestCtx) {
 // @Produce json
 // @Security AuthToken
 // @Param form formData forms.DeleteVcsForm true "patameter"
-// @Param vcsId path string true "vcs的Id"
+// @Param vcsId path string true "vcs仓库Id"
 // @Router /vcs/{vcsId} [delete]
 // @Success 200 {object} ctx.JSONResult
 func (Vcs) Delete(c *ctx.GinRequestCtx) {
@@ -90,7 +91,7 @@ func ListEnableVcs(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.ListEnableVcs(c.ServiceCtx()))
 }
 
-// 列出Vcs地址下所有的代码仓库
+// ListRepos 列出Vcs地址下所有的代码仓库
 // @Tags Vcs仓库
 // @Summary 列出vcs地址下所有代码仓库
 // @Accept application/x-www-form-urlencoded
@@ -108,7 +109,7 @@ func (Vcs) ListRepos(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.ListRepos(c.ServiceCtx(), &form))
 }
 
-// 列出代码仓库下所有分支
+// ListBranches 列出代码仓库下所有分支
 // @Tags Vcs仓库
 // @Summary 列出代码仓库下所有分支
 // @Accept application/x-www-form-urlencoded
@@ -126,7 +127,7 @@ func (Vcs) ListBranches(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.ListRepoBranches(c.ServiceCtx(), &form))
 }
 
-// 列出代码仓库下tag
+// ListTags 列出代码仓库下tag
 // @Tags Vcs仓库
 // @Summary 列出代码仓库下所有分支
 // @Accept application/x-www-form-urlencoded
@@ -144,7 +145,7 @@ func (Vcs) ListTags(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.ListRepoTags(c.ServiceCtx(), &form))
 }
 
-// 列出代码仓库下Readme 文件内容
+// GetReadmeContent 列出代码仓库下Readme 文件内容
 // @Tags Vcs仓库
 // @Summary 列出代码仓库下 Readme 文件内容
 // @Accept application/x-www-form-urlencoded

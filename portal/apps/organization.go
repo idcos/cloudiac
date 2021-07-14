@@ -13,18 +13,6 @@ import (
 	"net/http"
 )
 
-type emailInviteUserData struct {
-	*models.User
-	Inviter      string // 邀请人名称
-	Organization string // 加入目标组织名称
-	IsNewUser    bool   // 是否创建新用户
-}
-
-var (
-	emailSubjectInviteUser = "用户邀请通知【CloudIaC】"
-	emailBodyInviteUser    = "尊敬的 {{.Name}}：\n\n{{.Inviter}} 邀请您使用 CloudIaC 服务，您将加入 {{.Organization}} 组织。\n\n{{if .IsNewUser}}这是您的登录详细信息：\n\n登录名：\t{{.Email}}\n密码：\t{{.InitPass}}\n\n为了保障您的安全，请立即登陆您的账号并修改初始密码。{{else}}请使用 {{.Email}} 登陆您的账号使用 CloudIaC 服务。{{end}}"
-)
-
 // CreateOrganization 创建组织
 func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (*models.Organization, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create org %s", form.Name))
@@ -153,8 +141,7 @@ func SearchOrganization(c *ctx.ServiceCtx, form *forms.SearchOrganizationForm) (
 	}
 
 	if form.Q != "" {
-		qs := "%" + form.Q + "%"
-		query = query.WhereLike("name", qs)
+		query = query.WhereLike("name", form.Q)
 	}
 
 	// 默认按创建时间逆序排序

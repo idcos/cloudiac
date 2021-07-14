@@ -25,6 +25,105 @@ var (
 	emailBodyCreateUser    = "尊敬的 {{.Name}}：\n\n恭喜您完成注册 CloudIaC 服务。\n\n这是您的登录详细信息：\n\n登录名：\t{{.Email}}\n密码：\t{{.InitPass}}\n\n为了保障您的安全，请立即登陆您的账号并修改初始密码。"
 )
 
+type emailInviteUserData struct {
+	*models.User
+	Inviter      string // 邀请人名称
+	Organization string // 加入目标组织名称
+	IsNewUser    bool   // 是否创建新用户
+}
+
+var (
+	emailSubjectInviteUser = "用户邀请通知【CloudIaC】"
+	emailBodyInviteUser    = "尊敬的 {{.Name}}：\n\n{{.Inviter}} 邀请您使用 CloudIaC 服务，您将加入 {{.Organization}} 组织。\n\n{{if .IsNewUser}}这是您的登录详细信息：\n\n登录名：\t{{.Email}}\n密码：\t{{.InitPass}}\n\n为了保障您的安全，请立即登陆您的账号并修改初始密码。{{else}}请使用 {{.Email}} 登陆您的账号使用 CloudIaC 服务。{{end}}"
+)
+
+// InviteUser 邀请用户加入某个组织
+// 如果用户不存在，则创建并加入组织，如果用户已经存在，则加入或更新权限
+func InviteUser(c *ctx.ServiceCtx, form *forms.InviteUserForm) (*CreateUserResp, e.Error) {
+	c.AddLogField("action", fmt.Sprintf("invite user %s to org %s as %s", form.Name, c.OrgId, form.Role))
+
+	user, err := services.GetUserByEmail(c.DB(), form.Email)
+	if err != nil && err.Code() != e.UserNotExists {
+		return nil, err
+	}
+
+	tx := c.Tx().Debug()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	initPass := utils.GenPasswd(6, "mix")
+	hashedPassword, err := services.HashPassword(initPass)
+	if err != nil {
+		c.Logger().Errorf("error hash password, err %s", err)
+		return nil, err
+	}
+	isNew := false
+	if user == nil {
+		user, err = services.CreateUser(tx, models.User{
+			Name:     form.Name,
+			Password: hashedPassword,
+			Email:    form.Email,
+		})
+		if err != nil && err.Code() == e.UserAlreadyExists {
+			return nil, e.New(err.Code(), err, http.StatusBadRequest)
+		} else if err != nil {
+			_ = tx.Rollback()
+			c.Logger().Errorf("error create user, err %s", err)
+			return nil, err
+		}
+		isNew = true
+	}
+
+	// 建立用户与组织间关联
+	if !isNew {
+		if err := services.DeleteUserOrgRel(tx, user.Id, c.OrgId); err != nil {
+			_ = tx.Rollback()
+			c.Logger().Errorf("error del user org rel, err %s", err)
+		}
+	}
+	if _, err = services.CreateUserOrgRel(tx, models.UserOrg{
+		OrgId:  c.OrgId,
+		UserId: user.Id,
+		Role:   form.Role,
+	}); err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error create user org rel, err %s", err)
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error commit invite user, err %s", err)
+		return nil, e.New(e.DBError, err)
+	}
+
+	// 返回用户信息和初始化密码
+	resp := CreateUserResp{
+		User:     user,
+		InitPass: initPass,
+	}
+
+	// 发送邀请邮件
+	data := emailInviteUserData{
+		User:         user,
+		IsNewUser:    isNew,
+		Inviter:      c.Username,
+		Organization: c.MustOrg().Name,
+	}
+	go func() {
+		err := mail.SendMail([]string{form.Email}, emailSubjectInviteUser, utils.SprintTemplate(emailBodyInviteUser, data))
+		if err != nil {
+			c.Logger().Errorf("error send mail to %s, err %s", user.Email, err)
+		}
+	}()
+
+	return &resp, nil
+}
+
 // CreateUser 创建用户
 func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*CreateUserResp, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create user %s", form.Name))
@@ -184,10 +283,40 @@ func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (user *models.Use
 		attrs["newbie_guide"] = b
 	}
 
-	return services.UpdateUser(c.DB(), form.Id, attrs)
+	if form.HasKey("oldPassword") {
+		if !form.HasKey("newPassword") {
+			return nil, e.New(e.BadParam, http.StatusBadRequest)
+		}
+		user, er := services.GetUserById(c.DB(), form.Id)
+		if er != nil {
+			return nil, er
+		}
+
+		valid, err := utils.CheckPassword(form.OldPassword, user.Password)
+		if err != nil {
+			return nil, e.New(e.DBError, http.StatusInternalServerError, err)
+		}
+		if !valid {
+			return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
+		}
+
+		newPassword, er := services.HashPassword(form.NewPassword)
+		if er != nil {
+			return nil, er
+		}
+		attrs["password"] = newPassword
+	}
+
+	if form.HasKey("status") {
+		// TODO: 需要平台管理员权限
+
+	}
+
+	return services.UpdateUser(c.DB().Debug(), form.Id, attrs)
 }
 
 //ChangeUserStatus 修改用户启用/禁用状态
+// 需要平台管理员权限。
 func ChangeUserStatus(c *ctx.ServiceCtx, form *forms.DisableUserForm) (*models.User, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("change user status %s", form.Id))
 
@@ -230,7 +359,7 @@ func UserDetail(c *ctx.ServiceCtx, id models.Id) (*models.User, e.Error) {
 }
 
 // DeleteUser 删除用户
-// 需要组织管理员权限，如果用户拥有多个组织权限，管理员需要拥有所有相关组织权限。
+// 需要平台管理员权限。
 func DeleteUser(c *ctx.ServiceCtx, form *forms.DeleteUserForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("delete user %s", form.Id))
 	user, err := services.GetUserById(c.DB(), form.Id)

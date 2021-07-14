@@ -11,14 +11,14 @@ type Template struct {
 	ctrl.BaseController
 }
 
-// 创建云模版
-// @Tags 云模版
-// @Summary 创建云模版
+// Create 创建云模板
+// @Tags 云模板
+// @Summary 创建云模板
 // @Accept multipart/form-data
 // @Accept json
 // @Security AuthToken
 // @Produce json
-// @Param Iac-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param form formData forms.CreateTemplateForm true "parameter"
 // @Router /templates [post]
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
@@ -31,7 +31,7 @@ func (Template) Create(c *ctx.GinRequestCtx) {
 }
 
 // Search 查询云模板列表
-// @Tags 云模版
+// @Tags 云模板
 // @Summary 查询云模板列表
 // @Accept multipart/x-www-form-urlencoded
 // @Security AuthToken
@@ -39,8 +39,9 @@ func (Template) Create(c *ctx.GinRequestCtx) {
 // @Tags 云模板
 // @Accept  json
 // @Produce  json
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-project-Id header string false "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
+// @Param form query forms.SearchTemplateForm true "parameter"
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.SearchTemplateResp}}
 // @Router /templates [get]
 func (Template) Search(c *ctx.GinRequestCtx) {
@@ -52,14 +53,14 @@ func (Template) Search(c *ctx.GinRequestCtx) {
 }
 
 // Update 修改云模板信息
-// @Tags 云模版
+// @Tags 云模板
 // @Summary 修改云模板信息
 // @Description 修改云模板信息
 // @Security AuthToken
 // @Accept  json
 // @Produce  json
-// @Param templateId path string true "云模版ID"
-// @Param data body forms.UpdateTemplateForm true "云模板信息"
+// @Param templateId path string true "云模板ID"
+// @Param data formData forms.UpdateTemplateForm true "云模板信息"
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
 // @Router /templates/{templateId} [put]
 func (Template) Update(c *ctx.GinRequestCtx) {
@@ -68,20 +69,19 @@ func (Template) Update(c *ctx.GinRequestCtx) {
 		return
 	}
 	c.JSONResult(apps.UpdateTemplate(c.ServiceCtx(), &form))
-
 }
 
-// 删除活跃云模版
-// @Summary 删除云模版
-// @Tags 云模版
-// @Description 删除云模版,需要组织管理员权限。
+// Delete 删除活跃云模板
+// @Summary 删除云模板
+// @Tags 云模板
+// @Description 删除云模板,需要组织管理员权限。
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param form formData forms.DeleteUserForm true "parameter"
-// @Param templateId path string true "云模版ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param form query forms.DeleteTemplateForm true "parameter"
+// @Param templateId path string true "云模板ID"
 // @Router /template/{templateId} [delete]
 // @Success 200 {object} ctx.JSONResult
 func (Template) Delete(c *ctx.GinRequestCtx) {
@@ -92,16 +92,16 @@ func (Template) Delete(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.DelateTemplate(c.ServiceCtx(), &form))
 }
 
-// 模版详情
-// @Summary 模版详情
-// @Tags 云模版
-// @Description 获取云模版详情。
+// Detail 模板详情
+// @Summary 模板详情
+// @Tags 云模板
+// @Description 获取云模板详情。
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param templateId path string true "云模版ID"
-// @Param form formData forms.DetailTemplateForm true "parameter"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param templateId path string true "云模板ID"
+// @Param form query forms.DetailTemplateForm true "parameter"
 // @Router /template/{templateId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
 func (Template) Detail(c *ctx.GinRequestCtx) {
@@ -112,8 +112,8 @@ func (Template) Detail(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.TemplateDetail(c.ServiceCtx(), &form))
 }
 
-// 列出代码仓库下包含.tfvars 的所有文件
-// @Tags Vcs仓库
+// TemplateTfvarsSearch 列出代码仓库下包含.tfvars 的所有文件
+// @Tags 云模板
 // @Summary 列出代码仓库下.tfvars 的所有文件
 // @Accept application/x-www-form-urlencoded
 // @Accept json
@@ -146,7 +146,7 @@ func TemplateVariableSearch(c *ctx.GinRequestCtx) {
 }
 
 // TemplatePlaybookSearch
-// @Tags playbook列表查询
+// @Tags 云模板
 // @Summary  playbook列表接口
 // @Accept application/x-www-form-urlencoded
 // @Param form query forms.TemplatePlaybookSearchForm true "parameter"
