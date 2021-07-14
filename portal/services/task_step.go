@@ -108,6 +108,7 @@ func createTaskStep(tx *db.Session, task models.Task, stepBody models.TaskStepBo
 		TaskStepBody: stepBody,
 		OrgId:        task.OrgId,
 		ProjectId:    task.ProjectId,
+		EnvId:        task.EnvId,
 		TaskId:       task.Id,
 		Index:        index,
 		Status:       models.TaskStepPending,

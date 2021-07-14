@@ -1,13 +1,17 @@
 package apps
 
 import (
+	"bufio"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"fmt"
+	"github.com/gin-contrib/sse"
+	"io"
 	"net/http"
+	"strconv"
 )
 
 // SearchTask 任务查询
@@ -162,10 +166,44 @@ func ApproveTask(c *ctx.ServiceCtx, form *forms.ApproveTaskForm) (interface{}, e
 	return nil, nil
 }
 
-func FollowTaskLog(c *ctx.ServiceCtx, form forms.DetailTaskForm) e.Error {
-	c.Logger().WithField("func", "FollowTaskLog").WithField("askId", form.Id)
+func FollowTaskLog(c *ctx.GinRequestCtx, form forms.DetailTaskForm) e.Error {
+	logger := c.Logger().WithField("func", "FollowTaskLog").WithField("taskId", form.Id)
+	sc := c.ServiceCtx()
+	rCtx := c.Context.Request.Context()
 
-	// TODO: 获取日志
+	// TODO 浏览器原生 SSE 实现不支持修改 header，所以这个接口暂时不作认证，待前端支持
+	//task, er := services.GetTask(sc.ProjectDB(), form.Id)
+	task, er := services.GetTask(sc.DB(), form.Id)
+	if er != nil {
+		logger.Errorf("get task: %v", er)
+		if er.Code() == e.TaskNotExists {
+			return e.New(er.Code(), http.StatusNotFound)
+		}
+		return er
+	}
+
+	pr, pw := io.Pipe()
+	go func() {
+		if err := services.FetchTaskLog(rCtx, task, pw); err != nil {
+			logger.Errorf("fetch task log: %v", err)
+		}
+	}()
+
+	scanner := bufio.NewScanner(pr)
+	eventId := 0 // to indicate the message id
+	for scanner.Scan() {
+		c.Render(-1, sse.Event{
+			Id:    strconv.Itoa(eventId),
+			Event: "message",
+			Data:  scanner.Text(),
+		})
+		c.Writer.Flush()
+		eventId += 1
+	}
+
+	if err := scanner.Err(); err != nil && err != io.EOF {
+		return e.New(e.InternalError, err)
+	}
 	return nil
 }
 

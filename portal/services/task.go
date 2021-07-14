@@ -1,14 +1,21 @@
 package services
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/services/logstorage"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
+	"io"
+	"net/url"
+	"os"
 	"strings"
 	"time"
 )
@@ -351,4 +358,113 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource)
 		return err
 	}
 	return nil
+}
+
+func FetchTaskLog(ctx context.Context, task *models.Task, writer io.WriteCloser) (err error) {
+	// close 后 read 端会触发 EOF error
+	defer writer.Close()
+
+	var steps []*models.TaskStep
+	steps, err = GetTaskSteps(db.Get(), task.Id)
+	if err != nil {
+		return err
+	}
+
+	storage := logstorage.Get()
+	ticker := time.NewTicker(time.Second * 5)
+	defer ticker.Stop()
+
+	for _, step := range steps {
+		for !step.IsStarted() {
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-ticker.C:
+				step, err = GetTaskStep(db.Get(), task.Id, step.Index)
+				if err != nil {
+					return errors.Wrapf(err, "get task step %d", step.Index)
+				}
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+		}
+
+		if step.IsExited() {
+			var content []byte
+			if content, err = storage.Read(step.LogPath); err != nil {
+				if os.IsNotExist(err) {
+					// 当前步骤没有日志文件，继续读下一步骤
+					continue
+				}
+				return err
+			} else if _, err = writer.Write(content); err != nil {
+				return err
+			}
+		} else if step.IsStarted() { // running
+			if err = fetchRunnerTaskStepLog(ctx, task.RunnerId, step, writer); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// 从 runner 获取任务日志，直到任务结束
+func fetchRunnerTaskStepLog(ctx context.Context, runnerId string, step *models.TaskStep, writer io.Writer) error {
+	logger := logs.Get().WithField("func", "fetchRunnerTaskStepLog").
+		WithField("taskId", step.TaskId).
+		WithField("step", fmt.Sprintf("%d(%s)", step.Index, step.Type))
+
+	runnerAddr, err := GetRunnerAddress(runnerId)
+	if err != nil {
+		return errors.Wrapf(err, "get runner address")
+	}
+
+	params := url.Values{}
+	params.Add("envId", string(step.EnvId))
+	params.Add("taskId", string(step.TaskId))
+	params.Add("step", fmt.Sprintf("%d", step.Index))
+	wsConn, _, err := utils.WebsocketDail(runnerAddr, consts.RunnerTaskLogFollowURL, params)
+	if err != nil {
+		return errors.Wrapf(err, "websocket dail: %v/%s", runnerAddr, consts.RunnerTaskLogFollowURL)
+	}
+
+	defer func() {
+		_ = utils.WebsocketClose(wsConn)
+	}()
+
+	for {
+		var reader io.Reader
+
+		_, reader, err = wsConn.NextReader()
+		if err != nil {
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+				logger.Tracef("read message error: %v", err)
+				return nil
+			} else {
+				logger.Errorf("read message error: %v", err)
+				return err
+			}
+		} else {
+			select {
+			case <-ctx.Done():
+				return nil
+			default:
+			}
+
+			_, err = io.Copy(writer, reader)
+			if err != nil {
+				if err == io.ErrClosedPipe {
+					return nil
+				}
+				logger.Warnf("io copy error: %v", err)
+				return err
+			}
+		}
+	}
 }
