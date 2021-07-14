@@ -19,7 +19,7 @@ func ListNotificationCfgs(c *ctx.ServiceCtx) (interface{}, e.Error) {
 }
 
 func DeleteNotificationCfg(c *ctx.ServiceCtx, id models.Id) (result interface{}, err e.Error) {
-	c.AddLogField("action", fmt.Sprintf("Delete org notification id: %d", id))
+	c.AddLogField("action", fmt.Sprintf("Delete org notification id: %s", id))
 	err = services.DeleteOrganizationCfg(c.DB(), id, c.OrgId)
 	if err != nil {
 		return nil, err

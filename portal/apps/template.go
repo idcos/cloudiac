@@ -76,7 +76,7 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 }
 
 func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.Template, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("update template %d", form.Id))
+	c.AddLogField("action", fmt.Sprintf("update template %s", form.Id))
 
 	tpl, err := services.GetTemplate(c.DB(), form.Id)
 	if err != nil {

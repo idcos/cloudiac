@@ -3,8 +3,8 @@ package forms
 import "cloudiac/portal/models"
 
 type UserAuthorization struct {
-	UserId models.Id `json:"userId" form:"userId" ` // 用户id
-	Role   string    `json:"role" form:"role" `     // 角色 ('owner','manager','operator','guest')
+	UserId models.Id `json:"userId" form:"userId" `                                  // 用户id
+	Role   string    `json:"role" form:"role" enums:"'owner,manager,operator,guest"` // 角色 ('owner','manager','operator','guest')
 }
 
 type CreateProjectForm struct {

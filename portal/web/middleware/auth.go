@@ -74,7 +74,7 @@ func IsSuperAdmin(c *ctx.GinRequestCtx) {
 }
 
 func IsOrgAdmin(c *ctx.GinRequestCtx) {
-	if c.ServiceCtx().Role == "owner" || c.ServiceCtx().IsSuperAdmin == true {
+	if c.ServiceCtx().Role == consts.OrgRoleOwner || c.ServiceCtx().IsSuperAdmin == true {
 		c.Next()
 	} else {
 		c.JSONError(e.New(e.PermissionDeny), http.StatusForbidden)

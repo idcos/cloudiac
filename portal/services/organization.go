@@ -112,21 +112,13 @@ func FindUsersOrgRel(query *db.Session, userId models.Id, orgId models.Id) (user
 	return
 }
 
-func GetOrgIdsByUser(query *db.Session, userId models.Id) (orgIds []models.Id, err error) {
+func GetOrgIdsByUser(query *db.Session, userId models.Id) (orgIds []models.Id, err e.Error) {
 	var userOrgRel []*models.UserOrg
 	if err := query.Where("user_id = ?", userId).Find(&userOrgRel); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 	for _, o := range userOrgRel {
 		orgIds = append(orgIds, o.OrgId)
-	}
-	return
-}
-
-// GetUsersByOrg 获取某个组织下的所有用户
-func GetUsersByOrg(query *db.Session, orgId models.Id) (userOrgRel []*models.UserOrg, err error) {
-	if err := query.Where("org_id = ?", orgId).Find(&userOrgRel); err != nil {
-		return nil, e.AutoNew(err, e.DBError)
 	}
 	return
 }

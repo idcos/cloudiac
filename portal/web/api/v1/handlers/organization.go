@@ -204,3 +204,23 @@ func (Organization) SearchUser(c *ctx.GinRequestCtx) {
 	c.ServiceCtx().OrgId = models.Id(c.Param("orgId"))
 	c.JSONResult(apps.SearchUser(c.ServiceCtx(), &form))
 }
+
+// InviteUser 邀请用户加入组织
+// @Tags 组织
+// @Summary 邀请内部或者外部用户加入组织
+// @Description 如果用户不存在，则创建并加入组织，如果用户已经存在，则加入该组织
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param form formData forms.InviteUserForm true "parameter"
+// @Param orgId path string true "组织ID"
+// @router /orgs/{orgId}/users/invite [post]
+// @Success 200 {object} ctx.JSONResult{result=apps.CreateUserResp}
+func (Organization) InviteUser(c *ctx.GinRequestCtx) {
+	form := forms.InviteUserForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.InviteUser(c.ServiceCtx(), &form))
+}

@@ -3,6 +3,7 @@ package apps
 import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
@@ -17,112 +18,13 @@ import (
 // CreateUserResp 创建用户返回结果，带上初始化的随机密码
 type CreateUserResp struct {
 	*models.User
-	InitPass string `json:"initPass" example:"rANd0m"` // 初始化密码
+	InitPass string `json:"initPass,omitempty" example:"rANd0m"` // 初始化密码
 }
 
 var (
 	emailSubjectCreateUser = "注册用户成功通知"
 	emailBodyCreateUser    = "尊敬的 {{.Name}}：\n\n恭喜您完成注册 CloudIaC 服务。\n\n这是您的登录详细信息：\n\n登录名：\t{{.Email}}\n密码：\t{{.InitPass}}\n\n为了保障您的安全，请立即登陆您的账号并修改初始密码。"
 )
-
-type emailInviteUserData struct {
-	*models.User
-	Inviter      string // 邀请人名称
-	Organization string // 加入目标组织名称
-	IsNewUser    bool   // 是否创建新用户
-}
-
-var (
-	emailSubjectInviteUser = "用户邀请通知【CloudIaC】"
-	emailBodyInviteUser    = "尊敬的 {{.Name}}：\n\n{{.Inviter}} 邀请您使用 CloudIaC 服务，您将加入 {{.Organization}} 组织。\n\n{{if .IsNewUser}}这是您的登录详细信息：\n\n登录名：\t{{.Email}}\n密码：\t{{.InitPass}}\n\n为了保障您的安全，请立即登陆您的账号并修改初始密码。{{else}}请使用 {{.Email}} 登陆您的账号使用 CloudIaC 服务。{{end}}"
-)
-
-// InviteUser 邀请用户加入某个组织
-// 如果用户不存在，则创建并加入组织，如果用户已经存在，则加入或更新权限
-func InviteUser(c *ctx.ServiceCtx, form *forms.InviteUserForm) (*CreateUserResp, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("invite user %s to org %s as %s", form.Name, c.OrgId, form.Role))
-
-	user, err := services.GetUserByEmail(c.DB(), form.Email)
-	if err != nil && err.Code() != e.UserNotExists {
-		return nil, err
-	}
-
-	tx := c.Tx().Debug()
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			panic(r)
-		}
-	}()
-
-	initPass := utils.GenPasswd(6, "mix")
-	hashedPassword, err := services.HashPassword(initPass)
-	if err != nil {
-		c.Logger().Errorf("error hash password, err %s", err)
-		return nil, err
-	}
-	isNew := false
-	if user == nil {
-		user, err = services.CreateUser(tx, models.User{
-			Name:     form.Name,
-			Password: hashedPassword,
-			Email:    form.Email,
-		})
-		if err != nil && err.Code() == e.UserAlreadyExists {
-			return nil, e.New(err.Code(), err, http.StatusBadRequest)
-		} else if err != nil {
-			_ = tx.Rollback()
-			c.Logger().Errorf("error create user, err %s", err)
-			return nil, err
-		}
-		isNew = true
-	}
-
-	// 建立用户与组织间关联
-	if !isNew {
-		if err := services.DeleteUserOrgRel(tx, user.Id, c.OrgId); err != nil {
-			_ = tx.Rollback()
-			c.Logger().Errorf("error del user org rel, err %s", err)
-		}
-	}
-	if _, err = services.CreateUserOrgRel(tx, models.UserOrg{
-		OrgId:  c.OrgId,
-		UserId: user.Id,
-		Role:   form.Role,
-	}); err != nil {
-		_ = tx.Rollback()
-		c.Logger().Errorf("error create user org rel, err %s", err)
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		_ = tx.Rollback()
-		c.Logger().Errorf("error commit invite user, err %s", err)
-		return nil, e.New(e.DBError, err)
-	}
-
-	// 返回用户信息和初始化密码
-	resp := CreateUserResp{
-		User:     user,
-		InitPass: initPass,
-	}
-
-	// 发送邀请邮件
-	data := emailInviteUserData{
-		User:         user,
-		IsNewUser:    isNew,
-		Inviter:      c.Username,
-		Organization: c.MustOrg().Name,
-	}
-	go func() {
-		err := mail.SendMail([]string{form.Email}, emailSubjectInviteUser, utils.SprintTemplate(emailBodyInviteUser, data))
-		if err != nil {
-			c.Logger().Errorf("error send mail to %s, err %s", user.Email, err)
-		}
-	}()
-
-	return &resp, nil
-}
 
 // CreateUser 创建用户
 func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*CreateUserResp, e.Error) {
@@ -187,11 +89,10 @@ func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*CreateUserResp,
 
 	// 返回用户信息和初始化密码
 	resp := CreateUserResp{
-		User:     user,
-		InitPass: initPass,
+		User: user,
 	}
 
-	// TODO: 需确定邮件内容
+	// 发送邮件给用户
 	go func() {
 		err := mail.SendMail([]string{user.Email}, emailSubjectCreateUser, utils.SprintTemplate(emailBodyCreateUser, resp))
 		if err != nil {
@@ -210,18 +111,7 @@ type UserWithRoleResp struct {
 
 // SearchUser 查询用户列表
 func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.Error) {
-	userOrgRel, err := services.GetUsersByOrg(c.DB(), c.OrgId)
-	if err != nil {
-		c.Logger().Errorf("error get users by org, err %s", err)
-		return nil, e.New(e.DBError, err)
-	}
-	var userIds []models.Id
-	for _, o := range userOrgRel {
-		userIds = append(userIds, o.UserId)
-	}
-
-	query := services.QueryUser(c.DB())
-	query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+	query := UserRestrictOrg(c, c.DB())
 	if form.Status != "" {
 		query = query.Where("status = ?", form.Status)
 	}
@@ -255,7 +145,7 @@ func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.E
 
 // UpdateUser 用户信息编辑
 func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (user *models.User, err e.Error) {
-	c.AddLogField("action", fmt.Sprintf("update user %d", form.Id))
+	c.AddLogField("action", fmt.Sprintf("update user %s", form.Id))
 	if form.Id == "" {
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
 	}
@@ -312,7 +202,7 @@ func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (user *models.Use
 
 	}
 
-	return services.UpdateUser(c.DB().Debug(), form.Id, attrs)
+	return services.UpdateUser(UserRestrictOrg(c, c.DB()), form.Id, attrs)
 }
 
 //ChangeUserStatus 修改用户启用/禁用状态
@@ -336,7 +226,7 @@ func ChangeUserStatus(c *ctx.ServiceCtx, form *forms.DisableUserForm) (*models.U
 		return user, nil
 	}
 
-	user, err = services.UpdateUser(c.DB(), form.Id, models.Attrs{"status": form.Status})
+	user, err = services.UpdateUser(UserRestrictOrg(c, c.DB()), form.Id, models.Attrs{"status": form.Status})
 	if err != nil {
 		c.Logger().Errorf("error update user, err %s", err)
 		return nil, e.New(e.DBError, err)
@@ -347,7 +237,7 @@ func ChangeUserStatus(c *ctx.ServiceCtx, form *forms.DisableUserForm) (*models.U
 
 // UserDetail 获取单个用户详情
 func UserDetail(c *ctx.ServiceCtx, id models.Id) (*models.User, e.Error) {
-	user, err := services.GetUserById(c.DB(), id)
+	user, err := services.GetUserById(UserRestrictOrg(c, c.DB()), id)
 	if err != nil && err.Code() == e.UserNotExists {
 		// 通过 /auth/me 或者 /users/:userId 访问
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
@@ -362,16 +252,8 @@ func UserDetail(c *ctx.ServiceCtx, id models.Id) (*models.User, e.Error) {
 // 需要平台管理员权限。
 func DeleteUser(c *ctx.ServiceCtx, form *forms.DeleteUserForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("delete user %s", form.Id))
-	user, err := services.GetUserById(c.DB(), form.Id)
-	c.Logger().Errorf("del user %s", form.Id)
-	if err != nil && err.Code() == e.UserNotExists {
-		return nil, e.New(err.Code(), err, http.StatusNotFound)
-	} else if err != nil {
-		c.Logger().Errorf("error get user by id, err %s", err)
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	}
 
-	tx := c.Tx()
+	tx := UserRestrictOrg(c, c.Tx())
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -379,7 +261,14 @@ func DeleteUser(c *ctx.ServiceCtx, form *forms.DeleteUserForm) (interface{}, e.E
 		}
 	}()
 
-	// TODO: 判断管理员是否拥有所有关联组织管理员权限
+	user, err := services.GetUserById(tx, form.Id)
+	c.Logger().Errorf("del user %s", form.Id)
+	if err != nil && err.Code() == e.UserNotExists {
+		return nil, e.New(err.Code(), err, http.StatusNotFound)
+	} else if err != nil {
+		c.Logger().Errorf("error get user by id, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
 
 	// 解除组织关系
 	orgIds, er := services.GetOrgIdsByUser(c.DB(), c.UserId)
@@ -409,4 +298,27 @@ func DeleteUser(c *ctx.ServiceCtx, form *forms.DeleteUserForm) (interface{}, e.E
 	}
 
 	return nil, nil
+}
+
+// UserRestrictOrg 获取用户访问范围限制
+func UserRestrictOrg(c *ctx.ServiceCtx, query *db.Session) *db.Session {
+	query = query.Model(models.User{})
+	if c.OrgId != "" {
+		if c.IsSuperAdmin {
+			subQ := query.Model(models.UserOrg{}).Select("user_id").Where("org_id = ?", c.OrgId)
+			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), subQ.Expr())
+		} else {
+			subQ := query.Model(models.UserOrg{}).Select("user_id").
+				Where("org_id = ? AND user_id = ?", c.OrgId, c.UserId)
+			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), subQ.Expr())
+		}
+	} else {
+		// 如果是管理员，不需要附加限制参数，返回所有数据
+		// 组织管理员或者普通用户，如果不带 org，应该返回该用户关联的所有 org
+		if !c.IsSuperAdmin {
+			subQ := query.Model(models.UserOrg{}).Select("user_id").Where("user_id = ?", c.UserId)
+			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), subQ.Expr())
+		}
+	}
+	return query
 }

@@ -12,27 +12,6 @@ type User struct {
 	ctrl.BaseController
 }
 
-/**
-// InviteUser 邀请用户
-// @Tags 用户
-// @Summary 邀请用户
-// @Accept multipart/form-data
-// @Accept json
-// @Produce json
-// @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param form formData forms.InviteUserForm true "parameter"
-// @router /users/invite [post]
-// @Success 200 {object} ctx.JSONResult{result=apps.CreateUserResp}
-*/
-func (User) InviteUser(c *ctx.GinRequestCtx) {
-	form := forms.InviteUserForm{}
-	if err := c.Bind(&form); err != nil {
-		return
-	}
-	c.JSONResult(apps.InviteUser(c.ServiceCtx(), &form))
-}
-
 // Create 创建用户
 // @Tags 用户
 // @Summary 创建用户
@@ -153,6 +132,7 @@ func (User) Delete(c *ctx.GinRequestCtx) {
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param userId path string true "用户ID"
 // @router /users/{userId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.User}
@@ -170,6 +150,7 @@ func (User) Detail(c *ctx.GinRequestCtx) {
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param userId path string true "用户ID"
 // @Param form formData forms.DetailUserForm true "parameter"
 // @router /users/{userId}/reset_password [post]

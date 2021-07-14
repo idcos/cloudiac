@@ -4,12 +4,8 @@ import "cloudiac/portal/models"
 
 type CreateOrganizationForm struct {
 	BaseForm
-	Name        string    `form:"name" json:"name" binding:"required,gte=2,lte=32"` // 组织名称
-	Description string    `form:"description" json:"description" binding:""`        // 组织描述
-	RunnerId    string    `form:"runnerId" json:"runnerId" binding:""`              // 组织默认部署通道
-	OwnerId     models.Id `form:"ownerId" json:"ownerId"`                           // 管理员ID。管理员用户ID或邀请用户必填一个，同时提供以ID优先。
-	OwnerName   string    `form:"ownerName" json:"ownerName"`                       // 邀请用户做为管理员的用户名
-	OwnerEmail  string    `form:"ownerEmail" json:"ownerEmail"`                     // 邀请用户做为管理员的用户邮箱
+	Name        string `form:"name" json:"name" binding:"required,gte=2,lte=32"` // 组织名称
+	Description string `form:"description" json:"description" binding:""`        // 组织描述
 }
 
 type UpdateOrganizationForm struct {
@@ -54,4 +50,14 @@ type OrganizationParam struct {
 	BaseForm
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 组织ID，swagger 参数通过 param path 指定，这里忽略
+}
+
+type InviteUserForm struct {
+	BaseForm
+
+	Id     models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`      // 组织ID
+	UserId models.Id `form:"userId" json:"userId"`                             // 用户ID，用户ID 或 用户名+邮箱必须填写一个
+	Name   string    `form:"name" json:"name" binding:""`                      // 用户名
+	Email  string    `form:"email" json:"email" binding:""`                    // 电子邮件地址
+	Role   string    `form:"role" json:"role" binding:"" enums:"admin,member"` // 受邀请用户在组织中的角色，组织管理员：admin，普通用户：member
 }

@@ -134,7 +134,7 @@ func SearchResourceAccount(c *ctx.ServiceCtx, form *forms.SearchResourceAccountF
 }
 
 func UpdateResourceAccount(c *ctx.ServiceCtx, form *forms.UpdateResourceAccountForm) (rsAccount *models.ResourceAccount, err e.Error) {
-	c.AddLogField("action", fmt.Sprintf("update rsAccount %d", form.Id))
+	c.AddLogField("action", fmt.Sprintf("update rsAccount %s", form.Id))
 	if form.Id == "" {
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
 	}
@@ -195,7 +195,7 @@ func UpdateResourceAccount(c *ctx.ServiceCtx, form *forms.UpdateResourceAccountF
 }
 
 func DeleteResourceAccount(c *ctx.ServiceCtx, form *forms.DeleteResourceAccountForm) (result interface{}, re e.Error) {
-	c.AddLogField("action", fmt.Sprintf("delete ResourceAccount %d for org %d", form.Id, c.OrgId))
+	c.AddLogField("action", fmt.Sprintf("delete ResourceAccount %s for org %s", form.Id, c.OrgId))
 
 	tx := c.Tx()
 	defer func() {
@@ -211,7 +211,7 @@ func DeleteResourceAccount(c *ctx.ServiceCtx, form *forms.DeleteResourceAccountF
 	} else if err := tx.Commit(); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	c.Logger().Infof("delete ResourceAccount %d", form.Id, " for org %d", c.OrgId, " succeed")
+	c.Logger().Infof("delete ResourceAccount %s", form.Id, " for org %s", c.OrgId, " succeed")
 
 	return
 }
