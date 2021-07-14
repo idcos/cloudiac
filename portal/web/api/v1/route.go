@@ -73,10 +73,10 @@ func Register(g *gin.RouterGroup) {
 	ctrl.Register(g.Group("tokens", ac()), &handlers.Token{})
 
 	ctrl.Register(g.Group("vcs", ac()), &handlers.Vcs{})
-	g.GET("/vcs/:id/repo/", ac(), w(handlers.Vcs{}.ListRepos))
-	g.GET("/vcs/:id/branch/", ac(), w(handlers.Vcs{}.ListBranches))
-	g.GET("/vcs/:id/tag/", ac(), w(handlers.Vcs{}.ListTags))
-	g.GET("/vcs/:id/readme/", ac(), w(handlers.Vcs{}.GetReadmeContent))
+	g.GET("/vcs/:id/repo", ac(), w(handlers.Vcs{}.ListRepos))
+	g.GET("/vcs/:id/branch", ac(), w(handlers.Vcs{}.ListBranches))
+	g.GET("/vcs/:id/tag", ac(), w(handlers.Vcs{}.ListTags))
+	g.GET("/vcs/:id/readme", ac(), w(handlers.Vcs{}.GetReadmeContent))
 	// 项目资源
 	// TODO: parse project header
 	g.Use(w(middleware.AuthProjectId))

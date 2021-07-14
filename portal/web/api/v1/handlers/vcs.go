@@ -163,7 +163,7 @@ func (Vcs) ListTags(c *ctx.GinRequestCtx) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param vcsId path string true "Vcs仓库ID"
 // @Param form query forms.GetReadmeForm true "parameter"
-// @Router /vcs/{vcsId}/readme/ [get]
+// @Router /vcs/{vcsId}/readme [get]
 // @Success 200 {object} ctx.JSONResult{result=string}
 func (Vcs) GetReadmeContent(c *ctx.GinRequestCtx) {
 	form := forms.GetReadmeForm{}
