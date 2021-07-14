@@ -104,6 +104,21 @@ const (
 	OrganizationInvalidStatus  = 9014
 	InvalidOrganizationId      = 9015
 
+	//variable
+	VariableAlreadyExists  = 11010
+	VariableNotExists      = 11011
+	VariableDisabled       = 11012
+	VariableAliasDuplicate = 11013
+	VariableInvalidStatus  = 11014
+	InvalidVariableId      = 11015
+
+	TokenAlreadyExists  = 12010
+	TokenNotExists      = 12011
+	TokenDisabled       = 12012
+	TokenAliasDuplicate = 12013
+	TokenInvalidStatus  = 12014
+	InvalidTokenId      = 12015
+
 	// project
 	ProjectAlreadyExists  = 10010
 	ProjectNotExists      = 10011
@@ -122,6 +137,8 @@ const (
 
 	// template
 	TemplateAlreadyExists = 11010
+	TemplateNotExists = 11020
+	TemplateActiveEvcExists = 11030
 
 
 	// consul
@@ -341,5 +358,8 @@ var errorMsgs = map[int]map[string]string{
 	},
 	TaskStepNotExists: {
 		"zh-cn": "步骤不存在",
+	},
+	InvalidProjectId: {
+		"zh-cn": "无效的项目id",
 	},
 }

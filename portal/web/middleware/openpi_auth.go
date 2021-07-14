@@ -22,6 +22,6 @@ func OpenApiAuth(c *ctx.GinRequestCtx) {
 		return
 	}
 	if tokens != nil {
-		c.ServiceCtx().UserId = tokens.UserId
+		c.ServiceCtx().UserId = tokens.CreatorId
 	}
 }

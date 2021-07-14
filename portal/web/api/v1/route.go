@@ -29,6 +29,7 @@ func Register(g *gin.RouterGroup) {
 			"success": true,
 		})
 	})
+
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
 
 	// TODO 增加鉴权
@@ -64,15 +65,16 @@ func Register(g *gin.RouterGroup) {
 	{
 		ctrl.Register(g.Group("projects", ac()), &handlers.Project{})
 	}
+	g.PUT("/variables/batch", ac(), w(handlers.Variable{}.BatchUpdate))
+	ctrl.Register(g.Group("variables", ac()), &handlers.Variable{})
 	// 项目资源
 	// TODO: parse project header
 	g.Use(w(middleware.AuthProjectId))
 
-	ctrl.Register(g.Group("template", ac()), &handlers.Template{})
-	g.GET("/template/overview", ac(), w(handlers.Template{}.Overview))
-	g.GET("/template/tfvars/search", ac(), w(handlers.TemplateTfvarsSearch))
-	g.GET("/template/variable", ac(), w(handlers.TemplateVariableSearch))
-	g.GET("/template/playbook", ac(), w(handlers.TemplatePlaybookSearch))
+	ctrl.Register(g.Group("templates", ac()), &handlers.Template{})
+	g.GET("/templates/tfvars", ac(), w(handlers.TemplateTfvarsSearch))
+	g.GET("/templates/variable", ac(), w(handlers.TemplateVariableSearch))
+	g.GET("/templates/playbook", ac(), w(handlers.TemplatePlaybookSearch))
 	g.GET("/template/state_list", ac(), w(handlers.Task{}.TaskStateListSearch))
 	ctrl.Register(g.Group("task", ac()), &handlers.Task{})
 	ctrl.Register(g.Group("task/comment", ac()), &handlers.TaskComment{})
@@ -86,5 +88,7 @@ func Register(g *gin.RouterGroup) {
 
 	ctrl.Register(g.Group("notification", ac()), &handlers.Notification{})
 	ctrl.Register(g.Group("resource/account", ac()), &handlers.ResourceAccount{})
+
+	ctrl.Register(g.Group("tokens", ac()), &handlers.Token{})
 
 }
