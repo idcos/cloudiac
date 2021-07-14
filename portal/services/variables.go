@@ -96,7 +96,7 @@ func CreateVariables(tx *db.Session, bq *utils.BatchSQL) e.Error {
 
 func UpdateVariable(tx *db.Session, variableId models.Id, attr map[string]interface{}) e.Error {
 	if _, err := models.UpdateAttr(tx,
-		models.Variable{TimedModel: models.TimedModel{BaseModel: models.BaseModel{Id: variableId}}}, attr); err != nil {
+		models.Variable{BaseModel: models.BaseModel{Id: variableId}}, attr); err != nil {
 		if e.IsDuplicate(err) {
 			return e.New(e.VariableAliasDuplicate)
 		}

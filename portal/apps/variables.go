@@ -43,7 +43,7 @@ func (v newVariable) Len() int {
 	return len(v)
 }
 func (v newVariable) Less(i, j int) bool {
-	return v[i].CreatedAt.Unix() < v[j].CreatedAt.Unix()
+	return v[i].Name < v[j].Name
 }
 func (v newVariable) Swap(i, j int) {
 	v[i], v[j] = v[j], v[i]
