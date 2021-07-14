@@ -18,7 +18,7 @@ type Template struct {
 // @Accept json
 // @Security AuthToken
 // @Produce json
-// @Param Iac-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param form formData forms.CreateTemplateForm true "parameter"
 // @Router /templates [post]
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
@@ -39,8 +39,9 @@ func (Template) Create(c *ctx.GinRequestCtx) {
 // @Tags 云模板
 // @Accept  json
 // @Produce  json
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-project-Id header string false "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
+// @Param form query forms.SearchTemplateForm true "parameter"
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.SearchTemplateResp}}
 // @Router /templates [get]
 func (Template) Search(c *ctx.GinRequestCtx) {
@@ -59,7 +60,7 @@ func (Template) Search(c *ctx.GinRequestCtx) {
 // @Accept  json
 // @Produce  json
 // @Param templateId path string true "云模板ID"
-// @Param data body forms.UpdateTemplateForm true "云模板信息"
+// @Param data formData forms.UpdateTemplateForm true "云模板信息"
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
 // @Router /templates/{templateId} [put]
 func (Template) Update(c *ctx.GinRequestCtx) {
@@ -68,7 +69,6 @@ func (Template) Update(c *ctx.GinRequestCtx) {
 		return
 	}
 	c.JSONResult(apps.UpdateTemplate(c.ServiceCtx(), &form))
-
 }
 
 // Delete 删除活跃云模板
@@ -79,8 +79,8 @@ func (Template) Update(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param form formData forms.DeleteUserForm true "parameter"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param form query forms.DeleteTemplateForm true "parameter"
 // @Param templateId path string true "云模板ID"
 // @Router /template/{templateId} [delete]
 // @Success 200 {object} ctx.JSONResult
@@ -99,9 +99,9 @@ func (Template) Delete(c *ctx.GinRequestCtx) {
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param templateId path string true "云模板ID"
-// @Param form formData forms.DetailTemplateForm true "parameter"
+// @Param form query forms.DetailTemplateForm true "parameter"
 // @Router /template/{templateId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
 func (Template) Detail(c *ctx.GinRequestCtx) {

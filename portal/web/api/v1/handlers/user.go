@@ -20,7 +20,7 @@ type User struct {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param form formData forms.InviteUserForm true "parameter"
 // @router /users/invite [post]
 // @Success 200 {object} ctx.JSONResult{result=apps.CreateUserResp}
@@ -40,7 +40,7 @@ func (User) InviteUser(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param form formData forms.CreateUserForm true "parameter"
 // @router /users [post]
 // @Success 200 {object} ctx.JSONResult{result=apps.CreateUserResp}
@@ -58,7 +58,7 @@ func (User) Create(c *ctx.GinRequestCtx) {
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param form query forms.SearchUserForm true "parameter"
 // @router /users [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.User}}
@@ -77,7 +77,7 @@ func (User) Search(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param userId path string true "用户ID"
 // @Param form formData forms.UpdateUserForm true "parameter"
 // @router /users/{userId} [put]
@@ -97,7 +97,7 @@ func (User) Update(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param userId path string true "用户ID"
 // @Param form formData forms.DisableUserForm true "parameter"
 // @router /users/{userId}/status [put]
@@ -134,7 +134,7 @@ func (u User) UpdateSelf(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param userId path string true "用户ID"
 // @Param form formData forms.DeleteUserForm true "parameter"
 // @router /users/{userId} [delete]

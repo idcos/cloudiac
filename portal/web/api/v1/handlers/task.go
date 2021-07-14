@@ -18,8 +18,8 @@ type Task struct {
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string true "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
 // @Param form query forms.SearchTaskForm true "parameter"
 // @router /tasks [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Task}}
@@ -38,8 +38,8 @@ func (Task) Search(c *ctx.GinRequestCtx) {
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string true "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
 // @Param taskId path string true "任务ID"
 // @router /tasks/{taskId} [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
@@ -57,8 +57,8 @@ func (Task) Detail(c *ctx.GinRequestCtx) {
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string true "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
 // @Param taskId path string true "任务ID"
 // @router /tasks/{taskId}/log/sse [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
@@ -77,8 +77,8 @@ func (Task) FollowLogSse(c *ctx.GinRequestCtx) {
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string true "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
 // @Param taskId path string true "任务ID"
 // @Param form formData forms.ApproveTaskForm true "parameter"
 // @router /tasks/{taskId}/approve [post]
@@ -97,8 +97,8 @@ func (Task) TaskApprove(c *ctx.GinRequestCtx) {
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string true "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
 // @Param taskId path string true "任务ID"
 // @router /tasks/{taskId}/log [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
@@ -117,8 +117,8 @@ func (Task) Log(c *ctx.GinRequestCtx) {
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string true "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
 // @Param taskId path string true "任务ID"
 // @router /tasks/{taskId}/output [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}

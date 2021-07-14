@@ -191,7 +191,7 @@ func (Organization) UpdateUserOrgRel(c *ctx.GinRequestCtx) {
 // @Produce json
 // @Security AuthToken
 // @Param orgId path string true "组织ID"
-// @Param Iac-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param form query forms.SearchUserForm true "parameter"
 // @router /orgs/{orgId}/users [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.User}}

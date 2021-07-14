@@ -17,8 +17,8 @@ type Variable struct {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string false "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
 // @Param form body forms.BatchUpdateVariableForm true "parameter"
 // @router /variables/batch [put]
 // @Success 200 {object} ctx.JSONResult{result=models.Variable}
@@ -36,8 +36,8 @@ func (Variable) BatchUpdate(c *ctx.GinRequestCtx) {
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string false "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
 // @Param form query forms.SearchVariableForm true "parameter"
 // @router /variables [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Variable}}

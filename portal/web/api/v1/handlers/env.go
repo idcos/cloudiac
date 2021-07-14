@@ -18,8 +18,8 @@ type Env struct {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string true "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
 // @Param json body forms.CreateEnvForm true "环境参数"
 // @router /envs [post]
 // @Success 200 {object} ctx.JSONResult{result=models.Env}
@@ -37,8 +37,8 @@ func (Env) Create(c *ctx.GinRequestCtx) {
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string true "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
 // @Param form query forms.SearchEnvForm true "parameter"
 // @router /envs [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.EnvDetail}}
@@ -57,8 +57,8 @@ func (Env) Search(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string true "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
 // @Param form formData forms.UpdateEnvForm true "parameter"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId} [put]
@@ -77,8 +77,8 @@ func (Env) Update(c *ctx.GinRequestCtx) {
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string true "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.EnvDetail}
@@ -97,8 +97,8 @@ func (Env) Detail(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string true "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
 // @Param form formData forms.ArchiveEnvForm true "parameter"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/archive [put]
@@ -118,8 +118,8 @@ func (Env) Archive(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string true "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
 // @Param form formData forms.DeployEnvForm true "parameter"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/deploy [post]
@@ -139,8 +139,8 @@ func (Env) Deploy(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string true "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
 // @Param form formData forms.DestroyEnvForm true "parameter"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/destroy [post]
@@ -161,8 +161,8 @@ func (Env) Destroy(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string true "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
 // @Param form query forms.SearchEnvResourceForm true "parameter"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/resources [get]
@@ -182,8 +182,8 @@ func (Env) SearchResources(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string true "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
 // @Param form formData forms.SearchEnvVariableForm true "parameter"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/variables [get]
@@ -202,8 +202,8 @@ func (Env) SearchVariables(c *ctx.GinRequestCtx) {
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string true "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
 // @Param envId path string true "环境ID"
 // @Param form query forms.SearchEnvTasksForm true "parameter"
 // @router /envs/{envId}/tasks [get]
@@ -223,8 +223,8 @@ func (Env) SearchTasks(c *ctx.GinRequestCtx) {
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
-// @Param Iac-Project-Id header string true "项目ID"
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/tasks/last [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}

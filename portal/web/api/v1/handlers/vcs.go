@@ -18,7 +18,7 @@ type Vcs struct {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param form formData forms.CreateVcsForm true "parameter"
 // @Router /vcs [post]
 // @Success 200 {object} ctx.JSONResult
@@ -37,7 +37,7 @@ func (Vcs) Create(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param Iac-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param form query forms.SearchVcsForm true "parameter"
 // @Router /vcs [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Vcs}}
@@ -57,6 +57,7 @@ func (Vcs) Search(c *ctx.GinRequestCtx) {
 // @Produce json
 // @Security AuthToken
 // @Param form formData forms.UpdateVcsForm true "parameter"
+// @Param vcsId path string true "Vcs仓库ID"
 // @Router /vcs/{vcsId} [put]
 // @Success 200 {object} ctx.JSONResult{result=models.Vcs}
 func (Vcs) Update(c *ctx.GinRequestCtx) {
@@ -75,7 +76,7 @@ func (Vcs) Update(c *ctx.GinRequestCtx) {
 // @Produce json
 // @Security AuthToken
 // @Param form formData forms.DeleteVcsForm true "patameter"
-// @Param vcsId path string true "vcs的Id"
+// @Param vcsId path string true "vcs仓库Id"
 // @Router /vcs/{vcsId} [delete]
 // @Success 200 {object} ctx.JSONResult
 func (Vcs) Delete(c *ctx.GinRequestCtx) {

@@ -19,7 +19,6 @@ func CreateVcs(c *ctx.ServiceCtx, form *forms.CreateVcsForm) (interface{}, e.Err
 		OrgId:    c.OrgId,
 		Name:     form.Name,
 		VcsType:  form.VcsType,
-		Status:   form.Status,
 		Address:  form.Address,
 		VcsToken: form.VcsToken,
 	})
@@ -148,7 +147,7 @@ func listRepoRevision(c *ctx.ServiceCtx, form *forms.GetGitRevisionForm, revisio
 		return nil, e.New(e.GitLabError, er)
 	}
 	var revisionList []string
-	if revisionType == "tags"{
+	if revisionType == "tags" {
 		revisionList, er = repo.ListTags()
 	} else if revisionType == "branches" {
 		revisionList, er = repo.ListBranches()

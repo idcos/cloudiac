@@ -51,12 +51,12 @@ type UpdateTemplateForm struct {
 
 type DeleteTemplateForm struct {
 	BaseForm
-	Id models.Id `form:"id" json:"id" binding:"required"`
+	Id models.Id `uri:"id" json:"id" binding:"required" swaggerignore:"true"`
 }
 
 type DetailTemplateForm struct {
 	BaseForm
-	Id models.Id `form:"id" json:"id" binding:"required"`
+	Id models.Id `uri:"id" json:"id" binding:"required" swaggerignore:"true"`
 }
 
 type OpenApiDetailTemplateForm struct {

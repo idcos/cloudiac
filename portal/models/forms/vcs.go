@@ -8,12 +8,11 @@ type CreateVcsForm struct {
 	VcsType  string `form:"vcsType" json:"vcsType" binding:"required"`
 	Address  string `form:"address" json:"address" binding:"required"`
 	VcsToken string `form:"vcsToken" json:"vcsToken" binding:"required"`
-	Status   string `form:"status" json:"status" binding:"required"`
 }
 
 type UpdateVcsForm struct {
 	BaseForm
-	Id       models.Id `form:"id" json:"id" binding:""`
+	Id       models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`
 	Status   string    `form:"status" json:"status" binding:""`
 	Name     string    `form:"name" json:"name" binding:""`
 	VcsType  string    `form:"vcsType" json:"vcsType" binding:""`
@@ -29,7 +28,7 @@ type SearchVcsForm struct {
 
 type DeleteVcsForm struct {
 	BaseForm
-	Id models.Id `form:"id" json:"id" binding:"required"`
+	Id models.Id `uri:"id" json:"id" binding:"required" swaggerignore:"true"`
 }
 
 type GetGitProjectsForm struct {
