@@ -415,8 +415,17 @@ func SearchEnvResources(c *ctx.ServiceCtx, form *forms.SearchEnvResourceForm) (i
 	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
+
+	env, err := services.GetEnvById(c.DB(), form.Id)
+	if err != nil && err.Code() != e.EnvNotExists {
+		return nil, e.New(err.Code(), err, http.StatusNotFound)
+	} else if err != nil {
+		c.Logger().Errorf("error get env, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
 	query := c.DB().Model(models.Resource{}).Where("org_id = ? AND project_id = ? AND env_id = ?",
-		c.OrgId, c.ProjectId, form.Id)
+		c.OrgId, c.ProjectId, form.Id, env.LastTaskId)
 
 	if form.HasKey("q") {
 		// 支持对 provider / type / name 进行模糊查询
