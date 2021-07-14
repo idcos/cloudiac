@@ -70,6 +70,9 @@ const (
 	VarTypeEnv       = "environment"
 	VarTypeTerraform = "terraform"
 	VarTypeAnsible   = "ansible"
+
+	TokenApi     = "api"     //token类型
+	TokenTrigger = "trigger" //token类型
 )
 
 var (

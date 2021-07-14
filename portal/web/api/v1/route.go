@@ -31,6 +31,7 @@ func Register(g *gin.RouterGroup) {
 			"success": true,
 		})
 	})
+
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
 
 	// TODO 增加鉴权
@@ -67,6 +68,8 @@ func Register(g *gin.RouterGroup) {
 	{
 		ctrl.Register(g.Group("projects", ac()), &handlers.Project{})
 	}
+	g.PUT("/variables/batch", ac(), w(handlers.Variable{}.BatchUpdate))
+	ctrl.Register(g.Group("variables", ac()), &handlers.Variable{})
 	// 项目资源
 	// TODO: parse project header
 	g.Use(w(middleware.AuthProjectId))
@@ -100,5 +103,7 @@ func Register(g *gin.RouterGroup) {
 
 	ctrl.Register(g.Group("notification", ac()), &handlers.Notification{})
 	ctrl.Register(g.Group("resource/account", ac()), &handlers.ResourceAccount{})
+
+	ctrl.Register(g.Group("tokens", ac()), &handlers.Token{})
 
 }
