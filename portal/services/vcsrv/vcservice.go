@@ -39,6 +39,7 @@ type VcsIface interface {
 type RepoIface interface {
 	// ListBranches 获取分支列表
 	ListBranches() ([]string, error)
+	ListTags() ([]string, error)
 
 	// BranchCommitId
 	//param branch: 分支
