@@ -71,3 +71,12 @@ func GetProjectsByOrg(tx *db.Session, orgId models.Id) ([]models.Id, e.Error) {
 	}
 	return ids, nil
 }
+
+// GetProjectRoleByUser 获取用户在项目中的角色
+func GetProjectRoleByUser(tx *db.Session, projectId models.Id, userId models.Id) (string, e.Error) {
+	var role string
+	if err := tx.Model(models.UserProject{}).Where("user_id = ? AND project_id = ?", projectId, userId).Find(&role); err != nil {
+		return "", e.AutoNew(err, e.DBError)
+	}
+	return role, nil
+}

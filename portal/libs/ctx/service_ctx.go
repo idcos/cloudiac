@@ -191,7 +191,7 @@ func (c *ServiceCtx) RestrictProject(query *db.Session, m models.Modeler) *db.Se
 		} else {
 			// 如果带 orgId，如果是组织管理员，访问组织内所有 project
 			// FIXME: 是否解析出了 role ?
-			if c.Role == consts.OrgRoleOwner {
+			if c.Role == consts.OrgRoleAdmin {
 				// 组织管理员，查询组织所有项目
 				subQ := c.DB().Model(models.Project{}).Select("id").Where("org_id = ?", c.OrgId)
 				query = query.Where(fmt.Sprintf("%s.project_id in (?)", m.TableName()), subQ.Expr())

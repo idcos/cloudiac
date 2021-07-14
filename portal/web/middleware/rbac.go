@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
@@ -73,22 +74,28 @@ func AccessControl(args ...string) gin.HandlerFunc {
 		}
 
 		// 获取用户组织角色
-		if c.ServiceCtx().Role == "" && obj == "orgs" && c.Param("id") != "" { // 通过 path 获取组织角色
+		c.Logger().Errorf("role %s[%s], para %s, res %s", c.ServiceCtx().Role, c.ServiceCtx().ProjectRole, c.Param("id"), res)
+		if c.ServiceCtx().Role == "" && res == "orgs" && c.Param("id") != "" { // 通过 path 获取组织角色
 			orgId := models.Id(c.Param("id"))
 			userOrgRel, err := services.FindUsersOrgRel(c.ServiceCtx().DB(), c.ServiceCtx().UserId, orgId)
 			if err == nil && len(userOrgRel) > 0 {
 				c.ServiceCtx().Role = userOrgRel[0].Role
 				c.ServiceCtx().OrgId = orgId
 			}
+			if c.ServiceCtx().IsSuperAdmin == true {
+				c.ServiceCtx().Role = consts.OrgRoleRoot
+			}
 		}
-		if c.ServiceCtx().ProjectRole == "" && obj == "projects" && c.Param("id") != "" { // 通过 path 获取项目角色
+		if c.ServiceCtx().ProjectRole == "" && res == "projects" && c.Param("id") != "" { // 通过 path 获取项目角色
 			projectId := models.Id(c.Param("id"))
-			// TODO: 获取项目角色
-			//userOrgRel, err := services.FindUsersOrgRel(c.ServiceCtx().DB(), c.ServiceCtx().UserId, orgId)
-			//if err == nil && len(userOrgRel) > 0 {
-			//	c.ServiceCtx().ProjectRole = userOrgRel[0].Role
-			c.ServiceCtx().ProjectId = projectId
-			//}
+			role, err := services.GetProjectRoleByUser(c.ServiceCtx().DB(), projectId, c.ServiceCtx().UserId)
+			if err == nil && role != "" {
+				c.ServiceCtx().ProjectRole = role
+				c.ServiceCtx().ProjectId = projectId
+			}
+			if c.ServiceCtx().IsSuperAdmin == true {
+				c.ServiceCtx().ProjectRole = consts.ProjectRoleOwner
+			}
 		}
 
 		role := c.ServiceCtx().Role
@@ -127,7 +134,7 @@ func AccessControl(args ...string) gin.HandlerFunc {
 		if allow {
 			c.Next()
 		} else {
-			c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("%s,%s deined to %s %s", role, proj, action, object)), http.StatusForbidden)
+			c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("%s,%s not allowed to %s %s", role, proj, action, object)), http.StatusForbidden)
 		}
 	}
 }

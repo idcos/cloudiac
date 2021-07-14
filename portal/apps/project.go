@@ -98,7 +98,7 @@ func UpdateProject(c *ctx.ServiceCtx, form *forms.UpdateProjectForm) (interface{
 	}()
 
 	//校验用户是否在该项目下有权限
-	isExist := IsUserOrgProjectPermission(tx, c.UserId, form.Id, consts.OrgRoleOwner)
+	isExist := IsUserOrgProjectPermission(tx, c.UserId, form.Id, consts.OrgRoleAdmin)
 	if !isExist {
 		return nil, e.New(e.ObjectNotExistsOrNoPerm, http.StatusForbidden, errors.New("not permission"))
 	}
@@ -185,7 +185,7 @@ func DetailProject(c *ctx.ServiceCtx, form *forms.DetailProjectForm) (interface{
 		}
 	}()
 	//校验用户是否在该项目下有权限
-	isExist := IsUserOrgProjectPermission(tx, c.UserId, form.Id, consts.OrgRoleOwner)
+	isExist := IsUserOrgProjectPermission(tx, c.UserId, form.Id, consts.OrgRoleAdmin)
 
 	if !isExist {
 		return nil, e.New(e.ObjectNotExistsOrNoPerm, http.StatusForbidden, errors.New("not permission"))
