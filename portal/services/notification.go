@@ -14,7 +14,7 @@ type NotificationResp struct {
 	EventType string    `json:"eventType"`
 }
 
-func ListNotificationCfgs(tx *db.Session, orgId models.Id) (interface{}, error) {
+func SearchNotification(tx *db.Session, orgId models.Id) (interface{}, error) {
 	users := make([]*NotificationResp, 0)
 	err := tx.Table(models.User{}.TableName()).
 		Select(fmt.Sprintf("%s.name, %s.email, n.id, n.event_type", models.User{}.TableName(), models.User{}.TableName())).
