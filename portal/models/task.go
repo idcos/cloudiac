@@ -227,7 +227,7 @@ func (s *TaskStep) IsStarted() bool {
 }
 
 func (s *TaskStep) IsExited() bool {
-	return utils.StrInArray(s.Status, TaskStepRejected, TaskStepCommand, TaskStepFailed, TaskStepTimeout)
+	return utils.StrInArray(s.Status, TaskStepRejected, TaskStepComplete, TaskStepFailed, TaskStepTimeout)
 }
 
 func (s *TaskStep) IsApproved() bool {

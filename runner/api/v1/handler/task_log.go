@@ -19,7 +19,7 @@ import (
 
 // TaskLogFollow 读取 task log 并 follow, 直到任务退出
 func TaskLogFollow(c *ctx.Context) {
-	req := runner.TaskStatusReq{}
+	req := runner.TaskLogReq{}
 	if err := c.BindQuery(&req); err != nil {
 		c.Error(err, http.StatusBadRequest)
 		return
