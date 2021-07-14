@@ -72,7 +72,7 @@ type Task struct {
 	EnvId     Id `json:"envId" gorm:"size:32;not null"`     // 环境ID
 
 	Name      string `json:"name" gorm:"not null;comment:'任务名称'"`                              // 任务名称
-	CreatorId Id     `json:"size:32;creatorId"`                                                // 创建人ID
+	CreatorId Id     `json:"creatorId" gorm:"size:32;not null"`                                // 创建人ID
 	RunnerId  string `json:"runnerId" gorm:"not null"`                                         // 部署通道
 	CommitId  string `json:"commitId" gorm:"not null"`                                         // 版本 commit ID
 	Timeout   int    `json:"timeout" gorm:"default:'600';comment:'执行超时'"`                      // 超时时间（单位：秒）

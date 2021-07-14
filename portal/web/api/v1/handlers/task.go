@@ -127,5 +127,5 @@ func (Task) Output(c *ctx.GinRequestCtx) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.TaskDetail(c.ServiceCtx(), form))
+	c.JSONResult(apps.TaskOutput(c.ServiceCtx(), form))
 }

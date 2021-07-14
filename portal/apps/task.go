@@ -129,7 +129,7 @@ func ApproveTask(c *ctx.ServiceCtx, form *forms.ApproveTaskForm) (interface{}, e
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
-	if task.Status != models.TaskPending {
+	if task.Status != models.TaskApproving {
 		return nil, e.New(e.TaskApproveNotPending, http.StatusBadRequest)
 	}
 
@@ -167,4 +167,31 @@ func FollowTaskLog(c *ctx.ServiceCtx, form forms.DetailTaskForm) e.Error {
 
 	// TODO: 获取日志
 	return nil
+}
+
+// TaskOutput 任务Output信息详情
+func TaskOutput(c *ctx.ServiceCtx, form forms.DetailTaskForm) (interface{}, e.Error) {
+	taskIds, er := services.GetOrgIdsByUser(c.DB(), c.UserId)
+	if er != nil {
+		c.Logger().Errorf("error get task id by user, err %s", er)
+		return nil, e.New(e.DBError, er)
+	}
+	if form.Id.InArray(taskIds...) == false && c.IsSuperAdmin == false {
+		// 请求了一个不存在的 task，因为 task id 是在 path 传入，这里我们返回 404
+		return nil, e.New(e.TaskNotExists, http.StatusNotFound)
+	}
+
+	var (
+		task *models.Task
+		err  e.Error
+	)
+	task, err = services.GetTaskById(c.DB(), form.Id)
+	if err != nil && err.Code() == e.TaskNotExists {
+		return nil, e.New(e.TaskNotExists, err, http.StatusNotFound)
+	} else if err != nil {
+		c.Logger().Errorf("error get task by id, err %s", err)
+		return nil, e.New(e.DBError, err)
+	}
+
+	return task.Result.Outputs, nil
 }

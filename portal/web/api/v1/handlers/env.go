@@ -166,7 +166,7 @@ func (Env) Destroy(c *ctx.GinRequestCtx) {
 // @Param form query forms.SearchEnvResourceForm true "parameter"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/resources [get]
-// @Success 200 {object} ctx.JSONResult{result=models.EnvRes}
+// @Success 200 {object} ctx.JSONResult{result=models.Resource}
 func (Env) SearchResources(c *ctx.GinRequestCtx) {
 	form := forms.SearchEnvResourceForm{}
 	if err := c.Bind(&form); err != nil {
@@ -187,7 +187,7 @@ func (Env) SearchResources(c *ctx.GinRequestCtx) {
 // @Param form formData forms.SearchEnvVariableForm true "parameter"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/variables [get]
-// @Success 200 {object} ctx.JSONResult{result=models.EnvRes}
+// @Success 200 {object} ctx.JSONResult{result=models.Resource}
 func (Env) SearchVariables(c *ctx.GinRequestCtx) {
 	form := forms.SearchEnvVariableForm{}
 	if err := c.Bind(&form); err != nil {

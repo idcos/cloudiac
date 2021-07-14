@@ -37,7 +37,6 @@ type Env struct {
 	Deploying  bool   `json:"deploying" gorm:"not null;default:'0';common:'是否正在执行部署'"` // 是否正在执行部署
 
 	StatePath string `json:"statePath" gorm:"not null" swaggerignore:"true"` // Terraform tfstate 文件路径（内部）
-	Outputs   string `json:"outputs" gorm:"type:text" swaggerignore:"true"`  // Terraform outputs 输出内容
 
 	// 环境可以覆盖模板中的 vars file 配置，具体说明见 Template model
 	Variables    []VariableBody `json:"variables" gorm:"json"`          // 合并变量列表

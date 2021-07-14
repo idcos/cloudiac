@@ -415,22 +415,22 @@ func SearchEnvResources(c *ctx.ServiceCtx, form *forms.SearchEnvResourceForm) (i
 	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
-	query := c.DB().Model(models.EnvRes{}).Where("org_id = ? AND project_id = ? AND env_id = ?",
+	query := c.DB().Model(models.Resource{}).Where("org_id = ? AND project_id = ? AND env_id = ?",
 		c.OrgId, c.ProjectId, form.Id)
 
 	if form.HasKey("q") {
 		// 支持对 provider / type / name 进行模糊查询
 		query = query.Where("provider LIKE ? OR type LIKE ? OR name LIKE ?",
-			fmt.Sprintf("?%s?", form.Q),
-			fmt.Sprintf("?%s?", form.Q),
-			fmt.Sprintf("?%s?", form.Q))
+			fmt.Sprintf("%%%s%%", form.Q),
+			fmt.Sprintf("%%%s%%", form.Q),
+			fmt.Sprintf("%%%s%%", form.Q))
 	}
 
 	if form.SortField() == "" {
 		query = query.Order("provider, type, name")
 	}
 
-	return getPage(query, form, &models.EnvRes{})
+	return getPage(query, form, &models.Resource{})
 }
 
 // SearchEnvVariables 查询环境变量列表

@@ -73,7 +73,7 @@ func QueryEnvDetail(query *db.Session) *db.Session {
 	query = query.Joins("left join iac_user as u on u.id = iac_env.creator_id").
 		LazySelectAppend("u.name as creator,iac_env.*")
 	// 资源数量统计
-	query = query.Joins("left join (select count(*) as resource_count, env_id from iac_env_res group by env_id) as r on r.env_id = iac_env.id").
+	query = query.Joins("left join (select count(*) as resource_count, env_id from iac_resource group by env_id) as r on r.env_id = iac_env.id").
 		LazySelectAppend("r.resource_count, iac_env.*")
 
 	return query

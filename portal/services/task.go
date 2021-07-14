@@ -97,25 +97,6 @@ func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e
 	return &task, nil
 }
 
-func createTaskStep(tx *db.Session, task models.Task, stepBody models.TaskStepBody, index int) (*models.TaskStep, e.Error) {
-	s := models.TaskStep{
-		TaskStepBody: stepBody,
-		OrgId:        task.OrgId,
-		ProjectId:    task.ProjectId,
-		TaskId:       task.Id,
-		Index:        index,
-		Status:       models.TaskStepPending,
-		Message:      "",
-	}
-	s.Id = models.NewId("step")
-	s.LogPath = s.GenLogPath()
-
-	if _, err := tx.Save(&s); err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-	return &s, nil
-}
-
 func GetTaskById(tx *db.Session, id models.Id) (*models.Task, e.Error) {
 	o := models.Task{}
 	if err := tx.Where("id = ?", id).First(&o); err != nil {
@@ -225,7 +206,7 @@ func UnmarshalStateJson(bs []byte) (*TfState, error) {
 }
 
 func SaveTaskResources(tx *db.Session, task *models.Task, tfRes []TfStateResource) error {
-	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.EnvRes{}.TableName(),
+	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Resource{}.TableName(),
 		"id", "org_id", "project_id", "env_id", "task_id",
 		"provider", "type", "name", "index", "attrs")
 

@@ -188,7 +188,7 @@ func Init(migrate bool) {
 	autoMigrate(&Vcs{}, sess)
 	autoMigrate(&Template{}, sess)
 	autoMigrate(&Env{}, sess)
-	autoMigrate(&EnvRes{}, sess)
+	autoMigrate(&Resource{}, sess)
 
 	autoMigrate(&Variable{}, sess)
 
