@@ -90,14 +90,3 @@ func GetTemplate(sess *db.Session, id models.Id) (*models.Template, error) {
 	err := sess.Where("id = ?", id).Find(&tpl)
 	return &tpl, err
 }
-
-func GetTemplateById(tx *db.Session, id models.Id) (*models.Template, e.Error) {
-	o := models.Template{}
-	if err := tx.Where("id = ?", id).First(&o); err != nil {
-		if e.IsRecordNotFound(err) {
-			return nil, e.New(e.TemplateNotExists, err)
-		}
-		return nil, e.New(e.DBError, err)
-	}
-	return &o, nil
-}

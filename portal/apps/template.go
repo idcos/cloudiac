@@ -47,10 +47,10 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 			RepoId:       form.RepoId,
 			RepoAddr:     form.RepoAddr,
 			RepoRevision: form.RepoRevision,
-			Status:       form.Status,
 			CreatorId:    c.UserId,
 			Workdir:      form.Workdir,
 			Playbook:     form.Playbook,
+			PlayVarsFile: form.PlayVarsFile,
 			TfVarsFile:   form.TfVarsFile,
 		}
 		template, err = services.CreateTemplate(tx, tpl)
@@ -82,7 +82,7 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 	if err != nil {
 		return nil, e.New(e.DBError, err, e.TemplateNotExists)
 	}
-	// 根据云模版ID, 组织ID查询该云模版是否属于该组织
+	// 根据云模板ID, 组织ID查询该云模板是否属于该组织
 	if tpl.OrgId != c.OrgId {
 		return nil, e.New(e.TemplateNotExists, http.StatusForbidden, fmt.Errorf("The organization does not have permission to delete the current template"))
 	}
@@ -107,8 +107,11 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 	if form.HasKey("workdir") {
 		attrs["workdir"] = form.Workdir
 	}
-	if form.HasKey("varfile") {
+	if form.HasKey("tfVarsFile") {
 		attrs["tfVarsFile"] = form.TfVarsFile
+	}
+	if form.HasKey("playVarsFile") {
+		attrs["playVarsFile"] = form.PlayVarsFile
 	}
 
 	return services.UpdateTemplate(c.DB(), form.Id, attrs)
@@ -123,7 +126,7 @@ func DelateTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interfac
 			panic(r)
 		}
 	}()
-	// 根据ID 查询云模版是否存在
+	// 根据ID 查询云模板是否存在
 	tpl, err := services.GetTemplateById(tx, form.Id)
 	if err != nil && err.Code() == e.TemplateNotExists {
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
@@ -131,7 +134,7 @@ func DelateTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interfac
 		c.Logger().Errorf("error get template by id, err %v", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
-	// 根据云模版ID, 组织ID查询该云模版是否属于该组织
+	// 根据云模板ID, 组织ID查询该云模板是否属于该组织
 	if tpl.OrgId != c.OrgId {
 		return nil, e.New(e.TemplateNotExists, http.StatusForbidden, fmt.Errorf("The organization does not have permission to delete the current template"))
 	}
@@ -146,7 +149,7 @@ func DelateTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interfac
 			return nil, e.New(e.TemplateActiveEnvExists, http.StatusForbidden, fmt.Errorf("The cloud template cannot be deleted because there is an active environment"))
 		}
 	}
-	// 根据ID 删除云模版
+	// 根据ID 删除云模板
 	if err := services.DeleteTemplate(tx, tpl.Id); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error commit del template, err %s", err)

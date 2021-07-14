@@ -18,6 +18,7 @@ require (
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-sql-driver/mysql v1.5.0
+	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/gomodule/redigo v1.8.4
 	github.com/gorilla/mux v1.8.0 // indirect

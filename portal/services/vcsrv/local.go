@@ -115,6 +115,25 @@ func (l *LocalRepo) ListBranches() ([]string, error) {
 	return branches, nil
 }
 
+func (l *LocalRepo) ListTags() ([]string, error) {
+	refs, err := l.repo.Tags()
+	if err != nil {
+		return nil, err
+	}
+	defer refs.Close()
+	tags := make([]string, 0)
+	err = refs.ForEach(func(ref *plumbing.Reference) error {
+		tags = append(tags, filepath.Base(ref.Name().String()))
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return tags, nil
+
+}
+
+
 func (l *LocalRepo) BranchCommitId(branch string) (string, error) {
 	hash, err := l.repo.ResolveRevision(plumbing.Revision(branch))
 	if err != nil {

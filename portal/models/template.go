@@ -5,10 +5,10 @@ import "cloudiac/portal/libs/db"
 type Template struct {
 	SoftDeleteModel
 
-	Name         string `json:"name" gorm:"not null;comment:'模版名称'" example:"yunji_example"`
+	Name         string `json:"name" gorm:"not null;comment:'模板名称'" example:"yunji_example"`
 	TplType      string `json:"tplType" gorm:"not null;comment:'云模板类型(aliyun，VMware等)'" example:"aliyun"`
 	OrgId        Id     `json:"orgId" gorm:"size:32;not null" example:"a1f79e8a-744d-4ea5-8d97-7e4b7b422a6c"`
-	Description  string `json:"description" gorm:"type:text" example:"云霁阿里云模版"`
+	Description  string `json:"description" gorm:"type:text" example:"云霁阿里云模板"`
 	VcsId        Id     `json:"vcsId" gorm:"size:32;not null" example:"a1f79e8a-744d-4ea5-8d97-7e4b7b422a6c"`
 	RepoId       string `json:"repoId" gorm:"not null"`
 	RepoAddr     string `json:"repoAddr" gorm:"not null" example:"https://github.com/"` // RepoAddr 可以为相对路径，以支持修改 vcs 的地址
@@ -17,10 +17,10 @@ type Template struct {
 	Status       string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'状态'"`
 	CreatorId    Id     `json:"creatorId" gorm:"size:32;not null;comment:'创建人'"`
 	Workdir      string `json:"workdir" gorm:"default:''" example:"/user/local/yunji"` // 是基于项目根目录的相对路径, 默认为项目根目录
+	TfVarsFile   string `json:"tfVarsFile" gorm:"default:''"`                          // Terraform 变量文件路径
 	// 要执行的 ansible playbook 文件(相对于 workdir 的路径)
-	TfVarsFile string `json:"tfVarsFile" gorm:"default:''"`
-	// 要执行的 ansible playbook 文件(相对于 workdir 的路径)
-	Playbook   string `json:"playbook" gorm:"default:''" example:"ansbile/playbook.yml"`
+	Playbook     string `json:"playbook" gorm:"default:''" example:"ansbile/playbook.yml"`
+	PlayVarsFile string `json:"playVarsFile" gorm:"default:''"` // Ansible 变量文件路径
 }
 
 func (Template) TableName() string {

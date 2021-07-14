@@ -7,6 +7,7 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"cloudiac/utils"
 	"fmt"
 	"net/http"
 )
@@ -40,7 +41,7 @@ func SearchToken(c *ctx.ServiceCtx, form *forms.SearchTokenForm) (interface{}, e
 func CreateToken(c *ctx.ServiceCtx, form *forms.CreateTokenForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create token for user %s", c.UserId))
 
-	tokenStr := models.NewId("")
+	tokenStr, _ := utils.GetUUID()
 	token, err := services.CreateToken(c.DB().Debug(), models.Token{
 		Key:         string(tokenStr),
 		Type:        form.Type,

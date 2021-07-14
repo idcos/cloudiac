@@ -42,9 +42,11 @@ func OperationVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id
 		"id", "scope", "type", "name", "value", "sensitive", "description", "org_id", "project_id", "tpl_id", "env_id")
 	for _, v := range variables {
 		var value string
+		// 当需要加密时，判定加密的数据是否为空
 		if v.Sensitive && v.Value != "" {
 			value, _ = utils.AesEncrypt(v.Value)
 		}
+		// 当value为空， 判定是否需要加密
 		if v.Value == "" && v.Sensitive {
 			value = v.Value
 		}

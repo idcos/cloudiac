@@ -65,16 +65,16 @@ func Register(g *gin.RouterGroup) {
 	g.PUT("/users/:id/status", ac(), w(handlers.User{}.ChangeUserStatus))
 	g.POST("/users/:id/password/reset", ac(), w(handlers.User{}.PasswordReset))
 	//项目管理
-	{
-		ctrl.Register(g.Group("projects", ac()), &handlers.Project{})
-	}
+	ctrl.Register(g.Group("projects", ac()), &handlers.Project{})
+	//变量管理
 	g.PUT("/variables/batch", ac(), w(handlers.Variable{}.BatchUpdate))
 	ctrl.Register(g.Group("variables", ac()), &handlers.Variable{})
+	//token管理
+	ctrl.Register(g.Group("tokens", ac()), &handlers.Token{})
 	// 项目资源
 	// TODO: parse project header
 	g.Use(w(middleware.AuthProjectId))
 
-	ctrl.Register(g.Group("variables", ac()), &handlers.Template{})
 	ctrl.Register(g.Group("envs", ac()), &handlers.Env{})
 	g.PUT("/envs/:id/archive", ac(), w(handlers.Env{}.Archive))
 	g.GET("/envs/:id/tasks", ac(), w(handlers.Env{}.SearchTasks))
@@ -90,20 +90,17 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/tasks/:id/output", ac(), w(handlers.Task{}.Output))
 	g.POST("/tasks/:id/approve", ac("tasks", "approve"), w(handlers.Task{}.TaskApprove))
 
-	ctrl.Register(g.Group("template", ac()), &handlers.Template{})
-	g.GET("/template/overview", ac(), w(handlers.Template{}.Overview))
-	g.GET("/template/tfvars/search", ac(), w(handlers.TemplateTfvarsSearch))
-	g.GET("/template/variable/search", ac(), w(handlers.TemplateVariableSearch))
-	g.GET("/template/playbook/search", ac(), w(handlers.TemplatePlaybookSearch))
+	ctrl.Register(g.Group("templates", ac()), &handlers.Template{})
+	g.GET("/templates/tfvars", ac(), w(handlers.TemplateTfvarsSearch))
+	g.GET("/templates/variable", ac(), w(handlers.TemplateVariableSearch))
+	g.GET("/templates/playbook", ac(), w(handlers.TemplatePlaybookSearch))
 
 	ctrl.Register(g.Group("vcs", ac()), &handlers.Vcs{})
-	g.GET("/vcs/repo/search", ac(), w(handlers.Vcs{}.ListRepos))
-	g.GET("/vcs/branch/search", ac(), w(handlers.Vcs{}.ListBranches))
+	g.GET("/vcs/repo", ac(), w(handlers.Vcs{}.ListRepos))
+	g.GET("/vcs/branch", ac(), w(handlers.Vcs{}.ListBranches))
+	g.GET("/vcs/tag", ac(), w(handlers.Vcs{}.ListTags))
 	g.GET("/vcs/readme", ac(), w(handlers.Vcs{}.GetReadmeContent))
 
 	ctrl.Register(g.Group("notification", ac()), &handlers.Notification{})
 	ctrl.Register(g.Group("resource/account", ac()), &handlers.ResourceAccount{})
-
-	ctrl.Register(g.Group("tokens", ac()), &handlers.Token{})
-
 }

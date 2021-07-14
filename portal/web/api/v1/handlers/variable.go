@@ -14,7 +14,6 @@ type Variable struct {
 // BatchUpdate 批量修改变量
 // @Tags 变量
 // @Summary 批量修改变量
-// @Accept multipart/form-data
 // @Accept json
 // @Produce json
 // @Security AuthToken
