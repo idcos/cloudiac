@@ -127,8 +127,9 @@ const (
 	ProjectInvalidStatus  = 10014
 	ProjectIdInvalid      = 10014
 
-	// gitlib
-	GitLabError = 9100
+	// vcs
+	VcsError = 9100
+	VcsNotExists = 9200
 
 	// task
 	TaskAlreadyExists     = 10010

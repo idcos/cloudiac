@@ -12,6 +12,9 @@ import (
 )
 
 func CreateVcs(tx *db.Session, vcs models.Vcs) (*models.Vcs, e.Error) {
+	if vcs.Id == "" {
+		vcs.Id = models.NewId("v")
+	}
 	if err := models.Create(tx, &vcs); err != nil {
 		return nil, e.New(e.DBError, err)
 	}

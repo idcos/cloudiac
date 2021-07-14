@@ -51,11 +51,11 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 	}
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er, http.StatusInternalServerError)
+		return nil, e.New(e.VcsError, er, http.StatusInternalServerError)
 	}
 	repo, er := vcsService.GetRepo(tpl.RepoId)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er, http.StatusInternalServerError)
+		return nil, e.New(e.VcsError, er, http.StatusInternalServerError)
 	}
 	revision := tpl.RepoRevision
 	if form.Revision != "" {
@@ -63,7 +63,7 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 	}
 	commitId, er := repo.BranchCommitId(revision)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er, http.StatusInternalServerError)
+		return nil, e.New(e.VcsError, er, http.StatusInternalServerError)
 	}
 
 	tx := c.Tx()
@@ -326,11 +326,11 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	}
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er, http.StatusInternalServerError)
+		return nil, e.New(e.VcsError, er, http.StatusInternalServerError)
 	}
 	repo, er := vcsService.GetRepo(tpl.RepoId)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er, http.StatusInternalServerError)
+		return nil, e.New(e.VcsError, er, http.StatusInternalServerError)
 	}
 	revision := tpl.RepoRevision
 	if form.Revision != "" {
@@ -338,7 +338,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	}
 	commitId, er := repo.BranchCommitId(revision)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er, http.StatusInternalServerError)
+		return nil, e.New(e.VcsError, er, http.StatusInternalServerError)
 	}
 
 	// 变量

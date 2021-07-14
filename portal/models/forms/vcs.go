@@ -33,19 +33,19 @@ type DeleteVcsForm struct {
 
 type GetGitProjectsForm struct {
 	PageForm
+	Id    models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`
 	Q     string    `form:"q" json:"q"`
-	VcsId models.Id `form:"vcsId" json:"vcsId" binding:"required"`
 }
 
 type GetGitRevisionForm struct {
 	BaseForm
+	Id     models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`
 	RepoId string    `form:"repoId" json:"repoId" binding:"required"`
-	VcsId  models.Id `form:"vcsId" json:"vcsId" binding:"required"`
 }
 
 type GetReadmeForm struct {
 	BaseForm
-	RepoId string    `form:"repoId" json:"repoId" binding:""`
+	Id     models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`
+	RepoId string    `form:"repoId" json:"repoId" binding:"required"`
 	Branch string    `form:"branch" json:"branch" binding:"required"`
-	VcsId  models.Id `form:"vcsId" json:"vcsId" binding:"required"`
 }
