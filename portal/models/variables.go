@@ -7,8 +7,8 @@ type VariableBody struct {
 	Type        string `json:"type" gorm:"not null;type:enum('environment','terraform','ansible')"`
 	Name        string `json:"name" gorm:"size:64;not null"`
 	Value       string `json:"value" gorm:"default:''"`
-	Sensitive   bool   `json:"sensitive" gorm:"default:'0'"`
-	Description string `json:"description" gorm:"type:text"`
+	Sensitive   bool   `json:"sensitive,omitempty" gorm:"default:'0'"`
+	Description string `json:"description,omitempty" gorm:"type:text"`
 }
 
 type Variable struct {

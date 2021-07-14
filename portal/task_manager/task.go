@@ -111,6 +111,12 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 			logger.Infof("task log content: %s", content)
 		}
 	}
+	if len(stepResult.Result.TfStateJson) > 0 {
+		path := task.StateJsonPath()
+		if err := logstorage.Get().Write(path, stepResult.Result.TfStateJson); err != nil {
+			logger.WithField("path", path).Errorf("write task state json error: %v", err)
+		}
+	}
 
 	if er := services.ChangeTaskStepStatus(sess, task, step, stepResult.Status, ""); er != nil {
 		return stepResult, er
@@ -139,10 +145,8 @@ func pullTaskStepStatus(ctx context.Context, task *models.Task, step *models.Tas
 		if resp != nil && resp.StatusCode >= 300 {
 			// 返回异常 http 状态码时表示请求参数有问题或者 runner 无法处理该连接，所以直接返回步骤失败
 			return &waitStepResult{Status: models.TaskStepFailed, Result: runner.TaskStatusMessage{
-				Exited:           true,
-				ExitCode:         1,
-				LogContent:       nil,
-				StateListContent: nil,
+				Exited:   true,
+				ExitCode: 1,
 			}}, nil
 		}
 		return stepResult, err
@@ -235,9 +239,9 @@ func pullTaskStepStatus(ctx context.Context, task *models.Task, step *models.Tas
 		}
 	}
 
-	logger.Infof("pulling task status ...")
+	logger.Infof("pulling step status ...")
 	err = selectLoop()
-	logger.Infof("pull task status done, status=%v", stepResult.Status)
+	logger.Infof("pull step status done, status=%v", stepResult.Status)
 
 	return stepResult, nil
 }

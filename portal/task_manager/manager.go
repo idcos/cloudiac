@@ -6,6 +6,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
+	"cloudiac/portal/services/logstorage"
 	"cloudiac/portal/services/sshkey"
 	"cloudiac/runner"
 	"cloudiac/utils"
@@ -15,6 +16,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"net/url"
+	"os"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -232,6 +234,10 @@ func (m *TaskManager) run(ctx context.Context) {
 		go func() {
 			defer m.wg.Done()
 			m.runTask(ctx, task)
+			if task.IsEffectTask() {
+				// 不管任务成功还是失败都执行
+				m.processTaskResult(task)
+			}
 		}()
 	}
 }
@@ -296,11 +302,63 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 				logger.Infof("run task step: %v", err)
 				return
 			}
-			taskFailed(errors.Wrap(err, fmt.Sprintf("run task step %d", step.Index)))
+			taskFailed(errors.Wrap(err, fmt.Sprintf("step %d", step.Index)))
 			return
 		}
 	}
 	logger.Infof("task done: %s", task.Id)
+}
+
+func (m *TaskManager) processTaskResult(task *models.Task) {
+	logger := m.logger.WithField("func", "processTaskResult")
+
+	tx := m.db.Begin().Debug()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	err := func() error {
+		stateJsonPath := task.StateJsonPath()
+		content, err := logstorage.Get().Read(stateJsonPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+			logger.Errorf("read state json: %v", err)
+			return err
+		}
+
+		tfState, err := services.UnmarshalStateJson(content)
+		if err != nil {
+			logger.Errorf("unmarshal state json: %v", err)
+			return err
+		}
+
+		if err = services.SaveTaskResources(tx, task, tfState.Values.RootModule.Resources); err != nil {
+			logger.Errorf("update task resources: %v", err)
+			return err
+		}
+
+		if err = services.SaveTaskOutputs(tx, task, tfState.Values.Outputs); err != nil {
+			logger.Errorf("update task outputs: %v", err)
+			return err
+		}
+
+		// TODO @jinxing 解析资源变更数量
+		return nil
+	}()
+
+	if err != nil {
+		_ = tx.Rollback()
+		return
+	}
+	if err = tx.Commit(); err != nil {
+		logger.Errorf("commit error: %v", err)
+		return
+	}
 }
 
 func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq,
@@ -387,14 +445,6 @@ loop:
 				panic(er)
 			}
 		} else {
-			if len(stepResult.Result.StateListContent) > 0 {
-				task.Result.StateResList = strings.Split(string(stepResult.Result.StateListContent), "\n")
-			}
-			if stepResult.Status == models.TaskComplete {
-				////TODO 解析日志输出，更新资源变更信息到 task.Result
-				//tfInfo := ParseTfOutput(task.BackendInfo.LogFile)
-				//models.UpdateAttr(dbSess.Where("id = ?", task.Id), &models.Task{}, tfInfo)
-			}
 			if _, err = m.db.Model(&models.Task{}).Update(task); err != nil {
 				return
 			}

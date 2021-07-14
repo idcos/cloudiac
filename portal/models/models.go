@@ -114,7 +114,11 @@ func MarshalValue(v interface{}) (driver.Value, error) {
 	if v == nil {
 		return nil, nil
 	}
-	return json.Marshal(v)
+	bs, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	return string(bs), nil
 }
 
 func UnmarshalValue(src interface{}, dst interface{}) error {
@@ -174,7 +178,7 @@ func Init(migrate bool) {
 
 	autoMigrate(&Task{}, sess)
 	autoMigrate(&TaskStep{}, sess)
-	autoMigrate(&TaskLog{}, sess)
+	autoMigrate(&DBStorage{}, sess)
 
 	autoMigrate(&User{}, sess)
 	autoMigrate(&UserOrg{}, sess)

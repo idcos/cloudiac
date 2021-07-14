@@ -111,17 +111,14 @@ func ChangeTaskStepStatus(dbSess *db.Session, task *models.Task, taskStep *model
 		taskStep.EndAt = &now
 	}
 
-	logs.Get().WithField("taskId", taskStep.TaskId).
-		WithField("step", taskStep.Index).
-		Debugf("change step to '%s'", status)
+	logger := logs.Get().WithField("taskId", taskStep.TaskId).WithField("step", taskStep.Index)
+	if message != "" {
+		logger.Infof("change step to '%s', message: %s", status, message)
+	} else {
+		logger.Debugf("change step to '%s'", status)
+	}
 	if _, err := dbSess.Model(&models.TaskStep{}).Update(taskStep); err != nil {
 		return e.New(e.DBError, err)
 	}
-
-	//if task, err := GetTask(dbSess, taskStep.TaskId); err != nil {
-	//	return e.AutoNew(err, e.DBError)
-	//} else {
-	//	return ChangeTaskStatusWithStep(dbSess, task, taskStep)
-	//}
 	return ChangeTaskStatusWithStep(dbSess, task, taskStep)
 }
