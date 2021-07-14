@@ -27,6 +27,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/gofrs/uuid"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -511,4 +512,13 @@ func SprintTemplate(format string, data interface{}) (str string) {
 		tmpl.Execute(&msg, data)
 		return msg.String()
 	}
+}
+
+func GetUUID() (string, error) {
+	u2, err := uuid.NewV4()
+	if err != nil {
+		logs.Get().Errorf("Something went wrong: %s", err)
+		return "", err
+	}
+	return u2.String(), nil
 }
