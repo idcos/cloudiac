@@ -137,6 +137,8 @@ const (
 
 	// template
 	TemplateAlreadyExists = 11010
+	TemplateNotExists = 11020
+	TemplateActiveEvcExists = 11030
 
 
 	// consul
