@@ -76,6 +76,20 @@ func (git *gitlabRepoIface) ListBranches() ([]string, error) {
 	}
 	return branchList, nil
 }
+
+func (git *gitlabRepoIface) ListTags() ([]string, error) {
+	tagList := make([]string, 0)
+	opt := &gitlab.ListTagsOptions{}
+	tags, _, er := git.gitConn.Tags.ListTags(git.Project.ID, opt)
+	if er != nil {
+		return nil, e.New(e.GitLabError, er)
+	}
+	for _, tag := range tags {
+		tagList = append(tagList, tag.Name)
+	}
+	return tagList, nil
+}
+
 func (git *gitlabRepoIface) BranchCommitId(branch string) (string, error) {
 	lco := &gitlab.ListCommitsOptions{
 		RefName: gitlab.String(branch),

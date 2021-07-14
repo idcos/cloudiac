@@ -26,4 +26,10 @@ const (
 	TaskStepFailed    = "failed"
 	TaskStepComplete  = "complete"
 	TaskStepTimeout   = "timeout"
+
+	TaskTypePlanName    = "plan"
+	TaskTypeApplyName   = "apply"
+	TaskTypeDestroyName = "destroy"
+
+	TaskStepTimeoutDuration = 600
 )

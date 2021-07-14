@@ -104,23 +104,57 @@ const (
 	OrganizationInvalidStatus  = 9014
 	InvalidOrganizationId      = 9015
 
+	//variable
+	VariableAlreadyExists  = 11010
+	VariableNotExists      = 11011
+	VariableDisabled       = 11012
+	VariableAliasDuplicate = 11013
+	VariableInvalidStatus  = 11014
+	InvalidVariableId      = 11015
+
+	TokenAlreadyExists  = 12010
+	TokenNotExists      = 12011
+	TokenDisabled       = 12012
+	TokenAliasDuplicate = 12013
+	TokenInvalidStatus  = 12014
+	InvalidTokenId      = 12015
+
+	// project
+	ProjectAlreadyExists  = 10010
+	ProjectNotExists      = 10011
+	ProjectDisabled       = 10012
+	ProjectAliasDuplicate = 10013
+	ProjectInvalidStatus  = 10014
+	ProjectIdInvalid      = 10014
+
 	// gitlib
 	GitLabError = 9100
 
 	// task
-	TaskAlreadyExists = 10010
-	TaskNotExists     = 10011
-	TaskStepNotExists = 10110
+	TaskAlreadyExists     = 10010
+	TaskNotExists         = 10011
+	InvalidTaskId         = 10012
+	TaskApproveNotPending = 10013
+	TaskStepNotExists     = 10114
+	TaskLogInterrupted    = 10115
+	TaskNotHaveStep       = 10116
 
 	// template
-	TemplateAlreadyExists = 11010
-
+	TemplateAlreadyExists   = 11010
+	TemplateNotExists       = 11011
+	TemplateDisabled        = 11012
+	TemplateActiveEnvExists = 11030
 
 	// consul
 	ConsulConnError = 12010
 
-	// env
-	EnvNotExists = 13404
+	// envionment
+	EnvAlreadyExists       = 13010
+	EnvNotExists           = 13011
+	EnvAliasDuplicate      = 13012
+	EnvArchived            = 13013
+	EnvCannotArchiveActive = 13014
+	EnvDeploying           = 13015
 )
 
 var errorMsgs = map[int]map[string]string{
@@ -333,5 +367,11 @@ var errorMsgs = map[int]map[string]string{
 	},
 	TaskStepNotExists: {
 		"zh-cn": "步骤不存在",
+	},
+	InvalidProjectId: {
+		"zh-cn": "无效的项目id",
+	},
+	TaskNotHaveStep: {
+		"zh-cn": "任务无步骤",
 	},
 }

@@ -10,15 +10,23 @@ type CreateUserForm struct {
 	Email string `form:"email" json:"email" binding:"required,email"`      // 电子邮件地址
 }
 
+type InviteUserForm struct {
+	BaseForm
+
+	Name  string `form:"name" json:"name" binding:"required,gte=2,lte=32"` // 用户名
+	Email string `form:"email" json:"email" binding:"required,email"`      // 电子邮件地址
+	Role  string `form:"role" json:"role" binding:""`                      // 受邀请用户在组织中的角色
+}
+
 type UpdateUserForm struct {
 	BaseForm
 
-	Id          models.Id         `uri:"id" json:"id" binding:"" swaggerignore:"true"` // 用户ID
-	Name        string            `form:"name" json:"name" binding:"gte=2,lte=32"`     // 用户名
-	Phone       string            `form:"phone" json:"phone" binding:"max=11"`         // 电话
-	OldPassword string            `form:"oldPassword" json:"oldPassword" binding:""`   // 原始密码
-	NewPassword string            `form:"newPassword" json:"newPassword" binding:""`   // 新密码
-	NewbieGuide map[string]uint64 `form:"newbieGuide" json:"newbieGuide"`              // 新用户向导内容
+	Id          models.Id         `uri:"id" json:"id" binding:"" swaggerignore:"true"`         // 用户ID
+	Name        string            `form:"name" json:"name" binding:""`                         // 用户名
+	Phone       string            `form:"phone" json:"phone" binding:""`                       // 电话
+	OldPassword string            `form:"oldPassword" json:"oldPassword" binding:""`           // 原始密码
+	NewPassword string            `form:"newPassword" json:"newPassword" binding:""`           // 新密码
+	NewbieGuide map[string]uint64 `form:"newbieGuide" json:"newbieGuide" swaggertype:"string"` // 新用户向导内容
 }
 
 type SearchUserForm struct {

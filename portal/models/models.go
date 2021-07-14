@@ -61,6 +61,22 @@ func Create(tx *db.Session, o Modeler) error {
 	return err
 }
 
+//CreateBatch gorm1.9.16版本不支持批量创建 升级2.0可用
+func CreateBatch(tx *db.Session, o []Modeler) error {
+	_, err := withTx(tx, func(x *db.Session) (int64, error) {
+		for _, v := range o {
+			if err := v.Validate(); err != nil {
+				return 0, err
+			}
+		}
+		if err := x.Insert(o); err != nil {
+			return 0, err
+		}
+		return 0, nil
+	})
+	return err
+}
+
 func Save(tx *db.Session, o Modeler) error {
 	_, err := withTx(tx, func(x *db.Session) (int64, error) {
 		if err := o.Validate(); err != nil {
@@ -172,7 +188,7 @@ func Init(migrate bool) {
 	autoMigrate(&Vcs{}, sess)
 	autoMigrate(&Template{}, sess)
 	autoMigrate(&Env{}, sess)
-	autoMigrate(&EnvRes{}, sess)
+	autoMigrate(&Resource{}, sess)
 
 	autoMigrate(&Variable{}, sess)
 
@@ -192,4 +208,5 @@ func Init(migrate bool) {
 	autoMigrate(&Token{}, sess)
 	autoMigrate(&TaskComment{}, sess)
 	autoMigrate(&TemplateAccessToken{}, sess)
+	autoMigrate(&ProjectTemplate{}, sess)
 }

@@ -19,7 +19,6 @@ func CreateVcs(c *ctx.ServiceCtx, form *forms.CreateVcsForm) (interface{}, e.Err
 		OrgId:    c.OrgId,
 		Name:     form.Name,
 		VcsType:  form.VcsType,
-		Status:   form.Status,
 		Address:  form.Address,
 		VcsToken: form.VcsToken,
 	})
@@ -129,16 +128,15 @@ func ListRepos(c *ctx.ServiceCtx, form *forms.GetGitProjectsForm) (interface{}, 
 	}, nil
 }
 
-type Branches struct {
+type Revision struct {
 	Name string `json:"name"`
 }
 
-func ListRepoBranches(c *ctx.ServiceCtx, form *forms.GetGitBranchesForm) (brans []*Branches, err e.Error) {
+func listRepoRevision(c *ctx.ServiceCtx, form *forms.GetGitRevisionForm, revisionType string) (revision []*Revision, err e.Error) {
 	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
 	if err != nil {
 		return nil, err
 	}
-
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
 		return nil, e.New(e.GitLabError, er)
@@ -148,16 +146,33 @@ func ListRepoBranches(c *ctx.ServiceCtx, form *forms.GetGitBranchesForm) (brans 
 	if er != nil {
 		return nil, e.New(e.GitLabError, er)
 	}
-	branchList, er := repo.ListBranches()
+	var revisionList []string
+	if revisionType == "tags" {
+		revisionList, er = repo.ListTags()
+	} else if revisionType == "branches" {
+		revisionList, er = repo.ListBranches()
+	}
 	if er != nil {
 		return nil, e.New(e.GitLabError, er)
 	}
-	for _, v := range branchList {
-		brans = append(brans, &Branches{
+	for _, v := range revisionList {
+		revision = append(revision, &Revision{
 			v,
 		})
 	}
-	return brans, nil
+	return revision, nil
+
+}
+
+func ListRepoBranches(c *ctx.ServiceCtx, form *forms.GetGitRevisionForm) (brans []*Revision, err e.Error) {
+	brans, err = listRepoRevision(c, form, "branches")
+	return brans, err
+}
+
+func ListRepoTags(c *ctx.ServiceCtx, form *forms.GetGitRevisionForm) (tags []*Revision, err e.Error) {
+	tags, err = listRepoRevision(c, form, "tags")
+	return tags, err
+
 }
 
 func VcsTfVarsSearch(c *ctx.ServiceCtx, form *forms.TemplateTfvarsSearchForm) (interface{}, e.Error) {

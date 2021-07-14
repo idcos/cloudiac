@@ -63,49 +63,51 @@ const (
 	//TaskTimeout   = common.TaskTimeout
 )
 
-var TaskStatusList = []string{TaskPending, TaskRunning, TaskFailed, TaskComplete} //, TaskTimeout}
-
 type Task struct {
 	SoftDeleteModel
 
-	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
-	ProjectId Id `json:"projectId" gorm:"size:32;not null"`
-	TplId     Id `json:"TplId" gorm:"size:32;not null"`
-	EnvId     Id `json:"envId" gorm:"size:32;not null"`
+	OrgId     Id `json:"orgId" gorm:"size:32;not null"`     // 组织ID
+	ProjectId Id `json:"projectId" gorm:"size:32;not null"` // 项目ID
+	TplId     Id `json:"TplId" gorm:"size:32;not null"`     // 模板ID
+	EnvId     Id `json:"envId" gorm:"size:32;not null"`     // 环境ID
 
-	Name      string `json:"name" gorm:"not null;comment:'任务名称'"`
-	CreatorId Id     `json:"size:32;creatorId"`
-	RunnerId  string `json:"runnerId" gorm:"not null"`
-	CommitId  string `json:"commitId" gorm:"not null"`
+	Name      string `json:"name" gorm:"not null;comment:'任务名称'"`                              // 任务名称
+	CreatorId Id     `json:"creatorId" gorm:"size:32;not null"`                                // 创建人ID
+	RunnerId  string `json:"runnerId" gorm:"not null"`                                         // 部署通道
+	CommitId  string `json:"commitId" gorm:"not null"`                                         // 版本 commit ID
+	Timeout   int    `json:"timeout" gorm:"default:'600';comment:'执行超时'"`                      // 超时时间（单位：秒）
+	Status    string `json:"status" enums:"'pending','running','failed','complete','timeout'"` // gorm 配置见 Migrate() // 任务状态
+	Message   string `json:"message"`                                                          // 任务的状态描述信息，如失败原因
 
 	// 任务每一步的执行超时(整个任务无超时控制)
 	StepTimeout int `json:"stepTimeout" gorm:"default:'600';comment:'执行超时'"`
 
 	AutoApprove bool `json:"autoApproval" gorm:"default:'0'"`
 
-	Status  string `json:"status"`  // gorm 配置见 Migrate()
-	Message string `json:"message"` // 任务的状态描述信息，如失败原因
+	Type     string   `json:"type" gorm:"not null;enum('plan', 'apply', 'destroy')" enums:"'plan', 'apply', 'destroy'"` // 任务类型
+	Flow     TaskFlow `json:"-" gorm:"type:text"`                                                                       // 执行流程
+	CurrStep int      `json:"currStep" gorm:"default:'0'"`                                                              // 当前在执行的流程步骤
+	Targets  StrSlice `json:"targets" gorm:"type:json"`                                                                 // 指定 terraform target 参数
 
-	Type     string   `json:"type" gorm:"not null;enum('plan', 'apply', 'destroy')"`
-	Flow     TaskFlow `json:"-" gorm:"type:json"`
-	CurrStep int      `json:"currStep" gorm:"default:'0'"` // 当前在执行的流程步骤
-	Targets  StrSlice `json:"targets" gorm:"type:json"`    // 指定 terraform target 参数
-
-	StartAt *time.Time `json:"startAt" gorm:"null;comment:'任务开始时间'"`
-	EndAt   *time.Time `json:"endAt" gorm:"null;comment:'任务结束时间'"`
+	StartAt *time.Time `json:"startAt" gorm:"null;comment:'任务开始时间'"` // 任务开始时间
+	EndAt   *time.Time `json:"endAt" gorm:"null;comment:'任务结束时间'"`   // 任务结束时间
 
 	// 本次执行使用的所有变量(继承、覆盖计算之后的)
-	Variables TaskVariables `json:"variables" gorm:"type:json"`
+	Variables TaskVariables `json:"variables" gorm:"type:json"` // 本次执行使用的所有变量(继承、覆盖计算之后的)
 
 	// 任务执行结果，如 add/change/delete 的资源数量等
-	Result TaskResult `json:"result" gorm:"type:json"`
+	Result TaskResult `json:"result" gorm:"type:json"` // 任务执行结果
 
 	// 扩展属性，包括 source, transitionId 等
-	Extra TaskExtra `json:"extra" gorm:"type:json"`
+	Extra TaskExtra `json:"extra" gorm:"type:json"` // 扩展属性
 }
 
 func (Task) TableName() string {
 	return "iac_task"
+}
+
+func (Task) DefaultTaskName() string {
+	return ""
 }
 
 func (t *Task) Exited() bool {
@@ -134,6 +136,18 @@ func (Task) IsEffectTaskType(typ string) bool {
 	return utils.StrInArray(typ, TaskTypeApply, TaskTypeDestroy)
 }
 
+func (Task) GetTaskNameByType(typ string) string {
+	switch typ {
+	case TaskTypePlan:
+		return common.TaskTypePlanName
+	case TaskTypeApply:
+		return common.TaskTypeApplyName
+	case TaskTypeDestroy:
+		return common.TaskTypeDestroyName
+	default:
+		panic("invalid task type")
+	}
+}
 func (t *Task) StateJsonPath() string {
 	return fmt.Sprintf("%s/%s/%s/%s", t.ProjectId, t.EnvId, t.Id, runner.TFStateJsonFile)
 }

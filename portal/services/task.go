@@ -18,14 +18,17 @@ func GetTask(dbSess *db.Session, id models.Id) (*models.Task, e.Error) {
 	err := dbSess.Where("id = ?", id).First(&task)
 	if err != nil {
 		if e.IsRecordNotFound(err) {
-			return nil, e.New(e.TaskNotExists)
+			return nil, e.New(e.TaskNotExists, err)
 		}
 		return nil, e.New(e.DBError, err)
 	}
+
 	return &task, nil
 }
 
 func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e.Error) {
+	logger := logs.Get().WithField("func", "CreateTask")
+
 	task := models.Task{
 		// 以下为需要外部传入的属性
 		Name:        p.Name,
@@ -52,6 +55,7 @@ func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e
 	if task.RunnerId == "" {
 		task.RunnerId = env.RunnerId
 	}
+	logger = logger.WithField("taskId", task.Id)
 
 	if len(task.Flow.Steps) == 0 {
 		var err error
@@ -65,8 +69,23 @@ func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e
 		return nil, e.New(e.DBError, errors.Wrapf(err, "save task"))
 	}
 
+	flowSteps := make([]models.TaskStepBody, 0, len(task.Flow.Steps))
+	for i := range task.Flow.Steps {
+		step := task.Flow.Steps[i]
+		if step.Type == models.TaskStepPlay && env.Playbook == "" {
+			logger.WithField("step", fmt.Sprintf("%d(%s)", i, step.Type)).
+				Infof("not have playbook, skip this step")
+			continue
+		}
+		flowSteps = append(flowSteps, step)
+	}
+
+	if len(flowSteps) == 0 {
+		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps"))
+	}
+
 	taskSteps := make([]*models.TaskStep, 0)
-	for i, step := range task.Flow.Steps {
+	for i, step := range flowSteps {
 		if len(task.Targets) != 0 && IsTerraformStep(step.Type) {
 			if step.Type != models.TaskStepInit {
 				for _, t := range task.Targets {
@@ -94,6 +113,21 @@ func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e
 	}
 
 	return &task, nil
+}
+
+func GetTaskById(tx *db.Session, id models.Id) (*models.Task, e.Error) {
+	o := models.Task{}
+	if err := tx.Where("id = ?", id).First(&o); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TaskNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &o, nil
+}
+
+func QueryTask(query *db.Session) *db.Session {
+	return query.Model(&models.Task{})
 }
 
 var stepStatus2TaskStatus = map[string]string{
@@ -197,11 +231,11 @@ func UnmarshalStateJson(bs []byte) (*TfState, error) {
 	return &state, err
 }
 
-func traverseStateModule(module *TfStateModule) (rs []*models.EnvRes) {
+func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 	parts := strings.Split(module.Address, ".")
 	moduleName := parts[len(parts)-1]
 	for _, r := range module.Resources {
-		rs = append(rs, &models.EnvRes{
+		rs = append(rs, &models.Resource{
 			Provider: r.ProviderName,
 			Module:   moduleName,
 			Address:  r.Address,
@@ -219,11 +253,11 @@ func traverseStateModule(module *TfStateModule) (rs []*models.EnvRes) {
 }
 
 func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues) error {
-	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.EnvRes{}.TableName(),
+	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Resource{}.TableName(),
 		"id", "org_id", "project_id", "env_id", "task_id",
 		"provider", "module", "address", "type", "name", "index", "attrs")
 
-	rs := make([]*models.EnvRes, 0)
+	rs := make([]*models.Resource, 0)
 	rs = append(rs, traverseStateModule(&values.RootModule)...)
 	for i := range values.ChildModules {
 		rs = append(rs, traverseStateModule(&values.ChildModules[i])...)

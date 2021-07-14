@@ -57,10 +57,13 @@ func GetUserById(tx *db.Session, id models.Id) (*models.User, e.Error) {
 	return &u, nil
 }
 
-func GetUserByEmail(tx *db.Session, email string) (*models.User, error) {
+func GetUserByEmail(tx *db.Session, email string) (*models.User, e.Error) {
 	u := models.User{}
 	if err := tx.Where("email = ?", email).First(&u); err != nil {
-		return nil, err
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.UserNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
 	}
 	return &u, nil
 }
@@ -103,4 +106,28 @@ func CheckPasswordFormat(password string) e.Error {
 	}
 
 	return nil
+}
+
+func GetUserRoleByOrg(dbSess *db.Session, userId, orgId models.Id, role string) (bool, e.Error) {
+	isExists, err := dbSess.Table(models.UserOrg{}.TableName()).
+		Where("user_id = ?", userId).
+		Where("role = ?", role).
+		Where("org_id = ?", orgId).
+		Exists()
+	if err != nil {
+		return isExists, e.New(e.DBError, err)
+	}
+	return isExists, nil
+}
+
+func GetUserRoleByProject(dbSess *db.Session, userId, projectId models.Id, role string) (bool, e.Error) {
+	isExists, err := dbSess.Table(models.UserProject{}.TableName()).
+		Where("user_id = ?", userId).
+		Where("role = ?", role).
+		Where("project_id = ?", projectId).
+		Exists()
+	if err != nil {
+		return isExists, e.New(e.DBError, err)
+	}
+	return isExists, nil
 }

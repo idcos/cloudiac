@@ -15,7 +15,7 @@ func GetTaskSteps(sess *db.Session, taskId models.Id) ([]*models.TaskStep, error
 	return steps, err
 }
 
-func GetTaskStep(sess *db.Session, taskId models.Id, step int) (*models.TaskStep, error) {
+func GetTaskStep(sess *db.Session, taskId models.Id, step int) (*models.TaskStep, e.Error) {
 	taskStep := models.TaskStep{}
 	err := sess.Where(models.TaskStep{
 		TaskId: taskId,
@@ -31,28 +31,11 @@ func GetTaskStep(sess *db.Session, taskId models.Id, step int) (*models.TaskStep
 	return &taskStep, nil
 }
 
-func createTaskStep(dbSess *db.Session, task models.Task, stepBody models.TaskStepBody, index int) (*models.TaskStep, e.Error) {
-	s := models.TaskStep{
-		TaskStepBody: stepBody,
-		OrgId:        task.OrgId,
-		ProjectId:    task.ProjectId,
-		EnvId:        task.EnvId,
-		TaskId:       task.Id,
-		Index:        index,
-		Status:       models.TaskStepPending,
-		Message:      "",
-	}
-	s.Id = models.NewId("step")
-	s.LogPath = s.GenLogPath()
-
-	if _, err := dbSess.Save(&s); err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-	return &s, nil
-}
-
-func UpdateTaskStep(sess *db.Session, taskStep *models.TaskStep) e.Error {
-	if _, err := sess.Model(&models.TaskStep{}).Update(taskStep); err != nil {
+// ApproveTaskStep 标识步骤通过审批
+func ApproveTaskStep(tx *db.Session, taskId models.Id, step int, userId models.Id) e.Error {
+	if _, err := tx.Model(&models.TaskStep{}).
+		Where("task_id = ? AND `index` = ?", taskId, step).
+		Update(&models.TaskStep{ApproverId: userId}); err != nil {
 		if e.IsRecordNotFound(err) {
 			return e.New(e.TaskStepNotExists)
 		}
@@ -61,11 +44,8 @@ func UpdateTaskStep(sess *db.Session, taskStep *models.TaskStep) e.Error {
 	return nil
 }
 
-// ApproveTaskStep 通过步骤审批
-func ApproveTaskStep(dbSess *db.Session, taskId models.Id, step int, userId models.Id) e.Error {
-	if _, err := dbSess.Model(&models.TaskStep{}).
-		Where("task_id = ? AND `index` = ?", taskId, step).
-		Update(&models.TaskStep{ApproverId: userId}); err != nil {
+func UpdateTaskStep(sess *db.Session, taskStep *models.TaskStep) e.Error {
+	if _, err := sess.Model(&models.TaskStep{}).Update(taskStep); err != nil {
 		if e.IsRecordNotFound(err) {
 			return e.New(e.TaskStepNotExists)
 		}
@@ -121,4 +101,23 @@ func ChangeTaskStepStatus(dbSess *db.Session, task *models.Task, taskStep *model
 		return e.New(e.DBError, err)
 	}
 	return ChangeTaskStatusWithStep(dbSess, task, taskStep)
+}
+
+func createTaskStep(tx *db.Session, task models.Task, stepBody models.TaskStepBody, index int) (*models.TaskStep, e.Error) {
+	s := models.TaskStep{
+		TaskStepBody: stepBody,
+		OrgId:        task.OrgId,
+		ProjectId:    task.ProjectId,
+		TaskId:       task.Id,
+		Index:        index,
+		Status:       models.TaskStepPending,
+		Message:      "",
+	}
+	s.Id = models.NewId("step")
+	s.LogPath = s.GenLogPath()
+
+	if _, err := tx.Save(&s); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return &s, nil
 }

@@ -32,18 +32,18 @@ func (p *ChangePassword) Execute(args []string) error {
 	password := args[0]
 	user, err := services.GetUserByEmail(db.Get(), p.Email)
 	if err != nil {
-		if e.IsRecordNotFound(err) {
+		if err.Code() == e.UserNotExists {
 			return fmt.Errorf("user not exists")
 		}
 		return err
 	}
 
 	logger.Infof("update user password, email=%s, id=%d", user.Email, user.Id)
-	hashedPass, err := utils.HashPassword(password)
-	if err != nil {
-		return err
+	hashedPass, er := utils.HashPassword(password)
+	if er != nil {
+		return er
 	}
 
-	_, er := services.UpdateUser(db.Get(), user.Id, models.Attrs{"password": hashedPass})
-	return er
+	_, err = services.UpdateUser(db.Get(), user.Id, models.Attrs{"password": hashedPass})
+	return err
 }
