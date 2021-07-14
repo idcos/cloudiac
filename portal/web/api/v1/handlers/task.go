@@ -1,65 +1,131 @@
 package handlers
 
 import (
+	"cloudiac/portal/apps"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/models/forms"
 )
 
 type Task struct {
 	ctrl.BaseController
 }
 
-func (Task) Detail(c *ctx.GinRequestCtx) {
-	// TODO 待实现
-	//form := &forms.DetailTaskForm{}
-	//if err := c.Bind(form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.DetailTask(c.ServiceCtx(), form))
-}
-
-func (Task) Create(c *ctx.GinRequestCtx) {
-	// TODO 待实现
-	//form := &forms.CreateTaskForm{}
-	//if err := c.Bind(form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.CreateTask(c.ServiceCtx(), form))
-}
-
+/**
+// Search 任务查询
+// @Tags 环境
+// @Summary 任务查询
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param form query forms.SearchTaskForm true "parameter"
+// @router /tasks [get]
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Task}}
+*/
 func (Task) Search(c *ctx.GinRequestCtx) {
-	// TODO 待实现
-	//form := &forms.SearchTaskForm{}
-	//if err := c.Bind(form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.SearchTask(c.ServiceCtx(), form))
+	form := forms.SearchTaskForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.SearchTask(c.ServiceCtx(), &form))
 }
 
-func (Task) LastTask(c *ctx.GinRequestCtx) {
-	// TODO 待实现
-	//form := &forms.LastTaskForm{}
-	//if err := c.Bind(form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.LastTask(c.ServiceCtx(), form))
+// Detail 任务信息详情
+// @Tags 环境
+// @Summary 任务信息详情
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param taskId path string true "任务ID"
+// @router /tasks/{taskId} [get]
+// @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
+func (Task) Detail(c *ctx.GinRequestCtx) {
+	form := forms.DetailTaskForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.TaskDetail(c.ServiceCtx(), form))
 }
 
+// FollowLogSse 当前任务实时日志
+// @Tags 环境
+// @Summary 当前任务实时日志
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param taskId path string true "任务ID"
+// @router /tasks/{taskId}/log/sse [get]
+// @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
 func (Task) FollowLogSse(c *ctx.GinRequestCtx) {
-	// TODO 待实现
-	//defer c.SSEvent("end", "end")
-	//
-	//if err := apps.FollowTaskLog(c); err != nil {
-	//	c.SSEvent("error", err.Error())
-	//}
+	form := forms.DetailTaskForm{}
+	defer c.SSEvent("end", "end")
+
+	if err := apps.FollowTaskLog(c.ServiceCtx(), form); err != nil {
+		c.SSEvent("error", err.Error())
+	}
 }
 
+// TaskApprove 审批执行计划
+// @Tags 环境
+// @Summary 审批执行计划
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param taskId path string true "任务ID"
+// @Param form formData forms.ApproveTaskForm true "parameter"
+// @router /tasks/{taskId}/approve [post]
+// @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
+func (Task) TaskApprove(c *ctx.GinRequestCtx) {
+	form := &forms.ApproveTaskForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.ApproveTask(c.ServiceCtx(), form))
+}
 
-func (Task) TaskStateListSearch(c *ctx.GinRequestCtx) {
-	// TODO 待实现
-	//form := &forms.TaskStateListForm{}
-	//if err := c.Bind(form); err != nil {
+// Log 任务日志
+// @Tags 环境
+// @Summary 任务日志
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param taskId path string true "任务ID"
+// @router /tasks/{taskId}/log [get]
+// @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
+func (Task) Log(c *ctx.GinRequestCtx) {
+	// TODO: 待实现
+	//form := forms.DetailTaskForm{}
+	//if err := c.Bind(&form); err != nil {
 	//	return
 	//}
-	//c.JSONResult(apps.TaskStateList(c.ServiceCtx(), form))
+	//c.JSONResult(apps.TaskDetail(c.ServiceCtx(), form))
+}
+
+// Output Terraform Output
+// @Tags 环境
+// @Summary Terraform Output
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param taskId path string true "任务ID"
+// @router /tasks/{taskId}/output [get]
+// @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
+func (Task) Output(c *ctx.GinRequestCtx) {
+	form := forms.DetailTaskForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.TaskOutput(c.ServiceCtx(), form))
 }

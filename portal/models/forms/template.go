@@ -24,8 +24,7 @@ type CreateTemplateForm struct {
 	Workdir      string    `form:"workdir" json:"workdir"`
 	VcsId        models.Id `form:"vcsId" json:"vcsId" binding:"required"`
 	Playbook     string    `json:"playbook" form:"playbook"`
-	Status       string    `json:"status" form:"status"`
-	CreatorId    string    `json:"creatorId" form:"creatorId" binding:"required"`
+	PlayVarsFile string    `json:"playVarsFile" form:"playVarsFile"`
 	TfVarsFile   string    `form:"tfVarsFile" json:"tfVarsFile"`
 }
 
@@ -38,25 +37,26 @@ type SearchTemplateForm struct {
 
 type UpdateTemplateForm struct {
 	BaseForm
-	Id          models.Id `form:"id" json:"id" binding:"required"`
-	Name        string    `form:"name" json:"name"`
-	Description string    `form:"description" json:"Description"`
-	Extra       string    `form:"extra" json:"extra"`
-	Status      string    `form:"status" json:"status"`
-	Workdir     string    `form:"workdir" json:"workdor"`
-	RunnerId    string    `json:"runnerId" form:"runnerId"`
-	Playbook    string    `json:"playbook" form:"playbook"`
-	TfVarsFile  string    `form:"tfVarsFile" json:"tfVarsFile"`
+	Id           models.Id `form:"id" json:"id" binding:"required"`
+	Name         string    `form:"name" json:"name"`
+	Description  string    `form:"description" json:"Description"`
+	Extra        string    `form:"extra" json:"extra"`
+	Status       string    `form:"status" json:"status"`
+	Workdir      string    `form:"workdir" json:"workdor"`
+	RunnerId     string    `json:"runnerId" form:"runnerId"`
+	Playbook     string    `json:"playbook" form:"playbook"`
+	PlayVarsFile string    `json:"playVarsFile" form:"playVarsFile"`
+	TfVarsFile   string    `form:"tfVarsFile" json:"tfVarsFile"`
 }
 
 type DeleteTemplateForm struct {
 	BaseForm
-	Id models.Id `form:"id" json:"id" binding:"required`
+	Id models.Id `uri:"id" json:"id" binding:"required" swaggerignore:"true"`
 }
 
 type DetailTemplateForm struct {
 	BaseForm
-	Id models.Id `form:"id" json:"id" binding:"required"`
+	Id models.Id `uri:"id" json:"id" binding:"required" swaggerignore:"true"`
 }
 
 type OpenApiDetailTemplateForm struct {

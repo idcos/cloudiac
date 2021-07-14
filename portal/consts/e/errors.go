@@ -131,21 +131,29 @@ const (
 	GitLabError = 9100
 
 	// task
-	TaskAlreadyExists = 10010
-	TaskNotExists     = 10011
-	TaskStepNotExists = 10110
+	TaskAlreadyExists     = 10010
+	TaskNotExists         = 10011
+	InvalidTaskId         = 10012
+	TaskApproveNotPending = 10013
+	TaskStepNotExists     = 10114
+	TaskLogInterrupted    = 10115
 
 	// template
-	TemplateAlreadyExists = 11010
-	TemplateNotExists = 11020
-	TemplateActiveEvcExists = 11030
-
+	TemplateAlreadyExists   = 11010
+	TemplateNotExists       = 11011
+	TemplateDisabled        = 11012
+	TemplateActiveEnvExists = 11030
 
 	// consul
 	ConsulConnError = 12010
 
-	// env
-	EnvNotExists = 13404
+	// envionment
+	EnvAlreadyExists       = 13010
+	EnvNotExists           = 13011
+	EnvAliasDuplicate      = 13012
+	EnvArchived            = 13013
+	EnvCannotArchiveActive = 13014
+	EnvDeploying           = 13015
 )
 
 var errorMsgs = map[int]map[string]string{

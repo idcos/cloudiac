@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
@@ -55,6 +56,7 @@ func AuthOrgId(c *ctx.GinRequestCtx) {
 		return
 	}
 	if c.ServiceCtx().IsSuperAdmin == true {
+		c.ServiceCtx().Role = consts.OrgRoleRoot
 		c.Next()
 		return
 	}
