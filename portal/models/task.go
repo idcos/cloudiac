@@ -7,7 +7,7 @@ import (
 	"cloudiac/utils"
 	"database/sql/driver"
 	"fmt"
-	"path/filepath"
+	"path"
 	"time"
 )
 
@@ -149,11 +149,11 @@ func (Task) GetTaskNameByType(typ string) string {
 	}
 }
 func (t *Task) StateJsonPath() string {
-	return fmt.Sprintf("%s/%s/%s/%s", t.ProjectId, t.EnvId, t.Id, runner.TFStateJsonFile)
+	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TFStateJsonFile)
 }
 
 func (t *Task) PlanJsonPath() string {
-	return fmt.Sprintf("%s/%s/%s/%s", t.ProjectId, t.EnvId, t.Id, runner.TFPlanJsonFile)
+	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TFPlanJsonFile)
 }
 
 func (t *Task) Migrate(sess *db.Session) (err error) {
@@ -242,7 +242,7 @@ func (s *TaskStep) IsApproved() bool {
 }
 
 func (s *TaskStep) GenLogPath() string {
-	return filepath.Join(
+	return path.Join(
 		s.ProjectId.String(),
 		s.EnvId.String(),
 		s.TaskId.String(),
