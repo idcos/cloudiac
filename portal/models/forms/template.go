@@ -12,51 +12,50 @@ type Var struct {
 }
 
 type CreateTemplateForm struct {
-	PageForm
-	Name                   string    `form:"name" json:"name" binding:"required,gte=2,lte=32"`
-	Description            string    `form:"description" json:"Description" binding:""`
-	RepoId                 string    `form:"repoId" json:"repoId" binding:""`
-	RepoAddr               string    `form:"repoAddr" json:"repoAddr" bingding:""`
-	RepoBranch             string    `form:"repoBranch" json:"repoBranch" bingding:""`
-	SaveState              *bool     `form:"saveState" json:"saveState"`
-	Vars                   []Var     `form:"vars" json:"vars"`
-	Varfile                string    `form:"varfile" json:"varfile"`
-	Extra                  string    `form:"extra" json:"extra"`
-	Timeout                int64     `form:"timeout" json:"timeout"`
-	VcsId                  models.Id `json:"vcsId"`
-	DefaultRunnerAddr      string    `json:"defaultRunnerAddr" `
-	DefaultRunnerPort      uint      `json:"defaultRunnerPort" `
-	DefaultRunnerServiceId string    `json:"defaultRunnerServiceId"`
-	Playbook               string    `json:"playbook" form:"playbook" `
+	BaseForm
+
+	Name         string    `form:"name" json:"name" binding:"required,gte=2,lte=32"`
+	TplType      string    `form:"tplType" json:"tplType" binding:"required"`
+	Description  string    `form:"description" json:"Description" binding:""`
+	RepoId       string    `form:"repoId" json:"repoId" binding:""`
+	RepoAddr     string    `form:"repoAddr" json:"repoAddr" binding:""`
+	RepoRevision string    `form:"repoRevision" json:"repoRevision" binding:""`
+	Extra        string    `form:"extra" json:"extra"`
+	Workdir      string    `form:"workdir" json:"workdir"`
+	VcsId        models.Id `form:"vcsId" json:"vcsId" binding:"required"`
+	Playbook     string    `json:"playbook" form:"playbook"`
+	Status       string    `json:"status" form:"status"`
+	CreatorId    string    `json:"creatorId" form:"creatorId" binding:"required"`
+	TfVarsFile   string    `form:"tfVarsFile" json:"tfVarsFile"`
 }
 
 type SearchTemplateForm struct {
 	PageForm
 
-	Q          string `form:"q" json:"q" binding:""`
-	Status     string `form:"status" json:"status"`
-	TaskStatus string `json:"taskStatus" form:"taskStatus" `
+	Q      string `form:"q" json:"q" binding:""`
+	Status string `form:"status" json:"status"`
 }
 
 type UpdateTemplateForm struct {
-	PageForm
-	Id                     models.Id `form:"id" json:"id" binding:"required"`
-	Name                   string    `form:"name" json:"name"`
-	Description            string    `form:"description" json:"Description"`
-	SaveState              bool      `form:"saveState" json:"saveState"`
-	Vars                   []Var     `form:"vars" json:"vars"`
-	Varfile                string    `form:"varfile" json:"varfile"`
-	Extra                  string    `form:"extra" json:"extra"`
-	Timeout                int       `form:"timeout" json:"timeout"`
-	Status                 string    `form:"status" json:"status"`
-	DefaultRunnerAddr      string    `json:"defaultRunnerAddr" gorm:"not null;comment:'默认runner地址'"`
-	DefaultRunnerPort      uint      `json:"defaultRunnerPort" gorm:"not null;comment:'默认runner端口'"`
-	DefaultRunnerServiceId string    `json:"defaultRunnerServiceId" gorm:"not null;comment:'默认runner-consul-serviceId'"`
-	Playbook               string    `json:"playbook" form:"playbook" `
+	BaseForm
+	Id          models.Id `form:"id" json:"id" binding:"required"`
+	Name        string    `form:"name" json:"name"`
+	Description string    `form:"description" json:"Description"`
+	Extra       string    `form:"extra" json:"extra"`
+	Status      string    `form:"status" json:"status"`
+	Workdir     string    `form:"workdir" json:"workdor"`
+	RunnerId    string    `json:"runnerId" form:"runnerId"`
+	Playbook    string    `json:"playbook" form:"playbook"`
+	TfVarsFile  string    `form:"tfVarsFile" json:"tfVarsFile"`
+}
+
+type DeleteTemplateForm struct {
+	BaseForm
+	Id models.Id `form:"id" json:"id" binding:"required"`
 }
 
 type DetailTemplateForm struct {
-	PageForm
+	BaseForm
 	Id models.Id `form:"id" json:"id" binding:"required"`
 }
 

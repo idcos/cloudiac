@@ -8,7 +8,7 @@ import (
 type OperationLog struct {
 	BaseModel
 
-	UserID        Id      `json:"userId" form:"userId" gorm:"size:32"`
+	UserID        Id        `json:"userId" form:"userId" gorm:"size:32"`
 	Username      string    `json:"username" form:"username" `
 	UserAddr      string    `json:"userAddr" form:"userAddr" `
 	OperationAt   time.Time `json:"operationAt" form:"operationAt" `

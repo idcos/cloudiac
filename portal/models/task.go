@@ -11,21 +11,6 @@ import (
 	"time"
 )
 
-type TaskBackendInfo struct {
-	BackendUrl  string `json:"backend_url"`
-	CtServiceId string `json:"ct_service_id"`
-	LogFile     string `json:"log_file"`
-	ContainerId string `json:"container_id"`
-}
-
-func (b TaskBackendInfo) Value() (driver.Value, error) {
-	return MarshalValue(b)
-}
-
-func (b *TaskBackendInfo) Scan(value interface{}) error {
-	return UnmarshalValue(value, b)
-}
-
 type TaskVariables []VariableBody
 
 func (v TaskVariables) Value() (driver.Value, error) {
@@ -37,10 +22,11 @@ func (v *TaskVariables) Scan(value interface{}) error {
 }
 
 type TaskResult struct {
-	ResAdded     int      `json:"resAdded"`
-	ResChanged   int      `json:"resChanged"`
-	ResDestroyed int      `json:"resDestroyed"`
-	StateResList []string `json:"stateResList"`
+	ResAdded     int `json:"resAdded"`
+	ResChanged   int `json:"resChanged"`
+	ResDestroyed int `json:"resDestroyed"`
+
+	Outputs map[string]interface{} `json:"outputs"`
 }
 
 func (v TaskResult) Value() (driver.Value, error) {
@@ -52,8 +38,8 @@ func (v *TaskResult) Scan(value interface{}) error {
 }
 
 type TaskExtra struct {
-	Source       string `json:"source"`
-	TransitionId string `json:"transitionId"`
+	Source       string `json:"source,omitempty"`
+	TransitionId string `json:"transitionId,omitempty"`
 }
 
 func (v TaskExtra) Value() (driver.Value, error) {
@@ -162,6 +148,9 @@ func (Task) GetTaskNameByType(typ string) string {
 		panic("invalid task type")
 	}
 }
+func (t *Task) StateJsonPath() string {
+	return fmt.Sprintf("%s/%s/%s/%s", t.ProjectId, t.EnvId, t.Id, runner.TFStateJsonFile)
+}
 
 func (t *Task) Migrate(sess *db.Session) (err error) {
 	// 以下 column 通过 Migrate 来维护，确保新增加的 enum 生效
@@ -184,9 +173,9 @@ func (t *Task) Migrate(sess *db.Session) (err error) {
 }
 
 type TaskStepBody struct {
-	Type string   `json:"type" yaml:"type" gorm:"type:enum('init','plan','apply','play','command','destroy')"`
-	Name string   `json:"name" yaml:"name" gorm:""`
-	Args StrSlice `json:"args" yaml:"args" gorm:"type:text"`
+	Type string   `json:"type,omitempty" yaml:"type" gorm:"type:enum('init','plan','apply','play','command','destroy')"`
+	Name string   `json:"name,omitempty" yaml:"name" gorm:"size:32;not null"`
+	Args StrSlice `json:"args,omitempty" yaml:"args" gorm:"type:text"`
 }
 
 const (

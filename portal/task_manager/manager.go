@@ -6,6 +6,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
+	"cloudiac/portal/services/logstorage"
 	"cloudiac/portal/services/sshkey"
 	"cloudiac/runner"
 	"cloudiac/utils"
@@ -15,6 +16,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"net/url"
+	"os"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -232,13 +234,17 @@ func (m *TaskManager) run(ctx context.Context) {
 		go func() {
 			defer m.wg.Done()
 			m.runTask(ctx, task)
+			if task.IsEffectTask() {
+				// 不管任务成功还是失败都执行
+				m.processTaskResult(task)
+			}
 		}()
 	}
 }
 
 func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 	logger := m.logger.WithField("taskId", task.Id)
-	logger.Infof("run task %s", task.Id)
+	logger.Infof("run task: %s", task.Id)
 
 	changeTaskStatus := func(status, message string) error {
 		if er := services.ChangeTaskStatus(m.db, task, status, message); er != nil {
@@ -257,6 +263,14 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 	// 极端情况下任务未执行好过重复执行，所以先设置状态，后发起调用
 	if err := changeTaskStatus(models.TaskRunning, ""); err != nil {
 		return
+	}
+
+	if task.IsEffectTask() {
+		if _, er := m.db.Model(&models.Env{}).Where("id = ?", task.EnvId).
+			Update(&models.Env{LastTaskId: task.Id}); er != nil {
+			logger.Errorf("update env lastTaskId: %v", er)
+			return
+		}
 	}
 
 	runTaskReq, err := buildRunTaskReq(m.db, *task)
@@ -288,9 +302,62 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 				logger.Infof("run task step: %v", err)
 				return
 			}
-			taskFailed(errors.Wrap(err, fmt.Sprintf("run task step %d", step.Index)))
+			taskFailed(errors.Wrap(err, fmt.Sprintf("step %d", step.Index)))
 			return
 		}
+	}
+	logger.Infof("task done: %s", task.Id)
+}
+
+func (m *TaskManager) processTaskResult(task *models.Task) {
+	logger := m.logger.WithField("func", "processTaskResult")
+
+	tx := m.db.Begin().Debug()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	err := func() error {
+		stateJsonPath := task.StateJsonPath()
+		content, err := logstorage.Get().Read(stateJsonPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+			logger.Errorf("read state json: %v", err)
+			return err
+		}
+
+		tfState, err := services.UnmarshalStateJson(content)
+		if err != nil {
+			logger.Errorf("unmarshal state json: %v", err)
+			return err
+		}
+
+		if err = services.SaveTaskResources(tx, task, tfState.Values.RootModule.Resources); err != nil {
+			logger.Errorf("update task resources: %v", err)
+			return err
+		}
+
+		if err = services.SaveTaskOutputs(tx, task, tfState.Values.Outputs); err != nil {
+			logger.Errorf("update task outputs: %v", err)
+			return err
+		}
+
+		// TODO @jinxing 解析资源变更数量
+		return nil
+	}()
+
+	if err != nil {
+		_ = tx.Rollback()
+		return
+	}
+	if err = tx.Commit(); err != nil {
+		logger.Errorf("commit error: %v", err)
+		return
 	}
 }
 
@@ -302,13 +369,14 @@ func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq
 
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("painc: %v", r)
+			logger.Debugf("%s", debug.Stack())
+			err = fmt.Errorf("run task step painc: %v", r)
 		}
 	}()
 
 	changeStepStatus := func(status, message string) {
 		var er error
-		if er = services.ChangeTaskStepStatus(m.db, step, status, message); er != nil {
+		if er = services.ChangeTaskStepStatus(m.db, task, step, status, message); er != nil {
 			er = errors.Wrap(er, "update step status error")
 			logger.Error(er)
 			panic(err)
@@ -368,16 +436,18 @@ loop:
 
 	switch step.Status {
 	case models.TaskStepComplete:
-		if len(stepResult.Result.StateListContent) > 0 {
-			task.Result.StateResList = strings.Split(string(stepResult.Result.StateListContent), "\n")
-		}
-		if stepResult.Status == models.TaskComplete {
-			////TODO 解析日志输出，更新资源变更信息到 task.Result
-			//tfInfo := ParseTfOutput(task.BackendInfo.LogFile)
-			//models.UpdateAttr(dbSess.Where("id = ?", task.Id), &models.Task{}, tfInfo)
-		}
-		if _, err = m.db.Model(&models.Task{}).Update(task); err != nil {
-			return
+		// 有可能步骤变为 complete 状态后程序强制退出，导致任务和环境状态未设置，
+		// 重启后任务会被恢复执行，此时 stepResult 为 nil
+		if stepResult == nil {
+			// 有可能任务状态未与步骤状态同步，这里同步一下
+			if er := services.ChangeTaskStatus(m.db, task, step.Status, ""); er != nil {
+				logger.Errorf("change task status: %v", er)
+				panic(er)
+			}
+		} else {
+			if _, err = m.db.Model(&models.Task{}).Update(task); err != nil {
+				return
+			}
 		}
 		return nil
 	case models.TaskStepFailed:
@@ -425,7 +495,7 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		Workdir:         tpl.Workdir,
 		TfVarsFile:      tpl.TfVarsFile,
 		Playbook:        tpl.Playbook,
-		PlayVarsFile:    tpl.PlayVarsFile,
+		PlayVarsFile:    env.PlayVarsFile,
 		EnvironmentVars: make(map[string]string),
 		TerraformVars:   make(map[string]string),
 		AnsibleVars:     make(map[string]string),

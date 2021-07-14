@@ -139,9 +139,10 @@ const (
 	TaskLogInterrupted    = 10115
 
 	// template
-	TemplateAlreadyExists = 11010
-	TemplateNotExists     = 11011
-	TemplateDisabled      = 11012
+	TemplateAlreadyExists   = 11010
+	TemplateNotExists       = 11011
+	TemplateDisabled        = 11012
+	TemplateActiveEnvExists = 11030
 
 	// consul
 	ConsulConnError = 12010

@@ -70,29 +70,3 @@ func (Vcs) GetReadmeContent(c *ctx.GinRequestCtx) {
 	}
 	c.JSONResult(apps.GetReadme(c.ServiceCtx(), &form))
 }
-
-func TemplateTfvarsSearch(c *ctx.GinRequestCtx) {
-	form := forms.TemplateTfvarsSearchForm{}
-	if err := c.Bind(&form); err != nil {
-		return
-	}
-	c.JSONResult(apps.VcsTfVarsSearch(c.ServiceCtx(), &form))
-}
-
-
-func TemplateVariableSearch(c *ctx.GinRequestCtx) {
-	form := forms.TemplateVariableSearchForm{}
-	if err := c.Bind(&form); err != nil {
-		return
-	}
-	c.JSONResult(apps.VcsVariableSearch(c.ServiceCtx(), &form))
-}
-
-
-func TemplatePlaybookSearch(c *ctx.GinRequestCtx) {
-	form := forms.TemplatePlaybookSearchForm{}
-	if err := c.Bind(&form); err != nil {
-		return
-	}
-	c.JSONResult(apps.VcsPlaybookSearch(c.ServiceCtx(), &form))
-}

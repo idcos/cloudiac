@@ -247,6 +247,8 @@ func (t *Task) genStepScript() error {
 		command string
 		err     error
 	)
+
+	var collCmd string
 	switch t.req.StepType {
 	case common.TaskStepInit:
 		command, err = t.stepInit()
@@ -254,8 +256,14 @@ func (t *Task) genStepScript() error {
 		command, err = t.stepPlan()
 	case common.TaskStepApply:
 		command, err = t.stepApply()
+		if err == nil {
+			collCmd, err = t.collectCommand()
+		}
 	case common.TaskStepDestroy:
 		command, err = t.stepDestroy()
+		if err == nil {
+			collCmd, err = t.collectCommand()
+		}
 	case common.TaskStepPlay:
 		command, err = t.stepPlay()
 	case common.TaskStepCommand:
@@ -265,6 +273,11 @@ func (t *Task) genStepScript() error {
 	}
 	if err != nil {
 		return err
+	}
+
+	// 直接追加到末尾即可，即使步骤执行失败也执行信息采集命令
+	if collCmd != "" {
+		command = fmt.Sprintf("%s\n%s", command, collCmd)
 	}
 
 	stepDir := GetTaskStepDir(t.req.Env.Id, t.req.TaskId, t.req.Step)
@@ -290,8 +303,8 @@ var initCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 git clone '{{.Req.RepoAddress}}' code && \
 cd 'code/{{.Req.Env.Workdir}}' && \
 git checkout '{{.Req.RepoRevision}}' && \
-ln -svf {{.IacTfFile}} . && \
-ln -svf {{.IacTfVars}} . && \
+ln -sf {{.IacTfFile}} . && \
+ln -sf {{.IacTfVars}} . && \
 terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }}
 `))
 
@@ -316,10 +329,9 @@ func (t *Task) stepInit() (command string, err error) {
 
 var planCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
-terraform plan -input=false \
+terraform plan -input=false -out=_cloudiac.plan \
 {{if .TfVars}}-var-file={{.TfVars}}{{end}} -var-file={{.IacTfVars}} \
-{{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }}\
--out=_cloudiac.plan
+{{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }}
 `))
 
 func (t *Task) stepPlan() (command string, err error) {
@@ -334,8 +346,7 @@ func (t *Task) stepPlan() (command string, err error) {
 var applyCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 terraform apply -input=false -auto-approve \
-{{ range $arg := .Req.StepArgs}}{{$arg}} {{ end }} _cloudiac.plan && \
-terraform state list >{{.StateListPath}} 2>&1  
+{{ range $arg := .Req.StepArgs}}{{$arg}} {{ end }}_cloudiac.plan
 `))
 
 func (t *Task) stepApply() (command string, err error) {
@@ -343,7 +354,6 @@ func (t *Task) stepApply() (command string, err error) {
 		"Req":           t.req,
 		"TfVars":        t.req.Env.TfVarsFile,
 		"IacTfVars":     CloudIacTfVars,
-		"StateListPath": t.up2Workspace(StateListFile),
 	})
 }
 
@@ -351,8 +361,7 @@ var destroyCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 terraform destroy -input=false -auto-approve \
 {{if .TfVars}}-var-file={{.TfVars}}{{end}} -var-file={{.IacTfVars}} \
-{{ range $arg := .Req.StepArgs}}{{$arg}} {{end}}&& \
-terraform state list >{{.StateListPath}} 2>&1
+{{ range $arg := .Req.StepArgs}}{{$arg}} {{end}}
 `))
 
 func (t *Task) stepDestroy() (command string, err error) {
@@ -360,7 +369,6 @@ func (t *Task) stepDestroy() (command string, err error) {
 		"Req":           t.req,
 		"TfVars":        t.req.Env.TfVarsFile,
 		"IacTfVars":     CloudIacTfVars,
-		"StateListPath": t.up2Workspace(StateListFile),
 	})
 }
 
@@ -407,5 +415,16 @@ func (t *Task) stepCommand() (command string, err error) {
 	return t.executeTpl(cmdCommandTpl, map[string]interface{}{
 		"Req":      t.req,
 		"Commands": commands,
+	})
+}
+
+// collect command 失败不影响任务状态
+var collectCommandTpl = template.Must(template.New("").Parse(`# state collect command
+terraform show -no-color -json >{{.TFStateShowFilePath}} || sleep 0
+`))
+
+func (t *Task) collectCommand() (string, error) {
+	return t.executeTpl(collectCommandTpl, map[string]interface{}{
+		"TFStateShowFilePath": t.up2Workspace(TFStateJsonFile),
 	})
 }

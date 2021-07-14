@@ -73,26 +73,6 @@ func (e *Env) DefaultStatPath() string {
 	return path.Join(fmt.Sprintf("env-%s", e.Id.String()), "terraform.tfstate")
 }
 
-// EnvRes 环境资源
-// 环境资源为该环境部署后 terraform 创建的资源列表
-type EnvRes struct {
-	BaseModel
-
-	OrgId     Id `json:"orgId" gorm:"size:32;not null"`     // 组织ID
-	ProjectId Id `json:"projectId" gorm:"size:32;not null"` // 项目ID
-	EnvId     Id `json:"envId" gorm:"size:32;not null"`     // 环境ID
-
-	Provider string `json:"provider" gorm:"not null"` // Terraform provider，一般表示为云商/云平台
-	Type     string `json:"type" gorm:"not null"`     // 资源类型
-	Name     string `json:"name" gorm:"not null"`     // 资源名称
-	Index    int    `json:"index" gorm:"not null"`    // 资源序号
-	Attrs    JSON   `json:"attrs" gorm:"type:text"`   // 资源属性
-}
-
-func (EnvRes) TableName() string {
-	return "iac_env_res"
-}
-
 type EnvDetail struct {
 	Env
 	Creator       string `json:"creator"`       // 创建人
