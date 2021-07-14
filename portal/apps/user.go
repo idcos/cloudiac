@@ -104,7 +104,7 @@ func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*CreateUserResp,
 }
 
 type UserWithRoleResp struct {
-	models.User
+	*models.User
 	Password string `json:"-"`
 	Role     string `json:"role" example:"member"` // 角色
 }
@@ -125,9 +125,11 @@ func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.E
 	}
 
 	// 查找用户角色
-	query = query.Joins(fmt.Sprintf("left join %s as o on %s.id = o.user_id",
-		models.UserOrg{}.TableName(), models.User{}.TableName())).
-		LazySelectAppend(fmt.Sprintf("o.role,%s.*", models.User{}.TableName()))
+	if c.OrgId != "" {
+		query = query.Joins(fmt.Sprintf("left join %s as o on %s.id = o.user_id and o.org_id = ?",
+			models.UserOrg{}.TableName(), models.User{}.TableName()), c.OrgId).
+			LazySelectAppend(fmt.Sprintf("o.role,%s.*", models.User{}.TableName()))
+	}
 
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	users := make([]*UserWithRoleResp, 0)
@@ -304,19 +306,16 @@ func DeleteUser(c *ctx.ServiceCtx, form *forms.DeleteUserForm) (interface{}, e.E
 func UserRestrictOrg(c *ctx.ServiceCtx, query *db.Session) *db.Session {
 	query = query.Model(models.User{})
 	if c.OrgId != "" {
-		if c.IsSuperAdmin {
-			subQ := query.Model(models.UserOrg{}).Select("user_id").Where("org_id = ?", c.OrgId)
-			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), subQ.Expr())
-		} else {
-			subQ := query.Model(models.UserOrg{}).Select("user_id").
-				Where("org_id = ? AND user_id = ?", c.OrgId, c.UserId)
-			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), subQ.Expr())
-		}
+		subQ := query.Model(models.UserOrg{}).Select("user_id").Where("org_id = ?", c.OrgId)
+		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), subQ.Expr())
 	} else {
 		// 如果是管理员，不需要附加限制参数，返回所有数据
 		// 组织管理员或者普通用户，如果不带 org，应该返回该用户关联的所有 org
 		if !c.IsSuperAdmin {
-			subQ := query.Model(models.UserOrg{}).Select("user_id").Where("user_id = ?", c.UserId)
+			//select DISTINCT user_id from iac_user_org where (org_id in
+			//   (SELECT org_id from iac_user_org WHERE user_id = 'u-c3i41c06n88g4a2pet20'))
+			orgQ := query.Model(models.UserOrg{}).Select("org_id").Where("user_id = ?", c.UserId)
+			subQ := query.Model(models.UserOrg{}).Select("DISTINCT user_id").Where("org_id in (?)", orgQ)
 			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), subQ.Expr())
 		}
 	}

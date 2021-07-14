@@ -84,11 +84,13 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		RunnerId: form.RunnerId,
 		Status:   models.EnvStatusInactive,
 		OneTime:  form.OneTime,
+		Timeout:  form.Timeout,
 
 		// 模板参数
 		TfVarsFile:   form.TfVarsFile,
 		PlayVarsFile: form.PlayVarsFile,
 		Playbook:     form.Playbook,
+		Revision:     form.Revision,
 
 		// TODO: triggers 触发器设置
 		AutoApproval: form.AutoApproval,
@@ -372,6 +374,9 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	}
 	if form.HasKey("playbook") {
 		env.Playbook = form.Playbook
+	}
+	if form.HasKey("revision") {
+		env.Revision = form.Revision
 	}
 	if form.TaskType == "" {
 		return nil, e.New(e.BadParam, http.StatusBadRequest)

@@ -50,8 +50,9 @@ type DetailUserForm struct {
 type AddUserOrgRelForm struct {
 	BaseForm
 
-	Id   models.Id `form:"id" json:"id" binding:"required" swaggerignore:"true"` // 用户ID
-	Role string    `form:"role" json:"role" binding:"" enums:"admin,member"`     // 用户在组织中的角色，组织管理员：admin，普通用户：member，默认 member
+	Id     models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`      // 组织ID
+	UserId models.Id `form:"userId" json:"userId" binding:""`                  // 用户ID
+	Role   string    `form:"role" json:"role" binding:"" enums:"admin,member"` // 用户在组织中的角色，组织管理员：admin，普通用户：member，默认 member
 }
 
 type DeleteUserOrgRelForm struct {

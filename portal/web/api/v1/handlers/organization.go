@@ -132,7 +132,7 @@ func (Organization) ChangeOrgStatus(c *ctx.GinRequestCtx) {
 // @Security AuthToken
 // @Param orgId path string true "组织ID"
 // @Param form formData forms.AddUserOrgRelForm true "parameter"
-// @router /orgs/{orgId}/users [put]
+// @router /orgs/{orgId}/users [post]
 // @Success 200 {object} ctx.JSONResult{result=apps.UserWithRoleResp}
 func (Organization) AddUserToOrg(c *ctx.GinRequestCtx) {
 	form := forms.AddUserOrgRelForm{}

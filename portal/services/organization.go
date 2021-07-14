@@ -99,7 +99,7 @@ func DeleteUserOrgRel(tx *db.Session, userId models.Id, orgId models.Id) e.Error
 
 func UpdateUserOrgRel(tx *db.Session, userOrg models.UserOrg) e.Error {
 	attrs := models.Attrs{"role": userOrg.Role}
-	if _, err := models.UpdateAttr(tx.Where("userId = ? and orgId = ?", userOrg.UserId, userOrg.OrgId), &models.UserOrg{}, attrs); err != nil {
+	if _, err := models.UpdateAttr(tx.Where("user_id = ? and org_id = ?", userOrg.UserId, userOrg.OrgId), &models.UserOrg{}, attrs); err != nil {
 		return e.New(e.DBError, fmt.Errorf("update user org error: %v", err))
 	}
 	return nil

@@ -188,60 +188,55 @@ func DeleteOrganization(c *ctx.ServiceCtx, form *forms.DeleteOrganizationForm) (
 func DeleteUserOrgRel(c *ctx.ServiceCtx, form *forms.DeleteUserOrgRelForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("delete user %s for org %s", form.UserId, c.OrgId))
 
-	tx := c.RestrictOrg(c.Tx(), models.UserOrg{})
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		}
-	}()
+	user, err := services.GetUserById(UserRestrictOrg(c, c.DB()), form.UserId)
+	if err != nil && err.Code() == e.UserNotExists {
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		c.Logger().Errorf("error get user by id, err %s", err)
+		return nil, e.New(e.DBError, err)
+	}
 
-	if err := services.DeleteUserOrgRel(tx, form.UserId, c.OrgId); err != nil {
-		tx.Rollback()
+	if err := services.DeleteUserOrgRel(c.RestrictOrg(c.DB(), models.UserOrg{}), form.UserId, c.OrgId); err != nil {
 		c.Logger().Errorf("error del user org rel, err %s", err)
 		return nil, err
-	} else if err := tx.Commit(); err != nil {
-		tx.Rollback()
-		c.Logger().Errorf("error commit del user org rel, err %s", err)
-		return nil, e.New(e.DBError, err)
 	}
 	c.Logger().Infof("delete user ", form.UserId, " for org ", c.OrgId, " succeed")
 
-	user, _ := services.GetUserById(tx, form.UserId)
-	return user, nil
+	resp := UserWithRoleResp{
+		User: user,
+		Role: "",
+	}
+	return resp, nil
 }
 
 // AddUserOrgRel 添加用户到组织
 func AddUserOrgRel(c *ctx.ServiceCtx, form *forms.AddUserOrgRelForm) (*UserWithRoleResp, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("add user %s to org %s", form.Id, c.OrgId))
+	c.AddLogField("action", fmt.Sprintf("add user %s to org %s", form.UserId, form.Id))
+	var user *models.User
 
-	tx := c.RestrictOrg(c.Tx(), models.UserOrg{})
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		}
-	}()
-
-	if form.Role != consts.OrgRoleMember && form.Role != consts.OrgRoleOwner {
+	if form.Role != consts.OrgRoleMember && form.Role != consts.OrgRoleAdmin {
 		return nil, e.New(e.InvalidRoleName, http.StatusBadRequest)
 	}
+	user, err := services.GetUserById(c.DB(), form.UserId)
+	if err != nil && err.Code() == e.UserNotExists {
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		c.Logger().Errorf("error get user by id, err %s", err)
+		return nil, e.New(e.DBError, err)
+	}
 
-	_, err := services.CreateUserOrgRel(tx, models.UserOrg{OrgId: c.OrgId, UserId: form.Id, Role: form.Role})
-	if err != nil && err.Code() != e.UserAlreadyExists {
-		tx.Rollback()
+	_, err = services.CreateUserOrgRel(c.RestrictOrg(c.DB(), models.UserOrg{}), models.UserOrg{OrgId: form.Id, UserId: form.UserId, Role: form.Role})
+	if err != nil && err.Code() == e.UserAlreadyExists {
 		c.Logger().Errorf("error create user org rel, err %s", err)
-		return nil, err
-	} else if err := tx.Commit(); err != nil {
-		tx.Rollback()
-		c.Logger().Errorf("error commit add user org rel, err %s", err)
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		c.Logger().Errorf("error add user org rel, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
 	c.Logger().Infof("add user ", form.Id, " to org ", c.OrgId, " succeed")
 
-	user, _ := services.GetUserById(tx, form.Id)
 	resp := UserWithRoleResp{
-		User: *user,
+		User: user,
 		Role: form.Role,
 	}
 
@@ -252,28 +247,23 @@ func AddUserOrgRel(c *ctx.ServiceCtx, form *forms.AddUserOrgRelForm) (*UserWithR
 func UpdateUserOrgRel(c *ctx.ServiceCtx, form *forms.UpdateUserOrgRelForm) (*UserWithRoleResp, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update user %s in org %s to role %s", form.UserId, c.OrgId, form.Role))
 
-	tx := c.RestrictOrg(c.Tx(), models.UserOrg{})
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
-		}
-	}()
+	query := c.RestrictOrg(c.DB(), models.UserOrg{})
+	user, err := services.GetUserById(query, form.UserId)
+	if err != nil && err.Code() == e.UserNotExists {
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		c.Logger().Errorf("error get user by id, err %s", err)
+		return nil, e.New(e.DBError, err)
+	}
 
-	if err := services.UpdateUserOrgRel(tx, models.UserOrg{OrgId: c.OrgId, UserId: form.UserId, Role: form.Role}); err != nil {
-		tx.Rollback()
+	if err := services.UpdateUserOrgRel(query, models.UserOrg{OrgId: c.OrgId, UserId: form.UserId, Role: form.Role}); err != nil {
 		c.Logger().Errorf("error create user org rel, err %s", err)
 		return nil, err
-	} else if err := tx.Commit(); err != nil {
-		tx.Rollback()
-		c.Logger().Errorf("error commit add user org rel, err %s", err)
-		return nil, e.New(e.DBError, err)
 	}
 	c.Logger().Infof("add user ", form.UserId, " to org ", c.OrgId, " succeed")
 
-	user, _ := services.GetUserById(tx, form.UserId)
 	resp := UserWithRoleResp{
-		User: *user,
+		User: user,
 		Role: form.Role,
 	}
 
@@ -300,7 +290,7 @@ func OrgRestrictOrg(c *ctx.ServiceCtx, query *db.Session) *db.Session {
 
 // InviteUser 邀请用户加入某个组织
 // 如果用户不存在，则创建并加入组织，如果用户已经存在，则加入该组织
-func InviteUser(c *ctx.ServiceCtx, form *forms.InviteUserForm) (*models.User, e.Error) {
+func InviteUser(c *ctx.ServiceCtx, form *forms.InviteUserForm) (*UserWithRoleResp, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("invite user %s%s to org %s as %s", form.Name, form.UserId, form.Id, form.Role))
 	org, err := services.GetOrganizationById(OrgRestrictOrg(c, c.DB()), form.Id)
 	if err != nil && err.Code() == e.OrganizationNotExists {
@@ -308,6 +298,9 @@ func InviteUser(c *ctx.ServiceCtx, form *forms.InviteUserForm) (*models.User, e.
 	} else if err != nil {
 		c.Logger().Errorf("error get org, err %s", err)
 		return nil, e.New(e.DBError, err)
+	}
+	if form.Role == "" {
+		form.Role = consts.OrgRoleMember
 	}
 
 	tx := c.Tx()
@@ -401,5 +394,10 @@ func InviteUser(c *ctx.ServiceCtx, form *forms.InviteUserForm) (*models.User, e.
 		}
 	}()
 
-	return user, nil
+	resp := UserWithRoleResp{
+		User: user,
+		Role: form.Role,
+	}
+
+	return &resp, nil
 }
