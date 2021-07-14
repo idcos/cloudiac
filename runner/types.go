@@ -57,6 +57,7 @@ type TaskStatusMessage struct {
 
 	LogContent  []byte `json:"logContent"`
 	TfStateJson []byte `json:"tfStateJson"`
+	TfPlanJson  []byte `json:"tfPlanJson"`
 }
 
 type ErrorMessage struct {

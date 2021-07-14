@@ -138,6 +138,10 @@ func (t *Task) StateJsonPath() string {
 	return fmt.Sprintf("%s/%s/%s/%s", t.ProjectId, t.EnvId, t.Id, runner.TFStateJsonFile)
 }
 
+func (t *Task) PlanJsonPath() string {
+	return fmt.Sprintf("%s/%s/%s/%s", t.ProjectId, t.EnvId, t.Id, runner.TFPlanJsonFile)
+}
+
 func (t *Task) Migrate(sess *db.Session) (err error) {
 	// 以下 column 通过 Migrate 来维护，确保新增加的 enum 生效
 	columnDefines := []struct {

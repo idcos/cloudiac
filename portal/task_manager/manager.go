@@ -312,52 +312,46 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 func (m *TaskManager) processTaskResult(task *models.Task) {
 	logger := m.logger.WithField("func", "processTaskResult")
 
-	tx := m.db.Begin().Debug()
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			panic(r)
-		}
-	}()
-
-	err := func() error {
-		stateJsonPath := task.StateJsonPath()
-		content, err := logstorage.Get().Read(stateJsonPath)
+	dbSess := m.db
+	read := func(path string) ([]byte, error) {
+		content, err := logstorage.Get().Read(path)
 		if err != nil {
 			if os.IsNotExist(err) {
-				return nil
+				return nil, nil
 			}
-			logger.Errorf("read state json: %v", err)
-			return err
+			return nil, err
 		}
+		return content, nil
+	}
 
-		tfState, err := services.UnmarshalStateJson(content)
+	if bs, err := read(task.StateJsonPath()); err != nil {
+		logger.Errorf("read state json: %v", err)
+		return
+	} else if len(bs) > 0 {
+		tfState, err := services.UnmarshalStateJson(bs)
 		if err != nil {
 			logger.Errorf("unmarshal state json: %v", err)
-			return err
+			return
 		}
-
-		if err = services.SaveTaskResources(tx, task, tfState.Values.RootModule.Resources); err != nil {
-			logger.Errorf("update task resources: %v", err)
-			return err
+		if err = services.SaveTaskResources(dbSess, task, tfState.Values); err != nil {
+			logger.Errorf("save task resources: %v", err)
+			return
 		}
-
-		if err = services.SaveTaskOutputs(tx, task, tfState.Values.Outputs); err != nil {
-			logger.Errorf("update task outputs: %v", err)
-			return err
+		if err = services.SaveTaskOutputs(dbSess, task, tfState.Values.Outputs); err != nil {
+			logger.Errorf("save task outputs: %v", err)
+			return
 		}
-
-		// TODO @jinxing 解析资源变更数量
-		return nil
-	}()
-
-	if err != nil {
-		_ = tx.Rollback()
-		return
 	}
-	if err = tx.Commit(); err != nil {
-		logger.Errorf("commit error: %v", err)
+
+	if bs, err := read(task.PlanJsonPath()); err != nil {
+		logger.Errorf("read plan json: %v", err)
 		return
+	} else if len(bs) > 0 {
+		tfPlan, err := services.UnmarshalPlanJson(bs)
+		if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges); err != nil {
+			logger.Errorf("save task changes: %v", err)
+			return
+		}
 	}
 }
 
@@ -365,12 +359,13 @@ func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq
 	task *models.Task, step *models.TaskStep) (err error) {
 	logger := m.logger.WithField("taskId", taskReq.TaskId)
 	logger = logger.WithField("func", "runTaskStep").
-		WithField("step", fmt.Sprintf("%d", step.Index))
+		WithField("step", fmt.Sprintf("%d(%s)", step.Index, step.Type))
 
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Debugf("%s", debug.Stack())
 			err = fmt.Errorf("run task step painc: %v", r)
+			logger.Errorln(err)
+			logger.Debugf("%s", debug.Stack())
 		}
 	}()
 
@@ -417,7 +412,7 @@ loop:
 		switch step.Status {
 		case models.TaskStepPending, models.TaskStepApproving:
 			changeStepStatus(models.TaskStepRunning, "")
-			logger.Infof("start task step %d", step.Index)
+			logger.Infof("start task step %d(%s)", step.Index, step.Type)
 			if err = StartTaskStep(taskReq, *step); err != nil {
 				logger.Errorf("start task step error: %s", err.Error())
 				changeStepStatus(models.TaskStepFailed, err.Error())
@@ -443,10 +438,6 @@ loop:
 			if er := services.ChangeTaskStatus(m.db, task, step.Status, ""); er != nil {
 				logger.Errorf("change task status: %v", er)
 				panic(er)
-			}
-		} else {
-			if _, err = m.db.Model(&models.Task{}).Update(task); err != nil {
-				return
 			}
 		}
 		return nil

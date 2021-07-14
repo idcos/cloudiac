@@ -512,3 +512,15 @@ func SprintTemplate(format string, data interface{}) (str string) {
 		return msg.String()
 	}
 }
+
+func SliceEqualStr(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
