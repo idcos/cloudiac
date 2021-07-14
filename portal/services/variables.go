@@ -41,23 +41,27 @@ func OperationVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Variable{}.TableName(),
 		"id", "scope", "type", "name", "value", "sensitive", "description", "org_id", "project_id", "tpl_id", "env_id")
 	for _, v := range variables {
-		var value string
-		// 当需要加密时，判定加密的数据是否为空
+		attrs := map[string]interface{}{
+			"name":        v.Name,
+			"sensitive":   v.Sensitive,
+			"description": v.Description,
+		}
+		var value string = v.Value
+		// 需要加密，数据不为空
 		if v.Sensitive && v.Value != "" {
 			value, _ = utils.AesEncrypt(v.Value)
+			attrs["value"] = value
 		}
-		// 当value为空， 判定是否需要加密
-		if v.Value == "" && v.Sensitive {
+
+		// 不需要加密，数据不为空
+		if v.Value != "" && !v.Sensitive {
 			value = v.Value
+			attrs["value"] = value
 		}
+		// 需要加密，数据为空 不做操作
+
 		//id不为空修改变量，反之新建
 		if v.Id != "" {
-			attrs := map[string]interface{}{
-				"name":        v.Name,
-				"value":       value,
-				"sensitive":   v.Sensitive,
-				"description": v.Description,
-			}
 			err := UpdateVariable(tx, v.Id, attrs)
 			if err != nil && err.Code() == e.VariableAliasDuplicate {
 				return e.New(err.Code(), err, http.StatusBadRequest)
@@ -91,8 +95,8 @@ func CreateVariables(tx *db.Session, bq *utils.BatchSQL) e.Error {
 }
 
 func UpdateVariable(tx *db.Session, variableId models.Id, attr map[string]interface{}) e.Error {
-	if _, err := models.UpdateModel(tx,
-		models.Variable{BaseModel: models.BaseModel{Id: variableId}}, attr); err != nil {
+	if _, err := models.UpdateAttr(tx,
+		models.Variable{TimedModel: models.TimedModel{BaseModel: models.BaseModel{Id: variableId}}}, attr); err != nil {
 		if e.IsDuplicate(err) {
 			return e.New(e.VariableAliasDuplicate)
 		}
@@ -137,27 +141,30 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 		return nil, err
 	}
 	variableM := make(map[string]models.Variable, 0)
-	for _, v := range variables {
+	for index, v := range variables {
 		// 过滤掉变量一部分不需要应用的变量
 		if utils.InArrayStr(scopes, v.Scope) {
+			if v.Sensitive {
+				variables[index].Value = ""
+			}
 			// 根据id（envId/tplId/projectId）来确认变量是否需要应用
 			if v.EnvId != "" && v.EnvId == envId {
-				variableM[v.Name] = v
+				variableM[v.Name] = variables[index]
 				continue
 			}
 
 			if v.TplId != "" && v.TplId == tplId {
-				variableM[v.Name] = v
+				variableM[v.Name] = variables[index]
 				continue
 			}
 
 			if v.ProjectId != "" && v.ProjectId == projectId {
-				variableM[v.Name] = v
+				variableM[v.Name] = variables[index]
 				continue
 			}
 
 			if v.ProjectId == "" && v.TplId == "" && v.EnvId == "" {
-				variableM[v.Name] = v
+				variableM[v.Name] = variables[index]
 			}
 
 		}

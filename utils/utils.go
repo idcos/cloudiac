@@ -191,6 +191,10 @@ func (t *JSONTime) Scan(v interface{}) error {
 	return nil
 }
 
+func (t JSONTime) Unix() int64 {
+	return time.Time(t).Unix()
+}
+
 func FileExist(p string) bool {
 	_, err := os.Stat(p)
 	if err != nil {

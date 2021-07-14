@@ -13,7 +13,7 @@ type VariableBody struct {
 }
 
 type Variable struct {
-	BaseModel
+	TimedModel
 	VariableBody
 
 	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
