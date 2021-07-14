@@ -104,6 +104,14 @@ const (
 	OrganizationInvalidStatus  = 9014
 	InvalidOrganizationId      = 9015
 
+	// project
+	ProjectAlreadyExists  = 10010
+	ProjectNotExists      = 10011
+	ProjectDisabled       = 10012
+	ProjectAliasDuplicate = 10013
+	ProjectInvalidStatus  = 10014
+	ProjectIdInvalid      = 10014
+
 	// gitlib
 	GitLabError = 9100
 
@@ -115,8 +123,12 @@ const (
 	// template
 	TemplateAlreadyExists = 11010
 
+
 	// consul
 	ConsulConnError = 12010
+
+	// env
+	EnvNotExists = 13404
 )
 
 var errorMsgs = map[int]map[string]string{

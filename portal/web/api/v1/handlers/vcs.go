@@ -180,6 +180,7 @@ func TemplateTfvarsSearch(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.VcsTfVarsSearch(c.ServiceCtx(), &form))
 }
 
+
 // TemplateVariableSearch 查询云模板TF参数
 // @Tags 云模板
 // @Summary 云模板参数接口
@@ -195,7 +196,8 @@ func TemplateVariableSearch(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.VcsVariableSearch(c.ServiceCtx(), &form))
 }
 
-//TemplatePlaybookSearch
+
+// TemplatePlaybookSearch
 // @Tags playbook列表查询
 // @Summary  playbook列表接口
 // @Accept application/x-www-form-urlencoded

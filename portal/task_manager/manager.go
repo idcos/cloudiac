@@ -13,7 +13,6 @@ import (
 	"cloudiac/utils/logs"
 	"context"
 	"fmt"
-	consulapi "github.com/hashicorp/consul/api"
 	"github.com/pkg/errors"
 	"net/url"
 	"runtime/debug"
@@ -91,21 +90,22 @@ func (m *TaskManager) acquireLock(ctx context.Context) (<-chan struct{}, error) 
 	}
 
 	stopLockCh := make(chan struct{})
+	lockHeld := false
 	go func() {
 		<-ctx.Done()
-		if err := locker.Unlock(); err != nil {
-			if err != consulapi.ErrLockNotHeld {
+		close(stopLockCh)
+		if lockHeld {
+			if err := locker.Unlock(); err != nil {
 				m.logger.Errorf("release lock error: %v", err)
 			}
 		}
-		close(stopLockCh)
 	}()
 
 	lockLostCh, err := locker.Lock(stopLockCh)
 	if err != nil {
 		return nil, errors.Wrap(err, "acquire lock")
 	}
-
+	lockHeld = true
 	return lockLostCh, nil
 }
 
@@ -163,7 +163,7 @@ func (m *TaskManager) start() {
 func (m *TaskManager) recoverTask(ctx context.Context) error {
 	logger := m.logger
 	query := m.db.Model(&models.Task{}).
-		Where("status = ?", models.TaskRunning)
+		Where("status IN (?)", []string{models.TaskRunning, models.TaskApproving})
 
 	tasks := make([]*models.Task, 0)
 	if err := query.Find(&tasks); err != nil {
@@ -240,30 +240,22 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 	logger := m.logger.WithField("taskId", task.Id)
 	logger.Infof("run task %s", task.Id)
 
-	updateTask := func() error {
-		if _, err := m.db.Model(task).Update(task); err != nil {
-			logger.Errorf("update task error: %v", err)
-			return err
+	changeTaskStatus := func(status, message string) error {
+		if er := services.ChangeTaskStatus(m.db, task, status, message); er != nil {
+			logger.Errorf("update task status error: %v", er)
+			return er
 		}
 		return nil
 	}
 
 	taskFailed := func(err error) {
 		logger.Infoln(err)
-		now := time.Now()
-		task.Status = models.TaskFailed
-		task.Message = err.Error()
-		task.EndAt = &now
-		_ = updateTask()
+		_ = changeTaskStatus(models.TaskFailed, err.Error())
 	}
 
 	// 先更新任务为 running 状态
 	// 极端情况下任务未执行好过重复执行，所以先设置状态，后发起调用
-	task.Status = models.TaskRunning
-	task.Message = ""
-	now := time.Now()
-	task.StartAt = &now
-	if err := updateTask(); err != nil {
+	if err := changeTaskStatus(models.TaskRunning, ""); err != nil {
 		return
 	}
 
@@ -286,26 +278,27 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 		}
 
 		task.CurrStep = step.Index
-		if err = updateTask(); err != nil {
+		if _, err = m.db.Model(task).Update(task); err != nil {
+			logger.Errorf("update task error: %v", err)
 			return
 		}
 
 		if err = m.runTaskStep(ctx, *runTaskReq, task, step); err != nil {
+			if err == context.Canceled {
+				logger.Infof("run task step: %v", err)
+				return
+			}
 			taskFailed(errors.Wrap(err, fmt.Sprintf("run task step %d", step.Index)))
 			return
 		}
 	}
-
-	task.Status = models.TaskStepComplete
-	now = time.Now()
-	task.EndAt = &now
-	_ = updateTask()
 }
 
 func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq,
 	task *models.Task, step *models.TaskStep) (err error) {
 	logger := m.logger.WithField("taskId", taskReq.TaskId)
-	logger = logger.WithField("func", "runTaskStep").WithField("step", fmt.Sprintf("%d", step.Index))
+	logger = logger.WithField("func", "runTaskStep").
+		WithField("step", fmt.Sprintf("%d", step.Index))
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -313,27 +306,32 @@ func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq
 		}
 	}()
 
-	updateStep := func() {
-		if _, er := m.db.Model(step).Update(step); er != nil {
-			er = errors.Wrapf(er, "update step error")
+	changeStepStatus := func(status, message string) {
+		var er error
+		if er = services.ChangeTaskStepStatus(m.db, step, status, message); er != nil {
+			er = errors.Wrap(er, "update step status error")
 			logger.Error(er)
-			panic(er)
+			panic(err)
 		}
 	}
 
 	if !task.AutoApprove && !step.IsApproved() {
-		var newStep *models.TaskStep
 		logger.Infof("waitting task step approve")
+		changeStepStatus(models.TaskStepApproving, "")
 
-		step.Status = models.TaskStepApproving
-		step.Message = ""
-		updateStep()
-
+		var newStep *models.TaskStep
 		if newStep, err = WaitTaskStepApprove(ctx, m.db, step.TaskId, step.Index); err != nil {
+			if err == context.Canceled {
+				return err
+			}
+
 			logger.Errorf("wait task step approve error: %v", err)
-			step.Status = models.TaskStepFailed
-			step.Message = err.Error()
-			updateStep()
+			status := models.TaskStepFailed
+			if err == ErrTaskStepRejected {
+				status = models.TaskStepRejected
+			}
+			changeStepStatus(status, err.Error())
+			return err
 		}
 		step = newStep
 	}
@@ -350,26 +348,17 @@ loop:
 
 		switch step.Status {
 		case models.TaskStepPending, models.TaskStepApproving:
-			now := time.Now()
-			step.Status = models.TaskStepRunning
-			step.Message = ""
-			step.StartAt = &now
-			updateStep()
-
+			changeStepStatus(models.TaskStepRunning, "")
 			logger.Infof("start task step %d", step.Index)
 			if err = StartTaskStep(taskReq, *step); err != nil {
 				logger.Errorf("start task step error: %s", err.Error())
-				step.Status = models.TaskStepFailed
-				step.Message = err.Error()
-				updateStep()
+				changeStepStatus(models.TaskStepFailed, err.Error())
 				return err
 			}
 		case models.TaskStepRunning:
 			if stepResult, err = WaitTaskStep(ctx, m.db, task, step); err != nil {
 				logger.Errorf("wait task result error: %v", err)
-				step.Status = models.TaskStepFailed
-				step.Message = err.Error()
-				updateStep()
+				changeStepStatus(models.TaskStepFailed, err.Error())
 				return err
 			}
 		default:
@@ -442,14 +431,22 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		AnsibleVars:     make(map[string]string),
 	}
 
+	getVarValue := func(v models.VariableBody) string {
+		if v.Sensitive {
+			return utils.AesDecrypt(v.Value)
+		}
+		return v.Value
+	}
+
 	for _, v := range task.Variables {
+		value := getVarValue(v)
 		switch v.Type {
 		case consts.VarTypeEnv:
-			runnerEnv.EnvironmentVars[v.Name] = v.Value
+			runnerEnv.EnvironmentVars[v.Name] = value
 		case consts.VarTypeTerraform:
-			runnerEnv.TerraformVars[v.Name] = v.Value
+			runnerEnv.TerraformVars[v.Name] = value
 		case consts.VarTypeAnsible:
-			runnerEnv.AnsibleVars[v.Name] = v.Value
+			runnerEnv.AnsibleVars[v.Name] = value
 		default:
 			return nil, fmt.Errorf("unknown variable type: %s", v.Type)
 		}

@@ -14,7 +14,7 @@ type Paginator struct {
 type PageResp struct {
 	Total    int64       `json:"total" example:"1"`
 	PageSize int         `json:"pageSize" example:"15"`
-	List     interface{} `json:"list"`
+	List     interface{} `json:"list" swaggertype:"object"`
 }
 
 func New(page int, size int, q *db.Session) *Paginator {

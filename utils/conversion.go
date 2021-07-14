@@ -50,6 +50,15 @@ func ArrayIsHasSuffix(arr []string, v string) bool {
 	return false
 }
 
+func ArrayIsExistsStr(arr []string, v string) bool {
+	for i := range arr {
+		if v == arr[i] {
+			return true
+		}
+	}
+	return false
+}
+
 //去掉url路径结尾的'/'
 func GetUrl(address string) string {
 	return strings.TrimSuffix(address, "/")

@@ -60,11 +60,10 @@ func Register(g *gin.RouterGroup) {
 	ctrl.Register(g.Group("users", ac()), &handlers.User{})
 	g.PUT("/users/:id/status", ac(), w(handlers.User{}.ChangeUserStatus))
 	g.POST("/users/:id/password/reset", ac(), w(handlers.User{}.PasswordReset))
-
-	g.POST("/projects", ac(), w(handlers.Organization{}.Search))
-	g.GET("/projects", ac(), w(handlers.Organization{}.Search))
-	g.GET("/projects/:id", ac(), w(handlers.Organization{}.Search))
-
+	//项目管理
+	{
+		ctrl.Register(g.Group("projects", ac()), &handlers.Project{})
+	}
 	// 项目资源
 	// TODO: parse project header
 	g.Use(w(middleware.AuthProjectId))
@@ -75,7 +74,6 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/template/variable", ac(), w(handlers.TemplateVariableSearch))
 	g.GET("/template/playbook", ac(), w(handlers.TemplatePlaybookSearch))
 	g.GET("/template/state_list", ac(), w(handlers.Task{}.TaskStateListSearch))
-
 	ctrl.Register(g.Group("task", ac()), &handlers.Task{})
 	ctrl.Register(g.Group("task/comment", ac()), &handlers.TaskComment{})
 	g.GET("/task/last", ac(), w(handlers.Task{}.LastTask))
@@ -88,4 +86,5 @@ func Register(g *gin.RouterGroup) {
 
 	ctrl.Register(g.Group("notification", ac()), &handlers.Notification{})
 	ctrl.Register(g.Group("resource/account", ac()), &handlers.ResourceAccount{})
+
 }

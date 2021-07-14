@@ -69,14 +69,15 @@ const (
 	TaskTypeApply   = common.TaskTypeApply
 	TaskTypeDestroy = common.TaskTypeDestroy
 
-	TaskPending  = common.TaskPending
-	TaskRunning  = common.TaskRunning
-	TaskFailed   = common.TaskFailed
-	TaskComplete = common.TaskComplete
-	TaskTimeout  = common.TaskTimeout
+	TaskPending   = common.TaskPending
+	TaskRunning   = common.TaskRunning
+	TaskApproving = common.TaskApproving
+	TaskFailed    = common.TaskFailed
+	TaskComplete  = common.TaskComplete
+	//TaskTimeout   = common.TaskTimeout
 )
 
-var TaskStatusList = []string{TaskPending, TaskRunning, TaskFailed, TaskComplete, TaskTimeout}
+var TaskStatusList = []string{TaskPending, TaskRunning, TaskFailed, TaskComplete} //, TaskTimeout}
 
 type Task struct {
 	SoftDeleteModel
@@ -91,7 +92,7 @@ type Task struct {
 	RunnerId  string `json:"runnerId" gorm:"not null"`
 	CommitId  string `json:"commitId" gorm:"not null"`
 
-	// 任务每一步的执行超时，整个任务无超时控制
+	// 任务每一步的执行超时(整个任务无超时控制)
 	StepTimeout int `json:"stepTimeout" gorm:"default:'600';comment:'执行超时'"`
 
 	AutoApprove bool `json:"autoApproval" gorm:"default:'0'"`
@@ -130,11 +131,21 @@ func (t *Task) Started() bool {
 }
 
 func (Task) IsStartedStatus(status string) bool {
+	// 注意：approving 状态的任务我们也认为其 started
 	return !utils.InArrayStr([]string{TaskPending}, status)
 }
 
 func (Task) IsExitedStatus(status string) bool {
-	return utils.InArrayStr([]string{TaskFailed, TaskComplete, TaskTimeout}, status)
+	return utils.InArrayStr([]string{TaskFailed, TaskComplete}, status)
+}
+
+func (t *Task) IsEffectTask() bool {
+	return t.IsEffectTaskType(t.Type)
+}
+
+// IsEffectTaskType 是否产生实际数据变动的任务类型
+func (Task) IsEffectTaskType(typ string) bool {
+	return utils.StrInArray(typ, TaskTypeApply, TaskTypeDestroy)
 }
 
 func (t *Task) Migrate(sess *db.Session) (err error) {
@@ -145,7 +156,7 @@ func (t *Task) Migrate(sess *db.Session) (err error) {
 	}{
 		{
 			"status",
-			`ENUM('pending','running','failed','complete','timeout') DEFAULT 'pending' COMMENT '作业状态'`,
+			`ENUM('pending','running','approving','failed','complete','timeout') DEFAULT 'pending' COMMENT '作业状态'`,
 		},
 	}
 	for _, cd := range columnDefines {
@@ -173,6 +184,7 @@ const (
 
 	TaskStepPending   = common.TaskStepPending
 	TaskStepApproving = common.TaskStepApproving
+	TaskStepRejected  = common.TaskStepRejected
 	TaskStepRunning   = common.TaskStepRunning
 	TaskStepFailed    = common.TaskStepFailed
 	TaskStepComplete  = common.TaskStepComplete
@@ -187,8 +199,9 @@ type TaskStep struct {
 	ProjectId Id         `json:"projectId" gorm:"size:32;not null"`
 	EnvId     Id         `json:"envId" gorm:"size:32;not null"`
 	TaskId    Id         `json:"taskId" gorm:"size:32;not null"`
+	NextStep  Id         `json:"nextStep" gorm:"size:32;default:''"`
 	Index     int        `json:"index" gorm:"size:32;not null"`
-	Status    string     `json:"status" gorm:"type:enum('pending','approving','running','failed','complete','timeout')"`
+	Status    string     `json:"status" gorm:"type:enum('pending','approving','rejected','running','failed','complete','timeout')"`
 	Message   string     `json:"message" gorm:"type:text"`
 	StartAt   *time.Time `json:"startAt"`
 	EndAt     *time.Time `json:"endAt"`
@@ -201,7 +214,18 @@ func (TaskStep) TableName() string {
 	return "iac_task_step"
 }
 
+func (s *TaskStep) IsStarted() bool {
+	return !utils.StrInArray(s.Status, TaskStepPending, TaskStepApproving)
+}
+
+func (s *TaskStep) IsExited() bool {
+	return utils.StrInArray(s.Status, TaskStepRejected, TaskStepCommand, TaskStepFailed, TaskStepTimeout)
+}
+
 func (s *TaskStep) IsApproved() bool {
+	if s.Status == TaskStepRejected {
+		return false
+	}
 	// 只有 apply 和 destroy 步骤需要审批
 	if utils.StrInArray(s.Type, TaskStepApply, TaskStepDestroy) && len(s.ApproverId) == 0 {
 		return false
