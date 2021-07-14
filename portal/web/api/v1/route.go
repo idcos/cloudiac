@@ -81,9 +81,9 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/task/last", ac(), w(handlers.Task{}.LastTask))
 
 	ctrl.Register(g.Group("vcs", ac()), &handlers.Vcs{})
-	g.GET("/vcs/repo/search", ac(), w(handlers.Vcs{}.ListRepos))
-	g.GET("/vcs/branch/search", ac(), w(handlers.Vcs{}.ListBranches))
-	g.GET("/vcs/tag/search", ac(), w(handlers.Vcs{}.ListTags))
+	g.GET("/vcs/repo", ac(), w(handlers.Vcs{}.ListRepos))
+	g.GET("/vcs/branch", ac(), w(handlers.Vcs{}.ListBranches))
+	g.GET("/vcs/tag", ac(), w(handlers.Vcs{}.ListTags))
 	g.GET("/vcs/readme", ac(), w(handlers.Vcs{}.GetReadmeContent))
 
 	ctrl.Register(g.Group("notification", ac()), &handlers.Notification{})

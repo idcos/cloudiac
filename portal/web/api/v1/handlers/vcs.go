@@ -98,7 +98,7 @@ func ListEnableVcs(c *ctx.GinRequestCtx) {
 // @Produce json
 // @Security AuthToken
 // @Param form query forms.GetGitProjectsForm true "patameter"
-// @Router /vcs/repo/search [get]
+// @Router /vcs/repo [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]vcsrv.Projects}}
 func (Vcs) ListRepos(c *ctx.GinRequestCtx) {
 	form := forms.GetGitProjectsForm{}
@@ -116,7 +116,7 @@ func (Vcs) ListRepos(c *ctx.GinRequestCtx) {
 // @Produce json
 // @Security AuthToken
 // @Param form query forms.GetGitRevisionForm true "parameter"
-// @Router /vcs/branch/search [get]
+// @Router /vcs/branch [get]
 // @Success 200 {object} ctx.JSONResult{result=[]apps.Revision}
 func (Vcs) ListBranches(c *ctx.GinRequestCtx) {
 	form := forms.GetGitRevisionForm{}
@@ -134,7 +134,7 @@ func (Vcs) ListBranches(c *ctx.GinRequestCtx) {
 // @Produce json
 // @Security AuthToken
 // @Param form query forms.GetGitRevisionForm true "parameter"
-// @Router /vcs/tag/search [get]
+// @Router /vcs/tag [get]
 // @Success 200 {object} ctx.JSONResult{result=[]apps.Revision}
 func (Vcs) ListTags(c *ctx.GinRequestCtx) {
 	form := forms.GetGitRevisionForm{}
