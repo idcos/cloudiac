@@ -32,10 +32,12 @@ const (
 	TaskLogName      = "output.log"
 	TaskInfoFileName = "task.json"
 
-	StateListFile            = "state_list.log"
-	CloudIacTfFile           = "_cloudiac.tf"
-	CloudIacTfVars           = "_cloudiac.tfvars"
-	CloudIacPlayVars         = "_cloudiac_play_vars.yml"
+	CloudIacTfFile   = "_cloudiac.tf"
+	CloudIacTfVars   = "_cloudiac.tfvars"
+	CloudIacPlayVars = "_cloudiac_play_vars.yml"
+
+	TFStateJsonFile = "tfstate.json"
+
 	AnsibleStateAnalysisName = "terraform.py"
 
 	FollowLogDelay = time.Second // follow 文件时读到 EOF 后进行下次读取的等待时长

@@ -58,15 +58,18 @@ func GetTaskStepDirName(step int) string {
 }
 
 func FetchTaskStepLog(envId string, taskId string, step int) ([]byte, error) {
-	logFile := filepath.Join(GetTaskStepDir(envId, taskId, step), TaskLogName)
-	return ioutil.ReadFile(logFile)
+	path := filepath.Join(GetTaskStepDir(envId, taskId, step), TaskLogName)
+	return ioutil.ReadFile(path)
 }
 
-func FetchStateList(envId string, taskId string) ([]byte, error) {
-	logFile := filepath.Join(GetTaskWorkspace(envId, taskId), StateListFile)
-	bs, err := ioutil.ReadFile(logFile)
-	if os.IsNotExist(err) {
-		return []byte{}, nil
+func FetchStateJson(envId string, taskId string) ([]byte, error) {
+	path := filepath.Join(GetTaskWorkspace(envId, taskId), TFStateJsonFile)
+	content, err := ioutil.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
 	}
-	return bs, nil
+	return content, nil
 }

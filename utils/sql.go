@@ -92,7 +92,7 @@ func (b *BatchSQL) Next() (sql string, args []interface{}) {
 		columns[i] = fmt.Sprintf("`%s`", b.columns[i])
 	}
 
-	bPrintf("%s `%s`(%s)\nVALUES", b.op, b.table, strings.Join(columns, ","))
+	bPrintf("%s `%s`(%s) VALUES", b.op, b.table, strings.Join(columns, ","))
 	for i := range b.rowValues[start:end] {
 		if i == 0 {
 			bPrintf("%s", b.valuesPh)

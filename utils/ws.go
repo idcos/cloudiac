@@ -2,15 +2,16 @@ package utils
 
 import (
 	"github.com/gorilla/websocket"
+	"net/http"
 	"net/url"
 	"path"
 	"time"
 )
 
-func WebsocketDail(server string, urlPath string, params url.Values) (*websocket.Conn, error) {
+func WebsocketDail(server string, urlPath string, params url.Values) (*websocket.Conn, *http.Response, error) {
 	u, err := url.Parse(server)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	u.Path = path.Join(u.Path, urlPath)
@@ -21,8 +22,8 @@ func WebsocketDail(server string, urlPath string, params url.Values) (*websocket
 	}
 	u.RawQuery = params.Encode()
 
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
-	return c, err
+	c, resp, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	return c, resp, err
 }
 
 func WebsocketClose(conn *websocket.Conn) error {

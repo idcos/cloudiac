@@ -33,14 +33,13 @@ type Env struct {
 	OneTime  bool   `json:"oneTime" gorm:"default:'0'"`
 
 	StatePath string `json:"statePath" gorm:"not null"`
-	Outputs   string `json:"outputs" gorm:"type:text"`
 
 	// 环境可以覆盖模板中的 vars file 配置，具体说明见 Template model
 	TfVarsFile   string `json:"tfVarsFile" gorm:"default:''"`
 	PlayVarsFile string `json:"playVarsFile" gorm:"default:''"`
 
 	// 最后一次部署或销毁任务的 id(plan 作业不记录)
-	LastTaskId Id `json:"lastTaskId" gorm:"size:32;default:'0'"`
+	LastTaskId Id `json:"lastTaskId" gorm:"size:32;default:''"`
 
 	// TODO 自动销毁机制待实现
 	TTL           int        `json:"ttl" gorm:"default:'0'"` // 生存时间
@@ -62,22 +61,4 @@ func (e *Env) Migrate(sess *db.Session) (err error) {
 		return err
 	}
 	return nil
-}
-
-type EnvRes struct {
-	BaseModel
-
-	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
-	ProjectId Id `json:"projectId" gorm:"size:32;not null"`
-	EnvId     Id `json:"envId" gorm:"size:32;not null"`
-
-	Provider string `json:"provider" gorm:"not null"`
-	Type     string `json:"type" gorm:"not null"`
-	Name     string `json:"name" gorm:"not null"`
-	Index    int    `json:"index" gorm:"not null"`
-	Attrs    JSON   `json:"attrs" gorm:"type:text"`
-}
-
-func (EnvRes) TableName() string {
-	return "iac_env_res"
 }

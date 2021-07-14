@@ -4,19 +4,25 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/utils"
 	"cloudiac/utils/logs"
+	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
+	"path/filepath"
 	"time"
 )
 
 func GetTask(dbSess *db.Session, id models.Id) (*models.Task, e.Error) {
 	task := models.Task{}
 	err := dbSess.Where("id = ?", id).First(&task)
-	if e.IsRecordNotFound(err) {
-		return nil, e.New(e.TaskNotExists)
+	if err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TaskNotExists)
+		}
+		return nil, e.New(e.DBError, err)
 	}
-	return &task, e.New(e.DBError, err)
+	return &task, nil
 }
 
 func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e.Error) {
@@ -124,9 +130,12 @@ func ChangeTaskStatusWithStep(dbSess *db.Session, task *models.Task, step *model
 
 // ChangeTaskStatus 修改任务状态(同步修改 StartAt、EndAt 等)，并同步修改 env 状态
 func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message string) e.Error {
+	if task.Status == status && message == "" {
+		return nil
+	}
+
 	task.Status = status
 	task.Message = message
-
 	now := time.Now()
 	if task.StartAt == nil && task.Started() {
 		task.StartAt = &now
@@ -145,4 +154,70 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 		return e.AutoNew(er, e.DBError)
 	}
 	return ChangeEnvStatusWithTaskAndStep(dbSess, task.EnvId, task, step)
+}
+
+type TfState struct {
+	FormVersion      string `json:"form_version"`
+	TerraformVersion string `json:"terraform_version"`
+	Values           struct {
+		Outputs    map[string]TfStateVariable `json:"outputs"`
+		RootModule struct {
+			Resources []TfStateResource `json:"resources"`
+		} `json:"root_module"`
+	} `json:"values"`
+}
+
+type TfStateVariable struct {
+	Sensitive bool        `json:"sensitive,omitempty"`
+	Value     interface{} `json:"value"`
+}
+
+type TfStateResource struct {
+	Address      string `json:"address"`
+	Mode         string `json:"mode"` // managed、data
+	Type         string `json:"type"`
+	Name         string `json:"name"`
+	Index        int    `json:"index"`
+	ProviderName string `json:"provider_name"`
+
+	Values map[string]interface{} `json:"values"`
+}
+
+func UnmarshalStateJson(bs []byte) (*TfState, error) {
+	state := TfState{}
+	err := json.Unmarshal(bs, &state)
+	return &state, err
+}
+
+func SaveTaskResources(tx *db.Session, task *models.Task, tfRes []TfStateResource) error {
+	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.EnvRes{}.TableName(),
+		"id", "org_id", "project_id", "env_id", "task_id",
+		"provider", "type", "name", "index", "attrs")
+
+	for _, tr := range tfRes {
+		err := bq.AddRow(models.NewId("r"), task.OrgId, task.ProjectId, task.EnvId, task.Id,
+			filepath.Base(tr.ProviderName), tr.Type, tr.Name, tr.Index, models.ResAttrs(tr.Values))
+		if err != nil {
+			return err
+		}
+	}
+
+	for bq.HasNext() {
+		sql, args := bq.Next()
+		if _, err := tx.Exec(sql, args...); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func SaveTaskOutputs(dbSess *db.Session, task *models.Task, vars map[string]TfStateVariable) error {
+	task.Result.Outputs = make(map[string]interface{}, 0)
+	for k, v := range vars {
+		task.Result.Outputs[k] = v
+	}
+	if _, err := dbSess.Model(&models.Task{}).Update(task); err != nil {
+		return err
+	}
+	return nil
 }

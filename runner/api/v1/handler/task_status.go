@@ -78,12 +78,10 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.CommittedTaskStep, closed
 				msg.LogContent = logContent
 			}
 
-			stateList, err := runner.FetchStateList(task.EnvId, task.TaskId)
-			if err != nil {
-				logger.Errorf("fetch state list error: %v", err)
-				msg.StateListContent = utils.TaskLogMsgBytes("Fetch state list error: %v", err)
+			if stateJson, err := runner.FetchStateJson(task.EnvId, task.TaskId); err != nil {
+				logger.Errorf("fetch terraform state json error: %v", err)
 			} else {
-				msg.StateListContent = stateList
+				msg.TfStateJson = stateJson
 			}
 		}
 
