@@ -171,8 +171,7 @@ func SearchEnv(c *ctx.ServiceCtx, form *forms.SearchEnvForm) (interface{}, e.Err
 	}
 
 	if form.Q != "" {
-		qs := "%" + form.Q + "%"
-		query = query.WhereLike("iac_env.name", qs)
+		query = query.WhereLike("iac_env.name", form.Q)
 	}
 
 	// 默认按创建时间逆序排序
