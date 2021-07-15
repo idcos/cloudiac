@@ -15,7 +15,7 @@ type CreateTaskForm struct {
 
 type DetailTaskForm struct {
 	BaseForm
-	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 任务ID，swagger 参数通过 param path 指定，这里忽略
+	Id models.Id `uri:"id" form:"id" json:"id" swaggerignore:"true"` // 任务ID，swagger 参数通过 param path 指定，这里忽略
 }
 
 type SearchTaskForm struct {

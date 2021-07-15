@@ -12,9 +12,7 @@ func (v *ResAttrs) Scan(value interface{}) error {
 	return UnmarshalValue(value, v)
 }
 
-// TODO 将结构体改名为 Resource
-
-type EnvRes struct {
+type Resource struct {
 	BaseModel
 
 	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
@@ -23,12 +21,14 @@ type EnvRes struct {
 	TaskId    Id `json:"taskId" gorm:"size:32;not null"`
 
 	Provider string   `json:"provider" gorm:"not null"`
+	Module   string   `json:"module,omitempty" gorm:"not null;default:''"`
+	Address  string   `json:"address" gorm:"not null"`
 	Type     string   `json:"type" gorm:"not null"`
 	Name     string   `json:"name" gorm:"not null"`
 	Index    int      `json:"index" gorm:"not null"`
 	Attrs    ResAttrs `json:"attrs" gorm:"type:json"`
 }
 
-func (EnvRes) TableName() string {
+func (Resource) TableName() string {
 	return "iac_resource"
 }

@@ -137,6 +137,7 @@ const (
 	TaskApproveNotPending = 10013
 	TaskStepNotExists     = 10114
 	TaskLogInterrupted    = 10115
+	TaskNotHaveStep       = 10116
 
 	// template
 	TemplateAlreadyExists   = 11010
@@ -369,5 +370,8 @@ var errorMsgs = map[int]map[string]string{
 	},
 	InvalidProjectId: {
 		"zh-cn": "无效的项目id",
+	},
+	TaskNotHaveStep: {
+		"zh-cn": "任务无步骤",
 	},
 }

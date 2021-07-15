@@ -63,12 +63,12 @@ func (c *ServiceCtx) OrgDB() *db.Session {
 	return c.DB().Where("org_id = ?", c.OrgId)
 }
 
-func (c *ServiceCtx) Tx() *db.Session {
-	return c.DB().Begin()
+func (c *ServiceCtx) ProjectDB() *db.Session {
+	return c.DB().Where("org_id = ? AND project_id = ?", c.OrgId, c.ProjectId)
 }
 
-func (c *ServiceCtx) OrgTx() *db.Session {
-	return c.Tx().Where("org_id = ?", c.OrgId)
+func (c *ServiceCtx) Tx() *db.Session {
+	return c.DB().Begin()
 }
 
 func (c *ServiceCtx) Logger() logs.Logger {

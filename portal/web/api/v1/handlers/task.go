@@ -63,10 +63,13 @@ func (Task) Detail(c *ctx.GinRequestCtx) {
 // @router /tasks/{taskId}/log/sse [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
 func (Task) FollowLogSse(c *ctx.GinRequestCtx) {
-	form := forms.DetailTaskForm{}
 	defer c.SSEvent("end", "end")
 
-	if err := apps.FollowTaskLog(c.ServiceCtx(), form); err != nil {
+	form := forms.DetailTaskForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	if err := apps.FollowTaskLog(c, form); err != nil {
 		c.SSEvent("error", err.Error())
 	}
 }
@@ -127,5 +130,5 @@ func (Task) Output(c *ctx.GinRequestCtx) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.TaskDetail(c.ServiceCtx(), form))
+	c.JSONResult(apps.TaskOutput(c.ServiceCtx(), form))
 }

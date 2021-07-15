@@ -11,7 +11,7 @@ type CfgInfo struct {
 
 type UpdateNotificationCfgForm struct {
 	PageForm
-	NotificationId   models.Id `form:"notificationId" json:"notificationId" binding:"required"`
+	Id               models.Id `uri:"id" form:"notificationId" json:"notificationId" binding:"required"`
 	NotificationType string    `form:"notificationType" json:"notificationType" binding:"required"`
 	EventType        string    `form:"eventType" json:"eventType" binding:"required"`
 	CfgInfo          CfgInfo   `form:"cfgInfo" json:"cfgInfo"`
@@ -27,5 +27,5 @@ type CreateNotificationCfgForm struct {
 
 type DeleteNotificationCfgForm struct {
 	PageForm
-	Id models.Id `form:"id" json:"id" binding:"required"`
+	Id models.Id `uri:"id" form:"id" json:"id" binding:"required"`
 }

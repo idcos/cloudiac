@@ -7,7 +7,7 @@ import (
 	"cloudiac/utils"
 	"database/sql/driver"
 	"fmt"
-	"path/filepath"
+	"path"
 	"time"
 )
 
@@ -72,7 +72,7 @@ type Task struct {
 	EnvId     Id `json:"envId" gorm:"size:32;not null"`     // 环境ID
 
 	Name      string `json:"name" gorm:"not null;comment:'任务名称'"`                              // 任务名称
-	CreatorId Id     `json:"size:32;creatorId"`                                                // 创建人ID
+	CreatorId Id     `json:"creatorId" gorm:"size:32;not null"`                                // 创建人ID
 	RunnerId  string `json:"runnerId" gorm:"not null"`                                         // 部署通道
 	CommitId  string `json:"commitId" gorm:"not null"`                                         // 版本 commit ID
 	Timeout   int    `json:"timeout" gorm:"default:'600';comment:'执行超时'"`                      // 超时时间（单位：秒）
@@ -149,7 +149,11 @@ func (Task) GetTaskNameByType(typ string) string {
 	}
 }
 func (t *Task) StateJsonPath() string {
-	return fmt.Sprintf("%s/%s/%s/%s", t.ProjectId, t.EnvId, t.Id, runner.TFStateJsonFile)
+	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TFStateJsonFile)
+}
+
+func (t *Task) PlanJsonPath() string {
+	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TFPlanJsonFile)
 }
 
 func (t *Task) Migrate(sess *db.Session) (err error) {
@@ -223,7 +227,7 @@ func (s *TaskStep) IsStarted() bool {
 }
 
 func (s *TaskStep) IsExited() bool {
-	return utils.StrInArray(s.Status, TaskStepRejected, TaskStepCommand, TaskStepFailed, TaskStepTimeout)
+	return utils.StrInArray(s.Status, TaskStepRejected, TaskStepComplete, TaskStepFailed, TaskStepTimeout)
 }
 
 func (s *TaskStep) IsApproved() bool {
@@ -238,7 +242,7 @@ func (s *TaskStep) IsApproved() bool {
 }
 
 func (s *TaskStep) GenLogPath() string {
-	return filepath.Join(
+	return path.Join(
 		s.ProjectId.String(),
 		s.EnvId.String(),
 		s.TaskId.String(),

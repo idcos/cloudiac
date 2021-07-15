@@ -18,6 +18,7 @@ type Token struct {
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param data body forms.CreateTokenForm true "ApiToken信息"
 // @Success 200 {object} ctx.JSONResult{result=models.Token}
 // @Router /tokens [post]
@@ -55,9 +56,11 @@ func (Token) Search(c *ctx.GinRequestCtx) {
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param tokenId path string true "TokenID"
 // @Param data body forms.UpdateTokenForm true "ApiToken信息"
 // @Success 200
-// @Router /tokens/{id} [put]
+// @Router /tokens/{tokenId} [put]
 func (Token) Update(c *ctx.GinRequestCtx) {
 	form := &forms.UpdateTokenForm{}
 	if err := c.Bind(form); err != nil {
@@ -73,9 +76,11 @@ func (Token) Update(c *ctx.GinRequestCtx) {
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param tokenId path string true "TokenID"
 // @Param data body forms.DeleteTokenForm true "DeleteTokenForm信息"
 // @Success 200
-// @Router /tokens/{id} [delete]
+// @Router /tokens/{tokenId} [delete]
 func (Token) Delete(c *ctx.GinRequestCtx) {
 	form := &forms.DeleteTokenForm{}
 	if err := c.Bind(form); err != nil {

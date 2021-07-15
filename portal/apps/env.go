@@ -173,8 +173,7 @@ func SearchEnv(c *ctx.ServiceCtx, form *forms.SearchEnvForm) (interface{}, e.Err
 	}
 
 	if form.Q != "" {
-		qs := "%" + form.Q + "%"
-		query = query.WhereLike("iac_env.name", qs)
+		query = query.WhereLike("iac_env.name", form.Q)
 	}
 
 	// 默认按创建时间逆序排序
@@ -421,22 +420,31 @@ func SearchEnvResources(c *ctx.ServiceCtx, form *forms.SearchEnvResourceForm) (i
 	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
-	query := c.DB().Model(models.EnvRes{}).Where("org_id = ? AND project_id = ? AND env_id = ?",
-		c.OrgId, c.ProjectId, form.Id)
+
+	env, err := services.GetEnvById(c.DB(), form.Id)
+	if err != nil && err.Code() != e.EnvNotExists {
+		return nil, e.New(err.Code(), err, http.StatusNotFound)
+	} else if err != nil {
+		c.Logger().Errorf("error get env, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	query := c.DB().Model(models.Resource{}).Where("org_id = ? AND project_id = ? AND env_id = ?",
+		c.OrgId, c.ProjectId, form.Id, env.LastTaskId)
 
 	if form.HasKey("q") {
 		// 支持对 provider / type / name 进行模糊查询
 		query = query.Where("provider LIKE ? OR type LIKE ? OR name LIKE ?",
-			fmt.Sprintf("?%s?", form.Q),
-			fmt.Sprintf("?%s?", form.Q),
-			fmt.Sprintf("?%s?", form.Q))
+			fmt.Sprintf("%%%s%%", form.Q),
+			fmt.Sprintf("%%%s%%", form.Q),
+			fmt.Sprintf("%%%s%%", form.Q))
 	}
 
 	if form.SortField() == "" {
 		query = query.Order("provider, type, name")
 	}
 
-	return getPage(query, form, &models.EnvRes{})
+	return getPage(query, form, &models.Resource{})
 }
 
 // SearchEnvVariables 查询环境变量列表

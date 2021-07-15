@@ -128,12 +128,11 @@ func initAdmin(tx *db.Session) error {
 
 	// 通过邮箱查找账号，如果不存在则创建。
 	admin, err := services.GetUserByEmail(tx, email)
-	if err != nil && err.Code() == e.UserNotExists {
+	if err != nil && err.Code() != e.UserNotExists {
 		return err
 	} else if admin != nil { // 用户己存在
 		return nil
 	}
-
 	if password == "" {
 		return fmt.Errorf("environment variable 'IAC_ADMIN_PASSWORD' is not set")
 	}

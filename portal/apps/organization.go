@@ -59,8 +59,7 @@ func SearchOrganization(c *ctx.ServiceCtx, form *forms.SearchOrganizationForm) (
 	}
 
 	if form.Q != "" {
-		qs := "%" + form.Q + "%"
-		query = query.WhereLike("name", qs)
+		query = query.WhereLike("name", form.Q)
 	}
 
 	// 默认按创建时间逆序排序

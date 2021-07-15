@@ -329,16 +329,18 @@ func (t *Task) stepInit() (command string, err error) {
 
 var planCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
-terraform plan -input=false -out=_cloudiac.plan \
+terraform plan -input=false -out=_cloudiac.tfplan \
 {{if .TfVars}}-var-file={{.TfVars}}{{end}} -var-file={{.IacTfVars}} \
-{{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }}
+{{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }}&& \
+terraform show -no-color -json _cloudiac.tfplan >{{.TFPlanJsonFilePath}}
 `))
 
 func (t *Task) stepPlan() (command string, err error) {
 	return t.executeTpl(planCommandTpl, map[string]interface{}{
-		"Req":       t.req,
-		"TfVars":    t.req.Env.TfVarsFile,
-		"IacTfVars": CloudIacTfVars,
+		"Req":                t.req,
+		"TfVars":             t.req.Env.TfVarsFile,
+		"IacTfVars":          CloudIacTfVars,
+		"TFPlanJsonFilePath": t.up2Workspace(TFPlanJsonFile),
 	})
 }
 
@@ -346,14 +348,14 @@ func (t *Task) stepPlan() (command string, err error) {
 var applyCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 terraform apply -input=false -auto-approve \
-{{ range $arg := .Req.StepArgs}}{{$arg}} {{ end }}_cloudiac.plan
+{{ range $arg := .Req.StepArgs}}{{$arg}} {{ end }}_cloudiac.tfplan
 `))
 
 func (t *Task) stepApply() (command string, err error) {
 	return t.executeTpl(applyCommandTpl, map[string]interface{}{
-		"Req":           t.req,
-		"TfVars":        t.req.Env.TfVarsFile,
-		"IacTfVars":     CloudIacTfVars,
+		"Req":       t.req,
+		"TfVars":    t.req.Env.TfVarsFile,
+		"IacTfVars": CloudIacTfVars,
 	})
 }
 
@@ -366,9 +368,9 @@ terraform destroy -input=false -auto-approve \
 
 func (t *Task) stepDestroy() (command string, err error) {
 	return t.executeTpl(destroyCommandTpl, map[string]interface{}{
-		"Req":           t.req,
-		"TfVars":        t.req.Env.TfVarsFile,
-		"IacTfVars":     CloudIacTfVars,
+		"Req":       t.req,
+		"TfVars":    t.req.Env.TfVarsFile,
+		"IacTfVars": CloudIacTfVars,
 	})
 }
 
@@ -420,11 +422,11 @@ func (t *Task) stepCommand() (command string, err error) {
 
 // collect command 失败不影响任务状态
 var collectCommandTpl = template.Must(template.New("").Parse(`# state collect command
-terraform show -no-color -json >{{.TFStateShowFilePath}} || sleep 0
+terraform show -no-color -json >{{.TFStateJsonFilePath}} || sleep 0
 `))
 
 func (t *Task) collectCommand() (string, error) {
 	return t.executeTpl(collectCommandTpl, map[string]interface{}{
-		"TFStateShowFilePath": t.up2Workspace(TFStateJsonFile),
+		"TFStateJsonFilePath": t.up2Workspace(TFStateJsonFile),
 	})
 }

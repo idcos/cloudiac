@@ -2,21 +2,21 @@ package forms
 
 import (
 	"cloudiac/portal/models"
-	"time"
+	"cloudiac/utils"
 )
 
 type CreateTokenForm struct {
 	PageForm
 
-	Type        string     `json:"type" form:"type" `               //类型
-	Role        string     `json:"role" form:"role" `               // token角色
-	ExpiredAt   *time.Time `json:"expiredAt" form:"expiredAt" `     // 过期时间
-	Description string     `json:"description" form:"description" ` //描述
+	Type        string         `json:"type" form:"type" `               //类型
+	Role        string         `json:"role" form:"role" `               // token角色
+	ExpiredAt   utils.JSONTime `json:"expiredAt" form:"expiredAt" `     // 过期时间
+	Description string         `json:"description" form:"description" ` //描述
 }
 
 type UpdateTokenForm struct {
 	PageForm
-	Id          models.Id `form:"id" json:"id" binding:"required"`
+	Id          models.Id `uri:"id" form:"id" json:"id" binding:"required"`
 	Status      string    `form:"status" json:"status" binding:"required"`
 	Description string    `json:"description" form:"description" ` //描述
 }
@@ -29,7 +29,7 @@ type SearchTokenForm struct {
 
 type DeleteTokenForm struct {
 	PageForm
-	Id models.Id `form:"id" json:"id" binding:"required"`
+	Id models.Id `uri:"id" form:"id" json:"id" binding:"required"`
 }
 
 type LoginForm struct {
