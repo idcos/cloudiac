@@ -17,9 +17,9 @@ type Variable struct {
 	VariableBody
 
 	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
-	ProjectId Id `json:"projectId" gorm:"size:32;default:'0'"`
-	TplId     Id `json:"tplId" gorm:"size:32;default:'0'"`
-	EnvId     Id `json:"envId" gorm:"size:32;default:'0'"`
+	ProjectId Id `json:"projectId" gorm:"size:32;default:''"`
+	TplId     Id `json:"tplId" gorm:"size:32;default:''"`
+	EnvId     Id `json:"envId" gorm:"size:32;default:''"`
 }
 
 func (Variable) TableName() string {

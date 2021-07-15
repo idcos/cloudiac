@@ -15,10 +15,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
-	"net/url"
 	"os"
 	"runtime/debug"
-	"strings"
 	"sync"
 	"time"
 )
@@ -489,7 +487,6 @@ func (m *TaskManager) stop() {
 func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunTaskReq, err error) {
 	var (
 		env        *models.Env
-		tpl        *models.Template
 		privateKey []byte
 	)
 
@@ -498,31 +495,19 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		return nil, errors.Wrapf(err, "get env %v", task.EnvId)
 	}
 
-	tpl, err = services.GetTemplate(dbSess, env.TplId)
-	if err != nil {
-		return nil, errors.Wrapf(err, "get template %v", env.TplId)
-	}
-
 	runnerEnv := runner.TaskEnv{
-		Id:              string(env.Id),
-		Workdir:         tpl.Workdir,
-		TfVarsFile:      tpl.TfVarsFile,
-		Playbook:        tpl.Playbook,
-		PlayVarsFile:    env.PlayVarsFile,
+		Id:              string(task.EnvId),
+		Workdir:         task.Workdir,
+		TfVarsFile:      task.TfVarsFile,
+		Playbook:        task.Playbook,
+		PlayVarsFile:    task.PlayVarsFile,
 		EnvironmentVars: make(map[string]string),
 		TerraformVars:   make(map[string]string),
 		AnsibleVars:     make(map[string]string),
 	}
 
-	getVarValue := func(v models.VariableBody) string {
-		if v.Sensitive {
-			return utils.AesDecrypt(v.Value)
-		}
-		return v.Value
-	}
-
 	for _, v := range task.Variables {
-		value := getVarValue(v)
+		value := utils.EncodeSecretVar(v.Value, v.Sensitive)
 		switch v.Type {
 		case consts.VarTypeEnv:
 			runnerEnv.EnvironmentVars[v.Name] = value
@@ -533,13 +518,6 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		default:
 			return nil, fmt.Errorf("unknown variable type: %s", v.Type)
 		}
-	}
-
-	if env.TfVarsFile != "" {
-		runnerEnv.TfVarsFile = env.TfVarsFile
-	}
-	if env.PlayVarsFile != "" {
-		runnerEnv.PlayVarsFile = env.PlayVarsFile
 	}
 
 	stateStore := runner.StateStore{
@@ -554,49 +532,15 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		return nil, errors.Wrapf(err, "load private key")
 	}
 
-	var (
-		repoAddr     = tpl.RepoAddr
-		repoToken    = tpl.RepoToken
-		repoRevision = task.CommitId
-	)
-
-	if repoRevision == "" {
-		repoRevision = tpl.RepoRevision
-	}
-
-	if (repoToken == "" || !strings.Contains("://", repoAddr)) && tpl.VcsId != "" {
-		var vcs *models.Vcs
-		if vcs, err = services.QueryVcsByVcsId(tpl.VcsId, dbSess); err != nil {
-			return nil, errors.Wrapf(err, "get vcs %s", tpl.VcsId)
-		}
-
-		// 模板里保存的是路径，需要与 vcs.Address 组合成 URL
-		if !strings.Contains("://", repoAddr) {
-			repoAddr = utils.JoinURL(vcs.Address, tpl.RepoAddr)
-		}
-
-		// 模板没有保存 token，使用 vcs 的 token
-		if repoToken == "" {
-			repoToken = vcs.VcsToken
-		}
-	}
-
-	if u, err := url.Parse(repoAddr); err != nil {
-		return nil, errors.Wrapf(err, "parse url: %v", repoAddr)
-	} else if repoToken != "" {
-		u.User = url.UserPassword("token", repoToken)
-		repoAddr = u.String()
-	}
-
 	taskReq = &runner.RunTaskReq{
 		Env:          runnerEnv,
-		RunnerId:     env.RunnerId,
+		RunnerId:     task.RunnerId,
 		TaskId:       string(task.Id),
 		DockerImage:  "",
 		StateStore:   stateStore,
-		RepoAddress:  repoAddr,
-		RepoRevision: tpl.RepoRevision,
-		Timeout:      env.Timeout,
+		RepoAddress:  task.RepoAddr,
+		RepoRevision: task.CommitId,
+		Timeout:      task.StepTimeout,
 		PrivateKey:   string(privateKey),
 	}
 	return taskReq, nil
