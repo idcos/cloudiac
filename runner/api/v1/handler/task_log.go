@@ -62,7 +62,7 @@ func doFollowTaskLog(wsConn *websocket.Conn, task *runner.CommittedTaskStep, off
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	defer cancelCtx()
 
-	logPath := filepath.Join(runner.GetTaskStepDir(task.EnvId, task.TaskId, task.Step), runner.TaskLogName)
+	logPath := filepath.Join(runner.GetTaskStepDir(task.EnvId, task.TaskId, task.Step), runner.TaskStepLogName)
 	contentChan, readErrChan := followFile(ctx, logPath, offset)
 
 	// 等待任务退出协程

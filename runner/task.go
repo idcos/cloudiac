@@ -31,9 +31,19 @@ func NewTask(req RunTaskReq, logger logs.Logger) *Task {
 }
 
 func (t *Task) Run() (cid string, err error) {
-	t.decryptVariables(t.req.Env.EnvironmentVars)
-	t.decryptVariables(t.req.Env.TerraformVars)
-	t.decryptVariables(t.req.Env.AnsibleVars)
+	for _, vars := range []map[string]string{
+		t.req.Env.EnvironmentVars, t.req.Env.TerraformVars, t.req.Env.AnsibleVars} {
+		if err = t.decryptVariables(vars); err != nil {
+			return "", errors.Wrap(err, "decrypt variables")
+		}
+	}
+
+	if t.req.PrivateKey != "" {
+		t.req.PrivateKey, err = utils.DecryptSecretVar(t.req.PrivateKey)
+		if err != nil {
+			return "", errors.Wrap(err, "decrypt private key")
+		}
+	}
 
 	t.workspace, err = t.initWorkspace()
 	if err != nil {
@@ -52,7 +62,6 @@ func (t *Task) Run() (cid string, err error) {
 		Timeout:     t.req.Timeout,
 		Workdir:     ContainerWorkspace,
 		HostWorkdir: t.workspace,
-		PrivateKey:  t.req.PrivateKey,
 	}
 
 	if t.req.DockerImage != "" {
@@ -72,8 +81,8 @@ func (t *Task) Run() (cid string, err error) {
 	}
 
 	cmd.Commands = []string{"sh", "-c", fmt.Sprintf("sh %s >>%s 2>&1",
-		filepath.Join(t.stepDirName(t.req.Step), TaskScriptName),
-		filepath.Join(t.stepDirName(t.req.Step), TaskLogName),
+		filepath.Join(t.stepDirName(t.req.Step), TaskStepScriptName),
+		filepath.Join(t.stepDirName(t.req.Step), TaskStepLogName),
 	)}
 
 	t.logger.Infof("start task step, workdir: %s", cmd.HostWorkdir)
@@ -85,21 +94,25 @@ func (t *Task) Run() (cid string, err error) {
 		EnvId:       t.req.Env.Id,
 		TaskId:      t.req.TaskId,
 		Step:        t.req.Step,
-		Request:     t.req,
 		ContainerId: cid,
 	})
 
 	stepDir := GetTaskStepDir(t.req.Env.Id, t.req.TaskId, t.req.Step)
-	if er := os.WriteFile(filepath.Join(stepDir, TaskInfoFileName), infoJson, 0644); er != nil {
+	if er := os.WriteFile(filepath.Join(stepDir, TaskStepInfoFileName), infoJson, 0644); er != nil {
 		logger.Errorln(er)
 	}
 	return cid, err
 }
 
-func (t *Task) decryptVariables(vars map[string]string) {
+func (t *Task) decryptVariables(vars map[string]string) error {
+	var err error
 	for k, v := range vars {
-		vars[k] = utils.DecryptSecretVar(v)
+		vars[k], err = utils.DecryptSecretVar(v)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (t *Task) initWorkspace() (workspace string, err error) {
@@ -203,6 +216,9 @@ func (t *Task) genIacTfFile(workspace string) error {
 		return err
 	}
 
+	if t.req.StateStore.Address == "" {
+		t.req.StateStore.Address = configs.Get().Consul.Address
+	}
 	ctx := map[string]interface{}{
 		"Workspace":        workspace,
 		"PrivateKeyPath":   t.up2Workspace("ssh_key"),
@@ -295,7 +311,7 @@ func (t *Task) genStepScript() error {
 		return err
 	}
 
-	scriptPath := filepath.Join(stepDir, TaskScriptName)
+	scriptPath := filepath.Join(stepDir, TaskStepScriptName)
 	var fp *os.File
 	if fp, err = os.OpenFile(scriptPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644); err != nil {
 		return err

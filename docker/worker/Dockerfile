@@ -6,5 +6,6 @@ RUN apk add --update git curl openssh && \
         busybox unzip - && mv terraform /bin/ && chmod a+x /bin/terraform
 
 COPY assets/terraform.py /cloud-iac/assets/terraform.py
+COPY assets/terraform.py /cloudiac/assets/terraform.py
 COPY assets/providers /usr/share/terraform/plugins
 

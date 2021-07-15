@@ -55,10 +55,11 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		AutoApprove: pt.AutoApprove,
 		Extra:       pt.Extra,
 
-		OrgId:     env.OrgId,
-		ProjectId: env.ProjectId,
-		TplId:     env.TplId,
-		EnvId:     env.Id,
+		OrgId:      env.OrgId,
+		ProjectId:  env.ProjectId,
+		TplId:      env.TplId,
+		EnvId:      env.Id,
+		StatePath:  env.StatePath,
 
 		RepoAddr:     "",
 		Workdir:      firstVal(tpl.Workdir),
@@ -93,7 +94,7 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 	flowSteps := make([]models.TaskStepBody, 0, len(task.Flow.Steps))
 	for i := range task.Flow.Steps {
 		step := task.Flow.Steps[i]
-		if step.Type == models.TaskStepPlay && env.Playbook == "" {
+		if step.Type == models.TaskStepPlay && task.Playbook == "" {
 			logger.WithField("step", fmt.Sprintf("%d(%s)", i, step.Type)).
 				Infof("not have playbook, skip this step")
 			continue

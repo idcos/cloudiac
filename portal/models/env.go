@@ -2,7 +2,6 @@ package models
 
 import (
 	"cloudiac/portal/libs/db"
-	"fmt"
 	"path"
 	"time"
 )
@@ -69,7 +68,7 @@ func (e *Env) Migrate(sess *db.Session) (err error) {
 }
 
 func (e *Env) DefaultStatPath() string {
-	return path.Join(fmt.Sprintf("env-%s", e.Id.String()), "terraform.tfstate")
+	return path.Join(e.OrgId.String(), e.ProjectId.String(), e.Id.String(), "terraform.tfstate")
 }
 
 type EnvDetail struct {

@@ -29,7 +29,6 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/rs/xid"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -315,26 +314,22 @@ func AesEncrypt(plaintext string) (string, error) {
 	return base64.RawURLEncoding.EncodeToString(ciphertext), nil
 }
 
-func AesDecrypt(d string) string {
-	logger := logrus.WithField("func", "AesDecrypt")
+func AesDecrypt(d string) (string, error) {
 	ciphertext, err := base64.RawURLEncoding.DecodeString(d)
 	if err != nil {
-		logger.Errorln(err)
-		return ""
+		return "", err
 	}
 	block, err := aes.NewCipher(secretKey)
 	if err != nil {
-		logger.Errorln(err)
-		return ""
+		return "", err
 	}
 	if len(ciphertext) < aes.BlockSize {
-		logger.Errorln(errors.New("cipher text too short"))
-		return ""
+		return "", errors.New("cipher text too short")
 	}
 	iv := ciphertext[:aes.BlockSize]
 	ciphertext = ciphertext[aes.BlockSize:]
 	cipher.NewCFBDecrypter(block, iv).XORKeyStream(ciphertext, ciphertext)
-	return string(ciphertext)
+	return string(ciphertext), nil
 }
 
 func MustJSON(v interface{}) []byte {

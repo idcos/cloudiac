@@ -23,10 +23,10 @@ func DecodeSecretVar(value string) (string, bool) {
 	return value, false
 }
 
-func DecryptSecretVar(value string) string {
+func DecryptSecretVar(value string) (string, error) {
 	val, isSecret := DecodeSecretVar(value)
 	if isSecret {
 		return AesDecrypt(val)
 	}
-	return val
+	return val, nil
 }
