@@ -12,14 +12,14 @@ import (
 )
 
 type SearchTemplateResp struct {
-	Id                uint   `json:"id"`
-	Name              string `json:"name"`
-	Description       string `json:"description"`
-	ActiveEnvironment int    `json:"activeEnvironment"`
-	VcsType           string `json:"vcsType"`
-	RepoRevision      string `json:"repoRevision"`
-	UserName          string `json:"userName"`
-	CreateTime        string `json:"createTime"`
+	Id                models.Id `json:"id"`
+	Name              string    `json:"name"`
+	Description       string    `json:"description"`
+	ActiveEnvironment int       `json:"activeEnvironment"`
+	VcsType           string    `json:"vcsType"`
+	RepoRevision      string    `json:"repoRevision"`
+	UserName          string    `json:"userName"`
+	CreateTime        string    `json:"createTime"`
 }
 
 func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.Template, e.Error) {
@@ -33,39 +33,39 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 		}
 	}()
 
-	template, err := func() (*models.Template, e.Error) {
-		var (
-			template *models.Template
-			err      e.Error
-		)
-		tpl := models.Template{
-			Name:         form.Name,
-			TplType:      form.TplType,
-			OrgId:        c.OrgId,
-			Description:  form.Description,
-			VcsId:        form.VcsId,
-			RepoId:       form.RepoId,
-			RepoAddr:     form.RepoAddr,
-			RepoRevision: form.RepoRevision,
-			CreatorId:    c.UserId,
-			Workdir:      form.Workdir,
-			Playbook:     form.Playbook,
-			PlayVarsFile: form.PlayVarsFile,
-			TfVarsFile:   form.TfVarsFile,
-		}
-		template, err = services.CreateTemplate(tx, tpl)
-		if err != nil {
-			return nil, err
-		}
-		// TODO 创建 项目模板一对多关联
-		// TODO 创建 变量
-
-		return template, nil
-	}()
+	template, err := services.CreateTemplate(tx, models.Template{
+		Name:         form.Name,
+		TplType:      form.TplType,
+		OrgId:        c.OrgId,
+		Description:  form.Description,
+		VcsId:        form.VcsId,
+		RepoId:       form.RepoId,
+		RepoAddr:     form.RepoAddr,
+		RepoRevision: form.RepoRevision,
+		CreatorId:    c.UserId,
+		Workdir:      form.Workdir,
+		Playbook:     form.Playbook,
+		PlayVarsFile: form.PlayVarsFile,
+		TfVarsFile:   form.TfVarsFile,
+	})
 
 	if err != nil {
 		_ = tx.Rollback()
+		c.Logger().Errorf("error create template, err %s", err)
 		return nil, err
+	}
+
+	// 创建模板与项目的关系
+	if err := services.CreateTemplateProject(tx, form.ProjectId, template.Id); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	// 创建变量
+	if err := services.OperationVariables(tx, c.OrgId, c.ProjectId, template.Id, "", form.Variables); err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error operation variables, err %s", err)
+		return nil, e.New(e.DBError, err)
 	}
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
@@ -79,7 +79,7 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.Template, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update template %d", form.Id))
 
-	tpl, err := services.GetTemplate(c.DB(), form.Id)
+	tpl, err := services.GetTemplateById(c.DB(), form.Id)
 	if err != nil {
 		return nil, e.New(e.DBError, err, e.TemplateNotExists)
 	}
@@ -179,14 +179,14 @@ func TemplateDetail(c *ctx.ServiceCtx, form *forms.DetailTemplateForm) (*models.
 }
 
 func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (tpl interface{}, err e.Error) {
-	tplIdList := make([]string, 0)
+	tplIdList := make([]models.Id, 0)
 	if c.ProjectId != "" {
 		tplIdList, err = services.QueryTplByProjectId(c.DB(), c.ProjectId)
 		if err != nil {
 			return nil, err
 		}
 	}
-	query, _ := services.QueryTemplate(c.DB().Debug(), form.Q, c.OrgId, tplIdList)
+	query, _ := services.QueryTemplateByOrgId(c.DB().Debug(), form.Q, c.OrgId, tplIdList)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	templates := make([]*SearchTemplateResp, 0)
 	if err := p.Scan(&templates); err != nil {
