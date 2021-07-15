@@ -55,10 +55,11 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		AutoApprove: pt.AutoApprove,
 		Extra:       pt.Extra,
 
-		OrgId:     env.OrgId,
-		ProjectId: env.ProjectId,
-		TplId:     env.TplId,
-		EnvId:     env.Id,
+		OrgId:      env.OrgId,
+		ProjectId:  env.ProjectId,
+		TplId:      env.TplId,
+		EnvId:      env.Id,
+		StatePath:  env.StatePath,
 
 		RepoAddr:     "",
 		Workdir:      firstVal(tpl.Workdir),

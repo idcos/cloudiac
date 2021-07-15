@@ -293,7 +293,7 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 		}
 	}
 
-	runTaskReq, err := buildRunTaskReq(m.db, *task)
+	runTaskReq, err := buildRunTaskReq(*task)
 	if err != nil {
 		taskFailed(err)
 		return
@@ -484,16 +484,11 @@ func (m *TaskManager) stop() {
 
 // buildRunTaskReq 基于任务信息构建一个 RunTaskReq 对象。
 // 	注意这里不会设置 step 相关的数据，step 相关字段在 StartTaskStep() 方法中设置
-func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunTaskReq, err error) {
+func buildRunTaskReq(task models.Task) (taskReq *runner.RunTaskReq, err error) {
 	var (
-		env        *models.Env
+		//env        *models.Env
 		privateKey []byte
 	)
-
-	env, err = services.GetEnv(dbSess, task.EnvId)
-	if err != nil {
-		return nil, errors.Wrapf(err, "get env %v", task.EnvId)
-	}
 
 	runnerEnv := runner.TaskEnv{
 		Id:              string(task.EnvId),
@@ -523,8 +518,8 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 	stateStore := runner.StateStore{
 		Backend: "consul",
 		Scheme:  "http",
-		Path:    env.StatePath,
-		Address: configs.Get().Consul.Address,
+		Path:    task.StatePath,
+		Address: "",
 	}
 
 	privateKey, err = sshkey.LoadPrivateKeyPem()

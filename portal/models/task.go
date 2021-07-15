@@ -76,8 +76,8 @@ type Task struct {
 
 	Type string `json:"type" gorm:"not null;enum('plan', 'apply', 'destroy')" enums:"'plan', 'apply', 'destroy'"` // 任务类型
 
-	RepoAddr     string `json:"repoAddr" gorm:"not null"`
-	CommitId     string `json:"commitId" gorm:"not null"` // 创建任务时 revision 对应的 commit id
+	RepoAddr string `json:"repoAddr" gorm:"not null"`
+	CommitId string `json:"commitId" gorm:"not null"` // 创建任务时 revision 对应的 commit id
 
 	Workdir      string   `json:"workdir" gorm:"default:''"`
 	Playbook     string   `json:"playbook" gorm:"default:''"`
@@ -86,6 +86,8 @@ type Task struct {
 	Targets      StrSlice `json:"targets" gorm:"type:json"` // 指定 terraform target 参数
 
 	Variables TaskVariables `json:"variables" gorm:"type:json"` // 本次执行使用的所有变量(继承、覆盖计算之后的)
+
+	StatePath string `json:"statePath" gorm:"not null"`
 
 	// 扩展属性，包括 source, transitionId 等
 	Extra TaskExtra `json:"extra" gorm:"type:json"` // 扩展属性

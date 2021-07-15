@@ -203,6 +203,9 @@ func (t *Task) genIacTfFile(workspace string) error {
 		return err
 	}
 
+	if t.req.StateStore.Address == "" {
+		t.req.StateStore.Address = configs.Get().Consul.Address
+	}
 	ctx := map[string]interface{}{
 		"Workspace":        workspace,
 		"PrivateKeyPath":   t.up2Workspace("ssh_key"),
