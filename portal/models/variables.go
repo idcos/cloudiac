@@ -30,5 +30,5 @@ func (v Variable) Migrate(sess *db.Session) error {
 	// 变量名在各 scope 下唯一
 	// 注意这些 id 字段需要默认设置为 0，否则联合唯一索引可能会因为存在 null 值而不生效
 	return v.AddUniqueIndex(sess, "unique__variable__name",
-		"org_id", "project_id", "tpl_id", "env_id", "name(32)", "scope", "type")
+		"org_id", "project_id", "tpl_id", "env_id", "name(32)", "type")
 }
