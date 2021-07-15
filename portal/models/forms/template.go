@@ -16,7 +16,7 @@ type CreateTemplateForm struct {
 
 	Name         string    `form:"name" json:"name" binding:"required,gte=2,lte=32"`
 	TplType      string    `form:"tplType" json:"tplType" binding:"required"`
-	Description  string    `form:"description" json:"Description" binding:""`
+	Description  string    `form:"description" json:"description" binding:""`
 	RepoId       string    `form:"repoId" json:"repoId" binding:""`
 	RepoAddr     string    `form:"repoAddr" json:"repoAddr" binding:""`
 	RepoRevision string    `form:"repoRevision" json:"repoRevision" binding:""`
@@ -42,7 +42,7 @@ type UpdateTemplateForm struct {
 	BaseForm
 	Id           models.Id `form:"id" json:"id" binding:"required"`
 	Name         string    `form:"name" json:"name"`
-	Description  string    `form:"description" json:"Description"`
+	Description  string    `form:"description" json:"description"`
 	Extra        string    `form:"extra" json:"extra"`
 	Status       string    `form:"status" json:"status"`
 	Workdir      string    `form:"workdir" json:"workdor"`
