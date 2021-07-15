@@ -37,7 +37,12 @@ func SearchVariable(dbSess *db.Session, orgId models.Id) ([]models.Variable, e.E
 	return variables, nil
 }
 
-func OperationVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id, variables []forms.Variables) e.Error {
+func OperationVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id,
+	variables []forms.Variables, deleteVariablesId []string) e.Error {
+	if err := DeleteVariables(tx, deleteVariablesId); err != nil {
+		return err
+	}
+
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Variable{}.TableName(),
 		"id", "scope", "type", "name", "value", "sensitive", "description", "org_id", "project_id", "tpl_id", "env_id")
 	for _, v := range variables {
@@ -66,7 +71,6 @@ func OperationVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id
 			if err != nil && err.Code() == e.VariableAliasDuplicate {
 				return e.New(err.Code(), err, http.StatusBadRequest)
 			} else if err != nil {
-				_ = tx.Rollback()
 				return err
 			}
 			continue
@@ -149,26 +153,40 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 			}
 			// 根据id（envId/tplId/projectId）来确认变量是否需要应用
 			if v.EnvId != "" && v.EnvId == envId {
-				variableM[v.Name] = variables[index]
+				// 不同的变量类型也有可能出现相同的name
+				variableM[fmt.Sprintf("%s%s", v.Name, v.Type)] = variables[index]
 				continue
 			}
 
 			if v.TplId != "" && v.TplId == tplId {
-				variableM[v.Name] = variables[index]
+				variableM[fmt.Sprintf("%s%s", v.Name, v.Type)] = variables[index]
 				continue
 			}
 
 			if v.ProjectId != "" && v.ProjectId == projectId {
-				variableM[v.Name] = variables[index]
+				variableM[fmt.Sprintf("%s%s", v.Name, v.Type)] = variables[index]
 				continue
 			}
 
 			if v.ProjectId == "" && v.TplId == "" && v.EnvId == "" {
-				variableM[v.Name] = variables[index]
+				variableM[fmt.Sprintf("%s%s", v.Name, v.Type)] = variables[index]
 			}
 
 		}
 	}
 
 	return variableM, nil
+}
+
+func GetVariableParent(dbSess *db.Session, name, scope, variableType string) (bool, models.Variable) {
+	variable := models.Variable{}
+	if err := dbSess.
+		Where("name = ?", name).
+		Where("scope != ?", scope).
+		Where("type = ?", variableType).
+		Order("scope desc").
+		First(&variable); err != nil {
+		return false, variable
+	}
+	return true, variable
 }
