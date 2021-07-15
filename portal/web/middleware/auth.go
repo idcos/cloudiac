@@ -65,7 +65,7 @@ func Auth(c *ctx.GinRequestCtx) {
 			return
 		}
 		if c.ServiceCtx().IsSuperAdmin == true {
-			c.ServiceCtx().ProjectRole = consts.ProjectRoleOwner
+			c.ServiceCtx().ProjectRole = consts.ProjectRoleManager
 			c.Next()
 			return
 		}

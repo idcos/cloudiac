@@ -79,8 +79,8 @@ func Register(g *gin.RouterGroup) {
 	g.PUT("/envs/:id/archive", ac(), w(handlers.Env{}.Archive))
 	g.GET("/envs/:id/tasks", ac(), w(handlers.Env{}.SearchTasks))
 	g.GET("/envs/:id/tasks/last", ac(), w(handlers.Env{}.LastTask))
-	g.POST("/envs/:id/deploy", ac(), w(handlers.Env{}.Deploy))
-	g.POST("/envs/:id/destroy", ac(), w(handlers.Env{}.Destroy))
+	g.POST("/envs/:id/deploy", ac("envs", "deploy"), w(handlers.Env{}.Deploy))
+	g.POST("/envs/:id/destroy", ac("envs", "destroy"), w(handlers.Env{}.Destroy))
 	g.GET("/envs/:id/resources", ac(), w(handlers.Env{}.SearchResources))
 	g.GET("/envs/:id/variables", ac(), w(handlers.Env{}.SearchVariables))
 

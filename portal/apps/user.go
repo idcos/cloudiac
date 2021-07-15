@@ -1,6 +1,7 @@
 package apps
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/libs/db"
@@ -151,7 +152,7 @@ func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (user *models.Use
 	if form.Id == "" {
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
 	}
-	if c.IsSuperAdmin == false && c.Role != "owner" && c.UserId != form.Id {
+	if c.IsSuperAdmin == false && c.Role != consts.ProjectRoleManager && c.UserId != form.Id {
 		return nil, e.New(e.PermissionDeny, http.StatusForbidden)
 	}
 	if c.UserId != form.Id {

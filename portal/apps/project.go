@@ -41,7 +41,7 @@ func CreateProject(c *ctx.ServiceCtx, form *forms.CreateProjectForm) (interface{
 	// 需要把创建人加进来
 	form.UserAuthorization = append(form.UserAuthorization, forms.UserAuthorization{
 		UserId: c.UserId,
-		Role:   consts.ProjectRoleOwner,
+		Role:   consts.ProjectRoleManager,
 	})
 
 	if err := services.BindProjectUsers(tx, project.Id, form.UserAuthorization); err != nil {

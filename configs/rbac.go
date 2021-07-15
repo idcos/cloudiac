@@ -53,8 +53,8 @@ var polices = []Policy{
 	//    4. admin: 组织管理员
 	//    5. member: 普通用户
 	//    项目角色
-	//    1. owner: 项目管理员
-	//    2. manager: 审批者
+	//    1. manager: 管理者
+	//    2. approver: 审批者
 	//    3. operator: 执行者
 	//    4. guest: 访客
 	// 资源
@@ -91,18 +91,22 @@ var polices = []Policy{
 	{"member", "users", "read"},
 
 	// 项目
-	{"owner", "projects", "*"},
-	{"manager", "projects", "read"},
+	{"manager", "projects", "*"},
+	{"approver", "projects", "read"},
 	{"operator", "projects", "read"},
 	{"guest", "projects", "read"},
 
-	{"owner", "envs", "*"},
 	{"manager", "envs", "*"},
-	{"operator", "envs", "read/update/deploy/deleteres"},
+	{"manager", "tasks", "*"},
+	{"approver", "envs", "*"},
+	{"approver", "tasks", "*"},
+	{"operator", "envs", "read/update/deploy/destroy"},
+	{"operator", "tasks", "read"},
 	{"guest", "envs", "read"},
+	{"guest", "tasks", "read"},
 
-	{"owner", "templates", "*"},
 	{"manager", "templates", "*"},
+	{"approver", "templates", "*"},
 	{"operator", "templates", "read"},
 	{"guest", "templates", "read"},
 }

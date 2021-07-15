@@ -94,7 +94,7 @@ func AccessControl(args ...string) gin.HandlerFunc {
 				c.ServiceCtx().ProjectId = projectId
 			}
 			if c.ServiceCtx().IsSuperAdmin == true {
-				c.ServiceCtx().ProjectRole = consts.ProjectRoleOwner
+				c.ServiceCtx().ProjectRole = consts.ProjectRoleManager
 			}
 		}
 
