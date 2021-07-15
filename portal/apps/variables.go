@@ -17,18 +17,13 @@ func BatchUpdate(c *ctx.ServiceCtx, form *forms.BatchUpdateVariableForm) (interf
 			panic(r)
 		}
 	}()
-	err := services.OperationVariables(tx, c.OrgId, c.ProjectId, form.TplId, form.EnvId, form.Variables)
+	err := services.OperationVariables(tx, c.OrgId, c.ProjectId, form.TplId, form.EnvId, form.Variables, form.DeleteVariablesId)
 	if err != nil {
 		c.Logger().Errorf("error creating variable, err %s", err)
 		_ = tx.Rollback()
 		return nil, err
 	}
 
-	if err := services.DeleteVariables(tx, form.DeleteVariablesId); err != nil {
-		c.Logger().Errorf("error delete variable, err %s", err)
-		_ = tx.Rollback()
-		return nil, err
-	}
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
 		return nil, e.New(e.DBError, err)
@@ -37,7 +32,7 @@ func BatchUpdate(c *ctx.ServiceCtx, form *forms.BatchUpdateVariableForm) (interf
 	return nil, nil
 }
 
-type newVariable []models.Variable
+type newVariable []VariableResp
 
 func (v newVariable) Len() int {
 	return len(v)
@@ -49,14 +44,28 @@ func (v newVariable) Swap(i, j int) {
 	v[i], v[j] = v[j], v[i]
 }
 
+type VariableResp struct {
+	models.Variable
+	Overwrites *models.Variable `json:"overwrites" form:"overwrites" ` //回滚参数，无需回滚是为空
+}
+
 func SearchVariable(c *ctx.ServiceCtx, form *forms.SearchVariableForm) (interface{}, e.Error) {
 	variableM, err := services.GetValidVariables(c.DB(), form.Scope, c.OrgId, c.ProjectId, form.TplId, form.EnvId)
 	if err != nil {
 		return nil, err
 	}
-	rs := make([]models.Variable, 0)
+	rs := make([]VariableResp, 0)
 	for _, variable := range variableM {
-		rs = append(rs, variable)
+		vr := VariableResp{
+			Variable:   variable,
+			Overwrites: nil,
+		}
+		isExists, overwrites := services.GetVariableParent(c.DB(), variable.Name, variable.Scope, variable.Type)
+		if isExists {
+			vr.Overwrites = &overwrites
+		}
+
+		rs = append(rs, vr)
 	}
 	sort.Sort(newVariable(rs))
 
