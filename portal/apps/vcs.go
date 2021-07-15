@@ -10,7 +10,9 @@ import (
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"net/http"
 	"strings"
 )
 
@@ -28,7 +30,24 @@ func CreateVcs(c *ctx.ServiceCtx, form *forms.CreateVcsForm) (interface{}, e.Err
 	return vcs, nil
 }
 
+// 判断前端传递组织id是否具有该vcs仓库读写权限
+func checkOrgVcsAuth(c *ctx.ServiceCtx, id models.Id) (vcs *models.Vcs, err e.Error) {
+	vcs, err = services.QueryVcsByVcsId(id, c.DB())
+	if err != nil {
+		return nil, err
+	}
+	if vcs.OrgId != c.OrgId {
+		return nil, e.New(e.VcsNotExists, http.StatusForbidden, fmt.Errorf("The organization does not have the Vcs permission"))
+	}
+	return vcs, nil
+
+}
+
 func UpdateVcs(c *ctx.ServiceCtx, form *forms.UpdateVcsForm) (vcs *models.Vcs, err e.Error) {
+	vcs, err = checkOrgVcsAuth(c, form.Id)
+	if err != nil {
+		return nil, err
+	}
 	attrs := models.Attrs{}
 	if form.HasKey("status") {
 		attrs["status"] = form.Status
@@ -59,6 +78,10 @@ func SearchVcs(c *ctx.ServiceCtx, form *forms.SearchVcsForm) (interface{}, e.Err
 }
 
 func DeleteVcs(c *ctx.ServiceCtx, form *forms.DeleteVcsForm) (result interface{}, re e.Error) {
+	_, err := checkOrgVcsAuth(c, form.Id)
+	if err != nil {
+		return nil, err
+	}
 	if err := services.DeleteVcs(c.DB(), form.Id); err != nil {
 		return nil, err
 	}
@@ -71,24 +94,24 @@ func ListEnableVcs(c *ctx.ServiceCtx) (interface{}, e.Error) {
 }
 
 func GetReadme(c *ctx.ServiceCtx, form *forms.GetReadmeForm) (interface{}, e.Error) {
-	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
+	vcs, err := checkOrgVcsAuth(c, form.Id)
 	if err != nil {
 		return nil, err
 	}
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		return nil, e.New(e.VcsError, er)
 	}
 	repo, er := vcsService.GetRepo(form.RepoId)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		return nil, e.New(e.VcsError, er)
 	}
 	b, er := repo.ReadFileContent(form.Branch, "README.md")
 	if er != nil {
 		if strings.Contains(er.Error(), "not found") {
 			b = make([]byte, 0)
 		} else {
-			return nil, e.New(e.GitLabError, er)
+			return nil, e.New(e.VcsError, er)
 		}
 	}
 
@@ -97,20 +120,19 @@ func GetReadme(c *ctx.ServiceCtx, form *forms.GetReadmeForm) (interface{}, e.Err
 }
 
 func ListRepos(c *ctx.ServiceCtx, form *forms.GetGitProjectsForm) (interface{}, e.Error) {
-	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
+	vcs, err := checkOrgVcsAuth(c, form.Id)
 	if err != nil {
 		return nil, err
 	}
-
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		return nil, e.New(e.VcsError, er)
 	}
 	limit := form.PageSize()
 	offset := utils.PageSize2Offset(form.CurrentPage(), limit)
 	repo, total, er := vcsService.ListRepos("", form.Q, limit, offset)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		return nil, e.New(e.VcsError, er)
 	}
 	project := make([]*vcsrv.Projects, 0)
 	for _, repo := range repo {
@@ -133,18 +155,18 @@ type Revision struct {
 }
 
 func listRepoRevision(c *ctx.ServiceCtx, form *forms.GetGitRevisionForm, revisionType string) (revision []*Revision, err e.Error) {
-	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
+	vcs, err := checkOrgVcsAuth(c, form.Id)
 	if err != nil {
 		return nil, err
 	}
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		return nil, e.New(e.VcsError, er)
 	}
 
 	repo, er := vcsService.GetRepo(form.RepoId)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		return nil, e.New(e.VcsError, er)
 	}
 	var revisionList []string
 	if revisionType == "tags" {
@@ -153,7 +175,7 @@ func listRepoRevision(c *ctx.ServiceCtx, form *forms.GetGitRevisionForm, revisio
 		revisionList, er = repo.ListBranches()
 	}
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		return nil, e.New(e.VcsError, er)
 	}
 	for _, v := range revisionList {
 		revision = append(revision, &Revision{
@@ -183,18 +205,18 @@ func VcsTfVarsSearch(c *ctx.ServiceCtx, form *forms.TemplateTfvarsSearchForm) (i
 
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		return nil, e.New(e.VcsError, er)
 	}
 	repo, er := vcsService.GetRepo(form.RepoId)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		return nil, e.New(e.VcsError, er)
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
 		Ref:    form.RepoBranch,
 		Search: consts.TfVarFileMatch,
 	})
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		return nil, e.New(e.VcsError, er)
 	}
 
 	return listFiles, nil
@@ -208,11 +230,11 @@ func VcsPlaybookSearch(c *ctx.ServiceCtx, form *forms.TemplatePlaybookSearchForm
 
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		return nil, e.New(e.VcsError, er)
 	}
 	repo, er := vcsService.GetRepo(form.RepoId)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		return nil, e.New(e.VcsError, er)
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
 		Ref:       form.RepoBranch,
@@ -221,7 +243,7 @@ func VcsPlaybookSearch(c *ctx.ServiceCtx, form *forms.TemplatePlaybookSearchForm
 		Path:      consts.Ansible,
 	})
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		return nil, e.New(e.VcsError, er)
 	}
 
 	return listFiles, nil
@@ -235,28 +257,28 @@ func VcsVariableSearch(c *ctx.ServiceCtx, form *forms.TemplateVariableSearchForm
 
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		return nil, e.New(e.VcsError, er)
 	}
 	repo, er := vcsService.GetRepo(form.RepoId)
 	if er != nil {
-		return nil, e.New(e.GitLabError, err)
+		return nil, e.New(e.VcsError, err)
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
 		Ref:    form.RepoBranch,
 		Search: consts.VariablePrefix,
 	})
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		return nil, e.New(e.VcsError, er)
 	}
 	tvl := make([]services.TemplateVariable, 0)
 	for _, file := range listFiles {
 		content, er := repo.ReadFileContent(form.RepoBranch, file)
 		if er != nil {
-			return nil, e.New(e.GitLabError, er)
+			return nil, e.New(e.VcsError, er)
 		}
 		tvs, er := services.ParseTfVariables(file, content)
 		if er != nil {
-			return nil, e.AutoNew(er, e.GitLabError)
+			return nil, e.AutoNew(er, e.VcsError)
 		}
 		tvl = append(tvl, tvs...)
 	}

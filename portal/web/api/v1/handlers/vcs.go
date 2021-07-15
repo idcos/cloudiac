@@ -56,6 +56,7 @@ func (Vcs) Search(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param form formData forms.UpdateVcsForm true "parameter"
 // @Param vcsId path string true "Vcs仓库ID"
 // @Router /vcs/{vcsId} [put]
@@ -75,6 +76,7 @@ func (Vcs) Update(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param form formData forms.DeleteVcsForm true "patameter"
 // @Param vcsId path string true "vcs仓库Id"
 // @Router /vcs/{vcsId} [delete]
@@ -98,8 +100,10 @@ func ListEnableVcs(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param vcsId path string true "Vcs仓库ID"
 // @Param form query forms.GetGitProjectsForm true "patameter"
-// @Router /vcs/repo [get]
+// @Router /vcs/{vcsId}/repo [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]vcsrv.Projects}}
 func (Vcs) ListRepos(c *ctx.GinRequestCtx) {
 	form := forms.GetGitProjectsForm{}
@@ -116,8 +120,10 @@ func (Vcs) ListRepos(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param vcsId path string true "Vcs仓库ID"
 // @Param form query forms.GetGitRevisionForm true "parameter"
-// @Router /vcs/branch [get]
+// @Router /vcs/{vcsId}/branch [get]
 // @Success 200 {object} ctx.JSONResult{result=[]apps.Revision}
 func (Vcs) ListBranches(c *ctx.GinRequestCtx) {
 	form := forms.GetGitRevisionForm{}
@@ -134,8 +140,10 @@ func (Vcs) ListBranches(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param vcsId path string true "Vcs仓库ID"
 // @Param form query forms.GetGitRevisionForm true "parameter"
-// @Router /vcs/tag [get]
+// @Router /vcs/{vcsId}/tag [get]
 // @Success 200 {object} ctx.JSONResult{result=[]apps.Revision}
 func (Vcs) ListTags(c *ctx.GinRequestCtx) {
 	form := forms.GetGitRevisionForm{}
@@ -152,8 +160,10 @@ func (Vcs) ListTags(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param vcsId path string true "Vcs仓库ID"
 // @Param form query forms.GetReadmeForm true "parameter"
-// @Router /vcs/readme [get]
+// @Router /vcs/{vcsId}/readme [get]
 // @Success 200 {object} ctx.JSONResult{result=string}
 func (Vcs) GetReadmeContent(c *ctx.GinRequestCtx) {
 	form := forms.GetReadmeForm{}

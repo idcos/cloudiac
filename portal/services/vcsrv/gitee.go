@@ -120,7 +120,7 @@ type giteeTag struct {
 }
 
 func (gitee *giteeRepoIface) ListTags() ([]string, error) {
-	path := gitee.vcs.Address + fmt.Sprintf("/repos/%s/%s/tags", gitee.repository.FullName, gitee.repository.Name)
+	path := gitee.vcs.Address + fmt.Sprintf("/repos/%s/tags", gitee.repository.FullName)
 	_, body, err := gitee.giteaRequest(path, "GET")
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)

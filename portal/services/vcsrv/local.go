@@ -10,6 +10,7 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/utils/logs"
 	"fmt"
+	"github.com/go-git/go-git/v5/plumbing/storer"
 	"io/fs"
 	"path"
 	"path/filepath"
@@ -97,11 +98,7 @@ func newLocalRepo(dir string, path string) (*LocalRepo, error) {
 	}, nil
 }
 
-func (l *LocalRepo) ListBranches() ([]string, error) {
-	refs, err := l.repo.Branches()
-	if err != nil {
-		return nil, err
-	}
+func getRevision(refs storer.ReferenceIter, err error) ([]string, error) {
 	defer refs.Close()
 
 	branches := make([]string, 0)
@@ -115,24 +112,23 @@ func (l *LocalRepo) ListBranches() ([]string, error) {
 	return branches, nil
 }
 
+func (l *LocalRepo) ListBranches() ([]string, error) {
+	refs, err := l.repo.Branches()
+	if err != nil {
+		return nil, err
+	}
+	return getRevision(refs, err)
+
+}
+
 func (l *LocalRepo) ListTags() ([]string, error) {
 	refs, err := l.repo.Tags()
 	if err != nil {
 		return nil, err
 	}
-	defer refs.Close()
-	tags := make([]string, 0)
-	err = refs.ForEach(func(ref *plumbing.Reference) error {
-		tags = append(tags, filepath.Base(ref.Name().String()))
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return tags, nil
+	return getRevision(refs, err)
 
 }
-
 
 func (l *LocalRepo) BranchCommitId(branch string) (string, error) {
 	hash, err := l.repo.ResolveRevision(plumbing.Revision(branch))

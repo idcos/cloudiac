@@ -123,7 +123,7 @@ type githubTag struct {
 }
 
 func (github *githubRepoIface) ListTags() ([]string, error) {
-	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/%s/tags", github.repository.FullName, github.repository.Name), nil)
+	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/tags", github.repository.FullName), nil)
 	_, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
@@ -138,7 +138,6 @@ func (github *githubRepoIface) ListTags() ([]string, error) {
 	return tagList, nil
 
 }
-
 
 type githubCommit struct {
 	Commit struct {

@@ -125,7 +125,7 @@ type giteaTag struct {
 }
 
 func (gitea *giteaRepoIface) ListTags() ([]string, error) {
-	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/%s/tags", gitea.repository.FullName, gitea.repository.Name)
+	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/tags", gitea.repository.FullName)
 	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
@@ -140,7 +140,6 @@ func (gitea *giteaRepoIface) ListTags() ([]string, error) {
 	}
 	return tagList, nil
 }
-
 
 type giteaCommit struct {
 	Commit struct {
