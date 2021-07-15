@@ -103,7 +103,8 @@ func ChangeTaskStepStatus(dbSess *db.Session, task *models.Task, taskStep *model
 	return ChangeTaskStatusWithStep(dbSess, task, taskStep)
 }
 
-func createTaskStep(tx *db.Session, task models.Task, stepBody models.TaskStepBody, index int) (*models.TaskStep, e.Error) {
+func createTaskStep(tx *db.Session, task models.Task, stepBody models.TaskStepBody, index int, nextStep models.Id) (
+	*models.TaskStep, e.Error) {
 	s := models.TaskStep{
 		TaskStepBody: stepBody,
 		OrgId:        task.OrgId,
@@ -113,6 +114,7 @@ func createTaskStep(tx *db.Session, task models.Task, stepBody models.TaskStepBo
 		Index:        index,
 		Status:       models.TaskStepPending,
 		Message:      "",
+		NextStep:     nextStep,
 	}
 	s.Id = models.NewId("step")
 	s.LogPath = s.GenLogPath()

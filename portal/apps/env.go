@@ -111,7 +111,7 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 	env.Variables = vars
 
 	// 创建任务
-	_, err = services.CreateTask(tx, env, models.Task{
+	_, err = services.CreateTask(tx, tpl, env, models.Task{
 		Name:        models.Task{}.GetTaskNameByType(form.TaskType),
 		Type:        form.TaskType,
 		Flow:        models.TaskFlow{},
@@ -377,7 +377,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	}
 
 	// 创建任务
-	_, err = services.CreateTask(tx, env, models.Task{
+	_, err = services.CreateTask(tx, tpl, env, models.Task{
 		Name:        models.Task{}.GetTaskNameByType(form.TaskType),
 		Type:        form.TaskType,
 		Flow:        models.TaskFlow{},

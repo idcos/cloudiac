@@ -31,6 +31,10 @@ func NewTask(req RunTaskReq, logger logs.Logger) *Task {
 }
 
 func (t *Task) Run() (cid string, err error) {
+	t.decryptVariables(t.req.Env.EnvironmentVars)
+	t.decryptVariables(t.req.Env.TerraformVars)
+	t.decryptVariables(t.req.Env.AnsibleVars)
+
 	t.workspace, err = t.initWorkspace()
 	if err != nil {
 		return cid, errors.Wrap(err, "initial workspace")
@@ -90,6 +94,12 @@ func (t *Task) Run() (cid string, err error) {
 		logger.Errorln(er)
 	}
 	return cid, err
+}
+
+func (t *Task) decryptVariables(vars map[string]string) {
+	for k, v := range vars {
+		vars[k] = utils.DecryptSecretVar(v)
+	}
 }
 
 func (t *Task) initWorkspace() (workspace string, err error) {

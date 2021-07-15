@@ -10,7 +10,7 @@ import (
 	"crypto/md5"
 	crand "crypto/rand"
 	"database/sql/driver"
-	"encoding/hex"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -36,10 +36,16 @@ import (
 const letterAndDigit = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 var (
-	commonKey = []byte("monitorSecretKey")
+	secretKey []byte
 )
 
 func init() {
+	sk := os.Getenv("CLOUDIAC_SECRET_KEY")
+	if sk == "" {
+		sk = "6xGzLKiX4dl0UE6aVuBGCmRWL7cQ+90W"
+	}
+	secretKey = []byte(sk)
+
 	n, _ := crand.Int(crand.Reader, big.NewInt(math.MaxInt64))
 	if n == nil {
 		n = big.NewInt(time.Now().UnixNano())
@@ -295,7 +301,7 @@ func CheckRespCode(respCode int, code int) bool {
 }
 
 func AesEncrypt(plaintext string) (string, error) {
-	block, err := aes.NewCipher(commonKey)
+	block, err := aes.NewCipher(secretKey)
 	if err != nil {
 		return "", err
 	}
@@ -306,17 +312,17 @@ func AesEncrypt(plaintext string) (string, error) {
 	}
 	cipher.NewCFBEncrypter(block, iv).XORKeyStream(ciphertext[aes.BlockSize:],
 		[]byte(plaintext))
-	return hex.EncodeToString(ciphertext), nil
+	return base64.RawURLEncoding.EncodeToString(ciphertext), nil
 }
 
 func AesDecrypt(d string) string {
-	ciphertext, err := hex.DecodeString(d)
 	logger := logrus.WithField("func", "AesDecrypt")
+	ciphertext, err := base64.RawURLEncoding.DecodeString(d)
 	if err != nil {
 		logger.Errorln(err)
 		return ""
 	}
-	block, err := aes.NewCipher(commonKey)
+	block, err := aes.NewCipher(secretKey)
 	if err != nil {
 		logger.Errorln(err)
 		return ""
@@ -537,4 +543,14 @@ func GetUUID() (string, error) {
 		return "", err
 	}
 	return u2.String(), nil
+}
+
+// FirstValueStr 获取参数列表中第一个非空的字符串
+func FirstValueStr(ss ...string) string {
+	for _, s := range ss {
+		if s != "" {
+			return s
+		}
+	}
+	return ""
 }

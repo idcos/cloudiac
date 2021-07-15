@@ -25,8 +25,11 @@ func OpenSSHPublicKey(privatePem []byte) ([]byte, error) {
 	b.WriteString(pubKey.Type())
 	b.WriteByte(' ')
 	e := base64.NewEncoder(base64.StdEncoding, b)
-	e.Write(pubKey.Marshal())
-	e.Close()
+	_, err = e.Write(pubKey.Marshal())
+	if err != nil {
+		return  nil, err
+	}
+	_ = e.Close()
 	b.WriteString(" CloudIaC")
 	return b.Bytes(), nil
 }
