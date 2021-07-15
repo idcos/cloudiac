@@ -131,3 +131,142 @@ func GetUserRoleByProject(dbSess *db.Session, userId, projectId models.Id, role 
 	}
 	return isExists, nil
 }
+
+// UserOrgIds 用户有权限的组织 id
+func UserOrgIds(query *db.Session, userId models.Id) (*[]models.Id, e.Error) {
+	ids := make([]models.Id, 0)
+	if UserIsSuperAdmin(query, userId) {
+		// 平台管理员允许访问所有组织
+		err := query.Model(models.Organization{}).Find(&ids)
+		if err != nil && !e.IsRecordNotFound(err) {
+			return nil, e.New(e.DBError, err)
+		}
+	} else {
+		// 其他用户只允许访问关联的组织
+		err := query.Model(models.UserOrg{}).Where("user_id = ?", userId).Find(&ids)
+		if err != nil && !e.IsRecordNotFound(err) {
+			return nil, e.New(e.DBError, err)
+		}
+	}
+	return &ids, nil
+}
+
+// UserProjectIds 用户有权限的项目 id
+func UserProjectIds(query *db.Session, userId models.Id, orgId models.Id) (*[]models.Id, e.Error) {
+	ids := make([]models.Id, 0)
+	user, _ := GetUserById(query, userId)
+	if user == nil {
+		return &ids, nil
+	}
+	if UserIsSuperAdmin(query, userId) {
+		// 平台管理员允许访问所有项目
+		err := query.Model(models.Project{}).Find(&ids)
+		if err != nil && !e.IsRecordNotFound(err) {
+			return nil, e.New(e.DBError, err)
+		}
+	} else {
+		// 其他用户只允许访问关联的组织
+		err := query.Model(models.UserOrg{}).Where("user_id = ?", userId).Find(&ids)
+		if err != nil && !e.IsRecordNotFound(err) {
+			return nil, e.New(e.DBError, err)
+		}
+	}
+	return &ids, nil
+}
+
+// UserOrgRoles 用户在组织(多个)下的角色
+func UserOrgRoles(query *db.Session, userId models.Id, orgId models.Id) {
+
+}
+
+// UserProjectRoles 用户在项目(多个)下的角色
+func UserProjectRoles() {
+
+}
+
+// UserHasProjectRole 用户是否拥有项目的某个角色权限
+func UserHasProjectRole(query *db.Session, userId models.Id, orgId models.Id, projectId models.Id, role ...string) bool {
+	switch {
+	case UserIsSuperAdmin(query, userId):
+		// 平台管理员拥有所有权限
+		return true
+	case UserHasOrgRole(query, userId, orgId, consts.OrgRoleAdmin):
+		// 组织管理员拥有组织下项目的管理者权限
+		if exist, err := query.Model(models.Project{}).Where("org_id = ?", orgId).Exists(); err != nil {
+			return false
+		} else {
+			if !exist {
+				return false
+			}
+			if len(role) == 0 {
+				// 不关心具体角色，只检查是否关联了项目
+				return true
+			} else {
+				// 是否有确定的项目角色
+				return role[0] == consts.ProjectRoleManager
+			}
+		}
+	default:
+		// 普通用户
+		r := models.UserProject{}
+		err := query.Model(models.UserProject{}).Where("project_id = ? and user_id = ?", projectId, userId).Find(&r)
+		if err != nil {
+			return false
+		} else if len(role) == 0 {
+			// 不关心具体角色，只检查是否关联了项目
+			return true
+		} else {
+			// 是否有确定的项目角色
+			return r.Role == role[0]
+		}
+	}
+}
+
+// UserHasOrgRole 用户是否拥有组织的某个角色权限
+func UserHasOrgRole(query *db.Session, userId models.Id, orgId models.Id, role ...string) bool {
+	if UserIsSuperAdmin(query, userId) {
+		// 平台管理员拥有所有权限
+		return true
+	}
+	ur := models.UserOrg{}
+	err := query.Model(models.UserOrg{}).Where("user_id = ? AND org_id = ?", userId, orgId).Find(&ur)
+	if err != nil {
+		return false
+	} else if len(role) == 0 {
+		// 不关心具体角色，只检查是否关联了组织
+		return true
+	} else {
+		// 是否有确定的组织角色
+		return role[0] == ur.Role
+	}
+}
+
+// UserIsSuperAdmin 判断用户是否是平台管理员
+func UserIsSuperAdmin(query *db.Session, userId models.Id) bool {
+	if user, err := GetUserById(query, userId); err != nil {
+		return false
+	} else {
+		return user.IsAdmin
+	}
+}
+
+func UserHasManageUserPerm() {}
+
+func QueryWithOrgId(query *db.Session, orgId interface{}, tableName ...string) *db.Session {
+	return QueryWithCond(query, "org_id", orgId, tableName...)
+}
+
+func QueryWithProjectId(query *db.Session, projectId interface{}, tableName ...string) *db.Session {
+	return QueryWithCond(query, "project_id", projectId, tableName...)
+}
+
+func QueryWithCond(query *db.Session, column string, value interface{}, tableName ...string) *db.Session {
+	if len(tableName) > 0 {
+		return query.Where(fmt.Sprintf("`%s`.`%s` = ?", tableName[0], column), value)
+	}
+	return query.Where(fmt.Sprintf("`%s` = ?", column), value)
+}
+
+// TODO lru cache data
+//userOrgs	 = map[string]*models.UserOrg
+//userProjects = map[string]*models.UserProject
