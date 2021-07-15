@@ -10,8 +10,8 @@ import (
 	"fmt"
 )
 
-func ListNotificationCfgs(c *ctx.ServiceCtx) (interface{}, e.Error) {
-	cfgs, err := services.ListNotificationCfgs(c.DB(), c.OrgId)
+func SearchNotification(c *ctx.ServiceCtx) (interface{}, e.Error) {
+	cfgs, err := services.SearchNotification(c.DB(), c.OrgId)
 	if err != nil {
 		return nil, e.New(e.DBError, err)
 	}
@@ -28,9 +28,9 @@ func DeleteNotificationCfg(c *ctx.ServiceCtx, id models.Id) (result interface{},
 }
 
 func UpdateNotificationCfg(c *ctx.ServiceCtx, form *forms.UpdateNotificationCfgForm) (cfg *models.NotificationCfg, err e.Error) {
-	c.AddLogField("action", fmt.Sprintf("update org notification cfg id: %s", form.NotificationId))
+	c.AddLogField("action", fmt.Sprintf("update org notification cfg id: %s", form.Id))
 
-	if form.NotificationId == "" {
+	if form.Id == "" {
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
 	}
 
@@ -49,7 +49,7 @@ func UpdateNotificationCfg(c *ctx.ServiceCtx, form *forms.UpdateNotificationCfgF
 		attrs["cfgInfo"] = cfgJson
 	}
 
-	cfg, err = services.UpdateNotificationCfg(c.DB(), form.NotificationId, attrs)
+	cfg, err = services.UpdateNotificationCfg(c.DB(), form.Id, attrs)
 	return cfg, err
 }
 
