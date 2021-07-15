@@ -527,6 +527,11 @@ func buildRunTaskReq(task models.Task) (taskReq *runner.RunTaskReq, err error) {
 		return nil, errors.Wrapf(err, "load private key")
 	}
 
+	pk, err := utils.AesEncrypt(string(privateKey))
+	if err != nil {
+		return nil, errors.Wrap(err, "encrypt private key")
+	}
+
 	taskReq = &runner.RunTaskReq{
 		Env:          runnerEnv,
 		RunnerId:     task.RunnerId,
@@ -536,7 +541,7 @@ func buildRunTaskReq(task models.Task) (taskReq *runner.RunTaskReq, err error) {
 		RepoAddress:  task.RepoAddr,
 		RepoRevision: task.CommitId,
 		Timeout:      task.StepTimeout,
-		PrivateKey:   string(privateKey),
+		PrivateKey:   utils.EncodeSecretVar(pk, true),
 	}
 	return taskReq, nil
 }

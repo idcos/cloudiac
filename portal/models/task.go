@@ -258,6 +258,6 @@ func (s *TaskStep) GenLogPath() string {
 		s.EnvId.String(),
 		s.TaskId.String(),
 		fmt.Sprintf("step%d", s.Index),
-		runner.TaskLogName,
+		runner.TaskStepLogName,
 	)
 }

@@ -60,6 +60,9 @@ func TestAesEncrypt(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log(ss)
-	ds := AesDecrypt(ss)
+	ds, err := AesDecrypt(ss)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, text, ds)
 }
