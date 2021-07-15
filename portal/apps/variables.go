@@ -6,6 +6,7 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"sort"
 )
 
 func BatchUpdate(c *ctx.ServiceCtx, form *forms.BatchUpdateVariableForm) (interface{}, e.Error) {
@@ -36,6 +37,18 @@ func BatchUpdate(c *ctx.ServiceCtx, form *forms.BatchUpdateVariableForm) (interf
 	return nil, nil
 }
 
+type newVariable []models.Variable
+
+func (v newVariable) Len() int {
+	return len(v)
+}
+func (v newVariable) Less(i, j int) bool {
+	return v[i].Name < v[j].Name
+}
+func (v newVariable) Swap(i, j int) {
+	v[i], v[j] = v[j], v[i]
+}
+
 func SearchVariable(c *ctx.ServiceCtx, form *forms.SearchVariableForm) (interface{}, e.Error) {
 	variableM, err := services.GetValidVariables(c.DB(), form.Scope, c.OrgId, c.ProjectId, form.TplId, form.EnvId)
 	if err != nil {
@@ -45,6 +58,7 @@ func SearchVariable(c *ctx.ServiceCtx, form *forms.SearchVariableForm) (interfac
 	for _, variable := range variableM {
 		rs = append(rs, variable)
 	}
+	sort.Sort(newVariable(rs))
 
 	return rs, nil
 }
