@@ -170,9 +170,7 @@ func listRepoRevision(c *ctx.ServiceCtx, form *forms.GetGitRevisionForm, revisio
 	}
 	var revisionList []string
 	if revisionType == "tags" {
-		fmt.Println("执行这里")
 		revisionList, er = repo.ListTags()
-		fmt.Println("result", revisionList)
 	} else if revisionType == "branches" {
 		revisionList, er = repo.ListBranches()
 	}

@@ -57,6 +57,8 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 		if err != nil {
 			return nil, err
 		}
+		// TODO 创建 项目模板一对多关联
+		// TODO 创建 变量
 
 		return template, nil
 	}()
@@ -65,7 +67,6 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 		_ = tx.Rollback()
 		return nil, err
 	}
-
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error commit create template, err %s", err)
