@@ -6,6 +6,7 @@ import (
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
+	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"net/http"
 )
@@ -28,10 +29,6 @@ func Auth(c *ctx.GinRequestCtx) {
 	}
 
 	if claims, ok := token.Claims.(*services.Claims); ok && token.Valid {
-		orgId := models.Id(c.GetHeader("IaC-Org-Id"))
-		projectId := models.Id(c.GetHeader("IaC-Project-Id"))
-		c.ServiceCtx().OrgId = orgId
-		c.ServiceCtx().ProjectId = projectId
 		c.ServiceCtx().UserId = claims.UserId
 		c.ServiceCtx().Username = claims.Username
 		c.ServiceCtx().IsSuperAdmin = claims.IsAdmin
@@ -39,6 +36,37 @@ func Auth(c *ctx.GinRequestCtx) {
 		c.ServiceCtx().UserAgent = c.GetHeader("User-Agent")
 	} else {
 		c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
+		return
+	}
+
+	orgId := models.Id(c.GetHeader("IaC-Org-Id"))
+	if orgId != "" {
+		c.ServiceCtx().OrgId = orgId
+
+		if c.ServiceCtx().IsSuperAdmin ||
+			services.UserHasOrgRole(c.ServiceCtx().UserId, c.ServiceCtx().OrgId, "") {
+		} else {
+			c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("not allow to access org")), http.StatusForbidden)
+			return
+		}
+	}
+	projectId := models.Id(c.GetHeader("IaC-Project-Id"))
+	if projectId != "" {
+		c.ServiceCtx().ProjectId = projectId
+		if project, err := services.GetProjectsById(c.ServiceCtx().DB(), projectId); err != nil {
+			c.JSONError(e.New(e.ProjectNotExists, fmt.Errorf("not allow to access project")), http.StatusBadRequest)
+			return
+		} else if project.OrgId != c.ServiceCtx().OrgId {
+			c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("invalid project id")), http.StatusForbidden)
+			return
+		}
+		if c.ServiceCtx().IsSuperAdmin ||
+			services.UserHasOrgRole(c.ServiceCtx().UserId, c.ServiceCtx().OrgId, consts.OrgRoleAdmin) ||
+			services.UserHasProjectRole(c.ServiceCtx().UserId, c.ServiceCtx().OrgId, c.ServiceCtx().ProjectId, "") {
+			c.Next()
+			return
+		}
+		c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("not allow to access project")), http.StatusForbidden)
 		return
 	}
 }
@@ -49,36 +77,6 @@ func AuthOrgId(c *ctx.GinRequestCtx) {
 		c.JSONError(e.New(e.InvalidOrganizationId), http.StatusForbidden)
 		return
 	}
-	userOrgRel, err := services.FindUsersOrgRel(c.ServiceCtx().DB(), c.ServiceCtx().UserId, c.ServiceCtx().OrgId)
-	if err == nil && len(userOrgRel) > 0 {
-		c.ServiceCtx().Role = userOrgRel[0].Role
-		c.Next()
-		return
-	}
-	if c.ServiceCtx().IsSuperAdmin == true {
-		c.ServiceCtx().Role = consts.OrgRoleRoot
-		c.Next()
-		return
-	}
-	c.JSONError(e.New(e.PermissionDeny), http.StatusForbidden)
-	return
-}
-
-func IsSuperAdmin(c *ctx.GinRequestCtx) {
-	if c.ServiceCtx().IsSuperAdmin == true {
-		c.Next()
-	} else {
-		c.JSONError(e.New(e.PermissionDeny), http.StatusForbidden)
-	}
-	return
-}
-
-func IsOrgAdmin(c *ctx.GinRequestCtx) {
-	if c.ServiceCtx().Role == "owner" || c.ServiceCtx().IsSuperAdmin == true {
-		c.Next()
-	} else {
-		c.JSONError(e.New(e.PermissionDeny), http.StatusForbidden)
-	}
 	return
 }
 
@@ -88,13 +86,5 @@ func AuthProjectId(c *ctx.GinRequestCtx) {
 		c.JSONError(e.New(e.InvalidProjectId), http.StatusForbidden)
 		return
 	}
-	// TODO: 查找项目角色
-	//userOrgRel, err := services.FindUsersOrgRel(c.ServiceCtx().DB(), c.ServiceCtx().UserId, c.ServiceCtx().OrgId)
-	//if err == nil && len(userOrgRel) > 0 {
-	//	c.ServiceCtx().Role = userOrgRel[0].Role
-	//	c.Next()
-	//	return
-	//}
-	//c.JSONError(e.New(e.PermissionDeny), http.StatusForbidden)
 	return
 }

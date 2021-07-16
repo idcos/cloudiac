@@ -47,12 +47,15 @@ const (
 const (
 	SuperAdmin = "root"
 
-	OrgRoleRoot   = "root"
-	OrgRoleOwner  = "owner"
+	RoleRoot      = "root"
+	RoleLogin     = "login"
+	RoleAnonymous = "anonymous"
+
+	OrgRoleAdmin  = "admin"
 	OrgRoleMember = "member"
 
-	ProjectRoleOwner    = "owner"    //
-	ProjectRoleManager  = "manager"  // 要以创建模板、环境，部署审批
+	ProjectRoleManager  = "manager"  //
+	ProjectRoleApprover = "approver" // 要以创建模板、环境，部署审批
 	ProjectRoleOperator = "operator" // 可以发起 plan、apply
 	ProjectRoleGuest    = "guest"    // 访客，只读权限
 

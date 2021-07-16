@@ -15,6 +15,7 @@ type Organization struct {
 // Create 创建组织
 // @Tags 组织
 // @Summary 创建组织
+// @Description 需要管理员权限
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
@@ -30,9 +31,9 @@ func (Organization) Create(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.CreateOrganization(c.ServiceCtx(), &form))
 }
 
-// Search 组织查询
+// Search 组织列表查询
 // @Tags 组织
-// @Summary 组织查询
+// @Summary 组织列表查询
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
@@ -50,6 +51,7 @@ func (Organization) Search(c *ctx.GinRequestCtx) {
 // Update 组织编辑
 // @Tags 组织
 // @Summary 组织信息编辑
+// @Description 需要管理员权限
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
@@ -110,7 +112,7 @@ func (Organization) Detail(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param orgId path string true "组织ID"
+// @Param orgId path string false "组织ID"
 // @Param form formData forms.DisableOrganizationForm true "parameter"
 // @router /orgs/{orgId}/status [put]
 // @Success 200 {object} ctx.JSONResult{result=models.Organization}
@@ -132,8 +134,8 @@ func (Organization) ChangeOrgStatus(c *ctx.GinRequestCtx) {
 // @Security AuthToken
 // @Param orgId path string true "组织ID"
 // @Param form formData forms.AddUserOrgRelForm true "parameter"
-// @router /orgs/{orgId}/users [put]
-// @Success 200 {object} ctx.JSONResult{result=apps.UserWithRoleResp}
+// @router /orgs/{orgId}/users [post]
+// @Success 200 {object} ctx.JSONResult{result=models.UserWithRoleResp}
 func (Organization) AddUserToOrg(c *ctx.GinRequestCtx) {
 	form := forms.AddUserOrgRelForm{}
 	if err := c.Bind(&form); err != nil {
@@ -174,7 +176,7 @@ func (Organization) RemoveUserForOrg(c *ctx.GinRequestCtx) {
 // @Param userId path string true "用户ID"
 // @Param form formData forms.UpdateUserOrgRelForm true "parameter"
 // @router /orgs/{orgId}/users/{userId}/role [put]
-// @Success 200 {object} ctx.JSONResult{result=apps.UserWithRoleResp}
+// @Success 200 {object} ctx.JSONResult{result=models.UserWithRoleResp}
 func (Organization) UpdateUserOrgRel(c *ctx.GinRequestCtx) {
 	form := forms.UpdateUserOrgRelForm{}
 	if err := c.Bind(&form); err != nil {
@@ -203,4 +205,24 @@ func (Organization) SearchUser(c *ctx.GinRequestCtx) {
 	}
 	c.ServiceCtx().OrgId = models.Id(c.Param("orgId"))
 	c.JSONResult(apps.SearchUser(c.ServiceCtx(), &form))
+}
+
+// InviteUser 邀请用户加入组织
+// @Tags 组织
+// @Summary 邀请内部或者外部用户加入组织
+// @Description 如果用户不存在，则创建并加入组织，如果用户已经存在，则加入该组织
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param form formData forms.InviteUserForm true "parameter"
+// @Param orgId path string true "组织ID"
+// @router /orgs/{orgId}/users/invite [post]
+// @Success 200 {object} ctx.JSONResult{result=apps.CreateUserResp}
+func (Organization) InviteUser(c *ctx.GinRequestCtx) {
+	form := forms.InviteUserForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.InviteUser(c.ServiceCtx(), &form))
 }

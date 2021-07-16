@@ -31,7 +31,7 @@ func SearchSystemConfig(c *ctx.ServiceCtx) (interface{}, e.Error) {
 }
 
 func UpdateSystemConfig(c *ctx.ServiceCtx, form *forms.UpdateSystemConfigForm) (cfg *models.SystemCfg, err e.Error) {
-	c.AddLogField("action", fmt.Sprintf("update system config %d", form.Id))
+	c.AddLogField("action", fmt.Sprintf("update system config %s", form.Id))
 
 	attrs := models.Attrs{}
 	if form.HasKey("value") {

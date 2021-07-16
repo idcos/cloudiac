@@ -99,7 +99,7 @@ func DeleteUserOrgRel(tx *db.Session, userId models.Id, orgId models.Id) e.Error
 
 func UpdateUserOrgRel(tx *db.Session, userOrg models.UserOrg) e.Error {
 	attrs := models.Attrs{"role": userOrg.Role}
-	if _, err := models.UpdateAttr(tx.Where("userId = ? and orgId = ?", userOrg.UserId, userOrg.OrgId), &models.UserOrg{}, attrs); err != nil {
+	if _, err := models.UpdateAttr(tx.Where("user_id = ? and org_id = ?", userOrg.UserId, userOrg.OrgId), &models.UserOrg{}, attrs); err != nil {
 		return e.New(e.DBError, fmt.Errorf("update user org error: %v", err))
 	}
 	return nil
@@ -112,7 +112,7 @@ func FindUsersOrgRel(query *db.Session, userId models.Id, orgId models.Id) (user
 	return
 }
 
-func GetOrgIdsByUser(query *db.Session, userId models.Id) (orgIds []models.Id, err error) {
+func GetOrgIdsByUser(query *db.Session, userId models.Id) (orgIds []models.Id, err e.Error) {
 	var userOrgRel []*models.UserOrg
 	if err := query.Where("user_id = ?", userId).Find(&userOrgRel); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
@@ -123,10 +123,13 @@ func GetOrgIdsByUser(query *db.Session, userId models.Id) (orgIds []models.Id, e
 	return
 }
 
-// GetUsersByOrg 获取某个组织下的所有用户
-func GetUsersByOrg(query *db.Session, orgId models.Id) (userOrgRel []*models.UserOrg, err error) {
+func GetUserIdsByOrg(query *db.Session, orgId models.Id) (userIds []models.Id, err e.Error) {
+	var userOrgRel []*models.UserOrg
 	if err := query.Where("org_id = ?", orgId).Find(&userOrgRel); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
+	}
+	for _, o := range userOrgRel {
+		userIds = append(userIds, o.UserId)
 	}
 	return
 }

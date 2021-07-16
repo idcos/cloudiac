@@ -1,10 +1,14 @@
 package v1
 
 import (
+	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctrl"
+	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/web/api/v1/handlers"
 	"cloudiac/portal/web/middleware"
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 // @title 云霁 CloudIaC 基础设施即代码管理平台
@@ -52,18 +56,20 @@ func Register(g *gin.RouterGroup) {
 
 	ctrl.Register(g.Group("orgs", ac()), &handlers.Organization{})
 	g.PUT("/orgs/:id/status", ac(), w(handlers.Organization{}.ChangeOrgStatus))
-	g.GET("/orgs/:id/users", ac("orgs", "listuser"), w(handlers.Organization{}.SearchUser))
-	g.PUT("/orgs/:id/users", ac("orgs", "adduser"), w(handlers.Organization{}.AddUserToOrg))
-	g.DELETE("/orgs/:id/users/:userId", ac("orgs", "removeuser"), w(handlers.Organization{}.RemoveUserForOrg))
-	g.PUT("/orgs/:id/users/:userId/role", ac("orgs", "updaterole"), w(handlers.Organization{}.UpdateUserOrgRel))
-
-	// 组织 header
-	g.Use(w(middleware.AuthOrgId))
-
-	g.POST("/users/invite", ac(), w(handlers.User{}.InviteUser))
 	ctrl.Register(g.Group("users", ac()), &handlers.User{})
 	g.PUT("/users/:id/status", ac(), w(handlers.User{}.ChangeUserStatus))
 	g.POST("/users/:id/password/reset", ac(), w(handlers.User{}.PasswordReset))
+
+	// 要求组织 header
+	g.Use(w(middleware.AuthOrgId))
+
+	// 组织用户管理
+	g.GET("/orgs/:id/users", ac("orgs", "listuser"), w(handlers.Organization{}.SearchUser))
+	g.POST("/orgs/:id/users", ac("orgs", "adduser"), w(handlers.Organization{}.AddUserToOrg))
+	g.PUT("/orgs/:id/users/:userId/role", ac("orgs", "updaterole"), w(handlers.Organization{}.UpdateUserOrgRel))
+	g.POST("/orgs/:id/users/invite", ac("orgs", "adduser"), w(handlers.Organization{}.InviteUser))
+	g.DELETE("/orgs/:id/users/:userId", ac("orgs", "removeuser"), w(handlers.Organization{}.RemoveUserForOrg))
+
 	//项目管理
 	ctrl.Register(g.Group("projects", ac()), &handlers.Project{})
 	//变量管理
@@ -92,8 +98,8 @@ func Register(g *gin.RouterGroup) {
 	g.PUT("/envs/:id/archive", ac(), w(handlers.Env{}.Archive))
 	g.GET("/envs/:id/tasks", ac(), w(handlers.Env{}.SearchTasks))
 	g.GET("/envs/:id/tasks/last", ac(), w(handlers.Env{}.LastTask))
-	g.POST("/envs/:id/deploy", ac(), w(handlers.Env{}.Deploy))
-	g.POST("/envs/:id/destroy", ac(), w(handlers.Env{}.Destroy))
+	g.POST("/envs/:id/deploy", ac("envs", "deploy"), w(handlers.Env{}.Deploy))
+	g.POST("/envs/:id/destroy", ac("envs", "destroy"), w(handlers.Env{}.Destroy))
 	g.GET("/envs/:id/resources", ac(), w(handlers.Env{}.SearchResources))
 	g.GET("/envs/:id/variables", ac(), w(handlers.Env{}.SearchVariables))
 
