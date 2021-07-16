@@ -67,6 +67,11 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/orgs/:id/users/invite", ac("orgs", "adduser"), w(handlers.Organization{}.InviteUser))
 	g.DELETE("/orgs/:id/users/:userId", ac("orgs", "removeuser"), w(handlers.Organization{}.RemoveUserForOrg))
 
+	g.GET("/projects/users", ac(), w(handlers.ProjectUser{}.Search))
+	g.POST("/projects/users", ac(), w(handlers.ProjectUser{}.Create))
+	g.PUT("/projects/users/:id", ac(), w(handlers.ProjectUser{}.Update))
+	g.DELETE("/projects/users/:id", ac(), w(handlers.ProjectUser{}.Delete))
+
 	//项目管理
 	ctrl.Register(g.Group("projects", ac()), &handlers.Project{})
 	//变量管理
