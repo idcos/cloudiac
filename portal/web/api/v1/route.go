@@ -1,14 +1,10 @@
 package v1
 
 import (
-	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctrl"
-	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/web/api/v1/handlers"
 	"cloudiac/portal/web/middleware"
-	"fmt"
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
 // @title 云霁 CloudIaC 基础设施即代码管理平台

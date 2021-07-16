@@ -392,7 +392,7 @@ func SearchEnvResources(c *ctx.ServiceCtx, form *forms.SearchEnvResourceForm) (i
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
-	query := c.DB().Model(models.Resource{}).Where("org_id = ? AND project_id = ? AND env_id = ?",
+	query := c.DB().Model(models.Resource{}).Where("org_id = ? AND project_id = ? AND env_id = ? AND task_id = ?",
 		c.OrgId, c.ProjectId, form.Id, env.LastTaskId)
 
 	if form.HasKey("q") {
