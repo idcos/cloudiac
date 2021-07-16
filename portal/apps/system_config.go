@@ -9,19 +9,19 @@ import (
 	"fmt"
 )
 
-type searchSystemConfigResp struct {
+type SearchSystemConfigResp struct {
 	Id          models.Id `json:"id"`
 	Name        string    `json:"name"`
 	Value       string    `json:"value"`
 	Description string    `json:"description"`
 }
 
-func (m *searchSystemConfigResp) TableName() string {
+func (m *SearchSystemConfigResp) TableName() string {
 	return models.SystemCfg{}.TableName()
 }
 
 func SearchSystemConfig(c *ctx.ServiceCtx) (interface{}, e.Error) {
-	rs := searchSystemConfigResp{}
+	rs := SearchSystemConfigResp{}
 	err := services.QuerySystemConfig(c.DB()).First(&rs)
 	if err != nil {
 		return nil, e.New(e.DBError, err)
@@ -31,7 +31,7 @@ func SearchSystemConfig(c *ctx.ServiceCtx) (interface{}, e.Error) {
 }
 
 func UpdateSystemConfig(c *ctx.ServiceCtx, form *forms.UpdateSystemConfigForm) (cfg *models.SystemCfg, err e.Error) {
-	c.AddLogField("action", fmt.Sprintf("update system config %d", form.Id))
+	c.AddLogField("action", fmt.Sprintf("update system config %s", form.Id))
 
 	attrs := models.Attrs{}
 	if form.HasKey("value") {
