@@ -9,7 +9,7 @@ import (
 
 func CreateTemplate(tx *db.Session, tpl models.Template) (*models.Template, e.Error) {
 	if tpl.Id == "" {
-		tpl.Id = models.NewId("ct")
+		tpl.Id = models.NewId("tpl")
 	}
 	if err := models.Create(tx, &tpl); err != nil {
 		if e.IsDuplicate(err) {
@@ -41,7 +41,6 @@ func DeleteTemplate(tx *db.Session, id models.Id) e.Error {
 	return nil
 }
 
-// TODO 这里要不要和下面的 GetTemplate合并, 主要是错误处理
 func GetTemplateById(tx *db.Session, id models.Id) (*models.Template, e.Error) {
 	tpl := models.Template{}
 	if err := tx.Where("id = ?", id).First(&tpl); err != nil {
@@ -53,14 +52,12 @@ func GetTemplateById(tx *db.Session, id models.Id) (*models.Template, e.Error) {
 
 }
 
-// 这是根据orgId 去查
-func QueryTemplate(tx *db.Session, q string, orgId models.Id, templateIdList []string) (*db.Session, *db.Session) {
+func QueryTemplateByOrgId(tx *db.Session, q string, orgId models.Id, templateIdList []models.Id) *db.Session {
 	query := tx.Debug().Model(&models.Template{}).Joins(
 		"LEFT  JOIN iac_user"+
-			"  ON iac_user.id = iac_template.creatorId").
+			"  ON iac_user.id = iac_template.creator_id").
 		LazySelectAppend(
-			"iac_user.name as iac_user_name",
-			"iac_user.id",
+			"iac_user.name as creator",
 			"iac_template.*")
 	if q != "" {
 		qs := "%" + q + "%"
@@ -71,22 +68,13 @@ func QueryTemplate(tx *db.Session, q string, orgId models.Id, templateIdList []s
 		// 如果传入项目id，需要项目ID 再次筛选
 		query = query.Where("iac_template.id in (?) ", templateIdList)
 	}
-	return query, query
+	return query
 }
 
-func QueryTplByProjectId(tx *db.Session, projectId models.Id) (result []string, err e.Error) {
-	pro_tpl := []models.ProjectTemplate{}
-	if err := tx.Where("projectId = ?", projectId).Find(&pro_tpl); err != nil {
+func QueryTplByProjectId(tx *db.Session, projectId models.Id) (tplIds []models.Id, err e.Error) {
+	if err := tx.Where("project_id = ?", projectId).
+		Pluck("template_id", &tplIds); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
-	for _, v := range pro_tpl {
-		result = append(result, v.TemplateId)
-	}
 	return
-}
-
-func GetTemplate(sess *db.Session, id models.Id) (*models.Template, error) {
-	tpl := models.Template{}
-	err := sess.Where("id = ?", id).Find(&tpl)
-	return &tpl, err
 }
