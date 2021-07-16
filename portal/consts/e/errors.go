@@ -156,6 +156,12 @@ const (
 	EnvArchived            = 13013
 	EnvCannotArchiveActive = 13014
 	EnvDeploying           = 13015
+
+	// key
+	KeyAlreadyExists  = 14010
+	KeyNotExist       = 14011
+	KeyAliasDuplicate = 14012
+	KeyDecryptFail    = 14013
 )
 
 var errorMsgs = map[int]map[string]string{

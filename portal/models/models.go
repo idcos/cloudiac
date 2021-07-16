@@ -206,6 +206,7 @@ func Init(migrate bool) {
 	autoMigrate(&CtResourceMap{}, sess)
 	autoMigrate(&OperationLog{}, sess)
 	autoMigrate(&Token{}, sess)
+	autoMigrate(&Key{}, sess)
 	autoMigrate(&TaskComment{}, sess)
 	autoMigrate(&TemplateAccessToken{}, sess)
 	autoMigrate(&ProjectTemplate{}, sess)
