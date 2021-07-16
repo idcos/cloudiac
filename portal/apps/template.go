@@ -78,7 +78,7 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 		c.Logger().Errorf("error commit create template, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
-	fmt.Println(100000)
+
 	return template, nil
 }
 
