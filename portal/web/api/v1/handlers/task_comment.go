@@ -14,7 +14,7 @@ type TaskComment struct {
 // Create 创建作业评论
 // @Summary 创建作业评论
 // @Description 创建作业评论
-// @Tags 作业
+// @Tags 环境
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
@@ -33,7 +33,7 @@ func (TaskComment) Create(c *ctx.GinRequestCtx) {
 // Search 查询作业评论列表
 // @Summary 查询作业评论列表
 // @Description 查询作业评论列表
-// @Tags 作业
+// @Tags 环境
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
