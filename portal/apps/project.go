@@ -174,6 +174,10 @@ func DeleteProject(c *ctx.ServiceCtx, form *forms.DeleteProjectForm) (interface{
 type DetailProjectResp struct {
 	models.Project
 	UserAuthorization []models.UserProject `json:"userAuthorization" form:"userAuthorization" ` //用户认证信息
+	ProjectStatistics
+}
+
+type ProjectStatistics struct {
 }
 
 func DetailProject(c *ctx.ServiceCtx, form *forms.DetailProjectForm) (interface{}, e.Error) {
@@ -207,6 +211,7 @@ func DetailProject(c *ctx.ServiceCtx, form *forms.DetailProjectForm) (interface{
 	return DetailProjectResp{
 		projet,
 		projectUser,
+		nil,
 	}, nil
 }
 

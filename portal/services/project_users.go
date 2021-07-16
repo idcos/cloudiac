@@ -6,6 +6,7 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/utils"
+	"fmt"
 )
 
 func BindProjectUsers(tx *db.Session, projectId models.Id, authorization []forms.UserAuthorization) e.Error {
@@ -100,4 +101,42 @@ func GetUserIdsByProject(query *db.Session, projectId models.Id) ([]models.Id, e
 		userIds = append(userIds, p.UserId)
 	}
 	return userIds, nil
+}
+
+//GetUserIdsByProjectUser 获取项目下的userid
+func GetUserIdsByProjectUser(query *db.Session, projectId models.Id) ([]models.Id, e.Error) {
+	var userIds []models.Id
+	if err := query.Table(models.UserProject{}.TableName()).
+		Where("project_id = ?", projectId).
+		Pluck("user_id", &userIds); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return userIds, nil
+}
+
+func CreateProjectUser(dbSess *db.Session, userProject models.UserProject) (*models.UserProject, e.Error) {
+	if err := models.Create(dbSess, &userProject); err != nil {
+		if e.IsDuplicate(err) {
+			return nil, e.New(e.ProjectUserAlreadyExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &userProject, nil
+}
+
+func UpdateProjectUser(dbSess *db.Session, id uint, attrs models.Attrs) e.Error {
+	if _, err := models.UpdateAttr(dbSess.Where("id = ?", id), &models.UserProject{}, attrs); err != nil {
+		if e.IsDuplicate(err) {
+			return e.New(e.ProjectUserAliasDuplicate)
+		}
+		return e.New(e.DBError, fmt.Errorf("update project user error: %v", err))
+	}
+	return nil
+}
+
+func DeleteProjectUser(dbSess *db.Session, id uint) e.Error {
+	if _, err := dbSess.Where("id = ?", id).Delete(&models.UserProject{}); err != nil {
+		return e.New(e.DBError, fmt.Errorf("delete project error: %v", err))
+	}
+	return nil
 }

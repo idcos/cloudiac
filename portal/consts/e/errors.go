@@ -127,6 +127,11 @@ const (
 	ProjectInvalidStatus  = 10014
 	ProjectIdInvalid      = 10014
 
+	ProjectUserAlreadyExists  = 12010
+	ProjectUserNotExists      = 12011
+	ProjectUserAliasDuplicate = 12013
+	ProjectUserInvalidStatus  = 12014
+
 	// vcs
 	VcsError     = 9100
 	VcsNotExists = 9200
