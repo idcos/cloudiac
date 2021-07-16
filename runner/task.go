@@ -234,7 +234,7 @@ func (t *Task) genIacTfFile(workspace string) error {
 var iacTfVarsTpl = template.Must(template.New("").Parse(`
 {{- range $k,$v := .Env.TerraformVars -}}
 {{$k}} = "{{$v}}"
-{{- end -}}
+{{ end -}}
 `))
 
 func (t *Task) genIacTfVarsFile(workspace string) error {
