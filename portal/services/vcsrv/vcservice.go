@@ -84,6 +84,14 @@ func GetVcsInstance(vcs *models.Vcs) (VcsIface, error) {
 	}
 }
 
+func GetRepo(vcs *models.Vcs, repoId string) (RepoIface, error) {
+	v, err := GetVcsInstance(vcs)
+	if err != nil {
+		return nil, err
+	}
+	return v.GetRepo(repoId)
+}
+
 func matchGlob(search, name string) bool {
 	if search == "" {
 		return true
@@ -103,4 +111,12 @@ func getBranch(repo RepoIface, ref string) string {
 		return repo.DefaultBranch()
 	}
 	return ref
+}
+
+func GetRepoAddress(repo RepoIface) (string, error) {
+	p, err := repo.FormatRepoSearch()
+	if err != nil {
+		return "", err
+	}
+	return p.HTTPURLToRepo, nil
 }

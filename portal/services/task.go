@@ -6,6 +6,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services/logstorage"
+	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"context"
@@ -47,7 +48,6 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		Type:        pt.Type,
 		Flow:        pt.Flow,
 		Targets:     pt.Targets,
-		CommitId:    pt.CommitId,
 		CreatorId:   pt.CreatorId,
 		RunnerId:    firstVal(pt.RunnerId, env.RunnerId),
 		Variables:   pt.Variables,
@@ -82,7 +82,7 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		}
 	}
 
-	task.RepoAddr, err = buildFullRepoAddr(tx, tpl)
+	task.RepoAddr, task.CommitId, err = getTaskRepoAddrAndCommitId(tx, tpl)
 	if err != nil {
 		return nil, e.New(e.InternalError, err)
 	}
@@ -133,39 +133,55 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 	return &task, nil
 }
 
-func buildFullRepoAddr(tx *db.Session, tpl *models.Template) (string, error) {
+func getTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template) (repoAddr, commitId string, err error) {
 	var (
 		u         *url.URL
-		err       error
-		repoAddr  = tpl.RepoAddr
 		repoToken = tpl.RepoToken
 	)
 
-	if (repoToken == "" || !strings.Contains("://", repoAddr)) && tpl.VcsId != "" {
-		var vcs *models.Vcs
+	if tpl.RepoAddr != "" {
+		repoAddr = tpl.RepoAddr
+		commitId = tpl.RepoRevision
+	} else if tpl.VcsId != "" && tpl.RepoId != "" {
+		var (
+			vcs  *models.Vcs
+			repo vcsrv.RepoIface
+		)
 		if vcs, err = QueryVcsByVcsId(tpl.VcsId, tx); err != nil {
 			if e.IsRecordNotFound(err) {
-				return "", e.New(e.VcsNotExists, err)
+				return "", "", e.New(e.VcsNotExists, err)
 			}
-			return "", e.New(e.DBError, err)
+			return "", "", e.New(e.DBError, err)
 		}
-		// 模板里保存的是路径，需要与 vcs.Address 组合成 URL
-		if !strings.Contains("://", repoAddr) {
-			repoAddr = utils.JoinURL(vcs.Address, tpl.RepoAddr)
+
+		repo, err = vcsrv.GetRepo(vcs, tpl.RepoId)
+		if err != nil {
+			return "", "", err
 		}
-		// 模板没有保存 token，使用 vcs 的 token
+		commitId, err = repo.BranchCommitId(tpl.RepoRevision)
+		if err != nil {
+			return "", "", e.New(e.VcsError, err)
+		}
+		repoAddr, err = vcsrv.GetRepoAddress(repo)
+		if err != nil {
+			return
+		}
 		if repoToken == "" {
 			repoToken = vcs.VcsToken
 		}
+	} else {
+		return "", "", e.New(e.InternalError, fmt.Errorf("both 'repoId' and 'repoAddr' are empty"))
 	}
 
 	u, err = url.Parse(repoAddr)
 	if err != nil {
-		return "", e.New(e.InternalError, errors.Wrapf(err, "parse url: %v", repoAddr))
+		return "", "", e.New(e.InternalError, errors.Wrapf(err, "parse url: %v", repoAddr))
 	} else if repoToken != "" {
 		u.User = url.UserPassword("token", repoToken)
 	}
-	return u.String(), nil
+	repoAddr = u.String()
+
+	return repoAddr, commitId, nil
 }
 
 func GetTaskById(tx *db.Session, id models.Id) (*models.Task, e.Error) {
