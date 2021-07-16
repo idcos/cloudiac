@@ -92,6 +92,7 @@ type Task struct {
 	// 扩展属性，包括 source, transitionId 等
 	Extra TaskExtra `json:"extra" gorm:"type:json"` // 扩展属性
 
+	KeyId       Id     `json:"keyId" gorm:"size32"`      // 部署密钥ID
 	RunnerId    string `json:"runnerId" gorm:"not null"` // 部署通道
 	AutoApprove bool   `json:"autoApproval" gorm:"default:'0'"`
 

@@ -105,6 +105,10 @@ var polices = []Policy{
 	{"manager", "templates", "*"},
 	{"operator", "templates", "read"},
 	{"guest", "templates", "read"},
+
+	// 密钥
+	{"admin", "keys", "*"},
+	{"member", "keys", "*"},
 }
 
 // InitPolicy 初始化权限策略
