@@ -124,8 +124,9 @@ func ApproveTask(c *ctx.ServiceCtx, form *forms.ApproveTaskForm) (interface{}, e
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
-	query := c.DB().Where("iac_env.org_id = ? AND iac_env.project_id = ?", c.OrgId, c.ProjectId)
-	task, err := services.GetTask(query, form.Id)
+
+	taskQuery := services.QueryWithProjectId(services.QueryWithOrgId(c.DB(), c.OrgId), c.ProjectId)
+	task, err := services.GetTask(taskQuery, form.Id)
 	if err != nil && err.Code() != e.TaskNotExists {
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
 	} else if err != nil {
@@ -145,8 +146,8 @@ func ApproveTask(c *ctx.ServiceCtx, form *forms.ApproveTaskForm) (interface{}, e
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	// 非审批状态
-	if !step.IsApproved() {
+	// 己通过审批
+	if step.IsApproved() || step.ApproverId != "" {
 		return nil, e.New(e.TaskApproveNotPending, http.StatusBadRequest)
 	}
 
