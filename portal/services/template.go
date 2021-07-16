@@ -24,7 +24,7 @@ func UpdateTemplate(tx *db.Session, id models.Id, attrs models.Attrs) (tpl *mode
 	tpl = &models.Template{}
 	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.Template{}, attrs); err != nil {
 		if e.IsDuplicate(err) {
-			return nil, e.New(e.UserEmailDuplicate)
+			return nil, e.New(e.TemplateAlreadyExists, err)
 		}
 		return nil, e.New(e.DBError, fmt.Errorf("update template error: %v", err))
 	}
@@ -72,8 +72,18 @@ func QueryTemplateByOrgId(tx *db.Session, q string, orgId models.Id, templateIdL
 }
 
 func QueryTplByProjectId(tx *db.Session, projectId models.Id) (tplIds []models.Id, err e.Error) {
-	if err := tx.Where("project_id = ?", projectId).
+	if err := tx.Table(models.ProjectTemplate{}.TableName()).
+		Where("project_id = ?", projectId).
 		Pluck("template_id", &tplIds); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return
+}
+
+func QuertProjectByTplId(tx *db.Session, tplId models.Id) (project_ids []models.Id, err e.Error) {
+	if err := tx.Table(models.ProjectTemplate{}.TableName()).
+		Where("template_id = ?", tplId).
+		Pluck("project_id", &project_ids); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 	return

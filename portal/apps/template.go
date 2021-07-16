@@ -21,6 +21,9 @@ type SearchTemplateResp struct {
 	ActiveEnvironment int            `json:"activeEnvironment"`
 	RepoRevision      string         `json:"repoRevision"`
 	Creator           string         `json:"creator"`
+	RepoId            string         `json:"repoId"`
+	VcsId             string         `json:"vcsId"`
+	RepoAddr          string         `json:"repoAddr"`
 }
 
 func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.Template, e.Error) {
@@ -36,7 +39,6 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 
 	template, err := services.CreateTemplate(tx, models.Template{
 		Name:         form.Name,
-		TplType:      form.TplType,
 		OrgId:        c.OrgId,
 		Description:  form.Description,
 		VcsId:        form.VcsId,
@@ -101,12 +103,8 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 	if form.HasKey("description") {
 		attrs["description"] = form.Description
 	}
-
 	if form.HasKey("playbook") {
 		attrs["playbook"] = form.Playbook
-	}
-	if form.HasKey("extra") {
-		attrs["extra"] = form.Extra
 	}
 	if form.HasKey("status") {
 		attrs["status"] = form.Status
@@ -120,8 +118,41 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 	if form.HasKey("playVarsFile") {
 		attrs["playVarsFile"] = form.PlayVarsFile
 	}
-
-	return services.UpdateTemplate(c.DB(), form.Id, attrs)
+	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+	if tpl, err = services.UpdateTemplate(tx, form.Id, attrs); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+	if form.HasKey("projectId") {
+		if err := services.DeleteTemplateProject(tx, form.Id); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+		if err := services.CreateTemplateProject(tx, form.ProjectId, form.Id); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+	}
+	if form.HasKey("variables") || form.HasKey("deleteVariablesId") {
+		if err := services.OperationVariables(tx, c.OrgId, c.ProjectId,
+			form.Id, "", form.Variables, form.DeleteVariablesId); err != nil {
+			_ = tx.Rollback()
+			c.Logger().Errorf("error operation variables, err %s", err)
+			return nil, e.New(e.DBError, err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error commit update template, err %s", err)
+		return nil, e.New(e.DBError, err)
+	}
+	return tpl, err
 }
 
 func DeleteTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interface{}, e.Error) {
@@ -172,7 +203,13 @@ func DeleteTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interfac
 
 }
 
-func TemplateDetail(c *ctx.ServiceCtx, form *forms.DetailTemplateForm) (*models.Template, e.Error) {
+type TemplateDetailResp struct {
+	*models.Template
+	Variables   []models.Variable `json:"variables"`
+	ProjectList []models.Id       `json:"projectId"`
+}
+
+func TemplateDetail(c *ctx.ServiceCtx, form *forms.DetailTemplateForm) (*TemplateDetailResp, e.Error) {
 	tpl, err := services.GetTemplateById(c.DB(), form.Id)
 	if err != nil && err.Code() == e.TemplateNotExists {
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
@@ -180,13 +217,27 @@ func TemplateDetail(c *ctx.ServiceCtx, form *forms.DetailTemplateForm) (*models.
 		c.Logger().Errorf("error get template by id, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
-	return tpl, nil
+	project_ids, err := services.QuertProjectByTplId(c.DB(), form.Id)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	varialbeList, err := services.SearchVariableByTemplateId(c.DB(), form.Id)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	tplDetail := &TemplateDetailResp{
+		Template:    tpl,
+		Variables:   varialbeList,
+		ProjectList: project_ids,
+	}
+	return tplDetail, nil
 
 }
 
 func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (tpl interface{}, err e.Error) {
 	tplIdList := make([]models.Id, 0)
 	if c.ProjectId != "" {
+		// TODO 是否校验project_id 在不在这个组织里面？
 		tplIdList, err = services.QueryTplByProjectId(c.DB(), c.ProjectId)
 		if err != nil {
 			return nil, err
