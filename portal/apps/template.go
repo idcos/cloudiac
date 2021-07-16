@@ -7,19 +7,20 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"cloudiac/utils"
 	"fmt"
 	"net/http"
 )
 
 type SearchTemplateResp struct {
-	Id                models.Id `json:"id"`
-	Name              string    `json:"name"`
-	Description       string    `json:"description"`
-	ActiveEnvironment int       `json:"activeEnvironment"`
-	VcsType           string    `json:"vcsType"`
-	RepoRevision      string    `json:"repoRevision"`
-	UserName          string    `json:"userName"`
-	CreateTime        string    `json:"createTime"`
+	CreatedAt         utils.JSONTime `json:"createdAt"` // 创建时间
+	UpdatedAt         utils.JSONTime `json:"updatedAt"` // 更新时间
+	Id                models.Id      `json:"id"`
+	Name              string         `json:"name"`
+	Description       string         `json:"description"`
+	ActiveEnvironment int            `json:"activeEnvironment"`
+	RepoRevision      string         `json:"repoRevision"`
+	Creator           string         `json:"creator"`
 }
 
 func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.Template, e.Error) {
@@ -71,12 +72,13 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 		c.Logger().Errorf("error operation variables, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
+
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error commit create template, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
-
+	fmt.Println(100000)
 	return template, nil
 }
 
@@ -122,7 +124,7 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 	return services.UpdateTemplate(c.DB(), form.Id, attrs)
 }
 
-func DelateTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interface{}, e.Error) {
+func DeleteTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("delete template %s", form.Id))
 	tx := c.Tx()
 	defer func() {
@@ -190,7 +192,7 @@ func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (tpl inte
 			return nil, err
 		}
 	}
-	query, _ := services.QueryTemplateByOrgId(c.DB().Debug(), form.Q, c.OrgId, tplIdList)
+	query := services.QueryTemplateByOrgId(c.DB().Debug(), form.Q, c.OrgId, tplIdList)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	templates := make([]*SearchTemplateResp, 0)
 	if err := p.Scan(&templates); err != nil {

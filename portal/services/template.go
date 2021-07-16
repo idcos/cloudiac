@@ -9,7 +9,7 @@ import (
 
 func CreateTemplate(tx *db.Session, tpl models.Template) (*models.Template, e.Error) {
 	if tpl.Id == "" {
-		tpl.Id = models.NewId("ct")
+		tpl.Id = models.NewId("tpl")
 	}
 	if err := models.Create(tx, &tpl); err != nil {
 		if e.IsDuplicate(err) {
@@ -52,13 +52,12 @@ func GetTemplateById(tx *db.Session, id models.Id) (*models.Template, e.Error) {
 
 }
 
-func QueryTemplateByOrgId(tx *db.Session, q string, orgId models.Id, templateIdList []models.Id) (*db.Session, *db.Session) {
+func QueryTemplateByOrgId(tx *db.Session, q string, orgId models.Id, templateIdList []models.Id) *db.Session {
 	query := tx.Debug().Model(&models.Template{}).Joins(
 		"LEFT  JOIN iac_user"+
 			"  ON iac_user.id = iac_template.creator_id").
 		LazySelectAppend(
-			"iac_user.name as iac_user_name",
-			"iac_user.id",
+			"iac_user.name as creator",
 			"iac_template.*")
 	if q != "" {
 		qs := "%" + q + "%"
@@ -69,7 +68,7 @@ func QueryTemplateByOrgId(tx *db.Session, q string, orgId models.Id, templateIdL
 		// 如果传入项目id，需要项目ID 再次筛选
 		query = query.Where("iac_template.id in (?) ", templateIdList)
 	}
-	return query, query
+	return query
 }
 
 func QueryTplByProjectId(tx *db.Session, projectId models.Id) (tplIds []models.Id, err e.Error) {

@@ -9,7 +9,7 @@ import (
 
 func CreateTemplateProject(tx *db.Session, projectIds []models.Id, tplId models.Id) e.Error {
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.ProjectTemplate{}.TableName(),
-		"template_id", "project_id", "role")
+		"template_id", "project_id")
 
 	for _, v := range projectIds {
 		if err := bq.AddRow(v, tplId); err != nil {
