@@ -120,6 +120,11 @@ const (
 	VariableInvalidStatus  = 11014
 	InvalidVariableId      = 11015
 
+	ProjectUserAlreadyExists  = 20010
+	ProjectUserNotExists      = 20011
+	ProjectUserAliasDuplicate = 20013
+	ProjectUserInvalidStatus  = 20014
+
 	TokenAlreadyExists  = 12010
 	TokenNotExists      = 12011
 	TokenDisabled       = 12012
@@ -127,10 +132,6 @@ const (
 	TokenInvalidStatus  = 12014
 	InvalidTokenId      = 12015
 
-	ProjectUserAlreadyExists  = 12010
-	ProjectUserNotExists      = 12011
-	ProjectUserAliasDuplicate = 12013
-	ProjectUserInvalidStatus  = 12014
 
 	// template
 	TemplateAlreadyExists   = 11010
