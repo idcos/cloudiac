@@ -211,7 +211,7 @@ func DetailProject(c *ctx.ServiceCtx, form *forms.DetailProjectForm) (interface{
 	return DetailProjectResp{
 		projet,
 		projectUser,
-		nil,
+		ProjectStatistics{},
 	}, nil
 }
 

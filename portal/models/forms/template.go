@@ -15,10 +15,9 @@ type CreateTemplateForm struct {
 	BaseForm
 
 	Name              string      `form:"name" json:"name" binding:"required,gte=2,lte=32"`
-	TplType           string      `form:"tplType" json:"tplType" binding:"required"`
 	Description       string      `form:"description" json:"description" binding:""`
-	RepoId            string      `form:"repoId" json:"repoId" binding:""`
-	RepoAddr          string      `form:"repoAddr" json:"repoAddr" binding:""`
+	RepoId            string      `form:"repoId" json:"repoId" binding:"required"`
+	RepoAddr          string      `form:"repoAddr" json:"repoAddr" binding:"required"`
 	RepoRevision      string      `form:"repoRevision" json:"repoRevision" binding:""`
 	Extra             string      `form:"extra" json:"extra"`
 	Workdir           string      `form:"workdir" json:"workdir"`
@@ -40,10 +39,9 @@ type SearchTemplateForm struct {
 
 type UpdateTemplateForm struct {
 	BaseForm
-	Id                models.Id   `form:"id" json:"id" binding:"required"`
+	Id                models.Id   `uri:"id" form:"id" json:"id" binding:"required"`
 	Name              string      `form:"name" json:"name"`
 	Description       string      `form:"description" json:"description"`
-	Extra             string      `form:"extra" json:"extra"`
 	Status            string      `form:"status" json:"status"`
 	Workdir           string      `form:"workdir" json:"workdor"`
 	RunnerId          string      `json:"runnerId" form:"runnerId"`
@@ -52,6 +50,7 @@ type UpdateTemplateForm struct {
 	TfVarsFile        string      `form:"tfVarsFile" json:"tfVarsFile"`
 	Variables         []Variables `json:"variables" form:"variables" `
 	DeleteVariablesId []string    `json:"deleteVariablesId" form:"deleteVariablesId" ` //变量id
+	ProjectId         []models.Id `form:"projectId" json:"projectId"`
 }
 
 type DeleteTemplateForm struct {
@@ -62,6 +61,7 @@ type DeleteTemplateForm struct {
 type DetailTemplateForm struct {
 	BaseForm
 	Id models.Id `uri:"id" json:"id" binding:"required" swaggerignore:"true"`
+	// TODO 返回要返回 projectId
 }
 
 type OpenApiDetailTemplateForm struct {
@@ -84,10 +84,10 @@ type TemplateTfvarsSearchForm struct {
 
 type TemplateVariableSearchForm struct {
 	BaseForm
-	RepoId     string    `json:"repoId" form:"repoId" binding:"required"`
-	RepoBranch string    `json:"repoBranch" form:"repoBranch" binding:"required"`
-	RepoType   string    `json:"repoType" form:"repoType" `
-	VcsId      models.Id `json:"vcsId" form:"vcsId" binding:"required"`
+	RepoId       string    `json:"repoId" form:"repoId" binding:"required"`
+	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
+	RepoType     string    `json:"repoType" form:"repoType" `
+	VcsId        models.Id `json:"vcsId" form:"vcsId" binding:"required"`
 }
 
 type TemplatePlaybookSearchForm struct {
