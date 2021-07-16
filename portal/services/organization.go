@@ -122,3 +122,14 @@ func GetOrgIdsByUser(query *db.Session, userId models.Id) (orgIds []models.Id, e
 	}
 	return
 }
+
+func GetUserIdsByOrg(query *db.Session, orgId models.Id) (userIds []models.Id, err e.Error) {
+	var userOrgRel []*models.UserOrg
+	if err := query.Where("org_id = ?", orgId).Find(&userOrgRel); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	for _, o := range userOrgRel {
+		userIds = append(userIds, o.UserId)
+	}
+	return
+}

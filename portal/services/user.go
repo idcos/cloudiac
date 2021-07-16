@@ -107,6 +107,18 @@ func CheckPasswordFormat(password string) e.Error {
 	return nil
 }
 
+func GetUserDetailById(query *db.Session, userId models.Id) (*models.UserWithRoleResp, e.Error) {
+	d := models.UserWithRoleResp{}
+	if err := query.Table(models.User{}.TableName()).
+		Where(fmt.Sprintf("%s.id = ?", models.User{}.TableName()), userId).First(&d); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.UserNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &d, nil
+}
+
 func GetUserRoleByOrg(dbSess *db.Session, userId, orgId models.Id, role string) (bool, e.Error) {
 	isExists, err := dbSess.Table(models.UserOrg{}.TableName()).
 		Where("user_id = ?", userId).
@@ -219,6 +231,7 @@ func QueryWithCond(query *db.Session, column string, value interface{}, tableNam
 
 // TODO lru cache data
 // getUserOrgs 获取用户组织关联列表
+// @return map[models.Id]*models.UserOrg 返回 map[orgId]UserOrg
 func getUserOrgs(userId models.Id) map[models.Id]*models.UserOrg {
 	userOrgs := make([]models.UserOrg, 0)
 	query := db.Get()
@@ -227,12 +240,13 @@ func getUserOrgs(userId models.Id) map[models.Id]*models.UserOrg {
 	}
 	userOrgsMap := make(map[models.Id]*models.UserOrg)
 	for _, userOrg := range userOrgs {
-		userOrgsMap[userId] = &userOrg
+		userOrgsMap[userOrg.OrgId] = &userOrg
 	}
 	return userOrgsMap
 }
 
 // getUserProjects 获取用户项目关联列表
+// @return map[models.Id]*models.UserProject 返回 map[projectId]UserProject
 func getUserProjects(userId models.Id) map[models.Id]*models.UserProject {
 	userProjects := make([]models.UserProject, 0)
 	query := db.Get()
@@ -241,7 +255,7 @@ func getUserProjects(userId models.Id) map[models.Id]*models.UserProject {
 	}
 	userProjectsMap := make(map[models.Id]*models.UserProject)
 	for _, userProject := range userProjects {
-		userProjectsMap[userId] = &userProject
+		userProjectsMap[userProject.ProjectId] = &userProject
 	}
 	return userProjectsMap
 }

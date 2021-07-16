@@ -32,9 +32,9 @@ type ServiceCtx struct {
 	ProjectId    models.Id // 项目ID
 
 	// Casbin
-	enforcer    *casbin.Enforcer
-	Role        string // 组织角色
-	ProjectRole string // 项目角色
+	enforcer *casbin.Enforcer
+	//Role        string // 组织角色
+	//ProjectRole string // 项目角色
 }
 
 func NewServiceCtx(rc RequestContextInter) *ServiceCtx {

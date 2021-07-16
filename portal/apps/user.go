@@ -4,6 +4,7 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
@@ -24,6 +25,11 @@ type CreateUserResp struct {
 var (
 	emailSubjectCreateUser = "注册用户成功通知"
 	emailBodyCreateUser    = "尊敬的 {{.Name}}：\n\n恭喜您完成注册 CloudIaC 服务。\n\n这是您的登录详细信息：\n\n登录名：\t{{.Email}}\n密码：\t{{.InitPass}}\n\n为了保障您的安全，请立即登陆您的账号并修改初始密码。"
+)
+
+var (
+	emailSubjectResetPassword = "密码重置通知【CloudIaC】"
+	emailBodyResetPassword    = "尊敬的 {{.Name}}：\n\n您的密码已经被重置，这是您的新密码：\n\n密码：\t{{.InitPass}}\n\n请使用新密码登陆系统。\n\n为了保障您的安全，请立即登陆您的账号并修改密码。"
 )
 
 // CreateUser 创建用户
@@ -103,27 +109,21 @@ func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*CreateUserResp,
 	return &resp, nil
 }
 
-type UserWithRoleResp struct {
-	*models.User
-	Password    string `json:"-"`
-	Role        string `json:"role,omitempty" example:"member"`         // 组织角色
-	ProjectRole string `json:"projectRole,omitempty" example:"manager"` // 项目角色
-}
-
 // SearchUser 查询用户列表
 func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.Error) {
-	query := c.DB()
-	// 管理员查看所有用户
-	if c.OrgId == "" && c.ProjectId == "" && !c.IsSuperAdmin {
+	query := services.QueryUser(c.DB())
+
+	if c.OrgId == "" && !c.IsSuperAdmin {
 		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest)
 	}
-	// 组织成员查询
-	if c.OrgId != "" && c.ProjectId == "" {
-		query = services.QueryWithOrgId(query, c.OrgId)
+
+	if c.OrgId != "" {
+		userIds, _ := services.GetUserIdsByOrg(c.DB(), c.OrgId)
+		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
 	}
-	// 项目成员查询
-	if c.OrgId != "" && c.ProjectId != "" {
-		query = services.QueryWithProjectId(query, c.ProjectId)
+	if c.ProjectId != "" {
+		userIds, _ := services.GetUserIdsByProject(c.DB(), c.ProjectId)
+		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
 	}
 
 	if form.Status != "" {
@@ -151,7 +151,7 @@ func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.E
 	}
 
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	users := make([]*UserWithRoleResp, 0)
+	users := make([]*models.UserWithRoleResp, 0)
 	if err := p.Scan(&users); err != nil {
 		c.Logger().Errorf("error get users, err %s", err)
 		return nil, e.New(e.DBError, err)
@@ -165,16 +165,20 @@ func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.E
 }
 
 // UpdateUser 用户信息编辑
-func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (user *models.User, err e.Error) {
+func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (*models.User, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update user %s", form.Id))
-	if c.IsSuperAdmin == false && c.Role != consts.OrgRoleAdmin && c.UserId != form.Id {
-		return nil, e.New(e.PermissionDeny, http.StatusForbidden)
+	if c.UserId == form.Id {
+		// 自身编辑
+	} else if c.OrgId != "" && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) {
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("admin required"), http.StatusForbidden)
+	} else if c.OrgId == "" && !c.IsSuperAdmin {
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusForbidden)
 	}
-	if c.UserId != form.Id {
-		userOrgRel, _ := services.FindUsersOrgRel(c.DB(), form.Id, c.OrgId)
-		if len(userOrgRel) == 0 {
-			return nil, e.New(e.PermissionDeny, http.StatusForbidden)
-		}
+
+	query := c.DB()
+	user, err := services.GetUserById(query, form.Id)
+	if err != nil {
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	}
 
 	attrs := models.Attrs{}
@@ -214,6 +218,7 @@ func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (user *models.Use
 // 需要平台管理员权限。
 func ChangeUserStatus(c *ctx.ServiceCtx, form *forms.DisableUserForm) (*models.User, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("change user status %s", form.Id))
+	query := c.DB()
 	if c.IsSuperAdmin == false {
 		return nil, e.New(e.PermissionDeny, http.StatusForbidden)
 	}
@@ -222,7 +227,7 @@ func ChangeUserStatus(c *ctx.ServiceCtx, form *forms.DisableUserForm) (*models.U
 		return nil, e.New(e.UserInvalidStatus, http.StatusBadRequest)
 	}
 
-	user, err := services.GetUserById(c.DB(), form.Id)
+	user, err := services.GetUserById(query, form.Id)
 	if err != nil && err.Code() == e.UserNotExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
@@ -234,7 +239,7 @@ func ChangeUserStatus(c *ctx.ServiceCtx, form *forms.DisableUserForm) (*models.U
 		return user, nil
 	}
 
-	user, err = services.UpdateUser(c.DB(), form.Id, models.Attrs{"status": form.Status})
+	user, err = services.UpdateUser(query, form.Id, models.Attrs{"status": form.Status})
 	if err != nil {
 		c.Logger().Errorf("error update user, err %s", err)
 		return nil, e.New(e.DBError, err)
@@ -244,24 +249,37 @@ func ChangeUserStatus(c *ctx.ServiceCtx, form *forms.DisableUserForm) (*models.U
 }
 
 // UserDetail 获取单个用户详情
-func UserDetail(c *ctx.ServiceCtx, id models.Id) (*models.User, e.Error) {
+func UserDetail(c *ctx.ServiceCtx, userId models.Id) (*models.UserWithRoleResp, e.Error) {
 	query := c.DB()
-	// 组织用户查询
+
 	if c.OrgId != "" {
-		query = services.QueryWithOrgId(query, c.OrgId)
+		userIds, _ := services.GetUserIdsByOrg(c.DB(), c.OrgId)
+		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
 	}
-	// 项目用户查询
 	if c.ProjectId != "" {
-		query = services.QueryWithProjectId(query, c.ProjectId)
+		userIds, _ := services.GetUserIdsByProject(c.DB(), c.ProjectId)
+		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
 	}
-	if c.UserId == id {
+	if c.UserId == userId {
 		// 查自己
 	} else if (c.OrgId == "" && c.ProjectId == "") && !c.IsSuperAdmin {
 		// 全局用户查询，需要管理员权限
-		return nil, e.New(e.PermissionDeny, http.StatusForbidden)
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusForbidden)
 	}
 
-	user, err := services.GetUserById(query, id)
+	// 导出用户角色
+	if c.OrgId != "" {
+		query = query.Joins(fmt.Sprintf("left join %s as o on %s.id = o.user_id and o.org_id = ?",
+			models.UserOrg{}.TableName(), models.User{}.TableName()), c.OrgId).
+			LazySelectAppend(fmt.Sprintf("o.role,%s.*", models.User{}.TableName()))
+	}
+	// 导出项目角色
+	if c.ProjectId != "" {
+		query = query.Joins(fmt.Sprintf("left join %s as p on %s.id = p.user_id and p.project_id = ?",
+			models.UserProject{}.TableName(), models.User{}.TableName()), c.ProjectId).
+			LazySelectAppend(fmt.Sprintf("p.role as project_role,%s.*", models.User{}.TableName()))
+	}
+	detail, err := services.GetUserDetailById(query, userId)
 	if err != nil && err.Code() == e.UserNotExists {
 		// 通过 /auth/me 或者 /users/:userId 访问
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
@@ -269,7 +287,8 @@ func UserDetail(c *ctx.ServiceCtx, id models.Id) (*models.User, e.Error) {
 		c.Logger().Errorf("error get user by id, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
-	return user, nil
+
+	return detail, nil
 }
 
 // DeleteUser 删除用户
@@ -347,3 +366,48 @@ func DeleteUser(c *ctx.ServiceCtx, form *forms.DeleteUserForm) (interface{}, e.E
 //	}
 //	return query
 //}
+
+func QueryUserWithUserIdsByOrg(query *db.Session, orgId models.Id) *db.Session {
+	userIds, _ := services.GetUserIdsByOrg(query, orgId)
+	query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+	return query
+}
+
+func QueryUserWithUserIdsByProject(query *db.Session, projectId models.Id) *db.Session {
+	userIds, _ := services.GetUserIdsByProject(query, projectId)
+	query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+	return query
+}
+
+// UserPassReset 用户重置密码
+func UserPassReset(c *ctx.ServiceCtx, form *forms.DetailUserForm) (*models.User, e.Error) {
+	initPass := utils.GenPasswd(6, "mix")
+	hashedPassword, err := services.HashPassword(initPass)
+	if err != nil {
+		c.Logger().Errorf("error hash password %s", err)
+		return nil, err
+	}
+
+	attrs := models.Attrs{}
+	attrs["password"] = hashedPassword
+
+	user, err := services.UpdateUser(c.DB(), form.Id, attrs)
+
+	resp := struct {
+		*models.User
+		InitPass string
+	}{
+		User:     user,
+		InitPass: initPass,
+	}
+
+	// 发送密码重置通知邮件
+	go func() {
+		err := mail.SendMail([]string{user.Email}, emailSubjectResetPassword, utils.SprintTemplate(emailBodyResetPassword, resp))
+		if err != nil {
+			c.Logger().Errorf("error send mail to %s, err %s", user.Email, err)
+		}
+	}()
+
+	return user, err
+}

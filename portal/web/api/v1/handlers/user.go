@@ -153,12 +153,12 @@ func (User) Detail(c *ctx.GinRequestCtx) {
 // PasswordReset 重置用户密码
 // @Tags 用户
 // @Summary 用户重置密码
+// @Description 需要平台管理员或者组织管理员权限
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
-// @Param IaC-Org-Id header string false "组织ID"
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param userId path string true "用户ID"
-// @Param form formData forms.DetailUserForm true "parameter"
 // @router /users/{userId}/password/reset [post]
 // @Success 200 {object} ctx.JSONResult{result=apps.CreateUserResp}
 func (User) PasswordReset(c *ctx.GinRequestCtx) {

@@ -89,3 +89,15 @@ func GetProjectsById(tx *db.Session, projectId models.Id) (*models.Project, e.Er
 	}
 	return &proj, nil
 }
+
+func GetUserIdsByProject(query *db.Session, projectId models.Id) ([]models.Id, e.Error) {
+	var userProjects []*models.UserProject
+	var userIds []models.Id
+	if err := query.Where("project_id = ?", projectId).Find(&userProjects); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	for _, p := range userProjects {
+		userIds = append(userIds, p.UserId)
+	}
+	return userIds, nil
+}

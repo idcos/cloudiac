@@ -135,7 +135,7 @@ func (Organization) ChangeOrgStatus(c *ctx.GinRequestCtx) {
 // @Param orgId path string true "组织ID"
 // @Param form formData forms.AddUserOrgRelForm true "parameter"
 // @router /orgs/{orgId}/users [post]
-// @Success 200 {object} ctx.JSONResult{result=apps.UserWithRoleResp}
+// @Success 200 {object} ctx.JSONResult{result=models.UserWithRoleResp}
 func (Organization) AddUserToOrg(c *ctx.GinRequestCtx) {
 	form := forms.AddUserOrgRelForm{}
 	if err := c.Bind(&form); err != nil {
@@ -176,7 +176,7 @@ func (Organization) RemoveUserForOrg(c *ctx.GinRequestCtx) {
 // @Param userId path string true "用户ID"
 // @Param form formData forms.UpdateUserOrgRelForm true "parameter"
 // @router /orgs/{orgId}/users/{userId}/role [put]
-// @Success 200 {object} ctx.JSONResult{result=apps.UserWithRoleResp}
+// @Success 200 {object} ctx.JSONResult{result=models.UserWithRoleResp}
 func (Organization) UpdateUserOrgRel(c *ctx.GinRequestCtx) {
 	form := forms.UpdateUserOrgRelForm{}
 	if err := c.Bind(&form); err != nil {

@@ -28,3 +28,10 @@ func (u User) Migrate(sess *db.Session) (err error) {
 
 	return nil
 }
+
+type UserWithRoleResp struct {
+	*User
+	Password    string `json:"-"`
+	Role        string `json:"role,omitempty" example:"member"`         // 组织角色
+	ProjectRole string `json:"projectRole,omitempty" example:"manager"` // 项目角色
+}

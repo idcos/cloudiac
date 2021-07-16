@@ -80,15 +80,19 @@ var polices = []Policy{
 	{"login", "runner", "*"},
 	{"login", "consul", "*"},
 	{"login", "webhook", "*"},
+
+	// 用户
+	{"admin", "users", "*"},
+	{"member", "users", "read"},
 	{"login", "self", "read/update"},
+	{"admin", "self", "read/update"},
+	{"member", "self", "read/update"},
 
 	// 组织
 	//{"root", "orgs", "*"},
 	{"admin", "orgs", "read/update"},
 	{"admin", "orgs", "listuser/adduser/removeuser/updaterole"},
 	{"member", "orgs", "read"},
-	{"admin", "users", "*"},
-	{"member", "users", "read"},
 
 	// 项目
 	{"manager", "projects", "*"},

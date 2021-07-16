@@ -107,6 +107,7 @@ func AccessControl(args ...string) gin.HandlerFunc {
 			}
 		default:
 		}
+		c.Logger().Errorf("proj %s", proj)
 		//s.ProjectRole = proj
 
 		// 参数重写
