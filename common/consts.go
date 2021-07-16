@@ -1,5 +1,11 @@
 package common
 
+// 以下值会在编译时动态注入(见 Makefile)。
+var (
+	VERSION = "v0.0.0"
+	BUILD   = "000000"
+)
+
 const (
 	TaskTypePlan    = "plan"    // 计划执行，不会修改资源或做服务配置
 	TaskTypeApply   = "apply"   // 执行 terraform apply 和 playbook

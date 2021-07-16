@@ -55,11 +55,11 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		AutoApprove: pt.AutoApprove,
 		Extra:       pt.Extra,
 
-		OrgId:      env.OrgId,
-		ProjectId:  env.ProjectId,
-		TplId:      env.TplId,
-		EnvId:      env.Id,
-		StatePath:  env.StatePath,
+		OrgId:     env.OrgId,
+		ProjectId: env.ProjectId,
+		TplId:     env.TplId,
+		EnvId:     env.Id,
+		StatePath: env.StatePath,
 
 		RepoAddr:     "",
 		Workdir:      firstVal(tpl.Workdir),
@@ -421,11 +421,17 @@ func FetchTaskLog(ctx context.Context, task *models.Task, writer io.WriteCloser)
 	defer ticker.Stop()
 
 	for _, step := range steps {
-		for !step.IsStarted() {
+		// 任务有可能未开始执行步骤就退出了，所以需要先判断任务是否退出
+		for !task.Exited() && !step.IsStarted() {
 			select {
 			case <-ctx.Done():
 				return nil
 			case <-ticker.C:
+				task, err = GetTask(db.Get(), task.Id)
+				if err != nil {
+					return errors.Wrapf(err, "get task '%s'", task.Id)
+				}
+
 				step, err = GetTaskStep(db.Get(), task.Id, step.Index)
 				if err != nil {
 					return errors.Wrapf(err, "get task step %d", step.Index)

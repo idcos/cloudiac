@@ -1,6 +1,7 @@
 package web
 
 import (
+	"cloudiac/common"
 	"cloudiac/configs"
 	_ "cloudiac/docs" // 千万不要忘了导入你上一步生成的docs
 	"cloudiac/portal/consts"
@@ -32,8 +33,8 @@ func GetRouter() *gin.Engine {
 	e.GET("/hello", w(api.Hello))
 	e.GET("/system/info", w(func(c *ctx.GinRequestCtx) {
 		c.JSONSuccess(gin.H{
-			"version": consts.VERSION,
-			"build":   consts.BUILD,
+			"version": common.VERSION,
+			"build":   common.BUILD,
 		})
 	}))
 	api_v1.Register(e.Group("/api/v1"))

@@ -1,11 +1,5 @@
 package consts
 
-// 以下值会在编译时动态注入(见 Makefile)。
-var (
-	VERSION = "v0.0.0"
-	BUILD   = "000000"
-)
-
 const (
 	LowerCaseLetter = "abcdefghijklmnopqrstuvwxyz"
 	UpperCaseLetter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
