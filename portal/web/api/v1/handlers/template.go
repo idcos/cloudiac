@@ -119,6 +119,7 @@ func (Template) Detail(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param form query forms.TemplateTfvarsSearchForm true "parameter"
 // @Router /templates/tfvars [get]
 // @Success 200 {object} ctx.JSONResult{result=[]vcsrv.VcsIfaceOptions}
@@ -134,8 +135,10 @@ func TemplateTfvarsSearch(c *ctx.GinRequestCtx) {
 // @Tags 云模板
 // @Summary 云模板参数接口
 // @Accept application/x-www-form-urlencoded
+// @Param IaC-Org-Id header string true "组织ID"
+// @Security AuthToken
 // @Param form query forms.TemplateVariableSearchForm true "parameter"
-// @Router /templates/variable [get]
+// @Router /templates/variables [get]
 // @Success 200 {object} ctx.JSONResult{result=[]services.TemplateVariable}
 func TemplateVariableSearch(c *ctx.GinRequestCtx) {
 	form := forms.TemplateVariableSearchForm{}
@@ -149,6 +152,8 @@ func TemplateVariableSearch(c *ctx.GinRequestCtx) {
 // @Tags 云模板
 // @Summary  playbook列表接口
 // @Accept application/x-www-form-urlencoded
+// @Param IaC-Org-Id header string true "组织ID"
+// @Security AuthToken
 // @Param form query forms.TemplatePlaybookSearchForm true "parameter"
 // @router /templates/playbook [get]
 // @Success 200 {object} ctx.JSONResult{result=[]vcsrv.VcsIfaceOptions}

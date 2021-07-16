@@ -33,6 +33,8 @@ func Register(g *gin.RouterGroup) {
 	})
 
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
+	ctrl.Register(g.Group("systems", ac()), &handlers.SystemConfig{})
+	g.GET("/systems/status", ac(), w(handlers.PortalSystemStatusSearch))
 
 	// TODO 增加鉴权
 	g.GET("/task/log/sse", w(handlers.Task{}.FollowLogSse))
@@ -41,14 +43,13 @@ func Register(g *gin.RouterGroup) {
 	g.Use(w(middleware.Auth)) // 解析 header token
 
 	ctrl.Register(g.Group("token", ac()), &handlers.Auth{})
-	ctrl.Register(g.Group("system", ac()), &handlers.SystemConfig{})
 	ctrl.Register(g.Group("webhook", ac()), &handlers.AccessToken{})
 	g.GET("/auth/me", ac("self", "read"), w(handlers.Auth{}.GetUserByToken))
 	g.PUT("/users/self", ac("self", "update"), w(handlers.User{}.UpdateSelf))
-	g.GET("/runner/search", ac(), w(handlers.RunnerSearch))
+	//todo runner list权限怎么划分
+	g.GET("/runners", ac(), w(handlers.RunnerSearch))
 	g.PUT("/consul/tags/update", ac(), w(handlers.ConsulTagUpdate))
 	g.GET("/consul/kv/search", ac(), w(handlers.ConsulKVSearch))
-	g.GET("/system/status/search", ac(), w(handlers.PortalSystemStatusSearch))
 
 	ctrl.Register(g.Group("orgs", ac()), &handlers.Organization{})
 	g.PUT("/orgs/:id/status", ac(), w(handlers.Organization{}.ChangeOrgStatus))
@@ -65,6 +66,11 @@ func Register(g *gin.RouterGroup) {
 	g.PUT("/orgs/:id/users/:userId/role", ac("orgs", "updaterole"), w(handlers.Organization{}.UpdateUserOrgRel))
 	g.POST("/orgs/:id/users/invite", ac("orgs", "adduser"), w(handlers.Organization{}.InviteUser))
 	g.DELETE("/orgs/:id/users/:userId", ac("orgs", "removeuser"), w(handlers.Organization{}.RemoveUserForOrg))
+
+	g.GET("/projects/users", ac(), w(handlers.ProjectUser{}.Search))
+	g.POST("/projects/users", ac(), w(handlers.ProjectUser{}.Create))
+	g.PUT("/projects/users/:id", ac(), w(handlers.ProjectUser{}.Update))
+	g.DELETE("/projects/users/:id", ac(), w(handlers.ProjectUser{}.Delete))
 
 	//项目管理
 	ctrl.Register(g.Group("projects", ac()), &handlers.Project{})
@@ -83,7 +89,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/vcs/:id/readme", ac(), w(handlers.Vcs{}.GetReadmeContent))
 	ctrl.Register(g.Group("templates", ac()), &handlers.Template{})
 	g.GET("/templates/tfvars", ac(), w(handlers.TemplateTfvarsSearch))
-	g.GET("/templates/variable", ac(), w(handlers.TemplateVariableSearch))
+	g.GET("/templates/variables", ac(), w(handlers.TemplateVariableSearch))
 	g.GET("/templates/playbook", ac(), w(handlers.TemplatePlaybookSearch))
 
 	// 项目资源
@@ -104,7 +110,8 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/tasks/:id/log", ac(), w(handlers.Task{}.Log))
 	g.GET("/tasks/:id/output", ac(), w(handlers.Task{}.Output))
 	g.POST("/tasks/:id/approve", ac("tasks", "approve"), w(handlers.Task{}.TaskApprove))
-
+	g.POST("/task/:id/comment", ac(), w(handlers.TaskComment{}.Create))
+	g.GET("/task/:id/comment", ac(), w(handlers.TaskComment{}.Search))
 	ctrl.Register(g.Group("notifications", ac()), &handlers.Notification{})
 	ctrl.Register(g.Group("resource/account", ac()), &handlers.ResourceAccount{})
 }

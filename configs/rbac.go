@@ -76,7 +76,6 @@ var polices = []Policy{
 	// {"anonymous", "auth", "read"},
 	// 登陆用户
 	{"login", "token", "*"},
-	{"login", "system", "*"},
 	{"login", "runner", "*"},
 	{"login", "consul", "*"},
 	{"login", "webhook", "*"},

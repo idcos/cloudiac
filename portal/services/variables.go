@@ -37,6 +37,14 @@ func SearchVariable(dbSess *db.Session, orgId models.Id) ([]models.Variable, e.E
 	return variables, nil
 }
 
+func SearchVariableByTemplateId(tx *db.Session, tplId models.Id) ([]models.Variable, e.Error) {
+	variables := make([]models.Variable, 0)
+	if err := tx.Where("tpl_id = ?", tplId).Find(&variables); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return variables, nil
+}
+
 func OperationVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id,
 	variables []forms.Variables, deleteVariablesId []string) e.Error {
 	if err := DeleteVariables(tx, deleteVariablesId); err != nil {

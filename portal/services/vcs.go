@@ -33,13 +33,9 @@ func UpdateVcs(tx *db.Session, id models.Id, attrs models.Attrs) (vcs *models.Vc
 }
 
 func QueryVcs(orgId models.Id, status, q string, query *db.Session) *db.Session {
-	query = query.Model(&models.Vcs{})
+	query = query.Model(&models.Vcs{}).Where("org_id = ? or org_id = ''", orgId)
 	if status != "" {
-		query = query.Where("status = ?", status).
-			Where("org_id = ? or org_id = 0", orgId)
-	} else {
-		query = query.
-			Where("org_id = ?", orgId)
+		query = query.Where("status = ?", status)
 	}
 	if q != "" {
 		qs := "%" + q + "%"
@@ -81,7 +77,7 @@ func DeleteVcs(tx *db.Session, id models.Id) e.Error {
 
 type TemplateVariable struct {
 	Description string `json:"description" form:"description" `
-	Default     string `json:"default" form:"default" `
+	Value       string `json:"value" form:"value" `
 	Name        string `json:"name" form:"name" `
 }
 
@@ -119,7 +115,7 @@ func ParseTfVariables(filename string, content []byte) ([]TemplateVariable, e.Er
 	tv := make([]TemplateVariable, 0)
 	for _, s := range c.Upstreams {
 		tv = append(tv, TemplateVariable{
-			Default:     s.Default,
+			Value:       s.Default,
 			Name:        s.Name,
 			Description: s.Description,
 		})
