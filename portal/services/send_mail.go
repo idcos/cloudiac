@@ -21,7 +21,7 @@ func (sm *sendMail) SendMail() {
 	tmpl, err := template.New("sendMail").Parse("<table>" +
 		"<tr><td>模板名称: </td><td>{{.Name}}</td></tr>" +
 		"<tr><td>模板 Id: </td><td>{{.Id}}</td></tr>" +
-		"<tr><td>作业 Id: </td><td>{{.TaskId}}</td></tr>" +
+		"<tr><td>作业 Id: </td><td>{{.Id}}</td></tr>" +
 		"<tr><td>作业类型: </td><td>{{.TaskType}}</td></tr>" +
 		"<tr><td>作业状态: </td><td>{{.Status}}</td></tr>" +
 		"<tr><td>runnerId: </td><td>{{.RunnerId}}</td></tr>" +

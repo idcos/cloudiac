@@ -55,3 +55,11 @@ func DeleteProject(tx *db.Session, projectId models.Id) e.Error {
 	}
 	return nil
 }
+
+// StatisticalProjectTpl todo 项目统计 待完善
+func StatisticalProjectTpl(dbSess *db.Session, projectId models.Id) (int64, error) {
+	return dbSess.Table(models.Template{}.TableName()).Where("project_id = ?", projectId).Count()
+}
+func StatisticalProjectEnv(dbSess *db.Session, projectId models.Id) (int64, error) {
+	return dbSess.Table(models.Env{}.TableName()).Where("project_id = ?", projectId).Group("status").Count()
+}
