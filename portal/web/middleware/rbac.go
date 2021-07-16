@@ -1,9 +1,9 @@
 package middleware
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
-	"cloudiac/portal/models"
 	"cloudiac/portal/services"
 	"cloudiac/utils/logs"
 	"fmt"
@@ -33,6 +33,7 @@ func AccessControl(args ...string) gin.HandlerFunc {
 
 	return func(g *gin.Context) {
 		c := ctx.NewRequestCtx(g)
+		s := c.ServiceCtx()
 
 		// 通过 RequestURI 解析资源名称
 		res := ""
@@ -72,37 +73,42 @@ func AccessControl(args ...string) gin.HandlerFunc {
 			return
 		}
 
-		// 获取用户组织角色
-		if c.ServiceCtx().Role == "" && obj == "orgs" && c.Param("id") != "" { // 通过 path 获取组织角色
-			orgId := models.Id(c.Param("id"))
-			userOrgRel, err := services.FindUsersOrgRel(c.ServiceCtx().DB(), c.ServiceCtx().UserId, orgId)
-			if err == nil && len(userOrgRel) > 0 {
-				c.ServiceCtx().Role = userOrgRel[0].Role
-				c.ServiceCtx().OrgId = orgId
+		// 组织角色
+		role := ""
+		switch {
+		case s.UserId == "":
+			role = consts.RoleAnonymous
+		case s.IsSuperAdmin:
+			role = consts.RoleRoot
+		case s.UserId != "" && s.OrgId == "":
+			role = consts.RoleLogin
+		case s.OrgId != "":
+			userOrgs := services.UserOrgRoles(s.UserId)
+			userOrg := userOrgs[s.OrgId]
+			if userOrg != nil {
+				role = userOrg.Role
 			}
+		default:
 		}
-		if c.ServiceCtx().ProjectRole == "" && obj == "projects" && c.Param("id") != "" { // 通过 path 获取项目角色
-			projectId := models.Id(c.Param("id"))
-			// TODO: 获取项目角色
-			//userOrgRel, err := services.FindUsersOrgRel(c.ServiceCtx().DB(), c.ServiceCtx().UserId, orgId)
-			//if err == nil && len(userOrgRel) > 0 {
-			//	c.ServiceCtx().ProjectRole = userOrgRel[0].Role
-			c.ServiceCtx().ProjectId = projectId
-			//}
-		}
+		//s.Role = role
 
-		role := c.ServiceCtx().Role
-		proj := c.ServiceCtx().ProjectRole
-
-		if c.ServiceCtx().IsSuperAdmin {
-			role = "root" // 平台管理员
-		} else if role == "" {
-			if c.ServiceCtx().UserId != "" {
-				role = "login" // 登陆用户，无 orgId 信息
-			} else {
-				role = "anonymous" // 未登陆用户
+		// 项目角色
+		proj := ""
+		switch {
+		case s.IsSuperAdmin:
+			proj = consts.ProjectRoleManager
+		case services.UserHasOrgRole(s.UserId, s.OrgId, consts.OrgRoleAdmin):
+			proj = consts.ProjectRoleManager
+		case s.ProjectId != "":
+			userProjects := services.UserProjectRoles(s.UserId)
+			userProject := userProjects[s.ProjectId]
+			if userProject != nil {
+				proj = userProject.Role
 			}
+		default:
 		}
+		c.Logger().Errorf("proj %s", proj)
+		//s.ProjectRole = proj
 
 		// 参数重写
 		action := op
@@ -127,7 +133,7 @@ func AccessControl(args ...string) gin.HandlerFunc {
 		if allow {
 			c.Next()
 		} else {
-			c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("%s,%s deined to %s %s", role, proj, action, object)), http.StatusForbidden)
+			c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("%s,%s not allowed to %s %s", role, proj, action, object)), http.StatusForbidden)
 		}
 	}
 }

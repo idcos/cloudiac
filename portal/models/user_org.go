@@ -7,7 +7,7 @@ type UserOrg struct {
 
 	UserId Id     `json:"userId" gorm:"size:32;not null;comment:'用户ID'"`            // 用户ID
 	OrgId  Id     `json:"orgId" gorm:"size:32;not null;comment:'组织ID'"`             // 组织ID
-	Role   string `json:"role" gorm:"type:enum('owner','member');default:'member'"` // 角色
+	Role   string `json:"role" gorm:"type:enum('admin','member');default:'member'"` // 角色
 }
 
 func (UserOrg) TableName() string {

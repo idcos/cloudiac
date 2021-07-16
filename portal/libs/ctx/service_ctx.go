@@ -25,16 +25,16 @@ type ServiceCtx struct {
 	UserId       models.Id // 登陆用户ID
 	Username     string    // 用户名称
 	IsSuperAdmin bool      // 是否平台管理员
-	Role         string    // 组织角色
 	user         *models.User
 	UserIpAddr   string
 	UserAgent    string
 	Perms        []string
 	ProjectId    models.Id // 项目ID
-	ProjectRole  string    // 项目角色
 
 	// Casbin
 	enforcer *casbin.Enforcer
+	//Role        string // 组织角色
+	//ProjectRole string // 项目角色
 }
 
 func NewServiceCtx(rc RequestContextInter) *ServiceCtx {

@@ -10,14 +10,6 @@ type CreateUserForm struct {
 	Email string `form:"email" json:"email" binding:"required,email"`      // 电子邮件地址
 }
 
-type InviteUserForm struct {
-	BaseForm
-
-	Name  string `form:"name" json:"name" binding:"required,gte=2,lte=32"` // 用户名
-	Email string `form:"email" json:"email" binding:"required,email"`      // 电子邮件地址
-	Role  string `form:"role" json:"role" binding:""`                      // 受邀请用户在组织中的角色
-}
-
 type UpdateUserForm struct {
 	BaseForm
 
@@ -58,8 +50,9 @@ type DetailUserForm struct {
 type AddUserOrgRelForm struct {
 	BaseForm
 
-	Id   models.Id `form:"id" json:"id" binding:"required" swaggerignore:"true"` // 用户ID
-	Role string    `form:"role" json:"role" binding:"" enums:"owner,member"`     // 角色，默认 member
+	Id     models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`      // 组织ID
+	UserId models.Id `form:"userId" json:"userId" binding:""`                  // 用户ID
+	Role   string    `form:"role" json:"role" binding:"" enums:"admin,member"` // 用户在组织中的角色，组织管理员：admin，普通用户：member，默认 member
 }
 
 type DeleteUserOrgRelForm struct {
@@ -74,5 +67,5 @@ type UpdateUserOrgRelForm struct {
 
 	Id     models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`              // 组织ID
 	UserId models.Id `uri:"userId" json:"userId" binding:"" swaggerignore:"true"`      // 用户ID
-	Role   string    `form:"role" json:"role" binding:"required" enums:"owner,member"` // 角色
+	Role   string    `form:"role" json:"role" binding:"required" enums:"admin,member"` // 用户在组织中的角色，组织管理员：admin，普通用户：member，默认 member
 }

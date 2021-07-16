@@ -1,14 +1,13 @@
 package services
 
 import (
-	"fmt"
-	"strings"
-
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/utils"
+	"fmt"
+	"strings"
 )
 
 func CreateUser(tx *db.Session, user models.User) (*models.User, e.Error) {
@@ -108,6 +107,18 @@ func CheckPasswordFormat(password string) e.Error {
 	return nil
 }
 
+func GetUserDetailById(query *db.Session, userId models.Id) (*models.UserWithRoleResp, e.Error) {
+	d := models.UserWithRoleResp{}
+	if err := query.Table(models.User{}.TableName()).
+		Where(fmt.Sprintf("%s.id = ?", models.User{}.TableName()), userId).First(&d); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.UserNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &d, nil
+}
+
 func GetUserRoleByOrg(dbSess *db.Session, userId, orgId models.Id, role string) (bool, e.Error) {
 	isExists, err := dbSess.Table(models.UserOrg{}.TableName()).
 		Where("user_id = ?", userId).
@@ -130,4 +141,121 @@ func GetUserRoleByProject(dbSess *db.Session, userId, projectId models.Id, role 
 		return isExists, e.New(e.DBError, err)
 	}
 	return isExists, nil
+}
+
+// ========================================================================
+
+// UserOrgIds 用户关联组织 id 列表
+func UserOrgIds(userId models.Id) []models.Id {
+	var ids []models.Id
+	userOrgs := getUserOrgs(userId)
+	for _, userOrg := range userOrgs {
+		ids = append(ids, userOrg.OrgId)
+	}
+	return ids
+}
+
+// UserProjectIds 用户有权限的项目 id
+func UserProjectIds(userId models.Id, orgId models.Id) []models.Id {
+	var ids []models.Id
+	userProjects := getUserProjects(userId)
+	for _, userProject := range userProjects {
+		ids = append(ids, userProject.ProjectId)
+	}
+	return ids
+}
+
+// UserOrgRoles 用户在组织(多个)下的角色
+// @return map[models.Id]*models.UserOrg 返回 map[orgId]UserOrg
+func UserOrgRoles(userId models.Id) map[models.Id]*models.UserOrg {
+	return getUserOrgs(userId)
+}
+
+// UserProjectRoles 用户在项目(多个)下的角色
+// @return map[models.Id]*models.UserProject 返回 map[projectId]UserProject
+func UserProjectRoles(userId models.Id) map[models.Id]*models.UserProject {
+	return getUserProjects(userId)
+}
+
+// UserHasProjectRole 用户是否拥有项目的某个角色权限
+func UserHasProjectRole(userId models.Id, orgId models.Id, projectId models.Id, role string) bool {
+	userProjects := getUserProjects(userId)
+	if userProjects[projectId] == nil {
+		return false
+	}
+	if role == "" {
+		return true
+	} else {
+		return role == userProjects[orgId].Role
+	}
+}
+
+// UserHasOrgRole 用户是否拥有组织的某个角色权限
+func UserHasOrgRole(userId models.Id, orgId models.Id, role string) bool {
+	userOrgs := getUserOrgs(userId)
+	if userOrgs[orgId] == nil {
+		return false
+	}
+	if role == "" {
+		return true
+	} else {
+		return role == userOrgs[orgId].Role
+	}
+}
+
+// UserIsSuperAdmin 判断用户是否是平台管理员
+func UserIsSuperAdmin(query *db.Session, userId models.Id) bool {
+	if user, err := GetUserById(query, userId); err != nil {
+		return false
+	} else {
+		return user.IsAdmin
+	}
+}
+
+func UserHasManageUserPerm() {}
+
+func QueryWithOrgId(query *db.Session, orgId interface{}, tableName ...string) *db.Session {
+	return QueryWithCond(query, "org_id", orgId, tableName...)
+}
+
+func QueryWithProjectId(query *db.Session, projectId interface{}, tableName ...string) *db.Session {
+	return QueryWithCond(query, "project_id", projectId, tableName...)
+}
+
+func QueryWithCond(query *db.Session, column string, value interface{}, tableName ...string) *db.Session {
+	if len(tableName) > 0 {
+		return query.Where(fmt.Sprintf("`%s`.`%s` = ?", tableName[0], column), value)
+	}
+	return query.Where(fmt.Sprintf("`%s` = ?", column), value)
+}
+
+// TODO lru cache data
+// getUserOrgs 获取用户组织关联列表
+// @return map[models.Id]*models.UserOrg 返回 map[orgId]UserOrg
+func getUserOrgs(userId models.Id) map[models.Id]*models.UserOrg {
+	userOrgs := make([]models.UserOrg, 0)
+	query := db.Get()
+	if err := query.Model(models.UserOrg{}).Where("user_id = ?", userId).Find(&userOrgs); err != nil {
+		return nil
+	}
+	userOrgsMap := make(map[models.Id]*models.UserOrg)
+	for _, userOrg := range userOrgs {
+		userOrgsMap[userOrg.OrgId] = &userOrg
+	}
+	return userOrgsMap
+}
+
+// getUserProjects 获取用户项目关联列表
+// @return map[models.Id]*models.UserProject 返回 map[projectId]UserProject
+func getUserProjects(userId models.Id) map[models.Id]*models.UserProject {
+	userProjects := make([]models.UserProject, 0)
+	query := db.Get()
+	if err := query.Model(models.UserProject{}).Where("user_id = ?", userId).Find(&userProjects); err != nil {
+		return nil
+	}
+	userProjectsMap := make(map[models.Id]*models.UserProject)
+	for _, userProject := range userProjects {
+		userProjectsMap[userProject.ProjectId] = &userProject
+	}
+	return userProjectsMap
 }

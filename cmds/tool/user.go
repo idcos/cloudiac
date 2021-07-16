@@ -38,7 +38,7 @@ func (p *ChangePassword) Execute(args []string) error {
 		return err
 	}
 
-	logger.Infof("update user password, email=%s, id=%d", user.Email, user.Id)
+	logger.Infof("update user password, email=%s, id=%s", user.Email, user.Id)
 	hashedPass, er := utils.HashPassword(password)
 	if er != nil {
 		return er
