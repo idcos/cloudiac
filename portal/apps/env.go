@@ -89,6 +89,7 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		TfVarsFile:   form.TfVarsFile,
 		PlayVarsFile: form.PlayVarsFile,
 		Playbook:     form.Playbook,
+		KeyId:        form.KeyId,
 
 		// TODO: triggers 触发器设置
 		AutoApproval: form.AutoApproval,
@@ -118,6 +119,7 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		Targets:     strings.Split(form.Targets, ","),
 		CommitId:    commitId,
 		CreatorId:   c.UserId,
+		KeyId:       env.KeyId,
 		RunnerId:    env.RunnerId,
 		Variables:   form.Variables,
 		StepTimeout: form.Timeout,
@@ -214,6 +216,10 @@ func UpdateEnv(c *ctx.ServiceCtx, form *forms.UpdateEnvForm) (*models.Env, e.Err
 
 	if form.HasKey("description") {
 		attrs["description"] = form.Description
+	}
+
+	if form.HasKey("keyId") {
+		attrs["key_id"] = form.KeyId
 	}
 
 	if form.HasKey("runnerId") {
@@ -354,6 +360,9 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	if form.HasKey("autoDestroyAt") {
 		// TODO: 自动销毁设置
 	}
+	if form.HasKey("keyId") {
+		env.KeyId = form.KeyId
+	}
 	if form.HasKey("runnerId") {
 		env.RunnerId = form.RunnerId
 	}
@@ -384,6 +393,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		Targets:     strings.Split(form.Targets, ","),
 		CommitId:    commitId,
 		CreatorId:   c.UserId,
+		KeyId:       env.KeyId,
 		RunnerId:    env.RunnerId,
 		Variables:   form.Variables,
 		StepTimeout: form.Timeout,

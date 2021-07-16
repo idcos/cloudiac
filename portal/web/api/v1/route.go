@@ -71,6 +71,8 @@ func Register(g *gin.RouterGroup) {
 	ctrl.Register(g.Group("variables", ac()), &handlers.Variable{})
 	//token管理
 	ctrl.Register(g.Group("tokens", ac()), &handlers.Token{})
+	//密钥管理
+	ctrl.Register(g.Group("keys", ac()), &handlers.Key{})
 
 	ctrl.Register(g.Group("vcs", ac()), &handlers.Vcs{})
 	g.GET("/vcs/:id/repo", ac(), w(handlers.Vcs{}.ListRepos))
