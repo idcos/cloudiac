@@ -212,7 +212,7 @@ func VcsTfVarsSearch(c *ctx.ServiceCtx, form *forms.TemplateTfvarsSearchForm) (i
 		return nil, e.New(e.VcsError, er)
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
-		Ref:    form.RepoBranch,
+		Ref:    form.RepoRevision,
 		Search: consts.TfVarFileMatch,
 	})
 	if er != nil {
@@ -237,7 +237,7 @@ func VcsPlaybookSearch(c *ctx.ServiceCtx, form *forms.TemplatePlaybookSearchForm
 		return nil, e.New(e.VcsError, er)
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
-		Ref:       form.RepoBranch,
+		Ref:       form.RepoRevision,
 		Search:    consts.PlaybookMatch,
 		Recursive: true,
 		Path:      consts.Ansible,
