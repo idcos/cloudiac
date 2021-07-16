@@ -53,7 +53,10 @@ const (
 const (
 	SuperAdmin = "root"
 
-	OrgRoleRoot   = "root"
+	RoleRoot      = "root"
+	RoleLogin     = "login"
+	RoleAnonymous = "anonymous"
+
 	OrgRoleAdmin  = "admin"
 	OrgRoleMember = "member"
 

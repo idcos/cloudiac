@@ -4,7 +4,6 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
-	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
@@ -106,13 +105,27 @@ func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*CreateUserResp,
 
 type UserWithRoleResp struct {
 	*models.User
-	Password string `json:"-"`
-	Role     string `json:"role" example:"member"` // 角色
+	Password    string `json:"-"`
+	Role        string `json:"role,omitempty" example:"member"`         // 组织角色
+	ProjectRole string `json:"projectRole,omitempty" example:"manager"` // 项目角色
 }
 
 // SearchUser 查询用户列表
 func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.Error) {
-	query := UserRestrictOrg(c, c.DB())
+	query := c.DB()
+	// 管理员查看所有用户
+	if c.OrgId == "" && c.ProjectId == "" && !c.IsSuperAdmin {
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest)
+	}
+	// 组织成员查询
+	if c.OrgId != "" && c.ProjectId == "" {
+		query = services.QueryWithOrgId(query, c.OrgId)
+	}
+	// 项目成员查询
+	if c.OrgId != "" && c.ProjectId != "" {
+		query = services.QueryWithProjectId(query, c.ProjectId)
+	}
+
 	if form.Status != "" {
 		query = query.Where("status = ?", form.Status)
 	}
@@ -120,16 +133,21 @@ func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.E
 		qs := "%" + form.Q + "%"
 		query = query.Where("name LIKE ? OR phone LIKE ? OR email LIKE ? ", qs, qs, qs)
 	}
-
 	if form.SortField() == "" {
 		query = query.Order("created_at DESC")
 	}
 
-	// 查找用户角色
+	// 导出用户角色
 	if c.OrgId != "" {
 		query = query.Joins(fmt.Sprintf("left join %s as o on %s.id = o.user_id and o.org_id = ?",
 			models.UserOrg{}.TableName(), models.User{}.TableName()), c.OrgId).
 			LazySelectAppend(fmt.Sprintf("o.role,%s.*", models.User{}.TableName()))
+	}
+	// 导出项目角色
+	if c.ProjectId != "" {
+		query = query.Joins(fmt.Sprintf("left join %s as p on %s.id = p.user_id and p.project_id = ?",
+			models.UserProject{}.TableName(), models.User{}.TableName()), c.ProjectId).
+			LazySelectAppend(fmt.Sprintf("p.role as project_role,%s.*", models.User{}.TableName()))
 	}
 
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
@@ -149,10 +167,7 @@ func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.E
 // UpdateUser 用户信息编辑
 func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (user *models.User, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update user %s", form.Id))
-	if form.Id == "" {
-		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
-	}
-	if c.IsSuperAdmin == false && c.Role != consts.ProjectRoleManager && c.UserId != form.Id {
+	if c.IsSuperAdmin == false && c.Role != consts.OrgRoleAdmin && c.UserId != form.Id {
 		return nil, e.New(e.PermissionDeny, http.StatusForbidden)
 	}
 	if c.UserId != form.Id {
@@ -166,25 +181,17 @@ func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (user *models.Use
 	if form.HasKey("name") {
 		attrs["name"] = form.Name
 	}
-
 	if form.HasKey("phone") {
 		attrs["phone"] = form.Phone
 	}
-
 	if form.HasKey("newbieGuide") {
 		b, _ := json.Marshal(form.NewbieGuide)
 		attrs["newbie_guide"] = b
 	}
-
 	if form.HasKey("oldPassword") {
 		if !form.HasKey("newPassword") {
 			return nil, e.New(e.BadParam, http.StatusBadRequest)
 		}
-		user, er := services.GetUserById(c.DB(), form.Id)
-		if er != nil {
-			return nil, er
-		}
-
 		valid, err := utils.CheckPassword(form.OldPassword, user.Password)
 		if err != nil {
 			return nil, e.New(e.DBError, http.StatusInternalServerError, err)
@@ -200,18 +207,16 @@ func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (user *models.Use
 		attrs["password"] = newPassword
 	}
 
-	if form.HasKey("status") {
-		// TODO: 需要平台管理员权限
-
-	}
-
-	return services.UpdateUser(UserRestrictOrg(c, c.DB()), form.Id, attrs)
+	return services.UpdateUser(c.DB(), form.Id, attrs)
 }
 
-//ChangeUserStatus 修改用户启用/禁用状态
+// ChangeUserStatus 修改用户启用/禁用状态
 // 需要平台管理员权限。
 func ChangeUserStatus(c *ctx.ServiceCtx, form *forms.DisableUserForm) (*models.User, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("change user status %s", form.Id))
+	if c.IsSuperAdmin == false {
+		return nil, e.New(e.PermissionDeny, http.StatusForbidden)
+	}
 
 	if form.Status != models.Enable && form.Status != models.Disable {
 		return nil, e.New(e.UserInvalidStatus, http.StatusBadRequest)
@@ -229,7 +234,7 @@ func ChangeUserStatus(c *ctx.ServiceCtx, form *forms.DisableUserForm) (*models.U
 		return user, nil
 	}
 
-	user, err = services.UpdateUser(UserRestrictOrg(c, c.DB()), form.Id, models.Attrs{"status": form.Status})
+	user, err = services.UpdateUser(c.DB(), form.Id, models.Attrs{"status": form.Status})
 	if err != nil {
 		c.Logger().Errorf("error update user, err %s", err)
 		return nil, e.New(e.DBError, err)
@@ -240,7 +245,23 @@ func ChangeUserStatus(c *ctx.ServiceCtx, form *forms.DisableUserForm) (*models.U
 
 // UserDetail 获取单个用户详情
 func UserDetail(c *ctx.ServiceCtx, id models.Id) (*models.User, e.Error) {
-	user, err := services.GetUserById(UserRestrictOrg(c, c.DB()), id)
+	query := c.DB()
+	// 组织用户查询
+	if c.OrgId != "" {
+		query = services.QueryWithOrgId(query, c.OrgId)
+	}
+	// 项目用户查询
+	if c.ProjectId != "" {
+		query = services.QueryWithProjectId(query, c.ProjectId)
+	}
+	if c.UserId == id {
+		// 查自己
+	} else if (c.OrgId == "" && c.ProjectId == "") && !c.IsSuperAdmin {
+		// 全局用户查询，需要管理员权限
+		return nil, e.New(e.PermissionDeny, http.StatusForbidden)
+	}
+
+	user, err := services.GetUserById(query, id)
 	if err != nil && err.Code() == e.UserNotExists {
 		// 通过 /auth/me 或者 /users/:userId 访问
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
@@ -255,8 +276,11 @@ func UserDetail(c *ctx.ServiceCtx, id models.Id) (*models.User, e.Error) {
 // 需要平台管理员权限。
 func DeleteUser(c *ctx.ServiceCtx, form *forms.DeleteUserForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("delete user %s", form.Id))
+	if !c.IsSuperAdmin {
+		return nil, e.New(e.PermissionDeny, http.StatusForbidden)
+	}
 
-	tx := UserRestrictOrg(c, c.Tx())
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -274,7 +298,7 @@ func DeleteUser(c *ctx.ServiceCtx, form *forms.DeleteUserForm) (interface{}, e.E
 	}
 
 	// 解除组织关系
-	orgIds, er := services.GetOrgIdsByUser(c.DB(), c.UserId)
+	orgIds, er := services.GetOrgIdsByUser(tx, c.UserId)
 	if er != nil {
 		c.Logger().Errorf("error get org id by user, err %s", er)
 		return nil, e.New(e.DBError, er)
@@ -303,22 +327,23 @@ func DeleteUser(c *ctx.ServiceCtx, form *forms.DeleteUserForm) (interface{}, e.E
 	return nil, nil
 }
 
-// UserRestrictOrg 获取用户访问范围限制
-func UserRestrictOrg(c *ctx.ServiceCtx, query *db.Session) *db.Session {
-	query = query.Model(models.User{})
-	if c.OrgId != "" {
-		subQ := query.Model(models.UserOrg{}).Select("user_id").Where("org_id = ?", c.OrgId)
-		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), subQ.Expr())
-	} else {
-		// 如果是管理员，不需要附加限制参数，返回所有数据
-		// 组织管理员或者普通用户，如果不带 org，应该返回该用户关联的所有 org
-		if !c.IsSuperAdmin {
-			//select DISTINCT user_id from iac_user_org where (org_id in
-			//   (SELECT org_id from iac_user_org WHERE user_id = 'u-c3i41c06n88g4a2pet20'))
-			orgQ := query.Model(models.UserOrg{}).Select("org_id").Where("user_id = ?", c.UserId)
-			subQ := query.Model(models.UserOrg{}).Select("DISTINCT user_id").Where("org_id in (?)", orgQ)
-			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), subQ.Expr())
-		}
-	}
-	return query
-}
+//
+//// UserRestrictOrg 获取用户访问范围限制
+//func UserRestrictOrg(c *ctx.ServiceCtx, query *db.Session) *db.Session {
+//	query = query.Model(models.User{})
+//	if c.OrgId != "" {
+//		subQ := query.Model(models.UserOrg{}).Select("user_id").Where("org_id = ?", c.OrgId)
+//		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), subQ.Expr())
+//	} else {
+//		// 如果是管理员，不需要附加限制参数，返回所有数据
+//		// 组织管理员或者普通用户，如果不带 org，应该返回该用户关联的所有 org
+//		if !c.IsSuperAdmin {
+//			//select DISTINCT user_id from iac_user_org where (org_id in
+//			//   (SELECT org_id from iac_user_org WHERE user_id = 'u-c3i41c06n88g4a2pet20'))
+//			orgQ := query.Model(models.UserOrg{}).Select("org_id").Where("user_id = ?", c.UserId)
+//			subQ := query.Model(models.UserOrg{}).Select("DISTINCT user_id").Where("org_id in (?)", orgQ)
+//			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), subQ.Expr())
+//		}
+//	}
+//	return query
+//}

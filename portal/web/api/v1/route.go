@@ -1,10 +1,14 @@
 package v1
 
 import (
+	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctrl"
+	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/web/api/v1/handlers"
 	"cloudiac/portal/web/middleware"
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 // @title 云霁 CloudIaC 基础设施即代码管理平台
@@ -50,20 +54,36 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/consul/kv/search", ac(), w(handlers.ConsulKVSearch))
 	g.GET("/system/status/search", ac(), w(handlers.PortalSystemStatusSearch))
 
+	g.Any("/orgs/:id/:name", w(func(c *ctx.GinRequestCtx) {
+		if c.ServiceCtx().OrgId != "" && c.ServiceCtx().OrgId.String() != c.Param("id") {
+			c.JSONError(e.New(e.BadParam, fmt.Errorf("invalid org id param/header")), http.StatusBadRequest)
+			return
+		}
+	}))
+
+	g.Any("/projects/:id/:name", w(func(c *ctx.GinRequestCtx) {
+		if c.ServiceCtx().ProjectId != "" && c.ServiceCtx().ProjectId.String() != c.Param("id") {
+			c.JSONError(e.New(e.BadParam, fmt.Errorf("invalid project id param/header")), http.StatusBadRequest)
+			return
+		}
+	}))
+
 	ctrl.Register(g.Group("orgs", ac()), &handlers.Organization{})
 	g.PUT("/orgs/:id/status", ac(), w(handlers.Organization{}.ChangeOrgStatus))
+	ctrl.Register(g.Group("users", ac()), &handlers.User{})
+	g.PUT("/users/:id/status", ac(), w(handlers.User{}.ChangeUserStatus))
+	g.POST("/users/:id/password/reset", ac(), w(handlers.User{}.PasswordReset))
+
+	// 要求组织 header
+	g.Use(w(middleware.AuthOrgId))
+
+	// 组织用户管理
 	g.GET("/orgs/:id/users", ac("orgs", "listuser"), w(handlers.Organization{}.SearchUser))
 	g.POST("/orgs/:id/users", ac("orgs", "adduser"), w(handlers.Organization{}.AddUserToOrg))
 	g.PUT("/orgs/:id/users/:userId/role", ac("orgs", "updaterole"), w(handlers.Organization{}.UpdateUserOrgRel))
 	g.POST("/orgs/:id/users/invite", ac("orgs", "adduser"), w(handlers.Organization{}.InviteUser))
 	g.DELETE("/orgs/:id/users/:userId", ac("orgs", "removeuser"), w(handlers.Organization{}.RemoveUserForOrg))
 
-	// 组织 header
-	g.Use(w(middleware.AuthOrgId))
-
-	ctrl.Register(g.Group("users", ac()), &handlers.User{})
-	g.PUT("/users/:id/status", ac(), w(handlers.User{}.ChangeUserStatus))
-	g.POST("/users/:id/password/reset", ac(), w(handlers.User{}.PasswordReset))
 	//项目管理
 	ctrl.Register(g.Group("projects", ac()), &handlers.Project{})
 	//变量管理

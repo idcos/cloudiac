@@ -40,17 +40,9 @@ func Auth(c *ctx.GinRequestCtx) {
 
 	orgId := models.Id(c.GetHeader("IaC-Org-Id"))
 	if orgId != "" {
-		c.ServiceCtx().OrgId = orgId
-		userOrgRel, err := services.FindUsersOrgRel(c.ServiceCtx().DB(), c.ServiceCtx().UserId, c.ServiceCtx().OrgId)
-		if err == nil && len(userOrgRel) > 0 {
-			c.ServiceCtx().Role = userOrgRel[0].Role
-			c.Next()
-			return
-		}
-		if c.ServiceCtx().IsSuperAdmin == true {
-			c.ServiceCtx().Role = consts.OrgRoleRoot
-			c.Next()
-			return
+		if c.ServiceCtx().IsSuperAdmin ||
+			services.UserHasOrgRole(c.ServiceCtx().UserId, c.ServiceCtx().OrgId, "") {
+			c.ServiceCtx().OrgId = orgId
 		}
 		c.JSONError(e.New(e.PermissionDeny), http.StatusForbidden)
 		return
@@ -58,14 +50,16 @@ func Auth(c *ctx.GinRequestCtx) {
 	projectId := models.Id(c.GetHeader("IaC-Project-Id"))
 	if projectId != "" {
 		c.ServiceCtx().ProjectId = projectId
-		role, err := services.GetProjectRoleByUser(c.ServiceCtx().DB(), c.ServiceCtx().ProjectId, c.ServiceCtx().UserId)
-		if err == nil && role != "" {
-			c.ServiceCtx().ProjectRole = role
-			c.Next()
+		if project, err := services.GetProjectsById(c.ServiceCtx().DB(), projectId); err != nil {
+			c.JSONError(e.New(e.ProjectNotExists), http.StatusBadRequest)
+			return
+		} else if project.OrgId != c.ServiceCtx().OrgId {
+			c.JSONError(e.New(e.PermissionDeny), http.StatusForbidden)
 			return
 		}
-		if c.ServiceCtx().IsSuperAdmin == true {
-			c.ServiceCtx().ProjectRole = consts.ProjectRoleManager
+		if c.ServiceCtx().IsSuperAdmin ||
+			services.UserHasOrgRole(c.ServiceCtx().UserId, c.ServiceCtx().OrgId, consts.OrgRoleAdmin) ||
+			services.UserHasProjectRole(c.ServiceCtx().UserId, c.ServiceCtx().OrgId, c.ServiceCtx().ProjectId, "") {
 			c.Next()
 			return
 		}
@@ -79,24 +73,6 @@ func AuthOrgId(c *ctx.GinRequestCtx) {
 	if c.ServiceCtx().OrgId == "" {
 		c.JSONError(e.New(e.InvalidOrganizationId), http.StatusForbidden)
 		return
-	}
-	return
-}
-
-func IsSuperAdmin(c *ctx.GinRequestCtx) {
-	if c.ServiceCtx().IsSuperAdmin == true {
-		c.Next()
-	} else {
-		c.JSONError(e.New(e.PermissionDeny), http.StatusForbidden)
-	}
-	return
-}
-
-func IsOrgAdmin(c *ctx.GinRequestCtx) {
-	if c.ServiceCtx().Role == consts.OrgRoleAdmin || c.ServiceCtx().IsSuperAdmin == true {
-		c.Next()
-	} else {
-		c.JSONError(e.New(e.PermissionDeny), http.StatusForbidden)
 	}
 	return
 }

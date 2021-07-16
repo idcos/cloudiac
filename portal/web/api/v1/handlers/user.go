@@ -31,13 +31,17 @@ func (User) Create(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.CreateUser(c.ServiceCtx(), &form))
 }
 
-// Search 用户查询
+// Search 用户列表查询
 // @Tags 用户
-// @Summary 用户查询
+// @Summary 用户列表查询
+// @Description 平台管理员可以查询所有用户，不附带 IaC-Org-Id 和 IaC-Project-Id header
+// @Description 组织内用户可以查询本组织用户列表，附带 IaC-Org-Id header
+// @Description 项目内用户可以查询本项目用户列表，附带 IaC-Org-Id 和 IaC-Project-Id header
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string false "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
 // @Param form query forms.SearchUserForm true "parameter"
 // @router /users [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.User}}
@@ -52,11 +56,12 @@ func (User) Search(c *ctx.GinRequestCtx) {
 // Update 用户编辑
 // @Tags 用户
 // @Summary 用户信息编辑
+// @Description 用户可以编辑自己，组织管理员可以编辑组织下的用户，平台管理员可以编辑所有用户
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string false "组织ID"
 // @Param userId path string true "用户ID"
 // @Param form formData forms.UpdateUserForm true "parameter"
 // @router /users/{userId} [put]
@@ -72,11 +77,12 @@ func (User) Update(c *ctx.GinRequestCtx) {
 // ChangeUserStatus 启用/禁用用户
 // @Tags 用户
 // @Summary 启用/禁用用户
+// @Description 需要平台管理员权限
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string false "组织ID"
 // @Param userId path string true "用户ID"
 // @Param form formData forms.DisableUserForm true "parameter"
 // @router /users/{userId}/status [put]
@@ -108,12 +114,12 @@ func (u User) UpdateSelf(c *ctx.GinRequestCtx) {
 // Delete 删除用户
 // @Tags 用户
 // @Summary 删除用户
-// @Description 需要组织管理员权限，如果用户拥有多个组织权限，管理员需要拥有所有相关组织权限。
+// @Description 需要平台管理员权限
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string false "组织ID"
 // @Param userId path string true "用户ID"
 // @Param form formData forms.DeleteUserForm true "parameter"
 // @router /users/{userId} [delete]
@@ -132,7 +138,7 @@ func (User) Delete(c *ctx.GinRequestCtx) {
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string false "组织ID"
 // @Param userId path string true "用户ID"
 // @router /users/{userId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.User}
@@ -145,15 +151,15 @@ func (User) Detail(c *ctx.GinRequestCtx) {
 }
 
 // PasswordReset 重置用户密码
-// @Tags 鉴权
+// @Tags 用户
 // @Summary 用户重置密码
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
-// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Org-Id header string false "组织ID"
 // @Param userId path string true "用户ID"
 // @Param form formData forms.DetailUserForm true "parameter"
-// @router /users/{userId}/reset_password [post]
+// @router /users/{userId}/password/reset [post]
 // @Success 200 {object} ctx.JSONResult{result=apps.CreateUserResp}
 func (User) PasswordReset(c *ctx.GinRequestCtx) {
 	form := forms.DetailUserForm{}

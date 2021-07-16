@@ -80,3 +80,12 @@ func GetProjectRoleByUser(tx *db.Session, projectId models.Id, userId models.Id)
 	}
 	return role, nil
 }
+
+// GetProjectsById 获取项目
+func GetProjectsById(tx *db.Session, projectId models.Id) (*models.Project, e.Error) {
+	proj := models.Project{}
+	if err := tx.Model(models.Project{}).Where("id = ?", projectId).First(&proj); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return &proj, nil
+}

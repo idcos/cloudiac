@@ -4,7 +4,6 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
-	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
@@ -49,12 +48,13 @@ func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (
 
 // SearchOrganization 组织查询
 func SearchOrganization(c *ctx.ServiceCtx, form *forms.SearchOrganizationForm) (interface{}, e.Error) {
-	query := OrgRestrictOrg(c, c.DB())
-	if c.IsSuperAdmin == true {
+	query := c.DB()
+	if c.IsSuperAdmin {
 		if form.Status != "" {
 			query = query.Where("status = ?", form.Status)
 		}
 	} else {
+		query = query.Where("id in (?)", services.UserOrgIds(c.UserId))
 		query = query.Where("status = 'enable'")
 	}
 
@@ -76,6 +76,11 @@ func SearchOrganization(c *ctx.ServiceCtx, form *forms.SearchOrganizationForm) (
 // UpdateOrganization 组织编辑
 func UpdateOrganization(c *ctx.ServiceCtx, form *forms.UpdateOrganizationForm) (*models.Organization, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update org %s", form.Id))
+	query := c.DB()
+
+	if !c.IsSuperAdmin && c.OrgId == "" {
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest)
+	}
 
 	attrs := models.Attrs{}
 	if form.HasKey("name") {
@@ -97,7 +102,10 @@ func UpdateOrganization(c *ctx.ServiceCtx, form *forms.UpdateOrganizationForm) (
 		}
 	}
 
-	org, err := services.UpdateOrganization(OrgRestrictOrg(c, c.DB()), form.Id, attrs)
+	if !c.IsSuperAdmin {
+		query = query.Where("id in (?)", services.UserOrgIds(c.UserId))
+	}
+	org, err := services.UpdateOrganization(query, form.Id, attrs)
 	if err != nil && err.Code() == e.OrganizationAliasDuplicate {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
@@ -110,12 +118,14 @@ func UpdateOrganization(c *ctx.ServiceCtx, form *forms.UpdateOrganizationForm) (
 //ChangeOrgStatus 修改组织启用/禁用状态
 func ChangeOrgStatus(c *ctx.ServiceCtx, form *forms.DisableOrganizationForm) (*models.Organization, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("change org status %s", form.Id))
+	if !c.IsSuperAdmin && c.OrgId == "" {
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest)
+	}
+	query := c.DB()
 
 	if form.Status != models.OrgEnable && form.Status != models.OrgDisable {
 		return nil, e.New(e.OrganizationInvalidStatus, http.StatusBadRequest)
 	}
-
-	query := OrgRestrictOrg(c, c.DB())
 
 	org, err := services.GetOrganizationById(query, form.Id)
 	if err != nil && err.Code() == e.OrganizationNotExists {
@@ -129,6 +139,9 @@ func ChangeOrgStatus(c *ctx.ServiceCtx, form *forms.DisableOrganizationForm) (*m
 		return org, nil
 	}
 
+	if !c.IsSuperAdmin {
+		query = services.QueryWithOrgId(query, c.OrgId)
+	}
 	org, err = services.UpdateOrganization(query, form.Id, models.Attrs{"status": form.Status})
 	if err != nil && err.Code() == e.OrganizationAliasDuplicate {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
@@ -152,7 +165,11 @@ func OrganizationDetail(c *ctx.ServiceCtx, form forms.DetailOrganizationForm) (*
 		user *models.User
 		err  e.Error
 	)
-	org, err = services.GetOrganizationById(OrgRestrictOrg(c, c.DB()), form.Id)
+	query := c.DB()
+	if !c.IsSuperAdmin {
+		query = services.QueryWithOrgId(query, c.OrgId)
+	}
+	org, err = services.GetOrganizationById(query, form.Id)
 	if err != nil && err.Code() == e.OrganizationNotExists {
 		return nil, e.New(e.OrganizationNotExists, err, http.StatusNotFound)
 	} else if err != nil {
@@ -186,8 +203,12 @@ func DeleteOrganization(c *ctx.ServiceCtx, form *forms.DeleteOrganizationForm) (
 // DeleteUserOrgRel 从组织移除用户
 func DeleteUserOrgRel(c *ctx.ServiceCtx, form *forms.DeleteUserOrgRelForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("delete user %s for org %s", form.UserId, c.OrgId))
+	query := c.DB()
+	if !c.IsSuperAdmin {
+		query = services.QueryWithOrgId(query, c.OrgId)
+	}
 
-	user, err := services.GetUserById(UserRestrictOrg(c, c.DB()), form.UserId)
+	user, err := services.GetUserById(query, form.UserId)
 	if err != nil && err.Code() == e.UserNotExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
@@ -195,7 +216,7 @@ func DeleteUserOrgRel(c *ctx.ServiceCtx, form *forms.DeleteUserOrgRelForm) (inte
 		return nil, e.New(e.DBError, err)
 	}
 
-	if err := services.DeleteUserOrgRel(c.RestrictOrg(c.DB(), models.UserOrg{}), form.UserId, c.OrgId); err != nil {
+	if err := services.DeleteUserOrgRel(query, form.UserId, c.OrgId); err != nil {
 		c.Logger().Errorf("error del user org rel, err %s", err)
 		return nil, err
 	}
@@ -212,6 +233,10 @@ func DeleteUserOrgRel(c *ctx.ServiceCtx, form *forms.DeleteUserOrgRelForm) (inte
 func AddUserOrgRel(c *ctx.ServiceCtx, form *forms.AddUserOrgRelForm) (*UserWithRoleResp, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("add user %s to org %s", form.UserId, form.Id))
 	var user *models.User
+	query := c.DB()
+	if !c.IsSuperAdmin {
+		query = services.QueryWithOrgId(c.DB(), c.OrgId)
+	}
 
 	if form.Role != consts.OrgRoleMember && form.Role != consts.OrgRoleAdmin {
 		return nil, e.New(e.InvalidRoleName, http.StatusBadRequest)
@@ -224,7 +249,7 @@ func AddUserOrgRel(c *ctx.ServiceCtx, form *forms.AddUserOrgRelForm) (*UserWithR
 		return nil, e.New(e.DBError, err)
 	}
 
-	_, err = services.CreateUserOrgRel(c.RestrictOrg(c.DB(), models.UserOrg{}), models.UserOrg{OrgId: form.Id, UserId: form.UserId, Role: form.Role})
+	_, err = services.CreateUserOrgRel(query, models.UserOrg{OrgId: form.Id, UserId: form.UserId, Role: form.Role})
 	if err != nil && err.Code() == e.UserAlreadyExists {
 		c.Logger().Errorf("error create user org rel, err %s", err)
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
@@ -246,7 +271,10 @@ func AddUserOrgRel(c *ctx.ServiceCtx, form *forms.AddUserOrgRelForm) (*UserWithR
 func UpdateUserOrgRel(c *ctx.ServiceCtx, form *forms.UpdateUserOrgRelForm) (*UserWithRoleResp, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update user %s in org %s to role %s", form.UserId, c.OrgId, form.Role))
 
-	query := c.RestrictOrg(c.DB(), models.UserOrg{})
+	query := c.DB()
+	if !c.IsSuperAdmin {
+		query = services.QueryWithOrgId(c.DB(), c.OrgId)
+	}
 	user, err := services.GetUserById(query, form.UserId)
 	if err != nil && err.Code() == e.UserNotExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
@@ -269,29 +297,35 @@ func UpdateUserOrgRel(c *ctx.ServiceCtx, form *forms.UpdateUserOrgRelForm) (*Use
 	return &resp, nil
 }
 
-// OrgRestrictOrg 获取组织访问范围限制
-// 如果是平台管理员，可以访问所有组织
-// 其他用户只能访问关联组织
-func OrgRestrictOrg(c *ctx.ServiceCtx, query *db.Session) *db.Session {
-	query = query.Model(models.Organization{})
-	if c.OrgId != "" {
-		query = query.Where(fmt.Sprintf("%s.id = ?", models.Organization{}.TableName()), c.OrgId)
-	} else {
-		// 如果是管理员，不需要附加限制参数，返回所有数据
-		// 组织管理员或者普通用户，如果不带 org，应该返回该用户关联的所有 org
-		if !c.IsSuperAdmin {
-			subQ := query.Model(models.UserOrg{}).Select("org_id").Where("user_id = ?", c.UserId)
-			query = query.Where(fmt.Sprintf("%s.id in (?)", models.Organization{}.TableName()), subQ.Expr())
-		}
-	}
-	return query
-}
+//
+//// OrgRestrictOrg 获取组织访问范围限制
+//// 如果是平台管理员，可以访问所有组织
+//// 其他用户只能访问关联组织
+//func OrgRestrictOrg(c *ctx.ServiceCtx, query *db.Session) *db.Session {
+//	query = query.Model(models.Organization{})
+//	if c.OrgId != "" {
+//		query = query.Where(fmt.Sprintf("%s.id = ?", models.Organization{}.TableName()), c.OrgId)
+//	} else {
+//		// 如果是管理员，不需要附加限制参数，返回所有数据
+//		// 组织管理员或者普通用户，如果不带 org，应该返回该用户关联的所有 org
+//		if !c.IsSuperAdmin {
+//			subQ := query.Model(models.UserOrg{}).Select("org_id").Where("user_id = ?", c.UserId)
+//			query = query.Where(fmt.Sprintf("%s.id in (?)", models.Organization{}.TableName()), subQ.Expr())
+//		}
+//	}
+//	return query
+//}
 
 // InviteUser 邀请用户加入某个组织
 // 如果用户不存在，则创建并加入组织，如果用户已经存在，则加入该组织
 func InviteUser(c *ctx.ServiceCtx, form *forms.InviteUserForm) (*UserWithRoleResp, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("invite user %s%s to org %s as %s", form.Name, form.UserId, form.Id, form.Role))
-	org, err := services.GetOrganizationById(OrgRestrictOrg(c, c.DB()), form.Id)
+
+	query := c.DB()
+	if !c.IsSuperAdmin {
+		query = services.QueryWithOrgId(c.DB(), c.OrgId)
+	}
+	org, err := services.GetOrganizationById(query, form.Id)
 	if err != nil && err.Code() == e.OrganizationNotExists {
 		return nil, e.New(e.BadRequest, http.StatusNotFound)
 	} else if err != nil {
