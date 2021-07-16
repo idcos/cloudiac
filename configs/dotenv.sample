@@ -16,18 +16,18 @@ MYSQL_PASSWORD=
 PORTAL_ADDRESS=http://public.host.ip
 
 ## consul 配置
-CONSUL_ADDR=private.host.ip:8500
+CONSUL_ADDRESS=private.host.ip:8500
 
 # portal 服务注册信息配置
 SERVICE_IP=iac-portal
 SERVICE_ID=iac-portal-01
-SERVICE_TAGS=iac-porta;portal-01
+SERVICE_TAGS="iac-porta;portal-01"
 
 ## 以下为 runner 配置
 #### runner 服务注册配置
 RUNNER_SERVICE_IP=ct-runner
 RUNNER_SERVICE_ID=ct-runner-01
-RUNNER_SERVICE_TAGS=ct-runner;runner-01
+RUNNER_SERVICE_TAGS="ct-runner;runner-01"
 
 ## logger 配置
-LOG_DEVEL = "debug"
+LOG_DEVEL="debug"
