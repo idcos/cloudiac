@@ -104,6 +104,14 @@ const (
 	OrganizationInvalidStatus  = 9014
 	InvalidOrganizationId      = 9015
 
+	// project
+	ProjectAlreadyExists  = 10010
+	ProjectNotExists      = 10011
+	ProjectDisabled       = 10012
+	ProjectAliasDuplicate = 10013
+	ProjectInvalidStatus  = 10014
+	ProjectIdInvalid      = 10014
+
 	//variable
 	VariableAlreadyExists  = 11010
 	VariableNotExists      = 11011
@@ -118,27 +126,6 @@ const (
 	TokenAliasDuplicate = 12013
 	TokenInvalidStatus  = 12014
 	InvalidTokenId      = 12015
-
-	// project
-	ProjectAlreadyExists  = 10010
-	ProjectNotExists      = 10011
-	ProjectDisabled       = 10012
-	ProjectAliasDuplicate = 10013
-	ProjectInvalidStatus  = 10014
-	ProjectIdInvalid      = 10014
-
-	// vcs
-	VcsError     = 9100
-	VcsNotExists = 9200
-
-	// task
-	TaskAlreadyExists     = 10010
-	TaskNotExists         = 10011
-	InvalidTaskId         = 10012
-	TaskApproveNotPending = 10013
-	TaskStepNotExists     = 10114
-	TaskLogInterrupted    = 10115
-	TaskNotHaveStep       = 10116
 
 	// template
 	TemplateAlreadyExists   = 11010
@@ -156,6 +143,20 @@ const (
 	EnvArchived            = 13013
 	EnvCannotArchiveActive = 13014
 	EnvDeploying           = 13015
+
+
+	// task
+	TaskAlreadyExists     = 14010
+	TaskNotExists         = 14011
+	InvalidTaskId         = 14012
+	TaskApproveNotPending = 14013
+	TaskStepNotExists     = 14114
+	TaskLogInterrupted    = 14115
+	TaskNotHaveStep       = 14116
+
+	// vcs
+	VcsError     = 15010
+	VcsNotExists = 15011
 )
 
 var errorMsgs = map[int]map[string]string{

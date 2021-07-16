@@ -18,5 +18,8 @@ func (Vcs) TableName() string {
 }
 
 func (o Vcs) Migrate(sess *db.Session) (err error) {
+	if err = o.AddUniqueIndex(sess, "unique__org_vcs_name", "org_id", "name"); err != nil {
+		return err
+	}
 	return nil
 }
