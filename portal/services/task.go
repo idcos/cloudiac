@@ -139,10 +139,10 @@ func getTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template) (repoAddr,
 		repoToken = tpl.RepoToken
 	)
 
-	if tpl.RepoAddr != "" {
-		repoAddr = tpl.RepoAddr
+	repoAddr = tpl.RepoAddr
+	if tpl.VcsId == "" { // 用户直接填写的 repo 地址
 		commitId = tpl.RepoRevision
-	} else if tpl.VcsId != "" && tpl.RepoId != "" {
+	} else {
 		var (
 			vcs  *models.Vcs
 			repo vcsrv.RepoIface
@@ -158,19 +158,30 @@ func getTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template) (repoAddr,
 		if err != nil {
 			return "", "", err
 		}
+
 		commitId, err = repo.BranchCommitId(tpl.RepoRevision)
 		if err != nil {
 			return "", "", e.New(e.VcsError, err)
 		}
-		repoAddr, err = vcsrv.GetRepoAddress(repo)
-		if err != nil {
-			return
+
+		if repoAddr == "" {
+			// 如果模板中没有记录 repoAddr，则动态获取
+			repoAddr, err = vcsrv.GetRepoAddress(repo)
+			if err != nil {
+				return "", "", e.New(e.VcsError, err)
+			}
+		} else if !strings.Contains(repoAddr, "://") {
+			// 如果 addr 不是完整路径则添加上 vcs 的 address(这样可以允许保存相对路径到 repoAddr)
+			repoAddr = utils.JoinURL(vcs.Address, repoAddr)
 		}
+
 		if repoToken == "" {
 			repoToken = vcs.VcsToken
 		}
-	} else {
-		return "", "", e.New(e.InternalError, fmt.Errorf("both 'repoId' and 'repoAddr' are empty"))
+	}
+
+	if repoAddr == "" {
+		return "", "", e.New(e.BadParam, fmt.Errorf("repo address is blank"))
 	}
 
 	u, err = url.Parse(repoAddr)
