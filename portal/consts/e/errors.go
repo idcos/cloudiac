@@ -127,8 +127,9 @@ const (
 	ProjectInvalidStatus  = 10014
 	ProjectIdInvalid      = 10014
 
-	// gitlib
-	GitLabError = 9100
+	// vcs
+	VcsError     = 9100
+	VcsNotExists = 9200
 
 	// task
 	TaskAlreadyExists     = 10010
@@ -373,5 +374,8 @@ var errorMsgs = map[int]map[string]string{
 	},
 	TaskNotHaveStep: {
 		"zh-cn": "任务无步骤",
+	},
+	TemplateAlreadyExists: {
+		"zh-cn": "模板名称重复",
 	},
 }

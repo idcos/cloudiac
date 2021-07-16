@@ -2,7 +2,6 @@ package models
 
 import (
 	"cloudiac/portal/libs/db"
-	"fmt"
 	"path"
 	"time"
 )
@@ -44,6 +43,7 @@ type Env struct {
 	PlayVarsFile string         `json:"playVarsFile" gorm:"default:''"`           // Ansible 变量文件路径
 	Playbook     string         `json:"playbook" gorm:"default:''"`               // Ansible playbook 入口文件路径
 	Revision     string         `json:"revision" gorm:"size:64;default:'master'"` // Vcs仓库分支/标签
+	KeyId        Id             `json:"keyId" gorm:"size32"`                      // 部署密钥ID
 
 	LastTaskId Id `json:"lastTaskId" gorm:"size:32"` // 最后一次部署或销毁任务的 id(plan 任务不记录)
 
@@ -70,7 +70,7 @@ func (e *Env) Migrate(sess *db.Session) (err error) {
 }
 
 func (e *Env) DefaultStatPath() string {
-	return path.Join(fmt.Sprintf("env-%s", e.Id.String()), "terraform.tfstate")
+	return path.Join(e.OrgId.String(), e.ProjectId.String(), e.Id.String(), "terraform.tfstate")
 }
 
 type EnvDetail struct {

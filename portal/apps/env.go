@@ -51,11 +51,11 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 	}
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er, http.StatusInternalServerError)
+		return nil, e.New(e.VcsError, er, http.StatusInternalServerError)
 	}
 	repo, er := vcsService.GetRepo(tpl.RepoId)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er, http.StatusInternalServerError)
+		return nil, e.New(e.VcsError, er, http.StatusInternalServerError)
 	}
 	revision := tpl.RepoRevision
 	if form.Revision != "" {
@@ -63,7 +63,7 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 	}
 	commitId, er := repo.BranchCommitId(revision)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er, http.StatusInternalServerError)
+		return nil, e.New(e.VcsError, er, http.StatusInternalServerError)
 	}
 
 	tx := c.Tx()
@@ -91,6 +91,7 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		PlayVarsFile: form.PlayVarsFile,
 		Playbook:     form.Playbook,
 		Revision:     form.Revision,
+		KeyId:        form.KeyId,
 
 		// TODO: triggers 触发器设置
 		AutoApproval: form.AutoApproval,
@@ -113,13 +114,14 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 	env.Variables = vars
 
 	// 创建任务
-	_, err = services.CreateTask(tx, env, models.Task{
+	_, err = services.CreateTask(tx, tpl, env, models.Task{
 		Name:        models.Task{}.GetTaskNameByType(form.TaskType),
 		Type:        form.TaskType,
 		Flow:        models.TaskFlow{},
 		Targets:     strings.Split(form.Targets, ","),
 		CommitId:    commitId,
 		CreatorId:   c.UserId,
+		KeyId:       env.KeyId,
 		RunnerId:    env.RunnerId,
 		Variables:   form.Variables,
 		StepTimeout: form.Timeout,
@@ -216,6 +218,10 @@ func UpdateEnv(c *ctx.ServiceCtx, form *forms.UpdateEnvForm) (*models.Env, e.Err
 
 	if form.HasKey("description") {
 		attrs["description"] = form.Description
+	}
+
+	if form.HasKey("keyId") {
+		attrs["key_id"] = form.KeyId
 	}
 
 	if form.HasKey("runnerId") {
@@ -328,11 +334,11 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	}
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er, http.StatusInternalServerError)
+		return nil, e.New(e.VcsError, er, http.StatusInternalServerError)
 	}
 	repo, er := vcsService.GetRepo(tpl.RepoId)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er, http.StatusInternalServerError)
+		return nil, e.New(e.VcsError, er, http.StatusInternalServerError)
 	}
 	revision := tpl.RepoRevision
 	if form.Revision != "" {
@@ -340,7 +346,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	}
 	commitId, er := repo.BranchCommitId(revision)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er, http.StatusInternalServerError)
+		return nil, e.New(e.VcsError, er, http.StatusInternalServerError)
 	}
 
 	// 变量
@@ -355,6 +361,9 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	}
 	if form.HasKey("autoDestroyAt") {
 		// TODO: 自动销毁设置
+	}
+	if form.HasKey("keyId") {
+		env.KeyId = form.KeyId
 	}
 	if form.HasKey("runnerId") {
 		env.RunnerId = form.RunnerId
@@ -382,13 +391,14 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	}
 
 	// 创建任务
-	_, err = services.CreateTask(tx, env, models.Task{
+	_, err = services.CreateTask(tx, tpl, env, models.Task{
 		Name:        models.Task{}.GetTaskNameByType(form.TaskType),
 		Type:        form.TaskType,
 		Flow:        models.TaskFlow{},
 		Targets:     strings.Split(form.Targets, ","),
 		CommitId:    commitId,
 		CreatorId:   c.UserId,
+		KeyId:       env.KeyId,
 		RunnerId:    env.RunnerId,
 		Variables:   form.Variables,
 		StepTimeout: form.Timeout,

@@ -18,17 +18,16 @@ import (
 var logger = logs.Get()
 
 type CommittedTaskStep struct {
-	EnvId       string     `json:"envId"`
-	TaskId      string     `json:"taskId"`
-	Step        int        `json:"step"`
-	Request     RunTaskReq `json:"request"`
-	ContainerId string     `json:"containerId"`
+	EnvId       string `json:"envId"`
+	TaskId      string `json:"taskId"`
+	Step        int    `json:"step"`
+	ContainerId string `json:"containerId"`
 
 	containerInfoLock sync.RWMutex
 }
 
 func LoadCommittedTask(envId string, taskId string, step int) (*CommittedTaskStep, error) {
-	path := filepath.Join(GetTaskStepDir(envId, taskId, step), TaskInfoFileName)
+	path := filepath.Join(GetTaskStepDir(envId, taskId, step), TaskStepInfoFileName)
 	fp, err := os.Open(path)
 	if err != nil {
 		return nil, err

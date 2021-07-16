@@ -19,9 +19,10 @@ type CreateEnvForm struct {
 
 	Variables []models.VariableBody `form:"variables" json:"variable" binding:""` // 自定义变量列表，该变量列表会覆盖现有的变量
 
-	TfVarsFile   string `form:"tfVarsFile" json:"tfVarsFile" binding:""`     // Terraform tfvars 变量文件路径
-	PlayVarsFile string `form:"playVarsFile" json:"playVarsFile" binding:""` // Ansible playbook 变量文件路径
-	Playbook     string `form:"playbook" json:"playbook" binding:""`         // Ansible playbook 入口文件路径
+	TfVarsFile   string    `form:"tfVarsFile" json:"tfVarsFile" binding:""`     // Terraform tfvars 变量文件路径
+	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:""` // Ansible playbook 变量文件路径
+	Playbook     string    `form:"playbook" json:"playbook" binding:""`         // Ansible playbook 入口文件路径
+	KeyId        models.Id `form:"keyId" json:"keyId" binding:""`               // 部署密钥ID
 }
 
 type UpdateEnvForm struct {
@@ -29,12 +30,13 @@ type UpdateEnvForm struct {
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
 
-	Name          string `form:"name" json:"name" binding:""`                                     // 环境名称
-	Description   string `form:"description" json:"description" binding:"max=255"`                // 环境描述
-	RunnerId      string `form:"runnerId" json:"runnerId" binding:""`                             // 环境默认部署通道
-	Archived      bool   `form:"archived" json:"archived" enums:"true,false"`                     // 归档状态，默认返回未归档环境
-	AutoApproval  bool   `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"` // 是否自动审批
-	AutoDestroyAt string `form:"destroyAt" json:"destroyAt" binding:"" `                          // 自动销毁时间， 0: 不自动销毁, 12h: 12小时,	1d：一天,3d: 三天	1w: 一周，7天	15d: 半个月，15天	1m: 一个月，28/29/30/31天根据不同月份	xxxx-xx-xx xx:xx：指定时间（选择指定时间时出现时间选择框），格式：年-月-日 时:分
+	Name          string    `form:"name" json:"name" binding:""`                                     // 环境名称
+	Description   string    `form:"description" json:"description" binding:"max=255"`                // 环境描述
+	KeyId         models.Id `form:"keyId" json:"keyId" binding:""`                                   // 部署密钥ID
+	RunnerId      string    `form:"runnerId" json:"runnerId" binding:""`                             // 环境默认部署通道
+	Archived      bool      `form:"archived" json:"archived" enums:"true,false"`                     // 归档状态，默认返回未归档环境
+	AutoApproval  bool      `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"` // 是否自动审批
+	AutoDestroyAt string    `form:"destroyAt" json:"destroyAt" binding:"" `                          // 自动销毁时间， 0: 不自动销毁, 12h: 12小时,	1d：一天,3d: 三天	1w: 一周，7天	15d: 半个月，15天	1m: 一个月，28/29/30/31天根据不同月份	xxxx-xx-xx xx:xx：指定时间（选择指定时间时出现时间选择框），格式：年-月-日 时:分
 }
 
 type DeployEnvForm struct {
@@ -55,9 +57,10 @@ type DeployEnvForm struct {
 
 	Variables []models.VariableBody `form:"variables" json:"variable" binding:""` // 自定义变量列表，该变量列表会覆盖现有的变量
 
-	TfVarsFile   string `form:"tfVarsFile" json:"tfVarsFile" binding:""`     // Terraform tfvars 变量文件路径
-	PlayVarsFile string `form:"playVarsFile" json:"playVarsFile" binding:""` // Ansible playbook 变量文件路径
-	Playbook     string `form:"playbook" json:"playbook" binding:""`         // Ansible playbook 入口文件路径
+	TfVarsFile   string    `form:"tfVarsFile" json:"tfVarsFile" binding:""`     // Terraform tfvars 变量文件路径
+	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:""` // Ansible playbook 变量文件路径
+	Playbook     string    `form:"playbook" json:"playbook" binding:""`         // Ansible playbook 入口文件路径
+	KeyId        models.Id `form:"keyId" json:"keyId" binding:""`               // 部署密钥ID
 }
 
 type ArchiveEnvForm struct {

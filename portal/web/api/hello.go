@@ -1,7 +1,7 @@
 package api
 
 import (
-	"cloudiac/portal/consts"
+	"cloudiac/common"
 	"net/http"
 	"runtime"
 
@@ -21,7 +21,7 @@ func Hello(c *ctx.GinRequestCtx) {
 func Health(c *ctx.GinRequestCtx) {
 	c.JSON(http.StatusOK, nil, gin.H{
 		"ok":      true,
-		"version": consts.VERSION,
-		"build":   consts.BUILD,
+		"version": common.VERSION,
+		"build":   common.BUILD,
 	})
 }

@@ -23,7 +23,7 @@ type StateStore struct {
 	Backend string `json:"backend" binding:"required"`
 	Scheme  string `json:"scheme" binding:"required"`
 	Path    string `json:"path" binding:"required"`
-	Address string `json:"address" binding:"required"`
+	Address string `json:"address" binding:""` // consul 地址 runner 会自动设置
 }
 
 type RunTaskReq struct {

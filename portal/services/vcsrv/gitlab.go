@@ -69,7 +69,7 @@ func (git *gitlabRepoIface) ListBranches() ([]string, error) {
 	opt := &gitlab.ListBranchesOptions{}
 	branches, _, er := git.gitConn.Branches.ListBranches(git.Project.ID, opt)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		return nil, e.New(e.VcsError, er)
 	}
 	for _, branch := range branches {
 		branchList = append(branchList, branch.Name)
@@ -82,7 +82,7 @@ func (git *gitlabRepoIface) ListTags() ([]string, error) {
 	opt := &gitlab.ListTagsOptions{}
 	tags, _, er := git.gitConn.Tags.ListTags(git.Project.ID, opt)
 	if er != nil {
-		return nil, e.New(e.GitLabError, er)
+		return nil, e.New(e.VcsError, er)
 	}
 	for _, tag := range tags {
 		tagList = append(tagList, tag.Name)
@@ -96,12 +96,12 @@ func (git *gitlabRepoIface) BranchCommitId(branch string) (string, error) {
 	}
 	commits, _, commitErr := git.gitConn.Commits.ListCommits(git.Project.ID, lco)
 	if commitErr != nil {
-		return "nil", e.New(e.GitLabError, commitErr)
+		return "nil", e.New(e.VcsError, commitErr)
 	}
 	if commits != nil {
 		return commits[0].ID, nil
 	}
-	return "", e.New(e.GitLabError, fmt.Errorf("repo %s, commit is null", git.Project.Name))
+	return "", e.New(e.VcsError, fmt.Errorf("repo %s, commit is null", git.Project.Name))
 }
 
 func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) {
@@ -143,7 +143,7 @@ func (git *gitlabRepoIface) ReadFileContent(branch, path string) (content []byte
 	opt := &gitlab.GetRawFileOptions{Ref: gitlab.String(branch)}
 	row, _, errs := git.gitConn.RepositoryFiles.GetRawFile(git.Project.ID, path, opt)
 	if errs != nil {
-		return content, e.New(e.GitLabError, err)
+		return content, e.New(e.VcsError, err)
 	}
 	return row, nil
 }

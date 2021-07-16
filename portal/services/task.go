@@ -33,53 +33,68 @@ func GetTask(dbSess *db.Session, id models.Id) (*models.Task, e.Error) {
 	return &task, nil
 }
 
-func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e.Error) {
+func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models.Task) (*models.Task, e.Error) {
 	logger := logs.Get().WithField("func", "CreateTask")
+
+	var (
+		err      error
+		firstVal = utils.FirstValueStr
+	)
 
 	task := models.Task{
 		// 以下为需要外部传入的属性
-		Name:        p.Name,
-		Type:        p.Type,
-		Flow:        p.Flow,
-		Targets:     p.Targets,
-		CommitId:    p.CommitId,
-		CreatorId:   p.CreatorId,
-		RunnerId:    p.RunnerId,
-		Variables:   p.Variables,
-		StepTimeout: p.StepTimeout,
-		AutoApprove: p.AutoApprove,
+		Name:        pt.Name,
+		Type:        pt.Type,
+		Flow:        pt.Flow,
+		Targets:     pt.Targets,
+		CommitId:    pt.CommitId,
+		CreatorId:   pt.CreatorId,
+		RunnerId:    firstVal(pt.RunnerId, env.RunnerId),
+		Variables:   pt.Variables,
+		StepTimeout: pt.StepTimeout,
+		AutoApprove: pt.AutoApprove,
+		Extra:       pt.Extra,
 
 		OrgId:     env.OrgId,
 		ProjectId: env.ProjectId,
 		TplId:     env.TplId,
 		EnvId:     env.Id,
-		Status:    models.TaskPending,
-		Message:   "",
-		CurrStep:  0,
+		StatePath: env.StatePath,
+
+		RepoAddr:     "",
+		Workdir:      firstVal(tpl.Workdir),
+		Playbook:     firstVal(env.Playbook, tpl.Playbook),
+		TfVarsFile:   firstVal(env.TfVarsFile, tpl.TfVarsFile),
+		PlayVarsFile: firstVal(env.PlayVarsFile, tpl.PlayVarsFile),
+
+		Status:   models.TaskPending,
+		Message:  "",
+		CurrStep: 0,
 	}
 
 	task.Id = models.NewId("run")
-	if task.RunnerId == "" {
-		task.RunnerId = env.RunnerId
-	}
 	logger = logger.WithField("taskId", task.Id)
 
 	if len(task.Flow.Steps) == 0 {
-		var err error
 		task.Flow, err = models.DefaultTaskFlow(task.Type)
 		if err != nil {
 			return nil, e.New(e.InternalError, err)
 		}
 	}
 
-	if _, err := tx.Save(&task); err != nil {
+	task.RepoAddr, err = buildFullRepoAddr(tx, tpl)
+	if err != nil {
+		return nil, e.New(e.InternalError, err)
+	}
+
+	if _, err = tx.Save(&task); err != nil {
 		return nil, e.New(e.DBError, errors.Wrapf(err, "save task"))
 	}
 
 	flowSteps := make([]models.TaskStepBody, 0, len(task.Flow.Steps))
 	for i := range task.Flow.Steps {
 		step := task.Flow.Steps[i]
-		if step.Type == models.TaskStepPlay && env.Playbook == "" {
+		if step.Type == models.TaskStepPlay && task.Playbook == "" {
 			logger.WithField("step", fmt.Sprintf("%d(%s)", i, step.Type)).
 				Infof("not have playbook, skip this step")
 			continue
@@ -91,8 +106,10 @@ func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e
 		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps"))
 	}
 
-	taskSteps := make([]*models.TaskStep, 0)
-	for i, step := range flowSteps {
+	var preStep *models.TaskStep
+	for i := len(flowSteps) - 1; i >= 0; i-- { // 倒序保存 steps，以便于设置 step.NextStep
+		step := flowSteps[i]
+
 		if len(task.Targets) != 0 && IsTerraformStep(step.Type) {
 			if step.Type != models.TaskStepInit {
 				for _, t := range task.Targets {
@@ -102,24 +119,53 @@ func CreateTask(tx *db.Session, env *models.Env, p models.Task) (*models.Task, e
 			// TODO: tfVars, playVars 也以这种方式传入？
 		}
 
-		taskStep, er := createTaskStep(tx, task, step, i)
+		nextStepId := models.Id("")
+		if preStep != nil {
+			nextStepId = preStep.Id
+		}
+		var er e.Error
+		preStep, er = createTaskStep(tx, task, step, i, nextStepId)
 		if er != nil {
 			return nil, e.New(er.Code(), errors.Wrapf(er, "save task step"))
-		}
-		taskSteps = append(taskSteps, taskStep)
-	}
-
-	for i := range taskSteps {
-		step := taskSteps[i]
-		if i < len(taskSteps)-1 {
-			step.NextStep = taskSteps[i+1].Id
-		}
-		if _, err := tx.Model(&models.TaskStep{}).Update(step); err != nil {
-			return nil, e.New(e.DBError, err)
 		}
 	}
 
 	return &task, nil
+}
+
+func buildFullRepoAddr(tx *db.Session, tpl *models.Template) (string, error) {
+	var (
+		u         *url.URL
+		err       error
+		repoAddr  = tpl.RepoAddr
+		repoToken = tpl.RepoToken
+	)
+
+	if (repoToken == "" || !strings.Contains("://", repoAddr)) && tpl.VcsId != "" {
+		var vcs *models.Vcs
+		if vcs, err = QueryVcsByVcsId(tpl.VcsId, tx); err != nil {
+			if e.IsRecordNotFound(err) {
+				return "", e.New(e.VcsNotExists, err)
+			}
+			return "", e.New(e.DBError, err)
+		}
+		// 模板里保存的是路径，需要与 vcs.Address 组合成 URL
+		if !strings.Contains("://", repoAddr) {
+			repoAddr = utils.JoinURL(vcs.Address, tpl.RepoAddr)
+		}
+		// 模板没有保存 token，使用 vcs 的 token
+		if repoToken == "" {
+			repoToken = vcs.VcsToken
+		}
+	}
+
+	u, err = url.Parse(repoAddr)
+	if err != nil {
+		return "", e.New(e.InternalError, errors.Wrapf(err, "parse url: %v", repoAddr))
+	} else if repoToken != "" {
+		u.User = url.UserPassword("token", repoToken)
+	}
+	return u.String(), nil
 }
 
 func GetTaskById(tx *db.Session, id models.Id) (*models.Task, e.Error) {
@@ -375,11 +421,17 @@ func FetchTaskLog(ctx context.Context, task *models.Task, writer io.WriteCloser)
 	defer ticker.Stop()
 
 	for _, step := range steps {
-		for !step.IsStarted() {
+		// 任务有可能未开始执行步骤就退出了，所以需要先判断任务是否退出
+		for !task.Exited() && !step.IsStarted() {
 			select {
 			case <-ctx.Done():
 				return nil
 			case <-ticker.C:
+				task, err = GetTask(db.Get(), task.Id)
+				if err != nil {
+					return errors.Wrapf(err, "get task '%s'", task.Id)
+				}
+
 				step, err = GetTaskStep(db.Get(), task.Id, step.Index)
 				if err != nil {
 					return errors.Wrapf(err, "get task step %d", step.Index)

@@ -10,7 +10,7 @@ import (
 	"crypto/md5"
 	crand "crypto/rand"
 	"database/sql/driver"
-	"encoding/hex"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,17 +29,22 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/rs/xid"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
 const letterAndDigit = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 var (
-	commonKey = []byte("monitorSecretKey")
+	secretKey []byte
 )
 
 func init() {
+	sk := os.Getenv("CLOUDIAC_SECRET_KEY")
+	if sk == "" {
+		sk = "6xGzLKiX4dl0UE6aVuBGCmRWL7cQ+90W"
+	}
+	secretKey = []byte(sk)
+
 	n, _ := crand.Int(crand.Reader, big.NewInt(math.MaxInt64))
 	if n == nil {
 		n = big.NewInt(time.Now().UnixNano())
@@ -191,6 +196,10 @@ func (t *JSONTime) Scan(v interface{}) error {
 	return nil
 }
 
+func (t JSONTime) Unix() int64 {
+	return time.Time(t).Unix()
+}
+
 func FileExist(p string) bool {
 	_, err := os.Stat(p)
 	if err != nil {
@@ -291,7 +300,7 @@ func CheckRespCode(respCode int, code int) bool {
 }
 
 func AesEncrypt(plaintext string) (string, error) {
-	block, err := aes.NewCipher(commonKey)
+	block, err := aes.NewCipher(secretKey)
 	if err != nil {
 		return "", err
 	}
@@ -302,29 +311,25 @@ func AesEncrypt(plaintext string) (string, error) {
 	}
 	cipher.NewCFBEncrypter(block, iv).XORKeyStream(ciphertext[aes.BlockSize:],
 		[]byte(plaintext))
-	return hex.EncodeToString(ciphertext), nil
+	return base64.RawURLEncoding.EncodeToString(ciphertext), nil
 }
 
-func AesDecrypt(d string) string {
-	ciphertext, err := hex.DecodeString(d)
-	logger := logrus.WithField("func", "AesDecrypt")
+func AesDecrypt(d string) (string, error) {
+	ciphertext, err := base64.RawURLEncoding.DecodeString(d)
 	if err != nil {
-		logger.Errorln(err)
-		return ""
+		return "", err
 	}
-	block, err := aes.NewCipher(commonKey)
+	block, err := aes.NewCipher(secretKey)
 	if err != nil {
-		logger.Errorln(err)
-		return ""
+		return "", err
 	}
 	if len(ciphertext) < aes.BlockSize {
-		logger.Errorln(errors.New("cipher text too short"))
-		return ""
+		return "", errors.New("cipher text too short")
 	}
 	iv := ciphertext[:aes.BlockSize]
 	ciphertext = ciphertext[aes.BlockSize:]
 	cipher.NewCFBDecrypter(block, iv).XORKeyStream(ciphertext, ciphertext)
-	return string(ciphertext)
+	return string(ciphertext), nil
 }
 
 func MustJSON(v interface{}) []byte {
@@ -533,4 +538,14 @@ func GetUUID() (string, error) {
 		return "", err
 	}
 	return u2.String(), nil
+}
+
+// FirstValueStr 获取参数列表中第一个非空的字符串
+func FirstValueStr(ss ...string) string {
+	for _, s := range ss {
+		if s != "" {
+			return s
+		}
+	}
+	return ""
 }

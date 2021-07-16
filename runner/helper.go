@@ -58,7 +58,7 @@ func GetTaskStepDirName(step int) string {
 }
 
 func FetchTaskStepLog(envId string, taskId string, step int) ([]byte, error) {
-	path := filepath.Join(GetTaskStepDir(envId, taskId, step), TaskLogName)
+	path := filepath.Join(GetTaskStepDir(envId, taskId, step), TaskStepLogName)
 	return ioutil.ReadFile(path)
 }
 

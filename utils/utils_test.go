@@ -53,3 +53,16 @@ func TestFileExists(t *testing.T) {
 	}
 }
 
+func TestAesEncrypt(t *testing.T) {
+	text := "xxx"
+	ss, err := AesEncrypt(text)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(ss)
+	ds, err := AesDecrypt(ss)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, text, ds)
+}

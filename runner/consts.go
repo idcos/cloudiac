@@ -28,9 +28,9 @@ const (
 )
 
 const (
-	TaskScriptName   = "run.sh"
-	TaskLogName      = "output.log"
-	TaskInfoFileName = "task.json"
+	TaskStepScriptName   = "run.sh"
+	TaskStepLogName      = "output.log"
+	TaskStepInfoFileName = "info.json"
 
 	CloudIacTfFile   = "_cloudiac.tf"
 	CloudIacTfVars   = "_cloudiac.tfvars"

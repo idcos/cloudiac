@@ -91,6 +91,19 @@ func Register(g *gin.RouterGroup) {
 	ctrl.Register(g.Group("variables", ac()), &handlers.Variable{})
 	//token管理
 	ctrl.Register(g.Group("tokens", ac()), &handlers.Token{})
+	//密钥管理
+	ctrl.Register(g.Group("keys", ac()), &handlers.Key{})
+
+	ctrl.Register(g.Group("vcs", ac()), &handlers.Vcs{})
+	g.GET("/vcs/:id/repo", ac(), w(handlers.Vcs{}.ListRepos))
+	g.GET("/vcs/:id/branch", ac(), w(handlers.Vcs{}.ListBranches))
+	g.GET("/vcs/:id/tag", ac(), w(handlers.Vcs{}.ListTags))
+	g.GET("/vcs/:id/readme", ac(), w(handlers.Vcs{}.GetReadmeContent))
+	ctrl.Register(g.Group("templates", ac()), &handlers.Template{})
+	g.GET("/templates/tfvars", ac(), w(handlers.TemplateTfvarsSearch))
+	g.GET("/templates/variable", ac(), w(handlers.TemplateVariableSearch))
+	g.GET("/templates/playbook", ac(), w(handlers.TemplatePlaybookSearch))
+
 	// 项目资源
 	// TODO: parse project header
 	g.Use(w(middleware.AuthProjectId))
@@ -110,17 +123,6 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/tasks/:id/output", ac(), w(handlers.Task{}.Output))
 	g.POST("/tasks/:id/approve", ac("tasks", "approve"), w(handlers.Task{}.TaskApprove))
 
-	ctrl.Register(g.Group("templates", ac()), &handlers.Template{})
-	g.GET("/templates/tfvars", ac(), w(handlers.TemplateTfvarsSearch))
-	g.GET("/templates/variable", ac(), w(handlers.TemplateVariableSearch))
-	g.GET("/templates/playbook", ac(), w(handlers.TemplatePlaybookSearch))
-
-	ctrl.Register(g.Group("vcs", ac()), &handlers.Vcs{})
-	g.GET("/vcs/repo", ac(), w(handlers.Vcs{}.ListRepos))
-	g.GET("/vcs/branch", ac(), w(handlers.Vcs{}.ListBranches))
-	g.GET("/vcs/tag", ac(), w(handlers.Vcs{}.ListTags))
-	g.GET("/vcs/readme", ac(), w(handlers.Vcs{}.GetReadmeContent))
-
-	ctrl.Register(g.Group("notification", ac()), &handlers.Notification{})
+	ctrl.Register(g.Group("notifications", ac()), &handlers.Notification{})
 	ctrl.Register(g.Group("resource/account", ac()), &handlers.ResourceAccount{})
 }

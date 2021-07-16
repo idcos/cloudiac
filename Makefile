@@ -11,7 +11,7 @@ VERSION=$(shell cat VERSION)
 DATE_VER=$(shell date "+%Y%m%d")
 COMMIT=$(shell git rev-parse --short HEAD)
 
-GOLDFLAGS="-X cloudiac/consts.VERSION=$(VERSION) -X cloudiac/consts.BUILD=$(COMMIT)"
+GOLDFLAGS="-X cloudiac/common.VERSION=$(VERSION) -X cloudiac/common.BUILD=$(COMMIT)"
 GOBUILD=$(GOCMD) build -v -ldflags $(GOLDFLAGS)
 GORUN=$(GOCMD) run -v -ldflags $(GOLDFLAGS)
 PB_PROTOC=protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative

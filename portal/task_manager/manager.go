@@ -15,10 +15,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
-	"net/url"
 	"os"
 	"runtime/debug"
-	"strings"
 	"sync"
 	"time"
 )
@@ -295,7 +293,7 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 		}
 	}
 
-	runTaskReq, err := buildRunTaskReq(m.db, *task)
+	runTaskReq, err := buildRunTaskReq(*task)
 	if err != nil {
 		taskFailed(err)
 		return
@@ -486,43 +484,25 @@ func (m *TaskManager) stop() {
 
 // buildRunTaskReq 基于任务信息构建一个 RunTaskReq 对象。
 // 	注意这里不会设置 step 相关的数据，step 相关字段在 StartTaskStep() 方法中设置
-func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunTaskReq, err error) {
+func buildRunTaskReq(task models.Task) (taskReq *runner.RunTaskReq, err error) {
 	var (
-		env        *models.Env
-		tpl        *models.Template
+		//env        *models.Env
 		privateKey []byte
 	)
 
-	env, err = services.GetEnv(dbSess, task.EnvId)
-	if err != nil {
-		return nil, errors.Wrapf(err, "get env %v", task.EnvId)
-	}
-
-	tpl, err = services.GetTemplate(dbSess, env.TplId)
-	if err != nil {
-		return nil, errors.Wrapf(err, "get template %v", env.TplId)
-	}
-
 	runnerEnv := runner.TaskEnv{
-		Id:              string(env.Id),
-		Workdir:         tpl.Workdir,
-		TfVarsFile:      tpl.TfVarsFile,
-		Playbook:        tpl.Playbook,
-		PlayVarsFile:    env.PlayVarsFile,
+		Id:              string(task.EnvId),
+		Workdir:         task.Workdir,
+		TfVarsFile:      task.TfVarsFile,
+		Playbook:        task.Playbook,
+		PlayVarsFile:    task.PlayVarsFile,
 		EnvironmentVars: make(map[string]string),
 		TerraformVars:   make(map[string]string),
 		AnsibleVars:     make(map[string]string),
 	}
 
-	getVarValue := func(v models.VariableBody) string {
-		if v.Sensitive {
-			return utils.AesDecrypt(v.Value)
-		}
-		return v.Value
-	}
-
 	for _, v := range task.Variables {
-		value := getVarValue(v)
+		value := utils.EncodeSecretVar(v.Value, v.Sensitive)
 		switch v.Type {
 		case consts.VarTypeEnv:
 			runnerEnv.EnvironmentVars[v.Name] = value
@@ -535,18 +515,11 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		}
 	}
 
-	if env.TfVarsFile != "" {
-		runnerEnv.TfVarsFile = env.TfVarsFile
-	}
-	if env.PlayVarsFile != "" {
-		runnerEnv.PlayVarsFile = env.PlayVarsFile
-	}
-
 	stateStore := runner.StateStore{
 		Backend: "consul",
 		Scheme:  "http",
-		Path:    env.StatePath,
-		Address: configs.Get().Consul.Address,
+		Path:    task.StatePath,
+		Address: "",
 	}
 
 	privateKey, err = sshkey.LoadPrivateKeyPem()
@@ -554,50 +527,21 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		return nil, errors.Wrapf(err, "load private key")
 	}
 
-	var (
-		repoAddr     = tpl.RepoAddr
-		repoToken    = tpl.RepoToken
-		repoRevision = task.CommitId
-	)
-
-	if repoRevision == "" {
-		repoRevision = tpl.RepoRevision
-	}
-
-	if (repoToken == "" || !strings.Contains("://", repoAddr)) && tpl.VcsId != "" {
-		var vcs *models.Vcs
-		if vcs, err = services.QueryVcsByVcsId(tpl.VcsId, dbSess); err != nil {
-			return nil, errors.Wrapf(err, "get vcs %s", tpl.VcsId)
-		}
-
-		// 模板里保存的是路径，需要与 vcs.Address 组合成 URL
-		if !strings.Contains("://", repoAddr) {
-			repoAddr = utils.JoinURL(vcs.Address, tpl.RepoAddr)
-		}
-
-		// 模板没有保存 token，使用 vcs 的 token
-		if repoToken == "" {
-			repoToken = vcs.VcsToken
-		}
-	}
-
-	if u, err := url.Parse(repoAddr); err != nil {
-		return nil, errors.Wrapf(err, "parse url: %v", repoAddr)
-	} else if repoToken != "" {
-		u.User = url.UserPassword("token", repoToken)
-		repoAddr = u.String()
+	pk, err := utils.AesEncrypt(string(privateKey))
+	if err != nil {
+		return nil, errors.Wrap(err, "encrypt private key")
 	}
 
 	taskReq = &runner.RunTaskReq{
 		Env:          runnerEnv,
-		RunnerId:     env.RunnerId,
+		RunnerId:     task.RunnerId,
 		TaskId:       string(task.Id),
 		DockerImage:  "",
 		StateStore:   stateStore,
-		RepoAddress:  repoAddr,
-		RepoRevision: tpl.RepoRevision,
-		Timeout:      env.Timeout,
-		PrivateKey:   string(privateKey),
+		RepoAddress:  task.RepoAddr,
+		RepoRevision: task.CommitId,
+		Timeout:      task.StepTimeout,
+		PrivateKey:   utils.EncodeSecretVar(pk, true),
 	}
 	return taskReq, nil
 }

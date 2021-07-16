@@ -3,9 +3,9 @@ package models
 import "cloudiac/portal/libs/db"
 
 type ProjectTemplate struct {
-	BaseModel
-	ProjectId  Id     `json:"projectId" gorm:"not null"`
-	TemplateId string `json:"templateId" gorm:"not null"`
+	AutoUintIdModel
+	ProjectId  Id `json:"projectId" gorm:"not null"`
+	TemplateId Id `json:"templateId" gorm:"not null"`
 }
 
 func (ProjectTemplate) TableName() string {

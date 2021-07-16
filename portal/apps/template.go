@@ -7,19 +7,20 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"cloudiac/utils"
 	"fmt"
 	"net/http"
 )
 
 type SearchTemplateResp struct {
-	Id                uint   `json:"id"`
-	Name              string `json:"name"`
-	Description       string `json:"description"`
-	ActiveEnvironment int    `json:"activeEnvironment"`
-	VcsType           string `json:"vcsType"`
-	RepoRevision      string `json:"repoRevision"`
-	UserName          string `json:"userName"`
-	CreateTime        string `json:"createTime"`
+	CreatedAt         utils.JSONTime `json:"createdAt"` // 创建时间
+	UpdatedAt         utils.JSONTime `json:"updatedAt"` // 更新时间
+	Id                models.Id      `json:"id"`
+	Name              string         `json:"name"`
+	Description       string         `json:"description"`
+	ActiveEnvironment int            `json:"activeEnvironment"`
+	RepoRevision      string         `json:"repoRevision"`
+	Creator           string         `json:"creator"`
 }
 
 func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.Template, e.Error) {
@@ -33,37 +34,43 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 		}
 	}()
 
-	template, err := func() (*models.Template, e.Error) {
-		var (
-			template *models.Template
-			err      e.Error
-		)
-		tpl := models.Template{
-			Name:         form.Name,
-			TplType:      form.TplType,
-			OrgId:        c.OrgId,
-			Description:  form.Description,
-			VcsId:        form.VcsId,
-			RepoId:       form.RepoId,
-			RepoAddr:     form.RepoAddr,
-			RepoRevision: form.RepoRevision,
-			CreatorId:    c.UserId,
-			Workdir:      form.Workdir,
-			Playbook:     form.Playbook,
-			PlayVarsFile: form.PlayVarsFile,
-			TfVarsFile:   form.TfVarsFile,
-		}
-		template, err = services.CreateTemplate(tx, tpl)
-		if err != nil {
-			return nil, err
-		}
-
-		return template, nil
-	}()
+	template, err := services.CreateTemplate(tx, models.Template{
+		Name:         form.Name,
+		TplType:      form.TplType,
+		OrgId:        c.OrgId,
+		Description:  form.Description,
+		VcsId:        form.VcsId,
+		RepoId:       form.RepoId,
+		RepoAddr:     form.RepoAddr,
+		RepoRevision: form.RepoRevision,
+		CreatorId:    c.UserId,
+		Workdir:      form.Workdir,
+		Playbook:     form.Playbook,
+		PlayVarsFile: form.PlayVarsFile,
+		TfVarsFile:   form.TfVarsFile,
+	})
 
 	if err != nil {
 		_ = tx.Rollback()
+		c.Logger().Errorf("error create template, err %s", err)
+		if err.Code() == e.TemplateAlreadyExists {
+			return nil, e.New(err.Code(), err.Err(), http.StatusBadRequest)
+		}
 		return nil, err
+	}
+
+	// 创建模板与项目的关系
+	if err := services.CreateTemplateProject(tx, form.ProjectId, template.Id); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	// 创建变量
+	if err := services.OperationVariables(tx, c.OrgId, c.ProjectId,
+		template.Id, "", form.Variables, form.DeleteVariablesId); err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error operation variables, err %s", err)
+		return nil, e.New(e.DBError, err)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -78,13 +85,13 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.Template, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update template %s", form.Id))
 
-	tpl, err := services.GetTemplate(c.DB(), form.Id)
+	tpl, err := services.GetTemplateById(c.DB(), form.Id)
 	if err != nil {
 		return nil, e.New(e.DBError, err, e.TemplateNotExists)
 	}
 	// 根据云模板ID, 组织ID查询该云模板是否属于该组织
 	if tpl.OrgId != c.OrgId {
-		return nil, e.New(e.TemplateNotExists, http.StatusForbidden, fmt.Errorf("The organization does not have permission to delete the current template"))
+		return nil, e.New(e.TemplateNotExists, http.StatusForbidden, fmt.Errorf("the organization does not have permission to delete the current template"))
 	}
 	attrs := models.Attrs{}
 	if form.HasKey("name") {
@@ -117,7 +124,7 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 	return services.UpdateTemplate(c.DB(), form.Id, attrs)
 }
 
-func DelateTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interface{}, e.Error) {
+func DeleteTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("delete template %s", form.Id))
 	tx := c.Tx()
 	defer func() {
@@ -178,14 +185,14 @@ func TemplateDetail(c *ctx.ServiceCtx, form *forms.DetailTemplateForm) (*models.
 }
 
 func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (tpl interface{}, err e.Error) {
-	tplIdList := make([]string, 0)
+	tplIdList := make([]models.Id, 0)
 	if c.ProjectId != "" {
 		tplIdList, err = services.QueryTplByProjectId(c.DB(), c.ProjectId)
 		if err != nil {
 			return nil, err
 		}
 	}
-	query, _ := services.QueryTemplate(c.DB().Debug(), form.Q, c.OrgId, tplIdList)
+	query := services.QueryTemplateByOrgId(c.DB().Debug(), form.Q, c.OrgId, tplIdList)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	templates := make([]*SearchTemplateResp, 0)
 	if err := p.Scan(&templates); err != nil {

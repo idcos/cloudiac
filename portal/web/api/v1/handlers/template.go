@@ -19,7 +19,7 @@ type Template struct {
 // @Security AuthToken
 // @Produce json
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param form formData forms.CreateTemplateForm true "parameter"
+// @Param form body forms.CreateTemplateForm true "parameter"
 // @Router /templates [post]
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
 func (Template) Create(c *ctx.GinRequestCtx) {
@@ -60,7 +60,7 @@ func (Template) Search(c *ctx.GinRequestCtx) {
 // @Accept  json
 // @Produce  json
 // @Param templateId path string true "云模板ID"
-// @Param data formData forms.UpdateTemplateForm true "云模板信息"
+// @Param data body forms.UpdateTemplateForm true "云模板信息"
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
 // @Router /templates/{templateId} [put]
 func (Template) Update(c *ctx.GinRequestCtx) {
@@ -82,14 +82,14 @@ func (Template) Update(c *ctx.GinRequestCtx) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param form query forms.DeleteTemplateForm true "parameter"
 // @Param templateId path string true "云模板ID"
-// @Router /template/{templateId} [delete]
+// @Router /templates/{templateId} [delete]
 // @Success 200 {object} ctx.JSONResult
 func (Template) Delete(c *ctx.GinRequestCtx) {
 	form := forms.DeleteTemplateForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DelateTemplate(c.ServiceCtx(), &form))
+	c.JSONResult(apps.DeleteTemplate(c.ServiceCtx(), &form))
 }
 
 // Detail 模板详情
@@ -102,7 +102,7 @@ func (Template) Delete(c *ctx.GinRequestCtx) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param templateId path string true "云模板ID"
 // @Param form query forms.DetailTemplateForm true "parameter"
-// @Router /template/{templateId} [get]
+// @Router /templates/{templateId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
 func (Template) Detail(c *ctx.GinRequestCtx) {
 	form := forms.DetailTemplateForm{}

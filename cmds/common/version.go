@@ -1,7 +1,7 @@
 package common
 
 import (
-	"cloudiac/portal/consts"
+	"cloudiac/common"
 	"fmt"
 	"os"
 )
@@ -12,7 +12,7 @@ type OptionVersion struct {
 
 func ShowVersionIf(show bool) {
 	if show {
-		fmt.Printf("version: %s build: %s\n", consts.VERSION, consts.BUILD)
+		fmt.Printf("version: %s build: %s\n", common.VERSION, common.BUILD)
 		os.Exit(0)
 	}
 }
@@ -21,6 +21,6 @@ type VersionCommand struct {
 }
 
 func (VersionCommand) Execute([]string) error {
-	fmt.Printf("version: %s build: %s\n", consts.VERSION, consts.BUILD)
+	fmt.Printf("version: %s build: %s\n", common.VERSION, common.BUILD)
 	return nil
 }

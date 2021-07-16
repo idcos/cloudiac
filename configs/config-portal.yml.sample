@@ -7,7 +7,7 @@ portal:
   ssh_public_key: "var/private_key.pub"
 
 consul:
-  address: "${CONSUL_ADDR}"
+  address: "${CONSUL_ADDRESS}"
   id: "${SERVICE_ID}"
   ip: "${SERVICE_IP}"
   tags: "${SERVICE_TAGS}"
