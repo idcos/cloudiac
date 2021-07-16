@@ -7,7 +7,6 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
-	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
@@ -42,28 +41,6 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 	}
 	if form.Timeout == 0 {
 		form.Timeout = common.TaskStepTimeoutDuration
-	}
-
-	// 获取最新 commit id
-	vcs, err := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
-	if err != nil {
-		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
-	}
-	vcsService, er := vcsrv.GetVcsInstance(vcs)
-	if er != nil {
-		return nil, e.New(e.VcsError, er, http.StatusInternalServerError)
-	}
-	repo, er := vcsService.GetRepo(tpl.RepoId)
-	if er != nil {
-		return nil, e.New(e.VcsError, er, http.StatusInternalServerError)
-	}
-	revision := tpl.RepoRevision
-	if form.Revision != "" {
-		revision = form.Revision
-	}
-	commitId, er := repo.BranchCommitId(revision)
-	if er != nil {
-		return nil, e.New(e.VcsError, er, http.StatusInternalServerError)
 	}
 
 	tx := c.Tx()
@@ -117,7 +94,6 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		Type:        form.TaskType,
 		Flow:        models.TaskFlow{},
 		Targets:     strings.Split(form.Targets, ","),
-		CommitId:    commitId,
 		CreatorId:   c.UserId,
 		KeyId:       env.KeyId,
 		RunnerId:    env.RunnerId,
@@ -325,28 +301,6 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		form.Playbook = tpl.Playbook
 	}
 
-	// 获取最新 commit id
-	vcs, err := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
-	if err != nil {
-		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
-	}
-	vcsService, er := vcsrv.GetVcsInstance(vcs)
-	if er != nil {
-		return nil, e.New(e.VcsError, er, http.StatusInternalServerError)
-	}
-	repo, er := vcsService.GetRepo(tpl.RepoId)
-	if er != nil {
-		return nil, e.New(e.VcsError, er, http.StatusInternalServerError)
-	}
-	revision := tpl.RepoRevision
-	if form.Revision != "" {
-		revision = form.Revision
-	}
-	commitId, er := repo.BranchCommitId(revision)
-	if er != nil {
-		return nil, e.New(e.VcsError, er, http.StatusInternalServerError)
-	}
-
 	// 变量
 	// TODO: 检查、保存、合并环境变量
 	//vars := form.Variables
@@ -391,7 +345,6 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		Type:        form.TaskType,
 		Flow:        models.TaskFlow{},
 		Targets:     strings.Split(form.Targets, ","),
-		CommitId:    commitId,
 		CreatorId:   c.UserId,
 		KeyId:       env.KeyId,
 		RunnerId:    env.RunnerId,
@@ -405,7 +358,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
-	if _, er = tx.Save(env); er != nil {
+	if _, err := tx.Save(env); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error save env, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
