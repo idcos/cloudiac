@@ -54,20 +54,6 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/consul/kv/search", ac(), w(handlers.ConsulKVSearch))
 	g.GET("/system/status/search", ac(), w(handlers.PortalSystemStatusSearch))
 
-	g.Any("/orgs/:id/:name", w(func(c *ctx.GinRequestCtx) {
-		if c.ServiceCtx().OrgId != "" && c.ServiceCtx().OrgId.String() != c.Param("id") {
-			c.JSONError(e.New(e.BadParam, fmt.Errorf("invalid org id param/header")), http.StatusBadRequest)
-			return
-		}
-	}))
-
-	g.Any("/projects/:id/:name", w(func(c *ctx.GinRequestCtx) {
-		if c.ServiceCtx().ProjectId != "" && c.ServiceCtx().ProjectId.String() != c.Param("id") {
-			c.JSONError(e.New(e.BadParam, fmt.Errorf("invalid project id param/header")), http.StatusBadRequest)
-			return
-		}
-	}))
-
 	ctrl.Register(g.Group("orgs", ac()), &handlers.Organization{})
 	g.PUT("/orgs/:id/status", ac(), w(handlers.Organization{}.ChangeOrgStatus))
 	ctrl.Register(g.Group("users", ac()), &handlers.User{})
