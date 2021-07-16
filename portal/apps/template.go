@@ -52,6 +52,9 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 	if err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error create template, err %s", err)
+		if err.Code() == e.TemplateAlreadyExists {
+			return nil, e.New(err.Code(), err.Err(), http.StatusBadRequest)
+		}
 		return nil, err
 	}
 
@@ -62,7 +65,8 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 	}
 
 	// 创建变量
-	if err := services.OperationVariables(tx, c.OrgId, c.ProjectId, template.Id, "", form.Variables); err != nil {
+	if err := services.OperationVariables(tx, c.OrgId, c.ProjectId,
+		template.Id, "", form.Variables, form.DeleteVariablesId); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error operation variables, err %s", err)
 		return nil, e.New(e.DBError, err)
