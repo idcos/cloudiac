@@ -101,8 +101,6 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/tasks/:id/output", ac(), w(handlers.Task{}.Output))
 	g.POST("/tasks/:id/approve", ac("tasks", "approve"), w(handlers.Task{}.TaskApprove))
 
-
-
-	ctrl.Register(g.Group("notification", ac()), &handlers.Notification{})
+	ctrl.Register(g.Group("notifications", ac()), &handlers.Notification{})
 	ctrl.Register(g.Group("resource/account", ac()), &handlers.ResourceAccount{})
 }
