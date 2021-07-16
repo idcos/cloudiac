@@ -45,8 +45,8 @@ func (Notification) Create(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.CreateNotificationCfg(c.ServiceCtx(), form))
 }
 
-// Delete 删除Token账号
-// @Summary 删除Token账号
+// Delete 删除通知信息
+// @Summary 删除通知信息
 // @Description 删除Token账号
 // @Tags Token
 // @Accept  json

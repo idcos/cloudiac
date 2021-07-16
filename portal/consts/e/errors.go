@@ -128,7 +128,7 @@ const (
 	ProjectIdInvalid      = 10014
 
 	// vcs
-	VcsError = 9100
+	VcsError     = 9100
 	VcsNotExists = 9200
 
 	// task
@@ -374,5 +374,8 @@ var errorMsgs = map[int]map[string]string{
 	},
 	TaskNotHaveStep: {
 		"zh-cn": "任务无步骤",
+	},
+	TemplateAlreadyExists: {
+		"zh-cn": "模板名称重复",
 	},
 }

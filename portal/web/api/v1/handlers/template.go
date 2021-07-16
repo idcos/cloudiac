@@ -89,7 +89,7 @@ func (Template) Delete(c *ctx.GinRequestCtx) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DelateTemplate(c.ServiceCtx(), &form))
+	c.JSONResult(apps.DeleteTemplate(c.ServiceCtx(), &form))
 }
 
 // Detail 模板详情
