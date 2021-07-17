@@ -17,7 +17,6 @@ type CreateTemplateForm struct {
 	Name              string      `form:"name" json:"name" binding:"required,gte=2,lte=32"`
 	Description       string      `form:"description" json:"description" binding:""`
 	RepoId            string      `form:"repoId" json:"repoId" binding:"required"`
-	RepoAddr          string      `form:"repoAddr" json:"repoAddr" binding:"required"`
 	RepoRevision      string      `form:"repoRevision" json:"repoRevision" binding:""`
 	Extra             string      `form:"extra" json:"extra"`
 	Workdir           string      `form:"workdir" json:"workdir"`
@@ -51,6 +50,9 @@ type UpdateTemplateForm struct {
 	Variables         []Variables `json:"variables" form:"variables" `
 	DeleteVariablesId []string    `json:"deleteVariablesId" form:"deleteVariablesId" ` //变量id
 	ProjectId         []models.Id `form:"projectId" json:"projectId"`
+	RepoRevision      string      `form:"repoRevision" json:"repoRevision" binding:""`
+	VcsId             models.Id   `form:"vcsId" json:"vcsId" binding:""`
+	RepoId            string      `form:"repoId" json:"repoId" binding:""`
 }
 
 type DeleteTemplateForm struct {
@@ -76,10 +78,10 @@ type OverviewTemplateForm struct {
 
 type TemplateTfvarsSearchForm struct {
 	BaseForm
-	RepoId       string    `json:"repoId" form:"repoId" binding:"required"`
+	RepoId       string    `uri:"repoId" json:"repoId" form:"repoId"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
 	RepoType     string    `json:"repoType" form:"repoType" `
-	VcsId        models.Id `json:"vcsId" form:"vcsId" binding:"required"`
+	VcsId        models.Id `uri:"vcsId" json:"vcsId" form:"vcsId"`
 }
 
 type TemplateVariableSearchForm struct {
@@ -92,8 +94,8 @@ type TemplateVariableSearchForm struct {
 
 type TemplatePlaybookSearchForm struct {
 	BaseForm
-	RepoId       string    `json:"repoId" form:"repoId" binding:"required"`
+	RepoId       string    `uri:"repoId" json:"repoId" form:"repoId"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
 	RepoType     string    `json:"repoType" form:"repoType" `
-	VcsId        models.Id `json:"vcsId" form:"vcsId" binding:"required"`
+	VcsId        models.Id `uri:"vcsId" json:"vcsId" form:"vcsId"`
 }

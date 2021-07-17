@@ -3,12 +3,15 @@ package apps
 import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"fmt"
+	"github.com/pkg/errors"
 	"net/http"
 )
 
@@ -26,8 +29,28 @@ type SearchTemplateResp struct {
 	RepoAddr          string         `json:"repoAddr"`
 }
 
+func getRepoAddr(vcsId models.Id, query *db.Session, repoId string) (string, error) {
+	vcs, err := services.QueryVcsByVcsId(vcsId, query)
+	vcsIface, er := vcsrv.GetVcsInstance(vcs)
+	if er != nil {
+		return "", er
+	}
+	repo, er := vcsIface.GetRepo(repoId)
+	repoAddr, er := vcsrv.GetRepoAddress(repo)
+
+	if err != nil {
+		return "", err
+	}
+	return repoAddr, nil
+}
+
 func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.Template, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create template %s", form.Name))
+
+	repoAddr, er := getRepoAddr(form.VcsId, c.DB(), form.RepoId)
+	if er != nil {
+		return nil, e.New(e.DBError, errors.Wrapf(er, "get repo failed: %v", form.RepoId))
+	}
 
 	tx := c.Tx().Debug()
 	defer func() {
@@ -36,14 +59,13 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 			panic(r)
 		}
 	}()
-
 	template, err := services.CreateTemplate(tx, models.Template{
 		Name:         form.Name,
 		OrgId:        c.OrgId,
 		Description:  form.Description,
 		VcsId:        form.VcsId,
 		RepoId:       form.RepoId,
-		RepoAddr:     form.RepoAddr,
+		RepoAddr:     repoAddr,
 		RepoRevision: form.RepoRevision,
 		CreatorId:    c.UserId,
 		Workdir:      form.Workdir,
@@ -117,6 +139,16 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 	}
 	if form.HasKey("playVarsFile") {
 		attrs["playVarsFile"] = form.PlayVarsFile
+	}
+	if form.HasKey("repoRevision") {
+		attrs["repoRevision"] = form.RepoRevision
+	}
+	if form.HasKey("vcsId") && form.HasKey("repoId") {
+		repoAddr, er := getRepoAddr(form.VcsId, c.DB(), form.RepoId)
+		if er != nil {
+			return nil, e.New(e.DBError, errors.Wrapf(er, "get repo failed: %v", form.RepoId))
+		}
+		attrs["repoAddr"] = repoAddr
 	}
 	tx := c.Tx()
 	defer func() {
