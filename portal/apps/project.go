@@ -189,25 +189,28 @@ func DetailProject(c *ctx.ServiceCtx, form *forms.DetailProjectForm) (interface{
 	}()
 	//校验用户是否在该项目下有权限
 	isExist := IsUserOrgProjectPermission(tx, c.UserId, form.Id, consts.ProjectRoleManager)
-
 	if !isExist {
 		return nil, e.New(e.ObjectNotExistsOrNoPerm, http.StatusForbidden, errors.New("not permission"))
 	}
 	projectUser, err := services.SearchProjectUsers(tx, form.Id)
 	if err != nil {
+		_ = tx.Rollback()
 		return nil, e.New(e.DBError, err)
 	}
 	project, err := services.DetailProject(tx, form.Id)
 	if err != nil {
+		_ = tx.Rollback()
 		return nil, e.New(e.DBError, err)
 	}
 
 	tplCount, er := services.StatisticalProjectTpl(tx, form.Id)
 	if er != nil {
+		_ = tx.Rollback()
 		return nil, e.New(e.DBError, er)
 	}
 	envResp, er := services.StatisticalProjectEnv(tx, form.Id)
 	if er != nil {
+		_ = tx.Rollback()
 		return nil, e.New(e.DBError, er)
 	}
 
