@@ -31,10 +31,6 @@ func SearchProjectUser(c *ctx.ServiceCtx) (interface{}, e.Error) {
 		Where("status = 'enable'").
 		Order("created_at DESC")
 
-	if c.OrgId == "" && !c.IsSuperAdmin {
-		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest)
-	}
-
 	if c.OrgId != "" {
 		userIds, _ := services.GetUserIdsByOrg(c.DB(), c.OrgId)
 		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
@@ -72,8 +68,7 @@ func UpdateProjectUser(c *ctx.ServiceCtx, form *forms.UpdateProjectUserForm) (in
 	}
 
 	err := services.UpdateProjectUser(c.DB().
-		Where("user_id = ?", form.UserId).
-		Where("id = ?", form.Id).
+		Where("user_id = ?", form.Id).
 		Where("project_id = ?", c.ProjectId),
 		form.Id, attrs)
 	if err != nil && err.Code() == e.ProjectUserAliasDuplicate {
@@ -87,4 +82,29 @@ func UpdateProjectUser(c *ctx.ServiceCtx, form *forms.UpdateProjectUserForm) (in
 
 func DeleteProjectUser(c *ctx.ServiceCtx, form *forms.DeleteProjectOrgUserForm) (interface{}, e.Error) {
 	return nil, services.DeleteProjectUser(c.DB(), form.Id)
+}
+
+func SearchProjectAuthorizationUser(c *ctx.ServiceCtx, form *forms.SearchProjectAuthorizationUserForm) (interface{}, e.Error) {
+	query := services.QueryUser(c.DB()).
+		Where("status = 'enable'").
+		Order("created_at DESC")
+
+	if c.ProjectId != "" {
+		userIds, _ := services.GetUserIdsByProjectUser(c.DB(), c.ProjectId)
+		query = query.Where(fmt.Sprintf("%s.id  in (?)", models.User{}.TableName()), userIds)
+	}
+
+	// 导出用户角色
+	if c.OrgId != "" {
+		query = query.Joins(fmt.Sprintf("left join %s as o on %s.id = o.user_id and o.org_id = ?",
+			models.UserOrg{}.TableName(), models.User{}.TableName()), c.OrgId).
+			LazySelectAppend(fmt.Sprintf("o.role,%s.*", models.User{}.TableName()))
+	}
+
+	rs, err := getPage(query, form, &models.UserWithRoleResp{})
+	if err != nil {
+		c.Logger().Errorf("error get page, err %s", err)
+	}
+
+	return rs, nil
 }

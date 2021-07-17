@@ -20,3 +20,7 @@ type UpdateProjectUserForm struct {
 	UserId models.Id `json:"userId" form:"userId" `                                     // 用户id
 	Role   string    `json:"role" form:"role" enums:"'manager,approver,operator,guest"` // 角色 (manager,approver,operator,guest)
 }
+
+type SearchProjectAuthorizationUserForm struct {
+	PageForm
+}

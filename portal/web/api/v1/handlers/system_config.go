@@ -26,7 +26,7 @@ func (SystemConfig) Create(c *ctx.GinRequestCtx) {
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.SearchSystemConfigResp}}
+// @Success 200 {object} ctx.JSONResult{result=apps.SearchSystemConfigResp}
 // @Router /systems [get]
 func (SystemConfig) Search(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.SearchSystemConfig(c.ServiceCtx()))

@@ -58,8 +58,48 @@ func DeleteProject(tx *db.Session, projectId models.Id) e.Error {
 
 // StatisticalProjectTpl todo 项目统计 待完善
 func StatisticalProjectTpl(dbSess *db.Session, projectId models.Id) (int64, error) {
-	return dbSess.Table(models.Template{}.TableName()).Where("project_id = ?", projectId).Count()
+	return dbSess.Table(models.ProjectTemplate{}.TableName()).Where("project_id = ?", projectId).Count()
 }
-func StatisticalProjectEnv(dbSess *db.Session, projectId models.Id) (int64, error) {
-	return dbSess.Table(models.Env{}.TableName()).Where("project_id = ?", projectId).Group("status").Count()
+
+func StatisticalProjectEnv(dbSess *db.Session, projectId models.Id) (*struct {
+	EnvActive   int64
+	EnvFailed   int64
+	EnvInactive int64
+}, error) {
+	var (
+		resp []struct {
+			Count  int64
+			Status string
+		}
+		envActive   int64
+		envFailed   int64
+		envInactive int64
+	)
+
+	if err := dbSess.Table(models.Env{}.TableName()).Select("count(status) as count, status").
+		Where("project_id = ?", projectId).Group("status").Find(&resp); err != nil {
+		return nil, err
+	}
+
+	for _, v := range resp {
+		switch v.Status {
+		case models.EnvStatusFailed:
+			envFailed = v.Count
+		case models.EnvStatusActive:
+			envActive = v.Count
+		case models.EnvStatusInactive:
+			envInactive = v.Count
+		}
+	}
+
+	return &struct {
+		EnvActive   int64
+		EnvFailed   int64
+		EnvInactive int64
+	}{
+		EnvActive:   envActive,
+		EnvFailed:   envFailed,
+		EnvInactive: envInactive,
+	}, nil
+
 }

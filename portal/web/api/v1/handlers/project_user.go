@@ -11,9 +11,9 @@ type ProjectUser struct {
 	ctrl.BaseController
 }
 
-// Create 创建项目
-// @Summary 创建项目
-// @Description 创建项目
+// Create 创建项目下的用户
+// @Summary 创建项目下的用户
+// @Description 创建项目下的用户
 // @Tags 项目
 // @Accept  json
 // @Produce  json
@@ -31,16 +31,15 @@ func (ProjectUser) Create(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.CreateProjectUser(c.ServiceCtx(), form))
 }
 
-// Search 查询项目列表
-// @Summary 查询项目列表
-// @Description 查询项目列表
+// Search 查询组织下用户列表（不包含已经加入项目的用户）
+// @Summary 查询组织下用户列表（不包含已经加入项目的用户）
+// @Description 查询组织下用户列表（不包含已经加入项目的用户）
 // @Tags 项目
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
 // @Param IaC-Project-Id header string true "项目id"
-// @Param form query forms.SearchProjectOrgUserForm true "parameter"
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Project}}
 // @Router /projects/users [get]
 func (ProjectUser) Search(c *ctx.GinRequestCtx) {
@@ -68,9 +67,9 @@ func (ProjectUser) Update(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.UpdateProjectUser(c.ServiceCtx(), form))
 }
 
-// Delete 删除项目信息
-// @Summary 删除项目信息
-// @Description 删除项目信息
+// Delete 移除项目下的用户
+// @Summary 移除项目下的用户
+// @Description 移除项目下的用户
 // @Tags 项目
 // @Accept  json
 // @Produce  json
@@ -86,4 +85,24 @@ func (ProjectUser) Delete(c *ctx.GinRequestCtx) {
 		return
 	}
 	c.JSONResult(apps.DeleteProjectUser(c.ServiceCtx(), form))
+}
+
+// SearchProjectAuthorizationUser 项目下授权的用户
+// @Summary  项目下授权的用户
+// @Description  项目下授权的用户
+// @Tags 项目
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
+// @Param IaC-Project-Id header string true "项目id"
+// @Param request body forms.SearchProjectAuthorizationUserForm true "用户授权"
+// @Success 200
+// @Router /projects/authorization/users [get]
+func (ProjectUser) SearchProjectAuthorizationUser(c *ctx.GinRequestCtx) {
+	form := &forms.SearchProjectAuthorizationUserForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.SearchProjectAuthorizationUser(c.ServiceCtx(), form))
 }

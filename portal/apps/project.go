@@ -178,6 +178,10 @@ type DetailProjectResp struct {
 }
 
 type ProjectStatistics struct {
+	TplCount    int64 `json:"tplCount" form:"tplCount" `
+	EnvActive   int64 `json:"envActive" form:"envActive" `
+	EnvFailed   int64 `json:"envFailed" form:"envFailed" `
+	EnvInactive int64 `json:"envInactive" form:"envInactive" `
 }
 
 func DetailProject(c *ctx.ServiceCtx, form *forms.DetailProjectForm) (interface{}, e.Error) {
@@ -189,7 +193,7 @@ func DetailProject(c *ctx.ServiceCtx, form *forms.DetailProjectForm) (interface{
 		}
 	}()
 	//校验用户是否在该项目下有权限
-	isExist := IsUserOrgProjectPermission(tx, c.UserId, form.Id, consts.OrgRoleAdmin)
+	isExist := IsUserOrgProjectPermission(tx, c.UserId, form.Id, consts.ProjectRoleManager)
 
 	if !isExist {
 		return nil, e.New(e.ObjectNotExistsOrNoPerm, http.StatusForbidden, errors.New("not permission"))
@@ -198,9 +202,18 @@ func DetailProject(c *ctx.ServiceCtx, form *forms.DetailProjectForm) (interface{
 	if err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	projet, err := services.DetailProject(tx, form.Id)
+	project, err := services.DetailProject(tx, form.Id)
 	if err != nil {
 		return nil, e.New(e.DBError, err)
+	}
+
+	tplCount, er := services.StatisticalProjectTpl(tx, form.Id)
+	if er != nil {
+		return nil, e.New(e.DBError, er)
+	}
+	envResp, er := services.StatisticalProjectEnv(tx, form.Id)
+	if er != nil {
+		return nil, e.New(e.DBError, er)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -209,9 +222,14 @@ func DetailProject(c *ctx.ServiceCtx, form *forms.DetailProjectForm) (interface{
 	}
 
 	return DetailProjectResp{
-		projet,
+		project,
 		projectUser,
-		ProjectStatistics{},
+		ProjectStatistics{
+			TplCount:    tplCount,
+			EnvActive:   envResp.EnvActive,
+			EnvFailed:   envResp.EnvFailed,
+			EnvInactive: envResp.EnvInactive,
+		},
 	}, nil
 }
 
