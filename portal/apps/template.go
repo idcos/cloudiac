@@ -11,7 +11,6 @@ import (
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"fmt"
-	"github.com/pkg/errors"
 	"net/http"
 )
 
@@ -54,7 +53,7 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 
 	repoAddr, er := getRepoAddr(form.VcsId, c.DB(), form.RepoId)
 	if er != nil {
-		return nil, e.New(e.DBError, errors.Wrapf(er, "get repo failed: %v", form.RepoId))
+		return nil, e.New(e.DBError, fmt.Errorf("get repo failed: %v", er))
 	}
 
 	tx := c.Tx().Debug()
@@ -152,7 +151,7 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 	if form.HasKey("vcsId") && form.HasKey("repoId") {
 		repoAddr, er := getRepoAddr(form.VcsId, c.DB(), form.RepoId)
 		if er != nil {
-			return nil, e.New(e.DBError, errors.Wrapf(er, "get repo failed: %v", form.RepoId))
+			return nil, e.New(e.DBError, fmt.Errorf("get repo failed: %v", er))
 		}
 		attrs["repoAddr"] = repoAddr
 		attrs["vcsId"] = form.VcsId
