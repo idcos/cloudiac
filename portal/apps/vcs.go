@@ -122,7 +122,6 @@ func GetReadme(c *ctx.ServiceCtx, form *forms.GetReadmeForm) (interface{}, e.Err
 func ListRepos(c *ctx.ServiceCtx, form *forms.GetGitProjectsForm) (interface{}, e.Error) {
 	vcs, err := checkOrgVcsAuth(c, form.Id)
 	if err != nil {
-		fmt.Println("这里报错的")
 		return nil, err
 	}
 	vcsService, er := vcsrv.GetVcsInstance(vcs)

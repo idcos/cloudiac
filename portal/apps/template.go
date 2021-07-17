@@ -31,15 +31,20 @@ type SearchTemplateResp struct {
 
 func getRepoAddr(vcsId models.Id, query *db.Session, repoId string) (string, error) {
 	vcs, err := services.QueryVcsByVcsId(vcsId, query)
+	if err != nil {
+		return "", err
+	}
 	vcsIface, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
 		return "", er
 	}
 	repo, er := vcsIface.GetRepo(repoId)
+	if er != nil {
+		return "", er
+	}
 	repoAddr, er := vcsrv.GetRepoAddress(repo)
-
-	if err != nil {
-		return "", err
+	if er != nil {
+		return "", er
 	}
 	return repoAddr, nil
 }
@@ -111,8 +116,9 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 
 	tpl, err := services.GetTemplateById(c.DB(), form.Id)
 	if err != nil {
-		return nil, e.New(e.DBError, err, e.TemplateNotExists)
+		return nil, e.New(e.TemplateNotExists, err, http.StatusBadRequest)
 	}
+
 	// 根据云模板ID, 组织ID查询该云模板是否属于该组织
 	if tpl.OrgId != c.OrgId {
 		return nil, e.New(e.TemplateNotExists, http.StatusForbidden, fmt.Errorf("the organization does not have permission to delete the current template"))
@@ -149,6 +155,8 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 			return nil, e.New(e.DBError, errors.Wrapf(er, "get repo failed: %v", form.RepoId))
 		}
 		attrs["repoAddr"] = repoAddr
+		attrs["vcsId"] = form.VcsId
+		attrs["repoId"] = form.RepoId
 	}
 	tx := c.Tx()
 	defer func() {
