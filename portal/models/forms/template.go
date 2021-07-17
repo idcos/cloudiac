@@ -76,10 +76,10 @@ type OverviewTemplateForm struct {
 
 type TemplateTfvarsSearchForm struct {
 	BaseForm
-	RepoId     string    `json:"repoId" form:"repoId" binding:"required"`
-	RepoBranch string    `json:"repoBranch" form:"repoBranch" binding:"required"`
-	RepoType   string    `json:"repoType" form:"repoType" `
-	VcsId      models.Id `json:"vcsId" form:"vcsId" binding:"required"`
+	RepoId       string    `json:"repoId" form:"repoId" binding:"required"`
+	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
+	RepoType     string    `json:"repoType" form:"repoType" `
+	VcsId        models.Id `json:"vcsId" form:"vcsId" binding:"required"`
 }
 
 type TemplateVariableSearchForm struct {
@@ -92,8 +92,8 @@ type TemplateVariableSearchForm struct {
 
 type TemplatePlaybookSearchForm struct {
 	BaseForm
-	RepoId     string    `json:"repoId" form:"repoId" binding:"required"`
-	RepoBranch string    `json:"repoBranch" form:"repoBranch" binding:"required"`
-	RepoType   string    `json:"repoType" form:"repoType" `
-	VcsId      models.Id `json:"vcsId" form:"vcsId" binding:"required"`
+	RepoId       string    `json:"repoId" form:"repoId" binding:"required"`
+	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
+	RepoType     string    `json:"repoType" form:"repoType" `
+	VcsId        models.Id `json:"vcsId" form:"vcsId" binding:"required"`
 }
