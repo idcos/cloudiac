@@ -49,7 +49,7 @@ func SearchProjectUser(c *ctx.ServiceCtx) (interface{}, e.Error) {
 	}
 
 	users := make([]*models.UserWithRoleResp, 0)
-	if err := query.Find(&users); err != nil {
+	if err := query.Scan(&users); err != nil {
 		c.Logger().Errorf("error get users, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}

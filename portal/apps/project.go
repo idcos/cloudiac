@@ -98,14 +98,9 @@ func UpdateProject(c *ctx.ServiceCtx, form *forms.UpdateProjectForm) (interface{
 	}()
 
 	//校验用户是否在该项目下有权限
-	isExist := IsUserOrgProjectPermission(tx, c.UserId, form.Id, consts.OrgRoleAdmin)
+	isExist := IsUserOrgProjectPermission(tx, c.UserId, form.Id, consts.ProjectRoleManager)
 	if !isExist {
 		return nil, e.New(e.ObjectNotExistsOrNoPerm, http.StatusForbidden, errors.New("not permission"))
-	}
-
-	if err := services.UpdateProjectUsers(tx, form.Id, form.UserAuthorization); err != nil {
-		_ = tx.Rollback()
-		return nil, err
 	}
 
 	//修改项目数据

@@ -94,6 +94,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/templates/tfvars", ac(), w(handlers.TemplateTfvarsSearch))
 	g.GET("/templates/variables", ac(), w(handlers.TemplateVariableSearch))
 	g.GET("/templates/playbook", ac(), w(handlers.TemplatePlaybookSearch))
+	ctrl.Register(g.Group("notifications", ac()), &handlers.Notification{})
 
 	// 项目资源
 	// TODO: parse project header
@@ -115,6 +116,5 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/tasks/:id/approve", ac("tasks", "approve"), w(handlers.Task{}.TaskApprove))
 	g.POST("/task/:id/comment", ac(), w(handlers.TaskComment{}.Create))
 	g.GET("/task/:id/comment", ac(), w(handlers.TaskComment{}.Search))
-	ctrl.Register(g.Group("notifications", ac()), &handlers.Notification{})
 	ctrl.Register(g.Group("resource/account", ac()), &handlers.ResourceAccount{})
 }
