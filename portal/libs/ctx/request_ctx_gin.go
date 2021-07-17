@@ -238,13 +238,12 @@ func BindUriTagOnly(c *GinRequestCtx, b interface{}) error {
 	vals := reflect.ValueOf(b).Elem()
 	for _, p := range c.Params {
 		for i := 0; i < typs.NumField(); i++ {
-			if _, ok := typs.Field(i).Tag.Lookup("uri"); ok {
+			if key, ok := typs.Field(i).Tag.Lookup("uri"); ok && reflect.ValueOf(p.Key).String() == key {
 				v := reflect.ValueOf(p.Value)
 				vals.Field(i).Set(v.Convert(vals.Field(i).Type()))
 			}
 		}
 	}
-
 	return nil
 }
 
