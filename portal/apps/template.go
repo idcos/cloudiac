@@ -3,10 +3,12 @@ package apps
 import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
@@ -26,8 +28,33 @@ type SearchTemplateResp struct {
 	RepoAddr          string         `json:"repoAddr"`
 }
 
+func getRepoAddr(vcsId models.Id, query *db.Session, repoId string) (string, error) {
+	vcs, err := services.QueryVcsByVcsId(vcsId, query)
+	if err != nil {
+		return "", err
+	}
+	vcsIface, er := vcsrv.GetVcsInstance(vcs)
+	if er != nil {
+		return "", er
+	}
+	repo, er := vcsIface.GetRepo(repoId)
+	if er != nil {
+		return "", er
+	}
+	repoAddr, er := vcsrv.GetRepoAddress(repo)
+	if er != nil {
+		return "", er
+	}
+	return repoAddr, nil
+}
+
 func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.Template, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create template %s", form.Name))
+
+	repoAddr, er := getRepoAddr(form.VcsId, c.DB(), form.RepoId)
+	if er != nil {
+		return nil, e.New(e.DBError, fmt.Errorf("get repo failed: %v", er))
+	}
 
 	tx := c.Tx().Debug()
 	defer func() {
@@ -36,14 +63,13 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 			panic(r)
 		}
 	}()
-
 	template, err := services.CreateTemplate(tx, models.Template{
 		Name:         form.Name,
 		OrgId:        c.OrgId,
 		Description:  form.Description,
 		VcsId:        form.VcsId,
 		RepoId:       form.RepoId,
-		RepoAddr:     form.RepoAddr,
+		RepoAddr:     repoAddr,
 		RepoRevision: form.RepoRevision,
 		CreatorId:    c.UserId,
 		Workdir:      form.Workdir,
@@ -89,8 +115,9 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 
 	tpl, err := services.GetTemplateById(c.DB(), form.Id)
 	if err != nil {
-		return nil, e.New(e.DBError, err, e.TemplateNotExists)
+		return nil, e.New(e.TemplateNotExists, err, http.StatusBadRequest)
 	}
+
 	// 根据云模板ID, 组织ID查询该云模板是否属于该组织
 	if tpl.OrgId != c.OrgId {
 		return nil, e.New(e.TemplateNotExists, http.StatusForbidden, fmt.Errorf("the organization does not have permission to delete the current template"))
@@ -117,6 +144,18 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 	}
 	if form.HasKey("playVarsFile") {
 		attrs["playVarsFile"] = form.PlayVarsFile
+	}
+	if form.HasKey("repoRevision") {
+		attrs["repoRevision"] = form.RepoRevision
+	}
+	if form.HasKey("vcsId") && form.HasKey("repoId") {
+		repoAddr, er := getRepoAddr(form.VcsId, c.DB(), form.RepoId)
+		if er != nil {
+			return nil, e.New(e.DBError, fmt.Errorf("get repo failed: %v", er))
+		}
+		attrs["repoAddr"] = repoAddr
+		attrs["vcsId"] = form.VcsId
+		attrs["repoId"] = form.RepoId
 	}
 	tx := c.Tx()
 	defer func() {

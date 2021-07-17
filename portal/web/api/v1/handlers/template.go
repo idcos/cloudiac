@@ -119,9 +119,11 @@ func (Template) Detail(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param vcsId path string true "vcs地址iD"
+// @Param repoId path string true "代码仓库id"
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param form query forms.TemplateTfvarsSearchForm true "parameter"
-// @Router /templates/tfvars [get]
+// @Router /vcs/{vcsId}/repos/{repoId}/tfvars  [get]
 // @Success 200 {object} ctx.JSONResult{result=[]vcsrv.VcsIfaceOptions}
 func TemplateTfvarsSearch(c *ctx.GinRequestCtx) {
 	form := forms.TemplateTfvarsSearchForm{}
@@ -155,7 +157,9 @@ func TemplateVariableSearch(c *ctx.GinRequestCtx) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Security AuthToken
 // @Param form query forms.TemplatePlaybookSearchForm true "parameter"
-// @router /templates/playbook [get]
+// @Param vcsId path string true "vcs地址iD"
+// @Param repoId path string true "代码仓库id"
+// @router /vcs/{vcsId}/repos/{repoId}/playbook [get]
 // @Success 200 {object} ctx.JSONResult{result=[]vcsrv.VcsIfaceOptions}
 func TemplatePlaybookSearch(c *ctx.GinRequestCtx) {
 	form := forms.TemplatePlaybookSearchForm{}

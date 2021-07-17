@@ -91,9 +91,8 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/vcs/:id/tag", ac(), w(handlers.Vcs{}.ListTags))
 	g.GET("/vcs/:id/readme", ac(), w(handlers.Vcs{}.GetReadmeContent))
 	ctrl.Register(g.Group("templates", ac()), &handlers.Template{})
-	g.GET("/templates/tfvars", ac(), w(handlers.TemplateTfvarsSearch))
-	g.GET("/templates/variables", ac(), w(handlers.TemplateVariableSearch))
-	g.GET("/templates/playbook", ac(), w(handlers.TemplatePlaybookSearch))
+	g.GET("/vcs/:id/repos/:repoId/tfvars", ac(), w(handlers.TemplateTfvarsSearch))
+	g.GET("/vcs/:id/repos/:repoId/playbook", ac(), w(handlers.TemplatePlaybookSearch))
 	ctrl.Register(g.Group("notifications", ac()), &handlers.Notification{})
 
 	// 项目资源
