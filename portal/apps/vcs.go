@@ -36,7 +36,7 @@ func checkOrgVcsAuth(c *ctx.ServiceCtx, id models.Id) (vcs *models.Vcs, err e.Er
 	if err != nil {
 		return nil, err
 	}
-	if vcs.OrgId != c.OrgId {
+	if vcs.OrgId != c.OrgId && vcs.OrgId != "" {
 		return nil, e.New(e.VcsNotExists, http.StatusForbidden, fmt.Errorf("The organization does not have the Vcs permission"))
 	}
 	return vcs, nil
@@ -122,6 +122,7 @@ func GetReadme(c *ctx.ServiceCtx, form *forms.GetReadmeForm) (interface{}, e.Err
 func ListRepos(c *ctx.ServiceCtx, form *forms.GetGitProjectsForm) (interface{}, e.Error) {
 	vcs, err := checkOrgVcsAuth(c, form.Id)
 	if err != nil {
+		fmt.Println("这里报错的")
 		return nil, err
 	}
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
