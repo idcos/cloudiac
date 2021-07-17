@@ -132,7 +132,6 @@ const (
 	TokenInvalidStatus  = 12014
 	InvalidTokenId      = 12015
 
-
 	// template
 	TemplateAlreadyExists   = 11010
 	TemplateNotExists       = 11011
@@ -162,6 +161,12 @@ const (
 	// vcs
 	VcsError     = 15010
 	VcsNotExists = 15011
+
+	// key
+	KeyAlreadyExists  = 16010
+	KeyNotExist       = 16011
+	KeyAliasDuplicate = 16012
+	KeyDecryptFail    = 16013
 )
 
 var errorMsgs = map[int]map[string]string{
