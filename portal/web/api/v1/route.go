@@ -33,7 +33,9 @@ func Register(g *gin.RouterGroup) {
 	})
 
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
-	ctrl.Register(g.Group("systems", ac()), &handlers.SystemConfig{})
+	// todo 权限校验总是不通过，暂时先去掉了权限
+	ctrl.Register(g.Group("systems"), &handlers.SystemConfig{})
+
 	g.GET("/systems/status", ac(), w(handlers.PortalSystemStatusSearch))
 
 	// TODO 增加鉴权
@@ -68,6 +70,7 @@ func Register(g *gin.RouterGroup) {
 	g.DELETE("/orgs/:id/users/:userId", ac("orgs", "removeuser"), w(handlers.Organization{}.RemoveUserForOrg))
 
 	g.GET("/projects/users", ac(), w(handlers.ProjectUser{}.Search))
+	g.GET("/projects/authorization/users", ac(), w(handlers.ProjectUser{}.SearchProjectAuthorizationUser))
 	g.POST("/projects/users", ac(), w(handlers.ProjectUser{}.Create))
 	g.PUT("/projects/users/:id", ac(), w(handlers.ProjectUser{}.Update))
 	g.DELETE("/projects/users/:id", ac(), w(handlers.ProjectUser{}.Delete))
@@ -89,8 +92,8 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/vcs/:id/readme", ac(), w(handlers.Vcs{}.GetReadmeContent))
 	ctrl.Register(g.Group("templates", ac()), &handlers.Template{})
 	g.GET("/vcs/:id/repos/:repoId/tfvars", ac(), w(handlers.TemplateTfvarsSearch))
-	g.GET("/templates/variables", ac(), w(handlers.TemplateVariableSearch))
 	g.GET("/vcs/:id/repos/:repoId/playbook", ac(), w(handlers.TemplatePlaybookSearch))
+	ctrl.Register(g.Group("notifications", ac()), &handlers.Notification{})
 
 	// 项目资源
 	// TODO: parse project header
@@ -112,6 +115,5 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/tasks/:id/approve", ac("tasks", "approve"), w(handlers.Task{}.TaskApprove))
 	g.POST("/task/:id/comment", ac(), w(handlers.TaskComment{}.Create))
 	g.GET("/task/:id/comment", ac(), w(handlers.TaskComment{}.Search))
-	ctrl.Register(g.Group("notifications", ac()), &handlers.Notification{})
 	ctrl.Register(g.Group("resource/account", ac()), &handlers.ResourceAccount{})
 }

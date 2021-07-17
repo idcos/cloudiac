@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"cloudiac/portal/apps"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/models/forms"
 )
 
 type Key struct {
@@ -21,11 +23,11 @@ type Key struct {
 // @Router /keys [post]
 // @Success 200 {object} ctx.JSONResult{result=models.Key}
 func (Key) Create(c *ctx.GinRequestCtx) {
-	//form := &forms.CreateKeyForm{}
-	//if err := c.Bind(form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.CreateKey(c.ServiceCtx(), form))
+	form := &forms.CreateKeyForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.CreateKey(c.ServiceCtx(), form))
 }
 
 // Search 查询密钥
@@ -39,11 +41,11 @@ func (Key) Create(c *ctx.GinRequestCtx) {
 // @Router /keys [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Key}}
 func (Key) Search(c *ctx.GinRequestCtx) {
-	//form := &forms.SearchKeyForm{}
-	//if err := c.Bind(form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.SearchKey(c.ServiceCtx(), form))
+	form := &forms.SearchKeyForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.SearchKey(c.ServiceCtx(), form))
 }
 
 // Update 修改密钥信息
@@ -59,11 +61,11 @@ func (Key) Search(c *ctx.GinRequestCtx) {
 // @Router /keys/{keyId} [put]
 // @Success 200 {object} ctx.JSONResult{result=models.Key}
 func (Key) Update(c *ctx.GinRequestCtx) {
-	//form := &forms.UpdateKeyForm{}
-	//if err := c.Bind(form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.UpdateKey(c.ServiceCtx(), form))
+	form := &forms.UpdateKeyForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.UpdateKey(c.ServiceCtx(), form))
 }
 
 // Delete 删除密钥
@@ -77,11 +79,11 @@ func (Key) Update(c *ctx.GinRequestCtx) {
 // @Router /keys/{keyId} [delete]
 // @Success 200
 func (Key) Delete(c *ctx.GinRequestCtx) {
-	//form := &forms.DeleteKeyForm{}
-	//if err := c.Bind(form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.DeleteKey(c.ServiceCtx(), form))
+	form := &forms.DeleteKeyForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.DeleteKey(c.ServiceCtx(), form))
 }
 
 // Detail 密钥详情
@@ -95,9 +97,9 @@ func (Key) Delete(c *ctx.GinRequestCtx) {
 // @Router /keys/{keyId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.Key}
 func (Key) Detail(c *ctx.GinRequestCtx) {
-	//form := &forms.DetailKeyForm{}
-	//if err := c.Bind(form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.DetailKey(c.ServiceCtx(), form))
+	form := &forms.DetailKeyForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.DetailKey(c.ServiceCtx(), form))
 }
