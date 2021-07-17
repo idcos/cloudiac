@@ -125,7 +125,7 @@ func CreateProjectUser(dbSess *db.Session, userProject models.UserProject) (*mod
 }
 
 func UpdateProjectUser(dbSess *db.Session, id uint, attrs models.Attrs) e.Error {
-	if _, err := models.UpdateAttr(dbSess.Where("id = ?", id), &models.UserProject{}, attrs); err != nil {
+	if _, err := models.UpdateAttr(dbSess, &models.UserProject{}, attrs); err != nil {
 		if e.IsDuplicate(err) {
 			return e.New(e.ProjectUserAliasDuplicate)
 		}
