@@ -1,7 +1,7 @@
 package models
 
 type TaskComment struct {
-	SoftDeleteModel
+	TimedModel
 	TaskId    Id     `json:"taskId" form:"taskId" gorm:"size:32;not null;comment:'任务id'"`
 	Creator   string `json:"creator" form:"creator" gorm:"size:32;not null;comment:'评论人'"`
 	CreatorId Id     `json:"creatorId" form:"creatorId" gorm:"size:32;not null;comment:'评论人id'"`

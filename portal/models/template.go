@@ -9,12 +9,13 @@ type Template struct {
 	TplType     string `json:"tplType" gorm:"not null;comment:'云模板类型(aliyun，VMware等)'" example:"aliyun"`
 	OrgId       Id     `json:"orgId" gorm:"size:32;not null" example:"a1f79e8a-744d-4ea5-8d97-7e4b7b422a6c"`
 	Description string `json:"description" gorm:"type:text" example:"云霁阿里云模板"`
+
+	// 如果创建模板时用户直接填写完整 RepoAddr 则 vcsId 为空值，
+	// 此时创建任务直接使用 RepoRevision 做为 commit id，不再实时获取
 	VcsId       Id     `json:"vcsId" gorm:"size:32;not null" example:"a1f79e8a-744d-4ea5-8d97-7e4b7b422a6c"`
 
-	// RepoId 和 RepoAddr 只能选其一赋值，当设置了 RepoAddr 时 RepoId 被忽略，
-	// 此时创建任务直接使用 RepoRevision 做为 commit id，不再实时获取
 	RepoId   string `json:"repoId" gorm:"not null"`                                                 // RepoId 仓库 id 或者 path(local vcs)
-	RepoAddr string `json:"repoAddr" gorm:"not null" example:"https://github.com/user/project.git"` // RepoAddr 直接指定仓库地址
+	RepoAddr string `json:"repoAddr" gorm:"not null" example:"https://github.com/user/project.git"` // RepoAddr 仓库地址(完整 url 或者项目 path)
 
 	RepoToken    string `json:"repoToken" gorm:"size:128" ` // RepoToken 若为空则使用 vcs 的 token
 	RepoRevision string `json:"repoRevision" gorm:"size:64;default:'master'" example:"master"`

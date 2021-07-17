@@ -9,8 +9,8 @@ type SearchSystemConfigForm struct {
 }
 
 type UpdateSystemConfigForm struct {
-	PageForm
-	Id          models.Id `form:"id" json:"id" binding:""`
+	BaseForm
+	Id          models.Id `url:"id" form:"id" json:"id" binding:""`
 	Name        string    `form:"name" json:"name" binding:""`
 	Value       string    `form:"value" json:"value" binding:"required"`
 	Description string    `form:"description" json:"description"`

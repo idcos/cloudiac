@@ -212,7 +212,7 @@ func VcsTfVarsSearch(c *ctx.ServiceCtx, form *forms.TemplateTfvarsSearchForm) (i
 		return nil, e.New(e.VcsError, er)
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
-		Ref:    form.RepoBranch,
+		Ref:    form.RepoRevision,
 		Search: consts.TfVarFileMatch,
 	})
 	if er != nil {
@@ -237,7 +237,7 @@ func VcsPlaybookSearch(c *ctx.ServiceCtx, form *forms.TemplatePlaybookSearchForm
 		return nil, e.New(e.VcsError, er)
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
-		Ref:       form.RepoBranch,
+		Ref:       form.RepoRevision,
 		Search:    consts.PlaybookMatch,
 		Recursive: true,
 		Path:      consts.Ansible,
@@ -264,7 +264,7 @@ func VcsVariableSearch(c *ctx.ServiceCtx, form *forms.TemplateVariableSearchForm
 		return nil, e.New(e.VcsError, err)
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
-		Ref:    form.RepoBranch,
+		Ref:    form.RepoRevision,
 		Search: consts.VariablePrefix,
 	})
 	if er != nil {
@@ -272,7 +272,7 @@ func VcsVariableSearch(c *ctx.ServiceCtx, form *forms.TemplateVariableSearchForm
 	}
 	tvl := make([]services.TemplateVariable, 0)
 	for _, file := range listFiles {
-		content, er := repo.ReadFileContent(form.RepoBranch, file)
+		content, er := repo.ReadFileContent(form.RepoRevision, file)
 		if er != nil {
 			return nil, e.New(e.VcsError, er)
 		}

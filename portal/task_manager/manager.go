@@ -256,7 +256,7 @@ func (m *TaskManager) run(ctx context.Context) {
 			m.runTask(ctx, task)
 			if task.IsEffectTask() {
 				// 不管任务成功还是失败都执行
-				m.processTaskResult(task)
+				m.processTaskDone(task)
 			}
 		}()
 	}
@@ -326,11 +326,12 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 			return
 		}
 	}
+
 	logger.Infof("task done: %s", task.Id)
 }
 
-func (m *TaskManager) processTaskResult(task *models.Task) {
-	logger := m.logger.WithField("func", "processTaskResult")
+func (m *TaskManager) processTaskDone(task *models.Task) {
+	logger := m.logger.WithField("func", "processTaskDone")
 
 	dbSess := m.db
 	read := func(path string) ([]byte, error) {
@@ -344,34 +345,56 @@ func (m *TaskManager) processTaskResult(task *models.Task) {
 		return content, nil
 	}
 
-	if bs, err := read(task.StateJsonPath()); err != nil {
-		logger.Errorf("read state json: %v", err)
-		return
-	} else if len(bs) > 0 {
-		tfState, err := services.UnmarshalStateJson(bs)
-		if err != nil {
-			logger.Errorf("unmarshal state json: %v", err)
-			return
+	// 分析环境资源、outputs, changes
+	processResult := func() error {
+		if bs, err := read(task.StateJsonPath()); err != nil {
+			return fmt.Errorf("read state json: %v", err)
+		} else if len(bs) > 0 {
+			tfState, err := services.UnmarshalStateJson(bs)
+			if err != nil {
+				return fmt.Errorf("unmarshal state json: %v", err)
+			}
+			if err = services.SaveTaskResources(dbSess, task, tfState.Values); err != nil {
+				return fmt.Errorf("save task resources: %v", err)
+			}
+			if err = services.SaveTaskOutputs(dbSess, task, tfState.Values.Outputs); err != nil {
+				return fmt.Errorf("save task outputs: %v", err)
+			}
 		}
-		if err = services.SaveTaskResources(dbSess, task, tfState.Values); err != nil {
-			logger.Errorf("save task resources: %v", err)
-			return
+
+		if bs, err := read(task.PlanJsonPath()); err != nil {
+			return fmt.Errorf("read plan json: %v", err)
+		} else if len(bs) > 0 {
+			tfPlan, err := services.UnmarshalPlanJson(bs)
+			if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges); err != nil {
+				return fmt.Errorf("save task changes: %v", err)
+			}
 		}
-		if err = services.SaveTaskOutputs(dbSess, task, tfState.Values.Outputs); err != nil {
-			logger.Errorf("save task outputs: %v", err)
-			return
-		}
+		return nil
+	}
+	if err := processResult(); err != nil {
+		logger.Errorf("process result: %v", err)
 	}
 
-	if bs, err := read(task.PlanJsonPath()); err != nil {
-		logger.Errorf("read plan json: %v", err)
-		return
-	} else if len(bs) > 0 {
-		tfPlan, err := services.UnmarshalPlanJson(bs)
-		if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges); err != nil {
-			logger.Errorf("save task changes: %v", err)
-			return
+	// 设置 auto destroy
+	processAutoDestroy := func() error {
+		env, err := services.GetEnv(dbSess, task.EnvId)
+		if err != nil {
+			return errors.Wrapf(err, "get env '%s'", task.EnvId)
 		}
+
+		if env.AutoDestroyAt == nil && env.TTL != "" {
+			ttl, err := time.ParseDuration(env.TTL)
+			if err != nil {
+				return err
+			}
+			at := time.Now().Add(ttl)
+			env.AutoDestroyAt = &at
+		}
+		return nil
+	}
+	if err := processAutoDestroy(); err != nil {
+		logger.Errorf("process auto destroy at: %v", err)
 	}
 }
 

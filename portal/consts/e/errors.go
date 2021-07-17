@@ -104,21 +104,6 @@ const (
 	OrganizationInvalidStatus  = 9014
 	InvalidOrganizationId      = 9015
 
-	//variable
-	VariableAlreadyExists  = 11010
-	VariableNotExists      = 11011
-	VariableDisabled       = 11012
-	VariableAliasDuplicate = 11013
-	VariableInvalidStatus  = 11014
-	InvalidVariableId      = 11015
-
-	TokenAlreadyExists  = 12010
-	TokenNotExists      = 12011
-	TokenDisabled       = 12012
-	TokenAliasDuplicate = 12013
-	TokenInvalidStatus  = 12014
-	InvalidTokenId      = 12015
-
 	// project
 	ProjectAlreadyExists  = 10010
 	ProjectNotExists      = 10011
@@ -127,18 +112,25 @@ const (
 	ProjectInvalidStatus  = 10014
 	ProjectIdInvalid      = 10014
 
-	// vcs
-	VcsError     = 9100
-	VcsNotExists = 9200
+	//variable
+	VariableAlreadyExists  = 11010
+	VariableNotExists      = 11011
+	VariableDisabled       = 11012
+	VariableAliasDuplicate = 11013
+	VariableInvalidStatus  = 11014
+	InvalidVariableId      = 11015
 
-	// task
-	TaskAlreadyExists     = 10010
-	TaskNotExists         = 10011
-	InvalidTaskId         = 10012
-	TaskApproveNotPending = 10013
-	TaskStepNotExists     = 10114
-	TaskLogInterrupted    = 10115
-	TaskNotHaveStep       = 10116
+	ProjectUserAlreadyExists  = 20010
+	ProjectUserNotExists      = 20011
+	ProjectUserAliasDuplicate = 20013
+	ProjectUserInvalidStatus  = 20014
+
+	TokenAlreadyExists  = 12010
+	TokenNotExists      = 12011
+	TokenDisabled       = 12012
+	TokenAliasDuplicate = 12013
+	TokenInvalidStatus  = 12014
+	InvalidTokenId      = 12015
 
 	// template
 	TemplateAlreadyExists   = 11010
@@ -157,11 +149,24 @@ const (
 	EnvCannotArchiveActive = 13014
 	EnvDeploying           = 13015
 
+	// task
+	TaskAlreadyExists     = 14010
+	TaskNotExists         = 14011
+	InvalidTaskId         = 14012
+	TaskApproveNotPending = 14013
+	TaskStepNotExists     = 14114
+	TaskLogInterrupted    = 14115
+	TaskNotHaveStep       = 14116
+
+	// vcs
+	VcsError     = 15010
+	VcsNotExists = 15011
+
 	// key
-	KeyAlreadyExists  = 14010
-	KeyNotExist       = 14011
-	KeyAliasDuplicate = 14012
-	KeyDecryptFail    = 14013
+	KeyAlreadyExists  = 16010
+	KeyNotExist       = 16011
+	KeyAliasDuplicate = 16012
+	KeyDecryptFail    = 16013
 )
 
 var errorMsgs = map[int]map[string]string{

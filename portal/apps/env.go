@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // CreateEnv 创建环境
@@ -43,6 +44,23 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		form.Timeout = common.TaskStepTimeoutDuration
 	}
 
+	var (
+		DestroyAt *time.Time
+	)
+
+	if form.DestroyAt != "" {
+		at, err := time.Parse("2006-01-02 15:04", form.DestroyAt)
+		if err != nil {
+			return nil, e.New(e.BadParam, http.StatusBadRequest)
+		}
+		DestroyAt = &at
+	} else if form.TTL != "" {
+		_, err := time.ParseDuration(form.TTL)
+		if err != nil {
+			return nil, e.New(e.BadParam, http.StatusBadRequest)
+		}
+	}
+
 	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
@@ -70,10 +88,10 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		Revision:     form.Revision,
 		KeyId:        form.KeyId,
 
+		TTL:           form.TTL,
+		AutoDestroyAt: DestroyAt,
+		AutoApproval:  form.AutoApproval,
 		// TODO: triggers 触发器设置
-		AutoApproval: form.AutoApproval,
-		// TODO: 自动销毁设置
-
 	})
 	if err != nil && err.Code() == e.EnvAlreadyExists {
 		_ = tx.Rollback()
@@ -90,17 +108,23 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 	// vars, err := services.OperationVariable(tx, env.Id, form.Variables)
 	env.Variables = vars
 
+	targets := make([]string, 0)
+	if len(strings.TrimSpace(form.Targets)) > 0 {
+		targets = strings.Split(strings.TrimSpace(form.Targets), ",")
+	}
+
 	// 创建任务
 	_, err = services.CreateTask(tx, tpl, env, models.Task{
 		Name:        models.Task{}.GetTaskNameByType(form.TaskType),
 		Type:        form.TaskType,
 		Flow:        models.TaskFlow{},
-		Targets:     strings.Split(form.Targets, ","),
+		Targets:     targets,
 		CreatorId:   c.UserId,
 		KeyId:       env.KeyId,
 		RunnerId:    env.RunnerId,
 		Variables:   form.Variables,
 		StepTimeout: form.Timeout,
+		AutoApprove: env.AutoApproval,
 	})
 	if err != nil {
 		_ = tx.Rollback()
@@ -208,9 +232,25 @@ func UpdateEnv(c *ctx.ServiceCtx, form *forms.UpdateEnvForm) (*models.Env, e.Err
 		attrs["auto_approval"] = form.AutoApproval
 	}
 
-	if form.HasKey("autoDestroyAt") {
-		// TODO: 修改生命周期
+	if form.HasKey("destroyAt") {
+		at, err := time.Parse("2006-01-02 15:04", form.DestroyAt)
+		if err != nil {
+			return nil, e.New(e.BadParam, http.StatusBadRequest)
+		}
+		attrs["auto_destroy_at"] = &at
+	} else if form.HasKey("ttl") {
+		ttl, err := time.ParseDuration(form.TTL)
+		if err != nil {
+			return nil, e.New(e.BadParam, http.StatusBadRequest)
+		}
+
+		attrs["ttl"] = form.TTL
+		if env.LastTaskId != "" { // 己部署过的环境同步修改 destroyAt
+			at := time.Now().Add(ttl)
+			attrs["auto_destroy_at"] = &at
+		}
 	}
+
 
 	if form.HasKey("archived") {
 		if env.Status != models.EnvStatusInactive {
@@ -258,14 +298,16 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
 
-	tx := c.Tx().Where("iac_env.org_id = ? AND iac_env.project_id = ?", c.OrgId, c.ProjectId)
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
 			panic(r)
 		}
 	}()
-	env, err := services.GetEnvById(tx, form.Id)
+
+	envQuery := services.QueryWithProjectId(services.QueryWithOrgId(tx, c.OrgId), c.ProjectId)
+	env, err := services.GetEnvById(envQuery, form.Id)
 	if err != nil && err.Code() != e.EnvNotExists {
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
 	} else if err != nil {
@@ -282,7 +324,8 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	}
 
 	// 模板检查
-	tpl, err := services.GetTemplateById(tx, env.TplId)
+	tplQuery := services.QueryWithOrgId(tx, c.OrgId)
+	tpl, err := services.GetTemplateById(tplQuery, env.TplId)
 	if err != nil && err.Code() == e.TemplateNotExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
@@ -344,17 +387,23 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		return nil, e.New(e.BadParam, http.StatusBadRequest)
 	}
 
+	targets := make([]string, 0)
+	if len(strings.TrimSpace(form.Targets)) > 0 {
+		targets = strings.Split(strings.TrimSpace(form.Targets), ",")
+	}
+
 	// 创建任务
 	_, err = services.CreateTask(tx, tpl, env, models.Task{
 		Name:        models.Task{}.GetTaskNameByType(form.TaskType),
 		Type:        form.TaskType,
 		Flow:        models.TaskFlow{},
-		Targets:     strings.Split(form.Targets, ","),
+		Targets:     targets,
 		CreatorId:   c.UserId,
 		KeyId:       env.KeyId,
 		RunnerId:    env.RunnerId,
 		Variables:   form.Variables,
 		StepTimeout: form.Timeout,
+		AutoApprove: env.AutoApproval,
 	})
 
 	if err != nil {
