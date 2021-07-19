@@ -10,6 +10,7 @@ import (
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
+	"github.com/pkg/errors"
 	"net/http"
 )
 
@@ -148,6 +149,8 @@ func ApiTriggerHandler(c *ctx.ServiceCtx, form forms.ApiTriggerHandler) (interfa
 		taskType = models.TaskTypeApply
 	case models.TaskTypeDestroy:
 		taskType = models.TaskTypeDestroy
+	default:
+		return nil, e.New(e.BadRequest, errors.New("token action illegal"), http.StatusBadRequest)
 	}
 
 	task := models.Task{
