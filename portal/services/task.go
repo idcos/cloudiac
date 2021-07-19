@@ -53,6 +53,7 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		Variables:   pt.Variables,
 		StepTimeout: pt.StepTimeout,
 		AutoApprove: pt.AutoApprove,
+		KeyId:       models.Id(firstVal(string(pt.KeyId), string(env.KeyId))),
 		Extra:       pt.Extra,
 
 		OrgId:     env.OrgId,
@@ -61,7 +62,6 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		EnvId:     env.Id,
 		StatePath: env.StatePath,
 
-		RepoAddr:     "",
 		Workdir:      firstVal(tpl.Workdir),
 		Playbook:     firstVal(env.Playbook, tpl.Playbook),
 		TfVarsFile:   firstVal(env.TfVarsFile, tpl.TfVarsFile),

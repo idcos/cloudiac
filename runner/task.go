@@ -137,7 +137,8 @@ func (t *Task) initWorkspace() (workspace string, err error) {
 	}
 
 	privateKeyPath := filepath.Join(workspace, "ssh_key")
-	if err = os.WriteFile(privateKeyPath, []byte(t.req.PrivateKey), 0600); err != nil {
+	keyContent := fmt.Sprintf("%s\n", strings.TrimSpace(t.req.PrivateKey))
+	if err = os.WriteFile(privateKeyPath, []byte(keyContent), 0600); err != nil {
 		return workspace, err
 	}
 
@@ -154,14 +155,6 @@ func (t *Task) initWorkspace() (workspace string, err error) {
 	return workspace, nil
 }
 
-var cloudInitScriptTpl = template.Must(template.New("").Parse(`#!/bin/sh
-{{- if .PublicKey}}
-mkdir -p /root/.ssh/ && \
-echo '{{.PublicKey}}' >> /root/.ssh/authorized_keys && \
-chmod 0600 /root/.ssh/authorized_keys
-{{end -}}
-`))
-
 var iacTerraformTpl = template.Must(template.New("").Parse(` terraform {
   backend "{{.State.Backend}}" {
     address = "{{.State.Address}}"
@@ -172,23 +165,9 @@ var iacTerraformTpl = template.Must(template.New("").Parse(` terraform {
   }
 }
 
-data "cloudinit_config" "cloudiac" {
-  gzip = false
-  base64_encode = false
-
-  part {
-    content_type = "text/x-shellscript"
-    content = <<EOT
-{{.CloudInitContent}}
-EOT
-    filename = "_cloudiac_cloud_init.sh"
-  }
-}
-
 locals {
 	cloudiac_ssh_user    = "root"
 	cloudiac_private_key = "{{.PrivateKeyPath}}"
-	cloudiac_user_data   = data.cloudinit_config.cloudiac.rendered
 }
 `))
 
@@ -203,27 +182,13 @@ func execTpl2File(tpl *template.Template, data interface{}, savePath string) err
 }
 
 func (t *Task) genIacTfFile(workspace string) error {
-	publicKey, err := utils.OpenSSHPublicKey([]byte(t.req.PrivateKey))
-	if err != nil {
-		return err
-	}
-
-	// TODO: 改用 {{ template "name" }} 方式实现
-	cloudInitContent, err := t.executeTpl(cloudInitScriptTpl, map[string]string{
-		"PublicKey": string(publicKey),
-	})
-	if err != nil {
-		return err
-	}
-
 	if t.req.StateStore.Address == "" {
 		t.req.StateStore.Address = configs.Get().Consul.Address
 	}
 	ctx := map[string]interface{}{
-		"Workspace":        workspace,
-		"PrivateKeyPath":   t.up2Workspace("ssh_key"),
-		"State":            t.req.StateStore,
-		"CloudInitContent": cloudInitContent,
+		"Workspace":      workspace,
+		"PrivateKeyPath": t.up2Workspace("ssh_key"),
+		"State":          t.req.StateStore,
 	}
 	if err := execTpl2File(iacTerraformTpl, ctx, filepath.Join(workspace, CloudIacTfFile)); err != nil {
 		return err

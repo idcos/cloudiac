@@ -7,7 +7,6 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/logstorage"
-	"cloudiac/portal/services/sshkey"
 	"cloudiac/runner"
 	"cloudiac/utils"
 	"cloudiac/utils/consul"
@@ -293,7 +292,7 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 		}
 	}
 
-	runTaskReq, err := buildRunTaskReq(*task)
+	runTaskReq, err := buildRunTaskReq(m.db, *task)
 	if err != nil {
 		taskFailed(err)
 		return
@@ -507,12 +506,7 @@ func (m *TaskManager) stop() {
 
 // buildRunTaskReq 基于任务信息构建一个 RunTaskReq 对象。
 // 	注意这里不会设置 step 相关的数据，step 相关字段在 StartTaskStep() 方法中设置
-func buildRunTaskReq(task models.Task) (taskReq *runner.RunTaskReq, err error) {
-	var (
-		//env        *models.Env
-		privateKey []byte
-	)
-
+func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunTaskReq, err error) {
 	runnerEnv := runner.TaskEnv{
 		Id:              string(task.EnvId),
 		Workdir:         task.Workdir,
@@ -545,14 +539,13 @@ func buildRunTaskReq(task models.Task) (taskReq *runner.RunTaskReq, err error) {
 		Address: "",
 	}
 
-	privateKey, err = sshkey.LoadPrivateKeyPem()
-	if err != nil {
-		return nil, errors.Wrapf(err, "load private key")
-	}
-
-	pk, err := utils.AesEncrypt(string(privateKey))
-	if err != nil {
-		return nil, errors.Wrap(err, "encrypt private key")
+	pk := ""
+	if task.KeyId != "" {
+		mKey, err := services.GetKeyById(dbSess, task.KeyId, false)
+		if err != nil {
+			return nil, errors.Wrapf(err, "get key '%s' error: %v", task.KeyId, err)
+		}
+		pk = mKey.Content
 	}
 
 	taskReq = &runner.RunTaskReq{
@@ -564,7 +557,10 @@ func buildRunTaskReq(task models.Task) (taskReq *runner.RunTaskReq, err error) {
 		RepoAddress:  task.RepoAddr,
 		RepoRevision: task.CommitId,
 		Timeout:      task.StepTimeout,
-		PrivateKey:   utils.EncodeSecretVar(pk, true),
 	}
+	if pk != "" {
+		taskReq.PrivateKey = utils.EncodeSecretVar(pk, true)
+	}
+
 	return taskReq, nil
 }
