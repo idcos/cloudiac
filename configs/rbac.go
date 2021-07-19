@@ -89,6 +89,7 @@ var polices = []Policy{
 
 	// 组织
 	//{"root", "orgs", "*"},
+	{"login", "orgs", "read"},
 	{"admin", "orgs", "read/update"},
 	{"admin", "orgs", "listuser/adduser/removeuser/updaterole"},
 	{"member", "orgs", "read"},
