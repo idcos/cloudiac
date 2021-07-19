@@ -16,6 +16,10 @@ type Token struct {
 	ExpiredAt   utils.JSONTime `json:"ExpiredAt" form:"ExpiredAt"`
 	Description string         `json:"description" gorm:"comment:'描述'"`
 	CreatorId   Id             `json:"creatorId" gorm:"size:32;not null;comment:'创建人'" example:"u-c3ek0co6n88ldvq1n6ag"` //创建人ID
+
+	// 触发器需要的字段
+	EnvId  Id     `json:"envId" form:"envId"  gorm:"not null"`
+	Action string `json:"action" form:"action" gorm:"type:enum('apply','plan','destroy');default:'plan'"`
 }
 
 func (Token) TableName() string {

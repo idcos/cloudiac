@@ -1,6 +1,7 @@
 package services
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
@@ -93,4 +94,33 @@ func TokenExists(query *db.Session, apiToken string) (bool, *models.Token) {
 	}
 
 	return exists, token
+}
+
+func DetailTriggerToken(dbSess *db.Session, orgId, envId models.Id, action string) (interface{}, e.Error) {
+	token := models.Token{}
+	query := QueryToken(dbSess.Where("org_id = ?", orgId).
+		Where("env_id = ?", envId).
+		Where("action = ?", action), consts.TokenTrigger)
+	if err := query.First(&token); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TokenNotExists)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return token, nil
+}
+
+func IsExistsTriggerToken(dbSess *db.Session, tokenTrigger string) (*models.Token, e.Error) {
+	token := models.Token{}
+	if err := dbSess.
+		Table(models.Token{}.TableName()).
+		Where("`key` = ?", tokenTrigger).
+		Where("`type` = ?", consts.TokenTrigger).
+		First(&token); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TokenNotExists)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &token, nil
 }
