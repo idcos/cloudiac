@@ -14,7 +14,7 @@ import (
 // @Produce  json
 // @Security AuthToken
 // @Success 200 {object} []apps.SystemStatusResp
-// @Router /system/status [get]
+// @Router /systems/status [get]
 func PortalSystemStatusSearch(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.SystemStatusSearch())
 }

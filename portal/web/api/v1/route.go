@@ -33,10 +33,6 @@ func Register(g *gin.RouterGroup) {
 	})
 
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
-	// todo 权限校验总是不通过，暂时先去掉了权限
-	ctrl.Register(g.Group("systems"), &handlers.SystemConfig{})
-	// todo 权限校验总是不通过，暂时先去掉了权限
-	g.GET("/systems/status", w(handlers.PortalSystemStatusSearch))
 
 	// TODO 增加鉴权
 	g.GET("/task/log/sse", w(handlers.Task{}.FollowLogSse))
@@ -58,6 +54,11 @@ func Register(g *gin.RouterGroup) {
 	ctrl.Register(g.Group("users", ac()), &handlers.User{})
 	g.PUT("/users/:id/status", ac(), w(handlers.User{}.ChangeUserStatus))
 	g.POST("/users/:id/password/reset", ac(), w(handlers.User{}.PasswordReset))
+
+	// 系统配置
+	ctrl.Register(g.Group("systems"), &handlers.SystemConfig{})
+	// 系统状态
+	g.GET("/systems/status", w(handlers.PortalSystemStatusSearch))
 
 	// 要求组织 header
 	g.Use(w(middleware.AuthOrgId))
