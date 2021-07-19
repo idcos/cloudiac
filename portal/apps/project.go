@@ -38,11 +38,6 @@ func CreateProject(c *ctx.ServiceCtx, form *forms.CreateProjectForm) (interface{
 		_ = tx.Rollback()
 		return nil, e.AutoNew(err, e.DBError)
 	}
-	// 需要把创建人加进来
-	form.UserAuthorization = append(form.UserAuthorization, forms.UserAuthorization{
-		UserId: c.UserId,
-		Role:   consts.ProjectRoleManager,
-	})
 
 	if err := services.BindProjectUsers(tx, project.Id, form.UserAuthorization); err != nil {
 		c.Logger().Errorf("error creating project user, err %s", err)
@@ -99,7 +94,7 @@ func UpdateProject(c *ctx.ServiceCtx, form *forms.UpdateProjectForm) (interface{
 
 	//校验用户是否在该项目下有权限
 	isExist := IsUserOrgProjectPermission(tx, c.UserId, form.Id, consts.ProjectRoleManager)
-	if !isExist {
+	if !isExist && !c.IsSuperAdmin {
 		return nil, e.New(e.ObjectNotExistsOrNoPerm, http.StatusForbidden, errors.New("not permission"))
 	}
 
@@ -189,7 +184,7 @@ func DetailProject(c *ctx.ServiceCtx, form *forms.DetailProjectForm) (interface{
 	}()
 	//校验用户是否在该项目下有权限
 	isExist := IsUserOrgProjectPermission(tx, c.UserId, form.Id, consts.ProjectRoleManager)
-	if !isExist {
+	if !isExist && !c.IsSuperAdmin {
 		return nil, e.New(e.ObjectNotExistsOrNoPerm, http.StatusForbidden, errors.New("not permission"))
 	}
 	projectUser, err := services.SearchProjectUsers(tx, form.Id)

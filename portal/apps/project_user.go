@@ -27,21 +27,25 @@ func CreateProjectUser(c *ctx.ServiceCtx, form *forms.CreateProjectUserForm) (in
 
 // SearchProjectUser 查询组织下某个项目的用户(不包含已经关联项目的用户)
 func SearchProjectUser(c *ctx.ServiceCtx) (interface{}, e.Error) {
-	query := services.QueryUser(c.DB()).
+	query := services.QueryUser(c.DB().Debug()).
 		Where("status = 'enable'").
 		Order("created_at DESC")
 
 	if c.OrgId != "" {
 		userIds, _ := services.GetUserIdsByOrg(c.DB(), c.OrgId)
-		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+		if len(userIds) > 0 {
+			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+		}
+
 	}
 	if c.ProjectId != "" {
 		userIds, _ := services.GetUserIdsByProjectUser(c.DB(), c.ProjectId)
-		query = query.Where(fmt.Sprintf("%s.id not in (?)", models.User{}.TableName()), userIds)
+		if len(userIds) > 0 {
+			query = query.Where(fmt.Sprintf("%s.id not in (?)", models.User{}.TableName()), userIds)
+		}
 	}
 
 	// 导出用户角色
-
 	if c.OrgId != "" {
 		query = query.Joins(fmt.Sprintf("left join %s as o on %s.id = o.user_id and o.org_id = ?",
 			models.UserOrg{}.TableName(), models.User{}.TableName()), c.OrgId).
@@ -67,10 +71,9 @@ func UpdateProjectUser(c *ctx.ServiceCtx, form *forms.UpdateProjectUserForm) (in
 		attrs["role"] = form.Role
 	}
 
-	err := services.UpdateProjectUser(c.DB().
+	err := services.UpdateProjectUser(c.DB().Debug().
 		Where("user_id = ?", form.Id).
-		Where("project_id = ?", c.ProjectId),
-		form.Id, attrs)
+		Where("project_id = ?", c.ProjectId), attrs)
 	if err != nil && err.Code() == e.ProjectUserAliasDuplicate {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {

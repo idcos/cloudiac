@@ -16,9 +16,9 @@ type DeleteProjectOrgUserForm struct {
 
 type UpdateProjectUserForm struct {
 	BaseForm
-	Id     uint      `url:"id" json:"id" form:"id" `
-	UserId models.Id `json:"userId" form:"userId" `                                     // 用户id
-	Role   string    `json:"role" form:"role" enums:"'manager,approver,operator,guest"` // 角色 (manager,approver,operator,guest)
+	Id models.Id `url:"id" json:"id" form:"id" `
+	//UserId models.Id `json:"userId" form:"userId" `                                     // 用户id
+	Role string `json:"role" form:"role" enums:"'manager,approver,operator,guest"` // 角色 (manager,approver,operator,guest)
 }
 
 type SearchProjectAuthorizationUserForm struct {
