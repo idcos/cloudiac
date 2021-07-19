@@ -336,10 +336,9 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 }
 
 func (m *TaskManager) processTaskDone(task *models.Task) {
-	logger := m.logger.WithField("func", "processTaskDone")
+	logger := m.logger.WithField("func", "processTaskDone").WithField("taskId", task.Id)
 
 	dbSess := m.db
-
 	read := func(path string) ([]byte, error) {
 		content, err := logstorage.Get().Read(path)
 		if err != nil {
@@ -389,8 +388,14 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			return errors.Wrapf(err, "get env '%s'", task.EnvId)
 		}
 
-		// 如果设置了环境的 ttl，则在部署结束后自动根据 ttl 设置销毁时间
-		if env.AutoDestroyAt == nil && env.TTL != "" {
+		if env.AutoDestroyTaskId == task.Id {
+			// 自动销毁执行完后清空设置，以支持再次部署重建环境
+			env.AutoDestroyAt = nil
+			env.AutoDestroyTaskId = ""
+		}
+
+		if task.Type == models.TaskTypeApply && env.AutoDestroyAt == nil && env.TTL != "" {
+			// 如果设置了环境的 ttl，则在部署结束后自动根据 ttl 设置销毁时间
 			ttl, err := time.ParseDuration(env.TTL)
 			if err != nil {
 				return err
@@ -400,10 +405,16 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			env.AutoDestroyTaskId = ""
 		}
 
+		_, err = dbSess.Model(&models.Env{}).Where("id = ?", env.Id).
+			Update(env)
+		if err != nil {
+			return errors.Wrapf(err, "update environment")
+		}
+
 		return nil
 	}
 	if err := processAutoDestroy(); err != nil {
-		logger.Errorf("process auto destroy at: %v", err)
+		logger.Errorf("process auto destroy: %v", err)
 	}
 }
 
