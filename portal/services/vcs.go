@@ -33,7 +33,7 @@ func UpdateVcs(tx *db.Session, id models.Id, attrs models.Attrs) (vcs *models.Vc
 }
 
 func QueryVcs(orgId models.Id, status, q string, query *db.Session) *db.Session {
-	query = query.Model(&models.Vcs{}).Where("org_id = ? or org_id = ''", orgId)
+	query = query.Model(&models.Vcs{}).Where("org_id = ? or org_id = '' and vcs_type != 'local'", orgId)
 	if status != "" {
 		query = query.Where("status = ?", status)
 	}
