@@ -50,7 +50,7 @@ type VariableResp struct {
 }
 
 func SearchVariable(c *ctx.ServiceCtx, form *forms.SearchVariableForm) (interface{}, e.Error) {
-	variableM, err := services.GetValidVariables(c.DB(), form.Scope, c.OrgId, c.ProjectId, form.TplId, form.EnvId)
+	variableM, err, scopes := services.GetValidVariables(c.DB(), form.Scope, c.OrgId, c.ProjectId, form.TplId, form.EnvId)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func SearchVariable(c *ctx.ServiceCtx, form *forms.SearchVariableForm) (interfac
 			Variable:   variable,
 			Overwrites: nil,
 		}
-		isExists, overwrites := services.GetVariableParent(c.DB(), variable.Name, variable.Scope, variable.Type)
+		isExists, overwrites := services.GetVariableParent(c.DB(), variable.Name, variable.Scope, variable.Type, scopes)
 		if isExists {
 			vr.Overwrites = &overwrites
 		}

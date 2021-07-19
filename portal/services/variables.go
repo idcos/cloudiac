@@ -127,7 +127,7 @@ func DeleteVariables(tx *db.Session, DeleteVariables []string) e.Error {
 	return nil
 }
 
-func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId, envId models.Id) (map[string]models.Variable, e.Error) {
+func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId, envId models.Id) (map[string]models.Variable, e.Error, []string) {
 	var (
 		scopeEnv     = []string{consts.ScopeEnv, consts.ScopeTemplate, consts.ScopeProject, consts.ScopeOrg}
 		scopeTpl     = []string{consts.ScopeTemplate, consts.ScopeOrg}
@@ -150,7 +150,7 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 	// 将组织下所有的变量查询，在代码处理变量的继承关系及是否要应用该变量
 	variables, err := SearchVariable(dbSess, orgId)
 	if err != nil {
-		return nil, err
+		return nil, err, scopes
 	}
 	variableM := make(map[string]models.Variable, 0)
 	for index, v := range variables {
@@ -183,14 +183,15 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 		}
 	}
 
-	return variableM, nil
+	return variableM, nil, scopes
 }
 
-func GetVariableParent(dbSess *db.Session, name, scope, variableType string) (bool, models.Variable) {
+func GetVariableParent(dbSess *db.Session, name, scope, variableType string, scopes []string) (bool, models.Variable) {
 	variable := models.Variable{}
 	if err := dbSess.
 		Where("name = ?", name).
 		Where("scope != ?", scope).
+		Where("scope not in (?)", scopes).
 		Where("type = ?", variableType).
 		Order("scope desc").
 		First(&variable); err != nil {
