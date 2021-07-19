@@ -35,8 +35,10 @@ func SearchProjectUser(c *ctx.ServiceCtx) (interface{}, e.Error) {
 		userIds, _ := services.GetUserIdsByOrg(c.DB(), c.OrgId)
 		if len(userIds) > 0 {
 			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+		} else {
+			// 当组织下没有用户时，直接返回空
+			return nil, nil
 		}
-
 	}
 	if c.ProjectId != "" {
 		userIds, _ := services.GetUserIdsByProjectUser(c.DB(), c.ProjectId)
