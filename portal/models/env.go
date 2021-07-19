@@ -55,6 +55,8 @@ type Env struct {
 	// 该 id 在创建自动销毁任务后保存
 	AutoDestroyTaskId Id `json:"-"  gorm:"default:''"` // 自动销毁任务 id
 
+	// 触发器设置
+	Triggers []string `json:"triggers" gorm:"json"` // 触发器。commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
 }
 
 func (Env) TableName() string {

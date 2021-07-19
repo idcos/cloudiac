@@ -91,7 +91,8 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		TTL:           form.TTL,
 		AutoDestroyAt: DestroyAt,
 		AutoApproval:  form.AutoApproval,
-		// TODO: triggers 触发器设置
+
+		Triggers: form.Triggers,
 	})
 	if err != nil && err.Code() == e.EnvAlreadyExists {
 		_ = tx.Rollback()
@@ -258,6 +259,9 @@ func UpdateEnv(c *ctx.ServiceCtx, form *forms.UpdateEnvForm) (*models.Env, e.Err
 		}
 	}
 
+	if form.HasKey("triggers") {
+		env.Triggers = form.Triggers
+	}
 
 	if form.HasKey("archived") {
 		if env.Status != models.EnvStatusInactive {
@@ -363,9 +367,30 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	if form.HasKey("autoApproval") {
 		env.AutoApproval = form.AutoApproval
 	}
-	if form.HasKey("autoDestroyAt") {
-		// TODO: 自动销毁设置
+
+	if form.HasKey("destroyAt") {
+		at, err := time.Parse("2006-01-02 15:04", form.DestroyAt)
+		if err != nil {
+			return nil, e.New(e.BadParam, http.StatusBadRequest)
+		}
+		env.AutoDestroyAt = &at
+	} else if form.HasKey("ttl") {
+		ttl, err := time.ParseDuration(form.TTL)
+		if err != nil {
+			return nil, e.New(e.BadParam, http.StatusBadRequest)
+		}
+
+		env.TTL = form.TTL
+		if env.LastTaskId != "" { // 己部署过的环境同步修改 destroyAt
+			at := time.Now().Add(ttl)
+			env.AutoDestroyAt = &at
+		}
 	}
+
+	if form.HasKey("triggers") {
+		env.Triggers = form.Triggers
+	}
+
 	if form.HasKey("keyId") {
 		env.KeyId = form.KeyId
 	}
