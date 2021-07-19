@@ -76,7 +76,11 @@ func FindOrganization(query *db.Session) (orgs []*models.Organization, err error
 }
 
 func QueryOrganization(query *db.Session) *db.Session {
-	return query.Model(&models.Organization{})
+	query = query.Model(&models.Organization{})
+	// 创建人名称
+	query = query.Joins("left join iac_user as u on u.id = iac_org.creator_id").
+		LazySelectAppend("u.name as creator,iac_org.*")
+	return query
 }
 
 func CreateUserOrgRel(tx *db.Session, userOrg models.UserOrg) (*models.UserOrg, e.Error) {
