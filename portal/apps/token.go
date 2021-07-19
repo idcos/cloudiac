@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
 	"fmt"
 	"net/http"
 )
@@ -45,6 +46,8 @@ func CreateToken(c *ctx.ServiceCtx, form *forms.CreateTokenForm) (interface{}, e
 		ExpiredAt:   form.ExpiredAt,
 		Description: form.Description,
 		CreatorId:   c.UserId,
+		EnvId:       form.EnvId,
+		Action:      form.Action,
 	})
 	if err != nil && err.Code() == e.TokenAlreadyExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
@@ -88,4 +91,85 @@ func DeleteToken(c *ctx.ServiceCtx, form *forms.DeleteTokenForm) (result interfa
 	}
 
 	return
+}
+
+func DetailTriggerToken(c *ctx.ServiceCtx, form *forms.DetailTriggerTokenForm) (result interface{}, re e.Error) {
+	token, err := services.DetailTriggerToken(c.DB(), c.OrgId, form.EnvId, form.Action)
+	if err != nil {
+		if err.Code() == e.TokenNotExists {
+			return nil, e.New(err.Code(), err, http.StatusBadRequest)
+		}
+		return nil, err
+	}
+	return token, nil
+}
+
+func ApiTriggerHandler(c *ctx.ServiceCtx, form forms.ApiTriggerHandler) (interface{}, e.Error) {
+	var (
+		err      e.Error
+		taskType string
+	)
+	tx := c.Tx().Debug()
+
+	token, err := services.IsExistsTriggerToken(tx, form.Token)
+	if err != nil {
+		_ = tx.Rollback()
+		logs.Get().Errorf("get token by envId err %s:", err)
+		if err.Code() == e.TokenNotExists {
+			return nil, e.New(err.Code(), err, http.StatusForbidden)
+		}
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
+	env, err := services.GetEnvById(tx, token.EnvId)
+	if err != nil {
+		_ = tx.Rollback()
+		logs.Get().Errorf("get env by id err %s:", err)
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
+	tpl, err := services.GetTemplateById(tx, env.TplId)
+	if err != nil {
+		_ = tx.Rollback()
+		logs.Get().Errorf("get tpl by id err %s:", err)
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
+	switch token.Action {
+	case models.TaskTypePlan:
+		taskType = models.TaskTypePlan
+	case models.TaskTypeApply:
+		taskType = models.TaskTypeApply
+	case models.TaskTypeDestroy:
+		taskType = models.TaskTypeDestroy
+	}
+
+	task := models.Task{
+		Name:        models.Task{}.GetTaskNameByType(taskType),
+		Type:        taskType,
+		Flow:        models.TaskFlow{},
+		Targets:     models.StrSlice{},
+		CreatorId:   c.UserId,
+		KeyId:       env.KeyId,
+		RunnerId:    env.RunnerId,
+		Variables:   env.Variables,
+		StepTimeout: env.Timeout,
+		AutoApprove: env.AutoApproval,
+	}
+
+	_, err = services.CreateTask(tx, tpl, env, task)
+
+	if err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error creating task, err %s", err)
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error create task, err %s", err)
+		return nil, e.New(e.DBError, err)
+	}
+
+	return nil, nil
 }

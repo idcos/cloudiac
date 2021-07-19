@@ -88,3 +88,30 @@ func (Token) Delete(c *ctx.GinRequestCtx) {
 	}
 	c.JSONResult(apps.DeleteToken(c.ServiceCtx(), form))
 }
+
+// DetailTriggerToken 触发器token详情
+// @Summary 触发器token详情
+// @Description 触发器token详情
+// @Tags Token
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param data body forms.DetailTriggerTokenForm true "DeleteTokenForm信息"
+// @Success 200 {object} ctx.JSONResult{result=models.Token}
+// @Router /tokens/trigger [get]
+func (Token) DetailTriggerToken(c *ctx.GinRequestCtx) {
+	form := &forms.DetailTriggerTokenForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.DetailTriggerToken(c.ServiceCtx(), form))
+}
+
+func ApiTriggerHandler(c *ctx.GinRequestCtx) {
+	form := forms.ApiTriggerHandler{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.ApiTriggerHandler(c.ServiceCtx(), form))
+}

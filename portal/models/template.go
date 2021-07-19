@@ -12,7 +12,7 @@ type Template struct {
 
 	// 如果创建模板时用户直接填写完整 RepoAddr 则 vcsId 为空值，
 	// 此时创建任务直接使用 RepoRevision 做为 commit id，不再实时获取
-	VcsId       Id     `json:"vcsId" gorm:"size:32;not null" example:"a1f79e8a-744d-4ea5-8d97-7e4b7b422a6c"`
+	VcsId Id `json:"vcsId" gorm:"size:32;not null" example:"a1f79e8a-744d-4ea5-8d97-7e4b7b422a6c"`
 
 	RepoId   string `json:"repoId" gorm:"not null"`                                                 // RepoId 仓库 id 或者 path(local vcs)
 	RepoAddr string `json:"repoAddr" gorm:"not null" example:"https://github.com/user/project.git"` // RepoAddr 仓库地址(完整 url 或者项目 path)
@@ -41,27 +41,5 @@ func (t *Template) Migrate(sess *db.Session) (err error) {
 	if err = t.AddUniqueIndex(sess, "unique__org__tpl__name", "org_id", "name"); err != nil {
 		return err
 	}
-	return nil
-}
-
-// TODO 改用统一的 ApiToken 表
-type TemplateAccessToken struct {
-	TimedModel
-
-	TplGuid     string `json:"tplGuid" form:"tplGuid" gorm:"not null"`
-	AccessToken string `json:"accessToken" form:"accessToken" gorm:"not null"`
-	Action      string `json:"action" form:"action"  gorm:"type:enum('plan','apply','compliance');default:'plan'"`
-}
-
-func (TemplateAccessToken) TableName() string {
-	return "iac_template_access_token"
-}
-
-func (o TemplateAccessToken) Migrate(sess *db.Session) (err error) {
-	err = o.AddUniqueIndex(sess, "unique__guid", "access_token")
-	if err != nil {
-		return err
-	}
-
 	return nil
 }

@@ -31,6 +31,7 @@ func Register(g *gin.RouterGroup) {
 			"success": true,
 		})
 	})
+	g.GET("/trigger/send", w(handlers.ApiTriggerHandler))
 
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
 	// todo 权限校验总是不通过，暂时先去掉了权限
@@ -45,7 +46,6 @@ func Register(g *gin.RouterGroup) {
 	g.Use(w(middleware.Auth)) // 解析 header token
 
 	ctrl.Register(g.Group("token", ac()), &handlers.Auth{})
-	ctrl.Register(g.Group("webhook", ac()), &handlers.AccessToken{})
 	g.GET("/auth/me", ac("self", "read"), w(handlers.Auth{}.GetUserByToken))
 	g.PUT("/users/self", ac("self", "update"), w(handlers.User{}.UpdateSelf))
 	//todo runner list权限怎么划分
@@ -116,5 +116,7 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/tasks/:id/approve", ac("tasks", "approve"), w(handlers.Task{}.TaskApprove))
 	g.POST("/task/:id/comment", ac(), w(handlers.TaskComment{}.Create))
 	g.GET("/task/:id/comment", ac(), w(handlers.TaskComment{}.Search))
+
+	g.GET("/tokens/trigger", ac(), w(handlers.Token{}.DetailTriggerToken))
 	ctrl.Register(g.Group("resource/account", ac()), &handlers.ResourceAccount{})
 }

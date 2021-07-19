@@ -2,29 +2,29 @@ package forms
 
 import "cloudiac/portal/models"
 
-type CreateAccessTokenForm struct {
+type CreateApiTriggerForm struct {
 	PageForm
 	TplGuid string `json:"tplGuid" form:"tplGuid" `
 	Action  string `json:"action" form:"action" `
 }
 
-type UpdateAccessTokenForm struct {
+type UpdateApiTriggerForm struct {
 	PageForm
 	Id     models.Id `form:"id" json:"id" binding:"required"`
 	Action string    `json:"action" form:"action" `
 }
 
-type SearchAccessTokenForm struct {
+type SearchApiTriggerForm struct {
 	PageForm
 	TplGuid string `json:"tplGuid" form:"tplGuid" `
 }
 
-type DeleteAccessTokenForm struct {
+type DeleteApiTriggerForm struct {
 	PageForm
 	Id models.Id `form:"id" json:"id" binding:"required"`
 }
 
-type DetailAccessTokenForm struct {
+type DetailApiTriggerForm struct {
 	PageForm
 	Id models.Id `form:"id" json:"id" binding:"required"`
 }

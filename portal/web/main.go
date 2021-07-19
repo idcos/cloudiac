@@ -9,7 +9,6 @@ import (
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/web/api"
 	api_v1 "cloudiac/portal/web/api/v1"
-	"cloudiac/portal/web/api/v1/handlers"
 	"cloudiac/portal/web/middleware"
 	open_api_v1 "cloudiac/portal/web/openapi/v1"
 	"cloudiac/utils/logs"
@@ -39,9 +38,7 @@ func GetRouter() *gin.Engine {
 	}))
 	api_v1.Register(e.Group("/api/v1"))
 	open_api_v1.Register(e.Group("/iac/open/v1"))
-
-	e.GET("/template/hook/send", w(handlers.AccessTokenHandler))
-
+	//e.GET("/trigger/send", w(handlers.ApiTriggerHandler))
 	//// http git server
 	// 直接提供静态文件访问，生产环境部署时也可以使用 nginx 反代
 	e.StaticFS(consts.ReposUrlPrefix, gin.Dir(consts.LocalGitReposPath, true))
