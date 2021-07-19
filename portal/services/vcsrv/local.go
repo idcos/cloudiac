@@ -227,6 +227,7 @@ func (l *LocalRepo) FormatRepoSearch() (*Projects, e.Error) {
 		HTTPURLToRepo:  httpUrl,
 		Name:           strings.TrimSuffix(filepath.Base(l.path), ".git"),
 		LastActivityAt: &headCommit.Author.When,
+		FullName: 		strings.TrimSuffix(filepath.Base(l.path), ".git"),
 	}, nil
 }
 

@@ -231,6 +231,7 @@ func (github *githubRepoIface) FormatRepoSearch() (project *Projects, err e.Erro
 		HTTPURLToRepo:  github.repository.CloneURL,
 		Name:           github.repository.Name,
 		LastActivityAt: &github.repository.Updated,
+		FullName:       github.repository.FullName,
 	}, nil
 }
 
