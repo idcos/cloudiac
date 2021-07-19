@@ -77,4 +77,5 @@ type EnvDetail struct {
 	Creator       string `json:"creator"`       // 创建人
 	ResourceCount int    `json:"resourceCount"` // 资源数量
 	TemplateName  string `json:"templateName"`  // 模板名称
+	KeyName       string `json:"keyName"`       // 密钥名称
 }

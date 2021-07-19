@@ -95,7 +95,8 @@ func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*CreateUserResp,
 
 	// 返回用户信息和初始化密码
 	resp := CreateUserResp{
-		User: user,
+		User:     user,
+		InitPass: initPass,
 	}
 
 	// 发送邮件给用户
