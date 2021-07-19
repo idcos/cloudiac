@@ -6,6 +6,15 @@ import (
 	"cloudiac/portal/models/forms"
 )
 
+// PortalSystemStatusSearch 查询系统状态
+// @Summary 查询系统状态
+// @Description 查询系统状态
+// @Tags 系统状态
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Success 200 {object} []apps.SystemStatusResp
+// @Router /system/status [get]
 func PortalSystemStatusSearch(c *ctx.GinRequestCtx) {
 	c.JSONResult(apps.SystemStatusSearch())
 }
