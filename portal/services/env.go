@@ -93,21 +93,9 @@ func GetEnvDetailById(query *db.Session, id models.Id) (*models.EnvDetail, e.Err
 	return &d, nil
 }
 
-//
-//func GetEnvIdsByUser(query *db.Session, userId models.Id) (envIds []models.Id, err error) {
-//	var userEnvRel []*models.UserEnv
-//	if err := query.Where("user_id = ?", userId).Find(&userEnvRel); err != nil {
-//		return nil, e.AutoNew(err, e.DBError)
-//	}
-//	for _, o := range userEnvRel {
-//		envIds = append(envIds, o.EnvId)
-//	}
-//	return
-//}
-
 func GetEnvByTplId(tx *db.Session, id models.Id) ([]models.Env, error) {
-	env := []models.Env{}
-	if err := tx.Where("tplId = ?", id).Find(&env); err != nil {
+	env := make([]models.Env, 0)
+	if err := tx.Where("tpl_id = ?", id).Find(&env); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 	return env, nil
