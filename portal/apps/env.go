@@ -114,7 +114,7 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 	}
 
 	// 创建任务
-	_, err = services.CreateTask(tx, tpl, env, models.Task{
+	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:        models.Task{}.GetTaskNameByType(form.TaskType),
 		Type:        form.TaskType,
 		Flow:        models.TaskFlow{},
@@ -130,6 +130,13 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		_ = tx.Rollback()
 		c.Logger().Errorf("error creating task, err %s", err)
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
+	env.LastTaskId = task.Id
+	if _, err := tx.Save(env); err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error save env, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
 	// 创建完成
@@ -393,7 +400,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	}
 
 	// 创建任务
-	_, err = services.CreateTask(tx, tpl, env, models.Task{
+	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:        models.Task{}.GetTaskNameByType(form.TaskType),
 		Type:        form.TaskType,
 		Flow:        models.TaskFlow{},
@@ -410,6 +417,13 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		_ = tx.Rollback()
 		c.Logger().Errorf("error creating task, err %s", err)
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
+	env.LastTaskId = task.Id
+	if _, err := tx.Save(env); err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error save env, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
 	if _, err := tx.Save(env); err != nil {
