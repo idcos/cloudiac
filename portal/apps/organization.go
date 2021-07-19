@@ -51,22 +51,22 @@ func SearchOrganization(c *ctx.ServiceCtx, form *forms.SearchOrganizationForm) (
 	query := services.QueryOrganization(c.DB())
 	if c.IsSuperAdmin {
 		if form.Status != "" {
-			query = query.Where("status = ?", form.Status)
+			query = query.Where("iac_org.status = ?", form.Status)
 		}
 	} else {
-		query = query.Where("id in (?)", services.UserOrgIds(c.UserId))
-		query = query.Where("status = 'enable'")
+		query = query.Where("iac_org.id in (?)", services.UserOrgIds(c.UserId))
+		query = query.Where("iac_org.status = 'enable'")
 	}
 
 	if form.Q != "" {
-		query = query.WhereLike("name", form.Q)
+		query = query.WhereLike("iac_org.name", form.Q)
 	}
 
 	// 默认按创建时间逆序排序
 	if form.SortField() == "" {
-		query = query.Order("created_at DESC")
+		query = query.Order("iac_org.created_at DESC")
 	}
-	rs, err := getPage(query, form, &models.Organization{})
+	rs, err := getPage(query, form, &models.OrgDetailResp{})
 	if err != nil {
 		c.Logger().Errorf("error get page, err %s", err)
 	}
