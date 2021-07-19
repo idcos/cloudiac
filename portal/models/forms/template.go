@@ -78,7 +78,7 @@ type OverviewTemplateForm struct {
 
 type TemplateTfvarsSearchForm struct {
 	BaseForm
-	RepoId       string    `uri:"repoId"`
+	RepoId       string    `json:"repoId" form:"repoId" binding:"required"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
 	RepoType     string    `json:"repoType" form:"repoType" `
 	VcsId        models.Id `uri:"id"`
@@ -94,7 +94,7 @@ type TemplateVariableSearchForm struct {
 
 type TemplatePlaybookSearchForm struct {
 	BaseForm
-	RepoId       string    `uri:"repoId"`
+	RepoId       string    `json:"repoId" form:"repoId" binding:"required"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
 	RepoType     string    `json:"repoType" form:"repoType" `
 	VcsId        models.Id `uri:"id"`
