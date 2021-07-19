@@ -3,6 +3,7 @@ package task_manager
 import (
 	"cloudiac/configs"
 	"cloudiac/portal/consts"
+	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
@@ -148,7 +149,11 @@ func (m *TaskManager) start() {
 	defer ticker.Stop()
 
 	for {
-		m.run(ctx)
+		if err := m.processAutoDestroy(); err != nil {
+			m.logger.Errorf("process auto destroy error: %v", err)
+		}
+
+		m.processPendingTask(ctx)
 
 		select {
 		case <-ticker.C:
@@ -187,7 +192,7 @@ func (m *TaskManager) recoverTask(ctx context.Context) error {
 	return nil
 }
 
-func (m *TaskManager) run(ctx context.Context) {
+func (m *TaskManager) processPendingTask(ctx context.Context) {
 	logger := m.logger
 
 	limitedRunners := make([]string, 0)
@@ -334,6 +339,7 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 	logger := m.logger.WithField("func", "processTaskDone")
 
 	dbSess := m.db
+
 	read := func(path string) ([]byte, error) {
 		content, err := logstorage.Get().Read(path)
 		if err != nil {
@@ -383,6 +389,7 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			return errors.Wrapf(err, "get env '%s'", task.EnvId)
 		}
 
+		// 如果设置了环境的 ttl，则在部署结束后自动根据 ttl 设置销毁时间
 		if env.AutoDestroyAt == nil && env.TTL != "" {
 			ttl, err := time.ParseDuration(env.TTL)
 			if err != nil {
@@ -390,7 +397,9 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			}
 			at := time.Now().Add(ttl)
 			env.AutoDestroyAt = &at
+			env.AutoDestroyTaskId = ""
 		}
+
 		return nil
 	}
 	if err := processAutoDestroy(); err != nil {
@@ -567,4 +576,93 @@ func buildRunTaskReq(task models.Task) (taskReq *runner.RunTaskReq, err error) {
 		PrivateKey:   utils.EncodeSecretVar(pk, true),
 	}
 	return taskReq, nil
+}
+
+func (m *TaskManager) processAutoDestroy() error {
+	logger := m.logger.WithField("func", "processAutoDestroy")
+
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Errorf("panic: %v", r)
+			logger.Debugf("%s", debug.Stack())
+		}
+	}()
+
+	dbSess := m.db
+	limit := 64
+	destroyEnvs := make([]*models.Env, 0, limit)
+	err := dbSess.Model(&models.Env{}).
+		Where("status IN (?)", []string{models.EnvStatusActive, models.EnvStatusFailed}).
+		Where("auto_destroy_task_id = ?", "").
+		Where("auto_destroy_at <= ?", time.Now()).
+		Order("auto_destroy_at").Limit(limit).Find(&destroyEnvs)
+
+	if err != nil {
+		return errors.Wrapf(err, "query destroy task: %v", err)
+	}
+
+	for _, env := range destroyEnvs {
+		err = func() error {
+			logger := logger.WithField("envId", env.Id)
+
+			tx := dbSess.Begin()
+			defer func() {
+				if r := recover(); r != nil {
+					_ = tx.Rollback()
+					panic(r)
+				}
+			}()
+
+			tpl, err := services.GetTemplateById(tx, env.TplId)
+			if err != nil {
+				_ = tx.Rollback()
+				if e.IsRecordNotFound(err) {
+					logger.Warnf("template %s not exists", tpl.Id)
+					return nil
+				} else {
+					logger.Errorf("get template %s error: %v", tpl.Id, err)
+					return err
+				}
+			}
+
+			task, err := services.CreateTask(tx, tpl, env, models.Task{
+				Name:        "Auto Destroy",
+				Type:        models.TaskTypeDestroy,
+				Flow:        models.TaskFlow{},
+				Targets:     nil,
+				CreatorId:   "", // TODO 创建默认 system 账号，并在些使用
+				RunnerId:    "",
+				Variables:   nil,
+				StepTimeout: 0,
+				AutoApprove: true,
+			})
+			if err != nil {
+				_ = tx.Rollback()
+				logger.Errorf("create task error: %v", err)
+				// 创建任务失败继续处理其他任务
+				return nil
+			}
+
+			if _, err := tx.Model(&models.Env{}).Where("id = ?", env.Id).
+				Update(&models.Env{AutoDestroyTaskId: task.Id}); err != nil {
+				_ = tx.Rollback()
+				logger.Errorf("update env error: %v", err)
+				return nil
+			}
+
+			if err := tx.Commit(); err != nil {
+				logger.Errorf("commit error: %v", err)
+				return err
+			}
+
+			logger.Infof("created auto destory task: %s", task.Id)
+			return nil
+		}()
+
+		if err != nil {
+			break
+		}
+	}
+
+	return nil
 }
