@@ -196,7 +196,7 @@ func initVcs(tx *db.Session) error {
 	}
 
 	dbVcs := models.Vcs{}
-	err := services.QueryVcs("", "", "", tx).First(&dbVcs)
+	err := services.QueryVcs("", "", "", true, tx).First(&dbVcs)
 	if err != nil && !e.IsRecordNotFound(err) {
 		return err
 	}
