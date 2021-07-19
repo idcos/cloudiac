@@ -110,6 +110,12 @@ func ApiTriggerHandler(c *ctx.ServiceCtx, form forms.ApiTriggerHandler) (interfa
 		taskType string
 	)
 	tx := c.Tx().Debug()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
 
 	token, err := services.IsExistsTriggerToken(tx, form.Token)
 	if err != nil {
