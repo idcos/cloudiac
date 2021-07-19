@@ -51,6 +51,10 @@ type Env struct {
 	TTL           string     `json:"ttl" gorm:"default:'0'" example:"1h/1d"` // 生命周期
 	AutoDestroyAt *time.Time `json:"autoDestroyAt"`                          // 自动销毁时间
 	AutoApproval  bool       `json:"autoApproval" gorm:"default:'0'"`        // 是否自动审批
+
+	// 该 id 在创建自动销毁任务后保存
+	AutoDestroyTaskId Id `json:"-"  gorm:"default:''"` // 自动销毁任务 id
+
 }
 
 func (Env) TableName() string {
