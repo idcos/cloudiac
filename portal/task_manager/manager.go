@@ -402,7 +402,6 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			}
 			at := time.Now().Add(ttl)
 			env.AutoDestroyAt = &at
-			env.AutoDestroyTaskId = ""
 		}
 
 		_, err = dbSess.Model(&models.Env{}).Where("id = ?", env.Id).
