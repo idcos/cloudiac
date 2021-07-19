@@ -39,7 +39,7 @@ func AccessControl(args ...string) gin.HandlerFunc {
 		res := ""
 		// 请求 /api/v1/users/:userId，
 		// 匹配第三段的  ^^^^^^ users
-		regex := regexp.MustCompile("^/[^/]+/[^/]+/([^/]+)")
+		regex := regexp.MustCompile("^/[^/]+/[^/]+/([^/?#]+)")
 		match := regex.FindStringSubmatch(c.Request.RequestURI)
 		if len(match) == 2 {
 			res = match[1]
