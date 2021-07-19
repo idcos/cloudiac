@@ -156,6 +156,7 @@ type Projects struct {
 	HTTPURLToRepo  string     `json:"http_url_to_repo"`
 	Name           string     `json:"name"`
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+	FullName       string     `json:"fullName"`
 }
 
 func (gitlab *gitlabRepoIface) FormatRepoSearch() (project *Projects, err e.Error) {
@@ -167,6 +168,7 @@ func (gitlab *gitlabRepoIface) FormatRepoSearch() (project *Projects, err e.Erro
 		HTTPURLToRepo:  gitlab.Project.HTTPURLToRepo,
 		Name:           gitlab.Project.Name,
 		LastActivityAt: gitlab.Project.LastActivityAt,
+		FullName:       gitlab.Project.PathWithNamespace,
 	}, nil
 }
 

@@ -222,6 +222,7 @@ func (gitea *giteaRepoIface) FormatRepoSearch() (project *Projects, err e.Error)
 		HTTPURLToRepo:  gitea.repository.CloneURL,
 		Name:           gitea.repository.Name,
 		LastActivityAt: &gitea.repository.Updated,
+		FullName:       gitea.repository.FullName,
 	}, nil
 }
 

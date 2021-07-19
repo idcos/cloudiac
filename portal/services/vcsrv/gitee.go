@@ -224,6 +224,7 @@ func (gitee *giteeRepoIface) FormatRepoSearch() (project *Projects, err e.Error)
 		HTTPURLToRepo:  gitee.repository.HtmlUrl,
 		Name:           gitee.repository.Name,
 		LastActivityAt: &gitee.repository.Updated,
+		FullName:       gitee.repository.FullName,
 	}, nil
 }
 
