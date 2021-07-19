@@ -43,9 +43,9 @@ func main() {
 	conf := configs.Get().Log
 	logs.Init(conf.LogLevel, conf.LogPath, conf.LogMaxDays)
 
-	if err := initSSHKeyPair(); err != nil {
-		panic(errors.Wrap(err, "init ssh key pair"))
-	}
+	//if err := initSSHKeyPair(); err != nil {
+	//	panic(errors.Wrap(err, "init ssh key pair"))
+	//}
 
 	// 依赖中间件及数据的初始化
 	{

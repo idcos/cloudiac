@@ -3,8 +3,6 @@ mysql: "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL
 
 portal:
   address: ${PORTAL_ADDRESS}
-  ssh_private_key: "var/private_key"
-  ssh_public_key: "var/private_key.pub"
 
 consul:
   address: "${CONSUL_ADDRESS}"

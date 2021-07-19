@@ -1,5 +1,10 @@
 package sshkey
 
+/*
+ssh 密钥生成和加载。
+旧版本中是使用平台统一生成的 ssh key 并添加到部署的时候，新版本中改为由用户添加 ssh key
+*/
+
 import (
 	"cloudiac/configs"
 	"cloudiac/utils"
