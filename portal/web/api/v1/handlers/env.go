@@ -141,15 +141,11 @@ func (Env) Deploy(c *ctx.GinRequestCtx) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
-// @Param form formData forms.DestroyEnvForm true "parameter"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/destroy [post]
 // @Success 200 {object} ctx.JSONResult{result=models.EnvDetail}
 func (Env) Destroy(c *ctx.GinRequestCtx) {
 	form := forms.DeployEnvForm{}
-	if err := c.Bind(&form); err != nil {
-		return
-	}
 	form.TaskType = models.TaskTypeDestroy
 	c.JSONResult(apps.EnvDeploy(c.ServiceCtx(), &form))
 }
