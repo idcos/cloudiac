@@ -69,7 +69,7 @@ func UpdateVcs(c *ctx.ServiceCtx, form *forms.UpdateVcsForm) (vcs *models.Vcs, e
 }
 
 func SearchVcs(c *ctx.ServiceCtx, form *forms.SearchVcsForm) (interface{}, e.Error) {
-	rs, err := getPage(services.QueryVcs(c.OrgId, form.Status, form.Q, c.DB()), form, models.Vcs{})
+	rs, err := getPage(services.QueryVcs(c.OrgId, form.Status, form.Q, form.IsShowDefaultVcs, c.DB()), form, models.Vcs{})
 	if err != nil {
 		return nil, err
 	}

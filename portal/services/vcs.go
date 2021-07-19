@@ -32,7 +32,7 @@ func UpdateVcs(tx *db.Session, id models.Id, attrs models.Attrs) (vcs *models.Vc
 	return
 }
 
-func QueryVcs(orgId models.Id, status, q string, query *db.Session) *db.Session {
+func QueryVcs(orgId models.Id, status, q string, isShowdefaultVcs bool,query *db.Session) *db.Session {
 	query = query.Model(&models.Vcs{}).Where("org_id = ? or org_id = ''", orgId)
 	if status != "" {
 		query = query.Where("status = ?", status)
@@ -40,6 +40,9 @@ func QueryVcs(orgId models.Id, status, q string, query *db.Session) *db.Session 
 	if q != "" {
 		qs := "%" + q + "%"
 		query = query.Where("name LIKE ?", qs)
+	}
+	if isShowdefaultVcs != true {
+		query = query.Where("vcs_type != 'local'")
 	}
 	return query
 }
