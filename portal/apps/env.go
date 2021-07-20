@@ -11,6 +11,7 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 )
@@ -104,15 +105,17 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
-	// 创建变量
+	// 创建新导入的变量
 	if err = services.OperationVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.Variables, nil); err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
+	// 获取计算后的变量列表
 	vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
-	env.Variables = getVariableBody(vars)
+	// 保存固化的变量
+	env.Variables = getVariables(vars)
 
 	targets := make([]string, 0)
 	if len(strings.TrimSpace(form.Targets)) > 0 {
@@ -128,7 +131,7 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		CreatorId:   c.UserId,
 		KeyId:       env.KeyId,
 		RunnerId:    env.RunnerId,
-		Variables:   env.Variables,
+		Variables:   getVariableBody(env.Variables),
 		StepTimeout: form.Timeout,
 		AutoApprove: env.AutoApproval,
 	})
@@ -155,8 +158,15 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 	return env, nil
 }
 
-// getVariableBody 转换 models.variable 到 variablebody
-func getVariableBody(vars map[string]models.Variable) []models.VariableBody {
+func getVariables(vars map[string]models.Variable) models.EnvVariables {
+	var vb []models.Variable
+	for _, v := range vars {
+		vb = append(vb, v)
+	}
+	return vb
+}
+
+func getVariableBody(vars models.EnvVariables) []models.VariableBody {
 	var vb []models.VariableBody
 	for _, v := range vars {
 		vb = append(vb, models.VariableBody{
@@ -418,14 +428,17 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		env.Timeout = form.Timeout
 	}
 	if form.HasKey("variables") || form.HasKey("deleteVariablesId") {
+		// 变量列表增删
 		if err = services.OperationVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.Variables, form.DeleteVariablesId); err != nil {
 			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 		}
+		// 计算变量列表
 		vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id)
 		if err != nil {
 			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 		}
-		env.Variables = getVariableBody(vars)
+		// 保存固化变量
+		env.Variables = getVariables(vars)
 	}
 	if form.HasKey("tfVarsFile") {
 		env.TfVarsFile = form.TfVarsFile
@@ -457,7 +470,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		CreatorId:   c.UserId,
 		KeyId:       env.KeyId,
 		RunnerId:    env.RunnerId,
-		Variables:   env.Variables,
+		Variables:   getVariableBody(env.Variables),
 		StepTimeout: form.Timeout,
 		AutoApprove: env.AutoApproval,
 	})
@@ -535,6 +548,21 @@ func SearchEnvVariables(c *ctx.ServiceCtx, form *forms.SearchEnvVariableForm) (i
 		c.Logger().Errorf("error while get env by id, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
+
+	rs := make([]VariableResp, 0)
+	for _, variable := range env.Variables {
+		vr := VariableResp{
+			Variable:   variable,
+			Overwrites: nil,
+		}
+		isExists, overwrites := services.GetVariableParent(c.DB(), variable.Name, variable.Scope, variable.Type, common.EnvScopeEnv)
+		if isExists {
+			vr.Overwrites = &overwrites
+		}
+
+		rs = append(rs, vr)
+	}
+	sort.Sort(newVariable(rs))
 
 	return env.Variables, nil
 }

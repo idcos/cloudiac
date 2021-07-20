@@ -162,7 +162,7 @@ func ApiTriggerHandler(c *ctx.ServiceCtx, form forms.ApiTriggerHandler) (interfa
 		CreatorId:   c.UserId,
 		KeyId:       env.KeyId,
 		RunnerId:    env.RunnerId,
-		Variables:   env.Variables,
+		Variables:   getVariableBody(env.Variables),
 		StepTimeout: env.Timeout,
 		AutoApprove: env.AutoApproval,
 	}

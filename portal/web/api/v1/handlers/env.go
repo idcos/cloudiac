@@ -154,7 +154,7 @@ func (Env) Destroy(c *ctx.GinRequestCtx) {
 // @Tags 环境
 // @Summary 获取环境资源列表
 // @Accept multipart/form-data
-// @Accept json
+// @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
@@ -174,13 +174,12 @@ func (Env) SearchResources(c *ctx.GinRequestCtx) {
 // SearchVariables 获取环境变量
 // @Tags 环境
 // @Summary 获取环境变量列表，该环境变量为当前任务所用的环境变量
-// @Accept multipart/form-data
-// @Accept json
+// @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
-// @Param form formData forms.SearchEnvVariableForm true "parameter"
+// @Param form query forms.SearchEnvVariableForm true "parameter"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/variables [get]
 // @Success 200 {object} ctx.JSONResult{result=models.Resource}
