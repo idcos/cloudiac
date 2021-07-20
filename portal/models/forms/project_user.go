@@ -11,12 +11,12 @@ type CreateProjectUserForm struct {
 
 type DeleteProjectOrgUserForm struct {
 	BaseForm
-	Id uint `url:"id" json:"id" form:"id" `
+	Id uint `uri:"id" json:"id" form:"id" `
 }
 
 type UpdateProjectUserForm struct {
 	BaseForm
-	Id models.Id `url:"id" json:"id" form:"id" `
+	Id models.Id `uri:"id" json:"id" form:"id" `
 	//UserId models.Id `json:"userId" form:"userId" `                                     // 用户id
 	Role string `json:"role" form:"role" enums:"'manager,approver,operator,guest"` // 角色 (manager,approver,operator,guest)
 }
