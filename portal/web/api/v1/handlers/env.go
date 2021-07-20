@@ -146,6 +146,7 @@ func (Env) Deploy(c *ctx.GinRequestCtx) {
 // @Success 200 {object} ctx.JSONResult{result=models.EnvDetail}
 func (Env) Destroy(c *ctx.GinRequestCtx) {
 	form := forms.DeployEnvForm{}
+	form.Id = models.Id(c.Param("id"))
 	form.TaskType = models.TaskTypeDestroy
 	c.JSONResult(apps.EnvDeploy(c.ServiceCtx(), &form))
 }
