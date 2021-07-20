@@ -239,7 +239,6 @@ func (t *Task) genStepScript() error {
 		err     error
 	)
 
-	var collCmd string
 	switch t.req.StepType {
 	case common.TaskStepInit:
 		command, err = t.stepInit()
@@ -247,28 +246,19 @@ func (t *Task) genStepScript() error {
 		command, err = t.stepPlan()
 	case common.TaskStepApply:
 		command, err = t.stepApply()
-		if err == nil {
-			collCmd, err = t.collectCommand()
-		}
 	case common.TaskStepDestroy:
 		command, err = t.stepDestroy()
-		if err == nil {
-			collCmd, err = t.collectCommand()
-		}
 	case common.TaskStepPlay:
 		command, err = t.stepPlay()
 	case common.TaskStepCommand:
 		command, err = t.stepCommand()
+	case common.TaskStepCollect:
+		command, err = t.collectCommand()
 	default:
 		return fmt.Errorf("unknown step type '%s'", t.req.StepType)
 	}
 	if err != nil {
 		return err
-	}
-
-	// 直接追加到末尾即可，即使步骤执行失败也执行信息采集命令
-	if collCmd != "" {
-		command = fmt.Sprintf("%s\n%s", command, collCmd)
 	}
 
 	stepDir := GetTaskStepDir(t.req.Env.Id, t.req.TaskId, t.req.Step)
@@ -413,11 +403,13 @@ func (t *Task) stepCommand() (command string, err error) {
 
 // collect command 失败不影响任务状态
 var collectCommandTpl = template.Must(template.New("").Parse(`# state collect command
-terraform show -no-color -json >{{.TFStateJsonFilePath}} || sleep 0
+cd 'code/{{.Req.Env.Workdir}}' && \
+terraform show -no-color -json >{{.TFStateJsonFilePath}}
 `))
 
 func (t *Task) collectCommand() (string, error) {
 	return t.executeTpl(collectCommandTpl, map[string]interface{}{
+		"Req":                 t.req,
 		"TFStateJsonFilePath": t.up2Workspace(TFStateJsonFile),
 	})
 }

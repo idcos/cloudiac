@@ -6,6 +6,7 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/utils/logs"
 	"fmt"
+	"time"
 )
 
 func GetEnv(sess *db.Session, id models.Id) (*models.Env, error) {
@@ -170,4 +171,27 @@ func GetVariableBody(vars models.EnvVariables) []models.VariableBody {
 		})
 	}
 	return vb
+}
+
+var (
+	ttlMap = map[string]string{
+		"1d":  "24h",
+		"3d":  "72h",
+		"1w":  "168h",
+		"15d": "360h",
+		"30d": "720h",
+	}
+)
+
+func ParseTTL(ttl string) (time.Duration, error) {
+	ds, ok := ttlMap[ttl]
+	if ok {
+		return time.ParseDuration(ds)
+	}
+	// map 中不存在则尝试直接解析
+	t, err := time.ParseDuration(ttl)
+	if err != nil {
+		return t, fmt.Errorf("invalid duration: %v", ttl)
+	}
+	return t, nil
 }

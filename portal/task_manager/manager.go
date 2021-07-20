@@ -258,6 +258,7 @@ func (m *TaskManager) processPendingTask(ctx context.Context) {
 			}()
 
 			m.runTask(ctx, task)
+
 			if task.IsEffectTask() {
 				// 不管任务成功还是失败都执行
 				m.processTaskDone(task)
@@ -283,10 +284,12 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 	}
 
 	logger.Infof("run task: %s", task.Id)
-	// 先更新任务为 running 状态
-	// 极端情况下任务未执行好过重复执行，所以先设置状态，后发起调用
-	if err := changeTaskStatus(models.TaskRunning, ""); err != nil {
-		return
+	if !task.Started() { // 任务可能为己启动状态(比如异常退出后的任务恢复)，这里判断一下
+		// 先更新任务为 running 状态
+		// 极端情况下任务未执行好过重复执行，所以先设置状态，后发起调用
+		if err := changeTaskStatus(models.TaskRunning, ""); err != nil {
+			return
+		}
 	}
 
 	if task.IsEffectTask() {
@@ -318,16 +321,35 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 		task.CurrStep = step.Index
 		if _, err = m.db.Model(task).Update(task); err != nil {
 			logger.Errorf("update task error: %v", err)
-			return
+			break
 		}
 
 		if err = m.runTaskStep(ctx, *runTaskReq, task, step); err != nil {
 			if err == context.Canceled {
 				logger.Infof("run task step: %v", err)
-				return
+				break
 			}
 			taskFailed(errors.Wrap(err, fmt.Sprintf("step %d", step.Index)))
-			return
+			break
+		}
+	}
+
+	if task.IsEffectTask() {
+		// 执行信息采集步骤
+		if err := m.runTaskStep(ctx, *runTaskReq, task, &models.TaskStep{
+			TaskStepBody: models.TaskStepBody{
+				Type: models.TaskStepCollect,
+			},
+			OrgId:     task.OrgId,
+			ProjectId: task.ProjectId,
+			EnvId:     task.EnvId,
+			TaskId:    task.Id,
+			Index:     99,
+			Status:    models.TaskStepPending,
+		}); err != nil {
+			logger.Errorf("run collect step error: %v", err)
+		} else {
+			logger.Infof("collect step done")
 		}
 	}
 
@@ -395,11 +417,11 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 
 		if task.Type == models.TaskTypeApply && env.AutoDestroyAt == nil && env.TTL != "" {
 			// 如果设置了环境的 ttl，则在部署结束后自动根据 ttl 设置销毁时间
-			ttl, err := time.ParseDuration(env.TTL)
+			ttl, err := services.ParseTTL(env.TTL)
 			if err != nil {
 				return err
 			}
-			at := time.Now().Add(ttl)
+			at := models.Time(time.Now().Add(ttl))
 			env.AutoDestroyAt = &at
 		}
 

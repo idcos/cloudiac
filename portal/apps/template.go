@@ -9,23 +9,22 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/vcsrv"
-	"cloudiac/utils"
 	"fmt"
 	"net/http"
 )
 
 type SearchTemplateResp struct {
-	CreatedAt         utils.JSONTime `json:"createdAt"` // 创建时间
-	UpdatedAt         utils.JSONTime `json:"updatedAt"` // 更新时间
-	Id                models.Id      `json:"id"`
-	Name              string         `json:"name"`
-	Description       string         `json:"description"`
-	ActiveEnvironment int            `json:"activeEnvironment"`
-	RepoRevision      string         `json:"repoRevision"`
-	Creator           string         `json:"creator"`
-	RepoId            string         `json:"repoId"`
-	VcsId             string         `json:"vcsId"`
-	RepoAddr          string         `json:"repoAddr"`
+	CreatedAt         models.Time `json:"createdAt"` // 创建时间
+	UpdatedAt         models.Time `json:"updatedAt"` // 更新时间
+	Id                models.Id   `json:"id"`
+	Name              string      `json:"name"`
+	Description       string      `json:"description"`
+	ActiveEnvironment int         `json:"activeEnvironment"`
+	RepoRevision      string      `json:"repoRevision"`
+	Creator           string      `json:"creator"`
+	RepoId            string      `json:"repoId"`
+	VcsId             string      `json:"vcsId"`
+	RepoAddr          string      `json:"repoAddr"`
 }
 
 func getRepoAddr(vcsId models.Id, query *db.Session, repoId string) (string, error) {
