@@ -184,7 +184,8 @@ func DetailProject(c *ctx.ServiceCtx, form *forms.DetailProjectForm) (interface{
 	}()
 	//校验用户是否在该项目下有权限
 	isExist := IsUserOrgProjectPermission(tx, c.UserId, form.Id, consts.ProjectRoleManager)
-	if !isExist && !c.IsSuperAdmin {
+	isExistOrg := IsUserOrgPermission(tx, c.UserId, c.OrgId, consts.OrgRoleAdmin)
+	if !isExist && !isExistOrg && !c.IsSuperAdmin {
 		return nil, e.New(e.ObjectNotExistsOrNoPerm, http.StatusForbidden, errors.New("not permission"))
 	}
 	projectUser, err := services.SearchProjectUsers(tx, form.Id)
