@@ -12,7 +12,6 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
-	"sort"
 	"strings"
 	"time"
 )
@@ -549,8 +548,7 @@ func SearchEnvResources(c *ctx.ServiceCtx, form *forms.SearchEnvResourceForm) (i
 	return getPage(query, form, &models.Resource{})
 }
 
-// SearchEnvVariables 查询环境变量列表
-func SearchEnvVariables(c *ctx.ServiceCtx, form *forms.SearchEnvVariableForm) ([]VariableResp, e.Error) {
+func GetEnvById(c *ctx.ServiceCtx, form *forms.SearchEnvVariableForm) (*models.Env, e.Error) {
 	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
@@ -563,27 +561,5 @@ func SearchEnvVariables(c *ctx.ServiceCtx, form *forms.SearchEnvVariableForm) ([
 		return nil, e.New(e.DBError, err)
 	}
 
-	rs := make([]VariableResp, 0)
-	for index, variable := range env.Variables {
-		vr := VariableResp{
-			Variable:   variable,
-			Overwrites: nil,
-		}
-		// 屏蔽敏感字段输出
-		if vr.Sensitive {
-			env.Variables[index].Value = ""
-		}
-		isExists, overwrites := services.GetVariableParent(c.DB(), variable.Name, variable.Scope, variable.Type, common.EnvScopeEnv)
-		if isExists {
-			if vr.Sensitive {
-				vr.Value = ""
-			}
-			vr.Overwrites = &overwrites
-		}
-
-		rs = append(rs, vr)
-	}
-	sort.Sort(newVariable(rs))
-
-	return rs, nil
+	return env, nil
 }

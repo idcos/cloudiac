@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"cloudiac/portal/apps"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
@@ -173,7 +174,7 @@ func (Env) SearchResources(c *ctx.GinRequestCtx) {
 
 // SearchVariables 获取环境变量
 // @Tags 环境
-// @Summary 获取环境变量列表，该环境变量为当前任务所用的环境变量
+// @Summary 获取环境变量列表，该环境变量列表将用于本次部署
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
@@ -188,7 +189,17 @@ func (Env) SearchVariables(c *ctx.GinRequestCtx) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchEnvVariables(c.ServiceCtx(), &form))
+	env, err := apps.GetEnvById(c.ServiceCtx(), &form)
+	if err != nil {
+		c.JSONError(err)
+		return
+	}
+	searchVarForm := forms.SearchVariableForm{}
+	searchVarForm.TplId = env.TplId
+	searchVarForm.EnvId = env.Id
+	searchVarForm.Scope = consts.ScopeEnv
+	searchVarForm.BaseForm = form.BaseForm
+	c.JSONResult(apps.SearchVariable(c.ServiceCtx(), &searchVarForm))
 }
 
 // SearchTasks 部署历史
