@@ -62,6 +62,9 @@ func SearchVariable(c *ctx.ServiceCtx, form *forms.SearchVariableForm) (interfac
 		}
 		isExists, overwrites := services.GetVariableParent(c.DB(), variable.Name, variable.Scope, variable.Type, scopes)
 		if isExists {
+			if overwrites.Sensitive {
+				overwrites.Value = ""
+			}
 			vr.Overwrites = &overwrites
 		}
 
