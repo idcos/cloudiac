@@ -114,13 +114,12 @@ func (Env) Archive(c *ctx.GinRequestCtx) {
 // Deploy 环境重新部署
 // @Tags 环境
 // @Summary 环境重新部署
-// @Accept multipart/form-data
 // @Accept json
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
-// @Param form formData forms.DeployEnvForm true "parameter"
+// @Param data body forms.DeployEnvForm true "部署参数"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/deploy [post]
 // @Success 200 {object} ctx.JSONResult{result=models.EnvDetail}

@@ -2,6 +2,7 @@ package apps
 
 import (
 	"cloudiac/common"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
@@ -104,10 +105,14 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 	}
 
 	// 创建变量
-	// 前端只传修改过或者新建的变量?，所有修改过的上层变量都会变成新的环境变量进行创建
-	vars := form.Variables
-	// vars, err := services.OperationVariable(tx, env.Id, form.Variables)
-	env.Variables = vars
+	if err = services.OperationVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.Variables, nil); err != nil {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+	vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id)
+	if err != nil {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+	env.Variables = getVariableBody(vars)
 
 	targets := make([]string, 0)
 	if len(strings.TrimSpace(form.Targets)) > 0 {
@@ -123,7 +128,7 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		CreatorId:   c.UserId,
 		KeyId:       env.KeyId,
 		RunnerId:    env.RunnerId,
-		Variables:   form.Variables,
+		Variables:   env.Variables,
 		StepTimeout: form.Timeout,
 		AutoApprove: env.AutoApproval,
 	})
@@ -148,6 +153,22 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 	}
 
 	return env, nil
+}
+
+// getVariableBody 转换 models.variable 到 variablebody
+func getVariableBody(vars map[string]models.Variable) []models.VariableBody {
+	var vb []models.VariableBody
+	for _, v := range vars {
+		vb = append(vb, models.VariableBody{
+			Scope:       v.Scope,
+			Type:        v.Type,
+			Name:        v.Name,
+			Value:       v.Value,
+			Sensitive:   v.Sensitive,
+			Description: v.Description,
+		})
+	}
+	return vb
 }
 
 // SearchEnv 环境查询
@@ -357,10 +378,6 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		form.Playbook = tpl.Playbook
 	}
 
-	// 变量
-	// TODO: 检查、保存、合并环境变量
-	//vars := form.Variables
-
 	if form.HasKey("name") {
 		env.Name = form.Name
 	}
@@ -400,8 +417,15 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	if form.HasKey("timeout") {
 		env.Timeout = form.Timeout
 	}
-	if form.HasKey("variables") {
-		env.Variables = form.Variables
+	if form.HasKey("variables") || form.HasKey("deleteVariablesId") {
+		if err = services.OperationVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.Variables, form.DeleteVariablesId); err != nil {
+			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+		}
+		vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id)
+		if err != nil {
+			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+		}
+		env.Variables = getVariableBody(vars)
 	}
 	if form.HasKey("tfVarsFile") {
 		env.TfVarsFile = form.TfVarsFile
@@ -433,7 +457,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		CreatorId:   c.UserId,
 		KeyId:       env.KeyId,
 		RunnerId:    env.RunnerId,
-		Variables:   form.Variables,
+		Variables:   env.Variables,
 		StepTimeout: form.Timeout,
 		AutoApprove: env.AutoApproval,
 	})
