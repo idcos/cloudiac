@@ -4,7 +4,6 @@ import (
 	"cloudiac/portal/libs/db"
 	"github.com/lib/pq"
 	"path"
-	"time"
 )
 
 const (
@@ -48,16 +47,16 @@ type Env struct {
 
 	LastTaskId Id `json:"lastTaskId" gorm:"size:32"` // 最后一次部署或销毁任务的 id(plan 任务不记录)
 
-	// TODO 自动销毁机制待实现
-	TTL           string     `json:"ttl" gorm:"default:'0'" example:"1h/1d"` // 生命周期
-	AutoDestroyAt *time.Time `json:"autoDestroyAt"`                          // 自动销毁时间
-	AutoApproval  bool       `json:"autoApproval" gorm:"default:'0'"`        // 是否自动审批
+	AutoApproval bool `json:"autoApproval" gorm:"default:'0'"` // 是否自动审批
 
-	// 该 id 在创建自动销毁任务后保存
+	TTL           string `json:"ttl" gorm:"default:'0'" example:"1h/1d"` // 生命周期
+	AutoDestroyAt *Time  `json:"autoDestroyAt"`                          // 自动销毁时间
+
+	// 该 id 在创建自动销毁任务后保存，并在销毁任务执行完成后清除
 	AutoDestroyTaskId Id `json:"-"  gorm:"default:''"` // 自动销毁任务 id
 
 	// 触发器设置
-	Triggers pq.StringArray `json:"triggers" gorm:"type:text" swaggertype:"array,string"` // 触发器。commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
+	Triggers pq.StringArray `json:"triggers" gorm:"type:json" swaggertype:"array,string"` // 触发器。commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
 }
 
 func (Env) TableName() string {

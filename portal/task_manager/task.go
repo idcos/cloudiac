@@ -74,7 +74,10 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 	stepResult *waitStepResult, err error) {
 
 	logger := logs.Get().WithField("action", "WaitTaskStep").WithField("taskId", task.Id)
-	taskDeadline := step.StartAt.Add(time.Duration(task.StepTimeout) * time.Second)
+	if step.StartAt == nil {
+		return nil, fmt.Errorf("step not start")
+	}
+	taskDeadline := time.Time(*step.StartAt).Add(time.Duration(task.StepTimeout) * time.Second)
 
 	// 当前版本实现中需要 portal 主动连接到 runner 获取状态
 	err = utils.RetryFunc(0, time.Second*10, func(retryN int) (retry bool, er error) {
