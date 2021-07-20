@@ -638,7 +638,7 @@ func (m *TaskManager) processAutoDestroy() error {
 				Targets:     nil,
 				CreatorId:   "", // TODO 创建默认 system 账号，并在些使用
 				RunnerId:    "",
-				Variables:   nil,
+				Variables:   services.GetVariableBody(env.Variables),
 				StepTimeout: 0,
 				AutoApprove: true,
 			})

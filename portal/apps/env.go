@@ -131,7 +131,7 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		CreatorId:   c.UserId,
 		KeyId:       env.KeyId,
 		RunnerId:    env.RunnerId,
-		Variables:   getVariableBody(env.Variables),
+		Variables:   services.GetVariableBody(env.Variables),
 		StepTimeout: form.Timeout,
 		AutoApprove: env.AutoApproval,
 	})
@@ -162,21 +162,6 @@ func getVariables(vars map[string]models.Variable) models.EnvVariables {
 	var vb []models.Variable
 	for _, v := range vars {
 		vb = append(vb, v)
-	}
-	return vb
-}
-
-func getVariableBody(vars models.EnvVariables) []models.VariableBody {
-	var vb []models.VariableBody
-	for _, v := range vars {
-		vb = append(vb, models.VariableBody{
-			Scope:       v.Scope,
-			Type:        v.Type,
-			Name:        v.Name,
-			Value:       v.Value,
-			Sensitive:   v.Sensitive,
-			Description: v.Description,
-		})
 	}
 	return vb
 }
@@ -470,7 +455,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		CreatorId:   c.UserId,
 		KeyId:       env.KeyId,
 		RunnerId:    env.RunnerId,
-		Variables:   getVariableBody(env.Variables),
+		Variables:   services.GetVariableBody(env.Variables),
 		StepTimeout: form.Timeout,
 		AutoApprove: env.AutoApproval,
 	})
