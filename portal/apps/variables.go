@@ -50,7 +50,7 @@ type VariableResp struct {
 }
 
 func SearchVariable(c *ctx.ServiceCtx, form *forms.SearchVariableForm) (interface{}, e.Error) {
-	variableM, err, scopes := services.GetValidVariables(c.DB(), form.Scope, c.OrgId, c.ProjectId, form.TplId, form.EnvId)
+	variableM, err, scopes := services.GetValidVariables(c.DB(), form.Scope, c.OrgId, c.ProjectId, form.TplId, form.EnvId, false)
 	if err != nil {
 		return nil, err
 	}
@@ -63,6 +63,10 @@ func SearchVariable(c *ctx.ServiceCtx, form *forms.SearchVariableForm) (interfac
 		// 获取上一级被覆盖的变量
 		isExists, overwrites := services.GetVariableParent(c.DB(), variable.Name, variable.Scope, variable.Type, scopes)
 		if isExists {
+			// 屏蔽敏感字段输出
+			if vr.Sensitive {
+				vr.Value = ""
+			}
 			vr.Overwrites = &overwrites
 		}
 

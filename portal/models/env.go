@@ -80,6 +80,14 @@ func (e *Env) DefaultStatPath() string {
 	return path.Join(e.OrgId.String(), e.ProjectId.String(), e.Id.String(), "terraform.tfstate")
 }
 
+func (e *Env) HideSensitiveVariable() {
+	for index, v := range e.Variables {
+		if v.Sensitive {
+			e.Variables[index].Value = ""
+		}
+	}
+}
+
 type EnvVariables []Variable
 
 func (v EnvVariables) Value() (driver.Value, error) {

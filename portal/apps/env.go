@@ -5,6 +5,7 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
@@ -110,7 +111,7 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 	// 获取计算后的变量列表
-	vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id)
+	vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id, true)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -154,6 +155,9 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		c.Logger().Errorf("error commit env, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
+
+	// 屏蔽敏感字段输出
+	env.HideSensitiveVariable()
 
 	return env, nil
 }
@@ -205,13 +209,28 @@ func SearchEnv(c *ctx.ServiceCtx, form *forms.SearchEnvForm) (interface{}, e.Err
 	// 默认按创建时间逆序排序
 	if form.SortField() == "" {
 		query = query.Order("iac_env.created_at DESC")
+	} else {
+		query = form.Order(query)
 	}
 
-	rs, err := getPage(query, form, &models.EnvDetail{})
-	if err != nil {
-		c.Logger().Errorf("error get page, err %s", err)
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	details := make([]*models.EnvDetail, 0)
+	if err := p.Scan(&details); err != nil {
+		return nil, e.New(e.DBError, err)
 	}
-	return rs, err
+
+	// 屏蔽敏感字段输出
+	if details != nil {
+		for _, env := range details {
+			env.HideSensitiveVariable()
+		}
+	}
+
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     details,
+	}, nil
 }
 
 // UpdateEnv 环境编辑
@@ -295,6 +314,10 @@ func UpdateEnv(c *ctx.ServiceCtx, form *forms.UpdateEnvForm) (*models.Env, e.Err
 		c.Logger().Errorf("error update env, err %s", err)
 		return nil, err
 	}
+
+	// 屏蔽敏感字段输出
+	env.HideSensitiveVariable()
+
 	return env, nil
 }
 
@@ -313,6 +336,9 @@ func EnvDetail(c *ctx.ServiceCtx, form forms.DetailEnvForm) (*models.EnvDetail, 
 		c.Logger().Errorf("error get env by id, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
+
+	// 屏蔽敏感字段输出
+	envDetail.HideSensitiveVariable()
 
 	return envDetail, nil
 }
@@ -418,7 +444,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 		}
 		// 计算变量列表
-		vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id)
+		vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id, true)
 		if err != nil {
 			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 		}
@@ -485,6 +511,9 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		return nil, e.New(e.DBError, err)
 	}
 
+	// 屏蔽敏感字段输出
+	env.HideSensitiveVariable()
+
 	return env, nil
 }
 
@@ -535,13 +564,20 @@ func SearchEnvVariables(c *ctx.ServiceCtx, form *forms.SearchEnvVariableForm) ([
 	}
 
 	rs := make([]VariableResp, 0)
-	for _, variable := range env.Variables {
+	for index, variable := range env.Variables {
 		vr := VariableResp{
 			Variable:   variable,
 			Overwrites: nil,
 		}
+		// 屏蔽敏感字段输出
+		if vr.Sensitive {
+			env.Variables[index].Value = ""
+		}
 		isExists, overwrites := services.GetVariableParent(c.DB(), variable.Name, variable.Scope, variable.Type, common.EnvScopeEnv)
 		if isExists {
+			if vr.Sensitive {
+				vr.Value = ""
+			}
 			vr.Overwrites = &overwrites
 		}
 

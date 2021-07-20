@@ -128,7 +128,7 @@ func DeleteVariables(tx *db.Session, DeleteVariables []string) e.Error {
 	return nil
 }
 
-func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId, envId models.Id) (map[string]models.Variable, e.Error, []string) {
+func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId, envId models.Id, keepSensitive bool) (map[string]models.Variable, e.Error, []string) {
 	// 根据scope 构建变量应用范围
 	scopes := make([]string, 0)
 	switch scope {
@@ -151,7 +151,7 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 	for index, v := range variables {
 		// 过滤掉变量一部分不需要应用的变量
 		if utils.InArrayStr(scopes, v.Scope) {
-			if v.Sensitive {
+			if v.Sensitive && !keepSensitive {
 				variables[index].Value = ""
 			}
 			// 根据id（envId/tplId/projectId）来确认变量是否需要应用
