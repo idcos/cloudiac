@@ -34,12 +34,12 @@ type taskDetailResp struct {
 
 // TaskDetail 任务信息详情
 func TaskDetail(c *ctx.ServiceCtx, form forms.DetailTaskForm) (*taskDetailResp, e.Error) {
-	taskIds, er := services.GetOrgIdsByUser(c.DB(), c.UserId)
+	orgIds, er := services.GetOrgIdsByUser(c.DB(), c.UserId)
 	if er != nil {
 		c.Logger().Errorf("error get task id by user, err %s", er)
 		return nil, e.New(e.DBError, er)
 	}
-	if form.Id.InArray(taskIds...) == false && c.IsSuperAdmin == false {
+	if c.OrgId.InArray(orgIds...) == false && c.IsSuperAdmin == false {
 		// 请求了一个不存在的 task，因为 task id 是在 path 传入，这里我们返回 404
 		return nil, e.New(e.TaskNotExists, http.StatusNotFound)
 	}
@@ -209,12 +209,12 @@ func FollowTaskLog(c *ctx.GinRequestCtx, form forms.DetailTaskForm) e.Error {
 
 // TaskOutput 任务Output信息详情
 func TaskOutput(c *ctx.ServiceCtx, form forms.DetailTaskForm) (interface{}, e.Error) {
-	taskIds, er := services.GetOrgIdsByUser(c.DB(), c.UserId)
+	orgIds, er := services.GetOrgIdsByUser(c.DB(), c.UserId)
 	if er != nil {
 		c.Logger().Errorf("error get task id by user, err %s", er)
 		return nil, e.New(e.DBError, er)
 	}
-	if form.Id.InArray(taskIds...) == false && c.IsSuperAdmin == false {
+	if c.OrgId.InArray(orgIds...) == false && c.IsSuperAdmin == false {
 		// 请求了一个不存在的 task，因为 task id 是在 path 传入，这里我们返回 404
 		return nil, e.New(e.TaskNotExists, http.StatusNotFound)
 	}
