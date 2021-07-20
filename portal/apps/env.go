@@ -45,15 +45,12 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 	}
 
 	var (
-		DestroyAt *time.Time
+		DestroyAt utils.JSONTime
 	)
 
-	if form.DestroyAt != "" {
-		at, err := time.Parse("2006-01-02 15:04", form.DestroyAt)
-		if err != nil {
-			return nil, e.New(e.BadParam, http.StatusBadRequest)
-		}
-		DestroyAt = &at
+	if form.DestroyAt != 0 {
+		at := time.Unix(form.DestroyAt, 0)
+		DestroyAt = utils.JSONTime(at)
 	} else if form.TTL != "" {
 		_, err := time.ParseDuration(form.TTL)
 		if err != nil {
@@ -89,7 +86,7 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		KeyId:        form.KeyId,
 
 		TTL:           form.TTL,
-		AutoDestroyAt: DestroyAt,
+		AutoDestroyAt: &DestroyAt,
 		AutoApproval:  form.AutoApproval,
 
 		Triggers: form.Triggers,
@@ -241,10 +238,7 @@ func UpdateEnv(c *ctx.ServiceCtx, form *forms.UpdateEnvForm) (*models.Env, e.Err
 	}
 
 	if form.HasKey("destroyAt") {
-		at, err := time.Parse("2006-01-02 15:04", form.DestroyAt)
-		if err != nil {
-			return nil, e.New(e.BadParam, http.StatusBadRequest)
-		}
+		at := time.Unix(form.DestroyAt, 0)
 		attrs["auto_destroy_at"] = &at
 	} else if form.HasKey("ttl") {
 		ttl, err := time.ParseDuration(form.TTL)
@@ -369,10 +363,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	}
 
 	if form.HasKey("destroyAt") {
-		at, err := time.Parse("2006-01-02 15:04", form.DestroyAt)
-		if err != nil {
-			return nil, e.New(e.BadParam, http.StatusBadRequest)
-		}
+		at := utils.JSONTime(time.Unix(form.DestroyAt, 0))
 		env.AutoDestroyAt = &at
 	} else if form.HasKey("ttl") {
 		ttl, err := time.ParseDuration(form.TTL)
@@ -382,7 +373,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 
 		env.TTL = form.TTL
 		if env.LastTaskId != "" { // 己部署过的环境同步修改 destroyAt
-			at := time.Now().Add(ttl)
+			at := utils.JSONTime(time.Now().Add(ttl))
 			env.AutoDestroyAt = &at
 		}
 	}

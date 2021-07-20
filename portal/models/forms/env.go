@@ -1,6 +1,8 @@
 package forms
 
-import "cloudiac/portal/models"
+import (
+	"cloudiac/portal/models"
+)
 
 type CreateEnvForm struct {
 	BaseForm
@@ -9,7 +11,7 @@ type CreateEnvForm struct {
 	OneTime   bool      `form:"oneTime" json:"oneTime" binding:""`                // 一次性环境标识
 	Triggers  []string  `form:"triggers" json:"triggers" binding:""`              // 启用触发器，触发器：commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
 	TTL       string    `form:"ttl" json:"ttl" binding:"" `                       // 存活时间，1h/12h/3d/1w/
-	DestroyAt string    `form:"destroyAt" json:"destroyAt" binding:"" `           // 自动销毁时间,格式：2021-07-16 17:49
+	DestroyAt int64     `form:"destroyAt" json:"destroyAt" binding:"" `           // 自动销毁时间
 
 	AutoApproval bool `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"` // 是否自动审批
 
@@ -37,8 +39,9 @@ type UpdateEnvForm struct {
 	KeyId       models.Id `form:"keyId" json:"keyId" binding:""`                    // 部署密钥ID
 	RunnerId    string    `form:"runnerId" json:"runnerId" binding:""`              // 环境默认部署通道
 	Archived    bool      `form:"archived" json:"archived" enums:"true,false"`      // 归档状态，默认返回未归档环境
-	TTL         string    `form:"ttl" json:"ttl" binding:"" `                       // 存活时间(执行过部署的任务不可以修改该值)，格式：1h/12h/3d/1w/
-	DestroyAt   string    `form:"destroyAt" json:"destroyAt" binding:"" `           // 自动销毁时间,格式：2021-07-16 17:49
+
+	TTL       string `form:"ttl" json:"ttl" binding:"" `             // 存活时间(执行过部署的任务不可以修改该值)，格式：1h/12h/3d/1w/
+	DestroyAt int64  `form:"destroyAt" json:"destroyAt" binding:"" ` // 自动销毁时间(时间戳)
 
 	AutoApproval bool `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"` // 是否自动审批
 
@@ -53,8 +56,8 @@ type DeployEnvForm struct {
 	Name         string   `form:"name" json:"name" binding:""`                                     // 环境名称
 	Triggers     []string `form:"triggers" json:"triggers" binding:""`                             // 启用触发器，触发器：commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
 	AutoApproval bool     `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"` // 是否自动审批
-	DestroyAt    string   `form:"destroyAt" json:"destroyAt" binding:"" `                          // 自动销毁时间， 0: 不自动销毁, 12h: 12小时,	1d：一天,3d: 三天	1w: 一周，7天	15d: 半个月，15天	1m: 一个月，28/29/30/31天根据不同月份	xxxx-xx-xx xx:xx：指定时间（选择指定时间时出现时间选择框），格式：年-月-日 时:分
-	TTL          string   `form:"ttl" json:"ttl" binding:"" `                                      // 存活时间(执行过部署的任务不可以修改该值)，格式：1h/12h/3d/1w/
+	DestroyAt    int64    `form:"destroyAt" json:"destroyAt" binding:"" `                          // 自动销毁时间(时间戳)
+	TTL          string   `form:"ttl" json:"ttl" binding:"" `                                      // 存活时间(己部署的环境不可修改)，格式：1h/12h/3d/1w/
 
 	TaskType string `form:"taskType" json:"taskType" binding:"required" enums:"plan,apply,destroy"` // 环境创建后触发的任务步骤，plan计划,apply部署,destroy销毁资源
 	Targets  string `form:"targets" json:"targets" binding:""`                                      // Terraform target 参数列表

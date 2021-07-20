@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"sort"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -164,8 +165,25 @@ func SortedStringKV(m map[string]string) string {
 
 type JSONTime time.Time
 
+func (JSONTime) ParseStamp(s string) (time.Time, error) {
+	stamp, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return time.Unix(stamp, 0), nil
+}
+
+func (t *JSONTime) UnmarshalJSON(bs []byte) error {
+	var stamp int64
+	if err := json.Unmarshal(bs, &stamp); err != nil {
+		return err
+	}
+	*t = JSONTime(time.Unix(stamp, 0))
+	return nil
+}
+
 func (t JSONTime) MarshalJSON() ([]byte, error) {
-	stamp := fmt.Sprintf("\"%s\"", time.Time(t).Format("2006-01-02 15:04:05"))
+	stamp := fmt.Sprintf("%d", time.Time(t).Unix())
 	return []byte(stamp), nil
 }
 
