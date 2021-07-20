@@ -114,6 +114,43 @@ var polices = []Policy{
 	{"operator", "templates", "read"},
 	{"guest", "templates", "read"},
 
+	// 变量
+	{"admin", "variables", "*"},
+	{"member", "variables", "read"},
+
+	{"manager", "variables", "*"},
+	{"approver", "variables", "*"},
+	{"operator", "variables", "*"},
+	{"guest", "variables", "read"},
+
+	//token
+	{"admin", "tokens", "*"},
+	{"member", "tokens", "read"},
+
+	{"manager", "tokens", "*"},
+	{"approver", "tokens", "*"},
+	{"operator", "tokens", "*"},
+	{"guest", "tokens", "read"},
+
+	//通知
+	{"admin", "notifications", "*"},
+	{"member", "notifications", "read"},
+
+	//vcs
+	{"admin", "vcs", "*"},
+	{"member", "vcs", "read"},
+
+	{"manager", "vcs", "read"},
+	{"approver", "vcs", "read"},
+	{"operator", "vcs", "read"},
+	{"guest", "vcs", "read"},
+
+	//runner
+	{"manager", "runners", "read"},
+	{"approver", "runners", "read"},
+	{"operator", "runners", "read"},
+	{"guest", "runners", "read"},
+
 	// 密钥
 	{"admin", "keys", "*"},
 	{"member", "keys", "*"},
