@@ -17,15 +17,14 @@ import (
 // SearchTask 任务查询
 func SearchTask(c *ctx.ServiceCtx, form *forms.SearchTaskForm) (interface{}, e.Error) {
 	query := services.QueryTask(c.DB())
+	if form.EnvId != "" {
+		query = query.Where("env_id = ?", form.EnvId)
+	}
 	// 默认按创建时间逆序排序
 	if form.SortField() == "" {
 		query = query.Order("created_at DESC")
 	}
-	rs, err := getPage(query, form, &models.Task{})
-	if err != nil {
-		c.Logger().Errorf("error get page, err %s", err)
-	}
-	return rs, err
+	return getPage(query, form, &models.Task{})
 }
 
 type taskDetailResp struct {
