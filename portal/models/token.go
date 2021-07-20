@@ -2,20 +2,19 @@ package models
 
 import (
 	"cloudiac/portal/libs/db"
-	"cloudiac/utils"
 )
 
 type Token struct {
 	TimedModel
 
-	Key         string         `json:"key" form:"key" gorm:"not null"`
-	Type        string         `json:"type" form:"type" gorm:"not null"`
-	OrgId       Id             `json:"orgId" form:"orgId" gorm:"not null"`
-	Role        string         `json:"role" form:"role" gorm:"not null"`
-	Status      string         `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'Token状态'"`
-	ExpiredAt   utils.JSONTime `json:"ExpiredAt" form:"ExpiredAt"`
-	Description string         `json:"description" gorm:"comment:'描述'"`
-	CreatorId   Id             `json:"creatorId" gorm:"size:32;not null;comment:'创建人'" example:"u-c3ek0co6n88ldvq1n6ag"` //创建人ID
+	Key         string `json:"key" form:"key" gorm:"not null"`
+	Type        string `json:"type" form:"type" gorm:"not null"`
+	OrgId       Id     `json:"orgId" form:"orgId" gorm:"not null"`
+	Role        string `json:"role" form:"role" gorm:"not null"`
+	Status      string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'Token状态'"`
+	ExpiredAt   Time   `json:"ExpiredAt" form:"ExpiredAt"`
+	Description string `json:"description" gorm:"comment:'描述'"`
+	CreatorId   Id     `json:"creatorId" gorm:"size:32;not null;comment:'创建人'" example:"u-c3ek0co6n88ldvq1n6ag"` //创建人ID
 
 	// 触发器需要的字段
 	EnvId  Id     `json:"envId" form:"envId"  gorm:"not null"`

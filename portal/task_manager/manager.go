@@ -399,7 +399,7 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			if err != nil {
 				return err
 			}
-			at := utils.JSONTime(time.Now().Add(ttl))
+			at := models.Time(time.Now().Add(ttl))
 			env.AutoDestroyAt = &at
 		}
 

@@ -14,7 +14,7 @@ type Key struct {
 	//Description string `json:"description" gorm:"comment:'描述'" example:"测试环境部署密钥"`                                   // 描述
 	//Type        string         `json:"type" gorm:"not null;comment:类型" example:""`                                                 // 类型
 	//Status      string         `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'状态'" example:"enable"` // 状态
-	//ExpiredAt   utils.JSONTime `json:"ExpiredAt" gorm:"type:datetime;comment:'过期时间'" example:"2006-01-02 15:04:05"`                // 过期时间
+	//ExpiredAt   utils.Time `json:"ExpiredAt" gorm:"type:datetime;comment:'过期时间'" example:"2006-01-02 15:04:05"`                // 过期时间
 }
 
 func (Key) TableName() string {

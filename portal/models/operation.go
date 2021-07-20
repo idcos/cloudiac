@@ -2,19 +2,18 @@ package models
 
 import (
 	"cloudiac/portal/libs/db"
-	"cloudiac/utils"
 )
 
 type OperationLog struct {
 	BaseModel
 
-	UserID        Id             `json:"userId" form:"userId" gorm:"size:32"`
-	Username      string         `json:"username" form:"username" `
-	UserAddr      string         `json:"userAddr" form:"userAddr" `
-	OperationAt   utils.JSONTime `json:"operationAt" form:"operationAt" `
-	OperationType string         `json:"operationType" form:"operationType" `
-	OperationInfo string         `json:"operationInfo" form:"operationInfo" `
-	Desc          JSON           `json:"desc" form:"desc" gorm:"type:text"`
+	UserID        Id     `json:"userId" form:"userId" gorm:"size:32"`
+	Username      string `json:"username" form:"username" `
+	UserAddr      string `json:"userAddr" form:"userAddr" `
+	OperationAt   Time   `json:"operationAt" form:"operationAt" `
+	OperationType string `json:"operationType" form:"operationType" `
+	OperationInfo string `json:"operationInfo" form:"operationInfo" `
+	Desc          JSON   `json:"desc" form:"desc" gorm:"type:text"`
 }
 
 func (o *OperationLog) InsertLog() error {

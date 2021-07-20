@@ -250,7 +250,7 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 
 	task.Status = status
 	task.Message = message
-	now := utils.JSONTime(time.Now())
+	now := models.Time(time.Now())
 	if task.StartAt == nil && task.Started() {
 		task.StartAt = &now
 	}

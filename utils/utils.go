@@ -9,7 +9,6 @@ import (
 	"crypto/cipher"
 	"crypto/md5"
 	crand "crypto/rand"
-	"database/sql/driver"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -23,7 +22,6 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"sort"
-	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -161,61 +159,6 @@ func SortedStringKV(m map[string]string) string {
 		sorted = append(sorted, fmt.Sprintf("%s=%s", k, m[k]))
 	}
 	return strings.Join(sorted, ",")
-}
-
-type JSONTime time.Time
-
-func (JSONTime) ParseStamp(s string) (time.Time, error) {
-	stamp, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		return time.Time{}, err
-	}
-	return time.Unix(stamp, 0), nil
-}
-
-func (t *JSONTime) UnmarshalJSON(bs []byte) error {
-	var stamp int64
-	if err := json.Unmarshal(bs, &stamp); err != nil {
-		return err
-	}
-	*t = JSONTime(time.Unix(stamp, 0))
-	return nil
-}
-
-func (t JSONTime) MarshalJSON() ([]byte, error) {
-	stamp := fmt.Sprintf("%d", time.Time(t).Unix())
-	return []byte(stamp), nil
-}
-
-// Value 获取时间值
-// mysql 插入数据库的时候使用该函数
-func (t JSONTime) Value() (driver.Value, error) {
-	var zeroTime time.Time
-	if time.Time(t).UnixNano() == zeroTime.UnixNano() {
-		return nil, nil
-	}
-	return time.Time(t), nil
-}
-
-// Scan 转换为 time.Time
-func (t *JSONTime) Scan(v interface{}) error {
-	switch value := v.(type) {
-	case []byte:
-		tv, err := time.Parse("2006-01-02 15:04:05", string(value))
-		if err != nil {
-			return err
-		}
-		*t = JSONTime(tv)
-	case time.Time:
-		*t = JSONTime(value)
-	default:
-		return fmt.Errorf("can not convert %v to timestamp", v)
-	}
-	return nil
-}
-
-func (t JSONTime) Unix() int64 {
-	return time.Time(t).Unix()
 }
 
 func FileExist(p string) bool {

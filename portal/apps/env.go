@@ -45,12 +45,15 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 	}
 
 	var (
-		DestroyAt utils.JSONTime
+		destroyAt models.Time
 	)
 
-	if form.DestroyAt != 0 {
-		at := time.Unix(form.DestroyAt, 0)
-		DestroyAt = utils.JSONTime(at)
+	if form.DestroyAt != "" {
+		var err error
+		destroyAt, err = models.Time{}.Parse(form.DestroyAt)
+		if err != nil {
+			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
+		}
 	} else if form.TTL != "" {
 		_, err := services.ParseTTL(form.TTL) // 检查 ttl 格式
 		if err != nil {
@@ -86,7 +89,7 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		KeyId:        form.KeyId,
 
 		TTL:           form.TTL,
-		AutoDestroyAt: &DestroyAt,
+		AutoDestroyAt: &destroyAt,
 		AutoApproval:  form.AutoApproval,
 
 		Triggers: form.Triggers,
@@ -238,8 +241,12 @@ func UpdateEnv(c *ctx.ServiceCtx, form *forms.UpdateEnvForm) (*models.Env, e.Err
 	}
 
 	if form.HasKey("destroyAt") {
-		at := time.Unix(form.DestroyAt, 0)
-		attrs["auto_destroy_at"] = &at
+		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
+		if err != nil {
+			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
+		}
+
+		attrs["auto_destroy_at"] = &destroyAt
 	} else if form.HasKey("ttl") {
 		ttl, err := services.ParseTTL(form.TTL)
 		if err != nil {
@@ -363,8 +370,11 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	}
 
 	if form.HasKey("destroyAt") {
-		at := utils.JSONTime(time.Unix(form.DestroyAt, 0))
-		env.AutoDestroyAt = &at
+		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
+		if err != nil {
+			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
+		}
+		env.AutoDestroyAt = &destroyAt
 	} else if form.HasKey("ttl") {
 		ttl, err := services.ParseTTL(form.TTL)
 		if err != nil {
@@ -373,7 +383,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 
 		env.TTL = form.TTL
 		if env.LastTaskId != "" { // 己部署过的环境同步修改 destroyAt
-			at := utils.JSONTime(time.Now().Add(ttl))
+			at := models.Time(time.Now().Add(ttl))
 			env.AutoDestroyAt = &at
 		}
 	}
