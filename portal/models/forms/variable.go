@@ -22,7 +22,7 @@ type Variables struct {
 
 type SearchVariableForm struct {
 	BaseForm
-	TplId models.Id `json:"tplId" form:"tplId" `                     // 模板id
-	EnvId models.Id `json:"envId" form:"envId" `                     // 环境id
-	Scope string    `json:"scope" form:"scope" swaggerignore:"true"` // 应用范围
+	TplId models.Id `json:"tplId" form:"tplId" `                   // 模板id
+	EnvId models.Id `json:"envId" form:"envId" `                   // 环境id
+	Scope string    `json:"scope" form:"scope" binding:"required"` // 应用范围
 }
