@@ -160,9 +160,11 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 				variables[index].Value = ""
 			}
 			// 根据id（envId/tplId/projectId）来确认变量是否需要应用
-			if v.EnvId != "" && v.EnvId == envId {
-				// 不同的变量类型也有可能出现相同的name
-				variableM[fmt.Sprintf("%s%s", v.Name, v.Type)] = variables[index]
+			if v.EnvId != "" {
+				if v.EnvId == envId {
+					// 不同的变量类型也有可能出现相同的name
+					variableM[fmt.Sprintf("%s%s", v.Name, v.Type)] = variables[index]
+				}
 				continue
 			}
 
