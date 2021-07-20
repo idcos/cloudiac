@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"cloudiac/portal/apps"
-	"cloudiac/portal/consts"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
@@ -170,36 +169,6 @@ func (Env) SearchResources(c *ctx.GinRequestCtx) {
 		return
 	}
 	c.JSONResult(apps.SearchEnvResources(c.ServiceCtx(), &form))
-}
-
-// SearchVariables 获取环境变量
-// @Tags 环境
-// @Summary 获取环境变量列表，该环境变量列表将用于本次部署
-// @Accept application/x-www-form-urlencoded
-// @Produce json
-// @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string true "项目ID"
-// @Param form query forms.SearchEnvVariableForm true "parameter"
-// @Param envId path string true "环境ID"
-// @router /envs/{envId}/variables [get]
-// @Success 200 {object} ctx.JSONResult{result=models.Resource}
-func (Env) SearchVariables(c *ctx.GinRequestCtx) {
-	form := forms.SearchEnvVariableForm{}
-	if err := c.Bind(&form); err != nil {
-		return
-	}
-	env, err := apps.GetEnvById(c.ServiceCtx(), &form)
-	if err != nil {
-		c.JSONError(err)
-		return
-	}
-	searchVarForm := forms.SearchVariableForm{}
-	searchVarForm.TplId = env.TplId
-	searchVarForm.EnvId = env.Id
-	searchVarForm.Scope = consts.ScopeEnv
-	searchVarForm.BaseForm = form.BaseForm
-	c.JSONResult(apps.SearchVariable(c.ServiceCtx(), &searchVarForm))
 }
 
 // SearchTasks 部署历史
