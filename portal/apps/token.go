@@ -97,8 +97,9 @@ func DeleteToken(c *ctx.ServiceCtx, form *forms.DeleteTokenForm) (result interfa
 func DetailTriggerToken(c *ctx.ServiceCtx, form *forms.DetailTriggerTokenForm) (result interface{}, re e.Error) {
 	token, err := services.DetailTriggerToken(c.DB(), c.OrgId, form.EnvId, form.Action)
 	if err != nil {
+		// 如果不存在直接返回
 		if err.Code() == e.TokenNotExists {
-			return nil, e.New(err.Code(), err, http.StatusBadRequest)
+			return token, nil
 		}
 		return nil, err
 	}
