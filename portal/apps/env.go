@@ -13,6 +13,7 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
+	"path"
 	"strings"
 	"time"
 )
@@ -615,7 +616,24 @@ func SearchEnvResources(c *ctx.ServiceCtx, form *forms.SearchEnvResourceForm) (i
 
 	if form.SortField() == "" {
 		query = query.Order("provider, type, name")
+	} else {
+		query = form.Order(query)
 	}
 
-	return getPage(query, form, &models.Resource{})
+	rs := make([]models.Resource, 0)
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	if err := p.Scan(&rs); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	for i := range rs {
+		rs[i].Provider = path.Base(rs[i].Provider)
+		// attrs 暂时不需要返回
+		rs[i].Attrs = nil
+	}
+	return &page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     rs,
+	}, nil
 }
