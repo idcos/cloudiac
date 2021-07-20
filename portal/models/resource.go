@@ -26,7 +26,7 @@ type Resource struct {
 	Type     string   `json:"type" gorm:"not null"`
 	Name     string   `json:"name" gorm:"not null"`
 	Index    int      `json:"index" gorm:"not null"`
-	Attrs    ResAttrs `json:"attrs" gorm:"type:json"`
+	Attrs    ResAttrs `json:"attrs,omitempty" gorm:"type:json"`
 }
 
 func (Resource) TableName() string {

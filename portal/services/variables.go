@@ -188,10 +188,10 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 
 func GetVariableParent(dbSess *db.Session, name, scope, variableType string, scopes []string) (bool, models.Variable) {
 	variable := models.Variable{}
-	if err := dbSess.
+	if err := dbSess.Debug().
 		Where("name = ?", name).
 		Where("scope != ?", scope).
-		Where("scope not in (?)", scopes).
+		Where("scope in (?)", scopes).
 		Where("type = ?", variableType).
 		Order("scope desc").
 		First(&variable); err != nil {
