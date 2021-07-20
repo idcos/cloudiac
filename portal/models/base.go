@@ -108,18 +108,18 @@ type AutoUintIdModel struct {
 type TimedModel struct {
 	BaseModel
 
-	CreatedAt utils.JSONTime `json:"createdAt" gorm:"type:datetime" example:"2006-01-02 15:04:05"` // 创建时间
-	UpdatedAt utils.JSONTime `json:"updatedAt" gorm:"type:datetime" example:"2006-01-02 15:04:05"` // 更新时间
+	CreatedAt Time `json:"createdAt" gorm:"type:datetime" example:"2006-01-02 15:04:05"` // 创建时间
+	UpdatedAt Time `json:"updatedAt" gorm:"type:datetime" example:"2006-01-02 15:04:05"` // 更新时间
 }
 
 type SoftDeleteModel struct {
 	TimedModel
-	DeletedAt *time.Time `json:"-" csv:"-" sql:"index"`
+	DeletedAt *Time `json:"-" sql:"index"`
 	// 因为 deleted_at 字段的默认值为 NULL(gorm 也会依赖这个值做软删除)，会导致唯一约束与软删除冲突,
 	// 所以我们增加 deleted_at_t 字段来避免这个情况。
 	// 如果 model 需要同时支持软删除和唯一约束就需要在唯一约束索引中增加该字段
 	// (使用 SoftDeleteModel.AddUniqueIndex() 方法添加索引时会自动加上该字段)。
-	DeletedAtT int64 `json:"-" csv:"-" gorm:"default:0"`
+	DeletedAtT int64 `json:"-" gorm:"default:0"`
 }
 
 func (SoftDeleteModel) AfterDelete(scope *gorm.Scope) error {
@@ -142,4 +142,57 @@ func (v StrSlice) Value() (driver.Value, error) {
 
 func (v *StrSlice) Scan(value interface{}) error {
 	return UnmarshalValue(value, v)
+}
+
+type Time time.Time
+
+func (t *Time) UnmarshalJSON(bs []byte) error {
+	tt, err := time.Parse(time.RFC3339, string(bs))
+	if err != nil {
+		return err
+	}
+	*t = Time(tt)
+	return nil
+}
+
+func (t Time) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("\"%s\"", time.Time(t).Format(time.RFC3339))), nil
+}
+
+func (Time) Parse(s string) (t Time, err error) {
+	if err = t.UnmarshalJSON([]byte(s)); err != nil {
+		return t, err
+	}
+	return t, nil
+}
+
+// Value 获取时间值
+// mysql 插入数据库的时候使用该函数
+func (t Time) Value() (driver.Value, error) {
+	var zeroTime time.Time
+	if time.Time(t).UnixNano() == zeroTime.UnixNano() {
+		return nil, nil
+	}
+	return time.Time(t), nil
+}
+
+// Scan 转换为 time.Time
+func (t *Time) Scan(v interface{}) error {
+	switch value := v.(type) {
+	case []byte:
+		tv, err := time.Parse("2006-01-02 15:04:05", string(value))
+		if err != nil {
+			return err
+		}
+		*t = Time(tv)
+	case time.Time:
+		*t = Time(value)
+	default:
+		return fmt.Errorf("can not convert %v to timestamp", v)
+	}
+	return nil
+}
+
+func (t Time) Unix() int64 {
+	return time.Time(t).Unix()
 }

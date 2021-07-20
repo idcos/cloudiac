@@ -1,7 +1,5 @@
 package models
 
-import "time"
-
 type ApiToken struct {
 	BaseModel
 
@@ -16,6 +14,6 @@ type ApiToken struct {
 	Role   string `json:"role" gorm:"not null;type:enum('owner','manager','operator','guest');"`
 	Status string `json:"status" gorm:"type:enum('enable', 'disable');default:'enable'"`
 
-	ExpiredAt   *time.Time `json:"expiredAt"`
-	Description string     `json:"description" gorm:"type:text"`
+	ExpiredAt   *Time  `json:"expiredAt"`
+	Description string `json:"description" gorm:"type:text"`
 }

@@ -2,9 +2,9 @@ package models
 
 import (
 	"cloudiac/portal/libs/db"
+	"database/sql/driver"
 	"github.com/lib/pq"
 	"path"
-	"time"
 )
 
 const (
@@ -39,25 +39,25 @@ type Env struct {
 	StatePath string `json:"statePath" gorm:"not null" swaggerignore:"true"` // Terraform tfstate 文件路径（内部）
 
 	// 环境可以覆盖模板中的 vars file 配置，具体说明见 Template model
-	Variables    []VariableBody `json:"variables" gorm:"json"`                    // 合并变量列表
-	TfVarsFile   string         `json:"tfVarsFile" gorm:"default:''"`             // Terraform tfvars 变量文件路径
-	PlayVarsFile string         `json:"playVarsFile" gorm:"default:''"`           // Ansible 变量文件路径
-	Playbook     string         `json:"playbook" gorm:"default:''"`               // Ansible playbook 入口文件路径
-	Revision     string         `json:"revision" gorm:"size:64;default:'master'"` // Vcs仓库分支/标签
-	KeyId        Id             `json:"keyId" gorm:"size32"`                      // 部署密钥ID
+	Variables    EnvVariables `json:"variables" gorm:"type:json"`               // 合并变量列表
+	TfVarsFile   string       `json:"tfVarsFile" gorm:"default:''"`             // Terraform tfvars 变量文件路径
+	PlayVarsFile string       `json:"playVarsFile" gorm:"default:''"`           // Ansible 变量文件路径
+	Playbook     string       `json:"playbook" gorm:"default:''"`               // Ansible playbook 入口文件路径
+	Revision     string       `json:"revision" gorm:"size:64;default:'master'"` // Vcs仓库分支/标签
+	KeyId        Id           `json:"keyId" gorm:"size32"`                      // 部署密钥ID
 
 	LastTaskId Id `json:"lastTaskId" gorm:"size:32"` // 最后一次部署或销毁任务的 id(plan 任务不记录)
 
-	// TODO 自动销毁机制待实现
-	TTL           string     `json:"ttl" gorm:"default:'0'" example:"1h/1d"` // 生命周期
-	AutoDestroyAt *time.Time `json:"autoDestroyAt"`                          // 自动销毁时间
-	AutoApproval  bool       `json:"autoApproval" gorm:"default:'0'"`        // 是否自动审批
+	AutoApproval bool `json:"autoApproval" gorm:"default:'0'"` // 是否自动审批
 
-	// 该 id 在创建自动销毁任务后保存
+	TTL           string `json:"ttl" gorm:"default:'0'" example:"1h/1d"` // 生命周期
+	AutoDestroyAt *Time  `json:"autoDestroyAt"`                          // 自动销毁时间
+
+	// 该 id 在创建自动销毁任务后保存，并在销毁任务执行完成后清除
 	AutoDestroyTaskId Id `json:"-"  gorm:"default:''"` // 自动销毁任务 id
 
 	// 触发器设置
-	Triggers pq.StringArray `json:"triggers" gorm:"type:text" swaggertype:"array,string"` // 触发器。commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
+	Triggers pq.StringArray `json:"triggers" gorm:"type:json" swaggertype:"array,string"` // 触发器。commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
 }
 
 func (Env) TableName() string {
@@ -77,6 +77,24 @@ func (e *Env) Migrate(sess *db.Session) (err error) {
 
 func (e *Env) DefaultStatPath() string {
 	return path.Join(e.OrgId.String(), e.ProjectId.String(), e.Id.String(), "terraform.tfstate")
+}
+
+func (e *Env) HideSensitiveVariable() {
+	for index, v := range e.Variables {
+		if v.Sensitive {
+			e.Variables[index].Value = ""
+		}
+	}
+}
+
+type EnvVariables []Variable
+
+func (v EnvVariables) Value() (driver.Value, error) {
+	return MarshalValue(v)
+}
+
+func (v *EnvVariables) Scan(value interface{}) error {
+	return UnmarshalValue(value, v)
 }
 
 type EnvDetail struct {

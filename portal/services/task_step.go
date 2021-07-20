@@ -84,11 +84,16 @@ func ChangeTaskStepStatus(dbSess *db.Session, task *models.Task, taskStep *model
 	taskStep.Status = status
 	taskStep.Message = message
 
-	now := time.Now()
+	now := models.Time(time.Now())
 	if taskStep.StartAt == nil && taskStep.IsStarted() {
 		taskStep.StartAt = &now
 	} else if taskStep.StartAt != nil && taskStep.EndAt == nil && taskStep.IsExited() {
 		taskStep.EndAt = &now
+	}
+
+	if taskStep.Id == "" {
+		// id 为空表示是生成的功能性步骤，非任务的流程步骤
+		return nil
 	}
 
 	logger := logs.Get().WithField("taskId", taskStep.TaskId).WithField("step", taskStep.Index)
@@ -97,6 +102,7 @@ func ChangeTaskStepStatus(dbSess *db.Session, task *models.Task, taskStep *model
 	} else {
 		logger.Debugf("change step to '%s'", status)
 	}
+
 	if _, err := dbSess.Model(&models.TaskStep{}).Update(taskStep); err != nil {
 		return e.New(e.DBError, err)
 	}

@@ -8,7 +8,6 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"path"
-	"time"
 )
 
 type TaskVariables []VariableBody
@@ -107,8 +106,8 @@ type Task struct {
 
 	Message string `json:"message"` // 任务的状态描述信息，如失败原因等
 
-	StartAt *time.Time `json:"startAt" gorm:"null;comment:'任务开始时间'"` // 任务开始时间
-	EndAt   *time.Time `json:"endAt" gorm:"null;comment:'任务结束时间'"`   // 任务结束时间
+	StartAt *Time `json:"startAt" gorm:"null;comment:'任务开始时间'"` // 任务开始时间
+	EndAt   *Time `json:"endAt" gorm:"null;comment:'任务结束时间'"`   // 任务结束时间
 
 	// 任务执行结果，如 add/change/delete 的资源数量、outputs 等
 	Result TaskResult `json:"result" gorm:"type:json"` // 任务执行结果
@@ -201,6 +200,7 @@ const (
 	TaskStepDestroy = common.TaskStepDestroy
 	TaskStepPlay    = common.TaskStepPlay
 	TaskStepCommand = common.TaskStepCommand
+	TaskStepCollect = common.TaskStepCollect
 
 	TaskStepPending   = common.TaskStepPending
 	TaskStepApproving = common.TaskStepApproving
@@ -215,17 +215,17 @@ type TaskStep struct {
 	BaseModel
 	TaskStepBody
 
-	OrgId     Id         `json:"orgId" gorm:"size:32;not null"`
-	ProjectId Id         `json:"projectId" gorm:"size:32;not null"`
-	EnvId     Id         `json:"envId" gorm:"size:32;not null"`
-	TaskId    Id         `json:"taskId" gorm:"size:32;not null"`
-	NextStep  Id         `json:"nextStep" gorm:"size:32;default:''"`
-	Index     int        `json:"index" gorm:"size:32;not null"`
-	Status    string     `json:"status" gorm:"type:enum('pending','approving','rejected','running','failed','complete','timeout')"`
-	Message   string     `json:"message" gorm:"type:text"`
-	StartAt   *time.Time `json:"startAt"`
-	EndAt     *time.Time `json:"endAt"`
-	LogPath   string     `json:"logPath" gorm:""`
+	OrgId     Id     `json:"orgId" gorm:"size:32;not null"`
+	ProjectId Id     `json:"projectId" gorm:"size:32;not null"`
+	EnvId     Id     `json:"envId" gorm:"size:32;not null"`
+	TaskId    Id     `json:"taskId" gorm:"size:32;not null"`
+	NextStep  Id     `json:"nextStep" gorm:"size:32;default:''"`
+	Index     int    `json:"index" gorm:"size:32;not null"`
+	Status    string `json:"status" gorm:"type:enum('pending','approving','rejected','running','failed','complete','timeout')"`
+	Message   string `json:"message" gorm:"type:text"`
+	StartAt   *Time  `json:"startAt"`
+	EndAt     *Time  `json:"endAt"`
+	LogPath   string `json:"logPath" gorm:""`
 
 	ApproverId Id `json:"approverId" gorm:"size:32;not null"` // 审批者用户 id
 }

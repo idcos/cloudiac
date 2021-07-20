@@ -1,5 +1,7 @@
 package common
 
+import "cloudiac/portal/consts"
+
 // 以下值会在编译时动态注入(见 Makefile)。
 var (
 	VERSION = "v0.0.0"
@@ -24,6 +26,7 @@ const (
 	TaskStepDestroy = "destroy"
 	TaskStepPlay    = "play"    // play playbook
 	TaskStepCommand = "command" // run command
+	TaskStepCollect = "collect" // 任务结束后的信息采集
 
 	TaskStepPending   = "pending"
 	TaskStepApproving = "approving"
@@ -38,4 +41,11 @@ const (
 	TaskTypeDestroyName = "destroy"
 
 	TaskStepTimeoutDuration = 600
+)
+
+var (
+	EnvScopeEnv     = []string{consts.ScopeEnv, consts.ScopeTemplate, consts.ScopeProject, consts.ScopeOrg}
+	EnvScopeTpl     = []string{consts.ScopeTemplate, consts.ScopeOrg}
+	EnvScopeProject = []string{consts.ScopeProject, consts.ScopeOrg}
+	EnvScopeOrg     = []string{consts.ScopeOrg}
 )

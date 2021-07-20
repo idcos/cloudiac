@@ -2,6 +2,7 @@ package apps
 
 import (
 	"cloudiac/common"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/libs/page"
@@ -11,7 +12,6 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
-	"path"
 	"strings"
 	"time"
 )
@@ -47,19 +47,19 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 	}
 
 	var (
-		DestroyAt *time.Time
+		destroyAt models.Time
 	)
 
 	if form.DestroyAt != "" {
-		at, err := time.Parse("2006-01-02 15:04", form.DestroyAt)
+		var err error
+		destroyAt, err = models.Time{}.Parse(form.DestroyAt)
 		if err != nil {
-			return nil, e.New(e.BadParam, http.StatusBadRequest)
+			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
 		}
-		DestroyAt = &at
 	} else if form.TTL != "" {
-		_, err := time.ParseDuration(form.TTL)
+		_, err := services.ParseTTL(form.TTL) // 检查 ttl 格式
 		if err != nil {
-			return nil, e.New(e.BadParam, http.StatusBadRequest)
+			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
 		}
 	}
 
@@ -91,7 +91,7 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		KeyId:        form.KeyId,
 
 		TTL:           form.TTL,
-		AutoDestroyAt: DestroyAt,
+		AutoDestroyAt: &destroyAt,
 		AutoApproval:  form.AutoApproval,
 
 		Triggers: form.Triggers,
@@ -105,11 +105,17 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
-	// 创建变量
-	// 前端只传修改过或者新建的变量?，所有修改过的上层变量都会变成新的环境变量进行创建
-	vars := form.Variables
-	// vars, err := services.OperationVariable(tx, env.Id, form.Variables)
-	env.Variables = vars
+	// 创建新导入的变量
+	if err = services.OperationVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.Variables, nil); err != nil {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+	// 获取计算后的变量列表
+	vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id, true)
+	if err != nil {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+	// 保存固化的变量
+	env.Variables = getVariables(vars)
 
 	targets := make([]string, 0)
 	if len(strings.TrimSpace(form.Targets)) > 0 {
@@ -125,7 +131,7 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		CreatorId:   c.UserId,
 		KeyId:       env.KeyId,
 		RunnerId:    env.RunnerId,
-		Variables:   form.Variables,
+		Variables:   services.GetVariableBody(env.Variables),
 		StepTimeout: form.Timeout,
 		AutoApprove: env.AutoApproval,
 	})
@@ -149,7 +155,18 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		return nil, e.New(e.DBError, err)
 	}
 
+	// 屏蔽敏感字段输出
+	env.HideSensitiveVariable()
+
 	return env, nil
+}
+
+func getVariables(vars map[string]models.Variable) models.EnvVariables {
+	var vb []models.Variable
+	for _, v := range vars {
+		vb = append(vb, v)
+	}
+	return vb
 }
 
 // SearchEnv 环境查询
@@ -191,13 +208,28 @@ func SearchEnv(c *ctx.ServiceCtx, form *forms.SearchEnvForm) (interface{}, e.Err
 	// 默认按创建时间逆序排序
 	if form.SortField() == "" {
 		query = query.Order("iac_env.created_at DESC")
+	} else {
+		query = form.Order(query)
 	}
 
-	rs, err := getPage(query, form, &models.EnvDetail{})
-	if err != nil {
-		c.Logger().Errorf("error get page, err %s", err)
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	details := make([]*models.EnvDetail, 0)
+	if err := p.Scan(&details); err != nil {
+		return nil, e.New(e.DBError, err)
 	}
-	return rs, err
+
+	// 屏蔽敏感字段输出
+	if details != nil {
+		for _, env := range details {
+			env.HideSensitiveVariable()
+		}
+	}
+
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     details,
+	}, nil
 }
 
 // UpdateEnv 环境编辑
@@ -243,15 +275,16 @@ func UpdateEnv(c *ctx.ServiceCtx, form *forms.UpdateEnvForm) (*models.Env, e.Err
 	}
 
 	if form.HasKey("destroyAt") {
-		at, err := time.Parse("2006-01-02 15:04", form.DestroyAt)
+		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
 		if err != nil {
-			return nil, e.New(e.BadParam, http.StatusBadRequest)
+			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
 		}
-		attrs["auto_destroy_at"] = &at
+
+		attrs["auto_destroy_at"] = &destroyAt
 	} else if form.HasKey("ttl") {
-		ttl, err := time.ParseDuration(form.TTL)
+		ttl, err := services.ParseTTL(form.TTL)
 		if err != nil {
-			return nil, e.New(e.BadParam, http.StatusBadRequest)
+			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
 		}
 
 		attrs["ttl"] = form.TTL
@@ -281,6 +314,10 @@ func UpdateEnv(c *ctx.ServiceCtx, form *forms.UpdateEnvForm) (*models.Env, e.Err
 		c.Logger().Errorf("error update env, err %s", err)
 		return nil, err
 	}
+
+	// 屏蔽敏感字段输出
+	env.HideSensitiveVariable()
+
 	return env, nil
 }
 
@@ -299,6 +336,9 @@ func EnvDetail(c *ctx.ServiceCtx, form forms.DetailEnvForm) (*models.EnvDetail, 
 		c.Logger().Errorf("error get env by id, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
+
+	// 屏蔽敏感字段输出
+	envDetail.HideSensitiveVariable()
 
 	return envDetail, nil
 }
@@ -359,10 +399,6 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		form.Playbook = tpl.Playbook
 	}
 
-	// 变量
-	// TODO: 检查、保存、合并环境变量
-	//vars := form.Variables
-
 	if form.HasKey("name") {
 		env.Name = form.Name
 	}
@@ -371,20 +407,20 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	}
 
 	if form.HasKey("destroyAt") {
-		at, err := time.Parse("2006-01-02 15:04", form.DestroyAt)
+		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
 		if err != nil {
-			return nil, e.New(e.BadParam, http.StatusBadRequest)
+			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
 		}
-		env.AutoDestroyAt = &at
+		env.AutoDestroyAt = &destroyAt
 	} else if form.HasKey("ttl") {
-		ttl, err := time.ParseDuration(form.TTL)
+		ttl, err := services.ParseTTL(form.TTL)
 		if err != nil {
-			return nil, e.New(e.BadParam, http.StatusBadRequest)
+			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
 		}
 
 		env.TTL = form.TTL
 		if env.LastTaskId != "" { // 己部署过的环境同步修改 destroyAt
-			at := time.Now().Add(ttl)
+			at := models.Time(time.Now().Add(ttl))
 			env.AutoDestroyAt = &at
 		}
 	}
@@ -402,8 +438,18 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	if form.HasKey("timeout") {
 		env.Timeout = form.Timeout
 	}
-	if form.HasKey("variables") {
-		env.Variables = form.Variables
+	if form.HasKey("variables") || form.HasKey("deleteVariablesId") {
+		// 变量列表增删
+		if err = services.OperationVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.Variables, form.DeleteVariablesId); err != nil {
+			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+		}
+		// 计算变量列表
+		vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id, true)
+		if err != nil {
+			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+		}
+		// 保存固化变量
+		env.Variables = getVariables(vars)
 	}
 	if form.HasKey("tfVarsFile") {
 		env.TfVarsFile = form.TfVarsFile
@@ -435,7 +481,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		CreatorId:   c.UserId,
 		KeyId:       env.KeyId,
 		RunnerId:    env.RunnerId,
-		Variables:   form.Variables,
+		Variables:   services.GetVariableBody(env.Variables),
 		StepTimeout: form.Timeout,
 		AutoApprove: env.AutoApproval,
 	})
@@ -464,6 +510,9 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		c.Logger().Errorf("error commit env, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
+
+	// 屏蔽敏感字段输出
+	env.HideSensitiveVariable()
 
 	return env, nil
 }
@@ -495,30 +544,12 @@ func SearchEnvResources(c *ctx.ServiceCtx, form *forms.SearchEnvResourceForm) (i
 
 	if form.SortField() == "" {
 		query = query.Order("provider, type, name")
-	} else {
-		query = form.Order(query)
 	}
 
-	rs := make([]models.Resource, 0)
-	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	if err := p.Scan(&rs); err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-
-	for i := range rs {
-		rs[i].Provider = path.Base(rs[i].Provider)
-		// attrs 暂时不需要返回
-		rs[i].Attrs = nil
-	}
-	return &page.PageResp{
-		Total:    p.MustTotal(),
-		PageSize: p.Size,
-		List:     rs,
-	}, nil
+	return getPage(query, form, &models.Resource{})
 }
 
-// SearchEnvVariables 查询环境变量列表
-func SearchEnvVariables(c *ctx.ServiceCtx, form *forms.SearchEnvVariableForm) (interface{}, e.Error) {
+func GetEnvById(c *ctx.ServiceCtx, form *forms.SearchEnvVariableForm) (*models.Env, e.Error) {
 	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
@@ -531,5 +562,5 @@ func SearchEnvVariables(c *ctx.ServiceCtx, form *forms.SearchEnvVariableForm) (i
 		return nil, e.New(e.DBError, err)
 	}
 
-	return env.Variables, nil
+	return env, nil
 }
