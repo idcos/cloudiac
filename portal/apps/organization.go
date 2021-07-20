@@ -363,6 +363,7 @@ func InviteUser(c *ctx.ServiceCtx, form *forms.InviteUserForm) (*models.UserWith
 			Name:     form.Name,
 			Password: hashedPassword,
 			Email:    form.Email,
+			Phone:    form.Phone,
 		})
 		if err != nil && err.Code() == e.UserAlreadyExists {
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)

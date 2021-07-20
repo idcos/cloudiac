@@ -60,4 +60,6 @@ type InviteUserForm struct {
 	Name   string    `form:"name" json:"name" binding:""`                      // 用户名
 	Email  string    `form:"email" json:"email" binding:""`                    // 电子邮件地址
 	Role   string    `form:"role" json:"role" binding:"" enums:"admin,member"` // 受邀请用户在组织中的角色，组织管理员：admin，普通用户：member
+	Phone  string    `form:"phone" json:"phone" binding:""`                    // 用户手机号
+
 }
