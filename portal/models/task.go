@@ -201,6 +201,7 @@ const (
 	TaskStepDestroy = common.TaskStepDestroy
 	TaskStepPlay    = common.TaskStepPlay
 	TaskStepCommand = common.TaskStepCommand
+	TaskStepCollect = common.TaskStepCollect
 
 	TaskStepPending   = common.TaskStepPending
 	TaskStepApproving = common.TaskStepApproving

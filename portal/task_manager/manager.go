@@ -258,6 +258,7 @@ func (m *TaskManager) processPendingTask(ctx context.Context) {
 			}()
 
 			m.runTask(ctx, task)
+
 			if task.IsEffectTask() {
 				// 不管任务成功还是失败都执行
 				m.processTaskDone(task)
@@ -320,16 +321,35 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 		task.CurrStep = step.Index
 		if _, err = m.db.Model(task).Update(task); err != nil {
 			logger.Errorf("update task error: %v", err)
-			return
+			break
 		}
 
 		if err = m.runTaskStep(ctx, *runTaskReq, task, step); err != nil {
 			if err == context.Canceled {
 				logger.Infof("run task step: %v", err)
-				return
+				break
 			}
 			taskFailed(errors.Wrap(err, fmt.Sprintf("step %d", step.Index)))
-			return
+			break
+		}
+	}
+
+	if task.IsEffectTask() {
+		// 执行信息采集步骤
+		if err := m.runTaskStep(ctx, *runTaskReq, task, &models.TaskStep{
+			TaskStepBody: models.TaskStepBody{
+				Type: models.TaskStepCollect,
+			},
+			OrgId:     task.OrgId,
+			ProjectId: task.ProjectId,
+			EnvId:     task.EnvId,
+			TaskId:    task.Id,
+			Index:     99,
+			Status:    models.TaskStepPending,
+		}); err != nil {
+			logger.Errorf("run collect step error: %v", err)
+		} else {
+			logger.Infof("collect step done")
 		}
 	}
 

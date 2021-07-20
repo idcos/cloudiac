@@ -24,6 +24,7 @@ const (
 	TaskStepDestroy = "destroy"
 	TaskStepPlay    = "play"    // play playbook
 	TaskStepCommand = "command" // run command
+	TaskStepCollect = "collect" // 任务结束后的信息采集
 
 	TaskStepPending   = "pending"
 	TaskStepApproving = "approving"
