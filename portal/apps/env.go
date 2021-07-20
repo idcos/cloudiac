@@ -521,7 +521,7 @@ func SearchEnvResources(c *ctx.ServiceCtx, form *forms.SearchEnvResourceForm) (i
 }
 
 // SearchEnvVariables 查询环境变量列表
-func SearchEnvVariables(c *ctx.ServiceCtx, form *forms.SearchEnvVariableForm) (interface{}, e.Error) {
+func SearchEnvVariables(c *ctx.ServiceCtx, form *forms.SearchEnvVariableForm) ([]VariableResp, e.Error) {
 	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
@@ -549,5 +549,5 @@ func SearchEnvVariables(c *ctx.ServiceCtx, form *forms.SearchEnvVariableForm) (i
 	}
 	sort.Sort(newVariable(rs))
 
-	return env.Variables, nil
+	return rs, nil
 }

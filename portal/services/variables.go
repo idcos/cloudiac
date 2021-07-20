@@ -181,12 +181,13 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 	return variableM, nil, scopes
 }
 
+// GetVariableParent 获取上一级被覆盖的变量
 func GetVariableParent(dbSess *db.Session, name, scope, variableType string, scopes []string) (bool, models.Variable) {
 	variable := models.Variable{}
 	if err := dbSess.
 		Where("name = ?", name).
 		Where("scope != ?", scope).
-		Where("scope not in (?)", scopes).
+		Where("scope in (?)", scopes).
 		Where("type = ?", variableType).
 		Order("scope desc").
 		First(&variable); err != nil {
