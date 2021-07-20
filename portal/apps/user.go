@@ -168,7 +168,7 @@ func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.E
 // UpdateUser 用户信息编辑
 func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (*models.User, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update user %s", form.Id))
-	if c.UserId == form.Id {
+	if c.UserId == form.Id || c.IsSuperAdmin {
 		// 自身编辑
 	} else if c.OrgId != "" && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) {
 		return nil, e.New(e.PermissionDeny, fmt.Errorf("admin required"), http.StatusForbidden)
