@@ -2,6 +2,7 @@ package models
 
 import (
 	"cloudiac/portal/libs/db"
+	"database/sql/driver"
 	"github.com/lib/pq"
 	"path"
 )
@@ -38,12 +39,12 @@ type Env struct {
 	StatePath string `json:"statePath" gorm:"not null" swaggerignore:"true"` // Terraform tfstate 文件路径（内部）
 
 	// 环境可以覆盖模板中的 vars file 配置，具体说明见 Template model
-	Variables    []VariableBody `json:"variables" gorm:"json"`                    // 合并变量列表
-	TfVarsFile   string         `json:"tfVarsFile" gorm:"default:''"`             // Terraform tfvars 变量文件路径
-	PlayVarsFile string         `json:"playVarsFile" gorm:"default:''"`           // Ansible 变量文件路径
-	Playbook     string         `json:"playbook" gorm:"default:''"`               // Ansible playbook 入口文件路径
-	Revision     string         `json:"revision" gorm:"size:64;default:'master'"` // Vcs仓库分支/标签
-	KeyId        Id             `json:"keyId" gorm:"size32"`                      // 部署密钥ID
+	Variables    EnvVariables `json:"variables" gorm:"type:json"`               // 合并变量列表
+	TfVarsFile   string       `json:"tfVarsFile" gorm:"default:''"`             // Terraform tfvars 变量文件路径
+	PlayVarsFile string       `json:"playVarsFile" gorm:"default:''"`           // Ansible 变量文件路径
+	Playbook     string       `json:"playbook" gorm:"default:''"`               // Ansible playbook 入口文件路径
+	Revision     string       `json:"revision" gorm:"size:64;default:'master'"` // Vcs仓库分支/标签
+	KeyId        Id           `json:"keyId" gorm:"size32"`                      // 部署密钥ID
 
 	LastTaskId Id `json:"lastTaskId" gorm:"size:32"` // 最后一次部署或销毁任务的 id(plan 任务不记录)
 
@@ -76,6 +77,24 @@ func (e *Env) Migrate(sess *db.Session) (err error) {
 
 func (e *Env) DefaultStatPath() string {
 	return path.Join(e.OrgId.String(), e.ProjectId.String(), e.Id.String(), "terraform.tfstate")
+}
+
+func (e *Env) HideSensitiveVariable() {
+	for index, v := range e.Variables {
+		if v.Sensitive {
+			e.Variables[index].Value = ""
+		}
+	}
+}
+
+type EnvVariables []Variable
+
+func (v EnvVariables) Value() (driver.Value, error) {
+	return MarshalValue(v)
+}
+
+func (v *EnvVariables) Scan(value interface{}) error {
+	return UnmarshalValue(value, v)
 }
 
 type EnvDetail struct {

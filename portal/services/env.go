@@ -158,6 +158,21 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 	return nil
 }
 
+func GetVariableBody(vars models.EnvVariables) []models.VariableBody {
+	var vb []models.VariableBody
+	for _, v := range vars {
+		vb = append(vb, models.VariableBody{
+			Scope:       v.Scope,
+			Type:        v.Type,
+			Name:        v.Name,
+			Value:       v.Value,
+			Sensitive:   v.Sensitive,
+			Description: v.Description,
+		})
+	}
+	return vb
+}
+
 var (
 	ttlMap = map[string]string{
 		"1d":  "24h",

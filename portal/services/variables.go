@@ -1,6 +1,7 @@
 package services
 
 import (
+	"cloudiac/common"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
@@ -127,24 +128,18 @@ func DeleteVariables(tx *db.Session, DeleteVariables []string) e.Error {
 	return nil
 }
 
-func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId, envId models.Id) (map[string]models.Variable, e.Error, []string) {
-	var (
-		scopeEnv     = []string{consts.ScopeEnv, consts.ScopeTemplate, consts.ScopeProject, consts.ScopeOrg}
-		scopeTpl     = []string{consts.ScopeTemplate, consts.ScopeOrg}
-		scopeProject = []string{consts.ScopeProject, consts.ScopeOrg}
-		scopeOrg     = []string{consts.ScopeOrg}
-	)
+func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId, envId models.Id, keepSensitive bool) (map[string]models.Variable, e.Error, []string) {
 	// 根据scope 构建变量应用范围
 	scopes := make([]string, 0)
 	switch scope {
 	case consts.ScopeEnv:
-		scopes = scopeEnv
+		scopes = common.EnvScopeEnv
 	case consts.ScopeTemplate:
-		scopes = scopeTpl
+		scopes = common.EnvScopeTpl
 	case consts.ScopeProject:
-		scopes = scopeProject
+		scopes = common.EnvScopeProject
 	case consts.ScopeOrg:
-		scopes = scopeOrg
+		scopes = common.EnvScopeOrg
 	}
 
 	// 将组织下所有的变量查询，在代码处理变量的继承关系及是否要应用该变量
@@ -156,7 +151,7 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 	for index, v := range variables {
 		// 过滤掉变量一部分不需要应用的变量
 		if utils.InArrayStr(scopes, v.Scope) {
-			if v.Sensitive {
+			if v.Sensitive && !keepSensitive {
 				variables[index].Value = ""
 			}
 			// 根据id（envId/tplId/projectId）来确认变量是否需要应用
@@ -194,9 +189,10 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 	return variableM, nil, scopes
 }
 
+// GetVariableParent 获取上一级被覆盖的变量
 func GetVariableParent(dbSess *db.Session, name, scope, variableType string, scopes []string) (bool, models.Variable) {
 	variable := models.Variable{}
-	if err := dbSess.Debug().
+	if err := dbSess.
 		Where("name = ?", name).
 		Where("scope != ?", scope).
 		Where("scope in (?)", scopes).

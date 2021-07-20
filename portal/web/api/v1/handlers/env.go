@@ -114,13 +114,12 @@ func (Env) Archive(c *ctx.GinRequestCtx) {
 // Deploy 环境重新部署
 // @Tags 环境
 // @Summary 环境重新部署
-// @Accept multipart/form-data
 // @Accept json
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
-// @Param form formData forms.DeployEnvForm true "parameter"
+// @Param data body forms.DeployEnvForm true "部署参数"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/deploy [post]
 // @Success 200 {object} ctx.JSONResult{result=models.EnvDetail}
@@ -155,7 +154,7 @@ func (Env) Destroy(c *ctx.GinRequestCtx) {
 // @Tags 环境
 // @Summary 获取环境资源列表
 // @Accept multipart/form-data
-// @Accept json
+// @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
@@ -170,27 +169,6 @@ func (Env) SearchResources(c *ctx.GinRequestCtx) {
 		return
 	}
 	c.JSONResult(apps.SearchEnvResources(c.ServiceCtx(), &form))
-}
-
-// SearchVariables 获取环境变量
-// @Tags 环境
-// @Summary 获取环境变量列表，该环境变量为当前任务所用的环境变量
-// @Accept multipart/form-data
-// @Accept json
-// @Produce json
-// @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string true "项目ID"
-// @Param form formData forms.SearchEnvVariableForm true "parameter"
-// @Param envId path string true "环境ID"
-// @router /envs/{envId}/variables [get]
-// @Success 200 {object} ctx.JSONResult{result=models.Resource}
-func (Env) SearchVariables(c *ctx.GinRequestCtx) {
-	form := forms.SearchEnvVariableForm{}
-	if err := c.Bind(&form); err != nil {
-		return
-	}
-	c.JSONResult(apps.SearchEnvVariables(c.ServiceCtx(), &form))
 }
 
 // SearchTasks 部署历史

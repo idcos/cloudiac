@@ -26,7 +26,7 @@ type CreateEnvForm struct {
 	Revision string `form:"revision" json:"revision" binding:""`                            // 分支/标签
 	Timeout  int    `form:"timeout" json:"timeout" binding:""`                              // 部署超时时间（单位：秒）
 
-	Variables []models.VariableBody `form:"variables" json:"variables" binding:""` // 自定义变量列表，该变量列表会覆盖现有的变量
+	Variables []Variables `form:"variables" json:"variables" binding:""` // 自定义变量列表，该变量列表会覆盖现有的变量
 
 	TfVarsFile   string    `form:"tfVarsFile" json:"tfVarsFile" binding:""`     // Terraform tfvars 变量文件路径
 	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:""` // Ansible playbook 变量文件路径
@@ -67,7 +67,8 @@ type DeployEnvForm struct {
 	Revision string `form:"revision" json:"revision" binding:""`                                    // 分支/标签
 	Timeout  int    `form:"timeout" json:"timeout" binding:""`                                      // 部署超时时间（单位：秒）
 
-	Variables []models.VariableBody `form:"variables" json:"variables" binding:""` // 自定义变量列表，该变量列表会覆盖现有的变量
+	Variables         []Variables `form:"variables" json:"variables" binding:""`       // 自定义变量列表，该变量列表会覆盖现有的变量
+	DeleteVariablesId []string    `json:"deleteVariablesId" form:"deleteVariablesId" ` //删除的变量id
 
 	TfVarsFile   string    `form:"tfVarsFile" json:"tfVarsFile" binding:""`     // Terraform tfvars 变量文件路径
 	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:""` // Ansible playbook 变量文件路径
