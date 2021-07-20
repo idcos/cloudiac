@@ -50,7 +50,6 @@ type Env struct {
 
 	AutoApproval bool `json:"autoApproval" gorm:"default:'0'"` // 是否自动审批
 
-	// TODO 自动销毁机制待实现
 	TTL           string          `json:"ttl" gorm:"default:'0'" example:"1h/1d"` // 生命周期
 	AutoDestroyAt *utils.JSONTime `json:"autoDestroyAt"`                          // 自动销毁时间
 

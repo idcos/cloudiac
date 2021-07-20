@@ -84,7 +84,7 @@ func ChangeTaskStepStatus(dbSess *db.Session, task *models.Task, taskStep *model
 	taskStep.Status = status
 	taskStep.Message = message
 
-	now := time.Now()
+	now := utils.JSONTime(time.Now())
 	if taskStep.StartAt == nil && taskStep.IsStarted() {
 		taskStep.StartAt = &now
 	} else if taskStep.StartAt != nil && taskStep.EndAt == nil && taskStep.IsExited() {

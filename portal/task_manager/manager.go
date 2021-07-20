@@ -395,7 +395,7 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 
 		if task.Type == models.TaskTypeApply && env.AutoDestroyAt == nil && env.TTL != "" {
 			// 如果设置了环境的 ttl，则在部署结束后自动根据 ttl 设置销毁时间
-			ttl, err := time.ParseDuration(env.TTL)
+			ttl, err := services.ParseTTL(env.TTL)
 			if err != nil {
 				return err
 			}

@@ -52,9 +52,9 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		at := time.Unix(form.DestroyAt, 0)
 		DestroyAt = utils.JSONTime(at)
 	} else if form.TTL != "" {
-		_, err := time.ParseDuration(form.TTL)
+		_, err := services.ParseTTL(form.TTL) // 检查 ttl 格式
 		if err != nil {
-			return nil, e.New(e.BadParam, http.StatusBadRequest)
+			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
 		}
 	}
 
@@ -241,9 +241,9 @@ func UpdateEnv(c *ctx.ServiceCtx, form *forms.UpdateEnvForm) (*models.Env, e.Err
 		at := time.Unix(form.DestroyAt, 0)
 		attrs["auto_destroy_at"] = &at
 	} else if form.HasKey("ttl") {
-		ttl, err := time.ParseDuration(form.TTL)
+		ttl, err := services.ParseTTL(form.TTL)
 		if err != nil {
-			return nil, e.New(e.BadParam, http.StatusBadRequest)
+			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
 		}
 
 		attrs["ttl"] = form.TTL
@@ -366,9 +366,9 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		at := utils.JSONTime(time.Unix(form.DestroyAt, 0))
 		env.AutoDestroyAt = &at
 	} else if form.HasKey("ttl") {
-		ttl, err := time.ParseDuration(form.TTL)
+		ttl, err := services.ParseTTL(form.TTL)
 		if err != nil {
-			return nil, e.New(e.BadParam, http.StatusBadRequest)
+			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
 		}
 
 		env.TTL = form.TTL

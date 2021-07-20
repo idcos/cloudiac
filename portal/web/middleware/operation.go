@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
+	"cloudiac/utils"
 	"fmt"
 	"io/ioutil"
 	"time"
@@ -56,7 +57,7 @@ func (o *OperationMethod) putOperation() (err error) {
 		UserID:        cxt.UserId,
 		Username:      cxt.Username,
 		UserAddr:      cxt.UserIpAddr,
-		OperationAt:   time.Now(),
+		OperationAt:   utils.JSONTime(time.Now()),
 		OperationType: "PUT",
 		OperationInfo: fmt.Sprintf("修改了%s中的数据", strings.Split(url, "/")[len(strings.Split(url, "/"))-2]),
 		Desc:          models.JSON(bodyBytes),
@@ -81,7 +82,7 @@ func (o *OperationMethod) postOperation() (err error) {
 		UserID:        cxt.UserId,
 		Username:      cxt.Username,
 		UserAddr:      cxt.UserIpAddr,
-		OperationAt:   time.Now(),
+		OperationAt:   utils.JSONTime(time.Now()),
 		OperationType: "Create",
 		OperationInfo: fmt.Sprintf("创建了%s中的名称为%s数据", strings.Split(url, "/")[len(strings.Split(url, "/"))-2], name),
 		Desc:          models.JSON(bodyBytes),
@@ -106,7 +107,7 @@ func (o *OperationMethod) deleteOperation() (err error) {
 		UserID:        cxt.UserId,
 		Username:      cxt.Username,
 		UserAddr:      cxt.UserIpAddr,
-		OperationAt:   time.Now(),
+		OperationAt:   utils.JSONTime(time.Now()),
 		OperationType: "delete",
 		OperationInfo: fmt.Sprintf("删除%s中了id为%s的数据", strings.Split(url, "/")[len(strings.Split(url, "/"))-2], id),
 		Desc:          models.JSON(bodyBytes),

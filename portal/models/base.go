@@ -114,12 +114,12 @@ type TimedModel struct {
 
 type SoftDeleteModel struct {
 	TimedModel
-	DeletedAt *time.Time `json:"-" csv:"-" sql:"index"`
+	DeletedAt *utils.JSONTime `json:"-" sql:"index"`
 	// 因为 deleted_at 字段的默认值为 NULL(gorm 也会依赖这个值做软删除)，会导致唯一约束与软删除冲突,
 	// 所以我们增加 deleted_at_t 字段来避免这个情况。
 	// 如果 model 需要同时支持软删除和唯一约束就需要在唯一约束索引中增加该字段
 	// (使用 SoftDeleteModel.AddUniqueIndex() 方法添加索引时会自动加上该字段)。
-	DeletedAtT int64 `json:"-" csv:"-" gorm:"default:0"`
+	DeletedAtT int64 `json:"-" gorm:"default:0"`
 }
 
 func (SoftDeleteModel) AfterDelete(scope *gorm.Scope) error {
