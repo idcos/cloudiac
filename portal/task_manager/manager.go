@@ -283,10 +283,12 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 	}
 
 	logger.Infof("run task: %s", task.Id)
-	// 先更新任务为 running 状态
-	// 极端情况下任务未执行好过重复执行，所以先设置状态，后发起调用
-	if err := changeTaskStatus(models.TaskRunning, ""); err != nil {
-		return
+	if !task.Started() { // 任务可能为己启动状态(比如异常退出后的任务恢复)，这里判断一下
+		// 先更新任务为 running 状态
+		// 极端情况下任务未执行好过重复执行，所以先设置状态，后发起调用
+		if err := changeTaskStatus(models.TaskRunning, ""); err != nil {
+			return
+		}
 	}
 
 	if task.IsEffectTask() {
