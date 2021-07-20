@@ -100,9 +100,9 @@ func SearchProjectAuthorizationUser(c *ctx.ServiceCtx, form *forms.SearchProject
 	}
 
 	// 导出用户角色
-	if c.OrgId != "" {
-		query = query.Joins(fmt.Sprintf("left join %s as o on %s.id = o.user_id and o.org_id = ?",
-			models.UserOrg{}.TableName(), models.User{}.TableName()), c.OrgId).
+	if c.ProjectId != "" {
+		query = query.Joins(fmt.Sprintf("left join %s as o on %s.id = o.user_id and o.project_id = ?",
+			models.UserProject{}.TableName(), models.User{}.TableName()), c.ProjectId).
 			LazySelectAppend(fmt.Sprintf("o.role,%s.*", models.User{}.TableName()))
 	}
 
