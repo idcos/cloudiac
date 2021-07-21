@@ -196,10 +196,10 @@ func SearchEnv(c *ctx.ServiceCtx, form *forms.SearchEnvForm) (interface{}, e.Err
 	// do nothing
 	case "true":
 		// 已归档
-		query = query.Where("iac_env.archived == 1")
+		query = query.Where("iac_env.archived = 1")
 	case "false":
 		// 未归档
-		query = query.Where("iac_env.archived == 0")
+		query = query.Where("iac_env.archived = 0")
 	default:
 		return nil, e.New(e.BadParam, http.StatusBadRequest)
 	}
