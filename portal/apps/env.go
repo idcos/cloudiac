@@ -141,6 +141,8 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.EnvDetail,
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
+	// 首次部署，直接更新 last_task_id
+	env.LastTaskId = task.Id
 	if _, err := tx.Save(env); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error save env, err %s", err)
