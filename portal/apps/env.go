@@ -17,7 +17,7 @@ import (
 )
 
 // CreateEnv 创建环境
-func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Error) {
+func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.EnvDetail, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create env %s", form.Name))
 
 	if c.OrgId == "" || c.ProjectId == "" {
@@ -141,7 +141,6 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
-	env.LastTaskId = task.Id
 	if _, err := tx.Save(env); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error save env, err %s", err)
@@ -157,8 +156,12 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.Env, e.Err
 
 	// 屏蔽敏感字段输出
 	env.HideSensitiveVariable()
+	envDetail := models.EnvDetail{
+		Env:    *env,
+		TaskId: task.Id,
+	}
 
-	return env, nil
+	return &envDetail, nil
 }
 
 func getVariables(vars map[string]models.Variable) models.EnvVariables {
@@ -349,8 +352,8 @@ func EnvDetail(c *ctx.ServiceCtx, form forms.DetailEnvForm) (*models.EnvDetail, 
 }
 
 // EnvDeploy 创建新部署任务
-// 任务类型：apply, destroy
-func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Error) {
+// 任务类型：plan, apply, destroy
+func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.EnvDetail, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create env task %s", form.Id))
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
@@ -497,13 +500,6 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
-	env.LastTaskId = task.Id
-	if _, err := tx.Save(env); err != nil {
-		_ = tx.Rollback()
-		c.Logger().Errorf("error save env, err %s", err)
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	}
-
 	if _, err := tx.Save(env); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error save env, err %s", err)
@@ -519,8 +515,12 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	// 屏蔽敏感字段输出
 	env.HideSensitiveVariable()
 	env.MergeTaskStatus()
+	envDetail := models.EnvDetail{
+		Env:    *env,
+		TaskId: task.Id,
+	}
 
-	return env, nil
+	return &envDetail, nil
 }
 
 // SearchEnvResources 查询环境资源列表
@@ -553,20 +553,4 @@ func SearchEnvResources(c *ctx.ServiceCtx, form *forms.SearchEnvResourceForm) (i
 	}
 
 	return getPage(query, form, &models.Resource{})
-}
-
-func GetEnvById(c *ctx.ServiceCtx, form *forms.SearchEnvVariableForm) (*models.Env, e.Error) {
-	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
-		return nil, e.New(e.BadRequest, http.StatusBadRequest)
-	}
-	query := c.DB().Where("org_id = ? AND project_id = ? AND id = ?", c.OrgId, c.ProjectId, form.Id)
-	env, err := services.GetEnvById(query, form.Id)
-	if err != nil && err.Code() == e.EnvNotExists {
-		return nil, e.New(e.EnvNotExists, err, http.NotFound)
-	} else if err != nil {
-		c.Logger().Errorf("error while get env by id, err %s", err)
-		return nil, e.New(e.DBError, err)
-	}
-
-	return env, nil
 }
