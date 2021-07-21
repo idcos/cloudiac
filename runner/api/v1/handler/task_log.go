@@ -8,6 +8,7 @@ import (
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"context"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"io"
@@ -28,7 +29,7 @@ func TaskLogFollow(c *ctx.Context) {
 	task, err := runner.LoadCommittedTask(req.EnvId, req.TaskId, req.Step)
 	if err != nil {
 		if os.IsNotExist(err) {
-			c.Error(err, http.StatusNotFound)
+			c.Error(fmt.Errorf("not exists"), http.StatusNotFound)
 		} else {
 			c.Error(err, http.StatusInternalServerError)
 		}

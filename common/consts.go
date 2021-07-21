@@ -28,6 +28,8 @@ const (
 	TaskStepCommand = "command" // run command
 	TaskStepCollect = "collect" // 任务结束后的信息采集
 
+	CollectTaskStepIndex = -1
+
 	TaskStepPending   = "pending"
 	TaskStepApproving = "approving"
 	TaskStepRejected  = "rejected"

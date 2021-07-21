@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"cloudiac/common"
 	"cloudiac/configs"
 	"fmt"
 	"io/ioutil"
@@ -54,6 +55,9 @@ func GetTaskStepDir(envId string, taskId string, step int) string {
 }
 
 func GetTaskStepDirName(step int) string {
+	if step == common.CollectTaskStepIndex {
+		return fmt.Sprintf(".step-collect")
+	}
 	return fmt.Sprintf("step%d", step)
 }
 

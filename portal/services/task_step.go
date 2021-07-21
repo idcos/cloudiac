@@ -17,10 +17,7 @@ func GetTaskSteps(sess *db.Session, taskId models.Id) ([]*models.TaskStep, error
 
 func GetTaskStep(sess *db.Session, taskId models.Id, step int) (*models.TaskStep, e.Error) {
 	taskStep := models.TaskStep{}
-	err := sess.Where(models.TaskStep{
-		TaskId: taskId,
-		Index:  step,
-	}).First(&taskStep)
+	err := sess.Where("task_id = ? AND `index` = ?", taskId, step).First(&taskStep)
 
 	if err != nil {
 		if e.IsRecordNotFound(err) {

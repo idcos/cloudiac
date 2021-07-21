@@ -1,6 +1,7 @@
 package task_manager
 
 import (
+	"cloudiac/common"
 	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
@@ -284,6 +285,7 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 	}
 
 	logger.Infof("run task: %s", task.Id)
+
 	if !task.Started() { // 任务可能为己启动状态(比如异常退出后的任务恢复)，这里判断一下
 		// 先更新任务为 running 状态
 		// 极端情况下任务未执行好过重复执行，所以先设置状态，后发起调用
@@ -318,8 +320,7 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 			continue
 		}
 
-		task.CurrStep = step.Index
-		if _, err = m.db.Model(task).Update(task); err != nil {
+		if _, err = m.db.Model(task).Update(models.Attrs{"CurrStep": step.Index}); err != nil {
 			logger.Errorf("update task error: %v", err)
 			break
 		}
@@ -344,7 +345,7 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
 			ProjectId: task.ProjectId,
 			EnvId:     task.EnvId,
 			TaskId:    task.Id,
-			Index:     99,
+			Index:     common.CollectTaskStepIndex,
 			Status:    models.TaskStepPending,
 		}); err != nil {
 			logger.Errorf("run collect step error: %v", err)
@@ -494,6 +495,7 @@ loop:
 
 		switch step.Status {
 		case models.TaskStepPending, models.TaskStepApproving:
+			// 先将步骤置为 running 状态，然后再发起调用，保证步骤不会重复执行
 			changeStepStatus(models.TaskStepRunning, "")
 			logger.Infof("start task step %d(%s)", step.Index, step.Type)
 			if err = StartTaskStep(taskReq, *step); err != nil {

@@ -32,7 +32,7 @@ type Env struct {
 	Description string `json:"description" gorm:"type:text"`                                                               // 环境描述
 	Status      string `json:"status" gorm:"type:enum('active','failed','inactive')" enums:"'active','failed','inactive'"` // 环境状态, active活跃, inactive非活跃,failed错误,running部署中,approving审批中
 	// 任务状态，只同步部署任务的状态(apply,destroy)，plan 任务不会对环境产生影响，所以不同步
-	TaskStatus string `json:"taskStatus" gorm:"type:enum('', 'pending','approving','running');default:''"`
+	TaskStatus string `json:"taskStatus" gorm:"type:enum('','approving','running');default:''"`
 	Archived   bool   `json:"archived" gorm:"default:'0'"`                             // 是否已归档
 	RunnerId   string `json:"runnerId" gorm:"size:32;not null"`                        //部署通道ID
 	Timeout    int    `json:"timeout" gorm:"default:'600';comment:'部署超时'"`             // 部署超时时间（单位：秒）

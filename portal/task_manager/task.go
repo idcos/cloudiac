@@ -46,7 +46,8 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error) 
 	taskReq.StepType = step.Type
 	taskReq.StepArgs = step.Args
 
-	respData, err := utils.HttpService(requestUrl, "POST", header, taskReq, 1, 5)
+	respData, err := utils.HttpService(requestUrl, "POST", header, taskReq,
+		consts.RunnerConnectTimeout, consts.RunnerConnectTimeout)
 	if err != nil {
 		return err
 	}
@@ -55,7 +56,7 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error) 
 	if err := json.Unmarshal(respData, &resp); err != nil {
 		return fmt.Errorf("unexpected response: %s", respData)
 	}
-	logger.Debugf("runner response: %#v", resp)
+	logger.Debugf("runner response: %s", respData)
 	if resp.Error != "" {
 		return fmt.Errorf(resp.Error)
 	}

@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -443,25 +444,31 @@ func FetchTaskLog(ctx context.Context, task *models.Task, writer io.WriteCloser)
 		return err
 	}
 
+	sleepDuration := time.Second * 5
 	storage := logstorage.Get()
-	ticker := time.NewTicker(time.Second * 5)
+	ticker := time.NewTicker(sleepDuration)
 	defer ticker.Stop()
 
 	for _, step := range steps {
+		//logger := logs.Get().WithField("step", fmt.Sprintf("%s(%d)", step.Type, step.Index))
 		// 任务有可能未开始执行步骤就退出了，所以需要先判断任务是否退出
 		for !task.Exited() && !step.IsStarted() {
 			select {
 			case <-ctx.Done():
 				return nil
 			case <-ticker.C:
+				var (
+					// 先保存一下值，因为查询出错时 task、step 会被赋值为空，无法用于生成 error
+					taskId    = task.Id
+					stepIndex = step.Index
+				)
 				task, err = GetTask(db.Get(), task.Id)
 				if err != nil {
-					return errors.Wrapf(err, "get task '%s'", task.Id)
+					return errors.Wrapf(err, "get task '%s'", taskId)
 				}
-
 				step, err = GetTaskStep(db.Get(), task.Id, step.Index)
 				if err != nil {
-					return errors.Wrapf(err, "get task step %d", step.Index)
+					return errors.Wrapf(err, "get task step %d", stepIndex)
 				}
 			}
 		}
@@ -484,14 +491,28 @@ func FetchTaskLog(ctx context.Context, task *models.Task, writer io.WriteCloser)
 				return err
 			}
 		} else if step.IsStarted() { // running
-			if err = fetchRunnerTaskStepLog(ctx, task.RunnerId, step, writer); err != nil {
-				return err
+			for {
+				if err = fetchRunnerTaskStepLog(ctx, task.RunnerId, step, writer); err != nil {
+					if err == ErrRunnerTaskNotExists && step.StartAt != nil &&
+						time.Since(time.Time(*step.StartAt)) < time.Second*consts.RunnerConnectTimeout*2 {
+						// 某些情况下可能步骤被标识为了 running 状态，但调用 runner 执行任务时可能因为网络等原因导致没有及时启动执行。
+						// 所以这里加一个判断, 如果是刚启动的任务会进行重试
+						time.Sleep(sleepDuration)
+						continue
+					}
+					return err
+				}
+				break
 			}
 		}
 	}
 
 	return nil
 }
+
+var (
+	ErrRunnerTaskNotExists = errors.New("runner task not exists")
+)
 
 // 从 runner 获取任务日志，直到任务结束
 func fetchRunnerTaskStepLog(ctx context.Context, runnerId string, step *models.TaskStep, writer io.Writer) error {
@@ -508,8 +529,13 @@ func fetchRunnerTaskStepLog(ctx context.Context, runnerId string, step *models.T
 	params.Add("envId", string(step.EnvId))
 	params.Add("taskId", string(step.TaskId))
 	params.Add("step", fmt.Sprintf("%d", step.Index))
-	wsConn, _, err := utils.WebsocketDail(runnerAddr, consts.RunnerTaskLogFollowURL, params)
+	wsConn, resp, err := utils.WebsocketDail(runnerAddr, consts.RunnerTaskLogFollowURL, params)
 	if err != nil {
+		respBody, _ := io.ReadAll(resp.Body)
+		logger.Debugf("websocket dail error: %s, response: %s", err, respBody)
+		if resp.StatusCode == http.StatusNotFound {
+			return ErrRunnerTaskNotExists
+		}
 		return errors.Wrapf(err, "websocket dail: %v/%s", runnerAddr, consts.RunnerTaskLogFollowURL)
 	}
 
