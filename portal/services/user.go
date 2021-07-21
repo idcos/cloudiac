@@ -239,8 +239,8 @@ func getUserOrgs(userId models.Id) map[models.Id]*models.UserOrg {
 		return nil
 	}
 	userOrgsMap := make(map[models.Id]*models.UserOrg)
-	for _, userOrg := range userOrgs {
-		userOrgsMap[userOrg.OrgId] = &userOrg
+	for index, userOrg := range userOrgs {
+		userOrgsMap[userOrg.OrgId] = &userOrgs[index]
 	}
 	return userOrgsMap
 }

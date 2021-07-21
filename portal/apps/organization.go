@@ -312,7 +312,7 @@ func InviteUser(c *ctx.ServiceCtx, form *forms.InviteUserForm) (*models.UserWith
 
 	org, err := services.GetOrganizationById(c.DB(), form.Id)
 	if err != nil && err.Code() == e.OrganizationNotExists {
-		return nil, e.New(e.BadRequest, http.StatusNotFound)
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	} else if err != nil {
 		c.Logger().Errorf("error get org, err %s", err)
 		return nil, e.New(e.DBError, err)
