@@ -10,6 +10,8 @@ const (
 
 	MaxLogContentSize = 1024 * 1024 // 最大日志文件大小，超限会被截断
 
+	RunnerConnectTimeout = 5
+
 	DefaultAdminEmail = "admin@example.com"
 )
 
