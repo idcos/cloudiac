@@ -5,6 +5,7 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
@@ -159,8 +160,10 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.EnvDetail,
 	// 屏蔽敏感字段输出
 	env.HideSensitiveVariable()
 	envDetail := models.EnvDetail{
-		Env:    *env,
-		TaskId: task.Id,
+		Env:        *env,
+		TaskId:     task.Id,
+		Operator:   c.Username,
+		OperatorId: c.UserId,
 	}
 
 	return &envDetail, nil
@@ -230,6 +233,7 @@ func SearchEnv(c *ctx.ServiceCtx, form *forms.SearchEnvForm) (interface{}, e.Err
 		for _, env := range details {
 			env.HideSensitiveVariable()
 			env.MergeTaskStatus()
+			env = PopulateLastTask(c.DB(), env)
 		}
 	}
 
@@ -240,8 +244,33 @@ func SearchEnv(c *ctx.ServiceCtx, form *forms.SearchEnvForm) (interface{}, e.Err
 	}, nil
 }
 
+// PopulateLastTask 导出 last task 相关数据
+func PopulateLastTask(query *db.Session, env *models.EnvDetail) *models.EnvDetail {
+	if env.LastTaskId != "" {
+		if lastTask, _ := services.GetTaskById(query, env.LastTaskId); lastTask != nil {
+			// 密钥
+			if env.KeyId != lastTask.KeyId {
+				if key, _ := services.GetKeyById(query, lastTask.KeyId, false); key != nil {
+					env.KeyId = lastTask.KeyId
+					env.KeyName = key.Name
+				}
+			}
+			// 部署通道
+			env.RunnerId = lastTask.RunnerId
+			// 分支/标签
+			env.Revision = lastTask.Revision
+			// 执行人
+			if operator, _ := services.GetUserById(query, lastTask.CreatorId); operator != nil {
+				env.Operator = operator.Name
+				env.OperatorId = lastTask.CreatorId
+			}
+		}
+	}
+	return env
+}
+
 // UpdateEnv 环境编辑
-func UpdateEnv(c *ctx.ServiceCtx, form *forms.UpdateEnvForm) (*models.Env, e.Error) {
+func UpdateEnv(c *ctx.ServiceCtx, form *forms.UpdateEnvForm) (*models.EnvDetail, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update env %s", form.Id))
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
@@ -330,8 +359,10 @@ func UpdateEnv(c *ctx.ServiceCtx, form *forms.UpdateEnvForm) (*models.Env, e.Err
 	// 屏蔽敏感字段输出
 	env.HideSensitiveVariable()
 	env.MergeTaskStatus()
+	detail := &models.EnvDetail{Env: *env}
+	detail = PopulateLastTask(c.DB(), detail)
 
-	return env, nil
+	return detail, nil
 }
 
 // EnvDetail 环境信息详情
@@ -353,6 +384,7 @@ func EnvDetail(c *ctx.ServiceCtx, form forms.DetailEnvForm) (*models.EnvDetail, 
 	// 屏蔽敏感字段输出
 	envDetail.HideSensitiveVariable()
 	envDetail.MergeTaskStatus()
+	envDetail = PopulateLastTask(c.DB(), envDetail)
 
 	return envDetail, nil
 }
@@ -540,12 +572,13 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.EnvDetail,
 	// 屏蔽敏感字段输出
 	env.HideSensitiveVariable()
 	env.MergeTaskStatus()
-	envDetail := models.EnvDetail{
+	envDetail := &models.EnvDetail{
 		Env:    *env,
 		TaskId: task.Id,
 	}
+	envDetail = PopulateLastTask(c.DB(), envDetail)
 
-	return &envDetail, nil
+	return envDetail, nil
 }
 
 // SearchEnvResources 查询环境资源列表
