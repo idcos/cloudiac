@@ -497,7 +497,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.EnvDetail,
 	}
 
 	// 创建任务
-	_, err = services.CreateTask(tx, tpl, env, models.Task{
+	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:        models.Task{}.GetTaskNameByType(form.TaskType),
 		Type:        form.TaskType,
 		Flow:        models.TaskFlow{},
