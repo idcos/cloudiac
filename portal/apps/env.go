@@ -135,6 +135,7 @@ func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.EnvDetail,
 		Variables:   services.GetVariableBody(env.Variables),
 		StepTimeout: form.Timeout,
 		AutoApprove: env.AutoApproval,
+		Revision:    env.Revision,
 	})
 	if err != nil {
 		_ = tx.Rollback()
@@ -540,6 +541,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.EnvDetail,
 		Variables:   services.GetVariableBody(env.Variables),
 		StepTimeout: form.Timeout,
 		AutoApprove: env.AutoApproval,
+		Revision:    env.Revision,
 	})
 
 	if err != nil {

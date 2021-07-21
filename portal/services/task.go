@@ -55,6 +55,7 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		AutoApprove: pt.AutoApprove,
 		KeyId:       models.Id(firstVal(string(pt.KeyId), string(env.KeyId))),
 		Extra:       pt.Extra,
+		Revision:    pt.Revision,
 
 		OrgId:     env.OrgId,
 		ProjectId: env.ProjectId,
@@ -82,7 +83,7 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		}
 	}
 
-	task.RepoAddr, task.CommitId, err = getTaskRepoAddrAndCommitId(tx, tpl)
+	task.RepoAddr, task.CommitId, err = getTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
 	if err != nil {
 		return nil, e.New(e.InternalError, err)
 	}
@@ -133,7 +134,7 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 	return &task, nil
 }
 
-func getTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template) (repoAddr, commitId string, err error) {
+func getTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision string) (repoAddr, commitId string, err error) {
 	var (
 		u         *url.URL
 		repoToken = tpl.RepoToken
@@ -159,7 +160,10 @@ func getTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template) (repoAddr,
 			return "", "", err
 		}
 
-		commitId, err = repo.BranchCommitId(tpl.RepoRevision)
+		if revision == "" {
+			revision = tpl.RepoRevision
+		}
+		commitId, err = repo.BranchCommitId(revision)
 		if err != nil {
 			return "", "", e.New(e.VcsError, err)
 		}
