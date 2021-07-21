@@ -42,7 +42,7 @@ type UpdateTemplateForm struct {
 	Name              string      `form:"name" json:"name"`
 	Description       string      `form:"description" json:"description"`
 	Status            string      `form:"status" json:"status"`
-	Workdir           string      `form:"workdir" json:"workdor"`
+	Workdir           string      `form:"workdir" json:"workdir"`
 	RunnerId          string      `json:"runnerId" form:"runnerId"`
 	Playbook          string      `json:"playbook" form:"playbook"`
 	PlayVarsFile      string      `json:"playVarsFile" form:"playVarsFile"`
