@@ -498,8 +498,6 @@ loop:
 			// 先将步骤置为 running 状态，然后再发起调用，保证步骤不会重复执行
 			changeStepStatus(models.TaskStepRunning, "")
 			logger.Infof("start task step %d(%s)", step.Index, step.Type)
-			// TODO @DEBUG
-			time.Sleep(consts.RunnerConnectTimeout)
 			if err = StartTaskStep(taskReq, *step); err != nil {
 				logger.Errorf("start task step error: %s", err.Error())
 				changeStepStatus(models.TaskStepFailed, err.Error())
