@@ -81,11 +81,11 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 			return nil, e.New(e.InternalError, err)
 		}
 	}
-	//
-	//task.RepoAddr, task.CommitId, err = getTaskRepoAddrAndCommitId(tx, tpl)
-	//if err != nil {
-	//	return nil, e.New(e.InternalError, err)
-	//}
+
+	task.RepoAddr, task.CommitId, err = getTaskRepoAddrAndCommitId(tx, tpl)
+	if err != nil {
+		return nil, e.New(e.InternalError, err)
+	}
 
 	if _, err = tx.Save(&task); err != nil {
 		return nil, e.New(e.DBError, errors.Wrapf(err, "save task"))
