@@ -137,3 +137,14 @@ func GetUserIdsByOrg(query *db.Session, orgId models.Id) (userIds []models.Id, e
 	}
 	return
 }
+
+func GetDemoOrganization(tx *db.Session) (*models.Organization, e.Error) {
+	o := models.Organization{}
+	if err := tx.Where("is_demo = 1").First(&o); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.OrganizationNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &o, nil
+}

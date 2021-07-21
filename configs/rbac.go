@@ -154,6 +154,19 @@ var polices = []Policy{
 	// 密钥
 	{"admin", "keys", "*"},
 	{"member", "keys", "*"},
+
+	// 演示模式，当访问演示组织下的资源，进入受限模式
+	{"demo", "orgs", "read"},
+	{"demo", "projects", "read"},
+	{"demo", "tokens", "read"},
+	{"demo", "notifications", "read"},
+	{"demo", "vcs", "read"},
+	{"demo", "runners", "read"},
+	{"demo", "keys", "read"},
+	{"demo", "templates", "read"},
+	{"demo", "envs", "*"},
+	{"demo", "tasks", "*"},
+	{"demo", "variables", "*"},
 }
 
 // InitPolicy 初始化权限策略

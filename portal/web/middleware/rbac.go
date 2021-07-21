@@ -1,9 +1,11 @@
 package middleware
 
 import (
+	"cloudiac/common"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/models"
 	"cloudiac/portal/services"
 	"cloudiac/utils/logs"
 	"fmt"
@@ -120,6 +122,12 @@ func AccessControl(args ...string) gin.HandlerFunc {
 		}
 		if sub != "" {
 			role = sub
+		}
+
+		// 访问演示组织资源的时候切换到演示模式角色
+		if !s.IsSuperAdmin && s.OrgId != "" && s.OrgId == models.Id(common.DemoOrgId) {
+			role = consts.RoleDemo
+			proj = consts.RoleDemo
 		}
 
 		// 根据 角色 和 项目角色 判断资源访问许可
