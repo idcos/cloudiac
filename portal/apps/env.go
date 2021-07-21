@@ -337,7 +337,7 @@ func UpdateEnv(c *ctx.ServiceCtx, form *forms.UpdateEnvForm) (*models.EnvDetail,
 	}
 
 	if form.HasKey("triggers") {
-		env.Triggers = form.Triggers
+		attrs["triggers"] = form.Triggers
 	}
 
 	if form.HasKey("archived") {
