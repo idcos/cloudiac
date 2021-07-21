@@ -279,8 +279,8 @@ func UpdateEnv(c *ctx.ServiceCtx, form *forms.UpdateEnvForm) (*models.Env, e.Err
 		if err != nil {
 			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
 		}
-
 		attrs["auto_destroy_at"] = &destroyAt
+		attrs["ttl"] = "" // 直接传入了销毁时间，需要同步清空 ttl
 	} else if form.HasKey("ttl") {
 		ttl, err := services.ParseTTL(form.TTL)
 		if err != nil {
@@ -289,8 +289,12 @@ func UpdateEnv(c *ctx.ServiceCtx, form *forms.UpdateEnvForm) (*models.Env, e.Err
 
 		attrs["ttl"] = form.TTL
 		if env.LastTaskId != "" { // 己部署过的环境同步修改 destroyAt
-			at := time.Now().Add(ttl)
-			attrs["auto_destroy_at"] = &at
+			if ttl == 0 {
+				attrs["auto_destroy_at"] = nil
+			} else {
+				at := models.Time(time.Now().Add(ttl))
+				attrs["auto_destroy_at"] = &at
+			}
 		}
 	}
 
@@ -399,6 +403,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		form.Playbook = tpl.Playbook
 	}
 
+	envUpdateAttrs := models.Attrs{} // 保存需要强制 update 的字段值
 	if form.HasKey("name") {
 		env.Name = form.Name
 	}
@@ -412,6 +417,9 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
 		}
 		env.AutoDestroyAt = &destroyAt
+		// 直接传入了销毁时间，需要同步清空 ttl
+		env.TTL = ""
+		envUpdateAttrs["ttl"] = ""
 	} else if form.HasKey("ttl") {
 		ttl, err := services.ParseTTL(form.TTL)
 		if err != nil {
@@ -420,8 +428,14 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 
 		env.TTL = form.TTL
 		if env.LastTaskId != "" { // 己部署过的环境同步修改 destroyAt
-			at := models.Time(time.Now().Add(ttl))
-			env.AutoDestroyAt = &at
+			if ttl == 0 {
+				// ttl 传入 0 表示清空自动销毁时间
+				env.AutoDestroyAt = nil
+				envUpdateAttrs["AutoDestroyAt"] = nil
+			} else {
+				at := models.Time(time.Now().Add(ttl))
+				env.AutoDestroyAt = &at
+			}
 		}
 	}
 
@@ -473,7 +487,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 	}
 
 	// 创建任务
-	task, err := services.CreateTask(tx, tpl, env, models.Task{
+	_, err = services.CreateTask(tx, tpl, env, models.Task{
 		Name:        models.Task{}.GetTaskNameByType(form.TaskType),
 		Type:        form.TaskType,
 		Flow:        models.TaskFlow{},
@@ -492,11 +506,13 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
-	env.LastTaskId = task.Id
-	if _, err := tx.Save(env); err != nil {
-		_ = tx.Rollback()
-		c.Logger().Errorf("error save env, err %s", err)
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	if len(envUpdateAttrs) > 0 {
+		// tx.Save() 会忽略 nil 值，所以使用 map 强制更新
+		if _, err = services.UpdateEnv(tx, env.Id, envUpdateAttrs); err != nil {
+			_ = tx.Rollback()
+			c.Logger().Errorf("error update env, err %s", err)
+			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+		}
 	}
 
 	if _, err := tx.Save(env); err != nil {
