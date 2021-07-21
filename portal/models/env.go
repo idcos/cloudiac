@@ -109,8 +109,9 @@ func (v *EnvVariables) Scan(value interface{}) error {
 
 type EnvDetail struct {
 	Env
-	Creator       string `json:"creator"`       // 创建人
-	ResourceCount int    `json:"resourceCount"` // 资源数量
-	TemplateName  string `json:"templateName"`  // 模板名称
-	KeyName       string `json:"keyName"`       // 密钥名称
+	Creator       string `json:"creator"`          // 创建人
+	ResourceCount int    `json:"resourceCount"`    // 资源数量
+	TemplateName  string `json:"templateName"`     // 模板名称
+	KeyName       string `json:"keyName"`          // 密钥名称
+	TaskId        Id     `json:"taskId,omitempty"` // 当前作业ID
 }
