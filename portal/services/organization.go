@@ -1,11 +1,12 @@
 package services
 
 import (
-	"fmt"
-
+	"cloudiac/common"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"fmt"
 )
 
 func CreateOrganization(tx *db.Session, org models.Organization) (*models.Organization, e.Error) {
@@ -147,4 +148,23 @@ func GetDemoOrganization(tx *db.Session) (*models.Organization, e.Error) {
 		return nil, e.New(e.DBError, err)
 	}
 	return &o, nil
+}
+
+func TryAddDemoRelation(tx *db.Session, userId models.Id) (err e.Error) {
+	if common.DemoOrgId == "" {
+		return
+	}
+	demoProject, _ := GetProjectsById(tx, models.Id(common.DemoOrgId))
+	// 用户加入演示组织
+	_, err = CreateUserOrgRel(tx, models.UserOrg{OrgId: models.Id(common.DemoOrgId), UserId: userId, Role: consts.OrgRoleAdmin})
+	if err != nil {
+		return
+	}
+	// 用户加入演示项目
+	_, err = CreateProjectUser(tx, models.UserProject{
+		Role:      consts.ProjectRoleManager,
+		UserId:    userId,
+		ProjectId: demoProject.Id,
+	})
+	return
 }

@@ -140,3 +140,14 @@ func DeleteProjectUser(dbSess *db.Session, id uint) e.Error {
 	}
 	return nil
 }
+
+// GetDemoProject 获取演示项目
+func GetDemoProject(tx *db.Session, demoOrgId models.Id) (*models.Project, e.Error) {
+	proj := models.Project{}
+	if err := tx.Model(models.Project{}).
+		Joins("left join iac_user_project as up on up.project_id = iac_project.id").
+		Where("up.org_id = ?", demoOrgId).First(&proj); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return &proj, nil
+}
