@@ -31,7 +31,8 @@ func Register(g *gin.RouterGroup) {
 			"success": true,
 		})
 	})
-	g.GET("/trigger/send", w(handlers.ApiTriggerHandler))
+
+	g.POST("/trigger/send", w(handlers.ApiTriggerHandler))
 
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
 

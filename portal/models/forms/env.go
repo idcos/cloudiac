@@ -87,9 +87,9 @@ type ArchiveEnvForm struct {
 type SearchEnvForm struct {
 	PageForm
 
-	Q        string `form:"q" json:"q" binding:""`                                                   // 环境名称，支持模糊查询
-	Status   string `form:"status" json:"status" enums:"active,deploying,approving,failed,inactive"` // 环境状态
-	Archived string `form:"archived" json:"archived" enums:"true,false,all"`                         // 归档状态，默认返回未归档环境
+	Q        string `form:"q" json:"q" binding:""`                                                 // 环境名称，支持模糊查询
+	Status   string `form:"status" json:"status" enums:"active,failed,inactive,running,approving"` // 环境状态，active活跃, inactive非活跃,failed错误,running部署中,approving审批中
+	Archived string `form:"archived" json:"archived" enums:"true,false,all"`                       // 归档状态，默认返回未归档环境
 }
 
 type DeleteEnvForm struct {
