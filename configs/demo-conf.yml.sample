@@ -1,0 +1,36 @@
+organization:
+  name: 演示组织
+  description: 这是一个演示组织
+  project:
+    name: 演示项目
+    description: 这是一个演示项目
+  vcs:
+    name: 示例VCS
+    type: gitlab
+    address: http://gitlab.idcos.com/
+    token: ALyADJnyz56grgKCUNgM
+  key:
+    name: 示例密钥
+    key: 66w0Nbu7uOv6q9zIpJcwnGuVVFc
+  variable:
+    - name: ALICLOUD_ACCESS_KEY
+      type: environment
+      value: c3qkf83n6m8epuktqeq0
+      description: 阿里云访问密钥ID
+      sensitive: true
+    - name: ALICLOUD_SECRET_KEY
+      type: environment
+      value: c3qhqs3n6m80ukdhafng
+      description: 阿里云访问密钥
+      sensitive: true
+  template:
+    name: 演示云模板
+    description: 云模板样板间
+    vcs: 示例VCS
+    repo_id: 599
+    repo_address: http://gitlab.idcos.com/iacsample/cloudiac-example.git
+    revision: master
+    tf_vars_file: qa-env.tfvars
+    playbook: ansible/playbook.yml
+    workdir:
+

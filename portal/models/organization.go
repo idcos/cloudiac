@@ -19,6 +19,8 @@ type Organization struct {
 	Status      string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'组织状态'" example:"enable" enums:"enable,disable"` // 组织状态
 	CreatorId   Id     `json:"creatorId" gorm:"size:32;not null;comment:'创建人'" example:"u-c3ek0co6n88ldvq1n6ag"`                                    //创建人ID
 	RunnerId    string `json:"runnerId" gorm:"not null" example:"iac-porta;portal-01"`                                                              // 组织默认部署通道
+
+	IsDemo bool `json:"-" gorm:"default:'0'"` // 是否演示组织
 }
 
 func (Organization) TableName() string {
