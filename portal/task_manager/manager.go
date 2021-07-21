@@ -409,24 +409,24 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			return errors.Wrapf(err, "get env '%s'", task.EnvId)
 		}
 
+		updateAttrs := models.Attrs{}
 		if env.AutoDestroyTaskId == task.Id {
 			// 自动销毁执行完后清空设置，以支持再次部署重建环境
-			env.AutoDestroyAt = nil
-			env.AutoDestroyTaskId = ""
+			updateAttrs["AutoDestroyAt"] = nil
+			updateAttrs["AutoDestroyTaskId"] = ""
 		}
 
-		if task.Type == models.TaskTypeApply && env.AutoDestroyAt == nil && env.TTL != "" {
+		if task.Type == models.TaskTypeApply && env.AutoDestroyAt == nil && env.TTL != "" && env.TTL != "0" {
 			// 如果设置了环境的 ttl，则在部署结束后自动根据 ttl 设置销毁时间
 			ttl, err := services.ParseTTL(env.TTL)
 			if err != nil {
 				return err
 			}
 			at := models.Time(time.Now().Add(ttl))
-			env.AutoDestroyAt = &at
+			updateAttrs["AutoDestroyAt"] = &at
 		}
 
-		_, err = dbSess.Model(&models.Env{}).Where("id = ?", env.Id).
-			Update(env)
+		_, err = services.UpdateEnv(dbSess, env.Id, updateAttrs)
 		if err != nil {
 			return errors.Wrapf(err, "update environment")
 		}
@@ -621,7 +621,7 @@ func (m *TaskManager) processAutoDestroy() error {
 	destroyEnvs := make([]*models.Env, 0, limit)
 	err := dbSess.Model(&models.Env{}).
 		Where("status IN (?)", []string{models.EnvStatusActive, models.EnvStatusFailed}).
-		Where("auto_destroy_task_id = ?", "").
+		Where("auto_destroy_task_id = ''").
 		Where("auto_destroy_at <= ?", time.Now()).
 		Order("auto_destroy_at").Limit(limit).Find(&destroyEnvs)
 
