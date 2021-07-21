@@ -53,13 +53,12 @@ func (Env) Search(c *ctx.GinRequestCtx) {
 // Update 环境编辑
 // @Tags 环境
 // @Summary 环境信息编辑
-// @Accept multipart/form-data
 // @Accept json
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
-// @Param form formData forms.UpdateEnvForm true "parameter"
+// @Param form body forms.ArchiveEnvForm true "parameter"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId} [put]
 // @Success 200 {object} ctx.JSONResult{result=models.Env}
@@ -93,13 +92,12 @@ func (Env) Detail(c *ctx.GinRequestCtx) {
 // Archive 环境归档
 // @Tags 环境
 // @Summary 环境归档
-// @Accept multipart/form-data
 // @Accept json
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
-// @Param form formData forms.ArchiveEnvForm true "parameter"
+// @Param form body forms.ArchiveEnvForm true "parameter"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/archive [put]
 // @Success 200 {object} ctx.JSONResult{result=models.EnvDetail}

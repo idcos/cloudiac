@@ -16,7 +16,10 @@ const (
 	//EnvStatusApproving = "approving" // 等待审批
 )
 
-var EnvStatus = []string{EnvStatusActive, EnvStatusFailed, EnvStatusInactive}
+var (
+	EnvStatus     = []string{EnvStatusActive, EnvStatusFailed, EnvStatusInactive}
+	EnvTaskStatus = []string{TaskRunning, TaskApproving} // 环境 taskStatus 有效值
+)
 
 type Env struct {
 	SoftDeleteModel
@@ -27,7 +30,7 @@ type Env struct {
 
 	Name        string `json:"name" gorm:"not null"`                                                                       // 环境名称
 	Description string `json:"description" gorm:"type:text"`                                                               // 环境描述
-	Status      string `json:"status" gorm:"type:enum('active','failed','inactive')" enums:"'active','failed','inactive'"` // 环境状态
+	Status      string `json:"status" gorm:"type:enum('active','failed','inactive')" enums:"'active','failed','inactive'"` // 环境状态, active活跃, inactive非活跃,failed错误,running部署中,approving审批中
 	// 任务状态，只同步部署任务的状态(apply,destroy)，plan 任务不会对环境产生影响，所以不同步
 	TaskStatus string `json:"taskStatus" gorm:"type:enum('', 'pending','approving','running');default:''"`
 	Archived   bool   `json:"archived" gorm:"default:'0'"`                             // 是否已归档
@@ -85,6 +88,13 @@ func (e *Env) HideSensitiveVariable() {
 			e.Variables[index].Value = ""
 		}
 	}
+}
+
+func (e *Env) MergeTaskStatus() string {
+	if e.Deploying {
+		e.Status = e.TaskStatus
+	}
+	return e.Status
 }
 
 type EnvVariables []Variable

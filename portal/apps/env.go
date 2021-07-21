@@ -179,9 +179,12 @@ func SearchEnv(c *ctx.ServiceCtx, form *forms.SearchEnvForm) (interface{}, e.Err
 
 	if form.Status != "" {
 		if utils.InArrayStr(models.EnvStatus, form.Status) {
+			query = query.Where("iac_env.status = ?", form.Status)
+		} else if utils.InArrayStr(models.EnvTaskStatus, form.Status) {
+			query = query.Where("iac_env.task_status = ?", form.Status)
+		} else {
 			return nil, e.New(e.BadParam, http.StatusBadRequest)
 		}
-		query = query.Where("iac_env.status = ?", form.Status)
 	}
 
 	// 环境归档状态
@@ -218,10 +221,10 @@ func SearchEnv(c *ctx.ServiceCtx, form *forms.SearchEnvForm) (interface{}, e.Err
 		return nil, e.New(e.DBError, err)
 	}
 
-	// 屏蔽敏感字段输出
 	if details != nil {
 		for _, env := range details {
 			env.HideSensitiveVariable()
+			env.MergeTaskStatus()
 		}
 	}
 
@@ -317,6 +320,7 @@ func UpdateEnv(c *ctx.ServiceCtx, form *forms.UpdateEnvForm) (*models.Env, e.Err
 
 	// 屏蔽敏感字段输出
 	env.HideSensitiveVariable()
+	env.MergeTaskStatus()
 
 	return env, nil
 }
@@ -339,6 +343,7 @@ func EnvDetail(c *ctx.ServiceCtx, form forms.DetailEnvForm) (*models.EnvDetail, 
 
 	// 屏蔽敏感字段输出
 	envDetail.HideSensitiveVariable()
+	envDetail.MergeTaskStatus()
 
 	return envDetail, nil
 }
@@ -513,6 +518,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.Env, e.Err
 
 	// 屏蔽敏感字段输出
 	env.HideSensitiveVariable()
+	env.MergeTaskStatus()
 
 	return env, nil
 }
