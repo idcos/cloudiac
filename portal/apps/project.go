@@ -68,7 +68,7 @@ func SearchProject(c *ctx.ServiceCtx, form *forms.SearchProjectForm) (interface{
 	if len(projectIds) > 0 {
 		query = query.Where(fmt.Sprintf("%s.id in (?)", models.Project{}.TableName()), projectIds)
 	} else {
-		return getEmptyListResult(form), nil
+		return getEmptyListResult(form)
 	}
 
 	// 默认按创建时间逆序排序
