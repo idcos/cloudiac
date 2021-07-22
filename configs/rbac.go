@@ -94,6 +94,15 @@ var polices = []Policy{
 	{"admin", "orgs", "listuser/adduser/removeuser/updaterole"},
 	{"member", "orgs", "read"},
 
+	{"admin", "projects", "*"},
+	{"member", "projects", "read"},
+
+	{"admin", "templates", "*"},
+	{"member", "templates", "read"},
+
+	{"admin", "variables", "*"},
+	{"member", "variables", "read"},
+
 	// 项目
 	{"manager", "projects", "*"},
 	{"approver", "projects", "read"},
