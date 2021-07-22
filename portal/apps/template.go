@@ -285,7 +285,7 @@ func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (tpl inte
 			return getEmptyListResult(form)
 		}
 	}
-	query := services.QueryTemplateByOrgId(c.DB().Debug(), form.Q, c.OrgId, tplIdList)
+	query := services.QueryTemplateByOrgId(c.DB(), form.Q, c.OrgId, tplIdList)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	templates := make([]*SearchTemplateResp, 0)
 	if err := p.Scan(&templates); err != nil {
