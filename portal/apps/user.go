@@ -263,11 +263,11 @@ func ChangeUserStatus(c *ctx.ServiceCtx, form *forms.DisableUserForm) (*models.U
 func UserDetail(c *ctx.ServiceCtx, userId models.Id) (*models.UserWithRoleResp, e.Error) {
 	query := c.DB()
 
-	if c.OrgId != "" {
+	if !c.IsSuperAdmin && c.OrgId != "" {
 		userIds, _ := services.GetUserIdsByOrg(c.DB(), c.OrgId)
 		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
 	}
-	if c.ProjectId != "" {
+	if !c.IsSuperAdmin && c.ProjectId != "" {
 		userIds, _ := services.GetUserIdsByProject(c.DB(), c.ProjectId)
 		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
 	}
