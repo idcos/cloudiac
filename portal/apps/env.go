@@ -451,6 +451,11 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.EnvDetail,
 		env.Name = form.Name
 	}
 	if form.HasKey("autoApproval") {
+		if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) &&
+			!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) &&
+			!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) {
+			return nil, e.New(e.PermissionDeny, fmt.Errorf("approval role required"), http.StatusBadRequest)
+		}
 		env.AutoApproval = form.AutoApproval
 	}
 
