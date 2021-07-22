@@ -76,6 +76,7 @@ type Task struct {
 	Type string `json:"type" gorm:"not null;enum('plan', 'apply', 'destroy')" enums:"'plan', 'apply', 'destroy'"` // 任务类型。1. plan: 计划 2. apply: 部署 3. destroy: 销毁
 
 	RepoAddr string `json:"repoAddr" gorm:"not null"`
+	Revision string `json:"revision" gorm:"not null"`
 	CommitId string `json:"commitId" gorm:"not null"` // 创建任务时 revision 对应的 commit id
 
 	Workdir      string   `json:"workdir" gorm:"default:''"`

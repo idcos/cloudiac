@@ -655,6 +655,17 @@ func (m *TaskManager) processAutoDestroy() error {
 				}
 			}
 
+			vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, env.OrgId, env.ProjectId, env.TplId, env.Id, true)
+			if err != nil {
+				logger.Errorf("get vairables error: %v", err)
+				return nil
+			}
+
+			taskVars := make([]models.VariableBody, 0, len(vars))
+			for _, v := range vars {
+				taskVars = append(taskVars, v.VariableBody)
+			}
+
 			task, err := services.CreateTask(tx, tpl, env, models.Task{
 				Name:        "Auto Destroy",
 				Type:        models.TaskTypeDestroy,
@@ -662,7 +673,7 @@ func (m *TaskManager) processAutoDestroy() error {
 				Targets:     nil,
 				CreatorId:   "", // TODO 创建默认 system 账号，并在些使用
 				RunnerId:    "",
-				Variables:   services.GetVariableBody(env.Variables),
+				Variables:   taskVars,
 				StepTimeout: 0,
 				AutoApprove: true,
 			})
