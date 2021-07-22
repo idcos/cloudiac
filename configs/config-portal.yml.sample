@@ -30,9 +30,9 @@ kafka:
     sasl_password: ""
 
 smtpServer:
-  addr: smtp.example.com:25
-  username: user@example.com
-  password: ""
-  fromName: "IaC" # 邮件发送方的名称，不配置则为空
-  from: support@example.com   # 邮件显示的发送方，不配置则使用 username 值
+  addr: "${SMTP_ADDRESS}"
+  username: "${SMTP_USERNAME}"
+  password: "${SMTP_PASSWORD}"
+  fromName: "${SMTP_FROM_NAME}" # 邮件发送方的名称，不配置则为空
+  from: "${SMTP_FROM}"  # 邮件显示的发送方，不配置则使用 username 值
 

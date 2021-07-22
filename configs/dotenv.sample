@@ -31,3 +31,10 @@ RUNNER_SERVICE_TAGS="ct-runner;runner-01"
 
 ## logger 配置
 LOG_DEVEL="debug"
+
+# SMTP 配置
+SMTP_ADDRESS=smtp.example.com:25
+SMTP_USERNAME=user@example.com
+SMTP_PASSWORD=
+SMTP_FROM_NAME=IaC
+SMTP_FROM=support@example.com
