@@ -411,14 +411,16 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 		}
 
 		updateAttrs := models.Attrs{}
-		if env.AutoDestroyTaskId == task.Id {
-			// 自动销毁执行完后清空设置，以支持再次部署重建环境
+
+		if task.Type == models.TaskTypeDestroy && env.Status == models.EnvStatusInactive {
+			// 环境销毁后清空自动销毁设置，以支持通过再次部署重建环境
 			updateAttrs["AutoDestroyAt"] = nil
 			updateAttrs["AutoDestroyTaskId"] = ""
 		}
 
-		if task.Type == models.TaskTypeApply && env.AutoDestroyAt == nil && env.TTL != "" && env.TTL != "0" {
-			// 如果设置了环境的 ttl，则在部署结束后自动根据 ttl 设置销毁时间
+		if task.Type == models.TaskTypeApply && env.Status == models.EnvStatusActive &&
+			env.AutoDestroyAt == nil && env.TTL != "" && env.TTL != "0" {
+			// 如果设置了环境的 ttl，则在部署成功后自动根据 ttl 设置销毁时间
 			ttl, err := services.ParseTTL(env.TTL)
 			if err != nil {
 				return err

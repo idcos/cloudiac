@@ -124,7 +124,7 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 		case models.TaskComplete:
 			if task.Type == models.TaskTypeApply {
 				envStatus = models.EnvStatusActive
-			} else { // destroy 任务
+			} else if task.Type == models.TaskTypeDestroy {
 				envStatus = models.EnvStatusInactive
 			}
 		default:
