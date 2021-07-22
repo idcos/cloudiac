@@ -1,6 +1,7 @@
 package apps
 
 import (
+	"cloudiac/common"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
@@ -81,10 +82,12 @@ func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*CreateUserResp,
 		}
 
 		// 新用户自动加入演示组织和项目
-		if err = services.TryAddDemoRelation(tx, user.Id); err != nil {
-			_ = tx.Rollback()
-			c.Logger().Errorf("error add user demo rel, err %s", err)
-			return nil, err
+		if c.OrgId != models.Id(common.DemoOrgId) {
+			if err = services.TryAddDemoRelation(tx, user.Id); err != nil {
+				_ = tx.Rollback()
+				c.Logger().Errorf("error add user demo rel, err %s", err)
+				return nil, err
+			}
 		}
 
 		return user, nil
