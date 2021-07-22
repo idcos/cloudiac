@@ -32,7 +32,7 @@ func UpdateVcs(tx *db.Session, id models.Id, attrs models.Attrs) (vcs *models.Vc
 	return
 }
 
-func QueryVcs(orgId models.Id, status, q string, isShowdefaultVcs bool,query *db.Session) *db.Session {
+func QueryVcs(orgId models.Id, status, q string, isShowdefaultVcs bool, query *db.Session) *db.Session {
 	query = query.Model(&models.Vcs{}).Where("org_id = ? or org_id = ''", orgId)
 	if status != "" {
 		query = query.Where("status = ?", status)
@@ -128,7 +128,6 @@ func ParseTfVariables(filename string, content []byte) ([]TemplateVariable, e.Er
 
 func GetDefaultVcs(session *db.Session) (*models.Vcs, error) {
 	vcs := &models.Vcs{}
-	err := session.Where("org_id = 0").First(vcs)
+	err := session.Where("org_id = ''").First(vcs)
 	return vcs, err
-
 }

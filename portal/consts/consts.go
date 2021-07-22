@@ -52,6 +52,7 @@ const (
 	RoleRoot      = "root"
 	RoleLogin     = "login"
 	RoleAnonymous = "anonymous"
+	RoleDemo      = "demo"
 
 	OrgRoleAdmin  = "admin"
 	OrgRoleMember = "member"

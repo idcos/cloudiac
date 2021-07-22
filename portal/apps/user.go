@@ -80,6 +80,13 @@ func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*CreateUserResp,
 			return nil, err
 		}
 
+		// 新用户自动加入演示组织和项目
+		if err = services.TryAddDemoRelation(tx, user.Id); err != nil {
+			_ = tx.Rollback()
+			c.Logger().Errorf("error add user demo rel, err %s", err)
+			return nil, err
+		}
+
 		return user, nil
 	}()
 	if err != nil {

@@ -13,6 +13,7 @@ type Option struct {
 
 	ChangePassword ChangePassword        `command:"password" description:"update user password"`
 	Version        common.VersionCommand `command:"version" description:"show version"`
+	InitDemo       InitDemo              `command:"init-demo" description:"init demo data with config file"`
 }
 
 var (

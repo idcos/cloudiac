@@ -392,6 +392,15 @@ func InviteUser(c *ctx.ServiceCtx, form *forms.InviteUserForm) (*models.UserWith
 		return nil, err
 	}
 
+	// 新用户自动加入演示组织
+	if isNew {
+		if err = services.TryAddDemoRelation(tx, user.Id); err != nil {
+			_ = tx.Rollback()
+			c.Logger().Errorf("error add user demo rel, err %s", err)
+			return nil, err
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error commit invite user, err %s", err)

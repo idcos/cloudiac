@@ -1,6 +1,7 @@
 package main
 
 import (
+	common2 "cloudiac/common"
 	"cloudiac/portal/task_manager"
 	"fmt"
 	"github.com/jessevdk/go-flags"
@@ -76,6 +77,12 @@ func main() {
 
 	// 启动后台 worker
 	go task_manager.Start(configs.Get().Consul.ServiceID)
+
+	// 获取演示组织ID
+	org, _ := services.GetDemoOrganization(db.Get())
+	if org != nil {
+		common2.DemoOrgId = org.Id.String()
+	}
 
 	// 启动 web server
 	web.StartServer()
