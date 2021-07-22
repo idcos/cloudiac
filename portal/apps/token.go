@@ -39,12 +39,16 @@ func CreateToken(c *ctx.ServiceCtx, form *forms.CreateTokenForm) (interface{}, e
 	c.AddLogField("action", fmt.Sprintf("create token for user %s", c.UserId))
 
 	tokenStr, _ := utils.GetUUID()
+	expiredAt, er := models.Time{}.Parse(form.ExpiredAt)
+	if er != nil {
+		return nil, e.New(e.BadParam, http.StatusBadRequest, er)
+	}
 	token, err := services.CreateToken(c.DB().Debug(), models.Token{
 		Key:         string(tokenStr),
 		Type:        form.Type,
 		OrgId:       c.OrgId,
 		Role:        form.Role,
-		ExpiredAt:   form.ExpiredAt,
+		ExpiredAt:   expiredAt,
 		Description: form.Description,
 		CreatorId:   c.UserId,
 		EnvId:       form.EnvId,

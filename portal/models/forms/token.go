@@ -7,12 +7,12 @@ import (
 type CreateTokenForm struct {
 	PageForm
 
-	Type        string      `json:"type" form:"type" `               //类型
-	Role        string      `json:"role" form:"role" `               // token角色
-	ExpiredAt   models.Time `json:"expiredAt" form:"expiredAt" `     // 过期时间
-	Description string      `json:"description" form:"description" ` //描述
-	EnvId       models.Id   `json:"envId" form:"envId"`              //创建触发器token时必传，其他可不传
-	Action      string      `json:"action" form:"action"`            //创建触发器token时必传，其他可不传('apply','plan','destroy')
+	Type        string    `json:"type" form:"type" `               //类型
+	Role        string    `json:"role" form:"role" `               // token角色
+	ExpiredAt   string    `json:"expiredAt" form:"expiredAt" `     // 过期时间
+	Description string    `json:"description" form:"description" ` //描述
+	EnvId       models.Id `json:"envId" form:"envId"`              //创建触发器token时必传，其他可不传
+	Action      string    `json:"action" form:"action"`            //创建触发器token时必传，其他可不传('apply','plan','destroy')
 }
 
 type UpdateTokenForm struct {
