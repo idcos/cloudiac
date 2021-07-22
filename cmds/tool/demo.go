@@ -2,9 +2,12 @@ package main
 
 import (
 	"cloudiac/configs"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"cloudiac/utils"
 	"fmt"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -34,8 +37,8 @@ type VCS struct {
 }
 
 type Key struct {
-	Name string `yaml:"name"`
-	Key  string `yaml:"key"`
+	Name    string `yaml:"name"`
+	KeyFile string `yaml:"key_file"`
 }
 
 type Variable struct {
@@ -84,7 +87,7 @@ func (p *InitDemo) Execute(args []string) error {
 	if err := parseConfig(config, &data); err != nil {
 		panic("parse demo config failed")
 	}
-	fmt.Printf("Load demo data form config %s\n", config)
+	fmt.Printf("Load from demo config: %s\n", config)
 
 	// 创建演示组织
 	tx := db.Get().Begin()
@@ -98,8 +101,7 @@ func (p *InitDemo) Execute(args []string) error {
 	org, err := services.CreateOrganization(tx, models.Organization{
 		Name:        data.Organization.Name,
 		Description: data.Organization.Description,
-
-		IsDemo: true,
+		IsDemo:      true,
 	})
 	if err != nil {
 		panic(fmt.Errorf("create org failed, err %s", err))
@@ -117,25 +119,26 @@ func (p *InitDemo) Execute(args []string) error {
 	}
 	fmt.Printf("project_id = %s\n", project.Id)
 
-	// 创建VCS
-	vcs, err := services.CreateVcs(tx, models.Vcs{
-		OrgId:    org.Id,
-		Name:     data.Organization.VCS.Name,
-		VcsType:  data.Organization.VCS.Type,
-		Address:  data.Organization.VCS.Address,
-		VcsToken: data.Organization.VCS.Token,
-	})
-	if err != nil {
-		panic(fmt.Errorf("create vcs failed, err %s", err))
+	// 获取默认VCS
+	vcs, er := services.GetDefaultVcs(tx)
+	if er != nil {
+		panic(fmt.Errorf("missing default vcs, err %s", er))
 	}
-	fmt.Printf("vcs_id = %s\n", vcs.Id)
+	fmt.Printf("default_vcs_id = %s\n", vcs.Id)
 
 	// 创建密钥
-	// TODO: 上传密钥到云商
+	content, er := ioutil.ReadFile(data.Organization.Key.KeyFile)
+	if er != nil {
+		panic(fmt.Errorf("read key file %s failed, err %s", data.Organization.Key.KeyFile, er))
+	}
+	encrypted, er := utils.AesEncrypt(string(content))
+	if er != nil {
+		panic(fmt.Errorf("encrypt key failed, err %s", er))
+	}
 	key, err := services.CreateKey(tx, models.Key{
 		OrgId:   org.Id,
 		Name:    data.Organization.Key.Name,
-		Content: data.Organization.Key.Key,
+		Content: encrypted,
 	})
 	if err != nil {
 		panic(fmt.Errorf("create key failed, err %s", err))
@@ -143,21 +146,19 @@ func (p *InitDemo) Execute(args []string) error {
 	fmt.Printf("key_id = %s\n", key.Id)
 
 	// 创建变量
+	variables := make([]forms.Variables, 0)
 	for _, v := range data.Organization.Variables {
-		if variable, err := services.CreateVariable(tx, models.Variable{
-			OrgId: org.Id,
-			VariableBody: models.VariableBody{
-				Name:        v.Name,
-				Description: v.Description,
-				Value:       v.Value,
-				Type:        v.Type,
-				Sensitive:   v.Sensitive,
-			},
-		}); err != nil {
-			panic(fmt.Errorf("create variable failed, err %s", err))
-		} else {
-			fmt.Printf("variable_id = %s\n", variable.Id)
-		}
+		variables = append(variables, forms.Variables{
+			Scope:       consts.ScopeOrg,
+			Name:        v.Name,
+			Description: v.Description,
+			Value:       v.Value,
+			Type:        v.Type,
+			Sensitive:   v.Sensitive,
+		})
+	}
+	if err := services.OperationVariables(tx, org.Id, "", "", "", variables, nil); err != nil {
+		panic(fmt.Errorf("create variable failed, err %s", err))
 	}
 
 	// 创建模版
@@ -204,7 +205,6 @@ func parseConfig(filename string, out interface{}) error {
 	if err := yaml.Unmarshal(bs, out); err != nil {
 		return fmt.Errorf("yaml.Unmarshal: %v", err)
 	}
-	fmt.Printf("out %+v", out)
 
 	return nil
 }

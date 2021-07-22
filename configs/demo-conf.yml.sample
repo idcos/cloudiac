@@ -4,15 +4,10 @@ organization:
   project:
     name: 演示项目
     description: 这是一个演示项目
-  vcs:
-    name: 示例VCS
-    type: gitlab
-    address: http://gitlab.idcos.com/
-    token: xxxxxxxxxx
   key:
     name: 示例密钥
-    key: xxxxxxxxxxxxx
-  variable:
+    key_file: ./id_rsa
+  variables:
     - name: ALICLOUD_ACCESS_KEY
       type: environment
       value: xxxxxxxxxx
@@ -26,9 +21,9 @@ organization:
   template:
     name: 演示云模板
     description: 云模板样板间
-    vcs: 示例VCS
-    repo_id: 599
-    repo_address: http://gitlab.idcos.com/iacsample/cloudiac-example.git
+    vcs: 默认仓库
+    repo_id: /cloud-iac/cloudiac-example.git
+    repo_address: http://10.0.2.135/repos/cloud-iac/terraform-alicloud-disk.git
     revision: master
     tf_vars_file: qa-env.tfvars
     playbook: ansible/playbook.yml
