@@ -145,8 +145,8 @@ func DeleteProjectUser(dbSess *db.Session, id uint) e.Error {
 func GetDemoProject(tx *db.Session, demoOrgId models.Id) (*models.Project, e.Error) {
 	proj := models.Project{}
 	if err := tx.Model(models.Project{}).
-		Joins("left join iac_user_project as up on up.project_id = iac_project.id").
-		Where("up.org_id = ?", demoOrgId).First(&proj); err != nil {
+		Joins("left join iac_user_project on iac_user_project.project_id = iac_project.id").
+		Where("org_id = ?", demoOrgId).First(&proj); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 	return &proj, nil

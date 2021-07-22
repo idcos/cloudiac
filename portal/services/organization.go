@@ -154,7 +154,7 @@ func TryAddDemoRelation(tx *db.Session, userId models.Id) (err e.Error) {
 	if common.DemoOrgId == "" {
 		return
 	}
-	demoProject, _ := GetProjectsById(tx, models.Id(common.DemoOrgId))
+	demoProject, _ := GetDemoProject(tx, models.Id(common.DemoOrgId))
 	// 用户加入演示组织
 	_, err = CreateUserOrgRel(tx, models.UserOrg{OrgId: models.Id(common.DemoOrgId), UserId: userId, Role: consts.OrgRoleAdmin})
 	if err != nil {

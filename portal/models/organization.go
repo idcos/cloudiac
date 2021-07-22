@@ -20,7 +20,7 @@ type Organization struct {
 	CreatorId   Id     `json:"creatorId" gorm:"size:32;not null;comment:'创建人'" example:"u-c3ek0co6n88ldvq1n6ag"`                                    //创建人ID
 	RunnerId    string `json:"runnerId" gorm:"not null" example:"iac-porta;portal-01"`                                                              // 组织默认部署通道
 
-	IsDemo bool `json:"-" gorm:"default:'0'"` // 是否演示组织
+	IsDemo bool `json:"isDemo,omitempty" gorm:"default:'0'"` // 是否演示组织
 }
 
 func (Organization) TableName() string {

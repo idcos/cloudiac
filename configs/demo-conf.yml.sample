@@ -8,19 +8,19 @@ organization:
     name: 示例VCS
     type: gitlab
     address: http://gitlab.idcos.com/
-    token: ALyADJnyz56grgKCUNgM
+    token: xxxxxxxxxx
   key:
     name: 示例密钥
-    key: 66w0Nbu7uOv6q9zIpJcwnGuVVFc
+    key: xxxxxxxxxxxxx
   variable:
     - name: ALICLOUD_ACCESS_KEY
       type: environment
-      value: c3qkf83n6m8epuktqeq0
+      value: xxxxxxxxxx
       description: 阿里云访问密钥ID
       sensitive: true
     - name: ALICLOUD_SECRET_KEY
       type: environment
-      value: c3qhqs3n6m80ukdhafng
+      value: xxxxxxxxxx
       description: 阿里云访问密钥
       sensitive: true
   template:
