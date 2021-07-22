@@ -21,9 +21,7 @@ organization:
   template:
     name: 演示云模板
     description: 云模板样板间
-    vcs: 默认仓库
     repo_id: /cloud-iac/cloudiac-example.git
-    repo_address: http://10.0.2.135/repos/cloud-iac/terraform-alicloud-disk.git
     revision: master
     tf_vars_file: qa-env.tfvars
     playbook: ansible/playbook.yml
