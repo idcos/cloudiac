@@ -22,9 +22,9 @@ type UpdateVcsForm struct {
 
 type SearchVcsForm struct {
 	PageForm
-	Q      string `form:"q" json:"q" binding:""`
-	Status string `form:"status" json:"status"`
-	IsShowDefaultVcs bool `form:"isShowDefaultVcs" json:"isShowDefaultVcs" default:"true"`
+	Q                string `form:"q" json:"q" binding:""`
+	Status           string `form:"status" json:"status"`
+	IsShowDefaultVcs bool   `form:"isShowDefaultVcs" json:"isShowDefaultVcs" default:"true"`
 }
 
 type DeleteVcsForm struct {
@@ -34,8 +34,8 @@ type DeleteVcsForm struct {
 
 type GetGitProjectsForm struct {
 	PageForm
-	Id    models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`
-	Q     string    `form:"q" json:"q"`
+	Id models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`
+	Q  string    `form:"q" json:"q"`
 }
 
 type GetGitRevisionForm struct {

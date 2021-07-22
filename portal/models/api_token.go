@@ -14,6 +14,6 @@ type ApiToken struct {
 	Role   string `json:"role" gorm:"not null;type:enum('owner','manager','operator','guest');"`
 	Status string `json:"status" gorm:"type:enum('enable', 'disable');default:'enable'"`
 
-	ExpiredAt   *Time  `json:"expiredAt"`
+	ExpiredAt   *Time  `json:"expiredAt" gorm:"type:datetime"`
 	Description string `json:"description" gorm:"type:text"`
 }

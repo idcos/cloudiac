@@ -6,7 +6,7 @@ import (
 
 type envTtlForm struct {
 	TTL       string `form:"ttl" json:"ttl" binding:"" enums:"0,12h,1d,3d,1w,15d,30d"` // 存活时间(己部署的环境不可修改)
-	DestroyAt string `form:"destroyAt" json:"destroyAt" binding:""`                     // 自动销毁时间(时间戳)
+	DestroyAt string `form:"destroyAt" json:"destroyAt" binding:""`                    // 自动销毁时间(时间戳)
 }
 
 type CreateEnvForm struct {

@@ -10,7 +10,7 @@ type OperationLog struct {
 	UserID        Id     `json:"userId" form:"userId" gorm:"size:32"`
 	Username      string `json:"username" form:"username" `
 	UserAddr      string `json:"userAddr" form:"userAddr" `
-	OperationAt   Time   `json:"operationAt" form:"operationAt" `
+	OperationAt   Time   `json:"operationAt"  gorm:"type:datetime" form:"operationAt" `
 	OperationType string `json:"operationType" form:"operationType" `
 	OperationInfo string `json:"operationInfo" form:"operationInfo" `
 	Desc          JSON   `json:"desc" form:"desc" gorm:"type:text"`
