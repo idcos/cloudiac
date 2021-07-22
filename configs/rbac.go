@@ -166,6 +166,8 @@ var polices = []Policy{
 
 	// 演示模式，当访问演示组织下的资源，进入受限模式
 	{"demo", "orgs", "read"},
+	{"demo", "users", "read"},
+	{"demo", "self", "read"},
 	{"demo", "projects", "read"},
 	{"demo", "tokens", "read"},
 	{"demo", "notifications", "read"},
