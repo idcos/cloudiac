@@ -60,6 +60,17 @@ type ProjectResp struct {
 
 func SearchProject(c *ctx.ServiceCtx, form *forms.SearchProjectForm) (interface{}, e.Error) {
 	query := services.SearchProject(c.DB(), c.OrgId, form.Q, form.Status)
+	projectIds, err := services.GetProjectsByUserOrg(query, c.UserId, c.OrgId)
+	if err != nil {
+		c.Logger().Errorf("error get projects, err %s", err)
+		return nil, e.New(e.DBError, err)
+	}
+	if len(projectIds) > 0 {
+		query = query.Where(fmt.Sprintf("%s.id in (?)", models.Project{}.TableName()), projectIds)
+	} else {
+		return getEmptyListResult(form)
+	}
+
 	// 默认按创建时间逆序排序
 	if form.SortField() == "" {
 		query = query.Order("created_at DESC")
