@@ -280,12 +280,9 @@ func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (tpl inte
 		if err != nil {
 			return nil, err
 		}
+
 		if len(tplIdList) == 0 {
-			return page.PageResp{
-				Total:    0,
-				PageSize: form.PageSize(),
-				List:     nil,
-			}, nil
+			return getEmptyListResult(form)
 		}
 	}
 	query := services.QueryTemplateByOrgId(c.DB().Debug(), form.Q, c.OrgId, tplIdList)
