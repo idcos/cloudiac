@@ -89,6 +89,21 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		return nil, e.New(e.InternalError, err)
 	}
 
+	{ // 参数检查
+		if task.Playbook != "" && task.KeyId == "" {
+			return nil, e.New(e.BadParam, fmt.Errorf("'keyId' is required to run playbook"))
+		}
+		if task.RepoAddr == "" {
+			return nil, e.New(e.BadParam, fmt.Errorf("'repoAddr' is required"))
+		}
+		if task.CommitId == "" {
+			return nil, e.New(e.BadParam, fmt.Errorf("'commitId' is required"))
+		}
+		if task.RunnerId == "" {
+			return nil, e.New(e.BadParam, fmt.Errorf("'runnerId' is required"))
+		}
+	}
+
 	if _, err = tx.Save(&task); err != nil {
 		return nil, e.New(e.DBError, errors.Wrapf(err, "save task"))
 	}
