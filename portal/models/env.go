@@ -56,7 +56,7 @@ type Env struct {
 	AutoApproval bool `json:"autoApproval" gorm:"default:'0'"` // 是否自动审批
 
 	TTL           string `json:"ttl" gorm:"default:'0'" example:"1h/1d"` // 生命周期
-	AutoDestroyAt *Time  `json:"autoDestroyAt"`                          // 自动销毁时间
+	AutoDestroyAt *Time  `json:"autoDestroyAt" gorm:"type:datetime"`     // 自动销毁时间
 
 	// 该 id 在创建自动销毁任务后保存，并在销毁任务执行完成后清除
 	AutoDestroyTaskId Id `json:"-"  gorm:"default:''"` // 自动销毁任务 id
