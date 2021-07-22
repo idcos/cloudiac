@@ -37,12 +37,19 @@ func SearchToken(c *ctx.ServiceCtx, form *forms.SearchTokenForm) (interface{}, e
 
 func CreateToken(c *ctx.ServiceCtx, form *forms.CreateTokenForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create token for user %s", c.UserId))
+	var (
+		expiredAt models.Time
+		er        error
+	)
 
 	tokenStr, _ := utils.GetUUID()
-	expiredAt, er := models.Time{}.Parse(form.ExpiredAt)
-	if er != nil {
-		return nil, e.New(e.BadParam, http.StatusBadRequest, er)
+	if form.ExpiredAt != "" {
+		expiredAt, er = models.Time{}.Parse(form.ExpiredAt)
+		if er != nil {
+			return nil, e.New(e.BadParam, http.StatusBadRequest, er)
+		}
 	}
+
 	token, err := services.CreateToken(c.DB().Debug(), models.Token{
 		Key:         string(tokenStr),
 		Type:        form.Type,
