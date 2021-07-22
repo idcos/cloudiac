@@ -34,7 +34,6 @@ type Env struct {
 	// 任务状态，只同步部署任务的状态(apply,destroy)，plan 任务不会对环境产生影响，所以不同步
 	TaskStatus string `json:"taskStatus" gorm:"type:enum('','approving','running');default:''"`
 	Archived   bool   `json:"archived" gorm:"default:'0'"`                             // 是否已归档
-	RunnerId   string `json:"runnerId" gorm:"size:32;not null"`                        //部署通道ID
 	Timeout    int    `json:"timeout" gorm:"default:'600';comment:'部署超时'"`             // 部署超时时间（单位：秒）
 	OneTime    bool   `json:"oneTime" gorm:"default:'0'"`                              // 一次性环境标识
 	Deploying  bool   `json:"deploying" gorm:"not null;default:'0';common:'是否正在执行部署'"` // 是否正在执行部署
@@ -42,12 +41,15 @@ type Env struct {
 	StatePath string `json:"statePath" gorm:"not null" swaggerignore:"true"` // Terraform tfstate 文件路径（内部）
 
 	// 环境可以覆盖模板中的 vars file 配置，具体说明见 Template model
-	Variables    EnvVariables `json:"variables" gorm:"type:json"`               // 合并变量列表
-	TfVarsFile   string       `json:"tfVarsFile" gorm:"default:''"`             // Terraform tfvars 变量文件路径
-	PlayVarsFile string       `json:"playVarsFile" gorm:"default:''"`           // Ansible 变量文件路径
-	Playbook     string       `json:"playbook" gorm:"default:''"`               // Ansible playbook 入口文件路径
-	Revision     string       `json:"revision" gorm:"size:64;default:'master'"` // Vcs仓库分支/标签
-	KeyId        Id           `json:"keyId" gorm:"size32"`                      // 部署密钥ID
+	Variables    EnvVariables `json:"variables" gorm:"type:json"`     // 合并变量列表
+	TfVarsFile   string       `json:"tfVarsFile" gorm:"default:''"`   // Terraform tfvars 变量文件路径
+	PlayVarsFile string       `json:"playVarsFile" gorm:"default:''"` // Ansible 变量文件路径
+	Playbook     string       `json:"playbook" gorm:"default:''"`     // Ansible playbook 入口文件路径
+
+	// 任务相关参数，获取详情的时候，如果有 last_task_id 则返回 last_task_id 相关参数
+	RunnerId string `json:"runnerId" gorm:"size:32;not null"`         //部署通道ID
+	Revision string `json:"revision" gorm:"size:64;default:'master'"` // Vcs仓库分支/标签
+	KeyId    Id     `json:"keyId" gorm:"size32"`                      // 部署密钥ID
 
 	LastTaskId Id `json:"lastTaskId" gorm:"size:32"` // 最后一次部署或销毁任务的 id(plan 任务不记录)
 
@@ -109,9 +111,11 @@ func (v *EnvVariables) Scan(value interface{}) error {
 
 type EnvDetail struct {
 	Env
-	Creator       string `json:"creator"`          // 创建人
-	ResourceCount int    `json:"resourceCount"`    // 资源数量
-	TemplateName  string `json:"templateName"`     // 模板名称
-	KeyName       string `json:"keyName"`          // 密钥名称
-	TaskId        Id     `json:"taskId,omitempty"` // 当前作业ID
+	Creator       string `json:"creator"`       // 创建人
+	OperatorId    Id     `json:"operatorId"`    // 执行人ID
+	Operator      string `json:"operator"`      // 执行人
+	ResourceCount int    `json:"resourceCount"` // 资源数量
+	TemplateName  string `json:"templateName"`  // 模板名称
+	KeyName       string `json:"keyName"`       // 密钥名称
+	TaskId        Id     `json:"taskId"`        // 当前作业ID
 }
