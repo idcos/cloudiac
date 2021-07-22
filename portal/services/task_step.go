@@ -38,17 +38,20 @@ func ApproveTaskStep(tx *db.Session, taskId models.Id, step int, userId models.I
 		}
 		return e.New(e.DBError, err)
 	}
-	return nil
-}
 
-func UpdateTaskStep(sess *db.Session, taskStep *models.TaskStep) e.Error {
-	if _, err := sess.Model(&models.TaskStep{}).Update(taskStep); err != nil {
-		if e.IsRecordNotFound(err) {
-			return e.New(e.TaskStepNotExists)
-		}
-		return e.New(e.DBError, err)
+	taskStep, er := GetTaskStep(tx, taskId, step)
+	if er != nil {
+		return e.AutoNew(er, e.DBError)
 	}
-	return nil
+
+	task, err := GetTask(tx, taskId)
+	if err != nil {
+		return err
+	}
+
+	// 审批通过将步骤标识为 pending 状态，任务被同步修改为 running 状态，
+	// task manager 会在检测到步骤通过审批后开始执行步骤, 并标识为 running 状态
+	return ChangeTaskStepStatus(tx, task, taskStep, models.TaskStepPending, "")
 }
 
 // RejectTaskStep 驳回步骤审批
@@ -63,8 +66,18 @@ func RejectTaskStep(dbSess *db.Session, taskId models.Id, step int, userId model
 	if task, err := GetTask(dbSess, taskStep.TaskId); err != nil {
 		return e.AutoNew(err, e.DBError)
 	} else {
-		return ChangeTaskStepStatus(dbSess, task, taskStep, models.TaskStepRejected, "")
+		return ChangeTaskStepStatus(dbSess, task, taskStep, models.TaskStepRejected, "rejected")
 	}
+}
+
+func UpdateTaskStep(sess *db.Session, taskStep *models.TaskStep) e.Error {
+	if _, err := sess.Model(&models.TaskStep{}).Update(taskStep); err != nil {
+		if e.IsRecordNotFound(err) {
+			return e.New(e.TaskStepNotExists)
+		}
+		return e.New(e.DBError, err)
+	}
+	return nil
 }
 
 func IsTerraformStep(typ string) bool {

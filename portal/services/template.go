@@ -5,12 +5,18 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"fmt"
+	"strings"
 )
 
 func CreateTemplate(tx *db.Session, tpl models.Template) (*models.Template, e.Error) {
 	if tpl.Id == "" {
 		tpl.Id = models.NewId("tpl")
 	}
+
+	if strings.HasPrefix(tpl.Workdir, "..") || strings.HasPrefix(tpl.Workdir, "/") {
+		return nil, e.New(e.BadParam, fmt.Errorf("invalid workdir '%s'", tpl.Workdir))
+	}
+
 	if err := models.Create(tx, &tpl); err != nil {
 		if e.IsDuplicate(err) {
 			return nil, e.New(e.TemplateAlreadyExists, err)

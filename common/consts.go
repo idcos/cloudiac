@@ -18,7 +18,6 @@ const (
 	TaskApproving = "approving"
 	TaskFailed    = "failed"
 	TaskComplete  = "complete"
-	//TaskTimeout   = "timeout"
 
 	TaskStepInit    = "init"
 	TaskStepPlan    = "plan"

@@ -59,7 +59,6 @@ const (
 	TaskApproving = common.TaskApproving
 	TaskFailed    = common.TaskFailed
 	TaskComplete  = common.TaskComplete
-	//TaskTimeout   = common.TaskTimeout
 )
 
 type Task struct {

@@ -389,14 +389,19 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			}
 		}
 
-		if bs, err := read(task.PlanJsonPath()); err != nil {
-			return fmt.Errorf("read plan json: %v", err)
-		} else if len(bs) > 0 {
-			tfPlan, err := services.UnmarshalPlanJson(bs)
-			if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges); err != nil {
-				return fmt.Errorf("save task changes: %v", err)
+		// 任务执行成功才会进行 changes 统计，失败的话基于 plan 文件进行变更统计是不准确的，
+		// terraform 执行 apply 失败也不会输出资源变更情况
+		if task.Status == models.TaskComplete {
+			if bs, err := read(task.PlanJsonPath()); err != nil {
+				return fmt.Errorf("read plan json: %v", err)
+			} else if len(bs) > 0 {
+				tfPlan, err := services.UnmarshalPlanJson(bs)
+				if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges); err != nil {
+					return fmt.Errorf("save task changes: %v", err)
+				}
 			}
 		}
+
 		return nil
 	}
 	if err := processResult(); err != nil {
@@ -411,14 +416,16 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 		}
 
 		updateAttrs := models.Attrs{}
-		if env.AutoDestroyTaskId == task.Id {
-			// 自动销毁执行完后清空设置，以支持再次部署重建环境
+
+		if task.Type == models.TaskTypeDestroy && env.Status == models.EnvStatusInactive {
+			// 环境销毁后清空自动销毁设置，以支持通过再次部署重建环境
 			updateAttrs["AutoDestroyAt"] = nil
 			updateAttrs["AutoDestroyTaskId"] = ""
 		}
 
-		if task.Type == models.TaskTypeApply && env.AutoDestroyAt == nil && env.TTL != "" && env.TTL != "0" {
-			// 如果设置了环境的 ttl，则在部署结束后自动根据 ttl 设置销毁时间
+		if task.Type == models.TaskTypeApply && env.Status == models.EnvStatusActive &&
+			env.AutoDestroyAt == nil && env.TTL != "" && env.TTL != "0" {
+			// 如果设置了环境的 ttl，则在部署成功后自动根据 ttl 设置销毁时间
 			ttl, err := services.ParseTTL(env.TTL)
 			if err != nil {
 				return err

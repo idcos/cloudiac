@@ -96,7 +96,6 @@ providers-package: providers
 	@tar -czf $(PROVIDERS_PACKAGE_NAME) ./assets/providers && echo Package: $(PROVIDERS_PACKAGE_NAME)
 
 
-
 docker-image-portal: build-linux-amd64
 	$(DOCKER_BUILD) -t cloudiac/iac-portal:$(VERSION) -f docker/portal/Dockerfile .
 

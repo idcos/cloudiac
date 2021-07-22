@@ -8,6 +8,7 @@ import (
 )
 
 const (
+	EnvStatusInitial  = "initial"
 	EnvStatusActive   = "active"   // 成功部署
 	EnvStatusFailed   = "failed"   // apply 过程中出现错误
 	EnvStatusInactive = "inactive" // 资源未部署或已销毁
