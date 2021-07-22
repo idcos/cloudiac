@@ -38,6 +38,13 @@ func CreateProject(c *ctx.ServiceCtx, form *forms.CreateProjectForm) (interface{
 		_ = tx.Rollback()
 		return nil, e.AutoNew(err, e.DBError)
 	}
+	// 如果创建人不是超级管理员就把创建人加到项目里面
+	if !c.IsSuperAdmin {
+		form.UserAuthorization = append(form.UserAuthorization, forms.UserAuthorization{
+			UserId: c.UserId,
+			Role:   consts.ProjectRoleManager,
+		})
+	}
 
 	if err := services.BindProjectUsers(tx, project.Id, form.UserAuthorization); err != nil {
 		c.Logger().Errorf("error creating project user, err %s", err)
