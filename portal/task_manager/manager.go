@@ -389,14 +389,19 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			}
 		}
 
-		if bs, err := read(task.PlanJsonPath()); err != nil {
-			return fmt.Errorf("read plan json: %v", err)
-		} else if len(bs) > 0 {
-			tfPlan, err := services.UnmarshalPlanJson(bs)
-			if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges); err != nil {
-				return fmt.Errorf("save task changes: %v", err)
+		// 任务执行成功才会进行 changes 统计，失败的话基于 plan 文件进行变更统计是不准确的，
+		// terraform 执行 apply 失败也不会输出资源变更情况
+		if task.Status == models.TaskComplete {
+			if bs, err := read(task.PlanJsonPath()); err != nil {
+				return fmt.Errorf("read plan json: %v", err)
+			} else if len(bs) > 0 {
+				tfPlan, err := services.UnmarshalPlanJson(bs)
+				if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges); err != nil {
+					return fmt.Errorf("save task changes: %v", err)
+				}
 			}
 		}
+
 		return nil
 	}
 	if err := processResult(); err != nil {
