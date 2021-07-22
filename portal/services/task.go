@@ -216,13 +216,15 @@ func QueryTask(query *db.Session) *db.Session {
 }
 
 var stepStatus2TaskStatus = map[string]string{
-	models.TaskStepPending:   models.TaskPending,
+	// 步骤进入 pending，将任务标识为 running
+	// (正常情况下步骤进入 pending 并不会触发 ChangeXXXStatus 调用，只有在步骤通过审批时会走到这个逻辑)
+	models.TaskStepPending:   models.TaskRunning,
 	models.TaskStepApproving: models.TaskApproving,
 	models.TaskStepRejected:  models.TaskFailed,
 	models.TaskStepRunning:   models.TaskRunning,
 	models.TaskStepFailed:    models.TaskFailed,
 	models.TaskStepTimeout:   models.TaskFailed,
-	// complete 状态需要特殊处理
+	// complete 状态在代码中特殊处理
 }
 
 func ChangeTaskStatusWithStep(dbSess *db.Session, task *models.Task, step *models.TaskStep) e.Error {
