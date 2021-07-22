@@ -17,6 +17,12 @@ type PageResp struct {
 	List     interface{} `json:"list" swaggertype:"object"`
 }
 
+var EmptyPageResp = PageResp{
+	Total:    0,
+	PageSize: consts.DefaultPageSize,
+	List:     nil,
+}
+
 func New(page int, size int, q *db.Session) *Paginator {
 	if page <= 0 {
 		page = 1

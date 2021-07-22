@@ -21,7 +21,7 @@ func CreateProject(tx *db.Session, project *models.Project) (*models.Project, e.
 }
 
 func SearchProject(dbSess *db.Session, orgId models.Id, q, status string) *db.Session {
-	query := dbSess.Table(models.Project{}.TableName()).Where("org_id = ?", orgId)
+	query := dbSess.Table(models.Project{}.TableName()).Where(fmt.Sprintf("%s.org_id = ?", models.Project{}.TableName()), orgId)
 	if q != "" {
 		query = query.Where(fmt.Sprintf("%s.name like ?", models.Project{}.TableName()), fmt.Sprintf("%%%s%%", q))
 	}
