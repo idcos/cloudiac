@@ -375,5 +375,4 @@ func Init(args ...interface{}) {
 		logger.Fatalln(err)
 	}
 	db.SetLogger(sqlLogger{logger})
-	db = db.Debug()
 }
