@@ -317,12 +317,12 @@ type TfStateVariable struct {
 }
 
 type TfStateResource struct {
-	ProviderName string `json:"provider_name"`
-	Address      string `json:"address"`
-	Mode         string `json:"mode"` // managed、data
-	Type         string `json:"type"`
-	Name         string `json:"name"`
-	Index        int    `json:"index"`
+	ProviderName string      `json:"provider_name"`
+	Address      string      `json:"address"`
+	Mode         string      `json:"mode"` // managed、data
+	Type         string      `json:"type"`
+	Name         string      `json:"name"`
+	Index        interface{} `json:"index"` // index 可以为整型或字符串
 
 	Values map[string]interface{} `json:"values"`
 }
@@ -343,7 +343,7 @@ func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 			Address:  r.Address,
 			Type:     r.Type,
 			Name:     r.Name,
-			Index:    r.Index,
+			Index:    fmt.Sprintf("%v", r.Index),
 			Attrs:    r.Values,
 		})
 	}

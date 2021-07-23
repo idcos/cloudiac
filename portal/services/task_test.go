@@ -21,6 +21,15 @@ const testStateJson = `
         "root_module": {
             "resources": [
                 {
+                    "address": "alicloud_instance.web[key]",
+                    "mode": "managed",
+                    "type": "alicloud_instance",
+                    "name": "web",
+                    "index": "key",
+                    "provider_name": "registry.terraform.io/aliyun/alicloud",
+                    "schema_version": 0
+				},
+                {
                     "address": "alicloud_instance.web[0]",
                     "mode": "managed",
                     "type": "alicloud_instance",
@@ -131,7 +140,10 @@ func TestParseStateJson(t *testing.T) {
 	}
 
 	res := state.Values.RootModule.Resources
-	if !assert.Equal(t, res[0].Address, "alicloud_instance.web[0]") {
+	if !assert.Equal(t, res[0].Address, "alicloud_instance.web[key]") {
+		t.FailNow()
+	}
+	if !assert.Equal(t, res[1].Address, "alicloud_instance.web[0]") {
 		t.FailNow()
 	}
 }
