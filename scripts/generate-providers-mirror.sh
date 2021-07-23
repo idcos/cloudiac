@@ -23,6 +23,7 @@ function terraform_mirror() {
     (cd "${WORKDIR}" && terraform providers mirror -platform="${PLATFORM}" "${TARGET_DIR}")
 }
    
+mkdir -p "$TARGET_DIR"
 terraform_mirror "${PROVIDERS_FILE_DIR}"
 
 find "${REPOS}" -name '*?.git' | while read -r REPO; do
