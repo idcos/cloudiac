@@ -25,7 +25,7 @@ type Resource struct {
 	Address  string   `json:"address" gorm:"not null"`
 	Type     string   `json:"type" gorm:"not null"`
 	Name     string   `json:"name" gorm:"not null"`
-	Index    string   `json:"index" gorm:"not null"`
+	Index    string   `json:"index" gorm:"not null;default:''"`
 	Attrs    ResAttrs `json:"attrs,omitempty" gorm:"type:json"`
 }
 

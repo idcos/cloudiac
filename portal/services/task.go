@@ -337,13 +337,17 @@ func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 	parts := strings.Split(module.Address, ".")
 	moduleName := parts[len(parts)-1]
 	for _, r := range module.Resources {
+		idx := ""
+		if r.Index != nil {
+			idx = fmt.Sprintf("%v", r.Index)
+		}
 		rs = append(rs, &models.Resource{
 			Provider: r.ProviderName,
 			Module:   moduleName,
 			Address:  r.Address,
 			Type:     r.Type,
 			Name:     r.Name,
-			Index:    fmt.Sprintf("%v", r.Index),
+			Index:    idx,
 			Attrs:    r.Values,
 		})
 	}
