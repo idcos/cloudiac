@@ -193,19 +193,11 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 func GetVariableParent(dbSess *db.Session, name, scope, variableType string, scopes []string, orgId, projectId, tplId models.Id) (bool, models.Variable) {
 	variable := models.Variable{}
 	query := dbSess.Where("org_id = ?", orgId)
+	// 只有环境层级需要很细粒度的数据隔离
 	if scope == consts.ScopeEnv {
 		query = query.
 			Where("tpl_id = ?", tplId).
 			Where("project_id = ?", projectId)
-	}
-	switch scope {
-	case consts.ScopeProject:
-		query = query.Where("org_id = ?", orgId)
-	case consts.ScopeTemplate:
-		query = query.Where("org_id = ?", orgId)
-	case consts.ScopeEnv:
-		query = query.Where("org_id = ?", orgId)
-
 	}
 	if err := query.
 		Where("name = ?", name).
