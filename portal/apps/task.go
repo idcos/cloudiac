@@ -233,3 +233,35 @@ func TaskOutput(c *ctx.ServiceCtx, form forms.DetailTaskForm) (interface{}, e.Er
 
 	return task.Result.Outputs, nil
 }
+
+// SearchTaskResources 查询环境资源列表
+func SearchTaskResources(c *ctx.ServiceCtx, form *forms.SearchTaskResourceForm) (interface{}, e.Error) {
+	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+
+	task, err := services.GetTaskById(c.DB(), form.Id)
+	if err != nil && err.Code() != e.TaskNotExists {
+		return nil, e.New(err.Code(), err, http.StatusNotFound)
+	} else if err != nil {
+		c.Logger().Errorf("error get env, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	query := c.DB().Model(models.Resource{}).Where("org_id = ? AND project_id = ? AND env_id = ? AND task_id = ?",
+		c.OrgId, c.ProjectId, task.EnvId, task.Id)
+
+	if form.HasKey("q") {
+		// 支持对 provider / type / name 进行模糊查询
+		query = query.Where("provider LIKE ? OR type LIKE ? OR name LIKE ?",
+			fmt.Sprintf("%%%s%%", form.Q),
+			fmt.Sprintf("%%%s%%", form.Q),
+			fmt.Sprintf("%%%s%%", form.Q))
+	}
+
+	if form.SortField() == "" {
+		query = query.Order("provider, type, name")
+	}
+
+	return getPage(query, form, &models.Resource{})
+}
