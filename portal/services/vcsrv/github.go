@@ -4,6 +4,7 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/models"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -140,22 +141,28 @@ func (github *githubRepoIface) ListTags() ([]string, error) {
 }
 
 type githubCommit struct {
-	Commit struct {
-		Id string `json:"id" form:"id" `
-	} `json:"commit" form:"commit" `
+	Sha string `json:"sha"`
 }
 
+// BranchCommitId doc: https://docs.github.com/en/rest/reference/repos#get-a-commit
 func (github *githubRepoIface) BranchCommitId(branch string) (string, error) {
 	path := utils.GenQueryURL(github.vcs.Address,
 		fmt.Sprintf("/repos/%s/commits/%s", github.repository.FullName, branch), nil)
 	_, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken)
 	if err != nil {
-		return "", e.New(e.BadRequest, err)
+		return "", e.New(e.VcsError, err)
 	}
 
-	rep := githubCommit{}
-	_ = json.Unmarshal(body, &rep)
-	return rep.Commit.Id, nil
+	resp := githubCommit{}
+	err = json.Unmarshal(body, &resp)
+	if err != nil {
+		return "", e.New(e.VcsError, err)
+	}
+	if resp.Sha == "" {
+		logs.Get().Warnf("query github branch commit it failed")
+		return "", e.New(e.VcsError, fmt.Errorf("query commit id failed"))
+	}
+	return resp.Sha, nil
 }
 
 type githubFiles struct {
