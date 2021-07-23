@@ -192,14 +192,26 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 // GetVariableParent 获取上一级被覆盖的变量
 func GetVariableParent(dbSess *db.Session, name, scope, variableType string, scopes []string, orgId, projectId, tplId models.Id) (bool, models.Variable) {
 	variable := models.Variable{}
-	if err := dbSess.
+	query := dbSess.Where("org_id = ?", orgId)
+	if scope == consts.ScopeEnv {
+		query = query.
+			Where("tpl_id = ?", tplId).
+			Where("project_id = ?", projectId)
+	}
+	switch scope {
+	case consts.ScopeProject:
+		query = query.Where("org_id = ?", orgId)
+	case consts.ScopeTemplate:
+		query = query.Where("org_id = ?", orgId)
+	case consts.ScopeEnv:
+		query = query.Where("org_id = ?", orgId)
+
+	}
+	if err := query.
 		Where("name = ?", name).
 		Where("scope != ?", scope).
 		Where("scope in (?)", scopes).
 		Where("type = ?", variableType).
-		Where("tpl_id = ?", tplId).
-		Where("project_id = ?", projectId).
-		Where("org_id = ?", orgId).
 		Order("scope desc").
 		First(&variable); err != nil {
 		return false, variable
