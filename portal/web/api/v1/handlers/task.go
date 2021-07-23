@@ -132,3 +132,24 @@ func (Task) Output(c *ctx.GinRequestCtx) {
 	}
 	c.JSONResult(apps.TaskOutput(c.ServiceCtx(), form))
 }
+
+// Resource 获取任务资源列表
+// @Tags 环境
+// @Summary 获取任务资源列表
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param form query forms.SearchTaskResourceForm true "parameter"
+// @Param taskId path string true "任务ID"
+// @router /tasks/{taskId}/resources [get]
+// @Success 200 {object} ctx.JSONResult{result=models.Resource}
+func (Task) Resource(c *ctx.GinRequestCtx) {
+	form := forms.SearchTaskResourceForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.SearchTaskResources(c.ServiceCtx(), &form))
+}

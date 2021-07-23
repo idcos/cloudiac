@@ -62,7 +62,7 @@ func SearchVariable(c *ctx.ServiceCtx, form *forms.SearchVariableForm) (interfac
 		}
 		// 获取上一级被覆盖的变量
 		if variable.Scope == form.Scope {
-			isExists, overwrites := services.GetVariableParent(c.DB(), variable.Name, variable.Scope, variable.Type, scopes)
+			isExists, overwrites := services.GetVariableParent(c.DB(), variable.Name, variable.Scope, variable.Type, scopes, c.OrgId, c.ProjectId, form.TplId)
 			if isExists {
 				if overwrites.Sensitive {
 					overwrites.Value = ""
