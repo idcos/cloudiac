@@ -114,6 +114,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/tasks/:id", ac(), w(handlers.Task{}.Detail))
 	g.GET("/tasks/:id/log", ac(), w(handlers.Task{}.Log))
 	g.GET("/tasks/:id/output", ac(), w(handlers.Task{}.Output))
+	g.GET("/tasks/:id/resources", ac(), w(handlers.Task{}.Resource))
 	g.POST("/tasks/:id/approve", ac("tasks", "approve"), w(handlers.Task{}.TaskApprove))
 	g.POST("/tasks/:id/comment", ac(), w(handlers.TaskComment{}.Create))
 	g.GET("/tasks/:id/comment", ac(), w(handlers.TaskComment{}.Search))
