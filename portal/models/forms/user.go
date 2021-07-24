@@ -24,8 +24,9 @@ type UpdateUserForm struct {
 type SearchUserForm struct {
 	PageForm
 
-	Q      string `form:"q" json:"q" binding:""`                       // 用户名，支持模糊查询
-	Status string `form:"status" json:"status" enums:"enable,disable"` // 状态
+	Q       string `form:"q" json:"q" binding:""`                       // 用户名，支持模糊查询
+	Status  string `form:"status" json:"status" enums:"enable,disable"` // 状态
+	Exclude string `form:"exclude" json:"exclude" enums:"org,project"`  // 排除用户方式：1. org：排除当前组织用户 2. project: 排除当前项目用户
 }
 
 type DeleteUserForm struct {
