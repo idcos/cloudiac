@@ -1,6 +1,7 @@
 package services
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
@@ -102,6 +103,24 @@ func GetUserIdsByProject(query *db.Session, projectId models.Id) ([]models.Id, e
 	}
 	for _, p := range userProjects {
 		userIds = append(userIds, p.UserId)
+	}
+	return userIds, nil
+}
+
+func GetOrgAdminsByOrg(query *db.Session, orgId models.Id) ([]models.Id, e.Error) {
+	var userIds []models.Id
+	if err := query.Model(models.UserOrg{}).Where("org_id = ? and role = ?", orgId, consts.OrgRoleAdmin).
+		Pluck("user_id", &userIds); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return userIds, nil
+}
+
+func GetRootUserIds(query *db.Session) ([]models.Id, e.Error) {
+	var userIds []models.Id
+	if err := query.Model(models.User{}).Where("is_admin = 1").
+		Pluck("id", &userIds); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
 	}
 	return userIds, nil
 }

@@ -130,11 +130,36 @@ func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.E
 
 	if c.OrgId != "" {
 		userIds, _ := services.GetUserIdsByOrg(c.DB(), c.OrgId)
-		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+		if form.Exclude == "org" {
+			// 排除组织已有用户
+			// 应只有平台管理员可以调用
+			if !c.IsSuperAdmin {
+				return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest)
+			}
+			rootIds, _ := services.GetRootUserIds(c.DB())
+			userIds = append(userIds, rootIds...)
+			query = query.Where(fmt.Sprintf("%s.id not in (?)", models.User{}.TableName()), userIds)
+		} else {
+			// 查询组织所有用户
+			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+		}
 	}
 	if c.ProjectId != "" {
 		userIds, _ := services.GetUserIdsByProject(c.DB(), c.ProjectId)
-		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+		if form.Exclude == "project" {
+			// 排除组织里面的项目用户，包括所有组织管理员（自动获得项目权限）和已经加入组织的用户
+			orgUserIds, _ := services.GetUserIdsByOrg(c.DB(), c.OrgId)
+
+			orgAdminsIds, _ := services.GetOrgAdminsByOrg(c.DB(), c.OrgId)
+			rootIds, _ := services.GetRootUserIds(c.DB())
+			excludeIds := append(userIds, orgAdminsIds...)
+			excludeIds = append(excludeIds, rootIds...)
+
+			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), orgUserIds)
+			query = query.Where(fmt.Sprintf("%s.id not in (?)", models.User{}.TableName()), excludeIds)
+		} else {
+			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+		}
 	}
 
 	if form.Status != "" {
