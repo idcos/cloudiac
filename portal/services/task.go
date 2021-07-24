@@ -56,7 +56,7 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		AutoApprove: pt.AutoApprove,
 		KeyId:       models.Id(firstVal(string(pt.KeyId), string(env.KeyId))),
 		Extra:       pt.Extra,
-		Revision:    pt.Revision,
+		Revision:    firstVal(pt.Revision, env.Revision, tpl.RepoRevision),
 
 		OrgId:     env.OrgId,
 		ProjectId: env.ProjectId,
@@ -158,7 +158,7 @@ func getTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision s
 
 	repoAddr = tpl.RepoAddr
 	if tpl.VcsId == "" { // 用户直接填写的 repo 地址
-		commitId = tpl.RepoRevision
+		commitId = revision
 	} else {
 		var (
 			vcs  *models.Vcs
@@ -176,9 +176,6 @@ func getTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision s
 			return "", "", err
 		}
 
-		if revision == "" {
-			revision = tpl.RepoRevision
-		}
 		commitId, err = repo.BranchCommitId(revision)
 		if err != nil {
 			return "", "", e.New(e.VcsError, err)
