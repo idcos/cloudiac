@@ -58,8 +58,8 @@ func TaskDetail(c *ctx.ServiceCtx, form forms.DetailTaskForm) (*taskDetailResp, 
 	}
 	user, err = services.GetUserById(c.DB(), task.CreatorId)
 	if err != nil && err.Code() == e.UserNotExists {
-		// 报 500 错误，正常情况用户不应该找不到，除非被意外删除
-		return nil, e.New(e.UserNotExists, err, http.StatusInternalServerError)
+		user = &models.User{}
+		c.Logger().Errorf("task creator '%s' not exists", task.CreatorId)
 	} else if err != nil {
 		c.Logger().Errorf("error get user by id, err %s", err)
 		return nil, e.New(e.DBError, err)
@@ -101,8 +101,8 @@ func LastTask(c *ctx.ServiceCtx, form *forms.LastTaskForm) (*taskDetailResp, e.E
 	}
 	user, err := services.GetUserById(c.DB(), task.CreatorId)
 	if err != nil && err.Code() == e.UserNotExists {
-		// 报 500 错误，正常情况用户不应该找不到，除非被意外删除
-		return nil, e.New(e.UserNotExists, err, http.StatusInternalServerError)
+		user = &models.User{}
+		c.Logger().Errorf("task creator '%s' not exists", task.CreatorId)
 	} else if err != nil {
 		c.Logger().Errorf("error get user by id, err %s", err)
 		return nil, e.New(e.DBError, err)

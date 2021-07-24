@@ -177,17 +177,18 @@ func (m *TaskManager) recoverTask(ctx context.Context) error {
 	}
 
 	logger.Infof("find '%d' running tasks", len(tasks))
-	go func() {
-		for _, task := range tasks {
-			select {
-			case <-ctx.Done():
-				break
-			default:
-				logger.Infof("recover running task %s", task.Id)
-				m.runTask(ctx, task)
+	for _, task := range tasks {
+		select {
+		case <-ctx.Done():
+			break
+		default:
+			logger.Infof("recover running task %s", task.Id)
+			if err := m.runTask(ctx, task); err != nil {
+				logger.WithField("taskId", task.Id).Errorf("run task error: %s", err)
+				return err
 			}
 		}
-	}()
+	}
 
 	return nil
 }
@@ -208,11 +209,18 @@ func (m *TaskManager) processPendingTask(ctx context.Context) {
 		return true
 	})
 
-	selectTable := fmt.Sprintf("iac_task, "+
-		"(SELECT env_id, min(created_at) AS created_at FROM iac_task "+
-		"WHERE status = '%s' GROUP BY env_id) AS min_task", models.TaskPending)
-	query := m.db.Unscoped().Table(selectTable).Where(
-		"min_task.env_id = iac_task.env_id AND min_task.created_at = iac_task.created_at")
+	// 查询每个环境中最先创建的且状态为 pending 的任务
+	firstPendingQuery := m.db.Raw(
+		"SELECT env_id, MIN(created_at) AS created_at FROM iac_task "+
+			"WHERE status = ? GROUP BY env_id", models.TaskPending)
+	// 根据上一步查询到的 env_id + created_at 查询符合条件的任务，并取每个 env 下 id 最小的一条 task 记录
+	// (注意：直接通过 env_id + created_at 匹配可能同一个 env 会返回多条记录)
+	firstPendingIdQuery := m.db.Raw("SELECT iac_task.env_id, MIN(iac_task.id) AS task_id FROM iac_task, (?) AS fpt "+
+		"WHERE iac_task.env_id = fpt.env_id AND iac_task.created_at = fpt.created_at "+
+		"AND iac_task.status = ? GROUP BY env_id", firstPendingQuery.Expr(), models.TaskPending)
+
+	// 通过 id 查询完整任务信息
+	query := m.db.Model(&models.Task{}).Joins("JOIN (?) AS t ON t.task_id = iac_task.id", firstPendingIdQuery.Expr())
 
 	if len(runningEnvs) > 0 {
 		// 过滤掉同一环境下有其他任务在执行的任务
@@ -245,30 +253,47 @@ func (m *TaskManager) processPendingTask(ctx context.Context) {
 			continue
 		}
 
-		if v, loaded := m.envRunningTask.LoadOrStore(task.EnvId, task); loaded {
-			t := v.(*models.Task)
-			logger.Infof("environment '%s' has running task '%s', wait it", task.EnvId, t.Id)
-			continue
-		}
-
-		m.wg.Add(1)
-		go func() {
-			defer func() {
-				m.envRunningTask.Delete(task.EnvId)
-				m.wg.Done()
-			}()
-
-			m.runTask(ctx, task)
-
-			if task.IsEffectTask() {
-				// 不管任务成功还是失败都执行
-				m.processTaskDone(task)
+		if err := m.runTask(ctx, task); err != nil {
+			if err == errHasRunningTask {
+				continue
+			} else {
+				logger.WithField("taskId", task.Id).Errorf("run task error: %s", err)
 			}
-		}()
+		}
 	}
 }
 
-func (m *TaskManager) runTask(ctx context.Context, task *models.Task) {
+var (
+	errHasRunningTask = errors.New("environment has running task")
+)
+
+func (m *TaskManager) runTask(ctx context.Context, task *models.Task) error {
+	logger := m.logger.WithField("taskId", task.Id)
+
+	if v, loaded := m.envRunningTask.LoadOrStore(task.EnvId, task); loaded {
+		t := v.(*models.Task)
+		logger.Infof("environment '%s' has running task '%s'", task.EnvId, t.Id)
+		return errHasRunningTask
+	}
+
+	m.wg.Add(1)
+	go func() {
+		defer func() {
+			m.envRunningTask.Delete(task.EnvId)
+			m.wg.Done()
+		}()
+
+		m.doRunTask(ctx, task)
+
+		if task.IsEffectTask() {
+			// 不管任务成功还是失败都执行
+			m.processTaskDone(task)
+		}
+	}()
+	return nil
+}
+
+func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) {
 	logger := m.logger.WithField("taskId", task.Id)
 
 	changeTaskStatus := func(status, message string) error {
