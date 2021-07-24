@@ -263,18 +263,28 @@ func ChangeUserStatus(c *ctx.ServiceCtx, form *forms.DisableUserForm) (*models.U
 func UserDetail(c *ctx.ServiceCtx, userId models.Id) (*models.UserWithRoleResp, e.Error) {
 	query := c.DB()
 
-	if !c.IsSuperAdmin && c.OrgId != "" {
-		userIds, _ := services.GetUserIdsByOrg(c.DB(), c.OrgId)
-		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
-	}
-	if !c.IsSuperAdmin && c.ProjectId != "" {
-		userIds, _ := services.GetUserIdsByProject(c.DB(), c.ProjectId)
-		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
-	}
-	if c.UserId == userId {
-		// 查自己
-	} else if (c.OrgId == "" && c.ProjectId == "") && !c.IsSuperAdmin {
-		// 全局用户查询，需要管理员权限
+	if c.IsSuperAdmin || c.UserId == userId {
+		// 管理员查询任意用户或自身查询
+	} else if c.OrgId != "" {
+		if c.ProjectId != "" {
+			// 查询项目用户：组织管理员或项目成员
+			if services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) ||
+				services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, "") {
+				userIds, _ := services.GetUserIdsByProject(c.DB(), c.ProjectId)
+				query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+			} else {
+				return nil, e.New(e.PermissionDeny, fmt.Errorf("project permission required"), http.StatusForbidden)
+			}
+		} else {
+			// 查询组织用户
+			if services.UserHasOrgRole(c.UserId, c.OrgId, "") {
+				userIds, _ := services.GetUserIdsByOrg(c.DB(), c.OrgId)
+				query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+			} else {
+				return nil, e.New(e.PermissionDeny, fmt.Errorf("org permission required"), http.StatusForbidden)
+			}
+		}
+	} else {
 		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusForbidden)
 	}
 
@@ -297,6 +307,21 @@ func UserDetail(c *ctx.ServiceCtx, userId models.Id) (*models.UserWithRoleResp, 
 	} else if err != nil {
 		c.Logger().Errorf("error get user by id, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	if c.IsSuperAdmin {
+		// 如果是平台管理员，自动拥有组织管理员权限和项目管理者权限
+		if c.OrgId != "" {
+			detail.Role = consts.OrgRoleAdmin
+		}
+		if c.ProjectId != "" {
+			detail.ProjectRole = consts.ProjectRoleManager
+		}
+	} else if services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) {
+		// 如果是组织管理员自动拥有项目管理者权限
+		if c.ProjectId != "" {
+			detail.ProjectRole = consts.ProjectRoleManager
+		}
 	}
 
 	return detail, nil

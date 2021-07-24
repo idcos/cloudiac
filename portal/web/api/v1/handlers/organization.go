@@ -215,6 +215,7 @@ func (Organization) SearchUser(c *ctx.GinRequestCtx) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param form formData forms.InviteUserForm true "parameter"
 // @Param orgId path string true "组织ID"
 // @router /orgs/{orgId}/users/invite [post]
