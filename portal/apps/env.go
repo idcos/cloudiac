@@ -189,9 +189,9 @@ func SearchEnv(c *ctx.ServiceCtx, form *forms.SearchEnvForm) (interface{}, e.Err
 
 	if form.Status != "" {
 		if utils.InArrayStr(models.EnvStatus, form.Status) {
-			query = query.Where("iac_env.status = ?", form.Status)
+			query = query.Where("iac_env.status = ? and iac_env.deploying = 0", form.Status)
 		} else if utils.InArrayStr(models.EnvTaskStatus, form.Status) {
-			query = query.Where("iac_env.task_status = ?", form.Status)
+			query = query.Where("iac_env.task_status = ? and iac_env.deploying = 1", form.Status)
 		} else {
 			return nil, e.New(e.BadParam, http.StatusBadRequest)
 		}
