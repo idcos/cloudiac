@@ -224,7 +224,11 @@ func GetTaskById(tx *db.Session, id models.Id) (*models.Task, e.Error) {
 }
 
 func QueryTask(query *db.Session) *db.Session {
-	return query.Model(&models.Task{})
+	query = query.Model(&models.Task{})
+	// 创建人姓名
+	query = query.Joins("left join iac_user as u on u.id = iac_task.creator_id").
+		LazySelectAppend("u.name as creator,iac_task.*")
+	return query
 }
 
 var stepStatus2TaskStatus = map[string]string{
