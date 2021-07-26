@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
@@ -24,7 +25,25 @@ func SearchTask(c *ctx.ServiceCtx, form *forms.SearchTaskForm) (interface{}, e.E
 	if form.SortField() == "" {
 		query = query.Order("created_at DESC")
 	}
-	return getPage(query, form, &models.Task{})
+
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	details := make([]*taskDetailResp, 0)
+	if err := p.Scan(&details); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	if details != nil {
+		for _, env := range details {
+			// 隐藏敏感字段
+			env.HideSensitiveVariable()
+		}
+	}
+
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     details,
+	}, nil
 }
 
 type taskDetailResp struct {
@@ -65,6 +84,8 @@ func TaskDetail(c *ctx.ServiceCtx, form forms.DetailTaskForm) (*taskDetailResp, 
 		return nil, e.New(e.DBError, err)
 	}
 
+	// 隐藏敏感字段
+	task.HideSensitiveVariable()
 	var o = taskDetailResp{
 		Task:    *task,
 		Creator: user.Name,
@@ -108,6 +129,8 @@ func LastTask(c *ctx.ServiceCtx, form *forms.LastTaskForm) (*taskDetailResp, e.E
 		return nil, e.New(e.DBError, err)
 	}
 
+	// 隐藏敏感字段
+	task.HideSensitiveVariable()
 	var t = taskDetailResp{
 		Task:    *task,
 		Creator: user.Name,
