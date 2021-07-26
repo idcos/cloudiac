@@ -1,172 +1,147 @@
 package e
 
 const (
-	// 通用
-	InternalError           = 1000
-	ObjectAlreadyExists     = 1010
-	ObjectNotExists         = 1011
-	ObjectNotExistsOrNoPerm = 1013 // 对象不存在或者无权限
-	ObjectDisabled          = 1014
-	JSONParseError          = 1015
-	StateTryAgainLater      = 1016
-	ColValidateError        = 1017
-	NameDuplicate           = 1018
-	HCLParseError           = 1019
+	/*
+		错误码定义规范:
+		1. 错误码由 5 位组成: abcde
+		2. a 代表一级分类，如通用、db、外部服务、业务逻辑、数据校验、权限等
+		3. bc 代表二级分类, 一般对应具体功能模块，如用户、VCS、模板、环境等
+		4. de 代表具体错误类型，如不存在、连接失败、验证失败、加解密错误等
+	*/
 
-	NotImplement = 1020
+	// 通用错误 1
 
-	DBError           = 1030 // db 操作出错
-	DBAttrValidateErr = 1031
+	InternalError           = 10000
+	ObjectAlreadyExists     = 10010
+	ObjectNotExists         = 10011
+	ObjectNotExistsOrNoPerm = 10013 // 对象不存在或者无权限
+	ObjectDisabled          = 10014
+	NotImplement            = 10020
+	IOError                 = 10030 // 文件 io 出错
 
-	ToFromAttrErr = 1032
+	//// 解析错误 101
 
-	QuotaError = 1033
+	JSONParseError = 10100
+	HCLParseError  = 10101
 
-	BadParam               = 1040 // 参数错误(参数值不对)
-	BadRequest             = 1041 // 请求错误(请求缺少必要参数)
-	IOError                = 1050 // 文件 io 出错
-	LdapError              = 1060 // ldap 出错
-	MailServerError        = 1070
-	InvalidAccessKeyId     = 1080 // AccessKeyId错误
-	InvalidAccessKeySecret = 1081
-	ForbiddenAccessKey     = 1082
+	//// db 错误 102
 
-	// 登录认证
-	InvalidPassword    = 1110
-	InvalidToken       = 1100 // 无效 token
-	InvalidTokenScope  = 1101 // 无效 token scope
-	InvalidTokenPrefix = 1102 // 无效 token prefix
-	InvalidCaptcha     = 1103
-	InvalidOperation   = 1104
-	TokenExpired       = 1105
-	InvalidOrgId       = 1106 // 无效的 orgId
-	InvalidProjectId   = 1107 // 无效的 projectId
+	DBError           = 10200 // db 操作出错
+	DBAttrValidateErr = 10201
+	ColValidateError  = 10202
+	NameDuplicate     = 10203
+	InvalidColumn     = 10210
+	DataToLong        = 10211
+	NameToLong        = 10212
+	RemarkToLong      = 10213
 
-	InvalidColumn = 1201
-	DataToLong    = 1301
-	NameToLong    = 1302
-	RemarkToLong  = 1303
+	//// 校验错误 103
 
-	// prometheus
-	PromError      = 1400
-	PromQueryError = 1410
+	BadParam               = 10340 // 参数错误(参数值不对)
+	BadRequest             = 10341 // 请求错误(请求缺少必要参数)
+	InvalidAccessKeyId     = 10380 // AccessKeyId错误
+	InvalidAccessKeySecret = 10381
+	ForbiddenAccessKey     = 10382
 
-	CloudAccountNoExists = 1504
+	//// 第三方服务错误 104
 
-	//  第三方接口错误
-	CloudServerErr = 1501
-	CMDBServerErr  = 1511
+	LdapError       = 10410 // ldap 出错
+	MailServerError = 10420
+	ConsulConnError = 10430
+	VcsError        = 10440
 
-	// 用户
-	UserAlreadyExists          = 2010
-	UserNotExists              = 2020
-	UserEmailDuplicate         = 2030
-	UserEmailDuplicateInactive = 2031
-	UserInvalidStatus          = 2040
-	UserInactive               = 2041
-	UserDisabled               = 2043
-	InvalidPasswordFormat      = 2044 // 密码格式错误
-	UserActivated              = 2045
+	// 权限认证 2
+	//// 认证 200
 
-	InvalidRoleName   = 3010
-	RoleNameDuplicate = 3011
+	InvalidPassword   = 20010
+	InvalidToken      = 20000 // 无效 token
+	InvalidTokenScope = 20001 // 无效 token scope
+	TokenExpired      = 20005
+	InvalidOrgId      = 20006 // 无效的 orgId
+	InvalidProjectId  = 20007 // 无效的 projectId
 
-	// Customer
-	InvalidCustomerKey = 3030
-	CustomerNotExist   = 3031
+	//// 权限 201
 
-	// process
-	ProcessNotExists = 5010
+	PermissionDeny   = 20110
+	ValidateError    = 20111
+	InvalidOperation = 20112
 
-	// datasource
-	DsCheckError    = 6010
-	DsNoCollInGroup = 6011
+	// 功能模块 3
+	//// 用户 301
 
-	// permission
-	PermissionDeny  = 7010
-	EmptyPermKey    = 7011
-	InvalidPermName = 7012
-	InvalidPermKey  = 7013
-	EmptyPermApi    = 7014
-	ValidateError   = 7015
+	UserAlreadyExists          = 30110
+	UserNotExists              = 30120
+	UserEmailDuplicate         = 30130
+	UserEmailDuplicateInactive = 30131
+	UserInvalidStatus          = 30140
+	UserInactive               = 30141
+	UserDisabled               = 30143
+	InvalidPasswordFormat      = 30144 // 密码格式错误
+	UserActivated              = 30145
+	InvalidRoleName            = 30150
+	RoleNameDuplicate          = 30151
 
-	// license
-	InvalidLicense        = 8010
-	ExpiredLicense        = 8011
-	LicenseResourceLimit  = 8020
-	LicenseModuleDisabled = 8021
+	//// 组织 303
 
-	// organization
-	OrganizationAlreadyExists  = 9010
-	OrganizationNotExists      = 9011
-	OrganizationDisabled       = 9012
-	OrganizationAliasDuplicate = 9013
-	OrganizationInvalidStatus  = 9014
-	InvalidOrganizationId      = 9015
+	OrganizationAlreadyExists = 30310
+	OrganizationNotExists     = 30311
+	OrganizationDisabled      = 30312
+	OrganizationInvalidStatus = 30314
+	InvalidOrganizationId     = 30315
 
-	// project
-	ProjectAlreadyExists  = 10010
-	ProjectNotExists      = 10011
-	ProjectDisabled       = 10012
-	ProjectAliasDuplicate = 10013
-	ProjectInvalidStatus  = 10014
-	ProjectIdInvalid      = 10014
+	//// project 304
 
-	//variable
-	VariableAlreadyExists  = 11010
-	VariableNotExists      = 11011
-	VariableDisabled       = 11012
-	VariableAliasDuplicate = 11013
-	VariableInvalidStatus  = 11014
-	InvalidVariableId      = 11015
+	ProjectAlreadyExists      = 30410
+	ProjectNotExists          = 30411
+	ProjectAliasDuplicate     = 30412
+	ProjectUserAlreadyExists  = 30420
+	ProjectUserAliasDuplicate = 30421
 
-	ProjectUserAlreadyExists  = 20010
-	ProjectUserNotExists      = 20011
-	ProjectUserAliasDuplicate = 20013
-	ProjectUserInvalidStatus  = 20014
+	//// variable 305
 
-	TokenAlreadyExists  = 12010
-	TokenNotExists      = 12011
-	TokenDisabled       = 12012
-	TokenAliasDuplicate = 12013
-	TokenInvalidStatus  = 12014
-	InvalidTokenId      = 12015
+	VariableAlreadyExists  = 30510
+	VariableAliasDuplicate = 30511
 
-	// template
-	TemplateAlreadyExists   = 11010
-	TemplateNotExists       = 11011
-	TemplateDisabled        = 11012
-	TemplateActiveEnvExists = 11030
+	//// token 306
 
-	// consul
-	ConsulConnError = 12010
+	TokenAlreadyExists  = 30610
+	TokenNotExists      = 30611
+	TokenAliasDuplicate = 30613
 
-	// envionment
-	EnvAlreadyExists       = 13010
-	EnvNotExists           = 13011
-	EnvAliasDuplicate      = 13012
-	EnvArchived            = 13013
-	EnvCannotArchiveActive = 13014
-	EnvDeploying           = 13015
+	//// template 307
 
-	// task
-	TaskAlreadyExists     = 14010
-	TaskNotExists         = 14011
-	InvalidTaskId         = 14012
-	TaskApproveNotPending = 14013
-	TaskStepNotExists     = 14114
-	TaskLogInterrupted    = 14115
-	TaskNotHaveStep       = 14116
+	TemplateAlreadyExists   = 30710
+	TemplateNotExists       = 30711
+	TemplateDisabled        = 30712
+	TemplateActiveEnvExists = 30730
 
-	// vcs
-	VcsError     = 15010
-	VcsNotExists = 15011
+	//// environment 308
 
-	// key
-	KeyAlreadyExists  = 16010
-	KeyNotExist       = 16011
-	KeyAliasDuplicate = 16012
-	KeyDecryptFail    = 16013
+	EnvAlreadyExists       = 30810
+	EnvNotExists           = 30811
+	EnvAliasDuplicate      = 30812
+	EnvArchived            = 30813
+	EnvCannotArchiveActive = 30814
+	EnvDeploying           = 30815
+
+	//// task 309
+
+	TaskAlreadyExists     = 30910
+	TaskNotExists         = 30911
+	TaskApproveNotPending = 30913
+	TaskStepNotExists     = 30914
+	TaskNotHaveStep       = 30916
+
+	//// ssh key 310
+
+	KeyAlreadyExists  = 31010
+	KeyNotExist       = 31011
+	KeyAliasDuplicate = 31012
+	KeyDecryptFail    = 31013
+
+	//// vcs 311
+
+	VcsNotExists = 31110
 )
 
 var errorMsgs = map[int]map[string]string{
@@ -196,9 +171,6 @@ var errorMsgs = map[int]map[string]string{
 	},
 	DBAttrValidateErr: {
 		"zh-cn": "字段验证错误",
-	},
-	QuotaError: {
-		"zh-cn": "超过额度限制",
 	},
 	BadParam: {
 		"zh-cn": "无效参数",
@@ -239,26 +211,11 @@ var errorMsgs = map[int]map[string]string{
 	InvalidTokenScope: {
 		"zh-cn": "凭证 scope 不匹配",
 	},
-	InvalidTokenPrefix: {
-		"zh-cn": "凭证类型错误",
-	},
 	InvalidOrgId: {
 		"zh-cn": "无效的组织",
 	},
 	TokenExpired: {
 		"zh-cn": "凭证已过期",
-	},
-	PromError: {
-		"zh-cn": "Prometheus 错误",
-	},
-	PromQueryError: {
-		"zh-cn": "Prometheus 查询错误",
-	},
-	CloudAccountNoExists: {
-		"zh-cn": "云商账号不存在",
-	},
-	StateTryAgainLater: {
-		"zh-cn": "当前状态无法执行该操作，请稍后重试",
 	},
 	ColValidateError: {
 		"zh-cn": "字段校验错误",
@@ -269,14 +226,8 @@ var errorMsgs = map[int]map[string]string{
 	InvalidColumn: {
 		"zh-cn": "无效的字段名",
 	},
-	InvalidCaptcha: {
-		"zh-cn": "验证码错误",
-	},
 	InvalidOperation: {
 		"zh-cn": "无效操作",
-	},
-	CMDBServerErr: {
-		"zh-cn": "cmdb 接口错误",
 	},
 	UserAlreadyExists: {
 		"zh-cn": "用户已存在",
@@ -311,50 +262,11 @@ var errorMsgs = map[int]map[string]string{
 	RoleNameDuplicate: {
 		"zh-cn": "角色名重复",
 	},
-	InvalidCustomerKey: {
-		"zh-cn": "无效的客户 key",
-	},
-	CustomerNotExist: {
-		"zh-cn": "客户不存在",
-	},
-	ProcessNotExists: {
-		"zh-cn": "进程不存在",
-	},
-	DsCheckError: {
-		"zh-cn": "监控源连接失败，请检查地址及认证信息",
-	},
-	DsNoCollInGroup: {
-		"zh-cn": "指定分组中没有采集器",
-	},
 	PermissionDeny: {
 		"zh-cn": "无权限",
 	},
-	EmptyPermKey: {
-		"zh-cn": "权限 key 不能为空",
-	},
-	InvalidPermName: {
-		"zh-cn": "无效的权限点名称",
-	},
-	InvalidPermKey: {
-		"zh-cn": "无效的权限点 key",
-	},
-	EmptyPermApi: {
-		"zh-cn": "权限点的 API 不能为空",
-	},
 	ValidateError: {
 		"zh-cn": "验证失败",
-	},
-	InvalidLicense: {
-		"zh-cn": "无效 License",
-	},
-	ExpiredLicense: {
-		"zh-cn": "License 已过期",
-	},
-	LicenseResourceLimit: {
-		"zh-cn": "资源数量超过 License 限制",
-	},
-	LicenseModuleDisabled: {
-		"zh-cn": "功能模块未启用",
 	},
 	OrganizationAlreadyExists: {
 		"zh-cn": "组织已存在",
@@ -364,9 +276,6 @@ var errorMsgs = map[int]map[string]string{
 	},
 	OrganizationDisabled: {
 		"zh-cn": "组织被禁用",
-	},
-	OrganizationAliasDuplicate: {
-		"zh-cn": "组织别名重复",
 	},
 	OrganizationInvalidStatus: {
 		"zh-cn": "无效的组织状态",

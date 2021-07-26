@@ -17,7 +17,7 @@ func UpdateSystemConfig(tx *db.Session, attrs models.Attrs) (cfg *models.SystemC
 	cfg = &models.SystemCfg{}
 	if _, err := models.UpdateAttr(tx.Where("name = 'MAX_JOBS_PER_RUNNER'"), &models.SystemCfg{}, attrs); err != nil {
 		if e.IsDuplicate(err) {
-			return nil, e.New(e.OrganizationAliasDuplicate)
+			return nil, e.New(e.OrganizationAlreadyExists)
 		}
 		return nil, e.New(e.DBError, fmt.Errorf("update sys config error: %v", err))
 	}

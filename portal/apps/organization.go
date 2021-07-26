@@ -107,7 +107,7 @@ func UpdateOrganization(c *ctx.ServiceCtx, form *forms.UpdateOrganizationForm) (
 		query = query.Where("id in (?)", services.UserOrgIds(c.UserId))
 	}
 	org, err := services.UpdateOrganization(query, form.Id, attrs)
-	if err != nil && err.Code() == e.OrganizationAliasDuplicate {
+	if err != nil && err.Code() == e.OrganizationAlreadyExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
 		c.Logger().Errorf("error update org, err %s", err)
@@ -144,7 +144,7 @@ func ChangeOrgStatus(c *ctx.ServiceCtx, form *forms.DisableOrganizationForm) (*m
 		query = services.QueryWithOrgId(query, c.OrgId)
 	}
 	org, err = services.UpdateOrganization(query, form.Id, models.Attrs{"status": form.Status})
-	if err != nil && err.Code() == e.OrganizationAliasDuplicate {
+	if err != nil && err.Code() == e.OrganizationAlreadyExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
 		c.Logger().Errorf("error update org, err %s", err)
