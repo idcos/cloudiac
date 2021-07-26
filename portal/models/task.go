@@ -167,6 +167,14 @@ func (t *Task) PlanJsonPath() string {
 	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TFPlanJsonFile)
 }
 
+func (t *Task) HideSensitiveVariable() {
+	for index, v := range t.Variables {
+		if v.Sensitive {
+			t.Variables[index].Value = ""
+		}
+	}
+}
+
 func (t *Task) Migrate(sess *db.Session) (err error) {
 	// 以下 column 通过 Migrate 来维护，确保新增加的 enum 生效
 	columnDefines := []struct {
