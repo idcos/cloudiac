@@ -27,7 +27,7 @@ func UpdateOrganization(tx *db.Session, id models.Id, attrs models.Attrs) (org *
 	org = &models.Organization{}
 	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.Organization{}, attrs); err != nil {
 		if e.IsDuplicate(err) {
-			return nil, e.New(e.OrganizationAliasDuplicate)
+			return nil, e.New(e.OrganizationAlreadyExists)
 		}
 		return nil, e.New(e.DBError, fmt.Errorf("update org error: %v", err))
 	}
