@@ -36,7 +36,7 @@ func Register(g *gin.RouterGroup) {
 
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
 
-	// TODO 增加鉴权
+	// TODO 该接口无鉴权，待前端切换接口后需要删除
 	g.GET("/task/log/sse", w(handlers.Task{}.FollowLogSse))
 
 	// Authorization Header 鉴权
@@ -113,6 +113,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/tasks", ac(), w(handlers.Task{}.Search))
 	g.GET("/tasks/:id", ac(), w(handlers.Task{}.Detail))
 	g.GET("/tasks/:id/log", ac(), w(handlers.Task{}.Log))
+	g.GET("/tasks/:id/log/sse", ac(), w(handlers.Task{}.FollowLogSse))
 	g.GET("/tasks/:id/output", ac(), w(handlers.Task{}.Output))
 	g.GET("/tasks/:id/resources", ac(), w(handlers.Task{}.Resource))
 	g.POST("/tasks/:id/approve", ac("tasks", "approve"), w(handlers.Task{}.TaskApprove))
