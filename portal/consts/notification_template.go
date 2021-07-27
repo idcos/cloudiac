@@ -7,7 +7,7 @@ var IacUserInvitationsTpl = `
 <br />
 <p>	CloudIaC的管理员 【{{.Inviter}}】 邀请您体验CloudIaC平台并加入 【{{.Organization}}】组织，您可以通过以下方式登录CloudIaC平台：</p>
 <br />
-<p>	平台地址：{{.Addr}}</p>
+<p>	平台地址：<a href="{{.Addr}}">{{.Addr}}</a></p>
 <p>	用户名：{{.Email}}</p>
 {{if .IsNewUser}}
 <p>	初始密码：{{.InitPass}}</p>
