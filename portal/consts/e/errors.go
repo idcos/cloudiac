@@ -298,4 +298,87 @@ var errorMsgs = map[int]map[string]string{
 	TemplateAlreadyExists: {
 		"zh-cn": "模板名称重复",
 	},
+	HCLParseError: {
+		"zh-cn": "模版语法解析错误",
+	},
+
+	VariableAliasDuplicate: {
+		"zh-cn": "变量别名重复",
+	},
+
+	ProjectUserAlreadyExists: {
+		"zh-cn": "项目用户已经存在",
+	},
+
+	ProjectUserAliasDuplicate: {
+		"zh-cn": "项目别名重复",
+	},
+
+	TokenAlreadyExists: {
+		"zh-cn": "Token已经存在",
+	},
+	TokenNotExists: {
+		"zh-cn": "Token不存在",
+	},
+	TokenAliasDuplicate: {
+		"zh-cn": "Token别名重复",
+	},
+
+	TemplateNotExists: {
+		"zh-cn": "云模版不存在",
+	},
+	TemplateDisabled: {
+		"zh-cn": "云模版不可用",
+	},
+	TemplateActiveEnvExists: {
+		"zh-cn": "模版活跃环境已经存在",
+	},
+	ConsulConnError: {
+		"zh-cn": "consul链接失败",
+	},
+	EnvAlreadyExists: {
+		"zh-cn": "环境已经存在",
+	},
+	EnvNotExists: {
+		"zh-cn": "环境不存在",
+	},
+	EnvAliasDuplicate: {
+		"zh-cn": "环境别名重复",
+	},
+	EnvArchived: {
+		"zh-cn": "环境已归档，不允许操作",
+	},
+	EnvDeploying: {
+		"zh-cn": "环境正在部署中，请不要重复发起",
+	},
+	TaskAlreadyExists: {
+		"zh-cn": "任务已经存在",
+	},
+	TaskNotExists: {
+		"zh-cn": "任务不存在",
+	},
+	VcsError: {
+		"zh-cn": "vcs仓库错误",
+	},
+	VcsNotExists: {
+		"zh-cn": "vcs仓库不存在",
+	},
+	TaskApproveNotPending: {
+		"zh-cn": "作业状态非待审批，不允许操作",
+	},
+	KeyAlreadyExists: {
+		"zh-cn": "管理秘钥已存在",
+	},
+	KeyNotExist: {
+		"zh-cn": "管理秘钥不存在",
+	},
+	KeyAliasDuplicate: {
+		"zh-cn": "管理秘钥名称重复",
+	},
+	KeyDecryptFail: {
+		"zh-cn": "管理秘钥解析失败",
+	},
+	EnvCannotArchiveActive: {
+		"zh-cn": "环境当前状态活跃, 无法归档",
+	},
 }
