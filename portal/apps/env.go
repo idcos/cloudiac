@@ -13,7 +13,6 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
-	"path"
 	"strings"
 	"time"
 )
@@ -603,37 +602,9 @@ func SearchEnvResources(c *ctx.ServiceCtx, form *forms.SearchEnvResourceForm) (i
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
-	query := c.DB().Model(models.Resource{}).Where("org_id = ? AND project_id = ? AND env_id = ? AND task_id = ?",
-		c.OrgId, c.ProjectId, form.Id, env.LastTaskId)
-
-	if form.HasKey("q") {
-		// 支持对 provider / type / name 进行模糊查询
-		query = query.Where("provider LIKE ? OR type LIKE ? OR name LIKE ?",
-			fmt.Sprintf("%%%s%%", form.Q),
-			fmt.Sprintf("%%%s%%", form.Q),
-			fmt.Sprintf("%%%s%%", form.Q))
-	}
-
-	if form.SortField() == "" {
-		query = query.Order("provider, type, name")
-	} else {
-		query = form.Order(query)
-	}
-
-	rs := make([]models.Resource, 0)
-	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	if err := p.Scan(&rs); err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-
-	for i := range rs {
-		rs[i].Provider = path.Base(rs[i].Provider)
-		// attrs 暂时不需要返回
-		rs[i].Attrs = nil
-	}
-	return &page.PageResp{
-		Total:    p.MustTotal(),
-		PageSize: p.Size,
-		List:     rs,
-	}, nil
+	return SearchTaskResources(c, &forms.SearchTaskResourceForm{
+		PageForm: form.PageForm,
+		Id:       env.LastTaskId,
+		Q:        form.Q,
+	})
 }
