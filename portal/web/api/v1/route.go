@@ -36,9 +36,6 @@ func Register(g *gin.RouterGroup) {
 
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
 
-	// TODO 该接口无鉴权，待前端切换接口后需要删除
-	g.GET("/task/log/sse", w(handlers.Task{}.FollowLogSse))
-
 	// Authorization Header 鉴权
 	g.Use(w(middleware.Auth)) // 解析 header token
 
