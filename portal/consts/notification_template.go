@@ -13,7 +13,11 @@ var IacUserInvitationsTpl = `
 <p>	初始密码：{{.InitPass}}</p>
 {{end}}
 <br />	
+{{if .IsNewUser}}
 <p>	为保障您的帐户安全，请立即登录平台并及时修改初始密码，祝您使用愉快！</p>
+{{else}}
+<p>	请使用您的账号登陆 CloudIaC 平台使用服务，祝您使用愉快！</p>
+{{end}}
 <br />	
 <p>	-----该邮件由系统自动发出，请勿回复-----</p>
 </body>
