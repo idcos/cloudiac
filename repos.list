@@ -4,7 +4,7 @@ yunji_huaweicloud_vpc.git
 yunji_huaweicloud_vpc_vip.git
 yunji_huaweicloud_stack.git
 yunji_openstack.git
-yunji_vmvare_vsphere.git
+yunji_vmware_vsphere.git
 yunji_tencentcloud_cvm_vpc.git
 yunji_alicloud_ram_vpc.git
 yunji_alicloud_ecs_slb.git
