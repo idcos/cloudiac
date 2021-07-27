@@ -2,6 +2,7 @@ package apps
 
 import (
 	"cloudiac/common"
+	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
@@ -20,11 +21,11 @@ type emailInviteUserData struct {
 	Inviter      string // 邀请人名称
 	Organization string // 加入目标组织名称
 	IsNewUser    bool   // 是否创建新用户
+	Addr         string
 }
 
 var (
 	emailSubjectInviteUser = "用户邀请通知【CloudIaC】"
-	emailBodyInviteUser    = "尊敬的 {{.Name}}：\n\n{{.Inviter}} 邀请您使用 CloudIaC 服务，您将加入 {{.Organization}} 组织。\n\n{{if .IsNewUser}}这是您的登录详细信息：\n\n登录名：\t{{.Email}}\n密码：\t{{.InitPass}}\n\n为了保障您的安全，请立即登陆您的账号并修改初始密码。{{else}}请使用 {{.Email}} 登陆您的账号使用 CloudIaC 服务。{{end}}"
 )
 
 // CreateOrganization 创建组织
@@ -415,9 +416,11 @@ func InviteUser(c *ctx.ServiceCtx, form *forms.InviteUserForm) (*models.UserWith
 		Inviter:      c.Username,
 		Organization: org.Name,
 		InitPass:     initPass,
+		Addr:         configs.Get().Portal.Address,
 	}
 	go func() {
-		err := mail.SendMail([]string{user.Email}, emailSubjectInviteUser, utils.SprintTemplate(emailBodyInviteUser, data))
+		err := mail.SendMail([]string{user.Email}, emailSubjectInviteUser, utils.SprintTemplate(consts.IacUserInvitationsTpl, data))
+		//err := mail.SendMail([]string{user.Email}, emailSubjectInviteUser, utils.SprintTemplate(emailBodyInviteUser, data))
 		if err != nil {
 			c.Logger().Errorf("error send mail to %s, err %s", user.Email, err)
 		}
