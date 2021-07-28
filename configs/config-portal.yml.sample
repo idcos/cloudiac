@@ -1,6 +1,7 @@
 listen: "0.0.0.0:9030"
 mysql: "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL_DATABASE}?charset=utf8mb4&parseTime=True&loc=Local"
 jwtSecretKey: ${JWT_SECRET_KEY}
+secretKey: ${SECRET_KEY}
 
 portal:
   address: ${PORTAL_ADDRESS}
