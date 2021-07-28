@@ -149,7 +149,7 @@ func parseConfig(filename string, out interface{}) error {
 	return nil
 }
 
-func parsePortalConfig(filename string) error {
+func ParsePortalConfig(filename string) error {
 	cfg := defaultConfig
 	if err := parseConfig(filename, &cfg); err != nil {
 		return err
@@ -159,6 +159,18 @@ func parsePortalConfig(filename string) error {
 	}
 	if cfg.JwtSecretKey == "" {
 		cfg.JwtSecretKey = cfg.SecretKey
+	}
+	lock.Lock()
+	defer lock.Unlock()
+	config = &cfg
+
+	return nil
+}
+
+func ParseRunnerConfig(filename string) error {
+	cfg := defaultConfig
+	if err := parseConfig(filename, &cfg); err != nil {
+		return err
 	}
 	lock.Lock()
 	defer lock.Unlock()
@@ -180,6 +192,10 @@ func initConfig(filename string, parser func(string) error) {
 	}
 }
 
-func Init(name string) {
-	initConfig(name, parsePortalConfig)
+func Init(name string, parseFunc ...func(string) error) {
+	if len(parseFunc) > 0 {
+		initConfig(name, parseFunc[0])
+	} else {
+		initConfig(name, ParsePortalConfig)
+	}
 }
