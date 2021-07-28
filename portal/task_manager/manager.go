@@ -283,17 +283,16 @@ func (m *TaskManager) runTask(ctx context.Context, task *models.Task) error {
 			m.wg.Done()
 		}()
 
-		m.doRunTask(ctx, task)
-
-		if task.IsEffectTask() {
-			// 不管任务成功还是失败都执行
+		if startErr := m.doRunTask(ctx, task); startErr == nil {
+			// 任务启动成功，执行任务结束后的处理函数
 			m.processTaskDone(task)
 		}
 	}()
 	return nil
 }
 
-func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) {
+// doRunTask, startErr 只在任务启动出错时(执行步骤前出错)才会返回错误
+func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startErr error) {
 	logger := m.logger.WithField("taskId", task.Id)
 
 	changeTaskStatus := func(status, message string) error {
@@ -304,8 +303,9 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) {
 		return nil
 	}
 
-	taskFailed := func(err error) {
-		logger.Infoln(err)
+	taskStartFailed := func(err error) {
+		logger.Infof("task failed: %s", err)
+		startErr = err
 		_ = changeTaskStatus(models.TaskFailed, err.Error())
 	}
 
@@ -329,17 +329,18 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) {
 
 	runTaskReq, err := buildRunTaskReq(m.db, *task)
 	if err != nil {
-		taskFailed(err)
+		taskStartFailed(err)
 		return
 	}
 
 	steps, err := services.GetTaskSteps(m.db, task.Id)
 	if err != nil {
-		taskFailed(errors.Wrap(err, "get task steps"))
+		taskStartFailed(errors.Wrap(err, "get task steps"))
 		return
 	}
 
-	for _, step := range steps {
+	var step *models.TaskStep
+	for _, step = range steps {
 		if step.Index < task.CurrStep {
 			// 跳过己执行的步骤
 			continue
@@ -351,16 +352,12 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) {
 		}
 
 		if err = m.runTaskStep(ctx, *runTaskReq, task, step); err != nil {
-			if err == context.Canceled {
-				logger.Infof("run task step: %v", err)
-				break
-			}
-			taskFailed(errors.Wrap(err, fmt.Sprintf("step %d", step.Index)))
+			logger.Infof("run task step: %v", err)
 			break
 		}
 	}
 
-	if task.IsEffectTask() {
+	if task.IsEffectTask() && step != nil && !step.IsRejected() {
 		// 执行信息采集步骤
 		if err := m.runTaskStep(ctx, *runTaskReq, task, &models.TaskStep{
 			TaskStepBody: models.TaskStepBody{
@@ -379,7 +376,8 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) {
 		}
 	}
 
-	logger.Infof("task done: %s", task.Id)
+	logger.Infof("task done, status: %s", task.Status)
+	return nil
 }
 
 func (m *TaskManager) processTaskDone(task *models.Task) {
@@ -397,8 +395,8 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 		return content, nil
 	}
 
-	// 分析环境资源、outputs, changes
-	processResult := func() error {
+	// 分析环境资源、outputs
+	processState := func() error {
 		if bs, err := read(task.StateJsonPath()); err != nil {
 			return fmt.Errorf("read state json: %v", err)
 		} else if len(bs) > 0 {
@@ -414,23 +412,19 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			}
 		}
 
-		// 任务执行成功才会进行 changes 统计，失败的话基于 plan 文件进行变更统计是不准确的，
-		// terraform 执行 apply 失败也不会输出资源变更情况
-		if task.Status == models.TaskComplete {
-			if bs, err := read(task.PlanJsonPath()); err != nil {
-				return fmt.Errorf("read plan json: %v", err)
-			} else if len(bs) > 0 {
-				tfPlan, err := services.UnmarshalPlanJson(bs)
-				if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges); err != nil {
-					return fmt.Errorf("save task changes: %v", err)
-				}
-			}
-		}
-
 		return nil
 	}
-	if err := processResult(); err != nil {
-		logger.Errorf("process result: %v", err)
+
+	processPlan := func() error {
+		if bs, err := read(task.PlanJsonPath()); err != nil {
+			return fmt.Errorf("read plan json: %v", err)
+		} else if len(bs) > 0 {
+			tfPlan, err := services.UnmarshalPlanJson(bs)
+			if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges); err != nil {
+				return fmt.Errorf("save task changes: %v", err)
+			}
+		}
+		return nil
 	}
 
 	// 设置 auto destroy
@@ -466,8 +460,43 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 
 		return nil
 	}
-	if err := processAutoDestroy(); err != nil {
-		logger.Errorf("process auto destroy: %v", err)
+
+	lastStep, err := services.GetTaskStep(dbSess, task.Id, task.CurrStep)
+	if err != nil {
+		logger.Errorf("get task step(%d) error: %v", err, task.CurrStep)
+		return
+	}
+
+	// 基于最后一个步骤更新任务状态
+	updateTaskStatus := func() error {
+		if err = services.ChangeTaskStatusWithStep(dbSess, task, lastStep); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if !lastStep.IsRejected() {
+		if task.IsEffectTask() {
+			if err := processState(); err != nil {
+				logger.Errorf("process task state: %v", err)
+			}
+
+			// 任务执行成功才会进行 changes 统计，失败的话基于 plan 文件进行变更统计是不准确的
+			// (terraform 执行 apply 失败也不会输出资源变更情况)
+			if lastStep.Status == models.TaskComplete {
+				if err := processPlan(); err != nil {
+					logger.Errorf("process task plan: %v", err)
+				}
+			}
+
+			if err := processAutoDestroy(); err != nil {
+				logger.Errorf("process auto destroy: %v", err)
+			}
+		}
+
+		if err := updateTaskStatus(); err != nil {
+			logger.Errorf("update task status error: %v", err)
+		}
 	}
 }
 
@@ -515,7 +544,6 @@ func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq
 		step = newStep
 	}
 
-	var stepResult *waitStepResult
 loop:
 	for {
 		select {
@@ -536,7 +564,7 @@ loop:
 				return err
 			}
 		case models.TaskStepRunning:
-			if stepResult, err = WaitTaskStep(ctx, m.db, task, step); err != nil {
+			if _, err = WaitTaskStep(ctx, m.db, task, step); err != nil {
 				logger.Errorf("wait task result error: %v", err)
 				changeStepStatus(models.TaskStepFailed, err.Error())
 				return err
@@ -548,15 +576,6 @@ loop:
 
 	switch step.Status {
 	case models.TaskStepComplete:
-		// 有可能步骤变为 complete 状态后程序强制退出，导致任务和环境状态未设置，
-		// 重启后任务会被恢复执行，此时 stepResult 为 nil
-		if stepResult == nil {
-			// 有可能任务状态未与步骤状态同步，这里同步一下
-			if er := services.ChangeTaskStatus(m.db, task, step.Status, ""); er != nil {
-				logger.Errorf("change task status: %v", er)
-				panic(er)
-			}
-		}
 		return nil
 	case models.TaskStepFailed:
 		if step.Message != "" {

@@ -283,9 +283,8 @@ func (t *Task) genStepScript() error {
 var initCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 git clone '{{.Req.RepoAddress}}' code && \
 cd 'code/{{.Req.Env.Workdir}}' && \
-git checkout '{{.Req.RepoRevision}}' && \
-ln -sf {{.IacTfFile}} . && \
-ln -sf {{.IacTfVars}} . && \
+git checkout -q '{{.Req.RepoRevision}}' && echo check out $(git rev-parse --short HEAD). && \
+ln -sf {{.IacTfFile}} . && ln -sf {{.IacTfVars}} . && \
 terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }}
 `))
 

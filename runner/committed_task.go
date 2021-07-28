@@ -12,6 +12,7 @@ import (
 	"github.com/docker/docker/errdefs"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -177,7 +178,10 @@ func (task *CommittedTaskStep) Wait(ctx context.Context) (int64, error) {
 							Force:         false,
 						})
 					if err != nil {
-						logger.Warnf("remove container error: %v", err)
+						// 有可能其他协程己经提交了删除，这里忽略掉这个报错
+						if !strings.Contains(err.Error(), "already in progress") {
+							logger.Warnf("remove container error: %v", err)
+						}
 					}
 				}
 			}

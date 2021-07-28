@@ -240,28 +240,14 @@ var stepStatus2TaskStatus = map[string]string{
 	models.TaskStepRunning:   models.TaskRunning,
 	models.TaskStepFailed:    models.TaskFailed,
 	models.TaskStepTimeout:   models.TaskFailed,
-	// complete 状态在代码中特殊处理
+	models.TaskStepComplete:  models.TaskComplete,
 }
 
 func ChangeTaskStatusWithStep(dbSess *db.Session, task *models.Task, step *models.TaskStep) e.Error {
-	var (
-		taskStatus string
-	)
-
-	if step.Status == models.TaskStepComplete {
-		if step.NextStep == "" {
-			taskStatus = models.TaskComplete
-		} else {
-			taskStatus = models.TaskRunning
-		}
-	} else {
-		var ok bool
-		taskStatus, ok = stepStatus2TaskStatus[step.Status]
-		if !ok {
-			panic(fmt.Errorf("unknown task step status %v", step.Status))
-		}
+	taskStatus, ok := stepStatus2TaskStatus[step.Status]
+	if !ok {
+		panic(fmt.Errorf("unknown task step status %v", step.Status))
 	}
-
 	return ChangeTaskStatus(dbSess, task, taskStatus, step.Message)
 }
 
@@ -557,10 +543,12 @@ func fetchRunnerTaskStepLog(ctx context.Context, runnerId string, step *models.T
 	params.Add("step", fmt.Sprintf("%d", step.Index))
 	wsConn, resp, err := utils.WebsocketDail(runnerAddr, consts.RunnerTaskLogFollowURL, params)
 	if err != nil {
-		respBody, _ := io.ReadAll(resp.Body)
-		logger.Debugf("websocket dail error: %s, response: %s", err, respBody)
-		if resp.StatusCode == http.StatusNotFound {
-			return ErrRunnerTaskNotExists
+		if resp != nil {
+			respBody, _ := io.ReadAll(resp.Body)
+			logger.Debugf("websocket dail error: %s, response: %s", err, respBody)
+			if resp.StatusCode == http.StatusNotFound {
+				return ErrRunnerTaskNotExists
+			}
 		}
 		return errors.Wrapf(err, "websocket dail: %v/%s", runnerAddr, consts.RunnerTaskLogFollowURL)
 	}
