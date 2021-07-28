@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
@@ -21,7 +22,7 @@ func Auth(c *ctx.GinRequest) {
 	}
 
 	token, err := jwt.ParseWithClaims(tokenStr, &services.Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(services.SecretKey), nil
+		return []byte(configs.Get().JwtSecretKey), nil
 	})
 	if err != nil {
 		c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)

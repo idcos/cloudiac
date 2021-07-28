@@ -1,6 +1,7 @@
 package services
 
 import (
+	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
@@ -8,10 +9,6 @@ import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"time"
-)
-
-var (
-	SecretKey = "c1c3ik8rvdg331ivogcg"
 )
 
 type Claims struct {
@@ -34,7 +31,7 @@ func GenerateToken(uid models.Id, name string, isAdmin bool, expireDuration time
 		},
 	})
 
-	return token.SignedString([]byte(SecretKey))
+	return token.SignedString([]byte(configs.Get().JwtSecretKey))
 }
 
 func CreateToken(tx *db.Session, token models.Token) (*models.Token, e.Error) {
