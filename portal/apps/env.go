@@ -18,7 +18,7 @@ import (
 )
 
 // CreateEnv 创建环境
-func CreateEnv(c *ctx.ServiceCtx, form *forms.CreateEnvForm) (*models.EnvDetail, e.Error) {
+func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDetail, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create env %s", form.Name))
 
 	if c.OrgId == "" || c.ProjectId == "" {
@@ -179,7 +179,7 @@ func getVariables(vars map[string]models.Variable) models.EnvVariables {
 }
 
 // SearchEnv 环境查询
-func SearchEnv(c *ctx.ServiceCtx, form *forms.SearchEnvForm) (interface{}, e.Error) {
+func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e.Error) {
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
@@ -271,7 +271,7 @@ func PopulateLastTask(query *db.Session, env *models.EnvDetail) *models.EnvDetai
 }
 
 // UpdateEnv 环境编辑
-func UpdateEnv(c *ctx.ServiceCtx, form *forms.UpdateEnvForm) (*models.EnvDetail, e.Error) {
+func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDetail, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update env %s", form.Id))
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
@@ -367,7 +367,7 @@ func UpdateEnv(c *ctx.ServiceCtx, form *forms.UpdateEnvForm) (*models.EnvDetail,
 }
 
 // EnvDetail 环境信息详情
-func EnvDetail(c *ctx.ServiceCtx, form forms.DetailEnvForm) (*models.EnvDetail, e.Error) {
+func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDetail, e.Error) {
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
@@ -392,7 +392,7 @@ func EnvDetail(c *ctx.ServiceCtx, form forms.DetailEnvForm) (*models.EnvDetail, 
 
 // EnvDeploy 创建新部署任务
 // 任务类型：plan, apply, destroy
-func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.EnvDetail, e.Error) {
+func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDetail, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create env task %s", form.Id))
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
@@ -589,7 +589,7 @@ func EnvDeploy(c *ctx.ServiceCtx, form *forms.DeployEnvForm) (*models.EnvDetail,
 }
 
 // SearchEnvResources 查询环境资源列表
-func SearchEnvResources(c *ctx.ServiceCtx, form *forms.SearchEnvResourceForm) (interface{}, e.Error) {
+func SearchEnvResources(c *ctx.ServiceContext, form *forms.SearchEnvResourceForm) (interface{}, e.Error) {
 	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}

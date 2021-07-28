@@ -8,7 +8,7 @@ import (
 )
 
 type Task struct {
-	ctrl.BaseController
+	ctrl.GinController
 }
 
 /**
@@ -24,12 +24,12 @@ type Task struct {
 // @router /tasks [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Task}}
 */
-func (Task) Search(c *ctx.GinRequestCtx) {
+func (Task) Search(c *ctx.GinRequest) {
 	form := forms.SearchTaskForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchTask(c.ServiceCtx(), &form))
+	c.JSONResult(apps.SearchTask(c.Service(), &form))
 }
 
 // Detail 任务信息详情
@@ -43,12 +43,12 @@ func (Task) Search(c *ctx.GinRequestCtx) {
 // @Param taskId path string true "任务ID"
 // @router /tasks/{taskId} [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
-func (Task) Detail(c *ctx.GinRequestCtx) {
+func (Task) Detail(c *ctx.GinRequest) {
 	form := forms.DetailTaskForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.TaskDetail(c.ServiceCtx(), form))
+	c.JSONResult(apps.TaskDetail(c.Service(), form))
 }
 
 // FollowLogSse 当前任务实时日志
@@ -62,7 +62,7 @@ func (Task) Detail(c *ctx.GinRequestCtx) {
 // @Param taskId path string true "任务ID"
 // @router /tasks/{taskId}/log/sse [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
-func (Task) FollowLogSse(c *ctx.GinRequestCtx) {
+func (Task) FollowLogSse(c *ctx.GinRequest) {
 	defer c.SSEvent("end", "end")
 
 	form := forms.DetailTaskForm{}
@@ -86,12 +86,12 @@ func (Task) FollowLogSse(c *ctx.GinRequestCtx) {
 // @Param form formData forms.ApproveTaskForm true "parameter"
 // @router /tasks/{taskId}/approve [post]
 // @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
-func (Task) TaskApprove(c *ctx.GinRequestCtx) {
+func (Task) TaskApprove(c *ctx.GinRequest) {
 	form := &forms.ApproveTaskForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.ApproveTask(c.ServiceCtx(), form))
+	c.JSONResult(apps.ApproveTask(c.Service(), form))
 }
 
 // Log 任务日志
@@ -105,13 +105,13 @@ func (Task) TaskApprove(c *ctx.GinRequestCtx) {
 // @Param taskId path string true "任务ID"
 // @router /tasks/{taskId}/log [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
-func (Task) Log(c *ctx.GinRequestCtx) {
+func (Task) Log(c *ctx.GinRequest) {
 	// TODO: 待实现
 	//form := forms.DetailTaskForm{}
 	//if err := c.Bind(&form); err != nil {
 	//	return
 	//}
-	//c.JSONResult(apps.TaskDetail(c.ServiceCtx(), form))
+	//c.JSONResult(apps.TaskDetail(c.ServiceContext(), form))
 }
 
 // Output Terraform Output
@@ -125,12 +125,12 @@ func (Task) Log(c *ctx.GinRequestCtx) {
 // @Param taskId path string true "任务ID"
 // @router /tasks/{taskId}/output [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
-func (Task) Output(c *ctx.GinRequestCtx) {
+func (Task) Output(c *ctx.GinRequest) {
 	form := forms.DetailTaskForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.TaskOutput(c.ServiceCtx(), form))
+	c.JSONResult(apps.TaskOutput(c.Service(), form))
 }
 
 // Resource 获取任务资源列表
@@ -146,10 +146,10 @@ func (Task) Output(c *ctx.GinRequestCtx) {
 // @Param taskId path string true "任务ID"
 // @router /tasks/{taskId}/resources [get]
 // @Success 200 {object} ctx.JSONResult{result=models.Resource}
-func (Task) Resource(c *ctx.GinRequestCtx) {
+func (Task) Resource(c *ctx.GinRequest) {
 	form := forms.SearchTaskResourceForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchTaskResources(c.ServiceCtx(), &form))
+	c.JSONResult(apps.SearchTaskResources(c.Service(), &form))
 }

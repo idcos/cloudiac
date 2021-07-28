@@ -8,7 +8,7 @@ import (
 )
 
 type TaskComment struct {
-	ctrl.BaseController
+	ctrl.GinController
 }
 
 // Create 创建作业评论
@@ -22,12 +22,12 @@ type TaskComment struct {
 // @Param data body forms.CreateTaskCommentForm true "作业评论信息"
 // @Success 200 {object} models.TaskComment
 // @Router /tasks/{taskId}/comments [post]
-func (TaskComment) Create(c *ctx.GinRequestCtx) {
+func (TaskComment) Create(c *ctx.GinRequest) {
 	form := &forms.CreateTaskCommentForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CreateTaskComment(c.ServiceCtx(), form))
+	c.JSONResult(apps.CreateTaskComment(c.Service(), form))
 }
 
 // Search 查询作业评论列表
@@ -40,10 +40,10 @@ func (TaskComment) Create(c *ctx.GinRequestCtx) {
 // @Param taskId path string true "作业ID"
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.TaskComment}}
 // @Router /tasks/{taskId}/comments [get]
-func (TaskComment) Search(c *ctx.GinRequestCtx) {
+func (TaskComment) Search(c *ctx.GinRequest) {
 	form := &forms.SearchTaskCommentForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchTaskComment(c.ServiceCtx(), form))
+	c.JSONResult(apps.SearchTaskComment(c.Service(), form))
 }

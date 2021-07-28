@@ -12,7 +12,7 @@ import (
 )
 
 // SearchKey 密钥列表查询
-func SearchKey(c *ctx.ServiceCtx, form *forms.SearchKeyForm) (interface{}, e.Error) {
+func SearchKey(c *ctx.ServiceContext, form *forms.SearchKeyForm) (interface{}, e.Error) {
 	query := services.QueryKey(services.QueryWithOrgId(c.DB(), c.OrgId))
 	if form.Q != "" {
 		qs := "%" + form.Q + "%"
@@ -33,7 +33,7 @@ func SearchKey(c *ctx.ServiceCtx, form *forms.SearchKeyForm) (interface{}, e.Err
 }
 
 // CreateKey 创建密钥
-func CreateKey(c *ctx.ServiceCtx, form *forms.CreateKeyForm) (interface{}, e.Error) {
+func CreateKey(c *ctx.ServiceContext, form *forms.CreateKeyForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create key %s", form.Name))
 
 	encrypted, er := utils.AesEncrypt(form.Key)
@@ -55,7 +55,7 @@ func CreateKey(c *ctx.ServiceCtx, form *forms.CreateKeyForm) (interface{}, e.Err
 	return key, nil
 }
 
-func UpdateKey(c *ctx.ServiceCtx, form *forms.UpdateKeyForm) (key *models.Key, err e.Error) {
+func UpdateKey(c *ctx.ServiceContext, form *forms.UpdateKeyForm) (key *models.Key, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update key %s", form.Id))
 	if form.Id == "" {
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
@@ -78,7 +78,7 @@ func UpdateKey(c *ctx.ServiceCtx, form *forms.UpdateKeyForm) (key *models.Key, e
 	return
 }
 
-func DeleteKey(c *ctx.ServiceCtx, form *forms.DeleteKeyForm) (result interface{}, re e.Error) {
+func DeleteKey(c *ctx.ServiceContext, form *forms.DeleteKeyForm) (result interface{}, re e.Error) {
 	c.AddLogField("action", fmt.Sprintf("delete key %s", form.Id))
 	query := services.QueryKey(services.QueryWithOrgId(c.DB(), c.OrgId))
 	if err := services.DeleteKey(query, form.Id); err != nil {
@@ -88,7 +88,7 @@ func DeleteKey(c *ctx.ServiceCtx, form *forms.DeleteKeyForm) (result interface{}
 	return
 }
 
-func DetailKey(c *ctx.ServiceCtx, form *forms.DetailKeyForm) (result interface{}, re e.Error) {
+func DetailKey(c *ctx.ServiceContext, form *forms.DetailKeyForm) (result interface{}, re e.Error) {
 	query := services.QueryKey(services.QueryWithOrgId(c.DB(), c.OrgId))
 	if key, err := services.GetKeyById(query, form.Id, false); err != nil {
 		if err.Code() == e.KeyNotExist {

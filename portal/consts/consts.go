@@ -13,6 +13,8 @@ const (
 	RunnerConnectTimeout = 5
 
 	DefaultAdminEmail = "admin@example.com"
+
+	CTX_KEY = "__request_ctx__"
 )
 
 const (
@@ -76,18 +78,6 @@ const (
 )
 
 var (
-	BomUtf8    = []byte{0xEF, 0xBB, 0xBF}
-	AccountMap = map[string]map[string]string{
-		"aliyun": {
-			"accessKeyId":     "ALICLOUD_ACCESS_KEY",
-			"secretAccessKey": "ALICLOUD_SECRET_KEY",
-		},
-		"vmware": {
-			"userName": "username",
-			"password": "password",
-		},
-		"huawei": {},
-	}
 	StatusTranslation = map[string]string{
 		"complete": "成功",
 		"failed":   "失败",

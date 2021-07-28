@@ -10,7 +10,7 @@ var (
 	exposeHeaders = "Content-Length,Access-Control-Allow-Origin,Access-Control-Allow-Headers,Content-Type"
 )
 
-func Cors(c *ctx.GinRequestCtx) {
+func Cors(c *ctx.GinRequest) {
 	c.Header("Access-Control-Allow-Origin", "*")
 	c.Header("Access-Control-Allow-Headers", allowHeaders)
 	c.Header("Access-Control-Allow-Methods", "POST,GET,OPTIONS")

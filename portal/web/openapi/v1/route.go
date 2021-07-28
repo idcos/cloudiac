@@ -10,7 +10,7 @@ import (
 )
 
 func Register(g *gin.RouterGroup) {
-	w := ctrl.GinRequestCtxWrap
+	w := ctrl.WrapHandler
 	iac := g.Group("/", w(middleware.OpenApiAuth))
 	g.Any("/check", func(c *gin.Context) {
 		c.JSON(200, gin.H{

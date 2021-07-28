@@ -8,39 +8,39 @@ import (
 )
 
 type Auth struct {
-	ctrl.BaseController
+	ctrl.GinController
 }
 
-func (Auth) Create(c *ctx.GinRequestCtx) {
+func (Auth) Create(c *ctx.GinRequest) {
 	form := &forms.CreateTokenForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CreateToken(c.ServiceCtx(), form))
+	c.JSONResult(apps.CreateToken(c.Service(), form))
 }
 
-func (Auth) Search(c *ctx.GinRequestCtx) {
+func (Auth) Search(c *ctx.GinRequest) {
 	form := &forms.SearchTokenForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchToken(c.ServiceCtx(), form))
+	c.JSONResult(apps.SearchToken(c.Service(), form))
 }
 
-func (Auth) Update(c *ctx.GinRequestCtx) {
+func (Auth) Update(c *ctx.GinRequest) {
 	form := &forms.UpdateTokenForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.UpdateToken(c.ServiceCtx(), form))
+	c.JSONResult(apps.UpdateToken(c.Service(), form))
 }
 
-func (Auth) Delete(c *ctx.GinRequestCtx) {
+func (Auth) Delete(c *ctx.GinRequest) {
 	form := &forms.DeleteTokenForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DeleteToken(c.ServiceCtx(), form))
+	c.JSONResult(apps.DeleteToken(c.Service(), form))
 }
 
 // GetUserByToken 获取登陆用户自身信息
@@ -52,8 +52,8 @@ func (Auth) Delete(c *ctx.GinRequestCtx) {
 // @Security AuthToken
 // @router /auth/me [get]
 // @Success 200 {object} ctx.JSONResult{result=models.User}
-func (Auth) GetUserByToken(c *ctx.GinRequestCtx) {
-	c.JSONResult(apps.UserDetail(c.ServiceCtx(), c.ServiceCtx().UserId))
+func (Auth) GetUserByToken(c *ctx.GinRequest) {
+	c.JSONResult(apps.UserDetail(c.Service(), c.Service().UserId))
 }
 
 // Login 用户登陆
@@ -64,10 +64,10 @@ func (Auth) GetUserByToken(c *ctx.GinRequestCtx) {
 // @Param body formData forms.LoginForm true "parameter"
 // @router /auth/login [post]
 // @Success 200 {object} ctx.JSONResult{result=models.LoginResp}
-func (Auth) Login(c *ctx.GinRequestCtx) {
+func (a Auth) Login(c *ctx.GinRequest) {
 	form := forms.LoginForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.Login(c.ServiceCtx(), &form))
+	c.JSONResult(apps.Login(c.Service(), &form))
 }

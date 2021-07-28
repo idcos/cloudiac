@@ -34,7 +34,7 @@ var (
 )
 
 // CreateUser 创建用户
-func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*CreateUserResp, e.Error) {
+func CreateUser(c *ctx.ServiceContext, form *forms.CreateUserForm) (*CreateUserResp, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create user %s", form.Name))
 
 	initPass := utils.GenPasswd(6, "mix")
@@ -121,7 +121,7 @@ func CreateUser(c *ctx.ServiceCtx, form *forms.CreateUserForm) (*CreateUserResp,
 }
 
 // SearchUser 查询用户列表
-func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.Error) {
+func SearchUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{}, e.Error) {
 	query := services.QueryUser(c.DB())
 
 	if c.OrgId == "" && !c.IsSuperAdmin {
@@ -201,7 +201,7 @@ func SearchUser(c *ctx.ServiceCtx, form *forms.SearchUserForm) (interface{}, e.E
 }
 
 // UpdateUser 用户信息编辑
-func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (*models.User, e.Error) {
+func UpdateUser(c *ctx.ServiceContext, form *forms.UpdateUserForm) (*models.User, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update user %s", form.Id))
 	if c.UserId == form.Id || c.IsSuperAdmin {
 		// 自身编辑
@@ -252,7 +252,7 @@ func UpdateUser(c *ctx.ServiceCtx, form *forms.UpdateUserForm) (*models.User, e.
 
 // ChangeUserStatus 修改用户启用/禁用状态
 // 需要平台管理员权限。
-func ChangeUserStatus(c *ctx.ServiceCtx, form *forms.DisableUserForm) (*models.User, e.Error) {
+func ChangeUserStatus(c *ctx.ServiceContext, form *forms.DisableUserForm) (*models.User, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("change user status %s", form.Id))
 	query := c.DB()
 	if c.IsSuperAdmin == false {
@@ -285,7 +285,7 @@ func ChangeUserStatus(c *ctx.ServiceCtx, form *forms.DisableUserForm) (*models.U
 }
 
 // UserDetail 获取单个用户详情
-func UserDetail(c *ctx.ServiceCtx, userId models.Id) (*models.UserWithRoleResp, e.Error) {
+func UserDetail(c *ctx.ServiceContext, userId models.Id) (*models.UserWithRoleResp, e.Error) {
 	query := c.DB()
 
 	if c.IsSuperAdmin || c.UserId == userId {
@@ -354,7 +354,7 @@ func UserDetail(c *ctx.ServiceCtx, userId models.Id) (*models.UserWithRoleResp, 
 
 // DeleteUser 删除用户
 // 需要平台管理员权限。
-func DeleteUser(c *ctx.ServiceCtx, form *forms.DeleteUserForm) (interface{}, e.Error) {
+func DeleteUser(c *ctx.ServiceContext, form *forms.DeleteUserForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("delete user %s", form.Id))
 	if !c.IsSuperAdmin {
 		return nil, e.New(e.PermissionDeny, http.StatusForbidden)
@@ -409,7 +409,7 @@ func DeleteUser(c *ctx.ServiceCtx, form *forms.DeleteUserForm) (interface{}, e.E
 
 //
 //// UserRestrictOrg 获取用户访问范围限制
-//func UserRestrictOrg(c *ctx.ServiceCtx, query *db.Session) *db.Session {
+//func UserRestrictOrg(c *ctx.ServiceContext, query *db.Session) *db.Session {
 //	query = query.Model(models.User{})
 //	if c.OrgId != "" {
 //		subQ := query.Model(models.UserOrg{}).Select("user_id").Where("org_id = ?", c.OrgId)
@@ -441,7 +441,7 @@ func QueryUserWithUserIdsByProject(query *db.Session, projectId models.Id) *db.S
 }
 
 // UserPassReset 用户重置密码
-func UserPassReset(c *ctx.ServiceCtx, form *forms.DetailUserForm) (*models.User, e.Error) {
+func UserPassReset(c *ctx.ServiceContext, form *forms.DetailUserForm) (*models.User, e.Error) {
 	initPass := utils.GenPasswd(6, "mix")
 	hashedPassword, err := services.HashPassword(initPass)
 	if err != nil {

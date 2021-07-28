@@ -29,7 +29,7 @@ var (
 )
 
 // CreateOrganization 创建组织
-func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (*models.Organization, e.Error) {
+func CreateOrganization(c *ctx.ServiceContext, form *forms.CreateOrganizationForm) (*models.Organization, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create org %s", form.Name))
 
 	// 创建组织
@@ -49,7 +49,7 @@ func CreateOrganization(c *ctx.ServiceCtx, form *forms.CreateOrganizationForm) (
 }
 
 // SearchOrganization 组织查询
-func SearchOrganization(c *ctx.ServiceCtx, form *forms.SearchOrganizationForm) (interface{}, e.Error) {
+func SearchOrganization(c *ctx.ServiceContext, form *forms.SearchOrganizationForm) (interface{}, e.Error) {
 	query := services.QueryOrganization(c.DB())
 	if c.IsSuperAdmin {
 		if form.Status != "" {
@@ -76,7 +76,7 @@ func SearchOrganization(c *ctx.ServiceCtx, form *forms.SearchOrganizationForm) (
 }
 
 // UpdateOrganization 组织编辑
-func UpdateOrganization(c *ctx.ServiceCtx, form *forms.UpdateOrganizationForm) (*models.Organization, e.Error) {
+func UpdateOrganization(c *ctx.ServiceContext, form *forms.UpdateOrganizationForm) (*models.Organization, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update org %s", form.Id))
 	query := c.DB()
 
@@ -118,7 +118,7 @@ func UpdateOrganization(c *ctx.ServiceCtx, form *forms.UpdateOrganizationForm) (
 }
 
 //ChangeOrgStatus 修改组织启用/禁用状态
-func ChangeOrgStatus(c *ctx.ServiceCtx, form *forms.DisableOrganizationForm) (*models.Organization, e.Error) {
+func ChangeOrgStatus(c *ctx.ServiceContext, form *forms.DisableOrganizationForm) (*models.Organization, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("change org status %s", form.Id))
 	if !c.IsSuperAdmin && c.OrgId == "" {
 		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest)
@@ -161,7 +161,7 @@ type organizationDetailResp struct {
 }
 
 // OrganizationDetail 组织信息详情
-func OrganizationDetail(c *ctx.ServiceCtx, form forms.DetailOrganizationForm) (*organizationDetailResp, e.Error) {
+func OrganizationDetail(c *ctx.ServiceContext, form forms.DetailOrganizationForm) (*organizationDetailResp, e.Error) {
 	var (
 		org  *models.Organization
 		user *models.User
@@ -198,14 +198,14 @@ func OrganizationDetail(c *ctx.ServiceCtx, form forms.DetailOrganizationForm) (*
 }
 
 // DeleteOrganization 删除组织
-func DeleteOrganization(c *ctx.ServiceCtx, form *forms.DeleteOrganizationForm) (org *models.Organization, err e.Error) {
+func DeleteOrganization(c *ctx.ServiceContext, form *forms.DeleteOrganizationForm) (org *models.Organization, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("delete org %s", form.Id))
 	c.Logger().Errorf("del id %s", form.Id)
 	return nil, e.New(e.BadRequest, http.StatusNotImplemented)
 }
 
 // DeleteUserOrgRel 从组织移除用户
-func DeleteUserOrgRel(c *ctx.ServiceCtx, form *forms.DeleteUserOrgRelForm) (interface{}, e.Error) {
+func DeleteUserOrgRel(c *ctx.ServiceContext, form *forms.DeleteUserOrgRelForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("delete user %s for org %s", form.UserId, c.OrgId))
 	query := c.DB()
 	query = query.Where("status = 'enable'")
@@ -236,7 +236,7 @@ func DeleteUserOrgRel(c *ctx.ServiceCtx, form *forms.DeleteUserOrgRelForm) (inte
 }
 
 // AddUserOrgRel 添加用户到组织
-func AddUserOrgRel(c *ctx.ServiceCtx, form *forms.AddUserOrgRelForm) (*models.UserWithRoleResp, e.Error) {
+func AddUserOrgRel(c *ctx.ServiceContext, form *forms.AddUserOrgRelForm) (*models.UserWithRoleResp, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("add user %s to org %s", form.UserId, form.Id))
 	var user *models.User
 	query := c.DB()
@@ -276,7 +276,7 @@ func AddUserOrgRel(c *ctx.ServiceCtx, form *forms.AddUserOrgRelForm) (*models.Us
 }
 
 // UpdateUserOrgRel 更新用户组织角色
-func UpdateUserOrgRel(c *ctx.ServiceCtx, form *forms.UpdateUserOrgRelForm) (*models.UserWithRoleResp, e.Error) {
+func UpdateUserOrgRel(c *ctx.ServiceContext, form *forms.UpdateUserOrgRelForm) (*models.UserWithRoleResp, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update user %s in org %s to role %s", form.UserId, c.OrgId, form.Role))
 
 	query := c.DB()
@@ -309,7 +309,7 @@ func UpdateUserOrgRel(c *ctx.ServiceCtx, form *forms.UpdateUserOrgRelForm) (*mod
 
 // InviteUser 邀请用户加入某个组织
 // 如果用户不存在，则创建并加入组织，如果用户已经存在，则加入该组织
-func InviteUser(c *ctx.ServiceCtx, form *forms.InviteUserForm) (*models.UserWithRoleResp, e.Error) {
+func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*models.UserWithRoleResp, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("invite user %s%s to org %s as %s", form.Name, form.UserId, form.Id, form.Role))
 
 	org, err := services.GetOrganizationById(c.DB(), form.Id)

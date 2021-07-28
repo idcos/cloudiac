@@ -16,7 +16,7 @@ import (
 	"strings"
 )
 
-func CreateVcs(c *ctx.ServiceCtx, form *forms.CreateVcsForm) (interface{}, e.Error) {
+func CreateVcs(c *ctx.ServiceContext, form *forms.CreateVcsForm) (interface{}, e.Error) {
 	vcs, err := services.CreateVcs(c.DB(), models.Vcs{
 		OrgId:    c.OrgId,
 		Name:     form.Name,
@@ -31,7 +31,7 @@ func CreateVcs(c *ctx.ServiceCtx, form *forms.CreateVcsForm) (interface{}, e.Err
 }
 
 // 判断前端传递组织id是否具有该vcs仓库读写权限
-func checkOrgVcsAuth(c *ctx.ServiceCtx, id models.Id) (vcs *models.Vcs, err e.Error) {
+func checkOrgVcsAuth(c *ctx.ServiceContext, id models.Id) (vcs *models.Vcs, err e.Error) {
 	vcs, err = services.QueryVcsByVcsId(id, c.DB())
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func checkOrgVcsAuth(c *ctx.ServiceCtx, id models.Id) (vcs *models.Vcs, err e.Er
 
 }
 
-func UpdateVcs(c *ctx.ServiceCtx, form *forms.UpdateVcsForm) (vcs *models.Vcs, err e.Error) {
+func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (vcs *models.Vcs, err e.Error) {
 	vcs, err = checkOrgVcsAuth(c, form.Id)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func UpdateVcs(c *ctx.ServiceCtx, form *forms.UpdateVcsForm) (vcs *models.Vcs, e
 	return
 }
 
-func SearchVcs(c *ctx.ServiceCtx, form *forms.SearchVcsForm) (interface{}, e.Error) {
+func SearchVcs(c *ctx.ServiceContext, form *forms.SearchVcsForm) (interface{}, e.Error) {
 	rs, err := getPage(services.QueryVcs(c.OrgId, form.Status, form.Q, form.IsShowDefaultVcs, c.DB()), form, models.Vcs{})
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func SearchVcs(c *ctx.ServiceCtx, form *forms.SearchVcsForm) (interface{}, e.Err
 
 }
 
-func DeleteVcs(c *ctx.ServiceCtx, form *forms.DeleteVcsForm) (result interface{}, re e.Error) {
+func DeleteVcs(c *ctx.ServiceContext, form *forms.DeleteVcsForm) (result interface{}, re e.Error) {
 	_, err := checkOrgVcsAuth(c, form.Id)
 	if err != nil {
 		return nil, err
@@ -88,12 +88,12 @@ func DeleteVcs(c *ctx.ServiceCtx, form *forms.DeleteVcsForm) (result interface{}
 	return
 }
 
-func ListEnableVcs(c *ctx.ServiceCtx) (interface{}, e.Error) {
+func ListEnableVcs(c *ctx.ServiceContext) (interface{}, e.Error) {
 	return services.QueryEnableVcs(c.OrgId, c.DB())
 
 }
 
-func GetReadme(c *ctx.ServiceCtx, form *forms.GetReadmeForm) (interface{}, e.Error) {
+func GetReadme(c *ctx.ServiceContext, form *forms.GetReadmeForm) (interface{}, e.Error) {
 	vcs, err := checkOrgVcsAuth(c, form.Id)
 	if err != nil {
 		return nil, err
@@ -119,7 +119,7 @@ func GetReadme(c *ctx.ServiceCtx, form *forms.GetReadmeForm) (interface{}, e.Err
 	return res, nil
 }
 
-func ListRepos(c *ctx.ServiceCtx, form *forms.GetGitProjectsForm) (interface{}, e.Error) {
+func ListRepos(c *ctx.ServiceContext, form *forms.GetGitProjectsForm) (interface{}, e.Error) {
 	vcs, err := checkOrgVcsAuth(c, form.Id)
 	if err != nil {
 		return nil, err
@@ -154,7 +154,7 @@ type Revision struct {
 	Name string `json:"name"`
 }
 
-func listRepoRevision(c *ctx.ServiceCtx, form *forms.GetGitRevisionForm, revisionType string) (revision []*Revision, err e.Error) {
+func listRepoRevision(c *ctx.ServiceContext, form *forms.GetGitRevisionForm, revisionType string) (revision []*Revision, err e.Error) {
 	vcs, err := checkOrgVcsAuth(c, form.Id)
 	if err != nil {
 		return nil, err
@@ -186,18 +186,18 @@ func listRepoRevision(c *ctx.ServiceCtx, form *forms.GetGitRevisionForm, revisio
 
 }
 
-func ListRepoBranches(c *ctx.ServiceCtx, form *forms.GetGitRevisionForm) (brans []*Revision, err e.Error) {
+func ListRepoBranches(c *ctx.ServiceContext, form *forms.GetGitRevisionForm) (brans []*Revision, err e.Error) {
 	brans, err = listRepoRevision(c, form, "branches")
 	return brans, err
 }
 
-func ListRepoTags(c *ctx.ServiceCtx, form *forms.GetGitRevisionForm) (tags []*Revision, err e.Error) {
+func ListRepoTags(c *ctx.ServiceContext, form *forms.GetGitRevisionForm) (tags []*Revision, err e.Error) {
 	tags, err = listRepoRevision(c, form, "tags")
 	return tags, err
 
 }
 
-func VcsTfVarsSearch(c *ctx.ServiceCtx, form *forms.TemplateTfvarsSearchForm) (interface{}, e.Error) {
+func VcsTfVarsSearch(c *ctx.ServiceContext, form *forms.TemplateTfvarsSearchForm) (interface{}, e.Error) {
 	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
 	if err != nil {
 		return nil, err
@@ -222,7 +222,7 @@ func VcsTfVarsSearch(c *ctx.ServiceCtx, form *forms.TemplateTfvarsSearchForm) (i
 	return listFiles, nil
 }
 
-func VcsPlaybookSearch(c *ctx.ServiceCtx, form *forms.TemplatePlaybookSearchForm) (interface{}, e.Error) {
+func VcsPlaybookSearch(c *ctx.ServiceContext, form *forms.TemplatePlaybookSearchForm) (interface{}, e.Error) {
 	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
 	if err != nil {
 		return nil, err
@@ -249,7 +249,7 @@ func VcsPlaybookSearch(c *ctx.ServiceCtx, form *forms.TemplatePlaybookSearchForm
 	return listFiles, nil
 }
 
-func VcsVariableSearch(c *ctx.ServiceCtx, form *forms.TemplateVariableSearchForm) (interface{}, e.Error) {
+func VcsVariableSearch(c *ctx.ServiceContext, form *forms.TemplateVariableSearchForm) (interface{}, e.Error) {
 	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
 	if err != nil {
 		return nil, err

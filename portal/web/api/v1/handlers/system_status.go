@@ -15,11 +15,11 @@ import (
 // @Security AuthToken
 // @Success 200 {object} []apps.SystemStatusResp
 // @Router /systems/status [get]
-func PortalSystemStatusSearch(c *ctx.GinRequestCtx) {
+func PortalSystemStatusSearch(c *ctx.GinRequest) {
 	c.JSONResult(apps.SystemStatusSearch())
 }
 
-func ConsulKVSearch(c *ctx.GinRequestCtx) {
+func ConsulKVSearch(c *ctx.GinRequest) {
 	key := c.Query("key")
 	c.JSONResult(apps.ConsulKVSearch(key))
 }
@@ -33,7 +33,7 @@ func ConsulKVSearch(c *ctx.GinRequestCtx) {
 // @Security AuthToken
 // @Success 200
 // @Router /runners [get]
-func RunnerSearch(c *ctx.GinRequestCtx) {
+func RunnerSearch(c *ctx.GinRequest) {
 	c.JSONResult(apps.RunnerSearch())
 }
 
@@ -47,7 +47,7 @@ func RunnerSearch(c *ctx.GinRequestCtx) {
 // @Param data body forms.ConsulTagUpdateForm true "tag信息"
 // @Success 200
 // @Router /consul/tags [put]
-func ConsulTagUpdate(c *ctx.GinRequestCtx) {
+func ConsulTagUpdate(c *ctx.GinRequest) {
 	form := forms.ConsulTagUpdateForm{}
 	if err := c.Bind(&form); err != nil {
 		return

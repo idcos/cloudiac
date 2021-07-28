@@ -13,7 +13,7 @@ import (
 )
 
 // Login 用户登陆
-func Login(c *ctx.ServiceCtx, form *forms.LoginForm) (resp interface{}, err e.Error) {
+func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("user login: %s", form.Email))
 
 	user, err := services.GetUserByEmail(c.DB(), form.Email)

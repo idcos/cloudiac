@@ -9,7 +9,7 @@ import (
 )
 
 type User struct {
-	ctrl.BaseController
+	ctrl.GinController
 }
 
 // Create 创建用户
@@ -23,12 +23,12 @@ type User struct {
 // @Param form formData forms.CreateUserForm true "parameter"
 // @router /users [post]
 // @Success 200 {object} ctx.JSONResult{result=apps.CreateUserResp}
-func (User) Create(c *ctx.GinRequestCtx) {
+func (User) Create(c *ctx.GinRequest) {
 	form := forms.CreateUserForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CreateUser(c.ServiceCtx(), &form))
+	c.JSONResult(apps.CreateUser(c.Service(), &form))
 }
 
 // Search 用户列表查询
@@ -45,12 +45,12 @@ func (User) Create(c *ctx.GinRequestCtx) {
 // @Param form query forms.SearchUserForm true "parameter"
 // @router /users [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.User}}
-func (User) Search(c *ctx.GinRequestCtx) {
+func (User) Search(c *ctx.GinRequest) {
 	form := forms.SearchUserForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchUser(c.ServiceCtx(), &form))
+	c.JSONResult(apps.SearchUser(c.Service(), &form))
 }
 
 // Update 用户编辑
@@ -66,12 +66,12 @@ func (User) Search(c *ctx.GinRequestCtx) {
 // @Param form formData forms.UpdateUserForm true "parameter"
 // @router /users/{userId} [put]
 // @Success 200 {object} ctx.JSONResult{result=models.User}
-func (User) Update(c *ctx.GinRequestCtx) {
+func (User) Update(c *ctx.GinRequest) {
 	form := forms.UpdateUserForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.UpdateUser(c.ServiceCtx(), &form))
+	c.JSONResult(apps.UpdateUser(c.Service(), &form))
 }
 
 // ChangeUserStatus 启用/禁用用户
@@ -87,12 +87,12 @@ func (User) Update(c *ctx.GinRequestCtx) {
 // @Param form formData forms.DisableUserForm true "parameter"
 // @router /users/{userId}/status [put]
 // @Success 200 {object} ctx.JSONResult{result=models.User}
-func (User) ChangeUserStatus(c *ctx.GinRequestCtx) {
+func (User) ChangeUserStatus(c *ctx.GinRequest) {
 	form := forms.DisableUserForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.ChangeUserStatus(c.ServiceCtx(), &form))
+	c.JSONResult(apps.ChangeUserStatus(c.Service(), &form))
 }
 
 // UpdateSelf 用户自身信息编辑
@@ -105,9 +105,9 @@ func (User) ChangeUserStatus(c *ctx.GinRequestCtx) {
 // @Param form formData forms.UpdateUserForm true "parameter"
 // @router /users/self [put]
 // @Success 200 {object} ctx.JSONResult{result=models.User}
-func (u User) UpdateSelf(c *ctx.GinRequestCtx) {
+func (u User) UpdateSelf(c *ctx.GinRequest) {
 	// 将调用者 id 加入 Params 模拟 path 参数
-	c.Params = append(c.Params, gin.Param{Key: "id", Value: string(c.ServiceCtx().UserId)})
+	c.Params = append(c.Params, gin.Param{Key: "id", Value: string(c.Service().UserId)})
 	u.Update(c)
 }
 
@@ -124,12 +124,12 @@ func (u User) UpdateSelf(c *ctx.GinRequestCtx) {
 // @Param form formData forms.DeleteUserForm true "parameter"
 // @router /users/{userId} [delete]
 // @Success 200 {object} ctx.JSONResult
-func (User) Delete(c *ctx.GinRequestCtx) {
+func (User) Delete(c *ctx.GinRequest) {
 	form := forms.DeleteUserForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DeleteUser(c.ServiceCtx(), &form))
+	c.JSONResult(apps.DeleteUser(c.Service(), &form))
 }
 
 // Detail 用户详情
@@ -142,12 +142,12 @@ func (User) Delete(c *ctx.GinRequestCtx) {
 // @Param userId path string true "用户ID"
 // @router /users/{userId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.User}
-func (User) Detail(c *ctx.GinRequestCtx) {
+func (User) Detail(c *ctx.GinRequest) {
 	form := forms.DetailUserForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.UserDetail(c.ServiceCtx(), form.Id))
+	c.JSONResult(apps.UserDetail(c.Service(), form.Id))
 }
 
 // PasswordReset 重置用户密码
@@ -161,10 +161,10 @@ func (User) Detail(c *ctx.GinRequestCtx) {
 // @Param userId path string true "用户ID"
 // @router /users/{userId}/password/reset [post]
 // @Success 200 {object} ctx.JSONResult{result=apps.CreateUserResp}
-func (User) PasswordReset(c *ctx.GinRequestCtx) {
+func (User) PasswordReset(c *ctx.GinRequest) {
 	form := forms.DetailUserForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.UserPassReset(c.ServiceCtx(), &form))
+	c.JSONResult(apps.UserPassReset(c.Service(), &form))
 }

@@ -20,7 +20,7 @@ import (
 var logger = logs.Get()
 
 func GetRouter() *gin.Engine {
-	w := ctrl.GinRequestCtxWrap
+	w := ctrl.WrapHandler
 
 	e := gin.Default()
 	// 允许跨域
@@ -30,7 +30,7 @@ func GetRouter() *gin.Engine {
 
 	// 普通 handler func
 	e.GET("/hello", w(api.Hello))
-	e.GET("/system/info", w(func(c *ctx.GinRequestCtx) {
+	e.GET("/system/info", w(func(c *ctx.GinRequest) {
 		c.JSONSuccess(gin.H{
 			"version": common.VERSION,
 			"build":   common.BUILD,

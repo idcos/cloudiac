@@ -8,7 +8,7 @@ import (
 )
 
 type ProjectUser struct {
-	ctrl.BaseController
+	ctrl.GinController
 }
 
 // Create 创建项目下的用户
@@ -23,12 +23,12 @@ type ProjectUser struct {
 // @Param json body forms.CreateProjectUserForm true "parameter"
 // @Success 200 {object}  ctx.JSONResult{result=models.Project}
 // @Router /projects/users [post]
-func (ProjectUser) Create(c *ctx.GinRequestCtx) {
+func (ProjectUser) Create(c *ctx.GinRequest) {
 	form := &forms.CreateProjectUserForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CreateProjectUser(c.ServiceCtx(), form))
+	c.JSONResult(apps.CreateProjectUser(c.Service(), form))
 }
 
 // Search 查询组织下用户列表（不包含已经加入项目的用户）
@@ -42,8 +42,8 @@ func (ProjectUser) Create(c *ctx.GinRequestCtx) {
 // @Param IaC-Project-Id header string true "项目id"
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Project}}
 // @Router /projects/users [get]
-func (ProjectUser) Search(c *ctx.GinRequestCtx) {
-	c.JSONResult(apps.SearchProjectUser(c.ServiceCtx()))
+func (ProjectUser) Search(c *ctx.GinRequest) {
+	c.JSONResult(apps.SearchProjectUser(c.Service()))
 }
 
 // Update 修改项目用户授权信息
@@ -59,12 +59,12 @@ func (ProjectUser) Search(c *ctx.GinRequestCtx) {
 // @Param request body forms.UpdateProjectUserForm true "用户授权"
 // @Success 200 {object} ctx.JSONResult{result=models.Project}
 // @Router /projects/users/{id}  [put]
-func (ProjectUser) Update(c *ctx.GinRequestCtx) {
+func (ProjectUser) Update(c *ctx.GinRequest) {
 	form := &forms.UpdateProjectUserForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.UpdateProjectUser(c.ServiceCtx(), form))
+	c.JSONResult(apps.UpdateProjectUser(c.Service(), form))
 }
 
 // Delete 移除项目下的用户
@@ -79,12 +79,12 @@ func (ProjectUser) Update(c *ctx.GinRequestCtx) {
 // @Param id query string true "用户项目id"
 // @Success 200
 // @Router /projects/users/{id} [delete]
-func (ProjectUser) Delete(c *ctx.GinRequestCtx) {
+func (ProjectUser) Delete(c *ctx.GinRequest) {
 	form := &forms.DeleteProjectOrgUserForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DeleteProjectUser(c.ServiceCtx(), form))
+	c.JSONResult(apps.DeleteProjectUser(c.Service(), form))
 }
 
 // SearchProjectAuthorizationUser 项目下授权的用户
@@ -99,10 +99,10 @@ func (ProjectUser) Delete(c *ctx.GinRequestCtx) {
 // @Param request body forms.SearchProjectAuthorizationUserForm true "用户授权"
 // @Success 200
 // @Router /projects/authorization/users [get]
-func (ProjectUser) SearchProjectAuthorizationUser(c *ctx.GinRequestCtx) {
+func (ProjectUser) SearchProjectAuthorizationUser(c *ctx.GinRequest) {
 	form := &forms.SearchProjectAuthorizationUserForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchProjectAuthorizationUser(c.ServiceCtx(), form))
+	c.JSONResult(apps.SearchProjectAuthorizationUser(c.Service(), form))
 }

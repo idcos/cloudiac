@@ -9,7 +9,7 @@ import (
 )
 
 type Project struct {
-	ctrl.BaseController
+	ctrl.GinController
 }
 
 // Create 创建项目
@@ -23,12 +23,12 @@ type Project struct {
 // @Param json body forms.CreateProjectForm true "parameter"
 // @Success 200 {object}  ctx.JSONResult{result=models.Project}
 // @Router /projects [post]
-func (Project) Create(c *ctx.GinRequestCtx) {
+func (Project) Create(c *ctx.GinRequest) {
 	form := &forms.CreateProjectForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CreateProject(c.ServiceCtx(), form))
+	c.JSONResult(apps.CreateProject(c.Service(), form))
 }
 
 // Search 查询项目列表
@@ -42,12 +42,12 @@ func (Project) Create(c *ctx.GinRequestCtx) {
 // @Param form query forms.SearchProjectForm true "parameter"
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Project}}
 // @Router /projects [get]
-func (Project) Search(c *ctx.GinRequestCtx) {
+func (Project) Search(c *ctx.GinRequest) {
 	form := &forms.SearchProjectForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchProject(c.ServiceCtx(), form))
+	c.JSONResult(apps.SearchProject(c.Service(), form))
 }
 
 // Update 修改项目信息
@@ -61,12 +61,12 @@ func (Project) Search(c *ctx.GinRequestCtx) {
 // @Param request body forms.UpdateProjectForm true "用户授权"
 // @Success 200 {object} ctx.JSONResult{result=models.Project}
 // @Router /projects/{projectId}  [put]
-func (Project) Update(c *ctx.GinRequestCtx) {
+func (Project) Update(c *ctx.GinRequest) {
 	form := &forms.UpdateProjectForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.UpdateProject(c.ServiceCtx(), form))
+	c.JSONResult(apps.UpdateProject(c.Service(), form))
 }
 
 // Delete 删除项目信息
@@ -80,12 +80,12 @@ func (Project) Update(c *ctx.GinRequestCtx) {
 // @Param id query string true "项目id"
 // @Success 200
 // @Router /projects/{projectId} [delete]
-func (Project) Delete(c *ctx.GinRequestCtx) {
+func (Project) Delete(c *ctx.GinRequest) {
 	form := &forms.DeleteProjectForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DeleteProject(c.ServiceCtx(), form))
+	c.JSONResult(apps.DeleteProject(c.Service(), form))
 }
 
 // Detail 查询项目详情
@@ -98,11 +98,11 @@ func (Project) Delete(c *ctx.GinRequestCtx) {
 // @Param IaC-Org-Id header string true "组织id"
 // @Success 200 {object} ctx.JSONResult{result=models.Project}
 // @Router /projects/{projectId}  [get]
-func (Project) Detail(c *ctx.GinRequestCtx) {
+func (Project) Detail(c *ctx.GinRequest) {
 	fmt.Println(666)
 	form := &forms.DetailProjectForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DetailProject(c.ServiceCtx(), form))
+	c.JSONResult(apps.DetailProject(c.Service(), form))
 }

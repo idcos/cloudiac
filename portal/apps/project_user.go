@@ -10,7 +10,7 @@ import (
 	"net/http"
 )
 
-func CreateProjectUser(c *ctx.ServiceCtx, form *forms.CreateProjectUserForm) (interface{}, e.Error) {
+func CreateProjectUser(c *ctx.ServiceContext, form *forms.CreateProjectUserForm) (interface{}, e.Error) {
 	pu, err := services.CreateProjectUser(c.DB(), models.UserProject{
 		Role:      form.Role,
 		UserId:    form.UserId,
@@ -26,7 +26,7 @@ func CreateProjectUser(c *ctx.ServiceCtx, form *forms.CreateProjectUserForm) (in
 }
 
 // SearchProjectUser 查询组织下某个项目的用户(不包含已经关联项目的用户)
-func SearchProjectUser(c *ctx.ServiceCtx) (interface{}, e.Error) {
+func SearchProjectUser(c *ctx.ServiceContext) (interface{}, e.Error) {
 	query := services.QueryUser(c.DB().Debug()).
 		Where("status = 'enable'").
 		Order("created_at DESC")
@@ -63,7 +63,7 @@ func SearchProjectUser(c *ctx.ServiceCtx) (interface{}, e.Error) {
 	return users, nil
 }
 
-func UpdateProjectUser(c *ctx.ServiceCtx, form *forms.UpdateProjectUserForm) (interface{}, e.Error) {
+func UpdateProjectUser(c *ctx.ServiceContext, form *forms.UpdateProjectUserForm) (interface{}, e.Error) {
 	if !c.IsSuperAdmin && c.OrgId == "" {
 		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest)
 	}
@@ -85,11 +85,11 @@ func UpdateProjectUser(c *ctx.ServiceCtx, form *forms.UpdateProjectUserForm) (in
 	return nil, nil
 }
 
-func DeleteProjectUser(c *ctx.ServiceCtx, form *forms.DeleteProjectOrgUserForm) (interface{}, e.Error) {
+func DeleteProjectUser(c *ctx.ServiceContext, form *forms.DeleteProjectOrgUserForm) (interface{}, e.Error) {
 	return nil, services.DeleteProjectUser(c.DB(), form.Id)
 }
 
-func SearchProjectAuthorizationUser(c *ctx.ServiceCtx, form *forms.SearchProjectAuthorizationUserForm) (interface{}, e.Error) {
+func SearchProjectAuthorizationUser(c *ctx.ServiceContext, form *forms.SearchProjectAuthorizationUserForm) (interface{}, e.Error) {
 	query := services.QueryUser(c.DB()).
 		Where("status = 'enable'").
 		Order("created_at DESC")

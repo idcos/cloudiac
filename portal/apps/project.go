@@ -14,7 +14,7 @@ import (
 	"net/http"
 )
 
-func CreateProject(c *ctx.ServiceCtx, form *forms.CreateProjectForm) (interface{}, e.Error) {
+func CreateProject(c *ctx.ServiceContext, form *forms.CreateProjectForm) (interface{}, e.Error) {
 	tx := c.DB().Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -65,7 +65,7 @@ type ProjectResp struct {
 	Creator string `json:"creator" form:"creator" `
 }
 
-func SearchProject(c *ctx.ServiceCtx, form *forms.SearchProjectForm) (interface{}, e.Error) {
+func SearchProject(c *ctx.ServiceContext, form *forms.SearchProjectForm) (interface{}, e.Error) {
 	query := services.SearchProject(c.DB(), c.OrgId, form.Q, form.Status)
 	if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) {
 		projectIds, err := services.GetProjectsByUserOrg(query, c.UserId, c.OrgId)
@@ -102,7 +102,7 @@ func SearchProject(c *ctx.ServiceCtx, form *forms.SearchProjectForm) (interface{
 	}, nil
 }
 
-func UpdateProject(c *ctx.ServiceCtx, form *forms.UpdateProjectForm) (interface{}, e.Error) {
+func UpdateProject(c *ctx.ServiceContext, form *forms.UpdateProjectForm) (interface{}, e.Error) {
 	// 先删除项目和用户关系，在重新创建
 	tx := c.DB().Begin()
 	defer func() {
@@ -152,7 +152,7 @@ func UpdateProject(c *ctx.ServiceCtx, form *forms.UpdateProjectForm) (interface{
 	return nil, nil
 }
 
-func DeleteProject(c *ctx.ServiceCtx, form *forms.DeleteProjectForm) (interface{}, e.Error) {
+func DeleteProject(c *ctx.ServiceContext, form *forms.DeleteProjectForm) (interface{}, e.Error) {
 	return nil, e.New(e.NotImplement)
 	//tx := c.DB().Begin()
 	//defer func() {
@@ -194,7 +194,7 @@ type ProjectStatistics struct {
 	EnvInactive int64 `json:"envInactive" form:"envInactive" `
 }
 
-func DetailProject(c *ctx.ServiceCtx, form *forms.DetailProjectForm) (interface{}, e.Error) {
+func DetailProject(c *ctx.ServiceContext, form *forms.DetailProjectForm) (interface{}, e.Error) {
 	tx := c.DB().Begin()
 	defer func() {
 		if r := recover(); r != nil {

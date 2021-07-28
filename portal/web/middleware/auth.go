@@ -12,7 +12,7 @@ import (
 )
 
 // Auth 用户认证
-func Auth(c *ctx.GinRequestCtx) {
+func Auth(c *ctx.GinRequest) {
 	tokenStr := c.GetHeader("Authorization")
 	if tokenStr == "" {
 		c.Logger().Infof("missing token")
@@ -29,11 +29,10 @@ func Auth(c *ctx.GinRequestCtx) {
 	}
 
 	if claims, ok := token.Claims.(*services.Claims); ok && token.Valid {
-		c.ServiceCtx().UserId = claims.UserId
-		c.ServiceCtx().Username = claims.Username
-		c.ServiceCtx().IsSuperAdmin = claims.IsAdmin
-		c.ServiceCtx().UserIpAddr = c.ClientIP()
-		c.ServiceCtx().UserAgent = c.GetHeader("User-Agent")
+		c.Service().UserId = claims.UserId
+		c.Service().Username = claims.Username
+		c.Service().IsSuperAdmin = claims.IsAdmin
+		c.Service().UserIpAddr = c.ClientIP()
 	} else {
 		c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
 		return
@@ -41,10 +40,10 @@ func Auth(c *ctx.GinRequestCtx) {
 
 	orgId := models.Id(c.GetHeader("IaC-Org-Id"))
 	if orgId != "" {
-		c.ServiceCtx().OrgId = orgId
+		c.Service().OrgId = orgId
 
-		if c.ServiceCtx().IsSuperAdmin ||
-			services.UserHasOrgRole(c.ServiceCtx().UserId, c.ServiceCtx().OrgId, "") {
+		if c.Service().IsSuperAdmin ||
+			services.UserHasOrgRole(c.Service().UserId, c.Service().OrgId, "") {
 		} else {
 			c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("not allow to access org")), http.StatusForbidden)
 			return
@@ -52,17 +51,17 @@ func Auth(c *ctx.GinRequestCtx) {
 	}
 	projectId := models.Id(c.GetHeader("IaC-Project-Id"))
 	if projectId != "" {
-		c.ServiceCtx().ProjectId = projectId
-		if project, err := services.GetProjectsById(c.ServiceCtx().DB(), projectId); err != nil {
+		c.Service().ProjectId = projectId
+		if project, err := services.GetProjectsById(c.Service().DB(), projectId); err != nil {
 			c.JSONError(e.New(e.ProjectNotExists, fmt.Errorf("not allow to access project")), http.StatusBadRequest)
 			return
-		} else if project.OrgId != c.ServiceCtx().OrgId {
+		} else if project.OrgId != c.Service().OrgId {
 			c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("invalid project id")), http.StatusForbidden)
 			return
 		}
-		if c.ServiceCtx().IsSuperAdmin ||
-			services.UserHasOrgRole(c.ServiceCtx().UserId, c.ServiceCtx().OrgId, consts.OrgRoleAdmin) ||
-			services.UserHasProjectRole(c.ServiceCtx().UserId, c.ServiceCtx().OrgId, c.ServiceCtx().ProjectId, "") {
+		if c.Service().IsSuperAdmin ||
+			services.UserHasOrgRole(c.Service().UserId, c.Service().OrgId, consts.OrgRoleAdmin) ||
+			services.UserHasProjectRole(c.Service().UserId, c.Service().OrgId, c.Service().ProjectId, "") {
 			c.Next()
 			return
 		}
@@ -72,8 +71,8 @@ func Auth(c *ctx.GinRequestCtx) {
 }
 
 // AuthOrgId 验证组织ID是否有效
-func AuthOrgId(c *ctx.GinRequestCtx) {
-	if c.ServiceCtx().OrgId == "" {
+func AuthOrgId(c *ctx.GinRequest) {
+	if c.Service().OrgId == "" {
 		c.JSONError(e.New(e.InvalidOrganizationId), http.StatusForbidden)
 		return
 	}
@@ -81,8 +80,8 @@ func AuthOrgId(c *ctx.GinRequestCtx) {
 }
 
 // AuthProjectId 验证项目ID是否有效
-func AuthProjectId(c *ctx.GinRequestCtx) {
-	if c.ServiceCtx().ProjectId == "" {
+func AuthProjectId(c *ctx.GinRequest) {
+	if c.Service().ProjectId == "" {
 		c.JSONError(e.New(e.InvalidProjectId), http.StatusForbidden)
 		return
 	}

@@ -9,7 +9,7 @@ import (
 )
 
 type Organization struct {
-	ctrl.BaseController
+	ctrl.GinController
 }
 
 // Create 创建组织
@@ -23,12 +23,12 @@ type Organization struct {
 // @Param form formData forms.CreateOrganizationForm true "parameter"
 // @router /orgs [post]
 // @Success 200 {object} ctx.JSONResult{result=models.Organization}
-func (Organization) Create(c *ctx.GinRequestCtx) {
+func (Organization) Create(c *ctx.GinRequest) {
 	form := forms.CreateOrganizationForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CreateOrganization(c.ServiceCtx(), &form))
+	c.JSONResult(apps.CreateOrganization(c.Service(), &form))
 }
 
 // Search 组织列表查询
@@ -40,12 +40,12 @@ func (Organization) Create(c *ctx.GinRequestCtx) {
 // @Param form query forms.SearchOrganizationForm true "parameter"
 // @router /orgs [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Organization}}
-func (Organization) Search(c *ctx.GinRequestCtx) {
+func (Organization) Search(c *ctx.GinRequest) {
 	form := forms.SearchOrganizationForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchOrganization(c.ServiceCtx(), &form))
+	c.JSONResult(apps.SearchOrganization(c.Service(), &form))
 }
 
 // Update 组织编辑
@@ -60,12 +60,12 @@ func (Organization) Search(c *ctx.GinRequestCtx) {
 // @Param form formData forms.UpdateOrganizationForm true "parameter"
 // @router /orgs/{orgId} [put]
 // @Success 200 {object} ctx.JSONResult{result=models.Organization}
-func (Organization) Update(c *ctx.GinRequestCtx) {
+func (Organization) Update(c *ctx.GinRequest) {
 	form := forms.UpdateOrganizationForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.UpdateOrganization(c.ServiceCtx(), &form))
+	c.JSONResult(apps.UpdateOrganization(c.Service(), &form))
 }
 
 // Delete 删除组织（不支持）
@@ -80,12 +80,12 @@ func (Organization) Update(c *ctx.GinRequestCtx) {
 // @Param form formData forms.DeleteOrganizationForm true "parameter"
 // @router /orgs/{orgId} [delete]
 // @Success 501 {object} ctx.JSONResult
-func (Organization) Delete(c *ctx.GinRequestCtx) {
+func (Organization) Delete(c *ctx.GinRequest) {
 	form := forms.DeleteOrganizationForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DeleteOrganization(c.ServiceCtx(), &form))
+	c.JSONResult(apps.DeleteOrganization(c.Service(), &form))
 }
 
 // Detail 组织信息详情
@@ -97,12 +97,12 @@ func (Organization) Delete(c *ctx.GinRequestCtx) {
 // @Param orgId path string true "组织ID"
 // @router /orgs/{orgId} [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.organizationDetailResp}
-func (Organization) Detail(c *ctx.GinRequestCtx) {
+func (Organization) Detail(c *ctx.GinRequest) {
 	form := forms.DetailOrganizationForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.OrganizationDetail(c.ServiceCtx(), form))
+	c.JSONResult(apps.OrganizationDetail(c.Service(), form))
 }
 
 // ChangeOrgStatus 启用/禁用组织
@@ -116,12 +116,12 @@ func (Organization) Detail(c *ctx.GinRequestCtx) {
 // @Param form formData forms.DisableOrganizationForm true "parameter"
 // @router /orgs/{orgId}/status [put]
 // @Success 200 {object} ctx.JSONResult{result=models.Organization}
-func (Organization) ChangeOrgStatus(c *ctx.GinRequestCtx) {
+func (Organization) ChangeOrgStatus(c *ctx.GinRequest) {
 	form := forms.DisableOrganizationForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.ChangeOrgStatus(c.ServiceCtx(), &form))
+	c.JSONResult(apps.ChangeOrgStatus(c.Service(), &form))
 }
 
 // AddUserToOrg 添加用户到组织
@@ -136,12 +136,12 @@ func (Organization) ChangeOrgStatus(c *ctx.GinRequestCtx) {
 // @Param form formData forms.AddUserOrgRelForm true "parameter"
 // @router /orgs/{orgId}/users [post]
 // @Success 200 {object} ctx.JSONResult{result=models.UserWithRoleResp}
-func (Organization) AddUserToOrg(c *ctx.GinRequestCtx) {
+func (Organization) AddUserToOrg(c *ctx.GinRequest) {
 	form := forms.AddUserOrgRelForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.AddUserOrgRel(c.ServiceCtx(), &form))
+	c.JSONResult(apps.AddUserOrgRel(c.Service(), &form))
 }
 
 // RemoveUserForOrg 从组织移除用户
@@ -156,12 +156,12 @@ func (Organization) AddUserToOrg(c *ctx.GinRequestCtx) {
 // @Param form formData forms.DeleteUserOrgRelForm true "parameter"
 // @router /orgs/{orgId}/users/{userId} [delete]
 // @Success 200 {object} ctx.JSONResult{}
-func (Organization) RemoveUserForOrg(c *ctx.GinRequestCtx) {
+func (Organization) RemoveUserForOrg(c *ctx.GinRequest) {
 	form := forms.DeleteUserOrgRelForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DeleteUserOrgRel(c.ServiceCtx(), &form))
+	c.JSONResult(apps.DeleteUserOrgRel(c.Service(), &form))
 }
 
 // UpdateUserOrgRel 编辑用户组织角色
@@ -177,12 +177,12 @@ func (Organization) RemoveUserForOrg(c *ctx.GinRequestCtx) {
 // @Param form formData forms.UpdateUserOrgRelForm true "parameter"
 // @router /orgs/{orgId}/users/{userId}/role [put]
 // @Success 200 {object} ctx.JSONResult{result=models.UserWithRoleResp}
-func (Organization) UpdateUserOrgRel(c *ctx.GinRequestCtx) {
+func (Organization) UpdateUserOrgRel(c *ctx.GinRequest) {
 	form := forms.UpdateUserOrgRelForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.UpdateUserOrgRel(c.ServiceCtx(), &form))
+	c.JSONResult(apps.UpdateUserOrgRel(c.Service(), &form))
 }
 
 /**
@@ -198,13 +198,13 @@ func (Organization) UpdateUserOrgRel(c *ctx.GinRequestCtx) {
 // @router /orgs/{orgId}/users [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.User}}
 */
-func (Organization) SearchUser(c *ctx.GinRequestCtx) {
+func (Organization) SearchUser(c *ctx.GinRequest) {
 	form := forms.SearchUserForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.ServiceCtx().OrgId = models.Id(c.Param("orgId"))
-	c.JSONResult(apps.SearchUser(c.ServiceCtx(), &form))
+	c.Service().OrgId = models.Id(c.Param("orgId"))
+	c.JSONResult(apps.SearchUser(c.Service(), &form))
 }
 
 // InviteUser 邀请用户加入组织
@@ -220,10 +220,10 @@ func (Organization) SearchUser(c *ctx.GinRequestCtx) {
 // @Param orgId path string true "组织ID"
 // @router /orgs/{orgId}/users/invite [post]
 // @Success 200 {object} ctx.JSONResult{result=apps.CreateUserResp}
-func (Organization) InviteUser(c *ctx.GinRequestCtx) {
+func (Organization) InviteUser(c *ctx.GinRequest) {
 	form := forms.InviteUserForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.InviteUser(c.ServiceCtx(), &form))
+	c.JSONResult(apps.InviteUser(c.Service(), &form))
 }

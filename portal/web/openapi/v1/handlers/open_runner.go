@@ -5,6 +5,6 @@ import (
 	"cloudiac/portal/libs/ctx"
 )
 
-func RunnerListSearch(c *ctx.GinRequestCtx) {
-	c.JSONOpenResultList(apps.RunnerSearch())
+func RunnerListSearch(c *ctx.GinRequest) {
+	c.JSONResult(apps.RunnerSearch())
 }
