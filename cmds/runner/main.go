@@ -33,7 +33,7 @@ func main() {
 	}
 	common.ShowVersionIf(opt.Version)
 
-	configs.Init(opt.Config)
+	configs.Init(opt.Config, configs.ParseRunnerConfig)
 	if err := checkConfigs(configs.Get()); err != nil {
 		panic(err)
 	}
