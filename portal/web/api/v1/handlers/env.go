@@ -9,7 +9,7 @@ import (
 )
 
 type Env struct {
-	ctrl.BaseController
+	ctrl.GinController
 }
 
 // Create 创建环境
@@ -23,12 +23,12 @@ type Env struct {
 // @Param json body forms.CreateEnvForm true "环境参数"
 // @router /envs [post]
 // @Success 200 {object} ctx.JSONResult{result=models.Env}
-func (Env) Create(c *ctx.GinRequestCtx) {
+func (Env) Create(c *ctx.GinRequest) {
 	form := forms.CreateEnvForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CreateEnv(c.ServiceCtx(), &form))
+	c.JSONResult(apps.CreateEnv(c.Service(), &form))
 }
 
 // Search 环境查询
@@ -42,12 +42,12 @@ func (Env) Create(c *ctx.GinRequestCtx) {
 // @Param form query forms.SearchEnvForm true "parameter"
 // @router /envs [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.EnvDetail}}
-func (Env) Search(c *ctx.GinRequestCtx) {
+func (Env) Search(c *ctx.GinRequest) {
 	form := forms.SearchEnvForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchEnv(c.ServiceCtx(), &form))
+	c.JSONResult(apps.SearchEnv(c.Service(), &form))
 }
 
 // Update 环境编辑
@@ -62,12 +62,12 @@ func (Env) Search(c *ctx.GinRequestCtx) {
 // @Param envId path string true "环境ID"
 // @router /envs/{envId} [put]
 // @Success 200 {object} ctx.JSONResult{result=models.Env}
-func (Env) Update(c *ctx.GinRequestCtx) {
+func (Env) Update(c *ctx.GinRequest) {
 	form := forms.UpdateEnvForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.UpdateEnv(c.ServiceCtx(), &form))
+	c.JSONResult(apps.UpdateEnv(c.Service(), &form))
 }
 
 // Detail 环境信息详情
@@ -81,12 +81,12 @@ func (Env) Update(c *ctx.GinRequestCtx) {
 // @Param envId path string true "环境ID"
 // @router /envs/{envId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.EnvDetail}
-func (Env) Detail(c *ctx.GinRequestCtx) {
+func (Env) Detail(c *ctx.GinRequest) {
 	form := forms.DetailEnvForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.EnvDetail(c.ServiceCtx(), form))
+	c.JSONResult(apps.EnvDetail(c.Service(), form))
 }
 
 // Archive 环境归档
@@ -101,12 +101,12 @@ func (Env) Detail(c *ctx.GinRequestCtx) {
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/archive [put]
 // @Success 200 {object} ctx.JSONResult{result=models.EnvDetail}
-func (Env) Archive(c *ctx.GinRequestCtx) {
+func (Env) Archive(c *ctx.GinRequest) {
 	form := forms.UpdateEnvForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.UpdateEnv(c.ServiceCtx(), &form))
+	c.JSONResult(apps.UpdateEnv(c.Service(), &form))
 }
 
 // Deploy 环境重新部署
@@ -121,12 +121,12 @@ func (Env) Archive(c *ctx.GinRequestCtx) {
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/deploy [post]
 // @Success 200 {object} ctx.JSONResult{result=models.EnvDetail}
-func (Env) Deploy(c *ctx.GinRequestCtx) {
+func (Env) Deploy(c *ctx.GinRequest) {
 	form := forms.DeployEnvForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.EnvDeploy(c.ServiceCtx(), &form))
+	c.JSONResult(apps.EnvDeploy(c.Service(), &form))
 }
 
 // Destroy 销毁环境资源
@@ -141,11 +141,11 @@ func (Env) Deploy(c *ctx.GinRequestCtx) {
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/destroy [post]
 // @Success 200 {object} ctx.JSONResult{result=models.EnvDetail}
-func (Env) Destroy(c *ctx.GinRequestCtx) {
+func (Env) Destroy(c *ctx.GinRequest) {
 	form := forms.DeployEnvForm{}
 	form.Id = models.Id(c.Param("id"))
 	form.TaskType = models.TaskTypeDestroy
-	c.JSONResult(apps.EnvDeploy(c.ServiceCtx(), &form))
+	c.JSONResult(apps.EnvDeploy(c.Service(), &form))
 }
 
 // SearchResources 获取环境资源列表
@@ -161,12 +161,12 @@ func (Env) Destroy(c *ctx.GinRequestCtx) {
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/resources [get]
 // @Success 200 {object} ctx.JSONResult{result=models.Resource}
-func (Env) SearchResources(c *ctx.GinRequestCtx) {
+func (Env) SearchResources(c *ctx.GinRequest) {
 	form := forms.SearchEnvResourceForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchEnvResources(c.ServiceCtx(), &form))
+	c.JSONResult(apps.SearchEnvResources(c.Service(), &form))
 }
 
 // SearchTasks 部署历史
@@ -181,13 +181,13 @@ func (Env) SearchResources(c *ctx.GinRequestCtx) {
 // @Param form query forms.SearchEnvTasksForm true "parameter"
 // @router /envs/{envId}/tasks [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
-func (Env) SearchTasks(c *ctx.GinRequestCtx) {
+func (Env) SearchTasks(c *ctx.GinRequest) {
 	form := &forms.SearchEnvTasksForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
 	f := &forms.SearchTaskForm{EnvId: form.Id}
-	c.JSONResult(apps.SearchTask(c.ServiceCtx(), f))
+	c.JSONResult(apps.SearchTask(c.Service(), f))
 }
 
 // LastTask 环境最新任务详情
@@ -201,10 +201,10 @@ func (Env) SearchTasks(c *ctx.GinRequestCtx) {
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/tasks/last [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
-func (Env) LastTask(c *ctx.GinRequestCtx) {
+func (Env) LastTask(c *ctx.GinRequest) {
 	form := &forms.LastTaskForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.LastTask(c.ServiceCtx(), form))
+	c.JSONResult(apps.LastTask(c.Service(), form))
 }

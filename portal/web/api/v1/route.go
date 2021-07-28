@@ -22,7 +22,7 @@ import (
 // @name Authorization
 
 func Register(g *gin.RouterGroup) {
-	w := ctrl.GinRequestCtxWrap
+	w := ctrl.WrapHandler
 	ac := middleware.AccessControl
 
 	// 非授权用户相关路由
@@ -96,9 +96,9 @@ func Register(g *gin.RouterGroup) {
 	ctrl.Register(g.Group("notifications", ac()), &handlers.Notification{})
 
 	// 项目资源
-	// TODO: parse project header
 	g.Use(w(middleware.AuthProjectId))
 
+	// 环境管理
 	ctrl.Register(g.Group("envs", ac()), &handlers.Env{})
 	g.PUT("/envs/:id/archive", ac(), w(handlers.Env{}.Archive))
 	g.GET("/envs/:id/tasks", ac(), w(handlers.Env{}.SearchTasks))
@@ -107,6 +107,7 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/envs/:id/destroy", ac("envs", "destroy"), w(handlers.Env{}.Destroy))
 	g.GET("/envs/:id/resources", ac(), w(handlers.Env{}.SearchResources))
 
+	// 任务管理
 	g.GET("/tasks", ac(), w(handlers.Task{}.Search))
 	g.GET("/tasks/:id", ac(), w(handlers.Task{}.Detail))
 	g.GET("/tasks/:id/log", ac(), w(handlers.Task{}.Log))

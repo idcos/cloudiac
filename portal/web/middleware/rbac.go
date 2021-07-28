@@ -34,8 +34,8 @@ func AccessControl(args ...string) gin.HandlerFunc {
 	}
 
 	return func(g *gin.Context) {
-		c := ctx.NewRequestCtx(g)
-		s := c.ServiceCtx()
+		c := ctx.NewGinRequest(g)
+		s := c.Service()
 
 		// 通过 RequestURI 解析资源名称
 		res := ""
@@ -67,7 +67,7 @@ func AccessControl(args ...string) gin.HandlerFunc {
 		}
 
 		// 加载权限策略
-		enforcer := c.ServiceCtx().Enforcer()
+		enforcer := c.Service().Enforcer()
 		err := enforcer.LoadPolicy()
 		if err != nil {
 			logger.Errorf("error load rbac policy, err %s", err)

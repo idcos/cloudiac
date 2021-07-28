@@ -12,7 +12,7 @@ import (
 	"fmt"
 )
 
-func CreateResourceAccount(c *ctx.ServiceCtx, form *forms.CreateResourceAccountForm) (*models.ResourceAccount, e.Error) {
+func CreateResourceAccount(c *ctx.ServiceContext, form *forms.CreateResourceAccountForm) (*models.ResourceAccount, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create resource_account %s", form.Name))
 
 	tx := c.Tx()
@@ -93,7 +93,7 @@ type searchResourceAccountResp struct {
 	CtServiceIds []string `json:"ctServiceIds"`
 }
 
-func SearchResourceAccount(c *ctx.ServiceCtx, form *forms.SearchResourceAccountForm) (interface{}, e.Error) {
+func SearchResourceAccount(c *ctx.ServiceContext, form *forms.SearchResourceAccountForm) (interface{}, e.Error) {
 	query := services.QueryResourceAccount(c.DB())
 	query = query.Where("org_id = ?", c.OrgId)
 	if form.Status != "" {
@@ -133,7 +133,7 @@ func SearchResourceAccount(c *ctx.ServiceCtx, form *forms.SearchResourceAccountF
 	}, nil
 }
 
-func UpdateResourceAccount(c *ctx.ServiceCtx, form *forms.UpdateResourceAccountForm) (rsAccount *models.ResourceAccount, err e.Error) {
+func UpdateResourceAccount(c *ctx.ServiceContext, form *forms.UpdateResourceAccountForm) (rsAccount *models.ResourceAccount, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update rsAccount %s", form.Id))
 	if form.Id == "" {
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
@@ -194,7 +194,7 @@ func UpdateResourceAccount(c *ctx.ServiceCtx, form *forms.UpdateResourceAccountF
 	return
 }
 
-func DeleteResourceAccount(c *ctx.ServiceCtx, form *forms.DeleteResourceAccountForm) (result interface{}, re e.Error) {
+func DeleteResourceAccount(c *ctx.ServiceContext, form *forms.DeleteResourceAccountForm) (result interface{}, re e.Error) {
 	c.AddLogField("action", fmt.Sprintf("delete ResourceAccount %s for org %s", form.Id, c.OrgId))
 
 	tx := c.Tx()

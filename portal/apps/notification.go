@@ -10,7 +10,7 @@ import (
 	"fmt"
 )
 
-func SearchNotification(c *ctx.ServiceCtx) (interface{}, e.Error) {
+func SearchNotification(c *ctx.ServiceContext) (interface{}, e.Error) {
 	cfgs, err := services.SearchNotification(c.DB(), c.OrgId)
 	if err != nil {
 		return nil, e.New(e.DBError, err)
@@ -18,7 +18,7 @@ func SearchNotification(c *ctx.ServiceCtx) (interface{}, e.Error) {
 	return cfgs, nil
 }
 
-func DeleteNotificationCfg(c *ctx.ServiceCtx, id models.Id) (result interface{}, err e.Error) {
+func DeleteNotificationCfg(c *ctx.ServiceContext, id models.Id) (result interface{}, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("Delete org notification id: %s", id))
 	err = services.DeleteOrganizationCfg(c.DB(), id, c.OrgId)
 	if err != nil {
@@ -27,7 +27,7 @@ func DeleteNotificationCfg(c *ctx.ServiceCtx, id models.Id) (result interface{},
 	return
 }
 
-func UpdateNotificationCfg(c *ctx.ServiceCtx, form *forms.UpdateNotificationCfgForm) (cfg *models.NotificationCfg, err e.Error) {
+func UpdateNotificationCfg(c *ctx.ServiceContext, form *forms.UpdateNotificationCfgForm) (cfg *models.NotificationCfg, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update org notification cfg id: %s", form.Id))
 
 	if form.Id == "" {
@@ -53,7 +53,7 @@ func UpdateNotificationCfg(c *ctx.ServiceCtx, form *forms.UpdateNotificationCfgF
 	return cfg, err
 }
 
-func CreateNotificationCfg(c *ctx.ServiceCtx, form *forms.CreateNotificationCfgForm) (*models.NotificationCfg, e.Error) {
+func CreateNotificationCfg(c *ctx.ServiceContext, form *forms.CreateNotificationCfgForm) (*models.NotificationCfg, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create org notification cfg %s", form.NotificationType))
 
 	tx := c.Tx().Debug()

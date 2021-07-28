@@ -9,7 +9,7 @@ import (
 	"cloudiac/portal/services"
 )
 
-func CreateTaskComment(c *ctx.ServiceCtx, form *forms.CreateTaskCommentForm) (interface{}, e.Error) {
+func CreateTaskComment(c *ctx.ServiceContext, form *forms.CreateTaskCommentForm) (interface{}, e.Error) {
 	return services.CreateTaskComment(c.DB().Debug(), models.TaskComment{
 		TaskId:    form.Id,
 		Creator:   c.Username,
@@ -18,7 +18,7 @@ func CreateTaskComment(c *ctx.ServiceCtx, form *forms.CreateTaskCommentForm) (in
 	})
 }
 
-func SearchTaskComment(c *ctx.ServiceCtx, form *forms.SearchTaskCommentForm) (interface{}, e.Error) {
+func SearchTaskComment(c *ctx.ServiceContext, form *forms.SearchTaskCommentForm) (interface{}, e.Error) {
 	query := services.SearchTaskComment(c.DB(), form.Id)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	taskComment := make([]*models.TaskComment, 0)

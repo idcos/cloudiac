@@ -17,7 +17,7 @@ import (
 )
 
 // SearchTask 任务查询
-func SearchTask(c *ctx.ServiceCtx, form *forms.SearchTaskForm) (interface{}, e.Error) {
+func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{}, e.Error) {
 	query := services.QueryTask(c.DB())
 	if form.EnvId != "" {
 		query = query.Where("env_id = ?", form.EnvId)
@@ -53,7 +53,7 @@ type taskDetailResp struct {
 }
 
 // TaskDetail 任务信息详情
-func TaskDetail(c *ctx.ServiceCtx, form forms.DetailTaskForm) (*taskDetailResp, e.Error) {
+func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*taskDetailResp, e.Error) {
 	orgIds, er := services.GetOrgIdsByUser(c.DB(), c.UserId)
 	if er != nil {
 		c.Logger().Errorf("error get task id by user, err %s", er)
@@ -96,7 +96,7 @@ func TaskDetail(c *ctx.ServiceCtx, form forms.DetailTaskForm) (*taskDetailResp, 
 }
 
 // LastTask 最新任务信息
-func LastTask(c *ctx.ServiceCtx, form *forms.LastTaskForm) (*taskDetailResp, e.Error) {
+func LastTask(c *ctx.ServiceContext, form *forms.LastTaskForm) (*taskDetailResp, e.Error) {
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
@@ -141,7 +141,7 @@ func LastTask(c *ctx.ServiceCtx, form *forms.LastTaskForm) (*taskDetailResp, e.E
 }
 
 // ApproveTask 审批执行计划
-func ApproveTask(c *ctx.ServiceCtx, form *forms.ApproveTaskForm) (interface{}, e.Error) {
+func ApproveTask(c *ctx.ServiceContext, form *forms.ApproveTaskForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("approve task %s", form.Id))
 
 	if c.OrgId == "" || c.ProjectId == "" {
@@ -190,9 +190,9 @@ func ApproveTask(c *ctx.ServiceCtx, form *forms.ApproveTaskForm) (interface{}, e
 	return nil, nil
 }
 
-func FollowTaskLog(c *ctx.GinRequestCtx, form forms.DetailTaskForm) e.Error {
+func FollowTaskLog(c *ctx.GinRequest, form forms.DetailTaskForm) e.Error {
 	logger := c.Logger().WithField("func", "FollowTaskLog").WithField("taskId", form.Id)
-	sc := c.ServiceCtx()
+	sc := c.Service()
 	rCtx := c.Context.Request.Context()
 
 	// TODO 浏览器原生 SSE 实现不支持修改 header，所以这个接口暂时不作认证，待前端支持
@@ -232,7 +232,7 @@ func FollowTaskLog(c *ctx.GinRequestCtx, form forms.DetailTaskForm) e.Error {
 }
 
 // TaskOutput 任务Output信息详情
-func TaskOutput(c *ctx.ServiceCtx, form forms.DetailTaskForm) (interface{}, e.Error) {
+func TaskOutput(c *ctx.ServiceContext, form forms.DetailTaskForm) (interface{}, e.Error) {
 	orgIds, er := services.GetOrgIdsByUser(c.DB(), c.UserId)
 	if er != nil {
 		c.Logger().Errorf("error get task id by user, err %s", er)
@@ -259,7 +259,7 @@ func TaskOutput(c *ctx.ServiceCtx, form forms.DetailTaskForm) (interface{}, e.Er
 }
 
 // SearchTaskResources 查询环境资源列表
-func SearchTaskResources(c *ctx.ServiceCtx, form *forms.SearchTaskResourceForm) (interface{}, e.Error) {
+func SearchTaskResources(c *ctx.ServiceContext, form *forms.SearchTaskResourceForm) (interface{}, e.Error) {
 	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}

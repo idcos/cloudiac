@@ -8,7 +8,7 @@ import (
 )
 
 type Template struct {
-	ctrl.BaseController
+	ctrl.GinController
 }
 
 // Create 创建云模板
@@ -22,12 +22,12 @@ type Template struct {
 // @Param form body forms.CreateTemplateForm true "parameter"
 // @Router /templates [post]
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
-func (Template) Create(c *ctx.GinRequestCtx) {
+func (Template) Create(c *ctx.GinRequest) {
 	form := &forms.CreateTemplateForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CreateTemplate(c.ServiceCtx(), form))
+	c.JSONResult(apps.CreateTemplate(c.Service(), form))
 }
 
 // Search 查询云模板列表
@@ -44,12 +44,12 @@ func (Template) Create(c *ctx.GinRequestCtx) {
 // @Param form query forms.SearchTemplateForm true "parameter"
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.SearchTemplateResp}}
 // @Router /templates [get]
-func (Template) Search(c *ctx.GinRequestCtx) {
+func (Template) Search(c *ctx.GinRequest) {
 	form := forms.SearchTemplateForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchTemplate(c.ServiceCtx(), &form))
+	c.JSONResult(apps.SearchTemplate(c.Service(), &form))
 }
 
 // Update 修改云模板信息
@@ -63,12 +63,12 @@ func (Template) Search(c *ctx.GinRequestCtx) {
 // @Param data body forms.UpdateTemplateForm true "云模板信息"
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
 // @Router /templates/{templateId} [put]
-func (Template) Update(c *ctx.GinRequestCtx) {
+func (Template) Update(c *ctx.GinRequest) {
 	form := forms.UpdateTemplateForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.UpdateTemplate(c.ServiceCtx(), &form))
+	c.JSONResult(apps.UpdateTemplate(c.Service(), &form))
 }
 
 // Delete 删除活跃云模板
@@ -84,12 +84,12 @@ func (Template) Update(c *ctx.GinRequestCtx) {
 // @Param templateId path string true "云模板ID"
 // @Router /templates/{templateId} [delete]
 // @Success 200 {object} ctx.JSONResult
-func (Template) Delete(c *ctx.GinRequestCtx) {
+func (Template) Delete(c *ctx.GinRequest) {
 	form := forms.DeleteTemplateForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DeleteTemplate(c.ServiceCtx(), &form))
+	c.JSONResult(apps.DeleteTemplate(c.Service(), &form))
 }
 
 // Detail 模板详情
@@ -104,12 +104,12 @@ func (Template) Delete(c *ctx.GinRequestCtx) {
 // @Param form query forms.DetailTemplateForm true "parameter"
 // @Router /templates/{templateId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
-func (Template) Detail(c *ctx.GinRequestCtx) {
+func (Template) Detail(c *ctx.GinRequest) {
 	form := forms.DetailTemplateForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.TemplateDetail(c.ServiceCtx(), &form))
+	c.JSONResult(apps.TemplateDetail(c.Service(), &form))
 }
 
 // TemplateTfvarsSearch 列出代码仓库下包含.tfvars 的所有文件
@@ -124,12 +124,12 @@ func (Template) Detail(c *ctx.GinRequestCtx) {
 // @Param form query forms.TemplateTfvarsSearchForm true "parameter"
 // @Router /vcs/{vcsId}/repos/tfvars  [get]
 // @Success 200 {object} ctx.JSONResult{result=[]vcsrv.VcsIfaceOptions}
-func TemplateTfvarsSearch(c *ctx.GinRequestCtx) {
+func TemplateTfvarsSearch(c *ctx.GinRequest) {
 	form := forms.TemplateTfvarsSearchForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.VcsTfVarsSearch(c.ServiceCtx(), &form))
+	c.JSONResult(apps.VcsTfVarsSearch(c.Service(), &form))
 }
 
 // TemplateVariableSearch 查询云模板TF参数
@@ -141,12 +141,12 @@ func TemplateTfvarsSearch(c *ctx.GinRequestCtx) {
 // @Param form query forms.TemplateVariableSearchForm true "parameter"
 // @Router /templates/variables [get]
 // @Success 200 {object} ctx.JSONResult{result=[]services.TemplateVariable}
-func TemplateVariableSearch(c *ctx.GinRequestCtx) {
+func TemplateVariableSearch(c *ctx.GinRequest) {
 	form := forms.TemplateVariableSearchForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.VcsVariableSearch(c.ServiceCtx(), &form))
+	c.JSONResult(apps.VcsVariableSearch(c.Service(), &form))
 }
 
 // TemplatePlaybookSearch
@@ -159,10 +159,10 @@ func TemplateVariableSearch(c *ctx.GinRequestCtx) {
 // @Param vcsId path string true "vcs地址iD"
 // @router /vcs/{vcsId}/repos/playbook [get]
 // @Success 200 {object} ctx.JSONResult{result=[]vcsrv.VcsIfaceOptions}
-func TemplatePlaybookSearch(c *ctx.GinRequestCtx) {
+func TemplatePlaybookSearch(c *ctx.GinRequest) {
 	form := forms.TemplatePlaybookSearchForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.VcsPlaybookSearch(c.ServiceCtx(), &form))
+	c.JSONResult(apps.VcsPlaybookSearch(c.Service(), &form))
 }

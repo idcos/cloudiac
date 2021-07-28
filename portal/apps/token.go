@@ -14,7 +14,7 @@ import (
 	"net/http"
 )
 
-func SearchToken(c *ctx.ServiceCtx, form *forms.SearchTokenForm) (interface{}, e.Error) {
+func SearchToken(c *ctx.ServiceContext, form *forms.SearchTokenForm) (interface{}, e.Error) {
 	//todo 鉴权
 	query := services.QueryToken(c.DB(), consts.TokenApi)
 	query = query.Where("org_id = ?", c.OrgId)
@@ -35,7 +35,7 @@ func SearchToken(c *ctx.ServiceCtx, form *forms.SearchTokenForm) (interface{}, e
 	return rs, nil
 }
 
-func CreateToken(c *ctx.ServiceCtx, form *forms.CreateTokenForm) (interface{}, e.Error) {
+func CreateToken(c *ctx.ServiceContext, form *forms.CreateTokenForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create token for user %s", c.UserId))
 	var (
 		expiredAt models.Time
@@ -71,7 +71,7 @@ func CreateToken(c *ctx.ServiceCtx, form *forms.CreateTokenForm) (interface{}, e
 	return token, nil
 }
 
-func UpdateToken(c *ctx.ServiceCtx, form *forms.UpdateTokenForm) (token *models.Token, err e.Error) {
+func UpdateToken(c *ctx.ServiceContext, form *forms.UpdateTokenForm) (token *models.Token, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update token %s", form.Id))
 	if form.Id == "" {
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
@@ -96,7 +96,7 @@ func UpdateToken(c *ctx.ServiceCtx, form *forms.UpdateTokenForm) (token *models.
 	return
 }
 
-func DeleteToken(c *ctx.ServiceCtx, form *forms.DeleteTokenForm) (result interface{}, re e.Error) {
+func DeleteToken(c *ctx.ServiceContext, form *forms.DeleteTokenForm) (result interface{}, re e.Error) {
 	c.AddLogField("action", fmt.Sprintf("delete token %s", form.Id))
 	if err := services.DeleteToken(c.DB(), form.Id); err != nil {
 		return nil, err
@@ -105,7 +105,7 @@ func DeleteToken(c *ctx.ServiceCtx, form *forms.DeleteTokenForm) (result interfa
 	return
 }
 
-func DetailTriggerToken(c *ctx.ServiceCtx, form *forms.DetailTriggerTokenForm) (result interface{}, re e.Error) {
+func DetailTriggerToken(c *ctx.ServiceContext, form *forms.DetailTriggerTokenForm) (result interface{}, re e.Error) {
 	token, err := services.DetailTriggerToken(c.DB(), c.OrgId, form.EnvId, form.Action)
 	if err != nil {
 		// 如果不存在直接返回
@@ -117,7 +117,7 @@ func DetailTriggerToken(c *ctx.ServiceCtx, form *forms.DetailTriggerTokenForm) (
 	return token, nil
 }
 
-func ApiTriggerHandler(c *ctx.ServiceCtx, form forms.ApiTriggerHandler) (interface{}, e.Error) {
+func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (interface{}, e.Error) {
 	var (
 		err      e.Error
 		taskType string

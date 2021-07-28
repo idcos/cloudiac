@@ -9,7 +9,7 @@ import (
 	"sort"
 )
 
-func BatchUpdate(c *ctx.ServiceCtx, form *forms.BatchUpdateVariableForm) (interface{}, e.Error) {
+func BatchUpdate(c *ctx.ServiceContext, form *forms.BatchUpdateVariableForm) (interface{}, e.Error) {
 	tx := c.DB().Begin().Debug()
 	defer func() {
 		if r := recover(); r != nil {
@@ -49,7 +49,7 @@ type VariableResp struct {
 	Overwrites *models.Variable `json:"overwrites" form:"overwrites" ` //回滚参数，无需回滚是为空
 }
 
-func SearchVariable(c *ctx.ServiceCtx, form *forms.SearchVariableForm) (interface{}, e.Error) {
+func SearchVariable(c *ctx.ServiceContext, form *forms.SearchVariableForm) (interface{}, e.Error) {
 	variableM, err, scopes := services.GetValidVariables(c.DB(), form.Scope, c.OrgId, c.ProjectId, form.TplId, form.EnvId, false)
 	if err != nil {
 		return nil, err

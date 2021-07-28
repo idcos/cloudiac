@@ -8,7 +8,7 @@ import (
 )
 
 type Variable struct {
-	ctrl.BaseController
+	ctrl.GinController
 }
 
 // BatchUpdate 批量修改变量
@@ -22,12 +22,12 @@ type Variable struct {
 // @Param form body forms.BatchUpdateVariableForm true "parameter"
 // @router /variables/batch [put]
 // @Success 200 {object} ctx.JSONResult{result=models.Variable}
-func (Variable) BatchUpdate(c *ctx.GinRequestCtx) {
+func (Variable) BatchUpdate(c *ctx.GinRequest) {
 	form := forms.BatchUpdateVariableForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.BatchUpdate(c.ServiceCtx(), &form))
+	c.JSONResult(apps.BatchUpdate(c.Service(), &form))
 }
 
 // Search 查询变量
@@ -41,10 +41,10 @@ func (Variable) BatchUpdate(c *ctx.GinRequestCtx) {
 // @Param form query forms.SearchVariableForm true "parameter"
 // @router /variables [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Variable}}
-func (Variable) Search(c *ctx.GinRequestCtx) {
+func (Variable) Search(c *ctx.GinRequest) {
 	form := forms.SearchVariableForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchVariable(c.ServiceCtx(), &form))
+	c.JSONResult(apps.SearchVariable(c.Service(), &form))
 }

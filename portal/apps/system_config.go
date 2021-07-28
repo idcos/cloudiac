@@ -20,7 +20,7 @@ func (m *SearchSystemConfigResp) TableName() string {
 	return models.SystemCfg{}.TableName()
 }
 
-func SearchSystemConfig(c *ctx.ServiceCtx) (interface{}, e.Error) {
+func SearchSystemConfig(c *ctx.ServiceContext) (interface{}, e.Error) {
 	rs := SearchSystemConfigResp{}
 	err := services.QuerySystemConfig(c.DB()).First(&rs)
 	if err != nil {
@@ -30,7 +30,7 @@ func SearchSystemConfig(c *ctx.ServiceCtx) (interface{}, e.Error) {
 	return rs, nil
 }
 
-func UpdateSystemConfig(c *ctx.ServiceCtx, form *forms.UpdateSystemConfigForm) (cfg *models.SystemCfg, err e.Error) {
+func UpdateSystemConfig(c *ctx.ServiceContext, form *forms.UpdateSystemConfigForm) (cfg *models.SystemCfg, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update system config %s", form.Id))
 
 	attrs := models.Attrs{}

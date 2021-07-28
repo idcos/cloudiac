@@ -8,37 +8,37 @@ import (
 )
 
 type ResourceAccount struct {
-	ctrl.BaseController
+	ctrl.GinController
 }
 
-func (ResourceAccount) Search(c *ctx.GinRequestCtx) {
+func (ResourceAccount) Search(c *ctx.GinRequest) {
 	form := &forms.SearchResourceAccountForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchResourceAccount(c.ServiceCtx(), form))
+	c.JSONResult(apps.SearchResourceAccount(c.Service(), form))
 }
 
-func (ResourceAccount) Create(c *ctx.GinRequestCtx) {
+func (ResourceAccount) Create(c *ctx.GinRequest) {
 	form := &forms.CreateResourceAccountForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CreateResourceAccount(c.ServiceCtx(), form))
+	c.JSONResult(apps.CreateResourceAccount(c.Service(), form))
 }
 
-func (ResourceAccount) Delete(c *ctx.GinRequestCtx) {
+func (ResourceAccount) Delete(c *ctx.GinRequest) {
 	form := &forms.DeleteResourceAccountForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DeleteResourceAccount(c.ServiceCtx(), form))
+	c.JSONResult(apps.DeleteResourceAccount(c.Service(), form))
 }
 
-func (ResourceAccount) Update(c *ctx.GinRequestCtx) {
+func (ResourceAccount) Update(c *ctx.GinRequest) {
 	form := &forms.UpdateResourceAccountForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.UpdateResourceAccount(c.ServiceCtx(), form))
+	c.JSONResult(apps.UpdateResourceAccount(c.Service(), form))
 }

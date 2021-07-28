@@ -47,7 +47,7 @@ func getRepoAddr(vcsId models.Id, query *db.Session, repoId string) (string, err
 	return repoAddr, nil
 }
 
-func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.Template, e.Error) {
+func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*models.Template, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create template %s", form.Name))
 
 	repoAddr, er := getRepoAddr(form.VcsId, c.DB(), form.RepoId)
@@ -109,7 +109,7 @@ func CreateTemplate(c *ctx.ServiceCtx, form *forms.CreateTemplateForm) (*models.
 	return template, nil
 }
 
-func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.Template, e.Error) {
+func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*models.Template, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update template %s", form.Id))
 
 	tpl, err := services.GetTemplateById(c.DB(), form.Id)
@@ -193,7 +193,7 @@ func UpdateTemplate(c *ctx.ServiceCtx, form *forms.UpdateTemplateForm) (*models.
 	return tpl, err
 }
 
-func DeleteTemplate(c *ctx.ServiceCtx, form *forms.DeleteTemplateForm) (interface{}, e.Error) {
+func DeleteTemplate(c *ctx.ServiceContext, form *forms.DeleteTemplateForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("delete template %s", form.Id))
 	tx := c.Tx()
 	defer func() {
@@ -247,7 +247,7 @@ type TemplateDetailResp struct {
 	ProjectList []models.Id       `json:"projectId"`
 }
 
-func TemplateDetail(c *ctx.ServiceCtx, form *forms.DetailTemplateForm) (*TemplateDetailResp, e.Error) {
+func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*TemplateDetailResp, e.Error) {
 	tpl, err := services.GetTemplateById(c.DB(), form.Id)
 	if err != nil && err.Code() == e.TemplateNotExists {
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
@@ -272,7 +272,7 @@ func TemplateDetail(c *ctx.ServiceCtx, form *forms.DetailTemplateForm) (*Templat
 
 }
 
-func SearchTemplate(c *ctx.ServiceCtx, form *forms.SearchTemplateForm) (tpl interface{}, err e.Error) {
+func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl interface{}, err e.Error) {
 	tplIdList := make([]models.Id, 0)
 	if c.ProjectId != "" {
 		// TODO 是否校验project_id 在不在这个组织里面？

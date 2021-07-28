@@ -66,7 +66,7 @@ func RegisterRoute(apiV1 *gin.RouterGroup) {
 	apiV1.GET("/task/status", w(handler.TaskStatus))
 	apiV1.GET("/task/log/follow", w(handler.TaskLogFollow))
 
-	//apiV1.POST("/task/cancel", func(c *gin.Context) {
+	//apiV1.POST("/task/cancel", func(c *gin.ServiceContext) {
 	//	logger.Debug(c.Request.Body)
 	//	err := runner.Cancel(c.Request)
 	//	if err != nil {

@@ -14,7 +14,7 @@ import (
 
 type HandleTableAndDesc map[string]string
 
-func Operation(c *ctx.GinRequestCtx) {
+func Operation(c *ctx.GinRequest) {
 	if c.Request.Method == "" {
 		c.Next() // 注意 next()方法的作用是跳过该调用链去直接后面的中间件以及api路由
 	}
@@ -44,13 +44,13 @@ func Operation(c *ctx.GinRequestCtx) {
 }
 
 type OperationMethod struct {
-	C *ctx.GinRequestCtx
+	C *ctx.GinRequest
 }
 
 func (o *OperationMethod) putOperation() (err error) {
 	bodyBytes, err := ioutil.ReadAll(o.C.Request.Body)
 	o.C.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
-	cxt := o.C.ServiceCtx()
+	cxt := o.C.Service()
 	url := o.C.Request.URL.String()
 	operationLog := models.OperationLog{
 		UserID:        cxt.UserId,
@@ -75,7 +75,7 @@ func (o *OperationMethod) postOperation() (err error) {
 	name := o.C.PostForm("name")
 	bodyBytes, err := ioutil.ReadAll(o.C.Request.Body)
 	o.C.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
-	cxt := o.C.ServiceCtx()
+	cxt := o.C.Service()
 	url := o.C.Request.URL.String()
 	operationLog := models.OperationLog{
 		UserID:        cxt.UserId,
@@ -97,7 +97,7 @@ func (o *OperationMethod) postOperation() (err error) {
 
 func (o *OperationMethod) deleteOperation() (err error) {
 	// 删除操作
-	cxt := o.C.ServiceCtx()
+	cxt := o.C.Service()
 	id := o.C.PostForm("id")
 	bodyBytes, err := ioutil.ReadAll(o.C.Request.Body)
 	o.C.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))

@@ -8,7 +8,7 @@ import (
 )
 
 type Token struct {
-	ctrl.BaseController
+	ctrl.GinController
 }
 
 // Create 创建token
@@ -22,12 +22,12 @@ type Token struct {
 // @Param data body forms.CreateTokenForm true "ApiToken信息"
 // @Success 200 {object} ctx.JSONResult{result=models.Token}
 // @Router /tokens [post]
-func (Token) Create(c *ctx.GinRequestCtx) {
+func (Token) Create(c *ctx.GinRequest) {
 	form := &forms.CreateTokenForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CreateToken(c.ServiceCtx(), form))
+	c.JSONResult(apps.CreateToken(c.Service(), form))
 }
 
 // Search 查询token
@@ -41,12 +41,12 @@ func (Token) Create(c *ctx.GinRequestCtx) {
 // @Param status query string false "ApiToken状态"
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Token}}
 // @Router /tokens [get]
-func (Token) Search(c *ctx.GinRequestCtx) {
+func (Token) Search(c *ctx.GinRequest) {
 	form := &forms.SearchTokenForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchToken(c.ServiceCtx(), form))
+	c.JSONResult(apps.SearchToken(c.Service(), form))
 }
 
 // Update 修改token信息
@@ -61,12 +61,12 @@ func (Token) Search(c *ctx.GinRequestCtx) {
 // @Param data body forms.UpdateTokenForm true "ApiToken信息"
 // @Success 200
 // @Router /tokens/{tokenId} [put]
-func (Token) Update(c *ctx.GinRequestCtx) {
+func (Token) Update(c *ctx.GinRequest) {
 	form := &forms.UpdateTokenForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.UpdateToken(c.ServiceCtx(), form))
+	c.JSONResult(apps.UpdateToken(c.Service(), form))
 }
 
 // Delete 删除Token账号
@@ -81,12 +81,12 @@ func (Token) Update(c *ctx.GinRequestCtx) {
 // @Param data body forms.DeleteTokenForm true "DeleteTokenForm信息"
 // @Success 200
 // @Router /tokens/{tokenId} [delete]
-func (Token) Delete(c *ctx.GinRequestCtx) {
+func (Token) Delete(c *ctx.GinRequest) {
 	form := &forms.DeleteTokenForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DeleteToken(c.ServiceCtx(), form))
+	c.JSONResult(apps.DeleteToken(c.Service(), form))
 }
 
 // DetailTriggerToken 触发器token详情
@@ -100,18 +100,18 @@ func (Token) Delete(c *ctx.GinRequestCtx) {
 // @Param data body forms.DetailTriggerTokenForm true "DeleteTokenForm信息"
 // @Success 200 {object} ctx.JSONResult{result=models.Token}
 // @Router /tokens/trigger [get]
-func (Token) DetailTriggerToken(c *ctx.GinRequestCtx) {
+func (Token) DetailTriggerToken(c *ctx.GinRequest) {
 	form := &forms.DetailTriggerTokenForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DetailTriggerToken(c.ServiceCtx(), form))
+	c.JSONResult(apps.DetailTriggerToken(c.Service(), form))
 }
 
-func ApiTriggerHandler(c *ctx.GinRequestCtx) {
+func ApiTriggerHandler(c *ctx.GinRequest) {
 	form := forms.ApiTriggerHandler{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.ApiTriggerHandler(c.ServiceCtx(), form))
+	c.JSONResult(apps.ApiTriggerHandler(c.Service(), form))
 }

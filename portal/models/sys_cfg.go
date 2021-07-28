@@ -22,9 +22,5 @@ func (SystemCfg) TableName() string {
 }
 
 func (o SystemCfg) Migrate(sess *db.Session) (err error) {
-	if err != nil {
-		return err
-	}
-
 	return nil
 }

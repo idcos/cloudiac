@@ -11,14 +11,14 @@ import (
 )
 
 // 简单 handler 函数
-func Hello(c *ctx.GinRequestCtx) {
+func Hello(c *ctx.GinRequest) {
 	c.JSON(http.StatusOK, "", gin.H{
 		"hello": "world",
 		"goos":  runtime.GOOS,
 	})
 }
 
-func Health(c *ctx.GinRequestCtx) {
+func Health(c *ctx.GinRequest) {
 	c.JSON(http.StatusOK, nil, gin.H{
 		"ok":      true,
 		"version": common.VERSION,

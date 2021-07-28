@@ -4,10 +4,10 @@ import (
 	"cloudiac/portal/libs/ctx"
 )
 
-func OpenTemplateSearch(c *ctx.GinRequestCtx) {
+func OpenTemplateSearch(c *ctx.GinRequest) {
 	// TODO 待实现
 }
 
-func TemplateDetail(c *ctx.GinRequestCtx) {
+func TemplateDetail(c *ctx.GinRequest) {
 	// TODO 待实现
 }

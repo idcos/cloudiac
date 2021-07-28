@@ -47,7 +47,7 @@ func getEmptyListResult(form forms.PageFormer) (interface{}, e.Error) {
 	}, nil
 }
 
-func BaseHandler(c *ctx.ServiceCtx, form *forms.BaseForm) (interface{}, e.Error) {
+func BaseHandler(c *ctx.ServiceContext, form *forms.BaseForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("base"))
 	return nil, nil
 }
