@@ -3,6 +3,7 @@ package utils
 import (
 	"archive/zip"
 	"bytes"
+	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/utils/logs"
 	"crypto/aes"
@@ -33,17 +34,7 @@ import (
 
 const letterAndDigit = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-var (
-	secretKey []byte
-)
-
 func init() {
-	sk := os.Getenv("CLOUDIAC_SECRET_KEY")
-	if sk == "" {
-		sk = "6xGzLKiX4dl0UE6aVuBGCmRWL7cQ+90W"
-	}
-	secretKey = []byte(sk)
-
 	n, _ := crand.Int(crand.Reader, big.NewInt(math.MaxInt64))
 	if n == nil {
 		n = big.NewInt(time.Now().UnixNano())
@@ -261,7 +252,7 @@ func CheckRespCode(respCode int, code int) bool {
 }
 
 func AesEncrypt(plaintext string) (string, error) {
-	block, err := aes.NewCipher(secretKey)
+	block, err := aes.NewCipher([]byte(configs.Get().SecretKey))
 	if err != nil {
 		return "", err
 	}
@@ -280,7 +271,7 @@ func AesDecrypt(d string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	block, err := aes.NewCipher(secretKey)
+	block, err := aes.NewCipher([]byte(configs.Get().SecretKey))
 	if err != nil {
 		return "", err
 	}
