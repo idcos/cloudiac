@@ -195,9 +195,8 @@ func FollowTaskLog(c *ctx.GinRequestCtx, form forms.DetailTaskForm) e.Error {
 	sc := c.ServiceCtx()
 	rCtx := c.Context.Request.Context()
 
-	// TODO 浏览器原生 SSE 实现不支持修改 header，所以这个接口暂时不作认证，待前端支持
-	//task, er := services.GetTask(sc.ProjectDB(), form.Id)
-	task, er := services.GetTask(sc.DB(), form.Id)
+	query := services.QueryWithProjectId(services.QueryWithOrgId(sc.DB(), sc.OrgId), sc.ProjectId)
+	task, er := services.GetTask(query, form.Id)
 	if er != nil {
 		logger.Errorf("get task: %v", er)
 		if er.Code() == e.TaskNotExists {

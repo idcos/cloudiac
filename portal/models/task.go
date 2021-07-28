@@ -261,6 +261,10 @@ func (s *TaskStep) IsApproved() bool {
 	return true
 }
 
+func (s *TaskStep) IsRejected() bool {
+	return s.Status == TaskStepRejected
+}
+
 func (s *TaskStep) GenLogPath() string {
 	return path.Join(
 		s.ProjectId.String(),

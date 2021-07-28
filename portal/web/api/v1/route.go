@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"cloudiac/common"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/web/api/v1/handlers"
 	"cloudiac/portal/web/middleware"
@@ -29,6 +30,8 @@ func Register(g *gin.RouterGroup) {
 	g.Any("/check", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"success": true,
+			"version": common.VERSION,
+			"build":   common.BUILD,
 		})
 	})
 

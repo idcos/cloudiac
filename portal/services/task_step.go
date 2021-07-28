@@ -102,7 +102,8 @@ func ChangeTaskStepStatus(dbSess *db.Session, task *models.Task, taskStep *model
 	}
 
 	if taskStep.Id == "" {
-		// id 为空表示是生成的功能性步骤，非任务的流程步骤
+		// id 为空表示是生成的功能性步骤，非任务的流程步骤，
+		// 不需要保存到 db，且步骤的状态不影响任务和环境的状态
 		return nil
 	}
 
@@ -115,6 +116,12 @@ func ChangeTaskStepStatus(dbSess *db.Session, task *models.Task, taskStep *model
 
 	if _, err := dbSess.Model(&models.TaskStep{}).Update(taskStep); err != nil {
 		return e.New(e.DBError, err)
+	}
+
+	if taskStep.IsExited() && !taskStep.IsRejected() {
+		// 步骤结束时任务不能同步修改状态，需要等资源采集步骤执行结束并生成统计数据后才能更新任务状态。
+		// 特殊的: 审批驳回的任务执行结束后不需要进行资源统计，应该立即修改状态
+		return nil
 	}
 	return ChangeTaskStatusWithStep(dbSess, task, taskStep)
 }
