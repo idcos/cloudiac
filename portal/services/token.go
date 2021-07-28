@@ -31,7 +31,7 @@ func GenerateToken(uid models.Id, name string, isAdmin bool, expireDuration time
 		},
 	})
 
-	return token.SignedString([]byte(configs.Get().SecretKey))
+	return token.SignedString([]byte(configs.Get().JwtSecretKey))
 }
 
 func CreateToken(tx *db.Session, token models.Token) (*models.Token, e.Error) {

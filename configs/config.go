@@ -110,15 +110,16 @@ func (ut *yamlTimeDuration) UnmarshalYAML(unmarshal func(interface{}) error) err
 }
 
 type Config struct {
-	Mysql      string           `yaml:"mysql"`
-	Listen     string           `yaml:"listen"`
-	Consul     ConsulConfig     `yaml:"consul"`
-	Portal     PortalConfig     `yaml:"portal"`
-	Runner     RunnerConfig     `yaml:"runner"`
-	Log        LogConfig        `yaml:"log"`
-	Kafka      KafkaConfig      `yaml:"kafka"`
-	SMTPServer SMTPServerConfig `yaml:"smtpServer"`
-	SecretKey  string           `yaml:"secretKey"`
+	Mysql        string           `yaml:"mysql"`
+	Listen       string           `yaml:"listen"`
+	Consul       ConsulConfig     `yaml:"consul"`
+	Portal       PortalConfig     `yaml:"portal"`
+	Runner       RunnerConfig     `yaml:"runner"`
+	Log          LogConfig        `yaml:"log"`
+	Kafka        KafkaConfig      `yaml:"kafka"`
+	SMTPServer   SMTPServerConfig `yaml:"smtpServer"`
+	SecretKey    string           `yaml:"secretKey"`
+	JwtSecretKey string           `yaml:"jwtSecretKey"`
 }
 
 var (
@@ -153,7 +154,12 @@ func parsePortalConfig(filename string) error {
 	if err := parseConfig(filename, &cfg); err != nil {
 		return err
 	}
-
+	if cfg.SecretKey == "" {
+		panic("missing secret key config")
+	}
+	if cfg.JwtSecretKey == "" {
+		cfg.JwtSecretKey = cfg.SecretKey
+	}
 	lock.Lock()
 	defer lock.Unlock()
 	config = &cfg

@@ -22,7 +22,7 @@ func Auth(c *ctx.GinRequestCtx) {
 	}
 
 	token, err := jwt.ParseWithClaims(tokenStr, &services.Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(configs.Get().SecretKey), nil
+		return []byte(configs.Get().JwtSecretKey), nil
 	})
 	if err != nil {
 		c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
