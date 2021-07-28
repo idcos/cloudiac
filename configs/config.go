@@ -110,14 +110,15 @@ func (ut *yamlTimeDuration) UnmarshalYAML(unmarshal func(interface{}) error) err
 }
 
 type Config struct {
-	Mysql      string           `yaml:"mysql"`
-	Listen     string           `yaml:"listen"`
-	Consul     ConsulConfig     `yaml:"consul"`
-	Portal     PortalConfig     `yaml:"portal"`
-	Runner     RunnerConfig     `yaml:"runner"`
-	Log        LogConfig        `yaml:"log"`
-	Kafka      KafkaConfig      `yaml:"kafka"`
-	SMTPServer SMTPServerConfig `yaml:"smtpServer"`
+	Mysql        string           `yaml:"mysql"`
+	Listen       string           `yaml:"listen"`
+	Consul       ConsulConfig     `yaml:"consul"`
+	Portal       PortalConfig     `yaml:"portal"`
+	Runner       RunnerConfig     `yaml:"runner"`
+	Log          LogConfig        `yaml:"log"`
+	Kafka        KafkaConfig      `yaml:"kafka"`
+	SMTPServer   SMTPServerConfig `yaml:"smtpServer"`
+	JwtSecretKey string           `yaml:"jwtSecretKey"`
 }
 
 var (
@@ -129,6 +130,7 @@ var (
 			SSHPrivateKey: "var/private_key",
 			SSHPublicKey:  "var/private_key.pub",
 		},
+		JwtSecretKey: "c1c3ik8rvdg331ivogcg",
 	}
 )
 

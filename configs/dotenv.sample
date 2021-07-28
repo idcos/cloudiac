@@ -5,6 +5,9 @@ IAC_ADMIN_PASSWORD=
 # 部署的镜像版本，仅 docker-compose 部署时有效
 IAC_VERSION=latest
 
+# JWT 密钥配置
+JWT_SECRET_KEY=
+
 ## mysql 配置
 MYSQL_HOST=mysql
 MYSQL_PORT=3306
