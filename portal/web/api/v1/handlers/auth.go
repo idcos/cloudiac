@@ -9,7 +9,6 @@ import (
 
 type Auth struct {
 	ctrl.GinController
-	apps.AuthApp
 }
 
 func (Auth) Create(c *ctx.GinRequest) {
@@ -70,5 +69,5 @@ func (a Auth) Login(c *ctx.GinRequest) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.AuthApp{}.Login(&form))
+	c.JSONResult(apps.Login(c.Service(), &form))
 }
