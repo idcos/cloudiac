@@ -4,6 +4,8 @@
 
 ## 目标目录
 TARGET_DIR=${TARGET_DIR:-./assets/providers}
+export TF_PLUGIN_CACHE_DIR="/tmp/.cloudiac-build-terraform-plugins"
+mkdir -p "$TF_PLUGIN_CACHE_DIR"
 
 ## 内置代码库的路径
 REPOS=${REPOS:-./repos}
@@ -15,6 +17,7 @@ MY_DIRNAME=$(dirname "$0")
 MY_PATH=$(cd "${MY_DIRNAME}"; pwd)
 ## providers.tf 文件路径，用于额外下载指定的 provider
 PROVIDERS_FILE_DIR=${PROVIDERS_FILE_DIR:-$MY_PATH}
+
 
 function terraform_mirror() {
     local WORKDIR=$1

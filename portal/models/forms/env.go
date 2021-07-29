@@ -14,7 +14,7 @@ type CreateEnvForm struct {
 	envTtlForm
 
 	TplId    models.Id `form:"tplId" json:"tplId" binding:"required"`            // 模板ID
-	Name     string    `form:"name" json:"name" binding:"required,gte=2,lte=32"` // 环境名称
+	Name     string    `form:"name" json:"name" binding:"required,gte=2,lte=64"` // 环境名称
 	OneTime  bool      `form:"oneTime" json:"oneTime" binding:""`                // 一次性环境标识
 	Triggers []string  `form:"triggers" json:"triggers" binding:""`              // 启用触发器，触发器：commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
 
