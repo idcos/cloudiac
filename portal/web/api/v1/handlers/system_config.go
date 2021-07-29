@@ -26,7 +26,7 @@ func (SystemConfig) Create(c *ctx.GinRequest) {
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
-// @Success 200 {object} ctx.JSONResult{result=apps.SearchSystemConfigResp}
+// @Success 200 {object} ctx.JSONResult{result=[]apps.SearchSystemConfigResp}
 // @Router /systems [get]
 func (SystemConfig) Search(c *ctx.GinRequest) {
 	c.JSONResult(apps.SearchSystemConfig(c.Service()))
@@ -42,7 +42,7 @@ func (SystemConfig) Search(c *ctx.GinRequest) {
 // @Param id path string true "系统ID"
 // @Param data body forms.UpdateSystemConfigForm true "系统配置信息"
 // @Success 200 {object} models.SystemCfg
-// @Router /systems/{id} [put]
+// @Router /systems [put]
 func (SystemConfig) Update(c *ctx.GinRequest) {
 	form := forms.UpdateSystemConfigForm{}
 	if err := c.Bind(&form); err != nil {

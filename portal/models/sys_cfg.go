@@ -22,5 +22,9 @@ func (SystemCfg) TableName() string {
 }
 
 func (o SystemCfg) Migrate(sess *db.Session) (err error) {
+	if err := o.AddUniqueIndex(sess,
+		"unique__system_cfg__name", "name"); err != nil {
+		return err
+	}
 	return nil
 }

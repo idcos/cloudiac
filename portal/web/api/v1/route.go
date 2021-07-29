@@ -57,7 +57,8 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/users/:id/password/reset", ac(), w(handlers.User{}.PasswordReset))
 
 	// 系统配置
-	ctrl.Register(g.Group("systems"), &handlers.SystemConfig{})
+	g.PUT("/systems", ac(), w(handlers.SystemConfig{}.Update))
+	g.GET("/systems", ac(), w(handlers.SystemConfig{}.Search))
 	// 系统状态
 	g.GET("/systems/status", w(handlers.PortalSystemStatusSearch))
 
