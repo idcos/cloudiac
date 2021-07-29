@@ -34,15 +34,18 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		c.Logger().Errorf("error get template, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
-	if form.TfVarsFile == "" {
+
+	// 以下值只在未传入时使用模板定义的值，如果入参有该字段即使值为空也不会使用模板中的值
+	if !form.HasKey("tfVarsFile") {
 		form.TfVarsFile = tpl.TfVarsFile
 	}
-	if form.PlayVarsFile == "" {
+	if !form.HasKey("playVarsFile") {
 		form.PlayVarsFile = tpl.PlayVarsFile
 	}
-	if form.Playbook == "" {
+	if !form.HasKey("playbook") {
 		form.Playbook = tpl.Playbook
 	}
+
 	if form.Timeout == 0 {
 		form.Timeout = common.TaskStepTimeoutDuration
 	}
@@ -436,17 +439,6 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		return nil, e.New(e.TemplateDisabled, http.StatusBadRequest)
 	}
 
-	if form.TfVarsFile == "" {
-		form.TfVarsFile = tpl.TfVarsFile
-	}
-	if form.PlayVarsFile == "" {
-		form.PlayVarsFile = tpl.PlayVarsFile
-	}
-	if form.Playbook == "" {
-		form.Playbook = tpl.Playbook
-	}
-
-	envUpdateAttrs := models.Attrs{} // 保存需要强制 update 的字段值
 	if form.HasKey("name") {
 		env.Name = form.Name
 	}
@@ -467,7 +459,6 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		env.AutoDestroyAt = &destroyAt
 		// 直接传入了销毁时间，需要同步清空 ttl
 		env.TTL = ""
-		envUpdateAttrs["ttl"] = ""
 	} else if form.HasKey("ttl") {
 		ttl, err := services.ParseTTL(form.TTL)
 		if err != nil {
@@ -479,7 +470,6 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 			if ttl == 0 {
 				// ttl 传入 0 表示清空自动销毁时间
 				env.AutoDestroyAt = nil
-				envUpdateAttrs["AutoDestroyAt"] = nil
 			} else {
 				at := models.Time(time.Now().Add(ttl))
 				env.AutoDestroyAt = &at
@@ -555,15 +545,7 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
-	if len(envUpdateAttrs) > 0 {
-		// tx.Save() 会忽略 nil 值，所以使用 map 强制更新
-		if _, err = services.UpdateEnv(tx, env.Id, envUpdateAttrs); err != nil {
-			_ = tx.Rollback()
-			c.Logger().Errorf("error update env, err %s", err)
-			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-		}
-	}
-
+	// Save() 调用会全量将结构体中的字段进行保存，即使字段为 zero value
 	if _, err := tx.Save(env); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error save env, err %s", err)
