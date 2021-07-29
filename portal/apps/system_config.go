@@ -21,8 +21,8 @@ func (m *SearchSystemConfigResp) TableName() string {
 }
 
 func SearchSystemConfig(c *ctx.ServiceContext) (interface{}, e.Error) {
-	rs := SearchSystemConfigResp{}
-	err := services.QuerySystemConfig(c.DB()).First(&rs)
+	rs := make([]SearchSystemConfigResp, 0)
+	err := services.QuerySystemConfig(c.DB()).Find(&rs)
 	if err != nil {
 		return nil, e.New(e.DBError, err)
 	}
@@ -31,13 +31,27 @@ func SearchSystemConfig(c *ctx.ServiceContext) (interface{}, e.Error) {
 }
 
 func UpdateSystemConfig(c *ctx.ServiceContext, form *forms.UpdateSystemConfigForm) (cfg *models.SystemCfg, err e.Error) {
-	c.AddLogField("action", fmt.Sprintf("update system config %s", form.Id))
+	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
 
-	attrs := models.Attrs{}
-	if form.HasKey("value") {
-		attrs["value"] = form.Value
+	for _, v := range form.SystemCfg {
+		attrs := models.Attrs{}
+		attrs["value"] = v.Value
+		if _, err := services.UpdateSystemConfig(tx, v.Name, attrs); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
 	}
 
-	cfg, err = services.UpdateSystemConfig(c.DB(), attrs)
-	return
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, fmt.Errorf("error commit database, err %s", err))
+	}
+
+	return nil, nil
 }
