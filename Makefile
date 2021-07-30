@@ -6,7 +6,7 @@ GOGET=$(GOCMD) get
 
 RM=/bin/rm -f
 
-## VERSION=$(shell git describe --tags --abbrev=0 --always)
+#VERSION=$(shell git describe --tags --abbrev=0 --always)
 VERSION=$(shell cat VERSION)
 DATE_VER=$(shell date "+%Y%m%d")
 COMMIT=$(shell git rev-parse --short HEAD)
@@ -38,12 +38,9 @@ swag-docs:
 
 portal: reset-build-dir swag-docs
 	$(GOBUILD) -o $(BUILD_DIR)/iac-portal ./cmds/portal
-	cp ./configs/config-portal.yml.sample $(BUILD_DIR)/config-portal.yml.sample
-	cp ./configs/dotenv.sample $(BUILD_DIR)/dotenv.sample
 
 runner: reset-build-dir
 	$(GOBUILD) -o $(BUILD_DIR)/ct-runner ./cmds/runner
-	cp ./configs/config-runner.yml.sample $(BUILD_DIR)/config-runner.yml.sample
 
 tool: 
 	$(GOBUILD) -o $(BUILD_DIR)/iac-tool ./cmds/tool
@@ -67,37 +64,20 @@ clean: reset-build-dir
 	$(GOCLEAN) ./cmds/tool
 
 
-PACKAGE_NAME=cloudiac-$(VERSION).tar.gz
+PACKAGE_NAME=cloudiac_$(VERSION).tar.gz
 package-local: reset-build-dir clean build
-	cp -a ./assets/terraform.py $(BUILD_DIR)/assets/
-	cp ./scripts/iac-portal.service ./scripts/ct-runner.service $(BUILD_DIR)/
-	@cd $(BUILD_DIR) && tar -czf ../$(PACKAGE_NAME) ./ && echo "Package: $(PACKAGE_NAME)"
+	cp -a ./assets/terraform.py $(BUILD_DIR)/assets/ && \
+	cp ./scripts/iac-portal.service ./scripts/ct-runner.service $(BUILD_DIR)/ && \
+	cp ./configs/config-portal.yml.sample $(BUILD_DIR)/config-portal.yml.sample && \
+	cp ./configs/dotenv.sample $(BUILD_DIR)/dotenv.sample && \
+	cp ./configs/config-runner.yml.sample $(BUILD_DIR)/config-runner.yml.sample && \
+	cd $(BUILD_DIR) && tar -czf ../$(PACKAGE_NAME) ./ && echo "Package: $(PACKAGE_NAME)"
 
 package-linux-amd64:
 	GOOS=linux GOARCH=amd64 $(MAKE) package-local
 
 package: package-linux-amd64
 
-
-repos: repos.list
-	mkdir -p ./repos/cloud-iac && \
-	cd ./repos/cloud-iac && bash ../../scripts/clone-repos.sh
-
-REPOS_PACKAGE_NAME=cloudiac-repos-$(VERSION)-$(DATE_VER).tar.gz
-repos-package: repos
-	@tar -czf $(REPOS_PACKAGE_NAME) ./repos && echo Package: $(REPOS_PACKAGE_NAME)
-
-
-providers: 
-	bash scripts/generate-providers-mirror.sh
-
-PROVIDERS_PACKAGE_NAME=cloudiac-providers-$(VERSION)-$(DATE_VER).tar.gz
-providers-package: providers
-	@tar -czf $(PROVIDERS_PACKAGE_NAME) ./assets/providers && echo Package: $(PROVIDERS_PACKAGE_NAME)
-
-
-image-portal: build-linux-amd64
- $(DOCKER_BUILD) -t cloudiac/iac-portal:$(VERSION) -f docker/portal/Dockerfile .
 
 image-runner: build-linux-amd64
  $(DOCKER_BUILD) -t cloudiac/ct-runner:$(VERSION) -f docker/runner/Dockerfile .
@@ -107,7 +87,7 @@ image-worker:
 
 image: image-portal image-runner image-worker
 
-push-image: 
+push-image:
 	for NAME in iac-portal ct-runner ct-worker; do \
 	  docker push cloudiac/$${NAME}:$(VERSION) || exit $$?; \
 	done
@@ -117,4 +97,29 @@ push-image-latest:
 	  docker tag cloudiac/$${NAME}:$(VERSION) cloudiac/$${NAME}:latest && \
 	  docker push cloudiac/$${NAME}:latest || exit $$?; \
 	done
+
+
+OSNAME=$(shell uname -s)
+CMD_SHA1SUM=sha1sum | head -c8
+ifeq ($(OSNAME),Darwin)
+  CMD_SHA1SUM=shasum -a 1 | head -c8
+endif
+
+repos: repos.list
+	mkdir -p ./repos/cloud-iac && \
+	cd ./repos/cloud-iac && bash ../../scripts/clone-repos.sh
+
+REPOS_SHA1SUM=$(shell tar -c ./repos | $(CMD_SHA1SUM))
+REPOS_PACKAGE_NAME=cloudiac-repos_$(VERSION)_$(REPOS_SHA1SUM).tar.gz
+repos-package:
+	tar -czf $(REPOS_PACKAGE_NAME) ./repos
+
+
+providers:
+	bash scripts/generate-providers-mirror.sh
+
+PROVIDERS_SHA1SUM=$(shell tar -c ./assets/providers | $(CMD_SHA1SUM))
+PROVIDERS_PACKAGE_NAME=cloudiac-providers_$(VERSION)_$(PROVIDERS_SHA1SUM).tar.gz
+providers-package:
+	tar -czf $(PROVIDERS_PACKAGE_NAME) ./assets/providers
 
