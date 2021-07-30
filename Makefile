@@ -96,24 +96,25 @@ providers-package: providers
 	@tar -czf $(PROVIDERS_PACKAGE_NAME) ./assets/providers && echo Package: $(PROVIDERS_PACKAGE_NAME)
 
 
-docker-image-portal: build-linux-amd64
-	$(DOCKER_BUILD) -t cloudiac/iac-portal:$(VERSION) -f docker/portal/Dockerfile .
+image-portal: build-linux-amd64
+ $(DOCKER_BUILD) -t cloudiac/iac-portal:$(VERSION) -f docker/portal/Dockerfile .
 
-docker-image-runner: build-linux-amd64
-	$(DOCKER_BUILD) -t cloudiac/ct-runner:$(VERSION) -f docker/runner/Dockerfile .
+image-runner: build-linux-amd64
+ $(DOCKER_BUILD) -t cloudiac/ct-runner:$(VERSION) -f docker/runner/Dockerfile .
 
-docker-image-worker:
-	$(DOCKER_BUILD) -t cloudiac/ct-worker:$(VERSION) -f docker/worker/Dockerfile .
+image-worker:
+ $(DOCKER_BUILD) -t cloudiac/ct-worker:$(VERSION) -f docker/worker/Dockerfile .
 
-docker-image: docker-image-portal docker-image-runner docker-image-worker
+image: image-portal image-runner image-worker
 
-docker-push: 
+push-image: 
 	for NAME in iac-portal ct-runner ct-worker; do \
 	  docker push cloudiac/$${NAME}:$(VERSION) || exit $$?; \
 	done
 
-docker-push-latest:
+push-image-latest:
 	for NAME in iac-portal ct-runner ct-worker; do \
 	  docker tag cloudiac/$${NAME}:$(VERSION) cloudiac/$${NAME}:latest && \
 	  docker push cloudiac/$${NAME}:latest || exit $$?; \
 	done
+

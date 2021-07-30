@@ -66,6 +66,10 @@ func (s *Session) DropColumn(table string, columns ...string) error {
 	return nil
 }
 
+func (s *Session) ModifyColumn(column string, typ string) error {
+	return s.db.ModifyColumn(column, typ).Error
+}
+
 func (s *Session) Rollback() error {
 	return s.db.Rollback().Error
 }

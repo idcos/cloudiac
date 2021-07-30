@@ -14,7 +14,7 @@ type Var struct {
 type CreateTemplateForm struct {
 	BaseForm
 
-	Name              string      `form:"name" json:"name" binding:"required,gte=2,lte=32"`
+	Name              string      `form:"name" json:"name" binding:"required,gte=2,lte=64"`
 	Description       string      `form:"description" json:"description" binding:""`
 	RepoId            string      `form:"repoId" json:"repoId" binding:"required"`
 	RepoRevision      string      `form:"repoRevision" json:"repoRevision" binding:""`
