@@ -80,10 +80,10 @@ package: package-linux-amd64
 
 
 image-runner: build-linux-amd64
- $(DOCKER_BUILD) -t cloudiac/ct-runner:$(VERSION) -f docker/runner/Dockerfile .
+	$(DOCKER_BUILD) -t cloudiac/ct-runner:$(VERSION) -f docker/runner/Dockerfile .
 
 image-worker:
- $(DOCKER_BUILD) -t cloudiac/ct-worker:$(VERSION) -f docker/worker/Dockerfile .
+	$(DOCKER_BUILD) -t cloudiac/ct-worker:$(VERSION) -f docker/worker/Dockerfile .
 
 image: image-portal image-runner image-worker
 
