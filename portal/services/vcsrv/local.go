@@ -103,7 +103,7 @@ func getRevision(refs storer.ReferenceIter, err error) ([]string, error) {
 
 	branches := make([]string, 0)
 	err = refs.ForEach(func(ref *plumbing.Reference) error {
-		branches = append(branches, filepath.Base(ref.Name().String()))
+		branches = append(branches, ref.Name().Short())
 		return nil
 	})
 	if err != nil {
@@ -222,12 +222,12 @@ func (l *LocalRepo) FormatRepoSearch() (*Projects, e.Error) {
 	return &Projects{
 		ID:             l.path,
 		Description:    "",
-		DefaultBranch:  filepath.Base(head.Name().String()),
+		DefaultBranch:  l.DefaultBranch(),
 		SSHURLToRepo:   "",
 		HTTPURLToRepo:  httpUrl,
 		Name:           strings.TrimSuffix(filepath.Base(l.path), ".git"),
 		LastActivityAt: &headCommit.Author.When,
-		FullName: 		strings.TrimSuffix(filepath.Base(l.path), ".git"),
+		FullName:       strings.TrimSuffix(filepath.Base(l.path), ".git"),
 	}, nil
 }
 
