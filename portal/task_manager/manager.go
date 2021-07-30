@@ -144,8 +144,7 @@ func (m *TaskManager) start() {
 		return
 	}
 
-	// 查询待运行任务列表的间隔
-	ticker := time.NewTicker(time.Second * 5)
+	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
 	for {

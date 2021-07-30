@@ -64,7 +64,7 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		EnvId:     env.Id,
 		StatePath: env.StatePath,
 
-		Workdir:      tpl.Workdir,
+		Workdir: tpl.Workdir,
 		// 以下值直接使用环境的配置(不继承模板的配置)
 		Playbook:     env.Playbook,
 		TfVarsFile:   env.TfVarsFile,
@@ -457,7 +457,7 @@ func FetchTaskLog(ctx context.Context, task *models.Task, writer io.WriteCloser)
 		return err
 	}
 
-	sleepDuration := time.Second * 5
+	sleepDuration := consts.DbTaskPollInterval
 	storage := logstorage.Get()
 	ticker := time.NewTicker(sleepDuration)
 	defer ticker.Stop()
@@ -507,8 +507,8 @@ func FetchTaskLog(ctx context.Context, task *models.Task, writer io.WriteCloser)
 			for {
 				if err = fetchRunnerTaskStepLog(ctx, task.RunnerId, step, writer); err != nil {
 					if err == ErrRunnerTaskNotExists && step.StartAt != nil &&
-						time.Since(time.Time(*step.StartAt)) < time.Second*consts.RunnerConnectTimeout*2 {
-						// 某些情况下可能步骤被标识为了 running 状态，但调用 runner 执行任务时可能因为网络等原因导致没有及时启动执行。
+						time.Since(time.Time(*step.StartAt)) < consts.RunnerConnectTimeout*2 {
+						// 某些情况下可能步骤被标识为了 running 状态，但调用 runner 执行任务时因为网络等原因导致没有及时启动执行。
 						// 所以这里加一个判断, 如果是刚启动的任务会进行重试
 						time.Sleep(sleepDuration)
 						continue

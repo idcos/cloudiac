@@ -47,7 +47,7 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error) 
 	taskReq.StepArgs = step.Args
 
 	respData, err := utils.HttpService(requestUrl, "POST", header, taskReq,
-		consts.RunnerConnectTimeout, consts.RunnerConnectTimeout)
+		int(consts.RunnerConnectTimeout.Seconds()), int(consts.RunnerConnectTimeout.Seconds()))
 	if err != nil {
 		return err
 	}
@@ -265,7 +265,7 @@ var (
 func WaitTaskStepApprove(ctx context.Context, dbSess *db.Session, taskId models.Id, step int) (
 	taskStep *models.TaskStep, err error) {
 
-	ticker := time.NewTicker(time.Second * 5)
+	ticker := time.NewTicker(consts.DbTaskPollInterval)
 	defer ticker.Stop()
 
 	for {
