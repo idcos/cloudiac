@@ -20,8 +20,6 @@ provider plugin 的查找逻辑:
 const (
 	ContainerWorkspace = "/cloudiac/workspace"
 
-	//WorkspacePrefix         = "/cloud-iac/task"              // 挂载 iac 任务相关文件, 任务脚本、日志等
-
 	ContainerAssetsDir       = "/cloudiac/assets"             // 挂载依赖资源，如 terraform.py 等(可以考虑打包到镜像?)
 	ContainerPluginPath      = "/usr/share/terraform/plugins" // 预置 providers 目录(可以考虑打包到镜像?)
 	ContainerPluginCachePath = "/terraform/plugins-cache"     // terraform plugins 缓存目录

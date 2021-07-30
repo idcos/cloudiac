@@ -106,8 +106,8 @@ ifeq ($(OSNAME),Darwin)
 endif
 
 repos: repos.list
-	mkdir -p ./repos/cloud-iac && \
-	cd ./repos/cloud-iac && bash ../../scripts/clone-repos.sh
+	mkdir -p ./repos/cloudiac && \
+	cd ./repos/cloudiac && bash ../../scripts/clone-repos.sh
 
 REPOS_SHA1SUM=$(shell tar -c ./repos | $(CMD_SHA1SUM))
 REPOS_PACKAGE_NAME=cloudiac-repos_$(VERSION)_$(REPOS_SHA1SUM).tar.gz
