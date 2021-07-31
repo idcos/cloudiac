@@ -41,11 +41,11 @@ func (s *Session) AddUniqueIndex(indexName string, columns ...string) error {
 }
 
 func (s *Session) RemoveIndex(table string, indexName string) error {
-	if !s.db.Dialect().HasIndex(table, indexName) {
-		return nil
+	migrator := s.db.Migrator()
+	if migrator.HasIndex(table, indexName) {
+		return migrator.DropIndex(table, indexName)
 	}
-
-	return s.db.Table(table).RemoveIndex(indexName).Error
+	return nil
 }
 
 func (s *Session) DropColumn(table string, columns ...string) error {
@@ -60,8 +60,8 @@ func (s *Session) DropColumn(table string, columns ...string) error {
 	return nil
 }
 
-func (s *Session) ModifyColumn(column string, typ string) error {
-	return s.db.ModifyColumn(column, typ).Error
+func (s *Session) ModifyColumn(table string, column string) error {
+	return s.db.Migrator().AlterColumn(table, column)
 }
 
 func (s *Session) Rollback() error {

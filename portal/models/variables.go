@@ -10,7 +10,7 @@ type VariableBody struct {
 	Scope       string `json:"scope" gorm:"not null;type:enum('org','template','project','env')"`
 	Type        string `json:"type" gorm:"not null;type:enum('environment','terraform','ansible')"`
 	Name        string `json:"name" gorm:"size:64;not null"`
-	Value       string `json:"value"` // db 类型定义见 migrate
+	Value       string `json:"value" gorm:"type:text"`
 	Sensitive   bool   `json:"sensitive,omitempty" gorm:"default:'0'"`
 	Description string `json:"description,omitempty" gorm:"type:text"`
 }
@@ -31,12 +31,12 @@ func (Variable) TableName() string {
 
 func (v Variable) Migrate(sess *db.Session) error {
 	// 变量名在各 scope 下唯一
-	// 注意这些 id 字段需要默认设置为 0，否则联合唯一索引可能会因为存在 null 值而不生效
+	// 注意这些 id 字段需要默认设置为 ''，否则联合唯一索引可能会因为存在 null 值而不生效
 	if err := v.AddUniqueIndex(sess, "unique__variable__name",
 		"org_id", "project_id", "tpl_id", "env_id", "name(32)", "type"); err != nil {
 		return err
 	}
-	if err := sess.ModifyColumn("value", "text"); err != nil {
+	if err := sess.ModifyColumn(v.TableName(), "value"); err != nil {
 		return err
 	}
 	return nil
