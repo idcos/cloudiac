@@ -43,6 +43,11 @@ func Auth(c *ctx.GinRequest) {
 	if orgId != "" {
 		c.Service().OrgId = orgId
 
+		if org, err := services.GetOrganizationById(c.Service().DB(), orgId); err != nil {
+			c.JSONError(e.New(e.OrganizationNotExists, fmt.Errorf("not allow to access org")), http.StatusBadRequest)
+		} else if org.Status == models.Disable && !c.Service().IsSuperAdmin {
+			c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("org disabled")), http.StatusForbidden)
+		}
 		if c.Service().IsSuperAdmin ||
 			services.UserHasOrgRole(c.Service().UserId, c.Service().OrgId, "") {
 		} else {
@@ -59,6 +64,9 @@ func Auth(c *ctx.GinRequest) {
 		} else if project.OrgId != c.Service().OrgId {
 			c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("invalid project id")), http.StatusForbidden)
 			return
+		} else if project.Status == models.Disable &&
+			!(c.Service().IsSuperAdmin || services.UserHasOrgRole(c.Service().UserId, c.Service().OrgId, consts.OrgRoleAdmin)) {
+			c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("project disabled")), http.StatusForbidden)
 		}
 		if c.Service().IsSuperAdmin ||
 			services.UserHasOrgRole(c.Service().UserId, c.Service().OrgId, consts.OrgRoleAdmin) ||
