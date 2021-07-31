@@ -99,11 +99,15 @@ func (p *InitDemo) Execute(args []string) error {
 		}
 	}()
 
-	org, err := services.CreateOrganization(tx, models.Organization{
+	o := models.Organization{
 		Name:        data.Organization.Name,
 		Description: data.Organization.Description,
 		IsDemo:      true,
-	})
+		CreatorId:   consts.SysUserId,
+	}
+	o.Id = consts.DemoOrgId
+
+	org, err := services.CreateOrganization(tx, o)
 	if err != nil {
 		panic(fmt.Errorf("create org failed, err %s", err))
 	}
@@ -114,6 +118,7 @@ func (p *InitDemo) Execute(args []string) error {
 		OrgId:       org.Id,
 		Name:        data.Organization.Project.Name,
 		Description: data.Organization.Project.Description,
+		CreatorId:   consts.SysUserId,
 	})
 	if err != nil {
 		panic(fmt.Errorf("create project failed, err %s", err))
@@ -142,9 +147,10 @@ func (p *InitDemo) Execute(args []string) error {
 		panic(fmt.Errorf("encrypt key failed, err %s", er))
 	}
 	key, err := services.CreateKey(tx, models.Key{
-		OrgId:   org.Id,
-		Name:    data.Organization.Key.Name,
-		Content: encrypted,
+		OrgId:     org.Id,
+		Name:      data.Organization.Key.Name,
+		Content:   encrypted,
+		CreatorId: consts.SysUserId,
 	})
 	if err != nil {
 		panic(fmt.Errorf("create key failed, err %s", err))
@@ -179,6 +185,7 @@ func (p *InitDemo) Execute(args []string) error {
 		TfVarsFile:   data.Organization.Template.TfVarsFile,
 		Playbook:     data.Organization.Template.Playbook,
 		Workdir:      data.Organization.Template.Workdir,
+		CreatorId:    consts.SysUserId,
 	})
 	if err != nil {
 		panic(fmt.Errorf("create template failed, err %s", err))

@@ -45,7 +45,8 @@ func DeleteUser(tx *db.Session, id models.Id) e.Error {
 	return nil
 }
 
-func GetUserById(tx *db.Session, id models.Id) (*models.User, e.Error) {
+// GetUserByIdRaw 按 ID 查找用户，不排除系统用户
+func GetUserByIdRaw(tx *db.Session, id models.Id) (*models.User, e.Error) {
 	u := models.User{}
 	if err := tx.Where("id = ?", id).First(&u); err != nil {
 		if e.IsRecordNotFound(err) {
@@ -54,6 +55,12 @@ func GetUserById(tx *db.Session, id models.Id) (*models.User, e.Error) {
 		return nil, e.New(e.DBError, err)
 	}
 	return &u, nil
+}
+
+// GetUserById 按 ID 查找用户
+func GetUserById(tx *db.Session, id models.Id) (*models.User, e.Error) {
+	tx = tx.Where("id != ?", consts.SysUserId)
+	return GetUserByIdRaw(tx, id)
 }
 
 func GetUserByEmail(tx *db.Session, email string) (*models.User, e.Error) {

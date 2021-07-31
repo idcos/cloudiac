@@ -38,6 +38,13 @@ func CreateProject(c *ctx.ServiceContext, form *forms.CreateProjectForm) (interf
 		_ = tx.Rollback()
 		return nil, e.AutoNew(err, e.DBError)
 	}
+
+	// 检查用户是否属于本组织用户
+	for _, userAuth := range form.UserAuthorization {
+		if !services.UserHasOrgRole(userAuth.UserId, c.OrgId, "") {
+			return nil, e.New(e.BadParam, fmt.Errorf("invalid user"), http.StatusBadRequest)
+		}
+	}
 	// 如果创建人不是超级管理员就把创建人加到项目里面
 	if !c.IsSuperAdmin {
 		form.UserAuthorization = append(form.UserAuthorization, forms.UserAuthorization{
@@ -154,31 +161,6 @@ func UpdateProject(c *ctx.ServiceContext, form *forms.UpdateProjectForm) (interf
 
 func DeleteProject(c *ctx.ServiceContext, form *forms.DeleteProjectForm) (interface{}, e.Error) {
 	return nil, e.New(e.NotImplement)
-	//tx := c.DB().Begin()
-	//defer func() {
-	//	if r := recover(); r != nil {
-	//		_ = tx.Rollback()
-	//		panic(r)
-	//	}
-	//}()
-	////todo 检验环境是否活跃
-	////项目是逻辑删除，用户和项目的角色关系是直接删除
-	//if err := services.DeleteProject(tx, form.Id); err != nil {
-	//	_ = tx.Rollback()
-	//	return nil, err
-	//}
-	//
-	//if err := services.DeleteUserProject(tx, form.Id); err != nil {
-	//	_ = tx.Rollback()
-	//	return nil, err
-	//}
-	//
-	//if err := tx.Commit(); err != nil {
-	//	_ = tx.Rollback()
-	//	return nil, e.New(e.DBError, err)
-	//}
-	//
-	//return nil, nil
 }
 
 type DetailProjectResp struct {
