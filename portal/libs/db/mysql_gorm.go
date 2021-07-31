@@ -12,6 +12,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
+	"gorm.io/plugin/soft_delete"
 
 	"cloudiac/portal/consts/e"
 	"cloudiac/utils/logs"
@@ -19,6 +20,8 @@ import (
 
 var defaultSess *gorm.DB
 var logger logs.Logger
+
+type SoftDeletedAt soft_delete.DeletedAt
 
 type Session struct {
 	db *gorm.DB
@@ -28,16 +31,42 @@ func (s *Session) Begin() *Session {
 	return ToSess(s.db.Begin())
 }
 
+func (s *Session) Transaction(fc func(tx *Session) error) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		return fc(ToSess(tx))
+	})
+}
+
 func (s *Session) GormDB() *gorm.DB {
 	return s.db
 }
 
 func (s *Session) New() *Session {
-	return ToSess(s.db.Session(&gorm.Session{}))
+	return ToSess(s.db.Session(&gorm.Session{NewDB: true}))
 }
 
 func (s *Session) AddUniqueIndex(indexName string, columns ...string) error {
-	return s.db.AddUniqueIndex(indexName, columns...).Error
+	stmt := s.db.Statement
+	if stmt.Model != nil {
+		if err := stmt.Parse(stmt.Model); err != nil {
+			return err
+		}
+	}
+
+	if s.db.Migrator().HasIndex(stmt.Table, indexName) {
+		return nil
+	}
+
+	sqlDB, err := s.db.DB()
+	if err != nil {
+		return err
+	}
+
+	_, err = sqlDB.Exec("CREATE INDEX ? ON ? (?)", indexName, stmt.Table, columns)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *Session) RemoveIndex(table string, indexName string) error {
@@ -297,7 +326,11 @@ func ToSess(db *gorm.DB) *Session {
 }
 
 func ToColName(name string) string {
-	return gorm.ToColumnName(name)
+	name = defaultSess.NamingStrategy.ColumnName("", name)
+	if i := strings.IndexByte(name, '.'); i >= 0 {
+		name = name[i+1:]
+	}
+	return name
 }
 
 func Get() *Session {
@@ -309,6 +342,8 @@ func openDB(dsn string) error {
 	if err != nil {
 		return err
 	}
+
+	db.Callback().Create().Before("gorm:create").Register("my_before_create_hook", beforeCreateCallback)
 
 	slowThresholdEnv := os.Getenv("GORM_SLOW_THRESHOLD")
 	slowThreshold := time.Second
@@ -348,10 +383,24 @@ func openDB(dsn string) error {
 	return nil
 }
 
+type BeforeCreateInterface interface {
+	BeforeCreate(session *Session) error
+}
+
+func beforeCreateCallback(db *gorm.DB) {
+	if db.Error == nil && db.Statement.Schema != nil && !db.Statement.SkipHooks && db.Statement.Schema.BeforeCreate {
+		value := db.Statement.ReflectValue.Interface()
+		if db.Statement.Schema.BeforeCreate {
+			if i, ok := value.(BeforeCreateInterface); ok {
+				_ = db.AddError(i.BeforeCreate(ToSess(db)))
+			}
+		}
+	}
+}
+
 func Init(dsn string) {
 	logger = logs.Get()
 	if err := openDB(dsn); err != nil {
 		logger.Fatalln(err)
 	}
-	//db.SetLogger(sqlLogger{logger})
 }
