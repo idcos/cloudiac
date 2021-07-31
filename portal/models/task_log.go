@@ -16,7 +16,7 @@ func (DBStorage) TableName() string {
 }
 
 func (DBStorage) Migrate(s *db.Session) error {
-	if err := s.DB().ModifyColumn("content", "MEDIUMBLOB").Error; err != nil {
+	if err := s.GormDB().ModifyColumn("content", "MEDIUMBLOB").Error; err != nil {
 		return err
 	}
 	return nil

@@ -187,7 +187,7 @@ func (t *Task) Migrate(sess *db.Session) (err error) {
 		},
 	}
 	for _, cd := range columnDefines {
-		if err := sess.DB().ModifyColumn(cd.column, cd.typeDefine).Error; err != nil {
+		if err := sess.GormDB().ModifyColumn(cd.column, cd.typeDefine).Error; err != nil {
 			return err
 		}
 	}

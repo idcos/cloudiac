@@ -154,7 +154,7 @@ func UpdateProject(c *ctx.ServiceContext, form *forms.UpdateProjectForm) (interf
 
 func DeleteProject(c *ctx.ServiceContext, form *forms.DeleteProjectForm) (interface{}, e.Error) {
 	return nil, e.New(e.NotImplement)
-	//tx := c.DB().Begin()
+	//tx := c.GormDB().Begin()
 	//defer func() {
 	//	if r := recover(); r != nil {
 	//		_ = tx.Rollback()

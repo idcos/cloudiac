@@ -157,7 +157,7 @@ func autoMigrate(m Modeler, sess *db.Session) {
 	}
 
 	sess = sess.Model(m)
-	if err := sess.DB().AutoMigrate(m).Error; err != nil {
+	if err := sess.GormDB().AutoMigrate(m).Error; err != nil {
 		panic(fmt.Errorf("auto migrate %T: %v", m, err))
 	}
 	if err := m.Migrate(sess); err != nil {
@@ -168,7 +168,7 @@ func autoMigrate(m Modeler, sess *db.Session) {
 func Init(migrate bool) {
 	autoMigration = migrate
 
-	sess := db.ToSess(db.Get().DB().Set("gorm:table_options", "ENGINE=InnoDB")).Begin().Debug()
+	sess := db.ToSess(db.Get().GormDB().Set("gorm:table_options", "ENGINE=InnoDB")).Begin().Debug()
 	defer func() {
 		logger := logs.Get().WithField("func", "models.Init")
 		if r := recover(); r != nil {

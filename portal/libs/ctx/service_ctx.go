@@ -64,7 +64,7 @@ func (c *ServiceContext) Enforcer() *casbin.Enforcer {
 	if c.enforcer == nil {
 		var err error
 
-		adapter, err := gormadapter.NewAdapterByDBUsePrefix(db.Get().DB(), "iac_")
+		adapter, err := gormadapter.NewAdapterByDBUsePrefix(db.Get().GormDB(), "iac_")
 		if err != nil {
 			panic(fmt.Sprintf("error create enforcer: %v", err))
 		}
