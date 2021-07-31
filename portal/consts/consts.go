@@ -1,3 +1,5 @@
+// Copyright 2021 CloudJ Company Limited. All rights reserved.
+
 package consts
 
 import "time"

@@ -1,3 +1,5 @@
+// Copyright 2021 CloudJ Company Limited. All rights reserved.
+
 package handler
 
 import (
@@ -23,4 +25,3 @@ func RunTask(c *ctx.Context) {
 		c.Result(gin.H{"cid": cid})
 	}
 }
-
