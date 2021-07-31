@@ -203,7 +203,9 @@ func SearchUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{},
 // UpdateUser 用户信息编辑
 func UpdateUser(c *ctx.ServiceContext, form *forms.UpdateUserForm) (*models.User, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update user %s", form.Id))
-	if c.UserId == form.Id || c.IsSuperAdmin {
+	if form.Id == consts.SysUserId {
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("modify sys user denied"), http.StatusForbidden)
+	} else if c.UserId == form.Id || c.IsSuperAdmin {
 		// 自身编辑
 	} else if c.OrgId != "" && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) {
 		return nil, e.New(e.PermissionDeny, fmt.Errorf("admin required"), http.StatusForbidden)
@@ -255,7 +257,9 @@ func UpdateUser(c *ctx.ServiceContext, form *forms.UpdateUserForm) (*models.User
 func ChangeUserStatus(c *ctx.ServiceContext, form *forms.DisableUserForm) (*models.User, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("change user status %s", form.Id))
 	query := c.DB()
-	if c.IsSuperAdmin == false {
+	if form.Id == consts.SysUserId {
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("modify sys user denied"), http.StatusForbidden)
+	} else if c.IsSuperAdmin == false {
 		return nil, e.New(e.PermissionDeny, http.StatusForbidden)
 	}
 
@@ -356,7 +360,9 @@ func UserDetail(c *ctx.ServiceContext, userId models.Id) (*models.UserWithRoleRe
 // 需要平台管理员权限。
 func DeleteUser(c *ctx.ServiceContext, form *forms.DeleteUserForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("delete user %s", form.Id))
-	if !c.IsSuperAdmin {
+	if form.Id == consts.SysUserId {
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("delete sys user denied"), http.StatusForbidden)
+	} else if !c.IsSuperAdmin {
 		return nil, e.New(e.PermissionDeny, http.StatusForbidden)
 	}
 
@@ -407,27 +413,6 @@ func DeleteUser(c *ctx.ServiceContext, form *forms.DeleteUserForm) (interface{},
 	return nil, nil
 }
 
-//
-//// UserRestrictOrg 获取用户访问范围限制
-//func UserRestrictOrg(c *ctx.ServiceContext, query *db.Session) *db.Session {
-//	query = query.Model(models.User{})
-//	if c.OrgId != "" {
-//		subQ := query.Model(models.UserOrg{}).Select("user_id").Where("org_id = ?", c.OrgId)
-//		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), subQ.Expr())
-//	} else {
-//		// 如果是管理员，不需要附加限制参数，返回所有数据
-//		// 组织管理员或者普通用户，如果不带 org，应该返回该用户关联的所有 org
-//		if !c.IsSuperAdmin {
-//			//select DISTINCT user_id from iac_user_org where (org_id in
-//			//   (SELECT org_id from iac_user_org WHERE user_id = 'u-c3i41c06n88g4a2pet20'))
-//			orgQ := query.Model(models.UserOrg{}).Select("org_id").Where("user_id = ?", c.UserId)
-//			subQ := query.Model(models.UserOrg{}).Select("DISTINCT user_id").Where("org_id in (?)", orgQ)
-//			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), subQ.Expr())
-//		}
-//	}
-//	return query
-//}
-
 func QueryUserWithUserIdsByOrg(query *db.Session, orgId models.Id) *db.Session {
 	userIds, _ := services.GetUserIdsByOrg(query, orgId)
 	query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
@@ -442,6 +427,10 @@ func QueryUserWithUserIdsByProject(query *db.Session, projectId models.Id) *db.S
 
 // UserPassReset 用户重置密码
 func UserPassReset(c *ctx.ServiceContext, form *forms.DetailUserForm) (*models.User, e.Error) {
+	if form.Id == consts.SysUserId {
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("modify sys user denied"), http.StatusForbidden)
+	}
+
 	initPass := utils.GenPasswd(6, "mix")
 	hashedPassword, err := services.HashPassword(initPass)
 	if err != nil {

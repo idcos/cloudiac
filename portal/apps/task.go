@@ -76,7 +76,7 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*taskDetailRe
 		c.Logger().Errorf("error get task by id, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
-	user, err = services.GetUserById(c.DB(), task.CreatorId)
+	user, err = services.GetUserByIdRaw(c.DB(), task.CreatorId)
 	if err != nil && err.Code() == e.UserNotExists {
 		user = &models.User{}
 		c.Logger().Errorf("task creator '%s' not exists", task.CreatorId)
@@ -121,7 +121,7 @@ func LastTask(c *ctx.ServiceContext, form *forms.LastTaskForm) (*taskDetailResp,
 		c.Logger().Errorf("error get task by id, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
-	user, err := services.GetUserById(c.DB(), task.CreatorId)
+	user, err := services.GetUserByIdRaw(c.DB(), task.CreatorId)
 	if err != nil && err.Code() == e.UserNotExists {
 		user = &models.User{}
 		c.Logger().Errorf("task creator '%s' not exists", task.CreatorId)

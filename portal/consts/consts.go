@@ -17,7 +17,13 @@ const (
 
 	DefaultAdminEmail = "admin@example.com"
 
-	CTX_KEY = "__request_ctx__"
+	CtxKey = "__request_ctx__"
+
+	DemoOrgId = "org-demo0000000000000000"
+
+	SysUserId       = "u-system00000000000000"
+	DefaultSysEmail = "sys@example.com"
+	DefaultSysName  = "System"
 )
 
 const (
