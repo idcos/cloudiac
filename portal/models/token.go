@@ -26,7 +26,7 @@ func (Token) TableName() string {
 }
 
 func (o Token) Migrate(sess *db.Session) (err error) {
-	err = o.AddUniqueIndex(sess, "unique__key", "key")
+	err = o.AddUniqueIndex(sess, "unique__key", "`key`")
 	if err != nil {
 		return err
 	}

@@ -61,7 +61,6 @@ func Create(tx *db.Session, o Modeler) error {
 	return err
 }
 
-//CreateBatch gorm1.9.16版本不支持批量创建 升级2.0可用
 func CreateBatch(tx *db.Session, o []Modeler) error {
 	_, err := withTx(tx, func(x *db.Session) (int64, error) {
 		for _, v := range o {

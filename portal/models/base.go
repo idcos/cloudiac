@@ -117,7 +117,7 @@ type SoftDeleteModel struct {
 }
 
 func (m SoftDeleteModel) AddUniqueIndex(sess *db.Session, index string, cols ...string) error {
-	cols = append(cols, "deleted_at")
+	cols = append(cols, "deleted_at_t")
 	return m.TimedModel.AddUniqueIndex(sess, index, cols...)
 }
 

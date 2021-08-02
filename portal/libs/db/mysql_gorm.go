@@ -69,16 +69,8 @@ func (s *Session) AddUniqueIndex(indexName string, columns ...string) error {
 		return nil
 	}
 
-	sqlDB, err := s.db.DB()
-	if err != nil {
-		return err
-	}
-
-	for i := range columns {
-		columns[i] = fmt.Sprintf("`%s`", columns[i])
-	}
-	_, err = sqlDB.Exec(fmt.Sprintf("CREATE UNIQUE INDEX `%s` ON %s (%s)",
-		indexName, stmt.Table, strings.Join(columns, ",")))
+	err := s.db.Exec(fmt.Sprintf("CREATE UNIQUE INDEX `%s` ON `%s` (%s)",
+		indexName, stmt.Table, strings.Join(columns, ","))).Error
 	if err != nil {
 		return err
 	}
@@ -301,12 +293,16 @@ func (s *Session) Update(value interface{}) (int64, error) {
 }
 
 func (s *Session) UpdateColumn(column string, value interface{}) (int64, error) {
-	r := s.db.Update(column, value)
+	r := s.db.Update(ToColName(column), value)
 	return r.RowsAffected, r.Error
 }
 
 func (s *Session) UpdateAttrs(attrs map[string]interface{}) (int64, error) {
-	r := s.db.Updates(attrs)
+	newAttrs := make(map[string]interface{}, len(attrs))
+	for k, v := range attrs {
+		newAttrs[ToColName(k)]	= v
+	}
+	r := s.db.Updates(newAttrs)
 	return r.RowsAffected, r.Error
 }
 
