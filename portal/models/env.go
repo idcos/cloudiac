@@ -35,7 +35,7 @@ type Env struct {
 	// 任务状态，只同步部署任务的状态(apply,destroy)，plan 任务不会对环境产生影响，所以不同步
 	TaskStatus string `json:"taskStatus" gorm:"type:enum('','approving','running');default:''"`
 	Archived   bool   `json:"archived" gorm:"default:false"`               // 是否已归档
-	Timeout    int    `json:"timeout" gorm:"default:600;comment:'部署超时'"` // 部署超时时间（单位：秒）
+	Timeout    int    `json:"timeout" gorm:"default:600;comment:部署超时"` // 部署超时时间（单位：秒）
 	OneTime    bool   `json:"oneTime" gorm:"default:false"`                // 一次性环境标识
 	Deploying  bool   `json:"deploying" gorm:"not null;default:false"`     // 是否正在执行部署
 

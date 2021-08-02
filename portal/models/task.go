@@ -69,7 +69,7 @@ type Task struct {
 	TplId     Id `json:"TplId" gorm:"size:32;not null"`     // 模板ID
 	EnvId     Id `json:"envId" gorm:"size:32;not null"`     // 环境ID
 
-	Name      string `json:"name" gorm:"not null;comment:'任务名称'"` // 任务名称
+	Name      string `json:"name" gorm:"not null;comment:任务名称"` // 任务名称
 	CreatorId Id     `json:"creatorId" gorm:"size:32;not null"`   // 创建人ID
 
 	Type string `json:"type" gorm:"not null;enum('plan', 'apply', 'destroy')" enums:"'plan', 'apply', 'destroy'"` // 任务类型。1. plan: 计划 2. apply: 部署 3. destroy: 销毁
@@ -99,13 +99,13 @@ type Task struct {
 	CurrStep int      `json:"currStep" gorm:"default:0"` // 当前在执行的流程步骤
 
 	// 任务每一步的执行超时(整个任务无超时控制)
-	StepTimeout int `json:"stepTimeout" gorm:"default:600;comment:'执行超时'"`
+	StepTimeout int `json:"stepTimeout" gorm:"default:600;comment:执行超时"`
 
 	Status  string `json:"status" gorm:"type:enum('pending','running','approving','failed','complete','timeout');default 'pending'" enums:"'pending','running','failed','complete','timeout'"`
 	Message string `json:"message"` // 任务的状态描述信息，如失败原因等
 
-	StartAt *Time `json:"startAt" gorm:"type:datetime;comment:'任务开始时间'"` // 任务开始时间
-	EndAt   *Time `json:"endAt" gorm:"type:datetime;comment:'任务结束时间'"`   // 任务结束时间
+	StartAt *Time `json:"startAt" gorm:"type:datetime;comment:任务开始时间"` // 任务开始时间
+	EndAt   *Time `json:"endAt" gorm:"type:datetime;comment:任务结束时间"`   // 任务结束时间
 
 	// 任务执行结果，如 add/change/delete 的资源数量、outputs 等
 	Result TaskResult `json:"result" gorm:"type:json"` // 任务执行结果

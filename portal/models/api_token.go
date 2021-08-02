@@ -8,7 +8,7 @@ type ApiToken struct {
 	TplId     Id `json:"tplId" gorm:"size:32;default:''"`
 	EnvId     Id `json:"envId" gorm:"size:32;default:''"`
 
-	Token  string `json:"token" gorm:"not null;comment:'Token'"`
+	Token  string `json:"token" gorm:"not null;comment:Token"`
 	Type   string `json:"type" gorm:"not null;type:enum('api','trigger')"`
 	Scope  string `json:"scope" gorm:"not null;type:enum('org', 'project', 'template', 'env')"`
 	Role   string `json:"role" gorm:"not null;type:enum('owner','manager','operator','guest');"`
