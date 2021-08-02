@@ -18,7 +18,7 @@ func (DBStorage) TableName() string {
 }
 
 func (DBStorage) Migrate(s *db.Session) error {
-	if err := s.ModifyColumn(DBStorage{}.TableName(), "content"); err != nil {
+	if err := s.ModifyModelColumn(&DBStorage{}, "content"); err != nil {
 		return err
 	}
 	return nil

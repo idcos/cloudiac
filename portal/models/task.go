@@ -174,7 +174,7 @@ func (t *Task) HideSensitiveVariable() {
 }
 
 func (t *Task) Migrate(sess *db.Session) (err error) {
-	if err := sess.ModifyColumn(t, "status"); err != nil {
+	if err := sess.ModifyModelColumn(t, "status"); err != nil {
 		return err
 	}
 	return nil

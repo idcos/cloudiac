@@ -113,7 +113,7 @@ type TimedModel struct {
 
 type SoftDeleteModel struct {
 	TimedModel
-	DeletedAt db.SoftDeletedAt `gorm:"default:0" swaggerignore:"true"`
+	DeletedAtT db.SoftDeletedAt `gorm:"default:0" swaggerignore:"true"`
 }
 
 func (m SoftDeleteModel) AddUniqueIndex(sess *db.Session, index string, cols ...string) error {

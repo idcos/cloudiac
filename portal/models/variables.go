@@ -36,7 +36,7 @@ func (v Variable) Migrate(sess *db.Session) error {
 		"org_id", "project_id", "tpl_id", "env_id", "name(32)", "type"); err != nil {
 		return err
 	}
-	if err := sess.ModifyColumn(&v, "value"); err != nil {
+	if err := sess.ModifyModelColumn(&v, "value"); err != nil {
 		return err
 	}
 	return nil

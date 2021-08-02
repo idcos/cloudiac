@@ -3,21 +3,21 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"gorm.io/gorm/clause"
 	"gorm.io/gorm/schema"
+	"gorm.io/plugin/soft_delete"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
+	"cloudiac/portal/consts/e"
+	"cloudiac/utils/logs"
 	"github.com/pkg/errors"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
-	"gorm.io/plugin/soft_delete"
-
-	"cloudiac/portal/consts/e"
-	"cloudiac/utils/logs"
 )
 
 var (
@@ -25,7 +25,15 @@ var (
 	namingStrategy = schema.NamingStrategy{}
 )
 
-type SoftDeletedAt soft_delete.DeletedAt
+type SoftDeletedAt uint
+
+func (v SoftDeletedAt) QueryClauses(f *schema.Field) []clause.Interface {
+	return soft_delete.DeletedAt(v).QueryClauses(f)
+}
+
+func (v SoftDeletedAt) DeleteClauses(f *schema.Field) []clause.Interface {
+	return soft_delete.DeletedAt(v).DeleteClauses(f)
+}
 
 type Session struct {
 	db *gorm.DB
@@ -97,13 +105,12 @@ func (s *Session) DropColumn(table string, columns ...string) error {
 	return nil
 }
 
-func (s *Session) ModifyColumn(table interface{}, column string) error {
-	//logs.Get().Debugf("s.db.Statement: %#v", s.db.Statement)
-	//logs.Get().Debugf("s.db.Statement.Schema: %#v", s.db.Statement.Schema)
-	////logs.Get().Debugf("s.db.Statement.Schema.LookUpField: %#v", s.db.Statement.Schema.LookUpField)
-	//return s.db.Migrator().AlterColumn(table, column)
-	// TODO fixme
-	return nil
+// ModifyModelColumn 基于 gorm:"" tag 同步字段类型定义
+func (s *Session) ModifyModelColumn(model interface{}, column string) error {
+	if !s.isModel(model) {
+		return fmt.Errorf("'model' must be a 'struct', not '%T'", model)
+	}
+	return s.db.Migrator().AlterColumn(model, column)
 }
 
 func (s *Session) Rollback() error {
@@ -277,13 +284,17 @@ func (s *Session) Delete(val interface{}) (int64, error) {
 	return r.RowsAffected, r.Error
 }
 
-func (s *Session) Update(value interface{}) (int64, error) {
-	rv := reflect.ValueOf(value)
+func (s *Session) isModel(m interface{}) bool {
+	rv := reflect.ValueOf(m)
 	if rv.Kind() == reflect.Ptr {
 		rv = rv.Elem()
 	}
-	if rv.Kind() != reflect.Struct {
-		return 0, fmt.Errorf("'value' must be struct, not '%T'", value)
+	return rv.Kind() == reflect.Struct
+}
+
+func (s *Session) Update(value interface{}) (int64, error) {
+	if !s.isModel(value) {
+		return 0, fmt.Errorf("'value' must be a 'struct', not '%T'", value)
 	}
 	r := s.db.Updates(value)
 	return r.RowsAffected, r.Error
