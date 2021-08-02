@@ -1,11 +1,11 @@
 package services
 
 import (
+	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
-	"github.com/jinzhu/gorm"
 )
 
 var runnerMax int
@@ -22,7 +22,7 @@ func MaintenanceRunnerPerMax() {
 	logger := logs.Get().WithField("action", "MaintenanceRunnerPerMax")
 	systemCfg := models.SystemCfg{}
 	if err := db.Get().Table(models.SystemCfg{}.TableName()).
-		Where("name = 'MAX_JOBS_PER_RUNNER'").First(&systemCfg); err != nil && err != gorm.ErrRecordNotFound {
+		Where("name = 'MAX_JOBS_PER_RUNNER'").First(&systemCfg); err != nil && e.IsRecordNotFound(err) {
 		logger.Debugf("db err: %v", err)
 	}
 

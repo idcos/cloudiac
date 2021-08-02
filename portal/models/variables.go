@@ -11,7 +11,7 @@ type VariableBody struct {
 	Type        string `json:"type" gorm:"not null;type:enum('environment','terraform','ansible')"`
 	Name        string `json:"name" gorm:"size:64;not null"`
 	Value       string `json:"value" gorm:"type:text"`
-	Sensitive   bool   `json:"sensitive,omitempty" gorm:"default:'0'"`
+	Sensitive   bool   `json:"sensitive,omitempty" gorm:"default:false"`
 	Description string `json:"description,omitempty" gorm:"type:text"`
 }
 
@@ -36,7 +36,7 @@ func (v Variable) Migrate(sess *db.Session) error {
 		"org_id", "project_id", "tpl_id", "env_id", "name(32)", "type"); err != nil {
 		return err
 	}
-	if err := sess.ModifyColumn(v.TableName(), "value"); err != nil {
+	if err := sess.ModifyColumn(&v, "value"); err != nil {
 		return err
 	}
 	return nil

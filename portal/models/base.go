@@ -89,7 +89,7 @@ type BaseModel struct {
 	Id Id `gorm:"size:32;primary_key" json:"id" example:"x-c3ek0co6n88ldvq1n6ag"` //ID
 }
 
-func (base *BaseModel) BeforeCreate(*db.Session) error {
+func (base *BaseModel) CustomBeforeCreate(*db.Session) error {
 	// 未设置 Id 值的情况下默认生成一个无前缀的 id，如果对前缀有要求请主动为对象设置 Id 值,
 	// 或者在 Model 层定义自己的 BeforeCreate() 方法
 	if base.Id == "" {
@@ -113,20 +113,8 @@ type TimedModel struct {
 
 type SoftDeleteModel struct {
 	TimedModel
-	DeletedAt db.SoftDeletedAt `gorm:"default:'0'"`
-	//// 因为 deleted_at 字段的默认值为 NULL(gorm 也会依赖这个值做软删除)，会导致唯一约束与软删除冲突,
-	//// 所以我们增加 deleted_at_t 字段来避免这个情况。
-	//// 如果 model 需要同时支持软删除和唯一约束就需要在唯一约束索引中增加该字段
-	//// (使用 SoftDeleteModel.AddUniqueIndex() 方法添加索引时会自动加上该字段)。
-	//DeletedAtT int64 `json:"-" gorm:"default:0"`
+	DeletedAt db.SoftDeletedAt `gorm:"default:0" swaggerignore:"true"`
 }
-
-//func (SoftDeleteModel) AfterDelete(scope *gorm.Scope) error {
-//	if scope.Search.Unscoped {
-//		return nil
-//	}
-//	return scope.DB().Unscoped().UpdateColumn("deleted_at_t", time.Now().Unix()).Error
-//}
 
 func (m SoftDeleteModel) AddUniqueIndex(sess *db.Session, index string, cols ...string) error {
 	cols = append(cols, "deleted_at")

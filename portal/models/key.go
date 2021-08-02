@@ -18,7 +18,7 @@ func (Key) TableName() string {
 }
 
 func (o Key) Migrate(sess *db.Session) (err error) {
-	err = o.AddUniqueIndex(sess, "unique__org__name")
+	err = o.AddUniqueIndex(sess, "unique__org__name", "org_id", "name")
 	if err != nil {
 		return err
 	}

@@ -11,7 +11,7 @@ import (
 
 func GetTaskSteps(sess *db.Session, taskId models.Id) ([]*models.TaskStep, error) {
 	steps := make([]*models.TaskStep, 0)
-	err := sess.Where(models.TaskStep{TaskId: taskId}).Order("index").Find(&steps)
+	err := sess.Where(models.TaskStep{TaskId: taskId}).Order("`index`").Find(&steps)
 	return steps, err
 }
 
@@ -70,16 +70,6 @@ func RejectTaskStep(dbSess *db.Session, taskId models.Id, step int, userId model
 	}
 }
 
-func UpdateTaskStep(sess *db.Session, taskStep *models.TaskStep) e.Error {
-	if _, err := sess.Model(&models.TaskStep{}).Update(taskStep); err != nil {
-		if e.IsRecordNotFound(err) {
-			return e.New(e.TaskStepNotExists)
-		}
-		return e.New(e.DBError, err)
-	}
-	return nil
-}
-
 func IsTerraformStep(typ string) bool {
 	return utils.StrInArray(typ, models.TaskStepInit, models.TaskStepPlan,
 		models.TaskStepApply, models.TaskStepDestroy)
@@ -114,7 +104,7 @@ func ChangeTaskStepStatus(dbSess *db.Session, task *models.Task, taskStep *model
 		logger.Debugf("change step to '%s'", status)
 	}
 
-	if _, err := dbSess.Model(&models.TaskStep{}).Update(taskStep); err != nil {
+	if _, err := dbSess.Model(taskStep).Update(taskStep); err != nil {
 		return e.New(e.DBError, err)
 	}
 

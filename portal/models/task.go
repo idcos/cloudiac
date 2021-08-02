@@ -93,17 +93,15 @@ type Task struct {
 
 	KeyId       Id     `json:"keyId" gorm:"size32"`      // 部署密钥ID
 	RunnerId    string `json:"runnerId" gorm:"not null"` // 部署通道
-	AutoApprove bool   `json:"autoApproval" gorm:"default:'0'"`
+	AutoApprove bool   `json:"autoApproval" gorm:"default:false"`
 
 	Flow     TaskFlow `json:"-" gorm:"type:text"`          // 执行流程
-	CurrStep int      `json:"currStep" gorm:"default:'0'"` // 当前在执行的流程步骤
+	CurrStep int      `json:"currStep" gorm:"default:0"` // 当前在执行的流程步骤
 
 	// 任务每一步的执行超时(整个任务无超时控制)
-	StepTimeout int `json:"stepTimeout" gorm:"default:'600';comment:'执行超时'"`
+	StepTimeout int `json:"stepTimeout" gorm:"default:600;comment:'执行超时'"`
 
-	// gorm 配置见 Migrate()
-	Status string `json:"status" enums:"'pending','running','failed','complete','timeout'"` // 任务状态
-
+	Status  string `json:"status" gorm:"type:enum('pending','running','approving','failed','complete','timeout');default 'pending'" enums:"'pending','running','failed','complete','timeout'"`
 	Message string `json:"message"` // 任务的状态描述信息，如失败原因等
 
 	StartAt *Time `json:"startAt" gorm:"type:datetime;comment:'任务开始时间'"` // 任务开始时间
@@ -176,22 +174,9 @@ func (t *Task) HideSensitiveVariable() {
 }
 
 func (t *Task) Migrate(sess *db.Session) (err error) {
-	// 以下 column 通过 Migrate 来维护，确保新增加的 enum 生效
-	columnDefines := []struct {
-		column     string
-		typeDefine string
-	}{
-		{
-			"status",
-			`ENUM('pending','running','approving','failed','complete','timeout') DEFAULT 'pending' COMMENT '作业状态'`,
-		},
+	if err := sess.ModifyColumn(t, "status"); err != nil {
+		return err
 	}
-	for _, cd := range columnDefines {
-		if err := sess.GormDB().ModifyColumn(cd.column, cd.typeDefine).Error; err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 

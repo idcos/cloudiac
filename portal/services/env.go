@@ -148,7 +148,7 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 		logger.Infof("change env to '%v'", envStatus)
 		attrs["status"] = envStatus
 	}
-	_, err := tx.Model(&models.Env{}).Where("id = ?", id).Update(attrs)
+	_, err := tx.Model(&models.Env{}).Where("id = ?", id).UpdateAttrs(attrs)
 	if err != nil {
 		if e.IsRecordNotFound(err) {
 			return e.New(e.EnvNotExists)

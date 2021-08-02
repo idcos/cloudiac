@@ -96,9 +96,9 @@ func UpdateAttr(tx *db.Session, o Modeler, values Attrs, query ...interface{}) (
 			return 0, e.New(e.DBAttrValidateErr, err)
 		}
 		if len(query) != 0 {
-			return x.Model(o).Where(query[0], query[1:]...).Update(values)
+			return x.Model(o).Where(query[0], query[1:]...).UpdateAttrs(values)
 		} else {
-			return x.Model(o).Update(values)
+			return x.Model(o).UpdateAttrs(values)
 		}
 	})
 }
@@ -157,7 +157,7 @@ func autoMigrate(m Modeler, sess *db.Session) {
 	}
 
 	sess = sess.Model(m)
-	if err := sess.GormDB().AutoMigrate(m).Error; err != nil {
+	if err := sess.GormDB().AutoMigrate(m); err != nil {
 		panic(fmt.Errorf("auto migrate %T: %v", m, err))
 	}
 	if err := m.Migrate(sess); err != nil {
@@ -168,7 +168,7 @@ func autoMigrate(m Modeler, sess *db.Session) {
 func Init(migrate bool) {
 	autoMigration = migrate
 
-	sess := db.ToSess(db.Get().GormDB().Set("gorm:table_options", "ENGINE=InnoDB")).Begin().Debug()
+	sess := db.Get().Set("gorm:table_options", "ENGINE=InnoDB").Begin().Debug()
 	defer func() {
 		logger := logs.Get().WithField("func", "models.Init")
 		if r := recover(); r != nil {

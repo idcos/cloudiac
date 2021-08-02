@@ -345,7 +345,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 			continue
 		}
 
-		if _, err = m.db.Model(task).Update(models.Attrs{"CurrStep": step.Index}); err != nil {
+		if _, err = m.db.Model(task).UpdateAttrs(models.Attrs{"CurrStep": step.Index}); err != nil {
 			logger.Errorf("update task error: %v", err)
 			break
 		}
@@ -474,7 +474,7 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 		return nil
 	}
 
-	if !lastStep.IsRejected() {
+	if !lastStep.IsRejected() { // 任务被审批驳回时会即时更新状态，且不会执行资源统计步骤
 		if task.IsEffectTask() {
 			if err := processState(); err != nil {
 				logger.Errorf("process task state: %v", err)

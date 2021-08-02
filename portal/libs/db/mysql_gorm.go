@@ -3,12 +3,14 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"github.com/pkg/errors"
+	"gorm.io/gorm/schema"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
@@ -18,8 +20,10 @@ import (
 	"cloudiac/utils/logs"
 )
 
-var defaultSess *gorm.DB
-var logger logs.Logger
+var (
+	defaultDB      *gorm.DB
+	namingStrategy = schema.NamingStrategy{}
+)
 
 type SoftDeletedAt soft_delete.DeletedAt
 
@@ -62,7 +66,11 @@ func (s *Session) AddUniqueIndex(indexName string, columns ...string) error {
 		return err
 	}
 
-	_, err = sqlDB.Exec("CREATE INDEX ? ON ? (?)", indexName, stmt.Table, columns)
+	for i := range columns {
+		columns[i] = fmt.Sprintf("`%s`", columns[i])
+	}
+	_, err = sqlDB.Exec(fmt.Sprintf("CREATE UNIQUE INDEX `%s` ON %s (%s)",
+		indexName, stmt.Table, strings.Join(columns, ",")))
 	if err != nil {
 		return err
 	}
@@ -89,8 +97,13 @@ func (s *Session) DropColumn(table string, columns ...string) error {
 	return nil
 }
 
-func (s *Session) ModifyColumn(table string, column string) error {
-	return s.db.Migrator().AlterColumn(table, column)
+func (s *Session) ModifyColumn(table interface{}, column string) error {
+	//logs.Get().Debugf("s.db.Statement: %#v", s.db.Statement)
+	//logs.Get().Debugf("s.db.Statement.Schema: %#v", s.db.Statement.Schema)
+	////logs.Get().Debugf("s.db.Statement.Schema.LookUpField: %#v", s.db.Statement.Schema.LookUpField)
+	//return s.db.Migrator().AlterColumn(table, column)
+	// TODO fixme
+	return nil
 }
 
 func (s *Session) Rollback() error {
@@ -102,7 +115,12 @@ func (s *Session) Commit() error {
 }
 
 func (s *Session) Model(m interface{}) *Session {
-	return ToSess(s.db.Model(m))
+	switch v := m.(type) {
+	case string:
+		return s.Table(v)
+	default:
+		return ToSess(s.db.Model(m))
+	}
 }
 
 func (s *Session) Table(name string) *Session {
@@ -213,7 +231,7 @@ func (s *Session) Count() (cnt int64, err error) {
 
 func (s *Session) Exists() (bool, error) {
 	exists := false
-	err := s.New().Raw("SELECT EXISTS(?)", s.Expr()).Row().Scan(&exists)
+	err := defaultDB.Raw("SELECT EXISTS(?)", s.db).Debug().Scan(&exists).Error
 	if err != nil {
 		return false, err
 	}
@@ -259,15 +277,25 @@ func (s *Session) Delete(val interface{}) (int64, error) {
 	return r.RowsAffected, r.Error
 }
 
-// Update
-// example: Update("name", "newName") or Update(map[string]interface{}{"name":"newName"})
-func (s *Session) Update(attrs ...interface{}) (int64, error) {
-	var r *gorm.DB
-	if len(attrs) == 2 {
-		r = s.db.Update(attrs[0].(string), attrs[1])
-	} else {
-		r = s.db.Updates(attrs[0])
+func (s *Session) Update(value interface{}) (int64, error) {
+	rv := reflect.ValueOf(value)
+	if rv.Kind() == reflect.Ptr {
+		rv = rv.Elem()
 	}
+	if rv.Kind() != reflect.Struct {
+		return 0, fmt.Errorf("'value' must be struct, not '%T'", value)
+	}
+	r := s.db.Updates(value)
+	return r.RowsAffected, r.Error
+}
+
+func (s *Session) UpdateColumn(column string, value interface{}) (int64, error) {
+	r := s.db.Update(column, value)
+	return r.RowsAffected, r.Error
+}
+
+func (s *Session) UpdateAttrs(attrs map[string]interface{}) (int64, error) {
+	r := s.db.Updates(attrs)
 	return r.RowsAffected, r.Error
 }
 
@@ -322,11 +350,13 @@ func (s *Session) CompareFieldValue(field string, q string) (*Session, error) {
 }
 
 func ToSess(db *gorm.DB) *Session {
-	return &Session{db: db}
+	// ToSess 总是创建一个新 session
+	// 如果直接返回 db，gorm2 的 statement 重用机制会继续保留己记录的 where 条件
+	return &Session{db: db.Session(&gorm.Session{})}
 }
 
 func ToColName(name string) string {
-	name = defaultSess.NamingStrategy.ColumnName("", name)
+	name = namingStrategy.ColumnName("", name)
 	if i := strings.IndexByte(name, '.'); i >= 0 {
 		name = name[i+1:]
 	}
@@ -334,17 +364,10 @@ func ToColName(name string) string {
 }
 
 func Get() *Session {
-	return ToSess(defaultSess)
+	return ToSess(defaultDB)
 }
 
 func openDB(dsn string) error {
-	db, err := gorm.Open(mysql.Open(dsn), nil)
-	if err != nil {
-		return err
-	}
-
-	db.Callback().Create().Before("gorm:create").Register("my_before_create_hook", beforeCreateCallback)
-
 	slowThresholdEnv := os.Getenv("GORM_SLOW_THRESHOLD")
 	slowThreshold := time.Second
 	if slowThresholdEnv != "" {
@@ -372,7 +395,12 @@ func openDB(dsn string) error {
 		}
 	}
 
-	defaultSess = db.Session(&gorm.Session{
+	mysqlDial := mysql.New(mysql.Config{
+		DSN:               dsn,
+		DefaultStringSize: 255,
+	})
+	db, err := gorm.Open(mysqlDial, &gorm.Config{
+		NamingStrategy: namingStrategy,
 		Logger: gormLogger.New(logs.Get(), gormLogger.Config{
 			SlowThreshold:             slowThreshold,
 			Colorful:                  false,
@@ -380,27 +408,44 @@ func openDB(dsn string) error {
 			LogLevel:                  logLevel,
 		}),
 	})
+	if err != nil {
+		return err
+	}
+
+	if err = db.Callback().Create().Before("gorm:create").
+		Register("my_before_create_hook", beforeCreateCallback); err != nil {
+		return err
+	}
+
+	defaultDB = db
+	//defaultDB = db.Session(&gorm.Session{
+	//	Logger: gormLogger.New(logs.Get(), gormLogger.Config{
+	//		SlowThreshold:             slowThreshold,
+	//		Colorful:                  false,
+	//		IgnoreRecordNotFoundError: false,
+	//		LogLevel:                  logLevel,
+	//	}),
+	//})
 	return nil
 }
 
-type BeforeCreateInterface interface {
-	BeforeCreate(session *Session) error
+type CustomBeforeCreateInterface interface {
+	CustomBeforeCreate(session *Session) error
 }
 
 func beforeCreateCallback(db *gorm.DB) {
 	if db.Error == nil && db.Statement.Schema != nil && !db.Statement.SkipHooks && db.Statement.Schema.BeforeCreate {
 		value := db.Statement.ReflectValue.Interface()
 		if db.Statement.Schema.BeforeCreate {
-			if i, ok := value.(BeforeCreateInterface); ok {
-				_ = db.AddError(i.BeforeCreate(ToSess(db)))
+			if i, ok := value.(CustomBeforeCreateInterface); ok {
+				_ = db.AddError(i.CustomBeforeCreate(ToSess(db)))
 			}
 		}
 	}
 }
 
 func Init(dsn string) {
-	logger = logs.Get()
 	if err := openDB(dsn); err != nil {
-		logger.Fatalln(err)
+		logs.Get().Fatalln(err)
 	}
 }

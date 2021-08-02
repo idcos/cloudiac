@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/casbin/casbin/v2"
 	"github.com/casbin/casbin/v2/model"
-	gormadapter "github.com/casbin/gorm-adapter/v2"
+	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"strings"
 )
 
@@ -186,7 +186,7 @@ func InitPolicy(tx *db.Session) error {
 	logger.Infoln("init rbac policy...")
 	var err error
 
-	adapter, err := gormadapter.NewAdapterByDBUsePrefix(tx.GormDB(), "iac_")
+	adapter, err := gormadapter.NewAdapterByDBUseTableName(tx.GormDB(), "iac_", "")
 	if err != nil {
 		panic(fmt.Sprintf("error create enforcer: %v", err))
 	}
