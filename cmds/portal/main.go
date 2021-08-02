@@ -97,6 +97,10 @@ func appAutoInit(tx *db.Session) (err error) {
 		return errors.Wrap(err, "init admin account")
 	}
 
+	if err := initSysUser(tx); err != nil {
+		return errors.Wrap(err, "init sys account")
+	}
+
 	if err := initSystemConfig(tx); err != nil {
 		return errors.Wrap(err, "init system config")
 	}
@@ -161,6 +165,43 @@ func initAdmin(tx *db.Session) error {
 	return err
 }
 
+// initSysUser 初始化 sys 账号
+// 该函数读取环境变量 IAC_SYS_EMAIL, IAC_SYS_NAME 来获取初始系统用户的 email 和用户名
+// 如果 IAC_SYS_EMAIL 未设置则使用 DefaultSysEmail 邮箱，IAC_SYS_NAME 未设置则使用默认系统用户名
+func initSysUser(tx *db.Session) error {
+	if ok, err := services.QueryUser(tx).Where("id = ?", consts.SysUserId).Exists(); err != nil {
+		return err
+	} else if ok { // 己存在用户，跳过
+		return nil
+	}
+
+	email := os.Getenv("IAC_SYS_EMAIL")
+	if email == "" {
+		email = consts.DefaultSysEmail
+	}
+	name := os.Getenv("IAC_SYS_NAME")
+	if name == "" {
+		name = consts.DefaultSysName
+	}
+
+	// 通过邮箱查找账号，如果不存在则创建。
+	sys, err := services.GetUserByEmail(tx, email)
+	if err != nil && err.Code() != e.UserNotExists {
+		return err
+	} else if sys != nil { // 用户己存在
+		return fmt.Errorf("sys email conflict")
+	}
+
+	logger := logs.Get()
+	logger.Infof("create sys account, email: %s, name: %s", email, name)
+	_, err = services.CreateUser(tx, models.User{
+		Name:  name,
+		Phone: "",
+		Email: email,
+	})
+	return err
+}
+
 func initSystemConfig(tx *db.Session) (err error) {
 	logger := logs.Get().WithField("func", "initSystemConfig")
 	logger.Infoln("init system config...")
@@ -192,6 +233,7 @@ func initSystemConfig(tx *db.Session) (err error) {
 	return nil
 }
 
+// initVcs 初始化系统默认 VCS
 func initVcs(tx *db.Session) error {
 	vcs := models.Vcs{
 		OrgId:    "",

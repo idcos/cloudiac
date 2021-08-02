@@ -264,7 +264,7 @@ func PopulateLastTask(query *db.Session, env *models.EnvDetail) *models.EnvDetai
 			// 分支/标签
 			env.Revision = lastTask.Revision
 			// 执行人
-			if operator, _ := services.GetUserById(query, lastTask.CreatorId); operator != nil {
+			if operator, _ := services.GetUserByIdRaw(query, lastTask.CreatorId); operator != nil {
 				env.Operator = operator.Name
 				env.OperatorId = lastTask.CreatorId
 			}

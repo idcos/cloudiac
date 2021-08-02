@@ -721,7 +721,7 @@ func (m *TaskManager) processAutoDestroy() error {
 				Type:        models.TaskTypeDestroy,
 				Flow:        models.TaskFlow{},
 				Targets:     nil,
-				CreatorId:   "", // TODO 创建默认 system 账号，并在些使用
+				CreatorId:   consts.SysUserId,
 				RunnerId:    "",
 				Variables:   taskVars,
 				StepTimeout: 0,

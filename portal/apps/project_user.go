@@ -11,6 +11,10 @@ import (
 )
 
 func CreateProjectUser(c *ctx.ServiceContext, form *forms.CreateProjectUserForm) (interface{}, e.Error) {
+	// 检查用户是否属于本组织用户
+	if !services.UserHasOrgRole(form.UserId, c.OrgId, "") {
+		return nil, e.New(e.BadParam, fmt.Errorf("invalid user"), http.StatusBadRequest)
+	}
 	pu, err := services.CreateProjectUser(c.DB(), models.UserProject{
 		Role:      form.Role,
 		UserId:    form.UserId,
@@ -66,6 +70,10 @@ func SearchProjectUser(c *ctx.ServiceContext) (interface{}, e.Error) {
 func UpdateProjectUser(c *ctx.ServiceContext, form *forms.UpdateProjectUserForm) (interface{}, e.Error) {
 	if !c.IsSuperAdmin && c.OrgId == "" {
 		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest)
+	}
+	// 检查用户是否属于本组织用户
+	if !services.UserHasOrgRole(form.Id, c.OrgId, "") {
+		return nil, e.New(e.BadParam, fmt.Errorf("invalid user"), http.StatusBadRequest)
 	}
 
 	attrs := models.Attrs{}

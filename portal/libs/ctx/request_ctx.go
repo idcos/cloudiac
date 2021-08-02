@@ -29,7 +29,7 @@ type GinRequest struct {
 }
 
 func NewGinRequest(c *gin.Context) *GinRequest {
-	if rc, exist := c.Get(consts.CTX_KEY); exist {
+	if rc, exist := c.Get(consts.CtxKey); exist {
 		return rc.(*GinRequest)
 	}
 
@@ -37,7 +37,7 @@ func NewGinRequest(c *gin.Context) *GinRequest {
 		Context: c,
 	}
 	ctx.sc = NewServiceContext(ctx)
-	c.Set(consts.CTX_KEY, ctx)
+	c.Set(consts.CtxKey, ctx)
 	return ctx
 }
 

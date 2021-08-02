@@ -180,7 +180,7 @@ func OrganizationDetail(c *ctx.ServiceContext, form forms.DetailOrganizationForm
 		c.Logger().Errorf("error get org by id, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
-	user, err = services.GetUserById(c.DB(), org.CreatorId)
+	user, err = services.GetUserByIdRaw(c.DB(), org.CreatorId)
 	if err != nil && err.Code() == e.UserNotExists {
 		// 报 500 错误，正常情况用户不应该找不到，除非被意外删除
 		return nil, e.New(e.UserNotExists, err, http.StatusInternalServerError)
@@ -351,6 +351,9 @@ func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*models.User
 		}
 	} else if form.Name == "" || form.Email == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+	if user != nil && user.Id == consts.SysUserId {
+		return nil, e.New(e.UserNotExists, fmt.Errorf("should not use sys user"), http.StatusBadRequest)
 	}
 
 	initPass := utils.GenPasswd(6, "mix")
