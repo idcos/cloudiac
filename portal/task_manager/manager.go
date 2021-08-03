@@ -40,13 +40,6 @@ type TaskManager struct {
 
 	wg sync.WaitGroup // 等待执行任务协程退出的 wait group
 
-	// 通知任务开始执行
-	taskStartingCh chan *models.Task
-	// 通知任务己启动
-	taskStartedCh chan *models.Task
-	// 通知任务结束
-	taskExitedCh chan string
-
 	maxTasksPerRunner int // 每个 runner 并发任务数量限制
 }
 
@@ -76,11 +69,6 @@ func (m *TaskManager) reset() {
 	m.envRunningTask = sync.Map{}
 	m.runnerTaskNum = make(map[string]int)
 	m.wg = sync.WaitGroup{}
-
-	m.taskStartingCh = make(chan *models.Task)
-	m.taskStartedCh = make(chan *models.Task)
-	m.taskExitedCh = make(chan string)
-
 	m.maxTasksPerRunner = services.GetRunnerMax()
 }
 
@@ -419,6 +407,9 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			return fmt.Errorf("read plan json: %v", err)
 		} else if len(bs) > 0 {
 			tfPlan, err := services.UnmarshalPlanJson(bs)
+			if err != nil {
+				return fmt.Errorf("unmarshal plan json: %v", err)
+			}
 			if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges); err != nil {
 				return fmt.Errorf("save task changes: %v", err)
 			}
@@ -436,14 +427,16 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 		updateAttrs := models.Attrs{}
 
 		if task.Type == models.TaskTypeDestroy && env.Status == models.EnvStatusInactive {
-			// 环境销毁后清空自动销毁设置，以支持通过再次部署重建环境
+			// 环境销毁后清空自动销毁设置，以支持通过再次部署重建环境。
+			// ttl 需要保留，做为重建环境的默认 ttl
 			updateAttrs["AutoDestroyAt"] = nil
 			updateAttrs["AutoDestroyTaskId"] = ""
 		}
 
+		// 如果设置了环境的 ttl，则在部署成功后自动根据 ttl 设置销毁时间。
+		// 该逻辑只在环境从非活跃状态变为活跃时执行，活跃环境修改 ttl 会立即计算 AutoDestroyAt
 		if task.Type == models.TaskTypeApply && env.Status == models.EnvStatusActive &&
 			env.AutoDestroyAt == nil && env.TTL != "" && env.TTL != "0" {
-			// 如果设置了环境的 ttl，则在部署成功后自动根据 ttl 设置销毁时间
 			ttl, err := services.ParseTTL(env.TTL)
 			if err != nil {
 				return err
@@ -487,14 +480,17 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 					logger.Errorf("process task plan: %v", err)
 				}
 			}
-
-			if err := processAutoDestroy(); err != nil {
-				logger.Errorf("process auto destroy: %v", err)
-			}
 		}
 
 		if err := updateTaskStatus(); err != nil {
 			logger.Errorf("update task status error: %v", err)
+		}
+
+		if task.IsEffectTask() {
+			// 注意: 该步骤需要在环境状态被更新之后执行
+			if err := processAutoDestroy(); err != nil {
+				logger.Errorf("process auto destroy: %v", err)
+			}
 		}
 	}
 }

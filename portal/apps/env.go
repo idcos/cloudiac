@@ -329,13 +329,13 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 		}
 
 		attrs["ttl"] = form.TTL
-		if env.LastTaskId != "" { // 己部署过的环境同步修改 destroyAt
-			if ttl == 0 {
-				attrs["auto_destroy_at"] = nil
-			} else {
-				at := models.Time(time.Now().Add(ttl))
-				attrs["auto_destroy_at"] = &at
-			}
+		if ttl == 0 {
+			// ttl 传 0 表示重置销毁时间
+			attrs["auto_destroy_at"] = nil
+		} else if env.Status != models.EnvStatusInactive {
+			// 活跃环境同步修改 destroyAt
+			at := models.Time(time.Now().Add(ttl))
+			attrs["auto_destroy_at"] = &at
 		}
 	}
 
@@ -466,14 +466,13 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		}
 
 		env.TTL = form.TTL
-		if env.LastTaskId != "" { // 己部署过的环境同步修改 destroyAt
-			if ttl == 0 {
-				// ttl 传入 0 表示清空自动销毁时间
-				env.AutoDestroyAt = nil
-			} else {
-				at := models.Time(time.Now().Add(ttl))
-				env.AutoDestroyAt = &at
-			}
+
+		if ttl == 0 { // ttl 传入 0 表示清空自动销毁时间
+			env.AutoDestroyAt = nil
+		} else if env.Status != models.EnvStatusInactive {
+			// 活跃环境同步修改 destroyAt
+			at := models.Time(time.Now().Add(ttl))
+			env.AutoDestroyAt = &at
 		}
 	}
 
