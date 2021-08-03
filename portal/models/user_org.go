@@ -1,3 +1,5 @@
+// Copyright 2021 CloudJ Company Limited. All rights reserved.
+
 package models
 
 import "cloudiac/portal/libs/db"
