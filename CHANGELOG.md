@@ -13,7 +13,9 @@ update iac_template SET repo_id = replace(repo_id,'/cloud-iac/','/cloudiac/') wh
 update iac_template SET repo_addr = replace(repo_addr,'/repos/cloud-iac/','/repos/cloudiac/') where repo_addr like '%/repos/cloud-iac/%';
 ```
 
-2. 修改 deleted_at 字段类型，删除 deleted_at_t 字段
+2. 删除 deleted_at 字段
+
+gorm 也统一使用了 deleted_at_t 字段进行软删除标识
 
 **备份数据**
 ```sql
