@@ -230,7 +230,7 @@ func (s *Session) Count() (cnt int64, err error) {
 
 func (s *Session) Exists() (bool, error) {
 	exists := false
-	err := defaultDB.Raw("SELECT EXISTS(?)", s.db).Debug().Scan(&exists).Error
+	err := s.New().Raw("SELECT EXISTS(?)", s.db).Scan(&exists)
 	if err != nil {
 		return false, err
 	}
@@ -425,14 +425,6 @@ func openDB(dsn string) error {
 	}
 
 	defaultDB = db
-	//defaultDB = db.Session(&gorm.Session{
-	//	Logger: gormLogger.New(logs.Get(), gormLogger.Config{
-	//		SlowThreshold:             slowThreshold,
-	//		Colorful:                  false,
-	//		IgnoreRecordNotFoundError: false,
-	//		LogLevel:                  logLevel,
-	//	}),
-	//})
 	return nil
 }
 
