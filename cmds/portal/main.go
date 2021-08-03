@@ -196,11 +196,13 @@ func initSysUser(tx *db.Session) error {
 
 	logger := logs.Get()
 	logger.Infof("create sys account, email: %s, name: %s", email, name)
-	_, err = services.CreateUser(tx, models.User{
+	u := models.User{
 		Name:  name,
 		Phone: "",
 		Email: email,
-	})
+	}
+	u.Id = consts.SysUserId
+	_, err = services.CreateUser(tx, u)
 	return err
 }
 
