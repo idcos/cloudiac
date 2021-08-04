@@ -63,13 +63,12 @@ func (p *Paginator) TotalBySubQuery() (int64, error) {
 		count int64
 	)
 
-	err = p.dbSess.New().Raw("SELECT COUNT(*) as count FROM (?) AS t",
-		p.dbSess.DB().QueryExpr()).Row().Scan(&count)
+	err = p.dbSess.New().Raw("SELECT COUNT(*) as count FROM (?) AS t", p.dbSess.Expr()).Row().Scan(&count)
 	return count, err
 }
 
 func (p *Paginator) getPage() *db.Session {
-	return db.ToSess(p.dbSess.DB().Limit(p.Size).Offset((p.Page - 1) * p.Size))
+	return p.dbSess.Limit(p.Size).Offset((p.Page - 1) * p.Size)
 }
 
 func (p *Paginator) Scan(dest interface{}) error {

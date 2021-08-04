@@ -5,10 +5,9 @@ package e
 import (
 	"cloudiac/utils/logs"
 	"fmt"
-	goredis "github.com/go-redis/redis"
 	"github.com/go-sql-driver/mysql"
-	redisgo "github.com/gomodule/redigo/redis"
-	"github.com/jinzhu/gorm"
+	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 type Error interface {
@@ -127,14 +126,7 @@ func IsRecordNotFound(err error) bool {
 	if er, ok := err.(*MyError); ok {
 		err = er.Err()
 	}
-	return gorm.IsRecordNotFoundError(err)
-}
-
-func IsRedisNil(err error) bool {
-	if err == goredis.Nil || err == redisgo.ErrNil {
-		return true
-	}
-	return false
+	return errors.Is(err, gorm.ErrRecordNotFound)
 }
 
 func IgnoreNotFound(err error) error {

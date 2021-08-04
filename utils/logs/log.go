@@ -4,7 +4,7 @@ package logs
 
 import (
 	"fmt"
-	"github.com/lestrrat-go/file-rotatelogs"
+	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
 	"github.com/sirupsen/logrus"
 	"io"
 	"os"
@@ -17,6 +17,7 @@ type Logger interface {
 
 var (
 	defaultLogger *logrus.Logger
+	logWriter     io.Writer
 )
 
 // 创建一个新的默认 logger
@@ -34,18 +35,17 @@ func init() {
 	defaultLogger = newLogger()
 }
 
-// Init 根据配置文件配置 logger
-func Init(level string, path string, maxDays int) {
+func initWriter(logPath string, maxDays int) {
 	writers := []io.Writer{os.Stdout}
 
-	if path != "" {
+	if logPath != "" {
 		if maxDays == 0 {
 			maxDays = 7
 		}
 		//日志按天切割
 		rl, err := rotatelogs.New(
-			fmt.Sprintf("%s.%%Y%%m%%d", path),
-			rotatelogs.WithLinkName(path),
+			fmt.Sprintf("%s.%%Y%%m%%d", logPath),
+			rotatelogs.WithLinkName(logPath),
 			rotatelogs.WithRotationTime(time.Hour*24),
 			rotatelogs.WithMaxAge(time.Hour*24*time.Duration(maxDays)),
 		)
@@ -55,8 +55,13 @@ func Init(level string, path string, maxDays int) {
 			writers = append(writers, rl)
 		}
 	}
+	logWriter = io.MultiWriter(writers...)
+}
 
-	defaultLogger.SetOutput(io.MultiWriter(writers...))
+// Init 根据配置文件配置 logger
+func Init(level string, path string, maxDays int) {
+	initWriter(path, maxDays)
+	defaultLogger.SetOutput(logWriter)
 	if level != "" {
 		lvl, err := logrus.ParseLevel(level)
 		if err != nil {
@@ -68,4 +73,8 @@ func Init(level string, path string, maxDays int) {
 
 func Get() Logger {
 	return defaultLogger
+}
+
+func Writer() io.Writer {
+	return logWriter
 }

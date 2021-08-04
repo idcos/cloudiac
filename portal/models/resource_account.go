@@ -9,11 +9,11 @@ import (
 type ResourceAccount struct {
 	TimedModel
 
-	OrgId       Id     `json:"-" gorm:"size:32;not null;comment:'组织ID'"`
-	Name        string `json:"name" gorm:"size:32;not null;comment:'资源账号名称'"`
-	Description string `json:"description" gorm:"size:255;comment:'资源账号描述'"`
-	Params      JSON   `json:"params" gorm:"type:json;null;comment:'账号变量'"`
-	Status      string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:'资源账号状态'"`
+	OrgId       Id     `json:"-" gorm:"size:32;not null;comment:组织ID"`
+	Name        string `json:"name" gorm:"size:32;not null;comment:资源账号名称"`
+	Description string `json:"description" gorm:"size:255;comment:资源账号描述"`
+	Params      JSON   `json:"params" gorm:"type:json;null;comment:账号变量"`
+	Status      string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:资源账号状态"`
 }
 
 func (ResourceAccount) TableName() string {
@@ -32,8 +32,8 @@ func (r ResourceAccount) Migrate(sess *db.Session) (err error) {
 type CtResourceMap struct {
 	BaseModel
 
-	ResourceAccountId Id     `json:"resourceAccountId" gorm:"size:32;not null;comment:'资源账号ID'"`
-	CtServiceId       string `json:"ctServiceId" gorm:"size:64;not null;comment:'Runner Service ID'"`
+	ResourceAccountId Id     `json:"resourceAccountId" gorm:"size:32;not null;comment:资源账号ID"`
+	CtServiceId       string `json:"ctServiceId" gorm:"size:64;not null;comment:Runner Service ID"`
 }
 
 func (CtResourceMap) TableName() string {

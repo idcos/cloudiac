@@ -7,6 +7,8 @@ import (
 )
 
 type DBStorage struct {
+	AbstractModel
+
 	Id        uint   `gorm:"primary_key" json:"-"`
 	Path      string `gorm:"NOT NULL;UNIQUE"`
 	Content   []byte `gorm:"type:MEDIUMBLOB"` // MEDIUMBLOB 支持最大长度约 16M
@@ -18,16 +20,8 @@ func (DBStorage) TableName() string {
 }
 
 func (DBStorage) Migrate(s *db.Session) error {
-	if err := s.DB().ModifyColumn("content", "MEDIUMBLOB").Error; err != nil {
+	if err := s.ModifyModelColumn(&DBStorage{}, "content"); err != nil {
 		return err
 	}
-	return nil
-}
-
-func (DBStorage) Validate() error {
-	return nil
-}
-
-func (DBStorage) ValidateAttrs(attrs Attrs) error {
 	return nil
 }

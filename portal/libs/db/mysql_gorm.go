@@ -5,20 +5,37 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"path/filepath"
-	"runtime"
+	"gorm.io/gorm/clause"
+	"gorm.io/gorm/schema"
+	"gorm.io/plugin/soft_delete"
+	"os"
+	"reflect"
 	"strconv"
 	"strings"
-
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/jinzhu/gorm"
+	"time"
 
 	"cloudiac/portal/consts/e"
 	"cloudiac/utils/logs"
+	"github.com/pkg/errors"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+	gormLogger "gorm.io/gorm/logger"
 )
 
-var db *gorm.DB
-var logger logs.Logger
+var (
+	defaultDB      *gorm.DB
+	namingStrategy = schema.NamingStrategy{}
+)
+
+type SoftDeletedAt uint
+
+func (v SoftDeletedAt) QueryClauses(f *schema.Field) []clause.Interface {
+	return soft_delete.DeletedAt(v).QueryClauses(f)
+}
+
+func (v SoftDeletedAt) DeleteClauses(f *schema.Field) []clause.Interface {
+	return soft_delete.DeletedAt(v).DeleteClauses(f)
+}
 
 type Session struct {
 	db *gorm.DB
@@ -28,48 +45,66 @@ func (s *Session) Begin() *Session {
 	return ToSess(s.db.Begin())
 }
 
-func (s *Session) DB() *gorm.DB {
+func (s *Session) Transaction(fc func(tx *Session) error) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		return fc(ToSess(tx))
+	})
+}
+
+func (s *Session) GormDB() *gorm.DB {
 	return s.db
 }
 
 func (s *Session) New() *Session {
-	return ToSess(s.db.New())
-}
-
-func (s *Session) AddIndex(indexName string, columns ...string) error {
-	return s.DB().AddIndex(indexName, columns...).Error
+	return ToSess(s.db.Session(&gorm.Session{NewDB: true}))
 }
 
 func (s *Session) AddUniqueIndex(indexName string, columns ...string) error {
-	return s.DB().AddUniqueIndex(indexName, columns...).Error
-}
+	stmt := s.db.Statement
+	if stmt.Model != nil {
+		if err := stmt.Parse(stmt.Model); err != nil {
+			return err
+		}
+	}
 
-func (s *Session) RemoveIndex(table string, indexName string) error {
-	if !s.DB().Dialect().HasIndex(table, indexName) {
+	if s.db.Migrator().HasIndex(stmt.Table, indexName) {
 		return nil
 	}
 
-	return s.DB().Table(table).RemoveIndex(indexName).Error
+	err := s.db.Exec(fmt.Sprintf("CREATE UNIQUE INDEX `%s` ON `%s` (%s)",
+		indexName, stmt.Table, strings.Join(columns, ","))).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Session) RemoveIndex(table string, indexName string) error {
+	migrator := s.db.Migrator()
+	if migrator.HasIndex(table, indexName) {
+		return migrator.DropIndex(table, indexName)
+	}
+	return nil
 }
 
 func (s *Session) DropColumn(table string, columns ...string) error {
-	dbTable := s.DB().Table(table)
-	logger := logger.WithField("func", "DropColumn")
+	migrator := s.db.Migrator()
 	for _, col := range columns {
-		err := dbTable.DropColumn(col).Error
-		if err != nil {
-			if e.IsMysqlErr(err, e.MysqlDropColOrKeyNotExists) {
-				logger.Infof("column '%s' not exists, ignore", col)
-				continue
+		if migrator.HasColumn(table, col) {
+			if err := migrator.DropColumn(table, col); err != nil {
+				return err
 			}
-			return err
 		}
 	}
 	return nil
 }
 
-func (s *Session) ModifyColumn(column string, typ string) error {
-	return s.db.ModifyColumn(column, typ).Error
+// ModifyModelColumn 基于 gorm:"" tag 同步字段类型定义
+func (s *Session) ModifyModelColumn(model interface{}, column string) error {
+	if !s.isModel(model) {
+		return fmt.Errorf("'model' must be a 'struct', not '%T'", model)
+	}
+	return s.db.Migrator().AlterColumn(model, column)
 }
 
 func (s *Session) Rollback() error {
@@ -81,7 +116,12 @@ func (s *Session) Commit() error {
 }
 
 func (s *Session) Model(m interface{}) *Session {
-	return ToSess(s.db.Model(m))
+	switch v := m.(type) {
+	case string:
+		return s.Table(v)
+	default:
+		return ToSess(s.db.Model(m))
+	}
 }
 
 func (s *Session) Table(name string) *Session {
@@ -92,14 +132,8 @@ func (s *Session) Debug() *Session {
 	return ToSess(s.db.Debug())
 }
 
-func (s *Session) Expr() *gorm.SqlExpr {
-	return s.db.QueryExpr()
-}
-
-// Expr generate raw SQL expression, for example:
-//     DB.Model(&product).Update("price", gorm.Expr("price * ? + ?", 2, 100))
-func (s *Session) GormExpr(expression string, args ...interface{}) *gorm.SqlExpr {
-	return gorm.Expr(expression, args...)
+func (s *Session) Expr() interface{} {
+	return s.db
 }
 
 func (s *Session) Raw(sql string, values ...interface{}) *Session {
@@ -171,19 +205,19 @@ func (s *Session) Joins(query string, args ...interface{}) *Session {
 	return ToSess(s.db.Joins(query, args...))
 }
 
-func (s *Session) Order(value interface{}, reorder ...bool) *Session {
-	return ToSess(s.db.Order(value, reorder...))
+func (s *Session) Order(value interface{}) *Session {
+	return ToSess(s.db.Order(value))
 }
 
 func (s *Session) Group(query string) *Session {
 	return ToSess(s.db.Group(query))
 }
 
-func (s *Session) Limit(n interface{}) *Session {
+func (s *Session) Limit(n int) *Session {
 	return ToSess(s.db.Limit(n))
 }
 
-func (s *Session) Offset(n interface{}) *Session {
+func (s *Session) Offset(n int) *Session {
 	return ToSess(s.db.Offset(n))
 }
 
@@ -198,7 +232,7 @@ func (s *Session) Count() (cnt int64, err error) {
 
 func (s *Session) Exists() (bool, error) {
 	exists := false
-	err := s.db.New().Raw("SELECT EXISTS(?)", s.Expr()).Row().Scan(&exists)
+	err := s.New().Raw("SELECT EXISTS(?)", s.db).Scan(&exists)
 	if err != nil {
 		return false, err
 	}
@@ -244,8 +278,33 @@ func (s *Session) Delete(val interface{}) (int64, error) {
 	return r.RowsAffected, r.Error
 }
 
-func (s *Session) Update(attrs ...interface{}) (int64, error) {
-	r := s.db.Update(attrs...)
+func (s *Session) isModel(m interface{}) bool {
+	rv := reflect.ValueOf(m)
+	if rv.Kind() == reflect.Ptr {
+		rv = rv.Elem()
+	}
+	return rv.Kind() == reflect.Struct
+}
+
+func (s *Session) Update(value interface{}) (int64, error) {
+	if !s.isModel(value) {
+		return 0, fmt.Errorf("'value' must be a 'struct', not '%T'", value)
+	}
+	r := s.db.Updates(value)
+	return r.RowsAffected, r.Error
+}
+
+func (s *Session) UpdateColumn(column string, value interface{}) (int64, error) {
+	r := s.db.Update(ToColName(column), value)
+	return r.RowsAffected, r.Error
+}
+
+func (s *Session) UpdateAttrs(attrs map[string]interface{}) (int64, error) {
+	newAttrs := make(map[string]interface{}, len(attrs))
+	for k, v := range attrs {
+		newAttrs[ToColName(k)]	= v
+	}
+	r := s.db.Updates(newAttrs)
 	return r.RowsAffected, r.Error
 }
 
@@ -263,8 +322,7 @@ func (s *Session) Pluck(column string, val interface{}) error {
 }
 
 /*
-将指定的 field 与 q 比较大小
-
+CompareFieldValue 将指定的 field 与 q 比较大小
 q 的格式: 10, gt:10, ge:10, lt:10, le:10
 */
 func (s *Session) CompareFieldValue(field string, q string) (*Session, error) {
@@ -300,85 +358,95 @@ func (s *Session) CompareFieldValue(field string, q string) (*Session, error) {
 	}
 }
 
-func openDB(args ...interface{}) error {
-	var err error
-	db, err = gorm.Open("mysql", args...)
-	return err
-}
-
 func ToSess(db *gorm.DB) *Session {
-	return &Session{db: db}
+	// ToSess 总是创建一个新 session
+	// 如果直接返回 db，gorm2 的 statement 重用机制会继续保留己记录的 where 条件
+	return &Session{db: db.Session(&gorm.Session{})}
 }
 
 func ToColName(name string) string {
-	return gorm.ToColumnName(name)
-}
-
-type sqlLogger struct {
-	logger logs.Logger
-}
-
-func (sqlLogger) Print(v ...interface{}) {
-	var (
-		level    string
-		fileLine string
-		ok       bool
-	)
-
-	if len(v) < 3 {
-		goto end
+	name = namingStrategy.ColumnName("", name)
+	if i := strings.IndexByte(name, '.'); i >= 0 {
+		name = name[i+1:]
 	}
-
-	level, ok = v[0].(string)
-	if !ok {
-		goto end
-	}
-
-	fileLine, ok = v[1].(string)
-	if !ok {
-		goto end
-	}
-
-	// see gorm/main.go:DB.logs()
-	// 除了以下两种还有 error 级别，但 error 级日志是使用协程调用 s.print() 的，无法获取到业务层面的调用栈
-	if level == "sql" || level == "logs" {
-		// 前几层都是底层库调用，先跳过
-		for i := 4; i < 32; i++ {
-			_, file, line, ok := runtime.Caller(i)
-			if ok && fmt.Sprintf("%s:%d", file, line) == fileLine {
-				_, file, line, ok = runtime.Caller(i + 1)
-				// 我们需要展示业务层调用行而非 db 库调用行，所以跳过指定文件
-				if ok && !strings.HasSuffix(file, "db/mysql_gorm.go") {
-					v[1] = fmt.Sprintf("%s:%d", sqlLogger{}.baseFilePath(file), line)
-				}
-				break
-			}
-		}
-	}
-
-end:
-	logger.Debugln(gorm.LogFormatter(v...)...)
-}
-
-// 返回路径最后两层
-func (sqlLogger) baseFilePath(p string) string {
-	base := filepath.Base(p)
-	baseDir := filepath.Base(filepath.Dir(p))
-	if baseDir == base {
-		return base
-	} else {
-		return filepath.Join(baseDir, base)
-	}
+	return name
 }
 
 func Get() *Session {
-	return ToSess(db)
+	return ToSess(defaultDB)
 }
 
-func Init(args ...interface{}) {
-	logger = logs.Get()
-	if err := openDB(args...); err != nil {
-		logger.Fatalln(err)
+func openDB(dsn string) error {
+	slowThresholdEnv := os.Getenv("GORM_SLOW_THRESHOLD")
+	slowThreshold := time.Second
+	if slowThresholdEnv != "" {
+		n, err := strconv.Atoi(slowThresholdEnv)
+		if err != nil {
+			return errors.Wrap(err, "GORM_SLOW_THRESHOLD")
+		}
+		slowThreshold = time.Second * time.Duration(n)
 	}
-	db.SetLogger(sqlLogger{logger})
+
+	logLevelEnv := os.Getenv("GORM_LOG_LEVEL")
+	logLevel := gormLogger.Warn
+	if logLevelEnv != "" {
+		switch strings.ToLower(logLevelEnv) {
+		case "silent":
+			logLevel = gormLogger.Silent
+		case "error":
+			logLevel = gormLogger.Error
+		case "warn", "warning":
+			logLevel = gormLogger.Warn
+		case "info":
+			logLevel = gormLogger.Info
+		default:
+			logs.Get().Warnf("invalid GORM_LOG_LEVEL '%s'", logLevelEnv)
+		}
+	}
+
+	mysqlDial := mysql.New(mysql.Config{
+		DSN:               dsn,
+		DefaultStringSize: 255,
+	})
+	db, err := gorm.Open(mysqlDial, &gorm.Config{
+		NamingStrategy: namingStrategy,
+		Logger: gormLogger.New(logs.Get(), gormLogger.Config{
+			SlowThreshold:             slowThreshold,
+			Colorful:                  false,
+			IgnoreRecordNotFoundError: false,
+			LogLevel:                  logLevel,
+		}),
+	})
+	if err != nil {
+		return err
+	}
+
+	if err = db.Callback().Create().Before("gorm:create").
+		Register("my_before_create_hook", beforeCreateCallback); err != nil {
+		return err
+	}
+
+	defaultDB = db
+	return nil
+}
+
+type CustomBeforeCreateInterface interface {
+	CustomBeforeCreate(session *Session) error
+}
+
+func beforeCreateCallback(db *gorm.DB) {
+	if db.Error == nil && db.Statement.Schema != nil && !db.Statement.SkipHooks && db.Statement.Schema.BeforeCreate {
+		value := db.Statement.ReflectValue.Interface()
+		if db.Statement.Schema.BeforeCreate {
+			if i, ok := value.(CustomBeforeCreateInterface); ok {
+				_ = db.AddError(i.CustomBeforeCreate(ToSess(db)))
+			}
+		}
+	}
+}
+
+func Init(dsn string) {
+	if err := openDB(dsn); err != nil {
+		logs.Get().Fatalln(err)
+	}
 }

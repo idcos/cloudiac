@@ -271,7 +271,7 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 	}
 
 	logs.Get().WithField("taskId", task.Id).Infof("change task to '%s'", status)
-	if _, err := dbSess.Model(&models.Task{}).Update(task); err != nil {
+	if _, err := dbSess.Model(task).Update(task); err != nil {
 		return e.AutoNew(err, e.DBError)
 	}
 
@@ -382,7 +382,7 @@ func SaveTaskOutputs(dbSess *db.Session, task *models.Task, vars map[string]TfSt
 		task.Result.Outputs[k] = v
 	}
 	if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
-		Update("result", task.Result); err != nil {
+		UpdateColumn("result", task.Result); err != nil {
 		return err
 	}
 	return nil
@@ -443,7 +443,7 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource)
 	}
 
 	if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
-		Update("result", task.Result); err != nil {
+		UpdateColumn("result", task.Result); err != nil {
 		return err
 	}
 	return nil

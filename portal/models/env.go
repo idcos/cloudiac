@@ -36,10 +36,10 @@ type Env struct {
 	Status      string `json:"status" gorm:"type:enum('active','failed','inactive')" enums:"'active','failed','inactive'"` // 环境状态, active活跃, inactive非活跃,failed错误,running部署中,approving审批中
 	// 任务状态，只同步部署任务的状态(apply,destroy)，plan 任务不会对环境产生影响，所以不同步
 	TaskStatus string `json:"taskStatus" gorm:"type:enum('','approving','running');default:''"`
-	Archived   bool   `json:"archived" gorm:"default:'0'"`                             // 是否已归档
-	Timeout    int    `json:"timeout" gorm:"default:'600';comment:'部署超时'"`             // 部署超时时间（单位：秒）
-	OneTime    bool   `json:"oneTime" gorm:"default:'0'"`                              // 一次性环境标识
-	Deploying  bool   `json:"deploying" gorm:"not null;default:'0';common:'是否正在执行部署'"` // 是否正在执行部署
+	Archived   bool   `json:"archived" gorm:"default:false"`               // 是否已归档
+	Timeout    int    `json:"timeout" gorm:"default:600;comment:部署超时"` // 部署超时时间（单位：秒）
+	OneTime    bool   `json:"oneTime" gorm:"default:false"`                // 一次性环境标识
+	Deploying  bool   `json:"deploying" gorm:"not null;default:false"`     // 是否正在执行部署
 
 	StatePath string `json:"statePath" gorm:"not null" swaggerignore:"true"` // Terraform tfstate 文件路径（内部）
 
@@ -56,7 +56,7 @@ type Env struct {
 
 	LastTaskId Id `json:"lastTaskId" gorm:"size:32"` // 最后一次部署或销毁任务的 id(plan 任务不记录)
 
-	AutoApproval bool `json:"autoApproval" gorm:"default:'0'"` // 是否自动审批
+	AutoApproval bool `json:"autoApproval" gorm:"default:false"` // 是否自动审批
 
 	TTL           string `json:"ttl" gorm:"default:'0'" example:"1h/1d"` // 生命周期
 	AutoDestroyAt *Time  `json:"autoDestroyAt" gorm:"type:datetime"`     // 自动销毁时间

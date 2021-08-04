@@ -231,7 +231,7 @@ func DeleteUserOrgRel(c *ctx.ServiceContext, form *forms.DeleteUserOrgRelForm) (
 	c.Logger().Infof("delete user ", form.UserId, " for org ", c.OrgId, " succeed")
 
 	resp := models.UserWithRoleResp{
-		User: user,
+		User: *user,
 		Role: "",
 	}
 	return resp, nil
@@ -270,7 +270,7 @@ func AddUserOrgRel(c *ctx.ServiceContext, form *forms.AddUserOrgRelForm) (*model
 	c.Logger().Infof("add user ", form.Id, " to org ", c.OrgId, " succeed")
 
 	resp := models.UserWithRoleResp{
-		User: user,
+		User: *user,
 		Role: form.Role,
 	}
 
@@ -302,7 +302,7 @@ func UpdateUserOrgRel(c *ctx.ServiceContext, form *forms.UpdateUserOrgRelForm) (
 	c.Logger().Infof("add user ", form.UserId, " to org ", c.OrgId, " succeed")
 
 	resp := models.UserWithRoleResp{
-		User: user,
+		User: *user,
 		Role: form.Role,
 	}
 
@@ -432,7 +432,7 @@ func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*models.User
 	}()
 
 	resp := models.UserWithRoleResp{
-		User: user,
+		User: *user,
 		Role: form.Role,
 	}
 

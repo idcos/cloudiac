@@ -7,6 +7,7 @@ require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/casbin/casbin/v2 v2.31.9
 	github.com/casbin/gorm-adapter/v2 v2.1.0
+	github.com/casbin/gorm-adapter/v3 v3.3.2 // indirect
 	github.com/containerd/containerd v1.4.4 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/docker/distribution v2.7.1+incompatible // indirect
@@ -17,7 +18,7 @@ require (
 	github.com/gin-gonic/gin v1.7.2
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/go-redis/redis v6.15.9+incompatible
-	github.com/go-sql-driver/mysql v1.5.0
+	github.com/go-sql-driver/mysql v1.6.0
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/gomodule/redigo v1.8.4
@@ -26,7 +27,6 @@ require (
 	github.com/hashicorp/consul/api v1.8.1
 	github.com/hashicorp/hcl/v2 v2.10.0
 	github.com/jessevdk/go-flags v1.5.0
-	github.com/jinzhu/gorm v1.9.16
 	github.com/joho/godotenv v1.3.0
 	github.com/jonboulle/clockwork v0.2.2 // indirect
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
@@ -51,5 +51,8 @@ require (
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/yaml.v2 v2.4.0
+	gorm.io/driver/mysql v1.1.1 // indirect
+	gorm.io/gorm v1.21.12 // indirect
+	gorm.io/plugin/soft_delete v1.0.2 // indirect
 	gotest.tools/v3 v3.0.3 // indirect
 )
