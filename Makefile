@@ -26,8 +26,11 @@ BUILD_DIR=$(PWD)/targets
 all: build
 build: portal runner tool
 
-build-linux-amd64: 
-	GOOS=linux GOARCH=amd64 $(MAKE) build
+build-linux-amd64-portal: 
+	GOOS=linux GOARCH=amd64 $(MAKE) portal tool
+
+build-linux-amd64-runner: 
+	GOOS=linux GOARCH=amd64 $(MAKE) runner
 
 reset-build-dir:
 	$(RM) -r $(BUILD_DIR)
@@ -79,7 +82,10 @@ package-linux-amd64:
 package: package-linux-amd64
 
 
-image-runner: build-linux-amd64
+image-portal: build-linux-amd64-portal
+	$(DOCKER_BUILD) -t cloudiac/iac-portal:$(VERSION) -f docker/portal/Dockerfile .
+
+image-runner: build-linux-amd64-runner
 	$(DOCKER_BUILD) -t cloudiac/ct-runner:$(VERSION) -f docker/runner/Dockerfile .
 
 image-worker:
