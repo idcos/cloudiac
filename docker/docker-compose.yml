@@ -2,7 +2,7 @@ version: "3"
 services:
   iac-portal:
     container_name: iac-portal
-    image: "cloudiac/iac-portal:v0.5.0"
+    image: "cloudiac/iac-portal:latest"
     volumes:
       - type: bind
         source: /usr/yunji/cloudiac/var
@@ -19,7 +19,7 @@ services:
 
   ct-runner:
     container_name: ct-runner
-    image: "cloudiac/ct-runner:v0.5.0"
+    image: "cloudiac/ct-runner:latest"
     volumes:
       - type: bind
         source: /usr/yunji/cloudiac/var
@@ -35,17 +35,17 @@ services:
     depends_on:
       - consul
     restart: always
-    
+
   # 添加该服务只是为了自动 pull 镜像，并不需要作为服务运行
   ct-worker:
-    image: "cloudiac/ct-worker:v0.5.0"
+    image: "cloudiac/ct-worker:latest"
     container_name: "ct-worker-say-hi"
     command: ["echo", "hello world!"]
     restart: "no"
-    
+
   iac-web:
     container_name: iac-web
-    image: "cloudiac/iac-web:v0.5.0"
+    image: "cloudiac/iac-web:latest"
     ports:
       - 80:80
     restart: always
@@ -64,9 +64,9 @@ services:
         source: /usr/yunji/cloudiac/var/mysql
         target: /var/lib/mysql
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_RANDOM_ROOT_PASSWORD=yes
       - MYSQL_USER
-      - MYSQL_PASSWORD 
+      - MYSQL_PASSWORD
       - MYSQL_DATABASE
     restart: always
 
@@ -78,8 +78,9 @@ services:
         source: /usr/yunji/cloudiac/var/consul
         target: /consul/data
     ports:
-      - "${CONSUL_ADDRESS}:8500"
+      - "8500:8500"
     command: >
       consul agent -server -bootstrap-expect=1 -ui -bind=0.0.0.0
       -client=0.0.0.0 -enable-script-checks=true -data-dir=/consul/data
     restart: always
+

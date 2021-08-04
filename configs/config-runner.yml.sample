@@ -1,7 +1,7 @@
 listen: "0.0.0.0:19030"
 
 runner:
-  default_image: "cloudiac/ct-worker:v0.5.0"
+  default_image: "cloudiac/ct-worker:latest"
 
   ## 保存任务运行信息(脚本、日志等)
   storage_path: "var/storage"
