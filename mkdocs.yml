@@ -1,0 +1,24 @@
+site_name: CloudIaC
+docs_dir: "docs/mkdocs"
+theme: readthedocs
+plugins: []
+
+nav:
+  - "用户文档":
+    - "快速入门": user-guide/quick-start.md
+    - "云模板开发": user-guide/iac-template-develop.md
+
+  - "产品文档":
+    - "概述":  intra/summarize.md
+    - "组织": intra/organization.md
+    - "项目": intra/project.md
+    - "VCS": intra/vcs.md
+    - "模板": intra/template.md
+    - "变量": intra/variable.md
+    - "环境": intra/env.md
+    - "角色": intra/role.md
+
+  - "部署文档": 
+    - "容器化部署": deploy/container.md
+    - "手动部署": deploy/host.md
+

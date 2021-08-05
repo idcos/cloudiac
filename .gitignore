@@ -17,3 +17,4 @@ plugin-cache/
 /docs/swagger.yaml
 /var/
 /run/
+/site/
