@@ -20,6 +20,7 @@ func RegisterRoute(apiV1 *gin.RouterGroup) {
 		})
 	})
 
+	apiV1.Use(gin.Logger())
 	apiV1.POST("/task/run", w(handler.RunTask))
 	apiV1.GET("/task/status", w(handler.TaskStatus))
 	apiV1.GET("/task/log/follow", w(handler.TaskLogFollow))
