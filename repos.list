@@ -14,3 +14,4 @@ yunji_aliyun_ecs_ansible.git
 alicloud-landingzone-foundation.git
 yunji_gateway.git
 yunji_cloudiac_demo.git
+yunji_iac_k8s_deploy.git
