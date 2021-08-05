@@ -7,22 +7,7 @@ CloudIaC 将易于使用的界面与强大的治理工具相结合，让您和�
 
 通过将 CloudIaC 集成到您的流程中，您可以获得对组织的云使用情况的可见性、可预测性和更好的治理。
 
-- [快速入门](docs/mkdocs/user-guide/quick-start.md)
-- [产品文档](docs/mkdocs/intra/)
-- [容器化部署](docs/mkdocs/deploy/container.md)
-- [文档索引](docs/mkdocs/)
-
-## 编译
-依赖 go 1.16 及以上版本
-
-```
-go get -x github.com/swaggo/swag/cmd/swag
-go mod download -x
-make build
-```
-
-*如果下载较慢可以设置 GOPROXY:*
-```bash
-go env -w GOPROXY="https://goproxy.io,direct"
-```
+- [用户文档](user-guide/)
+- [产品文档](intra/)
+- [部署文档](deploy/)
 

@@ -19,7 +19,7 @@ PB_PROTOC=protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-
 WORKDIR?=/usr/yunji/cloudiac
 DOCKER_BUILD=docker build --build-arg WORKDIR=$(WORKDIR)
 
-BUILD_DIR=$(PWD)/targets
+BUILD_DIR=$(PWD)/build
 
 .PHONY: all build portal runner run run-portal ru-runner clean package repos providers package-release
 
