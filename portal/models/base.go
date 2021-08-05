@@ -91,6 +91,7 @@ type BaseModel struct {
 	Id Id `gorm:"size:32;primary_key" json:"id" example:"x-c3ek0co6n88ldvq1n6ag"` //ID
 }
 
+
 func (base *BaseModel) CustomBeforeCreate(*db.Session) error {
 	// 未设置 Id 值的情况下默认生成一个无前缀的 id，如果对前缀有要求请主动为对象设置 Id 值,
 	// 或者在 Model 层定义自己的 BeforeCreate() 方法

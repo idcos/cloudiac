@@ -302,7 +302,7 @@ func (s *Session) UpdateColumn(column string, value interface{}) (int64, error) 
 func (s *Session) UpdateAttrs(attrs map[string]interface{}) (int64, error) {
 	newAttrs := make(map[string]interface{}, len(attrs))
 	for k, v := range attrs {
-		newAttrs[ToColName(k)]	= v
+		newAttrs[ToColName(k)] = v
 	}
 	r := s.db.Updates(newAttrs)
 	return r.RowsAffected, r.Error
@@ -421,7 +421,7 @@ func openDB(dsn string) error {
 		return err
 	}
 
-	if err = db.Callback().Create().Before("gorm:create").
+	if err = db.Callback().Create().Before("gorm:before_create").
 		Register("my_before_create_hook", beforeCreateCallback); err != nil {
 		return err
 	}
@@ -434,14 +434,36 @@ type CustomBeforeCreateInterface interface {
 	CustomBeforeCreate(session *Session) error
 }
 
+// callMethod gorm.io/gorm@v1.21.12/callbacks/callmethod.go
+func callMethod(db *gorm.DB, fc func(value interface{}, tx *gorm.DB) bool) {
+	tx := db.Session(&gorm.Session{NewDB: true})
+	if called := fc(db.Statement.ReflectValue.Interface(), tx); !called {
+		switch db.Statement.ReflectValue.Kind() {
+		case reflect.Slice, reflect.Array:
+			db.Statement.CurDestIndex = 0
+			for i := 0; i < db.Statement.ReflectValue.Len(); i++ {
+				fc(reflect.Indirect(db.Statement.ReflectValue.Index(i)).Addr().Interface(), tx)
+				db.Statement.CurDestIndex++
+			}
+		case reflect.Struct:
+			fc(db.Statement.ReflectValue.Addr().Interface(), tx)
+		}
+	}
+}
+
 func beforeCreateCallback(db *gorm.DB) {
-	if db.Error == nil && db.Statement.Schema != nil && !db.Statement.SkipHooks && db.Statement.Schema.BeforeCreate {
-		value := db.Statement.ReflectValue.Interface()
-		if db.Statement.Schema.BeforeCreate {
+	// 这里不需要判断 db.Statement.Schema.BeforeCreate,
+	// Schema.BeforeCreate 只是用于判断 model 是否定义了 BeforeCreate(*gorm.DB) 方法，如果未定义则该值为 false。
+	// gorm 定义 Schema.BeforeCreate 是为了避免每次执行都进行接口断言？
+	// Schema.BeforeCreate 赋值: gorm.io/gorm@v1.21.12/schema/schema.go:229
+	if db.Error == nil && db.Statement.Schema != nil && !db.Statement.SkipHooks {
+		callMethod(db, func(value interface{}, db *gorm.DB) (called bool) {
 			if i, ok := value.(CustomBeforeCreateInterface); ok {
+				called = true
 				_ = db.AddError(i.CustomBeforeCreate(ToSess(db)))
 			}
-		}
+			return called
+		})
 	}
 }
 
