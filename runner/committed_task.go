@@ -181,7 +181,7 @@ func (task *CommittedTaskStep) Wait(ctx context.Context) (int64, error) {
 						})
 					if err != nil {
 						// 有可能其他协程己经提交了删除，这里忽略掉这些报错
-						if !strings.Contains(err.Error(), "already in progress") ||
+						if !strings.Contains(err.Error(), "already in progress") &&
 							!strings.Contains(err.Error(), "No such container") {
 							logger.Warnf("remove container error: %v", err)
 						}

@@ -78,3 +78,31 @@ func Get() Logger {
 func Writer() io.Writer {
 	return logWriter
 }
+
+type LogWriter struct {
+	write func(string)
+}
+
+func (w *LogWriter) Write(bytes []byte) (int, error) {
+	w.write(string(bytes))
+	return len(bytes), nil
+}
+
+func GetLogWriter(level string) (*LogWriter, error) {
+	l, err := logrus.ParseLevel(level)
+	if err != nil {
+		return nil, err
+	}
+	return &LogWriter{
+		write: func(s string) {
+			defaultLogger.Logf(l, s)
+		}}, nil
+}
+
+func MustGetLogWriter(level string) *LogWriter {
+	if w, err := GetLogWriter(level); err != nil {
+		panic(err)
+	} else {
+		return w
+	}
+}
