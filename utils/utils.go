@@ -257,6 +257,7 @@ func CheckRespCode(respCode int, code int) bool {
 func aesKey() []byte {
 	sk := configs.Get().SecretKey
 	if sk == "" {
+		// "" 不是一个合法的 aes key，这里直接返回，等调用 aes.NewCipher() 时报错
 		return []byte(sk)
 	}
 	if len(sk) == 32 {
