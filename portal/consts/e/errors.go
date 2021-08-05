@@ -192,9 +192,6 @@ var errorMsgs = map[int]map[string]string{
 	IOError: {
 		"zh-cn": "io 错误",
 	},
-	LdapError: {
-		"zh-cn": "LDAP 错误",
-	},
 	MailServerError: {
 		"zh-cn": "邮件服务错误",
 	},
@@ -238,10 +235,10 @@ var errorMsgs = map[int]map[string]string{
 		"zh-cn": "用户不存在",
 	},
 	UserEmailDuplicate: {
-		"zh-cn": "邮箱已注册，请直接登录",
+		"zh-cn": "用户邮箱已存在",
 	},
 	UserEmailDuplicateInactive: {
-		"zh-cn": "邮箱已注册，请前往邮箱激活账号",
+		"zh-cn": "无效的用户邮箱",
 	},
 	UserInvalidStatus: {
 		"zh-cn": "无效的用户状态",
@@ -301,7 +298,7 @@ var errorMsgs = map[int]map[string]string{
 		"zh-cn": "模板名称重复",
 	},
 	HCLParseError: {
-		"zh-cn": "模版语法解析错误",
+		"zh-cn": "模板语法解析错误",
 	},
 
 	VariableAliasDuplicate: {
@@ -327,13 +324,13 @@ var errorMsgs = map[int]map[string]string{
 	},
 
 	TemplateNotExists: {
-		"zh-cn": "云模版不存在",
+		"zh-cn": "模板不存在",
 	},
 	TemplateDisabled: {
-		"zh-cn": "云模版不可用",
+		"zh-cn": "模板不可用",
 	},
 	TemplateActiveEnvExists: {
-		"zh-cn": "模版活跃环境已经存在",
+		"zh-cn": "模板存在活跃环境",
 	},
 	ConsulConnError: {
 		"zh-cn": "consul链接失败",
