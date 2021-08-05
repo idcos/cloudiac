@@ -254,8 +254,20 @@ func CheckRespCode(respCode int, code int) bool {
 	return strings.HasSuffix(fmt.Sprintf("%d", respCode), fmt.Sprintf("%d", code))
 }
 
+func aesKey() []byte {
+	sk := configs.Get().SecretKey
+	if sk == "" {
+		// "" 不是一个合法的 aes key，这里直接返回，等调用 aes.NewCipher() 时报错
+		return []byte(sk)
+	}
+	if len(sk) == 32 {
+		return []byte(sk)
+	}
+	return []byte(Md5String(sk))
+}
+
 func AesEncrypt(plaintext string) (string, error) {
-	block, err := aes.NewCipher([]byte(configs.Get().SecretKey))
+	block, err := aes.NewCipher(aesKey())
 	if err != nil {
 		return "", err
 	}
@@ -274,7 +286,7 @@ func AesDecrypt(d string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	block, err := aes.NewCipher([]byte(configs.Get().SecretKey))
+	block, err := aes.NewCipher(aesKey())
 	if err != nil {
 		return "", err
 	}

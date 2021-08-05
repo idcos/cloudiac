@@ -21,9 +21,6 @@ type KafkaConfig struct {
 	Partition    int      `yaml:"partition"`
 	SaslUsername string   `yaml:"sasl_username"`
 	SaslPassword string   `yaml:"sasl_password"`
-	//TLSCertFile  string   `yaml:"tls_cert_file"`
-	//TLSKeyFile   string   `yaml:"tls_key_file"`
-	//TLSCAFile    string   `yaml:"tls_ca_file"`
 }
 
 type yamlTimeDuration struct {
@@ -173,6 +170,9 @@ func ParseRunnerConfig(filename string) error {
 	cfg := defaultConfig
 	if err := parseConfig(filename, &cfg); err != nil {
 		return err
+	}
+	if cfg.SecretKey == "" {
+		panic("missing secret key config")
 	}
 	lock.Lock()
 	defer lock.Unlock()

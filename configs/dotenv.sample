@@ -7,7 +7,7 @@ IAC_ADMIN_PASSWORD=
 # 加密密钥配置
 SECRET_KEY=
 
-## JWT 密钥未配置时默认使用 SECRET_KEY
+## JWT 密钥，未配置时默认使用 SECRET_KEY
 JWT_SECRET_KEY=
 
 # mysql 配置
