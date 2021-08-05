@@ -29,8 +29,10 @@ func getPage(query *db.Session, form forms.PageFormer, model TableIface) (interf
 		typ = typ.Elem()
 	}
 
-	models := reflect.New(reflect.SliceOf(typ)).Interface()
-	result, err := p.Result(models)
+	slice := reflect.MakeSlice(reflect.SliceOf(typ), 0, 0)
+	slicePtr := reflect.New(slice.Type())
+	slicePtr.Elem().Set(slice)
+	result, err := p.Result(slicePtr.Interface())
 	if err != nil {
 		return nil, e.New(e.DBError, err)
 	}
