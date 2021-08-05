@@ -4,6 +4,7 @@ package main
 
 import (
 	"cloudiac/runner/api/v1"
+	"cloudiac/utils"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -94,6 +95,7 @@ func StartServer() {
 	conf := configs.Get()
 	logger := logs.Get()
 
+	utils.SetGinMode()
 	e := gin.Default()
 	v1.RegisterRoute(e.Group("/api/v1"))
 	logger.Infof("starting runner on %v", conf.Listen)

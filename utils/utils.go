@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"io"
 	"math"
 	"math/big"
@@ -502,4 +503,12 @@ func FirstValueStr(ss ...string) string {
 		}
 	}
 	return ""
+}
+
+func SetGinMode() {
+	if mode := os.Getenv(gin.EnvGinMode); mode != "" {
+		gin.SetMode(mode)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
+	}
 }
