@@ -1,0 +1,23 @@
+// Copyright 2021 CloudJ Company Limited. All rights reserved.
+
+package models
+
+import (
+	"cloudiac/portal/libs/db"
+)
+
+type UserProject struct {
+	AutoUintIdModel
+
+	UserId    Id     `json:"userId" gorm:"size:32;not null;comment:用户ID"`
+	ProjectId Id     `json:"projectId" gorm:"size:32;not null"`
+	Role      string `json:"role" gorm:"type:enum('manager','approver','operator','guest');default:'operator';comment:角色"`
+}
+
+func (UserProject) TableName() string {
+	return "iac_user_project"
+}
+
+func (u UserProject) Migrate(sess *db.Session) error {
+	return u.AddUniqueIndex(sess, "unique__user__project", "user_id", "project_id")
+}

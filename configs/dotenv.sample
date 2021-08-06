@@ -1,0 +1,47 @@
+# 管理员账号密码，只在初始化启动时进行读取
+IAC_ADMIN_EMAIL=admin@example.com
+
+## 管理员密码要求长度大于 8 且需要包含字母、数字、特殊字符
+IAC_ADMIN_PASSWORD=
+
+# 加密密钥配置
+SECRET_KEY=
+
+## JWT 密钥，未配置时默认使用 SECRET_KEY
+JWT_SECRET_KEY=
+
+# mysql 配置
+MYSQL_HOST=mysql
+MYSQL_PORT=3306
+MYSQL_DATABASE=cloudiac
+MYSQL_USER=cloudiac
+MYSQL_PASSWORD=
+
+# IaC 对外提供服务的地址
+PORTAL_ADDRESS=http://public.host.ip
+
+# consul 配置(注意需要配置为宿主机的内网 ip)
+CONSUL_ADDRESS=private.host.ip:8500
+
+# portal 服务注册信息配置
+SERVICE_IP=iac-portal
+SERVICE_ID=iac-portal-01
+SERVICE_TAGS="iac-porta;portal-01"
+
+## logger 配置
+LOG_DEVEL="debug"
+
+# SMTP 配置
+SMTP_ADDRESS=smtp.example.com:25
+SMTP_USERNAME=user@example.com
+SMTP_PASSWORD=
+SMTP_FROM_NAME=IaC
+SMTP_FROM=support@example.com
+
+######### 以下为 runner 配置
+
+# runner 服务注册配置
+RUNNER_SERVICE_IP=ct-runner
+RUNNER_SERVICE_ID=ct-runner-01
+RUNNER_SERVICE_TAGS="ct-runner;runner-01"
+

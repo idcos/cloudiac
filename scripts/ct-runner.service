@@ -1,0 +1,11 @@
+[Unit]
+Description=ct-runner
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=simple
+WorkingDirectory=/usr/yunji/cloudiac
+ExecStart=/usr/yunji/cloudiac/ct-runner -c config-runner.yml
+Restart=on-failure

@@ -1,0 +1,33 @@
+listen: "0.0.0.0:19030"
+secretKey: ${SECRET_KEY}
+
+runner:
+  default_image: "cloudiac/ct-worker:latest"
+
+  ## 保存任务运行信息(脚本、日志等)
+  storage_path: "var/storage"
+
+  ## 预置资源(providers, terraform.py 等)
+  #assets_path: "assets"
+
+  # 当前版本依赖的 assets 己经打包到了 ct-worker 镜像中
+  assets_path: ""
+
+  ## plugins 缓存
+  plugin_cache_path: "var/plugin-cache"
+
+consul:
+  address: "${CONSUL_ADDRESS}"
+  id: "${RUNNER_SERVICE_ID}"
+  ip: "${RUNNER_SERVICE_IP}"
+  port: 19030
+  tags: "${RUNNER_SERVICE_TAGS}"
+  interval: 5s
+  timeout: 3s
+  deregister_after: "1m"
+
+log:
+  log_level: "${LOG_LEVEL}"
+  ## 日志保存路径，不指定则仅打印到标准输出
+  log_path: ""
+  log_max_days: 7
