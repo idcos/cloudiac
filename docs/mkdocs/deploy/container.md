@@ -205,18 +205,6 @@ organization:
     workdir:
 ```
 
-##### 查看容器id
-```bash
-docker ps
-```
-查看 ```iac-portal``` 的容器id，比如:96f7f14e99ab
-
-##### 复制云商密钥对私钥和演示组织配置到容器
-```bash
-## 假设查询到的容器 id 为 96f7f14e99ab
-docker cp my_private_key 96f7f14e99ab:/usr/yunji/cloudiac/var/private_key
-docker cp demo-conf.yml 96f7f14e99ab:/usr/yunji/cloudiac/demo-conf.yml
-```
 
 ##### 初始化并重启服务
 ```shell
