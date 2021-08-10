@@ -239,7 +239,7 @@ var stepStatus2TaskStatus = map[string]string{
 	// (正常情况下步骤进入 pending 并不会触发 ChangeXXXStatus 调用，只有在步骤通过审批时会走到这个逻辑)
 	models.TaskStepPending:   models.TaskRunning,
 	models.TaskStepApproving: models.TaskApproving,
-	models.TaskStepRejected:  models.TaskFailed,
+	models.TaskStepRejected:  models.TaskRejected,
 	models.TaskStepRunning:   models.TaskRunning,
 	models.TaskStepFailed:    models.TaskFailed,
 	models.TaskStepTimeout:   models.TaskFailed,
