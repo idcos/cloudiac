@@ -59,6 +59,7 @@ const (
 	TaskPending   = common.TaskPending
 	TaskRunning   = common.TaskRunning
 	TaskApproving = common.TaskApproving
+	TaskRejected  = common.TaskRejected
 	TaskFailed    = common.TaskFailed
 	TaskComplete  = common.TaskComplete
 )
@@ -72,9 +73,9 @@ type Task struct {
 	EnvId     Id `json:"envId" gorm:"size:32;not null"`     // 环境ID
 
 	Name      string `json:"name" gorm:"not null;comment:任务名称"` // 任务名称
-	CreatorId Id     `json:"creatorId" gorm:"size:32;not null"`   // 创建人ID
+	CreatorId Id     `json:"creatorId" gorm:"size:32;not null"` // 创建人ID
 
-	Type string `json:"type" gorm:"not null;enum('plan', 'apply', 'destroy')" enums:"'plan', 'apply', 'destroy'"` // 任务类型。1. plan: 计划 2. apply: 部署 3. destroy: 销毁
+	Type string `json:"type" gorm:"not null;enum('plan','apply','destroy')" enums:"'plan','apply','destroy'"` // 任务类型。1. plan: 计划 2. apply: 部署 3. destroy: 销毁
 
 	RepoAddr string `json:"repoAddr" gorm:"not null"`
 	Revision string `json:"revision" gorm:"not null"`
@@ -97,13 +98,13 @@ type Task struct {
 	RunnerId    string `json:"runnerId" gorm:"not null"` // 部署通道
 	AutoApprove bool   `json:"autoApproval" gorm:"default:false"`
 
-	Flow     TaskFlow `json:"-" gorm:"type:text"`          // 执行流程
+	Flow     TaskFlow `json:"-" gorm:"type:text"`        // 执行流程
 	CurrStep int      `json:"currStep" gorm:"default:0"` // 当前在执行的流程步骤
 
 	// 任务每一步的执行超时(整个任务无超时控制)
 	StepTimeout int `json:"stepTimeout" gorm:"default:600;comment:执行超时"`
 
-	Status  string `json:"status" gorm:"type:enum('pending','running','approving','failed','complete','timeout');default 'pending'" enums:"'pending','running','failed','complete','timeout'"`
+	Status  string `json:"status" gorm:"type:enum('pending','running','approving','rejected','failed','complete','timeout');default:'pending'" enums:"'pending','running','approving','rejected','failed','complete','timeout'"`
 	Message string `json:"message"` // 任务的状态描述信息，如失败原因等
 
 	StartAt *Time `json:"startAt" gorm:"type:datetime;comment:任务开始时间"` // 任务开始时间
@@ -135,7 +136,7 @@ func (Task) IsStartedStatus(status string) bool {
 }
 
 func (Task) IsExitedStatus(status string) bool {
-	return utils.InArrayStr([]string{TaskFailed, TaskComplete}, status)
+	return utils.InArrayStr([]string{TaskFailed, TaskRejected, TaskComplete}, status)
 }
 
 func (t *Task) IsEffectTask() bool {

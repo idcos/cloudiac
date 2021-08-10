@@ -119,10 +119,11 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 
 	if task.Exited() {
 		switch task.Status {
+		case models.TaskRejected:
+			// 任务驳回，环境状态不变
+			break
 		case models.TaskFailed:
-			if step.Status != models.TaskStepRejected {
-				envStatus = models.EnvStatusFailed
-			}
+			envStatus = models.EnvStatusFailed
 		case models.TaskComplete:
 			if task.Type == models.TaskTypeApply {
 				envStatus = models.EnvStatusActive
