@@ -144,6 +144,10 @@ const (
 	//// vcs 311
 
 	VcsNotExists = 31110
+
+	//// policy 312
+
+	PolicyAlreadyExist = 31210
 )
 
 var errorMsgs = map[int]map[string]string{

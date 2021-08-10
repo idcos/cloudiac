@@ -256,6 +256,10 @@ func (t *Task) genStepScript() error {
 		command, err = t.stepCommand()
 	case common.TaskStepCollect:
 		command, err = t.collectCommand()
+	case common.TaskStepTfParse:
+		command, err = t.stepTfParse()
+	case common.TaskStepTfScan:
+		command, err = t.stepTfScan()
 	default:
 		return fmt.Errorf("unknown step type '%s'", t.req.StepType)
 	}
@@ -412,5 +416,29 @@ func (t *Task) collectCommand() (string, error) {
 	return t.executeTpl(collectCommandTpl, map[string]interface{}{
 		"Req":                 t.req,
 		"TFStateJsonFilePath": t.up2Workspace(TFStateJsonFile),
+	})
+}
+
+var parseCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
+cd 'code/{{.Req.Env.Workdir}}' && terrascan scan --config-only  -d . -o json > {{.TerrascanJsonFile}}
+`))
+
+func (t *Task) stepTfParse() (command string, err error) {
+	return t.executeTpl(parseCommandTpl, map[string]interface{}{
+		"Req":                t.req,
+		"IacPlayVars":        t.up2Workspace(CloudIacPlayVars),
+		"TFScanJsonFilePath": filepath.Join(ContainerAssetsDir, TerrascanJsonFile),
+	})
+}
+
+var scanCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
+cd 'code/{{.Req.Env.Workdir}}' && terrascan scan -d . -o json > {{.TerrascanResultFile}}
+`))
+
+func (t *Task) stepTfScan() (command string, err error) {
+	return t.executeTpl(scanCommandTpl, map[string]interface{}{
+		"Req":                t.req,
+		"IacPlayVars":        t.up2Workspace(CloudIacPlayVars),
+		"TFScanJsonFilePath": filepath.Join(ContainerAssetsDir, TerrascanResultFile),
 	})
 }

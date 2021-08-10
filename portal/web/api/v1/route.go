@@ -102,6 +102,9 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/vcs/:id/repos/playbook", ac(), w(handlers.TemplatePlaybookSearch))
 	ctrl.Register(g.Group("notifications", ac()), &handlers.Notification{})
 
+	// 策略管理
+	ctrl.Register(g.Group("policies", ac()), &handlers.Policy{})
+
 	// 项目资源
 	g.Use(w(middleware.AuthProjectId))
 
