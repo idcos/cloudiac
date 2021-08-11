@@ -421,9 +421,11 @@ func UnmarshalPlanJson(bs []byte) (*TfPlan, error) {
 }
 
 func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource) error {
-	task.Result.ResAdded = 0
-	task.Result.ResChanged = 0
-	task.Result.ResDestroyed = 0
+	var (
+		resAdded     = 0
+		resChanged   = 0
+		resDestroyed = 0
+	)
 	for _, r := range rs {
 		actions := r.Change.Actions
 		switch {
@@ -431,16 +433,20 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource)
 			utils.SliceEqualStr(actions, []string{"create", "delete"}):
 			continue
 		case utils.SliceEqualStr(actions, []string{"create"}):
-			task.Result.ResAdded += 1
+			resAdded += 1
 		case utils.SliceEqualStr(actions, []string{"update"}),
 			utils.SliceEqualStr(actions, []string{"delete", "create"}):
-			task.Result.ResChanged += 1
+			resChanged += 1
 		case utils.SliceEqualStr(actions, []string{"delete"}):
-			task.Result.ResDestroyed += 1
+			resDestroyed += 1
 		default:
 			logs.Get().WithField("taskId", task.Id).Errorf("unknown change actions: %v", actions)
 		}
 	}
+
+	task.Result.ResAdded = &resAdded
+	task.Result.ResChanged = &resChanged
+	task.Result.ResDestroyed = &resDestroyed
 
 	if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
 		UpdateColumn("result", task.Result); err != nil {
