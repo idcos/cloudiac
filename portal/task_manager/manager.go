@@ -399,6 +399,9 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			if err = services.SaveTaskOutputs(dbSess, task, tfState.Values.Outputs); err != nil {
 				return fmt.Errorf("save task outputs: %v", err)
 			}
+			if err = services.UpdateEnvModel(dbSess, task.EnvId, models.Env{LastResTaskId: task.Id}); err != nil {
+				return fmt.Errorf("update env lastResTaskId: %v", err)
+			}
 		}
 
 		return nil

@@ -48,6 +48,14 @@ func UpdateEnv(tx *db.Session, id models.Id, attrs models.Attrs) (env *models.En
 	return
 }
 
+func UpdateEnvModel(tx *db.Session, id models.Id, env models.Env) e.Error {
+	_, err := models.UpdateModel(tx.Where("id = ?", id), &env)
+	if err != nil {
+		return e.AutoNew(err, e.DBError)
+	}
+	return nil
+}
+
 func DeleteEnv(tx *db.Session, id models.Id) e.Error {
 	if _, err := tx.Where("id = ?", id).Delete(&models.Env{}); err != nil {
 		return e.New(e.DBError, fmt.Errorf("delete env error: %v", err))
