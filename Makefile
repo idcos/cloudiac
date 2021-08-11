@@ -102,13 +102,13 @@ image-worker:
 	$(DOCKER_BUILD) -t cloudiac/ct-worker:$(VERSION) -f docker/worker/Dockerfile .
 
 image-portal-arm64: build-linux-arm64-portal
-	$(DOCKER_BUILD) -t cloudiac/iac-portal:$(VERSION) -f docker/portal/Dockerfile .
+	$(DOCKER_BUILD) -t cloudiac/iac-portal:$(VERSION) -f docker/portal/Dockerfile.arm64 .
 
 image-runner-arm64: build-linux-arm64-runner
-	$(DOCKER_BUILD) -t cloudiac/ct-runner:$(VERSION) -f docker/runner/Dockerfile .
+	$(DOCKER_BUILD) -t cloudiac/ct-runner:$(VERSION) -f docker/runner/Dockerfile.arm64 .
 
 image-worker-arm64: build-linux-arm64-runner 
-	$(DOCKER_BUILD) -t cloudiac/ct-worker:$(VERSION) -f docker/worker/Dockerfile .
+	$(DOCKER_BUILD) -t cloudiac/ct-worker:$(VERSION) -f docker/worker/Dockerfile.arm64 .
 
 image: image-portal image-runner image-worker
 image-arm64: image-portal-arm64 image-runner-arm64 image-worker-arm64

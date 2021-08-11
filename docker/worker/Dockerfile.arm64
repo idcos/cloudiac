@@ -1,0 +1,16 @@
+FROM jfxs/ansible
+USER root
+RUN sed -i 's/https/http/' /etc/apk/repositories
+
+ENV TERRAFORM_VERSION=0.14.11
+ENV TERRASCAN_VERSION=1.9.0
+RUN apk add --update git curl openssh && \
+    curl https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_arm64.zip | \
+        busybox unzip - && mv terraform /bin/ && chmod a+x /bin/terraform && \
+    curl -L https://github.com/accurics/terrascan/releases/download/v${TERRASCAN_VERSION}/terrascan_${TERRASCAN_VERSION}_Linux_arm64.tar.gz | \
+        tar -xz terrascan && install terrascan /usr/local/bin && rm terrascan
+        
+
+COPY assets/terraform.py /cloudiac/assets/terraform.py
+COPY assets/providers /usr/share/terraform/plugins
+
