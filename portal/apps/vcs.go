@@ -84,6 +84,14 @@ func DeleteVcs(c *ctx.ServiceContext, form *forms.DeleteVcsForm) (result interfa
 	if err != nil {
 		return nil, err
 	}
+	// 根据vcsId查询是否相关云模版已经被全部清除
+	exist, err := services.QueryTplByVcsId(c.DB(), form.Id)
+	if err != nil {
+		return nil, err
+	}
+	if exist {
+		return nil, e.New(e.VcsDeleteError, fmt.Errorf("Vcs cannot be deleted. Please delete the dependent cloud template first"))
+	}
 	if err := services.DeleteVcs(c.DB(), form.Id); err != nil {
 		return nil, err
 	}
