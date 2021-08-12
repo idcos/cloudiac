@@ -113,6 +113,7 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/envs/:id/deploy", ac("envs", "deploy"), w(handlers.Env{}.Deploy))
 	g.POST("/envs/:id/destroy", ac("envs", "destroy"), w(handlers.Env{}.Destroy))
 	g.GET("/envs/:id/resources", ac(), w(handlers.Env{}.SearchResources))
+	g.GET("/envs/:id/resources/:resourceId", ac(), w(handlers.Env{}.ResourceDetail))
 
 	// 任务管理
 	g.GET("/tasks", ac(), w(handlers.Task{}.Search))
