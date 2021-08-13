@@ -23,9 +23,9 @@ func (v *TaskVariables) Scan(value interface{}) error {
 }
 
 type TaskResult struct {
-	ResAdded     int `json:"resAdded"`
-	ResChanged   int `json:"resChanged"`
-	ResDestroyed int `json:"resDestroyed"`
+	ResAdded     *int `json:"resAdded"` // 该值为 nil 表示无资源变更数据(区别于 0)
+	ResChanged   *int `json:"resChanged"`
+	ResDestroyed *int `json:"resDestroyed"`
 
 	Outputs map[string]interface{} `json:"outputs"`
 }
