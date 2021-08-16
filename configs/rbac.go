@@ -1,16 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
-
 package configs
-
-import (
-	"cloudiac/portal/libs/db"
-	"cloudiac/utils/logs"
-	"fmt"
-	"github.com/casbin/casbin/v2"
-	"github.com/casbin/casbin/v2/model"
-	gormadapter "github.com/casbin/gorm-adapter/v3"
-	"strings"
-)
 
 var RbacModel = `
 [request_definition]
@@ -38,13 +26,13 @@ m = ((r.org == p.sub || r.proj == p.sub) && r.obj == p.obj && (r.act == p.act ||
 
 // Policy 权限策略表
 type Policy struct {
-	sub string // 角色，包含组织角色和项目角色
-	obj string // 资源名称
-	act string // 动作，对资源的操作
+	Sub string // 角色，包含组织角色和项目角色
+	Obj string // 资源名称
+	Act string // 动作，对资源的操作
 }
 
-// 角色策略
-var polices = []Policy{
+// Polices 角色策略
+var Polices = []Policy{
 	// 配置方式：
 	// 角色    资源    动作
 	// 角色：
@@ -180,36 +168,4 @@ var polices = []Policy{
 	{"demo", "envs", "*"},
 	{"demo", "tasks", "*"},
 	{"demo", "variables", "*"},
-}
-
-// InitPolicy 初始化权限策略
-func InitPolicy(tx *db.Session) error {
-	logger := logs.Get().WithField("func", "initPolicy")
-	logger.Infoln("init rbac policy...")
-	var err error
-
-	adapter, err := gormadapter.NewAdapterByDBUseTableName(tx.GormDB(), "iac_", "")
-	if err != nil {
-		panic(fmt.Sprintf("error create enforcer: %v", err))
-	}
-
-	// 加载策略模型
-	m, err := model.NewModelFromString(RbacModel)
-	if err != nil {
-		panic(fmt.Sprintf("error load rbac model: %v", err))
-	}
-	enforcer, err := casbin.NewEnforcer(m, adapter)
-	if err != nil {
-		panic(fmt.Sprintf("error create enforcer: %v", err))
-	}
-
-	// 初始化策略数据库
-	for _, policy := range polices {
-		for _, act := range strings.Split(policy.act, "/") {
-			logger.Debugf("add policy: %s %s %s", policy.sub, policy.obj, act)
-			enforcer.AddPolicy(policy.sub, policy.obj, act)
-		}
-	}
-
-	return nil
 }
