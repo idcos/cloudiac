@@ -712,10 +712,7 @@ func (m *TaskManager) processAutoDestroy() error {
 				return nil
 			}
 
-			taskVars := make([]models.VariableBody, 0, len(vars))
-			for _, v := range vars {
-				taskVars = append(taskVars, v.VariableBody)
-			}
+			taskVars := services.GetVariableBody(vars)
 
 			task, err := services.CreateTask(tx, tpl, env, models.Task{
 				Name:        "Auto Destroy",

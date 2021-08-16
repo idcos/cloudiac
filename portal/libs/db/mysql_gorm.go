@@ -87,11 +87,11 @@ func (s *Session) RemoveIndex(table string, indexName string) error {
 	return nil
 }
 
-func (s *Session) DropColumn(table string, columns ...string) error {
+func (s *Session) DropColumn(model interface{}, columns ...string) error {
 	migrator := s.db.Migrator()
 	for _, col := range columns {
-		if migrator.HasColumn(table, col) {
-			if err := migrator.DropColumn(table, col); err != nil {
+		if migrator.HasColumn(model, col) {
+			if err := migrator.DropColumn(model, col); err != nil {
 				return err
 			}
 		}
