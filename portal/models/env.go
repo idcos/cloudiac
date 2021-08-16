@@ -4,7 +4,6 @@ package models
 
 import (
 	"cloudiac/portal/libs/db"
-	"database/sql/driver"
 	"github.com/lib/pq"
 	"path"
 )
@@ -43,10 +42,9 @@ type Env struct {
 	StatePath string `json:"statePath" gorm:"not null" swaggerignore:"true"` // Terraform tfstate 文件路径（内部）
 
 	// 环境可以覆盖模板中的 vars file 配置，具体说明见 Template model
-	Variables    EnvVariables `json:"variables" gorm:"type:json"`     // 合并变量列表
-	TfVarsFile   string       `json:"tfVarsFile" gorm:"default:''"`   // Terraform tfvars 变量文件路径
-	PlayVarsFile string       `json:"playVarsFile" gorm:"default:''"` // Ansible 变量文件路径
-	Playbook     string       `json:"playbook" gorm:"default:''"`     // Ansible playbook 入口文件路径
+	TfVarsFile   string `json:"tfVarsFile" gorm:"default:''"`   // Terraform tfvars 变量文件路径
+	PlayVarsFile string `json:"playVarsFile" gorm:"default:''"` // Ansible 变量文件路径
+	Playbook     string `json:"playbook" gorm:"default:''"`     // Ansible playbook 入口文件路径
 
 	// 任务相关参数，获取详情的时候，如果有 last_task_id 则返回 last_task_id 相关参数
 	RunnerId string `json:"runnerId" gorm:"size:32;not null"`         //部署通道ID
@@ -80,6 +78,9 @@ func (e *Env) Migrate(sess *db.Session) (err error) {
 		"project_id", "name"); err != nil {
 		return err
 	}
+	if err = sess.DropColumn(Env{}, "variables"); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -87,29 +88,11 @@ func (e *Env) DefaultStatPath() string {
 	return path.Join(e.OrgId.String(), e.ProjectId.String(), e.Id.String(), "terraform.tfstate")
 }
 
-func (e *Env) HideSensitiveVariable() {
-	for index, v := range e.Variables {
-		if v.Sensitive {
-			e.Variables[index].Value = ""
-		}
-	}
-}
-
 func (e *Env) MergeTaskStatus() string {
 	if e.Deploying {
 		e.Status = e.TaskStatus
 	}
 	return e.Status
-}
-
-type EnvVariables []Variable
-
-func (v EnvVariables) Value() (driver.Value, error) {
-	return MarshalValue(v)
-}
-
-func (v *EnvVariables) Scan(value interface{}) error {
-	return UnmarshalValue(value, v)
 }
 
 type EnvDetail struct {
@@ -121,4 +104,5 @@ type EnvDetail struct {
 	TemplateName  string `json:"templateName"`  // 模板名称
 	KeyName       string `json:"keyName"`       // 密钥名称
 	TaskId        Id     `json:"taskId"`        // 当前作业ID
+	CommitId      string `json:"commitId"`      // Commit ID
 }

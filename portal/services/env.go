@@ -84,7 +84,7 @@ func QueryEnvDetail(query *db.Session) *db.Session {
 	query = query.Joins("left join iac_user as u on u.id = iac_env.creator_id").
 		LazySelectAppend("u.name as creator,iac_env.*")
 	// 资源数量统计
-	query = query.Joins("left join (select count(*) as resource_count, task_id from iac_resource group by task_id) as r on r.task_id = iac_env.last_task_id").
+	query = query.Joins("left join (select count(*) as resource_count, task_id from iac_resource group by task_id) as r on r.task_id = iac_env.last_res_task_id").
 		LazySelectAppend("r.resource_count, iac_env.*")
 	// 密钥名称
 	query = query.Joins("left join iac_key as k on k.id = iac_env.key_id").
@@ -167,21 +167,6 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 		return e.New(e.DBError, err)
 	}
 	return nil
-}
-
-func GetVariableBody(vars models.EnvVariables) []models.VariableBody {
-	var vb []models.VariableBody
-	for _, v := range vars {
-		vb = append(vb, models.VariableBody{
-			Scope:       v.Scope,
-			Type:        v.Type,
-			Name:        v.Name,
-			Value:       v.Value,
-			Sensitive:   v.Sensitive,
-			Description: v.Description,
-		})
-	}
-	return vb
 }
 
 var (
