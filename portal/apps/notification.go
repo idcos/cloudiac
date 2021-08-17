@@ -8,7 +8,6 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
-	"encoding/json"
 	"fmt"
 )
 
@@ -20,7 +19,7 @@ func SearchNotification(c *ctx.ServiceContext) (interface{}, e.Error) {
 	return cfgs, nil
 }
 
-func DeleteNotificationCfg(c *ctx.ServiceContext, id models.Id) (result interface{}, err e.Error) {
+func DeleteNotification(c *ctx.ServiceContext, id models.Id) (result interface{}, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("Delete org notification id: %s", id))
 	err = services.DeleteOrganizationCfg(c.DB(), id, c.OrgId)
 	if err != nil {
@@ -29,7 +28,7 @@ func DeleteNotificationCfg(c *ctx.ServiceContext, id models.Id) (result interfac
 	return
 }
 
-func UpdateNotificationCfg(c *ctx.ServiceContext, form *forms.UpdateNotificationCfgForm) (cfg *models.NotificationCfg, err e.Error) {
+func UpdateNotification(c *ctx.ServiceContext, form *forms.UpdateNotificationForm) (cfg *models.Notification, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update org notification cfg id: %s", form.Id))
 
 	if form.Id == "" {
@@ -37,25 +36,47 @@ func UpdateNotificationCfg(c *ctx.ServiceContext, form *forms.UpdateNotification
 	}
 
 	attrs := models.Attrs{}
+	if form.HasKey("name") {
+		attrs["name"] = form.Name
+	}
+
 	if form.HasKey("notificationType") {
 		attrs["notificationType"] = form.NotificationType
 	}
 
-	if form.HasKey("eventType") {
-		attrs["eventType"] = form.EventType
+	if form.HasKey("eventFailed") {
+		attrs["eventFailed"] = form.EventFailed
 	}
 
-	if form.HasKey("cfgInfo") {
-		cfgInfo := form.CfgInfo
-		cfgJson, _ := json.Marshal(cfgInfo)
-		attrs["cfgInfo"] = cfgJson
+	if form.HasKey("eventComplete") {
+		attrs["eventComplete"] = form.EventComplete
+	}
+
+	if form.HasKey("eventApproving") {
+		attrs["eventApproving"] = form.EventApproving
+	}
+
+	if form.HasKey("eventRunning") {
+		attrs["eventRunning"] = form.EventRunning
+	}
+
+	if form.HasKey("secret") {
+		attrs["secret"] = form.Secret
+	}
+
+	if form.HasKey("url") {
+		attrs["url"] = form.Url
+	}
+
+	if form.HasKey("userIds") {
+		attrs["userIds"] = form.UserIds
 	}
 
 	cfg, err = services.UpdateNotificationCfg(c.DB(), form.Id, attrs)
 	return cfg, err
 }
 
-func CreateNotificationCfg(c *ctx.ServiceContext, form *forms.CreateNotificationCfgForm) (*models.NotificationCfg, e.Error) {
+func CreateNotification(c *ctx.ServiceContext, form *forms.CreateNotificationForm) (*models.Notification, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create org notification cfg %s", form.NotificationType))
 
 	tx := c.Tx().Debug()
@@ -66,55 +87,27 @@ func CreateNotificationCfg(c *ctx.ServiceContext, form *forms.CreateNotification
 		}
 	}()
 
-	notificationCfg, err := func() (*models.NotificationCfg, e.Error) {
-		var (
-			notificationCfg *models.NotificationCfg
-			err             e.Error
-		)
-
-		cfgInfo := form.CfgInfo
-		cfgJson, _ := json.Marshal(cfgInfo)
-
-		if form.NotificationType == "email" {
-			for _, userId := range form.UserIds {
-				isExists, _ := services.FindOrganizationCfgByUserId(tx, c.OrgId, userId, form.EventType)
-				if isExists {
-					continue
-				}
-				notificationCfg, err = services.CreateNotificationCfg(tx, models.NotificationCfg{
-					OrgId:            c.OrgId,
-					NotificationType: form.NotificationType,
-					EventType:        form.EventType,
-					UserId:           userId,
-				})
-				if err != nil {
-					if e.IsDuplicate(err) {
-						continue
-					} else {
-						return nil, err
-					}
-				}
-			}
-		} else {
-			notificationCfg, err = services.CreateNotificationCfg(tx, models.NotificationCfg{
-				OrgId:            c.OrgId,
-				NotificationType: form.NotificationType,
-				EventType:        form.EventType,
-				CfgInfo:          cfgJson,
-			})
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		return notificationCfg, nil
-	}()
+	notificationCfg, err := services.CreateNotificationCfg(tx, models.Notification{
+		OrgId:            c.OrgId,
+		ProjectId:        c.ProjectId,
+		Name:             form.Name,
+		NotificationType: form.NotificationType,
+		Secret:           form.Secret,
+		Url:              form.Url,
+		UserIds:          form.UserIds,
+		EventFailed:      form.EventFailed,
+		EventComplete:    form.EventComplete,
+		EventApproving:   form.EventApproving,
+		EventRunning:     form.EventRunning,
+	})
 	if err != nil {
 		_ = tx.Rollback()
 		return nil, err
+
 	}
 
 	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
 		return nil, e.New(e.DBError, err)
 	}
 
