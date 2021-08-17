@@ -623,7 +623,7 @@ func EnvVariables(c *ctx.ServiceContext, form forms.SearchEnvVariableForm) (inte
 		return nil, nil
 	}
 
-	task, err := services.GetTaskById(c.DB(), env.LastResTaskId)
+	task, err := services.GetTaskById(c.DB(), env.LastTaskId)
 	if err != nil && err.Code() != e.TaskNotExists {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	} else if err != nil {
