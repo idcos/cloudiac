@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services/logstorage"
+	"cloudiac/portal/services/notificationrc"
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
@@ -274,6 +275,22 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 	if _, err := dbSess.Model(task).Update(task); err != nil {
 		return e.AutoNew(err, e.DBError)
 	}
+	go func() {
+		eventFailed, eventComplete, eventApproving, eventRunning := notificationrc.GetEventToStatus(status)
+		env := models.Env{}
+		_ = db.Get().Where("id = ?", task.EnvId).First(&env)
+		ns := notificationrc.NewNotificationService(&notificationrc.NotificationOptions{
+			OrgId:          task.OrgId,
+			ProjectId:      task.ProjectId,
+			Env:            &env,
+			Task:           task,
+			EventFailed:    eventFailed,
+			EventComplete:  eventComplete,
+			EventApproving: eventApproving,
+			EventRunning:   eventRunning,
+		})
+		ns.SendMessage()
+	}()
 
 	step, er := GetTaskStep(dbSess, task.Id, task.CurrStep)
 	if er != nil {

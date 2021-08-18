@@ -3,28 +3,31 @@ package notificationrc
 import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/services"
+	"cloudiac/utils"
+	"cloudiac/utils/mail"
 )
 
 type NotificationService struct {
-	OrgId          models.Id   `json:"orgId" form:"orgId" `
-	ProjectId      models.Id   `json:"projectId" form:"projectId" `
-	Env            models.Env  `json:"env" form:"env" `
-	Task           models.Task `json:"task" form:"task" `
-	EventFailed    bool        `json:"eventFailed" form:"eventFailed" `
-	EventComplete  bool        `json:"eventComplete" form:"eventComplete" `
-	EventApproving bool        `json:"eventApproving" form:"eventApproving" `
-	EventRunning   bool        `json:"eventRunning" form:"eventRunning" `
+	OrgId          models.Id    `json:"orgId" form:"orgId" `
+	ProjectId      models.Id    `json:"projectId" form:"projectId" `
+	Env            *models.Env  `json:"env" form:"env" `
+	Task           *models.Task `json:"task" form:"task" `
+	EventFailed    bool         `json:"eventFailed" form:"eventFailed" `
+	EventComplete  bool         `json:"eventComplete" form:"eventComplete" `
+	EventApproving bool         `json:"eventApproving" form:"eventApproving" `
+	EventRunning   bool         `json:"eventRunning" form:"eventRunning" `
 }
 
 type NotificationOptions struct {
-	OrgId          models.Id   `json:"orgId" form:"orgId" `
-	ProjectId      models.Id   `json:"projectId" form:"projectId" `
-	Env            models.Env  `json:"env" form:"env" `
-	Task           models.Task `json:"task" form:"task" `
-	EventFailed    bool        `json:"eventFailed" form:"eventFailed" `
-	EventComplete  bool        `json:"eventComplete" form:"eventComplete" `
-	EventApproving bool        `json:"eventApproving" form:"eventApproving" `
-	EventRunning   bool        `json:"eventRunning" form:"eventRunning" `
+	OrgId          models.Id    `json:"orgId" form:"orgId" `
+	ProjectId      models.Id    `json:"projectId" form:"projectId" `
+	Env            *models.Env  `json:"env" form:"env" `
+	Task           *models.Task `json:"task" form:"task" `
+	EventFailed    bool         `json:"eventFailed" form:"eventFailed" `
+	EventComplete  bool         `json:"eventComplete" form:"eventComplete" `
+	EventApproving bool         `json:"eventApproving" form:"eventApproving" `
+	EventRunning   bool         `json:"eventRunning" form:"eventRunning" `
 }
 
 func NewNotificationService(options *NotificationOptions) NotificationService {
@@ -89,7 +92,53 @@ func (ns *NotificationService) SendDingTalkMessage(n models.Notification, messag
 	}
 }
 
-func (ns *NotificationService) SendSlackMessage(n models.Notification, message string)   {}
-func (ns *NotificationService) SendWechatMessage(n models.Notification, message string)  {}
-func (ns *NotificationService) SendWebhookMessage(n models.Notification, message string) {}
-func (ns *NotificationService) SendEmailMessage(n models.Notification, message string)   {}
+func (ns *NotificationService) SendWechatMessage(n models.Notification, message string) {
+	wechat := WeChatRobot{Url: n.Url}
+	if _, err := wechat.SendMarkdown(message); err != nil {
+
+	}
+}
+
+func (ns *NotificationService) SendWebhookMessage(n models.Notification, message string) {
+	w := Webhook{Url: n.Url}
+	if err := w.Send(message); err != nil {
+	}
+}
+
+func (ns *NotificationService) SendSlackMessage(n models.Notification, message string) {
+	if errs := SendSlack(n.Url, Payload{Text: message, Markdown: true}); len(errs) != 0 {
+
+	}
+
+}
+
+func (ns *NotificationService) SendEmailMessage(n models.Notification, message string) {
+	// 获取用户邮箱列表
+	users := services.GetUsersByUserIds(db.Get(), n.UserIds)
+	emails := make([]string, 0)
+	for _, v := range users {
+		emails = append(emails, v.Email)
+	}
+	emails = utils.RemoveDuplicateElement(emails)
+	if err := mail.SendMail(emails, "", message); err != nil {
+
+	}
+}
+
+func GetEventToStatus(status string) (eventFailed, eventComplete, eventApproving, eventRunning bool) {
+	switch status {
+	case models.TaskFailed:
+		return true, false, false, false
+	case models.TaskComplete:
+		return false, true, false, false
+	case models.TaskRunning:
+		return false, false, false, true
+	case models.TaskApproving:
+		return false, false, true, false
+	case models.TaskRejected:
+		return false, false, true, false
+	default:
+		return false, false, false, false
+	}
+
+}

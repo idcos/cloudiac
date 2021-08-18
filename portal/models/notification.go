@@ -3,7 +3,6 @@
 package models
 
 import (
-	"cloudiac/portal/libs/db"
 	"github.com/lib/pq"
 )
 
@@ -36,13 +35,9 @@ type Notification struct {
 	EventRunning   bool           `json:"eventRunning" gorm:"default:false"`
 	Secret         string         `json:"secret" form:"secret" gorm:"comment:dingtalk加签秘钥"`
 	Url            string         `json:"url" form:"url" gorm:"comment:回调url"`
-	UserIds        pq.StringArray `json:"userIds" gorm:"size:32;comment:用户ID"  swaggertype:"array,string"`
+	UserIds        pq.StringArray `json:"userIds"  gorm:"type:json;comment:用户ID"  swaggertype:"array,string"`
 }
 
 func (Notification) TableName() string {
 	return "iac_notification"
-}
-
-func (o Notification) Migrate(sess *db.Session) (err error) {
-	return nil
 }

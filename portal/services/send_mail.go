@@ -12,15 +12,15 @@ import (
 	"html/template"
 )
 
-type sendMail struct {
+type SendMail struct {
 	Tos  []string        `json:"tos" form:"tos" `
 	Task models.Task     `json:"task" form:"task" `
 	Tpl  models.Template `json:"tpl" form:"tpl" `
 }
 
-func (sm *sendMail) SendMail() {
+func (sm *SendMail) SendMail() {
 	logger := logs.Get()
-	tmpl, err := template.New("sendMail").Parse("<table>" +
+	tmpl, err := template.New("SendMail").Parse("<table>" +
 		"<tr><td>模板名称: </td><td>{{.Name}}</td></tr>" +
 		"<tr><td>模板 Id: </td><td>{{.Id}}</td></tr>" +
 		"<tr><td>作业 Id: </td><td>{{.Id}}</td></tr>" +
@@ -83,10 +83,55 @@ func (sm *sendMail) SendMail() {
 	_ = mail.SendMail(sm.Tos, subject, content)
 }
 
-func GetMail(tos []string, task models.Task, template models.Template) sendMail {
-	return sendMail{
+func GetMail(tos []string, task models.Task, template models.Template) SendMail {
+	return SendMail{
 		Tos:  tos,
 		Task: task,
 		Tpl:  template,
 	}
 }
+
+//func SendTaskMail(dbSess *db.Session, taskId models.Id) {
+//	tos := make([]string, 0)
+//	logger := logs.Get().WithField("action", "sendMail")
+//	notifier := make([]sendMailQuery, 0)
+//	if err := query.Debug().Table(models.Notification{}.TableName()).Where("org_id = ?", orgId).
+//		Joins(fmt.Sprintf("left join %s as `user` on `user`.id = %s.user_id", models.User{}.TableName(), models.Notification{}.TableName())).
+//		LazySelectAppend("`user`.*").
+//		LazySelectAppend("`iac_org_notification_cfg`.*").
+//		Scan(&notifier); err != nil {
+//		logger.Errorf("query notifier err: %v", err)
+//		return
+//	}
+//
+//	tpl, _ := GetTemplateById(query, task.TemplateId)
+//	for _, v := range notifier {
+//		user, _ := GetUserById(query, v.UserId)
+//		switch task.Status {
+//		case consts.TaskPending:
+//			if v.EventType == "all" {
+//				tos = append(tos, user.Email)
+//			}
+//		case consts.TaskComplete:
+//			if v.EventType == "all" {
+//				tos = append(tos, user.Email)
+//			}
+//		case consts.TaskFailed:
+//			if v.EventType == "all" || v.EventType == "failure" {
+//				tos = append(tos, user.Email)
+//			}
+//		case consts.TaskTimeout:
+//			if v.EventType == "all" || v.EventType == "failure" {
+//				tos = append(tos, user.Email)
+//			}
+//		}
+//	}
+//
+//	tos = utils.RemoveDuplicateElement(tos)
+//	if len(tos) == 0 {
+//		return
+//	}
+//	sendMail := GetMail(tos, *task, tpl)
+//	sendMail.SendMail()
+//
+//}

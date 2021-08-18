@@ -268,3 +268,11 @@ func getUserProjects(userId models.Id) map[models.Id]*models.UserProject {
 	}
 	return userProjectsMap
 }
+
+func GetUsersByUserIds(dbSess *db.Session, userId []string) []models.User {
+	users := make([]models.User, 0)
+	if err := dbSess.Where("id in (?)", userId).Find(users); err != nil {
+		return nil
+	}
+	return users
+}

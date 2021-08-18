@@ -2,15 +2,13 @@ package notificationrc
 
 import (
 	"encoding/json"
-	"fmt"
-
 	"github.com/unliar/utils/go/http"
 )
 
 // 文档地址: https://work.weixin.qq.com/api/doc/90000/90136/91770
 
-type Robot struct {
-	Key string
+type WeChatRobot struct {
+	Url string
 }
 
 // RobotResponse 机器人接口响应
@@ -46,12 +44,12 @@ type RobotRequest struct {
 }
 
 // CreateBaseURL 拼接地址
-func (r *Robot) CreateBaseURL() string {
-	return fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=%s", r.Key)
+func (r *WeChatRobot) CreateBaseURL() string {
+	return r.Url
 }
 
 // SendText 发送纯文本
-func (r *Robot) SendText(text string) (res *RobotResponse, err error) {
+func (r *WeChatRobot) SendText(text string) (res *RobotResponse, err error) {
 	data := RobotRequest{
 		MsgType: "text",
 		Text: struct {
@@ -73,7 +71,7 @@ func (r *Robot) SendText(text string) (res *RobotResponse, err error) {
 }
 
 // SendMarkdown 发送markdown
-func (r *Robot) SendMarkdown(markdown string) (res *RobotResponse, err error) {
+func (r *WeChatRobot) SendMarkdown(markdown string) (res *RobotResponse, err error) {
 	data := RobotRequest{
 		MsgType: "markdown",
 		Markdown: struct {
@@ -95,7 +93,7 @@ func (r *Robot) SendMarkdown(markdown string) (res *RobotResponse, err error) {
 }
 
 // SendImage 发送图片
-func (r *Robot) SendImage(base64, md5 string) (res *RobotResponse, err error) {
+func (r *WeChatRobot) SendImage(base64, md5 string) (res *RobotResponse, err error) {
 	data := RobotRequest{
 		MsgType: "image",
 		Image: struct {
@@ -119,7 +117,7 @@ func (r *Robot) SendImage(base64, md5 string) (res *RobotResponse, err error) {
 }
 
 // SendNews 发送图文
-func (r *Robot) SendNews(news []*NewsItem) (res *RobotResponse, err error) {
+func (r *WeChatRobot) SendNews(news []*NewsItem) (res *RobotResponse, err error) {
 	data := RobotRequest{
 		MsgType: "news",
 		News: struct {
