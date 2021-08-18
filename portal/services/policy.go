@@ -6,7 +6,6 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/runner"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
 )
@@ -31,12 +30,12 @@ func GetPolicyReferenceId(query *db.Session, policy *models.Policy) (string, e.E
 	lastId := 0
 	// query max id by type
 	po := models.Policy{}
-	if err := query.Model(models.Policy{}).Where("reference_id LIKE ?", "iac_"+typ+"%").Order("reference_id DESC").Last(&po); err != nil && !e.IsRecordNotFound(err) {
+	if err := query.Model(models.Policy{}).Where("reference_id LIKE ?", "iac_"+typ+"%").
+		Order("length(reference_id) DESC, reference_id DESC").Last(&po); err != nil && !e.IsRecordNotFound(err) {
 		return "", e.AutoNew(err, e.DBError)
 	}
 	idx := strings.LastIndex(po.ReferenceId, "_")
 	if idx != -1 {
-		logrus.Errorf("ref %s %s", po.ReferenceId, po.ReferenceId[idx+1:])
 		lastId, _ = strconv.Atoi(po.ReferenceId[idx+1:])
 	}
 

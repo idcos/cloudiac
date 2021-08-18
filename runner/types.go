@@ -43,7 +43,8 @@ type RunTaskReq struct {
 	Timeout    int    `json:"timeout"`
 	PrivateKey string `json:"privateKey"`
 
-	Policies []TaskPolicy `json:"policies"` // 策略内容
+	Policies        []TaskPolicy `json:"policies"` // 策略内容
+	StopOnViolation bool         `json:"stopOnViolation"`
 }
 
 type TaskStatusReq struct {

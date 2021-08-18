@@ -446,9 +446,6 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			if err = services.SaveTfScanResult(dbSess, task, tfResultJson.Results); err != nil {
 				return fmt.Errorf("save scan result: %v", err)
 			}
-			if len(tfResultJson.Results.Violations) > 0 {
-				// mark step as failed
-			}
 		}
 		return nil
 	}
@@ -688,15 +685,16 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 	}
 
 	taskReq = &runner.RunTaskReq{
-		Env:          runnerEnv,
-		RunnerId:     task.RunnerId,
-		TaskId:       string(task.Id),
-		DockerImage:  "",
-		StateStore:   stateStore,
-		RepoAddress:  task.RepoAddr,
-		RepoRevision: task.CommitId,
-		Timeout:      task.StepTimeout,
-		Policies:     policies,
+		Env:             runnerEnv,
+		RunnerId:        task.RunnerId,
+		TaskId:          string(task.Id),
+		DockerImage:     "",
+		StateStore:      stateStore,
+		RepoAddress:     task.RepoAddr,
+		RepoRevision:    task.CommitId,
+		Timeout:         task.StepTimeout,
+		Policies:        policies,
+		StopOnViolation: task.StopOnViolation,
 	}
 	if pk != "" {
 		taskReq.PrivateKey = utils.EncodeSecretVar(pk, true)
@@ -761,15 +759,16 @@ func (m *TaskManager) processAutoDestroy() error {
 			taskVars := services.GetVariableBody(vars)
 
 			task, err := services.CreateTask(tx, tpl, env, models.Task{
-				Name:        "Auto Destroy",
-				Type:        models.TaskTypeDestroy,
-				Flow:        models.TaskFlow{},
-				Targets:     nil,
-				CreatorId:   consts.SysUserId,
-				RunnerId:    "",
-				Variables:   taskVars,
-				StepTimeout: 0,
-				AutoApprove: true,
+				Name:            "Auto Destroy",
+				Type:            models.TaskTypeDestroy,
+				Flow:            models.TaskFlow{},
+				Targets:         nil,
+				CreatorId:       consts.SysUserId,
+				RunnerId:        "",
+				Variables:       taskVars,
+				StepTimeout:     0,
+				AutoApprove:     true,
+				StopOnViolation: env.StopOnViolation,
 			})
 			if err != nil {
 				_ = tx.Rollback()

@@ -96,9 +96,10 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		Revision:     form.Revision,
 		KeyId:        form.KeyId,
 
-		TTL:           form.TTL,
-		AutoDestroyAt: &destroyAt,
-		AutoApproval:  form.AutoApproval,
+		TTL:             form.TTL,
+		AutoDestroyAt:   &destroyAt,
+		AutoApproval:    form.AutoApproval,
+		StopOnViolation: form.StopOnViolation,
 
 		Triggers: form.Triggers,
 	})
@@ -128,17 +129,18 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
-		Name:        models.Task{}.GetTaskNameByType(form.TaskType),
-		Type:        form.TaskType,
-		Flow:        models.TaskFlow{},
-		Targets:     targets,
-		CreatorId:   c.UserId,
-		KeyId:       env.KeyId,
-		RunnerId:    env.RunnerId,
-		Variables:   services.GetVariableBody(vars),
-		StepTimeout: form.Timeout,
-		AutoApprove: env.AutoApproval,
-		Revision:    env.Revision,
+		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
+		Type:            form.TaskType,
+		Flow:            models.TaskFlow{},
+		Targets:         targets,
+		CreatorId:       c.UserId,
+		KeyId:           env.KeyId,
+		RunnerId:        env.RunnerId,
+		Variables:       services.GetVariableBody(vars),
+		StepTimeout:     form.Timeout,
+		AutoApprove:     env.AutoApproval,
+		Revision:        env.Revision,
+		StopOnViolation: env.StopOnViolation,
 	})
 	if err != nil {
 		_ = tx.Rollback()
@@ -303,7 +305,21 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	}
 
 	if form.HasKey("autoApproval") {
+		if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) &&
+			!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) &&
+			!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) {
+			return nil, e.New(e.PermissionDeny, fmt.Errorf("approval role required"), http.StatusBadRequest)
+		}
 		attrs["auto_approval"] = form.AutoApproval
+	}
+
+	if form.HasKey("stopOnViolation") {
+		if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) &&
+			!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) &&
+			!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) {
+			return nil, e.New(e.PermissionDeny, fmt.Errorf("approval role required"), http.StatusBadRequest)
+		}
+		attrs["reject_on_violation"] = form.StopOnViolation
 	}
 
 	if form.HasKey("destroyAt") {
@@ -437,6 +453,14 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		}
 		env.AutoApproval = form.AutoApproval
 	}
+	if form.HasKey("stopOnViolation") {
+		if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) &&
+			!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) &&
+			!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) {
+			return nil, e.New(e.PermissionDeny, fmt.Errorf("approval role required"), http.StatusBadRequest)
+		}
+		env.StopOnViolation = form.StopOnViolation
+	}
 
 	if form.HasKey("destroyAt") {
 		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
@@ -511,17 +535,18 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
-		Name:        models.Task{}.GetTaskNameByType(form.TaskType),
-		Type:        form.TaskType,
-		Flow:        models.TaskFlow{},
-		Targets:     targets,
-		CreatorId:   c.UserId,
-		KeyId:       env.KeyId,
-		RunnerId:    env.RunnerId,
-		Variables:   services.GetVariableBody(vars),
-		StepTimeout: form.Timeout,
-		AutoApprove: env.AutoApproval,
-		Revision:    env.Revision,
+		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
+		Type:            form.TaskType,
+		Flow:            models.TaskFlow{},
+		Targets:         targets,
+		CreatorId:       c.UserId,
+		KeyId:           env.KeyId,
+		RunnerId:        env.RunnerId,
+		Variables:       services.GetVariableBody(vars),
+		StepTimeout:     form.Timeout,
+		AutoApprove:     env.AutoApproval,
+		Revision:        env.Revision,
+		StopOnViolation: env.StopOnViolation,
 	})
 
 	if err != nil {

@@ -59,6 +59,7 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		KeyId:       models.Id(firstVal(string(pt.KeyId), string(env.KeyId))),
 		Extra:       pt.Extra,
 		Revision:    firstVal(pt.Revision, env.Revision, tpl.RepoRevision),
+		StopOnViolation: pt.StopOnViolation,
 
 		OrgId:     env.OrgId,
 		ProjectId: env.ProjectId,
@@ -147,6 +148,10 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		preStep, er = createTaskStep(tx, task, step, i, nextStepId)
 		if er != nil {
 			return nil, e.New(er.Code(), errors.Wrapf(er, "save task step"))
+		}
+
+		if step.Type == models.TaskStepTfScan {
+			// TODO: init policy scan result
 		}
 	}
 

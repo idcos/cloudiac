@@ -333,7 +333,7 @@ func (t *Task) stepInit() (command string, err error) {
 	})
 }
 
-var planCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
+var planCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 terraform plan -input=false -out=_cloudiac.tfplan \
 {{if .TfVars}}-var-file={{.TfVars}}{{end}} \
@@ -350,7 +350,7 @@ func (t *Task) stepPlan() (command string, err error) {
 }
 
 // 当指定了 plan 文件时不需要也不能传 -var-file 参数
-var applyCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
+var applyCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 terraform apply -input=false -auto-approve \
 {{ range $arg := .Req.StepArgs}}{{$arg}} {{ end }}_cloudiac.tfplan
@@ -370,7 +370,7 @@ func (t *Task) stepDestroy() (command string, err error) {
 	})
 }
 
-var playCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
+var playCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 export ANSIBLE_HOST_KEY_CHECKING="False"
 export ANSIBLE_TF_DIR="."
 export ANSIBLE_NOCOWS="1"
@@ -396,7 +396,7 @@ func (t *Task) stepPlay() (command string, err error) {
 	})
 }
 
-var cmdCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
+var cmdCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 (test -d 'code/{{.Req.Env.Workdir}}' && cd 'code/{{.Req.Env.Workdir}}')
 {{ range $index, $command := .Commands -}}
 {{$command}} && \
@@ -429,7 +429,7 @@ func (t *Task) collectCommand() (string, error) {
 	})
 }
 
-var parseCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
+var parseCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && terrascan scan --config-only  -d . -o json > {{.TerrascanJsonFile}}
 `))
 
@@ -441,11 +441,12 @@ func (t *Task) stepTfParse() (command string, err error) {
 	})
 }
 
-var scanCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
+var scanCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 mkdir -p {{.PoliciesDir}} && \
 echo scanning policies && \
 terrascan scan -p {{.PoliciesDir}} --show-passed --iac-type terraform -l debug -o json > {{.TerrascanResultFile}}
+{{ if not .Req.StopOnViolation -}} RET=$? ; [ $RET -eq 3 ] && exit 0 || exit $RET {{ end -}}
 `))
 
 func (t *Task) stepTfScan() (command string, err error) {
