@@ -3,9 +3,10 @@ package notificationrc
 import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
-	"cloudiac/portal/services"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
 	"cloudiac/utils/mail"
+	"fmt"
 )
 
 type NotificationService struct {
@@ -47,11 +48,19 @@ func (ns *NotificationService) SendMessage() {
 	orgNotification := make([]models.Notification, 0)
 	projectNotification := make([]models.Notification, 0)
 	notifications := make([]models.Notification, 0)
-	dbSess := db.Get().Where("org_id = ?", ns.OrgId).
-		Where("event_failed = ?", ns.EventFailed).
-		Where("event_complete = ?", ns.EventComplete).
-		Where("event_approving = ?", ns.EventApproving).
-		Where("event_running = ?", ns.EventRunning)
+	dbSess := db.Get().Debug().Where("org_id = ?", ns.OrgId)
+	if ns.EventFailed {
+		dbSess = dbSess.Where("event_failed = ?", ns.EventFailed)
+	}
+	if ns.EventComplete {
+		dbSess = dbSess.Where("event_complete = ?", ns.EventComplete)
+	}
+	if ns.EventApproving {
+		dbSess = dbSess.Where("event_approving = ?", ns.EventApproving)
+	}
+	if ns.EventRunning {
+		dbSess = dbSess.Where("event_running = ?", ns.EventRunning)
+	}
 	// 查询需要组织下需要通知的人
 	if err := dbSess.
 		Where("project_id = '' or project_id = null").
@@ -69,17 +78,24 @@ func (ns *NotificationService) SendMessage() {
 	notifications = append(notifications, projectNotification...)
 
 	for _, notification := range notifications {
+		//todo 消息通知模板
+		fmt.Println(notification.NotificationType, "notification.NotificationType")
 		switch notification.NotificationType {
 		case models.NotificationTypeDingTalk:
-			ns.SendDingTalkMessage(notification, "")
+			fmt.Println(models.NotificationTypeDingTalk, "NotificationTypeDingTalk")
+			ns.SendDingTalkMessage(notification, "```test```")
 		case models.NotificationTypeWebhook:
-			ns.SendWebhookMessage(notification, "")
+			fmt.Println(models.NotificationTypeWebhook, "NotificationTypeWebhook")
+			ns.SendWebhookMessage(notification, "```test```")
 		case models.NotificationTypeWeChat:
-			ns.SendWechatMessage(notification, "")
+			fmt.Println(models.NotificationTypeWeChat, "NotificationTypeWeChat")
+			ns.SendWechatMessage(notification, "```NotificationTypeWeChat```\n### NotificationTypeWeChat")
 		case models.NotificationTypeSlack:
-			ns.SendSlackMessage(notification, "")
+			fmt.Println(models.NotificationTypeSlack, "NotificationTypeSlack")
+			ns.SendSlackMessage(notification, "```test```")
 		case models.NotificationTypeEmail:
-			ns.SendEmailMessage(notification, "")
+			fmt.Println(models.NotificationTypeEmail, "NotificationTypeEmail")
+			ns.SendEmailMessage(notification, "```test```")
 		}
 	}
 
@@ -87,14 +103,15 @@ func (ns *NotificationService) SendMessage() {
 
 func (ns *NotificationService) SendDingTalkMessage(n models.Notification, message string) {
 	dingTalk := NewDingTalkRobot(n.Url, n.Secret)
-	if err := dingTalk.SendMarkdownMessage("", message, nil, false); err != nil {
-
+	if err := dingTalk.SendMarkdownMessage("IaC Notification", message, nil, false); err != nil {
+		logs.Get().Errorf("send dingtalk message err: %v", err)
 	}
 }
 
 func (ns *NotificationService) SendWechatMessage(n models.Notification, message string) {
 	wechat := WeChatRobot{Url: n.Url}
 	if _, err := wechat.SendMarkdown(message); err != nil {
+		logs.Get().Errorf("send wechat message err: %v", err)
 
 	}
 }
@@ -102,19 +119,22 @@ func (ns *NotificationService) SendWechatMessage(n models.Notification, message 
 func (ns *NotificationService) SendWebhookMessage(n models.Notification, message string) {
 	w := Webhook{Url: n.Url}
 	if err := w.Send(message); err != nil {
+		logs.Get().Errorf("send webhook message err: %v", err)
 	}
 }
 
 func (ns *NotificationService) SendSlackMessage(n models.Notification, message string) {
 	if errs := SendSlack(n.Url, Payload{Text: message, Markdown: true}); len(errs) != 0 {
-
+		logs.Get().Errorf("send slack message err: %v", errs)
 	}
 
 }
 
 func (ns *NotificationService) SendEmailMessage(n models.Notification, message string) {
 	// 获取用户邮箱列表
-	users := services.GetUsersByUserIds(db.Get(), n.UserIds)
+	users := make([]models.User, 0)
+	_ = db.Get().Where("id in (?)", n.UserIds).Find(users)
+
 	emails := make([]string, 0)
 	for _, v := range users {
 		emails = append(emails, v.Email)
