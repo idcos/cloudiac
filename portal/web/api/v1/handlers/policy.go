@@ -30,7 +30,7 @@ func (Policy) Create(c *ctx.GinRequest) {
 	c.JSONResult(apps.CreatePolicy(c.Service(), form))
 }
 
-// Parse 解析云模板
+// Parse TODO: 解析云模板
 // @Summary 解析云模板
 // @Description 解析云模板
 // @Tags 策略
@@ -40,16 +40,17 @@ func (Policy) Create(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织id"
 // @Param json body forms.CreatePolicyForm true "parameter"
 // @Success 200 {object}  ctx.JSONResult{result=models.Policy}
-// @Router /policies [post]
+// @Router /policies/parse [post]
 func (Policy) Parse(c *ctx.GinRequest) {
-	form := &forms.CreatePolicyForm{}
-	if err := c.Bind(form); err != nil {
-		return
-	}
-	c.JSONResult(apps.CreatePolicy(c.Service(), form))
+	// TODO
+	//form := &forms.CreatePolicyForm{}
+	//if err := c.Bind(form); err != nil {
+	//	return
+	//}
+	//c.JSONResult(apps.CreatePolicy(c.Service(), form))
 }
 
-// Scan 运行策略扫描
+// Scan TODO: 运行策略扫描
 // @Summary 运行策略扫描
 // @Description 运行策略扫描
 // @Tags 策略
@@ -59,11 +60,11 @@ func (Policy) Parse(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织id"
 // @Param json body forms.CreatePolicyForm true "parameter"
 // @Success 200 {object}  ctx.JSONResult{result=models.Policy}
-// @Router /policies [post]
+// @Router /policies/scan [post]
 func (Policy) Scan(c *ctx.GinRequest) {
-	form := &forms.CreatePolicyForm{}
-	if err := c.Bind(form); err != nil {
-		return
-	}
-	c.JSONResult(apps.CreatePolicy(c.Service(), form))
+	//form := &forms.CreatePolicyForm{}
+	//if err := c.Bind(form); err != nil {
+	//	return
+	//}
+	//c.JSONResult(apps.CreatePolicy(c.Service(), form))
 }

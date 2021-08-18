@@ -54,7 +54,8 @@ type Env struct {
 	LastTaskId    Id `json:"lastTaskId" gorm:"size:32"`    // 最后一次部署或销毁任务的 id(plan 任务不记录)
 	LastResTaskId Id `json:"lastResTaskId" gorm:"size:32"` // 最后一次进行了资源列表统计的部署任务的 id
 
-	AutoApproval bool `json:"autoApproval" gorm:"default:false"` // 是否自动审批
+	AutoApproval      bool `json:"autoApproval" gorm:"default:false"`      // 是否自动审批
+	RejectOnViolation bool `json:"rejectOnViolation" gorm:"default:false"` // 当合规不通过是否中止部署
 
 	TTL           string `json:"ttl" gorm:"default:'0'" example:"1h/1d"` // 生命周期
 	AutoDestroyAt *Time  `json:"autoDestroyAt" gorm:"type:datetime"`     // 自动销毁时间

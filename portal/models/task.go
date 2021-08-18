@@ -55,6 +55,7 @@ const (
 	TaskTypePlan    = common.TaskTypePlan
 	TaskTypeApply   = common.TaskTypeApply
 	TaskTypeDestroy = common.TaskTypeDestroy
+	TaskTypeScan    = common.TaskTypeScan
 
 	TaskPending   = common.TaskPending
 	TaskRunning   = common.TaskRunning
@@ -94,9 +95,10 @@ type Task struct {
 	// 扩展属性，包括 source, transitionId 等
 	Extra TaskExtra `json:"extra" gorm:"type:json"` // 扩展属性
 
-	KeyId       Id     `json:"keyId" gorm:"size32"`      // 部署密钥ID
-	RunnerId    string `json:"runnerId" gorm:"not null"` // 部署通道
-	AutoApprove bool   `json:"autoApproval" gorm:"default:false"`
+	KeyId             Id     `json:"keyId" gorm:"size32"`      // 部署密钥ID
+	RunnerId          string `json:"runnerId" gorm:"not null"` // 部署通道
+	AutoApprove       bool   `json:"autoApproval" gorm:"default:false"`
+	RejectOnViolation bool   `json:"rejectOnViolation" gorm:"default:false"`
 
 	Flow     TaskFlow `json:"-" gorm:"type:text"`        // 执行流程
 	CurrStep int      `json:"currStep" gorm:"default:0"` // 当前在执行的流程步骤
@@ -156,6 +158,8 @@ func (Task) GetTaskNameByType(typ string) string {
 		return common.TaskTypeApplyName
 	case TaskTypeDestroy:
 		return common.TaskTypeDestroyName
+	case TaskTypeScan:
+		return common.TaskTypeScanName
 	default:
 		panic("invalid task type")
 	}
@@ -166,6 +170,14 @@ func (t *Task) StateJsonPath() string {
 
 func (t *Task) PlanJsonPath() string {
 	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TFPlanJsonFile)
+}
+
+func (t *Task) TfParseJsonPath() string {
+	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TerrascanJsonFile)
+}
+
+func (t *Task) TfResultJsonPath() string {
+	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TerrascanResultFile)
 }
 
 func (t *Task) HideSensitiveVariable() {
@@ -184,7 +196,7 @@ func (t *Task) Migrate(sess *db.Session) (err error) {
 }
 
 type TaskStepBody struct {
-	Type string   `json:"type" yaml:"type" gorm:"type:enum('init','plan','apply','play','command','destroy')"`
+	Type string   `json:"type" yaml:"type" gorm:"type:enum('init','plan','apply','play','command','destroy','tfscan','scan')"`
 	Name string   `json:"name,omitempty" yaml:"name" gorm:"size:32;not null"`
 	Args StrSlice `json:"args,omitempty" yaml:"args" gorm:"type:text"`
 }
@@ -197,6 +209,8 @@ const (
 	TaskStepPlay    = common.TaskStepPlay
 	TaskStepCommand = common.TaskStepCommand
 	TaskStepCollect = common.TaskStepCollect
+	TaskStepTfParse = common.TaskStepTfScan
+	TaskStepTfScan  = common.TaskStepTfScan
 
 	TaskStepPending   = common.TaskStepPending
 	TaskStepApproving = common.TaskStepApproving
@@ -228,6 +242,13 @@ type TaskStep struct {
 
 func (TaskStep) TableName() string {
 	return "iac_task_step"
+}
+
+func (t *TaskStep) Migrate(sess *db.Session) (err error) {
+	if err := sess.ModifyModelColumn(t, "type"); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *TaskStep) IsStarted() bool {

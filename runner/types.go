@@ -42,12 +42,20 @@ type RunTaskReq struct {
 
 	Timeout    int    `json:"timeout"`
 	PrivateKey string `json:"privateKey"`
+
+	Policies []TaskPolicy `json:"policies"` // 策略内容
 }
 
 type TaskStatusReq struct {
 	EnvId  string `json:"envId" form:"envId" binding:"required"`
 	TaskId string `json:"taskId" form:"taskId" binding:"required"`
 	Step   int    `json:"step" form:"step" binding:""`
+}
+
+type TaskPolicy struct {
+	PolicyId string      `json:"policyId"`
+	Meta     interface{} `json:"meta"`
+	Rego     string      `json:"rego"`
 }
 
 type TaskLogReq TaskStatusReq
@@ -57,9 +65,11 @@ type TaskStatusMessage struct {
 	Exited   bool `json:"exited"`
 	ExitCode int  `json:"status_code"`
 
-	LogContent  []byte `json:"logContent"`
-	TfStateJson []byte `json:"tfStateJson"`
-	TfPlanJson  []byte `json:"tfPlanJson"`
+	LogContent   []byte `json:"logContent"`
+	TfStateJson  []byte `json:"tfStateJson"`
+	TfPlanJson   []byte `json:"tfPlanJson"`
+	TfScanJson   []byte `json:"tfScanJson"`
+	TfResultJson []byte `json:"tfResultJson"`
 }
 
 type ErrorMessage struct {

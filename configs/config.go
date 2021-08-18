@@ -95,6 +95,10 @@ type SMTPServerConfig struct {
 	FromName string `yaml:"fromName"`
 }
 
+type PolicyConfig struct {
+	Enabled bool `yaml:"enabled"`
+}
+
 func (ut *yamlTimeDuration) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var ds string
 	if err := unmarshal(&ds); err != nil {
@@ -119,6 +123,7 @@ type Config struct {
 	SMTPServer   SMTPServerConfig `yaml:"smtpServer"`
 	SecretKey    string           `yaml:"secretKey"`
 	JwtSecretKey string           `yaml:"jwtSecretKey"`
+	Policy       PolicyConfig     `yaml:"policy"`
 }
 
 var (

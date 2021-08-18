@@ -210,4 +210,6 @@ func Init(migrate bool) {
 	autoMigrate(&Key{}, sess)
 	autoMigrate(&TaskComment{}, sess)
 	autoMigrate(&ProjectTemplate{}, sess)
+	autoMigrate(&Policy{}, sess)
+	autoMigrate(&PolicyGroup{}, sess)
 }

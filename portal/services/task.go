@@ -420,6 +420,66 @@ func UnmarshalPlanJson(bs []byte) (*TfPlan, error) {
 	return &plan, err
 }
 
+type TSResource struct {
+	Id         string `json:"id"`
+	Name       string `json:"name"`
+	ModuleName string `json:"module_name"`
+	Source     string `json:"source"`
+	PlanRoot   string `json:"plan_root"`
+	Line       int    `json:"line"`
+	Type       string `json:"type"`
+
+	Config map[string]interface{} `json:"config"`
+
+	SkipRules   *bool  `json:"skip_rules"`
+	MaxSeverity string `json:"max_severity"`
+	MinSeverity string `json:"min_severity"`
+}
+
+type TSResources []TSResource
+
+type TfParse map[string]TSResources
+
+func UnmarshalTfParseJson(bs []byte) (*TfParse, error) {
+	js := TfParse{}
+	err := json.Unmarshal(bs, &js)
+	return &js, err
+}
+
+type TsResultJson struct {
+	Results TsResult `json:"results"`
+}
+
+type TsResult struct {
+	Violations []Violation `json:"violations"`
+	Count      TsCount     `json:"count"`
+}
+
+type Violation struct {
+	RuleName     string `json:"rule_name"`
+	Description  string `json:"description"`
+	RuleId       string `json:"rule_id"`
+	Severity     string `json:"severity"`
+	Category     string `json:"category"`
+	ResourceName string `json:"resource_name"`
+	ResourceType string `json:"resource_type"`
+	File         string `json:"file"`
+	Line         int    `json:"line"`
+}
+
+type TsCount struct {
+	Low    int `json:"low"`
+	Medium int `json:"medium"`
+	High   int `json:"high"`
+	Total  int `json:"total"`
+}
+
+func UnmarshalTfResultJson(bs []byte) (*TsResultJson, error) {
+	js := TsResultJson{}
+	err := json.Unmarshal(bs, &js)
+	return &js, err
+}
+
 func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource) error {
 	var (
 		resAdded     = 0
@@ -452,6 +512,10 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource)
 		UpdateColumn("result", task.Result); err != nil {
 		return err
 	}
+	return nil
+}
+
+func SaveTfScanResult(dbSess *db.Session, task *models.Task, result TsResult) error {
 	return nil
 }
 

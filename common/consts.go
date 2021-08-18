@@ -46,6 +46,7 @@ const (
 	TaskTypePlanName    = "plan"
 	TaskTypeApplyName   = "apply"
 	TaskTypeDestroyName = "destroy"
+	TaskTypeScanName    = "scan"
 
 	TaskStepTimeoutDuration = 600
 )

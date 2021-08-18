@@ -148,6 +148,7 @@ const (
 	//// policy 312
 
 	PolicyAlreadyExist = 31210
+	PolicyNotExist     = 31211
 )
 
 var errorMsgs = map[int]map[string]string{

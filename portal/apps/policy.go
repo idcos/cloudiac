@@ -14,12 +14,22 @@ import (
 func CreatePolicy(c *ctx.ServiceContext, form *forms.CreatePolicyForm) (*models.Policy, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create policy %s", form.Name))
 
+	if form.PolicyType == "" {
+		form.PolicyType = "cloudiac"
+	}
+	if form.Category == "" {
+		form.PolicyType = "compliance"
+	}
+
 	p := models.Policy{
 		Name:          form.Name,
 		CreatorId:     c.UserId,
 		FixSuggestion: form.FixSuggestion,
 		Severity:      form.Severity,
 		Rego:          form.Rego,
+		Category:      form.Category,
+		ResourceType:  form.ResourceType,
+		PolicyType:    form.PolicyType,
 	}
 	refId, err := services.GetPolicyReferenceId(c.DB(), &p)
 	if err != nil {

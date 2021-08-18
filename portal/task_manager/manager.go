@@ -422,6 +422,37 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 		return nil
 	}
 
+	processTfParse := func() error {
+		if bs, err := read(task.TfParseJsonPath()); err != nil {
+			return fmt.Errorf("read parse json: %v", err)
+		} else if len(bs) > 0 {
+			_, err := services.UnmarshalTfParseJson(bs)
+			if err != nil {
+				return fmt.Errorf("unmarshal parse json: %v", err)
+			}
+			//TODO: return parse result
+		}
+		return nil
+	}
+
+	processTfResult := func() error {
+		if bs, err := read(task.PlanJsonPath()); err != nil {
+			return fmt.Errorf("read plan json: %v", err)
+		} else if len(bs) > 0 {
+			tfResultJson, err := services.UnmarshalTfResultJson(bs)
+			if err != nil {
+				return fmt.Errorf("unmarshal result json: %v", err)
+			}
+			if err = services.SaveTfScanResult(dbSess, task, tfResultJson.Results); err != nil {
+				return fmt.Errorf("save scan result: %v", err)
+			}
+			if len(tfResultJson.Results.Violations) > 0 {
+				// mark step as failed
+			}
+		}
+		return nil
+	}
+
 	// 设置 auto destroy
 	processAutoDestroy := func() error {
 		env, err := services.GetEnv(dbSess, task.EnvId)
@@ -472,6 +503,15 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 		return nil
 	}
 
+	if lastStep.Type == models.TaskStepTfParse {
+		if err := processTfParse(); err != nil {
+			logger.Errorf("process task parse: %s", err)
+		}
+	} else if lastStep.Type == models.TaskStepTfScan {
+		if err := processTfResult(); err != nil {
+			logger.Errorf("process task scan: %s", err)
+		}
+	}
 	if !lastStep.IsRejected() { // 任务被审批驳回时会即时更新状态，且不会执行资源统计步骤
 		if task.IsEffectTask() {
 			if err := processState(); err != nil {
@@ -642,6 +682,11 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		pk = mKey.Content
 	}
 
+	policies, err := services.GetTaskPolicies(dbSess, task.Id)
+	if err != nil {
+		return nil, errors.Wrapf(err, "get task '%s' policies error: %v", task.Id, err)
+	}
+
 	taskReq = &runner.RunTaskReq{
 		Env:          runnerEnv,
 		RunnerId:     task.RunnerId,
@@ -651,6 +696,7 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		RepoAddress:  task.RepoAddr,
 		RepoRevision: task.CommitId,
 		Timeout:      task.StepTimeout,
+		Policies:     policies,
 	}
 	if pk != "" {
 		taskReq.PrivateKey = utils.EncodeSecretVar(pk, true)

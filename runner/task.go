@@ -8,6 +8,7 @@ import (
 	"cloudiac/configs"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
+	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -160,6 +161,9 @@ func (t *Task) initWorkspace() (workspace string, err error) {
 	if err = t.genPlayVarsFile(workspace); err != nil {
 		return workspace, errors.Wrap(err, "generate play vars file")
 	}
+	if err = t.genPolicyFiles(workspace); err != nil {
+		return workspace, errors.Wrap(err, "generate policy files")
+	}
 
 	return workspace, nil
 }
@@ -217,6 +221,26 @@ func (t *Task) genPlayVarsFile(workspace string) error {
 		return err
 	}
 	return yaml.NewEncoder(fp).Encode(t.req.Env.AnsibleVars)
+}
+
+func (t *Task) genPolicyFiles(workspace string) error {
+	if err := os.MkdirAll(filepath.Join(workspace, PoliciesDir), 0755); err != nil {
+		return err
+	}
+
+	for _, policy := range t.req.Policies {
+		if err := os.MkdirAll(filepath.Join(workspace, PoliciesDir, policy.PolicyId), 0755); err != nil {
+			return err
+		}
+		js, _ := json.Marshal(policy.Meta)
+		if err := os.WriteFile(filepath.Join(workspace, PoliciesDir, policy.PolicyId, "meta.json"), js, 0644); err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(workspace, PoliciesDir, policy.PolicyId, "policy.rego"), []byte(policy.Rego), 0644); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (t *Task) executeTpl(tpl *template.Template, data interface{}) (string, error) {
@@ -418,13 +442,17 @@ func (t *Task) stepTfParse() (command string, err error) {
 }
 
 var scanCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
-cd 'code/{{.Req.Env.Workdir}}' && terrascan scan -d . -o json > {{.TerrascanResultFile}}
+cd 'code/{{.Req.Env.Workdir}}' && \
+mkdir -p {{.PoliciesDir}} && \
+echo scanning policies && \
+terrascan scan -p {{.PoliciesDir}} --show-passed --iac-type terraform -l debug -o json > {{.TerrascanResultFile}}
 `))
 
 func (t *Task) stepTfScan() (command string, err error) {
 	return t.executeTpl(scanCommandTpl, map[string]interface{}{
-		"Req":                t.req,
-		"IacPlayVars":        t.up2Workspace(CloudIacPlayVars),
-		"TFScanJsonFilePath": filepath.Join(ContainerAssetsDir, TerrascanResultFile),
+		"Req":                 t.req,
+		"IacPlayVars":         t.up2Workspace(CloudIacPlayVars),
+		"PoliciesDir":         t.up2Workspace(PoliciesDir),
+		"TerrascanResultFile": t.up2Workspace(TerrascanResultFile),
 	})
 }
