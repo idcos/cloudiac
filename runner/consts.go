@@ -33,7 +33,6 @@ const (
 	TaskStepInfoFileName = "info.json"
 
 	CloudIacTfFile   = "_cloudiac.tf"
-	CloudIacTfVars   = "_cloudiac.tfvars"
 	CloudIacPlayVars = "_cloudiac_play_vars.yml"
 
 	TFStateJsonFile = "tfstate.json"

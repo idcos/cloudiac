@@ -399,6 +399,9 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			if err = services.SaveTaskOutputs(dbSess, task, tfState.Values.Outputs); err != nil {
 				return fmt.Errorf("save task outputs: %v", err)
 			}
+			if err = services.UpdateEnvModel(dbSess, task.EnvId, models.Env{LastResTaskId: task.Id}); err != nil {
+				return fmt.Errorf("update env lastResTaskId: %v", err)
+			}
 		}
 
 		return nil
@@ -709,10 +712,7 @@ func (m *TaskManager) processAutoDestroy() error {
 				return nil
 			}
 
-			taskVars := make([]models.VariableBody, 0, len(vars))
-			for _, v := range vars {
-				taskVars = append(taskVars, v.VariableBody)
-			}
+			taskVars := services.GetVariableBody(vars)
 
 			task, err := services.CreateTask(tx, tpl, env, models.Task{
 				Name:        "Auto Destroy",

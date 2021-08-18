@@ -82,10 +82,20 @@ func (t *Task) Run() (cid string, err error) {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("TF_PLUGIN_CACHE_DIR=%s", ContainerPluginCachePath))
 	}
 
-	cmd.Commands = []string{"sh", "-c", fmt.Sprintf("sh %s >>%s 2>&1",
+	for k, v := range t.req.Env.TerraformVars {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("TF_VAR_%s=%s", k, v))
+	}
+
+	shellArgs := " "
+	if utils.IsTrueStr(t.req.Env.EnvironmentVars["CLOUDIAC_DEBUG"]) {
+		shellArgs += "-x"
+	}
+	shellCommand := fmt.Sprintf("sh%s %s >>%s 2>&1",
+		shellArgs,
 		filepath.Join(t.stepDirName(t.req.Step), TaskStepScriptName),
 		filepath.Join(t.stepDirName(t.req.Step), TaskStepLogName),
-	)}
+	)
+	cmd.Commands = []string{"sh", "-c", shellCommand}
 
 	t.logger.Infof("start task step, workdir: %s", cmd.HostWorkdir)
 	if cid, err = cmd.Start(); err != nil {
@@ -147,9 +157,6 @@ func (t *Task) initWorkspace() (workspace string, err error) {
 	if err = t.genIacTfFile(workspace); err != nil {
 		return workspace, errors.Wrap(err, "generate tf file")
 	}
-	if err = t.genIacTfVarsFile(workspace); err != nil {
-		return workspace, errors.Wrap(err, "generate tfvars file")
-	}
 	if err = t.genPlayVarsFile(workspace); err != nil {
 		return workspace, errors.Wrap(err, "generate play vars file")
 	}
@@ -196,16 +203,6 @@ func (t *Task) genIacTfFile(workspace string) error {
 		return err
 	}
 	return nil
-}
-
-var iacTfVarsTpl = template.Must(template.New("").Parse(`
-{{- range $k,$v := .Env.TerraformVars -}}
-{{$k}} = "{{$v}}"
-{{ end -}}
-`))
-
-func (t *Task) genIacTfVarsFile(workspace string) error {
-	return execTpl2File(iacTfVarsTpl, t.req, filepath.Join(workspace, CloudIacTfVars))
 }
 
 var iacPlayVarsTpl = template.Must(template.New("").Parse(`
@@ -290,14 +287,14 @@ var initCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 git clone '{{.Req.RepoAddress}}' code && \
 cd 'code/{{.Req.Env.Workdir}}' && \
 git checkout -q '{{.Req.RepoRevision}}' && echo check out $(git rev-parse --short HEAD). && \
-ln -sf {{.IacTfFile}} . && ln -sf {{.IacTfVars}} . && \
+ln -sf {{.IacTfFile}} . && \
 terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }}
 `))
 
-// 将 workspace 根目录下的文件名转为可以在环境的 workdir 下访问的相对路径
+// 将 workspace 根目录下的文件名转为可以在环境的 code/workdir 下访问的相对路径
 func (t *Task) up2Workspace(name string) string {
 	ups := make([]string, 0)
-	ups = append(ups, "..")
+	ups = append(ups, "..") // 代码仓库被 clone 到 code 目录，所以默认有一层目录包装
 	for range filepath.SplitList(t.req.Env.Workdir) {
 		ups = append(ups, "..")
 	}
@@ -309,14 +306,13 @@ func (t *Task) stepInit() (command string, err error) {
 		"Req":             t.req,
 		"PluginCachePath": ContainerPluginCachePath,
 		"IacTfFile":       t.up2Workspace(CloudIacTfFile),
-		"IacTfVars":       t.up2Workspace(CloudIacTfVars),
 	})
 }
 
 var planCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 terraform plan -input=false -out=_cloudiac.tfplan \
-{{if .TfVars}}-var-file={{.TfVars}}{{end}} -var-file={{.IacTfVars}} \
+{{if .TfVars}}-var-file={{.TfVars}}{{end}} \
 {{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }}&& \
 terraform show -no-color -json _cloudiac.tfplan >{{.TFPlanJsonFilePath}}
 `))
@@ -325,7 +321,6 @@ func (t *Task) stepPlan() (command string, err error) {
 	return t.executeTpl(planCommandTpl, map[string]interface{}{
 		"Req":                t.req,
 		"TfVars":             t.req.Env.TfVarsFile,
-		"IacTfVars":          CloudIacTfVars,
 		"TFPlanJsonFilePath": t.up2Workspace(TFPlanJsonFile),
 	})
 }
@@ -339,24 +334,15 @@ terraform apply -input=false -auto-approve \
 
 func (t *Task) stepApply() (command string, err error) {
 	return t.executeTpl(applyCommandTpl, map[string]interface{}{
-		"Req":       t.req,
-		"TfVars":    t.req.Env.TfVarsFile,
-		"IacTfVars": CloudIacTfVars,
+		"Req": t.req,
 	})
 }
 
-var destroyCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
-cd 'code/{{.Req.Env.Workdir}}' && \
-terraform destroy -input=false -auto-approve \
-{{if .TfVars}}-var-file={{.TfVars}}{{end}} -var-file={{.IacTfVars}} \
-{{ range $arg := .Req.StepArgs}}{{$arg}} {{end}}
-`))
-
 func (t *Task) stepDestroy() (command string, err error) {
-	return t.executeTpl(destroyCommandTpl, map[string]interface{}{
-		"Req":       t.req,
-		"TfVars":    t.req.Env.TfVarsFile,
-		"IacTfVars": CloudIacTfVars,
+	// destroy 任务通过会先执行 plan(传入 --destroy 参数)，然后再 apply plan 文件实现。
+	// 这样可以保证 destroy 时执行的是用户审批时看到的 plan 内容
+	return t.executeTpl(applyCommandTpl, map[string]interface{}{
+		"Req": t.req,
 	})
 }
 

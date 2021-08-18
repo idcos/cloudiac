@@ -126,7 +126,7 @@ func (Task) Log(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param taskId path string true "任务ID"
 // @router /tasks/{taskId}/output [get]
-// @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
+// @Success 200 {object} ctx.JSONResult
 func (Task) Output(c *ctx.GinRequest) {
 	form := forms.DetailTaskForm{}
 	if err := c.Bind(&form); err != nil {

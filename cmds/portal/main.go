@@ -115,7 +115,7 @@ func appAutoInit(tx *db.Session) (err error) {
 		return errors.Wrap(err, "init meat template")
 	}
 
-	if err := configs.InitPolicy(tx); err != nil {
+	if err := initPolicy(tx); err != nil {
 		return errors.Wrap(err, "init rbac policy")
 	}
 

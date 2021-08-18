@@ -19,6 +19,7 @@ const (
 	TaskPending   = "pending"
 	TaskRunning   = "running"
 	TaskApproving = "approving"
+	TaskRejected  = "rejected"
 	TaskFailed    = "failed"
 	TaskComplete  = "complete"
 

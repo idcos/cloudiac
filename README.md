@@ -24,3 +24,7 @@ make build
 ```bash
 go env -w GOPROXY="https://goproxy.io,direct"
 ```
+
+## 钉钉交流群
+![钉钉交流群](assets/dingtalk-group.png)
+

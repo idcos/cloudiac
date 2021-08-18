@@ -456,15 +456,23 @@ func ShortContainerId(id string) string {
 // GetBoolEnv 判断环境变量 bool 值
 func GetBoolEnv(key string, _default bool) bool {
 	val := os.Getenv(key)
-	if StrInArray(val, "off", "false", "0") {
+	if IsFalseStr(val) {
 		// 明确设置了 "false" 值则返回 false
 		return false
-	} else if StrInArray(val, "on", "true", "1") {
+	} else if IsTrueStr(val) {
 		// 明确设置了 "true" 值则返回 true
 		return true
 	}
 	// 其他情况返回默认值
 	return _default
+}
+
+func IsTrueStr(s string) bool {
+	return StrInArray(strings.ToLower(s), "on", "true", "1", "yes")
+}
+
+func IsFalseStr(s string) bool {
+	return StrInArray(strings.ToLower(s), "off", "false", "0", "no")
 }
 
 func JoinURL(address string, path ...string) string {
