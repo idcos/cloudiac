@@ -640,3 +640,21 @@ func EnvVariables(c *ctx.ServiceContext, form forms.SearchEnvVariableForm) (inte
 
 	return task.Variables, nil
 }
+
+// ResourceDetail 查询部署成功后资源的详细信息
+func ResourceDetail(c *ctx.ServiceContext, form *forms.ResourceDetailForm) (*models.ResAttrs, e.Error) {
+	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+
+	resource, err := services.GetResourceById(c.DB(), form.ResourceId)
+	if err != nil {
+		c.Logger().Errorf("error get resource, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+	if resource.Id != form.Id || resource.OrgId != c.OrgId || resource.ProjectId != c.ProjectId {
+		c.Logger().Errorf("Environment ID and resource ID do not match")
+		return nil, e.New(e.DBError, err, http.StatusForbidden)
+	}
+	return &resource.Attrs, nil
+}
