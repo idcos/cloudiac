@@ -18,7 +18,7 @@ func CreatePolicy(c *ctx.ServiceContext, form *forms.CreatePolicyForm) (*models.
 		form.PolicyType = "cloudiac"
 	}
 	if form.Category == "" {
-		form.PolicyType = "compliance"
+		form.PolicyType = "basic"
 	}
 
 	p := models.Policy{

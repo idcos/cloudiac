@@ -45,7 +45,7 @@ func GetPolicyReferenceId(query *db.Session, policy *models.Policy) (string, e.E
 	return fmt.Sprintf("%s_%s_%s_%d", "iac", typ, scope, lastId+1), nil
 }
 
-func GetPolicyById(tx *db.Session, id models.Id) (*models.Policy, error) {
+func GetPolicyById(tx *db.Session, id models.Id) (*models.Policy, e.Error) {
 	po := models.Policy{}
 	if err := tx.Model(models.Policy{}).Where("id = ?", id).First(&po); err != nil {
 		if e.IsRecordNotFound(err) {
@@ -56,7 +56,7 @@ func GetPolicyById(tx *db.Session, id models.Id) (*models.Policy, error) {
 	return &po, nil
 }
 
-func GetTaskPolicies(query *db.Session, taskId models.Id) ([]runner.TaskPolicy, error) {
+func GetTaskPolicies(query *db.Session, taskId models.Id) ([]runner.TaskPolicy, e.Error) {
 	var taskPolicies []runner.TaskPolicy
 	policies, err := GetValidTaskPolicyIds(query, taskId)
 	if err != nil {
@@ -88,7 +88,7 @@ func GetTaskPolicies(query *db.Session, taskId models.Id) ([]runner.TaskPolicy, 
 }
 
 // GetValidTaskPolicyIds 获取策略关联的策略ID列表
-func GetValidTaskPolicyIds(query *db.Session, taskId models.Id) ([]models.Id, error) {
+func GetValidTaskPolicyIds(query *db.Session, taskId models.Id) ([]models.Id, e.Error) {
 	// TODO: 处理策略关联
 	var policyIds []models.Id
 	if err := query.Model(models.Policy{}).Pluck("id", &policyIds); err != nil {

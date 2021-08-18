@@ -3,7 +3,7 @@ package models
 import "cloudiac/portal/libs/db"
 
 type Policy struct {
-	TimedModel
+	SoftDeleteModel
 
 	GroupId   Id `json:"groupId" gorm:"size:32;comment:策略组ID" example:"lg-c3lcrjxczjdywmk0go90"`
 	CreatorId Id `json:"creatorId" gorm:"size:32;not null;创建人" example:"u-c3lcrjxczjdywmk0go90"`

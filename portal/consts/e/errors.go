@@ -147,8 +147,11 @@ const (
 
 	//// policy 312
 
-	PolicyAlreadyExist = 31210
-	PolicyNotExist     = 31211
+	PolicyAlreadyExist           = 31210
+	PolicyNotExist               = 31211
+	PolicyGroupAlreadyExist      = 31221
+	PolicyGroupNotExist          = 31222
+	PolicyBelongedToAnotherGroup = 31223
 )
 
 var errorMsgs = map[int]map[string]string{

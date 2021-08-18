@@ -104,6 +104,15 @@ func Register(g *gin.RouterGroup) {
 
 	// 策略管理
 	ctrl.Register(g.Group("policies", ac()), &handlers.Policy{})
+	g.GET("/policies/templates", ac(), w(handlers.Policy{}.Create))     // 云模板列表，带策略组信息及状态
+	g.PUT("/policies/templates", ac(), w(handlers.Policy{}.Create))     // 关联云模板与策略组（创建/删除？）
+	g.GET("/policies/templates/:id", ac(), w(handlers.Policy{}.Create)) // 云模板策略列表
+	g.GET("/policies/envs", ac(), w(handlers.Policy{}.Create))
+	g.PUT("/policies/envs", ac(), w(handlers.Policy{}.Create)) // 关联环境与策略组（创建/删除？）
+	g.GET("/policies/envs/:id", ac(), w(handlers.Policy{}.Create))
+	ctrl.Register(g.Group("policies/groups", ac()), &handlers.PolicyGroup{})
+	g.GET("/policies/result", ac(), w(handlers.Policy{}.Create))         // 扫描结果
+	g.GET("/policies/result/summary", ac(), w(handlers.Policy{}.Create)) // 统计报告
 
 	// 项目资源
 	g.Use(w(middleware.AuthProjectId))
@@ -118,6 +127,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/resources", ac(), w(handlers.Env{}.SearchResources))
 	g.GET("/envs/:id/output", ac(), w(handlers.Env{}.Output))
 	g.GET("/envs/:id/variables", ac(), w(handlers.Env{}.Variables))
+	g.GET("/envs/:id/policy_result", ac(), w(handlers.Env{}.PolicyResult))
 
 	// 任务管理
 	g.GET("/tasks", ac(), w(handlers.Task{}.Search))
