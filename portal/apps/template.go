@@ -257,7 +257,7 @@ func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*Tem
 		c.Logger().Errorf("error get template by id, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
-	project_ids, err := services.QuertProjectByTplId(c.DB(), form.Id)
+	project_ids, err := services.QueryProjectByTplId(c.DB(), form.Id)
 	if err != nil {
 		return nil, e.New(e.DBError, err)
 	}
