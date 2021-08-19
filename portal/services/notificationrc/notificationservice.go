@@ -9,58 +9,53 @@ import (
 	"cloudiac/utils/logs"
 	"cloudiac/utils/mail"
 	"fmt"
+	"time"
 )
 
 type NotificationService struct {
-	Tpl            *models.Template     `json:"tpl" form:"tpl" `
-	Project        *models.Project      `json:"project" form:"project" `
-	Org            *models.Organization `json:"org" form:"org" `
-	OrgId          models.Id            `json:"orgId" form:"orgId" `
-	ProjectId      models.Id            `json:"projectId" form:"projectId" `
-	Env            *models.Env          `json:"env" form:"env" `
-	Task           *models.Task         `json:"task" form:"task" `
-	EventFailed    bool                 `json:"eventFailed" form:"eventFailed" `
-	EventComplete  bool                 `json:"eventComplete" form:"eventComplete" `
-	EventApproving bool                 `json:"eventApproving" form:"eventApproving" `
-	EventRunning   bool                 `json:"eventRunning" form:"eventRunning" `
+	Tpl       *models.Template     `json:"tpl" form:"tpl" `
+	Project   *models.Project      `json:"project" form:"project" `
+	Org       *models.Organization `json:"org" form:"org" `
+	OrgId     models.Id            `json:"orgId" form:"orgId" `
+	ProjectId models.Id            `json:"projectId" form:"projectId" `
+	Env       *models.Env          `json:"env" form:"env" `
+	Task      *models.Task         `json:"task" form:"task" `
+	EventType string               `json:"eventType" form:"eventType" `
 }
 
 type NotificationOptions struct {
-	Tpl            *models.Template     `json:"tpl" form:"tpl" `
-	Project        *models.Project      `json:"project" form:"project" `
-	Org            *models.Organization `json:"org" form:"org" `
-	OrgId          models.Id            `json:"orgId" form:"orgId" `
-	ProjectId      models.Id            `json:"projectId" form:"projectId" `
-	Env            *models.Env          `json:"env" form:"env" `
-	Task           *models.Task         `json:"task" form:"task" `
-	EventFailed    bool                 `json:"eventFailed" form:"eventFailed" `
-	EventComplete  bool                 `json:"eventComplete" form:"eventComplete" `
-	EventApproving bool                 `json:"eventApproving" form:"eventApproving" `
-	EventRunning   bool                 `json:"eventRunning" form:"eventRunning" `
+	Tpl       *models.Template     `json:"tpl" form:"tpl" `
+	Project   *models.Project      `json:"project" form:"project" `
+	Org       *models.Organization `json:"org" form:"org" `
+	OrgId     models.Id            `json:"orgId" form:"orgId" `
+	ProjectId models.Id            `json:"projectId" form:"projectId" `
+	Env       *models.Env          `json:"env" form:"env" `
+	Task      *models.Task         `json:"task" form:"task" `
+	EventType string               `json:"eventType" form:"eventType" `
 }
 
 func NewNotificationService(options *NotificationOptions) NotificationService {
 	return NotificationService{
-		OrgId:          options.OrgId,
-		ProjectId:      options.ProjectId,
-		Env:            options.Env,
-		Task:           options.Task,
-		EventFailed:    options.EventFailed,
-		EventComplete:  options.EventComplete,
-		EventApproving: options.EventApproving,
-		EventRunning:   options.EventRunning,
-		Tpl:            options.Tpl,
-		Project:        options.Project,
-		Org:            options.Org,
+		OrgId:     options.OrgId,
+		ProjectId: options.ProjectId,
+		Env:       options.Env,
+		Task:      options.Task,
+		Tpl:       options.Tpl,
+		Project:   options.Project,
+		Org:       options.Org,
+		EventType: options.EventType,
 	}
 }
 
 func (ns *NotificationService) SendMessage() {
 	notifications, tplNotificationTemplate, markdownNotificationTemplate := ns.FindNotificationsAndMessageTpl()
+	if len(notifications) == 0 {
+		return
+	}
 	u := models.User{}
 	_ = db.Get().Where("id = ?", ns.Task.CreatorId).First(&u)
 
-	markdownNotificationTemplate = utils.SprintTemplate(markdownNotificationTemplate, struct {
+	data := struct {
 		Creator      string
 		OrgName      string
 		ProjectName  string
@@ -85,29 +80,36 @@ func (ns *NotificationService) SendMessage() {
 		ResChanged:   ns.Task.Result.ResChanged,
 		ResDestroyed: ns.Task.Result.ResDestroyed,
 		Message:      ns.Task.Message,
-	})
-	tplNotificationTemplate = utils.SprintTemplate(tplNotificationTemplate, NotificationOptions{Env: ns.Env, Task: ns.Task})
+	}
+
+	// 获取消息通知模板
+	markdownNotificationTemplate = utils.SprintTemplate(markdownNotificationTemplate, data)
+	tplNotificationTemplate = utils.SprintTemplate(tplNotificationTemplate, data)
+
+	// 判断消息类型，下发至的消息通道
 	for _, notification := range notifications {
-		//todo 消息通知模板
-		switch notification.NotificationType {
-		case models.NotificationTypeDingTalk:
-			ns.SendDingTalkMessage(notification, markdownNotificationTemplate)
-		case models.NotificationTypeWebhook:
-			ns.SendWebhookMessage(notification, markdownNotificationTemplate)
-		case models.NotificationTypeWeChat:
-			ns.SendWechatMessage(notification, markdownNotificationTemplate)
-		case models.NotificationTypeSlack:
-			ns.SendSlackMessage(notification, markdownNotificationTemplate)
-		case models.NotificationTypeEmail:
-			ns.SendEmailMessage(notification, tplNotificationTemplate)
-		}
+		go func(notification models.Notification) {
+			switch notification.Type {
+			case models.NotificationTypeDingTalk:
+				ns.SendDingTalkMessage(notification, markdownNotificationTemplate)
+			case models.NotificationTypeWebhook:
+				ns.SendWebhookMessage(notification, markdownNotificationTemplate)
+			case models.NotificationTypeWeChat:
+				ns.SendWechatMessage(notification, markdownNotificationTemplate)
+			case models.NotificationTypeSlack:
+				ns.SendSlackMessage(notification, markdownNotificationTemplate)
+			case models.NotificationTypeEmail:
+				ns.SendEmailMessage(notification, tplNotificationTemplate)
+			}
+		}(notification)
+		time.Sleep(time.Second)
 	}
 
 }
 
 func (ns *NotificationService) SendDingTalkMessage(n models.Notification, message string) {
 	dingTalk := NewDingTalkRobot(n.Url, n.Secret)
-	if err := dingTalk.SendMarkdownMessage("CloudIaC平台系统通知", message, nil, false); err != nil {
+	if err := dingTalk.SendMarkdownMessage(consts.NotificationMessageTitle, message, nil, false); err != nil {
 		logs.Get().Errorf("send dingtalk message err: %v", err)
 	}
 }
@@ -144,7 +146,7 @@ func (ns *NotificationService) SendEmailMessage(n models.Notification, message s
 		emails = append(emails, v.Email)
 	}
 	emails = utils.RemoveDuplicateElement(emails)
-	if err := mail.SendMail(emails, "CloudIaC平台系统通知", message); err != nil {
+	if err := mail.SendMail(emails, consts.NotificationMessageTitle, message); err != nil {
 
 	}
 }
@@ -153,31 +155,30 @@ func (ns *NotificationService) FindNotificationsAndMessageTpl() ([]models.Notifi
 	orgNotification := make([]models.Notification, 0)
 	projectNotification := make([]models.Notification, 0)
 	notifications := make([]models.Notification, 0)
-	dbSess := db.Get().Debug().Where("org_id = ?", ns.OrgId)
+	dbSess := db.Get().Debug().Where("org_id = ?", ns.OrgId).
+		Joins(fmt.Sprintf("left join %s as ne on %s.id = ne.notification_id",
+			models.NotificationEvent{}.TableName(), models.Notification{}.TableName())).
+		Where("ne.event_type = ?", ns.EventType)
 	var (
 		tplNotificationTemplate      string
 		markdownNotificationTemplate string
 	)
-	if ns.EventFailed {
-		dbSess = dbSess.Where("event_failed = ?", ns.EventFailed)
+
+	switch ns.EventType {
+	case models.NotificationEventRunning:
+		tplNotificationTemplate = consts.IacTaskRunning
+		markdownNotificationTemplate = consts.IacTaskRunningMarkdown
+	case models.NotificationEventApproving:
+		tplNotificationTemplate = consts.IacTaskApprovingTpl
+		markdownNotificationTemplate = consts.IacTaskApprovingMarkdown
+	case models.NotificationEventFailed:
 		tplNotificationTemplate = consts.IacTaskFailedTpl
 		markdownNotificationTemplate = consts.IacTaskFailedMarkdown
-	}
-	if ns.EventComplete {
-		dbSess = dbSess.Where("event_complete = ?", ns.EventComplete)
+	case models.NotificationEventComplete:
 		tplNotificationTemplate = consts.IacTaskCompleteTpl
 		markdownNotificationTemplate = consts.IacTaskCompleteMarkdown
 	}
-	if ns.EventApproving {
-		dbSess = dbSess.Where("event_approving = ?", ns.EventApproving)
-		tplNotificationTemplate = consts.IacTaskApprovingTpl
-		markdownNotificationTemplate = consts.IacTaskApprovingMarkdown
-	}
-	if ns.EventRunning {
-		dbSess = dbSess.Where("event_running = ?", ns.EventRunning)
-		tplNotificationTemplate = consts.IacTaskRunning
-		markdownNotificationTemplate = consts.IacTaskRunningMarkdown
-	}
+
 	// 查询需要组织下需要通知的人
 	if err := dbSess.
 		Where("project_id = '' or project_id = null").
@@ -195,22 +196,4 @@ func (ns *NotificationService) FindNotificationsAndMessageTpl() ([]models.Notifi
 	notifications = append(notifications, orgNotification...)
 	notifications = append(notifications, projectNotification...)
 	return notifications, tplNotificationTemplate, markdownNotificationTemplate
-}
-
-func GetEventToStatus(status string) (eventFailed, eventComplete, eventApproving, eventRunning bool) {
-	switch status {
-	case models.TaskFailed:
-		return true, false, false, false
-	case models.TaskComplete:
-		return false, true, false, false
-	case models.TaskRunning:
-		return false, false, false, true
-	case models.TaskApproving:
-		return false, false, true, false
-	case models.TaskRejected:
-		return false, false, true, false
-	default:
-		return false, false, false, false
-	}
-
 }

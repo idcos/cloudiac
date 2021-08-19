@@ -35,29 +35,21 @@ func UpdateNotification(c *ctx.ServiceContext, form *forms.UpdateNotificationFor
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
 	}
 
+	tx := c.Tx().Debug()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
 	attrs := models.Attrs{}
 	if form.HasKey("name") {
 		attrs["name"] = form.Name
 	}
 
-	if form.HasKey("notificationType") {
-		attrs["notificationType"] = form.NotificationType
-	}
-
-	if form.HasKey("eventFailed") {
-		attrs["eventFailed"] = form.EventFailed
-	}
-
-	if form.HasKey("eventComplete") {
-		attrs["eventComplete"] = form.EventComplete
-	}
-
-	if form.HasKey("eventApproving") {
-		attrs["eventApproving"] = form.EventApproving
-	}
-
-	if form.HasKey("eventRunning") {
-		attrs["eventRunning"] = form.EventRunning
+	if form.HasKey("type") {
+		attrs["type"] = form.Type
 	}
 
 	if form.HasKey("secret") {
@@ -72,12 +64,40 @@ func UpdateNotification(c *ctx.ServiceContext, form *forms.UpdateNotificationFor
 		attrs["userIds"] = form.UserIds
 	}
 
-	cfg, err = services.UpdateNotificationCfg(c.DB(), form.Id, attrs)
+	cfg, err = services.UpdateNotification(tx, form.Id, attrs)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
+
+	if err := services.DeleteNotificationEvent(tx, form.Id); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
+
+	events := make([]models.NotificationEvent, len(form.EventType))
+	for _, v := range form.EventType {
+		events = append(events, models.NotificationEvent{
+			NotificationId: form.Id,
+			EventType:      v,
+		})
+	}
+
+	if err := services.CreateNotificationEvent(tx, events); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
+
 	return cfg, err
 }
 
 func CreateNotification(c *ctx.ServiceContext, form *forms.CreateNotificationForm) (*models.Notification, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("create org notification cfg %s", form.NotificationType))
+	c.AddLogField("action", fmt.Sprintf("create org notification cfg %s", form.Type))
 
 	tx := c.Tx().Debug()
 	defer func() {
@@ -87,23 +107,32 @@ func CreateNotification(c *ctx.ServiceContext, form *forms.CreateNotificationFor
 		}
 	}()
 
-	notificationCfg, err := services.CreateNotificationCfg(tx, models.Notification{
-		OrgId:            c.OrgId,
-		ProjectId:        c.ProjectId,
-		Name:             form.Name,
-		NotificationType: form.NotificationType,
-		Secret:           form.Secret,
-		Url:              form.Url,
-		UserIds:          form.UserIds,
-		EventFailed:      form.EventFailed,
-		EventComplete:    form.EventComplete,
-		EventApproving:   form.EventApproving,
-		EventRunning:     form.EventRunning,
+	notification, err := services.CreateNotification(tx, models.Notification{
+		OrgId:     c.OrgId,
+		ProjectId: c.ProjectId,
+		Name:      form.Name,
+		Type:      form.Type,
+		Secret:    form.Secret,
+		Url:       form.Url,
+		UserIds:   form.UserIds,
 	})
+
 	if err != nil {
 		_ = tx.Rollback()
 		return nil, err
+	}
 
+	events := make([]models.NotificationEvent, len(form.EventType))
+	for _, v := range form.EventType {
+		events = append(events, models.NotificationEvent{
+			NotificationId: notification.Id,
+			EventType:      v,
+		})
+	}
+
+	if err := services.CreateNotificationEvent(tx, events); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -111,5 +140,5 @@ func CreateNotification(c *ctx.ServiceContext, form *forms.CreateNotificationFor
 		return nil, e.New(e.DBError, err)
 	}
 
-	return notificationCfg, nil
+	return notification, nil
 }

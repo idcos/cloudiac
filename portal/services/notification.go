@@ -29,7 +29,7 @@ func SearchNotification(tx *db.Session, orgId models.Id) (interface{}, error) {
 	return users, nil
 }
 
-func UpdateNotificationCfg(tx *db.Session, id models.Id, attrs models.Attrs) (notificationCfg *models.Notification, err e.Error) {
+func UpdateNotification(tx *db.Session, id models.Id, attrs models.Attrs) (notificationCfg *models.Notification, err e.Error) {
 	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.Notification{}, attrs); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("update notification cfg error: %v", err))
 	}
@@ -39,12 +39,26 @@ func UpdateNotificationCfg(tx *db.Session, id models.Id, attrs models.Attrs) (no
 	return
 }
 
-func CreateNotificationCfg(tx *db.Session, cfg models.Notification) (*models.Notification, e.Error) {
+func CreateNotification(tx *db.Session, cfg models.Notification) (*models.Notification, e.Error) {
 	if err := models.Create(tx, &cfg); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 
 	return &cfg, nil
+}
+
+func CreateNotificationEvent(tx *db.Session, cfg []models.NotificationEvent) e.Error {
+	if err := tx.Insert(&cfg); err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
+func DeleteNotificationEvent(tx *db.Session, nId models.Id) e.Error {
+	if _, err := tx.Where("notification_id = ?", nId).Delete(&models.NotificationEvent{}); err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
 }
 
 func DeleteOrganizationCfg(tx *db.Session, id models.Id, orgId models.Id) e.Error {

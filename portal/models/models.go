@@ -203,6 +203,7 @@ func Init(migrate bool) {
 	autoMigrate(&UserProject{}, sess)
 
 	autoMigrate(&Notification{}, sess)
+	autoMigrate(&NotificationEvent{}, sess)
 	autoMigrate(&SystemCfg{}, sess)
 	autoMigrate(&ResourceAccount{}, sess)
 	autoMigrate(&CtResourceMap{}, sess)

@@ -24,20 +24,26 @@ const (
 type Notification struct {
 	BaseModel
 
-	OrgId            Id     `json:"orgId" gorm:"size:32;not null;comment:组织ID"`
-	ProjectId        Id     `json:"projectId" form:"projectId"  gorm:"size:32;not null;comment:项目ID"`
-	Name             string `json:"name" form:"name" `
-	NotificationType string `json:"notificationType" gorm:"type:enum('email', 'webhook', 'wechat', 'slack','dingtalk');default:'email';comment:通知类型"`
-	//EventType        string         `json:"eventType" gorm:"type:enum('all', 'failed', 'complete', 'approving', 'running');default:'failure';comment:事件类型"`
-	EventFailed    bool           `json:"eventFailed" gorm:"default:false"`
-	EventComplete  bool           `json:"eventComplete" gorm:"default:false"`
-	EventApproving bool           `json:"eventApproving" gorm:"default:false"`
-	EventRunning   bool           `json:"eventRunning" gorm:"default:false"`
-	Secret         string         `json:"secret" form:"secret" gorm:"comment:dingtalk加签秘钥"`
-	Url            string         `json:"url" form:"url" gorm:"comment:回调url"`
-	UserIds        pq.StringArray `json:"userIds"  gorm:"type:json;comment:用户ID"  swaggertype:"array,string"`
+	OrgId     Id             `json:"orgId" gorm:"size:32;not null;comment:组织ID"`
+	ProjectId Id             `json:"projectId" form:"projectId"  gorm:"size:32;not null;comment:项目ID"`
+	Name      string         `json:"name" form:"name" `
+	Type      string         `json:"notificationType" gorm:"type:enum('email', 'webhook', 'wechat', 'slack','dingtalk');default:'email';comment:通知类型"`
+	Secret    string         `json:"secret" form:"secret" gorm:"comment:dingtalk加签秘钥"`
+	Url       string         `json:"url" form:"url" gorm:"comment:回调url"`
+	UserIds   pq.StringArray `json:"userIds"  gorm:"type:json;comment:用户ID"  swaggertype:"array,string"`
 }
 
 func (Notification) TableName() string {
 	return "iac_notification"
+}
+
+type NotificationEvent struct {
+	AutoUintIdModel
+
+	EventType      string `json:"eventType" form:"eventType"  gorm:"type:enum('failed', 'complete', 'approving', 'running');default:'running';comment:事件类型"`
+	NotificationId Id     `json:"notificationId" form:"notificationId" gorm:"size:32;not null"`
+}
+
+func (NotificationEvent) TableName() string {
+	return "iac_notification_event"
 }

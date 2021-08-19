@@ -13,33 +13,26 @@ type CfgInfo struct {
 
 type UpdateNotificationForm struct {
 	PageForm
-	Id               models.Id `uri:"id" form:"notificationId" json:"notificationId" binding:"required"`
-	Name             string    `json:"name" form:"name" `
-	NotificationType string    `form:"notificationType" json:"notificationType" binding:"required"`
-	Secret           string    `json:"secret" form:"secret"`
-	Url              string    `json:"url" form:"url"`
-	UserIds          []string  `form:"userIds" json:"userIds"`
+	Id      models.Id `uri:"id" form:"notificationId" json:"notificationId" binding:"required"`
+	Name    string    `json:"name" form:"name" `
+	Type    string    `form:"type" json:"type" binding:"required"`
+	Secret  string    `json:"secret" form:"secret"`
+	Url     string    `json:"url" form:"url"`
+	UserIds []string  `form:"userIds" json:"userIds"`
 	//EventType        string      `form:"eventType" json:"eventType" binding:"required"`
 
-	EventFailed    bool `json:"eventFailed" form:"eventFailed" `
-	EventComplete  bool `json:"eventComplete" form:"eventComplete" `
-	EventApproving bool `json:"eventApproving" form:"eventApproving" `
-	EventRunning   bool `json:"eventRunning" form:"eventRunning" `
+	EventType []string `form:"eventType" json:"eventType" binding:"required"` //enum('failed', 'complete', 'approving', 'running')
 }
 
 type CreateNotificationForm struct {
 	PageForm
-	Name             string   `json:"name" form:"name" `
-	NotificationType string   `form:"notificationType" json:"notificationType" binding:"required"`
-	Secret           string   `json:"secret" form:"secret"`
-	Url              string   `json:"url" form:"url"`
-	UserIds          []string `form:"userIds" json:"userIds"`
-	//EventType        string      `form:"eventType" json:"eventType" binding:"required"`
+	Name      string   `json:"name" form:"name" `
+	Type      string   `form:"notificationType" json:"notificationType" binding:"required"`
+	Secret    string   `json:"secret" form:"secret"`
+	Url       string   `json:"url" form:"url"`
+	UserIds   []string `form:"userIds" json:"userIds"`
+	EventType []string `form:"eventType" json:"eventType" binding:"required"` //enum('failed', 'complete', 'approving', 'running')
 
-	EventFailed    bool `json:"eventFailed" form:"eventFailed" `
-	EventComplete  bool `json:"eventComplete" form:"eventComplete" `
-	EventApproving bool `json:"eventApproving" form:"eventApproving" `
-	EventRunning   bool `json:"eventRunning" form:"eventRunning" `
 }
 
 type DeleteNotificationForm struct {
