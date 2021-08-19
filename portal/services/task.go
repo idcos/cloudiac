@@ -278,12 +278,19 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 	go func() {
 		logs.Get().Infof("send massage to")
 		eventFailed, eventComplete, eventApproving, eventRunning := notificationrc.GetEventToStatus(status)
-		env := models.Env{}
-		_ = db.Get().Debug().Where("id = ?", task.EnvId).First(&env)
+
+		dbSess := db.Get()
+		env, _ := GetEnv(dbSess, task.EnvId)
+		tpl, _ := GetTemplateById(dbSess, task.TplId)
+		project, _ := GetProjectsById(dbSess, task.ProjectId)
+		org, _ := GetOrganizationById(dbSess, task.OrgId)
 		ns := notificationrc.NewNotificationService(&notificationrc.NotificationOptions{
 			OrgId:          task.OrgId,
 			ProjectId:      task.ProjectId,
-			Env:            &env,
+			Tpl:            tpl,
+			Project:        project,
+			Org:            org,
+			Env:            env,
 			Task:           task,
 			EventFailed:    eventFailed,
 			EventComplete:  eventComplete,

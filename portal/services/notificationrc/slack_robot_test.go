@@ -6,7 +6,8 @@ import (
 )
 
 func TestSend(t *testing.T) {
-	err := SendSlack("https://hooks.slack.com/services/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",
+	webhookUrl := "https://hooks.slack.com/services/xxxx"
+	err := SendSlack(webhookUrl,
 		Payload{Text: "``` xiaohei```", Markdown: true})
 	fmt.Println(err)
 }
