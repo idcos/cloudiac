@@ -652,7 +652,7 @@ func ResourceDetail(c *ctx.ServiceContext, form *forms.ResourceDetailForm) (*mod
 		c.Logger().Errorf("error get resource, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
-	if resource.Id != form.Id || resource.OrgId != c.OrgId || resource.ProjectId != c.ProjectId {
+	if resource.EnvId != form.Id || resource.OrgId != c.OrgId || resource.ProjectId != c.ProjectId {
 		c.Logger().Errorf("Environment ID and resource ID do not match")
 		return nil, e.New(e.DBError, err, http.StatusForbidden)
 	}
