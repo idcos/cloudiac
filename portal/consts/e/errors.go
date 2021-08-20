@@ -152,6 +152,8 @@ const (
 	PolicyGroupAlreadyExist      = 31221
 	PolicyGroupNotExist          = 31222
 	PolicyBelongedToAnotherGroup = 31223
+	PolicyResultAlreadyExist     = 31230
+	PolicyResultNotExist         = 31231
 )
 
 var errorMsgs = map[int]map[string]string{

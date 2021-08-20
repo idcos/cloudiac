@@ -63,13 +63,8 @@ func Create(tx *db.Session, o Modeler) error {
 	return err
 }
 
-func CreateBatch(tx *db.Session, o []Modeler) error {
+func CreateBatch(tx *db.Session, o interface{}) error {
 	_, err := withTx(tx, func(x *db.Session) (int64, error) {
-		for _, v := range o {
-			if err := v.Validate(); err != nil {
-				return 0, err
-			}
-		}
 		if err := x.Insert(o); err != nil {
 			return 0, err
 		}
@@ -212,4 +207,6 @@ func Init(migrate bool) {
 	autoMigrate(&ProjectTemplate{}, sess)
 	autoMigrate(&Policy{}, sess)
 	autoMigrate(&PolicyGroup{}, sess)
+	autoMigrate(&PolicyRel{}, sess)
+	autoMigrate(&PolicyResult{}, sess)
 }

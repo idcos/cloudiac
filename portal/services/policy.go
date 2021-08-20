@@ -104,3 +104,19 @@ func GetPolicyGroupsByEnvId(query *db.Session, envId models.Id) ([]models.Policy
 func GetPoliciesByGroupIds(query *db.Session, groupId ...models.Id) ([]models.Policy, error) {
 	return nil, nil
 }
+
+func GetPoliciesByEnvId(query *db.Session, envId models.Id) ([]models.Policy, e.Error) {
+	return nil, nil
+}
+
+func GetPoliciesByTemplateId(query *db.Session, envId models.Id) ([]models.Policy, e.Error) {
+	return nil, nil
+}
+
+func BindPolicyGroupWithEnv(tx *db.Session, groupIds []models.Id, envId models.Id) e.Error {
+	return nil
+}
+
+func BindPolicyGroupWithTemplate(tx *db.Session, groupIds []models.Id, tplId models.Id) e.Error {
+	return nil
+}

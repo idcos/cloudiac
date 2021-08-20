@@ -5,7 +5,6 @@ package models
 import (
 	"bytes"
 	"cloudiac/common"
-	"cloudiac/configs"
 	"database/sql/driver"
 	"fmt"
 	"gopkg.in/yaml.v2"
@@ -78,7 +77,7 @@ destroy:
 
 scan:
   steps:
-    - type: init
+    - type: scaninit
     - type: tfscan
 `
 
@@ -105,10 +104,7 @@ func DefaultTaskFlow(typ string) (TaskFlow, error) {
 	return GetTaskFlow(&defaultTaskFlows, typ)
 }
 
-func DefaultTaskFlows() TaskFlows {
-	if configs.Get().Policy.Enabled {
-		return decodeTaskFlow(taskFlowsWithScanContent)
-	}
+func DefaultTaskFlows(version string) TaskFlows {
 	return defaultTaskFlows
 }
 

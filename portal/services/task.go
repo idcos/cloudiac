@@ -151,7 +151,9 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		}
 
 		if step.Type == models.TaskStepTfScan {
-			// TODO: init policy scan result
+			if err := initScanResult(tx, task); err != nil {
+				return nil, e.New(err.Code(), errors.Wrapf(err, "init scan result"))
+			}
 		}
 	}
 
@@ -456,8 +458,17 @@ type TsResultJson struct {
 }
 
 type TsResult struct {
-	Violations []Violation `json:"violations"`
-	Count      TsCount     `json:"count"`
+	PassedRules []Rule      `json:"passed_rules"`
+	Violations  []Violation `json:"violations"`
+	Count       TsCount     `json:"count"`
+}
+
+type Rule struct {
+	RuleName    string `json:"rule_name"`
+	Description string `json:"description"`
+	RuleId      string `json:"rule_id"`
+	Severity    string `json:"severity"`
+	Category    string `json:"category"`
 }
 
 type Violation struct {
@@ -520,7 +531,35 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource)
 	return nil
 }
 
-func SaveTfScanResult(dbSess *db.Session, task *models.Task, result TsResult) error {
+func SaveTfScanResult(tx *db.Session, task *models.Task, result TsResult) error {
+	var (
+		policyResults []*models.PolicyResult
+	)
+	for _, r := range result.Violations {
+		if policyResult, err := GetPolicyResultById(tx, task.Id, models.Id(r.RuleId)); err != nil {
+			return err
+		} else {
+			policyResult.Status = "violated"
+			policyResults = append(policyResults, policyResult)
+		}
+	}
+	for _, r := range result.PassedRules {
+		if policyResult, err := GetPolicyResultById(tx, task.Id, models.Id(r.RuleId)); err != nil {
+			return err
+		} else {
+			policyResult.Status = "passed"
+			policyResults = append(policyResults, policyResult)
+		}
+	}
+	for _, r := range policyResults {
+		if err := models.Save(tx, r); err != nil {
+			return e.New(e.DBError, fmt.Errorf("save scan result"))
+		}
+	}
+
+	if err := finishScanResult(tx, task); err != nil {
+		return err
+	}
 	return nil
 }
 

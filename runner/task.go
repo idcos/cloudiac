@@ -277,6 +277,8 @@ func (t *Task) genStepScript() error {
 		command, err = t.stepCommand()
 	case common.TaskStepCollect:
 		command, err = t.collectCommand()
+	case common.TaskStepScanInit:
+		command, err = t.stepScanInit()
 	case common.TaskStepTfParse:
 		command, err = t.stepTfParse()
 	case common.TaskStepTfScan:
@@ -455,5 +457,20 @@ func (t *Task) stepTfScan() (command string, err error) {
 		"IacPlayVars":         t.up2Workspace(CloudIacPlayVars),
 		"PoliciesDir":         t.up2Workspace(PoliciesDir),
 		"TerrascanResultFile": t.up2Workspace(TerrascanResultFile),
+	})
+}
+
+var scanInitCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+git clone '{{.Req.RepoAddress}}' code && \
+cd 'code/{{.Req.Env.Workdir}}' && \
+git checkout -q '{{.Req.RepoRevision}}' && echo check out $(git rev-parse --short HEAD). && \
+ln -sf {{.IacTfFile}} .
+`))
+
+func (t *Task) stepScanInit() (command string, err error) {
+	return t.executeTpl(scanInitCommandTpl, map[string]interface{}{
+		"Req":             t.req,
+		"PluginCachePath": ContainerPluginCachePath,
+		"IacTfFile":       t.up2Workspace(CloudIacTfFile),
 	})
 }

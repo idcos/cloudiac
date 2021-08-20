@@ -76,7 +76,7 @@ type Task struct {
 	Name      string `json:"name" gorm:"not null;comment:任务名称"` // 任务名称
 	CreatorId Id     `json:"creatorId" gorm:"size:32;not null"` // 创建人ID
 
-	Type string `json:"type" gorm:"not null;enum('plan','apply','destroy')" enums:"'plan','apply','destroy'"` // 任务类型。1. plan: 计划 2. apply: 部署 3. destroy: 销毁
+	Type string `json:"type" gorm:"not null;enum('plan','apply','destroy','scan'')" enums:"'plan','apply','destroy','scan'"` // 任务类型。1. plan: 计划 2. apply: 部署 3. destroy: 销毁
 
 	RepoAddr string `json:"repoAddr" gorm:"not null"`
 	Revision string `json:"revision" gorm:"not null"`
@@ -196,21 +196,22 @@ func (t *Task) Migrate(sess *db.Session) (err error) {
 }
 
 type TaskStepBody struct {
-	Type string   `json:"type" yaml:"type" gorm:"type:enum('init','plan','apply','play','command','destroy','tfscan','scan')"`
+	Type string   `json:"type" yaml:"type" gorm:"type:enum('init','plan','apply','play','command','destroy','scaninit','tfscan','scan')"`
 	Name string   `json:"name,omitempty" yaml:"name" gorm:"size:32;not null"`
 	Args StrSlice `json:"args,omitempty" yaml:"args" gorm:"type:text"`
 }
 
 const (
-	TaskStepInit    = common.TaskStepInit
-	TaskStepPlan    = common.TaskStepPlan
-	TaskStepApply   = common.TaskStepApply
-	TaskStepDestroy = common.TaskStepDestroy
-	TaskStepPlay    = common.TaskStepPlay
-	TaskStepCommand = common.TaskStepCommand
-	TaskStepCollect = common.TaskStepCollect
-	TaskStepTfParse = common.TaskStepTfScan
-	TaskStepTfScan  = common.TaskStepTfScan
+	TaskStepInit     = common.TaskStepInit
+	TaskStepPlan     = common.TaskStepPlan
+	TaskStepApply    = common.TaskStepApply
+	TaskStepDestroy  = common.TaskStepDestroy
+	TaskStepPlay     = common.TaskStepPlay
+	TaskStepCommand  = common.TaskStepCommand
+	TaskStepCollect  = common.TaskStepCollect
+	TaskStepTfParse  = common.TaskStepTfScan
+	TaskStepTfScan   = common.TaskStepTfScan
+	TaskStepScanInit = common.TaskStepScanInit
 
 	TaskStepPending   = common.TaskStepPending
 	TaskStepApproving = common.TaskStepApproving

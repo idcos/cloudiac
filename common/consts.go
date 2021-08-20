@@ -15,6 +15,7 @@ const (
 	TaskTypeApply   = "apply"   // 执行 terraform apply 和 playbook
 	TaskTypeDestroy = "destroy" // 销毁，删除所有资源
 	TaskTypeScan    = "scan"    // 策略扫描，只执行策略扫描，不锈钢资源或配置
+	TaskTypeParse   = "parse"   // 策略扫描，只执行策略扫描，不锈钢资源或配置
 
 	TaskPending   = "pending"
 	TaskRunning   = "running"
@@ -23,15 +24,16 @@ const (
 	TaskFailed    = "failed"
 	TaskComplete  = "complete"
 
-	TaskStepInit    = "init"
-	TaskStepPlan    = "plan"
-	TaskStepApply   = "apply"
-	TaskStepDestroy = "destroy"
-	TaskStepPlay    = "play"    // play playbook
-	TaskStepCommand = "command" // run command
-	TaskStepCollect = "collect" // 任务结束后的信息采集
-	TaskStepTfParse = "tfparse" // 云模板解析
-	TaskStepTfScan  = "tfscan"  // 云模板策略扫描
+	TaskStepInit     = "init"
+	TaskStepPlan     = "plan"
+	TaskStepApply    = "apply"
+	TaskStepDestroy  = "destroy"
+	TaskStepPlay     = "play"    // play playbook
+	TaskStepCommand  = "command" // run command
+	TaskStepCollect  = "collect" // 任务结束后的信息采集
+	TaskStepScanInit = "scaninit"
+	TaskStepTfParse  = "tfparse" // 云模板解析
+	TaskStepTfScan   = "tfscan"  // 云模板策略扫描
 
 	CollectTaskStepIndex = -1
 
