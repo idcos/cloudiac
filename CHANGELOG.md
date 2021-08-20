@@ -14,7 +14,7 @@
 
 #### 升级步骤
 1. 备份数据库
-2. 执行升级 SQL
+2. 更新并重启后执行以下 SQL
 ```
 UPDATE iac_env SET last_res_task_id=last_task_id WHERE last_res_task_id IS NULL;
 ```
