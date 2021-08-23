@@ -12,7 +12,7 @@ import (
 )
 
 func SearchNotification(c *ctx.ServiceContext) (interface{}, e.Error) {
-	cfgs, err := services.SearchNotification(c.DB(), c.OrgId)
+	cfgs, err := services.SearchNotification(c.DB(), c.OrgId, c.ProjectId)
 	if err != nil {
 		return nil, e.New(e.DBError, err)
 	}
