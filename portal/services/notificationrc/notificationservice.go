@@ -85,11 +85,11 @@ func (ns *NotificationService) SendMessage() {
 	// 获取消息通知模板
 	markdownNotificationTemplate = utils.SprintTemplate(markdownNotificationTemplate, data)
 	tplNotificationTemplate = utils.SprintTemplate(tplNotificationTemplate, data)
-	users := make([]string, 0)
+	userIds := make([]string, 0)
 	// 判断消息类型，下发至的消息通道
 	for _, notification := range notifications {
 		if notification.Type == models.NotificationTypeEmail {
-			users = append(users, notification.UserIds...)
+			userIds = append(userIds, notification.UserIds...)
 			continue
 		}
 		go func(notification models.Notification) {
@@ -106,10 +106,21 @@ func (ns *NotificationService) SendMessage() {
 		}(notification)
 		time.Sleep(time.Second)
 	}
-	if len(users) > 0 {
-		ns.SendEmailMessage(users, tplNotificationTemplate)
-	}
+	userIds = utils.RemoveDuplicateElement(userIds)
 
+	func(userIds []string) {
+		// 获取用户邮箱列表
+		users := make([]models.User, 0)
+		_ = db.Get().Where("id in (?)", userIds).Find(users)
+		for _, v := range users {
+			// 单个用户发送邮件，避免暴露其他用户邮箱
+			go ns.SendEmailMessage([]string{
+				v.Email,
+			}, tplNotificationTemplate)
+			// 避免并发量太大
+			time.Sleep(time.Millisecond)
+		}
+	}(userIds)
 }
 
 func (ns *NotificationService) SendDingTalkMessage(n models.Notification, message string) {
@@ -141,16 +152,7 @@ func (ns *NotificationService) SendSlackMessage(n models.Notification, message s
 
 }
 
-func (ns *NotificationService) SendEmailMessage(userId []string, message string) {
-	// 获取用户邮箱列表
-	users := make([]models.User, 0)
-	_ = db.Get().Where("id in (?)", userId).Find(users)
-
-	emails := make([]string, 0)
-	for _, v := range users {
-		emails = append(emails, v.Email)
-	}
-	emails = utils.RemoveDuplicateElement(emails)
+func (ns *NotificationService) SendEmailMessage(emails []string, message string) {
 	if len(emails) < 1 {
 		return
 	}
@@ -189,7 +191,7 @@ func (ns *NotificationService) FindNotificationsAndMessageTpl() ([]models.Notifi
 
 	// 查询需要组织下需要通知的人
 	if err := dbSess.
-		Where("project_id = '' or project_id = null or project_id = ?", ns.ProjectId).
+		Where("project_id = '' or project_id is null or project_id = ?", ns.ProjectId).
 		Find(&orgNotification); err != nil {
 		return notifications, tplNotificationTemplate, markdownNotificationTemplate
 	}
