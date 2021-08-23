@@ -7,15 +7,16 @@ import (
 )
 
 const (
-	NotificationTypeEmail      = "email"
-	NotificationTypeWebhook    = "webhook"
-	NotificationTypeWeChat     = "wechat"
-	NotificationTypeSlack      = "slack"
-	NotificationTypeDingTalk   = "dingtalk"
-	NotificationEventFailed    = "failed"
-	NotificationEventComplete  = "complete"
-	NotificationEventRunning   = "running"
-	NotificationEventApproving = "approving"
+	NotificationTypeEmail    = "email"
+	NotificationTypeWebhook  = "webhook"
+	NotificationTypeWeChat   = "wechat"
+	NotificationTypeSlack    = "slack"
+	NotificationTypeDingTalk = "dingtalk"
+
+	EventTaskFailed    = "task.failed"
+	EventTaskComplete  = "task.complete"
+	EventTaskRunning   = "task.running"
+	EventTaskApproving = "task.approving"
 )
 
 // 通知类型 email, webhook, 钉钉， 企业微信，slack

@@ -86,3 +86,21 @@ func (Notification) Update(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.UpdateNotification(c.Service(), form))
 }
+
+// Detail 查询通知详情
+// @Summary 查询通知详情
+// @Description 查询通知详情
+// @Tags 通知
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
+// @Success 200 {object} ctx.JSONResult{result=models.Notification}
+// @Router /notifications/{notificationId}  [get]
+func (Notification) Detail(c *ctx.GinRequest) {
+	form := &forms.DetailNotificationForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.DetailNotification(c.Service(), form))
+}

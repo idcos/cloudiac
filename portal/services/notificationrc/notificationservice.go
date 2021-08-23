@@ -74,7 +74,7 @@ func (ns *NotificationService) SendMessage() {
 		TemplateName: ns.Tpl.Name,
 		Revision:     ns.Tpl.RepoRevision,
 		EnvName:      ns.Env.Name,
-		//http://10.0.2.135/org/org-c3vm0ljn6m8705n103ug/project/p-c3vm7tbn6m80l6s918m0/m-project-env/detail/env-c4adojrn6m83bocqu9h0/deployHistory/task/run-c4adojrn6m83bocqu9hg
+		//http://{{addr}}/org/{{orgId}}/project/{{ProjectId}}/m-project-env/detail/{{envId}}/deployHistory/task/{{TaskId}}
 		Addr:         fmt.Sprintf("%s/org/%s/project/%s/m-project-env/detail/%s/deployHistory/task/%s", configs.Get().Portal.Address, ns.Org.Id, ns.ProjectId, ns.Env.Id, ns.Task.Id),
 		ResAdded:     ns.Task.Result.ResAdded,
 		ResChanged:   ns.Task.Result.ResChanged,
@@ -85,9 +85,13 @@ func (ns *NotificationService) SendMessage() {
 	// 获取消息通知模板
 	markdownNotificationTemplate = utils.SprintTemplate(markdownNotificationTemplate, data)
 	tplNotificationTemplate = utils.SprintTemplate(tplNotificationTemplate, data)
-
+	users := make([]string, 0)
 	// 判断消息类型，下发至的消息通道
 	for _, notification := range notifications {
+		if notification.Type == models.NotificationTypeEmail {
+			users = append(users, notification.UserIds...)
+			continue
+		}
 		go func(notification models.Notification) {
 			switch notification.Type {
 			case models.NotificationTypeDingTalk:
@@ -98,11 +102,12 @@ func (ns *NotificationService) SendMessage() {
 				ns.SendWechatMessage(notification, markdownNotificationTemplate)
 			case models.NotificationTypeSlack:
 				ns.SendSlackMessage(notification, markdownNotificationTemplate)
-			case models.NotificationTypeEmail:
-				ns.SendEmailMessage(notification, tplNotificationTemplate)
 			}
 		}(notification)
 		time.Sleep(time.Second)
+	}
+	if len(users) > 0 {
+		ns.SendEmailMessage(users, tplNotificationTemplate)
 	}
 
 }
@@ -136,18 +141,21 @@ func (ns *NotificationService) SendSlackMessage(n models.Notification, message s
 
 }
 
-func (ns *NotificationService) SendEmailMessage(n models.Notification, message string) {
+func (ns *NotificationService) SendEmailMessage(userId []string, message string) {
 	// 获取用户邮箱列表
 	users := make([]models.User, 0)
-	_ = db.Get().Where("id in (?)", n.UserIds).Find(users)
+	_ = db.Get().Where("id in (?)", userId).Find(users)
 
 	emails := make([]string, 0)
 	for _, v := range users {
 		emails = append(emails, v.Email)
 	}
 	emails = utils.RemoveDuplicateElement(emails)
+	if len(emails) < 1 {
+		return
+	}
 	if err := mail.SendMail(emails, consts.NotificationMessageTitle, message); err != nil {
-
+		logs.Get().Errorf("send mail message err: %v", err)
 	}
 }
 
@@ -165,33 +173,26 @@ func (ns *NotificationService) FindNotificationsAndMessageTpl() ([]models.Notifi
 	)
 
 	switch ns.EventType {
-	case models.NotificationEventRunning:
+	case models.EventTaskRunning:
 		tplNotificationTemplate = consts.IacTaskRunning
 		markdownNotificationTemplate = consts.IacTaskRunningMarkdown
-	case models.NotificationEventApproving:
+	case models.EventTaskApproving:
 		tplNotificationTemplate = consts.IacTaskApprovingTpl
 		markdownNotificationTemplate = consts.IacTaskApprovingMarkdown
-	case models.NotificationEventFailed:
+	case models.EventTaskFailed:
 		tplNotificationTemplate = consts.IacTaskFailedTpl
 		markdownNotificationTemplate = consts.IacTaskFailedMarkdown
-	case models.NotificationEventComplete:
+	case models.EventTaskComplete:
 		tplNotificationTemplate = consts.IacTaskCompleteTpl
 		markdownNotificationTemplate = consts.IacTaskCompleteMarkdown
 	}
 
 	// 查询需要组织下需要通知的人
 	if err := dbSess.
-		Where("project_id = '' or project_id = null").
+		Where("project_id = '' or project_id = null or project_id = ?", ns.ProjectId).
 		Find(&orgNotification); err != nil {
 		return notifications, tplNotificationTemplate, markdownNotificationTemplate
 	}
-	// 查询需要项目下需要通知的人
-	if err := dbSess.
-		Where("project_id = ?", ns.ProjectId).
-		Find(&projectNotification); err != nil {
-		return notifications, tplNotificationTemplate, markdownNotificationTemplate
-	}
-
 	// 将需要通知的数据进行整理
 	notifications = append(notifications, orgNotification...)
 	notifications = append(notifications, projectNotification...)

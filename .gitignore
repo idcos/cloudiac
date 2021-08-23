@@ -19,3 +19,4 @@ plugin-cache/
 /run/
 /site/
 /build/
+*_debug_test.go

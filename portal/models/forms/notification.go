@@ -39,3 +39,9 @@ type DeleteNotificationForm struct {
 	PageForm
 	Id models.Id `uri:"id" form:"id" json:"id" binding:"required"`
 }
+
+type DetailNotificationForm struct {
+	BaseForm
+
+	Id models.Id `uri:"id" json:"id" swaggerignore:"true"`
+}

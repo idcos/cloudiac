@@ -20,8 +20,8 @@ func SearchNotification(c *ctx.ServiceContext) (interface{}, e.Error) {
 }
 
 func DeleteNotification(c *ctx.ServiceContext, id models.Id) (result interface{}, err e.Error) {
-	c.AddLogField("action", fmt.Sprintf("Delete org notification id: %s", id))
-	err = services.DeleteOrganizationCfg(c.DB(), id, c.OrgId)
+	c.AddLogField("action", fmt.Sprintf("Delete notification id: %s", id))
+	err = services.DeleteNotification(c.DB(), id, c.OrgId)
 	if err != nil {
 		return nil, err
 	}
@@ -83,11 +83,6 @@ func UpdateNotification(c *ctx.ServiceContext, form *forms.UpdateNotificationFor
 		})
 	}
 
-	if err := services.CreateNotificationEvent(tx, events); err != nil {
-		_ = tx.Rollback()
-		return nil, e.New(e.DBError, err)
-	}
-
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
 		return nil, e.New(e.DBError, err)
@@ -115,24 +110,11 @@ func CreateNotification(c *ctx.ServiceContext, form *forms.CreateNotificationFor
 		Secret:    form.Secret,
 		Url:       form.Url,
 		UserIds:   form.UserIds,
-	})
+	}, form.EventType)
 
 	if err != nil {
 		_ = tx.Rollback()
 		return nil, err
-	}
-
-	events := make([]models.NotificationEvent, len(form.EventType))
-	for _, v := range form.EventType {
-		events = append(events, models.NotificationEvent{
-			NotificationId: notification.Id,
-			EventType:      v,
-		})
-	}
-
-	if err := services.CreateNotificationEvent(tx, events); err != nil {
-		_ = tx.Rollback()
-		return nil, e.New(e.DBError, err)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -141,4 +123,8 @@ func CreateNotification(c *ctx.ServiceContext, form *forms.CreateNotificationFor
 	}
 
 	return notification, nil
+}
+
+func DetailNotification(c *ctx.ServiceContext, form *forms.DetailNotificationForm) (interface{}, e.Error) {
+	return services.DetailNotification(c.DB(), form.Id)
 }

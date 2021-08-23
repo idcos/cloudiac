@@ -41,14 +41,12 @@ func (robot *DingTalkRobot) SendMessage(msg interface{}) error {
 	}
 
 	value := url.Values{}
-	fmt.Println(utils.GetUrlParams(robot.url).Get("access_token"), "utils.GetUrlParams(robot.url).Get(\"access_token\")")
 	value.Set("access_token", utils.GetUrlParams(robot.url).Get("access_token"))
 	if robot.secret != "" {
 		t := time.Now().UnixNano() / 1e6
 		value.Set("timestamp", fmt.Sprintf("%d", t))
 		value.Set("sign", sign(t, robot.secret))
 	}
-	fmt.Println(robot.url)
 	request, err := http.NewRequest(http.MethodPost, robot.url, body)
 	if err != nil {
 		return fmt.Errorf("error request: %v", err.Error())
