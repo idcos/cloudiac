@@ -57,6 +57,8 @@ const (
 
 	LocalGitReposPath = "repos"  // 内置 http git server 服务目录
 	ReposUrlPrefix    = "/repos" // 内置 http git server url prefix
+
+	NotificationMessageTitle = "CloudIaC平台系统通知"
 )
 
 const (
@@ -95,5 +97,13 @@ var (
 		"running":  "运行中",
 		"timeout":  "超时",
 		"pending":  "排队中",
+	}
+
+	TaskStatusToEventType = map[string]string{
+		"complete":  "complete",
+		"failed":    "failed",
+		"running":   "running",
+		"approving": "approving",
+		"rejected":  "failed",
 	}
 )

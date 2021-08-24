@@ -36,15 +36,15 @@ func (Notification) Search(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Produce json
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param form formData forms.CreateNotificationCfgForm true "parameter"
+// @Param form formData forms.CreateNotificationForm true "parameter"
 // @Router /notifications [post]
-// @Success 200 {object} ctx.JSONResult{result=models.NotificationCfg}
+// @Success 200 {object} ctx.JSONResult{result=models.Notification}
 func (Notification) Create(c *ctx.GinRequest) {
-	form := &forms.CreateNotificationCfgForm{}
+	form := &forms.CreateNotificationForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CreateNotificationCfg(c.Service(), form))
+	c.JSONResult(apps.CreateNotification(c.Service(), form))
 }
 
 // Delete 删除通知信息
@@ -56,15 +56,15 @@ func (Notification) Create(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param id path string true "通知id"
-// @Param data body forms.DeleteNotificationCfgForm true "DeleteTokenForm信息"
+// @Param data body forms.DeleteNotificationForm true "DeleteTokenForm信息"
 // @Success 200
 // @Router /notifications/{id} [delete]
 func (Notification) Delete(c *ctx.GinRequest) {
-	form := &forms.DeleteNotificationCfgForm{}
+	form := &forms.DeleteNotificationForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DeleteNotificationCfg(c.Service(), form.Id))
+	c.JSONResult(apps.DeleteNotification(c.Service(), form.Id))
 }
 
 // Update 修改通知信息
@@ -76,13 +76,31 @@ func (Notification) Delete(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param id path string true "通知id"
-// @Param data body forms.UpdateNotificationCfgForm true "ApiToken信息"
+// @Param data body forms.UpdateNotificationForm true "ApiToken信息"
 // @Success 200
 // @Router /notifications/{id} [put]
 func (Notification) Update(c *ctx.GinRequest) {
-	form := &forms.UpdateNotificationCfgForm{}
+	form := &forms.UpdateNotificationForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.UpdateNotificationCfg(c.Service(), form))
+	c.JSONResult(apps.UpdateNotification(c.Service(), form))
+}
+
+// Detail 查询通知详情
+// @Summary 查询通知详情
+// @Description 查询通知详情
+// @Tags 通知
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
+// @Success 200 {object} ctx.JSONResult{result=models.Notification}
+// @Router /notifications/{notificationId}  [get]
+func (Notification) Detail(c *ctx.GinRequest) {
+	form := &forms.DetailNotificationForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.DetailNotification(c.Service(), form))
 }
