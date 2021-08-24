@@ -125,7 +125,7 @@ func GenScriptContent(context *ReqBody, saveTo string) error {
 	}
 	if err := commandTpl.Execute(saveFp, map[string]string{
 		"VarFile": context.Varfile,
-		// 存储terraform state list输出内容弄的文件路径
+		// 存储terraform state list输出内容的文件路径
 		"ContainerStateListPath": containerStateListPath,
 		"AnsibleWorkdir":         ansibleWorkdir,
 		"AnsiblePlaybook":        playbookName,
