@@ -164,6 +164,10 @@ func (t *Task) StateJsonPath() string {
 	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TFStateJsonFile)
 }
 
+func (t *Task) ProviderSchemaJsonPath() string {
+	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TFProviderSchema)
+}
+
 func (t *Task) PlanJsonPath() string {
 	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TFPlanJsonFile)
 }

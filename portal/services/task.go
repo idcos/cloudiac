@@ -9,11 +9,13 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/services/logstorage"
 	"cloudiac/portal/services/vcsrv"
+	"cloudiac/runner"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/aliyun/aliyun-tablestore-go-sdk/timeline/writer"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 	"io"
@@ -348,10 +350,20 @@ func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 	return rs
 }
 
-func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues) error {
+func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, read func(path string) ([]byte, error)) error {
+	ps, err := read(task.StateJsonPath())
+	proMap := runner.ProviderSensitiveAttrMap{}
+	if err != nil {
+		return fmt.Errorf("read provider schema json: %v", err)
+	}
+	if len(ps) > 0 {
+		if err = json.Unmarshal(ps, &proMap); err != nil {
+			return err
+		}
+	}
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Resource{}.TableName(),
 		"id", "org_id", "project_id", "env_id", "task_id",
-		"provider", "module", "address", "type", "name", "index", "attrs")
+		"provider", "module", "address", "type", "name", "index", "attrs", "sensitive_keys")
 
 	rs := make([]*models.Resource, 0)
 	rs = append(rs, traverseStateModule(&values.RootModule)...)
@@ -360,8 +372,15 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues) 
 	}
 
 	for _, r := range rs {
+		if len(proMap) > 0 {
+			providerKey := strings.Join([]string{r.Provider, r.Type}, "-")
+			// 通过provider-type 拼接查找敏感词是否在proMap中
+			if _, ok := proMap[providerKey]; ok {
+				r.SensitiveKeys = proMap[providerKey]
+			}
+		}
 		err := bq.AddRow(models.NewId("r"), task.OrgId, task.ProjectId, task.EnvId, task.Id,
-			r.Provider, r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs)
+			r.Provider, r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys)
 		if err != nil {
 			return err
 		}

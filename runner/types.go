@@ -57,9 +57,10 @@ type TaskStatusMessage struct {
 	Exited   bool `json:"exited"`
 	ExitCode int  `json:"status_code"`
 
-	LogContent  []byte `json:"logContent"`
-	TfStateJson []byte `json:"tfStateJson"`
-	TfPlanJson  []byte `json:"tfPlanJson"`
+	LogContent           []byte `json:"logContent"`
+	TfStateJson          []byte `json:"tfStateJson"`
+	TfPlanJson           []byte `json:"tfPlanJson"`
+	TFProviderSchemaJson []byte `json:"tfProviderSchemaJson"`
 }
 
 type ErrorMessage struct {

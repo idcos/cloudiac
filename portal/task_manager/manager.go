@@ -390,10 +390,11 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			return fmt.Errorf("read state json: %v", err)
 		} else if len(bs) > 0 {
 			tfState, err := services.UnmarshalStateJson(bs)
+
 			if err != nil {
 				return fmt.Errorf("unmarshal state json: %v", err)
 			}
-			if err = services.SaveTaskResources(dbSess, task, tfState.Values); err != nil {
+			if err = services.SaveTaskResources(dbSess, task, tfState.Values, read); err != nil {
 				return fmt.Errorf("save task resources: %v", err)
 			}
 			if err = services.SaveTaskOutputs(dbSess, task, tfState.Values.Outputs); err != nil {
