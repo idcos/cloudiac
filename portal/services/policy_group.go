@@ -15,3 +15,14 @@ func CreatePolicyGroup(tx *db.Session, group *models.PolicyGroup) (*models.Polic
 	}
 	return group, nil
 }
+
+func GetPolicyGroupById(tx *db.Session, id models.Id) (*models.PolicyGroup, e.Error) {
+	group := models.PolicyGroup{}
+	if err := tx.Model(models.PolicyGroup{}).Where("id = ?", id).First(&group); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.PolicyGroupNotExist, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &group, nil
+}

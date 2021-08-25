@@ -45,4 +45,5 @@ const (
 	PoliciesDir         = "policies"
 	TerrascanJsonFile   = "_tfscan.json"
 	TerrascanResultFile = "_tfresult.json"
+	TerrascanLogFile    = "_tsscan.log"
 )

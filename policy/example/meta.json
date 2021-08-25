@@ -1,0 +1,11 @@
+{
+  "category": "实例安全",
+  "file": "policy.rego",
+  "id": "po-c4ec520smpvc0c2qsq2g",
+  "name": "instanceWithNoVpc",
+  "policy_type": "alicloud",
+  "reference_id": "iac_compliance_public_102",
+  "resource_type": "alicloud_instance",
+  "severity": "medium",
+  "version": 1
+}

@@ -9,6 +9,7 @@ type Policy struct {
 	CreatorId Id `json:"creatorId" gorm:"size:32;not null;创建人" example:"u-c3lcrjxczjdywmk0go90"`
 
 	Name          string `json:"description" gorm:"type:text;comment:名称" example:"ECS分配公网IP"`
+	Entry         string `json:"entry" gorm:"comment:rego入口" example:"instanceNoVpc"`
 	ReferenceId   string `json:"referenceId" gorm:"not null;size:128;comment:策略ID" example:"iac_aliyun_public_26"`
 	Revision      int    `json:"revision" gorm:"default:1;comment:版本" example:"1"`
 	Enabled       bool   `json:"enabled" gorm:"default:true;comment:是否全局启用" example:"true"`
@@ -17,7 +18,7 @@ type Policy struct {
 
 	PolicyType   string `json:"policyType" gorm:"comment:云商类型" example:"alicloud"`
 	ResourceType string `json:"resourceType" gorm:"comment:资源类型" example:"alicloud_instance"`
-	Category     string `json:"category" gorm:"default:cloudiac;comment:分类" example:"cloudiac"`
+	Tags         string `json:"tags" gorm:"comment:标签" example:"security,aliyun"`
 
 	Rego string `json:"rego" gorm:"type:text;comment:rego脚本" example:"package idcos ..."`
 }

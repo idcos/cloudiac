@@ -65,6 +65,19 @@ func Register(g *gin.RouterGroup) {
 	// 系统状态
 	g.GET("/systems/status", w(handlers.PortalSystemStatusSearch))
 
+	// 策略管理
+	ctrl.Register(g.Group("policies", ac()), &handlers.Policy{})
+	g.GET("/policies/templates", ac(), w(handlers.Policy{}.Create))     // 云模板列表，带策略组信息及状态
+	g.PUT("/policies/templates", ac(), w(handlers.Policy{}.Create))     // 关联云模板与策略组（创建/删除？）
+	g.GET("/policies/templates/:id", ac(), w(handlers.Policy{}.Create)) // 云模板策略列表
+	g.GET("/policies/envs", ac(), w(handlers.Policy{}.Create))
+	g.PUT("/policies/envs", ac(), w(handlers.Policy{}.Create)) // 关联环境与策略组（创建/删除？）
+	g.GET("/policies/envs/:id", ac(), w(handlers.Policy{}.Create))
+	ctrl.Register(g.Group("policies/groups", ac()), &handlers.PolicyGroup{})
+	g.GET("/policies/result", ac(), w(handlers.Policy{}.Create))         // 扫描结果
+	g.GET("/policies/result/summary", ac(), w(handlers.Policy{}.Create)) // 统计报告
+	ctrl.Register(g.Group("policies/rels", ac()), &handlers.PolicyRel{})
+
 	// 要求组织 header
 	g.Use(w(middleware.AuthOrgId))
 
@@ -101,18 +114,6 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/vcs/:id/repos/tfvars", ac(), w(handlers.TemplateTfvarsSearch))
 	g.GET("/vcs/:id/repos/playbook", ac(), w(handlers.TemplatePlaybookSearch))
 	ctrl.Register(g.Group("notifications", ac()), &handlers.Notification{})
-
-	// 策略管理
-	ctrl.Register(g.Group("policies", ac()), &handlers.Policy{})
-	g.GET("/policies/templates", ac(), w(handlers.Policy{}.Create))     // 云模板列表，带策略组信息及状态
-	g.PUT("/policies/templates", ac(), w(handlers.Policy{}.Create))     // 关联云模板与策略组（创建/删除？）
-	g.GET("/policies/templates/:id", ac(), w(handlers.Policy{}.Create)) // 云模板策略列表
-	g.GET("/policies/envs", ac(), w(handlers.Policy{}.Create))
-	g.PUT("/policies/envs", ac(), w(handlers.Policy{}.Create)) // 关联环境与策略组（创建/删除？）
-	g.GET("/policies/envs/:id", ac(), w(handlers.Policy{}.Create))
-	ctrl.Register(g.Group("policies/groups", ac()), &handlers.PolicyGroup{})
-	g.GET("/policies/result", ac(), w(handlers.Policy{}.Create))         // 扫描结果
-	g.GET("/policies/result/summary", ac(), w(handlers.Policy{}.Create)) // 统计报告
 
 	// 项目资源
 	g.Use(w(middleware.AuthProjectId))

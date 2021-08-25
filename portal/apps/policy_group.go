@@ -23,7 +23,6 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 	}()
 
 	g := models.PolicyGroup{
-		OrgId:       c.OrgId,
 		Name:        form.Name,
 		Description: form.Description,
 	}

@@ -32,13 +32,10 @@ func batchUpdatePolicyResultStatus(tx *db.Session, policyResultIds []models.Id, 
 	}
 }
 
-func initScanResult(tx *db.Session, task models.Task) e.Error {
+func InitScanResult(tx *db.Session, task models.Task) e.Error {
 	// 1. 扫描类型：
 	//      1. 环境
 	//      2. 云模板
-	//      3. 单条策略
-	//      4. 策略组
-
 	var (
 		policies      []models.Policy
 		err           e.Error
@@ -56,8 +53,6 @@ func initScanResult(tx *db.Session, task models.Task) e.Error {
 		} else {
 			policies, err = GetPoliciesByTemplateId(tx, env.TplId)
 		}
-	case "policy": // TODO
-	case "policyGroup": // TODO
 	default:
 		return e.New(e.InternalError, fmt.Errorf("not support scan type"))
 	}
@@ -65,18 +60,6 @@ func initScanResult(tx *db.Session, task models.Task) e.Error {
 		return err
 	}
 
-	// FIXME
-	policyIds, err := GetValidTaskPolicyIds(tx, task.Id)
-	if err != nil {
-		return err
-	}
-	for _, policyId := range policyIds {
-		policy, err := GetPolicyById(tx, policyId)
-		if err != nil {
-			return err
-		}
-		policies = append(policies, *policy)
-	}
 	// 批量创建
 	for _, policy := range policies {
 		policyResults = append(policyResults, &models.PolicyResult{
@@ -101,8 +84,8 @@ func initScanResult(tx *db.Session, task models.Task) e.Error {
 	return nil
 }
 
-// updateScanResult 根据 terrascan 扫描结果批量更新
-func updateScanResult(tx *db.Session, task models.Task, result TsResult) e.Error {
+// UpdateScanResult 根据 terrascan 扫描结果批量更新
+func UpdateScanResult(tx *db.Session, task models.Task, result TsResult) e.Error {
 	var (
 		policyResults []*models.PolicyResult
 	)

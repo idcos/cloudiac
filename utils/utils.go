@@ -23,10 +23,12 @@ import (
 	"math/rand"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime/debug"
 	"sort"
 	"strings"
+	"syscall"
 	"text/template"
 	"time"
 
@@ -531,4 +533,22 @@ func SetGinMode() {
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
+}
+
+// CmdGetCode gets the exit code from the returned command of (*exec.Cmd).Wait()
+//
+// If no error is present, returns 0, nil
+// If an exit code is present, returns code, nil
+// If no exit code is present, returns -1, original error
+func CmdGetCode(e error) (int, error) {
+	if e != nil {
+		if exitError, ok := e.(*exec.ExitError); ok {
+			exitCode := exitError.Sys().(syscall.WaitStatus).ExitStatus()
+			return exitCode, nil
+		} else {
+			return -1, e
+		}
+	}
+
+	return 0, nil
 }

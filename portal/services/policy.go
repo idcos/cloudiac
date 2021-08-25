@@ -67,6 +67,11 @@ func GetTaskPolicies(query *db.Session, taskId models.Id) ([]runner.TaskPolicy, 
 		if err != nil {
 			return nil, err
 		}
+		category := "general"
+		group, _ := GetPolicyGroupById(query, policy.GroupId)
+		if group != nil {
+			category = group.Name
+		}
 		meta := map[string]interface{}{
 			"name":          policy.Name,
 			"file":          "policy.rego",
@@ -74,7 +79,7 @@ func GetTaskPolicies(query *db.Session, taskId models.Id) ([]runner.TaskPolicy, 
 			"resource_type": policy.ResourceType,
 			"severity":      strings.ToUpper(policy.Severity),
 			"reference_id":  policy.ReferenceId,
-			"category":      policy.Category,
+			"category":      category,
 			"version":       policy.Revision,
 			"id":            string(policy.Id),
 		}
@@ -89,7 +94,7 @@ func GetTaskPolicies(query *db.Session, taskId models.Id) ([]runner.TaskPolicy, 
 
 // GetValidTaskPolicyIds 获取策略关联的策略ID列表
 func GetValidTaskPolicyIds(query *db.Session, taskId models.Id) ([]models.Id, e.Error) {
-	// TODO: 处理策略关联
+	// TODO: 处理策略关联及已经屏蔽策略
 	var policyIds []models.Id
 	if err := query.Model(models.Policy{}).Pluck("id", &policyIds); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
@@ -97,26 +102,31 @@ func GetValidTaskPolicyIds(query *db.Session, taskId models.Id) ([]models.Id, e.
 	return policyIds, nil
 }
 
-func GetPolicyGroupsByEnvId(query *db.Session, envId models.Id) ([]models.PolicyGroup, error) {
-	return nil, nil
-}
-
-func GetPoliciesByGroupIds(query *db.Session, groupId ...models.Id) ([]models.Policy, error) {
-	return nil, nil
-}
-
 func GetPoliciesByEnvId(query *db.Session, envId models.Id) ([]models.Policy, e.Error) {
-	return nil, nil
+	subQuery := query.Table(models.PolicyRel{}.TableName()).Select("group_id").Where("env_id = ?", envId)
+	var policies []models.Policy
+	query = query.Debug()
+	if err := query.Model(models.Policy{}).Where("group_id in (?)", subQuery.Expr()).Find(&policies); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.PolicyNotExist, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+
+	// TODO: 处理策略屏蔽策略关系
+	return policies, nil
 }
 
-func GetPoliciesByTemplateId(query *db.Session, envId models.Id) ([]models.Policy, e.Error) {
-	return nil, nil
-}
+func GetPoliciesByTemplateId(query *db.Session, tplId models.Id) ([]models.Policy, e.Error) {
+	subQuery := query.Table(models.PolicyRel{}.TableName()).Select("group_id").Where("tpl_id = ?", tplId)
+	var policies []models.Policy
+	if err := query.Model(models.Policy{}).Where("group_id in (?)", subQuery.Expr()).Find(&policies); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.PolicyNotExist, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
 
-func BindPolicyGroupWithEnv(tx *db.Session, groupIds []models.Id, envId models.Id) e.Error {
-	return nil
-}
-
-func BindPolicyGroupWithTemplate(tx *db.Session, groupIds []models.Id, tplId models.Id) e.Error {
-	return nil
+	// TODO: 处理策略屏蔽策略关系
+	return policies, nil
 }

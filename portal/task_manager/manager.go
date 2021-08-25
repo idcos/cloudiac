@@ -441,13 +441,17 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			bs           []byte
 			err          error
 		)
-		if bs, err = read(task.TfResultJsonPath()); err == nil && len(bs) > 0 {
-			if tfResultJson, err = services.UnmarshalTfResultJson(bs); err == nil {
-				if err := services.SaveTfScanResult(dbSess, task, tfResultJson.Results); err != nil {
-					return fmt.Errorf("save scan result: %v", err)
+
+		if task.Status != common.TaskFailed {
+			if bs, err = read(task.TfResultJsonPath()); err == nil && len(bs) > 0 {
+				if tfResultJson, err = services.UnmarshalTfResultJson(bs); err == nil {
+					if err := services.SaveTfScanResult(dbSess, task, tfResultJson.Results); err != nil {
+						return fmt.Errorf("save scan result: %v", err)
+					}
 				}
 			}
 		}
+
 		// 扫描出错的时候更新所有策略扫描结果为 failed
 		emptyResult := services.TsResultJson{}
 		if err := services.SaveTfScanResult(dbSess, task, emptyResult.Results); err != nil {

@@ -88,7 +88,7 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		}
 	}
 
-	task.RepoAddr, task.CommitId, err = getTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
+	task.RepoAddr, task.CommitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
 	if err != nil {
 		return nil, e.New(e.InternalError, err)
 	}
@@ -151,7 +151,7 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		}
 
 		if step.Type == models.TaskStepTfScan {
-			if err := initScanResult(tx, task); err != nil {
+			if err := InitScanResult(tx, task); err != nil {
 				return nil, e.New(err.Code(), errors.Wrapf(err, "init scan result"))
 			}
 		}
@@ -160,10 +160,11 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 	return &task, nil
 }
 
-func getTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision string) (repoAddr, commitId string, err error) {
+func GetTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision string) (repoAddr, commitId string, err e.Error) {
 	var (
 		u         *url.URL
 		repoToken = tpl.RepoToken
+		er        error
 	)
 
 	repoAddr = tpl.RepoAddr
@@ -181,21 +182,21 @@ func getTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision s
 			return "", "", e.New(e.DBError, err)
 		}
 
-		repo, err = vcsrv.GetRepo(vcs, tpl.RepoId)
-		if err != nil {
-			return "", "", err
+		repo, er = vcsrv.GetRepo(vcs, tpl.RepoId)
+		if er != nil {
+			return "", "", e.New(e.VcsError, er)
 		}
 
-		commitId, err = repo.BranchCommitId(revision)
-		if err != nil {
-			return "", "", e.New(e.VcsError, err)
+		commitId, er = repo.BranchCommitId(revision)
+		if er != nil {
+			return "", "", e.New(e.VcsError, er)
 		}
 
 		if repoAddr == "" {
 			// 如果模板中没有记录 repoAddr，则动态获取
-			repoAddr, err = vcsrv.GetRepoAddress(repo)
-			if err != nil {
-				return "", "", e.New(e.VcsError, err)
+			repoAddr, er = vcsrv.GetRepoAddress(repo)
+			if er != nil {
+				return "", "", e.New(e.VcsError, er)
 			}
 		} else if !strings.Contains(repoAddr, "://") {
 			// 如果 addr 不是完整路径则添加上 vcs 的 address(这样可以允许保存相对路径到 repoAddr)
@@ -211,9 +212,9 @@ func getTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision s
 		return "", "", e.New(e.BadParam, fmt.Errorf("repo address is blank"))
 	}
 
-	u, err = url.Parse(repoAddr)
-	if err != nil {
-		return "", "", e.New(e.InternalError, errors.Wrapf(err, "parse url: %v", repoAddr))
+	u, er = url.Parse(repoAddr)
+	if er != nil {
+		return "", "", e.New(e.InternalError, errors.Wrapf(er, "parse url: %v", repoAddr))
 	} else if repoToken != "" {
 		u.User = url.UserPassword("token", repoToken)
 	}
