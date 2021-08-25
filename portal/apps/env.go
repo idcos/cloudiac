@@ -656,5 +656,18 @@ func ResourceDetail(c *ctx.ServiceContext, form *forms.ResourceDetailForm) (*mod
 		c.Logger().Errorf("Environment ID and resource ID do not match")
 		return nil, e.New(e.DBError, err, http.StatusForbidden)
 	}
-	return &resource.Attrs, nil
+	resultAttrs := resource.Attrs
+	if len(resource.SensitiveKeys) > 0 {
+		set := map[string]interface{}{}
+		for _, value := range resource.SensitiveKeys {
+			set[value] = nil
+		}
+		for k, _ := range resultAttrs {
+			// 如果state 中value 存在与sensitive 设置，展示时不展示详情
+			if _, ok := set[k]; ok {
+				resultAttrs[k] = "(sensitive value)"
+			}
+		}
+	}
+	return &resultAttrs, nil
 }
