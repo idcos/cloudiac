@@ -15,7 +15,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/aliyun/aliyun-tablestore-go-sdk/timeline/writer"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 	"io"
