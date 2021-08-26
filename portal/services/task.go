@@ -350,7 +350,7 @@ func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 }
 
 func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, read func(path string) ([]byte, error)) error {
-	ps, err := read(task.StateJsonPath())
+	ps, err := read(task.ProviderSchemaJsonPath())
 	proMap := runner.ProviderSensitiveAttrMap{}
 	if err != nil {
 		return fmt.Errorf("read provider schema json: %v", err)
