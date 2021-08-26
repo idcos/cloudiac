@@ -349,17 +349,8 @@ func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 	return rs
 }
 
-func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, read func(path string) ([]byte, error)) error {
-	ps, err := read(task.ProviderSchemaJsonPath())
-	proMap := runner.ProviderSensitiveAttrMap{}
-	if err != nil {
-		return fmt.Errorf("read provider schema json: %v", err)
-	}
-	if len(ps) > 0 {
-		if err = json.Unmarshal(ps, &proMap); err != nil {
-			return err
-		}
-	}
+func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, proMap runner.ProviderSensitiveAttrMap) error {
+
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Resource{}.TableName(),
 		"id", "org_id", "project_id", "env_id", "task_id",
 		"provider", "module", "address", "type", "name", "index", "attrs", "sensitive_keys")
