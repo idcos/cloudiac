@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services/logstorage"
+	"cloudiac/portal/services/notificationrc"
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
@@ -284,6 +285,8 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 	if _, err := dbSess.Model(task).Update(task); err != nil {
 		return e.AutoNew(err, e.DBError)
 	}
+
+	TaskStatusChangeSendMessage(task, status)
 
 	step, er := GetTaskStep(dbSess, task.Id, task.CurrStep)
 	if er != nil {
@@ -729,4 +732,25 @@ func fetchRunnerTaskStepLog(ctx context.Context, runnerId string, step *models.T
 			}
 		}
 	}
+}
+
+func TaskStatusChangeSendMessage(task *models.Task, status string) {
+	logs.Get().Infof("send massage to")
+
+	dbSess := db.Get()
+	env, _ := GetEnv(dbSess, task.EnvId)
+	tpl, _ := GetTemplateById(dbSess, task.TplId)
+	project, _ := GetProjectsById(dbSess, task.ProjectId)
+	org, _ := GetOrganizationById(dbSess, task.OrgId)
+	ns := notificationrc.NewNotificationService(&notificationrc.NotificationOptions{
+		OrgId:     task.OrgId,
+		ProjectId: task.ProjectId,
+		Tpl:       tpl,
+		Project:   project,
+		Org:       org,
+		Env:       env,
+		Task:      task,
+		EventType: consts.TaskStatusToEventType[status],
+	})
+	ns.SendMessage()
 }

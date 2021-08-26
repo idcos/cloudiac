@@ -88,10 +88,10 @@ func QueryTplByProjectId(tx *db.Session, projectId models.Id) (tplIds []models.I
 	return
 }
 
-func QuertProjectByTplId(tx *db.Session, tplId models.Id) (project_ids []models.Id, err e.Error) {
+func QueryProjectByTplId(tx *db.Session, tplId models.Id) (projectIds []models.Id, err e.Error) {
 	if err := tx.Table(models.ProjectTemplate{}.TableName()).
 		Where("template_id = ?", tplId).
-		Pluck("project_id", &project_ids); err != nil {
+		Pluck("project_id", &projectIds); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 	return

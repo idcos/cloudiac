@@ -11,23 +11,37 @@ type CfgInfo struct {
 	UserName     string    `form:"userName" json:"userName"`
 }
 
-type UpdateNotificationCfgForm struct {
+type UpdateNotificationForm struct {
 	PageForm
-	Id               models.Id `uri:"id" form:"notificationId" json:"notificationId" binding:"required"`
-	NotificationType string    `form:"notificationType" json:"notificationType" binding:"required"`
-	EventType        string    `form:"eventType" json:"eventType" binding:"required"`
-	CfgInfo          CfgInfo   `form:"cfgInfo" json:"cfgInfo"`
+	Id      models.Id `uri:"id" form:"notificationId" json:"notificationId" binding:"required"`
+	Name    string    `json:"name" form:"name" `
+	Type    string    `form:"type" json:"type" binding:"required"`
+	Secret  string    `json:"secret" form:"secret"`
+	Url     string    `json:"url" form:"url"`
+	UserIds []string  `form:"userIds" json:"userIds"`
+	//EventType        string      `form:"eventType" json:"eventType" binding:"required"`
+
+	EventType []string `form:"eventType" json:"eventType" binding:"required"` //enum('failed', 'complete', 'approving', 'running')
 }
 
-type CreateNotificationCfgForm struct {
+type CreateNotificationForm struct {
 	PageForm
-	NotificationType string      `form:"notificationType" json:"notificationType" binding:"required"`
-	EventType        string      `form:"eventType" json:"eventType" binding:"required"`
-	UserIds          []models.Id `form:"userIds" json:"userIds"`
-	CfgInfo          CfgInfo     `form:"cfgInfo" json:"cfgInfo"`
+	Name      string   `json:"name" form:"name" `
+	Type      string   `form:"notificationType" json:"notificationType" binding:"required"`
+	Secret    string   `json:"secret" form:"secret"`
+	Url       string   `json:"url" form:"url"`
+	UserIds   []string `form:"userIds" json:"userIds"`
+	EventType []string `form:"eventType" json:"eventType" binding:"required"` //enum('failed', 'complete', 'approving', 'running')
+
 }
 
-type DeleteNotificationCfgForm struct {
+type DeleteNotificationForm struct {
 	PageForm
 	Id models.Id `uri:"id" form:"id" json:"id" binding:"required"`
+}
+
+type DetailNotificationForm struct {
+	BaseForm
+
+	Id models.Id `uri:"id" json:"id" swaggerignore:"true"`
 }
