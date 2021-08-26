@@ -249,3 +249,23 @@ func (Env) LastTask(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.LastTask(c.Service(), form))
 }
+
+// ResourceDetail 资源部署成功后信息详情
+// @Tags 环境
+// @Summary 环境部署资源信息详情
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param envId path string true "环境ID"
+// @Param resourceId path string true "资源ID"
+// @route /envs/{envId}/resource/{resourceId} [get]
+// @Success 200 {object} ctx.JSONResult{result=models.ResAttrs}
+func (Env) ResourceDetail(c *ctx.GinRequest) {
+	form := &forms.ResourceDetailForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.ResourceDetail(c.Service(), form))
+}

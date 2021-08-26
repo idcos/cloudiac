@@ -640,3 +640,34 @@ func EnvVariables(c *ctx.ServiceContext, form forms.SearchEnvVariableForm) (inte
 
 	return task.Variables, nil
 }
+
+// ResourceDetail 查询部署成功后资源的详细信息
+func ResourceDetail(c *ctx.ServiceContext, form *forms.ResourceDetailForm) (*models.ResAttrs, e.Error) {
+	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+
+	resource, err := services.GetResourceById(c.DB(), form.ResourceId)
+	if err != nil {
+		c.Logger().Errorf("error get resource, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+	if resource.EnvId != form.Id || resource.OrgId != c.OrgId || resource.ProjectId != c.ProjectId {
+		c.Logger().Errorf("Environment ID and resource ID do not match")
+		return nil, e.New(e.DBError, err, http.StatusForbidden)
+	}
+	resultAttrs := resource.Attrs
+	if len(resource.SensitiveKeys) > 0 {
+		set := map[string]interface{}{}
+		for _, value := range resource.SensitiveKeys {
+			set[value] = nil
+		}
+		for k, _ := range resultAttrs {
+			// 如果state 中value 存在与sensitive 设置，展示时不展示详情
+			if _, ok := set[k]; ok {
+				resultAttrs[k] = "(sensitive value)"
+			}
+		}
+	}
+	return &resultAttrs, nil
+}

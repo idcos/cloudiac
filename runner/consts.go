@@ -35,8 +35,9 @@ const (
 	CloudIacTfFile   = "_cloudiac.tf"
 	CloudIacPlayVars = "_cloudiac_play_vars.yml"
 
-	TFStateJsonFile = "tfstate.json"
-	TFPlanJsonFile  = "tfplan.json"
+	TFStateJsonFile  = "tfstate.json"
+	TFPlanJsonFile   = "tfplan.json"
+	TFProviderSchema = "tfproviderschema.json"
 
 	AnsibleStateAnalysisName = "terraform.py"
 

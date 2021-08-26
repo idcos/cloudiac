@@ -16,6 +16,7 @@ import (
 	"cloudiac/utils/consul"
 	"cloudiac/utils/logs"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	"os"
@@ -390,10 +391,21 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			return fmt.Errorf("read state json: %v", err)
 		} else if len(bs) > 0 {
 			tfState, err := services.UnmarshalStateJson(bs)
+
 			if err != nil {
 				return fmt.Errorf("unmarshal state json: %v", err)
 			}
-			if err = services.SaveTaskResources(dbSess, task, tfState.Values); err != nil {
+			ps, err := read(task.ProviderSchemaJsonPath())
+			proMap := runner.ProviderSensitiveAttrMap{}
+			if err != nil {
+				return fmt.Errorf("read provider schema json: %v", err)
+			}
+			if len(ps) > 0 {
+				if err = json.Unmarshal(ps, &proMap); err != nil {
+					return err
+				}
+			}
+			if err = services.SaveTaskResources(dbSess, task, tfState.Values, proMap); err != nil {
 				return fmt.Errorf("save task resources: %v", err)
 			}
 			if err = services.SaveTaskOutputs(dbSess, task, tfState.Values.Outputs); err != nil {

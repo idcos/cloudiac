@@ -391,12 +391,14 @@ func (t *Task) stepCommand() (command string, err error) {
 // collect command 失败不影响任务状态
 var collectCommandTpl = template.Must(template.New("").Parse(`# state collect command
 cd 'code/{{.Req.Env.Workdir}}' && \
-terraform show -no-color -json >{{.TFStateJsonFilePath}}
+terraform show -no-color -json >{{.TFStateJsonFilePath}} && \
+terraform providers schema -json > {{.TFProviderSchema}}
 `))
 
 func (t *Task) collectCommand() (string, error) {
 	return t.executeTpl(collectCommandTpl, map[string]interface{}{
 		"Req":                 t.req,
 		"TFStateJsonFilePath": t.up2Workspace(TFStateJsonFile),
+		"TFProviderSchema":    t.up2Workspace(TFProviderSchema),
 	})
 }
