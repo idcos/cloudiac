@@ -144,6 +144,9 @@ repos-package:
 providers:
 	bash scripts/generate-providers-mirror.sh
 
+providers-arm64:
+	PLATFORM=linux_arm64 bash scripts/generate-providers-mirror.sh
+
 PROVIDERS_SHA1SUM=$(shell tar -c ./assets/providers | $(CMD_SHA1SUM))
 PROVIDERS_PACKAGE_NAME=cloudiac-providers_$(VERSION)_$(PROVIDERS_SHA1SUM).tar.gz
 providers-package:

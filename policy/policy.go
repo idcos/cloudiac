@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"bufio"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
@@ -95,17 +96,6 @@ func UnmarshalOutputResult(bs []byte) (*OutputResult, error) {
 	js := OutputResult{}
 	err := json.Unmarshal(bs, &js)
 	return &js, err
-}
-
-func (r Resource) TemplateDir() string {
-	if r.codeDir == "" {
-		var err error
-		r.codeDir, err = os.MkdirTemp(r.workingDir, "*")
-		if err != nil {
-			panic(fmt.Sprintf("failed to create template dir, err %v", err))
-		}
-	}
-	return r.codeDir
 }
 
 func (s *Scanner) GetResultPath(res Resource) string {
@@ -240,7 +230,7 @@ func (s *Scanner) Prepare() error {
 
 	// 创建 terrascan 默认策略目录避免网络请求
 	homeDir, _ := homedir.Dir()
-	_ = os.MkdirAll(filepath.Join(homeDir, ".terrascan/pkg/policies/opa/rego"), 0755)
+	_ = os.MkdirAll(filepath.Join(homeDir, ".terrascan/pkg/policies/opa/rego/aws"), 0755)
 
 	return nil
 }
@@ -297,22 +287,79 @@ func (s *Scanner) ScanResource(resource Resource) error {
 		}
 	}
 
-	if s.SaveResult {
-		bs, err := os.ReadFile(s.GetResultPath(resource))
-		if err != nil {
-			return s.handleScanError(&task, err)
-		}
+	bs, err := os.ReadFile(s.GetResultPath(resource))
+	if err != nil {
+		return s.handleScanError(&task, err)
+	}
 
-		if tfResultJson, err := services.UnmarshalTfResultJson(bs); err != nil {
+	var tfResultJson *services.TsResultJson
+	if tfResultJson, err = services.UnmarshalTfResultJson(bs); err != nil {
+		return s.handleScanError(&task, err)
+	}
+
+	if len(tfResultJson.Results.Violations) > 0 {
+		// 附加源码
+		if tfResultJson, err = populateViolateSource(s, resource, &task, tfResultJson); err != nil {
 			return s.handleScanError(&task, err)
-		} else {
-			if err := services.SaveTfScanResult(s.Db, &task, tfResultJson.Results); err != nil {
-				return s.handleScanError(&task, err)
-			}
 		}
 	}
 
+	if s.SaveResult {
+		if err := services.SaveTfScanResult(s.Db, &task, tfResultJson.Results); err != nil {
+			return s.handleScanError(&task, err)
+		}
+
+	}
+
 	return nil
+}
+
+func populateViolateSource(scanner *Scanner, res Resource, task *models.Task, resultJson *services.TsResultJson) (*services.TsResultJson, error) {
+	updated := false
+	for idx, policyResult := range resultJson.Results.Violations {
+		fmt.Printf("violation %+v", policyResult)
+		if policyResult.File == "" {
+			continue
+		}
+
+		srcFile, err := os.Open(filepath.Join(scanner.WorkingDir, res.codeDir, policyResult.File))
+		if err != nil {
+			fmt.Printf("open err %+v", err)
+
+			continue
+		}
+		reader := bufio.NewReader(srcFile)
+		for lineNo := 1; ; lineNo++ {
+			line, err := reader.ReadBytes('\n')
+			if err != nil {
+				break
+			}
+			if lineNo < policyResult.Line {
+				continue
+			} else if lineNo-policyResult.Line >= runner.PopulateSourceLineCount {
+				break
+			}
+
+			resultJson.Results.Violations[idx].Source += string(line)
+			updated = true
+		}
+		fmt.Printf("violation with src %+v", resultJson.Results.Violations[idx])
+		_ = srcFile.Close()
+	}
+	fmt.Printf("updaetd %s", updated)
+
+	if updated {
+		if js, err := json.MarshalIndent(resultJson, "", "  "); err == nil {
+			fmt.Printf("result file %s", scanner.GetResultPath(res))
+			err := os.WriteFile(scanner.GetResultPath(res), js, 0644)
+			if err != nil {
+				fmt.Printf("update result error %+v", err)
+			}
+		}
+
+	}
+
+	return resultJson, nil
 }
 
 func (s *Scanner) handleScanError(task *models.Task, err error) error {
@@ -330,7 +377,7 @@ func (s *Scanner) handleScanError(task *models.Task, err error) error {
 // TODO
 func (s *Scanner) genScanScript(res Resource) string {
 	cmdlineTemplate := `
-cd {{.TemplateDir}} && \
+cd {{.CodeDir}} && \
 mkdir -p ~/.terrascan/pkg/policies/opa/rego && \
 terrascan scan -d . -p {{.PolicyDir}} --show-passed \
 {{if .TfVars}}-var-file={{.TfVars}}{{end}} \
@@ -338,7 +385,7 @@ terrascan scan -d . -p {{.PolicyDir}} --show-passed \
 -o json > {{.TerrascanResultFile}} 2>{{.TerrascanLogFile}}
 `
 	cmdline := utils.SprintTemplate(cmdlineTemplate, map[string]interface{}{
-		"TemplateDir":         s.WorkingDir,
+		"CodeDir":             s.WorkingDir,
 		"TerrascanResultFile": s.GetResultPath(res),
 		"TerrascanLogFile":    s.GetLogPath(),
 		"PolicyDir":           s.PolicyDir,

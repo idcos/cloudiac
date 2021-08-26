@@ -46,4 +46,7 @@ const (
 	TerrascanJsonFile   = "_tfscan.json"
 	TerrascanResultFile = "_tfresult.json"
 	TerrascanLogFile    = "_tsscan.log"
+	RegoResultFile      = "_rego.json"
+
+	PopulateSourceLineCount = 3
 )

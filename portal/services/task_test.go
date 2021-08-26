@@ -258,11 +258,10 @@ var tsresultJson = `
         "line": 7
       }
     ],
-    "count": {
-      "low": 1,
-      "medium": 1,
-      "high": 3,
-      "total": 5
+    "scan_summary": {
+      "low": 0,
+      "medium": 0,
+      "high": 0
     }
   }
 }
@@ -283,11 +282,10 @@ func TestUnmarshalTfResultJson(t *testing.T) {
 			args: args{bs: []byte(tsresultJson)},
 			want: &TsResultJson{
 				Results: TsResult{
-					Count: TsCount{
-						Low:    1,
-						Medium: 1,
-						High:   3,
-						Total:  5,
+					ScanSummary: ScanSummary{
+						Low:    0,
+						Medium: 0,
+						High:   0,
 					},
 					Violations: []Violation{
 						{

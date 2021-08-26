@@ -49,12 +49,10 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		// 以下为需要外部传入的属性
 		Name:            pt.Name,
 		Type:            pt.Type,
-		Flow:            pt.Flow,
 		Targets:         pt.Targets,
 		CreatorId:       pt.CreatorId,
 		RunnerId:        firstVal(pt.RunnerId, env.RunnerId),
 		Variables:       pt.Variables,
-		StepTimeout:     pt.StepTimeout,
 		AutoApprove:     pt.AutoApprove,
 		KeyId:           models.Id(firstVal(string(pt.KeyId), string(env.KeyId))),
 		Extra:           pt.Extra,
@@ -72,10 +70,14 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		Playbook:     env.Playbook,
 		TfVarsFile:   env.TfVarsFile,
 		PlayVarsFile: env.PlayVarsFile,
+		BaseTask: models.BaseTask{
+			Flow:        pt.Flow,
+			StepTimeout: pt.StepTimeout,
 
-		Status:   models.TaskPending,
-		Message:  "",
-		CurrStep: 0,
+			Status:   models.TaskPending,
+			Message:  "",
+			CurrStep: 0,
+		},
 	}
 
 	task.Id = models.NewId("run")
@@ -459,9 +461,28 @@ type TsResultJson struct {
 }
 
 type TsResult struct {
-	PassedRules []Rule      `json:"passed_rules"`
-	Violations  []Violation `json:"violations"`
-	Count       TsCount     `json:"count"`
+	ScanErrors        []ScanError `json:"scan_errors,omitempty"`
+	PassedRules       []Rule      `json:"passed_rules,omitempty"`
+	Violations        []Violation `json:"violations"`
+	SkippedViolations []Violation `json:"skipped_violations"`
+	ScanSummary       ScanSummary `json:"scan_summary"`
+}
+
+type ScanError struct {
+	IacType   string `json:"iac_type"`
+	Directory string `json:"directory"`
+	ErrMsg    string `json:"errMsg"`
+}
+
+type ScanSummary struct {
+	FileFolder        string `json:"file/folder"`
+	IacType           string `json:"iac_type"`
+	ScannedAt         string `json:"scanned_at"`
+	PoliciesValidated int    `json:"policies_validated"`
+	ViolatedPolicies  int    `json:"violated_policies"`
+	Low               int    `json:"low"`
+	Medium            int    `json:"medium"`
+	High              int    `json:"high"`
 }
 
 type Rule struct {
@@ -478,10 +499,14 @@ type Violation struct {
 	RuleId       string `json:"rule_id"`
 	Severity     string `json:"severity"`
 	Category     string `json:"category"`
+	Comment      string `json:"skip_comment,omitempty"`
 	ResourceName string `json:"resource_name"`
 	ResourceType string `json:"resource_type"`
-	File         string `json:"file"`
-	Line         int    `json:"line"`
+	ModuleName   string `json:"module_name,omitempty"`
+	File         string `json:"file,omitempty"`
+	PlanRoot     string `json:"plan_root,omitempty"`
+	Line         int    `json:"line,omitempty"`
+	Source       string `json:"source,omitempty"`
 }
 
 type TsCount struct {

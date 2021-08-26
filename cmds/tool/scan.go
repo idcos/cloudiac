@@ -31,10 +31,12 @@ import (
 //    iac-tool scan -e env-xxxxxx
 // 3. 扫描模板
 //    iac-tool scan -t tpl-xxxxxx
+// 4. 调试 rego 脚本
+//    iac-tool scan --debug xxx.tf xxx.rego
 
 type ScanCmd struct {
-	Debug          bool   `long:"debug" description:"run raw rego script" required:"false"`
-	TemplateDir    string `long:"template-dir" short:"d" description:"local source code directory, default:\"code\"" required:"false"`
+	Debug          bool   `long:"debug" description:"run raw rego script \nuse \"--debug -d code xxx.rego\" or \"--debug xxx.tf xxx.rego\"" required:"false"`
+	CodeDir        string `long:"code-dir" short:"d" description:"local source code directory, default:\"code\"" required:"false"`
 	PolicyDir      string `long:"policy-dir" short:"p" description:"local policy directory, default:\"policies\"" required:"false"`
 	EnvId          string `long:"envId" short:"e" description:"scan environment with envId" required:"false"`
 	TplId          string `long:"tplId" short:"t" description:"scan template with tplId" required:"false"`
@@ -61,8 +63,24 @@ func (c *ScanCmd) hasDB() bool {
 func (c *ScanCmd) Execute(args []string) error {
 
 	if c.Debug {
-		// TODO call opa
-		return fmt.Errorf("not implement")
+		filePath := "."
+		regoFile := ""
+		if c.CodeDir != "" {
+			// iac-tool scan --debug -d code xxx.rego
+			filePath = c.CodeDir
+			if len(args) < 1 {
+				return fmt.Errorf("missing iac file or rego script")
+			}
+			regoFile = args[0]
+		} else {
+			// iac-tool scan --debug xxx.tf xxx.rego
+			if len(args) < 2 {
+				return fmt.Errorf("missing iac file or rego script")
+			}
+			filePath = args[0]
+			regoFile = args[1]
+		}
+		return c.RunDebug(filePath, regoFile)
 	}
 
 	if c.hasDB() {
@@ -90,16 +108,16 @@ func (c *ScanCmd) Execute(args []string) error {
 		}
 	} else {
 		// 执行本地扫描
-		if c.TemplateDir == "" {
-			c.TemplateDir = "code"
+		if c.CodeDir == "" {
+			c.CodeDir = "code"
 		}
 		if c.PolicyDir == "" {
 			c.PolicyDir = "policies"
 		}
-		if !utils.FileExist(c.TemplateDir) || !utils.FileExist(c.PolicyDir) {
+		if !utils.FileExist(c.CodeDir) || !utils.FileExist(c.PolicyDir) {
 			return fmt.Errorf("missing code or policy dir")
 		}
-		scanner, er = policy.NewScannerFromLocalDir(c.TemplateDir, c.PolicyDir)
+		scanner, er = policy.NewScannerFromLocalDir(c.CodeDir, c.PolicyDir)
 		if er != nil {
 			return er
 		}
@@ -149,6 +167,42 @@ func (c *ScanCmd) Scan(filePath string, regoDir string) error {
 		return err
 	}
 	fmt.Printf("scan result: %s\n", result)
+	return nil
+}
+
+func (c *ScanCmd) RunDebug(configFile string, regoFile string) error {
+	fileInfo, err := os.Stat(configFile)
+	if err != nil {
+		return err
+	}
+	isDir := false
+	if fileInfo.IsDir() {
+		isDir = true
+	}
+
+	// 创建空目录，避免 terrascan 读取默认策略
+	randomDir, err := os.MkdirTemp(".", "*")
+	if err != nil {
+		return err
+	}
+
+	cmdString := utils.SprintTemplate(`terrascan scan {{if .IsDir}} -d {{.ConfigFile}}{{else}}--iac-file {{.ConfigFile}}{{end}} -p {{.PolicyDir}} --config-only -o json > {{.JsonFile}} && \
+opa eval -f pretty --data {{.RegoFile}} --input {{.JsonFile}} data > {{.RegoResultFile}}
+`, map[string]interface{}{
+		"PolicyDir":      randomDir,
+		"ConfigFile":     configFile,
+		"IsDir":          isDir,
+		"JsonFile":       runner.TerrascanJsonFile,
+		"RegoFile":       regoFile,
+		"RegoResultFile": runner.RegoResultFile,
+	})
+
+	_, err = RunCmd(cmdString)
+	if err != nil {
+		_ = os.RemoveAll(randomDir)
+		return err
+	}
+	_ = os.RemoveAll(randomDir)
 	return nil
 }
 

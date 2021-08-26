@@ -772,14 +772,16 @@ func (m *TaskManager) processAutoDestroy() error {
 			task, err := services.CreateTask(tx, tpl, env, models.Task{
 				Name:            "Auto Destroy",
 				Type:            models.TaskTypeDestroy,
-				Flow:            models.TaskFlow{},
 				Targets:         nil,
 				CreatorId:       consts.SysUserId,
 				RunnerId:        "",
 				Variables:       taskVars,
-				StepTimeout:     0,
 				AutoApprove:     true,
 				StopOnViolation: env.StopOnViolation,
+				BaseTask: models.BaseTask{
+					Flow:        models.TaskFlow{},
+					StepTimeout: 0,
+				},
 			})
 			if err != nil {
 				_ = tx.Rollback()

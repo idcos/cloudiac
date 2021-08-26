@@ -10,6 +10,7 @@ type Violation struct {
 	ResourceType string `json:"resource_type"`
 	File         string `json:"file"`
 	Line         int    `json:"line"`
+	Source       string `json:"source"`
 }
 
 type PolicyResult struct {
