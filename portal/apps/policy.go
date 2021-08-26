@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strings"
 )
 
 // CreatePolicy 创建策略
@@ -49,26 +50,26 @@ func CreatePolicy(c *ctx.ServiceContext, form *forms.CreatePolicyForm) (*models.
 
 //parseRegoHeader 解析 rego 脚本获取入口，云商类型和资源类型
 func parseRegoHeader(rego string) (entry string, policyType string, resType string, err e.Error) {
-	regex := regexp.MustCompile("^##entry (.*)$")
+	regex := regexp.MustCompile("(?m)^##entry (.*)$")
 	match := regex.FindStringSubmatch(rego)
 	if len(match) == 2 {
-		entry = match[1]
+		entry = strings.TrimSpace(match[1])
 	} else {
 		return "", "", "", e.New(e.PolicyRegoMissingComment)
 	}
 
-	regex = regexp.MustCompile("^##policyType (.*)$")
+	regex = regexp.MustCompile("(?m)^##policyType (.*)$")
 	match = regex.FindStringSubmatch(rego)
 	if len(match) == 2 {
-		policyType = match[1]
+		policyType = strings.TrimSpace(match[1])
 	} else {
 		return "", "", "", e.New(e.PolicyRegoMissingComment)
 	}
 
-	regex = regexp.MustCompile("^##resType (.*)$")
+	regex = regexp.MustCompile("(?m)^##resourceType (.*)$")
 	match = regex.FindStringSubmatch(rego)
 	if len(match) == 2 {
-		resType = match[1]
+		resType = strings.TrimSpace(match[1])
 	} else {
 		return "", "", "", e.New(e.PolicyRegoMissingComment)
 	}
