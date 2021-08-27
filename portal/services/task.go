@@ -757,3 +757,171 @@ func ChangeScanTaskStatus(dbSess *db.Session, task *models.ScanTask, status, mes
 
 	return nil
 }
+
+func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models.ScanTask) (*models.ScanTask, e.Error) {
+	logger := logs.Get().WithField("func", "CreateScanTask")
+
+	var (
+		err error
+	)
+
+	task := models.ScanTask{
+		// 以下为需要外部传入的属性
+		Name:      pt.Name,
+		CreatorId: pt.CreatorId,
+		Extra:     pt.Extra,
+		Revision:  utils.FirstValueStr(pt.Revision, tpl.RepoRevision),
+
+		OrgId: tpl.OrgId,
+		TplId: tpl.Id,
+
+		Workdir: tpl.Workdir,
+
+		BaseTask: models.BaseTask{
+			Type:        pt.Type,
+			Flow:        pt.Flow,
+			StepTimeout: pt.StepTimeout,
+			RunnerId:    pt.RunnerId,
+
+			Status:   models.TaskPending,
+			Message:  "",
+			CurrStep: 0,
+		},
+	}
+
+	task.Id = models.NewId("run")
+	logger = logger.WithField("taskId", task.Id)
+
+	if len(task.Flow.Steps) == 0 {
+		task.Flow, err = models.DefaultTaskFlow(task.Type)
+		if err != nil {
+			return nil, e.New(e.InternalError, err)
+		}
+	}
+
+	task.RepoAddr, task.CommitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, tpl.RepoRevision)
+	if err != nil {
+		return nil, e.New(e.InternalError, err)
+	}
+
+	{ // 参数检查
+		if task.RepoAddr == "" {
+			return nil, e.New(e.BadParam, fmt.Errorf("'repoAddr' is required"))
+		}
+		if task.CommitId == "" {
+			return nil, e.New(e.BadParam, fmt.Errorf("'commitId' is required"))
+		}
+		if task.RunnerId == "" {
+			return nil, e.New(e.BadParam, fmt.Errorf("'runnerId' is required"))
+		}
+	}
+
+	if _, err = tx.Save(&task); err != nil {
+		return nil, e.New(e.DBError, errors.Wrapf(err, "save task"))
+	}
+
+	flowSteps := make([]models.TaskStepBody, 0, len(task.Flow.Steps))
+	for i := range task.Flow.Steps {
+		step := task.Flow.Steps[i]
+		flowSteps = append(flowSteps, step)
+	}
+
+	if len(flowSteps) == 0 {
+		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps"))
+	}
+
+	var preStep *models.TaskStep
+	for i := len(flowSteps) - 1; i >= 0; i-- { // 倒序保存 steps，以便于设置 step.NextStep
+		step := flowSteps[i]
+
+		nextStepId := models.Id("")
+		if preStep != nil {
+			nextStepId = preStep.Id
+		}
+		var er e.Error
+		preStep, er = createScanTaskStep(tx, task, step, i, nextStepId)
+		if er != nil {
+			return nil, e.New(er.Code(), errors.Wrapf(er, "save task step"))
+		}
+
+		if step.Type == models.TaskStepTfScan {
+			if err := initTemplateScanResult(tx, task); err != nil {
+				return nil, e.New(err.Code(), errors.Wrapf(err, "init scan result"))
+			}
+		}
+	}
+
+	return &task, nil
+}
+
+func createScanTaskStep(tx *db.Session, task models.ScanTask, stepBody models.TaskStepBody, index int, nextStep models.Id) (
+	*models.TaskStep, e.Error) {
+	s := models.TaskStep{
+		TaskStepBody: stepBody,
+		OrgId:        task.OrgId,
+		//ProjectId:    task.ProjectId,
+		EnvId:    task.EnvId,
+		TaskId:   task.Id,
+		Index:    index,
+		Status:   models.TaskStepPending,
+		Message:  "",
+		NextStep: nextStep,
+	}
+	s.Id = models.NewId("step")
+	s.LogPath = s.GenLogPath()
+
+	if _, err := tx.Save(&s); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return &s, nil
+}
+
+// initTemplateScanResult 初始化模板扫描结果
+func initTemplateScanResult(tx *db.Session, task models.ScanTask) e.Error {
+	var (
+		policies      []models.Policy
+		err           e.Error
+		policyResults []*models.PolicyResult
+	)
+
+	// 根据扫描类型获取策略列表
+	typ := "environment"
+	switch typ {
+	case "environment":
+		policies, err = GetPoliciesByEnvId(tx, task.EnvId)
+	case "template":
+		if env, er := GetEnvById(tx, task.EnvId); er != nil {
+			return er
+		} else {
+			policies, err = GetPoliciesByTemplateId(tx, env.TplId)
+		}
+	default:
+		return e.New(e.InternalError, fmt.Errorf("not support scan type"))
+	}
+	if err != nil {
+		return err
+	}
+
+	// 批量创建
+	for _, policy := range policies {
+		policyResults = append(policyResults, &models.PolicyResult{
+			OrgId: task.OrgId,
+			//ProjectId: task.ProjectId,
+			TplId:  task.TplId,
+			EnvId:  task.EnvId,
+			TaskId: task.Id,
+
+			PolicyId:      policy.Id,
+			PolicyGroupId: policy.GroupId,
+
+			StartAt: models.Time(time.Now()),
+			Status:  "pending", // 设置结果为等待扫描状态
+		})
+	}
+
+	if er := models.CreateBatch(tx, policyResults); er != nil {
+		return e.New(e.DBError, er)
+	}
+
+	return nil
+}

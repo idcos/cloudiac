@@ -156,16 +156,15 @@ func (m *TaskManager) start() {
 
 func (m *TaskManager) recoverTask(ctx context.Context) error {
 	logger := m.logger
-	query := m.db.Model(&models.Task{}).
-		Where("status IN (?)", []string{models.TaskRunning, models.TaskApproving})
+	query := m.db.Where("status IN (?)", []string{models.TaskRunning, models.TaskApproving})
 
 	deployTasks := make([]*models.Task, 0)
-	if err := query.Find(&deployTasks); err != nil {
+	if err := query.Model(&models.Task{}).Find(&deployTasks); err != nil {
 		logger.Errorf("find '%s' deploy tasks error: %v", models.TaskRunning, err)
 		return err
 	}
 	scanTasks := make([]*models.ScanTask, 0)
-	if err := query.Find(&scanTasks); err != nil {
+	if err := query.Model(&models.ScanTask{}).Find(&scanTasks); err != nil {
 		logger.Errorf("find '%s' scan tasks error: %v", models.TaskRunning, err)
 		return err
 	}
@@ -175,9 +174,9 @@ func (m *TaskManager) recoverTask(ctx context.Context) error {
 	for idx := range scanTasks {
 		tasks[idx] = scanTasks[idx]
 	}
-	deployTaskLen := len(deployTasks)
+	scanTasksLen := len(scanTasks)
 	for idx := range deployTasks {
-		tasks[deployTaskLen+idx] = deployTasks[deployTaskLen+idx]
+		tasks[scanTasksLen+idx] = deployTasks[scanTasksLen+idx]
 	}
 
 	logger.Infof("find '%d' running tasks", len(tasks))
@@ -1037,15 +1036,17 @@ func (m *TaskManager) processScanTaskDone(task *models.ScanTask) {
 // buildScanTaskReq 构建扫描任务 RunTaskReq 对象
 func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.TaskStep) (taskReq *runner.RunTaskReq, err error) {
 	taskReq = &runner.RunTaskReq{
-		RunnerId: task.RunnerId,
-		TaskId:   string(task.Id),
-		Timeout:  task.StepTimeout,
-		Repos: []runner.Repository{
-			{
-				RepoAddress:  task.RepoAddr,
-				RepoRevision: task.CommitId,
-			},
-		},
+		RunnerId:     task.RunnerId,
+		TaskId:       string(task.Id),
+		Timeout:      task.StepTimeout,
+		RepoAddress:  task.RepoAddr,
+		RepoRevision: task.CommitId,
+		//Repos: []runner.Repository{
+		//	{
+		//		RepoAddress:  task.RepoAddr,
+		//		RepoRevision: task.CommitId,
+		//	},
+		//},
 	}
 
 	if step.Type == models.TaskStepTfScan {

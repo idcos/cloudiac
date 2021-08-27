@@ -20,7 +20,7 @@ type BaseTask struct {
 	RunnerId string `json:"runnerId" gorm:"not null"` // 部署通道
 
 	Status  string `json:"status" gorm:"type:enum('pending','running','approving','rejected','failed','complete','timeout');default:'pending'" enums:"'pending','running','approving','rejected','failed','complete','timeout'"`
-	Message string `json:"message"` // 任务的状态描述信息，如失败原因等
+	Message string `json:"message" gorm:"type:text"` // 任务的状态描述信息，如失败原因等
 
 	StartAt *Time `json:"startAt" gorm:"type:datetime;comment:任务开始时间"` // 任务开始时间
 	EndAt   *Time `json:"endAt" gorm:"type:datetime;comment:任务结束时间"`   // 任务结束时间
@@ -31,23 +31,22 @@ type ScanTask struct {
 	BaseTask
 
 	// 模板扫描任务参数
-	OrgId Id `json:"orgId" gorm:"size:32;not null"` // 组织ID
-	TplId Id `json:"TplId" gorm:"size:32;not null"` // 模板ID
+	OrgId     Id `json:"orgId" gorm:"size:32;not null"` // 组织ID
+	ProjectId Id `json:"projectId" gorm:"size:32"`      // 项目ID
+	TplId     Id `json:"TplId" gorm:"size:32"`          // 模板ID
+	EnvId     Id `json:"envId" gorm:"size:32"`          // 环境ID
 
 	Name      string `json:"name" gorm:"not null;comment:任务名称"` // 任务名称
 	CreatorId Id     `json:"creatorId" gorm:"size:32;not null"` // 创建人ID
 
-	RepoAddr string `json:"repoAddr" gorm:"not null"`
-	Revision string `json:"revision" gorm:"not null"`
-	CommitId string `json:"commitId" gorm:"not null"` // 创建任务时 revision 对应的 commit id
+	RepoAddr string `json:"repoAddr" gorm:""`
+	Revision string `json:"revision" gorm:""`
+	CommitId string `json:"commitId" gorm:""` // 创建任务时 revision 对应的 commit id
 
 	Workdir string `json:"workdir" gorm:"default:''"`
 
 	// 扩展属性，包括 source, transitionId 等
 	Extra TaskExtra `json:"extra" gorm:"type:json"` // 扩展属性
-
-	// 任务执行结果，如 add/change/delete 的资源数量、outputs 等
-	Result TaskResult `json:"result" gorm:"type:json"` // 任务执行结果
 }
 
 func (ScanTask) TableName() string {

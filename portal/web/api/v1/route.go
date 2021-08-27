@@ -67,9 +67,11 @@ func Register(g *gin.RouterGroup) {
 
 	// 策略管理
 	ctrl.Register(g.Group("policies", ac()), &handlers.Policy{})
-	g.GET("/policies/templates", ac(), w(handlers.Policy{}.Create))     // 云模板列表，带策略组信息及状态
-	g.PUT("/policies/templates", ac(), w(handlers.Policy{}.Create))     // 关联云模板与策略组（创建/删除？）
-	g.GET("/policies/templates/:id", ac(), w(handlers.Policy{}.Create)) // 云模板策略列表
+	g.GET("/policies/templates", ac(), w(handlers.Policy{}.Create)) // 云模板列表，带策略组信息及状态
+	g.PUT("/policies/templates", ac(), w(handlers.Policy{}.Create)) // 关联云模板与策略组（创建/删除？）
+	// FIXME Draft
+	g.POST("/policies/templates/:id/scan", ac(), w(handlers.Policy{}.ScanTemplate)) // 扫描云模板
+	g.GET("/policies/templates/:id", ac(), w(handlers.Policy{}.Create))             // 云模板策略列表
 	g.GET("/policies/envs", ac(), w(handlers.Policy{}.Create))
 	g.PUT("/policies/envs", ac(), w(handlers.Policy{}.Create)) // 关联环境与策略组（创建/删除？）
 	g.GET("/policies/envs/:id", ac(), w(handlers.Policy{}.Create))

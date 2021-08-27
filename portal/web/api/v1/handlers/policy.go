@@ -50,21 +50,22 @@ func (Policy) Parse(c *ctx.GinRequest) {
 	//c.JSONResult(apps.CreatePolicy(c.Service(), form))
 }
 
-// Scan TODO: 运行策略扫描
-// @Summary 运行策略扫描
-// @Description 运行策略扫描
+// ScanTemplate 运行云模板策略扫描
+// @Summary 运行云模板策略扫描
+// @Description 运行云模板策略扫描
 // @Tags 策略
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
-// @Param json body forms.CreatePolicyForm true "parameter"
-// @Success 200 {object}  ctx.JSONResult{result=models.Policy}
-// @Router /policies/scan [post]
-func (Policy) Scan(c *ctx.GinRequest) {
-	//form := &forms.CreatePolicyForm{}
-	//if err := c.Bind(form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.CreatePolicy(c.Service(), form))
+// @Param templateId path string true "模板ID"
+// @Param json body forms.ScanTemplateForm true "parameter"
+// @Success 200 {object}  ctx.JSONResult{result=models.ScanTask}
+// @Router /policies/templates/{templateId}/scan [post]
+func (Policy) ScanTemplate(c *ctx.GinRequest) {
+	form := &forms.ScanTemplateForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.ScanTemplate(c.Service(), form))
 }

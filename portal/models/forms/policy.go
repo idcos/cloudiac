@@ -28,3 +28,10 @@ type CreatePolicyRelForm struct {
 	EnvId          models.Id   `json:"envId" binding:"" example:"env-c3ek0co6n88ldvq1n6ag"`
 	TplId          models.Id   `json:"tplId" binding:"" example:"tpl-c3ek0co6n88ldvq1n6ag"`
 }
+
+type ScanTemplateForm struct {
+	BaseForm
+
+	Id    models.Id `uri:"id" binding:"" example:"tpl-c3ek0co6n88ldvq1n6ag"`      // 云模板Id
+	Parse bool      `json:"parse" binding:""  enums:"true,false" example:"false"` // 是否只执行解析
+}

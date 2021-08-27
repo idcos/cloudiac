@@ -346,7 +346,7 @@ func populateViolateSource(scanner *Scanner, res Resource, task *models.Task, re
 		fmt.Printf("violation with src %+v", resultJson.Results.Violations[idx])
 		_ = srcFile.Close()
 	}
-	fmt.Printf("updaetd %s", updated)
+	fmt.Printf("updaetd %v", updated)
 
 	if updated {
 		if js, err := json.MarshalIndent(resultJson, "", "  "); err == nil {
@@ -356,7 +356,6 @@ func populateViolateSource(scanner *Scanner, res Resource, task *models.Task, re
 				fmt.Printf("update result error %+v", err)
 			}
 		}
-
 	}
 
 	return resultJson, nil

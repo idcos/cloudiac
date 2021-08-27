@@ -10,7 +10,7 @@ type EnvVariables struct {
 }
 
 type TaskEnv struct {
-	Id           string `json:"id" binding:"required"`
+	Id           string `json:"id" binding:""`
 	Workdir      string `json:"workdir"`
 	TfVarsFile   string `json:"tfVarsFile"`
 	Playbook     string `json:"playbook"`
@@ -22,23 +22,23 @@ type TaskEnv struct {
 }
 
 type StateStore struct {
-	Backend string `json:"backend" binding:"required"`
-	Scheme  string `json:"scheme" binding:"required"`
-	Path    string `json:"path" binding:"required"`
+	Backend string `json:"backend" binding:""`
+	Scheme  string `json:"scheme" binding:""`
+	Path    string `json:"path" binding:""`
 	Address string `json:"address" binding:""` // consul 地址 runner 会自动设置
 }
 
 type RunTaskReq struct {
-	Env          TaskEnv    `json:"env" binding:"required"`
+	Env          TaskEnv    `json:"env" binding:""`
 	RunnerId     string     `json:"runnerId" binding:""`
 	TaskId       string     `json:"taskId" binding:"required"`
 	Step         int        `json:"step" binding:""`
 	StepType     string     `json:"stepType" binding:"required"`
 	StepArgs     []string   `json:"stepArgs"`
 	DockerImage  string     `json:"dockerImage"`
-	StateStore   StateStore `json:"stateStore" binding:"required"`
-	RepoAddress  string     `json:"repoAddress" binding:"required"` // 带 token 的完整路径
-	RepoRevision string     `json:"repoRevision" binding:"required"`
+	StateStore   StateStore `json:"stateStore" binding:""`
+	RepoAddress  string     `json:"repoAddress" binding:""` // 带 token 的完整路径
+	RepoRevision string     `json:"repoRevision" binding:""`
 
 	Timeout    int    `json:"timeout"`
 	PrivateKey string `json:"privateKey"`
@@ -50,13 +50,13 @@ type RunTaskReq struct {
 }
 
 type Repository struct {
-	RepoAddress  string `json:"repoAddress" binding:"required"` // 带 token 的完整路径
-	RepoRevision string `json:"repoRevision" binding:"required"`
+	RepoAddress  string `json:"repoAddress" binding:""` // 带 token 的完整路径
+	RepoRevision string `json:"repoRevision" binding:""`
 }
 
 type TaskStatusReq struct {
-	EnvId  string `json:"envId" form:"envId" binding:"required"`
-	TaskId string `json:"taskId" form:"taskId" binding:"required"`
+	EnvId  string `json:"envId" form:"envId" binding:""`
+	TaskId string `json:"taskId" form:"taskId" binding:""`
 	Step   int    `json:"step" form:"step" binding:""`
 }
 

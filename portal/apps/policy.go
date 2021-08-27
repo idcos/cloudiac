@@ -1,6 +1,7 @@
 package apps
 
 import (
+	"cloudiac/common"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
@@ -75,4 +76,67 @@ func parseRegoHeader(rego string) (entry string, policyType string, resType stri
 	}
 
 	return
+}
+
+// ScanTemplate 扫描云模板策略
+func ScanTemplate(c *ctx.ServiceContext, form *forms.ScanTemplateForm) (*models.ScanTask, e.Error) {
+	c.AddLogField("action", fmt.Sprintf("create scan template %s", form.Id))
+	if c.OrgId == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+	// TODO: 检查云模板访问权限
+
+	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	// 模板检查
+	tplQuery := services.QueryWithOrgId(tx, c.OrgId)
+	tpl, err := services.GetTemplateById(tplQuery, form.Id)
+	if err != nil && err.Code() == e.TemplateNotExists {
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		c.Logger().Errorf("error get template, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	// 创建任务
+	runnerId, err := services.GetDefaultRunnerId()
+	if err != nil {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+	task, err := services.CreateScanTask(tx, tpl, nil, models.ScanTask{
+		Name:      models.ScanTask{}.GetTaskNameByType(models.TaskTypeScan),
+		CreatorId: c.UserId,
+		Revision:  tpl.RepoRevision,
+		BaseTask: models.BaseTask{
+			Type:        models.TaskTypeScan,
+			Flow:        models.TaskFlow{},
+			StepTimeout: common.TaskStepTimeoutDuration,
+			RunnerId:    runnerId,
+		},
+	})
+	if err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error creating scan task, err %s", err)
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
+	if _, err := tx.Save(task); err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error save env, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error commit env, err %s", err)
+		return nil, e.New(e.DBError, err)
+	}
+
+	return task, nil
 }
