@@ -130,18 +130,18 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
-		Type:            form.TaskType,
 		Targets:         targets,
 		CreatorId:       c.UserId,
 		KeyId:           env.KeyId,
-		RunnerId:        env.RunnerId,
 		Variables:       services.GetVariableBody(vars),
 		AutoApprove:     env.AutoApproval,
 		Revision:        env.Revision,
 		StopOnViolation: env.StopOnViolation,
 		BaseTask: models.BaseTask{
+			Type:        form.TaskType,
 			Flow:        models.TaskFlow{},
 			StepTimeout: form.Timeout,
+			RunnerId:    env.RunnerId,
 		},
 	})
 	if err != nil {
@@ -538,18 +538,18 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
-		Type:            form.TaskType,
 		Targets:         targets,
 		CreatorId:       c.UserId,
 		KeyId:           env.KeyId,
-		RunnerId:        env.RunnerId,
 		Variables:       services.GetVariableBody(vars),
 		AutoApprove:     env.AutoApproval,
 		Revision:        env.Revision,
 		StopOnViolation: env.StopOnViolation,
 		BaseTask: models.BaseTask{
+			Type:        form.TaskType,
 			Flow:        models.TaskFlow{},
 			StepTimeout: form.Timeout,
+			RunnerId:    env.RunnerId,
 		},
 	})
 

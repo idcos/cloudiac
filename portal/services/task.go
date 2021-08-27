@@ -49,10 +49,8 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 	task := models.Task{
 		// 以下为需要外部传入的属性
 		Name:            pt.Name,
-		Type:            pt.Type,
 		Targets:         pt.Targets,
 		CreatorId:       pt.CreatorId,
-		RunnerId:        firstVal(pt.RunnerId, env.RunnerId),
 		Variables:       pt.Variables,
 		AutoApprove:     pt.AutoApprove,
 		KeyId:           models.Id(firstVal(string(pt.KeyId), string(env.KeyId))),
@@ -71,9 +69,12 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		Playbook:     env.Playbook,
 		TfVarsFile:   env.TfVarsFile,
 		PlayVarsFile: env.PlayVarsFile,
+
 		BaseTask: models.BaseTask{
+			Type:        pt.Type,
 			Flow:        pt.Flow,
 			StepTimeout: pt.StepTimeout,
+			RunnerId:    firstVal(pt.RunnerId, env.RunnerId),
 
 			Status:   models.TaskPending,
 			Message:  "",
@@ -257,12 +258,19 @@ var stepStatus2TaskStatus = map[string]string{
 	models.TaskStepComplete:  models.TaskComplete,
 }
 
-func ChangeTaskStatusWithStep(dbSess *db.Session, task *models.Task, step *models.TaskStep) e.Error {
+func ChangeTaskStatusWithStep(dbSess *db.Session, task models.Tasker, step *models.TaskStep) e.Error {
 	taskStatus, ok := stepStatus2TaskStatus[step.Status]
 	if !ok {
 		panic(fmt.Errorf("unknown task step status %v", step.Status))
 	}
-	return ChangeTaskStatus(dbSess, task, taskStatus, step.Message)
+	switch t := task.(type) {
+	case *models.Task:
+		return ChangeTaskStatus(dbSess, t, taskStatus, step.Message)
+	case *models.ScanTask:
+		return ChangeScanTaskStatus(dbSess, t, taskStatus, step.Message)
+	default:
+		panic("invalid task type on change task status with step, task" + task.GetId())
+	}
 }
 
 // ChangeTaskStatus 修改任务状态(同步修改 StartAt、EndAt 等)，并同步修改 env 状态
@@ -560,38 +568,6 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource)
 	return nil
 }
 
-func SaveTfScanResult(tx *db.Session, task *models.Task, result TsResult) error {
-	var (
-		policyResults []*models.PolicyResult
-	)
-	for _, r := range result.Violations {
-		if policyResult, err := GetPolicyResultById(tx, task.Id, models.Id(r.RuleId)); err != nil {
-			return err
-		} else {
-			policyResult.Status = "violated"
-			policyResults = append(policyResults, policyResult)
-		}
-	}
-	for _, r := range result.PassedRules {
-		if policyResult, err := GetPolicyResultById(tx, task.Id, models.Id(r.RuleId)); err != nil {
-			return err
-		} else {
-			policyResult.Status = "passed"
-			policyResults = append(policyResults, policyResult)
-		}
-	}
-	for _, r := range policyResults {
-		if err := models.Save(tx, r); err != nil {
-			return e.New(e.DBError, fmt.Errorf("save scan result"))
-		}
-	}
-
-	if err := finishScanResult(tx, task); err != nil {
-		return err
-	}
-	return nil
-}
-
 func FetchTaskLog(ctx context.Context, task *models.Task, writer io.WriteCloser) (err error) {
 	// close 后 read 端会触发 EOF error
 	defer writer.Close()
@@ -753,4 +729,31 @@ func TaskStatusChangeSendMessage(task *models.Task, status string) {
 		EventType: consts.TaskStatusToEventType[status],
 	})
 	ns.SendMessage()
+}
+
+// ==================================================================================
+// 扫描任务
+
+// ChangeScanTaskStatus 修改扫描任务状态
+func ChangeScanTaskStatus(dbSess *db.Session, task *models.ScanTask, status, message string) e.Error {
+	if task.Status == status && message == "" {
+		return nil
+	}
+
+	task.Status = status
+	task.Message = message
+	now := models.Time(time.Now())
+	if task.StartAt == nil && task.Started() {
+		task.StartAt = &now
+	}
+	if task.EndAt == nil && task.Exited() {
+		task.EndAt = &now
+	}
+
+	logs.Get().WithField("taskId", task.Id).Infof("change task to '%s'", status)
+	if _, err := dbSess.Model(task).Update(task); err != nil {
+		return e.AutoNew(err, e.DBError)
+	}
+
+	return nil
 }

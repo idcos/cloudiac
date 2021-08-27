@@ -305,7 +305,7 @@ func (s *Scanner) ScanResource(resource Resource) error {
 	}
 
 	if s.SaveResult {
-		if err := services.SaveTfScanResult(s.Db, &task, tfResultJson.Results); err != nil {
+		if err := services.UpdateScanResult(s.Db, &task, tfResultJson.Results); err != nil {
 			return s.handleScanError(&task, err)
 		}
 
@@ -366,7 +366,7 @@ func (s *Scanner) handleScanError(task *models.Task, err error) error {
 	if s.SaveResult {
 		// 扫描出错的时候更新所有策略扫描结果为 failed
 		emptyResult := services.TsResultJson{}
-		if err := services.SaveTfScanResult(s.Db, task, emptyResult.Results); err != nil {
+		if err := services.UpdateScanResult(s.Db, task, emptyResult.Results); err != nil {
 			return err
 		}
 	}

@@ -85,12 +85,12 @@ func InitScanResult(tx *db.Session, task models.Task) e.Error {
 }
 
 // UpdateScanResult 根据 terrascan 扫描结果批量更新
-func UpdateScanResult(tx *db.Session, task models.Task, result TsResult) e.Error {
+func UpdateScanResult(tx *db.Session, task models.Tasker, result TsResult) e.Error {
 	var (
 		policyResults []*models.PolicyResult
 	)
 	for _, r := range result.Violations {
-		if policyResult, err := GetPolicyResultById(tx, task.Id, models.Id(r.RuleId)); err != nil {
+		if policyResult, err := GetPolicyResultById(tx, task.GetId(), models.Id(r.RuleId)); err != nil {
 			return err
 		} else {
 			policyResult.Status = "violated"
@@ -98,7 +98,7 @@ func UpdateScanResult(tx *db.Session, task models.Task, result TsResult) e.Error
 		}
 	}
 	for _, r := range result.PassedRules {
-		if policyResult, err := GetPolicyResultById(tx, task.Id, models.Id(r.RuleId)); err != nil {
+		if policyResult, err := GetPolicyResultById(tx, task.GetId(), models.Id(r.RuleId)); err != nil {
 			return err
 		} else {
 			policyResult.Status = "passed"
@@ -111,7 +111,7 @@ func UpdateScanResult(tx *db.Session, task models.Task, result TsResult) e.Error
 		}
 	}
 
-	if err := finishScanResult(tx, &task); err != nil {
+	if err := finishScanResult(tx, task); err != nil {
 		return err
 	}
 	return nil
@@ -119,10 +119,10 @@ func UpdateScanResult(tx *db.Session, task models.Task, result TsResult) e.Error
 
 // finishScanResult 更新状态未知的策略扫描结果
 // 当存在相同名称当策略时，扫描结果可能不包含在结果集里面，这些策略扫描结果一律标记为 failed
-func finishScanResult(tx *db.Session, task *models.Task) e.Error {
+func finishScanResult(tx *db.Session, task models.Tasker) e.Error {
 	sql := fmt.Sprintf("UPDATE %s SET status = 'failed' WHERE task_id = ? AND status = 'pending'",
 		models.PolicyResult{}.TableName())
-	if _, err := tx.Exec(sql, task.Id); err != nil {
+	if _, err := tx.Exec(sql, task.GetId()); err != nil {
 		return e.New(e.DBError, err)
 	}
 	return nil

@@ -176,16 +176,16 @@ func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (int
 
 	task := models.Task{
 		Name:        models.Task{}.GetTaskNameByType(taskType),
-		Type:        taskType,
 		Targets:     models.StrSlice{},
 		CreatorId:   c.UserId,
 		KeyId:       env.KeyId,
-		RunnerId:    env.RunnerId,
 		Variables:   taskVars,
 		AutoApprove: env.AutoApproval,
 		BaseTask: models.BaseTask{
+			Type:        taskType,
 			Flow:        models.TaskFlow{},
 			StepTimeout: env.Timeout,
+			RunnerId:    env.RunnerId,
 		},
 	}
 

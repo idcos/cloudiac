@@ -45,6 +45,13 @@ type RunTaskReq struct {
 
 	Policies        []TaskPolicy `json:"policies"` // 策略内容
 	StopOnViolation bool         `json:"stopOnViolation"`
+
+	Repos []Repository `json:"repos"` // 待扫描仓库列表
+}
+
+type Repository struct {
+	RepoAddress  string `json:"repoAddress" binding:"required"` // 带 token 的完整路径
+	RepoRevision string `json:"repoRevision" binding:"required"`
 }
 
 type TaskStatusReq struct {

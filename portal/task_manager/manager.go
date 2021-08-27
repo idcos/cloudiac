@@ -159,10 +159,25 @@ func (m *TaskManager) recoverTask(ctx context.Context) error {
 	query := m.db.Model(&models.Task{}).
 		Where("status IN (?)", []string{models.TaskRunning, models.TaskApproving})
 
-	tasks := make([]*models.Task, 0)
-	if err := query.Find(&tasks); err != nil {
-		logger.Errorf("find '%s' tasks error: %v", models.TaskRunning, err)
+	deployTasks := make([]*models.Task, 0)
+	if err := query.Find(&deployTasks); err != nil {
+		logger.Errorf("find '%s' deploy tasks error: %v", models.TaskRunning, err)
 		return err
+	}
+	scanTasks := make([]*models.ScanTask, 0)
+	if err := query.Find(&scanTasks); err != nil {
+		logger.Errorf("find '%s' scan tasks error: %v", models.TaskRunning, err)
+		return err
+	}
+
+	tasks := make([]models.Tasker, len(scanTasks)+len(deployTasks))
+	// 合并等待任务列表，扫描任务更轻量，我们先执行扫描任务
+	for idx := range scanTasks {
+		tasks[idx] = scanTasks[idx]
+	}
+	deployTaskLen := len(deployTasks)
+	for idx := range deployTasks {
+		tasks[deployTaskLen+idx] = deployTasks[deployTaskLen+idx]
 	}
 
 	logger.Infof("find '%d' running tasks", len(tasks))
@@ -171,9 +186,9 @@ func (m *TaskManager) recoverTask(ctx context.Context) error {
 		case <-ctx.Done():
 			break
 		default:
-			logger.Infof("recover running task %s", task.Id)
+			logger.Infof("recover running task %s", task.GetId())
 			if err := m.runTask(ctx, task); err != nil {
-				logger.WithField("taskId", task.Id).Errorf("run task error: %s", err)
+				logger.WithField("taskId", task.GetId()).Errorf("run task error: %s", err)
 				return err
 			}
 		}
@@ -182,15 +197,8 @@ func (m *TaskManager) recoverTask(ctx context.Context) error {
 	return nil
 }
 
-func (m *TaskManager) processPendingTask(ctx context.Context) {
+func (m *TaskManager) getPendingDeployTasks() []*models.Task {
 	logger := m.logger
-
-	limitedRunners := make([]string, 0)
-	for runnerId, count := range m.runnerTaskNum {
-		if count >= m.maxTasksPerRunner {
-			limitedRunners = append(limitedRunners, runnerId)
-		}
-	}
 
 	runningEnvs := make([]models.Id, 0)
 	m.envRunningTask.Range(func(key, value interface{}) bool {
@@ -216,6 +224,7 @@ func (m *TaskManager) processPendingTask(ctx context.Context) {
 		query = query.Where("iac_task.env_id NOT IN (?)", runningEnvs)
 	}
 
+	limitedRunners := m.getLimitedRunner()
 	if len(limitedRunners) > 0 {
 		// 查询时过滤掉己达并发限制的 runner
 		query = query.Where("runner_id NOT IN (?)", limitedRunners)
@@ -227,6 +236,57 @@ func (m *TaskManager) processPendingTask(ctx context.Context) {
 		logger.Panicf("find '%s' task error: %v", models.TaskPending, err)
 	}
 
+	return tasks
+}
+
+func (m *TaskManager) getPendingScanTasks() []*models.ScanTask {
+	logger := m.logger
+
+	// 扫描类型任务支持多个并行执行，不会互相影响，这里获取所有处于 pending 状态的任务列表
+
+	query := m.db.Model(&models.ScanTask{}).Where("status = ?", models.TaskPending)
+
+	limitedRunners := m.getLimitedRunner()
+	if len(limitedRunners) > 0 {
+		// 查询时过滤掉己达并发限制的 runner
+		query = query.Where("runner_id NOT IN (?)", limitedRunners)
+	}
+
+	queryTaskLimit := 64 // 单次查询任务数量限制
+	tasks := make([]*models.ScanTask, 0)
+	if err := query.Limit(queryTaskLimit).Find(&tasks); err != nil {
+		logger.Panicf("find '%s' task error: %v", models.TaskPending, err)
+	}
+
+	return tasks
+}
+
+func (m *TaskManager) getLimitedRunner() []string {
+	limitedRunners := make([]string, 0)
+	for runnerId, count := range m.runnerTaskNum {
+		if count >= m.maxTasksPerRunner {
+			limitedRunners = append(limitedRunners, runnerId)
+		}
+	}
+	return limitedRunners
+}
+
+func (m *TaskManager) processPendingTask(ctx context.Context) {
+	logger := m.logger
+
+	scanTasks := m.getPendingScanTasks()
+	deployTasks := m.getPendingDeployTasks()
+	tasks := make([]models.Tasker, len(scanTasks)+len(deployTasks))
+
+	// 合并等待任务列表，扫描任务更轻量，我们先执行扫描任务
+	for idx := range scanTasks {
+		tasks[idx] = scanTasks[idx]
+	}
+	deployTaskLen := len(deployTasks)
+	for idx := range deployTasks {
+		tasks[deployTaskLen+idx] = deployTasks[deployTaskLen+idx]
+	}
+
 	for i := range tasks {
 		select {
 		case <-ctx.Done():
@@ -236,9 +296,9 @@ func (m *TaskManager) processPendingTask(ctx context.Context) {
 
 		task := tasks[i]
 		// 判断 runner 并发数量
-		n := m.runnerTaskNum[task.RunnerId]
+		n := m.runnerTaskNum[task.GetRunnerId()]
 		if n >= m.maxTasksPerRunner {
-			logger.WithField("count", n).Infof("runner %s: %v", task.RunnerId, ErrMaxTasksPerRunner)
+			logger.WithField("count", n).Infof("runner %s: %v", task.GetRunnerId(), ErrMaxTasksPerRunner)
 			continue
 		}
 
@@ -246,7 +306,7 @@ func (m *TaskManager) processPendingTask(ctx context.Context) {
 			if err == errHasRunningTask {
 				continue
 			} else {
-				logger.WithField("taskId", task.Id).Errorf("run task error: %s", err)
+				logger.WithField("taskId", task.GetId()).Errorf("run task error: %s", err)
 			}
 		}
 	}
@@ -256,25 +316,36 @@ var (
 	errHasRunningTask = errors.New("environment has running task")
 )
 
-func (m *TaskManager) runTask(ctx context.Context, task *models.Task) error {
-	logger := m.logger.WithField("taskId", task.Id)
+func (m *TaskManager) runTask(ctx context.Context, task models.Tasker) error {
+	logger := m.logger.WithField("taskId", task.GetId())
 
-	if v, loaded := m.envRunningTask.LoadOrStore(task.EnvId, task); loaded {
-		t := v.(*models.Task)
-		logger.Infof("environment '%s' has running task '%s'", task.EnvId, t.Id)
-		return errHasRunningTask
+	if t, ok := task.(*models.Task); ok {
+		if v, loaded := m.envRunningTask.LoadOrStore(t.EnvId, t); loaded {
+			t := v.(*models.Task)
+			logger.Infof("environment '%s' has running task '%s'", t.EnvId, t.Id)
+			return errHasRunningTask
+		}
 	}
 
 	m.wg.Add(1)
 	go func() {
 		defer func() {
-			m.envRunningTask.Delete(task.EnvId)
+			if t, ok := task.(*models.Task); ok {
+				m.envRunningTask.Delete(t.EnvId)
+			}
 			m.wg.Done()
 		}()
 
-		if startErr := m.doRunTask(ctx, task); startErr == nil {
-			// 任务启动成功，执行任务结束后的处理函数
-			m.processTaskDone(task)
+		switch t := task.(type) {
+		case *models.Task:
+			if startErr := m.doRunTask(ctx, t); startErr == nil {
+				// 任务启动成功，执行任务结束后的处理函数
+				m.processTaskDone(t)
+			}
+		case *models.ScanTask:
+			if startErr := m.doRunScanTask(ctx, t); startErr == nil {
+				m.processScanTaskDone(t)
+			}
 		}
 	}()
 	return nil
@@ -445,7 +516,7 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 		if task.Status != common.TaskFailed {
 			if bs, err = read(task.TfResultJsonPath()); err == nil && len(bs) > 0 {
 				if tfResultJson, err = services.UnmarshalTfResultJson(bs); err == nil {
-					if err := services.SaveTfScanResult(dbSess, task, tfResultJson.Results); err != nil {
+					if err := services.UpdateScanResult(dbSess, task, tfResultJson.Results); err != nil {
 						return fmt.Errorf("save scan result: %v", err)
 					}
 				}
@@ -454,7 +525,7 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 
 		// 扫描出错的时候更新所有策略扫描结果为 failed
 		emptyResult := services.TsResultJson{}
-		if err := services.SaveTfScanResult(dbSess, task, emptyResult.Results); err != nil {
+		if err := services.UpdateScanResult(dbSess, task, emptyResult.Results); err != nil {
 			return fmt.Errorf("save scan result: %v", err)
 		}
 
@@ -771,16 +842,16 @@ func (m *TaskManager) processAutoDestroy() error {
 
 			task, err := services.CreateTask(tx, tpl, env, models.Task{
 				Name:            "Auto Destroy",
-				Type:            models.TaskTypeDestroy,
 				Targets:         nil,
 				CreatorId:       consts.SysUserId,
-				RunnerId:        "",
 				Variables:       taskVars,
 				AutoApprove:     true,
 				StopOnViolation: env.StopOnViolation,
 				BaseTask: models.BaseTask{
+					Type:        models.TaskTypeDestroy,
 					Flow:        models.TaskFlow{},
 					StepTimeout: 0,
+					RunnerId:    "",
 				},
 			})
 			if err != nil {
@@ -812,4 +883,245 @@ func (m *TaskManager) processAutoDestroy() error {
 	}
 
 	return nil
+}
+
+// ===================================================================================
+// 扫描任务逻辑
+//
+
+// doRunScanTask, startErr 只在任务启动出错时(执行步骤前出错)才会返回错误
+func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) (startErr error) {
+	logger := m.logger.WithField("taskId", task.Id)
+
+	changeTaskStatus := func(status, message string) error {
+		if er := services.ChangeScanTaskStatus(m.db, task, status, message); er != nil {
+			logger.Errorf("update task status error: %v", er)
+			return er
+		}
+		return nil
+	}
+
+	taskStartFailed := func(err error) {
+		logger.Infof("task failed: %s", err)
+		startErr = err
+		_ = changeTaskStatus(models.TaskFailed, err.Error())
+	}
+
+	logger.Infof("run task: %s", task.Id)
+
+	if !task.Started() { // 任务可能为己启动状态(比如异常退出后的任务恢复)，这里判断一下
+		// 先更新任务为 running 状态
+		// 极端情况下任务未执行好过重复执行，所以先设置状态，后发起调用
+		if err := changeTaskStatus(models.TaskRunning, ""); err != nil {
+			return
+		}
+	}
+
+	steps, err := services.GetTaskSteps(m.db, task.Id)
+	if err != nil {
+		taskStartFailed(errors.Wrap(err, "get task steps"))
+		return
+	}
+
+	var step *models.TaskStep
+	for _, step = range steps {
+		if step.Index < task.CurrStep {
+			// 跳过己执行的步骤
+			continue
+		}
+
+		if _, err = m.db.Model(task).UpdateAttrs(models.Attrs{"CurrStep": step.Index}); err != nil {
+			logger.Errorf("update task error: %v", err)
+			break
+		}
+
+		runTaskReq, err := buildScanTaskReq(m.db, task, step)
+		if err != nil {
+			taskStartFailed(err)
+			return
+		}
+
+		if err = m.runScanTaskStep(ctx, *runTaskReq, task, step); err != nil {
+			logger.Infof("run task step: %v", err)
+			break
+		}
+	}
+
+	logger.Infof("task done, status: %s", task.Status)
+	return nil
+}
+
+func (m *TaskManager) processScanTaskDone(task *models.ScanTask) {
+	logger := m.logger.WithField("func", "processTaskDone").WithField("taskId", task.Id)
+
+	dbSess := m.db
+	read := func(path string) ([]byte, error) {
+		content, err := logstorage.Get().Read(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil, nil
+			}
+			return nil, err
+		}
+		return content, nil
+	}
+
+	processTfParse := func() error {
+		if bs, err := read(task.TfParseJsonPath()); err != nil {
+			return fmt.Errorf("read parse json: %v", err)
+		} else if len(bs) > 0 {
+			_, err := services.UnmarshalTfParseJson(bs)
+			if err != nil {
+				return fmt.Errorf("unmarshal parse json: %v", err)
+			}
+			//TODO: return parse result
+		}
+		return nil
+	}
+
+	processTfResult := func() error {
+		var (
+			tfResultJson *services.TsResultJson
+			bs           []byte
+			err          error
+		)
+
+		if task.Status != common.TaskFailed {
+			if bs, err = read(task.TfResultJsonPath()); err == nil && len(bs) > 0 {
+				if tfResultJson, err = services.UnmarshalTfResultJson(bs); err == nil {
+					if err := services.UpdateScanResult(dbSess, task, tfResultJson.Results); err != nil {
+						return fmt.Errorf("save scan result: %v", err)
+					}
+				}
+			}
+		}
+
+		// 扫描出错的时候更新所有策略扫描结果为 failed
+		emptyResult := services.TsResultJson{}
+		if err := services.UpdateScanResult(dbSess, task, emptyResult.Results); err != nil {
+			return fmt.Errorf("save scan result: %v", err)
+		}
+
+		return err
+	}
+
+	lastStep, err := services.GetTaskStep(dbSess, task.Id, task.CurrStep)
+	if err != nil {
+		logger.Errorf("get task step(%d) error: %v", err, task.CurrStep)
+		return
+	}
+
+	// 基于最后一个步骤更新任务状态
+	updateTaskStatus := func() error {
+		if err = services.ChangeTaskStatusWithStep(dbSess, task, lastStep); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if task.Type == models.TaskTypeParse {
+		if err := processTfParse(); err != nil {
+			logger.Errorf("process task parse: %s", err)
+		}
+	} else if task.Type == common.TaskTypeScan {
+		if err := processTfResult(); err != nil {
+			logger.Errorf("process task scan: %s", err)
+		}
+	}
+
+	if err := updateTaskStatus(); err != nil {
+		logger.Errorf("update task status error: %v", err)
+	}
+}
+
+// buildScanTaskReq 构建扫描任务 RunTaskReq 对象
+func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.TaskStep) (taskReq *runner.RunTaskReq, err error) {
+	taskReq = &runner.RunTaskReq{
+		RunnerId: task.RunnerId,
+		TaskId:   string(task.Id),
+		Timeout:  task.StepTimeout,
+		Repos: []runner.Repository{
+			{
+				RepoAddress:  task.RepoAddr,
+				RepoRevision: task.CommitId,
+			},
+		},
+	}
+
+	if step.Type == models.TaskStepTfScan {
+		taskReq.Policies, err = services.GetTaskPolicies(dbSess, task.Id)
+		if err != nil {
+			return nil, errors.Wrapf(err, "get scan task '%s' policies error: %v", task.Id, err)
+		}
+	}
+
+	return taskReq, nil
+}
+
+func (m *TaskManager) runScanTaskStep(ctx context.Context, taskReq runner.RunTaskReq,
+	task *models.ScanTask, step *models.TaskStep) (err error) {
+	logger := m.logger.WithField("taskId", taskReq.TaskId)
+	logger = logger.WithField("func", "runTaskStep").
+		WithField("step", fmt.Sprintf("%d(%s)", step.Index, step.Type))
+
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("run task step painc: %v", r)
+			logger.Errorln(err)
+			logger.Debugf("%s", debug.Stack())
+		}
+	}()
+
+	changeStepStatus := func(status, message string) {
+		var er error
+		if er = services.ChangeTaskStepStatus(m.db, task, step, status, message); er != nil {
+			er = errors.Wrap(er, "update step status error")
+			logger.Error(er)
+			panic(err)
+		}
+	}
+
+loop:
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Infof("context done")
+			return ctx.Err()
+		default:
+		}
+
+		switch step.Status {
+		case models.TaskStepPending:
+			// 先将步骤置为 running 状态，然后再发起调用，保证步骤不会重复执行
+			changeStepStatus(models.TaskStepRunning, "")
+			logger.Infof("start task step %d(%s)", step.Index, step.Type)
+			if err = StartTaskStep(taskReq, *step); err != nil {
+				logger.Errorf("start task step error: %s", err.Error())
+				changeStepStatus(models.TaskStepFailed, err.Error())
+				return err
+			}
+		case models.TaskStepRunning:
+			if _, err = WaitScanTaskStep(ctx, m.db, task, step); err != nil {
+				logger.Errorf("wait task result error: %v", err)
+				changeStepStatus(models.TaskStepFailed, err.Error())
+				return err
+			}
+		default:
+			break loop
+		}
+	}
+
+	switch step.Status {
+	case models.TaskStepComplete:
+		return nil
+	case models.TaskStepFailed:
+		if step.Message != "" {
+			return fmt.Errorf(step.Message)
+		}
+		return errors.New("failed")
+	case models.TaskStepTimeout:
+		return errors.New("timeout")
+	default:
+		return fmt.Errorf("unknown step status: %v", step.Status)
+	}
 }
