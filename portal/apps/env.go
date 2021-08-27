@@ -12,6 +12,7 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
@@ -167,7 +168,10 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		Operator:   c.Username,
 		OperatorId: c.UserId,
 	}
-
+	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
+	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, form.Triggers); err != nil {
+		c.Logger().Errorf("set webhook err :%v", err)
+	}
 	return &envDetail, nil
 }
 
@@ -332,6 +336,18 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 
 	if form.HasKey("triggers") {
 		attrs["triggers"] = form.Triggers
+		// triggers有变更时，需要检测webhook的配置
+		tpl, err := services.GetTemplateById(query, env.TplId)
+		if err != nil && err.Code() == e.TemplateNotExists {
+			return nil, e.New(err.Code(), err, http.StatusBadRequest)
+		} else if err != nil {
+			c.Logger().Errorf("error get template, err %s", err)
+			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+		}
+		vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
+		if err := vcsrv.SetWebhook(vcs, tpl.RepoId, form.Triggers); err != nil {
+			c.Logger().Errorf("set webhook err")
+		}
 	}
 
 	if form.HasKey("archived") {
@@ -549,7 +565,10 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		TaskId: task.Id,
 	}
 	envDetail = PopulateLastTask(c.DB(), envDetail)
-
+	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
+	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, form.Triggers); err != nil {
+		c.Logger().Errorf("set webhook err :%v", err)
+	}
 	return envDetail, nil
 }
 

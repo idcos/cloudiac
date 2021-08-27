@@ -40,6 +40,7 @@ func Register(g *gin.RouterGroup) {
 	g.Use(gin.Logger())
 
 	g.POST("/trigger/send", w(handlers.ApiTriggerHandler))
+	g.POST("/webhooks/:vcsType/:vcsId", w(handlers.WebhooksApiHandler))
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
 
 	// Authorization Header 鉴权

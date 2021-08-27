@@ -3,6 +3,7 @@
 package vcsrv
 
 import (
+	"bytes"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/models"
 	"cloudiac/utils"
@@ -24,13 +25,13 @@ func newGiteeInstance(vcs *models.Vcs) (VcsIface, error) {
 }
 
 type giteeVcs struct {
-	giteeRequest func(path, method string) (*http.Response, []byte, error)
+	giteeRequest func(path, method string, requestBody []byte) (*http.Response, []byte, error)
 	vcs          *models.Vcs
 }
 
 func (gitee *giteeVcs) GetRepo(idOrPath string) (RepoIface, error) {
 	path := gitee.vcs.Address + fmt.Sprintf("/repos/%s?access_token=%s", idOrPath, gitee.vcs.VcsToken)
-	_, body, er := gitee.giteeRequest(path, "GET")
+	_, body, er := gitee.giteeRequest(path, "GET", nil)
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)
 	}
@@ -64,7 +65,7 @@ func (gitee *giteeVcs) ListRepos(namespace, search string, limit, offset int) ([
 		link.RawQuery += fmt.Sprintf("&q=%s", search)
 	}
 	path := gitee.vcs.Address + link.String()
-	response, body, err := gitee.giteeRequest(path, "GET")
+	response, body, err := gitee.giteeRequest(path, "GET", nil)
 
 	if err != nil {
 		return nil, 0, e.New(e.BadRequest, err)
@@ -90,7 +91,7 @@ func (gitee *giteeVcs) ListRepos(namespace, search string, limit, offset int) ([
 }
 
 type giteeRepoIface struct {
-	giteaRequest func(path, method string) (*http.Response, []byte, error)
+	giteaRequest func(path, method string, requestBody []byte) (*http.Response, []byte, error)
 	vcs          *models.Vcs
 	repository   *RepositoryGitee
 }
@@ -102,7 +103,7 @@ type giteeBranch struct {
 func (gitee *giteeRepoIface) ListBranches() ([]string, error) {
 	path := gitee.vcs.Address +
 		fmt.Sprintf("/repos/%s/branches?access_token=%s", gitee.repository.FullName, gitee.vcs.VcsToken)
-	_, body, err := gitee.giteaRequest(path, "GET")
+	_, body, err := gitee.giteaRequest(path, "GET", nil)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
@@ -123,7 +124,7 @@ type giteeTag struct {
 
 func (gitee *giteeRepoIface) ListTags() ([]string, error) {
 	path := gitee.vcs.Address + fmt.Sprintf("/repos/%s/tags", gitee.repository.FullName)
-	_, body, err := gitee.giteaRequest(path, "GET")
+	_, body, err := gitee.giteaRequest(path, "GET", nil)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
@@ -144,10 +145,9 @@ type giteeCommit struct {
 }
 
 func (gitee *giteeRepoIface) BranchCommitId(branch string) (string, error) {
-
 	path := gitee.vcs.Address +
 		fmt.Sprintf("/repos/%s/commits/%s?access_token=%s", gitee.repository.FullName, branch, gitee.vcs.VcsToken)
-	_, body, err := gitee.giteaRequest(path, "GET")
+	_, body, err := gitee.giteaRequest(path, "GET", nil)
 	if err != nil {
 		return "", e.New(e.BadRequest, err)
 	}
@@ -173,7 +173,7 @@ func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s",
 			gitee.repository.FullName, "%2F", gitee.vcs.VcsToken, branch)
 	}
-	_, body, er := gitee.giteaRequest(path, "GET")
+	_, body, er := gitee.giteaRequest(path, "GET", nil)
 	if er != nil {
 		return []string{}, e.New(e.BadRequest, er)
 	}
@@ -204,7 +204,7 @@ type giteeReadContent struct {
 func (gitee *giteeRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
 	pathAddr := gitee.vcs.Address +
 		fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", gitee.repository.FullName, path, gitee.vcs.VcsToken, branch)
-	_, body, er := gitee.giteaRequest(pathAddr, "GET")
+	_, body, er := gitee.giteaRequest(pathAddr, "GET", nil)
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)
 	}
@@ -234,11 +234,53 @@ func (gitee *giteeRepoIface) DefaultBranch() string {
 	return gitee.repository.DefaultBranch
 }
 
+//AddWebhook doc: https://gitee.com/api/v5/swagger#/deleteV5ReposOwnerRepoHooksId
+func (gitee *giteeRepoIface) AddWebhook(url string) error {
+	path := gitee.vcs.Address +
+		fmt.Sprintf("/repos/%s/hooks?access_token=%s", gitee.repository.FullName, gitee.vcs.VcsToken)
+	body := map[string]interface{}{
+		"url":                   url,
+		"push_events":           "true",
+		"merge_requests_events": "true",
+	}
+	b, _ := json.Marshal(&body)
+	_, _, err := gitee.giteaRequest(path, "POST", b)
+	if err != nil {
+		return e.New(e.BadRequest, err)
+	}
+	return nil
+}
+
+func (gitee *giteeRepoIface) ListWebhook() ([]ProjectsHook, error) {
+	ph := make([]ProjectsHook, 0)
+	path := gitee.vcs.Address +
+		fmt.Sprintf("/repos/%s/hooks?access_token=%s", gitee.repository.FullName, gitee.vcs.VcsToken)
+	_, body, err := gitee.giteaRequest(path, "GET", nil)
+	if err != nil {
+		return ph, e.New(e.BadRequest, err)
+	}
+
+	rep := []giteeCommit{}
+	_ = json.Unmarshal(body, &rep)
+
+	return ph, nil
+}
+
+func (gitee *giteeRepoIface) DeleteWebhook(id int) error {
+	path := gitee.vcs.Address +
+		fmt.Sprintf("/repos/%s/hooks/%d?access_token=%s", gitee.repository.FullName, id, gitee.vcs.VcsToken)
+	_, _, err := gitee.giteaRequest(path, "DELETE", nil)
+	if err != nil {
+		return e.New(e.BadRequest, err)
+	}
+	return nil
+}
+
 //giteeRequest
 //param path : gitea api路径
 //param method 请求方式
-func giteeRequest(path, method string) (*http.Response, []byte, error) {
-	request, er := http.NewRequest(method, path, nil)
+func giteeRequest(path, method string, requestBody []byte) (*http.Response, []byte, error) {
+	request, er := http.NewRequest(method, path, bytes.NewBuffer(requestBody))
 	if er != nil {
 		return nil, nil, er
 	}
