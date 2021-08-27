@@ -73,6 +73,5 @@ func parseRegoHeader(rego string) (entry string, policyType string, resType stri
 	} else {
 		return "", "", "", e.New(e.PolicyRegoMissingComment)
 	}
-
 	return
 }

@@ -28,3 +28,37 @@ type CreatePolicyRelForm struct {
 	EnvId          models.Id   `json:"envId" binding:"" example:"env-c3ek0co6n88ldvq1n6ag"`
 	TplId          models.Id   `json:"tplId" binding:"" example:"tpl-c3ek0co6n88ldvq1n6ag"`
 }
+
+type SearchPolicyGroupForm struct {
+	PageForm
+
+	Q string `form:"q" json:"q" binding:""` // 策略组名称，支持模糊搜索
+}
+
+type UpdatePolicyGroupForm struct {
+	BaseForm
+
+	Id          models.Id `uri:"id"`
+	Name        string    `json:"name" form:"name" `
+	Description string    `json:"description" binding:"" example:"本组包含对于安全合规的检查策略"`
+}
+
+type DeletePolicyGroupForm struct {
+	BaseForm
+
+	Id models.Id `uri:"id"`
+}
+
+type DetailPolicyGroupForm struct {
+	BaseForm
+
+	Id models.Id `uri:"id"`
+}
+
+type OpnPolicyAndPolicyGroupRelForm struct {
+	BaseForm
+
+	PolicyGroupId models.Id `uri:"id" json:"policyGroupId" form:"policyGroupId" `
+	RmPolicyIds   []string  `json:"rmPolicyIds" binding:"" example:"[\"po-c3ek0co6n88ldvq1n6ag\"]"`
+	AddPolicyIds  []string  `json:"addPolicyIds" binding:"" example:"[\"po-c3ek0co6n88ldvq1n6ag\"]"`
+}

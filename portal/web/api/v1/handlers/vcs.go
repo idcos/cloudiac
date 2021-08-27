@@ -79,7 +79,7 @@ func (Vcs) Update(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param form formData forms.DeleteVcsForm true "patameter"
+// @Param form formData forms.DeleteVcsForm true "parameter"
 // @Param vcsId path string true "vcs仓库Id"
 // @Router /vcs/{vcsId} [delete]
 // @Success 200 {object} ctx.JSONResult
@@ -104,7 +104,7 @@ func ListEnableVcs(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param vcsId path string true "Vcs仓库ID"
-// @Param form query forms.GetGitProjectsForm true "patameter"
+// @Param form query forms.GetGitProjectsForm true "parameter"
 // @Router /vcs/{vcsId}/repo [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]vcsrv.Projects}}
 func (Vcs) ListRepos(c *ctx.GinRequest) {
