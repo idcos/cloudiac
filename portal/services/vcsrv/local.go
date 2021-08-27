@@ -237,3 +237,16 @@ func (l *LocalRepo) DefaultBranch() string {
 	head, _ := l.repo.Head()
 	return head.Name().Short()
 }
+
+func (l *LocalRepo) AddWebhook(url string) error {
+	return nil
+}
+
+func (l *LocalRepo) ListWebhook() ([]ProjectsHook, error) {
+	ph := make([]ProjectsHook, 0)
+	return ph, nil
+}
+
+func (l *LocalRepo) DeleteWebhook(id int) error {
+	return nil
+}

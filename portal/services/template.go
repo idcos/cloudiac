@@ -96,3 +96,16 @@ func QueryProjectByTplId(tx *db.Session, tplId models.Id) (projectIds []models.I
 	}
 	return
 }
+
+func QueryTemplateByVcsIdAndRepoId(tx *db.Session, vcsId, repoId string) ([]models.Template, e.Error) {
+	tpl := make([]models.Template, 0)
+	if err := tx.Where("vcs_id = ?", vcsId).
+		Where("repo_id = ?", repoId).
+		Find(&tpl); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TemplateNotExists, err)
+		}
+	}
+	return tpl, nil
+
+}

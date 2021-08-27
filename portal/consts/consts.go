@@ -88,6 +88,9 @@ const (
 
 	TokenApi     = "api"     //token类型
 	TokenTrigger = "trigger" //token类型
+
+	EnvTriggerPRMR   = "prmr"
+	EnvTriggerCommit = "commit"
 )
 
 var (
