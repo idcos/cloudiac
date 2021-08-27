@@ -74,8 +74,9 @@ func Register(g *gin.RouterGroup) {
 	g.PUT("/policies/envs", ac(), w(handlers.Policy{}.Create)) // 关联环境与策略组（创建/删除？）
 	g.GET("/policies/envs/:id", ac(), w(handlers.Policy{}.Create))
 	ctrl.Register(g.Group("policies/groups", ac()), &handlers.PolicyGroup{})
-	g.GET("/policies/result", ac(), w(handlers.Policy{}.Create))         // 扫描结果
-	g.GET("/policies/result/summary", ac(), w(handlers.Policy{}.Create)) // 统计报告
+	g.POST("policies/groups/:id", ac(), w(handlers.PolicyGroup{}.OpPolicyAndPolicyGroupRel)) //关联策略与策略组
+	g.GET("/policies/result", ac(), w(handlers.Policy{}.Create))                             // 扫描结果
+	g.GET("/policies/result/summary", ac(), w(handlers.Policy{}.Create))                     // 统计报告
 	ctrl.Register(g.Group("policies/rels", ac()), &handlers.PolicyRel{})
 
 	// 要求组织 header
