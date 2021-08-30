@@ -3,6 +3,7 @@ package apps
 import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
@@ -74,4 +75,112 @@ func parseRegoHeader(rego string) (entry string, policyType string, resType stri
 		return "", "", "", e.New(e.PolicyRegoMissingComment)
 	}
 	return
+}
+
+type PolicyResp struct {
+	models.Policy
+	GroupName string `json:"groupName" form:"groupName" `
+}
+
+// SearchPolicy 查询策略组列表
+func SearchPolicy(c *ctx.ServiceContext, form *forms.SearchPolicyForm) (interface{}, e.Error) {
+	query := services.SearchPolicy(c.DB(), form)
+	pg := make([]PolicyResp, 0)
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	if err := p.Scan(&pg); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	return pg, nil
+}
+
+// UpdatePolicy 修改策略组
+func UpdatePolicy(c *ctx.ServiceContext, form *forms.UpdatePolicyForm) (interface{}, e.Error) {
+	attr := models.Attrs{}
+	if form.HasKey("name") {
+		attr["name"] = form.Name
+	}
+
+	if form.HasKey("fixSuggestion") {
+		attr["fixSuggestion"] = form.FixSuggestion
+	}
+
+	if form.HasKey("severity") {
+		attr["severity"] = form.Severity
+	}
+
+	if form.HasKey("rego") {
+		attr["rego"] = form.Rego
+	}
+
+	if form.HasKey("status") {
+		attr["status"] = form.Status
+	}
+
+	pg := models.Policy{}
+	pg.Id = form.Id
+	if _, err := services.UpdatePolicy(c.DB(), &pg, attr); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+// DeletePolicy 删除策略组
+func DeletePolicy(c *ctx.ServiceContext, form *forms.DeletePolicyForm) (interface{}, e.Error) {
+	return services.DeletePolicy(c.DB(), form.Id)
+
+}
+
+// DetailPolicy 查询策略组详情
+func DetailPolicy(c *ctx.ServiceContext, form *forms.DetailPolicyForm) (interface{}, e.Error) {
+	return services.DetailPolicy(c.DB(), form.Id)
+}
+
+// CreatePolicyShield 策略屏蔽
+func CreatePolicyShield(c *ctx.ServiceContext, form *forms.CreatePolicyShieldForm) (interface{}, e.Error) {
+	return services.CreatePolicyShield()
+}
+
+func SearchPolicyShield(c *ctx.ServiceContext, form *forms.SearchPolicyShieldForm) (interface{}, e.Error) {
+	return services.SearchPolicyShield()
+}
+
+func DeletePolicyShield(c *ctx.ServiceContext, form *forms.DeletePolicyShieldForm) (interface{}, e.Error) {
+	return services.DeletePolicyShield()
+}
+
+func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (interface{}, e.Error) {
+	return services.SearchPolicyTpl()
+}
+
+func UpdatePolicyTpl(c *ctx.ServiceContext, form *forms.UpdatePolicyTplForm) (interface{}, e.Error) {
+	return services.UpdatePolicyTpl()
+}
+
+func DetailPolicyTpl(c *ctx.ServiceContext, form *forms.DetailPolicyTplForm) (interface{}, e.Error) {
+	return services.DetailPolicyTpl()
+}
+
+func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (interface{}, e.Error) {
+	return services.SearchPolicyEnv()
+}
+
+func UpdatePolicyEnv(c *ctx.ServiceContext, form *forms.UpdatePolicyEnvForm) (interface{}, e.Error) {
+	return services.UpdatePolicyEnv()
+}
+
+func DetailPolicyEnv(c *ctx.ServiceContext, form *forms.DetailPolicyEnvForm) (interface{}, e.Error) {
+	return services.DetailPolicyEnv()
+}
+
+func PolicyError(c *ctx.ServiceContext, form *forms.PolicyErrorForm) (interface{}, e.Error) {
+	return services.PolicyError()
+}
+
+func PolicyReference(c *ctx.ServiceContext, form *forms.PolicyReferenceForm) (interface{}, e.Error) {
+	return services.PolicyReference()
+}
+
+func PolicyRepo(c *ctx.ServiceContext, form *forms.PolicyRepoForm) (interface{}, e.Error) {
+	return services.PolicyRepo()
 }
