@@ -281,9 +281,9 @@ func (m *TaskManager) processPendingTask(ctx context.Context) {
 	for idx := range scanTasks {
 		tasks[idx] = scanTasks[idx]
 	}
-	deployTaskLen := len(deployTasks)
+	scanTasksLen := len(scanTasks)
 	for idx := range deployTasks {
-		tasks[deployTaskLen+idx] = deployTasks[deployTaskLen+idx]
+		tasks[scanTasksLen+idx] = deployTasks[scanTasksLen+idx]
 	}
 
 	for i := range tasks {
