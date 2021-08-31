@@ -136,17 +136,27 @@ func DetailPolicy(c *ctx.ServiceContext, form *forms.DetailPolicyForm) (interfac
 	return services.DetailPolicy(c.DB(), form.Id)
 }
 
-// CreatePolicyShield 策略屏蔽
-func CreatePolicyShield(c *ctx.ServiceContext, form *forms.CreatePolicyShieldForm) (interface{}, e.Error) {
-	return services.CreatePolicyShield()
+// CreatePolicySuppress 策略屏蔽
+func CreatePolicySuppress(c *ctx.ServiceContext, form *forms.CreatePolicyShieldForm) (interface{}, e.Error) {
+	return services.CreatePolicySuppress()
 }
 
-func SearchPolicyShield(c *ctx.ServiceContext, form *forms.SearchPolicyShieldForm) (interface{}, e.Error) {
-	return services.SearchPolicyShield()
+func SearchPolicySuppress(c *ctx.ServiceContext, form *forms.SearchPolicySuppressForm) (interface{}, e.Error) {
+	return services.SearchPolicySuppress()
 }
 
-func DeletePolicyShield(c *ctx.ServiceContext, form *forms.DeletePolicyShieldForm) (interface{}, e.Error) {
-	return services.DeletePolicyShield()
+func DeletePolicySuppress(c *ctx.ServiceContext, form *forms.DeletePolicySuppressForm) (interface{}, e.Error) {
+	return services.DeletePolicySuppress()
+}
+
+type RespPolicyTpl struct {
+	TplName         string    `json:"tplName" form:"tplName" `
+	TplId           models.Id `json:"tplId" form:"tplId" `
+	RepoAddr        string    `json:"repoAddr" form:"repoAddr" `
+	PolicyGroupName string    `json:"policyGroupName" form:"policyGroupName" `
+	PolicyGroupId   models.Id `json:"policyGroupId" form:"policyGroupId" `
+	Enabled         bool      `json:"enabled" example:"true"`          //是否启用
+	GroupStatus     string    `json:"groupStatus" form:"groupStatus" ` //状态 todo 不确认字段
 }
 
 func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (interface{}, e.Error) {
@@ -159,6 +169,18 @@ func UpdatePolicyTpl(c *ctx.ServiceContext, form *forms.UpdatePolicyTplForm) (in
 
 func DetailPolicyTpl(c *ctx.ServiceContext, form *forms.DetailPolicyTplForm) (interface{}, e.Error) {
 	return services.DetailPolicyTpl()
+}
+
+type RespPolicyEnv struct {
+	TplName         string    `json:"tplName" form:"tplName" `
+	TplId           models.Id `json:"tplId" form:"tplId" `
+	EnvName         string    `json:"envName" form:"envName" `
+	EnvId           models.Id `json:"envId" form:"envId" `
+	RepoAddr        string    `json:"repoAddr" form:"repoAddr" `
+	PolicyGroupName string    `json:"policyGroupName" form:"policyGroupName" `
+	PolicyGroupId   models.Id `json:"policyGroupId" form:"policyGroupId" `
+	Enabled         bool      `json:"enabled" example:"true"`          //是否启用
+	GroupStatus     string    `json:"groupStatus" form:"groupStatus" ` //状态 todo 不确认字段
 }
 
 func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (interface{}, e.Error) {

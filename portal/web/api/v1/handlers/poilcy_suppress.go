@@ -7,11 +7,11 @@ import (
 	"cloudiac/portal/models/forms"
 )
 
-type PolicyShield struct {
+type PolicySuppress struct {
 	ctrl.GinController
 }
 
-// CreatePolicyShield 创建策略屏蔽
+// CreatePolicySuppress 创建策略屏蔽
 // @Tags 策略
 // @Summary shield
 // @Description 创建策略屏蔽
@@ -22,17 +22,17 @@ type PolicyShield struct {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param json body forms.CreatePolicyShieldForm true "parameter"
-// @Router /policies/shield [post]
+// @Router /policies/suppress [post]
 // @Success 200 {object} ctx.JSONResult{result=models.PolicyShield}
-func (PolicyShield) CreatePolicyShield(c *ctx.GinRequest) {
+func (PolicySuppress) CreatePolicySuppress(c *ctx.GinRequest) {
 	form := &forms.CreatePolicyShieldForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CreatePolicyShield(c.Service(), form))
+	c.JSONResult(apps.CreatePolicySuppress(c.Service(), form))
 }
 
-// SearchPolicyShield 查询策略屏蔽
+// SearchPolicySuppress 查询策略屏蔽
 // @Tags 策略
 // @Summary shield
 // @Description 查询策略屏蔽
@@ -42,18 +42,18 @@ func (PolicyShield) CreatePolicyShield(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
-// @Param json body forms.SearchPolicyShieldForm true "parameter"
-// @Router /policies/shield [get]
+// @Param json body forms.SearchPolicySuppressForm true "parameter"
+// @Router /policies/suppress [get]
 // @Success 200 {object} ctx.JSONResult{result=models.PolicyShield}
-func (PolicyShield) SearchPolicyShield(c *ctx.GinRequest) {
-	form := &forms.SearchPolicyShieldForm{}
+func (PolicySuppress) SearchPolicySuppress(c *ctx.GinRequest) {
+	form := &forms.SearchPolicySuppressForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchPolicyShield(c.Service(), form))
+	c.JSONResult(apps.SearchPolicySuppress(c.Service(), form))
 }
 
-// DeletePolicyShield 策略屏蔽
+// DeletePolicySuppress 策略屏蔽
 // @Tags 策略
 // @Summary shield
 // @Description 策略屏蔽
@@ -63,13 +63,13 @@ func (PolicyShield) SearchPolicyShield(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
-// @Param json body forms.DeletePolicyShieldForm true "parameter"
-// @Router /policies/shield [delete]
+// @Param json body forms.DeletePolicySuppressForm true "parameter"
+// @Router /policies/suppress [delete]
 // @Success 200 {object} ctx.JSONResult{result=models.Policy}
-func (PolicyShield) DeletePolicyShield(c *ctx.GinRequest) {
-	form := &forms.DeletePolicyShieldForm{}
+func (PolicySuppress) DeletePolicySuppress(c *ctx.GinRequest) {
+	form := &forms.DeletePolicySuppressForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DeletePolicyShield(c.Service(), form))
+	c.JSONResult(apps.DeletePolicySuppress(c.Service(), form))
 }

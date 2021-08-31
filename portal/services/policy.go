@@ -195,15 +195,15 @@ func DetailPolicy(dbSess *db.Session, id models.Id) (interface{}, e.Error) {
 	return nil, nil
 }
 
-func CreatePolicyShield() (interface{}, e.Error) {
+func CreatePolicySuppress() (interface{}, e.Error) {
 	return nil, nil
 }
 
-func SearchPolicyShield() (interface{}, e.Error) {
+func SearchPolicySuppress() (interface{}, e.Error) {
 	return nil, nil
 }
 
-func DeletePolicyShield() (interface{}, e.Error) {
+func DeletePolicySuppress() (interface{}, e.Error) {
 	return nil, nil
 }
 

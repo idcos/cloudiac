@@ -164,7 +164,7 @@ func (Policy) Detail(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
 // @Router /policies/templates [get]
-// todo @Success 200 {object} ctx.JSONResult{result=models.Policy}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.RespPolicyTpl}}
 func (Policy) SearchPolicyTpl(c *ctx.GinRequest) {
 	form := &forms.SearchPolicyTplForm{}
 	if err := c.Bind(form); err != nil {
@@ -206,7 +206,7 @@ func (Policy) UpdatePolicyTpl(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param tplId path string true "模板id"
 // @Router /policies/templates/{tplId} [get]
-// @Success 200 {object} ctx.JSONResult
+// @Success 200 {object} ctx.JSONResult{result=models.Policy}
 func (Policy) DetailPolicyTpl(c *ctx.GinRequest) {
 	form := &forms.DetailPolicyTplForm{}
 	if err := c.Bind(form); err != nil {
@@ -227,7 +227,7 @@ func (Policy) DetailPolicyTpl(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
 // @Router /policies/envs [get]
-// @Success 200 {object} ctx.JSONResult
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.RespPolicyEnv}}
 func (Policy) SearchPolicyEnv(c *ctx.GinRequest) {
 	form := &forms.SearchPolicyEnvForm{}
 	if err := c.Bind(form); err != nil {
@@ -269,7 +269,7 @@ func (Policy) UpdatePolicyEnv(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param envId path string true "环境id"
 // @Router /policies/envs/{envId} [get]
-// @Success 200 {object} ctx.JSONResult
+// @Success 200 {object} ctx.JSONResult{result=models.Policy}
 func (Policy) DetailPolicyEnv(c *ctx.GinRequest) {
 	form := &forms.DetailPolicyEnvForm{}
 	if err := c.Bind(form); err != nil {
@@ -290,7 +290,7 @@ func (Policy) DetailPolicyEnv(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param policyId path string true "策略id"
 // @Router /policies/{policyId}/error [get]
-// @Success 200 {object} ctx.JSONResult
+// @Success 200 {object} ctx.JSONResult{result=models.Policy}
 func (Policy) PolicyError(c *ctx.GinRequest) {
 	form := &forms.PolicyErrorForm{}
 	if err := c.Bind(form); err != nil {
@@ -311,7 +311,7 @@ func (Policy) PolicyError(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param policyId path string true "策略id"
 // @Router /policies/{policyId}/reference [get]
-// @Success 200 {object} ctx.JSONResult
+// @Success 200 {object} ctx.JSONResult{result=models.Policy}
 func (Policy) PolicyReference(c *ctx.GinRequest) {
 	form := &forms.PolicyReferenceForm{}
 	if err := c.Bind(form); err != nil {
@@ -332,7 +332,7 @@ func (Policy) PolicyReference(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param policyId path string true "策略id"
 // @Router /policies/{policyId}/report [get]
-// @Success 200 {object} ctx.JSONResult
+// @Success 200 {object} ctx.JSONResult{result=models.Policy}
 func (Policy) PolicyRepo(c *ctx.GinRequest) {
 	form := &forms.PolicyRepoForm{}
 	if err := c.Bind(form); err != nil {

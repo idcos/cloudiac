@@ -78,7 +78,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/policies/result", ac(), w(handlers.Policy{}.Create))                              // 扫描结果
 	g.GET("/policies/result/summary", ac(), w(handlers.Policy{}.Create))                      // 统计报告
 	ctrl.Register(g.Group("policies/rels", ac()), &handlers.PolicyRel{})
-	ctrl.Register(g.Group("policies/shield", ac()), &handlers.PolicyShield{}) //策略屏蔽
+	ctrl.Register(g.Group("policies/suppress", ac()), &handlers.PolicySuppress{}) //策略屏蔽
 	g.GET("/policies/:id/error", ac(), w(handlers.Policy{}.PolicyError))
 	g.GET("/policies/:id/reference", ac(), w(handlers.Policy{}.PolicyReference))
 	g.GET("/policies/:id/report", ac(), w(handlers.Policy{}.PolicyRepo))

@@ -108,13 +108,13 @@ type CreatePolicyShieldForm struct {
 	Type   string `json:"type" form:"type" enums:"'strategy','source'"`
 }
 
-type SearchPolicyShieldForm struct {
+type SearchPolicySuppressForm struct {
 	BaseForm
 
 	PolicyId models.Id `uri:"policyId"`
 }
 
-type DeletePolicyShieldForm struct {
+type DeletePolicySuppressForm struct {
 	BaseForm
 
 	Id models.Id `uri:"id"`
