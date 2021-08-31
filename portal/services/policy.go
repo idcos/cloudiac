@@ -4,6 +4,7 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/forms"
 	"cloudiac/runner"
 	"fmt"
 	"strconv"
@@ -149,4 +150,95 @@ func RemovePoliciesGroupRelation(tx *db.Session, groupId models.Id) e.Error {
 		return err
 	}
 	return nil
+}
+
+func SearchPolicy(dbSess *db.Session, form *forms.SearchPolicyForm) *db.Session {
+	pTable := models.Policy{}.TableName()
+	query := dbSess.Table(pTable).Joins("")
+	if len(form.GroupId) > 0 {
+		query = query.Where(fmt.Sprintf("%s.group_id in (?)", pTable), form.GroupId)
+	}
+
+	if form.Severity != "" {
+		query = query.Where(fmt.Sprintf("%s.severity = ?", pTable), form.Severity)
+	}
+
+	if form.Q != "" {
+		qs := "%" + form.Q + "%"
+		query = query.Where(fmt.Sprintf("%s.name like ?", pTable), qs)
+	}
+
+	return query.LazySelectAppend(fmt.Sprintf("%s.%", pTable),
+		fmt.Sprintf("%s.name as groupName", models.PolicyGroup{}.TableName()))
+}
+
+func DeletePolicy(dbSess *db.Session, id models.Id) (interface{}, e.Error) {
+	if _, err := dbSess.
+		Where("id = ?", id).
+		Delete(&models.Policy{}); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	return nil, nil
+}
+
+func DetailPolicy(dbSess *db.Session, id models.Id) (interface{}, e.Error) {
+	p := models.Policy{}
+	if err := dbSess.Table(models.Policy{}.TableName()).
+		Where("id = ?", id).
+		First(&p); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.DBError, fmt.Errorf("polict not found id: %s", id))
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return nil, nil
+}
+
+func CreatePolicySuppress() (interface{}, e.Error) {
+	return nil, nil
+}
+
+func SearchPolicySuppress() (interface{}, e.Error) {
+	return nil, nil
+}
+
+func DeletePolicySuppress() (interface{}, e.Error) {
+	return nil, nil
+}
+
+func SearchPolicyTpl() (interface{}, e.Error) {
+	return nil, nil
+}
+
+func UpdatePolicyTpl() (interface{}, e.Error) {
+	return nil, nil
+}
+
+func DetailPolicyTpl() (interface{}, e.Error) {
+	return nil, nil
+}
+
+func SearchPolicyEnv() (interface{}, e.Error) {
+	return nil, nil
+}
+
+func UpdatePolicyEnv() (interface{}, e.Error) {
+	return nil, nil
+}
+
+func DetailPolicyEnv() (interface{}, e.Error) {
+	return nil, nil
+}
+
+func PolicyError() (interface{}, e.Error) {
+	return nil, nil
+}
+
+func PolicyReference() (interface{}, e.Error) {
+	return nil, nil
+}
+
+func PolicyRepo() (interface{}, e.Error) {
+	return nil, nil
 }

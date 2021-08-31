@@ -75,6 +75,10 @@ func UpdatePolicyGroup(c *ctx.ServiceContext, form *forms.UpdatePolicyGroupForm)
 		attr["description"] = form.Description
 	}
 
+	if form.HasKey("status") {
+		attr["status"] = form.Status
+	}
+
 	pg := models.PolicyGroup{}
 	pg.Id = form.Id
 	if err := services.UpdatePolicyGroup(c.DB(), &pg, attr); err != nil {

@@ -33,3 +33,22 @@ func (p *Policy) CustomBeforeCreate(*db.Session) error {
 	}
 	return nil
 }
+
+type PolicyShield struct {
+	// todo 是不是直接删除即可
+	SoftDeleteModel
+
+	CreatorId Id `json:"creatorId" gorm:"size:32;not null;创建人" example:"u-c3lcrjxczjdywmk0go90"`
+	OrgId     Id `json:"orgId" gorm:"not null;size:32;comment:组织ID" example:"org-c3lcrjxczjdywmk0go90"`
+	ProjectId Id `json:"projectId" gorm:"default:'';size:32;comment:项目ID" example:"p-c3lcrjxczjdywmk0go90"`
+	TplId     Id `json:"tplId" gorm:"size:32;comment:云模板ID" example:"t-c3lcrjxczjdywmk0go90"`
+	EnvId     Id `json:"envId" gorm:"size:32;comment:环境ID" example:"e-c3lcrjxczjdywmk0go90"`
+	PolicyId  Id `json:"policyId" form:"policyId" gorm:"size:32;comment:策略ID" example:"e-c3lcrjxczjdywmk0go90"`
+
+	Reason string `json:"reason" form:"reason" gorm:"comment:屏蔽说明"`
+	Type   string `json:"type" form:"type" gorm:"type:enum('strategy','source');comment:屏蔽类型"`
+}
+
+func (PolicyShield) TableName() string {
+	return "iac_policy_shield"
+}
