@@ -4,6 +4,7 @@ import (
 	"cloudiac/common"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
@@ -74,7 +75,6 @@ func parseRegoHeader(rego string) (entry string, policyType string, resType stri
 	} else {
 		return "", "", "", e.New(e.PolicyRegoMissingComment)
 	}
-
 	return
 }
 
@@ -139,4 +139,134 @@ func ScanTemplate(c *ctx.ServiceContext, form *forms.ScanTemplateForm) (*models.
 	}
 
 	return task, nil
+}
+
+type PolicyResp struct {
+	models.Policy
+	GroupName string `json:"groupName" form:"groupName" `
+}
+
+// SearchPolicy 查询策略组列表
+func SearchPolicy(c *ctx.ServiceContext, form *forms.SearchPolicyForm) (interface{}, e.Error) {
+	query := services.SearchPolicy(c.DB(), form)
+	pg := make([]PolicyResp, 0)
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	if err := p.Scan(&pg); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	return pg, nil
+}
+
+// UpdatePolicy 修改策略组
+func UpdatePolicy(c *ctx.ServiceContext, form *forms.UpdatePolicyForm) (interface{}, e.Error) {
+	attr := models.Attrs{}
+	if form.HasKey("name") {
+		attr["name"] = form.Name
+	}
+
+	if form.HasKey("fixSuggestion") {
+		attr["fixSuggestion"] = form.FixSuggestion
+	}
+
+	if form.HasKey("severity") {
+		attr["severity"] = form.Severity
+	}
+
+	if form.HasKey("rego") {
+		attr["rego"] = form.Rego
+	}
+
+	if form.HasKey("status") {
+		attr["status"] = form.Status
+	}
+
+	pg := models.Policy{}
+	pg.Id = form.Id
+	if _, err := services.UpdatePolicy(c.DB(), &pg, attr); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+// DeletePolicy 删除策略组
+func DeletePolicy(c *ctx.ServiceContext, form *forms.DeletePolicyForm) (interface{}, e.Error) {
+	return services.DeletePolicy(c.DB(), form.Id)
+
+}
+
+// DetailPolicy 查询策略组详情
+func DetailPolicy(c *ctx.ServiceContext, form *forms.DetailPolicyForm) (interface{}, e.Error) {
+	return services.DetailPolicy(c.DB(), form.Id)
+}
+
+// CreatePolicySuppress 策略屏蔽
+func CreatePolicySuppress(c *ctx.ServiceContext, form *forms.CreatePolicyShieldForm) (interface{}, e.Error) {
+	return services.CreatePolicySuppress()
+}
+
+func SearchPolicySuppress(c *ctx.ServiceContext, form *forms.SearchPolicySuppressForm) (interface{}, e.Error) {
+	return services.SearchPolicySuppress()
+}
+
+func DeletePolicySuppress(c *ctx.ServiceContext, form *forms.DeletePolicySuppressForm) (interface{}, e.Error) {
+	return services.DeletePolicySuppress()
+}
+
+type RespPolicyTpl struct {
+	TplName         string    `json:"tplName" form:"tplName" `
+	TplId           models.Id `json:"tplId" form:"tplId" `
+	RepoAddr        string    `json:"repoAddr" form:"repoAddr" `
+	PolicyGroupName string    `json:"policyGroupName" form:"policyGroupName" `
+	PolicyGroupId   models.Id `json:"policyGroupId" form:"policyGroupId" `
+	Enabled         bool      `json:"enabled" example:"true"`          //是否启用
+	GroupStatus     string    `json:"groupStatus" form:"groupStatus" ` //状态 todo 不确认字段
+}
+
+func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (interface{}, e.Error) {
+	return services.SearchPolicyTpl()
+}
+
+func UpdatePolicyTpl(c *ctx.ServiceContext, form *forms.UpdatePolicyTplForm) (interface{}, e.Error) {
+	return services.UpdatePolicyTpl()
+}
+
+func DetailPolicyTpl(c *ctx.ServiceContext, form *forms.DetailPolicyTplForm) (interface{}, e.Error) {
+	return services.DetailPolicyTpl()
+}
+
+type RespPolicyEnv struct {
+	TplName         string    `json:"tplName" form:"tplName" `
+	TplId           models.Id `json:"tplId" form:"tplId" `
+	EnvName         string    `json:"envName" form:"envName" `
+	EnvId           models.Id `json:"envId" form:"envId" `
+	RepoAddr        string    `json:"repoAddr" form:"repoAddr" `
+	PolicyGroupName string    `json:"policyGroupName" form:"policyGroupName" `
+	PolicyGroupId   models.Id `json:"policyGroupId" form:"policyGroupId" `
+	Enabled         bool      `json:"enabled" example:"true"`          //是否启用
+	GroupStatus     string    `json:"groupStatus" form:"groupStatus" ` //状态 todo 不确认字段
+}
+
+func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (interface{}, e.Error) {
+	return services.SearchPolicyEnv()
+}
+
+func UpdatePolicyEnv(c *ctx.ServiceContext, form *forms.UpdatePolicyEnvForm) (interface{}, e.Error) {
+	return services.UpdatePolicyEnv()
+}
+
+func DetailPolicyEnv(c *ctx.ServiceContext, form *forms.DetailPolicyEnvForm) (interface{}, e.Error) {
+	return services.DetailPolicyEnv()
+}
+
+func PolicyError(c *ctx.ServiceContext, form *forms.PolicyErrorForm) (interface{}, e.Error) {
+	return services.PolicyError()
+}
+
+func PolicyReference(c *ctx.ServiceContext, form *forms.PolicyReferenceForm) (interface{}, e.Error) {
+	return services.PolicyReference()
+}
+
+func PolicyRepo(c *ctx.ServiceContext, form *forms.PolicyRepoForm) (interface{}, e.Error) {
+	return services.PolicyRepo()
 }

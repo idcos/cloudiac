@@ -557,7 +557,8 @@ func GetUrlParams(uri string) url.Values {
 	// 解析url地址
 	u, err := url.Parse(uri)
 	if err != nil {
-		panic(err)
+		logs.Get().Errorf("url parse err: %+v, url: %s", err, uri)
+		return nil
 	}
 	// 打印格式化的地址信息
 	//fmt.Println(u.Scheme)   // 返回协议

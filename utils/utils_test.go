@@ -4,7 +4,9 @@ package utils
 
 import (
 	"github.com/stretchr/testify/assert"
+	"net/url"
 	"os"
+	"reflect"
 	"testing"
 )
 
@@ -67,4 +69,25 @@ func TestAesEncrypt(t *testing.T) {
 		t.Fatal(err)
 	}
 	assert.Equal(t, text, ds)
+}
+
+func TestGetUrlParams(t *testing.T) {
+	type args struct {
+		uri string
+	}
+	tests := []struct {
+		name string
+		args args
+		want url.Values
+	}{
+		{name: "invalidUrl", args: args{uri: "test error uri"}, want: url.Values{}},
+		{name: "validUrl", args: args{uri: "http://10.0.0.1?key=xxxxxx"}, want: url.Values{"key": []string{"xxxxxx"}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetUrlParams(tt.args.uri); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetUrlParams() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
