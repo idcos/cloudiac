@@ -161,9 +161,6 @@ func (t *Task) initWorkspace() (workspace string, err error) {
 	if err = t.genPlayVarsFile(workspace); err != nil {
 		return workspace, errors.Wrap(err, "generate play vars file")
 	}
-	if err = t.genPolicyFiles(workspace); err != nil {
-		return workspace, errors.Wrap(err, "generate policy files")
-	}
 
 	return workspace, nil
 }
@@ -224,10 +221,12 @@ func (t *Task) genPlayVarsFile(workspace string) error {
 }
 
 func (t *Task) genPolicyFiles(workspace string) error {
+	if len(t.req.Policies) == 0 {
+		return nil
+	}
 	if err := os.MkdirAll(filepath.Join(workspace, PoliciesDir), 0755); err != nil {
 		return err
 	}
-
 	for _, policy := range t.req.Policies {
 		if err := os.MkdirAll(filepath.Join(workspace, PoliciesDir, policy.PolicyId), 0755); err != nil {
 			return err
@@ -432,14 +431,18 @@ func (t *Task) collectCommand() (string, error) {
 }
 
 var parseCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-cd 'code/{{.Req.Env.Workdir}}' && terrascan scan --config-only  -d . -o json > {{.TerrascanJsonFile}}
+cd 'code/{{.Req.Env.Workdir}}' && \
+mkdir -p {{.PoliciesDir}} && \
+terrascan scan --config-only -l debug -o json > {{.TFScanJsonFilePath}}
 `))
 
 func (t *Task) stepTfParse() (command string, err error) {
 	return t.executeTpl(parseCommandTpl, map[string]interface{}{
-		"Req":                t.req,
-		"IacPlayVars":        t.up2Workspace(CloudIacPlayVars),
-		"TFScanJsonFilePath": filepath.Join(ContainerAssetsDir, TerrascanJsonFile),
+		"Req":                 t.req,
+		"IacPlayVars":         t.up2Workspace(CloudIacPlayVars),
+		"TFScanJsonFilePath":  t.up2Workspace(TerrascanJsonFile),
+		"PoliciesDir":         t.up2Workspace(PoliciesDir),
+		"TerrascanResultFile": t.up2Workspace(TerrascanResultFile),
 	})
 }
 
@@ -452,6 +455,9 @@ terrascan scan -p {{.PoliciesDir}} --show-passed --iac-type terraform -l debug -
 `))
 
 func (t *Task) stepTfScan() (command string, err error) {
+	if err = t.genPolicyFiles(t.workspace); err != nil {
+		return "", errors.Wrap(err, "generate policy files")
+	}
 	return t.executeTpl(scanCommandTpl, map[string]interface{}{
 		"Req":                 t.req,
 		"IacPlayVars":         t.up2Workspace(CloudIacPlayVars),

@@ -94,6 +94,26 @@ func UpdateScanResult(tx *db.Session, task models.Tasker, result TsResult) e.Err
 			return err
 		} else {
 			policyResult.Status = "violated"
+			policyResult.Line = r.Line
+			policyResult.Source = r.Source
+			policyResult.PlanRoot = r.PlanRoot
+			policyResult.ModuleName = r.ModuleName
+			policyResult.File = r.File
+			policyResult.Violation = models.Violation{
+				RuleName:     r.RuleName,
+				Description:  r.Description,
+				RuleId:       r.RuleId,
+				Severity:     r.Severity,
+				Category:     r.Category,
+				Comment:      r.Comment,
+				ResourceName: r.ResourceName,
+				ResourceType: r.ResourceType,
+				ModuleName:   r.ModuleName,
+				File:         r.File,
+				PlanRoot:     r.PlanRoot,
+				Line:         r.Line,
+				Source:       r.Source,
+			}
 			policyResults = append(policyResults, policyResult)
 		}
 	}
@@ -152,4 +172,27 @@ func finishScanResult(tx *db.Session, task models.Tasker) e.Error {
 
 func GetPolicyResultByPolicyId(query *db.Session, policyId models.Id) error {
 	return nil
+}
+
+func GetLastScanTask(query *db.Session, envId models.Id, tplId models.Id) (*models.ScanTask, e.Error) {
+	scanTask := models.ScanTask{}
+	q := query.Model(models.ScanTask{})
+	if envId != "" {
+		q = q.Where("env_id = ?", envId)
+	} else {
+		q = q.Where("tpl_id = ?", tplId)
+	}
+	if err := q.Last(&scanTask); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TaskNotExists, err)
+		}
+		return nil, e.New(e.DBError, fmt.Errorf("query scan error: %v", err))
+	}
+	return &scanTask, nil
+}
+
+func QueryPolicyResult(query *db.Session, taskId models.Id) *db.Session {
+	return query.Model(models.PolicyResult{}).Where("task_id = ?", taskId).
+		Joins("left join iac_policy as p on p.id = iac_policy_result.policy_id").
+		LazySelectAppend("p.name as policy_name,iac_policy_result.*")
 }

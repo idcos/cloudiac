@@ -762,8 +762,17 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 	logger := logs.Get().WithField("func", "CreateScanTask")
 
 	var (
-		err error
+		er  error
+		err e.Error
 	)
+	envId := models.Id("")
+	if env != nil {
+		tpl, err = GetTemplateById(tx, env.TplId)
+		if err != nil {
+			return nil, e.New(err.Code(), err, http.StatusBadRequest)
+		}
+		envId = env.Id
+	}
 
 	task := models.ScanTask{
 		// 以下为需要外部传入的属性
@@ -774,6 +783,7 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 
 		OrgId: tpl.OrgId,
 		TplId: tpl.Id,
+		EnvId: envId,
 
 		Workdir: tpl.Workdir,
 
@@ -793,8 +803,8 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 	logger = logger.WithField("taskId", task.Id)
 
 	if len(task.Flow.Steps) == 0 {
-		task.Flow, err = models.DefaultTaskFlow(task.Type)
-		if err != nil {
+		task.Flow, er = models.DefaultTaskFlow(task.Type)
+		if er != nil {
 			return nil, e.New(e.InternalError, err)
 		}
 	}
@@ -816,8 +826,8 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 		}
 	}
 
-	if _, err = tx.Save(&task); err != nil {
-		return nil, e.New(e.DBError, errors.Wrapf(err, "save task"))
+	if _, er = tx.Save(&task); er != nil {
+		return nil, e.New(e.DBError, errors.Wrapf(er, "save task"))
 	}
 
 	flowSteps := make([]models.TaskStepBody, 0, len(task.Flow.Steps))
@@ -845,7 +855,7 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 		}
 
 		if step.Type == models.TaskStepTfScan {
-			if err := initTemplateScanResult(tx, task); err != nil {
+			if err := initTemplateScanResult(tx, &task); err != nil {
 				return nil, e.New(err.Code(), errors.Wrapf(err, "init scan result"))
 			}
 		}
@@ -877,7 +887,7 @@ func createScanTaskStep(tx *db.Session, task models.ScanTask, stepBody models.Ta
 }
 
 // initTemplateScanResult 初始化模板扫描结果
-func initTemplateScanResult(tx *db.Session, task models.ScanTask) e.Error {
+func initTemplateScanResult(tx *db.Session, task *models.ScanTask) e.Error {
 	var (
 		policies      []models.Policy
 		err           e.Error
@@ -885,16 +895,15 @@ func initTemplateScanResult(tx *db.Session, task models.ScanTask) e.Error {
 	)
 
 	// 根据扫描类型获取策略列表
-	typ := "environment"
-	switch typ {
+	scope := "template"
+	if task.EnvId != "" {
+		scope = "environment"
+	}
+	switch scope {
 	case "environment":
 		policies, err = GetPoliciesByEnvId(tx, task.EnvId)
 	case "template":
-		if env, er := GetEnvById(tx, task.EnvId); er != nil {
-			return er
-		} else {
-			policies, err = GetPoliciesByTemplateId(tx, env.TplId)
-		}
+		policies, err = GetPoliciesByTemplateId(tx, task.TplId)
 	default:
 		return e.New(e.InternalError, fmt.Errorf("not support scan type"))
 	}
@@ -924,4 +933,15 @@ func initTemplateScanResult(tx *db.Session, task models.ScanTask) e.Error {
 	}
 
 	return nil
+}
+
+func GetScanTaskById(tx *db.Session, id models.Id) (*models.ScanTask, e.Error) {
+	o := models.ScanTask{}
+	if err := tx.Where("id = ?", id).First(&o); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TaskNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &o, nil
 }

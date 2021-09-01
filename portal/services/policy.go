@@ -96,10 +96,46 @@ func GetTaskPolicies(query *db.Session, taskId models.Id) ([]runner.TaskPolicy, 
 // GetValidTaskPolicyIds 获取策略关联的策略ID列表
 func GetValidTaskPolicyIds(query *db.Session, taskId models.Id) ([]models.Id, e.Error) {
 	// TODO: 处理策略关联及已经屏蔽策略
-	var policyIds []models.Id
-	if err := query.Model(models.Policy{}).Pluck("id", &policyIds); err != nil {
-		return nil, e.AutoNew(err, e.DBError)
+
+	var (
+		policies  []models.Policy
+		policyIds []models.Id
+		envId     models.Id
+		tplId     models.Id
+		err       e.Error
+	)
+	if task, err := GetTask(query, taskId); err != nil {
+		if e.IsRecordNotFound(err) {
+			if scantask, err := GetScanTaskById(query, taskId); err != nil {
+				return nil, err
+			} else {
+				envId = scantask.EnvId
+				tplId = scantask.TplId
+			}
+		} else {
+			return nil, err
+		}
+	} else {
+		envId = task.EnvId
+		tplId = task.TplId
 	}
+
+	if envId != "" {
+		policies, err = GetPoliciesByEnvId(query, envId)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		policies, err = GetPoliciesByTemplateId(query, tplId)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for _, policy := range policies {
+		policyIds = append(policyIds, policy.Id)
+	}
+
 	return policyIds, nil
 }
 

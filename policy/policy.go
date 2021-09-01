@@ -299,7 +299,7 @@ func (s *Scanner) ScanResource(resource Resource) error {
 
 	if len(tfResultJson.Results.Violations) > 0 {
 		// 附加源码
-		if tfResultJson, err = populateViolateSource(s, resource, &task, tfResultJson); err != nil {
+		if tfResultJson, err = PopulateViolateSource(s, resource, &task, tfResultJson); err != nil {
 			return s.handleScanError(&task, err)
 		}
 	}
@@ -314,10 +314,10 @@ func (s *Scanner) ScanResource(resource Resource) error {
 	return nil
 }
 
-func populateViolateSource(scanner *Scanner, res Resource, task *models.Task, resultJson *services.TsResultJson) (*services.TsResultJson, error) {
+func PopulateViolateSource(scanner *Scanner, res Resource, task *models.Task, resultJson *services.TsResultJson) (*services.TsResultJson, error) {
 	updated := false
 	for idx, policyResult := range resultJson.Results.Violations {
-		fmt.Printf("violation %+v", policyResult)
+		logrus.Errorf("pupulate source: %s", policyResult)
 		if policyResult.File == "" {
 			continue
 		}

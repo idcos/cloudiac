@@ -988,6 +988,7 @@ func (m *TaskManager) processScanTaskDone(task *models.ScanTask) {
 		if task.Status != common.TaskFailed {
 			if bs, err = read(task.TfResultJsonPath()); err == nil && len(bs) > 0 {
 				if tfResultJson, err = services.UnmarshalTfResultJson(bs); err == nil {
+
 					if err := services.UpdateScanResult(dbSess, task, tfResultJson.Results); err != nil {
 						return fmt.Errorf("save scan result: %v", err)
 					}

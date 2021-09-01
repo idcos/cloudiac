@@ -172,6 +172,8 @@ func (BaseTask) GetTaskNameByType(typ string) string {
 		return common.TaskTypeDestroyName
 	case TaskTypeScan:
 		return common.TaskTypeScanName
+	case TaskTypeParse:
+		return common.TaskTypeParse
 	default:
 		panic("invalid task type")
 	}
@@ -208,7 +210,7 @@ func (t *Task) Migrate(sess *db.Session) (err error) {
 }
 
 type TaskStepBody struct {
-	Type string   `json:"type" yaml:"type" gorm:"type:enum('init','plan','apply','play','command','destroy','scaninit','tfscan','scan')"`
+	Type string   `json:"type" yaml:"type" gorm:"type:enum('init','plan','apply','play','command','destroy','scaninit','tfscan','tfparse','scan')"`
 	Name string   `json:"name,omitempty" yaml:"name" gorm:"size:32;not null"`
 	Args StrSlice `json:"args,omitempty" yaml:"args" gorm:"type:text"`
 }

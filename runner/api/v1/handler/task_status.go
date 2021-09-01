@@ -71,7 +71,8 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.CommittedTaskStep, closed
 			ExitCode: state.ExitCode,
 		}
 
-		if withLog {
+		// 由于任务退出的时候 portal 会断开连接，所以如果判断已经退出，则直接发送全量日志
+		if withLog || msg.Exited {
 			logContent, err := runner.FetchTaskStepLog(task.EnvId, task.TaskId, task.Step)
 			if err != nil {
 				logger.Errorf("fetch task log error: %v", err)
@@ -122,6 +123,7 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.CommittedTaskStep, closed
 		waitCh <- err
 	}()
 
+	// 发送首次结果
 	if err := sendStatus(false); err != nil {
 		return err
 	}
