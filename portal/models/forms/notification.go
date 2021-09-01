@@ -4,15 +4,8 @@ package forms
 
 import "cloudiac/portal/models"
 
-type CfgInfo struct {
-	EmailAddress string    `form:"emailAddress" json:"emailAddress"`
-	UserId       models.Id `form:"userId" json:"userId"`
-	WebUrl       string    `form:"webUrl" json:"webUrl"`
-	UserName     string    `form:"userName" json:"userName"`
-}
-
 type UpdateNotificationForm struct {
-	PageForm
+	BaseForm
 	Id      models.Id `uri:"id" form:"notificationId" json:"notificationId" binding:"required"`
 	Name    string    `json:"name" form:"name" `
 	Type    string    `form:"type" json:"type" binding:"required"`
@@ -25,7 +18,7 @@ type UpdateNotificationForm struct {
 }
 
 type CreateNotificationForm struct {
-	PageForm
+	BaseForm
 	Name      string   `json:"name" form:"name" `
 	Type      string   `form:"notificationType" json:"notificationType" binding:"required"`
 	Secret    string   `json:"secret" form:"secret"`
@@ -36,7 +29,7 @@ type CreateNotificationForm struct {
 }
 
 type DeleteNotificationForm struct {
-	PageForm
+	BaseForm
 	Id models.Id `uri:"id" form:"id" json:"id" binding:"required"`
 }
 

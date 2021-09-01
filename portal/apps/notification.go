@@ -9,14 +9,32 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"fmt"
+	"strings"
 )
 
+type RespNotify struct {
+	models.Notification
+	EventType []string `json:"eventType" form:"eventType" gorm:"event_type"`
+}
+
 func SearchNotification(c *ctx.ServiceContext) (interface{}, e.Error) {
-	cfgs, err := services.SearchNotification(c.DB(), c.OrgId, c.ProjectId)
+	notifyResp := make([]*RespNotify, 0)
+	notify, err := services.SearchNotification(c.DB(), c.OrgId, c.ProjectId)
 	if err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	return cfgs, nil
+
+	for _, v := range notify {
+		events := make([]string, 0)
+		if v.EventType != "" {
+			events = strings.Split(v.EventType, ",")
+		}
+		notifyResp = append(notifyResp, &RespNotify{
+			v.Notification,
+			events,
+		})
+	}
+	return notifyResp, nil
 }
 
 func DeleteNotification(c *ctx.ServiceContext, id models.Id) (result interface{}, err e.Error) {
