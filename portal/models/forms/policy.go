@@ -88,6 +88,27 @@ type CreatePolicyRelForm struct {
 	TplId          models.Id   `json:"tplId" binding:"" example:"tpl-c3ek0co6n88ldvq1n6ag"`
 }
 
+type ScanTemplateForm struct {
+	BaseForm
+
+	Id    models.Id `uri:"id" binding:"" example:"tpl-c3ek0co6n88ldvq1n6ag"`      // 云模板Id
+	Parse bool      `json:"parse" binding:""  enums:"true,false" example:"false"` // 是否只执行解析
+}
+
+type ScanEnvironmentForm struct {
+	BaseForm
+
+	Id    models.Id `uri:"id" binding:"" example:"env-c3ek0co6n88ldvq1n6ag"`      // 环境Id
+	Parse bool      `json:"parse" binding:""  enums:"true,false" example:"false"` // 是否只执行解析
+}
+
+type PolicyParseForm struct {
+	BaseForm
+
+	TemplateId models.Id `form:"tplId" json:"tplId" binding:"" example:"tpl-c3ek0co6n88ldvq1n6ag"` // 云模板Id
+	EnvId      models.Id `form:"envId" json:"envId" binding:"" example:"env-c3ek0co6n88ldvq1n6ag"` // 云模板Id
+}
+
 type OpnPolicyAndPolicyGroupRelForm struct {
 	BaseForm
 
@@ -167,4 +188,18 @@ type PolicyReferenceForm struct {
 type PolicyRepoForm struct {
 	BaseForm
 	Id models.Id `json:"id" form:"id" `
+}
+
+type PolicyScanResultForm struct {
+	PageForm
+
+	Id    models.Id `uri:"id" `
+	Scope string    `json:"-"`
+}
+
+type PolicyScanReportForm struct {
+	PageForm
+
+	Id    models.Id `uri:"id" `
+	Scope string    `json:"-"`
 }

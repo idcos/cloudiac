@@ -56,6 +56,7 @@ const (
 	TaskTypeApply   = common.TaskTypeApply
 	TaskTypeDestroy = common.TaskTypeDestroy
 	TaskTypeScan    = common.TaskTypeScan
+	TaskTypeParse   = common.TaskTypeParse
 
 	TaskPending   = common.TaskPending
 	TaskRunning   = common.TaskRunning
@@ -64,6 +65,19 @@ const (
 	TaskFailed    = common.TaskFailed
 	TaskComplete  = common.TaskComplete
 )
+
+type Tasker interface {
+	GetId() Id
+	GetRunnerId() string
+	GetStepTimeout() int
+	Exited() bool
+	Started() bool
+	IsStartedStatus(status string) bool
+	IsExitedStatus(status string) bool
+	IsEffectTask() bool
+	IsEffectTaskType(typ string) bool
+	GetTaskNameByType(typ string) string
+}
 
 // Task 部署任务
 type Task struct {
@@ -76,8 +90,6 @@ type Task struct {
 
 	Name      string `json:"name" gorm:"not null;comment:任务名称"` // 任务名称
 	CreatorId Id     `json:"creatorId" gorm:"size:32;not null"` // 创建人ID
-
-	Type string `json:"type" gorm:"not null;enum('plan','apply','destroy','scan'')" enums:"'plan','apply','destroy','scan'"` // 任务类型。1. plan: 计划 2. apply: 部署 3. destroy: 销毁
 
 	RepoAddr string `json:"repoAddr" gorm:"not null"`
 	Revision string `json:"revision" gorm:"not null"`
@@ -96,10 +108,9 @@ type Task struct {
 	// 扩展属性，包括 source, transitionId 等
 	Extra TaskExtra `json:"extra" gorm:"type:json"` // 扩展属性
 
-	KeyId           Id     `json:"keyId" gorm:"size32"`      // 部署密钥ID
-	RunnerId        string `json:"runnerId" gorm:"not null"` // 部署通道
-	AutoApprove     bool   `json:"autoApproval" gorm:"default:false"`
-	StopOnViolation bool   `json:"stopOnViolation" gorm:"default:false"`
+	KeyId           Id   `json:"keyId" gorm:"size32"` // 部署密钥ID
+	AutoApprove     bool `json:"autoApproval" gorm:"default:false"`
+	StopOnViolation bool `json:"stopOnViolation" gorm:"default:false"`
 
 	// 任务执行结果，如 add/change/delete 的资源数量、outputs 等
 	Result TaskResult `json:"result" gorm:"type:json"` // 任务执行结果
@@ -113,33 +124,45 @@ func (Task) DefaultTaskName() string {
 	return ""
 }
 
-func (t *Task) Exited() bool {
+func (t *BaseTask) GetId() Id {
+	return t.Id
+}
+
+func (t *BaseTask) GetRunnerId() string {
+	return t.RunnerId
+}
+
+func (t *BaseTask) GetStepTimeout() int {
+	return t.StepTimeout
+}
+
+func (t *BaseTask) Exited() bool {
 	return t.IsExitedStatus(t.Status)
 }
 
-func (t *Task) Started() bool {
+func (t *BaseTask) Started() bool {
 	return t.IsStartedStatus(t.Status)
 }
 
-func (Task) IsStartedStatus(status string) bool {
+func (BaseTask) IsStartedStatus(status string) bool {
 	// 注意：approving 状态的任务我们也认为其 started
 	return !utils.InArrayStr([]string{TaskPending}, status)
 }
 
-func (Task) IsExitedStatus(status string) bool {
+func (BaseTask) IsExitedStatus(status string) bool {
 	return utils.InArrayStr([]string{TaskFailed, TaskRejected, TaskComplete}, status)
 }
 
-func (t *Task) IsEffectTask() bool {
+func (t *BaseTask) IsEffectTask() bool {
 	return t.IsEffectTaskType(t.Type)
 }
 
 // IsEffectTaskType 是否产生实际数据变动的任务类型
-func (Task) IsEffectTaskType(typ string) bool {
+func (BaseTask) IsEffectTaskType(typ string) bool {
 	return utils.StrInArray(typ, TaskTypeApply, TaskTypeDestroy)
 }
 
-func (Task) GetTaskNameByType(typ string) string {
+func (BaseTask) GetTaskNameByType(typ string) string {
 	switch typ {
 	case TaskTypePlan:
 		return common.TaskTypePlanName
@@ -149,6 +172,8 @@ func (Task) GetTaskNameByType(typ string) string {
 		return common.TaskTypeDestroyName
 	case TaskTypeScan:
 		return common.TaskTypeScanName
+	case TaskTypeParse:
+		return common.TaskTypeParse
 	default:
 		panic("invalid task type")
 	}
@@ -185,7 +210,7 @@ func (t *Task) Migrate(sess *db.Session) (err error) {
 }
 
 type TaskStepBody struct {
-	Type string   `json:"type" yaml:"type" gorm:"type:enum('init','plan','apply','play','command','destroy','scaninit','tfscan','scan')"`
+	Type string   `json:"type" yaml:"type" gorm:"type:enum('init','plan','apply','play','command','destroy','scaninit','tfscan','tfparse','scan')"`
 	Name string   `json:"name,omitempty" yaml:"name" gorm:"size:32;not null"`
 	Args StrSlice `json:"args,omitempty" yaml:"args" gorm:"type:text"`
 }

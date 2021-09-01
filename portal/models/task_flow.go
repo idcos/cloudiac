@@ -16,6 +16,7 @@ type TaskFlows struct {
 	Apply   TaskFlow `json:"apply" yaml:"apply"`
 	Destroy TaskFlow `json:"destroy" yaml:"destroy"`
 	Scan    TaskFlow `json:"scan" yaml:"scan"`
+	Parse   TaskFlow `json:"parse" yaml:"parse"`
 }
 
 type TaskFlow struct {
@@ -79,6 +80,11 @@ scan:
   steps:
     - type: scaninit
     - type: tfscan
+
+parse:
+  steps:
+    - type: scaninit
+    - type: tfparse
 `
 
 const defaultTaskFlowsContent = taskFlowsWithScanContent
@@ -95,6 +101,8 @@ func GetTaskFlow(flows *TaskFlows, typ string) (TaskFlow, error) {
 		return flows.Destroy, nil
 	case common.TaskTypeScan:
 		return flows.Scan, nil
+	case common.TaskTypeParse:
+		return flows.Parse, nil
 	default:
 		return TaskFlow{}, fmt.Errorf("unknown task type: %v", typ)
 	}

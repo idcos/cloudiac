@@ -30,43 +30,45 @@ func (Policy) Create(c *ctx.GinRequest) {
 	c.JSONResult(apps.CreatePolicy(c.Service(), form))
 }
 
-// Parse TODO: 解析云模板
-// @Summary 解析云模板
-// @Description 解析云模板
+// ScanTemplate 运行云模板策略扫描
+// @Summary 运行云模板策略扫描
+// @Description 运行云模板策略扫描
 // @Tags 策略
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
-// @Param json body forms.CreatePolicyForm true "parameter"
-// @Success 200 {object}  ctx.JSONResult{result=models.Policy}
-// @Router /policies/parse [post]
-func (Policy) Parse(c *ctx.GinRequest) {
-	// TODO
-	//form := &forms.CreatePolicyForm{}
-	//if err := c.Bind(form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.CreatePolicy(c.Service(), form))
+// @Param templateId path string true "模板ID"
+// @Param json body forms.ScanTemplateForm true "parameter"
+// @Success 200 {object}  ctx.JSONResult{result=models.ScanTask}
+// @Router /policies/templates/{templateId}/scan [post]
+func (Policy) ScanTemplate(c *ctx.GinRequest) {
+	form := &forms.ScanTemplateForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.ScanTemplate(c.Service(), form, ""))
 }
 
-// Scan TODO: 运行策略扫描
-// @Summary 运行策略扫描
-// @Description 运行策略扫描
+// ScanEnvironment 运行环境策略扫描
+// @Summary 运行环境策略扫描
+// @Description 运行环境策略扫描
 // @Tags 策略
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
-// @Param json body forms.CreatePolicyForm true "parameter"
-// @Success 200 {object}  ctx.JSONResult{result=models.Policy}
-// @Router /policies/scan [post]
-func (Policy) Scan(c *ctx.GinRequest) {
-	//form := &forms.CreatePolicyForm{}
-	//if err := c.Bind(form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.CreatePolicy(c.Service(), form))
+// @Param envId path string true "环境ID"
+// @Param json body forms.ScanEnvironmentForm true "parameter"
+// @Success 200 {object}  ctx.JSONResult{result=models.ScanTask}
+// @Router /policies/envs/{envId}/scan [post]
+func (Policy) ScanEnvironment(c *ctx.GinRequest) {
+	form := &forms.ScanEnvironmentForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+
+	c.JSONResult(apps.ScanEnvironment(c.Service(), form))
 }
 
 // Search 查询策略列表
@@ -320,7 +322,7 @@ func (Policy) PolicyReference(c *ctx.GinRequest) {
 	c.JSONResult(apps.PolicyReference(c.Service(), form))
 }
 
-// PolicyRepo 策略详情-报表
+// PolicyReport 策略详情-报表
 // @Tags 策略
 // @Summary Detail
 // @Description 策略详情-报表
@@ -333,10 +335,96 @@ func (Policy) PolicyReference(c *ctx.GinRequest) {
 // @Param policyId path string true "策略id"
 // @Router /policies/{policyId}/report [get]
 // @Success 200 {object} ctx.JSONResult{result=models.Policy}
-func (Policy) PolicyRepo(c *ctx.GinRequest) {
-	form := &forms.PolicyRepoForm{}
+func (Policy) PolicyReport(c *ctx.GinRequest) {
+	form := &forms.PolicyScanReportForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.PolicyRepo(c.Service(), form))
+	c.JSONResult(apps.PolicyScanReport(c.Service(), form))
+}
+
+// PolicyGroupReport 策略组详情-报表
+// @Tags 策略
+// @Summary Detail
+// @Description 策略详情-报表
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
+// @Param policyGroupId path string true "策略id"
+// @Router /policies/{policyGroupId}/report [get]
+// @Success 200 {object} ctx.JSONResult{result=models.Policy}
+func (Policy) PolicyGroupReport(c *ctx.GinRequest) {
+	form := &forms.PolicyScanReportForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.PolicyScanReport(c.Service(), form))
+}
+
+// Parse 云模板/环境源码解析
+// @Summary 云模板/环境源码解析
+// @Description 运行云模板/环境源码解析，该 API 执行速度较慢，需要 5 ～ 15 秒，前端应明显提醒用户
+// @Tags 策略
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
+// @Param json body forms.PolicyParseForm true "parameter"
+// @Success 200 {object}  ctx.JSONResult{result=apps.ParseResp}
+// @Router /policies/parse [post]
+func (Policy) Parse(c *ctx.GinRequest) {
+	form := &forms.PolicyParseForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.ParseTemplate(c.Service(), form))
+}
+
+// EnvScanResult 环境策略扫描结果
+// @Tags 策略
+// @Summary Detail
+// @Description 环境策略扫描结果
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
+// @Param form query forms.PolicyScanResultForm true "parameter"
+// @Param envId path string true "环境ID"
+// @Router /policies/envs/{envId}/result [get]
+// @Success 200 {object} ctx.JSONResult{result=models.Policy}
+func (Policy) EnvScanResult(c *ctx.GinRequest) {
+	form := &forms.PolicyScanResultForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	form.Scope = "environment"
+	c.JSONResult(apps.PolicyScanResult(c.Service(), form))
+}
+
+// TemplateScanResult 云模板策略扫描结果
+// @Tags 策略
+// @Summary Detail
+// @Description 云模板策略扫描结果
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
+// @Param form query forms.PolicyScanResultForm true "parameter"
+// @Param envId path string true "环境ID"
+// @Router /policies/template/{tplId}/result [get]
+// @Success 200 {object} ctx.JSONResult{result=models.Policy}
+func (Policy) TemplateScanResult(c *ctx.GinRequest) {
+	form := &forms.PolicyScanResultForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	form.Scope = "template"
+	c.JSONResult(apps.PolicyScanResult(c.Service(), form))
 }

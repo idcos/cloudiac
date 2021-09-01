@@ -155,6 +155,7 @@ const (
 	PolicyResultAlreadyExist     = 31230
 	PolicyResultNotExist         = 31231
 	PolicyRegoMissingComment     = 31410
+	PolicyErrorParseTemplate     = 31510
 )
 
 var errorMsgs = map[int]map[string]string{

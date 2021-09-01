@@ -49,10 +49,8 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 	task := models.Task{
 		// 以下为需要外部传入的属性
 		Name:            pt.Name,
-		Type:            pt.Type,
 		Targets:         pt.Targets,
 		CreatorId:       pt.CreatorId,
-		RunnerId:        firstVal(pt.RunnerId, env.RunnerId),
 		Variables:       pt.Variables,
 		AutoApprove:     pt.AutoApprove,
 		KeyId:           models.Id(firstVal(string(pt.KeyId), string(env.KeyId))),
@@ -71,9 +69,12 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		Playbook:     env.Playbook,
 		TfVarsFile:   env.TfVarsFile,
 		PlayVarsFile: env.PlayVarsFile,
+
 		BaseTask: models.BaseTask{
+			Type:        pt.Type,
 			Flow:        pt.Flow,
 			StepTimeout: pt.StepTimeout,
+			RunnerId:    firstVal(pt.RunnerId, env.RunnerId),
 
 			Status:   models.TaskPending,
 			Message:  "",
@@ -257,12 +258,19 @@ var stepStatus2TaskStatus = map[string]string{
 	models.TaskStepComplete:  models.TaskComplete,
 }
 
-func ChangeTaskStatusWithStep(dbSess *db.Session, task *models.Task, step *models.TaskStep) e.Error {
+func ChangeTaskStatusWithStep(dbSess *db.Session, task models.Tasker, step *models.TaskStep) e.Error {
 	taskStatus, ok := stepStatus2TaskStatus[step.Status]
 	if !ok {
 		panic(fmt.Errorf("unknown task step status %v", step.Status))
 	}
-	return ChangeTaskStatus(dbSess, task, taskStatus, step.Message)
+	switch t := task.(type) {
+	case *models.Task:
+		return ChangeTaskStatus(dbSess, t, taskStatus, step.Message)
+	case *models.ScanTask:
+		return ChangeScanTaskStatus(dbSess, t, taskStatus, step.Message)
+	default:
+		panic("invalid task type on change task status with step, task" + task.GetId())
+	}
 }
 
 // ChangeTaskStatus 修改任务状态(同步修改 StartAt、EndAt 等)，并同步修改 env 状态
@@ -560,38 +568,6 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource)
 	return nil
 }
 
-func SaveTfScanResult(tx *db.Session, task *models.Task, result TsResult) error {
-	var (
-		policyResults []*models.PolicyResult
-	)
-	for _, r := range result.Violations {
-		if policyResult, err := GetPolicyResultById(tx, task.Id, models.Id(r.RuleId)); err != nil {
-			return err
-		} else {
-			policyResult.Status = "violated"
-			policyResults = append(policyResults, policyResult)
-		}
-	}
-	for _, r := range result.PassedRules {
-		if policyResult, err := GetPolicyResultById(tx, task.Id, models.Id(r.RuleId)); err != nil {
-			return err
-		} else {
-			policyResult.Status = "passed"
-			policyResults = append(policyResults, policyResult)
-		}
-	}
-	for _, r := range policyResults {
-		if err := models.Save(tx, r); err != nil {
-			return e.New(e.DBError, fmt.Errorf("save scan result"))
-		}
-	}
-
-	if err := finishScanResult(tx, task); err != nil {
-		return err
-	}
-	return nil
-}
-
 func FetchTaskLog(ctx context.Context, task *models.Task, writer io.WriteCloser) (err error) {
 	// close 后 read 端会触发 EOF error
 	defer writer.Close()
@@ -753,4 +729,219 @@ func TaskStatusChangeSendMessage(task *models.Task, status string) {
 		EventType: consts.TaskStatusToEventType[status],
 	})
 	ns.SendMessage()
+}
+
+// ==================================================================================
+// 扫描任务
+
+// ChangeScanTaskStatus 修改扫描任务状态
+func ChangeScanTaskStatus(dbSess *db.Session, task *models.ScanTask, status, message string) e.Error {
+	if task.Status == status && message == "" {
+		return nil
+	}
+
+	task.Status = status
+	task.Message = message
+	now := models.Time(time.Now())
+	if task.StartAt == nil && task.Started() {
+		task.StartAt = &now
+	}
+	if task.EndAt == nil && task.Exited() {
+		task.EndAt = &now
+	}
+
+	logs.Get().WithField("taskId", task.Id).Infof("change task to '%s'", status)
+	if _, err := dbSess.Model(task).Update(task); err != nil {
+		return e.AutoNew(err, e.DBError)
+	}
+
+	return nil
+}
+
+func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models.ScanTask) (*models.ScanTask, e.Error) {
+	logger := logs.Get().WithField("func", "CreateScanTask")
+
+	var (
+		er  error
+		err e.Error
+	)
+	envId := models.Id("")
+	if env != nil {
+		tpl, err = GetTemplateById(tx, env.TplId)
+		if err != nil {
+			return nil, e.New(err.Code(), err, http.StatusBadRequest)
+		}
+		envId = env.Id
+	}
+
+	task := models.ScanTask{
+		// 以下为需要外部传入的属性
+		Name:      pt.Name,
+		CreatorId: pt.CreatorId,
+		Extra:     pt.Extra,
+		Revision:  utils.FirstValueStr(pt.Revision, tpl.RepoRevision),
+
+		OrgId: tpl.OrgId,
+		TplId: tpl.Id,
+		EnvId: envId,
+
+		Workdir: tpl.Workdir,
+
+		BaseTask: models.BaseTask{
+			Type:        pt.Type,
+			Flow:        pt.Flow,
+			StepTimeout: pt.StepTimeout,
+			RunnerId:    pt.RunnerId,
+
+			Status:   models.TaskPending,
+			Message:  "",
+			CurrStep: 0,
+		},
+	}
+
+	task.Id = models.NewId("run")
+	logger = logger.WithField("taskId", task.Id)
+
+	if len(task.Flow.Steps) == 0 {
+		task.Flow, er = models.DefaultTaskFlow(task.Type)
+		if er != nil {
+			return nil, e.New(e.InternalError, err)
+		}
+	}
+
+	task.RepoAddr, task.CommitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, tpl.RepoRevision)
+	if err != nil {
+		return nil, e.New(e.InternalError, err)
+	}
+
+	{ // 参数检查
+		if task.RepoAddr == "" {
+			return nil, e.New(e.BadParam, fmt.Errorf("'repoAddr' is required"))
+		}
+		if task.CommitId == "" {
+			return nil, e.New(e.BadParam, fmt.Errorf("'commitId' is required"))
+		}
+		if task.RunnerId == "" {
+			return nil, e.New(e.BadParam, fmt.Errorf("'runnerId' is required"))
+		}
+	}
+
+	if _, er = tx.Save(&task); er != nil {
+		return nil, e.New(e.DBError, errors.Wrapf(er, "save task"))
+	}
+
+	flowSteps := make([]models.TaskStepBody, 0, len(task.Flow.Steps))
+	for i := range task.Flow.Steps {
+		step := task.Flow.Steps[i]
+		flowSteps = append(flowSteps, step)
+	}
+
+	if len(flowSteps) == 0 {
+		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps"))
+	}
+
+	var preStep *models.TaskStep
+	for i := len(flowSteps) - 1; i >= 0; i-- { // 倒序保存 steps，以便于设置 step.NextStep
+		step := flowSteps[i]
+
+		nextStepId := models.Id("")
+		if preStep != nil {
+			nextStepId = preStep.Id
+		}
+		var er e.Error
+		preStep, er = createScanTaskStep(tx, task, step, i, nextStepId)
+		if er != nil {
+			return nil, e.New(er.Code(), errors.Wrapf(er, "save task step"))
+		}
+
+		if step.Type == models.TaskStepTfScan {
+			if err := initTemplateScanResult(tx, &task); err != nil {
+				return nil, e.New(err.Code(), errors.Wrapf(err, "init scan result"))
+			}
+		}
+	}
+
+	return &task, nil
+}
+
+func createScanTaskStep(tx *db.Session, task models.ScanTask, stepBody models.TaskStepBody, index int, nextStep models.Id) (
+	*models.TaskStep, e.Error) {
+	s := models.TaskStep{
+		TaskStepBody: stepBody,
+		OrgId:        task.OrgId,
+		//ProjectId:    task.ProjectId,
+		EnvId:    task.EnvId,
+		TaskId:   task.Id,
+		Index:    index,
+		Status:   models.TaskStepPending,
+		Message:  "",
+		NextStep: nextStep,
+	}
+	s.Id = models.NewId("step")
+	s.LogPath = s.GenLogPath()
+
+	if _, err := tx.Save(&s); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return &s, nil
+}
+
+// initTemplateScanResult 初始化模板扫描结果
+func initTemplateScanResult(tx *db.Session, task *models.ScanTask) e.Error {
+	var (
+		policies      []models.Policy
+		err           e.Error
+		policyResults []*models.PolicyResult
+	)
+
+	// 根据扫描类型获取策略列表
+	scope := "template"
+	if task.EnvId != "" {
+		scope = "environment"
+	}
+	switch scope {
+	case "environment":
+		policies, err = GetPoliciesByEnvId(tx, task.EnvId)
+	case "template":
+		policies, err = GetPoliciesByTemplateId(tx, task.TplId)
+	default:
+		return e.New(e.InternalError, fmt.Errorf("not support scan type"))
+	}
+	if err != nil {
+		return err
+	}
+
+	// 批量创建
+	for _, policy := range policies {
+		policyResults = append(policyResults, &models.PolicyResult{
+			OrgId: task.OrgId,
+			//ProjectId: task.ProjectId,
+			TplId:  task.TplId,
+			EnvId:  task.EnvId,
+			TaskId: task.Id,
+
+			PolicyId:      policy.Id,
+			PolicyGroupId: policy.GroupId,
+
+			StartAt: models.Time(time.Now()),
+			Status:  "pending", // 设置结果为等待扫描状态
+		})
+	}
+
+	if er := models.CreateBatch(tx, policyResults); er != nil {
+		return e.New(e.DBError, er)
+	}
+
+	return nil
+}
+
+func GetScanTaskById(tx *db.Session, id models.Id) (*models.ScanTask, e.Error) {
+	o := models.ScanTask{}
+	if err := tx.Where("id = ?", id).First(&o); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TaskNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &o, nil
 }

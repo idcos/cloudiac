@@ -67,21 +67,25 @@ func Register(g *gin.RouterGroup) {
 
 	// 策略管理
 	ctrl.Register(g.Group("policies", ac()), &handlers.Policy{})
-	g.GET("/policies/templates", ac(), w(handlers.Policy{}.SearchPolicyTpl))     // 云模板列表，带策略组信息及状态
-	g.PUT("/policies/templates", ac(), w(handlers.Policy{}.UpdatePolicyTpl))     // 关联云模板与策略组（创建/删除？）
-	g.GET("/policies/templates/:id", ac(), w(handlers.Policy{}.DetailPolicyTpl)) // 云模板策略列表
+	g.GET("/policies/templates", ac(), w(handlers.Policy{}.SearchPolicyTpl))        // 云模板列表，带策略组信息及状态
+	g.PUT("/policies/templates", ac(), w(handlers.Policy{}.UpdatePolicyTpl))        // 关联云模板与策略组（创建/删除？）
+	g.GET("/policies/templates/:id", ac(), w(handlers.Policy{}.DetailPolicyTpl))    // 云模板策略列表
+	g.POST("/policies/templates/:id/scan", ac(), w(handlers.Policy{}.ScanTemplate)) // 扫描云模板
+	g.GET("/policies/templates/:id/result", ac(), w(handlers.Policy{}.TemplateScanResult))
+	g.POST("/policies/parse", ac(), w(handlers.Policy{}.Parse)) // 扫描云模板
 	g.GET("/policies/envs", ac(), w(handlers.Policy{}.SearchPolicyEnv))
 	g.PUT("/policies/envs", ac(), w(handlers.Policy{}.UpdatePolicyEnv)) // 关联环境与策略组（创建/删除？）
 	g.GET("/policies/envs/:id", ac(), w(handlers.Policy{}.DetailPolicyEnv))
+	g.POST("/policies/envs/:id/scan", ac(), w(handlers.Policy{}.ScanEnvironment)) // 扫描云模板
+	g.GET("/policies/envs/:id/result", ac(), w(handlers.Policy{}.EnvScanResult))
 	ctrl.Register(g.Group("policies/groups", ac()), &handlers.PolicyGroup{})
 	g.POST("/policies/groups/:id", ac(), w(handlers.PolicyGroup{}.OpPolicyAndPolicyGroupRel)) //关联策略与策略组
-	g.GET("/policies/result", ac(), w(handlers.Policy{}.Create))                              // 扫描结果
-	g.GET("/policies/result/summary", ac(), w(handlers.Policy{}.Create))                      // 统计报告
+	g.GET("/policies/groups/:id/report", ac(), w(handlers.Policy{}.PolicyReport))
 	ctrl.Register(g.Group("policies/rels", ac()), &handlers.PolicyRel{})
 	ctrl.Register(g.Group("policies/suppress", ac()), &handlers.PolicySuppress{}) //策略屏蔽
 	g.GET("/policies/:id/error", ac(), w(handlers.Policy{}.PolicyError))
 	g.GET("/policies/:id/reference", ac(), w(handlers.Policy{}.PolicyReference))
-	g.GET("/policies/:id/report", ac(), w(handlers.Policy{}.PolicyRepo))
+	g.GET("/policies/:id/report", ac(), w(handlers.Policy{}.PolicyReport))
 
 	// 要求组织 header
 	g.Use(w(middleware.AuthOrgId))

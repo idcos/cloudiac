@@ -190,6 +190,7 @@ func Init(migrate bool) {
 	autoMigrate(&Variable{}, sess)
 
 	autoMigrate(&Task{}, sess)
+	autoMigrate(&ScanTask{}, sess)
 	autoMigrate(&TaskStep{}, sess)
 	autoMigrate(&DBStorage{}, sess)
 

@@ -299,13 +299,13 @@ func (s *Scanner) ScanResource(resource Resource) error {
 
 	if len(tfResultJson.Results.Violations) > 0 {
 		// 附加源码
-		if tfResultJson, err = populateViolateSource(s, resource, &task, tfResultJson); err != nil {
+		if tfResultJson, err = PopulateViolateSource(s, resource, &task, tfResultJson); err != nil {
 			return s.handleScanError(&task, err)
 		}
 	}
 
 	if s.SaveResult {
-		if err := services.SaveTfScanResult(s.Db, &task, tfResultJson.Results); err != nil {
+		if err := services.UpdateScanResult(s.Db, &task, tfResultJson.Results); err != nil {
 			return s.handleScanError(&task, err)
 		}
 
@@ -314,10 +314,10 @@ func (s *Scanner) ScanResource(resource Resource) error {
 	return nil
 }
 
-func populateViolateSource(scanner *Scanner, res Resource, task *models.Task, resultJson *services.TsResultJson) (*services.TsResultJson, error) {
+func PopulateViolateSource(scanner *Scanner, res Resource, task *models.Task, resultJson *services.TsResultJson) (*services.TsResultJson, error) {
 	updated := false
 	for idx, policyResult := range resultJson.Results.Violations {
-		fmt.Printf("violation %+v", policyResult)
+		logrus.Errorf("pupulate source: %s", policyResult)
 		if policyResult.File == "" {
 			continue
 		}
@@ -346,7 +346,7 @@ func populateViolateSource(scanner *Scanner, res Resource, task *models.Task, re
 		fmt.Printf("violation with src %+v", resultJson.Results.Violations[idx])
 		_ = srcFile.Close()
 	}
-	fmt.Printf("updaetd %s", updated)
+	fmt.Printf("updaetd %v", updated)
 
 	if updated {
 		if js, err := json.MarshalIndent(resultJson, "", "  "); err == nil {
@@ -356,7 +356,6 @@ func populateViolateSource(scanner *Scanner, res Resource, task *models.Task, re
 				fmt.Printf("update result error %+v", err)
 			}
 		}
-
 	}
 
 	return resultJson, nil
@@ -366,7 +365,7 @@ func (s *Scanner) handleScanError(task *models.Task, err error) error {
 	if s.SaveResult {
 		// 扫描出错的时候更新所有策略扫描结果为 failed
 		emptyResult := services.TsResultJson{}
-		if err := services.SaveTfScanResult(s.Db, task, emptyResult.Results); err != nil {
+		if err := services.UpdateScanResult(s.Db, task, emptyResult.Results); err != nil {
 			return err
 		}
 	}
