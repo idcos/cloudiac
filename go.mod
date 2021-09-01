@@ -3,8 +3,9 @@ module cloudiac
 go 1.16
 
 require (
+	github.com/Masterminds/semver v1.5.0
 	github.com/Shopify/sarama v1.28.0
-	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
+	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/casbin/casbin/v2 v2.31.9
 	github.com/casbin/gorm-adapter/v3 v3.3.2
 	github.com/containerd/containerd v1.4.4 // indirect

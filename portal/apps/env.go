@@ -140,6 +140,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		StepTimeout: form.Timeout,
 		AutoApprove: env.AutoApproval,
 		Revision:    env.Revision,
+		TfVersion:  tpl.TfVersion,
 	})
 	if err != nil {
 		_ = tx.Rollback()

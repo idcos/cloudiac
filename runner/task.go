@@ -85,7 +85,7 @@ func (t *Task) Run() (cid string, err error) {
 	for k, v := range t.req.Env.TerraformVars {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("TF_VAR_%s=%s", k, v))
 	}
-
+	cmd.Env = append(cmd.Env, fmt.Sprintf("TFENV_TERRAFORM_VERSION=%s", t.req.Env.TfVersion))
 	shellArgs := " "
 	if utils.IsTrueStr(t.req.Env.EnvironmentVars["CLOUDIAC_DEBUG"]) {
 		shellArgs += "-x"
@@ -284,6 +284,8 @@ git clone '{{.Req.RepoAddress}}' code && \
 cd 'code/{{.Req.Env.Workdir}}' && \
 git checkout -q '{{.Req.RepoRevision}}' && echo check out $(git rev-parse --short HEAD). && \
 ln -sf {{.IacTfFile}} . && \
+tfenv install $TFENV_TERRAFORM_VERSION && \
+tfenv use $TFENV_TERRAFORM_VERSION  && \
 terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }}
 `))
 

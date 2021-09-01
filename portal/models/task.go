@@ -84,6 +84,7 @@ type Task struct {
 	Workdir      string   `json:"workdir" gorm:"default:''"`
 	Playbook     string   `json:"playbook" gorm:"default:''"`
 	TfVarsFile   string   `json:"tfVarsFile" gorm:"default:''"`
+	TfVersion    string   `json:"tfVersion" gorm:"default:''"`
 	PlayVarsFile string   `json:"playVarsFile" gorm:"default:''"`
 	Targets      StrSlice `json:"targets" gorm:"type:json"` // 指定 terraform target 参数
 
