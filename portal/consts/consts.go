@@ -26,6 +26,8 @@ const (
 	SysUserId       = "u-system00000000000000"
 	DefaultSysEmail = "sys@example.com"
 	DefaultSysName  = "System"
+
+	DefaultTerraformVersion = "0.14.11"
 )
 
 const (
@@ -91,6 +93,9 @@ const (
 
 	EnvTriggerPRMR   = "prmr"
 	EnvTriggerCommit = "commit"
+
+	DefaultTfMirror   = "https://releases.hashicorp.com/terraform"
+	HttpClientTimeout = 20
 )
 
 var (
@@ -101,7 +106,14 @@ var (
 		"timeout":  "超时",
 		"pending":  "排队中",
 	}
-
+	TerraformVersions = []string{
+		"v0.11.15",
+		"v0.12.31",
+		"v0.13.7",
+		"v0.14.11",
+		"v0.15.5",
+		"v1.0.5",
+	}
 	TaskStatusToEventType = map[string]string{
 		"complete":  "complete",
 		"failed":    "failed",

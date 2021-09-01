@@ -619,6 +619,7 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		TfVarsFile:      task.TfVarsFile,
 		Playbook:        task.Playbook,
 		PlayVarsFile:    task.PlayVarsFile,
+		TfVersion:       task.TfVersion,
 		EnvironmentVars: make(map[string]string),
 		TerraformVars:   make(map[string]string),
 		AnsibleVars:     make(map[string]string),
