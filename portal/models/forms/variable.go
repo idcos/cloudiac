@@ -13,13 +13,14 @@ type BatchUpdateVariableForm struct {
 }
 
 type Variables struct {
-	Id          models.Id `json:"id" form:"id" `
-	Scope       string    `json:"scope" form:"scope" `             // 应用范围 ('org','template','project','env')
-	Type        string    `json:"type" form:"type" `               // 类型 ('environment','terraform','ansible')
-	Name        string    `json:"name" form:"name" `               // 名称
-	Value       string    `json:"value" form:"value" `             // VALUE
-	Sensitive   bool      `json:"sensitive" form:"sensitive" `     // 是否加密
-	Description string    `json:"description" form:"description" ` // 描述
+	Id          models.Id       `json:"id" form:"id" `
+	Scope       string          `json:"scope" form:"scope" `             // 应用范围 ('org','template','project','env')
+	Type        string          `json:"type" form:"type" `               // 类型 ('environment','terraform','ansible')
+	Name        string          `json:"name" form:"name" `               // 名称
+	Value       string          `json:"value" form:"value" `             // VALUE
+	Sensitive   bool            `json:"sensitive" form:"sensitive" `     // 是否加密
+	Description string          `json:"description" form:"description" ` // 描述
+	Options     models.StrSlice `json:"options" form:"options"`          // 变量下拉列表
 }
 
 type SearchVariableForm struct {

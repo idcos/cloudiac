@@ -287,3 +287,29 @@ func VcsVariableSearch(c *ctx.ServiceContext, form *forms.TemplateVariableSearch
 
 	return tvl, nil
 }
+
+func SearchVcsFile(c *ctx.ServiceContext, form *forms.SearchVcsFileForm) (interface{}, e.Error) {
+	vcs, err := checkOrgVcsAuth(c, form.Id)
+	if err != nil {
+		return nil, err
+	}
+	vcsService, er := vcsrv.GetVcsInstance(vcs)
+	if er != nil {
+		return nil, e.New(e.VcsError, er)
+	}
+	repo, er := vcsService.GetRepo(form.RepoId)
+	if er != nil {
+		return nil, e.New(e.VcsError, er)
+	}
+	b, er := repo.ReadFileContent(form.Branch, form.FileName)
+	if er != nil {
+		if strings.Contains(er.Error(), "not found") {
+			b = make([]byte, 0)
+		} else {
+			return nil, e.New(e.VcsError, er)
+		}
+	}
+
+	res := gin.H{"content": string(b)}
+	return res, nil
+}

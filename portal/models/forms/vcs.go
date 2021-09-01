@@ -52,3 +52,11 @@ type GetReadmeForm struct {
 	RepoId string    `form:"repoId" json:"repoId" binding:"required"`
 	Branch string    `form:"branch" json:"branch" binding:"required"`
 }
+
+type SearchVcsFileForm struct {
+	BaseForm
+	Id       models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`
+	RepoId   string    `form:"repoId" json:"repoId" binding:"required"`
+	Branch   string    `form:"branch" json:"branch" binding:"required"`
+	FileName string    `json:"fileName" form:"fileName" binding:"required"`
+}

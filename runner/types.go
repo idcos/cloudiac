@@ -15,6 +15,7 @@ type TaskEnv struct {
 	TfVarsFile   string `json:"tfVarsFile"`
 	Playbook     string `json:"playbook"`
 	PlayVarsFile string `json:"playVarsFile"`
+	TfVersion    string `json:"tfVersion"`
 
 	EnvironmentVars map[string]string `json:"environment"`
 	TerraformVars   map[string]string `json:"terraform"`
@@ -78,6 +79,7 @@ type TaskStatusMessage struct {
 	TfPlanJson   []byte `json:"tfPlanJson"`
 	TfScanJson   []byte `json:"tfScanJson"`
 	TfResultJson []byte `json:"tfResultJson"`
+	TFProviderSchemaJson []byte `json:"tfProviderSchemaJson"`
 }
 
 type ErrorMessage struct {

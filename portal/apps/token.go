@@ -163,6 +163,7 @@ func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (int
 		taskType = models.TaskTypeApply
 	case models.TaskTypeDestroy:
 		taskType = models.TaskTypeDestroy
+	//todo 合规
 	default:
 		return nil, e.New(e.BadRequest, errors.New("token action illegal"), http.StatusBadRequest)
 	}

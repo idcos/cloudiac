@@ -87,6 +87,12 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.CommittedTaskStep, closed
 				msg.TfStateJson = stateJson
 			}
 
+			if providerJson, err := runner.FetchProviderJson(task.EnvId, task.TaskId); err != nil {
+				logger.Errorf("fetch terraform provider json error: %v", err)
+			} else {
+				msg.TFProviderSchemaJson = providerJson
+			}
+
 			if planJson, err := runner.FetchPlanJson(task.EnvId, task.TaskId); err != nil {
 				logger.Errorf("fetch terraform state json error: %v", err)
 			} else {

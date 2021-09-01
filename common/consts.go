@@ -51,6 +51,11 @@ const (
 	TaskTypeScanName    = "scan"
 
 	TaskStepTimeoutDuration = 600
+
+	VcsGitlab = "gitlab"
+	VcsGitea  = "gitea"
+	VcsGitee  = "gitee"
+	VcsGithub = "github"
 )
 
 var (

@@ -30,6 +30,8 @@ type Template struct {
 	// 要执行的 ansible playbook 文件(基于 workdir 的相对路径)
 	Playbook     string `json:"playbook" gorm:"default:''" example:"ansbile/playbook.yml"`
 	PlayVarsFile string `json:"playVarsFile" gorm:"default:''"` // Ansible 变量文件路径
+
+	TfVersion string `json:"tfVersion" gorm:"default:'v0.14.11'"` // 模版使用的terraform版本号
 }
 
 func (Template) TableName() string {
