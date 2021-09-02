@@ -14,8 +14,7 @@ type RespNotification struct {
 	EventType string `json:"eventType" form:"eventType" gorm:"event_type"`
 }
 
-func SearchNotification(dbSess *db.Session, orgId, projectId models.Id) ([]*RespNotification, e.Error) {
-	notify := make([]*RespNotification, 0)
+func SearchNotification(dbSess *db.Session, orgId, projectId models.Id) *db.Session {
 	n := models.Notification{}.TableName()
 	query := dbSess.Table(n).
 		Joins(fmt.Sprintf("left join %s as ne on %s.id = ne.notification_id",
@@ -24,13 +23,8 @@ func SearchNotification(dbSess *db.Session, orgId, projectId models.Id) ([]*Resp
 	if projectId != "" {
 		query = query.Where(fmt.Sprintf("%s.project_id = ?", n), projectId)
 	}
-	if err := query.LazySelectAppend(fmt.Sprintf("%s.*", n), "group_concat(ne.event_type) as event_type").
-		Group(fmt.Sprintf("%s.id", n)).
-		Find(&notify); err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-
-	return notify, nil
+	return query.LazySelectAppend(fmt.Sprintf("%s.*", n), "group_concat(ne.event_type) as event_type").
+		Group(fmt.Sprintf("%s.id", n))
 }
 
 func SearchNotifyEventType(dbSess *db.Session, notifyId models.Id) ([]string, e.Error) {

@@ -31,7 +31,7 @@ type Notification struct {
 	Type      string         `json:"notificationType" gorm:"type:enum('email', 'webhook', 'wechat', 'slack','dingtalk');default:'email';comment:通知类型"`
 	Secret    string         `json:"secret" form:"secret" gorm:"comment:dingtalk加签秘钥"`
 	Url       string         `json:"url" form:"url" gorm:"comment:回调url"`
-	UserIds   pq.StringArray `json:"userIds"  gorm:"type:json;comment:用户ID"  swaggertype:"array,string"`
+	UserIds   pq.StringArray `json:"userIds"  gorm:"type:text;comment:用户ID"  swaggertype:"array,string"`
 }
 
 func (Notification) TableName() string {
