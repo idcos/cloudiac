@@ -20,22 +20,9 @@ func GetPolicyResultById(query *db.Session, taskId models.Id, policyId models.Id
 	return &result, nil
 }
 
-// batchUpdatePolicyResult 批量更新结果
-func batchUpdatePolicyResultStatus(tx *db.Session, policyResultIds []models.Id, status string) (int64, e.Error) {
-	sql := fmt.Sprintf("UPDATE %s SET status = ? WHERE id IN (?)", models.PolicyResult{}.TableName())
-	if affected, err := tx.Exec(sql, status, policyResultIds); err != nil {
-		return affected, e.New(e.DBError, err)
-	} else if int(affected) != len(policyResultIds) {
-		return affected, e.New(e.DBError, err)
-	} else {
-		return affected, nil
-	}
-}
-
+// InitScanResult 初始化扫描结果
+// FIXME: task 支持 task 和 scantask
 func InitScanResult(tx *db.Session, task models.Task) e.Error {
-	// 1. 扫描类型：
-	//      1. 环境
-	//      2. 云模板
 	var (
 		policies      []models.Policy
 		err           e.Error
@@ -43,21 +30,18 @@ func InitScanResult(tx *db.Session, task models.Task) e.Error {
 	)
 
 	// 根据扫描类型获取策略列表
-	typ := "environment"
-	switch typ {
-	case "environment":
-		policies, err = GetPoliciesByEnvId(tx, task.EnvId)
-	case "template":
-		if env, er := GetEnvById(tx, task.EnvId); er != nil {
-			return er
-		} else {
-			policies, err = GetPoliciesByTemplateId(tx, env.TplId)
+	if task.EnvId != "" {
+		if policies, err = GetPoliciesByEnvId(tx, task.EnvId); err != nil {
+			return err
 		}
-	default:
-		return e.New(e.InternalError, fmt.Errorf("not support scan type"))
-	}
-	if err != nil {
-		return err
+	} else {
+		var env *models.Env
+		if env, err = GetEnvById(tx, task.EnvId); err != nil {
+			return err
+		}
+		if policies, err = GetPoliciesByTemplateId(tx, env.TplId); err != nil {
+			return err
+		}
 	}
 
 	// 批量创建
@@ -137,7 +121,7 @@ func UpdateScanResult(tx *db.Session, task models.Tasker, result TsResult) e.Err
 	return nil
 }
 
-// finishScanResult 更新状态未知的策略扫描结果
+// finishScanResult 更新状态未知的策略扫描结果为 failed
 // 当存在相同名称当策略时，扫描结果可能不包含在结果集里面，这些策略扫描结果一律标记为 failed
 func finishScanResult(tx *db.Session, task models.Tasker) e.Error {
 	sql := fmt.Sprintf("UPDATE %s SET status = 'failed' WHERE task_id = ? AND status = 'pending'",
@@ -192,7 +176,26 @@ func GetLastScanTask(query *db.Session, envId models.Id, tplId models.Id) (*mode
 }
 
 func QueryPolicyResult(query *db.Session, taskId models.Id) *db.Session {
-	return query.Model(models.PolicyResult{}).Where("task_id = ?", taskId).
-		Joins("left join iac_policy as p on p.id = iac_policy_result.policy_id").
-		LazySelectAppend("p.name as policy_name,iac_policy_result.*")
+	q := query.Model(models.PolicyResult{}).Where("task_id = ?", taskId)
+
+	// 策略信息
+	q = q.Joins("left join iac_policy as p on p.id = iac_policy_result.policy_id").
+		LazySelectAppend("p.name as policy_name, p.fix_suggestion,iac_policy_result.*")
+	// 策略组信息
+	q = q.Joins("left join iac_policy_group as g on g.id = iac_policy_result.policy_group_id").
+		LazySelectAppend("g.name as policy_group_name,iac_policy_result.*")
+
+	return q
+}
+
+//GetMirrorScanTask 查找部署任务对应的扫描任务
+func GetMirrorScanTask(query *db.Session, taskId models.Id) (*models.ScanTask, e.Error) {
+	t := models.ScanTask{}
+	if err := query.Where("mirror = 1 AND mirror_task_id = ?", taskId).First(&t); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TaskNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &t, nil
 }

@@ -561,7 +561,7 @@ func GetPoliciesFromDB(query *db.Session, policyIds []string) ([]Policy, error) 
 				Category:     category,
 				File:         "policy.rego",
 				Id:           string(policy.Id),
-				Name:         policy.Entry,
+				Name:         policy.RuleName,
 				PolicyType:   policy.PolicyType,
 				ReferenceId:  policy.ReferenceId,
 				ResourceType: policy.ResourceType,

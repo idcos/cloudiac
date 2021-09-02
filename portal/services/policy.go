@@ -1,6 +1,7 @@
 package services
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
@@ -190,7 +191,7 @@ func RemovePoliciesGroupRelation(tx *db.Session, groupId models.Id) e.Error {
 
 func SearchPolicy(dbSess *db.Session, form *forms.SearchPolicyForm) *db.Session {
 	pTable := models.Policy{}.TableName()
-	query := dbSess.Table(pTable).Joins("")
+	query := dbSess.Table(pTable)
 	if len(form.GroupId) > 0 {
 		query = query.Where(fmt.Sprintf("%s.group_id in (?)", pTable), form.GroupId)
 	}
@@ -204,8 +205,13 @@ func SearchPolicy(dbSess *db.Session, form *forms.SearchPolicyForm) *db.Session 
 		query = query.Where(fmt.Sprintf("%s.name like ?", pTable), qs)
 	}
 
-	return query.LazySelectAppend(fmt.Sprintf("%s.%", pTable),
-		fmt.Sprintf("%s.name as groupName", models.PolicyGroup{}.TableName()))
+	query = query.Joins("left join iac_policy_group as g on g.id = iac_policy.group_id").
+		LazySelectAppend("iac_policy.*,g.name as group_name")
+
+	query = query.Joins("left join iac_user as u on u.id = iac_policy.creator_id").
+		LazySelectAppend("iac_policy.*,u.name as creator")
+
+	return query
 }
 
 func DeletePolicy(dbSess *db.Session, id models.Id) (interface{}, e.Error) {
@@ -277,4 +283,32 @@ func PolicyReference() (interface{}, e.Error) {
 
 func PolicyRepo() (interface{}, e.Error) {
 	return nil, nil
+}
+
+type PolicyScanSummary struct {
+	Id     models.Id `json:"id"`
+	Count  int       `json:"count"`
+	Status string    `json:"status"`
+}
+
+// PolicySummary 获取策略环境/云模板执行结果
+func PolicySummary(query *db.Session, ids []models.Id, scope string) ([]*PolicyScanSummary, e.Error) {
+	subQuery := query.Model(models.PolicyResult{}).Select("min(id)").Group("policy_id,env_id,tpl_id")
+	if scope == consts.ScopePolicy {
+		subQuery = subQuery.Where("policy_id in (?)", ids)
+	} else {
+		subQuery = subQuery.Where("policy_group_id in (?)", ids)
+	}
+	q := query.Model(models.PolicyResult{}).Select("policy_id as id,count(*) as count,status").
+		Where("id in (?)", subQuery.Expr()).Group("policy_id,status")
+
+	summary := make([]*PolicyScanSummary, 0)
+	if err := q.Find(&summary); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, nil
+		}
+		return nil, e.New(e.DBError, err)
+	}
+
+	return summary, nil
 }

@@ -156,6 +156,12 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		}
 
 		if step.Type == models.TaskStepTfScan {
+			// 对于包含扫描的任务，创建一个对应的 scanTask 作为扫描任务记录，便于后期扫描状态的查询
+			scanTask := CreateMirrorScanTask(&task)
+			if _, err := tx.Save(scanTask); err != nil {
+				return nil, e.New(e.DBError, err)
+			}
+
 			if err := InitScanResult(tx, task); err != nil {
 				return nil, e.New(err.Code(), errors.Wrapf(err, "init scan result"))
 			}
@@ -953,4 +959,24 @@ func GetScanTaskById(tx *db.Session, id models.Id) (*models.ScanTask, e.Error) {
 		return nil, e.New(e.DBError, err)
 	}
 	return &o, nil
+}
+
+// CreateMirrorScanTask 创建镜像扫描任务
+func CreateMirrorScanTask(task *models.Task) *models.ScanTask {
+	return &models.ScanTask{
+		BaseTask:     task.BaseTask,
+		OrgId:        task.OrgId,
+		ProjectId:    task.ProjectId,
+		TplId:        task.TplId,
+		EnvId:        task.EnvId,
+		Name:         task.Name,
+		CreatorId:    task.CreatorId,
+		RepoAddr:     task.RepoAddr,
+		Revision:     task.Revision,
+		CommitId:     task.CommitId,
+		Workdir:      task.Workdir,
+		Mirror:       true,
+		MirrorTaskId: task.Id,
+		Extra:        task.Extra,
+	}
 }

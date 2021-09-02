@@ -7,7 +7,7 @@ type CreatePolicyForm struct {
 
 	Name          string `json:"name" binding:"required" example:"ECS分配公网IP"`                                                          // 策略名称
 	FixSuggestion string `json:"fixSuggestion" binding:"" example:"1. 设置 internet_max_bandwidth_out = 0\n 2. 取消设置 allocate_public_ip"` // 修复建议
-	Severity      string `json:"severity" binding:"" enums:"'high','medium','low','none'" example:"medium"`                            // 严重性
+	Severity      string `json:"severity" binding:"" enums:"'high','medium','low'" example:"medium"`                                   // 严重性
 
 	Rego string `json:"rego" binding:"required"` // rego脚本
 }
@@ -198,6 +198,22 @@ type PolicyScanResultForm struct {
 }
 
 type PolicyScanReportForm struct {
+	BaseForm
+
+	Id    models.Id `uri:"id" `
+	Scope string    `json:"-"`
+	From  string    `json:"from" form:"from" example:"08-01"` //  开始日期
+	To    string    `json:"to" form:"to" example:"08-07"`     // 结束日期
+}
+
+type PolicyTestForm struct {
+	BaseForm
+
+	Input string `form:"input" json:"input" binding:"" example:"{\n\"alicloud_instance\": [\n\n{\t\n\"id\": \"alicloud_instance.instance\"..."` // 脚本验证源数据
+	Rego  string `form:"rego" json:"rego" binding:"" example:"package accurics\ninstanceWithNoVpc[retVal] {..."`                                // rego脚本内容
+}
+
+type PolicyLastTasksForm struct {
 	PageForm
 
 	Id    models.Id `uri:"id" `

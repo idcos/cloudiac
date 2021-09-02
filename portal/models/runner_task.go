@@ -45,6 +45,9 @@ type ScanTask struct {
 
 	Workdir string `json:"workdir" gorm:"default:''"`
 
+	Mirror       bool `json:"mirror"`       // 是否属于部署任务的扫描任务
+	MirrorTaskId Id   `json:"mirrorTaskId"` // 部署任务ID
+
 	// 扩展属性，包括 source, transitionId 等
 	Extra TaskExtra `json:"extra" gorm:"type:json"` // 扩展属性
 }

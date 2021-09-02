@@ -399,4 +399,7 @@ var errorMsgs = map[int]map[string]string{
 	InvalidTfVersion: {
 		"zh-cn": "自动选择版本失败",
 	},
+	PolicyRegoMissingComment: {
+		"zh-cn": "自动选择版本失败",
+	},
 }

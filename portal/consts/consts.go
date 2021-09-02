@@ -79,10 +79,12 @@ const (
 	ProjectRoleOperator = "operator" // 可以发起 plan、apply
 	ProjectRoleGuest    = "guest"    // 访客，只读权限
 
-	ScopeOrg      = "org"
-	ScopeProject  = "project"
-	ScopeTemplate = "template"
-	ScopeEnv      = "env"
+	ScopeOrg         = "org"
+	ScopeProject     = "project"
+	ScopeTemplate    = "template"
+	ScopeEnv         = "env"
+	ScopePolicy      = "policy"
+	ScopePolicyGroup = "policyGroup"
 
 	VarTypeEnv       = "environment"
 	VarTypeTerraform = "terraform"
