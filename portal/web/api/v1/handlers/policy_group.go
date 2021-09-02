@@ -13,15 +13,14 @@ type PolicyGroup struct {
 
 // Create 创建策略组
 // @Summary 创建策略组
-// @Description 创建策略组
-// @Tags 策略
+// @Tags 合规/策略组
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
 // @Param json body forms.CreatePolicyGroupForm true "parameter"
 // @Success 200 {object}  ctx.JSONResult{result=models.PolicyGroup}
-// @Router /policies [post]
+// @Router /policies/groups [post]
 func (PolicyGroup) Create(c *ctx.GinRequest) {
 	form := &forms.CreatePolicyGroupForm{}
 	if err := c.Bind(form); err != nil {
@@ -31,9 +30,8 @@ func (PolicyGroup) Create(c *ctx.GinRequest) {
 }
 
 // Search 查询策略组列表
-// @Tags 策略
+// @Tags 合规/策略组
 // @Summary 查询策略组列表
-// @Description 查询策略组列表
 // @Accept application/x-www-form-urlencoded
 // @Accept json
 // @Produce json
@@ -51,9 +49,8 @@ func (PolicyGroup) Search(c *ctx.GinRequest) {
 }
 
 // Update 修改策略组
-// @Tags 策略
+// @Tags 合规/策略组
 // @Summary 修改策略组
-// @Description 修改策略组
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
@@ -72,9 +69,8 @@ func (PolicyGroup) Update(c *ctx.GinRequest) {
 }
 
 // Delete 删除策略组
-// @Tags 策略
+// @Tags 合规/策略组
 // @Summary 删除策略组
-// @Description 删除策略组
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
@@ -92,9 +88,8 @@ func (PolicyGroup) Delete(c *ctx.GinRequest) {
 }
 
 // Detail 策略组详情
-// @Tags 策略
-// @Summary Detail
-// @Description 策略组详情
+// @Tags 合规/策略组
+// @Summary 策略组详情
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
@@ -112,9 +107,8 @@ func (PolicyGroup) Detail(c *ctx.GinRequest) {
 }
 
 // OpPolicyAndPolicyGroupRel 添加/移除策略与策略组的关系
-// @Tags 策略
+// @Tags 合规/策略组
 // @Summary 添加/移除策略与策略组的关系
-// @Description 添加/移除策略与策略组的关系
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
@@ -129,4 +123,44 @@ func (PolicyGroup) OpPolicyAndPolicyGroupRel(c *ctx.GinRequest) {
 		return
 	}
 	c.JSONResult(apps.OpPolicyAndPolicyGroupRel(c.Service(), form))
+}
+
+// ScanReport 策略组详情-报表
+// @Tags 合规/策略组
+// @Summary 策略详情-报表
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
+// @Param policyGroupId path string true "策略id"
+// @Router /policies/{policyGroupId}/report [get]
+// @Success 200 {object} ctx.JSONResult{result=apps.PolicyGroupScanReportResp}
+func (PolicyGroup) ScanReport(c *ctx.GinRequest) {
+	form := &forms.PolicyScanReportForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.PolicyGroupScanReport(c.Service(), form))
+}
+
+// LastTasks 策略组最近扫描内容
+// @Tags 合规/策略组
+// @Summary 策略组最近扫描内容
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
+// @Param policyGroupId path string true "策略id"
+// @Router /policies/{policyGroupId}/last_tasks [get]
+// @Success 200 {object} ctx.JSONResult{result=[]apps.LastScanTaskResp}
+func (PolicyGroup) LastTasks(c *ctx.GinRequest) {
+	form := &forms.PolicyLastTasksForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.PolicyLastTasks(c.Service(), form))
 }

@@ -2,6 +2,7 @@ package apps
 
 import (
 	"cloudiac/common"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/libs/page"
@@ -9,8 +10,13 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/logstorage"
+	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -20,7 +26,7 @@ import (
 func CreatePolicy(c *ctx.ServiceContext, form *forms.CreatePolicyForm) (*models.Policy, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create policy %s", form.Name))
 
-	entryName, resourceType, policyType, err := parseRegoHeader(form.Rego)
+	ruleName, resourceType, policyType, err := parseRegoHeader(form.Rego)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	}
@@ -31,7 +37,7 @@ func CreatePolicy(c *ctx.ServiceContext, form *forms.CreatePolicyForm) (*models.
 		FixSuggestion: form.FixSuggestion,
 		Severity:      form.Severity,
 		Rego:          form.Rego,
-		Entry:         entryName,
+		RuleName:      ruleName,
 		ResourceType:  resourceType,
 		PolicyType:    policyType,
 	}
@@ -53,13 +59,13 @@ func CreatePolicy(c *ctx.ServiceContext, form *forms.CreatePolicyForm) (*models.
 }
 
 //parseRegoHeader 解析 rego 脚本获取入口，云商类型和资源类型
-func parseRegoHeader(rego string) (entry string, policyType string, resType string, err e.Error) {
-	regex := regexp.MustCompile("(?m)^##entry (.*)$")
+func parseRegoHeader(rego string) (ruleName string, policyType string, resType string, err e.Error) {
+	regex := regexp.MustCompile("(?m)^##ruleName (.*)$")
 	match := regex.FindStringSubmatch(rego)
 	if len(match) == 2 {
-		entry = strings.TrimSpace(match[1])
+		ruleName = strings.TrimSpace(match[1])
 	} else {
-		return "", "", "", e.New(e.PolicyRegoMissingComment)
+		return "", "", "", e.New(e.PolicyRegoMissingComment, fmt.Errorf("missing ##ruleName comment"))
 	}
 
 	regex = regexp.MustCompile("(?m)^##policyType (.*)$")
@@ -67,7 +73,7 @@ func parseRegoHeader(rego string) (entry string, policyType string, resType stri
 	if len(match) == 2 {
 		policyType = strings.TrimSpace(match[1])
 	} else {
-		return "", "", "", e.New(e.PolicyRegoMissingComment)
+		return "", "", "", e.New(e.PolicyRegoMissingComment, fmt.Errorf("missing ##policyType comment"))
 	}
 
 	regex = regexp.MustCompile("(?m)^##resourceType (.*)$")
@@ -75,7 +81,7 @@ func parseRegoHeader(rego string) (entry string, policyType string, resType stri
 	if len(match) == 2 {
 		resType = strings.TrimSpace(match[1])
 	} else {
-		return "", "", "", e.New(e.PolicyRegoMissingComment)
+		return "", "", "", e.New(e.PolicyRegoMissingComment, fmt.Errorf("missing ##resourceType comment"))
 	}
 	return
 }
@@ -186,19 +192,52 @@ func ScanEnvironment(c *ctx.ServiceContext, form *forms.ScanEnvironmentForm) (*m
 
 type PolicyResp struct {
 	models.Policy
-	GroupName string `json:"groupName" form:"groupName" `
+	GroupName  string `json:"groupName"`
+	Creator    string `json:"creator"`
+	Passed     int    `json:"passed"`
+	Violated   int    `json:"violated"`
+	Suppressed int    `json:"suppressed"`
+	Failed     int    `json:"failed"`
 }
 
 // SearchPolicy 查询策略组列表
 func SearchPolicy(c *ctx.ServiceContext, form *forms.SearchPolicyForm) (interface{}, e.Error) {
 	query := services.SearchPolicy(c.DB(), form)
-	pg := make([]PolicyResp, 0)
+	policyResps := make([]PolicyResp, 0)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	if err := p.Scan(&pg); err != nil {
+	if err := p.Scan(&policyResps); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 
-	return pg, nil
+	// 扫描结果统计信息
+	var policyIds []models.Id
+	for idx := range policyResps {
+		policyIds = append(policyIds, policyResps[idx].Id)
+	}
+	if summaries, err := services.PolicySummary(c.DB(), policyIds, consts.ScopePolicy); err != nil {
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	} else if summaries != nil && len(summaries) > 0 {
+		sumMap := make(map[string]*services.PolicyScanSummary, len(policyIds))
+		for idx, summary := range summaries {
+			sumMap[string(summary.Id)+summary.Status] = summaries[idx]
+		}
+		for idx, policyResp := range policyResps {
+			if summary, ok := sumMap[string(policyResp.Id)+"passed"]; ok {
+				policyResps[idx].Passed = summary.Count
+			}
+			if summary, ok := sumMap[string(policyResp.Id)+"violated"]; ok {
+				policyResps[idx].Violated = summary.Count
+			}
+			if summary, ok := sumMap[string(policyResp.Id)+"failed"]; ok {
+				policyResps[idx].Failed = summary.Count
+			}
+			if summary, ok := sumMap[string(policyResp.Id)+"suppressed"]; ok {
+				policyResps[idx].Suppressed = summary.Count
+			}
+		}
+	}
+
+	return policyResps, nil
 }
 
 // UpdatePolicy 修改策略组
@@ -385,7 +424,9 @@ type ScanResultResp struct {
 
 type PolicyResult struct {
 	models.PolicyResult
-	PolicyName string `json:"policy_name"`
+	PolicyName      string `json:"policyName"`
+	PolicyGroupName string `json:"policyGroupName"`
+	FixSuggestion   string `json:"fixSuggestion"`
 }
 
 func PolicyScanResult(c *ctx.ServiceContext, form *forms.PolicyScanResultForm) (*ScanResultResp, e.Error) {
@@ -394,36 +435,43 @@ func PolicyScanResult(c *ctx.ServiceContext, form *forms.PolicyScanResultForm) (
 		envId models.Id
 		tplId models.Id
 	)
-	if form.Scope == "environment" {
+	if form.Scope == consts.ScopeEnv {
 		envId = form.Id
 	} else {
 		tplId = form.Id
 	}
 	scanTask, err := services.GetLastScanTask(c.DB(), envId, tplId)
 	if err != nil {
-		if e.IsRecordNotFound(err) {
+		if err.Code() != e.TaskNotExists {
 			return nil, nil
+		} else {
+			return nil, err
 		}
 	}
 
 	query := services.QueryPolicyResult(c.DB(), scanTask.Id)
-	pg := make([]PolicyResult, 0)
+	if form.SortField() == "" {
+		query = query.Order("policy_group_name, policy_name")
+	} else {
+		query = form.Order(query)
+	}
+	results := make([]PolicyResult, 0)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	if err := p.Scan(&pg); err != nil {
+	if err := p.Scan(&results); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 
 	return &ScanResultResp{
 		ScanTime:    scanTask.StartAt,
-		ScanResults: pg,
+		ScanResults: results,
 	}, nil
 }
 
 type ScanReport struct {
-	Summary       Summary       `json:"summary"`
-	ScannedByDays ScanReportDay `json:"scannedByDays"`
-	PassedByDays  ScanReportDay `json:"passedByDays"`
-	LastScanned   []ScanTask    `json:"lastScanned"`
+	Summary       Summary            `json:"summary"`
+	ScannedByDays ScanReportDay      `json:"scannedByDays"`
+	PassedByDays  ScanReportDay      `json:"passedByDays"`
+	LastScanned   []LastScanTaskResp `json:"lastScanned"`
 }
 
 type Summary struct {
@@ -438,7 +486,7 @@ type ScanReportDay struct {
 	Count int    `json:"count"`
 }
 
-type ScanTask struct {
+type LastScanTaskResp struct {
 	models.ScanTask
 	Scope       string `json:"scope"`       // 目标类型：环境/模板
 	Name        string `json:"name"`        //检查目标
@@ -448,6 +496,101 @@ type ScanTask struct {
 	Summary
 }
 
-func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (*ScanReport, e.Error) {
+type PolicyScanReportResp struct {
+	PassedRate Polyline `json:"passedRate"` // 检测通过率
+}
+
+type Polyline struct {
+	Column []string      `json:"col" example:"[\"08/20\",\"08-21\"]"`
+	Value  []interface{} `json:"value" example:"[0.95,0.96]" swaggertype:"string"`
+}
+
+func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (*PolicyScanReportResp, e.Error) {
+	// data: {
+	//  x轴坐标： [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ],
+	//  数据：[ 12, 22, 33, 55, 77, 88, 99 ]
+	//}
+
 	return nil, nil
+}
+
+type PolicyGroupScanReportResp struct {
+	Total            PieChar  `json:"total"`            // 检测结果比例
+	TaskScanCount    Polyline `json:"scanCount"`        // 检测源执行次数
+	PolicyScanCount  Polyline `json:"policyScanCount"`  // 策略运行趋势
+	PolicyPassedRate Polyline `json:"policyPassedRate"` // 检测通过率趋势
+}
+
+type PieChar []PieSector
+
+type PieSector struct {
+	Name  string      `json:"name" example:"08-20"`
+	Value interface{} `json:"value" example:"10" swaggertype:"string"`
+}
+
+func PolicyGroupScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (*PolicyScanReportResp, e.Error) {
+	// data: [
+	//        { value: 335, name: '通过' },
+	//        { value: 310, name: '未通过' },
+	//        { value: 234, name: '屏蔽' }
+	// ]
+
+	return nil, nil
+}
+
+func PolicyLastTasks(c *ctx.ServiceContext, form *forms.PolicyLastTasksForm) ([]*LastScanTaskResp, e.Error) {
+
+	return nil, nil
+}
+
+type PolicyTestResp struct {
+	Data  interface{} `json:"data" example:"{\n\"accurics\":{\n\"instanceWithNoVpc\":[\n{\n\"Id\":\"alicloud_instance.instance\"\n}\n]\n}\n}"` // 脚本测试输出，json文本
+	Error string      `json:"error" example:"1 error occurred: policy.rego:4: rego_parse_error: refs cannot be used for rule\n"`               // 脚本执行错误内容
+}
+
+func PolicyTest(c *ctx.ServiceContext, form *forms.PolicyTestForm) (*PolicyTestResp, e.Error) {
+	c.AddLogField("action", fmt.Sprintf("test template"))
+
+	if _, _, _, err := parseRegoHeader(form.Rego); err != nil {
+		return &PolicyTestResp{
+			Data:  "",
+			Error: fmt.Sprintf("1 error occurred: %s", err.Error()),
+		}, nil
+	}
+	if err := json.Unmarshal([]byte(form.Input), nil); err != nil {
+		return &PolicyTestResp{
+			Data:  "",
+			Error: fmt.Sprintf("invalid input"),
+		}, nil
+	}
+
+	tmpDir, err := os.MkdirTemp("", "*")
+	if err != nil {
+		return nil, e.New(e.InternalError, errors.Wrapf(err, "create tmp dir"), http.StatusInternalServerError)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	regoPath := filepath.Join(tmpDir, "policy.rego")
+	inputPath := filepath.Join(tmpDir, "input.json")
+
+	if err := os.WriteFile(regoPath, []byte(form.Rego), 0644); err != nil {
+		return nil, e.New(e.InternalError, err, http.StatusInternalServerError)
+	}
+	if err := os.WriteFile(inputPath, []byte(form.Input), 0644); err != nil {
+		return nil, e.New(e.InternalError, err, http.StatusInternalServerError)
+	}
+
+	cmdline := fmt.Sprintf("cd %s && opa eval -f pretty --data %s --input %s data", tmpDir, "policy.rego", "input.json")
+	cmd := exec.Command("sh", "-c", cmdline)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return &PolicyTestResp{
+			Data:  "",
+			Error: string(output),
+		}, nil
+	} else {
+		return &PolicyTestResp{
+			Data:  output,
+			Error: "",
+		}, nil
+	}
 }

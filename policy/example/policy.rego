@@ -1,6 +1,6 @@
 package accurics
 
-##entry instanceWithNoVpc
+##ruleName instanceWithNoVpc
 ##policyType alicloud
 ##resourceType alicloud_instance
 

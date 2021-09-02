@@ -165,7 +165,7 @@ func (m *TaskManager) recoverTask(ctx context.Context) error {
 		return err
 	}
 	scanTasks := make([]*models.ScanTask, 0)
-	if err := query.Model(&models.ScanTask{}).Find(&scanTasks); err != nil {
+	if err := query.Model(&models.ScanTask{}).Where("mirror = 0").Find(&scanTasks); err != nil {
 		logger.Errorf("find '%s' scan tasks error: %v", models.TaskRunning, err)
 		return err
 	}
@@ -243,8 +243,7 @@ func (m *TaskManager) getPendingScanTasks() []*models.ScanTask {
 	logger := m.logger
 
 	// 扫描类型任务支持多个并行执行，不会互相影响，这里获取所有处于 pending 状态的任务列表
-
-	query := m.db.Model(&models.ScanTask{}).Where("status = ?", models.TaskPending)
+	query := m.db.Model(&models.ScanTask{}).Where("status = ? AND mirror = 0", models.TaskPending)
 
 	limitedRunners := m.getLimitedRunner()
 	if len(limitedRunners) > 0 {
@@ -504,45 +503,6 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 		return nil
 	}
 
-	processTfParse := func() error {
-		if bs, err := read(task.TfParseJsonPath()); err != nil {
-			return fmt.Errorf("read parse json: %v", err)
-		} else if len(bs) > 0 {
-			_, err := services.UnmarshalTfParseJson(bs)
-			if err != nil {
-				return fmt.Errorf("unmarshal parse json: %v", err)
-			}
-			//TODO: return parse result
-		}
-		return nil
-	}
-
-	processTfResult := func() error {
-		var (
-			tfResultJson *services.TsResultJson
-			bs           []byte
-			err          error
-		)
-
-		if task.Status != common.TaskFailed {
-			if bs, err = read(task.TfResultJsonPath()); err == nil && len(bs) > 0 {
-				if tfResultJson, err = services.UnmarshalTfResultJson(bs); err == nil {
-					if err := services.UpdateScanResult(dbSess, task, tfResultJson.Results); err != nil {
-						return fmt.Errorf("save scan result: %v", err)
-					}
-				}
-			}
-		}
-
-		// 扫描出错的时候更新所有策略扫描结果为 failed
-		emptyResult := services.TsResultJson{}
-		if err := services.UpdateScanResult(dbSess, task, emptyResult.Results); err != nil {
-			return fmt.Errorf("save scan result: %v", err)
-		}
-
-		return err
-	}
-
 	// 设置 auto destroy
 	processAutoDestroy := func() error {
 		env, err := services.GetEnv(dbSess, task.EnvId)
@@ -593,15 +553,58 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 		return nil
 	}
 
-	if task.Type == models.TaskTypePlan {
-		if err := processTfParse(); err != nil {
-			logger.Errorf("process task parse: %s", err)
+	hasScanStep := func() bool {
+		scanStep, _ := services.HasScanStep(dbSess, task.Id)
+		return scanStep != nil
+	}
+
+	processScanResult := func() error {
+		var (
+			tfResultJson *services.TsResultJson
+			bs           []byte
+			scanStep     *models.TaskStep
+			scanTask     *models.ScanTask
+		)
+
+		if scanStep, err = services.HasScanStep(dbSess, task.Id); err != nil {
+			return err
 		}
-	} else if task.Type == common.TaskTypeScan {
-		if err := processTfResult(); err != nil {
-			logger.Errorf("process task scan: %s", err)
+		if scanTask, err = services.GetMirrorScanTask(dbSess, task.Id); err != nil {
+			return err
+		}
+
+		// 根据扫描步骤的执行结果更新扫描任务的状态
+		if err = services.ChangeTaskStatusWithStep(dbSess, scanTask, scanStep); err != nil {
+			return err
+		}
+
+		// 处理扫描结果
+		if scanTask.Status == common.TaskComplete {
+			var er error
+			if bs, er = read(scanTask.TfResultJsonPath()); er == nil && len(bs) > 0 {
+				if tfResultJson, er = services.UnmarshalTfResultJson(bs); er == nil {
+					if err := services.UpdateScanResult(dbSess, scanTask, tfResultJson.Results); err != nil {
+						return fmt.Errorf("save scan result: %v", err)
+					}
+				}
+			}
+		}
+
+		// 扫描出错的时候更新所有策略扫描结果为 failed
+		emptyResult := services.TsResultJson{}
+		if err := services.UpdateScanResult(dbSess, scanTask, emptyResult.Results); err != nil {
+			return fmt.Errorf("save scan result: %v", err)
+		}
+
+		return err
+	}
+
+	if hasScanStep() {
+		if err := processScanResult(); err != nil {
+			logger.Errorf("process scan result: %v", err)
 		}
 	}
+
 	if !lastStep.IsRejected() { // 任务被审批驳回时会即时更新状态，且不会执行资源统计步骤
 		if task.IsEffectTask() {
 			if err := processState(); err != nil {
@@ -978,19 +981,6 @@ func (m *TaskManager) processScanTaskDone(task *models.ScanTask) {
 		return content, nil
 	}
 
-	processTfParse := func() error {
-		if bs, err := read(task.TfParseJsonPath()); err != nil {
-			return fmt.Errorf("read parse json: %v", err)
-		} else if len(bs) > 0 {
-			_, err := services.UnmarshalTfParseJson(bs)
-			if err != nil {
-				return fmt.Errorf("unmarshal parse json: %v", err)
-			}
-			//TODO: return parse result
-		}
-		return nil
-	}
-
 	processTfResult := func() error {
 		var (
 			tfResultJson *services.TsResultJson
@@ -1032,11 +1022,7 @@ func (m *TaskManager) processScanTaskDone(task *models.ScanTask) {
 		return nil
 	}
 
-	if task.Type == models.TaskTypeParse {
-		if err := processTfParse(); err != nil {
-			logger.Errorf("process task parse: %s", err)
-		}
-	} else if task.Type == common.TaskTypeScan {
+	if task.Type == common.TaskTypeScan {
 		if err := processTfResult(); err != nil {
 			logger.Errorf("process task scan: %s", err)
 		}

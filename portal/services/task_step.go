@@ -3,6 +3,7 @@
 package services
 
 import (
+	"cloudiac/common"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
@@ -139,4 +140,17 @@ func createTaskStep(tx *db.Session, task models.Task, stepBody models.TaskStepBo
 		return nil, e.New(e.DBError, err)
 	}
 	return &s, nil
+}
+
+// HasScanStep 检查任务是否有策略扫描步骤
+func HasScanStep(query *db.Session, taskId models.Id) (*models.TaskStep, e.Error) {
+	taskStep := models.TaskStep{}
+	err := query.Where("task_id = ? AND `type` = ?", taskId, common.TaskStepTfScan).First(&taskStep)
+	if err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TaskStepNotExists)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &taskStep, nil
 }

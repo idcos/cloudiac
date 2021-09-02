@@ -12,7 +12,7 @@ type PolicySuppress struct {
 }
 
 // CreatePolicySuppress 创建策略屏蔽
-// @Tags 策略
+// @Tags 合规/策略
 // @Summary shield
 // @Description 创建策略屏蔽
 // @Accept multipart/form-data
@@ -33,7 +33,7 @@ func (PolicySuppress) CreatePolicySuppress(c *ctx.GinRequest) {
 }
 
 // SearchPolicySuppress 查询策略屏蔽
-// @Tags 策略
+// @Tags 合规/策略
 // @Summary shield
 // @Description 查询策略屏蔽
 // @Accept multipart/form-data
