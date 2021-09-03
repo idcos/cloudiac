@@ -226,3 +226,10 @@ type PolicyLastTasksForm struct {
 	Id    models.Id `uri:"id" `
 	Scope string    `json:"-"`
 }
+
+type SearchGroupOfPolicyForm struct {
+	PageForm
+
+	Id   models.Id `uri:"id" `
+	Bind bool      `json:"bind" form:"bind" ` //  ture: 查询绑定策略组的策略，false: 查询未绑定的策略组的策略
+}
