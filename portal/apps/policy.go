@@ -197,11 +197,11 @@ type PolicyResp struct {
 	Summary
 }
 
-// SearchPolicy 查询策略组列表
+// SearchPolicy 查询策略列表
 func SearchPolicy(c *ctx.ServiceContext, form *forms.SearchPolicyForm) (interface{}, e.Error) {
 	query := services.SearchPolicy(c.DB(), form)
 	policyResps := make([]PolicyResp, 0)
-	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	if err := p.Scan(&policyResps); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
@@ -234,7 +234,11 @@ func SearchPolicy(c *ctx.ServiceContext, form *forms.SearchPolicyForm) (interfac
 		}
 	}
 
-	return policyResps, nil
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     policyResps,
+	}, nil
 }
 
 // UpdatePolicy 修改策略组
@@ -293,49 +297,119 @@ func DeletePolicySuppress(c *ctx.ServiceContext, form *forms.DeletePolicySuppres
 }
 
 type RespPolicyTpl struct {
-	TplName         string    `json:"tplName" form:"tplName" `
-	TplId           models.Id `json:"tplId" form:"tplId" `
-	RepoAddr        string    `json:"repoAddr" form:"repoAddr" `
-	PolicyGroupName string    `json:"policyGroupName" form:"policyGroupName" `
-	PolicyGroupId   models.Id `json:"policyGroupId" form:"policyGroupId" `
-	Enabled         bool      `json:"enabled" example:"true"`          //是否启用
-	GroupStatus     string    `json:"groupStatus" form:"groupStatus" ` //状态 todo 不确认字段
+	models.Template
+	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
 }
 
 func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (interface{}, e.Error) {
-	return services.SearchPolicyTpl()
-}
+	respPolicyTpls := make([]RespPolicyTpl, 0)
+	tplIds := make([]models.Id, 0)
+	query := services.SearchPolicyTpl(c.DB(), c.OrgId, c.ProjectId, form.Q)
+	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
+	groupM := make(map[models.Id][]services.NewPolicyGroup, 0)
+	if err := p.Scan(&respPolicyTpls); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	for _, v := range respPolicyTpls {
+		tplIds = append(tplIds, v.Id)
+	}
 
-func UpdatePolicyTpl(c *ctx.ServiceContext, form *forms.UpdatePolicyTplForm) (interface{}, e.Error) {
-	return services.UpdatePolicyTpl()
-}
+	// 根据模板id查询出关联的所有策略组
+	groups, err := services.GetPolicyGroupByTplIds(c.DB(), tplIds)
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range groups {
+		if _, ok := groupM[v.TplId]; !ok {
+			groupM[v.TplId] = []services.NewPolicyGroup{v}
+			continue
+		}
+		groupM[v.TplId] = append(groupM[v.TplId], v)
+	}
 
-func DetailPolicyTpl(c *ctx.ServiceContext, form *forms.DetailPolicyTplForm) (interface{}, e.Error) {
-	return services.DetailPolicyTpl()
+	for index, v := range respPolicyTpls {
+		if _, ok := groupM[v.Id]; !ok {
+			respPolicyTpls[index].PolicyGroups = []services.NewPolicyGroup{}
+			continue
+		}
+		respPolicyTpls[index].PolicyGroups = groupM[v.Id]
+	}
+
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     respPolicyTpls,
+	}, nil
 }
 
 type RespPolicyEnv struct {
-	TplName         string    `json:"tplName" form:"tplName" `
-	TplId           models.Id `json:"tplId" form:"tplId" `
-	EnvName         string    `json:"envName" form:"envName" `
-	EnvId           models.Id `json:"envId" form:"envId" `
-	RepoAddr        string    `json:"repoAddr" form:"repoAddr" `
-	PolicyGroupName string    `json:"policyGroupName" form:"policyGroupName" `
-	PolicyGroupId   models.Id `json:"policyGroupId" form:"policyGroupId" `
-	Enabled         bool      `json:"enabled" example:"true"`          //是否启用
-	GroupStatus     string    `json:"groupStatus" form:"groupStatus" ` //状态 todo 不确认字段
+	models.EnvDetail
+	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
 }
 
 func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (interface{}, e.Error) {
-	return services.SearchPolicyEnv()
+	//todo 缺少通过、不通过、屏蔽数据
+	respPolicyEnvs := make([]RespPolicyEnv, 0)
+	envIds := make([]models.Id, 0)
+	query := services.SearchPolicyEnv(c.DB().Debug(), c.OrgId, c.ProjectId, form.Q)
+	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
+	groupM := make(map[models.Id][]services.NewPolicyGroup, 0)
+
+	if err := p.Scan(&respPolicyEnvs); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	for _, v := range respPolicyEnvs {
+		envIds = append(envIds, v.Id)
+	}
+
+	// 根据环境id查询出关联的所有策略组
+	groups, err := services.GetPolicyGroupByEnvIds(c.DB(), envIds)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range groups {
+		if _, ok := groupM[v.EnvId]; !ok {
+			groupM[v.EnvId] = []services.NewPolicyGroup{v}
+			continue
+		}
+		groupM[v.TplId] = append(groupM[v.TplId], v)
+	}
+
+	for index, v := range respPolicyEnvs {
+		if _, ok := groupM[v.Id]; !ok {
+			respPolicyEnvs[index].PolicyGroups = []services.NewPolicyGroup{}
+			continue
+		}
+		respPolicyEnvs[index].PolicyGroups = groupM[v.Id]
+	}
+
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     respPolicyEnvs,
+	}, nil
 }
 
-func UpdatePolicyEnv(c *ctx.ServiceContext, form *forms.UpdatePolicyEnvForm) (interface{}, e.Error) {
-	return services.UpdatePolicyEnv()
+type RespEnvOfPolicy struct {
+	models.Policy
+	GroupName string `json:"groupName"`
+	GroupId   string `json:"groupId"`
+	EnvName   string `json:"envName"`
 }
 
-func DetailPolicyEnv(c *ctx.ServiceContext, form *forms.DetailPolicyEnvForm) (interface{}, e.Error) {
-	return services.DetailPolicyEnv()
+func EnvOfPolicy(c *ctx.ServiceContext, form *forms.EnvOfPolicyForm) (interface{}, e.Error) {
+	resp := make([]RespEnvOfPolicy, 0)
+	query := services.EnvOfPolicy(c.DB().Debug(), form, c.OrgId, c.ProjectId)
+	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
+	if err := p.Scan(&resp); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     resp,
+	}, nil
 }
 
 func PolicyError(c *ctx.ServiceContext, form *forms.PolicyErrorForm) (interface{}, e.Error) {
@@ -426,7 +500,7 @@ type PolicyResult struct {
 	FixSuggestion   string `json:"fixSuggestion"`
 }
 
-func PolicyScanResult(c *ctx.ServiceContext, form *forms.PolicyScanResultForm) (*ScanResultResp, e.Error) {
+func PolicyScanResult(c *ctx.ServiceContext, form *forms.PolicyScanResultForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("scan result %s %s", form.Scope, form.Id))
 	var (
 		envId models.Id
@@ -453,14 +527,18 @@ func PolicyScanResult(c *ctx.ServiceContext, form *forms.PolicyScanResultForm) (
 		query = form.Order(query)
 	}
 	results := make([]PolicyResult, 0)
-	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	if err := p.Scan(&results); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 
-	return &ScanResultResp{
-		ScanTime:    scanTask.StartAt,
-		ScanResults: results,
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List: &ScanResultResp{
+			ScanTime:    scanTask.StartAt,
+			ScanResults: results,
+		},
 	}, nil
 }
 
@@ -679,8 +757,7 @@ func PolicyGroupScanTasks(c *ctx.ServiceContext, form *forms.PolicyLastTasksForm
 	} else {
 		query = form.Order(query)
 	}
-
-	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	tasks := make([]*LastScanTaskResp, 0)
 	if err := p.Scan(&tasks); err != nil {
 		return nil, e.New(e.DBError, err)

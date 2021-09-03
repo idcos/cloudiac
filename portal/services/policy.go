@@ -250,28 +250,59 @@ func DeletePolicySuppress() (interface{}, e.Error) {
 	return nil, nil
 }
 
-func SearchPolicyTpl() (interface{}, e.Error) {
-	return nil, nil
+func SearchPolicyTpl(tx *db.Session, orgId, projectId models.Id, q string) *db.Session {
+	query := tx.Table(models.Template{}.TableName())
+	if orgId != "" {
+		query = query.Where("org_id = ?", orgId)
+	}
+
+	if q != "" {
+		query = query.WhereLike("name", q)
+	}
+	return query
 }
 
-func UpdatePolicyTpl() (interface{}, e.Error) {
-	return nil, nil
+func SearchPolicyEnv(dbSess *db.Session, orgId, projectId models.Id, q string) *db.Session {
+	env := models.EnvDetail{}.TableName()
+	query := dbSess.Table(env).
+		Joins(fmt.Sprintf("left join %s as tpl on tpl.id = %s.tpl_id",
+			models.Template{}.TableName(), env))
+	if orgId != "" {
+		query = query.Where(fmt.Sprintf("%s.org_id = ?", env), orgId)
+	}
+
+	if projectId != "" {
+		query = query.Where(fmt.Sprintf("%s.project_id = ?", env), projectId)
+	}
+
+	if q != "" {
+		query = query.WhereLike(fmt.Sprintf("%s.name", env), q)
+	}
+	return query
 }
 
-func DetailPolicyTpl() (interface{}, e.Error) {
-	return nil, nil
-}
+func EnvOfPolicy(dbSess *db.Session, form *forms.EnvOfPolicyForm, orgId, projectId models.Id) *db.Session {
+	pTable := models.Policy{}.TableName()
+	query := dbSess.Table(pTable).Joins(fmt.Sprintf("left join %s as pg on pg.id = %s.group_id",
+		models.PolicyGroup{}.TableName(), pTable)).LazySelectAppend("pg.name as group_name, pg.id as group_id")
+	if form.GroupId != "" {
+		query = query.Where(fmt.Sprintf("%s.group_id = ?", pTable), form.GroupId)
+	}
 
-func SearchPolicyEnv() (interface{}, e.Error) {
-	return nil, nil
-}
+	if form.Severity != "" {
+		query = query.Where(fmt.Sprintf("%s.severity = ?", pTable), form.Severity)
+	}
 
-func UpdatePolicyEnv() (interface{}, e.Error) {
-	return nil, nil
-}
+	if form.Q != "" {
+		query = query.WhereLike(fmt.Sprintf("%s.name", pTable), form.Q)
+	}
 
-func DetailPolicyEnv() (interface{}, e.Error) {
-	return nil, nil
+	query = query.
+		Joins(fmt.Sprintf("left join %s as rel on rel.group_id = pg.id ", models.PolicyRel{}.TableName())).
+		Joins(fmt.Sprintf("left join %s as env on env.id = rel.env_id", models.Env{}.TableName())).
+		Where("rel.org_id = ? and rel.project_id = ? and rel.scope = ?", orgId, projectId, models.PolicyRelScopeEnv)
+
+	return query.LazySelectAppend(fmt.Sprintf("env.name as env_name, %s.*", pTable))
 }
 
 func PolicyError() (interface{}, e.Error) {

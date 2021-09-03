@@ -72,3 +72,48 @@ func DetailPolicyGroup(dbSess *db.Session, groupId models.Id) (*models.PolicyGro
 	}
 	return pg, nil
 }
+
+type NewPolicyGroup struct {
+	models.PolicyGroup
+	OrgId     models.Id `json:"orgId"`
+	ProjectId models.Id `json:"projectId" `
+	TplId     models.Id `json:"tplId"`
+	EnvId     models.Id `json:"envId"`
+	Scope     string    `json:"scope"`
+}
+
+func GetPolicyGroupByTplIds(tx *db.Session, ids []models.Id) ([]NewPolicyGroup, e.Error) {
+	group := make([]NewPolicyGroup, 0)
+	if len(ids) == 0 {
+		return group, nil
+	}
+	rel := models.PolicyRel{}.TableName()
+	if err := tx.Model(models.PolicyRel{}).
+		Joins(fmt.Sprintf("left join %s as pg on pg.ids = %s.group_id",
+			models.PolicyGroup{}.TableName(), rel)).
+		Where(fmt.Sprintf("%s.tpl_id in (?)", rel), ids).
+		Where(fmt.Sprintf("%s.scope = ?", rel), models.PolicyRelScopeTpl).
+		LazySelectAppend(fmt.Sprintf("%s.*", rel), "pg.*").
+		Find(&group); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return group, nil
+}
+
+func GetPolicyGroupByEnvIds(tx *db.Session, ids []models.Id) ([]NewPolicyGroup, e.Error) {
+	group := make([]NewPolicyGroup, 0)
+	if len(ids) == 0 {
+		return group, nil
+	}
+	rel := models.PolicyRel{}.TableName()
+	if err := tx.Model(models.PolicyRel{}).
+		Joins(fmt.Sprintf("left join %s as pg on pg.id = %s.group_id",
+			models.PolicyGroup{}.TableName(), rel)).
+		Where(fmt.Sprintf("%s.env_id in (?)", rel), ids).
+		Where(fmt.Sprintf("%s.scope = ?", rel), models.PolicyRelScopeEnv).
+		LazySelectAppend(fmt.Sprintf("%s.*", rel), "pg.*").
+		Find(&group); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return group, nil
+}

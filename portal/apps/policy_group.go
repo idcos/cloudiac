@@ -59,7 +59,7 @@ type PolicyGroupResp struct {
 func SearchPolicyGroup(c *ctx.ServiceContext, form *forms.SearchPolicyGroupForm) (interface{}, e.Error) {
 	query := services.SearchPolicyGroup(c.DB().Debug(), c.OrgId, form.Q)
 	policyGroupResps := make([]PolicyGroupResp, 0)
-	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	if err := p.Scan(&policyGroupResps); err != nil {
 		return nil, e.New(e.DBError, err)
 	}

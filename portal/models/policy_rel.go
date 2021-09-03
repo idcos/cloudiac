@@ -2,6 +2,11 @@ package models
 
 import "cloudiac/portal/libs/db"
 
+const (
+	PolicyRelScopeEnv = "environment"
+	PolicyRelScopeTpl = "template"
+)
+
 type PolicyRel struct {
 	AutoUintIdModel
 

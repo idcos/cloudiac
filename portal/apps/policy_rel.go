@@ -70,7 +70,7 @@ func CreatePolicyRel(c *ctx.ServiceContext, form *forms.CreatePolicyRelForm) ([]
 				OrgId:   tpl.OrgId,
 				GroupId: group.Id,
 				TplId:   tpl.Id,
-				Scope:   "template",
+				Scope:   models.PolicyRelScopeTpl,
 			})
 		}
 	}

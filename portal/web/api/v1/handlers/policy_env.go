@@ -27,7 +27,7 @@ func (Policy) SearchPolicyEnv(c *ctx.GinRequest) {
 	c.JSONResult(apps.SearchPolicyEnv(c.Service(), form))
 }
 
-// DetailPolicyEnv 环境策略详情
+// EnvOfPolicy 环境策略详情
 // @Tags 合规/环境
 // @Summary 环境策略详情
 // @Accept multipart/form-data
@@ -37,14 +37,14 @@ func (Policy) SearchPolicyEnv(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param envId path string true "环境id"
-// @Router /policies/envs/{envId} [get]
+// @Router /policies/envs/{envId}/policies [get]
 // @Success 200 {object} ctx.JSONResult{result=models.Policy}
-func (Policy) DetailPolicyEnv(c *ctx.GinRequest) {
-	form := &forms.DetailPolicyEnvForm{}
+func (Policy) EnvOfPolicy(c *ctx.GinRequest) {
+	form := &forms.EnvOfPolicyForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DetailPolicyEnv(c.Service(), form))
+	c.JSONResult(apps.EnvOfPolicy(c.Service(), form))
 }
 
 // UpdatePolicyEnv 修改环境与策略组关联
@@ -60,11 +60,11 @@ func (Policy) DetailPolicyEnv(c *ctx.GinRequest) {
 // @Router /policies/envs [put]
 // @Success 200 {object} ctx.JSONResult
 func (Policy) UpdatePolicyEnv(c *ctx.GinRequest) {
-	form := &forms.UpdatePolicyEnvForm{}
-	if err := c.Bind(form); err != nil {
-		return
-	}
-	c.JSONResult(apps.UpdatePolicyEnv(c.Service(), form))
+	//form := &forms.UpdatePolicyEnvForm{}
+	//if err := c.Bind(form); err != nil {
+	//	return
+	//}
+	//c.JSONResult(apps.UpdatePolicyEnv(c.Service(), form))
 }
 
 // ScanEnvironment 运行环境策略扫描
