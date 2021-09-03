@@ -184,3 +184,22 @@ func (Policy) Test(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.PolicyTest(c.Service(), form))
 }
+
+// SearchGroupOfPolicy 查询策略组关联的策略或未关联策略组的策略
+// @Tags 合规/策略组
+// @Summary 查询策略组关联的策略或未关联策略组的策略
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param bind query bool false "是否查询绑定了策略组的策略 ture: 查询绑定策略组的策略，false: 查询未绑定的策略组的策略"
+// @Param groupId path string true "策略组id"
+// @Router /policies/groups/{groupId}/policies [get]
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Policy}}
+func (Policy) SearchGroupOfPolicy(c *ctx.GinRequest) {
+	form := &forms.SearchGroupOfPolicyForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.SearchGroupOfPolicy(c.Service(), form))
+}

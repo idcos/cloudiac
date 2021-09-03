@@ -82,6 +82,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/policies/envs/:id", ac(), w(handlers.Policy{}.DetailPolicyEnv))
 	g.POST("/policies/envs/:id/scan", ac(), w(handlers.Policy{}.ScanEnvironment)) // 扫描云模板
 	g.GET("/policies/envs/:id/result", ac(), w(handlers.Policy{}.EnvScanResult))
+	g.GET("/policies/groups/:id/policies", ac(), w(handlers.Policy{}.SearchGroupOfPolicy)) //查询策略组下的策略，同时包含未关联的策略
 	ctrl.Register(g.Group("policies/groups", ac()), &handlers.PolicyGroup{})
 	g.POST("/policies/groups/:id", ac(), w(handlers.PolicyGroup{}.OpPolicyAndPolicyGroupRel)) //关联策略与策略组
 	g.GET("/policies/groups/:id/report", ac(), w(handlers.PolicyGroup{}.ScanReport))

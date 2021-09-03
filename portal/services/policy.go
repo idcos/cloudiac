@@ -373,3 +373,13 @@ func GetPolicyScanByDate(query *db.Session, policyId models.Id, from time.Time, 
 
 	return scanStatus, nil
 }
+
+func SearchGroupOfPolicy(dbSess *db.Session, groupId models.Id, bind bool) *db.Session {
+	query := dbSess.Table(models.Policy{}.TableName())
+	if bind {
+		query = query.Where("group_id = ? ", groupId)
+	} else {
+		query = query.Where("group_id = '' or group_id is null")
+	}
+	return query
+}

@@ -772,3 +772,17 @@ func PolicyTest(c *ctx.ServiceContext, form *forms.PolicyTestForm) (*PolicyTestR
 		}, nil
 	}
 }
+
+func SearchGroupOfPolicy(c *ctx.ServiceContext, form *forms.SearchGroupOfPolicyForm) (interface{}, e.Error) {
+	resp := make([]models.Policy, 0)
+	query := services.SearchGroupOfPolicy(c.DB().Debug(), form.Id, form.Bind)
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	if err := p.Scan(&resp); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     resp,
+	}, nil
+}
