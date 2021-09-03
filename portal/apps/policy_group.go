@@ -1,6 +1,8 @@
 package apps
 
 import (
+	"cloudiac/common"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/libs/page"
@@ -49,19 +51,47 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 
 type PolicyGroupResp struct {
 	models.PolicyGroup
-	PolicyCount uint `json:"policyCount" form:"policyCount" `
+	PolicyCount uint `json:"policyCount" example:"10"`
+	Summary
 }
 
 // SearchPolicyGroup 查询策略组列表
 func SearchPolicyGroup(c *ctx.ServiceContext, form *forms.SearchPolicyGroupForm) (interface{}, e.Error) {
 	query := services.SearchPolicyGroup(c.DB().Debug(), c.OrgId, form.Q)
-	pg := make([]PolicyGroupResp, 0)
+	policyGroupResps := make([]PolicyGroupResp, 0)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	if err := p.Scan(&pg); err != nil {
+	if err := p.Scan(&policyGroupResps); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 
-	return pg, nil
+	// 扫描结果统计信息
+	var policyIds []models.Id
+	for idx := range policyGroupResps {
+		policyIds = append(policyIds, policyGroupResps[idx].Id)
+	}
+	if summaries, err := services.PolicySummary(c.DB(), policyIds, consts.ScopePolicyGroup); err != nil {
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	} else if summaries != nil && len(summaries) > 0 {
+		sumMap := make(map[string]*services.PolicyScanSummary, len(policyIds))
+		for idx, summary := range summaries {
+			sumMap[string(summary.Id)+summary.Status] = summaries[idx]
+		}
+		for idx, policyResp := range policyGroupResps {
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusPassed]; ok {
+				policyGroupResps[idx].Passed = summary.Count
+			}
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusViolated]; ok {
+				policyGroupResps[idx].Violated = summary.Count
+			}
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusFailed]; ok {
+				policyGroupResps[idx].Failed = summary.Count
+			}
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusSuppressed]; ok {
+				policyGroupResps[idx].Suppressed = summary.Count
+			}
+		}
+	}
+	return policyGroupResps, nil
 }
 
 // UpdatePolicyGroup 修改策略组

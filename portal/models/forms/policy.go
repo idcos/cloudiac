@@ -1,6 +1,9 @@
 package forms
 
-import "cloudiac/portal/models"
+import (
+	"cloudiac/portal/models"
+	"time"
+)
 
 type CreatePolicyForm struct {
 	BaseForm
@@ -202,8 +205,8 @@ type PolicyScanReportForm struct {
 
 	Id    models.Id `uri:"id" `
 	Scope string    `json:"-"`
-	From  string    `json:"from" form:"from" example:"08-01"` //  开始日期
-	To    string    `json:"to" form:"to" example:"08-07"`     // 结束日期
+	From  time.Time `json:"from" form:"from" example:"2006-01-02T15:04:05Z07:00"` //  开始日期
+	To    time.Time `json:"to" form:"to" example:"2006-01-02T15:04:05Z07:00"`     // 结束日期
 }
 
 type PolicyTestForm struct {

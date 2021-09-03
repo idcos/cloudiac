@@ -910,14 +910,14 @@ func initTemplateScanResult(tx *db.Session, task *models.ScanTask) e.Error {
 	)
 
 	// 根据扫描类型获取策略列表
-	scope := "template"
+	scope := consts.ScopeTemplate
 	if task.EnvId != "" {
-		scope = "environment"
+		scope = consts.ScopeEnv
 	}
 	switch scope {
-	case "environment":
+	case consts.ScopeEnv:
 		policies, err = GetPoliciesByEnvId(tx, task.EnvId)
-	case "template":
+	case consts.ScopeTemplate:
 		policies, err = GetPoliciesByTemplateId(tx, task.TplId)
 	default:
 		return e.New(e.InternalError, fmt.Errorf("not support scan type"))

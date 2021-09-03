@@ -1,6 +1,7 @@
 package services
 
 import (
+	"cloudiac/common"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
@@ -105,7 +106,7 @@ func UpdateScanResult(tx *db.Session, task models.Tasker, result TsResult) e.Err
 		if policyResult, err := GetPolicyResultById(tx, task.GetId(), models.Id(r.RuleId)); err != nil {
 			return err
 		} else {
-			policyResult.Status = "passed"
+			policyResult.Status = common.PolicyStatusPassed
 			policyResults = append(policyResults, policyResult)
 		}
 	}
@@ -173,6 +174,31 @@ func GetLastScanTask(query *db.Session, envId models.Id, tplId models.Id) (*mode
 		return nil, e.New(e.DBError, fmt.Errorf("query scan error: %v", err))
 	}
 	return &scanTask, nil
+}
+
+func GetPolicyGroupScanTasks(query *db.Session, policyGroupId models.Id) *db.Session {
+	t := models.PolicyResult{}.TableName()
+	subQuery := query.Model(models.PolicyResult{}).
+		Select(fmt.Sprintf("if(%s.env_id='','template','environment')as target_type,if(%s.env_id = '',iac_template.name,iac_env.name) as target_name,%s.task_id,%s.policy_group_id", t, t, t, t)).
+		Joins("LEFT JOIN iac_env ON iac_policy_result.env_id = iac_env.id").
+		Joins("LEFT JOIN iac_template ON iac_policy_result.tpl_id = iac_template.id").
+		Where("iac_policy_result.policy_group_id = ?", policyGroupId)
+
+	q := query.Model(models.ScanTask{}).
+		Joins("LEFT JOIN (?) AS r ON r.task_id = iac_scan_task.id", subQuery.Expr()).
+		Where("r.policy_group_id = ?", policyGroupId).
+		LazySelectAppend("iac_scan_task.*,r.*")
+
+	// 创建者
+	q = q.Joins("left join iac_user as u on u.id = iac_scan_task.creator_id").
+		LazySelectAppend("u.name as creator")
+	// 组织
+	q = q.Joins("left join iac_org as o on o.id = iac_scan_task.org_id").
+		LazySelectAppend("o.name as org_name")
+	// 项目
+	q = q.Joins("left join iac_project as p on p.id = iac_scan_task.project_id").
+		LazySelectAppend("p.name as project_name")
+	return q
 }
 
 func QueryPolicyResult(query *db.Session, taskId models.Id) *db.Session {

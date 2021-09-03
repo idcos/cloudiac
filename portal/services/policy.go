@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func CreatePolicy(tx *db.Session, policy *models.Policy) (*models.Policy, e.Error) {
@@ -291,16 +292,26 @@ type PolicyScanSummary struct {
 	Status string    `json:"status"`
 }
 
-// PolicySummary 获取策略环境/云模板执行结果
+// PolicySummary 获取策略环境/云模板/任务执行结果
 func PolicySummary(query *db.Session, ids []models.Id, scope string) ([]*PolicyScanSummary, e.Error) {
-	subQuery := query.Model(models.PolicyResult{}).Select("min(id)").Group("policy_id,env_id,tpl_id")
+	var key string
 	if scope == consts.ScopePolicy {
-		subQuery = subQuery.Where("policy_id in (?)", ids)
+		key = "policy_id"
 	} else {
-		subQuery = subQuery.Where("policy_group_id in (?)", ids)
+		key = "policy_group_id"
 	}
-	q := query.Model(models.PolicyResult{}).Select("policy_id as id,count(*) as count,status").
-		Where("id in (?)", subQuery.Expr()).Group("policy_id,status")
+	switch scope {
+	case consts.ScopePolicy:
+		key = "policy_id"
+	case consts.ScopePolicyGroup:
+		key = "policy_group_id"
+	case consts.ScopeTask:
+		key = "task_id"
+	}
+	subQuery := query.Model(models.PolicyResult{}).Select("max(id)").
+		Group(fmt.Sprintf("%s,env_id,tpl_id", key)).Where(fmt.Sprintf("%s in (?)", key), ids)
+	q := query.Model(models.PolicyResult{}).Select(fmt.Sprintf("%s as id,count(*) as count,status", key)).
+		Where("id in (?)", subQuery.Expr()).Group(fmt.Sprintf("%s,status", key))
 
 	summary := make([]*PolicyScanSummary, 0)
 	if err := q.Find(&summary); err != nil {
@@ -311,4 +322,54 @@ func PolicySummary(query *db.Session, ids []models.Id, scope string) ([]*PolicyS
 	}
 
 	return summary, nil
+}
+
+type ScanStatus struct {
+	Date   string
+	Count  int
+	Status string
+}
+
+func GetPolicyScanStatus(query *db.Session, id models.Id, from time.Time, to time.Time, scope string) ([]*ScanStatus, e.Error) {
+	key := ""
+	switch scope {
+	case consts.ScopePolicyGroup:
+		key = "policy_group_id"
+	case consts.ScopePolicy:
+		key = "policy_id"
+	}
+	q := query.Model(models.PolicyResult{})
+	q = q.Where(fmt.Sprintf("start_at >= ? and start_at < ? and %s = ?", key), from, to, id).
+		Select("count(*) as count, date(start_at) as date, status").
+		Group("date(start_at), status").
+		Order("date(start_at)")
+
+	scanStatus := make([]*ScanStatus, 0)
+	if err := q.Find(&scanStatus); err != nil {
+		if e.IsRecordNotFound(err) {
+			return scanStatus, nil
+		}
+		return nil, e.New(e.DBError, err)
+	}
+
+	return scanStatus, nil
+}
+
+func GetPolicyScanByDate(query *db.Session, policyId models.Id, from time.Time, to time.Time) ([]*ScanStatus, e.Error) {
+	q := query.Model(models.PolicyResult{})
+	q = q.Where("start_at >= ? and start_at < ? and policy_id = ?", from, to, policyId).
+		Where("status != 'pending'"). // 跳过pending状态
+		Select("count(*) as count, date(start_at) as date").
+		Group("date(start_at),tpl_id,env_id").
+		Order("date(start_at)")
+
+	scanStatus := make([]*ScanStatus, 0)
+	if err := q.Find(&scanStatus); err != nil {
+		if e.IsRecordNotFound(err) {
+			return scanStatus, nil
+		}
+		return nil, e.New(e.DBError, err)
+	}
+
+	return scanStatus, nil
 }

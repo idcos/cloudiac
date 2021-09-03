@@ -1,6 +1,7 @@
 package apps
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
@@ -62,7 +63,7 @@ func CreatePolicyRel(c *ctx.ServiceContext, form *forms.CreatePolicyRelForm) ([]
 				ProjectId: env.ProjectId,
 				GroupId:   group.Id,
 				EnvId:     env.Id,
-				Scope:     "environment",
+				Scope:     consts.ScopeEnv,
 			})
 		} else {
 			rels = append(rels, models.PolicyRel{

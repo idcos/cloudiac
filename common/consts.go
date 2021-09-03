@@ -56,6 +56,12 @@ const (
 	VcsGitea  = "gitea"
 	VcsGitee  = "gitee"
 	VcsGithub = "github"
+
+	PolicyStatusPending    = "pending"
+	PolicyStatusPassed     = "passed"
+	PolicyStatusFailed     = "failed"
+	PolicyStatusViolated   = "violated"
+	PolicyStatusSuppressed = "suppressed"
 )
 
 var (

@@ -192,12 +192,9 @@ func ScanEnvironment(c *ctx.ServiceContext, form *forms.ScanEnvironmentForm) (*m
 
 type PolicyResp struct {
 	models.Policy
-	GroupName  string `json:"groupName"`
-	Creator    string `json:"creator"`
-	Passed     int    `json:"passed"`
-	Violated   int    `json:"violated"`
-	Suppressed int    `json:"suppressed"`
-	Failed     int    `json:"failed"`
+	GroupName string `json:"groupName"`
+	Creator   string `json:"creator"`
+	Summary
 }
 
 // SearchPolicy 查询策略组列表
@@ -222,16 +219,16 @@ func SearchPolicy(c *ctx.ServiceContext, form *forms.SearchPolicyForm) (interfac
 			sumMap[string(summary.Id)+summary.Status] = summaries[idx]
 		}
 		for idx, policyResp := range policyResps {
-			if summary, ok := sumMap[string(policyResp.Id)+"passed"]; ok {
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusPassed]; ok {
 				policyResps[idx].Passed = summary.Count
 			}
-			if summary, ok := sumMap[string(policyResp.Id)+"violated"]; ok {
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusViolated]; ok {
 				policyResps[idx].Violated = summary.Count
 			}
-			if summary, ok := sumMap[string(policyResp.Id)+"failed"]; ok {
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusFailed]; ok {
 				policyResps[idx].Failed = summary.Count
 			}
-			if summary, ok := sumMap[string(policyResp.Id)+"suppressed"]; ok {
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusSuppressed]; ok {
 				policyResps[idx].Suppressed = summary.Count
 			}
 		}
@@ -467,80 +464,261 @@ func PolicyScanResult(c *ctx.ServiceContext, form *forms.PolicyScanResultForm) (
 	}, nil
 }
 
-type ScanReport struct {
-	Summary       Summary            `json:"summary"`
-	ScannedByDays ScanReportDay      `json:"scannedByDays"`
-	PassedByDays  ScanReportDay      `json:"passedByDays"`
-	LastScanned   []LastScanTaskResp `json:"lastScanned"`
-}
-
 type Summary struct {
-	Passed   int `json:"passed"` // 百分比，按 100 = 100%
-	Violated int `json:"violated"`
-	Suppress int `json:"suppress"`
-	Failed   int `json:"failed"`
-}
-
-type ScanReportDay struct {
-	Day   string `json:"date"`
-	Count int    `json:"count"`
-}
-
-type LastScanTaskResp struct {
-	models.ScanTask
-	Scope       string `json:"scope"`       // 目标类型：环境/模板
-	Name        string `json:"name"`        //检查目标
-	OrgName     string `json:"orgName"`     // 组织名称
-	ProjectName string `json:"projectName"` // 项目
-	Creator     string `json:"creator"`     // 创建者
-	Summary
-}
-
-type PolicyScanReportResp struct {
-	PassedRate Polyline `json:"passedRate"` // 检测通过率
+	Passed     int `json:"passed"`
+	Violated   int `json:"violated"`
+	Suppressed int `json:"suppressed"`
+	Failed     int `json:"failed"`
 }
 
 type Polyline struct {
-	Column []string      `json:"col" example:"[\"08/20\",\"08-21\"]"`
-	Value  []interface{} `json:"value" example:"[0.95,0.96]" swaggertype:"string"`
+	Column []string `json:"column,omitempty" example:"08-20,08-21"`
+	Value  []int    `json:"value,omitempty" example:"101,103"`
 }
 
-func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (*PolicyScanReportResp, e.Error) {
-	// data: {
-	//  x轴坐标： [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun' ],
-	//  数据：[ 12, 22, 33, 55, 77, 88, 99 ]
-	//}
+type PieChar []PieSector
 
-	return nil, nil
+type PieSector struct {
+	Name  string `json:"name" example:"08-20"`
+	Value int    `json:"value" example:"10"`
 }
 
-type PolicyGroupScanReportResp struct {
+type PolicyScanReportResp struct {
 	Total            PieChar  `json:"total"`            // 检测结果比例
 	TaskScanCount    Polyline `json:"scanCount"`        // 检测源执行次数
 	PolicyScanCount  Polyline `json:"policyScanCount"`  // 策略运行趋势
 	PolicyPassedRate Polyline `json:"policyPassedRate"` // 检测通过率趋势
 }
 
-type PieChar []PieSector
+//type ScanStatus struct {
+//	Date   string
+//	Count  int
+//	Status string
+//}
 
-type PieSector struct {
-	Name  string      `json:"name" example:"08-20"`
-	Value interface{} `json:"value" example:"10" swaggertype:"string"`
+func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (*PolicyScanReportResp, e.Error) {
+	if !form.HasKey("to") {
+		form.To = time.Now()
+	}
+	if !form.HasKey("from") {
+		// 往回 5 天
+		y, m, d := form.To.AddDate(0, 0, -15).Date()
+		form.From = time.Date(y, m, d, 0, 0, 0, 0, time.Local)
+	}
+	scanStatus, err := services.GetPolicyScanStatus(c.DB().Debug(), form.Id, form.From, form.To, consts.ScopePolicy)
+	if err != nil {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
+	report := PolicyScanReportResp{}
+	totalScan := &report.PolicyScanCount
+	passedScan := &report.PolicyPassedRate
+	totalSummary := Summary{}
+
+	for _, s := range scanStatus {
+		d := s.Date[5:10] // 2021-08-08T00:00:00+08:00 => 08-08
+		found := false
+		for idx := range totalScan.Column {
+			if totalScan.Column[idx] == d {
+				// 跳过扫描中状态策略
+				if s.Status != common.PolicyStatusPending {
+					totalScan.Value[idx] += s.Count
+				}
+				if s.Status == common.PolicyStatusPassed {
+					passedScan.Value[idx] = s.Count
+				}
+
+				found = true
+				break
+			}
+		}
+		if !found {
+			totalScan.Column = append(totalScan.Column, d)
+			totalScan.Value = append(totalScan.Value, s.Count)
+
+			passedScan.Column = append(passedScan.Column, d)
+			if s.Status == common.PolicyStatusPassed {
+				passedScan.Value = append(passedScan.Value, s.Count)
+			} else {
+				passedScan.Value = append(passedScan.Value, 0)
+			}
+		}
+
+		switch s.Status {
+		case common.PolicyStatusPassed:
+			totalSummary.Passed += s.Count
+		case common.PolicyStatusViolated:
+			totalSummary.Violated += s.Count
+		case common.PolicyStatusSuppressed:
+			totalSummary.Suppressed += s.Count
+		case common.PolicyStatusFailed:
+			totalSummary.Failed += s.Count
+		}
+	}
+	report.Total = append(report.Total, PieSector{
+		Name:  common.PolicyStatusPassed,
+		Value: totalSummary.Passed,
+	}, PieSector{
+		Name:  common.PolicyStatusViolated,
+		Value: totalSummary.Violated,
+	}, PieSector{
+		Name:  common.PolicyStatusSuppressed,
+		Value: totalSummary.Suppressed,
+	}, PieSector{
+		Name:  common.PolicyStatusFailed,
+		Value: totalSummary.Failed,
+	})
+
+	scanTaskStatus, err := services.GetPolicyScanByDate(c.DB().Debug(), form.Id, form.From, form.To)
+	if err != nil {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+	taskCount := &report.TaskScanCount
+
+	for _, s := range scanTaskStatus {
+		d := s.Date[5:10] // 2021-08-08T00:00:00+08:00 => 08-08
+		found := false
+		for idx := range taskCount.Column {
+			if taskCount.Column[idx] == d {
+				taskCount.Value[idx] += 1
+				found = true
+				break
+			}
+		}
+		if !found {
+			taskCount.Column = append(taskCount.Column, d)
+			taskCount.Value = append(taskCount.Value, 1)
+		}
+	}
+
+	return &report, nil
 }
 
-func PolicyGroupScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (*PolicyScanReportResp, e.Error) {
-	// data: [
-	//        { value: 335, name: '通过' },
-	//        { value: 310, name: '未通过' },
-	//        { value: 234, name: '屏蔽' }
-	// ]
-
-	return nil, nil
+type PolylinePercent struct {
+	Column []string  `json:"column,omitempty" example:"08-20,08-21"`
+	Value  []Percent `json:"value,omitempty" example:"0.951,0.962"`
+	Passed []int     `json:"-"`
+	Total  []int     `json:"-"`
 }
 
-func PolicyLastTasks(c *ctx.ServiceContext, form *forms.PolicyLastTasksForm) ([]*LastScanTaskResp, e.Error) {
+type Percent float64 // 百分比，保留1位百分比小数，0.951 = 95.1%
 
-	return nil, nil
+func (n Percent) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("%.3f", n)), nil
+}
+
+type PolicyGroupScanReportResp struct {
+	PassedRate PolylinePercent `json:"passedRate"` // 检测通过率
+}
+
+func PolicyGroupScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (*PolicyGroupScanReportResp, e.Error) {
+	if !form.HasKey("to") {
+		form.To = time.Now()
+	}
+	if !form.HasKey("from") {
+		// 往回 15 天
+		y, m, d := form.To.AddDate(0, 0, -15).Date()
+		form.From = time.Date(y, m, d, 0, 0, 0, 0, time.Local)
+	}
+	scanStatus, err := services.GetPolicyScanStatus(c.DB(), form.Id, form.From, form.To, consts.ScopePolicyGroup)
+	if err != nil {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
+	report := PolicyGroupScanReportResp{}
+	r := &report.PassedRate
+
+	for _, s := range scanStatus {
+		d := s.Date[5:10] // 2021-08-08T00:00:00+08:00 => 08-08
+		found := false
+		for idx := range r.Column {
+			if r.Column[idx] == d {
+				if s.Status == common.PolicyStatusPassed {
+					r.Passed[idx] = s.Count
+				}
+				// FIXME: 是否跳过失败和屏蔽的策略？
+				r.Total[idx] += s.Count
+				r.Value[idx] = Percent(r.Passed[idx]) / Percent(r.Total[idx])
+				found = true
+				break
+			}
+		}
+		if !found {
+			r.Column = append(r.Column, d)
+			if s.Status == common.PolicyStatusPassed {
+				r.Passed = append(r.Passed, s.Count)
+				r.Total = append(r.Total, s.Count)
+				r.Value = append(r.Value, 1)
+			} else {
+				r.Passed = append(r.Passed, 0)
+				r.Total = append(r.Total, s.Count)
+				r.Value = append(r.Value, 0)
+			}
+		}
+	}
+
+	return &report, nil
+}
+
+type LastScanTaskResp struct {
+	models.ScanTask
+	TargetName  string `json:"targetName"`  // 检查目标
+	TargetType  string `json:"targetType"`  // 目标类型：环境/模板
+	OrgName     string `json:"orgName"`     // 组织名称
+	ProjectName string `json:"projectName"` // 项目
+	Creator     string `json:"creator"`     // 创建者
+	Summary
+}
+
+func PolicyGroupScanTasks(c *ctx.ServiceContext, form *forms.PolicyLastTasksForm) (interface{}, e.Error) {
+	query := services.GetPolicyGroupScanTasks(c.DB().Debug(), form.Id)
+
+	// 默认按创建时间逆序排序
+	if form.SortField() == "" {
+		query = query.Order("created_at DESC")
+	} else {
+		query = form.Order(query)
+	}
+
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	tasks := make([]*LastScanTaskResp, 0)
+	if err := p.Scan(&tasks); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	// 扫描结果统计信息
+	var policyIds []models.Id
+	for idx := range tasks {
+		policyIds = append(policyIds, tasks[idx].Id)
+	}
+	if summaries, err := services.PolicySummary(c.DB(), policyIds, consts.ScopeTask); err != nil {
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	} else if summaries != nil && len(summaries) > 0 {
+		sumMap := make(map[string]*services.PolicyScanSummary, len(policyIds))
+		for idx, summary := range summaries {
+			sumMap[string(summary.Id)+summary.Status] = summaries[idx]
+		}
+		for idx, policyResp := range tasks {
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusPassed]; ok {
+				tasks[idx].Passed = summary.Count
+			}
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusViolated]; ok {
+				tasks[idx].Violated = summary.Count
+			}
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusFailed]; ok {
+				tasks[idx].Failed = summary.Count
+			}
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusSuppressed]; ok {
+				tasks[idx].Suppressed = summary.Count
+			}
+		}
+	}
+
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     tasks,
+	}, nil
 }
 
 type PolicyTestResp struct {

@@ -162,5 +162,5 @@ func (PolicyGroup) LastTasks(c *ctx.GinRequest) {
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.PolicyLastTasks(c.Service(), form))
+	c.JSONResult(apps.PolicyGroupScanTasks(c.Service(), form))
 }
