@@ -79,7 +79,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/policies/templates/:id/result", ac(), w(handlers.Policy{}.TemplateScanResult))
 	g.GET("/policies/envs", ac(), w(handlers.Policy{}.SearchPolicyEnv))
 	g.PUT("/policies/envs", ac(), w(handlers.Policy{}.UpdatePolicyEnv)) // 关联环境与策略组（创建/删除？）
-	g.GET("/policies/envs/:id", ac(), w(handlers.Policy{}.DetailPolicyEnv))
+	g.GET("/policies/envs/:id/policies", ac(), w(handlers.Policy{}.EnvOfPolicy))
 	g.POST("/policies/envs/:id/scan", ac(), w(handlers.Policy{}.ScanEnvironment)) // 扫描云模板
 	g.GET("/policies/envs/:id/result", ac(), w(handlers.Policy{}.EnvScanResult))
 	ctrl.Register(g.Group("policies/groups", ac()), &handlers.PolicyGroup{})

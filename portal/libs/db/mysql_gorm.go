@@ -205,6 +205,10 @@ func (s *Session) Joins(query string, args ...interface{}) *Session {
 	return ToSess(s.db.Joins(query, args...))
 }
 
+func (s *Session) Having(query interface{}, args ...interface{}) *Session {
+	return ToSess(s.db.Having(query, args...))
+}
+
 func (s *Session) Order(value interface{}) *Session {
 	return ToSess(s.db.Order(value))
 }

@@ -145,7 +145,7 @@ type DeletePolicySuppressForm struct {
 }
 
 type SearchPolicyTplForm struct {
-	BaseForm
+	PageForm
 	Q string `form:"q" json:"q" binding:""` // 模糊搜索
 }
 
@@ -162,7 +162,7 @@ type DetailPolicyTplForm struct {
 }
 
 type SearchPolicyEnvForm struct {
-	BaseForm
+	PageForm
 	Q string `form:"q" json:"q" binding:""` // 模糊搜索
 }
 
@@ -173,9 +173,13 @@ type UpdatePolicyEnvForm struct {
 	GroupId []models.Id `json:"groupId" form:"groupId" `
 }
 
-type DetailPolicyEnvForm struct {
-	BaseForm
-	Id models.Id `json:"id" form:"id" `
+type EnvOfPolicyForm struct {
+	PageForm
+
+	Id       models.Id `json:"id" form:"id" `
+	Q        string    `form:"q" json:"q" binding:""` // 策略组名称，支持模糊搜索
+	Severity string    `json:"severity" form:"severity" enums:"'high','medium','low','none'" example:"medium"`
+	GroupId  models.Id `json:"groupId" form:"groupId" `
 }
 
 type PolicyErrorForm struct {
