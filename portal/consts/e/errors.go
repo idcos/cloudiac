@@ -144,6 +144,7 @@ const (
 	//// vcs 311
 
 	VcsNotExists = 31110
+	VcsDeleteError = 31120
 
 	/// terraform 312
 	InvalidTfVersion = 31200
@@ -364,6 +365,9 @@ var errorMsgs = map[int]map[string]string{
 	},
 	VcsNotExists: {
 		"zh-cn": "vcs仓库不存在",
+	},
+	VcsDeleteError: {
+		"zh-cn": "vcs存在相关依赖云模版，无法删除",
 	},
 	TaskApproveNotPending: {
 		"zh-cn": "作业状态非待审批，不允许操作",

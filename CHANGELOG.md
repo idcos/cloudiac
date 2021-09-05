@@ -1,4 +1,25 @@
 ------
+## v0.5.3-pre1 20210820
+#### Features
+- 删除 VCS 时进行依赖检查，有模板依赖 VCS 时不允许删除
+- 任务无资源变更数据时“资源变更”字段不展示数值(避免展示为 0)
+- 任务增加审批驳回状态，审批驳回不再显示为“失败”
+
+#### Fixed
+- 环境增加 lastResTaskId 字段，记录最后一次可能进行了资源改动的任务 id，
+避免任务被驳回时环境的资源数量统计为 0 的问题
+
+#### Changes
+- 使用 TF_VAR_xxx 格式的环境变量进行 terraform 变量的传入，避免传入未声明的变量时出现警告信息
+
+#### 升级步骤
+1. 备份数据库
+2. 更新并重启后执行以下 SQL
+```
+UPDATE iac_env SET last_res_task_id=last_task_id WHERE last_res_task_id IS NULL;
+```
+
+------
 ## v0.5.1 20210806
 #### Features
 - 支持配置 JWT 和 AES 的密钥
