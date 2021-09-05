@@ -55,12 +55,13 @@ func OperationVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id
 	}
 
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Variable{}.TableName(),
-		"id", "scope", "type", "name", "value", "sensitive", "description", "org_id", "project_id", "tpl_id", "env_id")
+		"id", "scope", "type", "name", "value", "sensitive", "description", "org_id", "project_id", "tpl_id", "env_id", "options")
 	for _, v := range variables {
 		attrs := map[string]interface{}{
 			"name":        v.Name,
 			"sensitive":   v.Sensitive,
 			"description": v.Description,
+			"options":     v.Options,
 		}
 		var value string = v.Value
 		// 需要加密，数据不为空
@@ -88,7 +89,7 @@ func OperationVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id
 		} else {
 			vId := models.NewId("v")
 			if err := bq.AddRow(vId, v.Scope, v.Type, v.Name, value, v.Sensitive, v.Description,
-				orgId, projectId, tplId, envId); err != nil {
+				orgId, projectId, tplId, envId, v.Options); err != nil {
 				return e.New(e.DBError, err)
 			}
 		}

@@ -45,6 +45,11 @@ const (
 	TaskTypeDestroyName = "destroy"
 
 	TaskStepTimeoutDuration = 600
+
+	VcsGitlab = "gitlab"
+	VcsGitea  = "gitea"
+	VcsGitee  = "gitee"
+	VcsGithub = "github"
 )
 
 var (

@@ -40,6 +40,7 @@ func Register(g *gin.RouterGroup) {
 	g.Use(gin.Logger())
 
 	g.POST("/trigger/send", w(handlers.ApiTriggerHandler))
+	g.POST("/webhooks/:vcsType/:vcsId", w(handlers.WebhooksApiHandler))
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
 
 	// Authorization Header 鉴权
@@ -98,6 +99,8 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/vcs/:id/readme", ac(), w(handlers.Vcs{}.GetReadmeContent))
 	ctrl.Register(g.Group("templates", ac()), &handlers.Template{})
 	g.GET("/templates/variables", ac(), w(handlers.TemplateVariableSearch))
+	g.GET("/templates/tfversions", ac(), w(handlers.TemplateTfVersionSearch))
+	g.GET("/templates/autotfversion", ac(), w(handlers.AutoTemplateTfVersionChoice))
 	g.GET("/vcs/:id/repos/tfvars", ac(), w(handlers.TemplateTfvarsSearch))
 	g.GET("/vcs/:id/repos/playbook", ac(), w(handlers.TemplatePlaybookSearch))
 	ctrl.Register(g.Group("notifications", ac()), &handlers.Notification{})
@@ -114,6 +117,7 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/envs/:id/destroy", ac("envs", "destroy"), w(handlers.Env{}.Destroy))
 	g.GET("/envs/:id/resources", ac(), w(handlers.Env{}.SearchResources))
 	g.GET("/envs/:id/output", ac(), w(handlers.Env{}.Output))
+	g.GET("/envs/:id/resources/:resourceId", ac(), w(handlers.Env{}.ResourceDetail))
 	g.GET("/envs/:id/variables", ac(), w(handlers.Env{}.Variables))
 
 	// 任务管理

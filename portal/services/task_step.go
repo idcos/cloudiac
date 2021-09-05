@@ -79,6 +79,7 @@ func IsTerraformStep(typ string) bool {
 
 // ChangeTaskStepStatus 修改步骤状态及 startAt、endAt，并同步修改任务状态
 func ChangeTaskStepStatus(dbSess *db.Session, task *models.Task, taskStep *models.TaskStep, status, message string) e.Error {
+
 	if taskStep.Status == status && message == "" {
 		return nil
 	}

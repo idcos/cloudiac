@@ -22,13 +22,13 @@ func newGiteaInstance(vcs *models.Vcs) (VcsIface, error) {
 }
 
 type giteaVcs struct {
-	giteaRequest func(path, method, token string) (*http.Response, []byte, error)
+	giteaRequest func(path, method, token string, requestBody []byte) (*http.Response, []byte, error)
 	vcs          *models.Vcs
 }
 
 func (gitea *giteaVcs) GetRepo(idOrPath string) (RepoIface, error) {
 	path := gitea.vcs.Address + fmt.Sprintf("/api/v1/repositories/%s", idOrPath)
-	response, body, er := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
+	response, body, er := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)
 	}
@@ -57,7 +57,7 @@ type Repository struct {
 	FullName      string    `json:"full_name" form:"full_name" `
 }
 
-//Fixme ListRepos中的数据不能直接调用repo接口的方法
+//ListRepos Fixme中的数据不能直接调用repo接口的方法
 func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([]RepoIface, int64, error) {
 	link, _ := url.Parse("/repos/search")
 	page := utils.LimitOffset2Page(limit, offset)
@@ -66,7 +66,7 @@ func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([
 		link.RawQuery = link.RawQuery + fmt.Sprintf("&q=%s", search)
 	}
 	path := gitea.vcs.Address + "/api/v1" + link.String()
-	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
+	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 
 	if err != nil {
 		return nil, 0, e.New(e.BadRequest, err)
@@ -94,7 +94,7 @@ func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([
 }
 
 type giteaRepoIface struct {
-	giteaRequest func(path, method, token string) (*http.Response, []byte, error)
+	giteaRequest func(path, method, token string, requestBody []byte) (*http.Response, []byte, error)
 	vcs          *models.Vcs
 	repository   *Repository
 }
@@ -107,7 +107,7 @@ func (gitea *giteaRepoIface) ListBranches() ([]string, error) {
 	path := gitea.vcs.Address + "/api/v1" +
 		fmt.Sprintf("/repos/%s/branches?limit=0&page=0", gitea.repository.FullName)
 
-	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
+	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
@@ -128,7 +128,7 @@ type giteaTag struct {
 
 func (gitea *giteaRepoIface) ListTags() ([]string, error) {
 	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/tags", gitea.repository.FullName)
-	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
+	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
@@ -152,7 +152,7 @@ type giteaCommit struct {
 func (gitea *giteaRepoIface) BranchCommitId(branch string) (string, error) {
 	path := gitea.vcs.Address + "/api/v1" +
 		fmt.Sprintf("/repos/%s/branches/%s?limit=0&page=0", gitea.repository.FullName, branch)
-	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
+	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if err != nil {
 		return "", e.New(e.BadRequest, err)
 	}
@@ -180,7 +180,7 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 			fmt.Sprintf("/repos/%s/contents?limit=0&page=0&ref=%s",
 				gitea.repository.FullName, branch)
 	}
-	response, body, er := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken)
+	response, body, er := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if er != nil {
 		return []string{}, e.New(e.BadRequest, er)
 	}
@@ -206,7 +206,7 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 func (gitea *giteaRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
 	pathAddr := gitea.vcs.Address + "/api/v1" +
 		fmt.Sprintf("/repos/%s/raw/%s?ref=%s", gitea.repository.FullName, path, branch)
-	response, body, er := gitea.giteaRequest(pathAddr, "GET", gitea.vcs.VcsToken)
+	response, body, er := gitea.giteaRequest(pathAddr, "GET", gitea.vcs.VcsToken, nil)
 	if er != nil {
 		return []byte{}, e.New(e.BadRequest, er)
 	}
@@ -232,17 +232,72 @@ func (gitea *giteaRepoIface) DefaultBranch() string {
 	return gitea.repository.DefaultBranch
 }
 
+//AddWebhook doc: http://10.0.3.124:3000/api/swagger#/repository/repoDeleteHook
+func (gitea *giteaRepoIface) AddWebhook(url string) error {
+	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/hooks", gitea.repository.FullName)
+	bodys := map[string]interface{}{
+		"url": url,
+		"events": []string{
+			"pull_request",
+			"push",
+		},
+		"type": "gitea",
+	}
+	b, _ := json.Marshal(&bodys)
+	response, body, err := gitea.giteaRequest(path, "POST", gitea.vcs.VcsToken, b)
+	if err != nil {
+		return e.New(e.BadRequest, err)
+	}
+	defer response.Body.Close()
+	rep := make([]giteaTag, 0)
+
+	_ = json.Unmarshal(body, &rep)
+	return nil
+}
+
+func (gitea *giteaRepoIface) ListWebhook() ([]ProjectsHook, error) {
+	ph := make([]ProjectsHook, 0)
+	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/hooks", gitea.repository.FullName)
+	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
+	if err != nil {
+		return nil, e.New(e.BadRequest, err)
+	}
+	defer response.Body.Close()
+	rep := make([]giteaTag, 0)
+
+	_ = json.Unmarshal(body, &rep)
+	tagList := []string{}
+	for _, v := range rep {
+		tagList = append(tagList, v.Name)
+	}
+	return ph, nil
+}
+
+func (gitea *giteaRepoIface) DeleteWebhook(id int) error {
+	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/hooks/%d", gitea.repository.FullName, id)
+	response, body, err := gitea.giteaRequest(path, "DELETE", gitea.vcs.VcsToken, nil)
+	if err != nil {
+		return e.New(e.BadRequest, err)
+	}
+	defer response.Body.Close()
+	rep := make([]giteaTag, 0)
+
+	_ = json.Unmarshal(body, &rep)
+	return nil
+}
+
 //giteeRequest
 //param path : gitea api路径
 //param method 请求方式
-func giteaRequest(path, method, token string) (*http.Response, []byte, error) {
+func giteaRequest(path, method, token string, requestBody []byte) (*http.Response, []byte, error) {
 	request, er := http.NewRequest(method, path, nil)
 	if er != nil {
 		return nil, nil, er
 	}
 	client := &http.Client{}
-	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Content-Type", "multipart/form-data")
 	request.Header.Set("Authorization", fmt.Sprintf("token %s", token))
+	//request.Body.Read()
 	response, err := client.Do(request)
 	if err != nil {
 		return nil, nil, err

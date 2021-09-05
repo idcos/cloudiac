@@ -26,6 +26,8 @@ const (
 	SysUserId       = "u-system00000000000000"
 	DefaultSysEmail = "sys@example.com"
 	DefaultSysName  = "System"
+
+	DefaultTerraformVersion = "0.14.11"
 )
 
 const (
@@ -57,6 +59,8 @@ const (
 
 	LocalGitReposPath = "repos"  // 内置 http git server 服务目录
 	ReposUrlPrefix    = "/repos" // 内置 http git server url prefix
+
+	NotificationMessageTitle = "CloudIaC平台系统通知"
 )
 
 const (
@@ -86,6 +90,12 @@ const (
 
 	TokenApi     = "api"     //token类型
 	TokenTrigger = "trigger" //token类型
+
+	EnvTriggerPRMR   = "prmr"
+	EnvTriggerCommit = "commit"
+
+	DefaultTfMirror   = "https://releases.hashicorp.com/terraform"
+	HttpClientTimeout = 20
 )
 
 var (
@@ -95,5 +105,20 @@ var (
 		"running":  "运行中",
 		"timeout":  "超时",
 		"pending":  "排队中",
+	}
+	TerraformVersions = []string{
+		"v0.11.15",
+		"v0.12.31",
+		"v0.13.7",
+		"v0.14.11",
+		"v0.15.5",
+		"v1.0.5",
+	}
+	TaskStatusToEventType = map[string]string{
+		"complete":  "complete",
+		"failed":    "failed",
+		"running":   "running",
+		"approving": "approving",
+		"rejected":  "failed",
 	}
 )

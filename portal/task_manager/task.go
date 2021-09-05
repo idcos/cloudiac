@@ -123,6 +123,12 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 			logger.WithField("path", path).Errorf("write task state json error: %v", err)
 		}
 	}
+	if len(stepResult.Result.TFProviderSchemaJson) > 0 {
+		path := task.ProviderSchemaJsonPath()
+		if err := logstorage.Get().Write(path, stepResult.Result.TFProviderSchemaJson); err != nil {
+			logger.WithField("path", path).Errorf("write task provider json error: %v", err)
+		}
+	}
 	if len(stepResult.Result.TfPlanJson) > 0 {
 		path := task.PlanJsonPath()
 		if err := logstorage.Get().Write(path, stepResult.Result.TfPlanJson); err != nil {

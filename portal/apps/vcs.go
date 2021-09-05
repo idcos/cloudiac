@@ -13,9 +13,10 @@ import (
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 func CreateVcs(c *ctx.ServiceContext, form *forms.CreateVcsForm) (interface{}, e.Error) {
@@ -92,6 +93,7 @@ func DeleteVcs(c *ctx.ServiceContext, form *forms.DeleteVcsForm) (result interfa
 	if exist {
 		return nil, e.New(e.VcsDeleteError, fmt.Errorf("Vcs cannot be deleted. Please delete the dependent cloud template first"))
 	}
+
 	if err := services.DeleteVcs(c.DB(), form.Id); err != nil {
 		return nil, err
 	}
@@ -294,4 +296,30 @@ func VcsVariableSearch(c *ctx.ServiceContext, form *forms.TemplateVariableSearch
 	}
 
 	return tvl, nil
+}
+
+func SearchVcsFile(c *ctx.ServiceContext, form *forms.SearchVcsFileForm) (interface{}, e.Error) {
+	vcs, err := checkOrgVcsAuth(c, form.Id)
+	if err != nil {
+		return nil, err
+	}
+	vcsService, er := vcsrv.GetVcsInstance(vcs)
+	if er != nil {
+		return nil, e.New(e.VcsError, er)
+	}
+	repo, er := vcsService.GetRepo(form.RepoId)
+	if er != nil {
+		return nil, e.New(e.VcsError, er)
+	}
+	b, er := repo.ReadFileContent(form.Branch, form.FileName)
+	if er != nil {
+		if strings.Contains(er.Error(), "not found") {
+			b = make([]byte, 0)
+		} else {
+			return nil, e.New(e.VcsError, er)
+		}
+	}
+
+	res := gin.H{"content": string(b)}
+	return res, nil
 }

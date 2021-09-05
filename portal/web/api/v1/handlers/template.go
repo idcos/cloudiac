@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"cloudiac/portal/apps"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
@@ -167,4 +168,34 @@ func TemplatePlaybookSearch(c *ctx.GinRequest) {
 		return
 	}
 	c.JSONResult(apps.VcsPlaybookSearch(c.Service(), &form))
+}
+
+// TemplateTfVersionsSearch
+// @Tags 云模版
+// @Summary terraform versions tf版本列表接口
+// @Accept application/x-www-form-urlencoded
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @router /templates/tfversions [get]
+// @Success 200 {object} []string
+func TemplateTfVersionSearch(c *ctx.GinRequest) {
+	c.JSONResult(consts.TerraformVersions, nil)
+}
+
+// AutoTemplateTfVersionChoice
+// @Tags 云模版
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Summary choice terraform version 根据用户文件设置自动选择tf版本
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param form query forms.TemplateTfVersionSearchForm true "parameter"
+// @router /templates/autotfversion [GET]
+// @Success 200 {object} string
+func AutoTemplateTfVersionChoice(c *ctx.GinRequest) {
+	form := forms.TemplateTfVersionSearchForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.AutoGetTfVersion(c.Service(), &form))
 }

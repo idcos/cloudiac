@@ -3,13 +3,17 @@
 package vcsrv
 
 import (
+	"bytes"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/models"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	git "github.com/google/go-github/github"
+	"golang.org/x/oauth2"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -25,13 +29,13 @@ func newGithubInstance(vcs *models.Vcs) (VcsIface, error) {
 }
 
 type githubVcs struct {
-	githubRequest func(path, method, token string) (*http.Response, []byte, error)
+	githubRequest func(path, method, token string, requestBody []byte) (*http.Response, []byte, error)
 	vcs           *models.Vcs
 }
 
 func (github *githubVcs) GetRepo(idOrPath string) (RepoIface, error) {
 	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s", idOrPath), nil)
-	_, body, er := github.githubRequest(path, "GET", github.vcs.VcsToken)
+	_, body, er := github.githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)
 	}
@@ -68,15 +72,27 @@ func (github *githubVcs) ListRepos(namespace, search string, limit, offset int) 
 		urlParam.Set("q", search)
 	}
 	path := utils.GenQueryURL(github.vcs.Address, "/user/repos", urlParam)
-	response, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken)
+	_, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if err != nil {
 		return nil, 0, e.New(e.BadRequest, err)
 	}
 
-	var total int64
-	if len(response.Header["X-Total-Count"]) != 0 {
-		total, _ = strconv.ParseInt(response.Header["X-Total-Count"][0], 10, 64)
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: github.vcs.VcsToken},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+	client := git.NewClient(tc)
+	_, r, err := client.Repositories.List(ctx, "", &git.RepositoryListOptions{
+		ListOptions: git.ListOptions{
+			Page:    1,
+			PerPage: 1,
+		},
+	})
+	if err != nil {
+		return nil, 0, e.New(e.BadRequest, err)
 	}
+
 	rep := make([]*RepositoryGithub, 0)
 	_ = json.Unmarshal(body, &rep)
 	repoList := make([]RepoIface, 0)
@@ -85,15 +101,15 @@ func (github *githubVcs) ListRepos(namespace, search string, limit, offset int) 
 			githubRequest: github.githubRequest,
 			vcs:           github.vcs,
 			repository:    v,
-			total:         int(total),
+			total:         r.LastPage,
 		})
 	}
 
-	return repoList, total, nil
+	return repoList, int64(r.LastPage), nil
 }
 
 type githubRepoIface struct {
-	githubRequest func(path, method, token string) (*http.Response, []byte, error)
+	githubRequest func(path, method, token string, requestBody []byte) (*http.Response, []byte, error)
 	vcs           *models.Vcs
 	repository    *RepositoryGithub
 	total         int
@@ -107,7 +123,7 @@ func (github *githubRepoIface) ListBranches() ([]string, error) {
 
 	path := utils.GenQueryURL(github.vcs.Address,
 		fmt.Sprintf("/repos/%s/branches", github.repository.FullName), nil)
-	_, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken)
+	_, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
@@ -127,7 +143,7 @@ type githubTag struct {
 
 func (github *githubRepoIface) ListTags() ([]string, error) {
 	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/tags", github.repository.FullName), nil)
-	_, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken)
+	_, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
@@ -150,7 +166,7 @@ type githubCommit struct {
 func (github *githubRepoIface) BranchCommitId(branch string) (string, error) {
 	path := utils.GenQueryURL(github.vcs.Address,
 		fmt.Sprintf("/repos/%s/commits/%s", github.repository.FullName, branch), nil)
-	_, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken)
+	_, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if err != nil {
 		return "", e.New(e.VcsError, err)
 	}
@@ -184,7 +200,7 @@ func (github *githubRepoIface) ListFiles(option VcsIfaceOptions) ([]string, erro
 		path = utils.GenQueryURL(github.vcs.Address,
 			fmt.Sprintf("/repos/%s/contents", github.repository.FullName), urlParam)
 	}
-	_, body, er := github.githubRequest(path, "GET", github.vcs.VcsToken)
+	_, body, er := github.githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if er != nil {
 		return []string{}, e.New(e.BadRequest, er)
 	}
@@ -217,7 +233,7 @@ func (github *githubRepoIface) ReadFileContent(branch, path string) (content []b
 	urlParam.Set("ref", branch)
 	pathAddr := utils.GenQueryURL(github.vcs.Address,
 		fmt.Sprintf("/repos/%s/contents/%s", github.repository.FullName, path), urlParam)
-	_, body, er := github.githubRequest(pathAddr, "GET", github.vcs.VcsToken)
+	_, body, er := github.githubRequest(pathAddr, "GET", github.vcs.VcsToken, nil)
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)
 	}
@@ -248,16 +264,73 @@ func (github *githubRepoIface) DefaultBranch() string {
 	return github.repository.DefaultBranch
 }
 
+// AddWebhook doc: https://docs.github.com/cn/rest/reference/repos#traffic
+func (github *githubRepoIface) AddWebhook(url string) error {
+	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/hooks", github.repository.FullName), nil)
+	body := map[string]interface{}{
+		"url":                   url,
+		"push_events":           "true",
+		"merge_requests_events": "true",
+	}
+	b, _ := json.Marshal(&body)
+	_, _, err := github.githubRequest(path, "POST", github.vcs.VcsToken, b)
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: github.vcs.VcsToken},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+	client := git.NewClient(tc)
+	_, _, errs := client.Repositories.CreateHook(ctx, "", "", &git.Hook{
+		Name: git.String("CloudIaC"),
+		URL:  git.String(url),
+		Events: []string{
+			"pull_request",
+			"push",
+		},
+	})
+
+	if errs != nil {
+		return e.New(e.BadRequest, err)
+	}
+	return nil
+}
+
+func (github *githubRepoIface) ListWebhook() ([]ProjectsHook, error) {
+	ph := make([]ProjectsHook, 0)
+	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/hooks", github.repository.FullName), nil)
+	_, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken, nil)
+	if err != nil {
+		return nil, e.New(e.BadRequest, err)
+	}
+	rep := make([]githubTag, 0)
+
+	_ = json.Unmarshal(body, &rep)
+	tagList := []string{}
+	for _, v := range rep {
+		tagList = append(tagList, v.Name)
+	}
+	return ph, nil
+}
+
+func (github *githubRepoIface) DeleteWebhook(id int) error {
+	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/hooks/%d", github.repository.FullName, id), nil)
+	_, _, err := github.githubRequest(path, "DELETE", github.vcs.VcsToken, nil)
+	if err != nil {
+		return e.New(e.BadRequest, err)
+	}
+	return nil
+}
+
 //giteaRequest
 //param path : gitea api路径
 //param method 请求方式
-func githubRequest(path, method, token string) (*http.Response, []byte, error) {
-	request, er := http.NewRequest(method, path, nil)
+func githubRequest(path, method, token string, requestBody []byte) (*http.Response, []byte, error) {
+	request, er := http.NewRequest(method, path, bytes.NewBuffer(requestBody))
 	if er != nil {
 		return nil, nil, er
 	}
 	client := &http.Client{}
-	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Content-Type", "multipart/form-data")
 	request.Header.Set("Authorization", fmt.Sprintf("token %s", token))
 	response, err := client.Do(request)
 	if err != nil {

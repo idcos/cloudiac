@@ -7,7 +7,6 @@ import (
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
-	"fmt"
 )
 
 type Project struct {
@@ -101,7 +100,6 @@ func (Project) Delete(c *ctx.GinRequest) {
 // @Success 200 {object} ctx.JSONResult{result=models.Project}
 // @Router /projects/{projectId}  [get]
 func (Project) Detail(c *ctx.GinRequest) {
-	fmt.Println(666)
 	form := &forms.DetailProjectForm{}
 	if err := c.Bind(form); err != nil {
 		return

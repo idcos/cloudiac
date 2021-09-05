@@ -2,7 +2,17 @@
 
 package models
 
-import "cloudiac/portal/libs/db"
+import (
+	"cloudiac/common"
+	"cloudiac/portal/libs/db"
+)
+
+const (
+	VcsGitlab = common.VcsGitlab
+	VcsGitea  = common.VcsGitea
+	VcsGitee  = common.VcsGitee
+	VcsGithub = common.VcsGithub
+)
 
 type Vcs struct {
 	BaseModel

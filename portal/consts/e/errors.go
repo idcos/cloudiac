@@ -143,8 +143,11 @@ const (
 
 	//// vcs 311
 
-	VcsNotExists   = 31110
+	VcsNotExists = 31110
 	VcsDeleteError = 31120
+
+	/// terraform 312
+	InvalidTfVersion = 31200
 )
 
 var errorMsgs = map[int]map[string]string{
@@ -383,5 +386,8 @@ var errorMsgs = map[int]map[string]string{
 	},
 	EnvCannotArchiveActive: {
 		"zh-cn": "环境当前状态活跃, 无法归档",
+	},
+	InvalidTfVersion: {
+		"zh-cn": "自动选择版本失败",
 	},
 }

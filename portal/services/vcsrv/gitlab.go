@@ -34,6 +34,7 @@ func (git *gitlabVcsIface) GetRepo(idOrPath string) (RepoIface, error) {
 		Project: project,
 	}, nil
 }
+
 func (git *gitlabVcsIface) ListRepos(namespace, search string, limit, offset int) ([]RepoIface, int64, error) {
 	opt := &gitlab.ListProjectsOptions{}
 
@@ -161,21 +162,67 @@ type Projects struct {
 	FullName       string     `json:"fullName"`
 }
 
-func (gitlab *gitlabRepoIface) FormatRepoSearch() (project *Projects, err e.Error) {
+func (git *gitlabRepoIface) FormatRepoSearch() (project *Projects, err e.Error) {
 	return &Projects{
-		ID:             strconv.Itoa(gitlab.Project.ID),
-		Description:    gitlab.Project.Description,
-		DefaultBranch:  gitlab.Project.DefaultBranch,
-		SSHURLToRepo:   gitlab.Project.SSHURLToRepo,
-		HTTPURLToRepo:  gitlab.Project.HTTPURLToRepo,
-		Name:           gitlab.Project.Name,
-		LastActivityAt: gitlab.Project.LastActivityAt,
-		FullName:       gitlab.Project.PathWithNamespace,
+		ID:             strconv.Itoa(git.Project.ID),
+		Description:    git.Project.Description,
+		DefaultBranch:  git.Project.DefaultBranch,
+		SSHURLToRepo:   git.Project.SSHURLToRepo,
+		HTTPURLToRepo:  git.Project.HTTPURLToRepo,
+		Name:           git.Project.Name,
+		LastActivityAt: git.Project.LastActivityAt,
+		FullName:       git.Project.PathWithNamespace,
 	}, nil
 }
 
-func (gitlab *gitlabRepoIface) DefaultBranch() string {
-	return gitlab.Project.DefaultBranch
+func (git *gitlabRepoIface) DefaultBranch() string {
+	return git.Project.DefaultBranch
+}
+
+func (git *gitlabRepoIface) AddWebhook(url string) error {
+	_, _, err := git.gitConn.Projects.AddProjectHook(git.Project.ID, &gitlab.AddProjectHookOptions{
+		URL:                 gitlab.String(url),
+		PushEvents:          gitlab.Bool(true),
+		MergeRequestsEvents: gitlab.Bool(true),
+	})
+	return err
+}
+
+type ProjectsHook struct {
+	ID                       int        `json:"id"`
+	URL                      string     `json:"url"`
+	ConfidentialNoteEvents   bool       `json:"confidential_note_events"`
+	ProjectID                int        `json:"project_id"`
+	PushEvents               bool       `json:"push_events"`
+	PushEventsBranchFilter   string     `json:"push_events_branch_filter"`
+	IssuesEvents             bool       `json:"issues_events"`
+	ConfidentialIssuesEvents bool       `json:"confidential_issues_events"`
+	MergeRequestsEvents      bool       `json:"merge_requests_events"`
+	TagPushEvents            bool       `json:"tag_push_events"`
+	NoteEvents               bool       `json:"note_events"`
+	JobEvents                bool       `json:"job_events"`
+	PipelineEvents           bool       `json:"pipeline_events"`
+	WikiPageEvents           bool       `json:"wiki_page_events"`
+	DeploymentEvents         bool       `json:"deployment_events"`
+	EnableSSLVerification    bool       `json:"enable_ssl_verification"`
+	CreatedAt                *time.Time `json:"created_at"`
+}
+
+func (git *gitlabRepoIface) ListWebhook() ([]ProjectsHook, error) {
+	ph := make([]ProjectsHook, 0)
+	projectsHook, _, err := git.gitConn.Projects.ListProjectHooks(git.Project.ID, &gitlab.ListProjectHooksOptions{})
+	for _, p := range projectsHook {
+		ph = append(ph, ProjectsHook{
+			ID:  p.ID,
+			URL: p.URL,
+		})
+	}
+	return ph, err
+}
+
+func (git *gitlabRepoIface) DeleteWebhook(id int) error {
+	_, err := git.gitConn.Projects.DeleteProjectHook(git.Project.ID, id)
+	return err
 }
 
 func GetGitConn(gitlabToken, gitlabUrl string) (git *gitlab.Client, err e.Error) {

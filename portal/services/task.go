@@ -8,7 +8,9 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services/logstorage"
+	"cloudiac/portal/services/notificationrc"
 	"cloudiac/portal/services/vcsrv"
+	"cloudiac/runner"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"context"
@@ -275,6 +277,8 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 		return e.AutoNew(err, e.DBError)
 	}
 
+	TaskStatusChangeSendMessage(task, status)
+
 	step, er := GetTaskStep(dbSess, task.Id, task.CurrStep)
 	if er != nil {
 		return e.AutoNew(er, e.DBError)
@@ -348,10 +352,11 @@ func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 	return rs
 }
 
-func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues) error {
+func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, proMap runner.ProviderSensitiveAttrMap) error {
+
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Resource{}.TableName(),
 		"id", "org_id", "project_id", "env_id", "task_id",
-		"provider", "module", "address", "type", "name", "index", "attrs")
+		"provider", "module", "address", "type", "name", "index", "attrs", "sensitive_keys")
 
 	rs := make([]*models.Resource, 0)
 	rs = append(rs, traverseStateModule(&values.RootModule)...)
@@ -360,8 +365,15 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues) 
 	}
 
 	for _, r := range rs {
+		if len(proMap) > 0 {
+			providerKey := strings.Join([]string{r.Provider, r.Type}, "-")
+			// 通过provider-type 拼接查找敏感词是否在proMap中
+			if _, ok := proMap[providerKey]; ok {
+				r.SensitiveKeys = proMap[providerKey]
+			}
+		}
 		err := bq.AddRow(models.NewId("r"), task.OrgId, task.ProjectId, task.EnvId, task.Id,
-			r.Provider, r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs)
+			r.Provider, r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys)
 		if err != nil {
 			return err
 		}
@@ -595,4 +607,25 @@ func fetchRunnerTaskStepLog(ctx context.Context, runnerId string, step *models.T
 			}
 		}
 	}
+}
+
+func TaskStatusChangeSendMessage(task *models.Task, status string) {
+	logs.Get().Infof("send massage to")
+
+	dbSess := db.Get()
+	env, _ := GetEnv(dbSess, task.EnvId)
+	tpl, _ := GetTemplateById(dbSess, task.TplId)
+	project, _ := GetProjectsById(dbSess, task.ProjectId)
+	org, _ := GetOrganizationById(dbSess, task.OrgId)
+	ns := notificationrc.NewNotificationService(&notificationrc.NotificationOptions{
+		OrgId:     task.OrgId,
+		ProjectId: task.ProjectId,
+		Tpl:       tpl,
+		Project:   project,
+		Org:       org,
+		Env:       env,
+		Task:      task,
+		EventType: consts.TaskStatusToEventType[status],
+	})
+	ns.SendMessage()
 }
