@@ -24,7 +24,11 @@ type Notification struct {
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]services.RespNotification}}
 // @Router /notifications [get]
 func (Notification) Search(c *ctx.GinRequest) {
-	c.JSONResult(apps.SearchNotification(c.Service()))
+	form := &forms.SearchNotificationForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.SearchNotification(c.Service(), form))
 }
 
 // Create 创建通知

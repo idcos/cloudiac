@@ -38,3 +38,7 @@ type DetailNotificationForm struct {
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true"`
 }
+
+type SearchNotificationForm struct {
+	PageForm
+}
