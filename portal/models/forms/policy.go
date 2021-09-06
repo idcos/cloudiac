@@ -116,8 +116,8 @@ type OpnPolicyAndPolicyGroupRelForm struct {
 	BaseForm
 
 	PolicyGroupId models.Id `uri:"id" json:"policyGroupId" form:"policyGroupId" `
-	RmPolicyIds   []string  `json:"rmPolicyIds" binding:"" example:"[\"po-c3ek0co6n88ldvq1n6ag\"]"`
-	AddPolicyIds  []string  `json:"addPolicyIds" binding:"" example:"[\"po-c3ek0co6n88ldvq1n6ag\"]"`
+	RmPolicyIds   []string  `json:"rmPolicyIds" binding:"" example:"po-c3ek0co6n88ldvq1n6ag"`
+	AddPolicyIds  []string  `json:"addPolicyIds" binding:"" example:"po-c3ek0co6n88ldvq1n6ag"`
 }
 
 type CreatePolicySuppressForm struct {

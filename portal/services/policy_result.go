@@ -156,15 +156,19 @@ func GetLastScanTask(query *db.Session, envId models.Id, tplId models.Id) (*mode
 func GetPolicyGroupScanTasks(query *db.Session, policyGroupId models.Id) *db.Session {
 	t := models.PolicyResult{}.TableName()
 	subQuery := query.Model(models.PolicyResult{}).
-		Select(fmt.Sprintf("if(%s.env_id='','template','env')as target_type,if(%s.env_id = '',iac_template.name,iac_env.name) as target_name,%s.task_id,%s.policy_group_id", t, t, t, t)).
-		Joins("LEFT JOIN iac_env ON iac_policy_result.env_id = iac_env.id").
-		Joins("LEFT JOIN iac_template ON iac_policy_result.tpl_id = iac_template.id").
-		Where("iac_policy_result.policy_group_id = ?", policyGroupId)
+		Select(fmt.Sprintf("%s.task_id,%s.policy_group_id,%s.env_id,%s.tpl_id", t, t, t, t)).
+		Where("iac_policy_result.policy_group_id = ?", policyGroupId).
+		Group("iac_policy_result.task_id,iac_policy_result.env_id,iac_policy_result.tpl_id,iac_policy_result.policy_group_id")
 
 	q := query.Model(models.ScanTask{}).
 		Joins("LEFT JOIN (?) AS r ON r.task_id = iac_scan_task.id", subQuery.Expr()).
 		Where("r.policy_group_id = ?", policyGroupId).
 		LazySelectAppend("iac_scan_task.*,r.*")
+
+	q = q.Joins("LEFT JOIN iac_env ON r.env_id = iac_env.id").
+		LazySelectAppend("if(r.env_id='','template','env')as target_type").
+		Joins("LEFT JOIN iac_template ON r.tpl_id = iac_template.id").
+		LazySelectAppend("if(r.env_id = '',iac_template.name,iac_env.name) as target_name")
 
 	// 创建者
 	q = q.Joins("left join iac_user as u on u.id = iac_scan_task.creator_id").

@@ -114,6 +114,7 @@ func (PolicyGroup) Detail(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
+// @Param json body forms.OpnPolicyAndPolicyGroupRelForm true "parameter"
 // @Param policyGroupId path string true "策略组Id"
 // @Router /policies/groups/{policyGroupId} [post]
 // @Success 200 {object} ctx.JSONResult

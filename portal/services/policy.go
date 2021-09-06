@@ -332,14 +332,9 @@ type PolicyScanSummary struct {
 	Status string    `json:"status"`
 }
 
-// PolicySummary 获取策略环境/云模板/任务执行结果
+// PolicySummary 获取策略/策略组/任务执行结果
 func PolicySummary(query *db.Session, ids []models.Id, scope string) ([]*PolicyScanSummary, e.Error) {
 	var key string
-	if scope == consts.ScopePolicy {
-		key = "policy_id"
-	} else {
-		key = "policy_group_id"
-	}
 	switch scope {
 	case consts.ScopePolicy:
 		key = "policy_id"
@@ -432,4 +427,29 @@ func DeletePolicySuppress(tx *db.Session, id models.Id) e.Error {
 		return e.New(e.DBError, err)
 	}
 	return nil
+}
+
+// PolicyTargetSummary 获取策略环境/云模板执行结果
+func PolicyTargetSummary(query *db.Session, ids []models.Id, scope string) ([]*PolicyScanSummary, e.Error) {
+	var key string
+	switch scope {
+	case consts.ScopeEnv:
+		key = "env_id"
+	case consts.ScopeTemplate:
+		key = "tpl_id"
+	}
+	subQuery := query.Model(models.PolicyResult{}).Select("max(id)").
+		Group(fmt.Sprintf("policy_id,%s", key)).Where(fmt.Sprintf("%s in (?)", key), ids)
+	q := query.Model(models.PolicyResult{}).Select(fmt.Sprintf("%s as id,count(*) as count,status", key)).
+		Where("id in (?)", subQuery.Expr()).Group(fmt.Sprintf("%s,status", key))
+
+	summary := make([]*PolicyScanSummary, 0)
+	if err := q.Find(&summary); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, nil
+		}
+		return nil, e.New(e.DBError, err)
+	}
+
+	return summary, nil
 }

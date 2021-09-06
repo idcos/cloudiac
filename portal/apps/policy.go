@@ -352,6 +352,7 @@ func SearchPolicySuppress(c *ctx.ServiceContext, form *forms.SearchPolicySuppres
 type RespPolicyTpl struct {
 	models.Template
 	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
+	Summary
 }
 
 func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (interface{}, e.Error) {
@@ -386,6 +387,30 @@ func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (in
 			continue
 		}
 		respPolicyTpls[index].PolicyGroups = groupM[v.Id]
+	}
+
+	// 扫描结果统计信息
+	if summaries, err := services.PolicyTargetSummary(c.DB(), tplIds, consts.ScopeTemplate); err != nil {
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	} else if summaries != nil && len(summaries) > 0 {
+		sumMap := make(map[string]*services.PolicyScanSummary, len(tplIds))
+		for idx, summary := range summaries {
+			sumMap[string(summary.Id)+summary.Status] = summaries[idx]
+		}
+		for idx, policyResp := range respPolicyTpls {
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusPassed]; ok {
+				respPolicyTpls[idx].Passed = summary.Count
+			}
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusViolated]; ok {
+				respPolicyTpls[idx].Violated = summary.Count
+			}
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusFailed]; ok {
+				respPolicyTpls[idx].Failed = summary.Count
+			}
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusSuppressed]; ok {
+				respPolicyTpls[idx].Suppressed = summary.Count
+			}
+		}
 	}
 
 	return page.PageResp{
@@ -437,29 +462,29 @@ func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (in
 		respPolicyEnvs[index].PolicyGroups = groupM[v.Id]
 	}
 
-	//// 扫描结果统计信息
-	//if summaries, err := services.PolicySummary(c.DB(), envIds, consts.ScopeEnv); err != nil {
-	//	return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	//} else if summaries != nil && len(summaries) > 0 {
-	//	sumMap := make(map[string]*services.PolicyScanSummary, len(policyIds))
-	//	for idx, summary := range summaries {
-	//		sumMap[string(summary.Id)+summary.Status] = summaries[idx]
-	//	}
-	//	for idx, policyResp := range policyGroupResps {
-	//		if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusPassed]; ok {
-	//			policyGroupResps[idx].Passed = summary.Count
-	//		}
-	//		if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusViolated]; ok {
-	//			policyGroupResps[idx].Violated = summary.Count
-	//		}
-	//		if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusFailed]; ok {
-	//			policyGroupResps[idx].Failed = summary.Count
-	//		}
-	//		if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusSuppressed]; ok {
-	//			policyGroupResps[idx].Suppressed = summary.Count
-	//		}
-	//	}
-	//}
+	// 扫描结果统计信息
+	if summaries, err := services.PolicyTargetSummary(c.DB(), envIds, consts.ScopeEnv); err != nil {
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	} else if summaries != nil && len(summaries) > 0 {
+		sumMap := make(map[string]*services.PolicyScanSummary, len(envIds))
+		for idx, summary := range summaries {
+			sumMap[string(summary.Id)+summary.Status] = summaries[idx]
+		}
+		for idx, policyResp := range respPolicyEnvs {
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusPassed]; ok {
+				respPolicyEnvs[idx].Passed = summary.Count
+			}
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusViolated]; ok {
+				respPolicyEnvs[idx].Violated = summary.Count
+			}
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusFailed]; ok {
+				respPolicyEnvs[idx].Failed = summary.Count
+			}
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusSuppressed]; ok {
+				respPolicyEnvs[idx].Suppressed = summary.Count
+			}
+		}
+	}
 
 	return page.PageResp{
 		Total:    p.MustTotal(),
