@@ -11,6 +11,7 @@ type CreatePolicyForm struct {
 	Name          string `json:"name" binding:"required" example:"ECS分配公网IP"`                                                          // 策略名称
 	FixSuggestion string `json:"fixSuggestion" binding:"" example:"1. 设置 internet_max_bandwidth_out = 0\n 2. 取消设置 allocate_public_ip"` // 修复建议
 	Severity      string `json:"severity" binding:"" enums:"'high','medium','low'" example:"medium"`                                   // 严重性
+	Tags          string `json:"tags" form:"tags" example:"aliyun,jscloud"`
 
 	Rego string `json:"rego" binding:"required"` // rego脚本
 }
@@ -27,11 +28,12 @@ type UpdatePolicyForm struct {
 	BaseForm
 
 	Id            models.Id `uri:"id"`
-	Name          string    `json:"name" binding:"required" example:"ECS分配公网IP"`                                                          // 策略名称
+	Name          string    `json:"name" example:"ECS分配公网IP"`                                                                             // 策略名称
 	FixSuggestion string    `json:"fixSuggestion" binding:"" example:"1. 设置 internet_max_bandwidth_out = 0\n 2. 取消设置 allocate_public_ip"` // 修复建议
 	Severity      string    `json:"severity" binding:"" enums:"'high','medium','low','none'" example:"medium"`                            // 严重性
+	Tags          string    `json:"tags" form:"tags" example:"aliyun,jscloud"`
 
-	Rego    string `json:"rego" binding:"required"` // rego脚本
+	Rego    string `json:"rego"` // rego脚本
 	Enabled bool   `json:"enabled" form:"enabled"`
 }
 

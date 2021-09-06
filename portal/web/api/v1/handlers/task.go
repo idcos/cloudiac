@@ -110,7 +110,7 @@ func (Task) TaskApprove(c *ctx.GinRequest) {
 func (Task) Log(c *ctx.GinRequest) {
 	// TODO: 待实现
 	//form := forms.DetailTaskForm{}
-	//if err := c.Bind(&form); err != nil {
+	//if err := c.IsBind(&form); err != nil {
 	//	return
 	//}
 	//c.JSONResult(apps.TaskDetail(c.ServiceContext(), form))

@@ -37,6 +37,7 @@ func CreatePolicy(c *ctx.ServiceContext, form *forms.CreatePolicyForm) (*models.
 		FixSuggestion: form.FixSuggestion,
 		Severity:      form.Severity,
 		Rego:          form.Rego,
+		Tags:          form.Tags,
 		RuleName:      ruleName,
 		ResourceType:  resourceType,
 		PolicyType:    policyType,
@@ -252,6 +253,10 @@ func UpdatePolicy(c *ctx.ServiceContext, form *forms.UpdatePolicyForm) (interfac
 		attr["rego"] = form.Rego
 	}
 
+	if form.HasKey("tags") {
+		attr["tags"] = form.Tags
+	}
+
 	if form.HasKey("enabled") {
 		attr["enabled"] = form.Enabled
 	}
@@ -358,7 +363,7 @@ type RespPolicyTpl struct {
 func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (interface{}, e.Error) {
 	respPolicyTpls := make([]RespPolicyTpl, 0)
 	tplIds := make([]models.Id, 0)
-	query := services.SearchPolicyTpl(c.DB(), form.OrgId, form.Q)
+	query := services.SearchPolicyTpl(c.DB().Debug(), form.OrgId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	groupM := make(map[models.Id][]services.NewPolicyGroup, 0)
 	if err := p.Scan(&respPolicyTpls); err != nil {
