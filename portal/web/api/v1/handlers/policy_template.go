@@ -36,8 +36,8 @@ func (Policy) ScanTemplate(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param form query forms.PolicyScanResultForm true "parameter"
-// @Param envId path string true "环境ID"
-// @Router /policies/template/{tplId}/result [get]
+// @Param templateId path string true "环境ID"
+// @Router /policies/template/{templateId}/result [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.ScanResultResp}
 func (Policy) TemplateScanResult(c *ctx.GinRequest) {
 	form := &forms.PolicyScanResultForm{}
@@ -55,7 +55,7 @@ func (Policy) TemplateScanResult(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param q query string false "模糊搜索"
+// @Param form query forms.SearchPolicyTplForm true "parameter"
 // @Param IaC-Org-Id header string true "组织ID"
 // @Router /policies/templates [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.RespPolicyTpl}}

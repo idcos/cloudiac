@@ -59,8 +59,8 @@ func (Policy) Search(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param json body forms.UpdatePolicyForm true "parameter"
-// @Param policiesId path string true "策略Id"
-// @Router /policies/{policiesId} [put]
+// @Param policyId path string true "策略Id"
+// @Router /policies/{policyId} [put]
 // @Success 200 {object} ctx.JSONResult{result=models.Policy}
 func (Policy) Update(c *ctx.GinRequest) {
 	form := &forms.UpdatePolicyForm{}
@@ -78,8 +78,8 @@ func (Policy) Update(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param policiesId path string true "策略Id"
-// @Router /policies/{policiesId} [delete]
+// @Param policyId path string true "策略Id"
+// @Router /policies/{policyId} [delete]
 // @Success 200 {object} ctx.JSONResult
 func (Policy) Delete(c *ctx.GinRequest) {
 	form := &forms.DeletePolicyForm{}
@@ -97,8 +97,8 @@ func (Policy) Delete(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param policiesId path string true "策略Id"
-// @Router /policies/{policiesId} [get]
+// @Param policyId path string true "策略Id"
+// @Router /policies/{policyId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.Policy}
 func (Policy) Detail(c *ctx.GinRequest) {
 	form := &forms.DetailPolicyForm{}
@@ -119,7 +119,7 @@ func (Policy) Detail(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param policyId path string true "策略id"
 // @Router /policies/{policyId}/error [get]
-// @Success 200 {object} ctx.JSONResult{result=models.Policy}
+// @Success 200 {object} ctx.JSONResult{result=apps.PolicyErrorResp}
 func (Policy) PolicyError(c *ctx.GinRequest) {
 	form := &forms.PolicyErrorForm{}
 	if err := c.Bind(form); err != nil {
@@ -213,7 +213,7 @@ func (Policy) Parse(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
 // @Param json body forms.PolicyTestForm true "parameter"
-// @Success 200 {object}  ctx.JSONResult{result=apps.ParseResp}
+// @Success 200 {object}  ctx.JSONResult{result=apps.PolicyTestResp}
 // @Router /policies/test [post]
 func (Policy) Test(c *ctx.GinRequest) {
 	form := &forms.PolicyTestForm{}

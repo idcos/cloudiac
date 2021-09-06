@@ -88,7 +88,7 @@ type UpdatePolicyRelForm struct {
 
 	Id             models.Id   `uri:"id" binding:"" example:"tpl-c3ek0co6n88ldvq1n6ag"`
 	PolicyGroupIds []models.Id `json:"policyGroupIds" binding:"required" example:"[\"pog-c3ek0co6n88ldvq1n6ag\"]"`
-	Scope          string      `json:"-" binding:""`
+	Scope          string      `json:"-" swaggerignore:"true" binding:""`
 }
 
 type ScanTemplateForm struct {
@@ -149,13 +149,6 @@ type SearchPolicyTplForm struct {
 	Q string `form:"q" json:"q" binding:""` // 模糊搜索
 }
 
-type UpdatePolicyTplForm struct {
-	BaseForm
-	Scope   string      `json:"scope"`
-	TplId   models.Id   `json:"tplId" form:"tplId" `
-	GroupId []models.Id `json:"groupId" form:"groupId" `
-}
-
 type DetailPolicyTplForm struct {
 	BaseForm
 	Id models.Id `json:"id" form:"id" `
@@ -164,13 +157,6 @@ type DetailPolicyTplForm struct {
 type SearchPolicyEnvForm struct {
 	PageForm
 	Q string `form:"q" json:"q" binding:""` // 模糊搜索
-}
-
-type UpdatePolicyEnvForm struct {
-	BaseForm
-	Scope   string      `json:"scope"`
-	EnvId   models.Id   `json:"envId" form:"envId" `
-	GroupId []models.Id `json:"groupId" form:"groupId" `
 }
 
 type EnvOfPolicyForm struct {
