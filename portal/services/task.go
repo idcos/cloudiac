@@ -879,8 +879,7 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 	return &task, nil
 }
 
-func createScanTaskStep(tx *db.Session, task models.ScanTask, stepBody models.TaskStepBody, index int, nextStep models.Id) (
-	*models.TaskStep, e.Error) {
+func createScanTaskStep(tx *db.Session, task models.ScanTask, stepBody models.TaskStepBody, index int, nextStep models.Id) (*models.TaskStep, e.Error) {
 	s := models.TaskStep{
 		TaskStepBody: stepBody,
 		OrgId:        task.OrgId,
