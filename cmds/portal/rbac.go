@@ -37,7 +37,7 @@ func initPolicy(tx *db.Session) error {
 	// 初始化策略数据库
 	for _, policy := range configs.Polices {
 		for _, act := range strings.Split(policy.Act, "/") {
-			logger.Debugf("add policy: %s %s %s", policy.Sub, policy.Obj, act)
+			logger.Tracef("add policy: %s %s %s", policy.Sub, policy.Obj, act)
 			enforcer.AddPolicy(policy.Sub, policy.Obj, act)
 		}
 	}

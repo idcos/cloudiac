@@ -74,35 +74,16 @@ func (Policy) SearchPolicyTpl(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param json body forms.UpdatePolicyTplForm true "parameter"
+// @Param json body forms.UpdatePolicyRelForm true "parameter"
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
-// @Router /policies/templates [put]
+// @Router /policies/templates/{templateId} [put]
 // @Success 200 {object} ctx.JSONResult
 func (Policy) UpdatePolicyTpl(c *ctx.GinRequest) {
-	//form := &forms.UpdatePolicyTplForm{}
-	//if err := c.Bind(form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.UpdatePolicyTpl(c.Service(), form))
-}
-
-// DetailPolicyTpl 云模板策略详情
-// @Tags 合规/云模板
-// @Summary 云模板策略详情
-// @Accept multipart/form-data
-// @Accept json
-// @Produce json
-// @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string false "项目ID"
-// @Param tplId path string true "模板id"
-// @Router /policies/templates/{tplId} [get]
-// @Success 200 {object} ctx.JSONResult{result=models.Policy}
-func (Policy) DetailPolicyTpl(c *ctx.GinRequest) {
-	//form := &forms.DetailPolicyTplForm{}
-	//if err := c.Bind(form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.DetailPolicyTpl(c.Service(), form))
+	form := &forms.UpdatePolicyRelForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	form.Scope = consts.ScopeTemplate
+	c.JSONResult(apps.UpdatePolicyRel(c.Service(), form))
 }

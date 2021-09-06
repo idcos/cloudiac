@@ -33,7 +33,7 @@ func CreateProjectUser(c *ctx.ServiceContext, form *forms.CreateProjectUserForm)
 
 // SearchProjectUser 查询组织下某个项目的用户(不包含已经关联项目的用户)
 func SearchProjectUser(c *ctx.ServiceContext) (interface{}, e.Error) {
-	query := services.QueryUser(c.DB().Debug()).
+	query := services.QueryUser(c.DB()).
 		Where("status = 'enable'").
 		Order("created_at DESC")
 
@@ -83,7 +83,7 @@ func UpdateProjectUser(c *ctx.ServiceContext, form *forms.UpdateProjectUserForm)
 		attrs["role"] = form.Role
 	}
 
-	err := services.UpdateProjectUser(c.DB().Debug().
+	err := services.UpdateProjectUser(c.DB().
 		Where("user_id = ?", form.Id).
 		Where("project_id = ?", c.ProjectId), attrs)
 	if err != nil && err.Code() == e.ProjectUserAliasDuplicate {

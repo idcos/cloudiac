@@ -35,7 +35,7 @@ func UpdateNotification(c *ctx.ServiceContext, form *forms.UpdateNotificationFor
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
 	}
 
-	tx := c.Tx().Debug()
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -94,7 +94,7 @@ func UpdateNotification(c *ctx.ServiceContext, form *forms.UpdateNotificationFor
 func CreateNotification(c *ctx.ServiceContext, form *forms.CreateNotificationForm) (*models.Notification, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create org notification cfg %s", form.Type))
 
-	tx := c.Tx().Debug()
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()

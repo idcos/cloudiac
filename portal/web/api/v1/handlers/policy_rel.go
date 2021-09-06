@@ -19,13 +19,13 @@ type PolicyRel struct {
 // @Produce  json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
-// @Param json body forms.CreatePolicyRelForm true "parameter"
+// @Param json body forms.UpdatePolicyRelForm true "parameter"
 // @Success 200 {object}  ctx.JSONResult{result=[]models.PolicyRel}
 // @Router /policies/rels [post]
 func (PolicyRel) Create(c *ctx.GinRequest) {
-	form := &forms.CreatePolicyRelForm{}
+	form := &forms.UpdatePolicyRelForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CreatePolicyRel(c.Service(), form))
+	c.JSONResult(apps.UpdatePolicyRel(c.Service(), form))
 }

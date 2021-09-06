@@ -31,8 +31,8 @@ type UpdatePolicyForm struct {
 	FixSuggestion string    `json:"fixSuggestion" binding:"" example:"1. 设置 internet_max_bandwidth_out = 0\n 2. 取消设置 allocate_public_ip"` // 修复建议
 	Severity      string    `json:"severity" binding:"" enums:"'high','medium','low','none'" example:"medium"`                            // 严重性
 
-	Rego   string `json:"rego" binding:"required"` // rego脚本
-	Status string `json:"status" form:"status" enums:"'enable', 'disable'" `
+	Rego    string `json:"rego" binding:"required"` // rego脚本
+	Enabled bool   `json:"enabled" form:"enabled"`
 }
 
 type DeletePolicyForm struct {
@@ -68,7 +68,7 @@ type UpdatePolicyGroupForm struct {
 	Id          models.Id `uri:"id"`
 	Name        string    `json:"name" form:"name" `
 	Description string    `json:"description" binding:"" example:"本组包含对于安全合规的检查策略"`
-	Status      string    `json:"status" form:"status" enums:"'enable', 'disable'" `
+	Enabled     bool      `json:"enabled" form:"enabled"`
 }
 
 type DeletePolicyGroupForm struct {
@@ -83,12 +83,12 @@ type DetailPolicyGroupForm struct {
 	Id models.Id `uri:"id"`
 }
 
-type CreatePolicyRelForm struct {
+type UpdatePolicyRelForm struct {
 	BaseForm
 
+	Id             models.Id   `uri:"id" binding:"" example:"tpl-c3ek0co6n88ldvq1n6ag"`
 	PolicyGroupIds []models.Id `json:"policyGroupIds" binding:"required" example:"[\"pog-c3ek0co6n88ldvq1n6ag\"]"`
-	EnvId          models.Id   `json:"envId" binding:"" example:"env-c3ek0co6n88ldvq1n6ag"`
-	TplId          models.Id   `json:"tplId" binding:"" example:"tpl-c3ek0co6n88ldvq1n6ag"`
+	Scope          string      `json:"-" binding:""`
 }
 
 type ScanTemplateForm struct {
@@ -120,7 +120,7 @@ type OpnPolicyAndPolicyGroupRelForm struct {
 	AddPolicyIds  []string  `json:"addPolicyIds" binding:"" example:"[\"po-c3ek0co6n88ldvq1n6ag\"]"`
 }
 
-type CreatePolicyShieldForm struct {
+type CreatePolicySuppressForm struct {
 	BaseForm
 
 	CreatorId models.Id   `json:"creatorId" `
@@ -133,9 +133,9 @@ type CreatePolicyShieldForm struct {
 }
 
 type SearchPolicySuppressForm struct {
-	BaseForm
+	PageForm
 
-	PolicyId models.Id `uri:"policyId"`
+	Id models.Id `uri:"id"`
 }
 
 type DeletePolicySuppressForm struct {
@@ -183,18 +183,15 @@ type EnvOfPolicyForm struct {
 }
 
 type PolicyErrorForm struct {
-	BaseForm
-	Id models.Id `json:"id" form:"id" `
+	PageForm
+	Id models.Id `uri:"id"`
+	Q  string    `json:"q" form:"q"`
 }
 
-type PolicyReferenceForm struct {
+type UpdatePolicySuppressForm struct {
 	BaseForm
-	Id models.Id `json:"id" form:"id" `
-}
-
-type PolicyRepoForm struct {
-	BaseForm
-	Id models.Id `json:"id" form:"id" `
+	Id        models.Id   `uri:"id"`
+	TargetIds []models.Id `json:"targetIds"`
 }
 
 type PolicyScanResultForm struct {
@@ -230,6 +227,6 @@ type PolicyLastTasksForm struct {
 type SearchGroupOfPolicyForm struct {
 	PageForm
 
-	Id   models.Id `uri:"id" `
-	Bind bool      `json:"bind" form:"bind" ` //  ture: 查询绑定策略组的策略，false: 查询未绑定的策略组的策略
+	Id     models.Id `uri:"id" `
+	IsBind bool      `json:"bind" form:"bind" ` //  ture: 查询绑定策略组的策略，false: 查询未绑定的策略组的策略
 }

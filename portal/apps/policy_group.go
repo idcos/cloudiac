@@ -57,7 +57,7 @@ type PolicyGroupResp struct {
 
 // SearchPolicyGroup 查询策略组列表
 func SearchPolicyGroup(c *ctx.ServiceContext, form *forms.SearchPolicyGroupForm) (interface{}, e.Error) {
-	query := services.SearchPolicyGroup(c.DB().Debug(), c.OrgId, form.Q)
+	query := services.SearchPolicyGroup(c.DB(), c.OrgId, form.Q)
 	policyGroupResps := make([]PolicyGroupResp, 0)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	if err := p.Scan(&policyGroupResps); err != nil {
@@ -105,8 +105,8 @@ func UpdatePolicyGroup(c *ctx.ServiceContext, form *forms.UpdatePolicyGroupForm)
 		attr["description"] = form.Description
 	}
 
-	if form.HasKey("status") {
-		attr["status"] = form.Status
+	if form.HasKey("enabled") {
+		attr["enabled"] = form.Enabled
 	}
 
 	pg := models.PolicyGroup{}
@@ -153,7 +153,7 @@ func DetailPolicyGroup(c *ctx.ServiceContext, form *forms.DetailPolicyGroupForm)
 
 // OpPolicyAndPolicyGroupRel 创建和修改策略和策略组的关系
 func OpPolicyAndPolicyGroupRel(c *ctx.ServiceContext, form *forms.OpnPolicyAndPolicyGroupRelForm) (interface{}, e.Error) {
-	tx := c.Tx().Debug()
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()

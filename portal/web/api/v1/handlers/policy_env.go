@@ -57,14 +57,15 @@ func (Policy) EnvOfPolicy(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param json body forms.UpdatePolicyEnvForm true "parameter"
-// @Router /policies/envs [put]
+// @Router /policies/envs/:envId [put]
 // @Success 200 {object} ctx.JSONResult
 func (Policy) UpdatePolicyEnv(c *ctx.GinRequest) {
-	//form := &forms.UpdatePolicyEnvForm{}
-	//if err := c.Bind(form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.UpdatePolicyEnv(c.Service(), form))
+	form := &forms.UpdatePolicyRelForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	form.Scope = consts.ScopeEnv
+	c.JSONResult(apps.UpdatePolicyRel(c.Service(), form))
 }
 
 // ScanEnvironment 运行环境策略扫描

@@ -61,7 +61,7 @@ func GetTemplateById(tx *db.Session, id models.Id) (*models.Template, e.Error) {
 }
 
 func QueryTemplateByOrgId(tx *db.Session, q string, orgId models.Id, templateIdList []models.Id) *db.Session {
-	query := tx.Debug().Model(&models.Template{}).Joins(
+	query := tx.Model(&models.Template{}).Joins(
 		"LEFT  JOIN iac_user"+
 			"  ON iac_user.id = iac_template.creator_id").
 		LazySelectAppend(

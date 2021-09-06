@@ -11,9 +11,9 @@ import (
 	"net/http"
 )
 
-// CreatePolicyRel 创建策略关系
-func CreatePolicyRel(c *ctx.ServiceContext, form *forms.CreatePolicyRelForm) ([]models.PolicyRel, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("create policy group relation %s%s", form.EnvId, form.TplId))
+// UpdatePolicyRel 创建/更新策略关系
+func UpdatePolicyRel(c *ctx.ServiceContext, form *forms.UpdatePolicyRelForm) ([]models.PolicyRel, e.Error) {
+	c.AddLogField("action", fmt.Sprintf("create policy relation %s %s", form.Scope, form.Id))
 
 	var (
 		env  *models.Env
@@ -29,28 +29,26 @@ func CreatePolicyRel(c *ctx.ServiceContext, form *forms.CreatePolicyRelForm) ([]
 		}
 	}()
 
-	if (!form.HasKey("envId") && !form.HasKey("tplId")) ||
-		(form.HasKey("envId") && form.HasKey("tplId")) ||
-		len(form.PolicyGroupIds) == 0 {
-		_ = tx.Rollback()
-		return nil, e.New(e.BadParam, http.StatusBadRequest)
-	}
-
-	if form.HasKey("envId") {
-		env, err = services.GetEnvById(tx, form.EnvId)
+	if form.Scope == consts.ScopeEnv {
+		env, err = services.GetEnvById(tx, form.Id)
 		if err != nil {
 			_ = tx.Rollback()
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)
 		}
-	}
-	if form.HasKey("tplId") {
-		tpl, err = services.GetTemplateById(tx, form.TplId)
+	} else {
+		tpl, err = services.GetTemplateById(tx, form.Id)
 		if err != nil {
 			_ = tx.Rollback()
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)
 		}
 	}
 
+	// 删除原有关联关系
+	if err := services.DeletePolicyRel(tx, form.Id, form.Scope); err != nil {
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	// 创新新的关联关系
 	for _, groupId := range form.PolicyGroupIds {
 		group, err := services.GetPolicyGroupById(tx, groupId)
 		if err != nil {

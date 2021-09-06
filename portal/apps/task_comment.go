@@ -12,7 +12,7 @@ import (
 )
 
 func CreateTaskComment(c *ctx.ServiceContext, form *forms.CreateTaskCommentForm) (interface{}, e.Error) {
-	return services.CreateTaskComment(c.DB().Debug(), models.TaskComment{
+	return services.CreateTaskComment(c.DB(), models.TaskComment{
 		TaskId:    form.Id,
 		Creator:   c.Username,
 		CreatorId: c.UserId,

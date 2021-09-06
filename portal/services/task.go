@@ -885,7 +885,7 @@ func createScanTaskStep(tx *db.Session, task models.ScanTask, stepBody models.Ta
 		TaskStepBody: stepBody,
 		OrgId:        task.OrgId,
 		//ProjectId:    task.ProjectId,
-		EnvId:    task.EnvId,
+		//EnvId:    task.EnvId,
 		TaskId:   task.Id,
 		Index:    index,
 		Status:   models.TaskStepPending,
@@ -924,6 +924,10 @@ func initTemplateScanResult(tx *db.Session, task *models.ScanTask) e.Error {
 	}
 	if err != nil {
 		return err
+	}
+
+	if len(policies) == 0 {
+		return nil
 	}
 
 	// 批量创建
