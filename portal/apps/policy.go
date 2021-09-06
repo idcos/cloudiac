@@ -89,9 +89,6 @@ func parseRegoHeader(rego string) (ruleName string, policyType string, resType s
 // ScanTemplate 扫描云模板策略
 func ScanTemplate(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envId models.Id) (*models.ScanTask, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("scan template %s", form.Id))
-	if c.OrgId == "" {
-		return nil, e.New(e.BadRequest, http.StatusBadRequest)
-	}
 
 	tx := c.Tx()
 	defer func() {
@@ -106,11 +103,9 @@ func ScanTemplate(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envId mod
 		err e.Error
 	)
 
-	orgQuery := services.QueryWithOrgId(tx, c.OrgId)
-
 	// 环境检查
 	if envId != "" {
-		env, err = services.GetEnvById(orgQuery, envId)
+		env, err = services.GetEnvById(tx, envId)
 		if err != nil && err.Code() == e.EnvNotExists {
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)
 		} else if err != nil {
@@ -120,7 +115,7 @@ func ScanTemplate(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envId mod
 	}
 
 	// 模板检查
-	tpl, err := services.GetTemplateById(orgQuery, form.Id)
+	tpl, err := services.GetTemplateById(tx, form.Id)
 	if err != nil && err.Code() == e.TemplateNotExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
@@ -174,9 +169,6 @@ func ScanTemplate(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envId mod
 // ScanEnvironment 扫描环境策略
 func ScanEnvironment(c *ctx.ServiceContext, form *forms.ScanEnvironmentForm) (*models.ScanTask, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("scan environment %s", form.Id))
-	if c.OrgId == "" {
-		return nil, e.New(e.BadRequest, http.StatusBadRequest)
-	}
 
 	env, err := services.GetEnvById(c.DB(), form.Id)
 	if err != nil {
@@ -308,20 +300,20 @@ func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppres
 		if strings.HasPrefix(string(id), "env-") {
 			sups = append(sups, models.PolicySuppress{
 				CreatorId: c.UserId,
-				OrgId:     c.OrgId,
-				ProjectId: c.ProjectId,
-				EnvId:     id,
-				PolicyId:  form.Id,
-				Type:      "source",
+				//OrgId:     c.OrgId,
+				//ProjectId: c.ProjectId,
+				EnvId:    id,
+				PolicyId: form.Id,
+				Type:     "source",
 			})
 		} else if strings.HasPrefix(string(id), "tpl-") {
 			sups = append(sups, models.PolicySuppress{
 				CreatorId: c.UserId,
-				OrgId:     c.OrgId,
-				ProjectId: c.ProjectId,
-				TplId:     id,
-				PolicyId:  form.Id,
-				Type:      "source",
+				//OrgId:     c.OrgId,
+				//ProjectId: c.ProjectId,
+				TplId:    id,
+				PolicyId: form.Id,
+				Type:     "source",
 			})
 		}
 	}
@@ -365,7 +357,7 @@ type RespPolicyTpl struct {
 func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (interface{}, e.Error) {
 	respPolicyTpls := make([]RespPolicyTpl, 0)
 	tplIds := make([]models.Id, 0)
-	query := services.SearchPolicyTpl(c.DB(), c.OrgId, c.ProjectId, form.Q)
+	query := services.SearchPolicyTpl(c.DB(), form.OrgId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	groupM := make(map[models.Id][]services.NewPolicyGroup, 0)
 	if err := p.Scan(&respPolicyTpls); err != nil {
@@ -406,13 +398,13 @@ func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (in
 type RespPolicyEnv struct {
 	models.EnvDetail
 	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
+	Summary
 }
 
 func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (interface{}, e.Error) {
-	//todo 缺少通过、不通过、屏蔽数据
 	respPolicyEnvs := make([]RespPolicyEnv, 0)
 	envIds := make([]models.Id, 0)
-	query := services.SearchPolicyEnv(c.DB(), c.OrgId, c.ProjectId, form.Q)
+	query := services.SearchPolicyEnv(c.DB(), form.OrgId, form.ProjectId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	groupM := make(map[models.Id][]services.NewPolicyGroup, 0)
 
@@ -444,6 +436,30 @@ func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (in
 		}
 		respPolicyEnvs[index].PolicyGroups = groupM[v.Id]
 	}
+
+	//// 扫描结果统计信息
+	//if summaries, err := services.PolicySummary(c.DB(), envIds, consts.ScopeEnv); err != nil {
+	//	return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	//} else if summaries != nil && len(summaries) > 0 {
+	//	sumMap := make(map[string]*services.PolicyScanSummary, len(policyIds))
+	//	for idx, summary := range summaries {
+	//		sumMap[string(summary.Id)+summary.Status] = summaries[idx]
+	//	}
+	//	for idx, policyResp := range policyGroupResps {
+	//		if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusPassed]; ok {
+	//			policyGroupResps[idx].Passed = summary.Count
+	//		}
+	//		if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusViolated]; ok {
+	//			policyGroupResps[idx].Violated = summary.Count
+	//		}
+	//		if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusFailed]; ok {
+	//			policyGroupResps[idx].Failed = summary.Count
+	//		}
+	//		if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusSuppressed]; ok {
+	//			policyGroupResps[idx].Suppressed = summary.Count
+	//		}
+	//	}
+	//}
 
 	return page.PageResp{
 		Total:    p.MustTotal(),

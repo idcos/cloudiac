@@ -255,7 +255,7 @@ func SearchPolicySuppress(query *db.Session, id models.Id) *db.Session {
 	return q
 }
 
-func SearchPolicyTpl(tx *db.Session, orgId, projectId models.Id, q string) *db.Session {
+func SearchPolicyTpl(tx *db.Session, orgId models.Id, q string) *db.Session {
 	query := tx.Table(models.Template{}.TableName())
 	if orgId != "" {
 		query = query.Where("org_id = ?", orgId)

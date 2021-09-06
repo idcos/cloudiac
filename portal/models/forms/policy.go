@@ -87,7 +87,7 @@ type UpdatePolicyRelForm struct {
 	BaseForm
 
 	Id             models.Id   `uri:"id" binding:"" example:"tpl-c3ek0co6n88ldvq1n6ag"`
-	PolicyGroupIds []models.Id `json:"policyGroupIds" binding:"required" example:"[\"pog-c3ek0co6n88ldvq1n6ag\"]"`
+	PolicyGroupIds []models.Id `json:"policyGroupIds" binding:"required" example:"pog-c3ek0co6n88ldvq1n6ag,pog-c3ek0co6n88ldvq1n6bg"`
 	Scope          string      `json:"-" swaggerignore:"true" binding:""`
 }
 
@@ -146,7 +146,9 @@ type DeletePolicySuppressForm struct {
 
 type SearchPolicyTplForm struct {
 	PageForm
-	Q string `form:"q" json:"q" binding:""` // 模糊搜索
+
+	OrgId models.Id `form:"orgId" binding:""`      // 组织ID
+	Q     string    `form:"q" json:"q" binding:""` // 模糊搜索
 }
 
 type DetailPolicyTplForm struct {
@@ -156,7 +158,10 @@ type DetailPolicyTplForm struct {
 
 type SearchPolicyEnvForm struct {
 	PageForm
-	Q string `form:"q" json:"q" binding:""` // 模糊搜索
+
+	OrgId     models.Id `form:"orgId" binding:""`
+	ProjectId models.Id `form:"projectId" binding:""`
+	Q         string    `form:"q" json:"q" binding:""` // 模糊搜索
 }
 
 type EnvOfPolicyForm struct {

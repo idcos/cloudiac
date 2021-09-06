@@ -231,8 +231,8 @@ func (Policy) Test(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param bind query bool false "是否查询绑定了策略组的策略 ture: 查询绑定策略组的策略，false: 查询未绑定的策略组的策略"
-// @Param groupId path string true "策略组id"
-// @Router /policies/groups/{groupId}/policies [get]
+// @Param policyGroupId path string true "策略组id"
+// @Router /policies/groups/{policyGroupId}/policies [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Policy}}
 func (Policy) SearchGroupOfPolicy(c *ctx.GinRequest) {
 	form := &forms.SearchGroupOfPolicyForm{}
