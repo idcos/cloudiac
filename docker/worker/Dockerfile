@@ -1,9 +1,9 @@
 FROM mini/ansible:2.4
 
-ARG WORKDIR=/root
+ARG WORKDIR=/usr/yunji/cloudiac
 WORKDIR ${WORKDIR}
 RUN apk add --update git bash curl && \
-    git clone https://github.com/tfutils/tfenv.git
+    git clone https://github.com/tfutils/tfenv.git /root/tfenv
 
 ENV PATH="/root/tfenv/bin:${PATH}"
 RUN tfenv install "v0.11.15" && \
