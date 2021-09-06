@@ -390,7 +390,7 @@ func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (in
 	}
 
 	// 扫描结果统计信息
-	if summaries, err := services.PolicyTargetSummary(c.DB().Debug(), tplIds, consts.ScopeTemplate); err != nil {
+	if summaries, err := services.PolicyTargetSummary(c.DB(), tplIds, consts.ScopeTemplate); err != nil {
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	} else if summaries != nil && len(summaries) > 0 {
 		sumMap := make(map[string]*services.PolicyScanSummary, len(tplIds))
