@@ -89,11 +89,12 @@ func GetPolicyGroupByTplIds(tx *db.Session, ids []models.Id) ([]NewPolicyGroup, 
 	}
 	rel := models.PolicyRel{}.TableName()
 	if err := tx.Model(models.PolicyRel{}).
-		Joins(fmt.Sprintf("left join %s as pg on pg.ids = %s.group_id",
+		Joins(fmt.Sprintf("left join %s as pg on pg.id = %s.group_id",
 			models.PolicyGroup{}.TableName(), rel)).
 		Where(fmt.Sprintf("%s.tpl_id in (?)", rel), ids).
 		Where(fmt.Sprintf("%s.scope = ?", rel), models.PolicyRelScopeTpl).
-		LazySelectAppend(fmt.Sprintf("%s.*", rel), "pg.*").
+		LazySelectAppend(fmt.Sprintf("%s.org_id,%s.project_id,%s.tpl_id,%s.env_id,%s.scope",
+			rel, rel, rel, rel, rel), "pg.*").
 		Find(&group); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
