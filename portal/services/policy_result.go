@@ -22,7 +22,6 @@ func GetPolicyResultById(query *db.Session, taskId models.Id, policyId models.Id
 }
 
 // InitScanResult 初始化扫描结果
-// FIXME: task 支持 task 和 scantask
 func InitScanResult(tx *db.Session, task models.Task) e.Error {
 	var (
 		policies      []models.Policy
@@ -43,6 +42,10 @@ func InitScanResult(tx *db.Session, task models.Task) e.Error {
 		if policies, err = GetPoliciesByTemplateId(tx, env.TplId); err != nil {
 			return err
 		}
+	}
+
+	if len(policies) == 0 {
+		return nil
 	}
 
 	// 批量创建
@@ -133,32 +136,6 @@ func finishScanResult(tx *db.Session, task models.Tasker) e.Error {
 	return nil
 }
 
-/*
-获取扫描结果
-
-查询最新扫描结果：
-按 org, policy id, policy group id，按 start at 取最新一条记录
-根据范围做 distinct:
-1. 查看策略
-2. 查看策略组
-3. 查看环境
-4. 查看云模板
-
-1. 策略页面获取当前策略扫描状态
-2. 策略组页面获取当前策略组扫描状态
-	是否扫描中：
-		检查是否存在 result.status = pending
-	是否违反：
-		检查是否存在 result.status = violated
-	是否存在错误：
-
-'passed','violated','suppressed','pending','failed'
-*/
-
-func GetPolicyResultByPolicyId(query *db.Session, policyId models.Id) error {
-	return nil
-}
-
 func GetLastScanTask(query *db.Session, envId models.Id, tplId models.Id) (*models.ScanTask, e.Error) {
 	scanTask := models.ScanTask{}
 	q := query.Model(models.ScanTask{})
@@ -179,7 +156,7 @@ func GetLastScanTask(query *db.Session, envId models.Id, tplId models.Id) (*mode
 func GetPolicyGroupScanTasks(query *db.Session, policyGroupId models.Id) *db.Session {
 	t := models.PolicyResult{}.TableName()
 	subQuery := query.Model(models.PolicyResult{}).
-		Select(fmt.Sprintf("if(%s.env_id='','template','environment')as target_type,if(%s.env_id = '',iac_template.name,iac_env.name) as target_name,%s.task_id,%s.policy_group_id", t, t, t, t)).
+		Select(fmt.Sprintf("if(%s.env_id='','template','env')as target_type,if(%s.env_id = '',iac_template.name,iac_env.name) as target_name,%s.task_id,%s.policy_group_id", t, t, t, t)).
 		Joins("LEFT JOIN iac_env ON iac_policy_result.env_id = iac_env.id").
 		Joins("LEFT JOIN iac_template ON iac_policy_result.tpl_id = iac_template.id").
 		Where("iac_policy_result.policy_group_id = ?", policyGroupId)

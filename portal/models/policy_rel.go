@@ -3,7 +3,7 @@ package models
 import "cloudiac/portal/libs/db"
 
 const (
-	PolicyRelScopeEnv = "environment"
+	PolicyRelScopeEnv = "env"
 	PolicyRelScopeTpl = "template"
 )
 

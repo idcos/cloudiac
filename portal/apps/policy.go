@@ -260,8 +260,8 @@ func UpdatePolicy(c *ctx.ServiceContext, form *forms.UpdatePolicyForm) (interfac
 		attr["rego"] = form.Rego
 	}
 
-	if form.HasKey("status") {
-		attr["status"] = form.Status
+	if form.HasKey("enabled") {
+		attr["enabled"] = form.Enabled
 	}
 
 	pg := models.Policy{}
@@ -283,17 +283,78 @@ func DetailPolicy(c *ctx.ServiceContext, form *forms.DetailPolicyForm) (interfac
 	return services.DetailPolicy(c.DB(), form.Id)
 }
 
-// CreatePolicySuppress 策略屏蔽
-func CreatePolicySuppress(c *ctx.ServiceContext, form *forms.CreatePolicyShieldForm) (interface{}, e.Error) {
-	return services.CreatePolicySuppress()
+// UpdatePolicySuppress 更新策略屏蔽
+func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppressForm) (interface{}, e.Error) {
+	c.AddLogField("action", fmt.Sprintf("update policy suppress %s", form.Id))
+
+	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	// 删除原有屏蔽记录
+	if err := services.DeletePolicySuppress(tx, form.Id); err != nil {
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	// 创新新的屏蔽记录
+	var (
+		sups []models.PolicySuppress
+	)
+	for _, id := range form.TargetIds {
+		if strings.HasPrefix(string(id), "env-") {
+			sups = append(sups, models.PolicySuppress{
+				CreatorId: c.UserId,
+				OrgId:     c.OrgId,
+				ProjectId: c.ProjectId,
+				EnvId:     id,
+				PolicyId:  form.Id,
+				Type:      "source",
+			})
+		} else if strings.HasPrefix(string(id), "tpl-") {
+			sups = append(sups, models.PolicySuppress{
+				CreatorId: c.UserId,
+				OrgId:     c.OrgId,
+				ProjectId: c.ProjectId,
+				TplId:     id,
+				PolicyId:  form.Id,
+				Type:      "source",
+			})
+		}
+	}
+
+	if er := models.CreateBatch(tx, sups); er != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, er)
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.Logger().Errorf("error commit policy suppress, err %s", err)
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
+
+	return sups, nil
+}
+
+type PolicySuppressResp struct {
+	models.PolicyRel
+	TargetName string `json:"targetName"` // 检查目标
+	TargetType string `json:"targetType"` // 目标类型：环境/模板
+	TargetId   string `json:"targetId"`   // 目标ID
+	Suppressed bool   `json:"suppressed"` // 是否已经屏蔽
+}
+
+func (PolicySuppressResp) TableName() string {
+	return models.PolicyRel{}.TableName()
 }
 
 func SearchPolicySuppress(c *ctx.ServiceContext, form *forms.SearchPolicySuppressForm) (interface{}, e.Error) {
-	return services.SearchPolicySuppress()
-}
-
-func DeletePolicySuppress(c *ctx.ServiceContext, form *forms.DeletePolicySuppressForm) (interface{}, e.Error) {
-	return services.DeletePolicySuppress()
+	query := services.SearchPolicySuppress(c.DB(), form.Id)
+	return getPage(query, form, PolicySuppressResp{})
 }
 
 type RespPolicyTpl struct {
@@ -351,7 +412,7 @@ func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (in
 	//todo 缺少通过、不通过、屏蔽数据
 	respPolicyEnvs := make([]RespPolicyEnv, 0)
 	envIds := make([]models.Id, 0)
-	query := services.SearchPolicyEnv(c.DB().Debug(), c.OrgId, c.ProjectId, form.Q)
+	query := services.SearchPolicyEnv(c.DB(), c.OrgId, c.ProjectId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	groupM := make(map[models.Id][]services.NewPolicyGroup, 0)
 
@@ -400,7 +461,7 @@ type RespEnvOfPolicy struct {
 
 func EnvOfPolicy(c *ctx.ServiceContext, form *forms.EnvOfPolicyForm) (interface{}, e.Error) {
 	resp := make([]RespEnvOfPolicy, 0)
-	query := services.EnvOfPolicy(c.DB().Debug(), form, c.OrgId, c.ProjectId)
+	query := services.EnvOfPolicy(c.DB(), form, c.OrgId, c.ProjectId)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	if err := p.Scan(&resp); err != nil {
 		return nil, e.New(e.DBError, err)
@@ -412,16 +473,33 @@ func EnvOfPolicy(c *ctx.ServiceContext, form *forms.EnvOfPolicyForm) (interface{
 	}, nil
 }
 
+type PolicyErrorResp struct {
+	models.PolicyResult
+	TargetId     models.Id `json:"targetId"`
+	EnvName      string    `json:"envName"`
+	TemplateName string    `json:"templateName"`
+}
+
+func (PolicyErrorResp) TableName() string {
+	return models.PolicyResult{}.TableName()
+}
+
+// PolicyError 获取合规错误列表，包含执行错误和合规不通过，排除已经屏蔽的条目
 func PolicyError(c *ctx.ServiceContext, form *forms.PolicyErrorForm) (interface{}, e.Error) {
-	return services.PolicyError()
+	query := services.PolicyError(c.DB(), form.Id)
+	if form.HasKey("q") {
+		query = query.Where(fmt.Sprintf("env_name LIKE '%%%s%%' or template_name LIKE '%%%s%%'", form.Q, form.Q))
+	}
+	return getPage(query, form, PolicyErrorResp{})
 }
 
-func PolicyReference(c *ctx.ServiceContext, form *forms.PolicyReferenceForm) (interface{}, e.Error) {
-	return services.PolicyReference()
-}
-
-func PolicyRepo(c *ctx.ServiceContext, form *forms.PolicyRepoForm) (interface{}, e.Error) {
-	return services.PolicyRepo()
+// PolicySuppress 获取合规错误列表，包含执行错误和合规不通过，排除已经屏蔽的条目
+func PolicySuppress(c *ctx.ServiceContext, form *forms.PolicyErrorForm) (interface{}, e.Error) {
+	query := services.PolicyError(c.DB(), form.Id)
+	if form.HasKey("q") {
+		query = query.Where(fmt.Sprintf("env_name LIKE '%%%s%%' or template_name LIKE '%%%s%%'", form.Q, form.Q))
+	}
+	return getPage(query, form, PolicyErrorResp{})
 }
 
 type ParseResp struct {
@@ -583,7 +661,7 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 		y, m, d := form.To.AddDate(0, 0, -15).Date()
 		form.From = time.Date(y, m, d, 0, 0, 0, 0, time.Local)
 	}
-	scanStatus, err := services.GetPolicyScanStatus(c.DB().Debug(), form.Id, form.From, form.To, consts.ScopePolicy)
+	scanStatus, err := services.GetPolicyScanStatus(c.DB(), form.Id, form.From, form.To, consts.ScopePolicy)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -647,7 +725,7 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 		Value: totalSummary.Failed,
 	})
 
-	scanTaskStatus, err := services.GetPolicyScanByDate(c.DB().Debug(), form.Id, form.From, form.To)
+	scanTaskStatus, err := services.GetPolicyScanByDate(c.DB(), form.Id, form.From, form.To)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -749,7 +827,7 @@ type LastScanTaskResp struct {
 }
 
 func PolicyGroupScanTasks(c *ctx.ServiceContext, form *forms.PolicyLastTasksForm) (interface{}, e.Error) {
-	query := services.GetPolicyGroupScanTasks(c.DB().Debug(), form.Id)
+	query := services.GetPolicyGroupScanTasks(c.DB(), form.Id)
 
 	// 默认按创建时间逆序排序
 	if form.SortField() == "" {
@@ -799,8 +877,8 @@ func PolicyGroupScanTasks(c *ctx.ServiceContext, form *forms.PolicyLastTasksForm
 }
 
 type PolicyTestResp struct {
-	Data  interface{} `json:"data" example:"{\n\"accurics\":{\n\"instanceWithNoVpc\":[\n{\n\"Id\":\"alicloud_instance.instance\"\n}\n]\n}\n}"` // 脚本测试输出，json文本
-	Error string      `json:"error" example:"1 error occurred: policy.rego:4: rego_parse_error: refs cannot be used for rule\n"`               // 脚本执行错误内容
+	Data  interface{} `json:"data" swaggertype:"string" example:"{\n\"accurics\":{\n\"instanceWithNoVpc\":[\n{\n\"Id\":\"alicloud_instance.instance\"\n}\n]\n}\n}"` // 脚本测试输出，json文本
+	Error string      `json:"error" example:"1 error occurred: policy.rego:4: rego_parse_error: refs cannot be used for rule\n"`                                    // 脚本执行错误内容
 }
 
 func PolicyTest(c *ctx.ServiceContext, form *forms.PolicyTestForm) (*PolicyTestResp, e.Error) {
@@ -852,7 +930,7 @@ func PolicyTest(c *ctx.ServiceContext, form *forms.PolicyTestForm) (*PolicyTestR
 
 func SearchGroupOfPolicy(c *ctx.ServiceContext, form *forms.SearchGroupOfPolicyForm) (interface{}, e.Error) {
 	resp := make([]models.Policy, 0)
-	query := services.SearchGroupOfPolicy(c.DB().Debug(), form.Id, form.Bind)
+	query := services.SearchGroupOfPolicy(c.DB(), form.Id, form.IsBind)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	if err := p.Scan(&resp); err != nil {
 		return nil, e.New(e.DBError, err)

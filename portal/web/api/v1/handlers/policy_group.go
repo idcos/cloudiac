@@ -57,8 +57,8 @@ func (PolicyGroup) Search(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param json body forms.UpdatePolicyGroupForm true "parameter"
-// @Param policiesId path string true "策略组Id"
-// @Router /policies/groups/{policiesId} [put]
+// @Param policyId path string true "策略组Id"
+// @Router /policies/groups/{policyId} [put]
 // @Success 200 {object} ctx.JSONResult{result=models.PolicyGroup}
 func (PolicyGroup) Update(c *ctx.GinRequest) {
 	form := &forms.UpdatePolicyGroupForm{}
@@ -76,8 +76,8 @@ func (PolicyGroup) Update(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param policiesId path string true "策略组Id"
-// @Router /policies/groups/{policiesId} [delete]
+// @Param policyId path string true "策略组Id"
+// @Router /policies/groups/{policyId} [delete]
 // @Success 200 {object} ctx.JSONResult
 func (PolicyGroup) Delete(c *ctx.GinRequest) {
 	form := &forms.DeletePolicyGroupForm{}
@@ -95,8 +95,8 @@ func (PolicyGroup) Delete(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param policiesId path string true "策略组Id"
-// @Router /policies/groups/{policiesId} [get]
+// @Param policyId path string true "策略组Id"
+// @Router /policies/groups/{policyId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.PolicyGroup}
 func (PolicyGroup) Detail(c *ctx.GinRequest) {
 	form := &forms.DetailPolicyGroupForm{}
@@ -114,8 +114,8 @@ func (PolicyGroup) Detail(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param policiesId path string true "策略组Id"
-// @Router /policies/groups/{policiesId} [post]
+// @Param policyId path string true "策略组Id"
+// @Router /policies/groups/{policyId} [post]
 // @Success 200 {object} ctx.JSONResult
 func (PolicyGroup) OpPolicyAndPolicyGroupRel(c *ctx.GinRequest) {
 	form := &forms.OpnPolicyAndPolicyGroupRelForm{}
@@ -135,7 +135,7 @@ func (PolicyGroup) OpPolicyAndPolicyGroupRel(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param policyGroupId path string true "策略id"
-// @Router /policies/{policyGroupId}/report [get]
+// @Router /policies/groups/{policyGroupId}/report [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.PolicyGroupScanReportResp}
 func (PolicyGroup) ScanReport(c *ctx.GinRequest) {
 	form := &forms.PolicyScanReportForm{}
@@ -155,7 +155,7 @@ func (PolicyGroup) ScanReport(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param policyGroupId path string true "策略id"
-// @Router /policies/{policyGroupId}/last_tasks [get]
+// @Router /policies/groups/{policyGroupId}/last_tasks [get]
 // @Success 200 {object} ctx.JSONResult{result=[]apps.LastScanTaskResp}
 func (PolicyGroup) LastTasks(c *ctx.GinRequest) {
 	form := &forms.PolicyLastTasksForm{}

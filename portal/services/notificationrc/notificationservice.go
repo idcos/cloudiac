@@ -165,7 +165,7 @@ func (ns *NotificationService) FindNotificationsAndMessageTpl() ([]models.Notifi
 	orgNotification := make([]models.Notification, 0)
 	projectNotification := make([]models.Notification, 0)
 	notifications := make([]models.Notification, 0)
-	dbSess := db.Get().Debug().Where("org_id = ?", ns.OrgId).
+	dbSess := db.Get().Where("org_id = ?", ns.OrgId).
 		Joins(fmt.Sprintf("left join %s as ne on %s.id = ne.notification_id",
 			models.NotificationEvent{}.TableName(), models.Notification{}.TableName())).
 		Where("ne.event_type = ?", ns.EventType)

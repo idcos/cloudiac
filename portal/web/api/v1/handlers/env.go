@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"cloudiac/portal/apps"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
@@ -262,12 +263,12 @@ func (Env) LastTask(c *ctx.GinRequest) {
 // @router /envs/{envId}/policy_result [get]
 // @Success 200 {object} ctx.JSONResult{result=[]models.PolicyResult}
 func (Env) PolicyResult(c *ctx.GinRequest) {
-	// TODO
-	//form := &forms.LastTaskForm{}
-	//if err := c.Bind(form); err != nil {
-	//	return
-	//}
-	//c.JSONResult(apps.LastTask(c.Service(), form))
+	form := &forms.PolicyScanResultForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	form.Scope = consts.ScopeEnv
+	c.JSONResult(apps.PolicyScanResult(c.Service(), form))
 }
 
 // ResourceDetail 资源部署成功后信息详情

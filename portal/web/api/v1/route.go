@@ -69,26 +69,26 @@ func Register(g *gin.RouterGroup) {
 	// 策略管理
 	ctrl.Register(g.Group("policies", ac()), &handlers.Policy{})
 	g.GET("/policies/:id/error", ac(), w(handlers.Policy{}.PolicyError))
+	g.GET("/policies/:id/suppress", ac(), w(handlers.Policy{}.SearchPolicySuppress))
+	g.PUT("/policies/:id/suppress", ac(), w(handlers.Policy{}.UpdatePolicySuppress))
 	g.GET("/policies/:id/report", ac(), w(handlers.Policy{}.PolicyReport))
-	g.POST("/policies/parse", ac(), w(handlers.Policy{}.Parse))                     // 扫描云模板
-	g.POST("/policies/test", ac(), w(handlers.Policy{}.Test))                       // 扫描云模板
-	g.GET("/policies/templates", ac(), w(handlers.Policy{}.SearchPolicyTpl))        // 云模板列表，带策略组信息及状态
-	g.PUT("/policies/templates", ac(), w(handlers.Policy{}.UpdatePolicyTpl))        // 关联云模板与策略组（创建/删除？）
-	g.GET("/policies/templates/:id", ac(), w(handlers.Policy{}.DetailPolicyTpl))    // 云模板策略列表
-	g.POST("/policies/templates/:id/scan", ac(), w(handlers.Policy{}.ScanTemplate)) // 扫描云模板
+	g.POST("/policies/parse", ac(), w(handlers.Policy{}.Parse))
+	g.POST("/policies/test", ac(), w(handlers.Policy{}.Test))
+	g.GET("/policies/templates", ac(), w(handlers.Policy{}.SearchPolicyTpl))
+	g.PUT("/policies/templates/:id", ac(), w(handlers.Policy{}.UpdatePolicyTpl))
+	g.POST("/policies/templates/:id/scan", ac(), w(handlers.Policy{}.ScanTemplate))
 	g.GET("/policies/templates/:id/result", ac(), w(handlers.Policy{}.TemplateScanResult))
 	g.GET("/policies/envs", ac(), w(handlers.Policy{}.SearchPolicyEnv))
-	g.PUT("/policies/envs", ac(), w(handlers.Policy{}.UpdatePolicyEnv)) // 关联环境与策略组（创建/删除？）
+	g.PUT("/policies/envs/:id", ac(), w(handlers.Policy{}.UpdatePolicyEnv))
 	g.GET("/policies/envs/:id/policies", ac(), w(handlers.Policy{}.EnvOfPolicy))
-	g.POST("/policies/envs/:id/scan", ac(), w(handlers.Policy{}.ScanEnvironment)) // 扫描云模板
+	g.POST("/policies/envs/:id/scan", ac(), w(handlers.Policy{}.ScanEnvironment))
 	g.GET("/policies/envs/:id/result", ac(), w(handlers.Policy{}.EnvScanResult))
-	g.GET("/policies/groups/:id/policies", ac(), w(handlers.Policy{}.SearchGroupOfPolicy)) //查询策略组下的策略，同时包含未关联的策略
+	g.GET("/policies/groups/:id/policies", ac(), w(handlers.Policy{}.SearchGroupOfPolicy))
 	ctrl.Register(g.Group("policies/groups", ac()), &handlers.PolicyGroup{})
-	g.POST("/policies/groups/:id", ac(), w(handlers.PolicyGroup{}.OpPolicyAndPolicyGroupRel)) //关联策略与策略组
+	g.POST("/policies/groups/:id", ac(), w(handlers.PolicyGroup{}.OpPolicyAndPolicyGroupRel))
 	g.GET("/policies/groups/:id/report", ac(), w(handlers.PolicyGroup{}.ScanReport))
 	g.GET("/policies/groups/:id/last_tasks", ac(), w(handlers.PolicyGroup{}.LastTasks))
-	ctrl.Register(g.Group("policies/rels", ac()), &handlers.PolicyRel{})
-	ctrl.Register(g.Group("policies/suppress", ac()), &handlers.PolicySuppress{}) //策略屏蔽
+	ctrl.Register(g.Group("policies/suppress", ac()), &handlers.PolicySuppress{})
 
 	// 要求组织 header
 	g.Use(w(middleware.AuthOrgId))

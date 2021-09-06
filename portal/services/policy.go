@@ -1,6 +1,7 @@
 package services
 
 import (
+	"cloudiac/common"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
@@ -76,7 +77,7 @@ func GetTaskPolicies(query *db.Session, taskId models.Id) ([]runner.TaskPolicy, 
 			category = group.Name
 		}
 		meta := map[string]interface{}{
-			"name":          policy.Name,
+			"name":          policy.RuleName,
 			"file":          "policy.rego",
 			"policy_type":   policy.PolicyType,
 			"resource_type": policy.ResourceType,
@@ -97,8 +98,6 @@ func GetTaskPolicies(query *db.Session, taskId models.Id) ([]runner.TaskPolicy, 
 
 // GetValidTaskPolicyIds 获取策略关联的策略ID列表
 func GetValidTaskPolicyIds(query *db.Session, taskId models.Id) ([]models.Id, e.Error) {
-	// TODO: 处理策略关联及已经屏蔽策略
-
 	var (
 		policies  []models.Policy
 		policyIds []models.Id
@@ -141,32 +140,38 @@ func GetValidTaskPolicyIds(query *db.Session, taskId models.Id) ([]models.Id, e.
 	return policyIds, nil
 }
 
+func suppressedQuery(query *db.Session) *db.Session {
+	return query.Select("iac_policy.id").Table(models.PolicyRel{}.TableName()).
+		Joins("join iac_policy on iac_policy.group_id = iac_policy_rel.group_id").
+		Joins("join iac_policy_group on iac_policy_group.id = iac_policy_rel.group_id").
+		Where("iac_policy.id not in (select policy_id from iac_policy_suppress WHERE env_id != '')").
+		Where("iac_policy.id not in (select policy_id from iac_policy_suppress WHERE tpl_id != '')").
+		Where("iac_policy.enabled = 1 and iac_policy_group.enabled = 1")
+}
+
 func GetPoliciesByEnvId(query *db.Session, envId models.Id) ([]models.Policy, e.Error) {
-	subQuery := query.Table(models.PolicyRel{}.TableName()).Select("group_id").Where("env_id = ?", envId)
+	subQuery := suppressedQuery(query).Where("iac_policy_rel.env_id = ?", envId)
 	var policies []models.Policy
-	query = query.Debug()
-	if err := query.Model(models.Policy{}).Where("group_id in (?)", subQuery.Expr()).Find(&policies); err != nil {
+	if err := query.Model(models.Policy{}).Where("iac_policy.id in (?)", subQuery.Expr()).Find(&policies); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.PolicyNotExist, err)
 		}
 		return nil, e.New(e.DBError, err)
 	}
 
-	// TODO: 处理策略屏蔽策略关系
 	return policies, nil
 }
 
 func GetPoliciesByTemplateId(query *db.Session, tplId models.Id) ([]models.Policy, e.Error) {
-	subQuery := query.Table(models.PolicyRel{}.TableName()).Select("group_id").Where("tpl_id = ?", tplId)
+	subQuery := suppressedQuery(query).Where("iac_policy_rel.tpl_id = ?", tplId)
 	var policies []models.Policy
-	if err := query.Model(models.Policy{}).Where("group_id in (?)", subQuery.Expr()).Find(&policies); err != nil {
+	if err := query.Model(models.Policy{}).Where("iac_policy.id in (?)", subQuery.Expr()).Find(&policies); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.PolicyNotExist, err)
 		}
 		return nil, e.New(e.DBError, err)
 	}
 
-	// TODO: 处理策略屏蔽策略关系
 	return policies, nil
 }
 
@@ -238,16 +243,16 @@ func DetailPolicy(dbSess *db.Session, id models.Id) (interface{}, e.Error) {
 	return nil, nil
 }
 
-func CreatePolicySuppress() (interface{}, e.Error) {
-	return nil, nil
-}
-
-func SearchPolicySuppress() (interface{}, e.Error) {
-	return nil, nil
-}
-
-func DeletePolicySuppress() (interface{}, e.Error) {
-	return nil, nil
+func SearchPolicySuppress(query *db.Session, id models.Id) *db.Session {
+	t := models.PolicyRel{}.TableName()
+	q := query.Model(models.PolicyRel{}.TableName()).
+		Select(fmt.Sprintf("DISTINCT iac_policy.id as dist,%s.*,iac_policy.id as policy_id,if(%s.env_id='',%s.tpl_id,%s.env_id)as target_id,if(%s.env_id='','template','env')as target_type,if(%s.env_id = '',iac_template.name,iac_env.name) as target_name,if(e.id is null, 0, 1) as suppressed", t, t, t, t, t, t)).
+		Joins("LEFT JOIN iac_policy_suppress AS e ON e.env_id = iac_policy_rel.env_id AND e.tpl_id = iac_policy_rel.tpl_id").
+		Joins("LEFT JOIN iac_env ON iac_policy_rel.env_id = iac_env.id").
+		Joins("LEFT JOIN iac_template ON iac_policy_rel.tpl_id = iac_template.id").
+		Joins("LEFT JOIN iac_policy ON iac_policy_rel.group_id = iac_policy.group_id").
+		Where("iac_policy.id = ?", id)
+	return q
 }
 
 func SearchPolicyTpl(tx *db.Session, orgId, projectId models.Id, q string) *db.Session {
@@ -305,16 +310,20 @@ func EnvOfPolicy(dbSess *db.Session, form *forms.EnvOfPolicyForm, orgId, project
 	return query.LazySelectAppend(fmt.Sprintf("env.name as env_name, %s.*", pTable))
 }
 
-func PolicyError() (interface{}, e.Error) {
-	return nil, nil
-}
+func PolicyError(query *db.Session, policyId models.Id) *db.Session {
+	return query.Model(models.PolicyResult{}).
+		Select(fmt.Sprintf("if(%s.env_id='','template','env')as target_id,%s.*,%s.name as env_name,%s.name as template_name",
+			models.PolicyResult{}.TableName(),
+			models.PolicyResult{}.TableName(),
+			models.Env{}.TableName(),
+			models.Template{}.TableName(),
+		)).
+		Joins("LEFT JOIN iac_env ON iac_policy_result.env_id = iac_env.id").
+		Joins("LEFT JOIN iac_template ON iac_policy_result.tpl_id = iac_template.id").
+		Where("iac_policy_result.policy_id = ?", policyId).
+		Where("iac_policy_result.status = ? OR iac_policy_result.status = ?",
+			common.PolicyStatusSuppressed, common.PolicyStatusFailed, common.PolicyStatusViolated)
 
-func PolicyReference() (interface{}, e.Error) {
-	return nil, nil
-}
-
-func PolicyRepo() (interface{}, e.Error) {
-	return nil, nil
 }
 
 type PolicyScanSummary struct {
@@ -413,4 +422,14 @@ func SearchGroupOfPolicy(dbSess *db.Session, groupId models.Id, bind bool) *db.S
 		query = query.Where("group_id = '' or group_id is null")
 	}
 	return query
+}
+
+func DeletePolicySuppress(tx *db.Session, id models.Id) e.Error {
+	if _, err := tx.Where("policy_id = ?", id).Delete(models.PolicySuppress{}); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil
+		}
+		return e.New(e.DBError, err)
+	}
+	return nil
 }
