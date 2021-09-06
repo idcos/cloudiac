@@ -240,7 +240,7 @@ func DetailPolicy(dbSess *db.Session, id models.Id) (interface{}, e.Error) {
 		}
 		return nil, e.New(e.DBError, err)
 	}
-	return nil, nil
+	return p, nil
 }
 
 func SearchPolicySuppress(query *db.Session, id models.Id) *db.Session {
@@ -283,7 +283,8 @@ func SearchPolicyEnv(dbSess *db.Session, orgId, projectId models.Id, q string) *
 	if q != "" {
 		query = query.WhereLike(fmt.Sprintf("%s.name", env), q)
 	}
-	return query
+	return query.LazySelectAppend(fmt.Sprintf("%s.*", env)).
+		LazySelectAppend("tpl.name as template_name,tpl.id as tpl_id,tpl.repo_addr")
 }
 
 func EnvOfPolicy(dbSess *db.Session, form *forms.EnvOfPolicyForm, orgId, projectId models.Id) *db.Session {

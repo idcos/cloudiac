@@ -91,7 +91,11 @@ func SearchPolicyGroup(c *ctx.ServiceContext, form *forms.SearchPolicyGroupForm)
 			}
 		}
 	}
-	return policyGroupResps, nil
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     policyGroupResps,
+	}, nil
 }
 
 // UpdatePolicyGroup 修改策略组
