@@ -48,17 +48,17 @@ func (PolicyGroup) Search(c *ctx.GinRequest) {
 	c.JSONResult(apps.SearchPolicyGroup(c.Service(), form))
 }
 
-// Update 修改策略组
+// Update 修改策略组信息
 // @Tags 合规/策略组
-// @Summary 修改策略组
+// @Summary 修改策略组信息
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param json body forms.UpdatePolicyGroupForm true "parameter"
-// @Param policyId path string true "策略组Id"
-// @Router /policies/groups/{policyId} [put]
+// @Param policyGroupId path string true "策略组Id"
+// @Router /policies/groups/{policyGroupId} [put]
 // @Success 200 {object} ctx.JSONResult{result=models.PolicyGroup}
 func (PolicyGroup) Update(c *ctx.GinRequest) {
 	form := &forms.UpdatePolicyGroupForm{}
@@ -76,8 +76,8 @@ func (PolicyGroup) Update(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param policyId path string true "策略组Id"
-// @Router /policies/groups/{policyId} [delete]
+// @Param policyGroupId path string true "策略组Id"
+// @Router /policies/groups/{policyGroupId} [delete]
 // @Success 200 {object} ctx.JSONResult
 func (PolicyGroup) Delete(c *ctx.GinRequest) {
 	form := &forms.DeletePolicyGroupForm{}
@@ -95,8 +95,8 @@ func (PolicyGroup) Delete(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param policyId path string true "策略组Id"
-// @Router /policies/groups/{policyId} [get]
+// @Param policyGroupId path string true "策略组Id"
+// @Router /policies/groups/{policyGroupId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.PolicyGroup}
 func (PolicyGroup) Detail(c *ctx.GinRequest) {
 	form := &forms.DetailPolicyGroupForm{}
@@ -114,8 +114,8 @@ func (PolicyGroup) Detail(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param policyId path string true "策略组Id"
-// @Router /policies/groups/{policyId} [post]
+// @Param policyGroupId path string true "策略组Id"
+// @Router /policies/groups/{policyGroupId} [post]
 // @Success 200 {object} ctx.JSONResult
 func (PolicyGroup) OpPolicyAndPolicyGroupRel(c *ctx.GinRequest) {
 	form := &forms.OpnPolicyAndPolicyGroupRelForm{}

@@ -88,7 +88,6 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/policies/groups/:id", ac(), w(handlers.PolicyGroup{}.OpPolicyAndPolicyGroupRel))
 	g.GET("/policies/groups/:id/report", ac(), w(handlers.PolicyGroup{}.ScanReport))
 	g.GET("/policies/groups/:id/last_tasks", ac(), w(handlers.PolicyGroup{}.LastTasks))
-	ctrl.Register(g.Group("policies/suppress", ac()), &handlers.PolicySuppress{})
 
 	// 要求组织 header
 	g.Use(w(middleware.AuthOrgId))
