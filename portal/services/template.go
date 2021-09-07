@@ -107,5 +107,13 @@ func QueryTemplateByVcsIdAndRepoId(tx *db.Session, vcsId, repoId string) ([]mode
 		}
 	}
 	return tpl, nil
+}
 
+func QueryTplByVcsId(tx *db.Session, VcsId models.Id) (bool, e.Error) {
+	exists, err := tx.Table(models.Template{}.TableName()).
+		Where("vcs_id = ? and deleted_at_t = 0", VcsId).Exists()
+	if err != nil {
+		return false, e.AutoNew(err, e.DBError)
+	}
+	return exists, nil
 }

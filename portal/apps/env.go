@@ -650,7 +650,7 @@ func EnvOutput(c *ctx.ServiceContext, form forms.DetailEnvForm) (interface{}, e.
 
 	return TaskOutput(c, forms.DetailTaskForm{
 		BaseForm: form.BaseForm,
-		Id:       env.LastTaskId,
+		Id:       env.LastResTaskId,
 	})
 }
 

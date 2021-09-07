@@ -9,27 +9,33 @@ import (
 	"fmt"
 )
 
-type NotificationResp struct {
-	Id        models.Id `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	EventType string    `json:"eventType"`
+type RespNotification struct {
+	models.Notification
+	EventType string `json:"eventType" form:"eventType" gorm:"event_type"`
 }
 
-func SearchNotification(tx *db.Session, orgId, projectId models.Id) (interface{}, error) {
-	users := make([]*NotificationResp, 0)
-	query := tx.Table(models.User{}.TableName()).
-		Joins(fmt.Sprintf("left %s as ne on %s.id = ne.notification_id",
-			models.NotificationEvent{}.TableName(), models.Notification{}.TableName())).
-		Where("org_id = ?", orgId)
+func SearchNotification(dbSess *db.Session, orgId, projectId models.Id) *db.Session {
+	n := models.Notification{}.TableName()
+	query := dbSess.Table(n).
+		Joins(fmt.Sprintf("left join %s as ne on %s.id = ne.notification_id",
+			models.NotificationEvent{}.TableName(), n)).
+		Where(fmt.Sprintf("%s.org_id = ?", n), orgId)
 	if projectId != "" {
-		query = query.Where("project_id = ?", projectId)
+		query = query.Where(fmt.Sprintf("%s.project_id = ?", n), projectId)
 	}
-	if err := query.Find(&users); err != nil {
-		return nil, err
+	return query.LazySelectAppend(fmt.Sprintf("%s.*", n), "group_concat(ne.event_type) as event_type").
+		Group(fmt.Sprintf("%s.id", n))
+}
+
+func SearchNotifyEventType(dbSess *db.Session, notifyId models.Id) ([]string, e.Error) {
+	events := make([]string, 0)
+	if err := dbSess.Table(models.NotificationEvent{}.TableName()).
+		Where("notification_id = ?", notifyId).
+		Pluck("event_type", &events); err != nil {
+		return nil, e.New(e.DBError, err)
 	}
 
-	return users, nil
+	return events, nil
 }
 
 func UpdateNotification(tx *db.Session, id models.Id, attrs models.Attrs) (notificationCfg *models.Notification, err e.Error) {

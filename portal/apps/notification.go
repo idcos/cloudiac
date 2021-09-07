@@ -5,18 +5,47 @@ package apps
 import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"fmt"
+	"strings"
 )
 
-func SearchNotification(c *ctx.ServiceContext) (interface{}, e.Error) {
-	cfgs, err := services.SearchNotification(c.DB(), c.OrgId, c.ProjectId)
-	if err != nil {
+type RespNotify struct {
+	models.Notification
+	EventType []string `json:"eventType" form:"eventType" gorm:"event_type"`
+}
+
+type RespNotification struct {
+	models.Notification
+	EventType string `json:"eventType" form:"eventType" gorm:"event_type"`
+}
+
+func SearchNotification(c *ctx.ServiceContext, form *forms.SearchNotificationForm) (interface{}, e.Error) {
+	notifyResp := make([]*RespNotify, 0)
+	notify := make([]*RespNotification, 0)
+	query := services.SearchNotification(c.DB(), c.OrgId, c.ProjectId)
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	if err := p.Scan(&notify); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	return cfgs, nil
+	for _, v := range notify {
+		events := make([]string, 0)
+		if v.EventType != "" {
+			events = strings.Split(v.EventType, ",")
+		}
+		notifyResp = append(notifyResp, &RespNotify{
+			v.Notification,
+			events,
+		})
+	}
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     notifyResp,
+	}, nil
 }
 
 func DeleteNotification(c *ctx.ServiceContext, id models.Id) (result interface{}, err e.Error) {
