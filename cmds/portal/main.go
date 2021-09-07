@@ -5,11 +5,13 @@ package main
 import (
 	common2 "cloudiac/common"
 	"cloudiac/portal/apps"
+	"cloudiac/portal/migrations"
 	"cloudiac/portal/task_manager"
 	"fmt"
+	"os"
+
 	"github.com/jessevdk/go-flags"
 	"github.com/pkg/errors"
-	"os"
 
 	"cloudiac/cmds/common"
 	"cloudiac/configs"
@@ -54,7 +56,6 @@ func main() {
 	// 依赖中间件及数据的初始化
 	{
 		db.Init(configs.Get().Mysql)
-		models.Init(true)
 
 		tx := db.Get().Begin()
 		defer func() {
@@ -63,14 +64,19 @@ func main() {
 				panic(r)
 			}
 		}()
+
+		if err := migrations.Run(); err != nil {
+			panic(err)
+		}
+
 		// 自动执行平台初始化操作
 		if err := appAutoInit(tx); err != nil {
 			panic(err)
 		}
 		if err := tx.Commit(); err != nil {
+
 			panic(err)
 		}
-
 		services.MaintenanceRunnerPerMax()
 		kafka.InitKafkaProducerBuilder()
 	}

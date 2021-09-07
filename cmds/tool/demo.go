@@ -11,11 +11,12 @@ import (
 	"cloudiac/portal/services"
 	"cloudiac/utils"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"path"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 )
 
 type Organization struct {
@@ -84,7 +85,6 @@ func (p *InitDemo) Execute(args []string) error {
 
 	configs.Init(opt.Config)
 	db.Init(configs.Get().Mysql)
-	models.Init(false)
 
 	config := args[0]
 	if err := parseConfig(config, &data); err != nil {
