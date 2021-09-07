@@ -9,6 +9,7 @@ import (
 const (
 	SysCfgNameMaxJobsPerRunner = "MAX_JOBS_PER_RUNNER"
 	SysCfgNamePeriodOfLogSave  = "PERIOD_OF_LOG_SAVE"
+	SysCfgNameMigrationVersion = "MIGRATION_VERSION"
 )
 
 type SystemCfg struct {

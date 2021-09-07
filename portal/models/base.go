@@ -22,7 +22,6 @@ type Modeler interface {
 	TableName() string
 	Validate() error
 	ValidateAttrs(attrs Attrs) error
-	Migrate(*db.Session) error
 	//AddUniqueIndex(*db.Session) error
 }
 
@@ -68,10 +67,6 @@ func (i Id) String() string {
 }
 
 type AbstractModel struct {
-}
-
-func (AbstractModel) Migrate(*db.Session) error {
-	return nil
 }
 
 func (AbstractModel) Validate() error {

@@ -22,6 +22,9 @@ PORTAL_ADDRESS=http://public.host.ip
 
 # consul 配置(注意需要配置为宿主机的内网 ip)
 CONSUL_ADDRESS=private.host.ip:8500
+# 更多的 consul 选项可以在该文件中通过环境变量配置如 CONSUL_HTTP_TOKEN、CONSUL_HTTP_SSL 等，
+# 参考文档: https://www.consul.io/commands#environment-variables
+
 
 # portal 服务注册信息配置
 SERVICE_IP=iac-portal
