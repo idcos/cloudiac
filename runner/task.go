@@ -474,7 +474,7 @@ var scanInitCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 git clone '{{.Req.RepoAddress}}' code && \
 cd 'code/{{.Req.Env.Workdir}}' && \
 git checkout -q '{{.Req.RepoRevision}}' && echo check out $(git rev-parse --short HEAD). && \
-ln -sf {{.IacTfFile}} .
+mkdir -p ~/.terrascan/pkg/policies/opa/rego/aws
 `))
 
 func (t *Task) stepScanInit() (command string, err error) {
