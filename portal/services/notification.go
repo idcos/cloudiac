@@ -7,6 +7,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"fmt"
+	"strings"
 )
 
 type RespNotification struct {
@@ -88,17 +89,24 @@ func DeleteNotification(tx *db.Session, id models.Id, orgId models.Id) e.Error {
 	return nil
 }
 
+type RespDetailNotification struct {
+	models.Notification
+	EventType  string   `json:"-" `
+	EventTypes []string `json:"eventTypes" gorm:"-"`
+}
+
 func DetailNotification(dbSess *db.Session, id models.Id) (interface{}, e.Error) {
-	resp := struct {
-		models.Notification
-		models.NotificationEvent
-	}{}
+	resp := RespDetailNotification{}
 	if err := dbSess.Table(models.Notification{}.TableName()).
-		Joins(fmt.Sprintf("left %s as ne on %s.id = ne.notification_id",
+		Joins(fmt.Sprintf("left join %s as ne on %s.id = ne.notification_id",
 			models.NotificationEvent{}.TableName(), models.Notification{}.TableName())).
 		Where(fmt.Sprintf("%s.id = ?", models.Notification{}.TableName()), id).
+		LazySelectAppend(fmt.Sprintf("%s.*", models.Notification{}.TableName())).
+		LazySelectAppend("group_concat(ne.event_type) as event_type").
+		Group(fmt.Sprintf("%s.id", models.Notification{}.TableName())).
 		First(&resp); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
+	resp.EventTypes = strings.Split(resp.EventType, ",")
 	return resp, nil
 }

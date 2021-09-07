@@ -126,6 +126,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/templates/autotfversion", ac(), w(handlers.AutoTemplateTfVersionChoice))
 	g.GET("/vcs/:id/repos/tfvars", ac(), w(handlers.TemplateTfvarsSearch))
 	g.GET("/vcs/:id/repos/playbook", ac(), w(handlers.TemplatePlaybookSearch))
+	g.GET("/vcs/:id/file", ac(), w(handlers.Vcs{}.SearchVcsFileContent))
 	ctrl.Register(g.Group("notifications", ac()), &handlers.Notification{})
 
 	// 项目资源
