@@ -365,7 +365,7 @@ type RespPolicyTpl struct {
 func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (interface{}, e.Error) {
 	respPolicyTpls := make([]RespPolicyTpl, 0)
 	tplIds := make([]models.Id, 0)
-	query := services.SearchPolicyTpl(c.DB().Debug(), form.OrgId, form.Q)
+	query := services.SearchPolicyTpl(c.DB(), form.OrgId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	groupM := make(map[models.Id][]services.NewPolicyGroup, 0)
 	if err := p.Scan(&respPolicyTpls); err != nil {
@@ -458,7 +458,7 @@ func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (in
 			groupM[v.EnvId] = []services.NewPolicyGroup{v}
 			continue
 		}
-		groupM[v.TplId] = append(groupM[v.TplId], v)
+		groupM[v.EnvId] = append(groupM[v.EnvId], v)
 	}
 
 	for index, v := range respPolicyEnvs {
