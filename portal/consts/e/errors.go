@@ -143,7 +143,7 @@ const (
 
 	//// vcs 311
 
-	VcsNotExists = 31110
+	VcsNotExists   = 31110
 	VcsDeleteError = 31120
 
 	//// policy 312
@@ -403,7 +403,40 @@ var errorMsgs = map[int]map[string]string{
 	InvalidTfVersion: {
 		"zh-cn": "自动选择版本失败",
 	},
+
+	PolicyAlreadyExist: {
+		"zh-cn": "策略已存在",
+	},
+
+	PolicyNotExist: {
+		"zh-cn": "策略不存在",
+	},
+
+	PolicyGroupAlreadyExist: {
+		"zh-cn": "策略组已存在",
+	},
+
+	PolicyGroupNotExist: {
+		"zh-cn": "策略组不存在",
+	},
+
+	PolicyBelongedToAnotherGroup: {
+		"zh-cn": "策略属于其他策略组",
+	},
+
+	PolicyResultAlreadyExist: {
+		"zh-cn": "结果已存在",
+	},
+
+	PolicyResultNotExist: {
+		"zh-cn": "结果不存在",
+	},
+
+	PolicyErrorParseTemplate: {
+		"zh-cn": "模板解析错误",
+	},
+
 	PolicyRegoMissingComment: {
-		"zh-cn": "自动选择版本失败",
+		"zh-cn": "Rego脚本头缺失",
 	},
 }
