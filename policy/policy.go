@@ -8,17 +8,22 @@ import (
 	"cloudiac/portal/services"
 	"cloudiac/runner"
 	"cloudiac/utils"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/hashicorp/hcl"
 	"github.com/mitchellh/go-homedir"
+	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/rego"
+	"github.com/open-policy-agent/opa/version"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -694,4 +699,59 @@ func GetScanPolicies(query *db.Session, policies []models.Policy) ([]Policy, err
 	}
 
 	return ps, nil
+}
+
+func EngineScan(regoFile string, configFile string) (interface{}, error) {
+	configString, err := os.ReadFile(configFile)
+	if err != nil {
+		return nil, fmt.Errorf("read configFile: %w", err)
+	}
+
+	var input interface{}
+	err = json.Unmarshal(configString, &input)
+	if err != nil {
+		return nil, fmt.Errorf("parse input: %w", err)
+	}
+
+	// 初始化 rego 引擎
+	ctx := context.Background()
+	obj := ast.NewObject()
+	env := ast.NewObject()
+
+	for _, s := range os.Environ() {
+		parts := strings.SplitN(s, "=", 2)
+		if len(parts) == 1 {
+			env.Insert(ast.StringTerm(parts[0]), ast.NullTerm())
+		} else if len(parts) > 1 {
+			env.Insert(ast.StringTerm(parts[0]), ast.StringTerm(parts[1]))
+		}
+	}
+
+	obj.Insert(ast.StringTerm("env"), ast.NewTerm(env))
+	obj.Insert(ast.StringTerm("version"), ast.StringTerm(version.Version))
+	obj.Insert(ast.StringTerm("commit"), ast.StringTerm(version.Vcs))
+
+	info := ast.NewTerm(obj)
+
+	regoArgs := []func(*rego.Rego){
+		rego.Input(input),
+		rego.Query("data"),
+		rego.Load([]string{regoFile}, nil),
+		rego.Runtime(info),
+	}
+
+	// 执行规则检查
+	r := rego.New(regoArgs...)
+	resultSet, err := r.Eval(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("evaluating policy: %w", err)
+	}
+
+	// 获取结果
+	var result interface{}
+	if len(resultSet) > 0 && len(resultSet[0].Expressions) > 0 {
+		result = resultSet[0].Expressions[0].Value
+	}
+
+	return result, nil
 }

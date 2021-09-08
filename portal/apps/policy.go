@@ -2,6 +2,7 @@ package apps
 
 import (
 	"cloudiac/common"
+	"cloudiac/policy"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
@@ -15,7 +16,6 @@ import (
 	"github.com/pkg/errors"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -613,15 +613,15 @@ func ParseTemplate(c *ctx.ServiceContext, form *forms.PolicyParseForm) (interfac
 }
 
 type ScanResultResp struct {
-	ScanTime    *models.Time   `json:"scanTime"`
-	ScanResults []PolicyResult `json:"scanResults"`
+	ScanTime    *models.Time   `json:"scanTime"`    // 扫描时间
+	ScanResults []PolicyResult `json:"scanResults"` // 扫描结果
 }
 
 type PolicyResult struct {
 	models.PolicyResult
-	PolicyName      string `json:"policyName"`
-	PolicyGroupName string `json:"policyGroupName"`
-	FixSuggestion   string `json:"fixSuggestion"`
+	PolicyName      string `json:"policyName" example:"VPC 安全组规则"`  // 策略名称
+	PolicyGroupName string `json:"policyGroupName" example:"安全策略组"` // 策略组名称
+	FixSuggestion   string `json:"fixSuggestion" example:"建议您创建一个专有网络..."`
 }
 
 func PolicyScanResult(c *ctx.ServiceContext, form *forms.PolicyScanResultForm) (interface{}, e.Error) {
@@ -936,10 +936,11 @@ func PolicyTest(c *ctx.ServiceContext, form *forms.PolicyTestForm) (*PolicyTestR
 			Error: fmt.Sprintf("1 error occurred: %s", err.Error()),
 		}, nil
 	}
-	if err := json.Unmarshal([]byte(form.Input), nil); err != nil {
+	var value interface{}
+	if err := json.Unmarshal([]byte(form.Input), &value); err != nil {
 		return &PolicyTestResp{
 			Data:  "",
-			Error: fmt.Sprintf("invalid input"),
+			Error: fmt.Sprintf("invalid input %v", err),
 		}, nil
 	}
 
@@ -959,16 +960,21 @@ func PolicyTest(c *ctx.ServiceContext, form *forms.PolicyTestForm) (*PolicyTestR
 		return nil, e.New(e.InternalError, err, http.StatusInternalServerError)
 	}
 
-	cmdline := fmt.Sprintf("cd %s && opa eval -f pretty --data %s --input %s data", tmpDir, "policy.rego", "input.json")
-	cmd := exec.Command("sh", "-c", cmdline)
-	if output, err := cmd.CombinedOutput(); err != nil {
+	if result, err := policy.EngineScan(regoPath, inputPath); err != nil {
 		return &PolicyTestResp{
 			Data:  "",
-			Error: string(output),
+			Error: fmt.Sprintf("%s", err),
 		}, nil
 	} else {
+		output, err := json.Marshal(result)
+		if err != nil {
+			return &PolicyTestResp{
+				Data:  "",
+				Error: fmt.Sprintf("marshal output %v", err),
+			}, nil
+		}
 		return &PolicyTestResp{
-			Data:  output,
+			Data:  string(output),
 			Error: "",
 		}, nil
 	}

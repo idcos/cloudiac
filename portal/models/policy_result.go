@@ -3,17 +3,17 @@ package models
 type PolicyResult struct {
 	AutoUintIdModel
 
-	OrgId     Id `json:"org_id" gorm:"not null;size:32;comment:组织" example:"org-c3lcrjxczjdywmk0go90"`
-	ProjectId Id `json:"project_id" gorm:"size:32;comment:项目ID" example:"p-c3lcrjxczjdywmk0go90"`
-	TplId     Id `json:"tpl_id" gorm:"size:32;comment:云模板ID" example:"tpl-c3lcrjxczjdywmk0go90"`
-	EnvId     Id `json:"env_id" gorm:"size:32;comment:环境ID" example:"env-c3lcrjxczjdywmk0go90"`
-	TaskId    Id `json:"taskId" gorm:"not null;size:32;comment:任务ID" example:"t-c3lcrjxczjdywmk0go90"`
+	OrgId     Id `json:"org_id" gorm:"not null;size:32;comment:组织" example:"org-c3lcrjxczjdywmk0go90"` // 组织ID
+	ProjectId Id `json:"project_id" gorm:"size:32;comment:项目ID" example:"p-c3lcrjxczjdywmk0go90"`      // 项目ID
+	TplId     Id `json:"tpl_id" gorm:"size:32;comment:云模板ID" example:"tpl-c3lcrjxczjdywmk0go90"`       // 云模板ID
+	EnvId     Id `json:"env_id" gorm:"size:32;comment:环境ID" example:"env-c3lcrjxczjdywmk0go90"`        // 环境ID
+	TaskId    Id `json:"taskId" gorm:"not null;size:32;comment:任务ID" example:"t-c3lcrjxczjdywmk0go90"` // 任务ID
 
-	PolicyId      Id `json:"policyId" gorm:"not null;size:32;comment:策略ID" example:"po-c3lcrjxczjdywmk0go90"`
-	PolicyGroupId Id `json:"policyGroupId" gorm:"not null;size:32;comment:策略组ID" example:"pog-c3lcrjxczjdywmk0go90"`
+	PolicyId      Id `json:"policyId" gorm:"not null;size:32;comment:策略ID" example:"po-c3lcrjxczjdywmk0go90"`        // 策略ID
+	PolicyGroupId Id `json:"policyGroupId" gorm:"not null;size:32;comment:策略组ID" example:"pog-c3lcrjxczjdywmk0go90"` // 策略组ID
 
 	StartAt Time   `json:"startAt" gorm:"type:datetime;comment:开始时间"`                                                                 // 任务开始时间
-	Status  string `json:"status" gorm:"type:enum('passed','violated','suppressed','pending','failed');default:'pending';comment:状态"` // 策略扫描状态
+	Status  string `json:"status" gorm:"type:enum('passed','violated','suppressed','pending','failed');default:'pending';comment:状态"` // 状态
 
 	Violation
 }
@@ -52,27 +52,27 @@ type ScanSummary struct {
 }
 
 type Rule struct {
-	RuleName    string `json:"rule_name"`
-	Description string `json:"description"`
-	RuleId      string `json:"rule_id"`
-	Severity    string `json:"severity"`
-	Category    string `json:"category"`
+	RuleName    string `json:"rule_name"`   // 规则名称
+	Description string `json:"description"` // 规则描述
+	RuleId      string `json:"rule_id"`     // 规则ID（策略ID）
+	Severity    string `json:"severity"`    // 严重程度
+	Category    string `json:"category"`    // 分类（策略组名称）
 }
 
 type Violation struct {
-	RuleName     string `json:"rule_name"`
-	Description  string `json:"description"`
-	RuleId       string `json:"rule_id"`
-	Severity     string `json:"severity"`
-	Category     string `json:"category"`
-	Comment      string `json:"skip_comment,omitempty"`
-	ResourceName string `json:"resource_name"`
-	ResourceType string `json:"resource_type"`
-	ModuleName   string `json:"module_name,omitempty"`
-	File         string `json:"file,omitempty"`
-	PlanRoot     string `json:"plan_root,omitempty"`
-	Line         int    `json:"line,omitempty"`
-	Source       string `json:"source,omitempty"`
+	RuleName     string `json:"rule_name"`              // 规则名称
+	Description  string `json:"description"`            // 规则描述
+	RuleId       string `json:"rule_id"`                // 规则ID（策略ID）
+	Severity     string `json:"severity"`               // 严重程度
+	Category     string `json:"category"`               // 分类（策略组名称）
+	Comment      string `json:"skip_comment,omitempty"` // 注释
+	ResourceName string `json:"resource_name"`          // 资源名称
+	ResourceType string `json:"resource_type"`          // 资源类型
+	ModuleName   string `json:"module_name,omitempty"`  // 模块名称
+	File         string `json:"file,omitempty"`         // 文件路径
+	PlanRoot     string `json:"plan_root,omitempty"`    // 文件夹路径
+	Line         int    `json:"line,omitempty"`         // 错误源文件行号
+	Source       string `json:"source,omitempty"`       // 错误源码
 }
 
 type TsCount struct {
