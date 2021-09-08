@@ -2,6 +2,8 @@ module cloudiac
 
 go 1.16
 
+replace github.com/google/flatbuffers v1.12.0 => github.com/google/flatbuffers v1.12.1
+
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/Shopify/sarama v1.28.0
@@ -9,8 +11,10 @@ require (
 	github.com/armon/go-metrics v0.3.3 // indirect
 	github.com/casbin/casbin/v2 v2.31.9
 	github.com/casbin/gorm-adapter/v3 v3.3.2
+	github.com/containerd/containerd v1.5.5 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/docker/docker v20.10.5+incompatible
+	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/elazarl/goproxy v0.0.0-20210801061803-8e322dfb79c4 // indirect
 	github.com/gin-contrib/sse v0.1.0
 	github.com/gin-gonic/gin v1.7.2
@@ -31,7 +35,8 @@ require (
 	github.com/mattn/go-sqlite3 v2.0.1+incompatible // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
-	github.com/open-policy-agent/opa v0.32.0 // indirect
+	github.com/morikuni/aec v1.0.0 // indirect
+	github.com/open-policy-agent/opa v0.32.0
 	github.com/parnurzeal/gorequest v0.2.16
 	github.com/pkg/errors v0.9.1
 	github.com/rs/xid v1.2.1
