@@ -112,7 +112,9 @@ func GetPolicyGroupByEnvIds(tx *db.Session, ids []models.Id) ([]NewPolicyGroup, 
 			models.PolicyGroup{}.TableName(), rel)).
 		Where(fmt.Sprintf("%s.env_id in (?)", rel), ids).
 		Where(fmt.Sprintf("%s.scope = ?", rel), models.PolicyRelScopeEnv).
-		LazySelectAppend(fmt.Sprintf("%s.*", rel), "pg.*").
+		LazySelectAppend("pg.*").
+		LazySelectAppend(fmt.Sprintf("%s.scope, %s.org_id, %s.project_id, %s.tpl_id, %s.env_id",
+			rel, rel, rel, rel, rel)).
 		Find(&group); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
