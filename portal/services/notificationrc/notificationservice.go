@@ -111,7 +111,7 @@ func (ns *NotificationService) SendMessage() {
 	func(userIds []string) {
 		// 获取用户邮箱列表
 		users := make([]models.User, 0)
-		_ = db.Get().Where("id in (?)", userIds).Find(users)
+		_ = db.Get().Where("id in (?)", userIds).Find(&users)
 		for _, v := range users {
 			// 单个用户发送邮件，避免暴露其他用户邮箱
 			go ns.SendEmailMessage([]string{
