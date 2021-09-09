@@ -75,7 +75,7 @@ func InitScanResult(tx *db.Session, task models.Task) e.Error {
 }
 
 // UpdateScanResult 根据 terrascan 扫描结果批量更新
-func UpdateScanResult(tx *db.Session, task models.Tasker, result TsResult) e.Error {
+func UpdateScanResult(tx *db.Session, task models.Tasker, result TsResult, taskFailed bool) e.Error {
 	var (
 		policyResults []*models.PolicyResult
 	)
@@ -121,7 +121,11 @@ func UpdateScanResult(tx *db.Session, task models.Tasker, result TsResult) e.Err
 		}
 	}
 
-	if err := finishScanResult(tx, task); err != nil {
+	message := "task failed"
+	if !taskFailed {
+		message = "policy skipped"
+	}
+	if err := finishPendingScanResult(tx, task, message); err != nil {
 		return err
 	}
 	return nil
@@ -129,10 +133,11 @@ func UpdateScanResult(tx *db.Session, task models.Tasker, result TsResult) e.Err
 
 // finishScanResult 更新状态未知的策略扫描结果为 failed
 // 当存在相同名称当策略时，扫描结果可能不包含在结果集里面，这些策略扫描结果一律标记为 failed
-func finishScanResult(tx *db.Session, task models.Tasker) e.Error {
-	sql := fmt.Sprintf("UPDATE %s SET status = 'failed' WHERE task_id = ? AND status = 'pending'",
-		models.PolicyResult{}.TableName())
-	if _, err := tx.Exec(sql, task.GetId()); err != nil {
+func finishPendingScanResult(tx *db.Session, task models.Tasker, message string) e.Error {
+	table := models.PolicyResult{}.TableName()
+	sql := fmt.Sprintf("UPDATE %s SET status = ?, message = ? WHERE task_id = ? AND status = '?'", table)
+	args := []interface{}{common.PolicyStatusFailed, message, task.GetId(), common.PolicyStatusPending}
+	if _, err := tx.Exec(sql, args...); err != nil {
 		return e.New(e.DBError, err)
 	}
 	return nil

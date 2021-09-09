@@ -18,11 +18,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"os"
 	"runtime/debug"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -560,10 +561,10 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 
 	processScanResult := func() error {
 		var (
-			tfResultJson *services.TsResultJson
-			bs           []byte
-			scanStep     *models.TaskStep
-			scanTask     *models.ScanTask
+			tsResult services.TsResult
+			bs       []byte
+			scanStep *models.TaskStep
+			scanTask *models.ScanTask
 		)
 
 		if scanStep, err = services.HasScanStep(dbSess, task.Id); err != nil {
@@ -582,17 +583,15 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 		if scanTask.Status == common.TaskComplete {
 			var er error
 			if bs, er = read(scanTask.TfResultJsonPath()); er == nil && len(bs) > 0 {
-				if tfResultJson, er = services.UnmarshalTfResultJson(bs); er == nil {
-					if err := services.UpdateScanResult(dbSess, scanTask, tfResultJson.Results); err != nil {
-						return fmt.Errorf("save scan result: %v", err)
-					}
+				if tfResultJson, er := services.UnmarshalTfResultJson(bs); er == nil {
+					tsResult = tfResultJson.Results
 				}
 			}
 		}
 
-		// 扫描出错的时候更新所有策略扫描结果为 failed
-		emptyResult := services.TsResultJson{}
-		if err := services.UpdateScanResult(dbSess, scanTask, emptyResult.Results); err != nil {
+		// 扫描出错的时候 tsResult 为空值，
+		// UpdateScanResult() 会将所有无法获取到扫描结果的 PolicyResult 设置为 failed
+		if err := services.UpdateScanResult(dbSess, task, tsResult, task.Status == common.TaskFailed); err != nil {
 			return fmt.Errorf("save scan result: %v", err)
 		}
 
@@ -983,25 +982,22 @@ func (m *TaskManager) processScanTaskDone(task *models.ScanTask) {
 
 	processTfResult := func() error {
 		var (
-			tfResultJson *services.TsResultJson
-			bs           []byte
-			err          error
+			tsResult services.TsResult
+			bs       []byte
+			err      error
 		)
 
 		if task.Status != common.TaskFailed {
 			if bs, err = read(task.TfResultJsonPath()); err == nil && len(bs) > 0 {
-				if tfResultJson, err = services.UnmarshalTfResultJson(bs); err == nil {
-
-					if err := services.UpdateScanResult(dbSess, task, tfResultJson.Results); err != nil {
-						return fmt.Errorf("save scan result: %v", err)
-					}
+				if tfResultJson, err := services.UnmarshalTfResultJson(bs); err == nil {
+					tsResult = tfResultJson.Results
 				}
 			}
 		}
 
-		// 扫描出错的时候更新所有策略扫描结果为 failed
-		emptyResult := services.TsResultJson{}
-		if err := services.UpdateScanResult(dbSess, task, emptyResult.Results); err != nil {
+		// 扫描出错的时候 tsResult 为空值，
+		// UpdateScanResult() 会将所有无法获取到扫描结果的 PolicyResult 设置为 failed
+		if err := services.UpdateScanResult(dbSess, task, tsResult, task.Status == common.TaskFailed); err != nil {
 			return fmt.Errorf("save scan result: %v", err)
 		}
 
