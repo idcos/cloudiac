@@ -10,21 +10,19 @@ import (
 	"strings"
 )
 
-type RespNotification struct {
-	models.Notification
-	EventType string `json:"eventType" form:"eventType" gorm:"event_type"`
-}
-
 func SearchNotification(dbSess *db.Session, orgId, projectId models.Id) *db.Session {
 	n := models.Notification{}.TableName()
 	query := dbSess.Table(n).
 		Joins(fmt.Sprintf("left join %s as ne on %s.id = ne.notification_id",
 			models.NotificationEvent{}.TableName(), n)).
+		Joins(fmt.Sprintf("left join %s as user on %s.creator = user.id",
+			models.User{}.TableName(), n)).
 		Where(fmt.Sprintf("%s.org_id = ?", n), orgId)
 	if projectId != "" {
 		query = query.Where(fmt.Sprintf("%s.project_id = ?", n), projectId)
 	}
 	return query.LazySelectAppend(fmt.Sprintf("%s.*", n), "group_concat(ne.event_type) as event_type").
+		LazySelectAppend("user.name as creator_name").
 		Group(fmt.Sprintf("%s.id", n))
 }
 
