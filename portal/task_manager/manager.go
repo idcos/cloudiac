@@ -177,7 +177,7 @@ func (m *TaskManager) recoverTask(ctx context.Context) error {
 	}
 	scanTasksLen := len(scanTasks)
 	for idx := range deployTasks {
-		tasks[scanTasksLen+idx] = deployTasks[scanTasksLen+idx]
+		tasks[scanTasksLen+idx] = deployTasks[idx]
 	}
 
 	logger.Infof("find '%d' running tasks", len(tasks))
@@ -283,7 +283,7 @@ func (m *TaskManager) processPendingTask(ctx context.Context) {
 	}
 	scanTasksLen := len(scanTasks)
 	for idx := range deployTasks {
-		tasks[scanTasksLen+idx] = deployTasks[scanTasksLen+idx]
+		tasks[scanTasksLen+idx] = deployTasks[idx]
 	}
 
 	for i := range tasks {
