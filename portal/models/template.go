@@ -32,6 +32,8 @@ type Template struct {
 	PlayVarsFile string `json:"playVarsFile" gorm:"default:''"` // Ansible 变量文件路径
 
 	TfVersion string `json:"tfVersion" gorm:"default:'v0.14.11'"` // 模版使用的terraform版本号
+
+	LastScanTaskId Id `json:"lastScanTaskId" gorm:"size:32"` // 最后一次策略扫描任务 id
 }
 
 func (Template) TableName() string {

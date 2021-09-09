@@ -931,6 +931,22 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 		}
 	}
 
+	if task.Type == common.TaskTypeScan {
+		if task.EnvId != "" { // 环境扫描
+			if err := services.UpdateEnvModel(m.db, task.EnvId,
+				models.Env{LastScanTaskId: task.Id}); err != nil {
+				logger.Errorf("update env lastScanTaskId: %v", err)
+				return
+			}
+		} else if task.TplId != "" { // 模板扫描
+			if _, err := m.db.Where("id = ?", task.TplId).
+				Update(&models.Template{LastScanTaskId: task.Id}); err != nil {
+				logger.Errorf("update template lastScanTaskId: %v", err)
+				return
+			}
+		}
+	}
+
 	steps, err := services.GetTaskSteps(m.db, task.Id)
 	if err != nil {
 		taskStartFailed(errors.Wrap(err, "get task steps"))

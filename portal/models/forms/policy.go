@@ -149,7 +149,8 @@ type DeletePolicySuppressForm struct {
 type SearchPolicyTplForm struct {
 	PageForm
 
-	OrgId models.Id `form:"orgId" binding:""`      // 组织ID
+	OrgId models.Id `form:"orgId" binding:""` // 组织ID
+	TplId models.Id `form:"tplId" binding:""`
 	Q     string    `form:"q" json:"q" binding:""` // 模糊搜索
 }
 
@@ -163,6 +164,7 @@ type SearchPolicyEnvForm struct {
 
 	OrgId     models.Id `form:"orgId" binding:""`
 	ProjectId models.Id `form:"projectId" binding:""`
+	EnvId     models.Id `form:"envId" binding:""`
 	Q         string    `form:"q" json:"q" binding:""` // 模糊搜索
 }
 
