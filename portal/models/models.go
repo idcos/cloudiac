@@ -3,6 +3,7 @@
 package models
 
 import (
+	"cloudiac/utils/logs"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
@@ -148,4 +149,67 @@ func UnmarshalValue(src interface{}, dst interface{}) error {
 		return fmt.Errorf("invalid type %T, value: %T", src, src)
 	}
 	return json.Unmarshal(bs, dst)
+}
+
+var autoMigration = false
+
+func autoMigrate(m Modeler, sess *db.Session) {
+	if !autoMigration {
+		return
+	}
+
+	sess = sess.Model(m)
+	if err := sess.GormDB().AutoMigrate(m); err != nil {
+		panic(fmt.Errorf("auto migrate %T: %v", m, err))
+	}
+	if err := m.Migrate(sess); err != nil {
+		panic(fmt.Errorf("auto migrate %T: %v", m, err))
+	}
+}
+
+func Init(migrate bool) {
+	autoMigration = migrate
+
+	sess := db.Get().Set("gorm:table_options", "ENGINE=InnoDB").Begin().Debug()
+	defer func() {
+		logger := logs.Get().WithField("func", "models.Init")
+		if r := recover(); r != nil {
+			logger.Infof("recover: %v", r)
+			if err := sess.Rollback(); err != nil {
+				logger.Errorf("rollback error: %v", err)
+			}
+			panic(r)
+		} else if err := sess.Commit(); err != nil {
+			logger.Errorf("commit error: %v", err)
+			panic(err)
+		}
+	}()
+
+	autoMigrate(&Organization{}, sess)
+	autoMigrate(&Project{}, sess)
+	autoMigrate(&Vcs{}, sess)
+	autoMigrate(&Template{}, sess)
+	autoMigrate(&Env{}, sess)
+	autoMigrate(&Resource{}, sess)
+
+	autoMigrate(&Variable{}, sess)
+
+	autoMigrate(&Task{}, sess)
+	autoMigrate(&TaskStep{}, sess)
+	autoMigrate(&DBStorage{}, sess)
+
+	autoMigrate(&User{}, sess)
+	autoMigrate(&UserOrg{}, sess)
+	autoMigrate(&UserProject{}, sess)
+
+	autoMigrate(&Notification{}, sess)
+	autoMigrate(&NotificationEvent{}, sess)
+	autoMigrate(&SystemCfg{}, sess)
+	autoMigrate(&ResourceAccount{}, sess)
+	autoMigrate(&CtResourceMap{}, sess)
+	autoMigrate(&OperationLog{}, sess)
+	autoMigrate(&Token{}, sess)
+	autoMigrate(&Key{}, sess)
+	autoMigrate(&TaskComment{}, sess)
+	autoMigrate(&ProjectTemplate{}, sess)
 }
