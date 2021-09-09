@@ -19,7 +19,6 @@ type PolicyGroup struct {
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织id"
 // @Param json body forms.CreatePolicyGroupForm true "parameter"
 // @Success 200 {object}  ctx.JSONResult{result=models.PolicyGroup}
 // @Router /policies/groups [post]
@@ -38,7 +37,6 @@ func (PolicyGroup) Create(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
 // @Param q query string false "模糊搜索"
 // @Router /policies/groups [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.PolicyGroup}}
@@ -57,7 +55,6 @@ func (PolicyGroup) Search(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
 // @Param json body forms.UpdatePolicyGroupForm true "parameter"
 // @Param policyGroupId path string true "策略组Id"
 // @Router /policies/groups/{policyGroupId} [put]
@@ -77,7 +74,6 @@ func (PolicyGroup) Update(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
 // @Param policyGroupId path string true "策略组Id"
 // @Router /policies/groups/{policyGroupId} [delete]
 // @Success 200 {object} ctx.JSONResult
@@ -96,7 +92,6 @@ func (PolicyGroup) Delete(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
 // @Param policyGroupId path string true "策略组Id"
 // @Router /policies/groups/{policyGroupId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.PolicyGroup}
@@ -115,7 +110,6 @@ func (PolicyGroup) Detail(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
 // @Param json body forms.OpnPolicyAndPolicyGroupRelForm true "parameter"
 // @Param policyGroupId path string true "策略组Id"
 // @Router /policies/groups/{policyGroupId} [post]
@@ -135,8 +129,6 @@ func (PolicyGroup) OpPolicyAndPolicyGroupRel(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string false "项目ID"
 // @Param policyGroupId path string true "策略id"
 // @Router /policies/groups/{policyGroupId}/report [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.PolicyGroupScanReportResp}
@@ -155,8 +147,6 @@ func (PolicyGroup) ScanReport(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string false "项目ID"
 // @Param policyGroupId path string true "策略id"
 // @Router /policies/groups/{policyGroupId}/last_tasks [get]
 // @Success 200 {object} ctx.JSONResult{result=[]apps.LastScanTaskResp}

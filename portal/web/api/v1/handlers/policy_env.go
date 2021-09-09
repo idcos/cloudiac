@@ -17,8 +17,6 @@ import (
 // @Produce json
 // @Security AuthToken
 // @Param q query string false "模糊搜索"
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string false "项目ID"
 // @Router /policies/envs [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.RespPolicyEnv}}
 func (Policy) SearchPolicyEnv(c *ctx.GinRequest) {
@@ -36,8 +34,6 @@ func (Policy) SearchPolicyEnv(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string false "项目ID"
 // @Param envId path string true "环境id"
 // @Router /policies/envs/{envId}/policies [get]
 // @Success 200 {object} ctx.JSONResult{result=models.Policy}
@@ -56,8 +52,6 @@ func (Policy) EnvOfPolicy(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string false "项目ID"
 // @Param json body forms.UpdatePolicyRelForm true "parameter"
 // @Param envId path string true "环境ID"
 // @Router /policies/envs/{envId} [put]
@@ -77,7 +71,6 @@ func (Policy) UpdatePolicyEnv(c *ctx.GinRequest) {
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织id"
 // @Param envId path string true "环境ID"
 // @Param json body forms.ScanEnvironmentForm true "parameter"
 // @Success 200 {object}  ctx.JSONResult{result=models.ScanTask}
@@ -98,8 +91,6 @@ func (Policy) ScanEnvironment(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string false "项目ID"
 // @Param form query forms.PolicyScanResultForm true "parameter"
 // @Param envId path string true "环境ID"
 // @Router /policies/envs/{envId}/result [get]

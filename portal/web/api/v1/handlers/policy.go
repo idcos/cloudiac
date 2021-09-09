@@ -38,7 +38,6 @@ func (Policy) Create(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
 // @Param q query string false "模糊搜索"
 // @Param severity query string false "严重性"
 // @Param groupId query string false "策略组Id"
@@ -59,7 +58,6 @@ func (Policy) Search(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
 // @Param json body forms.UpdatePolicyForm true "parameter"
 // @Param policyId path string true "策略Id"
 // @Router /policies/{policyId} [put]
@@ -79,7 +77,6 @@ func (Policy) Update(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
 // @Param policyId path string true "策略Id"
 // @Router /policies/{policyId} [delete]
 // @Success 200 {object} ctx.JSONResult
@@ -98,7 +95,6 @@ func (Policy) Delete(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
 // @Param policyId path string true "策略Id"
 // @Router /policies/{policyId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.Policy}
@@ -117,8 +113,6 @@ func (Policy) Detail(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string false "项目ID"
 // @Param policyId path string true "策略id"
 // @Router /policies/{policyId}/error [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.PolicyErrorResp}
@@ -136,8 +130,6 @@ func (Policy) PolicyError(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string false "项目ID"
 // @Param policyId path string true "策略id"
 // @Router /policies/{policyId}/suppress [put]
 // @Success 200 {object} ctx.JSONResult
@@ -155,8 +147,6 @@ func (Policy) UpdatePolicySuppress(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string false "项目ID"
 // @Param policyId path string true "策略id"
 // @Router /policies/{policyId}/suppress [get]
 // @Success 200 {object} ctx.JSONResult{result=[]apps.PolicySuppressResp}
@@ -175,8 +165,6 @@ func (Policy) SearchPolicySuppress(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string false "项目ID"
 // @Param policyId path string true "策略id"
 // @Router /policies/{policyId}/report [get]
 // @Success 200 {object} ctx.JSONResult{result=apps.PolicyScanReportResp}
@@ -195,7 +183,6 @@ func (Policy) PolicyReport(c *ctx.GinRequest) {
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织id"
 // @Param json body forms.PolicyParseForm true "parameter"
 // @Success 200 {object}  ctx.JSONResult{result=apps.ParseResp}
 // @Router /policies/parse [post]
@@ -213,7 +200,6 @@ func (Policy) Parse(c *ctx.GinRequest) {
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织id"
 // @Param json body forms.PolicyTestForm true "parameter"
 // @Success 200 {object}  ctx.JSONResult{result=apps.PolicyTestResp}
 // @Router /policies/test [post]
