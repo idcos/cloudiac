@@ -12,12 +12,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/hcl"
-	"github.com/mitchellh/go-homedir"
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/rego"
-	"github.com/open-policy-agent/opa/version"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -25,6 +19,13 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/hcl"
+	"github.com/mitchellh/go-homedir"
+	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/rego"
+	"github.com/open-policy-agent/opa/version"
+	"github.com/sirupsen/logrus"
 )
 
 type Parser struct {
@@ -310,10 +311,9 @@ func (s *Scanner) ScanResource(resource Resource) error {
 	}
 
 	if s.SaveResult {
-		if err := services.UpdateScanResult(s.Db, &task, tfResultJson.Results); err != nil {
+		if err := services.UpdateScanResult(s.Db, &task, tfResultJson.Results, false); err != nil {
 			return s.handleScanError(&task, err)
 		}
-
 	}
 
 	return nil
@@ -370,7 +370,7 @@ func (s *Scanner) handleScanError(task *models.Task, err error) error {
 	if s.SaveResult {
 		// 扫描出错的时候更新所有策略扫描结果为 failed
 		emptyResult := services.TsResultJson{}
-		if err := services.UpdateScanResult(s.Db, task, emptyResult.Results); err != nil {
+		if err := services.UpdateScanResult(s.Db, task, emptyResult.Results, true); err != nil {
 			return err
 		}
 	}
