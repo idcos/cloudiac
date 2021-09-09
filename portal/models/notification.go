@@ -32,6 +32,7 @@ type Notification struct {
 	Secret    string         `json:"secret" form:"secret" gorm:"comment:dingtalk加签秘钥"`
 	Url       string         `json:"url" form:"url" gorm:"comment:回调url"`
 	UserIds   pq.StringArray `json:"userIds"  gorm:"type:text;comment:用户ID"  swaggertype:"array,string"`
+	Creator   Id             `json:"creator" form:"creator" `
 }
 
 func (Notification) TableName() string {
