@@ -17,8 +17,6 @@ import (
 // @Produce json
 // @Security AuthToken
 // @Param q query string false "模糊搜索"
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string false "项目ID"
 // @Router /policies/envs [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.RespPolicyEnv}}
 func (Policy) SearchPolicyEnv(c *ctx.GinRequest) {

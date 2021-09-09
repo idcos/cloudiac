@@ -58,7 +58,6 @@ func (Policy) TemplateScanResult(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param form query forms.SearchPolicyTplForm true "parameter"
-// @Param IaC-Org-Id header string true "组织ID"
 // @Router /policies/templates [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.RespPolicyTpl}}
 func (Policy) SearchPolicyTpl(c *ctx.GinRequest) {
