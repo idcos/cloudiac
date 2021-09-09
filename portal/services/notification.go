@@ -90,7 +90,7 @@ func DeleteNotification(tx *db.Session, id models.Id, orgId models.Id) e.Error {
 type RespDetailNotification struct {
 	models.Notification
 	EventType  string   `json:"-" `
-	EventTypes []string `json:"eventTypes" gorm:"-"`
+	EventTypes []string `json:"eventType" gorm:"-"`
 }
 
 func DetailNotification(dbSess *db.Session, id models.Id) (interface{}, e.Error) {

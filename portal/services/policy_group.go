@@ -34,7 +34,7 @@ func SearchPolicyGroup(dbSess *db.Session, orgId models.Id, q string) *db.Sessio
 	pgTable := models.PolicyGroup{}.TableName()
 	query := dbSess.Table(pgTable).
 		Joins(fmt.Sprintf("left join (%s) as p on p.group_id = %s.id",
-			fmt.Sprintf("select count(1) as policy_count,group_id from %s",
+			fmt.Sprintf("select count(group_id) as policy_count,group_id from %s group by group_id",
 				models.Policy{}.TableName()), pgTable))
 		//Where(fmt.Sprintf("%s.org_id = ?", pgTable), orgId)
 	if q != "" {
