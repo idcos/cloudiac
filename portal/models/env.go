@@ -4,8 +4,9 @@ package models
 
 import (
 	"cloudiac/portal/libs/db"
-	"github.com/lib/pq"
 	"path"
+
+	"github.com/lib/pq"
 )
 
 const (
@@ -53,6 +54,8 @@ type Env struct {
 
 	LastTaskId    Id `json:"lastTaskId" gorm:"size:32"`    // 最后一次部署或销毁任务的 id(plan 任务不记录)
 	LastResTaskId Id `json:"lastResTaskId" gorm:"size:32"` // 最后一次进行了资源列表统计的部署任务的 id
+
+	LastScanTaskId Id `json:"lastScanTaskId" gorm:"size:32"` // 最后一次策略扫描任务 id
 
 	AutoApproval    bool `json:"autoApproval" gorm:"default:false"`    // 是否自动审批
 	StopOnViolation bool `json:"stopOnViolation" gorm:"default:false"` // 当合规不通过是否中止部署

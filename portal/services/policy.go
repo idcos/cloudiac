@@ -257,36 +257,47 @@ func SearchPolicySuppress(query *db.Session, id models.Id) *db.Session {
 	return q
 }
 
-func SearchPolicyTpl(tx *db.Session, orgId models.Id, q string) *db.Session {
-	query := tx.Table(models.Template{}.TableName())
+func SearchPolicyTpl(tx *db.Session, orgId, tplId models.Id, q string) *db.Session {
+	query := tx.Table("iac_template AS tpl")
 	if orgId != "" {
-		query = query.Where("org_id = ?", orgId)
+		query = query.Where("tpl.org_id = ?", orgId)
 	}
-
+	if tplId != "" {
+		query = query.Where("tpl.id = ?", tplId)
+	}
 	if q != "" {
-		query = query.WhereLike("name", q)
+		query = query.WhereLike("tpl.name", q)
 	}
-	return query
+	query = query.Joins("LEFT JOIN iac_scan_task AS task ON task.id = tpl.last_scan_task_id")
+	return query.LazySelect("tpl.*, task.status AS scan_task_status")
 }
 
-func SearchPolicyEnv(dbSess *db.Session, orgId, projectId models.Id, q string) *db.Session {
-	env := models.EnvDetail{}.TableName()
-	query := dbSess.Table(env).
-		Joins(fmt.Sprintf("left join %s as tpl on tpl.id = %s.tpl_id",
-			models.Template{}.TableName(), env))
+func SearchPolicyEnv(dbSess *db.Session, orgId, projectId, envId models.Id, q string) *db.Session {
+	envTable := models.Env{}.TableName()
+	query := dbSess.Table(envTable)
 	if orgId != "" {
-		query = query.Where(fmt.Sprintf("%s.org_id = ?", env), orgId)
+		query = query.Where(fmt.Sprintf("%s.org_id = ?", envTable), orgId)
 	}
-
 	if projectId != "" {
-		query = query.Where(fmt.Sprintf("%s.project_id = ?", env), projectId)
+		query = query.Where(fmt.Sprintf("%s.project_id = ?", envTable), projectId)
+	}
+	if envId != "" {
+		query = query.Where(fmt.Sprintf("%s.id = ?", envTable), envId)
 	}
 
 	if q != "" {
-		query = query.WhereLike(fmt.Sprintf("%s.name", env), q)
+		query = query.WhereLike(fmt.Sprintf("%s.name", envTable), q)
 	}
-	return query.LazySelectAppend(fmt.Sprintf("%s.*", env)).
-		LazySelectAppend("tpl.name as template_name,tpl.id as tpl_id,tpl.repo_addr")
+
+	query = query.Joins(fmt.Sprintf("LEFT JOIN %s AS tpl ON tpl.id = %s.tpl_id",
+		models.Template{}.TableName(), envTable))
+	query = query.Joins(fmt.Sprintf("LEFT JOIN %s AS task ON task.id = %s.last_scan_task_id",
+		models.ScanTask{}.TableName(), envTable))
+
+	return query.
+		LazySelectAppend(fmt.Sprintf("%s.*", envTable)).
+		LazySelectAppend("tpl.name AS template_name, tpl.id AS tpl_id, tpl.repo_addr AS repo_addr").
+		LazySelectAppend("task.status AS scan_task_status")
 }
 
 func EnvOfPolicy(dbSess *db.Session, form *forms.EnvOfPolicyForm, orgId, projectId models.Id) *db.Session {

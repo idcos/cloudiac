@@ -15,13 +15,14 @@ import (
 	"cloudiac/portal/services/logstorage"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 // CreatePolicy 创建策略
@@ -208,7 +209,7 @@ func SearchPolicy(c *ctx.ServiceContext, form *forms.SearchPolicyForm) (interfac
 	}
 	if summaries, err := services.PolicySummary(c.DB(), policyIds, consts.ScopePolicy); err != nil {
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	} else if summaries != nil && len(summaries) > 0 {
+	} else if len(summaries) > 0 {
 		sumMap := make(map[string]*services.PolicyScanSummary, len(policyIds))
 		for idx, summary := range summaries {
 			sumMap[string(summary.Id)+summary.Status] = summaries[idx]
@@ -358,6 +359,10 @@ func SearchPolicySuppress(c *ctx.ServiceContext, form *forms.SearchPolicySuppres
 
 type RespPolicyTpl struct {
 	models.Template
+
+	// FIXME: "是否开启检测" 当前无标识
+	Status string `json:"status" gorm:"column:scan_task_status"`
+
 	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
 	Summary
 }
@@ -365,7 +370,7 @@ type RespPolicyTpl struct {
 func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (interface{}, e.Error) {
 	respPolicyTpls := make([]RespPolicyTpl, 0)
 	tplIds := make([]models.Id, 0)
-	query := services.SearchPolicyTpl(c.DB(), form.OrgId, form.Q)
+	query := services.SearchPolicyTpl(c.DB(), form.OrgId, form.TplId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	groupM := make(map[models.Id][]services.NewPolicyGroup, 0)
 	if err := p.Scan(&respPolicyTpls); err != nil {
@@ -399,7 +404,7 @@ func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (in
 	// 扫描结果统计信息
 	if summaries, err := services.PolicyTargetSummary(c.DB(), tplIds, consts.ScopeTemplate); err != nil {
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	} else if summaries != nil && len(summaries) > 0 {
+	} else if len(summaries) > 0 {
 		sumMap := make(map[string]*services.PolicyScanSummary, len(tplIds))
 		for idx, summary := range summaries {
 			sumMap[string(summary.Id)+summary.Status] = summaries[idx]
@@ -429,14 +434,19 @@ func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (in
 
 type RespPolicyEnv struct {
 	models.EnvDetail
+
+	Status       string                    `json:"status" gorm:"column:scan_task_status"`
 	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
 	Summary
+
+	// 以下字段不返回
+	TaskStatus string `json:"-" gorm:"-"` // 环境部署任务状态
 }
 
 func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (interface{}, e.Error) {
 	respPolicyEnvs := make([]RespPolicyEnv, 0)
 	envIds := make([]models.Id, 0)
-	query := services.SearchPolicyEnv(c.DB(), form.OrgId, form.ProjectId, form.Q)
+	query := services.SearchPolicyEnv(c.DB(), form.OrgId, form.ProjectId, form.EnvId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	groupM := make(map[models.Id][]services.NewPolicyGroup, 0)
 
@@ -472,7 +482,7 @@ func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (in
 	// 扫描结果统计信息
 	if summaries, err := services.PolicyTargetSummary(c.DB(), envIds, consts.ScopeEnv); err != nil {
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	} else if summaries != nil && len(summaries) > 0 {
+	} else if len(summaries) > 0 {
 		sumMap := make(map[string]*services.PolicyScanSummary, len(envIds))
 		for idx, summary := range summaries {
 			sumMap[string(summary.Id)+summary.Status] = summaries[idx]
@@ -896,7 +906,7 @@ func PolicyGroupScanTasks(c *ctx.ServiceContext, form *forms.PolicyLastTasksForm
 	}
 	if summaries, err := services.PolicySummary(c.DB(), policyIds, consts.ScopeTask); err != nil {
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	} else if summaries != nil && len(summaries) > 0 {
+	} else if len(summaries) > 0 {
 		sumMap := make(map[string]*services.PolicyScanSummary, len(policyIds))
 		for idx, summary := range summaries {
 			sumMap[string(summary.Id)+summary.Status] = summaries[idx]

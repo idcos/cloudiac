@@ -165,7 +165,7 @@ func autoMigrate(m Modeler, sess *db.Session) {
 func Init(migrate bool) {
 	autoMigration = migrate
 
-	sess := db.Get().Set("gorm:table_options", "ENGINE=InnoDB").Begin().Debug()
+	sess := db.Get().Set("gorm:table_options", "ENGINE=InnoDB").Begin()
 	defer func() {
 		logger := logs.Get().WithField("func", "models.Init")
 		if r := recover(); r != nil {

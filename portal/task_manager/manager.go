@@ -18,11 +18,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"os"
 	"runtime/debug"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -929,6 +930,22 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 		// 极端情况下任务未执行好过重复执行，所以先设置状态，后发起调用
 		if err := changeTaskStatus(models.TaskRunning, ""); err != nil {
 			return
+		}
+	}
+
+	if task.Type == common.TaskTypeScan {
+		if task.EnvId != "" { // 环境扫描
+			if err := services.UpdateEnvModel(m.db, task.EnvId,
+				models.Env{LastScanTaskId: task.Id}); err != nil {
+				logger.Errorf("update env lastScanTaskId: %v", err)
+				return
+			}
+		} else if task.TplId != "" { // 模板扫描
+			if _, err := m.db.Where("id = ?", task.TplId).
+				Update(&models.Template{LastScanTaskId: task.Id}); err != nil {
+				logger.Errorf("update template lastScanTaskId: %v", err)
+				return
+			}
 		}
 	}
 
