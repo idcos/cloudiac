@@ -62,6 +62,9 @@ const (
 	PolicyStatusFailed     = "failed"
 	PolicyStatusViolated   = "violated"
 	PolicyStatusSuppressed = "suppressed"
+
+	PolicySuppressTypeSource = "source"
+	PolicySuppressTypePolicy = "policy"
 )
 
 var (

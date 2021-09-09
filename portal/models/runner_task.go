@@ -33,7 +33,7 @@ type ScanTask struct {
 	// 模板扫描任务参数
 	OrgId     Id `json:"orgId" gorm:"size:32;not null"` // 组织ID
 	ProjectId Id `json:"projectId" gorm:"size:32"`      // 项目ID
-	TplId     Id `json:"TplId" gorm:"size:32"`          // 模板ID
+	TplId     Id `json:"tplId" gorm:"size:32"`          // 模板ID
 	EnvId     Id `json:"envId" gorm:"size:32"`          // 环境ID
 
 	Name      string `json:"name" gorm:"not null;comment:任务名称"` // 任务名称

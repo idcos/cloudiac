@@ -157,6 +157,8 @@ const (
 	PolicyResultNotExist         = 31231
 	PolicyRegoMissingComment     = 31410
 	PolicyErrorParseTemplate     = 31510
+	PolicySuppressNotExist       = 31610
+	PolicySuppressAlreadyExist   = 31611
 
 	/// terraform 313
 
@@ -438,5 +440,13 @@ var errorMsgs = map[int]map[string]string{
 
 	PolicyRegoMissingComment: {
 		"zh-cn": "Rego脚本头缺失",
+	},
+
+	PolicySuppressNotExist: {
+		"zh-cn": "屏蔽记录不存在",
+	},
+
+	PolicySuppressAlreadyExist: {
+		"zh-cn": "屏蔽记录已存在",
 	},
 }

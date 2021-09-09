@@ -88,3 +88,43 @@ func (Policy) UpdatePolicyTpl(c *ctx.GinRequest) {
 	form.Scope = consts.ScopeTemplate
 	c.JSONResult(apps.UpdatePolicyRel(c.Service(), form))
 }
+
+// TplOfPolicy 云模板策略详情
+// @Tags 合规/云模板
+// @Summary 云模板策略详情
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
+// @Param templateId path string true "云模板id"
+// @Router /policies/templates/{templateId}/policies [get]
+// @Success 200 {object} ctx.JSONResult{result=models.Policy}
+func (Policy) TplOfPolicy(c *ctx.GinRequest) {
+	form := &forms.TplOfPolicyForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.TplOfPolicy(c.Service(), form))
+}
+
+// ValidTplOfPolicy 云模板策略详情
+// @Tags 合规/云模板
+// @Summary 云模板策略详情
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
+// @Param templateId path string true "云模板id"
+// @Router /policies/templates/{templateId}/policies [get]
+// @Success 200 {object} ctx.JSONResult{result=models.Policy}
+func (Policy) ValidTplOfPolicy(c *ctx.GinRequest) {
+	form := &forms.TplOfPolicyForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.ValidTplOfPolicy(c.Service(), form))
+}

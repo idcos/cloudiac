@@ -121,3 +121,21 @@ func (b *PageForm) Order(query *db.Session) *db.Session {
 		return query.Order(fmt.Sprintf("`%s`", b.SortField()))
 	}
 }
+
+// OrderBy 生成 order by 语句
+func (b *PageForm) OrderBy() string {
+	if b.SortField() == "" {
+		return ""
+	}
+
+	if strings.Contains(b.SortField(), "`") {
+		logs.Get().Warnf("invalid sortField: %s", b.SortField())
+		return ""
+	}
+
+	if b.SortOrder() == "desc" {
+		return fmt.Sprintf("ORDER BY `%s` desc", b.SortField())
+	} else {
+		return fmt.Sprintf("ORDER BY `%s`", b.SortField())
+	}
+}

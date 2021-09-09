@@ -45,6 +45,26 @@ func (Policy) EnvOfPolicy(c *ctx.GinRequest) {
 	c.JSONResult(apps.EnvOfPolicy(c.Service(), form))
 }
 
+// ValidEnvOfPolicy 环境策略详情
+// @Tags 合规/环境
+// @Summary 环境策略详情
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
+// @Param envId path string true "环境id"
+// @Router /policies/envs/{envId}/valid_policies [get]
+// @Success 200 {object} ctx.JSONResult{result=models.Policy}
+func (Policy) ValidEnvOfPolicy(c *ctx.GinRequest) {
+	form := &forms.EnvOfPolicyForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.ValidEnvOfPolicy(c.Service(), form))
+}
+
 // UpdatePolicyEnv 修改环境与策略组关联
 // @Tags 合规/环境
 // @Summary 修改环境与策略组关联
