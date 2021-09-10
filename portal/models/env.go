@@ -68,6 +68,11 @@ type Env struct {
 
 	// 触发器设置
 	Triggers pq.StringArray `json:"triggers" gorm:"type:json" swaggertype:"array,string"` // 触发器。commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
+
+	// 任务重试
+	RetryNumber int  `json:"retryNumber" gorm:"size:32;default:3"` // 任务重试次数
+	RetryDelay  int  `json:"RetryDelay" gorm:"size:32;default:5"`  // 任务重试时间，单位为秒，默认值为0
+	RetryAble   bool `json:"retryAble" gorm:"default:false"`       // 是否允许任务进行重试
 }
 
 func (Env) TableName() string {

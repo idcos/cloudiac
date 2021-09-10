@@ -115,6 +115,10 @@ type Task struct {
 
 	// 任务执行结果，如 add/change/delete 的资源数量、outputs 等
 	Result TaskResult `json:"result" gorm:"type:json"` // 任务执行结果
+
+	RetryNumber int  `json:"retryNumber" gorm:"size:32;default:0"` // 任务重试次数
+	RetryDelay  int  `json:"retryDelay" gorm:"size:32;default:0"`  // 每次任务重试时间，单位为秒
+	RetryAble   bool `json:""`
 }
 
 func (Task) TableName() string {
@@ -221,16 +225,17 @@ type TaskStepBody struct {
 }
 
 const (
-	TaskStepInit     = common.TaskStepInit
-	TaskStepPlan     = common.TaskStepPlan
-	TaskStepApply    = common.TaskStepApply
-	TaskStepDestroy  = common.TaskStepDestroy
-	TaskStepPlay     = common.TaskStepPlay
-	TaskStepCommand  = common.TaskStepCommand
-	TaskStepCollect  = common.TaskStepCollect
-	TaskStepTfParse  = common.TaskStepTfParse
-	TaskStepTfScan   = common.TaskStepTfScan
-	TaskStepScanInit = common.TaskStepScanInit
+	TaskStepInit               = common.TaskStepInit
+	TaskStepPlan               = common.TaskStepPlan
+	TaskStepApply              = common.TaskStepApply
+	TaskStepDestroy            = common.TaskStepDestroy
+	TaskStepPlay               = common.TaskStepPlay
+	TaskStepCommand            = common.TaskStepCommand
+	TaskStepCollect            = common.TaskStepCollect
+	TaskStepTfParse            = common.TaskStepTfParse
+	TaskStepTfScan             = common.TaskStepTfScan
+	TaskStepScanInit           = common.TaskStepScanInit
+	TaskStepResultScanExitCode = common.TaskStepResultScanExitCode
 
 	TaskStepPending   = common.TaskStepPending
 	TaskStepApproving = common.TaskStepApproving
@@ -257,7 +262,10 @@ type TaskStep struct {
 	EndAt     *Time  `json:"endAt" gorm:"type:datetime"`
 	LogPath   string `json:"logPath" gorm:""`
 
-	ApproverId Id `json:"approverId" gorm:"size:32;not null"` // 审批者用户 id
+	ApproverId        Id    `json:"approverId" gorm:"size:32;not null"`         // 审批者用户 id
+	CurrentRetryCount int   `json:"currentRetryCount" gorm:"size:32;default:0"` // 当前重试次数
+	NextRetryTime     int64 `json:"nextRetryTime" gorm:"default:0"`             // 下次重试时间
+	RetryNumber       int   `json:"retryNumber" gorm:"size:32;default:0"`       // 每个步骤可以重试的总次数
 }
 
 func (TaskStep) TableName() string {

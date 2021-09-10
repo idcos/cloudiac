@@ -78,7 +78,7 @@ func IsTerraformStep(typ string) bool {
 		models.TaskStepApply, models.TaskStepDestroy)
 }
 
-// ChangeTaskStepStatus 修改步骤状态及 startAt、endAt，并同步修改任务状态
+// ChangeTaskStepStatus 修改步骤状态，下次重试时间，重试次数及 startAt、endAt，并同步修改任务状态
 func ChangeTaskStepStatus(dbSess *db.Session, task models.Tasker, taskStep *models.TaskStep, status, message string) e.Error {
 
 	if taskStep.Status == status && message == "" {
@@ -132,6 +132,7 @@ func createTaskStep(tx *db.Session, task models.Task, stepBody models.TaskStepBo
 		Status:       models.TaskStepPending,
 		Message:      "",
 		NextStep:     nextStep,
+		RetryNumber:  task.RetryNumber,
 	}
 	s.Id = models.NewId("step")
 	s.LogPath = s.GenLogPath()

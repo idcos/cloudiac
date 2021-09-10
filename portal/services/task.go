@@ -81,6 +81,8 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 			Message:  "",
 			CurrStep: 0,
 		},
+		RetryDelay:  pt.RetryDelay,
+		RetryNumber: pt.RetryNumber,
 	}
 
 	task.Id = models.NewId("run")

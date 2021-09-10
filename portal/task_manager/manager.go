@@ -398,7 +398,6 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		taskStartFailed(errors.Wrap(err, "get task steps"))
 		return
 	}
-
 	var step *models.TaskStep
 	for _, step = range steps {
 		if step.Index < task.CurrStep {
@@ -646,7 +645,7 @@ func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq
 		}
 	}()
 
-	changeStepStatus := func(status, message string) {
+	changeStepStatusAndStepRetryTimes := func(status, message string, step *models.TaskStep) {
 		var er error
 		if er = services.ChangeTaskStepStatus(m.db, task, step, status, message); er != nil {
 			er = errors.Wrap(er, "update step status error")
@@ -657,7 +656,7 @@ func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq
 
 	if !task.AutoApprove && !step.IsApproved() {
 		logger.Infof("waitting task step approve")
-		changeStepStatus(models.TaskStepApproving, "")
+		changeStepStatusAndStepRetryTimes(models.TaskStepApproving, "", step)
 
 		var newStep *models.TaskStep
 		if newStep, err = WaitTaskStepApprove(ctx, m.db, step.TaskId, step.Index); err != nil {
@@ -670,7 +669,7 @@ func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq
 			if err == ErrTaskStepRejected {
 				status = models.TaskStepRejected
 			}
-			changeStepStatus(status, err.Error())
+			changeStepStatusAndStepRetryTimes(status, err.Error(), step)
 			return err
 		}
 		step = newStep
@@ -684,22 +683,52 @@ loop:
 			return ctx.Err()
 		default:
 		}
+		if step.NextRetryTime != 0 {
+			sleepTime := step.NextRetryTime - time.Now().Unix()
+			// 如果没有到达重试时间，则时间等待缺少时间
+			if sleepTime > 0 {
+				time.Sleep(time.Duration(sleepTime) * time.Second)
+			}
+		}
 
 		switch step.Status {
-		case models.TaskStepPending, models.TaskStepApproving:
+		case models.TaskStepPending, models.TaskApproving:
 			// 先将步骤置为 running 状态，然后再发起调用，保证步骤不会重复执行
-			changeStepStatus(models.TaskStepRunning, "")
-			logger.Infof("start task step %d(%s)", step.Index, step.Type)
-			if err = StartTaskStep(taskReq, *step); err != nil {
-				logger.Errorf("start task step error: %s", err.Error())
-				changeStepStatus(models.TaskStepFailed, err.Error())
-				return err
+			changeStepStatusAndStepRetryTimes(models.TaskStepRunning, "", step)
+			if err, retryAble := StartTaskStep(taskReq, *step); err != nil {
+				logger.Infof("start task step %d(%s)", step.Index, step.Type)
+				// 如果是可重试错误，并且任务设定可以重试, 则运行重试逻辑
+				if retryAble && task.RetryAble {
+					if step.RetryNumber > 0 && step.CurrentRetryCount < step.RetryNumber {
+						// 下次重试时间为当前任务失败时间点加任务设置重试间隔时间。
+						step.NextRetryTime = time.Now().Unix() + int64(task.RetryDelay)
+						step.CurrentRetryCount += 1
+						message := fmt.Sprintf("Task step start failed and try again. The current number of retries is %d", step.CurrentRetryCount)
+						changeStepStatusAndStepRetryTimes(models.TaskStepPending, message, step)
+					}
+				} else {
+					changeStepStatusAndStepRetryTimes(models.TaskStepFailed, err.Error(), step)
+					return err
+				}
 			}
 		case models.TaskStepRunning:
-			if _, err = WaitTaskStep(ctx, m.db, task, step); err != nil {
+			stepResult, err := WaitTaskStep(ctx, m.db, task, step)
+			if err != nil {
 				logger.Errorf("wait task result error: %v", err)
-				changeStepStatus(models.TaskStepFailed, err.Error())
+				changeStepStatusAndStepRetryTimes(models.TaskStepFailed, err.Error(), step)
 				return err
+			}
+			// 合规检测步骤失败，不需要重试，跳出循环
+			if step.Type == models.TaskStepTfScan && stepResult.Result.ExitCode == models.TaskStepResultScanExitCode {
+				break loop
+			}
+			if stepResult.Status == models.TaskStepFailed {
+				if task.RetryAble && step.RetryNumber > 0 && step.CurrentRetryCount < step.RetryNumber {
+					step.NextRetryTime = time.Now().Unix() + int64(task.RetryDelay)
+					step.CurrentRetryCount += 1
+					message := fmt.Sprintf("Task step start failed and try again. The current number of retries is %d", step.CurrentRetryCount)
+					changeStepStatusAndStepRetryTimes(models.TaskStepPending, message, step)
+				}
 			}
 		default:
 			break loop
@@ -1108,7 +1137,7 @@ loop:
 			// 先将步骤置为 running 状态，然后再发起调用，保证步骤不会重复执行
 			changeStepStatus(models.TaskStepRunning, "")
 			logger.Infof("start task step %d(%s)", step.Index, step.Type)
-			if err = StartTaskStep(taskReq, *step); err != nil {
+			if err, _ = StartTaskStep(taskReq, *step); err != nil {
 				logger.Errorf("start task step error: %s", err.Error())
 				changeStepStatus(models.TaskStepFailed, err.Error())
 				return err
