@@ -29,6 +29,7 @@ func (p *ChangePassword) Execute(args []string) error {
 
 	configs.Init(opt.Config)
 	db.Init(configs.Get().Mysql)
+	models.Init(false)
 
 	password := args[0]
 	user, err := services.GetUserByEmail(db.Get(), p.Email)

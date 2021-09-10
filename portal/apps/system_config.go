@@ -44,7 +44,7 @@ func UpdateSystemConfig(c *ctx.ServiceContext, form *forms.UpdateSystemConfigFor
 	for _, v := range form.SystemCfg {
 		attrs := models.Attrs{}
 		attrs["value"] = v.Value
-		if _, err = services.UpdateSystemConfig(tx, v.Name, attrs); err != nil {
+		if _, err := services.UpdateSystemConfig(tx, v.Name, attrs); err != nil {
 			_ = tx.Rollback()
 			return nil, err
 		}

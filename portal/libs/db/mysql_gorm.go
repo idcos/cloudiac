@@ -88,10 +88,6 @@ func (s *Session) RemoveIndex(table string, indexName string) error {
 }
 
 func (s *Session) DropColumn(model interface{}, columns ...string) error {
-	if !s.isModel(model) {
-		return fmt.Errorf("'model' must be a 'struct', not '%T'", model)
-	}
-
 	migrator := s.db.Migrator()
 	for _, col := range columns {
 		if migrator.HasColumn(model, col) {
