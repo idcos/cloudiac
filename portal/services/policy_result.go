@@ -135,7 +135,7 @@ func UpdateScanResult(tx *db.Session, task models.Tasker, result TsResult, taskF
 // 当存在相同名称当策略时，扫描结果可能不包含在结果集里面，这些策略扫描结果一律标记为 failed
 func finishPendingScanResult(tx *db.Session, task models.Tasker, message string) e.Error {
 	table := models.PolicyResult{}.TableName()
-	sql := fmt.Sprintf("UPDATE %s SET status = ?, message = ? WHERE task_id = ? AND status = '?'", table)
+	sql := fmt.Sprintf("UPDATE %s SET status = ?, message = ? WHERE task_id = ? AND status = ?", table)
 	args := []interface{}{common.PolicyStatusFailed, message, task.GetId(), common.PolicyStatusPending}
 	if _, err := tx.Exec(sql, args...); err != nil {
 		return e.New(e.DBError, err)

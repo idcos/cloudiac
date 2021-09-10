@@ -16,14 +16,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
-	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/pkg/errors"
 )
 
 func GetTask(dbSess *db.Session, id models.Id) (*models.Task, e.Error) {
@@ -284,7 +285,8 @@ func ChangeTaskStatusWithStep(dbSess *db.Session, task models.Tasker, step *mode
 
 // ChangeTaskStatus 修改任务状态(同步修改 StartAt、EndAt 等)，并同步修改 env 状态
 func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message string) e.Error {
-	if task.Status == status && message == "" {
+	preStatus := task.Status
+	if preStatus == status && message == "" {
 		return nil
 	}
 
@@ -303,7 +305,9 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 		return e.AutoNew(err, e.DBError)
 	}
 
-	TaskStatusChangeSendMessage(task, status)
+	if preStatus != status {
+		TaskStatusChangeSendMessage(task, status)
+	}
 
 	step, er := GetTaskStep(dbSess, task.Id, task.CurrStep)
 	if er != nil {
@@ -728,8 +732,6 @@ func fetchRunnerTaskStepLog(ctx context.Context, runnerId string, step *models.T
 }
 
 func TaskStatusChangeSendMessage(task *models.Task, status string) {
-	logs.Get().Infof("send massage to")
-
 	dbSess := db.Get()
 	env, _ := GetEnv(dbSess, task.EnvId)
 	tpl, _ := GetTemplateById(dbSess, task.TplId)
@@ -745,6 +747,8 @@ func TaskStatusChangeSendMessage(task *models.Task, status string) {
 		Task:      task,
 		EventType: consts.TaskStatusToEventType[status],
 	})
+
+	logs.Get().WithField("taskId", task.Id).Infof("new event: %s", ns.EventType)
 	ns.SendMessage()
 }
 
@@ -767,7 +771,7 @@ func ChangeScanTaskStatus(dbSess *db.Session, task *models.ScanTask, status, mes
 		task.EndAt = &now
 	}
 
-	logs.Get().WithField("taskId", task.Id).Infof("change task to '%s'", status)
+	logs.Get().WithField("taskId", task.Id).Infof("change scan task to '%s'", status)
 	if _, err := dbSess.Model(task).Update(task); err != nil {
 		return e.AutoNew(err, e.DBError)
 	}

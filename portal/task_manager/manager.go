@@ -435,12 +435,13 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		}
 	}
 
-	logger.Infof("task done, status: %s", task.Status)
+	logger.Infof("run task done")
 	return nil
 }
 
 func (m *TaskManager) processTaskDone(task *models.Task) {
 	logger := m.logger.WithField("func", "processTaskDone").WithField("taskId", task.Id)
+	logger.Debugln("start process task done")
 
 	dbSess := m.db
 	read := func(path string) ([]byte, error) {
@@ -603,7 +604,8 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 		}
 	}
 
-	if !lastStep.IsRejected() { // 任务被审批驳回时会即时更新状态，且不会执行资源统计步骤
+	// 任务被审批驳回时会即时更新状态，且不会执行资源统计步骤，所以不需要执行下面这段逻辑
+	if !lastStep.IsRejected() {
 		if task.IsEffectTask() {
 			if err := processState(); err != nil {
 				logger.Errorf("process task state: %v", err)
@@ -1006,7 +1008,7 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 		}
 	}
 
-	logger.Infof("task done, status: %s", task.Status)
+	logger.Infof("run scan task done")
 	return nil
 }
 
