@@ -123,3 +123,23 @@ func (Policy) EnvScanResult(c *ctx.GinRequest) {
 	form.Scope = consts.ScopeEnv
 	c.JSONResult(apps.PolicyScanResult(c.Service(), form))
 }
+
+// EnablePolicyEnv 启用环境扫描
+// @Tags 合规/环境
+// @Summary 启用环境扫描
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param json body forms.EnableScanForm true "parameter"
+// @Param envId path string true "环境ID"
+// @Router /policies/envs/{envId}/enabled [put]
+// @Success 200 {object} ctx.JSONResult
+func (Policy) EnablePolicyEnv(c *ctx.GinRequest) {
+	form := &forms.EnableScanForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	form.Scope = consts.ScopeEnv
+	c.JSONResult(apps.EnablePolicyScanRel(c.Service(), form))
+}

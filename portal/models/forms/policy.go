@@ -93,6 +93,14 @@ type UpdatePolicyRelForm struct {
 	Scope          string      `json:"-" swaggerignore:"true" binding:""`
 }
 
+type EnableScanForm struct {
+	BaseForm
+
+	Id      models.Id `uri:"id" binding:"" example:"tpl-c3ek0co6n88ldvq1n6ag"` // ID
+	Scope   string    `json:"-" swaggerignore:"true" binding:""`
+	Enabled bool      `json:"enabled" binding:"" example:"true"` // 是否启用扫描
+}
+
 type ScanTemplateForm struct {
 	BaseForm
 

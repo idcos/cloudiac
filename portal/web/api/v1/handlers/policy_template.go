@@ -128,3 +128,23 @@ func (Policy) ValidTplOfPolicy(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.ValidTplOfPolicy(c.Service(), form))
 }
+
+// EnablePolicyTpl 启用云模板扫描
+// @Tags 合规/云模板
+// @Summary 启用云模板扫描
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param json body forms.EnableScanForm true "parameter"
+// @Param tplId path string true "云模板ID"
+// @Router /policies/templates/{tplId}/enabled [put]
+// @Success 200 {object} ctx.JSONResult
+func (Policy) EnablePolicyTpl(c *ctx.GinRequest) {
+	form := &forms.EnableScanForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	form.Scope = consts.ScopeTemplate
+	c.JSONResult(apps.EnablePolicyScanRel(c.Service(), form))
+}
