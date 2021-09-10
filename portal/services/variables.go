@@ -3,7 +3,6 @@
 package services
 
 import (
-	"cloudiac/common"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
@@ -136,13 +135,13 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 	scopes := make([]string, 0)
 	switch scope {
 	case consts.ScopeEnv:
-		scopes = common.EnvScopeEnv
+		scopes = consts.EnvScopeEnv
 	case consts.ScopeTemplate:
-		scopes = common.EnvScopeTpl
+		scopes = consts.EnvScopeTpl
 	case consts.ScopeProject:
-		scopes = common.EnvScopeProject
+		scopes = consts.EnvScopeProject
 	case consts.ScopeOrg:
-		scopes = common.EnvScopeOrg
+		scopes = consts.EnvScopeOrg
 	}
 
 	// 将组织下所有的变量查询，在代码处理变量的继承关系及是否要应用该变量

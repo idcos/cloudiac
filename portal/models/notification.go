@@ -3,6 +3,8 @@
 package models
 
 import (
+	"cloudiac/portal/libs/db"
+
 	"github.com/lib/pq"
 )
 
@@ -12,11 +14,6 @@ const (
 	NotificationTypeWeChat   = "wechat"
 	NotificationTypeSlack    = "slack"
 	NotificationTypeDingTalk = "dingtalk"
-
-	EventTaskFailed    = "task.failed"
-	EventTaskComplete  = "task.complete"
-	EventTaskRunning   = "task.running"
-	EventTaskApproving = "task.approving"
 )
 
 // 通知类型 email, webhook, 钉钉， 企业微信，slack
@@ -42,10 +39,17 @@ func (Notification) TableName() string {
 type NotificationEvent struct {
 	AutoUintIdModel
 
-	EventType      string `json:"eventType" form:"eventType"  gorm:"type:enum('failed', 'complete', 'approving', 'running');default:'running';comment:事件类型"`
+	EventType      string `json:"eventType" form:"eventType"  gorm:"type:enum('task.failed', 'task.complete', 'task.approving', 'task.running');default:'task.running';comment:事件类型"`
 	NotificationId Id     `json:"notificationId" form:"notificationId" gorm:"size:32;not null"`
 }
 
 func (NotificationEvent) TableName() string {
 	return "iac_notification_event"
+}
+
+func (NotificationEvent) Migrate(tx *db.Session) error {
+	if err := tx.ModifyModelColumn(&NotificationEvent{}, "event_type"); err != nil {
+		return err
+	}
+	return nil
 }

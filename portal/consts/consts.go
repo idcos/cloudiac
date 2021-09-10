@@ -2,7 +2,10 @@
 
 package consts
 
-import "time"
+import (
+	"cloudiac/common"
+	"time"
+)
 
 const (
 	LowerCaseLetter = "abcdefghijklmnopqrstuvwxyz"
@@ -98,11 +101,21 @@ const (
 	EnvTriggerPRMR   = "prmr"
 	EnvTriggerCommit = "commit"
 
+	EventTaskFailed    = "task.failed"
+	EventTaskComplete  = "task.complete"
+	EventTaskRunning   = "task.running"
+	EventTaskApproving = "task.approving"
+
 	DefaultTfMirror   = "https://releases.hashicorp.com/terraform"
 	HttpClientTimeout = 20
 )
 
 var (
+	EnvScopeEnv     = []string{ScopeEnv, ScopeTemplate, ScopeProject, ScopeOrg}
+	EnvScopeTpl     = []string{ScopeTemplate, ScopeOrg}
+	EnvScopeProject = []string{ScopeProject, ScopeOrg}
+	EnvScopeOrg     = []string{ScopeOrg}
+
 	StatusTranslation = map[string]string{
 		"complete": "成功",
 		"failed":   "失败",
@@ -118,11 +131,12 @@ var (
 		"v0.15.5",
 		"v1.0.5",
 	}
+
 	TaskStatusToEventType = map[string]string{
-		"complete":  "complete",
-		"failed":    "failed",
-		"running":   "running",
-		"approving": "approving",
-		"rejected":  "failed",
+		common.TaskComplete:  EventTaskComplete,
+		common.TaskFailed:    EventTaskFailed,
+		common.TaskRunning:   EventTaskRunning,
+		common.TaskApproving: EventTaskApproving,
+		common.TaskRejected:  EventTaskFailed,
 	}
 )

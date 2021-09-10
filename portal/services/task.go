@@ -16,14 +16,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
-	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/pkg/errors"
 )
 
 func GetTask(dbSess *db.Session, id models.Id) (*models.Task, e.Error) {
@@ -726,8 +727,6 @@ func fetchRunnerTaskStepLog(ctx context.Context, runnerId string, step *models.T
 }
 
 func TaskStatusChangeSendMessage(task *models.Task, status string) {
-	logs.Get().Infof("send massage to")
-
 	dbSess := db.Get()
 	env, _ := GetEnv(dbSess, task.EnvId)
 	tpl, _ := GetTemplateById(dbSess, task.TplId)
@@ -743,6 +742,8 @@ func TaskStatusChangeSendMessage(task *models.Task, status string) {
 		Task:      task,
 		EventType: consts.TaskStatusToEventType[status],
 	})
+
+	logs.Get().WithField("taskId", task.Id).Infof("new event: %s", ns.EventType)
 	ns.SendMessage()
 }
 

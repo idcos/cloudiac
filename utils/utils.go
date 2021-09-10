@@ -16,7 +16,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io"
 	"math"
 	"math/big"
@@ -25,12 +24,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime/debug"
 	"sort"
 	"strings"
 	"syscall"
 	"text/template"
 	"time"
+
+	"github.com/gin-gonic/gin"
 
 	"github.com/gofrs/uuid"
 	"github.com/rs/xid"
@@ -317,17 +317,6 @@ func MustJSONIndent(v interface{}, indent string) []byte {
 	return bs
 }
 
-func RecoverPanic(logger logs.Logger, fn func()) {
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Errorf("panic: %v", r)
-			logger.Errorf("%s", string(debug.Stack()))
-		}
-	}()
-
-	fn()
-}
-
 func GenGuid(v string) string {
 	guid := xid.New()
 	guidStr := guid.String()
@@ -566,4 +555,21 @@ func GetUrlParams(uri string) url.Values {
 	//fmt.Println(u.Path)     // 返回路径部分
 	//fmt.Println(u.RawQuery) // 返回url的参数部分
 	return u.Query() // 以url.Values数据类型的形式返回url参数部分,可以根据参数名读写参数
+}
+
+// RecoverdCall 调用 fn，并 recover panic
+func RecoverdCall(fn func(), recoverFuncs ...func(error)) {
+	recoverFunc := func(err error) {
+		fmt.Printf("recoverd panic: %v", err)
+	}
+	if len(recoverFuncs) > 0 {
+		recoverFunc = recoverFuncs[0]
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			recoverFunc(fmt.Errorf("%v", r))
+		}
+	}()
+	fn()
 }
