@@ -83,7 +83,7 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 	taskDeadline := time.Time(*step.StartAt).Add(time.Duration(task.StepTimeout) * time.Second)
 
 	// 当前版本实现中需要 portal 主动连接到 runner 获取状态
-	err = utils.RetryFunc(0, time.Second*10, func(retryN int) (retry bool, er error) {
+	err = utils.RetryFunc(10, time.Second*10, func(retryN int) (retry bool, er error) {
 		stepResult, er = pullTaskStepStatus(ctx, task, step, taskDeadline)
 		if er != nil {
 			logger.Errorf("pull task status error: %v, retry(%d)", er, retryN)
@@ -321,7 +321,7 @@ func WaitScanTaskStep(ctx context.Context, sess *db.Session, task *models.ScanTa
 	taskDeadline := time.Time(*step.StartAt).Add(time.Duration(task.StepTimeout) * time.Second)
 
 	// 当前版本实现中需要 portal 主动连接到 runner 获取状态
-	err = utils.RetryFunc(0, time.Second*10, func(retryN int) (retry bool, er error) {
+	err = utils.RetryFunc(10, time.Second*10, func(retryN int) (retry bool, er error) {
 		stepResult, er = pullTaskStepStatus(ctx, task, step, taskDeadline)
 		if er != nil {
 			logger.Errorf("pull task status error: %v, retry(%d)", er, retryN)

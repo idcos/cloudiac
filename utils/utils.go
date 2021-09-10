@@ -386,7 +386,7 @@ func RetryFunc(max int, maxDelay time.Duration, run func(retryN int) (retry bool
 			}
 
 			delay := time.Duration(retryCount) * 2 * time.Second
-			if delay > maxDelay { // 最大重试等待时长 10s
+			if delay > maxDelay {
 				delay = maxDelay
 			}
 			time.Sleep(delay)
