@@ -26,7 +26,7 @@ import (
 
 // StartTaskStep 启动任务的一步
 // 该函数会设置 taskReq 中 step 相关的数据
-func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error) {
+func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error, reTryAble bool) {
 	logger := logs.Get().
 		WithField("action", "StartTaskStep").
 		WithField("taskId", taskReq.TaskId).
@@ -38,7 +38,7 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error) 
 	var runnerAddr string
 	runnerAddr, err = services.GetRunnerAddress(taskReq.RunnerId)
 	if err != nil {
-		return errors.Wrapf(err, "get runner '%s' address", taskReq.RunnerId)
+		return errors.Wrapf(err, "get runner '%s' address", taskReq.RunnerId), true
 	}
 
 	requestUrl := utils.JoinURL(runnerAddr, consts.RunnerRunTaskURL)
@@ -51,18 +51,19 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error) 
 	respData, err := utils.HttpService(requestUrl, "POST", header, taskReq,
 		int(consts.RunnerConnectTimeout.Seconds()), int(consts.RunnerConnectTimeout.Seconds()))
 	if err != nil {
-		return err
+		return err, true
 	}
 
 	resp := runner.Response{}
 	if err := json.Unmarshal(respData, &resp); err != nil {
-		return fmt.Errorf("unexpected response: %s", respData)
+		return fmt.Errorf("unexpected response: %s", respData), false
 	}
 	logger.Debugf("runner response: %s", respData)
+
 	if resp.Error != "" {
-		return fmt.Errorf(resp.Error)
+		return fmt.Errorf(resp.Error), false
 	}
-	return nil
+	return nil, false
 }
 
 type waitStepResult struct {
@@ -80,7 +81,6 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 		return nil, fmt.Errorf("step not start")
 	}
 	taskDeadline := time.Time(*step.StartAt).Add(time.Duration(task.StepTimeout) * time.Second)
-
 	// 当前版本实现中需要 portal 主动连接到 runner 获取状态
 	err = utils.RetryFunc(0, time.Second*10, func(retryN int) (retry bool, er error) {
 		stepResult, er = pullTaskStepStatus(ctx, task, step, taskDeadline)
@@ -100,14 +100,12 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 	if err != nil {
 		return stepResult, err
 	}
-
 	if stepResult.Status != models.TaskRunning && task.Extra.Source == consts.WorkFlow {
 		k := kafka.Get()
 		if err := k.ConnAndSend(k.GenerateKafkaContent(task.Extra.TransitionId, stepResult.Status)); err != nil {
 			logger.Errorf("kafka send error: %v", err)
 		}
 	}
-
 	if len(stepResult.Result.LogContent) > 0 {
 		content := stepResult.Result.LogContent
 		content = logstorage.CutLogContent(content)
@@ -146,7 +144,6 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 			logger.WithField("path", path).Errorf("write task scan result json error: %v", err)
 		}
 	}
-
 	if er := services.ChangeTaskStepStatus(sess, task, step, stepResult.Status, ""); er != nil {
 		return stepResult, er
 	}

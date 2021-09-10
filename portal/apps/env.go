@@ -77,7 +77,6 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 			panic(r)
 		}
 	}()
-
 	env, err := services.CreateEnv(tx, models.Env{
 		OrgId:     c.OrgId,
 		ProjectId: c.ProjectId,
@@ -102,7 +101,10 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		AutoApproval:    form.AutoApproval,
 		StopOnViolation: form.StopOnViolation,
 
-		Triggers: form.Triggers,
+		Triggers:    form.Triggers,
+		RetryAble:   form.RetryAble,
+		RetryDelay:  form.RetryDelay,
+		RetryNumber: form.RetryNumber,
 	})
 	if err != nil && err.Code() == e.EnvAlreadyExists {
 		_ = tx.Rollback()
@@ -144,7 +146,10 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 			StepTimeout: form.Timeout,
 			RunnerId:    env.RunnerId,
 		},
-		TfVersion: tpl.TfVersion,
+		TfVersion:   tpl.TfVersion,
+		RetryNumber: env.RetryNumber,
+		RetryDelay:  env.RetryDelay,
+		RetryAble:   env.RetryAble,
 	})
 	if err != nil {
 		_ = tx.Rollback()
@@ -309,6 +314,15 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 
 	if form.HasKey("runnerId") {
 		attrs["runner_id"] = form.RunnerId
+	}
+	if form.HasKey("retryAble") {
+		attrs["retryAble"] = form.RetryAble
+	}
+	if form.HasKey("retryNumber") {
+		attrs["retryNumber"] = form.RetryNumber
+	}
+	if form.HasKey("retryDelay") {
+		attrs["retryDelay"] = form.RetryDelay
 	}
 
 	if form.HasKey("autoApproval") {

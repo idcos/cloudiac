@@ -37,13 +37,14 @@ const (
 
 	CollectTaskStepIndex = -1
 
-	TaskStepPending   = "pending"
-	TaskStepApproving = "approving"
-	TaskStepRejected  = "rejected"
-	TaskStepRunning   = "running"
-	TaskStepFailed    = "failed"
-	TaskStepComplete  = "complete"
-	TaskStepTimeout   = "timeout"
+	TaskStepPending            = "pending"
+	TaskStepApproving          = "approving"
+	TaskStepRejected           = "rejected"
+	TaskStepRunning            = "running"
+	TaskStepFailed             = "failed"
+	TaskStepComplete           = "complete"
+	TaskStepTimeout            = "timeout"
+	TaskStepResultScanExitCode = 3 // 合规任务返回该错误码，无需重试
 
 	TaskTypePlanName    = "plan"
 	TaskTypeApplyName   = "apply"

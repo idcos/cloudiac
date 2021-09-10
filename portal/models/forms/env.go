@@ -34,6 +34,11 @@ type CreateEnvForm struct {
 	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:""` // Ansible playbook 变量文件路径
 	Playbook     string    `form:"playbook" json:"playbook" binding:""`         // Ansible playbook 入口文件路径
 	KeyId        models.Id `form:"keyId" json:"keyId" binding:""`               // 部署密钥ID
+
+	RetryNumber int  `form:"retryNumber" json:"retryNumber" binding:""` // 重试总次数
+	RetryDelay  int  `form:"retryDelay" json:"retryDelay" binding:""`   // 重试时间间隔
+	RetryAble   bool `form:"retryAble" json:"retryAble" binding:""`     // 是否允许任务进行重试
+
 }
 
 type UpdateEnvForm struct {
@@ -51,7 +56,10 @@ type UpdateEnvForm struct {
 	AutoApproval    bool `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"` // 是否自动审批
 	StopOnViolation bool `form:"stopOnViolation" json:"stopOnViolation" enums:"true,false"`       // 合规不通过是否中止任务
 
-	Triggers []string `form:"triggers" json:"triggers" binding:""` // 启用触发器，触发器：commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
+	Triggers    []string `form:"triggers" json:"triggers" binding:""`       // 启用触发器，触发器：commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
+	RetryNumber int      `form:"retryNumber" json:"retryNumber" binding:""` // 重试总次数
+	RetryDelay  int      `form:"retryDelay" json:"retryDelay" binding:""`   // 重试时间间隔
+	RetryAble   bool     `form:"retryAble" json:"retryAble" binding:""`     // 是否允许任务进行重试
 }
 
 type DeployEnvForm struct {
