@@ -46,8 +46,7 @@ func (Policy) TemplateScanResult(c *ctx.GinRequest) {
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	form.Scope = consts.ScopeTemplate
-	c.JSONResult(apps.PolicyScanResult(c.Service(), form))
+	c.JSONResult(apps.PolicyScanResult(c.Service(), consts.ScopeTemplate, form))
 }
 
 // SearchPolicyTpl 查询云模板策略配置

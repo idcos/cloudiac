@@ -75,7 +75,6 @@ type waitStepResult struct {
 // param: taskDeadline 任务超时时间，达到这个时间后任务会被置为 timeout 状态
 func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step *models.TaskStep) (
 	stepResult *waitStepResult, err error) {
-
 	logger := logs.Get().WithField("action", "WaitTaskStep").WithField("taskId", task.Id)
 	if step.StartAt == nil {
 		return nil, fmt.Errorf("step not start")

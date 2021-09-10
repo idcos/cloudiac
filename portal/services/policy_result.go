@@ -143,23 +143,6 @@ func finishPendingScanResult(tx *db.Session, task models.Tasker, message string)
 	return nil
 }
 
-func GetLastScanTask(query *db.Session, envId models.Id, tplId models.Id) (*models.ScanTask, e.Error) {
-	scanTask := models.ScanTask{}
-	q := query.Model(models.ScanTask{})
-	if envId != "" {
-		q = q.Where("env_id = ?", envId)
-	} else {
-		q = q.Where("tpl_id = ?", tplId)
-	}
-	if err := q.Last(&scanTask); err != nil {
-		if e.IsRecordNotFound(err) {
-			return nil, e.New(e.TaskNotExists, err)
-		}
-		return nil, e.New(e.DBError, fmt.Errorf("query scan error: %v", err))
-	}
-	return &scanTask, nil
-}
-
 func GetPolicyGroupScanTasks(query *db.Session, policyGroupId models.Id) *db.Session {
 	t := models.PolicyResult{}.TableName()
 	subQuery := query.Model(models.PolicyResult{}).

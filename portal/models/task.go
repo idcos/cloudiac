@@ -228,7 +228,7 @@ const (
 	TaskStepPlay     = common.TaskStepPlay
 	TaskStepCommand  = common.TaskStepCommand
 	TaskStepCollect  = common.TaskStepCollect
-	TaskStepTfParse  = common.TaskStepTfScan
+	TaskStepTfParse  = common.TaskStepTfParse
 	TaskStepTfScan   = common.TaskStepTfScan
 	TaskStepScanInit = common.TaskStepScanInit
 

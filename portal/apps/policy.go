@@ -590,24 +590,25 @@ type PolicyResult struct {
 	FixSuggestion   string `json:"fixSuggestion" example:"建议您创建一个专有网络..."`
 }
 
-func PolicyScanResult(c *ctx.ServiceContext, form *forms.PolicyScanResultForm) (interface{}, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("scan result %s %s", form.Scope, form.Id))
+func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicyScanResultForm) (interface{}, e.Error) {
+	c.AddLogField("action", fmt.Sprintf("scan result %s %s", scope, form.Id))
 	var (
-		envId models.Id
-		tplId models.Id
+		scanTask *models.ScanTask
+		err      error
 	)
-	if form.Scope == consts.ScopeEnv {
-		envId = form.Id
+	if scope == consts.ScopeEnv {
+		scanTask, err = services.GetEnvLastScanTask(c.DB(), form.Id)
+	} else if scope == consts.ScopeTemplate {
+		scanTask, err = services.GetTplLastScanTask(c.DB(), form.Id)
 	} else {
-		tplId = form.Id
+		return nil, e.New(e.InternalError, fmt.Errorf("unknown policy scan result scope '%s'", scope))
 	}
-	scanTask, err := services.GetLastScanTask(c.DB(), envId, tplId)
+
 	if err != nil {
-		if err.Code() != e.TaskNotExists {
+		if e.IsRecordNotFound(err) {
 			return nil, nil
-		} else {
-			return nil, err
 		}
+		return nil, e.AutoNew(err, e.DBError)
 	}
 
 	query := services.QueryPolicyResult(c.DB(), scanTask.Id)

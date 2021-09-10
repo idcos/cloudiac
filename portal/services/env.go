@@ -191,3 +191,10 @@ func ParseTTL(ttl string) (time.Duration, error) {
 	}
 	return t, nil
 }
+
+func GetEnvLastScanTask(sess *db.Session, envId models.Id) (*models.ScanTask, error) {
+	task := models.ScanTask{}
+	scanTaskIdQuery := sess.Model(&models.Env{}).Where("id = ?", envId).Select("last_scan_task_id")
+	err := sess.Model(&models.ScanTask{}).Where("id = (?)", scanTaskIdQuery.Expr()).First(&task)
+	return &task, err
+}

@@ -218,8 +218,7 @@ type UpdatePolicySuppressForm struct {
 type PolicyScanResultForm struct {
 	PageForm
 
-	Id    models.Id `uri:"id"`
-	Scope string    `json:"-"`
+	Id models.Id `uri:"id" `
 }
 
 type PolicyScanReportForm struct {

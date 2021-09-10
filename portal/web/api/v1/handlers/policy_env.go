@@ -108,8 +108,7 @@ func (Policy) EnvScanResult(c *ctx.GinRequest) {
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	form.Scope = consts.ScopeEnv
-	c.JSONResult(apps.PolicyScanResult(c.Service(), form))
+	c.JSONResult(apps.PolicyScanResult(c.Service(), consts.ScopeEnv, form))
 }
 
 // EnablePolicyEnv 启用环境扫描
