@@ -96,7 +96,7 @@ type UpdatePolicyRelForm struct {
 type EnableScanForm struct {
 	BaseForm
 
-	Id      models.Id `uri:"id" binding:"" example:"tpl-c3ek0co6n88ldvq1n6ag"` // ID
+	Id      models.Id `uri:"id" swaggerignore:"true" binding:"" example:"tpl-c3ek0co6n88ldvq1n6ag"` // ID
 	Scope   string    `json:"-" swaggerignore:"true" binding:""`
 	Enabled bool      `json:"enabled" binding:"" example:"true"` // 是否启用扫描
 }
@@ -209,8 +209,7 @@ type PolicyErrorForm struct {
 
 type UpdatePolicySuppressForm struct {
 	BaseForm
-	Id           models.Id   `uri:"id"`
-	Scope        string      `json:"scope" example:"source" enums:"source,policy"`    // 屏蔽类型，source按来源屏蔽，policy屏蔽此策略
+	Id           models.Id   `uri:"id" swaggerignore:"true"`                          // 策略ID
 	Reason       string      `json:"reason" example:"测试环境无需检测"`                       // 屏蔽原因
 	AddSourceIds []models.Id `json:"addTargetIds" example:"env-c3ek0co6n88ldvq1n6ag"` // 添加屏蔽源ID列表
 	//RmSourceIds  []models.Id `json:"rmTargetIds" example:"env-c3ek0co6n88ldvq1n6ag"`  // 删除屏蔽源ID列表
@@ -219,17 +218,16 @@ type UpdatePolicySuppressForm struct {
 type PolicyScanResultForm struct {
 	PageForm
 
-	Id    models.Id `uri:"id" `
+	Id    models.Id `uri:"id"`
 	Scope string    `json:"-"`
 }
 
 type PolicyScanReportForm struct {
 	BaseForm
 
-	Id    models.Id `uri:"id" `
-	Scope string    `json:"-"`
-	From  time.Time `json:"from" form:"from" example:"2006-01-02T15:04:05Z07:00"` //  开始日期
-	To    time.Time `json:"to" form:"to" example:"2006-01-02T15:04:05Z07:00"`     // 结束日期
+	Id   models.Id `uri:"id" swaggerignore:"true"`                               // 策略/策略组ID
+	From time.Time `json:"from" form:"from" example:"2006-01-02T15:04:05Z07:00"` //  开始日期
+	To   time.Time `json:"to" form:"to" example:"2006-01-02T15:04:05Z07:00"`     // 结束日期
 }
 
 type PolicyTestForm struct {

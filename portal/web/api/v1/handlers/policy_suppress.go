@@ -7,13 +7,12 @@ import (
 )
 
 // UpdatePolicySuppress 更新策略屏蔽
-// @Tags 合规/策略
+// @Tags 合规/策略屏蔽
 // @Summary 更新策略屏蔽
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string false "项目ID"
+// @Param json body forms.UpdatePolicySuppressForm true "parameter"
 // @Param policyId path string true "策略id"
 // @Router /policies/{policyId}/suppress [post]
 // @Success 200 {object} ctx.JSONResult
@@ -26,13 +25,11 @@ func (Policy) UpdatePolicySuppress(c *ctx.GinRequest) {
 }
 
 // DeletePolicySuppress 删除策略屏蔽
-// @Tags 合规/策略
+// @Tags 合规/策略屏蔽
 // @Summary 删除策略屏蔽
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string false "项目ID"
 // @Param policyId path string true "策略id"
 // @Param suppressId path string true "屏蔽策略id"
 // @Router /policies/{policyId}/suppress/{suppressId} [delete]
@@ -46,17 +43,15 @@ func (Policy) DeletePolicySuppress(c *ctx.GinRequest) {
 }
 
 // SearchPolicySuppress 获取策略屏蔽列表
-// @Tags 合规/策略
+// @Tags 合规/策略屏蔽
 // @Summary 获取策略屏蔽列表。
 // @Description 获取策略屏蔽列表。该列表仅返回手动设置的策略屏蔽，不包含策略组屏蔽和环境/云模板禁用扫描导致的策略屏蔽。
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string false "项目ID"
 // @Param policyId path string true "策略id"
 // @Router /policies/{policyId}/suppress [get]
-// @Success 200 {object} ctx.JSONResult{result=[]apps.PolicySuppressResp}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.PolicySuppressResp}}
 func (Policy) SearchPolicySuppress(c *ctx.GinRequest) {
 	form := &forms.SearchPolicySuppressForm{}
 	if err := c.Bind(form); err != nil {
@@ -66,15 +61,16 @@ func (Policy) SearchPolicySuppress(c *ctx.GinRequest) {
 }
 
 // SearchPolicySuppressSource 获取策略屏蔽源列表
-// @Tags 合规/策略
+// @Tags 合规/策略屏蔽
 // @Summary 获取策略屏蔽列表。
-// @Description 获取策略屏蔽列表。该列表仅返回手动设置的策略屏蔽，不包含策略组屏蔽和环境/云模板禁用扫描导致的策略屏蔽。该列表自动过滤器已经屏蔽的源
+// @Description 获取策略屏蔽列表。该列表仅返回手动设置的策略屏蔽，
+// @Description 不包含策略组屏蔽和环境/云模板禁用扫描导致的策略屏蔽。
 // @Accept json
 // @Produce json
 // @Security AuthToken
 // @Param policyId path string true "策略id"
 // @Router /policies/{policyId}/suppress/sources [get]
-// @Success 200 {object} ctx.JSONResult{result=[]apps.PolicySuppressSourceResp}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.PolicySuppressSourceResp}}
 func (Policy) SearchPolicySuppressSource(c *ctx.GinRequest) {
 	form := &forms.SearchPolicySuppressSourceForm{}
 	if err := c.Bind(form); err != nil {
