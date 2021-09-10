@@ -267,8 +267,7 @@ func (Env) PolicyResult(c *ctx.GinRequest) {
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	form.Scope = consts.ScopeEnv
-	c.JSONResult(apps.PolicyScanResult(c.Service(), form))
+	c.JSONResult(apps.PolicyScanResult(c.Service(), consts.ScopeEnv, form))
 }
 
 // ResourceDetail 资源部署成功后信息详情
