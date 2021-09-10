@@ -13,6 +13,7 @@ import (
 	"cloudiac/portal/services"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 // CreatePolicyGroup 创建策略组
@@ -220,4 +221,131 @@ func OpPolicyAndPolicyGroupRel(c *ctx.ServiceContext, form *forms.OpnPolicyAndPo
 		return nil, e.New(e.DBError, err)
 	}
 	return nil, nil
+}
+
+type LastScanTaskResp struct {
+	models.ScanTask
+	TargetName  string `json:"targetName"`  // 检查目标
+	TargetType  string `json:"targetType"`  // 目标类型：环境/模板
+	OrgName     string `json:"orgName"`     // 组织名称
+	ProjectName string `json:"projectName"` // 项目
+	Creator     string `json:"creator"`     // 创建者
+	Summary
+}
+
+func PolicyGroupScanTasks(c *ctx.ServiceContext, form *forms.PolicyLastTasksForm) (interface{}, e.Error) {
+	query := services.GetPolicyGroupScanTasks(c.DB(), form.Id)
+
+	// 默认按创建时间逆序排序
+	if form.SortField() == "" {
+		query = query.Order("created_at DESC")
+	} else {
+		query = form.Order(query)
+	}
+	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
+	tasks := make([]*LastScanTaskResp, 0)
+	if err := p.Scan(&tasks); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	// 扫描结果统计信息
+	var policyIds []models.Id
+	for idx := range tasks {
+		policyIds = append(policyIds, tasks[idx].Id)
+	}
+	if summaries, err := services.PolicySummary(c.DB(), policyIds, consts.ScopeTask); err != nil {
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	} else if summaries != nil && len(summaries) > 0 {
+		sumMap := make(map[string]*services.PolicyScanSummary, len(policyIds))
+		for idx, summary := range summaries {
+			sumMap[string(summary.Id)+summary.Status] = summaries[idx]
+		}
+		for idx, policyResp := range tasks {
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusPassed]; ok {
+				tasks[idx].Passed = summary.Count
+			}
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusViolated]; ok {
+				tasks[idx].Violated = summary.Count
+			}
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusFailed]; ok {
+				tasks[idx].Failed = summary.Count
+			}
+			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusSuppressed]; ok {
+				tasks[idx].Suppressed = summary.Count
+			}
+		}
+	}
+
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     tasks,
+	}, nil
+}
+
+func SearchGroupOfPolicy(c *ctx.ServiceContext, form *forms.SearchGroupOfPolicyForm) (interface{}, e.Error) {
+	resp := make([]models.Policy, 0)
+	query := services.SearchGroupOfPolicy(c.DB(), form.Id, form.IsBind)
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	if err := p.Scan(&resp); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     resp,
+	}, nil
+}
+
+type PolicyGroupScanReportResp struct {
+	PassedRate PolylinePercent `json:"passedRate"` // 检测通过率
+}
+
+func PolicyGroupScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (*PolicyGroupScanReportResp, e.Error) {
+	if !form.HasKey("to") {
+		form.To = time.Now()
+	}
+	if !form.HasKey("from") {
+		// 往回 15 天
+		y, m, d := form.To.AddDate(0, 0, -15).Date()
+		form.From = time.Date(y, m, d, 0, 0, 0, 0, time.Local)
+	}
+	scanStatus, err := services.GetPolicyScanStatus(c.DB(), form.Id, form.From, form.To, consts.ScopePolicyGroup)
+	if err != nil {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
+	report := PolicyGroupScanReportResp{}
+	r := &report.PassedRate
+
+	for _, s := range scanStatus {
+		d := s.Date[5:10] // 2021-08-08T00:00:00+08:00 => 08-08
+		found := false
+		for idx := range r.Column {
+			if r.Column[idx] == d {
+				if s.Status == common.PolicyStatusPassed {
+					r.Passed[idx] = s.Count
+				}
+				// FIXME: 是否跳过失败和屏蔽的策略？
+				r.Total[idx] += s.Count
+				r.Value[idx] = Percent(r.Passed[idx]) / Percent(r.Total[idx])
+				found = true
+				break
+			}
+		}
+		if !found {
+			r.Column = append(r.Column, d)
+			if s.Status == common.PolicyStatusPassed {
+				r.Passed = append(r.Passed, s.Count)
+				r.Total = append(r.Total, s.Count)
+				r.Value = append(r.Value, 1)
+			} else {
+				r.Passed = append(r.Passed, 0)
+				r.Total = append(r.Total, s.Count)
+				r.Value = append(r.Value, 0)
+			}
+		}
+	}
+
+	return &report, nil
 }

@@ -123,6 +123,7 @@ func GetValidTaskPolicyIds(query *db.Session, taskId models.Id) ([]models.Id, e.
 		tplId = task.TplId
 	}
 
+	query = query.Debug()
 	if envId != "" {
 		policies, err = GetPoliciesByEnvId(query, envId)
 		if err != nil {
@@ -142,17 +143,43 @@ func GetValidTaskPolicyIds(query *db.Session, taskId models.Id) ([]models.Id, e.
 	return policyIds, nil
 }
 
-func suppressedQuery(query *db.Session) *db.Session {
-	return query.Select("iac_policy.id").Table(models.PolicyRel{}.TableName()).
+func suppressedQuery(query *db.Session, envId models.Id, tplId models.Id) *db.Session {
+	q := query.Select("iac_policy.id").Table(models.PolicyRel{}.TableName()).
 		Joins("join iac_policy on iac_policy.group_id = iac_policy_rel.group_id").
+		Where("iac_policy.enabled = 1").
 		Joins("join iac_policy_group on iac_policy_group.id = iac_policy_rel.group_id").
-		Where("iac_policy.id not in (select policy_id from iac_policy_suppress WHERE env_id != '')").
-		Where("iac_policy.id not in (select policy_id from iac_policy_suppress WHERE tpl_id != '')").
-		Where("iac_policy.enabled = 1 and iac_policy_group.enabled = 1")
+		Where("iac_policy_group.enabled = 1")
+
+	if envId != "" {
+		q = q.Where("iac_policy_rel.env_id = ?", envId)
+	} else if tplId != "" {
+		q = q.Where("iac_policy_rel.tpl_id = ?", tplId)
+	}
+
+	suppressQuery := query.Model(models.PolicySuppress{}).Select("policy_id")
+	if envId != "" {
+		suppressQuery = suppressQuery.Where("target_type = 'env' AND env_id = ?", envId)
+		q = q.Where("iac_policy.id not in (?)", suppressQuery.Expr())
+	} else if tplId != "" {
+		suppressQuery = suppressQuery.Where("target_type = 'template' AND tpl_id = ?", tplId)
+		q = q.Where("iac_policy.id not in (?)", suppressQuery.Expr())
+	}
+
+	enableQuery := query.Model(models.PolicyRel{}).Where("iac_policy_rel.group_id = '' and iac_policy_rel.enabled = 1")
+	if envId != "" {
+		enableQuery = enableQuery.Select("env_id").Where("env_id = ?", envId)
+		q = q.Where("iac_policy_rel.env_id in (?)", enableQuery.Expr())
+	} else if tplId != "" {
+		enableQuery = enableQuery.Select("tpl_id").Where("tpl_id = ?", tplId)
+		q = q.Where("iac_policy_rel.tpl_id in (?)", enableQuery.Expr())
+	}
+
+	return q
 }
 
+// GetPoliciesByEnvId 查询环境关联的策略，排除已经禁用的策略/策略组/策略屏蔽
 func GetPoliciesByEnvId(query *db.Session, envId models.Id) ([]models.Policy, e.Error) {
-	subQuery := suppressedQuery(query).Where("iac_policy_rel.env_id = ?", envId)
+	subQuery := suppressedQuery(query, envId, "")
 	var policies []models.Policy
 	if err := query.Model(models.Policy{}).Where("iac_policy.id in (?)", subQuery.Expr()).Find(&policies); err != nil {
 		if e.IsRecordNotFound(err) {
@@ -165,7 +192,7 @@ func GetPoliciesByEnvId(query *db.Session, envId models.Id) ([]models.Policy, e.
 }
 
 func GetPoliciesByTemplateId(query *db.Session, tplId models.Id) ([]models.Policy, e.Error) {
-	subQuery := suppressedQuery(query).Where("iac_policy_rel.tpl_id = ?", tplId)
+	subQuery := suppressedQuery(query, "", tplId)
 	var policies []models.Policy
 	if err := query.Model(models.Policy{}).Where("iac_policy.id in (?)", subQuery.Expr()).Find(&policies); err != nil {
 		if e.IsRecordNotFound(err) {
@@ -245,18 +272,6 @@ func DetailPolicy(dbSess *db.Session, id models.Id) (interface{}, e.Error) {
 	return p, nil
 }
 
-func SearchPolicySuppress(query *db.Session, id models.Id) *db.Session {
-	t := models.PolicyRel{}.TableName()
-	q := query.Model(models.PolicyRel{}.TableName()).
-		Select(fmt.Sprintf("DISTINCT iac_policy.id as dist,%s.*,iac_policy.id as policy_id,if(%s.env_id='',%s.tpl_id,%s.env_id)as target_id,if(%s.env_id='','template','env')as target_type,if(%s.env_id = '',iac_template.name,iac_env.name) as target_name,if(e.id is null, 0, 1) as suppressed", t, t, t, t, t, t)).
-		Joins("LEFT JOIN iac_policy_suppress AS e ON e.env_id = iac_policy_rel.env_id AND e.tpl_id = iac_policy_rel.tpl_id").
-		Joins("LEFT JOIN iac_env ON iac_policy_rel.env_id = iac_env.id").
-		Joins("LEFT JOIN iac_template ON iac_policy_rel.tpl_id = iac_template.id").
-		Joins("LEFT JOIN iac_policy ON iac_policy_rel.group_id = iac_policy.group_id").
-		Where("iac_policy.id = ?", id)
-	return q
-}
-
 func SearchPolicyTpl(tx *db.Session, orgId, tplId models.Id, q string) *db.Session {
 	query := tx.Table("iac_template AS tpl")
 	if orgId != "" {
@@ -322,6 +337,30 @@ func EnvOfPolicy(dbSess *db.Session, form *forms.EnvOfPolicyForm, orgId, project
 		Where("rel.org_id = ? and rel.project_id = ? and rel.scope = ?", orgId, projectId, models.PolicyRelScopeEnv)
 
 	return query.LazySelectAppend(fmt.Sprintf("env.name as env_name, %s.*", pTable))
+}
+
+func TplOfPolicy(dbSess *db.Session, form *forms.TplOfPolicyForm, orgId, projectId models.Id) *db.Session {
+	pTable := models.Policy{}.TableName()
+	query := dbSess.Table(pTable).Joins(fmt.Sprintf("left join %s as pg on pg.id = %s.group_id",
+		models.PolicyGroup{}.TableName(), pTable)).LazySelectAppend("pg.name as group_name, pg.id as group_id")
+	if form.GroupId != "" {
+		query = query.Where(fmt.Sprintf("%s.group_id = ?", pTable), form.GroupId)
+	}
+
+	if form.Severity != "" {
+		query = query.Where(fmt.Sprintf("%s.severity = ?", pTable), form.Severity)
+	}
+
+	if form.Q != "" {
+		query = query.WhereLike(fmt.Sprintf("%s.name", pTable), form.Q)
+	}
+
+	query = query.
+		Joins(fmt.Sprintf("left join %s as rel on rel.group_id = pg.id ", models.PolicyRel{}.TableName())).
+		Joins(fmt.Sprintf("left join %s as tpl on tpl.id = rel.tpl_id", models.Template{}.TableName())).
+		Where("rel.org_id = ? and rel.project_id = ? and rel.scope = ?", orgId, projectId, models.PolicyRelScopeTpl)
+
+	return query.LazySelectAppend(fmt.Sprintf("tpl.name as tpl_name, %s.*", pTable))
 }
 
 func PolicyError(query *db.Session, policyId models.Id) *db.Session {
@@ -433,16 +472,6 @@ func SearchGroupOfPolicy(dbSess *db.Session, groupId models.Id, bind bool) *db.S
 	return query
 }
 
-func DeletePolicySuppress(tx *db.Session, id models.Id) e.Error {
-	if _, err := tx.Where("policy_id = ?", id).Delete(models.PolicySuppress{}); err != nil {
-		if e.IsRecordNotFound(err) {
-			return nil
-		}
-		return e.New(e.DBError, err)
-	}
-	return nil
-}
-
 // PolicyTargetSummary 获取策略环境/云模板执行结果
 func PolicyTargetSummary(query *db.Session, ids []models.Id, scope string) ([]*PolicyScanSummary, e.Error) {
 	var key string
@@ -466,4 +495,75 @@ func PolicyTargetSummary(query *db.Session, ids []models.Id, scope string) ([]*P
 	}
 
 	return summary, nil
+}
+
+func SubQueryUserEnvIds(query *db.Session, userId models.Id) *db.Session {
+	q := query.Model(models.Env{}).Select("id")
+
+	// 系统管理员
+	if UserIsSuperAdmin(query, userId) {
+		return q
+	}
+
+	// 组织管理员相关项目
+	var orgAdminIds []models.Id
+	userOrgs := getUserOrgs(userId)
+	orgAdminProjectQuery := query.Model(models.Project{}).Select("id")
+	for _, userOrg := range userOrgs {
+		if UserHasOrgRole(userId, userOrg.OrgId, consts.OrgRoleAdmin) {
+			orgAdminIds = append(orgAdminIds, userOrg.OrgId)
+		}
+	}
+
+	// 普通成员相关项目
+	var projectIds []models.Id
+	userProjects := getUserProjects(userId)
+	for _, userProject := range userProjects {
+		projectIds = append(projectIds, userProject.ProjectId)
+	}
+
+	if len(orgAdminIds) > 0 && len(projectIds) > 0 {
+		return q.Where("org_id in (?) OR project_id in (?)", orgAdminProjectQuery, projectIds)
+	} else if len(orgAdminIds) > 0 {
+		return q.Where("org_id in (?)", orgAdminProjectQuery)
+	} else if len(projectIds) > 0 {
+		return q.Where("project_id in (?)", projectIds)
+	} else {
+		return q.Where("1 = 0")
+	}
+}
+
+func SubQueryUserTemplateIds(query *db.Session, userId models.Id) *db.Session {
+	q := query.Model(models.Template{}).Select("id")
+
+	// 平台管理员
+	if UserIsSuperAdmin(query, userId) {
+		return q
+	}
+
+	// 组织内用户
+	userOrgs := getUserOrgs(userId)
+	var orgIds []models.Id
+	for _, userOrg := range userOrgs {
+		orgIds = append(orgIds, userOrg.OrgId)
+	}
+	if len(orgIds) == 0 {
+		return q.Where("1 = 0")
+	}
+
+	return q.Where("org_id in (?)", orgIds)
+}
+
+func PolicyEnable(tx *db.Session, policyId models.Id, enabled bool) (*models.Policy, e.Error) {
+	policy, err := GetPolicyById(tx, policyId)
+	if err != nil {
+		return nil, err
+	}
+	policy.Enabled = enabled
+	_, er := tx.Save(policy)
+	if er != nil {
+		return nil, e.New(e.DBError, fmt.Errorf("save policy enable error, id %s", policyId))
+	}
+
+	return policy, nil
 }

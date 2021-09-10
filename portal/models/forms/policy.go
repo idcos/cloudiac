@@ -93,6 +93,14 @@ type UpdatePolicyRelForm struct {
 	Scope          string      `json:"-" swaggerignore:"true" binding:""`
 }
 
+type EnableScanForm struct {
+	BaseForm
+
+	Id      models.Id `uri:"id" binding:"" example:"tpl-c3ek0co6n88ldvq1n6ag"` // ID
+	Scope   string    `json:"-" swaggerignore:"true" binding:""`
+	Enabled bool      `json:"enabled" binding:"" example:"true"` // 是否启用扫描
+}
+
 type ScanTemplateForm struct {
 	BaseForm
 
@@ -140,10 +148,17 @@ type SearchPolicySuppressForm struct {
 	Id models.Id `uri:"id"`
 }
 
+type SearchPolicySuppressSourceForm struct {
+	PageForm
+
+	Id models.Id `uri:"id"`
+}
+
 type DeletePolicySuppressForm struct {
 	BaseForm
 
-	Id models.Id `uri:"id"`
+	Id         models.Id `uri:"id"`
+	SuppressId models.Id `uri:"suppressId"`
 }
 
 type SearchPolicyTplForm struct {
@@ -157,6 +172,15 @@ type SearchPolicyTplForm struct {
 type DetailPolicyTplForm struct {
 	BaseForm
 	Id models.Id `json:"id" form:"id" `
+}
+
+type TplOfPolicyForm struct {
+	PageForm
+
+	Id       models.Id `json:"id" form:"id" `
+	Q        string    `form:"q" json:"q" binding:""` // 策略组名称，支持模糊搜索
+	Severity string    `json:"severity" form:"severity" enums:"'high','medium','low','none'" example:"medium"`
+	GroupId  models.Id `json:"groupId" form:"groupId" `
 }
 
 type SearchPolicyEnvForm struct {
@@ -185,8 +209,11 @@ type PolicyErrorForm struct {
 
 type UpdatePolicySuppressForm struct {
 	BaseForm
-	Id        models.Id   `uri:"id"`
-	TargetIds []models.Id `json:"targetIds"`
+	Id           models.Id   `uri:"id"`
+	Scope        string      `json:"scope" example:"source" enums:"source,policy"`    // 屏蔽类型，source按来源屏蔽，policy屏蔽此策略
+	Reason       string      `json:"reason" example:"测试环境无需检测"`                       // 屏蔽原因
+	AddSourceIds []models.Id `json:"addTargetIds" example:"env-c3ek0co6n88ldvq1n6ag"` // 添加屏蔽源ID列表
+	//RmSourceIds  []models.Id `json:"rmTargetIds" example:"env-c3ek0co6n88ldvq1n6ag"`  // 删除屏蔽源ID列表
 }
 
 type PolicyScanResultForm struct {

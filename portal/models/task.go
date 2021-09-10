@@ -85,7 +85,7 @@ type Task struct {
 
 	OrgId     Id `json:"orgId" gorm:"size:32;not null"`     // 组织ID
 	ProjectId Id `json:"projectId" gorm:"size:32;not null"` // 项目ID
-	TplId     Id `json:"TplId" gorm:"size:32;not null"`     // 模板ID
+	TplId     Id `json:"tplId" gorm:"size:32;not null"`     // 模板ID
 	EnvId     Id `json:"envId" gorm:"size:32;not null"`     // 环境ID
 
 	Name      string `json:"name" gorm:"not null;comment:任务名称"` // 任务名称
