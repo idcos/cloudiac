@@ -114,7 +114,7 @@ func (PolicyGroup) Detail(c *ctx.GinRequest) {
 // @Param policyGroupId path string true "策略组id"
 // @Router /policies/groups/{policyGroupId}/policies [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Policy}}
-func (Policy) SearchGroupOfPolicy(c *ctx.GinRequest) {
+func (PolicyGroup) SearchGroupOfPolicy(c *ctx.GinRequest) {
 	form := &forms.SearchGroupOfPolicyForm{}
 	if err := c.Bind(form); err != nil {
 		return
