@@ -141,7 +141,6 @@ func ScanTemplate(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envId mod
 		CreatorId: c.UserId,
 		TplId:     tpl.Id,
 		EnvId:     envId,
-		Revision:  tpl.RepoRevision,
 		BaseTask: models.BaseTask{
 			Type:        taskType,
 			Flow:        models.TaskFlow{},

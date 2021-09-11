@@ -829,7 +829,7 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 		Name:      pt.Name,
 		CreatorId: pt.CreatorId,
 		Extra:     pt.Extra,
-		Revision:  utils.FirstValueStr(pt.Revision, tpl.RepoRevision),
+		Revision:  utils.FirstValueStr(pt.Revision, env.Revision, tpl.RepoRevision),
 
 		OrgId: tpl.OrgId,
 		TplId: tpl.Id,
@@ -859,7 +859,7 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 		}
 	}
 
-	task.RepoAddr, task.CommitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, tpl.RepoRevision)
+	task.RepoAddr, task.CommitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
 	if err != nil {
 		return nil, e.New(e.InternalError, err)
 	}
