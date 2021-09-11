@@ -14,7 +14,7 @@ func DeletePolicyGroupRel(tx *db.Session, id models.Id, scope string) e.Error {
 	if scope == consts.ScopeEnv {
 		sql = "env_id = ? and group_id != ''"
 	} else {
-		sql = "tpl_id = ? and env_id = '' group_id != ''"
+		sql = "tpl_id = ? and env_id = '' and group_id != ''"
 	}
 	if _, err := tx.Where(sql, id).Delete(models.PolicyRel{}); err != nil {
 		if e.IsRecordNotFound(err) {
@@ -58,7 +58,7 @@ func DeletePolicyEnabledRel(tx *db.Session, id models.Id, scope string) e.Error 
 	if scope == consts.ScopeEnv {
 		sql = "env_id = ? and group_id = ''"
 	} else {
-		sql = "tpl_id = ? and env_id = '' group_id = ''"
+		sql = "tpl_id = ? and env_id = '' and group_id = ''"
 	}
 	if _, err := tx.Where(sql, id).Delete(models.PolicyRel{}); err != nil {
 		if e.IsRecordNotFound(err) {
