@@ -3,14 +3,17 @@
 package runner
 
 import (
-	"cloudiac/configs"
-	"cloudiac/utils"
 	"context"
+	"path/filepath"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
-	"path/filepath"
+
+	"cloudiac/common"
+	"cloudiac/configs"
+	"cloudiac/utils"
 )
 
 // Command to run docker image
@@ -20,9 +23,10 @@ type Command struct {
 	Timeout    int
 	PrivateKey string
 
-	Commands    []string
-	HostWorkdir string // 宿主机目录
-	Workdir     string // 容器目录
+	TerraformVersion string
+	Commands         []string
+	HostWorkdir      string // 宿主机目录
+	Workdir          string // 容器目录
 	// for container
 	//ContainerInstance *Container
 }
@@ -78,6 +82,18 @@ func (cmd *Command) Start() (string, error) {
 			Source:   conf.Runner.ProviderPath(),
 			Target:   ContainerPluginPath,
 			ReadOnly: true,
+		})
+	}
+
+	// 内置 tf 版本列表中无该版本，我们挂载缓存目录到容器，下载后会保存到宿主机，下次可以直接使用。
+	// 注意，该方案有个问题：客户无法自定义镜像预先安装需要的 terraform 版本，
+	// 因为判断版本不在 TerraformVersions 列表中就会挂载目录，客户自定义镜像安装的版本会被覆盖
+	//（考虑把版本列表写到配置文件？）
+	if !utils.StrInArray(cmd.TerraformVersion, common.TerraformVersions...) {
+		mountConfigs = append(mountConfigs, mount.Mount{
+			Type:   mount.TypeBind,
+			Source: conf.Runner.AbsTfenvVersionsCachePath(),
+			Target: "/root/.tfenv/versions",
 		})
 	}
 
