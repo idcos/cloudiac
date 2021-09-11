@@ -144,7 +144,8 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 			logger.WithField("path", path).Errorf("write task scan result json error: %v", err)
 		}
 	}
-	if er := services.ChangeTaskStepStatus(sess, task, step, stepResult.Status, ""); er != nil {
+	if er := services.ChangeTaskStepStatusAndExitCode(
+		sess, task, step, stepResult.Status, "", stepResult.Result.ExitCode); er != nil {
 		return stepResult, er
 	}
 	return stepResult, err
@@ -364,7 +365,8 @@ func WaitScanTaskStep(ctx context.Context, sess *db.Session, task *models.ScanTa
 		}
 	}
 
-	if er := services.ChangeTaskStepStatus(sess, task, step, stepResult.Status, ""); er != nil {
+	if er := services.ChangeTaskStepStatusAndExitCode(
+		sess, task, step, stepResult.Status, "", stepResult.Result.ExitCode); er != nil {
 		return stepResult, er
 	}
 	return stepResult, err

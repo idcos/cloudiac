@@ -35,14 +35,15 @@ const (
 
 	CollectTaskStepIndex = -1
 
-	TaskStepPending            = "pending"
-	TaskStepApproving          = "approving"
-	TaskStepRejected           = "rejected"
-	TaskStepRunning            = "running"
-	TaskStepFailed             = "failed"
-	TaskStepComplete           = "complete"
-	TaskStepTimeout            = "timeout"
-	TaskStepResultScanExitCode = 3 // 合规任务返回该错误码，无需重试
+	TaskStepPending   = "pending"
+	TaskStepApproving = "approving"
+	TaskStepRejected  = "rejected"
+	TaskStepRunning   = "running"
+	TaskStepFailed    = "failed"
+	TaskStepComplete  = "complete"
+	TaskStepTimeout   = "timeout"
+
+	TaskStepPolicyViolationExitCode = 3 // 合规检查不通过时的退出码
 
 	TaskTypePlanName    = "plan"
 	TaskTypeApplyName   = "apply"

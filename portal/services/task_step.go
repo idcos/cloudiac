@@ -54,7 +54,7 @@ func ApproveTaskStep(tx *db.Session, taskId models.Id, step int, userId models.I
 
 	// 审批通过将步骤标识为 pending 状态，任务被同步修改为 running 状态，
 	// task manager 会在检测到步骤通过审批后开始执行步骤, 并标识为 running 状态
-	return ChangeTaskStepStatus(tx, task, taskStep, models.TaskStepPending, "")
+	return ChangeTaskStepStatusAndUpdate(tx, task, taskStep, models.TaskStepPending, "")
 }
 
 // RejectTaskStep 驳回步骤审批
@@ -69,7 +69,7 @@ func RejectTaskStep(dbSess *db.Session, taskId models.Id, step int, userId model
 	if task, err := GetTask(dbSess, taskStep.TaskId); err != nil {
 		return e.AutoNew(err, e.DBError)
 	} else {
-		return ChangeTaskStepStatus(dbSess, task, taskStep, models.TaskStepRejected, "rejected")
+		return ChangeTaskStepStatusAndUpdate(dbSess, task, taskStep, models.TaskStepRejected, "rejected")
 	}
 }
 
@@ -78,9 +78,15 @@ func IsTerraformStep(typ string) bool {
 		models.TaskStepApply, models.TaskStepDestroy)
 }
 
-// ChangeTaskStepStatus 修改步骤状态，下次重试时间，重试次数及 startAt、endAt，并同步修改任务状态
-func ChangeTaskStepStatus(dbSess *db.Session, task models.Tasker, taskStep *models.TaskStep, status, message string) e.Error {
+func ChangeTaskStepStatusAndExitCode(dbSess *db.Session, task models.Tasker, taskStep *models.TaskStep,
+	status, message string, exitCode int) e.Error {
+	taskStep.ExitCode = exitCode
+	return ChangeTaskStepStatusAndUpdate(dbSess, task, taskStep, status, message)
+}
 
+// ChangeTaskStepStatusAndUpdate 修改步骤状态并更新 taskStep
+// 该函数会同步修改任务状态
+func ChangeTaskStepStatusAndUpdate(dbSess *db.Session, task models.Tasker, taskStep *models.TaskStep, status, message string) e.Error {
 	if taskStep.Status == status && message == "" {
 		return nil
 	}

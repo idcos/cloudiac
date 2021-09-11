@@ -324,12 +324,14 @@ func DetailPolicy(c *ctx.ServiceContext, form *forms.DetailPolicyForm) (interfac
 type RespPolicyTpl struct {
 	models.Template
 
-	// FIXME: "是否开启检测" 当前无标识
-	Status  string `json:"status" gorm:"column:scan_task_status"`
-	Enabled bool   `json:"enabled"`
+	Enabled      bool   `json:"enabled"`
+	PolicyStatus string `json:"policyStatus"` // 策略检查状态, enum('passed','violated','pending','failed')
 
 	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
 	Summary
+
+	// 以下字段不返回
+	Status string `json:"status,omitempty" gorm:"-" swaggerignore:"true"` // 模板状态(enabled, disable)
 }
 
 func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (interface{}, e.Error) {
@@ -400,13 +402,15 @@ func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (in
 type RespPolicyEnv struct {
 	models.EnvDetail
 
-	Status       string                    `json:"status" gorm:"column:scan_task_status"`
+	PolicyStatus string `json:"policyStatus"` // 策略检查状态, enum('passed','violated','pending','failed')
+
 	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
 	Summary
 	Enabled bool `json:"enabled"`
 
 	// 以下字段不返回
-	TaskStatus string `json:"-" gorm:"-"` // 环境部署任务状态
+	Status     string `json:"status,omitempty" gorm:"-" swaggerignore:"true"`     // 环境状态
+	TaskStatus string `json:"taskStatus,omitempty" gorm:"-" swaggerignore:"true"` // 环境部署任务状态
 }
 
 func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (interface{}, e.Error) {
@@ -414,7 +418,7 @@ func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (in
 	envIds := make([]models.Id, 0)
 	query := services.SearchPolicyEnv(c.DB(), form.OrgId, form.ProjectId, form.EnvId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
-	groupM := make(map[models.Id][]services.NewPolicyGroup, 0)
+	groupM := make(map[models.Id][]services.NewPolicyGroup)
 
 	if err := p.Scan(&respPolicyEnvs); err != nil {
 		return nil, e.New(e.DBError, err)

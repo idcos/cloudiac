@@ -3,6 +3,7 @@
 package services
 
 import (
+	"cloudiac/common"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
@@ -256,7 +257,7 @@ func QueryTask(query *db.Session) *db.Session {
 	return query
 }
 
-var stepStatus2TaskStatus = map[string]string{
+var stepStatus2TaskStatusMap = map[string]string{
 	// 步骤进入 pending，将任务标识为 running
 	// (正常情况下步骤进入 pending 并不会触发 ChangeXXXStatus 调用，只有在步骤通过审批时会走到这个逻辑)
 	models.TaskStepPending:   models.TaskRunning,
@@ -268,16 +269,20 @@ var stepStatus2TaskStatus = map[string]string{
 	models.TaskStepComplete:  models.TaskComplete,
 }
 
-func ChangeTaskStatusWithStep(dbSess *db.Session, task models.Tasker, step *models.TaskStep) e.Error {
-	taskStatus, ok := stepStatus2TaskStatus[step.Status]
+func stepStatus2TaskStatus(s string) string {
+	taskStatus, ok := stepStatus2TaskStatusMap[s]
 	if !ok {
-		panic(fmt.Errorf("unknown task step status %v", step.Status))
+		panic(fmt.Errorf("unknown task step status %v", s))
 	}
+	return taskStatus
+}
+
+func ChangeTaskStatusWithStep(dbSess *db.Session, task models.Tasker, step *models.TaskStep) e.Error {
 	switch t := task.(type) {
 	case *models.Task:
-		return ChangeTaskStatus(dbSess, t, taskStatus, step.Message)
+		return ChangeTaskStatus(dbSess, t, stepStatus2TaskStatus(step.Status), step.Message)
 	case *models.ScanTask:
-		return ChangeScanTaskStatus(dbSess, t, taskStatus, step.Message)
+		return ChangeScanTaskStatusWithStep(dbSess, t, step)
 	default:
 		panic("invalid task type on change task status with step, task" + task.GetId())
 	}
@@ -777,6 +782,27 @@ func ChangeScanTaskStatus(dbSess *db.Session, task *models.ScanTask, status, mes
 	}
 
 	return nil
+}
+
+func ChangeScanTaskStatusWithStep(dbSess *db.Session, task *models.ScanTask, step *models.TaskStep) e.Error {
+	taskStatus := stepStatus2TaskStatus(step.Status)
+	exitCode := step.ExitCode
+
+	switch taskStatus {
+	case common.TaskPending:
+		task.PolicyStatus = common.PolicyStatusPending
+	case common.TaskComplete:
+		task.PolicyStatus = common.PolicyStatusPassed
+	case common.TaskFailed:
+		if step.Type == common.TaskStepTfScan && exitCode == common.TaskStepPolicyViolationExitCode {
+			task.PolicyStatus = common.PolicyStatusViolated
+		} else {
+			task.PolicyStatus = common.PolicyStatusFailed
+		}
+	default:
+		panic(fmt.Errorf("invalid scan task status '%s'", taskStatus))
+	}
+	return ChangeScanTaskStatus(dbSess, task, taskStatus, step.Message)
 }
 
 func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models.ScanTask) (*models.ScanTask, e.Error) {

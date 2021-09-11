@@ -649,7 +649,7 @@ func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq
 
 	changeStepStatusAndStepRetryTimes := func(status, message string, step *models.TaskStep) {
 		var er error
-		if er = services.ChangeTaskStepStatus(m.db, task, step, status, message); er != nil {
+		if er = services.ChangeTaskStepStatusAndUpdate(m.db, task, step, status, message); er != nil {
 			er = errors.Wrap(er, "update step status error")
 			logger.Error(er)
 			panic(err)
@@ -721,7 +721,8 @@ loop:
 				return err
 			}
 			// 合规检测步骤失败，不需要重试，跳出循环
-			if step.Type == models.TaskStepTfScan && stepResult.Result.ExitCode == models.TaskStepResultScanExitCode {
+			if step.Type == models.TaskStepTfScan &&
+				stepResult.Result.ExitCode == common.TaskStepPolicyViolationExitCode {
 				break loop
 			}
 			if stepResult.Status == models.TaskStepFailed {
@@ -1118,7 +1119,7 @@ func (m *TaskManager) runScanTaskStep(ctx context.Context, taskReq runner.RunTas
 
 	changeStepStatus := func(status, message string) {
 		var er error
-		if er = services.ChangeTaskStepStatus(m.db, task, step, status, message); er != nil {
+		if er = services.ChangeTaskStepStatusAndUpdate(m.db, task, step, status, message); er != nil {
 			er = errors.Wrap(er, "update step status error")
 			logger.Error(er)
 			panic(err)

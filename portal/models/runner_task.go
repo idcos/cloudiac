@@ -48,6 +48,8 @@ type ScanTask struct {
 	Mirror       bool `json:"mirror"`       // 是否属于部署任务的扫描任务
 	MirrorTaskId Id   `json:"mirrorTaskId"` // 部署任务ID
 
+	PolicyStatus string `json:"policyStatus" gorm:"size:16" enums:"'passed','violated','pending','failed'"` // 策略检查结果
+
 	// 扩展属性，包括 source, transitionId 等
 	Extra TaskExtra `json:"extra" gorm:"type:json"` // 扩展属性
 }
