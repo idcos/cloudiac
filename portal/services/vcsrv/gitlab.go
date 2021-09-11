@@ -7,9 +7,10 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/utils"
 	"fmt"
-	"github.com/xanzy/go-gitlab"
 	"strconv"
 	"time"
+
+	"github.com/xanzy/go-gitlab"
 )
 
 func newGitlabInstance(vcs *models.Vcs) (VcsIface, error) {
@@ -101,7 +102,7 @@ func (git *gitlabRepoIface) BranchCommitId(branch string) (string, error) {
 	if commitErr != nil {
 		return "nil", e.New(e.VcsError, commitErr)
 	}
-	if commits != nil {
+	if len(commits) > 0 {
 		return commits[0].ID, nil
 	}
 	return "", e.New(e.VcsError, fmt.Errorf("repo %s, commit is null", git.Project.Name))
