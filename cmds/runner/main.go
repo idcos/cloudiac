@@ -3,7 +3,7 @@
 package main
 
 import (
-	"cloudiac/runner/api/v1"
+	v1 "cloudiac/runner/api/v1"
 	"cloudiac/utils"
 	"fmt"
 	"io"
@@ -75,7 +75,13 @@ func ensureDirs() error {
 	c := configs.Get().Runner
 
 	var err error
-	for _, path := range []string{c.StoragePath, c.AssetsPath, c.PluginCachePath, c.ProviderPath()} {
+	for _, path := range []string{
+		c.StoragePath,
+		c.AssetsPath,
+		c.PluginCachePath,
+		c.ProviderPath(),
+		c.AbsTfenvVersionsCachePath(),
+	} {
 		if path == "" {
 			continue
 		}
