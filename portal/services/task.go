@@ -789,7 +789,7 @@ func ChangeScanTaskStatusWithStep(dbSess *db.Session, task *models.ScanTask, ste
 	exitCode := step.ExitCode
 
 	switch taskStatus {
-	case common.TaskPending:
+	case common.TaskPending, common.TaskRunning:
 		task.PolicyStatus = common.PolicyStatusPending
 	case common.TaskComplete:
 		task.PolicyStatus = common.PolicyStatusPassed
@@ -799,7 +799,7 @@ func ChangeScanTaskStatusWithStep(dbSess *db.Session, task *models.ScanTask, ste
 		} else {
 			task.PolicyStatus = common.PolicyStatusFailed
 		}
-	default:
+	default: // "approving", "rejected", ...
 		panic(fmt.Errorf("invalid scan task status '%s'", taskStatus))
 	}
 	return ChangeScanTaskStatus(dbSess, task, taskStatus, step.Message)

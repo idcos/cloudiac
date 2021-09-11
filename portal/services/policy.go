@@ -314,7 +314,7 @@ func SearchPolicyEnv(dbSess *db.Session, orgId, projectId, envId models.Id, q st
 	return query.
 		LazySelectAppend(fmt.Sprintf("%s.*", envTable)).
 		LazySelectAppend("tpl.name AS template_name, tpl.id AS tpl_id, tpl.repo_addr AS repo_addr").
-		LazySelectAppend("task.policy_status AS scan_task_status").
+		LazySelectAppend("task.policy_status").
 		Joins("LEFT JOIN iac_policy_rel on iac_policy_rel.env_id = iac_env.id and iac_policy_rel.group_id = ''").
 		LazySelectAppend("iac_policy_rel.enabled")
 }
