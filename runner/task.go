@@ -10,12 +10,13 @@ import (
 	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 )
 
 type Task struct {
@@ -137,12 +138,6 @@ func (t *Task) initWorkspace() (workspace string, err error) {
 	workspace = GetTaskWorkspace(t.req.Env.Id, t.req.TaskId)
 	if t.req.Step != 0 {
 		return workspace, nil
-	}
-
-	if ok, err := PathExists(workspace); err != nil {
-		return workspace, err
-	} else if ok && t.req.StepType == common.TaskStepInit {
-		return workspace, fmt.Errorf("workspace '%s' is already exists", workspace)
 	}
 
 	if err = os.MkdirAll(workspace, 0755); err != nil {
@@ -309,10 +304,10 @@ func (t *Task) genStepScript() error {
 }
 
 var initCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-git clone '{{.Req.RepoAddress}}' code && \
+if [[ ! -e code ]]; then git clone '{{.Req.RepoAddress}}' code; fi && \
 cd 'code/{{.Req.Env.Workdir}}' && \
 git checkout -q '{{.Req.RepoRevision}}' && echo check out $(git rev-parse --short HEAD). && \
-ln -sf {{.IacTfFile}} . && \
+ln -sf '{{.IacTfFile}}' . && \
 tfenv install $TFENV_TERRAFORM_VERSION && \
 tfenv use $TFENV_TERRAFORM_VERSION  && \
 terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }}
