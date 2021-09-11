@@ -62,6 +62,10 @@ const (
 	PolicyStatusViolated   = "violated"
 	PolicyStatusSuppressed = "suppressed"
 
+	PolicySeverityHigh   = "high"
+	PolicySeverityMedium = "medium"
+	PolicySeverityLow    = "low"
+
 	PolicySuppressTypeSource = "source"
 	PolicySuppressTypePolicy = "policy"
 )

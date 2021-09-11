@@ -239,6 +239,14 @@ func SearchPolicy(c *ctx.ServiceContext, form *forms.SearchPolicyForm) (interfac
 
 // UpdatePolicy 修改策略组
 func UpdatePolicy(c *ctx.ServiceContext, form *forms.UpdatePolicyForm) (interface{}, e.Error) {
+	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
 	attr := models.Attrs{}
 	if form.HasKey("name") {
 		attr["name"] = form.Name
@@ -262,13 +270,43 @@ func UpdatePolicy(c *ctx.ServiceContext, form *forms.UpdatePolicyForm) (interfac
 
 	if form.HasKey("enabled") {
 		attr["enabled"] = form.Enabled
+
+		// 保持和策略屏蔽行为一致，禁用的时候添加一条屏蔽记录
+		sup, _ := services.GetPolicySuppressByPolicyId(tx, form.Id)
+		if !form.Enabled && sup == nil {
+			sup := models.PolicySuppress{
+				CreatorId:  c.UserId,
+				TargetId:   form.Id,
+				TargetType: consts.ScopePolicy,
+				PolicyId:   form.Id,
+				Type:       common.PolicySuppressTypePolicy,
+			}
+			if _, err := tx.Save(&sup); err != nil {
+				_ = tx.Rollback()
+				return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+			}
+		} else {
+			if sup != nil {
+				if _, err := services.DeletePolicySuppress(tx, sup.Id); err != nil {
+					_ = tx.Rollback()
+					return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+				}
+			}
+		}
 	}
 
 	pg := models.Policy{}
 	pg.Id = form.Id
-	if _, err := services.UpdatePolicy(c.DB(), &pg, attr); err != nil {
+	if _, err := services.UpdatePolicy(tx, &pg, attr); err != nil {
+		_ = tx.Rollback()
 		return nil, err
 	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
 	return nil, nil
 }
 
@@ -826,4 +864,194 @@ func PolicyTest(c *ctx.ServiceContext, form *forms.PolicyTestForm) (*PolicyTestR
 			Error: "",
 		}, nil
 	}
+}
+
+type PieCharPercent []PieSectorPercent
+
+type PieSectorPercent struct {
+	Name  string  `json:"name" example:"passed"`
+	Value float64 `json:"value" example:"0.2"`
+}
+
+type PolicySummaryResp struct {
+	ActivePolicy struct {
+		Total   int     `json:"total"`   // 最近 15 天产生扫描记录的策略数量
+		Last    int     `json:"last"`    // 16～30 天产生扫描记录的策略数量
+		Changes float64 `json:"changes"` // 相较上次变化
+		Summary PieChar `json:"summary"` // 策略状态包含
+	} `json:"activePolicy"`
+
+	UnresolvedPolicy struct {
+		Total   int     `json:"total"`   // 最近 15 天产生扫描记录的策略数量
+		Last    int     `json:"last"`    // 16～30 天产生扫描记录的策略数量
+		Changes float64 `json:"changes"` // 相较上次变化： (total - last) / last
+		Summary PieChar `json:"summary"` // 策略严重级别统计
+	} `json:"unresolvedPolicy"`
+
+	PolicyViolated      PieChar `json:"policyViolated"`      // 策略不通过
+	PolicyGroupViolated PieChar `json:"policyGroupViolated"` // 策略组不通过
+}
+
+func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
+	// 策略概览
+	// 默认统计时间范围：最近15天
+	// 1. 活跃策略
+	//    活跃策略定义：产生扫描记录的策略
+	//    last （最近15天）定义：第前30～16天
+	//    changes 定义：(total - last) / last
+	//    summary: 含 passed / violated / failed / suppressed
+	// 2. 未解决错误策略
+	//    未解决错误定义：扫描结果产生至少一次 violated 或者 failed 的策略
+	//    扇形图：按策略的严重级别进行统计
+	// 3. 策略检测未通过
+	//    未通过定义：策略扫描结果为 violated
+	//    柱状图：按未通过次数统计，以策略为纬度，取未通过次数最多的 5 条策略记录
+	// 4. 策略组检测未通过
+	//    未通过定义：扫描结果含 violated 的策略组
+	//    柱状图：按未通过次数统计，以策略组为纬度，取未通过次数最多的 5 条策略组记录
+
+	// 最近 15 天
+	to := time.Now()
+	y, m, d := to.AddDate(0, 0, -15).Date()
+	from := time.Date(y, m, d, 0, 0, 0, 0, time.Local)
+	// 前 16～30 天
+	lastFrom := from.AddDate(0, 0, -15)
+	lastTo := from
+
+	query := c.DB().Debug()
+	summaryResp := PolicySummaryResp{}
+
+	// 近15天数据
+	scanStatus, err := services.GetPolicyStatusByPolicy(query, from, to, "")
+	if err != nil {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+	totalPolicyMap := make(map[models.Id]int)
+	policyStatusMap := make(map[string]int)
+	unresolvedTotalMap := make(map[models.Id]*services.ScanStatusGroupBy)
+	unresolvedCountMap := make(map[models.Id]int)
+	for idx, v := range scanStatus {
+		// 计算策略数量
+		totalPolicyMap[v.Id] = 1
+		// 按状态统计数量
+		policyStatusMap[v.Status] += v.Count
+
+		// 计算未解决错误策略数量
+		if v.Status == common.PolicyStatusFailed || v.Status == common.PolicyStatusViolated {
+			unresolvedTotalMap[v.Id] = scanStatus[idx]
+		}
+
+		// 计算未通过错误策略数量
+		if v.Status == common.PolicyStatusViolated {
+			unresolvedCountMap[v.Id]++
+		}
+	}
+	// 16～30天数据
+	lastScanStatus, err := services.GetPolicyStatusByPolicy(query, lastFrom, lastTo, "")
+	if err != nil {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+	lastPolicyMap := make(map[models.Id]int)
+	lastUnresolvedMap := make(map[models.Id]int)
+	for _, v := range lastScanStatus {
+		// 计算策略数量
+		lastPolicyMap[v.Id] = 1
+
+		// 计算未解决错误策略数量
+		if v.Status == common.PolicyStatusFailed || v.Status == common.PolicyStatusViolated {
+			lastUnresolvedMap[v.Id] = 1
+		}
+	}
+
+	// 1. 活跃策略
+	c.Logger().Errorf("totalPolicyMap %+v", totalPolicyMap)
+	summaryResp.ActivePolicy.Total = len(totalPolicyMap)
+	summaryResp.ActivePolicy.Last = len(lastPolicyMap)
+	if summaryResp.ActivePolicy.Last != 0 {
+		summaryResp.ActivePolicy.Changes =
+			(float64(summaryResp.ActivePolicy.Total) - float64(summaryResp.ActivePolicy.Last)) /
+				float64(summaryResp.ActivePolicy.Last)
+	} else {
+		summaryResp.ActivePolicy.Changes = 1
+	}
+
+	s := PieChar{}
+	s = append(s, PieSector{
+		Name:  common.PolicyStatusPassed,
+		Value: policyStatusMap[common.PolicyStatusPassed],
+	}, PieSector{
+		Name:  common.PolicyStatusViolated,
+		Value: policyStatusMap[common.PolicyStatusViolated],
+	}, PieSector{
+		Name:  common.PolicyStatusFailed,
+		Value: policyStatusMap[common.PolicyStatusFailed],
+	}, PieSector{
+		Name:  common.PolicyStatusSuppressed,
+		Value: policyStatusMap[common.PolicyStatusSuppressed],
+	})
+	summaryResp.ActivePolicy.Summary = s
+
+	// 2. 未解决错误策略
+	summaryResp.UnresolvedPolicy.Total = len(unresolvedTotalMap)
+	summaryResp.UnresolvedPolicy.Last = len(lastUnresolvedMap)
+	if summaryResp.ActivePolicy.Last != 0 {
+		summaryResp.UnresolvedPolicy.Changes =
+			(float64(summaryResp.UnresolvedPolicy.Total) - float64(summaryResp.UnresolvedPolicy.Last)) /
+				float64(summaryResp.UnresolvedPolicy.Last)
+	} else {
+		summaryResp.ActivePolicy.Changes = 1
+	}
+	var high, medium, low int
+	for _, v := range unresolvedTotalMap {
+		switch v.Severity {
+		case common.PolicySeverityHigh:
+			high++
+		case common.PolicySeverityMedium:
+			medium++
+		case common.PolicySeverityLow:
+			low++
+		}
+	}
+	s = PieChar{}
+	s = append(s, PieSector{
+		Name:  common.PolicySeverityHigh,
+		Value: high,
+	}, PieSector{
+		Name:  common.PolicySeverityMedium,
+		Value: medium,
+	}, PieSector{
+		Name:  common.PolicySeverityLow,
+		Value: low,
+	})
+	summaryResp.UnresolvedPolicy.Summary = s
+
+	// 3. 策略未通过
+	violatedScanStatus, err := services.GetPolicyStatusByPolicy(query, from, to, common.PolicyStatusViolated)
+	if err != nil {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+	p := PieChar{}
+	for i := 0; i < 5 && i < len(violatedScanStatus); i++ {
+		p = append(p, PieSector{
+			Name:  violatedScanStatus[i].Name,
+			Value: violatedScanStatus[i].Count,
+		})
+	}
+	summaryResp.PolicyViolated = p
+
+	// 4. 策略组未通过
+	violatedGroupScanStatus, err := services.GetPolicyStatusByPolicyGroup(query, from, to, common.PolicyStatusViolated)
+	if err != nil {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+	p = PieChar{}
+	for i := 0; i < 5 && i < len(violatedGroupScanStatus); i++ {
+		p = append(p, PieSector{
+			Name:  violatedGroupScanStatus[i].Name,
+			Value: violatedGroupScanStatus[i].Count,
+		})
+	}
+	summaryResp.PolicyGroupViolated = p
+
+	return &summaryResp, nil
 }

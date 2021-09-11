@@ -20,6 +20,7 @@ when s.target_type = 'env' then e.name
 when s.target_type = 'template' then t.name 
 when s.target_type = 'policy' then p.name
 end as target_name`).
+		Where("s.policy_id = ?", id).
 		Joins("LEFT JOIN iac_user AS u ON s.creator_id = u.id").
 		LazySelectAppend("u.name as creator")
 
@@ -57,8 +58,21 @@ func SearchPolicySuppressSource(query *db.Session, form *forms.SearchPolicySuppr
 	suppressQuery := query.Model(models.PolicySuppress{}).Where("policy_id = ?", policyId).
 		Select("target_id")
 
-	q := query.Raw(fmt.Sprintf("select r.* from ((?) union (?)) as r where r.target_id not in (?) and 1 = ? %s", form.OrderBy()),
-		envQuery.Expr(), templateQuery.Expr(), suppressQuery.Expr(), 1)
+	q := query.Raw(fmt.Sprintf("select r.* from ((?) union (?)) as r where r.target_id not in (?) %s", form.OrderBy()),
+		envQuery.Expr(), templateQuery.Expr(), suppressQuery.Expr())
 
 	return q
+}
+
+// GetPolicySuppressByPolicyId 获取策略禁用/启用屏蔽记录
+func GetPolicySuppressByPolicyId(query *db.Session, id models.Id) (*models.PolicySuppress, e.Error) {
+	sup := models.PolicySuppress{}
+	if err := query.Model(models.PolicySuppress{}).Where("target_id = ? and type = 'policy'", id).First(&sup); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.PolicySuppressNotExist, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+
+	return &sup, nil
 }

@@ -2,11 +2,19 @@ FROM jfxs/ansible
 USER root
 RUN sed -i 's/https/http/' /etc/apk/repositories
 
-ENV TERRAFORM_VERSION=0.14.11
+ARG WORKDIR=/root
+WORKDIR ${WORKDIR}
 ENV TERRASCAN_VERSION=1.9.0
-RUN apk add --update git curl openssh && \
-    curl https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_arm64.zip | \
-        busybox unzip - && mv terraform /bin/ && chmod a+x /bin/terraform && \
+ENV PATH="/root/.tfenv/bin:${PATH}"
+RUN apk add --update git curl openssh bash && \
+    git clone https://github.com/tfutils/tfenv.git /root/.tfenv && \
+        tfenv install "v0.11.15" && \
+        tfenv install "v0.12.31" && \
+        tfenv install "v0.13.7" && \
+        tfenv install "v0.14.11" && \
+        tfenv install "v0.15.5" && \
+        tfenv install "v1.0.5" && \
+        tfenv install "v1.0.6" && \
     curl -L https://github.com/accurics/terrascan/releases/download/v${TERRASCAN_VERSION}/terrascan_${TERRASCAN_VERSION}_Linux_arm64.tar.gz | \
         tar -xz terrascan && mv terrascan /bin/ && chmod a+x /bin/terrascan && \
     git clone https://github.com/accurics/terrascan.git /root/.terrascan

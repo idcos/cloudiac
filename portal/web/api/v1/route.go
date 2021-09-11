@@ -68,6 +68,7 @@ func Register(g *gin.RouterGroup) {
 
 	// 策略管理
 	ctrl.Register(g.Group("policies", ac()), &handlers.Policy{})
+	g.GET("/policies/summary", ac(), w(handlers.Policy{}.PolicySummary))
 	g.GET("/policies/:id/error", ac(), w(handlers.Policy{}.PolicyError))
 	g.GET("/policies/:id/suppress", ac(), w(handlers.Policy{}.SearchPolicySuppress))
 	g.POST("/policies/:id/suppress", ac(), w(handlers.Policy{}.UpdatePolicySuppress))
