@@ -443,15 +443,26 @@ func GetPolicyScanStatus(query *db.Session, id models.Id, from time.Time, to tim
 	return scanStatus, nil
 }
 
-func GetPolicyScanByDate(query *db.Session, policyId models.Id, from time.Time, to time.Time) ([]*ScanStatus, e.Error) {
-	q := query.Model(models.PolicyResult{})
-	q = q.Where("start_at >= ? and start_at < ? and policy_id = ?", from, to, policyId).
-		Where("status != 'pending'"). // 跳过pending状态
-		Select("count(*) as count, date(start_at) as date").
-		Group("date(start_at),tpl_id,env_id").
-		Order("date(start_at)")
+type ScanStatusByTarget struct {
+	ID     string
+	Count  int
+	Status string
+	Name   string
+}
 
-	scanStatus := make([]*ScanStatus, 0)
+func GetPolicyScanByTarget(query *db.Session, policyId models.Id, from time.Time, to time.Time) ([]*ScanStatusByTarget, e.Error) {
+	groupQuery := query.Model(models.PolicyResult{})
+	groupQuery = groupQuery.Where("start_at >= ? and start_at < ? and policy_id = ?", from, to, policyId).
+		Where("status != 'pending'"). // 跳过pending状态
+		Select("count(*) as count, tpl_id, env_id").
+		Group("tpl_id,env_id")
+
+	q := query.Table("(?) as r", groupQuery.Expr()).
+		Select("r.*,if(r.env_id = '', iac_template.name, iac_env.name) as name").
+		Joins("left join iac_env on iac_env.id = r.env_id").
+		Joins("left join iac_template on iac_template.id = r.tpl_id")
+
+	scanStatus := make([]*ScanStatusByTarget, 0)
 	if err := q.Find(&scanStatus); err != nil {
 		if e.IsRecordNotFound(err) {
 			return scanStatus, nil

@@ -770,26 +770,15 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 		Value: totalSummary.Failed,
 	})
 
-	scanTaskStatus, err := services.GetPolicyScanByDate(c.DB(), form.Id, form.From, form.To)
+	scanTaskStatus, err := services.GetPolicyScanByTarget(c.DB(), form.Id, form.From, form.To)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 	taskCount := &report.TaskScanCount
 
 	for _, s := range scanTaskStatus {
-		d := s.Date[5:10] // 2021-08-08T00:00:00+08:00 => 08-08
-		found := false
-		for idx := range taskCount.Column {
-			if taskCount.Column[idx] == d {
-				taskCount.Value[idx] += 1
-				found = true
-				break
-			}
-		}
-		if !found {
-			taskCount.Column = append(taskCount.Column, d)
-			taskCount.Value = append(taskCount.Value, 1)
-		}
+		taskCount.Column = append(taskCount.Column, s.Name)
+		taskCount.Value = append(taskCount.Value, s.Count)
 	}
 
 	return &report, nil
