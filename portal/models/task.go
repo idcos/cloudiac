@@ -118,7 +118,7 @@ type Task struct {
 
 	RetryNumber int  `json:"retryNumber" gorm:"size:32;default:0"` // 任务重试次数
 	RetryDelay  int  `json:"retryDelay" gorm:"size:32;default:0"`  // 每次任务重试时间，单位为秒
-	RetryAble   bool `json:""`
+	RetryAble   bool `json:"retryAble" gorm:"default:false"`
 }
 
 func (Task) TableName() string {
