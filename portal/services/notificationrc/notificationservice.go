@@ -9,7 +9,6 @@ import (
 	"cloudiac/utils/logs"
 	"cloudiac/utils/mail"
 	"fmt"
-	"time"
 )
 
 type NotificationService struct {
@@ -48,12 +47,27 @@ func NewNotificationService(options *NotificationOptions) NotificationService {
 }
 
 func (ns *NotificationService) SendMessage() {
-	notifications, tplNotificationTemplate, markdownNotificationTemplate := ns.FindNotificationsAndMessageTpl()
+	go utils.RecoverdCall(ns.SyncSendMessage, func(err error) {
+		logs.Get().Warnf("sync send message panic: %v", err)
+	})
+}
+
+func (ns *NotificationService) SyncSendMessage() {
+	logger := logs.Get().WithField("action", "SyncSendMessage")
+	notifications, messageTpl, mdMessageTpl, err := ns.FindNotificationsAndMessageTpl()
+	if err != nil {
+		logger.Warnf("FindNotificationsAndMessageTpl error: %v", err)
+		return
+	}
 	if len(notifications) == 0 {
+		logger.Debugln("no notifications")
 		return
 	}
 	u := models.User{}
-	_ = db.Get().Where("id = ?", ns.Task.CreatorId).First(&u)
+	if err := db.Get().Where("id = ?", ns.Task.CreatorId).First(&u); err != nil {
+		logs.Get().Warnf("get task createor(%s): %v", ns.Task.CreatorId, err)
+		return
+	}
 
 	data := struct {
 		Creator      string
@@ -83,8 +97,8 @@ func (ns *NotificationService) SendMessage() {
 	}
 
 	// 获取消息通知模板
-	markdownNotificationTemplate = utils.SprintTemplate(markdownNotificationTemplate, data)
-	tplNotificationTemplate = utils.SprintTemplate(tplNotificationTemplate, data)
+	mdMessageTpl = utils.SprintTemplate(mdMessageTpl, data)
+	messageTpl = utils.SprintTemplate(messageTpl, data)
 	userIds := make([]string, 0)
 	// 判断消息类型，下发至的消息通道
 	for _, notification := range notifications {
@@ -92,35 +106,29 @@ func (ns *NotificationService) SendMessage() {
 			userIds = append(userIds, notification.UserIds...)
 			continue
 		}
-		go func(notification models.Notification) {
-			switch notification.Type {
-			case models.NotificationTypeDingTalk:
-				ns.SendDingTalkMessage(notification, markdownNotificationTemplate)
-			case models.NotificationTypeWebhook:
-				ns.SendWebhookMessage(notification, markdownNotificationTemplate)
-			case models.NotificationTypeWeChat:
-				ns.SendWechatMessage(notification, markdownNotificationTemplate)
-			case models.NotificationTypeSlack:
-				ns.SendSlackMessage(notification, markdownNotificationTemplate)
-			}
-		}(notification)
-		time.Sleep(time.Second)
+		switch notification.Type {
+		case models.NotificationTypeDingTalk:
+			ns.SendDingTalkMessage(notification, mdMessageTpl)
+		case models.NotificationTypeWebhook:
+			ns.SendWebhookMessage(notification, mdMessageTpl)
+		case models.NotificationTypeWeChat:
+			ns.SendWechatMessage(notification, mdMessageTpl)
+		case models.NotificationTypeSlack:
+			ns.SendSlackMessage(notification, mdMessageTpl)
+		}
 	}
 	userIds = utils.RemoveDuplicateElement(userIds)
 
-	func(userIds []string) {
-		// 获取用户邮箱列表
-		users := make([]models.User, 0)
-		_ = db.Get().Where("id in (?)", userIds).Find(users)
+	// 获取用户邮箱列表
+	users := make([]models.User, 0)
+	if err := db.Get().Where("id in (?)", userIds).Find(&users); err != nil {
+		logger.Warnf("find notification users error: %v", err)
+	} else {
 		for _, v := range users {
 			// 单个用户发送邮件，避免暴露其他用户邮箱
-			go ns.SendEmailMessage([]string{
-				v.Email,
-			}, tplNotificationTemplate)
-			// 避免并发量太大
-			time.Sleep(time.Millisecond)
+			ns.SendEmailMessage([]string{v.Email}, messageTpl)
 		}
-	}(userIds)
+	}
 }
 
 func (ns *NotificationService) SendDingTalkMessage(n models.Notification, message string) {
@@ -149,7 +157,6 @@ func (ns *NotificationService) SendSlackMessage(n models.Notification, message s
 	if errs := SendSlack(n.Url, Payload{Text: message, Markdown: true}); len(errs) != 0 {
 		logs.Get().Errorf("send slack message err: %v", errs)
 	}
-
 }
 
 func (ns *NotificationService) SendEmailMessage(emails []string, message string) {
@@ -161,11 +168,11 @@ func (ns *NotificationService) SendEmailMessage(emails []string, message string)
 	}
 }
 
-func (ns *NotificationService) FindNotificationsAndMessageTpl() ([]models.Notification, string, string) {
+func (ns *NotificationService) FindNotificationsAndMessageTpl() ([]models.Notification, string, string, error) {
 	orgNotification := make([]models.Notification, 0)
 	projectNotification := make([]models.Notification, 0)
 	notifications := make([]models.Notification, 0)
-	dbSess := db.Get().Debug().Where("org_id = ?", ns.OrgId).
+	dbSess := db.Get().Where("org_id = ?", ns.OrgId).
 		Joins(fmt.Sprintf("left join %s as ne on %s.id = ne.notification_id",
 			models.NotificationEvent{}.TableName(), models.Notification{}.TableName())).
 		Where("ne.event_type = ?", ns.EventType)
@@ -175,28 +182,30 @@ func (ns *NotificationService) FindNotificationsAndMessageTpl() ([]models.Notifi
 	)
 
 	switch ns.EventType {
-	case models.EventTaskRunning:
+	case consts.EventTaskRunning:
 		tplNotificationTemplate = consts.IacTaskRunning
 		markdownNotificationTemplate = consts.IacTaskRunningMarkdown
-	case models.EventTaskApproving:
+	case consts.EventTaskApproving:
 		tplNotificationTemplate = consts.IacTaskApprovingTpl
 		markdownNotificationTemplate = consts.IacTaskApprovingMarkdown
-	case models.EventTaskFailed:
+	case consts.EventTaskFailed:
 		tplNotificationTemplate = consts.IacTaskFailedTpl
 		markdownNotificationTemplate = consts.IacTaskFailedMarkdown
-	case models.EventTaskComplete:
+	case consts.EventTaskComplete:
 		tplNotificationTemplate = consts.IacTaskCompleteTpl
 		markdownNotificationTemplate = consts.IacTaskCompleteMarkdown
+	default:
+		return nil, "", "", fmt.Errorf("unknown event type '%s'", ns.EventType)
 	}
 
 	// 查询需要组织下需要通知的人
 	if err := dbSess.
 		Where("project_id = '' or project_id is null or project_id = ?", ns.ProjectId).
 		Find(&orgNotification); err != nil {
-		return notifications, tplNotificationTemplate, markdownNotificationTemplate
+		return notifications, tplNotificationTemplate, markdownNotificationTemplate, err
 	}
 	// 将需要通知的数据进行整理
 	notifications = append(notifications, orgNotification...)
 	notifications = append(notifications, projectNotification...)
-	return notifications, tplNotificationTemplate, markdownNotificationTemplate
+	return notifications, tplNotificationTemplate, markdownNotificationTemplate, nil
 }

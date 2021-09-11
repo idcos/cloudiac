@@ -12,7 +12,7 @@ import (
 )
 
 func BatchUpdate(c *ctx.ServiceContext, form *forms.BatchUpdateVariableForm) (interface{}, e.Error) {
-	tx := c.DB().Begin().Debug()
+	tx := c.DB().Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()

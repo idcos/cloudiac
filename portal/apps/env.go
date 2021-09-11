@@ -77,7 +77,6 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 			panic(r)
 		}
 	}()
-
 	env, err := services.CreateEnv(tx, models.Env{
 		OrgId:     c.OrgId,
 		ProjectId: c.ProjectId,
@@ -97,11 +96,15 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		Revision:     form.Revision,
 		KeyId:        form.KeyId,
 
-		TTL:           form.TTL,
-		AutoDestroyAt: &destroyAt,
-		AutoApproval:  form.AutoApproval,
+		TTL:             form.TTL,
+		AutoDestroyAt:   &destroyAt,
+		AutoApproval:    form.AutoApproval,
+		StopOnViolation: form.StopOnViolation,
 
-		Triggers: form.Triggers,
+		Triggers:    form.Triggers,
+		RetryAble:   form.RetryAble,
+		RetryDelay:  form.RetryDelay,
+		RetryNumber: form.RetryNumber,
 	})
 	if err != nil && err.Code() == e.EnvAlreadyExists {
 		_ = tx.Rollback()
@@ -129,17 +132,24 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
-		Name:        models.Task{}.GetTaskNameByType(form.TaskType),
-		Type:        form.TaskType,
-		Flow:        models.TaskFlow{},
-		Targets:     targets,
-		CreatorId:   c.UserId,
-		KeyId:       env.KeyId,
-		RunnerId:    env.RunnerId,
-		Variables:   services.GetVariableBody(vars),
-		StepTimeout: form.Timeout,
-		AutoApprove: env.AutoApproval,
-		Revision:    env.Revision,
+		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
+		Targets:         targets,
+		CreatorId:       c.UserId,
+		KeyId:           env.KeyId,
+		Variables:       services.GetVariableBody(vars),
+		AutoApprove:     env.AutoApproval,
+		Revision:        env.Revision,
+		StopOnViolation: env.StopOnViolation,
+		BaseTask: models.BaseTask{
+			Type:        form.TaskType,
+			Flow:        models.TaskFlow{},
+			StepTimeout: form.Timeout,
+			RunnerId:    env.RunnerId,
+		},
+		TfVersion:   tpl.TfVersion,
+		RetryNumber: env.RetryNumber,
+		RetryDelay:  env.RetryDelay,
+		RetryAble:   env.RetryAble,
 	})
 	if err != nil {
 		_ = tx.Rollback()
@@ -305,9 +315,32 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	if form.HasKey("runnerId") {
 		attrs["runner_id"] = form.RunnerId
 	}
+	if form.HasKey("retryAble") {
+		attrs["retryAble"] = form.RetryAble
+	}
+	if form.HasKey("retryNumber") {
+		attrs["retryNumber"] = form.RetryNumber
+	}
+	if form.HasKey("retryDelay") {
+		attrs["retryDelay"] = form.RetryDelay
+	}
 
 	if form.HasKey("autoApproval") {
+		if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) &&
+			!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) &&
+			!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) {
+			return nil, e.New(e.PermissionDeny, fmt.Errorf("approval role required"), http.StatusBadRequest)
+		}
 		attrs["auto_approval"] = form.AutoApproval
+	}
+
+	if form.HasKey("stopOnViolation") {
+		//if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) &&
+		//	!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) &&
+		//	!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) {
+		//	return nil, e.New(e.PermissionDeny, fmt.Errorf("approval role required"), http.StatusBadRequest)
+		//}
+		attrs["StopOnViolation"] = form.StopOnViolation
 	}
 
 	if form.HasKey("destroyAt") {
@@ -453,6 +486,14 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		}
 		env.AutoApproval = form.AutoApproval
 	}
+	if form.HasKey("stopOnViolation") {
+		//if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) &&
+		//	!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) &&
+		//	!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) {
+		//	return nil, e.New(e.PermissionDeny, fmt.Errorf("approval role required"), http.StatusBadRequest)
+		//}
+		env.StopOnViolation = form.StopOnViolation
+	}
 
 	if form.HasKey("destroyAt") {
 		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
@@ -527,17 +568,20 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
-		Name:        models.Task{}.GetTaskNameByType(form.TaskType),
-		Type:        form.TaskType,
-		Flow:        models.TaskFlow{},
-		Targets:     targets,
-		CreatorId:   c.UserId,
-		KeyId:       env.KeyId,
-		RunnerId:    env.RunnerId,
-		Variables:   services.GetVariableBody(vars),
-		StepTimeout: form.Timeout,
-		AutoApprove: env.AutoApproval,
-		Revision:    env.Revision,
+		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
+		Targets:         targets,
+		CreatorId:       c.UserId,
+		KeyId:           env.KeyId,
+		Variables:       services.GetVariableBody(vars),
+		AutoApprove:     env.AutoApproval,
+		Revision:        env.Revision,
+		StopOnViolation: env.StopOnViolation,
+		BaseTask: models.BaseTask{
+			Type:        form.TaskType,
+			Flow:        models.TaskFlow{},
+			StepTimeout: form.Timeout,
+			RunnerId:    env.RunnerId,
+		},
 	})
 
 	if err != nil {

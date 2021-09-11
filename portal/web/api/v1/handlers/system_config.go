@@ -15,7 +15,7 @@ type SystemConfig struct {
 
 func (SystemConfig) Create(c *ctx.GinRequest) {
 	//form := &forms.CreateOrganizationForm{}
-	//if err := c.Bind(form); err != nil {
+	//if err := c.IsBind(form); err != nil {
 	//	return
 	//}
 	//c.JSONResult(apps.CreateOrganization(c.ServiceContext(), form))

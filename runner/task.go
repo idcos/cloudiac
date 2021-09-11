@@ -9,6 +9,7 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -145,12 +146,6 @@ func (t *Task) initWorkspace() (workspace string, err error) {
 		return workspace, nil
 	}
 
-	if ok, err := PathExists(workspace); err != nil {
-		return workspace, err
-	} else if ok && t.req.StepType == common.TaskStepInit {
-		return workspace, fmt.Errorf("workspace '%s' is already exists", workspace)
-	}
-
 	if err = os.MkdirAll(workspace, 0755); err != nil {
 		return workspace, err
 	}
@@ -226,6 +221,28 @@ func (t *Task) genPlayVarsFile(workspace string) error {
 	return yaml.NewEncoder(fp).Encode(t.req.Env.AnsibleVars)
 }
 
+func (t *Task) genPolicyFiles(workspace string) error {
+	if len(t.req.Policies) == 0 {
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Join(workspace, PoliciesDir), 0755); err != nil {
+		return err
+	}
+	for _, policy := range t.req.Policies {
+		if err := os.MkdirAll(filepath.Join(workspace, PoliciesDir, policy.PolicyId), 0755); err != nil {
+			return err
+		}
+		js, _ := json.Marshal(policy.Meta)
+		if err := os.WriteFile(filepath.Join(workspace, PoliciesDir, policy.PolicyId, "meta.json"), js, 0644); err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(workspace, PoliciesDir, policy.PolicyId, "policy.rego"), []byte(policy.Rego), 0644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (t *Task) executeTpl(tpl *template.Template, data interface{}) (string, error) {
 	buffer := bytes.NewBuffer(nil)
 	err := tpl.Execute(buffer, data)
@@ -260,6 +277,12 @@ func (t *Task) genStepScript() error {
 		command, err = t.stepCommand()
 	case common.TaskStepCollect:
 		command, err = t.collectCommand()
+	case common.TaskStepScanInit:
+		command, err = t.stepScanInit()
+	case common.TaskStepTfParse:
+		command, err = t.stepTfParse()
+	case common.TaskStepTfScan:
+		command, err = t.stepTfScan()
 	default:
 		return fmt.Errorf("unknown step type '%s'", t.req.StepType)
 	}
@@ -287,10 +310,10 @@ func (t *Task) genStepScript() error {
 }
 
 var initCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-git clone '{{.Req.RepoAddress}}' code && \
+if [[ ! -e code ]]; then git clone '{{.Req.RepoAddress}}' code; fi && \
 cd 'code/{{.Req.Env.Workdir}}' && \
 git checkout -q '{{.Req.RepoRevision}}' && echo check out $(git rev-parse --short HEAD). && \
-ln -sf {{.IacTfFile}} . && \
+ln -sf '{{.IacTfFile}}' . && \
 tfenv install $TFENV_TERRAFORM_VERSION && \
 tfenv use $TFENV_TERRAFORM_VERSION  && \
 terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }}
@@ -314,7 +337,7 @@ func (t *Task) stepInit() (command string, err error) {
 	})
 }
 
-var planCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
+var planCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 tfenv use $TFENV_TERRAFORM_VERSION && \
 terraform plan -input=false -out=_cloudiac.tfplan \
@@ -332,7 +355,7 @@ func (t *Task) stepPlan() (command string, err error) {
 }
 
 // 当指定了 plan 文件时不需要也不能传 -var-file 参数
-var applyCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
+var applyCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 tfenv use $TFENV_TERRAFORM_VERSION && \
 terraform apply -input=false -auto-approve \
@@ -353,7 +376,7 @@ func (t *Task) stepDestroy() (command string, err error) {
 	})
 }
 
-var playCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
+var playCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 export ANSIBLE_HOST_KEY_CHECKING="False"
 export ANSIBLE_TF_DIR="."
 export ANSIBLE_NOCOWS="1"
@@ -379,7 +402,7 @@ func (t *Task) stepPlay() (command string, err error) {
 	})
 }
 
-var cmdCommandTpl = template.Must(template.New("").Parse(`#/bin/sh
+var cmdCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 (test -d 'code/{{.Req.Env.Workdir}}' && cd 'code/{{.Req.Env.Workdir}}')
 {{ range $index, $command := .Commands -}}
 {{$command}} && \
@@ -411,5 +434,56 @@ func (t *Task) collectCommand() (string, error) {
 		"Req":                 t.req,
 		"TFStateJsonFilePath": t.up2Workspace(TFStateJsonFile),
 		"TFProviderSchema":    t.up2Workspace(TFProviderSchema),
+	})
+}
+
+var parseCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+cd 'code/{{.Req.Env.Workdir}}' && \
+mkdir -p {{.PoliciesDir}} && \
+terrascan scan --config-only -l debug -o json > {{.TFScanJsonFilePath}}
+`))
+
+func (t *Task) stepTfParse() (command string, err error) {
+	return t.executeTpl(parseCommandTpl, map[string]interface{}{
+		"Req":                 t.req,
+		"IacPlayVars":         t.up2Workspace(CloudIacPlayVars),
+		"TFScanJsonFilePath":  t.up2Workspace(TerrascanJsonFile),
+		"PoliciesDir":         t.up2Workspace(PoliciesDir),
+		"TerrascanResultFile": t.up2Workspace(TerrascanResultFile),
+	})
+}
+
+var scanCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+cd 'code/{{.Req.Env.Workdir}}' && \
+mkdir -p {{.PoliciesDir}} && \
+echo scanning policies && \
+terrascan scan -p {{.PoliciesDir}} --show-passed --iac-type terraform -l debug -o json > {{.TerrascanResultFile}}
+{{ if not .Req.StopOnViolation -}} RET=$? ; [ $RET -eq 3 ] && exit 0 || exit $RET {{ end -}}
+`))
+
+func (t *Task) stepTfScan() (command string, err error) {
+	if err = t.genPolicyFiles(t.workspace); err != nil {
+		return "", errors.Wrap(err, "generate policy files")
+	}
+	return t.executeTpl(scanCommandTpl, map[string]interface{}{
+		"Req":                 t.req,
+		"IacPlayVars":         t.up2Workspace(CloudIacPlayVars),
+		"PoliciesDir":         t.up2Workspace(PoliciesDir),
+		"TerrascanResultFile": t.up2Workspace(TerrascanResultFile),
+	})
+}
+
+var scanInitCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+git clone '{{.Req.RepoAddress}}' code && \
+cd 'code/{{.Req.Env.Workdir}}' && \
+git checkout -q '{{.Req.RepoRevision}}' && echo check out $(git rev-parse --short HEAD). && \
+mkdir -p ~/.terrascan/pkg/policies/opa/rego/aws
+`))
+
+func (t *Task) stepScanInit() (command string, err error) {
+	return t.executeTpl(scanInitCommandTpl, map[string]interface{}{
+		"Req":             t.req,
+		"PluginCachePath": ContainerPluginCachePath,
+		"IacTfFile":       t.up2Workspace(CloudIacTfFile),
 	})
 }

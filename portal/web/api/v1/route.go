@@ -66,6 +66,37 @@ func Register(g *gin.RouterGroup) {
 	// 系统状态
 	g.GET("/systems/status", w(handlers.PortalSystemStatusSearch))
 
+	// 策略管理
+	ctrl.Register(g.Group("policies", ac()), &handlers.Policy{})
+	g.GET("/policies/summary", ac(), w(handlers.Policy{}.PolicySummary))
+	g.GET("/policies/:id/error", ac(), w(handlers.Policy{}.PolicyError))
+	g.GET("/policies/:id/suppress", ac(), w(handlers.Policy{}.SearchPolicySuppress))
+	g.POST("/policies/:id/suppress", ac(), w(handlers.Policy{}.UpdatePolicySuppress))
+	g.GET("/policies/:id/suppress/sources", ac(), w(handlers.Policy{}.SearchPolicySuppressSource))
+	g.DELETE("/policies/:id/suppress/:suppressId", ac(), w(handlers.Policy{}.DeletePolicySuppress))
+	g.GET("/policies/:id/report", ac(), w(handlers.Policy{}.PolicyReport))
+	g.POST("/policies/parse", ac(), w(handlers.Policy{}.Parse))
+	g.POST("/policies/test", ac(), w(handlers.Policy{}.Test))
+	g.GET("/policies/templates", ac(), w(handlers.Policy{}.SearchPolicyTpl))
+	g.PUT("/policies/templates/:id", ac(), w(handlers.Policy{}.UpdatePolicyTpl))
+	g.PUT("/policies/templates/:id/enabled", ac(), w(handlers.Policy{}.EnablePolicyTpl))
+	g.GET("/policies/templates/:id/policies", ac(), w(handlers.Policy{}.TplOfPolicy))
+	g.GET("/policies/templates/:id/valid_policies", ac(), w(handlers.Policy{}.ValidTplOfPolicy))
+	g.POST("/policies/templates/:id/scan", ac(), w(handlers.Policy{}.ScanTemplate))
+	g.GET("/policies/templates/:id/result", ac(), w(handlers.Policy{}.TemplateScanResult))
+	g.GET("/policies/envs", ac(), w(handlers.Policy{}.SearchPolicyEnv))
+	g.PUT("/policies/envs/:id", ac(), w(handlers.Policy{}.UpdatePolicyEnv))
+	g.PUT("/policies/envs/:id/enabled", ac(), w(handlers.Policy{}.EnablePolicyEnv))
+	g.GET("/policies/envs/:id/policies", ac(), w(handlers.Policy{}.EnvOfPolicy))
+	g.GET("/policies/envs/:id/valid_policies", ac(), w(handlers.Policy{}.ValidEnvOfPolicy))
+	g.POST("/policies/envs/:id/scan", ac(), w(handlers.Policy{}.ScanEnvironment))
+	g.GET("/policies/envs/:id/result", ac(), w(handlers.Policy{}.EnvScanResult))
+	ctrl.Register(g.Group("policies/groups", ac()), &handlers.PolicyGroup{})
+	g.GET("/policies/groups/:id/policies", ac(), w(handlers.PolicyGroup{}.SearchGroupOfPolicy))
+	g.POST("/policies/groups/:id", ac(), w(handlers.PolicyGroup{}.OpPolicyAndPolicyGroupRel))
+	g.GET("/policies/groups/:id/report", ac(), w(handlers.PolicyGroup{}.ScanReport))
+	g.GET("/policies/groups/:id/last_tasks", ac(), w(handlers.PolicyGroup{}.LastTasks))
+
 	// 要求组织 header
 	g.Use(w(middleware.AuthOrgId))
 
@@ -103,6 +134,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/templates/autotfversion", ac(), w(handlers.AutoTemplateTfVersionChoice))
 	g.GET("/vcs/:id/repos/tfvars", ac(), w(handlers.TemplateTfvarsSearch))
 	g.GET("/vcs/:id/repos/playbook", ac(), w(handlers.TemplatePlaybookSearch))
+	g.GET("/vcs/:id/file", ac(), w(handlers.Vcs{}.SearchVcsFileContent))
 	ctrl.Register(g.Group("notifications", ac()), &handlers.Notification{})
 
 	// 项目资源
@@ -119,6 +151,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/output", ac(), w(handlers.Env{}.Output))
 	g.GET("/envs/:id/resources/:resourceId", ac(), w(handlers.Env{}.ResourceDetail))
 	g.GET("/envs/:id/variables", ac(), w(handlers.Env{}.Variables))
+	g.GET("/envs/:id/policy_result", ac(), w(handlers.Env{}.PolicyResult))
 
 	// 任务管理
 	g.GET("/tasks", ac(), w(handlers.Task{}.Search))

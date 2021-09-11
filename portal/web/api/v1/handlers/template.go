@@ -170,8 +170,8 @@ func TemplatePlaybookSearch(c *ctx.GinRequest) {
 	c.JSONResult(apps.VcsPlaybookSearch(c.Service(), &form))
 }
 
-// TemplateTfVersionsSearch
-// @Tags 云模版
+// TemplateTfVersionSearch
+// @Tags 云模板
 // @Summary terraform versions tf版本列表接口
 // @Accept application/x-www-form-urlencoded
 // @Security AuthToken
@@ -183,7 +183,7 @@ func TemplateTfVersionSearch(c *ctx.GinRequest) {
 }
 
 // AutoTemplateTfVersionChoice
-// @Tags 云模版
+// @Tags 云模板
 // @Accept multipart/form-data
 // @Accept application/x-www-form-urlencoded
 // @Summary choice terraform version 根据用户文件设置自动选择tf版本

@@ -160,3 +160,15 @@ func FetchPlanJson(envId string, taskId string) ([]byte, error) {
 	}
 	return content, nil
 }
+
+func FetchJson(envId string, taskId string, jsonFile string) ([]byte, error) {
+	path := filepath.Join(GetTaskWorkspace(envId, taskId), jsonFile)
+	content, err := ioutil.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return content, nil
+}

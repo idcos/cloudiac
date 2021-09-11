@@ -13,7 +13,6 @@ type Task struct {
 	ctrl.GinController
 }
 
-/**
 // Search 任务查询
 // @Tags 环境
 // @Summary 任务查询
@@ -25,7 +24,6 @@ type Task struct {
 // @Param form query forms.SearchTaskForm true "parameter"
 // @router /tasks [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Task}}
-*/
 func (Task) Search(c *ctx.GinRequest) {
 	form := forms.SearchTaskForm{}
 	if err := c.Bind(&form); err != nil {

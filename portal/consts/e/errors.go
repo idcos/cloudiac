@@ -143,11 +143,27 @@ const (
 
 	//// vcs 311
 
-	VcsNotExists = 31110
+	VcsNotExists   = 31110
 	VcsDeleteError = 31120
 
-	/// terraform 312
-	InvalidTfVersion = 31200
+	//// policy 312
+
+	PolicyAlreadyExist           = 31210
+	PolicyNotExist               = 31211
+	PolicyGroupAlreadyExist      = 31221
+	PolicyGroupNotExist          = 31222
+	PolicyBelongedToAnotherGroup = 31223
+	PolicyResultAlreadyExist     = 31230
+	PolicyResultNotExist         = 31231
+	PolicyRegoMissingComment     = 31410
+	PolicyErrorParseTemplate     = 31510
+	PolicySuppressNotExist       = 31610
+	PolicySuppressAlreadyExist   = 31611
+	PolicyRelNotExist            = 31710
+	PolicyRelAlreadyExist        = 31711
+	/// terraform 313
+
+	InvalidTfVersion = 31300
 )
 
 var errorMsgs = map[int]map[string]string{
@@ -389,5 +405,57 @@ var errorMsgs = map[int]map[string]string{
 	},
 	InvalidTfVersion: {
 		"zh-cn": "自动选择版本失败",
+	},
+
+	PolicyAlreadyExist: {
+		"zh-cn": "策略已存在",
+	},
+
+	PolicyNotExist: {
+		"zh-cn": "策略不存在",
+	},
+
+	PolicyGroupAlreadyExist: {
+		"zh-cn": "策略组已存在",
+	},
+
+	PolicyGroupNotExist: {
+		"zh-cn": "策略组不存在",
+	},
+
+	PolicyBelongedToAnotherGroup: {
+		"zh-cn": "策略属于其他策略组",
+	},
+
+	PolicyResultAlreadyExist: {
+		"zh-cn": "结果已存在",
+	},
+
+	PolicyResultNotExist: {
+		"zh-cn": "结果不存在",
+	},
+
+	PolicyErrorParseTemplate: {
+		"zh-cn": "模板解析错误",
+	},
+
+	PolicyRegoMissingComment: {
+		"zh-cn": "Rego脚本头缺失",
+	},
+
+	PolicySuppressNotExist: {
+		"zh-cn": "屏蔽记录不存在",
+	},
+
+	PolicySuppressAlreadyExist: {
+		"zh-cn": "屏蔽记录已存在",
+	},
+
+	PolicyRelNotExist: {
+		"zh-cn": "策略关联关系不存在",
+	},
+
+	PolicyRelAlreadyExist: {
+		"zh-cn": "策略关联关系已存在",
 	},
 }

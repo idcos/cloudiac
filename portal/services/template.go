@@ -61,7 +61,7 @@ func GetTemplateById(tx *db.Session, id models.Id) (*models.Template, e.Error) {
 }
 
 func QueryTemplateByOrgId(tx *db.Session, q string, orgId models.Id, templateIdList []models.Id) *db.Session {
-	query := tx.Debug().Model(&models.Template{}).Joins(
+	query := tx.Model(&models.Template{}).Joins(
 		"LEFT  JOIN iac_user"+
 			"  ON iac_user.id = iac_template.creator_id").
 		LazySelectAppend(
@@ -116,4 +116,11 @@ func QueryTplByVcsId(tx *db.Session, VcsId models.Id) (bool, e.Error) {
 		return false, e.AutoNew(err, e.DBError)
 	}
 	return exists, nil
+}
+
+func GetTplLastScanTask(sess *db.Session, envId models.Id) (*models.ScanTask, error) {
+	task := models.ScanTask{}
+	scanTaskIdQuery := sess.Model(&models.Template{}).Where("id = ?", envId).Select("last_scan_task_id")
+	err := sess.Model(&models.ScanTask{}).Where("id = (?)", scanTaskIdQuery.Expr()).First(&task)
+	return &task, err
 }

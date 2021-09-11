@@ -13,38 +13,27 @@ import (
 	"strings"
 )
 
-type RespNotify struct {
-	models.Notification
-	EventType []string `json:"eventType" form:"eventType" gorm:"event_type"`
-}
-
 type RespNotification struct {
 	models.Notification
-	EventType string `json:"eventType" form:"eventType" gorm:"event_type"`
+	EventType   string   `json:"-" form:"-" gorm:"event_type"`
+	EventTypes  []string `json:"eventType" form:"eventType" gorm:"-"`
+	CreatorName string   `json:"creatorName" form:"creatorName" `
 }
 
 func SearchNotification(c *ctx.ServiceContext, form *forms.SearchNotificationForm) (interface{}, e.Error) {
-	notifyResp := make([]*RespNotify, 0)
 	notify := make([]*RespNotification, 0)
 	query := services.SearchNotification(c.DB(), c.OrgId, c.ProjectId)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	if err := p.Scan(&notify); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	for _, v := range notify {
-		events := make([]string, 0)
-		if v.EventType != "" {
-			events = strings.Split(v.EventType, ",")
-		}
-		notifyResp = append(notifyResp, &RespNotify{
-			v.Notification,
-			events,
-		})
+	for index, v := range notify {
+		notify[index].EventTypes = strings.Split(v.EventType, ",")
 	}
 	return page.PageResp{
 		Total:    p.MustTotal(),
 		PageSize: p.Size,
-		List:     notifyResp,
+		List:     notify,
 	}, nil
 }
 
@@ -64,7 +53,7 @@ func UpdateNotification(c *ctx.ServiceContext, form *forms.UpdateNotificationFor
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
 	}
 
-	tx := c.Tx().Debug()
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -123,7 +112,7 @@ func UpdateNotification(c *ctx.ServiceContext, form *forms.UpdateNotificationFor
 func CreateNotification(c *ctx.ServiceContext, form *forms.CreateNotificationForm) (*models.Notification, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create org notification cfg %s", form.Type))
 
-	tx := c.Tx().Debug()
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -139,6 +128,7 @@ func CreateNotification(c *ctx.ServiceContext, form *forms.CreateNotificationFor
 		Secret:    form.Secret,
 		Url:       form.Url,
 		UserIds:   form.UserIds,
+		Creator:   c.UserId,
 	}, form.EventType)
 
 	if err != nil {

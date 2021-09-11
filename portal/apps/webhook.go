@@ -23,7 +23,7 @@ const (
 
 func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (interface{}, e.Error) {
 
-	tx := c.Tx().Debug()
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -86,16 +86,19 @@ func CreateWebhookTask(tx *db.Session, taskType string, userId models.Id, env *m
 		return e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 	task := models.Task{
-		Name:        models.Task{}.GetTaskNameByType(taskType),
-		Type:        taskType,
-		Flow:        models.TaskFlow{},
+		Name: models.Task{}.GetTaskNameByType(taskType),
+
 		Targets:     models.StrSlice{},
 		CreatorId:   userId,
 		KeyId:       env.KeyId,
-		RunnerId:    env.RunnerId,
 		Variables:   services.GetVariableBody(vars),
-		StepTimeout: env.Timeout,
 		AutoApprove: env.AutoApproval,
+		BaseTask: models.BaseTask{
+			Type:        taskType,
+			Flow:        models.TaskFlow{},
+			RunnerId:    env.RunnerId,
+			StepTimeout: env.Timeout,
+		},
 	}
 
 	if _, err := services.CreateTask(tx, tpl, env, task); err != nil {

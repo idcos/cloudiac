@@ -70,6 +70,9 @@ var Polices = []Policy{
 	{"login", "consul", "*"},
 	{"login", "webhook", "*"},
 
+	// 合规策略
+	//{"login", "policies", "*"},
+
 	// 用户
 	{"admin", "users", "*"},
 	{"member", "users", "read"},

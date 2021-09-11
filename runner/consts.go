@@ -42,4 +42,12 @@ const (
 	AnsibleStateAnalysisName = "terraform.py"
 
 	FollowLogDelay = time.Second // follow 文件时读到 EOF 后进行下次读取的等待时长
+
+	PoliciesDir         = "policies"
+	TerrascanJsonFile   = "_tfscan.json"
+	TerrascanResultFile = "_tfresult.json"
+	TerrascanLogFile    = "_tsscan.log"
+	RegoResultFile      = "_rego.json"
+
+	PopulateSourceLineCount = 3
 )

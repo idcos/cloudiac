@@ -32,6 +32,12 @@ build-linux-amd64-portal:
 build-linux-amd64-runner: 
 	GOOS=linux GOARCH=amd64 $(MAKE) runner
 
+build-linux-arm64-portal: 
+	GOOS=linux GOARCH=arm64 $(MAKE) portal tool
+
+build-linux-arm64-runner: 
+	GOOS=linux GOARCH=arm64 $(MAKE) runner
+
 reset-build-dir:
 	$(RM) -r $(BUILD_DIR)
 	mkdir -p $(BUILD_DIR)/assets/
@@ -80,6 +86,9 @@ package-local: reset-build-dir clean build
 package-linux-amd64:
 	GOOS=linux GOARCH=amd64 $(MAKE) package-local
 
+package-linux-arm64:
+	GOOS=linux GOARCH=arm64 $(MAKE) package-local
+
 package: package-linux-amd64
 
 
@@ -92,7 +101,17 @@ image-runner: build-linux-amd64-runner
 image-worker:
 	$(DOCKER_BUILD) -t cloudiac/ct-worker:$(VERSION) -f docker/worker/Dockerfile .
 
+image-portal-arm64: build-linux-arm64-portal
+	$(DOCKER_BUILD) -t cloudiac/iac-portal:$(VERSION) -f docker/portal/Dockerfile.arm64 .
+
+image-runner-arm64: build-linux-arm64-runner
+	$(DOCKER_BUILD) -t cloudiac/ct-runner:$(VERSION) -f docker/runner/Dockerfile.arm64 .
+
+image-worker-arm64: build-linux-arm64-runner 
+	$(DOCKER_BUILD) -t cloudiac/ct-worker:$(VERSION) -f docker/worker/Dockerfile.arm64 .
+
 image: image-portal image-runner image-worker
+image-arm64: image-portal-arm64 image-runner-arm64 image-worker-arm64
 
 push-image:
 	for NAME in iac-portal ct-runner ct-worker; do \
@@ -124,6 +143,9 @@ repos-package:
 
 providers:
 	bash scripts/generate-providers-mirror.sh
+
+providers-arm64:
+	PLATFORM=linux_arm64 bash scripts/generate-providers-mirror.sh
 
 PROVIDERS_SHA1SUM=$(shell tar -c ./assets/providers | $(CMD_SHA1SUM))
 PROVIDERS_PACKAGE_NAME=cloudiac-providers_$(VERSION)_$(PROVIDERS_SHA1SUM).tar.gz

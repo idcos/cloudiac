@@ -52,7 +52,7 @@ func CreateToken(c *ctx.ServiceContext, form *forms.CreateTokenForm) (interface{
 		}
 	}
 
-	token, err := services.CreateToken(c.DB().Debug(), models.Token{
+	token, err := services.CreateToken(c.DB(), models.Token{
 		Key:         string(tokenStr),
 		Type:        form.Type,
 		OrgId:       c.OrgId,
@@ -124,7 +124,7 @@ func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (int
 		err      e.Error
 		taskType string
 	)
-	tx := c.Tx().Debug()
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -177,15 +177,17 @@ func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (int
 
 	task := models.Task{
 		Name:        models.Task{}.GetTaskNameByType(taskType),
-		Type:        taskType,
-		Flow:        models.TaskFlow{},
 		Targets:     models.StrSlice{},
 		CreatorId:   c.UserId,
 		KeyId:       env.KeyId,
-		RunnerId:    env.RunnerId,
 		Variables:   taskVars,
-		StepTimeout: env.Timeout,
 		AutoApprove: env.AutoApproval,
+		BaseTask: models.BaseTask{
+			Type:        taskType,
+			Flow:        models.TaskFlow{},
+			StepTimeout: env.Timeout,
+			RunnerId:    env.RunnerId,
+		},
 	}
 
 	_, err = services.CreateTask(tx, tpl, env, task)

@@ -5,7 +5,7 @@ package consts
 var IacUserInvitationsTpl = `
 <html>
 <body>
-尊敬的 {{.Name}}：
+尊敬的 {{.TargetName}}：
 <br>
 <br>&nbsp;&nbsp;&nbsp;&nbsp;CloudIaC的管理员 【{{.Inviter}}】 邀请您体验CloudIaC平台并加入 【{{.Organization}}】组织，您可以通过以下方式登录CloudIaC平台：
 <br>

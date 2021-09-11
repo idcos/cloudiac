@@ -64,13 +64,8 @@ func Create(tx *db.Session, o Modeler) error {
 }
 
 //CreateBatch Fixme 目前切片Modeler类型无法与批量插入公用
-func CreateBatch(tx *db.Session, o []Modeler) error {
+func CreateBatch(tx *db.Session, o interface{}) error {
 	_, err := withTx(tx, func(x *db.Session) (int64, error) {
-		for _, v := range o {
-			if err := v.Validate(); err != nil {
-				return 0, err
-			}
-		}
 		if err := x.Insert(o); err != nil {
 			return 0, err
 		}
@@ -170,7 +165,7 @@ func autoMigrate(m Modeler, sess *db.Session) {
 func Init(migrate bool) {
 	autoMigration = migrate
 
-	sess := db.Get().Set("gorm:table_options", "ENGINE=InnoDB").Begin().Debug()
+	sess := db.Get().Set("gorm:table_options", "ENGINE=InnoDB").Begin()
 	defer func() {
 		logger := logs.Get().WithField("func", "models.Init")
 		if r := recover(); r != nil {
@@ -195,6 +190,7 @@ func Init(migrate bool) {
 	autoMigrate(&Variable{}, sess)
 
 	autoMigrate(&Task{}, sess)
+	autoMigrate(&ScanTask{}, sess)
 	autoMigrate(&TaskStep{}, sess)
 	autoMigrate(&DBStorage{}, sess)
 
@@ -212,4 +208,9 @@ func Init(migrate bool) {
 	autoMigrate(&Key{}, sess)
 	autoMigrate(&TaskComment{}, sess)
 	autoMigrate(&ProjectTemplate{}, sess)
+	autoMigrate(&Policy{}, sess)
+	autoMigrate(&PolicyGroup{}, sess)
+	autoMigrate(&PolicyRel{}, sess)
+	autoMigrate(&PolicyResult{}, sess)
+	autoMigrate(&PolicySuppress{}, sess)
 }

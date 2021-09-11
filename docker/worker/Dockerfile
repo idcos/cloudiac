@@ -2,6 +2,7 @@ FROM mini/ansible:2.4
 
 ARG WORKDIR=/usr/yunji/cloudiac
 WORKDIR ${WORKDIR}
+ENV TERRASCAN_VERSION=1.9.0
 RUN apk add --update git bash curl && \
     git clone https://github.com/tfutils/tfenv.git /root/.tfenv
 
@@ -15,3 +16,4 @@ RUN tfenv install "0.11.15" && \
 
 COPY assets/terraform.py /cloudiac/assets/terraform.py
 COPY assets/providers /usr/share/terraform/plugins
+

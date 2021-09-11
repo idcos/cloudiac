@@ -124,8 +124,8 @@ func (s *Session) Model(m interface{}) *Session {
 	}
 }
 
-func (s *Session) Table(name string) *Session {
-	return ToSess(s.db.Table(name))
+func (s *Session) Table(name string, args ...interface{}) *Session {
+	return ToSess(s.db.Table(name, args...))
 }
 
 func (s *Session) Debug() *Session {
@@ -133,11 +133,25 @@ func (s *Session) Debug() *Session {
 }
 
 func (s *Session) Expr() interface{} {
-	return s.db
+	qs := s.autoLazySelect()
+	return qs.db
 }
 
 func (s *Session) Raw(sql string, values ...interface{}) *Session {
-	return ToSess(s.db.Raw(sql, values...))
+	// FIXME: gorm driver bugs
+	// gorm@v1.21.12~14: statement.go +204
+	//   subdb.Statement.Vars = stmt.Vars
+	// when values is a *DB (usually a sub query), the statement vars will be appended twice
+	// workaround:
+	//  check if sql variables wanted matched the vars count x 2, then remove the duplicated vars
+	ss := ToSess(s.db.Raw(sql, values...))
+	// remove duplicated vars
+	if len(ss.db.Statement.Vars) > 0 && strings.Count(ss.db.Statement.SQL.String(), "?")*2 == len(ss.db.Statement.Vars) {
+		logs.Get().Warnf("gorm bugs: duplicate vars, sql: %s", ss.db.Statement.SQL.String())
+		ss.db.Statement.Vars = ss.db.Statement.Vars[:len(ss.db.Statement.Vars)/2]
+	}
+
+	return ss
 }
 
 func (s *Session) Exec(sql string, args ...interface{}) (int64, error) {
@@ -205,6 +219,10 @@ func (s *Session) Joins(query string, args ...interface{}) *Session {
 	return ToSess(s.db.Joins(query, args...))
 }
 
+func (s *Session) Having(query interface{}, args ...interface{}) *Session {
+	return ToSess(s.db.Having(query, args...))
+}
+
 func (s *Session) Order(value interface{}) *Session {
 	return ToSess(s.db.Order(value))
 }
@@ -226,7 +244,8 @@ func (s *Session) Set(name string, value interface{}) *Session {
 }
 
 func (s *Session) Count() (cnt int64, err error) {
-	err = s.db.Count(&cnt).Error
+	qs := s.autoLazySelect()
+	err = qs.db.Count(&cnt).Error
 	return
 }
 

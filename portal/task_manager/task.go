@@ -26,7 +26,7 @@ import (
 
 // StartTaskStep 启动任务的一步
 // 该函数会设置 taskReq 中 step 相关的数据
-func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error) {
+func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error, reTryAble bool) {
 	logger := logs.Get().
 		WithField("action", "StartTaskStep").
 		WithField("taskId", taskReq.TaskId).
@@ -38,7 +38,7 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error) 
 	var runnerAddr string
 	runnerAddr, err = services.GetRunnerAddress(taskReq.RunnerId)
 	if err != nil {
-		return errors.Wrapf(err, "get runner '%s' address", taskReq.RunnerId)
+		return errors.Wrapf(err, "get runner '%s' address", taskReq.RunnerId), true
 	}
 
 	requestUrl := utils.JoinURL(runnerAddr, consts.RunnerRunTaskURL)
@@ -51,18 +51,19 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error) 
 	respData, err := utils.HttpService(requestUrl, "POST", header, taskReq,
 		int(consts.RunnerConnectTimeout.Seconds()), int(consts.RunnerConnectTimeout.Seconds()))
 	if err != nil {
-		return err
+		return err, true
 	}
 
 	resp := runner.Response{}
 	if err := json.Unmarshal(respData, &resp); err != nil {
-		return fmt.Errorf("unexpected response: %s", respData)
+		return fmt.Errorf("unexpected response: %s", respData), false
 	}
 	logger.Debugf("runner response: %s", respData)
+
 	if resp.Error != "" {
-		return fmt.Errorf(resp.Error)
+		return fmt.Errorf(resp.Error), false
 	}
-	return nil
+	return nil, false
 }
 
 type waitStepResult struct {
@@ -75,15 +76,13 @@ type waitStepResult struct {
 // param: taskDeadline 任务超时时间，达到这个时间后任务会被置为 timeout 状态
 func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step *models.TaskStep) (
 	stepResult *waitStepResult, err error) {
-
 	logger := logs.Get().WithField("action", "WaitTaskStep").WithField("taskId", task.Id)
 	if step.StartAt == nil {
 		return nil, fmt.Errorf("step not start")
 	}
 	taskDeadline := time.Time(*step.StartAt).Add(time.Duration(task.StepTimeout) * time.Second)
-
 	// 当前版本实现中需要 portal 主动连接到 runner 获取状态
-	err = utils.RetryFunc(0, time.Second*10, func(retryN int) (retry bool, er error) {
+	err = utils.RetryFunc(10, time.Second*10, func(retryN int) (retry bool, er error) {
 		stepResult, er = pullTaskStepStatus(ctx, task, step, taskDeadline)
 		if er != nil {
 			logger.Errorf("pull task status error: %v, retry(%d)", er, retryN)
@@ -101,14 +100,12 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 	if err != nil {
 		return stepResult, err
 	}
-
 	if stepResult.Status != models.TaskRunning && task.Extra.Source == consts.WorkFlow {
 		k := kafka.Get()
 		if err := k.ConnAndSend(k.GenerateKafkaContent(task.Extra.TransitionId, stepResult.Status)); err != nil {
 			logger.Errorf("kafka send error: %v", err)
 		}
 	}
-
 	if len(stepResult.Result.LogContent) > 0 {
 		content := stepResult.Result.LogContent
 		content = logstorage.CutLogContent(content)
@@ -135,8 +132,20 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 			logger.WithField("path", path).Errorf("write task plan json error: %v", err)
 		}
 	}
-
-	if er := services.ChangeTaskStepStatus(sess, task, step, stepResult.Status, ""); er != nil {
+	if len(stepResult.Result.TfScanJson) > 0 {
+		path := task.TfParseJsonPath()
+		if err := logstorage.Get().Write(path, stepResult.Result.TfScanJson); err != nil {
+			logger.WithField("path", path).Errorf("write task parse json error: %v", err)
+		}
+	}
+	if len(stepResult.Result.TfResultJson) > 0 {
+		path := task.TfResultJsonPath()
+		if err := logstorage.Get().Write(path, stepResult.Result.TfResultJson); err != nil {
+			logger.WithField("path", path).Errorf("write task scan result json error: %v", err)
+		}
+	}
+	if er := services.ChangeTaskStepStatusAndExitCode(
+		sess, task, step, stepResult.Status, "", stepResult.Result.ExitCode); er != nil {
 		return stepResult, er
 	}
 	return stepResult, err
@@ -144,18 +153,18 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 
 // pullTaskStepStatus 获取任务最新状态，直到任务结束(或 ctx cancel)
 // 该函数允许重复调用，即使任务己结束 (runner 会在本地保存近期(约7天)任务执行信息)，如果任务结束则写入全量日志到存储
-func pullTaskStepStatus(ctx context.Context, task *models.Task, step *models.TaskStep, deadline time.Time) (
+func pullTaskStepStatus(ctx context.Context, task models.Tasker, step *models.TaskStep, deadline time.Time) (
 	stepResult *waitStepResult, err error) {
-	logger := logs.Get().WithField("action", "PullTaskState").WithField("taskId", task.Id)
+	logger := logs.Get().WithField("action", "PullTaskState").WithField("taskId", task.GetId())
 
-	runnerAddr, err := services.GetRunnerAddress(task.RunnerId)
+	runnerAddr, err := services.GetRunnerAddress(task.GetRunnerId())
 	if err != nil {
 		return nil, errors.Wrapf(err, "get runner address")
 	}
 
 	params := url.Values{}
-	params.Add("envId", string(task.EnvId))
-	params.Add("taskId", string(task.Id))
+	params.Add("envId", string(step.EnvId))
+	params.Add("taskId", string(step.TaskId))
 	params.Add("step", fmt.Sprintf("%d", step.Index))
 	wsConn, resp, err := utils.WebsocketDail(runnerAddr, consts.RunnerTaskStateURL, params)
 	if err != nil {
@@ -259,7 +268,7 @@ func pullTaskStepStatus(ctx context.Context, task *models.Task, step *models.Tas
 
 	logger.Infof("pulling step status ...")
 	err = selectLoop()
-	logger.Infof("pull step status done, status=%v", stepResult.Status)
+	logger.Infof("pull step status done, status=%v code=%d", stepResult.Status, stepResult.Result.ExitCode)
 
 	return stepResult, nil
 }
@@ -293,4 +302,72 @@ func WaitTaskStepApprove(ctx context.Context, dbSess *db.Session, taskId models.
 			}
 		}
 	}
+}
+
+// ========================================================
+// 扫描任务
+
+// WaitScanTaskStep 等待任务结束(包括超时)，返回任务最新状态
+func WaitScanTaskStep(ctx context.Context, sess *db.Session, task *models.ScanTask, step *models.TaskStep) (
+	stepResult *waitStepResult, err error) {
+
+	logger := logs.Get().WithField("action", "WaitTaskStep").WithField("taskId", task.Id)
+	if step.StartAt == nil {
+		return nil, fmt.Errorf("step not start")
+	}
+	taskDeadline := time.Time(*step.StartAt).Add(time.Duration(task.StepTimeout) * time.Second)
+
+	// 当前版本实现中需要 portal 主动连接到 runner 获取状态
+	err = utils.RetryFunc(10, time.Second*10, func(retryN int) (retry bool, er error) {
+		stepResult, er = pullTaskStepStatus(ctx, task, step, taskDeadline)
+		if er != nil {
+			logger.Errorf("pull task status error: %v, retry(%d)", er, retryN)
+			return true, er
+		}
+
+		// 正常情况下 pullTaskStepStatus() 应该在 runner 任务退出后才返回，
+		// 但发现有任务在 running 状态时函数返回的情况，所以这里进行一次状态检查，如果任务不是退出状态则继续重试
+		if !(models.Task{}).IsExitedStatus(stepResult.Status) {
+			logger.Warnf("pull task status done, but task status is '%s', retry(%d)", stepResult.Status, retryN)
+			return true, nil
+		}
+		return false, nil
+	})
+	if err != nil {
+		return stepResult, err
+	}
+
+	if stepResult.Status != models.TaskRunning && task.Extra.Source == consts.WorkFlow {
+		k := kafka.Get()
+		if err := k.ConnAndSend(k.GenerateKafkaContent(task.Extra.TransitionId, stepResult.Status)); err != nil {
+			logger.Errorf("kafka send error: %v", err)
+		}
+	}
+
+	if len(stepResult.Result.LogContent) > 0 {
+		content := stepResult.Result.LogContent
+		content = logstorage.CutLogContent(content)
+		if err := logstorage.Get().Write(step.LogPath, content); err != nil {
+			logger.WithField("path", step.LogPath).Errorf("write task log error: %v", err)
+			logger.Infof("task log content: %s", content)
+		}
+	}
+	if len(stepResult.Result.TfScanJson) > 0 {
+		path := task.TfParseJsonPath()
+		if err := logstorage.Get().Write(path, stepResult.Result.TfScanJson); err != nil {
+			logger.WithField("path", path).Errorf("write task parse json error: %v", err)
+		}
+	}
+	if len(stepResult.Result.TfResultJson) > 0 {
+		path := task.TfResultJsonPath()
+		if err := logstorage.Get().Write(path, stepResult.Result.TfResultJson); err != nil {
+			logger.WithField("path", path).Errorf("write task scan result json error: %v", err)
+		}
+	}
+
+	if er := services.ChangeTaskStepStatusAndExitCode(
+		sess, task, step, stepResult.Status, "", stepResult.Result.ExitCode); er != nil {
+		return stepResult, er
+	}
+	return stepResult, err
 }

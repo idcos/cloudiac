@@ -68,7 +68,7 @@ func ConsulKVSearch(key string) (interface{}, e.Error) {
 
 }
 
-func RunnerSearch() (interface{}, e.Error) {
+func RunnerSearch() ([]*api.AgentService, e.Error) {
 	resp := make([]*api.AgentService, 0)
 
 	conf := configs.Get()
@@ -166,4 +166,15 @@ func GetRunnerAddress(serviceId string) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("http://%s:%d", s.Address, s.Port), nil
+}
+
+func GetDefaultRunnerId() (string, e.Error) {
+	runners, err := RunnerSearch()
+	if err != nil {
+		return "", err
+	}
+	if len(runners) > 0 {
+		return runners[0].ID, nil
+	}
+	return "", e.New(e.ConsulConnError, fmt.Errorf("no active runner found"))
 }

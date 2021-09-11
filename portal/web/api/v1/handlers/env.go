@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"cloudiac/portal/apps"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
@@ -250,6 +251,25 @@ func (Env) LastTask(c *ctx.GinRequest) {
 	c.JSONResult(apps.LastTask(c.Service(), form))
 }
 
+// PolicyResult 环境合规详情
+// @Tags 环境
+// @Summary 环境合规详情
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param envId path string true "环境ID"
+// @router /envs/{envId}/policy_result [get]
+// @Success 200 {object} ctx.JSONResult{result=[]models.PolicyResult}
+func (Env) PolicyResult(c *ctx.GinRequest) {
+	form := &forms.PolicyScanResultForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.PolicyScanResult(c.Service(), consts.ScopeEnv, form))
+}
+
 // ResourceDetail 资源部署成功后信息详情
 // @Tags 环境
 // @Summary 环境部署资源信息详情
@@ -257,8 +277,6 @@ func (Env) LastTask(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string true "项目ID"
-// @Param envId path string true "环境ID"
 // @Param resourceId path string true "资源ID"
 // @route /envs/{envId}/resource/{resourceId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.ResAttrs}

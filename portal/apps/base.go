@@ -21,7 +21,12 @@ type TableIface interface {
 func getPage(query *db.Session, form forms.PageFormer, model TableIface) (interface{}, e.Error) {
 	pageSize := form.PageSize()
 	currentPage := form.CurrentPage()
+
+	// 处理排序
+	// 注意: 如果 query 使用 Raw 构建查询语句，则 Order 排序不生效，
+	// 需要 Raw 语句生成的时候手动调用 PageForm.OrderBy 构建排序语句
 	query = form.Order(query)
+
 	p := page.New(currentPage, pageSize, query)
 
 	typ := reflect.TypeOf(model)

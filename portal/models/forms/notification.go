@@ -6,15 +6,13 @@ import "cloudiac/portal/models"
 
 type UpdateNotificationForm struct {
 	BaseForm
-	Id      models.Id `uri:"id" form:"notificationId" json:"notificationId" binding:"required"`
-	Name    string    `json:"name" form:"name" `
-	Type    string    `form:"type" json:"type" binding:"required"`
-	Secret  string    `json:"secret" form:"secret"`
-	Url     string    `json:"url" form:"url"`
-	UserIds []string  `form:"userIds" json:"userIds"`
-	//EventType        string      `form:"eventType" json:"eventType" binding:"required"`
-
-	EventType []string `form:"eventType" json:"eventType" binding:"required"` //enum('failed', 'complete', 'approving', 'running')
+	Id        models.Id `uri:"id" form:"notificationId" json:"notificationId" binding:"required"`
+	Name      string    `json:"name" form:"name" `
+	Type      string    `form:"type" json:"type" binding:"required"`
+	Secret    string    `json:"secret" form:"secret"`
+	Url       string    `json:"url" form:"url"`
+	UserIds   []string  `form:"userIds" json:"userIds"`
+	EventType []string  `form:"eventType" json:"eventType" binding:"required"` //enum('task.failed', 'task.complete', 'task.approving', 'task.running')
 }
 
 type CreateNotificationForm struct {
@@ -24,8 +22,7 @@ type CreateNotificationForm struct {
 	Secret    string   `json:"secret" form:"secret"`
 	Url       string   `json:"url" form:"url"`
 	UserIds   []string `form:"userIds" json:"userIds"`
-	EventType []string `form:"eventType" json:"eventType" binding:"required"` //enum('failed', 'complete', 'approving', 'running')
-
+	EventType []string `form:"eventType" json:"eventType" binding:"required"` //enum('task.failed', 'task.complete', 'task.approving', 'task.running')
 }
 
 type DeleteNotificationForm struct {
