@@ -71,7 +71,7 @@ type Env struct {
 
 	// 任务重试
 	RetryNumber int  `json:"retryNumber" gorm:"size:32;default:3"` // 任务重试次数
-	RetryDelay  int  `json:"RetryDelay" gorm:"size:32;default:5"`  // 任务重试时间，单位为秒，默认值为0
+	RetryDelay  int  `json:"retryDelay" gorm:"size:32;default:5"`  // 任务重试时间，单位为秒
 	RetryAble   bool `json:"retryAble" gorm:"default:false"`       // 是否允许任务进行重试
 }
 
