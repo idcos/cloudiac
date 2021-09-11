@@ -567,3 +567,61 @@ func PolicyEnable(tx *db.Session, policyId models.Id, enabled bool) (*models.Pol
 
 	return policy, nil
 }
+
+type ScanStatusGroupBy struct {
+	Id       models.Id
+	Name     string
+	Count    int
+	Status   string
+	Severity string
+}
+
+func GetPolicyStatusByPolicy(query *db.Session, from time.Time, to time.Time, status string) ([]*ScanStatusGroupBy, e.Error) {
+	groupQuery := query.Model(models.PolicyResult{})
+	groupQuery = groupQuery.Where("start_at >= ? and start_at < ?", from, to).
+		Select("count(*) as count, policy_id as id, status").
+		Group("policy_id,status").
+		Order("count desc")
+
+	q := query.Select("r.*,iac_policy.name,iac_policy.severity").Table("(?) as r", groupQuery.Expr()).
+		Joins("left join iac_policy on iac_policy.id = r.id")
+
+	if status != "" {
+		q = q.Where("r.status = ?", status)
+	}
+
+	scanStatus := make([]*ScanStatusGroupBy, 0)
+	if err := q.Find(&scanStatus); err != nil {
+		if e.IsRecordNotFound(err) {
+			return scanStatus, nil
+		}
+		return nil, e.New(e.DBError, err)
+	}
+
+	return scanStatus, nil
+}
+
+func GetPolicyStatusByPolicyGroup(query *db.Session, from time.Time, to time.Time, status string) ([]*ScanStatusGroupBy, e.Error) {
+	groupQuery := query.Model(models.PolicyResult{})
+	groupQuery = groupQuery.Where("start_at >= ? and start_at < ?", from, to).
+		Select("count(*) as count, policy_group_id as id, status").
+		Group("policy_group_id,status").
+		Order("count desc")
+
+	q := query.Select("r.*,iac_policy_group.name").Table("(?) as r", groupQuery.Expr()).
+		Joins("left join iac_policy_group on iac_policy_group.id = r.id")
+
+	if status != "" {
+		q = q.Where("r.status = ?", status)
+	}
+
+	scanStatus := make([]*ScanStatusGroupBy, 0)
+	if err := q.Find(&scanStatus); err != nil {
+		if e.IsRecordNotFound(err) {
+			return scanStatus, nil
+		}
+		return nil, e.New(e.DBError, err)
+	}
+
+	return scanStatus, nil
+}

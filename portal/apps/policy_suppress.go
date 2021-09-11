@@ -54,7 +54,9 @@ func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppres
 				}
 				return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 			}
-			if services.UserHasProjectRole(c.UserId, env.OrgId, env.ProjectId, "") {
+
+			if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, env.OrgId, consts.OrgRoleAdmin) &&
+				!services.UserHasProjectRole(c.UserId, env.OrgId, env.ProjectId, "") {
 				_ = tx.Rollback()
 				return nil, e.New(e.EnvNotExists, fmt.Errorf("cannot access env %s", id), http.StatusForbidden)
 			}
@@ -67,7 +69,7 @@ func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppres
 				}
 				return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 			}
-			if services.UserHasOrgRole(c.UserId, tpl.OrgId, "") {
+			if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, tpl.OrgId, "") {
 				_ = tx.Rollback()
 				return nil, e.New(e.TemplateNotExists, fmt.Errorf("cannot access tpl %s", id), http.StatusForbidden)
 			}

@@ -124,8 +124,8 @@ func (s *Session) Model(m interface{}) *Session {
 	}
 }
 
-func (s *Session) Table(name string) *Session {
-	return ToSess(s.db.Table(name))
+func (s *Session) Table(name string, args ...interface{}) *Session {
+	return ToSess(s.db.Table(name, args...))
 }
 
 func (s *Session) Debug() *Session {

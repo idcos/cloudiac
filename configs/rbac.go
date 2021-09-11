@@ -71,7 +71,7 @@ var Polices = []Policy{
 	{"login", "webhook", "*"},
 
 	// 合规策略
-	{"login", "policies", "*"},
+	//{"login", "policies", "*"},
 
 	// 用户
 	{"admin", "users", "*"},
