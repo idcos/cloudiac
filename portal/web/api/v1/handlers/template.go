@@ -3,8 +3,8 @@
 package handlers
 
 import (
+	"cloudiac/common"
 	"cloudiac/portal/apps"
-	"cloudiac/portal/consts"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
@@ -179,7 +179,7 @@ func TemplatePlaybookSearch(c *ctx.GinRequest) {
 // @router /templates/tfversions [get]
 // @Success 200 {object} []string
 func TemplateTfVersionSearch(c *ctx.GinRequest) {
-	c.JSONResult(consts.TerraformVersions, nil)
+	c.JSONResult(common.TerraformVersions, nil)
 }
 
 // AutoTemplateTfVersionChoice

@@ -124,12 +124,12 @@ var (
 		"pending":  "排队中",
 	}
 	TerraformVersions = []string{
-		"v0.11.15",
-		"v0.12.31",
-		"v0.13.7",
-		"v0.14.11",
-		"v0.15.5",
-		"v1.0.5",
+		"0.11.15",
+		"0.12.31",
+		"0.13.7",
+		"0.14.11",
+		"0.15.5",
+		"1.0.6",
 	}
 
 	TaskStatusToEventType = map[string]string{

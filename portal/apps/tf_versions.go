@@ -3,6 +3,7 @@
 package apps
 
 import (
+	"cloudiac/common"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
@@ -10,7 +11,6 @@ import (
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/vcsrv"
 	"fmt"
-	"github.com/Masterminds/semver"
 	"io/ioutil"
 	"net/http"
 	"regexp"
@@ -18,6 +18,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Masterminds/semver"
 )
 
 var TfListVersions []string
@@ -42,8 +44,9 @@ func AutoGetTfVersion(c *ctx.ServiceContext, form *forms.TemplateTfVersionSearch
 		return nil, e.New(e.VcsError, er)
 	}
 	content, er := repoDetail.ReadFileContent(form.VcsBranch, "versions.tf")
+	// 没有找到versions.tf 文件，使用默认版本，不报错
 	if er != nil {
-		return nil, e.New(e.VcsError, er)
+		return consts.DefaultTerraformVersion, nil
 	}
 	tfconstraint := GetUserTfVersion(content)
 	// 如果用户versions.tf 中没有制定terraform 版本，使用我们默认版本
@@ -51,7 +54,7 @@ func AutoGetTfVersion(c *ctx.ServiceContext, form *forms.TemplateTfVersionSearch
 		return consts.DefaultTerraformVersion, nil
 	}
 	// 查看内置版本中有无满足用户约束条件的版本
-	tfVersion, tferr := GetDetailTfVersion(consts.TerraformVersions, tfconstraint)
+	tfVersion, tferr := GetDetailTfVersion(common.TerraformVersions, tfconstraint)
 	if tferr != nil {
 		return nil, e.New(e.InvalidTfVersion, tferr)
 	}

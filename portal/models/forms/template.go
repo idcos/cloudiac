@@ -56,6 +56,7 @@ type UpdateTemplateForm struct {
 	RepoRevision      string      `form:"repoRevision" json:"repoRevision" binding:""`
 	VcsId             models.Id   `form:"vcsId" json:"vcsId" binding:""`
 	RepoId            string      `form:"repoId" json:"repoId" binding:""`
+	TfVersion         string      `form:"tfVersion" json:"tfVersion" binding:""`
 }
 
 type DeleteTemplateForm struct {

@@ -4,18 +4,16 @@ ARG WORKDIR=/usr/yunji/cloudiac
 WORKDIR ${WORKDIR}
 ENV TERRASCAN_VERSION=1.9.0
 RUN apk add --update git bash curl && \
-    git clone https://github.com/tfutils/tfenv.git /root/.tfenv && \
-    curl -L https://github.com/accurics/terrascan/releases/download/v${TERRASCAN_VERSION}/terrascan_${TERRASCAN_VERSION}_Linux_x86_64.tar.gz | \
-        tar -xz terrascan && install terrascan /usr/local/bin && rm terrascan
+    git clone https://github.com/tfutils/tfenv.git /root/.tfenv
 
 ENV PATH="/root/.tfenv/bin:${PATH}"
-RUN tfenv install "v0.11.15" && \
-    tfenv install "v0.11.15" && \
-    tfenv install "v0.12.31" && \
-    tfenv install "v0.13.7" && \
-    tfenv install "v0.14.11" && \
-    tfenv install "v0.15.5" && \
-    tfenv install "v1.0.5" \
+RUN tfenv install "0.11.15" && \
+    tfenv install "0.12.31" && \
+    tfenv install "0.13.7" && \
+    tfenv install "0.14.11" && \
+    tfenv install "0.15.5" && \
+    tfenv install "1.0.6"
 
 COPY assets/terraform.py /cloudiac/assets/terraform.py
 COPY assets/providers /usr/share/terraform/plugins
+

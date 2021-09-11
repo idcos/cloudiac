@@ -70,3 +70,14 @@ const (
 	PolicySuppressTypeSource = "source"
 	PolicySuppressTypePolicy = "policy"
 )
+
+var (
+	TerraformVersions = []string{
+		"0.11.15",
+		"0.12.31",
+		"0.13.7",
+		"0.14.11",
+		"0.15.5",
+		"1.0.6",
+	}
+)

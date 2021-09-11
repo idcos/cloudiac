@@ -67,7 +67,9 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		EnvId:     env.Id,
 		StatePath: env.StatePath,
 
-		Workdir: tpl.Workdir,
+		Workdir:   tpl.Workdir,
+		TfVersion: tpl.TfVersion,
+
 		// 以下值直接使用环境的配置(不继承模板的配置)
 		Playbook:     env.Playbook,
 		TfVarsFile:   env.TfVarsFile,

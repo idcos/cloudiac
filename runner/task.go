@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"cloudiac/common"
 	"cloudiac/configs"
+	"cloudiac/portal/consts"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"encoding/json"
@@ -87,7 +88,12 @@ func (t *Task) Run() (cid string, err error) {
 	for k, v := range t.req.Env.TerraformVars {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("TF_VAR_%s=%s", k, v))
 	}
-	cmd.Env = append(cmd.Env, fmt.Sprintf("TFENV_TERRAFORM_VERSION=%s", t.req.Env.TfVersion))
+	if t.req.Env.TfVersion == "" {
+		t.req.Env.TfVersion = consts.DefaultTerraformVersion
+	}
+	cmd.TerraformVersion = t.req.Env.TfVersion
+	cmd.Env = append(cmd.Env, fmt.Sprintf("TFENV_TERRAFORM_VERSION=%s", cmd.TerraformVersion))
+
 	shellArgs := " "
 	if utils.IsTrueStr(t.req.Env.EnvironmentVars["CLOUDIAC_DEBUG"]) {
 		shellArgs += "-x"
@@ -333,6 +339,7 @@ func (t *Task) stepInit() (command string, err error) {
 
 var planCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
+tfenv use $TFENV_TERRAFORM_VERSION && \
 terraform plan -input=false -out=_cloudiac.tfplan \
 {{if .TfVars}}-var-file={{.TfVars}}{{end}} \
 {{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }}&& \
@@ -350,6 +357,7 @@ func (t *Task) stepPlan() (command string, err error) {
 // 当指定了 plan 文件时不需要也不能传 -var-file 参数
 var applyCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
+tfenv use $TFENV_TERRAFORM_VERSION && \
 terraform apply -input=false -auto-approve \
 {{ range $arg := .Req.StepArgs}}{{$arg}} {{ end }}_cloudiac.tfplan
 `))

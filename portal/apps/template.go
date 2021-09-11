@@ -77,6 +77,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		Playbook:     form.Playbook,
 		PlayVarsFile: form.PlayVarsFile,
 		TfVarsFile:   form.TfVarsFile,
+		TfVersion:    form.TfVersion,
 	})
 
 	if err != nil {
@@ -145,6 +146,9 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 	}
 	if form.HasKey("playVarsFile") {
 		attrs["playVarsFile"] = form.PlayVarsFile
+	}
+	if form.HasKey("tfVersion") {
+		attrs["tfVersion"] = form.TfVersion
 	}
 	if form.HasKey("repoRevision") {
 		attrs["repoRevision"] = form.RepoRevision
