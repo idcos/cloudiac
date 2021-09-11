@@ -225,17 +225,16 @@ type TaskStepBody struct {
 }
 
 const (
-	TaskStepInit               = common.TaskStepInit
-	TaskStepPlan               = common.TaskStepPlan
-	TaskStepApply              = common.TaskStepApply
-	TaskStepDestroy            = common.TaskStepDestroy
-	TaskStepPlay               = common.TaskStepPlay
-	TaskStepCommand            = common.TaskStepCommand
-	TaskStepCollect            = common.TaskStepCollect
-	TaskStepTfParse            = common.TaskStepTfParse
-	TaskStepTfScan             = common.TaskStepTfScan
-	TaskStepScanInit           = common.TaskStepScanInit
-	TaskStepResultScanExitCode = common.TaskStepResultScanExitCode
+	TaskStepInit     = common.TaskStepInit
+	TaskStepPlan     = common.TaskStepPlan
+	TaskStepApply    = common.TaskStepApply
+	TaskStepDestroy  = common.TaskStepDestroy
+	TaskStepPlay     = common.TaskStepPlay
+	TaskStepCommand  = common.TaskStepCommand
+	TaskStepCollect  = common.TaskStepCollect
+	TaskStepTfParse  = common.TaskStepTfParse
+	TaskStepTfScan   = common.TaskStepTfScan
+	TaskStepScanInit = common.TaskStepScanInit
 
 	TaskStepPending   = common.TaskStepPending
 	TaskStepApproving = common.TaskStepApproving
@@ -257,12 +256,14 @@ type TaskStep struct {
 	NextStep  Id     `json:"nextStep" gorm:"size:32;default:''"`
 	Index     int    `json:"index" gorm:"size:32;not null"`
 	Status    string `json:"status" gorm:"type:enum('pending','approving','rejected','running','failed','complete','timeout')"`
+	ExitCode  int    `json:"exitCode" gorm:"default:0"` // 执行退出码，status 为 failed 时才有意义
 	Message   string `json:"message" gorm:"type:text"`
 	StartAt   *Time  `json:"startAt" gorm:"type:datetime"`
 	EndAt     *Time  `json:"endAt" gorm:"type:datetime"`
 	LogPath   string `json:"logPath" gorm:""`
 
-	ApproverId        Id    `json:"approverId" gorm:"size:32;not null"`         // 审批者用户 id
+	ApproverId Id `json:"approverId" gorm:"size:32;not null"` // 审批者用户 id
+
 	CurrentRetryCount int   `json:"currentRetryCount" gorm:"size:32;default:0"` // 当前重试次数
 	NextRetryTime     int64 `json:"nextRetryTime" gorm:"default:0"`             // 下次重试时间
 	RetryNumber       int   `json:"retryNumber" gorm:"size:32;default:0"`       // 每个步骤可以重试的总次数
