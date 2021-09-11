@@ -284,7 +284,9 @@ func SearchPolicyTpl(tx *db.Session, orgId, tplId models.Id, q string) *db.Sessi
 		query = query.WhereLike("tpl.name", q)
 	}
 	query = query.Joins("LEFT JOIN iac_scan_task AS task ON task.id = tpl.last_scan_task_id")
-	return query.LazySelect("tpl.*, task.status AS scan_task_status")
+	return query.LazySelect("tpl.*, task.status AS scan_task_status").
+		Joins("LEFT JOIN iac_policy_rel on iac_policy_rel.tpl_id = tpl.id and iac_policy_rel.group_id = ''").
+		LazySelectAppend("iac_policy_rel.enabled")
 }
 
 func SearchPolicyEnv(dbSess *db.Session, orgId, projectId, envId models.Id, q string) *db.Session {
@@ -312,7 +314,9 @@ func SearchPolicyEnv(dbSess *db.Session, orgId, projectId, envId models.Id, q st
 	return query.
 		LazySelectAppend(fmt.Sprintf("%s.*", envTable)).
 		LazySelectAppend("tpl.name AS template_name, tpl.id AS tpl_id, tpl.repo_addr AS repo_addr").
-		LazySelectAppend("task.status AS scan_task_status")
+		LazySelectAppend("task.status AS scan_task_status").
+		Joins("LEFT JOIN iac_policy_rel on iac_policy_rel.env_id = iac_env.id and iac_policy_rel.group_id = ''").
+		LazySelectAppend("iac_policy_rel.enabled")
 }
 
 func EnvOfPolicy(dbSess *db.Session, form *forms.EnvOfPolicyForm, orgId, projectId models.Id) *db.Session {

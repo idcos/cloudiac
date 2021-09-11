@@ -325,7 +325,8 @@ type RespPolicyTpl struct {
 	models.Template
 
 	// FIXME: "是否开启检测" 当前无标识
-	Status string `json:"status" gorm:"column:scan_task_status"`
+	Status  string `json:"status" gorm:"column:scan_task_status"`
+	Enabled bool   `json:"enabled"`
 
 	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
 	Summary
@@ -402,6 +403,7 @@ type RespPolicyEnv struct {
 	Status       string                    `json:"status" gorm:"column:scan_task_status"`
 	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
 	Summary
+	Enabled bool `json:"enabled"`
 
 	// 以下字段不返回
 	TaskStatus string `json:"-" gorm:"-"` // 环境部署任务状态
