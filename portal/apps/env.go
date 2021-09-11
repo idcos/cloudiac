@@ -340,7 +340,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 		//	!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) {
 		//	return nil, e.New(e.PermissionDeny, fmt.Errorf("approval role required"), http.StatusBadRequest)
 		//}
-		attrs["reject_on_violation"] = form.StopOnViolation
+		attrs["StopOnViolation"] = form.StopOnViolation
 	}
 
 	if form.HasKey("destroyAt") {
