@@ -622,8 +622,9 @@ func ParseTemplate(c *ctx.ServiceContext, form *forms.PolicyParseForm) (interfac
 }
 
 type ScanResultResp struct {
-	ScanTime    *models.Time   `json:"scanTime"`    // 扫描时间
-	ScanResults []PolicyResult `json:"scanResults"` // 扫描结果
+	ScanTime     *models.Time   `json:"scanTime"`     // 扫描时间
+	PolicyStatus string         `json:"policyStatus"` // 扫描状态
+	ScanResults  []PolicyResult `json:"scanResults"`  // 扫描结果
 }
 
 type PolicyResult struct {
@@ -670,8 +671,9 @@ func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicySca
 		Total:    p.MustTotal(),
 		PageSize: p.Size,
 		List: &ScanResultResp{
-			ScanTime:    scanTask.StartAt,
-			ScanResults: results,
+			ScanTime:     scanTask.StartAt,
+			PolicyStatus: scanTask.PolicyStatus,
+			ScanResults:  results,
 		},
 	}, nil
 }
