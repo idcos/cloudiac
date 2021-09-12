@@ -838,6 +838,8 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 
 		Workdir: tpl.Workdir,
 
+		PolicyStatus: common.PolicyStatusPending,
+
 		BaseTask: models.BaseTask{
 			Type:        pt.Type,
 			Flow:        pt.Flow,
