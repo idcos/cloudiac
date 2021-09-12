@@ -553,6 +553,16 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 	if form.HasKey("revision") {
 		env.Revision = form.Revision
 	}
+	if form.HasKey("retryAble") {
+		env.RetryAble = form.RetryAble
+	}
+	if form.HasKey("retryNumber") {
+		env.RetryNumber = form.RetryNumber
+	}
+	if form.HasKey("retryDelay") {
+		env.RetryDelay = form.RetryDelay
+	}
+
 	if form.TaskType == "" {
 		return nil, e.New(e.BadParam, http.StatusBadRequest)
 	}
