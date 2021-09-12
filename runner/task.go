@@ -447,6 +447,7 @@ func (t *Task) collectCommand() (string, error) {
 var parseCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 mkdir -p {{.PoliciesDir}} && \
+mkdir -p ~/.terrascan/pkg/policies/opa/rego/aws && \
 terrascan scan --config-only -l debug -o json > {{.TFScanJsonFilePath}}
 `))
 
@@ -463,6 +464,7 @@ func (t *Task) stepTfParse() (command string, err error) {
 var scanCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 mkdir -p {{.PoliciesDir}} && \
+mkdir -p ~/.terrascan/pkg/policies/opa/rego/aws && \
 echo scanning policies && \
 terrascan scan -p {{.PoliciesDir}} --show-passed --iac-type terraform -l debug -o json > {{.TerrascanResultFile}}
 {{ if not .Req.StopOnViolation -}} RET=$? ; [ $RET -eq 3 ] && exit 0 || exit $RET {{ end -}}
@@ -483,8 +485,7 @@ func (t *Task) stepTfScan() (command string, err error) {
 var scanInitCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 git clone '{{.Req.RepoAddress}}' code && \
 cd 'code/{{.Req.Env.Workdir}}' && \
-git checkout -q '{{.Req.RepoRevision}}' && echo check out $(git rev-parse --short HEAD). && \
-mkdir -p ~/.terrascan/pkg/policies/opa/rego/aws
+git checkout -q '{{.Req.RepoRevision}}' && echo check out $(git rev-parse --short HEAD).
 `))
 
 func (t *Task) stepScanInit() (command string, err error) {

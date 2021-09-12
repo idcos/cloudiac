@@ -816,6 +816,8 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 		er  error
 		err e.Error
 	)
+	envRevison := ""
+
 	envId := models.Id("")
 	if env != nil {
 		tpl, err = GetTemplateById(tx, env.TplId)
@@ -823,6 +825,7 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)
 		}
 		envId = env.Id
+		envRevison = env.Revision
 	}
 
 	task := models.ScanTask{
@@ -830,7 +833,7 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 		Name:      pt.Name,
 		CreatorId: pt.CreatorId,
 		Extra:     pt.Extra,
-		Revision:  utils.FirstValueStr(pt.Revision, env.Revision, tpl.RepoRevision),
+		Revision:  utils.FirstValueStr(pt.Revision, envRevison, tpl.RepoRevision),
 
 		OrgId: tpl.OrgId,
 		TplId: tpl.Id,
