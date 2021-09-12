@@ -367,7 +367,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	if form.HasKey("triggers") {
 		attrs["triggers"] = pq.StringArray(form.Triggers)
 		// triggers有变更时，需要检测webhook的配置
-		tpl, err := services.GetTemplateById(query, env.TplId)
+		tpl, err := services.GetTemplateById(c.DB(), env.TplId)
 		if err != nil && err.Code() == e.TemplateNotExists {
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)
 		} else if err != nil {
