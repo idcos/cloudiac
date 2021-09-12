@@ -2,6 +2,7 @@ package policy
 
 import (
 	"bufio"
+	"cloudiac/common"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
@@ -257,7 +258,7 @@ func (s *Scanner) CleanUp(er error) error {
 
 func (s *Scanner) ScanResource(resource Resource) error {
 	// TODO: handle relation with task
-	task := models.Task{
+	task := models.ScanTask{
 		OrgId:     "",
 		ProjectId: "",
 		TplId:     "",
@@ -266,7 +267,7 @@ func (s *Scanner) ScanResource(resource Resource) error {
 	task.Id = ""
 
 	if s.SaveResult {
-		if err := services.InitScanResult(s.Db, task); err != nil {
+		if err := services.InitScanResult(s.Db, &task); err != nil {
 			return err
 		}
 	}
@@ -283,43 +284,52 @@ func (s *Scanner) ScanResource(resource Resource) error {
 	}
 
 	if err := s.RunScan(resource); err != nil {
-		code, er := utils.CmdGetCode(err)
+		defer s.handleScanError(&task, err)
+		code, err := utils.CmdGetCode(err)
+		if err != nil {
+			return err
+		}
 		switch code {
-		case 3: // found violation, continue process
-		case 0, 1:
-			fallthrough
+		case 3:
+			task.PolicyStatus = common.PolicyStatusViolated
+		case 0:
+			task.PolicyStatus = common.PolicyStatusPassed
+		case 1:
+			task.PolicyStatus = common.PolicyStatusFailed
+			return err
 		default:
-			return s.handleScanError(&task, er)
+			task.PolicyStatus = common.PolicyStatusFailed
+			return err
 		}
 	}
 
 	bs, err := os.ReadFile(s.GetResultPath(resource))
 	if err != nil {
-		return s.handleScanError(&task, err)
+		return err
 	}
 
 	var tfResultJson *services.TsResultJson
 	if tfResultJson, err = services.UnmarshalTfResultJson(bs); err != nil {
-		return s.handleScanError(&task, err)
+		return err
 	}
 
 	if len(tfResultJson.Results.Violations) > 0 {
 		// 附加源码
 		if tfResultJson, err = PopulateViolateSource(s, resource, &task, tfResultJson); err != nil {
-			return s.handleScanError(&task, err)
+			return err
 		}
 	}
 
 	if s.SaveResult {
-		if err := services.UpdateScanResult(s.Db, &task, tfResultJson.Results, false); err != nil {
-			return s.handleScanError(&task, err)
+		if err := services.UpdateScanResult(s.Db, &task, tfResultJson.Results, task.PolicyStatus); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func PopulateViolateSource(scanner *Scanner, res Resource, task *models.Task, resultJson *services.TsResultJson) (*services.TsResultJson, error) {
+func PopulateViolateSource(scanner *Scanner, res Resource, task *models.ScanTask, resultJson *services.TsResultJson) (*services.TsResultJson, error) {
 	updated := false
 	for idx, policyResult := range resultJson.Results.Violations {
 		logrus.Errorf("pupulate source: %s", policyResult)
@@ -366,11 +376,11 @@ func PopulateViolateSource(scanner *Scanner, res Resource, task *models.Task, re
 	return resultJson, nil
 }
 
-func (s *Scanner) handleScanError(task *models.Task, err error) error {
+func (s *Scanner) handleScanError(task *models.ScanTask, err error) error {
 	if s.SaveResult {
 		// 扫描出错的时候更新所有策略扫描结果为 failed
 		emptyResult := services.TsResultJson{}
-		if err := services.UpdateScanResult(s.Db, task, emptyResult.Results, true); err != nil {
+		if err := services.UpdateScanResult(s.Db, task, emptyResult.Results, task.PolicyStatus); err != nil {
 			return err
 		}
 	}

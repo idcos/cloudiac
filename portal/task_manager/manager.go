@@ -589,9 +589,7 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			}
 		}
 
-		// 扫描出错的时候 tsResult 为空值，
-		// UpdateScanResult() 会将所有无法获取到扫描结果的 PolicyResult 设置为 failed
-		if err := services.UpdateScanResult(dbSess, task, tsResult, task.Status == common.TaskFailed); err != nil {
+		if err := services.UpdateScanResult(dbSess, scanTask, tsResult, scanTask.PolicyStatus); err != nil {
 			return fmt.Errorf("save scan result: %v", err)
 		}
 
@@ -1043,9 +1041,7 @@ func (m *TaskManager) processScanTaskDone(task *models.ScanTask) {
 			}
 		}
 
-		// 扫描出错的时候 tsResult 为空值，
-		// UpdateScanResult() 会将所有无法获取到扫描结果的 PolicyResult 设置为 failed
-		if err := services.UpdateScanResult(dbSess, task, tsResult, task.Status == common.TaskFailed); err != nil {
+		if err := services.UpdateScanResult(dbSess, task, tsResult, task.PolicyStatus); err != nil {
 			return fmt.Errorf("save scan result: %v", err)
 		}
 
@@ -1066,25 +1062,26 @@ func (m *TaskManager) processScanTaskDone(task *models.ScanTask) {
 		return nil
 	}
 
+	if err := updateTaskStatus(); err != nil {
+		logger.Errorf("update task status error: %v", err)
+	}
+
 	if task.Type == common.TaskTypeScan {
 		if err := processTfResult(); err != nil {
 			logger.Errorf("process task scan: %s", err)
 		}
-	}
-
-	if err := updateTaskStatus(); err != nil {
-		logger.Errorf("update task status error: %v", err)
 	}
 }
 
 // buildScanTaskReq 构建扫描任务 RunTaskReq 对象
 func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.TaskStep) (taskReq *runner.RunTaskReq, err error) {
 	taskReq = &runner.RunTaskReq{
-		RunnerId:     task.RunnerId,
-		TaskId:       string(task.Id),
-		Timeout:      task.StepTimeout,
-		RepoAddress:  task.RepoAddr,
-		RepoRevision: task.CommitId,
+		RunnerId:        task.RunnerId,
+		TaskId:          string(task.Id),
+		Timeout:         task.StepTimeout,
+		RepoAddress:     task.RepoAddr,
+		RepoRevision:    task.CommitId,
+		StopOnViolation: true,
 		//Repos: []runner.Repository{
 		//	{
 		//		RepoAddress:  task.RepoAddr,
