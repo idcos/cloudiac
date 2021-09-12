@@ -15,6 +15,7 @@ import (
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"fmt"
+	"github.com/lib/pq"
 	"net/http"
 	"strings"
 	"time"
@@ -364,7 +365,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	}
 
 	if form.HasKey("triggers") {
-		attrs["triggers"] = form.Triggers
+		attrs["triggers"] = pq.StringArray(form.Triggers)
 		// triggers有变更时，需要检测webhook的配置
 		tpl, err := services.GetTemplateById(query, env.TplId)
 		if err != nil && err.Code() == e.TemplateNotExists {
