@@ -44,6 +44,7 @@ func CreatePolicy(c *ctx.ServiceContext, form *forms.CreatePolicyForm) (*models.
 		RuleName:      ruleName,
 		ResourceType:  resourceType,
 		PolicyType:    policyType,
+		GroupId:       form.GroupId,
 	}
 	refId, err := services.GetPolicyReferenceId(c.DB(), &p)
 	if err != nil {
@@ -51,7 +52,7 @@ func CreatePolicy(c *ctx.ServiceContext, form *forms.CreatePolicyForm) (*models.
 	}
 	p.ReferenceId = refId
 
-	policy, err := services.CreatePolicy(c.DB(), &p)
+	policyInfo, err := services.CreatePolicy(c.DB(), &p)
 	if err != nil && err.Code() == e.PolicyAlreadyExist {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
@@ -59,7 +60,7 @@ func CreatePolicy(c *ctx.ServiceContext, form *forms.CreatePolicyForm) (*models.
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	return policy, nil
+	return policyInfo, nil
 }
 
 //parseRegoHeader 解析 rego 脚本获取入口，云商类型和资源类型
@@ -265,6 +266,10 @@ func UpdatePolicy(c *ctx.ServiceContext, form *forms.UpdatePolicyForm) (interfac
 
 	if form.HasKey("tags") {
 		attr["tags"] = form.Tags
+	}
+
+	if form.HasKey("groupId") {
+		attr["groupId"] = form.GroupId
 	}
 
 	if form.HasKey("enabled") {
