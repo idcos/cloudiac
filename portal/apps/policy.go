@@ -29,7 +29,7 @@ import (
 func CreatePolicy(c *ctx.ServiceContext, form *forms.CreatePolicyForm) (*models.Policy, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create policy %s", form.Name))
 
-	ruleName, resourceType, policyType, err := parseRegoHeader(form.Rego)
+	ruleName, policyType, resourceType, err := parseRegoHeader(form.Rego)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	}
