@@ -2,10 +2,13 @@ FROM mini/ansible:2.4
 
 ARG WORKDIR=/usr/yunji/cloudiac
 WORKDIR ${WORKDIR}
-ENV TERRASCAN_VERSION=1.9.0
-RUN apk add --update git bash curl && \
-    git clone https://github.com/tfutils/tfenv.git /root/.tfenv
 
+RUN apk add --update git bash curl
+
+ENV TERRASCAN_VERSION=1.9.0
+RUN curl -L https://github.com/accurics/terrascan/releases/download/v${TERRASCAN_VERSION}/terrascan_${TERRASCAN_VERSION}_Linux_x86_64.tar.gz | tar -xz terrascan && install terrascan /usr/local/bin && rm terrascan
+
+RUN git clone https://github.com/tfutils/tfenv.git /root/.tfenv && cd /root/.tfenv && git checkout tags/v2.2.2
 ENV PATH="/root/.tfenv/bin:${PATH}"
 RUN tfenv install "0.11.15" && \
     tfenv install "0.12.31" && \

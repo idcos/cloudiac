@@ -516,6 +516,26 @@ func FirstValueStr(ss ...string) string {
 	return ""
 }
 
+// FirstValueInt 获取参数列表中第一个不为 0 的整数
+func FirstValueInt(vs ...int) int {
+	for _, v := range vs {
+		if v != 0 {
+			return v
+		}
+	}
+	return 0
+}
+
+// FirstValueBool 获取参数列表中第一个不为 false 的 bool 值
+func FirstValueBool(vs ...bool) bool {
+	for _, v := range vs {
+		if v {
+			return v
+		}
+	}
+	return false
+}
+
 func SetGinMode() {
 	if mode := os.Getenv(gin.EnvGinMode); mode != "" {
 		gin.SetMode(mode)

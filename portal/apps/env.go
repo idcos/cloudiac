@@ -146,10 +146,6 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 			StepTimeout: form.Timeout,
 			RunnerId:    env.RunnerId,
 		},
-		TfVersion:   tpl.TfVersion,
-		RetryNumber: env.RetryNumber,
-		RetryDelay:  env.RetryDelay,
-		RetryAble:   env.RetryAble,
 	})
 	if err != nil {
 		_ = tx.Rollback()

@@ -61,6 +61,10 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		Revision:        firstVal(pt.Revision, env.Revision, tpl.RepoRevision),
 		StopOnViolation: pt.StopOnViolation,
 
+		RetryDelay:  utils.FirstValueInt(pt.RetryDelay, env.RetryDelay),
+		RetryNumber: utils.FirstValueInt(pt.RetryNumber, env.RetryNumber),
+		RetryAble:   env.RetryAble,
+
 		OrgId:     env.OrgId,
 		ProjectId: env.ProjectId,
 		TplId:     env.TplId,
@@ -85,9 +89,6 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 			Message:  "",
 			CurrStep: 0,
 		},
-		RetryDelay:  pt.RetryDelay,
-		RetryNumber: pt.RetryNumber,
-		RetryAble:   pt.RetryAble,
 	}
 
 	task.Id = models.NewId("run")
