@@ -49,6 +49,9 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 				// 比较分支
 				if env.Revision != strings.Replace(form.Ref, RefHeads, "", -1) &&
 					env.Revision != form.ObjectAttributes.TargetBranch {
+					logs.Get().WithField("webhook", "createTask").
+						Infof("tplId: %s, envId: %s, revision don't match, env.revision: %s, %s or %s",
+							env.TplId, env.Id, env.Revision, form.ObjectAttributes.TargetBranch, form.Ref)
 					continue
 				}
 				// 判断pr类型并确认动作
@@ -106,5 +109,6 @@ func CreateWebhookTask(tx *db.Session, taskType string, userId models.Id, env *m
 		logs.Get().Errorf("error creating task, err %s", err)
 		return e.New(err.Code(), err, http.StatusInternalServerError)
 	}
+	logs.Get().Infof("create webhook task success. envId:%s, task type: %s", env.Id, taskType)
 	return nil
 }

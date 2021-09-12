@@ -142,7 +142,7 @@ func GetRepoAddress(repo RepoIface) (string, error) {
 }
 
 func SetWebhook(vcs *models.Vcs, repoId string, triggers []string) error {
-	webhookUrl := configs.Get().Portal.Address
+	webhookUrl := configs.Get().Portal.Address + "/api/v1"
 	switch vcs.VcsType {
 	case models.VcsGitlab:
 		webhookUrl += WebhookUrlGitlab
