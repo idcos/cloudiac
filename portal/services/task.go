@@ -170,7 +170,7 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 				return nil, e.New(e.DBError, err)
 			}
 
-			if err := InitScanResult(tx, task); err != nil {
+			if err := InitScanResult(tx, scanTask); err != nil {
 				return nil, e.New(err.Code(), errors.Wrapf(err, "init scan result"))
 			}
 		}

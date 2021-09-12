@@ -269,6 +269,14 @@ func UpdatePolicy(c *ctx.ServiceContext, form *forms.UpdatePolicyForm) (interfac
 
 	if form.HasKey("rego") {
 		attr["rego"] = form.Rego
+
+		ruleName, policyType, resourceType, err := parseRegoHeader(form.Rego)
+		if err != nil {
+			return nil, e.New(err.Code(), err, http.StatusBadRequest)
+		}
+		attr["ruleName"] = ruleName
+		attr["policyType"] = policyType
+		attr["resourceType"] = resourceType
 	}
 
 	if form.HasKey("tags") {

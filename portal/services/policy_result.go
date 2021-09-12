@@ -24,7 +24,7 @@ func GetPolicyResultById(query *db.Session, taskId models.Id, policyId models.Id
 }
 
 // InitScanResult 初始化扫描结果
-func InitScanResult(tx *db.Session, task models.Task) e.Error {
+func InitScanResult(tx *db.Session, task *models.ScanTask) e.Error {
 	var (
 		policies      []models.Policy
 		err           e.Error
@@ -75,7 +75,7 @@ func InitScanResult(tx *db.Session, task models.Task) e.Error {
 }
 
 // UpdateScanResult 根据 terrascan 扫描结果批量更新
-func UpdateScanResult(tx *db.Session, task models.Tasker, result TsResult, taskFailed bool) e.Error {
+func UpdateScanResult(tx *db.Session, task models.Tasker, result TsResult, policyStatus string) e.Error {
 	var (
 		policyResults []*models.PolicyResult
 	)
@@ -121,22 +121,29 @@ func UpdateScanResult(tx *db.Session, task models.Tasker, result TsResult, taskF
 		}
 	}
 
-	message := "task failed"
-	if !taskFailed {
+	var (
+		status  string
+		message string
+	)
+	switch policyStatus {
+	case common.PolicyStatusPassed, common.PolicyStatusViolated:
 		message = "policy skipped"
+		status = common.PolicyStatusPassed
+	default:
+		status = common.PolicyStatusFailed
+		message = "task failed"
 	}
-	if err := finishPendingScanResult(tx, task, message); err != nil {
+	if err := finishPendingScanResult(tx, task, message, status); err != nil {
 		return err
 	}
 	return nil
 }
 
-// finishScanResult 更新状态未知的策略扫描结果为 failed
-// 当存在相同名称当策略时，扫描结果可能不包含在结果集里面，这些策略扫描结果一律标记为 failed
-func finishPendingScanResult(tx *db.Session, task models.Tasker, message string) e.Error {
+// finishScanResult 更新状态未知的策略扫描结果
+func finishPendingScanResult(tx *db.Session, task models.Tasker, message string, status string) e.Error {
 	table := models.PolicyResult{}.TableName()
 	sql := fmt.Sprintf("UPDATE %s SET status = ?, message = ? WHERE task_id = ? AND status = ?", table)
-	args := []interface{}{common.PolicyStatusFailed, message, task.GetId(), common.PolicyStatusPending}
+	args := []interface{}{status, message, task.GetId(), common.PolicyStatusPending}
 	if _, err := tx.Exec(sql, args...); err != nil {
 		return e.New(e.DBError, err)
 	}
