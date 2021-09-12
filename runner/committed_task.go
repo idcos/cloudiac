@@ -8,14 +8,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/errdefs"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
+	"github.com/docker/docker/errdefs"
 )
 
 var logger = logs.Get()
@@ -92,7 +93,7 @@ func (task *CommittedTaskStep) TaskStepDir() string {
 }
 
 func (task *CommittedTaskStep) containerInfoPath() string {
-	return filepath.Join(task.TaskStepDir(), "container.json")
+	return filepath.Join(task.TaskStepDir(), TaskStepContainerInfoFileName)
 }
 
 func (task *CommittedTaskStep) writeContainerInfo(info *types.ContainerJSON) error {

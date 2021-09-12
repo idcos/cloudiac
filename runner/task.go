@@ -52,7 +52,7 @@ func (t *Task) Run() (cid string, err error) {
 
 	t.workspace, err = t.initWorkspace()
 	if err != nil {
-		return cid, errors.Wrap(err, "initial workspace")
+		return "", errors.Wrap(err, "initial workspace")
 	}
 
 	if err = t.genStepScript(); err != nil {
@@ -105,6 +105,14 @@ func (t *Task) Run() (cid string, err error) {
 	)
 	cmd.Commands = []string{"sh", "-c", shellCommand}
 
+	stepDir := GetTaskStepDir(t.req.Env.Id, t.req.TaskId, t.req.Step)
+	containerInfoFile := filepath.Join(stepDir, TaskStepContainerInfoFileName)
+	// 启动容器前先删除可能存在的 containerInfoFile，以支持步骤重试，
+	// 否则 containerInfoFile 文件存在 CommittedTaskStep.Wait() 会直接返回
+	if err = os.Remove(containerInfoFile); err != nil && !os.IsNotExist(err) {
+		return "", errors.Wrap(err, "remove containerInfoFile")
+	}
+
 	t.logger.Infof("start task step, workdir: %s", cmd.HostWorkdir)
 	if cid, err = cmd.Start(); err != nil {
 		return cid, err
@@ -116,12 +124,11 @@ func (t *Task) Run() (cid string, err error) {
 		Step:        t.req.Step,
 		ContainerId: cid,
 	})
-
-	stepDir := GetTaskStepDir(t.req.Env.Id, t.req.TaskId, t.req.Step)
-	if er := os.WriteFile(filepath.Join(stepDir, TaskStepInfoFileName), infoJson, 0644); er != nil {
+	stepInfoFile := filepath.Join(stepDir, TaskStepInfoFileName)
+	if er := os.WriteFile(stepInfoFile, infoJson, 0644); er != nil {
 		logger.Errorln(er)
 	}
-	return cid, err
+	return cid, nil
 }
 
 func (t *Task) decryptVariables(vars map[string]string) error {
