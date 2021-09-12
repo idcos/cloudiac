@@ -161,6 +161,13 @@ func ScanTemplate(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envId mod
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
+	tpl.LastScanTaskId = task.Id
+	if _, err := tx.Save(tpl); err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error save env, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error commit env, err %s", err)
