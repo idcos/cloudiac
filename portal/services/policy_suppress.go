@@ -50,11 +50,19 @@ func GetPolicySuppressById(query *db.Session, id models.Id) (*models.PolicySuppr
 	return &sup, nil
 }
 
-func SearchPolicySuppressSource(query *db.Session, form *forms.SearchPolicySuppressSourceForm, userId models.Id, policyId models.Id) *db.Session {
-	envQuery := query.Model(models.Env{}).Where("id in (?)", SubQueryUserEnvIds(query, userId).Expr()).
-		Select("iac_env.id as target_id, iac_env.name as target_name, 'env' as target_type")
-	templateQuery := query.Model(models.Template{}).Where("id in (?)", SubQueryUserTemplateIds(query, userId).Expr()).
-		Select("iac_template.id as target_id, iac_template.name as target_name, 'template' as target_type")
+func SearchPolicySuppressSource(query *db.Session, form *forms.SearchPolicySuppressSourceForm, userId models.Id, policyId models.Id, policyGroupId models.Id) *db.Session {
+	subQueryPolicyGroupRel := query.Model(models.PolicyRel{}).Where("group_id = ?", policyGroupId)
+
+	envQuery := query.Model(models.Env{}).
+		Select("iac_env.id as target_id, iac_env.name as target_name, 'env' as target_type").
+		Where("id in (?)", SubQueryUserEnvIds(query, userId).Expr()).
+		Where("id in (?)", subQueryPolicyGroupRel.Select("env_id").Expr())
+
+	templateQuery := query.Model(models.Template{}).
+		Select("iac_template.id as target_id, iac_template.name as target_name, 'template' as target_type").
+		Where("id in (?)", SubQueryUserTemplateIds(query, userId).Expr()).
+		Where("id in (?)", subQueryPolicyGroupRel.Select("tpl_id").Expr())
+
 	suppressQuery := query.Model(models.PolicySuppress{}).Where("policy_id = ?", policyId).
 		Select("target_id")
 

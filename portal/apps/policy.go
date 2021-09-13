@@ -1010,12 +1010,12 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	// 2. 未解决错误策略
 	summaryResp.UnresolvedPolicy.Total = len(unresolvedTotalMap)
 	summaryResp.UnresolvedPolicy.Last = len(lastUnresolvedMap)
-	if summaryResp.ActivePolicy.Last != 0 {
+	if summaryResp.UnresolvedPolicy.Last != 0 {
 		summaryResp.UnresolvedPolicy.Changes =
 			(float64(summaryResp.UnresolvedPolicy.Total) - float64(summaryResp.UnresolvedPolicy.Last)) /
 				float64(summaryResp.UnresolvedPolicy.Last)
 	} else {
-		summaryResp.ActivePolicy.Changes = 1
+		summaryResp.UnresolvedPolicy.Changes = 1
 	}
 	var high, medium, low int
 	for _, v := range unresolvedTotalMap {

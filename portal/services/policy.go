@@ -379,8 +379,7 @@ func PolicyError(query *db.Session, policyId models.Id) *db.Session {
 		Joins("LEFT JOIN iac_template ON iac_policy_result.tpl_id = iac_template.id").
 		Where("iac_policy_result.policy_id = ?", policyId).
 		Where("iac_policy_result.status = ? OR iac_policy_result.status = ?",
-			common.PolicyStatusSuppressed, common.PolicyStatusFailed, common.PolicyStatusViolated)
-
+			common.PolicyStatusFailed, common.PolicyStatusViolated)
 }
 
 type PolicyScanSummary struct {

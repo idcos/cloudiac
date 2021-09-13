@@ -219,6 +219,14 @@ func (PolicySuppressSourceResp) TableName() string {
 }
 
 func SearchPolicySuppressSource(c *ctx.ServiceContext, form *forms.SearchPolicySuppressSourceForm) (interface{}, e.Error) {
-	query := services.SearchPolicySuppressSource(c.DB(), form, c.UserId, form.Id)
+	policy, err := services.GetPolicyById(c.DB(), form.Id)
+	if err != nil {
+		if err.Code() == e.PolicyNotExist {
+			return nil, e.New(err.Code(), err, http.StatusBadRequest)
+		} else {
+			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+		}
+	}
+	query := services.SearchPolicySuppressSource(c.DB(), form, c.UserId, form.Id, policy.GroupId)
 	return getPage(query, form, PolicySuppressSourceResp{})
 }
