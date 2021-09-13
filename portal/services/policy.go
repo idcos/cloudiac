@@ -488,17 +488,24 @@ func SearchGroupOfPolicy(dbSess *db.Session, groupId models.Id, bind bool) *db.S
 
 // PolicyTargetSummary 获取策略环境/云模板执行结果
 func PolicyTargetSummary(query *db.Session, ids []models.Id, scope string) ([]*PolicyScanSummary, e.Error) {
-	var key string
+	var (
+		key   string
+		table string
+	)
 	switch scope {
 	case consts.ScopeEnv:
 		key = "env_id"
+		table = "iac_env"
 	case consts.ScopeTemplate:
 		key = "tpl_id"
+		table = "iac_template"
 	}
-	subQuery := query.Model(models.PolicyResult{}).Select("max(id)").
-		Group(fmt.Sprintf("policy_id,%s", key)).Where(fmt.Sprintf("%s in (?)", key), ids)
-	q := query.Model(models.PolicyResult{}).Select(fmt.Sprintf("%s as id,count(*) as count,status", key)).
-		Where("id in (?)", subQuery.Expr()).Group(fmt.Sprintf("%s,status", key))
+	q := query.Model(models.PolicyResult{}).
+		Select(fmt.Sprintf("iac_policy_result.%s as id,count(*) as count,iac_policy_result.status", key)).
+		Joins(fmt.Sprintf("join %s on %s.id = iac_policy_result.%s and %s.last_scan_task_id = iac_policy_result.task_id",
+			table, table, key, table)).
+		Where(fmt.Sprintf("iac_policy_result.%s in (?)", key), ids).
+		Group(fmt.Sprintf("%s,status", key))
 
 	summary := make([]*PolicyScanSummary, 0)
 	if err := q.Find(&summary); err != nil {
@@ -638,4 +645,42 @@ func GetPolicyStatusByPolicyGroup(query *db.Session, from time.Time, to time.Tim
 	}
 
 	return scanStatus, nil
+}
+
+// PolicyTargetSuppressSummary 获取策略环境/云模板策略屏蔽统计
+func PolicyTargetSuppressSummary(query *db.Session, ids []models.Id, scope string) ([]*PolicyScanSummary, e.Error) {
+	var key string
+	switch scope {
+	case consts.ScopeEnv:
+		key = "env_id"
+	case consts.ScopeTemplate:
+		key = "tpl_id"
+	}
+	// 按来源屏蔽记录
+	suppressBySourceQuery := query.Model(models.PolicySuppress{}).
+		Select("policy_id, target_id, target_type").
+		Where("iac_policy_suppress.target_type= ? and iac_policy_suppress.target_id in (?)", scope, ids)
+	// 按策略屏蔽记录
+	suppressByPolicyQuery := query.Model(models.Policy{}).
+		Select(fmt.Sprintf("iac_policy.id as policy_id, iac_policy_rel.%s as target_id, iac_policy_suppress.target_type", key)).
+		Joins("JOIN iac_policy_rel on iac_policy_rel.group_id = iac_policy.group_id").
+		Joins("JOIN iac_policy_suppress on iac_policy.id = iac_policy_suppress.target_id").
+		Where(fmt.Sprintf("iac_policy_rel.%s in (?)", key), ids)
+	// 合并屏蔽记录
+	distinctQuery := query.Table("((?) union (?)) as st", suppressBySourceQuery.Expr(), suppressByPolicyQuery.Expr()).
+		Select("DISTINCT policy_id, target_id")
+
+	q := query.Table("(?) as s", distinctQuery.Expr()).
+		Select("count(*) as count, target_id as id, 'suppressed' as status").
+		Group("target_id")
+
+	summary := make([]*PolicyScanSummary, 0)
+	if err := q.Find(&summary); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, nil
+		}
+		return nil, e.New(e.DBError, err)
+	}
+
+	return summary, nil
 }
