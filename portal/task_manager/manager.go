@@ -580,7 +580,7 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 		}
 
 		// 处理扫描结果
-		if scanTask.Status == common.TaskComplete {
+		if scanTask.PolicyStatus == common.PolicyStatusPassed || scanTask.PolicyStatus == common.PolicyStatusViolated {
 			var er error
 			if bs, er = read(scanTask.TfResultJsonPath()); er == nil && len(bs) > 0 {
 				if tfResultJson, er := services.UnmarshalTfResultJson(bs); er == nil {
@@ -1033,7 +1033,7 @@ func (m *TaskManager) processScanTaskDone(task *models.ScanTask) {
 			err      error
 		)
 
-		if task.Status != common.TaskFailed {
+		if task.PolicyStatus == common.PolicyStatusPassed || task.PolicyStatus == common.PolicyStatusViolated {
 			if bs, err = read(task.TfResultJsonPath()); err == nil && len(bs) > 0 {
 				if tfResultJson, err := services.UnmarshalTfResultJson(bs); err == nil {
 					tsResult = tfResultJson.Results
