@@ -201,7 +201,11 @@ func execTpl2File(tpl *template.Template, data interface{}, savePath string) err
 
 func (t *Task) genIacTfFile(workspace string) error {
 	if t.req.StateStore.Address == "" {
-		t.req.StateStore.Address = configs.Get().Consul.Address
+		if os.Getenv("IAC_WORKER_CONSUL") != "" {
+			t.req.StateStore.Address = os.Getenv("IAC_WORKER_CONSUL")
+		} else {
+			t.req.StateStore.Address = configs.Get().Consul.Address
+		}
 	}
 	ctx := map[string]interface{}{
 		"Workspace":      workspace,

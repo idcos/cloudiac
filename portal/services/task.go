@@ -170,6 +170,12 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 				return nil, e.New(e.DBError, err)
 			}
 
+			env.LastScanTaskId = scanTask.Id
+
+			if _, err := tx.Save(env); err != nil {
+				return nil, e.New(e.DBError, errors.Wrapf(err, "update env scan task id"))
+			}
+
 			if err := InitScanResult(tx, scanTask); err != nil {
 				return nil, e.New(err.Code(), errors.Wrapf(err, "init scan result"))
 			}
