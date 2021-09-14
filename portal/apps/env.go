@@ -530,18 +530,21 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 	if form.HasKey("timeout") {
 		env.Timeout = form.Timeout
 	}
-	vars := map[string]models.Variable{}
+
 	if form.HasKey("variables") || form.HasKey("deleteVariablesId") {
 		// 变量列表增删
 		if err = services.OperationVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.Variables, form.DeleteVariablesId); err != nil {
 			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 		}
-		// 计算变量列表
-		vars, err, _ = services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id, true)
-		if err != nil {
-			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
-		}
 	}
+
+	// 计算变量列表
+	vars := map[string]models.Variable{}
+	vars, err, _ = services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id, true)
+	if err != nil {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
 	if form.HasKey("tfVarsFile") {
 		env.TfVarsFile = form.TfVarsFile
 	}
