@@ -118,17 +118,25 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 
 	// 创建新导入的变量
 	if err = services.OperationVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.Variables, nil); err != nil {
+		_ = tx.Rollback()
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 	// 获取计算后的变量列表
 	vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id, true)
 	if err != nil {
+		_ = tx.Rollback()
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
 	targets := make([]string, 0)
 	if len(strings.TrimSpace(form.Targets)) > 0 {
 		targets = strings.Split(strings.TrimSpace(form.Targets), ",")
+	}
+
+	// 合规检查是否启用环境扫描
+	if _, err := services.CreateEnvPolicyScan(tx, tpl, env); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
 	// 创建任务
