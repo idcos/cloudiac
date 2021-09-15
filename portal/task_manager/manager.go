@@ -868,10 +868,10 @@ func (m *TaskManager) processAutoDestroy() error {
 			if err != nil {
 				_ = tx.Rollback()
 				if e.IsRecordNotFound(err) {
-					logger.Warnf("template %s not exists", tpl.Id)
+					logger.Warnf("template %s not exists", env.TplId)
 					return nil
 				} else {
-					logger.Errorf("get template %s error: %v", tpl.Id, err)
+					logger.Errorf("get template %s error: %v", env.TplId, err)
 					return err
 				}
 			}
