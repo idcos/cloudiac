@@ -399,8 +399,14 @@ func PolicySummary(query *db.Session, ids []models.Id, scope string) ([]*PolicyS
 	case consts.ScopeTask:
 		key = "task_id"
 	}
-	subQuery := query.Model(models.PolicyResult{}).Select("max(id)").
-		Group(fmt.Sprintf("%s,env_id,tpl_id", key)).Where(fmt.Sprintf("%s in (?)", key), ids)
+	subQuery := query.Model(models.PolicyResult{}).Select("max(id)").Where(fmt.Sprintf("%s in (?)", key), ids)
+
+	if scope == consts.ScopeTask {
+		subQuery = subQuery.Group(fmt.Sprintf("%s,env_id,tpl_id,policy_id", key))
+	} else {
+		subQuery = subQuery.Group(fmt.Sprintf("%s,env_id,tpl_id", key))
+	}
+
 	q := query.Model(models.PolicyResult{}).Select(fmt.Sprintf("%s as id,count(*) as count,status", key)).
 		Where("id in (?)", subQuery.Expr()).Group(fmt.Sprintf("%s,status", key))
 
@@ -453,7 +459,7 @@ type ScanStatusByTarget struct {
 	Name   string
 }
 
-func GetPolicyScanByTarget(query *db.Session, policyId models.Id, from time.Time, to time.Time) ([]*ScanStatusByTarget, e.Error) {
+func GetPolicyScanByTarget(query *db.Session, policyId models.Id, from, to time.Time, showCount int) ([]*ScanStatusByTarget, e.Error) {
 	groupQuery := query.Model(models.PolicyResult{})
 	groupQuery = groupQuery.Where("start_at >= ? and start_at < ? and policy_id = ?", from, to, policyId).
 		Where("status != 'pending'"). // 跳过pending状态
@@ -464,7 +470,7 @@ func GetPolicyScanByTarget(query *db.Session, policyId models.Id, from time.Time
 		Select("r.*,if(r.env_id = '', iac_template.name, iac_env.name) as name").
 		Joins("left join iac_env on iac_env.id = r.env_id").
 		Joins("left join iac_template on iac_template.id = r.tpl_id")
-
+	q = q.Order("count desc").Limit(showCount)
 	scanStatus := make([]*ScanStatusByTarget, 0)
 	if err := q.Find(&scanStatus); err != nil {
 		if e.IsRecordNotFound(err) {

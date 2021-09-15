@@ -226,9 +226,10 @@ type PolicyScanResultForm struct {
 type PolicyScanReportForm struct {
 	BaseForm
 
-	Id   models.Id `uri:"id" swaggerignore:"true"`                               // 策略/策略组ID
-	From time.Time `json:"from" form:"from" example:"2006-01-02T15:04:05Z07:00"` //  开始日期
-	To   time.Time `json:"to" form:"to" example:"2006-01-02T15:04:05Z07:00"`     // 结束日期
+	Id        models.Id `uri:"id" swaggerignore:"true"`                               // 策略/策略组ID
+	From      time.Time `json:"from" form:"from" example:"2006-01-02T15:04:05Z07:00"` //  开始日期
+	To        time.Time `json:"to" form:"to" example:"2006-01-02T15:04:05Z07:00"`     // 结束日期
+	ShowCount int       `json:"showCount" form:"showCount" example:"5"`
 }
 
 type PolicyTestForm struct {

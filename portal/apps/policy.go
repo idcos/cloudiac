@@ -104,8 +104,9 @@ func ScanTemplate(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envId mod
 	}()
 
 	var (
-		env *models.Env
-		err e.Error
+		env       *models.Env
+		err       e.Error
+		projectId models.Id
 	)
 
 	// 环境检查
@@ -117,6 +118,7 @@ func ScanTemplate(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envId mod
 			c.Logger().Errorf("error get environment, err %s", err)
 			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 		}
+		projectId = env.ProjectId
 	}
 
 	// 模板检查
@@ -142,6 +144,7 @@ func ScanTemplate(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envId mod
 		CreatorId: c.UserId,
 		TplId:     tpl.Id,
 		EnvId:     envId,
+		ProjectId: projectId,
 		BaseTask: models.BaseTask{
 			Type:        taskType,
 			Flow:        models.TaskFlow{},
@@ -754,12 +757,16 @@ type PolicyScanReportResp struct {
 }
 
 func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (*PolicyScanReportResp, e.Error) {
+	if !form.HasKey("showCount") {
+		// 默认展示最近五个
+		form.ShowCount = 5
+	}
 	if !form.HasKey("to") {
 		form.To = time.Now()
 	}
 	if !form.HasKey("from") {
 		// 往回 5 天
-		y, m, d := form.To.AddDate(0, 0, -15).Date()
+		y, m, d := form.To.AddDate(0, 0, -5).Date()
 		form.From = time.Date(y, m, d, 0, 0, 0, 0, time.Local)
 	}
 	scanStatus, err := services.GetPolicyScanStatus(c.DB(), form.Id, form.From, form.To, consts.ScopePolicy)
@@ -826,7 +833,7 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 		Value: totalSummary.Failed,
 	})
 
-	scanTaskStatus, err := services.GetPolicyScanByTarget(c.DB(), form.Id, form.From, form.To)
+	scanTaskStatus, err := services.GetPolicyScanByTarget(c.DB().Debug(), form.Id, form.From, form.To, form.ShowCount)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -863,14 +870,14 @@ func PolicyTest(c *ctx.ServiceContext, form *forms.PolicyTestForm) (*PolicyTestR
 
 	if _, _, _, err := parseRegoHeader(form.Rego); err != nil {
 		return &PolicyTestResp{
-			Data:  "",
+			Data:  map[string]interface{}{},
 			Error: fmt.Sprintf("1 error occurred: %s", err.Error()),
 		}, nil
 	}
 	var value interface{}
 	if err := json.Unmarshal([]byte(form.Input), &value); err != nil {
 		return &PolicyTestResp{
-			Data:  "",
+			Data:  map[string]interface{}{},
 			Error: fmt.Sprintf("invalid input %v", err),
 		}, nil
 	}
@@ -893,19 +900,12 @@ func PolicyTest(c *ctx.ServiceContext, form *forms.PolicyTestForm) (*PolicyTestR
 
 	if result, err := policy.EngineScan(regoPath, inputPath); err != nil {
 		return &PolicyTestResp{
-			Data:  "",
+			Data:  map[string]interface{}{},
 			Error: fmt.Sprintf("%s", err),
 		}, nil
 	} else {
-		output, err := json.Marshal(result)
-		if err != nil {
-			return &PolicyTestResp{
-				Data:  "",
-				Error: fmt.Sprintf("marshal output %v", err),
-			}, nil
-		}
 		return &PolicyTestResp{
-			Data:  string(output),
+			Data:  result,
 			Error: "",
 		}, nil
 	}

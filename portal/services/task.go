@@ -841,9 +841,10 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 		Extra:     pt.Extra,
 		Revision:  utils.FirstValueStr(pt.Revision, envRevison, tpl.RepoRevision),
 
-		OrgId: tpl.OrgId,
-		TplId: tpl.Id,
-		EnvId: envId,
+		OrgId:     tpl.OrgId,
+		TplId:     tpl.Id,
+		EnvId:     envId,
+		ProjectId: pt.ProjectId,
 
 		Workdir: tpl.Workdir,
 
