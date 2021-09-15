@@ -122,3 +122,17 @@ func GetPolicyGroupByEnvIds(tx *db.Session, ids []models.Id) ([]NewPolicyGroup, 
 	}
 	return group, nil
 }
+
+func GetPolicyGroupByTplId(tx *db.Session, id models.Id) ([]models.PolicyGroup, e.Error) {
+	groups := make([]models.PolicyGroup, 0)
+	if err := tx.Model(models.PolicyGroup{}).
+		Joins("join iac_policy_rel on iac_policy_group.id = iac_policy_rel.group_id").
+		Where("iac_policy_rel.tpl_id = ?", id).
+		Find(&groups); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.PolicyGroupNotExist, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return groups, nil
+}
