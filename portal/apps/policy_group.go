@@ -253,7 +253,7 @@ func PolicyGroupScanTasks(c *ctx.ServiceContext, form *forms.PolicyLastTasksForm
 	for idx := range tasks {
 		policyIds = append(policyIds, tasks[idx].Id)
 	}
-	if summaries, err := services.PolicySummary(c.DB(), policyIds, consts.ScopeTask); err != nil {
+	if summaries, err := services.PolicySummary(c.DB().Debug(), policyIds, consts.ScopeTask); err != nil {
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	} else if summaries != nil && len(summaries) > 0 {
 		sumMap := make(map[string]*services.PolicyScanSummary, len(policyIds))
