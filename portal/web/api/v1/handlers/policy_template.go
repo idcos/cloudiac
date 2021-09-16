@@ -25,7 +25,7 @@ func (Policy) ScanTemplate(c *ctx.GinRequest) {
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.ScanTemplate(c.Service(), form, ""))
+	c.JSONResult(apps.ScanTemplateOrEnv(c.Service(), form, ""))
 }
 
 // TemplateScanResult 云模板策略扫描结果
