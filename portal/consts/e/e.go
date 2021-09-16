@@ -53,9 +53,9 @@ func newError(code int, err error, status int) Error {
 	}
 }
 
-// 生成一个 Error 对象
-// code 为错误码
-// errOrStatus 为错误消息或者 http status，可以同时传两者，自动根据数据类型来判断是哪种值
+// New 生成一个 Error 对象，code 为错误码，errOrStatus 为错误消息或者 http status
+// err 和 http status 可以同时传，函数自动根据数据类型来判断是哪种值。
+// !!建议使用 AutoNew，可以自动判断 err 类型，如果 err 己是一个 Error 对象则不创建新 error!!
 func New(code int, errOrStatus ...interface{}) Error {
 	var (
 		// 默认设置 http 状态码为 0，

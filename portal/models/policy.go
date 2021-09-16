@@ -1,6 +1,12 @@
 package models
 
-import "cloudiac/portal/libs/db"
+import (
+	"cloudiac/portal/consts/e"
+	"cloudiac/portal/libs/db"
+	"strings"
+)
+
+const MaxTagSize = 16
 
 type Policy struct {
 	SoftDeleteModel
@@ -30,6 +36,26 @@ func (Policy) TableName() string {
 func (p *Policy) CustomBeforeCreate(*db.Session) error {
 	if p.Id == "" {
 		p.Id = NewId("po")
+	}
+	return nil
+}
+
+func (p *Policy) Validate() error {
+	return p.ValidateAttrs(Attrs{
+		"tags": p.Tags,
+	})
+}
+
+func (p *Policy) ValidateAttrs(attrs Attrs) error {
+	for k, v := range attrs {
+		switch db.ToColName(k) {
+		case "tags":
+			for _, tag := range strings.Split(v.(string), ",") {
+				if len(tag) > MaxTagSize {
+					return e.New(e.TagToLong)
+				}
+			}
+		}
 	}
 	return nil
 }

@@ -39,13 +39,6 @@ func withTx(tx *db.Session, f errorFunc) (int64, error) {
 	return n, nil
 }
 
-func getSess(tx *db.Session) *db.Session {
-	if tx == nil {
-		return db.Get()
-	}
-	return tx
-}
-
 func Validate(tx *db.Session, o Modeler) error {
 	return o.Validate()
 }
@@ -90,7 +83,7 @@ func Save(tx *db.Session, o Modeler) error {
 func UpdateAttr(tx *db.Session, o Modeler, values Attrs, query ...interface{}) (int64, error) {
 	return withTx(tx, func(x *db.Session) (int64, error) {
 		if err := o.ValidateAttrs(values); err != nil {
-			return 0, e.New(e.DBAttrValidateErr, err)
+			return 0, e.AutoNew(err, e.DBAttrValidateErr)
 		}
 		if len(query) != 0 {
 			return x.Model(o).Where(query[0], query[1:]...).UpdateAttrs(values)
@@ -103,7 +96,7 @@ func UpdateAttr(tx *db.Session, o Modeler, values Attrs, query ...interface{}) (
 func UpdateModel(tx *db.Session, o Modeler, query ...interface{}) (int64, error) {
 	return withTx(tx, func(x *db.Session) (int64, error) {
 		if err := o.Validate(); err != nil {
-			return 0, e.New(e.DBAttrValidateErr, err)
+			return 0, e.AutoNew(err, e.DBAttrValidateErr)
 		}
 		if len(query) == 0 {
 			return x.Model(o).Update(o)
