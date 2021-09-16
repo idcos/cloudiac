@@ -5,6 +5,7 @@ package e
 import (
 	"cloudiac/utils/logs"
 	"fmt"
+
 	"github.com/go-sql-driver/mysql"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
@@ -62,12 +63,12 @@ func New(code int, errOrStatus ...interface{}) Error {
 		status       = 0
 		err    error = nil
 	)
-	for _, v := range errOrStatus {
-		switch v.(type) {
+	for _, es := range errOrStatus {
+		switch v := es.(type) {
 		case int:
-			status = v.(int)
+			status = v
 		case error:
-			err = v.(error)
+			err = v
 		default:
 			logger.Errorf("'msgOrStatus' only supports 'string' or 'error'")
 		}
@@ -88,6 +89,8 @@ func convertError(code int, err error, status int) Error {
 			case MysqlDropColOrKeyNotExists:
 			case MysqlTableNotExist:
 				return newError(DBError, err, status)
+			case MysqlDataTooLong:
+				return newError(DataToLong, err, status)
 			}
 		}
 	}

@@ -201,7 +201,7 @@ var errorMsgs = map[int]map[string]string{
 		"zh-cn": "无效请求",
 	},
 	DataToLong: {
-		"zh-cn": "数据过长",
+		"zh-cn": "内容过长",
 	},
 	NameToLong: {
 		"zh-cn": "名称过长",
