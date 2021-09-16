@@ -272,8 +272,8 @@ func DetailPolicy(dbSess *db.Session, id models.Id) (interface{}, e.Error) {
 	return p, nil
 }
 
-func SearchPolicyTpl(tx *db.Session, orgId, tplId models.Id, q string) *db.Session {
-	query := tx.Table("iac_template AS tpl")
+func SearchPolicyTpl(dbSess *db.Session, orgId, tplId models.Id, q string) *db.Session {
+	query := dbSess.Table("iac_template AS tpl")
 	if orgId != "" {
 		query = query.Where("tpl.org_id = ?", orgId)
 	}
@@ -286,7 +286,9 @@ func SearchPolicyTpl(tx *db.Session, orgId, tplId models.Id, q string) *db.Sessi
 	query = query.Joins("LEFT JOIN iac_scan_task AS task ON task.id = tpl.last_scan_task_id")
 	return query.LazySelect("tpl.*, task.policy_status").
 		Joins("LEFT JOIN iac_policy_rel on iac_policy_rel.tpl_id = tpl.id and iac_policy_rel.group_id = ''").
-		LazySelectAppend("iac_policy_rel.enabled")
+		Joins("LEFT JOIN iac_org on iac_org.id = tpl.org_id").
+		LazySelectAppend("iac_policy_rel.enabled", "iac_org.name as org_name").
+		Order("iac_org.created_at desc, tpl.created_at desc ")
 }
 
 func SearchPolicyEnv(dbSess *db.Session, orgId, projectId, envId models.Id, q string) *db.Session {
@@ -316,7 +318,10 @@ func SearchPolicyEnv(dbSess *db.Session, orgId, projectId, envId models.Id, q st
 		LazySelectAppend("tpl.name AS template_name, tpl.id AS tpl_id, tpl.repo_addr AS repo_addr").
 		LazySelectAppend("task.policy_status").
 		Joins("LEFT JOIN iac_policy_rel on iac_policy_rel.env_id = iac_env.id and iac_policy_rel.group_id = ''").
-		LazySelectAppend("iac_policy_rel.enabled")
+		Joins("LEFT JOIN iac_org as org on org.id = iac_env.org_id").
+		Joins("LEFT JOIN iac_project as project on project.id = iac_env.project_id").
+		LazySelectAppend("iac_policy_rel.enabled", "org.name as org_name, project.name as project_name").
+		Order("org.created_at desc, project.created_at desc, iac_env.created_at desc")
 }
 
 func EnvOfPolicy(dbSess *db.Session, form *forms.EnvOfPolicyForm, orgId, projectId models.Id) *db.Session {
