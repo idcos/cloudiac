@@ -350,6 +350,7 @@ type RespPolicyTpl struct {
 	PolicyStatus string `json:"policyStatus"` // 策略检查状态, enum('passed','violated','pending','failed')
 
 	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
+	OrgName      string                    `json:"orgName" form:"orgName" `
 	Summary
 
 	// 以下字段不返回
@@ -442,7 +443,9 @@ type RespPolicyEnv struct {
 
 	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
 	Summary
-	Enabled bool `json:"enabled"`
+	Enabled     bool   `json:"enabled"`
+	OrgName     string `json:"orgName" form:"orgName" `
+	ProjectName string `json:"projectName" form:"projectName" `
 
 	// 以下字段不返回
 	Status     string `json:"status,omitempty" gorm:"-" swaggerignore:"true"`     // 环境状态
