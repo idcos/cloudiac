@@ -261,7 +261,7 @@ func (Env) LastTask(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/policy_result [get]
-// @Success 200 {object} ctx.JSONResult{result=[]models.PolicyResult}
+// @Success 200 {object} apps.ScanResultPageResp
 func (Env) PolicyResult(c *ctx.GinRequest) {
 	form := &forms.PolicyScanResultForm{}
 	if err := c.Bind(form); err != nil {

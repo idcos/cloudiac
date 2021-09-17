@@ -705,10 +705,11 @@ func ParseTemplate(c *ctx.ServiceContext, form *forms.PolicyParseForm) (interfac
 	return nil, e.New(e.PolicyErrorParseTemplate, fmt.Errorf("execute parse tempalte error: %v", err), http.StatusInternalServerError)
 }
 
-type ScanResultResp struct {
-	ScanTime     *models.Time   `json:"scanTime"`     // 扫描时间
-	PolicyStatus string         `json:"policyStatus"` // 扫描状态
-	ScanResults  []PolicyResult `json:"scanResults"`  // 扫描结果
+type ScanResultPageResp struct {
+	Task     *models.ScanTask `json:"task"`     // 扫描任务
+	Total    int64            `json:"total"`    // 总数
+	PageSize int              `json:"pageSize"` // 分页数量
+	List     []PolicyResult   `json:"list"`     // 扫描结果
 }
 
 type PolicyResult struct {
@@ -751,14 +752,11 @@ func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicySca
 		return nil, e.New(e.DBError, err)
 	}
 
-	return page.PageResp{
+	return ScanResultPageResp{
+		Task:     scanTask,
 		Total:    p.MustTotal(),
 		PageSize: p.Size,
-		List: &ScanResultResp{
-			ScanTime:     scanTask.StartAt,
-			PolicyStatus: scanTask.PolicyStatus,
-			ScanResults:  results,
-		},
+		List:     results,
 	}, nil
 }
 
