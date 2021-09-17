@@ -715,7 +715,7 @@ func QueryPolicyStatusEveryTargetLastRun(sess *db.Session, from time.Time, to ti
 	// 组合 iac_policy 表，获取策略严重级别
 	policyQuery := sess.Table("iac_policy").
 		Select("iac_policy.id, iac_policy.severity").
-		Where("id in (?)", policyResultQuery.Expr())
+		Joins("join (?) as r on r.policy_id = iac_policy.id", policyResultQuery.Expr())
 
 	policies := make([]*models.Policy, 0)
 	if err := policyQuery.Find(&policies); err != nil {
