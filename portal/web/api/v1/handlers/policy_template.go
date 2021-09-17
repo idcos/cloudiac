@@ -108,6 +108,26 @@ func (Policy) TplOfPolicy(c *ctx.GinRequest) {
 	c.JSONResult(apps.TplOfPolicy(c.Service(), form))
 }
 
+// TplOfPolicyGroup 云模板策略组详情
+// @Tags 合规/云模板
+// @Summary 云模板策略组详情
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
+// @Param templateId path string true "云模板id"
+// @Router /policies/templates/{templateId}/policies/groups [get]
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.PolicyGroup}}
+func (Policy) TplOfPolicyGroup(c *ctx.GinRequest) {
+	form := &forms.TplOfPolicyGroupForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.TplOfPolicyGroup(c.Service(), form))
+}
+
 func (Policy) ValidTplOfPolicy(c *ctx.GinRequest) {
 	form := &forms.TplOfPolicyForm{}
 	if err := c.Bind(form); err != nil {
