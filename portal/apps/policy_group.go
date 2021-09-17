@@ -11,6 +11,7 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"cloudiac/utils"
 	"fmt"
 	"net/http"
 	"time"
@@ -306,9 +307,8 @@ func PolicyGroupScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportFo
 		form.To = time.Now()
 	}
 	if !form.HasKey("from") {
-		// 往回 15 天
-		y, m, d := form.To.AddDate(0, 0, -15).Date()
-		form.From = time.Date(y, m, d, 0, 0, 0, 0, time.Local)
+		// 往回 30 天
+		form.From = utils.LastDaysMidnight(30, form.To)
 	}
 	scanStatus, err := services.GetPolicyScanStatus(c.DB(), form.Id, form.From, form.To, consts.ScopePolicyGroup)
 	if err != nil {

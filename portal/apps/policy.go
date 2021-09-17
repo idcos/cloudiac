@@ -13,6 +13,7 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/logstorage"
+	"cloudiac/utils"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -795,9 +796,8 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 		form.To = time.Now()
 	}
 	if !form.HasKey("from") {
-		// 往回 5 天
-		y, m, d := form.To.AddDate(0, 0, -5).Date()
-		form.From = time.Date(y, m, d, 0, 0, 0, 0, time.Local)
+		// 默认展示近 5 天的数据
+		form.From = utils.LastDaysMidnight(5, form.To)
 	}
 	scanStatus, err := services.GetPolicyScanStatus(c.DB(), form.Id, form.From, form.To, consts.ScopePolicy)
 	if err != nil {
@@ -987,11 +987,10 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 
 	// 最近 15 天
 	to := time.Now()
-	y, m, d := to.AddDate(0, 0, -15).Date()
-	from := time.Date(y, m, d, 0, 0, 0, 0, time.Local)
+	from := utils.LastDaysMidnight(15, to)
 	// 前 16～30 天
-	lastFrom := from.AddDate(0, 0, -15)
 	lastTo := from
+	lastFrom := utils.LastDaysMidnight(15, lastTo)
 
 	query := c.DB()
 	summaryResp := PolicySummaryResp{}
