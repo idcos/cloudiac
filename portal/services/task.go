@@ -924,12 +924,6 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 		if er != nil {
 			return nil, e.New(er.Code(), errors.Wrapf(er, "save task step"))
 		}
-
-		if step.Type == models.TaskStepTfScan {
-			if err := InitScanResult(tx, &task); err != nil {
-				return nil, e.New(err.Code(), errors.Wrapf(err, "init scan result"))
-			}
-		}
 	}
 
 	return &task, nil
