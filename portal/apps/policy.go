@@ -444,20 +444,6 @@ func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (in
 			}
 		}
 	}
-	// 策略屏蔽统计
-	if summaries, err := services.PolicyTargetSuppressSummary(c.DB(), tplIds, consts.ScopeTemplate); err != nil {
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	} else if len(summaries) > 0 {
-		sumMap := make(map[string]*services.PolicyScanSummary, len(tplIds))
-		for idx, summary := range summaries {
-			sumMap[string(summary.Id)+summary.Status] = summaries[idx]
-		}
-		for idx, policyResp := range respPolicyTpls {
-			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusSuppressed]; ok {
-				respPolicyTpls[idx].Suppressed = summary.Count
-			}
-		}
-	}
 
 	return page.PageResp{
 		Total:    p.MustTotal(),
@@ -536,21 +522,6 @@ func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (in
 			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusFailed]; ok {
 				respPolicyEnvs[idx].Failed = summary.Count
 			}
-			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusSuppressed]; ok {
-				respPolicyEnvs[idx].Suppressed = summary.Count
-			}
-		}
-	}
-
-	// 策略屏蔽统计
-	if summaries, err := services.PolicyTargetSuppressSummary(c.DB(), envIds, consts.ScopeEnv); err != nil {
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	} else if len(summaries) > 0 {
-		sumMap := make(map[string]*services.PolicyScanSummary, len(envIds))
-		for idx, summary := range summaries {
-			sumMap[string(summary.Id)+summary.Status] = summaries[idx]
-		}
-		for idx, policyResp := range respPolicyEnvs {
 			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusSuppressed]; ok {
 				respPolicyEnvs[idx].Suppressed = summary.Count
 			}
