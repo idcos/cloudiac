@@ -36,6 +36,7 @@ const (
 	DataToLong        = 10211
 	NameToLong        = 10212
 	RemarkToLong      = 10213
+	TagToLong         = 10214
 
 	//// 校验错误 103
 
@@ -208,6 +209,9 @@ var errorMsgs = map[int]map[string]string{
 	},
 	RemarkToLong: {
 		"zh-cn": "备注过长",
+	},
+	TagToLong: {
+		"zh-cn": "标签过长",
 	},
 	IOError: {
 		"zh-cn": "io 错误",

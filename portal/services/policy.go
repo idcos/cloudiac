@@ -21,7 +21,7 @@ func CreatePolicy(tx *db.Session, policy *models.Policy) (*models.Policy, e.Erro
 		if e.IsDuplicate(err) {
 			return nil, e.New(e.PolicyAlreadyExist, err)
 		}
-		return nil, e.New(e.DBError, err)
+		return nil, e.AutoNew(err, e.DBError)
 	}
 	return policy, nil
 }
@@ -210,7 +210,7 @@ func UpdatePolicy(tx *db.Session, policy *models.Policy, attr models.Attrs) (int
 		if e.IsDuplicate(err) {
 			return affected, e.New(e.PolicyGroupAlreadyExist, err)
 		}
-		return affected, e.New(e.DBError, err)
+		return affected, e.AutoNew(err, e.DBError)
 	}
 	return affected, nil
 }
