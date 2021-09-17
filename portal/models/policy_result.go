@@ -7,12 +7,14 @@ type PolicyResult struct {
 	ProjectId Id `json:"project_id" gorm:"size:32;comment:项目ID" example:"p-c3lcrjxczjdywmk0go90"`      // 项目ID
 	TplId     Id `json:"tpl_id" gorm:"size:32;comment:云模板ID" example:"tpl-c3lcrjxczjdywmk0go90"`       // 云模板ID
 	EnvId     Id `json:"env_id" gorm:"size:32;comment:环境ID" example:"env-c3lcrjxczjdywmk0go90"`        // 环境ID
-	TaskId    Id `json:"taskId" gorm:"not null;size:32;comment:任务ID" example:"t-c3lcrjxczjdywmk0go90"` // 任务ID
+
+	TaskId Id `json:"taskId" gorm:"not null;size:32;index;comment:任务ID" example:"t-c3lcrjxczjdywmk0go90"` // 任务ID
 
 	PolicyId      Id `json:"policyId" gorm:"not null;size:32;comment:策略ID" example:"po-c3lcrjxczjdywmk0go90"`        // 策略ID
 	PolicyGroupId Id `json:"policyGroupId" gorm:"not null;size:32;comment:策略组ID" example:"pog-c3lcrjxczjdywmk0go90"` // 策略组ID
 
-	StartAt Time   `json:"startAt" gorm:"type:datetime;comment:开始时间"`                                                                 // 任务开始时间
+	StartAt Time `json:"startAt" gorm:"type:datetime;index;comment:开始时间"` // 任务开始时间
+
 	Status  string `json:"status" gorm:"type:enum('passed','violated','suppressed','pending','failed');default:'pending';comment:状态"` // 状态
 	Message string `json:"message" gorm:"type:text;comment:失败原因"`
 
