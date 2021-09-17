@@ -155,12 +155,13 @@ const (
 	PolicyBelongedToAnotherGroup = 31223
 	PolicyResultAlreadyExist     = 31230
 	PolicyResultNotExist         = 31231
-	PolicyRegoMissingComment     = 31410
-	PolicyErrorParseTemplate     = 31510
-	PolicySuppressNotExist       = 31610
-	PolicySuppressAlreadyExist   = 31611
-	PolicyRelNotExist            = 31710
-	PolicyRelAlreadyExist        = 31711
+	PolicyRegoMissingComment     = 31340
+	PolicyErrorParseTemplate     = 31250
+	PolicySuppressNotExist       = 31260
+	PolicySuppressAlreadyExist   = 31261
+	PolicyRelNotExist            = 31270
+	PolicyRelAlreadyExist        = 31271
+	PolicyScanNotEnabled         = 31280
 	/// terraform 313
 
 	InvalidTfVersion = 31300
@@ -457,5 +458,9 @@ var errorMsgs = map[int]map[string]string{
 
 	PolicyRelAlreadyExist: {
 		"zh-cn": "策略关联关系已存在",
+	},
+
+	PolicyScanNotEnabled: {
+		"zh-cn": "扫描未启用",
 	},
 }

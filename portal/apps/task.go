@@ -198,18 +198,24 @@ func FollowTaskLog(c *ctx.GinRequest, form forms.DetailTaskForm) e.Error {
 	rCtx := c.Context.Request.Context()
 
 	query := services.QueryWithProjectId(services.QueryWithOrgId(sc.DB(), sc.OrgId), sc.ProjectId)
-	task, er := services.GetTask(query, form.Id)
+	var tasker models.Tasker
+	tasker, er := services.GetTask(query, form.Id)
 	if er != nil {
-		logger.Errorf("get task: %v", er)
-		if er.Code() == e.TaskNotExists {
-			return e.New(er.Code(), http.StatusNotFound)
+		if sc.IsSuperAdmin {
+			tasker, er = services.GetScanTaskById(sc.DB(), form.Id)
 		}
-		return er
+		if er != nil {
+			logger.Errorf("get task: %v", er)
+			if er.Code() == e.TaskNotExists {
+				return e.New(er.Code(), http.StatusNotFound)
+			}
+			return er
+		}
 	}
 
 	pr, pw := io.Pipe()
 	go func() {
-		if err := services.FetchTaskLog(rCtx, task, pw); err != nil {
+		if err := services.FetchTaskLog(rCtx, tasker, pw); err != nil {
 			logger.Errorf("fetch task log: %v", err)
 		}
 	}()

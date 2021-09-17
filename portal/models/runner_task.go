@@ -57,11 +57,18 @@ type ScanTask struct {
 func (ScanTask) TableName() string {
 	return "iac_scan_task"
 }
-
 func (t *ScanTask) TfParseJsonPath() string {
-	return path.Join(t.Id.String(), runner.TerrascanJsonFile)
+	if t.EnvId != "" {
+		return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TerrascanJsonFile)
+	} else {
+		return path.Join(t.TplId.String(), t.Id.String(), runner.TerrascanJsonFile)
+	}
 }
 
 func (t *ScanTask) TfResultJsonPath() string {
-	return path.Join(t.Id.String(), runner.TerrascanResultFile)
+	if t.EnvId != "" {
+		return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TerrascanResultFile)
+	} else {
+		return path.Join(t.TplId.String(), t.Id.String(), runner.TerrascanResultFile)
+	}
 }

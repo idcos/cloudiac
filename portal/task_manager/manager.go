@@ -555,19 +555,18 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 	}
 
 	hasScanStep := func() bool {
-		scanStep, _ := services.HasScanStep(dbSess, task.Id)
+		scanStep, _ := services.GetTaskScanStep(dbSess, task.Id)
 		return scanStep != nil
 	}
 
 	processScanResult := func() error {
 		var (
 			tsResult services.TsResult
-			bs       []byte
 			scanStep *models.TaskStep
 			scanTask *models.ScanTask
 		)
 
-		if scanStep, err = services.HasScanStep(dbSess, task.Id); err != nil {
+		if scanStep, err = services.GetTaskScanStep(dbSess, task.Id); err != nil {
 			return err
 		}
 		if scanTask, err = services.GetMirrorScanTask(dbSess, task.Id); err != nil {
@@ -581,16 +580,18 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 
 		// 处理扫描结果
 		if scanTask.PolicyStatus == common.PolicyStatusPassed || scanTask.PolicyStatus == common.PolicyStatusViolated {
-			var er error
-			if bs, er = read(scanTask.TfResultJsonPath()); er == nil && len(bs) > 0 {
+			if er := services.InitScanResult(dbSess, scanTask); er != nil {
+				return er
+			}
+			if bs, er := read(task.TfResultJsonPath()); er == nil && len(bs) > 0 {
 				if tfResultJson, er := services.UnmarshalTfResultJson(bs); er == nil {
 					tsResult = tfResultJson.Results
 				}
 			}
-		}
 
-		if err := services.UpdateScanResult(dbSess, scanTask, tsResult, scanTask.PolicyStatus); err != nil {
-			return fmt.Errorf("save scan result: %v", err)
+			if err := services.UpdateScanResult(dbSess, scanTask, tsResult, scanTask.PolicyStatus); err != nil {
+				return fmt.Errorf("save scan result: %v", err)
+			}
 		}
 
 		return err
@@ -721,6 +722,8 @@ loop:
 			// 合规检测步骤失败，不需要重试，跳出循环
 			if step.Type == models.TaskStepTfScan &&
 				stepResult.Result.ExitCode == common.TaskStepPolicyViolationExitCode {
+				message := fmt.Sprintf("Scan task step finished with violations found.")
+				changeStepStatusAndStepRetryTimes(models.TaskStepFailed, message, step)
 				break loop
 			}
 			if stepResult.Status == models.TaskStepFailed {
@@ -805,11 +808,6 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		pk = mKey.Content
 	}
 
-	policies, err := services.GetTaskPolicies(dbSess, task.Id)
-	if err != nil {
-		return nil, errors.Wrapf(err, "get task '%s' policies error: %v", task.Id, err)
-	}
-
 	taskReq = &runner.RunTaskReq{
 		Env:             runnerEnv,
 		RunnerId:        task.RunnerId,
@@ -819,9 +817,16 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		RepoAddress:     task.RepoAddr,
 		RepoRevision:    task.CommitId,
 		Timeout:         task.StepTimeout,
-		Policies:        policies,
 		StopOnViolation: task.StopOnViolation,
 	}
+	if scanStep, err := services.GetTaskScanStep(dbSess, task.Id); err == nil && scanStep != nil {
+		policies, err := services.GetTaskPolicies(dbSess, task.Id)
+		if err != nil {
+			return nil, errors.Wrapf(err, "get task '%s' policies error: %v", task.Id, err)
+		}
+		taskReq.Policies = policies
+	}
+
 	if pk != "" {
 		taskReq.PrivateKey = utils.EncodeSecretVar(pk, true)
 	}

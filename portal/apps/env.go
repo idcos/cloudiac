@@ -133,12 +133,6 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		targets = strings.Split(strings.TrimSpace(form.Targets), ",")
 	}
 
-	// 合规检查是否启用环境扫描
-	if _, err := services.CreateEnvPolicyScan(tx, tpl, env); err != nil {
-		_ = tx.Rollback()
-		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
-	}
-
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
