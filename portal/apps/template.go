@@ -220,17 +220,15 @@ func DeleteTemplate(c *ctx.ServiceContext, form *forms.DeleteTemplateForm) (inte
 	if tpl.OrgId != c.OrgId {
 		return nil, e.New(e.TemplateNotExists, http.StatusForbidden, fmt.Errorf("The organization does not have permission to delete the current template"))
 	}
-	// 查询活跃环境
-	envList, er := services.GetEnvByTplId(tx, form.Id)
-	if er != nil {
-		return nil, e.AutoNew(er, e.DBError)
+
+	// 查询模板是否有活跃环境
+	if ok, err := services.QueryActiveEnv(tx.Where("tpl_id = ?", form.Id)).Exists(); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	} else if ok {
+		return nil, e.New(e.TemplateActiveEnvExists, http.StatusMethodNotAllowed,
+			fmt.Errorf("The cloud template cannot be deleted because there is an active environment"))
 	}
-	for _, v := range envList {
-		if v.Status != "inactive" {
-			c.Logger().Error("error delete template by id,because the template also has an active environment")
-			return nil, e.New(e.TemplateActiveEnvExists, http.StatusForbidden, fmt.Errorf("The cloud template cannot be deleted because there is an active environment"))
-		}
-	}
+
 	// 根据ID 删除云模板
 	if err := services.DeleteTemplate(tx, tpl.Id); err != nil {
 		_ = tx.Rollback()
