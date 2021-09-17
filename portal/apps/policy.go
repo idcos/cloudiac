@@ -936,7 +936,7 @@ type PolicyTestResp struct {
 }
 
 func PolicyTest(c *ctx.ServiceContext, form *forms.PolicyTestForm) (*PolicyTestResp, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("test template"))
+	c.AddLogField("action", "test template")
 
 	if _, _, _, err := parseRegoHeader(form.Rego); err != nil {
 		return &PolicyTestResp{
@@ -1016,7 +1016,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	//    changes 定义：(total - last) / last
 	//    summary: 含 passed / violated / failed / suppressed
 	// 2. 未解决错误策略
-	//    未解决错误定义：扫描结果产生至少一次 violated 或者 failed 的策略
+	//    未解决错误定义：策略在任意一个环境或模板上最后一个扫描结果为 violated 或者 failed
 	//    扇形图：按策略的严重级别进行统计
 	// 3. 策略检测未通过
 	//    未通过定义：策略扫描结果为 violated
@@ -1032,49 +1032,37 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	lastTo := from
 	lastFrom := utils.LastDaysMidnight(15, lastTo)
 
-	query := c.DB()
+	dbSess := c.DB()
 	summaryResp := PolicySummaryResp{}
 
 	// 近15天数据
-	scanStatus, err := services.GetPolicyStatusByPolicy(query, from, to, "")
+	scanStatus, err := services.GetPolicyStatusByPolicy(dbSess, from, to, "")
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 	totalPolicyMap := make(map[models.Id]int)
 	policyStatusMap := make(map[string]int)
-	unresolvedTotalMap := make(map[models.Id]*services.ScanStatusGroupBy)
-	unresolvedCountMap := make(map[models.Id]int)
-	for idx, v := range scanStatus {
+	for _, v := range scanStatus {
 		// 计算策略数量
 		totalPolicyMap[v.Id] = 1
 		// 按状态统计数量
 		policyStatusMap[v.Status] += v.Count
 
-		// 计算未解决错误策略数量
-		if v.Status == common.PolicyStatusFailed || v.Status == common.PolicyStatusViolated {
-			unresolvedTotalMap[v.Id] = scanStatus[idx]
-		}
-
-		// 计算未通过错误策略数量
-		if v.Status == common.PolicyStatusViolated {
-			unresolvedCountMap[v.Id]++
-		}
+		// // 计算未通过错误策略数量
+		// if v.Status == common.PolicyStatusViolated {
+		// 	unresolvedCountMap[v.Id]++
+		// }
 	}
+
 	// 16～30天数据
-	lastScanStatus, err := services.GetPolicyStatusByPolicy(query, lastFrom, lastTo, "")
+	lastScanStatus, err := services.GetPolicyStatusByPolicy(dbSess, lastFrom, lastTo, "")
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 	lastPolicyMap := make(map[models.Id]int)
-	lastUnresolvedMap := make(map[models.Id]int)
 	for _, v := range lastScanStatus {
 		// 计算策略数量
 		lastPolicyMap[v.Id] = 1
-
-		// 计算未解决错误策略数量
-		if v.Status == common.PolicyStatusFailed || v.Status == common.PolicyStatusViolated {
-			lastUnresolvedMap[v.Id] = 1
-		}
 	}
 
 	// 1. 活跃策略
@@ -1106,41 +1094,56 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	summaryResp.ActivePolicy.Summary = s
 
 	// 2. 未解决错误策略
-	summaryResp.UnresolvedPolicy.Total = len(unresolvedTotalMap)
-	summaryResp.UnresolvedPolicy.Last = len(lastUnresolvedMap)
-	if summaryResp.UnresolvedPolicy.Last != 0 {
-		summaryResp.UnresolvedPolicy.Changes =
-			(float64(summaryResp.UnresolvedPolicy.Total) - float64(summaryResp.UnresolvedPolicy.Last)) /
-				float64(summaryResp.UnresolvedPolicy.Last)
-	} else {
-		summaryResp.UnresolvedPolicy.Changes = 1
-	}
-	var high, medium, low int
-	for _, v := range unresolvedTotalMap {
-		switch v.Severity {
-		case common.PolicySeverityHigh:
-			high++
-		case common.PolicySeverityMedium:
-			medium++
-		case common.PolicySeverityLow:
-			low++
+	{
+		// 最近 15 天
+		unresolvedPolicies, err := services.QueryPolicyStatusEveryTargetLastRun(dbSess, from, to)
+		if err != nil {
+			return nil, e.AutoNew(errors.Wrap(err, "QueryPolicyStatusEveryTargetLastRun"), e.DBError)
 		}
+
+		// 前一个 15天
+		lastUnresolvedPolicies, err := services.QueryPolicyStatusEveryTargetLastRun(dbSess, lastFrom, lastTo)
+		if err != nil {
+			return nil, e.AutoNew(errors.Wrap(err, "QueryPolicyStatusEveryTargetLastRun"), e.DBError)
+		}
+
+		summaryResp.UnresolvedPolicy.Total = len(unresolvedPolicies)
+		summaryResp.UnresolvedPolicy.Last = len(lastUnresolvedPolicies)
+		if summaryResp.UnresolvedPolicy.Last != 0 {
+			summaryResp.UnresolvedPolicy.Changes =
+				(float64(summaryResp.UnresolvedPolicy.Total) -
+					float64(summaryResp.UnresolvedPolicy.Last)) /
+					float64(summaryResp.UnresolvedPolicy.Last)
+		} else {
+			summaryResp.UnresolvedPolicy.Changes = 1
+		}
+		var high, medium, low int
+		for _, v := range unresolvedPolicies {
+			switch v.Severity {
+			case common.PolicySeverityHigh:
+				high++
+			case common.PolicySeverityMedium:
+				medium++
+			case common.PolicySeverityLow:
+				low++
+			}
+		}
+		s = PieChar{}
+		s = append(s, PieSector{
+			Name:  common.PolicySeverityHigh,
+			Value: high,
+		}, PieSector{
+			Name:  common.PolicySeverityMedium,
+			Value: medium,
+		}, PieSector{
+			Name:  common.PolicySeverityLow,
+			Value: low,
+		})
+		summaryResp.UnresolvedPolicy.Summary = s
 	}
-	s = PieChar{}
-	s = append(s, PieSector{
-		Name:  common.PolicySeverityHigh,
-		Value: high,
-	}, PieSector{
-		Name:  common.PolicySeverityMedium,
-		Value: medium,
-	}, PieSector{
-		Name:  common.PolicySeverityLow,
-		Value: low,
-	})
-	summaryResp.UnresolvedPolicy.Summary = s
 
 	// 3. 策略未通过
-	violatedScanStatus, err := services.GetPolicyStatusByPolicy(query, from, to, common.PolicyStatusViolated)
+	violatedScanStatus, err := services.GetPolicyStatusByPolicy(dbSess, from, to, common.PolicyStatusViolated)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -1154,7 +1157,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	summaryResp.PolicyViolated = p
 
 	// 4. 策略组未通过
-	violatedGroupScanStatus, err := services.GetPolicyStatusByPolicyGroup(query, from, to, common.PolicyStatusViolated)
+	violatedGroupScanStatus, err := services.GetPolicyStatusByPolicyGroup(dbSess, from, to, common.PolicyStatusViolated)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
