@@ -13,6 +13,7 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/logstorage"
+	"cloudiac/utils"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -795,10 +796,20 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 		form.To = time.Now()
 	}
 	if !form.HasKey("from") {
-		// 往回 5 天
-		y, m, d := form.To.AddDate(0, 0, -5).Date()
-		form.From = time.Date(y, m, d, 0, 0, 0, 0, time.Local)
+		// 默认展示近 5 天的数据
+		form.From = utils.LastDaysMidnight(5, form.To)
 	}
+
+	timePoints := make([]string, 0)
+	{
+		start := form.From
+		for !start.After(form.To) {
+			_, m, d := start.Date()
+			timePoints = append(timePoints, fmt.Sprintf("%02d-%02d", m, d))
+			start = start.AddDate(0, 0, 1)
+		}
+	}
+
 	scanStatus, err := services.GetPolicyScanStatus(c.DB(), form.Id, form.From, form.To, consts.ScopePolicy)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
@@ -808,6 +819,15 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 	totalScan := &report.PolicyScanCount
 	passedScan := &report.PolicyPassedRate
 	totalSummary := Summary{}
+
+	// 初始化返回的时间点序列，保证没有查询到数据的时候点也会自动填充 0 值
+	for _, d := range timePoints {
+		totalScan.Column = append(totalScan.Column, d)
+		totalScan.Value = append(totalScan.Value, 0)
+
+		passedScan.Column = append(passedScan.Column, d)
+		passedScan.Value = append(passedScan.Value, 0)
+	}
 
 	for _, s := range scanStatus {
 		d := s.Date[5:10] // 2021-08-08T00:00:00+08:00 => 08-08
@@ -827,15 +847,8 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 			}
 		}
 		if !found {
-			totalScan.Column = append(totalScan.Column, d)
-			totalScan.Value = append(totalScan.Value, s.Count)
-
-			passedScan.Column = append(passedScan.Column, d)
-			if s.Status == common.PolicyStatusPassed {
-				passedScan.Value = append(passedScan.Value, s.Count)
-			} else {
-				passedScan.Value = append(passedScan.Value, 0)
-			}
+			c.Logger().Warnf("date '%s' not in time range %v", d, timePoints)
+			return nil, e.New(e.InternalError, fmt.Errorf("date '%s' not in time range", d))
 		}
 
 		switch s.Status {
@@ -987,11 +1000,10 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 
 	// 最近 15 天
 	to := time.Now()
-	y, m, d := to.AddDate(0, 0, -15).Date()
-	from := time.Date(y, m, d, 0, 0, 0, 0, time.Local)
+	from := utils.LastDaysMidnight(15, to)
 	// 前 16～30 天
-	lastFrom := from.AddDate(0, 0, -15)
 	lastTo := from
+	lastFrom := utils.LastDaysMidnight(15, lastTo)
 
 	query := c.DB()
 	summaryResp := PolicySummaryResp{}
