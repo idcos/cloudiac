@@ -104,12 +104,16 @@ func GetEnvDetailById(query *db.Session, id models.Id) (*models.EnvDetail, e.Err
 	return &d, nil
 }
 
-func GetEnvByTplId(tx *db.Session, id models.Id) ([]models.Env, error) {
+func GetEnvByTplId(tx *db.Session, tplId models.Id) ([]models.Env, error) {
 	env := make([]models.Env, 0)
-	if err := tx.Where("tpl_id = ?", id).Find(&env); err != nil {
+	if err := tx.Where("tpl_id = ?", tplId).Find(&env); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 	return env, nil
+}
+
+func QueryActiveEnv(query *db.Session) *db.Session {
+	return query.Model(&models.Env{}).Where("status != ? OR deploying = ?", models.EnvStatusInactive, true)
 }
 
 // ChangeEnvStatusWithTaskAndStep 基于任务和步骤的状态更新环境状态
