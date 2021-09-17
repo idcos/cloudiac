@@ -157,28 +157,36 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		if preStep != nil {
 			nextStepId = preStep.Id
 		}
+
+		// 如果环境扫描没启用，跳过扫描步骤创建
+		if step.Type == models.TaskStepTfScan {
+			if enabled, err := IsEnvEnabledScan(tx, task.EnvId); err != nil {
+				return nil, err
+			} else {
+				if enabled {
+					// 对于包含扫描的任务，创建一个对应的 scanTask 作为扫描任务记录，便于后期扫描状态的查询
+					scanTask := CreateMirrorScanTask(&task)
+					if _, err := tx.Save(scanTask); err != nil {
+						return nil, e.New(e.DBError, err)
+					}
+					env.LastScanTaskId = scanTask.Id
+					if _, err := tx.Save(env); err != nil {
+						return nil, e.New(e.DBError, errors.Wrapf(err, "update env scan task id"))
+					}
+				} else {
+					env.LastScanTaskId = ""
+					if _, err := tx.Save(env); err != nil {
+						return nil, e.New(e.DBError, errors.Wrapf(err, "update env scan task id"))
+					}
+					continue
+				}
+			}
+		}
+
 		var er e.Error
 		preStep, er = createTaskStep(tx, task, step, i, nextStepId)
 		if er != nil {
 			return nil, e.New(er.Code(), errors.Wrapf(er, "save task step"))
-		}
-
-		if step.Type == models.TaskStepTfScan {
-			// 对于包含扫描的任务，创建一个对应的 scanTask 作为扫描任务记录，便于后期扫描状态的查询
-			scanTask := CreateMirrorScanTask(&task)
-			if _, err := tx.Save(scanTask); err != nil {
-				return nil, e.New(e.DBError, err)
-			}
-
-			env.LastScanTaskId = scanTask.Id
-
-			if _, err := tx.Save(env); err != nil {
-				return nil, e.New(e.DBError, errors.Wrapf(err, "update env scan task id"))
-			}
-
-			if err := InitScanResult(tx, scanTask); err != nil {
-				return nil, e.New(err.Code(), errors.Wrapf(err, "init scan result"))
-			}
 		}
 	}
 
@@ -604,12 +612,12 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource)
 	return nil
 }
 
-func FetchTaskLog(ctx context.Context, task *models.Task, writer io.WriteCloser) (err error) {
+func FetchTaskLog(ctx context.Context, task models.Tasker, writer io.WriteCloser) (err error) {
 	// close 后 read 端会触发 EOF error
 	defer writer.Close()
 
 	var steps []*models.TaskStep
-	steps, err = GetTaskSteps(db.Get(), task.Id)
+	steps, err = GetTaskSteps(db.Get(), task.GetId())
 	if err != nil {
 		return err
 	}
@@ -629,14 +637,14 @@ func FetchTaskLog(ctx context.Context, task *models.Task, writer io.WriteCloser)
 			case <-ticker.C:
 				var (
 					// 先保存一下值，因为查询出错时 task、step 会被赋值为空，无法用于生成 error
-					taskId    = task.Id
+					taskId    = task.GetId()
 					stepIndex = step.Index
 				)
-				task, err = GetTask(db.Get(), task.Id)
+				task, err = GetTask(db.Get(), task.GetId())
 				if err != nil {
 					return errors.Wrapf(err, "get task '%s'", taskId)
 				}
-				step, err = GetTaskStep(db.Get(), task.Id, step.Index)
+				step, err = GetTaskStep(db.Get(), task.GetId(), step.Index)
 				if err != nil {
 					return errors.Wrapf(err, "get task step %d", stepIndex)
 				}
@@ -662,7 +670,7 @@ func FetchTaskLog(ctx context.Context, task *models.Task, writer io.WriteCloser)
 			}
 		} else if step.IsStarted() { // running
 			for {
-				if err = fetchRunnerTaskStepLog(ctx, task.RunnerId, step, writer); err != nil {
+				if err = fetchRunnerTaskStepLog(ctx, task.GetRunnerId(), step, writer); err != nil {
 					if err == ErrRunnerTaskNotExists && step.StartAt != nil &&
 						time.Since(time.Time(*step.StartAt)) < consts.RunnerConnectTimeout*2 {
 						// 某些情况下可能步骤被标识为了 running 状态，但调用 runner 执行任务时因为网络等原因导致没有及时启动执行。
@@ -918,7 +926,7 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 		}
 
 		if step.Type == models.TaskStepTfScan {
-			if err := initTemplateScanResult(tx, &task); err != nil {
+			if err := InitScanResult(tx, &task); err != nil {
 				return nil, e.New(err.Code(), errors.Wrapf(err, "init scan result"))
 			}
 		}
@@ -946,59 +954,6 @@ func createScanTaskStep(tx *db.Session, task models.ScanTask, stepBody models.Ta
 		return nil, e.New(e.DBError, err)
 	}
 	return &s, nil
-}
-
-// initTemplateScanResult 初始化模板扫描结果
-func initTemplateScanResult(tx *db.Session, task *models.ScanTask) e.Error {
-	var (
-		policies      []models.Policy
-		err           e.Error
-		policyResults []*models.PolicyResult
-	)
-
-	// 根据扫描类型获取策略列表
-	scope := consts.ScopeTemplate
-	if task.EnvId != "" {
-		scope = consts.ScopeEnv
-	}
-	switch scope {
-	case consts.ScopeEnv:
-		policies, err = GetPoliciesByEnvId(tx, task.EnvId)
-	case consts.ScopeTemplate:
-		policies, err = GetPoliciesByTemplateId(tx, task.TplId)
-	default:
-		return e.New(e.InternalError, fmt.Errorf("not support scan type"))
-	}
-	if err != nil {
-		return err
-	}
-
-	if len(policies) == 0 {
-		return nil
-	}
-
-	// 批量创建
-	for _, policy := range policies {
-		policyResults = append(policyResults, &models.PolicyResult{
-			OrgId: task.OrgId,
-			//ProjectId: task.ProjectId,
-			TplId:  task.TplId,
-			EnvId:  task.EnvId,
-			TaskId: task.Id,
-
-			PolicyId:      policy.Id,
-			PolicyGroupId: policy.GroupId,
-
-			StartAt: models.Time(time.Now()),
-			Status:  "pending", // 设置结果为等待扫描状态
-		})
-	}
-
-	if er := models.CreateBatch(tx, policyResults); er != nil {
-		return e.New(e.DBError, er)
-	}
-
-	return nil
 }
 
 func GetScanTaskById(tx *db.Session, id models.Id) (*models.ScanTask, e.Error) {

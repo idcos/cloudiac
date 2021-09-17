@@ -251,7 +251,7 @@ func (s *Session) Count() (cnt int64, err error) {
 
 func (s *Session) Exists() (bool, error) {
 	exists := false
-	err := s.New().Raw("SELECT EXISTS(?)", s.db).Scan(&exists)
+	err := s.Raw("SELECT EXISTS(?)", s.db).Scan(&exists)
 	if err != nil {
 		return false, err
 	}

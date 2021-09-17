@@ -113,28 +113,53 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 		projectId models.Id
 	)
 
-	tpl, err = services.GetTemplateById(tx, form.Id)
-	if err != nil && err.Code() == e.TemplateNotExists {
-		return nil, e.New(err.Code(), err, http.StatusBadRequest)
-	} else if err != nil {
-		c.Logger().Errorf("error get template, err %s", err)
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	}
-
 	if envId != "" { // 环境检查
 		env, err = services.GetEnvById(tx, envId)
 		if err != nil && err.Code() == e.EnvNotExists {
+			_ = tx.Rollback()
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)
 		} else if err != nil {
+			_ = tx.Rollback()
 			c.Logger().Errorf("error get environment, err %s", err)
 			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 		}
 		projectId = env.ProjectId
+
+		// 环境扫描未启用，不允许发起手动检测
+		if enabled, err := services.IsEnvEnabledScan(tx, envId); err != nil {
+			_ = tx.Rollback()
+			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+		} else if !enabled {
+			_ = tx.Rollback()
+			return nil, e.New(e.PolicyScanNotEnabled, http.StatusBadRequest)
+		}
+	}
+
+	// 模板检查
+	tpl, err = services.GetTemplateById(tx, form.Id)
+	if err != nil && err.Code() == e.TemplateNotExists {
+		_ = tx.Rollback()
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error get template, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+	if envId == "" {
+		// 云模板扫描未启用，不允许发起手动检测
+		if enabled, err := services.IsTemplateEnabledScan(tx, form.Id); err != nil {
+			_ = tx.Rollback()
+			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+		} else if !enabled {
+			_ = tx.Rollback()
+			return nil, e.New(e.PolicyScanNotEnabled, http.StatusBadRequest)
+		}
 	}
 
 	// 创建任务
 	runnerId, err := services.GetDefaultRunnerId()
 	if err != nil {
+		_ = tx.Rollback()
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 	taskType := models.TaskTypeScan
@@ -840,7 +865,7 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 		Value: totalSummary.Failed,
 	})
 
-	scanTaskStatus, err := services.GetPolicyScanByTarget(c.DB().Debug(), form.Id, form.From, form.To, form.ShowCount)
+	scanTaskStatus, err := services.GetPolicyScanByTarget(c.DB(), form.Id, form.From, form.To, form.ShowCount)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -970,7 +995,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	lastFrom := from.AddDate(0, 0, -15)
 	lastTo := from
 
-	query := c.DB().Debug()
+	query := c.DB()
 	summaryResp := PolicySummaryResp{}
 
 	// 近15天数据

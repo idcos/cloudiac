@@ -64,15 +64,18 @@ func GetPolicyById(tx *db.Session, id models.Id) (*models.Policy, e.Error) {
 
 func GetTaskPolicies(query *db.Session, taskId models.Id) ([]runner.TaskPolicy, e.Error) {
 	var taskPolicies []runner.TaskPolicy
-	policies, err := GetValidTaskPolicyIds(query, taskId)
+
+	task, err := GetScanTaskById(query, taskId)
 	if err != nil {
 		return nil, err
 	}
-	for _, policyId := range policies {
-		policy, err := GetPolicyById(query, policyId)
-		if err != nil {
-			return nil, err
-		}
+
+	policies, _, err := GetValidPolicies(query, task.TplId, task.EnvId)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, policy := range policies {
 		category := "general"
 		group, _ := GetPolicyGroupById(query, policy.GroupId)
 		if group != nil {
@@ -90,7 +93,7 @@ func GetTaskPolicies(query *db.Session, taskId models.Id) ([]runner.TaskPolicy, 
 			"id":            string(policy.Id),
 		}
 		taskPolicies = append(taskPolicies, runner.TaskPolicy{
-			PolicyId: string(policyId),
+			PolicyId: string(policy.Id),
 			Meta:     meta,
 			Rego:     policy.Rego,
 		})
@@ -98,49 +101,60 @@ func GetTaskPolicies(query *db.Session, taskId models.Id) ([]runner.TaskPolicy, 
 	return taskPolicies, nil
 }
 
-// GetValidTaskPolicyIds 获取策略关联的策略ID列表
-func GetValidTaskPolicyIds(query *db.Session, taskId models.Id) ([]models.Id, e.Error) {
+// GetValidPolicies 获取云模板/环境关联的策略
+func GetValidPolicies(query *db.Session, tplId, envId models.Id) (validPolicies []models.Policy, suppressedPolicies []models.Policy, err e.Error) {
 	var (
-		policies  []models.Policy
-		policyIds []models.Id
-		envId     models.Id
-		tplId     models.Id
-		err       e.Error
+		tplPolicies, tplValidPolicies, tplSuppressedPolicies []models.Policy
+		envPolicies, envSuppressedPolicies                   []models.Policy
+		enabled                                              bool
 	)
-	if task, err := GetTask(query, taskId); err != nil {
-		if e.IsRecordNotFound(err) {
-			if scantask, err := GetScanTaskById(query, taskId); err != nil {
-				return nil, err
-			} else {
-				envId = scantask.EnvId
-				tplId = scantask.TplId
+
+	// 获取云模板策略
+	if enabled, err = IsTemplateEnabledScan(query, tplId); err != nil {
+		return
+	}
+	if enabled {
+		if tplPolicies, err = GetPoliciesByTemplateId(query, tplId); err != nil {
+			return
+		}
+		if tplValidPolicies, tplSuppressedPolicies, err = FilterSuppressPolicies(query, tplPolicies, tplId, consts.ScopeTemplate); err != nil {
+			return
+		}
+	}
+
+	// 获取环境策略
+	if enabled, err = IsEnvEnabledScan(query, envId); err != nil {
+		return
+	}
+	if envId != "" && enabled {
+		if envPolicies, err = GetPoliciesByEnvId(query, envId); err != nil {
+			return
+		}
+
+		// 有效策略：valid = tpl valid + env valid - env suppress
+		policies := MergePolicies(tplValidPolicies, envPolicies)
+		if validPolicies, envSuppressedPolicies, err = FilterSuppressPolicies(query, policies, envId, consts.ScopeEnv); err != nil {
+			return
+		}
+
+		// 屏蔽策略列表需要排除掉环境引入的策略
+		// suppress = tpl suppress - env valid + env suppress
+		envValidPoliciesMap := make(map[models.Id]int)
+		for _, policy := range envPolicies {
+			envValidPoliciesMap[policy.Id] = 1
+		}
+		mergedSuppressedPolicies := MergePolicies(tplSuppressedPolicies, envSuppressedPolicies)
+		for idx, policy := range mergedSuppressedPolicies {
+			if _, ok := envValidPoliciesMap[policy.Id]; !ok {
+				suppressedPolicies = append(suppressedPolicies, mergedSuppressedPolicies[idx])
 			}
-		} else {
-			return nil, err
 		}
 	} else {
-		envId = task.EnvId
-		tplId = task.TplId
+		validPolicies = tplValidPolicies
+		suppressedPolicies = tplSuppressedPolicies
 	}
 
-	query = query.Debug()
-	if envId != "" {
-		policies, err = GetPoliciesByEnvId(query, envId)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		policies, err = GetPoliciesByTemplateId(query, tplId)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	for _, policy := range policies {
-		policyIds = append(policyIds, policy.Id)
-	}
-
-	return policyIds, nil
+	return
 }
 
 func suppressedQuery(query *db.Session, envId models.Id, tplId models.Id) *db.Session {
@@ -177,11 +191,14 @@ func suppressedQuery(query *db.Session, envId models.Id, tplId models.Id) *db.Se
 	return q
 }
 
-// GetPoliciesByEnvId 查询环境关联的策略，排除已经禁用的策略/策略组/策略屏蔽
+// GetPoliciesByEnvId 查询环境关联的所有策略
 func GetPoliciesByEnvId(query *db.Session, envId models.Id) ([]models.Policy, e.Error) {
-	subQuery := suppressedQuery(query, envId, "")
 	var policies []models.Policy
-	if err := query.Model(models.Policy{}).Where("iac_policy.id in (?)", subQuery.Expr()).Find(&policies); err != nil {
+	q := query.Model(models.Policy{}).
+		Joins("join iac_policy_group on iac_policy_group.id = iac_policy.group_id").
+		Joins("join iac_policy_rel on iac_policy_rel.group_id = iac_policy_group.id").
+		Where("iac_policy_rel.env_id = ? and iac_policy_rel.scope = ?", envId, consts.ScopeEnv)
+	if err := q.Find(&policies); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.PolicyNotExist, err)
 		}
@@ -191,10 +208,14 @@ func GetPoliciesByEnvId(query *db.Session, envId models.Id) ([]models.Policy, e.
 	return policies, nil
 }
 
+// GetPoliciesByTemplateId 查询云模板关联的所有策略
 func GetPoliciesByTemplateId(query *db.Session, tplId models.Id) ([]models.Policy, e.Error) {
-	subQuery := suppressedQuery(query, "", tplId)
 	var policies []models.Policy
-	if err := query.Model(models.Policy{}).Where("iac_policy.id in (?)", subQuery.Expr()).Find(&policies); err != nil {
+	q := query.Model(models.Policy{}).
+		Joins("join iac_policy_group on iac_policy_group.id = iac_policy.group_id").
+		Joins("join iac_policy_rel on iac_policy_rel.group_id = iac_policy_group.id").
+		Where("iac_policy_rel.tpl_id = ? and iac_policy_rel.scope = ?", tplId, consts.ScopeTemplate)
+	if err := q.Find(&policies); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.PolicyNotExist, err)
 		}
@@ -694,4 +715,20 @@ func PolicyTargetSuppressSummary(query *db.Session, ids []models.Id, scope strin
 	}
 
 	return summary, nil
+}
+
+func IsTemplateEnabledScan(tx *db.Session, tplId models.Id) (bool, e.Error) {
+	if enabled, err := tx.Model(models.PolicyRel{}).Where("tpl_id = ? and group_id = ''", tplId).Exists(); err != nil {
+		return false, e.New(e.DBError, err)
+	} else {
+		return enabled, nil
+	}
+}
+
+func IsEnvEnabledScan(tx *db.Session, envId models.Id) (bool, e.Error) {
+	if enabled, err := tx.Model(models.PolicyRel{}).Where("env_id = ? and group_id = ''", envId).Exists(); err != nil {
+		return false, e.New(e.DBError, err)
+	} else {
+		return enabled, nil
+	}
 }

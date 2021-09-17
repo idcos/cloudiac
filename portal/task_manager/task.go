@@ -266,9 +266,9 @@ func pullTaskStepStatus(ctx context.Context, task models.Tasker, step *models.Ta
 		}
 	}
 
-	logger.Infof("pulling step status ...")
+	logger.Infof("pulling step %s status ...", step.Name)
 	err = selectLoop()
-	logger.Infof("pull step status done, status=%v code=%d", stepResult.Status, stepResult.Result.ExitCode)
+	logger.Infof("pull step %s status done, status=%v code=%d", step.Name, stepResult.Status, stepResult.Result.ExitCode)
 
 	return stepResult, nil
 }

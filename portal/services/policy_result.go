@@ -26,32 +26,21 @@ func GetPolicyResultById(query *db.Session, taskId models.Id, policyId models.Id
 // InitScanResult 初始化扫描结果
 func InitScanResult(tx *db.Session, task *models.ScanTask) e.Error {
 	var (
-		policies      []models.Policy
-		err           e.Error
-		policyResults []*models.PolicyResult
+		validPolicies, suppressedPolicies []models.Policy
+		policyResults                     []*models.PolicyResult
+		err                               e.Error
 	)
 
-	// 根据扫描类型获取策略列表
-	if task.EnvId != "" {
-		if policies, err = GetPoliciesByEnvId(tx, task.EnvId); err != nil {
-			return err
-		}
-	} else {
-		var env *models.Env
-		if env, err = GetEnvById(tx, task.EnvId); err != nil {
-			return err
-		}
-		if policies, err = GetPoliciesByTemplateId(tx, env.TplId); err != nil {
-			return err
-		}
+	if validPolicies, suppressedPolicies, err = GetValidPolicies(tx, task.TplId, task.EnvId); err != nil {
+		return err
 	}
 
-	if len(policies) == 0 {
+	if len(validPolicies) == 0 && len(suppressedPolicies) == 0 {
 		return nil
 	}
 
 	// 批量创建
-	for _, policy := range policies {
+	for _, policy := range validPolicies {
 		policyResults = append(policyResults, &models.PolicyResult{
 			OrgId:     task.OrgId,
 			ProjectId: task.ProjectId,
@@ -63,7 +52,22 @@ func InitScanResult(tx *db.Session, task *models.ScanTask) e.Error {
 			PolicyGroupId: policy.GroupId,
 
 			StartAt: models.Time(time.Now()),
-			Status:  "pending", // 设置结果为等待扫描状态
+			Status:  common.TaskStepPending,
+		})
+	}
+	for _, policy := range suppressedPolicies {
+		policyResults = append(policyResults, &models.PolicyResult{
+			OrgId:     task.OrgId,
+			ProjectId: task.ProjectId,
+			TplId:     task.TplId,
+			EnvId:     task.EnvId,
+			TaskId:    task.Id,
+
+			PolicyId:      policy.Id,
+			PolicyGroupId: policy.GroupId,
+
+			StartAt: models.Time(time.Now()),
+			Status:  common.PolicyStatusSuppressed,
 		})
 	}
 
@@ -76,6 +80,7 @@ func InitScanResult(tx *db.Session, task *models.ScanTask) e.Error {
 
 // UpdateScanResult 根据 terrascan 扫描结果批量更新
 func UpdateScanResult(tx *db.Session, task models.Tasker, result TsResult, policyStatus string) e.Error {
+
 	var (
 		policyResults []*models.PolicyResult
 	)
@@ -121,18 +126,8 @@ func UpdateScanResult(tx *db.Session, task models.Tasker, result TsResult, polic
 		}
 	}
 
-	var (
-		status  string
-		message string
-	)
-	switch policyStatus {
-	case common.PolicyStatusPassed, common.PolicyStatusViolated:
-		message = "policy skipped"
-		status = common.PolicyStatusPassed
-	default:
-		status = common.PolicyStatusFailed
-		message = "task failed"
-	}
+	message := "policy skipped"
+	status := common.PolicyStatusPassed
 	if err := finishPendingScanResult(tx, task, message, status); err != nil {
 		return err
 	}
@@ -180,7 +175,7 @@ func GetPolicyGroupScanTasks(query *db.Session, policyGroupId models.Id) *db.Ses
 }
 
 func QueryPolicyResult(query *db.Session, taskId models.Id) *db.Session {
-	q := query.Model(models.PolicyResult{}).Where("task_id = ?", taskId)
+	q := query.Model(models.PolicyResult{}).Where("task_id = ? and status != ?", taskId, common.PolicyStatusSuppressed)
 
 	// 策略信息
 	q = q.Joins("left join iac_policy as p on p.id = iac_policy_result.policy_id").
@@ -202,4 +197,61 @@ func GetMirrorScanTask(query *db.Session, taskId models.Id) (*models.ScanTask, e
 		return nil, e.New(e.DBError, err)
 	}
 	return &t, nil
+}
+
+func FilterSuppressPolicies(query *db.Session, policies []models.Policy, targetId models.Id, scope string) (
+	validPolicies []models.Policy, suppressedPolicies []models.Policy, err e.Error) {
+	var (
+		policyIds []models.Id
+	)
+	for _, policy := range policies {
+		policyIds = append(policyIds, policy.Id)
+	}
+
+	suppressQuery := query.Table(fmt.Sprintf("%s as s", models.PolicySuppress{}.TableName())).
+		Select("policy_id").
+		Where("s.policy_id in (?)", policyIds).
+		Where("(s.target_type = 'policy') OR (s.target_id = ? AND s.target_type = ?)", targetId, scope).
+		Group("policy_id")
+
+	// 搜索策略屏蔽 或者 来源屏蔽
+	q := query.Model(models.Policy{}).Where("id in (?)", suppressQuery.Expr())
+	if er := q.Find(&suppressedPolicies); er != nil {
+		if e.IsRecordNotFound(er) {
+			return policies, nil, nil
+		}
+		return policies, nil, e.New(e.DBError, er)
+	}
+
+	if len(suppressedPolicies) == 0 {
+		return policies, nil, nil
+	}
+
+	// 区分有效策略和屏蔽策略
+	suppressPolicyMap := make(map[models.Id]models.Policy, 0)
+	for idx, policy := range suppressedPolicies {
+		suppressPolicyMap[policy.Id] = suppressedPolicies[idx]
+	}
+	for idx, policy := range policies {
+		if _, ok := suppressPolicyMap[policy.Id]; !ok {
+			validPolicies = append(validPolicies, policies[idx])
+		}
+	}
+
+	return validPolicies, suppressedPolicies, nil
+}
+
+func MergePolicies(policies1, policies2 []models.Policy) (mergedPolicies []models.Policy) {
+	policiesMap := make(map[models.Id]models.Policy, 0)
+	for idx, policy := range policies1 {
+		policiesMap[policy.Id] = policies1[idx]
+	}
+	for idx, policy := range policies2 {
+		policiesMap[policy.Id] = policies2[idx]
+	}
+	for id, _ := range policiesMap {
+		mergedPolicies = append(mergedPolicies, policiesMap[id])
+	}
+
+	return
 }
