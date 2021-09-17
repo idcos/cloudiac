@@ -137,6 +137,9 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/vcs/:id/file", ac(), w(handlers.Vcs{}.SearchVcsFileContent))
 	ctrl.Register(g.Group("notifications", ac()), &handlers.Notification{})
 
+	// 任务实时日志（云模板检测无项目ID）
+	g.GET("/tasks/:id/log/sse", ac(), w(handlers.Task{}.FollowLogSse))
+
 	// 项目资源
 	g.Use(w(middleware.AuthProjectId))
 
@@ -157,7 +160,6 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/tasks", ac(), w(handlers.Task{}.Search))
 	g.GET("/tasks/:id", ac(), w(handlers.Task{}.Detail))
 	g.GET("/tasks/:id/log", ac(), w(handlers.Task{}.Log))
-	g.GET("/tasks/:id/log/sse", ac(), w(handlers.Task{}.FollowLogSse))
 	g.GET("/tasks/:id/output", ac(), w(handlers.Task{}.Output))
 	g.GET("/tasks/:id/resources", ac(), w(handlers.Task{}.Resource))
 	g.POST("/tasks/:id/approve", ac("tasks", "approve"), w(handlers.Task{}.TaskApprove))

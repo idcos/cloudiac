@@ -102,7 +102,7 @@ func (Policy) ScanEnvironment(c *ctx.GinRequest) {
 // @Param form query forms.PolicyScanResultForm true "parameter"
 // @Param envId path string true "环境ID"
 // @Router /policies/envs/{envId}/result [get]
-// @Success 200 {object} ctx.JSONResult{result=apps.ScanResultResp}
+// @Success 200 {object} apps.ScanResultPageResp
 func (Policy) EnvScanResult(c *ctx.GinRequest) {
 	form := &forms.PolicyScanResultForm{}
 	if err := c.Bind(form); err != nil {

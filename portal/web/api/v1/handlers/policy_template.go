@@ -40,7 +40,7 @@ func (Policy) ScanTemplate(c *ctx.GinRequest) {
 // @Param form query forms.PolicyScanResultForm true "parameter"
 // @Param templateId path string true "环境ID"
 // @Router /policies/templates/{templateId}/result [get]
-// @Success 200 {object} ctx.JSONResult{result=apps.ScanResultResp}
+// @Success 200 {object} apps.ScanResultPageResp
 func (Policy) TemplateScanResult(c *ctx.GinRequest) {
 	form := &forms.PolicyScanResultForm{}
 	if err := c.Bind(form); err != nil {
