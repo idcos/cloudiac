@@ -279,7 +279,6 @@ func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*Tem
 func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl interface{}, err e.Error) {
 	tplIdList := make([]models.Id, 0)
 	if c.ProjectId != "" {
-		// TODO 是否校验project_id 在不在这个组织里面？
 		tplIdList, err = services.QueryTplByProjectId(c.DB(), c.ProjectId)
 		if err != nil {
 			return nil, err

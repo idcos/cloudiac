@@ -67,6 +67,8 @@ func QueryTemplateByOrgId(tx *db.Session, q string, orgId models.Id, templateIdL
 		LazySelectAppend(
 			"iac_user.name as creator",
 			"iac_template.*")
+	query = query.Joins("left join iac_env on iac_template.id = iac_env.tpl_id and (iac_env.status != 'inactive' or deploying = 1)").Group("iac_template.id").
+		LazySelectAppend("count(iac_env.id) as active_environment")
 	if q != "" {
 		qs := "%" + q + "%"
 		query = query.Where("iac_template.name LIKE ? OR iac_template.description LIKE ?", qs, qs)
