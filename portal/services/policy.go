@@ -642,11 +642,12 @@ func PolicyEnable(tx *db.Session, policyId models.Id, enabled bool) (*models.Pol
 type ScanStatusGroupBy struct {
 	Id       models.Id
 	Name     string
-	Count    int
 	Status   string
+	Count    int
 	Severity string
 }
 
+// GetPolicyStatusByPolicy 查询指定时间范围内所有策略的执行结果，统计各策略每种检测状态下的数量
 func GetPolicyStatusByPolicy(query *db.Session, from time.Time, to time.Time, status string) ([]*ScanStatusGroupBy, e.Error) {
 	groupQuery := query.Model(models.PolicyResult{})
 	groupQuery = groupQuery.Where("start_at >= ? and start_at < ?", from, to).
@@ -660,18 +661,10 @@ func GetPolicyStatusByPolicy(query *db.Session, from time.Time, to time.Time, st
 	if status != "" {
 		q = q.Where("r.status = ?", status)
 	}
-
-	scanStatus := make([]*ScanStatusGroupBy, 0)
-	if err := q.Find(&scanStatus); err != nil {
-		if e.IsRecordNotFound(err) {
-			return scanStatus, nil
-		}
-		return nil, e.New(e.DBError, err)
-	}
-
-	return scanStatus, nil
+	return findScanStatusGroupBy(q)
 }
 
+// GetPolicyStatusByPolicyGroup 查询指定时间范围内所有策略组的执行结果，统计各策略组每种检测状态下的数量
 func GetPolicyStatusByPolicyGroup(query *db.Session, from time.Time, to time.Time, status string) ([]*ScanStatusGroupBy, e.Error) {
 	groupQuery := query.Model(models.PolicyResult{})
 	groupQuery = groupQuery.Where("start_at >= ? and start_at < ?", from, to).
@@ -685,16 +678,51 @@ func GetPolicyStatusByPolicyGroup(query *db.Session, from time.Time, to time.Tim
 	if status != "" {
 		q = q.Where("r.status = ?", status)
 	}
+	return findScanStatusGroupBy(q)
+}
 
+func findScanStatusGroupBy(query *db.Session) ([]*ScanStatusGroupBy, e.Error) {
 	scanStatus := make([]*ScanStatusGroupBy, 0)
-	if err := q.Find(&scanStatus); err != nil {
-		if e.IsRecordNotFound(err) {
-			return scanStatus, nil
-		}
+	if err := query.Find(&scanStatus); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return scanStatus, nil
+}
+
+// QueryPolicyStatusEveryTargetLastRun 获取指定时间范围内每个策略在任意环境或云模板下的最后一次检测的状态统计
+func QueryPolicyStatusEveryTargetLastRun(sess *db.Session, from time.Time, to time.Time) ([]*models.Policy, e.Error) {
+	lastScanQuery := sess.Model(models.PolicyResult{}).
+		Select("max(id)").
+		Group("env_id,tpl_id").
+		Where("start_at >= ? AND start_at < ?", from, to)
+	lastTaskQuery := sess.Model(models.PolicyResult{}).
+		Select("task_id").
+		Where("id in (?)", lastScanQuery.Expr())
+
+	// 最后一次检测所有检测结果
+	policyLastResultQuery := sess.Model(models.PolicyResult{}).
+		Select("id").
+		Where("iac_policy_result.task_id in (?)", lastTaskQuery.Expr())
+
+	// 获取策略执行结果的统计数据
+	policyResultQuery := sess.Table("iac_policy_result").
+		Where("id IN (?)", policyLastResultQuery.Expr()).
+		Where("iac_policy_result.status = ? OR iac_policy_result.status = ?",
+			common.PolicyStatusFailed, common.PolicyStatusViolated).
+		Select("policy_id").
+		Group("policy_id")
+
+	// 组合 iac_policy 表，获取策略严重级别
+	policyQuery := sess.Table("iac_policy").
+		Select("iac_policy.id, iac_policy.severity").
+		Where("id in (?)", policyResultQuery.Expr())
+
+	policies := make([]*models.Policy, 0)
+	if err := policyQuery.Find(&policies); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 
-	return scanStatus, nil
+	return policies, nil
 }
 
 // PolicyTargetSuppressSummary 获取策略环境/云模板策略屏蔽统计
