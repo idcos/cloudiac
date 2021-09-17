@@ -91,9 +91,12 @@ func parseRegoHeader(rego string) (ruleName string, policyType string, resType s
 	return
 }
 
-// ScanTemplate 扫描云模板策略
-func ScanTemplate(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envId models.Id) (*models.ScanTask, e.Error) {
+// ScanTemplateOrEnv 扫描云模板或环境的合规策略
+func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envId models.Id) (*models.ScanTask, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("scan template %s", form.Id))
+	if envId != "" {
+		c.AddLogField("envId", envId.String())
+	}
 
 	tx := c.Tx()
 	defer func() {
@@ -104,13 +107,13 @@ func ScanTemplate(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envId mod
 	}()
 
 	var (
+		tpl       *models.Template
 		env       *models.Env
 		err       e.Error
 		projectId models.Id
 	)
 
-	// 环境检查
-	if envId != "" {
+	if envId != "" { // 环境检查
 		env, err = services.GetEnvById(tx, envId)
 		if err != nil && err.Code() == e.EnvNotExists {
 			_ = tx.Rollback()
@@ -133,7 +136,7 @@ func ScanTemplate(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envId mod
 	}
 
 	// 模板检查
-	tpl, err := services.GetTemplateById(tx, form.Id)
+	tpl, err = services.GetTemplateById(tx, form.Id)
 	if err != nil && err.Code() == e.TemplateNotExists {
 		_ = tx.Rollback()
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
@@ -182,25 +185,27 @@ func ScanTemplate(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envId mod
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
-	if _, err := tx.Save(task); err != nil {
-		_ = tx.Rollback()
-		c.Logger().Errorf("error save env, err %s", err)
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	}
-
-	tpl.LastScanTaskId = task.Id
-	if _, err := tx.Save(tpl); err != nil {
-		_ = tx.Rollback()
-		c.Logger().Errorf("error save env, err %s", err)
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	if envId != "" { // 环境检查
+		env.LastScanTaskId = task.Id
+		if _, err := tx.Save(env); err != nil {
+			_ = tx.Rollback()
+			c.Logger().Errorf("save env, err %s", err)
+			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+		}
+	} else { // 模板检查
+		tpl.LastScanTaskId = task.Id
+		if _, err := tx.Save(tpl); err != nil {
+			_ = tx.Rollback()
+			c.Logger().Errorf("save template, err %s", err)
+			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
-		c.Logger().Errorf("error commit env, err %s", err)
+		c.Logger().Errorf("commit env, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
-
 	return task, nil
 }
 
@@ -217,7 +222,7 @@ func ScanEnvironment(c *ctx.ServiceContext, form *forms.ScanEnvironmentForm) (*m
 		Id: env.TplId,
 	}
 
-	return ScanTemplate(c, &f, env.Id)
+	return ScanTemplateOrEnv(c, &f, env.Id)
 }
 
 type PolicyResp struct {
@@ -374,6 +379,7 @@ type RespPolicyTpl struct {
 	PolicyStatus string `json:"policyStatus"` // 策略检查状态, enum('passed','violated','pending','failed')
 
 	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
+	OrgName      string                    `json:"orgName" form:"orgName" `
 	Summary
 
 	// 以下字段不返回
@@ -466,7 +472,9 @@ type RespPolicyEnv struct {
 
 	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
 	Summary
-	Enabled bool `json:"enabled"`
+	Enabled     bool   `json:"enabled"`
+	OrgName     string `json:"orgName" form:"orgName" `
+	ProjectName string `json:"projectName" form:"projectName" `
 
 	// 以下字段不返回
 	Status     string `json:"status,omitempty" gorm:"-" swaggerignore:"true"`     // 环境状态
@@ -656,7 +664,7 @@ func ParseTemplate(c *ctx.ServiceContext, form *forms.PolicyParseForm) (interfac
 		Id:    tplId,
 		Parse: true,
 	}
-	scanTask, err := ScanTemplate(c, &f, envId)
+	scanTask, err := ScanTemplateOrEnv(c, &f, envId)
 	if err != nil {
 		return nil, err
 	}
@@ -857,7 +865,7 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 		Value: totalSummary.Failed,
 	})
 
-	scanTaskStatus, err := services.GetPolicyScanByTarget(c.DB().Debug(), form.Id, form.From, form.To, form.ShowCount)
+	scanTaskStatus, err := services.GetPolicyScanByTarget(c.DB(), form.Id, form.From, form.To, form.ShowCount)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -987,7 +995,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	lastFrom := from.AddDate(0, 0, -15)
 	lastTo := from
 
-	query := c.DB().Debug()
+	query := c.DB()
 	summaryResp := PolicySummaryResp{}
 
 	// 近15天数据

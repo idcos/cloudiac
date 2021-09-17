@@ -31,8 +31,6 @@ func InitScanResult(tx *db.Session, task *models.ScanTask) e.Error {
 		err                               e.Error
 	)
 
-	tx = tx.Debug()
-
 	if validPolicies, suppressedPolicies, err = GetValidPolicies(tx, task.TplId, task.EnvId); err != nil {
 		return err
 	}
