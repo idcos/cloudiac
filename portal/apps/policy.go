@@ -614,6 +614,25 @@ func TplOfPolicy(c *ctx.ServiceContext, form *forms.TplOfPolicyForm) (interface{
 	}, nil
 }
 
+type RespTplOfPolicyGroup struct {
+	GroupName string `json:"groupName"`
+	GroupId   string `json:"groupId"`
+}
+
+func TplOfPolicyGroup(c *ctx.ServiceContext, form *forms.TplOfPolicyGroupForm) (interface{}, e.Error) {
+	resp := make([]RespTplOfPolicyGroup, 0)
+	query := services.TplOfPolicyGroup(c.DB().Debug(), form)
+	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
+	if err := p.Scan(&resp); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     resp,
+	}, nil
+}
+
 func ValidTplOfPolicy(c *ctx.ServiceContext, form *forms.TplOfPolicyForm) (interface{}, e.Error) {
 	policies, err := services.GetPoliciesByTemplateId(c.DB(), form.Id)
 	if err != nil {
@@ -781,10 +800,10 @@ type PieSector struct {
 }
 
 type PolicyScanReportResp struct {
-	Total            PieChar  `json:"total"`            // 检测结果比例
-	TaskScanCount    Polyline `json:"scanCount"`        // 检测源执行次数
-	PolicyScanCount  Polyline `json:"policyScanCount"`  // 策略运行趋势
-	PolicyPassedRate Polyline `json:"policyPassedRate"` // 检测通过率趋势
+	Total            PieChar         `json:"total"`            // 检测结果比例
+	TaskScanCount    Polyline        `json:"scanCount"`        // 检测源执行次数
+	PolicyScanCount  Polyline        `json:"policyScanCount"`  // 策略运行趋势
+	PolicyPassedRate PolylinePercent `json:"policyPassedRate"` // 检测通过率趋势
 }
 
 func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (*PolicyScanReportResp, e.Error) {
@@ -839,7 +858,7 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 					totalScan.Value[idx] += s.Count
 				}
 				if s.Status == common.PolicyStatusPassed {
-					passedScan.Value[idx] = s.Count
+					passedScan.Value[idx] = Percent(s.Count)
 				}
 
 				found = true
@@ -849,6 +868,14 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 		if !found {
 			c.Logger().Warnf("date '%s' not in time range %v", d, timePoints)
 			return nil, e.New(e.InternalError, fmt.Errorf("date '%s' not in time range", d))
+		}
+
+		for idx := range totalScan.Column {
+			if totalScan.Value[idx] == 0 {
+				passedScan.Value[idx] = 0
+				continue
+			}
+			passedScan.Value[idx] = passedScan.Value[idx] / Percent(totalScan.Value[idx])
 		}
 
 		switch s.Status {

@@ -185,6 +185,12 @@ type TplOfPolicyForm struct {
 	GroupId  models.Id `json:"groupId" form:"groupId" `
 }
 
+type TplOfPolicyGroupForm struct {
+	PageForm
+
+	Id models.Id `uri:"id"`
+}
+
 type SearchPolicyEnvForm struct {
 	PageForm
 

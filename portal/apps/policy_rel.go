@@ -75,9 +75,11 @@ func UpdatePolicyRel(c *ctx.ServiceContext, form *forms.UpdatePolicyRelForm) ([]
 		}
 	}
 
-	if er := models.CreateBatch(tx, rels); er != nil {
-		_ = tx.Rollback()
-		return nil, e.New(e.DBError, er)
+	if len(rels) > 0 {
+		if er := models.CreateBatch(tx, rels); er != nil {
+			_ = tx.Rollback()
+			return nil, e.New(e.DBError, er)
+		}
 	}
 
 	if err := tx.Commit(); err != nil {

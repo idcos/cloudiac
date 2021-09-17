@@ -393,6 +393,16 @@ func TplOfPolicy(dbSess *db.Session, form *forms.TplOfPolicyForm, orgId, project
 	return query.LazySelectAppend(fmt.Sprintf("tpl.name as tpl_name, %s.*", pTable))
 }
 
+func TplOfPolicyGroup(dbSess *db.Session, form *forms.TplOfPolicyGroupForm) *db.Session {
+	pTable := models.PolicyGroup{}.TableName()
+	query := dbSess.Table(pTable)
+	query = query.
+		Joins(fmt.Sprintf("left join %s as rel on rel.group_id = iac_policy_group.id and rel.tpl_id = ?", models.PolicyRel{}.TableName()), form.Id).
+		Where("rel.scope = ?", models.PolicyRelScopeTpl)
+
+	return query.LazySelectAppend(fmt.Sprintf("%s.id as group_id, %s.name as group_name", pTable, pTable))
+}
+
 func PolicyError(query *db.Session, policyId models.Id) *db.Session {
 	return query.Model(models.PolicyResult{}).
 		Select(fmt.Sprintf("if(%s.env_id='','template','env')as target_id,%s.*,%s.name as env_name,%s.name as template_name",
