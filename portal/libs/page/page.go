@@ -63,7 +63,7 @@ func (p *Paginator) TotalBySubQuery() (int64, error) {
 		count int64
 	)
 
-	err = p.dbSess.New().Raw("SELECT COUNT(*) as count FROM (?) AS t", p.dbSess.Expr()).Row().Scan(&count)
+	err = p.dbSess.Raw("SELECT COUNT(*) as count FROM (?) AS t", p.dbSess.Expr()).Row().Scan(&count)
 	return count, err
 }
 

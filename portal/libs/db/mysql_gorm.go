@@ -5,17 +5,19 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"gorm.io/gorm/clause"
-	"gorm.io/gorm/schema"
-	"gorm.io/plugin/soft_delete"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
+	"gorm.io/gorm/clause"
+	"gorm.io/gorm/schema"
+	"gorm.io/plugin/soft_delete"
+
 	"cloudiac/portal/consts/e"
 	"cloudiac/utils/logs"
+
 	"github.com/pkg/errors"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -55,6 +57,8 @@ func (s *Session) GormDB() *gorm.DB {
 	return s.db
 }
 
+// 创建一个新 Session 对象。
+// !!注意!!，该方法返回的新 session 会跳出事务
 func (s *Session) New() *Session {
 	return ToSess(s.db.Session(&gorm.Session{NewDB: true}))
 }
