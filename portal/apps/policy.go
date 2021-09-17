@@ -129,7 +129,7 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 		if enabled, err := services.IsEnvEnabledScan(tx, envId); err != nil {
 			_ = tx.Rollback()
 			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-		} else if !enabled {
+		} else if !enabled && !form.Parse {
 			_ = tx.Rollback()
 			return nil, e.New(e.PolicyScanNotEnabled, http.StatusBadRequest)
 		}
@@ -150,7 +150,7 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 		if enabled, err := services.IsTemplateEnabledScan(tx, form.Id); err != nil {
 			_ = tx.Rollback()
 			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-		} else if !enabled {
+		} else if !enabled && !form.Parse {
 			_ = tx.Rollback()
 			return nil, e.New(e.PolicyScanNotEnabled, http.StatusBadRequest)
 		}

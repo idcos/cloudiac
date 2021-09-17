@@ -1039,15 +1039,18 @@ func (m *TaskManager) processScanTaskDone(task *models.ScanTask) {
 		)
 
 		if task.PolicyStatus == common.PolicyStatusPassed || task.PolicyStatus == common.PolicyStatusViolated {
+			if er := services.InitScanResult(dbSess, task); er != nil {
+				return er
+			}
 			if bs, err = read(task.TfResultJsonPath()); err == nil && len(bs) > 0 {
 				if tfResultJson, err := services.UnmarshalTfResultJson(bs); err == nil {
 					tsResult = tfResultJson.Results
 				}
 			}
-		}
 
-		if err := services.UpdateScanResult(dbSess, task, tsResult, task.PolicyStatus); err != nil {
-			return fmt.Errorf("save scan result: %v", err)
+			if err := services.UpdateScanResult(dbSess, task, tsResult, task.PolicyStatus); err != nil {
+				return fmt.Errorf("save scan result: %v", err)
+			}
 		}
 
 		return err
