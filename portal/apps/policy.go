@@ -652,7 +652,7 @@ func (PolicyErrorResp) TableName() string {
 	return models.PolicyResult{}.TableName()
 }
 
-// PolicyError 获取合规错误列表，包含执行错误和合规不通过，排除已经屏蔽的条目
+// PolicyError 获取合规错误列表，包含最后一次检测错误和合规不通过，排除已经屏蔽的条目
 func PolicyError(c *ctx.ServiceContext, form *forms.PolicyErrorForm) (interface{}, e.Error) {
 	query := services.PolicyError(c.DB(), form.Id)
 	if form.HasKey("q") {

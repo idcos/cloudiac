@@ -404,6 +404,13 @@ func TplOfPolicyGroup(dbSess *db.Session, form *forms.TplOfPolicyGroupForm) *db.
 }
 
 func PolicyError(query *db.Session, policyId models.Id) *db.Session {
+	lastScanQuery := query.Model(models.PolicyResult{}).
+		Select("max(id)").
+		Group("env_id,tpl_id")
+	lastTaskQuery := query.Model(models.PolicyResult{}).
+		Select("task_id").
+		Where("id in (?)", lastScanQuery.Expr())
+
 	return query.Model(models.PolicyResult{}).
 		Select(fmt.Sprintf("if(%s.env_id='','template','env')as target_id,%s.*,%s.name as env_name,%s.name as template_name",
 			models.PolicyResult{}.TableName(),
@@ -415,7 +422,8 @@ func PolicyError(query *db.Session, policyId models.Id) *db.Session {
 		Joins("LEFT JOIN iac_template ON iac_policy_result.tpl_id = iac_template.id").
 		Where("iac_policy_result.policy_id = ?", policyId).
 		Where("iac_policy_result.status = ? OR iac_policy_result.status = ?",
-			common.PolicyStatusFailed, common.PolicyStatusViolated)
+			common.PolicyStatusFailed, common.PolicyStatusViolated).
+		Where("iac_policy_result.task_id in (?)", lastTaskQuery.Expr())
 }
 
 type PolicyScanSummary struct {
