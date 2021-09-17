@@ -143,12 +143,12 @@ func GetValidPolicies(query *db.Session, tplId, envId models.Id) (validPolicies 
 		for _, policy := range envPolicies {
 			envValidPoliciesMap[policy.Id] = 1
 		}
-		mergedSuppressedPolicies := MergePolicies(tplSuppressedPolicies, envSuppressedPolicies)
-		for idx, policy := range mergedSuppressedPolicies {
+		for idx, policy := range tplSuppressedPolicies {
 			if _, ok := envValidPoliciesMap[policy.Id]; !ok {
-				suppressedPolicies = append(suppressedPolicies, mergedSuppressedPolicies[idx])
+				suppressedPolicies = append(suppressedPolicies, tplSuppressedPolicies[idx])
 			}
 		}
+		suppressedPolicies = MergePolicies(suppressedPolicies, envSuppressedPolicies)
 	} else {
 		validPolicies = tplValidPolicies
 		suppressedPolicies = tplSuppressedPolicies
