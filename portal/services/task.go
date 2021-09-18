@@ -132,6 +132,11 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 			logger.WithField("step", fmt.Sprintf("%d(%s)", i, step.Type)).
 				Infof("not have playbook, skip this step")
 			continue
+		} else if step.Type == models.TaskStepTfScan {
+			// 如果环境扫描未启用，则跳过扫描步骤
+			if enabled, _ := IsEnvEnabledScan(tx, task.EnvId); !enabled {
+				continue
+			}
 		}
 		flowSteps = append(flowSteps, step)
 	}
@@ -158,28 +163,15 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 			nextStepId = preStep.Id
 		}
 
-		// 如果环境扫描没启用，跳过扫描步骤创建
 		if step.Type == models.TaskStepTfScan {
-			if enabled, err := IsEnvEnabledScan(tx, task.EnvId); err != nil {
-				return nil, err
-			} else {
-				if enabled {
-					// 对于包含扫描的任务，创建一个对应的 scanTask 作为扫描任务记录，便于后期扫描状态的查询
-					scanTask := CreateMirrorScanTask(&task)
-					if _, err := tx.Save(scanTask); err != nil {
-						return nil, e.New(e.DBError, err)
-					}
-					env.LastScanTaskId = scanTask.Id
-					if _, err := tx.Save(env); err != nil {
-						return nil, e.New(e.DBError, errors.Wrapf(err, "update env scan task id"))
-					}
-				} else {
-					env.LastScanTaskId = ""
-					if _, err := tx.Save(env); err != nil {
-						return nil, e.New(e.DBError, errors.Wrapf(err, "update env scan task id"))
-					}
-					continue
-				}
+			// 对于包含扫描的任务，创建一个对应的 scanTask 作为扫描任务记录，便于后期扫描状态的查询
+			scanTask := CreateMirrorScanTask(&task)
+			if _, err := tx.Save(scanTask); err != nil {
+				return nil, e.New(e.DBError, err)
+			}
+			env.LastScanTaskId = scanTask.Id
+			if _, err := tx.Save(env); err != nil {
+				return nil, e.New(e.DBError, errors.Wrapf(err, "update env scan task id"))
 			}
 		}
 
