@@ -6,7 +6,7 @@
 
 ## 后端部署
 直接在物理机或者虚拟机上部署 IaC 服务。
-限定条件：
+该文档的环境限定：
 
 - 单机部署
 - 全新机器初始安装
@@ -25,7 +25,7 @@
 
 
 ```
-VERSION=v0.5.1
+VERSION=v0.6.0
 mkdir -p /usr/yunji/cloudiac && \
 cd /usr/yunji/cloudiac && \
 for PACK in cloudiac cloudiac-repos cloudiac-providers; do
@@ -158,55 +158,17 @@ systemctl status -l iac-portal ct-runner
 
 #### 9. 接取 ct-worker 镜像
 
-ct-worker 是执行部署任务的容器镜像，需要提前 pull 到本地, 命令如下(该操作可以后台进行):
+ct-worker 是执行部署任务的容器镜像，需要 pull 到本地:
 ```
 docker pull cloudiac/ct-worker
 ```
 
-#### 10. 初始化演示组织（可选步骤）
-
-复制云商密钥对私钥并存储在本地，比如，存储为 /usr/yunji/cloudiac/var/private_key 文件
-
-###### 编辑 demo-conf.yml 文件，主要修改如下内容:
-
-```yaml
-  # 云商密钥对私钥文件路径
-  key:
-    name: 示例密钥
-    key_file: ./var/private_key
-  # 云商访问密钥，这里以阿里云为例
-  variables:
-    - name: ALICLOUD_ACCESS_KEY
-      type: environment
-      value: xxxxxxxxxx
-      description: 阿里云访问密钥ID
-      sensitive: true
-    - name: ALICLOUD_SECRET_KEY
-      type: environment
-      value: xxxxxxxxxx
-      description: 阿里云访问密钥
-      sensitive: true
-```
-
-###### 初始化并重启服务
-
-```shell
-## 初始化演示组织
-cd /usr/yunji/cloudiac && ./iac-tool init-demo demo-conf.yml
-
-## 重启 portal 服务
-systemctl restart iac-portal
-```
-
-** 注意演示组织只能创建一次，如需重新初始化，需手动删除相关数据 **
-
-至此后端部署完成。
-
+该操作可以后台进行，保证在执行环境部署前镜像 pull 到本地即可。
 
 ## 前端部署
 #### 1. 下载前端部署包并解压
 ```
-VERSION=v0.5.1
+VERSION=v0.6.0
 mkdir -p /usr/yunji/cloudiac-web && \
 cd /usr/yunji/cloudiac-web && \
 curl -sL https://github.com/idcos/cloudiac-web/releases/download/${VERSION}/cloudiac-web_${VERSION}.tar.gz -o cloudiac-web_${VERSION}.tar.gz && \
@@ -254,3 +216,5 @@ server {
 
 配置后重启 nginx，完成前端部署。
 
+
+*至此服务部署完成，如果需要快速创建演示组织请参考文档: [创建演示组织](../demo-org/)*
