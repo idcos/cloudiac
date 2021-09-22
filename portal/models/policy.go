@@ -4,6 +4,7 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"strings"
+	"unicode/utf8"
 )
 
 const MaxTagSize = 16
@@ -51,7 +52,7 @@ func (p *Policy) ValidateAttrs(attrs Attrs) error {
 		switch db.ToColName(k) {
 		case "tags":
 			for _, tag := range strings.Split(v.(string), ",") {
-				if len(tag) > MaxTagSize {
+				if utf8.RuneCountInString(tag) > MaxTagSize {
 					return e.New(e.TagToLong)
 				}
 			}
