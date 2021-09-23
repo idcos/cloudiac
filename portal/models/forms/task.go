@@ -20,6 +20,12 @@ type DetailTaskForm struct {
 	Id models.Id `uri:"id" form:"id" json:"id" swaggerignore:"true"` // 任务ID，swagger 参数通过 param path 指定，这里忽略
 }
 
+type TaskLogForm struct {
+	BaseForm
+	Id       models.Id `uri:"id" form:"id" json:"id" swaggerignore:"true"` // 任务ID，swagger 参数通过 param path 指定，这里忽略
+	StepType string    `form:"stepType" json:"stepType"`                   // 步骤名称
+}
+
 type SearchTaskForm struct {
 	PageForm
 	EnvId models.Id `json:"envId" form:"envId" binding:"required"` // 环境ID
