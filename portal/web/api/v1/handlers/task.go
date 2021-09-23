@@ -59,13 +59,14 @@ func (Task) Detail(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID，获取环境扫描日志必填"
+// @Param form query forms.TaskLogForm true "parameter"
 // @Param taskId path string true "任务ID"
 // @router /tasks/{taskId}/log/sse [get]
 // @Success 200 {string} string "日志实时数据流"
 func (Task) FollowLogSse(c *ctx.GinRequest) {
 	defer c.SSEvent("end", "end")
 
-	form := forms.DetailTaskForm{}
+	form := forms.TaskLogForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
