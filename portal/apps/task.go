@@ -192,7 +192,7 @@ func ApproveTask(c *ctx.ServiceContext, form *forms.ApproveTaskForm) (interface{
 	return nil, nil
 }
 
-func FollowTaskLog(c *ctx.GinRequest, form forms.DetailTaskForm) e.Error {
+func FollowTaskLog(c *ctx.GinRequest, form forms.TaskLogForm) e.Error {
 	logger := c.Logger().WithField("func", "FollowTaskLog").WithField("taskId", form.Id)
 	sc := c.Service()
 	rCtx := c.Context.Request.Context()
@@ -215,7 +215,7 @@ func FollowTaskLog(c *ctx.GinRequest, form forms.DetailTaskForm) e.Error {
 
 	pr, pw := io.Pipe()
 	go func() {
-		if err := services.FetchTaskLog(rCtx, tasker, pw); err != nil {
+		if err := services.FetchTaskLog(rCtx, tasker, form.StepType, pw); err != nil {
 			logger.Errorf("fetch task log: %v", err)
 		}
 	}()

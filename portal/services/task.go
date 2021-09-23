@@ -604,7 +604,7 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource)
 	return nil
 }
 
-func FetchTaskLog(ctx context.Context, task models.Tasker, writer io.WriteCloser) (err error) {
+func FetchTaskLog(ctx context.Context, task models.Tasker, stepType string, writer io.WriteCloser) (err error) {
 	// close 后 read 端会触发 EOF error
 	defer writer.Close()
 
@@ -620,6 +620,9 @@ func FetchTaskLog(ctx context.Context, task models.Tasker, writer io.WriteCloser
 	defer ticker.Stop()
 
 	for _, step := range steps {
+		if stepType != "" && step.Type != stepType {
+			continue
+		}
 		//logger := logs.Get().WithField("step", fmt.Sprintf("%s(%d)", step.Type, step.Index))
 		// 任务有可能未开始执行步骤就退出了，所以需要先判断任务是否退出
 		for !task.Exited() && !step.IsStarted() {
