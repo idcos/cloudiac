@@ -74,11 +74,11 @@ type TaskStatusMessage struct {
 	Exited   bool `json:"exited"`
 	ExitCode int  `json:"status_code"`
 
-	LogContent   []byte `json:"logContent"`
-	TfStateJson  []byte `json:"tfStateJson"`
-	TfPlanJson   []byte `json:"tfPlanJson"`
-	TfScanJson   []byte `json:"tfScanJson"`
-	TfResultJson []byte `json:"tfResultJson"`
+	LogContent           []byte `json:"logContent"`
+	TfStateJson          []byte `json:"tfStateJson"`
+	TfPlanJson           []byte `json:"tfPlanJson"`
+	TfScanJson           []byte `json:"tfScanJson"`
+	TfResultJson         []byte `json:"tfResultJson"`
 	TFProviderSchemaJson []byte `json:"tfProviderSchemaJson"`
 }
 
