@@ -414,6 +414,10 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 			logger.Infof("run task step: %v", err)
 			break
 		}
+		if err = m.processStepDone(task, step); err != nil {
+			logger.Infof("process step done: %v", err)
+			break
+		}
 	}
 
 	if task.IsEffectTask() && step != nil && !step.IsRejected() {
@@ -435,8 +439,67 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		}
 	}
 
-	logger.Infof("run task done")
+	logger.Infof("run task finish")
 	return nil
+}
+
+func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) error {
+	dbSess := m.db
+	processScanResult := func() error {
+		var (
+			tsResult services.TsResult
+			scanStep *models.TaskStep
+			scanTask *models.ScanTask
+			err      error
+		)
+
+		if scanStep, err = services.GetTaskScanStep(dbSess, task.Id); err != nil {
+			return err
+		}
+		if scanTask, err = services.GetMirrorScanTask(dbSess, task.Id); err != nil {
+			return err
+		}
+
+		// 根据扫描步骤的执行结果更新扫描任务的状态
+		if err = services.ChangeTaskStatusWithStep(dbSess, scanTask, scanStep); err != nil {
+			return err
+		}
+
+		// 处理扫描结果
+		if scanTask.PolicyStatus == common.PolicyStatusPassed || scanTask.PolicyStatus == common.PolicyStatusViolated {
+			if er := services.InitScanResult(dbSess, scanTask); er != nil {
+				return er
+			}
+			if bs, er := readIfExist(task.TfResultJsonPath()); er == nil && len(bs) > 0 {
+				if tfResultJson, er := services.UnmarshalTfResultJson(bs); er == nil {
+					tsResult = tfResultJson.Results
+				}
+			}
+
+			if err := services.UpdateScanResult(dbSess, scanTask, tsResult, scanTask.PolicyStatus); err != nil {
+				return fmt.Errorf("save scan result: %v", err)
+			}
+		}
+
+		return err
+	}
+
+	switch step.Type {
+	case common.TaskStepTfScan:
+		return processScanResult()
+	}
+	return nil
+}
+
+func readIfExist(path string) ([]byte, error) {
+	content, err := logstorage.Get().Read(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return content, nil
 }
 
 func (m *TaskManager) processTaskDone(task *models.Task) {
@@ -444,20 +507,10 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 	logger.Debugln("start process task done")
 
 	dbSess := m.db
-	read := func(path string) ([]byte, error) {
-		content, err := logstorage.Get().Read(path)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return nil, nil
-			}
-			return nil, err
-		}
-		return content, nil
-	}
 
 	// 分析环境资源、outputs
 	processState := func() error {
-		if bs, err := read(task.StateJsonPath()); err != nil {
+		if bs, err := readIfExist(task.StateJsonPath()); err != nil {
 			return fmt.Errorf("read state json: %v", err)
 		} else if len(bs) > 0 {
 			tfState, err := services.UnmarshalStateJson(bs)
@@ -465,7 +518,7 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			if err != nil {
 				return fmt.Errorf("unmarshal state json: %v", err)
 			}
-			ps, err := read(task.ProviderSchemaJsonPath())
+			ps, err := readIfExist(task.ProviderSchemaJsonPath())
 			proMap := runner.ProviderSensitiveAttrMap{}
 			if err != nil {
 				return fmt.Errorf("read provider schema json: %v", err)
@@ -490,7 +543,7 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 	}
 
 	processPlan := func() error {
-		if bs, err := read(task.PlanJsonPath()); err != nil {
+		if bs, err := readIfExist(task.PlanJsonPath()); err != nil {
 			return fmt.Errorf("read plan json: %v", err)
 		} else if len(bs) > 0 {
 			tfPlan, err := services.UnmarshalPlanJson(bs)
@@ -552,55 +605,6 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 			return err
 		}
 		return nil
-	}
-
-	hasScanStep := func() bool {
-		scanStep, _ := services.GetTaskScanStep(dbSess, task.Id)
-		return scanStep != nil
-	}
-
-	processScanResult := func() error {
-		var (
-			tsResult services.TsResult
-			scanStep *models.TaskStep
-			scanTask *models.ScanTask
-		)
-
-		if scanStep, err = services.GetTaskScanStep(dbSess, task.Id); err != nil {
-			return err
-		}
-		if scanTask, err = services.GetMirrorScanTask(dbSess, task.Id); err != nil {
-			return err
-		}
-
-		// 根据扫描步骤的执行结果更新扫描任务的状态
-		if err = services.ChangeTaskStatusWithStep(dbSess, scanTask, scanStep); err != nil {
-			return err
-		}
-
-		// 处理扫描结果
-		if scanTask.PolicyStatus == common.PolicyStatusPassed || scanTask.PolicyStatus == common.PolicyStatusViolated {
-			if er := services.InitScanResult(dbSess, scanTask); er != nil {
-				return er
-			}
-			if bs, er := read(task.TfResultJsonPath()); er == nil && len(bs) > 0 {
-				if tfResultJson, er := services.UnmarshalTfResultJson(bs); er == nil {
-					tsResult = tfResultJson.Results
-				}
-			}
-
-			if err := services.UpdateScanResult(dbSess, scanTask, tsResult, scanTask.PolicyStatus); err != nil {
-				return fmt.Errorf("save scan result: %v", err)
-			}
-		}
-
-		return err
-	}
-
-	if hasScanStep() {
-		if err := processScanResult(); err != nil {
-			logger.Errorf("process scan result: %v", err)
-		}
 	}
 
 	// 任务被审批驳回时会即时更新状态，且不会执行资源统计步骤，所以不需要执行下面这段逻辑
@@ -722,7 +726,7 @@ loop:
 			// 合规检测步骤失败，不需要重试，跳出循环
 			if step.Type == models.TaskStepTfScan &&
 				stepResult.Result.ExitCode == common.TaskStepPolicyViolationExitCode {
-				message := fmt.Sprintf("Scan task step finished with violations found.")
+				message := "Scan task step finished with violations found."
 				changeStepStatusAndStepRetryTimes(models.TaskStepFailed, message, step)
 				break loop
 			}
