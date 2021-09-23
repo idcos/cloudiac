@@ -6,7 +6,6 @@
 - 合规管理的环境列表中不应该展示己归档的环境(jira#cloudiac-34)
 - 新建策略时策略内容为空会报“无效参数的问题”(jira#cloudiac-28)
 - 未开启检测的云模板显示状态为通过(jira#cloudiac-20)
-- 后端标签长度判断错误(jira#cloudiac-30)
 
 #### Changes
 - 默认情况下合规脚本异常不中止环境部署过程(jira#cloudiac-32)
