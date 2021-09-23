@@ -14,7 +14,7 @@ type CreatePolicyForm struct {
 	Tags          string    `json:"tags" form:"tags" example:"aliyun,jscloud"`
 	GroupId       models.Id `json:"groupId" form:"groupId"`
 
-	Rego string `json:"rego" binding:"required"` // rego脚本
+	Rego string `json:"rego"` // rego脚本
 }
 
 type SearchPolicyForm struct {
