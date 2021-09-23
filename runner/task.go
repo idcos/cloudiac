@@ -471,7 +471,6 @@ mkdir -p {{.PoliciesDir}} && \
 mkdir -p ~/.terrascan/pkg/policies/opa/rego/aws && \
 echo scanning policies && \
 terrascan scan -p {{.PoliciesDir}} --show-passed --iac-type terraform -l debug -o json > {{.TerrascanResultFile}}
-{{ if not .Req.StopOnViolation -}} RET=$? ; [ $RET -eq 3 ] && exit 0 || exit $RET {{ end -}}
 `))
 
 func (t *Task) stepTfScan() (command string, err error) {
