@@ -314,7 +314,7 @@ func SearchPolicyTpl(dbSess *db.Session, orgId, tplId models.Id, q string) *db.S
 
 func SearchPolicyEnv(dbSess *db.Session, orgId, projectId, envId models.Id, q string) *db.Session {
 	envTable := models.Env{}.TableName()
-	query := dbSess.Table(envTable)
+	query := dbSess.Table(envTable).Where(fmt.Sprintf("%s.archived = 0", envTable))
 	if orgId != "" {
 		query = query.Where(fmt.Sprintf("%s.org_id = ?", envTable), orgId)
 	}

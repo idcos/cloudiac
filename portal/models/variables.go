@@ -9,23 +9,23 @@ import (
 type VariableBody struct {
 
 	// 继承关系依赖数据创建枚举的顺序，后续新增枚举值时请按照新的继承顺序增加
-	Scope       string   `json:"scope" gorm:"not null;type:enum('org','template','project','env')"`
-	Type        string   `json:"type" gorm:"not null;type:enum('environment','terraform','ansible')"`
-	Name        string   `json:"name" gorm:"size:64;not null"`
-	Value       string   `json:"value" gorm:"type:text"`
-	Sensitive   bool     `json:"sensitive,omitempty" gorm:"default:false"`
-	Description string   `json:"description,omitempty" gorm:"type:text"`
+	Scope       string `json:"scope" gorm:"not null;type:enum('org','template','project','env')"`
+	Type        string `json:"type" gorm:"not null;type:enum('environment','terraform','ansible')"`
+	Name        string `json:"name" gorm:"size:64;not null"`
+	Value       string `json:"value" gorm:"type:text"`
+	Sensitive   bool   `json:"sensitive,omitempty" gorm:"default:false"`
+	Description string `json:"description,omitempty" gorm:"type:text"`
 }
 
 type Variable struct {
 	BaseModel
 	VariableBody
 
-	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
-	ProjectId Id `json:"projectId" gorm:"size:32;default:''"`
-	TplId     Id `json:"tplId" gorm:"size:32;default:''"`
-	EnvId     Id `json:"envId" gorm:"size:32;default:''"`
-	Options     StrSlice `json:"options" gorm:"type:json"`
+	OrgId     Id       `json:"orgId" gorm:"size:32;not null"`
+	ProjectId Id       `json:"projectId" gorm:"size:32;default:''"`
+	TplId     Id       `json:"tplId" gorm:"size:32;default:''"`
+	EnvId     Id       `json:"envId" gorm:"size:32;default:''"`
+	Options   StrSlice `json:"options" gorm:"type:json"`
 }
 
 func (Variable) TableName() string {
