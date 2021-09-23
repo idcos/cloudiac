@@ -186,19 +186,21 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
-	if envId != "" { // 环境检查
-		env.LastScanTaskId = task.Id
-		if _, err := tx.Save(env); err != nil {
-			_ = tx.Rollback()
-			c.Logger().Errorf("save env, err %s", err)
-			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-		}
-	} else { // 模板检查
-		tpl.LastScanTaskId = task.Id
-		if _, err := tx.Save(tpl); err != nil {
-			_ = tx.Rollback()
-			c.Logger().Errorf("save template, err %s", err)
-			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	if task.Type == models.TaskTypeScan {
+		if envId != "" { // 环境检查
+			env.LastScanTaskId = task.Id
+			if _, err := tx.Save(env); err != nil {
+				_ = tx.Rollback()
+				c.Logger().Errorf("save env, err %s", err)
+				return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+			}
+		} else { // 模板检查
+			tpl.LastScanTaskId = task.Id
+			if _, err := tx.Save(tpl); err != nil {
+				_ = tx.Rollback()
+				c.Logger().Errorf("save template, err %s", err)
+				return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+			}
 		}
 	}
 
