@@ -32,7 +32,7 @@ func CreatePolicy(c *ctx.ServiceContext, form *forms.CreatePolicyForm) (*models.
 
 	ruleName, policyType, resourceType, err := parseRegoHeader(form.Rego)
 	if err != nil {
-		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+		c.Logger().Errorf("rego parse error: %v", err)
 	}
 
 	p := models.Policy{
