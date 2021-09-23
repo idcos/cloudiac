@@ -410,12 +410,20 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 			break
 		}
 
-		if err = m.runTaskStep(ctx, *runTaskReq, task, step); err != nil {
-			logger.Infof("run task step: %v", err)
-			break
-		}
+		runErr := m.runTaskStep(ctx, *runTaskReq, task, step)
+
 		if err = m.processStepDone(task, step); err != nil {
 			logger.Infof("process step done: %v", err)
+			break
+		}
+
+		if runErr != nil {
+			if step.Type == common.TaskStepTfScan && !task.StopOnViolation {
+				// 合规任务失败不影响环境部署流程
+				logger.Warnf("run scan task step: %v", runErr)
+				continue
+			}
+			logger.Infof("run task step: %v", runErr)
 			break
 		}
 	}
@@ -723,7 +731,7 @@ loop:
 				changeStepStatusAndStepRetryTimes(models.TaskStepFailed, err.Error(), step)
 				return err
 			}
-			// 合规检测步骤失败，不需要重试，跳出循环
+			// 合规检测步骤不通过，不需要重试，跳出循环
 			if step.Type == models.TaskStepTfScan &&
 				stepResult.Result.ExitCode == common.TaskStepPolicyViolationExitCode {
 				message := "Scan task step finished with violations found."
@@ -970,7 +978,7 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 		}
 	}
 
-	if task.Type == common.TaskTypeScan {
+	if task.Type != common.TaskTypeParse {
 		if task.EnvId != "" { // 环境扫描
 			if err := services.UpdateEnvModel(m.db, task.EnvId,
 				models.Env{LastScanTaskId: task.Id}); err != nil {
