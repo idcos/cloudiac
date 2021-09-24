@@ -90,7 +90,7 @@ func convertError(code int, err error, status int) Error {
 			case MysqlTableNotExist:
 				return newError(DBError, err, status)
 			case MysqlDataTooLong:
-				return newError(DataToLong, err, status)
+				return newError(DataTooLong, err, status)
 			}
 		}
 	}

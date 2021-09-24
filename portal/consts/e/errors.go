@@ -33,10 +33,11 @@ const (
 	ColValidateError  = 10202
 	NameDuplicate     = 10203
 	InvalidColumn     = 10210
-	DataToLong        = 10211
-	NameToLong        = 10212
-	RemarkToLong      = 10213
-	TagToLong         = 10214
+	DataTooLong       = 10211
+	NameTooLong       = 10212
+	RemarkTooLong     = 10213
+	TagTooLong        = 10214
+	TagTooMuch        = 10215
 
 	//// 校验错误 103
 
@@ -202,17 +203,20 @@ var errorMsgs = map[int]map[string]string{
 	BadRequest: {
 		"zh-cn": "无效请求",
 	},
-	DataToLong: {
+	DataTooLong: {
 		"zh-cn": "内容过长",
 	},
-	NameToLong: {
+	NameTooLong: {
 		"zh-cn": "名称过长",
 	},
-	RemarkToLong: {
+	RemarkTooLong: {
 		"zh-cn": "备注过长",
 	},
-	TagToLong: {
+	TagTooLong: {
 		"zh-cn": "标签过长",
+	},
+	TagTooMuch: {
+		"zh-cn": "标签过多",
 	},
 	IOError: {
 		"zh-cn": "io 错误",

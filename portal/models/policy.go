@@ -51,9 +51,14 @@ func (p *Policy) ValidateAttrs(attrs Attrs) error {
 	for k, v := range attrs {
 		switch db.ToColName(k) {
 		case "tags":
-			for _, tag := range strings.Split(v.(string), ",") {
+			for i, tag := range strings.Split(v.(string), ",") {
+				// 限制只允许有 10 个 tag
+				if i >= 10 {
+					return e.New(e.TagTooMuch)
+				}
+
 				if utf8.RuneCountInString(tag) > MaxTagSize {
-					return e.New(e.TagToLong)
+					return e.New(e.TagTooLong)
 				}
 			}
 		}
