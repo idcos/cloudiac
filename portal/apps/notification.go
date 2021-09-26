@@ -10,6 +10,7 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"fmt"
+	"github.com/lib/pq"
 	"strings"
 )
 
@@ -53,7 +54,7 @@ func UpdateNotification(c *ctx.ServiceContext, form *forms.UpdateNotificationFor
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
 	}
 
-	tx := c.Tx()
+	tx := c.Tx().Debug()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -79,7 +80,7 @@ func UpdateNotification(c *ctx.ServiceContext, form *forms.UpdateNotificationFor
 	}
 
 	if form.HasKey("userIds") {
-		attrs["userIds"] = form.UserIds
+		attrs["userIds"] = pq.StringArray(form.UserIds)
 	}
 
 	cfg, err = services.UpdateNotification(tx, form.Id, attrs)
@@ -99,6 +100,11 @@ func UpdateNotification(c *ctx.ServiceContext, form *forms.UpdateNotificationFor
 			NotificationId: form.Id,
 			EventType:      v,
 		})
+	}
+
+	if err := tx.Insert(&events); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -127,7 +133,7 @@ func CreateNotification(c *ctx.ServiceContext, form *forms.CreateNotificationFor
 		Type:      form.Type,
 		Secret:    form.Secret,
 		Url:       form.Url,
-		UserIds:   form.UserIds,
+		UserIds:   pq.StringArray(form.UserIds),
 		Creator:   c.UserId,
 	}, form.EventType)
 

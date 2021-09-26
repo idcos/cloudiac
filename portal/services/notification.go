@@ -48,6 +48,9 @@ func UpdateNotification(tx *db.Session, id models.Id, attrs models.Attrs) (notif
 }
 
 func CreateNotification(tx *db.Session, notification models.Notification, eventType []string) (*models.Notification, e.Error) {
+	if notification.Id == "" {
+		notification.Id = models.NewId("notif-")
+	}
 	if err := models.Create(tx, &notification); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
