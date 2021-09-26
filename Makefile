@@ -17,7 +17,7 @@ GORUN=$(GOCMD) run -v -ldflags $(GOLDFLAGS)
 PB_PROTOC=protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative
 
 WORKDIR?=/usr/yunji/cloudiac
-DOCKER_BUILD=docker build --build-arg WORKDIR=$(WORKDIR)
+DOCKER_BUILD=docker build --build-arg WORKDIR=$(WORKDIR) 
 
 BUILD_DIR=$(PWD)/build
 
@@ -87,7 +87,8 @@ image-portal: build-linux-amd64-portal
 	$(DOCKER_BUILD) -t cloudiac/iac-portal:$(VERSION) -f docker/portal/Dockerfile .
 
 image-runner: build-linux-amd64-runner
-	$(DOCKER_BUILD) -t cloudiac/ct-runner:$(VERSION) -f docker/runner/Dockerfile .
+	$(DOCKER_BUILD) --build-arg WORKER_IMAGE=cloudiac/ct-worker:$(VERSION) \
+	  -t cloudiac/ct-runner:$(VERSION) -f docker/runner/Dockerfile .
 
 image-worker:
 	$(DOCKER_BUILD) -t cloudiac/ct-worker:$(VERSION) -f docker/worker/Dockerfile .
