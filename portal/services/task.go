@@ -319,7 +319,6 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 	if _, err := dbSess.Model(task).Update(task); err != nil {
 		return e.AutoNew(err, e.DBError)
 	}
-
 	if preStatus != status {
 		TaskStatusChangeSendMessage(task, status)
 	}
@@ -750,6 +749,11 @@ func fetchRunnerTaskStepLog(ctx context.Context, runnerId string, step *models.T
 }
 
 func TaskStatusChangeSendMessage(task *models.Task, status string) {
+	// 非通知类型的状态直接跳过
+	if _, ok := consts.TaskStatusToEventType[status]; !ok {
+		logs.Get().WithField("taskId", task.Id).Infof("event don't need send message")
+		return
+	}
 	dbSess := db.Get()
 	env, _ := GetEnv(dbSess, task.EnvId)
 	tpl, _ := GetTemplateById(dbSess, task.TplId)

@@ -96,14 +96,14 @@ var IacTaskApprovingTpl = `
 <body>
 <p>尊敬的CloudIaC用户：</p>
 <br />
-<p>	【{{.Creator}}】在CloudIaC平台发起的部署任务执行失败，详情如下：</p> 
+<p>	【{{.Creator}}】在CloudIaC平台发起的部署任务等待审批中，详情如下：</p> 
 <br />	
 <p>	所属组织：{{.OrgName}}</p>
 <p>	所属项目：{{.ProjectName}}</p>
 <p>	云模板：{{.TemplateName}}</p>
 <p>	分支/tag：{{.Revision}}</p>
 <p>	环境名称：{{.EnvName}}</p>
-<p>	执行结果：失败</p>
+<p>	执行结果：审批中</p>
 <p>	失败原因：{{.Message}}</p>
 <br />	
 <p>	更多详情请点击：{{.Addr}}</p>
@@ -137,7 +137,7 @@ const (
 	IacTaskApprovingMarkdown = `
 尊敬的CloudIaC用户：
 
-	【{{.Creator}}】在CloudIaC平台发起的部署任务执行失败，详情如下：
+	【{{.Creator}}】在CloudIaC平台发起的部署任务等待审批中，详情如下：
 
 	所属组织：{{.OrgName}}
 
@@ -149,7 +149,7 @@ const (
 
 	环境名称：{{.EnvName}}
 
-	执行结果：失败
+	执行结果：审批中
 
 	失败原因：{{.Message}}
 

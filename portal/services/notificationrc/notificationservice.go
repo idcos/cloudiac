@@ -65,7 +65,7 @@ func (ns *NotificationService) SyncSendMessage() {
 	}
 	u := models.User{}
 	if err := db.Get().Where("id = ?", ns.Task.CreatorId).First(&u); err != nil {
-		logs.Get().Warnf("get task createor(%s): %v", ns.Task.CreatorId, err)
+		logs.Get().Warnf("get task creator(%s): %v", ns.Task.CreatorId, err)
 		return
 	}
 
