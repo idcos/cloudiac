@@ -9,7 +9,7 @@ ENV TERRASCAN_VERSION=1.9.0
 RUN mkdir -p /root/.terrascan/pkg/policies/opa/rego && \
     curl -L https://github.com/accurics/terrascan/releases/download/v${TERRASCAN_VERSION}/terrascan_${TERRASCAN_VERSION}_Linux_x86_64.tar.gz | tar -xz terrascan && install terrascan /usr/local/bin && rm terrascan 
 
-RUN git clone https://github.com/tfutils/tfenv.git /root/.tfenv && cd /root/.tfenv && git checkout tags/v2.2.2
+RUN git clone https://github.com/jinxing-idcos/tfenv.git /root/.tfenv && cd /root/.tfenv && git checkout tags/v2.2.3
 ENV PATH="/root/.tfenv/bin:${PATH}"
 RUN tfenv install "0.11.15" && \
     tfenv install "0.12.31" && \
