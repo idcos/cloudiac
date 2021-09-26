@@ -105,6 +105,7 @@ const (
 	EventTaskComplete  = "task.complete"
 	EventTaskRunning   = "task.running"
 	EventTaskApproving = "task.approving"
+	EventTaskRejected  = "task.rejected"
 
 	DefaultTfMirror   = "https://releases.hashicorp.com/terraform"
 	HttpClientTimeout = 20

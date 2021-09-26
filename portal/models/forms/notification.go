@@ -18,7 +18,7 @@ type UpdateNotificationForm struct {
 type CreateNotificationForm struct {
 	BaseForm
 	Name      string   `json:"name" form:"name" `
-	Type      string   `form:"notificationType" json:"notificationType" binding:"required"`
+	Type      string   `form:"type" json:"type" binding:"required"`
 	Secret    string   `json:"secret" form:"secret"`
 	Url       string   `json:"url" form:"url"`
 	UserIds   []string `form:"userIds" json:"userIds"`
