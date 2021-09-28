@@ -17,8 +17,10 @@ nav:
     - "变量": intra/variable.md
     - "环境": intra/env.md
     - "角色": intra/role.md
+    - "合规": intra/opa.md
 
   - "部署文档": 
     - "容器化部署": deploy/container.md
     - "手动部署": deploy/host.md
+    - "创建演示组织": deploy/demo-org.md
 

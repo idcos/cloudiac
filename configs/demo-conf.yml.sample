@@ -12,7 +12,7 @@ organization:
       type: environment
       value: xxxxxxxxxx
       description: 阿里云访问密钥ID
-      sensitive: true
+      sensitive: false 
     - name: ALICLOUD_SECRET_KEY
       type: environment
       value: xxxxxxxxxx

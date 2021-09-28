@@ -1,5 +1,5 @@
 listen: "0.0.0.0:19030"
-secretKey: ${SECRET_KEY}
+secretKey: "${SECRET_KEY}"
 
 runner:
   default_image: "cloudiac/ct-worker:latest"
