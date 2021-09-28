@@ -79,7 +79,7 @@ func (Vcs) Update(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param form formData forms.DeleteVcsForm true "patameter"
+// @Param form formData forms.DeleteVcsForm true "parameter"
 // @Param vcsId path string true "vcs仓库Id"
 // @Router /vcs/{vcsId} [delete]
 // @Success 200 {object} ctx.JSONResult
@@ -104,7 +104,7 @@ func ListEnableVcs(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param vcsId path string true "Vcs仓库ID"
-// @Param form query forms.GetGitProjectsForm true "patameter"
+// @Param form query forms.GetGitProjectsForm true "parameter"
 // @Router /vcs/{vcsId}/repo [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]vcsrv.Projects}}
 func (Vcs) ListRepos(c *ctx.GinRequest) {
@@ -173,4 +173,24 @@ func (Vcs) GetReadmeContent(c *ctx.GinRequest) {
 		return
 	}
 	c.JSONResult(apps.GetReadme(c.Service(), &form))
+}
+
+// SearchVcsFileContent 查询代码仓库下文件内容
+// @Tags Vcs仓库
+// @Summary 查询代码仓库下文件内容
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param vcsId path string true "vcs仓库ID"
+// @Param form query forms.SearchVcsFileForm true "parameter"
+// @Router /vcs/{vcsId}/file [get]
+// @Success 200 {object} ctx.JSONResult{result=string}
+func (Vcs) SearchVcsFileContent(c *ctx.GinRequest) {
+	form := forms.SearchVcsFileForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.SearchVcsFile(c.Service(), &form))
 }

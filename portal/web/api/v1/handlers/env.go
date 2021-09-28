@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"cloudiac/portal/apps"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
@@ -171,6 +172,45 @@ func (Env) SearchResources(c *ctx.GinRequest) {
 	c.JSONResult(apps.SearchEnvResources(c.Service(), &form))
 }
 
+// Output 环境的 Terraform Output
+// @Tags 环境
+// @Summary 环境的 Terraform Output
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param envId path string true "环境ID"
+// @router /envs/{envId}/output [get]
+// @Success 200 {object} ctx.JSONResult
+func (Env) Output(c *ctx.GinRequest) {
+	form := forms.DetailEnvForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.EnvOutput(c.Service(), form))
+}
+
+// Variables 查询环境部署时使用的变量
+// @Tags 环境
+// @Summary 查询环境部署时使用的变量
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
+// @Param form query forms.SearchEnvVariableForm true "parameter"
+// @Param envId path string true "环境ID"
+// @router /envs/{envId}/variables [get]
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.VariableBody}}
+func (Env) Variables(c *ctx.GinRequest) {
+	form := forms.SearchEnvVariableForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.EnvVariables(c.Service(), form))
+}
+
 // SearchTasks 部署历史
 // @Tags 环境
 // @Summary 部署历史
@@ -209,4 +249,41 @@ func (Env) LastTask(c *ctx.GinRequest) {
 		return
 	}
 	c.JSONResult(apps.LastTask(c.Service(), form))
+}
+
+// PolicyResult 环境合规详情
+// @Tags 环境
+// @Summary 环境合规详情
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param envId path string true "环境ID"
+// @router /envs/{envId}/policy_result [get]
+// @Success 200 {object} apps.ScanResultPageResp
+func (Env) PolicyResult(c *ctx.GinRequest) {
+	form := &forms.PolicyScanResultForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.PolicyScanResult(c.Service(), consts.ScopeEnv, form))
+}
+
+// ResourceDetail 资源部署成功后信息详情
+// @Tags 环境
+// @Summary 环境部署资源信息详情
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param resourceId path string true "资源ID"
+// @route /envs/{envId}/resource/{resourceId} [get]
+// @Success 200 {object} ctx.JSONResult{result=models.ResAttrs}
+func (Env) ResourceDetail(c *ctx.GinRequest) {
+	form := &forms.ResourceDetailForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.ResourceDetail(c.Service(), form))
 }

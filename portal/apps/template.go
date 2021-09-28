@@ -57,7 +57,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		return nil, e.New(e.DBError, fmt.Errorf("get repo failed: %v", er))
 	}
 
-	tx := c.Tx().Debug()
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -77,6 +77,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		Playbook:     form.Playbook,
 		PlayVarsFile: form.PlayVarsFile,
 		TfVarsFile:   form.TfVarsFile,
+		TfVersion:    form.TfVersion,
 	})
 
 	if err != nil {
@@ -145,6 +146,9 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 	}
 	if form.HasKey("playVarsFile") {
 		attrs["playVarsFile"] = form.PlayVarsFile
+	}
+	if form.HasKey("tfVersion") {
+		attrs["tfVersion"] = form.TfVersion
 	}
 	if form.HasKey("repoRevision") {
 		attrs["repoRevision"] = form.RepoRevision
@@ -216,17 +220,15 @@ func DeleteTemplate(c *ctx.ServiceContext, form *forms.DeleteTemplateForm) (inte
 	if tpl.OrgId != c.OrgId {
 		return nil, e.New(e.TemplateNotExists, http.StatusForbidden, fmt.Errorf("The organization does not have permission to delete the current template"))
 	}
-	// 查询活跃环境
-	envList, er := services.GetEnvByTplId(tx, form.Id)
-	if er != nil {
-		return nil, e.AutoNew(er, e.DBError)
+
+	// 查询模板是否有活跃环境
+	if ok, err := services.QueryActiveEnv(tx.Where("tpl_id = ?", form.Id)).Exists(); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	} else if ok {
+		return nil, e.New(e.TemplateActiveEnvExists, http.StatusMethodNotAllowed,
+			fmt.Errorf("The cloud template cannot be deleted because there is an active environment"))
 	}
-	for _, v := range envList {
-		if v.Status != "inactive" {
-			c.Logger().Error("error delete template by id,because the template also has an active environment")
-			return nil, e.New(e.TemplateActiveEnvExists, http.StatusForbidden, fmt.Errorf("The cloud template cannot be deleted because there is an active environment"))
-		}
-	}
+
 	// 根据ID 删除云模板
 	if err := services.DeleteTemplate(tx, tpl.Id); err != nil {
 		_ = tx.Rollback()
@@ -257,7 +259,7 @@ func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*Tem
 		c.Logger().Errorf("error get template by id, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
-	project_ids, err := services.QuertProjectByTplId(c.DB(), form.Id)
+	project_ids, err := services.QueryProjectByTplId(c.DB(), form.Id)
 	if err != nil {
 		return nil, e.New(e.DBError, err)
 	}
@@ -277,7 +279,6 @@ func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*Tem
 func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl interface{}, err e.Error) {
 	tplIdList := make([]models.Id, 0)
 	if c.ProjectId != "" {
-		// TODO 是否校验project_id 在不在这个组织里面？
 		tplIdList, err = services.QueryTplByProjectId(c.DB(), c.ProjectId)
 		if err != nil {
 			return nil, err

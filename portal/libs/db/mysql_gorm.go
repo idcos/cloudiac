@@ -5,17 +5,19 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"gorm.io/gorm/clause"
-	"gorm.io/gorm/schema"
-	"gorm.io/plugin/soft_delete"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
+	"gorm.io/gorm/clause"
+	"gorm.io/gorm/schema"
+	"gorm.io/plugin/soft_delete"
+
 	"cloudiac/portal/consts/e"
 	"cloudiac/utils/logs"
+
 	"github.com/pkg/errors"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -55,6 +57,8 @@ func (s *Session) GormDB() *gorm.DB {
 	return s.db
 }
 
+// 创建一个新 Session 对象。
+// !!注意!!，该方法返回的新 session 会跳出事务
 func (s *Session) New() *Session {
 	return ToSess(s.db.Session(&gorm.Session{NewDB: true}))
 }
@@ -87,11 +91,11 @@ func (s *Session) RemoveIndex(table string, indexName string) error {
 	return nil
 }
 
-func (s *Session) DropColumn(table string, columns ...string) error {
+func (s *Session) DropColumn(model interface{}, columns ...string) error {
 	migrator := s.db.Migrator()
 	for _, col := range columns {
-		if migrator.HasColumn(table, col) {
-			if err := migrator.DropColumn(table, col); err != nil {
+		if migrator.HasColumn(model, col) {
+			if err := migrator.DropColumn(model, col); err != nil {
 				return err
 			}
 		}
@@ -124,8 +128,8 @@ func (s *Session) Model(m interface{}) *Session {
 	}
 }
 
-func (s *Session) Table(name string) *Session {
-	return ToSess(s.db.Table(name))
+func (s *Session) Table(name string, args ...interface{}) *Session {
+	return ToSess(s.db.Table(name, args...))
 }
 
 func (s *Session) Debug() *Session {
@@ -133,11 +137,25 @@ func (s *Session) Debug() *Session {
 }
 
 func (s *Session) Expr() interface{} {
-	return s.db
+	qs := s.autoLazySelect()
+	return qs.db
 }
 
 func (s *Session) Raw(sql string, values ...interface{}) *Session {
-	return ToSess(s.db.Raw(sql, values...))
+	// FIXME: gorm driver bugs
+	// gorm@v1.21.12~14: statement.go +204
+	//   subdb.Statement.Vars = stmt.Vars
+	// when values is a *DB (usually a sub query), the statement vars will be appended twice
+	// workaround:
+	//  check if sql variables wanted matched the vars count x 2, then remove the duplicated vars
+	ss := ToSess(s.db.Raw(sql, values...))
+	// remove duplicated vars
+	if len(ss.db.Statement.Vars) > 0 && strings.Count(ss.db.Statement.SQL.String(), "?")*2 == len(ss.db.Statement.Vars) {
+		logs.Get().Warnf("gorm bugs: duplicate vars, sql: %s", ss.db.Statement.SQL.String())
+		ss.db.Statement.Vars = ss.db.Statement.Vars[:len(ss.db.Statement.Vars)/2]
+	}
+
+	return ss
 }
 
 func (s *Session) Exec(sql string, args ...interface{}) (int64, error) {
@@ -205,6 +223,10 @@ func (s *Session) Joins(query string, args ...interface{}) *Session {
 	return ToSess(s.db.Joins(query, args...))
 }
 
+func (s *Session) Having(query interface{}, args ...interface{}) *Session {
+	return ToSess(s.db.Having(query, args...))
+}
+
 func (s *Session) Order(value interface{}) *Session {
 	return ToSess(s.db.Order(value))
 }
@@ -226,13 +248,14 @@ func (s *Session) Set(name string, value interface{}) *Session {
 }
 
 func (s *Session) Count() (cnt int64, err error) {
-	err = s.db.Count(&cnt).Error
+	qs := s.autoLazySelect()
+	err = qs.db.Count(&cnt).Error
 	return
 }
 
 func (s *Session) Exists() (bool, error) {
 	exists := false
-	err := s.New().Raw("SELECT EXISTS(?)", s.db).Scan(&exists)
+	err := s.Raw("SELECT EXISTS(?)", s.db).Scan(&exists)
 	if err != nil {
 		return false, err
 	}

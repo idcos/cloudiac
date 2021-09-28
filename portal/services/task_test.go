@@ -3,6 +3,7 @@
 package services
 
 import (
+	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -147,5 +148,175 @@ func TestParseStateJson(t *testing.T) {
 	}
 	if !assert.Equal(t, res[1].Address, "alicloud_instance.web[0]") {
 		t.FailNow()
+	}
+}
+
+var tfconfigJson = `
+{
+  "alicloud_instance": [
+    {
+      "id": "alicloud_instance.instance",
+      "name": "instance",
+      "module_name": "root",
+      "source": "main.tf",
+      "plan_root": "./",
+      "line": 50,
+      "type": "alicloud_instance",
+      "config": {
+        "availability_zone": "cn-beijing-a",
+        "count": 1,
+        "image_id": "ubuntu_18_04_64_20G_alibase_20190624.vhd",
+        "instance_name": "tf_jack_instance",
+        "instance_type": "ecs.t5-lc1m1.small",
+        "internet_max_bandwidth_out": 0,
+        "password": "Hello123",
+        "security_groups": "${alicloud_security_group.jack_secg.*.id}",
+        "system_disk_category": "cloud_efficiency",
+        "vswitch_id": "${alicloud_vswitch.jack_vsw.id}"
+      },
+      "skip_rules": null,
+      "max_severity": "",
+      "min_severity": ""
+    }
+  ]
+}
+`
+
+func TestUnmarshalTfParseJson(t *testing.T) {
+	type args struct {
+		bs []byte
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *TfParse
+		wantErr bool
+	}{
+		{
+			name: "Test parse terrascan config",
+			args: args{bs: []byte(tfconfigJson)},
+			want: &TfParse{
+				"alicloud_instance": TSResources{
+					{
+						Id:         "alicloud_instance.instance",
+						Name:       "instance",
+						ModuleName: "root",
+						Source:     "main.tf",
+						PlanRoot:   "./",
+						Line:       50,
+						Type:       "alicloud_instance",
+						Config: map[string]interface{}{
+							"availability_zone":          "cn-beijing-a",
+							"count":                      1,
+							"image_id":                   "ubuntu_18_04_64_20G_alibase_20190624.vhd",
+							"instance_name":              "tf_jack_instance",
+							"instance_type":              "ecs.t5-lc1m1.small",
+							"internet_max_bandwidth_out": 0,
+							"password":                   "Hello123",
+							"security_groups":            "${alicloud_security_group.jack_secg.*.id}",
+							"system_disk_category":       "cloud_efficiency",
+							"vswitch_id":                 "${alicloud_vswitch.jack_vsw.id}",
+						},
+						SkipRules:   nil,
+						MaxSeverity: "",
+						MinSeverity: "",
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := UnmarshalTfParseJson(tt.args.bs)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("UnmarshalTfParseJson() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			gotJson, err := json.Marshal(got)
+			wantJson, err2 := json.Marshal(tt.want)
+			if err != nil || err2 != nil || string(gotJson) != string(wantJson) {
+				t.Errorf("UnmarshalTfParseJson() got = %+v, want %+v", got, tt.want)
+			}
+		})
+	}
+}
+
+var tsresultJson = `
+{
+  "results": {
+    "violations": [
+      {
+        "rule_name": "cloudfrontNoGeoRestriction",
+        "description": "Ensure that geo restriction is enabled for your Amazon ...",
+        "rule_id": "AWS.CloudFront.Network Security.Low.0568",
+        "severity": "LOW",
+        "category": "Network Security",
+        "resource_name": "s3-distribution-TLS-v1",
+        "resource_type": "aws_cloudfront_distribution",
+        "file": "terrascan-492583054.tf",
+        "line": 7
+      }
+    ],
+    "scan_summary": {
+      "low": 0,
+      "medium": 0,
+      "high": 0
+    }
+  }
+}
+`
+
+func TestUnmarshalTfResultJson(t *testing.T) {
+	type args struct {
+		bs []byte
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *TsResultJson
+		wantErr bool
+	}{
+		{
+			name: "Test parse terrascan result",
+			args: args{bs: []byte(tsresultJson)},
+			want: &TsResultJson{
+				Results: TsResult{
+					ScanSummary: ScanSummary{
+						Low:    0,
+						Medium: 0,
+						High:   0,
+					},
+					Violations: []Violation{
+						{
+							RuleName:     "cloudfrontNoGeoRestriction",
+							Description:  "Ensure that geo restriction is enabled for your Amazon ...",
+							RuleId:       "AWS.CloudFront.Network Security.Low.0568",
+							Severity:     "LOW",
+							Category:     "Network Security",
+							ResourceName: "s3-distribution-TLS-v1",
+							ResourceType: "aws_cloudfront_distribution",
+							File:         "terrascan-492583054.tf",
+							Line:         7,
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := UnmarshalTfResultJson(tt.args.bs)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("UnmarshalTfResultJson() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			gotJson, err := json.Marshal(got)
+			wantJson, err2 := json.Marshal(tt.want)
+			if err != nil || err2 != nil || string(gotJson) != string(wantJson) {
+				t.Errorf("UnmarshalTfResultJson() got = %+v, want %+v", got, tt.want)
+			}
+		})
 	}
 }

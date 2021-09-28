@@ -98,3 +98,14 @@ func DeleteCtResourceMap(tx *db.Session, rsAccountId models.Id) e.Error {
 	}
 	return nil
 }
+
+func GetResourceById(tx *db.Session, id models.Id) (*models.Resource, e.Error) {
+	r := models.Resource{}
+	if err := tx.Where("id = ?", id).First(&r); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.ObjectNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &r, nil
+}

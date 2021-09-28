@@ -52,7 +52,7 @@ func CreateToken(c *ctx.ServiceContext, form *forms.CreateTokenForm) (interface{
 		}
 	}
 
-	token, err := services.CreateToken(c.DB().Debug(), models.Token{
+	token, err := services.CreateToken(c.DB(), models.Token{
 		Key:         string(tokenStr),
 		Type:        form.Type,
 		OrgId:       c.OrgId,
@@ -124,7 +124,7 @@ func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (int
 		err      e.Error
 		taskType string
 	)
-	tx := c.Tx().Debug()
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -163,21 +163,31 @@ func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (int
 		taskType = models.TaskTypeApply
 	case models.TaskTypeDestroy:
 		taskType = models.TaskTypeDestroy
+	//todo 合规
 	default:
 		return nil, e.New(e.BadRequest, errors.New("token action illegal"), http.StatusBadRequest)
 	}
 
+	vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, env.OrgId, env.ProjectId, env.TplId, env.Id, true)
+	if err != nil {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
+	taskVars := services.GetVariableBody(vars)
+
 	task := models.Task{
 		Name:        models.Task{}.GetTaskNameByType(taskType),
-		Type:        taskType,
-		Flow:        models.TaskFlow{},
 		Targets:     models.StrSlice{},
 		CreatorId:   c.UserId,
 		KeyId:       env.KeyId,
-		RunnerId:    env.RunnerId,
-		Variables:   services.GetVariableBody(env.Variables),
-		StepTimeout: env.Timeout,
+		Variables:   taskVars,
 		AutoApprove: env.AutoApproval,
+		BaseTask: models.BaseTask{
+			Type:        taskType,
+			Flow:        models.TaskFlow{},
+			StepTimeout: env.Timeout,
+			RunnerId:    env.RunnerId,
+		},
 	}
 
 	_, err = services.CreateTask(tx, tpl, env, task)

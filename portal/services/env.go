@@ -48,6 +48,14 @@ func UpdateEnv(tx *db.Session, id models.Id, attrs models.Attrs) (env *models.En
 	return
 }
 
+func UpdateEnvModel(tx *db.Session, id models.Id, env models.Env) e.Error {
+	_, err := models.UpdateModel(tx.Where("id = ?", id), &env)
+	if err != nil {
+		return e.AutoNew(err, e.DBError)
+	}
+	return nil
+}
+
 func DeleteEnv(tx *db.Session, id models.Id) e.Error {
 	if _, err := tx.Where("id = ?", id).Delete(&models.Env{}); err != nil {
 		return e.New(e.DBError, fmt.Errorf("delete env error: %v", err))
@@ -76,7 +84,7 @@ func QueryEnvDetail(query *db.Session) *db.Session {
 	query = query.Joins("left join iac_user as u on u.id = iac_env.creator_id").
 		LazySelectAppend("u.name as creator,iac_env.*")
 	// 资源数量统计
-	query = query.Joins("left join (select count(*) as resource_count, task_id from iac_resource group by task_id) as r on r.task_id = iac_env.last_task_id").
+	query = query.Joins("left join (select count(*) as resource_count, task_id from iac_resource group by task_id) as r on r.task_id = iac_env.last_res_task_id").
 		LazySelectAppend("r.resource_count, iac_env.*")
 	// 密钥名称
 	query = query.Joins("left join iac_key as k on k.id = iac_env.key_id").
@@ -96,12 +104,16 @@ func GetEnvDetailById(query *db.Session, id models.Id) (*models.EnvDetail, e.Err
 	return &d, nil
 }
 
-func GetEnvByTplId(tx *db.Session, id models.Id) ([]models.Env, error) {
+func GetEnvByTplId(tx *db.Session, tplId models.Id) ([]models.Env, error) {
 	env := make([]models.Env, 0)
-	if err := tx.Where("tpl_id = ?", id).Find(&env); err != nil {
+	if err := tx.Where("tpl_id = ?", tplId).Find(&env); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 	return env, nil
+}
+
+func QueryActiveEnv(query *db.Session) *db.Session {
+	return query.Model(&models.Env{}).Where("status != ? OR deploying = ?", models.EnvStatusInactive, true)
 }
 
 // ChangeEnvStatusWithTaskAndStep 基于任务和步骤的状态更新环境状态
@@ -119,10 +131,11 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 
 	if task.Exited() {
 		switch task.Status {
+		case models.TaskRejected:
+			// 任务驳回，环境状态不变
+			break
 		case models.TaskFailed:
-			if step.Status != models.TaskStepRejected {
-				envStatus = models.EnvStatusFailed
-			}
+			envStatus = models.EnvStatusFailed
 		case models.TaskComplete:
 			if task.Type == models.TaskTypeApply {
 				envStatus = models.EnvStatusActive
@@ -160,21 +173,6 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 	return nil
 }
 
-func GetVariableBody(vars models.EnvVariables) []models.VariableBody {
-	var vb []models.VariableBody
-	for _, v := range vars {
-		vb = append(vb, models.VariableBody{
-			Scope:       v.Scope,
-			Type:        v.Type,
-			Name:        v.Name,
-			Value:       v.Value,
-			Sensitive:   v.Sensitive,
-			Description: v.Description,
-		})
-	}
-	return vb
-}
-
 var (
 	ttlMap = map[string]string{
 		"1d":  "24h",
@@ -196,4 +194,11 @@ func ParseTTL(ttl string) (time.Duration, error) {
 		return t, fmt.Errorf("invalid duration: %v", ttl)
 	}
 	return t, nil
+}
+
+func GetEnvLastScanTask(sess *db.Session, envId models.Id) (*models.ScanTask, error) {
+	task := models.ScanTask{}
+	scanTaskIdQuery := sess.Model(&models.Env{}).Where("id = ?", envId).Select("last_scan_task_id")
+	err := sess.Model(&models.ScanTask{}).Where("id = (?)", scanTaskIdQuery.Expr()).First(&task)
+	return &task, err
 }

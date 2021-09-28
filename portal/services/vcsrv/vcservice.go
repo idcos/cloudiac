@@ -3,8 +3,10 @@
 package vcsrv
 
 import (
+	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"fmt"
 	"path"
@@ -15,6 +17,13 @@ import (
 /*
 version control service 接口
 */
+
+const (
+	WebhookUrlGitlab = "/webhooks/gitlab"
+	WebhookUrlGitea  = "/webhooks/gitea"
+	WebhookUrlGitee  = "/webhooks/gitee"
+	WebhookUrlGithub = "/webhooks/github"
+)
 
 type VcsIfaceOptions struct {
 	Ref       string
@@ -67,6 +76,15 @@ type RepoIface interface {
 
 	// DefaultBranch 获取默认分支
 	DefaultBranch() string
+
+	//ListWebhook 查询Webhook列表
+	ListWebhook() ([]ProjectsHook, error)
+
+	//DeleteWebhook 查询Webhook列表
+	DeleteWebhook(id int) error
+
+	//AddWebhook 查询Webhook列表
+	AddWebhook(url string) error
 }
 
 func GetVcsInstance(vcs *models.Vcs) (VcsIface, error) {
@@ -121,4 +139,62 @@ func GetRepoAddress(repo RepoIface) (string, error) {
 		return "", err
 	}
 	return p.HTTPURLToRepo, nil
+}
+
+func SetWebhook(vcs *models.Vcs, repoId string, triggers []string) error {
+	webhookUrl := configs.Get().Portal.Address + "/api/v1"
+	switch vcs.VcsType {
+	case models.VcsGitlab:
+		webhookUrl += WebhookUrlGitlab
+	case models.VcsGitea:
+		webhookUrl += WebhookUrlGitea
+	case models.VcsGitee:
+		webhookUrl += WebhookUrlGitee
+	case models.VcsGithub:
+		webhookUrl += WebhookUrlGithub
+	}
+	webhookUrl += fmt.Sprintf("/%s", vcs.Id.String())
+	repo, err := GetRepo(vcs, repoId)
+	if err != nil {
+		return err
+	}
+	webhooks, err := repo.ListWebhook()
+	if err != nil {
+		return err
+	}
+	var webhookId int
+	isExist := false
+	for _, webhook := range webhooks {
+		// 如果url相同，证明仓库中存在webhook；
+		if webhook.URL == webhookUrl {
+			isExist = true
+			webhookId = webhook.ID
+			break
+		}
+	}
+	//空值时删除
+	if len(triggers) == 0 {
+		// 判断同vcs、仓库的环境是否存在
+		exist, err := db.Get().Table(models.Env{}.TableName()).
+			Where("vcs_id = ?", vcs.Id).
+			Where("triggers not null").Exists()
+		if err != nil {
+			return err
+		}
+		//如果同vcs、仓库的环境不存在，则删除代码仓库中的webhook
+		if !exist {
+			if err := repo.DeleteWebhook(webhookId); err != nil {
+				return err
+			}
+		}
+		return nil
+	} else {
+		// 存在则忽略，不存在则添加
+		if !isExist {
+			if err := repo.AddWebhook(webhookUrl); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 }

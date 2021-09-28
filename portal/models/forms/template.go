@@ -29,6 +29,7 @@ type CreateTemplateForm struct {
 	Variables         []Variables `json:"variables" form:"variables" `
 	DeleteVariablesId []string    `json:"deleteVariablesId" form:"deleteVariablesId" ` //变量id
 	ProjectId         []models.Id `form:"projectId" json:"projectId"`                  // 项目ID
+	TfVersion         string      `form:"tfVersion" json:"tfVersion"`                  // 模版使用terraform版本号
 }
 
 type SearchTemplateForm struct {
@@ -55,6 +56,7 @@ type UpdateTemplateForm struct {
 	RepoRevision      string      `form:"repoRevision" json:"repoRevision" binding:""`
 	VcsId             models.Id   `form:"vcsId" json:"vcsId" binding:""`
 	RepoId            string      `form:"repoId" json:"repoId" binding:""`
+	TfVersion         string      `form:"tfVersion" json:"tfVersion" binding:""`
 }
 
 type DeleteTemplateForm struct {
@@ -100,4 +102,11 @@ type TemplatePlaybookSearchForm struct {
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
 	RepoType     string    `json:"repoType" form:"repoType" `
 	VcsId        models.Id `uri:"id"`
+}
+
+type TemplateTfVersionSearchForm struct {
+	BaseForm
+	VcsId     models.Id `json:"vcsId" form:"vcsId"`
+	VcsBranch string    `json:"vcsBranch" form:"vcsBranch"`
+	RepoId    string    `json:"repoId" form:"repoId"`
 }

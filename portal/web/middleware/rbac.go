@@ -32,7 +32,7 @@ func AccessControl(args ...string) gin.HandlerFunc {
 		act = args[0]
 	}
 	if !(sub == "" && obj == "" && act == "") {
-		logger.Debugf("policy overwrites %s, %s, %s", sub, obj, act)
+		logger.Tracef("policy overwrites %s, %s, %s", sub, obj, act)
 	}
 
 	return func(g *gin.Context) {

@@ -2,7 +2,10 @@
 
 package consts
 
-import "time"
+import (
+	"cloudiac/common"
+	"time"
+)
 
 const (
 	LowerCaseLetter = "abcdefghijklmnopqrstuvwxyz"
@@ -26,6 +29,8 @@ const (
 	SysUserId       = "u-system00000000000000"
 	DefaultSysEmail = "sys@example.com"
 	DefaultSysName  = "System"
+
+	DefaultTerraformVersion = "0.14.11"
 )
 
 const (
@@ -57,6 +62,8 @@ const (
 
 	LocalGitReposPath = "repos"  // 内置 http git server 服务目录
 	ReposUrlPrefix    = "/repos" // 内置 http git server url prefix
+
+	NotificationMessageTitle = "CloudIaC平台系统通知"
 )
 
 const (
@@ -80,20 +87,57 @@ const (
 	ScopeTemplate = "template"
 	ScopeEnv      = "env"
 
+	ScopePolicy      = "policy"
+	ScopePolicyGroup = "policyGroup"
+	ScopeTask        = "task"
+
 	VarTypeEnv       = "environment"
 	VarTypeTerraform = "terraform"
 	VarTypeAnsible   = "ansible"
 
 	TokenApi     = "api"     //token类型
 	TokenTrigger = "trigger" //token类型
+
+	EnvTriggerPRMR   = "prmr"
+	EnvTriggerCommit = "commit"
+
+	EventTaskFailed    = "task.failed"
+	EventTaskComplete  = "task.complete"
+	EventTaskRunning   = "task.running"
+	EventTaskApproving = "task.approving"
+	EventTaskRejected  = "task.rejected"
+
+	DefaultTfMirror   = "https://releases.hashicorp.com/terraform"
+	HttpClientTimeout = 20
 )
 
 var (
+	EnvScopeEnv     = []string{ScopeEnv, ScopeTemplate, ScopeProject, ScopeOrg}
+	EnvScopeTpl     = []string{ScopeTemplate, ScopeOrg}
+	EnvScopeProject = []string{ScopeProject, ScopeOrg}
+	EnvScopeOrg     = []string{ScopeOrg}
+
 	StatusTranslation = map[string]string{
 		"complete": "成功",
 		"failed":   "失败",
 		"running":  "运行中",
 		"timeout":  "超时",
 		"pending":  "排队中",
+	}
+	TerraformVersions = []string{
+		"0.11.15",
+		"0.12.31",
+		"0.13.7",
+		"0.14.11",
+		"0.15.5",
+		"1.0.6",
+	}
+
+	TaskStatusToEventType = map[string]string{
+		common.TaskComplete:  EventTaskComplete,
+		common.TaskFailed:    EventTaskFailed,
+		common.TaskRunning:   EventTaskRunning,
+		common.TaskApproving: EventTaskApproving,
+		common.TaskRejected:  EventTaskFailed,
 	}
 )

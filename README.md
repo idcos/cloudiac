@@ -10,6 +10,7 @@ CloudIaC 将易于使用的界面与强大的治理工具相结合，让您和�
 通过将 CloudIaC 集成到您的流程中，您可以获得对组织的云使用情况的可见性、可预测性和更好的治理。
 
 官方网站: https://cloudiac.idcos.com/
+
 产品手册: https://cloudiac.readthedocs.io/
 
 ## 编译
@@ -26,6 +27,6 @@ make build
 go env -w GOPROXY="https://goproxy.io,direct"
 ```
 
-## 钉钉交流群
-![钉钉交流群](assets/dingtalk-group.png)
+## 联系我们
+[Issue](https://github.com/idcos/CloudIaC/issues/19)
 

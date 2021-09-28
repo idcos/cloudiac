@@ -23,9 +23,9 @@ func (v *TaskVariables) Scan(value interface{}) error {
 }
 
 type TaskResult struct {
-	ResAdded     int `json:"resAdded"`
-	ResChanged   int `json:"resChanged"`
-	ResDestroyed int `json:"resDestroyed"`
+	ResAdded     *int `json:"resAdded"` // 该值为 nil 表示无资源变更数据(区别于 0)
+	ResChanged   *int `json:"resChanged"`
+	ResDestroyed *int `json:"resDestroyed"`
 
 	Outputs map[string]interface{} `json:"outputs"`
 }
@@ -55,26 +55,41 @@ const (
 	TaskTypePlan    = common.TaskTypePlan
 	TaskTypeApply   = common.TaskTypeApply
 	TaskTypeDestroy = common.TaskTypeDestroy
+	TaskTypeScan    = common.TaskTypeScan
+	TaskTypeParse   = common.TaskTypeParse
 
 	TaskPending   = common.TaskPending
 	TaskRunning   = common.TaskRunning
 	TaskApproving = common.TaskApproving
+	TaskRejected  = common.TaskRejected
 	TaskFailed    = common.TaskFailed
 	TaskComplete  = common.TaskComplete
 )
 
+type Tasker interface {
+	GetId() Id
+	GetRunnerId() string
+	GetStepTimeout() int
+	Exited() bool
+	Started() bool
+	IsStartedStatus(status string) bool
+	IsExitedStatus(status string) bool
+	IsEffectTask() bool
+	IsEffectTaskType(typ string) bool
+	GetTaskNameByType(typ string) string
+}
+
+// Task 部署任务
 type Task struct {
-	SoftDeleteModel
+	BaseTask
 
 	OrgId     Id `json:"orgId" gorm:"size:32;not null"`     // 组织ID
 	ProjectId Id `json:"projectId" gorm:"size:32;not null"` // 项目ID
-	TplId     Id `json:"TplId" gorm:"size:32;not null"`     // 模板ID
+	TplId     Id `json:"tplId" gorm:"size:32;not null"`     // 模板ID
 	EnvId     Id `json:"envId" gorm:"size:32;not null"`     // 环境ID
 
 	Name      string `json:"name" gorm:"not null;comment:任务名称"` // 任务名称
-	CreatorId Id     `json:"creatorId" gorm:"size:32;not null"`   // 创建人ID
-
-	Type string `json:"type" gorm:"not null;enum('plan', 'apply', 'destroy')" enums:"'plan', 'apply', 'destroy'"` // 任务类型。1. plan: 计划 2. apply: 部署 3. destroy: 销毁
+	CreatorId Id     `json:"creatorId" gorm:"size:32;not null"` // 创建人ID
 
 	RepoAddr string `json:"repoAddr" gorm:"not null"`
 	Revision string `json:"revision" gorm:"not null"`
@@ -83,6 +98,7 @@ type Task struct {
 	Workdir      string   `json:"workdir" gorm:"default:''"`
 	Playbook     string   `json:"playbook" gorm:"default:''"`
 	TfVarsFile   string   `json:"tfVarsFile" gorm:"default:''"`
+	TfVersion    string   `json:"tfVersion" gorm:"default:''"`
 	PlayVarsFile string   `json:"playVarsFile" gorm:"default:''"`
 	Targets      StrSlice `json:"targets" gorm:"type:json"` // 指定 terraform target 参数
 
@@ -93,24 +109,16 @@ type Task struct {
 	// 扩展属性，包括 source, transitionId 等
 	Extra TaskExtra `json:"extra" gorm:"type:json"` // 扩展属性
 
-	KeyId       Id     `json:"keyId" gorm:"size32"`      // 部署密钥ID
-	RunnerId    string `json:"runnerId" gorm:"not null"` // 部署通道
-	AutoApprove bool   `json:"autoApproval" gorm:"default:false"`
-
-	Flow     TaskFlow `json:"-" gorm:"type:text"`          // 执行流程
-	CurrStep int      `json:"currStep" gorm:"default:0"` // 当前在执行的流程步骤
-
-	// 任务每一步的执行超时(整个任务无超时控制)
-	StepTimeout int `json:"stepTimeout" gorm:"default:600;comment:执行超时"`
-
-	Status  string `json:"status" gorm:"type:enum('pending','running','approving','failed','complete','timeout');default 'pending'" enums:"'pending','running','failed','complete','timeout'"`
-	Message string `json:"message"` // 任务的状态描述信息，如失败原因等
-
-	StartAt *Time `json:"startAt" gorm:"type:datetime;comment:任务开始时间"` // 任务开始时间
-	EndAt   *Time `json:"endAt" gorm:"type:datetime;comment:任务结束时间"`   // 任务结束时间
+	KeyId           Id   `json:"keyId" gorm:"size32"` // 部署密钥ID
+	AutoApprove     bool `json:"autoApproval" gorm:"default:false"`
+	StopOnViolation bool `json:"stopOnViolation" gorm:"default:false"`
 
 	// 任务执行结果，如 add/change/delete 的资源数量、outputs 等
 	Result TaskResult `json:"result" gorm:"type:json"` // 任务执行结果
+
+	RetryNumber int  `json:"retryNumber" gorm:"size:32;default:0"` // 任务重试次数
+	RetryDelay  int  `json:"retryDelay" gorm:"size:32;default:0"`  // 每次任务重试时间，单位为秒
+	RetryAble   bool `json:"retryAble" gorm:"default:false"`
 }
 
 func (Task) TableName() string {
@@ -121,33 +129,45 @@ func (Task) DefaultTaskName() string {
 	return ""
 }
 
-func (t *Task) Exited() bool {
+func (t *BaseTask) GetId() Id {
+	return t.Id
+}
+
+func (t *BaseTask) GetRunnerId() string {
+	return t.RunnerId
+}
+
+func (t *BaseTask) GetStepTimeout() int {
+	return t.StepTimeout
+}
+
+func (t *BaseTask) Exited() bool {
 	return t.IsExitedStatus(t.Status)
 }
 
-func (t *Task) Started() bool {
+func (t *BaseTask) Started() bool {
 	return t.IsStartedStatus(t.Status)
 }
 
-func (Task) IsStartedStatus(status string) bool {
+func (BaseTask) IsStartedStatus(status string) bool {
 	// 注意：approving 状态的任务我们也认为其 started
 	return !utils.InArrayStr([]string{TaskPending}, status)
 }
 
-func (Task) IsExitedStatus(status string) bool {
-	return utils.InArrayStr([]string{TaskFailed, TaskComplete}, status)
+func (BaseTask) IsExitedStatus(status string) bool {
+	return utils.InArrayStr([]string{TaskFailed, TaskRejected, TaskComplete}, status)
 }
 
-func (t *Task) IsEffectTask() bool {
+func (t *BaseTask) IsEffectTask() bool {
 	return t.IsEffectTaskType(t.Type)
 }
 
 // IsEffectTaskType 是否产生实际数据变动的任务类型
-func (Task) IsEffectTaskType(typ string) bool {
+func (BaseTask) IsEffectTaskType(typ string) bool {
 	return utils.StrInArray(typ, TaskTypeApply, TaskTypeDestroy)
 }
 
-func (Task) GetTaskNameByType(typ string) string {
+func (BaseTask) GetTaskNameByType(typ string) string {
 	switch typ {
 	case TaskTypePlan:
 		return common.TaskTypePlanName
@@ -155,6 +175,10 @@ func (Task) GetTaskNameByType(typ string) string {
 		return common.TaskTypeApplyName
 	case TaskTypeDestroy:
 		return common.TaskTypeDestroyName
+	case TaskTypeScan:
+		return common.TaskTypeScanName
+	case TaskTypeParse:
+		return common.TaskTypeParse
 	default:
 		panic("invalid task type")
 	}
@@ -163,8 +187,20 @@ func (t *Task) StateJsonPath() string {
 	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TFStateJsonFile)
 }
 
+func (t *Task) ProviderSchemaJsonPath() string {
+	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TFProviderSchema)
+}
+
 func (t *Task) PlanJsonPath() string {
 	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TFPlanJsonFile)
+}
+
+func (t *Task) TfParseJsonPath() string {
+	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TerrascanJsonFile)
+}
+
+func (t *Task) TfResultJsonPath() string {
+	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TerrascanResultFile)
 }
 
 func (t *Task) HideSensitiveVariable() {
@@ -183,19 +219,22 @@ func (t *Task) Migrate(sess *db.Session) (err error) {
 }
 
 type TaskStepBody struct {
-	Type string   `json:"type" yaml:"type" gorm:"type:enum('init','plan','apply','play','command','destroy')"`
+	Type string   `json:"type" yaml:"type" gorm:"type:enum('init','plan','apply','play','command','destroy','scaninit','tfscan','tfparse','scan')"`
 	Name string   `json:"name,omitempty" yaml:"name" gorm:"size:32;not null"`
 	Args StrSlice `json:"args,omitempty" yaml:"args" gorm:"type:text"`
 }
 
 const (
-	TaskStepInit    = common.TaskStepInit
-	TaskStepPlan    = common.TaskStepPlan
-	TaskStepApply   = common.TaskStepApply
-	TaskStepDestroy = common.TaskStepDestroy
-	TaskStepPlay    = common.TaskStepPlay
-	TaskStepCommand = common.TaskStepCommand
-	TaskStepCollect = common.TaskStepCollect
+	TaskStepInit     = common.TaskStepInit
+	TaskStepPlan     = common.TaskStepPlan
+	TaskStepApply    = common.TaskStepApply
+	TaskStepDestroy  = common.TaskStepDestroy
+	TaskStepPlay     = common.TaskStepPlay
+	TaskStepCommand  = common.TaskStepCommand
+	TaskStepCollect  = common.TaskStepCollect
+	TaskStepTfParse  = common.TaskStepTfParse
+	TaskStepTfScan   = common.TaskStepTfScan
+	TaskStepScanInit = common.TaskStepScanInit
 
 	TaskStepPending   = common.TaskStepPending
 	TaskStepApproving = common.TaskStepApproving
@@ -217,16 +256,28 @@ type TaskStep struct {
 	NextStep  Id     `json:"nextStep" gorm:"size:32;default:''"`
 	Index     int    `json:"index" gorm:"size:32;not null"`
 	Status    string `json:"status" gorm:"type:enum('pending','approving','rejected','running','failed','complete','timeout')"`
+	ExitCode  int    `json:"exitCode" gorm:"default:0"` // 执行退出码，status 为 failed 时才有意义
 	Message   string `json:"message" gorm:"type:text"`
 	StartAt   *Time  `json:"startAt" gorm:"type:datetime"`
 	EndAt     *Time  `json:"endAt" gorm:"type:datetime"`
 	LogPath   string `json:"logPath" gorm:""`
 
 	ApproverId Id `json:"approverId" gorm:"size:32;not null"` // 审批者用户 id
+
+	CurrentRetryCount int   `json:"currentRetryCount" gorm:"size:32;default:0"` // 当前重试次数
+	NextRetryTime     int64 `json:"nextRetryTime" gorm:"default:0"`             // 下次重试时间
+	RetryNumber       int   `json:"retryNumber" gorm:"size:32;default:0"`       // 每个步骤可以重试的总次数
 }
 
 func (TaskStep) TableName() string {
 	return "iac_task_step"
+}
+
+func (t *TaskStep) Migrate(sess *db.Session) (err error) {
+	if err := sess.ModifyModelColumn(t, "type"); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *TaskStep) IsStarted() bool {

@@ -192,24 +192,30 @@ func ApproveTask(c *ctx.ServiceContext, form *forms.ApproveTaskForm) (interface{
 	return nil, nil
 }
 
-func FollowTaskLog(c *ctx.GinRequest, form forms.DetailTaskForm) e.Error {
+func FollowTaskLog(c *ctx.GinRequest, form forms.TaskLogForm) e.Error {
 	logger := c.Logger().WithField("func", "FollowTaskLog").WithField("taskId", form.Id)
 	sc := c.Service()
 	rCtx := c.Context.Request.Context()
 
 	query := services.QueryWithProjectId(services.QueryWithOrgId(sc.DB(), sc.OrgId), sc.ProjectId)
-	task, er := services.GetTask(query, form.Id)
+	var tasker models.Tasker
+	tasker, er := services.GetTask(query, form.Id)
 	if er != nil {
-		logger.Errorf("get task: %v", er)
-		if er.Code() == e.TaskNotExists {
-			return e.New(er.Code(), http.StatusNotFound)
+		if sc.IsSuperAdmin {
+			tasker, er = services.GetScanTaskById(sc.DB(), form.Id)
 		}
-		return er
+		if er != nil {
+			logger.Errorf("get task: %v", er)
+			if er.Code() == e.TaskNotExists {
+				return e.New(er.Code(), http.StatusNotFound)
+			}
+			return er
+		}
 	}
 
 	pr, pw := io.Pipe()
 	go func() {
-		if err := services.FetchTaskLog(rCtx, task, pw); err != nil {
+		if err := services.FetchTaskLog(rCtx, tasker, form.StepType, pw); err != nil {
 			logger.Errorf("fetch task log: %v", err)
 		}
 	}()

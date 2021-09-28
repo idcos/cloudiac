@@ -80,6 +80,10 @@ func (c *RunnerConfig) AbsPluginCachePath() string {
 	return c.mustAbs(c.PluginCachePath)
 }
 
+func (c *RunnerConfig) AbsTfenvVersionsCachePath() string {
+	return c.mustAbs(filepath.Join(c.PluginCachePath, ".tfenv-versions"))
+}
+
 type LogConfig struct {
 	LogLevel   string `yaml:"log_level"`
 	LogPath    string `yaml:"log_path"`
@@ -93,6 +97,10 @@ type SMTPServerConfig struct {
 
 	From     string `yaml:"from"`
 	FromName string `yaml:"fromName"`
+}
+
+type PolicyConfig struct {
+	Enabled bool `yaml:"enabled"`
 }
 
 func (ut *yamlTimeDuration) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -119,6 +127,7 @@ type Config struct {
 	SMTPServer   SMTPServerConfig `yaml:"smtpServer"`
 	SecretKey    string           `yaml:"secretKey"`
 	JwtSecretKey string           `yaml:"jwtSecretKey"`
+	Policy       PolicyConfig     `yaml:"policy"`
 }
 
 var (

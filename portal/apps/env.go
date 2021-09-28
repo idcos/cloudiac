@@ -12,8 +12,10 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"fmt"
+	"github.com/lib/pq"
 	"net/http"
 	"strings"
 	"time"
@@ -76,7 +78,6 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 			panic(r)
 		}
 	}()
-
 	env, err := services.CreateEnv(tx, models.Env{
 		OrgId:     c.OrgId,
 		ProjectId: c.ProjectId,
@@ -96,11 +97,15 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		Revision:     form.Revision,
 		KeyId:        form.KeyId,
 
-		TTL:           form.TTL,
-		AutoDestroyAt: &destroyAt,
-		AutoApproval:  form.AutoApproval,
+		TTL:             form.TTL,
+		AutoDestroyAt:   &destroyAt,
+		AutoApproval:    form.AutoApproval,
+		StopOnViolation: form.StopOnViolation,
 
-		Triggers: form.Triggers,
+		Triggers:    form.Triggers,
+		RetryAble:   form.RetryAble,
+		RetryDelay:  form.RetryDelay,
+		RetryNumber: form.RetryNumber,
 	})
 	if err != nil && err.Code() == e.EnvAlreadyExists {
 		_ = tx.Rollback()
@@ -113,15 +118,15 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 
 	// 创建新导入的变量
 	if err = services.OperationVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.Variables, nil); err != nil {
+		_ = tx.Rollback()
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 	// 获取计算后的变量列表
 	vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id, true)
 	if err != nil {
+		_ = tx.Rollback()
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
-	// 保存固化的变量
-	env.Variables = getVariables(vars)
 
 	targets := make([]string, 0)
 	if len(strings.TrimSpace(form.Targets)) > 0 {
@@ -130,17 +135,20 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
-		Name:        models.Task{}.GetTaskNameByType(form.TaskType),
-		Type:        form.TaskType,
-		Flow:        models.TaskFlow{},
-		Targets:     targets,
-		CreatorId:   c.UserId,
-		KeyId:       env.KeyId,
-		RunnerId:    env.RunnerId,
-		Variables:   services.GetVariableBody(env.Variables),
-		StepTimeout: form.Timeout,
-		AutoApprove: env.AutoApproval,
-		Revision:    env.Revision,
+		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
+		Targets:         targets,
+		CreatorId:       c.UserId,
+		KeyId:           env.KeyId,
+		Variables:       services.GetVariableBody(vars),
+		AutoApprove:     env.AutoApproval,
+		Revision:        env.Revision,
+		StopOnViolation: env.StopOnViolation,
+		BaseTask: models.BaseTask{
+			Type:        form.TaskType,
+			Flow:        models.TaskFlow{},
+			StepTimeout: form.Timeout,
+			RunnerId:    env.RunnerId,
+		},
 	})
 	if err != nil {
 		_ = tx.Rollback()
@@ -163,24 +171,17 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, e.New(e.DBError, err)
 	}
 
-	// 屏蔽敏感字段输出
-	env.HideSensitiveVariable()
 	envDetail := models.EnvDetail{
 		Env:        *env,
 		TaskId:     task.Id,
 		Operator:   c.Username,
 		OperatorId: c.UserId,
 	}
-
-	return &envDetail, nil
-}
-
-func getVariables(vars map[string]models.Variable) models.EnvVariables {
-	var vb []models.Variable
-	for _, v := range vars {
-		vb = append(vb, v)
+	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
+	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, form.Triggers); err != nil {
+		c.Logger().Errorf("set webhook err :%v", err)
 	}
-	return vb
+	return &envDetail, nil
 }
 
 // SearchEnv 环境查询
@@ -237,7 +238,6 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 
 	if details != nil {
 		for _, env := range details {
-			env.HideSensitiveVariable()
 			env.MergeTaskStatus()
 			env = PopulateLastTask(c.DB(), env)
 		}
@@ -265,6 +265,8 @@ func PopulateLastTask(query *db.Session, env *models.EnvDetail) *models.EnvDetai
 			env.RunnerId = lastTask.RunnerId
 			// 分支/标签
 			env.Revision = lastTask.Revision
+			// Commit id
+			env.CommitId = lastTask.CommitId
 			// 执行人
 			if operator, _ := services.GetUserByIdRaw(query, lastTask.CreatorId); operator != nil {
 				env.Operator = operator.Name
@@ -312,9 +314,32 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	if form.HasKey("runnerId") {
 		attrs["runner_id"] = form.RunnerId
 	}
+	if form.HasKey("retryAble") {
+		attrs["retryAble"] = form.RetryAble
+	}
+	if form.HasKey("retryNumber") {
+		attrs["retryNumber"] = form.RetryNumber
+	}
+	if form.HasKey("retryDelay") {
+		attrs["retryDelay"] = form.RetryDelay
+	}
 
 	if form.HasKey("autoApproval") {
+		if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) &&
+			!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) &&
+			!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) {
+			return nil, e.New(e.PermissionDeny, fmt.Errorf("approval role required"), http.StatusBadRequest)
+		}
 		attrs["auto_approval"] = form.AutoApproval
+	}
+
+	if form.HasKey("stopOnViolation") {
+		//if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) &&
+		//	!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) &&
+		//	!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) {
+		//	return nil, e.New(e.PermissionDeny, fmt.Errorf("approval role required"), http.StatusBadRequest)
+		//}
+		attrs["StopOnViolation"] = form.StopOnViolation
 	}
 
 	if form.HasKey("destroyAt") {
@@ -342,7 +367,19 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	}
 
 	if form.HasKey("triggers") {
-		attrs["triggers"] = form.Triggers
+		attrs["triggers"] = pq.StringArray(form.Triggers)
+		// triggers有变更时，需要检测webhook的配置
+		tpl, err := services.GetTemplateById(c.DB(), env.TplId)
+		if err != nil && err.Code() == e.TemplateNotExists {
+			return nil, e.New(err.Code(), err, http.StatusBadRequest)
+		} else if err != nil {
+			c.Logger().Errorf("error get template, err %s", err)
+			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+		}
+		vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
+		if err := vcsrv.SetWebhook(vcs, tpl.RepoId, form.Triggers); err != nil {
+			c.Logger().Errorf("set webhook err")
+		}
 	}
 
 	if form.HasKey("archived") {
@@ -362,8 +399,6 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 		return nil, err
 	}
 
-	// 屏蔽敏感字段输出
-	env.HideSensitiveVariable()
 	env.MergeTaskStatus()
 	detail := &models.EnvDetail{Env: *env}
 	detail = PopulateLastTask(c.DB(), detail)
@@ -387,8 +422,6 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 		return nil, e.New(e.DBError, err)
 	}
 
-	// 屏蔽敏感字段输出
-	envDetail.HideSensitiveVariable()
 	envDetail.MergeTaskStatus()
 	envDetail = PopulateLastTask(c.DB(), envDetail)
 
@@ -452,6 +485,14 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		}
 		env.AutoApproval = form.AutoApproval
 	}
+	if form.HasKey("stopOnViolation") {
+		//if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) &&
+		//	!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) &&
+		//	!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) {
+		//	return nil, e.New(e.PermissionDeny, fmt.Errorf("approval role required"), http.StatusBadRequest)
+		//}
+		env.StopOnViolation = form.StopOnViolation
+	}
 
 	if form.HasKey("destroyAt") {
 		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
@@ -491,19 +532,21 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 	if form.HasKey("timeout") {
 		env.Timeout = form.Timeout
 	}
+
 	if form.HasKey("variables") || form.HasKey("deleteVariablesId") {
 		// 变量列表增删
 		if err = services.OperationVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.Variables, form.DeleteVariablesId); err != nil {
 			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 		}
-		// 计算变量列表
-		vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id, true)
-		if err != nil {
-			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
-		}
-		// 保存固化变量
-		env.Variables = getVariables(vars)
 	}
+
+	// 计算变量列表
+	vars := map[string]models.Variable{}
+	vars, err, _ = services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id, true)
+	if err != nil {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
 	if form.HasKey("tfVarsFile") {
 		env.TfVarsFile = form.TfVarsFile
 	}
@@ -516,6 +559,16 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 	if form.HasKey("revision") {
 		env.Revision = form.Revision
 	}
+	if form.HasKey("retryAble") {
+		env.RetryAble = form.RetryAble
+	}
+	if form.HasKey("retryNumber") {
+		env.RetryNumber = form.RetryNumber
+	}
+	if form.HasKey("retryDelay") {
+		env.RetryDelay = form.RetryDelay
+	}
+
 	if form.TaskType == "" {
 		return nil, e.New(e.BadParam, http.StatusBadRequest)
 	}
@@ -527,17 +580,20 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
-		Name:        models.Task{}.GetTaskNameByType(form.TaskType),
-		Type:        form.TaskType,
-		Flow:        models.TaskFlow{},
-		Targets:     targets,
-		CreatorId:   c.UserId,
-		KeyId:       env.KeyId,
-		RunnerId:    env.RunnerId,
-		Variables:   services.GetVariableBody(env.Variables),
-		StepTimeout: form.Timeout,
-		AutoApprove: env.AutoApproval,
-		Revision:    env.Revision,
+		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
+		Targets:         targets,
+		CreatorId:       c.UserId,
+		KeyId:           env.KeyId,
+		Variables:       services.GetVariableBody(vars),
+		AutoApprove:     env.AutoApproval,
+		Revision:        env.Revision,
+		StopOnViolation: env.StopOnViolation,
+		BaseTask: models.BaseTask{
+			Type:        form.TaskType,
+			Flow:        models.TaskFlow{},
+			StepTimeout: form.Timeout,
+			RunnerId:    env.RunnerId,
+		},
 	})
 
 	if err != nil {
@@ -559,15 +615,16 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		return nil, e.New(e.DBError, err)
 	}
 
-	// 屏蔽敏感字段输出
-	env.HideSensitiveVariable()
 	env.MergeTaskStatus()
 	envDetail := &models.EnvDetail{
 		Env:    *env,
 		TaskId: task.Id,
 	}
 	envDetail = PopulateLastTask(c.DB(), envDetail)
-
+	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
+	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, form.Triggers); err != nil {
+		c.Logger().Errorf("set webhook err :%v", err)
+	}
 	return envDetail, nil
 }
 
@@ -585,9 +642,107 @@ func SearchEnvResources(c *ctx.ServiceContext, form *forms.SearchEnvResourceForm
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
+	// 无资源变更
+	if env.LastResTaskId == "" {
+		return getEmptyListResult(form)
+	}
+
 	return SearchTaskResources(c, &forms.SearchTaskResourceForm{
 		PageForm: form.PageForm,
-		Id:       env.LastTaskId,
+		Id:       env.LastResTaskId,
 		Q:        form.Q,
 	})
+}
+
+// EnvOutput 环境的 Terraform output
+// output 与 resource 返回源保持一致
+func EnvOutput(c *ctx.ServiceContext, form forms.DetailEnvForm) (interface{}, e.Error) {
+	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+
+	env, err := services.GetEnvById(c.DB(), form.Id)
+	if err != nil && err.Code() != e.EnvNotExists {
+		return nil, e.New(err.Code(), err, http.StatusNotFound)
+	} else if err != nil {
+		c.Logger().Errorf("error get env, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	// 无资源变更
+	if env.LastResTaskId == "" {
+		return nil, nil
+	}
+
+	return TaskOutput(c, forms.DetailTaskForm{
+		BaseForm: form.BaseForm,
+		Id:       env.LastResTaskId,
+	})
+}
+
+// EnvVariables 环境部署对应的环境变量为 last task 固化的变量内容
+func EnvVariables(c *ctx.ServiceContext, form forms.SearchEnvVariableForm) (interface{}, e.Error) {
+	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+
+	env, err := services.GetEnvById(c.DB(), form.Id)
+	if err != nil && err.Code() != e.EnvNotExists {
+		return nil, e.New(err.Code(), err, http.StatusNotFound)
+	} else if err != nil {
+		c.Logger().Errorf("error get env, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	if env.LastTaskId == "" {
+		return nil, nil
+	}
+
+	task, err := services.GetTaskById(c.DB(), env.LastTaskId)
+	if err != nil && err.Code() != e.TaskNotExists {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	} else if err != nil {
+		c.Logger().Errorf("error get env last res task, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	// 隐藏敏感字段
+	for index, v := range task.Variables {
+		if v.Sensitive {
+			task.Variables[index].Value = ""
+		}
+	}
+
+	return task.Variables, nil
+}
+
+// ResourceDetail 查询部署成功后资源的详细信息
+func ResourceDetail(c *ctx.ServiceContext, form *forms.ResourceDetailForm) (*models.ResAttrs, e.Error) {
+	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+
+	resource, err := services.GetResourceById(c.DB(), form.ResourceId)
+	if err != nil {
+		c.Logger().Errorf("error get resource, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+	if resource.EnvId != form.Id || resource.OrgId != c.OrgId || resource.ProjectId != c.ProjectId {
+		c.Logger().Errorf("Environment ID and resource ID do not match")
+		return nil, e.New(e.DBError, err, http.StatusForbidden)
+	}
+	resultAttrs := resource.Attrs
+	if len(resource.SensitiveKeys) > 0 {
+		set := map[string]interface{}{}
+		for _, value := range resource.SensitiveKeys {
+			set[value] = nil
+		}
+		for k, _ := range resultAttrs {
+			// 如果state 中value 存在与sensitive 设置，展示时不展示详情
+			if _, ok := set[k]; ok {
+				resultAttrs[k] = "(sensitive value)"
+			}
+		}
+	}
+	return &resultAttrs, nil
 }

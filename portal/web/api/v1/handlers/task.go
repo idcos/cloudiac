@@ -13,7 +13,6 @@ type Task struct {
 	ctrl.GinController
 }
 
-/**
 // Search 任务查询
 // @Tags 环境
 // @Summary 任务查询
@@ -25,7 +24,6 @@ type Task struct {
 // @Param form query forms.SearchTaskForm true "parameter"
 // @router /tasks [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Task}}
-*/
 func (Task) Search(c *ctx.GinRequest) {
 	form := forms.SearchTaskForm{}
 	if err := c.Bind(&form); err != nil {
@@ -60,14 +58,15 @@ func (Task) Detail(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string true "项目ID"
+// @Param IaC-Project-Id header string false "项目ID，获取环境扫描日志必填"
+// @Param form query forms.TaskLogForm true "parameter"
 // @Param taskId path string true "任务ID"
 // @router /tasks/{taskId}/log/sse [get]
-// @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
+// @Success 200 {string} string "日志实时数据流"
 func (Task) FollowLogSse(c *ctx.GinRequest) {
 	defer c.SSEvent("end", "end")
 
-	form := forms.DetailTaskForm{}
+	form := forms.TaskLogForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
@@ -126,7 +125,7 @@ func (Task) Log(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param taskId path string true "任务ID"
 // @router /tasks/{taskId}/output [get]
-// @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
+// @Success 200 {object} ctx.JSONResult
 func (Task) Output(c *ctx.GinRequest) {
 	form := forms.DetailTaskForm{}
 	if err := c.Bind(&form); err != nil {

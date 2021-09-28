@@ -23,7 +23,7 @@ mkdir -p /usr/yunji/cloudiac/var/{consul,mysql} && cd /usr/yunji/cloudiac/
 #### 4. 编写 docker-compose.yml 文件
 文件路径 /usr/yunji/cloudiac/docker-compose.yml，内容如下:
 ```yaml
-version: "3"
+version: "3.2"
 services:
   iac-portal:
     container_name: iac-portal
@@ -142,7 +142,7 @@ CONSUL_ADDRESS=private.host.ip:8500
 # portal 服务注册信息配置
 SERVICE_IP=iac-portal
 SERVICE_ID=iac-portal-01
-SERVICE_TAGS="iac-porta;portal-01"
+SERVICE_TAGS="iac-portal;portal-01"
 
 ## logger 配置
 LOG_DEVEL="debug"

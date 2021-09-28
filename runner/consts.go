@@ -28,18 +28,28 @@ const (
 )
 
 const (
-	TaskStepScriptName   = "run.sh"
-	TaskStepLogName      = "output.log"
-	TaskStepInfoFileName = "info.json"
+	TaskStepScriptName = "run.sh"
+	TaskStepLogName    = "output.log"
+
+	TaskStepInfoFileName          = "info.json"
+	TaskStepContainerInfoFileName = "container.json"
 
 	CloudIacTfFile   = "_cloudiac.tf"
-	CloudIacTfVars   = "_cloudiac.tfvars"
 	CloudIacPlayVars = "_cloudiac_play_vars.yml"
 
-	TFStateJsonFile = "tfstate.json"
-	TFPlanJsonFile  = "tfplan.json"
+	TFStateJsonFile  = "tfstate.json"
+	TFPlanJsonFile   = "tfplan.json"
+	TFProviderSchema = "tfproviderschema.json"
 
 	AnsibleStateAnalysisName = "terraform.py"
 
 	FollowLogDelay = time.Second // follow 文件时读到 EOF 后进行下次读取的等待时长
+
+	PoliciesDir         = "policies"
+	TerrascanJsonFile   = "_tfscan.json"
+	TerrascanResultFile = "_tfresult.json"
+	TerrascanLogFile    = "_tsscan.log"
+	RegoResultFile      = "_rego.json"
+
+	PopulateSourceLineCount = 3
 )

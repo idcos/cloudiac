@@ -117,7 +117,7 @@ CONSUL_ADDRESS=private.host.ip:8500
 # portal 服务注册信息配置
 SERVICE_IP=private.host.ip
 SERVICE_ID=IaC-Portal-01
-SERVICE_TAGS=iac-porta;portal-01
+SERVICE_TAGS=iac-portal;portal-01
 ```
 
 ###### 编辑 config-runner.yml 文件，主要修改如下内容:

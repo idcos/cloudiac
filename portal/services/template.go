@@ -61,12 +61,14 @@ func GetTemplateById(tx *db.Session, id models.Id) (*models.Template, e.Error) {
 }
 
 func QueryTemplateByOrgId(tx *db.Session, q string, orgId models.Id, templateIdList []models.Id) *db.Session {
-	query := tx.Debug().Model(&models.Template{}).Joins(
+	query := tx.Model(&models.Template{}).Joins(
 		"LEFT  JOIN iac_user"+
 			"  ON iac_user.id = iac_template.creator_id").
 		LazySelectAppend(
 			"iac_user.name as creator",
 			"iac_template.*")
+	query = query.Joins("left join iac_env on iac_template.id = iac_env.tpl_id and (iac_env.status != 'inactive' or deploying = 1)").Group("iac_template.id").
+		LazySelectAppend("count(iac_env.id) as active_environment")
 	if q != "" {
 		qs := "%" + q + "%"
 		query = query.Where("iac_template.name LIKE ? OR iac_template.description LIKE ?", qs, qs)
@@ -88,11 +90,39 @@ func QueryTplByProjectId(tx *db.Session, projectId models.Id) (tplIds []models.I
 	return
 }
 
-func QuertProjectByTplId(tx *db.Session, tplId models.Id) (project_ids []models.Id, err e.Error) {
+func QueryProjectByTplId(tx *db.Session, tplId models.Id) (projectIds []models.Id, err e.Error) {
 	if err := tx.Table(models.ProjectTemplate{}.TableName()).
 		Where("template_id = ?", tplId).
-		Pluck("project_id", &project_ids); err != nil {
+		Pluck("project_id", &projectIds); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 	return
+}
+
+func QueryTemplateByVcsIdAndRepoId(tx *db.Session, vcsId, repoId string) ([]models.Template, e.Error) {
+	tpl := make([]models.Template, 0)
+	if err := tx.Where("vcs_id = ?", vcsId).
+		Where("repo_id = ?", repoId).
+		Find(&tpl); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TemplateNotExists, err)
+		}
+	}
+	return tpl, nil
+}
+
+func QueryTplByVcsId(tx *db.Session, VcsId models.Id) (bool, e.Error) {
+	exists, err := tx.Table(models.Template{}.TableName()).
+		Where("vcs_id = ? and deleted_at_t = 0", VcsId).Exists()
+	if err != nil {
+		return false, e.AutoNew(err, e.DBError)
+	}
+	return exists, nil
+}
+
+func GetTplLastScanTask(sess *db.Session, envId models.Id) (*models.ScanTask, error) {
+	task := models.ScanTask{}
+	scanTaskIdQuery := sess.Model(&models.Template{}).Where("id = ?", envId).Select("last_scan_task_id")
+	err := sess.Model(&models.ScanTask{}).Where("id = (?)", scanTaskIdQuery.Expr()).First(&task)
+	return &task, err
 }

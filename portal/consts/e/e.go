@@ -5,6 +5,7 @@ package e
 import (
 	"cloudiac/utils/logs"
 	"fmt"
+
 	"github.com/go-sql-driver/mysql"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
@@ -52,9 +53,9 @@ func newError(code int, err error, status int) Error {
 	}
 }
 
-// 生成一个 Error 对象
-// code 为错误码
-// errOrStatus 为错误消息或者 http status，可以同时传两者，自动根据数据类型来判断是哪种值
+// New 生成一个 Error 对象，code 为错误码，errOrStatus 为错误消息或者 http status
+// err 和 http status 可以同时传，函数自动根据数据类型来判断是哪种值。
+// !!建议使用 AutoNew，可以自动判断 err 类型，如果 err 己是一个 Error 对象则不创建新 error!!
 func New(code int, errOrStatus ...interface{}) Error {
 	var (
 		// 默认设置 http 状态码为 0，
@@ -62,12 +63,12 @@ func New(code int, errOrStatus ...interface{}) Error {
 		status       = 0
 		err    error = nil
 	)
-	for _, v := range errOrStatus {
-		switch v.(type) {
+	for _, es := range errOrStatus {
+		switch v := es.(type) {
 		case int:
-			status = v.(int)
+			status = v
 		case error:
-			err = v.(error)
+			err = v
 		default:
 			logger.Errorf("'msgOrStatus' only supports 'string' or 'error'")
 		}
@@ -88,6 +89,8 @@ func convertError(code int, err error, status int) Error {
 			case MysqlDropColOrKeyNotExists:
 			case MysqlTableNotExist:
 				return newError(DBError, err, status)
+			case MysqlDataTooLong:
+				return newError(DataTooLong, err, status)
 			}
 		}
 	}

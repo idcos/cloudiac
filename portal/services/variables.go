@@ -3,7 +3,6 @@
 package services
 
 import (
-	"cloudiac/common"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
@@ -55,12 +54,13 @@ func OperationVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id
 	}
 
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Variable{}.TableName(),
-		"id", "scope", "type", "name", "value", "sensitive", "description", "org_id", "project_id", "tpl_id", "env_id")
+		"id", "scope", "type", "name", "value", "sensitive", "description", "org_id", "project_id", "tpl_id", "env_id", "options")
 	for _, v := range variables {
 		attrs := map[string]interface{}{
 			"name":        v.Name,
 			"sensitive":   v.Sensitive,
 			"description": v.Description,
+			"options":     v.Options,
 		}
 		var value string = v.Value
 		// 需要加密，数据不为空
@@ -88,7 +88,7 @@ func OperationVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id
 		} else {
 			vId := models.NewId("v")
 			if err := bq.AddRow(vId, v.Scope, v.Type, v.Name, value, v.Sensitive, v.Description,
-				orgId, projectId, tplId, envId); err != nil {
+				orgId, projectId, tplId, envId, v.Options); err != nil {
 				return e.New(e.DBError, err)
 			}
 		}
@@ -135,13 +135,13 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 	scopes := make([]string, 0)
 	switch scope {
 	case consts.ScopeEnv:
-		scopes = common.EnvScopeEnv
+		scopes = consts.EnvScopeEnv
 	case consts.ScopeTemplate:
-		scopes = common.EnvScopeTpl
+		scopes = consts.EnvScopeTpl
 	case consts.ScopeProject:
-		scopes = common.EnvScopeProject
+		scopes = consts.EnvScopeProject
 	case consts.ScopeOrg:
-		scopes = common.EnvScopeOrg
+		scopes = consts.EnvScopeOrg
 	}
 
 	// 将组织下所有的变量查询，在代码处理变量的继承关系及是否要应用该变量
@@ -236,4 +236,12 @@ func GetVariableParent(dbSess *db.Session, name, scope, variableType string, sco
 	}
 
 	return true, variable
+}
+
+func GetVariableBody(vars map[string]models.Variable) []models.VariableBody {
+	vb := make([]models.VariableBody, 0, len(vars))
+	for k, _ := range vars {
+		vb = append(vb, vars[k].VariableBody)
+	}
+	return vb
 }

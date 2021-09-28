@@ -4,6 +4,7 @@ package main
 
 import (
 	common2 "cloudiac/common"
+	"cloudiac/portal/apps"
 	"cloudiac/portal/task_manager"
 	"fmt"
 	"github.com/jessevdk/go-flags"
@@ -85,7 +86,8 @@ func main() {
 	if org != nil {
 		common2.DemoOrgId = org.Id.String()
 	}
-
+	// 初始化tfversions list
+	apps.InitTfVersions()
 	// 启动 web server
 	web.StartServer()
 }
@@ -115,7 +117,7 @@ func appAutoInit(tx *db.Session) (err error) {
 		return errors.Wrap(err, "init meat template")
 	}
 
-	if err := configs.InitPolicy(tx); err != nil {
+	if err := initPolicy(tx); err != nil {
 		return errors.Wrap(err, "init rbac policy")
 	}
 

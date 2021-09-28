@@ -33,9 +33,11 @@ const (
 	ColValidateError  = 10202
 	NameDuplicate     = 10203
 	InvalidColumn     = 10210
-	DataToLong        = 10211
-	NameToLong        = 10212
-	RemarkToLong      = 10213
+	DataTooLong       = 10211
+	NameTooLong       = 10212
+	RemarkTooLong     = 10213
+	TagTooLong        = 10214
+	TagTooMuch        = 10215
 
 	//// 校验错误 103
 
@@ -143,7 +145,28 @@ const (
 
 	//// vcs 311
 
-	VcsNotExists = 31110
+	VcsNotExists   = 31110
+	VcsDeleteError = 31120
+
+	//// policy 312
+
+	PolicyAlreadyExist           = 31210
+	PolicyNotExist               = 31211
+	PolicyGroupAlreadyExist      = 31221
+	PolicyGroupNotExist          = 31222
+	PolicyBelongedToAnotherGroup = 31223
+	PolicyResultAlreadyExist     = 31230
+	PolicyResultNotExist         = 31231
+	PolicyRegoMissingComment     = 31340
+	PolicyErrorParseTemplate     = 31250
+	PolicySuppressNotExist       = 31260
+	PolicySuppressAlreadyExist   = 31261
+	PolicyRelNotExist            = 31270
+	PolicyRelAlreadyExist        = 31271
+	PolicyScanNotEnabled         = 31280
+	/// terraform 313
+
+	InvalidTfVersion = 31300
 )
 
 var errorMsgs = map[int]map[string]string{
@@ -180,14 +203,20 @@ var errorMsgs = map[int]map[string]string{
 	BadRequest: {
 		"zh-cn": "无效请求",
 	},
-	DataToLong: {
-		"zh-cn": "数据过长",
+	DataTooLong: {
+		"zh-cn": "内容过长",
 	},
-	NameToLong: {
+	NameTooLong: {
 		"zh-cn": "名称过长",
 	},
-	RemarkToLong: {
+	RemarkTooLong: {
 		"zh-cn": "备注过长",
+	},
+	TagTooLong: {
+		"zh-cn": "标签过长",
+	},
+	TagTooMuch: {
+		"zh-cn": "标签过多",
 	},
 	IOError: {
 		"zh-cn": "io 错误",
@@ -362,6 +391,9 @@ var errorMsgs = map[int]map[string]string{
 	VcsNotExists: {
 		"zh-cn": "vcs仓库不存在",
 	},
+	VcsDeleteError: {
+		"zh-cn": "vcs存在相关依赖云模版，无法删除",
+	},
 	TaskApproveNotPending: {
 		"zh-cn": "作业状态非待审批，不允许操作",
 	},
@@ -379,5 +411,64 @@ var errorMsgs = map[int]map[string]string{
 	},
 	EnvCannotArchiveActive: {
 		"zh-cn": "环境当前状态活跃, 无法归档",
+	},
+	InvalidTfVersion: {
+		"zh-cn": "自动选择版本失败",
+	},
+
+	PolicyAlreadyExist: {
+		"zh-cn": "策略已存在",
+	},
+
+	PolicyNotExist: {
+		"zh-cn": "策略不存在",
+	},
+
+	PolicyGroupAlreadyExist: {
+		"zh-cn": "策略组已存在",
+	},
+
+	PolicyGroupNotExist: {
+		"zh-cn": "策略组不存在",
+	},
+
+	PolicyBelongedToAnotherGroup: {
+		"zh-cn": "策略属于其他策略组",
+	},
+
+	PolicyResultAlreadyExist: {
+		"zh-cn": "结果已存在",
+	},
+
+	PolicyResultNotExist: {
+		"zh-cn": "结果不存在",
+	},
+
+	PolicyErrorParseTemplate: {
+		"zh-cn": "模板解析错误",
+	},
+
+	PolicyRegoMissingComment: {
+		"zh-cn": "Rego脚本头缺失",
+	},
+
+	PolicySuppressNotExist: {
+		"zh-cn": "屏蔽记录不存在",
+	},
+
+	PolicySuppressAlreadyExist: {
+		"zh-cn": "屏蔽记录已存在",
+	},
+
+	PolicyRelNotExist: {
+		"zh-cn": "策略关联关系不存在",
+	},
+
+	PolicyRelAlreadyExist: {
+		"zh-cn": "策略关联关系已存在",
+	},
+
+	PolicyScanNotEnabled: {
+		"zh-cn": "扫描未启用",
 	},
 }

@@ -21,10 +21,11 @@ type Variable struct {
 	BaseModel
 	VariableBody
 
-	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
-	ProjectId Id `json:"projectId" gorm:"size:32;default:''"`
-	TplId     Id `json:"tplId" gorm:"size:32;default:''"`
-	EnvId     Id `json:"envId" gorm:"size:32;default:''"`
+	OrgId     Id       `json:"orgId" gorm:"size:32;not null"`
+	ProjectId Id       `json:"projectId" gorm:"size:32;default:''"`
+	TplId     Id       `json:"tplId" gorm:"size:32;default:''"`
+	EnvId     Id       `json:"envId" gorm:"size:32;default:''"`
+	Options   StrSlice `json:"options" gorm:"type:json"`
 }
 
 func (Variable) TableName() string {
