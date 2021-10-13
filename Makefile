@@ -102,6 +102,9 @@ image-runner: build-linux-amd64-runner
 image-worker:
 	$(DOCKER_BUILD) -t cloudiac/ct-worker:$(VERSION) -f docker/worker/Dockerfile .
 
+image-worker-centos:
+	$(DOCKER_BUILD) -t cloudiac/ct-worker:$(VERSION)-centos -f docker/worker/Dockerfile-centos .
+
 image-portal-arm64: build-linux-arm64-portal image-portal
 image-runner-arm64: build-linux-arm64-runner image-runner
 image-worker-arm64: image-worker
