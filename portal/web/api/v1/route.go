@@ -102,6 +102,7 @@ func Register(g *gin.RouterGroup) {
 	g.Use(w(middleware.AuthOrgId))
 
 	// 组织用户管理
+	g.GET("/orgs/resources", ac(), w(handlers.Organization{}.SearchOrgResources))
 	g.GET("/orgs/:id/users", ac("orgs", "listuser"), w(handlers.Organization{}.SearchUser))
 	g.POST("/orgs/:id/users", ac("orgs", "adduser"), w(handlers.Organization{}.AddUserToOrg))
 	g.PUT("/orgs/:id/users/:userId/role", ac("orgs", "updaterole"), w(handlers.Organization{}.UpdateUserOrgRel))
