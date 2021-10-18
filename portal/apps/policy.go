@@ -175,7 +175,7 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 		ProjectId: projectId,
 		BaseTask: models.BaseTask{
 			Type:        taskType,
-			Flow:        models.TaskFlow{},
+			Pipeline:    models.Pipeline{},
 			StepTimeout: common.TaskStepTimeoutDuration,
 			RunnerId:    runnerId,
 		},

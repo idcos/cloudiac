@@ -431,7 +431,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 	if task.IsEffectTask() && step != nil && !step.IsRejected() {
 		// 执行信息采集步骤
 		if err := m.runTaskStep(ctx, *runTaskReq, task, &models.TaskStep{
-			TaskStepBody: models.TaskStepBody{
+			PipelineStep: models.PipelineStep{
 				Type: models.TaskStepCollect,
 			},
 			OrgId:     task.OrgId,
@@ -906,8 +906,10 @@ func (m *TaskManager) processAutoDestroy() error {
 				AutoApprove:     true,
 				StopOnViolation: env.StopOnViolation,
 				BaseTask: models.BaseTask{
-					Type:        models.TaskTypeDestroy,
-					Flow:        models.TaskFlow{},
+					Type: models.TaskTypeDestroy,
+					// FIXME: 销毁任务应该从云模板代码库中读取 pipeline 文件
+					// 或者读取环境 lastResTaskId 的 pipeline?
+					Pipeline:    models.Pipeline{},
 					StepTimeout: 0,
 					RunnerId:    "",
 				},

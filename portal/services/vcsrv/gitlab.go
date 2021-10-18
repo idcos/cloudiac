@@ -143,13 +143,10 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 
 }
 
-func (git *gitlabRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
+func (git *gitlabRepoIface) ReadFileContent(branch, path string) ([]byte, error) {
 	opt := &gitlab.GetRawFileOptions{Ref: gitlab.String(branch)}
-	row, _, errs := git.gitConn.RepositoryFiles.GetRawFile(git.Project.ID, path, opt)
-	if errs != nil {
-		return content, e.New(e.VcsError, err)
-	}
-	return row, nil
+	row, _, err := git.gitConn.RepositoryFiles.GetRawFile(git.Project.ID, path, opt)
+	return row, err
 }
 
 type Projects struct {
