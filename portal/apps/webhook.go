@@ -98,7 +98,7 @@ func CreateWebhookTask(tx *db.Session, taskType string, userId models.Id, env *m
 		AutoApprove: env.AutoApproval,
 		BaseTask: models.BaseTask{
 			Type:        taskType,
-			Flow:        models.TaskFlow{},
+			Pipeline:    models.Pipeline{},
 			RunnerId:    env.RunnerId,
 			StepTimeout: env.Timeout,
 		},

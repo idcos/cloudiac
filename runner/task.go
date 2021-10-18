@@ -274,15 +274,17 @@ func (t *Task) genStepScript() error {
 	)
 
 	switch t.req.StepType {
-	case common.TaskStepInit:
+	case common.TaskStepCheckout:
+		command, err = t.stepCheckout()
+	case common.TaskStepTfInit:
 		command, err = t.stepInit()
-	case common.TaskStepPlan:
+	case common.TaskStepTfPlan:
 		command, err = t.stepPlan()
-	case common.TaskStepApply:
+	case common.TaskStepTfApply:
 		command, err = t.stepApply()
-	case common.TaskStepDestroy:
+	case common.TaskStepTfDestroy:
 		command, err = t.stepDestroy()
-	case common.TaskStepPlay:
+	case common.TaskStepAnsiblePlay:
 		command, err = t.stepPlay()
 	case common.TaskStepCommand:
 		command, err = t.stepCommand()
@@ -320,10 +322,21 @@ func (t *Task) genStepScript() error {
 	return nil
 }
 
-var initCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+var checkoutCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 if [[ ! -e code ]]; then git clone '{{.Req.RepoAddress}}' code; fi && \
 cd 'code/{{.Req.Env.Workdir}}' && \
-git checkout -q '{{.Req.RepoRevision}}' && echo check out $(git rev-parse --short HEAD). && \
+echo check out $(git rev-parse --short HEAD). && \
+git checkout -q '{{.Req.RepoRevision}}'
+`))
+
+func (t *Task) stepCheckout() (command string, err error) {
+	return t.executeTpl(checkoutCommandTpl, map[string]interface{}{
+		"Req": t.req,
+	})
+}
+
+var initCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+cd 'code/{{.Req.Env.Workdir}}' && \
 ln -sf '{{.IacTfFile}}' . && \
 tfenv install $TFENV_TERRAFORM_VERSION && \
 tfenv use $TFENV_TERRAFORM_VERSION  && \

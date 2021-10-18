@@ -9,9 +9,9 @@ type BaseTask struct {
 	SoftDeleteModel
 
 	/* 通用任务参数 */
-	Type string `json:"type" gorm:"not null;enum('plan','apply','destroy','scan'')" enums:"'plan','apply','destroy','scan'"` // 任务类型。1. plan: 计划 2. apply: 部署 3. destroy: 销毁
+	Type string `json:"type" gorm:"not null;enum('plan','apply','destroy','scan')" enums:"'plan','apply','destroy','scan'"` // 任务类型。1. plan: 计划 2. apply: 部署 3. destroy: 销毁
 
-	Flow     TaskFlow `json:"-" gorm:"type:text"`        // 执行流程
+	Pipeline Pipeline `json:"-" gorm:"type:text"`        // 执行流程
 	CurrStep int      `json:"currStep" gorm:"default:0"` // 当前在执行的流程步骤
 
 	// 任务每一步的执行超时(整个任务无超时控制)
@@ -57,6 +57,7 @@ type ScanTask struct {
 func (ScanTask) TableName() string {
 	return "iac_scan_task"
 }
+
 func (t *ScanTask) TfParseJsonPath() string {
 	if t.EnvId != "" {
 		return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TerrascanJsonFile)

@@ -12,11 +12,12 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/utils/logs"
 	"fmt"
-	"github.com/go-git/go-git/v5/plumbing/storer"
 	"io/fs"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/go-git/go-git/v5/plumbing/storer"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -200,6 +201,9 @@ func (l *LocalRepo) ReadFileContent(revision string, path string) (content []byt
 
 	file, err := commit.File(path)
 	if err != nil {
+		if strings.Contains(err.Error(), "file not found") {
+			return nil, e.New(e.ObjectNotExists)
+		}
 		return nil, err
 	}
 

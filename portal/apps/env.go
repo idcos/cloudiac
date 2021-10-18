@@ -15,10 +15,11 @@ import (
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"fmt"
-	"github.com/lib/pq"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 // CreateEnv 创建环境
@@ -145,7 +146,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		StopOnViolation: env.StopOnViolation,
 		BaseTask: models.BaseTask{
 			Type:        form.TaskType,
-			Flow:        models.TaskFlow{},
+			Pipeline:    models.Pipeline{},
 			StepTimeout: form.Timeout,
 			RunnerId:    env.RunnerId,
 		},
@@ -590,7 +591,7 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		StopOnViolation: env.StopOnViolation,
 		BaseTask: models.BaseTask{
 			Type:        form.TaskType,
-			Flow:        models.TaskFlow{},
+			Pipeline:    models.Pipeline{},
 			StepTimeout: form.Timeout,
 			RunnerId:    env.RunnerId,
 		},

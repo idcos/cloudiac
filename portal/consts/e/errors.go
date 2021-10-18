@@ -12,7 +12,6 @@ const (
 	*/
 
 	// 通用错误 1
-
 	InternalError           = 10000
 	ObjectAlreadyExists     = 10010
 	ObjectNotExists         = 10011
@@ -40,15 +39,14 @@ const (
 	TagTooMuch        = 10215
 
 	//// 校验错误 103
-
 	BadParam               = 10340 // 参数错误(参数值不对)
 	BadRequest             = 10341 // 请求错误(请求缺少必要参数)
+	InvalidPipeline        = 10350
 	InvalidAccessKeyId     = 10380 // AccessKeyId错误
 	InvalidAccessKeySecret = 10381
 	ForbiddenAccessKey     = 10382
 
 	//// 第三方服务错误 104
-
 	LdapError       = 10410 // ldap 出错
 	MailServerError = 10420
 	ConsulConnError = 10430
@@ -56,7 +54,6 @@ const (
 
 	// 权限认证 2
 	//// 认证 200
-
 	InvalidPassword   = 20010
 	InvalidToken      = 20000 // 无效 token
 	InvalidTokenScope = 20001 // 无效 token scope
@@ -65,14 +62,12 @@ const (
 	InvalidProjectId  = 20007 // 无效的 projectId
 
 	//// 权限 201
-
 	PermissionDeny   = 20110
 	ValidateError    = 20111
 	InvalidOperation = 20112
 
 	// 功能模块 3
 	//// 用户 301
-
 	UserAlreadyExists          = 30110
 	UserNotExists              = 30120
 	UserEmailDuplicate         = 30130
@@ -86,7 +81,6 @@ const (
 	RoleNameDuplicate          = 30151
 
 	//// 组织 303
-
 	OrganizationAlreadyExists = 30310
 	OrganizationNotExists     = 30311
 	OrganizationDisabled      = 30312
@@ -94,7 +88,6 @@ const (
 	InvalidOrganizationId     = 30315
 
 	//// project 304
-
 	ProjectAlreadyExists      = 30410
 	ProjectNotExists          = 30411
 	ProjectAliasDuplicate     = 30412
@@ -102,25 +95,21 @@ const (
 	ProjectUserAliasDuplicate = 30421
 
 	//// variable 305
-
 	VariableAlreadyExists  = 30510
 	VariableAliasDuplicate = 30511
 
 	//// token 306
-
 	TokenAlreadyExists  = 30610
 	TokenNotExists      = 30611
 	TokenAliasDuplicate = 30613
 
 	//// template 307
-
 	TemplateAlreadyExists   = 30710
 	TemplateNotExists       = 30711
 	TemplateDisabled        = 30712
 	TemplateActiveEnvExists = 30730
 
 	//// environment 308
-
 	EnvAlreadyExists       = 30810
 	EnvNotExists           = 30811
 	EnvAliasDuplicate      = 30812
@@ -129,7 +118,6 @@ const (
 	EnvDeploying           = 30815
 
 	//// task 309
-
 	TaskAlreadyExists     = 30910
 	TaskNotExists         = 30911
 	TaskApproveNotPending = 30913
@@ -137,19 +125,16 @@ const (
 	TaskNotHaveStep       = 30916
 
 	//// ssh key 310
-
 	KeyAlreadyExists  = 31010
 	KeyNotExist       = 31011
 	KeyAliasDuplicate = 31012
 	KeyDecryptFail    = 31013
 
 	//// vcs 311
-
 	VcsNotExists   = 31110
 	VcsDeleteError = 31120
 
 	//// policy 312
-
 	PolicyAlreadyExist           = 31210
 	PolicyNotExist               = 31211
 	PolicyGroupAlreadyExist      = 31221
@@ -164,8 +149,8 @@ const (
 	PolicyRelNotExist            = 31270
 	PolicyRelAlreadyExist        = 31271
 	PolicyScanNotEnabled         = 31280
-	/// terraform 313
 
+	/// terraform 313
 	InvalidTfVersion = 31300
 )
 
@@ -202,6 +187,9 @@ var errorMsgs = map[int]map[string]string{
 	},
 	BadRequest: {
 		"zh-cn": "无效请求",
+	},
+	InvalidPipeline: {
+		"zh-cn": "pipeline 格式错误",
 	},
 	DataTooLong: {
 		"zh-cn": "内容过长",
