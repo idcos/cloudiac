@@ -10,6 +10,7 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/utils"
 	"fmt"
+	"gorm.io/gorm"
 )
 
 func BindProjectUsers(tx *db.Session, projectId models.Id, authorization []forms.UserAuthorization) e.Error {
@@ -158,7 +159,7 @@ func UpdateProjectUser(dbSess *db.Session, attrs models.Attrs) e.Error {
 	return nil
 }
 
-func DeleteProjectUser(dbSess *db.Session, id uint) e.Error {
+func DeleteProjectUser(dbSess *db.Session, id string) e.Error {
 	if _, err := dbSess.Where("id = ?", id).Delete(&models.UserProject{}); err != nil {
 		return e.New(e.DBError, fmt.Errorf("delete project error: %v", err))
 	}
@@ -174,4 +175,13 @@ func GetDemoProject(tx *db.Session, demoOrgId models.Id) (*models.Project, e.Err
 		return nil, e.AutoNew(err, e.DBError)
 	}
 	return &proj, nil
+}
+
+// 取消该用户在当前组织里所有项目中的权限
+func DeleteUserAllProject(tx *db.Session, userId models.Id, orgId models.Id) e.Error {
+	if _, err := tx.Where("project_id in (?) AND user_id = ?",
+		gorm.Expr("select id from iac_project where org_id = ?", orgId), userId).Delete(&models.UserProject{}); err != nil {
+		return e.New(e.DBError, fmt.Errorf("delete user %v for all project error: %v", userId, err))
+	}
+	return nil
 }

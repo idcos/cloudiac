@@ -13,7 +13,7 @@ type CreateProjectUserForm struct {
 
 type DeleteProjectOrgUserForm struct {
 	BaseForm
-	Id uint `uri:"id" json:"id" form:"id" `
+	Id string `uri:"id" json:"id" form:"id" `
 }
 
 type UpdateProjectUserForm struct {
