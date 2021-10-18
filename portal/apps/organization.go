@@ -230,6 +230,11 @@ func DeleteUserOrgRel(c *ctx.ServiceContext, form *forms.DeleteUserOrgRelForm) (
 		c.Logger().Errorf("error del user org rel, err %s", err)
 		return nil, err
 	}
+	if err := services.DeleteUserAllProject(c.DB(), form.UserId, c.OrgId); err != nil {
+		c.Logger().Errorf("error del user project rel, err %s", err)
+		return nil, err
+	}
+
 	c.Logger().Infof("delete user ", form.UserId, " for org ", c.OrgId, " succeed")
 
 	resp := models.UserWithRoleResp{
