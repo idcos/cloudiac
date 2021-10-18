@@ -4,28 +4,29 @@ package models
 
 import (
 	"cloudiac/portal/libs/db"
+	"database/sql/driver"
 )
 
 type VariableBody struct {
 
 	// 继承关系依赖数据创建枚举的顺序，后续新增枚举值时请按照新的继承顺序增加
-	Scope       string `json:"scope" gorm:"not null;type:enum('org','template','project','env')"`
-	Type        string `json:"type" gorm:"not null;type:enum('environment','terraform','ansible')"`
-	Name        string `json:"name" gorm:"size:64;not null"`
-	Value       string `json:"value" gorm:"type:text"`
-	Sensitive   bool   `json:"sensitive,omitempty" gorm:"default:false"`
-	Description string `json:"description,omitempty" gorm:"type:text"`
+	Options     StrSlice `json:"options" gorm:"type:json"`
+	Scope       string   `json:"scope" gorm:"not null;type:enum('org','template','project','env')"`
+	Type        string   `json:"type" gorm:"not null;type:enum('environment','terraform','ansible')"`
+	Name        string   `json:"name" gorm:"size:64;not null"`
+	Value       string   `json:"value" gorm:"type:text"`
+	Sensitive   bool     `json:"sensitive,omitempty" gorm:"default:false"`
+	Description string   `json:"description,omitempty" gorm:"type:text"`
 }
 
 type Variable struct {
 	BaseModel
 	VariableBody
 
-	OrgId     Id       `json:"orgId" gorm:"size:32;not null"`
-	ProjectId Id       `json:"projectId" gorm:"size:32;default:''"`
-	TplId     Id       `json:"tplId" gorm:"size:32;default:''"`
-	EnvId     Id       `json:"envId" gorm:"size:32;default:''"`
-	Options   StrSlice `json:"options" gorm:"type:json"`
+	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
+	ProjectId Id `json:"projectId" gorm:"size:32;default:''"`
+	TplId     Id `json:"tplId" gorm:"size:32;default:''"`
+	EnvId     Id `json:"envId" gorm:"size:32;default:''"`
 }
 
 func (Variable) TableName() string {
@@ -43,4 +44,54 @@ func (v Variable) Migrate(sess *db.Session) error {
 		return err
 	}
 	return nil
+}
+
+type VariableGroup struct {
+	BaseModel
+	Name      string    `json:"name" gorm:"size:64;not null"`
+	Type      string    `json:"type" gorm:"not null;type:enum('environment','terraform')"`
+	OrgId     Id        `json:"orgId" gorm:"size:32;not null"`
+	Variables Variables `json:"variables" gorm:"type:json;null;comment:变量组下的变量"`
+}
+
+func (VariableGroup) TableName() string {
+	return "iac_variable_group"
+}
+
+func (v VariableGroup) Migrate(sess *db.Session) error {
+	if err := v.AddUniqueIndex(sess, "unique__org__variable_group_name",
+		"org_id", "name(32)"); err != nil {
+		return err
+	}
+	return nil
+}
+
+type Variables []VarGroupVariable
+
+func (v *Variables) Value() (driver.Value, error) {
+	return MarshalValue(v)
+}
+
+func (v *Variables) Scan(value interface{}) error {
+	return UnmarshalValue(value, v)
+}
+
+type VarGroupVariable struct { // db model field
+	Id          string `json:"id" form:"id" `
+	Name        string `json:"name" form:"name" `
+	Val         string `json:"value" form:"value" `
+	Sensitive   bool   `json:"sensitive" form:"sensitive" `
+	Description string `json:"description" form:"description" `
+}
+
+//VariableGroupRel 变量组与实例的关联表
+type VariableGroupRel struct {
+	AbstractModel
+	VarGroupId string `json:"varGroupId" gorm:"size:32;not null"`
+	ObjectType string `json:"objectType" gorm:"not null; type:enum('org','template','project','env')"`
+	ObjectId   string `json:"objectId" gorm:"size:32;not null"`
+}
+
+func (VariableGroupRel) TableName() string {
+	return "iac_variable_group_rel"
 }
