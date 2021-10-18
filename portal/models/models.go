@@ -184,6 +184,7 @@ func Init(migrate bool) {
 
 	autoMigrate(&Task{}, sess)
 	autoMigrate(&ScanTask{}, sess)
+	autoMigrate(&TaskJob{}, sess)
 	autoMigrate(&TaskStep{}, sess)
 	autoMigrate(&DBStorage{}, sess)
 

@@ -229,3 +229,21 @@ func (Organization) InviteUser(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.InviteUser(c.Service(), &form))
 }
+
+//SearchOrgResources 搜索当前组织下所有项目的活跃资源列表
+//@Tags 组织
+//@Summary 搜索当前组织下所有项目的活跃资源列表
+//@Accept application/x-www-form-urlencoded
+//@Produce json
+//@Security AuthToken
+//@Param IaC-Org-Id header string true "组织ID"
+//@Param form query forms.SearchOrgResourceForm true "parameter"
+//@router /orgs/resources [get]
+//@Success 200 {object} ctx.JSONResult{result=apps.OrgResourcesResp}
+func (Organization) SearchOrgResources(c *ctx.GinRequest) {
+	form := forms.SearchOrgResourceForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.SearchOrgResources(c.Service(), &form))
+}

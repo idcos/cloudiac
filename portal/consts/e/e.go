@@ -98,6 +98,13 @@ func convertError(code int, err error, status int) Error {
 	return newError(code, err, status)
 }
 
+func Is(err error, code int) bool {
+	if er, ok := err.(Error); ok {
+		return er.Code() == code
+	}
+	return false
+}
+
 func IsMysqlErr(err error, num int) bool {
 	if e, ok := err.(*mysql.MySQLError); ok {
 		if num == 0 {

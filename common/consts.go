@@ -12,8 +12,16 @@ const (
 	TaskTypePlan    = "plan"    // 计划执行，不会修改资源或做服务配置
 	TaskTypeApply   = "apply"   // 执行 terraform apply 和 playbook
 	TaskTypeDestroy = "destroy" // 销毁，删除所有资源
-	TaskTypeScan    = "scan"    // 策略扫描，只执行策略扫描，不锈钢资源或配置
-	TaskTypeParse   = "parse"   // 策略扫描，只执行策略扫描，不锈钢资源或配置
+	TaskTypeScan    = "scan"    // 策略扫描，只执行策略扫描，不修改资源或配置
+	TaskTypeParse   = "parse"   // 策略扫描，只执行策略扫描，不修改资源或配置
+
+	TaskJobPlan        = "plan"
+	TaskJobApply       = "apply"
+	TaskJobPlay        = "play"
+	TaskJobDestroyPlan = "destroyPlan"
+	TaskJobDestroy     = "destroy"
+	TaskJobScan        = "scan"
+	TaskJobParse       = "parse"
 
 	TaskPending   = "pending"
 	TaskRunning   = "running"
@@ -22,17 +30,21 @@ const (
 	TaskFailed    = "failed"
 	TaskComplete  = "complete"
 
-	TaskStepInit     = "init"
-	TaskStepPlan     = "plan"
-	TaskStepApply    = "apply"
-	TaskStepDestroy  = "destroy"
-	TaskStepPlay     = "play"    // play playbook
-	TaskStepCommand  = "command" // run command
-	TaskStepCollect  = "collect" // 任务结束后的信息采集
-	TaskStepScanInit = "scaninit"
-	TaskStepTfParse  = "tfparse" // 云模板解析
-	TaskStepTfScan   = "tfscan"  // 云模板策略扫描
+	TaskStepCheckout    = "checkout"
+	TaskStepTfInit      = "terraformInit"
+	TaskStepTfPlan      = "terraformPlan"
+	TaskStepTfApply     = "terraformApply"
+	TaskStepTfDestroy   = "terraformDestroy"
+	TaskStepAnsiblePlay = "ansiblePlay" // play playbook
+	TaskStepCommand     = "command"     // run command
+	TaskStepCollect     = "collect"     // 任务结束后的信息采集
+	TaskStepScanInit    = "scaninit"
+	TaskStepTfParse     = "tfparse" // 云模板解析
+	TaskStepTfScan      = "tfscan"  // 云模板策略扫描
 
+	PipelineFileName = ".cloudiac-pipeline.yml"
+
+	// 结束采集步骤的索引
 	CollectTaskStepIndex = -1
 
 	TaskStepPending   = "pending"
