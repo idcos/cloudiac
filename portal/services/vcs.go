@@ -6,8 +6,10 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils/logs"
 	"fmt"
+
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
@@ -63,6 +65,36 @@ func QueryVcsByVcsId(vcsId models.Id, query *db.Session) (*models.Vcs, e.Error) 
 	}
 	return vcs, nil
 
+}
+
+func GetVcsById(sess *db.Session, id models.Id) (*models.Vcs, e.Error) {
+	vcs := models.Vcs{}
+	err := sess.Model(&models.Vcs{}).Where("id = ?", id).First(&vcs)
+	if err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.VcsNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &vcs, nil
+}
+
+func GetVcsRepoByTplId(sess *db.Session, tplId models.Id) (vcsrv.RepoIface, e.Error) {
+	tpl, err := GetTemplateById(sess, tplId)
+	if err != nil {
+		return nil, err
+	}
+
+	vcs, err := GetVcsById(sess, tpl.VcsId)
+	if err != nil {
+		return nil, err
+	}
+
+	if repo, err := vcsrv.GetRepo(vcs, tpl.RepoId); err != nil {
+		return nil, e.AutoNew(err, e.VcsError)
+	} else {
+		return repo, nil
+	}
 }
 
 func QueryEnableVcs(orgId models.Id, query *db.Session) (interface{}, e.Error) {

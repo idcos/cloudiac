@@ -12,8 +12,9 @@ import (
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
-	"github.com/pkg/errors"
 	"net/http"
+
+	"github.com/pkg/errors"
 )
 
 func SearchToken(c *ctx.ServiceContext, form *forms.SearchTokenForm) (interface{}, e.Error) {
@@ -184,7 +185,7 @@ func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (int
 		AutoApprove: env.AutoApproval,
 		BaseTask: models.BaseTask{
 			Type:        taskType,
-			Flow:        models.TaskFlow{},
+			Pipeline:    models.Pipeline{},
 			StepTimeout: env.Timeout,
 			RunnerId:    env.RunnerId,
 		},
