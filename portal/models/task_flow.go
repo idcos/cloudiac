@@ -7,6 +7,7 @@ import (
 	"cloudiac/common"
 	"database/sql/driver"
 	"fmt"
+
 	"gopkg.in/yaml.v2"
 )
 
@@ -20,7 +21,7 @@ type TaskFlows struct {
 }
 
 type TaskFlow struct {
-	Steps []TaskStepBody `json:"steps" yaml:"steps"`
+	Steps []PipelineStep `json:"steps" yaml:"steps"`
 }
 
 func (v TaskFlow) Value() (driver.Value, error) {

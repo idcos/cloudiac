@@ -126,10 +126,9 @@ func ChangeTaskStepStatusAndUpdate(dbSess *db.Session, task models.Tasker, taskS
 	return ChangeTaskStatusWithStep(dbSess, task, taskStep)
 }
 
-func createTaskStep(tx *db.Session, task models.Task, stepBody models.TaskStepBody, index int, nextStep models.Id) (
-	*models.TaskStep, e.Error) {
+func newTaskStep(tx *db.Session, task models.Task, stepBody models.PipelineStep, index int) *models.TaskStep {
 	s := models.TaskStep{
-		TaskStepBody: stepBody,
+		PipelineStep: stepBody,
 		OrgId:        task.OrgId,
 		ProjectId:    task.ProjectId,
 		EnvId:        task.EnvId,
@@ -137,16 +136,28 @@ func createTaskStep(tx *db.Session, task models.Task, stepBody models.TaskStepBo
 		Index:        index,
 		Status:       models.TaskStepPending,
 		Message:      "",
-		NextStep:     nextStep,
+		NextStep:     "",
 		RetryNumber:  task.RetryNumber,
+	}
+
+	s.Id = models.NewId("step")
+	s.LogPath = s.GenLogPath()
+	return &s
+}
+
+func newScanTaskStep(tx *db.Session, task models.ScanTask, stepBody models.PipelineStep, index int) *models.TaskStep {
+	s := models.TaskStep{
+		PipelineStep: stepBody,
+		OrgId:        task.OrgId,
+		TaskId:       task.Id,
+		Index:        index,
+		Status:       models.TaskStepPending,
+		Message:      "",
 	}
 	s.Id = models.NewId("step")
 	s.LogPath = s.GenLogPath()
 
-	if _, err := tx.Save(&s); err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-	return &s, nil
+	return &s
 }
 
 func GetTaskScanStep(query *db.Session, taskId models.Id) (*models.TaskStep, e.Error) {
