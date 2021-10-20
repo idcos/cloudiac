@@ -47,9 +47,10 @@ func (v Variable) Migrate(sess *db.Session) error {
 }
 
 type VariableGroup struct {
-	BaseModel
+	TimedModel
 	Name      string            `json:"name" gorm:"size:64;not null"`
 	Type      string            `json:"type" gorm:"not null;type:enum('environment','terraform')"`
+	CreatorId Id                `json:"creatorId" gorm:"size:32;not null;comment:创建人" example:"u-c3ek0co6n88ldvq1n6ag"`
 	OrgId     Id                `json:"orgId" gorm:"size:32;not null"`
 	Variables VarGroupVariables `json:"variables" gorm:"type:json;null;comment:变量组下的变量"`
 }
