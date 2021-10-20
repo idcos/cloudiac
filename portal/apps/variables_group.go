@@ -8,7 +8,6 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/utils"
-	"encoding/json"
 )
 
 type CreateVariableGroupForm struct {
@@ -36,23 +35,23 @@ func CreateVariableGroup(c *ctx.ServiceContext, form *forms.CreateVariableGroupF
 		vb = append(vb, models.VarGroupVariable{
 			Id:          form.VarGroupVariables[index].Id,
 			Name:        form.VarGroupVariables[index].Name,
-			Val:         form.VarGroupVariables[index].Value,
+			Value:       form.VarGroupVariables[index].Value,
 			Sensitive:   form.VarGroupVariables[index].Sensitive,
 			Description: form.VarGroupVariables[index].Description,
 		})
 	}
 	//创建变量组
-	_, err := services.CreateVariableGroup(session, models.VariableGroup{
+	vg, err := services.CreateVariableGroup(session, models.VariableGroup{
 		Name:      form.Name,
 		Type:      form.Type,
 		OrgId:     c.OrgId,
-		Variables: models.Variables(vb),
+		Variables: models.VarGroupVariables(vb),
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return nil, nil
+	return vg, nil
 }
 
 func SearchVariableGroup(c *ctx.ServiceContext, form *forms.SearchVariableGroupForm) (interface{}, e.Error) {
@@ -92,13 +91,13 @@ func UpdateVariableGroup(c *ctx.ServiceContext, form *forms.UpdateVariableGroupF
 			vb = append(vb, models.VarGroupVariable{
 				Id:          form.VarGroupVariables[index].Id,
 				Name:        form.VarGroupVariables[index].Name,
-				Val:         form.VarGroupVariables[index].Value,
+				Value:       form.VarGroupVariables[index].Value,
 				Sensitive:   form.VarGroupVariables[index].Sensitive,
 				Description: form.VarGroupVariables[index].Description,
 			})
 		}
-		b,_:=json.Marshal(vb)
-		attrs["variables"] = models.JSON(b)
+		b, _ := models.VarGroupVariables(vb).Value()
+		attrs["variables"] = b
 	}
 
 	if err := services.UpdateVariableGroup(session, form.Id, attrs); err != nil {

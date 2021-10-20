@@ -48,10 +48,10 @@ func (v Variable) Migrate(sess *db.Session) error {
 
 type VariableGroup struct {
 	BaseModel
-	Name      string    `json:"name" gorm:"size:64;not null"`
-	Type      string    `json:"type" gorm:"not null;type:enum('environment','terraform')"`
-	OrgId     Id        `json:"orgId" gorm:"size:32;not null"`
-	Variables Variables `json:"variables" gorm:"type:json;null;comment:变量组下的变量"`
+	Name      string            `json:"name" gorm:"size:64;not null"`
+	Type      string            `json:"type" gorm:"not null;type:enum('environment','terraform')"`
+	OrgId     Id                `json:"orgId" gorm:"size:32;not null"`
+	Variables VarGroupVariables `json:"variables" gorm:"type:json;null;comment:变量组下的变量"`
 }
 
 func (VariableGroup) TableName() string {
@@ -66,20 +66,20 @@ func (v VariableGroup) Migrate(sess *db.Session) error {
 	return nil
 }
 
-type Variables []VarGroupVariable
+type VarGroupVariables []VarGroupVariable
 
-func (v *Variables) Value() (driver.Value, error) {
+func (v VarGroupVariables) Value() (driver.Value, error) {
 	return MarshalValue(v)
 }
 
-func (v *Variables) Scan(value interface{}) error {
+func (v *VarGroupVariables) Scan(value interface{}) error {
 	return UnmarshalValue(value, v)
 }
 
-type VarGroupVariable struct { // db model field
+type VarGroupVariable struct {
 	Id          string `json:"id" form:"id" `
 	Name        string `json:"name" form:"name" `
-	Val         string `json:"value" form:"value" `
+	Value       string `json:"value" form:"value" `
 	Sensitive   bool   `json:"sensitive" form:"sensitive" `
 	Description string `json:"description" form:"description" `
 }
