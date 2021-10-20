@@ -8,10 +8,11 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/utils/logs"
 	"fmt"
+	"math/rand"
+
 	"github.com/casbin/casbin/v2"
 	"github.com/casbin/casbin/v2/model"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
-	"math/rand"
 )
 
 type ServiceContext struct {

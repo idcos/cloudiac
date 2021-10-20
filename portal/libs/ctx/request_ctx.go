@@ -3,19 +3,20 @@
 package ctx
 
 import (
-	"bytes"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/models/forms"
 	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 type RequestContext interface {
@@ -105,9 +106,9 @@ func (c *GinRequest) JSONError(err e.Error, statusOrResult ...interface{}) {
 		result interface{}
 	)
 	for _, v := range statusOrResult {
-		switch v.(type) {
+		switch vv := v.(type) {
 		case int:
-			status = v.(int)
+			status = vv
 		default:
 			result = v
 		}
@@ -153,51 +154,63 @@ func BindUriTagOnly(c *GinRequest, b interface{}) error {
 }
 
 func (c *GinRequest) Bind(form forms.BaseFormer) error {
-	var body []byte
-	if c.ContentType() == "application/json" {
-		body, _ = ioutil.ReadAll(c.Request.Body)
-		// Write body back for ShouldBind() call
-		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
-	}
+
+	var (
+		body     []byte
+		jsonForm map[string]interface{}
+		err      error
+	)
 
 	// 将 Params 绑定到 form 里面标记了 uri 的字段
 	if err := BindUriTagOnly(c, form); err != nil {
 		// URI 参数不对，按路径不对处理
 		c.Logger().Errorf("bind uri error %s", err)
-		c.JSON(http.StatusNotFound, e.New(e.BadParam, err), nil)
+		c.JSONError(e.New(e.BadParam, err), http.StatusNotFound)
 		c.Abort()
 		return err
 	}
 
-	if err := c.Context.ShouldBind(form); err != nil {
-		c.JSON(http.StatusBadRequest, e.New(e.BadParam, err), nil)
+	// ShouldBind() 不支持 HTTP GET 请求通过 body json 传参，
+	// 所以我们针对 json 类型的 content-type 做特殊处理
+	if c.ContentType() == binding.MIMEJSON {
+		body, err = ioutil.ReadAll(c.Request.Body)
+		if err != nil {
+			c.Logger().Error(err)
+			c.JSONError(e.New(e.InternalError, err), http.StatusInternalServerError)
+			return err
+		}
+		_ = json.Unmarshal(body, &jsonForm)
+		err = binding.JSON.BindBody(body, form)
+	} else {
+		err = c.Context.ShouldBind(form)
+	}
+
+	if err != nil {
+		c.JSONError(e.New(e.BadParam, err), http.StatusBadRequest)
 		c.Abort()
 		return err
 	}
 
 	if err := c.Request.ParseForm(); err != nil {
-		c.JSON(http.StatusBadRequest, e.New(e.BadParam, err), nil)
+		c.JSONError(e.New(e.BadParam, err), http.StatusBadRequest)
 		c.Abort()
 		return err
 	}
 
 	values := url.Values{}
-	// path 参数可以被 post 参数覆盖
+	// path 参数可以被 post 参数覆盖，需要先添加
 	for _, p := range c.Params {
-		values[p.Key] = []string{fmt.Sprintf("%v", p.Value)}
+		values.Set(p.Key, p.Value)
 	}
+	// url 参数也可以被 post 参数覆盖
 	for k, v := range c.Request.Form {
 		values[k] = v
 	}
 	for k, v := range c.Request.PostForm {
 		values[k] = v
 	}
-	if c.ContentType() == "application/json" {
-		var jsObj map[string]interface{}
-		_ = json.Unmarshal(body, &jsObj)
-		for k := range jsObj {
-			values[k] = []string{fmt.Sprintf("%v", jsObj[k])}
-		}
+	for k, v := range jsonForm {
+		values.Set(k, fmt.Sprintf("%v", v))
 	}
 
 	form.Bind(values)
