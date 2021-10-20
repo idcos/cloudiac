@@ -75,16 +75,12 @@ func SearchVariableGroup(c *ctx.ServiceContext, form *forms.SearchVariableGroupF
 }
 
 func UpdateVariableGroup(c *ctx.ServiceContext, form *forms.UpdateVariableGroupForm) (interface{}, e.Error) {
-	session := c.DB().Debug()
+	session := c.DB()
 	attrs := models.Attrs{}
 
 	// 修改变量组
 	if form.HasKey("name") {
 		attrs["name"] = form.Name
-	}
-
-	if form.HasKey("type") {
-		attrs["type"] = form.Type
 	}
 
 	if form.HasKey("variables") {

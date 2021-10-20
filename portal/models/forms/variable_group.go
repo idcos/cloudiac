@@ -19,7 +19,6 @@ type UpdateVariableGroupForm struct {
 
 	Id        models.Id                 `uri:"id"`
 	Name      string                    `json:"name" form:"name"`
-	Type      string                    `json:"type" form:"type"`
 	Variables []models.VarGroupVariable `json:"variables" form:"variables" `
 }
 
