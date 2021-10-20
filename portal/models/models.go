@@ -207,4 +207,6 @@ func Init(migrate bool) {
 	autoMigrate(&PolicyRel{}, sess)
 	autoMigrate(&PolicyResult{}, sess)
 	autoMigrate(&PolicySuppress{}, sess)
+	autoMigrate(&VariableGroup{}, sess)
+	autoMigrate(&VariableGroupRel{}, sess)
 }
