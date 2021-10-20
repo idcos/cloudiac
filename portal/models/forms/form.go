@@ -67,16 +67,12 @@ func (b *PageForm) CurrentPage() int {
 }
 
 func (b *PageForm) PageSize() int {
-	if b.HasKey("pageSize") {
-		if b.PageSize_ > consts.MaxPageSize {
-			return consts.MaxPageSize
-		} else if b.PageSize_ < 0 {
-			return consts.DefaultPageSize
-		}
-		// pageSize 为 0 表示不分页
-		return b.PageSize_
+	if b.PageSize_ > consts.MaxPageSize {
+		return consts.MaxPageSize
+	} else if b.PageSize_ <= 0 {
+		return consts.DefaultPageSize
 	}
-	return consts.DefaultPageSize
+	return b.PageSize_
 }
 
 func (b *PageForm) SortField() string {
@@ -127,4 +123,16 @@ func (b *PageForm) OrderBy() string {
 	} else {
 		return fmt.Sprintf("ORDER BY `%s`", b.SortField())
 	}
+}
+
+// 支持分页，但允许 pageSize 传 0 表示不分页的表单类型
+type ZeroPageSizeForm struct {
+	PageForm
+}
+
+func (b *ZeroPageSizeForm) PageSize() int {
+	if b.HasKey("pageSize") && b.PageSize_ == 0 {
+		return 0
+	}
+	return b.PageForm.PageSize()
 }
