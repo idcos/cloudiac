@@ -21,11 +21,14 @@ func CreateVariableGroup(tx *db.Session, group models.VariableGroup) (models.Var
 }
 
 func SearchVariableGroup(dbSess *db.Session, orgId models.Id, q string) *db.Session {
-	query := dbSess.Model(models.VariableGroup{}).Where("org_id = ?", orgId)
+	query := dbSess.Model(models.VariableGroup{}).Where("iac_variable_group.org_id = ?", orgId)
 	if q != "" {
-		query = query.WhereLike("name", q)
+		query = query.WhereLike("iac_variable_group.name", q)
 	}
-	return query
+	return query.Joins("left join iac_user as u on u.id = iac_variable_group.creator_id").
+		LazySelectAppend("iac_variable_group.*").
+		LazySelectAppend("u.name as creator")
+
 }
 
 func UpdateVariableGroup(tx *db.Session, id models.Id, attrs models.Attrs) e.Error {

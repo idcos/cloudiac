@@ -27,17 +27,17 @@ func CreateVariableGroup(c *ctx.ServiceContext, form *forms.CreateVariableGroupF
 	session := c.DB()
 
 	vb := make([]models.VarGroupVariable, 0)
-	for index, v := range form.VarGroupVariables {
+	for index, v := range form.Variables {
 		if v.Sensitive {
 			value, _ := utils.AesEncrypt(v.Value)
-			form.VarGroupVariables[index].Value = value
+			form.Variables[index].Value = value
 		}
 		vb = append(vb, models.VarGroupVariable{
-			Id:          form.VarGroupVariables[index].Id,
-			Name:        form.VarGroupVariables[index].Name,
-			Value:       form.VarGroupVariables[index].Value,
-			Sensitive:   form.VarGroupVariables[index].Sensitive,
-			Description: form.VarGroupVariables[index].Description,
+			Id:          form.Variables[index].Id,
+			Name:        form.Variables[index].Name,
+			Value:       form.Variables[index].Value,
+			Sensitive:   form.Variables[index].Sensitive,
+			Description: form.Variables[index].Description,
 		})
 	}
 	//创建变量组
@@ -45,6 +45,7 @@ func CreateVariableGroup(c *ctx.ServiceContext, form *forms.CreateVariableGroupF
 		Name:      form.Name,
 		Type:      form.Type,
 		OrgId:     c.OrgId,
+		CreatorId: c.UserId,
 		Variables: models.VarGroupVariables(vb),
 	})
 	if err != nil {
@@ -54,10 +55,15 @@ func CreateVariableGroup(c *ctx.ServiceContext, form *forms.CreateVariableGroupF
 	return vg, nil
 }
 
+type SearchVariableGroupResp struct {
+	models.VariableGroup
+	Creator string `json:"creator" form:"creator" `
+}
+
 func SearchVariableGroup(c *ctx.ServiceContext, form *forms.SearchVariableGroupForm) (interface{}, e.Error) {
 	query := services.SearchVariableGroup(c.DB(), c.OrgId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	resp := make([]models.VariableGroup, 0)
+	resp := make([]SearchVariableGroupResp, 0)
 	if err := p.Scan(&resp); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
@@ -77,23 +83,19 @@ func UpdateVariableGroup(c *ctx.ServiceContext, form *forms.UpdateVariableGroupF
 		attrs["name"] = form.Name
 	}
 
-	if form.HasKey("type") {
-		attrs["type"] = form.Type
-	}
-
-	if form.HasKey("varGroupVariables") {
+	if form.HasKey("variables") {
 		vb := make([]models.VarGroupVariable, 0)
-		for index, v := range form.VarGroupVariables {
+		for index, v := range form.Variables {
 			if v.Sensitive {
 				value, _ := utils.AesEncrypt(v.Value)
-				form.VarGroupVariables[index].Value = value
+				form.Variables[index].Value = value
 			}
 			vb = append(vb, models.VarGroupVariable{
-				Id:          form.VarGroupVariables[index].Id,
-				Name:        form.VarGroupVariables[index].Name,
-				Value:       form.VarGroupVariables[index].Value,
-				Sensitive:   form.VarGroupVariables[index].Sensitive,
-				Description: form.VarGroupVariables[index].Description,
+				Id:          form.Variables[index].Id,
+				Name:        form.Variables[index].Name,
+				Value:       form.Variables[index].Value,
+				Sensitive:   form.Variables[index].Sensitive,
+				Description: form.Variables[index].Description,
 			})
 		}
 		b, _ := models.VarGroupVariables(vb).Value()
@@ -124,3 +126,4 @@ func DetailVariableGroup(c *ctx.ServiceContext, form *forms.DetailVariableGroupF
 
 	return vg, nil
 }
+
