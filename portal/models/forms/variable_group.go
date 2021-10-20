@@ -9,34 +9,18 @@ type SearchVariableGroupForm struct {
 
 type CreateVariableGroupForm struct {
 	BaseForm
-	Name              string                    `json:"name" form:"name"`
-	Type              string                    `json:"type" form:"type"`
-	VarGroupVariables []VarGroupVariablesCreate `json:"varGroupVariables" form:"varGroupVariables" `
-}
-
-type VarGroupVariablesCreate struct {
-	Id          string `json:"id" form:"id" `
-	Name        string `json:"name" form:"name" `
-	Value       string `json:"value" form:"value" `
-	Sensitive   bool   `json:"sensitive" form:"sensitive" `
-	Description string `json:"description" form:"description" `
+	Name      string                    `json:"name" form:"name"`
+	Type      string                    `json:"type" form:"type"`
+	Variables []models.VarGroupVariable `json:"variables" form:"variables" `
 }
 
 type UpdateVariableGroupForm struct {
 	BaseForm
 
-	Id                models.Id                 `uri:"id"`
-	Name              string                    `json:"name" form:"name"`
-	Type              string                    `json:"type" form:"type"`
-	VarGroupVariables []VarGroupVariablesUpdate `json:"varGroupVariables" form:"varGroupVariables" `
-}
-
-type VarGroupVariablesUpdate struct {
-	Id          string `json:"id" form:"id" `
-	Name        string `json:"name" form:"name" `
-	Value       string `json:"value" form:"value" `
-	Sensitive   bool   `json:"sensitive" form:"sensitive" `
-	Description string `json:"description" form:"description" `
+	Id        models.Id                 `uri:"id"`
+	Name      string                    `json:"name" form:"name"`
+	Type      string                    `json:"type" form:"type"`
+	Variables []models.VarGroupVariable `json:"variables" form:"variables" `
 }
 
 type DeleteVariableGroupForm struct {
