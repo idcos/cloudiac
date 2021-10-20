@@ -22,7 +22,7 @@ type VariableGroup struct {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param form query forms.SearchVariableGroupForm true "parameter"
-// @router /variables/groups [get]
+// @router /var_groups [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.VariableGroup}}
 func (VariableGroup) Search(c *ctx.GinRequest) {
 	form := forms.SearchVariableGroupForm{}
@@ -41,8 +41,8 @@ func (VariableGroup) Search(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param form query forms.CreateVariableGroupForm true "parameter"
-// @router /variables/groups [post]
-// @Success 200 {object}
+// @router /var_groups [post]
+// @Success 200 {object} ctx.JSONResult{result=models.VariableGroup}
 func (VariableGroup) Create(c *ctx.GinRequest) {
 	form := forms.CreateVariableGroupForm{}
 	if err := c.Bind(&form); err != nil {
@@ -60,8 +60,8 @@ func (VariableGroup) Create(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param form query forms.UpdateVariableGroupForm true "parameter"
-// @router /variables/groups/{group_id} [get]
-// @Success 200 {object}
+// @router /var_groups/{group_id} [put]
+// @Success 200 {object} ctx.JSONResult{}
 func (VariableGroup) Update(c *ctx.GinRequest) {
 	form := forms.UpdateVariableGroupForm{}
 	if err := c.Bind(&form); err != nil {
@@ -79,8 +79,8 @@ func (VariableGroup) Update(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param form query forms.DeleteVariableGroupForm true "parameter"
-// @router /variables [get]
-// @Success 200 {object}
+// @router /var_groups/{group_id} [delete]
+// @Success 200 {object} ctx.JSONResult{}
 func (VariableGroup) Delete(c *ctx.GinRequest) {
 	form := forms.DeleteVariableGroupForm{}
 	if err := c.Bind(&form); err != nil {
@@ -98,8 +98,8 @@ func (VariableGroup) Delete(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param form query forms.DeleteVariableGroupForm true "parameter"
-// @router /variables [get]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.VarGroupVariable}}
+// @router /var_groups/{group_id} [get]
+// @Success 200 {object} ctx.JSONResult{result=models.VariableGroup}
 func (VariableGroup) Detail(c *ctx.GinRequest) {
 	form := forms.DetailVariableGroupForm{}
 	if err := c.Bind(&form); err != nil {
