@@ -42,6 +42,7 @@ const (
 	BadParam               = 10340 // 参数错误(参数值不对)
 	BadRequest             = 10341 // 请求错误(请求缺少必要参数)
 	InvalidPipeline        = 10350
+	InvalidPipelineVersion = 10351
 	InvalidAccessKeyId     = 10380 // AccessKeyId错误
 	InvalidAccessKeySecret = 10381
 	ForbiddenAccessKey     = 10382

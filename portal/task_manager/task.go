@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/pkg/errors"
 
 	"cloudiac/portal/consts"
 	"cloudiac/portal/models"
@@ -40,7 +39,7 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (
 	var runnerAddr string
 	runnerAddr, err = services.GetRunnerAddress(taskReq.RunnerId)
 	if err != nil {
-		return "", true, errors.Wrapf(err, "get runner '%s' address", taskReq.RunnerId)
+		return "", true, err
 	}
 
 	requestUrl := utils.JoinURL(runnerAddr, consts.RunnerRunTaskStepURL)
@@ -168,7 +167,7 @@ func pullTaskStepStatus(ctx context.Context, task models.Tasker, step *models.Ta
 
 	runnerAddr, err := services.GetRunnerAddress(task.GetRunnerId())
 	if err != nil {
-		return nil, errors.Wrapf(err, "get runner address")
+		return nil, err
 	}
 
 	params := url.Values{}

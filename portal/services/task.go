@@ -209,7 +209,14 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 }
 
 func GetTaskPipelineJobs(pipeline models.Pipeline, taskType string) (jobs []models.PipelineJobWithType) {
-	withType := func(job models.PipelineJob, jobType string) models.PipelineJobWithType {
+	defaultPipeline := models.MustGetPipelineByVersion(pipeline.Version)
+
+	getJob := func(job models.PipelineJob, jobType string) models.PipelineJobWithType {
+		if len(job.Steps) == 0 {
+			// 如果 pipeline 文件中未定义 job 步骤则使用默认模板中的步骤
+			defaultJob := defaultPipeline.GetJob(jobType)
+			job.Steps = defaultJob.Steps
+		}
 		return models.PipelineJobWithType{
 			PipelineJob: job,
 			Type:        jobType,
@@ -219,21 +226,21 @@ func GetTaskPipelineJobs(pipeline models.Pipeline, taskType string) (jobs []mode
 	switch taskType {
 	case common.TaskTypePlan:
 		jobs = append(jobs,
-			withType(pipeline.Plan, common.TaskJobPlan))
+			getJob(pipeline.Plan, common.TaskJobPlan))
 	case common.TaskTypeApply:
 		jobs = append(jobs,
-			withType(pipeline.Plan, common.TaskJobPlan),
-			withType(pipeline.Apply, common.TaskJobApply))
+			getJob(pipeline.Plan, common.TaskJobPlan),
+			getJob(pipeline.Apply, common.TaskJobApply))
 	case common.TaskTypeDestroy:
 		jobs = append(jobs,
-			withType(pipeline.DestroyPlan, common.TaskJobDestroyPlan),
-			withType(pipeline.Destroy, common.TaskJobDestroy))
+			getJob(pipeline.DestroyPlan, common.TaskJobDestroyPlan),
+			getJob(pipeline.Destroy, common.TaskJobDestroy))
 	case common.TaskTypeScan:
 		jobs = append(jobs,
-			withType(pipeline.PolicyScan, common.TaskJobScan))
+			getJob(pipeline.PolicyScan, common.TaskJobScan))
 	case common.TaskTypeParse:
 		jobs = append(jobs,
-			withType(pipeline.PolicyParse, common.TaskJobParse))
+			getJob(pipeline.PolicyParse, common.TaskJobParse))
 	}
 	return jobs
 }
@@ -747,7 +754,7 @@ func fetchRunnerTaskStepLog(ctx context.Context, runnerId string, step *models.T
 
 	runnerAddr, err := GetRunnerAddress(runnerId)
 	if err != nil {
-		return errors.Wrapf(err, "get runner address")
+		return err
 	}
 
 	params := url.Values{}

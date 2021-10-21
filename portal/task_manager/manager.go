@@ -610,6 +610,10 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 		return nil
 	}
 
+	if err := StopTaskContainers(dbSess, task.Id); err != nil {
+		logger.Warnf("stop task containers: %v", err)
+	}
+
 	lastStep, err := services.GetTaskStep(dbSess, task.Id, task.CurrStep)
 	if err != nil {
 		logger.Errorf("get task step(%d) error: %v", err, task.CurrStep)
@@ -1041,7 +1045,7 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 }
 
 func (m *TaskManager) processScanTaskDone(task *models.ScanTask) {
-	logger := m.logger.WithField("func", "processTaskDone").WithField("taskId", task.Id)
+	logger := m.logger.WithField("func", "processScanTaskDone").WithField("taskId", task.Id)
 
 	dbSess := m.db
 	read := func(path string) ([]byte, error) {

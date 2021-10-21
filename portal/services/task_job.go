@@ -18,6 +18,14 @@ func GetTaskJob(sess *db.Session, jobId models.Id) (*models.TaskJob, e.Error) {
 	return &job, nil
 }
 
+func GetTaskJobs(sess *db.Session, taskId models.Id) (rs []models.TaskJob, er e.Error) {
+	err := sess.Model(&models.TaskJob{}).Where("task_id = ?", taskId).Find(&rs)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return rs, nil
+}
+
 func UpdateTaskJobContainerId(sess *db.Session, jobId models.Id, containerId string) e.Error {
 	_, err := models.UpdateModel(
 		sess,

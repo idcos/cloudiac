@@ -39,6 +39,10 @@ type Container struct {
 	RunID   string
 }
 
+func DockerClient() (*client.Client, error) {
+	return dockerClient()
+}
+
 func dockerClient() (*client.Client, error) {
 	cli, err := client.NewClientWithOpts(
 		client.FromEnv,

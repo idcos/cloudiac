@@ -2,7 +2,9 @@ package models
 
 import (
 	"bytes"
+	"cloudiac/common"
 	"database/sql/driver"
+	"fmt"
 
 	"gopkg.in/yaml.v2"
 )
@@ -20,12 +22,35 @@ type Pipeline struct {
 	PolicyParse PipelineJob `json:"parse" yaml:"parse"`
 }
 
+func (p Pipeline) GetJob(typ string) PipelineJob {
+	switch typ {
+	case common.TaskJobPlan:
+		return p.Plan
+	case common.TaskJobApply:
+		return p.Apply
+	case common.TaskJobPlay:
+		return p.Play
+	case common.TaskJobDestroyPlan:
+		return p.DestroyPlan
+	case common.TaskJobDestroy:
+		return p.Destroy
+	case common.TaskJobScan:
+		return p.PolicyScan
+	case common.TaskJobParse:
+		return p.PolicyParse
+	default:
+		panic(fmt.Errorf("unknown pipeline job type '%s'", typ))
+	}
+}
+
 type PipelineJob struct {
-	Image     string         `json:"image" yaml:"image"`
-	Steps     []PipelineStep `json:"steps" yaml:"steps"`
-	OnCreate  PipelineStep   `json:"onCreate" yaml:"onCreate"`
-	OnSuccess PipelineStep   `json:"onSuccess" yaml:"onSuccess"`
-	OnFail    PipelineStep   `json:"onFail" yaml:"onFail"`
+	Image string         `json:"image,omitempty" yaml:"image"`
+	Steps []PipelineStep `json:"steps,omitempty" yaml:"steps"`
+
+	// 定义为指针类型，这样在字段无值时 json 序列化不会输出该字段，避免写入数据库时记录为空结构体
+	OnCreate  *PipelineStep `json:"onCreate,omitempty" yaml:"onCreate"`
+	OnSuccess *PipelineStep `json:"onSuccess,omitempty" yaml:"onSuccess"`
+	OnFail    *PipelineStep `json:"onFail,omitempty" yaml:"onFail"`
 }
 
 type PipelineJobWithType struct {
@@ -34,7 +59,7 @@ type PipelineJobWithType struct {
 }
 
 type PipelineStep struct {
-	Type string   `json:"type" yaml:"type" gorm:"size:32;not null"`
+	Type string   `json:"type,omitempty" yaml:"type" gorm:"size:32;not null"`
 	Name string   `json:"name,omitempty" yaml:"name" gorm:"size:32;not null"`
 	Args StrSlice `json:"args,omitempty" yaml:"args" gorm:"type:text"`
 }
@@ -100,15 +125,39 @@ parse:
     - type: tfparse
 `
 
-var defaultPipeline Pipeline
+const defaultPipelineVersion = "0.3"
+
+var (
+	defaultPipelineTpls = map[string]string{
+		"0.3": pipelineV0dot3,
+	}
+	defaultPipelines = make(map[string]Pipeline)
+)
 
 func DefaultPipeline() Pipeline {
-	return defaultPipeline
+	return MustGetPipelineByVersion(defaultPipelineVersion)
+}
+
+func GetPipelineByVersion(version string) (Pipeline, bool) {
+	p, ok := defaultPipelines[version]
+	return p, ok
+}
+
+func MustGetPipelineByVersion(version string) Pipeline {
+	pipeline, ok := GetPipelineByVersion(version)
+	if !ok {
+		panic(fmt.Errorf("pipeline for version '%s' not exists", version))
+	}
+	return pipeline
 }
 
 func init() {
-	buffer := bytes.NewBufferString(pipelineV0dot3)
-	if err := yaml.NewDecoder(buffer).Decode(&defaultPipeline); err != nil {
-		panic(err)
+	for v, tpl := range defaultPipelineTpls {
+		buffer := bytes.NewBufferString(tpl)
+		p := Pipeline{}
+		if err := yaml.NewDecoder(buffer).Decode(&p); err != nil {
+			panic(err)
+		}
+		defaultPipelines[v] = p
 	}
 }

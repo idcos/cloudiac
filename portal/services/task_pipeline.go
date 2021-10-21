@@ -39,7 +39,7 @@ func GenerateTaskPipeline(sess *db.Session, tplId models.Id, revision, workdir s
 		}
 	}
 
-	if len(content) == 0 {
+	if len(content) == 0 { // 没有 pipeline 内容，直接返回当前版本的默认 pipeline
 		return models.DefaultPipeline(), nil
 	}
 
@@ -47,5 +47,12 @@ func GenerateTaskPipeline(sess *db.Session, tplId models.Id, revision, workdir s
 	if err := yaml.NewDecoder(buffer).Decode(&pipeline); err != nil {
 		return pipeline, e.New(e.InvalidPipeline, err)
 	}
+
+	// 检查 version 是否合法
+	_, ok := models.GetPipelineByVersion(pipeline.Version)
+	if !ok {
+		return pipeline, e.New(e.InvalidPipelineVersion)
+	}
+
 	return pipeline, nil
 }

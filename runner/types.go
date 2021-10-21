@@ -64,6 +64,11 @@ type TaskStatusReq struct {
 	Step   int    `json:"step" form:"step" binding:""`
 }
 
+type TaskStopReq struct {
+	TaskId       string   `json:"taskId" form:"taskId" binding:"required"`
+	ContainerIds []string `json:"containerIds" form:"containerIds" binding:"required"`
+}
+
 type TaskPolicy struct {
 	PolicyId string      `json:"policyId"`
 	Meta     interface{} `json:"meta"`
