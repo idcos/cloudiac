@@ -120,6 +120,9 @@ func Register(g *gin.RouterGroup) {
 	//变量管理
 	g.PUT("/variables/batch", ac(), w(handlers.Variable{}.BatchUpdate))
 	ctrl.Register(g.Group("variables", ac()), &handlers.Variable{})
+	// 变量组
+	ctrl.Register(g.Group("var_groups",ac()),&handlers.VariableGroup{})
+
 	//token管理
 	ctrl.Register(g.Group("tokens", ac()), &handlers.Token{})
 	//密钥管理
