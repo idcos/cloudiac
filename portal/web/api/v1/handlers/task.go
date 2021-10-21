@@ -75,6 +75,31 @@ func (Task) FollowLogSse(c *ctx.GinRequest) {
 	}
 }
 
+// FollowStepLogSse 当前步骤实时日志
+// @Tags FollowStepLogSse
+// @Summary 当前步骤实时日志
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID，获取环境扫描日志必填"
+// @Param form query forms.TaskLogForm true "parameter"
+// @Param id path string true "任务ID"
+// @Param stepId path string true "任务步骤ID"
+// @router /tasks/:id/steps/:stepId/log/sse [get]
+// @Success 200 {string} string "日志实时数据流"
+func (Task) FollowStepLogSse(c *ctx.GinRequest) {
+	defer c.SSEvent("end", "end")
+	form := forms.TaskLogForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	if err := apps.FollowTaskLog(c, form); err != nil {
+		c.SSEvent("error", err.Error())
+	}
+
+}
+
 // TaskApprove 审批执行计划
 // @Tags 环境
 // @Summary 审批执行计划
@@ -153,4 +178,47 @@ func (Task) Resource(c *ctx.GinRequest) {
 		return
 	}
 	c.JSONResult(apps.SearchTaskResources(c.Service(), &form))
+}
+
+// SearchTaskStep 获取任务的步骤列表和各步骤的状态
+// @Tags 任务管理
+// @Summary 获取任务步骤详情
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param taskId path string true "任务ID"
+// @router /tasks/{taskId}/steps [get]
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.TaskStepDetail}}
+func (Task) SearchTaskStep(c *ctx.GinRequest) {
+	form := forms.DetailTaskStepForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.SearchTaskSteps(c.Service(), &form))
+}
+
+// GetTaskStepLog 获取任务步骤的详细日志
+// @Tags 任务管理
+// @Summary 获取任务步骤详情
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param id path string true "任务ID"
+// @Param stepId path string true "任务步骤ID"
+// @Param form query forms.GetTaskStepLogForm true "parameter"
+// @router /tasks/:id/steps/:stepId/log
+// @Success 200 {object} ctx.JSONResult{}
+func (Task) GetTaskStepLog(c *ctx.GinRequest) {
+	form := forms.GetTaskStepLogForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.GetTaskStep(c.Service(), &form))
+
 }

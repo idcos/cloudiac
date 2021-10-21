@@ -651,16 +651,34 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource)
 	return nil
 }
 
-func FetchTaskLog(ctx context.Context, task models.Tasker, stepType string, writer io.WriteCloser) (err error) {
+func GetTaskStepByStepId(tx *db.Session, stepId models.Id) (*models.TaskStep, error) {
+	taskStep := models.TaskStep{}
+	err := tx.Where("id = ?", stepId).First(&taskStep)
+	if err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TaskStepNotExists)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &taskStep, nil
+}
+
+func FetchTaskLog(ctx context.Context, task models.Tasker, stepType string, writer io.WriteCloser, stepId models.Id) (err error) {
 	// close 后 read 端会触发 EOF error
 	defer writer.Close()
-
 	var steps []*models.TaskStep
-	steps, err = GetTaskSteps(db.Get(), task.GetId())
-	if err != nil {
-		return err
+	if stepId != "" {
+		step, err := GetTaskStepByStepId(db.Get(), stepId)
+		if err != nil {
+			return err
+		}
+		steps = append(steps, step)
+	} else {
+		steps, err = GetTaskSteps(db.Get(), task.GetId())
+		if err != nil {
+			return err
+		}
 	}
-
 	sleepDuration := consts.DbTaskPollInterval
 	storage := logstorage.Get()
 	ticker := time.NewTicker(sleepDuration)
@@ -1019,4 +1037,22 @@ func CreateMirrorScanTask(task *models.Task) *models.ScanTask {
 		MirrorTaskId: task.Id,
 		Extra:        task.Extra,
 	}
+}
+
+// 查询任务所有的步骤信息
+func QueryTaskStepsById(query *db.Session, taskId models.Id) *db.Session {
+	return query.Model(&models.TaskStep{}).Where("task_id = ?", taskId)
+}
+
+// 查询任务下某一个单独步骤的具体执行日志
+func QueryTaskStepLogBy(tx *db.Session, stepId models.Id) ([]byte, e.Error) {
+	var dbStorage models.DBStorage
+	query := tx.Joins("left join iac_task_step on iac_task_step.log_path=iac_storage.path").
+		Where("iac_task_step.id = ?", stepId).
+		LazySelectAppend("iac_storage.content")
+
+	if err := query.First(&dbStorage); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return dbStorage.Content, nil
 }
