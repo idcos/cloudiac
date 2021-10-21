@@ -406,13 +406,22 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		}
 
 		if _, err = m.db.Model(task).UpdateAttrs(models.Attrs{"CurrStep": step.Index}); err != nil {
-			logger.Errorf("update task error: %v", err)
-			break
+			taskStartFailed(errors.Wrap(err, "update task"))
+			return
 		}
 
-		runErr := m.runTaskStep(ctx, *runTaskReq, task, step)
+		req := *runTaskReq
+		taskJob, err := services.GetTaskJob(m.db, step.JobId)
+		if err != nil {
+			taskStartFailed(errors.Wrap(err, "get task job"))
+			return
+		}
+		req.JobId = string(taskJob.Id)
+		req.DockerImage = taskJob.Image
+		req.ContainerId = taskJob.ContainerId
 
-		if err = m.processStepDone(task, step); err != nil {
+		runErr := m.runTaskStep(ctx, req, task, step)
+		if err := m.processStepDone(task, step); err != nil {
 			logger.Infof("process step done: %v", err)
 			break
 		}
@@ -705,7 +714,7 @@ loop:
 		case models.TaskStepPending, models.TaskApproving:
 			// 先将步骤置为 running 状态，然后再发起调用，保证步骤不会重复执行
 			changeStepStatusAndStepRetryTimes(models.TaskStepRunning, "", step)
-			if err, retryAble := StartTaskStep(taskReq, *step); err != nil {
+			if cid, retryAble, err := StartTaskStep(taskReq, *step); err != nil {
 				logger.Infof("start task step %d(%s)", step.Index, step.Type)
 				// 如果是可重试错误，并且任务设定可以重试, 则运行重试逻辑
 				if retryAble && task.RetryAble {
@@ -719,6 +728,10 @@ loop:
 				} else {
 					changeStepStatusAndStepRetryTimes(models.TaskStepFailed, err.Error(), step)
 					return err
+				}
+			} else if taskReq.ContainerId == "" {
+				if err := services.UpdateTaskJobContainerId(m.db, models.Id(taskReq.JobId), cid); err != nil {
+					panic(errors.Wrapf(err, "update job(%s) container id", taskReq.JobId))
 				}
 			}
 		case models.TaskStepRunning:
@@ -1094,13 +1107,21 @@ func (m *TaskManager) processScanTaskDone(task *models.ScanTask) {
 
 // buildScanTaskReq 构建扫描任务 RunTaskReq 对象
 func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.TaskStep) (taskReq *runner.RunTaskReq, err error) {
+	taskJob, err := services.GetTaskJob(dbSess, step.JobId)
+	if err != nil {
+		return nil, err
+	}
+
 	taskReq = &runner.RunTaskReq{
 		RunnerId:        task.RunnerId,
 		TaskId:          string(task.Id),
+		JobId:           string(step.JobId),
 		Timeout:         task.StepTimeout,
 		RepoAddress:     task.RepoAddr,
 		RepoRevision:    task.CommitId,
 		StopOnViolation: true,
+		DockerImage:     taskJob.Image,
+		ContainerId:     taskJob.ContainerId,
 		//Repos: []runner.Repository{
 		//	{
 		//		RepoAddress:  task.RepoAddr,
@@ -1122,7 +1143,7 @@ func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.Ta
 func (m *TaskManager) runScanTaskStep(ctx context.Context, taskReq runner.RunTaskReq,
 	task *models.ScanTask, step *models.TaskStep) (err error) {
 	logger := m.logger.WithField("taskId", taskReq.TaskId)
-	logger = logger.WithField("func", "runTaskStep").
+	logger = logger.WithField("func", "runScanTaskStep").
 		WithField("step", fmt.Sprintf("%d(%s)", step.Index, step.Type))
 
 	defer func() {
@@ -1156,10 +1177,14 @@ loop:
 			// 先将步骤置为 running 状态，然后再发起调用，保证步骤不会重复执行
 			changeStepStatus(models.TaskStepRunning, "")
 			logger.Infof("start task step %d(%s)", step.Index, step.Type)
-			if err, _ = StartTaskStep(taskReq, *step); err != nil {
+			if cid, _, err := StartTaskStep(taskReq, *step); err != nil {
 				logger.Errorf("start task step error: %s", err.Error())
 				changeStepStatus(models.TaskStepFailed, err.Error())
 				return err
+			} else if taskReq.ContainerId == "" {
+				if err := services.UpdateTaskJobContainerId(m.db, models.Id(taskReq.JobId), cid); err != nil {
+					panic(errors.Wrapf(err, "update job(%s) container id", taskReq.JobId))
+				}
 			}
 		case models.TaskStepRunning:
 			if _, err = WaitScanTaskStep(ctx, m.db, task, step); err != nil {

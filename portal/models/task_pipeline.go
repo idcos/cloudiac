@@ -23,9 +23,9 @@ type Pipeline struct {
 type PipelineJob struct {
 	Image     string         `json:"image" yaml:"image"`
 	Steps     []PipelineStep `json:"steps" yaml:"steps"`
-	OnCreate  []PipelineStep `json:"onCreate" yaml:"onCreate"`
-	OnSuccess []PipelineStep `json:"onSuccess" yaml:"onSuccess"`
-	OnFail    []PipelineStep `json:"onFail" yaml:"onFail"`
+	OnCreate  PipelineStep   `json:"onCreate" yaml:"onCreate"`
+	OnSuccess PipelineStep   `json:"onSuccess" yaml:"onSuccess"`
+	OnFail    PipelineStep   `json:"onFail" yaml:"onFail"`
 }
 
 type PipelineJobWithType struct {

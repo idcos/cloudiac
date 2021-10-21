@@ -29,12 +29,14 @@ func GenerateTaskPipeline(sess *db.Session, tplId models.Id, revision, workdir s
 	)
 	for _, path := range paths {
 		content, err = repo.ReadFileContent(revision, path)
-		// TODO 所有 vcs 的 ReadFileContent() 实现需要在文件不存在时返回 ObjectNotExists 错误
-		if e.Is(err, e.ObjectNotExists) {
-			continue
+		if err != nil {
+			// TODO 所有 vcs 的 ReadFileContent() 实现需要在文件不存在时返回 ObjectNotExists 错误
+			if e.Is(err, e.ObjectNotExists) {
+				continue
+			}
+			logs.Get().Debugf("read file content error(%T): %v", err, err)
+			return pipeline, e.New(e.VcsError, err)
 		}
-		logs.Get().Debugf("read file content error(%T): %v", err, err)
-		return pipeline, e.New(e.VcsError, err)
 	}
 
 	if len(content) == 0 {

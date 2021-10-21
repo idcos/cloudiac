@@ -3,8 +3,9 @@
 package handler
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 
 	"cloudiac/runner"
 	"cloudiac/runner/api/ctx"
@@ -22,6 +23,6 @@ func RunTask(c *ctx.Context) {
 		c.Error(err, http.StatusInternalServerError)
 		return
 	} else {
-		c.Result(gin.H{"cid": cid})
+		c.Result(gin.H{"containerId": cid})
 	}
 }

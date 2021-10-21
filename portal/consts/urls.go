@@ -3,7 +3,7 @@
 package consts
 
 const (
-	RunnerRunTaskURL       = "/api/v1/task/run"
-	RunnerTaskStateURL     = "/api/v1/task/status"
-	RunnerTaskLogFollowURL = "/api/v1/task/log/follow"
+	RunnerRunTaskStepURL       = "/api/v1/task/step/run"
+	RunnerTaskStepStatusURL    = "/api/v1/task/step/status"
+	RunnerTaskStepLogFollowURL = "/api/v1/task/step/log/follow"
 )
