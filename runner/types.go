@@ -33,6 +33,7 @@ type RunTaskReq struct {
 	Env          TaskEnv    `json:"env" binding:""`
 	RunnerId     string     `json:"runnerId" binding:""`
 	TaskId       string     `json:"taskId" binding:"required"`
+	JobId        string     `json:"jobId"`
 	Step         int        `json:"step" binding:""`
 	StepType     string     `json:"stepType" binding:"required"`
 	StepArgs     []string   `json:"stepArgs"`
@@ -48,6 +49,8 @@ type RunTaskReq struct {
 	StopOnViolation bool         `json:"stopOnViolation"`
 
 	Repos []Repository `json:"repos"` // 待扫描仓库列表
+
+	ContainerId string `json:"containerId"`
 }
 
 type Repository struct {
@@ -59,6 +62,11 @@ type TaskStatusReq struct {
 	EnvId  string `json:"envId" form:"envId" binding:""`
 	TaskId string `json:"taskId" form:"taskId" binding:""`
 	Step   int    `json:"step" form:"step" binding:""`
+}
+
+type TaskStopReq struct {
+	TaskId       string   `json:"taskId" form:"taskId" binding:"required"`
+	ContainerIds []string `json:"containerIds" form:"containerIds" binding:"required"`
 }
 
 type TaskPolicy struct {
