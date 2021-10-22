@@ -86,7 +86,7 @@ func (Task) FollowLogSse(c *ctx.GinRequest) {
 // @Param form query forms.TaskLogForm true "parameter"
 // @Param id path string true "任务ID"
 // @Param stepId path string true "任务步骤ID"
-// @router /tasks/:id/steps/:stepId/log/sse [get]
+// @router /tasks/{id}/steps/{stepId}/log/sse [get]
 // @Success 200 {string} string "日志实时数据流"
 func (Task) FollowStepLogSse(c *ctx.GinRequest) {
 	defer c.SSEvent("end", "end")
@@ -212,7 +212,7 @@ func (Task) SearchTaskStep(c *ctx.GinRequest) {
 // @Param id path string true "任务ID"
 // @Param stepId path string true "任务步骤ID"
 // @Param form query forms.GetTaskStepLogForm true "parameter"
-// @router /tasks/:id/steps/:stepId/log
+// @router /tasks/{id}/steps/{stepId}/log
 // @Success 200 {object} ctx.JSONResult{}
 func (Task) GetTaskStepLog(c *ctx.GinRequest) {
 	form := forms.GetTaskStepLogForm{}
