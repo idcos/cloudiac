@@ -460,7 +460,7 @@ type OrgResourcesResp struct {
 func SearchOrgResources(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm) (interface{}, e.Error) {
 	query := c.DB().Model(&models.Resource{})
 
-	query = query.Debug().Joins("inner join iac_env on iac_env.last_res_task_id = iac_resource.task_id left join " +
+	query = query.Joins("inner join iac_env on iac_env.last_res_task_id = iac_resource.task_id left join " +
 		"iac_project on iac_resource.project_id = iac_project.id").
 		LazySelectAppend("iac_project.name as project_name, iac_env.name as env_name," +
 			"iac_resource.name as resource_name, iac_resource.task_id, iac_resource.project_id as project_id, " +
