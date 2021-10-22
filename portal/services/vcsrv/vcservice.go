@@ -177,7 +177,7 @@ func SetWebhook(vcs *models.Vcs, repoId string, triggers []string) error {
 		// 判断同vcs、仓库的环境是否存在
 		exist, err := db.Get().Table(models.Env{}.TableName()).
 			Where("vcs_id = ?", vcs.Id).
-			Where("triggers not null").Exists()
+			Where("triggers IS NOT NULL").Exists()
 		if err != nil {
 			return err
 		}
