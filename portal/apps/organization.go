@@ -455,6 +455,7 @@ type OrgResourcesResp struct {
 	Module       string    `json:"module"`
 	EnvId        models.Id `json:"envId"`
 	ProjectId    models.Id `json:"projectId"`
+	ResourceId   models.Id `json:"resourceId"`
 }
 
 func SearchOrgResources(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm) (interface{}, e.Error) {
@@ -462,7 +463,7 @@ func SearchOrgResources(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm
 
 	query = query.Joins("inner join iac_env on iac_env.last_res_task_id = iac_resource.task_id left join " +
 		"iac_project on iac_resource.project_id = iac_project.id").
-		LazySelectAppend("iac_project.name as project_name, iac_env.name as env_name," +
+		LazySelectAppend("iac_project.name as project_name, iac_env.name as env_name, iac_resource.id as resource_id," +
 			"iac_resource.name as resource_name, iac_resource.task_id, iac_resource.project_id as project_id, " +
 			"iac_resource.env_id as env_id, iac_resource.provider, iac_resource.type, iac_resource.module")
 	query = query.Where("iac_env.org_id = ?", c.OrgId)
