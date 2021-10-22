@@ -31,3 +31,22 @@ type DetailVariableGroupForm struct {
 	BaseForm
 	Id models.Id `uri:"id"`
 }
+
+type SearchRelationshipForm struct {
+	BaseForm
+	ObjectType string    `json:"objectType" form:"objectType" ` //enum('org','template','project','env')
+	TplId      models.Id `json:"tplId" form:"tplId" `           // 模板id
+	EnvId      models.Id `json:"envId" form:"envId" `
+}
+
+type CreateRelationshipForm struct {
+	BaseForm
+	VarGroupIds []models.Id `json:"varGroupId" form:"varGroupId" `
+	ObjectType  string      `json:"objectType" form:"objectType" ` //enum('org','template','project','env')
+	ObjectId    models.Id   `json:"objectId" form:"objectId" `
+}
+
+type DeleteRelationshipForm struct {
+	BaseForm
+	Id models.Id `uri:"id" json:"id" form:"id" `
+}

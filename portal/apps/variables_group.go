@@ -1,6 +1,7 @@
 package apps
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/libs/page"
@@ -40,7 +41,7 @@ func CreateVariableGroup(c *ctx.ServiceContext, form *forms.CreateVariableGroupF
 			Description: form.Variables[index].Description,
 		})
 	}
-	//创建变量组
+	// 创建变量组
 	vg, err := services.CreateVariableGroup(session, models.VariableGroup{
 		Name:      form.Name,
 		Type:      form.Type,
@@ -127,3 +128,39 @@ func DetailVariableGroup(c *ctx.ServiceContext, form *forms.DetailVariableGroupF
 	return vg, nil
 }
 
+func SearchRelationship(c *ctx.ServiceContext, form *forms.SearchRelationshipForm) (interface{}, e.Error) {
+	// 继承逻辑 当前作用域下的变量组包含变量组中的变量时 进行覆盖
+	// 查询作用域下的所有变量
+	vgs, err := services.SearchVariableGroupRel(c.DB(), map[string]models.Id{
+		consts.ScopeEnv:      form.EnvId,
+		consts.ScopeTemplate: form.TplId,
+		consts.ScopeProject:  c.ProjectId,
+		consts.ScopeOrg:      c.OrgId,
+	}, form.ObjectType)
+	if err != nil {
+		return nil, err
+	}
+	return vgs, nil
+}
+
+func CreateRelationship(c *ctx.ServiceContext, form *forms.CreateRelationshipForm) (interface{}, e.Error) {
+	rel := make([]models.VariableGroupRel, 0)
+	for _, v := range form.VarGroupIds {
+		rel = append(rel, models.VariableGroupRel{
+			VarGroupId: v,
+			ObjectType: form.ObjectType,
+			ObjectId:   form.ObjectId,
+		})
+	}
+	if err := services.CreateRelationship(c.DB(), rel); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func DeleteRelationship(c *ctx.ServiceContext, form *forms.DeleteRelationshipForm) (interface{}, e.Error) {
+	if err := services.DeleteRelationship(c.DB(), form.Id); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}

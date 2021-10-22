@@ -107,3 +107,60 @@ func (VariableGroup) Detail(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.DetailVariableGroup(c.Service(), &form))
 }
+
+// SearchRelationship 查询变量组与实例的关系
+// @Tags 变量组
+// @Summary 查询变量组与实例的关系
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
+// @Param form query forms.SearchRelationshipForm true "parameter"
+// @router /var_groups/relationship [get]
+// @Success 200 {object} ctx.JSONResult{result=[]services.VarGroupRel}
+func (VariableGroup) SearchRelationship(c *ctx.GinRequest) {
+	form := forms.SearchRelationshipForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.SearchRelationship(c.Service(), &form))
+}
+
+// CreateRelationship 绑定变量组与实例的关系
+// @Tags 变量组
+// @Summary 绑定变量组与实例的关系
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
+// @Param form query forms.CreateRelationshipForm true "parameter"
+// @router /var_groups/relationship [post]
+// @Success 200 {object} ctx.JSONResult{}
+func (VariableGroup) CreateRelationship(c *ctx.GinRequest) {
+	form := forms.CreateRelationshipForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.CreateRelationship(c.Service(), &form))
+}
+
+// DeleteRelationship 删除变量组与实例的关系
+// @Tags 变量组
+// @Summary 删除变量组与实例的关系
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
+// @Param form query forms.DeleteRelationshipForm true "parameter"
+// @router /var_groups/relationship/{varGroupId} [delete]
+// @Success 200 {object} ctx.JSONResult{}
+func (VariableGroup) DeleteRelationship(c *ctx.GinRequest) {
+	form := forms.DeleteRelationshipForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.DeleteRelationship(c.Service(), &form))
+}
