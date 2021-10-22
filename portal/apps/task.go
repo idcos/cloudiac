@@ -215,7 +215,7 @@ func FollowTaskLog(c *ctx.GinRequest, form forms.TaskLogForm) e.Error {
 
 	pr, pw := io.Pipe()
 	go func() {
-		if err := services.FetchTaskLog(rCtx, tasker, form.StepType, pw); err != nil {
+		if err := services.FetchTaskLog(rCtx, tasker, form.StepType, pw, form.StepId); err != nil {
 			logger.Errorf("fetch task log: %v", err)
 		}
 	}()
@@ -310,4 +310,37 @@ func SearchTaskResources(c *ctx.ServiceContext, form *forms.SearchTaskResourceFo
 		PageSize: p.Size,
 		List:     rs,
 	}, nil
+}
+
+type TaskStepDetail struct {
+	Id      models.Id    `json:"id"`
+	Index   int          `json:"index"`
+	Name    string       `json:"name"`
+	TaskId  models.Id    `json:"taskId"`
+	Status  string       `json:"status"`
+	Message string       `json:"message"`
+	StartAt *models.Time `json:"startAt"`
+	EndAt   *models.Time `json:"endAt"`
+}
+
+func SearchTaskSteps(c *ctx.ServiceContext, form *forms.DetailTaskStepForm) (interface{}, e.Error) {
+	query := services.QueryTaskStepsById(c.DB(), form.TaskId)
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	details := make([]*TaskStepDetail, 0)
+	if err := p.Scan(&details); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     details,
+	}, nil
+}
+
+func GetTaskStep(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (interface{}, e.Error) {
+	content, err := services.QueryTaskStepLogBy(c.DB(), form.StepId)
+	if err != nil {
+		return nil, err
+	}
+	return string(content), nil
 }

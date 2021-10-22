@@ -28,11 +28,11 @@ const (
 )
 
 const (
-	TaskStepScriptName = "run.sh"
-	TaskStepLogName    = "output.log"
+	TaskScriptName = "run.sh"
+	TaskLogName    = "output.log"
 
-	TaskStepInfoFileName          = "info.json"
-	TaskStepContainerInfoFileName = "container.json"
+	TaskInfoFileName          = "info.json"
+	TaskContainerInfoFileName = "container.json"
 
 	CloudIacTfFile   = "_cloudiac.tf"
 	CloudIacPlayVars = "_cloudiac_play_vars.yml"

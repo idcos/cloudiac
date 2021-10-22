@@ -125,18 +125,22 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 	pipelineJobs := GetTaskPipelineJobs(task.Pipeline, task.Type)
 	jobs := make([]models.TaskJob, 0)
 	for _, job := range pipelineJobs {
-		jobs = append(jobs, models.TaskJob{
+		taskJob := models.TaskJob{
 			TaskId: task.Id,
 			Type:   job.Type,
 			Image:  job.Image,
-		})
+		}
+		taskJob.Id = models.NewId("job-")
+		jobs = append(jobs, taskJob)
 	}
 
 	steps := make([]models.TaskStep, 0)
+	stepIndex := 0
 	for i := range pipelineJobs {
-		job := pipelineJobs[i]
-		for j := range job.Steps {
-			jobStep := job.Steps[j]
+		taskJob := jobs[i]
+		pipelineJob := pipelineJobs[i]
+		for j := range pipelineJob.Steps {
+			jobStep := pipelineJob.Steps[j]
 
 			if jobStep.Type == models.TaskStepPlay && task.Playbook == "" {
 				logger.WithField("step", fmt.Sprintf("%d(%s)", i, jobStep.Type)).
@@ -169,13 +173,14 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 				}
 			}
 
-			taskStep := newTaskStep(tx, task, jobStep, i+j)
+			taskStep := newTaskStep(tx, task, taskJob.Id, jobStep, stepIndex)
 			// apply 和 destroy job 的第一个 step 需要审批
-			if (job.Type == common.TaskJobApply || job.Type == common.TaskJobDestroy) && j == 0 {
+			if (pipelineJob.Type == common.TaskJobApply || pipelineJob.Type == common.TaskJobDestroy) && j == 0 {
 				taskStep.MustApproval = true
 			}
 
 			steps = append(steps, *taskStep)
+			stepIndex += 1
 		}
 	}
 	if len(steps) == 0 {
@@ -204,7 +209,14 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 }
 
 func GetTaskPipelineJobs(pipeline models.Pipeline, taskType string) (jobs []models.PipelineJobWithType) {
-	withType := func(job models.PipelineJob, jobType string) models.PipelineJobWithType {
+	defaultPipeline := models.MustGetPipelineByVersion(pipeline.Version)
+
+	getJob := func(job models.PipelineJob, jobType string) models.PipelineJobWithType {
+		if len(job.Steps) == 0 {
+			// 如果 pipeline 文件中未定义 job 步骤则使用默认模板中的步骤
+			defaultJob := defaultPipeline.GetJob(jobType)
+			job.Steps = defaultJob.Steps
+		}
 		return models.PipelineJobWithType{
 			PipelineJob: job,
 			Type:        jobType,
@@ -214,21 +226,21 @@ func GetTaskPipelineJobs(pipeline models.Pipeline, taskType string) (jobs []mode
 	switch taskType {
 	case common.TaskTypePlan:
 		jobs = append(jobs,
-			withType(pipeline.Plan, common.TaskJobPlan))
+			getJob(pipeline.Plan, common.TaskJobPlan))
 	case common.TaskTypeApply:
 		jobs = append(jobs,
-			withType(pipeline.Plan, common.TaskJobPlan),
-			withType(pipeline.Apply, common.TaskJobApply))
+			getJob(pipeline.Plan, common.TaskJobPlan),
+			getJob(pipeline.Apply, common.TaskJobApply))
 	case common.TaskTypeDestroy:
 		jobs = append(jobs,
-			withType(pipeline.DestroyPlan, common.TaskJobDestroyPlan),
-			withType(pipeline.Destroy, common.TaskJobDestroy))
+			getJob(pipeline.DestroyPlan, common.TaskJobDestroyPlan),
+			getJob(pipeline.Destroy, common.TaskJobDestroy))
 	case common.TaskTypeScan:
 		jobs = append(jobs,
-			withType(pipeline.PolicyScan, common.TaskJobScan))
+			getJob(pipeline.PolicyScan, common.TaskJobScan))
 	case common.TaskTypeParse:
 		jobs = append(jobs,
-			withType(pipeline.PolicyParse, common.TaskJobParse))
+			getJob(pipeline.PolicyParse, common.TaskJobParse))
 	}
 	return jobs
 }
@@ -651,16 +663,34 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource)
 	return nil
 }
 
-func FetchTaskLog(ctx context.Context, task models.Tasker, stepType string, writer io.WriteCloser) (err error) {
+func GetTaskStepByStepId(tx *db.Session, stepId models.Id) (*models.TaskStep, error) {
+	taskStep := models.TaskStep{}
+	err := tx.Where("id = ?", stepId).First(&taskStep)
+	if err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TaskStepNotExists)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &taskStep, nil
+}
+
+func FetchTaskLog(ctx context.Context, task models.Tasker, stepType string, writer io.WriteCloser, stepId models.Id) (err error) {
 	// close 后 read 端会触发 EOF error
 	defer writer.Close()
-
 	var steps []*models.TaskStep
-	steps, err = GetTaskSteps(db.Get(), task.GetId())
-	if err != nil {
-		return err
+	if stepId != "" {
+		step, err := GetTaskStepByStepId(db.Get(), stepId)
+		if err != nil {
+			return err
+		}
+		steps = append(steps, step)
+	} else {
+		steps, err = GetTaskSteps(db.Get(), task.GetId())
+		if err != nil {
+			return err
+		}
 	}
-
 	sleepDuration := consts.DbTaskPollInterval
 	storage := logstorage.Get()
 	ticker := time.NewTicker(sleepDuration)
@@ -742,26 +772,29 @@ func fetchRunnerTaskStepLog(ctx context.Context, runnerId string, step *models.T
 
 	runnerAddr, err := GetRunnerAddress(runnerId)
 	if err != nil {
-		return errors.Wrapf(err, "get runner address")
+		return err
 	}
 
 	params := url.Values{}
 	params.Add("envId", string(step.EnvId))
 	params.Add("taskId", string(step.TaskId))
 	params.Add("step", fmt.Sprintf("%d", step.Index))
-	wsConn, resp, err := utils.WebsocketDail(runnerAddr, consts.RunnerTaskLogFollowURL, params)
+	wsConn, resp, err := utils.WebsocketDail(runnerAddr, consts.RunnerTaskStepLogFollowURL, params)
 	if err != nil {
 		if resp != nil {
-			respBody, _ := io.ReadAll(resp.Body)
-			logger.Debugf("websocket dail error: %s, response: %s", err, respBody)
 			if resp.StatusCode == http.StatusNotFound {
 				return ErrRunnerTaskNotExists
 			}
+			respBody, _ := io.ReadAll(resp.Body)
+			logger.Warnf("websocket dail error: %s, response: %s", err, respBody)
 		}
-		return errors.Wrapf(err, "websocket dail: %v/%s", runnerAddr, consts.RunnerTaskLogFollowURL)
+		return errors.Wrapf(err, "websocket dail: %s/%s", runnerAddr, consts.RunnerTaskStepLogFollowURL)
 	}
 
 	defer func() {
+		if resp != nil && resp.Body != nil {
+			_ = resp.Body.Close()
+		}
 		_ = utils.WebsocketClose(wsConn)
 	}()
 
@@ -948,20 +981,25 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 	pipelineJobs := GetTaskPipelineJobs(task.Pipeline, task.Type)
 	jobs := make([]models.TaskJob, 0)
 	for _, job := range pipelineJobs {
-		jobs = append(jobs, models.TaskJob{
+		taskJob := models.TaskJob{
 			TaskId: task.Id,
 			Type:   job.Type,
 			Image:  job.Image,
-		})
+		}
+		taskJob.Id = models.NewId("job-")
+		jobs = append(jobs, taskJob)
 	}
 
 	steps := make([]models.TaskStep, 0)
+	stepIndex := 0
 	for i := range pipelineJobs {
-		job := pipelineJobs[i]
-		for j := range job.Steps {
-			jobStep := job.Steps[j]
-			taskStep := newScanTaskStep(tx, task, jobStep, i+j)
+		taskJob := jobs[i]
+		pipelineJob := pipelineJobs[i]
+		for j := range pipelineJob.Steps {
+			jobStep := pipelineJob.Steps[j]
+			taskStep := newScanTaskStep(tx, task, taskJob.Id, jobStep, stepIndex)
 			steps = append(steps, *taskStep)
+			stepIndex += 1
 		}
 	}
 
@@ -1019,4 +1057,22 @@ func CreateMirrorScanTask(task *models.Task) *models.ScanTask {
 		MirrorTaskId: task.Id,
 		Extra:        task.Extra,
 	}
+}
+
+// 查询任务所有的步骤信息
+func QueryTaskStepsById(query *db.Session, taskId models.Id) *db.Session {
+	return query.Model(&models.TaskStep{}).Where("task_id = ?", taskId)
+}
+
+// 查询任务下某一个单独步骤的具体执行日志
+func QueryTaskStepLogBy(tx *db.Session, stepId models.Id) ([]byte, e.Error) {
+	var dbStorage models.DBStorage
+	query := tx.Joins("left join iac_task_step on iac_task_step.log_path=iac_storage.path").
+		Where("iac_task_step.id = ?", stepId).
+		LazySelectAppend("iac_storage.content")
+
+	if err := query.First(&dbStorage); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return dbStorage.Content, nil
 }

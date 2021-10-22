@@ -120,6 +120,9 @@ func Register(g *gin.RouterGroup) {
 	//变量管理
 	g.PUT("/variables/batch", ac(), w(handlers.Variable{}.BatchUpdate))
 	ctrl.Register(g.Group("variables", ac()), &handlers.Variable{})
+	// 变量组
+	ctrl.Register(g.Group("var_groups",ac()),&handlers.VariableGroup{})
+
 	//token管理
 	ctrl.Register(g.Group("tokens", ac()), &handlers.Token{})
 	//密钥管理
@@ -167,6 +170,9 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/tasks/:id/approve", ac("tasks", "approve"), w(handlers.Task{}.TaskApprove))
 	g.POST("/tasks/:id/comment", ac(), w(handlers.TaskComment{}.Create))
 	g.GET("/tasks/:id/comment", ac(), w(handlers.TaskComment{}.Search))
+	g.GET("/tasks/:id/steps", ac(), w(handlers.Task{}.SearchTaskStep))
+	g.GET("/tasks/:id/steps/:stepId/log", ac(), w(handlers.Task{}.GetTaskStepLog))
+	g.GET("tasks/:id/steps/:stepId/log/sse", ac(), w(handlers.Task{}.FollowStepLogSse))
 
 	g.GET("/tokens/trigger", ac(), w(handlers.Token{}.DetailTriggerToken))
 	ctrl.Register(g.Group("resource/account", ac()), &handlers.ResourceAccount{})

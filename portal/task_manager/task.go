@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/pkg/errors"
 
 	"cloudiac/portal/consts"
 	"cloudiac/portal/models"
@@ -26,7 +25,9 @@ import (
 
 // StartTaskStep 启动任务的一步
 // 该函数会设置 taskReq 中 step 相关的数据
-func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error, reTryAble bool) {
+func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (
+	containerId string, retryAble bool, err error) {
+
 	logger := logs.Get().
 		WithField("action", "StartTaskStep").
 		WithField("taskId", taskReq.TaskId).
@@ -38,10 +39,10 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error, 
 	var runnerAddr string
 	runnerAddr, err = services.GetRunnerAddress(taskReq.RunnerId)
 	if err != nil {
-		return errors.Wrapf(err, "get runner '%s' address", taskReq.RunnerId), true
+		return "", true, err
 	}
 
-	requestUrl := utils.JoinURL(runnerAddr, consts.RunnerRunTaskURL)
+	requestUrl := utils.JoinURL(runnerAddr, consts.RunnerRunTaskStepURL)
 	logger.Debugf("request runner: %s", requestUrl)
 
 	taskReq.Step = step.Index
@@ -51,19 +52,26 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (err error, 
 	respData, err := utils.HttpService(requestUrl, "POST", header, taskReq,
 		int(consts.RunnerConnectTimeout.Seconds()), int(consts.RunnerConnectTimeout.Seconds()))
 	if err != nil {
-		return err, true
+		return "", true, err
 	}
 
 	resp := runner.Response{}
 	if err := json.Unmarshal(respData, &resp); err != nil {
-		return fmt.Errorf("unexpected response: %s", respData), false
+		return "", false, fmt.Errorf("unexpected response: %s", respData)
 	}
 	logger.Debugf("runner response: %s", respData)
 
 	if resp.Error != "" {
-		return fmt.Errorf(resp.Error), false
+		return "", false, fmt.Errorf(resp.Error)
 	}
-	return nil, false
+
+	if result, ok := resp.Result.(map[string]interface{}); !ok {
+		return "", false, fmt.Errorf("unexpected result: %v", resp.Result)
+	} else {
+		containerId = fmt.Sprintf("%v", result["containerId"])
+	}
+
+	return containerId, false, nil
 }
 
 type waitStepResult struct {
@@ -159,14 +167,14 @@ func pullTaskStepStatus(ctx context.Context, task models.Tasker, step *models.Ta
 
 	runnerAddr, err := services.GetRunnerAddress(task.GetRunnerId())
 	if err != nil {
-		return nil, errors.Wrapf(err, "get runner address")
+		return nil, err
 	}
 
 	params := url.Values{}
 	params.Add("envId", string(step.EnvId))
 	params.Add("taskId", string(step.TaskId))
 	params.Add("step", fmt.Sprintf("%d", step.Index))
-	wsConn, resp, err := utils.WebsocketDail(runnerAddr, consts.RunnerTaskStateURL, params)
+	wsConn, resp, err := utils.WebsocketDail(runnerAddr, consts.RunnerTaskStepStatusURL, params)
 	if err != nil {
 		logger.Errorf("connect error: %v", err)
 		if resp != nil && resp.StatusCode >= 300 {
