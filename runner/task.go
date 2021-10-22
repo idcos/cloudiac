@@ -36,6 +36,17 @@ func NewTask(req RunTaskReq, logger logs.Logger) *Task {
 }
 
 func (t *Task) Run() (cid string, err error) {
+	if t.req.ContainerId == "" {
+		cid, err = t.start()
+		if err != nil {
+			return cid, err
+		}
+		t.req.ContainerId = cid
+	}
+	return t.req.ContainerId, t.runStep()
+}
+
+func (t *Task) start() (cid string, err error) {
 	for _, vars := range []map[string]string{
 		t.req.Env.EnvironmentVars, t.req.Env.TerraformVars, t.req.Env.AnsibleVars} {
 		if err = t.decryptVariables(vars); err != nil {
@@ -55,15 +66,9 @@ func (t *Task) Run() (cid string, err error) {
 		return "", errors.Wrap(err, "initial workspace")
 	}
 
-	if err = t.genStepScript(); err != nil {
-		return cid, errors.Wrap(err, "generate step script")
-	}
-
 	conf := configs.Get().Runner
-	cmd := Command{
+	cmd := Executor{
 		Image:       conf.DefaultImage,
-		Env:         nil,
-		Commands:    nil,
 		Timeout:     t.req.Timeout,
 		Workdir:     ContainerWorkspace,
 		HostWorkdir: t.workspace,
@@ -94,21 +99,13 @@ func (t *Task) Run() (cid string, err error) {
 	cmd.TerraformVersion = t.req.Env.TfVersion
 	cmd.Env = append(cmd.Env, fmt.Sprintf("TFENV_TERRAFORM_VERSION=%s", cmd.TerraformVersion))
 
-	shellArgs := " "
-	if utils.IsTrueStr(t.req.Env.EnvironmentVars["CLOUDIAC_DEBUG"]) {
-		shellArgs += "-x"
-	}
-	shellCommand := fmt.Sprintf("sh%s %s >>%s 2>&1",
-		shellArgs,
-		filepath.Join(t.stepDirName(t.req.Step), TaskStepScriptName),
-		filepath.Join(t.stepDirName(t.req.Step), TaskStepLogName),
-	)
-	cmd.Commands = []string{"sh", "-c", shellCommand}
+	// 容器启动后执行 /bin/sh，以保持运行
+	cmd.Commands = []string{"/bin/sh"}
 
-	stepDir := GetTaskStepDir(t.req.Env.Id, t.req.TaskId, t.req.Step)
-	containerInfoFile := filepath.Join(stepDir, TaskStepContainerInfoFileName)
+	stepDir := GetTaskDir(t.req.Env.Id, t.req.TaskId, t.req.Step)
+	containerInfoFile := filepath.Join(stepDir, TaskContainerInfoFileName)
 	// 启动容器前先删除可能存在的 containerInfoFile，以支持步骤重试，
-	// 否则 containerInfoFile 文件存在 CommittedTaskStep.Wait() 会直接返回
+	// 否则 containerInfoFile 文件存在 CommittedTask.Wait() 会直接返回
 	if err = os.Remove(containerInfoFile); err != nil && !os.IsNotExist(err) {
 		return "", errors.Wrap(err, "remove containerInfoFile")
 	}
@@ -118,17 +115,48 @@ func (t *Task) Run() (cid string, err error) {
 		return cid, err
 	}
 
-	infoJson := utils.MustJSON(CommittedTaskStep{
+	return cid, nil
+}
+
+func (t *Task) generateCommand(cmd string) []string {
+	cmds := []string{"/bin/sh"}
+	if utils.IsTrueStr(t.req.Env.EnvironmentVars["CLOUDIAC_DEBUG"]) {
+		cmds = append(cmds, "-x")
+	}
+	return append(cmds, "-c", cmd)
+}
+
+func (t *Task) runStep() (err error) {
+	_, err = t.genStepScript()
+	if err != nil {
+		return errors.Wrap(err, "generate step script")
+	}
+
+	containerScriptPath := filepath.Join(t.stepDirName(t.req.Step), TaskScriptName)
+	logPath := filepath.Join(t.stepDirName(t.req.Step), TaskLogName)
+	command := fmt.Sprintf("%s >>%s 2>&1", containerScriptPath, logPath)
+	execId, err := (&Executor{}).RunCommand(t.req.ContainerId, t.generateCommand(command))
+	if err != nil {
+		return err
+	}
+
+	infoJson := utils.MustJSON(StartedTask{
 		EnvId:       t.req.Env.Id,
 		TaskId:      t.req.TaskId,
 		Step:        t.req.Step,
-		ContainerId: cid,
+		ContainerId: t.req.ContainerId,
+		ExecId:      execId,
 	})
-	stepInfoFile := filepath.Join(stepDir, TaskStepInfoFileName)
-	if er := os.WriteFile(stepInfoFile, infoJson, 0644); er != nil {
-		logger.Errorln(er)
+
+	stepInfoFile := filepath.Join(
+		GetTaskDir(t.req.Env.Id, t.req.TaskId, t.req.Step),
+		TaskInfoFileName,
+	)
+	if err := os.WriteFile(stepInfoFile, infoJson, 0644); err != nil {
+		err = errors.Wrap(err, "write step info")
+		return err
 	}
-	return cid, nil
+	return nil
 }
 
 func (t *Task) decryptVariables(vars map[string]string) error {
@@ -264,10 +292,10 @@ func (t *Task) executeTpl(tpl *template.Template, data interface{}) (string, err
 }
 
 func (t *Task) stepDirName(step int) string {
-	return GetTaskStepDirName(step)
+	return GetTaskDirName(step)
 }
 
-func (t *Task) genStepScript() error {
+func (t *Task) genStepScript() (string, error) {
 	var (
 		command string
 		err     error
@@ -297,29 +325,29 @@ func (t *Task) genStepScript() error {
 	case common.TaskStepTfScan:
 		command, err = t.stepTfScan()
 	default:
-		return fmt.Errorf("unknown step type '%s'", t.req.StepType)
+		return "", fmt.Errorf("unknown step type '%s'", t.req.StepType)
 	}
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	stepDir := GetTaskStepDir(t.req.Env.Id, t.req.TaskId, t.req.Step)
+	stepDir := GetTaskDir(t.req.Env.Id, t.req.TaskId, t.req.Step)
 	if err = os.MkdirAll(stepDir, 0755); err != nil {
-		return err
+		return "", err
 	}
 
-	scriptPath := filepath.Join(stepDir, TaskStepScriptName)
+	scriptPath := filepath.Join(stepDir, TaskScriptName)
 	var fp *os.File
-	if fp, err = os.OpenFile(scriptPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644); err != nil {
-		return err
+	if fp, err = os.OpenFile(scriptPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755); err != nil {
+		return "", err
 	}
 	defer fp.Close()
 
 	if _, err = fp.WriteString(command); err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return scriptPath, nil
 }
 
 var checkoutCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
