@@ -9,11 +9,12 @@ import (
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"context"
-	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 )
 
 var logger = logs.Get()
@@ -25,7 +26,7 @@ func TaskStatus(c *ctx.Context) {
 		return
 	}
 
-	task, err := runner.LoadCommittedTask(req.EnvId, req.TaskId, req.Step)
+	task, err := runner.LoadStartedTask(req.EnvId, req.TaskId, req.Step)
 	if err != nil {
 		if os.IsNotExist(err) {
 			c.Error(err, http.StatusNotFound)
@@ -55,25 +56,24 @@ func TaskStatus(c *ctx.Context) {
 	}
 }
 
-func doTaskStatus(wsConn *websocket.Conn, task *runner.CommittedTaskStep, closedCh <-chan struct{}) error {
+func doTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, closedCh <-chan struct{}) error {
 	logger := logger.WithField("taskId", task.TaskId).WithField("step", task.Step)
 
 	// 获取任务最新状态并通过 websocket 发送
 	sendStatus := func(withLog bool) error {
-		containerJSON, err := task.Status()
+		status, err := task.Status()
 		if err != nil {
 			return err
 		}
 
-		state := containerJSON.State
 		msg := runner.TaskStatusMessage{
-			Exited:   !state.Running,
-			ExitCode: state.ExitCode,
+			Exited:   !status.Running,
+			ExitCode: status.ExitCode,
 		}
 
 		// 由于任务退出的时候 portal 会断开连接，所以如果判断已经退出，则直接发送全量日志
 		if withLog || msg.Exited {
-			logContent, err := runner.FetchTaskStepLog(task.EnvId, task.TaskId, task.Step)
+			logContent, err := runner.FetchTaskLog(task.EnvId, task.TaskId, task.Step)
 			if err != nil {
 				logger.Errorf("fetch task log error: %v", err)
 				msg.LogContent = utils.TaskLogMsgBytes("Fetch task log error: %v", err)

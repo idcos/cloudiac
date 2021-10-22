@@ -11,13 +11,14 @@ import (
 	"cloudiac/utils/logs"
 	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 )
 
 // TaskLogFollow 读取 task log 并 follow, 直到任务退出
@@ -28,7 +29,7 @@ func TaskLogFollow(c *ctx.Context) {
 		return
 	}
 
-	task, err := runner.LoadCommittedTask(req.EnvId, req.TaskId, req.Step)
+	task, err := runner.LoadStartedTask(req.EnvId, req.TaskId, req.Step)
 	if err != nil {
 		if os.IsNotExist(err) {
 			c.Error(fmt.Errorf("not exists"), http.StatusNotFound)
@@ -55,7 +56,7 @@ func TaskLogFollow(c *ctx.Context) {
 	}
 }
 
-func doFollowTaskLog(wsConn *websocket.Conn, task *runner.CommittedTaskStep, offset int64, closedCh <-chan struct{}) error {
+func doFollowTaskLog(wsConn *websocket.Conn, task *runner.StartedTask, offset int64, closedCh <-chan struct{}) error {
 	logger := logger.WithField("func", "doFollowTaskLog").WithField("taskId", task.TaskId)
 
 	var (
@@ -65,7 +66,7 @@ func doFollowTaskLog(wsConn *websocket.Conn, task *runner.CommittedTaskStep, off
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	defer cancelCtx()
 
-	logPath := filepath.Join(runner.GetTaskStepDir(task.EnvId, task.TaskId, task.Step), runner.TaskStepLogName)
+	logPath := filepath.Join(runner.GetTaskDir(task.EnvId, task.TaskId, task.Step), runner.TaskLogName)
 	contentChan, readErrChan := followFile(ctx, logPath, offset)
 
 	// 等待任务退出协程

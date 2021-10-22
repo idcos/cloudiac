@@ -447,26 +447,36 @@ func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*models.User
 }
 
 type OrgResourcesResp struct {
-	ProjectName  string `json:"projectName"`
-	EnvName      string `json:"envName"`
-	ResourceName string `json:"resourceName"`
-	Provider     string `json:"provider"`
-	Type         string `json:"type"`
-	Module       string `json:"module"`
+	ProjectName  string    `json:"projectName"`
+	EnvName      string    `json:"envName"`
+	ResourceName string    `json:"resourceName"`
+	Provider     string    `json:"provider"`
+	Type         string    `json:"type"`
+	Module       string    `json:"module"`
+	EnvId        models.Id `json:"envId"`
+	ProjectId    models.Id `json:"projectId"`
+	ResourceId   models.Id `json:"resourceId"`
 }
 
 func SearchOrgResources(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm) (interface{}, e.Error) {
 	query := c.DB().Model(&models.Resource{})
+
 	query = query.Joins("inner join iac_env on iac_env.last_res_task_id = iac_resource.task_id left join " +
 		"iac_project on iac_resource.project_id = iac_project.id").
-		LazySelectAppend("iac_project.name as project_name, iac_env.name as env_name," +
-			"iac_resource.name as resource_name, iac_resource.task_id, iac_resource.project_id, " +
-			"iac_resource.env_id, iac_resource.provider, iac_resource.type, iac_resource.module")
+		LazySelectAppend("iac_project.name as project_name, iac_env.name as env_name, iac_resource.id as resource_id," +
+			"iac_resource.name as resource_name, iac_resource.task_id, iac_resource.project_id as project_id, " +
+			"iac_resource.env_id as env_id, iac_resource.provider, iac_resource.type, iac_resource.module")
 	query = query.Where("iac_env.org_id = ?", c.OrgId)
 	if form.Module == "name" && form.Q != "" {
 		query = query.Where("iac_resource.name Like ?", fmt.Sprintf("%%%s%%", form.Q))
 	} else if form.Module == "type" && form.Q != "" {
 		query = query.Where("iac_resource.type Like ?", fmt.Sprintf("%%%s%%", form.Q))
+	}
+	if !c.IsSuperAdmin {
+		// 查一下当前用户属于哪些项目
+		query = query.Joins("left join iac_user_project on iac_user_project.project_id = iac_resource.project_id").
+			LazySelectAppend("iac_user_project.user_id")
+		query = query.Where("iac_user_project.user_id = ?", c.UserId)
 	}
 	rs := make([]OrgResourcesResp, 0)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)

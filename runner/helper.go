@@ -76,19 +76,19 @@ func GetTaskWorkspace(envId string, taskId string) string {
 	return filepath.Join(conf.Runner.AbsStoragePath(), envId, taskId)
 }
 
-func GetTaskStepDir(envId string, taskId string, step int) string {
-	return filepath.Join(GetTaskWorkspace(envId, taskId), GetTaskStepDirName(step))
+func GetTaskDir(envId string, taskId string, step int) string {
+	return filepath.Join(GetTaskWorkspace(envId, taskId), GetTaskDirName(step))
 }
 
-func GetTaskStepDirName(step int) string {
+func GetTaskDirName(step int) string {
 	if step == common.CollectTaskStepIndex {
-		return fmt.Sprintf(".step-collect")
+		return ".step-collect"
 	}
 	return fmt.Sprintf("step%d", step)
 }
 
-func FetchTaskStepLog(envId string, taskId string, step int) ([]byte, error) {
-	path := filepath.Join(GetTaskStepDir(envId, taskId, step), TaskStepLogName)
+func FetchTaskLog(envId string, taskId string, step int) ([]byte, error) {
+	path := filepath.Join(GetTaskDir(envId, taskId, step), TaskLogName)
 	return ioutil.ReadFile(path)
 }
 

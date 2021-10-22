@@ -7,8 +7,10 @@ import (
 	"cloudiac/portal/consts/e"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/consul/api"
 	"strings"
+
+	"github.com/hashicorp/consul/api"
+	"github.com/pkg/errors"
 )
 
 func SystemStatusSearch() ([]api.AgentService, map[string]api.AgentCheck, []string, e.Error) {
@@ -163,7 +165,7 @@ func ConsulServiceRegistered(serviceInfo *api.AgentService, tags []string) e.Err
 func GetRunnerAddress(serviceId string) (string, error) {
 	s, err := ConsulServiceInfo(serviceId)
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "get runner address, runnerId %s", serviceId)
 	}
 	return fmt.Sprintf("http://%s:%d", s.Address, s.Port), nil
 }

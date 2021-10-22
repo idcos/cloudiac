@@ -10,14 +10,15 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
+	"github.com/pkg/errors"
 
 	"cloudiac/common"
 	"cloudiac/configs"
 	"cloudiac/utils"
 )
 
-// Command to run docker image
-type Command struct {
+// Task Executor
+type Executor struct {
 	Image      string
 	Env        []string
 	Timeout    int
@@ -38,20 +39,34 @@ type Container struct {
 	RunID   string
 }
 
-func (cmd *Command) Start() (string, error) {
-	logger := logger.WithField("taskId", filepath.Base(cmd.HostWorkdir))
-	cli, err := client.NewClientWithOpts()
+func DockerClient() (*client.Client, error) {
+	return dockerClient()
+}
+
+func dockerClient() (*client.Client, error) {
+	cli, err := client.NewClientWithOpts(
+		client.FromEnv,
+		client.WithAPIVersionNegotiation(),
+	)
 	if err != nil {
-		logger.Errorf("unable to create docker client")
+		return nil, errors.Wrap(err, "create docker client")
+	}
+	return cli, nil
+}
+
+func (exec *Executor) Start() (string, error) {
+	logger := logger.WithField("taskId", filepath.Base(exec.HostWorkdir))
+	cli, err := dockerClient()
+	if err != nil {
+		logger.Error(err)
 		return "", err
 	}
-	cli.NegotiateAPIVersion(context.Background())
 
 	conf := configs.Get()
 	mountConfigs := []mount.Mount{
 		{
 			Type:   mount.TypeBind,
-			Source: cmd.HostWorkdir,
+			Source: exec.HostWorkdir,
 			Target: ContainerWorkspace,
 		},
 		{
@@ -89,7 +104,7 @@ func (cmd *Command) Start() (string, error) {
 	// 注意，该方案有个问题：客户无法自定义镜像预先安装需要的 terraform 版本，
 	// 因为判断版本不在 TerraformVersions 列表中就会挂载目录，客户自定义镜像安装的版本会被覆盖
 	//（考虑把版本列表写到配置文件？）
-	if !utils.StrInArray(cmd.TerraformVersion, common.TerraformVersions...) {
+	if !utils.StrInArray(exec.TerraformVersion, common.TerraformVersions...) {
 		mountConfigs = append(mountConfigs, mount.Mount{
 			Type:   mount.TypeBind,
 			Source: conf.Runner.AbsTfenvVersionsCachePath(),
@@ -100,10 +115,12 @@ func (cmd *Command) Start() (string, error) {
 	c, err := cli.ContainerCreate(
 		context.Background(),
 		&container.Config{
-			Image:        cmd.Image,
-			WorkingDir:   cmd.Workdir,
-			Cmd:          cmd.Commands,
-			Env:          cmd.Env,
+			Image:        exec.Image,
+			WorkingDir:   exec.Workdir,
+			Cmd:          exec.Commands,
+			Env:          exec.Env,
+			OpenStdin:    true,
+			Tty:          true,
 			AttachStdin:  false,
 			AttachStdout: true,
 			AttachStderr: true,
@@ -124,4 +141,76 @@ func (cmd *Command) Start() (string, error) {
 	logger.Infof("container id: %s", cid)
 	err = cli.ContainerStart(context.Background(), c.ID, types.ContainerStartOptions{})
 	return cid, err
+}
+
+func (Executor) RunCommand(cid string, command []string) (execId string, err error) {
+	cli, err := dockerClient()
+	if err != nil {
+		logger.Warn(err)
+		return "", err
+	}
+
+	resp, err := cli.ContainerExecCreate(context.Background(), cid, types.ExecConfig{
+		Detach: false,
+		Cmd:    command,
+	})
+	if err != nil {
+		err = errors.Wrap(err, "container exec create")
+		logger.Warn(err)
+		return "", err
+	}
+
+	err = cli.ContainerExecStart(context.Background(), resp.ID, types.ExecStartCheck{})
+	if err != nil {
+		err = errors.Wrap(err, "container exec start")
+		logger.Warn(err)
+		return "", err
+	}
+
+	// cli.ContainerExecCreate()
+	// resp, err := cli.ContainerAttach(context.Background(), cid, types.ContainerAttachOptions{
+	// 	Stream: true,
+	// 	Stdin:  true,
+	// 	Stdout: true,
+	// 	Stderr: true,
+	// })
+	// if err != nil {
+	// 	return errors.Wrap(err, "container attach")
+	// }
+	// defer resp.Close()
+
+	// logger.Debug("send command: %s", command)
+	// if _, err := resp.Conn.Write(append([]byte(command), '\n')); err != nil {
+	// 	return errors.Wrap(err, "send command")
+	// }
+	return resp.ID, nil
+}
+
+func (Executor) GetExecInfo(execId string) (execInfo types.ContainerExecInspect, err error) {
+	cli, err := dockerClient()
+	if err != nil {
+		return execInfo, err
+	}
+	execInfo, err = cli.ContainerExecInspect(context.Background(), execId)
+	if err != nil {
+		return execInfo, errors.Wrap(err, "container exec attach")
+	}
+	return execInfo, nil
+}
+
+func (Executor) WaitCommand(ctx context.Context, execId string) (execInfo types.ContainerExecInspect, err error) {
+	cli, err := dockerClient()
+	if err != nil {
+		return execInfo, err
+	}
+
+	for {
+		inspect, err := cli.ContainerExecInspect(ctx, execId)
+		if err != nil {
+			return execInfo, errors.Wrap(err, "container exec attach")
+		}
+		if !inspect.Running {
+			return execInfo, nil
+		}
+	}
 }
