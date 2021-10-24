@@ -8,8 +8,6 @@ var (
 	TaskJobTypes = []string{
 		TaskJobPlan,
 		TaskJobApply,
-		TaskJobPlay,
-		TaskJobDestroyPlan,
 		TaskJobDestroy,
 		TaskJobScan,
 		TaskJobParse,

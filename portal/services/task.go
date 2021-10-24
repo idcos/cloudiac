@@ -232,9 +232,7 @@ func GetTaskPipelineJobs(pipeline models.Pipeline, taskType string) (jobs []mode
 			getJob(pipeline.Plan, common.TaskJobPlan),
 			getJob(pipeline.Apply, common.TaskJobApply))
 	case common.TaskTypeDestroy:
-		jobs = append(jobs,
-			getJob(pipeline.DestroyPlan, common.TaskJobDestroyPlan),
-			getJob(pipeline.Destroy, common.TaskJobDestroy))
+		jobs = append(jobs, getJob(pipeline.Destroy, common.TaskJobDestroy))
 	case common.TaskTypeScan:
 		jobs = append(jobs,
 			getJob(pipeline.PolicyScan, common.TaskJobScan))

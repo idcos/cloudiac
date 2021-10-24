@@ -10,12 +10,10 @@ import (
 )
 
 type Pipeline struct {
-	Version     string      `json:"version" yaml:"version"`
-	Plan        PipelineJob `json:"plan" yaml:"plan"`
-	Apply       PipelineJob `json:"apply" yaml:"apply"`
-	Play        PipelineJob `json:"play" yaml:"play"`
-	DestroyPlan PipelineJob `json:"destroyPlan" yaml:"destroyPlan"`
-	Destroy     PipelineJob `json:"destroy" yaml:"destroy"`
+	Version string      `json:"version" yaml:"version"`
+	Plan    PipelineJob `json:"plan" yaml:"plan"`
+	Apply   PipelineJob `json:"apply" yaml:"apply"`
+	Destroy PipelineJob `json:"destroy" yaml:"destroy"`
 
 	// 直接命名为 Scan 会与 Scan() 接口方法重名，所以这里命名为 PolicyScan
 	PolicyScan  PipelineJob `json:"scan" yaml:"scan"`
@@ -28,10 +26,6 @@ func (p Pipeline) GetJob(typ string) PipelineJob {
 		return p.Plan
 	case common.TaskJobApply:
 		return p.Apply
-	case common.TaskJobPlay:
-		return p.Play
-	case common.TaskJobDestroyPlan:
-		return p.DestroyPlan
 	case common.TaskJobDestroy:
 		return p.Destroy
 	case common.TaskJobScan:
@@ -88,15 +82,22 @@ plan:
 
 apply:
   steps:
+    - type: checkout
+      name: Checkout code
+      
+    - type: terraformInit
+      name: Terraform Init
+
+    - type: terraformPlan
+      name: Terraform Plan
+
     - type: terraformApply
       name: Terraform Apply
 
-play:
-  steps:
-     - type: ansiblePlay
-       name: Run playbook
-
-destroyPlan:
+    - type: ansiblePlay
+      name: Run playbook
+      
+destroy:
   steps:
     - type: checkout
       name: Checkout code
@@ -108,9 +109,7 @@ destroyPlan:
       name: Terraform Plan
       args: 
         - "-destroy"
-      
-destroy:
-  steps:
+
     - type: terraformDestroy
       name: Terraform Destroy
 

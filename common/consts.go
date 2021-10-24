@@ -15,13 +15,11 @@ const (
 	TaskTypeScan    = "scan"    // 策略扫描，只执行策略扫描，不修改资源或配置
 	TaskTypeParse   = "parse"   // 策略扫描，只执行策略扫描，不修改资源或配置
 
-	TaskJobPlan        = "plan"
-	TaskJobApply       = "apply"
-	TaskJobPlay        = "play"
-	TaskJobDestroyPlan = "destroyPlan"
-	TaskJobDestroy     = "destroy"
-	TaskJobScan        = "scan"
-	TaskJobParse       = "parse"
+	TaskJobPlan    = "plan"
+	TaskJobApply   = "apply"
+	TaskJobDestroy = "destroy"
+	TaskJobScan    = "scan"
+	TaskJobParse   = "parse"
 
 	TaskPending   = "pending"
 	TaskRunning   = "running"
