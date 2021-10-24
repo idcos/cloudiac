@@ -5,6 +5,8 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/forms"
+	"cloudiac/utils/logs"
 	"fmt"
 )
 
@@ -126,9 +128,14 @@ func SearchVariableGroupRel(dbSess *db.Session, objectAttr map[string]models.Id,
 
 func GetVariableGroupByObject(dbSess *db.Session, objectType string, objectId models.Id) ([]VarGroupRel, e.Error) {
 	vg := make([]VarGroupRel, 0)
-	query := dbSess.Table(fmt.Sprintf("%s as rel", models.VariableGroupRel{}.TableName())).
-		Where("rel.object_id = ?", objectId).
-		Where("rel.object_type = ?", objectType)
+	query := dbSess.Table(fmt.Sprintf("%s as rel", models.VariableGroupRel{}.TableName()))
+
+	if objectType != "" {
+		query = query.Where("rel.object_type = ?", objectType)
+	}
+	if objectId != "" {
+		query = query.Where("rel.object_id = ?", objectId)
+	}
 	query = query.LazySelectAppend("rel.*")
 	query = query.LazySelectAppend("vg.*")
 	if err := query.Joins("left join iac_variable_group as vg on vg.id = rel.var_group_id").Find(&vg); err != nil {
@@ -165,6 +172,58 @@ func CreateRelationship(dbSess *db.Session, rels []models.VariableGroupRel) e.Er
 		return e.AutoNew(err, e.DBError)
 	}
 	return nil
+}
+
+func CheckVgRelationship(tx *db.Session, form *forms.CreateRelationshipForm) bool {
+	// 查询当前作用域下绑定的变量组
+	bindVgs, err := GetVariableGroupByObject(tx, form.ObjectType, "")
+	if err != nil {
+		logs.Get().Errorf("func GetVariableGroupByObject err: %v", err)
+		return false
+	}
+	// 查询将要绑定的变量组
+	notBindVgs, err := GetVariableGroupListByIds(tx, form.VarGroupIds)
+	if err != nil {
+		logs.Get().Errorf("func GetVariableGroupListByIds err: %v", err)
+		return false
+	}
+	// 比较变量组下变量是否与其他变量组下变量存在冲突
+	// 利用map将当前作用域下绑定的变量组变量进行整理
+	variables := make(map[string]interface{})
+	for _, bindVg := range bindVgs {
+		for _, vg := range bindVg.Variables {
+			variables[vg.Name] = vg.Value
+		}
+	}
+
+	for _, notBindVg := range notBindVgs {
+		for _, vg := range notBindVg.Variables {
+			// 校验新绑定的变量组变量是否冲突
+			if _, ok := variables[vg.Name]; ok {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func GetVariableGroupById(dbSess *db.Session, id models.Id) (models.VariableGroup, e.Error) {
+	vg := models.VariableGroup{}
+	if err := dbSess.Where("id = ?", id).First(&vg); err != nil {
+		return vg, e.New(e.DBError, err)
+	}
+	return vg, nil
+}
+
+func GetVariableGroupListByIds(dbSess *db.Session, ids []models.Id) ([]models.VariableGroup, e.Error) {
+	vgs := make([]models.VariableGroup, 0)
+	if len(ids) == 0 {
+		return nil, e.New(e.BadParam, fmt.Errorf("id list is null"))
+	}
+	if err := dbSess.Where("id in (?)", ids).Find(&vgs); err != nil {
+		return vgs, e.New(e.DBError, err)
+	}
+	return vgs, nil
 }
 
 func DeleteRelationship(dbSess *db.Session, vgId models.Id) e.Error {

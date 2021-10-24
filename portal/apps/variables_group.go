@@ -9,6 +9,7 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/utils"
+	"fmt"
 )
 
 type CreateVariableGroupForm struct {
@@ -145,6 +146,21 @@ func SearchRelationship(c *ctx.ServiceContext, form *forms.SearchRelationshipFor
 
 func CreateRelationship(c *ctx.ServiceContext, form *forms.CreateRelationshipForm) (interface{}, e.Error) {
 	rel := make([]models.VariableGroupRel, 0)
+	// 校验变量组在同级是否有相同key的变量
+	tx := c.Tx()
+
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	if services.CheckVgRelationship(tx, form) {
+		_ = tx.Rollback()
+		return nil, e.New(e.VariableAlreadyExists, fmt.Errorf("the variables under the variable group are repeated"))
+	}
+
 	for _, v := range form.VarGroupIds {
 		rel = append(rel, models.VariableGroupRel{
 			VarGroupId: v,
@@ -152,9 +168,16 @@ func CreateRelationship(c *ctx.ServiceContext, form *forms.CreateRelationshipFor
 			ObjectId:   form.ObjectId,
 		})
 	}
-	if err := services.CreateRelationship(c.DB(), rel); err != nil {
+	if err := services.CreateRelationship(tx, rel); err != nil {
+		_ = tx.Rollback()
 		return nil, err
 	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
+
 	return nil, nil
 }
 
