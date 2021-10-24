@@ -15,6 +15,7 @@ const (
 	TaskTypeScan    = "scan"    // 策略扫描，只执行策略扫描，不修改资源或配置
 	TaskTypeParse   = "parse"   // 策略扫描，只执行策略扫描，不修改资源或配置
 
+	// TODO 与 taskTypexxx 重复，需要替换
 	TaskJobPlan    = "plan"
 	TaskJobApply   = "apply"
 	TaskJobDestroy = "destroy"

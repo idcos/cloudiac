@@ -10,17 +10,17 @@ import (
 )
 
 type Pipeline struct {
-	Version string      `json:"version" yaml:"version"`
-	Plan    PipelineJob `json:"plan" yaml:"plan"`
-	Apply   PipelineJob `json:"apply" yaml:"apply"`
-	Destroy PipelineJob `json:"destroy" yaml:"destroy"`
+	Version string       `json:"version" yaml:"version"`
+	Plan    PipelineTask `json:"plan" yaml:"plan"`
+	Apply   PipelineTask `json:"apply" yaml:"apply"`
+	Destroy PipelineTask `json:"destroy" yaml:"destroy"`
 
 	// 直接命名为 Scan 会与 Scan() 接口方法重名，所以这里命名为 PolicyScan
-	PolicyScan  PipelineJob `json:"scan" yaml:"scan"`
-	PolicyParse PipelineJob `json:"parse" yaml:"parse"`
+	PolicyScan  PipelineTask `json:"scan" yaml:"scan"`
+	PolicyParse PipelineTask `json:"parse" yaml:"parse"`
 }
 
-func (p Pipeline) GetJob(typ string) PipelineJob {
+func (p Pipeline) GetTask(typ string) PipelineTask {
 	switch typ {
 	case common.TaskJobPlan:
 		return p.Plan
@@ -37,18 +37,16 @@ func (p Pipeline) GetJob(typ string) PipelineJob {
 	}
 }
 
-type PipelineJob struct {
+type PipelineTask struct {
 	Image string         `json:"image,omitempty" yaml:"image"`
 	Steps []PipelineStep `json:"steps,omitempty" yaml:"steps"`
 
-	// 定义为指针类型，这样在字段无值时 json 序列化不会输出该字段，避免写入数据库时记录为空结构体
-	OnCreate  *PipelineStep `json:"onCreate,omitempty" yaml:"onCreate"`
 	OnSuccess *PipelineStep `json:"onSuccess,omitempty" yaml:"onSuccess"`
 	OnFail    *PipelineStep `json:"onFail,omitempty" yaml:"onFail"`
 }
 
-type PipelineJobWithType struct {
-	PipelineJob
+type PipelineTaskWithType struct {
+	PipelineTask
 	Type string `json:"type"`
 }
 
@@ -58,11 +56,11 @@ type PipelineStep struct {
 	Args StrSlice `json:"args,omitempty" yaml:"args" gorm:"type:text"`
 }
 
-func (v Pipeline) Value() (driver.Value, error) {
+func (v PipelineTask) Value() (driver.Value, error) {
 	return MarshalValue(v)
 }
 
-func (v *Pipeline) Scan(value interface{}) error {
+func (v *PipelineTask) Scan(value interface{}) error {
 	return UnmarshalValue(value, v)
 }
 
@@ -143,6 +141,9 @@ func GetPipelineByVersion(version string) (Pipeline, bool) {
 }
 
 func MustGetPipelineByVersion(version string) Pipeline {
+	if version == "" {
+		version = defaultPipelineVersion
+	}
 	pipeline, ok := GetPipelineByVersion(version)
 	if !ok {
 		panic(fmt.Errorf("pipeline for version '%s' not exists", version))

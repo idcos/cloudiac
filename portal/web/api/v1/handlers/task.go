@@ -212,7 +212,6 @@ func (Task) SearchTaskStep(c *ctx.GinRequest) {
 // @Param id path string true "任务ID"
 // @Param stepId path string true "任务步骤ID"
 // @Param form query forms.GetTaskStepLogForm true "parameter"
-// @router /tasks/{id}/steps/{stepId}/log
 // @Success 200 {object} ctx.JSONResult{}
 func (Task) GetTaskStepLog(c *ctx.GinRequest) {
 	form := forms.GetTaskStepLogForm{}

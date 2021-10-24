@@ -16,11 +16,6 @@ func StopTaskContainers(sess *db.Session, taskId models.Id) error {
 		return er
 	}
 
-	taskJobs, er := services.GetTaskJobs(sess, taskId)
-	if er != nil {
-		return er
-	}
-
 	runnerAddr, err := services.GetRunnerAddress(task.RunnerId)
 	if err != nil {
 		return err
@@ -31,9 +26,7 @@ func StopTaskContainers(sess *db.Session, taskId models.Id) error {
 		TaskId:       taskId.String(),
 		ContainerIds: []string{},
 	}
-	for _, job := range taskJobs {
-		req.ContainerIds = append(req.ContainerIds, job.ContainerId)
-	}
+	req.ContainerIds = append(req.ContainerIds, task.ContainerId)
 
 	header := &http.Header{}
 	header.Set("Content-Type", "application/json")

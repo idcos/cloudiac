@@ -9,6 +9,7 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -135,10 +136,23 @@ func (t *Task) runStep() (err error) {
 	containerScriptPath := filepath.Join(t.stepDirName(t.req.Step), TaskScriptName)
 	logPath := filepath.Join(t.stepDirName(t.req.Step), TaskLogName)
 	command := fmt.Sprintf("%s >>%s 2>&1", containerScriptPath, logPath)
+
 	execId, err := (&Executor{}).RunCommand(t.req.ContainerId, t.generateCommand(command))
 	if err != nil {
 		return err
 	}
+
+	defer func() {
+		_, err := (Executor{}).WaitCommand(context.Background(), execId)
+		if err != nil {
+			logger.Debugf("container %s: %v", t.req.ContainerId, err)
+			return
+		}
+
+		if err := (&Executor{}).Pause(t.req.ContainerId); err != nil {
+			logger.Debugf("container %s: %v", t.req.ContainerId, err)
+		}
+	}()
 
 	infoJson := utils.MustJSON(StartedTask{
 		EnvId:       t.req.Env.Id,

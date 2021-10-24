@@ -126,14 +126,13 @@ func ChangeTaskStepStatusAndUpdate(dbSess *db.Session, task models.Tasker, taskS
 	return ChangeTaskStatusWithStep(dbSess, task, taskStep)
 }
 
-func newTaskStep(tx *db.Session, task models.Task, jobId models.Id, stepBody models.PipelineStep, index int) *models.TaskStep {
+func newTaskStep(tx *db.Session, task models.Task, stepBody models.PipelineStep, index int) *models.TaskStep {
 	s := models.TaskStep{
 		PipelineStep: stepBody,
 		OrgId:        task.OrgId,
 		ProjectId:    task.ProjectId,
 		EnvId:        task.EnvId,
 		TaskId:       task.Id,
-		JobId:        jobId,
 		Index:        index,
 		Status:       models.TaskStepPending,
 		Message:      "",
@@ -141,17 +140,21 @@ func newTaskStep(tx *db.Session, task models.Task, jobId models.Id, stepBody mod
 		RetryNumber:  task.RetryNumber,
 	}
 
+	// apply 和 destroy 步骤需要审批
+	if s.Type == common.TaskStepTfApply || s.Type == common.TaskStepTfDestroy {
+		s.MustApproval = true
+	}
+
 	s.Id = models.NewId("step")
 	s.LogPath = s.GenLogPath()
 	return &s
 }
 
-func newScanTaskStep(tx *db.Session, task models.ScanTask, jobId models.Id, stepBody models.PipelineStep, index int) *models.TaskStep {
+func newScanTaskStep(tx *db.Session, task models.ScanTask, stepBody models.PipelineStep, index int) *models.TaskStep {
 	s := models.TaskStep{
 		PipelineStep: stepBody,
 		OrgId:        task.OrgId,
 		TaskId:       task.Id,
-		JobId:        "",
 		Index:        index,
 		Status:       models.TaskStepPending,
 		Message:      "",

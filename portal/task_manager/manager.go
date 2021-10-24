@@ -410,17 +410,15 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 			return
 		}
 
-		req := *runTaskReq
-		taskJob, err := services.GetTaskJob(m.db, step.JobId)
+		// 重新读取 task，获取最新的 containerId
+		task, err = services.GetTaskById(m.db, task.Id)
 		if err != nil {
-			taskStartFailed(errors.Wrap(err, "get task job"))
+			taskStartFailed(errors.Wrapf(err, "get task %s", task.Id.String()))
 			return
 		}
-		req.JobId = string(taskJob.Id)
-		req.DockerImage = taskJob.Image
-		req.ContainerId = taskJob.ContainerId
+		runTaskReq.ContainerId = task.ContainerId
 
-		runErr := m.runTaskStep(ctx, req, task, step)
+		runErr := m.runTaskStep(ctx, *runTaskReq, task, step)
 		if err := m.processStepDone(task, step); err != nil {
 			logger.Infof("process step done: %v", err)
 			break
@@ -734,8 +732,8 @@ loop:
 					return err
 				}
 			} else if taskReq.ContainerId == "" {
-				if err := services.UpdateTaskJobContainerId(m.db, models.Id(taskReq.JobId), cid); err != nil {
-					panic(errors.Wrapf(err, "update job(%s) container id", taskReq.JobId))
+				if err := services.UpdateTaskContainerId(m.db, models.Id(taskReq.TaskId), cid); err != nil {
+					panic(errors.Wrapf(err, "update task %s container id", taskReq.TaskId))
 				}
 			}
 		case models.TaskStepRunning:
@@ -838,12 +836,13 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		Env:             runnerEnv,
 		RunnerId:        task.RunnerId,
 		TaskId:          string(task.Id),
-		DockerImage:     "",
+		DockerImage:     task.Flow.Image,
 		StateStore:      stateStore,
 		RepoAddress:     task.RepoAddr,
 		RepoRevision:    task.CommitId,
 		Timeout:         task.StepTimeout,
 		StopOnViolation: task.StopOnViolation,
+		ContainerId:     task.ContainerId,
 	}
 	if scanStep, err := services.GetTaskScanStep(dbSess, task.Id); err == nil && scanStep != nil {
 		policies, err := services.GetTaskPolicies(dbSess, task.Id)
@@ -926,7 +925,7 @@ func (m *TaskManager) processAutoDestroy() error {
 					Type: models.TaskTypeDestroy,
 					// FIXME: 销毁任务应该从云模板代码库中读取 pipeline 文件
 					// 或者读取环境 lastResTaskId 的 pipeline?
-					Pipeline:    models.Pipeline{},
+					Pipeline:    "",
 					StepTimeout: 0,
 					RunnerId:    "",
 				},
@@ -1028,6 +1027,13 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 			break
 		}
 
+		// 重新读取 task，获取最新的 containerId
+		task, err = services.GetScanTaskById(m.db, task.Id)
+		if err != nil {
+			taskStartFailed(errors.Wrapf(err, "get task %s", task.Id.String()))
+			return
+		}
+
 		runTaskReq, err := buildScanTaskReq(m.db, task, step)
 		if err != nil {
 			taskStartFailed(err)
@@ -1111,21 +1117,15 @@ func (m *TaskManager) processScanTaskDone(task *models.ScanTask) {
 
 // buildScanTaskReq 构建扫描任务 RunTaskReq 对象
 func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.TaskStep) (taskReq *runner.RunTaskReq, err error) {
-	taskJob, err := services.GetTaskJob(dbSess, step.JobId)
-	if err != nil {
-		return nil, err
-	}
-
 	taskReq = &runner.RunTaskReq{
 		RunnerId:        task.RunnerId,
 		TaskId:          string(task.Id),
-		JobId:           string(step.JobId),
 		Timeout:         task.StepTimeout,
 		RepoAddress:     task.RepoAddr,
 		RepoRevision:    task.CommitId,
 		StopOnViolation: true,
-		DockerImage:     taskJob.Image,
-		ContainerId:     taskJob.ContainerId,
+		DockerImage:     task.Flow.Image,
+		ContainerId:     task.ContainerId,
 		//Repos: []runner.Repository{
 		//	{
 		//		RepoAddress:  task.RepoAddr,
@@ -1186,8 +1186,8 @@ loop:
 				changeStepStatus(models.TaskStepFailed, err.Error())
 				return err
 			} else if taskReq.ContainerId == "" {
-				if err := services.UpdateTaskJobContainerId(m.db, models.Id(taskReq.JobId), cid); err != nil {
-					panic(errors.Wrapf(err, "update job(%s) container id", taskReq.JobId))
+				if err := services.UpdateTaskContainerId(m.db, models.Id(taskReq.TaskId), cid); err != nil {
+					panic(errors.Wrapf(err, "update job %s container id", taskReq.TaskId))
 				}
 			}
 		case models.TaskStepRunning:

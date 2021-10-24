@@ -5,6 +5,8 @@ package runner
 import (
 	"context"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -14,6 +16,7 @@ import (
 
 	"cloudiac/common"
 	"cloudiac/configs"
+	"cloudiac/portal/consts"
 	"cloudiac/utils"
 )
 
@@ -146,8 +149,16 @@ func (exec *Executor) Start() (string, error) {
 func (Executor) RunCommand(cid string, command []string) (execId string, err error) {
 	cli, err := dockerClient()
 	if err != nil {
-		logger.Warn(err)
 		return "", err
+	}
+
+	if ok, err := (Executor{}).IsPaused(cid); err != nil {
+		return "", err
+	} else if ok {
+		err = cli.ContainerUnpause(context.Background(), cid)
+		if err != nil {
+			return "", errors.Wrapf(err, "start container %s", cid)
+		}
 	}
 
 	resp, err := cli.ContainerExecCreate(context.Background(), cid, types.ExecConfig{
@@ -156,14 +167,12 @@ func (Executor) RunCommand(cid string, command []string) (execId string, err err
 	})
 	if err != nil {
 		err = errors.Wrap(err, "container exec create")
-		logger.Warn(err)
 		return "", err
 	}
 
 	err = cli.ContainerExecStart(context.Background(), resp.ID, types.ExecStartCheck{})
 	if err != nil {
 		err = errors.Wrap(err, "container exec start")
-		logger.Warn(err)
 		return "", err
 	}
 
@@ -196,5 +205,37 @@ func (Executor) WaitCommand(ctx context.Context, execId string) (execInfo types.
 		if !inspect.Running {
 			return execInfo, nil
 		}
+		time.Sleep(consts.DbTaskPollInterval)
 	}
+}
+
+func (Executor) IsPaused(cid string) (bool, error) {
+	cli, err := dockerClient()
+	if err != nil {
+		return false, err
+	}
+
+	inspect, err := cli.ContainerInspect(context.Background(), cid)
+	if err != nil {
+		return false, errors.Wrapf(err, "%s, container inspect", cid)
+	}
+
+	return inspect.State.Paused, nil
+}
+
+func (Executor) Pause(cid string) (err error) {
+	cli, err := dockerClient()
+	if err != nil {
+		return err
+	}
+
+	if err := cli.ContainerPause(context.Background(), cid); err != nil {
+		if strings.Contains(err.Error(), "is not running") {
+			return nil
+		}
+		err = errors.Wrap(err, "container pause")
+		return err
+	}
+
+	return nil
 }
