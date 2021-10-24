@@ -167,22 +167,6 @@ func (Executor) RunCommand(cid string, command []string) (execId string, err err
 		return "", err
 	}
 
-	// cli.ContainerExecCreate()
-	// resp, err := cli.ContainerAttach(context.Background(), cid, types.ContainerAttachOptions{
-	// 	Stream: true,
-	// 	Stdin:  true,
-	// 	Stdout: true,
-	// 	Stderr: true,
-	// })
-	// if err != nil {
-	// 	return errors.Wrap(err, "container attach")
-	// }
-	// defer resp.Close()
-
-	// logger.Debug("send command: %s", command)
-	// if _, err := resp.Conn.Write(append([]byte(command), '\n')); err != nil {
-	// 	return errors.Wrap(err, "send command")
-	// }
 	return resp.ID, nil
 }
 
