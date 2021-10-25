@@ -87,7 +87,7 @@ func Auth(c *ctx.GinRequest) {
 			c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("org disabled")), http.StatusForbidden)
 			return
 		}
-		if c.Service().IsSuperAdmin || c.Service().UserId.String() == consts.SysUserId ||
+		if c.Service().IsSuperAdmin ||
 			services.UserHasOrgRole(c.Service().UserId, c.Service().OrgId, "") {
 		} else {
 			c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("not allow to access org")), http.StatusForbidden)
@@ -108,7 +108,7 @@ func Auth(c *ctx.GinRequest) {
 			c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("project disabled")), http.StatusForbidden)
 			return
 		}
-		if c.Service().IsSuperAdmin ||  c.Service().UserId.String() == consts.SysUserId ||
+		if c.Service().IsSuperAdmin ||
 			services.UserHasOrgRole(c.Service().UserId, c.Service().OrgId, consts.OrgRoleAdmin) ||
 			services.UserHasProjectRole(c.Service().UserId, c.Service().OrgId, c.Service().ProjectId, "") {
 			c.Next()
