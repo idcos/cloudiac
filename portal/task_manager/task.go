@@ -214,7 +214,7 @@ func pullTaskStepStatus(ctx context.Context, task models.Tasker, step *models.Ta
 				if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 					logger.Tracef("read message error: %v", err)
 				} else {
-					logger.Errorf("read message error: %v", err)
+					logger.Warnf("read message error: %v", err)
 					if checkDone() {
 						return
 					}

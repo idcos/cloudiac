@@ -141,7 +141,7 @@ func newTaskStep(tx *db.Session, task models.Task, stepBody models.PipelineStep,
 	}
 
 	// apply 和 destroy 步骤需要审批
-	if s.Type == common.TaskStepTfApply || s.Type == common.TaskStepTfDestroy {
+	if !task.AutoApprove && (s.Type == common.TaskStepTfApply || s.Type == common.TaskStepTfDestroy) {
 		s.MustApproval = true
 	}
 
@@ -167,7 +167,7 @@ func newScanTaskStep(tx *db.Session, task models.ScanTask, stepBody models.Pipel
 
 func GetTaskScanStep(query *db.Session, taskId models.Id) (*models.TaskStep, e.Error) {
 	taskStep := models.TaskStep{}
-	err := query.Where("task_id = ? AND `type` = ?", taskId, common.TaskStepTfScan).First(&taskStep)
+	err := query.Where("task_id = ? AND `type` = ?", taskId, common.TaskStepOpaScan).First(&taskStep)
 	if err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.TaskStepNotExists)

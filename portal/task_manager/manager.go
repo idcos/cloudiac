@@ -340,11 +340,11 @@ func (m *TaskManager) runTask(ctx context.Context, task models.Tasker) error {
 		case *models.Task:
 			if startErr := m.doRunTask(ctx, t); startErr == nil {
 				// 任务启动成功，执行任务结束后的处理函数
-				m.processTaskDone(t)
+				m.processTaskDone(t.Id)
 			}
 		case *models.ScanTask:
 			if startErr := m.doRunScanTask(ctx, t); startErr == nil {
-				m.processScanTaskDone(t)
+				m.processScanTaskDone(t.Id)
 			}
 		}
 	}()
@@ -410,13 +410,15 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 			return
 		}
 
-		// 重新读取 task，获取最新的 containerId
-		task, err = services.GetTaskById(m.db, task.Id)
-		if err != nil {
-			taskStartFailed(errors.Wrapf(err, "get task %s", task.Id.String()))
-			return
+		{
+			// 获取 task 最新的 containerId
+			tTask, err := services.GetTaskById(m.db, task.Id)
+			if err != nil {
+				taskStartFailed(errors.Wrapf(err, "get task %s", task.Id.String()))
+				return
+			}
+			runTaskReq.ContainerId = tTask.ContainerId
 		}
-		runTaskReq.ContainerId = task.ContainerId
 
 		runErr := m.runTaskStep(ctx, *runTaskReq, task, step)
 		if err := m.processStepDone(task, step); err != nil {
@@ -425,7 +427,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		}
 
 		if runErr != nil {
-			if step.Type == common.TaskStepTfScan && !task.StopOnViolation {
+			if step.Type == common.TaskStepOpaScan && !task.StopOnViolation {
 				// 合规任务失败不影响环境部署流程
 				logger.Warnf("run scan task step: %v", runErr)
 				continue
@@ -500,7 +502,7 @@ func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) 
 	}
 
 	switch step.Type {
-	case common.TaskStepTfScan:
+	case common.TaskStepOpaScan:
 		return processScanResult()
 	}
 	return nil
@@ -517,11 +519,18 @@ func readIfExist(path string) ([]byte, error) {
 	return content, nil
 }
 
-func (m *TaskManager) processTaskDone(task *models.Task) {
-	logger := m.logger.WithField("func", "processTaskDone").WithField("taskId", task.Id)
+func (m *TaskManager) processTaskDone(taskId models.Id) {
+	logger := m.logger.WithField("func", "processTaskDone").WithField("taskId", taskId)
 	logger.Debugln("start process task done")
 
 	dbSess := m.db
+
+	// 重新查询获取 task，确保使用的是最新的 task 数据
+	task, err := services.GetTaskById(dbSess, taskId)
+	if err != nil {
+		logger.Errorf("get task %d: %v", err)
+		return
+	}
 
 	// 分析环境资源、outputs
 	processState := func() error {
@@ -618,6 +627,8 @@ func (m *TaskManager) processTaskDone(task *models.Task) {
 		return
 	}
 
+	logger.Debugf("last step %#v", lastStep)
+
 	// 基于最后一个步骤更新任务状态
 	updateTaskStatus := func() error {
 		if err = services.ChangeTaskStatusWithStep(dbSess, task, lastStep); err != nil {
@@ -669,6 +680,15 @@ func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq
 		}
 	}()
 
+	if step.NextStep != "" {
+		if nextStep, err := services.GetTaskStepByStepId(m.db, step.NextStep); err != nil {
+			err = errors.Wrapf(err, "get task step %s", string(step.NextStep))
+			return err
+		} else if nextStep.MustApproval {
+			taskReq.PauseTask = true
+		}
+	}
+
 	changeStepStatusAndStepRetryTimes := func(status, message string, step *models.TaskStep) {
 		var er error
 		if er = services.ChangeTaskStepStatusAndUpdate(m.db, task, step, status, message); er != nil {
@@ -678,7 +698,7 @@ func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq
 		}
 	}
 
-	if !task.AutoApprove && !step.IsApproved() {
+	if step.MustApproval && !step.IsApproved() {
 		logger.Infof("waitting task step approve")
 		changeStepStatusAndStepRetryTimes(models.TaskStepApproving, "", step)
 		var newStep *models.TaskStep
@@ -717,7 +737,7 @@ loop:
 			// 先将步骤置为 running 状态，然后再发起调用，保证步骤不会重复执行
 			changeStepStatusAndStepRetryTimes(models.TaskStepRunning, "", step)
 			if cid, retryAble, err := StartTaskStep(taskReq, *step); err != nil {
-				logger.Infof("start task step %d(%s)", step.Index, step.Type)
+				logger.Warnf("start task step %d-%s: %v", step.Index, step.Type, err)
 				// 如果是可重试错误，并且任务设定可以重试, 则运行重试逻辑
 				if retryAble && task.RetryAble {
 					if step.RetryNumber > 0 && step.CurrentRetryCount < step.RetryNumber {
@@ -744,7 +764,7 @@ loop:
 				return err
 			}
 			// 合规检测步骤不通过，不需要重试，跳出循环
-			if step.Type == models.TaskStepTfScan &&
+			if step.Type == models.TaskStepOpaScan &&
 				stepResult.Result.ExitCode == common.TaskStepPolicyViolationExitCode {
 				message := "Scan task step finished with violations found."
 				changeStepStatusAndStepRetryTimes(models.TaskStepFailed, message, step)
@@ -1050,10 +1070,18 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 	return nil
 }
 
-func (m *TaskManager) processScanTaskDone(task *models.ScanTask) {
-	logger := m.logger.WithField("func", "processScanTaskDone").WithField("taskId", task.Id)
+func (m *TaskManager) processScanTaskDone(taskId models.Id) {
+	logger := m.logger.WithField("func", "processScanTaskDone").WithField("taskId", taskId)
 
 	dbSess := m.db
+
+	// 重新查询获取 task，确保使用的是最新的 task 数据
+	task, err := services.GetScanTaskById(dbSess, taskId)
+	if err != nil {
+		logger.Errorf("get task %d: %v", err)
+		return
+	}
+
 	read := func(path string) ([]byte, error) {
 		content, err := logstorage.Get().Read(path)
 		if err != nil {
@@ -1134,7 +1162,7 @@ func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.Ta
 		//},
 	}
 
-	if step.Type == models.TaskStepTfScan {
+	if step.Type == models.TaskStepOpaScan {
 		taskReq.Policies, err = services.GetTaskPolicies(dbSess, task.Id)
 		if err != nil {
 			return nil, errors.Wrapf(err, "get scan task '%s' policies error: %v", task.Id, err)
@@ -1157,6 +1185,15 @@ func (m *TaskManager) runScanTaskStep(ctx context.Context, taskReq runner.RunTas
 			logger.Debugf("%s", debug.Stack())
 		}
 	}()
+
+	if step.NextStep != "" {
+		if nextStep, err := services.GetTaskStepByStepId(m.db, step.NextStep); err != nil {
+			err = errors.Wrapf(err, "get task step %s", string(step.NextStep))
+			return err
+		} else if nextStep.MustApproval {
+			taskReq.PauseTask = true
+		}
+	}
 
 	changeStepStatus := func(status, message string) {
 		var er error

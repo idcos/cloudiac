@@ -16,7 +16,6 @@ import (
 
 	"cloudiac/common"
 	"cloudiac/configs"
-	"cloudiac/portal/consts"
 	"cloudiac/utils"
 )
 
@@ -152,15 +151,6 @@ func (Executor) RunCommand(cid string, command []string) (execId string, err err
 		return "", err
 	}
 
-	if ok, err := (Executor{}).IsPaused(cid); err != nil {
-		return "", err
-	} else if ok {
-		err = cli.ContainerUnpause(context.Background(), cid)
-		if err != nil {
-			return "", errors.Wrapf(err, "start container %s", cid)
-		}
-	}
-
 	resp, err := cli.ContainerExecCreate(context.Background(), cid, types.ExecConfig{
 		Detach: false,
 		Cmd:    command,
@@ -205,7 +195,7 @@ func (Executor) WaitCommand(ctx context.Context, execId string) (execInfo types.
 		if !inspect.Running {
 			return execInfo, nil
 		}
-		time.Sleep(consts.DbTaskPollInterval)
+		time.Sleep(time.Second)
 	}
 }
 
@@ -230,12 +220,26 @@ func (Executor) Pause(cid string) (err error) {
 	}
 
 	if err := cli.ContainerPause(context.Background(), cid); err != nil {
-		if strings.Contains(err.Error(), "is not running") {
+		if strings.Contains(err.Error(), "is not running") ||
+			strings.Contains(err.Error(), "is already paused") {
 			return nil
 		}
-		err = errors.Wrap(err, "container pause")
+		err = errors.Wrapf(err, "pause container %s", cid)
 		return err
 	}
 
+	return nil
+}
+
+func (Executor) Unpause(cid string) (err error) {
+	cli, err := dockerClient()
+	if err != nil {
+		return err
+	}
+
+	if err := cli.ContainerUnpause(context.Background(), cid); err != nil {
+		err = errors.Wrapf(err, "unpause container %s", cid)
+		return err
+	}
 	return nil
 }

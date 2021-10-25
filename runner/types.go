@@ -50,6 +50,7 @@ type RunTaskReq struct {
 	Repos []Repository `json:"repos"` // 待扫描仓库列表
 
 	ContainerId string `json:"containerId"`
+	PauseTask   bool   `json:"pauseTask"` // 本次执行结束后暂停任务
 }
 
 type Repository struct {

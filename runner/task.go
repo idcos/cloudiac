@@ -137,29 +137,47 @@ func (t *Task) runStep() (err error) {
 	logPath := filepath.Join(t.stepDirName(t.req.Step), TaskLogName)
 	command := fmt.Sprintf("%s >>%s 2>&1", containerScriptPath, logPath)
 
+	if ok, err := (Executor{}).IsPaused(t.req.ContainerId); err != nil {
+		return err
+	} else if ok {
+		logger.Debugf("container %s is paused", t.req.ContainerId)
+
+		logger.Debugf("unpause container")
+		if err := (Executor{}).Unpause(t.req.ContainerId); err != nil {
+			return err
+		}
+		logger.Debugf("unpause container done")
+	}
+
 	execId, err := (&Executor{}).RunCommand(t.req.ContainerId, t.generateCommand(command))
 	if err != nil {
 		return err
 	}
 
-	defer func() {
-		_, err := (Executor{}).WaitCommand(context.Background(), execId)
-		if err != nil {
-			logger.Debugf("container %s: %v", t.req.ContainerId, err)
-			return
-		}
+	// 后台协程监控到命令结束就会暂停容器，
+	// 同时 task.Wait() 函数也会在任务结束后暂停容器，两边同时处理保证容器被暂停
+	if t.req.PauseTask {
+		go func() {
+			_, err := (Executor{}).WaitCommand(context.Background(), execId)
+			if err != nil {
+				logger.Debugf("container %s: %v", t.req.ContainerId, err)
+				return
+			}
 
-		if err := (&Executor{}).Pause(t.req.ContainerId); err != nil {
-			logger.Debugf("container %s: %v", t.req.ContainerId, err)
-		}
-	}()
+			logger.Debugf("pause container %s", t.req.ContainerId)
+			if err := (&Executor{}).Pause(t.req.ContainerId); err != nil {
+				logger.Debugf("container %s: %v", t.req.ContainerId, err)
+			}
+		}()
+	}
 
 	infoJson := utils.MustJSON(StartedTask{
-		EnvId:       t.req.Env.Id,
-		TaskId:      t.req.TaskId,
-		Step:        t.req.Step,
-		ContainerId: t.req.ContainerId,
-		ExecId:      execId,
+		EnvId:         t.req.Env.Id,
+		TaskId:        t.req.TaskId,
+		Step:          t.req.Step,
+		ContainerId:   t.req.ContainerId,
+		PauseOnFinish: t.req.PauseTask,
+		ExecId:        execId,
 	})
 
 	stepInfoFile := filepath.Join(
@@ -334,9 +352,9 @@ func (t *Task) genStepScript() (string, error) {
 		command, err = t.collectCommand()
 	case common.TaskStepScanInit:
 		command, err = t.stepScanInit()
-	case common.TaskStepTfParse:
+	case common.TaskStepRegoParse:
 		command, err = t.stepTfParse()
-	case common.TaskStepTfScan:
+	case common.TaskStepOpaScan:
 		command, err = t.stepTfScan()
 	default:
 		return "", fmt.Errorf("unknown step type '%s'", t.req.StepType)
@@ -405,7 +423,6 @@ func (t *Task) stepInit() (command string, err error) {
 
 var planCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
-tfenv use $TFENV_TERRAFORM_VERSION && \
 terraform plan -input=false -out=_cloudiac.tfplan \
 {{if .TfVars}}-var-file={{.TfVars}}{{end}} \
 {{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }}&& \
@@ -423,7 +440,6 @@ func (t *Task) stepPlan() (command string, err error) {
 // 当指定了 plan 文件时不需要也不能传 -var-file 参数
 var applyCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
-tfenv use $TFENV_TERRAFORM_VERSION && \
 terraform apply -input=false -auto-approve \
 {{ range $arg := .Req.StepArgs}}{{$arg}} {{ end }}_cloudiac.tfplan
 `))

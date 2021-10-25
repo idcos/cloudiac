@@ -135,7 +135,7 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 			logger.WithField("step", fmt.Sprintf("%d(%s)", i, pipelineStep.Type)).
 				Infof("not have playbook, skip this step")
 			continue
-		} else if pipelineStep.Type == models.TaskStepTfScan {
+		} else if pipelineStep.Type == models.TaskStepOpaScan {
 			// 如果环境扫描未启用，则跳过扫描步骤
 			if enabled, _ := IsEnvEnabledScan(tx, task.EnvId); !enabled {
 				continue
@@ -150,7 +150,7 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 			}
 		}
 
-		if pipelineStep.Type == models.TaskStepTfScan {
+		if pipelineStep.Type == models.TaskStepOpaScan {
 			// 对于包含扫描的任务，创建一个对应的 scanTask 作为扫描任务记录，便于后期扫描状态的查询
 			scanTask := CreateMirrorScanTask(&task)
 			if _, err := tx.Save(scanTask); err != nil {
@@ -749,7 +749,7 @@ func fetchRunnerTaskStepLog(ctx context.Context, runnerId string, step *models.T
 				logger.Tracef("read message error: %v", err)
 				return nil
 			} else {
-				logger.Errorf("read message error: %v", err)
+				logger.Warnf("read message error: %v", err)
 				return err
 			}
 		} else {
@@ -834,7 +834,7 @@ func ChangeScanTaskStatusWithStep(dbSess *db.Session, task *models.ScanTask, ste
 	case common.TaskComplete:
 		task.PolicyStatus = common.PolicyStatusPassed
 	case common.TaskFailed:
-		if step.Type == common.TaskStepTfScan && exitCode == common.TaskStepPolicyViolationExitCode {
+		if step.Type == common.TaskStepOpaScan && exitCode == common.TaskStepPolicyViolationExitCode {
 			task.PolicyStatus = common.PolicyStatusViolated
 		} else {
 			task.PolicyStatus = common.PolicyStatusFailed

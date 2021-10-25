@@ -25,6 +25,8 @@ type StartedTask struct {
 	ContainerId string `json:"containerId"`
 	ExecId      string `json:"execId"`
 
+	PauseOnFinish bool `json:"pauseOnFinish"` // 该步骤结束时暂停容器
+
 	containerInfoLock sync.RWMutex `json:"-"`
 }
 
@@ -125,7 +127,7 @@ func (task *StartedTask) readContainerInfo() (info types.ContainerExecInspect, e
 }
 
 // Wait 等待任务结束返回退出码，若超时返回 error=context.DeadlineExceeded
-// 如果等待到任务结束则会将容器状态信息写入到文件，然后删除容器
+// 如果等待到任务结束则会将容器状态信息写入到文件，并判断是否需要暂停容器
 func (task *StartedTask) Wait(ctx context.Context) (int64, error) {
 	logger := logger.WithField("taskId", task.TaskId).
 		WithField("containerId", utils.ShortContainerId(task.ContainerId))
@@ -153,6 +155,14 @@ func (task *StartedTask) Wait(ctx context.Context) (int64, error) {
 			logger.Warnf("get task status error: %v", err)
 		} else if err := task.writeContainerInfo(&info); err != nil {
 			logger.Warnf("write container info error: %v", err)
+		}
+
+		// 暂停容器
+		if task.PauseOnFinish {
+			logger.Debugf("pause container %s", info.ContainerID)
+			if err := (Executor{}).Pause(info.ContainerID); err != nil {
+				logger.Warn(err)
+			}
 		}
 	}
 

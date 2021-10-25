@@ -112,7 +112,7 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, closedCh <-c
 		}
 
 		if err := wsConn.WriteJSON(msg); err != nil {
-			logger.Errorf("write message error: %v", err)
+			logger.Warnf("write message error: %v", err)
 			return err
 		}
 		return nil

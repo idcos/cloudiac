@@ -75,6 +75,9 @@ plan:
     - type: terraformInit
       name: Terraform Init
 
+    - type: opaScan
+      name: OPA Scan
+
     - type: terraformPlan
       name: Terraform Plan
 
@@ -85,6 +88,9 @@ apply:
       
     - type: terraformInit
       name: Terraform Init
+
+    - type: opaScan
+      name: OPA Scan
 
     - type: terraformPlan
       name: Terraform Plan
@@ -111,15 +117,17 @@ destroy:
     - type: terraformDestroy
       name: Terraform Destroy
 
+
+# scan 和 parse 暂不开发自定义工作流
 scan:
   steps:
     - type: scaninit
-    - type: tfscan
+    - type: opaScan
 
 parse:
   steps:
     - type: scaninit
-    - type: tfparse
+    - type: regoParse 
 `
 
 const defaultPipelineVersion = "0.3"

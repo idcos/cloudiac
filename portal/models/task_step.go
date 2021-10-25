@@ -10,16 +10,16 @@ import (
 )
 
 const (
-	TaskStepInit     = common.TaskStepTfInit
-	TaskStepPlan     = common.TaskStepTfPlan
-	TaskStepApply    = common.TaskStepTfApply
-	TaskStepDestroy  = common.TaskStepTfDestroy
-	TaskStepPlay     = common.TaskStepAnsiblePlay
-	TaskStepCommand  = common.TaskStepCommand
-	TaskStepCollect  = common.TaskStepCollect
-	TaskStepTfParse  = common.TaskStepTfParse
-	TaskStepTfScan   = common.TaskStepTfScan
-	TaskStepScanInit = common.TaskStepScanInit
+	TaskStepInit      = common.TaskStepTfInit
+	TaskStepPlan      = common.TaskStepTfPlan
+	TaskStepApply     = common.TaskStepTfApply
+	TaskStepDestroy   = common.TaskStepTfDestroy
+	TaskStepPlay      = common.TaskStepAnsiblePlay
+	TaskStepCommand   = common.TaskStepCommand
+	TaskStepCollect   = common.TaskStepCollect
+	TaskStepRegoParse = common.TaskStepRegoParse
+	TaskStepOpaScan   = common.TaskStepOpaScan
+	TaskStepScanInit  = common.TaskStepScanInit
 
 	TaskStepPending   = common.TaskStepPending
 	TaskStepApproving = common.TaskStepApproving
@@ -75,10 +75,10 @@ func (s *TaskStep) IsExited() bool {
 }
 
 func (s *TaskStep) IsApproved() bool {
-	if s.Status == TaskStepRejected {
+	if len(s.ApproverId) == 0 {
 		return false
 	}
-	if s.MustApproval && len(s.ApproverId) == 0 {
+	if s.Status == TaskStepRejected {
 		return false
 	}
 	return true
