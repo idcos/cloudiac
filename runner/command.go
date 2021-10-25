@@ -5,6 +5,8 @@ package runner
 import (
 	"context"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -146,7 +148,6 @@ func (exec *Executor) Start() (string, error) {
 func (Executor) RunCommand(cid string, command []string) (execId string, err error) {
 	cli, err := dockerClient()
 	if err != nil {
-		logger.Warn(err)
 		return "", err
 	}
 
@@ -156,33 +157,15 @@ func (Executor) RunCommand(cid string, command []string) (execId string, err err
 	})
 	if err != nil {
 		err = errors.Wrap(err, "container exec create")
-		logger.Warn(err)
 		return "", err
 	}
 
 	err = cli.ContainerExecStart(context.Background(), resp.ID, types.ExecStartCheck{})
 	if err != nil {
 		err = errors.Wrap(err, "container exec start")
-		logger.Warn(err)
 		return "", err
 	}
 
-	// cli.ContainerExecCreate()
-	// resp, err := cli.ContainerAttach(context.Background(), cid, types.ContainerAttachOptions{
-	// 	Stream: true,
-	// 	Stdin:  true,
-	// 	Stdout: true,
-	// 	Stderr: true,
-	// })
-	// if err != nil {
-	// 	return errors.Wrap(err, "container attach")
-	// }
-	// defer resp.Close()
-
-	// logger.Debug("send command: %s", command)
-	// if _, err := resp.Conn.Write(append([]byte(command), '\n')); err != nil {
-	// 	return errors.Wrap(err, "send command")
-	// }
 	return resp.ID, nil
 }
 
@@ -212,5 +195,51 @@ func (Executor) WaitCommand(ctx context.Context, execId string) (execInfo types.
 		if !inspect.Running {
 			return execInfo, nil
 		}
+		time.Sleep(time.Second)
 	}
+}
+
+func (Executor) IsPaused(cid string) (bool, error) {
+	cli, err := dockerClient()
+	if err != nil {
+		return false, err
+	}
+
+	inspect, err := cli.ContainerInspect(context.Background(), cid)
+	if err != nil {
+		return false, errors.Wrapf(err, "%s, container inspect", cid)
+	}
+
+	return inspect.State.Paused, nil
+}
+
+func (Executor) Pause(cid string) (err error) {
+	cli, err := dockerClient()
+	if err != nil {
+		return err
+	}
+
+	if err := cli.ContainerPause(context.Background(), cid); err != nil {
+		if strings.Contains(err.Error(), "is not running") ||
+			strings.Contains(err.Error(), "is already paused") {
+			return nil
+		}
+		err = errors.Wrapf(err, "pause container %s", cid)
+		return err
+	}
+
+	return nil
+}
+
+func (Executor) Unpause(cid string) (err error) {
+	cli, err := dockerClient()
+	if err != nil {
+		return err
+	}
+
+	if err := cli.ContainerUnpause(context.Background(), cid); err != nil {
+		err = errors.Wrapf(err, "unpause container %s", cid)
+		return err
+	}
+	return nil
 }

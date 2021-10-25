@@ -10,16 +10,16 @@ import (
 )
 
 const (
-	TaskStepInit     = common.TaskStepTfInit
-	TaskStepPlan     = common.TaskStepTfPlan
-	TaskStepApply    = common.TaskStepTfApply
-	TaskStepDestroy  = common.TaskStepTfDestroy
-	TaskStepPlay     = common.TaskStepAnsiblePlay
-	TaskStepCommand  = common.TaskStepCommand
-	TaskStepCollect  = common.TaskStepCollect
-	TaskStepTfParse  = common.TaskStepTfParse
-	TaskStepTfScan   = common.TaskStepTfScan
-	TaskStepScanInit = common.TaskStepScanInit
+	TaskStepInit      = common.TaskStepTfInit
+	TaskStepPlan      = common.TaskStepTfPlan
+	TaskStepApply     = common.TaskStepTfApply
+	TaskStepDestroy   = common.TaskStepTfDestroy
+	TaskStepPlay      = common.TaskStepAnsiblePlay
+	TaskStepCommand   = common.TaskStepCommand
+	TaskStepCollect   = common.TaskStepCollect
+	TaskStepRegoParse = common.TaskStepRegoParse
+	TaskStepOpaScan   = common.TaskStepOpaScan
+	TaskStepScanInit  = common.TaskStepScanInit
 
 	TaskStepPending   = common.TaskStepPending
 	TaskStepApproving = common.TaskStepApproving
@@ -38,7 +38,6 @@ type TaskStep struct {
 	ProjectId Id     `json:"projectId" gorm:"size:32;not null"`
 	EnvId     Id     `json:"envId" gorm:"size:32;not null"`
 	TaskId    Id     `json:"taskId" gorm:"size:32;not null"`
-	JobId     Id     `json:"-" gorm:"size:32;not null"`
 	NextStep  Id     `json:"nextStep" gorm:"size:32;default:''"`
 	Index     int    `json:"index" gorm:"size:32;not null"`
 	Status    string `json:"status" gorm:"type:enum('pending','approving','rejected','running','failed','complete','timeout')"`
@@ -76,10 +75,10 @@ func (s *TaskStep) IsExited() bool {
 }
 
 func (s *TaskStep) IsApproved() bool {
-	if s.Status == TaskStepRejected {
+	if len(s.ApproverId) == 0 {
 		return false
 	}
-	if s.MustApproval && len(s.ApproverId) == 0 {
+	if s.Status == TaskStepRejected {
 		return false
 	}
 	return true
