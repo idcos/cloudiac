@@ -17,42 +17,77 @@ import (
 // Auth 用户认证
 func Auth(c *ctx.GinRequest) {
 	tokenStr := c.GetHeader("Authorization")
-	if tokenStr == "" {
+	apiTokenStr := c.GetHeader("Token")
+	var isHavePermission bool
+	var apiTokenOrgId models.Id
+	if tokenStr == "" && apiTokenStr == "" {
 		c.Logger().Infof("missing token")
 		c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
 		return
 	}
+	isHavePermission = func() bool {
+		if tokenStr == "" {
+			return false
+		} else {
+			token, err := jwt.ParseWithClaims(tokenStr, &services.Claims{}, func(token *jwt.Token) (interface{}, error) {
+				return []byte(configs.Get().JwtSecretKey), nil
+			})
+			if err != nil {
+				//c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
+				return false
+			}
+			if claims, ok := token.Claims.(*services.Claims); ok && token.Valid {
+				c.Service().UserId = claims.UserId
+				c.Service().Username = claims.Username
+				c.Service().IsSuperAdmin = claims.IsAdmin
+				c.Service().UserIpAddr = c.ClientIP()
+			} else {
+				//c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
+				return false
+			}
+			return true
+		}
 
-	token, err := jwt.ParseWithClaims(tokenStr, &services.Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(configs.Get().JwtSecretKey), nil
-	})
-	if err != nil {
-		c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
-		return
-	}
+	}()
 
-	if claims, ok := token.Claims.(*services.Claims); ok && token.Valid {
-		c.Service().UserId = claims.UserId
-		c.Service().Username = claims.Username
-		c.Service().IsSuperAdmin = claims.IsAdmin
+	isHavePermission = func() bool {
+		if isHavePermission == true || apiTokenStr == "" {
+			return true
+		}
+		// 查询api token详情
+		apiToken, err := services.GetApiTokenByToken(c.Service().DB().Debug(), apiTokenStr)
+		if err != nil {
+			return false
+		}
+		c.Service().UserId = consts.SysUserId
+		c.Service().Username = consts.DefaultSysName
+		c.Service().IsSuperAdmin = false
 		c.Service().UserIpAddr = c.ClientIP()
-	} else {
+		apiTokenOrgId = apiToken.OrgId
+		return true
+	}()
+
+	if !isHavePermission {
 		c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
 		return
 	}
-
 	orgId := models.Id(c.GetHeader("IaC-Org-Id"))
 	if orgId != "" {
 		c.Service().OrgId = orgId
+		// 校验api token所属组织是否与传入组织一致
+		if apiTokenStr != "" && !(orgId == apiTokenOrgId) {
+			c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
+			return
+		}
 
-		if org, err := services.GetOrganizationById(c.Service().DB(), orgId); err != nil {
+		if org, err := services.GetOrganizationById(c.Service().DB().Debug(), orgId); err != nil {
 			c.JSONError(e.New(e.OrganizationNotExists, fmt.Errorf("not allow to access org")), http.StatusBadRequest)
 			return
 		} else if org.Status == models.Disable && !c.Service().IsSuperAdmin {
 			c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("org disabled")), http.StatusForbidden)
 			return
 		}
-		if c.Service().IsSuperAdmin ||
+		if c.Service().IsSuperAdmin || c.Service().UserId.String() == consts.SysUserId ||
 			services.UserHasOrgRole(c.Service().UserId, c.Service().OrgId, "") {
 		} else {
 			c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("not allow to access org")), http.StatusForbidden)
@@ -73,7 +108,7 @@ func Auth(c *ctx.GinRequest) {
 			c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("project disabled")), http.StatusForbidden)
 			return
 		}
-		if c.Service().IsSuperAdmin ||
+		if c.Service().IsSuperAdmin ||  c.Service().UserId.String() == consts.SysUserId ||
 			services.UserHasOrgRole(c.Service().UserId, c.Service().OrgId, consts.OrgRoleAdmin) ||
 			services.UserHasProjectRole(c.Service().UserId, c.Service().OrgId, c.Service().ProjectId, "") {
 			c.Next()
