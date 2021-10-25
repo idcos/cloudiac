@@ -12,7 +12,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func GenerateTaskPipeline(sess *db.Session, tplId models.Id, revision, workdir string) (pipeline models.Pipeline, er e.Error) {
+func GetTplPipeline(sess *db.Session, tplId models.Id, revision, workdir string) (pipeline string, er e.Error) {
 	repo, er := GetVcsRepoByTplId(sess, tplId)
 	if er != nil {
 		return pipeline, er
@@ -39,20 +39,60 @@ func GenerateTaskPipeline(sess *db.Session, tplId models.Id, revision, workdir s
 		}
 	}
 
-	if len(content) == 0 { // 没有 pipeline 内容，直接返回当前版本的默认 pipeline
-		return models.DefaultPipeline(), nil
+	if len(content) == 0 {
+		return "", nil
 	}
 
-	buffer := bytes.NewBuffer(content)
-	if err := yaml.NewDecoder(buffer).Decode(&pipeline); err != nil {
-		return pipeline, e.New(e.InvalidPipeline, err)
+	if pipeline, err := DecodePipeline(string(content)); err != nil {
+		return "", e.AutoNew(err, e.InvalidPipeline)
+	} else {
+		// 检查 version 是否合法
+		_, ok := models.GetPipelineByVersion(pipeline.Version)
+		if !ok {
+			return "", e.New(e.InvalidPipelineVersion)
+		}
 	}
 
-	// 检查 version 是否合法
-	_, ok := models.GetPipelineByVersion(pipeline.Version)
-	if !ok {
-		return pipeline, e.New(e.InvalidPipelineVersion)
-	}
+	return string(content), nil
+}
 
-	return pipeline, nil
+// 从 pipeline 中返回指定 typ 的 task，如果 pipeline 中未定义该类型 task 则返回默认 pipeline 中的值
+func GetTaskFlowWithPipeline(p models.Pipeline, typ string) models.PipelineTask {
+	defaultPipeline := models.MustGetPipelineByVersion(p.Version)
+
+	flow := defaultPipeline.GetTask(typ)
+	customFlow := p.GetTask(typ)
+	if customFlow.Image != "" {
+		flow.Image = customFlow.Image
+	}
+	if len(customFlow.Steps) != 0 {
+		flow.Steps = customFlow.Steps
+	}
+	if customFlow.OnFail != nil {
+		flow.OnFail = customFlow.OnFail
+	}
+	if customFlow.OnSuccess != nil {
+		flow.OnSuccess = customFlow.OnSuccess
+	}
+	return flow
+}
+
+func DecodePipeline(s string) (models.Pipeline, error) {
+	p := models.Pipeline{}
+	if s == "" {
+		return p, nil
+	}
+	buffer := bytes.NewBufferString(s)
+	err := yaml.NewDecoder(buffer).Decode(&p)
+	return p, err
+}
+
+func UpdateTaskContainerId(sess *db.Session, taskId models.Id, containerId string) e.Error {
+	task := &models.Task{}
+	task.ContainerId = containerId
+	_, err := models.UpdateModel(sess, task, "id = ?", taskId)
+	if err != nil {
+		return e.AutoNew(err, e.DBError)
+	}
+	return nil
 }

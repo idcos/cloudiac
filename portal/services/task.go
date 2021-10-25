@@ -94,14 +94,6 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 	task.Id = models.NewId("run")
 	logger = logger.WithField("taskId", task.Id)
 
-	if task.Pipeline.Version == "" {
-		var er e.Error
-		task.Pipeline, er = GenerateTaskPipeline(tx, task.TplId, task.Revision, task.Workdir)
-		if er != nil {
-			return nil, er
-		}
-	}
-
 	task.RepoAddr, task.CommitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
 	if err != nil {
 		return nil, e.New(e.InternalError, err)
@@ -122,127 +114,77 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		}
 	}
 
-	pipelineJobs := GetTaskPipelineJobs(task.Pipeline, task.Type)
-	jobs := make([]models.TaskJob, 0)
-	for _, job := range pipelineJobs {
-		taskJob := models.TaskJob{
-			TaskId: task.Id,
-			Type:   job.Type,
-			Image:  job.Image,
+	// pipeline 内容可以从外部传入，如果没有传则尝试读取云模板目录下的文件
+	if task.Pipeline == "" {
+		task.Pipeline, err = GetTplPipeline(tx, tpl.Id, task.Revision, task.Workdir)
+		if err != nil {
+			return nil, e.AutoNew(err, e.InvalidPipeline)
 		}
-		taskJob.Id = models.NewId("job-")
-		jobs = append(jobs, taskJob)
 	}
 
+	pipeline, err := DecodePipeline(task.Pipeline)
+	if err != nil {
+		return nil, e.New(e.InvalidPipeline, err)
+	}
+
+	task.Flow = GetTaskFlowWithPipeline(pipeline, task.Type)
 	steps := make([]models.TaskStep, 0)
 	stepIndex := 0
-	for i := range pipelineJobs {
-		taskJob := jobs[i]
-		pipelineJob := pipelineJobs[i]
-		for j := range pipelineJob.Steps {
-			jobStep := pipelineJob.Steps[j]
-
-			if jobStep.Type == models.TaskStepPlay && task.Playbook == "" {
-				logger.WithField("step", fmt.Sprintf("%d(%s)", i, jobStep.Type)).
-					Infof("not have playbook, skip this step")
+	for i, pipelineStep := range task.Flow.Steps {
+		if pipelineStep.Type == models.TaskStepPlay && task.Playbook == "" {
+			logger.WithField("step", fmt.Sprintf("%d(%s)", i, pipelineStep.Type)).
+				Infof("not have playbook, skip this step")
+			continue
+		} else if pipelineStep.Type == models.TaskStepOpaScan {
+			// 如果环境扫描未启用，则跳过扫描步骤
+			if enabled, _ := IsEnvEnabledScan(tx, task.EnvId); !enabled {
 				continue
-			} else if jobStep.Type == models.TaskStepTfScan {
-				// 如果环境扫描未启用，则跳过扫描步骤
-				if enabled, _ := IsEnvEnabledScan(tx, task.EnvId); !enabled {
-					continue
-				}
 			}
-
-			if len(task.Targets) != 0 && IsTerraformStep(jobStep.Type) {
-				if jobStep.Type != models.TaskStepInit {
-					for _, t := range task.Targets {
-						jobStep.Args = append(jobStep.Args, fmt.Sprintf("-target=%s", t))
-					}
-				}
-			}
-
-			if jobStep.Type == models.TaskStepTfScan {
-				// 对于包含扫描的任务，创建一个对应的 scanTask 作为扫描任务记录，便于后期扫描状态的查询
-				scanTask := CreateMirrorScanTask(&task)
-				if _, err := tx.Save(scanTask); err != nil {
-					return nil, e.New(e.DBError, err)
-				}
-				env.LastScanTaskId = scanTask.Id
-				if _, err := tx.Save(env); err != nil {
-					return nil, e.New(e.DBError, errors.Wrapf(err, "update env scan task id"))
-				}
-			}
-
-			taskStep := newTaskStep(tx, task, taskJob.Id, jobStep, stepIndex)
-			// apply 和 destroy job 的第一个 step 需要审批
-			if (pipelineJob.Type == common.TaskJobApply || pipelineJob.Type == common.TaskJobDestroy) && j == 0 {
-				taskStep.MustApproval = true
-			}
-
-			steps = append(steps, *taskStep)
-			stepIndex += 1
 		}
+
+		if len(task.Targets) != 0 && IsTerraformStep(pipelineStep.Type) {
+			if pipelineStep.Type != models.TaskStepInit {
+				for _, t := range task.Targets {
+					pipelineStep.Args = append(pipelineStep.Args, fmt.Sprintf("-target=%s", t))
+				}
+			}
+		}
+
+		if pipelineStep.Type == models.TaskStepOpaScan {
+			// 对于包含扫描的任务，创建一个对应的 scanTask 作为扫描任务记录，便于后期扫描状态的查询
+			scanTask := CreateMirrorScanTask(&task)
+			if _, err := tx.Save(scanTask); err != nil {
+				return nil, e.New(e.DBError, err)
+			}
+			env.LastScanTaskId = scanTask.Id
+			if _, err := tx.Save(env); err != nil {
+				return nil, e.New(e.DBError, errors.Wrapf(err, "update env scan task id"))
+			}
+		}
+
+		taskStep := newTaskStep(tx, task, pipelineStep, stepIndex)
+
+		steps = append(steps, *taskStep)
+		stepIndex += 1
 	}
+
 	if len(steps) == 0 {
 		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps"))
 	}
 
-	if _, err = tx.Save(&task); err != nil {
+	if err = tx.Insert(&task); err != nil {
 		return nil, e.New(e.DBError, errors.Wrapf(err, "save task"))
-	}
-
-	for i := range jobs {
-		if _, err := tx.Save(&jobs[i]); err != nil {
-			return nil, e.New(e.DBError, errors.Wrapf(err, "save task job"))
-		}
 	}
 
 	for i := range steps {
 		if i+1 < len(steps) {
 			steps[i].NextStep = steps[i+1].Id
 		}
-		if _, err = tx.Save(&steps[i]); err != nil {
+		if err = tx.Insert(&steps[i]); err != nil {
 			return nil, e.New(e.DBError, errors.Wrapf(err, "save task step"))
 		}
 	}
 	return &task, nil
-}
-
-func GetTaskPipelineJobs(pipeline models.Pipeline, taskType string) (jobs []models.PipelineJobWithType) {
-	defaultPipeline := models.MustGetPipelineByVersion(pipeline.Version)
-
-	getJob := func(job models.PipelineJob, jobType string) models.PipelineJobWithType {
-		if len(job.Steps) == 0 {
-			// 如果 pipeline 文件中未定义 job 步骤则使用默认模板中的步骤
-			defaultJob := defaultPipeline.GetJob(jobType)
-			job.Steps = defaultJob.Steps
-		}
-		return models.PipelineJobWithType{
-			PipelineJob: job,
-			Type:        jobType,
-		}
-	}
-
-	switch taskType {
-	case common.TaskTypePlan:
-		jobs = append(jobs,
-			getJob(pipeline.Plan, common.TaskJobPlan))
-	case common.TaskTypeApply:
-		jobs = append(jobs,
-			getJob(pipeline.Plan, common.TaskJobPlan),
-			getJob(pipeline.Apply, common.TaskJobApply))
-	case common.TaskTypeDestroy:
-		jobs = append(jobs,
-			getJob(pipeline.DestroyPlan, common.TaskJobDestroyPlan),
-			getJob(pipeline.Destroy, common.TaskJobDestroy))
-	case common.TaskTypeScan:
-		jobs = append(jobs,
-			getJob(pipeline.PolicyScan, common.TaskJobScan))
-	case common.TaskTypeParse:
-		jobs = append(jobs,
-			getJob(pipeline.PolicyParse, common.TaskJobParse))
-	}
-	return jobs
 }
 
 func GetTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision string) (repoAddr, commitId string, err e.Error) {
@@ -807,7 +749,7 @@ func fetchRunnerTaskStepLog(ctx context.Context, runnerId string, step *models.T
 				logger.Tracef("read message error: %v", err)
 				return nil
 			} else {
-				logger.Errorf("read message error: %v", err)
+				logger.Warnf("read message error: %v", err)
 				return err
 			}
 		} else {
@@ -892,7 +834,7 @@ func ChangeScanTaskStatusWithStep(dbSess *db.Session, task *models.ScanTask, ste
 	case common.TaskComplete:
 		task.PolicyStatus = common.PolicyStatusPassed
 	case common.TaskFailed:
-		if step.Type == common.TaskStepTfScan && exitCode == common.TaskStepPolicyViolationExitCode {
+		if step.Type == common.TaskStepOpaScan && exitCode == common.TaskStepPolicyViolationExitCode {
 			task.PolicyStatus = common.PolicyStatusViolated
 		} else {
 			task.PolicyStatus = common.PolicyStatusFailed
@@ -940,7 +882,6 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 
 		BaseTask: models.BaseTask{
 			Type:        pt.Type,
-			Pipeline:    pt.Pipeline,
 			StepTimeout: pt.StepTimeout,
 			RunnerId:    pt.RunnerId,
 
@@ -952,14 +893,6 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 
 	task.Id = models.NewId("run")
 	logger = logger.WithField("taskId", task.Id)
-
-	if task.Pipeline.Version == "" {
-		var er e.Error
-		task.Pipeline, er = GenerateTaskPipeline(tx, tpl.Id, task.Revision, task.Workdir)
-		if er != nil {
-			return nil, er
-		}
-	}
 
 	task.RepoAddr, task.CommitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
 	if err != nil {
@@ -978,50 +911,38 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 		}
 	}
 
-	pipelineJobs := GetTaskPipelineJobs(task.Pipeline, task.Type)
-	jobs := make([]models.TaskJob, 0)
-	for _, job := range pipelineJobs {
-		taskJob := models.TaskJob{
-			TaskId: task.Id,
-			Type:   job.Type,
-			Image:  job.Image,
-		}
-		taskJob.Id = models.NewId("job-")
-		jobs = append(jobs, taskJob)
+	task.Pipeline, err = GetTplPipeline(tx, tpl.Id, task.Revision, task.Workdir)
+	if err != nil {
+		return nil, e.AutoNew(err, e.InvalidPipeline)
 	}
 
+	pipeline, err := DecodePipeline(task.Pipeline)
+	if err != nil {
+		return nil, e.New(e.InvalidPipeline, err)
+	}
+
+	task.Flow = GetTaskFlowWithPipeline(pipeline, task.Type)
 	steps := make([]models.TaskStep, 0)
 	stepIndex := 0
-	for i := range pipelineJobs {
-		taskJob := jobs[i]
-		pipelineJob := pipelineJobs[i]
-		for j := range pipelineJob.Steps {
-			jobStep := pipelineJob.Steps[j]
-			taskStep := newScanTaskStep(tx, task, taskJob.Id, jobStep, stepIndex)
-			steps = append(steps, *taskStep)
-			stepIndex += 1
-		}
+	for _, pipelineStep := range task.Flow.Steps {
+		taskStep := newScanTaskStep(tx, task, pipelineStep, stepIndex)
+		steps = append(steps, *taskStep)
+		stepIndex += 1
 	}
 
 	if len(steps) == 0 {
 		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps"))
 	}
 
-	if _, err := tx.Save(&task); err != nil {
+	if err := tx.Insert(&task); err != nil {
 		return nil, e.New(e.DBError, errors.Wrapf(err, "save task"))
-	}
-
-	for i := range jobs {
-		if _, err := tx.Save(&jobs[i]); err != nil {
-			return nil, e.New(e.DBError, errors.Wrapf(err, "save task job"))
-		}
 	}
 
 	for i := range steps {
 		if i+1 < len(steps) {
 			steps[i].NextStep = steps[i+1].Id
 		}
-		if _, err := tx.Save(&steps[i]); err != nil {
+		if err := tx.Insert(&steps[i]); err != nil {
 			return nil, e.New(e.DBError, errors.Wrapf(err, "save task step"))
 		}
 	}

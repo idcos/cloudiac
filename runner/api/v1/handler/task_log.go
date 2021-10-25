@@ -84,7 +84,7 @@ func doFollowTaskLog(wsConn *websocket.Conn, task *runner.StartedTask, offset in
 		select {
 		case content := <-contentChan:
 			if err := wsConn.WriteMessage(websocket.TextMessage, content); err != nil {
-				logger.Errorf("write message error: %v", err)
+				logger.Warnf("write message error: %v", err)
 				return err
 			}
 		case err := <-readErrChan:

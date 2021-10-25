@@ -146,7 +146,6 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		StopOnViolation: env.StopOnViolation,
 		BaseTask: models.BaseTask{
 			Type:        form.TaskType,
-			Pipeline:    models.Pipeline{},
 			StepTimeout: form.Timeout,
 			RunnerId:    env.RunnerId,
 		},
@@ -591,7 +590,6 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		StopOnViolation: env.StopOnViolation,
 		BaseTask: models.BaseTask{
 			Type:        form.TaskType,
-			Pipeline:    models.Pipeline{},
 			StepTimeout: form.Timeout,
 			RunnerId:    env.RunnerId,
 		},

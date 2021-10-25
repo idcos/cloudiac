@@ -25,6 +25,8 @@ type StartedTask struct {
 	ContainerId string `json:"containerId"`
 	ExecId      string `json:"execId"`
 
+	PauseOnFinish bool `json:"pauseOnFinish"` // 该步骤结束时暂停容器
+
 	containerInfoLock sync.RWMutex `json:"-"`
 }
 
@@ -125,7 +127,7 @@ func (task *StartedTask) readContainerInfo() (info types.ContainerExecInspect, e
 }
 
 // Wait 等待任务结束返回退出码，若超时返回 error=context.DeadlineExceeded
-// 如果等待到任务结束则会将容器状态信息写入到文件，然后删除容器
+// 如果等待到任务结束则会将容器状态信息写入到文件，并判断是否需要暂停容器
 func (task *StartedTask) Wait(ctx context.Context) (int64, error) {
 	logger := logger.WithField("taskId", task.TaskId).
 		WithField("containerId", utils.ShortContainerId(task.ContainerId))
@@ -154,58 +156,15 @@ func (task *StartedTask) Wait(ctx context.Context) (int64, error) {
 		} else if err := task.writeContainerInfo(&info); err != nil {
 			logger.Warnf("write container info error: %v", err)
 		}
+
+		// 暂停容器
+		if task.PauseOnFinish {
+			logger.Debugf("pause container %s", info.ContainerID)
+			if err := (Executor{}).Pause(info.ContainerID); err != nil {
+				logger.Warn(err)
+			}
+		}
 	}
 
 	return int64(info.ExitCode), nil
-
-	// cli, err := client.NewClientWithOpts()
-	// if err != nil {
-	// 	return 0, err
-	// }
-
-	// cli.NegotiateAPIVersion(ctx)
-	// respCh, errCh := cli.ContainerWait(ctx, task.ContainerId, container.WaitConditionNotRunning)
-	// select {
-	// case resp := <-respCh:
-	// 	if resp.Error != nil {
-	// 		logger.Warnf("wait container response status: %v, error: %v", resp.StatusCode, resp.Error)
-	// 		return resp.StatusCode, fmt.Errorf(resp.Error.Message)
-	// 	} else {
-	// 		{ // 执行结束后的处理
-	// 			// 调用 Status() 获取一次任务最新状态，并保存状态到文件
-	// 			if info, err := task.Status(); err != nil {
-	// 				logger.Warnf("get task status error: %v", err)
-	// 			} else if err := task.writeContainerInfo(&info); err != nil {
-	// 				logger.Warnf("write container info error: %v", err)
-	// 			}
-
-	// 			// autoRemove := utils.GetBoolEnv("IAC_AUTO_REMOVE", true)
-	// 			// if autoRemove {
-	// 			// 	// 删除容器
-	// 			// 	err := cli.ContainerRemove(context.Background(), task.ContainerId,
-	// 			// 		types.ContainerRemoveOptions{
-	// 			// 			RemoveVolumes: true,
-	// 			// 			RemoveLinks:   false,
-	// 			// 			Force:         false,
-	// 			// 		})
-	// 			// 	if err != nil {
-	// 			// 		// 有可能其他协程己经提交了删除，这里忽略掉这些报错
-	// 			// 		if !strings.Contains(err.Error(), "already in progress") &&
-	// 			// 			!strings.Contains(err.Error(), "No such container") {
-	// 			// 			logger.Warnf("remove container error: %v", err)
-	// 			// 		}
-	// 			// 	}
-	// 			// }
-	// 		}
-
-	// 		return resp.StatusCode, nil
-	// 	}
-	// case err := <-errCh:
-	// 	if errdefs.IsNotFound(err) {
-	// 		logger.Infof("container not found, Id: %s", task.ContainerId)
-	// 		return 0, nil
-	// 	}
-	// 	logger.Warnf("wait container error: %v", err)
-	// 	return 0, err
-	// }
 }

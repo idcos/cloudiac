@@ -15,13 +15,12 @@ const (
 	TaskTypeScan    = "scan"    // 策略扫描，只执行策略扫描，不修改资源或配置
 	TaskTypeParse   = "parse"   // 策略扫描，只执行策略扫描，不修改资源或配置
 
-	TaskJobPlan        = "plan"
-	TaskJobApply       = "apply"
-	TaskJobPlay        = "play"
-	TaskJobDestroyPlan = "destroyPlan"
-	TaskJobDestroy     = "destroy"
-	TaskJobScan        = "scan"
-	TaskJobParse       = "parse"
+	// TODO 与 taskTypexxx 重复，需要替换
+	TaskJobPlan    = "plan"
+	TaskJobApply   = "apply"
+	TaskJobDestroy = "destroy"
+	TaskJobScan    = "scan"
+	TaskJobParse   = "parse"
 
 	TaskPending   = "pending"
 	TaskRunning   = "running"
@@ -30,17 +29,19 @@ const (
 	TaskFailed    = "failed"
 	TaskComplete  = "complete"
 
-	TaskStepCheckout    = "checkout"
-	TaskStepTfInit      = "terraformInit"
-	TaskStepTfPlan      = "terraformPlan"
-	TaskStepTfApply     = "terraformApply"
-	TaskStepTfDestroy   = "terraformDestroy"
+	TaskStepCheckout  = "checkout"
+	TaskStepTfInit    = "terraformInit"
+	TaskStepTfPlan    = "terraformPlan"
+	TaskStepTfApply   = "terraformApply"
+	TaskStepTfDestroy = "terraformDestroy"
+
+	TaskStepRegoParse = "regoParse" // 解析资源为 rego 的 input
+	TaskStepOpaScan   = "opaScan"   // 云模板策略扫描
+
 	TaskStepAnsiblePlay = "ansiblePlay" // play playbook
 	TaskStepCommand     = "command"     // run command
 	TaskStepCollect     = "collect"     // 任务结束后的信息采集
 	TaskStepScanInit    = "scaninit"
-	TaskStepTfParse     = "tfparse" // 云模板解析
-	TaskStepTfScan      = "tfscan"  // 云模板策略扫描
 
 	PipelineFileName = ".cloudiac-pipeline.yml"
 

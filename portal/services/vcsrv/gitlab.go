@@ -8,6 +8,7 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/xanzy/go-gitlab"
@@ -146,6 +147,9 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 func (git *gitlabRepoIface) ReadFileContent(branch, path string) ([]byte, error) {
 	opt := &gitlab.GetRawFileOptions{Ref: gitlab.String(branch)}
 	row, _, err := git.gitConn.RepositoryFiles.GetRawFile(git.Project.ID, path, opt)
+	if err != nil && strings.Contains(err.Error(), "File Not Found") {
+		return nil, e.New(e.ObjectNotExists, err)
+	}
 	return row, err
 }
 
