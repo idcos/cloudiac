@@ -33,7 +33,6 @@ type RunTaskReq struct {
 	Env          TaskEnv    `json:"env" binding:""`
 	RunnerId     string     `json:"runnerId" binding:""`
 	TaskId       string     `json:"taskId" binding:"required"`
-	JobId        string     `json:"jobId"`
 	Step         int        `json:"step" binding:""`
 	StepType     string     `json:"stepType" binding:"required"`
 	StepArgs     []string   `json:"stepArgs"`
@@ -51,6 +50,7 @@ type RunTaskReq struct {
 	Repos []Repository `json:"repos"` // 待扫描仓库列表
 
 	ContainerId string `json:"containerId"`
+	PauseTask   bool   `json:"pauseTask"` // 本次执行结束后暂停任务
 }
 
 type Repository struct {

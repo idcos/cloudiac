@@ -4,6 +4,7 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/errdefs"
@@ -51,8 +52,18 @@ func StopTask(c *ctx.Context) {
 			if _, ok := err.(errdefs.ErrNotFound); ok {
 				continue
 			}
+
+			if err != nil {
+				// 有可能己经提交了删除请求，这里忽略掉这些报错
+				if !strings.Contains(err.Error(), "already in progress") &&
+					!strings.Contains(err.Error(), "No such container") {
+					logger.Warnf("remove container error: %v", err)
+				}
+			}
+
 			c.Error(err, http.StatusInternalServerError)
 			return
 		}
 	}
+	c.Result(nil)
 }

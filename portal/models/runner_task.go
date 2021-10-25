@@ -11,8 +11,11 @@ type BaseTask struct {
 	/* 通用任务参数 */
 	Type string `json:"type" gorm:"not null;enum('plan','apply','destroy','scan')" enums:"'plan','apply','destroy','scan'"` // 任务类型。1. plan: 计划 2. apply: 部署 3. destroy: 销毁
 
-	Pipeline Pipeline `json:"-" gorm:"type:text"`        // 执行流程
-	CurrStep int      `json:"currStep" gorm:"default:0"` // 当前在执行的流程步骤
+	Pipeline string       `json:"-" gorm:"type:json"`        // 用户自定义 pipeline 内容
+	Flow     PipelineTask `json:"-" gorm:"type:json"`        // 实际生成的任务执行流程
+	CurrStep int          `json:"currStep" gorm:"default:0"` // 当前在执行的流程步骤
+
+	ContainerId string `json:"-" gorm:"size:64"`
 
 	// 任务每一步的执行超时(整个任务无超时控制)
 	StepTimeout int `json:"stepTimeout" gorm:"default:600;comment:执行超时"`
