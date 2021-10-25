@@ -3,11 +3,13 @@
 package apps
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"fmt"
 	"sort"
 )
 
@@ -78,4 +80,30 @@ func SearchVariable(c *ctx.ServiceContext, form *forms.SearchVariableForm) (inte
 	sort.Sort(newVariable(rs))
 
 	return rs, nil
+}
+
+func SearchStandardVariable(c *ctx.ServiceContext, form *forms.SearchVariableForm) (interface{}, e.Error) {
+	newRs := make([]models.VariableBody, 0)
+	rs, err := SearchVariable(c, form)
+	if err != nil {
+		return nil, err
+	}
+	if rs != nil {
+		for _, v := range rs.([]VariableResp) {
+			if v.Type == consts.VarTypeTerraform {
+				newRs = append(newRs, models.VariableBody{
+					Scope:       v.Scope,
+					Type:        v.Type,
+					Name:        fmt.Sprintf("TF_VAR_%s", v.Name),
+					Value:       v.Value,
+					Sensitive:   false,
+					Description: v.Description,
+				})
+				continue
+			}
+			newRs = append(newRs, v.VariableBody)
+		}
+	}
+
+	return newRs, nil
 }

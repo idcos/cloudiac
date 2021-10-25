@@ -35,9 +35,10 @@ type CreateEnvForm struct {
 	Playbook     string    `form:"playbook" json:"playbook" binding:""`         // Ansible playbook 入口文件路径
 	KeyId        models.Id `form:"keyId" json:"keyId" binding:""`               // 部署密钥ID
 
-	RetryNumber int  `form:"retryNumber" json:"retryNumber" binding:""` // 重试总次数
-	RetryDelay  int  `form:"retryDelay" json:"retryDelay" binding:""`   // 重试时间间隔
-	RetryAble   bool `form:"retryAble" json:"retryAble" binding:""`     // 是否允许任务进行重试
+	RetryNumber int         `form:"retryNumber" json:"retryNumber" binding:""` // 重试总次数
+	RetryDelay  int         `form:"retryDelay" json:"retryDelay" binding:""`   // 重试时间间隔
+	RetryAble   bool        `form:"retryAble" json:"retryAble" binding:""`     // 是否允许任务进行重试
+	ExtraData   models.JSON `form:"extraData" json:"extraData" binding:""`     // 扩展字段，用于存储外部服务调用时的信息
 
 }
 

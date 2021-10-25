@@ -27,6 +27,7 @@ type SearchTemplateResp struct {
 	RepoId            string      `json:"repoId"`
 	VcsId             string      `json:"vcsId"`
 	RepoAddr          string      `json:"repoAddr"`
+	TplType           string      `json:"tplType" `
 }
 
 func getRepoAddr(vcsId models.Id, query *db.Session, repoId string) (string, error) {

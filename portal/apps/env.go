@@ -107,6 +107,8 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		RetryAble:   form.RetryAble,
 		RetryDelay:  form.RetryDelay,
 		RetryNumber: form.RetryNumber,
+
+		ExtraData:   form.ExtraData,
 	})
 	if err != nil && err.Code() == e.EnvAlreadyExists {
 		_ = tx.Rollback()
