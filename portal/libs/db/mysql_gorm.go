@@ -270,11 +270,13 @@ func (s *Session) autoLazySelect() *Session {
 	return s.Select(strings.Join(selects.([]string), ","))
 }
 
+// 获取查询到的第一条记录，按主键排序，如果指定了 Order() 则联合主键一起排序
 func (s *Session) First(out interface{}) error {
 	qs := s.autoLazySelect()
 	return qs.db.First(out).Error
 }
 
+// 获取查询到的最后一条记录，按主键排序，如果指定了 Order() 则联合主键一起排序
 func (s *Session) Last(out interface{}) error {
 	qs := s.autoLazySelect()
 	return qs.db.Last(out).Error
