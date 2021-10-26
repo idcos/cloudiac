@@ -50,7 +50,7 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (
 	taskReq.StepArgs = step.Args
 
 	respData, err := utils.HttpService(requestUrl, "POST", header, taskReq,
-		int(consts.RunnerConnectTimeout.Seconds()), int(consts.RunnerConnectTimeout.Seconds()))
+		int(consts.RunnerConnectTimeout.Seconds()), int(consts.RunnerConnectTimeout.Seconds())*10)
 	if err != nil {
 		return "", true, err
 	}
@@ -214,7 +214,7 @@ func pullTaskStepStatus(ctx context.Context, task models.Tasker, step *models.Ta
 				if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 					logger.Tracef("read message error: %v", err)
 				} else {
-					logger.Errorf("read message error: %v", err)
+					logger.Warnf("read message error: %v", err)
 					if checkDone() {
 						return
 					}
