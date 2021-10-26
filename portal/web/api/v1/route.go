@@ -124,8 +124,8 @@ func Register(g *gin.RouterGroup) {
 	// 变量组
 	ctrl.Register(g.Group("var_groups", ac()), &handlers.VariableGroup{})
 	g.GET("/var_groups/relationship", ac(), w(handlers.VariableGroup{}.SearchRelationship))
-	g.POST("/var_groups/relationship", ac(), w(handlers.VariableGroup{}.CreateRelationship))
-	g.DELETE("/var_groups/relationship/:id", ac(), w(handlers.VariableGroup{}.DeleteRelationship))
+	g.PUT("/var_groups/relationship/batch", ac(), w(handlers.VariableGroup{}.BatchUpdateRelationship))
+	//g.DELETE("/var_groups/relationship/:id", ac(), w(handlers.VariableGroup{}.DeleteRelationship))
 
 	//token管理
 	ctrl.Register(g.Group("tokens", ac()), &handlers.Token{})

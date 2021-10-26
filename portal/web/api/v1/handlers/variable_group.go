@@ -13,7 +13,6 @@ type VariableGroup struct {
 	ctrl.GinController
 }
 
-
 // Search 查询变量组
 // @Tags 变量组
 // @Summary 查询变量组
@@ -127,7 +126,7 @@ func (VariableGroup) SearchRelationship(c *ctx.GinRequest) {
 	c.JSONResult(apps.SearchRelationship(c.Service(), &form))
 }
 
-// CreateRelationship 绑定变量组与实例的关系
+// BatchUpdateRelationship 绑定变量组与实例的关系
 // @Tags 变量组
 // @Summary 绑定变量组与实例的关系
 // @Accept application/x-www-form-urlencoded
@@ -135,15 +134,15 @@ func (VariableGroup) SearchRelationship(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
-// @Param form query forms.CreateRelationshipForm true "parameter"
-// @router /var_groups/relationship [post]
+// @Param form query forms.BatchUpdateRelationshipForm true "parameter"
+// @router /var_groups/relationship/batch [put]
 // @Success 200 {object} ctx.JSONResult{}
-func (VariableGroup) CreateRelationship(c *ctx.GinRequest) {
-	form := forms.CreateRelationshipForm{}
+func (VariableGroup) BatchUpdateRelationship(c *ctx.GinRequest) {
+	form := forms.BatchUpdateRelationshipForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CreateRelationship(c.Service(), &form))
+	c.JSONResult(apps.BatchUpdateRelationship(c.Service(), &form))
 }
 
 // DeleteRelationship 删除变量组与实例的关系

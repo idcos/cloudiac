@@ -144,7 +144,7 @@ func SearchRelationship(c *ctx.ServiceContext, form *forms.SearchRelationshipFor
 	return vgs, nil
 }
 
-func CreateRelationship(c *ctx.ServiceContext, form *forms.CreateRelationshipForm) (interface{}, e.Error) {
+func BatchUpdateRelationship(c *ctx.ServiceContext, form *forms.BatchUpdateRelationshipForm) (interface{}, e.Error) {
 	rel := make([]models.VariableGroupRel, 0)
 	// 校验变量组在同级是否有相同key的变量
 	tx := c.Tx()
@@ -156,6 +156,10 @@ func CreateRelationship(c *ctx.ServiceContext, form *forms.CreateRelationshipFor
 		}
 	}()
 
+	if err := services.DeleteRelationship(tx, form.DelVarGroupIds); err != nil {
+		return nil, err
+	}
+	fmt.Println(form.DelVarGroupIds)
 	if services.CheckVgRelationship(tx, form) {
 		_ = tx.Rollback()
 		return nil, e.New(e.VariableAlreadyExists, fmt.Errorf("the variables under the variable group are repeated"))
@@ -182,8 +186,8 @@ func CreateRelationship(c *ctx.ServiceContext, form *forms.CreateRelationshipFor
 }
 
 func DeleteRelationship(c *ctx.ServiceContext, form *forms.DeleteRelationshipForm) (interface{}, e.Error) {
-	if err := services.DeleteRelationship(c.DB(), form.Id); err != nil {
-		return nil, err
-	}
+	//if err := services.DeleteRelationship(c.DB(), form.Id); err != nil {
+	//	return nil, err
+	//}
 	return nil, nil
 }
