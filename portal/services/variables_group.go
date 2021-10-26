@@ -53,7 +53,7 @@ func DeleteVariableGroup(tx *db.Session, vgId models.Id) e.Error {
 	}
 
 	//删除变量组与实例之间的关系
-	if err := DeleteRelationship(tx, vgId); err != nil {
+	if err := DeleteRelationship(tx, []models.Id{vgId}); err != nil {
 		return e.New(e.DBError, err)
 	}
 	return nil
@@ -174,7 +174,7 @@ func CreateRelationship(dbSess *db.Session, rels []models.VariableGroupRel) e.Er
 	return nil
 }
 
-func CheckVgRelationship(tx *db.Session, form *forms.CreateRelationshipForm) bool {
+func CheckVgRelationship(tx *db.Session, form *forms.BatchUpdateRelationshipForm) bool {
 	// 查询当前作用域下绑定的变量组
 	bindVgs, err := GetVariableGroupByObject(tx, form.ObjectType, "")
 	if err != nil {
@@ -226,8 +226,11 @@ func GetVariableGroupListByIds(dbSess *db.Session, ids []models.Id) ([]models.Va
 	return vgs, nil
 }
 
-func DeleteRelationship(dbSess *db.Session, vgId models.Id) e.Error {
-	if _, err := dbSess.Where("var_group_id = ?", vgId).
+func DeleteRelationship(dbSess *db.Session, vgId []models.Id) e.Error {
+	if len(vgId) == 0 {
+		return nil
+	}
+	if _, err := dbSess.Where("var_group_id in (?)", vgId).
 		Delete(&models.VariableGroupRel{}); err != nil {
 		return e.New(e.DBError, err)
 	}

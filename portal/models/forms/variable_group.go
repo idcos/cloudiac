@@ -39,11 +39,12 @@ type SearchRelationshipForm struct {
 	EnvId      models.Id `json:"envId" form:"envId" `
 }
 
-type CreateRelationshipForm struct {
+type BatchUpdateRelationshipForm struct {
 	BaseForm
-	VarGroupIds []models.Id `json:"varGroupId" form:"varGroupId" `
-	ObjectType  string      `json:"objectType" form:"objectType" ` //enum('org','template','project','env')
-	ObjectId    models.Id   `json:"objectId" form:"objectId" `
+	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" `
+	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
+	ObjectType     string      `json:"objectType" form:"objectType" ` //enum('org','template','project','env')
+	ObjectId       models.Id   `json:"objectId" form:"objectId" `
 }
 
 type DeleteRelationshipForm struct {
