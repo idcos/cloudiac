@@ -86,9 +86,13 @@ func (t *Task) start() (cid string, err error) {
 		}
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
 	}
-
 	if tfPluginCacheDir == "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("TF_PLUGIN_CACHE_DIR=%s", ContainerPluginCachePath))
+	}
+
+	// 变量名冲突时，系统环境变量覆盖用户定义的环境变量
+	for k, v := range t.req.SysEnvironments {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
 	}
 
 	for k, v := range t.req.Env.TerraformVars {
@@ -386,7 +390,7 @@ var checkoutCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 if [[ ! -e code ]]; then git clone '{{.Req.RepoAddress}}' code; fi && \
 cd 'code/{{.Req.Env.Workdir}}' && \
 echo check out $(git rev-parse --short HEAD). && \
-git checkout -q '{{.Req.RepoRevision}}'
+git checkout -q '{{.Req.RepoCommitId}}'
 `))
 
 func (t *Task) stepCheckout() (command string, err error) {
@@ -559,7 +563,7 @@ func (t *Task) stepTfScan() (command string, err error) {
 var scanInitCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 git clone '{{.Req.RepoAddress}}' code && \
 cd 'code/{{.Req.Env.Workdir}}' && \
-git checkout -q '{{.Req.RepoRevision}}' && echo check out $(git rev-parse --short HEAD).
+git checkout -q '{{.Req.RepoCommitId}}' && echo check out $(git rev-parse --short HEAD).
 `))
 
 func (t *Task) stepScanInit() (command string, err error) {
