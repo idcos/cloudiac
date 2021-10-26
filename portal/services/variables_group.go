@@ -68,6 +68,7 @@ func DetailVariableGroup(dbSess *db.Session, vgId, orgId models.Id) *db.Session 
 type VarGroupRel struct {
 	models.VariableGroupRel
 	models.VariableGroup
+	Overwrites []VarGroupRel `json:"overwrites" form:"overwrites" gorm:"-"` //回滚参数，无需回滚是为空
 }
 
 func SearchVariableGroupRel(dbSess *db.Session, objectAttr map[string]models.Id, object string) ([]VarGroupRel, e.Error) {
@@ -84,6 +85,8 @@ func SearchVariableGroupRel(dbSess *db.Session, objectAttr map[string]models.Id,
 	}
 	// {objectType:{objectId:xxx}}
 	rels := make(map[models.Id]VarGroupRel, 0)
+
+	coverRels := make(map[models.Id][]VarGroupRel)
 
 	// 按照继承顺序一层一层查询对应的变量组数据
 	for index, v := range scopes {
@@ -105,7 +108,16 @@ func SearchVariableGroupRel(dbSess *db.Session, objectAttr map[string]models.Id,
 				if MatchVarGroup(v, vg) {
 					// 需要覆盖则删除上一级的变量组
 					delete(rels, k)
+					// 记录覆盖的变量
+					if _, ok := coverRels[vg.VarGroupId]; !ok {
+						coverRels[vg.VarGroupId] = []VarGroupRel{
+							v,
+						}
+						continue
+					}
+					coverRels[vg.VarGroupId] = append(coverRels[vg.VarGroupId], v)
 				}
+
 			}
 			//临时存储需要添加的变量组,避免重复相同层级的变量进行比较
 			addRels = append(addRels, vg)
@@ -120,6 +132,7 @@ func SearchVariableGroupRel(dbSess *db.Session, objectAttr map[string]models.Id,
 	// 整理数据并返回
 	resp := make([]VarGroupRel, 0)
 	for _, v := range rels {
+		v.Overwrites = coverRels[v.VarGroupId]
 		resp = append(resp, v)
 	}
 
