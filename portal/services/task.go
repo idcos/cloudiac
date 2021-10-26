@@ -13,6 +13,7 @@ import (
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/runner"
 	"cloudiac/utils"
+	"cloudiac/utils/kafka"
 	"cloudiac/utils/logs"
 	"context"
 	"encoding/json"
@@ -996,4 +997,16 @@ func QueryTaskStepLogBy(tx *db.Session, stepId models.Id) ([]byte, e.Error) {
 		return nil, e.New(e.DBError, err)
 	}
 	return dbStorage.Content, nil
+}
+
+func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string) {
+	resources := make([]models.Resource, 0)
+	if err := session.Model(models.Resource{}).Where("org_id = ? AND project_id = ? AND env_id = ? AND task_id = ?",
+		task.OrgId, task.ProjectId, task.EnvId, task.Id).Find(&resources); err != nil {
+		logs.Get().Errorf("kafka send error, get resource data err: %v", err)
+	}
+	k := kafka.Get()
+	if err := k.ConnAndSend(k.GenerateKafkaContent(task, taskStatus, resources)); err != nil {
+		logs.Get().Errorf("kafka send error: %v", err)
+	}
 }
