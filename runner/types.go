@@ -39,7 +39,10 @@ type RunTaskReq struct {
 	DockerImage  string     `json:"dockerImage"`
 	StateStore   StateStore `json:"stateStore" binding:""`
 	RepoAddress  string     `json:"repoAddress" binding:""` // 带 token 的完整路径
-	RepoRevision string     `json:"repoRevision" binding:""`
+	RepoBranch   string     `json:"repoBranch" binding:""`  // git branch or tag
+	RepoCommitId string     `json:"repoCommitId" binding:""`
+
+	SysEnvironments map[string]string `json:"sysEnvironments "` // 系统注入的环境变量
 
 	Timeout    int    `json:"timeout"`
 	PrivateKey string `json:"privateKey"`

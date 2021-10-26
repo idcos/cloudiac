@@ -822,6 +822,10 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		AnsibleVars:     make(map[string]string),
 	}
 
+	if runnerEnv.TfVersion == "" {
+		runnerEnv.TfVersion = consts.DefaultTerraformVersion
+	}
+
 	for _, v := range task.Variables {
 		value := utils.EncodeSecretVar(v.Value, v.Sensitive)
 		switch v.Type {
@@ -859,11 +863,17 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		DockerImage:     task.Flow.Image,
 		StateStore:      stateStore,
 		RepoAddress:     task.RepoAddr,
-		RepoRevision:    task.CommitId,
+		RepoBranch:      task.Revision,
+		RepoCommitId:    task.CommitId,
 		Timeout:         task.StepTimeout,
 		StopOnViolation: task.StopOnViolation,
 		ContainerId:     task.ContainerId,
 	}
+
+	if err := runTaskReqAddSysEnvs(taskReq); err != nil {
+		return nil, err
+	}
+
 	if scanStep, err := services.GetTaskScanStep(dbSess, task.Id); err == nil && scanStep != nil {
 		policies, err := services.GetTaskPolicies(dbSess, task.Id)
 		if err != nil {
@@ -1150,7 +1160,8 @@ func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.Ta
 		TaskId:          string(task.Id),
 		Timeout:         task.StepTimeout,
 		RepoAddress:     task.RepoAddr,
-		RepoRevision:    task.CommitId,
+		RepoBranch:      task.Revision,
+		RepoCommitId:    task.CommitId,
 		StopOnViolation: true,
 		DockerImage:     task.Flow.Image,
 		ContainerId:     task.ContainerId,
@@ -1160,6 +1171,10 @@ func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.Ta
 		//		RepoRevision: task.CommitId,
 		//	},
 		//},
+	}
+
+	if err := runTaskReqAddSysEnvs(taskReq); err != nil {
+		return nil, err
 	}
 
 	if step.Type == models.TaskStepOpaScan {
@@ -1251,4 +1266,37 @@ loop:
 	default:
 		return fmt.Errorf("unknown step status: %v", step.Status)
 	}
+}
+
+// 为 req 添加 sysEnvs(直接修改传入的 req)
+func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
+	sysEnvs := make(map[string]string)
+	env, err := services.GetEnvById(db.Get(), models.Id(req.Env.Id))
+	if err != nil {
+		return errors.Wrapf(err, "query env %s", req.Env.Id)
+	}
+
+	// CLOUDIAC_ORG_ID	当前任务的组织 ID
+	// CLOUDIAC_PROJECT_ID	当前任务的项目 ID
+	// CLOUDIAC_TEMPLATE_ID	当前任务的模板 ID
+	// CLOUDIAC_ENV_ID	当前任务的环境 ID
+	// CLOUDIAC_ENV_NAME	当前任务的环境名称
+	// CLOUDIAC_ENV_STATUS	当前环境状态(启动任务时)
+	// CLOUDIAC_COMMIT	当前任务的云模板代码 commit hash
+	// CLOUDIAC_BRANCH	当前任务的云模板代码的分支
+	// CLOUDIAC_TASK_ID	当前任务的 id
+	// CLOUDIAC_TF_VERSION	当前任务使用的 terraform 版本号(eg. 0.14.11)
+	sysEnvs["CLOUDIAC_ORG_ID"] = env.OrgId.String()
+	sysEnvs["CLOUDIAC_PROJECT_ID"] = env.ProjectId.String()
+	sysEnvs["CLOUDIAC_TEMPLATE_ID"] = env.TplId.String()
+	sysEnvs["CLOUDIAC_ENV_ID"] = env.Id.String()
+	sysEnvs["CLOUDIAC_ENV_NAME"] = env.Name
+	sysEnvs["CLOUDIAC_ENV_STATUS"] = env.Status
+	sysEnvs["CLOUDIAC_TASK_ID"] = req.TaskId
+	sysEnvs["CLOUDIAC_BRANCH"] = req.RepoBranch
+	sysEnvs["CLOUDIAC_COMMIT"] = req.RepoCommitId
+	sysEnvs["CLOUDIAC_TF_VERSION"] = req.Env.TfVersion
+
+	req.SysEnvironments = sysEnvs
+	return nil
 }
