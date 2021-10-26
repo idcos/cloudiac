@@ -10,8 +10,9 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"fmt"
-	"github.com/lib/pq"
 	"strings"
+
+	"github.com/lib/pq"
 )
 
 type RespNotification struct {
@@ -54,7 +55,7 @@ func UpdateNotification(c *ctx.ServiceContext, form *forms.UpdateNotificationFor
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
 	}
 
-	tx := c.Tx().Debug()
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()

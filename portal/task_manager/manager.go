@@ -6,7 +6,6 @@ import (
 	"cloudiac/common"
 	"cloudiac/configs"
 	"cloudiac/portal/consts"
-	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
@@ -422,7 +421,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 
 		runErr := m.runTaskStep(ctx, *runTaskReq, task, step)
 		if err := m.processStepDone(task, step); err != nil {
-			logger.Infof("process step done: %v", err)
+			logger.Warnf("process step done: %v", err)
 			break
 		}
 
@@ -437,25 +436,9 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		}
 	}
 
-	if task.IsEffectTask() && step != nil && !step.IsRejected() {
-		// 执行信息采集步骤
-		if err := m.runTaskStep(ctx, *runTaskReq, task, &models.TaskStep{
-			PipelineStep: models.PipelineStep{
-				Type: models.TaskStepCollect,
-			},
-			OrgId:     task.OrgId,
-			ProjectId: task.ProjectId,
-			EnvId:     task.EnvId,
-			TaskId:    task.Id,
-			Index:     common.CollectTaskStepIndex,
-			Status:    models.TaskStepPending,
-		}); err != nil {
-			logger.Errorf("run collect step error: %v", err)
-		} else {
-			logger.Infof("collect step done")
-		}
+	if err := m.runTaskStepsDoneActions(ctx, task, step, *runTaskReq); err != nil {
+		logger.Errorf("runTaskStepsDoneActions: %v", err)
 	}
-
 	logger.Infof("run task finish")
 	return nil
 }
@@ -627,8 +610,6 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 		return
 	}
 
-	logger.Debugf("last step %#v", lastStep)
-
 	// 基于最后一个步骤更新任务状态
 	updateTaskStatus := func() error {
 		if err = services.ChangeTaskStatusWithStep(dbSess, task, lastStep); err != nil {
@@ -666,8 +647,11 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 	}
 }
 
-func (m *TaskManager) runTaskStep(ctx context.Context, taskReq runner.RunTaskReq,
-	task *models.Task, step *models.TaskStep) (err error) {
+func (m *TaskManager) runTaskStep(
+	ctx context.Context,
+	taskReq runner.RunTaskReq,
+	task *models.Task,
+	step *models.TaskStep) (err error) {
 	logger := m.logger.WithField("taskId", taskReq.TaskId)
 	logger = logger.WithField("func", "runTaskStep").
 		WithField("step", fmt.Sprintf("%d(%s)", step.Index, step.Type))
@@ -737,7 +721,7 @@ loop:
 			// 先将步骤置为 running 状态，然后再发起调用，保证步骤不会重复执行
 			changeStepStatusAndStepRetryTimes(models.TaskStepRunning, "", step)
 			if cid, retryAble, err := StartTaskStep(taskReq, *step); err != nil {
-				logger.Warnf("start task step %d-%s: %v", step.Index, step.Type, err)
+				logger.Warnf("start task step %s(%d): %v", step.Type, step.Index, err)
 				// 如果是可重试错误，并且任务设定可以重试, 则运行重试逻辑
 				if retryAble && task.RetryAble {
 					if step.RetryNumber > 0 && step.CurrentRetryCount < step.RetryNumber {
@@ -787,10 +771,10 @@ loop:
 	case models.TaskStepComplete:
 		return nil
 	case models.TaskStepFailed:
-		if step.Message != "" {
-			return fmt.Errorf(step.Message)
+		if step.Message == "" {
+			step.Message = "failed"
 		}
-		return errors.New("failed")
+		return fmt.Errorf(step.Message)
 	case models.TaskStepTimeout:
 		return errors.New("timeout")
 	default:
@@ -924,42 +908,13 @@ func (m *TaskManager) processAutoDestroy() error {
 				}
 			}()
 
-			tpl, err := services.GetTemplateById(tx, env.TplId)
+			task, err := services.CreateAutoDestroyTask(tx, env)
 			if err != nil {
 				_ = tx.Rollback()
-				if e.IsRecordNotFound(err) {
-					logger.Warnf("template %s not exists", env.TplId)
-					return nil
-				} else {
-					logger.Errorf("get template %s error: %v", env.TplId, err)
-					return err
-				}
-			}
-
-			vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, env.OrgId, env.ProjectId, env.TplId, env.Id, true)
-			if err != nil {
-				logger.Errorf("get vairables error: %v", err)
+				logger.Errorf("create auto destroy task: %v", err)
 				return nil
 			}
 
-			taskVars := services.GetVariableBody(vars)
-
-			task, err := services.CreateTask(tx, tpl, env, models.Task{
-				Name:            "Auto Destroy",
-				Targets:         nil,
-				CreatorId:       consts.SysUserId,
-				Variables:       taskVars,
-				AutoApprove:     true,
-				StopOnViolation: env.StopOnViolation,
-				BaseTask: models.BaseTask{
-					Type: models.TaskTypeDestroy,
-					// FIXME: 销毁任务应该从云模板代码库中读取 pipeline 文件
-					// 或者读取环境 lastResTaskId 的 pipeline?
-					Pipeline:    "",
-					StepTimeout: 0,
-					RunnerId:    "",
-				},
-			})
 			if err != nil {
 				_ = tx.Rollback()
 				logger.Errorf("create task error: %v", err)
@@ -1276,6 +1231,11 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 		return errors.Wrapf(err, "query env %s", req.Env.Id)
 	}
 
+	resCount, err := services.GetEnvResourceCount(db.Get(), env.Id)
+	if err != nil {
+		return errors.Wrapf(err, "%s, query environment resource count", req.Env.Id)
+	}
+
 	// CLOUDIAC_ORG_ID	当前任务的组织 ID
 	// CLOUDIAC_PROJECT_ID	当前任务的项目 ID
 	// CLOUDIAC_TEMPLATE_ID	当前任务的模板 ID
@@ -1292,6 +1252,8 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 	sysEnvs["CLOUDIAC_ENV_ID"] = env.Id.String()
 	sysEnvs["CLOUDIAC_ENV_NAME"] = env.Name
 	sysEnvs["CLOUDIAC_ENV_STATUS"] = env.Status
+	// 当前环境中的资源数量(启动任务时)
+	sysEnvs["CLOUDIAC_ENV_RESOURCES"] = fmt.Sprintf("%d", resCount)
 	sysEnvs["CLOUDIAC_TASK_ID"] = req.TaskId
 	sysEnvs["CLOUDIAC_BRANCH"] = req.RepoBranch
 	sysEnvs["CLOUDIAC_COMMIT"] = req.RepoCommitId

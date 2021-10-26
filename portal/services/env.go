@@ -202,3 +202,12 @@ func GetEnvLastScanTask(sess *db.Session, envId models.Id) (*models.ScanTask, er
 	err := sess.Model(&models.ScanTask{}).Where("id = (?)", scanTaskIdQuery.Expr()).First(&task)
 	return &task, err
 }
+
+func GetEnvResourceCount(sess *db.Session, envId models.Id) (int, e.Error) {
+	lastResTaskQuery := sess.Model(&models.Env{}).Where("id = ?", envId).Select("last_res_task_id")
+	count, err := sess.Model(&models.Resource{}).Where("task_id = (?)", lastResTaskQuery.Expr()).Count()
+	if err != nil {
+		return 0, e.AutoNew(err, e.DBError)
+	}
+	return int(count), nil
+}

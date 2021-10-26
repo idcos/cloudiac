@@ -53,6 +53,8 @@ type TaskStep struct {
 	CurrentRetryCount int   `json:"currentRetryCount" gorm:"size:32;default:0"` // 当前重试次数
 	NextRetryTime     int64 `json:"nextRetryTime" gorm:"default:0"`             // 下次重试时间
 	RetryNumber       int   `json:"retryNumber" gorm:"size:32;default:0"`       // 每个步骤可以重试的总次数
+
+	IsCallback bool `json:"isCallback" gorm:"default:0"` // 步骤是否为回调
 }
 
 func (TaskStep) TableName() string {
@@ -72,6 +74,16 @@ func (s *TaskStep) IsStarted() bool {
 
 func (s *TaskStep) IsExited() bool {
 	return utils.StrInArray(s.Status, TaskStepRejected, TaskStepComplete, TaskStepFailed, TaskStepTimeout)
+}
+
+// 执行成功
+func (s *TaskStep) IsSuccess() bool {
+	return utils.StrInArray(s.Status, TaskStepComplete)
+}
+
+// 执行失败
+func (s *TaskStep) IsFail() bool {
+	return utils.StrInArray(s.Status, TaskStepTimeout, TaskStepFailed)
 }
 
 func (s *TaskStep) IsApproved() bool {
