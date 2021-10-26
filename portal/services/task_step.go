@@ -123,6 +123,12 @@ func ChangeTaskStepStatusAndUpdate(dbSess *db.Session, task models.Tasker, taskS
 		// 特殊的: 审批驳回的任务执行结束后不需要进行资源统计，应该立即修改状态
 		return nil
 	}
+
+	// callback 步骤不影响任务状态
+	if taskStep.IsCallback {
+		return nil
+	}
+
 	return ChangeTaskStatusWithStep(dbSess, task, taskStep)
 }
 
@@ -175,4 +181,33 @@ func GetTaskScanStep(query *db.Session, taskId models.Id) (*models.TaskStep, e.E
 		return nil, e.New(e.DBError, err)
 	}
 	return &taskStep, nil
+}
+
+func GetTaskLastStep(sess *db.Session, taskId models.Id) (*models.TaskStep, e.Error) {
+	taskStep := models.TaskStep{}
+	err := sess.Where("task_id = ?", taskId).Order("`index` DESC").Limit(1).Find(&taskStep)
+	if err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TaskStepNotExists)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &taskStep, nil
+}
+
+func CreateTaskStep(tx *db.Session, task models.Task, stepBody models.PipelineStep, index int) (*models.TaskStep, e.Error) {
+	step := newTaskStep(tx, task, stepBody, index)
+	if err := tx.Insert(step); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return step, nil
+}
+
+func CreateTaskCallbackStep(sess *db.Session, task models.Task, stepBody models.PipelineStep, index int) (*models.TaskStep, e.Error) {
+	step := newTaskStep(sess, task, stepBody, index)
+	step.IsCallback = true
+	if err := sess.Insert(step); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return step, nil
 }

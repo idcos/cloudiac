@@ -491,9 +491,8 @@ func (t *Task) stepPlay() (command string, err error) {
 var cmdCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 (test -d 'code/{{.Req.Env.Workdir}}' && cd 'code/{{.Req.Env.Workdir}}')
 {{ range $index, $command := .Commands -}}
-{{$command}} && \
+{{$command}}
 {{ end -}}
-sleep 0
 `))
 
 func (t *Task) stepCommand() (command string, err error) {

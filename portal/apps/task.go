@@ -11,16 +11,17 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"fmt"
-	"github.com/gin-contrib/sse"
 	"io"
 	"net/http"
 	"path"
 	"strconv"
+
+	"github.com/gin-contrib/sse"
 )
 
 // SearchTask 任务查询
 func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{}, e.Error) {
-	query := services.QueryTask(c.DB())
+	query := services.QueryTask(c.DB().Debug())
 	if form.EnvId != "" {
 		query = query.Where("env_id = ?", form.EnvId)
 	}
@@ -215,8 +216,14 @@ func FollowTaskLog(c *ctx.GinRequest, form forms.TaskLogForm) e.Error {
 
 	pr, pw := io.Pipe()
 	go func() {
-		if err := services.FetchTaskLog(rCtx, tasker, form.StepType, pw, form.StepId); err != nil {
-			logger.Errorf("fetch task log: %v", err)
+		if form.StepId != "" {
+			if err := services.FetchTaskStepLog(rCtx, tasker, pw, form.StepId); err != nil {
+				logger.Errorf("fetch task step log: %v", err)
+			}
+		} else {
+			if err := services.FetchTaskLog(rCtx, tasker, form.StepType, pw); err != nil {
+				logger.Errorf("fetch task log: %v", err)
+			}
 		}
 	}()
 
