@@ -96,7 +96,7 @@ func UpdateProjectUser(c *ctx.ServiceContext, form *forms.UpdateProjectUserForm)
 }
 
 func DeleteProjectUser(c *ctx.ServiceContext, form *forms.DeleteProjectOrgUserForm) (interface{}, e.Error) {
-	return nil, services.DeleteProjectUser(c.DB(), form.Id)
+	return nil, services.DeleteProjectUser(c.DB(), form.Id, c.ProjectId)
 }
 
 func SearchProjectAuthorizationUser(c *ctx.ServiceContext, form *forms.SearchProjectAuthorizationUserForm) (interface{}, e.Error) {
