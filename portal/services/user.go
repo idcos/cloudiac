@@ -188,7 +188,7 @@ func UserProjectRoles(userId models.Id) map[models.Id]*models.UserProject {
 
 // UserHasProjectRole 用户是否拥有项目的某个角色权限
 func UserHasProjectRole(userId models.Id, orgId models.Id, projectId models.Id, role string) bool {
-	// FIXME 临时处理系统管理员权限
+	// TODO 临时处理系统管理员权限
 	if userId.String() == consts.SysUserId {
 		return true
 	}
@@ -206,7 +206,7 @@ func UserHasProjectRole(userId models.Id, orgId models.Id, projectId models.Id, 
 // UserHasOrgRole 用户是否拥有组织的某个角色权限
 // role 传空字符串表示只检查 user 是否属于 org，不检查具体 role
 func UserHasOrgRole(userId models.Id, orgId models.Id, role string) bool {
-	// FIXME 临时处理系统管理员权限
+	// TODO 临时处理系统管理员权限
 	if userId.String() == consts.SysUserId {
 		return true
 	}
