@@ -188,9 +188,9 @@ func CreateRelationship(dbSess *db.Session, rels []models.VariableGroupRel) e.Er
 	return nil
 }
 
-func CheckVgRelationship(tx *db.Session, form *forms.BatchUpdateRelationshipForm,orgId models.Id) bool {
+func CheckVgRelationship(tx *db.Session, form *forms.BatchUpdateRelationshipForm, orgId models.Id) bool {
 	// 查询当前作用域下绑定的变量组
-	bindVgs, err := GetVariableGroupByObject(tx, form.ObjectType, "",orgId)
+	bindVgs, err := GetVariableGroupByObject(tx, form.ObjectType, "", orgId)
 	if err != nil {
 		logs.Get().Errorf("func GetVariableGroupByObject err: %v", err)
 		return false
@@ -249,4 +249,28 @@ func DeleteRelationship(dbSess *db.Session, vgId []models.Id) e.Error {
 		return e.New(e.DBError, err)
 	}
 	return nil
+}
+
+func GetVariableGroupVar(vgs []VarGroupRel, vars map[string]models.Variable) map[string]models.Variable {
+	variableM := make(map[string]models.Variable)
+	//newVariableM := make(map[string]models.Variable)
+	for _, v := range vgs {
+		for _, variable := range v.Variables {
+			variableM[fmt.Sprintf("%s%s", variable.Name, v.Type)] = models.Variable{
+				VariableBody: models.VariableBody{
+					Scope:       v.ObjectType,
+					Type:        v.Type,
+					Name:        variable.Name,
+					Value:       variable.Value,
+					Sensitive:   variable.Sensitive,
+					Description: variable.Description,
+				},
+			}
+		}
+	}
+	// 将标准变量覆盖
+	for k, v := range vars {
+		variableM[k] = v
+	}
+	return variableM
 }
