@@ -123,6 +123,7 @@ func Register(g *gin.RouterGroup) {
 	// 变量组
 	ctrl.Register(g.Group("var_groups", ac()), &handlers.VariableGroup{})
 	g.GET("/var_groups/relationship", ac(), w(handlers.VariableGroup{}.SearchRelationship))
+	g.GET("/var_groups/relationship/all", ac(), w(handlers.VariableGroup{}.SearchRelationshipAll))
 	g.PUT("/var_groups/relationship/batch", ac(), w(handlers.VariableGroup{}.BatchUpdateRelationship))
 	//g.DELETE("/var_groups/relationship/:id", ac(), w(handlers.VariableGroup{}.DeleteRelationship))
 
