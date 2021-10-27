@@ -88,9 +88,9 @@ type VarGroupVariable struct {
 //VariableGroupRel 变量组与实例的关联表
 type VariableGroupRel struct {
 	AbstractModel
-	VarGroupId string `json:"varGroupId" gorm:"size:32;not null"`
+	VarGroupId Id     `json:"varGroupId" gorm:"size:32;not null"`
 	ObjectType string `json:"objectType" gorm:"not null; type:enum('org','template','project','env')"`
-	ObjectId   string `json:"objectId" gorm:"size:32;not null"`
+	ObjectId   Id     `json:"objectId" gorm:"size:32;not null"`
 }
 
 func (VariableGroupRel) TableName() string {

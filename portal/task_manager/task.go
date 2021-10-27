@@ -19,7 +19,6 @@ import (
 	"cloudiac/portal/services/logstorage"
 	"cloudiac/runner"
 	"cloudiac/utils"
-	"cloudiac/utils/kafka"
 	"cloudiac/utils/logs"
 )
 
@@ -108,12 +107,7 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 	if err != nil {
 		return stepResult, err
 	}
-	if stepResult.Status != models.TaskRunning && task.Extra.Source == consts.WorkFlow {
-		k := kafka.Get()
-		if err := k.ConnAndSend(k.GenerateKafkaContent(task.Extra.TransitionId, stepResult.Status)); err != nil {
-			logger.Errorf("kafka send error: %v", err)
-		}
-	}
+
 	if len(stepResult.Result.LogContent) > 0 {
 		content := stepResult.Result.LogContent
 		content = logstorage.CutLogContent(content)
@@ -152,6 +146,11 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 			logger.WithField("path", path).Errorf("write task scan result json error: %v", err)
 		}
 	}
+
+	if stepResult.Status != models.TaskRunning && task.ExtraData != nil {
+		services.SendKafkaMessage(sess,task,stepResult.Status)
+	}
+
 	if er := services.ChangeTaskStepStatusAndExitCode(
 		sess, task, step, stepResult.Status, "", stepResult.Result.ExitCode); er != nil {
 		return stepResult, er
@@ -346,13 +345,6 @@ func WaitScanTaskStep(ctx context.Context, sess *db.Session, task *models.ScanTa
 		return stepResult, err
 	}
 
-	if stepResult.Status != models.TaskRunning && task.Extra.Source == consts.WorkFlow {
-		k := kafka.Get()
-		if err := k.ConnAndSend(k.GenerateKafkaContent(task.Extra.TransitionId, stepResult.Status)); err != nil {
-			logger.Errorf("kafka send error: %v", err)
-		}
-	}
-
 	if len(stepResult.Result.LogContent) > 0 {
 		content := stepResult.Result.LogContent
 		content = logstorage.CutLogContent(content)
@@ -373,6 +365,13 @@ func WaitScanTaskStep(ctx context.Context, sess *db.Session, task *models.ScanTa
 			logger.WithField("path", path).Errorf("write task scan result json error: %v", err)
 		}
 	}
+	// 合规任务暂时不需要发送消息
+	//if stepResult.Status != models.TaskRunning && task.Extra.Source == consts.WorkFlow {
+	//	k := kafka.Get()
+	//	if err := k.ConnAndSend(k.GenerateKafkaContent(task.Extra.TransitionId, stepResult.Status)); err != nil {
+	//		logger.Errorf("kafka send error: %v", err)
+	//	}
+	//}
 
 	if er := services.ChangeTaskStepStatusAndExitCode(
 		sess, task, step, stepResult.Status, "", stepResult.Result.ExitCode); er != nil {

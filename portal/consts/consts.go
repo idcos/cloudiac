@@ -117,6 +117,11 @@ var (
 	EnvScopeProject = []string{ScopeProject, ScopeOrg}
 	EnvScopeOrg     = []string{ScopeOrg}
 
+	VariableGroupEnv     = []string{ScopeOrg, ScopeProject, ScopeTemplate, ScopeEnv}
+	VariableGroupTpl     = []string{ScopeOrg, ScopeTemplate}
+	VariableGroupProject = []string{ScopeOrg, ScopeProject}
+	VariableGroupOrg     = []string{ScopeOrg}
+
 	StatusTranslation = map[string]string{
 		"complete": "成功",
 		"failed":   "失败",
