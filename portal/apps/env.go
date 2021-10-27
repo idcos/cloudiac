@@ -144,7 +144,13 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 
 	// 将变量组变量与普通变量进行合并，优先级: 普通变量 > 变量组变量
 	// 查询实例关联的变量组
-	varGroup, err := services.GetVariableGroupByObject(tx, consts.ScopeEnv, env.Id, env.OrgId)
+	varGroup, err := services.SearchVariableGroupRel(tx.Debug(), map[string]models.Id{
+		consts.ScopeEnv:      env.Id,
+		consts.ScopeTemplate: env.TplId,
+		consts.ScopeProject:  c.ProjectId,
+		consts.ScopeOrg:      c.OrgId,
+	}, consts.ScopeEnv)
+
 	if err != nil {
 		_ = tx.Rollback()
 		return nil, err
@@ -604,7 +610,12 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 
 	// 将变量组变量与普通变量进行合并，优先级: 普通变量 > 变量组变量
 	// 查询实例关联的变量组
-	varGroup, err := services.GetVariableGroupByObject(tx, consts.ScopeEnv, env.Id, env.OrgId)
+	varGroup, err := services.SearchVariableGroupRel(tx.Debug(), map[string]models.Id{
+		consts.ScopeEnv:      env.Id,
+		consts.ScopeTemplate: env.TplId,
+		consts.ScopeProject:  c.ProjectId,
+		consts.ScopeOrg:      c.OrgId,
+	}, consts.ScopeEnv)
 	if err != nil {
 		_ = tx.Rollback()
 		return nil, err
