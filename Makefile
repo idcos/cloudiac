@@ -17,8 +17,7 @@ GORUN=$(GOCMD) run -v -ldflags $(GOLDFLAGS)
 PB_PROTOC=protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative
 
 WORKDIR?=/usr/yunji/cloudiac
-DOCKER_BUILD=docker build --build-arg WORKDIR=$(WORKDIR)
-
+DOCKER_BUILD=docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" --build-arg WORKDIR=$(WORKDIR) 
 BUILD_DIR=$(PWD)/build
 
 .PHONY: all build portal runner run run-portal ru-runner clean package repos providers package-release
@@ -92,21 +91,48 @@ package-linux-arm64:
 package: package-linux-amd64
 
 
+BASE_IMAGE_VERSION=$(shell cat docker/base/VERSION)
+
+base-image-portal:
+	$(DOCKER_BUILD) -t cloudiac/base-iac-portal:$(BASE_IMAGE_VERSION) -f docker/base/portal/Dockerfile .
+
+base-image-portal-arm64:
+	$(DOCKER_BUILD) -t cloudiac/base-iac-portal:$(BASE_IMAGE_VERSION)-arm64 -f docker/base/portal/Dockerfile-arm64 .
+
+base-image-runner:
+	$(DOCKER_BUILD) -t cloudiac/base-ct-runner:$(BASE_IMAGE_VERSION) -f docker/base/runner/Dockerfile .
+
+base-image-runner-arm64:
+	$(DOCKER_BUILD) -t cloudiac/base-ct-runner:$(BASE_IMAGE_VERSION)-arm64 -f docker/base/runner/Dockerfile-arm64 .
+
+base-image-worker:
+	$(DOCKER_BUILD) -t cloudiac/base-ct-worker:$(BASE_IMAGE_VERSION) -f docker/base/worker/Dockerfile .
+
+base-image: base-image-portal base-image-runner base-image-worker
+
+push-base-image:
+	for NAME in iac-portal ct-runner ct-worker; do \
+	  docker push cloudiac/base-$${NAME}:$(BASE_IMAGE_VERSION) || exit $$?; \
+	done
+
+
 image-portal: build-linux-amd64-portal
 	$(DOCKER_BUILD) -t cloudiac/iac-portal:$(VERSION) -f docker/portal/Dockerfile .
+
+image-portal-arm64: build-linux-arm64-portal
+	$(DOCKER_BUILD) -t cloudiac/iac-portal:$(VERSION) -f docker/portal/Dockerfile-arm64 .
 
 image-runner: build-linux-amd64-runner
 	$(DOCKER_BUILD) --build-arg WORKER_IMAGE=cloudiac/ct-worker:$(VERSION) \
 	  -t cloudiac/ct-runner:$(VERSION) -f docker/runner/Dockerfile .
 
+image-runner-arm64: build-linux-arm64-runner 
+	$(DOCKER_BUILD) --build-arg WORKER_IMAGE=cloudiac/ct-worker:$(VERSION) \
+	  -t cloudiac/ct-runner:$(VERSION) -f docker/runner/Dockerfile-arm64 .
+
 image-worker:
 	$(DOCKER_BUILD) -t cloudiac/ct-worker:$(VERSION) -f docker/worker/Dockerfile .
 
-image-worker-centos:
-	$(DOCKER_BUILD) -t cloudiac/ct-worker:$(VERSION)-centos -f docker/worker/Dockerfile-centos .
-
-image-portal-arm64: build-linux-arm64-portal image-portal
-image-runner-arm64: build-linux-arm64-runner image-runner
 image-worker-arm64: image-worker
 
 image: image-portal image-runner image-worker
