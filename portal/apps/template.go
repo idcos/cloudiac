@@ -3,6 +3,7 @@
 package apps
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/libs/db"
@@ -103,6 +104,25 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		return nil, e.New(e.DBError, err)
 	}
 
+	// 创建变量组与实例的关系
+	if err := services.DeleteRelationship(tx, form.DelVarGroupIds); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+	rel := make([]models.VariableGroupRel, 0)
+
+	for _, v := range form.VarGroupIds {
+		rel = append(rel, models.VariableGroupRel{
+			VarGroupId: v,
+			ObjectType: consts.ScopeTemplate,
+			ObjectId:   template.Id,
+		})
+	}
+	if err := services.CreateRelationship(tx, rel); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error commit create template, err %s", err)
@@ -191,6 +211,28 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 			return nil, e.New(e.DBError, err)
 		}
 	}
+
+	if form.HasKey("varGroupIds") || form.HasKey("delVarGroupIds") {
+		// 创建变量组与实例的关系
+		if err := services.DeleteRelationship(tx, form.DelVarGroupIds); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+		rel := make([]models.VariableGroupRel, 0)
+
+		for _, v := range form.VarGroupIds {
+			rel = append(rel, models.VariableGroupRel{
+				VarGroupId: v,
+				ObjectType: consts.ScopeTemplate,
+				ObjectId:   form.Id,
+			})
+		}
+		if err := services.CreateRelationship(tx, rel); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error commit update template, err %s", err)

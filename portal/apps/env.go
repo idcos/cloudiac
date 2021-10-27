@@ -134,13 +134,40 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		targets = strings.Split(strings.TrimSpace(form.Targets), ",")
 	}
 
+	// 创建变量组与实例的关系
+	if err := services.DeleteRelationship(tx, form.DelVarGroupIds); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+	rel := make([]models.VariableGroupRel, 0)
+
+	for _, v := range form.VarGroupIds {
+		rel = append(rel, models.VariableGroupRel{
+			VarGroupId: v,
+			ObjectType: consts.ScopeEnv,
+			ObjectId:   env.Id,
+		})
+	}
+	if err := services.CreateRelationship(tx, rel); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	// 将变量组变量与普通变量进行合并，优先级: 普通变量 > 变量组变量
+	// 查询实例关联的变量组
+	varGroup, err := services.GetVariableGroupByObject(tx, consts.ScopeEnv, env.Id, env.OrgId)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
 		Targets:         targets,
 		CreatorId:       c.UserId,
 		KeyId:           env.KeyId,
-		Variables:       services.GetVariableBody(vars),
+		Variables:       services.GetVariableBody(services.GetVariableGroupVar(varGroup, vars)),
 		AutoApprove:     env.AutoApproval,
 		Revision:        env.Revision,
 		StopOnViolation: env.StopOnViolation,
@@ -540,6 +567,8 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		}
 	}
 
+
+
 	// 计算变量列表
 	vars := map[string]models.Variable{}
 	vars, err, _ = services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id, true)
@@ -577,6 +606,34 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 	if len(strings.TrimSpace(form.Targets)) > 0 {
 		targets = strings.Split(strings.TrimSpace(form.Targets), ",")
 	}
+	if form.HasKey("varGroupIds") || form.HasKey("delVarGroupIds") {
+		// 创建变量组与实例的关系
+		if err := services.DeleteRelationship(tx, form.DelVarGroupIds); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+		rel := make([]models.VariableGroupRel, 0)
+
+		for _, v := range form.VarGroupIds {
+			rel = append(rel, models.VariableGroupRel{
+				VarGroupId: v,
+				ObjectType: consts.ScopeEnv,
+				ObjectId:   env.Id,
+			})
+		}
+		if err := services.CreateRelationship(tx, rel); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+	}
+
+	// 将变量组变量与普通变量进行合并，优先级: 普通变量 > 变量组变量
+	// 查询实例关联的变量组
+	varGroup, err := services.GetVariableGroupByObject(tx, consts.ScopeEnv, env.Id, env.OrgId)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
 
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
@@ -584,7 +641,7 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		Targets:         targets,
 		CreatorId:       c.UserId,
 		KeyId:           env.KeyId,
-		Variables:       services.GetVariableBody(vars),
+		Variables:       services.GetVariableBody(services.GetVariableGroupVar(varGroup, vars)),
 		AutoApprove:     env.AutoApproval,
 		Revision:        env.Revision,
 		StopOnViolation: env.StopOnViolation,

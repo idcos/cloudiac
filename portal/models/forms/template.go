@@ -30,6 +30,8 @@ type CreateTemplateForm struct {
 	DeleteVariablesId []string    `json:"deleteVariablesId" form:"deleteVariablesId" ` //变量id
 	ProjectId         []models.Id `form:"projectId" json:"projectId"`                  // 项目ID
 	TfVersion         string      `form:"tfVersion" json:"tfVersion"`                  // 模版使用terraform版本号
+	VarGroupIds       []models.Id `json:"varGroupIds" form:"varGroupIds" `
+	DelVarGroupIds    []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
 }
 
 type SearchTemplateForm struct {
@@ -57,6 +59,8 @@ type UpdateTemplateForm struct {
 	VcsId             models.Id   `form:"vcsId" json:"vcsId" binding:""`
 	RepoId            string      `form:"repoId" json:"repoId" binding:""`
 	TfVersion         string      `form:"tfVersion" json:"tfVersion" binding:""`
+	VarGroupIds       []models.Id `json:"varGroupIds" form:"varGroupIds" `
+	DelVarGroupIds    []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
 }
 
 type DeleteTemplateForm struct {

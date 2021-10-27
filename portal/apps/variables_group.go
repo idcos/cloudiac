@@ -69,6 +69,13 @@ func SearchVariableGroup(c *ctx.ServiceContext, form *forms.SearchVariableGroupF
 	if err := p.Scan(&resp); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
+	for _, v := range resp {
+		for index, variable := range v.Variables {
+			if variable.Sensitive {
+				v.Variables[index].Value = ""
+			}
+		}
+	}
 	return page.PageResp{
 		Total:    p.MustTotal(),
 		PageSize: p.Size,
@@ -88,7 +95,7 @@ func UpdateVariableGroup(c *ctx.ServiceContext, form *forms.UpdateVariableGroupF
 	if form.HasKey("variables") {
 		vb := make([]models.VarGroupVariable, 0)
 		for index, v := range form.Variables {
-			if v.Sensitive {
+			if v.Sensitive && v.Value != "" {
 				value, _ := utils.AesEncrypt(v.Value)
 				form.Variables[index].Value = value
 			}
@@ -125,7 +132,11 @@ func DetailVariableGroup(c *ctx.ServiceContext, form *forms.DetailVariableGroupF
 	if err := vgQuery.First(&vg); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-
+	for index, v := range vg.Variables {
+		if v.Sensitive {
+			vg.Variables[index].Value = ""
+		}
+	}
 	return vg, nil
 }
 
@@ -157,6 +168,7 @@ func BatchUpdateRelationship(c *ctx.ServiceContext, form *forms.BatchUpdateRelat
 	}()
 
 	if err := services.DeleteRelationship(tx, form.DelVarGroupIds); err != nil {
+		_ = tx.Rollback()
 		return nil, err
 	}
 
