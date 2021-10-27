@@ -70,7 +70,7 @@ version: 0.3
 plan:
   steps:
     - type: checkout
-      name: Checkout code
+      name: Checkout Code
       
     - type: terraformInit
       name: Terraform Init
@@ -84,7 +84,7 @@ plan:
 apply:
   steps:
     - type: checkout
-      name: Checkout code
+      name: Checkout Code
       
     - type: terraformInit
       name: Terraform Init
@@ -104,7 +104,7 @@ apply:
 destroy:
   steps:
     - type: checkout
-      name: Checkout code
+      name: Checkout Code
       
     - type: terraformInit
       name: Terraform Init
