@@ -92,7 +92,7 @@ func SearchVariableGroupRel(dbSess *db.Session, objectAttr map[string]models.Id,
 	for index, v := range scopes {
 		addRels := make([]VarGroupRel, 0)
 		// 查询当前作用域下的变量组信息
-		vgs, err := GetVariableGroupByObject(dbSess, v, objectAttr[v])
+		vgs, err := GetVariableGroupByObject(dbSess, v, objectAttr[v], objectAttr[consts.ScopeOrg])
 		if err != nil {
 			continue
 		}
@@ -139,9 +139,10 @@ func SearchVariableGroupRel(dbSess *db.Session, objectAttr map[string]models.Id,
 	return resp, nil
 }
 
-func GetVariableGroupByObject(dbSess *db.Session, objectType string, objectId models.Id) ([]VarGroupRel, e.Error) {
+func GetVariableGroupByObject(dbSess *db.Session, objectType string, objectId, orgId models.Id) ([]VarGroupRel, e.Error) {
 	vg := make([]VarGroupRel, 0)
-	query := dbSess.Table(fmt.Sprintf("%s as rel", models.VariableGroupRel{}.TableName()))
+	query := dbSess.Table(fmt.Sprintf("%s as rel", models.VariableGroupRel{}.TableName())).
+		Where("vg.org_id = ?", orgId)
 
 	if objectType != "" {
 		query = query.Where("rel.object_type = ?", objectType)
@@ -187,9 +188,9 @@ func CreateRelationship(dbSess *db.Session, rels []models.VariableGroupRel) e.Er
 	return nil
 }
 
-func CheckVgRelationship(tx *db.Session, form *forms.BatchUpdateRelationshipForm) bool {
+func CheckVgRelationship(tx *db.Session, form *forms.BatchUpdateRelationshipForm,orgId models.Id) bool {
 	// 查询当前作用域下绑定的变量组
-	bindVgs, err := GetVariableGroupByObject(tx, form.ObjectType, "")
+	bindVgs, err := GetVariableGroupByObject(tx, form.ObjectType, "",orgId)
 	if err != nil {
 		logs.Get().Errorf("func GetVariableGroupByObject err: %v", err)
 		return false
