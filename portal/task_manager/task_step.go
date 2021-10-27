@@ -27,11 +27,19 @@ func (m *TaskManager) runTaskStepsDoneActions(ctx context.Context, task *models.
 
 		pipelineSteps := make([]models.PipelineStep, 0)
 		if currStep.IsSuccess() && task.Flow.OnSuccess != nil {
-			pipelineSteps = append(pipelineSteps, *task.Flow.OnSuccess)
+			step := *task.Flow.OnSuccess
+			if step.Name == "" {
+				step.Name = "onSuccess"
+			}
+			pipelineSteps = append(pipelineSteps, step)
 		}
 
 		if currStep.IsFail() && task.Flow.OnFail != nil {
-			pipelineSteps = append(pipelineSteps, *task.Flow.OnFail)
+			step := *task.Flow.OnFail
+			if step.Name == "" {
+				step.Name = "onFail"
+			}
+			pipelineSteps = append(pipelineSteps, step)
 		}
 
 		newStepIndex := taskLastStep.Index + 1
