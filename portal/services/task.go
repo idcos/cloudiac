@@ -618,31 +618,72 @@ func GetTaskStepByStepId(tx *db.Session, stepId models.Id) (*models.TaskStep, er
 	return &taskStep, nil
 }
 
-func FetchTaskLog(ctx context.Context, task models.Tasker, stepType string, writer io.WriteCloser, stepId models.Id) (err error) {
+func FetchTaskLog(ctx context.Context, task models.Tasker, stepType string, writer io.WriteCloser) (err error) {
 	// close 后 read 端会触发 EOF error
 	defer writer.Close()
-	var steps []*models.TaskStep
-	if stepId != "" {
-		step, err := GetTaskStepByStepId(db.Get(), stepId)
-		if err != nil {
-			return err
+
+	var (
+		steps        []*models.TaskStep
+		fetchedSteps = make(map[string]struct{})
+	)
+
+	steps, err = GetTaskSteps(db.Get(), task.GetId())
+	if err != nil {
+		return err
+	}
+
+	for {
+		for _, s := range steps {
+			if stepType != "" && s.Type != stepType {
+				continue
+			}
+			if _, ok := fetchedSteps[s.Id.String()]; ok {
+				continue
+			}
+			if err := fetchTaskStepLog(ctx, task, writer, s.Id); err != nil {
+				return err
+			}
+			fetchedSteps[s.Id.String()] = struct{}{}
 		}
-		steps = append(steps, step)
-	} else {
+
+		if task.Exited() {
+			break
+		}
+
+		// 因为有 callback 步骤，所以任务的步骤是会新增的(但只加到末尾)。
+		// 我们等待一定时间，确保没有新的步骤了才退出循环
+		time.Sleep(consts.DbTaskPollInterval * 2)
 		steps, err = GetTaskSteps(db.Get(), task.GetId())
 		if err != nil {
 			return err
 		}
+		if len(steps) <= len(fetchedSteps) {
+			break
+		}
 	}
+
+	return nil
+}
+
+func FetchTaskStepLog(ctx context.Context, task models.Tasker, writer io.WriteCloser, stepId models.Id) (err error) {
+	// close 后 read 端会触发 EOF error
+	defer writer.Close()
+	return fetchTaskStepLog(ctx, task, writer, stepId)
+}
+
+func fetchTaskStepLog(ctx context.Context, task models.Tasker, writer io.Writer, stepId models.Id) (err error) {
+
+	step, err := GetTaskStepByStepId(db.Get(), stepId)
+	if err != nil {
+		return err
+	}
+
 	sleepDuration := consts.DbTaskPollInterval
 	storage := logstorage.Get()
 	ticker := time.NewTicker(sleepDuration)
 	defer ticker.Stop()
 
-	for _, step := range steps {
-		if stepType != "" && step.Type != stepType {
-			continue
-		}
+	for _, step := range []*models.TaskStep{step} {
 		//logger := logs.Get().WithField("step", fmt.Sprintf("%s(%d)", step.Type, step.Index))
 		// 任务有可能未开始执行步骤就退出了，所以需要先判断任务是否退出
 		for !task.Exited() && !step.IsStarted() {
