@@ -163,3 +163,22 @@ func (VariableGroup) DeleteRelationship(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.DeleteRelationship(c.Service(), &form))
 }
+
+// SearchRelationshipAll 查询变量组与实例的关系(不进行继承处理展示所有的变量)
+// @Tags 变量组
+// @Summary 查询变量组与实例的关系(不进行继承处理展示所有的变量)
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
+// @Param form query forms.SearchRelationshipForm true "parameter"
+// @router /var_groups/relationship/all [get]
+// @Success 200 {object} ctx.JSONResult{result=[]services.VarGroupRel}
+func (VariableGroup) SearchRelationshipAll(c *ctx.GinRequest) {
+	form := forms.SearchRelationshipForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.SearchRelationshipAll(c.Service(), &form))
+}

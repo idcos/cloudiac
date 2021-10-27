@@ -191,3 +191,45 @@ func DeleteRelationship(c *ctx.ServiceContext, form *forms.DeleteRelationshipFor
 	//}
 	return nil, nil
 }
+
+func SearchRelationshipAll(c *ctx.ServiceContext, form *forms.SearchRelationshipForm) (interface{}, e.Error) {
+	// 继承逻辑 当前作用域下的变量组包含变量组中的变量时 进行覆盖
+	// 查询作用域下的所有变量
+	resp := make([]services.VarGroupRel, 0)
+	vgs, err := services.SearchVariableGroupRel(c.DB(), map[string]models.Id{
+		consts.ScopeEnv:      form.EnvId,
+		consts.ScopeTemplate: form.TplId,
+		consts.ScopeProject:  c.ProjectId,
+		consts.ScopeOrg:      c.OrgId,
+	}, form.ObjectType)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range vgs {
+		resp = append(resp, v)
+		if len(v.Overwrites) != 0 {
+
+			resp = append(resp, v.Overwrites...)
+		}
+	}
+	//按照id去重
+	return DelDuplicate(resp), nil
+}
+
+func DelDuplicate(arr []services.VarGroupRel) []services.VarGroupRel {
+	rel := make([]services.VarGroupRel, 0)
+	for _, v := range arr {
+		isDuplicate := false
+		for _, r := range rel {
+			if v.Id == r.Id {
+				isDuplicate = true
+			}
+		}
+		if !isDuplicate {
+			rel = append(rel, v)
+		}
+
+	}
+	return rel
+}
