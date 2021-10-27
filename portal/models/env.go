@@ -67,7 +67,7 @@ type Env struct {
 	AutoDestroyTaskId Id `json:"-"  gorm:"default:''"` // 自动销毁任务 id
 
 	// 触发器设置
-	Triggers pq.StringArray `json:"triggers" gorm:"type:json" swaggertype:"array,string"` // 触发器。commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
+	Triggers pq.StringArray `json:"triggers" gorm:"type:text" swaggertype:"array,string"` // 触发器。commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
 
 	// 任务重试
 	RetryNumber int  `json:"retryNumber" gorm:"size:32;default:3"` // 任务重试次数
@@ -88,6 +88,9 @@ func (e *Env) Migrate(sess *db.Session) (err error) {
 		return err
 	}
 	if err = sess.DropColumn(Env{}, "variables"); err != nil {
+		return err
+	}
+	if err = sess.ModifyModelColumn(&Env{}, "triggers"); err != nil {
 		return err
 	}
 	return nil

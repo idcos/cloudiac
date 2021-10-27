@@ -11,16 +11,17 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"fmt"
-	"github.com/gin-contrib/sse"
 	"io"
 	"net/http"
 	"path"
 	"strconv"
+
+	"github.com/gin-contrib/sse"
 )
 
 // SearchTask 任务查询
 func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{}, e.Error) {
-	query := services.QueryTask(c.DB())
+	query := services.QueryTask(c.DB().Debug())
 	if form.EnvId != "" {
 		query = query.Where("env_id = ?", form.EnvId)
 	}
@@ -215,8 +216,14 @@ func FollowTaskLog(c *ctx.GinRequest, form forms.TaskLogForm) e.Error {
 
 	pr, pw := io.Pipe()
 	go func() {
-		if err := services.FetchTaskLog(rCtx, tasker, form.StepType, pw, form.StepId); err != nil {
-			logger.Errorf("fetch task log: %v", err)
+		if form.StepId != "" {
+			if err := services.FetchTaskStepLog(rCtx, tasker, pw, form.StepId); err != nil {
+				logger.Errorf("fetch task step log: %v", err)
+			}
+		} else {
+			if err := services.FetchTaskLog(rCtx, tasker, form.StepType, pw); err != nil {
+				logger.Errorf("fetch task log: %v", err)
+			}
 		}
 	}()
 
@@ -321,20 +328,17 @@ type TaskStepDetail struct {
 	Message string       `json:"message"`
 	StartAt *models.Time `json:"startAt"`
 	EndAt   *models.Time `json:"endAt"`
+	Type    string       `json:"type"`
 }
 
 func SearchTaskSteps(c *ctx.ServiceContext, form *forms.DetailTaskStepForm) (interface{}, e.Error) {
 	query := services.QueryTaskStepsById(c.DB(), form.TaskId)
-	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	details := make([]*TaskStepDetail, 0)
-	if err := p.Scan(&details); err != nil {
+	if err := query.Scan(&details); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	return page.PageResp{
-		Total:    p.MustTotal(),
-		PageSize: p.Size,
-		List:     details,
-	}, nil
+	return details, nil
+
 }
 
 func GetTaskStep(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (interface{}, e.Error) {
