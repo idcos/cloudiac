@@ -73,6 +73,8 @@ type Env struct {
 	RetryNumber int  `json:"retryNumber" gorm:"size:32;default:3"` // 任务重试次数
 	RetryDelay  int  `json:"retryDelay" gorm:"size:32;default:5"`  // 任务重试时间，单位为秒
 	RetryAble   bool `json:"retryAble" gorm:"default:false"`       // 是否允许任务进行重试
+
+	ExtraData JSON `json:"extraData" gorm:"type:json"` // 扩展字段，用于存储外部服务调用时的信息
 }
 
 func (Env) TableName() string {

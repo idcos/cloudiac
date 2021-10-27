@@ -119,9 +119,14 @@ func Register(g *gin.RouterGroup) {
 	ctrl.Register(g.Group("projects", ac()), &handlers.Project{})
 	//变量管理
 	g.PUT("/variables/batch", ac(), w(handlers.Variable{}.BatchUpdate))
+	g.PUT("/standard/variables", ac(), w(handlers.Variable{}.SearchStandardVariable))
 	ctrl.Register(g.Group("variables", ac()), &handlers.Variable{})
 	// 变量组
-	ctrl.Register(g.Group("var_groups",ac()),&handlers.VariableGroup{})
+	ctrl.Register(g.Group("var_groups", ac()), &handlers.VariableGroup{})
+	g.GET("/var_groups/relationship", ac(), w(handlers.VariableGroup{}.SearchRelationship))
+	g.GET("/var_groups/relationship/all", ac(), w(handlers.VariableGroup{}.SearchRelationshipAll))
+	g.PUT("/var_groups/relationship/batch", ac(), w(handlers.VariableGroup{}.BatchUpdateRelationship))
+	//g.DELETE("/var_groups/relationship/:id", ac(), w(handlers.VariableGroup{}.DeleteRelationship))
 
 	//token管理
 	ctrl.Register(g.Group("tokens", ac()), &handlers.Token{})

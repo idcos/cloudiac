@@ -123,3 +123,17 @@ func IsExistsTriggerToken(dbSess *db.Session, tokenTrigger string) (*models.Toke
 	}
 	return &token, nil
 }
+
+func GetApiTokenByToken(dbSess *db.Session, token string) (*models.Token, e.Error) {
+	tokenResp := &models.Token{}
+	if err := dbSess.
+		Where("`key` = ?", token).
+		Where("`type` = ?", consts.TokenApi).
+		First(tokenResp); err != nil {
+		if e.IsRecordNotFound(err) {
+			return tokenResp, e.New(e.TokenNotExists)
+		}
+		return tokenResp, e.New(e.DBError, err)
+	}
+	return tokenResp, nil
+}
