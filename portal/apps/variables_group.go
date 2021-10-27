@@ -159,8 +159,8 @@ func BatchUpdateRelationship(c *ctx.ServiceContext, form *forms.BatchUpdateRelat
 	if err := services.DeleteRelationship(tx, form.DelVarGroupIds); err != nil {
 		return nil, err
 	}
-	fmt.Println(form.DelVarGroupIds)
-	if services.CheckVgRelationship(tx, form) {
+
+	if services.CheckVgRelationship(tx, form, c.OrgId) {
 		_ = tx.Rollback()
 		return nil, e.New(e.VariableAlreadyExists, fmt.Errorf("the variables under the variable group are repeated"))
 	}
@@ -208,8 +208,7 @@ func SearchRelationshipAll(c *ctx.ServiceContext, form *forms.SearchRelationship
 
 	for _, v := range vgs {
 		resp = append(resp, v)
-		if len(v.Overwrites) != 0 {
-
+		if len(v.Overwrites) != 0 && v.ObjectType == form.ObjectType {
 			resp = append(resp, v.Overwrites...)
 		}
 	}
