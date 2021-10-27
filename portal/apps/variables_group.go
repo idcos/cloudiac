@@ -152,7 +152,7 @@ func SearchRelationship(c *ctx.ServiceContext, form *forms.SearchRelationshipFor
 	if err != nil {
 		return nil, err
 	}
-	return vgs, nil
+	return SetSensitiveNull(vgs), nil
 }
 
 func BatchUpdateRelationship(c *ctx.ServiceContext, form *forms.BatchUpdateRelationshipForm) (interface{}, e.Error) {
@@ -225,7 +225,7 @@ func SearchRelationshipAll(c *ctx.ServiceContext, form *forms.SearchRelationship
 		}
 	}
 	//按照id去重
-	return DelDuplicate(resp), nil
+	return DelDuplicate(SetSensitiveNull(resp)), nil
 }
 
 func DelDuplicate(arr []services.VarGroupRel) []services.VarGroupRel {
@@ -243,4 +243,15 @@ func DelDuplicate(arr []services.VarGroupRel) []services.VarGroupRel {
 
 	}
 	return rel
+}
+
+func SetSensitiveNull(vg []services.VarGroupRel) []services.VarGroupRel {
+	for _, v := range vg {
+		for index, variable := range v.Variables {
+			if variable.Sensitive {
+				v.Variables[index].Value = ""
+			}
+		}
+	}
+	return vg
 }
