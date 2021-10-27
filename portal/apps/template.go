@@ -106,20 +106,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 	}
 
 	// 创建变量组与实例的关系
-	if err := services.DeleteRelationship(tx, form.DelVarGroupIds); err != nil {
-		_ = tx.Rollback()
-		return nil, err
-	}
-	rel := make([]models.VariableGroupRel, 0)
-
-	for _, v := range form.VarGroupIds {
-		rel = append(rel, models.VariableGroupRel{
-			VarGroupId: v,
-			ObjectType: consts.ScopeTemplate,
-			ObjectId:   template.Id,
-		})
-	}
-	if err := services.CreateRelationship(tx, rel); err != nil {
+	if err := services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeTemplate, template.Id.String()); err != nil {
 		_ = tx.Rollback()
 		return nil, err
 	}
@@ -215,20 +202,7 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 
 	if form.HasKey("varGroupIds") || form.HasKey("delVarGroupIds") {
 		// 创建变量组与实例的关系
-		if err := services.DeleteRelationship(tx, form.DelVarGroupIds); err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
-		rel := make([]models.VariableGroupRel, 0)
-
-		for _, v := range form.VarGroupIds {
-			rel = append(rel, models.VariableGroupRel{
-				VarGroupId: v,
-				ObjectType: consts.ScopeTemplate,
-				ObjectId:   form.Id,
-			})
-		}
-		if err := services.CreateRelationship(tx, rel); err != nil {
+		if err := services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeTemplate, form.Id.String()); err != nil {
 			_ = tx.Rollback()
 			return nil, err
 		}

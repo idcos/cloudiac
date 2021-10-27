@@ -274,3 +274,23 @@ func GetVariableGroupVar(vgs []VarGroupRel, vars map[string]models.Variable) map
 	}
 	return variableM
 }
+
+func BatchUpdateRelationship(tx *db.Session, variableIds, delVariableIds []models.Id, objectType, objectId string) e.Error {
+	rel := make([]models.VariableGroupRel, 0)
+	if err := DeleteRelationship(tx, delVariableIds); err != nil {
+		return err
+	}
+
+	for _, v := range variableIds {
+		rel = append(rel, models.VariableGroupRel{
+			VarGroupId: v,
+			ObjectType: objectType,
+			ObjectId:   models.Id(objectId),
+		})
+	}
+
+	if err := CreateRelationship(tx, rel); err != nil {
+		return err
+	}
+	return nil
+}
