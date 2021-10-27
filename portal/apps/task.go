@@ -328,20 +328,17 @@ type TaskStepDetail struct {
 	Message string       `json:"message"`
 	StartAt *models.Time `json:"startAt"`
 	EndAt   *models.Time `json:"endAt"`
+	Type    string       `json:"type"`
 }
 
 func SearchTaskSteps(c *ctx.ServiceContext, form *forms.DetailTaskStepForm) (interface{}, e.Error) {
 	query := services.QueryTaskStepsById(c.DB(), form.TaskId)
-	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	details := make([]*TaskStepDetail, 0)
-	if err := p.Scan(&details); err != nil {
+	if err := query.Scan(&details); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	return page.PageResp{
-		Total:    p.MustTotal(),
-		PageSize: p.Size,
-		List:     details,
-	}, nil
+	return details, nil
+
 }
 
 func GetTaskStep(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (interface{}, e.Error) {
