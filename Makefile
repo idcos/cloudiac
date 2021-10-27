@@ -109,6 +109,7 @@ base-image-worker:
 	$(DOCKER_BUILD) -t cloudiac/base-ct-worker:$(BASE_IMAGE_VERSION) -f docker/base/worker/Dockerfile .
 
 base-image: base-image-portal base-image-runner base-image-worker
+base-image-arm64: base-image-portal-arm64 base-image-runner-arm64 base-image-worker
 
 push-base-image:
 	for NAME in iac-portal ct-runner ct-worker; do \
