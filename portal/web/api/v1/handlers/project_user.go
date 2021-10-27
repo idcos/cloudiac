@@ -78,7 +78,7 @@ func (ProjectUser) Update(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
 // @Param IaC-Project-Id header string true "项目id"
-// @Param id query string true "用户项目id"
+// @Param id query string true "用户id"
 // @Success 200
 // @Router /projects/users/{id} [delete]
 func (ProjectUser) Delete(c *ctx.GinRequest) {
