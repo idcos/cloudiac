@@ -85,6 +85,9 @@ func AccessControl(args ...string) gin.HandlerFunc {
 			role = consts.RoleAnonymous
 		case s.IsSuperAdmin:
 			role = consts.RoleRoot
+		// FIXME 临时处理系统管理员权限
+		case s.UserId == consts.SysUserId:
+			role = consts.OrgRoleAdmin
 		case s.UserId != "" && s.OrgId == "":
 			role = consts.RoleLogin
 		case s.OrgId != "":

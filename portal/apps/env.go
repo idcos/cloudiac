@@ -107,6 +107,8 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		RetryAble:   form.RetryAble,
 		RetryDelay:  form.RetryDelay,
 		RetryNumber: form.RetryNumber,
+
+		ExtraData: models.JSON(form.ExtraData),
 	})
 	if err != nil && err.Code() == e.EnvAlreadyExists {
 		_ = tx.Rollback()
@@ -134,13 +136,27 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		targets = strings.Split(strings.TrimSpace(form.Targets), ",")
 	}
 
+	// 创建变量组与实例的关系
+	if err := services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeEnv, env.Id.String()); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	// 将变量组变量与普通变量进行合并，优先级: 普通变量 > 变量组变量
+	// 查询实例关联的变量组
+	varGroup, err := services.GetVariableGroupByObject(tx, consts.ScopeEnv, env.Id, env.OrgId)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
 		Targets:         targets,
 		CreatorId:       c.UserId,
 		KeyId:           env.KeyId,
-		Variables:       services.GetVariableBody(vars),
+		Variables:       services.GetVariableBody(services.GetVariableGroupVar(varGroup, vars)),
 		AutoApprove:     env.AutoApproval,
 		Revision:        env.Revision,
 		StopOnViolation: env.StopOnViolation,
@@ -149,6 +165,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 			StepTimeout: form.Timeout,
 			RunnerId:    env.RunnerId,
 		},
+		ExtraData: models.JSON(form.ExtraData),
 	})
 	if err != nil {
 		_ = tx.Rollback()
@@ -577,6 +594,21 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 	if len(strings.TrimSpace(form.Targets)) > 0 {
 		targets = strings.Split(strings.TrimSpace(form.Targets), ",")
 	}
+	if form.HasKey("varGroupIds") || form.HasKey("delVarGroupIds") {
+		// 创建变量组与实例的关系
+		if err := services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeEnv, env.Id.String()); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+	}
+
+	// 将变量组变量与普通变量进行合并，优先级: 普通变量 > 变量组变量
+	// 查询实例关联的变量组
+	varGroup, err := services.GetVariableGroupByObject(tx, consts.ScopeEnv, env.Id, env.OrgId)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
 
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
@@ -584,7 +616,7 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		Targets:         targets,
 		CreatorId:       c.UserId,
 		KeyId:           env.KeyId,
-		Variables:       services.GetVariableBody(vars),
+		Variables:       services.GetVariableBody(services.GetVariableGroupVar(varGroup, vars)),
 		AutoApprove:     env.AutoApproval,
 		Revision:        env.Revision,
 		StopOnViolation: env.StopOnViolation,

@@ -78,7 +78,7 @@ func QueryTemplateByOrgId(tx *db.Session, q string, orgId models.Id, templateIdL
 		// 如果传入项目id，需要项目ID 再次筛选
 		query = query.Where("iac_template.id in (?) ", templateIdList)
 	}
-	return query
+	return query.LazySelectAppend("iac_template.tpl_type")
 }
 
 func QueryTplByProjectId(tx *db.Session, projectId models.Id) (tplIds []models.Id, err e.Error) {

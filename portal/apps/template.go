@@ -3,6 +3,7 @@
 package apps
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/libs/db"
@@ -27,6 +28,7 @@ type SearchTemplateResp struct {
 	RepoId            string      `json:"repoId"`
 	VcsId             string      `json:"vcsId"`
 	RepoAddr          string      `json:"repoAddr"`
+	TplType           string      `json:"tplType" `
 }
 
 func getRepoAddr(vcsId models.Id, query *db.Session, repoId string) (string, error) {
@@ -101,6 +103,12 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		_ = tx.Rollback()
 		c.Logger().Errorf("error operation variables, err %s", err)
 		return nil, e.New(e.DBError, err)
+	}
+
+	// 创建变量组与实例的关系
+	if err := services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeTemplate, template.Id.String()); err != nil {
+		_ = tx.Rollback()
+		return nil, err
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -191,6 +199,15 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 			return nil, e.New(e.DBError, err)
 		}
 	}
+
+	if form.HasKey("varGroupIds") || form.HasKey("delVarGroupIds") {
+		// 创建变量组与实例的关系
+		if err := services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeTemplate, form.Id.String()); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error commit update template, err %s", err)

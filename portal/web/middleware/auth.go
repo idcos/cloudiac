@@ -17,35 +17,55 @@ import (
 // Auth 用户认证
 func Auth(c *ctx.GinRequest) {
 	tokenStr := c.GetHeader("Authorization")
+	var apiTokenOrgId models.Id
 	if tokenStr == "" {
 		c.Logger().Infof("missing token")
 		c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
 		return
 	}
 
-	token, err := jwt.ParseWithClaims(tokenStr, &services.Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(configs.Get().JwtSecretKey), nil
-	})
+	err := func() error {
+		token, err := jwt.ParseWithClaims(tokenStr, &services.Claims{}, func(token *jwt.Token) (interface{}, error) {
+			return []byte(configs.Get().JwtSecretKey), nil
+		})
+		if err != nil || token == nil {
+			apiToken, err := services.GetApiTokenByToken(c.Service().DB(), tokenStr)
+			if err != nil {
+				return err
+			}
+			c.Service().UserId = consts.SysUserId
+			c.Service().Username = consts.DefaultSysName
+			c.Service().IsSuperAdmin = false
+			c.Service().UserIpAddr = c.ClientIP()
+			apiTokenOrgId = apiToken.OrgId
+			return nil
+		}
+
+		if claims, ok := token.Claims.(*services.Claims); ok && token.Valid {
+			c.Service().UserId = claims.UserId
+			c.Service().Username = claims.Username
+			c.Service().IsSuperAdmin = claims.IsAdmin
+			c.Service().UserIpAddr = c.ClientIP()
+		} else {
+			c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
+		}
+		return nil
+	}()
+
 	if err != nil {
 		c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
 		return
 	}
-
-	if claims, ok := token.Claims.(*services.Claims); ok && token.Valid {
-		c.Service().UserId = claims.UserId
-		c.Service().Username = claims.Username
-		c.Service().IsSuperAdmin = claims.IsAdmin
-		c.Service().UserIpAddr = c.ClientIP()
-	} else {
-		c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
-		return
-	}
-
 	orgId := models.Id(c.GetHeader("IaC-Org-Id"))
 	if orgId != "" {
 		c.Service().OrgId = orgId
+		// 校验api token所属组织是否与传入组织一致
+		if apiTokenOrgId != "" && !(orgId == apiTokenOrgId) {
+			c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
+			return
+		}
 
-		if org, err := services.GetOrganizationById(c.Service().DB(), orgId); err != nil {
+		if org, err := services.GetOrganizationById(c.Service().DB().Debug(), orgId); err != nil {
 			c.JSONError(e.New(e.OrganizationNotExists, fmt.Errorf("not allow to access org")), http.StatusBadRequest)
 			return
 		} else if org.Status == models.Disable && !c.Service().IsSuperAdmin {
