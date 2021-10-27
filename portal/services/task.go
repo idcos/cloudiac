@@ -58,7 +58,7 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		Variables:       pt.Variables,
 		AutoApprove:     pt.AutoApprove,
 		KeyId:           models.Id(firstVal(string(pt.KeyId), string(env.KeyId))),
-		Extra:           pt.Extra,
+		ExtraData:       pt.ExtraData,
 		Revision:        firstVal(pt.Revision, env.Revision, tpl.RepoRevision),
 		StopOnViolation: pt.StopOnViolation,
 
@@ -1018,7 +1018,6 @@ func CreateMirrorScanTask(task *models.Task) *models.ScanTask {
 		Workdir:      task.Workdir,
 		Mirror:       true,
 		MirrorTaskId: task.Id,
-		Extra:        task.Extra,
 	}
 }
 

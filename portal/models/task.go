@@ -107,7 +107,6 @@ type Task struct {
 
 	// 扩展属性，包括 source, transitionId 等
 	ExtraData JSON      `json:"extraData" gorm:"type:json"` // 扩展字段，用于存储外部服务调用时的信息
-	Extra     TaskExtra `json:"extra" gorm:"type:json"`              // 扩展属性
 
 	KeyId           Id   `json:"keyId" gorm:"size32"` // 部署密钥ID
 	AutoApprove     bool `json:"autoApproval" gorm:"default:false"`

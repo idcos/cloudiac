@@ -17,57 +17,42 @@ import (
 // Auth 用户认证
 func Auth(c *ctx.GinRequest) {
 	tokenStr := c.GetHeader("Authorization")
-	apiTokenStr := c.GetHeader("Token")
-	var isHavePermission bool
 	var apiTokenOrgId models.Id
-	if tokenStr == "" && apiTokenStr == "" {
+	if tokenStr == "" {
 		c.Logger().Infof("missing token")
 		c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
 		return
 	}
-	isHavePermission = func() bool {
-		if tokenStr == "" {
-			return false
-		} else {
-			token, err := jwt.ParseWithClaims(tokenStr, &services.Claims{}, func(token *jwt.Token) (interface{}, error) {
-				return []byte(configs.Get().JwtSecretKey), nil
-			})
+
+	err := func() error {
+		token, err := jwt.ParseWithClaims(tokenStr, &services.Claims{}, func(token *jwt.Token) (interface{}, error) {
+			return []byte(configs.Get().JwtSecretKey), nil
+		})
+		if err != nil || token == nil {
+			apiToken, err := services.GetApiTokenByToken(c.Service().DB(), tokenStr)
 			if err != nil {
-				//c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
-				return false
+				return err
 			}
-			if claims, ok := token.Claims.(*services.Claims); ok && token.Valid {
-				c.Service().UserId = claims.UserId
-				c.Service().Username = claims.Username
-				c.Service().IsSuperAdmin = claims.IsAdmin
-				c.Service().UserIpAddr = c.ClientIP()
-			} else {
-				//c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
-				return false
-			}
-			return true
+			c.Service().UserId = consts.SysUserId
+			c.Service().Username = consts.DefaultSysName
+			c.Service().IsSuperAdmin = false
+			c.Service().UserIpAddr = c.ClientIP()
+			apiTokenOrgId = apiToken.OrgId
+			return nil
 		}
 
+		if claims, ok := token.Claims.(*services.Claims); ok && token.Valid {
+			c.Service().UserId = claims.UserId
+			c.Service().Username = claims.Username
+			c.Service().IsSuperAdmin = claims.IsAdmin
+			c.Service().UserIpAddr = c.ClientIP()
+		} else {
+			c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
+		}
+		return nil
 	}()
 
-	isHavePermission = func() bool {
-		if isHavePermission == true || apiTokenStr == "" {
-			return true
-		}
-		// 查询api token详情
-		apiToken, err := services.GetApiTokenByToken(c.Service().DB().Debug(), apiTokenStr)
-		if err != nil {
-			return false
-		}
-		c.Service().UserId = consts.SysUserId
-		c.Service().Username = consts.DefaultSysName
-		c.Service().IsSuperAdmin = false
-		c.Service().UserIpAddr = c.ClientIP()
-		apiTokenOrgId = apiToken.OrgId
-		return true
-	}()
-
-	if !isHavePermission {
+	if err != nil {
 		c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
 		return
 	}
@@ -75,7 +60,7 @@ func Auth(c *ctx.GinRequest) {
 	if orgId != "" {
 		c.Service().OrgId = orgId
 		// 校验api token所属组织是否与传入组织一致
-		if apiTokenStr != "" && !(orgId == apiTokenOrgId) {
+		if apiTokenOrgId != "" && !(orgId == apiTokenOrgId) {
 			c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
 			return
 		}
