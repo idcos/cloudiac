@@ -159,8 +159,8 @@ func UpdateProjectUser(dbSess *db.Session, attrs models.Attrs) e.Error {
 	return nil
 }
 
-func DeleteProjectUser(dbSess *db.Session, id string) e.Error {
-	if _, err := dbSess.Where("id = ?", id).Delete(&models.UserProject{}); err != nil {
+func DeleteProjectUser(dbSess *db.Session, id string, projectId models.Id) e.Error {
+	if _, err := dbSess.Where("user_id = ? and project_id = ?", id, projectId).Delete(&models.UserProject{}); err != nil {
 		return e.New(e.DBError, fmt.Errorf("delete project error: %v", err))
 	}
 	return nil
