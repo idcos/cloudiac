@@ -1023,7 +1023,7 @@ func CreateMirrorScanTask(task *models.Task) *models.ScanTask {
 
 // 查询任务所有的步骤信息
 func QueryTaskStepsById(query *db.Session, taskId models.Id) *db.Session {
-	return query.Model(&models.TaskStep{}).Where("task_id = ?", taskId)
+	return query.Model(&models.TaskStep{}).Where("task_id = ?", taskId).Order("`index`")
 }
 
 // 查询任务下某一个单独步骤的具体执行日志
