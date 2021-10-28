@@ -2,6 +2,7 @@ FROM centos:7
 
 ARG WORKDIR=/usr/yunji/cloudiac
 WORKDIR ${WORKDIR}
+USER root
 
 RUN yum install epel-release -y && \
     yum install git curl unzip openssh ansible -y && \
@@ -22,4 +23,5 @@ RUN tfenv install "0.11.15" && \
 
 COPY assets/terraform.py /cloudiac/assets/terraform.py
 COPY assets/providers /usr/share/terraform/plugins
+COPY assets/terraformrc /root/.terraformrc
 
