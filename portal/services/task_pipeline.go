@@ -34,8 +34,11 @@ func GetTplPipeline(sess *db.Session, tplId models.Id, revision, workdir string)
 			if e.Is(err, e.ObjectNotExists) {
 				continue
 			}
-			logs.Get().Debugf("read file content error(%T): %v", err, err)
+
+			logs.Get().Warnf("read file content error(%T): %v", err, err)
 			return pipeline, e.New(e.VcsError, err)
+		} else {
+			break
 		}
 	}
 
