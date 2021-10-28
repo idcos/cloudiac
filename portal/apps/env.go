@@ -79,6 +79,16 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 			panic(r)
 		}
 	}()
+
+	var runnerId string = form.RunnerId
+	if runnerId == "" {
+		rId, err := services.GetDefaultRunner()
+		if err != nil {
+			return nil, err
+		}
+		runnerId = rId
+	}
+
 	env, err := services.CreateEnv(tx, models.Env{
 		OrgId:     c.OrgId,
 		ProjectId: c.ProjectId,
@@ -86,7 +96,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		TplId:     form.TplId,
 
 		Name:     form.Name,
-		RunnerId: form.RunnerId,
+		RunnerId: runnerId,
 		Status:   models.EnvStatusInactive,
 		OneTime:  form.OneTime,
 		Timeout:  form.Timeout,
@@ -169,7 +179,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		BaseTask: models.BaseTask{
 			Type:        form.TaskType,
 			StepTimeout: form.Timeout,
-			RunnerId:    env.RunnerId,
+			RunnerId:    runnerId,
 		},
 		ExtraData: models.JSON(form.ExtraData),
 	})
