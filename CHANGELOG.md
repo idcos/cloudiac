@@ -1,4 +1,11 @@
 ------
+## v0.7.0-rc3 20211028.17
+#### Fixes
+- 修复云模板代码库中没有 pipeline 文件时部署报错的问题
+- 修复 pipeline 不支持 gitea 仓库的问题(目前己支持 local,gitlab,gitlab,gitea)
+
+
+------
 ## v0.7.0-rc2 20211028
 #### Fixes
 - apply 步骤失败，任何回调步骤未执行的问题
