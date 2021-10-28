@@ -388,9 +388,10 @@ func (t *Task) genStepScript() (string, error) {
 
 var checkoutCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 if [[ ! -e code ]]; then git clone '{{.Req.RepoAddress}}' code; fi && \
-cd 'code/{{.Req.Env.Workdir}}' && \
-echo check out $(git rev-parse --short HEAD). && \
-git checkout -q '{{.Req.RepoCommitId}}'
+cd code && \
+echo 'checkout {{.Req.RepoCommitId}}.' && \
+git checkout -q '{{.Req.RepoCommitId}}' && \
+cd '{{.Req.Env.Workdir}}'
 `))
 
 func (t *Task) stepCheckout() (command string, err error) {
@@ -560,9 +561,11 @@ func (t *Task) stepTfScan() (command string, err error) {
 }
 
 var scanInitCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-git clone '{{.Req.RepoAddress}}' code && \
-cd 'code/{{.Req.Env.Workdir}}' && \
-git checkout -q '{{.Req.RepoCommitId}}' && echo check out $(git rev-parse --short HEAD).
+if [[ ! -e code ]]; then git clone '{{.Req.RepoAddress}}' code; fi && \
+cd code && \
+echo 'checkout {{.Req.RepoCommitId}}.' && \
+git checkout -q '{{.Req.RepoCommitId}}' && \
+cd '{{.Req.Env.Workdir}}'
 `))
 
 func (t *Task) stepScanInit() (command string, err error) {

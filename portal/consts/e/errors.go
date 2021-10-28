@@ -198,6 +198,9 @@ var errorMsgs = map[int]map[string]string{
 	InvalidPipeline: {
 		"zh-cn": "pipeline 格式错误",
 	},
+	InvalidPipelineVersion: {
+		"zh-cn": "不支持的 pipeline 版本",
+	},
 	DataTooLong: {
 		"zh-cn": "内容过长",
 	},
