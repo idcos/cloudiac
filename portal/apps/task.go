@@ -342,7 +342,7 @@ func SearchTaskSteps(c *ctx.ServiceContext, form *forms.DetailTaskStepForm) (int
 }
 
 func GetTaskStep(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (interface{}, e.Error) {
-	content, err := services.QueryTaskStepLogBy(c.DB(), form.StepId)
+	content, err := services.GetTaskStepLogById(c.DB(), form.StepId)
 	if err != nil {
 		return nil, err
 	}
