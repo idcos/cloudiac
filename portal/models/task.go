@@ -106,7 +106,7 @@ type Task struct {
 	StatePath string `json:"statePath" gorm:"not null"`
 
 	// 扩展属性，包括 source, transitionId 等
-	ExtraData JSON      `json:"extraData" gorm:"type:json"` // 扩展字段，用于存储外部服务调用时的信息
+	ExtraData JSON `json:"extraData" gorm:"type:json"` // 扩展字段，用于存储外部服务调用时的信息
 
 	KeyId           Id   `json:"keyId" gorm:"size32"` // 部署密钥ID
 	AutoApprove     bool `json:"autoApproval" gorm:"default:false"`
@@ -182,6 +182,7 @@ func (BaseTask) GetTaskNameByType(typ string) string {
 		panic("invalid task type")
 	}
 }
+
 func (t *Task) StateJsonPath() string {
 	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TFStateJsonFile)
 }
@@ -211,7 +212,14 @@ func (t *Task) HideSensitiveVariable() {
 }
 
 func (t *Task) Migrate(sess *db.Session) (err error) {
-	if err := sess.ModifyModelColumn(t, "status"); err != nil {
+	return TaskModelMigrate(sess, t)
+}
+
+func TaskModelMigrate(sess *db.Session, taskModel interface{}) (err error) {
+	if err := sess.ModifyModelColumn(taskModel, "status"); err != nil {
+		return err
+	}
+	if err := sess.ModifyModelColumn(taskModel, "pipeline"); err != nil {
 		return err
 	}
 	return nil

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"cloudiac/portal/libs/db"
 	"cloudiac/runner"
 	"path"
 )
@@ -11,7 +12,7 @@ type BaseTask struct {
 	/* 通用任务参数 */
 	Type string `json:"type" gorm:"not null;enum('plan','apply','destroy','scan')" enums:"'plan','apply','destroy','scan'"` // 任务类型。1. plan: 计划 2. apply: 部署 3. destroy: 销毁
 
-	Pipeline string       `json:"-" gorm:"type:json"`        // 用户自定义 pipeline 内容
+	Pipeline string       `json:"-" gorm:"type:text"`        // 用户自定义 pipeline 内容
 	Flow     PipelineTask `json:"-" gorm:"type:json"`        // 实际生成的任务执行流程
 	CurrStep int          `json:"currStep" gorm:"default:0"` // 当前在执行的流程步骤
 
@@ -75,4 +76,8 @@ func (t *ScanTask) TfResultJsonPath() string {
 	} else {
 		return path.Join(t.TplId.String(), t.Id.String(), runner.TerrascanResultFile)
 	}
+}
+
+func (t *ScanTask) Migrate(sess *db.Session) (err error) {
+	return TaskModelMigrate(sess, t)
 }

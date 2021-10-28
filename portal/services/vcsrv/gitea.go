@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -204,6 +205,12 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 }
 
 func (gitea *giteaRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
+	defer func() {
+		if err != nil && strings.Contains(err.Error(), "Not Found") {
+			err = e.New(e.ObjectNotExists)
+		}
+	}()
+
 	pathAddr := gitea.vcs.Address + "/api/v1" +
 		fmt.Sprintf("/repos/%s/raw/%s?ref=%s", gitea.repository.FullName, path, branch)
 	response, body, er := gitea.giteaRequest(pathAddr, "GET", gitea.vcs.VcsToken, nil)
@@ -211,6 +218,11 @@ func (gitea *giteaRepoIface) ReadFileContent(branch, path string) (content []byt
 		return []byte{}, e.New(e.BadRequest, er)
 	}
 	defer response.Body.Close()
+
+	if response.StatusCode >= 300 {
+		err = e.New(e.VcsError, fmt.Errorf("%s: %s", response.Status, body))
+		return []byte{}, err
+	}
 
 	return body[:], nil
 }
