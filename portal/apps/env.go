@@ -141,6 +141,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		targets = strings.Split(strings.TrimSpace(form.Targets), ",")
 	}
 
+	// 计算变量列表
 	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
 	if er != nil {
 		_ = tx.Rollback()
