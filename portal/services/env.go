@@ -211,3 +211,14 @@ func GetEnvResourceCount(sess *db.Session, envId models.Id) (int, e.Error) {
 	}
 	return int(count), nil
 }
+
+func GetDefaultRunner() (string, e.Error) {
+	runners, err := RunnerSearch()
+	if err != nil {
+		return "", err
+	}
+	if len(runners) > 0 {
+		return runners[0].ID, nil
+	}
+	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list is null"))
+}

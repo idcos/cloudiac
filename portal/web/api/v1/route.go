@@ -45,6 +45,7 @@ func Register(g *gin.RouterGroup) {
 
 	// Authorization Header 鉴权
 	g.Use(w(middleware.Auth)) // 解析 header token
+	g.POST("/cloudj/envs/deploy", w(handlers.CiDeployEnv))
 
 	ctrl.Register(g.Group("token", ac()), &handlers.Auth{})
 	g.GET("/auth/me", ac("self", "read"), w(handlers.Auth{}.GetUserByToken))

@@ -57,6 +57,8 @@ func Auth(c *ctx.GinRequest) {
 		return
 	}
 	orgId := models.Id(c.GetHeader("IaC-Org-Id"))
+	// ci/cd 版本 orgid 使用apitotoken查询到的ID
+	c.Service().OrgId = apiTokenOrgId
 	if orgId != "" {
 		c.Service().OrgId = orgId
 		// 校验api token所属组织是否与传入组织一致
