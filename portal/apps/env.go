@@ -135,6 +135,11 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
+	// 创建变量组与实例的关系
+	if err := services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeEnv, env.Id.String()); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
 
 	targets := make([]string, 0)
 	if len(strings.TrimSpace(form.Targets)) > 0 {
