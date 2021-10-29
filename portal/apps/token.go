@@ -169,19 +169,19 @@ func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (int
 		return nil, e.New(e.BadRequest, errors.New("token action illegal"), http.StatusBadRequest)
 	}
 
-	vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, env.OrgId, env.ProjectId, env.TplId, env.Id, true)
-	if err != nil {
-		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	// 计算变量列表
+	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
+	if er != nil {
+		_ = tx.Rollback()
+		return nil, err
 	}
-
-	taskVars := services.GetVariableBody(vars)
 
 	task := models.Task{
 		Name:        models.Task{}.GetTaskNameByType(taskType),
 		Targets:     models.StrSlice{},
 		CreatorId:   consts.SysUserId,
 		KeyId:       env.KeyId,
-		Variables:   taskVars,
+		Variables:   vars,
 		AutoApprove: env.AutoApproval,
 		BaseTask: models.BaseTask{
 			Type:        taskType,

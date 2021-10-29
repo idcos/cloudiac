@@ -83,10 +83,11 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 }
 
 func CreateWebhookTask(tx *db.Session, taskType string, userId models.Id, env *models.Env, tpl *models.Template) error {
-	// 获取计算后的变量列表
-	vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, env.OrgId, env.ProjectId, env.TplId, env.Id, true)
-	if err != nil {
-		return e.New(err.Code(), err, http.StatusInternalServerError)
+	// 计算变量列表
+	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
+	if er != nil {
+		_ = tx.Rollback()
+		return e.New(e.DBError, er, http.StatusInternalServerError)
 	}
 	task := models.Task{
 		Name: models.Task{}.GetTaskNameByType(taskType),
@@ -94,7 +95,7 @@ func CreateWebhookTask(tx *db.Session, taskType string, userId models.Id, env *m
 		Targets:     models.StrSlice{},
 		CreatorId:   userId,
 		KeyId:       env.KeyId,
-		Variables:   services.GetVariableBody(vars),
+		Variables:  vars,
 		AutoApprove: env.AutoApproval,
 		BaseTask: models.BaseTask{
 			Type:        taskType,

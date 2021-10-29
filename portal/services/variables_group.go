@@ -294,3 +294,25 @@ func BatchUpdateRelationship(tx *db.Session, variableIds, delVariableIds []model
 	}
 	return nil
 }
+
+// GetValidVarsAndVgVars 获取变量及变量组变量
+func GetValidVarsAndVgVars(tx *db.Session, orgId, projectId, tplId, envId models.Id) ([]models.VariableBody, error) {
+	vars, err, _ := GetValidVariables(tx, consts.ScopeEnv, orgId, projectId, tplId, envId, true)
+	if err != nil {
+		return nil, fmt.Errorf("get vairables error: %v", err)
+	}
+
+	// 将变量组变量与普通变量进行合并，优先级: 普通变量 > 变量组变量
+	// 查询实例关联的变量组
+	varGroup, err := SearchVariableGroupRel(tx.Debug(), map[string]models.Id{
+		consts.ScopeEnv:      envId,
+		consts.ScopeTemplate: tplId,
+		consts.ScopeProject: projectId,
+		consts.ScopeOrg:     orgId,
+	}, consts.ScopeEnv)
+
+	if err != nil {
+		return nil, fmt.Errorf("get vairable group var error: %v", err)
+	}
+	return GetVariableBody(GetVariableGroupVar(varGroup, vars)),nil
+}

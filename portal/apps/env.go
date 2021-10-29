@@ -134,34 +134,15 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		_ = tx.Rollback()
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
-	// 获取计算后的变量列表
-	vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id, true)
-	if err != nil {
-		_ = tx.Rollback()
-		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
-	}
+
 
 	targets := make([]string, 0)
 	if len(strings.TrimSpace(form.Targets)) > 0 {
 		targets = strings.Split(strings.TrimSpace(form.Targets), ",")
 	}
 
-	// 创建变量组与实例的关系
-	if err := services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeEnv, env.Id.String()); err != nil {
-		_ = tx.Rollback()
-		return nil, err
-	}
-
-	// 将变量组变量与普通变量进行合并，优先级: 普通变量 > 变量组变量
-	// 查询实例关联的变量组
-	varGroup, err := services.SearchVariableGroupRel(tx.Debug(), map[string]models.Id{
-		consts.ScopeEnv:      env.Id,
-		consts.ScopeTemplate: env.TplId,
-		consts.ScopeProject:  c.ProjectId,
-		consts.ScopeOrg:      c.OrgId,
-	}, consts.ScopeEnv)
-
-	if err != nil {
+	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
+	if er != nil {
 		_ = tx.Rollback()
 		return nil, err
 	}
@@ -172,7 +153,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		Targets:         targets,
 		CreatorId:       c.UserId,
 		KeyId:           env.KeyId,
-		Variables:       services.GetVariableBody(services.GetVariableGroupVar(varGroup, vars)),
+		Variables:       vars,
 		AutoApprove:     env.AutoApproval,
 		Revision:        env.Revision,
 		StopOnViolation: env.StopOnViolation,
@@ -573,12 +554,6 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		}
 	}
 
-	// 计算变量列表
-	vars := map[string]models.Variable{}
-	vars, err, _ = services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id, true)
-	if err != nil {
-		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
-	}
 
 	if form.HasKey("tfVarsFile") {
 		env.TfVarsFile = form.TfVarsFile
@@ -618,15 +593,9 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		}
 	}
 
-	// 将变量组变量与普通变量进行合并，优先级: 普通变量 > 变量组变量
-	// 查询实例关联的变量组
-	varGroup, err := services.SearchVariableGroupRel(tx.Debug(), map[string]models.Id{
-		consts.ScopeEnv:      env.Id,
-		consts.ScopeTemplate: env.TplId,
-		consts.ScopeProject:  c.ProjectId,
-		consts.ScopeOrg:      c.OrgId,
-	}, consts.ScopeEnv)
-	if err != nil {
+	// 计算变量列表
+	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
+	if er != nil {
 		_ = tx.Rollback()
 		return nil, err
 	}
@@ -637,7 +606,7 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		Targets:         targets,
 		CreatorId:       c.UserId,
 		KeyId:           env.KeyId,
-		Variables:       services.GetVariableBody(services.GetVariableGroupVar(varGroup, vars)),
+		Variables:       vars,
 		AutoApprove:     env.AutoApproval,
 		Revision:        env.Revision,
 		StopOnViolation: env.StopOnViolation,
