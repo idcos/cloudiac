@@ -1050,5 +1050,5 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 	if err := k.ConnAndSend(message); err != nil {
 		logs.Get().Errorf("kafka send error: %v", err)
 	}
-	logs.Get().Infof("kafka send massage successful. data: %+v", message)
+	logs.Get().Infof("kafka send massage successful. data: %s", string(message))
 }
