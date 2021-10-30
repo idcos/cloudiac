@@ -119,7 +119,11 @@ func Register(g *gin.RouterGroup) {
 	ctrl.Register(g.Group("projects", ac()), &handlers.Project{})
 	//变量管理
 	g.PUT("/variables/batch", ac(), w(handlers.Variable{}.BatchUpdate))
-	g.PUT("/standard/variables", ac(), w(handlers.Variable{}.SearchStandardVariable))
+
+	// 临时使用等cmp修改pack删除
+	g.GET("/standard/variables", ac(), w(handlers.Variable{}.SearchStandardVariable))
+	// cmp使用的变量接口
+	g.GET("/variables/standard", ac(), w(handlers.Variable{}.SearchStandardVariable))
 	ctrl.Register(g.Group("variables", ac()), &handlers.Variable{})
 	// 变量组
 	ctrl.Register(g.Group("var_groups", ac()), &handlers.VariableGroup{})

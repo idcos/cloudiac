@@ -40,9 +40,15 @@ type CreateEnvForm struct {
 	RetryAble   bool        `form:"retryAble" json:"retryAble" binding:""`     // 是否允许任务进行重试
 	ExtraData   models.JSON `form:"extraData" json:"extraData" binding:""`     // 扩展字段，用于存储外部服务调用时的信息
 
-	VarGroupIds       []models.Id `json:"varGroupIds" form:"varGroupIds" `
-	DelVarGroupIds    []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
+	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" `
+	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
 
+	Vars []Vars `json:"vars" form:"vars" `
+}
+
+type Vars struct {
+	Name  string `json:"name" form:"name" `
+	Value string `json:"value" form:"value" `
 }
 
 type UpdateEnvForm struct {
@@ -95,8 +101,8 @@ type DeployEnvForm struct {
 	Playbook     string    `form:"playbook" json:"playbook" binding:""`         // Ansible playbook 入口文件路径
 	KeyId        models.Id `form:"keyId" json:"keyId" binding:""`               // 部署密钥ID
 
-	VarGroupIds       []models.Id `json:"varGroupIds" form:"varGroupIds" `
-	DelVarGroupIds    []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
+	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" `
+	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
 }
 
 type ArchiveEnvForm struct {

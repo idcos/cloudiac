@@ -125,6 +125,16 @@ var Polices = []Policy{
 	{"operator", "variables", "*"},
 	{"guest", "variables", "read"},
 
+	// 临时使用等cmp修改pack删除
+	{"admin", "standard", "*"},
+	{"member", "standard", "read"},
+
+	{"manager", "standard", "*"},
+	{"approver", "standard", "*"},
+	{"operator", "standard", "*"},
+	{"guest", "standard", "read"},
+
+
 	//token
 	{"admin", "tokens", "*"},
 	{"member", "tokens", "read"},
