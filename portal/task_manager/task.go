@@ -147,12 +147,6 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 		}
 	}
 
-	// 控制回调的消息通知只发送一次
-	// 判断next step是否为空,为空则是最后一步
-	if stepResult.Status != models.TaskRunning && task.ExtraData != nil && step.NextStep == "" {
-		services.SendKafkaMessage(sess, task, stepResult.Status)
-	}
-
 	if er := services.ChangeTaskStepStatusAndExitCode(
 		sess, task, step, stepResult.Status, "", stepResult.Result.ExitCode); er != nil {
 		return stepResult, er

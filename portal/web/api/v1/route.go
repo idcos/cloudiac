@@ -121,7 +121,7 @@ func Register(g *gin.RouterGroup) {
 	g.PUT("/variables/batch", ac(), w(handlers.Variable{}.BatchUpdate))
 
 	// 供第三方系统获取变量的接口，该接口将 terraform 变量和环境变量统一转为环境变量格式返回，方便第三方系统处理
-	g.GET("/variables/standard", ac(), w(handlers.Variable{}.SearchStandardVariable))
+	g.GET("/variables/sample", ac(), w(handlers.Variable{}.SearchSampleVariable))
 	ctrl.Register(g.Group("variables", ac()), &handlers.Variable{})
 	// 变量组
 	ctrl.Register(g.Group("var_groups", ac()), &handlers.VariableGroup{})

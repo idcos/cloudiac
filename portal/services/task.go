@@ -322,6 +322,12 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 	if _, err := dbSess.Model(task).Update(task); err != nil {
 		return e.AutoNew(err, e.DBError)
 	}
+
+	// 回调的消息通知只发送一次, 作业结束后发送通知
+	if task.ExtraData != nil && task.Exited() {
+		SendKafkaMessage(dbSess, task, status)
+	}
+
 	if preStatus != status {
 		TaskStatusChangeSendMessage(task, status)
 	}

@@ -43,10 +43,10 @@ type CreateEnvForm struct {
 	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" `
 	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
 
-	Vars []Vars `json:"vars" form:"vars" `
+	SampleVariables []SampleVariables `json:"sampleVariables" form:"sampleVariables" `
 }
 
-type Vars struct {
+type SampleVariables struct {
 	Name  string `json:"name" form:"name" `
 	Value string `json:"value" form:"value" `
 }
