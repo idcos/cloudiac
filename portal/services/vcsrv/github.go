@@ -18,24 +18,24 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
 //newGithubInstance
 //github api文档: https://docs.github.com/cn/rest/reference/repos
 func newGithubInstance(vcs *models.Vcs) (VcsIface, error) {
-	return &githubVcs{githubRequest: githubRequest, vcs: vcs}, nil
+	return &githubVcs{vcs: vcs}, nil
 
 }
 
 type githubVcs struct {
-	githubRequest func(path, method, token string, requestBody []byte) (*http.Response, []byte, error)
-	vcs           *models.Vcs
+	vcs *models.Vcs
 }
 
 func (github *githubVcs) GetRepo(idOrPath string) (RepoIface, error) {
 	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s", idOrPath), nil)
-	_, body, er := github.githubRequest(path, "GET", github.vcs.VcsToken, nil)
+	_, body, er := githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)
 	}
@@ -44,9 +44,8 @@ func (github *githubVcs) GetRepo(idOrPath string) (RepoIface, error) {
 	_ = json.Unmarshal(body, &rep)
 
 	return &githubRepoIface{
-		githubRequest: github.githubRequest,
-		vcs:           github.vcs,
-		repository:    &rep,
+		vcs:        github.vcs,
+		repository: &rep,
 	}, nil
 
 }
@@ -72,7 +71,7 @@ func (github *githubVcs) ListRepos(namespace, search string, limit, offset int) 
 		urlParam.Set("q", search)
 	}
 	path := utils.GenQueryURL(github.vcs.Address, "/user/repos", urlParam)
-	_, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken, nil)
+	_, body, err := githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if err != nil {
 		return nil, 0, e.New(e.BadRequest, err)
 	}
@@ -98,10 +97,9 @@ func (github *githubVcs) ListRepos(namespace, search string, limit, offset int) 
 	repoList := make([]RepoIface, 0)
 	for _, v := range rep {
 		repoList = append(repoList, &githubRepoIface{
-			githubRequest: github.githubRequest,
-			vcs:           github.vcs,
-			repository:    v,
-			total:         r.LastPage,
+			vcs:        github.vcs,
+			repository: v,
+			total:      r.LastPage,
 		})
 	}
 
@@ -109,10 +107,9 @@ func (github *githubVcs) ListRepos(namespace, search string, limit, offset int) 
 }
 
 type githubRepoIface struct {
-	githubRequest func(path, method, token string, requestBody []byte) (*http.Response, []byte, error)
-	vcs           *models.Vcs
-	repository    *RepositoryGithub
-	total         int
+	vcs        *models.Vcs
+	repository *RepositoryGithub
+	total      int
 }
 
 type githubBranch struct {
@@ -123,7 +120,7 @@ func (github *githubRepoIface) ListBranches() ([]string, error) {
 
 	path := utils.GenQueryURL(github.vcs.Address,
 		fmt.Sprintf("/repos/%s/branches", github.repository.FullName), nil)
-	_, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken, nil)
+	_, body, err := githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
@@ -143,7 +140,7 @@ type githubTag struct {
 
 func (github *githubRepoIface) ListTags() ([]string, error) {
 	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/tags", github.repository.FullName), nil)
-	_, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken, nil)
+	_, body, err := githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
@@ -166,7 +163,7 @@ type githubCommit struct {
 func (github *githubRepoIface) BranchCommitId(branch string) (string, error) {
 	path := utils.GenQueryURL(github.vcs.Address,
 		fmt.Sprintf("/repos/%s/commits/%s", github.repository.FullName, branch), nil)
-	_, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken, nil)
+	_, body, err := githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if err != nil {
 		return "", e.New(e.VcsError, err)
 	}
@@ -200,7 +197,7 @@ func (github *githubRepoIface) ListFiles(option VcsIfaceOptions) ([]string, erro
 		path = utils.GenQueryURL(github.vcs.Address,
 			fmt.Sprintf("/repos/%s/contents", github.repository.FullName), urlParam)
 	}
-	_, body, er := github.githubRequest(path, "GET", github.vcs.VcsToken, nil)
+	_, body, er := githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if er != nil {
 		return []string{}, e.New(e.BadRequest, er)
 	}
@@ -229,16 +226,30 @@ type githubReadContent struct {
 }
 
 func (github *githubRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
+	defer func() {
+		if err != nil && strings.Contains(err.Error(), "Not Found") {
+			err = e.New(e.ObjectNotExists)
+		}
+	}()
+
 	urlParam := url.Values{}
 	urlParam.Set("ref", branch)
 	pathAddr := utils.GenQueryURL(github.vcs.Address,
 		fmt.Sprintf("/repos/%s/contents/%s", github.repository.FullName, path), urlParam)
-	_, body, er := github.githubRequest(pathAddr, "GET", github.vcs.VcsToken, nil)
+	response, body, er := githubRequest(pathAddr, "GET", github.vcs.VcsToken, nil)
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)
 	}
 	grc := githubReadContent{}
-	_ = json.Unmarshal(body[:], &grc)
+	if err := json.Unmarshal(body[:], &grc); err != nil {
+		return nil, err
+	}
+
+	if response.StatusCode >= 300 {
+		err = e.New(e.VcsError, fmt.Errorf("%s: %s", response.Status, body))
+		return []byte{}, err
+	}
+
 	decoded, err := base64.StdEncoding.DecodeString(grc.Content)
 	if err != nil {
 		return nil, e.New(e.BadRequest, er)
@@ -273,7 +284,7 @@ func (github *githubRepoIface) AddWebhook(url string) error {
 		"merge_requests_events": "true",
 	}
 	b, _ := json.Marshal(&body)
-	_, _, err := github.githubRequest(path, "POST", github.vcs.VcsToken, b)
+	_, _, err := githubRequest(path, "POST", github.vcs.VcsToken, b)
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: github.vcs.VcsToken},
@@ -298,7 +309,7 @@ func (github *githubRepoIface) AddWebhook(url string) error {
 func (github *githubRepoIface) ListWebhook() ([]ProjectsHook, error) {
 	ph := make([]ProjectsHook, 0)
 	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/hooks", github.repository.FullName), nil)
-	_, body, err := github.githubRequest(path, "GET", github.vcs.VcsToken, nil)
+	_, body, err := githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
@@ -314,7 +325,7 @@ func (github *githubRepoIface) ListWebhook() ([]ProjectsHook, error) {
 
 func (github *githubRepoIface) DeleteWebhook(id int) error {
 	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/hooks/%d", github.repository.FullName, id), nil)
-	_, _, err := github.githubRequest(path, "DELETE", github.vcs.VcsToken, nil)
+	_, _, err := githubRequest(path, "DELETE", github.vcs.VcsToken, nil)
 	if err != nil {
 		return e.New(e.BadRequest, err)
 	}
