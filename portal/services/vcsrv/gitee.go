@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -199,15 +198,9 @@ type giteeReadContent struct {
 }
 
 func (gitee *giteeRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
-	defer func() {
-		if err != nil && (strings.Contains(err.Error(), "Not Found") ||
-			strings.Contains(err.Error(), "json: cannot unmarshal")) {
-			err = e.New(e.ObjectNotExists)
-		}
-	}()
 	pathAddr := gitee.vcs.Address +
 		fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", gitee.repository.FullName, path, gitee.vcs.VcsToken, branch)
-	response, body, er := giteeRequest(pathAddr, "GET", nil)
+	_, body, er := giteeRequest(pathAddr, "GET", nil)
 
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)
@@ -215,12 +208,11 @@ func (gitee *giteeRepoIface) ReadFileContent(branch, path string) (content []byt
 
 	grc := giteeReadContent{}
 	if err := json.Unmarshal(body[:], &grc); err != nil {
-		return nil, err
-	}
-
-	if response.StatusCode >= 300 {
-		err = e.New(e.VcsError, fmt.Errorf("%s: %s", response.Status, body))
-		return []byte{}, err
+		// 找不到文件时状态码为200，gieee接口会返回'[]'
+		if string(body) == "[]" {
+			return nil, e.New(e.ObjectNotExists)
+		}
+		return nil, fmt.Errorf("json unmarshl err: %v, body: %s", err, string(body))
 	}
 
 	decoded, err := base64.StdEncoding.DecodeString(grc.Content)
