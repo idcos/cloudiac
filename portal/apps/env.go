@@ -147,7 +147,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	}
 
 	// 计算变量列表
-	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
+	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id, form.SampleVariables)
 	if er != nil {
 		_ = tx.Rollback()
 		return nil, err
@@ -560,7 +560,6 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		}
 	}
 
-
 	if form.HasKey("tfVarsFile") {
 		env.TfVarsFile = form.TfVarsFile
 	}
@@ -600,7 +599,7 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 	}
 
 	// 计算变量列表
-	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
+	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id, nil)
 	if er != nil {
 		_ = tx.Rollback()
 		return nil, err

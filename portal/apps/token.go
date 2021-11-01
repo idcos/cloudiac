@@ -170,7 +170,7 @@ func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (int
 	}
 
 	// 计算变量列表
-	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
+	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id, nil)
 	if er != nil {
 		_ = tx.Rollback()
 		return nil, err
