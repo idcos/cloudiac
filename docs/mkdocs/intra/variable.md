@@ -45,3 +45,20 @@ playbook文件是在调用ansible进行应用部署时定义的描述配置文�
 选择型变量是指在创建变量时定义了变量的可选值列表，下一级继承该变量时直接选择列表中的值，而不是手动输入。
 
 选择型变量不可设置为敏感类型。
+
+## 平台导出的环境变量
+除了用户配置的环境变量，CloudIaC 还会在执行任务时自动导出当前任务和环境相关的环境变量，这些变量可以在自定义步骤中使用。平台导出的环境变量列表如下：
+
+| 变量名称 | 描述 |
+| ----   | ---- |
+| CLOUDIAC_ORG_ID |	当前任务的组织 ID |
+| CLOUDIAC_PROJECT_ID |	当前任务的项目 ID |
+| CLOUDIAC_TEMPLATE_ID | 当前任务的模板 ID |
+| CLOUDIAC_ENV_ID | 当前任务的环境 ID |
+| CLOUDIAC_ENV_NAME	| 当前任务的环境名称 |
+| CLOUDIAC_ENV_STATUS | 当前环境状态(启动任务时) |
+| CLOUDIAC_ENV_RESOURCES | 当前环境中的资源数据(启动任务时) |
+| CLOUDIAC_COMMIT | 当前任务的云模板代码 commit hash |
+| CLOUDIAC_BRANCH | 当前任务的云模板代码的分支 |
+| CLOUDIAC_TASK_ID | 当前任务的 id |
+| CLOUDIAC_TF_VERSION | 当前任务使用的 terraform 版本号(eg. 0.14.11) |
