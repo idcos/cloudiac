@@ -294,3 +294,50 @@ func BatchUpdateRelationship(tx *db.Session, variableIds, delVariableIds []model
 	}
 	return nil
 }
+
+// GetValidVarsAndVgVars 获取变量及变量组变量
+func GetValidVarsAndVgVars(tx *db.Session, orgId, projectId, tplId, envId models.Id, sampleVariables []forms.SampleVariables) ([]models.VariableBody, error) {
+	vars, err, _ := GetValidVariables(tx, consts.ScopeEnv, orgId, projectId, tplId, envId, true)
+	if err != nil {
+		return nil, fmt.Errorf("get vairables error: %v", err)
+	}
+	// sampleVariables是外部下发的环境变量，会和计算出来的变量列表冲突，这里需要做一下处理
+	// FIXME 未对变量组的变量进行处理
+	if len(sampleVariables) != 0 {
+		for index, v := range sampleVariables {
+			for key, value := range vars {
+				if v.Name == fmt.Sprintf("TF_VAR_%s", value.Name) {
+					vars[key] = models.Variable{
+						VariableBody: models.VariableBody{
+							Options:     vars[key].Options,
+							Scope:       vars[key].Scope,
+							Type:        vars[key].Type,
+							Name:        vars[key].Name,
+							Value:       sampleVariables[index].Value,
+							Sensitive:   vars[key].Sensitive,
+							Description: vars[key].Description,
+						},
+						OrgId:     vars[key].OrgId,
+						ProjectId: vars[key].ProjectId,
+						TplId:     vars[key].TplId,
+						EnvId:     vars[key].EnvId,
+					}
+				}
+			}
+		}
+	}
+
+	// 将变量组变量与普通变量进行合并，优先级: 普通变量 > 变量组变量
+	// 查询实例关联的变量组
+	varGroup, err := SearchVariableGroupRel(tx.Debug(), map[string]models.Id{
+		consts.ScopeEnv:      envId,
+		consts.ScopeTemplate: tplId,
+		consts.ScopeProject: projectId,
+		consts.ScopeOrg:     orgId,
+	}, consts.ScopeEnv)
+
+	if err != nil {
+		return nil, fmt.Errorf("get vairable group var error: %v", err)
+	}
+	return GetVariableBody(GetVariableGroupVar(varGroup, vars)),nil
+}
