@@ -51,8 +51,7 @@ func (Variable) Search(c *ctx.GinRequest) {
 	c.JSONResult(apps.SearchVariable(c.Service(), &form))
 }
 
-
-// SearchStandardVariable 查询变量
+// SearchSampleVariable 查询变量
 // @Tags 变量
 // @Summary 查询变量
 // @Accept application/x-www-form-urlencoded
@@ -61,13 +60,13 @@ func (Variable) Search(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param form query forms.SearchVariableForm true "parameter"
-// @router /variables [get]
+// @router /variables/sample [get]
 // @Success 200 {object} ctx.JSONResult{result=[]models.Variable}
-func (Variable) SearchStandardVariable(c *ctx.GinRequest) {
+func (Variable) SearchSampleVariable(c *ctx.GinRequest) {
 	form := forms.SearchVariableForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchStandardVariable(c.Service(), &form))
+	c.JSONResult(apps.SearchSampleVariable(c.Service(), &form))
 }
 

@@ -322,6 +322,12 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 	if _, err := dbSess.Model(task).Update(task); err != nil {
 		return e.AutoNew(err, e.DBError)
 	}
+
+	// 回调的消息通知只发送一次, 作业结束后发送通知
+	if task.ExtraData != nil && task.Exited() {
+		SendKafkaMessage(dbSess, task, status)
+	}
+
 	if preStatus != status {
 		TaskStatusChangeSendMessage(task, status)
 	}
@@ -1046,7 +1052,9 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 		logs.Get().Errorf("kafka send error, get resource data err: %v", err)
 	}
 	k := kafka.Get()
-	if err := k.ConnAndSend(k.GenerateKafkaContent(task, taskStatus, resources)); err != nil {
+	message := k.GenerateKafkaContent(task, taskStatus, resources)
+	if err := k.ConnAndSend(message); err != nil {
 		logs.Get().Errorf("kafka send error: %v", err)
 	}
+	logs.Get().Infof("kafka send massage successful. data: %s", string(message))
 }

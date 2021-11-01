@@ -22,16 +22,16 @@ type KafkaProducer struct {
 var kafka *KafkaProducer
 
 type IacKafkaCallbackResult struct {
-	Resources []models.Resource
+	Resources []models.Resource `json:"resources"  `
 }
 
 type IacKafkaContent struct {
 	ExtraData  models.JSON            `json:"extraData"`
-	TaskStatus string                 `json:"taskStatus" form:"taskStatus" `
-	OrgId      models.Id              `json:"orgId" gorm:"size:32;not null"`
-	ProjectId  models.Id              `json:"projectId" gorm:"size:32;default:''"`
-	TplId      models.Id              `json:"tplId" gorm:"size:32;default:''"`
-	EnvId      models.Id              `json:"envId" gorm:"size:32;default:''"`
+	TaskStatus string                 `json:"taskStatus"`
+	OrgId      models.Id              `json:"orgId"`
+	ProjectId  models.Id              `json:"projectId"`
+	TplId      models.Id              `json:"tplId"`
+	EnvId      models.Id              `json:"envId"`
 	Result     IacKafkaCallbackResult `json:"result"`
 }
 

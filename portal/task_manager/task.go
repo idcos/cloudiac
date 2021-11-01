@@ -147,10 +147,6 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 		}
 	}
 
-	if stepResult.Status != models.TaskRunning && task.ExtraData != nil {
-		services.SendKafkaMessage(sess,task,stepResult.Status)
-	}
-
 	if er := services.ChangeTaskStepStatusAndExitCode(
 		sess, task, step, stepResult.Status, "", stepResult.Result.ExitCode); er != nil {
 		return stepResult, er
