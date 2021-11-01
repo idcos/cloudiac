@@ -17,7 +17,7 @@ func CreateAutoDestroyTask(tx *db.Session, env *models.Env) (*models.Task, e.Err
 		return nil, err
 	}
 	// 计算变量列表
-	vars, er := GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id, nil)
+	vars, er := GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
 	if er != nil {
 		return nil, err
 	}

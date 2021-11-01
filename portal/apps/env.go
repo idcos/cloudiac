@@ -129,6 +129,17 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
+	// sampleVariables是外部下发的环境变量，会和计算出来的变量列表冲突，这里需要做一下处理
+	// FIXME 未对变量组的变量进行处理
+	sampleVars, err := services.GetSampleValidVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.SampleVariables)
+	if err != nil {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
+	if len(sampleVars) > 0 {
+		form.Variables = append(form.Variables, sampleVars...)
+	}
+
 	// 创建新导入的变量
 	if err = services.OperationVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.Variables, nil); err != nil {
 		_ = tx.Rollback()
@@ -147,7 +158,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	}
 
 	// 计算变量列表
-	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id, form.SampleVariables)
+	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
 	if er != nil {
 		_ = tx.Rollback()
 		return nil, err
@@ -599,7 +610,7 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 	}
 
 	// 计算变量列表
-	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id, nil)
+	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
 	if er != nil {
 		_ = tx.Rollback()
 		return nil, err
