@@ -7,6 +7,7 @@ import (
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/web/api/v1/handlers"
 	"cloudiac/portal/web/middleware"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -101,8 +102,10 @@ func Register(g *gin.RouterGroup) {
 	// 要求组织 header
 	g.Use(w(middleware.AuthOrgId))
 
+	// 组织下的资源搜索(只需要有环境的读权限即可查看资源)
+	g.GET("/orgs/resources", ac("envs", "read"), w(handlers.Organization{}.SearchOrgResources))
+
 	// 组织用户管理
-	g.GET("/orgs/resources", ac(), w(handlers.Organization{}.SearchOrgResources))
 	g.GET("/orgs/:id/users", ac("orgs", "listuser"), w(handlers.Organization{}.SearchUser))
 	g.POST("/orgs/:id/users", ac("orgs", "adduser"), w(handlers.Organization{}.AddUserToOrg))
 	g.PUT("/orgs/:id/users/:userId/role", ac("orgs", "updaterole"), w(handlers.Organization{}.UpdateUserOrgRel))

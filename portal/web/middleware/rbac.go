@@ -23,9 +23,9 @@ func AccessControl(args ...string) gin.HandlerFunc {
 
 	var sub, obj, act string
 	if len(args) >= 3 {
-		sub = args[0]
-		obj = args[1]
-		act = args[2]
+		sub = args[0] // 角色
+		obj = args[1] // 对象
+		act = args[2] // 操作
 	} else if len(args) == 2 {
 		obj = args[0]
 		act = args[1]
@@ -137,12 +137,13 @@ func AccessControl(args ...string) gin.HandlerFunc {
 		}
 
 		// 根据 角色 和 项目角色 判断资源访问许可
-		logger.Debugf("enforcing %s,%s %s:%s", role, proj, object, action)
 		allow, err := enforcer.Enforce(role, proj, object, action)
 		if err != nil {
 			logger.Errorf("error enforce %s,%s %s:%s, err %s", role, proj, object, action, err)
 			c.JSONError(e.New(e.InternalError), http.StatusInternalServerError)
 		}
+		logger.Debugf("enforce, orgRole=%s, projectRole=%s, object=%s, action=%s, allow=%v",
+			role, proj, object, action, allow)
 		if allow {
 			c.Next()
 		} else {
