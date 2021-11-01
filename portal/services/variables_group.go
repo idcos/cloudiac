@@ -8,7 +8,6 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/utils/logs"
 	"fmt"
-	"strings"
 )
 
 func CreateVariableGroup(tx *db.Session, group models.VariableGroup) (models.VariableGroup, e.Error) {
@@ -297,52 +296,10 @@ func BatchUpdateRelationship(tx *db.Session, variableIds, delVariableIds []model
 }
 
 // GetValidVarsAndVgVars 获取变量及变量组变量
-func GetValidVarsAndVgVars(tx *db.Session, orgId, projectId, tplId, envId models.Id, sampleVariables []forms.SampleVariables) ([]models.VariableBody, error) {
+func GetValidVarsAndVgVars(tx *db.Session, orgId, projectId, tplId, envId models.Id) ([]models.VariableBody, error) {
 	vars, err, _ := GetValidVariables(tx, consts.ScopeEnv, orgId, projectId, tplId, envId, true)
 	if err != nil {
 		return nil, fmt.Errorf("get vairables error: %v", err)
-	}
-	// sampleVariables是外部下发的环境变量，会和计算出来的变量列表冲突，这里需要做一下处理
-	// FIXME 未对变量组的变量进行处理
-	if len(sampleVariables) != 0 {
-		for index, v := range sampleVariables {
-			isNew := true
-			for key, value := range vars {
-				if v.Name == fmt.Sprintf("TF_VAR_%s", value.Name) {
-					vars[key] = models.Variable{
-						VariableBody: models.VariableBody{
-							Options:     vars[key].Options,
-							Scope:       vars[key].Scope,
-							Type:        vars[key].Type,
-							Name:        vars[key].Name,
-							Value:       sampleVariables[index].Value,
-							Sensitive:   vars[key].Sensitive,
-							Description: vars[key].Description,
-						},
-						OrgId:     vars[key].OrgId,
-						ProjectId: vars[key].ProjectId,
-						TplId:     vars[key].TplId,
-						EnvId:     vars[key].EnvId,
-					}
-					continue
-				}
-				// 比较变量名
-				if value.Name == v.Name || strings.HasPrefix(v.Name, "TF_VAR_") {
-					isNew = false
-				}
-			}
-			// 对不在变量列表的变量进行新建
-			if isNew {
-				vars[fmt.Sprintf("%s%s", v.Name, consts.VarTypeEnv)] = models.Variable{
-					VariableBody: models.VariableBody{
-						Scope: consts.ScopeEnv,
-						Type:  consts.VarTypeEnv,
-						Name:  v.Name,
-						Value: v.Value,
-					},
-				}
-			}
-		}
 	}
 
 	// 将变量组变量与普通变量进行合并，优先级: 普通变量 > 变量组变量

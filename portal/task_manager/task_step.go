@@ -63,7 +63,7 @@ func (m *TaskManager) runTaskStepsDoneActions(
 		}
 	}()
 
-	if task.IsEffectTask() && currStep.IsRejected() {
+	if task.IsEffectTask() && !currStep.IsRejected() {
 		// 执行信息采集步骤
 		logger.Infof("run task collect step")
 		if err := m.runTaskStep(ctx, runTaskReq, task, &models.TaskStep{
