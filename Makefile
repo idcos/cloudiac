@@ -17,7 +17,17 @@ GORUN=$(GOCMD) run -v -ldflags $(GOLDFLAGS)
 PB_PROTOC=protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative
 
 WORKDIR?=/usr/yunji/cloudiac
+
+DOCKER_REPO=cloudiac
+ifneq ($(DOCKER_REGISTRY),)
+  DOCKER_REPO=$(DOCKER_REGISTRY)/cloudiac
+endif
+
+# base image 不支持自定义 docker registry
+BASE_IMAGE_DOCKER_REPO=cloudiac
+
 DOCKER_BUILD=docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" --build-arg WORKDIR=$(WORKDIR) 
+
 BUILD_DIR=$(PWD)/build
 
 .PHONY: all build portal runner run run-portal ru-runner clean package repos providers package-release
@@ -94,19 +104,19 @@ package: package-linux-amd64
 BASE_IMAGE_VERSION=$(shell cat docker/base/VERSION)
 
 base-image-portal:
-	$(DOCKER_BUILD) -t cloudiac/base-iac-portal:$(BASE_IMAGE_VERSION) -f docker/base/portal/Dockerfile .
+	$(DOCKER_BUILD) -t ${BASE_IMAGE_DOCKER_REPO}/base-iac-portal:$(BASE_IMAGE_VERSION) -f docker/base/portal/Dockerfile .
 
 base-image-portal-arm64:
-	$(DOCKER_BUILD) -t cloudiac/base-iac-portal:$(BASE_IMAGE_VERSION)-arm64 -f docker/base/portal/Dockerfile-arm64 .
+	$(DOCKER_BUILD) -t ${BASE_IMAGE_DOCKER_REPO}/base-iac-portal:$(BASE_IMAGE_VERSION)-arm64 -f docker/base/portal/Dockerfile-arm64 .
 
 base-image-runner:
-	$(DOCKER_BUILD) -t cloudiac/base-ct-runner:$(BASE_IMAGE_VERSION) -f docker/base/runner/Dockerfile .
+	$(DOCKER_BUILD) -t ${BASE_IMAGE_DOCKER_REPO}/base-ct-runner:$(BASE_IMAGE_VERSION) -f docker/base/runner/Dockerfile .
 
 base-image-runner-arm64:
-	$(DOCKER_BUILD) -t cloudiac/base-ct-runner:$(BASE_IMAGE_VERSION)-arm64 -f docker/base/runner/Dockerfile-arm64 .
+	$(DOCKER_BUILD) -t ${BASE_IMAGE_DOCKER_REPO}/base-ct-runner:$(BASE_IMAGE_VERSION)-arm64 -f docker/base/runner/Dockerfile-arm64 .
 
 base-image-worker:
-	$(DOCKER_BUILD) -t cloudiac/base-ct-worker:$(BASE_IMAGE_VERSION) -f docker/base/worker/Dockerfile .
+	$(DOCKER_BUILD) -t ${BASE_IMAGE_DOCKER_REPO}/base-ct-worker:$(BASE_IMAGE_VERSION) -f docker/base/worker/Dockerfile .
 
 base-image: base-image-portal base-image-runner base-image-worker
 base-image-arm64: base-image-portal-arm64 base-image-runner-arm64 base-image-worker
@@ -118,21 +128,21 @@ push-base-image:
 
 
 image-portal: build-linux-amd64-portal
-	$(DOCKER_BUILD) -t cloudiac/iac-portal:$(VERSION) -f docker/portal/Dockerfile .
+	$(DOCKER_BUILD) -t ${DOCKER_REPO}/iac-portal:$(VERSION) -f docker/portal/Dockerfile .
 
 image-portal-arm64: build-linux-arm64-portal
-	$(DOCKER_BUILD) -t cloudiac/iac-portal:$(VERSION) -f docker/portal/Dockerfile-arm64 .
+	$(DOCKER_BUILD) -t ${DOCKER_REPO}/iac-portal:$(VERSION) -f docker/portal/Dockerfile-arm64 .
 
 image-runner: build-linux-amd64-runner
-	$(DOCKER_BUILD) --build-arg WORKER_IMAGE=cloudiac/ct-worker:$(VERSION) \
-	  -t cloudiac/ct-runner:$(VERSION) -f docker/runner/Dockerfile .
+	$(DOCKER_BUILD) --build-arg WORKER_IMAGE=${DOCKER_REPO}/ct-worker:$(VERSION) \
+	  -t ${DOCKER_REPO}/ct-runner:$(VERSION) -f docker/runner/Dockerfile .
 
 image-runner-arm64: build-linux-arm64-runner 
-	$(DOCKER_BUILD) --build-arg WORKER_IMAGE=cloudiac/ct-worker:$(VERSION) \
-	  -t cloudiac/ct-runner:$(VERSION) -f docker/runner/Dockerfile-arm64 .
+	$(DOCKER_BUILD) --build-arg WORKER_IMAGE=${DOCKER_REPO}/ct-worker:$(VERSION) \
+	  -t ${DOCKER_REPO}/ct-runner:$(VERSION) -f docker/runner/Dockerfile-arm64 .
 
 image-worker:
-	$(DOCKER_BUILD) -t cloudiac/ct-worker:$(VERSION) -f docker/worker/Dockerfile .
+	$(DOCKER_BUILD) -t ${DOCKER_REPO}/ct-worker:$(VERSION) -f docker/worker/Dockerfile .
 
 image-worker-arm64: image-worker
 
@@ -141,7 +151,7 @@ image-arm64: image-portal-arm64 image-runner-arm64 image-worker-arm64
 
 push-image:
 	for NAME in iac-portal ct-runner ct-worker; do \
-	  docker push cloudiac/$${NAME}:$(VERSION) || exit $$?; \
+	  docker push ${DOCKER_REPO}/$${NAME}:$(VERSION) || exit $$?; \
 	done
 
 push-image-latest:
