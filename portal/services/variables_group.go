@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/utils/logs"
 	"fmt"
+	"strings"
 )
 
 func CreateVariableGroup(tx *db.Session, group models.VariableGroup) (models.VariableGroup, e.Error) {
@@ -305,6 +306,7 @@ func GetValidVarsAndVgVars(tx *db.Session, orgId, projectId, tplId, envId models
 	// FIXME 未对变量组的变量进行处理
 	if len(sampleVariables) != 0 {
 		for index, v := range sampleVariables {
+			isNew := true
 			for key, value := range vars {
 				if v.Name == fmt.Sprintf("TF_VAR_%s", value.Name) {
 					vars[key] = models.Variable{
@@ -322,6 +324,22 @@ func GetValidVarsAndVgVars(tx *db.Session, orgId, projectId, tplId, envId models
 						TplId:     vars[key].TplId,
 						EnvId:     vars[key].EnvId,
 					}
+					continue
+				}
+				// 比较变量名
+				if value.Name == v.Name || strings.HasPrefix(v.Name, "TF_VAR_") {
+					isNew = false
+				}
+			}
+			// 对不在变量列表的变量进行新建
+			if isNew {
+				vars[fmt.Sprintf("%s%s", v.Name, consts.VarTypeEnv)] = models.Variable{
+					VariableBody: models.VariableBody{
+						Scope: consts.ScopeEnv,
+						Type:  consts.VarTypeEnv,
+						Name:  v.Name,
+						Value: v.Value,
+					},
 				}
 			}
 		}
@@ -332,12 +350,12 @@ func GetValidVarsAndVgVars(tx *db.Session, orgId, projectId, tplId, envId models
 	varGroup, err := SearchVariableGroupRel(tx.Debug(), map[string]models.Id{
 		consts.ScopeEnv:      envId,
 		consts.ScopeTemplate: tplId,
-		consts.ScopeProject: projectId,
-		consts.ScopeOrg:     orgId,
+		consts.ScopeProject:  projectId,
+		consts.ScopeOrg:      orgId,
 	}, consts.ScopeEnv)
 
 	if err != nil {
 		return nil, fmt.Errorf("get vairable group var error: %v", err)
 	}
-	return GetVariableBody(GetVariableGroupVar(varGroup, vars)),nil
+	return GetVariableBody(GetVariableGroupVar(varGroup, vars)), nil
 }
