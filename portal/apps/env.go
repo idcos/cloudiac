@@ -141,6 +141,32 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
+	// vars是cmp下发的环境变量，会和计算出来的变量列表冲突，这里需要做一下处理
+	// FIXME 未对变量组的变量进行处理
+	if len(form.SampleVariables) != 0 {
+		for index, v := range form.SampleVariables {
+			for key, value := range vars {
+				if v.Name == fmt.Sprintf("TF_VAR_%s", value.Name) {
+					vars[key] = models.Variable{
+						VariableBody: models.VariableBody{
+							Options:     vars[key].Options,
+							Scope:       vars[key].Scope,
+							Type:        vars[key].Type,
+							Name:        vars[key].Name,
+							Value:       form.SampleVariables[index].Value,
+							Sensitive:   vars[key].Sensitive,
+							Description: vars[key].Description,
+						},
+						OrgId:     vars[key].OrgId,
+						ProjectId: vars[key].ProjectId,
+						TplId:     vars[key].TplId,
+						EnvId:     vars[key].EnvId,
+					}
+				}
+			}
+		}
+	}
+
 	targets := make([]string, 0)
 	if len(strings.TrimSpace(form.Targets)) > 0 {
 		targets = strings.Split(strings.TrimSpace(form.Targets), ",")

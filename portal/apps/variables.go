@@ -82,7 +82,7 @@ func SearchVariable(c *ctx.ServiceContext, form *forms.SearchVariableForm) (inte
 	return rs, nil
 }
 
-func SearchStandardVariable(c *ctx.ServiceContext, form *forms.SearchVariableForm) (interface{}, e.Error) {
+func SearchSampleVariable(c *ctx.ServiceContext, form *forms.SearchVariableForm) (interface{}, e.Error) {
 	newRs := make([]models.VariableBody, 0)
 	rs, err := SearchVariable(c, form)
 	if err != nil {
