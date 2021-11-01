@@ -66,6 +66,7 @@ const (
 	PermissionDeny   = 20110
 	ValidateError    = 20111
 	InvalidOperation = 20112
+	PermDenyApproval = 20113
 
 	// 功能模块 3
 	//// 用户 301
@@ -290,6 +291,9 @@ var errorMsgs = map[int]map[string]string{
 	},
 	PermissionDeny: {
 		"zh-cn": "无权限",
+	},
+	PermDenyApproval: {
+		"zh-cn": "无审批权限",
 	},
 	ValidateError: {
 		"zh-cn": "验证失败",

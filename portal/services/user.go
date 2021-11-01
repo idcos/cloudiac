@@ -192,14 +192,17 @@ func UserHasProjectRole(userId models.Id, orgId models.Id, projectId models.Id, 
 	if userId.String() == consts.SysUserId {
 		return true
 	}
+
+	// 用户属于项目?
 	userProjects := getUserProjects(userId)
 	if userProjects[projectId] == nil {
 		return false
 	}
+
 	if role == "" {
 		return true
 	} else {
-		return role == userProjects[orgId].Role
+		return role == userProjects[projectId].Role
 	}
 }
 
