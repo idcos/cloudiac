@@ -120,9 +120,7 @@ func Register(g *gin.RouterGroup) {
 	//变量管理
 	g.PUT("/variables/batch", ac(), w(handlers.Variable{}.BatchUpdate))
 
-	// 临时使用等cmp修改pack删除
-	g.GET("/standard/variables", ac(), w(handlers.Variable{}.SearchStandardVariable))
-	// cmp使用的变量接口
+	// 供第三方系统获取变量的接口，该接口将 terraform 变量和环境变量统一转为环境变量格式返回，方便第三方系统处理
 	g.GET("/variables/standard", ac(), w(handlers.Variable{}.SearchStandardVariable))
 	ctrl.Register(g.Group("variables", ac()), &handlers.Variable{})
 	// 变量组
