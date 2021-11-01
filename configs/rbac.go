@@ -81,11 +81,15 @@ var Polices = []Policy{
 	{"member", "self", "read/update"},
 
 	// 组织
-	//{"root", "orgs", "*"},
+	{"root", "orgs", "*"},
 	{"login", "orgs", "read"},
 	{"admin", "orgs", "read/update"},
 	{"admin", "orgs", "listuser/adduser/removeuser/updaterole"},
 	{"member", "orgs", "read"},
+
+	// 资源账号(变量组)
+	{"admin", "var_groups", "*"},
+	{"member", "var_groups", "read"},
 
 	{"admin", "projects", "*"},
 	{"member", "projects", "read"},
@@ -148,6 +152,7 @@ var Polices = []Policy{
 	{"guest", "vcs", "read"},
 
 	//runner
+	{"member", "runners", "read"},
 	{"manager", "runners", "read"},
 	{"approver", "runners", "read"},
 	{"operator", "runners", "read"},

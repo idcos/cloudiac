@@ -308,6 +308,16 @@ func PopulateLastTask(query *db.Session, env *models.EnvDetail) *models.EnvDetai
 	return env
 }
 
+func checkUserHasApprovalPerm(c *ctx.ServiceContext) error {
+	if c.IsSuperAdmin ||
+		services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) ||
+		services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) ||
+		services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleApprover) {
+		return nil
+	}
+	return e.New(e.PermDenyApproval, http.StatusForbidden)
+}
+
 // UpdateEnv 环境编辑
 func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDetail, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update env %s", form.Id))
@@ -325,7 +335,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	}
 
 	// 项目已归档，不允许编辑
-	if env.Archived && form.Archived == false {
+	if env.Archived && !form.Archived {
 		return nil, e.New(e.EnvArchived, http.StatusBadRequest)
 	}
 
@@ -356,20 +366,15 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	}
 
 	if form.HasKey("autoApproval") {
-		if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) &&
-			!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) &&
-			!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) {
-			return nil, e.New(e.PermissionDeny, fmt.Errorf("approval role required"), http.StatusBadRequest)
+		if form.AutoApproval != env.AutoApproval {
+			if err := checkUserHasApprovalPerm(c); err != nil {
+				return nil, e.AutoNew(err, e.PermissionDeny)
+			}
 		}
 		attrs["auto_approval"] = form.AutoApproval
 	}
 
 	if form.HasKey("stopOnViolation") {
-		//if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) &&
-		//	!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) &&
-		//	!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) {
-		//	return nil, e.New(e.PermissionDeny, fmt.Errorf("approval role required"), http.StatusBadRequest)
-		//}
 		attrs["StopOnViolation"] = form.StopOnViolation
 	}
 
@@ -509,19 +514,14 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		env.Name = form.Name
 	}
 	if form.HasKey("autoApproval") {
-		if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) &&
-			!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) &&
-			!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) {
-			return nil, e.New(e.PermissionDeny, fmt.Errorf("approval role required"), http.StatusBadRequest)
+		if form.AutoApproval != env.AutoApproval {
+			if err := checkUserHasApprovalPerm(c); err != nil {
+				return nil, e.AutoNew(err, e.PermissionDeny)
+			}
 		}
 		env.AutoApproval = form.AutoApproval
 	}
 	if form.HasKey("stopOnViolation") {
-		//if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) &&
-		//	!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) &&
-		//	!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.ProjectRoleManager) {
-		//	return nil, e.New(e.PermissionDeny, fmt.Errorf("approval role required"), http.StatusBadRequest)
-		//}
 		env.StopOnViolation = form.StopOnViolation
 	}
 
