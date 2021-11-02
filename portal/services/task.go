@@ -90,6 +90,7 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 			Message:  "",
 			CurrStep: 0,
 		},
+		Callback: pt.Callback,
 	}
 
 	task.Id = models.NewId("run")
@@ -324,8 +325,13 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 	}
 
 	// 回调的消息通知只发送一次, 作业结束后发送通知
-	if task.ExtraData != nil && task.Exited() {
-		SendKafkaMessage(dbSess, task, status)
+	if task.Callback != "" && task.Exited() {
+		switch task.Callback {
+		case consts.TaskCallbackKafka:
+			SendKafkaMessage(dbSess, task, status)
+		default:
+			logs.Get().Infof("callback type don't support")
+		}
 	}
 
 	if preStatus != status {
