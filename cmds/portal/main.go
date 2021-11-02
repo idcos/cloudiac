@@ -7,9 +7,10 @@ import (
 	"cloudiac/portal/apps"
 	"cloudiac/portal/task_manager"
 	"fmt"
+	"os"
+
 	"github.com/jessevdk/go-flags"
 	"github.com/pkg/errors"
-	"os"
 
 	"cloudiac/cmds/common"
 	"cloudiac/configs"
@@ -18,6 +19,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
+	"cloudiac/portal/services/rbac"
 	"cloudiac/portal/services/sshkey"
 	"cloudiac/portal/web"
 	"cloudiac/utils/kafka"
@@ -51,7 +53,7 @@ func main() {
 	//	panic(errors.Wrap(err, "init ssh key pair"))
 	//}
 
-	// 依赖中间件及数据的初始化
+	// 中间件及数据的初始化
 	{
 		db.Init(configs.Get().Mysql)
 		models.Init(true)
@@ -73,6 +75,7 @@ func main() {
 
 		services.MaintenanceRunnerPerMax()
 		kafka.InitKafkaProducerBuilder()
+		rbac.InitPolicy()
 	}
 
 	// 注册到 consul
@@ -115,10 +118,6 @@ func appAutoInit(tx *db.Session) (err error) {
 
 	if err := initTemplates(tx); err != nil {
 		return errors.Wrap(err, "init meat template")
-	}
-
-	if err := initPolicy(tx); err != nil {
-		return errors.Wrap(err, "init rbac policy")
 	}
 
 	return nil
