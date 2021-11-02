@@ -44,6 +44,8 @@ type CreateEnvForm struct {
 	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
 
 	SampleVariables []SampleVariables `json:"sampleVariables" form:"sampleVariables" `
+
+	Callback string `json:"callback" form:"callback"` // 外部请求的回调方式
 }
 
 type SampleVariables struct {

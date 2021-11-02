@@ -115,9 +115,10 @@ type Task struct {
 	// 任务执行结果，如 add/change/delete 的资源数量、outputs 等
 	Result TaskResult `json:"result" gorm:"type:json"` // 任务执行结果
 
-	RetryNumber int  `json:"retryNumber" gorm:"size:32;default:0"` // 任务重试次数
-	RetryDelay  int  `json:"retryDelay" gorm:"size:32;default:0"`  // 每次任务重试时间，单位为秒
-	RetryAble   bool `json:"retryAble" gorm:"default:false"`
+	RetryNumber int    `json:"retryNumber" gorm:"size:32;default:0"` // 任务重试次数
+	RetryDelay  int    `json:"retryDelay" gorm:"size:32;default:0"`  // 每次任务重试时间，单位为秒
+	RetryAble   bool   `json:"retryAble" gorm:"default:false"`
+	Callback    string `json:"callback" gorm:"default:''"` // 外部请求的回调方式
 }
 
 func (Task) TableName() string {

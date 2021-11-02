@@ -119,6 +119,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		RetryNumber: form.RetryNumber,
 
 		ExtraData: models.JSON(form.ExtraData),
+		Callback:  form.Callback,
 	})
 	if err != nil && err.Code() == e.EnvAlreadyExists {
 		_ = tx.Rollback()
@@ -180,6 +181,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 			RunnerId:    runnerId,
 		},
 		ExtraData: models.JSON(form.ExtraData),
+		Callback:  form.Callback,
 	})
 	if err != nil {
 		_ = tx.Rollback()
