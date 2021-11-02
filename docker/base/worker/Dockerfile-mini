@@ -2,6 +2,7 @@ FROM mini/ansible:2.4
 
 ARG WORKDIR=/usr/yunji/cloudiac
 WORKDIR ${WORKDIR}
+USER root
 
 RUN apk add --update git bash curl
 
@@ -20,4 +21,5 @@ RUN tfenv install "0.11.15" && \
 
 COPY assets/terraform.py /cloudiac/assets/terraform.py
 COPY assets/providers /usr/share/terraform/plugins
+COPY assets/terraform.rc /root/.terraformrc
 
