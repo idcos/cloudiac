@@ -132,12 +132,10 @@ var Polices = []Policy{
 
 	//token
 	{"admin", "tokens", "*"},
-	{"member", "tokens", "read"},
 
 	{"manager", "tokens", "*"},
 	{"approver", "tokens", "*"},
 	{"operator", "tokens", "*"},
-	{"guest", "tokens", "read"},
 
 	//通知
 	{"admin", "notifications", "*"},
