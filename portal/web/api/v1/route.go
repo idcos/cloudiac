@@ -47,7 +47,9 @@ func Register(g *gin.RouterGroup) {
 	// Authorization Header 鉴权
 	g.Use(w(middleware.Auth)) // 解析 header token
 
-	ctrl.Register(g.Group("token", ac()), &handlers.Auth{})
+	// TODO 旧的 token 接口己不再使用，先注释, 后续版本删除
+	// ctrl.Register(g.Group("token", ac()), &handlers.Auth{})
+
 	g.GET("/auth/me", ac("self", "read"), w(handlers.Auth{}.GetUserByToken))
 	g.PUT("/users/self", ac("self", "update"), w(handlers.User{}.UpdateSelf))
 	//todo runner list权限怎么划分
