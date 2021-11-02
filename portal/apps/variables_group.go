@@ -92,19 +92,33 @@ func UpdateVariableGroup(c *ctx.ServiceContext, form *forms.UpdateVariableGroupF
 		attrs["name"] = form.Name
 	}
 
+	vg, err := services.GetVariableGroupById(session, form.Id)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	vgVarsMap := make(map[string]models.VarGroupVariable)
+	for _, v := range vg.Variables {
+		vgVarsMap[v.Name] = v
+	}
+
 	if form.HasKey("variables") {
 		vb := make([]models.VarGroupVariable, 0)
-		for index, v := range form.Variables {
-			if v.Sensitive && v.Value != "" {
-				value, _ := utils.AesEncrypt(v.Value)
-				form.Variables[index].Value = value
+		for _, v := range form.Variables {
+			if v.Sensitive {
+				if v.Value == "" {
+					// 传空值时表示不修改，我们赋值为 db 中己保存的值(如果存在)
+					v.Value = vgVarsMap[v.Name].Value
+				} else {
+					v.Value, _ = utils.AesEncrypt(v.Value)
+				}
 			}
 			vb = append(vb, models.VarGroupVariable{
-				Id:          form.Variables[index].Id,
-				Name:        form.Variables[index].Name,
-				Value:       form.Variables[index].Value,
-				Sensitive:   form.Variables[index].Sensitive,
-				Description: form.Variables[index].Description,
+				Id:          v.Id,
+				Name:        v.Name,
+				Value:       v.Value,
+				Sensitive:   v.Sensitive,
+				Description: v.Description,
 			})
 		}
 		b, _ := models.VarGroupVariables(vb).Value()
