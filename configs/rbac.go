@@ -71,7 +71,8 @@ var Polices = []Policy{
 	{"login", "webhook", "*"},
 
 	// 合规策略
-	//{"login", "policies", "*"},
+	// 暂时只开放给平台管理员
+	{"root", "policies", "*"},
 
 	// 用户
 	{"admin", "users", "*"},

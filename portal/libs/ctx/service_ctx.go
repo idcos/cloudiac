@@ -3,23 +3,17 @@
 package ctx
 
 import (
-	"cloudiac/configs"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/utils/logs"
 	"fmt"
 	"math/rand"
-
-	"github.com/casbin/casbin/v2"
-	"github.com/casbin/casbin/v2/model"
-	gormadapter "github.com/casbin/gorm-adapter/v3"
 )
 
 type ServiceContext struct {
-	rc       RequestContext
-	dbSess   *db.Session
-	logger   logs.Logger
-	enforcer *casbin.Enforcer
+	rc     RequestContext
+	dbSess *db.Session
+	logger logs.Logger
 
 	UserId       models.Id // 登陆用户ID
 	OrgId        models.Id // 组织ID
@@ -60,27 +54,4 @@ func (c *ServiceContext) Logger() logs.Logger {
 func (c *ServiceContext) AddLogField(key string, val string) *ServiceContext {
 	c.logger = c.logger.WithField(key, val)
 	return c
-}
-
-// Enforcer 初始化 casbin enforcer 对象
-func (c *ServiceContext) Enforcer() *casbin.Enforcer {
-	if c.enforcer == nil {
-		var err error
-
-		adapter, err := gormadapter.NewAdapterByDBUseTableName(db.Get().GormDB(), "iac_", "")
-		if err != nil {
-			panic(fmt.Sprintf("error create enforcer: %v", err))
-		}
-
-		// 加载策略模型
-		m, err := model.NewModelFromString(configs.RbacModel)
-		if err != nil {
-			panic(fmt.Sprintf("error load rbac model: %v", err))
-		}
-		c.enforcer, err = casbin.NewEnforcer(m, adapter)
-		if err != nil {
-			panic(fmt.Sprintf("error create enforcer: %v", err))
-		}
-	}
-	return c.enforcer
 }
