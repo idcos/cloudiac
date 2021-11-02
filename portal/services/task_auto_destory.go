@@ -16,10 +16,9 @@ func CreateAutoDestroyTask(tx *db.Session, env *models.Env) (*models.Task, e.Err
 		logger.Errorf("get template %s error: %v", env.TplId, err)
 		return nil, err
 	}
-
-	vars, err, _ := GetValidVariables(tx, consts.ScopeEnv, env.OrgId, env.ProjectId, env.TplId, env.Id, true)
-	if err != nil {
-		logger.Errorf("get vairables error: %v", err)
+	// 计算变量列表
+	vars, er := GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
+	if er != nil {
 		return nil, err
 	}
 
@@ -38,7 +37,7 @@ func CreateAutoDestroyTask(tx *db.Session, env *models.Env) (*models.Task, e.Err
 		Name:            "Auto Destroy",
 		Targets:         nil,
 		CreatorId:       consts.SysUserId,
-		Variables:       GetVariableBody(vars),
+		Variables:       vars,
 		AutoApprove:     true,
 		StopOnViolation: env.StopOnViolation,
 		BaseTask: models.BaseTask{

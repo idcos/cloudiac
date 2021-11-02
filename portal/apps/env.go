@@ -129,21 +129,21 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
+	// sampleVariables是外部下发的环境变量，会和计算出来的变量列表冲突，这里需要做一下处理
+	// FIXME 未对变量组的变量进行处理
+	sampleVars, err := services.GetSampleValidVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.SampleVariables)
+	if err != nil {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
+	if len(sampleVars) > 0 {
+		form.Variables = append(form.Variables, sampleVars...)
+	}
+
 	// 创建新导入的变量
 	if err = services.OperationVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.Variables, nil); err != nil {
 		_ = tx.Rollback()
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
-	}
-	// 获取计算后的变量列表
-	vars, err, _ := services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id, true)
-	if err != nil {
-		_ = tx.Rollback()
-		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
-	}
-
-	targets := make([]string, 0)
-	if len(strings.TrimSpace(form.Targets)) > 0 {
-		targets = strings.Split(strings.TrimSpace(form.Targets), ",")
 	}
 
 	// 创建变量组与实例的关系
@@ -152,16 +152,14 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, err
 	}
 
-	// 将变量组变量与普通变量进行合并，优先级: 普通变量 > 变量组变量
-	// 查询实例关联的变量组
-	varGroup, err := services.SearchVariableGroupRel(tx.Debug(), map[string]models.Id{
-		consts.ScopeEnv:      env.Id,
-		consts.ScopeTemplate: env.TplId,
-		consts.ScopeProject:  c.ProjectId,
-		consts.ScopeOrg:      c.OrgId,
-	}, consts.ScopeEnv)
+	targets := make([]string, 0)
+	if len(strings.TrimSpace(form.Targets)) > 0 {
+		targets = strings.Split(strings.TrimSpace(form.Targets), ",")
+	}
 
-	if err != nil {
+	// 计算变量列表
+	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
+	if er != nil {
 		_ = tx.Rollback()
 		return nil, err
 	}
@@ -172,7 +170,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		Targets:         targets,
 		CreatorId:       c.UserId,
 		KeyId:           env.KeyId,
-		Variables:       services.GetVariableBody(services.GetVariableGroupVar(varGroup, vars)),
+		Variables:       vars,
 		AutoApprove:     env.AutoApproval,
 		Revision:        env.Revision,
 		StopOnViolation: env.StopOnViolation,
@@ -573,13 +571,6 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		}
 	}
 
-	// 计算变量列表
-	vars := map[string]models.Variable{}
-	vars, err, _ = services.GetValidVariables(tx, consts.ScopeEnv, c.OrgId, c.ProjectId, env.TplId, env.Id, true)
-	if err != nil {
-		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
-	}
-
 	if form.HasKey("tfVarsFile") {
 		env.TfVarsFile = form.TfVarsFile
 	}
@@ -618,15 +609,9 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		}
 	}
 
-	// 将变量组变量与普通变量进行合并，优先级: 普通变量 > 变量组变量
-	// 查询实例关联的变量组
-	varGroup, err := services.SearchVariableGroupRel(tx.Debug(), map[string]models.Id{
-		consts.ScopeEnv:      env.Id,
-		consts.ScopeTemplate: env.TplId,
-		consts.ScopeProject:  c.ProjectId,
-		consts.ScopeOrg:      c.OrgId,
-	}, consts.ScopeEnv)
-	if err != nil {
+	// 计算变量列表
+	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
+	if er != nil {
 		_ = tx.Rollback()
 		return nil, err
 	}
@@ -637,7 +622,7 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		Targets:         targets,
 		CreatorId:       c.UserId,
 		KeyId:           env.KeyId,
-		Variables:       services.GetVariableBody(services.GetVariableGroupVar(varGroup, vars)),
+		Variables:       vars,
 		AutoApprove:     env.AutoApproval,
 		Revision:        env.Revision,
 		StopOnViolation: env.StopOnViolation,

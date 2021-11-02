@@ -3,11 +3,14 @@
 package services
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/forms"
 	"cloudiac/utils/logs"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -222,3 +225,43 @@ func GetDefaultRunner() (string, e.Error) {
 	}
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list is null"))
 }
+
+func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id, sampleVariables []forms.SampleVariables) ([]forms.Variables, e.Error) {
+	resp := make([]forms.Variables, 0)
+	vars, err, _ := GetValidVariables(tx, consts.ScopeEnv, orgId, projectId, tplId, envId, true)
+	if err != nil {
+		return nil, e.New(e.DBError, fmt.Errorf("get vairables error: %v", err))
+	}
+	for _, v := range sampleVariables {
+		isNew := true
+		for key, value := range vars {
+			// 
+			if v.Name == fmt.Sprintf("TF_VAR_%s", value.Name) {
+				resp = append(resp, forms.Variables{
+					Id:    vars[key].Id,
+					Scope: vars[key].Scope,
+					Type:  vars[key].Type,
+					Name:  vars[key].Name,
+					Value: v.Value,
+				})
+				continue
+			}
+			// 比较变量名
+			if value.Name == v.Name || strings.HasPrefix(v.Name, "TF_VAR_") {
+				isNew = false
+			}
+		}
+		// 对不在变量列表的变量进行新建
+		if isNew {
+			resp = append(resp, forms.Variables{
+				Scope: consts.ScopeEnv,
+				Type:  consts.VarTypeEnv,
+				Name:  v.Name,
+				Value: v.Value,
+			})
+		}
+	}
+
+	return resp, nil
+}
+
