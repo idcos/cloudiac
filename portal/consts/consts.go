@@ -109,6 +109,8 @@ const (
 
 	DefaultTfMirror   = "https://releases.hashicorp.com/terraform"
 	HttpClientTimeout = 20
+
+	TaskCallbackKafka = "kafka"
 )
 
 var (
