@@ -139,6 +139,19 @@ func UnmarshalValue(src interface{}, dst interface{}) error {
 	return json.Unmarshal(bs, dst)
 }
 
+func dbMigrate(sess *db.Session) {
+	if !autoMigration {
+		return
+	}
+
+	if err := sess.DropTable("iac_casbin_rule"); err != nil {
+		panic(err)
+	}
+	if err := sess.DropTable("iac__casbin_rule"); err != nil {
+		panic(err)
+	}
+}
+
 var autoMigration = false
 
 func autoMigrate(m Modeler, sess *db.Session) {
@@ -208,4 +221,6 @@ func Init(migrate bool) {
 	autoMigrate(&PolicySuppress{}, sess)
 	autoMigrate(&VariableGroup{}, sess)
 	autoMigrate(&VariableGroupRel{}, sess)
+
+	dbMigrate(sess)
 }

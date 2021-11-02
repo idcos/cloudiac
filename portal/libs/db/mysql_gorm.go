@@ -63,6 +63,14 @@ func (s *Session) New() *Session {
 	return ToSess(s.db.Session(&gorm.Session{NewDB: true}))
 }
 
+func (s *Session) DropTable(table string) error {
+	migrator := s.db.Migrator()
+	if !migrator.HasTable(table) {
+		return nil
+	}
+	return migrator.DropTable(table)
+}
+
 func (s *Session) AddUniqueIndex(indexName string, columns ...string) error {
 	stmt := s.db.Statement
 	if stmt.Model != nil {

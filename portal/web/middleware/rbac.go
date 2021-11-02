@@ -9,6 +9,7 @@ import (
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
+	"cloudiac/portal/services/rbac"
 	"cloudiac/utils/logs"
 	"fmt"
 	"net/http"
@@ -67,15 +68,6 @@ func AccessControl(args ...string) gin.HandlerFunc {
 			op = "delete"
 		default:
 			op = "other"
-		}
-
-		// 加载权限策略
-		enforcer := c.Service().Enforcer()
-		err := enforcer.LoadPolicy()
-		if err != nil {
-			logger.Errorf("error load rbac policy, err %s", err)
-			c.JSONError(e.New(e.DBError), http.StatusInternalServerError)
-			return
 		}
 
 		// 组织角色
@@ -137,7 +129,7 @@ func AccessControl(args ...string) gin.HandlerFunc {
 		}
 
 		// 根据 角色 和 项目角色 判断资源访问许可
-		allow, err := enforcer.Enforce(role, proj, object, action)
+		allow, err := rbac.Enforce(role, proj, object, action)
 		if err != nil {
 			logger.Errorf("error enforce %s,%s %s:%s, err %s", role, proj, object, action, err)
 			c.JSONError(e.New(e.InternalError), http.StatusInternalServerError)
