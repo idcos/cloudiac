@@ -171,7 +171,7 @@ func ParsePortalConfig(filename string) error {
 	lock.Lock()
 	defer lock.Unlock()
 	config = &cfg
-
+	fmt.Println(config.Kafka.Brokers)
 	return nil
 }
 

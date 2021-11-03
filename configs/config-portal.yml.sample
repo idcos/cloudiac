@@ -26,9 +26,9 @@ log:
 kafka:
     topic: "${KAFKA_TOPIC}"
     group_id: "${KAFKA_GROUP_ID}"
-    partition: "${KAFKA_PARTITION}"
+    partition: ${KAFKA_PARTITION}
     ## example: brokers: ["kafka.example.com:9092", "..."]
-    brokers: "${KAFKA_BROKERS}"
+    brokers: ${KAFKA_BROKERS}
     sasl_username: "${KAFKA_SASL_USERNAME}"
     sasl_password: "${KAFKA_SASL_PASSWORD}"
 
