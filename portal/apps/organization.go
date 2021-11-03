@@ -493,3 +493,63 @@ func SearchOrgResources(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm
 	}, nil
 
 }
+
+// UpdateUserOrg 更新组织用户信息
+func UpdateUserOrg(c *ctx.ServiceContext, form *forms.UpdateUserOrgForm) (userResp *models.UserWithRoleResp, err e.Error) {
+	c.AddLogField("action", fmt.Sprintf("update user %s in org %s to role %s", form.UserId, c.OrgId, form.Role))
+
+	tx := c.Tx()
+
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+	query := tx
+	query = query.Where("status = 'enable'")
+	if !c.IsSuperAdmin {
+		userIds, _ := services.GetUserIdsByOrg(tx, c.OrgId)
+		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+	}
+	user, err := services.GetUserById(query, form.UserId)
+	if err != nil && err.Code() == e.UserNotExists {
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		c.Logger().Errorf("error get user by id, err %s", err)
+		return nil, e.New(e.DBError, err)
+	}
+
+	if err := services.UpdateUserOrgRel(tx, models.UserOrg{OrgId: c.OrgId, UserId: form.UserId, Role: form.Role}); err != nil {
+		c.Logger().Errorf("error create user org rel, err %s", err)
+		return nil, err
+	}
+	c.Logger().Infof("add user ", form.UserId, " to org ", c.OrgId, " succeed")
+
+	attrs := models.Attrs{}
+	if form.HasKey("name") {
+		attrs["name"] = form.Name
+	}
+	if form.HasKey("phone") {
+		attrs["phone"] = form.Phone
+	}
+
+	user, err = services.UpdateUser(tx, user.Id, attrs)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	resp := models.UserWithRoleResp{
+		User: *user,
+		Role: form.Role,
+	}
+
+	return &resp, nil
+}
