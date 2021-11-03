@@ -24,13 +24,13 @@ log:
   log_max_days: 7
 
 kafka:
-    topic: IAC_TASK_REPLY
-    group_id: ""
-    partition: 0
+    topic: ${KAFKA_TOPIC}
+    group_id: ${KAFKA_GROUP_ID}
+    partition: ${KAFKA_PARTITION}
     ## example: brokers: ["kafka.example.com:9092", "..."]
-    brokers: []
-    sasl_username: admin
-    sasl_password: ""
+    brokers: ${KAFKA_BROKERS}
+    sasl_username: ${KAFKA_SASL_USERNAME}
+    sasl_password: ${KAFKA_SASL_PASSWORD}
 
 smtpServer:
   addr: "${SMTP_ADDRESS}"

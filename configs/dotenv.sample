@@ -35,6 +35,16 @@ SMTP_PASSWORD=""
 SMTP_FROM_NAME=IaC
 SMTP_FROM=support@example.com
 
+# KAFKA配置(该配置只影响KAFKA消息的发送，不配置也能启动)
+KAFKA_TOPIC = "IAC_TASK_REPLY"
+KAFKA_GROUP_ID=""
+KAFKA_PARTITION=0
+## example: KAFKA_BROKERS: ["kafka.example.com:9092", "..."]
+KAFKA_BROKERS=[]
+KAFKA_SASL_USERNAME=""
+KAFKA_SASL_PASSWORD=""
+
+
 ######### 以下为 runner 配置 #############
 # runner 服务注册配置
 RUNNER_SERVICE_IP=ct-runner
