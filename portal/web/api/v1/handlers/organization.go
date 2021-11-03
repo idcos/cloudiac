@@ -257,7 +257,7 @@ func (Organization) SearchOrgResources(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param orgId path string true "组织ID"
 // @Param userId path string true "用户ID"
-// @Param form formData forms.UpdateUserOrgRelForm true "parameter"
+// @Param form formData forms.UpdateUserOrgForm true "parameter"
 // @router /orgs/{orgId}/users/{userId} [put]
 // @Success 200 {object} ctx.JSONResult{result=models.UserWithRoleResp}
 func (Organization) UpdateUserOrg(c *ctx.GinRequest) {
