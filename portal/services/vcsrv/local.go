@@ -172,9 +172,12 @@ func (l *LocalRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
 			return nil
 		}
 
-		// 非递归时只遍历第一层目录
-		if !opt.Recursive && (opt.Path != "" && filepath.Dir(file.Name) != opt.Path) {
-			return nil
+		if !opt.Recursive {
+			// 非递归时只遍历第一层目录
+			if (opt.Path == "" && filepath.Dir(file.Name) != ".") ||
+				(opt.Path != "" && filepath.Dir(file.Name) != opt.Path) {
+				return nil
+			}
 		}
 
 		if matchGlob(opt.Search, filepath.Base(file.Name)) {
