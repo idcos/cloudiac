@@ -1,16 +1,19 @@
-# 平台管理员账号，只在初始化启动时进行读取
+# 平台管理员账号密码(均为必填)
+# 该账号密码只在系统初始化时使用，后续修改不影响己创建的账号
 IAC_ADMIN_EMAIL="admin@example.com"
-
-## 平台管理员密码(必填)，要求长度大于 8 且包含字母、数字、特殊字符
+# 密码要求长度大于 8 且包含字母、数字、特殊字符
 IAC_ADMIN_PASSWORD=""
 
 # 加密密钥配置(必填)
+# 敏感数据使用该密钥进行加密
 SECRET_KEY=""
 
 # IaC 对外提供服务的地址(必填), 示例: http://cloudiac.example.com
+# 该地址需要带协议(http/https)，结尾不可以加 "/"
 PORTAL_ADDRESS=""
 
-# consul 地址，需要配置为宿主机的内网 ip(必填)，示例: private.host.ip:8500
+# consul 地址(必填)，示例: private.host.ip:8500
+# 需要配置为机器的内网 ip:port，不可使用 127.0.0.1
 CONSUL_ADDRESS=""
 
 # mysql 配置(必填)
@@ -20,22 +23,25 @@ MYSQL_DATABASE=cloudiac
 MYSQL_USER=cloudiac
 MYSQL_PASSWORD="mysqlpass"
 
-# portal 服务注册信息配置
+# portal 服务注册信息配置 (均为必填)
+## portal 服务 IP 地址，需要配置为内网 IP
 SERVICE_IP=iac-portal
+## portal 服务注册的 id(需要保证唯一)
 SERVICE_ID=iac-portal-01
+## portal 服务注册的 tags
 SERVICE_TAGS="iac-portal;portal-01"
 
-## logger 配置
+# logger 配置
 LOG_DEVEL="debug"
 
-# SMTP 配置(该配置只影响邮件通知的发送，不配置也能启动)
+# SMTP 配置(该配置只影响邮件通知的发送，不配置不影响其他功能)
 SMTP_ADDRESS=smtp.example.com:25
 SMTP_USERNAME=user@example.com
 SMTP_PASSWORD=""
 SMTP_FROM_NAME=IaC
 SMTP_FROM=support@example.com
 
-# KAFKA配置(该配置只影响KAFKA消息的发送，不配置也能启动)
+# KAFKA配置(kafka 任务结果回调使用，不配置不影响其他功能)
 KAFKA_TOPIC = "IAC_TASK_REPLY"
 KAFKA_GROUP_ID=""
 KAFKA_PARTITION=0
@@ -46,7 +52,9 @@ KAFKA_SASL_PASSWORD=""
 
 
 ######### 以下为 runner 配置 #############
-# runner 服务注册配置
+# runner 服务注册配置(均为必填)
+## runner 服务的 IP 地址，需要配置为内网 IP
 RUNNER_SERVICE_IP=ct-runner
+## runner 服务注册的 id(需要保证唯一)
 RUNNER_SERVICE_ID=ct-runner-01
 RUNNER_SERVICE_TAGS="ct-runner;runner-01"
