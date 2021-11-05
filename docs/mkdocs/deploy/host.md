@@ -82,72 +82,30 @@ systemctl start consul
 https://learn.hashicorp.com/tutorials/consul/get-started-install
 
 #### 5. 编辑配置文件
-
-###### 拷贝示例配置文件
-
+- 拷贝示例配置文件
 ```bash
 mv config-portal.yml.sample config-portal.yml
 mv config-runner.yml.sample config-runner.yml
 mv dotenv.sample .env
 mv demo-conf.yml.sample demo-conf.yml
 ```
+- 编辑 .env 文件，依据注释修改配置。
 
-###### 修改配置 
-
-编辑 .env 文件，主要修改如下内容:
-
-```bash
-# 管理员账号密码，只在初始化启动时进行读取
-IAC_ADMIN_EMAIL=admin@example.com
-IAC_ADMIN_PASSWORD=
-
-# IaC 对外提供服务的地址
-PORTAL_ADDRESS=http://public.host.ip
-
-# mysql 配置
-MYSQL_HOST=mysql
-MYSQL_PORT=3306
-MYSQL_DATABASE=iac
-MYSQL_USER=root
-MYSQL_PASSWORD=
-
-# consul 配置
-CONSUL_ADDRESS=private.host.ip:8500
-
-# portal 服务注册信息配置
-SERVICE_IP=private.host.ip
-SERVICE_ID=IaC-Portal-01
-SERVICE_TAGS=iac-portal;portal-01
-```
-
-###### 编辑 config-runner.yml 文件，主要修改如下内容:
-
-```yaml
-consul:
-  address: "consul.example.com:8500"
-  // runner id 全局唯一
-  id: "CT-Runner-01"
-  // runner 的地址，该地址需要确保 portal 和 consul 能正常访问
-  ip: "runner01.example.com"
-  tags: "ct-runner;runner-01"
-```
+*通过 .env 可以配置大部分参数，更详细的配置可以直接修改 config-portal.yml 和 config-runner.yml*
 
 #### 6. 初始化 Mysql
-
 ```sql
 -- 连接到 mysql 执行以下命令创建 db，默认配置的 db 名称为 iac
 create database iac charset utf8mb4;
 ```
 
 #### 7. 安装 IaC 服务
-
 ```shell
 cp iac-portal.service ct-runner.service /etc/systemd/system/
 systemctl enable iac-portal ct-runner
 ```
 
 #### 8. 启动 IaC 服务
-
 ```shell
 ## 启动服务
 systemctl start iac-portal ct-runner
@@ -157,7 +115,6 @@ systemctl status -l iac-portal ct-runner
 ```
 
 #### 9. 接取 ct-worker 镜像
-
 ct-worker 是执行部署任务的容器镜像，需要 pull 到本地:
 ```
 docker pull cloudiac/ct-worker
