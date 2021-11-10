@@ -336,6 +336,10 @@ func (github *githubRepoIface) DeleteWebhook(id int) error {
 //param path : gitea api路径
 //param method 请求方式
 func githubRequest(path, method, token string, requestBody []byte) (*http.Response, []byte, error) {
+	token, err := utils.AesDecrypt(token)
+	if err != nil {
+		return nil, nil, err
+	}
 	request, er := http.NewRequest(method, path, bytes.NewBuffer(requestBody))
 	if er != nil {
 		return nil, nil, er
