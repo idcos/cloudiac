@@ -4,7 +4,13 @@
 - 修复 ct-worker 镜像的 provider 加载问题
 
 #### Features
-- 新增 runner 的 offline mode，通过 runner 配置项 `runner.offline_mode = true` 开启，开启 offline mode 后不再连接官方 registry 查询 provider，仅使用本地内置的 provider
+- 新增 runner 的 offline mode
+
+#### 配置更新
+如果要开启 offline mode，需要在 .env 中添加(不配置默认为 false) 
+```
+RUNNER_OFFLINE_MODE="true"
+```
 
 
 ## v0.7.0 20211105
