@@ -81,6 +81,7 @@ func (ns *NotificationService) SyncSendMessage() {
 		ResChanged   *int
 		ResDestroyed *int
 		Message      string
+		TaskType     string
 	}{
 		Creator:      u.Name,
 		OrgName:      ns.Org.Name,
@@ -94,6 +95,7 @@ func (ns *NotificationService) SyncSendMessage() {
 		ResChanged:   ns.Task.Result.ResChanged,
 		ResDestroyed: ns.Task.Result.ResDestroyed,
 		Message:      ns.Task.Message,
+		TaskType:     ns.Task.Type,
 	}
 
 	// 获取消息通知模板
