@@ -39,6 +39,7 @@ var IacTaskRunning = `
 <p>	云模板：{{.TemplateName}}</p>
 <p>	分支/tag：{{.Revision}}</p>
 <p>	环境名称：{{.EnvName}}</p>
+<p>	任务类型：{{.TaskType}}</p>
 <br />	
 <p>	更多详情请点击：{{.Addr}}</p>
 <br />	
@@ -59,6 +60,7 @@ var IacTaskCompleteTpl = `
 <p>	云模板：{{.TemplateName}}</p>
 <p>	分支/tag：{{.Revision}}</p>
 <p>	环境名称：{{.EnvName}}</p>
+<p>	任务类型：{{.TaskType}}</p>
 <p>	执行结果：成功</p>
 <p>	资源数量：{{.ResAdded}}+ {{.ResChanged}}~ {{.ResDestroyed}}-</p>
 <br />	
@@ -81,6 +83,7 @@ var IacTaskFailedTpl = `
 <p>	云模板：{{.TemplateName}}</p>
 <p>	分支/tag：{{.Revision}}</p>
 <p>	环境名称：{{.EnvName}}</p>
+<p>	任务类型：{{.TaskType}}</p>
 <p>	执行结果：失败</p>
 <p>	失败原因：{{.Message}}</p>
 <br />	
@@ -103,8 +106,8 @@ var IacTaskApprovingTpl = `
 <p>	云模板：{{.TemplateName}}</p>
 <p>	分支/tag：{{.Revision}}</p>
 <p>	环境名称：{{.EnvName}}</p>
+<p>	任务类型：{{.TaskType}}</p>
 <p>	执行结果：审批中</p>
-<p>	失败原因：{{.Message}}</p>
 <br />	
 <p>	更多详情请点击：{{.Addr}}</p>
 <br />	
@@ -129,6 +132,8 @@ const (
 
 	环境名称：{{.EnvName}}
 
+	任务类型：{{.TaskType}}
+
 	更多详情请点击：{{.Addr}}
 
 	-----该消息由系统自动发出，请勿回复-----
@@ -149,9 +154,9 @@ const (
 
 	环境名称：{{.EnvName}}
 
-	执行结果：审批中
+	任务类型：{{.TaskType}}
 
-	失败原因：{{.Message}}
+	执行结果：审批中
 
 	更多详情请点击：{{.Addr}}
 
@@ -172,6 +177,8 @@ const (
 	分支/tag：{{.Revision}}
 
 	环境名称：{{.EnvName}}
+
+	任务类型：{{.TaskType}}
 
 	执行结果：失败
 
@@ -196,6 +203,8 @@ const (
 	分支/tag：{{.Revision}}
 
 	环境名称：{{.EnvName}}
+
+	任务类型：{{.TaskType}}
 
 	执行结果：成功
 
