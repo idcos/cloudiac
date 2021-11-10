@@ -115,11 +115,14 @@ base-image-runner:
 base-image-runner-arm64:
 	$(DOCKER_BUILD) -t ${BASE_IMAGE_DOCKER_REPO}/base-ct-runner:$(BASE_IMAGE_VERSION)-arm64 -f docker/base/runner/Dockerfile-arm64 .
 
-base-image-worker:
+base-image-worker: 
 	$(DOCKER_BUILD) -t ${BASE_IMAGE_DOCKER_REPO}/base-ct-worker:$(BASE_IMAGE_VERSION) -f docker/base/worker/Dockerfile .
 
-base-image: base-image-portal base-image-runner base-image-worker
+base-image: base-image-portal base-image-runner base-image-worker 
+	@echo "Update base image version to $(BASE_IMAGE_VERSION)" && bash scripts/update-base-image-version.sh
+
 base-image-arm64: base-image-portal-arm64 base-image-runner-arm64 base-image-worker
+	bash scripts/update-base-image-version.sh
 
 push-base-image:
 	for NAME in iac-portal ct-runner ct-worker; do \
@@ -162,16 +165,16 @@ push-image-latest:
 
 
 OSNAME=$(shell uname -s)
-CMD_SHA1SUM=sha1sum | head -c8
+CMD_MD5SUM=md5sum | head -c8
 ifeq ($(OSNAME),Darwin)
-  CMD_SHA1SUM=shasum -a 1 | head -c8
+  CMD_MD5SUM=md5 | head -c8
 endif
 
 repos: repos.list
 	mkdir -p ./repos/cloudiac && \
 	cd ./repos/cloudiac && bash ../../scripts/clone-repos.sh
 
-REPOS_SHA1SUM=$(shell tar -c ./repos | $(CMD_SHA1SUM))
+REPOS_SHA1SUM=$(shell tar -c ./repos | $(CMD_MD5SUM))
 REPOS_PACKAGE_NAME=cloudiac-repos_$(VERSION)_$(REPOS_SHA1SUM).tar.gz
 repos-package:
 	tar -czf $(REPOS_PACKAGE_NAME) ./repos
@@ -183,8 +186,8 @@ providers:
 providers-arm64:
 	PLATFORM=linux_arm64 bash scripts/generate-providers-mirror.sh
 
-PROVIDERS_SHA1SUM=$(shell tar -c ./assets/providers | $(CMD_SHA1SUM))
-PROVIDERS_PACKAGE_NAME=cloudiac-providers_$(VERSION)_$(PROVIDERS_SHA1SUM).tar.gz
+PROVIDERS_SHA1SUM=$(shell tar -c ./assets/providers | $(CMD_MD5SUM))
+PROVIDERS_PACKAGE_NAME=cloudiac-providers_$(PROVIDERS_SHA1SUM).tar.gz
 providers-package:
-	tar -czf $(PROVIDERS_PACKAGE_NAME) ./assets/providers
+	@if [[ ! -e "$(PROVIDERS_PACKAGE_NAME)" ]]; then echo "Package $(PROVIDERS_PACKAGE_NAME)"; tar -czf $(PROVIDERS_PACKAGE_NAME) ./assets/providers; fi
 

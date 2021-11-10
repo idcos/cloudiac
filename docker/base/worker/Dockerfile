@@ -21,7 +21,5 @@ RUN tfenv install "0.11.15" && \
     tfenv install "0.15.5" && \
     tfenv install "1.0.6"
 
-COPY assets/terraform.py /cloudiac/assets/terraform.py
-COPY assets/providers /usr/share/terraform/plugins
-COPY assets/terraformrc /root/.terraformrc
+COPY assets/providers /cloudiac/terraform/plugins
 

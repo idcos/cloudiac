@@ -1,3 +1,12 @@
+------
+## v0.7.1-rc1 20211110
+#### Fixes
+- 修复 ct-worker 镜像的 provider 加载问题
+
+#### Features
+- 新增 runner 的 offline mode，通过 runner 配置项 `runner.offline_mode = true` 开启，开启 offline mode 后不再连接官方 registry 查询 provider，仅使用本地内置的 provider
+
+
 ## v0.7.0 20211105
 #### Features
 - **新增自定义 pipeline 功能，并将任务执行过程分步展示**
