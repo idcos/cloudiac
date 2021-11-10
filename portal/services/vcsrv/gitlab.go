@@ -227,10 +227,14 @@ func (git *gitlabRepoIface) DeleteWebhook(id int) error {
 	return err
 }
 
-func GetGitConn(gitlabToken, gitlabUrl string) (git *gitlab.Client, err e.Error) {
-	git, er := gitlab.NewClient(gitlabToken, gitlab.WithBaseURL(gitlabUrl+"/api/v4"))
+func GetGitConn(gitlabToken, gitlabUrl string) (*gitlab.Client, e.Error) {
+	token, err := utils.AesDecrypt(gitlabToken)
+	if err != nil {
+		return nil, e.New(e.VcsError, err)
+	}
+	git, er := gitlab.NewClient(token, gitlab.WithBaseURL(gitlabUrl+"/api/v4"))
 	if er != nil {
 		return nil, e.New(e.JSONParseError, er)
 	}
-	return
+	return git, nil
 }
