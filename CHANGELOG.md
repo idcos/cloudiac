@@ -1,4 +1,9 @@
 ------
+## v0.7.1-rc2 20211111
+#### Fixes
+- 修复 runner 默认配置中缺少 offline_mode 项的问题
+
+------
 ## v0.7.1-rc1 20211110
 #### Fixes
 - 修复 ct-worker 镜像的 provider 加载问题
