@@ -8,8 +8,10 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/utils"
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -177,7 +179,7 @@ func SetWebhook(vcs *models.Vcs, repoId string, triggers []string) error {
 		// 判断同vcs、仓库的环境是否存在
 		exist, err := db.Get().Table(models.Env{}.TableName()).
 			Joins("left join iac_template as tpl on iac_env.tpl_id = tpl.id").
-			Where("tpl.vcs_id = ?",vcs.Id).
+			Where("tpl.vcs_id = ?", vcs.Id).
 			Where("iac_env.triggers IS NOT NULL or iac_env.triggers != '{}'").Exists()
 		if err != nil {
 			return err
@@ -198,4 +200,18 @@ func SetWebhook(vcs *models.Vcs, repoId string, triggers []string) error {
 		}
 		return nil
 	}
+}
+
+func GetVcsToken(token string) (string, error) {
+	var (
+		vcsToken string = token
+		err      error
+	)
+	if strings.HasPrefix(token, consts.VcsEncryptTokenPrefix) {
+		vcsToken, err = utils.AesDecrypt(token)
+		if err != nil {
+			return "", err
+		}
+	}
+	return vcsToken, nil
 }

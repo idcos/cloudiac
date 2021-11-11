@@ -4,8 +4,10 @@ package models
 
 import (
 	"cloudiac/common"
+	"cloudiac/portal/consts"
+	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
-	"cloudiac/utils"
+	"strings"
 )
 
 const (
@@ -38,5 +40,12 @@ func (v Vcs) Migrate(sess *db.Session) (err error) {
 }
 
 func (v *Vcs) Decrypt() (string, error) {
-	return utils.AesDecrypt(v.VcsToken)
+	if strings.HasPrefix(v.VcsToken, consts.VcsEncryptTokenPrefix) {
+		token, err := v.Decrypt()
+		if err != nil {
+			return "", e.New(e.VcsError, err)
+		}
+		return token, nil
+	}
+	return v.VcsToken, nil
 }
