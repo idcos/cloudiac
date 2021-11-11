@@ -245,3 +245,7 @@ func GetVariableBody(vars map[string]models.Variable) []models.VariableBody {
 	}
 	return vb
 }
+
+func QueryVariable(dbSess *db.Session) *db.Session {
+	return dbSess.Model(&models.Variable{})
+}
