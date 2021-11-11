@@ -10,10 +10,8 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/utils"
 	"fmt"
-	"path"
-	"strings"
-
 	"github.com/pkg/errors"
+	"path"
 )
 
 /*
@@ -203,15 +201,5 @@ func SetWebhook(vcs *models.Vcs, repoId string, triggers []string) error {
 }
 
 func GetVcsToken(token string) (string, error) {
-	var (
-		vcsToken string = token
-		err      error
-	)
-	if strings.HasPrefix(token, consts.VcsEncryptTokenPrefix) {
-		vcsToken, err = utils.AesDecrypt(token)
-		if err != nil {
-			return "", err
-		}
-	}
-	return vcsToken, nil
+	return utils.DecryptSecretVar(token)
 }
