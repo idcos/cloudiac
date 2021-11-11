@@ -29,7 +29,7 @@ func CreateVcs(c *ctx.ServiceContext, form *forms.CreateVcsForm) (interface{}, e
 		Name:     form.Name,
 		VcsType:  form.VcsType,
 		Address:  form.Address,
-		VcsToken: token,
+		VcsToken: fmt.Sprintf("%s%s", consts.VcsEncryptTokenPrefix, token),
 	})
 
 	if err != nil {
@@ -74,7 +74,7 @@ func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (vcs *models.Vc
 		if err != nil {
 			return nil, e.New(e.VcsError, err)
 		}
-		attrs["vcsToken"] = token
+		attrs["vcsToken"] = fmt.Sprintf("%s%s", consts.VcsEncryptTokenPrefix, token)
 	}
 	vcs, err = services.UpdateVcs(c.DB(), form.Id, attrs)
 	return
@@ -100,7 +100,7 @@ func DeleteVcs(c *ctx.ServiceContext, form *forms.DeleteVcsForm) (result interfa
 		return nil, err
 	}
 	if exist {
-		return nil, e.New(e.VcsDeleteError, fmt.Errorf("Vcs cannot be deleted. Please delete the dependent cloud template first"))
+		return nil, e.New(e.VcsDeleteError, fmt.Errorf("vcs cannot be deleted. Please delete the dependent cloud template first"))
 	}
 
 	if err := services.DeleteVcs(c.DB(), form.Id); err != nil {

@@ -228,7 +228,7 @@ func (git *gitlabRepoIface) DeleteWebhook(id int) error {
 }
 
 func GetGitConn(gitlabToken, gitlabUrl string) (*gitlab.Client, e.Error) {
-	token, err := utils.AesDecrypt(gitlabToken)
+	token, err := GetVcsToken(gitlabToken)
 	if err != nil {
 		return nil, e.New(e.VcsError, err)
 	}
