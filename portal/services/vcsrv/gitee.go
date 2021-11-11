@@ -21,7 +21,7 @@ import (
 //gitee open api文档: https://gitee.com/api/v5/swagger#/getV5ReposOwnerRepoBranches
 func newGiteeInstance(vcs *models.Vcs) (VcsIface, error) {
 	vcs.Address = fmt.Sprintf("%s/api/v5", utils.GetUrl(vcs.Address))
-	vcsToken, err := vcs.Decrypt()
+	vcsToken, err := vcs.DecryptToken()
 	if err != nil {
 		return nil, err
 	}

@@ -20,7 +20,7 @@ import (
 )
 
 func CreateVcs(c *ctx.ServiceContext, form *forms.CreateVcsForm) (interface{}, e.Error) {
-	token, err := utils.AesEncrypt(form.VcsToken)
+	token, err := utils.EncryptSecretVar(form.VcsToken, true)
 	if err != nil {
 		return nil, e.New(e.VcsError, err)
 	}
@@ -29,7 +29,7 @@ func CreateVcs(c *ctx.ServiceContext, form *forms.CreateVcsForm) (interface{}, e
 		Name:     form.Name,
 		VcsType:  form.VcsType,
 		Address:  form.Address,
-		VcsToken: fmt.Sprintf("%s%s", consts.VcsEncryptTokenPrefix, token),
+		VcsToken: token,
 	})
 
 	if err != nil {
@@ -70,11 +70,11 @@ func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (vcs *models.Vc
 		attrs["address"] = form.Address
 	}
 	if form.HasKey("vcsToken") {
-		token, err := utils.AesEncrypt(form.VcsToken)
+		token, err := utils.EncryptSecretVar(form.VcsToken, true)
 		if err != nil {
 			return nil, e.New(e.VcsError, err)
 		}
-		attrs["vcsToken"] = fmt.Sprintf("%s%s", consts.VcsEncryptTokenPrefix, token)
+		attrs["vcsToken"] = token
 	}
 	vcs, err = services.UpdateVcs(c.DB(), form.Id, attrs)
 	return

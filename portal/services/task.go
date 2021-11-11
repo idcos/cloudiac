@@ -233,7 +233,7 @@ func GetTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision s
 		}
 
 		if repoToken == "" {
-			token, err := vcs.Decrypt()
+			token, err := vcs.DecryptToken()
 			if err != nil {
 				return "", "", e.New(e.VcsError, er)
 			}
