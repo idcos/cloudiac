@@ -64,6 +64,8 @@ const (
 	ReposUrlPrefix    = "/repos" // 内置 http git server url prefix
 
 	NotificationMessageTitle = "CloudIaC平台系统通知"
+
+	VcsEncryptTokenPrefix = "secure: "
 )
 
 const (
