@@ -171,10 +171,6 @@ func MatchVarGroup(oldVg, newVg VarGroupRel) bool {
 
 }
 
-func SearchRelationship(dbSess *db.Session, vgId, orgId models.Id) *db.Session {
-	return dbSess
-}
-
 func CreateRelationship(dbSess *db.Session, rels []models.VariableGroupRel) e.Error {
 	if len(rels) == 0 {
 		return nil
@@ -315,4 +311,17 @@ func GetValidVarsAndVgVars(tx *db.Session, orgId, projectId, tplId, envId models
 		return nil, fmt.Errorf("get vairable group var error: %v", err)
 	}
 	return GetVariableBody(GetVariableGroupVar(varGroup, vars)), nil
+}
+
+// 查询指定模板直接关联的变量组
+func FindTplsRelVarGroup(query *db.Session, tplIds []models.Id) ([]models.VariableGroup, error) {
+	vgs := make([]models.VariableGroup, 0)
+	err := query.Table("iac_variable_group AS vg").
+		Joins("JOIN iac_variable_group_rel AS vgr ON vgr.var_group_id = vg.id").
+		Where("vgr.object_type = ? AND vgr.object_id IN (?)", consts.ScopeTemplate, tplIds).
+		Select("vg.*").Find(&vgs)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return vgs, nil
 }

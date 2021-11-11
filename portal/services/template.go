@@ -126,3 +126,7 @@ func GetTplLastScanTask(sess *db.Session, envId models.Id) (*models.ScanTask, er
 	err := sess.Model(&models.ScanTask{}).Where("id = (?)", scanTaskIdQuery.Expr()).First(&task)
 	return &task, err
 }
+
+func QueryTemplate(tx *db.Session) *db.Session {
+	return tx.Model(&models.Template{})
+}
