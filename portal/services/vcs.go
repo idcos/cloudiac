@@ -45,10 +45,14 @@ func QueryVcs(orgId models.Id, status, q string, isShowdefaultVcs bool, query *d
 		qs := "%" + q + "%"
 		query = query.Where("name LIKE ?", qs)
 	}
-	if isShowdefaultVcs != true {
+	if !isShowdefaultVcs {
 		query = query.Where("vcs_type != 'local'")
 	}
 	return query.LazySelectAppend("id, org_id, project_id, name, status, vcs_type, address")
+}
+
+func QueryVcsSample(query *db.Session) *db.Session {
+	return query.Model(&models.Vcs{})
 }
 
 func QueryVcsByVcsId(vcsId models.Id, query *db.Session) (*models.Vcs, e.Error) {

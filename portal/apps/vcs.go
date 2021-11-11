@@ -20,7 +20,7 @@ import (
 )
 
 func CreateVcs(c *ctx.ServiceContext, form *forms.CreateVcsForm) (interface{}, e.Error) {
-	token, err := utils.EncryptSecretVar(form.VcsToken, true)
+	token, err := utils.EncryptSecretVar(form.VcsToken)
 	if err != nil {
 		return nil, e.New(e.VcsError, err)
 	}
@@ -70,7 +70,7 @@ func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (vcs *models.Vc
 		attrs["address"] = form.Address
 	}
 	if form.HasKey("vcsToken") {
-		token, err := utils.EncryptSecretVar(form.VcsToken, true)
+		token, err := utils.EncryptSecretVar(form.VcsToken)
 		if err != nil {
 			return nil, e.New(e.VcsError, err)
 		}

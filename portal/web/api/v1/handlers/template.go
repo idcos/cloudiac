@@ -5,9 +5,12 @@ package handlers
 import (
 	"cloudiac/common"
 	"cloudiac/portal/apps"
+	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
+	"cloudiac/utils/logs"
+	"encoding/json"
 )
 
 type Template struct {
@@ -198,4 +201,37 @@ func AutoTemplateTfVersionChoice(c *ctx.GinRequest) {
 		return
 	}
 	c.JSONResult(apps.AutoGetTfVersion(c.Service(), &form))
+}
+
+// TemplateExport 云模板导出
+// @Tags 云模板
+// @Summary 云模板导出接口
+// @Accept application/x-www-form-urlencoded
+// @Param IaC-Org-Id header string true "组织ID"
+// @Security AuthToken
+// @Param form query apps.TplExportForm true "parameter"
+// @Router /templates/export [get]
+// @Success 200 {object} ctx.JSONResult{result=apps.TplExportResp}
+func TemplateExport(c *ctx.GinRequest) {
+	form := apps.TplExportForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+
+	resp, err := apps.TemplateExport(c.Service(), &form)
+	if err != nil {
+		c.JSONError(err)
+	}
+
+	if !form.Download {
+		c.JSONResult(resp, err)
+		return
+	} else {
+		data, err := json.MarshalIndent(resp, "", "  ")
+		if err != nil {
+			logs.Get().Warnf("json.Marshal: %v", err)
+			c.JSONError(e.New(e.JSONParseError))
+		}
+		c.FileDownloadResponse(data, "cloudiac-templates.json", "")
+	}
 }
