@@ -32,3 +32,13 @@ func DecryptSecretVar(value string) (string, error) {
 	}
 	return val, nil
 }
+
+func EncryptSecretVar(value string, isSecret bool) (string, error) {
+	var err error
+	if isSecret {
+		if value, err = AesEncrypt(value); err != nil {
+			return "", err
+		}
+	}
+	return EncodeSecretVar(value, isSecret), nil
+}
