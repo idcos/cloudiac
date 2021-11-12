@@ -85,6 +85,7 @@ clean: reset-build-dir
 PACKAGE_NAME=cloudiac_$(VERSION).tar.gz
 package-local: reset-build-dir clean build
 	cp -a ./assets/terraform.py $(BUILD_DIR)/assets/ && \
+	cp -a ./assets/terraformrc-* $(BUILD_DIR)/assets/ && \
 	cp ./scripts/iac-portal.service ./scripts/ct-runner.service $(BUILD_DIR)/ && \
 	cp ./configs/config-portal.yml.sample $(BUILD_DIR)/config-portal.yml.sample && \
 	cp ./configs/dotenv.sample $(BUILD_DIR)/dotenv.sample && \
