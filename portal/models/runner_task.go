@@ -19,7 +19,7 @@ type BaseTask struct {
 	ContainerId string `json:"-" gorm:"size:64"`
 
 	// 任务每一步的执行超时(整个任务无超时控制)
-	StepTimeout int `json:"stepTimeout" gorm:"default:600;comment:执行超时"`
+	StepTimeout int `json:"stepTimeout" gorm:"default:1800;comment:执行超时"`
 
 	RunnerId string `json:"runnerId" gorm:"not null"` // 部署通道
 
