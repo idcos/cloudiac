@@ -53,7 +53,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	}
 
 	if form.Timeout == 0 {
-		form.Timeout = common.TaskStepTimeoutDuration
+		form.Timeout = common.DefaultTaskStepTimeout
 	}
 
 	var (
