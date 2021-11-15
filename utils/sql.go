@@ -53,6 +53,12 @@ func (b *BatchSQL) AddRow(values ...interface{}) error {
 	return nil
 }
 
+func (b *BatchSQL) MustAddRow(values ...interface{}) {
+	if err := b.AddRow(values...); err != nil {
+		panic(err)
+	}
+}
+
 func (b *BatchSQL) AddExtraOp(op string) {
 	if b.extraOp == "" {
 		b.extraOp = op

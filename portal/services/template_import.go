@@ -14,6 +14,7 @@ import (
 type TplImporter struct {
 	OrgId           models.Id
 	CreatorId       models.Id
+	ProjectIds      []models.Id
 	Data            TplExportedData
 	WhenIdDuplicate string
 
@@ -64,6 +65,8 @@ func (t *TplImporter) Import(tx *db.Session) (*TplImportResult, e.Error) {
 }
 
 func (t *TplImporter) ImportTemplates(tx *db.Session) e.Error {
+	bs := utils.NewBatchSQL(1024, "REPLACE INTO", models.ProjectTemplate{}.TableName(), "project_id", "template_id")
+
 	for i := range t.Data.Templates {
 		tpl, err := t.getTplFromExportData(t.Data.Templates[i])
 		if err != nil {
@@ -75,11 +78,21 @@ func (t *TplImporter) ImportTemplates(tx *db.Session) e.Error {
 		}
 
 		dbTpl := models.Template{}
-		if err := QueryTemplate(tx.Where("id = ?", tpl.Id)).Find(&dbTpl); err != nil {
+		if err := QueryTemplate(tx.Debug().Where("id = ?", tpl.Id)).Find(&dbTpl); err != nil {
 			return e.AutoNew(err, e.DBError)
 		}
-		tplIdDuplicate := (dbTpl.Id != "")
 
+		tplIdDuplicate := false
+		if dbTpl.Id != "" {
+			tplIdDuplicate = true
+			if t.WhenIdDuplicate == "update" && t.OrgId != dbTpl.OrgId {
+				return e.New(e.ImportUpdateOrgId)
+			}
+		}
+
+		if tplIdDuplicate {
+			t.Logger.Debugf("template %s, id duplicate", tpl.Id)
+		}
 		if er := t.doImport(tx, tpl.Id, tpl, tplIdDuplicate); er != nil {
 			return er
 		}
@@ -153,9 +166,16 @@ func (t *TplImporter) ImportTemplates(tx *db.Session) e.Error {
 			}
 		}
 
-		// TODO: 处理云模板与项目的关联
-		{
+		// 处理云模板与项目的关联
+		for _, pid := range t.ProjectIds {
+			bs.MustAddRow(pid, t.getImportedId(tpl.Id.String()))
+		}
+	}
 
+	for bs.HasNext() {
+		sql, args := bs.Next()
+		if _, err := tx.Exec(sql, args...); err != nil {
+			return e.AutoNew(err, e.DBError)
 		}
 	}
 	return nil
@@ -177,7 +197,14 @@ func (t *TplImporter) ImportVcs(tx *db.Session) e.Error {
 		if err := QueryVcsSample(tx.Where("id = ?", vcs.Id)).Find(&dbVcs); err != nil {
 			return e.AutoNew(err, e.DBError)
 		}
-		vcsIdDuplicate := (dbVcs.Id != "")
+
+		vcsIdDuplicate := false
+		if dbVcs.Id != "" {
+			vcsIdDuplicate = true
+			if t.WhenIdDuplicate == "update" && t.OrgId != dbVcs.OrgId {
+				return e.New(e.ImportUpdateOrgId)
+			}
+		}
 
 		if er := t.doImport(tx, vcs.Id, vcs, vcsIdDuplicate); er != nil {
 			return e.AutoNew(er, e.DBError)
@@ -201,7 +228,14 @@ func (t *TplImporter) ImportVarGroups(tx *db.Session) e.Error {
 		if err := QueryVarGroup(tx.Where("id = ?", vg.Id)).Find(&dbVg); err != nil {
 			return e.AutoNew(err, e.DBError)
 		}
-		vgIdDuplicate := (dbVg.Id != "")
+
+		vgIdDuplicate := false
+		if dbVg.Id != "" {
+			vgIdDuplicate = true
+			if t.WhenIdDuplicate == "update" && t.OrgId != dbVg.OrgId {
+				return e.New(e.ImportUpdateOrgId)
+			}
+		}
 
 		// 注意：变量组及其变量是一个整体，当进行 update 时变量组的所有变量会被完整替换为导入的值
 		if er := t.doImport(tx, vg.Id, vg, vgIdDuplicate); er != nil {
@@ -320,7 +354,6 @@ func (t *TplImporter) renameVarGroupIf(tx *db.Session, vg *models.VariableGroup)
 }
 
 func (t TplImporter) importRename(origName, currName string) string {
-	t.Logger.Debugf("origName %s, currName %s", origName, currName)
 	now := time.Now()
 	if origName == currName {
 		return fmt.Sprintf("%s import-%s", currName, now.Format("0601021504"))
@@ -430,12 +463,10 @@ func (t *TplImporter) doImport(tx *db.Session, id models.Id, importObj models.Mo
 	}
 
 	if !hasDuplicate {
-		setNewId()
 		if err := models.Create(tx, importObj); err != nil {
 			return e.AutoNew(err, e.DBError)
 		}
 		t.addCount("created", importObj)
-
 		return nil
 	}
 

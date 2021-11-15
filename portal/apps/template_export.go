@@ -4,6 +4,7 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
@@ -23,9 +24,10 @@ func TemplateExport(c *ctx.ServiceContext, form *TplExportForm) (interface{}, e.
 type TplImportForm struct {
 	forms.BaseForm
 
-	IdDuplicate string `json:"idDuplicate" bind:"required"` // id 重复时的处理方式, enum('update','skip','copy','abort')
+	IdDuplicate string      `json:"idDuplicate" form:"idDuplicate" bind:"required"` // id 重复时的处理方式, enum('update','skip','copy','abort')
+	Projects    []models.Id `json:"projects" form:"projects"`                       // 关联项目 id 列表
 
-	Data services.TplExportedData `json:"data" bind:"required"` // 待导入数据(即导出的数据)
+	Data services.TplExportedData `json:"data" form:"file" bind:"required"` // 待导入数据(即导出的数据)
 }
 
 func TemplateImport(c *ctx.ServiceContext, form *TplImportForm) (result *services.TplImportResult, er e.Error) {
@@ -33,17 +35,18 @@ func TemplateImport(c *ctx.ServiceContext, form *TplImportForm) (result *service
 		Logger:          c.Logger().WithField("action", "ImportTemplate"),
 		OrgId:           c.OrgId,
 		CreatorId:       consts.SysUserId,
+		ProjectIds:      form.Projects,
 		Data:            form.Data,
 		WhenIdDuplicate: form.IdDuplicate,
 	}
-	// err := c.DB().Transaction(func(tx *db.Session) error {
-	// 	result, er = importer.Import(tx)
-	// 	return er
-	// })
-	// if err != nil {
-	// 	return nil, e.AutoNew(err, e.DBError)
-	// }
+	// return importer.Import(c.DB())
 
-	result, er = importer.Import(c.DB())
-	return result, er
+	err := c.DB().Transaction(func(tx *db.Session) error {
+		result, er = importer.Import(tx)
+		return er
+	})
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return result, nil
 }
