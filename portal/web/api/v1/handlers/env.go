@@ -287,3 +287,44 @@ func (Env) ResourceDetail(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.ResourceDetail(c.Service(), form))
 }
+
+
+// SearchResourcesGraph 获取环境资源列表
+// @Tags 环境
+// @Summary 获取环境资源列表
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param form query forms.SearchEnvResourceForm true "parameter"
+// @Param envId path string true "环境ID"
+// @router /envs/{envId}/resources/graph [get]
+// @Success 200 {object} ctx.JSONResult{result=models.Resource}
+func (Env) SearchResourcesGraph(c *ctx.GinRequest) {
+	form := forms.SearchEnvResourceGraphForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.SearchEnvResourcesGraph(c.Service(), &form))
+}
+
+
+// ResourceGraphDetail 资源部署成功后信息详情
+// @Tags 环境
+// @Summary 环境部署资源信息详情
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param resourceId path string true "资源ID"
+// @route /envs/{envId}/resource/{resourceId} [get]
+// @Success 200 {object} ctx.JSONResult{result=models.ResAttrs}
+func (Env) ResourceGraphDetail(c *ctx.GinRequest) {
+	form := &forms.ResourceGraphDetailForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.ResourceGraphDetail(c.Service(), form))
+}

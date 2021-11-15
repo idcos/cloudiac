@@ -173,6 +173,8 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/resources/:resourceId", ac(), w(handlers.Env{}.ResourceDetail))
 	g.GET("/envs/:id/variables", ac(), w(handlers.Env{}.Variables))
 	g.GET("/envs/:id/policy_result", ac(), w(handlers.Env{}.PolicyResult))
+	g.GET("/envs/:id/resources/graph",ac(),w(handlers.Env{}.SearchResourcesGraph))
+	g.GET("/envs/:id/resources/graph/:resourceId",ac(),w(handlers.Env{}.ResourceGraphDetail))
 
 	// 任务管理
 	g.GET("/tasks", ac(), w(handlers.Task{}.Search))

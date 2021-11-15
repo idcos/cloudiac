@@ -4,17 +4,20 @@ package apps
 
 import (
 	"bufio"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"cloudiac/utils"
 	"fmt"
 	"io"
 	"net/http"
 	"path"
 	"strconv"
+	"strings"
 
 	"github.com/gin-contrib/sse"
 )
@@ -347,4 +350,200 @@ func GetTaskStep(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (interfa
 		return nil, err
 	}
 	return string(content), nil
+}
+
+// SearchTaskResourcesGraph 查询环境资源列表
+func SearchTaskResourcesGraph(c *ctx.ServiceContext, form *forms.SearchTaskResourceGraphForm) (interface{}, e.Error) {
+	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+
+	task, err := services.GetTaskById(c.DB(), form.Id)
+	if err != nil && err.Code() != e.TaskNotExists {
+		return nil, e.New(err.Code(), err, http.StatusNotFound)
+	} else if err != nil {
+		c.Logger().Errorf("error get env, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	rs, err := services.GetTaskResourceToTaskId(c.DB(), task)
+	if err != nil {
+		return nil, err
+	}
+	for i := range rs {
+		rs[i].Provider = path.Base(rs[i].Provider)
+		// attrs 暂时不需要返回
+		rs[i].Attrs = nil
+	}
+	return GetResourcesGraph(rs, form.Dimension), nil
+}
+
+func GetResourcesGraph(rs []models.Resource, dimension string) interface{} {
+	switch dimension {
+	case consts.GraphDimensionModule:
+		return GetResourcesGraphModule(rs)
+	case consts.GraphDimensionProvider:
+		return GetResourcesGraphProvider(rs)
+	case consts.GraphDimensionType:
+		return GetResourcesGraphType(rs)
+	default:
+		return nil
+	}
+}
+
+type ResourcesGraphModule struct {
+	NodeId        string                  `json:"nodeId" form:"nodeId" `
+	IsRoot        bool                    `json:"isRoot" form:"isRoot" `
+	NodeName      string                  `json:"nodeName" form:"nodeName" `
+	Children      []*ResourcesGraphModule `json:"children" form:"children" `
+	ResourcesList []Resources             `json:"resourcesList" form:"resourcesList" `
+}
+
+type Resources struct {
+	ResourceId   string
+	ResourceName string
+	NodeName     string
+}
+
+func GetResourcesGraphModule(resources []models.Resource) interface{} {
+	// 构建根节点
+	rgm := &ResourcesGraphModule{
+		IsRoot:   true,
+		NodeName: "rootModule",
+		NodeId:   "rootModule",
+		Children: make([]*ResourcesGraphModule, 0),
+	}
+
+	// 存储当前节点与父级节点的关系
+	parentChildNode := make(map[string][]string)
+	// 当前节点与资源的关系
+	nodeAttr := make(map[string]models.Resource)
+	// 资源列表
+	resourceAttr := make(map[string][]Resources)
+
+	for _, resource := range resources {
+		addrs := strings.Split(resource.Address, ".")
+		parentName := "rootModule"
+		for index, addr := range addrs {
+			// 处理最末级节点，将末级节点定义为资源
+			if index == len(addrs)-1 {
+				res := Resources{
+					ResourceId:   resource.Id.String(),
+					ResourceName: resource.Name,
+					NodeName:     addr,
+				}
+				if _, ok := resourceAttr[addrs[index-1]]; !ok {
+					resourceAttr[addrs[index-1]] = []Resources{res}
+					continue
+				}
+				resourceAttr[addrs[index-1]] = append(resourceAttr[addrs[index-1]], res)
+				continue
+			}
+
+			// 当前节点为二级节点
+			if _, ok := parentChildNode[parentName]; !ok {
+				parentChildNode[parentName] = []string{addr}
+				parentName = addr
+				continue
+			}
+			parentChildNode[parentName] = append(parentChildNode[parentName], addr)
+			parentName = addr
+
+			nodeAttr[addr] = resource
+		}
+	}
+
+	return getTree(rgm, parentChildNode, nodeAttr, resourceAttr)
+}
+
+func getTree(rgm *ResourcesGraphModule, parentChildNode map[string][]string, nodeAttr map[string]models.Resource, resourceAttr map[string][]Resources) *ResourcesGraphModule {
+	for parent, child := range parentChildNode {
+		newChild := utils.RemoveDuplicateElement(child)
+		if rgm.NodeId == parent {
+			for _, v := range newChild {
+				rgm.Children = append(rgm.Children, &ResourcesGraphModule{
+					NodeId:   nodeAttr[v].Id.String(),
+					IsRoot:   false,
+					NodeName: v,
+					Children: make([]*ResourcesGraphModule, 0),
+				})
+			}
+			continue
+		}
+		addNode(rgm.Children, parent, nodeAttr, newChild, resourceAttr)
+	}
+	return rgm
+}
+
+func addNode(children []*ResourcesGraphModule, parentNodeName string, nodeAttr map[string]models.Resource, childes []string, resourceAttr map[string][]Resources) {
+	for _, child := range children {
+		if child.NodeName == parentNodeName {
+			for _, v := range childes {
+				rgm := &ResourcesGraphModule{
+					NodeId:   nodeAttr[v].Id.String(),
+					IsRoot:   false,
+					NodeName: v,
+					Children: make([]*ResourcesGraphModule, 0),
+				}
+				if _, ok := resourceAttr[v]; ok {
+					rgm.ResourcesList = resourceAttr[v]
+				}
+				child.Children = append(child.Children, rgm)
+
+			}
+			continue
+		}
+		addNode(child.Children, parentNodeName, nodeAttr, childes, resourceAttr)
+	}
+
+}
+
+type ResourcesGraphProvider struct {
+	NodeName string            `json:"nodeName" form:"nodeName" `
+	List     []models.Resource `json:"list" form:"list" `
+}
+
+func GetResourcesGraphProvider(rs []models.Resource) interface{} {
+	rgt := make([]ResourcesGraphProvider, 0)
+	rgtAttr := make(map[string][]models.Resource)
+	for _, v := range rs {
+		if _, ok := rgtAttr[v.Provider]; !ok {
+			rgtAttr[v.Provider] = []models.Resource{v}
+			continue
+		}
+		rgtAttr[v.Provider] = append(rgtAttr[v.Provider], v)
+	}
+	for k, v := range rgtAttr {
+		rgt = append(rgt, ResourcesGraphProvider{
+			NodeName: k,
+			List:     v,
+		})
+	}
+
+	return rgt
+}
+
+type ResourcesGraphType struct {
+	NodeName string `json:"nodeName" form:"nodeName" `
+	List     []models.Resource
+}
+
+func GetResourcesGraphType(rs []models.Resource) interface{} {
+	rgt := make([]ResourcesGraphType, 0)
+	rgtAttr := make(map[string][]models.Resource)
+	for _, v := range rs {
+		if _, ok := rgtAttr[v.Provider]; !ok {
+			rgtAttr[v.Provider] = []models.Resource{v}
+			continue
+		}
+		rgtAttr[v.Provider] = append(rgtAttr[v.Provider], v)
+	}
+	for k, v := range rgtAttr {
+		rgt = append(rgt, ResourcesGraphType{
+			NodeName: k,
+			List:     v,
+		})
+	}
+
+	return rgt
 }

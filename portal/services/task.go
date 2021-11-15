@@ -1064,3 +1064,12 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 	}
 	logs.Get().Infof("kafka send massage successful. data: %s", string(message))
 }
+
+func GetTaskResourceToTaskId(dbSess *db.Session, task *models.Task) ([]models.Resource, e.Error) {
+	rs := make([]models.Resource, 0)
+	if err := dbSess.Model(models.Resource{}).Where("org_id = ? AND project_id = ? AND env_id = ? AND task_id = ?",
+		task.OrgId, task.ProjectId, task.EnvId, task.Id).Order("provider, type, name").Find(&rs); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return rs, nil
+}
