@@ -63,7 +63,8 @@ const (
 	TaskTypeDestroyName = "destroy"
 	TaskTypeScanName    = "scan"
 
-	TaskStepTimeoutDuration = 600
+	// 默认步骤超时时间(秒)
+	DefaultTaskStepTimeout = 1800
 
 	VcsGitlab = "gitlab"
 	VcsGitea  = "gitea"
