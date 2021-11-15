@@ -5,6 +5,7 @@ package models
 import (
 	"cloudiac/common"
 	"cloudiac/portal/libs/db"
+	"cloudiac/utils"
 )
 
 const (
@@ -29,9 +30,17 @@ func (Vcs) TableName() string {
 	return "iac_vcs"
 }
 
-func (o Vcs) Migrate(sess *db.Session) (err error) {
-	if err = o.AddUniqueIndex(sess, "unique__org_vcs_name", "org_id", "name"); err != nil {
+func (Vcs) NewId() Id {
+	return NewId("vcs")
+}
+
+func (v Vcs) Migrate(sess *db.Session) (err error) {
+	if err = v.AddUniqueIndex(sess, "unique__org_vcs_name", "org_id", "name"); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (v *Vcs) DecryptToken() (string, error) {
+	return utils.DecryptSecretVar(v.VcsToken)
 }

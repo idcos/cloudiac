@@ -19,6 +19,7 @@ const (
 	ObjectDisabled          = 10014
 	NotImplement            = 10020
 	IOError                 = 10030 // 文件 io 出错
+	TooManyRetries          = 10040
 
 	//// 解析错误 101
 
@@ -43,6 +44,7 @@ const (
 	BadRequest             = 10341 // 请求错误(请求缺少必要参数)
 	InvalidPipeline        = 10350
 	InvalidPipelineVersion = 10351
+	InvalidExportVersion   = 10361
 	InvalidAccessKeyId     = 10380 // AccessKeyId错误
 	InvalidAccessKeySecret = 10381
 	ForbiddenAccessKey     = 10382
@@ -52,6 +54,11 @@ const (
 	MailServerError = 10420
 	ConsulConnError = 10430
 	VcsError        = 10440
+
+	//// 导入导出错误 105
+	ImportError       = 10510
+	ImportIdDuplicate = 10520 //  id 重复
+	ImportUpdateOrgId = 10530
 
 	// 权限认证 2
 	//// 认证 200
@@ -202,6 +209,9 @@ var errorMsgs = map[int]map[string]string{
 	InvalidPipelineVersion: {
 		"zh-cn": "不支持的 pipeline 版本",
 	},
+	InvalidExportVersion: {
+		"zh-cn": "不支持的导出数据版本",
+	},
 	DataTooLong: {
 		"zh-cn": "内容过长",
 	},
@@ -219,6 +229,9 @@ var errorMsgs = map[int]map[string]string{
 	},
 	IOError: {
 		"zh-cn": "io 错误",
+	},
+	TooManyRetries: {
+		"zh-cn": "达到最大重试次数",
 	},
 	MailServerError: {
 		"zh-cn": "邮件服务错误",
@@ -398,6 +411,15 @@ var errorMsgs = map[int]map[string]string{
 	},
 	VcsDeleteError: {
 		"zh-cn": "vcs存在相关依赖云模版，无法删除",
+	},
+	ImportError: {
+		"zh-cn": "导入出错",
+	},
+	ImportIdDuplicate: {
+		"zh-cn": "id 重复",
+	},
+	ImportUpdateOrgId: {
+		"zh-cn": "同 id 的数据己属于另一组织，无法使用“覆盖”方案(不允许更改组织 id)",
 	},
 	TaskApproveNotPending: {
 		"zh-cn": "作业状态非待审批，不允许操作",

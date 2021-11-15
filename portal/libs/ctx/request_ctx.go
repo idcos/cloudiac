@@ -10,12 +10,13 @@ import (
 	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
 )
 
 type RequestContext interface {
@@ -132,6 +133,17 @@ func (c *GinRequest) JSONResult(res interface{}, err e.Error) {
 	} else {
 		c.JSONSuccess(res)
 	}
+}
+
+func (c *GinRequest) FileDownloadResponse(data []byte, filename string, contentType string) {
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+	if filename != "" {
+		c.Writer.Header().Set("Content-Disposition",
+			fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	}
+	c.Context.Data(http.StatusOK, contentType, data)
 }
 
 //BindUriTagOnly 将 context.Params 绑定到标记了 uri 标签的 form 字段
