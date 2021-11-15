@@ -9,8 +9,9 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
 )
 
 type Claims struct {
@@ -38,7 +39,7 @@ func GenerateToken(uid models.Id, name string, isAdmin bool, expireDuration time
 
 func CreateToken(tx *db.Session, token models.Token) (*models.Token, e.Error) {
 	if token.Id == "" {
-		token.Id = models.NewId("t")
+		token.Id = token.NewId()
 	}
 	if err := models.Create(tx, &token); err != nil {
 		if e.IsDuplicate(err) {
