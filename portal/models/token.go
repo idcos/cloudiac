@@ -27,6 +27,10 @@ func (Token) TableName() string {
 	return "iac_token"
 }
 
+func (Token) NewId() Id {
+	return NewId("t")
+}
+
 func (o Token) Migrate(sess *db.Session) (err error) {
 	err = o.AddUniqueIndex(sess, "unique__key", "`key`")
 	if err != nil {

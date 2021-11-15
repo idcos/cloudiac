@@ -29,6 +29,10 @@ type Variable struct {
 	EnvId     Id `json:"envId" gorm:"size:32;default:''"`
 }
 
+func (Variable) NewId() Id {
+	return NewId("var")
+}
+
 func (Variable) TableName() string {
 	return "iac_variable"
 }
@@ -57,6 +61,10 @@ type VariableGroup struct {
 
 func (VariableGroup) TableName() string {
 	return "iac_variable_group"
+}
+
+func (VariableGroup) NewId() Id {
+	return NewId("vg")
 }
 
 func (v VariableGroup) Migrate(sess *db.Session) error {

@@ -211,7 +211,7 @@ func AutoTemplateTfVersionChoice(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param form query apps.TplExportForm true "parameter"
 // @Router /templates/export [get]
-// @Success 200 {object} ctx.JSONResult{result=apps.TplExportResp}
+// @Success 200 {object} ctx.JSONResult{result=services.TplExportedData}
 func TemplateExport(c *ctx.GinRequest) {
 	form := apps.TplExportForm{}
 	if err := c.Bind(&form); err != nil {
@@ -234,4 +234,13 @@ func TemplateExport(c *ctx.GinRequest) {
 		}
 		c.FileDownloadResponse(data, "cloudiac-templates.json", "")
 	}
+}
+
+func TemplateImport(c *ctx.GinRequest) {
+	form := apps.TplImportForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+
+	c.JSONResult(apps.TemplateImport(c.Service(), &form))
 }
