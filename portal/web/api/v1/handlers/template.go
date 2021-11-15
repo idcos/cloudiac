@@ -206,7 +206,7 @@ func AutoTemplateTfVersionChoice(c *ctx.GinRequest) {
 // TemplateExport 云模板导出
 // @Tags 云模板
 // @Summary 云模板导出接口
-// @Accept application/x-www-form-urlencoded
+// @Accept application/json, application/x-www-form-urlencoded
 // @Param IaC-Org-Id header string true "组织ID"
 // @Security AuthToken
 // @Param form query apps.TplExportForm true "parameter"
@@ -236,11 +236,35 @@ func TemplateExport(c *ctx.GinRequest) {
 	}
 }
 
+// TemplateImport 云模板导入
+// @Tags 云模板
+// @Summary 云模板导入接口
+// @Accept application/json, multipart/form-data
+// @Param IaC-Org-Id header string true "组织ID"
+// @Security AuthToken
+// @Param form body apps.TplImportForm true "parameter"
+// @Param data body services.TplExportedData false "待导入数据(与 file 参数二选一)"
+// @Param file formData file false "待导入文件(与 data 参数二选一)"
+// @Router /templates/import [post]
+// @Success 200 {object} ctx.JSONResult{result=services.TplImportResult}
 func TemplateImport(c *ctx.GinRequest) {
 	form := apps.TplImportForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
 
+	if form.File != nil {
+		file, err := form.File.Open()
+		if err != nil {
+			c.JSONError(e.New(e.BadParam, err))
+			return
+		}
+		defer file.Close()
+
+		if err := json.NewDecoder(file).Decode(&form.Data); err != nil {
+			c.JSONError(e.New(e.BadParam, err))
+			return
+		}
+	}
 	c.JSONResult(apps.TemplateImport(c.Service(), &form))
 }
