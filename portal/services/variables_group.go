@@ -12,7 +12,7 @@ import (
 
 func CreateVariableGroup(tx *db.Session, group models.VariableGroup) (models.VariableGroup, e.Error) {
 	if group.Id == "" {
-		group.Id = models.NewId("vg")
+		group.Id = group.NewId()
 	}
 	if err := models.Create(tx, &group); err != nil {
 		if e.IsDuplicate(err) {
@@ -271,13 +271,13 @@ func GetVariableGroupVar(vgs []VarGroupRel, vars map[string]models.Variable) map
 	return variableM
 }
 
-func BatchUpdateRelationship(tx *db.Session, variableIds, delVariableIds []models.Id, objectType, objectId string) e.Error {
+func BatchUpdateRelationship(tx *db.Session, vgIds, delVgIds []models.Id, objectType, objectId string) e.Error {
 	rel := make([]models.VariableGroupRel, 0)
-	if err := DeleteRelationship(tx, delVariableIds); err != nil {
+	if err := DeleteRelationship(tx, delVgIds); err != nil {
 		return err
 	}
 
-	for _, v := range variableIds {
+	for _, v := range vgIds {
 		rel = append(rel, models.VariableGroupRel{
 			VarGroupId: v,
 			ObjectType: objectType,
@@ -324,4 +324,28 @@ func FindTplsRelVarGroup(query *db.Session, tplIds []models.Id) ([]models.Variab
 		return nil, e.AutoNew(err, e.DBError)
 	}
 	return vgs, nil
+}
+
+func QueryVarGroup(sess *db.Session) *db.Session {
+	return sess.Model(&models.VariableGroup{})
+}
+
+func FindTemplateVgIds(sess *db.Session, tplId models.Id) ([]models.Id, e.Error) {
+	ids := make([]models.Id, 0)
+	err := sess.Model(&models.VariableGroupRel{}).
+		Where("object_type = ? AND object_id = ?", consts.ScopeTemplate, tplId).Pluck("var_group_id", &ids)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return ids, nil
+}
+
+func DeleteVarGroupRel(sess *db.Session, objectType string, objectId models.Id) e.Error {
+	_, err := sess.
+		Where("object_type = ? AND object_id = ?", objectType, objectId).
+		Delete(&models.VariableGroupRel{})
+	if err != nil {
+		return e.AutoNew(err, e.DBError)
+	}
+	return nil
 }

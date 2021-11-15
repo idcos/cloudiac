@@ -40,7 +40,11 @@ func (Template) TableName() string {
 	return "iac_template"
 }
 
-func (t *Template) Migrate(sess *db.Session) (err error) {
+func (Template) NewId() Id {
+	return NewId("tpl")
+}
+
+func (t Template) Migrate(sess *db.Session) (err error) {
 	if err = sess.RemoveIndex("iac_template", "unique__project__tpl__name"); err != nil {
 		return err
 	}
