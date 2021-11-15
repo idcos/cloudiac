@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"mime/multipart"
 )
 
 type TplExportForm struct {
@@ -27,7 +28,9 @@ type TplImportForm struct {
 	IdDuplicate string      `json:"idDuplicate" form:"idDuplicate" bind:"required"` // id 重复时的处理方式, enum('update','skip','copy','abort')
 	Projects    []models.Id `json:"projects" form:"projects"`                       // 关联项目 id 列表
 
-	Data services.TplExportedData `json:"data" form:"file" bind:"required"` // 待导入数据(即导出的数据)
+	Data services.TplExportedData `json:"data"  swaggerignore:"true"` // 待导入数据(JSON 格式，与 file 参数二选一)
+
+	File *multipart.FileHeader `form:"file" swaggerignore:"true"` // 待导入文件(与 data 参数二选一)
 }
 
 func TemplateImport(c *ctx.ServiceContext, form *TplImportForm) (result *services.TplImportResult, er e.Error) {

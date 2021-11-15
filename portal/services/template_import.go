@@ -65,7 +65,9 @@ func (t *TplImporter) Import(tx *db.Session) (*TplImportResult, e.Error) {
 }
 
 func (t *TplImporter) ImportTemplates(tx *db.Session) e.Error {
-	bs := utils.NewBatchSQL(1024, "REPLACE INTO", models.ProjectTemplate{}.TableName(), "project_id", "template_id")
+	// 用于导入云模板与项目的关联
+	bs := utils.NewBatchSQL(1024, "REPLACE INTO", models.ProjectTemplate{}.TableName(),
+		"project_id", "template_id")
 
 	for i := range t.Data.Templates {
 		tpl, err := t.getTplFromExportData(t.Data.Templates[i])
