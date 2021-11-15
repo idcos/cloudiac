@@ -58,6 +58,7 @@ const (
 	//// 导入导出错误 105
 	ImportError       = 10510
 	ImportIdDuplicate = 10520 //  id 重复
+	ImportUpdateOrgId = 10530
 
 	// 权限认证 2
 	//// 认证 200
@@ -416,6 +417,9 @@ var errorMsgs = map[int]map[string]string{
 	},
 	ImportIdDuplicate: {
 		"zh-cn": "id 重复",
+	},
+	ImportUpdateOrgId: {
+		"zh-cn": "同 id 的数据己属于另一组织，无法使用“覆盖”方案(不允许更改组织 id)",
 	},
 	TaskApproveNotPending: {
 		"zh-cn": "作业状态非待审批，不允许操作",
