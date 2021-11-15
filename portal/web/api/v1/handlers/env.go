@@ -298,10 +298,10 @@ func (Env) ResourceDetail(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
-// @Param form query forms.SearchEnvResourceForm true "parameter"
+// @Param form query forms.SearchEnvResourceGraphForm true "parameter"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/resources/graph [get]
-// @Success 200 {object} ctx.JSONResult{result=models.Resource}
+// @Success 200 {object} ctx.JSONResult{}
 func (Env) SearchResourcesGraph(c *ctx.GinRequest) {
 	form := forms.SearchEnvResourceGraphForm{}
 	if err := c.Bind(&form); err != nil {
@@ -319,8 +319,8 @@ func (Env) SearchResourcesGraph(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param resourceId path string true "资源ID"
-// @route /envs/{envId}/resource/{resourceId} [get]
-// @Success 200 {object} ctx.JSONResult{result=models.ResAttrs}
+// @route /envs/{envId}/resource/graph/{resourceId} [get]
+// @Success 200 {object} ctx.JSONResult{result=models.Resource}
 func (Env) ResourceGraphDetail(c *ctx.GinRequest) {
 	form := &forms.ResourceGraphDetailForm{}
 	if err := c.Bind(form); err != nil {
