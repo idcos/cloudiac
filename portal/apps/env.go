@@ -16,6 +16,7 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -52,7 +53,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	}
 
 	if form.Timeout == 0 {
-		form.Timeout = common.TaskStepTimeoutDuration
+		form.Timeout = common.DefaultTaskStepTimeout
 	}
 
 	var (
@@ -751,7 +752,7 @@ func EnvVariables(c *ctx.ServiceContext, form forms.SearchEnvVariableForm) (inte
 			task.Variables[index].Value = ""
 		}
 	}
-
+	sort.Sort(task.Variables)
 	return task.Variables, nil
 }
 

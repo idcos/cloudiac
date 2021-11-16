@@ -13,6 +13,16 @@ import (
 
 type TaskVariables []VariableBody
 
+func (v TaskVariables) Len() int {
+	return len(v)
+}
+func (v TaskVariables) Less(i, j int) bool {
+	return v[i].Name < v[j].Name
+}
+func (v TaskVariables) Swap(i, j int) {
+	v[i], v[j] = v[j], v[i]
+}
+
 func (v TaskVariables) Value() (driver.Value, error) {
 	return MarshalValue(v)
 }

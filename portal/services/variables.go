@@ -15,7 +15,7 @@ import (
 
 func CreateVariable(tx *db.Session, variable models.Variable) (*models.Variable, e.Error) {
 	if variable.Id == "" {
-		variable.Id = models.NewId("v")
+		variable.Id = variable.NewId()
 	}
 	if err := models.Create(tx, &variable); err != nil {
 		if e.IsDuplicate(err) {
@@ -86,7 +86,7 @@ func OperationVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id
 			}
 			continue
 		} else {
-			vId := models.NewId("v")
+			vId := models.Variable{}.NewId()
 			if err := bq.AddRow(vId, v.Scope, v.Type, v.Name, value, v.Sensitive, v.Description,
 				orgId, projectId, tplId, envId, v.Options); err != nil {
 				return e.New(e.DBError, err)
@@ -244,4 +244,8 @@ func GetVariableBody(vars map[string]models.Variable) []models.VariableBody {
 		vb = append(vb, vars[k].VariableBody)
 	}
 	return vb
+}
+
+func QueryVariable(dbSess *db.Session) *db.Session {
+	return dbSess.Model(&models.Variable{})
 }
