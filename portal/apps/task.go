@@ -402,9 +402,9 @@ type ResourcesGraphModule struct {
 }
 
 type Resources struct {
-	ResourceId   string
-	ResourceName string
-	NodeName     string
+	ResourceId   string `json:"resourceId" form:"resourceId" `
+	ResourceName string `json:"resourceName" form:"resourceName" `
+	NodeName     string `json:"nodeName" form:"nodeName" `
 }
 
 func GetResourcesGraphModule(resources []models.Resource) interface{} {
