@@ -126,3 +126,13 @@ func GetTplLastScanTask(sess *db.Session, envId models.Id) (*models.ScanTask, er
 	err := sess.Model(&models.ScanTask{}).Where("id = (?)", scanTaskIdQuery.Expr()).First(&task)
 	return &task, err
 }
+
+func QueryTemplateByName(tx *db.Session, name string) (*models.Template, e.Error) {
+	tpl := models.Template{}
+	if err := tx.Where("name = ?", name).First(&tpl); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TemplateNotExists, err)
+		}
+	}
+	return &tpl, nil
+}

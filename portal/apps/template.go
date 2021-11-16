@@ -318,3 +318,53 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 		List:     templates,
 	}, nil
 }
+
+type TemplateChecksResp struct {
+	CheckResult string `json:"CheckResult"`
+	Reason      string `json:"reason""`
+}
+
+func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (interface{}, e.Error) {
+	// 如果云模版名称传入，校验名称是否重复.
+	if form.Name != "" {
+		tpl, err := services.QueryTemplateByName(c.DB(), form.Name)
+		if tpl != nil {
+			return TemplateChecksResp{
+				CheckResult: consts.TplTfCheckFailed,
+				Reason:      "Cloud template name already exists",
+			}, nil
+		}
+		if err != nil && err.Code() == e.TemplateNotExists {
+			return TemplateChecksResp{
+				CheckResult: consts.TplTfCheckSuccess,
+			}, nil
+		}
+	}
+	// 检查工作目录下.tf 文件是否存在
+	searchForm := &forms.TemplateTfvarsSearchForm{
+		RepoId:       form.RepoId,
+		RepoRevision: form.RepoRevision,
+		RepoType:     form.RepoType,
+		VcsId:        form.VcsId,
+		TplChecks:    true,
+		Path:         form.Path,
+	}
+	results, err := VcsTfVarsSearch(c, searchForm)
+	if err != nil {
+		return TemplateChecksResp{
+			CheckResult: consts.TplTfCheckFailed,
+			Reason:      err.Error(),
+		}, nil
+	}
+
+	if len(results.([]string)) == 0 {
+		return TemplateChecksResp{
+			CheckResult: consts.TplTfCheckFailed,
+			Reason:      "There is no file ending in. TF in the working directory",
+		}, nil
+	}
+	return TemplateChecksResp{
+		CheckResult: consts.TplTfCheckSuccess,
+	}, nil
+
+}

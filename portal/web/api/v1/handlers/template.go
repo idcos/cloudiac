@@ -199,3 +199,22 @@ func AutoTemplateTfVersionChoice(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.AutoGetTfVersion(c.Service(), &form))
 }
+
+// TemplateChecks
+// @Tag 云模版
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Summary 创建云模版前检查名称是否重复和工作目录是否正确
+// @Param IaC-Org-Id header string true "组织ID"
+// @Security AuthToken
+// @Param form query forms.TemplateTfVersionSearchForm true "parameter"
+// @router /templates/checks [POST]
+// @Param form query forms.TemplateChecksForm true "parameter"
+// @Success 200 {object} ctx.JSONResult{result=apps.TemplateChecksResp}
+func TemplateChecks(c *ctx.GinRequest) {
+	form := forms.TemplateChecksForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.TemplateChecks(c.Service(), &form))
+}

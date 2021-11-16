@@ -90,6 +90,8 @@ type TemplateTfvarsSearchForm struct {
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
 	RepoType     string    `json:"repoType" form:"repoType" `
 	VcsId        models.Id `uri:"id"`
+	TplChecks    bool      `json:"tplChecks" form:"tplChecks"`
+	Path         string    `json:"path" form:"path"`
 }
 
 type TemplateVariableSearchForm struct {
@@ -113,4 +115,14 @@ type TemplateTfVersionSearchForm struct {
 	VcsId     models.Id `json:"vcsId" form:"vcsId"`
 	VcsBranch string    `json:"vcsBranch" form:"vcsBranch"`
 	RepoId    string    `json:"repoId" form:"repoId"`
+}
+
+type TemplateChecksForm struct {
+	BaseForm
+	Name         string    `json:"name" form:"name" form:"name"`
+	RepoId       string    `json:"repoId" form:"repoId"`
+	RepoRevision string    `json:"repoRevision" form:"repoRevision"`
+	RepoType     string    `json:"repoType" form:"repoType" `
+	VcsId        models.Id `json:"vcsId" form:"vcsId"`
+	Path         string    `json:"path" form:"path"`
 }

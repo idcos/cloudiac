@@ -54,9 +54,12 @@ const (
 	MetaYmlMatch   = "meta.y*ml"
 	VariablePrefix = "variables.tf"
 
-	TfVarFileMatch = "*.tfvars"
-	PlaybookMatch  = "*.y*ml"
-	Ansible        = "ansible"
+	TfVarFileMatch    = "*.tfvars"
+	TplTfCheck        = "*.tf"
+	TplTfCheckSuccess = "Success"
+	TplTfCheckFailed  = "Failed"
+	PlaybookMatch     = "*.y*ml"
+	Ansible           = "ansible"
 
 	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀
 
