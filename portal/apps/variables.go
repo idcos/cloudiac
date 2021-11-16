@@ -6,6 +6,7 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
@@ -34,6 +35,90 @@ func BatchUpdate(c *ctx.ServiceContext, form *forms.BatchUpdateVariableForm) (in
 	}
 
 	return nil, nil
+}
+
+func UpdateObjectVars(c *ctx.ServiceContext, form *forms.UpdateObjectVarsForm) (interface{}, e.Error) {
+	var (
+		result interface{}
+		err    error
+	)
+	err = c.DB().Transaction(func(tx *db.Session) error {
+		result, err = updateObjectVars(c, tx, form)
+		return err
+	})
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return result, nil
+}
+
+func updateObjectVars(c *ctx.ServiceContext, tx *db.Session, form *forms.UpdateObjectVarsForm) (interface{}, e.Error) {
+	var (
+		orgId     = c.OrgId
+		projectId = c.ProjectId
+		scope     = form.Scope
+		objectId  = form.ObjectId
+	)
+
+	for _, v := range form.Variables {
+		if v.Scope != form.Scope {
+			return nil, e.New(e.VariableScopeConflict)
+		}
+		if v.Name == "" {
+			return nil, e.New(e.EmptyVarName)
+		}
+	}
+
+	switch scope {
+	case consts.ScopeOrg:
+		if objectId != orgId {
+			return nil, e.New(e.BadOrgId)
+		}
+	case consts.ScopeProject:
+		if objectId != projectId {
+			return nil, e.New(e.BadProjectId)
+		}
+	}
+
+	vars := make([]models.Variable, 0, len(form.Variables))
+	for _, v := range form.Variables {
+		modelVar := models.Variable{
+			VariableBody: models.VariableBody{
+				Scope:       v.Scope,
+				Type:        v.Type,
+				Name:        v.Name,
+				Value:       v.Value,
+				Sensitive:   v.Sensitive,
+				Description: v.Description,
+				Options:     v.Options,
+			},
+		}
+		modelVar.Id = v.Id
+
+		switch scope {
+		case consts.ScopeOrg:
+			modelVar.OrgId = orgId
+		case consts.ScopeProject:
+			modelVar.OrgId = orgId
+			modelVar.ProjectId = projectId
+		case consts.ScopeTemplate:
+			modelVar.OrgId = orgId
+			modelVar.TplId = objectId
+		case consts.ScopeEnv:
+			modelVar.OrgId = orgId
+			modelVar.ProjectId = projectId
+			modelVar.EnvId = objectId
+		}
+		vars = append(vars, modelVar)
+	}
+
+	tx = services.QueryWithOrgId(tx, c.OrgId)
+	retVars, err := services.UpdateObjectVars(tx, scope, objectId, vars)
+	if err != nil {
+		c.Logger().Warnf("update object %s(%s) vars error: %v", form.Scope, form.ObjectId, err)
+		return nil, e.AutoNew(err, e.InternalError)
+	}
+	return services.VarsDesensitization(retVars), nil
 }
 
 type newVariable []VariableResp

@@ -26,7 +26,7 @@ type CreateTemplateForm struct {
 	Playbook          string      `json:"playbook" form:"playbook"`
 	PlayVarsFile      string      `json:"playVarsFile" form:"playVarsFile"`
 	TfVarsFile        string      `form:"tfVarsFile" json:"tfVarsFile"`
-	Variables         []Variables `json:"variables" form:"variables" `
+	Variables         []Variable `json:"variables" form:"variables" `
 	DeleteVariablesId []string    `json:"deleteVariablesId" form:"deleteVariablesId" ` //变量id
 	ProjectId         []models.Id `form:"projectId" json:"projectId"`                  // 项目ID
 	TfVersion         string      `form:"tfVersion" json:"tfVersion"`                  // 模版使用terraform版本号
@@ -52,7 +52,7 @@ type UpdateTemplateForm struct {
 	Playbook          string      `json:"playbook" form:"playbook"`
 	PlayVarsFile      string      `json:"playVarsFile" form:"playVarsFile"`
 	TfVarsFile        string      `form:"tfVarsFile" json:"tfVarsFile"`
-	Variables         []Variables `json:"variables" form:"variables" `
+	Variables         []Variable `json:"variables" form:"variables" `
 	DeleteVariablesId []string    `json:"deleteVariablesId" form:"deleteVariablesId" ` //变量id
 	ProjectId         []models.Id `form:"projectId" json:"projectId"`
 	RepoRevision      string      `form:"repoRevision" json:"repoRevision" binding:""`

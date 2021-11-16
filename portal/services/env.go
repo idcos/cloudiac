@@ -226,8 +226,8 @@ func GetDefaultRunner() (string, e.Error) {
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list is null"))
 }
 
-func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id, sampleVariables []forms.SampleVariables) ([]forms.Variables, e.Error) {
-	resp := make([]forms.Variables, 0)
+func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id, sampleVariables []forms.SampleVariables) ([]forms.Variable, e.Error) {
+	resp := make([]forms.Variable, 0)
 	vars, err, _ := GetValidVariables(tx, consts.ScopeEnv, orgId, projectId, tplId, envId, true)
 	if err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("get vairables error: %v", err))
@@ -237,7 +237,7 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 		for key, value := range vars {
 			// 
 			if v.Name == fmt.Sprintf("TF_VAR_%s", value.Name) {
-				resp = append(resp, forms.Variables{
+				resp = append(resp, forms.Variable{
 					Id:    vars[key].Id,
 					Scope: vars[key].Scope,
 					Type:  vars[key].Type,
@@ -253,7 +253,7 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 		}
 		// 对不在变量列表的变量进行新建
 		if isNew {
-			resp = append(resp, forms.Variables{
+			resp = append(resp, forms.Variable{
 				Scope: consts.ScopeEnv,
 				Type:  consts.VarTypeEnv,
 				Name:  v.Name,
