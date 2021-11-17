@@ -218,12 +218,12 @@ func ListRepoTags(c *ctx.ServiceContext, form *forms.GetGitRevisionForm) (tags [
 
 }
 
-func VcsTfVarsSearch(c *ctx.ServiceContext, form *forms.TemplateTfvarsSearchForm) (interface{}, e.Error) {
+func VcsFileSearch(c *ctx.ServiceContext, form *forms.TemplateTfvarsSearchForm) (interface{}, e.Error) {
 	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
+
 	if err != nil {
 		return nil, err
 	}
-
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
@@ -232,10 +232,22 @@ func VcsTfVarsSearch(c *ctx.ServiceContext, form *forms.TemplateTfvarsSearchForm
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
+	var (
+		search string
+		path   string
+	)
+	if form.TplChecks {
+		search = consts.TplTfCheck
+		path = form.Path
+	} else {
+		search = consts.TfVarFileMatch
+	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
 		Ref:    form.RepoRevision,
-		Search: consts.TfVarFileMatch,
+		Search: search,
+		Path:   path,
 	})
+
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
