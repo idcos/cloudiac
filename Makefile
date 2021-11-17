@@ -188,7 +188,7 @@ providers-arm64:
 	PLATFORM=linux_arm64 bash scripts/generate-providers-mirror.sh
 
 PROVIDERS_SHA1SUM=$(shell tar -c ./assets/providers | $(CMD_MD5SUM))
-PROVIDERS_PACKAGE_NAME=cloudiac-providers_$(PROVIDERS_SHA1SUM).tar.gz
+PROVIDERS_PACKAGE_NAME=cloudiac-providers_$(VERSION)_$(PROVIDERS_SHA1SUM).tar.gz
 providers-package:
 	@if [[ ! -e "$(PROVIDERS_PACKAGE_NAME)" ]]; then echo "Package $(PROVIDERS_PACKAGE_NAME)"; tar -czf $(PROVIDERS_PACKAGE_NAME) ./assets/providers; fi
 
