@@ -1,4 +1,15 @@
 [{
+  "version": "0.7.1",
+  "date": "20211116",
+  "content": {
+    "Features": [
+      "新增 runner 的 offline mode"
+    ],
+    "Fixes": [
+      "修复预置 provider 不生效的问题"
+    ]
+  }
+},{
   "version": "0.7.0",
   "date": "20211105",
   "content": {

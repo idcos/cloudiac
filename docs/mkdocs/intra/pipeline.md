@@ -128,20 +128,20 @@ apply:
 ```yaml
 apply:
   onSuccess:
-    - name: 任务成功
-      type: command
-      args: 
-        - echo "Task successful"
-        - test "$CLOUDIAC_ENV_STATUS" = "inactive" && echo "Environment created"
-        - test "$CLOUDIAC_ENV_STATUS" = "failed" && echo "Environment recovered"
+    name: 任务成功
+    type: command
+    args: 
+      - echo "Task successful"
+      - test "$CLOUDIAC_ENV_STATUS" = "inactive" && echo "Environment created"
+      - test "$CLOUDIAC_ENV_STATUS" = "failed" && echo "Environment recovered"
 
   onFail:
-    - name: 任务失败
-      type: command
-      args: 
-        - echo "Task failed"
+    name: 任务失败
+    type: command
+    args: 
+      - echo "Task failed"
 
-  steps: ["..."] // 流程步骤省略
+  steps: [] # 流程步骤省略
 ```
 
 在 command 步骤中可以引用环境变量的值，通过判断变量值来执行不同的操作。如示例中基于环境在任务启动时的状态来判断是创建环境还是恢复失败状态的环境。 

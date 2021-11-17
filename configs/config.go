@@ -42,9 +42,11 @@ type ConsulConfig struct {
 type RunnerConfig struct {
 	DefaultImage string `yaml:"default_image"`
 	// AssetsPath  预置 providers 也在该目录下
-	AssetsPath      string `yaml:"assets_path"`
-	StoragePath     string `yaml:"storage_path"`
-	PluginCachePath string `yaml:"plugin_cache_path"`
+	AssetsPath       string `yaml:"assets_path"`
+	StoragePath      string `yaml:"storage_path"`
+	PluginCachePath  string `yaml:"plugin_cache_path"`
+	OfflineMode      bool   `yaml:"offline_mode"`       // 离线模式?
+	ReserveContainer bool   `yaml:"reserver_container"` // 任务结束后保留容器?(停止容器但不删除)
 }
 
 type PortalConfig struct {

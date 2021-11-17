@@ -16,6 +16,9 @@ runner:
   ## plugins 缓存
   plugin_cache_path: "var/plugin-cache"
 
+  ## 是否开启 offline 模式(默认为 false)
+  offline_mode: ${RUNNER_OFFLINE_MODE}
+
 consul:
   address: "${CONSUL_ADDRESS}"
   id: "${RUNNER_SERVICE_ID}"
