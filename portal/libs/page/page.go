@@ -23,8 +23,10 @@ func New(page int, size int, q *db.Session) *Paginator {
 	if page <= 0 {
 		page = 1
 	}
-	if size < 0 || size > consts.MaxPageSize {
+	if size <= 0 {
 		size = consts.DefaultPageSize
+	} else if size > consts.MaxPageSize {
+		size = consts.MaxPageSize
 	}
 
 	return &Paginator{
@@ -68,11 +70,7 @@ func (p *Paginator) TotalBySubQuery() (int64, error) {
 }
 
 func (p *Paginator) getPage() *db.Session {
-	// size 为 0 表示不分页
-	if p.Size != 0 {
-		return p.dbSess.Limit(p.Size).Offset((p.Page - 1) * p.Size)
-	}
-	return p.dbSess
+	return p.dbSess.Limit(p.Size).Offset((p.Page - 1) * p.Size)
 }
 
 func (p *Paginator) Scan(dest interface{}) error {

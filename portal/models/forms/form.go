@@ -125,14 +125,15 @@ func (b *PageForm) OrderBy() string {
 	}
 }
 
-// 支持分页，但允许 pageSize 传 0 表示不分页的表单类型
+// 支持分页，但允许 pageSize 传 0 表示不分页的表单类型(每页大小为 MaxPageSize)
 type NoPageSizeForm struct {
 	PageForm
 }
 
 func (b *NoPageSizeForm) PageSize() int {
 	if b.HasKey("pageSize") && b.PageSize_ == 0 {
-		return 0
+		// 即使传了 0 表示不分页，我们也设置一个每页最大数量，避免一次查询过多数据拖垮后端
+		return consts.MaxPageSize
 	}
 	return b.PageForm.PageSize()
 }
