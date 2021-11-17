@@ -24,7 +24,7 @@ type UpdateUserForm struct {
 }
 
 type SearchUserForm struct {
-	PageForm
+	NoPageSizeForm
 
 	Q       string `form:"q" json:"q" binding:""`                       // 用户名，支持模糊查询
 	Status  string `form:"status" json:"status" enums:"enable,disable"` // 状态
