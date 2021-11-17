@@ -135,7 +135,7 @@ func TemplateTfvarsSearch(c *ctx.GinRequest) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.VcsTfVarsSearch(c.Service(), &form))
+	c.JSONResult(apps.VcsFileSearch(c.Service(), &form))
 }
 
 // TemplateVariableSearch 查询云模板TF参数
@@ -204,7 +204,7 @@ func AutoTemplateTfVersionChoice(c *ctx.GinRequest) {
 }
 
 // TemplateChecks
-// @Tag 云模版
+// @Tags 云模板
 // @Accept multipart/form-data
 // @Accept application/x-www-form-urlencoded
 // @Summary 创建云模版前检查名称是否重复和工作目录是否正确

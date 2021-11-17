@@ -218,7 +218,7 @@ func ListRepoTags(c *ctx.ServiceContext, form *forms.GetGitRevisionForm) (tags [
 
 }
 
-func VcsTfVarsSearch(c *ctx.ServiceContext, form *forms.TemplateTfvarsSearchForm) (interface{}, e.Error) {
+func VcsFileSearch(c *ctx.ServiceContext, form *forms.TemplateTfvarsSearchForm) (interface{}, e.Error) {
 	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
 
 	if err != nil {

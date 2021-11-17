@@ -327,7 +327,7 @@ type TemplateChecksResp struct {
 func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (interface{}, e.Error) {
 	// 如果云模版名称传入，校验名称是否重复.
 	if form.Name != "" {
-		tpl, err := services.QueryTemplateByName(c.DB(), form.Name)
+		tpl, err := services.QueryTemplateByName(c.DB(), form.Name, c.OrgId)
 		if tpl != nil {
 			return TemplateChecksResp{
 				CheckResult: consts.TplTfCheckFailed,
@@ -349,7 +349,7 @@ func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (inte
 		TplChecks:    true,
 		Path:         form.Path,
 	}
-	results, err := VcsTfVarsSearch(c, searchForm)
+	results, err := VcsFileSearch(c, searchForm)
 	if err != nil {
 		return TemplateChecksResp{
 			CheckResult: consts.TplTfCheckFailed,

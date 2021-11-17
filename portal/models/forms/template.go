@@ -90,8 +90,8 @@ type TemplateTfvarsSearchForm struct {
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
 	RepoType     string    `json:"repoType" form:"repoType" `
 	VcsId        models.Id `uri:"id"`
-	TplChecks    bool      `json:"tplChecks" form:"tplChecks"`
-	Path         string    `json:"path" form:"path"`
+	TplChecks    bool      `json:"tplChecks" form:"tplChecks" swaggerignore:"true"`
+	Path         string    `json:"path" form:"path" swaggerignore:"true"`
 }
 
 type TemplateVariableSearchForm struct {
