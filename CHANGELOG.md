@@ -1,3 +1,24 @@
+------
+## v0.7.1 20211117
+#### Features
+- 新增 runner 的 offline mode
+
+#### Enhancements
+- 调整步骤的默认超时时间为 1800 秒
+- 步骤超时会记录错误原因，展示为 "timeout"
+
+#### Fixes
+- 修复 ct-worker 镜像的 provider 加载问题
+
+
+#### 配置更新
+若要开启 offline mode，需在 .env 中添加(不配置默认为 false) 
+```
+RUNNER_OFFLINE_MODE="true"
+```
+
+
+------
 ## v0.7.0 20211105
 #### Features
 - **新增自定义 pipeline 功能，并将任务执行过程分步展示**

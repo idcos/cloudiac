@@ -83,7 +83,7 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		BaseTask: models.BaseTask{
 			Type:        pt.Type,
 			Pipeline:    pt.Pipeline,
-			StepTimeout: pt.StepTimeout,
+			StepTimeout: utils.FirstValueInt(pt.StepTimeout, common.DefaultTaskStepTimeout),
 			RunnerId:    firstVal(pt.RunnerId, env.RunnerId),
 
 			Status:   models.TaskPending,
@@ -936,7 +936,7 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 
 		BaseTask: models.BaseTask{
 			Type:        pt.Type,
-			StepTimeout: pt.StepTimeout,
+			StepTimeout: utils.FirstValueInt(pt.StepTimeout, common.DefaultTaskStepTimeout),
 			RunnerId:    pt.RunnerId,
 
 			Status:   models.TaskPending,

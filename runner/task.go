@@ -79,6 +79,17 @@ func (t *Task) start() (cid string, err error) {
 		cmd.Image = t.req.DockerImage
 	}
 
+	reserveContainer := conf.ReserveContainer
+	if v, ok := t.req.Env.EnvironmentVars["CLOUDIAC_RESERVER_CONTAINER"]; ok {
+		// 需要明确判断是否为 true 或者 false，其他情况使用配置文件中的值
+		if utils.IsTrueStr(v) {
+			reserveContainer = true
+		} else if utils.IsFalseStr(v) {
+			reserveContainer = false
+		}
+	}
+	cmd.AutoRemove = !reserveContainer
+
 	tfPluginCacheDir := ""
 	for k, v := range t.req.Env.EnvironmentVars {
 		if k == "TF_PLUGIN_CACHE_DIR" {
@@ -104,8 +115,8 @@ func (t *Task) start() (cid string, err error) {
 	cmd.TerraformVersion = t.req.Env.TfVersion
 	cmd.Env = append(cmd.Env, fmt.Sprintf("TFENV_TERRAFORM_VERSION=%s", cmd.TerraformVersion))
 
-	// 容器启动后执行 /bin/sh，以保持运行
-	cmd.Commands = []string{"/bin/sh"}
+	// 容器启动后执行 /bin/bash 以保持运行，然后通过 exec 在容器中执行步骤命令
+	cmd.Commands = []string{"/bin/bash"}
 
 	stepDir := GetTaskDir(t.req.Env.Id, t.req.TaskId, t.req.Step)
 	containerInfoFile := filepath.Join(stepDir, TaskContainerInfoFileName)
@@ -403,6 +414,7 @@ func (t *Task) stepCheckout() (command string, err error) {
 var initCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 ln -sf '{{.IacTfFile}}' . && \
+ln -sf '{{.terraformrc}}' ~/.terraformrc && \
 tfenv install $TFENV_TERRAFORM_VERSION && \
 tfenv use $TFENV_TERRAFORM_VERSION  && \
 terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }}
@@ -419,8 +431,14 @@ func (t *Task) up2Workspace(name string) string {
 }
 
 func (t *Task) stepInit() (command string, err error) {
+	tfrcName := "terraformrc-default"
+	if configs.Get().Runner.OfflineMode {
+		tfrcName = "terraformrc-offline"
+	}
+	tfrc := filepath.Join(ContainerAssetsDir, tfrcName)
 	return t.executeTpl(initCommandTpl, map[string]interface{}{
 		"Req":             t.req,
+		"terraformrc":     tfrc,
 		"PluginCachePath": ContainerPluginCachePath,
 		"IacTfFile":       t.up2Workspace(CloudIacTfFile),
 	})

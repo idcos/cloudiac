@@ -3,8 +3,8 @@
 
 #### 1. 安装并启动 docker
 ```bash
-curl -fsSL https://get.docker.com | bash -s docker
-systemctl enable docker
+curl -fsSL https://get.docker.com | bash -s docker && \
+systemctl enable docker && \
 systemctl start docker
 ```
 
@@ -141,7 +141,7 @@ MYSQL_USER=cloudiac
 MYSQL_PASSWORD="mysqlpass"
 
 # portal 服务注册信息配置 (均为必填)
-## portal 服务 IP 地址，需要配置为内网 IP
+## portal 服务的 IP 地址， 容器化部署时无需修改, 手动部署时配置为内网 IP
 SERVICE_IP=iac-portal
 ## portal 服务注册的 id(需要保证唯一)
 SERVICE_ID=iac-portal-01
@@ -159,7 +159,7 @@ SMTP_FROM_NAME=IaC
 SMTP_FROM=support@example.com
 
 # KAFKA配置(kafka 任务结果回调使用，不配置不影响其他功能)
-KAFKA_TOPIC = "IAC_TASK_REPLY"
+KAFKA_TOPIC="IAC_TASK_REPLY"
 KAFKA_GROUP_ID=""
 KAFKA_PARTITION=0
 ## example: KAFKA_BROKERS: ["kafka.example.com:9092", "..."]
@@ -170,7 +170,7 @@ KAFKA_SASL_PASSWORD=""
 
 ######### 以下为 runner 配置 #############
 # runner 服务注册配置(均为必填)
-## runner 服务的 IP 地址，需要配置为内网 IP
+## runner 服务的 IP 地址， 容器化部署时无需修改, 手动部署时配置为内网 IP
 RUNNER_SERVICE_IP=ct-runner
 ## runner 服务注册的 id(需要保证唯一)
 RUNNER_SERVICE_ID=ct-runner-01

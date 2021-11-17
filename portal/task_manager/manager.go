@@ -772,12 +772,17 @@ loop:
 	case models.TaskStepComplete:
 		return nil
 	case models.TaskStepFailed:
-		if step.Message == "" {
-			step.Message = "failed"
+		message := "failed"
+		if step.Message != "" {
+			message = step.Message
 		}
-		return fmt.Errorf(step.Message)
+		return fmt.Errorf(message)
 	case models.TaskStepTimeout:
-		return errors.New("timeout")
+		message := "timeout"
+		if step.Message != "" {
+			message = step.Message
+		}
+		return fmt.Errorf(message)
 	default:
 		return fmt.Errorf("unknown step status: %v", step.Status)
 	}
