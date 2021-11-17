@@ -61,7 +61,7 @@ type CreatePolicyGroupForm struct {
 }
 
 type SearchPolicyGroupForm struct {
-	ZeroPageSizeForm
+	NoPageSizeForm
 
 	Q string `form:"q" json:"q" binding:""` // 策略组名称，支持模糊搜索
 }
@@ -151,7 +151,7 @@ type SearchPolicySuppressForm struct {
 }
 
 type SearchPolicySuppressSourceForm struct {
-	ZeroPageSizeForm
+	NoPageSizeForm
 
 	Id models.Id `uri:"id"`
 }
@@ -164,7 +164,7 @@ type DeletePolicySuppressForm struct {
 }
 
 type SearchPolicyTplForm struct {
-	ZeroPageSizeForm
+	NoPageSizeForm
 
 	OrgId models.Id `form:"orgId" binding:""` // 组织ID
 	TplId models.Id `form:"tplId" binding:""`
@@ -186,13 +186,13 @@ type TplOfPolicyForm struct {
 }
 
 type TplOfPolicyGroupForm struct {
-	ZeroPageSizeForm
+	NoPageSizeForm
 
 	Id models.Id `uri:"id"`
 }
 
 type SearchPolicyEnvForm struct {
-	ZeroPageSizeForm
+	NoPageSizeForm
 
 	OrgId     models.Id `form:"orgId" binding:""`
 	ProjectId models.Id `form:"projectId" binding:""`
@@ -224,7 +224,7 @@ type UpdatePolicySuppressForm struct {
 }
 
 type PolicyScanResultForm struct {
-	ZeroPageSizeForm
+	NoPageSizeForm
 
 	Id models.Id `uri:"id" `
 }

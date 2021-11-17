@@ -23,7 +23,7 @@ type UpdateVcsForm struct {
 }
 
 type SearchVcsForm struct {
-	ZeroPageSizeForm
+	NoPageSizeForm
 
 	Q                string `form:"q" json:"q" binding:""`
 	Status           string `form:"status" json:"status"`

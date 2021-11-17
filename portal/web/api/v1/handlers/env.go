@@ -229,7 +229,7 @@ func (Env) SearchTasks(c *ctx.GinRequest) {
 		return
 	}
 	taskForm := &forms.SearchTaskForm{
-		ZeroPageSizeForm: form.ZeroPageSizeForm,
+		NoPageSizeForm: form.NoPageSizeForm,
 		EnvId:    form.Id,
 	}
 	c.JSONResult(apps.SearchTask(c.Service(), taskForm))

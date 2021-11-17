@@ -126,11 +126,11 @@ func (b *PageForm) OrderBy() string {
 }
 
 // 支持分页，但允许 pageSize 传 0 表示不分页的表单类型
-type ZeroPageSizeForm struct {
+type NoPageSizeForm struct {
 	PageForm
 }
 
-func (b *ZeroPageSizeForm) PageSize() int {
+func (b *NoPageSizeForm) PageSize() int {
 	if b.HasKey("pageSize") && b.PageSize_ == 0 {
 		return 0
 	}

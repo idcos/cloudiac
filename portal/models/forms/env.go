@@ -116,7 +116,7 @@ type ArchiveEnvForm struct {
 }
 
 type SearchEnvForm struct {
-	ZeroPageSizeForm
+	NoPageSizeForm
 
 	Q        string `form:"q" json:"q" binding:""`                                                 // 环境名称，支持模糊查询
 	Status   string `form:"status" json:"status" enums:"active,failed,inactive,running,approving"` // 环境状态，active活跃, inactive非活跃,failed错误,running部署中,approving审批中
@@ -142,7 +142,7 @@ type EnvParam struct {
 }
 
 type SearchEnvResourceForm struct {
-	ZeroPageSizeForm
+	NoPageSizeForm
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
 	Q  string    `form:"q" json:"q" binding:""`            // 资源名称，支持模糊查询

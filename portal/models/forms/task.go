@@ -33,7 +33,7 @@ type TaskLogForm struct {
 }
 
 type SearchTaskForm struct {
-	ZeroPageSizeForm
+	NoPageSizeForm
 
 	EnvId models.Id `json:"envId" form:"envId" binding:"required"` // 环境ID
 }
@@ -74,13 +74,13 @@ type ApproveTaskForm struct {
 }
 
 type SearchEnvTasksForm struct {
-	ZeroPageSizeForm
+	NoPageSizeForm
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
 }
 
 type SearchTaskResourceForm struct {
-	ZeroPageSizeForm
+	NoPageSizeForm
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 任务ID，swagger 参数通过 param path 指定，这里忽略
 	Q  string    `form:"q" json:"q" binding:""`            // 资源名称，支持模糊查询

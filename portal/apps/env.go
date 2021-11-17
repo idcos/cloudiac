@@ -688,7 +688,7 @@ func SearchEnvResources(c *ctx.ServiceContext, form *forms.SearchEnvResourceForm
 	}
 
 	return SearchTaskResources(c, &forms.SearchTaskResourceForm{
-		ZeroPageSizeForm: form.ZeroPageSizeForm,
+		NoPageSizeForm: form.NoPageSizeForm,
 		Id:               env.LastResTaskId,
 		Q:                form.Q,
 	})
