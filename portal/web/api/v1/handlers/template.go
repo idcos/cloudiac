@@ -135,7 +135,7 @@ func TemplateTfvarsSearch(c *ctx.GinRequest) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.VcsTfVarsSearch(c.Service(), &form))
+	c.JSONResult(apps.VcsFileSearch(c.Service(), &form))
 }
 
 // TemplateVariableSearch 查询云模板TF参数
@@ -201,6 +201,25 @@ func AutoTemplateTfVersionChoice(c *ctx.GinRequest) {
 		return
 	}
 	c.JSONResult(apps.AutoGetTfVersion(c.Service(), &form))
+}
+
+// TemplateChecks
+// @Tags 云模板
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Summary 创建云模版前检查名称是否重复和工作目录是否正确
+// @Param IaC-Org-Id header string true "组织ID"
+// @Security AuthToken
+// @Param form query forms.TemplateTfVersionSearchForm true "parameter"
+// @router /templates/checks [POST]
+// @Param form query forms.TemplateChecksForm true "parameter"
+// @Success 200 {object} ctx.JSONResult{result=apps.TemplateChecksResp}
+func TemplateChecks(c *ctx.GinRequest) {
+	form := forms.TemplateChecksForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.TemplateChecks(c.Service(), &form))
 }
 
 // TemplateExport 云模板导出
