@@ -23,7 +23,8 @@ type UpdateVcsForm struct {
 }
 
 type SearchVcsForm struct {
-	PageForm
+	ZeroPageSizeForm
+
 	Q                string `form:"q" json:"q" binding:""`
 	Status           string `form:"status" json:"status"`
 	IsShowDefaultVcs bool   `form:"isShowDefaultVcs" json:"isShowDefaultVcs" default:"true"`

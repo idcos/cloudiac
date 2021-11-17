@@ -33,7 +33,8 @@ type TaskLogForm struct {
 }
 
 type SearchTaskForm struct {
-	PageForm
+	ZeroPageSizeForm
+
 	EnvId models.Id `json:"envId" form:"envId" binding:"required"` // 环境ID
 }
 
@@ -73,7 +74,7 @@ type ApproveTaskForm struct {
 }
 
 type SearchEnvTasksForm struct {
-	PageForm
+	ZeroPageSizeForm
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
 }

@@ -14,7 +14,7 @@ type CreateKeyForm struct {
 }
 
 type SearchKeyForm struct {
-	PageForm
+	ZeroPageSizeForm
 
 	Q string `form:"q" json:"q" binding:""` // 密钥名称，支持模糊搜索
 }

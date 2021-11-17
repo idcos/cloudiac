@@ -116,7 +116,7 @@ type ArchiveEnvForm struct {
 }
 
 type SearchEnvForm struct {
-	PageForm
+	ZeroPageSizeForm
 
 	Q        string `form:"q" json:"q" binding:""`                                                 // 环境名称，支持模糊查询
 	Status   string `form:"status" json:"status" enums:"active,failed,inactive,running,approving"` // 环境状态，active活跃, inactive非活跃,failed错误,running部署中,approving审批中
