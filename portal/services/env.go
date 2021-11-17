@@ -119,6 +119,10 @@ func QueryActiveEnv(query *db.Session) *db.Session {
 	return query.Model(&models.Env{}).Where("status != ? OR deploying = ?", models.EnvStatusInactive, true)
 }
 
+func QueryEnv(query *db.Session) *db.Session {
+	return query.Model(&models.Env{})
+}
+
 // ChangeEnvStatusWithTaskAndStep 基于任务和步骤的状态更新环境状态
 func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.Task, step *models.TaskStep) e.Error {
 	var (
@@ -235,7 +239,7 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 	for _, v := range sampleVariables {
 		isNew := true
 		for key, value := range vars {
-			// 
+			//
 			if v.Name == fmt.Sprintf("TF_VAR_%s", value.Name) {
 				resp = append(resp, forms.Variable{
 					Id:    vars[key].Id,

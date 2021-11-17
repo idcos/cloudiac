@@ -11,6 +11,7 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"fmt"
+	"net/http"
 	"sort"
 )
 
@@ -62,10 +63,10 @@ func updateObjectVars(c *ctx.ServiceContext, tx *db.Session, form *forms.UpdateO
 
 	for _, v := range form.Variables {
 		if v.Scope != form.Scope {
-			return nil, e.New(e.VariableScopeConflict)
+			return nil, e.New(e.VariableScopeConflict, http.StatusBadRequest)
 		}
 		if v.Name == "" {
-			return nil, e.New(e.EmptyVarName)
+			return nil, e.New(e.EmptyVarName, http.StatusBadRequest)
 		}
 	}
 

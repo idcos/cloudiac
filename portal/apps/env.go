@@ -150,7 +150,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	}
 	if _, er := updateObjectVars(c, tx, &updateVarsForm); er != nil {
 		_ = tx.Rollback()
-		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+		return nil, e.AutoNew(er, e.InternalError)
 	}
 
 	// 创建变量组与实例的关系
@@ -475,7 +475,7 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 // EnvDeploy 创建新部署任务
 // 任务类型：plan, apply, destroy
 func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (ret *models.EnvDetail, er e.Error) {
-	c.DB().Transaction(func(tx *db.Session) error {
+	_ = c.DB().Transaction(func(tx *db.Session) error {
 		ret, er = envDeploy(c, tx, form)
 		return er
 	})
@@ -719,30 +719,22 @@ func EnvOutput(c *ctx.ServiceContext, form forms.DetailEnvForm) (interface{}, e.
 	})
 }
 
-// EnvVariables 环境部署对应的环境变量为 last task 固化的变量内容
+// EnvVariables 获取环境的变量列表，环境部署对应的环境变量为 last task 固化的变量内容
 func EnvVariables(c *ctx.ServiceContext, form forms.SearchEnvVariableForm) (interface{}, e.Error) {
 	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
 
-	env, err := services.GetEnvById(c.DB(), form.Id)
-	if err != nil && err.Code() != e.EnvNotExists {
-		return nil, e.New(err.Code(), err, http.StatusNotFound)
-	} else if err != nil {
-		c.Logger().Errorf("error get env, err %s", err)
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	}
-
-	if env.LastTaskId == "" {
-		return nil, nil
-	}
-
-	task, err := services.GetTaskById(c.DB(), env.LastTaskId)
-	if err != nil && err.Code() != e.TaskNotExists {
-		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
-	} else if err != nil {
-		c.Logger().Errorf("error get env last res task, err %s", err)
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	task := models.Task{}
+	err := services.QueryWithOrgProject(c.DB(), c.OrgId, c.ProjectId, models.Task{}.TableName()).
+		Where("env_id = ? AND `type` IN (?)", form.Id,
+			[]string{common.TaskTypePlan, common.TaskTypeApply, common.TaskTypeDestroy}).Last(&task)
+	if err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.ObjectNotExists, http.StatusNotFound)
+		}
+		c.Logger().Errorf("query env last task error: %v", err)
+		return nil, e.AutoNew(err, e.DBError)
 	}
 
 	// 隐藏敏感字段
@@ -751,6 +743,7 @@ func EnvVariables(c *ctx.ServiceContext, form forms.SearchEnvVariableForm) (inte
 			task.Variables[index].Value = ""
 		}
 	}
+
 	sort.Sort(task.Variables)
 	return task.Variables, nil
 }
