@@ -22,7 +22,6 @@ type PageFormer interface {
 
 	CurrentPage() int
 	PageSize() int
-	Export() bool
 	Order(*db.Session) *db.Session
 }
 
@@ -33,9 +32,8 @@ type BaseForm struct {
 type PageForm struct {
 	BaseForm
 
-	PageSize_    int  `form:"pageSize" json:"pageSize" binding:""`       // 分页大小，默认 15 条
-	CurrentPage_ int  `form:"currentPage" json:"currentPage" binding:""` // 当前分页，从 1 开始
-	Export_      bool `form:"export" json:"export" binding:""`           // 是否导出 csv 文件
+	PageSize_    int `form:"pageSize" json:"pageSize" binding:""`       // 分页大小，默认 15 条
+	CurrentPage_ int `form:"currentPage" json:"currentPage" binding:""` // 当前分页，从 1 开始
 
 	SortField_ string `form:"sortField" json:"sortField"`                  // 排序字段名称
 	SortOrder_ string `form:"sortOrder" json:"sortOrder" enums:"asc,desc"` // 排序顺序
@@ -62,10 +60,6 @@ func (b *BaseForm) HasKey(k string) bool {
 }
 
 func (b *PageForm) CurrentPage() int {
-	if b.Export_ {
-		// 导出 csv 总是从第一页开始
-		return 1
-	}
 	if b.CurrentPage_ <= 0 {
 		return 1
 	}
@@ -73,21 +67,12 @@ func (b *PageForm) CurrentPage() int {
 }
 
 func (b *PageForm) PageSize() int {
-	if b.Export_ {
-		// 导出 csv 时设定为最大单页数量
-		return consts.MaxPageSize
-	}
 	if b.PageSize_ > consts.MaxPageSize {
 		return consts.MaxPageSize
-	}
-	if b.PageSize_ <= 0 {
+	} else if b.PageSize_ <= 0 {
 		return consts.DefaultPageSize
 	}
 	return b.PageSize_
-}
-
-func (b *PageForm) Export() bool {
-	return b.Export_
 }
 
 func (b *PageForm) SortField() string {
@@ -138,4 +123,17 @@ func (b *PageForm) OrderBy() string {
 	} else {
 		return fmt.Sprintf("ORDER BY `%s`", b.SortField())
 	}
+}
+
+// 支持分页，但允许 pageSize 传 0 表示不分页的表单类型(每页大小为 MaxPageSize)
+type NoPageSizeForm struct {
+	PageForm
+}
+
+func (b *NoPageSizeForm) PageSize() int {
+	if b.HasKey("pageSize") && b.PageSize_ == 0 {
+		// 即使传了 0 表示不分页，我们也设置一个每页最大数量，避免一次查询过多数据拖垮后端
+		return consts.MaxPageSize
+	}
+	return b.PageForm.PageSize()
 }
