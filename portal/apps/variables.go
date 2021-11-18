@@ -108,6 +108,11 @@ func updateObjectVars(c *ctx.ServiceContext, tx *db.Session, form *forms.UpdateO
 		case consts.ScopeEnv:
 			modelVar.OrgId = orgId
 			modelVar.ProjectId = projectId
+			if env, er := services.GetEnvById(tx, objectId); er != nil {
+				return nil, er
+			} else {
+				modelVar.TplId = env.TplId
+			}
 			modelVar.EnvId = objectId
 		}
 		vars = append(vars, modelVar)
