@@ -169,3 +169,20 @@ func GetDefaultVcs(session *db.Session) (*models.Vcs, error) {
 	err := session.Where("org_id = ''").First(vcs)
 	return vcs, err
 }
+
+func CreateVcsPr(session *db.Session, vcsPr models.VcsPr) e.Error {
+	if err := models.Create(session, &vcsPr); err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
+func GetVcsPrByTaskId(session *db.Session, task *models.Task) (models.VcsPr, e.Error) {
+	vp := models.VcsPr{}
+	if err := session.Model(&models.VcsPr{}).
+		Where("env_id = ?", task.EnvId).
+		Where("task_id = ?", task.Id).First(&vp); err != nil {
+		return vp, e.New(e.DBError, err)
+	}
+	return vp, nil
+}

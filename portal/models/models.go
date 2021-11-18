@@ -195,6 +195,7 @@ func Init(migrate bool) {
 	autoMigrate(&Organization{}, sess)
 	autoMigrate(&Project{}, sess)
 	autoMigrate(&Vcs{}, sess)
+	autoMigrate(&VcsPr{}, sess)
 	autoMigrate(&Template{}, sess)
 	autoMigrate(&Env{}, sess)
 	autoMigrate(&Resource{}, sess)
