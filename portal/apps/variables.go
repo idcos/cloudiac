@@ -61,15 +61,6 @@ func updateObjectVars(c *ctx.ServiceContext, tx *db.Session, form *forms.UpdateO
 		objectId  = form.ObjectId
 	)
 
-	for _, v := range form.Variables {
-		if v.Scope != form.Scope {
-			return nil, e.New(e.VariableScopeConflict, http.StatusBadRequest)
-		}
-		if v.Name == "" {
-			return nil, e.New(e.EmptyVarName, http.StatusBadRequest)
-		}
-	}
-
 	switch scope {
 	case consts.ScopeOrg:
 		if objectId != orgId {
@@ -83,6 +74,16 @@ func updateObjectVars(c *ctx.ServiceContext, tx *db.Session, form *forms.UpdateO
 
 	vars := make([]models.Variable, 0, len(form.Variables))
 	for _, v := range form.Variables {
+		if v.Scope != form.Scope {
+			// return nil, e.New(e.VariableScopeConflict, http.StatusBadRequest)
+			// TODO: 暂时忽略掉 scope 冲突的变量，保持接口兼容，待联调完成改为直接报错
+			c.Logger().Warnf("variable '%s', scope conflict, ignored", v.Name)
+			continue
+		}
+		if v.Name == "" {
+			return nil, e.New(e.EmptyVarName, http.StatusBadRequest)
+		}
+
 		modelVar := models.Variable{
 			VariableBody: models.VariableBody{
 				Scope:       v.Scope,
