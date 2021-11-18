@@ -4,6 +4,7 @@ package runner
 
 import (
 	"context"
+	"io/ioutil"
 	"path/filepath"
 	"strings"
 	"time"
@@ -57,6 +58,32 @@ func dockerClient() (*client.Client, error) {
 	return cli, nil
 }
 
+func (exec *Executor) tryPullImage(cli *client.Client) {
+	logger := logger.WithField("image", exec.Image).WithField("action", "TryPullImage")
+	if cli == nil {
+		var err error
+		cli, err = dockerClient()
+		if err != nil {
+			logger.Warn(err)
+			return
+		}
+	}
+
+	reader, err := cli.ImagePull(context.Background(), exec.Image, types.ImagePullOptions{})
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			logger.Debugf("pull image: %v", err)
+		} else {
+			logger.Warnf("pull image: %v", err)
+		}
+		return
+	}
+	defer reader.Close()
+
+	bs, _ := ioutil.ReadAll(reader)
+	logger.Tracef("pull image: %s", bs)
+}
+
 func (exec *Executor) Start() (string, error) {
 	logger := logger.WithField("taskId", filepath.Base(exec.HostWorkdir))
 	cli, err := dockerClient()
@@ -64,6 +91,8 @@ func (exec *Executor) Start() (string, error) {
 		logger.Error(err)
 		return "", err
 	}
+	logger.Infof("pull image: %s", exec.Image)
+	exec.tryPullImage(cli)
 
 	conf := configs.Get()
 	mountConfigs := []mount.Mount{
