@@ -44,12 +44,9 @@ func TemplateImport(c *ctx.ServiceContext, form *TplImportForm) (result *service
 	}
 	// return importer.Import(c.DB())
 
-	err := c.DB().Transaction(func(tx *db.Session) error {
+	_ = c.DB().Transaction(func(tx *db.Session) error {
 		result, er = importer.Import(tx)
 		return er
 	})
-	if err != nil {
-		return nil, e.AutoNew(err, e.DBError)
-	}
-	return result, nil
+	return result, er
 }
