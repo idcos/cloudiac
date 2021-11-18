@@ -41,16 +41,13 @@ func BatchUpdate(c *ctx.ServiceContext, form *forms.BatchUpdateVariableForm) (in
 func UpdateObjectVars(c *ctx.ServiceContext, form *forms.UpdateObjectVarsForm) (interface{}, e.Error) {
 	var (
 		result interface{}
-		err    error
+		err    e.Error
 	)
-	err = c.DB().Transaction(func(tx *db.Session) error {
+	_ = c.DB().Transaction(func(tx *db.Session) error {
 		result, err = updateObjectVars(c, tx, form)
 		return err
 	})
-	if err != nil {
-		return nil, e.AutoNew(err, e.DBError)
-	}
-	return result, nil
+	return result, err
 }
 
 func updateObjectVars(c *ctx.ServiceContext, tx *db.Session, form *forms.UpdateObjectVarsForm) (interface{}, e.Error) {
@@ -75,10 +72,7 @@ func updateObjectVars(c *ctx.ServiceContext, tx *db.Session, form *forms.UpdateO
 	vars := make([]models.Variable, 0, len(form.Variables))
 	for _, v := range form.Variables {
 		if v.Scope != form.Scope {
-			// return nil, e.New(e.VariableScopeConflict, http.StatusBadRequest)
-			// TODO: 暂时忽略掉 scope 冲突的变量，保持接口兼容，待联调完成改为直接报错
-			c.Logger().Warnf("variable '%s', scope conflict, ignored", v.Name)
-			continue
+			return nil, e.New(e.VariableScopeConflict, http.StatusBadRequest)
 		}
 		if v.Name == "" {
 			return nil, e.New(e.EmptyVarName, http.StatusBadRequest)
