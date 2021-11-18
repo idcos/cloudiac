@@ -160,9 +160,9 @@ func (p *InitDemo) Execute(args []string) error {
 	fmt.Printf("key_id = %s\n", key.Id)
 
 	// 创建变量
-	variables := make([]forms.Variables, 0)
+	variables := make([]forms.Variable, 0)
 	for _, v := range data.Organization.Variables {
-		variables = append(variables, forms.Variables{
+		variables = append(variables, forms.Variable{
 			Scope:       consts.ScopeOrg,
 			Name:        v.Name,
 			Description: v.Description,

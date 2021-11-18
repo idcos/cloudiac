@@ -243,6 +243,10 @@ func QueryWithProjectId(query *db.Session, projectId interface{}, tableName ...s
 	return QueryWithCond(query, "project_id", projectId, tableName...)
 }
 
+func QueryWithOrgProject(query *db.Session, orgId interface{}, projId interface{}, tableName ...string) *db.Session {
+	return QueryWithProjectId(QueryWithOrgId(query, orgId, tableName...), projId, tableName...)
+}
+
 func QueryWithCond(query *db.Session, column string, value interface{}, tableName ...string) *db.Session {
 	if len(tableName) > 0 {
 		return query.Where(fmt.Sprintf("`%s`.`%s` = ?", tableName[0], column), value)
