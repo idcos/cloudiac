@@ -19,9 +19,10 @@ type Project struct {
 }
 
 type ObjectAttributes struct {
-	SourceBranch string `json:"source_branch"` // 源分支
-	TargetBranch string `json:"target_branch"` // 目标分支
-	State        string `json:"state"`         // mr/pr动作(open、close)
+	SourceBranch string `json:"source_branch"`   // 源分支
+	TargetBranch string `json:"target_branch"`   // 目标分支
+	State        string `json:"state"`           // mr/pr动作(open、close)
+	Iid          int    `json:"iid" form:"iid" ` // prId
 }
 
 type User struct {
