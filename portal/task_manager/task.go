@@ -98,7 +98,7 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 
 		// 正常情况下 pullTaskStepStatus() 应该在 runner 任务退出后才返回，
 		// 但发现有任务在 running 状态时函数返回的情况，所以这里进行一次状态检查，如果任务不是退出状态则继续重试
-		if !(models.Task{}).IsExitedStatus(stepResult.Status) {
+		if !(models.TaskStep{}).IsExitedStatus(stepResult.Status) {
 			logger.Warnf("pull task status done, but task status is '%s', retry(%d)", stepResult.Status, retryN)
 			return true, nil
 		}
@@ -147,8 +147,16 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 		}
 	}
 
+	message := ""
+	switch stepResult.Status {
+	case models.TaskStepFailed:
+		message = "failed"
+	case models.TaskStepTimeout:
+		message = "timeout"
+	}
+
 	if er := services.ChangeTaskStepStatusAndExitCode(
-		sess, task, step, stepResult.Status, "", stepResult.Result.ExitCode); er != nil {
+		sess, task, step, stepResult.Status, message, stepResult.Result.ExitCode); er != nil {
 		return stepResult, er
 	}
 	return stepResult, err

@@ -5,6 +5,7 @@ package main
 import (
 	v1 "cloudiac/runner/api/v1"
 	"cloudiac/utils"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -45,8 +46,11 @@ func main() {
 		panic(err)
 	}
 
-	conf := configs.Get().Log
-	logs.Init(conf.LogLevel, conf.LogPath, conf.LogMaxDays)
+	logConf := configs.Get().Log
+	logs.Init(logConf.LogLevel, logConf.LogPath, logConf.LogMaxDays)
+
+	runnerConfJson, _ := json.Marshal(configs.Get().Runner)
+	logs.Get().Infof("runner configs: %s", runnerConfJson)
 
 	common.ReRegisterService(opt.ReRegister, "CT-Runner")
 	StartServer()

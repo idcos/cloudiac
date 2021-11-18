@@ -30,6 +30,7 @@ type Executor struct {
 	Commands         []string
 	HostWorkdir      string // 宿主机目录
 	Workdir          string // 容器目录
+	AutoRemove       bool   // 开启容器的自动删除？
 	// for container
 	//ContainerInstance *Container
 }
@@ -128,7 +129,7 @@ func (exec *Executor) Start() (string, error) {
 			AttachStderr: true,
 		},
 		&container.HostConfig{
-			AutoRemove: false,
+			AutoRemove: exec.AutoRemove,
 			Mounts:     mountConfigs,
 		},
 		nil,
@@ -179,6 +180,21 @@ func (Executor) GetExecInfo(execId string) (execInfo types.ContainerExecInspect,
 		return execInfo, errors.Wrap(err, "container exec attach")
 	}
 	return execInfo, nil
+}
+
+func (Executor) Wait(ctx context.Context, cid string) error {
+	cli, err := dockerClient()
+	if err != nil {
+		return err
+	}
+
+	okCh, errCh := cli.ContainerWait(ctx, cid, container.WaitConditionNotRunning)
+	select {
+	case <-okCh:
+		return nil
+	case err = <-errCh:
+		return err
+	}
 }
 
 func (Executor) WaitCommand(ctx context.Context, execId string) (execInfo types.ContainerExecInspect, err error) {

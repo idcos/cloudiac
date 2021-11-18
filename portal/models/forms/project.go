@@ -18,7 +18,7 @@ type CreateProjectForm struct {
 }
 
 type SearchProjectForm struct {
-	PageForm
+	NoPageSizeForm
 
 	Q      string `json:"q" form:"q" `
 	Status string `json:"status" form:"status"`

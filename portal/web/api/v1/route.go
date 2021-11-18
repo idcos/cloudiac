@@ -149,6 +149,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/templates/variables", ac(), w(handlers.TemplateVariableSearch))
 	g.GET("/templates/tfversions", ac(), w(handlers.TemplateTfVersionSearch))
 	g.GET("/templates/autotfversion", ac(), w(handlers.AutoTemplateTfVersionChoice))
+	g.POST("/templates/checks", ac(), w(handlers.TemplateChecks))
 	g.GET("/templates/export", ac(), w(handlers.TemplateExport))
 	g.POST("/templates/import", ac(), w(handlers.TemplateImport))
 	g.GET("/vcs/:id/repos/tfvars", ac(), w(handlers.TemplateTfvarsSearch))

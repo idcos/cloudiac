@@ -228,8 +228,11 @@ func (Env) SearchTasks(c *ctx.GinRequest) {
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	f := &forms.SearchTaskForm{EnvId: form.Id}
-	c.JSONResult(apps.SearchTask(c.Service(), f))
+	taskForm := &forms.SearchTaskForm{
+		NoPageSizeForm: form.NoPageSizeForm,
+		EnvId:    form.Id,
+	}
+	c.JSONResult(apps.SearchTask(c.Service(), taskForm))
 }
 
 // LastTask 环境最新任务详情

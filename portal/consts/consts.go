@@ -13,7 +13,7 @@ const (
 	DigitChars      = "0123456789"
 
 	DefaultPageSize = 15   // 默认分页大小
-	MaxPageSize     = 5000 // 同时是 csv 最大导出条数
+	MaxPageSize     = 5000 // 最大单页数据条数
 
 	MaxLogContentSize = 1024 * 1024 // 最大日志文件大小，超限会被截断
 
@@ -54,9 +54,12 @@ const (
 	MetaYmlMatch   = "meta.y*ml"
 	VariablePrefix = "variables.tf"
 
-	TfVarFileMatch = "*.tfvars"
-	PlaybookMatch  = "*.y*ml"
-	Ansible        = "ansible"
+	TfVarFileMatch    = "*.tfvars"
+	TplTfCheck        = "*.tf"
+	TplTfCheckSuccess = "Success"
+	TplTfCheckFailed  = "Failed"
+	PlaybookMatch     = "*.y*ml"
+	Ansible           = "ansible"
 
 	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀
 
