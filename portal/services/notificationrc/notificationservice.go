@@ -89,8 +89,8 @@ func (ns *NotificationService) SyncSendMessage() {
 		TemplateName: ns.Tpl.Name,
 		Revision:     ns.Tpl.RepoRevision,
 		EnvName:      ns.Env.Name,
-		//http://{{addr}}/org/{{orgId}}/project/{{ProjectId}}/m-project-env/detail/{{envId}}/deployHistory/task/{{TaskId}}
-		Addr:         fmt.Sprintf("%s/org/%s/project/%s/m-project-env/detail/%s/deployHistory/task/%s", configs.Get().Portal.Address, ns.Org.Id, ns.ProjectId, ns.Env.Id, ns.Task.Id),
+		//http://{{addr}}/org/{{orgId}}/project/{{ProjectId}}/m-project-env/detail/{{envId}}/task/{{TaskId}}
+		Addr:         fmt.Sprintf("%s/org/%s/project/%s/m-project-env/detail/%s/task/%s", configs.Get().Portal.Address, ns.Org.Id, ns.ProjectId, ns.Env.Id, ns.Task.Id),
 		ResAdded:     ns.Task.Result.ResAdded,
 		ResChanged:   ns.Task.Result.ResChanged,
 		ResDestroyed: ns.Task.Result.ResDestroyed,

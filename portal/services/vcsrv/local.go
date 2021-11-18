@@ -257,3 +257,8 @@ func (l *LocalRepo) ListWebhook() ([]ProjectsHook, error) {
 func (l *LocalRepo) DeleteWebhook(id int) error {
 	return nil
 }
+
+func (l *LocalRepo) CreatePrComment(prId int,comment string) error {
+
+	return nil
+}

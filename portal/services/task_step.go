@@ -211,3 +211,16 @@ func CreateTaskCallbackStep(sess *db.Session, task models.Task, stepBody models.
 	}
 	return step, nil
 }
+
+func GetTaskPlanStep(sess *db.Session, taskId models.Id) (*models.TaskStep, e.Error) {
+	taskStep := models.TaskStep{}
+	err := sess.Where("task_id = ?", taskId).
+		Where("type = ?", common.TaskStepTfInit).First(&taskStep)
+	if err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TaskStepNotExists)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &taskStep, nil
+}

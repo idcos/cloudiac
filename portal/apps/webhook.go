@@ -33,6 +33,7 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 
 	// 根据VcsId & 仓库Id查询对应的云模板
 	tplList, err := services.QueryTemplateByVcsIdAndRepoId(tx, form.VcsId, strconv.Itoa(int(form.Project.Id)))
+	prId := form.ObjectAttributes.Iid
 	// 查询云模板对应的环境
 	for _, tpl := range tplList {
 		envs, err := services.GetEnvByTplId(tx, tpl.Id)
@@ -57,11 +58,11 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 				// 判断pr类型并确认动作
 				//open状态的mr进行plan计划
 				if v == consts.EnvTriggerPRMR && form.ObjectAttributes.State == GitlabPrOpened {
-					err = CreateWebhookTask(tx, models.TaskTypePlan, c.UserId, &env, &tpl)
+					err = CreateWebhookTask(tx, models.TaskTypePlan, c.UserId, &env, &tpl, prId)
 				}
 
 				if v == consts.EnvTriggerCommit && form.ObjectKind == GitlabObjectKindPush {
-					err = CreateWebhookTask(tx, models.TaskTypeApply, c.UserId, &env, &tpl)
+					err = CreateWebhookTask(tx, models.TaskTypeApply, c.UserId, &env, &tpl, prId)
 				}
 
 				if err != nil {
@@ -82,14 +83,14 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 	return nil, err
 }
 
-func CreateWebhookTask(tx *db.Session, taskType string, userId models.Id, env *models.Env, tpl *models.Template) error {
+func CreateWebhookTask(tx *db.Session, taskType string, userId models.Id, env *models.Env, tpl *models.Template, prId int) error {
 	// 计算变量列表
 	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
 	if er != nil {
 		_ = tx.Rollback()
 		return e.New(e.DBError, er, http.StatusInternalServerError)
 	}
-	task := models.Task{
+	task := &models.Task{
 		Name: models.Task{}.GetTaskNameByType(taskType),
 
 		Targets:     models.StrSlice{},
@@ -103,12 +104,25 @@ func CreateWebhookTask(tx *db.Session, taskType string, userId models.Id, env *m
 			StepTimeout: env.Timeout,
 		},
 	}
-
-	if _, err := services.CreateTask(tx, tpl, env, task); err != nil {
+	task, err := services.CreateTask(tx, tpl, env, *task)
+	if err != nil {
 		_ = tx.Rollback()
 		logs.Get().Errorf("error creating task, err %s", err)
 		return e.New(err.Code(), err, http.StatusInternalServerError)
 	}
+
+	// 创建pr与作业的关系
+	if err := services.CreateVcsPr(tx, models.VcsPr{
+		PrId:   prId,
+		TaskId: task.Id,
+		EnvId:  task.EnvId,
+		VcsId:  tpl.VcsId,
+	}); err != nil {
+		logs.Get().Errorf("error creating task, err %s", err)
+		return e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
+	// todo 任务执行结束，回调comment，和kafka逻辑一致
 	logs.Get().Infof("create webhook task success. envId:%s, task type: %s", env.Id, taskType)
 	return nil
 }

@@ -227,6 +227,13 @@ func (git *gitlabRepoIface) DeleteWebhook(id int) error {
 	return err
 }
 
+func (git *gitlabRepoIface) CreatePrComment(prId int, comment string) error {
+	if _, _, err := git.gitConn.Notes.CreateMergeRequestNote(git.Project.ID, prId, &gitlab.CreateMergeRequestNoteOptions{Body: gitlab.String(comment)}); err != nil {
+		return err
+	}
+	return nil
+}
+
 func GetGitConn(gitlabToken, gitlabUrl string) (*gitlab.Client, e.Error) {
 	token, err := GetVcsToken(gitlabToken)
 	if err != nil {
