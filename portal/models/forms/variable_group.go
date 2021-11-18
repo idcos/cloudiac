@@ -3,7 +3,7 @@ package forms
 import "cloudiac/portal/models"
 
 type SearchVariableGroupForm struct {
-	PageForm
+	NoPageSizeForm
 	Q string `form:"q" json:"q" binding:""`
 }
 
