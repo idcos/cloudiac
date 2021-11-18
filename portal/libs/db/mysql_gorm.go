@@ -206,6 +206,10 @@ func (s *Session) Select(query interface{}, args ...interface{}) *Session {
 	return ToSess(s.db.Select(query, args...))
 }
 
+func (s *Session) Omit(cols ...string) *Session {
+	return ToSess(s.db.Omit(cols...))
+}
+
 func (s *Session) LazySelect(selectStat ...string) *Session {
 	return ToSess(s.db.Set("app:lazySelects", selectStat))
 }
