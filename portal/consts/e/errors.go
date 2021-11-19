@@ -20,14 +20,14 @@ const (
 	NotImplement            = 10020
 	IOError                 = 10030 // 文件 io 出错
 	TooManyRetries          = 10040
+	EncryptError            = 10050
+	DecryptError            = 10051
 
 	//// 解析错误 101
-
 	JSONParseError = 10100
 	HCLParseError  = 10101
 
 	//// db 错误 102
-
 	DBError           = 10200 // db 操作出错
 	DBAttrValidateErr = 10201
 	ColValidateError  = 10202
@@ -40,6 +40,10 @@ const (
 	TagTooMuch        = 10215
 
 	//// 校验错误 103
+	BadOrgId               = 10310
+	BadProjectId           = 10311
+	BadTemplateId          = 10312
+	BadEnvId               = 10314
 	BadParam               = 10340 // 参数错误(参数值不对)
 	BadRequest             = 10341 // 请求错误(请求缺少必要参数)
 	InvalidPipeline        = 10350
@@ -106,6 +110,9 @@ const (
 	//// variable 305
 	VariableAlreadyExists  = 30510
 	VariableAliasDuplicate = 30511
+	VariableScopeConflict  = 30512
+	InvalidVarName         = 30513
+	EmptyVarName           = 30514
 
 	//// token 306
 	TokenAlreadyExists  = 30610
@@ -197,6 +204,18 @@ var errorMsgs = map[int]map[string]string{
 	DBAttrValidateErr: {
 		"zh-cn": "字段验证错误",
 	},
+	BadOrgId: {
+		"zh-cn": "组织 ID 错误",
+	},
+	BadProjectId: {
+		"zh-cn": "项目 ID 错误",
+	},
+	BadTemplateId: {
+		"zh-cn": "模板 ID 错误",
+	},
+	BadEnvId: {
+		"zh-cn": "环境 ID 错误",
+	},
 	BadParam: {
 		"zh-cn": "无效参数",
 	},
@@ -232,6 +251,12 @@ var errorMsgs = map[int]map[string]string{
 	},
 	TooManyRetries: {
 		"zh-cn": "达到最大重试次数",
+	},
+	EncryptError: {
+		"zh-cn": "数据加密错误",
+	},
+	DecryptError: {
+		"zh-cn": "数据解密错误",
 	},
 	MailServerError: {
 		"zh-cn": "邮件服务错误",
@@ -351,7 +376,15 @@ var errorMsgs = map[int]map[string]string{
 	VariableAliasDuplicate: {
 		"zh-cn": "变量别名重复",
 	},
-
+	VariableScopeConflict: {
+		"zh-cn": "变量作用域冲突",
+	},
+	InvalidVarName: {
+		"zh-cn": "无效变量名",
+	},
+	EmptyVarName: {
+		"zh-cn": "变量名不可为空",
+	},
 	ProjectUserAlreadyExists: {
 		"zh-cn": "项目用户已经存在",
 	},

@@ -298,6 +298,26 @@ func (gitea *giteaRepoIface) DeleteWebhook(id int) error {
 	return nil
 }
 
+func (gitea *giteaRepoIface) CreatePrComment(prId int, comment string) error {
+	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/pulls/%d/reviews", gitea.repository.FullName, prId)
+	requestBody := map[string]string{
+		"body": comment,
+	}
+	b, err := json.Marshal(requestBody)
+	if err != nil {
+		return err
+	}
+	response, body, err := gitea.giteaRequest(path, http.MethodPost, gitea.vcs.VcsToken, b)
+	if err != nil {
+		return e.New(e.BadRequest, err)
+	}
+	defer response.Body.Close()
+	rep := make([]giteaTag, 0)
+
+	_ = json.Unmarshal(body, &rep)
+	return nil
+}
+
 //giteeRequest
 //param path : gitea api路径
 //param method 请求方式

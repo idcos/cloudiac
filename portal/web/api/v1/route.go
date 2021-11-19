@@ -122,12 +122,14 @@ func Register(g *gin.RouterGroup) {
 
 	//项目管理
 	ctrl.Register(g.Group("projects", ac()), &handlers.Project{})
+
 	//变量管理
 	g.PUT("/variables/batch", ac(), w(handlers.Variable{}.BatchUpdate))
-
+	g.PUT("/variables/scope/:scope/:id", ac(), w(handlers.Variable{}.UpdateObjectVars))
 	// 供第三方系统获取变量的接口，该接口将 terraform 变量和环境变量统一转为环境变量格式返回，方便第三方系统处理
 	g.GET("/variables/sample", ac(), w(handlers.Variable{}.SearchSampleVariable))
 	ctrl.Register(g.Group("variables", ac()), &handlers.Variable{})
+
 	// 变量组
 	ctrl.Register(g.Group("var_groups", ac()), &handlers.VariableGroup{})
 	g.GET("/var_groups/relationship", ac(), w(handlers.VariableGroup{}.SearchRelationship))

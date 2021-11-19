@@ -93,6 +93,7 @@ func UpdateAttr(tx *db.Session, o Modeler, values Attrs, query ...interface{}) (
 	})
 }
 
+// 更新 model 的非 zero value 字段值到 db
 func UpdateModel(tx *db.Session, o Modeler, query ...interface{}) (int64, error) {
 	return withTx(tx, func(x *db.Session) (int64, error) {
 		if err := o.Validate(); err != nil {
@@ -106,6 +107,11 @@ func UpdateModel(tx *db.Session, o Modeler, query ...interface{}) (int64, error)
 			return x.Model(o).Where(query[0], query[1:]...).Update(o)
 		}
 	})
+}
+
+// 更新 model 的所有字段值到 db，即使其值为 zero value
+func UpdateModelAll(tx *db.Session, o Modeler, query ...interface{}) (int64, error) {
+	return UpdateModel(tx.Select("*").Omit("created_at"), o, query...)
 }
 
 func MustMarshalValue(v interface{}) driver.Value {
@@ -189,6 +195,7 @@ func Init(migrate bool) {
 	autoMigrate(&Organization{}, sess)
 	autoMigrate(&Project{}, sess)
 	autoMigrate(&Vcs{}, sess)
+	autoMigrate(&VcsPr{}, sess)
 	autoMigrate(&Template{}, sess)
 	autoMigrate(&Env{}, sess)
 	autoMigrate(&Resource{}, sess)
