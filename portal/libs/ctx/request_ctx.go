@@ -167,32 +167,39 @@ func BindUriTagOnly(c *GinRequest, b interface{}) error {
 func (c *GinRequest) Bind(form forms.BaseFormer) error {
 
 	var (
-		body     []byte
 		jsonForm map[string]interface{}
 		err      error
 	)
 
 	// 将 Params 绑定到 form 里面标记了 uri 的字段
-	if err := BindUriTagOnly(c, form); err != nil {
+	if err = BindUriTagOnly(c, form); err != nil {
 		// URI 参数不对，按路径不对处理
-		c.Logger().Errorf("bind uri error %s", err)
 		c.JSONError(e.New(e.BadParam, err), http.StatusNotFound)
 		c.Abort()
 		return err
 	}
 
+	bound := true // 己执行过 bound?
 	// ShouldBind() 不支持 HTTP GET 请求通过 body json 传参，
 	// 所以我们针对 json 类型的 content-type 做特殊处理
 	if c.ContentType() == binding.MIMEJSON {
+		var body []byte
 		body, err = ioutil.ReadAll(c.Request.Body)
 		if err != nil {
-			c.Logger().Error(err)
-			c.JSONError(e.New(e.InternalError, err), http.StatusInternalServerError)
+			c.JSONError(e.New(e.IOError, err), http.StatusInternalServerError)
+			c.Abort()
 			return err
 		}
-		_ = json.Unmarshal(body, &jsonForm)
-		err = binding.JSON.BindBody(body, form)
-	} else {
+
+		// 如果 body 无内容则我们不进行 json bind
+		if len(body) > 0 {
+			bound = true
+			err = binding.JSON.BindBody(body, form)
+			_ = json.Unmarshal(body, &jsonForm)
+		}
+	}
+
+	if !bound {
 		err = c.Context.ShouldBind(form)
 	}
 
