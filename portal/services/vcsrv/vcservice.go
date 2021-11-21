@@ -85,6 +85,9 @@ type RepoIface interface {
 
 	//AddWebhook 查询Webhook列表
 	AddWebhook(url string) error
+
+	//CreatePrComment 添加PR评论
+	CreatePrComment(prId int, comment string) error
 }
 
 func GetVcsInstance(vcs *models.Vcs) (VcsIface, error) {

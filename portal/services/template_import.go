@@ -52,16 +52,26 @@ func (t *TplImporter) Import(tx *db.Session) (*TplImportResult, e.Error) {
 		return nil, e.New(e.InvalidExportVersion)
 	}
 
+	getResult := func(er e.Error) *TplImportResult {
+		if er == nil {
+			return &t.result
+		}
+		// 当发生 error 时只需要返回 Duplicate 数据，其他操作已经回滚
+		return &TplImportResult{
+			Duplicate: t.result.Duplicate,
+		}
+	}
+
 	if er := t.ImportVcs(tx); er != nil {
-		return nil, er
+		return getResult(er), er
 	}
 	if er := t.ImportVarGroups(tx); er != nil {
-		return nil, er
+		return getResult(er), er
 	}
 	if er := t.ImportTemplates(tx); er != nil {
-		return nil, er
+		return getResult(er), er
 	}
-	return &t.result, nil
+	return getResult(nil), nil
 }
 
 func (t *TplImporter) ImportTemplates(tx *db.Session) e.Error {
@@ -80,7 +90,7 @@ func (t *TplImporter) ImportTemplates(tx *db.Session) e.Error {
 		}
 
 		dbTpl := models.Template{}
-		if err := QueryTemplate(tx.Debug().Where("id = ?", tpl.Id)).Find(&dbTpl); err != nil {
+		if err := QueryTemplate(tx.Unscoped().Where("id = ?", tpl.Id)).Find(&dbTpl); err != nil {
 			return e.AutoNew(err, e.DBError)
 		}
 
@@ -118,9 +128,6 @@ func (t *TplImporter) ImportTemplates(tx *db.Session) e.Error {
 			vars := t.Data.Templates[i].Variables
 			for _, iVar := range vars {
 				v := t.getVarFromExportData(t.Data.Templates[i], iVar)
-				// t.Logger.Debugf("process var %s %s", iVar.Id, iVar.Name)
-				// t.Logger.Debugf("process var %s %s", v.Id, v.Name)
-
 				if !tplIdDuplicate || t.WhenIdDuplicate == "copy" {
 					if er := models.Create(tx, v); er != nil {
 						return e.AutoNew(er, e.DBError)
@@ -131,7 +138,7 @@ func (t *TplImporter) ImportTemplates(tx *db.Session) e.Error {
 					dbVar, varDuplicate := tplVarsMap[fmt.Sprintf("%s/%s", v.Type, v.Name)]
 					if varDuplicate {
 						v.Id = dbVar.Id
-						if _, err := models.UpdateModel(tx, v); err != nil {
+						if _, err := models.UpdateModelAll(tx, v); err != nil {
 							return e.AutoNew(err, e.DBError)
 						}
 						t.addCount("updated", v)
@@ -196,7 +203,7 @@ func (t *TplImporter) ImportVcs(tx *db.Session) e.Error {
 		}
 
 		dbVcs := models.Vcs{}
-		if err := QueryVcsSample(tx.Where("id = ?", vcs.Id)).Find(&dbVcs); err != nil {
+		if err := QueryVcsSample(tx.Unscoped().Where("id = ?", vcs.Id)).Find(&dbVcs); err != nil {
 			return e.AutoNew(err, e.DBError)
 		}
 
@@ -227,7 +234,7 @@ func (t *TplImporter) ImportVarGroups(tx *db.Session) e.Error {
 		}
 
 		dbVg := models.VariableGroup{}
-		if err := QueryVarGroup(tx.Where("id = ?", vg.Id)).Find(&dbVg); err != nil {
+		if err := QueryVarGroup(tx.Unscoped().Where("id = ?", vg.Id)).Find(&dbVg); err != nil {
 			return e.AutoNew(err, e.DBError)
 		}
 
@@ -475,7 +482,7 @@ func (t *TplImporter) doImport(tx *db.Session, id models.Id, importObj models.Mo
 	// id 有重复
 	switch t.WhenIdDuplicate {
 	case "update":
-		if _, err := models.UpdateModel(tx, importObj); err != nil {
+		if _, err := models.UpdateModelAll(tx, importObj); err != nil {
 			return e.AutoNew(err, e.DBError)
 		}
 		t.addCount("updated", importObj)

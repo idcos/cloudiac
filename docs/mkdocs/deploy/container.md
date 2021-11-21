@@ -23,6 +23,7 @@ mkdir -p /usr/yunji/cloudiac/var/{consul,mysql} && cd /usr/yunji/cloudiac/
 #### 4. 编写 docker-compose.yml 文件
 文件路径 /usr/yunji/cloudiac/docker-compose.yml，内容如下:
 ```yaml
+# auto-replace-from: docker/docker-compose.yml
 version: "3.2"
 services:
   iac-portal:
@@ -79,7 +80,7 @@ services:
 
   mysql:
     container_name: mysql
-    image: "mysql:5.7"
+    image: "mysql:8.0"
     command: [
         "--character-set-server=utf8mb4",
         "--collation-server=utf8mb4_unicode_ci",
@@ -109,12 +110,14 @@ services:
       consul agent -server -bootstrap-expect=1 -ui -bind=0.0.0.0
       -client=0.0.0.0 -enable-script-checks=true -data-dir=/consul/data
     restart: always
+
 ```
 
 #### 5. 编写 .env 文件
 文件路径 /usr/yunji/cloudiac/.env，内容如下(**请根据注释修改配置**):
 
 ```bash
+# auto-replace-from: configs/dotenv.sample
 # 平台管理员账号密码(均为必填)
 # 该账号密码只在系统初始化时使用，后续修改不影响己创建的账号
 IAC_ADMIN_EMAIL="admin@example.com"
@@ -175,6 +178,10 @@ RUNNER_SERVICE_IP=ct-runner
 ## runner 服务注册的 id(需要保证唯一)
 RUNNER_SERVICE_ID=ct-runner-01
 RUNNER_SERVICE_TAGS="ct-runner;runner-01"
+
+## 是否开启 offline mode，默认为 false
+RUNNER_OFFLINE_MODE="false"
+
 ```
 
 *通过 .env 可以配置大部分参数，需要更详细的配置可以拷贝镜像里的 config-portal.yml 和 config-runner.yml 文件，修改后再挂载到容器中进行替换*

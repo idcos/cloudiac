@@ -146,10 +146,15 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		form.Variables = append(form.Variables, sampleVars...)
 	}
 
-	// 创建新导入的变量
-	if err = services.OperationVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.Variables, nil); err != nil {
+	// 创建变量
+	updateVarsForm := forms.UpdateObjectVarsForm{
+		Scope:     consts.ScopeEnv,
+		ObjectId:  env.Id,
+		Variables: form.Variables,
+	}
+	if _, er := updateObjectVars(c, tx, &updateVarsForm); er != nil {
 		_ = tx.Rollback()
-		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+		return nil, e.AutoNew(er, e.InternalError)
 	}
 
 	// 创建变量组与实例的关系
@@ -492,19 +497,19 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 
 // EnvDeploy 创建新部署任务
 // 任务类型：plan, apply, destroy
-func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDetail, e.Error) {
+func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (ret *models.EnvDetail, er e.Error) {
+	_ = c.DB().Transaction(func(tx *db.Session) error {
+		ret, er = envDeploy(c, tx, form)
+		return er
+	})
+	return ret, er
+}
+
+func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm) (*models.EnvDetail, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create env task %s", form.Id))
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
-
-	tx := c.Tx()
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			panic(r)
-		}
-	}()
 
 	envQuery := services.QueryWithProjectId(services.QueryWithOrgId(tx, c.OrgId), c.ProjectId)
 	env, err := services.GetEnvById(envQuery, form.Id)
@@ -590,10 +595,14 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		env.Timeout = form.Timeout
 	}
 
-	if form.HasKey("variables") || form.HasKey("deleteVariablesId") {
-		// 变量列表增删
-		if err = services.OperationVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.Variables, form.DeleteVariablesId); err != nil {
-			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	if form.HasKey("variables") {
+		updateVarsForm := forms.UpdateObjectVarsForm{
+			Scope:     consts.ScopeEnv,
+			ObjectId:  env.Id,
+			Variables: form.Variables,
+		}
+		if _, er := updateObjectVars(c, tx, &updateVarsForm); er != nil {
+			return nil, e.AutoNew(er, e.InternalError)
 		}
 	}
 
@@ -630,7 +639,6 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 	if form.HasKey("varGroupIds") || form.HasKey("delVarGroupIds") {
 		// 创建变量组与实例的关系
 		if err := services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeEnv, env.Id.String()); err != nil {
-			_ = tx.Rollback()
 			return nil, err
 		}
 	}
@@ -638,7 +646,6 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 	// 计算变量列表
 	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
 	if er != nil {
-		_ = tx.Rollback()
 		return nil, err
 	}
 
@@ -660,7 +667,6 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 	})
 
 	if err != nil {
-		_ = tx.Rollback()
 		c.Logger().Errorf("error creating task, err %s", err)
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -677,15 +683,8 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 
 	// Save() 调用会全量将结构体中的字段进行保存，即使字段为 zero value
 	if _, err := tx.Save(env); err != nil {
-		_ = tx.Rollback()
 		c.Logger().Errorf("error save env, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	}
-
-	if err := tx.Commit(); err != nil {
-		_ = tx.Rollback()
-		c.Logger().Errorf("error commit env, err %s", err)
-		return nil, e.New(e.DBError, err)
 	}
 
 	env.MergeTaskStatus()
@@ -721,9 +720,9 @@ func SearchEnvResources(c *ctx.ServiceContext, form *forms.SearchEnvResourceForm
 	}
 
 	return SearchTaskResources(c, &forms.SearchTaskResourceForm{
-		PageForm: form.PageForm,
-		Id:       env.LastResTaskId,
-		Q:        form.Q,
+		NoPageSizeForm: form.NoPageSizeForm,
+		Id:               env.LastResTaskId,
+		Q:                form.Q,
 	})
 }
 
@@ -753,30 +752,22 @@ func EnvOutput(c *ctx.ServiceContext, form forms.DetailEnvForm) (interface{}, e.
 	})
 }
 
-// EnvVariables 环境部署对应的环境变量为 last task 固化的变量内容
+// EnvVariables 获取环境的变量列表，环境部署对应的环境变量为 last task 固化的变量内容
 func EnvVariables(c *ctx.ServiceContext, form forms.SearchEnvVariableForm) (interface{}, e.Error) {
 	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
 
-	env, err := services.GetEnvById(c.DB(), form.Id)
-	if err != nil && err.Code() != e.EnvNotExists {
-		return nil, e.New(err.Code(), err, http.StatusNotFound)
-	} else if err != nil {
-		c.Logger().Errorf("error get env, err %s", err)
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	}
-
-	if env.LastTaskId == "" {
-		return nil, nil
-	}
-
-	task, err := services.GetTaskById(c.DB(), env.LastTaskId)
-	if err != nil && err.Code() != e.TaskNotExists {
-		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
-	} else if err != nil {
-		c.Logger().Errorf("error get env last res task, err %s", err)
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	task := models.Task{}
+	err := services.QueryWithOrgProject(c.DB(), c.OrgId, c.ProjectId, models.Task{}.TableName()).
+		Where("env_id = ? AND `type` IN (?)", form.Id,
+			[]string{common.TaskTypePlan, common.TaskTypeApply, common.TaskTypeDestroy}).Last(&task)
+	if err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.ObjectNotExists, http.StatusNotFound)
+		}
+		c.Logger().Errorf("query env last task error: %v", err)
+		return nil, e.AutoNew(err, e.DBError)
 	}
 
 	// 隐藏敏感字段
@@ -785,6 +776,7 @@ func EnvVariables(c *ctx.ServiceContext, form forms.SearchEnvVariableForm) (inte
 			task.Variables[index].Value = ""
 		}
 	}
+
 	sort.Sort(task.Variables)
 	return task.Variables, nil
 }

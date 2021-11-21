@@ -152,13 +152,18 @@ func GetErr(err error) (*MyError, bool) {
 	return er, ok
 }
 
-func AutoNew(err error, code int) Error {
+func AutoNew(err error, code int, status ...int) Error {
 	// 如果 err 是 Error 类型则直接返回
 	if er, ok := GetErr(err); ok {
 		return er
 	}
+
 	// 否则生成一个 code 对应的 Error
-	return New(code, err)
+	if len(status) > 0 {
+		return New(code, err, status[0])
+	} else {
+		return New(code, err)
+	}
 }
 
 const defaultLang = "zh-cn"

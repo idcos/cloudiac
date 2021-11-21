@@ -291,6 +291,24 @@ func (gitee *giteeRepoIface) DeleteWebhook(id int) error {
 	return nil
 }
 
+func (gitee *giteeRepoIface) CreatePrComment(prId int, comment string) error {
+	path := gitee.vcs.Address +
+		fmt.Sprintf("/repos/%s/pulls/%d/comments?access_token=%s", gitee.repository.FullName, prId, gitee.urlParam.Get("access_token"))
+
+	requestBody := map[string]string{
+		"body": comment,
+	}
+	b, er := json.Marshal(requestBody)
+	if er != nil {
+		return er
+	}
+	_, _, err := giteeRequest(path, http.MethodPost, b)
+	if err != nil {
+		return e.New(e.BadRequest, err)
+	}
+	return nil
+}
+
 //giteeRequest
 //param path : gitea api路径
 //param method 请求方式

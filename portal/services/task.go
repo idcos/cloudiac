@@ -4,6 +4,7 @@ package services
 
 import (
 	"cloudiac/common"
+	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
@@ -340,6 +341,10 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 
 	if preStatus != status {
 		TaskStatusChangeSendMessage(task, status)
+	}
+	// 如果勾选提交pr自动plan，任务结束时 plan作业结果写入PR评论中
+	if task.Exited() && task.Type == common.TaskTypePlan {
+		SendVcsComment(dbSess, task, status)
 	}
 
 	step, er := GetTaskStep(dbSess, task.Id, task.CurrStep)
@@ -1060,11 +1065,13 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 	if err := session.Model(models.Resource{}).Where("org_id = ? AND project_id = ? AND env_id = ? AND task_id = ?",
 		task.OrgId, task.ProjectId, task.EnvId, task.Id).Find(&resources); err != nil {
 		logs.Get().Errorf("kafka send error, get resource data err: %v", err)
+		return
 	}
 	k := kafka.Get()
 	message := k.GenerateKafkaContent(task, taskStatus, resources)
 	if err := k.ConnAndSend(message); err != nil {
 		logs.Get().Errorf("kafka send error: %v", err)
+		return
 	}
 	logs.Get().Infof("kafka send massage successful. data: %s", string(message))
 }
@@ -1072,6 +1079,52 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 func InsertCronTaskInfo(session *db.Session, cronTask models.CronDriftTask) {
 	if err := session.Insert(cronTask); err != nil {
 		logs.Get().Errorf("insert cron task info error: %v", err)
+	}
+}
+
+func SendVcsComment(session *db.Session, task *models.Task, taskStatus string) {
+	env, err := GetEnvById(session, task.EnvId)
+	if err != nil {
+		logs.Get().Errorf("vcs comment err, get env detail data err: %v", err)
+		return
+	}
+
+	vp, err := GetVcsPrByTaskId(session, task)
+	if err != nil {
+		logs.Get().Errorf("vcs comment err, get vcs pr data err: %v", err)
+		return
+	}
+
+	vcs, err := GetVcsRepoByTplId(session, task.TplId)
+	if err != nil {
+		logs.Get().Errorf("vcs comment err, get vcs data err: %v", err)
+		return
+	}
+	taskStep, err := GetTaskPlanStep(session, task.Id)
+	if err != nil {
+		logs.Get().Errorf("vcs comment err, get task step data err: %v", err)
+		return
+	}
+
+	logContent, er := logstorage.Get().Read(taskStep.LogPath)
+	if er != nil {
+		logs.Get().Errorf("vcs comment err, get task plan log err: %v", err)
+		return
+	}
+
+	attr := map[string]interface{}{
+		"Status": taskStatus,
+		"Name":   env.Name,
+		//http://{{addr}}/org/{{orgId}}/project/{{ProjectId}}/m-project-env/detail/{{envId}}/task/{{TaskId}}
+		"Addr":    fmt.Sprintf("%s/org/%s/project/%s/m-project-env/detail/%s/task/%s", configs.Get().Portal.Address, task.OrgId, task.ProjectId, task.EnvId, task.Id),
+		"Content": string(logContent),
+	}
+
+	content := utils.SprintTemplate(consts.PrCommentTpl, attr)
+
+	if err := vcs.CreatePrComment(vp.PrId, content); err != nil {
+		logs.Get().Errorf("vcs comment err, create comment err: %v", err)
+		return
 	}
 
 }

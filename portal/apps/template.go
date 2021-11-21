@@ -97,12 +97,16 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		return nil, err
 	}
 
-	// 创建变量
-	if err := services.OperationVariables(tx, c.OrgId, c.ProjectId,
-		template.Id, "", form.Variables, form.DeleteVariablesId); err != nil {
-		_ = tx.Rollback()
-		c.Logger().Errorf("error operation variables, err %s", err)
-		return nil, e.New(e.DBError, err)
+	{
+		updateVarsForm := forms.UpdateObjectVarsForm{
+			Scope:     consts.ScopeTemplate,
+			ObjectId:  template.Id,
+			Variables: form.Variables,
+		}
+		if _, er := updateObjectVars(c, tx, &updateVarsForm); er != nil {
+			_ = tx.Rollback()
+			return nil, er
+		}
 	}
 
 	// 创建变量组与实例的关系
@@ -191,12 +195,15 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 			return nil, err
 		}
 	}
-	if form.HasKey("variables") || form.HasKey("deleteVariablesId") {
-		if err := services.OperationVariables(tx, c.OrgId, c.ProjectId,
-			form.Id, "", form.Variables, form.DeleteVariablesId); err != nil {
+	if form.HasKey("variables") {
+		updateVarsForm := forms.UpdateObjectVarsForm{
+			Scope:     consts.ScopeTemplate,
+			ObjectId:  form.Id,
+			Variables: form.Variables,
+		}
+		if _, er := updateObjectVars(c, tx, &updateVarsForm); er != nil {
 			_ = tx.Rollback()
-			c.Logger().Errorf("error operation variables, err %s", err)
-			return nil, e.New(e.DBError, err)
+			return nil, er
 		}
 	}
 

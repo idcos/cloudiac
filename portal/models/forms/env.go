@@ -28,7 +28,7 @@ type CreateEnvForm struct {
 	Revision        string `form:"revision" json:"revision" binding:""`                             // 分支/标签
 	Timeout         int    `form:"timeout" json:"timeout" binding:""`                               // 部署超时时间（单位：秒）
 
-	Variables []Variables `form:"variables" json:"variables" binding:""` // 自定义变量列表，该变量列表会覆盖现有的变量
+	Variables []Variable `form:"variables" json:"variables" binding:""` // 自定义变量列表，该变量列表会覆盖现有的变量
 
 	TfVarsFile   string    `form:"tfVarsFile" json:"tfVarsFile" binding:""`     // Terraform tfvars 变量文件路径
 	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:""` // Ansible playbook 变量文件路径
@@ -99,8 +99,7 @@ type DeployEnvForm struct {
 	RetryDelay  int  `form:"retryDelay" json:"retryDelay" binding:""`   // 重试时间间隔
 	RetryAble   bool `form:"retryAble" json:"retryAble" binding:""`     // 是否允许任务进行重试
 
-	Variables         []Variables `form:"variables" json:"variables" binding:""`       // 自定义变量列表，该变量列表会覆盖现有的变量
-	DeleteVariablesId []string    `json:"deleteVariablesId" form:"deleteVariablesId" ` //删除的变量id
+	Variables []Variable `form:"variables" json:"variables" binding:""` // 自定义变量列表，该变量列表会覆盖现有的变量
 
 	TfVarsFile   string    `form:"tfVarsFile" json:"tfVarsFile" binding:""`     // Terraform tfvars 变量文件路径
 	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:""` // Ansible playbook 变量文件路径
@@ -120,7 +119,7 @@ type ArchiveEnvForm struct {
 }
 
 type SearchEnvForm struct {
-	PageForm
+	NoPageSizeForm
 
 	Q        string `form:"q" json:"q" binding:""`                                                 // 环境名称，支持模糊查询
 	Status   string `form:"status" json:"status" enums:"active,failed,inactive,running,approving"` // 环境状态，active活跃, inactive非活跃,failed错误,running部署中,approving审批中
@@ -146,7 +145,7 @@ type EnvParam struct {
 }
 
 type SearchEnvResourceForm struct {
-	PageForm
+	NoPageSizeForm
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
 	Q  string    `form:"q" json:"q" binding:""`            // 资源名称，支持模糊查询
