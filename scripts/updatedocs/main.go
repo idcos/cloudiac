@@ -3,10 +3,12 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"strings"
+	"text/template"
 	"unicode"
 )
 
@@ -137,7 +139,54 @@ func (r *FileReplacer) Run() error {
 	return nil
 }
 
+type changeLog struct {
+	Version string
+	Date    string
+	Content map[string][]string
+}
+
+const releaseNoteTemplate = `
+{{- range . -}}
+------
+## v{{.Version}} {{.Date}}
+{{ range $type, $notes := .Content -}}
+#### {{$type}}
+{{ range $notes -}}
+- {{ . }}
+{{ end }}
+{{ end }}
+{{end}}
+`
+
+func generateReleaseNotes() error {
+	changelogFile := "changelog.json"
+	releaseNoteFile := "docs/mkdocs/release-notes.md"
+
+	rp, err := os.Open(changelogFile)
+	if err != nil {
+		return err
+	}
+	defer rp.Close()
+
+	changeLogs := make([]changeLog, 0)
+	if err := json.NewDecoder(rp).Decode(&changeLogs); err != nil {
+		return err
+	}
+
+	wp, err := os.OpenFile(releaseNoteFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer wp.Close()
+
+	return template.Must(template.New("").Parse(releaseNoteTemplate)).Execute(wp, changeLogs)
+}
+
 func main() {
+	if err := generateReleaseNotes(); err != nil {
+		log.Fatalln(err)
+	}
+
 	versionBytes, err := os.ReadFile("VERSION")
 	if err != nil {
 		log.Fatalln(err)

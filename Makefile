@@ -54,10 +54,10 @@ reset-build-dir:
 swag-docs:
 	swag init -g portal/web/api/v1/route.go
 
-mkdocs: swag-docs
+mkdocs: 
 	GOOS="" GOARCH="" go run scripts/updatedocs/main.go
 
-portal: reset-build-dir mkdocs
+portal: reset-build-dir mkdocs swag-docs
 	$(GOBUILD) -o $(BUILD_DIR)/iac-portal ./cmds/portal
 
 runner: reset-build-dir
