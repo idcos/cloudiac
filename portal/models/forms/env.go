@@ -46,6 +46,10 @@ type CreateEnvForm struct {
 	SampleVariables []SampleVariables `json:"sampleVariables" form:"sampleVariables" `
 
 	Callback string `json:"callback" form:"callback"` // 外部请求的回调方式
+
+	CronDriftExpress string `json:"cronDriftExpress" form:"cronDriftExpress"` // 偏移检测表达式
+	AutoRepairDrift   bool `json:"autoRepairDrift" form:"autoRepairDrift"` // 是否进行自动纠偏
+
 }
 
 type SampleVariables struct {

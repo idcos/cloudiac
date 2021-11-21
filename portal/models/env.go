@@ -76,6 +76,11 @@ type Env struct {
 
 	ExtraData JSON   `json:"extraData" gorm:"type:json"` // 扩展字段，用于存储外部服务调用时的信息
 	Callback  string `json:"callback" gorm:"default:''"` // 外部请求的回调方式
+
+	// 偏移检测相关
+	LastDriftTaskId     Id     `json:"lastDriftTask" gorm:"size:32"`          // 最后一次执行偏移检测的ID
+	CronDriftExpression string `json:"cronDriftExpression" gorm:"default:''"` // 偏移检测任务的Cron表达式
+	AutoRepairDrift     bool   `json:"autoRepairDrift" gorm:"default:false"`  // 是否进行自动纠偏
 }
 
 func (Env) TableName() string {

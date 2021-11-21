@@ -125,10 +125,11 @@ type Task struct {
 	// 任务执行结果，如 add/change/delete 的资源数量、outputs 等
 	Result TaskResult `json:"result" gorm:"type:json"` // 任务执行结果
 
-	RetryNumber int    `json:"retryNumber" gorm:"size:32;default:0"` // 任务重试次数
-	RetryDelay  int    `json:"retryDelay" gorm:"size:32;default:0"`  // 每次任务重试时间，单位为秒
-	RetryAble   bool   `json:"retryAble" gorm:"default:false"`
-	Callback    string `json:"callback" gorm:"default:''"` // 外部请求的回调方式
+	RetryNumber     int    `json:"retryNumber" gorm:"size:32;default:0"` // 任务重试次数
+	RetryDelay      int    `json:"retryDelay" gorm:"size:32;default:0"`  // 每次任务重试时间，单位为秒
+	RetryAble       bool   `json:"retryAble" gorm:"default:false"`
+	Callback        string `json:"callback" gorm:"default:''"`           // 外部请求的回调方式
+	IsCronDriftTask bool   `json:"isCronDriftTask" gorm:"default:false"` // 是否是偏移检测任务
 }
 
 func (Task) TableName() string {
@@ -212,6 +213,10 @@ func (t *Task) TfParseJsonPath() string {
 
 func (t *Task) TfResultJsonPath() string {
 	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TerrascanResultFile)
+}
+
+func (t *Task) TFPlanOutputLogPath() string {
+	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), "step2", runner.TaskLogName)
 }
 
 func (t *Task) HideSensitiveVariable() {

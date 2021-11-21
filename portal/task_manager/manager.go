@@ -18,7 +18,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 
@@ -631,6 +633,17 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 			if lastStep.Status == models.TaskComplete {
 				if err := processPlan(); err != nil {
 					logger.Errorf("process task plan: %v", err)
+				}
+
+				// 判断是否是偏移检测任务，如果是，解析log文件并写入表
+				if task.IsCronDriftTask {
+					if bs, err := readIfExist(task.TFPlanOutputLogPath()); err != nil {
+						logger.Errorf("read plan output log: %v", err)
+					} else {
+						// 保存偏移检测任务信息到数据表中
+						InsertCronDriftTaskInfo(dbSess, bs, task)
+					}
+
 				}
 			}
 		}
@@ -1272,4 +1285,35 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 
 	req.SysEnvironments = sysEnvs
 	return nil
+}
+
+func InsertCronDriftTaskInfo(db *db.Session, bs []byte, task *models.Task) {
+	content := strings.Split(string(bs), "\n")
+	for k, v := range content {
+		if strings.Contains(v, "#") && strings.Contains(v, "must be") || strings.Contains(v, "will be") {
+			var resourceDetail string
+			nowTime := models.Time(time.Now())
+			cronTaskInfo := models.CronDriftTask{
+				EnvId:      task.EnvId,
+				CreateTime: &nowTime,
+				TaskId:     task.Id,
+			}
+			reg1 := regexp.MustCompile(`#\s\S*`)
+			result1 := reg1.FindAllStringSubmatch(v, 1)
+			cronTaskInfo.Address = strings.TrimSpace(result1[0][0][1:])
+			for k1, v2 := range content[k+1:] {
+				if strings.Contains(v2, "#") && strings.Contains(v2, "must be") || strings.Contains(v2, "will be") {
+					resourceDetail = strings.Join(content[k+1:k1+k], "")
+					cronTaskInfo.ResourceDetail = []byte(resourceDetail)
+					break
+				} else if strings.Contains(v2, "Plan:") {
+					resourceDetail = strings.Join(content[k+1:k1+k], "")
+					cronTaskInfo.ResourceDetail = []byte(resourceDetail)
+					break
+				}
+			}
+			services.InsertCronTaskInfo(db, cronTaskInfo)
+		}
+
+	}
 }
