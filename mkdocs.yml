@@ -26,3 +26,5 @@ nav:
     - "手动部署": deploy/host.md
     - "创建演示组织": deploy/demo-org.md
 
+  - "Releases": release-notes.md
+

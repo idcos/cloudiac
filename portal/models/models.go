@@ -111,7 +111,7 @@ func UpdateModel(tx *db.Session, o Modeler, query ...interface{}) (int64, error)
 
 // 更新 model 的所有字段值到 db，即使其值为 zero value
 func UpdateModelAll(tx *db.Session, o Modeler, query ...interface{}) (int64, error) {
-	return UpdateModel(tx.Select("*"), o, query...)
+	return UpdateModel(tx.Select("*").Omit("created_at"), o, query...)
 }
 
 func MustMarshalValue(v interface{}) driver.Value {

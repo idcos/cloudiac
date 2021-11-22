@@ -83,6 +83,7 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 	return nil, err
 }
 
+
 func CreateWebhookTask(tx *db.Session, taskType, revision string, userId models.Id, env *models.Env, tpl *models.Template, prId int) error {
 	// 计算变量列表
 	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
