@@ -278,30 +278,27 @@ func (github *githubRepoIface) DefaultBranch() string {
 // AddWebhook doc: https://docs.github.com/cn/rest/reference/repos#traffic
 func (github *githubRepoIface) AddWebhook(url string) error {
 	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/hooks", github.repository.FullName), nil)
-	body := map[string]interface{}{
-		"url":                   url,
-		"push_events":           "true",
-		"merge_requests_events": "true",
-	}
-	b, _ := json.Marshal(&body)
-	_, _, err := githubRequest(path, "POST", github.vcs.VcsToken, b)
-	ctx := context.Background()
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: github.vcs.VcsToken},
-	)
-	tc := oauth2.NewClient(ctx, ts)
-	client := git.NewClient(tc)
-	_, _, errs := client.Repositories.CreateHook(ctx, "", "", &git.Hook{
-		Name: git.String("CloudIaC"),
-		URL:  git.String(url),
-		Events: []string{
+	bodys := map[string]interface{}{
+		"config": map[string]interface{}{
+			"url":          url,
+			"content_type": "json",
+		},
+		"events": []string{
 			"pull_request",
 			"push",
 		},
-	})
+		"type": "gitea",
+	}
+	b, _ := json.Marshal(&bodys)
+	response, respBody, err := githubRequest(path, "POST", github.vcs.VcsToken, b)
 
-	if errs != nil {
+	if err != nil {
 		return e.New(e.BadRequest, err)
+	}
+
+	if response.StatusCode >= 300 && !strings.Contains(string(respBody),"Hook already exists on this repository") {
+		err = e.New(e.VcsError, fmt.Errorf("%s: %s", response.Status, string(respBody)))
+		return  err
 	}
 	return nil
 }

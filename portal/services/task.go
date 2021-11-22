@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/acarl005/stripansi"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 )
@@ -1111,7 +1112,7 @@ func SendVcsComment(session *db.Session, task *models.Task, taskStatus string) {
 		"Name":   env.Name,
 		//http://{{addr}}/org/{{orgId}}/project/{{ProjectId}}/m-project-env/detail/{{envId}}/task/{{TaskId}}
 		"Addr":    fmt.Sprintf("%s/org/%s/project/%s/m-project-env/detail/%s/task/%s", configs.Get().Portal.Address, task.OrgId, task.ProjectId, task.EnvId, task.Id),
-		"Content": string(logContent),
+		"Content": stripansi.Strip(string(logContent)),
 	}
 
 	content := utils.SprintTemplate(consts.PrCommentTpl, attr)

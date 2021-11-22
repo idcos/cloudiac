@@ -11,6 +11,7 @@ type WebhooksApiHandler struct {
 	Project          Project          `json:"project"`           // 项目信息
 	ObjectAttributes ObjectAttributes `json:"object_attributes"` // 返回值信息
 	User             User             `json:"user"`              // 用户信息
+	PullRequest      PullRequest      `json:"pull_request"`      //gitea
 }
 
 type Project struct {
@@ -27,4 +28,20 @@ type ObjectAttributes struct {
 
 type User struct {
 	Name string `json:"name"`
+}
+
+//PullRequest gitea
+type PullRequest struct {
+	Base Base `json:"base"`
+	Head Head `json:"head"`
+}
+
+//Base gitea
+type Base struct {
+	Ref string `json:"ref"`
+}
+
+//Head gitea
+type Head struct {
+	Ref string `json:"ref"`
 }

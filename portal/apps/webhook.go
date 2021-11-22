@@ -58,11 +58,11 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 				// 判断pr类型并确认动作
 				//open状态的mr进行plan计划
 				if v == consts.EnvTriggerPRMR && form.ObjectAttributes.State == GitlabPrOpened {
-					err = CreateWebhookTask(tx, models.TaskTypePlan, c.UserId, &env, &tpl, prId)
+					err = CreateWebhookTask(tx, models.TaskTypePlan, form.ObjectAttributes.SourceBranch, c.UserId, &env, &tpl, prId)
 				}
 
 				if v == consts.EnvTriggerCommit && form.ObjectKind == GitlabObjectKindPush {
-					err = CreateWebhookTask(tx, models.TaskTypeApply, c.UserId, &env, &tpl, prId)
+					err = CreateWebhookTask(tx, models.TaskTypeApply, form.ObjectAttributes.SourceBranch, c.UserId, &env, &tpl, prId)
 				}
 
 				if err != nil {
@@ -83,7 +83,7 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 	return nil, err
 }
 
-func CreateWebhookTask(tx *db.Session, taskType string, userId models.Id, env *models.Env, tpl *models.Template, prId int) error {
+func CreateWebhookTask(tx *db.Session, taskType, revision string, userId models.Id, env *models.Env, tpl *models.Template, prId int) error {
 	// 计算变量列表
 	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
 	if er != nil {
@@ -98,6 +98,7 @@ func CreateWebhookTask(tx *db.Session, taskType string, userId models.Id, env *m
 		KeyId:       env.KeyId,
 		Variables:   vars,
 		AutoApprove: env.AutoApproval,
+		Revision:    revision,
 		BaseTask: models.BaseTask{
 			Type:        taskType,
 			RunnerId:    env.RunnerId,
