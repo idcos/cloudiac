@@ -232,14 +232,15 @@ func (Task) GetTaskStepLog(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
-// @Param form query forms.SearchTaskResourceForm true "parameter"
+// @Param form query forms.SearchTaskResourceGraphForm true "parameter"
 // @Param taskId path string true "任务ID"
-// @router /tasks/{taskId}/resources [get]
+// @router /tasks/{taskId}/resources/graph [get]
 // @Success 200 {object} ctx.JSONResult{result=models.Resource}
 func (Task) ResourceGraph(c *ctx.GinRequest) {
-	form := forms.SearchTaskResourceForm{}
+	form := forms.SearchTaskResourceGraphForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchTaskResources(c.Service(), &form))
+	c.JSONResult(apps.SearchTaskResourcesGraph(c.Service(), &form))
 }
+

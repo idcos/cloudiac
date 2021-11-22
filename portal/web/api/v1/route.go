@@ -191,7 +191,9 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/tasks/:id/comment", ac(), w(handlers.TaskComment{}.Search))
 	g.GET("/tasks/:id/steps", ac(), w(handlers.Task{}.SearchTaskStep))
 	g.GET("/tasks/:id/steps/:stepId/log", ac(), w(handlers.Task{}.GetTaskStepLog))
-	g.GET("tasks/:id/steps/:stepId/log/sse", ac(), w(handlers.Task{}.FollowStepLogSse))
+	g.GET("/tasks/:id/steps/:stepId/log/sse", ac(), w(handlers.Task{}.FollowStepLogSse))
+	g.GET("/tasks/:id/resources/graph",ac(),w(handlers.Task{}.ResourceGraph))
+
 
 	g.GET("/tokens/trigger", ac(), w(handlers.Token{}.DetailTriggerToken))
 	ctrl.Register(g.Group("resource/account", ac()), &handlers.ResourceAccount{})

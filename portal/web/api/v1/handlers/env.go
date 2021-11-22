@@ -312,20 +312,6 @@ func (Env) SearchResourcesGraph(c *ctx.GinRequest) {
 	c.JSONResult(apps.SearchEnvResourcesGraph(c.Service(), &form))
 }
 
-
-// ResourceGraphDetail 获取环境资源详情
-// @Tags 环境
-// @Summary 获取环境资源详情
-// @Accept application/x-www-form-urlencoded
-// @Produce json
-// @Security AuthToken
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param id path string true "环境ID"
-// @Param resourceId path string true "资源ID"
-// @route /sadfqqqqqqqqq [get]
-// @Success 200 {object} ctx.JSONResult{result=models.ResAttrs}
-
-
 // ResourceGraphDetail 获取环境资源详情
 // @Tags 环境
 // @Summary 获取环境资源详情
@@ -337,7 +323,7 @@ func (Env) SearchResourcesGraph(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param envId path string true "环境ID"
 // @Param resourceId path string true "资源ID"
-// @router /envs/{envId}/resources/{resourceId}/graph [get]
+// @router /envs/{envId}/resources/graph/{resourceId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.Resource}
 func (Env) ResourceGraphDetail(c *ctx.GinRequest) {
 	form := &forms.ResourceGraphDetailForm{}

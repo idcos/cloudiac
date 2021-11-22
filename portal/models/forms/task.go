@@ -102,6 +102,6 @@ type GetTaskStepLogForm struct {
 type SearchTaskResourceGraphForm struct {
 	BaseForm
 
-	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 任务ID，swagger 参数通过 param path 指定，这里忽略
-	Dimension  string   `json:"dimension" form:"dimension" binding:"required"`           // 资源名称，支持模糊查询
+	Id        models.Id `uri:"id" json:"id" swaggerignore:"true"`              // 任务ID，swagger 参数通过 param path 指定，这里忽略
+	Dimension string    `json:"dimension" form:"dimension" binding:"required"` // 资源名称，支持模糊查询
 }
