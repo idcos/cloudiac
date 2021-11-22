@@ -58,7 +58,6 @@ type Repository struct {
 	FullName      string    `json:"full_name" form:"full_name" `
 }
 
-
 /*curl -X 'GET' \
 'http://localhost:9999/api/v1/user/repos' \
 -H 'accept: application/json' \
@@ -67,9 +66,13 @@ type Repository struct {
 
 //ListRepos Fixme中的数据不能直接调用repo接口的方法
 func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([]RepoIface, int64, error) {
-	link, _ := url.Parse("/user/repos")
+	user, err := getGiteaUserMe(gitea.vcs)
+	if err != nil {
+		return nil, 0, e.New(e.BadRequest, err)
+	}
+	link, _ := url.Parse("/repos/search")
 	page := utils.LimitOffset2Page(limit, offset)
-	link.RawQuery = fmt.Sprintf("page=%d&limit=%d", page, limit)
+	link.RawQuery = fmt.Sprintf("page=%d&limit=%d&exclusive=true&uid=%d", page, limit, user.Id)
 	if search != "" {
 		link.RawQuery = link.RawQuery + fmt.Sprintf("&q=%s", search)
 	}
@@ -349,4 +352,19 @@ func giteaRequest(path, method, token string, requestBody []byte) (*http.Respons
 	body, _ := ioutil.ReadAll(response.Body)
 	return response, body, nil
 
+}
+
+type giteaUser struct {
+	Id int64 `json:"id" form:"id" `
+}
+
+func getGiteaUserMe(vcs *models.Vcs) (*giteaUser, error) {
+	path := vcs.Address + "/api/v1/user"
+	_, body, err := giteaRequest(path, "GET", vcs.VcsToken, nil)
+	if err != nil {
+		return nil, e.New(e.BadRequest, err)
+	}
+	user := &giteaUser{}
+	_ = json.Unmarshal(body, user)
+	return user, nil
 }
