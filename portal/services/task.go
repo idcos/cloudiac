@@ -1076,7 +1076,7 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 	logs.Get().Infof("kafka send massage successful. data: %s", string(message))
 }
 
-func InsertCronTaskInfo(session *db.Session, cronTask models.CronDriftTask) {
+func InsertCronTaskInfo(session *db.Session, cronTask models.ResourceDrift) {
 	if err := session.Insert(cronTask); err != nil {
 		logs.Get().Errorf("insert cron task info error: %v", err)
 	}

@@ -90,7 +90,7 @@ func main() {
 		common2.DemoOrgId = org.Id.String()
 	}
 	// 恢复/启动环境偏移检测任务
-	apps.StartDriftTask()
+	apps.RecoverDriftTask()
 	// 初始化tfversions list
 	apps.InitTfVersions()
 	// 启动 web server

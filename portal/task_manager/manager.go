@@ -636,12 +636,18 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 				}
 
 				// 判断是否是偏移检测任务，如果是，解析log文件并写入表
-				if task.IsCronDriftTask {
-					if bs, err := readIfExist(task.TFPlanOutputLogPath()); err != nil {
+				if task.IsDriftTask {
+					step, err := services.GetTaskPlanStep(db.Get(), task.Id)
+					if err != nil {
+						// 解析失败任务不停止不影响主流程
 						logger.Errorf("read plan output log: %v", err)
 					} else {
-						// 保存偏移检测任务信息到数据表中
-						InsertCronDriftTaskInfo(dbSess, bs, task)
+						if bs, err := readIfExist(task.TFPlanOutputLogPath(fmt.Sprintf("step%d", step.Index))); err != nil {
+							logger.Errorf("read plan output log: %v", err)
+						} else {
+							// 保存偏移检测任务信息到数据表中
+							InsertCronDriftTaskInfo(dbSess, bs, task)
+						}
 					}
 
 				}
@@ -1293,10 +1299,10 @@ func InsertCronDriftTaskInfo(db *db.Session, bs []byte, task *models.Task) {
 		if strings.Contains(v, "#") && strings.Contains(v, "must be") || strings.Contains(v, "will be") {
 			var resourceDetail string
 			nowTime := models.Time(time.Now())
-			cronTaskInfo := models.CronDriftTask{
-				EnvId:      task.EnvId,
-				CreateTime: &nowTime,
-				TaskId:     task.Id,
+			cronTaskInfo := models.ResourceDrift{
+				EnvId:    task.EnvId,
+				CreateAt: &nowTime,
+				TaskId:   task.Id,
 			}
 			reg1 := regexp.MustCompile(`#\s\S*`)
 			result1 := reg1.FindAllStringSubmatch(v, 1)

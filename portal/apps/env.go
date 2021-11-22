@@ -175,7 +175,8 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, err
 	}
 
-	pt := models.Task{
+	// 创建任务
+	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
 		Targets:         targets,
 		CreatorId:       c.UserId,
@@ -191,24 +192,13 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		},
 		ExtraData: models.JSON(form.ExtraData),
 		Callback:  form.Callback,
-	}
-
-	// 创建任务
-	task, err := services.CreateTask(tx, tpl, env, pt)
+	})
 	// 创建偏移检测任务
 	if form.CronDriftExpress != "" {
-		if form.AutoRepairDrift {
-			pt.BaseTask.Type = "plan"
-			err := CronDriftTask(CronInstance, form.CronDriftExpress, tpl, env.Id, pt)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			pt.BaseTask.Type = "apply"
-			err := CronDriftTask(CronInstance, form.CronDriftExpress, tpl, env.Id, pt)
-			if err != nil {
-				return nil, err
-			}
+		err := CronDriftTask(CronInstance, form.CronDriftExpress, tpl, *env)
+		if err != nil {
+			_ = tx.Rollback()
+			return nil, err
 		}
 	}
 
@@ -673,10 +663,14 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 
 	// 重新部署或者删除环境，则重新生成环境偏移检测任务或删除环境偏移检测任务
 	if form.TaskType == models.TaskTypeDestroy {
-		CronEntryChan <- env.Id
+		if err := DeleteCronEntryId(env.Id.String()); err != nil {
+			return nil, err
+		}
 	} else {
-		CronEntryChan <- env.Id
-		if err = CronDriftTask(CronInstance, env.CronDriftExpression, tpl, env.Id, *task); err != nil {
+		if err := DeleteCronEntryId(env.Id.String()); err != nil {
+			return nil, err
+		}
+		if err = CronDriftTask(CronInstance, env.CronDriftExpression, tpl, *env); err != nil {
 			return nil, err
 		}
 	}
@@ -721,8 +715,8 @@ func SearchEnvResources(c *ctx.ServiceContext, form *forms.SearchEnvResourceForm
 
 	return SearchTaskResources(c, &forms.SearchTaskResourceForm{
 		NoPageSizeForm: form.NoPageSizeForm,
-		Id:               env.LastResTaskId,
-		Q:                form.Q,
+		Id:             env.LastResTaskId,
+		Q:              form.Q,
 	})
 }
 
@@ -812,30 +806,12 @@ func ResourceDetail(c *ctx.ServiceContext, form *forms.ResourceDetailForm) (*mod
 	return &resultAttrs, nil
 }
 
-var EnvDriftTaskMap = map[models.Id]cron.EntryID{}
-var CronEntryChan = make(chan models.Id)
-
-func StartDriftTask() {
-	go destroyDriftTask()
-	recoverDriftTask()
-}
-
-func destroyDriftTask() {
-	for {
-		select {
-		case envId := <-CronEntryChan:
-			// 移除不活跃/被删除 环境下的偏移检测任务
-			CronInstance.Remove(EnvDriftTaskMap[envId])
-		}
-	}
-}
-
 // 程序重启恢复所有活跃环境偏移检测任务
-func recoverDriftTask() {
+func RecoverDriftTask() {
 	logger := logs.Get()
 	session := db.Get()
 	env := make([]models.Env, 0)
-	if err := services.QueryActiveEnv(session).Find(&env); err != nil {
+	if err := services.QueryDeploySucessEnv(session).Find(&env); err != nil {
 		logger.Errorf("Recovery of drift detection task failed, err %s", err)
 		return
 	}
@@ -850,17 +826,18 @@ func recoverDriftTask() {
 				continue
 			}
 			// 获取活跃环境最后一次任务id, 保证环境最新部署任务和偏移检测任务保持一致，除了任务类型。
-			task, err := services.GetTaskById(query, v.LastTaskId)
-			if v.AutoRepairDrift {
-				task.Type = "apply"
-			} else {
-				task.Type = "plan"
-			}
+			// 此时不再内存中了，需要去查表
+			_, err = services.GetTaskById(query, v.LastTaskId)
 			if err != nil {
 				logger.Errorf("Recovery of drift detection task failed, err %s", err)
 				continue
 			}
-			err = CronDriftTask(CronInstance, v.CronDriftExpression, tpl, v.Id, *task)
+			// 移除偏移检测任务关系表内容失败，跳过该环境，不应该在创建新的定时任务
+			if err := DeleteCronEntryId(v.Id.String()); err != nil {
+				logger.Errorf("Recovery of drift detection task failed, err %s", err)
+				continue
+			}
+			err = CronDriftTask(CronInstance, v.CronDriftExpression, tpl, v)
 			if err != nil {
 				logger.Errorf("Recovery of drift detection task failed, err %s", err)
 				continue
@@ -871,16 +848,30 @@ func recoverDriftTask() {
 
 }
 
-func CronDriftTask(cron *cron.Cron, cronExpress string, tpl *models.Template, envId models.Id, pt models.Task) e.Error {
+func CronDriftTask(cron *cron.Cron, cronExpress string, tpl *models.Template, env models.Env) e.Error {
 	// 添加偏移检测任务
 	logger := logs.Get()
 	entryId, err := cron.AddFunc(cronExpress, func() {
 		session := db.Get()
 		// 任务启动前，判断环境是否存在，是否活跃
-		env, err := services.GetEnvById(session, envId)
-		if env.Status == "active" && err == nil {
-			pt.IsCronDriftTask = true
-			task, err := services.CreateTask(session, tpl, env, pt)
+		env, err := services.GetEnvById(session, env.Id)
+		if err != nil {
+			logger.Errorf("Query environment failed while creating drift detection task， err %s", err)
+			return
+		}
+		if env.Status == "active" {
+			pt, err := services.GetTaskById(session, env.LastTaskId)
+			if err != nil {
+				logger.Errorf("Query task failed while creating drift detection task， err %s", err)
+				return
+			}
+			pt.IsDriftTask = true
+			if env.AutoRepairDrift {
+				pt.Type = "apply"
+			} else {
+				pt.Type = "plan"
+			}
+			task, err := services.CreateTask(session, tpl, env, *pt)
 			if err != nil {
 				// 定时任务无法即时判断是否执行成功，采用logger方式记录
 				logger.Errorf("Failed to create drift detection task, err %s", err)
@@ -889,22 +880,67 @@ func CronDriftTask(cron *cron.Cron, cronExpress string, tpl *models.Template, en
 			attr := models.Attrs{
 				"last_drift_task_id": task.Id,
 			}
-			_, err = services.UpdateEnv(session, envId, attr)
+			_, err = services.UpdateEnv(session, env.Id, attr)
 			if err != nil {
 				logger.Errorf("Failed to update env last_drift_task_id, err %s", err)
 			}
 		} else {
 			// 如果环境不存在，或者环境不活跃，传递EnvId，删除定时任务
-			CronEntryChan <- envId
+			err := DeleteCronEntryId(env.Id.String())
+			if err != nil {
+				logger.Errorf("Failed to delete cron task, err %s", err)
+			}
 		}
 	})
 	if err != nil {
 		return e.New(e.CronTaskFailed, "Drift detection task creation failed")
 	}
 	//任务启动成功，内存关系表关联环境和偏移检测任务entryId
-	EnvDriftTaskMap[envId] = entryId
+	AddCronEntryId(env.Id.String(), int(entryId))
 	// 幂等操作，多次调用不会重复开启多个groutine
 	cron.Start()
 	return nil
+
+}
+
+// 给偏移检测/task 关系表里面添加 定时任务id
+func AddCronEntryId(envId string, entryId int) {
+	session := db.Get()
+	if err := services.AddCronTaskEntryId(session, models.EnvCronDrift{
+		EnvId:       models.Id(envId),
+		CronEntryId: entryId,
+	}); err != nil {
+		logs.Get().Errorf("Failed to add cronentryid，err: %s", err)
+	}
+
+}
+
+// 移除定时任务id
+func DeleteCronEntryId(envId string) e.Error {
+	session := db.Get()
+	drift, err := getGetCronTaskEntryId(envId)
+	if err != nil {
+		logs.Get().Errorf("Failed to get cronentryid，err: %s", err)
+		return err
+	}
+	// 从数据表中删除
+	if err := services.DeleteCronTaskEntryId(session, envId); err != nil {
+		logs.Get().Errorf("Failed to delete cronentryid，err: %s", err)
+		return err
+	}
+
+	// 从定时任务中(内存中)删除
+	CronInstance.Remove(cron.EntryID(drift.CronEntryId))
+	return nil
+}
+
+// 获取任务/偏移检测定时任务id 关系表中，定时检测任务id
+func getGetCronTaskEntryId(envId string) (*models.EnvCronDrift, e.Error) {
+	taskCronDrifter, err := services.QueryCronTaskEntryId(db.Get(), envId)
+	if err != nil {
+		logs.Get().Errorf("Failed to get cronentryid，err: %s", err)
+		return nil, err
+	}
+	return taskCronDrifter, nil
 
 }
