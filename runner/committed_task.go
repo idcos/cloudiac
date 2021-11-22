@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -24,6 +25,9 @@ type StartedTask struct {
 	Step        int    `json:"step"`
 	ContainerId string `json:"containerId"`
 	ExecId      string `json:"execId"`
+
+	StartedAt *time.Time `json:"startedAt"`
+	Timeout   int        `json:"timeout"`
 
 	PauseOnFinish bool `json:"pauseOnFinish"` // 该步骤结束时暂停容器
 
@@ -140,10 +144,18 @@ func (task *StartedTask) Wait(ctx context.Context) (int64, error) {
 		return int64(info.ExitCode), nil
 	}
 
-	info, err := Executor{}.WaitCommand(ctx, task.ExecId)
+	var (
+		info types.ContainerExecInspect
+		err  error
+	)
+	if task.StartedAt != nil && task.Timeout > 0 {
+		deadline := task.StartedAt.Add(time.Duration(task.Timeout) * time.Second)
+		info, err = Executor{}.WaitCommandWithDeadline(ctx, task.ExecId, deadline)
+	} else {
+		info, err = Executor{}.WaitCommand(ctx, task.ExecId)
+	}
+
 	if err != nil {
-		// logger.Warnf("wait container response status: %v, error: %v", resp.StatusCode, resp.Error)
-		// return resp.StatusCode, fmt.Errorf(resp.Error.Message)
 		logger.Warnf("wait step error: %v", err)
 		return 0, err
 	}
