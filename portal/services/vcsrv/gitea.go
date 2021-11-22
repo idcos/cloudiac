@@ -58,9 +58,16 @@ type Repository struct {
 	FullName      string    `json:"full_name" form:"full_name" `
 }
 
+
+/*curl -X 'GET' \
+'http://localhost:9999/api/v1/user/repos' \
+-H 'accept: application/json' \
+-H 'Authorization: token 27b9b370eb3qqqqqqqqc0f3a5de10a3'
+*/
+
 //ListRepos Fixme中的数据不能直接调用repo接口的方法
 func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([]RepoIface, int64, error) {
-	link, _ := url.Parse("/repos/search")
+	link, _ := url.Parse("/user/repos")
 	page := utils.LimitOffset2Page(limit, offset)
 	link.RawQuery = fmt.Sprintf("page=%d&limit=%d", page, limit)
 	if search != "" {
