@@ -755,7 +755,7 @@ loop:
 				changeStepStatusAndStepRetryTimes(models.TaskStepFailed, message, step)
 				break loop
 			}
-			if stepResult.Status == models.TaskStepFailed {
+			if stepResult.Status == models.TaskStepFailed || stepResult.Status == models.TaskStepTimeout {
 				if task.RetryAble && step.RetryNumber > 0 && step.CurrentRetryCount < step.RetryNumber {
 					step.NextRetryTime = time.Now().Unix() + int64(task.RetryDelay)
 					step.CurrentRetryCount += 1

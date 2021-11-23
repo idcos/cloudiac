@@ -4,6 +4,7 @@ package runner
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -233,15 +234,60 @@ func (Executor) WaitCommand(ctx context.Context, execId string) (execInfo types.
 	}
 
 	for {
+		select {
+		case <-ctx.Done():
+			return execInfo, ctx.Err()
+		default:
+		}
+
 		inspect, err := cli.ContainerExecInspect(ctx, execId)
 		if err != nil {
-			return execInfo, errors.Wrap(err, "container exec attach")
+			if err == context.DeadlineExceeded {
+				return execInfo, err
+			}
+			return execInfo, errors.Wrap(err, "container exec inspect")
 		}
 		if !inspect.Running {
 			return execInfo, nil
 		}
 		time.Sleep(time.Second)
 	}
+}
+
+func (exec Executor) WaitCommandWithDeadline(ctx context.Context, execId string, deadline time.Time) (execInfo types.ContainerExecInspect, err error) {
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithDeadline(ctx, deadline)
+	defer cancel()
+
+	logger.Debugf("wait exec %s, deadline: %s", execId, deadline.Format(time.RFC3339))
+	if execInfo, err = exec.WaitCommand(ctx, execId); err != nil {
+		if err == context.DeadlineExceeded {
+			// logger.Infof("task %s/step%s: %v", exec..TaskId, t.req.Step, err)
+			if err := (Executor{}).StopCommand(execId); err != nil {
+				logger.WithField("cid", execInfo.ContainerID).Errorf("stop command error: %v", err)
+			}
+		}
+		return execInfo, err
+	}
+
+	return execInfo, err
+}
+
+func (e Executor) StopCommand(execId string) (err error) {
+	cli, err := dockerClient()
+	if err != nil {
+		return err
+	}
+
+	inspect, err := cli.ContainerExecInspect(context.Background(), execId)
+	if err != nil {
+		return errors.Wrap(err, "container exec attach")
+	}
+
+	if _, err := e.RunCommand(inspect.ContainerID, []string{"kill", "-9", fmt.Sprintf("%d", inspect.Pid)}); err != nil {
+		return errors.Wrap(err, "kill process")
+	}
+	return nil
 }
 
 func (Executor) IsPaused(cid string) (bool, error) {
