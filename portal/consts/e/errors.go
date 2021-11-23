@@ -113,6 +113,7 @@ const (
 	VariableScopeConflict  = 30512
 	InvalidVarName         = 30513
 	EmptyVarName           = 30514
+	EmptyVarValue          = 30515
 
 	//// token 306
 	TokenAlreadyExists  = 30610
@@ -384,6 +385,9 @@ var errorMsgs = map[int]map[string]string{
 	},
 	EmptyVarName: {
 		"zh-cn": "变量名不可为空",
+	},
+	EmptyVarValue: {
+		"zh-cn": "变量值不可为空",
 	},
 	ProjectUserAlreadyExists: {
 		"zh-cn": "项目用户已经存在",
