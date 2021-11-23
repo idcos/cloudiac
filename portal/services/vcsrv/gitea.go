@@ -59,7 +59,7 @@ type Repository struct {
 }
 
 /*curl -X 'GET' \
-'http://localhost:9999/api/v1/user/repos' \
+'http://localhost:9999/api/v1/repos/search?page=1&limit=1&exclusive=true&uid=1&q=test' \
 -H 'accept: application/json' \
 -H 'Authorization: token 27b9b370eb3qqqqqqqqc0f3a5de10a3'
 */
