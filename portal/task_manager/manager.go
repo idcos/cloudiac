@@ -5,6 +5,7 @@ package task_manager
 import (
 	"cloudiac/common"
 	"cloudiac/configs"
+	"cloudiac/portal/apps"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
@@ -155,6 +156,71 @@ func (m *TaskManager) start() {
 			return
 		}
 	}
+}
+
+// 开始所有漂移检测任务
+func (m *TaskManager) beginCronDriftTask() error {
+	logger := m.logger
+	cronDriftEnvs := make([]*models.Env, 0)
+	query := m.db.Where("status = ? and open_cron_drift = ?", models.EnvStatusActive, true)
+	if err := query.Model(&models.Env{}).Find(&cronDriftEnvs); err != nil {
+		return err
+	}
+	// 查询出来所有需要开启偏移检测的环境任务，并且创建
+	for _, env := range cronDriftEnvs {
+		task, err := services.GetTaskById(m.db, env.LastTaskId)
+		if err != nil {
+			logger.Errorf("create cronDriftTask failed, error: %v", err)
+			continue
+		}
+		// 从环境中拿到应该执行下次进行任务偏移检测的时间
+		// 判断当前时间是否在定时任务时间之前
+		nowTime := time.Now()
+		isBeginCronTask := nowTime.Before(*env.NextStartCronTaskTime)
+		isBeginCronCondition := nowTime.Equal(*env.NextStartCronTaskTime)
+		// 如果时间等于或者超过环境表存储下次偏移任务，则创建偏移检测任务
+		if !isBeginCronTask && isBeginCronCondition {
+			// 先查询这个环境有没有排队中的偏移检测任务了, 有就不创建了
+			cronPengdingTask, err := services.ListPendingCronTask(m.db, env.Id)
+			if err != nil {
+				logger.Errorf("create cronDriftTask failed, error: %v", err)
+				continue
+			}
+			// 如果查询出来有排队或执行中的漂移检测任务，则本次跳过
+			if len(cronPengdingTask) != 0 {
+				continue
+			}
+			// 这里每次都去解析env表保存的最新的cron 表达式
+			envCronTaskType, err := apps.GetEnvCronTaskType(env.CronDriftExpression, env.AutoRepairDrift, env.OpenCronDrift)
+			if err != nil {
+				logger.Errorf("create cronDriftTask failed, error: %v", err)
+				continue
+			}
+			if envCronTaskType != "" {
+				attrs := models.Attrs{}
+				nextTime, err := apps.ParseCronpress(env.CronDriftExpression)
+				if err != nil {
+					logger.Errorf("create cronDriftTask failed, error: %v", err)
+					continue
+				}
+				attrs["nextStartCronTaskTime"] = nextTime
+				_, err = services.UpdateEnv(m.db, env.Id, attrs)
+				if err != nil {
+					logger.Errorf("create cronDriftTask failed, error: %v", err)
+					continue
+				}
+				task.Type = envCronTaskType
+				task.IsDriftTask = true
+				_, err = services.CreateTask(m.db, nil, nil, *task)
+				if err != nil {
+					logger.Errorf("create cronDriftTask failed, error: %v", err)
+					continue
+				}
+			}
+
+		}
+	}
+	return nil
 }
 
 func (m *TaskManager) recoverTask(ctx context.Context) error {

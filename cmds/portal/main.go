@@ -89,8 +89,6 @@ func main() {
 	if org != nil {
 		common2.DemoOrgId = org.Id.String()
 	}
-	// 恢复/启动环境偏移检测任务
-	apps.RecoverDriftTask()
 	// 初始化tfversions list
 	apps.InitTfVersions()
 	// 启动 web server

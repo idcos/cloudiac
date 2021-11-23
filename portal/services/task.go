@@ -50,48 +50,52 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		err      error
 		firstVal = utils.FirstValueStr
 	)
+	var task models.Task
+	if tpl == nil && env == nil {
+		task = pt
+	} else {
+		task = models.Task{
+			// 以下为需要外部传入的属性
+			Name:            pt.Name,
+			Targets:         pt.Targets,
+			CreatorId:       pt.CreatorId,
+			Variables:       pt.Variables,
+			AutoApprove:     pt.AutoApprove,
+			KeyId:           models.Id(firstVal(string(pt.KeyId), string(env.KeyId))),
+			ExtraData:       pt.ExtraData,
+			Revision:        firstVal(pt.Revision, env.Revision, tpl.RepoRevision),
+			StopOnViolation: pt.StopOnViolation,
 
-	task := models.Task{
-		// 以下为需要外部传入的属性
-		Name:            pt.Name,
-		Targets:         pt.Targets,
-		CreatorId:       pt.CreatorId,
-		Variables:       pt.Variables,
-		AutoApprove:     pt.AutoApprove,
-		KeyId:           models.Id(firstVal(string(pt.KeyId), string(env.KeyId))),
-		ExtraData:       pt.ExtraData,
-		Revision:        firstVal(pt.Revision, env.Revision, tpl.RepoRevision),
-		StopOnViolation: pt.StopOnViolation,
+			RetryDelay:  utils.FirstValueInt(pt.RetryDelay, env.RetryDelay),
+			RetryNumber: utils.FirstValueInt(pt.RetryNumber, env.RetryNumber),
+			RetryAble:   env.RetryAble,
 
-		RetryDelay:  utils.FirstValueInt(pt.RetryDelay, env.RetryDelay),
-		RetryNumber: utils.FirstValueInt(pt.RetryNumber, env.RetryNumber),
-		RetryAble:   env.RetryAble,
+			OrgId:     env.OrgId,
+			ProjectId: env.ProjectId,
+			TplId:     env.TplId,
+			EnvId:     env.Id,
+			StatePath: env.StatePath,
 
-		OrgId:     env.OrgId,
-		ProjectId: env.ProjectId,
-		TplId:     env.TplId,
-		EnvId:     env.Id,
-		StatePath: env.StatePath,
+			Workdir:   tpl.Workdir,
+			TfVersion: tpl.TfVersion,
 
-		Workdir:   tpl.Workdir,
-		TfVersion: tpl.TfVersion,
+			// 以下值直接使用环境的配置(不继承模板的配置)
+			Playbook:     env.Playbook,
+			TfVarsFile:   env.TfVarsFile,
+			PlayVarsFile: env.PlayVarsFile,
 
-		// 以下值直接使用环境的配置(不继承模板的配置)
-		Playbook:     env.Playbook,
-		TfVarsFile:   env.TfVarsFile,
-		PlayVarsFile: env.PlayVarsFile,
+			BaseTask: models.BaseTask{
+				Type:        pt.Type,
+				Pipeline:    pt.Pipeline,
+				StepTimeout: utils.FirstValueInt(pt.StepTimeout, common.DefaultTaskStepTimeout),
+				RunnerId:    firstVal(pt.RunnerId, env.RunnerId),
 
-		BaseTask: models.BaseTask{
-			Type:        pt.Type,
-			Pipeline:    pt.Pipeline,
-			StepTimeout: utils.FirstValueInt(pt.StepTimeout, common.DefaultTaskStepTimeout),
-			RunnerId:    firstVal(pt.RunnerId, env.RunnerId),
-
-			Status:   models.TaskPending,
-			Message:  "",
-			CurrStep: 0,
-		},
-		Callback: pt.Callback,
+				Status:   models.TaskPending,
+				Message:  "",
+				CurrStep: 0,
+			},
+			Callback: pt.Callback,
+		}
 	}
 
 	task.Id = models.NewId("run")
@@ -255,6 +259,15 @@ func GetTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision s
 	repoAddr = u.String()
 
 	return repoAddr, commitId, nil
+}
+
+func ListPendingCronTask(tx *db.Session, envId models.Id) ([]*models.Task, error) {
+	cronPengdingTask := make([]*models.Task, 0)
+	query := tx.Where("env_id = ? and is_drift_task = true and  status = 'pending' or status='running'", envId)
+	if err := query.Model(&models.Task{}).Find(&cronPengdingTask); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return cronPengdingTask, nil
 }
 
 func GetTaskById(tx *db.Session, id models.Id) (*models.Task, e.Error) {

@@ -272,26 +272,3 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 
 	return resp, nil
 }
-
-func QueryCronTaskEntryId(db *db.Session, taskId string) (*models.EnvCronDrift, e.Error) {
-	d := models.EnvCronDrift{}
-	if err := db.Where("env_id = ?", taskId).First(&d); err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-	return &d, nil
-
-}
-
-func DeleteCronTaskEntryId(db *db.Session, taskId string) e.Error {
-	if _, err := db.Where("env_id = ?", taskId).Delete(&models.EnvCronDrift{}); err != nil {
-		return e.New(e.DBError, fmt.Errorf("delete CronTaskEntryId error: %v", err))
-	}
-	return nil
-}
-
-func AddCronTaskEntryId(db *db.Session, taskCronDrift models.EnvCronDrift) e.Error {
-	if err := db.Insert(taskCronDrift); err != nil {
-		return e.New(e.DBError, err)
-	}
-	return nil
-}

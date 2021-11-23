@@ -48,7 +48,8 @@ type CreateEnvForm struct {
 	Callback string `json:"callback" form:"callback"` // 外部请求的回调方式
 
 	CronDriftExpress string `json:"cronDriftExpress" form:"cronDriftExpress"` // 偏移检测表达式
-	AutoRepairDrift   bool `json:"autoRepairDrift" form:"autoRepairDrift"` // 是否进行自动纠偏
+	AutoRepairDrift  bool   `json:"autoRepairDrift" form:"autoRepairDrift"`   // 是否进行自动纠偏
+	OpenCronDrift    bool   `json:"openCronDrift" form:"openCronDrift"`       // 是否开启偏移检测
 
 }
 
@@ -72,10 +73,13 @@ type UpdateEnvForm struct {
 	AutoApproval    bool `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"` // 是否自动审批
 	StopOnViolation bool `form:"stopOnViolation" json:"stopOnViolation" enums:"true,false"`       // 合规不通过是否中止任务
 
-	Triggers    []string `form:"triggers" json:"triggers" binding:""`       // 启用触发器，触发器：commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
-	RetryNumber int      `form:"retryNumber" json:"retryNumber" binding:""` // 重试总次数
-	RetryDelay  int      `form:"retryDelay" json:"retryDelay" binding:""`   // 重试时间间隔
-	RetryAble   bool     `form:"retryAble" json:"retryAble" binding:""`     // 是否允许任务进行重试
+	Triggers         []string `form:"triggers" json:"triggers" binding:""`       // 启用触发器，触发器：commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
+	RetryNumber      int      `form:"retryNumber" json:"retryNumber" binding:""` // 重试总次数
+	RetryDelay       int      `form:"retryDelay" json:"retryDelay" binding:""`   // 重试时间间隔
+	RetryAble        bool     `form:"retryAble" json:"retryAble" binding:""`     // 是否允许任务进行重试
+	CronDriftExpress string   `json:"cronDriftExpress" form:"cronDriftExpress"`  // 偏移检测表达式
+	AutoRepairDrift  bool     `json:"autoRepairDrift" form:"autoRepairDrift"`    // 是否进行自动纠偏
+	OpenCronDrift    bool     `json:"openCronDrift" form:"openCronDrift"`        // 是否开启偏移检测
 }
 
 type DeployEnvForm struct {

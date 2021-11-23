@@ -5,6 +5,7 @@ package models
 import (
 	"cloudiac/portal/libs/db"
 	"path"
+	"time"
 
 	"github.com/lib/pq"
 )
@@ -78,9 +79,10 @@ type Env struct {
 	Callback  string `json:"callback" gorm:"default:''"` // 外部请求的回调方式
 
 	// 偏移检测相关
-	LastDriftTaskId     Id     `json:"lastDriftTask" gorm:"size:32"`          // 最后一次执行偏移检测的ID
-	CronDriftExpression string `json:"cronDriftExpression" gorm:"default:''"` // 偏移检测任务的Cron表达式
-	AutoRepairDrift     bool   `json:"autoRepairDrift" gorm:"default:false"`  // 是否进行自动纠偏
+	CronDriftExpression   string     `json:"cronDriftExpression" gorm:"default:''"`      // 偏移检测任务的Cron表达式
+	AutoRepairDrift       bool       `json:"autoRepairDrift" gorm:"default:false"`       // 是否进行自动纠偏
+	OpenCronDrift         bool       `json:"openCronDrift" gorm:"default:false"`         // 是否开启偏移检测
+	NextStartCronTaskTime *time.Time `json:"nextStartCronTaskTime" gorm:"type:datetime"` // 下次执行偏移检测任务的时间
 }
 
 func (Env) TableName() string {
