@@ -60,19 +60,23 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, closedCh <-c
 	logger := logger.WithField("taskId", task.TaskId).WithField("step", task.Step)
 
 	// 获取任务最新状态并通过 websocket 发送
-	sendStatus := func(withLog bool) error {
-		status, err := task.Status()
-		if err != nil {
-			return err
-		}
-
-		msg := runner.TaskStatusMessage{
-			Exited:   !status.Running,
-			ExitCode: status.ExitCode,
+	sendStatus := func(withLog bool, isDeadline bool) error {
+		var msg runner.TaskStatusMessage
+		if isDeadline {
+			msg.Timeout = true
+		} else {
+			status, err := task.Status()
+			if err != nil {
+				return err
+			}
+			msg = runner.TaskStatusMessage{
+				Exited:   !status.Running,
+				ExitCode: status.ExitCode,
+			}
 		}
 
 		// 由于任务退出的时候 portal 会断开连接，所以如果判断已经退出，则直接发送全量日志
-		if withLog || msg.Exited {
+		if withLog || msg.Timeout || msg.Exited {
 			logContent, err := runner.FetchTaskLog(task.EnvId, task.TaskId, task.Step)
 			if err != nil {
 				logger.Errorf("fetch task log error: %v", err)
@@ -130,7 +134,7 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, closedCh <-c
 	}()
 
 	// 发送首次结果
-	if err := sendStatus(false); err != nil {
+	if err := sendStatus(false, false); err != nil {
 		return err
 	}
 
@@ -156,7 +160,7 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, closedCh <-c
 		select {
 		case <-ticker.C:
 			// 定时发送最新任务状态
-			if err := sendStatus(false); err != nil {
+			if err := sendStatus(false, false); err != nil {
 				logger.Warnf("send status error: %v", err)
 			}
 		case err := <-waitCh:
@@ -164,10 +168,13 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, closedCh <-c
 				return nil
 			}
 			if err != nil {
+				if err == context.DeadlineExceeded {
+					return sendStatus(true, true)
+				}
 				return err
 			}
 			// 任务结束，发送状态和全量日志
-			return sendStatus(true)
+			return sendStatus(true, false)
 		}
 	}
 }

@@ -82,6 +82,9 @@ type TaskLogReq TaskStatusReq
 
 // TaskStatusMessage runner 通知任务状态到 portal
 type TaskStatusMessage struct {
+	Timeout bool `json:"timeout"` // 任务是否己超时？
+
+	// 当 timeout 为 true 时，以下两个字段无意义
 	Exited   bool `json:"exited"`
 	ExitCode int  `json:"status_code"`
 
