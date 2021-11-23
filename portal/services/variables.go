@@ -131,6 +131,7 @@ func deleteVariables(tx *db.Session, varIds []string) e.Error {
 }
 
 func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId, envId models.Id, keepSensitive bool) (map[string]models.Variable, e.Error, []string) {
+
 	// 根据scope 构建变量应用范围
 	scopes := make([]string, 0)
 	switch scope {
@@ -142,6 +143,8 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 		scopes = consts.EnvScopeProject
 	case consts.ScopeOrg:
 		scopes = consts.EnvScopeOrg
+	default:
+		panic(fmt.Errorf("unknown scope '%s'", scope))
 	}
 
 	// 将组织下所有的变量查询，在代码处理变量的继承关系及是否要应用该变量
