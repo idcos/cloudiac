@@ -54,11 +54,6 @@ func getRepoAddr(vcsId models.Id, query *db.Session, repoId string) (string, err
 func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*models.Template, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create template %s", form.Name))
 
-	repoAddr, er := getRepoAddr(form.VcsId, c.DB(), form.RepoId)
-	if er != nil {
-		return nil, e.New(e.DBError, fmt.Errorf("get repo failed: %v", er))
-	}
-
 	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
@@ -67,12 +62,14 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		}
 	}()
 	template, err := services.CreateTemplate(tx, models.Template{
-		Name:         form.Name,
-		OrgId:        c.OrgId,
-		Description:  form.Description,
-		VcsId:        form.VcsId,
-		RepoId:       form.RepoId,
-		RepoAddr:     repoAddr,
+		Name:        form.Name,
+		OrgId:       c.OrgId,
+		Description: form.Description,
+		VcsId:       form.VcsId,
+		RepoId:      form.RepoId,
+		// 云模板的 repoAddr 和 repoToken 可以为空，若为空则会在创建任务时自动查询 vcs 获取相应值
+		RepoAddr:     "",
+		RepoToken:    "",
 		RepoRevision: form.RepoRevision,
 		CreatorId:    c.UserId,
 		Workdir:      form.Workdir,
@@ -166,11 +163,6 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 		attrs["repoRevision"] = form.RepoRevision
 	}
 	if form.HasKey("vcsId") && form.HasKey("repoId") {
-		repoAddr, er := getRepoAddr(form.VcsId, c.DB(), form.RepoId)
-		if er != nil {
-			return nil, e.New(e.DBError, fmt.Errorf("get repo failed: %v", er))
-		}
-		attrs["repoAddr"] = repoAddr
 		attrs["vcsId"] = form.VcsId
 		attrs["repoId"] = form.RepoId
 	}
