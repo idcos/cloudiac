@@ -402,10 +402,10 @@ type ResourcesGraphModule struct {
 }
 
 type ResourceInfo struct {
-	ResourceId   string `json:"resourceId" form:"resourceId" `
-	ResourceName string `json:"resourceName" form:"resourceName" `
-	NodeName     string `json:"nodeName" form:"nodeName" `
-	IsDrift      bool   `json:"isDrift"`
+	ResourceId   interface{} `json:"resourceId" form:"resourceId" `
+	ResourceName string      `json:"resourceName" form:"resourceName" `
+	NodeName     string      `json:"nodeName" form:"nodeName" `
+	IsDrift      bool        `json:"isDrift"`
 }
 
 func GetResourcesGraphModule(resources []services.Resource) interface{} {
@@ -478,6 +478,14 @@ func GetResourcesGraphModule(resources []services.Resource) interface{} {
 					ResourceId:   resource.Id.String(),
 					ResourceName: resource.Name,
 					NodeName:     addr,
+				}
+
+				if resource.Id == "" {
+					res.ResourceId = resource.DriftResourceId
+				}
+
+				if res.ResourceName == "" {
+					res.ResourceName = addr
 				}
 
 				if resource.ResourceDetail != "" {
