@@ -151,7 +151,14 @@ func (t *Task) runStep() (err error) {
 
 	containerScriptPath := filepath.Join(t.stepDirName(t.req.Step), TaskScriptName)
 	logPath := filepath.Join(t.stepDirName(t.req.Step), TaskLogName)
-	command := fmt.Sprintf("%s >>%s 2>&1", containerScriptPath, logPath)
+
+	var command string
+	if utils.StrInArray(t.req.StepType, common.TaskStepCheckout, common.TaskStepScanInit) {
+		// 移除日志中可能出现的 token 信息
+		command = fmt.Sprintf("set -o pipefail\n%s 2>&1 | sed -re 's/token:[^@]+/token:******/' >>%s", containerScriptPath, logPath)
+	} else {
+		command = fmt.Sprintf("%s >>%s 2>&1", containerScriptPath, logPath)
+	}
 
 	if ok, err := (Executor{}).IsPaused(t.req.ContainerId); err != nil {
 		return err
@@ -402,7 +409,7 @@ func (t *Task) genStepScript() (string, error) {
 }
 
 var checkoutCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-if [[ ! -e code ]]; then git clone '{{.Req.RepoAddress}}' code; fi && \
+if [[ ! -e code ]]; then git clone '{{.Req.RepoAddress}}' code || exit $?; fi && \
 cd code && \
 echo 'checkout {{.Req.RepoCommitId}}.' && \
 git checkout -q '{{.Req.RepoCommitId}}' && \
@@ -583,7 +590,7 @@ func (t *Task) stepTfScan() (command string, err error) {
 }
 
 var scanInitCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-if [[ ! -e code ]]; then git clone '{{.Req.RepoAddress}}' code; fi && \
+if [[ ! -e code ]]; then git clone '{{.Req.RepoAddress}}' code || exit $?; fi && \
 cd code && \
 echo 'checkout {{.Req.RepoCommitId}}.' && \
 git checkout -q '{{.Req.RepoCommitId}}' && \
