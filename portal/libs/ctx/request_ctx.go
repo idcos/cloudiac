@@ -185,7 +185,6 @@ func (c *GinRequest) Bind(form forms.BaseFormer) error {
 	if c.ContentType() == binding.MIMEJSON {
 		var body []byte
 		body, err = ioutil.ReadAll(c.Request.Body)
-		fmt.Println(string(body),"bodyqqqq")
 		if err != nil {
 			c.JSONError(e.New(e.IOError, err), http.StatusInternalServerError)
 			c.Abort()

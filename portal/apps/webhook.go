@@ -9,7 +9,6 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/utils/logs"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -23,8 +22,8 @@ const (
 )
 
 func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (interface{}, e.Error) {
-	fmt.Println(1111)
-	tx := c.Tx().Debug()
+
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -39,7 +38,7 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 		c.Logger().Errorf("webhook get vcs err: %s", err)
 		return nil, e.New(e.DBError, err)
 	}
-	fmt.Println(2222)
+
 	// 根据VcsId & 仓库Id查询对应的云模板
 	tplList, err := services.QueryTemplateByVcsIdAndRepoId(tx, form.VcsId, getVcsRepoId(vcs.VcsType,form))
 	if err != nil {
@@ -49,7 +48,6 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 	}
 
 	// 查询云模板对应的环境
-	fmt.Println(333333)
 	for _, tpl := range tplList {
 		envs, err := services.GetEnvByTplId(tx, tpl.Id)
 		if err != nil {
@@ -176,7 +174,6 @@ func giteaActionPrOrPush(tx *db.Session, taskType, trigger string, userId models
 	// 判断pr类型并确认动作
 	// open状态的mr进行plan计划
 	// gitea状态值与gitlab相同，这里统一使用 GitlabPrOpened
-	fmt.Println(trigger , consts.EnvTriggerPRMR , form.Action , GitlabPrOpened,"-----")
 	if trigger == consts.EnvTriggerPRMR && form.Action == GitlabPrOpened {
 		return CreateWebhookTask(tx, models.TaskTypePlan, form.PullRequest.Head.Ref, userId, env, tpl, form.PullRequest.Number)
 	}

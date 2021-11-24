@@ -305,7 +305,6 @@ func (gitea *giteaRepoIface) DeleteWebhook(id int) error {
 
 func (gitea *giteaRepoIface) CreatePrComment(prId int, comment string) error {
 	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/pulls/%d/reviews", gitea.repository.FullName, prId)
-	fmt.Println(path,"qqqq")
 	requestBody := map[string]string{
 		"body": comment,
 	}
@@ -317,7 +316,6 @@ func (gitea *giteaRepoIface) CreatePrComment(prId int, comment string) error {
 	if err != nil {
 		return e.New(e.BadRequest, err)
 	}
-	fmt.Println(string(body))
 	return nil
 }
 
