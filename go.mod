@@ -7,10 +7,10 @@ replace github.com/google/flatbuffers v1.12.0 => github.com/google/flatbuffers v
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/Shopify/sarama v1.28.0
+	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/armon/go-metrics v0.3.3 // indirect
 	github.com/casbin/casbin/v2 v2.31.9
-	github.com/casbin/gorm-adapter/v3 v3.3.2
 	github.com/containerd/containerd v1.5.5 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/docker/docker v20.10.5+incompatible
