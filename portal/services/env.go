@@ -228,6 +228,9 @@ func GetDefaultRunner() (string, e.Error) {
 	}
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list is null"))
 }
+//
+// tf变量
+// 环境变量
 
 func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id, sampleVariables []forms.SampleVariables) ([]forms.Variable, e.Error) {
 	resp := make([]forms.Variable, 0)
@@ -240,7 +243,8 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 			// 对于第三方调用api创建的环境来说，当前作用域是无变量的，sampleVariables中的变量一种是继承性下来的、另一种是新建的
 			// 这里需要判断变量如果修改了就在当前作用域创建一个变量
 			// 比较变量名是否相同，相同的变量比较变量的值是否发生变化, 发生变化则创建
-			if v.Name == value.Name || v.Name == fmt.Sprintf("TF_VAR_%s", value.Name) {
+			if (v.Name == value.Name &&  value.Type == consts.VarTypeEnv) ||
+				 (v.Name == fmt.Sprintf("TF_VAR_%s", value.Name) && value.Type == consts.VarTypeTerraform) {
 				if v.Value != value.Value {
 					resp = append(resp, forms.Variable{
 						Scope: consts.ScopeEnv,
