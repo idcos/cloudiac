@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -169,6 +170,8 @@ func (t *Task) runStep() (err error) {
 		return err
 	}
 
+	now := time.Now()
+
 	// 后台协程监控到命令结束就会暂停容器，
 	// 同时 task.Wait() 函数也会在任务结束后暂停容器，两边同时处理保证容器被暂停
 	if t.req.PauseTask {
@@ -193,8 +196,9 @@ func (t *Task) runStep() (err error) {
 		ContainerId:   t.req.ContainerId,
 		PauseOnFinish: t.req.PauseTask,
 		ExecId:        execId,
+		StartedAt:     &now,
+		Timeout:       t.req.Timeout,
 	})
-
 	stepInfoFile := filepath.Join(
 		GetTaskDir(t.req.Env.Id, t.req.TaskId, t.req.Step),
 		TaskInfoFileName,
