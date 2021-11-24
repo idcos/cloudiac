@@ -3,6 +3,7 @@
 package vcsrv
 
 import (
+	"bytes"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/models"
 	"cloudiac/utils"
@@ -18,28 +19,25 @@ import (
 
 func newGiteaInstance(vcs *models.Vcs) (VcsIface, error) {
 	vcs.Address = utils.GetUrl(vcs.Address)
-	return &giteaVcs{giteaRequest: giteaRequest, vcs: vcs}, nil
+	return &giteaVcs{vcs: vcs}, nil
 
 }
 
 type giteaVcs struct {
-	giteaRequest func(path, method, token string, requestBody []byte) (*http.Response, []byte, error)
-	vcs          *models.Vcs
+	vcs *models.Vcs
 }
 
 func (gitea *giteaVcs) GetRepo(idOrPath string) (RepoIface, error) {
 	path := gitea.vcs.Address + fmt.Sprintf("/api/v1/repositories/%s", idOrPath)
-	response, body, er := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
+	_, body, er := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)
 	}
-	defer response.Body.Close()
 	rep := Repository{}
 	_ = json.Unmarshal(body, &rep)
 	return &giteaRepoIface{
-		giteaRequest: gitea.giteaRequest,
-		vcs:          gitea.vcs,
-		repository:   &rep,
+		vcs:        gitea.vcs,
+		repository: &rep,
 	}, nil
 
 }
@@ -77,13 +75,12 @@ func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([
 		link.RawQuery = link.RawQuery + fmt.Sprintf("&q=%s", search)
 	}
 	path := gitea.vcs.Address + "/api/v1" + link.String()
-	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
+	response, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 
 	if err != nil {
 		return nil, 0, e.New(e.BadRequest, err)
 	}
 
-	defer response.Body.Close()
 	var total int64
 	if len(response.Header["X-Total-Count"]) != 0 {
 		total, _ = strconv.ParseInt(response.Header["X-Total-Count"][0], 10, 64)
@@ -95,9 +92,8 @@ func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([
 	repoList := make([]RepoIface, 0)
 	for _, v := range rep.Repos {
 		repoList = append(repoList, &giteaRepoIface{
-			giteaRequest: gitea.giteaRequest,
-			vcs:          gitea.vcs,
-			repository:   v,
+			vcs:        gitea.vcs,
+			repository: v,
 		})
 	}
 
@@ -105,9 +101,8 @@ func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([
 }
 
 type giteaRepoIface struct {
-	giteaRequest func(path, method, token string, requestBody []byte) (*http.Response, []byte, error)
-	vcs          *models.Vcs
-	repository   *Repository
+	vcs        *models.Vcs
+	repository *Repository
 }
 
 type giteaBranch struct {
@@ -118,11 +113,10 @@ func (gitea *giteaRepoIface) ListBranches() ([]string, error) {
 	path := gitea.vcs.Address + "/api/v1" +
 		fmt.Sprintf("/repos/%s/branches?limit=0&page=0", gitea.repository.FullName)
 
-	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
+	_, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
-	defer response.Body.Close()
 	rep := make([]giteaBranch, 0)
 
 	_ = json.Unmarshal(body, &rep)
@@ -139,11 +133,10 @@ type giteaTag struct {
 
 func (gitea *giteaRepoIface) ListTags() ([]string, error) {
 	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/tags", gitea.repository.FullName)
-	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
+	_, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
-	defer response.Body.Close()
 	rep := make([]giteaTag, 0)
 
 	_ = json.Unmarshal(body, &rep)
@@ -163,11 +156,10 @@ type giteaCommit struct {
 func (gitea *giteaRepoIface) BranchCommitId(branch string) (string, error) {
 	path := gitea.vcs.Address + "/api/v1" +
 		fmt.Sprintf("/repos/%s/branches/%s?limit=0&page=0", gitea.repository.FullName, branch)
-	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
+	_, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if err != nil {
 		return "", e.New(e.BadRequest, err)
 	}
-	defer response.Body.Close()
 	rep := giteaCommit{}
 	_ = json.Unmarshal(body, &rep)
 	return rep.Commit.Id, nil
@@ -191,11 +183,10 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 			fmt.Sprintf("/repos/%s/contents?limit=0&page=0&ref=%s",
 				gitea.repository.FullName, branch)
 	}
-	response, body, er := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
+	_, body, er := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if er != nil {
 		return []string{}, e.New(e.BadRequest, er)
 	}
-	defer response.Body.Close()
 	resp := make([]string, 0)
 	rep := make([]giteaFiles, 0)
 	_ = json.Unmarshal(body, &rep)
@@ -223,7 +214,7 @@ func (gitea *giteaRepoIface) ReadFileContent(branch, path string) (content []byt
 
 	pathAddr := gitea.vcs.Address + "/api/v1" +
 		fmt.Sprintf("/repos/%s/raw/%s?ref=%s", gitea.repository.FullName, path, branch)
-	response, body, er := gitea.giteaRequest(pathAddr, "GET", gitea.vcs.VcsToken, nil)
+	response, body, er := giteaRequest(pathAddr, "GET", gitea.vcs.VcsToken, nil)
 	if er != nil {
 		return []byte{}, e.New(e.BadRequest, er)
 	}
@@ -258,33 +249,38 @@ func (gitea *giteaRepoIface) DefaultBranch() string {
 func (gitea *giteaRepoIface) AddWebhook(url string) error {
 	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/hooks", gitea.repository.FullName)
 	bodys := map[string]interface{}{
-		"url": url,
+		"active": true,
+		"config": map[string]interface{}{
+			"url":          url,
+			"content_type": "json",
+		},
 		"events": []string{
-			"pull_request",
+			"pull_request_only",
 			"push",
 		},
 		"type": "gitea",
 	}
 	b, _ := json.Marshal(&bodys)
-	response, body, err := gitea.giteaRequest(path, "POST", gitea.vcs.VcsToken, b)
+	response, body, err := giteaRequest(path, http.MethodPost, gitea.vcs.VcsToken, b)
 	if err != nil {
 		return e.New(e.BadRequest, err)
 	}
-	defer response.Body.Close()
-	rep := make([]giteaTag, 0)
 
-	_ = json.Unmarshal(body, &rep)
+	if response.StatusCode >= 300 {
+		err = e.New(e.VcsError, fmt.Errorf("%s: %s", response.Status, string(body)))
+		return err
+	}
+
 	return nil
 }
 
 func (gitea *giteaRepoIface) ListWebhook() ([]ProjectsHook, error) {
 	ph := make([]ProjectsHook, 0)
 	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/hooks", gitea.repository.FullName)
-	response, body, err := gitea.giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
+	_, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
-	defer response.Body.Close()
 	rep := make([]giteaTag, 0)
 
 	_ = json.Unmarshal(body, &rep)
@@ -297,11 +293,10 @@ func (gitea *giteaRepoIface) ListWebhook() ([]ProjectsHook, error) {
 
 func (gitea *giteaRepoIface) DeleteWebhook(id int) error {
 	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/hooks/%d", gitea.repository.FullName, id)
-	response, body, err := gitea.giteaRequest(path, "DELETE", gitea.vcs.VcsToken, nil)
+	_, body, err := giteaRequest(path, "DELETE", gitea.vcs.VcsToken, nil)
 	if err != nil {
 		return e.New(e.BadRequest, err)
 	}
-	defer response.Body.Close()
 	rep := make([]giteaTag, 0)
 
 	_ = json.Unmarshal(body, &rep)
@@ -317,14 +312,10 @@ func (gitea *giteaRepoIface) CreatePrComment(prId int, comment string) error {
 	if err != nil {
 		return err
 	}
-	response, body, err := gitea.giteaRequest(path, http.MethodPost, gitea.vcs.VcsToken, b)
+	_, _, err = giteaRequest(path, http.MethodPost, gitea.vcs.VcsToken, b)
 	if err != nil {
 		return e.New(e.BadRequest, err)
 	}
-	defer response.Body.Close()
-	rep := make([]giteaTag, 0)
-
-	_ = json.Unmarshal(body, &rep)
 	return nil
 }
 
@@ -336,20 +327,24 @@ func giteaRequest(path, method, token string, requestBody []byte) (*http.Respons
 	if err != nil {
 		return nil, nil, err
 	}
-
-	request, er := http.NewRequest(method, path, nil)
+	request, er := http.NewRequest(method, path, bytes.NewBuffer(requestBody))
 	if er != nil {
 		return nil, nil, er
 	}
 	client := &http.Client{}
-	request.Header.Set("Content-Type", "multipart/form-data")
+	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Authorization", fmt.Sprintf("token %s", vcsToken))
 	//request.Body.Read()
 	response, err := client.Do(request)
+
 	if err != nil {
 		return nil, nil, err
 	}
+
+	defer response.Body.Close()
+
 	body, _ := ioutil.ReadAll(response.Body)
+
 	return response, body, nil
 
 }

@@ -31,9 +31,22 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 		}
 	}()
 
+	// 查询vcs
+	vcs, err := services.GetVcsById(tx, models.Id(form.VcsId))
+	if err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("webhook get vcs err: %s", err)
+		return nil, e.New(e.DBError, err)
+	}
+
 	// 根据VcsId & 仓库Id查询对应的云模板
-	tplList, err := services.QueryTemplateByVcsIdAndRepoId(tx, form.VcsId, strconv.Itoa(int(form.Project.Id)))
-	prId := form.ObjectAttributes.Iid
+	tplList, err := services.QueryTemplateByVcsIdAndRepoId(tx, form.VcsId, getVcsRepoId(vcs.VcsType,form))
+	if err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("webhook get tpl err: %s", err)
+		return nil, e.New(e.DBError, err)
+	}
+
 	// 查询云模板对应的环境
 	for _, tpl := range tplList {
 		envs, err := services.GetEnvByTplId(tx, tpl.Id)
@@ -45,29 +58,24 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 		}
 		for _, env := range envs {
 			for _, v := range env.Triggers {
-				var err error
+				var er error
 
-				// 比较分支
-				if env.Revision != strings.Replace(form.Ref, RefHeads, "", -1) &&
-					env.Revision != form.ObjectAttributes.TargetBranch {
+				// 判断vcs类型，不同vcs, 入参不同
+				switch vcs.VcsType {
+				case consts.GitTypeGitLab:
+					er = gitlabActionPrOrPush(tx, models.TaskTypePlan, v, c.UserId, &env, &tpl, form)
+				case consts.GitTypeGitEA:
+					er = giteaActionPrOrPush(tx, models.TaskTypePlan, v, c.UserId, &env, &tpl, form)
+				case consts.GitTypeGithub:
+					er = githubActionPrOrPush(tx, models.TaskTypePlan, v, c.UserId, &env, &tpl, form)
+				case consts.GitTypeGitee:
+					er = giteeActionPrOrPush(tx, models.TaskTypePlan, v, c.UserId, &env, &tpl, form)
+
+				}
+
+				if er != nil {
 					logs.Get().WithField("webhook", "createTask").
-						Infof("tplId: %s, envId: %s, revision don't match, env.revision: %s, %s or %s",
-							env.TplId, env.Id, env.Revision, form.ObjectAttributes.TargetBranch, form.Ref)
-					continue
-				}
-				// 判断pr类型并确认动作
-				//open状态的mr进行plan计划
-				if v == consts.EnvTriggerPRMR && form.ObjectAttributes.State == GitlabPrOpened {
-					err = CreateWebhookTask(tx, models.TaskTypePlan, c.UserId, &env, &tpl, prId)
-				}
-
-				if v == consts.EnvTriggerCommit && form.ObjectKind == GitlabObjectKindPush {
-					err = CreateWebhookTask(tx, models.TaskTypeApply, c.UserId, &env, &tpl, prId)
-				}
-
-				if err != nil {
-					logs.Get().WithField("webhook", "createTask").
-						Errorf("create task err: %v, envId: %s", err, env.Id)
+						Errorf("create task er: %v, envId: %s", er, env.Id)
 				}
 
 			}
@@ -83,7 +91,7 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 	return nil, err
 }
 
-func CreateWebhookTask(tx *db.Session, taskType string, userId models.Id, env *models.Env, tpl *models.Template, prId int) error {
+func CreateWebhookTask(tx *db.Session, taskType, revision string, userId models.Id, env *models.Env, tpl *models.Template, prId int) error {
 	// 计算变量列表
 	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
 	if er != nil {
@@ -98,6 +106,7 @@ func CreateWebhookTask(tx *db.Session, taskType string, userId models.Id, env *m
 		KeyId:       env.KeyId,
 		Variables:   vars,
 		AutoApprove: env.AutoApproval,
+		Revision:    revision,
 		BaseTask: models.BaseTask{
 			Type:        taskType,
 			RunnerId:    env.RunnerId,
@@ -110,19 +119,128 @@ func CreateWebhookTask(tx *db.Session, taskType string, userId models.Id, env *m
 		logs.Get().Errorf("error creating task, err %s", err)
 		return e.New(err.Code(), err, http.StatusInternalServerError)
 	}
-
-	// 创建pr与作业的关系
-	if err := services.CreateVcsPr(tx, models.VcsPr{
-		PrId:   prId,
-		TaskId: task.Id,
-		EnvId:  task.EnvId,
-		VcsId:  tpl.VcsId,
-	}); err != nil {
-		logs.Get().Errorf("error creating task, err %s", err)
-		return e.New(err.Code(), err, http.StatusInternalServerError)
+	if prId != 0 {
+		// 创建pr与作业的关系
+		if err := services.CreateVcsPr(tx, models.VcsPr{
+			PrId:   prId,
+			TaskId: task.Id,
+			EnvId:  task.EnvId,
+			VcsId:  tpl.VcsId,
+		}); err != nil {
+			logs.Get().Errorf("error creating task, err %s", err)
+			return e.New(err.Code(), err, http.StatusInternalServerError)
+		}
 	}
-
-	// todo 任务执行结束，回调comment，和kafka逻辑一致
 	logs.Get().Infof("create webhook task success. envId:%s, task type: %s", env.Id, taskType)
 	return nil
+}
+
+func gitlabActionPrOrPush(tx *db.Session, taskType, trigger string, userId models.Id,
+	env *models.Env, tpl *models.Template, form forms.WebhooksApiHandler) error {
+	// 比较分支
+	// 如果同时不满足push分支和pr目标分支则不做动作
+	if env.Revision != strings.Replace(form.Ref, RefHeads, "", -1) &&
+		env.Revision != form.ObjectAttributes.TargetBranch {
+		logs.Get().WithField("webhook", "createTask").
+			Infof("tplId: %s, envId: %s, revision don't match, env.revision: %s, %s or %s",
+				env.TplId, env.Id, env.Revision, form.ObjectAttributes.TargetBranch, form.Ref)
+		return nil
+	}
+	// 判断pr类型并确认动作
+	// open状态的mr进行plan计划
+	if trigger == consts.EnvTriggerPRMR && form.ObjectAttributes.State == GitlabPrOpened {
+		return CreateWebhookTask(tx, models.TaskTypePlan, form.ObjectAttributes.SourceBranch, userId, env, tpl, form.ObjectAttributes.Iid)
+	}
+	// push操作，执行apply计划
+	if trigger == consts.EnvTriggerCommit && form.ObjectKind == GitlabObjectKindPush {
+		return CreateWebhookTask(tx, models.TaskTypeApply, form.ObjectAttributes.SourceBranch, userId, env, tpl, 0)
+	}
+
+	return nil
+}
+func giteaActionPrOrPush(tx *db.Session, taskType, trigger string, userId models.Id,
+	env *models.Env, tpl *models.Template, form forms.WebhooksApiHandler) error {
+
+	// 比较分支
+	// 如果同时不满足push分支和pr目标分支则不做动作
+	if env.Revision != form.PullRequest.Base.Ref &&
+		env.Revision != strings.Replace(form.Ref, RefHeads, "", -1) {
+		logs.Get().WithField("webhook", "createTask").
+			Infof("tplId: %s, envId: %s, revision don't match, env.revision: %s, %s or %s",
+				env.TplId, env.Id, env.Revision, form.ObjectAttributes.TargetBranch, form.Ref)
+		return nil
+	}
+
+	// 判断pr类型并确认动作
+	// open状态的mr进行plan计划
+	// gitea状态值与gitlab相同，这里统一使用 GitlabPrOpened
+	if trigger == consts.EnvTriggerPRMR && form.Action == GitlabPrOpened {
+		return CreateWebhookTask(tx, models.TaskTypePlan, form.PullRequest.Head.Ref, userId, env, tpl, form.PullRequest.Number)
+	}
+	// push操作，执行apply计划
+	if trigger == consts.EnvTriggerCommit && form.Before != "" {
+		return CreateWebhookTask(tx, models.TaskTypeApply, form.Before, userId, env, tpl, 0)
+	}
+	return nil
+}
+func githubActionPrOrPush(tx *db.Session, taskType, trigger string, userId models.Id,
+	env *models.Env, tpl *models.Template, form forms.WebhooksApiHandler) error {
+	// 比较分支
+	// 如果同时不满足push分支和pr目标分支则不做动作
+	if env.Revision != strings.Replace(form.Ref, RefHeads, "", -1) &&
+		env.Revision != form.ObjectAttributes.TargetBranch {
+		logs.Get().WithField("webhook", "createTask").
+			Infof("tplId: %s, envId: %s, revision don't match, env.revision: %s, %s or %s",
+				env.TplId, env.Id, env.Revision, form.ObjectAttributes.TargetBranch, form.Ref)
+		return nil
+	}
+
+	// 判断pr类型并确认动作
+	// open状态的mr进行plan计划
+	if trigger == consts.EnvTriggerPRMR && form.ObjectAttributes.State == GitlabPrOpened {
+		return CreateWebhookTask(tx, models.TaskTypePlan, form.ObjectAttributes.SourceBranch, userId, env, tpl, form.ObjectAttributes.Iid)
+	}
+	// push操作，执行apply计划
+	if trigger == consts.EnvTriggerCommit && form.ObjectKind == GitlabObjectKindPush {
+		return CreateWebhookTask(tx, models.TaskTypeApply, form.ObjectAttributes.SourceBranch, userId, env, tpl, form.ObjectAttributes.Iid)
+	}
+	return nil
+}
+func giteeActionPrOrPush(tx *db.Session, taskType, trigger string, userId models.Id,
+	env *models.Env, tpl *models.Template, form forms.WebhooksApiHandler) error {
+	// 比较分支
+	// 如果同时不满足push分支和pr目标分支则不做动作
+	if env.Revision != strings.Replace(form.Ref, RefHeads, "", -1) &&
+		env.Revision != form.ObjectAttributes.TargetBranch {
+		logs.Get().WithField("webhook", "createTask").
+			Infof("tplId: %s, envId: %s, revision don't match, env.revision: %s, %s or %s",
+				env.TplId, env.Id, env.Revision, form.ObjectAttributes.TargetBranch, form.Ref)
+		return nil
+	}
+
+	// 判断pr类型并确认动作
+	// open状态的mr进行plan计划
+	if trigger == consts.EnvTriggerPRMR && form.ObjectAttributes.State == GitlabPrOpened {
+		return CreateWebhookTask(tx, models.TaskTypePlan, form.ObjectAttributes.SourceBranch, userId, env, tpl, form.ObjectAttributes.Iid)
+	}
+	// push操作，执行apply计划
+	if trigger == consts.EnvTriggerCommit && form.ObjectKind == GitlabObjectKindPush {
+		return CreateWebhookTask(tx, models.TaskTypeApply, form.ObjectAttributes.SourceBranch, userId, env, tpl, form.ObjectAttributes.Iid)
+	}
+	return nil
+}
+
+func getVcsRepoId (vcsType string,form forms.WebhooksApiHandler) string {
+	switch vcsType {
+	case consts.GitTypeGitLab:
+		return strconv.Itoa(int(form.Project.Id))
+	case consts.GitTypeGitEA:
+		return strconv.Itoa(form.Repository.Id)
+	case consts.GitTypeGithub:
+		return strconv.Itoa(form.Repository.Id)
+	case consts.GitTypeGitee:
+		return strconv.Itoa(form.Repository.Id)
+	default:
+		return ""
+	}
 }
