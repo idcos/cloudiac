@@ -15,6 +15,7 @@ import (
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"fmt"
+	"github.com/robfig/cron/v3"
 	"net/http"
 	"sort"
 	"strings"
@@ -22,6 +23,43 @@ import (
 
 	"github.com/lib/pq"
 )
+
+var SpecParser = cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+
+func ParseCronpress(cronDriftExpress string) (*time.Time, e.Error) {
+	expr, err := SpecParser.Parse(cronDriftExpress)
+	if err != nil {
+		return nil, e.New(e.BadParam, http.StatusBadRequest, err)
+	}
+	// 根据当前时间算出下次该环境下次执行偏移检测任务时间
+	nextTime := expr.Next(time.Now())
+	return &nextTime, nil
+}
+
+// 获取环境偏移检测任务类型
+func GetEnvCronTaskType(cronExpress string, autoRepairDrift, openCronDrift bool) (string, e.Error) {
+	if openCronDrift {
+		if cronExpress == "" {
+			return "", e.New(e.BadParam, http.StatusBadRequest, "Please set cronExpress when openCronDrift is set")
+		}
+	}
+	if autoRepairDrift {
+		if !openCronDrift || cronExpress == "" {
+			return "", e.New(e.BadParam, http.StatusBadRequest, "Please set openCronDrift to true when autoRepairDrift is set")
+		}
+	}
+	if openCronDrift {
+		if autoRepairDrift == false {
+			return models.TaskTypePlan, nil
+		} else {
+			return models.TaskTypeApply, nil
+		}
+	}
+	// 未开启漂移检测任务
+	return "", nil
+}
+
+// 解析表达式
 
 // CreateEnv 创建环境
 func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDetail, e.Error) {
@@ -90,7 +128,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		runnerId = rId
 	}
 
-	env, err := services.CreateEnv(tx, models.Env{
+	envModel := models.Env{
 		OrgId:     c.OrgId,
 		ProjectId: c.ProjectId,
 		CreatorId: c.UserId,
@@ -119,9 +157,26 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		RetryDelay:  form.RetryDelay,
 		RetryNumber: form.RetryNumber,
 
-		ExtraData: models.JSON(form.ExtraData),
-		Callback:  form.Callback,
-	})
+		ExtraData:        models.JSON(form.ExtraData),
+		Callback:         form.Callback,
+		AutoRepairDrift:  form.AutoRepairDrift,
+		CronDriftExpress: form.CronDriftExpress,
+		OpenCronDrift:    form.OpenCronDrift,
+	}
+	// 检查偏移检测参数
+	cronTaskType, err := GetEnvCronTaskType(form.CronDriftExpress, form.AutoRepairDrift, form.OpenCronDrift)
+	if err != nil {
+		return nil, err
+	}
+	// 如果定时任务存在，保存参数到表内容
+	if cronTaskType != "" {
+		nextTime, err := ParseCronpress(form.CronDriftExpress)
+		if err != nil {
+			return nil, err
+		}
+		envModel.NextStartCronTaskTime = nextTime
+	}
+	env, err := services.CreateEnv(tx, envModel)
 	if err != nil && err.Code() == e.EnvAlreadyExists {
 		_ = tx.Rollback()
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
@@ -189,6 +244,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		ExtraData: models.JSON(form.ExtraData),
 		Callback:  form.Callback,
 	})
+
 	if err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error creating task, err %s", err)
@@ -348,6 +404,30 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	}
 
 	attrs := models.Attrs{}
+	if form.HasKey("cronDriftExpress") || form.HasKey("autoRepairDrift") || form.HasKey("openCronDrift") {
+		// 检验定时任务表达式是否更新，如果更新
+		cronTaskType, err := GetEnvCronTaskType(form.CronDriftExpress, form.AutoRepairDrift, form.OpenCronDrift)
+		if err != nil {
+			return nil, err
+		}
+		if cronTaskType != "" {
+			if form.HasKey("cronDriftExpress") {
+				attrs["cronDriftExpress"] = form.CronDriftExpress
+				nextTime, err := ParseCronpress(form.CronDriftExpress)
+				if err != nil {
+					return nil, err
+				}
+				attrs["nextStartCronTaskTime"] = nextTime
+			}
+			if form.HasKey("autoRepairDrift") {
+				attrs["autoRepairDrift"] = form.AutoRepairDrift
+			}
+			if form.HasKey("openCronDrift") {
+				attrs["openCronDrift"] = form.OpenCronDrift
+			}
+		}
+	}
+
 	if form.HasKey("name") {
 		attrs["name"] = form.Name
 	}
@@ -422,7 +502,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 		}
 		vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
 		if err := vcsrv.SetWebhook(vcs, tpl.RepoId, form.Triggers); err != nil {
-			c.Logger().Errorf("set webhook err")
+			c.Logger().Errorf("set webhook err：%v", err)
 		}
 	}
 

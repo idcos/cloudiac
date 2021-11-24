@@ -7,10 +7,10 @@ replace github.com/google/flatbuffers v1.12.0 => github.com/google/flatbuffers v
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/Shopify/sarama v1.28.0
+	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/armon/go-metrics v0.3.3 // indirect
 	github.com/casbin/casbin/v2 v2.31.9
-	github.com/casbin/gorm-adapter/v3 v3.3.2
 	github.com/containerd/containerd v1.5.5 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/docker/docker v20.10.5+incompatible
@@ -22,6 +22,7 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/google/go-github v17.0.0+incompatible
+	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/consul/api v1.8.1
 	github.com/hashicorp/hcl v1.0.0
@@ -39,6 +40,7 @@ require (
 	github.com/open-policy-agent/opa v0.32.0
 	github.com/parnurzeal/gorequest v0.2.16
 	github.com/pkg/errors v0.9.1
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/xid v1.2.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
