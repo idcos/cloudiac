@@ -420,8 +420,7 @@ func GetResourcesGraphModule(resources []services.Resource) interface{} {
 
 	// 存储当前节点与父级节点的关系 父级节点id与子节点关系 {parentNodeId: [nodeId, nodeId]}
 	parentChildNode := make(map[string][]string)
-	// 当前节点与资源的关系 当前节点id与资源 {nodeid: resourceInfo}
-	nodeAttr := make(map[string]services.Resource)
+
 	// 资源列表 {nodeId: [resource1,resource2]}
 	resourceAttr := make(map[string][]ResourceInfo)
 
@@ -507,7 +506,6 @@ func GetResourcesGraphModule(resources []services.Resource) interface{} {
 			}
 			parentChildNode[parentNodeId] = append(parentChildNode[parentNodeId], nodeId)
 
-			nodeAttr[nodeId] = resource
 		}
 	}
 
@@ -534,13 +532,13 @@ func GetResourcesGraphModule(resources []services.Resource) interface{} {
 		}
 	}
 
-	getTree(rgm.Children, parentChildNode, nodeAttr, resourceAttr, nodeNameAttr)
+	getTree(rgm.Children, parentChildNode, resourceAttr, nodeNameAttr)
 
 	return rgm
 }
 
 func getTree(children []*ResourcesGraphModule, parentChildNode map[string][]string,
-	nodeAttr map[string]services.Resource, resourceAttr map[string][]ResourceInfo, nodeNameAttr map[string]string) {
+	 resourceAttr map[string][]ResourceInfo, nodeNameAttr map[string]string) {
 	for parentId, childIds := range parentChildNode {
 		newChildId := utils.RemoveDuplicateElement(childIds)
 		for _, child := range children {
@@ -560,7 +558,7 @@ func getTree(children []*ResourcesGraphModule, parentChildNode map[string][]stri
 				continue
 			}
 			// 递归处理叶子节点
-			getTree(child.Children, parentChildNode, nodeAttr, resourceAttr, nodeNameAttr)
+			getTree(child.Children, parentChildNode, resourceAttr, nodeNameAttr)
 		}
 	}
 }
