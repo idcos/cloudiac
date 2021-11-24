@@ -175,6 +175,10 @@ const (
 	VariableGroupAlreadyExist   = 31410
 	VariableGroupNotExist       = 31411
 	VariableGroupAliasDuplicate = 31412
+
+	//cron 315
+	CronExpressError = 31500
+	CronTaskFailed   = 31501
 )
 
 var errorMsgs = map[int]map[string]string{
@@ -534,5 +538,11 @@ var errorMsgs = map[int]map[string]string{
 
 	PolicyScanNotEnabled: {
 		"zh-cn": "扫描未启用",
+	},
+	CronExpressError: {
+		"zh-cn": "cron定时任务表达式错误",
+	},
+	CronTaskFailed: {
+		"zh-cn": "cron定时任务执行失败",
 	},
 }

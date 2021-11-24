@@ -5,6 +5,7 @@ package task_manager
 import (
 	"cloudiac/common"
 	"cloudiac/configs"
+	"cloudiac/portal/apps"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
@@ -18,7 +19,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 
@@ -144,13 +147,71 @@ func (m *TaskManager) start() {
 		}
 
 		m.processPendingTask(ctx)
-
+		// 执行所有偏移检测任务
+		m.beginCronDriftTask()
 		select {
 		case <-ticker.C:
 			continue
 		case <-ctx.Done():
 			m.logger.Infof("context done: %v", ctx.Err())
 			return
+		}
+	}
+}
+
+// 开始所有漂移检测任务
+func (m *TaskManager) beginCronDriftTask() {
+	logger := m.logger
+	cronDriftEnvs := make([]*models.Env, 0)
+	query := m.db.Where("status = ? and open_cron_drift = ? and next_start_cron_task_time <= ?", models.EnvStatusActive, true, time.Now())
+	if err := query.Model(&models.Env{}).Find(&cronDriftEnvs); err != nil {
+		logger.Error(err)
+		return
+	}
+	// 查询出来所有需要开启偏移检测的环境任务，并且创建
+	for _, env := range cronDriftEnvs {
+		task, err := services.GetTaskById(m.db, env.LastTaskId)
+		if err != nil {
+			logger.Errorf("create cronDriftTask failed, error: %v", err)
+			continue
+		}
+		// 先查询这个环境有没有排队中的偏移检测任务了, 有就不创建了
+		existCronPengdingTask, err := services.ListPendingCronTask(m.db, env.Id)
+		if err != nil {
+			logger.Errorf("create cronDriftTask failed, error: %v", err)
+			continue
+		}
+		// 如果查询出来有排队或执行中的漂移检测任务，则本次跳过
+		if existCronPengdingTask {
+			continue
+		}
+		// 这里每次都去解析env表保存的最新的cron 表达式
+		envCronTaskType, err := apps.GetEnvCronTaskType(env.CronDriftExpress, env.AutoRepairDrift, env.OpenCronDrift)
+		if err != nil {
+			logger.Errorf("create cronDriftTask failed, error: %v", err)
+			continue
+		}
+		if envCronTaskType != "" {
+			attrs := models.Attrs{}
+			nextTime, err := apps.ParseCronpress(env.CronDriftExpress)
+			if err != nil {
+				logger.Errorf("create cronDriftTask failed, error: %v", err)
+				continue
+			}
+			task.Type = envCronTaskType
+			task.IsDriftTask = true
+			task, err = services.CloneTask(m.db, *task, env)
+			if err != nil {
+				logger.Errorf("create cronDriftTask failed, error: %v", err)
+				continue
+			}
+			attrs["nextStartCronTaskTime"] = nextTime
+			attrs["lastCronTaskId"] = task.IsDriftTask
+			_, err = services.UpdateEnv(m.db, env.Id, attrs)
+			if err != nil {
+				logger.Errorf("create cronDriftTask failed, error: %v", err)
+				continue
+			}
 		}
 	}
 }
@@ -632,6 +693,26 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 				if err := processPlan(); err != nil {
 					logger.Errorf("process task plan: %v", err)
 				}
+			}
+
+		}
+		if lastStep.Status == models.TaskComplete && task.IsDriftTask {
+
+			// 判断是否是偏移检测任务，如果是，解析log文件并写入表
+			if task.IsDriftTask {
+				step, err := services.GetTaskPlanStep(db.Get(), task.Id)
+				if err != nil {
+					// 解析失败任务不停止不影响主流程
+					logger.Errorf("read plan output log: %v", err)
+				} else {
+					if bs, err := readIfExist(task.TFPlanOutputLogPath(fmt.Sprintf("step%d", step.Index))); err != nil {
+						logger.Errorf("read plan output log: %v", err)
+					} else {
+						// 保存偏移检测任务信息到数据表中
+						InsertCronDriftTaskInfo(dbSess, bs, task)
+					}
+				}
+
 			}
 		}
 
@@ -1272,4 +1353,36 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 
 	req.SysEnvironments = sysEnvs
 	return nil
+}
+
+func InsertCronDriftTaskInfo(db *db.Session, bs []byte, task *models.Task) {
+	content := strings.Split(string(bs), "\n")
+	for k, v := range content {
+		if strings.Contains(v, "#") && strings.Contains(v, "must be") || strings.Contains(v, "will be") {
+			var resourceDetail string
+			nowTime := models.Time(time.Now())
+			cronTaskInfo := models.ResourceDrift{
+				EnvId:    task.EnvId,
+				CreateAt: &nowTime,
+				TaskId:   task.Id,
+			}
+			reg1 := regexp.MustCompile(`#\s\S*`)
+			result1 := reg1.FindAllStringSubmatch(v, 1)
+			cronTaskInfo.Address = strings.TrimSpace(result1[0][0][1:])
+			for k1, v2 := range content[k+1:] {
+				if strings.Contains(v2, "#") && strings.Contains(v2, "must be") || strings.Contains(v2, "will be") {
+					resourceDetail = strings.Join(content[k+1:k1+k], "")
+					cronTaskInfo.ResourceDetail = resourceDetail
+					break
+				} else if strings.Contains(v2, "Plan:") {
+					resourceDetail = strings.Join(content[k+1:k1+k], "")
+					cronTaskInfo.ResourceDetail = resourceDetail
+					break
+				}
+			}
+			services.InsertCronTaskInfo(db, cronTaskInfo)
+
+		}
+
+	}
 }

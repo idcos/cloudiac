@@ -354,21 +354,15 @@ func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (inte
 		RepoType:     form.RepoType,
 		VcsId:        form.VcsId,
 		TplChecks:    true,
-		Path:         form.Path,
+		Path:         form.Workdir,
 	}
 	results, err := VcsFileSearch(c, searchForm)
 	if err != nil {
-		return TemplateChecksResp{
-			CheckResult: consts.TplTfCheckFailed,
-			Reason:      err.Error(),
-		}, nil
+		return nil, e.New(e.BadParam, err)
 	}
 
 	if len(results.([]string)) == 0 {
-		return TemplateChecksResp{
-			CheckResult: consts.TplTfCheckFailed,
-			Reason:      "There is no file ending in. TF in the working directory",
-		}, nil
+		return nil, e.New(e.BadParam, err)
 	}
 	return TemplateChecksResp{
 		CheckResult: consts.TplTfCheckSuccess,

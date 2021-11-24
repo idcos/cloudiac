@@ -118,6 +118,10 @@ func QueryActiveEnv(query *db.Session) *db.Session {
 	return query.Model(&models.Env{}).Where("status != ? OR deploying = ?", models.EnvStatusInactive, true)
 }
 
+func QueryDeploySucessEnv(query *db.Session) *db.Session {
+	return query.Model(&models.Env{}).Where("status = ?", models.EnvStatusActive)
+}
+
 func QueryEnv(query *db.Session) *db.Session {
 	return query.Model(&models.Env{})
 }

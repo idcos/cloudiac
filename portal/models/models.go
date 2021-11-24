@@ -234,6 +234,7 @@ func Init(migrate bool) {
 	autoMigrate(&PolicySuppress{}, sess)
 	autoMigrate(&VariableGroup{}, sess)
 	autoMigrate(&VariableGroupRel{}, sess)
+	autoMigrate(&ResourceDrift{}, sess)
 
 	dbMigrate(sess)
 }
