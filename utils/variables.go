@@ -14,6 +14,7 @@ const (
 // 为加密字符串添加前缀标识
 func EncodeSecretVar(value string, isSecret bool) string {
 	if isSecret {
+		fmt.Println(2222)
 		return fmt.Sprintf("%s%s", SecretValuePrefix, value)
 	}
 	return value
@@ -40,6 +41,7 @@ func DecryptSecretVar(value string) (string, error) {
 func EncryptSecretVar(value string) (string, error) {
 	var err error
 	if value, err = AesEncrypt(value); err != nil {
+		fmt.Println(err, "1111")
 		return "", err
 	}
 	return EncodeSecretVar(value, true), nil

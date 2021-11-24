@@ -257,10 +257,13 @@ func CheckRespCode(respCode int, code int) bool {
 }
 
 func AesEncrypt(plaintext string) (string, error) {
+	fmt.Println(configs.Get().SecretKey, "configs.Get().SecretKey")
 	return AesEncryptWithKey(plaintext, configs.Get().SecretKey)
 }
 
 func AesEncryptWithKey(plaintext string, key string) (string, error) {
+	fmt.Println(plaintext)
+	fmt.Println(key)
 	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
 		return "", err

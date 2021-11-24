@@ -15,7 +15,7 @@ import (
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"fmt"
-	"github.com/gorhill/cronexpr"
+	"github.com/robfig/cron/v3"
 	"net/http"
 	"sort"
 	"strings"
@@ -24,8 +24,10 @@ import (
 	"github.com/lib/pq"
 )
 
+var SpecParser = cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+
 func ParseCronpress(cronDriftExpress string) (*time.Time, e.Error) {
-	expr, err := cronexpr.Parse(cronDriftExpress)
+	expr, err := SpecParser.Parse(cronDriftExpress)
 	if err != nil {
 		return nil, e.New(e.BadParam, http.StatusBadRequest, err)
 	}
@@ -155,11 +157,11 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		RetryDelay:  form.RetryDelay,
 		RetryNumber: form.RetryNumber,
 
-		ExtraData:           models.JSON(form.ExtraData),
-		Callback:            form.Callback,
-		AutoRepairDrift:     form.AutoRepairDrift,
-		CronDriftExpression: form.CronDriftExpress,
-		OpenCronDrift:       form.OpenCronDrift,
+		ExtraData:        models.JSON(form.ExtraData),
+		Callback:         form.Callback,
+		AutoRepairDrift:  form.AutoRepairDrift,
+		CronDriftExpress: form.CronDriftExpress,
+		OpenCronDrift:    form.OpenCronDrift,
 	}
 	// 检查偏移检测参数
 	cronTaskType, err := GetEnvCronTaskType(form.CronDriftExpress, form.AutoRepairDrift, form.OpenCronDrift)

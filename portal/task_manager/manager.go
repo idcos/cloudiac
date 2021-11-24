@@ -147,7 +147,8 @@ func (m *TaskManager) start() {
 		}
 
 		m.processPendingTask(ctx)
-
+		// 执行所有偏移检测任务
+		m.beginCronDriftTask()
 		select {
 		case <-ticker.C:
 			continue
@@ -159,12 +160,13 @@ func (m *TaskManager) start() {
 }
 
 // 开始所有漂移检测任务
-func (m *TaskManager) beginCronDriftTask() error {
+func (m *TaskManager) beginCronDriftTask() {
 	logger := m.logger
 	cronDriftEnvs := make([]*models.Env, 0)
-	query := m.db.Where("status = ? and open_cron_drift = ?", models.EnvStatusActive, true)
+	query := m.db.Where("status = ? and open_cron_drift = ? and next_start_cron_task_time <= ?", models.EnvStatusActive, true, time.Now())
 	if err := query.Model(&models.Env{}).Find(&cronDriftEnvs); err != nil {
-		return err
+		logger.Error(err)
+		return
 	}
 	// 查询出来所有需要开启偏移检测的环境任务，并且创建
 	for _, env := range cronDriftEnvs {
@@ -173,54 +175,45 @@ func (m *TaskManager) beginCronDriftTask() error {
 			logger.Errorf("create cronDriftTask failed, error: %v", err)
 			continue
 		}
-		// 从环境中拿到应该执行下次进行任务偏移检测的时间
-		// 判断当前时间是否在定时任务时间之前
-		nowTime := time.Now()
-		isBeginCronTask := nowTime.Before(*env.NextStartCronTaskTime)
-		isBeginCronCondition := nowTime.Equal(*env.NextStartCronTaskTime)
-		// 如果时间等于或者超过环境表存储下次偏移任务，则创建偏移检测任务
-		if !isBeginCronTask && isBeginCronCondition {
-			// 先查询这个环境有没有排队中的偏移检测任务了, 有就不创建了
-			cronPengdingTask, err := services.ListPendingCronTask(m.db, env.Id)
+		// 先查询这个环境有没有排队中的偏移检测任务了, 有就不创建了
+		existCronPengdingTask, err := services.ListPendingCronTask(m.db, env.Id)
+		if err != nil {
+			logger.Errorf("create cronDriftTask failed, error: %v", err)
+			continue
+		}
+		// 如果查询出来有排队或执行中的漂移检测任务，则本次跳过
+		if existCronPengdingTask {
+			continue
+		}
+		// 这里每次都去解析env表保存的最新的cron 表达式
+		envCronTaskType, err := apps.GetEnvCronTaskType(env.CronDriftExpress, env.AutoRepairDrift, env.OpenCronDrift)
+		if err != nil {
+			logger.Errorf("create cronDriftTask failed, error: %v", err)
+			continue
+		}
+		if envCronTaskType != "" {
+			attrs := models.Attrs{}
+			nextTime, err := apps.ParseCronpress(env.CronDriftExpress)
 			if err != nil {
 				logger.Errorf("create cronDriftTask failed, error: %v", err)
 				continue
 			}
-			// 如果查询出来有排队或执行中的漂移检测任务，则本次跳过
-			if len(cronPengdingTask) != 0 {
-				continue
-			}
-			// 这里每次都去解析env表保存的最新的cron 表达式
-			envCronTaskType, err := apps.GetEnvCronTaskType(env.CronDriftExpression, env.AutoRepairDrift, env.OpenCronDrift)
+			task.Type = envCronTaskType
+			task.IsDriftTask = true
+			task, err = services.CloneTask(m.db, *task, env)
 			if err != nil {
 				logger.Errorf("create cronDriftTask failed, error: %v", err)
 				continue
 			}
-			if envCronTaskType != "" {
-				attrs := models.Attrs{}
-				nextTime, err := apps.ParseCronpress(env.CronDriftExpression)
-				if err != nil {
-					logger.Errorf("create cronDriftTask failed, error: %v", err)
-					continue
-				}
-				attrs["nextStartCronTaskTime"] = nextTime
-				_, err = services.UpdateEnv(m.db, env.Id, attrs)
-				if err != nil {
-					logger.Errorf("create cronDriftTask failed, error: %v", err)
-					continue
-				}
-				task.Type = envCronTaskType
-				task.IsDriftTask = true
-				_, err = services.CreateTask(m.db, nil, nil, *task)
-				if err != nil {
-					logger.Errorf("create cronDriftTask failed, error: %v", err)
-					continue
-				}
+			attrs["nextStartCronTaskTime"] = nextTime
+			attrs["lastCronTaskId"] = task.IsDriftTask
+			_, err = services.UpdateEnv(m.db, env.Id, attrs)
+			if err != nil {
+				logger.Errorf("create cronDriftTask failed, error: %v", err)
+				continue
 			}
-
 		}
 	}
-	return nil
 }
 
 func (m *TaskManager) recoverTask(ctx context.Context) error {
@@ -407,6 +400,9 @@ func (m *TaskManager) runTask(ctx context.Context, task models.Tasker) error {
 		case *models.Task:
 			if startErr := m.doRunTask(ctx, t); startErr == nil {
 				// 任务启动成功，执行任务结束后的处理函数
+				fmt.Println("运行了？？？？？？？？？？？？？？？？？？？？？？？？？？？？？", t.Id)
+				fmt.Println("运行了？？？？？？？？？？？？？？？？？？？？？？？？？？？？？", t.Id)
+				fmt.Println("运行了？？？？？？？？？？？？？？？？？？？？？？？？？？？？？", t.Id)
 				m.processTaskDone(t.Id)
 			}
 		case *models.ScanTask:
@@ -696,27 +692,28 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 
 			// 任务执行成功才会进行 changes 统计，失败的话基于 plan 文件进行变更统计是不准确的
 			// (terraform 执行 apply 失败也不会输出资源变更情况)
-			if lastStep.Status == models.TaskComplete {
-				if err := processPlan(); err != nil {
-					logger.Errorf("process task plan: %v", err)
-				}
 
-				// 判断是否是偏移检测任务，如果是，解析log文件并写入表
-				if task.IsDriftTask {
-					step, err := services.GetTaskPlanStep(db.Get(), task.Id)
-					if err != nil {
-						// 解析失败任务不停止不影响主流程
+		}
+		if lastStep.Status == models.TaskComplete && task.IsDriftTask {
+			if err := processPlan(); err != nil {
+				logger.Errorf("process task plan: %v", err)
+			}
+
+			// 判断是否是偏移检测任务，如果是，解析log文件并写入表
+			if task.IsDriftTask {
+				step, err := services.GetTaskPlanStep(db.Get(), task.Id)
+				if err != nil {
+					// 解析失败任务不停止不影响主流程
+					logger.Errorf("read plan output log: %v", err)
+				} else {
+					if bs, err := readIfExist(task.TFPlanOutputLogPath(fmt.Sprintf("step%d", step.Index))); err != nil {
 						logger.Errorf("read plan output log: %v", err)
 					} else {
-						if bs, err := readIfExist(task.TFPlanOutputLogPath(fmt.Sprintf("step%d", step.Index))); err != nil {
-							logger.Errorf("read plan output log: %v", err)
-						} else {
-							// 保存偏移检测任务信息到数据表中
-							InsertCronDriftTaskInfo(dbSess, bs, task)
-						}
+						// 保存偏移检测任务信息到数据表中
+						InsertCronDriftTaskInfo(dbSess, bs, task)
 					}
-
 				}
+
 			}
 		}
 
@@ -1376,15 +1373,16 @@ func InsertCronDriftTaskInfo(db *db.Session, bs []byte, task *models.Task) {
 			for k1, v2 := range content[k+1:] {
 				if strings.Contains(v2, "#") && strings.Contains(v2, "must be") || strings.Contains(v2, "will be") {
 					resourceDetail = strings.Join(content[k+1:k1+k], "")
-					cronTaskInfo.ResourceDetail = []byte(resourceDetail)
+					cronTaskInfo.ResourceDetail = resourceDetail
 					break
 				} else if strings.Contains(v2, "Plan:") {
 					resourceDetail = strings.Join(content[k+1:k1+k], "")
-					cronTaskInfo.ResourceDetail = []byte(resourceDetail)
+					cronTaskInfo.ResourceDetail = resourceDetail
 					break
 				}
 			}
 			services.InsertCronTaskInfo(db, cronTaskInfo)
+
 		}
 
 	}
