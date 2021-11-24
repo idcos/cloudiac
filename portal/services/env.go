@@ -10,7 +10,6 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/utils/logs"
 	"fmt"
-	"strings"
 	"time"
 )
 
@@ -229,6 +228,9 @@ func GetDefaultRunner() (string, e.Error) {
 	}
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list is null"))
 }
+//
+// tf变量
+// 环境变量
 
 func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id, sampleVariables []forms.SampleVariables) ([]forms.Variable, e.Error) {
 	resp := make([]forms.Variable, 0)
@@ -237,32 +239,29 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 		return nil, e.New(e.DBError, fmt.Errorf("get vairables error: %v", err))
 	}
 	for _, v := range sampleVariables {
-		isNew := true
 		for key, value := range vars {
-			//
-			if v.Name == fmt.Sprintf("TF_VAR_%s", value.Name) {
+			// 对于第三方调用api创建的环境来说，当前作用域是无变量的，sampleVariables中的变量一种是继承性下来的、另一种是新建的
+			// 这里需要判断变量如果修改了就在当前作用域创建一个变量
+			// 比较变量名是否相同，相同的变量比较变量的值是否发生变化, 发生变化则创建
+			if (v.Name == value.Name &&  value.Type == consts.VarTypeEnv) ||
+				 (v.Name == fmt.Sprintf("TF_VAR_%s", value.Name) && value.Type == consts.VarTypeTerraform) {
+				if v.Value != value.Value {
+					resp = append(resp, forms.Variable{
+						Scope: consts.ScopeEnv,
+						Type:  vars[key].Type,
+						Name:  vars[key].Name,
+						Value: v.Value,
+					})
+				}
+			} else {
+				// 这部分变量不是继承来的 需要新建
 				resp = append(resp, forms.Variable{
-					Id:    vars[key].Id,
-					Scope: vars[key].Scope,
-					Type:  vars[key].Type,
+					Scope: consts.ScopeEnv,
+					Type:  consts.VarTypeEnv,
 					Name:  vars[key].Name,
 					Value: v.Value,
 				})
-				continue
 			}
-			// 比较变量名
-			if value.Name == v.Name || strings.HasPrefix(v.Name, "TF_VAR_") {
-				isNew = false
-			}
-		}
-		// 对不在变量列表的变量进行新建
-		if isNew {
-			resp = append(resp, forms.Variable{
-				Scope: consts.ScopeEnv,
-				Type:  consts.VarTypeEnv,
-				Name:  v.Name,
-				Value: v.Value,
-			})
 		}
 	}
 
