@@ -3,6 +3,7 @@
 package configs
 
 import (
+	"crypto/md5"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -175,12 +176,11 @@ func ParsePortalConfig(filename string) error {
 		panic("missing secret key config")
 	}
 	// 如果 SecretKey 不是 32 位字符则使用 md5 转为 32 位
-	//if len(cfg.SecretKey) != 32 {
-	//	cfg.SecretKey = fmt.Sprintf("%x", md5.New().Sum([]byte(cfg.SecretKey)))
-	//	fmt.Println(cfg.SecretKey ,"$$$$$$$", len(cfg.SecretKey))
-	//}
-	// TODO
-	cfg.SecretKey = "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
+	if len(cfg.SecretKey) != 32 {
+		cfg.SecretKey = fmt.Sprintf("%x", md5.New().Sum([]byte(cfg.SecretKey)))
+		fmt.Println(cfg.SecretKey ,"$$$$$$$", len(cfg.SecretKey))
+	}
+
 	if cfg.JwtSecretKey == "" {
 		cfg.JwtSecretKey = cfg.SecretKey
 	}
