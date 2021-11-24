@@ -1103,7 +1103,7 @@ func SendVcsComment(session *db.Session, task *models.Task, taskStatus string) {
 
 	logContent, er := logstorage.Get().Read(taskStep.LogPath)
 	if er != nil {
-		logs.Get().Errorf("vcs comment err, get task plan log err: %v", err)
+		logs.Get().Errorf("vcs comment err, get task plan log err: %v", er)
 		return
 	}
 

@@ -288,6 +288,7 @@ func (github *githubRepoIface) AddWebhook(url string) error {
 			"push",
 		},
 		"type": "gitea",
+		"active": true,
 	}
 	b, _ := json.Marshal(&bodys)
 	response, respBody, err := githubRequest(path, "POST", github.vcs.VcsToken, b)

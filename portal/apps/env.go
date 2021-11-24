@@ -422,7 +422,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 		}
 		vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
 		if err := vcsrv.SetWebhook(vcs, tpl.RepoId, form.Triggers); err != nil {
-			c.Logger().Errorf("set webhook err")
+			c.Logger().Errorf("set webhook err：%v", err)
 		}
 	}
 
@@ -688,8 +688,8 @@ func SearchEnvResources(c *ctx.ServiceContext, form *forms.SearchEnvResourceForm
 
 	return SearchTaskResources(c, &forms.SearchTaskResourceForm{
 		NoPageSizeForm: form.NoPageSizeForm,
-		Id:               env.LastResTaskId,
-		Q:                form.Q,
+		Id:             env.LastResTaskId,
+		Q:              form.Q,
 	})
 }
 

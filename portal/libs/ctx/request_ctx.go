@@ -179,12 +179,13 @@ func (c *GinRequest) Bind(form forms.BaseFormer) error {
 		return err
 	}
 
-	bound := true // 己执行过 bound?
+	bound := false // 己执行过 bound?
 	// ShouldBind() 不支持 HTTP GET 请求通过 body json 传参，
 	// 所以我们针对 json 类型的 content-type 做特殊处理
 	if c.ContentType() == binding.MIMEJSON {
 		var body []byte
 		body, err = ioutil.ReadAll(c.Request.Body)
+		fmt.Println(string(body),"bodyqqqq")
 		if err != nil {
 			c.JSONError(e.New(e.IOError, err), http.StatusInternalServerError)
 			c.Abort()

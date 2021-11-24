@@ -12,6 +12,9 @@ type WebhooksApiHandler struct {
 	ObjectAttributes ObjectAttributes `json:"object_attributes"` // 返回值信息
 	User             User             `json:"user"`              // 用户信息
 	PullRequest      PullRequest      `json:"pull_request"`      //gitea
+	Action           string           `json:"action"`            // gitea pr状态，示例：open
+	Before           string           `json:"before"`            //gitea push时回调的commitid
+	Repository       Repository       `json:"repository"`        //gitea pr回调仓库信息
 }
 
 type Project struct {
@@ -32,8 +35,10 @@ type User struct {
 
 //PullRequest gitea
 type PullRequest struct {
-	Base Base `json:"base"`
-	Head Head `json:"head"`
+	Id     int  `json:"id"`
+	Base   Base `json:"base"`
+	Head   Head `json:"head"`
+	Number int  `json:"number"`
 }
 
 //Base gitea
@@ -44,4 +49,8 @@ type Base struct {
 //Head gitea
 type Head struct {
 	Ref string `json:"ref"`
+}
+
+type Repository struct {
+	Id int `json:"id"`
 }

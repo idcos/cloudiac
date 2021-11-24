@@ -3,6 +3,7 @@
 package vcsrv
 
 import (
+	"bytes"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/models"
 	"cloudiac/utils"
@@ -23,7 +24,7 @@ func newGiteaInstance(vcs *models.Vcs) (VcsIface, error) {
 }
 
 type giteaVcs struct {
-	vcs          *models.Vcs
+	vcs *models.Vcs
 }
 
 func (gitea *giteaVcs) GetRepo(idOrPath string) (RepoIface, error) {
@@ -35,8 +36,8 @@ func (gitea *giteaVcs) GetRepo(idOrPath string) (RepoIface, error) {
 	rep := Repository{}
 	_ = json.Unmarshal(body, &rep)
 	return &giteaRepoIface{
-		vcs:          gitea.vcs,
-		repository:   &rep,
+		vcs:        gitea.vcs,
+		repository: &rep,
 	}, nil
 
 }
@@ -91,8 +92,8 @@ func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([
 	repoList := make([]RepoIface, 0)
 	for _, v := range rep.Repos {
 		repoList = append(repoList, &giteaRepoIface{
-			vcs:          gitea.vcs,
-			repository:   v,
+			vcs:        gitea.vcs,
+			repository: v,
 		})
 	}
 
@@ -100,8 +101,8 @@ func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([
 }
 
 type giteaRepoIface struct {
-	vcs          *models.Vcs
-	repository   *Repository
+	vcs        *models.Vcs
+	repository *Repository
 }
 
 type giteaBranch struct {
@@ -248,6 +249,7 @@ func (gitea *giteaRepoIface) DefaultBranch() string {
 func (gitea *giteaRepoIface) AddWebhook(url string) error {
 	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/hooks", gitea.repository.FullName)
 	bodys := map[string]interface{}{
+		"active": true,
 		"config": map[string]interface{}{
 			"url":          url,
 			"content_type": "json",
@@ -259,15 +261,14 @@ func (gitea *giteaRepoIface) AddWebhook(url string) error {
 		"type": "gitea",
 	}
 	b, _ := json.Marshal(&bodys)
-	response, body, err := giteaRequest(path, "POST", gitea.vcs.VcsToken, b)
+	response, body, err := giteaRequest(path, http.MethodPost, gitea.vcs.VcsToken, b)
 	if err != nil {
 		return e.New(e.BadRequest, err)
 	}
 
-
 	if response.StatusCode >= 300 {
 		err = e.New(e.VcsError, fmt.Errorf("%s: %s", response.Status, string(body)))
-		return  err
+		return err
 	}
 
 	return nil
@@ -304,6 +305,7 @@ func (gitea *giteaRepoIface) DeleteWebhook(id int) error {
 
 func (gitea *giteaRepoIface) CreatePrComment(prId int, comment string) error {
 	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/pulls/%d/reviews", gitea.repository.FullName, prId)
+	fmt.Println(path,"qqqq")
 	requestBody := map[string]string{
 		"body": comment,
 	}
@@ -315,9 +317,7 @@ func (gitea *giteaRepoIface) CreatePrComment(prId int, comment string) error {
 	if err != nil {
 		return e.New(e.BadRequest, err)
 	}
-	rep := make([]giteaTag, 0)
-
-	_ = json.Unmarshal(body, &rep)
+	fmt.Println(string(body))
 	return nil
 }
 
@@ -329,13 +329,12 @@ func giteaRequest(path, method, token string, requestBody []byte) (*http.Respons
 	if err != nil {
 		return nil, nil, err
 	}
-
-	request, er := http.NewRequest(method, path, nil)
+	request, er := http.NewRequest(method, path, bytes.NewBuffer(requestBody))
 	if er != nil {
 		return nil, nil, er
 	}
 	client := &http.Client{}
-	request.Header.Set("Content-Type", "multipart/form-data")
+	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Authorization", fmt.Sprintf("token %s", vcsToken))
 	//request.Body.Read()
 	response, err := client.Do(request)
