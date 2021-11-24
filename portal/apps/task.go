@@ -528,7 +528,7 @@ func GetResourcesGraphModule(resources []services.Resource) interface{} {
 			Children: make([]*ResourcesGraphModule, 0),
 		}
 		rgm.Children = append(rgm.Children, resourcesGraphModule)
-		// 二级节点有可能是末级节点
+		// 二级节点有可能是末级节点，需要把资源列表放进去
 		if _, ok := resourceAttr[v]; ok {
 			resourcesGraphModule.ResourcesList = resourceAttr[v]
 		}
