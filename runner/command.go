@@ -24,6 +24,7 @@ import (
 // Task Executor
 type Executor struct {
 	Image      string
+	Name       string
 	Env        []string
 	Timeout    int
 	PrivateKey string
@@ -164,7 +165,7 @@ func (exec *Executor) Start() (string, error) {
 		},
 		nil,
 		nil,
-		"")
+		exec.Name)
 	if err != nil {
 		logger.Errorf("create container err: %v", err)
 		return "", err

@@ -71,6 +71,7 @@ func (t *Task) start() (cid string, err error) {
 	conf := configs.Get().Runner
 	cmd := Executor{
 		Image:       conf.DefaultImage,
+		Name:        t.req.TaskId,
 		Timeout:     t.req.Timeout,
 		Workdir:     ContainerWorkspace,
 		HostWorkdir: t.workspace,

@@ -11,11 +11,10 @@ import (
 	"cloudiac/portal/services"
 	"cloudiac/utils"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
-	"path"
-	"strings"
+
+	"gopkg.in/yaml.v2"
 )
 
 type Organization struct {
@@ -133,11 +132,6 @@ func (p *InitDemo) Execute(args []string) error {
 		panic(fmt.Errorf("missing default vcs, err %s", er))
 	}
 	fmt.Printf("default_vcs_id = %s\n", vcs.Id)
-	// 默认仓库为本地仓库，获取本地仓库 vcs 地址
-	address := fmt.Sprintf("%s/%s",
-		strings.Trim(configs.Get().Portal.Address, "/"),
-		strings.Trim(path.Join(consts.ReposUrlPrefix, data.Organization.Template.RepoId), "/"))
-	fmt.Printf("default_vcs_address = %s\n", address)
 
 	// 创建密钥
 	content, er := ioutil.ReadFile(data.Organization.Key.KeyFile)
@@ -183,7 +177,6 @@ func (p *InitDemo) Execute(args []string) error {
 		VcsId:        vcs.Id,
 		RepoId:       data.Organization.Template.RepoId,
 		RepoRevision: data.Organization.Template.Revision,
-		RepoAddr:     address,
 		TfVarsFile:   data.Organization.Template.TfVarsFile,
 		Playbook:     data.Organization.Template.Playbook,
 		Workdir:      data.Organization.Template.Workdir,
