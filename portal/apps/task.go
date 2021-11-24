@@ -368,7 +368,7 @@ func SearchTaskResourcesGraph(c *ctx.ServiceContext, form *forms.SearchTaskResou
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
-	rs, err := services.GetTaskResourceToTaskId(c.DB(), task)
+	rs, err := services.GetTaskResourceToTaskId(c.DB().Debug(), task)
 	if err != nil {
 		return nil, err
 	}
@@ -521,12 +521,17 @@ func GetResourcesGraphModule(resources []services.Resource) interface{} {
 	newChildId := utils.RemoveDuplicateElement(parentChildNode[rgm.NodeId])
 	// 构造二级节点
 	for _, v := range newChildId {
-		rgm.Children = append(rgm.Children, &ResourcesGraphModule{
+		resourcesGraphModule := &ResourcesGraphModule{
 			NodeId:   v,
 			IsRoot:   false,
 			NodeName: nodeNameAttr[v],
 			Children: make([]*ResourcesGraphModule, 0),
-		})
+		}
+		rgm.Children = append(rgm.Children, resourcesGraphModule)
+		// 二级节点有可能是末级节点
+		if _, ok := resourceAttr[v]; ok {
+			resourcesGraphModule.ResourcesList = resourceAttr[v]
+		}
 	}
 
 	getTree(rgm.Children, parentChildNode, nodeAttr, resourceAttr, nodeNameAttr)
