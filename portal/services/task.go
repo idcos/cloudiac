@@ -1076,10 +1076,17 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 	logs.Get().Infof("kafka send massage successful. data: %s", string(message))
 }
 
-func GetTaskResourceToTaskId(dbSess *db.Session, task *models.Task) ([]models.Resource, e.Error) {
-	rs := make([]models.Resource, 0)
-	if err := dbSess.Model(models.Resource{}).Where("org_id = ? AND project_id = ? AND env_id = ? AND task_id = ?",
-		task.OrgId, task.ProjectId, task.EnvId, task.Id).Order("provider, type, name").Find(&rs); err != nil {
+type Resource struct {
+	models.Resource
+	ResourceDetail string       `json:"resourceDetail"`
+	CreateAt       *models.Time `json:"createAt"`
+}
+
+func GetTaskResourceToTaskId(dbSess *db.Session, task *models.Task) ([]Resource, e.Error) {
+	rs := make([]Resource, 0)
+	if err := QueryResource(dbSess, task).
+		LazySelectAppend("r.*, rd.resource_detail").
+		Find(&rs); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 	return rs, nil
@@ -1129,4 +1136,11 @@ func SendVcsComment(session *db.Session, task *models.Task, taskStatus string) {
 		logs.Get().Errorf("vcs comment err, create comment err: %v", err)
 		return
 	}
+}
+
+func QueryResource(dbSess *db.Session, task *models.Task) *db.Session {
+	return dbSess.Debug().Table("iac_resource as r").
+		Joins("left join iac_resource_drift as rd on rd.address =  r.address  and rd.env_id = ? AND rd.task_id = ?", task.EnvId, task.Id).
+		Where("r.org_id = ? AND r.project_id = ? AND r.env_id = ? AND r.task_id = ?",
+			task.OrgId, task.ProjectId, task.EnvId, task.Id)
 }

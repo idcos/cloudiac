@@ -688,8 +688,8 @@ func SearchEnvResources(c *ctx.ServiceContext, form *forms.SearchEnvResourceForm
 
 	return SearchTaskResources(c, &forms.SearchTaskResourceForm{
 		NoPageSizeForm: form.NoPageSizeForm,
-		Id:               env.LastResTaskId,
-		Q:                form.Q,
+		Id:             env.LastResTaskId,
+		Q:              form.Q,
 	})
 }
 
@@ -805,7 +805,7 @@ func SearchEnvResourcesGraph(c *ctx.ServiceContext, form *forms.SearchEnvResourc
 }
 
 // ResourceGraphDetail 查询部署成功后资源的详细信息
-func ResourceGraphDetail(c *ctx.ServiceContext, form *forms.ResourceGraphDetailForm) (*models.Resource, e.Error) {
+func ResourceGraphDetail(c *ctx.ServiceContext, form *forms.ResourceGraphDetailForm) (interface{}, e.Error) {
 	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
@@ -815,12 +815,25 @@ func ResourceGraphDetail(c *ctx.ServiceContext, form *forms.ResourceGraphDetailF
 		c.Logger().Errorf("error get resource, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
-	if resource.EnvId != form.Id || resource.OrgId != c.OrgId || resource.ProjectId != c.ProjectId {
+
+	task, err := services.GetTaskById(c.DB(), resource.TaskId)
+	if err != nil {
+		c.Logger().Errorf("error get task, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	res, err := services.GetResourceByTask(c.DB(), task)
+	if err != nil {
+		c.Logger().Errorf("error get resource, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	if res.EnvId != form.Id || res.OrgId != c.OrgId || res.ProjectId != c.ProjectId {
 		c.Logger().Errorf("Environment ID and resource ID do not match")
 		return nil, e.New(e.DBError, err, http.StatusForbidden)
 	}
 	resultAttrs := resource.Attrs
-	if len(resource.SensitiveKeys) > 0 {
+	if len(res.SensitiveKeys) > 0 {
 		set := map[string]interface{}{}
 		for _, value := range resource.SensitiveKeys {
 			set[value] = nil
@@ -832,6 +845,6 @@ func ResourceGraphDetail(c *ctx.ServiceContext, form *forms.ResourceGraphDetailF
 			}
 		}
 	}
-	resource.Attrs = resultAttrs
-	return resource, nil
+	res.Attrs = resultAttrs
+	return res, nil
 }

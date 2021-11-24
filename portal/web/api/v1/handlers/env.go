@@ -324,7 +324,7 @@ func (Env) SearchResourcesGraph(c *ctx.GinRequest) {
 // @Param envId path string true "环境ID"
 // @Param resourceId path string true "资源ID"
 // @router /envs/{envId}/resources/graph/{resourceId} [get]
-// @Success 200 {object} ctx.JSONResult{result=models.Resource}
+// @Success 200 {object} ctx.JSONResult{result=services.Resource}
 func (Env) ResourceGraphDetail(c *ctx.GinRequest) {
 	form := &forms.ResourceGraphDetailForm{}
 	if err := c.Bind(form); err != nil {

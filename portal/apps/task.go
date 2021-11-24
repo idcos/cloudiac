@@ -380,7 +380,7 @@ func SearchTaskResourcesGraph(c *ctx.ServiceContext, form *forms.SearchTaskResou
 	return GetResourcesGraph(rs, form.Dimension), nil
 }
 
-func GetResourcesGraph(rs []models.Resource, dimension string) interface{} {
+func GetResourcesGraph(rs []services.Resource, dimension string) interface{} {
 	switch dimension {
 	case consts.GraphDimensionModule:
 		return GetResourcesGraphModule(rs)
@@ -398,123 +398,188 @@ type ResourcesGraphModule struct {
 	IsRoot        bool                    `json:"isRoot" form:"isRoot" `
 	NodeName      string                  `json:"nodeName" form:"nodeName" `
 	Children      []*ResourcesGraphModule `json:"children" form:"children" `
-	ResourcesList []Resources             `json:"resourcesList" form:"resourcesList" `
+	ResourcesList []ResourceInfo          `json:"resourcesList" form:"resourcesList" `
 }
 
-type Resources struct {
+type ResourceInfo struct {
 	ResourceId   string `json:"resourceId" form:"resourceId" `
 	ResourceName string `json:"resourceName" form:"resourceName" `
 	NodeName     string `json:"nodeName" form:"nodeName" `
+	IsDrift      bool   `json:"isDrift"`
 }
 
-func GetResourcesGraphModule(resources []models.Resource) interface{} {
+func GetResourcesGraphModule(resources []services.Resource) interface{} {
 	// 构建根节点
+	rootModule := "rootModule"
 	rgm := &ResourcesGraphModule{
 		IsRoot:   true,
-		NodeName: "rootModule",
-		NodeId:   "rootModule",
+		NodeName: rootModule,
+		NodeId:   rootModule,
 		Children: make([]*ResourcesGraphModule, 0),
 	}
 
-	// 存储当前节点与父级节点的关系
+	// 存储当前节点与父级节点的关系 父级节点id与子节点关系 {parentNodeId: [nodeId, nodeId]}
 	parentChildNode := make(map[string][]string)
-	// 当前节点与资源的关系
-	nodeAttr := make(map[string]models.Resource)
-	// 资源列表
-	resourceAttr := make(map[string][]Resources)
+	// 当前节点与资源的关系 当前节点id与资源 {nodeid: resourceInfo}
+	nodeAttr := make(map[string]services.Resource)
+	// 资源列表 {nodeId: [resource1,resource2]}
+	resourceAttr := make(map[string][]ResourceInfo)
 
+	//查询nodeId对应的nodeName {nodeId: nodeName}
+	nodeNameAttr := make(map[string]string)
+
+	/*
+		示例： slb.data.alicloud_slbs.this
+		{
+			nodeId: rootModule
+			nodeName: rootModule
+			children: [
+				{
+					"nodeId" :"slb.data.alicloud_slbs.this"
+					"nodeName" : "slb"
+					children : [
+						{
+							"nodeId" :"slb.data"
+							"nodeName" : "data"
+							children : [
+								{
+									"nodeId" :"slb.data.alicloud_slbs"
+									"nodeName" : "alicloud_slbs"
+									children : []
+								}
+							]
+						}
+					]
+				}
+
+			]
+		}
+
+	*/
 	for _, resource := range resources {
-		addrs := strings.Split(resource.Address, ".")
-		parentName := "rootModule"
+		// 将module替替换为空
+		address := strings.Replace(resource.Address, "module.", "", -1)
+		addrs := strings.Split(address, ".")
 		for index, addr := range addrs {
+			var (
+				parentNodeId string
+				nodeId       = strings.Join(addrs[:index+1], ".")
+			)
+			nodeNameAttr[nodeId] = addr
+			if index == 0 {
+				parentNodeId = rootModule
+			} else {
+				parentNodeId = strings.Join(addrs[:index], ".")
+			}
+
 			// 处理最末级节点，将末级节点定义为资源
 			if index == len(addrs)-1 {
-				res := Resources{
+				res := ResourceInfo{
 					ResourceId:   resource.Id.String(),
 					ResourceName: resource.Name,
 					NodeName:     addr,
 				}
-				if _, ok := resourceAttr[addrs[index-1]]; !ok {
-					resourceAttr[addrs[index-1]] = []Resources{res}
+
+				if resource.ResourceDetail != "" {
+					res.IsDrift = true
+				}
+
+				if _, ok := resourceAttr[parentNodeId]; !ok {
+					resourceAttr[parentNodeId] = []ResourceInfo{res}
 					continue
 				}
-				resourceAttr[addrs[index-1]] = append(resourceAttr[addrs[index-1]], res)
+				resourceAttr[parentNodeId] = append(resourceAttr[parentNodeId], res)
 				continue
 			}
 
-			// 当前节点为二级节点
-			if _, ok := parentChildNode[parentName]; !ok {
-				parentChildNode[parentName] = []string{addr}
-				parentName = addr
+			// 构造数据结构
+			if _, ok := parentChildNode[parentNodeId]; !ok {
+				parentChildNode[parentNodeId] = []string{nodeId}
 				continue
 			}
-			parentChildNode[parentName] = append(parentChildNode[parentName], addr)
-			parentName = addr
+			parentChildNode[parentNodeId] = append(parentChildNode[parentNodeId], nodeId)
 
-			nodeAttr[addr] = resource
+			nodeAttr[nodeId] = resource
 		}
 	}
 
-	return getTree(rgm, parentChildNode, nodeAttr, resourceAttr)
-}
-
-func getTree(rgm *ResourcesGraphModule, parentChildNode map[string][]string, nodeAttr map[string]models.Resource, resourceAttr map[string][]Resources) *ResourcesGraphModule {
-	for parent, child := range parentChildNode {
-		newChild := utils.RemoveDuplicateElement(child)
-		if rgm.NodeId == parent {
-			for _, v := range newChild {
-				rgm.Children = append(rgm.Children, &ResourcesGraphModule{
-					NodeId:   nodeAttr[v].Id.String(),
-					IsRoot:   false,
-					NodeName: v,
-					Children: make([]*ResourcesGraphModule, 0),
-				})
-			}
-			continue
-		}
-		addNode(rgm.Children, parent, nodeAttr, newChild, resourceAttr)
+	// 根据address构造的叶子节点列表有可能重复，这里进行去重
+	/*
+		a.b.c
+		a.b.d
+		输出：a: [b,b]
+		去重: a: [b]
+	*/
+	newChildId := utils.RemoveDuplicateElement(parentChildNode[rgm.NodeId])
+	// 构造二级节点
+	for _, v := range newChildId {
+		rgm.Children = append(rgm.Children, &ResourcesGraphModule{
+			NodeId:   v,
+			IsRoot:   false,
+			NodeName: nodeNameAttr[v],
+			Children: make([]*ResourcesGraphModule, 0),
+		})
 	}
+
+	getTree(rgm.Children, parentChildNode, nodeAttr, resourceAttr, nodeNameAttr)
+
 	return rgm
 }
 
-func addNode(children []*ResourcesGraphModule, parentNodeName string, nodeAttr map[string]models.Resource, childes []string, resourceAttr map[string][]Resources) {
-	for _, child := range children {
-		if child.NodeName == parentNodeName {
-			for _, v := range childes {
-				rgm := &ResourcesGraphModule{
-					NodeId:   nodeAttr[v].Id.String(),
-					IsRoot:   false,
-					NodeName: v,
-					Children: make([]*ResourcesGraphModule, 0),
+func getTree(children []*ResourcesGraphModule, parentChildNode map[string][]string,
+	nodeAttr map[string]services.Resource, resourceAttr map[string][]ResourceInfo, nodeNameAttr map[string]string) {
+	for parentId, childIds := range parentChildNode {
+		for _, child := range children {
+			if child.NodeId == parentId {
+				for _, v := range childIds {
+					rgm := &ResourcesGraphModule{
+						NodeId:   v,
+						IsRoot:   false,
+						NodeName: nodeNameAttr[v],
+						Children: make([]*ResourcesGraphModule, 0),
+					}
+					if _, ok := resourceAttr[v]; ok {
+						rgm.ResourcesList = resourceAttr[v]
+					}
+					child.Children = append(child.Children, rgm)
 				}
-				if _, ok := resourceAttr[v]; ok {
-					rgm.ResourcesList = resourceAttr[v]
-				}
-				child.Children = append(child.Children, rgm)
-
+				continue
 			}
-			continue
+			// 递归处理叶子节点
+			getTree(child.Children, parentChildNode, nodeAttr, resourceAttr, nodeNameAttr)
 		}
-		addNode(child.Children, parentNodeName, nodeAttr, childes, resourceAttr)
 	}
+}
 
+type ProviderTypeResource struct {
+	Id      models.Id `json:"id" ` //ID
+	Name    string    `json:"name"`
+	IsDrift bool      `json:"isDrift"`
 }
 
 type ResourcesGraphProvider struct {
-	NodeName string            `json:"nodeName" form:"nodeName" `
-	List     []models.Resource `json:"list" form:"list" `
+	NodeName string                 `json:"nodeName" form:"nodeName" `
+	List     []ProviderTypeResource `json:"list" form:"list" `
 }
 
-func GetResourcesGraphProvider(rs []models.Resource) interface{} {
+func GetResourcesGraphProvider(rs []services.Resource) interface{} {
 	rgt := make([]ResourcesGraphProvider, 0)
-	rgtAttr := make(map[string][]models.Resource)
+	rgtAttr := make(map[string][]ProviderTypeResource)
 	for _, v := range rs {
+		ptr := ProviderTypeResource{
+			Id:   v.Id,
+			Name: v.Name,
+		}
+		if v.ResourceDetail != "" {
+			ptr.IsDrift = true
+		}
 		if _, ok := rgtAttr[v.Provider]; !ok {
-			rgtAttr[v.Provider] = []models.Resource{v}
+			rgtAttr[v.Provider] = []ProviderTypeResource{ptr}
 			continue
 		}
-		rgtAttr[v.Provider] = append(rgtAttr[v.Provider], v)
+		rgtAttr[v.Provider] = append(rgtAttr[v.Provider], ptr)
 	}
+
 	for k, v := range rgtAttr {
 		rgt = append(rgt, ResourcesGraphProvider{
 			NodeName: k,
@@ -527,18 +592,25 @@ func GetResourcesGraphProvider(rs []models.Resource) interface{} {
 
 type ResourcesGraphType struct {
 	NodeName string `json:"nodeName" form:"nodeName" `
-	List     []models.Resource
+	List     []ProviderTypeResource
 }
 
-func GetResourcesGraphType(rs []models.Resource) interface{} {
+func GetResourcesGraphType(rs []services.Resource) interface{} {
 	rgt := make([]ResourcesGraphType, 0)
-	rgtAttr := make(map[string][]models.Resource)
+	rgtAttr := make(map[string][]ProviderTypeResource)
 	for _, v := range rs {
-		if _, ok := rgtAttr[v.Provider]; !ok {
-			rgtAttr[v.Provider] = []models.Resource{v}
+		ptr := ProviderTypeResource{
+			Id:   v.Id,
+			Name: v.Name,
+		}
+		if v.ResourceDetail != "" {
+			ptr.IsDrift = true
+		}
+		if _, ok := rgtAttr[v.Type]; !ok {
+			rgtAttr[v.Type] = []ProviderTypeResource{ptr}
 			continue
 		}
-		rgtAttr[v.Provider] = append(rgtAttr[v.Provider], v)
+		rgtAttr[v.Type] = append(rgtAttr[v.Type], ptr)
 	}
 	for k, v := range rgtAttr {
 		rgt = append(rgt, ResourcesGraphType{

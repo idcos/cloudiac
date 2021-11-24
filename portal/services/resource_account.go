@@ -109,3 +109,13 @@ func GetResourceById(tx *db.Session, id models.Id) (*models.Resource, e.Error) {
 	}
 	return &r, nil
 }
+
+func GetResourceByTask(tx *db.Session, task *models.Task) (*Resource, e.Error) {
+	r := &Resource{}
+	if err := QueryResource(tx, task).
+		LazySelectAppend("r.*, rd.resource_detail,rd.create_at").
+		First(r); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return r, nil
+}
