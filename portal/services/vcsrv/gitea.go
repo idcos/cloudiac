@@ -312,7 +312,7 @@ func (gitea *giteaRepoIface) CreatePrComment(prId int, comment string) error {
 	if err != nil {
 		return err
 	}
-	_, body, err := giteaRequest(path, http.MethodPost, gitea.vcs.VcsToken, b)
+	_, _, err = giteaRequest(path, http.MethodPost, gitea.vcs.VcsToken, b)
 	if err != nil {
 		return e.New(e.BadRequest, err)
 	}
