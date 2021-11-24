@@ -410,8 +410,10 @@ terrascan scan -d . -p {{.PolicyDir}} --show-passed \
 
 var scanInitCommandTpl = `#!/bin/sh
 git clone '{{.RepoAddress}}' code && \
-cd 'code/{{.SubDir}}' && \
-git checkout -q '{{.Revision}}' && echo check out $(git rev-parse --short HEAD). 
+cd code && \
+echo "checkout $(git rev-parse --short HEAD)." && \
+git checkout -q '{{.Revision}}' && \
+cd '{{.SubDir}}'
 `
 
 func (s *Scanner) genScanInit(res *Resource) (command string) {
