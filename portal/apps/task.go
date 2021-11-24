@@ -529,9 +529,10 @@ func GetResourcesGraphModule(resources []services.Resource) interface{} {
 func getTree(children []*ResourcesGraphModule, parentChildNode map[string][]string,
 	nodeAttr map[string]services.Resource, resourceAttr map[string][]ResourceInfo, nodeNameAttr map[string]string) {
 	for parentId, childIds := range parentChildNode {
+		newChildId := utils.RemoveDuplicateElement(childIds)
 		for _, child := range children {
 			if child.NodeId == parentId {
-				for _, v := range childIds {
+				for _, v := range newChildId {
 					rgm := &ResourcesGraphModule{
 						NodeId:   v,
 						IsRoot:   false,
@@ -591,8 +592,8 @@ func GetResourcesGraphProvider(rs []services.Resource) interface{} {
 }
 
 type ResourcesGraphType struct {
-	NodeName string `json:"nodeName" form:"nodeName" `
-	List     []ProviderTypeResource
+	NodeName string                 `json:"nodeName" form:"nodeName" `
+	List     []ProviderTypeResource `json:"list"`
 }
 
 func GetResourcesGraphType(rs []services.Resource) interface{} {
