@@ -44,6 +44,40 @@ func GetTask(dbSess *db.Session, id models.Id) (*models.Task, e.Error) {
 	return &task, nil
 }
 
+func CloneTask(tx *db.Session, pt models.Task, env *models.Env) (*models.Task, e.Error) {
+	logger := logs.Get().WithField("func", "CreateTask")
+	var err error
+	pt.Id = models.NewId("run")
+	logger = logger.WithField("taskId", pt.Id)
+	tpl, err := GetTemplateById(tx, pt.TplId)
+	if err != nil {
+		return nil, e.New(e.InternalError, err)
+	}
+	pt.RepoAddr, _, err = GetTaskRepoAddrAndCommitId(tx, tpl, pt.Revision)
+	// 克隆任务需要重置部分任务参数
+	var cronTaskType string
+	if env.AutoRepairDrift {
+		cronTaskType = models.TaskTypeApply
+	} else {
+		cronTaskType = models.TaskTypePlan
+	}
+	pt.Name = models.Task{}.GetTaskNameByType(cronTaskType)
+	pt.Type = cronTaskType
+	pt.Status = models.TaskPending
+	pt.CurrStep = 0
+	pt.Result = models.TaskResult{}
+	pt.CreatedAt = models.Time{}
+	pt.UpdatedAt = models.Time{}
+	pt.StartAt = &models.Time{}
+	pt.EndAt = &models.Time{}
+	pt.ContainerId = ""
+	if err != nil {
+		return nil, e.New(e.InternalError, err)
+	}
+	return doCreateTask(tx, pt, tpl, env)
+
+}
+
 func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models.Task) (*models.Task, e.Error) {
 	logger := logs.Get().WithField("func", "CreateTask")
 
@@ -51,7 +85,6 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		err      error
 		firstVal = utils.FirstValueStr
 	)
-
 	task := models.Task{
 		// 以下为需要外部传入的属性
 		Name:            pt.Name,
@@ -102,7 +135,14 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 	if err != nil {
 		return nil, e.New(e.InternalError, err)
 	}
+	return doCreateTask(tx, task, tpl, env)
 
+}
+
+func doCreateTask(tx *db.Session, task models.Task, tpl *models.Template, env *models.Env) (*models.Task, e.Error) {
+	// pipeline 内容可以从外部传入，如果没有传则尝试读取云模板目录下的文件
+	var err error
+	logger := logs.Get().WithField("func", "doCreateTask")
 	{ // 参数检查
 		if task.Playbook != "" && task.KeyId == "" {
 			return nil, e.New(e.BadParam, fmt.Errorf("'keyId' is required to run playbook"))
@@ -117,8 +157,6 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 			return nil, e.New(e.BadParam, fmt.Errorf("'runnerId' is required"))
 		}
 	}
-
-	// pipeline 内容可以从外部传入，如果没有传则尝试读取云模板目录下的文件
 	if task.Pipeline == "" {
 		task.Pipeline, err = GetTplPipeline(tx, tpl.Id, task.Revision, task.Workdir)
 		if err != nil {
@@ -256,6 +294,15 @@ func GetTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision s
 	repoAddr = u.String()
 
 	return repoAddr, commitId, nil
+}
+
+func ListPendingCronTask(tx *db.Session, envId models.Id) (bool, e.Error) {
+	query := tx.Where("env_id = ? and is_drift_task = true and (status = ? or status= ?)", envId, models.TaskPending, models.TaskRunning)
+	exist, err := query.Model(&models.Task{}).Exists()
+	if err != nil {
+		return exist, e.New(e.DBError, err)
+	}
+	return exist, nil
 }
 
 func GetTaskById(tx *db.Session, id models.Id) (*models.Task, e.Error) {
@@ -1075,6 +1122,13 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 		return
 	}
 	logs.Get().Infof("kafka send massage successful. data: %s", string(message))
+}
+
+func InsertCronTaskInfo(session *db.Session, cronTask models.ResourceDrift) {
+	if err := models.Create(session, &cronTask); err != nil {
+		logs.Get().Errorf("insert cron task info error: %v", err)
+	}
+
 }
 
 func SendVcsComment(session *db.Session, task *models.Task, taskStatus string) {
