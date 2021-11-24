@@ -400,9 +400,6 @@ func (m *TaskManager) runTask(ctx context.Context, task models.Tasker) error {
 		case *models.Task:
 			if startErr := m.doRunTask(ctx, t); startErr == nil {
 				// 任务启动成功，执行任务结束后的处理函数
-				fmt.Println("运行了？？？？？？？？？？？？？？？？？？？？？？？？？？？？？", t.Id)
-				fmt.Println("运行了？？？？？？？？？？？？？？？？？？？？？？？？？？？？？", t.Id)
-				fmt.Println("运行了？？？？？？？？？？？？？？？？？？？？？？？？？？？？？", t.Id)
 				m.processTaskDone(t.Id)
 			}
 		case *models.ScanTask:
@@ -692,12 +689,12 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 
 			// 任务执行成功才会进行 changes 统计，失败的话基于 plan 文件进行变更统计是不准确的
 			// (terraform 执行 apply 失败也不会输出资源变更情况)
-
-		}
-		if lastStep.Status == models.TaskComplete && task.IsDriftTask {
 			if err := processPlan(); err != nil {
 				logger.Errorf("process task plan: %v", err)
 			}
+
+		}
+		if lastStep.Status == models.TaskComplete && task.IsDriftTask {
 
 			// 判断是否是偏移检测任务，如果是，解析log文件并写入表
 			if task.IsDriftTask {

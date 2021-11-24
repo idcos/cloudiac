@@ -126,5 +126,5 @@ type TemplateChecksForm struct {
 	RepoRevision string    `json:"repoRevision" form:"repoRevision"`
 	RepoType     string    `json:"repoType" form:"repoType" `
 	VcsId        models.Id `json:"vcsId" form:"vcsId"`
-	Path         string    `json:"path" form:"path"`
+	Workdir      string    `json:"workdir" form:"path"`
 }
