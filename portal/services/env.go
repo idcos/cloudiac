@@ -290,5 +290,10 @@ func CheckoutAutoApproval(autoApproval, autoDrift bool, triggers []string) bool 
 		}
 	}
 
+	// 没有配置这两项的直接跳过
+	if !autoDrift && (len(triggers) ==0 || (len(triggers)==1 && triggers[0] ==consts.EnvTriggerPRMR) ){
+		return true
+	}
+
 	return false
 }
