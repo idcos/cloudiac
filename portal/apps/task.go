@@ -4,18 +4,21 @@ package apps
 
 import (
 	"bufio"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"cloudiac/utils"
 	"fmt"
 	"io"
 	"net/http"
 	"path"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/gin-contrib/sse"
 )
@@ -349,4 +352,284 @@ func GetTaskStep(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (interfa
 		return nil, err
 	}
 	return string(content), nil
+}
+
+// SearchTaskResourcesGraph 查询环境资源列表
+func SearchTaskResourcesGraph(c *ctx.ServiceContext, form *forms.SearchTaskResourceGraphForm) (interface{}, e.Error) {
+	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+
+	task, err := services.GetTaskById(c.DB(), form.Id)
+	if err != nil && err.Code() != e.TaskNotExists {
+		return nil, e.New(err.Code(), err, http.StatusNotFound)
+	} else if err != nil {
+		c.Logger().Errorf("error get env, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	rs, err := services.GetTaskResourceToTaskId(c.DB().Debug(), task)
+	if err != nil {
+		return nil, err
+	}
+	for i := range rs {
+		rs[i].Provider = path.Base(rs[i].Provider)
+		// attrs 暂时不需要返回
+		rs[i].Attrs = nil
+	}
+	return GetResourcesGraph(rs, form.Dimension), nil
+}
+
+func GetResourcesGraph(rs []services.Resource, dimension string) interface{} {
+	switch dimension {
+	case consts.GraphDimensionModule:
+		return GetResourcesGraphModule(rs)
+	case consts.GraphDimensionProvider:
+		return GetResourcesGraphProvider(rs)
+	case consts.GraphDimensionType:
+		return GetResourcesGraphType(rs)
+	default:
+		return nil
+	}
+}
+
+type ResourcesGraphModule struct {
+	NodeId        string                  `json:"nodeId" form:"nodeId" `
+	IsRoot        bool                    `json:"isRoot" form:"isRoot" `
+	NodeName      string                  `json:"nodeName" form:"nodeName" `
+	Children      []*ResourcesGraphModule `json:"children" form:"children" `
+	ResourcesList []ResourceInfo          `json:"resourcesList" form:"resourcesList" `
+}
+
+type ResourceInfo struct {
+	ResourceId   interface{} `json:"resourceId" form:"resourceId" `
+	ResourceName string      `json:"resourceName" form:"resourceName" `
+	NodeName     string      `json:"nodeName" form:"nodeName" `
+	IsDrift      bool        `json:"isDrift"`
+}
+
+func GetResourcesGraphModule(resources []services.Resource) interface{} {
+	// 构建根节点
+	rootModule := "rootModule"
+	rgm := &ResourcesGraphModule{
+		IsRoot:   true,
+		NodeName: rootModule,
+		NodeId:   rootModule,
+		Children: make([]*ResourcesGraphModule, 0),
+	}
+
+	// 存储当前节点与父级节点的关系 父级节点id与子节点关系 {parentNodeId: [nodeId, nodeId]}
+	parentChildNode := make(map[string][]string)
+
+	// 资源列表 {nodeId: [resource1,resource2]}
+	resourceAttr := make(map[string][]ResourceInfo)
+
+	//查询nodeId对应的nodeName {nodeId: nodeName}
+	nodeNameAttr := make(map[string]string)
+
+	/*
+		示例： slb.data.alicloud_slbs.this
+		{
+			nodeId: rootModule
+			nodeName: rootModule
+			children: [
+				{
+					"nodeId" :"slb.data.alicloud_slbs.this"
+					"nodeName" : "slb"
+					children : [
+						{
+							"nodeId" :"slb.data"
+							"nodeName" : "data"
+							children : [
+								{
+									"nodeId" :"slb.data.alicloud_slbs"
+									"nodeName" : "alicloud_slbs"
+									children : []
+								}
+							]
+						}
+					]
+				}
+
+			]
+		}
+
+	*/
+	for _, resource := range resources {
+		// 将module替替换为空
+		address := strings.Replace(resource.Address, "module.", "", -1)
+		addrs := strings.Split(address, ".")
+		for index, addr := range addrs {
+			var (
+				parentNodeId string
+				nodeId       = strings.Join(addrs[:index+1], ".")
+			)
+			nodeNameAttr[nodeId] = addr
+			if index == 0 {
+				parentNodeId = rootModule
+			} else {
+				parentNodeId = strings.Join(addrs[:index], ".")
+			}
+
+			// 处理最末级节点，将末级节点定义为资源
+			if index == len(addrs)-1 {
+				res := ResourceInfo{
+					ResourceId:   resource.Id.String(),
+					ResourceName: resource.Name,
+					NodeName:     addr,
+				}
+
+				if resource.Id == "" {
+					res.ResourceId = resource.DriftResourceId
+				}
+
+				if res.ResourceName == "" {
+					res.ResourceName = addr
+				}
+
+				if resource.ResourceDetail != "" {
+					res.IsDrift = true
+				}
+
+				if _, ok := resourceAttr[parentNodeId]; !ok {
+					resourceAttr[parentNodeId] = []ResourceInfo{res}
+					continue
+				}
+				resourceAttr[parentNodeId] = append(resourceAttr[parentNodeId], res)
+				continue
+			}
+
+			// 构造数据结构
+			if _, ok := parentChildNode[parentNodeId]; !ok {
+				parentChildNode[parentNodeId] = []string{nodeId}
+				continue
+			}
+			parentChildNode[parentNodeId] = append(parentChildNode[parentNodeId], nodeId)
+
+		}
+	}
+
+	// 根据address构造的叶子节点列表有可能重复，这里进行去重
+	/*
+		a.b.c
+		a.b.d
+		输出：a: [b,b]
+		去重: a: [b]
+	*/
+	newChildId := utils.RemoveDuplicateElement(parentChildNode[rgm.NodeId])
+	// 构造二级节点
+	for _, v := range newChildId {
+		resourcesGraphModule := &ResourcesGraphModule{
+			NodeId:   v,
+			IsRoot:   false,
+			NodeName: nodeNameAttr[v],
+			Children: make([]*ResourcesGraphModule, 0),
+		}
+		rgm.Children = append(rgm.Children, resourcesGraphModule)
+		// 二级节点有可能是末级节点，需要把资源列表放进去
+		if _, ok := resourceAttr[v]; ok {
+			resourcesGraphModule.ResourcesList = resourceAttr[v]
+		}
+	}
+
+	getTree(rgm.Children, parentChildNode, resourceAttr, nodeNameAttr)
+
+	return rgm
+}
+
+func getTree(children []*ResourcesGraphModule, parentChildNode map[string][]string,
+	 resourceAttr map[string][]ResourceInfo, nodeNameAttr map[string]string) {
+	for parentId, childIds := range parentChildNode {
+		newChildId := utils.RemoveDuplicateElement(childIds)
+		for _, child := range children {
+			if child.NodeId == parentId {
+				for _, v := range newChildId {
+					rgm := &ResourcesGraphModule{
+						NodeId:   v,
+						IsRoot:   false,
+						NodeName: nodeNameAttr[v],
+						Children: make([]*ResourcesGraphModule, 0),
+					}
+					if _, ok := resourceAttr[v]; ok {
+						rgm.ResourcesList = resourceAttr[v]
+					}
+					child.Children = append(child.Children, rgm)
+				}
+				continue
+			}
+			// 递归处理叶子节点
+			getTree(child.Children, parentChildNode, resourceAttr, nodeNameAttr)
+		}
+	}
+}
+
+type ProviderTypeResource struct {
+	Id      models.Id `json:"id" ` //ID
+	Name    string    `json:"name"`
+	IsDrift bool      `json:"isDrift"`
+}
+
+type ResourcesGraphProvider struct {
+	NodeName string                 `json:"nodeName" form:"nodeName" `
+	List     []ProviderTypeResource `json:"list" form:"list" `
+}
+
+func GetResourcesGraphProvider(rs []services.Resource) interface{} {
+	rgt := make([]ResourcesGraphProvider, 0)
+	rgtAttr := make(map[string][]ProviderTypeResource)
+	for _, v := range rs {
+		ptr := ProviderTypeResource{
+			Id:   v.Id,
+			Name: v.Name,
+		}
+		if v.ResourceDetail != "" {
+			ptr.IsDrift = true
+		}
+		if _, ok := rgtAttr[v.Provider]; !ok {
+			rgtAttr[v.Provider] = []ProviderTypeResource{ptr}
+			continue
+		}
+		rgtAttr[v.Provider] = append(rgtAttr[v.Provider], ptr)
+	}
+
+	for k, v := range rgtAttr {
+		rgt = append(rgt, ResourcesGraphProvider{
+			NodeName: k,
+			List:     v,
+		})
+	}
+
+	return rgt
+}
+
+type ResourcesGraphType struct {
+	NodeName string                 `json:"nodeName" form:"nodeName" `
+	List     []ProviderTypeResource `json:"list"`
+}
+
+func GetResourcesGraphType(rs []services.Resource) interface{} {
+	rgt := make([]ResourcesGraphType, 0)
+	rgtAttr := make(map[string][]ProviderTypeResource)
+	for _, v := range rs {
+		ptr := ProviderTypeResource{
+			Id:   v.Id,
+			Name: v.Name,
+		}
+		if v.ResourceDetail != "" {
+			ptr.IsDrift = true
+		}
+		if _, ok := rgtAttr[v.Type]; !ok {
+			rgtAttr[v.Type] = []ProviderTypeResource{ptr}
+			continue
+		}
+		rgtAttr[v.Type] = append(rgtAttr[v.Type], ptr)
+	}
+	for k, v := range rgtAttr {
+		rgt = append(rgt, ResourcesGraphType{
+			NodeName: k,
+			List:     v,
+		})
+	}
+
+	return rgt
 }

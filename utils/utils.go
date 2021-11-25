@@ -104,6 +104,7 @@ func LogLevel(verboseNum int) string {
 	}
 }
 
+//RemoveDuplicateElement 数组去重
 func RemoveDuplicateElement(languages []string) []string {
 	result := make([]string, 0, len(languages))
 	temp := map[string]struct{}{}

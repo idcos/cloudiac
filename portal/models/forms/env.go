@@ -166,3 +166,17 @@ type SearchEnvVariableForm struct {
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
 }
+
+type SearchEnvResourceGraphForm struct {
+	BaseForm
+
+	Id        models.Id `uri:"id" json:"id" swaggerignore:"true"`              // 环境ID，swagger 参数通过 param path 指定，这里忽略
+	Dimension string    `json:"dimension" form:"dimension" binding:"required"` // 资源名称，支持模糊查询
+}
+
+type ResourceGraphDetailForm struct {
+	BaseForm
+
+	Id         models.Id `uri:"id" json:"id" swaggerignore:"true"`                 // 环境ID，swagger 参数通过 param path 指定，这里忽略
+	ResourceId models.Id `uri:"resourceId" json:"resourceId" swaggerignore:"true"` // 部署成功后后资源ID
+}

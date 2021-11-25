@@ -79,11 +79,11 @@ type Env struct {
 	Callback  string `json:"callback" gorm:"default:''"` // 外部请求的回调方式
 
 	// 偏移检测相关
-	CronDriftExpress   string     `json:"cronDriftExpress" gorm:"default:''"`      // 偏移检测任务的Cron表达式
+	CronDriftExpress      string     `json:"cronDriftExpress" gorm:"default:''"`         // 偏移检测任务的Cron表达式
 	AutoRepairDrift       bool       `json:"autoRepairDrift" gorm:"default:false"`       // 是否进行自动纠偏
 	OpenCronDrift         bool       `json:"openCronDrift" gorm:"default:false"`         // 是否开启偏移检测
 	NextStartCronTaskTime *time.Time `json:"nextStartCronTaskTime" gorm:"type:datetime"` // 下次执行偏移检测任务的时间
-	LastCronTaskId     Id `json:"lastCronTaskId" gorm:"size:32"` // 最后一次执行漂移检测任务id
+	LastCronTaskId        Id         `json:"lastCronTaskId" gorm:"size:32"`              // 最后一次执行漂移检测任务id
 }
 
 func (Env) TableName() string {

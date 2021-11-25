@@ -858,3 +858,91 @@ func ResourceDetail(c *ctx.ServiceContext, form *forms.ResourceDetailForm) (*mod
 	}
 	return &resultAttrs, nil
 }
+
+// SearchEnvResourcesGraph 查询环境资源列表
+func SearchEnvResourcesGraph(c *ctx.ServiceContext, form *forms.SearchEnvResourceGraphForm) (interface{}, e.Error) {
+	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+
+	env, err := services.GetEnvById(c.DB(), form.Id)
+	if err != nil && err.Code() != e.EnvNotExists {
+		return nil, e.New(err.Code(), err, http.StatusNotFound)
+	} else if err != nil {
+		c.Logger().Errorf("error get env, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	// 无资源变更
+	if env.LastResTaskId == "" {
+		return nil, nil
+	}
+
+	return SearchTaskResourcesGraph(c, &forms.SearchTaskResourceGraphForm{
+		Id:        env.LastResTaskId,
+		Dimension: form.Dimension,
+	})
+}
+
+// ResourceGraphDetail 查询部署成功后资源的详细信息
+func ResourceGraphDetail(c *ctx.ServiceContext, form *forms.ResourceGraphDetailForm) (interface{}, e.Error) {
+	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+
+	resource, err := services.GetResourceById(c.DB(), form.ResourceId)
+	if err != nil {
+		// 如果没有查询到资源信息的话，有可能是新增的漂移资源
+		if e.IsRecordNotFound(err.Err()) {
+			// 尝试查询一下，如果查询到了直接返回
+			resourceDrift, err := services.GetDriftResourceById(c.DB(), form.ResourceId.String())
+			if err != nil {
+				c.Logger().Errorf("error get resource, err %s", err)
+				return nil, err
+			}
+			return resourceDrift, nil
+		}
+		c.Logger().Errorf("error get resource, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	task, err := services.GetTaskById(c.DB(), resource.TaskId)
+	if err != nil {
+		c.Logger().Errorf("error get task, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	env, err := services.GetEnvById(c.DB(), task.EnvId)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := services.GetResourceByEnv(c.DB(), env)
+	if err != nil {
+		c.Logger().Errorf("error get resource, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	if res.EnvId != form.Id || res.OrgId != c.OrgId || res.ProjectId != c.ProjectId {
+		c.Logger().Errorf("Environment ID and resource ID do not match")
+		return nil, e.New(e.DBError, err, http.StatusForbidden)
+	}
+	resultAttrs := resource.Attrs
+	if len(res.SensitiveKeys) > 0 {
+		set := map[string]interface{}{}
+		for _, value := range resource.SensitiveKeys {
+			set[value] = nil
+		}
+		for k, _ := range resultAttrs {
+			// 如果state 中value 存在与sensitive 设置，展示时不展示详情
+			if _, ok := set[k]; ok {
+				resultAttrs[k] = "(sensitive value)"
+			}
+		}
+	}
+	if res.ResourceDetail != "" {
+		res.IsDrift = true
+	}
+	res.Attrs = resultAttrs
+	return res, nil
+}

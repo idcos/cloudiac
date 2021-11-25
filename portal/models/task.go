@@ -240,3 +240,4 @@ func TaskModelMigrate(sess *db.Session, taskModel interface{}) (err error) {
 	}
 	return nil
 }
+
