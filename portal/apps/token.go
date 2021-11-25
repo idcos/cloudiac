@@ -6,15 +6,15 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
-	"net/http"
-
 	"github.com/pkg/errors"
+	"net/http"
 )
 
 func SearchToken(c *ctx.ServiceContext, form *forms.SearchTokenForm) (interface{}, e.Error) {
@@ -30,12 +30,17 @@ func SearchToken(c *ctx.ServiceContext, form *forms.SearchTokenForm) (interface{
 	}
 
 	query = query.Order("created_at DESC")
-	rs, err := getPage(query, form, models.Token{})
-	if err != nil {
-		c.Logger().Errorf("error get page, err %s", err)
-		return nil, err
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	tokens := make([]models.Token, 0)
+	if err := p.Scan(&tokens); err != nil {
+		return nil, e.New(e.DBError, err)
 	}
-	return rs, nil
+
+	return &page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     tokens,
+	}, nil
 }
 
 func CreateToken(c *ctx.ServiceContext, form *forms.CreateTokenForm) (interface{}, e.Error) {
@@ -58,7 +63,7 @@ func CreateToken(c *ctx.ServiceContext, form *forms.CreateTokenForm) (interface{
 		Type:        form.Type,
 		OrgId:       c.OrgId,
 		Role:        form.Role,
-		ExpiredAt:   expiredAt,
+		ExpiredAt:   &expiredAt,
 		Description: form.Description,
 		CreatorId:   c.UserId,
 		EnvId:       form.EnvId,

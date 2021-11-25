@@ -14,7 +14,7 @@ type Token struct {
 	OrgId       Id     `json:"orgId" form:"orgId" gorm:"not null"`
 	Role        string `json:"role" form:"role" gorm:"not null"`
 	Status      string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:Token状态"`
-	ExpiredAt   Time   `json:"expiredAt" form:"expiredAt" gorm:"type:datetime"`
+	ExpiredAt   *Time  `json:"expiredAt" form:"expiredAt" gorm:"type:datetime"`
 	Description string `json:"description" gorm:"comment:描述"`
 	CreatorId   Id     `json:"creatorId" gorm:"size:32;not null;comment:创建人" example:"u-c3ek0co6n88ldvq1n6ag"` //创建人ID
 
