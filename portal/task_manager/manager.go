@@ -709,10 +709,11 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 				if bs, err := readIfExist(task.TFPlanOutputLogPath(fmt.Sprintf("step%d", step.Index))); err != nil {
 					logger.Errorf("read plan output log: %v", err)
 				} else {
-					// 保存偏移检测任务信息到数据表中
-					InsertCronDriftTaskInfo(dbSess, bs, task)
-					// 发送邮件通知
-					services.TaskStatusChangeSendMessage(task, consts.EvenvtCronDrift)
+					// 解析并保存资源漂移信息
+					if InsertResourceDriftInfo(dbSess, bs, task) {
+						// 发送邮件通知
+						services.TaskStatusChangeSendMessage(task, consts.EvenvtCronDrift)
+					}
 				}
 			}
 
@@ -1360,7 +1361,7 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 	return nil
 }
 
-func InsertCronDriftTaskInfo(db *db.Session, bs []byte, task *models.Task) {
+func InsertResourceDriftInfo(db *db.Session, bs []byte, task *models.Task) (hasDrift bool) {
 	content := strings.Split(string(bs), "\n")
 	for k, v := range content {
 		if strings.Contains(v, "#") && strings.Contains(v, "must be") || strings.Contains(v, "will be") {
@@ -1385,6 +1386,8 @@ func InsertCronDriftTaskInfo(db *db.Session, bs []byte, task *models.Task) {
 			}
 			cronTaskInfo.ResourceDetail = resourceDetail
 			services.InsertCronTaskInfo(db, cronTaskInfo)
+			hasDrift = true
 		}
 	}
+	return
 }
