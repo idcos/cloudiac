@@ -279,19 +279,19 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 // CheckoutAutoApproval 配置漂移自动执行apply、commit自动部署apply是否配置自动审批
 func CheckoutAutoApproval(autoApproval, autoDrift bool, triggers []string) bool {
 	if autoApproval {
-		return false
+		return true
 	}
 	// 漂移自动执行apply检测，当勾选漂移自动检测时自动审批同时勾选
-	if !autoDrift {
-		return true
+	if autoDrift {
+		return false
 	}
 
 	// 配置commit自动apply时，必须勾选自动审批
 	for _, v := range triggers {
 		if v == consts.EnvTriggerCommit {
-			return true
+			return false
 		}
 	}
 
-	return false
+	return true
 }
