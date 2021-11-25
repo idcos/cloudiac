@@ -320,41 +320,41 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 
 type TemplateChecksResp struct {
 	CheckResult string `json:"CheckResult"`
-	Reason      string `json:"reason""`
+	Reason      string `json:"reason"`
 }
 
 func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (interface{}, e.Error) {
+
 	// 如果云模版名称传入，校验名称是否重复.
 	if form.Name != "" {
-		tpl, err := services.QueryTemplateByName(c.DB(), form.Name, c.OrgId)
+		tpl, err := services.QueryTemplateByName(c.DB().Where("id != ?",form.TemplateId), form.Name, c.OrgId)
 		if tpl != nil {
-			return nil, e.New(e.BadParam, err)
+			return nil, e.New(e.TemplateNameRepeat, err)
 		}
-		if err != nil && err.Code() == e.TemplateNotExists {
-			return TemplateChecksResp{
-				CheckResult: consts.TplTfCheckSuccess,
-			}, nil
+		// 数据库相关错误
+		if err != nil && err.Code() != e.TemplateNotExists {
+			return nil, err
 		}
 	}
-	// 检查工作目录下.tf 文件是否存在
-	searchForm := &forms.TemplateTfvarsSearchForm{
-		RepoId:       form.RepoId,
-		RepoRevision: form.RepoRevision,
-		RepoType:     form.RepoType,
-		VcsId:        form.VcsId,
-		TplChecks:    true,
-		Path:         form.Workdir,
-	}
-	results, err := VcsFileSearch(c, searchForm)
-	if err != nil {
-		return nil, e.New(e.BadParam, err)
-	}
-
-	if len(results.([]string)) == 0 {
-		return nil, e.New(e.BadParam, err)
+	if form.Workdir != "" {
+		// 检查工作目录下.tf 文件是否存在
+		searchForm := &forms.TemplateTfvarsSearchForm{
+			RepoId:       form.RepoId,
+			RepoRevision: form.RepoRevision,
+			RepoType:     form.RepoType,
+			VcsId:        form.VcsId,
+			TplChecks:    true,
+			Path:         form.Workdir,
+		}
+		results, err := VcsFileSearch(c, searchForm)
+		if err != nil {
+			return nil, err
+		}
+		if len(results.([]string)) == 0 {
+			return nil, e.New(e.TemplateWorkdirError, err)
+		}
 	}
 	return TemplateChecksResp{
 		CheckResult: consts.TplTfCheckSuccess,
 	}, nil
-
 }

@@ -52,6 +52,8 @@ const (
 	InvalidAccessKeyId     = 10380 // AccessKeyId错误
 	InvalidAccessKeySecret = 10381
 	ForbiddenAccessKey     = 10382
+	TemplateNameRepeat     = 10383
+	TemplateWorkdirError   = 10384
 
 	//// 第三方服务错误 104
 	LdapError       = 10410 // ldap 出错
@@ -224,6 +226,12 @@ var errorMsgs = map[int]map[string]string{
 	},
 	BadParam: {
 		"zh-cn": "无效参数",
+	},
+	TemplateNameRepeat: {
+		"zh-cn": "云模版名称重复",
+	},
+	TemplateWorkdirError: {
+		"zh-cn": "工作目录校验失败",
 	},
 	BadRequest: {
 		"zh-cn": "无效请求",
