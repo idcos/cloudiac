@@ -91,6 +91,9 @@ func QueryEnvDetail(query *db.Session) *db.Session {
 	// 密钥名称
 	query = query.Joins("left join iac_key as k on k.id = iac_env.key_id").
 		LazySelectAppend("k.name as key_name,iac_env.*")
+	// 资源是否发生漂移
+	query = query.Joins("left join (select task_id from iac_resource_drift group by task_id) as rd on rd.task_id = iac_env.last_cron_task_id").
+		LazySelectAppend("!ISNULL(rd.task_id) as is_drift")
 
 	return query
 }
