@@ -2,33 +2,46 @@ package apps
 
 import (
 	"cloudiac/portal/models"
+	"cloudiac/portal/services"
 	"reflect"
 	"testing"
 )
 
 func TestGetResourcesGraphModule(t *testing.T) {
-	GetResourcesGraphModule([]models.Resource{
+	GetResourcesGraphModule([]services.Resource{
 		{
-			Address:"module.tf-instances.alicloud_security_group.default",
+			Resource:        models.Resource{
+				Address:"module.tf-instances.alicloud_security_group.default",
+			},
 		},
 		{
-			Address:"module.tf-instances.alicloud_security_group_rule.allow_all_tcp",
+			Resource:        models.Resource{
+				Address:"module.tf-instances.alicloud_security_group_rule.allow_all_tcp",
+			},
 		},
 		{
-			Address:"module.tf-instances.alicloud_vpc.vpc",
+			Resource:        models.Resource{
+				Address:"module.tf-instances.alicloud_vpc.vpc",
+			},
 		},
 		{
-			Address:"module.tf-instances.alicloud_vswitch.vsw",
+			Resource:        models.Resource{
+				Address:"module.tf-instances.alicloud_vswitch.vsw",
+			},
 		},
 		{
-			Address:"module.tf-instances.module.tf-instances.alicloud_instance.this[0]",
+			Resource:        models.Resource{
+				Address:"module.tf-instances.module.tf-instances.alicloud_instance.this[0]",
+			},
 		},
 		{
-			Address:"module.tf-instances.module.tf-instances.alicloud_instance.this[1]",
+			Resource:        models.Resource{
+				Address:"module.tf-instances.module.tf-instances.alicloud_instance.this[1]",
+			},
 		},
 	})
 	type args struct {
-		rs []models.Resource
+		rs []services.Resource
 	}
 	tests := []struct {
 		name string
