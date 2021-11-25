@@ -712,6 +712,7 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 						// 保存偏移检测任务信息到数据表中
 						InsertCronDriftTaskInfo(dbSess, bs, task)
 						// 发送邮件通知
+						services.TaskStatusChangeSendMessage(task, consts.EvenvtCronDrift)
 					}
 				}
 

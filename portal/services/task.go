@@ -905,7 +905,6 @@ func TaskStatusChangeSendMessage(task *models.Task, status string) {
 		Task:      task,
 		EventType: consts.TaskStatusToEventType[status],
 	})
-
 	logs.Get().WithField("taskId", task.Id).Infof("new event: %s", ns.EventType)
 	ns.SendMessage()
 }
