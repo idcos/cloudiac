@@ -943,7 +943,7 @@ func ResourceGraphDetail(c *ctx.ServiceContext, form *forms.ResourceGraphDetailF
 		return nil, err
 	}
 
-	res, err := services.GetResourceByEnv(c.DB(), env)
+	res, err := services.GetResourceDetail(c.DB(), env, resource.Id)
 	if err != nil {
 		c.Logger().Errorf("error get resource, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
