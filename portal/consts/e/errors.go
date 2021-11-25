@@ -133,6 +133,7 @@ const (
 	EnvArchived            = 30813
 	EnvCannotArchiveActive = 30814
 	EnvDeploying           = 30815
+	EnvCheckAutoApproval   = 30816
 
 	//// task 309
 	TaskAlreadyExists     = 30910
@@ -437,6 +438,9 @@ var errorMsgs = map[int]map[string]string{
 	},
 	EnvDeploying: {
 		"zh-cn": "环境正在部署中，请不要重复发起",
+	},
+	EnvCheckAutoApproval: {
+		"zh-cn": "配置自动纠漂移、推送到分支时重新部署时，必须配置自动审批",
 	},
 	TaskAlreadyExists: {
 		"zh-cn": "任务已经存在",

@@ -112,6 +112,8 @@ type DeployEnvForm struct {
 
 	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" `
 	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
+
+	AutoRepairDrift bool `json:"autoRepairDrift" form:"autoRepairDrift"` // 是否进行自动纠偏
 }
 
 type ArchiveEnvForm struct {
