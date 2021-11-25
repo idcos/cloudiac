@@ -328,10 +328,7 @@ func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (inte
 	if form.Name != "" {
 		tpl, err := services.QueryTemplateByName(c.DB(), form.Name, c.OrgId)
 		if tpl != nil {
-			return TemplateChecksResp{
-				CheckResult: consts.TplTfCheckFailed,
-				Reason:      "Cloud template name already exists",
-			}, nil
+			return nil, e.New(e.BadParam, err)
 		}
 		if err != nil && err.Code() == e.TemplateNotExists {
 			return TemplateChecksResp{
