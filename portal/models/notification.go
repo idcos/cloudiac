@@ -39,7 +39,7 @@ func (Notification) TableName() string {
 type NotificationEvent struct {
 	AutoUintIdModel
 
-	EventType      string `json:"eventType" form:"eventType"  gorm:"type:enum('task.failed', 'task.complete', 'task.approving', 'task.running');default:'task.running';comment:事件类型"`
+	EventType      string `json:"eventType" form:"eventType"  gorm:"type:enum('task.failed', 'task.complete', 'task.approving', 'task.running', 'task.crondrift');default:'task.running';comment:事件类型"`
 	NotificationId Id     `json:"notificationId" form:"notificationId" gorm:"size:32;not null"`
 }
 
