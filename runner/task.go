@@ -128,7 +128,7 @@ func (t *Task) start() (cid string, err error) {
 		return "", errors.Wrap(err, "remove containerInfoFile")
 	}
 
-	t.logger.Infof("start task step, workdir: %s", cmd.HostWorkdir)
+	t.logger.Infof("start task step, %s", stepDir)
 	if cid, err = cmd.Start(); err != nil {
 		return cid, err
 	}

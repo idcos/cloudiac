@@ -4,18 +4,24 @@ import (
 	"cloudiac/common"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
-	"cloudiac/runner"
 	"context"
 
 	"github.com/pkg/errors"
 )
 
 // 任务的流程步骤执行结束后的操作
-func (m *TaskManager) runTaskStepsDoneActions(
-	ctx context.Context,
-	task *models.Task,
-	runTaskReq runner.RunTaskReq) error {
-	logger := m.logger.WithField("func", "runTaskStepsDoneActions").WithField("taskId", task.Id)
+func (m *TaskManager) runTaskStepsDoneActions(ctx context.Context, taskId models.Id) error {
+	logger := m.logger.WithField("func", "runTaskStepsDoneActions").WithField("taskId", taskId)
+
+	task, er := services.GetTaskById(m.db, taskId)
+	if er != nil {
+		return errors.Wrapf(er, "query task %s", taskId)
+	}
+
+	runTaskReq, err := buildRunTaskReq(m.db, *task)
+	if err != nil {
+		return err
+	}
 
 	currStep, err := services.GetTaskStep(m.db, task.Id, task.CurrStep)
 	if err != nil {
@@ -57,7 +63,7 @@ func (m *TaskManager) runTaskStepsDoneActions(
 
 			newStepIndex += 1
 			logger.Infof("run task callback step: %s", step.Id)
-			if err := m.runTaskStep(ctx, runTaskReq, task, step); err != nil {
+			if err := m.runTaskStep(ctx, *runTaskReq, task, step); err != nil {
 				logger.Infof("run task callback step: %v", err)
 			}
 		}
@@ -66,7 +72,7 @@ func (m *TaskManager) runTaskStepsDoneActions(
 	if task.IsEffectTask() && !currStep.IsRejected() {
 		// 执行信息采集步骤
 		logger.Infof("run task collect step")
-		if err := m.runTaskStep(ctx, runTaskReq, task, &models.TaskStep{
+		if err := m.runTaskStep(ctx, *runTaskReq, task, &models.TaskStep{
 			PipelineStep: models.PipelineStep{
 				Type: models.TaskStepCollect,
 			},
