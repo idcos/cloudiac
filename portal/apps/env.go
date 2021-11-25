@@ -75,7 +75,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	}
 
 	// 检查自动纠漂移、推送到分支时重新部署时，是否了配置自动审批
-	if !services.CheckoutAutoApproval(form.AutoApproval, form.AutoRepairDrift, form.Triggers) {
+	if services.CheckoutAutoApproval(form.AutoApproval, form.AutoRepairDrift, form.Triggers) {
 		return nil, e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
 	}
 
@@ -400,7 +400,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	}
 
 	// 检查自动纠漂移、推送到分支时重新部署时，是否了配置自动审批
-	if !services.CheckoutAutoApproval(form.AutoApproval, form.AutoRepairDrift, form.Triggers) {
+	if services.CheckoutAutoApproval(form.AutoApproval, form.AutoRepairDrift, form.Triggers) {
 		return nil, e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
 	}
 
@@ -584,7 +584,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	}
 
 	// 检查自动纠漂移、推送到分支时重新部署时，是否了配置自动审批
-	if !services.CheckoutAutoApproval(form.AutoApproval, form.AutoRepairDrift, form.Triggers) {
+	if services.CheckoutAutoApproval(form.AutoApproval, form.AutoRepairDrift, form.Triggers) {
 		return nil, e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
 	}
 
