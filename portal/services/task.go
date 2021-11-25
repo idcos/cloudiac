@@ -1129,6 +1129,7 @@ type Resource struct {
 	ResourceDetail  string       `json:"resourceDetail"`
 	CreateAt        *models.Time `json:"createAt"`
 	DriftResourceId uint         `json:"driftResourceIde_id"`
+	IsDrift         bool         `json:"isDrift" form:"isDrift" `
 }
 
 func GetTaskResourceToTaskId(dbSess *db.Session, task *models.Task) ([]Resource, e.Error) {
@@ -1245,12 +1246,18 @@ func GetDriftResource(session *db.Session, envId, driftTaskId models.Id) ([]mode
 	return driftResources, nil
 }
 
-func GetDriftResourceById(session *db.Session, id string) (*models.ResourceDrift, e.Error) {
-	driftResources := &models.ResourceDrift{}
+type ResourceDriftResp struct {
+	models.ResourceDrift
+	IsDrift bool `gorm:"-" json:"isDrift"`
+}
+
+func GetDriftResourceById(session *db.Session, id string) (*ResourceDriftResp, e.Error) {
+	driftResources := &ResourceDriftResp{}
 	if err := session.Debug().Model(&models.ResourceDrift{}).
 		Where("id = ?", id).
 		First(driftResources); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
+	driftResources.IsDrift = true
 	return driftResources, nil
 }

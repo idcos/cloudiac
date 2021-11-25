@@ -940,6 +940,9 @@ func ResourceGraphDetail(c *ctx.ServiceContext, form *forms.ResourceGraphDetailF
 			}
 		}
 	}
+	if res.ResourceDetail != "" {
+		res.IsDrift = true
+	}
 	res.Attrs = resultAttrs
 	return res, nil
 }
