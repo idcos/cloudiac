@@ -118,7 +118,7 @@ func (base *BaseModel) CustomBeforeCreate(*db.Session) error {
 // AutoUintIdModel  使用自增 uint id 的 model
 type AutoUintIdModel struct {
 	AbstractModel
-	Id uint `gorm:"primary_key"`
+	Id uint `gorm:"primary_key" json:"id"`
 }
 
 func (b *AutoUintIdModel) SetId(id interface{}) {

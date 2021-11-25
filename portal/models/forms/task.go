@@ -98,3 +98,10 @@ type GetTaskStepLogForm struct {
 	Id     models.Id `uri:"id" json:"id"`         // 任务Id
 	StepId models.Id `uri:"stepId" json:"stepId"` //步骤ID
 }
+
+type SearchTaskResourceGraphForm struct {
+	BaseForm
+
+	Id        models.Id `uri:"id" json:"id" swaggerignore:"true"`              // 任务ID，swagger 参数通过 param path 指定，这里忽略
+	Dimension string    `json:"dimension" form:"dimension" binding:"required"` // 资源名称，支持模糊查询
+}

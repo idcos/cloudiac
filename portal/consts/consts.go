@@ -68,7 +68,9 @@ const (
 
 	NotificationMessageTitle = "CloudIaC平台系统通知"
 
-	VcsEncryptTokenPrefix = "secure: "
+	GraphDimensionModule   = "module"
+	GraphDimensionProvider = "provider"
+	GraphDimensionType     = "type"
 )
 
 const (
