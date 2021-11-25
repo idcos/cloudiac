@@ -434,7 +434,7 @@ func GetResourcesGraphModule(resources []services.Resource) interface{} {
 			nodeName: rootModule
 			children: [
 				{
-					"nodeId" :"slb.data.alicloud_slbs.this"
+					"nodeId" :"slb"
 					"nodeName" : "slb"
 					children : [
 						{
@@ -516,19 +516,24 @@ func GetResourcesGraphModule(resources []services.Resource) interface{} {
 		输出：a: [b,b]
 		去重: a: [b]
 	*/
-	newChildId := utils.RemoveDuplicateElement(parentChildNode[rgm.NodeId])
+
+	for k, v := range parentChildNode {
+		// 去重
+		parentChildNode[k] = utils.RemoveDuplicateElement(v)
+	}
+
 	// 构造二级节点
-	for _, v := range newChildId {
+	for _, nodeId := range parentChildNode[rgm.NodeId] {
 		resourcesGraphModule := &ResourcesGraphModule{
-			NodeId:   v,
+			NodeId:   nodeId,
 			IsRoot:   false,
-			NodeName: nodeNameAttr[v],
+			NodeName: nodeNameAttr[nodeId],
 			Children: make([]*ResourcesGraphModule, 0),
 		}
 		rgm.Children = append(rgm.Children, resourcesGraphModule)
 		// 二级节点有可能是末级节点，需要把资源列表放进去
-		if _, ok := resourceAttr[v]; ok {
-			resourcesGraphModule.ResourcesList = resourceAttr[v]
+		if _, ok := resourceAttr[nodeId]; ok {
+			resourcesGraphModule.ResourcesList = resourceAttr[nodeId]
 		}
 	}
 
@@ -537,13 +542,13 @@ func GetResourcesGraphModule(resources []services.Resource) interface{} {
 	return rgm
 }
 
-func getTree(children []*ResourcesGraphModule, parentChildNode map[string][]string,
-	 resourceAttr map[string][]ResourceInfo, nodeNameAttr map[string]string) {
-	for parentId, childIds := range parentChildNode {
-		newChildId := utils.RemoveDuplicateElement(childIds)
-		for _, child := range children {
-			if child.NodeId == parentId {
-				for _, v := range newChildId {
+func getTree(parents []*ResourcesGraphModule, parentChildNode map[string][]string,
+	resourceAttr map[string][]ResourceInfo, nodeNameAttr map[string]string) {
+
+	for _, parent := range parents {
+		for parentId, childIds := range parentChildNode {
+			if parentId == parent.NodeId {
+				for _, v := range childIds {
 					rgm := &ResourcesGraphModule{
 						NodeId:   v,
 						IsRoot:   false,
@@ -553,13 +558,13 @@ func getTree(children []*ResourcesGraphModule, parentChildNode map[string][]stri
 					if _, ok := resourceAttr[v]; ok {
 						rgm.ResourcesList = resourceAttr[v]
 					}
-					child.Children = append(child.Children, rgm)
+					parent.Children = append(parent.Children, rgm)
 				}
-				continue
+				break
 			}
-			// 递归处理叶子节点
-			getTree(child.Children, parentChildNode, resourceAttr, nodeNameAttr)
 		}
+		// 递归处理叶子节点
+		getTree(parent.Children, parentChildNode, resourceAttr, nodeNameAttr)
 	}
 }
 
