@@ -24,7 +24,12 @@ import (
 	"github.com/lib/pq"
 )
 
-var SpecParser = cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+// 最小时间单位为分钟
+// 每隔1 分钟执行一次 */1 * * * ?
+// 每天 23点 执行一次 0 23 * * ?
+// 每个月1号23 点执行一次 0 23 1 * ?
+// 每天的0点、13点、18点、21点都执行一次：0 0,13,18,21 * * ?
+var SpecParser = cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 
 func ParseCronpress(cronDriftExpress string) (*time.Time, e.Error) {
 	expr, err := SpecParser.Parse(cronDriftExpress)
@@ -174,7 +179,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		if err != nil {
 			return nil, err
 		}
-		envModel.NextStartCronTaskTime = nextTime
+		envModel.NextDriftTaskTime = nextTime
 	}
 	env, err := services.CreateEnv(tx, envModel)
 	if err != nil && err.Code() == e.EnvAlreadyExists {
@@ -417,7 +422,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 				if err != nil {
 					return nil, err
 				}
-				attrs["nextStartCronTaskTime"] = nextTime
+				attrs["nextDriftTaskTime"] = nextTime
 			}
 			if form.HasKey("autoRepairDrift") {
 				attrs["autoRepairDrift"] = form.AutoRepairDrift

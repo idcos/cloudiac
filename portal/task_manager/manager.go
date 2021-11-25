@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/acarl005/stripansi"
 	"os"
 	"regexp"
 	"runtime/debug"
@@ -205,8 +206,8 @@ func (m *TaskManager) beginCronDriftTask() {
 				logger.Errorf("create cronDriftTask failed, error: %v", err)
 				continue
 			}
-			attrs["nextStartCronTaskTime"] = nextTime
-			attrs["lastCronTaskId"] = task.IsDriftTask
+			attrs["nextDriftTaskTime"] = nextTime
+			attrs["lastDriftTaskId"] = task.Id
 			_, err = services.UpdateEnv(m.db, env.Id, attrs)
 			if err != nil {
 				logger.Errorf("create cronDriftTask failed, error: %v", err)
@@ -710,6 +711,7 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 					} else {
 						// 保存偏移检测任务信息到数据表中
 						InsertCronDriftTaskInfo(dbSess, bs, task)
+						// 发送邮件通知
 					}
 				}
 
@@ -1368,7 +1370,7 @@ func InsertCronDriftTaskInfo(db *db.Session, bs []byte, task *models.Task) {
 			}
 			reg1 := regexp.MustCompile(`#\s\S*`)
 			result1 := reg1.FindAllStringSubmatch(v, 1)
-			cronTaskInfo.Address = strings.TrimSpace(result1[0][0][1:])
+			cronTaskInfo.Address = stripansi.Strip(strings.TrimSpace(result1[0][0][1:]))
 			for k1, v2 := range content[k+1:] {
 				if strings.Contains(v2, "#") && strings.Contains(v2, "must be") || strings.Contains(v2, "will be") {
 					resourceDetail = strings.Join(content[k+1:k1+k], "")

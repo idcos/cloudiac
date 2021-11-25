@@ -65,6 +65,8 @@ func CloneTask(tx *db.Session, pt models.Task, env *models.Env) (*models.Task, e
 	pt.Type = cronTaskType
 	pt.Status = models.TaskPending
 	pt.CurrStep = 0
+	pt.CreatorId = consts.SysUserId
+	pt.Name = common.CronDriftTaskName
 	pt.Result = models.TaskResult{}
 	pt.CreatedAt = models.Time{}
 	pt.UpdatedAt = models.Time{}
@@ -1141,7 +1143,7 @@ func GetTaskResourceToTaskId(dbSess *db.Session, task *models.Task) ([]Resource,
 	}
 	rs := make([]Resource, 0)
 	if err := dbSess.Debug().Table("iac_resource as r").
-		Joins("left join iac_resource_drift as rd on rd.address =  r.address  and rd.env_id = ? AND rd.task_id = ?", task.EnvId, env.LastCronTaskId).
+		Joins("left join iac_resource_drift as rd on rd.address =  r.address  and rd.env_id = ? AND rd.task_id = ?", task.EnvId, env.LastDriftTaskId).
 		Where("r.org_id = ? AND r.project_id = ? AND r.env_id = ? AND r.task_id = ?",
 			task.OrgId, task.ProjectId, task.EnvId, task.Id).
 		LazySelectAppend("r.*, rd.resource_detail").
@@ -1149,7 +1151,7 @@ func GetTaskResourceToTaskId(dbSess *db.Session, task *models.Task) ([]Resource,
 		return nil, e.New(e.DBError, err)
 	}
 
-	res, err := GetDriftResource(dbSess, task.EnvId, env.LastCronTaskId)
+	res, err := GetDriftResource(dbSess, task.EnvId, env.LastDriftTaskId)
 	if err != nil {
 		return nil, err
 	}
