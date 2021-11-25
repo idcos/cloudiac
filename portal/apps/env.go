@@ -74,6 +74,11 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
 
+	// 检查自动纠漂移、推送到分支时重新部署时，是否了配置自动审批
+	if !services.CheckoutAutoApproval(form.AutoApproval, form.AutoRepairDrift, form.Triggers) {
+		return nil, e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
+	}
+
 	// 检查模板
 	query := c.DB().Where("status = ?", models.Enable)
 	tpl, err := services.GetTemplateById(query, form.TplId)
@@ -393,6 +398,12 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
+
+	// 检查自动纠漂移、推送到分支时重新部署时，是否了配置自动审批
+	if !services.CheckoutAutoApproval(form.AutoApproval, form.AutoRepairDrift, form.Triggers) {
+		return nil, e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
+	}
+
 	query := c.DB().Where("iac_env.org_id = ? AND iac_env.project_id = ?", c.OrgId, c.ProjectId)
 
 	env, err := services.GetEnvById(query, form.Id)
@@ -570,6 +581,11 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	c.AddLogField("action", fmt.Sprintf("create env task %s", form.Id))
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+
+	// 检查自动纠漂移、推送到分支时重新部署时，是否了配置自动审批
+	if !services.CheckoutAutoApproval(form.AutoApproval, form.AutoRepairDrift, form.Triggers) {
+		return nil, e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
 	}
 
 	envQuery := services.QueryWithProjectId(services.QueryWithOrgId(tx, c.OrgId), c.ProjectId)

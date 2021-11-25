@@ -113,6 +113,7 @@ func CreateWebhookTask(tx *db.Session, taskType, revision string, userId models.
 			StepTimeout: env.Timeout,
 		},
 	}
+
 	task, err := services.CreateTask(tx, tpl, env, *task)
 	if err != nil {
 		_ = tx.Rollback()
