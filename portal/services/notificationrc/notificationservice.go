@@ -196,6 +196,9 @@ func (ns *NotificationService) FindNotificationsAndMessageTpl() ([]models.Notifi
 	case consts.EventTaskComplete:
 		tplNotificationTemplate = consts.IacTaskCompleteTpl
 		markdownNotificationTemplate = consts.IacTaskCompleteMarkdown
+	case consts.EvenvtCronDrift:
+		tplNotificationTemplate = consts.IacCronDriftTaskTpl
+		markdownNotificationTemplate = consts.IacCronDriftTaskMarkDown
 	default:
 		return nil, "", "", fmt.Errorf("unknown event type '%s'", ns.EventType)
 	}

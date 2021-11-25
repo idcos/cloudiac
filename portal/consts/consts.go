@@ -113,6 +113,7 @@ const (
 	EventTaskRunning   = "task.running"
 	EventTaskApproving = "task.approving"
 	EventTaskRejected  = "task.rejected"
+	EvenvtCronDrift    = "task.crondrift"
 
 	DefaultTfMirror   = "https://releases.hashicorp.com/terraform"
 	HttpClientTimeout = 20
@@ -153,5 +154,6 @@ var (
 		common.TaskRunning:   EventTaskRunning,
 		common.TaskApproving: EventTaskApproving,
 		common.TaskRejected:  EventTaskFailed,
+		EvenvtCronDrift: EvenvtCronDrift,
 	}
 )

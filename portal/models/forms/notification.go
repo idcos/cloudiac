@@ -12,7 +12,7 @@ type UpdateNotificationForm struct {
 	Secret    string    `json:"secret" form:"secret"`
 	Url       string    `json:"url" form:"url"`
 	UserIds   []string  `form:"userIds" json:"userIds"`
-	EventType []string  `form:"eventType" json:"eventType" binding:"required"` //enum('task.failed', 'task.complete', 'task.approving', 'task.running')
+	EventType []string  `form:"eventType" json:"eventType" binding:"required"` //enum('task.failed', 'task.complete', 'task.approving', 'task.running', "task.crondrift")
 }
 
 type CreateNotificationForm struct {
@@ -22,7 +22,7 @@ type CreateNotificationForm struct {
 	Secret    string   `json:"secret" form:"secret"`
 	Url       string   `json:"url" form:"url"`
 	UserIds   []string `form:"userIds" json:"userIds"`
-	EventType []string `form:"eventType" json:"eventType" binding:"required"` //enum('task.failed', 'task.complete', 'task.approving', 'task.running')
+	EventType []string `form:"eventType" json:"eventType" binding:"required"` //enum('task.failed', 'task.complete', 'task.approving', 'task.running', "task.crondrift")
 }
 
 type DeleteNotificationForm struct {

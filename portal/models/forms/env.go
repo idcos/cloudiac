@@ -113,7 +113,9 @@ type DeployEnvForm struct {
 	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" `
 	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
 
-	AutoRepairDrift bool `json:"autoRepairDrift" form:"autoRepairDrift"` // 是否进行自动纠偏
+	CronDriftExpress string   `json:"cronDriftExpress" form:"cronDriftExpress"`  // 偏移检测表达式
+	AutoRepairDrift  bool     `json:"autoRepairDrift" form:"autoRepairDrift"`    // 是否进行自动纠偏
+	OpenCronDrift    bool     `json:"openCronDrift" form:"openCronDrift"`        // 是否开启偏移检测
 }
 
 type ArchiveEnvForm struct {
