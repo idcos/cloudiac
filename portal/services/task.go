@@ -389,7 +389,7 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 		}
 	}
 
-	if preStatus != status {
+	if preStatus != status && !task.IsDriftTask {
 		TaskStatusChangeSendMessage(task, status)
 	}
 	// 如果勾选提交pr自动plan，任务结束时 plan作业结果写入PR评论中
