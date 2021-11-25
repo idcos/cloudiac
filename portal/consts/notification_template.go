@@ -70,12 +70,13 @@ var IacTaskCompleteTpl = `
 </body>
 </html>
 `
+
 var IacCronDriftTaskTpl = `
 <html>
 <body>
-<p>尊敬的CloudIaC用户：</p>
+<p>尊敬的 CloudIaC 用户：</p>
 <br />
-<p>	【{{.Creator}}】在CloudIaC平台发起的部署任务已执行完成，详情如下：</p> 
+<p>	【{{.Creator}}】在 CloudIaC 平台发起的漂移检测任务检测到服务端配置出现漂移，详情如下：</p> 
 <br />	
 <p>	所属组织：{{.OrgName}}</p>
 <p>	所属项目：{{.ProjectName}}</p>
@@ -247,6 +248,5 @@ const (
 
 
   -----该消息由系统自动发出，请勿回复-----
-)
 `
 )
