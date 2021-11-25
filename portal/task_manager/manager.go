@@ -501,7 +501,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		}
 	}
 
-	if err := m.runTaskStepsDoneActions(ctx, task, *runTaskReq); err != nil {
+	if err := m.runTaskStepsDoneActions(ctx, task.Id); err != nil {
 		logger.Errorf("runTaskStepsDoneActions: %v", err)
 	}
 	logger.Infof("run task finish")
@@ -823,7 +823,7 @@ loop:
 					changeStepStatusAndStepRetryTimes(models.TaskStepFailed, err.Error(), step)
 					return err
 				}
-			} else if taskReq.ContainerId == "" {
+			} else if task.ContainerId == "" {
 				if err := services.UpdateTaskContainerId(m.db, models.Id(taskReq.TaskId), cid); err != nil {
 					panic(errors.Wrapf(err, "update task %s container id", taskReq.TaskId))
 				}
@@ -1285,7 +1285,7 @@ loop:
 				logger.Errorf("start task step error: %s", err.Error())
 				changeStepStatus(models.TaskStepFailed, err.Error())
 				return err
-			} else if taskReq.ContainerId == "" {
+			} else if task.ContainerId == "" {
 				if err := services.UpdateTaskContainerId(m.db, models.Id(taskReq.TaskId), cid); err != nil {
 					panic(errors.Wrapf(err, "update job %s container id", taskReq.TaskId))
 				}
