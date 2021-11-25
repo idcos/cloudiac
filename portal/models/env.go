@@ -128,4 +128,5 @@ type EnvDetail struct {
 	KeyName       string `json:"keyName"`       // 密钥名称
 	TaskId        Id     `json:"taskId"`        // 当前作业ID
 	CommitId      string `json:"commitId"`      // Commit ID
+	IsDrift       bool   `json:"isDrift"`
 }
