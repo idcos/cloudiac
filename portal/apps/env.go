@@ -15,11 +15,12 @@ import (
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"fmt"
-	"github.com/robfig/cron/v3"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/robfig/cron/v3"
 
 	"github.com/lib/pq"
 )
@@ -670,7 +671,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 				if err != nil {
 					return nil, err
 				}
-				env.NextDriftTaskTime= nextTime
+				env.NextDriftTaskTime = nextTime
 			}
 			if form.HasKey("autoRepairDrift") {
 				env.AutoRepairDrift = form.AutoRepairDrift

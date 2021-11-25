@@ -18,13 +18,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/acarl005/stripansi"
 	"os"
 	"regexp"
 	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/acarl005/stripansi"
 
 	"github.com/pkg/errors"
 )
@@ -164,7 +165,7 @@ func (m *TaskManager) start() {
 func (m *TaskManager) beginCronDriftTask() {
 	logger := m.logger
 	cronDriftEnvs := make([]*models.Env, 0)
-	query := m.db.Where("status = ? and open_cron_drift = ? and next_start_cron_task_time <= ?", models.EnvStatusActive, true, time.Now())
+	query := m.db.Where("status = ? and open_cron_drift = ? and next_drift_task_time <= ?", models.EnvStatusActive, true, time.Now())
 	if err := query.Model(&models.Env{}).Find(&cronDriftEnvs); err != nil {
 		logger.Error(err)
 		return
@@ -199,15 +200,16 @@ func (m *TaskManager) beginCronDriftTask() {
 				logger.Errorf("create cronDriftTask failed, error: %v", err)
 				continue
 			}
+
 			task.Type = envCronTaskType
 			task.IsDriftTask = true
-			task, err = services.CloneTask(m.db, *task, env)
+			_, err = services.CloneTask(m.db, *task, env)
 			if err != nil {
 				logger.Errorf("create cronDriftTask failed, error: %v", err)
 				continue
 			}
+
 			attrs["nextDriftTaskTime"] = nextTime
-			attrs["lastDriftTaskId"] = task.Id
 			_, err = services.UpdateEnv(m.db, env.Id, attrs)
 			if err != nil {
 				logger.Errorf("create cronDriftTask failed, error: %v", err)
@@ -698,24 +700,24 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 
 		}
 		if lastStep.Status == models.TaskComplete && task.IsDriftTask {
-
 			// 判断是否是偏移检测任务，如果是，解析log文件并写入表
-			if task.IsDriftTask {
-				step, err := services.GetTaskPlanStep(db.Get(), task.Id)
-				if err != nil {
-					// 解析失败任务不停止不影响主流程
+			step, err := services.GetTaskPlanStep(db.Get(), task.Id)
+			if err != nil {
+				// 解析失败任务不停止不影响主流程
+				logger.Errorf("read plan output log: %v", err)
+			} else {
+				if bs, err := readIfExist(task.TFPlanOutputLogPath(fmt.Sprintf("step%d", step.Index))); err != nil {
 					logger.Errorf("read plan output log: %v", err)
 				} else {
-					if bs, err := readIfExist(task.TFPlanOutputLogPath(fmt.Sprintf("step%d", step.Index))); err != nil {
-						logger.Errorf("read plan output log: %v", err)
-					} else {
-						// 保存偏移检测任务信息到数据表中
-						InsertCronDriftTaskInfo(dbSess, bs, task)
-						// 发送邮件通知
-						services.TaskStatusChangeSendMessage(task, consts.EvenvtCronDrift)
-					}
+					// 保存偏移检测任务信息到数据表中
+					InsertCronDriftTaskInfo(dbSess, bs, task)
+					// 发送邮件通知
+					services.TaskStatusChangeSendMessage(task, consts.EvenvtCronDrift)
 				}
+			}
 
+			if err = services.UpdateEnvModel(dbSess, task.EnvId, models.Env{LastDriftTaskId: task.Id}); err != nil {
+				logger.Errorf("update env lastDriftTaskId: %v", err)
 			}
 		}
 
@@ -1374,18 +1376,15 @@ func InsertCronDriftTaskInfo(db *db.Session, bs []byte, task *models.Task) {
 			cronTaskInfo.Address = stripansi.Strip(strings.TrimSpace(result1[0][0][1:]))
 			for k1, v2 := range content[k+1:] {
 				if strings.Contains(v2, "#") && strings.Contains(v2, "must be") || strings.Contains(v2, "will be") {
-					resourceDetail = strings.Join(content[k+1:k1+k], "")
-					cronTaskInfo.ResourceDetail = resourceDetail
+					resourceDetail = strings.Join(content[k+1:k1+k], "\n")
 					break
 				} else if strings.Contains(v2, "Plan:") {
-					resourceDetail = strings.Join(content[k+1:k1+k], "")
-					cronTaskInfo.ResourceDetail = resourceDetail
+					resourceDetail = strings.Join(content[k+1:k1+k], "\n")
 					break
 				}
 			}
+			cronTaskInfo.ResourceDetail = resourceDetail
 			services.InsertCronTaskInfo(db, cronTaskInfo)
-
 		}
-
 	}
 }
