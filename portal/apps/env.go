@@ -16,6 +16,7 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
+	"path"
 	"sort"
 	"strings"
 	"time"
@@ -920,11 +921,17 @@ func SearchEnvResourcesGraph(c *ctx.ServiceContext, form *forms.SearchEnvResourc
 	if env.LastResTaskId == "" {
 		return nil, nil
 	}
+	rs, err := services.GetTaskResourceByEnv(c.DB(), env)
+	if err != nil {
+		return nil, err
+	}
+	for i := range rs {
+		rs[i].Provider = path.Base(rs[i].Provider)
+		// attrs 暂时不需要返回
+		rs[i].Attrs = nil
+	}
+	return GetResourcesGraph(rs, form.Dimension), nil
 
-	return SearchTaskResourcesGraph(c, &forms.SearchTaskResourceGraphForm{
-		Id:        env.LastResTaskId,
-		Dimension: form.Dimension,
-	})
 }
 
 // ResourceGraphDetail 查询部署成功后资源的详细信息

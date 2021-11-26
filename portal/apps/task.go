@@ -25,7 +25,7 @@ import (
 
 // SearchTask 任务查询
 func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{}, e.Error) {
-	query := services.QueryTask(c.DB().Debug())
+	query := services.QueryTask(c.DB())
 	if form.EnvId != "" {
 		query = query.Where("env_id = ?", form.EnvId)
 	}
@@ -368,7 +368,7 @@ func SearchTaskResourcesGraph(c *ctx.ServiceContext, form *forms.SearchTaskResou
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
-	rs, err := services.GetTaskResourceToTaskId(c.DB().Debug(), task)
+	rs, err := services.GetTaskResourceByTask(c.DB(), task)
 	if err != nil {
 		return nil, err
 	}

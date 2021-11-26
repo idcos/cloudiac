@@ -295,3 +295,19 @@ func CheckoutAutoApproval(autoApproval, autoDrift bool, triggers []string) bool 
 
 	return true
 }
+
+func GetTaskResourceByEnv(dbSess *db.Session, env *models.Env) ([]Resource, e.Error) {
+	// 查询出最后一次漂移检测的资源
+	// 资源类型: 新增、删除、修改
+	rs := make([]Resource, 0)
+	if err := dbSess.Debug().Table("iac_resource as r").
+		Joins("left join iac_resource_drift as rd on rd.address =  r.address  and rd.env_id = ? AND rd.task_id = ?", env.Id, env.LastDriftTaskId).
+		Where("r.org_id = ? AND r.project_id = ? AND r.env_id = ? AND r.task_id = ?",
+			env.OrgId, env.ProjectId, env.Id, env.LastResTaskId).
+		LazySelectAppend("r.*, rd.resource_detail").
+		Find(&rs); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	return rs, nil
+}
