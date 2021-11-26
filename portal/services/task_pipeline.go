@@ -99,3 +99,13 @@ func UpdateTaskContainerId(sess *db.Session, taskId models.Id, containerId strin
 	}
 	return nil
 }
+
+func UpdateScanTaskContainerId(sess *db.Session, taskId models.Id, containerId string) e.Error {
+	task := &models.ScanTask{}
+	task.ContainerId = containerId
+	_, err := models.UpdateModel(sess, task, "id = ?", taskId)
+	if err != nil {
+		return e.AutoNew(err, e.DBError)
+	}
+	return nil
+}
