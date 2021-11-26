@@ -666,7 +666,7 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 	}
 
 	if err := StopTaskContainers(dbSess, task.Id); err != nil {
-		logger.Warnf("stop task containers: %v", err)
+		logger.Warnf("stop task container: %v", err)
 	}
 
 	lastStep, err := services.GetTaskStep(dbSess, task.Id, task.CurrStep)
@@ -1136,7 +1136,7 @@ func (m *TaskManager) processScanTaskDone(taskId models.Id) {
 	// 重新查询获取 task，确保使用的是最新的 task 数据
 	task, err := services.GetScanTaskById(dbSess, taskId)
 	if err != nil {
-		logger.Errorf("get task %d: %v", err)
+		logger.Errorf("get task %s: %v", taskId, err)
 		return
 	}
 
@@ -1174,6 +1174,10 @@ func (m *TaskManager) processScanTaskDone(taskId models.Id) {
 		}
 
 		return err
+	}
+
+	if err := StopScanTaskContainers(dbSess, task.Id); err != nil {
+		logger.Warnf("stop task container: %v", err)
 	}
 
 	lastStep, err := services.GetTaskStep(dbSess, task.Id, task.CurrStep)
@@ -1286,7 +1290,7 @@ loop:
 				changeStepStatus(models.TaskStepFailed, err.Error())
 				return err
 			} else if task.ContainerId == "" {
-				if err := services.UpdateTaskContainerId(m.db, models.Id(taskReq.TaskId), cid); err != nil {
+				if err := services.UpdateScanTaskContainerId(m.db, models.Id(taskReq.TaskId), cid); err != nil {
 					panic(errors.Wrapf(err, "update job %s container id", taskReq.TaskId))
 				}
 			}
