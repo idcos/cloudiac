@@ -34,10 +34,14 @@ type TplImportForm struct {
 }
 
 func TemplateImport(c *ctx.ServiceContext, form *TplImportForm) (result *services.TplImportResult, er e.Error) {
+	creatorId := c.UserId
+	if creatorId == "" {
+		creatorId = consts.SysUserId
+	}
 	importer := services.TplImporter{
 		Logger:          c.Logger().WithField("action", "ImportTemplate"),
 		OrgId:           c.OrgId,
-		CreatorId:       consts.SysUserId,
+		CreatorId:       creatorId,
 		ProjectIds:      form.Projects,
 		Data:            form.Data,
 		WhenIdDuplicate: form.IdDuplicate,
