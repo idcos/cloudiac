@@ -1142,7 +1142,8 @@ func GetTaskResourceToTaskId(dbSess *db.Session, task *models.Task) ([]Resource,
 	}
 	rs := make([]Resource, 0)
 	if err := dbSess.Debug().Table("iac_resource as r").
-		Joins("left join iac_resource_drift as rd on rd.address =  r.address  and rd.env_id = ? AND rd.task_id = ?", task.EnvId, env.LastDriftTaskId).
+		Joins("left join iac_resource_drift as rd on rd.address =  r.address  " +
+			"and rd.env_id = ? AND rd.task_id = ?", task.EnvId, env.LastDriftTaskId).
 		Where("r.org_id = ? AND r.project_id = ? AND r.env_id = ? AND r.task_id = ?",
 			task.OrgId, task.ProjectId, task.EnvId, task.Id).
 		LazySelectAppend("r.*, rd.resource_detail").
@@ -1229,11 +1230,12 @@ func SendVcsComment(session *db.Session, task *models.Task, taskStatus string) {
 	}
 }
 
-func QueryResource(dbSess *db.Session, task *models.Task) *db.Session {
+func QueryResourceByEnv(dbSess *db.Session, env *models.Env) *db.Session {
 	return dbSess.Table("iac_resource as r").
-		Joins("inner join iac_resource_drift as rd on rd.address =  r.address  and rd.env_id = ? ", task.EnvId).
+		Joins("left join iac_resource_drift as rd on rd.address =  r.address  " +
+			"and rd.env_id = ? and rd.task_id = ?", env.Id,env.LastDriftTaskId).
 		Where("r.org_id = ? AND r.project_id = ? AND r.env_id = ? AND r.task_id = ?",
-			task.OrgId, task.ProjectId, task.EnvId, task.Id)
+			env.OrgId, env.ProjectId, env.Id, env.LastResTaskId)
 }
 
 func GetDriftResource(session *db.Session, envId, driftTaskId models.Id) ([]models.ResourceDrift, e.Error) {

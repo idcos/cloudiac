@@ -16,6 +16,7 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
+	"path"
 	"sort"
 	"strings"
 	"time"
@@ -808,12 +809,44 @@ func SearchEnvResources(c *ctx.ServiceContext, form *forms.SearchEnvResourceForm
 	if env.LastResTaskId == "" {
 		return getEmptyListResult(form)
 	}
+	query := services.QueryResourceByEnv(c.DB(), env).
+		LazySelectAppend("r.*, rd.resource_detail, rd.create_at")
 
-	return SearchTaskResources(c, &forms.SearchTaskResourceForm{
-		NoPageSizeForm: form.NoPageSizeForm,
-		Id:             env.LastResTaskId,
-		Q:              form.Q,
-	})
+	if form.HasKey("q") {
+		// 支持对 provider / type / name 进行模糊查询
+		query = query.Where("r.provider LIKE ? OR r.type LIKE ? OR r.name LIKE ?",
+			fmt.Sprintf("%%%s%%", form.Q),
+			fmt.Sprintf("%%%s%%", form.Q),
+			fmt.Sprintf("%%%s%%", form.Q))
+	}
+
+	if form.SortField() == "" {
+		query = query.Order("r.provider, r.type, r.name")
+	}
+
+	rs := make([]services.Resource, 0)
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	if err := p.Scan(&rs); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	for i := range rs {
+		rs[i].Provider = path.Base(rs[i].Provider)
+		// attrs 暂时不需要返回
+		rs[i].Attrs = nil
+
+		if rs[i].ResourceDetail != "" {
+			rs[i].IsDrift = true
+		}
+
+		rs[i].ResourceDetail = ""
+	}
+
+	return &page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     rs,
+	}, err
 }
 
 // EnvOutput 环境的 Terraform output
