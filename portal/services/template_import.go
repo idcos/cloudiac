@@ -56,7 +56,7 @@ func (t *TplImporter) Import(tx *db.Session) (*TplImportResult, e.Error) {
 		if er == nil {
 			return &t.result
 		}
-		// 当发生 error 时只需要返回 Duplicate 数据，其他操作已经回滚
+		// 当发生 error 时只需要返回 Duplicate 数据用于回显，其他操作已经回滚
 		return &TplImportResult{
 			Duplicate: t.result.Duplicate,
 		}
@@ -279,11 +279,11 @@ func (t *TplImporter) addCount(op string, item models.Modeler) {
 	case *models.Vcs:
 		t.Logger.Infof("%s %s", op, o.Id)
 		countItem := tplImportCountItem{Id: o.Id.String(), Name: o.Name}
-		countOp.Vcs = append(countOp.Templates, countItem)
+		countOp.Vcs = append(countOp.Vcs, countItem)
 	case *models.VariableGroup:
 		t.Logger.Infof("%s %s", op, o.Id)
 		countItem := tplImportCountItem{Id: o.Id.String(), Name: o.Name}
-		countOp.VarGroups = append(countOp.Templates, countItem)
+		countOp.VarGroups = append(countOp.VarGroups, countItem)
 	default:
 		panic(fmt.Errorf("unknonw item type: %T", item))
 	}
