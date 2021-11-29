@@ -69,7 +69,7 @@ func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (vcs *models.Vc
 	if form.HasKey("address") {
 		attrs["address"] = form.Address
 	}
-	if form.HasKey("vcsToken") {
+	if form.HasKey("vcsToken") && form.VcsToken != "" {
 		token, err := utils.EncryptSecretVar(form.VcsToken)
 		if err != nil {
 			return nil, e.New(e.VcsError, err)
