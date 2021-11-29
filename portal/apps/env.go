@@ -677,7 +677,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 				env.AutoRepairDrift = form.AutoRepairDrift
 			}
 			if form.HasKey("openCronDrift") {
-				env.AutoRepairDrift = form.OpenCronDrift
+				env.OpenCronDrift = form.OpenCronDrift
 			}
 		}
 	}
