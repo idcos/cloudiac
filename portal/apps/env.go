@@ -65,7 +65,39 @@ func GetEnvCronTaskType(cronExpress string, autoRepairDrift, openCronDrift bool)
 	return "", nil
 }
 
-// 解析表达式
+type CronDriftParam struct {
+	CronDriftExpress  string     `json:"cronDriftExpress"`  // 偏移检测表达式
+	AutoRepairDrift   bool       `json:"autoRepairDrift"`   // 是否进行自动纠偏
+	OpenCronDrift     bool       `json:"openCronDrift"`     // 是否开启偏移检测
+	NextDriftTaskTime *time.Time `json:"nextDriftTaskTime"` // 下次执行偏移检测任务的时间
+}
+
+func GetCronDriftParam(form forms.CronDriftForm) (*CronDriftParam, e.Error) {
+	cronDriftParam := &CronDriftParam{}
+	if form.HasKey("cronDriftExpress") || form.HasKey("autoRepairDrift") || form.HasKey("openCronDrift") {
+		cronTaskType, err := GetEnvCronTaskType(form.CronDriftExpress, form.AutoRepairDrift, form.OpenCronDrift)
+		if err != nil {
+			return nil, err
+		}
+		if form.HasKey("autoRepairDrift") {
+			cronDriftParam.AutoRepairDrift = form.AutoRepairDrift
+		}
+		if form.HasKey("openCronDrift") {
+			cronDriftParam.OpenCronDrift = form.OpenCronDrift
+		}
+		if cronTaskType != "" {
+			if form.HasKey("cronDriftExpress") {
+				cronDriftParam.CronDriftExpress = form.CronDriftExpress
+				nextTime, err := ParseCronpress(form.CronDriftExpress)
+				if err != nil {
+					return nil, err
+				}
+				cronDriftParam.NextDriftTaskTime = nextTime
+			}
+		}
+	}
+	return cronDriftParam, nil
+}
 
 // CreateEnv 创建环境
 func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDetail, e.Error) {
@@ -421,28 +453,21 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	}
 
 	attrs := models.Attrs{}
-	if form.HasKey("cronDriftExpress") || form.HasKey("autoRepairDrift") || form.HasKey("openCronDrift") {
-		cronTaskType, err := GetEnvCronTaskType(form.CronDriftExpress, form.AutoRepairDrift, form.OpenCronDrift)
-		if err != nil {
-			return nil, err
-		}
-		if cronTaskType != "" {
-			if form.HasKey("cronDriftExpress") {
-				attrs["cronDriftExpress"] = form.CronDriftExpress
-				nextTime, err := ParseCronpress(form.CronDriftExpress)
-				if err != nil {
-					return nil, err
-				}
-				attrs["nextDriftTaskTime"] = nextTime
-			}
-			if form.HasKey("autoRepairDrift") {
-				attrs["autoRepairDrift"] = form.AutoRepairDrift
-			}
-			if form.HasKey("openCronDrift") {
-				attrs["openCronDrift"] = form.OpenCronDrift
-			}
-		}
+
+	cronDriftParam, err := GetCronDriftParam(forms.CronDriftForm{
+		BaseForm:         form.BaseForm,
+		CronDriftExpress: form.CronDriftExpress,
+		AutoRepairDrift:  form.AutoRepairDrift,
+		OpenCronDrift:    form.OpenCronDrift,
+	})
+
+	if err != nil {
+		return nil, err
 	}
+	attrs["autoRepairDrift"] = cronDriftParam.AutoRepairDrift
+	attrs["openCronDrift"] = cronDriftParam.OpenCronDrift
+	attrs["cronDriftExpress"] = cronDriftParam.CronDriftExpress
+	attrs["nextDriftTaskTime"] = cronDriftParam.NextDriftTaskTime
 
 	if form.HasKey("name") {
 		attrs["name"] = form.Name
@@ -658,29 +683,19 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 			env.AutoDestroyAt = &at
 		}
 	}
-
-	if form.HasKey("cronDriftExpress") || form.HasKey("autoRepairDrift") || form.HasKey("openCronDrift") {
-		cronTaskType, err := GetEnvCronTaskType(form.CronDriftExpress, form.AutoRepairDrift, form.OpenCronDrift)
-		if err != nil {
-			return nil, err
-		}
-		if cronTaskType != "" {
-			if form.HasKey("cronDriftExpress") {
-				env.CronDriftExpress = form.CronDriftExpress
-				nextTime, err := ParseCronpress(form.CronDriftExpress)
-				if err != nil {
-					return nil, err
-				}
-				env.NextDriftTaskTime = nextTime
-			}
-			if form.HasKey("autoRepairDrift") {
-				env.AutoRepairDrift = form.AutoRepairDrift
-			}
-			if form.HasKey("openCronDrift") {
-				env.OpenCronDrift = form.OpenCronDrift
-			}
-		}
+	cronDriftParam, err := GetCronDriftParam(forms.CronDriftForm{
+		BaseForm:         form.BaseForm,
+		CronDriftExpress: form.CronDriftExpress,
+		AutoRepairDrift:  form.AutoRepairDrift,
+		OpenCronDrift:    form.OpenCronDrift,
+	})
+	if err != nil {
+		return nil, err
 	}
+	env.AutoRepairDrift = cronDriftParam.AutoRepairDrift
+	env.OpenCronDrift = cronDriftParam.OpenCronDrift
+	env.CronDriftExpress = cronDriftParam.CronDriftExpress
+	env.NextDriftTaskTime = cronDriftParam.NextDriftTaskTime
 	if form.HasKey("triggers") {
 		env.Triggers = form.Triggers
 	}
