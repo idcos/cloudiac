@@ -300,7 +300,7 @@ func GetValidVarsAndVgVars(tx *db.Session, orgId, projectId, tplId, envId models
 
 	// 将变量组变量与普通变量进行合并，优先级: 普通变量 > 变量组变量
 	// 查询实例关联的变量组
-	varGroup, err := SearchVariableGroupRel(tx.Debug(), map[string]models.Id{
+	varGroup, err := SearchVariableGroupRel(tx, map[string]models.Id{
 		consts.ScopeEnv:      envId,
 		consts.ScopeTemplate: tplId,
 		consts.ScopeProject:  projectId,

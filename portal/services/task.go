@@ -1127,50 +1127,22 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 
 type Resource struct {
 	models.Resource
-	ResourceDetail  string       `json:"resourceDetail"`
-	CreateAt        *models.Time `json:"createAt"`
-	DriftResourceId uint         `json:"driftResourceIde_id"`
-	IsDrift         bool         `json:"isDrift" form:"isDrift" `
+	DriftDetail string       `json:"driftDetail"`
+	CreatedAt   *models.Time `json:"createdAt"`
+	IsDrift     bool         `json:"isDrift" form:"isDrift" `
 }
 
 func GetTaskResourceToTaskId(dbSess *db.Session, task *models.Task) ([]Resource, e.Error) {
 	// 查询出最后一次漂移检测的资源
 	// 资源类型: 新增、删除、修改
-	env, err := GetEnvById(dbSess, task.EnvId)
-	if err != nil {
-		return nil, err
-	}
 	rs := make([]Resource, 0)
-	if err := dbSess.Debug().Table("iac_resource as r").
-		Joins("left join iac_resource_drift as rd on rd.address =  r.address  and rd.env_id = ? AND rd.task_id = ?", task.EnvId, env.LastDriftTaskId).
+	if err := dbSess.Table("iac_resource as r").
+		Joins("left join iac_resource_drift as rd on rd.res_id =  r.id ").
 		Where("r.org_id = ? AND r.project_id = ? AND r.env_id = ? AND r.task_id = ?",
 			task.OrgId, task.ProjectId, task.EnvId, task.Id).
-		LazySelectAppend("r.*, rd.resource_detail").
+		LazySelectAppend("r.*, rd.drift_detail, rd.updated_at, rd.created_at").
 		Find(&rs); err != nil {
 		return nil, e.New(e.DBError, err)
-	}
-
-	res, err := GetDriftResource(dbSess, task.EnvId, env.LastDriftTaskId)
-	if err != nil {
-		return nil, err
-	}
-
-	resAddrs := make([]string, 0)
-	for _, v := range rs {
-		resAddrs = append(resAddrs, v.Address)
-	}
-
-	for _, r := range res {
-		if !utils.InArrayStr(resAddrs, r.Address) {
-			rs = append(rs, Resource{
-				Resource: models.Resource{
-					Address: r.Address,
-				},
-				ResourceDetail:  r.ResourceDetail,
-				CreateAt:        r.CreateAt,
-				DriftResourceId: r.Id,
-			})
-		}
 	}
 
 	return rs, nil
@@ -1238,7 +1210,7 @@ func QueryResource(dbSess *db.Session, task *models.Task) *db.Session {
 
 func GetDriftResource(session *db.Session, envId, driftTaskId models.Id) ([]models.ResourceDrift, e.Error) {
 	driftResources := make([]models.ResourceDrift, 0)
-	if err := session.Debug().Model(&models.ResourceDrift{}).
+	if err := session.Model(&models.ResourceDrift{}).
 		Where("env_id = ?", envId).
 		Where("task_id = ?", driftTaskId).
 		Find(&driftResources); err != nil {
@@ -1254,7 +1226,7 @@ type ResourceDriftResp struct {
 
 func GetDriftResourceById(session *db.Session, id string) (*ResourceDriftResp, e.Error) {
 	driftResources := &ResourceDriftResp{}
-	if err := session.Debug().Model(&models.ResourceDrift{}).
+	if err := session.Model(&models.ResourceDrift{}).
 		Where("id = ?", id).
 		First(driftResources); err != nil {
 		return nil, e.New(e.DBError, err)

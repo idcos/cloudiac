@@ -25,7 +25,7 @@ import (
 
 // SearchTask 任务查询
 func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{}, e.Error) {
-	query := services.QueryTask(c.DB().Debug())
+	query := services.QueryTask(c.DB())
 	if form.EnvId != "" {
 		query = query.Where("env_id = ?", form.EnvId)
 	}
@@ -291,22 +291,22 @@ func SearchTaskResources(c *ctx.ServiceContext, form *forms.SearchTaskResourceFo
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
-	query := c.DB().Model(models.Resource{}).Where("org_id = ? AND project_id = ? AND env_id = ? AND task_id = ?",
+	query := c.DB().Table("iac_resource as r").Where("r.org_id = ? AND r.project_id = ? AND r.env_id = ? AND r.task_id = ?",
 		c.OrgId, c.ProjectId, task.EnvId, task.Id)
-
+	query = query.Joins("left join iac_resource_drift as rd on rd.res_id = r.id").LazySelectAppend("r.*, !ISNULL(rd.drift_detail) as is_drift")
 	if form.HasKey("q") {
 		// 支持对 provider / type / name 进行模糊查询
-		query = query.Where("provider LIKE ? OR type LIKE ? OR name LIKE ?",
+		query = query.Where("r.provider LIKE ? OR r.type LIKE ? OR r.name LIKE ?",
 			fmt.Sprintf("%%%s%%", form.Q),
 			fmt.Sprintf("%%%s%%", form.Q),
 			fmt.Sprintf("%%%s%%", form.Q))
 	}
 
 	if form.SortField() == "" {
-		query = query.Order("provider, type, name")
+		query = query.Order("r.provider, r.type, r.name")
 	}
 
-	rs := make([]models.Resource, 0)
+	rs := make([]services.Resource, 0)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	if err := p.Scan(&rs); err != nil {
 		return nil, e.New(e.DBError, err)
@@ -368,7 +368,7 @@ func SearchTaskResourcesGraph(c *ctx.ServiceContext, form *forms.SearchTaskResou
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
-	rs, err := services.GetTaskResourceToTaskId(c.DB().Debug(), task)
+	rs, err := services.GetTaskResourceToTaskId(c.DB(), task)
 	if err != nil {
 		return nil, err
 	}
@@ -479,15 +479,12 @@ func GetResourcesGraphModule(resources []services.Resource) interface{} {
 					NodeName:     addr,
 				}
 
-				if resource.Id == "" {
-					res.ResourceId = resource.DriftResourceId
-				}
 
 				if res.ResourceName == "" {
 					res.ResourceName = addr
 				}
 
-				if resource.ResourceDetail != "" {
+				if resource.DriftDetail != "" {
 					res.IsDrift = true
 				}
 
@@ -587,7 +584,7 @@ func GetResourcesGraphProvider(rs []services.Resource) interface{} {
 			Id:   v.Id,
 			Name: v.Name,
 		}
-		if v.ResourceDetail != "" {
+		if v.DriftDetail != "" {
 			ptr.IsDrift = true
 		}
 		if _, ok := rgtAttr[v.Provider]; !ok {
@@ -620,7 +617,7 @@ func GetResourcesGraphType(rs []services.Resource) interface{} {
 			Id:   v.Id,
 			Name: v.Name,
 		}
-		if v.ResourceDetail != "" {
+		if v.DriftDetail != "" {
 			ptr.IsDrift = true
 		}
 		if _, ok := rgtAttr[v.Type]; !ok {
