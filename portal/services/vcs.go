@@ -83,6 +83,18 @@ func GetVcsById(sess *db.Session, id models.Id) (*models.Vcs, e.Error) {
 	return &vcs, nil
 }
 
+func GetVcsListByIds(sess *db.Session, ids []string) ([]models.Vcs, e.Error) {
+	vcs := make([]models.Vcs, 0)
+	err := sess.Model(&models.Vcs{}).Where("id in (?)", ids).Find(&vcs)
+	if err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.VcsNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return vcs, nil
+}
+
 func GetVcsRepoByTplId(sess *db.Session, tplId models.Id) (vcsrv.RepoIface, e.Error) {
 	tpl, err := GetTemplateById(sess, tplId)
 	if err != nil {
