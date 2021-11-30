@@ -188,7 +188,7 @@ func (m *TaskManager) beginCronDriftTask() {
 			continue
 		}
 		// 这里每次都去解析env表保存的最新的cron 表达式
-		envCronTaskType, err := apps.GetEnvCronTaskType(env.CronDriftExpress, env.AutoRepairDrift, env.OpenCronDrift)
+		envCronTaskType, err := apps.GetCronTaskTypeAndCheckParam(env.CronDriftExpress, env.AutoRepairDrift, env.OpenCronDrift)
 		if err != nil {
 			logger.Errorf("create cronDriftTask failed, error: %v", err)
 			continue
