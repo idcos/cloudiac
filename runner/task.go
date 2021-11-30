@@ -557,7 +557,7 @@ var parseCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 mkdir -p {{.PoliciesDir}} && \
 mkdir -p ~/.terrascan/pkg/policies/opa/rego/aws && \
-terrascan scan --config-only -l debug -o json > {{.TFScanJsonFilePath}}
+terrascan scan --config-only -l debug -o json --iac-type terraform > {{.TFScanJsonFilePath}}
 `))
 
 func (t *Task) stepTfParse() (command string, err error) {
