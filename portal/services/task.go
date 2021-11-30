@@ -53,15 +53,28 @@ func DeleteTaskStep(tx *db.Session, taskId models.Id) e.Error {
 	return nil
 }
 
-func DeleteHistoryCronTask(tx *db.Session, pt models.Task) e.Error {
-	task := make([]models.TaskStep, 0)
-	err := tx.Where("where unix_timestamp(now()) - unix_timestamp(end_at) > ?", 86400*7).Find(&task)
+func DeleteTask(tx *db.Session, taskId models.Id) e.Error {
+	step := models.Task{}
+	_, err := tx.Where("id = ?", taskId).Delete(&step)
+	if err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
+func DeleteHistoryCronTask(tx *db.Session) e.Error {
+	task := make([]models.Task, 0)
+	err := tx.Where("unix_timestamp(now()) - unix_timestamp(end_at) > ? and name = ? and type = ?",
+		86400*7, common.CronDriftTaskName, models.TaskTypePlan).Find(&task)
 	if err != nil {
 		return e.New(e.DBError, fmt.Errorf("delete task error: %v", err))
 	}
-	// 删除任务相关的step
+	// 删除任务以及任务相关的step
 	if len(task) > 0 {
 		for _, v := range task {
+			if er1 := DeleteTask(tx, v.Id); er1 != nil {
+				return er1
+			}
 			if er1 := DeleteTaskStep(tx, v.Id); er1 != nil {
 				return er1
 			}

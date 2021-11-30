@@ -202,13 +202,10 @@ func (m *TaskManager) beginCronDriftTask() {
 			}
 			task.Type = envCronTaskType
 			task.IsDriftTask = true
-			if task.Type == models.TaskTypePlan {
-				err = services.DeleteHistoryCronTask(m.db, *task)
-				// 删除历史数据失败，先跳过当前任务的创建。
-				if err != nil {
-					logger.Errorf("delete expired task and task step failed, error: %v", err)
-					continue
-				}
+			err = services.DeleteHistoryCronTask(m.db)
+			// 删除历史数据失败，继续剩余流程。
+			if err != nil {
+				logger.Errorf("delete expired task and task step failed, error: %v", err)
 			}
 			_, err = services.CloneTask(m.db, *task, env)
 			if err != nil {
@@ -717,15 +714,17 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 					logger.Errorf("read plan output log: %v", err)
 				} else {
 					// 解析并保存资源漂移信息
-					if InsertResourceDriftInfo(dbSess, bs, task) {
+					driftInfoList := InsertResourceDriftInfo(dbSess, bs, task)
+					if len(driftInfoList) > 0 {
+						for _,v := range(driftInfoList) {
+							// 批量更新偏移资源表信息 TODO 后续使用batch 改进
+							services.InsertOrUpdateCronTaskInfo(db.Get(), v)
+						}
 						// 发送邮件通知
 						services.TaskStatusChangeSendMessage(task, consts.EvenvtCronDrift)
 					}
-				}
-			}
 
-			if err = services.UpdateEnvModel(dbSess, task.EnvId, models.Env{LastResTaskId: task.Id}); err != nil {
-				logger.Errorf("update env lastDriftTaskId: %v", err)
+				}
 			}
 		}
 
@@ -1368,8 +1367,9 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 	return nil
 }
 
-func InsertResourceDriftInfo(db *db.Session, bs []byte, task *models.Task) (hasDrift bool) {
+func InsertResourceDriftInfo(db *db.Session, bs []byte, task *models.Task) []models.ResourceDrift {
 	content := strings.Split(string(bs), "\n")
+	cronTaskInfoList := make([]models.ResourceDrift, 0)
 	for k, v := range content {
 		if strings.Contains(v, "#") && strings.Contains(v, "must be") || strings.Contains(v, "will be") {
 			var resourceDetail string
@@ -1394,9 +1394,8 @@ func InsertResourceDriftInfo(db *db.Session, bs []byte, task *models.Task) (hasD
 			}
 			cronTaskInfo.DriftDetail = resourceDetail
 			cronTaskInfo.ResId = res.Id
-			services.InsertOrUpdateCronTaskInfo(db, cronTaskInfo)
-			hasDrift = true
+			cronTaskInfoList = append(cronTaskInfoList, cronTaskInfo)
 		}
 	}
-	return
+	return cronTaskInfoList
 }
