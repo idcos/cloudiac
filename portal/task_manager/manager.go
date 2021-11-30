@@ -200,9 +200,16 @@ func (m *TaskManager) beginCronDriftTask() {
 				logger.Errorf("create cronDriftTask failed, error: %v", err)
 				continue
 			}
-
 			task.Type = envCronTaskType
 			task.IsDriftTask = true
+			if task.Type == models.TaskTypePlan {
+				err = services.DeleteHistoryCronTask(m.db, *task)
+				// 删除历史数据失败，先跳过当前任务的创建。
+				if err != nil {
+					logger.Errorf("delete expired task and task step failed, error: %v", err)
+					continue
+				}
+			}
 			_, err = services.CloneTask(m.db, *task, env)
 			if err != nil {
 				logger.Errorf("create cronDriftTask failed, error: %v", err)
@@ -717,7 +724,7 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 				}
 			}
 
-			if err = services.UpdateEnvModel(dbSess, task.EnvId, models.Env{LastDriftTaskId: task.Id}); err != nil {
+			if err = services.UpdateEnvModel(dbSess, task.EnvId, models.Env{LastResTaskId: task.Id}); err != nil {
 				logger.Errorf("update env lastDriftTaskId: %v", err)
 			}
 		}
@@ -1366,15 +1373,16 @@ func InsertResourceDriftInfo(db *db.Session, bs []byte, task *models.Task) (hasD
 	for k, v := range content {
 		if strings.Contains(v, "#") && strings.Contains(v, "must be") || strings.Contains(v, "will be") {
 			var resourceDetail string
-			nowTime := models.Time(time.Now())
-			cronTaskInfo := models.ResourceDrift{
-				EnvId:    task.EnvId,
-				CreateAt: &nowTime,
-				TaskId:   task.Id,
-			}
+			cronTaskInfo := models.ResourceDrift{}
 			reg1 := regexp.MustCompile(`#\s\S*`)
 			result1 := reg1.FindAllStringSubmatch(v, 1)
-			cronTaskInfo.Address = stripansi.Strip(strings.TrimSpace(result1[0][0][1:]))
+			address := stripansi.Strip(strings.TrimSpace(result1[0][0][1:]))
+			res, err := services.GetResourceIdByAddressAndTaskId(db, address, task.Id)
+			if err != nil {
+				logs.Get().Error("Failed to query resource table while writing drift resource")
+				continue
+			}
+
 			for k1, v2 := range content[k+1:] {
 				if strings.Contains(v2, "#") && strings.Contains(v2, "must be") || strings.Contains(v2, "will be") {
 					resourceDetail = strings.Join(content[k+1:k1+k], "\n")
@@ -1384,8 +1392,9 @@ func InsertResourceDriftInfo(db *db.Session, bs []byte, task *models.Task) (hasD
 					break
 				}
 			}
-			cronTaskInfo.ResourceDetail = resourceDetail
-			services.InsertCronTaskInfo(db, cronTaskInfo)
+			cronTaskInfo.DriftDetail = resourceDetail
+			cronTaskInfo.ResId = res.Id
+			services.InsertOrUpdateCronTaskInfo(db, cronTaskInfo)
 			hasDrift = true
 		}
 	}
