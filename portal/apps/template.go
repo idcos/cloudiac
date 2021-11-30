@@ -3,6 +3,7 @@
 package apps
 
 import (
+	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
@@ -31,6 +32,8 @@ type SearchTemplateResp struct {
 	RepoAddr          string      `json:"repoAddr"`
 	TplType           string      `json:"tplType" `
 	RepoFullName      string      `json:"repoFullName"`
+	NewRepoAddr       string      `json:"newRepoAddr"`
+	VcsAddr           string      `json:"vcsAddr"`
 }
 
 func getRepoAddr(vcsId models.Id, query *db.Session, repoId string) (string, error) {
@@ -372,6 +375,10 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 		}
 
 		if tpl.RepoAddr == "" {
+			if vcsAttr[tpl.VcsId].VcsType == consts.GitTypeLocal {
+				tpl.RepoAddr = fmt.Sprintf("%s/%s/%s.git", utils.GetUrl(configs.Get().Portal.Address), vcsAttr[tpl.VcsId].Address, tpl.RepoFullName)
+				continue
+			}
 			tpl.RepoAddr = fmt.Sprintf("%s/%s.git", utils.GetUrl(vcsAttr[tpl.VcsId].Address), tpl.RepoFullName)
 		}
 	}
