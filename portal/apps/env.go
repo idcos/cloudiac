@@ -42,8 +42,8 @@ func ParseCronpress(cronDriftExpress string) (*time.Time, e.Error) {
 	return &nextTime, nil
 }
 
-// 获取环境偏移检测任务类型
-func GetEnvCronTaskType(cronExpress string, autoRepairDrift, openCronDrift bool) (string, e.Error) {
+// 获取环境偏移检测任务类型并且检查其参数
+func GetCronTaskTypeAndCheckParam(cronExpress string, autoRepairDrift, openCronDrift bool) (string, e.Error) {
 	if openCronDrift {
 		if cronExpress == "" {
 			return "", e.New(e.BadParam, http.StatusBadRequest, "Please set cronExpress when openCronDrift is set")
@@ -75,7 +75,7 @@ type CronDriftParam struct {
 func GetCronDriftParam(form forms.CronDriftForm) (*CronDriftParam, e.Error) {
 	cronDriftParam := &CronDriftParam{}
 	if form.HasKey("cronDriftExpress") || form.HasKey("autoRepairDrift") || form.HasKey("openCronDrift") {
-		cronTaskType, err := GetEnvCronTaskType(form.CronDriftExpress, form.AutoRepairDrift, form.OpenCronDrift)
+		cronTaskType, err := GetCronTaskTypeAndCheckParam(form.CronDriftExpress, form.AutoRepairDrift, form.OpenCronDrift)
 		if err != nil {
 			return nil, err
 		}
@@ -86,14 +86,16 @@ func GetCronDriftParam(form forms.CronDriftForm) (*CronDriftParam, e.Error) {
 			cronDriftParam.OpenCronDrift = form.OpenCronDrift
 		}
 		if cronTaskType != "" {
-			if form.HasKey("cronDriftExpress") {
-				cronDriftParam.CronDriftExpress = form.CronDriftExpress
-				nextTime, err := ParseCronpress(form.CronDriftExpress)
-				if err != nil {
-					return nil, err
-				}
-				cronDriftParam.NextDriftTaskTime = nextTime
+			// 如果任务类型不为空，说明配置了漂移检测任务
+			cronDriftParam.CronDriftExpress = form.CronDriftExpress
+			nextTime, err := ParseCronpress(form.CronDriftExpress)
+			if err != nil {
+				return nil, err
 			}
+			cronDriftParam.NextDriftTaskTime = nextTime
+		} else {
+			// 更新配置取消漂移检测任务，将下次重试时间重置为nil
+			cronDriftParam.NextDriftTaskTime = nil
 		}
 	}
 	return cronDriftParam, nil
@@ -207,7 +209,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		OpenCronDrift:    form.OpenCronDrift,
 	}
 	// 检查偏移检测参数
-	cronTaskType, err := GetEnvCronTaskType(form.CronDriftExpress, form.AutoRepairDrift, form.OpenCronDrift)
+	cronTaskType, err := GetCronTaskTypeAndCheckParam(form.CronDriftExpress, form.AutoRepairDrift, form.OpenCronDrift)
 	if err != nil {
 		return nil, err
 	}
