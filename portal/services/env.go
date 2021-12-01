@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
 	"time"
@@ -246,6 +247,7 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 	if err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("get vairables error: %v", err))
 	}
+	ValidNameList := make([]string, 0)
 	for _, v := range sampleVariables {
 		for key, value := range vars {
 			// 对于第三方调用api创建的环境来说，当前作用域是无变量的，sampleVariables中的变量一种是继承性下来的、另一种是新建的
@@ -260,17 +262,20 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 						Name:  vars[key].Name,
 						Value: v.Value,
 					})
+					ValidNameList = append(ValidNameList, v.Name)
 				}
-			} else {
-				// 这部分变量不是继承来的 需要新建
-				resp = append(resp, forms.Variable{
-					Scope: consts.ScopeEnv,
-					Type:  consts.VarTypeEnv,
-					Name:  vars[key].Name,
-					Value: v.Value,
-				})
 			}
 		}
+		if utils.ArrayIsExistsStr(ValidNameList,v.Name) {
+			continue
+		}
+		// 这部分变量是新增的 需要新建
+		resp = append(resp, forms.Variable{
+			Scope: consts.ScopeEnv,
+			Type:  consts.VarTypeEnv,
+			Name:  v.Name,
+			Value: v.Value,
+		})
 	}
 
 	return resp, nil
