@@ -109,7 +109,8 @@ func UpdateModel(tx *db.Session, o Modeler, query ...interface{}) (int64, error)
 	})
 }
 
-// 更新 model 的所有字段值到 db，即使其值为 zero value
+// 更新 model 的所有字段值到 db，即使其值为 zero value(除了 created_at)
+// 注意，该方法不会自动更新 updated_at
 func UpdateModelAll(tx *db.Session, o Modeler, query ...interface{}) (int64, error) {
 	return UpdateModel(tx.Select("*").Omit("created_at"), o, query...)
 }

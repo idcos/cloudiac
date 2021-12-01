@@ -134,7 +134,7 @@ func AccessControl(args ...string) gin.HandlerFunc {
 			logger.Errorf("error enforce %s,%s %s:%s, err %s", role, proj, object, action, err)
 			c.JSONError(e.New(e.InternalError), http.StatusInternalServerError)
 		}
-		logger.Debugf("enforce, orgRole=%s, projectRole=%s, object=%s, action=%s, allow=%v",
+		logger.Tracef("enforce, orgRole=%s, projectRole=%s, object=%s, action=%s, allow=%v",
 			role, proj, object, action, allow)
 		if allow {
 			c.Next()

@@ -207,7 +207,7 @@ func (m *TaskManager) beginCronDriftTask() {
 			if err != nil {
 				logger.Errorf("delete expired task and task step failed, error: %v", err)
 			}
-			_, err = services.CloneTask(m.db, *task, env)
+			_, err = services.CloneNewDriftTask(m.db, *task, env)
 			if err != nil {
 				logger.Errorf("create cronDriftTask failed, error: %v", err)
 				continue
@@ -446,6 +446,19 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		}
 	}
 
+	if task.IsDriftTask {
+		if env, err := services.GetEnvById(m.db, task.EnvId); err != nil {
+			if err != nil {
+				logger.Errorf("get task environment %s: %v", task.EnvId, err)
+				taskStartFailed(errors.New("get task environment failed"))
+				return
+			}
+		} else if env.Status != models.EnvStatusActive {
+			taskStartFailed(errors.New("environment is not active"))
+			return
+		}
+	}
+
 	if task.IsEffectTask() {
 		if _, er := m.db.Model(&models.Env{}).Where("id = ?", task.EnvId).
 			Update(&models.Env{LastTaskId: task.Id}); er != nil {
@@ -610,9 +623,6 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 			if err = services.SaveTaskOutputs(dbSess, task, tfState.Values.Outputs); err != nil {
 				return fmt.Errorf("save task outputs: %v", err)
 			}
-			if err = services.UpdateEnvModel(dbSess, task.EnvId, models.Env{LastResTaskId: task.Id}); err != nil {
-				return fmt.Errorf("update env lastResTaskId: %v", err)
-			}
 		}
 
 		return nil
@@ -701,8 +711,8 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 					logger.Errorf("process task plan: %v", err)
 				}
 			}
-
 		}
+
 		if lastStep.Status == models.TaskComplete && task.IsDriftTask {
 			// 判断是否是偏移检测任务，如果是，解析log文件并写入表
 			step, err := services.GetTaskPlanStep(db.Get(), task.Id)
@@ -719,16 +729,16 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 						logger.Errorf("get env '%s'", task.EnvId)
 						return
 					}
-					driftInfoList := InsertResourceDriftInfo(dbSess, bs, env.LastResTaskId)
+					driftInfoList := ParseResourceDriftInfo(dbSess, bs, env.LastResTaskId)
 					if len(driftInfoList) > 0 {
-						for _,v := range(driftInfoList) {
-							// 批量更新偏移资源表信息 TODO 后续使用batch 改进
+						for _, v := range driftInfoList {
+							// 批量更新偏移资源表信息
+							// TODO 后续使用batch 改进
 							services.InsertOrUpdateCronTaskInfo(db.Get(), v)
 						}
 						// 发送邮件通知
 						services.TaskStatusChangeSendMessage(task, consts.EvenvtCronDrift)
 					}
-
 				}
 			}
 		}
@@ -738,6 +748,11 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 		}
 
 		if task.IsEffectTask() {
+			// 注意：环境的 lastResTaskId 必须在资源漂移信息统计后执行
+			if err = services.UpdateEnvModel(dbSess, task.EnvId, models.Env{LastResTaskId: task.Id}); err != nil {
+				logger.Errorf("update env lastResTaskId: %v", err)
+			}
+
 			// 注意: 该步骤需要在环境状态被更新之后执行
 			if err := processAutoDestroy(); err != nil {
 				logger.Errorf("process auto destroy: %v", err)
@@ -1376,7 +1391,7 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 	return nil
 }
 
-func InsertResourceDriftInfo(db *db.Session, bs []byte, lastResId models.Id) []models.ResourceDrift {
+func ParseResourceDriftInfo(db *db.Session, bs []byte, lastResId models.Id) []models.ResourceDrift {
 	content := strings.Split(string(bs), "\n")
 	cronTaskInfoList := make([]models.ResourceDrift, 0)
 	for k, v := range content {
