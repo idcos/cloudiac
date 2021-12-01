@@ -19,6 +19,7 @@ type CreateTemplateForm struct {
 	Name         string      `form:"name" json:"name" binding:"required,gte=2,lte=64"`
 	Description  string      `form:"description" json:"description" binding:""`
 	RepoId       string      `form:"repoId" json:"repoId" binding:"required"`
+	RepoFullName string      `form:"repoFullName" json:"repoFullName" binding:"required"`
 	RepoRevision string      `form:"repoRevision" json:"repoRevision" binding:""`
 	Extra        string      `form:"extra" json:"extra"`
 	Workdir      string      `form:"workdir" json:"workdir"`
@@ -57,6 +58,7 @@ type UpdateTemplateForm struct {
 	RepoRevision string      `form:"repoRevision" json:"repoRevision" binding:""`
 	VcsId        models.Id   `form:"vcsId" json:"vcsId" binding:""`
 	RepoId       string      `form:"repoId" json:"repoId" binding:""`
+	RepoFullName string      `form:"repoFullName" json:"repoFullName" binding:""`
 	TfVersion    string      `form:"tfVersion" json:"tfVersion" binding:""`
 
 	Variables []Variable `json:"variables" form:"variables" `

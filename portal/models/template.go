@@ -16,7 +16,8 @@ type Template struct {
 	// 此时创建任务直接使用 RepoRevision 做为 commit id，不再实时获取
 	VcsId Id `json:"vcsId" gorm:"size:32;not null" example:"a1f79e8a-744d-4ea5-8d97-7e4b7b422a6c"`
 
-	RepoId       string `json:"repoId" gorm:"not null"` // RepoId 仓库 id 或者 path(local vcs)
+	RepoId       string `json:"repoId" gorm:"not null"`       // RepoId 仓库 id 或者 path(local vcs)
+	RepoFullName string `json:"repoFullName" gorm:"not null"` // 完整的仓库名称
 	RepoRevision string `json:"repoRevision" gorm:"size:64;default:'master'" example:"master"`
 
 	// 云模板的 repoAddr  和 repoToken 字段可以为空，若为空则在创建 task 时会查询 vcs 获取

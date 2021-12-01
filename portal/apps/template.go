@@ -3,6 +3,7 @@
 package apps
 
 import (
+	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
@@ -12,6 +13,7 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/vcsrv"
+	"cloudiac/utils"
 	"fmt"
 	"net/http"
 )
@@ -29,6 +31,9 @@ type SearchTemplateResp struct {
 	VcsId             string      `json:"vcsId"`
 	RepoAddr          string      `json:"repoAddr"`
 	TplType           string      `json:"tplType" `
+	RepoFullName      string      `json:"repoFullName"`
+	NewRepoAddr       string      `json:"newRepoAddr"`
+	VcsAddr           string      `json:"vcsAddr"`
 }
 
 func getRepoAddr(vcsId models.Id, query *db.Session, repoId string) (string, error) {
@@ -51,6 +56,27 @@ func getRepoAddr(vcsId models.Id, query *db.Session, repoId string) (string, err
 	return repoAddr, nil
 }
 
+func getRepo(vcsId models.Id, query *db.Session, repoId string) (*vcsrv.Projects, error) {
+	vcs, err := services.QueryVcsByVcsId(vcsId, query)
+	if err != nil {
+		return nil, err
+	}
+	vcsIface, er := vcsrv.GetVcsInstance(vcs)
+	if er != nil {
+		return nil, er
+	}
+	repo, er := vcsIface.GetRepo(repoId)
+	if er != nil {
+		return nil, er
+	}
+
+	p, err := repo.FormatRepoSearch()
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
 func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*models.Template, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create template %s", form.Name))
 
@@ -62,11 +88,12 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		}
 	}()
 	template, err := services.CreateTemplate(tx, models.Template{
-		Name:        form.Name,
-		OrgId:       c.OrgId,
-		Description: form.Description,
-		VcsId:       form.VcsId,
-		RepoId:      form.RepoId,
+		Name:         form.Name,
+		OrgId:        c.OrgId,
+		Description:  form.Description,
+		VcsId:        form.VcsId,
+		RepoId:       form.RepoId,
+		RepoFullName: form.RepoFullName,
 		// 云模板的 repoAddr 和 repoToken 可以为空，若为空则会在创建任务时自动查询 vcs 获取相应值
 		RepoAddr:     "",
 		RepoToken:    "",
@@ -162,9 +189,10 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 	if form.HasKey("repoRevision") {
 		attrs["repoRevision"] = form.RepoRevision
 	}
-	if form.HasKey("vcsId") && form.HasKey("repoId") {
+	if form.HasKey("vcsId") && form.HasKey("repoId") && form.HasKey("repoFullName") {
 		attrs["vcsId"] = form.VcsId
 		attrs["repoId"] = form.RepoId
+		attrs["repoFullName"] = form.RepoFullName
 	}
 	tx := c.Tx()
 	defer func() {
@@ -283,6 +311,15 @@ func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*Tem
 	if err != nil {
 		return nil, e.New(e.DBError, err)
 	}
+
+	if tpl.RepoFullName == "" {
+		repo, err := getRepo(tpl.VcsId, c.DB(), tpl.RepoId)
+		if err != nil {
+			return nil, e.New(e.VcsError, err)
+		}
+		tpl.RepoFullName = repo.FullName
+	}
+
 	tplDetail := &TemplateDetailResp{
 		Template:    tpl,
 		Variables:   varialbeList,
@@ -304,11 +341,38 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 			return getEmptyListResult(form)
 		}
 	}
+	vcsIds := make([]string, 0)
 	query := services.QueryTemplateByOrgId(c.DB(), form.Q, c.OrgId, tplIdList)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	templates := make([]*SearchTemplateResp, 0)
 	if err := p.Scan(&templates); err != nil {
 		return nil, e.New(e.DBError, err)
+	}
+
+	for _, v := range templates {
+		if v.RepoAddr == "" {
+			vcsIds = append(vcsIds, v.VcsId)
+		}
+	}
+
+	vcsList, err := services.GetVcsListByIds(c.DB(), vcsIds)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	vcsAttr := make(map[string]models.Vcs)
+	for _, v := range vcsList {
+		vcsAttr[v.Id.String()] = v
+	}
+
+	for _, tpl := range templates {
+		if tpl.RepoAddr == "" && tpl.RepoFullName != "" {
+			if vcsAttr[tpl.VcsId].VcsType == consts.GitTypeLocal {
+				tpl.RepoAddr = fmt.Sprintf("%s/%s/%s.git", utils.GetUrl(configs.Get().Portal.Address), vcsAttr[tpl.VcsId].Address, tpl.RepoFullName)
+				continue
+			}
+			tpl.RepoAddr = fmt.Sprintf("%s/%s.git", utils.GetUrl(vcsAttr[tpl.VcsId].Address), tpl.RepoFullName)
+		}
 	}
 
 	return page.PageResp{
@@ -327,7 +391,7 @@ func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (inte
 
 	// 如果云模版名称传入，校验名称是否重复.
 	if form.Name != "" {
-		tpl, err := services.QueryTemplateByName(c.DB().Where("id != ?",form.TemplateId), form.Name, c.OrgId)
+		tpl, err := services.QueryTemplateByName(c.DB().Where("id != ?", form.TemplateId), form.Name, c.OrgId)
 		if tpl != nil {
 			return nil, e.New(e.TemplateNameRepeat, err)
 		}
