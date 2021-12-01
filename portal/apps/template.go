@@ -366,15 +366,7 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 	}
 
 	for _, tpl := range templates {
-		if tpl.RepoFullName == "" {
-			p, err := getRepo(models.Id(tpl.VcsId), c.DB(), tpl.RepoId)
-			if err != nil {
-				return nil, e.New(e.VcsError, err)
-			}
-			tpl.RepoFullName = p.FullName
-		}
-
-		if tpl.RepoAddr == "" {
+		if tpl.RepoAddr == "" && tpl.RepoFullName != "" {
 			if vcsAttr[tpl.VcsId].VcsType == consts.GitTypeLocal {
 				tpl.RepoAddr = fmt.Sprintf("%s/%s/%s.git", utils.GetUrl(configs.Get().Portal.Address), vcsAttr[tpl.VcsId].Address, tpl.RepoFullName)
 				continue
