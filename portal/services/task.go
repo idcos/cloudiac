@@ -1175,7 +1175,7 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 type Resource struct {
 	models.Resource
 	DriftDetail string       `json:"driftDetail"`
-	CreatedAt   *models.Time `json:"createdAt"`
+	DriftAt     *models.Time `json:"driftAt"`
 	IsDrift     bool         `json:"isDrift" form:"isDrift" `
 }
 
