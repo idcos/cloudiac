@@ -64,8 +64,8 @@ func DeleteTask(tx *db.Session, taskId models.Id) e.Error {
 
 func DeleteHistoryCronTask(tx *db.Session) e.Error {
 	task := make([]models.Task, 0)
-	err := tx.Where("unix_timestamp(now()) - unix_timestamp(end_at) > ? and name = ? and type = ?",
-		86400*7, common.CronDriftTaskName, models.TaskTypePlan).Find(&task)
+	err := tx.Where("unix_timestamp(now()) - unix_timestamp(end_at) > ? and is_drift_task = ? and type = ?",
+		86400*7, true, models.TaskTypePlan).Find(&task)
 	if err != nil {
 		return e.New(e.DBError, fmt.Errorf("delete task error: %v", err))
 	}
