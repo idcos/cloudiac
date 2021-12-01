@@ -44,6 +44,53 @@ func GetTask(dbSess *db.Session, id models.Id) (*models.Task, e.Error) {
 	return &task, nil
 }
 
+func DeleteTaskStep(tx *db.Session, taskId models.Id) e.Error {
+	step := models.TaskStep{}
+	_, err := tx.Where("task_id = ?", taskId).Delete(&step)
+	if err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
+func DeleteTask(tx *db.Session, taskId models.Id) e.Error {
+	step := models.Task{}
+	_, err := tx.Where("id = ?", taskId).Delete(&step)
+	if err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
+func DeleteHistoryCronTask(tx *db.Session) e.Error {
+	task := make([]models.Task, 0)
+	err := tx.Where("unix_timestamp(now()) - unix_timestamp(end_at) > ? and is_drift_task = ? and type = ?",
+		86400*7, true, models.TaskTypePlan).Find(&task)
+	if err != nil {
+		return e.New(e.DBError, fmt.Errorf("delete task error: %v", err))
+	}
+	// 删除任务以及任务相关的step
+	if len(task) > 0 {
+		for _, v := range task {
+			if er1 := DeleteTask(tx, v.Id); er1 != nil {
+				return er1
+			}
+			if er1 := DeleteTaskStep(tx, v.Id); er1 != nil {
+				return er1
+			}
+		}
+	}
+	return nil
+}
+
+func GetResourceIdByAddressAndTaskId(sess *db.Session, address string, lastResTaskId models.Id) (*models.Resource, e.Error) {
+	res := models.Resource{}
+	if err := sess.Where("address = ? and task_id = ?", address, lastResTaskId).First(&res); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return &res, nil
+}
+
 func CloneTask(tx *db.Session, pt models.Task, env *models.Env) (*models.Task, e.Error) {
 	logger := logs.Get().WithField("func", "CreateTask")
 	var err error
@@ -1176,11 +1223,27 @@ func GetTaskResourceToTaskId(dbSess *db.Session, task *models.Task) ([]Resource,
 	return rs, nil
 }
 
-func InsertCronTaskInfo(session *db.Session, cronTask models.ResourceDrift) {
-	if err := models.Create(session, &cronTask); err != nil {
-		logs.Get().Errorf("insert cron task info error: %v", err)
+func InsertOrUpdateCronTaskInfo(session *db.Session, resDrift models.ResourceDrift) {
+	//_, err := session.Exec("replace into iac_resource_drift(id, res_id, drift_detail, created_at, update_at) values (?,?,?,?,?)",
+	//	resDrift.Id, resDrift.ResId, resDrift.DriftDetail, resDrift.CreatedAt, resDrift.UpdatedAt)
+	//if err != nil {
+	//	logs.Get().Errorf("insert cron task info error: %v", err)
+	//}
+	exist, err := session.Where("res_id = ?", resDrift.ResId).Model(&resDrift).Exists()
+	if err != nil {
+		logs.Get().Errorf("insert resource drift info error: %v", err)
+		return
 	}
-
+	if !exist {
+		if err = models.Create(session, resDrift); err != nil {
+			logs.Get().Errorf("insert resource drift info error: %v", err)
+		}
+	} else {
+		_, err = models.UpdateModelAll(session, resDrift)
+		if err != nil {
+			logs.Get().Errorf("update resource drift info error: %v", err)
+		}
+	}
 }
 
 func SendVcsComment(session *db.Session, task *models.Task, taskStatus string) {
