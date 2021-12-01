@@ -714,7 +714,12 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 					logger.Errorf("read plan output log: %v", err)
 				} else {
 					// 解析并保存资源漂移信息
-					driftInfoList := InsertResourceDriftInfo(dbSess, bs, task)
+					env, err := services.GetEnv(dbSess, task.EnvId)
+					if err != nil {
+						logger.Errorf("get env '%s'", task.EnvId)
+						return
+					}
+					driftInfoList := InsertResourceDriftInfo(dbSess, bs, env.LastResTaskId)
 					if len(driftInfoList) > 0 {
 						for _,v := range(driftInfoList) {
 							// 批量更新偏移资源表信息 TODO 后续使用batch 改进
@@ -1371,7 +1376,7 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 	return nil
 }
 
-func InsertResourceDriftInfo(db *db.Session, bs []byte, task *models.Task) []models.ResourceDrift {
+func InsertResourceDriftInfo(db *db.Session, bs []byte, lastResId models.Id) []models.ResourceDrift {
 	content := strings.Split(string(bs), "\n")
 	cronTaskInfoList := make([]models.ResourceDrift, 0)
 	for k, v := range content {
@@ -1381,7 +1386,7 @@ func InsertResourceDriftInfo(db *db.Session, bs []byte, task *models.Task) []mod
 			reg1 := regexp.MustCompile(`#\s\S*`)
 			result1 := reg1.FindAllStringSubmatch(v, 1)
 			address := stripansi.Strip(strings.TrimSpace(result1[0][0][1:]))
-			res, err := services.GetResourceIdByAddressAndTaskId(db, address, task.Id)
+			res, err := services.GetResourceIdByAddressAndTaskId(db, address, lastResId)
 			if err != nil {
 				logs.Get().Error("Failed to query resource table while writing drift resource")
 				continue
