@@ -249,6 +249,7 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 	}
 	ValidNameList := make([]string, 0)
 	for _, v := range sampleVariables {
+		isNewVaild := true
 		for key, value := range vars {
 			// 对于第三方调用api创建的环境来说，当前作用域是无变量的，sampleVariables中的变量一种是继承性下来的、另一种是新建的
 			// 这里需要判断变量如果修改了就在当前作用域创建一个变量
@@ -262,20 +263,22 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 						Name:  vars[key].Name,
 						Value: v.Value,
 					})
-					ValidNameList = append(ValidNameList, v.Name)
+					isNewVaild = false
+					// 如果匹配到了就不在继续匹配
+					break
+
 				}
 			}
 		}
-		if utils.ArrayIsExistsStr(ValidNameList,v.Name) {
-			continue
+		if isNewVaild {
+			// 这部分变量是新增的 需要新建
+			resp = append(resp, forms.Variable{
+				Scope: consts.ScopeEnv,
+				Type:  consts.VarTypeEnv,
+				Name:  v.Name,
+				Value: v.Value,
+			})
 		}
-		// 这部分变量是新增的 需要新建
-		resp = append(resp, forms.Variable{
-			Scope: consts.ScopeEnv,
-			Type:  consts.VarTypeEnv,
-			Name:  v.Name,
-			Value: v.Value,
-		})
 	}
 
 	return resp, nil
