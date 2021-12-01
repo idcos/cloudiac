@@ -65,7 +65,7 @@ func Auth(c *ctx.GinRequest) {
 			return
 		}
 
-		if org, err := services.GetOrganizationById(c.Service().DB().Debug(), orgId); err != nil {
+		if org, err := services.GetOrganizationById(c.Service().DB(), orgId); err != nil {
 			c.JSONError(e.New(e.OrganizationNotExists, fmt.Errorf("not allow to access org")), http.StatusBadRequest)
 			return
 		} else if org.Status == models.Disable && !c.Service().IsSuperAdmin {
