@@ -935,16 +935,6 @@ func ResourceGraphDetail(c *ctx.ServiceContext, form *forms.ResourceGraphDetailF
 
 	resource, err := services.GetResourceById(c.DB(), form.ResourceId)
 	if err != nil {
-		// 如果没有查询到资源信息的话，有可能是新增的漂移资源
-		if e.IsRecordNotFound(err.Err()) {
-			// 尝试查询一下，如果查询到了直接返回
-			resourceDrift, err := services.GetDriftResourceById(c.DB(), form.ResourceId.String())
-			if err != nil {
-				c.Logger().Errorf("error get resource, err %s", err)
-				return nil, err
-			}
-			return resourceDrift, nil
-		}
 		c.Logger().Errorf("error get resource, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
@@ -983,7 +973,7 @@ func ResourceGraphDetail(c *ctx.ServiceContext, form *forms.ResourceGraphDetailF
 			}
 		}
 	}
-	if res.ResourceDetail != "" {
+	if res.DriftDetail != "" {
 		res.IsDrift = true
 	}
 	res.Attrs = resultAttrs
