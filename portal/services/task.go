@@ -407,7 +407,7 @@ func stepStatus2TaskStatus(s string) string {
 func ChangeTaskStatusWithStep(dbSess *db.Session, task models.Tasker, step *models.TaskStep) e.Error {
 	switch t := task.(type) {
 	case *models.Task:
-		return ChangeTaskStatus(dbSess, t, stepStatus2TaskStatus(step.Status), step.Message)
+		return ChangeTaskStatus(dbSess, t, stepStatus2TaskStatus(step.Status), step.Message, false)
 	case *models.ScanTask:
 		return ChangeScanTaskStatusWithStep(dbSess, t, step)
 	default:
@@ -416,7 +416,7 @@ func ChangeTaskStatusWithStep(dbSess *db.Session, task models.Tasker, step *mode
 }
 
 // ChangeTaskStatus 修改任务状态(同步修改 StartAt、EndAt 等)，并同步修改 env 状态
-func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message string) e.Error {
+func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message string, skipUpdateEnv bool) e.Error {
 	preStatus := task.Status
 	if preStatus == status && message == "" {
 		return nil
@@ -450,16 +450,20 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 	if preStatus != status && !task.IsDriftTask {
 		TaskStatusChangeSendMessage(task, status)
 	}
+
 	// 如果勾选提交pr自动plan，任务结束时 plan作业结果写入PR评论中
 	if task.Exited() && task.Type == common.TaskTypePlan {
 		SendVcsComment(dbSess, task, status)
 	}
 
-	step, er := GetTaskStep(dbSess, task.Id, task.CurrStep)
-	if er != nil {
-		return e.AutoNew(er, e.DBError)
+	if !skipUpdateEnv {
+		step, er := GetTaskStep(dbSess, task.Id, task.CurrStep)
+		if er != nil {
+			return e.AutoNew(er, e.DBError)
+		}
+		return ChangeEnvStatusWithTaskAndStep(dbSess, task.EnvId, task, step)
 	}
-	return ChangeEnvStatusWithTaskAndStep(dbSess, task.EnvId, task, step)
+	return nil
 }
 
 type TfState struct {
@@ -1226,32 +1230,34 @@ func InsertOrUpdateCronTaskInfo(session *db.Session, resDrift models.ResourceDri
 }
 
 func SendVcsComment(session *db.Session, task *models.Task, taskStatus string) {
-	env, err := GetEnvById(session, task.EnvId)
-	if err != nil {
-		logs.Get().Errorf("vcs comment err, get env detail data err: %v", err)
+	env, er := GetEnvById(session, task.EnvId)
+	if er != nil {
+		logs.Get().Errorf("vcs comment err, get env detail data err: %v", er)
 		return
 	}
 
 	vp, err := GetVcsPrByTaskId(session, task)
 	if err != nil {
-		logs.Get().Errorf("vcs comment err, get vcs pr data err: %v", err)
+		if !e.IsRecordNotFound(err) {
+			logs.Get().Errorf("vcs comment err, get vcs pr data err: %v", err)
+		}
 		return
 	}
 
-	vcs, err := GetVcsRepoByTplId(session, task.TplId)
+	vcs, er := GetVcsRepoByTplId(session, task.TplId)
 	if err != nil {
-		logs.Get().Errorf("vcs comment err, get vcs data err: %v", err)
+		logs.Get().Errorf("vcs comment err, get vcs data err: %v", er)
 		return
 	}
-	taskStep, err := GetTaskPlanStep(session, task.Id)
-	if err != nil {
-		logs.Get().Errorf("vcs comment err, get task step data err: %v", err)
-		return
-	}
-
-	logContent, er := logstorage.Get().Read(taskStep.LogPath)
+	taskStep, er := GetTaskPlanStep(session, task.Id)
 	if er != nil {
-		logs.Get().Errorf("vcs comment err, get task plan log err: %v", er)
+		logs.Get().Errorf("vcs comment err, get task step data err: %v", er)
+		return
+	}
+
+	logContent, err := logstorage.Get().Read(taskStep.LogPath)
+	if err != nil {
+		logs.Get().Errorf("vcs comment err, get task plan log err: %v", err)
 		return
 	}
 
@@ -1264,7 +1270,6 @@ func SendVcsComment(session *db.Session, task *models.Task, taskStatus string) {
 	}
 
 	content := utils.SprintTemplate(consts.PrCommentTpl, attr)
-
 	if err := vcs.CreatePrComment(vp.PrId, content); err != nil {
 		logs.Get().Errorf("vcs comment err, create comment err: %v", err)
 		return

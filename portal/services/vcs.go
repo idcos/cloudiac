@@ -186,12 +186,12 @@ func CreateVcsPr(session *db.Session, vcsPr models.VcsPr) e.Error {
 	return nil
 }
 
-func GetVcsPrByTaskId(session *db.Session, task *models.Task) (models.VcsPr, e.Error) {
+func GetVcsPrByTaskId(session *db.Session, task *models.Task) (models.VcsPr, error) {
 	vp := models.VcsPr{}
 	if err := session.Model(&models.VcsPr{}).
 		Where("env_id = ?", task.EnvId).
 		Where("task_id = ?", task.Id).First(&vp); err != nil {
-		return vp, e.New(e.DBError, err)
+		return vp, err
 	}
 	return vp, nil
 }

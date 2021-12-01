@@ -422,8 +422,8 @@ func (m *TaskManager) runTask(ctx context.Context, task models.Tasker) error {
 func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startErr error) {
 	logger := m.logger.WithField("taskId", task.Id)
 
-	changeTaskStatus := func(status, message string) error {
-		if er := services.ChangeTaskStatus(m.db, task, status, message); er != nil {
+	changeTaskStatus := func(status, message string, skipUpdateEnv bool) error {
+		if er := services.ChangeTaskStatus(m.db, task, status, message, skipUpdateEnv); er != nil {
 			logger.Errorf("update task status error: %v", er)
 			return er
 		}
@@ -433,18 +433,10 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 	taskStartFailed := func(err error) {
 		logger.Infof("task failed: %s", err)
 		startErr = err
-		_ = changeTaskStatus(models.TaskFailed, err.Error())
+		_ = changeTaskStatus(models.TaskFailed, err.Error(), false)
 	}
 
 	logger.Infof("run task: %s", task.Id)
-
-	if !task.Started() { // 任务可能为己启动状态(比如异常退出后的任务恢复)，这里判断一下
-		// 先更新任务为 running 状态
-		// 极端情况下任务未执行好过重复执行，所以先设置状态，后发起调用
-		if err := changeTaskStatus(models.TaskRunning, ""); err != nil {
-			return
-		}
-	}
 
 	if task.IsDriftTask {
 		if env, err := services.GetEnvById(m.db, task.EnvId); err != nil {
@@ -454,7 +446,16 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 				return
 			}
 		} else if env.Status != models.EnvStatusActive {
-			taskStartFailed(errors.New("environment is not active"))
+			startErr = errors.New("environment is not active")
+			_ = changeTaskStatus(models.TaskFailed, startErr.Error(), true)
+			return
+		}
+	}
+
+	if !task.Started() { // 任务可能为己启动状态(比如异常退出后的任务恢复)，这里判断一下
+		// 先更新任务为 running 状态
+		// 极端情况下任务未执行好过重复执行，所以先设置状态，后发起调用
+		if err := changeTaskStatus(models.TaskRunning, "", false); err != nil {
 			return
 		}
 	}
