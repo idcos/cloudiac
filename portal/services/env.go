@@ -246,7 +246,6 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 	if err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("get vairables error: %v", err))
 	}
-	ValidNameList := make([]string, 0)
 	for _, v := range sampleVariables {
 		isNewVaild := true
 		for key, value := range vars {
