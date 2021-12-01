@@ -140,6 +140,10 @@ func (Task) DefaultTaskName() string {
 	return ""
 }
 
+func (BaseTask) NewId() Id {
+	return NewId("run")
+}
+
 func (t *BaseTask) GetId() Id {
 	return t.Id
 }
@@ -240,4 +244,3 @@ func TaskModelMigrate(sess *db.Session, taskModel interface{}) (err error) {
 	}
 	return nil
 }
-
