@@ -83,7 +83,6 @@ type Env struct {
 	AutoRepairDrift   bool       `json:"autoRepairDrift" gorm:"default:false"`   // 是否进行自动纠偏
 	OpenCronDrift     bool       `json:"openCronDrift" gorm:"default:false"`     // 是否开启偏移检测
 	NextDriftTaskTime *time.Time `json:"nextDriftTaskTime" gorm:"type:datetime"` // 下次执行偏移检测任务的时间
-	LastDriftTaskId   Id         `json:"lastDriftTaskId" gorm:"size:32"`         // 最后一次执行漂移检测任务id
 }
 
 func (Env) TableName() string {
