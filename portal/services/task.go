@@ -1207,11 +1207,11 @@ func InsertOrUpdateCronTaskInfo(session *db.Session, resDrift models.ResourceDri
 		return
 	}
 	if !exist {
-		if err = models.Create(session, resDrift); err != nil {
+		if err = models.Create(session, &resDrift); err != nil {
 			logs.Get().Errorf("insert resource drift info error: %v", err)
 		}
 	} else {
-		_, err = models.UpdateModelAll(session, resDrift)
+		_, err = models.UpdateModelAll(session, &resDrift)
 		if err != nil {
 			logs.Get().Errorf("update resource drift info error: %v", err)
 		}
