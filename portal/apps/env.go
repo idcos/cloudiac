@@ -66,9 +66,9 @@ func GetCronTaskTypeAndCheckParam(cronExpress string, autoRepairDrift, openCronD
 }
 
 type CronDriftParam struct {
-	CronDriftExpress  string     `json:"cronDriftExpress"`  // 偏移检测表达式
-	AutoRepairDrift   bool       `json:"autoRepairDrift"`   // 是否进行自动纠偏
-	OpenCronDrift     bool       `json:"openCronDrift"`     // 是否开启偏移检测
+	CronDriftExpress  *string    `json:"cronDriftExpress"`  // 偏移检测表达式
+	AutoRepairDrift   *bool      `json:"autoRepairDrift"`   // 是否进行自动纠偏
+	OpenCronDrift     *bool      `json:"openCronDrift"`     // 是否开启偏移检测
 	NextDriftTaskTime *time.Time `json:"nextDriftTaskTime"` // 下次执行偏移检测任务的时间
 }
 
@@ -80,14 +80,14 @@ func GetCronDriftParam(form forms.CronDriftForm) (*CronDriftParam, e.Error) {
 			return nil, err
 		}
 		if form.HasKey("autoRepairDrift") {
-			cronDriftParam.AutoRepairDrift = form.AutoRepairDrift
+			cronDriftParam.AutoRepairDrift = &form.AutoRepairDrift
 		}
 		if form.HasKey("openCronDrift") {
-			cronDriftParam.OpenCronDrift = form.OpenCronDrift
+			cronDriftParam.OpenCronDrift = &form.OpenCronDrift
 		}
 		if cronTaskType != "" {
 			// 如果任务类型不为空，说明配置了漂移检测任务
-			cronDriftParam.CronDriftExpress = form.CronDriftExpress
+			cronDriftParam.CronDriftExpress = &form.CronDriftExpress
 			nextTime, err := ParseCronpress(form.CronDriftExpress)
 			if err != nil {
 				return nil, err
@@ -694,10 +694,18 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	if err != nil {
 		return nil, err
 	}
-	env.AutoRepairDrift = cronDriftParam.AutoRepairDrift
-	env.OpenCronDrift = cronDriftParam.OpenCronDrift
-	env.CronDriftExpress = cronDriftParam.CronDriftExpress
-	env.NextDriftTaskTime = cronDriftParam.NextDriftTaskTime
+
+	if cronDriftParam.AutoRepairDrift != nil {
+		env.AutoRepairDrift = *cronDriftParam.AutoRepairDrift
+	}
+	if cronDriftParam.OpenCronDrift != nil {
+		env.OpenCronDrift = *cronDriftParam.OpenCronDrift
+		env.NextDriftTaskTime = cronDriftParam.NextDriftTaskTime
+	}
+	if cronDriftParam.CronDriftExpress != nil {
+		env.CronDriftExpress = *cronDriftParam.CronDriftExpress
+	}
+
 	if form.HasKey("triggers") {
 		env.Triggers = form.Triggers
 	}

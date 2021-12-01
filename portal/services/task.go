@@ -91,16 +91,14 @@ func GetResourceIdByAddressAndTaskId(sess *db.Session, address string, lastResTa
 	return &res, nil
 }
 
-func CloneTask(tx *db.Session, pt models.Task, env *models.Env) (*models.Task, e.Error) {
-	logger := logs.Get().WithField("func", "CreateTask")
-	var err error
-	pt.Id = models.NewId("run")
-	logger = logger.WithField("taskId", pt.Id)
-	tpl, err := GetTemplateById(tx, pt.TplId)
+func CloneNewDriftTask(tx *db.Session, src models.Task, env *models.Env) (*models.Task, e.Error) {
+	// logger := logs.Get().WithField("func", "CreateTask")
+	// logger = logger.WithField("taskId", pt.Id)
+	tpl, err := GetTemplateById(tx, src.TplId)
 	if err != nil {
 		return nil, e.New(e.InternalError, err)
 	}
-	pt.RepoAddr, _, err = GetTaskRepoAddrAndCommitId(tx, tpl, pt.Revision)
+
 	// 克隆任务需要重置部分任务参数
 	var cronTaskType string
 	if env.AutoRepairDrift {
@@ -108,32 +106,52 @@ func CloneTask(tx *db.Session, pt models.Task, env *models.Env) (*models.Task, e
 	} else {
 		cronTaskType = models.TaskTypePlan
 	}
-	pt.Name = models.Task{}.GetTaskNameByType(cronTaskType)
-	pt.Type = cronTaskType
-	pt.Status = models.TaskPending
-	pt.CurrStep = 0
-	pt.CreatorId = consts.SysUserId
-	pt.Name = common.CronDriftTaskName
-	pt.Result = models.TaskResult{}
-	pt.CreatedAt = models.Time{}
-	pt.UpdatedAt = models.Time{}
-	pt.StartAt = &models.Time{}
-	pt.EndAt = &models.Time{}
-	pt.ContainerId = ""
-	if err != nil {
-		return nil, e.New(e.InternalError, err)
-	}
-	return doCreateTask(tx, pt, tpl, env)
 
+	// 获取最新 repoAddr(带 token)，确保 vcs 更新后任务还可以正常 checkout 代码
+	repoAddr, _, err := GetTaskRepoAddrAndCommitId(tx, tpl, src.Revision)
+	if err != nil {
+		return nil, e.AutoNew(err, e.InternalError)
+	}
+
+	task, er := newCommonTask(tpl, env, src)
+	if er != nil {
+		return nil, er
+	}
+
+	task.Name = common.CronDriftTaskName
+	task.Type = cronTaskType
+	task.IsDriftTask = true
+	task.RepoAddr = repoAddr
+	task.CommitId = src.CommitId
+	task.CreatorId = consts.SysUserId
+	task.AutoApprove = env.AutoApproval
+	task.StopOnViolation = env.StopOnViolation
+	task.RunnerId = env.RunnerId
+	task.KeyId = env.KeyId
+
+	return doCreateTask(tx, *task, tpl, env)
 }
 
 func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models.Task) (*models.Task, e.Error) {
-	logger := logs.Get().WithField("func", "CreateTask")
+	// logger := logs.Get().WithField("func", "CreateTask")
+	// logger = logger.WithField("taskId", task.Id)
+	task, er := newCommonTask(tpl, env, pt)
+	if er != nil {
+		return nil, er
+	}
 
 	var (
-		err      error
-		firstVal = utils.FirstValueStr
+		err error
 	)
+	task.RepoAddr, task.CommitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
+	if err != nil {
+		return nil, e.New(e.InternalError, err)
+	}
+	return doCreateTask(tx, *task, tpl, env)
+}
+
+func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*models.Task, e.Error) {
+	firstVal := utils.FirstValueStr
 	task := models.Task{
 		// 以下为需要外部传入的属性
 		Name:            pt.Name,
@@ -148,8 +166,9 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 
 		RetryDelay:  utils.FirstValueInt(pt.RetryDelay, env.RetryDelay),
 		RetryNumber: utils.FirstValueInt(pt.RetryNumber, env.RetryNumber),
-		RetryAble:   env.RetryAble,
+		RetryAble:   utils.FirstValueBool(pt.RetryAble, env.RetryAble),
 
+		// 以下值直接使用环境的配置(不继承模板的配置)
 		OrgId:     env.OrgId,
 		ProjectId: env.ProjectId,
 		TplId:     env.TplId,
@@ -159,7 +178,6 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		Workdir:   tpl.Workdir,
 		TfVersion: tpl.TfVersion,
 
-		// 以下值直接使用环境的配置(不继承模板的配置)
 		Playbook:     env.Playbook,
 		TfVarsFile:   env.TfVarsFile,
 		PlayVarsFile: env.PlayVarsFile,
@@ -176,16 +194,8 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		},
 		Callback: pt.Callback,
 	}
-
-	task.Id = models.NewId("run")
-	logger = logger.WithField("taskId", task.Id)
-
-	task.RepoAddr, task.CommitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
-	if err != nil {
-		return nil, e.New(e.InternalError, err)
-	}
-	return doCreateTask(tx, task, tpl, env)
-
+	task.Id = models.Task{}.NewId()
+	return &task, nil
 }
 
 func doCreateTask(tx *db.Session, task models.Task, tpl *models.Template, env *models.Env) (*models.Task, e.Error) {
@@ -346,7 +356,8 @@ func GetTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision s
 }
 
 func ListPendingCronTask(tx *db.Session, envId models.Id) (bool, e.Error) {
-	query := tx.Where("env_id = ? and is_drift_task = true and (status = ? or status= ?)", envId, models.TaskPending, models.TaskRunning)
+	query := tx.Where("env_id = ? AND is_drift_task = 1 AND status IN (?)", envId,
+		[]string{models.TaskPending, models.TaskRunning, models.TaskApproving})
 	exist, err := query.Model(&models.Task{}).Exists()
 	if err != nil {
 		return exist, e.New(e.DBError, err)
@@ -1196,23 +1207,19 @@ func GetTaskResourceToTaskId(dbSess *db.Session, task *models.Task) ([]Resource,
 }
 
 func InsertOrUpdateCronTaskInfo(session *db.Session, resDrift models.ResourceDrift) {
-	//_, err := session.Exec("replace into iac_resource_drift(id, res_id, drift_detail, created_at, update_at) values (?,?,?,?,?)",
-	//	resDrift.Id, resDrift.ResId, resDrift.DriftDetail, resDrift.CreatedAt, resDrift.UpdatedAt)
-	//if err != nil {
-	//	logs.Get().Errorf("insert cron task info error: %v", err)
-	//}
-	exist, err := session.Where("res_id = ?", resDrift.ResId).Model(&resDrift).Exists()
-	if err != nil {
+	dbResDrift := models.ResourceDrift{}
+	if err := session.Where("res_id = ?", resDrift.ResId).Find(&dbResDrift); err != nil {
 		logs.Get().Errorf("insert resource drift info error: %v", err)
 		return
 	}
-	if !exist {
-		if err = models.Create(session, &resDrift); err != nil {
+
+	if dbResDrift.Id == "" {
+		if err := models.Create(session, &resDrift); err != nil {
 			logs.Get().Errorf("insert resource drift info error: %v", err)
 		}
 	} else {
-		_, err = models.UpdateModelAll(session, &resDrift)
-		if err != nil {
+		dbResDrift.DriftDetail = resDrift.DriftDetail
+		if _, err := models.UpdateModelAll(session, &dbResDrift); err != nil {
 			logs.Get().Errorf("update resource drift info error: %v", err)
 		}
 	}
