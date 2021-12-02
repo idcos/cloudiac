@@ -96,12 +96,10 @@ func TokenExists(query *db.Session, apiToken string) (bool, *models.Token) {
 	return exists, token
 }
 
-func DetailTriggerToken(dbSess *db.Session, orgId, envId models.Id, action string) (interface{}, e.Error) {
-	token := models.Token{}
-	query := QueryToken(dbSess.Where("org_id = ?", orgId).
-		Where("env_id = ?", envId).
-		Where("action = ?", action), consts.TokenTrigger)
-	if err := query.First(&token); err != nil {
+func DetailTriggerToken(dbSess *db.Session, orgId models.Id) (*models.Token, e.Error) {
+	token := &models.Token{}
+	query := QueryToken(dbSess.Where("org_id = ?", orgId), consts.TokenTrigger)
+	if err := query.First(token); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.TokenNotExists)
 		}
@@ -110,19 +108,21 @@ func DetailTriggerToken(dbSess *db.Session, orgId, envId models.Id, action strin
 	return token, nil
 }
 
-func IsExistsTriggerToken(dbSess *db.Session, tokenTrigger string) (*models.Token, e.Error) {
-	token := models.Token{}
+// todo 函数名是否有效
+func IsActiveToken(dbSess *db.Session, token,tokenType string) (*models.Token, e.Error) {
+	t := models.Token{}
 	if err := dbSess.
 		Table(models.Token{}.TableName()).
-		Where("`key` = ?", tokenTrigger).
-		Where("`type` = ?", consts.TokenTrigger).
-		First(&token); err != nil {
+		Where("`key` = ?", token).
+		Where("`type` = ?", tokenType).
+		Where("`expired_at` > ? or expired_at is null", time.Now()).
+		First(&t); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.TokenNotExists)
 		}
 		return nil, e.New(e.DBError, err)
 	}
-	return &token, nil
+	return &t, nil
 }
 
 func GetApiTokenByToken(dbSess *db.Session, token string) (*models.Token, e.Error) {
