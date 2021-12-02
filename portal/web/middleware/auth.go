@@ -124,7 +124,7 @@ func AuthProjectId(c *ctx.GinRequest) {
 
 func AuthApiToken(c *ctx.GinRequest) {
 	token, _ := c.GetQuery("token")
-	if _, err := services.IsExistsTriggerToken(c.Service().DB(), token); err != nil {
+	if _, err := services.IsActiveToken(c.Service().DB(), token, consts.TokenTrigger); err != nil {
 		c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("missing token")), http.StatusForbidden)
 		return
 	}

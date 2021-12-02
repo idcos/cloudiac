@@ -35,7 +35,7 @@ type DeleteTokenForm struct {
 	Id models.Id `uri:"id" form:"id" json:"id" binding:"required"`
 }
 
-type DetailTriggerTokenForm struct {
+type VcsWebhookUrlForm struct {
 	BaseForm
 	EnvId  models.Id `json:"envId" form:"envId" binding:"required"`
 	//Action string    `json:"action" form:"action" binding:"required"`

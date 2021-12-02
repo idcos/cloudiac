@@ -114,7 +114,7 @@ func DeleteToken(c *ctx.ServiceContext, form *forms.DeleteTokenForm) (result int
 	return
 }
 
-func DetailTriggerToken(c *ctx.ServiceContext, form *forms.DetailTriggerTokenForm) (result interface{}, re e.Error) {
+func VcsWebhookUrl(c *ctx.ServiceContext, form *forms.VcsWebhookUrlForm) (result interface{}, re e.Error) {
 	var (
 		token interface{}
 		err   e.Error
@@ -162,7 +162,7 @@ func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (int
 		}
 	}()
 
-	token, err := services.IsExistsTriggerToken(tx, form.Token)
+	token, err := services.IsActiveToken(tx, form.Token, consts.TokenTrigger)
 	if err != nil {
 		_ = tx.Rollback()
 		logs.Get().Errorf("get token by envId err %s:", err)

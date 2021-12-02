@@ -9,7 +9,6 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/utils/logs"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -50,7 +49,6 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 	for _, tpl := range tplList {
 		envs, err := services.GetEnvByTplId(tx, tpl.Id)
 		if err != nil {
-			fmt.Println(err)
 			logs.Get().WithField("webhook", "searchEnv").
 				Errorf("search env err: %v, tplId: %s", err, tpl.Id)
 			// 记录个日志就行
