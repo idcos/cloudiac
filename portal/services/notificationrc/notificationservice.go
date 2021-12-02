@@ -197,8 +197,14 @@ func (ns *NotificationService) FindNotificationsAndMessageTpl() ([]models.Notifi
 		tplNotificationTemplate = consts.IacTaskCompleteTpl
 		markdownNotificationTemplate = consts.IacTaskCompleteMarkdown
 	case consts.EvenvtCronDrift:
-		tplNotificationTemplate = consts.IacCronDriftTaskTpl
-		markdownNotificationTemplate = consts.IacCronDriftTaskMarkDown
+		if ns.Task.Type == models.TaskTypeApply && ns.Task.IsDriftTask == true {
+			tplNotificationTemplate = consts.IacCronDriftApplyTaskTpl
+			markdownNotificationTemplate = consts.IacCronDriftApplyTaskMarkDown
+		} else {
+			tplNotificationTemplate = consts.IacCronDriftPlanTaskTpl
+			markdownNotificationTemplate = consts.IacCronDriftPlanTaskMarkDown
+		}
+
 	default:
 		return nil, "", "", fmt.Errorf("unknown event type '%s'", ns.EventType)
 	}
