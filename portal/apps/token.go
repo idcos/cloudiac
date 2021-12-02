@@ -10,6 +10,7 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
@@ -66,8 +67,8 @@ func CreateToken(c *ctx.ServiceContext, form *forms.CreateTokenForm) (interface{
 		ExpiredAt:   &expiredAt,
 		Description: form.Description,
 		CreatorId:   c.UserId,
-		EnvId:       form.EnvId,
-		Action:      form.Action,
+		//EnvId:       form.EnvId,
+		//Action:      form.Action,
 	})
 	if err != nil && err.Code() == e.TokenAlreadyExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
@@ -113,16 +114,39 @@ func DeleteToken(c *ctx.ServiceContext, form *forms.DeleteTokenForm) (result int
 	return
 }
 
-func DetailTriggerToken(c *ctx.ServiceContext, form *forms.DetailTriggerTokenForm) (result interface{}, re e.Error) {
-	token, err := services.DetailTriggerToken(c.DB(), c.OrgId, form.EnvId, form.Action)
+func VcsWebhookUrl(c *ctx.ServiceContext, form *forms.VcsWebhookUrlForm) (result interface{}, re e.Error) {
+	var (
+		token interface{}
+		err   e.Error
+	)
+	token, err = services.DetailTriggerToken(c.DB(), c.OrgId)
 	if err != nil {
-		// 如果不存在直接返回
+		// 如果不存在, 则创建一个触发器token
 		if err.Code() == e.TokenNotExists {
-			return token, nil
+			token, err = CreateToken(c, &forms.CreateTokenForm{
+				Type: consts.TokenTrigger,
+			})
+			if err != nil {
+				return nil, err
+			}
 		}
 		return nil, err
 	}
-	return token, nil
+
+	tpl, err := services.GetTplByEnvId(c.DB(), form.EnvId)
+	if err != nil {
+		return nil, err
+	}
+
+	vcs, err := services.GetVcsById(c.DB(), tpl.VcsId)
+	if err != nil {
+		return nil, err
+	}
+
+	webhookUrl := fmt.Sprintf("%s?token=%s", vcsrv.GetWebhookUrl(vcs), token.(*models.Token).Key)
+	return struct {
+		Url string `json:"url"`
+	}{webhookUrl}, err
 }
 
 func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (interface{}, e.Error) {
@@ -138,7 +162,7 @@ func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (int
 		}
 	}()
 
-	token, err := services.IsExistsTriggerToken(tx, form.Token)
+	token, err := services.IsActiveToken(tx, form.Token, consts.TokenTrigger)
 	if err != nil {
 		_ = tx.Rollback()
 		logs.Get().Errorf("get token by envId err %s:", err)

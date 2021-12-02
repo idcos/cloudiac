@@ -40,7 +40,11 @@ func Register(g *gin.RouterGroup) {
 	g.Use(gin.Logger())
 
 	g.POST("/trigger/send", w(handlers.ApiTriggerHandler))
-	g.POST("/webhooks/:vcsType/:vcsId", w(handlers.WebhooksApiHandler))
+	// 触发器
+	apiToken := g.Group("")
+	apiToken.Use(w(middleware.AuthApiToken))
+	apiToken.POST("/webhooks/:vcsType/:vcsId", w(handlers.WebhooksApiHandler))
+
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
 
 	// Authorization Header 鉴权
@@ -178,8 +182,8 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/resources/:resourceId", ac(), w(handlers.Env{}.ResourceDetail))
 	g.GET("/envs/:id/variables", ac(), w(handlers.Env{}.Variables))
 	g.GET("/envs/:id/policy_result", ac(), w(handlers.Env{}.PolicyResult))
-	g.GET("/envs/:id/resources/graph",ac(),w(handlers.Env{}.SearchResourcesGraph))
-	g.GET("/envs/:id/resources/graph/:resourceId",ac(),w(handlers.Env{}.ResourceGraphDetail))
+	g.GET("/envs/:id/resources/graph", ac(), w(handlers.Env{}.SearchResourcesGraph))
+	g.GET("/envs/:id/resources/graph/:resourceId", ac(), w(handlers.Env{}.ResourceGraphDetail))
 
 	// 任务管理
 	g.GET("/tasks", ac(), w(handlers.Task{}.Search))
@@ -193,9 +197,9 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/tasks/:id/steps", ac(), w(handlers.Task{}.SearchTaskStep))
 	g.GET("/tasks/:id/steps/:stepId/log", ac(), w(handlers.Task{}.GetTaskStepLog))
 	g.GET("/tasks/:id/steps/:stepId/log/sse", ac(), w(handlers.Task{}.FollowStepLogSse))
-	g.GET("/tasks/:id/resources/graph",ac(),w(handlers.Task{}.ResourceGraph))
+	g.GET("/tasks/:id/resources/graph", ac(), w(handlers.Task{}.ResourceGraph))
 
-
-	g.GET("/tokens/trigger", ac(), w(handlers.Token{}.DetailTriggerToken))
+	//g.GET("/tokens/trigger", ac(), w(handlers.Token{}.VcsWebhookUrl))
+	g.GET("/vcs/webhook", ac(), w(handlers.Token{}.VcsWebhookUrl))
 	ctrl.Register(g.Group("resource/account", ac()), &handlers.ResourceAccount{})
 }

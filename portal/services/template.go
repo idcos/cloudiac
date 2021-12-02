@@ -120,9 +120,9 @@ func QueryTplByVcsId(tx *db.Session, VcsId models.Id) (bool, e.Error) {
 	return exists, nil
 }
 
-func GetTplLastScanTask(sess *db.Session, envId models.Id) (*models.ScanTask, error) {
+func GetTplLastScanTask(sess *db.Session, tplId models.Id) (*models.ScanTask, error) {
 	task := models.ScanTask{}
-	scanTaskIdQuery := sess.Model(&models.Template{}).Where("id = ?", envId).Select("last_scan_task_id")
+	scanTaskIdQuery := sess.Model(&models.Template{}).Where("id = ?", tplId).Select("last_scan_task_id")
 	err := sess.Model(&models.ScanTask{}).Where("id = (?)", scanTaskIdQuery.Expr()).First(&task)
 	return &task, err
 }
@@ -145,4 +145,13 @@ func QueryTemplate(tx *db.Session) *db.Session {
 func FindOrgTemplateByName(tx *db.Session, orgId models.Id, name string) (tpl models.Template, err error) {
 	err = tx.Model(&models.Template{}).Where("org_id = ? AND name = ?", orgId, name).Find(&tpl)
 	return tpl, err
+}
+
+func GetTplByEnvId(sess *db.Session, envId models.Id) (*models.Template, e.Error) {
+	env, err := GetEnvById(sess, envId)
+	if err != nil {
+		return nil, err
+	}
+	return GetTemplateById(sess, env.TplId)
+
 }
