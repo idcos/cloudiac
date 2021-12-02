@@ -7,7 +7,7 @@ import (
 )
 
 type CreateTokenForm struct {
-	PageForm
+	BaseForm
 
 	Type        string    `json:"type" form:"type" binding:"required"` //类型
 	Role        string    `json:"role" form:"role" `                   // token角色
@@ -18,7 +18,7 @@ type CreateTokenForm struct {
 }
 
 type UpdateTokenForm struct {
-	PageForm
+	BaseForm
 	Id          models.Id `uri:"id" form:"id" json:"id" binding:"required"`
 	Status      string    `form:"status" json:"status" binding:"required"`
 	Description string    `json:"description" form:"description" ` //描述
@@ -31,14 +31,14 @@ type SearchTokenForm struct {
 }
 
 type DeleteTokenForm struct {
-	PageForm
+	BaseForm
 	Id models.Id `uri:"id" form:"id" json:"id" binding:"required"`
 }
 
 type DetailTriggerTokenForm struct {
-	PageForm
+	BaseForm
 	EnvId  models.Id `json:"envId" form:"envId" binding:"required"`
-	Action string    `json:"action" form:"action" binding:"required"`
+	//Action string    `json:"action" form:"action" binding:"required"`
 }
 
 type LoginForm struct {

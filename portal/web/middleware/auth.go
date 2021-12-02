@@ -121,3 +121,11 @@ func AuthProjectId(c *ctx.GinRequest) {
 	}
 	return
 }
+
+func AuthApiToken(c *ctx.GinRequest) {
+	token, _ := c.GetQuery("token")
+	if _, err := services.IsExistsTriggerToken(c.Service().DB(), token); err != nil {
+		c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("missing token")), http.StatusForbidden)
+		return
+	}
+}

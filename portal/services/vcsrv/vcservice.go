@@ -145,18 +145,7 @@ func GetRepoAddress(repo RepoIface) (string, error) {
 }
 
 func SetWebhook(vcs *models.Vcs, repoId string, triggers []string) error {
-	webhookUrl := configs.Get().Portal.Address + "/api/v1"
-	switch vcs.VcsType {
-	case models.VcsGitlab:
-		webhookUrl += WebhookUrlGitlab
-	case models.VcsGitea:
-		webhookUrl += WebhookUrlGitea
-	case models.VcsGitee:
-		webhookUrl += WebhookUrlGitee
-	case models.VcsGithub:
-		webhookUrl += WebhookUrlGithub
-	}
-	webhookUrl += fmt.Sprintf("/%s", vcs.Id.String())
+	webhookUrl := GetWebhookUrl(vcs)
 	repo, err := GetRepo(vcs, repoId)
 	if err != nil {
 		return err
@@ -205,4 +194,20 @@ func SetWebhook(vcs *models.Vcs, repoId string, triggers []string) error {
 
 func GetVcsToken(token string) (string, error) {
 	return utils.DecryptSecretVar(token)
+}
+
+func GetWebhookUrl(vcs *models.Vcs) string {
+	webhookUrl := configs.Get().Portal.Address + "/api/v1"
+	switch vcs.VcsType {
+	case models.VcsGitlab:
+		webhookUrl += WebhookUrlGitlab
+	case models.VcsGitea:
+		webhookUrl += WebhookUrlGitea
+	case models.VcsGitee:
+		webhookUrl += WebhookUrlGitee
+	case models.VcsGithub:
+		webhookUrl += WebhookUrlGithub
+	}
+	webhookUrl += fmt.Sprintf("/%s", vcs.Id.String())
+	return webhookUrl
 }

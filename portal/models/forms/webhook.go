@@ -52,5 +52,6 @@ type Head struct {
 }
 
 type Repository struct {
-	Id int `json:"id"`
+	Id       int    `json:"id"`
+	FullName string `json:"full_name"`
 }

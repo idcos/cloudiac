@@ -96,12 +96,10 @@ func TokenExists(query *db.Session, apiToken string) (bool, *models.Token) {
 	return exists, token
 }
 
-func DetailTriggerToken(dbSess *db.Session, orgId, envId models.Id, action string) (interface{}, e.Error) {
-	token := models.Token{}
-	query := QueryToken(dbSess.Where("org_id = ?", orgId).
-		Where("env_id = ?", envId).
-		Where("action = ?", action), consts.TokenTrigger)
-	if err := query.First(&token); err != nil {
+func DetailTriggerToken(dbSess *db.Session, orgId models.Id) (*models.Token, e.Error) {
+	token := &models.Token{}
+	query := QueryToken(dbSess.Where("org_id = ?", orgId), consts.TokenTrigger)
+	if err := query.First(token); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.TokenNotExists)
 		}
