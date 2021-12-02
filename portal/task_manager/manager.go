@@ -594,7 +594,7 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 	// 重新查询获取 task，确保使用的是最新的 task 数据
 	task, err := services.GetTaskById(dbSess, taskId)
 	if err != nil {
-		logger.Errorf("get task %d: %v", err)
+		logger.Errorf("get task %s: %v", taskId, err)
 		return
 	}
 
@@ -730,13 +730,20 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 						logger.Errorf("get env '%s'", task.EnvId)
 						return
 					}
-					driftInfoList := ParseResourceDriftInfo(dbSess, bs, env.LastResTaskId)
-					if len(driftInfoList) > 0 {
-						for _, v := range driftInfoList {
-							// 批量更新偏移资源表信息
+					driftInfoMap := ParseResourceDriftInfo(bs)
+					for address, driftInfo := range driftInfoMap {
+						res, err := services.GetResourceIdByAddressAndTaskId(dbSess, address, env.LastResTaskId)
+						if err != nil {
+							logs.Get().Error("Failed to query resource table while writing drift resource")
+							continue
+						} else {
+							driftInfo.ResId = res.Id
 							// TODO 后续使用batch 改进
-							services.InsertOrUpdateCronTaskInfo(db.Get(), v)
+							services.InsertOrUpdateCronTaskInfo(db.Get(), driftInfo)
 						}
+					}
+
+					if len(driftInfoMap) > 0 {
 						// 发送邮件通知
 						services.TaskStatusChangeSendMessage(task, consts.EvenvtCronDrift)
 					}
@@ -1392,9 +1399,9 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 	return nil
 }
 
-func ParseResourceDriftInfo(db *db.Session, bs []byte, lastResId models.Id) []models.ResourceDrift {
+func ParseResourceDriftInfo(bs []byte) map[string]models.ResourceDrift {
 	content := strings.Split(string(bs), "\n")
-	cronTaskInfoList := make([]models.ResourceDrift, 0)
+	cronTaskInfoMap := make(map[string]models.ResourceDrift, 0)
 	for k, v := range content {
 		if strings.Contains(v, "#") && strings.Contains(v, "must be") || strings.Contains(v, "will be") {
 			var resourceDetail string
@@ -1402,12 +1409,6 @@ func ParseResourceDriftInfo(db *db.Session, bs []byte, lastResId models.Id) []mo
 			reg1 := regexp.MustCompile(`#\s\S*`)
 			result1 := reg1.FindAllStringSubmatch(v, 1)
 			address := stripansi.Strip(strings.TrimSpace(result1[0][0][1:]))
-			res, err := services.GetResourceIdByAddressAndTaskId(db, address, lastResId)
-			if err != nil {
-				logs.Get().Error("Failed to query resource table while writing drift resource")
-				continue
-			}
-
 			for k1, v2 := range content[k+1:] {
 				if strings.Contains(v2, "#") && strings.Contains(v2, "must be") || strings.Contains(v2, "will be") {
 					resourceDetail = strings.Join(content[k+1:k1+k], "\n")
@@ -1418,9 +1419,8 @@ func ParseResourceDriftInfo(db *db.Session, bs []byte, lastResId models.Id) []mo
 				}
 			}
 			cronTaskInfo.DriftDetail = resourceDetail
-			cronTaskInfo.ResId = res.Id
-			cronTaskInfoList = append(cronTaskInfoList, cronTaskInfo)
+			cronTaskInfoMap[address] = cronTaskInfo
 		}
 	}
-	return cronTaskInfoList
+	return cronTaskInfoMap
 }
