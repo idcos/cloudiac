@@ -18,6 +18,7 @@ nav:
     - "资源账号": intra/cloud_account.md
     - "Pipeline": intra/pipeline.md
     - "环境": intra/env.md
+    - "漂移检测": intra/resource_drift.md
     - "角色": intra/role.md
     - "合规": intra/opa.md
 

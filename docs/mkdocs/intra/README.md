@@ -8,6 +8,7 @@
 - [资源账号](cloud_account.md)
 - [Pipeline](pipeline.md)
 - [环境](env.md)
+- [漂移检测](resource_drift.md)
 - [角色](role.md)
 - [合规](opa.md)
 
