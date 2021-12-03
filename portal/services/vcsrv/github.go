@@ -76,9 +76,13 @@ func (github *githubVcs) ListRepos(namespace, search string, limit, offset int) 
 		return nil, 0, e.New(e.BadRequest, err)
 	}
 
+	token, err := GetVcsToken(github.vcs.VcsToken)
+	if err != nil {
+		return nil, 0, err
+	}
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: github.vcs.VcsToken},
+		&oauth2.Token{AccessToken: token},
 	)
 	tc := oauth2.NewClient(ctx, ts)
 	client := git.NewClient(tc)
@@ -287,7 +291,7 @@ func (github *githubRepoIface) AddWebhook(url string) error {
 			"pull_request",
 			"push",
 		},
-		"type": "gitea",
+		"type":   "gitea",
 		"active": true,
 	}
 	b, _ := json.Marshal(&bodys)
@@ -297,9 +301,9 @@ func (github *githubRepoIface) AddWebhook(url string) error {
 		return e.New(e.BadRequest, err)
 	}
 
-	if response.StatusCode >= 300 && !strings.Contains(string(respBody),"Hook already exists on this repository") {
+	if response.StatusCode >= 300 && !strings.Contains(string(respBody), "Hook already exists on this repository") {
 		err = e.New(e.VcsError, fmt.Errorf("%s: %s", response.Status, string(respBody)))
-		return  err
+		return err
 	}
 	return nil
 }
@@ -354,12 +358,14 @@ func githubRequest(path, method, token string, requestBody []byte) (*http.Respon
 	if err != nil {
 		return nil, nil, err
 	}
+
 	request, er := http.NewRequest(method, path, bytes.NewBuffer(requestBody))
 	if er != nil {
 		return nil, nil, er
 	}
 	client := &http.Client{}
 	request.Header.Set("Content-Type", "multipart/form-data")
+	request.Header.Set("Accept", "application/vnd.github.v3+json")
 	request.Header.Set("Authorization", fmt.Sprintf("token %s", vcsToken))
 	response, err := client.Do(request)
 	if err != nil {
@@ -367,6 +373,7 @@ func githubRequest(path, method, token string, requestBody []byte) (*http.Respon
 	}
 	defer response.Body.Close()
 	body, _ := ioutil.ReadAll(response.Body)
+
 	return response, body, nil
 
 }
