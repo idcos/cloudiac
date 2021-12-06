@@ -1,0 +1,11 @@
+# repos list 配置示例，使用时请将该文件重命名为 repos.list
+# repos.list 文件用于配置预置打包到 iac-portal 中的云模板仓库，
+# 文件一行为一个仓库，可以添加相对路径或者 url 地址
+
+# 当配置相对路径时会自动添加前缀: https://github.com/idcos/
+# 如以下仓库路径，会解析为完整 url: https://github.com/idcos/cloudiac-example.git
+# cloudiac-example.git
+
+# 当配置的路径为完整 url 地址，则直接使用, 如下:
+# http://gitlab.example.com/cloudiac-example.git
+
