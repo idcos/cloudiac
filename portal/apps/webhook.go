@@ -54,19 +54,20 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 			// 记录个日志就行
 			continue
 		}
+		sysUserId := models.Id(consts.SysUserId)
 		for _, env := range envs {
 			for _, v := range env.Triggers {
 				var er error
 				// 判断vcs类型，不同vcs, 入参不同
 				switch vcs.VcsType {
 				case consts.GitTypeGitLab:
-					er = gitlabActionPrOrPush(tx, models.TaskTypePlan, v, c.UserId, &env, &tpl, form)
+					er = gitlabActionPrOrPush(tx, models.TaskTypePlan, v, sysUserId, &env, &tpl, form)
 				case consts.GitTypeGitEA:
-					er = giteaActionPrOrPush(tx, models.TaskTypePlan, v, c.UserId, &env, &tpl, form)
+					er = giteaActionPrOrPush(tx, models.TaskTypePlan, v, sysUserId, &env, &tpl, form)
 				case consts.GitTypeGithub:
-					er = githubActionPrOrPush(tx, models.TaskTypePlan, v, c.UserId, &env, &tpl, form)
+					er = githubActionPrOrPush(tx, models.TaskTypePlan, v, sysUserId, &env, &tpl, form)
 				case consts.GitTypeGitee:
-					er = giteeActionPrOrPush(tx, models.TaskTypePlan, v, c.UserId, &env, &tpl, form)
+					er = giteeActionPrOrPush(tx, models.TaskTypePlan, v, sysUserId, &env, &tpl, form)
 
 				}
 
