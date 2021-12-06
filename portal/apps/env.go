@@ -318,7 +318,13 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		OperatorId: c.UserId,
 	}
 	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
-	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, form.Triggers); err != nil {
+	// 获取token
+	token, err := GetWebhookToken(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, form.Triggers); err != nil {
 		c.Logger().Errorf("set webhook err :%v", err)
 	}
 	return &envDetail, nil
@@ -544,7 +550,13 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 		}
 		vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
-		if err := vcsrv.SetWebhook(vcs, tpl.RepoId, form.Triggers); err != nil {
+		// 获取token
+		token, err := GetWebhookToken(c)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := vcsrv.SetWebhook(vcs, tpl.RepoId,token.Key, form.Triggers); err != nil {
 			c.Logger().Errorf("set webhook err：%v", err)
 		}
 	}
@@ -809,7 +821,13 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	}
 	envDetail = PopulateLastTask(c.DB(), envDetail)
 	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
-	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, form.Triggers); err != nil {
+	// 获取token
+	token, err := GetWebhookToken(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := vcsrv.SetWebhook(vcs, tpl.RepoId,token.Key, form.Triggers); err != nil {
 		c.Logger().Errorf("set webhook err :%v", err)
 	}
 	return envDetail, nil

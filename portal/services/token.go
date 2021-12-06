@@ -66,7 +66,8 @@ func UpdateToken(tx *db.Session, id models.Id, attrs models.Attrs) (token *model
 }
 
 func QueryToken(query *db.Session, tokenType string) *db.Session {
-	query = query.Model(&models.Token{})
+	query = query.Model(&models.Token{}).
+		Where("`expired_at` > ? or expired_at is null", time.Now())
 	if tokenType != "" {
 		query = query.Where("type = ?", tokenType)
 	}
@@ -108,8 +109,7 @@ func DetailTriggerToken(dbSess *db.Session, orgId models.Id) (*models.Token, e.E
 	return token, nil
 }
 
-// todo 函数名是否有效
-func IsActiveToken(dbSess *db.Session, token,tokenType string) (*models.Token, e.Error) {
+func IsActiveToken(dbSess *db.Session, token, tokenType string) (*models.Token, e.Error) {
 	t := models.Token{}
 	if err := dbSess.
 		Table(models.Token{}.TableName()).
@@ -138,3 +138,5 @@ func GetApiTokenByToken(dbSess *db.Session, token string) (*models.Token, e.Erro
 	}
 	return tokenResp, nil
 }
+
+

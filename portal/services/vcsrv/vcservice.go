@@ -144,8 +144,8 @@ func GetRepoAddress(repo RepoIface) (string, error) {
 	return p.HTTPURLToRepo, nil
 }
 
-func SetWebhook(vcs *models.Vcs, repoId string, triggers []string) error {
-	webhookUrl := GetWebhookUrl(vcs)
+func SetWebhook(vcs *models.Vcs, repoId, apiToken string, triggers []string) error {
+	webhookUrl := GetWebhookUrl(vcs, apiToken)
 	repo, err := GetRepo(vcs, repoId)
 	if err != nil {
 		return err
@@ -196,7 +196,7 @@ func GetVcsToken(token string) (string, error) {
 	return utils.DecryptSecretVar(token)
 }
 
-func GetWebhookUrl(vcs *models.Vcs) string {
+func GetWebhookUrl(vcs *models.Vcs, apiToken string) string {
 	webhookUrl := configs.Get().Portal.Address + "/api/v1"
 	switch vcs.VcsType {
 	case models.VcsGitlab:
@@ -208,6 +208,6 @@ func GetWebhookUrl(vcs *models.Vcs) string {
 	case models.VcsGithub:
 		webhookUrl += WebhookUrlGithub
 	}
-	webhookUrl += fmt.Sprintf("/%s", vcs.Id.String())
+	webhookUrl += fmt.Sprintf("/%s?token=%s", vcs.Id.String(), apiToken)
 	return webhookUrl
 }

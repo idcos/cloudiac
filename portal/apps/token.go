@@ -115,21 +115,8 @@ func DeleteToken(c *ctx.ServiceContext, form *forms.DeleteTokenForm) (result int
 }
 
 func VcsWebhookUrl(c *ctx.ServiceContext, form *forms.VcsWebhookUrlForm) (result interface{}, re e.Error) {
-	var (
-		token interface{}
-		err   e.Error
-	)
-	token, err = services.DetailTriggerToken(c.DB(), c.OrgId)
+	token, err := GetWebhookToken(c)
 	if err != nil {
-		// 如果不存在, 则创建一个触发器token
-		if err.Code() == e.TokenNotExists {
-			token, err = CreateToken(c, &forms.CreateTokenForm{
-				Type: consts.TokenTrigger,
-			})
-			if err != nil {
-				return nil, err
-			}
-		}
 		return nil, err
 	}
 
@@ -143,7 +130,7 @@ func VcsWebhookUrl(c *ctx.ServiceContext, form *forms.VcsWebhookUrlForm) (result
 		return nil, err
 	}
 
-	webhookUrl := fmt.Sprintf("%s?token=%s", vcsrv.GetWebhookUrl(vcs), token.(*models.Token).Key)
+	webhookUrl := vcsrv.GetWebhookUrl(vcs, token.Key)
 	return struct {
 		Url string `json:"url"`
 	}{webhookUrl}, err
@@ -234,4 +221,27 @@ func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (int
 	}
 
 	return nil, nil
+}
+
+func GetWebhookToken(c *ctx.ServiceContext) (*models.Token, e.Error) {
+	// 获取token
+	var (
+		token interface{}
+		err   e.Error
+	)
+
+	token, err = services.DetailTriggerToken(c.DB(), c.OrgId)
+	if err != nil {
+		// 如果不存在, 则创建一个触发器token
+		if err.Code() == e.TokenNotExists {
+			token, err = CreateToken(c, &forms.CreateTokenForm{
+				Type: consts.TokenTrigger,
+			})
+			if err != nil {
+				return nil, err
+			}
+		}
+		return nil, err
+	}
+	return token.(*models.Token), err
 }
