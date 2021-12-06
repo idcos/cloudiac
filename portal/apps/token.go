@@ -44,7 +44,7 @@ func SearchToken(c *ctx.ServiceContext, form *forms.SearchTokenForm) (interface{
 	}, nil
 }
 
-func CreateToken(c *ctx.ServiceContext, form *forms.CreateTokenForm) (interface{}, e.Error) {
+func CreateToken(c *ctx.ServiceContext, form *forms.CreateTokenForm) (*models.Token, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create token for user %s", c.UserId))
 	var (
 		expiredAt models.Time
@@ -226,7 +226,7 @@ func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (int
 func GetWebhookToken(c *ctx.ServiceContext) (*models.Token, e.Error) {
 	// 获取token
 	var (
-		token interface{}
+		token *models.Token
 		err   e.Error
 	)
 
@@ -243,5 +243,5 @@ func GetWebhookToken(c *ctx.ServiceContext) (*models.Token, e.Error) {
 		}
 		return nil, err
 	}
-	return token.(*models.Token), err
+	return token, err
 }
