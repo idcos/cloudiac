@@ -77,23 +77,26 @@ func GetEnvById(tx *db.Session, id models.Id) (*models.Env, e.Error) {
 }
 
 func QueryEnvDetail(query *db.Session) *db.Session {
-	query = query.Model(&models.Env{})
+	query = query.Model(&models.Env{}).LazySelectAppend("iac_env.*")
 
 	// 模板名称
 	query = query.Joins("left join iac_template as t on t.id = iac_env.tpl_id").
-		LazySelectAppend("t.name as template_name,iac_env.*")
+		LazySelectAppend("t.name as template_name")
 	// 创建人姓名
 	query = query.Joins("left join iac_user as u on u.id = iac_env.creator_id").
-		LazySelectAppend("u.name as creator,iac_env.*")
+		LazySelectAppend("u.name as creator")
 	// 资源数量统计
 	query = query.Joins("left join (select count(*) as resource_count, task_id from iac_resource group by task_id) as r on r.task_id = iac_env.last_res_task_id").
-		LazySelectAppend("r.resource_count, iac_env.*")
+		LazySelectAppend("r.resource_count")
 	// 密钥名称
 	query = query.Joins("left join iac_key as k on k.id = iac_env.key_id").
-		LazySelectAppend("k.name as key_name,iac_env.*")
-	//// 资源是否发生漂移
-	query = query.Joins("left join (select r.task_id as rd_task_id, rd.* from iac_resource as r LEFT JOIN  iac_resource_drift as rd on rd.res_id = r.id WHERE rd.drift_detail is not NULL) as rd on rd.rd_task_id = iac_env.last_res_task_id").
-		LazySelectAppend("!ISNULL(rd.drift_detail) as is_drift")
+		LazySelectAppend("k.name as key_name")
+	// 资源是否发生漂移
+	query = query.Joins("LEFT JOIN (" +
+		"  SELECT iac_resource.task_id FROM iac_resource_drift " +
+		"    INNER JOIN iac_resource ON iac_resource.id = iac_resource_drift.res_id GROUP BY iac_resource.task_id" +
+		") AS rd ON rd.task_id = iac_env.last_res_task_id").
+		LazySelectAppend("!ISNULL(rd.task_id) AS is_drift")
 
 	return query
 }
