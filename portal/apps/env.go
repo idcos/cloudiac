@@ -382,6 +382,12 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		return nil, e.New(e.DBError, err)
 	}
 
+	for _, env := range details {
+		env.MergeTaskStatus()
+		// FIXME: 这里会在 for 循环中查询 db，需要优化
+		PopulateLastTask(c.DB(), env)
+	}
+
 	return page.PageResp{
 		Total:    p.MustTotal(),
 		PageSize: p.Size,
