@@ -382,13 +382,6 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		return nil, e.New(e.DBError, err)
 	}
 
-	if details != nil {
-		for _, env := range details {
-			env.MergeTaskStatus()
-			env = PopulateLastTask(c.DB(), env)
-		}
-	}
-
 	return page.PageResp{
 		Total:    p.MustTotal(),
 		PageSize: p.Size,
@@ -407,10 +400,13 @@ func PopulateLastTask(query *db.Session, env *models.EnvDetail) *models.EnvDetai
 					env.KeyName = key.Name
 				}
 			}
+			// 返回环境详情时会调用该函数，且返回的数据会用于创建新的部署任务时在表单中回显，
+			// 而对于 vcs webhook 自动触发的任务其 revision 可能与环境的不同，这就会导致重新部署环境时使用的不是环境当前配置的分支。
+			// 为了避免这种情况，这里我们不将环境的 Revision 设置为最后一次任务的 revision
+			// env.Revision = lastTask.Revision // 分支/标签
+
 			// 部署通道
 			env.RunnerId = lastTask.RunnerId
-			// 分支/标签
-			env.Revision = lastTask.Revision
 			// Commit id
 			env.CommitId = lastTask.CommitId
 			// 执行人
