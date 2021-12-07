@@ -61,13 +61,13 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 				// 判断vcs类型，不同vcs, 入参不同
 				switch vcs.VcsType {
 				case consts.GitTypeGitLab:
-					er = gitlabActionPrOrPush(tx, models.TaskTypePlan, v, sysUserId, &env, &tpl, form)
+					er = gitlabActionPrOrPush(tx, v, sysUserId, &env, &tpl, form)
 				case consts.GitTypeGitEA:
-					er = giteaActionPrOrPush(tx, models.TaskTypePlan, v, sysUserId, &env, &tpl, form)
+					er = giteaActionPrOrPush(tx, v, sysUserId, &env, &tpl, form)
 				case consts.GitTypeGithub:
-					er = githubActionPrOrPush(tx, models.TaskTypePlan, v, sysUserId, &env, &tpl, form)
+					er = githubActionPrOrPush(tx, v, sysUserId, &env, &tpl, form)
 				case consts.GitTypeGitee:
-					er = giteeActionPrOrPush(tx, models.TaskTypePlan, v, sysUserId, &env, &tpl, form)
+					er = giteeActionPrOrPush(tx, v, sysUserId, &env, &tpl, form)
 
 				}
 
@@ -89,7 +89,7 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 	return nil, err
 }
 
-func CreateWebhookTask(tx *db.Session, taskType, revision string, userId models.Id, env *models.Env, tpl *models.Template, prId int) error {
+func CreateWebhookTask(tx *db.Session, taskType, revision, commitId string, userId models.Id, env *models.Env, tpl *models.Template, prId int) error {
 	// 计算变量列表
 	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
 	if er != nil {
@@ -105,6 +105,7 @@ func CreateWebhookTask(tx *db.Session, taskType, revision string, userId models.
 		Variables:   vars,
 		AutoApprove: env.AutoApproval,
 		Revision:    revision,
+		CommitId:    commitId,
 		BaseTask: models.BaseTask{
 			Type:        taskType,
 			RunnerId:    env.RunnerId,
@@ -134,7 +135,7 @@ func CreateWebhookTask(tx *db.Session, taskType, revision string, userId models.
 	return nil
 }
 
-func gitlabActionPrOrPush(tx *db.Session, taskType, trigger string, userId models.Id,
+func gitlabActionPrOrPush(tx *db.Session, trigger string, userId models.Id,
 	env *models.Env, tpl *models.Template, form forms.WebhooksApiHandler) error {
 	// 比较分支
 	// 如果同时不满足push分支和pr目标分支则不做动作
@@ -148,16 +149,16 @@ func gitlabActionPrOrPush(tx *db.Session, taskType, trigger string, userId model
 	// 判断pr类型并确认动作
 	// open状态的mr进行plan计划
 	if trigger == consts.EnvTriggerPRMR && form.ObjectAttributes.State == GitlabPrOpened {
-		return CreateWebhookTask(tx, models.TaskTypePlan, form.ObjectAttributes.SourceBranch, userId, env, tpl, form.ObjectAttributes.Iid)
+		return CreateWebhookTask(tx, models.TaskTypePlan, form.ObjectAttributes.SourceBranch, "", userId, env, tpl, form.ObjectAttributes.Iid)
 	}
 	// push操作，执行apply计划
 	if trigger == consts.EnvTriggerCommit && form.ObjectKind == GitlabObjectKindPush {
-		return CreateWebhookTask(tx, models.TaskTypeApply, form.ObjectAttributes.SourceBranch, userId, env, tpl, 0)
+		return CreateWebhookTask(tx, models.TaskTypeApply, env.Revision, form.After, userId, env, tpl, 0)
 	}
 
 	return nil
 }
-func giteaActionPrOrPush(tx *db.Session, taskType, trigger string, userId models.Id,
+func giteaActionPrOrPush(tx *db.Session, trigger string, userId models.Id,
 	env *models.Env, tpl *models.Template, form forms.WebhooksApiHandler) error {
 
 	// 比较分支
@@ -174,16 +175,16 @@ func giteaActionPrOrPush(tx *db.Session, taskType, trigger string, userId models
 	// open状态的mr进行plan计划
 	// gitea状态值与gitlab相同，这里统一使用 GitlabPrOpened
 	if trigger == consts.EnvTriggerPRMR && form.Action == GitlabPrOpened {
-		return CreateWebhookTask(tx, models.TaskTypePlan, form.PullRequest.Head.Ref, userId, env, tpl, form.PullRequest.Number)
+		return CreateWebhookTask(tx, models.TaskTypePlan, form.PullRequest.Head.Ref, "", userId, env, tpl, form.PullRequest.Number)
 	}
 	// push操作，执行apply计划
 	if trigger == consts.EnvTriggerCommit && form.Before != "" {
-		return CreateWebhookTask(tx, models.TaskTypeApply, form.Before, userId, env, tpl, 0)
+		return CreateWebhookTask(tx, models.TaskTypeApply, env.Revision, form.After, userId, env, tpl, 0)
 	}
 	return nil
 }
 
-func githubActionPrOrPush(tx *db.Session, taskType, trigger string, userId models.Id,
+func githubActionPrOrPush(tx *db.Session, trigger string, userId models.Id,
 	env *models.Env, tpl *models.Template, form forms.WebhooksApiHandler) error {
 	// 比较分支
 	// 如果同时不满足push分支和pr目标分支则不做动作
@@ -199,16 +200,16 @@ func githubActionPrOrPush(tx *db.Session, taskType, trigger string, userId model
 	// open状态的mr进行plan计划
 	// gitea状态值与gitlab相同，这里统一使用 GitlabPrOpened
 	if trigger == consts.EnvTriggerPRMR && form.Action == GitlabPrOpened {
-		return CreateWebhookTask(tx, models.TaskTypePlan, form.PullRequest.Head.Ref, userId, env, tpl, form.PullRequest.Number)
+		return CreateWebhookTask(tx, models.TaskTypePlan, form.PullRequest.Head.Ref, "", userId, env, tpl, form.PullRequest.Number)
 	}
 	// push操作，执行apply计划
 	if trigger == consts.EnvTriggerCommit && form.Before != "" {
-		return CreateWebhookTask(tx, models.TaskTypeApply, form.Before, userId, env, tpl, 0)
+		return CreateWebhookTask(tx, models.TaskTypeApply, env.Revision, form.After, userId, env, tpl, 0)
 	}
 	return nil
 }
 
-func giteeActionPrOrPush(tx *db.Session, taskType, trigger string, userId models.Id,
+func giteeActionPrOrPush(tx *db.Session, trigger string, userId models.Id,
 	env *models.Env, tpl *models.Template, form forms.WebhooksApiHandler) error {
 	// 比较分支
 	// 如果同时不满足push分支和pr目标分支则不做动作
@@ -222,11 +223,11 @@ func giteeActionPrOrPush(tx *db.Session, taskType, trigger string, userId models
 	// 判断pr类型并确认动作
 	// open状态的mr进行plan计划
 	if trigger == consts.EnvTriggerPRMR && form.Action == GiteePrOpen {
-		return CreateWebhookTask(tx, models.TaskTypePlan, form.PullRequest.Head.Ref, userId, env, tpl, form.PullRequest.Number)
+		return CreateWebhookTask(tx, models.TaskTypePlan, form.PullRequest.Head.Ref, "", userId, env, tpl, form.PullRequest.Number)
 	}
 	// push操作，执行apply计划
 	if trigger == consts.EnvTriggerCommit && form.Before != "" {
-		return CreateWebhookTask(tx, models.TaskTypeApply, form.Before, userId, env, tpl, 0)
+		return CreateWebhookTask(tx, models.TaskTypeApply, env.Revision, form.After, userId, env, tpl, 0)
 	}
 	return nil
 }
