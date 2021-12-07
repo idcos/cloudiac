@@ -731,15 +731,30 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 						return
 					}
 					driftInfoMap := ParseResourceDriftInfo(bs)
-					for address, driftInfo := range driftInfoMap {
-						res, err := services.GetResourceIdByAddressAndTaskId(dbSess, address, env.LastResTaskId)
+					if len(driftInfoMap) == 0 {
+						err = services.DeleteEnvResourceDrift(dbSess, env.Id)
 						if err != nil {
-							logs.Get().Error("Failed to query resource table while writing drift resource")
-							continue
-						} else {
-							driftInfo.ResId = res.Id
-							// TODO 后续使用batch 改进
-							services.InsertOrUpdateCronTaskInfo(db.Get(), driftInfo)
+							logs.Get().Error("Failed to delete all resoruce drift information in the environment")
+						}
+					} else {
+						addressList := []string{}
+						for address, _ := range driftInfoMap {
+							addressList = append(addressList, address)
+						}
+						err = services.DeleteEnvResourceDriftByAddressList(dbSess, env.Id, addressList)
+						if err != nil {
+							logs.Get().Error("Failed to delete already repair resoruce drift information in the environment")
+						}
+						for address, driftInfo := range driftInfoMap {
+							res, err := services.GetResourceIdByAddressAndTaskId(dbSess, address, env.LastResTaskId)
+							if err != nil {
+								logs.Get().Error("Failed to query resource table while writing drift resource")
+								continue
+							} else {
+								driftInfo.ResId = res.Id
+								// TODO 后续使用batch 改进
+								services.InsertOrUpdateCronTaskInfo(db.Get(), driftInfo)
+							}
 						}
 					}
 
