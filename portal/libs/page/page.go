@@ -70,7 +70,12 @@ func (p *Paginator) TotalBySubQuery() (int64, error) {
 }
 
 func (p *Paginator) getPage() *db.Session {
-	return p.dbSess.Limit(p.Size).Offset((p.Page - 1) * p.Size)
+	sess := p.dbSess.Limit(p.Size).Offset((p.Page - 1) * p.Size)
+	// 数据分页时必须进行排序，如果查询未排序则默认使用 id 排序
+	if !sess.IsOrdered() {
+		sess = sess.Order("`id`")
+	}
+	return sess
 }
 
 func (p *Paginator) Scan(dest interface{}) error {
