@@ -323,6 +323,11 @@ func (s *Session) isModel(m interface{}) bool {
 	return rv.Kind() == reflect.Struct
 }
 
+func (s *Session) IsOrdered() bool {
+	_, ok := s.db.Statement.Clauses[clause.OrderBy{}.Name()]
+	return ok
+}
+
 func (s *Session) Update(value interface{}) (int64, error) {
 	if !s.isModel(value) {
 		return 0, fmt.Errorf("'value' must be a 'struct', not '%T'", value)
