@@ -141,12 +141,17 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 	}
 
 	var (
-		err error
+		err      error
+		commitId string
 	)
-	task.RepoAddr, task.CommitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
+	task.RepoAddr, commitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
 	if err != nil {
 		return nil, e.New(e.InternalError, err)
 	}
+	if task.CommitId == "" {
+		task.CommitId = commitId
+	}
+
 	return doCreateTask(tx, *task, tpl, env)
 }
 
@@ -162,6 +167,7 @@ func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*mode
 		KeyId:           models.Id(firstVal(string(pt.KeyId), string(env.KeyId))),
 		ExtraData:       pt.ExtraData,
 		Revision:        firstVal(pt.Revision, env.Revision, tpl.RepoRevision),
+		CommitId:        pt.CommitId,
 		StopOnViolation: pt.StopOnViolation,
 
 		RetryDelay:  utils.FirstValueInt(pt.RetryDelay, env.RetryDelay),
