@@ -14,6 +14,7 @@ type WebhooksApiHandler struct {
 	PullRequest      PullRequest      `json:"pull_request"`      //gitea
 	Action           string           `json:"action"`            // gitea pr状态，示例：open
 	Before           string           `json:"before"`            //gitea push时回调的commitid
+	After            string           `json:"after"`             //gitea push时回调的commitid
 	Repository       Repository       `json:"repository"`        //gitea pr回调仓库信息
 }
 
