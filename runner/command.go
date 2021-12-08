@@ -4,6 +4,8 @@ package runner
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
 	"path/filepath"
 	"strings"
 	"time"
@@ -22,6 +24,7 @@ import (
 // Task Executor
 type Executor struct {
 	Image      string
+	Name       string
 	Env        []string
 	Timeout    int
 	PrivateKey string
@@ -30,6 +33,7 @@ type Executor struct {
 	Commands         []string
 	HostWorkdir      string // 宿主机目录
 	Workdir          string // 容器目录
+	AutoRemove       bool   // 开启容器的自动删除？
 	// for container
 	//ContainerInstance *Container
 }
@@ -56,6 +60,32 @@ func dockerClient() (*client.Client, error) {
 	return cli, nil
 }
 
+func (exec *Executor) tryPullImage(cli *client.Client) {
+	logger := logger.WithField("image", exec.Image).WithField("action", "TryPullImage")
+	if cli == nil {
+		var err error
+		cli, err = dockerClient()
+		if err != nil {
+			logger.Warn(err)
+			return
+		}
+	}
+
+	reader, err := cli.ImagePull(context.Background(), exec.Image, types.ImagePullOptions{})
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			logger.Debugf("pull image: %v", err)
+		} else {
+			logger.Warnf("pull image: %v", err)
+		}
+		return
+	}
+	defer reader.Close()
+
+	bs, _ := ioutil.ReadAll(reader)
+	logger.Tracef("pull image: %s", bs)
+}
+
 func (exec *Executor) Start() (string, error) {
 	logger := logger.WithField("taskId", filepath.Base(exec.HostWorkdir))
 	cli, err := dockerClient()
@@ -63,6 +93,8 @@ func (exec *Executor) Start() (string, error) {
 		logger.Error(err)
 		return "", err
 	}
+	logger.Infof("pull image: %s", exec.Image)
+	exec.tryPullImage(cli)
 
 	conf := configs.Get()
 	mountConfigs := []mount.Mount{
@@ -128,12 +160,12 @@ func (exec *Executor) Start() (string, error) {
 			AttachStderr: true,
 		},
 		&container.HostConfig{
-			AutoRemove: false,
+			AutoRemove: exec.AutoRemove,
 			Mounts:     mountConfigs,
 		},
 		nil,
 		nil,
-		"")
+		exec.Name)
 	if err != nil {
 		logger.Errorf("create container err: %v", err)
 		return "", err
@@ -181,6 +213,21 @@ func (Executor) GetExecInfo(execId string) (execInfo types.ContainerExecInspect,
 	return execInfo, nil
 }
 
+func (Executor) Wait(ctx context.Context, cid string) error {
+	cli, err := dockerClient()
+	if err != nil {
+		return err
+	}
+
+	okCh, errCh := cli.ContainerWait(ctx, cid, container.WaitConditionNotRunning)
+	select {
+	case <-okCh:
+		return nil
+	case err = <-errCh:
+		return err
+	}
+}
+
 func (Executor) WaitCommand(ctx context.Context, execId string) (execInfo types.ContainerExecInspect, err error) {
 	cli, err := dockerClient()
 	if err != nil {
@@ -188,15 +235,60 @@ func (Executor) WaitCommand(ctx context.Context, execId string) (execInfo types.
 	}
 
 	for {
+		select {
+		case <-ctx.Done():
+			return execInfo, ctx.Err()
+		default:
+		}
+
 		inspect, err := cli.ContainerExecInspect(ctx, execId)
 		if err != nil {
-			return execInfo, errors.Wrap(err, "container exec attach")
+			if err == context.DeadlineExceeded {
+				return execInfo, err
+			}
+			return execInfo, errors.Wrap(err, "container exec inspect")
 		}
 		if !inspect.Running {
 			return execInfo, nil
 		}
 		time.Sleep(time.Second)
 	}
+}
+
+func (exec Executor) WaitCommandWithDeadline(ctx context.Context, execId string, deadline time.Time) (execInfo types.ContainerExecInspect, err error) {
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithDeadline(ctx, deadline)
+	defer cancel()
+
+	logger.Debugf("wait exec %s, deadline: %s", execId, deadline.Format(time.RFC3339))
+	if execInfo, err = exec.WaitCommand(ctx, execId); err != nil {
+		if err == context.DeadlineExceeded {
+			// logger.Infof("task %s/step%s: %v", exec..TaskId, t.req.Step, err)
+			if err := (Executor{}).StopCommand(execId); err != nil {
+				logger.WithField("cid", execInfo.ContainerID).Errorf("stop command error: %v", err)
+			}
+		}
+		return execInfo, err
+	}
+
+	return execInfo, err
+}
+
+func (e Executor) StopCommand(execId string) (err error) {
+	cli, err := dockerClient()
+	if err != nil {
+		return err
+	}
+
+	inspect, err := cli.ContainerExecInspect(context.Background(), execId)
+	if err != nil {
+		return errors.Wrap(err, "container exec attach")
+	}
+
+	if _, err := e.RunCommand(inspect.ContainerID, []string{"kill", "-9", fmt.Sprintf("%d", inspect.Pid)}); err != nil {
+		return errors.Wrap(err, "kill process")
+	}
+	return nil
 }
 
 func (Executor) IsPaused(cid string) (bool, error) {

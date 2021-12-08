@@ -3,6 +3,7 @@
 package configs
 
 import (
+	"crypto/md5"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -41,9 +42,11 @@ type ConsulConfig struct {
 type RunnerConfig struct {
 	DefaultImage string `yaml:"default_image"`
 	// AssetsPath  预置 providers 也在该目录下
-	AssetsPath      string `yaml:"assets_path"`
-	StoragePath     string `yaml:"storage_path"`
-	PluginCachePath string `yaml:"plugin_cache_path"`
+	AssetsPath       string `yaml:"assets_path"`
+	StoragePath      string `yaml:"storage_path"`
+	PluginCachePath  string `yaml:"plugin_cache_path"`
+	OfflineMode      bool   `yaml:"offline_mode"`       // 离线模式?
+	ReserveContainer bool   `yaml:"reserver_container"` // 任务结束后保留容器?(停止容器但不删除)
 }
 
 type PortalConfig struct {
@@ -127,8 +130,15 @@ type Config struct {
 	SMTPServer   SMTPServerConfig `yaml:"smtpServer"`
 	SecretKey    string           `yaml:"secretKey"`
 	JwtSecretKey string           `yaml:"jwtSecretKey"`
-	Policy       PolicyConfig     `yaml:"policy"`
+
+	ExportSecretKey string `yaml:"exportSecretKey"`
+
+	Policy PolicyConfig `yaml:"policy"`
 }
+
+const (
+	defaultExportSecretKey = "rIhfbOpPsZHTdDA1yLJOxYNxCTFgTEuh"
+)
 
 var (
 	config *Config
@@ -165,9 +175,20 @@ func ParsePortalConfig(filename string) error {
 	if cfg.SecretKey == "" {
 		panic("missing secret key config")
 	}
+	// 如果 SecretKey 不是 32 位字符则使用 md5 转为 32 位
+	if len(cfg.SecretKey) != 32 {
+		hash := md5.New()
+		hash.Write([]byte(cfg.SecretKey))
+		cfg.SecretKey = fmt.Sprintf("%x", hash.Sum(nil))
+	}
+
 	if cfg.JwtSecretKey == "" {
 		cfg.JwtSecretKey = cfg.SecretKey
 	}
+	if cfg.ExportSecretKey == "" {
+		cfg.ExportSecretKey = defaultExportSecretKey
+	}
+
 	lock.Lock()
 	defer lock.Unlock()
 	config = &cfg

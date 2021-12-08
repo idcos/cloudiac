@@ -1,3 +1,48 @@
+------
+## v0.8.0-rc1 20211125
+#### Features
+- 新增环境漂移检测功能
+- 新增环境资源图形化展示
+- 新增云模板导出导入功能
+- 新增创建云模板时名称和工作目录有效性检查
+- 新增加 VCS 编辑功能，并对 vcs token 做加密处理
+- 新增, 执行 MR/PR 触发的 plan 任务时将日志回写到 review comment
+- 任务通知消息中增加任务类型说明
+- 接口支持传参数 pageSize=0 表示不分页
+- runner 启动 worker 前先进行 docker image pull
+
+#### Fixes
+- 修复步骤超时后不显示日志的问题
+
+#### Changes
+- 修改步骤默认超时时间为 1800 秒
+- 变量更新接口改为只支持传当前实例添加的变量
+- 变量按名称排序
+- 云模板选择仓库时仅列出与 token 用户相关的仓库(gitea 修改，其他 VCS 无此问题)
+- 文档中默认使用的 mysql 版本修改为 8.0
+
+
+------
+## v0.7.1 20211117
+#### Features
+- 新增 runner 的 offline mode
+
+#### Enhancements
+- 调整步骤的默认超时时间为 1800 秒
+- 步骤超时会记录错误原因，展示为 "timeout"
+
+#### Fixes
+- 修复 ct-worker 镜像的 provider 加载问题
+
+
+#### 配置更新
+若要开启 offline mode，需在 .env 中添加(不配置默认为 false) 
+```
+RUNNER_OFFLINE_MODE="true"
+```
+
+
+------
 ## v0.7.0 20211105
 #### Features
 - **新增自定义 pipeline 功能，并将任务执行过程分步展示**

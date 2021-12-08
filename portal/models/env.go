@@ -5,6 +5,7 @@ package models
 import (
 	"cloudiac/portal/libs/db"
 	"path"
+	"time"
 
 	"github.com/lib/pq"
 )
@@ -35,10 +36,10 @@ type Env struct {
 	Status      string `json:"status" gorm:"type:enum('active','failed','inactive')" enums:"'active','failed','inactive'"` // 环境状态, active活跃, inactive非活跃,failed错误,running部署中,approving审批中
 	// 任务状态，只同步部署任务的状态(apply,destroy)，plan 任务不会对环境产生影响，所以不同步
 	TaskStatus string `json:"taskStatus" gorm:"type:enum('','approving','running');default:''"`
-	Archived   bool   `json:"archived" gorm:"default:false"`           // 是否已归档
-	Timeout    int    `json:"timeout" gorm:"default:600;comment:部署超时"` // 部署超时时间（单位：秒）
-	OneTime    bool   `json:"oneTime" gorm:"default:false"`            // 一次性环境标识
-	Deploying  bool   `json:"deploying" gorm:"not null;default:false"` // 是否正在执行部署
+	Archived   bool   `json:"archived" gorm:"default:false"`            // 是否已归档
+	Timeout    int    `json:"timeout" gorm:"default:1800;comment:部署超时"` // 步骤超时时间（单位：秒）
+	OneTime    bool   `json:"oneTime" gorm:"default:false"`             // 一次性环境标识
+	Deploying  bool   `json:"deploying" gorm:"not null;default:false"`  // 是否正在执行部署
 
 	StatePath string `json:"statePath" gorm:"not null" swaggerignore:"true"` // Terraform tfstate 文件路径（内部）
 
@@ -76,6 +77,12 @@ type Env struct {
 
 	ExtraData JSON   `json:"extraData" gorm:"type:json"` // 扩展字段，用于存储外部服务调用时的信息
 	Callback  string `json:"callback" gorm:"default:''"` // 外部请求的回调方式
+
+	// 偏移检测相关
+	CronDriftExpress  string     `json:"cronDriftExpress" gorm:"default:''"`     // 偏移检测任务的Cron表达式
+	AutoRepairDrift   bool       `json:"autoRepairDrift" gorm:"default:false"`   // 是否进行自动纠偏
+	OpenCronDrift     bool       `json:"openCronDrift" gorm:"default:false"`     // 是否开启偏移检测
+	NextDriftTaskTime *time.Time `json:"nextDriftTaskTime" gorm:"type:datetime"` // 下次执行偏移检测任务的时间
 }
 
 func (Env) TableName() string {
@@ -120,4 +127,5 @@ type EnvDetail struct {
 	KeyName       string `json:"keyName"`       // 密钥名称
 	TaskId        Id     `json:"taskId"`        // 当前作业ID
 	CommitId      string `json:"commitId"`      // Commit ID
+	IsDrift       bool   `json:"isDrift"`
 }

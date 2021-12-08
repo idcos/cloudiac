@@ -4,6 +4,7 @@ package services
 
 import (
 	"cloudiac/common"
+	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
@@ -25,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/acarl005/stripansi"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 )
@@ -42,14 +44,140 @@ func GetTask(dbSess *db.Session, id models.Id) (*models.Task, e.Error) {
 	return &task, nil
 }
 
+func DeleteTaskStep(tx *db.Session, taskId models.Id) e.Error {
+	step := models.TaskStep{}
+	_, err := tx.Where("task_id = ?", taskId).Delete(&step)
+	if err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
+// 删除环境下所有的偏移检测资源信息
+func DeleteEnvResourceDrift(tx *db.Session, taskId models.Id) e.Error {
+	drift := models.ResourceDrift{}
+	_, err := tx.Where("res_id in (select id from iac_resource where task_id = ?)", taskId).Delete(&drift)
+	if err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
+// 删除已经手动恢复的资源
+func DeleteEnvResourceDriftByAddressList(tx *db.Session, taskId models.Id, addressList []string) e.Error {
+	drift := models.ResourceDrift{}
+	_, err := tx.Where("res_id in (select id from iac_resource where task_id = ? and address not in (?))",
+		taskId, addressList).Delete(&drift)
+	if err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
+func DeleteTask(tx *db.Session, taskId models.Id) e.Error {
+	step := models.Task{}
+	_, err := tx.Where("id = ?", taskId).Delete(&step)
+	if err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
+func DeleteHistoryCronTask(tx *db.Session) e.Error {
+	task := make([]models.Task, 0)
+	err := tx.Where("unix_timestamp(now()) - unix_timestamp(end_at) > ? and is_drift_task = ? and type = ?",
+		86400*7, true, models.TaskTypePlan).Find(&task)
+	if err != nil {
+		return e.New(e.DBError, fmt.Errorf("delete task error: %v", err))
+	}
+	// 删除任务以及任务相关的step
+	if len(task) > 0 {
+		for _, v := range task {
+			if er1 := DeleteTask(tx, v.Id); er1 != nil {
+				return er1
+			}
+			if er1 := DeleteTaskStep(tx, v.Id); er1 != nil {
+				return er1
+			}
+		}
+	}
+	return nil
+}
+
+func GetResourceIdByAddressAndTaskId(sess *db.Session, address string, lastResTaskId models.Id) (*models.Resource, e.Error) {
+	res := models.Resource{}
+	if err := sess.Where("address = ? and task_id = ?", address, lastResTaskId).First(&res); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return &res, nil
+}
+
+func CloneNewDriftTask(tx *db.Session, src models.Task, env *models.Env) (*models.Task, e.Error) {
+	// logger := logs.Get().WithField("func", "CreateTask")
+	// logger = logger.WithField("taskId", pt.Id)
+	tpl, err := GetTemplateById(tx, src.TplId)
+	if err != nil {
+		return nil, e.New(e.InternalError, err)
+	}
+
+	// 克隆任务需要重置部分任务参数
+	var cronTaskType string
+	if env.AutoRepairDrift {
+		cronTaskType = models.TaskTypeApply
+	} else {
+		cronTaskType = models.TaskTypePlan
+	}
+
+	// 获取最新 repoAddr(带 token)，确保 vcs 更新后任务还可以正常 checkout 代码
+	repoAddr, _, err := GetTaskRepoAddrAndCommitId(tx, tpl, src.Revision)
+	if err != nil {
+		return nil, e.AutoNew(err, e.InternalError)
+	}
+
+	task, er := newCommonTask(tpl, env, src)
+	if er != nil {
+		return nil, er
+	}
+
+	task.Name = common.CronDriftTaskName
+	task.Type = cronTaskType
+	task.IsDriftTask = true
+	task.RepoAddr = repoAddr
+	task.CommitId = src.CommitId
+	task.CreatorId = consts.SysUserId
+	task.AutoApprove = env.AutoApproval
+	task.StopOnViolation = env.StopOnViolation
+	task.RunnerId = env.RunnerId
+	task.KeyId = env.KeyId
+
+	return doCreateTask(tx, *task, tpl, env)
+}
+
 func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models.Task) (*models.Task, e.Error) {
-	logger := logs.Get().WithField("func", "CreateTask")
+	// logger := logs.Get().WithField("func", "CreateTask")
+	// logger = logger.WithField("taskId", task.Id)
+	task, er := newCommonTask(tpl, env, pt)
+	if er != nil {
+		return nil, er
+	}
 
 	var (
 		err      error
-		firstVal = utils.FirstValueStr
+		commitId string
 	)
+	task.RepoAddr, commitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
+	if err != nil {
+		return nil, e.New(e.InternalError, err)
+	}
+	if task.CommitId == "" {
+		task.CommitId = commitId
+	}
 
+	return doCreateTask(tx, *task, tpl, env)
+}
+
+func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*models.Task, e.Error) {
+	firstVal := utils.FirstValueStr
 	task := models.Task{
 		// 以下为需要外部传入的属性
 		Name:            pt.Name,
@@ -60,12 +188,14 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		KeyId:           models.Id(firstVal(string(pt.KeyId), string(env.KeyId))),
 		ExtraData:       pt.ExtraData,
 		Revision:        firstVal(pt.Revision, env.Revision, tpl.RepoRevision),
+		CommitId:        pt.CommitId,
 		StopOnViolation: pt.StopOnViolation,
 
 		RetryDelay:  utils.FirstValueInt(pt.RetryDelay, env.RetryDelay),
 		RetryNumber: utils.FirstValueInt(pt.RetryNumber, env.RetryNumber),
-		RetryAble:   env.RetryAble,
+		RetryAble:   utils.FirstValueBool(pt.RetryAble, env.RetryAble),
 
+		// 以下值直接使用环境的配置(不继承模板的配置)
 		OrgId:     env.OrgId,
 		ProjectId: env.ProjectId,
 		TplId:     env.TplId,
@@ -75,7 +205,6 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		Workdir:   tpl.Workdir,
 		TfVersion: tpl.TfVersion,
 
-		// 以下值直接使用环境的配置(不继承模板的配置)
 		Playbook:     env.Playbook,
 		TfVarsFile:   env.TfVarsFile,
 		PlayVarsFile: env.PlayVarsFile,
@@ -83,7 +212,7 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		BaseTask: models.BaseTask{
 			Type:        pt.Type,
 			Pipeline:    pt.Pipeline,
-			StepTimeout: pt.StepTimeout,
+			StepTimeout: utils.FirstValueInt(pt.StepTimeout, common.DefaultTaskStepTimeout),
 			RunnerId:    firstVal(pt.RunnerId, env.RunnerId),
 
 			Status:   models.TaskPending,
@@ -92,15 +221,14 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		},
 		Callback: pt.Callback,
 	}
+	task.Id = models.Task{}.NewId()
+	return &task, nil
+}
 
-	task.Id = models.NewId("run")
-	logger = logger.WithField("taskId", task.Id)
-
-	task.RepoAddr, task.CommitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
-	if err != nil {
-		return nil, e.New(e.InternalError, err)
-	}
-
+func doCreateTask(tx *db.Session, task models.Task, tpl *models.Template, env *models.Env) (*models.Task, e.Error) {
+	// pipeline 内容可以从外部传入，如果没有传则尝试读取云模板目录下的文件
+	var err error
+	logger := logs.Get().WithField("func", "doCreateTask")
 	{ // 参数检查
 		if task.Playbook != "" && task.KeyId == "" {
 			return nil, e.New(e.BadParam, fmt.Errorf("'keyId' is required to run playbook"))
@@ -115,8 +243,6 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 			return nil, e.New(e.BadParam, fmt.Errorf("'runnerId' is required"))
 		}
 	}
-
-	// pipeline 内容可以从外部传入，如果没有传则尝试读取云模板目录下的文件
 	if task.Pipeline == "" {
 		task.Pipeline, err = GetTplPipeline(tx, tpl.Id, task.Revision, task.Workdir)
 		if err != nil {
@@ -256,6 +382,16 @@ func GetTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision s
 	return repoAddr, commitId, nil
 }
 
+func ListPendingCronTask(tx *db.Session, envId models.Id) (bool, e.Error) {
+	query := tx.Where("env_id = ? AND is_drift_task = 1 AND status IN (?)", envId,
+		[]string{models.TaskPending, models.TaskRunning, models.TaskApproving})
+	exist, err := query.Model(&models.Task{}).Exists()
+	if err != nil {
+		return exist, e.New(e.DBError, err)
+	}
+	return exist, nil
+}
+
 func GetTaskById(tx *db.Session, id models.Id) (*models.Task, e.Error) {
 	o := models.Task{}
 	if err := tx.Where("id = ?", id).First(&o); err != nil {
@@ -298,7 +434,7 @@ func stepStatus2TaskStatus(s string) string {
 func ChangeTaskStatusWithStep(dbSess *db.Session, task models.Tasker, step *models.TaskStep) e.Error {
 	switch t := task.(type) {
 	case *models.Task:
-		return ChangeTaskStatus(dbSess, t, stepStatus2TaskStatus(step.Status), step.Message)
+		return ChangeTaskStatus(dbSess, t, stepStatus2TaskStatus(step.Status), step.Message, false)
 	case *models.ScanTask:
 		return ChangeScanTaskStatusWithStep(dbSess, t, step)
 	default:
@@ -307,7 +443,7 @@ func ChangeTaskStatusWithStep(dbSess *db.Session, task models.Tasker, step *mode
 }
 
 // ChangeTaskStatus 修改任务状态(同步修改 StartAt、EndAt 等)，并同步修改 env 状态
-func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message string) e.Error {
+func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message string, skipUpdateEnv bool) e.Error {
 	preStatus := task.Status
 	if preStatus == status && message == "" {
 		return nil
@@ -338,15 +474,23 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 		}
 	}
 
-	if preStatus != status {
+	if preStatus != status && !task.IsDriftTask {
 		TaskStatusChangeSendMessage(task, status)
 	}
 
-	step, er := GetTaskStep(dbSess, task.Id, task.CurrStep)
-	if er != nil {
-		return e.AutoNew(er, e.DBError)
+	// 如果勾选提交pr自动plan，任务结束时 plan作业结果写入PR评论中
+	if task.Exited() && task.Type == common.TaskTypePlan {
+		SendVcsComment(dbSess, task, status)
 	}
-	return ChangeEnvStatusWithTaskAndStep(dbSess, task.EnvId, task, step)
+
+	if !skipUpdateEnv {
+		step, er := GetTaskStep(dbSess, task.Id, task.CurrStep)
+		if er != nil {
+			return e.AutoNew(er, e.DBError)
+		}
+		return ChangeEnvStatusWithTaskAndStep(dbSess, task.EnvId, task, step)
+	}
+	return nil
 }
 
 type TfState struct {
@@ -850,7 +994,6 @@ func TaskStatusChangeSendMessage(task *models.Task, status string) {
 		Task:      task,
 		EventType: consts.TaskStatusToEventType[status],
 	})
-
 	logs.Get().WithField("taskId", task.Id).Infof("new event: %s", ns.EventType)
 	ns.SendMessage()
 }
@@ -940,7 +1083,7 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 
 		BaseTask: models.BaseTask{
 			Type:        pt.Type,
-			StepTimeout: pt.StepTimeout,
+			StepTimeout: utils.FirstValueInt(pt.StepTimeout, common.DefaultTaskStepTimeout),
 			RunnerId:    pt.RunnerId,
 
 			Status:   models.TaskPending,
@@ -1060,11 +1203,136 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 	if err := session.Model(models.Resource{}).Where("org_id = ? AND project_id = ? AND env_id = ? AND task_id = ?",
 		task.OrgId, task.ProjectId, task.EnvId, task.Id).Find(&resources); err != nil {
 		logs.Get().Errorf("kafka send error, get resource data err: %v", err)
+		return
 	}
 	k := kafka.Get()
 	message := k.GenerateKafkaContent(task, taskStatus, resources)
 	if err := k.ConnAndSend(message); err != nil {
 		logs.Get().Errorf("kafka send error: %v", err)
+		return
 	}
 	logs.Get().Infof("kafka send massage successful. data: %s", string(message))
+}
+
+type Resource struct {
+	models.Resource
+	DriftDetail string       `json:"driftDetail"`
+	DriftAt     *models.Time `json:"driftAt"`
+	IsDrift     bool         `json:"isDrift" form:"isDrift" `
+}
+
+func GetTaskResourceToTaskId(dbSess *db.Session, task *models.Task) ([]Resource, e.Error) {
+	// 查询出最后一次漂移检测的资源
+	// 资源类型: 新增、删除、修改
+	rs := make([]Resource, 0)
+	if err := dbSess.Table("iac_resource as r").
+		Joins("left join iac_resource_drift as rd on rd.res_id =  r.id ").
+		Where("r.org_id = ? AND r.project_id = ? AND r.env_id = ? AND r.task_id = ?",
+			task.OrgId, task.ProjectId, task.EnvId, task.Id).
+		LazySelectAppend("r.*, rd.drift_detail, rd.updated_at, rd.created_at").
+		Find(&rs); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	return rs, nil
+}
+
+func InsertOrUpdateCronTaskInfo(session *db.Session, resDrift models.ResourceDrift) {
+	dbResDrift := models.ResourceDrift{}
+	if err := session.Where("res_id = ?", resDrift.ResId).Find(&dbResDrift); err != nil {
+		logs.Get().Errorf("insert resource drift info error: %v", err)
+		return
+	}
+
+	if dbResDrift.Id == "" {
+		if err := models.Create(session, &resDrift); err != nil {
+			logs.Get().Errorf("insert resource drift info error: %v", err)
+		}
+	} else {
+		dbResDrift.DriftDetail = resDrift.DriftDetail
+		if _, err := models.UpdateModelAll(session, &dbResDrift); err != nil {
+			logs.Get().Errorf("update resource drift info error: %v", err)
+		}
+	}
+}
+
+func SendVcsComment(session *db.Session, task *models.Task, taskStatus string) {
+	env, er := GetEnvById(session, task.EnvId)
+	if er != nil {
+		logs.Get().Errorf("vcs comment err, get env detail data err: %v", er)
+		return
+	}
+
+	vp, err := GetVcsPrByTaskId(session, task)
+	if err != nil {
+		if !e.IsRecordNotFound(err) {
+			logs.Get().Errorf("vcs comment err, get vcs pr data err: %v", err)
+		}
+		return
+	}
+
+	vcs, er := GetVcsRepoByTplId(session, task.TplId)
+	if err != nil {
+		logs.Get().Errorf("vcs comment err, get vcs data err: %v", er)
+		return
+	}
+	taskStep, er := GetTaskPlanStep(session, task.Id)
+	if er != nil {
+		logs.Get().Errorf("vcs comment err, get task step data err: %v", er)
+		return
+	}
+
+	logContent, err := logstorage.Get().Read(taskStep.LogPath)
+	if err != nil {
+		logs.Get().Errorf("vcs comment err, get task plan log err: %v", err)
+		return
+	}
+
+	attr := map[string]interface{}{
+		"Status": taskStatus,
+		"Name":   env.Name,
+		//http://{{addr}}/org/{{orgId}}/project/{{ProjectId}}/m-project-env/detail/{{envId}}/task/{{TaskId}}
+		"Addr":    fmt.Sprintf("%s/org/%s/project/%s/m-project-env/detail/%s/task/%s", configs.Get().Portal.Address, task.OrgId, task.ProjectId, task.EnvId, task.Id),
+		"Content": stripansi.Strip(string(logContent)),
+	}
+
+	content := utils.SprintTemplate(consts.PrCommentTpl, attr)
+	if err := vcs.CreatePrComment(vp.PrId, content); err != nil {
+		logs.Get().Errorf("vcs comment err, create comment err: %v", err)
+		return
+	}
+}
+
+func QueryResource(dbSess *db.Session, task *models.Task) *db.Session {
+	return dbSess.Table("iac_resource as r").
+		Joins("inner join iac_resource_drift as rd on rd.address =  r.address  and rd.env_id = ? ", task.EnvId).
+		Where("r.org_id = ? AND r.project_id = ? AND r.env_id = ? AND r.task_id = ?",
+			task.OrgId, task.ProjectId, task.EnvId, task.Id)
+}
+
+func GetDriftResource(session *db.Session, envId, driftTaskId models.Id) ([]models.ResourceDrift, e.Error) {
+	driftResources := make([]models.ResourceDrift, 0)
+	if err := session.Model(&models.ResourceDrift{}).
+		Where("env_id = ?", envId).
+		Where("task_id = ?", driftTaskId).
+		Find(&driftResources); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return driftResources, nil
+}
+
+type ResourceDriftResp struct {
+	models.ResourceDrift
+	IsDrift bool `gorm:"-" json:"isDrift"`
+}
+
+func GetDriftResourceById(session *db.Session, id string) (*ResourceDriftResp, e.Error) {
+	driftResources := &ResourceDriftResp{}
+	if err := session.Model(&models.ResourceDrift{}).
+		Where("id = ?", id).
+		First(driftResources); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	driftResources.IsDrift = true
+	return driftResources, nil
 }

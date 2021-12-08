@@ -10,7 +10,6 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/utils/logs"
 	"fmt"
-	"strings"
 	"time"
 )
 
@@ -78,20 +77,26 @@ func GetEnvById(tx *db.Session, id models.Id) (*models.Env, e.Error) {
 }
 
 func QueryEnvDetail(query *db.Session) *db.Session {
-	query = query.Model(&models.Env{})
+	query = query.Model(&models.Env{}).LazySelectAppend("iac_env.*")
 
 	// 模板名称
 	query = query.Joins("left join iac_template as t on t.id = iac_env.tpl_id").
-		LazySelectAppend("t.name as template_name,iac_env.*")
+		LazySelectAppend("t.name as template_name")
 	// 创建人姓名
 	query = query.Joins("left join iac_user as u on u.id = iac_env.creator_id").
-		LazySelectAppend("u.name as creator,iac_env.*")
+		LazySelectAppend("u.name as creator")
 	// 资源数量统计
 	query = query.Joins("left join (select count(*) as resource_count, task_id from iac_resource group by task_id) as r on r.task_id = iac_env.last_res_task_id").
-		LazySelectAppend("r.resource_count, iac_env.*")
+		LazySelectAppend("r.resource_count")
 	// 密钥名称
 	query = query.Joins("left join iac_key as k on k.id = iac_env.key_id").
-		LazySelectAppend("k.name as key_name,iac_env.*")
+		LazySelectAppend("k.name as key_name")
+	// 资源是否发生漂移
+	query = query.Joins("LEFT JOIN (" +
+		"  SELECT iac_resource.task_id FROM iac_resource_drift " +
+		"    INNER JOIN iac_resource ON iac_resource.id = iac_resource_drift.res_id GROUP BY iac_resource.task_id" +
+		") AS rd ON rd.task_id = iac_env.last_res_task_id").
+		LazySelectAppend("!ISNULL(rd.task_id) AS is_drift")
 
 	return query
 }
@@ -117,6 +122,14 @@ func GetEnvByTplId(tx *db.Session, tplId models.Id) ([]models.Env, error) {
 
 func QueryActiveEnv(query *db.Session) *db.Session {
 	return query.Model(&models.Env{}).Where("status != ? OR deploying = ?", models.EnvStatusInactive, true)
+}
+
+func QueryDeploySucessEnv(query *db.Session) *db.Session {
+	return query.Model(&models.Env{}).Where("status = ?", models.EnvStatusActive)
+}
+
+func QueryEnv(query *db.Session) *db.Session {
+	return query.Model(&models.Env{})
 }
 
 // ChangeEnvStatusWithTaskAndStep 基于任务和步骤的状态更新环境状态
@@ -226,34 +239,41 @@ func GetDefaultRunner() (string, e.Error) {
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list is null"))
 }
 
-func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id, sampleVariables []forms.SampleVariables) ([]forms.Variables, e.Error) {
-	resp := make([]forms.Variables, 0)
+//
+// tf变量
+// 环境变量
+
+func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id, sampleVariables []forms.SampleVariables) ([]forms.Variable, e.Error) {
+	resp := make([]forms.Variable, 0)
 	vars, err, _ := GetValidVariables(tx, consts.ScopeEnv, orgId, projectId, tplId, envId, true)
 	if err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("get vairables error: %v", err))
 	}
 	for _, v := range sampleVariables {
-		isNew := true
+		isNewVaild := true
 		for key, value := range vars {
-			// 
-			if v.Name == fmt.Sprintf("TF_VAR_%s", value.Name) {
-				resp = append(resp, forms.Variables{
-					Id:    vars[key].Id,
-					Scope: vars[key].Scope,
-					Type:  vars[key].Type,
-					Name:  vars[key].Name,
-					Value: v.Value,
-				})
-				continue
-			}
-			// 比较变量名
-			if value.Name == v.Name || strings.HasPrefix(v.Name, "TF_VAR_") {
-				isNew = false
+			// 对于第三方调用api创建的环境来说，当前作用域是无变量的，sampleVariables中的变量一种是继承性下来的、另一种是新建的
+			// 这里需要判断变量如果修改了就在当前作用域创建一个变量
+			// 比较变量名是否相同，相同的变量比较变量的值是否发生变化, 发生变化则创建
+			if (v.Name == value.Name && value.Type == consts.VarTypeEnv) ||
+				(v.Name == fmt.Sprintf("TF_VAR_%s", value.Name) && value.Type == consts.VarTypeTerraform) {
+				if v.Value != value.Value {
+					resp = append(resp, forms.Variable{
+						Scope: consts.ScopeEnv,
+						Type:  vars[key].Type,
+						Name:  vars[key].Name,
+						Value: v.Value,
+					})
+					isNewVaild = false
+					// 如果匹配到了就不在继续匹配
+					break
+
+				}
 			}
 		}
-		// 对不在变量列表的变量进行新建
-		if isNew {
-			resp = append(resp, forms.Variables{
+		if isNewVaild {
+			// 这部分变量是新增的 需要新建
+			resp = append(resp, forms.Variable{
 				Scope: consts.ScopeEnv,
 				Type:  consts.VarTypeEnv,
 				Name:  v.Name,
@@ -263,4 +283,24 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 	}
 
 	return resp, nil
+}
+
+// CheckoutAutoApproval 配置漂移自动执行apply、commit自动部署apply是否配置自动审批
+func CheckoutAutoApproval(autoApproval, autoDrift bool, triggers []string) bool {
+	if autoApproval {
+		return true
+	}
+	// 漂移自动执行apply检测，当勾选漂移自动检测时自动审批同时勾选
+	if autoDrift {
+		return false
+	}
+
+	// 配置commit自动apply时，必须勾选自动审批
+	for _, v := range triggers {
+		if v == consts.EnvTriggerCommit {
+			return false
+		}
+	}
+
+	return true
 }

@@ -73,7 +73,11 @@ func (s *TaskStep) IsStarted() bool {
 }
 
 func (s *TaskStep) IsExited() bool {
-	return utils.StrInArray(s.Status, TaskStepRejected, TaskStepComplete, TaskStepFailed, TaskStepTimeout)
+	return s.IsExitedStatus(s.Status)
+}
+
+func (TaskStep) IsExitedStatus(status string) bool {
+	return utils.StrInArray(status, TaskStepRejected, TaskStepComplete, TaskStepFailed, TaskStepTimeout)
 }
 
 // 执行成功

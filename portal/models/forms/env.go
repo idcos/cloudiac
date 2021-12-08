@@ -28,7 +28,7 @@ type CreateEnvForm struct {
 	Revision        string `form:"revision" json:"revision" binding:""`                             // 分支/标签
 	Timeout         int    `form:"timeout" json:"timeout" binding:""`                               // 部署超时时间（单位：秒）
 
-	Variables []Variables `form:"variables" json:"variables" binding:""` // 自定义变量列表，该变量列表会覆盖现有的变量
+	Variables []Variable `form:"variables" json:"variables" binding:""` // 自定义变量列表，该变量列表会覆盖现有的变量
 
 	TfVarsFile   string    `form:"tfVarsFile" json:"tfVarsFile" binding:""`     // Terraform tfvars 变量文件路径
 	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:""` // Ansible playbook 变量文件路径
@@ -46,11 +46,23 @@ type CreateEnvForm struct {
 	SampleVariables []SampleVariables `json:"sampleVariables" form:"sampleVariables" `
 
 	Callback string `json:"callback" form:"callback"` // 外部请求的回调方式
+
+	CronDriftExpress string `json:"cronDriftExpress" form:"cronDriftExpress"` // 偏移检测表达式
+	AutoRepairDrift  bool   `json:"autoRepairDrift" form:"autoRepairDrift"`   // 是否进行自动纠偏
+	OpenCronDrift    bool   `json:"openCronDrift" form:"openCronDrift"`       // 是否开启偏移检测
+
 }
 
 type SampleVariables struct {
 	Name  string `json:"name" form:"name" `
 	Value string `json:"value" form:"value" `
+}
+
+type CronDriftForm struct {
+	BaseForm
+	CronDriftExpress string `json:"cronDriftExpress" form:"cronDriftExpress"` // 偏移检测表达式
+	AutoRepairDrift  bool   `json:"autoRepairDrift" form:"autoRepairDrift"`   // 是否进行自动纠偏
+	OpenCronDrift    bool   `json:"openCronDrift" form:"openCronDrift"`       // 是否开启偏移检测
 }
 
 type UpdateEnvForm struct {
@@ -68,10 +80,13 @@ type UpdateEnvForm struct {
 	AutoApproval    bool `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"` // 是否自动审批
 	StopOnViolation bool `form:"stopOnViolation" json:"stopOnViolation" enums:"true,false"`       // 合规不通过是否中止任务
 
-	Triggers    []string `form:"triggers" json:"triggers" binding:""`       // 启用触发器，触发器：commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
-	RetryNumber int      `form:"retryNumber" json:"retryNumber" binding:""` // 重试总次数
-	RetryDelay  int      `form:"retryDelay" json:"retryDelay" binding:""`   // 重试时间间隔
-	RetryAble   bool     `form:"retryAble" json:"retryAble" binding:""`     // 是否允许任务进行重试
+	Triggers         []string `form:"triggers" json:"triggers" binding:""`       // 启用触发器，触发器：commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
+	RetryNumber      int      `form:"retryNumber" json:"retryNumber" binding:""` // 重试总次数
+	RetryDelay       int      `form:"retryDelay" json:"retryDelay" binding:""`   // 重试时间间隔
+	RetryAble        bool     `form:"retryAble" json:"retryAble" binding:""`     // 是否允许任务进行重试
+	CronDriftExpress string   `json:"cronDriftExpress" form:"cronDriftExpress"`  // 偏移检测表达式
+	AutoRepairDrift  bool     `json:"autoRepairDrift" form:"autoRepairDrift"`    // 是否进行自动纠偏
+	OpenCronDrift    bool     `json:"openCronDrift" form:"openCronDrift"`        // 是否开启偏移检测
 }
 
 type DeployEnvForm struct {
@@ -95,8 +110,7 @@ type DeployEnvForm struct {
 	RetryDelay  int  `form:"retryDelay" json:"retryDelay" binding:""`   // 重试时间间隔
 	RetryAble   bool `form:"retryAble" json:"retryAble" binding:""`     // 是否允许任务进行重试
 
-	Variables         []Variables `form:"variables" json:"variables" binding:""`       // 自定义变量列表，该变量列表会覆盖现有的变量
-	DeleteVariablesId []string    `json:"deleteVariablesId" form:"deleteVariablesId" ` //删除的变量id
+	Variables []Variable `form:"variables" json:"variables" binding:""` // 自定义变量列表，该变量列表会覆盖现有的变量
 
 	TfVarsFile   string    `form:"tfVarsFile" json:"tfVarsFile" binding:""`     // Terraform tfvars 变量文件路径
 	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:""` // Ansible playbook 变量文件路径
@@ -105,6 +119,10 @@ type DeployEnvForm struct {
 
 	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" `
 	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
+
+	CronDriftExpress string `json:"cronDriftExpress" form:"cronDriftExpress"` // 偏移检测表达式
+	AutoRepairDrift  bool   `json:"autoRepairDrift" form:"autoRepairDrift"`   // 是否进行自动纠偏
+	OpenCronDrift    bool   `json:"openCronDrift" form:"openCronDrift"`       // 是否开启偏移检测
 }
 
 type ArchiveEnvForm struct {
@@ -116,7 +134,7 @@ type ArchiveEnvForm struct {
 }
 
 type SearchEnvForm struct {
-	PageForm
+	NoPageSizeForm
 
 	Q        string `form:"q" json:"q" binding:""`                                                 // 环境名称，支持模糊查询
 	Status   string `form:"status" json:"status" enums:"active,failed,inactive,running,approving"` // 环境状态，active活跃, inactive非活跃,failed错误,running部署中,approving审批中
@@ -142,7 +160,7 @@ type EnvParam struct {
 }
 
 type SearchEnvResourceForm struct {
-	PageForm
+	NoPageSizeForm
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
 	Q  string    `form:"q" json:"q" binding:""`            // 资源名称，支持模糊查询
@@ -158,4 +176,18 @@ type SearchEnvVariableForm struct {
 	BaseForm
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
+}
+
+type SearchEnvResourceGraphForm struct {
+	BaseForm
+
+	Id        models.Id `uri:"id" json:"id" swaggerignore:"true"`              // 环境ID，swagger 参数通过 param path 指定，这里忽略
+	Dimension string    `json:"dimension" form:"dimension" binding:"required"` // 资源名称，支持模糊查询
+}
+
+type ResourceGraphDetailForm struct {
+	BaseForm
+
+	Id         models.Id `uri:"id" json:"id" swaggerignore:"true"`                 // 环境ID，swagger 参数通过 param path 指定，这里忽略
+	ResourceId models.Id `uri:"resourceId" json:"resourceId" swaggerignore:"true"` // 部署成功后后资源ID
 }

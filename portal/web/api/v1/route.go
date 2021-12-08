@@ -40,7 +40,11 @@ func Register(g *gin.RouterGroup) {
 	g.Use(gin.Logger())
 
 	g.POST("/trigger/send", w(handlers.ApiTriggerHandler))
-	g.POST("/webhooks/:vcsType/:vcsId", w(handlers.WebhooksApiHandler))
+	// 触发器
+	apiToken := g.Group("")
+	apiToken.Use(w(middleware.AuthApiToken))
+	apiToken.POST("/webhooks/:vcsType/:vcsId", w(handlers.WebhooksApiHandler))
+
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
 
 	// Authorization Header 鉴权
@@ -122,12 +126,14 @@ func Register(g *gin.RouterGroup) {
 
 	//项目管理
 	ctrl.Register(g.Group("projects", ac()), &handlers.Project{})
+
 	//变量管理
 	g.PUT("/variables/batch", ac(), w(handlers.Variable{}.BatchUpdate))
-
+	g.PUT("/variables/scope/:scope/:id", ac(), w(handlers.Variable{}.UpdateObjectVars))
 	// 供第三方系统获取变量的接口，该接口将 terraform 变量和环境变量统一转为环境变量格式返回，方便第三方系统处理
 	g.GET("/variables/sample", ac(), w(handlers.Variable{}.SearchSampleVariable))
 	ctrl.Register(g.Group("variables", ac()), &handlers.Variable{})
+
 	// 变量组
 	ctrl.Register(g.Group("var_groups", ac()), &handlers.VariableGroup{})
 	g.GET("/var_groups/relationship", ac(), w(handlers.VariableGroup{}.SearchRelationship))
@@ -145,10 +151,14 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/vcs/:id/branch", ac(), w(handlers.Vcs{}.ListBranches))
 	g.GET("/vcs/:id/tag", ac(), w(handlers.Vcs{}.ListTags))
 	g.GET("/vcs/:id/readme", ac(), w(handlers.Vcs{}.GetReadmeContent))
+	// 云模板
 	ctrl.Register(g.Group("templates", ac()), &handlers.Template{})
 	g.GET("/templates/variables", ac(), w(handlers.TemplateVariableSearch))
 	g.GET("/templates/tfversions", ac(), w(handlers.TemplateTfVersionSearch))
 	g.GET("/templates/autotfversion", ac(), w(handlers.AutoTemplateTfVersionChoice))
+	g.POST("/templates/checks", ac(), w(handlers.TemplateChecks))
+	g.GET("/templates/export", ac(), w(handlers.TemplateExport))
+	g.POST("/templates/import", ac(), w(handlers.TemplateImport))
 	g.GET("/vcs/:id/repos/tfvars", ac(), w(handlers.TemplateTfvarsSearch))
 	g.GET("/vcs/:id/repos/playbook", ac(), w(handlers.TemplatePlaybookSearch))
 	g.GET("/vcs/:id/file", ac(), w(handlers.Vcs{}.SearchVcsFileContent))
@@ -172,6 +182,8 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/resources/:resourceId", ac(), w(handlers.Env{}.ResourceDetail))
 	g.GET("/envs/:id/variables", ac(), w(handlers.Env{}.Variables))
 	g.GET("/envs/:id/policy_result", ac(), w(handlers.Env{}.PolicyResult))
+	g.GET("/envs/:id/resources/graph", ac(), w(handlers.Env{}.SearchResourcesGraph))
+	g.GET("/envs/:id/resources/graph/:resourceId", ac(), w(handlers.Env{}.ResourceGraphDetail))
 
 	// 任务管理
 	g.GET("/tasks", ac(), w(handlers.Task{}.Search))
@@ -184,8 +196,10 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/tasks/:id/comment", ac(), w(handlers.TaskComment{}.Search))
 	g.GET("/tasks/:id/steps", ac(), w(handlers.Task{}.SearchTaskStep))
 	g.GET("/tasks/:id/steps/:stepId/log", ac(), w(handlers.Task{}.GetTaskStepLog))
-	g.GET("tasks/:id/steps/:stepId/log/sse", ac(), w(handlers.Task{}.FollowStepLogSse))
+	g.GET("/tasks/:id/steps/:stepId/log/sse", ac(), w(handlers.Task{}.FollowStepLogSse))
+	g.GET("/tasks/:id/resources/graph", ac(), w(handlers.Task{}.ResourceGraph))
 
-	g.GET("/tokens/trigger", ac(), w(handlers.Token{}.DetailTriggerToken))
+	//g.GET("/tokens/trigger", ac(), w(handlers.Token{}.VcsWebhookUrl))
+	g.GET("/vcs/webhook", ac(), w(handlers.Token{}.VcsWebhookUrl))
 	ctrl.Register(g.Group("resource/account", ac()), &handlers.ResourceAccount{})
 }

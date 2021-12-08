@@ -27,7 +27,11 @@ type Modeler interface {
 }
 
 type ModelIdGenerator interface {
-	NewId() string
+	NewId() Id
+}
+
+type ModelIdSetter interface {
+	SetId(interface{})
 }
 
 type Id string
@@ -91,6 +95,17 @@ type BaseModel struct {
 	Id Id `gorm:"size:32;primary_key" json:"id" example:"x-c3ek0co6n88ldvq1n6ag"` //ID
 }
 
+func (base *BaseModel) SetId(id interface{}) {
+	switch v := id.(type) {
+	case string:
+		base.Id = Id(v)
+	case Id:
+		base.Id = v
+	default:
+		panic(fmt.Errorf("invalid id type '%T'", id))
+	}
+}
+
 func (base *BaseModel) CustomBeforeCreate(*db.Session) error {
 	// 未设置 Id 值的情况下默认生成一个无前缀的 id，如果对前缀有要求请主动为对象设置 Id 值,
 	// 或者在 Model 层定义自己的 CustomBeforeCreate() 方法
@@ -103,7 +118,18 @@ func (base *BaseModel) CustomBeforeCreate(*db.Session) error {
 // AutoUintIdModel  使用自增 uint id 的 model
 type AutoUintIdModel struct {
 	AbstractModel
-	Id uint `gorm:"primary_key"`
+	Id uint `gorm:"primary_key" json:"id"`
+}
+
+func (b *AutoUintIdModel) SetId(id interface{}) {
+	switch v := id.(type) {
+	case int:
+		b.Id = uint(v)
+	case uint:
+		b.Id = v
+	default:
+		panic(fmt.Errorf("invalid id type '%T'", id))
+	}
 }
 
 type TimedModel struct {

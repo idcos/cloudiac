@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/errdefs"
 	"github.com/gin-gonic/gin"
 
@@ -43,12 +42,10 @@ func StopTask(c *ctx.Context) {
 		return
 	}
 
-	containerRemoveOpts := types.ContainerRemoveOptions{
-		Force: true,
-	}
-
+	// 这里仅 kill container，container 的 remove 通过启动时的 AutoRemove 参数配置
 	for _, cid := range req.ContainerIds {
-		if err := cli.ContainerRemove(c.Context, cid, containerRemoveOpts); err != nil {
+		// default signal "SIGKILL"
+		if err := cli.ContainerKill(c.Context, cid, ""); err != nil {
 			if _, ok := err.(errdefs.ErrNotFound); ok {
 				continue
 			}
@@ -57,7 +54,7 @@ func StopTask(c *ctx.Context) {
 				// 有可能己经提交了删除请求，这里忽略掉这些报错
 				if !strings.Contains(err.Error(), "already in progress") &&
 					!strings.Contains(err.Error(), "No such container") {
-					logger.Warnf("remove container error: %v", err)
+					logger.Warnf("kill container error: %v", err)
 				}
 			}
 

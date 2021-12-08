@@ -206,6 +206,10 @@ func (s *Session) Select(query interface{}, args ...interface{}) *Session {
 	return ToSess(s.db.Select(query, args...))
 }
 
+func (s *Session) Omit(cols ...string) *Session {
+	return ToSess(s.db.Omit(cols...))
+}
+
 func (s *Session) LazySelect(selectStat ...string) *Session {
 	return ToSess(s.db.Set("app:lazySelects", selectStat))
 }
@@ -317,6 +321,11 @@ func (s *Session) isModel(m interface{}) bool {
 		rv = rv.Elem()
 	}
 	return rv.Kind() == reflect.Struct
+}
+
+func (s *Session) IsOrdered() bool {
+	_, ok := s.db.Statement.Clauses[clause.OrderBy{}.Name()]
+	return ok
 }
 
 func (s *Session) Update(value interface{}) (int64, error) {

@@ -8,8 +8,8 @@ import (
 )
 
 type Paginator struct {
-	Page   int
-	Size   int
+	Page   int // 当前页码(1 base)
+	Size   int // 每页大小，为 0 表示不分页
 	dbSess *db.Session
 }
 
@@ -23,8 +23,10 @@ func New(page int, size int, q *db.Session) *Paginator {
 	if page <= 0 {
 		page = 1
 	}
-	if size <= 0 || size > consts.MaxPageSize {
+	if size <= 0 {
 		size = consts.DefaultPageSize
+	} else if size > consts.MaxPageSize {
+		size = consts.MaxPageSize
 	}
 
 	return &Paginator{
@@ -68,7 +70,12 @@ func (p *Paginator) TotalBySubQuery() (int64, error) {
 }
 
 func (p *Paginator) getPage() *db.Session {
-	return p.dbSess.Limit(p.Size).Offset((p.Page - 1) * p.Size)
+	sess := p.dbSess.Limit(p.Size).Offset((p.Page - 1) * p.Size)
+	// 数据分页时必须进行排序，如果查询未排序则默认使用 id 排序
+	if !sess.IsOrdered() {
+		sess = sess.Order("`id`")
+	}
+	return sess
 }
 
 func (p *Paginator) Scan(dest interface{}) error {

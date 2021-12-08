@@ -8,15 +8,15 @@ import (
 )
 
 type VariableBody struct {
+	Scope       string `json:"scope" gorm:"not null;type:enum('org','template','project','env')"`
+	Type        string `json:"type" gorm:"not null;type:enum('environment','terraform','ansible')"`
+	Name        string `json:"name" gorm:"size:64;not null"`
+	Value       string `json:"value" gorm:"type:text"`
+	Sensitive   bool   `json:"sensitive,omitempty" gorm:"default:false"`
+	Description string `json:"description,omitempty" gorm:"type:text"`
 
 	// 继承关系依赖数据创建枚举的顺序，后续新增枚举值时请按照新的继承顺序增加
-	Options     StrSlice `json:"options" gorm:"type:json"`
-	Scope       string   `json:"scope" gorm:"not null;type:enum('org','template','project','env')"`
-	Type        string   `json:"type" gorm:"not null;type:enum('environment','terraform','ansible')"`
-	Name        string   `json:"name" gorm:"size:64;not null"`
-	Value       string   `json:"value" gorm:"type:text"`
-	Sensitive   bool     `json:"sensitive,omitempty" gorm:"default:false"`
-	Description string   `json:"description,omitempty" gorm:"type:text"`
+	Options StrSlice `json:"options" gorm:"type:json"`
 }
 
 type Variable struct {
@@ -27,6 +27,10 @@ type Variable struct {
 	ProjectId Id `json:"projectId" gorm:"size:32;default:''"`
 	TplId     Id `json:"tplId" gorm:"size:32;default:''"`
 	EnvId     Id `json:"envId" gorm:"size:32;default:''"`
+}
+
+func (Variable) NewId() Id {
+	return NewId("var")
 }
 
 func (Variable) TableName() string {
@@ -57,6 +61,10 @@ type VariableGroup struct {
 
 func (VariableGroup) TableName() string {
 	return "iac_variable_group"
+}
+
+func (VariableGroup) NewId() Id {
+	return NewId("vg")
 }
 
 func (v VariableGroup) Migrate(sess *db.Session) error {

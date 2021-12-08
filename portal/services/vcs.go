@@ -17,7 +17,7 @@ import (
 
 func CreateVcs(tx *db.Session, vcs models.Vcs) (*models.Vcs, e.Error) {
 	if vcs.Id == "" {
-		vcs.Id = models.NewId("v")
+		vcs.Id = vcs.NewId()
 	}
 	if err := models.Create(tx, &vcs); err != nil {
 		return nil, e.New(e.DBError, err)
@@ -45,10 +45,14 @@ func QueryVcs(orgId models.Id, status, q string, isShowdefaultVcs bool, query *d
 		qs := "%" + q + "%"
 		query = query.Where("name LIKE ?", qs)
 	}
-	if isShowdefaultVcs != true {
+	if !isShowdefaultVcs {
 		query = query.Where("vcs_type != 'local'")
 	}
 	return query.LazySelectAppend("id, org_id, project_id, name, status, vcs_type, address")
+}
+
+func QueryVcsSample(query *db.Session) *db.Session {
+	return query.Model(&models.Vcs{})
 }
 
 func QueryVcsByVcsId(vcsId models.Id, query *db.Session) (*models.Vcs, e.Error) {
@@ -77,6 +81,15 @@ func GetVcsById(sess *db.Session, id models.Id) (*models.Vcs, e.Error) {
 		return nil, e.New(e.DBError, err)
 	}
 	return &vcs, nil
+}
+
+func GetVcsListByIds(sess *db.Session, ids []string) ([]models.Vcs, e.Error) {
+	vcs := make([]models.Vcs, 0)
+	err := sess.Model(&models.Vcs{}).Where("id in (?)", ids).Find(&vcs)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return vcs, nil
 }
 
 func GetVcsRepoByTplId(sess *db.Session, tplId models.Id) (vcsrv.RepoIface, e.Error) {
@@ -164,4 +177,21 @@ func GetDefaultVcs(session *db.Session) (*models.Vcs, error) {
 	vcs := &models.Vcs{}
 	err := session.Where("org_id = ''").First(vcs)
 	return vcs, err
+}
+
+func CreateVcsPr(session *db.Session, vcsPr models.VcsPr) e.Error {
+	if err := models.Create(session, &vcsPr); err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
+func GetVcsPrByTaskId(session *db.Session, task *models.Task) (models.VcsPr, error) {
+	vp := models.VcsPr{}
+	if err := session.Model(&models.VcsPr{}).
+		Where("env_id = ?", task.EnvId).
+		Where("task_id = ?", task.Id).First(&vp); err != nil {
+		return vp, err
+	}
+	return vp, nil
 }

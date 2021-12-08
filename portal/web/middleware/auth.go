@@ -65,7 +65,7 @@ func Auth(c *ctx.GinRequest) {
 			return
 		}
 
-		if org, err := services.GetOrganizationById(c.Service().DB().Debug(), orgId); err != nil {
+		if org, err := services.GetOrganizationById(c.Service().DB(), orgId); err != nil {
 			c.JSONError(e.New(e.OrganizationNotExists, fmt.Errorf("not allow to access org")), http.StatusBadRequest)
 			return
 		} else if org.Status == models.Disable && !c.Service().IsSuperAdmin {
@@ -120,4 +120,12 @@ func AuthProjectId(c *ctx.GinRequest) {
 		return
 	}
 	return
+}
+
+func AuthApiToken(c *ctx.GinRequest) {
+	token, _ := c.GetQuery("token")
+	if _, err := services.IsActiveToken(c.Service().DB(), token, consts.TokenTrigger); err != nil {
+		c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("missing token")), http.StatusForbidden)
+		return
+	}
 }

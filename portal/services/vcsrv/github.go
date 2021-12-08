@@ -76,9 +76,13 @@ func (github *githubVcs) ListRepos(namespace, search string, limit, offset int) 
 		return nil, 0, e.New(e.BadRequest, err)
 	}
 
+	token, err := GetVcsToken(github.vcs.VcsToken)
+	if err != nil {
+		return nil, 0, err
+	}
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: github.vcs.VcsToken},
+		&oauth2.Token{AccessToken: token},
 	)
 	tc := oauth2.NewClient(ctx, ts)
 	client := git.NewClient(tc)
@@ -278,30 +282,28 @@ func (github *githubRepoIface) DefaultBranch() string {
 // AddWebhook doc: https://docs.github.com/cn/rest/reference/repos#traffic
 func (github *githubRepoIface) AddWebhook(url string) error {
 	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/hooks", github.repository.FullName), nil)
-	body := map[string]interface{}{
-		"url":                   url,
-		"push_events":           "true",
-		"merge_requests_events": "true",
-	}
-	b, _ := json.Marshal(&body)
-	_, _, err := githubRequest(path, "POST", github.vcs.VcsToken, b)
-	ctx := context.Background()
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: github.vcs.VcsToken},
-	)
-	tc := oauth2.NewClient(ctx, ts)
-	client := git.NewClient(tc)
-	_, _, errs := client.Repositories.CreateHook(ctx, "", "", &git.Hook{
-		Name: git.String("CloudIaC"),
-		URL:  git.String(url),
-		Events: []string{
+	bodys := map[string]interface{}{
+		"config": map[string]interface{}{
+			"url":          url,
+			"content_type": "json",
+		},
+		"events": []string{
 			"pull_request",
 			"push",
 		},
-	})
+		"type":   "gitea",
+		"active": true,
+	}
+	b, _ := json.Marshal(&bodys)
+	response, respBody, err := githubRequest(path, "POST", github.vcs.VcsToken, b)
 
-	if errs != nil {
+	if err != nil {
 		return e.New(e.BadRequest, err)
+	}
+
+	if response.StatusCode >= 300 && !strings.Contains(string(respBody), "Hook already exists on this repository") {
+		err = e.New(e.VcsError, fmt.Errorf("%s: %s", response.Status, string(respBody)))
+		return err
 	}
 	return nil
 }
@@ -332,6 +334,22 @@ func (github *githubRepoIface) DeleteWebhook(id int) error {
 	return nil
 }
 
+func (github *githubRepoIface) CreatePrComment(prId int, comment string) error {
+	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/puuls/%d/reviews", github.repository.FullName, prId), nil)
+	requestBody := map[string]string{
+		"body": comment,
+	}
+	b, er := json.Marshal(requestBody)
+	if er != nil {
+		return er
+	}
+	_, _, err := githubRequest(path, http.MethodPost, github.vcs.VcsToken, b)
+	if err != nil {
+		return e.New(e.BadRequest, err)
+	}
+	return nil
+}
+
 //giteaRequest
 //param path : gitea api路径
 //param method 请求方式
@@ -340,12 +358,14 @@ func githubRequest(path, method, token string, requestBody []byte) (*http.Respon
 	if err != nil {
 		return nil, nil, err
 	}
+
 	request, er := http.NewRequest(method, path, bytes.NewBuffer(requestBody))
 	if er != nil {
 		return nil, nil, er
 	}
 	client := &http.Client{}
 	request.Header.Set("Content-Type", "multipart/form-data")
+	request.Header.Set("Accept", "application/vnd.github.v3+json")
 	request.Header.Set("Authorization", fmt.Sprintf("token %s", vcsToken))
 	response, err := client.Do(request)
 	if err != nil {
@@ -353,6 +373,7 @@ func githubRequest(path, method, token string, requestBody []byte) (*http.Respon
 	}
 	defer response.Body.Close()
 	body, _ := ioutil.ReadAll(response.Body)
+
 	return response, body, nil
 
 }

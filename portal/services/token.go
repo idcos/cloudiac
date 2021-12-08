@@ -9,8 +9,9 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
 )
 
 type Claims struct {
@@ -38,7 +39,7 @@ func GenerateToken(uid models.Id, name string, isAdmin bool, expireDuration time
 
 func CreateToken(tx *db.Session, token models.Token) (*models.Token, e.Error) {
 	if token.Id == "" {
-		token.Id = models.NewId("t")
+		token.Id = token.NewId()
 	}
 	if err := models.Create(tx, &token); err != nil {
 		if e.IsDuplicate(err) {
@@ -65,7 +66,8 @@ func UpdateToken(tx *db.Session, id models.Id, attrs models.Attrs) (token *model
 }
 
 func QueryToken(query *db.Session, tokenType string) *db.Session {
-	query = query.Model(&models.Token{})
+	query = query.Model(&models.Token{}).
+		Where("`expired_at` > ? or expired_at is null", time.Now())
 	if tokenType != "" {
 		query = query.Where("type = ?", tokenType)
 	}
@@ -95,12 +97,10 @@ func TokenExists(query *db.Session, apiToken string) (bool, *models.Token) {
 	return exists, token
 }
 
-func DetailTriggerToken(dbSess *db.Session, orgId, envId models.Id, action string) (interface{}, e.Error) {
-	token := models.Token{}
-	query := QueryToken(dbSess.Where("org_id = ?", orgId).
-		Where("env_id = ?", envId).
-		Where("action = ?", action), consts.TokenTrigger)
-	if err := query.First(&token); err != nil {
+func DetailTriggerToken(dbSess *db.Session, orgId models.Id) (*models.Token, e.Error) {
+	token := &models.Token{}
+	query := QueryToken(dbSess.Where("org_id = ?", orgId), consts.TokenTrigger)
+	if err := query.First(token); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.TokenNotExists)
 		}
@@ -109,19 +109,20 @@ func DetailTriggerToken(dbSess *db.Session, orgId, envId models.Id, action strin
 	return token, nil
 }
 
-func IsExistsTriggerToken(dbSess *db.Session, tokenTrigger string) (*models.Token, e.Error) {
-	token := models.Token{}
+func IsActiveToken(dbSess *db.Session, token, tokenType string) (*models.Token, e.Error) {
+	t := models.Token{}
 	if err := dbSess.
 		Table(models.Token{}.TableName()).
-		Where("`key` = ?", tokenTrigger).
-		Where("`type` = ?", consts.TokenTrigger).
-		First(&token); err != nil {
+		Where("`key` = ?", token).
+		Where("`type` = ?", tokenType).
+		Where("`expired_at` > ? or expired_at is null", time.Now()).
+		First(&t); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.TokenNotExists)
 		}
 		return nil, e.New(e.DBError, err)
 	}
-	return &token, nil
+	return &t, nil
 }
 
 func GetApiTokenByToken(dbSess *db.Session, token string) (*models.Token, e.Error) {
@@ -137,3 +138,5 @@ func GetApiTokenByToken(dbSess *db.Session, token string) (*models.Token, e.Erro
 	}
 	return tokenResp, nil
 }
+
+

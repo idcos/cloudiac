@@ -16,22 +16,24 @@ type Var struct {
 type CreateTemplateForm struct {
 	BaseForm
 
-	Name              string      `form:"name" json:"name" binding:"required,gte=2,lte=64"`
-	Description       string      `form:"description" json:"description" binding:""`
-	RepoId            string      `form:"repoId" json:"repoId" binding:"required"`
-	RepoRevision      string      `form:"repoRevision" json:"repoRevision" binding:""`
-	Extra             string      `form:"extra" json:"extra"`
-	Workdir           string      `form:"workdir" json:"workdir"`
-	VcsId             models.Id   `form:"vcsId" json:"vcsId" binding:"required"`
-	Playbook          string      `json:"playbook" form:"playbook"`
-	PlayVarsFile      string      `json:"playVarsFile" form:"playVarsFile"`
-	TfVarsFile        string      `form:"tfVarsFile" json:"tfVarsFile"`
-	Variables         []Variables `json:"variables" form:"variables" `
-	DeleteVariablesId []string    `json:"deleteVariablesId" form:"deleteVariablesId" ` //变量id
-	ProjectId         []models.Id `form:"projectId" json:"projectId"`                  // 项目ID
-	TfVersion         string      `form:"tfVersion" json:"tfVersion"`                  // 模版使用terraform版本号
-	VarGroupIds       []models.Id `json:"varGroupIds" form:"varGroupIds" `
-	DelVarGroupIds    []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
+	Name         string      `form:"name" json:"name" binding:"required,gte=2,lte=64"`
+	Description  string      `form:"description" json:"description" binding:""`
+	RepoId       string      `form:"repoId" json:"repoId" binding:"required"`
+	RepoFullName string      `form:"repoFullName" json:"repoFullName" binding:"required"`
+	RepoRevision string      `form:"repoRevision" json:"repoRevision" binding:""`
+	Extra        string      `form:"extra" json:"extra"`
+	Workdir      string      `form:"workdir" json:"workdir"`
+	VcsId        models.Id   `form:"vcsId" json:"vcsId" binding:"required"`
+	Playbook     string      `json:"playbook" form:"playbook"`
+	PlayVarsFile string      `json:"playVarsFile" form:"playVarsFile"`
+	TfVarsFile   string      `form:"tfVarsFile" json:"tfVarsFile"`
+	ProjectId    []models.Id `form:"projectId" json:"projectId"` // 项目ID
+	TfVersion    string      `form:"tfVersion" json:"tfVersion"` // 模版使用terraform版本号
+
+	Variables []Variable `json:"variables" form:"variables" `
+
+	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" `
+	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
 }
 
 type SearchTemplateForm struct {
@@ -43,24 +45,26 @@ type SearchTemplateForm struct {
 
 type UpdateTemplateForm struct {
 	BaseForm
-	Id                models.Id   `uri:"id" form:"id" json:"id" binding:"required"`
-	Name              string      `form:"name" json:"name"`
-	Description       string      `form:"description" json:"description"`
-	Status            string      `form:"status" json:"status"`
-	Workdir           string      `form:"workdir" json:"workdir"`
-	RunnerId          string      `json:"runnerId" form:"runnerId"`
-	Playbook          string      `json:"playbook" form:"playbook"`
-	PlayVarsFile      string      `json:"playVarsFile" form:"playVarsFile"`
-	TfVarsFile        string      `form:"tfVarsFile" json:"tfVarsFile"`
-	Variables         []Variables `json:"variables" form:"variables" `
-	DeleteVariablesId []string    `json:"deleteVariablesId" form:"deleteVariablesId" ` //变量id
-	ProjectId         []models.Id `form:"projectId" json:"projectId"`
-	RepoRevision      string      `form:"repoRevision" json:"repoRevision" binding:""`
-	VcsId             models.Id   `form:"vcsId" json:"vcsId" binding:""`
-	RepoId            string      `form:"repoId" json:"repoId" binding:""`
-	TfVersion         string      `form:"tfVersion" json:"tfVersion" binding:""`
-	VarGroupIds       []models.Id `json:"varGroupIds" form:"varGroupIds" `
-	DelVarGroupIds    []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
+	Id           models.Id   `uri:"id" form:"id" json:"id" binding:"required"`
+	Name         string      `form:"name" json:"name"`
+	Description  string      `form:"description" json:"description"`
+	Status       string      `form:"status" json:"status"`
+	Workdir      string      `form:"workdir" json:"workdir"`
+	RunnerId     string      `json:"runnerId" form:"runnerId"`
+	Playbook     string      `json:"playbook" form:"playbook"`
+	PlayVarsFile string      `json:"playVarsFile" form:"playVarsFile"`
+	TfVarsFile   string      `form:"tfVarsFile" json:"tfVarsFile"`
+	ProjectId    []models.Id `form:"projectId" json:"projectId"`
+	RepoRevision string      `form:"repoRevision" json:"repoRevision" binding:""`
+	VcsId        models.Id   `form:"vcsId" json:"vcsId" binding:""`
+	RepoId       string      `form:"repoId" json:"repoId" binding:""`
+	RepoFullName string      `form:"repoFullName" json:"repoFullName" binding:""`
+	TfVersion    string      `form:"tfVersion" json:"tfVersion" binding:""`
+
+	Variables []Variable `json:"variables" form:"variables" `
+
+	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" `
+	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
 }
 
 type DeleteTemplateForm struct {
@@ -90,6 +94,8 @@ type TemplateTfvarsSearchForm struct {
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
 	RepoType     string    `json:"repoType" form:"repoType" `
 	VcsId        models.Id `uri:"id"`
+	TplChecks    bool      `json:"tplChecks" form:"tplChecks" swaggerignore:"true"`
+	Path         string    `json:"path" form:"path" swaggerignore:"true"`
 }
 
 type TemplateVariableSearchForm struct {
@@ -113,4 +119,15 @@ type TemplateTfVersionSearchForm struct {
 	VcsId     models.Id `json:"vcsId" form:"vcsId"`
 	VcsBranch string    `json:"vcsBranch" form:"vcsBranch"`
 	RepoId    string    `json:"repoId" form:"repoId"`
+}
+
+type TemplateChecksForm struct {
+	BaseForm
+	Name         string    `json:"name" form:"name" form:"name"`
+	RepoId       string    `json:"repoId" form:"repoId"`
+	RepoRevision string    `json:"repoRevision" form:"repoRevision"`
+	RepoType     string    `json:"repoType" form:"repoType" `
+	VcsId        models.Id `json:"vcsId" form:"vcsId"`
+	Workdir      string    `json:"workdir" form:"path"`
+	TemplateId   models.Id `json:"templateId" form:"templateId"`
 }

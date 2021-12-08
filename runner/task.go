@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -70,6 +71,7 @@ func (t *Task) start() (cid string, err error) {
 	conf := configs.Get().Runner
 	cmd := Executor{
 		Image:       conf.DefaultImage,
+		Name:        t.req.TaskId,
 		Timeout:     t.req.Timeout,
 		Workdir:     ContainerWorkspace,
 		HostWorkdir: t.workspace,
@@ -78,6 +80,17 @@ func (t *Task) start() (cid string, err error) {
 	if t.req.DockerImage != "" {
 		cmd.Image = t.req.DockerImage
 	}
+
+	reserveContainer := conf.ReserveContainer
+	if v, ok := t.req.Env.EnvironmentVars["CLOUDIAC_RESERVER_CONTAINER"]; ok {
+		// 需要明确判断是否为 true 或者 false，其他情况使用配置文件中的值
+		if utils.IsTrueStr(v) {
+			reserveContainer = true
+		} else if utils.IsFalseStr(v) {
+			reserveContainer = false
+		}
+	}
+	cmd.AutoRemove = !reserveContainer
 
 	tfPluginCacheDir := ""
 	for k, v := range t.req.Env.EnvironmentVars {
@@ -104,8 +117,8 @@ func (t *Task) start() (cid string, err error) {
 	cmd.TerraformVersion = t.req.Env.TfVersion
 	cmd.Env = append(cmd.Env, fmt.Sprintf("TFENV_TERRAFORM_VERSION=%s", cmd.TerraformVersion))
 
-	// 容器启动后执行 /bin/sh，以保持运行
-	cmd.Commands = []string{"/bin/sh"}
+	// 容器启动后执行 /bin/bash 以保持运行，然后通过 exec 在容器中执行步骤命令
+	cmd.Commands = []string{"/bin/bash"}
 
 	stepDir := GetTaskDir(t.req.Env.Id, t.req.TaskId, t.req.Step)
 	containerInfoFile := filepath.Join(stepDir, TaskContainerInfoFileName)
@@ -115,7 +128,7 @@ func (t *Task) start() (cid string, err error) {
 		return "", errors.Wrap(err, "remove containerInfoFile")
 	}
 
-	t.logger.Infof("start task step, workdir: %s", cmd.HostWorkdir)
+	t.logger.Infof("start task step, %s", stepDir)
 	if cid, err = cmd.Start(); err != nil {
 		return cid, err
 	}
@@ -139,7 +152,14 @@ func (t *Task) runStep() (err error) {
 
 	containerScriptPath := filepath.Join(t.stepDirName(t.req.Step), TaskScriptName)
 	logPath := filepath.Join(t.stepDirName(t.req.Step), TaskLogName)
-	command := fmt.Sprintf("%s >>%s 2>&1", containerScriptPath, logPath)
+
+	var command string
+	if utils.StrInArray(t.req.StepType, common.TaskStepCheckout, common.TaskStepScanInit) {
+		// 移除日志中可能出现的 token 信息
+		command = fmt.Sprintf("set -o pipefail\n%s 2>&1 | sed -re 's/token:[^@]+/token:******/' >>%s", containerScriptPath, logPath)
+	} else {
+		command = fmt.Sprintf("%s >>%s 2>&1", containerScriptPath, logPath)
+	}
 
 	if ok, err := (Executor{}).IsPaused(t.req.ContainerId); err != nil {
 		return err
@@ -157,6 +177,8 @@ func (t *Task) runStep() (err error) {
 	if err != nil {
 		return err
 	}
+
+	now := time.Now()
 
 	// 后台协程监控到命令结束就会暂停容器，
 	// 同时 task.Wait() 函数也会在任务结束后暂停容器，两边同时处理保证容器被暂停
@@ -182,8 +204,9 @@ func (t *Task) runStep() (err error) {
 		ContainerId:   t.req.ContainerId,
 		PauseOnFinish: t.req.PauseTask,
 		ExecId:        execId,
+		StartedAt:     &now,
+		Timeout:       t.req.Timeout,
 	})
-
 	stepInfoFile := filepath.Join(
 		GetTaskDir(t.req.Env.Id, t.req.TaskId, t.req.Step),
 		TaskInfoFileName,
@@ -387,7 +410,7 @@ func (t *Task) genStepScript() (string, error) {
 }
 
 var checkoutCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-if [[ ! -e code ]]; then git clone '{{.Req.RepoAddress}}' code; fi && \
+if [[ ! -e code ]]; then git clone '{{.Req.RepoAddress}}' code || exit $?; fi && \
 cd code && \
 echo 'checkout {{.Req.RepoCommitId}}.' && \
 git checkout -q '{{.Req.RepoCommitId}}' && \
@@ -403,6 +426,7 @@ func (t *Task) stepCheckout() (command string, err error) {
 var initCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 ln -sf '{{.IacTfFile}}' . && \
+ln -sf '{{.terraformrc}}' ~/.terraformrc && \
 tfenv install $TFENV_TERRAFORM_VERSION && \
 tfenv use $TFENV_TERRAFORM_VERSION  && \
 terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }}
@@ -419,8 +443,14 @@ func (t *Task) up2Workspace(name string) string {
 }
 
 func (t *Task) stepInit() (command string, err error) {
+	tfrcName := "terraformrc-default"
+	if configs.Get().Runner.OfflineMode {
+		tfrcName = "terraformrc-offline"
+	}
+	tfrc := filepath.Join(ContainerAssetsDir, tfrcName)
 	return t.executeTpl(initCommandTpl, map[string]interface{}{
 		"Req":             t.req,
+		"terraformrc":     tfrc,
 		"PluginCachePath": ContainerPluginCachePath,
 		"IacTfFile":       t.up2Workspace(CloudIacTfFile),
 	})
@@ -561,7 +591,7 @@ func (t *Task) stepTfScan() (command string, err error) {
 }
 
 var scanInitCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-if [[ ! -e code ]]; then git clone '{{.Req.RepoAddress}}' code; fi && \
+if [[ ! -e code ]]; then git clone '{{.Req.RepoAddress}}' code || exit $?; fi && \
 cd code && \
 echo 'checkout {{.Req.RepoCommitId}}.' && \
 git checkout -q '{{.Req.RepoCommitId}}' && \

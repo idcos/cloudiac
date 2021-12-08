@@ -20,7 +20,7 @@ import (
 )
 
 func CreateVcs(c *ctx.ServiceContext, form *forms.CreateVcsForm) (interface{}, e.Error) {
-	token, err := utils.EncryptSecretVar(form.VcsToken, true)
+	token, err := utils.EncryptSecretVar(form.VcsToken)
 	if err != nil {
 		return nil, e.New(e.VcsError, err)
 	}
@@ -69,8 +69,8 @@ func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (vcs *models.Vc
 	if form.HasKey("address") {
 		attrs["address"] = form.Address
 	}
-	if form.HasKey("vcsToken") {
-		token, err := utils.EncryptSecretVar(form.VcsToken, true)
+	if form.HasKey("vcsToken") && form.VcsToken != "" {
+		token, err := utils.EncryptSecretVar(form.VcsToken)
 		if err != nil {
 			return nil, e.New(e.VcsError, err)
 		}
@@ -218,12 +218,12 @@ func ListRepoTags(c *ctx.ServiceContext, form *forms.GetGitRevisionForm) (tags [
 
 }
 
-func VcsTfVarsSearch(c *ctx.ServiceContext, form *forms.TemplateTfvarsSearchForm) (interface{}, e.Error) {
+func VcsFileSearch(c *ctx.ServiceContext, form *forms.TemplateTfvarsSearchForm) (interface{}, e.Error) {
 	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
+
 	if err != nil {
 		return nil, err
 	}
-
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
@@ -232,10 +232,22 @@ func VcsTfVarsSearch(c *ctx.ServiceContext, form *forms.TemplateTfvarsSearchForm
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
+	var (
+		search string
+		path   string
+	)
+	if form.TplChecks {
+		search = consts.TplTfCheck
+		path = form.Path
+	} else {
+		search = consts.TfVarFileMatch
+	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
 		Ref:    form.RepoRevision,
-		Search: consts.TfVarFileMatch,
+		Search: search,
+		Path:   path,
 	})
+
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}

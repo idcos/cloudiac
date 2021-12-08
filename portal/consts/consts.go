@@ -13,7 +13,7 @@ const (
 	DigitChars      = "0123456789"
 
 	DefaultPageSize = 15   // 默认分页大小
-	MaxPageSize     = 5000 // 同时是 csv 最大导出条数
+	MaxPageSize     = 5000 // 最大单页数据条数
 
 	MaxLogContentSize = 1024 * 1024 // 最大日志文件大小，超限会被截断
 
@@ -54,9 +54,12 @@ const (
 	MetaYmlMatch   = "meta.y*ml"
 	VariablePrefix = "variables.tf"
 
-	TfVarFileMatch = "*.tfvars"
-	PlaybookMatch  = "*.y*ml"
-	Ansible        = "ansible"
+	TfVarFileMatch    = "*.tfvars"
+	TplTfCheck        = "*.tf"
+	TplTfCheckSuccess = "Success"
+	TplTfCheckFailed  = "Failed"
+	PlaybookMatch     = "*.y*ml"
+	Ansible           = "ansible"
 
 	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀
 
@@ -65,7 +68,9 @@ const (
 
 	NotificationMessageTitle = "CloudIaC平台系统通知"
 
-	VcsEncryptTokenPrefix = "secure: "
+	GraphDimensionModule   = "module"
+	GraphDimensionProvider = "provider"
+	GraphDimensionType     = "type"
 )
 
 const (
@@ -108,6 +113,7 @@ const (
 	EventTaskRunning   = "task.running"
 	EventTaskApproving = "task.approving"
 	EventTaskRejected  = "task.rejected"
+	EvenvtCronDrift    = "task.crondrift"
 
 	DefaultTfMirror   = "https://releases.hashicorp.com/terraform"
 	HttpClientTimeout = 20
@@ -148,5 +154,6 @@ var (
 		common.TaskRunning:   EventTaskRunning,
 		common.TaskApproving: EventTaskApproving,
 		common.TaskRejected:  EventTaskFailed,
+		EvenvtCronDrift: EvenvtCronDrift,
 	}
 )

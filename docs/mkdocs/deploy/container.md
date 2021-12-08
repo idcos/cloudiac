@@ -3,8 +3,8 @@
 
 #### 1. 安装并启动 docker
 ```bash
-curl -fsSL https://get.docker.com | bash -s docker
-systemctl enable docker
+curl -fsSL https://get.docker.com | bash -s docker && \
+systemctl enable docker && \
 systemctl start docker
 ```
 
@@ -23,6 +23,7 @@ mkdir -p /usr/yunji/cloudiac/var/{consul,mysql} && cd /usr/yunji/cloudiac/
 #### 4. 编写 docker-compose.yml 文件
 文件路径 /usr/yunji/cloudiac/docker-compose.yml，内容如下:
 ```yaml
+# auto-replace-from: docker/docker-compose.yml
 version: "3.2"
 services:
   iac-portal:
@@ -79,7 +80,7 @@ services:
 
   mysql:
     container_name: mysql
-    image: "mysql:5.7"
+    image: "mysql:8.0"
     command: [
         "--character-set-server=utf8mb4",
         "--collation-server=utf8mb4_unicode_ci",
@@ -109,12 +110,14 @@ services:
       consul agent -server -bootstrap-expect=1 -ui -bind=0.0.0.0
       -client=0.0.0.0 -enable-script-checks=true -data-dir=/consul/data
     restart: always
+
 ```
 
 #### 5. 编写 .env 文件
 文件路径 /usr/yunji/cloudiac/.env，内容如下(**请根据注释修改配置**):
 
 ```bash
+# auto-replace-from: configs/dotenv.sample
 # 平台管理员账号密码(均为必填)
 # 该账号密码只在系统初始化时使用，后续修改不影响己创建的账号
 IAC_ADMIN_EMAIL="admin@example.com"
@@ -141,7 +144,7 @@ MYSQL_USER=cloudiac
 MYSQL_PASSWORD="mysqlpass"
 
 # portal 服务注册信息配置 (均为必填)
-## portal 服务 IP 地址，需要配置为内网 IP
+## portal 服务的 IP 地址， 容器化部署时无需修改, 手动部署时配置为内网 IP
 SERVICE_IP=iac-portal
 ## portal 服务注册的 id(需要保证唯一)
 SERVICE_ID=iac-portal-01
@@ -159,7 +162,7 @@ SMTP_FROM_NAME=IaC
 SMTP_FROM=support@example.com
 
 # KAFKA配置(kafka 任务结果回调使用，不配置不影响其他功能)
-KAFKA_TOPIC = "IAC_TASK_REPLY"
+KAFKA_TOPIC="IAC_TASK_REPLY"
 KAFKA_GROUP_ID=""
 KAFKA_PARTITION=0
 ## example: KAFKA_BROKERS: ["kafka.example.com:9092", "..."]
@@ -170,11 +173,15 @@ KAFKA_SASL_PASSWORD=""
 
 ######### 以下为 runner 配置 #############
 # runner 服务注册配置(均为必填)
-## runner 服务的 IP 地址，需要配置为内网 IP
+## runner 服务的 IP 地址， 容器化部署时无需修改, 手动部署时配置为内网 IP
 RUNNER_SERVICE_IP=ct-runner
 ## runner 服务注册的 id(需要保证唯一)
 RUNNER_SERVICE_ID=ct-runner-01
 RUNNER_SERVICE_TAGS="ct-runner;runner-01"
+
+## 是否开启 offline mode，默认为 false
+RUNNER_OFFLINE_MODE="false"
+
 ```
 
 *通过 .env 可以配置大部分参数，需要更详细的配置可以拷贝镜像里的 config-portal.yml 和 config-runner.yml 文件，修改后再挂载到容器中进行替换*

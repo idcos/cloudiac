@@ -2,7 +2,7 @@
 
 ## 环境依赖
 1. 操作系统：Linux x86_64 架构
-1. 中间件：MySQL 5.7、Consul
+1. 中间件：MySQL 8.0、Consul
 
 ## 后端部署
 直接在物理机或者虚拟机上部署 IaC 服务。
@@ -25,7 +25,7 @@
 
 
 ```
-VERSION=v0.6.0
+VERSION=v0.8.0-rc1
 mkdir -p /usr/yunji/cloudiac && \
 cd /usr/yunji/cloudiac && \
 for PACK in cloudiac cloudiac-repos cloudiac-providers; do
@@ -125,7 +125,7 @@ docker pull cloudiac/ct-worker
 ## 前端部署
 #### 1. 下载前端部署包并解压
 ```
-VERSION=v0.6.0
+VERSION=v0.8.0-rc1
 mkdir -p /usr/yunji/cloudiac-web && \
 cd /usr/yunji/cloudiac-web && \
 curl -sL https://github.com/idcos/cloudiac-web/releases/download/${VERSION}/cloudiac-web_${VERSION}.tar.gz -o cloudiac-web_${VERSION}.tar.gz && \

@@ -12,7 +12,7 @@ import (
 
 func CreateVariableGroup(tx *db.Session, group models.VariableGroup) (models.VariableGroup, e.Error) {
 	if group.Id == "" {
-		group.Id = models.NewId("vg")
+		group.Id = group.NewId()
 	}
 	if err := models.Create(tx, &group); err != nil {
 		if e.IsDuplicate(err) {
@@ -171,10 +171,6 @@ func MatchVarGroup(oldVg, newVg VarGroupRel) bool {
 
 }
 
-func SearchRelationship(dbSess *db.Session, vgId, orgId models.Id) *db.Session {
-	return dbSess
-}
-
 func CreateRelationship(dbSess *db.Session, rels []models.VariableGroupRel) e.Error {
 	if len(rels) == 0 {
 		return nil
@@ -275,13 +271,13 @@ func GetVariableGroupVar(vgs []VarGroupRel, vars map[string]models.Variable) map
 	return variableM
 }
 
-func BatchUpdateRelationship(tx *db.Session, variableIds, delVariableIds []models.Id, objectType, objectId string) e.Error {
+func BatchUpdateRelationship(tx *db.Session, vgIds, delVgIds []models.Id, objectType, objectId string) e.Error {
 	rel := make([]models.VariableGroupRel, 0)
-	if err := DeleteRelationship(tx, delVariableIds); err != nil {
+	if err := DeleteRelationship(tx, delVgIds); err != nil {
 		return err
 	}
 
-	for _, v := range variableIds {
+	for _, v := range vgIds {
 		rel = append(rel, models.VariableGroupRel{
 			VarGroupId: v,
 			ObjectType: objectType,
@@ -304,7 +300,7 @@ func GetValidVarsAndVgVars(tx *db.Session, orgId, projectId, tplId, envId models
 
 	// 将变量组变量与普通变量进行合并，优先级: 普通变量 > 变量组变量
 	// 查询实例关联的变量组
-	varGroup, err := SearchVariableGroupRel(tx.Debug(), map[string]models.Id{
+	varGroup, err := SearchVariableGroupRel(tx, map[string]models.Id{
 		consts.ScopeEnv:      envId,
 		consts.ScopeTemplate: tplId,
 		consts.ScopeProject:  projectId,
@@ -315,4 +311,41 @@ func GetValidVarsAndVgVars(tx *db.Session, orgId, projectId, tplId, envId models
 		return nil, fmt.Errorf("get vairable group var error: %v", err)
 	}
 	return GetVariableBody(GetVariableGroupVar(varGroup, vars)), nil
+}
+
+// 查询指定模板直接关联的变量组
+func FindTplsRelVarGroup(query *db.Session, tplIds []models.Id) ([]models.VariableGroup, error) {
+	vgs := make([]models.VariableGroup, 0)
+	err := query.Table("iac_variable_group AS vg").
+		Joins("JOIN iac_variable_group_rel AS vgr ON vgr.var_group_id = vg.id").
+		Where("vgr.object_type = ? AND vgr.object_id IN (?)", consts.ScopeTemplate, tplIds).
+		Select("vg.*").Find(&vgs)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return vgs, nil
+}
+
+func QueryVarGroup(sess *db.Session) *db.Session {
+	return sess.Model(&models.VariableGroup{})
+}
+
+func FindTemplateVgIds(sess *db.Session, tplId models.Id) ([]models.Id, e.Error) {
+	ids := make([]models.Id, 0)
+	err := sess.Model(&models.VariableGroupRel{}).
+		Where("object_type = ? AND object_id = ?", consts.ScopeTemplate, tplId).Pluck("var_group_id", &ids)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return ids, nil
+}
+
+func DeleteVarGroupRel(sess *db.Session, objectType string, objectId models.Id) e.Error {
+	_, err := sess.
+		Where("object_type = ? AND object_id = ?", objectType, objectId).
+		Delete(&models.VariableGroupRel{})
+	if err != nil {
+		return e.AutoNew(err, e.DBError)
+	}
+	return nil
 }

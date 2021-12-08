@@ -12,7 +12,7 @@ import (
 
 func CreateTemplate(tx *db.Session, tpl models.Template) (*models.Template, e.Error) {
 	if tpl.Id == "" {
-		tpl.Id = models.NewId("tpl")
+		tpl.Id = tpl.NewId()
 	}
 
 	if strings.HasPrefix(tpl.Workdir, "..") || strings.HasPrefix(tpl.Workdir, "/") {
@@ -120,9 +120,38 @@ func QueryTplByVcsId(tx *db.Session, VcsId models.Id) (bool, e.Error) {
 	return exists, nil
 }
 
-func GetTplLastScanTask(sess *db.Session, envId models.Id) (*models.ScanTask, error) {
+func GetTplLastScanTask(sess *db.Session, tplId models.Id) (*models.ScanTask, error) {
 	task := models.ScanTask{}
-	scanTaskIdQuery := sess.Model(&models.Template{}).Where("id = ?", envId).Select("last_scan_task_id")
+	scanTaskIdQuery := sess.Model(&models.Template{}).Where("id = ?", tplId).Select("last_scan_task_id")
 	err := sess.Model(&models.ScanTask{}).Where("id = (?)", scanTaskIdQuery.Expr()).First(&task)
 	return &task, err
+}
+
+func QueryTemplateByName(tx *db.Session, name string, OrgId models.Id) (*models.Template, e.Error) {
+	tpl := models.Template{}
+	if err := tx.Where("name = ? and org_id = ?", name, OrgId).First(&tpl); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TemplateNotExists, err)
+		}
+	}
+	return &tpl, nil
+}
+
+func QueryTemplate(tx *db.Session) *db.Session {
+	return tx.Model(&models.Template{})
+}
+
+// 通过名称查询指定组织下的模板
+func FindOrgTemplateByName(tx *db.Session, orgId models.Id, name string) (tpl models.Template, err error) {
+	err = tx.Model(&models.Template{}).Where("org_id = ? AND name = ?", orgId, name).Find(&tpl)
+	return tpl, err
+}
+
+func GetTplByEnvId(sess *db.Session, envId models.Id) (*models.Template, e.Error) {
+	env, err := GetEnvById(sess, envId)
+	if err != nil {
+		return nil, err
+	}
+	return GetTemplateById(sess, env.TplId)
+
 }

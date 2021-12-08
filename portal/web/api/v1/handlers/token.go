@@ -91,7 +91,7 @@ func (Token) Delete(c *ctx.GinRequest) {
 	c.JSONResult(apps.DeleteToken(c.Service(), form))
 }
 
-// DetailTriggerToken 触发器token详情
+// VcsWebhookUrl 触发器token详情
 // @Summary 触发器token详情
 // @Description 触发器token详情
 // @Tags Token
@@ -99,15 +99,15 @@ func (Token) Delete(c *ctx.GinRequest) {
 // @Produce  json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param data body forms.DetailTriggerTokenForm true "DeleteTokenForm信息"
+// @Param data body forms.VcsWebhookUrlForm true "DeleteTokenForm信息"
 // @Success 200 {object} ctx.JSONResult{result=models.Token}
-// @Router /tokens/trigger [get]
-func (Token) DetailTriggerToken(c *ctx.GinRequest) {
-	form := &forms.DetailTriggerTokenForm{}
+// @Router /vcs/webhook [get]
+func (Token) VcsWebhookUrl(c *ctx.GinRequest) {
+	form := &forms.VcsWebhookUrlForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
-	c.JSONResult(apps.DetailTriggerToken(c.Service(), form))
+	c.JSONResult(apps.VcsWebhookUrl(c.Service(), form))
 }
 
 func ApiTriggerHandler(c *ctx.GinRequest) {

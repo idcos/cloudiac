@@ -85,6 +85,9 @@ type RepoIface interface {
 
 	//AddWebhook 查询Webhook列表
 	AddWebhook(url string) error
+
+	//CreatePrComment 添加PR评论
+	CreatePrComment(prId int, comment string) error
 }
 
 func GetVcsInstance(vcs *models.Vcs) (VcsIface, error) {
@@ -141,19 +144,8 @@ func GetRepoAddress(repo RepoIface) (string, error) {
 	return p.HTTPURLToRepo, nil
 }
 
-func SetWebhook(vcs *models.Vcs, repoId string, triggers []string) error {
-	webhookUrl := configs.Get().Portal.Address + "/api/v1"
-	switch vcs.VcsType {
-	case models.VcsGitlab:
-		webhookUrl += WebhookUrlGitlab
-	case models.VcsGitea:
-		webhookUrl += WebhookUrlGitea
-	case models.VcsGitee:
-		webhookUrl += WebhookUrlGitee
-	case models.VcsGithub:
-		webhookUrl += WebhookUrlGithub
-	}
-	webhookUrl += fmt.Sprintf("/%s", vcs.Id.String())
+func SetWebhook(vcs *models.Vcs, repoId, apiToken string, triggers []string) error {
+	webhookUrl := GetWebhookUrl(vcs, apiToken)
 	repo, err := GetRepo(vcs, repoId)
 	if err != nil {
 		return err
@@ -202,4 +194,20 @@ func SetWebhook(vcs *models.Vcs, repoId string, triggers []string) error {
 
 func GetVcsToken(token string) (string, error) {
 	return utils.DecryptSecretVar(token)
+}
+
+func GetWebhookUrl(vcs *models.Vcs, apiToken string) string {
+	webhookUrl := configs.Get().Portal.Address + "/api/v1"
+	switch vcs.VcsType {
+	case models.VcsGitlab:
+		webhookUrl += WebhookUrlGitlab
+	case models.VcsGitea:
+		webhookUrl += WebhookUrlGitea
+	case models.VcsGitee:
+		webhookUrl += WebhookUrlGitee
+	case models.VcsGithub:
+		webhookUrl += WebhookUrlGithub
+	}
+	webhookUrl += fmt.Sprintf("/%s?token=%s", vcs.Id.String(), apiToken)
+	return webhookUrl
 }

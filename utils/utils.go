@@ -104,6 +104,7 @@ func LogLevel(verboseNum int) string {
 	}
 }
 
+//RemoveDuplicateElement 数组去重
 func RemoveDuplicateElement(languages []string) []string {
 	result := make([]string, 0, len(languages))
 	temp := map[string]struct{}{}
@@ -256,20 +257,12 @@ func CheckRespCode(respCode int, code int) bool {
 	return strings.HasSuffix(fmt.Sprintf("%d", respCode), fmt.Sprintf("%d", code))
 }
 
-func aesKey() []byte {
-	sk := configs.Get().SecretKey
-	if sk == "" {
-		// "" 不是一个合法的 aes key，这里直接返回，等调用 aes.NewCipher() 时报错
-		return []byte(sk)
-	}
-	if len(sk) == 32 {
-		return []byte(sk)
-	}
-	return []byte(Md5String(sk))
+func AesEncrypt(plaintext string) (string, error) {
+	return AesEncryptWithKey(plaintext, configs.Get().SecretKey)
 }
 
-func AesEncrypt(plaintext string) (string, error) {
-	block, err := aes.NewCipher(aesKey())
+func AesEncryptWithKey(plaintext string, key string) (string, error) {
+	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
 		return "", err
 	}
@@ -284,11 +277,16 @@ func AesEncrypt(plaintext string) (string, error) {
 }
 
 func AesDecrypt(d string) (string, error) {
+	return AesDecryptWithKey(d, configs.Get().SecretKey)
+}
+
+func AesDecryptWithKey(d string, key string) (string, error) {
 	ciphertext, err := base64.RawURLEncoding.DecodeString(d)
 	if err != nil {
 		return "", err
 	}
-	block, err := aes.NewCipher(aesKey())
+
+	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
 		return "", err
 	}

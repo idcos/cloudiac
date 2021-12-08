@@ -16,11 +16,90 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/robfig/cron/v3"
+
 	"github.com/lib/pq"
 )
+
+// 最小时间单位为分钟
+// 每隔1 分钟执行一次 */1 * * * ?
+// 每天 23点 执行一次 0 23 * * ?
+// 每个月1号23 点执行一次 0 23 1 * ?
+// 每天的0点、13点、18点、21点都执行一次：0 0,13,18,21 * * ?
+var SpecParser = cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+
+func ParseCronpress(cronDriftExpress string) (*time.Time, e.Error) {
+	expr, err := SpecParser.Parse(cronDriftExpress)
+	if err != nil {
+		return nil, e.New(e.BadParam, http.StatusBadRequest, err)
+	}
+	// 根据当前时间算出下次该环境下次执行偏移检测任务时间
+	nextTime := expr.Next(time.Now())
+	return &nextTime, nil
+}
+
+// 获取环境偏移检测任务类型并且检查其参数
+func GetCronTaskTypeAndCheckParam(cronExpress string, autoRepairDrift, openCronDrift bool) (string, e.Error) {
+	if openCronDrift {
+		if cronExpress == "" {
+			return "", e.New(e.BadParam, http.StatusBadRequest, "Please set cronExpress when openCronDrift is set")
+		}
+	}
+	if autoRepairDrift {
+		if !openCronDrift || cronExpress == "" {
+			return "", e.New(e.BadParam, http.StatusBadRequest, "Please set openCronDrift to true when autoRepairDrift is set")
+		}
+	}
+	if openCronDrift {
+		if autoRepairDrift == false {
+			return models.TaskTypePlan, nil
+		} else {
+			return models.TaskTypeApply, nil
+		}
+	}
+	// 未开启漂移检测任务
+	return "", nil
+}
+
+type CronDriftParam struct {
+	CronDriftExpress  *string    `json:"cronDriftExpress"`  // 偏移检测表达式
+	AutoRepairDrift   *bool      `json:"autoRepairDrift"`   // 是否进行自动纠偏
+	OpenCronDrift     *bool      `json:"openCronDrift"`     // 是否开启偏移检测
+	NextDriftTaskTime *time.Time `json:"nextDriftTaskTime"` // 下次执行偏移检测任务的时间
+}
+
+func GetCronDriftParam(form forms.CronDriftForm) (*CronDriftParam, e.Error) {
+	cronDriftParam := &CronDriftParam{}
+	if form.HasKey("cronDriftExpress") || form.HasKey("autoRepairDrift") || form.HasKey("openCronDrift") {
+		cronTaskType, err := GetCronTaskTypeAndCheckParam(form.CronDriftExpress, form.AutoRepairDrift, form.OpenCronDrift)
+		if err != nil {
+			return nil, err
+		}
+		if form.HasKey("autoRepairDrift") {
+			cronDriftParam.AutoRepairDrift = &form.AutoRepairDrift
+		}
+		if form.HasKey("openCronDrift") {
+			cronDriftParam.OpenCronDrift = &form.OpenCronDrift
+		}
+		if cronTaskType != "" {
+			// 如果任务类型不为空，说明配置了漂移检测任务
+			cronDriftParam.CronDriftExpress = &form.CronDriftExpress
+			nextTime, err := ParseCronpress(form.CronDriftExpress)
+			if err != nil {
+				return nil, err
+			}
+			cronDriftParam.NextDriftTaskTime = nextTime
+		} else {
+			// 更新配置取消漂移检测任务，将下次重试时间重置为nil
+			cronDriftParam.NextDriftTaskTime = nil
+		}
+	}
+	return cronDriftParam, nil
+}
 
 // CreateEnv 创建环境
 func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDetail, e.Error) {
@@ -28,6 +107,11 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+
+	// 检查自动纠漂移、推送到分支时重新部署时，是否了配置自动审批
+	if !services.CheckoutAutoApproval(form.AutoApproval, form.AutoRepairDrift, form.Triggers) {
+		return nil, e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
 	}
 
 	// 检查模板
@@ -52,7 +136,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	}
 
 	if form.Timeout == 0 {
-		form.Timeout = common.TaskStepTimeoutDuration
+		form.Timeout = common.DefaultTaskStepTimeout
 	}
 
 	var (
@@ -89,7 +173,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		runnerId = rId
 	}
 
-	env, err := services.CreateEnv(tx, models.Env{
+	envModel := models.Env{
 		OrgId:     c.OrgId,
 		ProjectId: c.ProjectId,
 		CreatorId: c.UserId,
@@ -118,9 +202,26 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		RetryDelay:  form.RetryDelay,
 		RetryNumber: form.RetryNumber,
 
-		ExtraData: models.JSON(form.ExtraData),
-		Callback:  form.Callback,
-	})
+		ExtraData:        models.JSON(form.ExtraData),
+		Callback:         form.Callback,
+		AutoRepairDrift:  form.AutoRepairDrift,
+		CronDriftExpress: form.CronDriftExpress,
+		OpenCronDrift:    form.OpenCronDrift,
+	}
+	// 检查偏移检测参数
+	cronTaskType, err := GetCronTaskTypeAndCheckParam(form.CronDriftExpress, form.AutoRepairDrift, form.OpenCronDrift)
+	if err != nil {
+		return nil, err
+	}
+	// 如果定时任务存在，保存参数到表内容
+	if cronTaskType != "" {
+		nextTime, err := ParseCronpress(form.CronDriftExpress)
+		if err != nil {
+			return nil, err
+		}
+		envModel.NextDriftTaskTime = nextTime
+	}
+	env, err := services.CreateEnv(tx, envModel)
 	if err != nil && err.Code() == e.EnvAlreadyExists {
 		_ = tx.Rollback()
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
@@ -141,10 +242,15 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		form.Variables = append(form.Variables, sampleVars...)
 	}
 
-	// 创建新导入的变量
-	if err = services.OperationVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.Variables, nil); err != nil {
+	// 创建变量
+	updateVarsForm := forms.UpdateObjectVarsForm{
+		Scope:     consts.ScopeEnv,
+		ObjectId:  env.Id,
+		Variables: form.Variables,
+	}
+	if _, er := updateObjectVars(c, tx, &updateVarsForm); er != nil {
 		_ = tx.Rollback()
-		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+		return nil, e.AutoNew(er, e.InternalError)
 	}
 
 	// 创建变量组与实例的关系
@@ -183,6 +289,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		ExtraData: models.JSON(form.ExtraData),
 		Callback:  form.Callback,
 	})
+
 	if err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error creating task, err %s", err)
@@ -211,7 +318,13 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		OperatorId: c.UserId,
 	}
 	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
-	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, form.Triggers); err != nil {
+	// 获取token
+	token, err := GetWebhookToken(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, form.Triggers); err != nil {
 		c.Logger().Errorf("set webhook err :%v", err)
 	}
 	return &envDetail, nil
@@ -269,11 +382,10 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		return nil, e.New(e.DBError, err)
 	}
 
-	if details != nil {
-		for _, env := range details {
-			env.MergeTaskStatus()
-			env = PopulateLastTask(c.DB(), env)
-		}
+	for _, env := range details {
+		env.MergeTaskStatus()
+		// FIXME: 这里会在 for 循环中查询 db，需要优化
+		PopulateLastTask(c.DB(), env)
 	}
 
 	return page.PageResp{
@@ -294,10 +406,13 @@ func PopulateLastTask(query *db.Session, env *models.EnvDetail) *models.EnvDetai
 					env.KeyName = key.Name
 				}
 			}
+			// 返回环境详情时会调用该函数，且返回的数据会用于创建新的部署任务时在表单中回显，
+			// 而对于 vcs webhook 自动触发的任务其 revision 可能与环境的不同，这就会导致重新部署环境时使用的不是环境当前配置的分支。
+			// 为了避免这种情况，这里我们不将环境的 Revision 设置为最后一次任务的 revision
+			// env.Revision = lastTask.Revision // 分支/标签
+
 			// 部署通道
 			env.RunnerId = lastTask.RunnerId
-			// 分支/标签
-			env.Revision = lastTask.Revision
 			// Commit id
 			env.CommitId = lastTask.CommitId
 			// 执行人
@@ -326,6 +441,12 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
+
+	// 检查自动纠漂移、推送到分支时重新部署时，是否了配置自动审批
+	if !services.CheckoutAutoApproval(form.AutoApproval, form.AutoRepairDrift, form.Triggers) {
+		return nil, e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
+	}
+
 	query := c.DB().Where("iac_env.org_id = ? AND iac_env.project_id = ?", c.OrgId, c.ProjectId)
 
 	env, err := services.GetEnvById(query, form.Id)
@@ -342,6 +463,22 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	}
 
 	attrs := models.Attrs{}
+
+	cronDriftParam, err := GetCronDriftParam(forms.CronDriftForm{
+		BaseForm:         form.BaseForm,
+		CronDriftExpress: form.CronDriftExpress,
+		AutoRepairDrift:  form.AutoRepairDrift,
+		OpenCronDrift:    form.OpenCronDrift,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	attrs["autoRepairDrift"] = cronDriftParam.AutoRepairDrift
+	attrs["openCronDrift"] = cronDriftParam.OpenCronDrift
+	attrs["cronDriftExpress"] = cronDriftParam.CronDriftExpress
+	attrs["nextDriftTaskTime"] = cronDriftParam.NextDriftTaskTime
+
 	if form.HasKey("name") {
 		attrs["name"] = form.Name
 	}
@@ -415,8 +552,14 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 		}
 		vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
-		if err := vcsrv.SetWebhook(vcs, tpl.RepoId, form.Triggers); err != nil {
-			c.Logger().Errorf("set webhook err")
+		// 获取token
+		token, err := GetWebhookToken(c)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, form.Triggers); err != nil {
+			c.Logger().Errorf("set webhook err：%v", err)
 		}
 	}
 
@@ -468,19 +611,24 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 
 // EnvDeploy 创建新部署任务
 // 任务类型：plan, apply, destroy
-func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDetail, e.Error) {
+func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (ret *models.EnvDetail, er e.Error) {
+	_ = c.DB().Transaction(func(tx *db.Session) error {
+		ret, er = envDeploy(c, tx, form)
+		return er
+	})
+	return ret, er
+}
+
+func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm) (*models.EnvDetail, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create env task %s", form.Id))
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
 
-	tx := c.Tx()
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			panic(r)
-		}
-	}()
+	// 检查自动纠漂移、推送到分支时重新部署时，是否了配置自动审批
+	if !services.CheckoutAutoApproval(form.AutoApproval, form.AutoRepairDrift, form.Triggers) {
+		return nil, e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
+	}
 
 	envQuery := services.QueryWithProjectId(services.QueryWithOrgId(tx, c.OrgId), c.ProjectId)
 	env, err := services.GetEnvById(envQuery, form.Id)
@@ -551,6 +699,26 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 			env.AutoDestroyAt = &at
 		}
 	}
+	cronDriftParam, err := GetCronDriftParam(forms.CronDriftForm{
+		BaseForm:         form.BaseForm,
+		CronDriftExpress: form.CronDriftExpress,
+		AutoRepairDrift:  form.AutoRepairDrift,
+		OpenCronDrift:    form.OpenCronDrift,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if cronDriftParam.AutoRepairDrift != nil {
+		env.AutoRepairDrift = *cronDriftParam.AutoRepairDrift
+	}
+	if cronDriftParam.OpenCronDrift != nil {
+		env.OpenCronDrift = *cronDriftParam.OpenCronDrift
+		env.NextDriftTaskTime = cronDriftParam.NextDriftTaskTime
+	}
+	if cronDriftParam.CronDriftExpress != nil {
+		env.CronDriftExpress = *cronDriftParam.CronDriftExpress
+	}
 
 	if form.HasKey("triggers") {
 		env.Triggers = form.Triggers
@@ -566,10 +734,14 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 		env.Timeout = form.Timeout
 	}
 
-	if form.HasKey("variables") || form.HasKey("deleteVariablesId") {
-		// 变量列表增删
-		if err = services.OperationVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.Variables, form.DeleteVariablesId); err != nil {
-			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	if form.HasKey("variables") {
+		updateVarsForm := forms.UpdateObjectVarsForm{
+			Scope:     consts.ScopeEnv,
+			ObjectId:  env.Id,
+			Variables: form.Variables,
+		}
+		if _, er := updateObjectVars(c, tx, &updateVarsForm); er != nil {
+			return nil, e.AutoNew(er, e.InternalError)
 		}
 	}
 
@@ -606,7 +778,6 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 	if form.HasKey("varGroupIds") || form.HasKey("delVarGroupIds") {
 		// 创建变量组与实例的关系
 		if err := services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeEnv, env.Id.String()); err != nil {
-			_ = tx.Rollback()
 			return nil, err
 		}
 	}
@@ -614,7 +785,6 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 	// 计算变量列表
 	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
 	if er != nil {
-		_ = tx.Rollback()
 		return nil, err
 	}
 
@@ -636,22 +806,14 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 	})
 
 	if err != nil {
-		_ = tx.Rollback()
 		c.Logger().Errorf("error creating task, err %s", err)
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
 	// Save() 调用会全量将结构体中的字段进行保存，即使字段为 zero value
 	if _, err := tx.Save(env); err != nil {
-		_ = tx.Rollback()
 		c.Logger().Errorf("error save env, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	}
-
-	if err := tx.Commit(); err != nil {
-		_ = tx.Rollback()
-		c.Logger().Errorf("error commit env, err %s", err)
-		return nil, e.New(e.DBError, err)
 	}
 
 	env.MergeTaskStatus()
@@ -661,7 +823,13 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (*models.EnvDet
 	}
 	envDetail = PopulateLastTask(c.DB(), envDetail)
 	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
-	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, form.Triggers); err != nil {
+	// 获取token
+	token, err := GetWebhookToken(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, form.Triggers); err != nil {
 		c.Logger().Errorf("set webhook err :%v", err)
 	}
 	return envDetail, nil
@@ -687,9 +855,9 @@ func SearchEnvResources(c *ctx.ServiceContext, form *forms.SearchEnvResourceForm
 	}
 
 	return SearchTaskResources(c, &forms.SearchTaskResourceForm{
-		PageForm: form.PageForm,
-		Id:       env.LastResTaskId,
-		Q:        form.Q,
+		NoPageSizeForm: form.NoPageSizeForm,
+		Id:             env.LastResTaskId,
+		Q:              form.Q,
 	})
 }
 
@@ -719,30 +887,22 @@ func EnvOutput(c *ctx.ServiceContext, form forms.DetailEnvForm) (interface{}, e.
 	})
 }
 
-// EnvVariables 环境部署对应的环境变量为 last task 固化的变量内容
+// EnvVariables 获取环境的变量列表，环境部署对应的环境变量为 last task 固化的变量内容
 func EnvVariables(c *ctx.ServiceContext, form forms.SearchEnvVariableForm) (interface{}, e.Error) {
 	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
 
-	env, err := services.GetEnvById(c.DB(), form.Id)
-	if err != nil && err.Code() != e.EnvNotExists {
-		return nil, e.New(err.Code(), err, http.StatusNotFound)
-	} else if err != nil {
-		c.Logger().Errorf("error get env, err %s", err)
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	}
-
-	if env.LastTaskId == "" {
-		return nil, nil
-	}
-
-	task, err := services.GetTaskById(c.DB(), env.LastTaskId)
-	if err != nil && err.Code() != e.TaskNotExists {
-		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
-	} else if err != nil {
-		c.Logger().Errorf("error get env last res task, err %s", err)
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	task := models.Task{}
+	err := services.QueryWithOrgProject(c.DB(), c.OrgId, c.ProjectId, models.Task{}.TableName()).
+		Where("env_id = ? AND `type` IN (?)", form.Id,
+			[]string{common.TaskTypePlan, common.TaskTypeApply, common.TaskTypeDestroy}).Last(&task)
+	if err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.ObjectNotExists, http.StatusNotFound)
+		}
+		c.Logger().Errorf("query env last task error: %v", err)
+		return nil, e.AutoNew(err, e.DBError)
 	}
 
 	// 隐藏敏感字段
@@ -752,6 +912,7 @@ func EnvVariables(c *ctx.ServiceContext, form forms.SearchEnvVariableForm) (inte
 		}
 	}
 
+	sort.Sort(task.Variables)
 	return task.Variables, nil
 }
 
@@ -784,4 +945,71 @@ func ResourceDetail(c *ctx.ServiceContext, form *forms.ResourceDetailForm) (*mod
 		}
 	}
 	return &resultAttrs, nil
+}
+
+// SearchEnvResourcesGraph 查询环境资源列表
+func SearchEnvResourcesGraph(c *ctx.ServiceContext, form *forms.SearchEnvResourceGraphForm) (interface{}, e.Error) {
+	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+
+	env, err := services.GetEnvById(c.DB(), form.Id)
+	if err != nil && err.Code() != e.EnvNotExists {
+		return nil, e.New(err.Code(), err, http.StatusNotFound)
+	} else if err != nil {
+		c.Logger().Errorf("error get env, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	// 无资源变更
+	if env.LastResTaskId == "" {
+		return nil, nil
+	}
+
+	return SearchTaskResourcesGraph(c, &forms.SearchTaskResourceGraphForm{
+		Id:        env.LastResTaskId,
+		Dimension: form.Dimension,
+	})
+}
+
+// ResourceGraphDetail 查询部署成功后资源的详细信息
+func ResourceGraphDetail(c *ctx.ServiceContext, form *forms.ResourceGraphDetailForm) (interface{}, e.Error) {
+	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+
+	resource, err := services.GetResourceById(c.DB(), form.ResourceId)
+	if err != nil {
+		c.Logger().Errorf("error get resource, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	res, err := services.GetResourceDetail(c.DB(), c.OrgId, c.ProjectId, form.Id, resource.Id)
+	if err != nil {
+		c.Logger().Errorf("error get resource, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	if res.EnvId != form.Id || res.OrgId != c.OrgId || res.ProjectId != c.ProjectId {
+		c.Logger().Errorf("Environment ID and resource ID do not match")
+		return nil, e.New(e.DBError, err, http.StatusForbidden)
+	}
+	resultAttrs := resource.Attrs
+	if len(res.SensitiveKeys) > 0 {
+		set := map[string]interface{}{}
+		for _, value := range resource.SensitiveKeys {
+			set[value] = nil
+		}
+		for k, _ := range resultAttrs {
+			// 如果state 中value 存在与sensitive 设置，展示时不展示详情
+			if _, ok := set[k]; ok {
+				resultAttrs[k] = "(sensitive value)"
+			}
+		}
+	}
+	if res.DriftDetail != "" {
+		res.IsDrift = true
+	}
+	res.Attrs = resultAttrs
+	return res, nil
 }

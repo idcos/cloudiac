@@ -80,14 +80,16 @@ type waitStepResult struct {
 
 // WaitTaskStep 等待任务结束(包括超时)，返回任务最新状态
 // 该函数会更新任务状态、日志等到 db
-// param: taskDeadline 任务超时时间，达到这个时间后任务会被置为 timeout 状态
 func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step *models.TaskStep) (
 	stepResult *waitStepResult, err error) {
 	logger := logs.Get().WithField("action", "WaitTaskStep").WithField("taskId", task.Id)
 	if step.StartAt == nil {
 		return nil, fmt.Errorf("step not start")
 	}
-	taskDeadline := time.Time(*step.StartAt).Add(time.Duration(task.StepTimeout) * time.Second)
+
+	// runner 端己经增加了超时处理，portal 端的超时暂时保留，但时间设置为给定时间的 2 倍
+	taskDeadline := time.Time(*step.StartAt).Add(time.Duration(task.StepTimeout*2) * time.Second)
+
 	// 当前版本实现中需要 portal 主动连接到 runner 获取状态
 	err = utils.RetryFunc(10, time.Second*10, func(retryN int) (retry bool, er error) {
 		stepResult, er = pullTaskStepStatus(ctx, task, step, taskDeadline)
@@ -98,7 +100,7 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 
 		// 正常情况下 pullTaskStepStatus() 应该在 runner 任务退出后才返回，
 		// 但发现有任务在 running 状态时函数返回的情况，所以这里进行一次状态检查，如果任务不是退出状态则继续重试
-		if !(models.Task{}).IsExitedStatus(stepResult.Status) {
+		if !(models.TaskStep{}).IsExitedStatus(stepResult.Status) {
 			logger.Warnf("pull task status done, but task status is '%s', retry(%d)", stepResult.Status, retryN)
 			return true, nil
 		}
@@ -147,8 +149,16 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 		}
 	}
 
+	message := ""
+	switch stepResult.Status {
+	case models.TaskStepFailed:
+		message = "failed"
+	case models.TaskStepTimeout:
+		message = "timeout"
+	}
+
 	if er := services.ChangeTaskStepStatusAndExitCode(
-		sess, task, step, stepResult.Status, "", stepResult.Result.ExitCode); er != nil {
+		sess, task, step, stepResult.Status, message, stepResult.Result.ExitCode); er != nil {
 		return stepResult, er
 	}
 	return stepResult, err
@@ -247,11 +257,14 @@ func pullTaskStepStatus(ctx context.Context, task models.Tasker, step *models.Ta
 
 				stepResult.Result = *msg
 				//logger.Debugf("receive task status message: %v, %v", msg.Exited, msg.ExitCode)
-				if msg.Exited {
+
+				if msg.Timeout {
+					stepResult.Status = models.TaskStepTimeout
+				} else if msg.Exited {
 					if msg.ExitCode == 0 {
-						stepResult.Status = models.TaskComplete
+						stepResult.Status = models.TaskStepComplete
 					} else {
-						stepResult.Status = models.TaskFailed
+						stepResult.Status = models.TaskStepFailed
 					}
 					return nil
 				}
@@ -319,7 +332,9 @@ func WaitScanTaskStep(ctx context.Context, sess *db.Session, task *models.ScanTa
 	if step.StartAt == nil {
 		return nil, fmt.Errorf("step not start")
 	}
-	taskDeadline := time.Time(*step.StartAt).Add(time.Duration(task.StepTimeout) * time.Second)
+
+	// runner 端己经增加了超时处理，portal 端的超时暂时保留，但时间设置为给定时间的 2 倍
+	taskDeadline := time.Time(*step.StartAt).Add(time.Duration(task.StepTimeout*2) * time.Second)
 
 	// 当前版本实现中需要 portal 主动连接到 runner 获取状态
 	err = utils.RetryFunc(10, time.Second*10, func(retryN int) (retry bool, er error) {

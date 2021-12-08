@@ -222,3 +222,25 @@ func (Task) GetTaskStepLog(c *ctx.GinRequest) {
 	c.JSONResult(apps.GetTaskStep(c.Service(), &form))
 
 }
+
+// ResourceGraph 获取任务资源列表
+// @Tags 环境
+// @Summary 获取任务资源列表
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param form query forms.SearchTaskResourceGraphForm true "parameter"
+// @Param taskId path string true "任务ID"
+// @router /tasks/{taskId}/resources/graph [get]
+// @Success 200 {object} ctx.JSONResult{result=models.Resource}
+func (Task) ResourceGraph(c *ctx.GinRequest) {
+	form := forms.SearchTaskResourceGraphForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.SearchTaskResourcesGraph(c.Service(), &form))
+}
+

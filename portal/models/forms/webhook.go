@@ -11,6 +11,11 @@ type WebhooksApiHandler struct {
 	Project          Project          `json:"project"`           // 项目信息
 	ObjectAttributes ObjectAttributes `json:"object_attributes"` // 返回值信息
 	User             User             `json:"user"`              // 用户信息
+	PullRequest      PullRequest      `json:"pull_request"`      //gitea
+	Action           string           `json:"action"`            // gitea pr状态，示例：open
+	Before           string           `json:"before"`            //gitea push时回调的commitid
+	After            string           `json:"after"`             //gitea push时回调的commitid
+	Repository       Repository       `json:"repository"`        //gitea pr回调仓库信息
 }
 
 type Project struct {
@@ -19,11 +24,35 @@ type Project struct {
 }
 
 type ObjectAttributes struct {
-	SourceBranch string `json:"source_branch"` // 源分支
-	TargetBranch string `json:"target_branch"` // 目标分支
-	State        string `json:"state"`         // mr/pr动作(open、close)
+	SourceBranch string `json:"source_branch"`   // 源分支
+	TargetBranch string `json:"target_branch"`   // 目标分支
+	State        string `json:"state"`           // mr/pr动作(open、close)
+	Iid          int    `json:"iid" form:"iid" ` // prId
 }
 
 type User struct {
 	Name string `json:"name"`
+}
+
+//PullRequest gitea
+type PullRequest struct {
+	Id     int  `json:"id"`
+	Base   Base `json:"base"`
+	Head   Head `json:"head"`
+	Number int  `json:"number"`
+}
+
+//Base gitea
+type Base struct {
+	Ref string `json:"ref"`
+}
+
+//Head gitea
+type Head struct {
+	Ref string `json:"ref"`
+}
+
+type Repository struct {
+	Id       int    `json:"id"`
+	FullName string `json:"full_name"`
 }

@@ -71,6 +71,38 @@ var IacTaskCompleteTpl = `
 </html>
 `
 
+var IacCronDriftPlanTaskTpl = `
+<html>
+<body>
+<p>尊敬的 CloudIaC 用户：</p>
+<br />
+<p>	{{.EnvName}}环境检测到资源配置发生漂移,详情如下：</p> 
+<br />	
+<p>	所属组织：{{.OrgName}}</p>
+<p>	所属项目：{{.ProjectName}}</p>
+<p>	云模板：{{.TemplateName}}</p>
+<p>	分支/tag：{{.Revision}}</p>
+<p>	-----该邮件由系统自动发出，请勿回复-----</p>
+</body>
+</html>
+`
+
+var IacCronDriftApplyTaskTpl = `
+<html>
+<body>
+<p>尊敬的 CloudIaC 用户：</p>
+<br />
+<p>	{{.EnvName}}环境检测到资源配置发生漂移,自动纠偏成功，详情如下：</p> 
+<br />	
+<p>	所属组织：{{.OrgName}}</p>
+<p>	所属项目：{{.ProjectName}}</p>
+<p>	云模板：{{.TemplateName}}</p>
+<p>	分支/tag：{{.Revision}}</p>
+<p>	-----该邮件由系统自动发出，请勿回复-----</p>
+</body>
+</html>
+`
+
 var IacTaskFailedTpl = `
 <html>
 <body>
@@ -213,5 +245,37 @@ const (
 	更多详情请点击：{{.Addr}}
 
 	-----该消息由系统自动发出，请勿回复-----
+`
+	IacCronDriftPlanTaskMarkDown = `
+尊敬的CloudIaC用户：
+
+  {{.EnvName}}环境检测到资源配置发生漂移,详情如下：
+
+  所属组织：{{.OrgName}}
+
+  所属项目：{{.ProjectName}}
+
+  云模板：{{.TemplateName}}
+
+  分支/tag：{{.Revision}}
+
+
+  -----该消息由系统自动发出，请勿回复-----
+`
+	IacCronDriftApplyTaskMarkDown = `
+尊敬的CloudIaC用户：
+
+  {{.EnvName}}环境检测到资源配置发生漂移,自动纠偏成功，详情如下：
+
+  所属组织：{{.OrgName}}
+
+  所属项目：{{.ProjectName}}
+
+  云模板：{{.TemplateName}}
+
+  分支/tag：{{.Revision}}
+
+
+  -----该消息由系统自动发出，请勿回复-----
 `
 )

@@ -6,15 +6,16 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
-	"net/http"
-
 	"github.com/pkg/errors"
+	"net/http"
 )
 
 func SearchToken(c *ctx.ServiceContext, form *forms.SearchTokenForm) (interface{}, e.Error) {
@@ -30,15 +31,20 @@ func SearchToken(c *ctx.ServiceContext, form *forms.SearchTokenForm) (interface{
 	}
 
 	query = query.Order("created_at DESC")
-	rs, err := getPage(query, form, models.Token{})
-	if err != nil {
-		c.Logger().Errorf("error get page, err %s", err)
-		return nil, err
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	tokens := make([]models.Token, 0)
+	if err := p.Scan(&tokens); err != nil {
+		return nil, e.New(e.DBError, err)
 	}
-	return rs, nil
+
+	return &page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     tokens,
+	}, nil
 }
 
-func CreateToken(c *ctx.ServiceContext, form *forms.CreateTokenForm) (interface{}, e.Error) {
+func CreateToken(c *ctx.ServiceContext, form *forms.CreateTokenForm) (*models.Token, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create token for user %s", c.UserId))
 	var (
 		expiredAt models.Time
@@ -58,11 +64,11 @@ func CreateToken(c *ctx.ServiceContext, form *forms.CreateTokenForm) (interface{
 		Type:        form.Type,
 		OrgId:       c.OrgId,
 		Role:        form.Role,
-		ExpiredAt:   expiredAt,
+		ExpiredAt:   &expiredAt,
 		Description: form.Description,
 		CreatorId:   c.UserId,
-		EnvId:       form.EnvId,
-		Action:      form.Action,
+		//EnvId:       form.EnvId,
+		//Action:      form.Action,
 	})
 	if err != nil && err.Code() == e.TokenAlreadyExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
@@ -108,16 +114,26 @@ func DeleteToken(c *ctx.ServiceContext, form *forms.DeleteTokenForm) (result int
 	return
 }
 
-func DetailTriggerToken(c *ctx.ServiceContext, form *forms.DetailTriggerTokenForm) (result interface{}, re e.Error) {
-	token, err := services.DetailTriggerToken(c.DB(), c.OrgId, form.EnvId, form.Action)
+func VcsWebhookUrl(c *ctx.ServiceContext, form *forms.VcsWebhookUrlForm) (result interface{}, re e.Error) {
+	token, err := GetWebhookToken(c)
 	if err != nil {
-		// 如果不存在直接返回
-		if err.Code() == e.TokenNotExists {
-			return token, nil
-		}
 		return nil, err
 	}
-	return token, nil
+
+	tpl, err := services.GetTplByEnvId(c.DB(), form.EnvId)
+	if err != nil {
+		return nil, err
+	}
+
+	vcs, err := services.GetVcsById(c.DB(), tpl.VcsId)
+	if err != nil {
+		return nil, err
+	}
+
+	webhookUrl := vcsrv.GetWebhookUrl(vcs, token.Key)
+	return struct {
+		Url string `json:"url"`
+	}{webhookUrl}, err
 }
 
 func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (interface{}, e.Error) {
@@ -133,7 +149,7 @@ func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (int
 		}
 	}()
 
-	token, err := services.IsExistsTriggerToken(tx, form.Token)
+	token, err := services.IsActiveToken(tx, form.Token, consts.TokenTrigger)
 	if err != nil {
 		_ = tx.Rollback()
 		logs.Get().Errorf("get token by envId err %s:", err)
@@ -205,4 +221,27 @@ func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (int
 	}
 
 	return nil, nil
+}
+
+func GetWebhookToken(c *ctx.ServiceContext) (*models.Token, e.Error) {
+	// 获取token
+	var (
+		token *models.Token
+		err   e.Error
+	)
+
+	token, err = services.DetailTriggerToken(c.DB(), c.OrgId)
+	if err != nil {
+		// 如果不存在, 则创建一个触发器token
+		if err.Code() == e.TokenNotExists {
+			token, err = CreateToken(c, &forms.CreateTokenForm{
+				Type: consts.TokenTrigger,
+			})
+			if err != nil {
+				return nil, err
+			}
+		}
+		return nil, err
+	}
+	return token, err
 }

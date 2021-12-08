@@ -4,24 +4,28 @@ package apps
 
 import (
 	"bufio"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"cloudiac/utils"
 	"fmt"
 	"io"
 	"net/http"
 	"path"
+	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/gin-contrib/sse"
 )
 
 // SearchTask 任务查询
 func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{}, e.Error) {
-	query := services.QueryTask(c.DB().Debug())
+	query := services.QueryTask(c.DB())
 	if form.EnvId != "" {
 		query = query.Where("env_id = ?", form.EnvId)
 	}
@@ -73,6 +77,7 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*taskDetailRe
 		err  e.Error
 	)
 	task, err = services.GetTaskById(c.DB(), form.Id)
+	sort.Sort(task.Variables)
 	if err != nil && err.Code() == e.TaskNotExists {
 		return nil, e.New(e.TaskNotExists, err, http.StatusNotFound)
 	} else if err != nil {
@@ -286,22 +291,22 @@ func SearchTaskResources(c *ctx.ServiceContext, form *forms.SearchTaskResourceFo
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
-	query := c.DB().Model(models.Resource{}).Where("org_id = ? AND project_id = ? AND env_id = ? AND task_id = ?",
+	query := c.DB().Table("iac_resource as r").Where("r.org_id = ? AND r.project_id = ? AND r.env_id = ? AND r.task_id = ?",
 		c.OrgId, c.ProjectId, task.EnvId, task.Id)
-
+	query = query.Joins("left join iac_resource_drift as rd on rd.res_id = r.id").LazySelectAppend("r.*, !ISNULL(rd.drift_detail) as is_drift")
 	if form.HasKey("q") {
 		// 支持对 provider / type / name 进行模糊查询
-		query = query.Where("provider LIKE ? OR type LIKE ? OR name LIKE ?",
+		query = query.Where("r.provider LIKE ? OR r.type LIKE ? OR r.name LIKE ?",
 			fmt.Sprintf("%%%s%%", form.Q),
 			fmt.Sprintf("%%%s%%", form.Q),
 			fmt.Sprintf("%%%s%%", form.Q))
 	}
 
 	if form.SortField() == "" {
-		query = query.Order("provider, type, name")
+		query = query.Order("r.provider, r.type, r.name")
 	}
 
-	rs := make([]models.Resource, 0)
+	rs := make([]services.Resource, 0)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	if err := p.Scan(&rs); err != nil {
 		return nil, e.New(e.DBError, err)
@@ -347,4 +352,286 @@ func GetTaskStep(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (interfa
 		return nil, err
 	}
 	return string(content), nil
+}
+
+// SearchTaskResourcesGraph 查询环境资源列表
+func SearchTaskResourcesGraph(c *ctx.ServiceContext, form *forms.SearchTaskResourceGraphForm) (interface{}, e.Error) {
+	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+
+	task, err := services.GetTaskById(c.DB(), form.Id)
+	if err != nil && err.Code() != e.TaskNotExists {
+		return nil, e.New(err.Code(), err, http.StatusNotFound)
+	} else if err != nil {
+		c.Logger().Errorf("error get env, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	rs, err := services.GetTaskResourceToTaskId(c.DB(), task)
+	if err != nil {
+		return nil, err
+	}
+	for i := range rs {
+		rs[i].Provider = path.Base(rs[i].Provider)
+		// attrs 暂时不需要返回
+		rs[i].Attrs = nil
+	}
+	return GetResourcesGraph(rs, form.Dimension), nil
+}
+
+func GetResourcesGraph(rs []services.Resource, dimension string) interface{} {
+	switch dimension {
+	case consts.GraphDimensionModule:
+		return GetResourcesGraphModule(rs)
+	case consts.GraphDimensionProvider:
+		return GetResourcesGraphProvider(rs)
+	case consts.GraphDimensionType:
+		return GetResourcesGraphType(rs)
+	default:
+		return nil
+	}
+}
+
+type ResourcesGraphModule struct {
+	NodeId        string                  `json:"nodeId" form:"nodeId" `
+	IsRoot        bool                    `json:"isRoot" form:"isRoot" `
+	NodeName      string                  `json:"nodeName" form:"nodeName" `
+	Children      []*ResourcesGraphModule `json:"children" form:"children" `
+	ResourcesList []ResourceInfo          `json:"resourcesList" form:"resourcesList" `
+}
+
+type ResourceInfo struct {
+	ResourceId   interface{} `json:"resourceId" form:"resourceId" `
+	ResourceName string      `json:"resourceName" form:"resourceName" `
+	NodeName     string      `json:"nodeName" form:"nodeName" `
+	IsDrift      bool        `json:"isDrift"`
+}
+
+func GetResourcesGraphModule(resources []services.Resource) interface{} {
+	// 构建根节点
+	rootModule := "rootModule"
+	rgm := &ResourcesGraphModule{
+		IsRoot:   true,
+		NodeName: rootModule,
+		NodeId:   rootModule,
+		Children: make([]*ResourcesGraphModule, 0),
+	}
+
+	// 存储当前节点与父级节点的关系 父级节点id与子节点关系 {parentNodeId: [nodeId, nodeId]}
+	parentChildNode := make(map[string][]string)
+
+	// 资源列表 {nodeId: [resource1,resource2]}
+	resourceAttr := make(map[string][]ResourceInfo)
+
+	//查询nodeId对应的nodeName {nodeId: nodeName}
+	nodeNameAttr := make(map[string]string)
+
+	/*
+		示例： slb.data.alicloud_slbs.this
+		{
+			nodeId: rootModule
+			nodeName: rootModule
+			children: [
+				{
+					"nodeId" :"slb"
+					"nodeName" : "slb"
+					children : [
+						{
+							"nodeId" :"slb.data"
+							"nodeName" : "data"
+							children : [
+								{
+									"nodeId" :"slb.data.alicloud_slbs"
+									"nodeName" : "alicloud_slbs"
+									children : []
+								}
+							]
+						}
+					]
+				}
+
+			]
+		}
+
+	*/
+	for _, resource := range resources {
+		// 将module替替换为空
+		address := strings.Replace(resource.Address, "module.", "", -1)
+		addrs := strings.Split(address, ".")
+		for index, addr := range addrs {
+			var (
+				parentNodeId string
+				nodeId       = strings.Join(addrs[:index+1], ".")
+			)
+			nodeNameAttr[nodeId] = addr
+			if index == 0 {
+				parentNodeId = rootModule
+			} else {
+				parentNodeId = strings.Join(addrs[:index], ".")
+			}
+
+			// 处理最末级节点，将末级节点定义为资源
+			if index == len(addrs)-1 {
+				res := ResourceInfo{
+					ResourceId:   resource.Id.String(),
+					ResourceName: resource.Name,
+					NodeName:     addr,
+				}
+
+
+				if res.ResourceName == "" {
+					res.ResourceName = addr
+				}
+
+				if resource.DriftDetail != "" {
+					res.IsDrift = true
+				}
+
+				if _, ok := resourceAttr[parentNodeId]; !ok {
+					resourceAttr[parentNodeId] = []ResourceInfo{res}
+					continue
+				}
+				resourceAttr[parentNodeId] = append(resourceAttr[parentNodeId], res)
+				continue
+			}
+
+			// 构造数据结构
+			if _, ok := parentChildNode[parentNodeId]; !ok {
+				parentChildNode[parentNodeId] = []string{nodeId}
+				continue
+			}
+			parentChildNode[parentNodeId] = append(parentChildNode[parentNodeId], nodeId)
+
+		}
+	}
+
+	// 根据address构造的叶子节点列表有可能重复，这里进行去重
+	/*
+		a.b.c
+		a.b.d
+		输出：a: [b,b]
+		去重: a: [b]
+	*/
+
+	for k, v := range parentChildNode {
+		// 去重
+		parentChildNode[k] = utils.RemoveDuplicateElement(v)
+	}
+
+	// 构造二级节点
+	for _, nodeId := range parentChildNode[rgm.NodeId] {
+		resourcesGraphModule := &ResourcesGraphModule{
+			NodeId:   nodeId,
+			IsRoot:   false,
+			NodeName: nodeNameAttr[nodeId],
+			Children: make([]*ResourcesGraphModule, 0),
+		}
+		rgm.Children = append(rgm.Children, resourcesGraphModule)
+		// 二级节点有可能是末级节点，需要把资源列表放进去
+		if _, ok := resourceAttr[nodeId]; ok {
+			resourcesGraphModule.ResourcesList = resourceAttr[nodeId]
+		}
+	}
+
+	getTree(rgm.Children, parentChildNode, resourceAttr, nodeNameAttr)
+
+	return rgm
+}
+
+func getTree(parents []*ResourcesGraphModule, parentChildNode map[string][]string,
+	resourceAttr map[string][]ResourceInfo, nodeNameAttr map[string]string) {
+
+	for _, parent := range parents {
+		for parentId, childIds := range parentChildNode {
+			if parentId == parent.NodeId {
+				for _, v := range childIds {
+					rgm := &ResourcesGraphModule{
+						NodeId:   v,
+						IsRoot:   false,
+						NodeName: nodeNameAttr[v],
+						Children: make([]*ResourcesGraphModule, 0),
+					}
+					if _, ok := resourceAttr[v]; ok {
+						rgm.ResourcesList = resourceAttr[v]
+					}
+					parent.Children = append(parent.Children, rgm)
+				}
+				break
+			}
+		}
+		// 递归处理叶子节点
+		getTree(parent.Children, parentChildNode, resourceAttr, nodeNameAttr)
+	}
+}
+
+type ProviderTypeResource struct {
+	Id      models.Id `json:"id" ` //ID
+	Name    string    `json:"name"`
+	IsDrift bool      `json:"isDrift"`
+}
+
+type ResourcesGraphProvider struct {
+	NodeName string                 `json:"nodeName" form:"nodeName" `
+	List     []ProviderTypeResource `json:"list" form:"list" `
+}
+
+func GetResourcesGraphProvider(rs []services.Resource) interface{} {
+	rgt := make([]ResourcesGraphProvider, 0)
+	rgtAttr := make(map[string][]ProviderTypeResource)
+	for _, v := range rs {
+		ptr := ProviderTypeResource{
+			Id:   v.Id,
+			Name: v.Name,
+		}
+		if v.DriftDetail != "" {
+			ptr.IsDrift = true
+		}
+		if _, ok := rgtAttr[v.Provider]; !ok {
+			rgtAttr[v.Provider] = []ProviderTypeResource{ptr}
+			continue
+		}
+		rgtAttr[v.Provider] = append(rgtAttr[v.Provider], ptr)
+	}
+
+	for k, v := range rgtAttr {
+		rgt = append(rgt, ResourcesGraphProvider{
+			NodeName: k,
+			List:     v,
+		})
+	}
+
+	return rgt
+}
+
+type ResourcesGraphType struct {
+	NodeName string                 `json:"nodeName" form:"nodeName" `
+	List     []ProviderTypeResource `json:"list"`
+}
+
+func GetResourcesGraphType(rs []services.Resource) interface{} {
+	rgt := make([]ResourcesGraphType, 0)
+	rgtAttr := make(map[string][]ProviderTypeResource)
+	for _, v := range rs {
+		ptr := ProviderTypeResource{
+			Id:   v.Id,
+			Name: v.Name,
+		}
+		if v.DriftDetail != "" {
+			ptr.IsDrift = true
+		}
+		if _, ok := rgtAttr[v.Type]; !ok {
+			rgtAttr[v.Type] = []ProviderTypeResource{ptr}
+			continue
+		}
+		rgtAttr[v.Type] = append(rgtAttr[v.Type], ptr)
+	}
+	for k, v := range rgtAttr {
+		rgt = append(rgt, ResourcesGraphType{
+			NodeName: k,
+			List:     v,
+		})
+	}
+
+	return rgt
 }

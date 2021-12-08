@@ -16,11 +16,14 @@ type Template struct {
 	// 此时创建任务直接使用 RepoRevision 做为 commit id，不再实时获取
 	VcsId Id `json:"vcsId" gorm:"size:32;not null" example:"a1f79e8a-744d-4ea5-8d97-7e4b7b422a6c"`
 
-	RepoId   string `json:"repoId" gorm:"not null"`                                                 // RepoId 仓库 id 或者 path(local vcs)
-	RepoAddr string `json:"repoAddr" gorm:"not null" example:"https://github.com/user/project.git"` // RepoAddr 仓库地址(完整 url 或者项目 path)
-
-	RepoToken    string `json:"repoToken" gorm:"size:128" ` // RepoToken 若为空则使用 vcs 的 token
+	RepoId       string `json:"repoId" gorm:"not null"`       // RepoId 仓库 id 或者 path(local vcs)
+	RepoFullName string `json:"repoFullName" gorm:"not null"` // 完整的仓库名称
 	RepoRevision string `json:"repoRevision" gorm:"size:64;default:'master'" example:"master"`
+
+	// 云模板的 repoAddr  和 repoToken 字段可以为空，若为空则在创建 task 时会查询 vcs 获取
+	// 提供这两个字段主要是为了后续支持直接添加 git 地址和 token 来创建云模板
+	RepoAddr  string `json:"repoAddr" gorm:"not null" example:"https://github.com/user/project.git"` // RepoAddr 仓库地址(完整 url 或者项目 path)
+	RepoToken string `json:"repoToken" gorm:"size:128" `                                             // RepoToken 若为空则使用 vcs 的 token
 
 	Status     string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:状态"`
 	CreatorId  Id     `json:"creatorId" gorm:"size:32;not null;comment:创建人"`
@@ -40,7 +43,11 @@ func (Template) TableName() string {
 	return "iac_template"
 }
 
-func (t *Template) Migrate(sess *db.Session) (err error) {
+func (Template) NewId() Id {
+	return NewId("tpl")
+}
+
+func (t Template) Migrate(sess *db.Session) (err error) {
 	if err = sess.RemoveIndex("iac_template", "unique__project__tpl__name"); err != nil {
 		return err
 	}
