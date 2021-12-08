@@ -110,12 +110,12 @@ func GetResourceById(tx *db.Session, id models.Id) (*models.Resource, e.Error) {
 	return &r, nil
 }
 
-func GetResourceDetail(tx *db.Session, env *models.Env, resourceId models.Id) (*Resource, e.Error) {
+func GetResourceDetail(tx *db.Session, orgId, projectId, envId, resourceId models.Id) (*Resource, e.Error) {
 	r := &Resource{}
 	if err := tx.Table("iac_resource as r").
 		Joins("left join iac_resource_drift as rd on rd.res_id = r.id ").
-		Where("r.org_id = ? AND r.project_id = ? AND r.env_id = ? AND r.task_id = ? AND r.id = ?",
-			env.OrgId, env.ProjectId, env.Id, env.LastResTaskId, resourceId).
+		Where("r.org_id = ? AND r.project_id = ? AND r.env_id = ? AND r.id = ?",
+			orgId, projectId, envId, resourceId).
 		LazySelectAppend("r.*, rd.drift_detail, rd.created_at as drift_at").
 		First(r); err != nil {
 		return nil, e.New(e.DBError, err)
