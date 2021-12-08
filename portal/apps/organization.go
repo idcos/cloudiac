@@ -459,7 +459,7 @@ type OrgResourcesResp struct {
 }
 
 func SearchOrgResources(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm) (interface{}, e.Error) {
-	query := c.DB().Model(&models.Resource{}).LazySelectAppend("iac_env.id")
+	query := c.DB().Model(&models.Resource{})
 
 	query = query.Joins("inner join iac_env on iac_env.last_res_task_id = iac_resource.task_id left join " +
 		"iac_project on iac_resource.project_id = iac_project.id").
@@ -479,6 +479,7 @@ func SearchOrgResources(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm
 		query = query.Where("iac_user_project.user_id = ?", c.UserId)
 	}
 	rs := make([]OrgResourcesResp, 0)
+	query = query.Order("project_id, env_id, provider desc")
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	if err := p.Scan(&rs); err != nil {
 		return nil, e.New(e.DBError, err)

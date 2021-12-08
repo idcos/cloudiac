@@ -984,18 +984,7 @@ func ResourceGraphDetail(c *ctx.ServiceContext, form *forms.ResourceGraphDetailF
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
-	task, err := services.GetTaskById(c.DB(), resource.TaskId)
-	if err != nil {
-		c.Logger().Errorf("error get task, err %s", err)
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	}
-
-	env, err := services.GetEnvById(c.DB(), task.EnvId)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := services.GetResourceDetail(c.DB(), env, resource.Id)
+	res, err := services.GetResourceDetail(c.DB(), c.OrgId, c.ProjectId, form.Id, resource.Id)
 	if err != nil {
 		c.Logger().Errorf("error get resource, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
