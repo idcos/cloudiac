@@ -732,7 +732,7 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 					}
 					driftInfoMap := ParseResourceDriftInfo(bs)
 					if len(driftInfoMap) == 0 {
-						err = services.DeleteEnvResourceDrift(dbSess, env.Id)
+						err = services.DeleteEnvResourceDrift(dbSess, env.LastResTaskId)
 						if err != nil {
 							logs.Get().Error("Failed to delete all resoruce drift information in the environment")
 						}
@@ -741,7 +741,7 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 						for address, _ := range driftInfoMap {
 							addressList = append(addressList, address)
 						}
-						err = services.DeleteEnvResourceDriftByAddressList(dbSess, env.Id, addressList)
+						err = services.DeleteEnvResourceDriftByAddressList(dbSess, env.LastResTaskId, addressList)
 						if err != nil {
 							logs.Get().Error("Failed to delete already repair resoruce drift information in the environment")
 						}
