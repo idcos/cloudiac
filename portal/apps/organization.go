@@ -479,6 +479,7 @@ func SearchOrgResources(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm
 		query = query.Where("iac_user_project.user_id = ?", c.UserId)
 	}
 	rs := make([]OrgResourcesResp, 0)
+	query = query.Order("project_id, env_id, provider desc")
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	if err := p.Scan(&rs); err != nil {
 		return nil, e.New(e.DBError, err)
