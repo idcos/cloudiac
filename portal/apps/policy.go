@@ -1038,7 +1038,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	}
 
 	// 1. 活跃策略
-	c.Logger().Errorf("totalPolicyMap %+v", totalPolicyMap)
+	// c.Logger().Errorf("totalPolicyMap %+v", totalPolicyMap)
 	summaryResp.ActivePolicy.Total = len(totalPolicyMap)
 	summaryResp.ActivePolicy.Last = len(lastPolicyMap)
 	if summaryResp.ActivePolicy.Last != 0 {
