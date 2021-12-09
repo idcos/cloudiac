@@ -294,7 +294,7 @@ func DetailPolicy(dbSess *db.Session, id models.Id) (interface{}, e.Error) {
 }
 
 func SearchPolicyTpl(dbSess *db.Session, orgId, tplId models.Id, q string) *db.Session {
-	query := dbSess.Table("iac_template AS tpl")
+	query := dbSess.Table("iac_template AS tpl").Where("tpl.deleted_at_t = 0")
 	if orgId != "" {
 		query = query.Where("tpl.org_id = ?", orgId)
 	}
