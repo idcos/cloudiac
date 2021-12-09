@@ -44,6 +44,12 @@ func (t *Task) Run() (cid string, err error) {
 			return cid, err
 		}
 		t.req.ContainerId = cid
+	} else {
+		// 初始化 workspace 路径名称
+		t.workspace, err = t.initWorkspace()
+		if err != nil {
+			return "", errors.Wrap(err, "initial workspace")
+		}
 	}
 	return t.req.ContainerId, t.runStep()
 }
