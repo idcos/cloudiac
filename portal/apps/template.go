@@ -193,6 +193,10 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 		attrs["vcsId"] = form.VcsId
 		attrs["repoId"] = form.RepoId
 		attrs["repoFullName"] = form.RepoFullName
+		if form.VcsId != "" {
+			// 当云模板关联了 vcs 时需要清空 repoAddr，这样才能支持 vcs 更新。
+			attrs["repoAddr"] = ""
+		}
 	}
 	tx := c.Tx()
 	defer func() {
