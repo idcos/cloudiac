@@ -145,8 +145,9 @@ type changeLog struct {
 	Content map[string][]string
 }
 
-const releaseNoteTemplate = `
-{{- range . -}}
+const releaseNoteTemplate = `# Releases
+
+{{ range . -}}
 ------
 ## v{{.Version}} {{.Date}}
 {{ range $type, $notes := .Content -}}
