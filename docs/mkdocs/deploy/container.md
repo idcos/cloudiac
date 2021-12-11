@@ -28,7 +28,7 @@ version: "3.2"
 services:
   iac-portal:
     container_name: iac-portal
-    image: "cloudiac/iac-portal:latest"
+    image: "cloudiac/iac-portal:v0.8.0"
     volumes:
       - type: bind
         source: /usr/yunji/cloudiac/var
@@ -45,7 +45,7 @@ services:
 
   ct-runner:
     container_name: ct-runner
-    image: "cloudiac/ct-runner:latest"
+    image: "cloudiac/ct-runner:v0.8.0"
     volumes:
       - type: bind
         source: /usr/yunji/cloudiac/var
@@ -63,7 +63,7 @@ services:
     restart: always
 
   ct-worker:
-    image: "cloudiac/ct-worker:latest"
+    image: "cloudiac/ct-worker:v0.8.0"
     container_name: "ct-worker-say-hi"
     # 添加该服务只是为了自动 pull 镜像，并不需要后台运行
     command: ["echo", "hello world!"]
@@ -71,7 +71,7 @@ services:
 
   iac-web:
     container_name: iac-web
-    image: "cloudiac/iac-web:latest"
+    image: "cloudiac/iac-web:v0.8.0"
     ports:
       - 80:80
     restart: always

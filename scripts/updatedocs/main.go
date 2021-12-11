@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 	"text/template"
 	"unicode"
@@ -21,7 +22,7 @@ type FileReplacer struct {
 type ReplaceRule interface {
 	IsBegin(token string) bool
 	IsEnd(token string) bool
-	Replace(orig []byte) []byte
+	Replace(src string) []byte
 }
 
 type BlockReplaceRule struct {
@@ -38,7 +39,7 @@ func (r *BlockReplaceRule) IsEnd(token string) bool {
 	return r.end == token
 }
 
-func (r *BlockReplaceRule) Replace([]byte) []byte {
+func (r *BlockReplaceRule) Replace(string) []byte {
 	log.Printf("block replace: %s", r.begin)
 	rs := make([]byte, 0, len(r.content))
 	rs = append(rs, []byte(r.begin)...)
@@ -71,12 +72,35 @@ func (r *LineStartReplaceRule) IsBegin(line string) bool {
 }
 
 func (r *LineStartReplaceRule) IsEnd(line string) bool {
-	return strings.HasPrefix(line, r.token)
+	return true
 }
 
-func (r *LineStartReplaceRule) Replace([]byte) []byte {
-	log.Printf("line start replace: %s", r.token)
+func (r *LineStartReplaceRule) Replace(line string) []byte {
+	log.Printf("line start replace: %s", line)
 	return []byte(r.content)
+}
+
+type LineRegexReplaceRule struct {
+	expr string
+	repl string
+
+	re *regexp.Regexp
+}
+
+func (r *LineRegexReplaceRule) IsBegin(line string) bool {
+	if r.re == nil {
+		r.re = regexp.MustCompile(r.expr)
+	}
+	return r.re.MatchString(line)
+}
+
+func (r *LineRegexReplaceRule) IsEnd(line string) bool {
+	return true
+}
+
+func (r *LineRegexReplaceRule) Replace(line string) []byte {
+	log.Printf("line regex replace: %s", line)
+	return r.re.ReplaceAll([]byte(line), []byte(r.repl))
 }
 
 func NewReplace(filepath string) *FileReplacer {
@@ -119,7 +143,7 @@ func (r *FileReplacer) Run() error {
 			// 当前行匹配了 beging，我们也需要同步检查是否匹配了 end
 			if r.inRule.IsEnd(trimLine) {
 				// log.Println("is end", trimLine)
-				if _, err := buffer.Write(r.inRule.Replace(nil)); err != nil {
+				if _, err := buffer.Write(r.inRule.Replace(line)); err != nil {
 					return err
 				}
 				r.inRule = nil
@@ -211,6 +235,12 @@ func main() {
 					"```",
 					"./configs/dotenv.sample",
 				),
+			},
+		},
+		{
+			"./docs/mkdocs/deploy/container.md",
+			[]ReplaceRule{
+				&LineRegexReplaceRule{expr: `image: "(cloudiac/[^:]+):latest"`, repl: fmt.Sprintf(`image: "$1:%s"`, version)},
 			},
 		},
 		{
