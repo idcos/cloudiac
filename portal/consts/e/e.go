@@ -70,7 +70,7 @@ func New(code int, errOrStatus ...interface{}) Error {
 		case error:
 			err = v
 		default:
-			logger.Errorf("'msgOrStatus' only supports 'string' or 'error'")
+			logger.Warnf("invalid errOrStatus value type %T(%v)", es, es)
 		}
 	}
 
