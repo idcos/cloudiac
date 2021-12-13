@@ -3,11 +3,12 @@
 package utils
 
 import (
-	"github.com/stretchr/testify/assert"
 	"net/url"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGlobMatch(t *testing.T) {
@@ -59,12 +60,13 @@ func TestFileExists(t *testing.T) {
 
 func TestAesEncrypt(t *testing.T) {
 	text := "xxx"
-	ss, err := AesEncrypt(text)
+	key := "W5ds1zjYGHhh71dCOMMy5bG5ellAzQxx"
+	ss, err := AesEncryptWithKey(text, key)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Log(ss)
-	ds, err := AesDecrypt(ss)
+	ds, err := AesDecryptWithKey(ss, key)
 	if err != nil {
 		t.Fatal(err)
 	}

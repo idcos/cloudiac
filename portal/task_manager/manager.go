@@ -953,7 +953,11 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 	}
 
 	for _, v := range task.Variables {
-		value := utils.EncodeSecretVar(v.Value, v.Sensitive)
+		value := v.Value
+		// 旧版本创建的敏感变量保存时不会添加 secret 前缀，这里判断一下，如果敏感变量无前缀则添加
+		if v.Sensitive && !strings.HasPrefix(v.Value, utils.SecretValuePrefix) {
+			value = utils.EncodeSecretVar(v.Value, v.Sensitive)
+		}
 		switch v.Type {
 		case consts.VarTypeEnv:
 			runnerEnv.EnvironmentVars[v.Name] = value

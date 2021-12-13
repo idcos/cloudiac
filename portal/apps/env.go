@@ -620,7 +620,7 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (ret *models.En
 }
 
 func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm) (*models.EnvDetail, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("create env task %s", form.Id))
+	c.AddLogField("action", fmt.Sprintf("deploy env task %s", form.Id))
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
