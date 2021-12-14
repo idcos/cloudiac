@@ -426,7 +426,7 @@ var stepStatus2TaskStatusMap = map[string]string{
 func stepStatus2TaskStatus(s string) string {
 	taskStatus, ok := stepStatus2TaskStatusMap[s]
 	if !ok {
-		panic(fmt.Errorf("unknown task step status %v", s))
+		panic(fmt.Errorf("unknown task step status '%v'", s))
 	}
 	return taskStatus
 }

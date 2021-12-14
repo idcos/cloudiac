@@ -224,3 +224,8 @@ func GetTaskPlanStep(sess *db.Session, taskId models.Id) (*models.TaskStep, e.Er
 	}
 	return &taskStep, nil
 }
+
+func UpdateTaskStepStatus(sess *db.Session, stepId models.Id, status, message string) error {
+	_, err := sess.Where("id = ?", stepId).Update(models.TaskStep{Status: status, Message: message})
+	return err
+}

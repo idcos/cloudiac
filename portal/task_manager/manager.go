@@ -504,7 +504,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 
 		runErr := m.runTaskStep(ctx, *runTaskReq, task, step)
 		if err := m.processStepDone(task, step); err != nil {
-			logger.Warnf("process step done: %v", err)
+			logger.Warnf("process step done error: %v", err)
 			break
 		}
 
@@ -515,6 +515,9 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 				continue
 			}
 			logger.Infof("run task step: %v", runErr)
+			if err := services.UpdateTaskStepStatus(m.db, step.Id, common.TaskStepFailed, runErr.Error()); err != nil {
+				logger.Panicf("update task step status error: %v", err)
+			}
 			break
 		}
 	}
@@ -795,7 +798,7 @@ func (m *TaskManager) runTaskStep(
 
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("run task step painc: %v", r)
+			err = fmt.Errorf("run task step panic: %v", r)
 			logger.Errorln(err)
 			logger.Debugf("%s", debug.Stack())
 		}
@@ -953,7 +956,11 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 	}
 
 	for _, v := range task.Variables {
-		value := utils.EncodeSecretVar(v.Value, v.Sensitive)
+		value := v.Value
+		// 旧版本创建的敏感变量保存时不会添加 secret 前缀，这里判断一下，如果敏感变量无前缀则添加
+		if v.Sensitive && !strings.HasPrefix(v.Value, utils.SecretValuePrefix) {
+			value = utils.EncodeSecretVar(v.Value, v.Sensitive)
+		}
 		switch v.Type {
 		case consts.VarTypeEnv:
 			runnerEnv.EnvironmentVars[v.Name] = value
@@ -1296,7 +1303,7 @@ func (m *TaskManager) runScanTaskStep(ctx context.Context, taskReq runner.RunTas
 
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("run task step painc: %v", r)
+			err = fmt.Errorf("run task step panic: %v", r)
 			logger.Errorln(err)
 			logger.Debugf("%s", debug.Stack())
 		}

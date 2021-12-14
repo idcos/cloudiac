@@ -14,8 +14,9 @@ import (
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
-	"github.com/pkg/errors"
 	"net/http"
+
+	"github.com/pkg/errors"
 )
 
 func SearchToken(c *ctx.ServiceContext, form *forms.SearchTokenForm) (interface{}, e.Error) {
@@ -231,17 +232,11 @@ func GetWebhookToken(c *ctx.ServiceContext) (*models.Token, e.Error) {
 	)
 
 	token, err = services.DetailTriggerToken(c.DB(), c.OrgId)
-	if err != nil {
+	if err != nil && err.Code() == e.TokenNotExists {
 		// 如果不存在, 则创建一个触发器token
-		if err.Code() == e.TokenNotExists {
-			token, err = CreateToken(c, &forms.CreateTokenForm{
-				Type: consts.TokenTrigger,
-			})
-			if err != nil {
-				return nil, err
-			}
-		}
-		return nil, err
+		token, err = CreateToken(c, &forms.CreateTokenForm{
+			Type: consts.TokenTrigger,
+		})
 	}
 	return token, err
 }

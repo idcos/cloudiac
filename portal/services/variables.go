@@ -301,6 +301,11 @@ func UpdateObjectVars(tx *db.Session, scope string, objectId models.Id, vars []m
 
 	for _, v := range vars {
 		if dbVar, ok := dbVarsMap[v.Name]; ok { // 同名变量己存在，进行更新
+			//敏感变量提交空值表示不进行修改
+			if v.Sensitive && v.Value == "" {
+				continue
+			}
+
 			// 如果没有传 id 则使用己有的 id
 			if v.Id == "" {
 				v.Id = dbVar.Id
