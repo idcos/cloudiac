@@ -102,7 +102,7 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 		// 但发现有任务在 running 状态时函数返回的情况，所以这里进行一次状态检查，如果任务不是退出状态则继续重试
 		if !(models.TaskStep{}).IsExitedStatus(stepResult.Status) {
 			logger.Warnf("pull task status done, but task status is '%s', retry(%d)", stepResult.Status, retryN)
-			return true, nil
+			return true, fmt.Errorf("unexpected task step staus '%s'", stepResult.Status)
 		}
 		return false, nil
 	})
@@ -268,7 +268,7 @@ func pullTaskStepStatus(ctx context.Context, task models.Tasker, step *models.Ta
 					}
 					return nil
 				}
-			case err = <-readErrChan:
+			case err := <-readErrChan:
 				return fmt.Errorf("read message error: %v", err)
 
 			case <-ctx.Done():
@@ -287,7 +287,7 @@ func pullTaskStepStatus(ctx context.Context, task models.Tasker, step *models.Ta
 	logger.Debugf("pull step status done, step=%s(%d), status=%v code=%d",
 		step.Type, step.Index, stepResult.Status, stepResult.Result.ExitCode)
 
-	return stepResult, nil
+	return stepResult, err
 }
 
 var (
