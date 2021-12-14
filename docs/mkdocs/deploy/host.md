@@ -25,7 +25,7 @@
 
 
 ```
-VERSION=v0.8.0
+VERSION=v0.8.1
 mkdir -p /usr/yunji/cloudiac && \
 cd /usr/yunji/cloudiac && \
 for PACK in cloudiac cloudiac-repos cloudiac-providers; do
