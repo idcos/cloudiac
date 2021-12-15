@@ -366,7 +366,11 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 	}
 
 	if form.Q != "" {
-		query = query.WhereLike("iac_env.name", form.Q)
+		query = query.Joins("left join iac_template on iac_env.tpl_id = iac_template.id")
+		query = query.Where("iac_env.name LIKE ? OR iac_template.name LIKE ?",
+			fmt.Sprintf("%%%s%%", form.Q),
+			fmt.Sprintf("%%%s%%", form.Q),
+			)
 	}
 
 	// 默认按创建时间逆序排序
