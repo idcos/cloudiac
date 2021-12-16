@@ -31,6 +31,10 @@ const (
 	DefaultSysName  = "System"
 
 	DefaultTerraformVersion = "0.14.11"
+
+	// token subject
+	JwtSubjectUserAuth = "userAuth" // 用于用户认证
+	JwtSubjectSsoCode  = "ssoCode"  // 用于 sso 单点登录
 )
 
 const (
@@ -154,6 +158,6 @@ var (
 		common.TaskRunning:   EventTaskRunning,
 		common.TaskApproving: EventTaskApproving,
 		common.TaskRejected:  EventTaskFailed,
-		EvenvtCronDrift: EvenvtCronDrift,
+		EvenvtCronDrift:      EvenvtCronDrift,
 	}
 )
