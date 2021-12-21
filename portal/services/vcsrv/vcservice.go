@@ -10,8 +10,9 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/utils"
 	"fmt"
-	"github.com/pkg/errors"
 	"path"
+
+	"github.com/pkg/errors"
 )
 
 /*
@@ -167,7 +168,7 @@ func SetWebhook(vcs *models.Vcs, repoId, apiToken string, triggers []string) err
 	//空值时删除
 	if len(triggers) == 0 {
 		// 判断同vcs、仓库的环境是否存在
-		exist, err := db.Get().Table(models.Env{}.TableName()).
+		exist, err := db.Get().Model(&models.Env{}).
 			Joins("left join iac_template as tpl on iac_env.tpl_id = tpl.id").
 			Where("tpl.vcs_id = ?", vcs.Id).
 			Where("iac_env.triggers IS NOT NULL or iac_env.triggers != '{}'").Exists()
