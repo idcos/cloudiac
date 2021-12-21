@@ -179,7 +179,6 @@ func (c *GinRequest) Bind(form forms.BaseFormer) error {
 		return err
 	}
 
-	bound := false // 己执行过 bind?
 	// ShouldBind() 不支持 HTTP GET 请求通过 body json 传参，
 	// 所以我们针对 json 类型的 content-type 做特殊处理
 	if c.ContentType() == binding.MIMEJSON {
@@ -191,15 +190,13 @@ func (c *GinRequest) Bind(form forms.BaseFormer) error {
 			return err
 		}
 
-		// 如果 body 无内容则我们不进行 json bind
-		if len(body) > 0 {
-			bound = true
+		if len(body) > 0 { // body 有内容才不进行 json bind
 			err = binding.JSON.BindBody(body, form)
 			_ = json.Unmarshal(body, &jsonForm)
+		} else { // 否则使用 Form binding
+			err = c.Context.ShouldBindWith(form, binding.Form)
 		}
-	}
-
-	if !bound {
+	} else {
 		err = c.Context.ShouldBind(form)
 	}
 
