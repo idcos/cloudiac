@@ -119,6 +119,13 @@ const (
 	HttpClientTimeout = 20
 
 	TaskCallbackKafka = "kafka"
+
+	TaskSourceManual       = "manual"
+	TaskSourceDriftPlan    = "driftPlan"
+	TaskSourceDriftApply   = "driftApply"
+	TaskSourceWebhookPlan  = "webhookPlan"
+	TaskSourceWebhookApply = "webhookApply"
+	TaskSourceAutoDestroy  = "autoDestroy"
 )
 
 var (
@@ -154,6 +161,6 @@ var (
 		common.TaskRunning:   EventTaskRunning,
 		common.TaskApproving: EventTaskApproving,
 		common.TaskRejected:  EventTaskFailed,
-		EvenvtCronDrift: EvenvtCronDrift,
+		EvenvtCronDrift:      EvenvtCronDrift,
 	}
 )

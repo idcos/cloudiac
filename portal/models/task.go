@@ -130,6 +130,7 @@ type Task struct {
 	RetryAble   bool   `json:"retryAble" gorm:"default:false"`
 	Callback    string `json:"callback" gorm:"default:''"`       // 外部请求的回调方式
 	IsDriftTask bool   `json:"isDritfTask" gorm:"default:false"` // 是否是偏移检测任务
+	Source      string `json:"type" gorm:"not null;default:manual;enum('manual','driftPlan','driftApply','webhookPlan', 'webhookApply', 'autoDestroy')"`
 }
 
 func (Task) TableName() string {
