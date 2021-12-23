@@ -39,15 +39,16 @@ type Policy struct {
 }
 
 type Meta struct {
-	Category     string `json:"category"`
-	File         string `json:"file"`
-	Id           string `json:"id"`
-	Name         string `json:"name"`
-	PolicyType   string `json:"policy_type"`
-	ReferenceId  string `json:"reference_id"`
-	ResourceType string `json:"resource_type"`
-	Severity     string `json:"severity"`
-	Version      int    `json:"version"`
+	Category      string `json:"category"`
+	File          string `json:"file"`
+	Id            string `json:"id"`
+	Name          string `json:"name"`
+	PolicyType    string `json:"policy_type"`
+	ReferenceId   string `json:"reference_id"`
+	ResourceType  string `json:"resource_type"`
+	Severity      string `json:"severity"`
+	Version       int    `json:"version"`
+	FixSuggestion string `json:"fix_suggestion"`
 }
 
 type Resource struct {
@@ -721,6 +722,138 @@ func EngineScan(regoFile string, configFile string) (interface{}, error) {
 
 	var input interface{}
 	err = json.Unmarshal(configString, &input)
+	if err != nil {
+		return nil, fmt.Errorf("parse input: %w", err)
+	}
+
+	// 初始化 rego 引擎
+	ctx := context.Background()
+	obj := ast.NewObject()
+	env := ast.NewObject()
+
+	for _, s := range os.Environ() {
+		parts := strings.SplitN(s, "=", 2)
+		if len(parts) == 1 {
+			env.Insert(ast.StringTerm(parts[0]), ast.NullTerm())
+		} else if len(parts) > 1 {
+			env.Insert(ast.StringTerm(parts[0]), ast.StringTerm(parts[1]))
+		}
+	}
+
+	obj.Insert(ast.StringTerm("env"), ast.NewTerm(env))
+	obj.Insert(ast.StringTerm("version"), ast.StringTerm(version.Version))
+	obj.Insert(ast.StringTerm("commit"), ast.StringTerm(version.Vcs))
+
+	info := ast.NewTerm(obj)
+
+	regoArgs := []func(*rego.Rego){
+		rego.Input(input),
+		rego.Query("data"),
+		rego.Load([]string{regoFile}, nil),
+		rego.Runtime(info),
+	}
+
+	// 执行规则检查
+	r := rego.New(regoArgs...)
+	resultSet, err := r.Eval(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("evaluating policy: %w", err)
+	}
+
+	// 获取结果
+	var result interface{}
+	if len(resultSet) > 0 && len(resultSet[0].Expressions) > 0 {
+		result = resultSet[0].Expressions[0].Value
+	}
+
+	return result, nil
+}
+
+type Rego struct {
+	filePath string
+	content  string
+	pkg      string
+	rules    []string
+
+	compiler *ast.Compiler
+}
+
+func (r *Rego) LoadRego() (string, error) {
+	content, err := ioutil.ReadFile(r.filePath)
+	if err != nil {
+		return "", nil
+	}
+	return string(content), nil
+}
+
+func (r *Rego) Compile() (*ast.Compiler, error) {
+	compiler, err := ast.CompileModules(map[string]string{
+		r.filePath: r.content,
+	})
+	return compiler, err
+}
+
+func (r *Rego) ParsePackage() (string, error) {
+	return strings.TrimPrefix(r.compiler.Modules[r.filePath].Package.String(), "package "), nil
+}
+
+func (r *Rego) ParseRules() ([]string, error) {
+	var rules []string
+	for _, r := range r.compiler.Modules[r.filePath].Rules {
+		rules = append(rules, r.Head.Name.String())
+	}
+
+	return rules, nil
+}
+
+func (r *Rego) String() string {
+	str := fmt.Sprintf("file: %s\n", r.filePath)
+	str += fmt.Sprintf("package: %s\n", r.pkg)
+	for i, rule := range r.rules {
+		str += fmt.Sprintf("rule[%d]: %s\n", i, rule)
+	}
+	return str
+}
+
+// TODO: split rego parse only
+func RegoParse(regoFile string, inputFile string) (interface{}, error) {
+	reg := Rego{
+		filePath: regoFile,
+	}
+	var err error
+
+	reg.content, err = reg.LoadRego()
+	if err != nil {
+		fmt.Printf("error load rego file %+v", err)
+		return nil, nil
+	}
+
+	reg.compiler, err = reg.Compile()
+	if err != nil {
+		fmt.Printf("error compiling rego %+v", err)
+		return nil, nil
+	}
+
+	reg.pkg, err = reg.ParsePackage()
+	if err != nil {
+		fmt.Printf("error parse package %+v", err)
+	}
+
+	reg.rules, err = reg.ParseRules()
+	if err != nil {
+		fmt.Printf("error parse rules %+v", err)
+	}
+
+	fmt.Printf("%s\n", reg.String())
+
+	// 读取待执行的输入文件
+	inputBuf, err := os.ReadFile(inputFile)
+	if err != nil {
+		return nil, fmt.Errorf("read configFile: %w", err)
+	}
+
+	var input interface{}
+	err = json.Unmarshal(inputBuf, &input)
 	if err != nil {
 		return nil, fmt.Errorf("parse input: %w", err)
 	}

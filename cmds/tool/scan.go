@@ -215,3 +215,22 @@ func RunCmd(cmdString string) (string, error) {
 	}
 	return out.String(), nil
 }
+
+type ParseCmd struct {
+}
+
+func (*ParseCmd) Usage() string {
+	return ""
+}
+
+func (c *ParseCmd) Execute(args []string) error {
+	// iac-tool parse xxx.rego xxx.json
+	if len(args) < 2 {
+		return fmt.Errorf("missing iac file or rego script")
+	}
+	regoFile := args[0]
+	inputPath := args[1]
+	_, err := policy.RegoParse(regoFile, inputPath)
+	fmt.Printf("Execute rego parse return err %+v", err)
+	return err
+}
