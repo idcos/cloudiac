@@ -2,7 +2,10 @@
 
 package models
 
-import "cloudiac/portal/libs/db"
+import (
+	"cloudiac/portal/libs/db"
+	"github.com/lib/pq"
+)
 
 type Template struct {
 	SoftDeleteModel
@@ -37,6 +40,9 @@ type Template struct {
 	LastScanTaskId Id `json:"lastScanTaskId" gorm:"size:32"` // 最后一次策略扫描任务 id
 
 	TfVersion string `json:"tfVersion" gorm:"default:''"` // 模版使用的terraform版本号
+
+	// 触发器设置
+	Triggers pq.StringArray `json:"triggers" gorm:"type:text" swaggertype:"array,string"` // 触发器。commit（每次推送执行合规检测）
 }
 
 func (Template) TableName() string {
