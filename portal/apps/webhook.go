@@ -10,8 +10,6 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/utils/logs"
-	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -75,8 +73,7 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 		sysUserId := models.Id(consts.SysUserId)
 		//todo 处理云模板的触发器
 		if len(tpl.Triggers) > 0 {
-			createTplScan(sysUserId, &tpl, pushRef, baseRef,
-				headRef, prStatus, afterCommit, beforeCommit, prId)
+			createTplScan(sysUserId, &tpl, pushRef, baseRef, headRef, prStatus, afterCommit, beforeCommit)
 		}
 		envs, err := services.GetEnvByTplId(tx, tpl.Id)
 		if err != nil {
