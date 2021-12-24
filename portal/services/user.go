@@ -119,7 +119,8 @@ func CheckPasswordFormat(password string) e.Error {
 func GetUserDetailById(query *db.Session, userId models.Id) (*models.UserWithRoleResp, e.Error) {
 	d := models.UserWithRoleResp{}
 	table := models.User{}.TableName()
-	if err := query.Model(&models.User{}).Where(fmt.Sprintf("%s.id = ?", table), userId).First(&d); err != nil {
+	if err := query.Model(&models.User{}).
+		Where(fmt.Sprintf("%s.id = ?", table), userId).Scan(&d); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.UserNotExists, err)
 		}
