@@ -71,7 +71,7 @@ services:
 
   iac-web:
     container_name: iac-web
-    image: "cloudiac/iac-web:v0.8.0"
+    image: "cloudiac/iac-web:v0.8.1"
     ports:
       - 80:80
     restart: always
