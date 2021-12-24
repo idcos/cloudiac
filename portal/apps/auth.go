@@ -65,18 +65,7 @@ func GenerateSsoToken(c *ctx.ServiceContext) (resp interface{}, err e.Error) {
 	return data, err
 }
 
-type VerifySsoTokenForm struct {
-	forms.BaseForm
-
-	Token string `json:"token" form:"token" binding:"required"`
-}
-
-type VerifySsoTokenResp struct {
-	UserId string
-	Email  string
-}
-
-func VerifySsoToken(c *ctx.ServiceContext, form *VerifySsoTokenForm) (resp *VerifySsoTokenResp, err e.Error) {
+func VerifySsoToken(c *ctx.ServiceContext, form *forms.VerifySsoTokenForm) (resp *models.VerifySsoTokenResp, err e.Error) {
 	// TODO
 	return nil, nil
 }
