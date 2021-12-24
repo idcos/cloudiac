@@ -31,6 +31,9 @@ const (
 	DefaultSysName  = "System"
 
 	DefaultTerraformVersion = "0.14.11"
+
+	DirRoot                          = "/"
+	PolicyGroupDownloadTimeoutSecond = 20 * time.Second
 )
 
 const (
@@ -154,6 +157,6 @@ var (
 		common.TaskRunning:   EventTaskRunning,
 		common.TaskApproving: EventTaskApproving,
 		common.TaskRejected:  EventTaskFailed,
-		EvenvtCronDrift: EvenvtCronDrift,
+		EvenvtCronDrift:      EvenvtCronDrift,
 	}
 )

@@ -3,10 +3,25 @@
 package services
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/services/vcsrv"
+	"cloudiac/utils"
 	"fmt"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"io/fs"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"sync"
+	"syscall"
+	"time"
 )
 
 func CreatePolicyGroup(tx *db.Session, group *models.PolicyGroup) (*models.PolicyGroup, e.Error) {
@@ -135,4 +150,209 @@ func GetPolicyGroupByTplId(tx *db.Session, id models.Id) ([]models.PolicyGroup, 
 		return nil, e.New(e.DBError, err)
 	}
 	return groups, nil
+}
+
+type PolicyGroupImportError struct {
+	File  string `json:"file"`
+	Error string `json:"error"`
+}
+
+type PolicyGroupImportSummary struct {
+	PolicyCount int                      `json:"policyCount"`
+	ErrorCount  int                      `json:"errorCount"`
+	Errors      []PolicyGroupImportError `json:"errors"`
+}
+
+type DownloadPolicyGroupResult struct {
+	Error   e.Error                   `json:"-"`
+	Group   *models.PolicyGroup       `json:"group"`
+	Summary *PolicyGroupImportSummary `json:"summary"`
+}
+
+func DownloadPolicyGroup(tx *db.Session, result *DownloadPolicyGroupResult, wg *sync.WaitGroup) {
+	group := result.Group
+
+	defer wg.Done()
+
+	// 生成临时工作目录
+	tmpDir, err := os.MkdirTemp("", "*")
+	if err != nil {
+		result.Error = e.New(e.InternalError, errors.Wrapf(err, "create tmp dir"), http.StatusInternalServerError)
+		return
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// 1. git download
+	branch := group.GitTags
+	if group.Branch != "" {
+		branch = group.Branch
+	}
+	repoAddr, commitId, err := GetPolicyGroupCommitId(tx, group.VcsId, group.RepoId, branch)
+	if err != nil {
+		result.Error = e.New(e.InternalError, errors.Wrapf(err, "create tmp dir"), http.StatusInternalServerError)
+		return
+	}
+	// generate checkout command line
+	cmdline := genGitCheckoutScript(tmpDir, repoAddr, commitId, group.Dir)
+
+	// git checkout
+	cmd := exec.Command("sh", "-c", cmdline)
+	cmd.Dir = tmpDir
+	// setpgid 保证可以杀死进程及子进程
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
+	done := make(chan error)
+	go func() {
+		if err := cmd.Start(); err != nil {
+			logrus.Errorf("error start cmd %s, err: %v", cmd.Path, err)
+			done <- err
+		}
+		done <- cmd.Wait()
+	}()
+
+	select {
+	case <-time.After(consts.PolicyGroupDownloadTimeoutSecond):
+		if err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL); err != nil {
+			result.Error = e.New(e.InternalError, errors.Wrapf(err, fmt.Sprintf("kill timeout process %s error %v", cmd.Path, err)), http.StatusInternalServerError)
+		} else {
+			result.Error = e.New(e.InternalError, errors.Wrapf(err, fmt.Sprintf("kill timeout process %s with timeout %s seconds", cmd.Path, consts.PolicyGroupDownloadTimeoutSecond/time.Second)), http.StatusInternalServerError)
+		}
+		return
+	case err = <-done:
+		if err != nil {
+			result.Error = e.New(e.InternalError, errors.Wrapf(err, fmt.Sprintf("command complete with error %v", err)), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		err = fmt.Errorf("git checkout error %v, output %s", err, output)
+		result.Error = e.New(e.InternalError, errors.Wrapf(err, "git checkout"), http.StatusInternalServerError)
+		return
+	}
+
+	// TODO: 2. parse policy
+	_, er := ParsePolicyGroup(filepath.Join(tmpDir, "code"))
+	if er != nil {
+		result.Error = e.New(e.InternalError, errors.Wrapf(er, "parse rego"), http.StatusInternalServerError)
+		return
+	}
+
+	// TODO: 3. insert policy to db
+}
+
+func GetPolicyGroupCommitId(tx *db.Session, vcsId models.Id, repoId models.Id, branch string) (repoAddr, commitId string, err e.Error) {
+	vcs, err := QueryVcsByVcsId(vcsId, tx)
+	if err != nil {
+		if e.IsRecordNotFound(err) {
+			return "", "", e.New(e.VcsNotExists, err)
+		}
+		return "", "", e.New(e.DBError, err)
+	}
+
+	repo, er := vcsrv.GetRepo(vcs, repoId.String())
+	if er != nil {
+		return "", "", e.New(e.VcsError, er)
+	}
+
+	commitId, er = repo.BranchCommitId(branch)
+	if er != nil {
+		return "", "", e.New(e.VcsError, er)
+	}
+
+	repoAddr, er = vcsrv.GetRepoAddress(repo)
+	if er != nil {
+		return "", "", e.New(e.VcsError, er)
+	}
+
+	token, er := vcs.DecryptToken()
+	if er != nil {
+		return "", "", e.New(e.VcsError, er)
+	}
+
+	if repoAddr == "" {
+		return "", "", e.New(e.BadParam, fmt.Errorf("repo address is blank"))
+	}
+
+	u, er := url.Parse(repoAddr)
+	if er != nil {
+		return "", "", e.New(e.InternalError, errors.Wrapf(er, "parse url: %v", repoAddr))
+	} else if token != "" {
+		u.User = url.UserPassword("token", token)
+	}
+	repoAddr = u.String()
+
+	return repoAddr, commitId, nil
+}
+
+var gitCheckoutScriptCommandTpl = `#!/bin/sh
+cd '{{.WorkingDir}}'
+git clone '{{.RepoAddress}}' code && \
+cd code && \
+echo "checkout $(git rev-parse --short HEAD)." && \
+git checkout -q '{{.Revision}}' && \
+cd '{{.SubDir}}'
+`
+
+func genGitCheckoutScript(wd string, repoAddr string, revision string, dir string) (command string) {
+	if revision == "" || revision == "/" {
+		revision = "./"
+	}
+	cmdline := utils.SprintTemplate(gitCheckoutScriptCommandTpl, map[string]interface{}{
+		"WorkingDir":  wd,
+		"RepoAddress": repoAddr,
+		"SubDir":      dir,
+		"Revision":    revision,
+	})
+
+	return cmdline
+}
+
+type RegoFile struct {
+	MetaFile string
+	RegoFile string
+}
+
+func ParsePolicyGroup(dirname string) ([]*models.Policy, error) {
+	files, err := ioutil.ReadDir(dirname)
+	if err != nil {
+		return nil, err
+	}
+
+	var regoFiles []fs.FileInfo
+	copy(regoFiles, files)
+	var regos []RegoFile
+	// 遍历当前目录
+	for _, f := range files {
+		// 优先处理 json 的 meta 及对应的 rego 文件
+		if filepath.Ext(f.Name()) == "json" {
+			if utils.FileExist(filepath.Base(f.Name()) + ".rego") {
+				regos = append(regos, RegoFile{
+					MetaFile: filepath.Base(f.Name()) + ".json",
+					RegoFile: filepath.Base(f.Name()) + ".rego",
+				})
+				// 将已经处理的 rego 排除
+				for i, rf := range regoFiles {
+					if rf.Name() == filepath.Base(f.Name())+".rego" {
+						regoFiles[i] = regoFiles[len(regoFiles)-1]
+						regoFiles = regoFiles[:len(regoFiles)-1]
+						break
+					}
+				}
+			}
+		}
+	}
+	// 遍历其他没有 json meta 的 rego 文件
+	for _, f := range regoFiles {
+		if filepath.Ext(f.Name()) == "rego" {
+			regos = append(regos, RegoFile{
+				RegoFile: filepath.Base(f.Name()) + ".rego",
+			})
+		}
+	}
+
+	// TODO: parse rego header
+
+	return nil, nil
 }

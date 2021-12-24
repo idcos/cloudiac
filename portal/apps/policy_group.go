@@ -13,7 +13,9 @@ import (
 	"cloudiac/portal/services"
 	"cloudiac/utils"
 	"fmt"
+	"github.com/Masterminds/semver"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -32,6 +34,30 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 	g := models.PolicyGroup{
 		Name:        form.Name,
 		Description: form.Description,
+		Label:       form.Label,
+		VcsId:       form.VcsId,
+		RepoId:      form.ReopId,
+	}
+	if form.HasKey("gitTags") {
+		g.GitTags = form.GitTags
+		// 检查是否有效的语义话版本
+		v, err := semver.NewVersion(g.GitTags)
+		if err != nil {
+			return nil, e.AutoNew(fmt.Errorf("git tag is invalid semver"), e.BadParam)
+		}
+		g.Version = v.String()
+	} else if form.HasKey("branch") {
+		g.Branch = form.Branch
+		// RFC: 选择了 branch，版本号标记应该为多少？
+		g.Version = "0.0.0"
+		g.UseLatest = true
+	} else {
+		return nil, e.New(e.BadParam, http.StatusBadRequest)
+	}
+	if form.HasKey("dir") {
+		g.Dir = form.Dir
+	} else {
+		g.Dir = consts.DirRoot
 	}
 
 	group, err := services.CreatePolicyGroup(tx, &g)
@@ -42,6 +68,18 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 		c.Logger().Errorf("error creating policy group, err %s", err)
 		_ = tx.Rollback()
 		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	// 策略仓库同步
+	var wg sync.WaitGroup
+	result := services.DownloadPolicyGroupResult{
+		Group: group,
+	}
+	wg.Add(1)
+	go services.DownloadPolicyGroup(tx, &result, &wg)
+	wg.Wait()
+	if result.Error != nil {
+		return nil, result.Error
 	}
 
 	if err := tx.Commit(); err != nil {
