@@ -12,8 +12,6 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-
-	"github.com/dgrijalva/jwt-go"
 )
 
 // Login 用户登陆
@@ -51,15 +49,20 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err 
 	return data, nil
 }
 
-type SsoTokenClaims struct {
-	jwt.StandardClaims
+// GenerateSsoToken 生成 SSO token
+func GenerateSsoToken(c *ctx.ServiceContext) (resp interface{}, err e.Error) {
 
-	UserId models.Id `json:"userId"`
-}
+	token, er := services.GenerateSsoToken(c.UserId, 1*24*time.Hour)
+	if er != nil {
+		c.Logger().Errorf("userId [%s] generateToken error: %v", c.UserId, er)
+		return nil, e.New(e.InternalError, er, http.StatusInternalServerError)
+	}
 
-func GenerateSsoToken(c *ctx.ServiceContext) (resp *SsoTokenClaims, err e.Error) {
-	// TODO
-	return nil, nil
+	data := models.SsoResp{
+		Token: token,
+	}
+
+	return data, err
 }
 
 type VerifySsoTokenForm struct {
@@ -69,8 +72,8 @@ type VerifySsoTokenForm struct {
 }
 
 type VerifySsoTokenResp struct {
-	UserId   string
-	Username string
+	UserId string
+	Email  string
 }
 
 func VerifySsoToken(c *ctx.ServiceContext, form *VerifySsoTokenForm) (resp *VerifySsoTokenResp, err e.Error) {
