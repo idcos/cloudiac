@@ -43,3 +43,7 @@ type LoginResp struct {
 	//UserInfo *models.User
 	Token string `json:"token" example:"eyJhbGciO..."` // 登陆令牌
 }
+
+type SsoResp struct {
+	Token string `json:"token" example:"eyJhbGciO..."` // 登陆令牌
+}
