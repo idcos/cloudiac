@@ -45,5 +45,10 @@ type LoginResp struct {
 }
 
 type SsoResp struct {
-	Token string `json:"token" example:"eyJhbGciO..."` // 登陆令牌
+	Token string `json:"token" example:"eyJhbGciO..."` // SSO令牌
+}
+
+type VerifySsoTokenResp struct {
+	UserId string
+	Email  string
 }
