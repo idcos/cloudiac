@@ -178,13 +178,13 @@ func (m *TaskManager) beginCronDriftTask() {
 			continue
 		}
 		// 先查询这个环境有没有排队中的偏移检测任务了, 有就不创建了
-		existCronPengdingTask, err := services.ListPendingCronTask(m.db, env.Id)
+		existCronPendingTask, err := services.ListPendingCronTask(m.db, env.Id)
 		if err != nil {
 			logger.Errorf("create cronDriftTask failed, error: %v", err)
 			continue
 		}
 		// 如果查询出来有排队或执行中的漂移检测任务，则本次跳过
-		if existCronPengdingTask {
+		if existCronPendingTask {
 			continue
 		}
 		// 这里每次都去解析env表保存的最新的cron 表达式

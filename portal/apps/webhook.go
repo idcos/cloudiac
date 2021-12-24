@@ -9,6 +9,8 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/utils/logs"
+	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -47,6 +49,8 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 	}
 	// 查询云模板对应的环境
 	for _, tpl := range tplList {
+		sysUserId := models.Id(consts.SysUserId)
+		//todo 处理云模板的触发器
 		envs, err := services.GetEnvByTplId(tx, tpl.Id)
 		if err != nil {
 			logs.Get().WithField("webhook", "searchEnv").
@@ -54,21 +58,34 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 			// 记录个日志就行
 			continue
 		}
-		sysUserId := models.Id(consts.SysUserId)
+
 		for _, env := range envs {
 			for _, v := range env.Triggers {
 				var er error
 				// 判断vcs类型，不同vcs, 入参不同
 				switch vcs.VcsType {
 				case consts.GitTypeGitLab:
-					er = gitlabActionPrOrPush(tx, v, sysUserId, &env, &tpl, form)
+					//er = gitlabActionPrOrPush(tx, v, sysUserId, &env, &tpl, form)
+					er = actionPrOrPush(tx, v, sysUserId, &env, &tpl, form.Ref,
+						form.ObjectAttributes.TargetBranch, form.ObjectAttributes.SourceBranch,
+						form.ObjectAttributes.State, form.After, form.Before, form.ObjectAttributes.Iid)
 				case consts.GitTypeGitEA:
-					er = giteaActionPrOrPush(tx, v, sysUserId, &env, &tpl, form)
+					//er = giteaActionPrOrPush(tx, v, sysUserId, &env, &tpl, form)
+					er = actionPrOrPush(tx, v, sysUserId, &env, &tpl, form.Ref,
+						form.PullRequest.Base.Ref, form.PullRequest.Head.Ref,
+						form.Action, form.After, form.Before, form.PullRequest.Number)
 				case consts.GitTypeGithub:
-					er = githubActionPrOrPush(tx, v, sysUserId, &env, &tpl, form)
+					//er = githubActionPrOrPush(tx, v, sysUserId, &env, &tpl, form)
+					er = actionPrOrPush(tx, v, sysUserId, &env, &tpl, form.Ref,
+						form.PullRequest.Base.Ref, form.PullRequest.Head.Ref,
+						form.Action, form.After, form.Before, form.PullRequest.Number)
 				case consts.GitTypeGitee:
-					er = giteeActionPrOrPush(tx, v, sysUserId, &env, &tpl, form)
-
+					//er = giteeActionPrOrPush(tx, v, sysUserId, &env, &tpl, form)
+					er = actionPrOrPush(tx, v, sysUserId, &env, &tpl, form.Ref,
+						form.PullRequest.Base.Ref, form.PullRequest.Head.Ref,
+						form.Action, form.After, form.Before, form.PullRequest.Number)
+				default:
+					er = errors.New(fmt.Sprintf("vcs type error %s", vcs.VcsType))
 				}
 
 				if er != nil {
@@ -89,7 +106,7 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 	return nil, err
 }
 
-func CreateWebhookTask(tx *db.Session, taskType, revision, commitId string, userId models.Id, env *models.Env, tpl *models.Template, prId int) error {
+func CreateWebhookTask(tx *db.Session, taskType, revision, commitId string, userId models.Id, env *models.Env, tpl *models.Template, prId int, source string) error {
 	// 计算变量列表
 	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
 	if er != nil {
@@ -111,6 +128,7 @@ func CreateWebhookTask(tx *db.Session, taskType, revision, commitId string, user
 			RunnerId:    env.RunnerId,
 			StepTimeout: env.Timeout,
 		},
+		Source: source,
 	}
 
 	task, err := services.CreateTask(tx, tpl, env, *task)
@@ -119,7 +137,7 @@ func CreateWebhookTask(tx *db.Session, taskType, revision, commitId string, user
 		logs.Get().Errorf("error creating task, err %s", err)
 		return e.New(err.Code(), err, http.StatusInternalServerError)
 	}
-	if prId != 0 {
+	if prId != 0 && taskType == models.TaskTypePlan {
 		// 创建pr与作业的关系
 		if err := services.CreateVcsPr(tx, models.VcsPr{
 			PrId:   prId,
@@ -135,102 +153,31 @@ func CreateWebhookTask(tx *db.Session, taskType, revision, commitId string, user
 	return nil
 }
 
-func gitlabActionPrOrPush(tx *db.Session, trigger string, userId models.Id,
-	env *models.Env, tpl *models.Template, form forms.WebhooksApiHandler) error {
+func actionPrOrPush(tx *db.Session, trigger string, userId models.Id,
+	env *models.Env, tpl *models.Template, pushRef, baseRef, headRef, prStatus, afterCommit, beforeCommit string, prId int) error {
+
 	// 比较分支
 	// 如果同时不满足push分支和pr目标分支则不做动作
-	if env.Revision != strings.Replace(form.Ref, RefHeads, "", -1) &&
-		env.Revision != form.ObjectAttributes.TargetBranch {
+	if env.Revision != strings.Replace(pushRef, RefHeads, "", -1) &&
+		env.Revision != baseRef {
 		logs.Get().WithField("webhook", "createTask").
 			Infof("tplId: %s, envId: %s, revision don't match, env.revision: %s, %s or %s",
-				env.TplId, env.Id, env.Revision, form.ObjectAttributes.TargetBranch, form.Ref)
+				env.TplId, env.Id, env.Revision, pushRef, baseRef)
 		return nil
 	}
 	// 判断pr类型并确认动作
 	// open状态的mr进行plan计划
-	if trigger == consts.EnvTriggerPRMR && form.ObjectAttributes.State == GitlabPrOpened {
-		return CreateWebhookTask(tx, models.TaskTypePlan, form.ObjectAttributes.SourceBranch, "", userId, env, tpl, form.ObjectAttributes.Iid)
+	if trigger == consts.EnvTriggerPRMR && prStatus == GitlabPrOpened {
+		return CreateWebhookTask(tx, models.TaskTypePlan, headRef, "", userId, env, tpl, prId, consts.TaskSourceWebhookPlan)
 	}
 	// push操作，执行apply计划
-	if trigger == consts.EnvTriggerCommit && form.ObjectKind == GitlabObjectKindPush {
-		return CreateWebhookTask(tx, models.TaskTypeApply, env.Revision, form.After, userId, env, tpl, 0)
+	if trigger == consts.EnvTriggerCommit && beforeCommit != "" {
+		return CreateWebhookTask(tx, models.TaskTypeApply, env.Revision, afterCommit, userId, env, tpl, prId, consts.TaskSourceWebhookApply)
 	}
 
 	return nil
 }
-func giteaActionPrOrPush(tx *db.Session, trigger string, userId models.Id,
-	env *models.Env, tpl *models.Template, form forms.WebhooksApiHandler) error {
 
-	// 比较分支
-	// 如果同时不满足push分支和pr目标分支则不做动作
-	if env.Revision != form.PullRequest.Base.Ref &&
-		env.Revision != strings.Replace(form.Ref, RefHeads, "", -1) {
-		logs.Get().WithField("webhook", "createTask").
-			Infof("tplId: %s, envId: %s, revision don't match, env.revision: %s, %s or %s",
-				env.TplId, env.Id, env.Revision, form.ObjectAttributes.TargetBranch, form.Ref)
-		return nil
-	}
-
-	// 判断pr类型并确认动作
-	// open状态的mr进行plan计划
-	// gitea状态值与gitlab相同，这里统一使用 GitlabPrOpened
-	if trigger == consts.EnvTriggerPRMR && form.Action == GitlabPrOpened {
-		return CreateWebhookTask(tx, models.TaskTypePlan, form.PullRequest.Head.Ref, "", userId, env, tpl, form.PullRequest.Number)
-	}
-	// push操作，执行apply计划
-	if trigger == consts.EnvTriggerCommit && form.Before != "" {
-		return CreateWebhookTask(tx, models.TaskTypeApply, env.Revision, form.After, userId, env, tpl, 0)
-	}
-	return nil
-}
-
-func githubActionPrOrPush(tx *db.Session, trigger string, userId models.Id,
-	env *models.Env, tpl *models.Template, form forms.WebhooksApiHandler) error {
-	// 比较分支
-	// 如果同时不满足push分支和pr目标分支则不做动作
-	if env.Revision != form.PullRequest.Base.Ref &&
-		env.Revision != strings.Replace(form.Ref, RefHeads, "", -1) {
-		logs.Get().WithField("webhook", "createTask").
-			Infof("tplId: %s, envId: %s, revision don't match, env.revision: %s, %s or %s",
-				env.TplId, env.Id, env.Revision, form.ObjectAttributes.TargetBranch, form.Ref)
-		return nil
-	}
-
-	// 判断pr类型并确认动作
-	// open状态的mr进行plan计划
-	// gitea状态值与gitlab相同，这里统一使用 GitlabPrOpened
-	if trigger == consts.EnvTriggerPRMR && form.Action == GitlabPrOpened {
-		return CreateWebhookTask(tx, models.TaskTypePlan, form.PullRequest.Head.Ref, "", userId, env, tpl, form.PullRequest.Number)
-	}
-	// push操作，执行apply计划
-	if trigger == consts.EnvTriggerCommit && form.Before != "" {
-		return CreateWebhookTask(tx, models.TaskTypeApply, env.Revision, form.After, userId, env, tpl, 0)
-	}
-	return nil
-}
-
-func giteeActionPrOrPush(tx *db.Session, trigger string, userId models.Id,
-	env *models.Env, tpl *models.Template, form forms.WebhooksApiHandler) error {
-	// 比较分支
-	// 如果同时不满足push分支和pr目标分支则不做动作
-	if env.Revision != form.PullRequest.Base.Ref &&
-		env.Revision != strings.Replace(form.Ref, RefHeads, "", -1) {
-		logs.Get().WithField("webhook", "createTask").
-			Infof("tplId: %s, envId: %s, revision don't match, env.revision: %s, %s or %s",
-				env.TplId, env.Id, env.Revision, form.ObjectAttributes.TargetBranch, form.Ref)
-		return nil
-	}
-	// 判断pr类型并确认动作
-	// open状态的mr进行plan计划
-	if trigger == consts.EnvTriggerPRMR && form.Action == GiteePrOpen {
-		return CreateWebhookTask(tx, models.TaskTypePlan, form.PullRequest.Head.Ref, "", userId, env, tpl, form.PullRequest.Number)
-	}
-	// push操作，执行apply计划
-	if trigger == consts.EnvTriggerCommit && form.Before != "" {
-		return CreateWebhookTask(tx, models.TaskTypeApply, env.Revision, form.After, userId, env, tpl, 0)
-	}
-	return nil
-}
 
 func getVcsRepoId(vcsType string, form forms.WebhooksApiHandler) string {
 	switch vcsType {

@@ -122,6 +122,13 @@ const (
 	HttpClientTimeout = 20
 
 	TaskCallbackKafka = "kafka"
+
+	TaskSourceManual       = "manual"
+	TaskSourceDriftPlan    = "driftPlan"
+	TaskSourceDriftApply   = "driftApply"
+	TaskSourceWebhookPlan  = "webhookPlan"
+	TaskSourceWebhookApply = "webhookApply"
+	TaskSourceAutoDestroy  = "autoDestroy"
 )
 
 var (
