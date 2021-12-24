@@ -1,6 +1,7 @@
 package apps
 
 import (
+	"cloudiac/common"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
@@ -9,8 +10,6 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/utils/logs"
-	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -47,10 +46,35 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 		c.Logger().Errorf("webhook get tpl err: %s", err)
 		return nil, e.New(e.DBError, err)
 	}
+
+	var (
+		pushRef      string = form.Ref
+		baseRef      string = form.PullRequest.Base.Ref
+		headRef      string = form.PullRequest.Head.Ref
+		prStatus     string = form.Action
+		afterCommit  string = form.After
+		beforeCommit string = form.Before
+		prId         int    = form.PullRequest.Number
+	)
+
 	// 查询云模板对应的环境
 	for _, tpl := range tplList {
+		switch vcs.VcsType {
+		case consts.GitTypeGitLab:
+			baseRef = form.ObjectAttributes.TargetBranch
+			headRef = form.ObjectAttributes.SourceBranch
+			prStatus = form.ObjectAttributes.State
+			prId = form.ObjectAttributes.Iid
+			//case consts.GitTypeGitEA:
+			//case consts.GitTypeGithub:
+			//case consts.GitTypeGitee:
+		}
+
 		sysUserId := models.Id(consts.SysUserId)
 		//todo 处理云模板的触发器
+		if len(tpl.Triggers) > 0 {
+			createTplScan(sysUserId, &tpl, pushRef, baseRef, headRef, prStatus, afterCommit, beforeCommit)
+		}
 		envs, err := services.GetEnvByTplId(tx, tpl.Id)
 		if err != nil {
 			logs.Get().WithField("webhook", "searchEnv").
@@ -61,38 +85,11 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 
 		for _, env := range envs {
 			for _, v := range env.Triggers {
-				var er error
-				// 判断vcs类型，不同vcs, 入参不同
-				switch vcs.VcsType {
-				case consts.GitTypeGitLab:
-					//er = gitlabActionPrOrPush(tx, v, sysUserId, &env, &tpl, form)
-					er = actionPrOrPush(tx, v, sysUserId, &env, &tpl, form.Ref,
-						form.ObjectAttributes.TargetBranch, form.ObjectAttributes.SourceBranch,
-						form.ObjectAttributes.State, form.After, form.Before, form.ObjectAttributes.Iid)
-				case consts.GitTypeGitEA:
-					//er = giteaActionPrOrPush(tx, v, sysUserId, &env, &tpl, form)
-					er = actionPrOrPush(tx, v, sysUserId, &env, &tpl, form.Ref,
-						form.PullRequest.Base.Ref, form.PullRequest.Head.Ref,
-						form.Action, form.After, form.Before, form.PullRequest.Number)
-				case consts.GitTypeGithub:
-					//er = githubActionPrOrPush(tx, v, sysUserId, &env, &tpl, form)
-					er = actionPrOrPush(tx, v, sysUserId, &env, &tpl, form.Ref,
-						form.PullRequest.Base.Ref, form.PullRequest.Head.Ref,
-						form.Action, form.After, form.Before, form.PullRequest.Number)
-				case consts.GitTypeGitee:
-					//er = giteeActionPrOrPush(tx, v, sysUserId, &env, &tpl, form)
-					er = actionPrOrPush(tx, v, sysUserId, &env, &tpl, form.Ref,
-						form.PullRequest.Base.Ref, form.PullRequest.Head.Ref,
-						form.Action, form.After, form.Before, form.PullRequest.Number)
-				default:
-					er = errors.New(fmt.Sprintf("vcs type error %s", vcs.VcsType))
-				}
-
-				if er != nil {
+				if er := actionPrOrPush(tx, v, sysUserId, &env, &tpl, pushRef, baseRef,
+					headRef, prStatus, afterCommit, beforeCommit, prId); er != nil {
 					logs.Get().WithField("webhook", "createTask").
 						Errorf("create task er: %v, envId: %s", er, env.Id)
 				}
-
 			}
 		}
 	}
@@ -153,18 +150,26 @@ func CreateWebhookTask(tx *db.Session, taskType, revision, commitId string, user
 	return nil
 }
 
+func checkVcsCallbackMessage(revision, pushRef, baseRef string) bool {
+	// 比较分支
+	// 如果同时不满足push分支和pr目标分支则不做动作
+	if revision != strings.Replace(pushRef, RefHeads, "", -1) &&
+		revision != baseRef {
+		return false
+	}
+	return true
+}
+
 func actionPrOrPush(tx *db.Session, trigger string, userId models.Id,
 	env *models.Env, tpl *models.Template, pushRef, baseRef, headRef, prStatus, afterCommit, beforeCommit string, prId int) error {
 
-	// 比较分支
-	// 如果同时不满足push分支和pr目标分支则不做动作
-	if env.Revision != strings.Replace(pushRef, RefHeads, "", -1) &&
-		env.Revision != baseRef {
+	if !checkVcsCallbackMessage(env.Revision, pushRef, baseRef) {
 		logs.Get().WithField("webhook", "createTask").
 			Infof("tplId: %s, envId: %s, revision don't match, env.revision: %s, %s or %s",
 				env.TplId, env.Id, env.Revision, pushRef, baseRef)
 		return nil
 	}
+
 	// 判断pr类型并确认动作
 	// open状态的mr进行plan计划
 	if trigger == consts.EnvTriggerPRMR && prStatus == GitlabPrOpened {
@@ -178,7 +183,6 @@ func actionPrOrPush(tx *db.Session, trigger string, userId models.Id,
 	return nil
 }
 
-
 func getVcsRepoId(vcsType string, form forms.WebhooksApiHandler) string {
 	switch vcsType {
 	case consts.GitTypeGitLab:
@@ -191,5 +195,55 @@ func getVcsRepoId(vcsType string, form forms.WebhooksApiHandler) string {
 		return form.Repository.FullName
 	default:
 		return ""
+	}
+}
+
+func createTplScan(userId models.Id, tpl *models.Template, pushRef, baseRef, headRef, prStatus, afterCommit, beforeCommit string) {
+	logger := logs.Get()
+	// 云模板扫描未启用，不允许发起手动检测
+	if enabled, err := services.IsTemplateEnabledScan(db.Get(), tpl.Id); err != nil {
+		logger.Errorf("template enable err: %s", err)
+		return
+	} else if !enabled {
+		logger.Infof("template %s not open scan", tpl.Id)
+		return
+	}
+	if !checkVcsCallbackMessage(tpl.RepoRevision, pushRef, baseRef) {
+		return
+	}
+
+	// 目前云模板的webhook只有push一种
+	if tpl.Triggers[0] != consts.EnvTriggerCommit {
+		return
+	}
+
+	// 创建任务
+	runnerId, err := services.GetDefaultRunnerId()
+	if err != nil {
+		logger.Errorf("webhook task scan get runner, err %s", err)
+		return
+	}
+
+	taskType := models.TaskTypeScan
+	task, err := services.CreateScanTask(db.Get(), tpl, nil, models.ScanTask{
+		Name:      models.ScanTask{}.GetTaskNameByType(taskType),
+		CreatorId: userId,
+		TplId:     tpl.Id,
+		BaseTask: models.BaseTask{
+			Type:        taskType,
+			StepTimeout: common.DefaultTaskStepTimeout,
+			RunnerId:    runnerId,
+		},
+	})
+	if err != nil {
+		logger.Errorf("error creating scan task, err %s", err)
+		return
+	}
+
+	if task.Type == models.TaskTypeScan {
+		tpl.LastScanTaskId = task.Id
+		if _, err := db.Get().Save(tpl); err != nil {
+			logger.Errorf("save template, err %s", err)
+		}
 	}
 }

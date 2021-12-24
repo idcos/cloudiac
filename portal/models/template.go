@@ -42,7 +42,7 @@ type Template struct {
 	TfVersion string `json:"tfVersion" gorm:"default:''"` // 模版使用的terraform版本号
 
 	// 触发器设置
-	Triggers pq.StringArray `json:"triggers" gorm:"type:text" swaggertype:"array,string"` // 触发器。commit（每次推送执行合规检测）
+	Triggers pq.StringArray `json:"triggers" gorm:"type:text" swaggertype:"array,string"` // 触发器。commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
 }
 
 func (Template) TableName() string {
