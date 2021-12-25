@@ -65,7 +65,15 @@ func GenerateSsoToken(c *ctx.ServiceContext) (resp interface{}, err e.Error) {
 	return data, err
 }
 
+// VerifySsoToken 验证 SSO token
 func VerifySsoToken(c *ctx.ServiceContext, form *forms.VerifySsoTokenForm) (resp *models.VerifySsoTokenResp, err e.Error) {
-	// TODO
-	return nil, nil
+	user, err := services.VerifySsoToken(c.DB(), form.Token)
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.VerifySsoTokenResp{
+		UserId: user.Id,
+		Email:  user.Email,
+	}, nil
 }

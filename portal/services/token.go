@@ -21,12 +21,6 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-type SsoTokenClaims struct {
-	jwt.StandardClaims
-
-	UserId models.Id `json:"userId"`
-}
-
 func GenerateToken(uid models.Id, name string, isAdmin bool, expireDuration time.Duration) (string, error) {
 	expire := time.Now().Add(expireDuration)
 
@@ -35,21 +29,6 @@ func GenerateToken(uid models.Id, name string, isAdmin bool, expireDuration time
 		UserId:   uid,
 		Username: name,
 		IsAdmin:  isAdmin,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expire.Unix(),
-			Subject:   consts.JwtSubjectUserAuth,
-		},
-	})
-
-	return token.SignedString([]byte(configs.Get().JwtSecretKey))
-}
-
-func GenerateSsoToken(uid models.Id, expireDuration time.Duration) (string, error) {
-	expire := time.Now().Add(expireDuration)
-
-	// 将 userId，姓名, 过期时间写入 token 中
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, SsoTokenClaims{
-		UserId: uid,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expire.Unix(),
 			Subject:   consts.JwtSubjectUserAuth,

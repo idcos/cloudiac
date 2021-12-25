@@ -49,6 +49,6 @@ type SsoResp struct {
 }
 
 type VerifySsoTokenResp struct {
-	UserId string
-	Email  string
+	UserId Id     `json:"user_Id"`
+	Email  string `json:"email"`
 }
