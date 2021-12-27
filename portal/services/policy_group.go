@@ -9,19 +9,21 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
+	"encoding/json"
 	"fmt"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"io/fs"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
 	"sync"
-	"syscall"
-	"time"
 )
 
 func CreatePolicyGroup(tx *db.Session, group *models.PolicyGroup) (*models.PolicyGroup, e.Error) {
@@ -169,80 +171,33 @@ type DownloadPolicyGroupResult struct {
 	Summary *PolicyGroupImportSummary `json:"summary"`
 }
 
-func DownloadPolicyGroup(tx *db.Session, result *DownloadPolicyGroupResult, wg *sync.WaitGroup) {
+func DownloadPolicyGroup(tx *db.Session, tmpDir string, result *DownloadPolicyGroupResult, wg *sync.WaitGroup) {
+	logger := logs.Get().WithField("func", "DownloadPolicyGroup")
 	group := result.Group
 
 	defer wg.Done()
 
-	// 生成临时工作目录
-	tmpDir, err := os.MkdirTemp("", "*")
-	if err != nil {
-		result.Error = e.New(e.InternalError, errors.Wrapf(err, "create tmp dir"), http.StatusInternalServerError)
-		return
-	}
-	defer os.RemoveAll(tmpDir)
-
 	// 1. git download
+	logger.Debugf("downloading git")
 	branch := group.GitTags
 	if group.Branch != "" {
 		branch = group.Branch
 	}
 	repoAddr, commitId, err := GetPolicyGroupCommitId(tx, group.VcsId, group.RepoId, branch)
 	if err != nil {
-		result.Error = e.New(e.InternalError, errors.Wrapf(err, "create tmp dir"), http.StatusInternalServerError)
+		result.Error = e.New(e.InternalError, errors.Wrapf(err, "get commit id"), http.StatusInternalServerError)
 		return
 	}
-	// generate checkout command line
-	cmdline := genGitCheckoutScript(tmpDir, repoAddr, commitId, group.Dir)
-
-	// git checkout
-	cmd := exec.Command("sh", "-c", cmdline)
-	cmd.Dir = tmpDir
-	// setpgid 保证可以杀死进程及子进程
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-
-	done := make(chan error)
-	go func() {
-		if err := cmd.Start(); err != nil {
-			logrus.Errorf("error start cmd %s, err: %v", cmd.Path, err)
-			done <- err
-		}
-		done <- cmd.Wait()
-	}()
-
-	select {
-	case <-time.After(consts.PolicyGroupDownloadTimeoutSecond):
-		if err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL); err != nil {
-			result.Error = e.New(e.InternalError, errors.Wrapf(err, fmt.Sprintf("kill timeout process %s error %v", cmd.Path, err)), http.StatusInternalServerError)
-		} else {
-			result.Error = e.New(e.InternalError, errors.Wrapf(err, fmt.Sprintf("kill timeout process %s with timeout %s seconds", cmd.Path, consts.PolicyGroupDownloadTimeoutSecond/time.Second)), http.StatusInternalServerError)
-		}
-		return
-	case err = <-done:
-		if err != nil {
-			result.Error = e.New(e.InternalError, errors.Wrapf(err, fmt.Sprintf("command complete with error %v", err)), http.StatusInternalServerError)
-			return
-		}
-	}
-
-	output, err := cmd.CombinedOutput()
+	logger.Debugf("downloading git %s@%s to %s", repoAddr, commitId, filepath.Join(tmpDir, "code"))
+	er := GitCheckout(filepath.Join(tmpDir, "code"), repoAddr, commitId)
 	if err != nil {
-		err = fmt.Errorf("git checkout error %v, output %s", err, output)
-		result.Error = e.New(e.InternalError, errors.Wrapf(err, "git checkout"), http.StatusInternalServerError)
+		result.Error = e.New(e.InternalError, errors.Wrapf(er, "checkout repo"), http.StatusInternalServerError)
 		return
 	}
-
-	// TODO: 2. parse policy
-	_, er := ParsePolicyGroup(filepath.Join(tmpDir, "code"))
-	if er != nil {
-		result.Error = e.New(e.InternalError, errors.Wrapf(er, "parse rego"), http.StatusInternalServerError)
-		return
-	}
-
-	// TODO: 3. insert policy to db
+	logger.Debugf("download git complete")
 }
 
-func GetPolicyGroupCommitId(tx *db.Session, vcsId models.Id, repoId models.Id, branch string) (repoAddr, commitId string, err e.Error) {
+func GetPolicyGroupCommitId(tx *db.Session, vcsId models.Id, repoId string, branch string) (repoAddr, commitId string, err e.Error) {
 	vcs, err := QueryVcsByVcsId(vcsId, tx)
 	if err != nil {
 		if e.IsRecordNotFound(err) {
@@ -251,7 +206,7 @@ func GetPolicyGroupCommitId(tx *db.Session, vcsId models.Id, repoId models.Id, b
 		return "", "", e.New(e.DBError, err)
 	}
 
-	repo, er := vcsrv.GetRepo(vcs, repoId.String())
+	repo, er := vcsrv.GetRepo(vcs, repoId)
 	if er != nil {
 		return "", "", e.New(e.VcsError, er)
 	}
@@ -286,27 +241,24 @@ func GetPolicyGroupCommitId(tx *db.Session, vcsId models.Id, repoId models.Id, b
 	return repoAddr, commitId, nil
 }
 
-var gitCheckoutScriptCommandTpl = `#!/bin/sh
-cd '{{.WorkingDir}}'
-git clone '{{.RepoAddress}}' code && \
-cd code && \
-echo "checkout $(git rev-parse --short HEAD)." && \
-git checkout -q '{{.Revision}}' && \
-cd '{{.SubDir}}'
-`
-
-func genGitCheckoutScript(wd string, repoAddr string, revision string, dir string) (command string) {
-	if revision == "" || revision == "/" {
-		revision = "./"
+// GitCheckout 从 repoUrl 的 git 仓库 checkout 到本地目录 localDir，可以设置对应的 commitId
+func GitCheckout(localDir string, repoUrl string, commitId string) error {
+	opt := git.CloneOptions{
+		URL:      repoUrl,
+		Progress: logs.Writer(),
 	}
-	cmdline := utils.SprintTemplate(gitCheckoutScriptCommandTpl, map[string]interface{}{
-		"WorkingDir":  wd,
-		"RepoAddress": repoAddr,
-		"SubDir":      dir,
-		"Revision":    revision,
+	repo, err := git.PlainClone(localDir, false, &opt)
+	if err != nil {
+		return err
+	}
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return err
+	}
+	err = worktree.Checkout(&git.CheckoutOptions{
+		Hash: plumbing.NewHash(commitId),
 	})
-
-	return cmdline
+	return err
 }
 
 type RegoFile struct {
@@ -314,45 +266,184 @@ type RegoFile struct {
 	RegoFile string
 }
 
-func ParsePolicyGroup(dirname string) ([]*models.Policy, error) {
+func ParsePolicyGroup(dirname string) ([]*Policy, error) {
 	files, err := ioutil.ReadDir(dirname)
 	if err != nil {
 		return nil, err
 	}
 
-	var regoFiles []fs.FileInfo
-	copy(regoFiles, files)
-	var regos []RegoFile
+	otherFiles := append(files)
+	var regoFiles []RegoFile
 	// 遍历当前目录
 	for _, f := range files {
 		// 优先处理 json 的 meta 及对应的 rego 文件
-		if filepath.Ext(f.Name()) == "json" {
-			if utils.FileExist(filepath.Base(f.Name()) + ".rego") {
-				regos = append(regos, RegoFile{
-					MetaFile: filepath.Base(f.Name()) + ".json",
-					RegoFile: filepath.Base(f.Name()) + ".rego",
+		if filepath.Ext(f.Name()) == ".json" {
+			regoFileName := utils.FileNameWithoutExt(f.Name()) + ".rego"
+			regoFilePath := filepath.Join(dirname, regoFileName)
+			if utils.FileExist(regoFilePath) {
+				regoFiles = append(regoFiles, RegoFile{
+					MetaFile: filepath.Join(dirname, f.Name()),
+					RegoFile: filepath.Join(dirname, regoFileName),
 				})
 				// 将已经处理的 rego 排除
-				for i, rf := range regoFiles {
-					if rf.Name() == filepath.Base(f.Name())+".rego" {
-						regoFiles[i] = regoFiles[len(regoFiles)-1]
-						regoFiles = regoFiles[:len(regoFiles)-1]
+				for i, rf := range otherFiles {
+					if rf.Name() == regoFileName {
+						otherFiles[i] = otherFiles[len(otherFiles)-1]
+						otherFiles = otherFiles[:len(otherFiles)-1]
 						break
 					}
 				}
 			}
 		}
 	}
+
 	// 遍历其他没有 json meta 的 rego 文件
-	for _, f := range regoFiles {
-		if filepath.Ext(f.Name()) == "rego" {
-			regos = append(regos, RegoFile{
-				RegoFile: filepath.Base(f.Name()) + ".rego",
+	for _, f := range otherFiles {
+		if filepath.Ext(f.Name()) == ".rego" {
+			regoFiles = append(regoFiles, RegoFile{
+				RegoFile: filepath.Join(dirname, f.Name()),
 			})
 		}
 	}
 
-	// TODO: parse rego header
+	// 解析 rego 元信息
+	var policies []*Policy
+	for _, r := range regoFiles {
+		p, err := ParseMeta(r.RegoFile, r.MetaFile)
+		if err != nil {
+			return nil, err
+		}
+		policies = append(policies, p)
+	}
 
-	return nil, nil
+	return policies, nil
+}
+
+type Policy struct {
+	Id   string `json:"Id"`
+	Meta Meta   `json:"meta"`
+	Rego string `json:"rego"`
+}
+
+type Meta struct {
+	Category      string `json:"category"`
+	File          string `json:"file"`
+	Id            string `json:"id"`
+	Name          string `json:"name"`
+	PolicyType    string `json:"policy_type"`
+	ReferenceId   string `json:"reference_id"`
+	ResourceType  string `json:"resource_type"`
+	Severity      string `json:"severity"`
+	Version       int    `json:"version"`
+	Description   string `json:"description"`
+	FixSuggestion string `json:"fixSuggestion"`
+}
+
+//ParseMeta 解析 rego metadata，如果存在 file.json 则从 json 文件读取 metadat，否则通过头部注释读取 metadata
+func ParseMeta(regoFilePath string, metaFilePath string) (policy *Policy, err e.Error) {
+	var meta Meta
+	buf, er := os.ReadFile(regoFilePath)
+	if er != nil {
+		return nil, e.New(e.PolicyRegoInvalid, fmt.Errorf("read rego file: %v", err))
+	}
+	regoContent := string(buf)
+
+	// 1. 如果存在 json metadata，则解析 json 文件
+	policy = &Policy{}
+	if metaFilePath != "" {
+		content, er := os.ReadFile(metaFilePath)
+		if er != nil {
+			return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("read meta file: %v", err))
+		}
+		er = json.Unmarshal(content, &meta)
+		if er != nil {
+			return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("unmarshal meta file: %v", err))
+		}
+		policy.Meta = meta
+		policy.Id = meta.Id
+		policy.Rego = string(regoContent)
+
+		return policy, nil
+	}
+
+	// 2. 无 json metadata，通过头部注释解析信息
+	//	## id 为策略在策略组中的唯一标识，由大小写英文字符、数字、"."、"_"、"-" 组成
+	//	## 建议按`组织_云商_资源名称/分类_编号`的格式进行命名
+	//	# @id: cloudiac_alicloud_security_p001
+	//
+	//	# @name: 策略名称A
+	//	# @description: 这是策略的描述
+	//
+	//	## 策略类型，如 aws, k8s, github, alicloud, ...
+	//	# @policy_type: alicloud
+	//
+	//	## 资源类型，如 aws_ami, k8s_pod, alicloud_ecs, ...
+	//	# @resource_type: aliyun_ami
+	//
+	//	## 策略严重级别: 可选 HIGH/MEDIUM/LOW
+	//	# @severity: HIGH
+	//
+	//	## 策略分类(或者叫标签)，多个分类使用逗号分隔
+	//	# @category: cat1,cat2
+	//
+	//	## 策略修复建议（支持多行）
+	//	# @fix_suggestion:
+	//	Terraform 代码去掉`associate_public_ip_address`配置
+	//	```
+	//resource "aws_instance" "bar" {
+	//  ...
+	//- associate_public_ip_address = true
+	//}
+	//```
+	//	# @fix_suggestion_end
+
+	meta = Meta{
+		Id:           ExtractStr("id", regoContent),
+		File:         filepath.Base(regoFilePath),
+		Name:         utils.FileNameWithoutExt(regoFilePath),
+		Description:  ExtractStr("description", regoContent),
+		PolicyType:   ExtractStr("policy_type", regoContent),
+		ResourceType: ExtractStr("resource_type", regoContent),
+		Category:     ExtractStr("label", regoContent),
+		ReferenceId:  ExtractStr("reference_id", regoContent),
+		Severity:     ExtractStr("severity", regoContent),
+	}
+	ver := ExtractStr("version", regoContent)
+	meta.Version, _ = strconv.Atoi(ver)
+
+	// 多行注释提取
+	regex := regexp.MustCompile("(?s)@fix_suggestion:\\s*(.*)\\s*#+\\s*@fix_suggestion_end")
+	match := regex.FindStringSubmatch(regoContent)
+	if len(match) == 2 {
+		meta.FixSuggestion = strings.TrimSpace(match[1])
+	} else {
+		// 单行注释提取
+		meta.FixSuggestion = ExtractStr("fix_suggestion", regoContent)
+	}
+
+	if meta.ResourceType == "" {
+		return nil, e.New(e.PolicyRegoMissingComment, fmt.Errorf("missing resource type info"))
+	}
+	if meta.PolicyType == "" {
+		// alicloud_instance => alicloud
+		meta.PolicyType = meta.ResourceType[:strings.Index(meta.ResourceType, "_")]
+	}
+	if meta.Severity == "" {
+		meta.Severity = consts.PolicySeverityMedium
+	}
+
+	policy.Id = meta.Id
+	policy.Meta = meta
+	policy.Rego = regoContent
+	return policy, nil
+}
+
+// ExtractStr 提取 # @keyword: xxx 格式字符串
+func ExtractStr(keyword string, input string) string {
+	regex := regexp.MustCompile(fmt.Sprintf("(?m)^\\s*#+\\s*@%s:\\s*(.*)$)", keyword))
+	match := regex.FindStringSubmatch(input)
+	if len(match) == 2 {
+		return strings.TrimSpace(match[1])
+	}
+	return ""
 }

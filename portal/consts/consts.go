@@ -34,6 +34,9 @@ const (
 
 	DirRoot                          = "/"
 	PolicyGroupDownloadTimeoutSecond = 20 * time.Second
+	PolicySeverityHigh               = "HIGH"
+	PolicySeverityMedium             = "MEDIUM"
+	PolicySeverityLow                = "LOW"
 )
 
 const (

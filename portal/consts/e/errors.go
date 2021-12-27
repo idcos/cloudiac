@@ -169,6 +169,8 @@ const (
 	PolicyRelNotExist            = 31270
 	PolicyRelAlreadyExist        = 31271
 	PolicyScanNotEnabled         = 31280
+	PolicyMetaInvalid            = 31281
+	PolicyRegoInvalid            = 31282
 
 	/// terraform 313
 	InvalidTfVersion = 31300
@@ -556,5 +558,11 @@ var errorMsgs = map[int]map[string]string{
 	},
 	CronTaskFailed: {
 		"zh-cn": "cron定时任务执行失败",
+	},
+	PolicyMetaInvalid: {
+		"zh-cn": "策略元数据解析无效",
+	},
+	PolicyRegoInvalid: {
+		"zh-cn": "rego 脚本解析无效",
 	},
 }

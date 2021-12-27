@@ -39,15 +39,17 @@ type Policy struct {
 }
 
 type Meta struct {
-	Category     string `json:"category"`
-	File         string `json:"file"`
-	Id           string `json:"id"`
-	Name         string `json:"name"`
-	PolicyType   string `json:"policy_type"`
-	ReferenceId  string `json:"reference_id"`
-	ResourceType string `json:"resource_type"`
-	Severity     string `json:"severity"`
-	Version      int    `json:"version"`
+	Category      string `json:"category"`
+	File          string `json:"file"`
+	Id            string `json:"id"`
+	Name          string `json:"name"`
+	PolicyType    string `json:"policy_type"`
+	ReferenceId   string `json:"reference_id"`
+	ResourceType  string `json:"resource_type"`
+	Severity      string `json:"severity"`
+	Version       int    `json:"version"`
+	Description   string `json:"description"`
+	FixSuggestion string `json:"fixSuggestion"`
 }
 
 type Resource struct {

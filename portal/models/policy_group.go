@@ -15,7 +15,7 @@ type PolicyGroup struct {
 	Enabled     bool   `json:"enabled" gorm:"default:true;comment:是否启用" example:"true"`
 	Source      string `json:"source" gorm:"type:enum('vcs','registry');comment:来源：VCS/Registry"`
 	VcsId       Id     `json:"vcsId" gorm:"size:32;not null;comment:VCS ID"`
-	RepoId      Id     `json:"repoId" gorm:"not null;comment:VCS 仓库ID"`
+	RepoId      string `json:"repoId" gorm:"size:128;not null;comment:VCS 仓库ID"`
 	GitTags     string `json:"gitTags" gorm:"size:128;comment:Git 版本标签：\"v1.0.0\""`
 	Branch      string `json:"branch" gorm:"size:128;comment:分支"`
 	CommitId    string `json:"commitId" gorm:"size:128;not null;当前 git commit id"`

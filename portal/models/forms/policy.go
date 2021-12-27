@@ -60,7 +60,7 @@ type CreatePolicyGroupForm struct {
 
 	Source  string    `json:"source" binding:"required" enums:"vcs,registry" example:"来源"`
 	VcsId   models.Id `json:"vcsId" binding:"required" example:"vcs-c3lcrjxczjdywmk0go90"`
-	ReopId  models.Id `json:"reopId" binding:"required" example:"repo-c3lcrjxczjdywmk0go90"`
+	RepoId  string    `json:"repoId" binding:"required" example:"1234567890"`
 	GitTags string    `json:"gitTags" example:"Git Tags"`
 	Branch  string    `json:"branch" example:"master"`
 	Dir     string    `json:"dir" example:"/"`
