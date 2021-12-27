@@ -26,7 +26,7 @@ func GenerateSsoToken(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param token query string true "sso token"
 // @Success 200 {object}  ctx.JSONResult{result=models.VerifySsoTokenResp}
-// @Router /sso/tokens [post]
+// @Router /sso/tokens/verify [get]
 func VerifySsoToken(c *ctx.GinRequest) {
 	form := forms.VerifySsoTokenForm{}
 	if err := c.Bind(&form); err != nil {
