@@ -13,14 +13,78 @@ import (
 	"cloudiac/portal/services"
 	"cloudiac/utils"
 	"fmt"
+	"github.com/Masterminds/semver"
+	"github.com/pkg/errors"
 	"net/http"
+	"os"
+	"path/filepath"
+	"sync"
 	"time"
 )
 
 // CreatePolicyGroup 创建策略组
 func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm) (*models.PolicyGroup, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create policy group %s", form.Name))
+	logger := c.Logger()
 
+	g := models.PolicyGroup{
+		Name:        form.Name,
+		Description: form.Description,
+		Label:       form.Label,
+		Source:      form.Source,
+		VcsId:       form.VcsId,
+		RepoId:      form.RepoId,
+	}
+	if form.HasKey("gitTags") {
+		g.GitTags = form.GitTags
+		// 检查是否有效的语义话版本
+		v, err := semver.NewVersion(g.GitTags)
+		if err != nil {
+			return nil, e.AutoNew(fmt.Errorf("git tag is invalid semver"), e.BadParam)
+		}
+		g.Version = v.String()
+	} else if form.HasKey("branch") {
+		g.Branch = form.Branch
+		g.UseLatest = true
+	} else {
+		return nil, e.New(e.BadParam, http.StatusBadRequest)
+	}
+	if form.HasKey("dir") {
+		g.Dir = form.Dir
+	} else {
+		g.Dir = consts.DirRoot
+	}
+
+	// 策略仓库同步
+	// 1. 生成临时工作目录
+	logger.Debugf("creating tmp dir")
+	tmpDir, er := os.MkdirTemp("", "*")
+	if er != nil {
+		return nil, e.New(e.InternalError, errors.Wrapf(er, "create tmp dir"), http.StatusInternalServerError)
+	}
+	defer os.RemoveAll(tmpDir)
+	logger.Debugf("tmp dir %s", tmpDir)
+
+	// 2. clone 策略组
+	var wg sync.WaitGroup
+	result := services.DownloadPolicyGroupResult{Group: &g}
+	wg.Add(1)
+	go services.DownloadPolicyGroup(c.DB(), tmpDir, &result, &wg)
+	wg.Wait()
+	if result.Error != nil {
+		c.Logger().Errorf("error download policy group, err %s", result.Error)
+		return nil, result.Error
+	}
+
+	// 3. 遍历策略组目录，解析策略文件
+	logger.Debugf("parsing policy group")
+	// TODO: import summary
+	policies, er := services.ParsePolicyGroup(filepath.Join(tmpDir, "code", g.Dir))
+	if er != nil {
+		return nil, e.New(e.InternalError, errors.Wrapf(er, "parse rego"), http.StatusInternalServerError)
+	}
+
+	// 策略组与策略文件入库
 	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
@@ -29,11 +93,7 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 		}
 	}()
 
-	g := models.PolicyGroup{
-		Name:        form.Name,
-		Description: form.Description,
-	}
-
+	logger.Debugf("creating policy group")
 	group, err := services.CreatePolicyGroup(tx, &g)
 	if err != nil && err.Code() == e.PolicyGroupAlreadyExist {
 		_ = tx.Rollback()
@@ -42,6 +102,32 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 		c.Logger().Errorf("error creating policy group, err %s", err)
 		_ = tx.Rollback()
 		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	logger.Debugf("creating policy")
+	for _, p := range policies {
+		policy := models.Policy{
+			OrgId:     c.OrgId,
+			CreatorId: c.UserId,
+			GroupId:   group.Id,
+
+			Name:          p.Meta.Name,
+			RuleName:      p.Meta.Name,
+			ReferenceId:   p.Meta.ReferenceId,
+			Revision:      p.Meta.Version,
+			FixSuggestion: p.Meta.FixSuggestion,
+			Severity:      p.Meta.Severity,
+			ResourceType:  p.Meta.ResourceType,
+			PolicyType:    p.Meta.PolicyType,
+			Tags:          p.Meta.Category,
+
+			Rego: p.Rego,
+		}
+		_, er = tx.Save(policy)
+		if er != nil {
+			_ = tx.Rollback()
+			return nil, e.New(e.DBError, err)
+		}
 	}
 
 	if err := tx.Commit(); err != nil {

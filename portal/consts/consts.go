@@ -31,6 +31,12 @@ const (
 	DefaultSysName  = "System"
 
 	DefaultTerraformVersion = "0.14.11"
+
+	DirRoot                          = "/"
+	PolicyGroupDownloadTimeoutSecond = 20 * time.Second
+	PolicySeverityHigh               = "HIGH"
+	PolicySeverityMedium             = "MEDIUM"
+	PolicySeverityLow                = "LOW"
 )
 
 const (

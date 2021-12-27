@@ -591,3 +591,7 @@ func RecoverdCall(fn func(), recoverFuncs ...func(error)) {
 	}()
 	fn()
 }
+
+func FileNameWithoutExt(filePath string) string {
+	return strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
+}
