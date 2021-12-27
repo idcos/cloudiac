@@ -27,14 +27,6 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 	c.AddLogField("action", fmt.Sprintf("create policy group %s", form.Name))
 	logger := c.Logger()
 
-	tx := c.Tx()
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			panic(r)
-		}
-	}()
-
 	g := models.PolicyGroup{
 		Name:        form.Name,
 		Description: form.Description,
@@ -63,6 +55,45 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 		g.Dir = consts.DirRoot
 	}
 
+	// 策略仓库同步
+	// 1. 生成临时工作目录
+	logger.Debugf("creating tmp dir")
+	tmpDir, er := os.MkdirTemp("", "*")
+	if er != nil {
+		return nil, e.New(e.InternalError, errors.Wrapf(er, "create tmp dir"), http.StatusInternalServerError)
+	}
+	defer os.RemoveAll(tmpDir)
+	logger.Debugf("tmp dir %s", tmpDir)
+
+	// 2. clone 策略组
+	var wg sync.WaitGroup
+	result := services.DownloadPolicyGroupResult{Group: &g}
+	wg.Add(1)
+	go services.DownloadPolicyGroup(c.DB(), tmpDir, &result, &wg)
+	wg.Wait()
+	if result.Error != nil {
+		c.Logger().Errorf("error download policy group, err %s", result.Error)
+		return nil, result.Error
+	}
+
+	// 3. 遍历策略组目录，解析策略文件
+	logger.Debugf("parsing policy group")
+	// TODO: import summary
+	policies, er := services.ParsePolicyGroup(filepath.Join(tmpDir, "code", g.Dir))
+	if er != nil {
+		return nil, e.New(e.InternalError, errors.Wrapf(er, "parse rego"), http.StatusInternalServerError)
+	}
+
+	// 策略组与策略文件入库
+	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	logger.Debugf("creating policy group")
 	group, err := services.CreatePolicyGroup(tx, &g)
 	if err != nil && err.Code() == e.PolicyGroupAlreadyExist {
 		_ = tx.Rollback()
@@ -73,41 +104,6 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	// 策略仓库同步
-
-	// 生成临时工作目录
-	logger.Debugf("creating tmp dir")
-	tmpDir, er := os.MkdirTemp("", "*")
-	if er != nil {
-		_ = tx.Rollback()
-		return nil, e.New(e.InternalError, errors.Wrapf(err, "create tmp dir"), http.StatusInternalServerError)
-	}
-	defer os.RemoveAll(tmpDir)
-	logger.Debugf("tmp dir %s", tmpDir)
-
-	// 下载策略组
-	var wg sync.WaitGroup
-	result := services.DownloadPolicyGroupResult{
-		Group: group,
-	}
-	wg.Add(1)
-	go services.DownloadPolicyGroup(tx, tmpDir, &result, &wg)
-	wg.Wait()
-	if result.Error != nil {
-		c.Logger().Errorf("error download policy group, err %s", result.Error)
-		_ = tx.Rollback()
-		return nil, result.Error
-	}
-
-	// 遍历策略组目录，解析策略文件
-	logger.Debugf("parsing policy group")
-	policies, er := services.ParsePolicyGroup(filepath.Join(tmpDir, "code", group.Dir))
-	if er != nil {
-		_ = tx.Rollback()
-		return nil, e.New(e.InternalError, errors.Wrapf(er, "parse rego"), http.StatusInternalServerError)
-	}
-
-	// 3. 策略文件入库
 	logger.Debugf("creating policy")
 	for _, p := range policies {
 		policy := models.Policy{

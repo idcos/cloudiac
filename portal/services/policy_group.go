@@ -171,7 +171,7 @@ type DownloadPolicyGroupResult struct {
 	Summary *PolicyGroupImportSummary `json:"summary"`
 }
 
-func DownloadPolicyGroup(tx *db.Session, tmpDir string, result *DownloadPolicyGroupResult, wg *sync.WaitGroup) {
+func DownloadPolicyGroup(sess *db.Session, tmpDir string, result *DownloadPolicyGroupResult, wg *sync.WaitGroup) {
 	logger := logs.Get().WithField("func", "DownloadPolicyGroup")
 	group := result.Group
 
@@ -183,7 +183,7 @@ func DownloadPolicyGroup(tx *db.Session, tmpDir string, result *DownloadPolicyGr
 	if group.Branch != "" {
 		branch = group.Branch
 	}
-	repoAddr, commitId, err := GetPolicyGroupCommitId(tx, group.VcsId, group.RepoId, branch)
+	repoAddr, commitId, err := GetPolicyGroupCommitId(sess, group.VcsId, group.RepoId, branch)
 	if err != nil {
 		result.Error = e.New(e.InternalError, errors.Wrapf(err, "get commit id"), http.StatusInternalServerError)
 		return
@@ -197,8 +197,8 @@ func DownloadPolicyGroup(tx *db.Session, tmpDir string, result *DownloadPolicyGr
 	logger.Debugf("download git complete")
 }
 
-func GetPolicyGroupCommitId(tx *db.Session, vcsId models.Id, repoId string, branch string) (repoAddr, commitId string, err e.Error) {
-	vcs, err := QueryVcsByVcsId(vcsId, tx)
+func GetPolicyGroupCommitId(sess *db.Session, vcsId models.Id, repoId string, branch string) (repoAddr, commitId string, err e.Error) {
+	vcs, err := QueryVcsByVcsId(vcsId, sess)
 	if err != nil {
 		if e.IsRecordNotFound(err) {
 			return "", "", e.New(e.VcsNotExists, err)
