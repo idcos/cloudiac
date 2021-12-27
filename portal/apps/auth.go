@@ -52,7 +52,7 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err 
 // GenerateSsoToken 生成 SSO token
 func GenerateSsoToken(c *ctx.ServiceContext) (resp interface{}, err e.Error) {
 
-	token, er := services.GenerateSsoToken(c.UserId, 1*24*time.Hour)
+	token, er := services.GenerateSsoToken(c.UserId, 5*time.Minute)
 	if er != nil {
 		c.Logger().Errorf("userId [%s] generateToken error: %v", c.UserId, er)
 		return nil, e.New(e.InternalError, er, http.StatusInternalServerError)
