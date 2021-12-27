@@ -28,7 +28,7 @@ func GenerateSsoToken(uid models.Id, expireDuration time.Duration) (string, erro
 		UserId: uid,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expire.Unix(),
-			Subject:   consts.JwtSubjectUserAuth,
+			Subject:   consts.JwtSubjectSsoCode,
 		},
 	})
 
