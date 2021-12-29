@@ -12,5 +12,5 @@ cloudiac 不生成密钥，只支持添加己生成的 ssh 私钥。私钥可以
 
 可以查看 cloudiac-example 示例模板代码了解如何在模板中配置 ssh 密钥对。
 
-![image-20211223154720024](../images/WX20211224-163923@2x.png)
+![image-20211223154720024](../images/WX20211224-163923@2x.png){.img-fluid}
 

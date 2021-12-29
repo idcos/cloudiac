@@ -14,7 +14,7 @@
 
 OPA 提供了一种高级声明性语言 Rego，可以让您将策略指定为代码和简单的 API，从而将策略的执行从应用中解耦。
 
-![img](../images/opa-before-after.png)
+![img](../images/opa-before-after.png){.img-fluid}
 
 ### Rego
 

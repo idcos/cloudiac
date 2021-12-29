@@ -6,17 +6,18 @@
 
 资源账号通过 “组织设置” / “资源账号”页面添加，添加资源账号时填写云商 Provider 认证需要使用的环境变量(包括 AK、SK、Region)。
 
-![img](../images/cloud_account_add.png)
+![img](../images/cloud_account_add.png){.img-fluid}
 
 ## 引用资源账号
 
 资源账号在组织级别添加后可以添加到组织、云模式、项目、环境的环境变量。
 
-![img](../images/cloud_account_use_1.png)
+![img](../images/cloud_account_use_1.png){.img-fluid}
 
-![img](../images/cloud_account_use_2.png)
+![img](../images/cloud_account_use_2.png){.img-fluid}
 
-实例引用的资源账号不可修改、只能从实例中删除资源账号。 ![img](../images/cloud_account_use_3.png)
+实例引用的资源账号不可修改、只能从实例中删除资源账号。
+![img](../images/cloud_account_use_3.png){.img-fluid}
 
 引用资源账号时如果实例中己引用的资源账号中存在与当前资源账号同名的变量，则会禁止添加。
 

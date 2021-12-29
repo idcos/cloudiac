@@ -2,7 +2,8 @@
 
 CloudIaC 支持 Pipeline，将环境的 Plan、部署、销毁任务拆分为多个步骤，默认的我们为所有任务类型定义了标准步骤流程，用户可以自定义 pipeline，来增加步骤、调整步骤执行顺序等。
 
-同时在前端，任务也是分步骤展示： ![img](https://cloudiac.readthedocs.io/zh/latest/resources/pipeline-steps-1.png)
+同时在前端，任务也是分步骤展示：
+![img.png](../images/pipeline1.png){.img-fluid}
 
 ## 如何使用 Pipeline
 
@@ -154,7 +155,8 @@ apply:
 
 CLOUDIAC_ENV_STATUS 为任务启动时平台自动导出的环境变量，完整的导出环境变量列表见文档: [变量](https://cloudiac.readthedocs.io/zh/latest/intra/variable/)
 
-回调步骤总是在流程的最后展示，流程步骤展示效果: ![img](https://cloudiac.readthedocs.io/zh/latest/resources/pipeline-steps-2.png)
+回调步骤总是在流程的最后展示，流程步骤展示效果: 
+![img.png](../images/pipeline2.png){.img-fluid}
 
 ## 完整的自定义 Pipeline 示例
 
