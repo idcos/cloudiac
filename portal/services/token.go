@@ -31,6 +31,7 @@ func GenerateToken(uid models.Id, name string, isAdmin bool, expireDuration time
 		IsAdmin:  isAdmin,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expire.Unix(),
+			Subject:   consts.JwtSubjectUserAuth,
 		},
 	})
 
@@ -138,5 +139,3 @@ func GetApiTokenByToken(dbSess *db.Session, token string) (*models.Token, e.Erro
 	}
 	return tokenResp, nil
 }
-
-

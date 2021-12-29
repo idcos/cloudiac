@@ -49,3 +49,31 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err 
 	return data, nil
 }
 
+// GenerateSsoToken 生成 SSO token
+func GenerateSsoToken(c *ctx.ServiceContext) (resp interface{}, err e.Error) {
+
+	token, er := services.GenerateSsoToken(c.UserId, 5*time.Minute)
+	if er != nil {
+		c.Logger().Errorf("userId [%s] generateToken error: %v", c.UserId, er)
+		return nil, e.New(e.InternalError, er, http.StatusInternalServerError)
+	}
+
+	data := models.SsoResp{
+		Token: token,
+	}
+
+	return data, err
+}
+
+// VerifySsoToken 验证 SSO token
+func VerifySsoToken(c *ctx.ServiceContext, form *forms.VerifySsoTokenForm) (resp *models.VerifySsoTokenResp, err e.Error) {
+	user, err := services.VerifySsoToken(c.DB(), form.Token)
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.VerifySsoTokenResp{
+		UserId: user.Id,
+		Email:  user.Email,
+	}, nil
+}
