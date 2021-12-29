@@ -117,6 +117,7 @@ services:
       consul agent -server -bootstrap-expect=1 -ui -bind=0.0.0.0
       -client=0.0.0.0 -enable-script-checks=true -data-dir=/consul/data
     restart: always
+
 ```
 
 ## 5. 编写 .env 文件
@@ -151,11 +152,11 @@ MYSQL_USER=cloudiac
 MYSQL_PASSWORD="mysqlpass"
 
 # portal 服务注册信息配置 (均为必填)
-# portal 服务的 IP 地址， 容器化部署时无需修改, 手动部署时配置为内网 IP
+## portal 服务的 IP 地址， 容器化部署时无需修改, 手动部署时配置为内网 IP
 SERVICE_IP=iac-portal
-# portal 服务注册的 id(需要保证唯一)
+## portal 服务注册的 id(需要保证唯一)
 SERVICE_ID=iac-portal-01
-# portal 服务注册的 tags
+## portal 服务注册的 tags
 SERVICE_TAGS="iac-portal;portal-01"
 
 # logger 配置
@@ -172,22 +173,23 @@ SMTP_FROM=support@example.com
 KAFKA_TOPIC="IAC_TASK_REPLY"
 KAFKA_GROUP_ID=""
 KAFKA_PARTITION=0
-# example: KAFKA_BROKERS: ["kafka.example.com:9092", "..."]
+## example: KAFKA_BROKERS: ["kafka.example.com:9092", "..."]
 KAFKA_BROKERS=[]
 KAFKA_SASL_USERNAME=""
 KAFKA_SASL_PASSWORD=""
 
 
-####### 以下为 runner 配置 #############
+######### 以下为 runner 配置 #############
 # runner 服务注册配置(均为必填)
-# runner 服务的 IP 地址， 容器化部署时无需修改, 手动部署时配置为内网 IP
+## runner 服务的 IP 地址， 容器化部署时无需修改, 手动部署时配置为内网 IP
 RUNNER_SERVICE_IP=ct-runner
-# runner 服务注册的 id(需要保证唯一)
+## runner 服务注册的 id(需要保证唯一)
 RUNNER_SERVICE_ID=ct-runner-01
 RUNNER_SERVICE_TAGS="ct-runner;runner-01"
 
-# 是否开启 offline mode，默认为 false
+## 是否开启 offline mode，默认为 false
 RUNNER_OFFLINE_MODE="false"
+
 ```
 
 *通过 .env 可以配置大部分参数，需要更详细的配置可以拷贝镜像里的 config-portal.yml 和 config-runner.yml 文件，修改后再挂载到容器中进行替换*
