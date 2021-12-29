@@ -121,11 +121,16 @@ func CloneNewDriftTask(tx *db.Session, src models.Task, env *models.Env) (*model
 	}
 
 	// 克隆任务需要重置部分任务参数
-	var cronTaskType string
+	var (
+		cronTaskType string
+		taskSource string
+	)
 	if env.AutoRepairDrift {
 		cronTaskType = models.TaskTypeApply
+		taskSource = consts.TaskSourceDriftApply
 	} else {
 		cronTaskType = models.TaskTypePlan
+		taskSource = consts.TaskSourceDriftPlan
 	}
 
 	// 获取最新 repoAddr(带 token)，确保 vcs 更新后任务还可以正常 checkout 代码
@@ -149,6 +154,7 @@ func CloneNewDriftTask(tx *db.Session, src models.Task, env *models.Env) (*model
 	task.StopOnViolation = env.StopOnViolation
 	task.RunnerId = env.RunnerId
 	task.KeyId = env.KeyId
+	task.Source = taskSource
 
 	return doCreateTask(tx, *task, tpl, env)
 }

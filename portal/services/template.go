@@ -82,7 +82,7 @@ func QueryTemplateByOrgId(tx *db.Session, q string, orgId models.Id, templateIdL
 }
 
 func QueryTplByProjectId(tx *db.Session, projectId models.Id) (tplIds []models.Id, err e.Error) {
-	if err := tx.Table(models.ProjectTemplate{}.TableName()).
+	if err := tx.Model(&models.ProjectTemplate{}).
 		Where("project_id = ?", projectId).
 		Pluck("template_id", &tplIds); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
@@ -91,7 +91,7 @@ func QueryTplByProjectId(tx *db.Session, projectId models.Id) (tplIds []models.I
 }
 
 func QueryProjectByTplId(tx *db.Session, tplId models.Id) (projectIds []models.Id, err e.Error) {
-	if err := tx.Table(models.ProjectTemplate{}.TableName()).
+	if err := tx.Model(&models.ProjectTemplate{}).
 		Where("template_id = ?", tplId).
 		Pluck("project_id", &projectIds); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
