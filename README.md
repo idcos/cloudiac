@@ -11,7 +11,7 @@ CloudIaC 将易于使用的界面与强大的治理工具相结合，让您和�
 
 官方网站: https://cloudiac.idcos.com/
 
-产品手册: https://cloudiac.readthedocs.io/
+产品手册: https://idcos.github.io/cloudiac/
 
 ## 编译
 依赖 go 1.16 及以上版本
@@ -28,5 +28,5 @@ go env -w GOPROXY="https://goproxy.io,direct"
 ```
 
 ## 联系我们
-[Issue](https://github.com/idcos/CloudIaC/issues/19)
+[Issue](https://github.com/idcos/cloudiac/issues/19)
 
