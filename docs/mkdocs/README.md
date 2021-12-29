@@ -28,5 +28,5 @@ CloudIaC 是一套基于基础设施即代码（Infrastructure as Code）构建�
 - [产品部署](product-deploy/)
 - [常见问题](answer-questions/)
 - [API文档](api-docs/)
-- [Releases](release.md)
+- [Releases](releases.md)
 
