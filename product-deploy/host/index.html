@@ -22,6 +22,10 @@
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.e6a45f82.min.css">
         
+          
+          
+          <meta name="theme-color" content="#2094f3">
+        
       
     
     
@@ -33,6 +37,10 @@
         <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
       
     
+    
+      <link rel="stylesheet" href="../../assets/css/custom.css">
+    
+      <link rel="stylesheet" href="../../assets/css/simpleLightbox.min.css">
     
     <script>__md_scope=new URL("../..",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -48,7 +56,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="blue" data-md-color-accent="">
   
     
     
@@ -74,8 +82,7 @@
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href="../.." title="CloudIaC文档中心" class="md-header__button md-logo" aria-label="CloudIaC文档中心" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+  <img src="../../assets/svg/logo.svg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -100,6 +107,51 @@
     
     
     
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/idcos/cloudiac/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    IDCOS/CloudIaC
+  </div>
+</a>
+      </div>
     
   </nav>
   
@@ -127,12 +179,23 @@
   <label class="md-nav__title" for="__drawer">
     <a href="../.." title="CloudIaC文档中心" class="md-nav__button md-logo" aria-label="CloudIaC文档中心" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+  <img src="../../assets/svg/logo.svg" alt="logo">
 
     </a>
     CloudIaC文档中心
   </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/idcos/cloudiac/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    IDCOS/CloudIaC
+  </div>
+</a>
+    </div>
   
   <ul class="md-nav__list" data-md-scrollfix>
     
@@ -638,21 +701,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-docker" class="md-nav__link">
+  <a href="#2_docker" class="md-nav__link">
     2. 安装并启动 Docker
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-mysql" class="md-nav__link">
+  <a href="#3_mysql" class="md-nav__link">
     3. 安装并启动 Mysql
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-consul" class="md-nav__link">
+  <a href="#4_consul" class="md-nav__link">
     4. 安装并启动 Consul
   </a>
   
@@ -666,28 +729,28 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#6-mysql" class="md-nav__link">
+  <a href="#6_mysql" class="md-nav__link">
     6. 初始化 Mysql
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#7-iac" class="md-nav__link">
+  <a href="#7_iac" class="md-nav__link">
     7. 安装 IaC 服务
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#8-iac" class="md-nav__link">
+  <a href="#8_iac" class="md-nav__link">
     8. 启动 IaC 服务
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#9-ct-worker" class="md-nav__link">
+  <a href="#9_ct-worker" class="md-nav__link">
     9. 接取 ct-worker 镜像
   </a>
   
@@ -714,14 +777,14 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-nginx" class="md-nav__link">
+  <a href="#2_nginx" class="md-nav__link">
     2. 安装 nginx
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-nginx" class="md-nav__link">
+  <a href="#3_nginx" class="md-nav__link">
     3. 配置 nginx
   </a>
   
@@ -907,21 +970,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-docker" class="md-nav__link">
+  <a href="#2_docker" class="md-nav__link">
     2. 安装并启动 Docker
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-mysql" class="md-nav__link">
+  <a href="#3_mysql" class="md-nav__link">
     3. 安装并启动 Mysql
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-consul" class="md-nav__link">
+  <a href="#4_consul" class="md-nav__link">
     4. 安装并启动 Consul
   </a>
   
@@ -935,28 +998,28 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#6-mysql" class="md-nav__link">
+  <a href="#6_mysql" class="md-nav__link">
     6. 初始化 Mysql
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#7-iac" class="md-nav__link">
+  <a href="#7_iac" class="md-nav__link">
     7. 安装 IaC 服务
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#8-iac" class="md-nav__link">
+  <a href="#8_iac" class="md-nav__link">
     8. 启动 IaC 服务
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#9-ct-worker" class="md-nav__link">
+  <a href="#9_ct-worker" class="md-nav__link">
     9. 接取 ct-worker 镜像
   </a>
   
@@ -983,14 +1046,14 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-nginx" class="md-nav__link">
+  <a href="#2_nginx" class="md-nav__link">
     2. 安装 nginx
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-nginx" class="md-nav__link">
+  <a href="#3_nginx" class="md-nav__link">
     3. 配置 nginx
   </a>
   
@@ -1013,14 +1076,18 @@
             <article class="md-content__inner md-typeset">
               
                 
+<a href="https://github.com/idcos/cloudiac/edit/master/docs/mkdocs/product-deploy/host.md" title="Edit this page" class="md-content__button md-icon">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+</a>
 
-<h1 id="_1">手动部署</h1>
-<h2 id="_2">环境依赖</h2>
+
+<h1 id="_1">手动部署<a class="headerlink" href="#_1" title="Permanent link">#</a></h1>
+<h2 id="_2">环境依赖<a class="headerlink" href="#_2" title="Permanent link">#</a></h2>
 <ol>
 <li>操作系统：Linux x86_64 架构</li>
 <li>中间件：MySQL 8.0、Consul</li>
 </ol>
-<h2 id="_3">后端部署</h2>
+<h2 id="_3">后端部署<a class="headerlink" href="#_3" title="Permanent link">#</a></h2>
 <p>直接在物理机或者虚拟机上部署 IaC 服务。 该文档的环境限定：</p>
 <ul>
 <li>单机部署</li>
@@ -1029,106 +1096,106 @@
 <li>部署目录为 /usr/yunji/cloudiac</li>
 </ul>
 <p>以下部署过程全部使用 <strong>root</strong> 操作。</p>
-<h3 id="1">1. 下载并解压安装包</h3>
+<h3 id="1">1. 下载并解压安装包<a class="headerlink" href="#1" title="Permanent link">#</a></h3>
 <p>目前 cloudiac 分为三个包:</p>
 <ul>
 <li>主程序: cloudiac_${VERSION}.tar.gz</li>
 <li>预置样板间: cloudiac-repos_${VERSION}.tar.gz</li>
 <li>预置 proviers: cloudiac-providers_${VERSION}.tar.gz</li>
 </ul>
-<pre><code>VERSION=v0.8.1
+<div class="highlight"><pre><span></span><code>VERSION=v0.8.1
 mkdir -p /usr/yunji/cloudiac &amp;&amp; \
 cd /usr/yunji/cloudiac &amp;&amp; \
 for PACK in cloudiac cloudiac-repos cloudiac-providers; do
   curl -sL https://github.com/idcos/cloudiac/releases/download/${VERSION}/${PACK}_${VERSION}.tar.gz -o ${PACK}_${VERSION}.tar.gz &amp;&amp; \
   tar -xf ${PACK}_${VERSION}.tar.gz
 done
-</code></pre>
+</code></pre></div>
 <p><strong>目前只支持部署到: <code>/usr/yunji/cloudiac</code> 目录</strong></p>
-<h3 id="2-docker">2. 安装并启动 Docker</h3>
-<pre><code class="language-bash">curl -fsSL https://get.docker.com | bash -s docker
+<h3 id="2_docker">2. 安装并启动 Docker<a class="headerlink" href="#2_docker" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>curl -fsSL https://get.docker.com <span class="p">|</span> bash -s docker
 
-systemctl enable docker
+systemctl <span class="nb">enable</span> docker
 systemctl start docker
-</code></pre>
-<h3 id="3-mysql">3. 安装并启动 Mysql</h3>
-<pre><code class="language-bash">yum install -y https://repo.mysql.com/mysql57-community-release-el7.rpm
+</code></pre></div>
+<h3 id="3_mysql">3. 安装并启动 Mysql<a class="headerlink" href="#3_mysql" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>yum install -y https://repo.mysql.com/mysql57-community-release-el7.rpm
 yum install -y mysql-server
 
-systemctl enable mysqld
+systemctl <span class="nb">enable</span> mysqld
 systemctl start mysqld
-</code></pre>
+</code></pre></div>
 <p>安装完成后直接使用 <code>mysql -uroot</code> 即可连接到数据库，然后新创建一个账号用于 cloudiac。</p>
 <blockquote>
 <p>根据版本和系统的不同，安装后的初始密码可能在日志中打印或者写入到了 /etc/mysql/xxx 配置中，请根据实际情况获取默认密码。</p>
 </blockquote>
-<h3 id="4-consul">4. 安装并启动 Consul</h3>
-<pre><code class="language-bash">yum install -y yum-utils
+<h3 id="4_consul">4. 安装并启动 Consul<a class="headerlink" href="#4_consul" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>yum install -y yum-utils
 yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
 yum -y install consul
 
-# 修改 consul 配置
-cat &gt;&gt; /etc/consul.d/consul.hcl &lt;&lt;EOF
-ui = true
-server = true
-bind_addr = &quot;0.0.0.0&quot;
-client_addr = &quot;0.0.0.0&quot;
-bootstrap_expect = 1
-enable_script_checks = true
-EOF
+<span class="c1"># 修改 consul 配置</span>
+cat &gt;&gt; /etc/consul.d/consul.hcl <span class="s">&lt;&lt;EOF</span>
+<span class="s">ui = true</span>
+<span class="s">server = true</span>
+<span class="s">bind_addr = &quot;0.0.0.0&quot;</span>
+<span class="s">client_addr = &quot;0.0.0.0&quot;</span>
+<span class="s">bootstrap_expect = 1</span>
+<span class="s">enable_script_checks = true</span>
+<span class="s">EOF</span>
 
-systemctl enable consul
+systemctl <span class="nb">enable</span> consul
 systemctl start consul
-</code></pre>
+</code></pre></div>
 <p>以上配置仅用于单机测试时使用，完整的 consul 集群部署请参考官方文档:
 https://learn.hashicorp.com/tutorials/consul/get-started-install</p>
-<h3 id="5">5. 编辑配置文件</h3>
+<h3 id="5">5. 编辑配置文件<a class="headerlink" href="#5" title="Permanent link">#</a></h3>
 <ul>
 <li>拷贝示例配置文件</li>
 </ul>
-<pre><code class="language-bash">mv config-portal.yml.sample config-portal.yml
+<div class="highlight"><pre><span></span><code>mv config-portal.yml.sample config-portal.yml
 mv config-runner.yml.sample config-runner.yml
 mv dotenv.sample .env
 mv demo-conf.yml.sample demo-conf.yml
-</code></pre>
+</code></pre></div>
 <ul>
 <li>编辑 .env 文件，依据注释修改配置。</li>
 </ul>
 <p><em>通过 .env 可以配置大部分参数，更详细的配置可以直接修改 config-portal.yml 和 config-runner.yml</em></p>
-<h3 id="6-mysql">6. 初始化 Mysql</h3>
-<pre><code class="language-sql">-- 连接到 mysql 执行以下命令创建 db，默认配置的 db 名称为 iac
-create database iac charset utf8mb4;
-</code></pre>
-<h3 id="7-iac">7. 安装 IaC 服务</h3>
-<pre><code class="language-shell">cp iac-portal.service ct-runner.service /etc/systemd/system/
-systemctl enable iac-portal ct-runner
-</code></pre>
-<h3 id="8-iac">8. 启动 IaC 服务</h3>
-<pre><code class="language-shell"># 启动服务
+<h3 id="6_mysql">6. 初始化 Mysql<a class="headerlink" href="#6_mysql" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 连接到 mysql 执行以下命令创建 db，默认配置的 db 名称为 iac</span>
+<span class="k">create</span> <span class="k">database</span> <span class="n">iac</span> <span class="n">charset</span> <span class="n">utf8mb4</span><span class="p">;</span>
+</code></pre></div>
+<h3 id="7_iac">7. 安装 IaC 服务<a class="headerlink" href="#7_iac" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>cp iac-portal.service ct-runner.service /etc/systemd/system/
+systemctl <span class="nb">enable</span> iac-portal ct-runner
+</code></pre></div>
+<h3 id="8_iac">8. 启动 IaC 服务<a class="headerlink" href="#8_iac" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 启动服务</span>
 systemctl start iac-portal ct-runner
 
-# 确定服务状态
+<span class="c1"># 确定服务状态</span>
 systemctl status -l iac-portal ct-runner
-</code></pre>
-<h3 id="9-ct-worker">9. 接取 ct-worker 镜像</h3>
+</code></pre></div>
+<h3 id="9_ct-worker">9. 接取 ct-worker 镜像<a class="headerlink" href="#9_ct-worker" title="Permanent link">#</a></h3>
 <p>ct-worker 是执行部署任务的容器镜像，需要 pull 到本地:</p>
-<pre><code>docker pull cloudiac/ct-worker
-</code></pre>
+<div class="highlight"><pre><span></span><code>docker pull cloudiac/ct-worker
+</code></pre></div>
 <p>该操作可以后台进行，保证在执行环境部署前镜像 pull 到本地即可。</p>
-<h2 id="_4">前端部署</h2>
-<h3 id="1_1">1. 下载前端部署包并解压</h3>
-<pre><code>VERSION=v0.8.0
+<h2 id="_4">前端部署<a class="headerlink" href="#_4" title="Permanent link">#</a></h2>
+<h3 id="1_1">1. 下载前端部署包并解压<a class="headerlink" href="#1_1" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>VERSION=v0.8.0
 mkdir -p /usr/yunji/cloudiac-web &amp;&amp; \
 cd /usr/yunji/cloudiac-web &amp;&amp; \
 curl -sL https://github.com/idcos/cloudiac-web/releases/download/${VERSION}/cloudiac-web_${VERSION}.tar.gz -o cloudiac-web_${VERSION}.tar.gz &amp;&amp; \
 tar -xf cloudiac-web_${VERSION}.tar.gz
-</code></pre>
-<h3 id="2-nginx">2. 安装 nginx</h3>
-<pre><code class="language-bash">yum install -y nginx
-</code></pre>
-<h3 id="3-nginx">3. 配置 nginx</h3>
+</code></pre></div>
+<h3 id="2_nginx">2. 安装 nginx<a class="headerlink" href="#2_nginx" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>yum install -y nginx
+</code></pre></div>
+<h3 id="3_nginx">3. 配置 nginx<a class="headerlink" href="#3_nginx" title="Permanent link">#</a></h3>
 <p>配置 nginx 实现前端静态文件访问，并代理后端接口。 nginx 示例配置:</p>
-<pre><code>server {
+<div class="highlight"><pre><span></span><code>server {
   listen 80;
   server_name _ default;
 
@@ -1154,7 +1221,7 @@ tar -xf cloudiac-web_${VERSION}.tar.gz
     proxy_pass http://iac-portal:9030;
   }
 }
-</code></pre>
+</code></pre></div>
 <ul>
 <li>其中 <code>iac-portal</code> 需要替换为后端 portal 服务的 ip</li>
 </ul>
@@ -1229,6 +1296,12 @@ tar -xf cloudiac-web_${VERSION}.tar.gz
     
     
       <script src="../../assets/javascripts/bundle.e1a181d9.min.js"></script>
+      
+        <script src="../../assets/js/jquery.min.js"></script>
+      
+        <script src="../../assets/js/simpleLightbox.min.js"></script>
+      
+        <script src="../../assets/js/custom.js"></script>
       
     
   </body>

@@ -22,6 +22,10 @@
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.e6a45f82.min.css">
         
+          
+          
+          <meta name="theme-color" content="#2094f3">
+        
       
     
     
@@ -33,6 +37,10 @@
         <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
       
     
+    
+      <link rel="stylesheet" href="../../assets/css/custom.css">
+    
+      <link rel="stylesheet" href="../../assets/css/simpleLightbox.min.css">
     
     <script>__md_scope=new URL("../..",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -48,7 +56,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="blue" data-md-color-accent="">
   
     
     
@@ -74,8 +82,7 @@
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href="../.." title="CloudIaC文档中心" class="md-header__button md-logo" aria-label="CloudIaC文档中心" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+  <img src="../../assets/svg/logo.svg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -100,6 +107,51 @@
     
     
     
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/idcos/cloudiac/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    IDCOS/CloudIaC
+  </div>
+</a>
+      </div>
     
   </nav>
   
@@ -127,12 +179,23 @@
   <label class="md-nav__title" for="__drawer">
     <a href="../.." title="CloudIaC文档中心" class="md-nav__button md-logo" aria-label="CloudIaC文档中心" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+  <img src="../../assets/svg/logo.svg" alt="logo">
 
     </a>
     CloudIaC文档中心
   </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/idcos/cloudiac/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    IDCOS/CloudIaC
+  </div>
+</a>
+    </div>
   
   <ul class="md-nav__list" data-md-scrollfix>
     
@@ -602,14 +665,14 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-docker" class="md-nav__link">
+  <a href="#1_docker" class="md-nav__link">
     1. 安装并启动 docker
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-docker-compose" class="md-nav__link">
+  <a href="#2_docker-compose" class="md-nav__link">
     2. 安装 docker-compose
   </a>
   
@@ -623,21 +686,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-docker-composeyml" class="md-nav__link">
+  <a href="#4_docker-composeyml" class="md-nav__link">
     4. 编写 docker-compose.yml 文件
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#5-env" class="md-nav__link">
+  <a href="#5_env" class="md-nav__link">
     5. 编写 .env 文件
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-docker-compose" class="md-nav__link">
+  <a href="#6_docker-compose" class="md-nav__link">
     6. 启动docker-compose
   </a>
   
@@ -810,14 +873,14 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-docker" class="md-nav__link">
+  <a href="#1_docker" class="md-nav__link">
     1. 安装并启动 docker
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-docker-compose" class="md-nav__link">
+  <a href="#2_docker-compose" class="md-nav__link">
     2. 安装 docker-compose
   </a>
   
@@ -831,21 +894,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-docker-composeyml" class="md-nav__link">
+  <a href="#4_docker-composeyml" class="md-nav__link">
     4. 编写 docker-compose.yml 文件
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#5-env" class="md-nav__link">
+  <a href="#5_env" class="md-nav__link">
     5. 编写 .env 文件
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-docker-compose" class="md-nav__link">
+  <a href="#6_docker-compose" class="md-nav__link">
     6. 启动docker-compose
   </a>
   
@@ -863,188 +926,190 @@
             <article class="md-content__inner md-typeset">
               
                 
+<a href="https://github.com/idcos/cloudiac/edit/master/docs/mkdocs/product-deploy/container.md" title="Edit this page" class="md-content__button md-icon">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+</a>
 
-<h1 id="_1">容器部署</h1>
+
+<h1 id="_1">容器部署<a class="headerlink" href="#_1" title="Permanent link">#</a></h1>
 <p>该文档使用容器部署了所有组件，包括 mysql 和 consul，实际生产环境请根据需要进行调整。</p>
-<h2 id="1-docker">1. 安装并启动 docker</h2>
-<pre><code class="language-bash">curl -fsSL https://get.docker.com | bash -s docker &amp;&amp; \
-systemctl enable docker &amp;&amp; \
+<h2 id="1_docker">1. 安装并启动 docker<a class="headerlink" href="#1_docker" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code>curl -fsSL https://get.docker.com <span class="p">|</span> bash -s docker <span class="o">&amp;&amp;</span> <span class="se">\</span>
+systemctl <span class="nb">enable</span> docker <span class="o">&amp;&amp;</span> <span class="se">\</span>
 systemctl start docker
-</code></pre>
-<h2 id="2-docker-compose">2. 安装 docker-compose</h2>
-<pre><code class="language-bash">curl -L https://get.daocloud.io/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` &gt; /usr/local/bin/docker-compose &amp;&amp; \
+</code></pre></div>
+<h2 id="2_docker-compose">2. 安装 docker-compose<a class="headerlink" href="#2_docker-compose" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code>curl -L https://get.daocloud.io/docker/compose/releases/download/1.29.2/docker-compose-<span class="sb">`</span>uname -s<span class="sb">`</span>-<span class="sb">`</span>uname -m<span class="sb">`</span> &gt; /usr/local/bin/docker-compose <span class="o">&amp;&amp;</span> <span class="se">\</span>
 chmod +x /usr/local/bin/docker-compose
-</code></pre>
-<h2 id="3">3. 创建部署目录</h2>
+</code></pre></div>
+<h2 id="3">3. 创建部署目录<a class="headerlink" href="#3" title="Permanent link">#</a></h2>
 <p>部署目录固定为 /usr/yunji/cloudiac，<strong>不可更改</strong>，更改部署目录会导致执行部署任务失败。</p>
-<pre><code class="language-bash">mkdir -p /usr/yunji/cloudiac/var/{consul,mysql} &amp;&amp; cd /usr/yunji/cloudiac/
-</code></pre>
-<h2 id="4-docker-composeyml">4. 编写 docker-compose.yml 文件</h2>
+<div class="highlight"><pre><span></span><code>mkdir -p /usr/yunji/cloudiac/var/<span class="o">{</span>consul,mysql<span class="o">}</span> <span class="o">&amp;&amp;</span> <span class="nb">cd</span> /usr/yunji/cloudiac/
+</code></pre></div>
+<h2 id="4_docker-composeyml">4. 编写 docker-compose.yml 文件<a class="headerlink" href="#4_docker-composeyml" title="Permanent link">#</a></h2>
 <p>文件路径 /usr/yunji/cloudiac/docker-compose.yml，内容如下:</p>
-<pre><code class="language-yaml"># auto-replace-from: docker/docker-compose.yml
-version: &quot;3.2&quot;
-services:
-  iac-portal:
-    container_name: iac-portal
-    image: &quot;cloudiac/iac-portal:v0.8.1&quot;
-    volumes:
-      - type: bind
-        source: /usr/yunji/cloudiac/var
-        target: /usr/yunji/cloudiac/var
-      - type: bind
-        source: /usr/yunji/cloudiac/.env
-        target: /usr/yunji/cloudiac/.env
-    ports:
-      - &quot;9030:9030&quot;
-    depends_on:
-      - mysql
-      - consul
-    restart: always
+<div class="highlight"><pre><span></span><code><span class="c1"># auto-replace-from: docker/docker-compose.yml</span>
+<span class="nt">version</span><span class="p">:</span> <span class="s">&quot;3.2&quot;</span>
+<span class="nt">services</span><span class="p">:</span>
+  <span class="nt">iac-portal</span><span class="p">:</span>
+    <span class="nt">container_name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">iac-portal</span>
+    <span class="nt">image</span><span class="p">:</span> <span class="s">&quot;cloudiac/iac-portal:v0.8.1&quot;</span>
+    <span class="nt">volumes</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">bind</span>
+        <span class="nt">source</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/usr/yunji/cloudiac/var</span>
+        <span class="nt">target</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/usr/yunji/cloudiac/var</span>
+      <span class="p p-Indicator">-</span> <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">bind</span>
+        <span class="nt">source</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/usr/yunji/cloudiac/.env</span>
+        <span class="nt">target</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/usr/yunji/cloudiac/.env</span>
+    <span class="nt">ports</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="s">&quot;9030:9030&quot;</span>
+    <span class="nt">depends_on</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">mysql</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">consul</span>
+    <span class="nt">restart</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">always</span>
 
-  ct-runner:
-    container_name: ct-runner
-    image: &quot;cloudiac/ct-runner:v0.8.1&quot;
-    volumes:
-      - type: bind
-        source: /usr/yunji/cloudiac/var
-        target: /usr/yunji/cloudiac/var
-      - type: bind
-        source: /usr/yunji/cloudiac/.env
-        target: /usr/yunji/cloudiac/.env
-      - type: bind
-        source: /var/run/docker.sock
-        target: /var/run/docker.sock
-    ports:
-      - &quot;19030:19030&quot;
-    depends_on:
-      - consul
-    restart: always
+  <span class="nt">ct-runner</span><span class="p">:</span>
+    <span class="nt">container_name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">ct-runner</span>
+    <span class="nt">image</span><span class="p">:</span> <span class="s">&quot;cloudiac/ct-runner:v0.8.1&quot;</span>
+    <span class="nt">volumes</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">bind</span>
+        <span class="nt">source</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/usr/yunji/cloudiac/var</span>
+        <span class="nt">target</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/usr/yunji/cloudiac/var</span>
+      <span class="p p-Indicator">-</span> <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">bind</span>
+        <span class="nt">source</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/usr/yunji/cloudiac/.env</span>
+        <span class="nt">target</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/usr/yunji/cloudiac/.env</span>
+      <span class="p p-Indicator">-</span> <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">bind</span>
+        <span class="nt">source</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/var/run/docker.sock</span>
+        <span class="nt">target</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/var/run/docker.sock</span>
+    <span class="nt">ports</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="s">&quot;19030:19030&quot;</span>
+    <span class="nt">depends_on</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">consul</span>
+    <span class="nt">restart</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">always</span>
 
-  ct-worker:
-    image: &quot;cloudiac/ct-worker:v0.8.1&quot;
-    container_name: &quot;ct-worker-say-hi&quot;
-    # 添加该服务只是为了自动 pull 镜像，并不需要后台运行
-    command: [&quot;echo&quot;, &quot;hello world!&quot;]
-    restart: &quot;no&quot;
+  <span class="nt">ct-worker</span><span class="p">:</span>
+    <span class="nt">image</span><span class="p">:</span> <span class="s">&quot;cloudiac/ct-worker:v0.8.1&quot;</span>
+    <span class="nt">container_name</span><span class="p">:</span> <span class="s">&quot;ct-worker-say-hi&quot;</span>
+    <span class="c1"># 添加该服务只是为了自动 pull 镜像，并不需要后台运行</span>
+    <span class="nt">command</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="s">&quot;echo&quot;</span><span class="p p-Indicator">,</span> <span class="s">&quot;hello</span><span class="nv"> </span><span class="s">world!&quot;</span><span class="p p-Indicator">]</span>
+    <span class="nt">restart</span><span class="p">:</span> <span class="s">&quot;no&quot;</span>
 
-  iac-web:
-    container_name: iac-web
-    image: &quot;cloudiac/iac-web:v0.8.0&quot;
-    ports:
-      - 80:80
-    restart: always
-    depends_on:
-      - iac-portal
+  <span class="nt">iac-web</span><span class="p">:</span>
+    <span class="nt">container_name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">iac-web</span>
+    <span class="nt">image</span><span class="p">:</span> <span class="s">&quot;cloudiac/iac-web:v0.8.0&quot;</span>
+    <span class="nt">ports</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">80:80</span>
+    <span class="nt">restart</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">always</span>
+    <span class="nt">depends_on</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">iac-portal</span>
 
-  mysql:
-    container_name: mysql
-    image: &quot;mysql:8.0&quot;
-    command: [
-        &quot;--character-set-server=utf8mb4&quot;,
-        &quot;--collation-server=utf8mb4_unicode_ci&quot;,
-        &quot;--sql_mode=STRICT_TRANS_TABLES,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION&quot;
-    ]
-    volumes:
-      - type: bind
-        source: /usr/yunji/cloudiac/var/mysql
-        target: /var/lib/mysql
-    environment:
-      - MYSQL_RANDOM_ROOT_PASSWORD=yes
-      - MYSQL_USER
-      - MYSQL_PASSWORD
-      - MYSQL_DATABASE
-    restart: always
+  <span class="nt">mysql</span><span class="p">:</span>
+    <span class="nt">container_name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">mysql</span>
+    <span class="nt">image</span><span class="p">:</span> <span class="s">&quot;mysql:8.0&quot;</span>
+    <span class="nt">command</span><span class="p">:</span> <span class="p p-Indicator">[</span>
+        <span class="s">&quot;--character-set-server=utf8mb4&quot;</span><span class="p p-Indicator">,</span>
+        <span class="s">&quot;--collation-server=utf8mb4_unicode_ci&quot;</span><span class="p p-Indicator">,</span>
+        <span class="s">&quot;--sql_mode=STRICT_TRANS_TABLES,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION&quot;</span>
+    <span class="p p-Indicator">]</span>
+    <span class="nt">volumes</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">bind</span>
+        <span class="nt">source</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/usr/yunji/cloudiac/var/mysql</span>
+        <span class="nt">target</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/var/lib/mysql</span>
+    <span class="nt">environment</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">MYSQL_RANDOM_ROOT_PASSWORD=yes</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">MYSQL_USER</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">MYSQL_PASSWORD</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">MYSQL_DATABASE</span>
+    <span class="nt">restart</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">always</span>
 
-  consul:
-    container_name: consul
-    image: &quot;consul:latest&quot;
-    volumes:
-      - type: bind
-        source: /usr/yunji/cloudiac/var/consul
-        target: /consul/data
-    ports:
-      - &quot;8500:8500&quot;
-    command: &gt;
-      consul agent -server -bootstrap-expect=1 -ui -bind=0.0.0.0
-      -client=0.0.0.0 -enable-script-checks=true -data-dir=/consul/data
-    restart: always
-
-</code></pre>
-<h2 id="5-env">5. 编写 .env 文件</h2>
+  <span class="nt">consul</span><span class="p">:</span>
+    <span class="nt">container_name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">consul</span>
+    <span class="nt">image</span><span class="p">:</span> <span class="s">&quot;consul:latest&quot;</span>
+    <span class="nt">volumes</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">bind</span>
+        <span class="nt">source</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/usr/yunji/cloudiac/var/consul</span>
+        <span class="nt">target</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/consul/data</span>
+    <span class="nt">ports</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="s">&quot;8500:8500&quot;</span>
+    <span class="nt">command</span><span class="p">:</span> <span class="p p-Indicator">&gt;</span>
+      <span class="no">consul agent -server -bootstrap-expect=1 -ui -bind=0.0.0.0</span>
+      <span class="no">-client=0.0.0.0 -enable-script-checks=true -data-dir=/consul/data</span>
+    <span class="nt">restart</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">always</span>
+</code></pre></div>
+<h2 id="5_env">5. 编写 .env 文件<a class="headerlink" href="#5_env" title="Permanent link">#</a></h2>
 <p>文件路径 /usr/yunji/cloudiac/.env，内容如下(<strong>请根据注释修改配置</strong>):</p>
-<pre><code class="language-bash"># auto-replace-from: configs/dotenv.sample
-# 平台管理员账号密码(均为必填)
-# 该账号密码只在系统初始化时使用，后续修改不影响己创建的账号
-IAC_ADMIN_EMAIL=&quot;admin@example.com&quot;
-# 密码要求长度大于 8 且包含字母、数字、特殊字符
-IAC_ADMIN_PASSWORD=&quot;&quot;
+<div class="highlight"><pre><span></span><code><span class="c1"># auto-replace-from: configs/dotenv.sample</span>
+<span class="c1"># 平台管理员账号密码(均为必填)</span>
+<span class="c1"># 该账号密码只在系统初始化时使用，后续修改不影响己创建的账号</span>
+<span class="nv">IAC_ADMIN_EMAIL</span><span class="o">=</span><span class="s2">&quot;admin@example.com&quot;</span>
+<span class="c1"># 密码要求长度大于 8 且包含字母、数字、特殊字符</span>
+<span class="nv">IAC_ADMIN_PASSWORD</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
 
-# 加密密钥配置(必填)
-# 敏感数据使用该密钥进行加密
-SECRET_KEY=&quot;&quot;
+<span class="c1"># 加密密钥配置(必填)</span>
+<span class="c1"># 敏感数据使用该密钥进行加密</span>
+<span class="nv">SECRET_KEY</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
 
-# IaC 对外提供服务的地址(必填), 示例: http://cloudiac.example.com
-# 该地址需要带协议(http/https)，结尾不可以加 &quot;/&quot;
-PORTAL_ADDRESS=&quot;&quot;
+<span class="c1"># IaC 对外提供服务的地址(必填), 示例: http://cloudiac.example.com</span>
+<span class="c1"># 该地址需要带协议(http/https)，结尾不可以加 &quot;/&quot;</span>
+<span class="nv">PORTAL_ADDRESS</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
 
-# consul 地址(必填)，示例: private.host.ip:8500
-# 需要配置为机器的内网 ip:port，不可使用 127.0.0.1
-CONSUL_ADDRESS=&quot;&quot;
+<span class="c1"># consul 地址(必填)，示例: private.host.ip:8500</span>
+<span class="c1"># 需要配置为机器的内网 ip:port，不可使用 127.0.0.1</span>
+<span class="nv">CONSUL_ADDRESS</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
 
-# mysql 配置(必填)
-MYSQL_HOST=mysql
-MYSQL_PORT=3306
-MYSQL_DATABASE=cloudiac
-MYSQL_USER=cloudiac
-MYSQL_PASSWORD=&quot;mysqlpass&quot;
+<span class="c1"># mysql 配置(必填)</span>
+<span class="nv">MYSQL_HOST</span><span class="o">=</span>mysql
+<span class="nv">MYSQL_PORT</span><span class="o">=</span><span class="m">3306</span>
+<span class="nv">MYSQL_DATABASE</span><span class="o">=</span>cloudiac
+<span class="nv">MYSQL_USER</span><span class="o">=</span>cloudiac
+<span class="nv">MYSQL_PASSWORD</span><span class="o">=</span><span class="s2">&quot;mysqlpass&quot;</span>
 
-# portal 服务注册信息配置 (均为必填)
-## portal 服务的 IP 地址， 容器化部署时无需修改, 手动部署时配置为内网 IP
-SERVICE_IP=iac-portal
-## portal 服务注册的 id(需要保证唯一)
-SERVICE_ID=iac-portal-01
-## portal 服务注册的 tags
-SERVICE_TAGS=&quot;iac-portal;portal-01&quot;
+<span class="c1"># portal 服务注册信息配置 (均为必填)</span>
+<span class="c1">## portal 服务的 IP 地址， 容器化部署时无需修改, 手动部署时配置为内网 IP</span>
+<span class="nv">SERVICE_IP</span><span class="o">=</span>iac-portal
+<span class="c1">## portal 服务注册的 id(需要保证唯一)</span>
+<span class="nv">SERVICE_ID</span><span class="o">=</span>iac-portal-01
+<span class="c1">## portal 服务注册的 tags</span>
+<span class="nv">SERVICE_TAGS</span><span class="o">=</span><span class="s2">&quot;iac-portal;portal-01&quot;</span>
 
-# logger 配置
-LOG_DEVEL=&quot;debug&quot;
+<span class="c1"># logger 配置</span>
+<span class="nv">LOG_DEVEL</span><span class="o">=</span><span class="s2">&quot;debug&quot;</span>
 
-# SMTP 配置(该配置只影响邮件通知的发送，不配置不影响其他功能)
-SMTP_ADDRESS=smtp.example.com:25
-SMTP_USERNAME=user@example.com
-SMTP_PASSWORD=&quot;&quot;
-SMTP_FROM_NAME=IaC
-SMTP_FROM=support@example.com
+<span class="c1"># SMTP 配置(该配置只影响邮件通知的发送，不配置不影响其他功能)</span>
+<span class="nv">SMTP_ADDRESS</span><span class="o">=</span>smtp.example.com:25
+<span class="nv">SMTP_USERNAME</span><span class="o">=</span>user@example.com
+<span class="nv">SMTP_PASSWORD</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+<span class="nv">SMTP_FROM_NAME</span><span class="o">=</span>IaC
+<span class="nv">SMTP_FROM</span><span class="o">=</span>support@example.com
 
-# KAFKA配置(kafka 任务结果回调使用，不配置不影响其他功能)
-KAFKA_TOPIC=&quot;IAC_TASK_REPLY&quot;
-KAFKA_GROUP_ID=&quot;&quot;
-KAFKA_PARTITION=0
-## example: KAFKA_BROKERS: [&quot;kafka.example.com:9092&quot;, &quot;...&quot;]
-KAFKA_BROKERS=[]
-KAFKA_SASL_USERNAME=&quot;&quot;
-KAFKA_SASL_PASSWORD=&quot;&quot;
+<span class="c1"># KAFKA配置(kafka 任务结果回调使用，不配置不影响其他功能)</span>
+<span class="nv">KAFKA_TOPIC</span><span class="o">=</span><span class="s2">&quot;IAC_TASK_REPLY&quot;</span>
+<span class="nv">KAFKA_GROUP_ID</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+<span class="nv">KAFKA_PARTITION</span><span class="o">=</span><span class="m">0</span>
+<span class="c1">## example: KAFKA_BROKERS: [&quot;kafka.example.com:9092&quot;, &quot;...&quot;]</span>
+<span class="nv">KAFKA_BROKERS</span><span class="o">=[]</span>
+<span class="nv">KAFKA_SASL_USERNAME</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+<span class="nv">KAFKA_SASL_PASSWORD</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
 
 
-######### 以下为 runner 配置 #############
-# runner 服务注册配置(均为必填)
-## runner 服务的 IP 地址， 容器化部署时无需修改, 手动部署时配置为内网 IP
-RUNNER_SERVICE_IP=ct-runner
-## runner 服务注册的 id(需要保证唯一)
-RUNNER_SERVICE_ID=ct-runner-01
-RUNNER_SERVICE_TAGS=&quot;ct-runner;runner-01&quot;
+<span class="c1">######### 以下为 runner 配置 #############</span>
+<span class="c1"># runner 服务注册配置(均为必填)</span>
+<span class="c1">## runner 服务的 IP 地址， 容器化部署时无需修改, 手动部署时配置为内网 IP</span>
+<span class="nv">RUNNER_SERVICE_IP</span><span class="o">=</span>ct-runner
+<span class="c1">## runner 服务注册的 id(需要保证唯一)</span>
+<span class="nv">RUNNER_SERVICE_ID</span><span class="o">=</span>ct-runner-01
+<span class="nv">RUNNER_SERVICE_TAGS</span><span class="o">=</span><span class="s2">&quot;ct-runner;runner-01&quot;</span>
 
-## 是否开启 offline mode，默认为 false
-RUNNER_OFFLINE_MODE=&quot;false&quot;
-
-</code></pre>
+<span class="c1">## 是否开启 offline mode，默认为 false</span>
+<span class="nv">RUNNER_OFFLINE_MODE</span><span class="o">=</span><span class="s2">&quot;false&quot;</span>
+</code></pre></div>
 <p><em>通过 .env 可以配置大部分参数，需要更详细的配置可以拷贝镜像里的 config-portal.yml 和 config-runner.yml 文件，修改后再挂载到容器中进行替换</em></p>
-<h2 id="6-docker-compose">6. 启动docker-compose</h2>
-<pre><code class="language-bash">docker-compose up -d
+<h2 id="6_docker-compose">6. 启动docker-compose<a class="headerlink" href="#6_docker-compose" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code>docker-compose up -d
 
-# 前台调试启动：
-# dokcker-compose up
-</code></pre>
+<span class="c1"># 前台调试启动：</span>
+<span class="c1"># dokcker-compose up</span>
+</code></pre></div>
 <p><em>至此服务部署完成</em></p>
 
               
@@ -1115,6 +1180,12 @@ RUNNER_OFFLINE_MODE=&quot;false&quot;
     
     
       <script src="../../assets/javascripts/bundle.e1a181d9.min.js"></script>
+      
+        <script src="../../assets/js/jquery.min.js"></script>
+      
+        <script src="../../assets/js/simpleLightbox.min.js"></script>
+      
+        <script src="../../assets/js/custom.js"></script>
       
     
   </body>
