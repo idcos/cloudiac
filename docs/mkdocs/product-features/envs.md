@@ -28,13 +28,13 @@ CloudIaC 通过 Terraform 的状态文件来维护整个环境的状态，用户
 - *失败*：在部署过程中发生错误
 - *待审批*：operator发起部署作业后等待Manager或Approver审批
 
-![img](../images/environment-status.jpg)
+![img](../images/environment-status.jpg){.img-fluid}
 
 ## 环境资源
 
 当您的环境处于*活跃*状态时，您只需单击环境即可查看其中包含的资源。
 
-![image-20211223154720024](../images/WX20211223-174758@2x.png)
+![image-20211223154720024](../images/WX20211223-174758@2x.png){.img-fluid}
 
 ## 存活时间
 

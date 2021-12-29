@@ -1,7 +1,45 @@
 site_name: CloudIaC文档中心
 docs_dir: "docs/mkdocs"
-theme: material
-plugins: []
+repo_url: https://github.com/idcos/cloudiac
+repo_name: IDCOS/CloudIaC
+edit_uri: edit/master/docs/mkdocs/
+theme:
+  name: material
+  logo: assets/svg/logo.svg
+  palette:
+    primary: blue
+  icon:
+    repo: fontawesome/brands/github
+plugins:
+  - search:
+      lang:
+        - en
+        - ja
+      separator: '[\s\-\.]+' # 分词分隔符
+extra_css:
+  - 'assets/css/custom.css'
+  - 'assets/css/simpleLightbox.min.css'
+extra_javascript:
+  - 'assets/js/jquery.min.js'
+  - 'assets/js/simpleLightbox.min.js'
+  - 'assets/js/custom.js'
+markdown_extensions:
+  - markdown.extensions.attr_list
+  - meta
+  - toc:
+      permalink: "#"
+      baselevel: 1
+      separator: "_"
+  - footnotes
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid
 
 nav:
   - "产品介绍": 
