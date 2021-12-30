@@ -34,6 +34,10 @@ type CreateTemplateForm struct {
 
 	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" `
 	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
+	PolicyEnable   bool        `json:"policyEnable" form:"policyEnable"` // 是否开启合规检测
+	PolicyGroup    []models.Id `json:"policyGroup" form:"policyGroup"`   // 绑定的合规策略组
+	Triggers       []string    `json:"triggers" form:"triggers"`         // 分之推送自动触发合规 例如 ["commit"]
+
 }
 
 type SearchTemplateForm struct {
@@ -65,6 +69,9 @@ type UpdateTemplateForm struct {
 
 	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" `
 	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
+	PolicyEnable   bool        `json:"policyEnable" form:"policyEnable"` // 是否开启合规检测
+	PolicyGroup    []models.Id `json:"policyGroup" form:"policyGroup"`   // 绑定的合规策略组
+	Triggers       []string    `json:"triggers" form:"triggers"`         // 分之推送自动触发合规 例如 ["commit"]
 }
 
 type DeleteTemplateForm struct {

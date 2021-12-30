@@ -104,6 +104,8 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		PlayVarsFile: form.PlayVarsFile,
 		TfVarsFile:   form.TfVarsFile,
 		TfVersion:    form.TfVersion,
+		PolicyEnable: form.PolicyEnable,
+		Triggers:     form.Triggers,
 	})
 
 	if err != nil {
@@ -113,6 +115,19 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 			return nil, e.New(err.Code(), err.Err(), http.StatusBadRequest)
 		}
 		return nil, err
+	}
+
+	// 绑定云模版和策略组的关系
+	if len(form.PolicyGroup) > 0 {
+		policyForm := &forms.UpdatePolicyRelForm{
+			Id:             template.Id,
+			Scope:          consts.ScopeTemplate,
+			PolicyGroupIds: form.PolicyGroup,
+		}
+		if _, err = UpdatePolicyRel(c, policyForm); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
 	}
 
 	// 创建模板与项目的关系
@@ -143,6 +158,10 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		_ = tx.Rollback()
 		c.Logger().Errorf("error commit create template, err %s", err)
 		return nil, e.New(e.DBError, err)
+	}
+	// TODO 自动触发一次检测, 协程去开启？是否有封装好方法？
+	if form.PolicyEnable {
+
 	}
 
 	return template, nil
@@ -189,6 +208,13 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 	if form.HasKey("repoRevision") {
 		attrs["repoRevision"] = form.RepoRevision
 	}
+	if form.HasKey("policyEnable") {
+		attrs["policyEnable"] = form.PolicyEnable
+	}
+	if form.HasKey("triggers") {
+		attrs["triggers"] = form.Triggers
+	}
+
 	if form.HasKey("vcsId") && form.HasKey("repoId") && form.HasKey("repoFullName") {
 		attrs["vcsId"] = form.VcsId
 		attrs["repoId"] = form.RepoId
@@ -208,6 +234,22 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 	if tpl, err = services.UpdateTemplate(tx, form.Id, attrs); err != nil {
 		_ = tx.Rollback()
 		return nil, err
+	}
+	// 更新和策略组的绑定关系
+	if form.HasKey("policyGroup") {
+		policyForm := &forms.UpdatePolicyRelForm{
+			Id:             tpl.Id,
+			Scope:          consts.ScopeTemplate,
+			PolicyGroupIds: form.PolicyGroup,
+		}
+		if _, err = UpdatePolicyRel(c, policyForm); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+	}
+	// TODO 自动触发一次检测, 协程去开启？是否有封装好方法？
+	if form.PolicyEnable {
+
 	}
 	if form.HasKey("projectId") {
 		if err := services.DeleteTemplateProject(tx, form.Id); err != nil {
