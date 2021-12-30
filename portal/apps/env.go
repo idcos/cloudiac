@@ -207,6 +207,8 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		AutoRepairDrift:  form.AutoRepairDrift,
 		CronDriftExpress: form.CronDriftExpress,
 		OpenCronDrift:    form.OpenCronDrift,
+		// TODO 这个参数哪里去调用?
+		PolicyEnable: form.PolicyEnable,
 	}
 	// 检查偏移检测参数
 	cronTaskType, err := GetCronTaskTypeAndCheckParam(form.CronDriftExpress, form.AutoRepairDrift, form.OpenCronDrift)
@@ -270,7 +272,18 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		_ = tx.Rollback()
 		return nil, err
 	}
-
+	// 绑定策略组
+	if len(form.PolicyGroup) > 0 {
+		policyForm := &forms.UpdatePolicyRelForm{
+			Id:             env.Id,
+			Scope:          consts.ScopeEnv,
+			PolicyGroupIds: form.PolicyGroup,
+		}
+		if _, err = UpdatePolicyRel(c, policyForm); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+	}
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
@@ -479,6 +492,17 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	if err != nil {
 		return nil, err
 	}
+	// 先更新合规绑定，若失败则不进行后续更新操作
+	if form.HasKey("policyGroup") && len(form.PolicyGroup) > 0 {
+		policyForm := &forms.UpdatePolicyRelForm{
+			Id:             env.Id,
+			Scope:          consts.ScopeEnv,
+			PolicyGroupIds: form.PolicyGroup,
+		}
+		if _, err = UpdatePolicyRel(c, policyForm); err != nil {
+			return nil, err
+		}
+	}
 	attrs["autoRepairDrift"] = cronDriftParam.AutoRepairDrift
 	attrs["openCronDrift"] = cronDriftParam.OpenCronDrift
 	attrs["cronDriftExpress"] = cronDriftParam.CronDriftExpress
@@ -575,6 +599,9 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 				http.StatusBadRequest)
 		}
 		attrs["archived"] = form.Archived
+	}
+	if form.HasKey("policyEnable") {
+		attrs["policyEnable"] = form.PolicyEnable
 	}
 
 	env, err = services.UpdateEnv(c.DB(), form.Id, attrs)
