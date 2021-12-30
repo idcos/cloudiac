@@ -103,12 +103,12 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, closedCh <-c
 				msg.TfPlanJson = planJson
 			}
 
-			if parseJson, err := runner.FetchJson(task.EnvId, task.TaskId, runner.TerrascanJsonFile); err != nil {
+			if parseJson, err := runner.FetchJson(task.EnvId, task.TaskId, runner.ScanInputFile); err != nil {
 				logger.Errorf("fetch terrascan parsed json error: %v", err)
 			} else {
 				msg.TfScanJson = parseJson
 			}
-			if resultJson, err := runner.FetchJson(task.EnvId, task.TaskId, runner.TerrascanResultFile); err != nil {
+			if resultJson, err := runner.FetchJson(task.EnvId, task.TaskId, runner.ScanResultFile); err != nil {
 				logger.Errorf("fetch terrascan scan result json error: %v", err)
 			} else {
 				msg.TfResultJson = resultJson

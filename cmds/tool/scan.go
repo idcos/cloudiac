@@ -147,8 +147,8 @@ func (c *ScanCmd) Execute(args []string) error {
 }
 
 func (c *ScanCmd) Parse(filePath string) error {
-	cmdString := utils.SprintTemplate("terrascan scan --parse-only -d . -o json > {{.TerrascanResultFile}}", map[string]interface{}{
-		"TFScanJsonFilePath": filepath.Join("./", runner.TerrascanJsonFile),
+	cmdString := utils.SprintTemplate("terrascan scan --parse-only -d . -o json > {{.ScanResultFile}}", map[string]interface{}{
+		"TFScanJsonFilePath": filepath.Join("./", runner.ScanInputFile),
 	})
 	result, err := RunCmd(cmdString)
 	if err != nil {
@@ -159,8 +159,8 @@ func (c *ScanCmd) Parse(filePath string) error {
 }
 
 func (c *ScanCmd) Scan(filePath string, regoDir string) error {
-	cmdString := utils.SprintTemplate("terrascan scan -d . -o json > {{.TerrascanResultFile}}", map[string]interface{}{
-		"TFScanJsonFilePath": filepath.Join("./", runner.TerrascanResultFile),
+	cmdString := utils.SprintTemplate("terrascan scan -d . -o json > {{.ScanResultFile}}", map[string]interface{}{
+		"TFScanJsonFilePath": filepath.Join("./", runner.ScanResultFile),
 	})
 	result, err := RunCmd(cmdString)
 	if err != nil {
@@ -192,7 +192,7 @@ opa eval -f pretty --data {{.RegoFile}} --input {{.JsonFile}} data > {{.RegoResu
 		"PolicyDir":      randomDir,
 		"ConfigFile":     configFile,
 		"IsDir":          isDir,
-		"JsonFile":       runner.TerrascanJsonFile,
+		"JsonFile":       runner.ScanInputFile,
 		"RegoFile":       regoFile,
 		"RegoResultFile": runner.RegoResultFile,
 	})

@@ -509,7 +509,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		}
 
 		if runErr != nil {
-			if step.Type == common.TaskStepOpaScan && !task.StopOnViolation {
+			if step.Type == common.TaskStepEnvScan && !task.StopOnViolation {
 				// 合规任务失败不影响环境部署流程
 				logger.Warnf("run scan task step: %v", runErr)
 				continue
@@ -571,7 +571,7 @@ func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) 
 	}
 
 	switch step.Type {
-	case common.TaskStepOpaScan:
+	case common.TaskStepEnvScan:
 		return processScanResult()
 	}
 	return nil
@@ -888,7 +888,7 @@ loop:
 				return err
 			}
 			// 合规检测步骤不通过，不需要重试，跳出循环
-			if step.Type == models.TaskStepOpaScan &&
+			if step.Type == models.TaskStepEnvScan &&
 				stepResult.Result.ExitCode == common.TaskStepPolicyViolationExitCode {
 				message := "Scan task step finished with violations found."
 				changeStepStatusAndStepRetryTimes(models.TaskStepFailed, message, step)
@@ -1127,19 +1127,17 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 		}
 	}
 
-	if task.Type != common.TaskTypeParse {
-		if task.EnvId != "" { // 环境扫描
-			if err := services.UpdateEnvModel(m.db, task.EnvId,
-				models.Env{LastScanTaskId: task.Id}); err != nil {
-				logger.Errorf("update env lastScanTaskId: %v", err)
-				return
-			}
-		} else if task.TplId != "" { // 模板扫描
-			if _, err := m.db.Where("id = ?", task.TplId).
-				Update(&models.Template{LastScanTaskId: task.Id}); err != nil {
-				logger.Errorf("update template lastScanTaskId: %v", err)
-				return
-			}
+	if task.Type == common.TaskTypeEnvScan {
+		if err := services.UpdateEnvModel(m.db, task.EnvId,
+			models.Env{LastScanTaskId: task.Id}); err != nil {
+			logger.Errorf("update env lastScanTaskId: %v", err)
+			return
+		}
+	} else if task.Type == common.TaskTypeTplScan { // 模板扫描
+		if _, err := m.db.Where("id = ?", task.TplId).
+			Update(&models.Template{LastScanTaskId: task.Id}); err != nil {
+			logger.Errorf("update template lastScanTaskId: %v", err)
+			return
 		}
 	}
 
@@ -1254,7 +1252,7 @@ func (m *TaskManager) processScanTaskDone(taskId models.Id) {
 		logger.Errorf("update task status error: %v", err)
 	}
 
-	if task.Type == common.TaskTypeScan {
+	if task.Type == common.TaskTypeEnvScan {
 		if err := processTfResult(); err != nil {
 			logger.Errorf("process task scan: %s", err)
 		}
@@ -1285,7 +1283,7 @@ func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.Ta
 		return nil, err
 	}
 
-	if step.Type == models.TaskStepOpaScan {
+	if step.Type == models.TaskStepEnvScan || step.Type == models.TaskStepTplScan {
 		taskReq.Policies, err = services.GetTaskPolicies(dbSess, task.Id)
 		if err != nil {
 			return nil, errors.Wrapf(err, "get scan task '%s' policies error: %v", task.Id, err)

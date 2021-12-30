@@ -64,17 +64,17 @@ func (ScanTask) TableName() string {
 
 func (t *ScanTask) TfParseJsonPath() string {
 	if t.EnvId != "" {
-		return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TerrascanJsonFile)
+		return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.ScanInputFile)
 	} else {
-		return path.Join(t.TplId.String(), t.Id.String(), runner.TerrascanJsonFile)
+		return path.Join(t.TplId.String(), t.Id.String(), runner.ScanInputFile)
 	}
 }
 
 func (t *ScanTask) TfResultJsonPath() string {
 	if t.EnvId != "" {
-		return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TerrascanResultFile)
+		return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.ScanResultFile)
 	} else {
-		return path.Join(t.TplId.String(), t.Id.String(), runner.TerrascanResultFile)
+		return path.Join(t.TplId.String(), t.Id.String(), runner.ScanResultFile)
 	}
 }
 

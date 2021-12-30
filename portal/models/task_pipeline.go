@@ -16,8 +16,10 @@ type Pipeline struct {
 	Destroy PipelineTask `json:"destroy" yaml:"destroy"`
 
 	// 直接命名为 Scan 会与 Scan() 接口方法重名，所以这里命名为 PolicyScan
-	PolicyScan  PipelineTask `json:"scan" yaml:"scan"`
-	PolicyParse PipelineTask `json:"parse" yaml:"parse"`
+	EnvScan  PipelineTask `json:"envScan" yaml:"envScan"`
+	EnvParse PipelineTask `json:"envParse" yaml:"envParse"`
+	TplScan  PipelineTask `json:"tplScan" yaml:"tplScan"`
+	TplParse PipelineTask `json:"tplParse" yaml:"tplParse"`
 }
 
 func (p Pipeline) GetTask(typ string) PipelineTask {
@@ -28,10 +30,14 @@ func (p Pipeline) GetTask(typ string) PipelineTask {
 		return p.Apply
 	case common.TaskJobDestroy:
 		return p.Destroy
-	case common.TaskJobScan:
-		return p.PolicyScan
-	case common.TaskJobParse:
-		return p.PolicyParse
+	case common.TaskJobEnvScan:
+		return p.EnvScan
+	case common.TaskJobEnvParse:
+		return p.EnvParse
+	case common.TaskJobTplScan:
+		return p.TplScan
+	case common.TaskJobTplParse:
+		return p.TplParse
 	default:
 		panic(fmt.Errorf("unknown pipeline job type '%s'", typ))
 	}
@@ -64,8 +70,8 @@ func (v *PipelineTask) Scan(value interface{}) error {
 	return UnmarshalValue(value, v)
 }
 
-const pipelineV0dot3 = `
-version: 0.3
+const pipelineV0dot4 = `
+version: 0.4
 
 plan:
   steps:
@@ -75,11 +81,11 @@ plan:
     - type: terraformInit
       name: Terraform Init
 
-    - type: opaScan
-      name: OPA Scan
-
     - type: terraformPlan
       name: Terraform Plan
+
+    - type: envScan
+      name: OPA Scan
 
 apply:
   steps:
@@ -89,11 +95,11 @@ apply:
     - type: terraformInit
       name: Terraform Init
 
-    - type: opaScan
-      name: OPA Scan
-
     - type: terraformPlan
       name: Terraform Plan
+
+    - type: envScan
+      name: OPA Scan
 
     - type: terraformApply
       name: Terraform Apply
@@ -119,22 +125,36 @@ destroy:
 
 
 # scan 和 parse 暂不开发自定义工作流
-scan:
+envScan:
   steps:
-    - type: scaninit
-    - type: opaScan
+    - type: checkout
+    - type: terraformInit
+    - type: terraformPlan
+    - type: envScan
 
-parse:
+envParse:
+  steps:
+    - type: checkout
+    - type: terraformInit
+    - type: terraformPlan
+    - type: envParse 
+
+tplScan:
   steps:
     - type: scaninit
-    - type: regoParse 
+    - type: tplScan
+
+tplParse:
+  steps:
+    - type: scaninit
+    - type: tplParse 
 `
 
-const defaultPipelineVersion = "0.3"
+const defaultPipelineVersion = "0.4"
 
 var (
 	defaultPipelineTpls = map[string]string{
-		"0.3": pipelineV0dot3,
+		"0.4": pipelineV0dot4,
 	}
 	defaultPipelines = make(map[string]Pipeline)
 )

@@ -61,11 +61,13 @@ func (v *TaskExtra) Scan(value interface{}) error {
 }
 
 const (
-	TaskTypePlan    = common.TaskTypePlan
-	TaskTypeApply   = common.TaskTypeApply
-	TaskTypeDestroy = common.TaskTypeDestroy
-	TaskTypeScan    = common.TaskTypeScan
-	TaskTypeParse   = common.TaskTypeParse
+	TaskTypePlan     = common.TaskTypePlan
+	TaskTypeApply    = common.TaskTypeApply
+	TaskTypeDestroy  = common.TaskTypeDestroy
+	TaskTypeEnvScan  = common.TaskTypeEnvScan
+	TaskTypeEnvParse = common.TaskTypeEnvParse
+	TaskTypeTplScan  = common.TaskTypeTplScan
+	TaskTypeTplParse = common.TaskTypeTplParse
 
 	TaskPending   = common.TaskPending
 	TaskRunning   = common.TaskRunning
@@ -191,10 +193,14 @@ func (BaseTask) GetTaskNameByType(typ string) string {
 		return common.TaskTypeApplyName
 	case TaskTypeDestroy:
 		return common.TaskTypeDestroyName
-	case TaskTypeScan:
-		return common.TaskTypeScanName
-	case TaskTypeParse:
-		return common.TaskTypeParse
+	case TaskTypeEnvScan:
+		return common.TaskTypeEnvScanName
+	case TaskTypeEnvParse:
+		return common.TaskTypeEnvParseName
+	case TaskTypeTplScan:
+		return common.TaskTypeTplScanName
+	case TaskTypeTplParse:
+		return common.TaskTypeTplParseName
 	default:
 		panic("invalid task type")
 	}
@@ -213,11 +219,11 @@ func (t *Task) PlanJsonPath() string {
 }
 
 func (t *Task) TfParseJsonPath() string {
-	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TerrascanJsonFile)
+	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.ScanInputFile)
 }
 
 func (t *Task) TfResultJsonPath() string {
-	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TerrascanResultFile)
+	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.ScanResultFile)
 }
 
 func (t *Task) TFPlanOutputLogPath(step string) string {

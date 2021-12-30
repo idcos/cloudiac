@@ -163,9 +163,17 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 		_ = tx.Rollback()
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
-	taskType := models.TaskTypeScan
-	if form.Parse {
-		taskType = models.TaskTypeParse
+	// 确定任务类型
+	taskType := ""
+	if envId != "" && !form.Parse {
+		taskType = models.TaskTypeEnvScan
+	} else if envId != "" && form.Parse {
+		taskType = models.TaskTypeEnvParse
+	} else if envId == "" && !form.Parse {
+		taskType = models.TaskTypeTplScan
+	} else {
+		// envId == "" && form.Parse
+		taskType = models.TaskTypeTplParse
 	}
 	task, err := services.CreateScanTask(tx, tpl, env, models.ScanTask{
 		Name:      models.ScanTask{}.GetTaskNameByType(taskType),
@@ -185,7 +193,7 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
-	if task.Type == models.TaskTypeScan {
+	if task.Type == models.TaskTypeEnvScan {
 		if envId != "" { // 环境检查
 			env.LastScanTaskId = task.Id
 			if _, err := tx.Save(env); err != nil {

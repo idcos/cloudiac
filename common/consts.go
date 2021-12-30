@@ -9,18 +9,22 @@ var (
 )
 
 const (
-	TaskTypePlan    = "plan"    // 计划执行，不会修改资源或做服务配置
-	TaskTypeApply   = "apply"   // 执行 terraform apply 和 playbook
-	TaskTypeDestroy = "destroy" // 销毁，删除所有资源
-	TaskTypeScan    = "scan"    // 策略扫描，只执行策略扫描，不修改资源或配置
-	TaskTypeParse   = "parse"   // 策略扫描，只执行策略扫描，不修改资源或配置
+	TaskTypePlan     = "plan"     // 计划执行，不会修改资源或做服务配置
+	TaskTypeApply    = "apply"    // 执行 terraform apply 和 playbook
+	TaskTypeDestroy  = "destroy"  // 销毁，删除所有资源
+	TaskTypeEnvScan  = "envScan"  // 环境策略扫描，只执行策略扫描，不修改资源或配置
+	TaskTypeEnvParse = "envParse" // 环境策略扫描，只执行策略扫描，不修改资源或配置
+	TaskTypeTplScan  = "tplScan"  // 云模板策略扫描，只执行策略扫描，不修改资源或配置
+	TaskTypeTplParse = "tplParse" // 云模板策略扫描，只执行策略扫描，不修改资源或配置
 
 	// TODO 与 taskTypexxx 重复，需要替换
-	TaskJobPlan    = "plan"
-	TaskJobApply   = "apply"
-	TaskJobDestroy = "destroy"
-	TaskJobScan    = "scan"
-	TaskJobParse   = "parse"
+	TaskJobPlan     = "plan"
+	TaskJobApply    = "apply"
+	TaskJobDestroy  = "destroy"
+	TaskJobEnvScan  = "envScan"
+	TaskJobEnvParse = "envParse"
+	TaskJobTplScan  = "tplScan"
+	TaskJobTplParse = "tplParse"
 
 	TaskPending   = "pending"
 	TaskRunning   = "running"
@@ -35,8 +39,10 @@ const (
 	TaskStepTfApply   = "terraformApply"
 	TaskStepTfDestroy = "terraformDestroy"
 
-	TaskStepRegoParse = "regoParse" // 解析资源为 rego 的 input
-	TaskStepOpaScan   = "opaScan"   // 云模板策略扫描
+	TaskStepTplParse = "tplParse"
+	TaskStepTplScan  = "tplScan"
+	TaskStepEnvParse = "envParse"
+	TaskStepEnvScan  = "envScan"
 
 	TaskStepAnsiblePlay = "ansiblePlay" // play playbook
 	TaskStepCommand     = "command"     // run command
@@ -59,10 +65,13 @@ const (
 
 	TaskStepPolicyViolationExitCode = 3 // 合规检查不通过时的退出码
 
-	TaskTypePlanName    = "plan"
-	TaskTypeApplyName   = "apply"
-	TaskTypeDestroyName = "destroy"
-	TaskTypeScanName    = "scan"
+	TaskTypePlanName     = "plan"
+	TaskTypeApplyName    = "apply"
+	TaskTypeDestroyName  = "destroy"
+	TaskTypeEnvScanName  = "envScan"
+	TaskTypeEnvParseName = "envParse"
+	TaskTypeTplScanName  = "tplScan"
+	TaskTypeTplParseName = "tplParse"
 
 	// 默认步骤超时时间(秒)
 	DefaultTaskStepTimeout = 1800

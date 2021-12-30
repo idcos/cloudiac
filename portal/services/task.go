@@ -123,7 +123,7 @@ func CloneNewDriftTask(tx *db.Session, src models.Task, env *models.Env) (*model
 	// 克隆任务需要重置部分任务参数
 	var (
 		cronTaskType string
-		taskSource string
+		taskSource   string
 	)
 	if env.AutoRepairDrift {
 		cronTaskType = models.TaskTypeApply
@@ -269,7 +269,7 @@ func doCreateTask(tx *db.Session, task models.Task, tpl *models.Template, env *m
 			logger.WithField("step", fmt.Sprintf("%d(%s)", i, pipelineStep.Type)).
 				Infof("not have playbook, skip this step")
 			continue
-		} else if pipelineStep.Type == models.TaskStepOpaScan {
+		} else if pipelineStep.Type == models.TaskStepEnvScan {
 			// 如果环境扫描未启用，则跳过扫描步骤
 			if enabled, _ := IsEnvEnabledScan(tx, task.EnvId); !enabled {
 				continue
@@ -284,7 +284,7 @@ func doCreateTask(tx *db.Session, task models.Task, tpl *models.Template, env *m
 			}
 		}
 
-		if pipelineStep.Type == models.TaskStepOpaScan {
+		if pipelineStep.Type == models.TaskStepEnvScan {
 			// 对于包含扫描的任务，创建一个对应的 scanTask 作为扫描任务记录，便于后期扫描状态的查询
 			scanTask := CreateMirrorScanTask(&task)
 			if _, err := tx.Save(scanTask); err != nil {
@@ -1041,7 +1041,8 @@ func ChangeScanTaskStatusWithStep(dbSess *db.Session, task *models.ScanTask, ste
 	case common.TaskComplete:
 		task.PolicyStatus = common.PolicyStatusPassed
 	case common.TaskFailed:
-		if step.Type == common.TaskStepOpaScan && exitCode == common.TaskStepPolicyViolationExitCode {
+		if (step.Type == common.TaskStepEnvScan || step.Type == common.TaskStepTplScan) &&
+			exitCode == common.TaskStepPolicyViolationExitCode {
 			task.PolicyStatus = common.PolicyStatusViolated
 		} else {
 			task.PolicyStatus = common.PolicyStatusFailed
