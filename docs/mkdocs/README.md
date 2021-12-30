@@ -20,13 +20,4 @@ CloudIaC 是一套基于基础设施即代码（Infrastructure as Code）构建�
 | 安全合规           | 使用开放标准 Open Policy Agent 框架以"策略即代码"的方式进行合规检测，在问题发生之前尽量降低安全风险和错误配置 |
 | 私有Registry       | 私有Registry，提供Providers、Modules、Polices管理，让您在私有云、混合云环境下流畅使用IaC来管理您的云部署 |
 
-## 文档中心
-
-- [产品介绍](product-description/)
-- [快速入门](quick-start/)
-- [产品功能](product-features/)
-- [产品部署](product-deploy/)
-- [常见问题](answer-questions/)
-- [API文档](api-docs/)
-- [Releases](releases.md)
 
