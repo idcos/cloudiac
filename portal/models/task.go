@@ -64,6 +64,8 @@ const (
 	TaskTypePlan     = common.TaskTypePlan
 	TaskTypeApply    = common.TaskTypeApply
 	TaskTypeDestroy  = common.TaskTypeDestroy
+	TaskTypeScan     = common.TaskTypeScan
+	TaskTypeParse    = common.TaskTypeParse
 	TaskTypeEnvScan  = common.TaskTypeEnvScan
 	TaskTypeEnvParse = common.TaskTypeEnvParse
 	TaskTypeTplScan  = common.TaskTypeTplScan
@@ -193,6 +195,10 @@ func (BaseTask) GetTaskNameByType(typ string) string {
 		return common.TaskTypeApplyName
 	case TaskTypeDestroy:
 		return common.TaskTypeDestroyName
+	case TaskTypeScan:
+		return common.TaskTypeScanName
+	case TaskTypeParse:
+		return common.TaskTypeParse
 	case TaskTypeEnvScan:
 		return common.TaskTypeEnvScanName
 	case TaskTypeEnvParse:

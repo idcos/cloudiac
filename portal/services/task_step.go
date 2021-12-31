@@ -160,6 +160,7 @@ func newScanTaskStep(tx *db.Session, task models.ScanTask, stepBody models.Pipel
 	s := models.TaskStep{
 		PipelineStep: stepBody,
 		OrgId:        task.OrgId,
+		EnvId:        task.EnvId,
 		TaskId:       task.Id,
 		Index:        index,
 		Status:       models.TaskStepPending,
@@ -173,8 +174,8 @@ func newScanTaskStep(tx *db.Session, task models.ScanTask, stepBody models.Pipel
 
 func GetTaskScanStep(query *db.Session, taskId models.Id) (*models.TaskStep, e.Error) {
 	taskStep := models.TaskStep{}
-	err := query.Where("task_id = ? AND `type` in (?,?)",
-		taskId, common.TaskStepEnvScan, common.TaskStepTplScan).First(&taskStep)
+	err := query.Where("task_id = ? AND `type` in (?,?,?)",
+		taskId, common.TaskStepEnvScan, common.TaskStepTplScan, common.TaskStepOpaScan).First(&taskStep)
 	if err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.TaskStepNotExists)

@@ -385,6 +385,16 @@ func (t *Task) genStepScript() (string, error) {
 		command, err = t.collectCommand()
 	case common.TaskStepScanInit:
 		command, err = t.stepScanInit()
+	case common.TaskStepOpaScan:
+		// 兼容 0.3 版本 pipeline
+		// 为了保证 step envScan 步骤的正确运行，会自动插入 plan 步骤
+		// 该行为会导致执行两次 plan，导致执行速度变慢，作为一个兼容性的已知问题
+		var planCommand, scanCommand string
+		if planCommand, err = t.stepPlan(); err == nil {
+			if scanCommand, err = t.stepEnvScan(); err == nil {
+				command = planCommand + "\n" + scanCommand
+			}
+		}
 	case common.TaskStepEnvParse:
 		command, err = t.stepEnvParse()
 	case common.TaskStepEnvScan:

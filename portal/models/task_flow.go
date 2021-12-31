@@ -16,6 +16,8 @@ type TaskFlows struct {
 	Plan     TaskFlow `json:"plan" yaml:"plan"`
 	Apply    TaskFlow `json:"apply" yaml:"apply"`
 	Destroy  TaskFlow `json:"destroy" yaml:"destroy"`
+	Scan     TaskFlow `json:"scan" yaml:"scan"`
+	Parse    TaskFlow `json:"parse" yaml:"parse"`
 	EnvScan  TaskFlow `json:"envScan" yaml:"envScan"`
 	EnvParse TaskFlow `json:"parse" yaml:"envParse"`
 	TplScan  TaskFlow `json:"tplScan" yaml:"tplScan"`
@@ -102,6 +104,10 @@ func GetTaskFlow(flows *TaskFlows, typ string) (TaskFlow, error) {
 		return flows.Apply, nil
 	case common.TaskTypeDestroy:
 		return flows.Destroy, nil
+	case common.TaskTypeScan:
+		return flows.Scan, nil
+	case common.TaskTypeParse:
+		return flows.Parse, nil
 	case common.TaskTypeEnvScan:
 		return flows.EnvScan, nil
 	case common.TaskTypeEnvParse:

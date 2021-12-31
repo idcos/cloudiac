@@ -12,6 +12,8 @@ const (
 	TaskTypePlan     = "plan"     // 计划执行，不会修改资源或做服务配置
 	TaskTypeApply    = "apply"    // 执行 terraform apply 和 playbook
 	TaskTypeDestroy  = "destroy"  // 销毁，删除所有资源
+	TaskTypeScan     = "scan"     // 策略扫描，只执行策略扫描，不修改资源或配置
+	TaskTypeParse    = "parse"    // 策略扫描，只执行策略扫描，不修改资源或配置
 	TaskTypeEnvScan  = "envScan"  // 环境策略扫描，只执行策略扫描，不修改资源或配置
 	TaskTypeEnvParse = "envParse" // 环境策略扫描，只执行策略扫描，不修改资源或配置
 	TaskTypeTplScan  = "tplScan"  // 云模板策略扫描，只执行策略扫描，不修改资源或配置
@@ -21,6 +23,8 @@ const (
 	TaskJobPlan     = "plan"
 	TaskJobApply    = "apply"
 	TaskJobDestroy  = "destroy"
+	TaskJobScan     = "scan"
+	TaskJobParse    = "parse"
 	TaskJobEnvScan  = "envScan"
 	TaskJobEnvParse = "envParse"
 	TaskJobTplScan  = "tplScan"
@@ -39,6 +43,9 @@ const (
 	TaskStepTfApply   = "terraformApply"
 	TaskStepTfDestroy = "terraformDestroy"
 
+	// 0.3 扫描步骤名称
+	TaskStepOpaScan = "opaScan" // 云模板策略扫描
+	// 0.4 扫描步骤名称
 	TaskStepTplParse = "tplParse"
 	TaskStepTplScan  = "tplScan"
 	TaskStepEnvParse = "envParse"
@@ -68,6 +75,7 @@ const (
 	TaskTypePlanName     = "plan"
 	TaskTypeApplyName    = "apply"
 	TaskTypeDestroyName  = "destroy"
+	TaskTypeScanName     = "scan"
 	TaskTypeEnvScanName  = "envScan"
 	TaskTypeEnvParseName = "envParse"
 	TaskTypeTplScanName  = "tplScan"

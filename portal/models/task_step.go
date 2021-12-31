@@ -22,6 +22,7 @@ const (
 	TaskStepTplParse = common.TaskStepTplParse
 	TaskStepTplScan  = common.TaskStepTplScan
 	TaskStepScanInit = common.TaskStepScanInit
+	TaskStepOpaScan  = common.TaskStepOpaScan
 
 	TaskStepPending   = common.TaskStepPending
 	TaskStepApproving = common.TaskStepApproving

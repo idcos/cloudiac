@@ -15,7 +15,11 @@ type Pipeline struct {
 	Apply   PipelineTask `json:"apply" yaml:"apply"`
 	Destroy PipelineTask `json:"destroy" yaml:"destroy"`
 
-	// 直接命名为 Scan 会与 Scan() 接口方法重名，所以这里命名为 PolicyScan
+	// 0.3 pipeline 扫描步骤
+	PolicyScan  PipelineTask `json:"scan" yaml:"scan"`
+	PolicyParse PipelineTask `json:"parse" yaml:"parse"`
+
+	// 0.4 pipeline 扫描步骤
 	EnvScan  PipelineTask `json:"envScan" yaml:"envScan"`
 	EnvParse PipelineTask `json:"envParse" yaml:"envParse"`
 	TplScan  PipelineTask `json:"tplScan" yaml:"tplScan"`
@@ -30,6 +34,10 @@ func (p Pipeline) GetTask(typ string) PipelineTask {
 		return p.Apply
 	case common.TaskJobDestroy:
 		return p.Destroy
+	case common.TaskJobScan:
+		return p.PolicyScan
+	case common.TaskJobParse:
+		return p.PolicyParse
 	case common.TaskJobEnvScan:
 		return p.EnvScan
 	case common.TaskJobEnvParse:
@@ -69,6 +77,60 @@ func (v PipelineTask) Value() (driver.Value, error) {
 func (v *PipelineTask) Scan(value interface{}) error {
 	return UnmarshalValue(value, v)
 }
+
+const pipelineV0dot3 = `
+version: 0.3
+
+plan:
+  steps:
+    - type: checkout
+      name: Checkout Code
+      
+    - type: terraformInit
+      name: Terraform Init
+
+    - type: opaScan
+      name: OPA Scan
+
+    - type: terraformPlan
+      name: Terraform Plan
+
+apply:
+  steps:
+    - type: checkout
+      name: Checkout Code
+      
+    - type: terraformInit
+      name: Terraform Init
+
+    - type: opaScan
+      name: OPA Scan
+
+    - type: terraformPlan
+      name: Terraform Plan
+
+    - type: terraformApply
+      name: Terraform Apply
+
+    - type: ansiblePlay
+      name: Run playbook
+      
+destroy:
+  steps:
+    - type: checkout
+      name: Checkout Code
+      
+    - type: terraformInit
+      name: Terraform Init
+
+    - type: terraformPlan
+      name: Terraform Plan
+      args: 
+        - "-destroy"
+
+    - type: terraformDestroy
+      name: Terraform Destroy
+`
 
 const pipelineV0dot4 = `
 version: 0.4
@@ -123,7 +185,6 @@ destroy:
     - type: terraformDestroy
       name: Terraform Destroy
 
-
 # scan 和 parse 暂不开发自定义工作流
 envScan:
   steps:
@@ -150,17 +211,22 @@ tplParse:
     - type: tplParse 
 `
 
-const defaultPipelineVersion = "0.4"
+const DefaultPipelineVersion = "0.4"
 
 var (
 	defaultPipelineTpls = map[string]string{
+		"0.3": pipelineV0dot3,
 		"0.4": pipelineV0dot4,
 	}
 	defaultPipelines = make(map[string]Pipeline)
 )
 
+func DefaultPipelineRaw() string {
+	return defaultPipelineTpls[DefaultPipelineVersion]
+}
+
 func DefaultPipeline() Pipeline {
-	return MustGetPipelineByVersion(defaultPipelineVersion)
+	return MustGetPipelineByVersion(DefaultPipelineVersion)
 }
 
 func GetPipelineByVersion(version string) (Pipeline, bool) {
@@ -170,7 +236,7 @@ func GetPipelineByVersion(version string) (Pipeline, bool) {
 
 func MustGetPipelineByVersion(version string) Pipeline {
 	if version == "" {
-		version = defaultPipelineVersion
+		version = DefaultPipelineVersion
 	}
 	pipeline, ok := GetPipelineByVersion(version)
 	if !ok {

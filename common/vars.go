@@ -9,6 +9,10 @@ var (
 		TaskJobPlan,
 		TaskJobApply,
 		TaskJobDestroy,
+		// 0.3
+		TaskJobScan,
+		TaskJobParse,
+		// 0.4
 		TaskJobEnvScan,
 		TaskJobEnvParse,
 		TaskJobTplScan,
