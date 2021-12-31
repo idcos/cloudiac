@@ -12,20 +12,16 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
 	"fmt"
 	"github.com/Masterminds/semver"
-	"github.com/pkg/errors"
 	"net/http"
-	"os"
-	"path/filepath"
-	"sync"
 	"time"
 )
 
 // CreatePolicyGroup 创建策略组
 func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm) (*models.PolicyGroup, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create policy group %s", form.Name))
-	logger := c.Logger()
 
 	g := models.PolicyGroup{
 		Name:        form.Name,
@@ -34,7 +30,10 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 		Source:      form.Source,
 		VcsId:       form.VcsId,
 		RepoId:      form.RepoId,
+		OrgId:       c.OrgId,
+		CreatorId:   c.UserId,
 	}
+
 	if form.HasKey("gitTags") {
 		g.GitTags = form.GitTags
 		// 检查是否有效的语义话版本
@@ -55,36 +54,6 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 		g.Dir = consts.DirRoot
 	}
 
-	// 策略仓库同步
-	// 1. 生成临时工作目录
-	logger.Debugf("creating tmp dir")
-	tmpDir, er := os.MkdirTemp("", "*")
-	if er != nil {
-		return nil, e.New(e.InternalError, errors.Wrapf(er, "create tmp dir"), http.StatusInternalServerError)
-	}
-	defer os.RemoveAll(tmpDir)
-	logger.Debugf("tmp dir %s", tmpDir)
-
-	// 2. clone 策略组
-	var wg sync.WaitGroup
-	result := services.DownloadPolicyGroupResult{Group: &g}
-	wg.Add(1)
-	go services.DownloadPolicyGroup(c.DB(), tmpDir, &result, &wg)
-	wg.Wait()
-	if result.Error != nil {
-		c.Logger().Errorf("error download policy group, err %s", result.Error)
-		return nil, result.Error
-	}
-
-	// 3. 遍历策略组目录，解析策略文件
-	logger.Debugf("parsing policy group")
-	// TODO: import summary
-	policies, er := services.ParsePolicyGroup(filepath.Join(tmpDir, "code", g.Dir))
-	if er != nil {
-		return nil, e.New(e.InternalError, errors.Wrapf(er, "parse rego"), http.StatusInternalServerError)
-	}
-
-	// 策略组与策略文件入库
 	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
@@ -93,41 +62,22 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 		}
 	}()
 
-	logger.Debugf("creating policy group")
+	logs.Get().Debugf("creating policy group")
 	group, err := services.CreatePolicyGroup(tx, &g)
 	if err != nil && err.Code() == e.PolicyGroupAlreadyExist {
 		_ = tx.Rollback()
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
-		c.Logger().Errorf("error creating policy group, err %s", err)
 		_ = tx.Rollback()
+		logs.Get().Errorf("error creating policy group, err %s", err)
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	logger.Debugf("creating policy")
-	for _, p := range policies {
-		policy := models.Policy{
-			OrgId:     c.OrgId,
-			CreatorId: c.UserId,
-			GroupId:   group.Id,
-
-			Name:          p.Meta.Name,
-			RuleName:      p.Meta.Name,
-			ReferenceId:   p.Meta.ReferenceId,
-			Revision:      p.Meta.Version,
-			FixSuggestion: p.Meta.FixSuggestion,
-			Severity:      p.Meta.Severity,
-			ResourceType:  p.Meta.ResourceType,
-			PolicyType:    p.Meta.PolicyType,
-			Tags:          p.Meta.Category,
-
-			Rego: p.Rego,
-		}
-		_, er = tx.Save(policy)
-		if er != nil {
-			_ = tx.Rollback()
-			return nil, e.New(e.DBError, err)
-		}
+	// 策略仓库同步
+	err = RepoPolicyCreate(tx, group, c.OrgId, c.UserId)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -142,7 +92,7 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 type PolicyGroupResp struct {
 	models.PolicyGroup
 	PolicyCount uint `json:"policyCount" example:"10"`
-	Summary
+	RelCount    uint `json:"relCount"`
 }
 
 // SearchPolicyGroup 查询策略组列表
@@ -154,33 +104,6 @@ func SearchPolicyGroup(c *ctx.ServiceContext, form *forms.SearchPolicyGroupForm)
 		return nil, e.New(e.DBError, err)
 	}
 
-	// 扫描结果统计信息
-	var policyIds []models.Id
-	for idx := range policyGroupResps {
-		policyIds = append(policyIds, policyGroupResps[idx].Id)
-	}
-	if summaries, err := services.PolicySummary(c.DB(), policyIds, consts.ScopePolicyGroup); err != nil {
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	} else if summaries != nil && len(summaries) > 0 {
-		sumMap := make(map[string]*services.PolicyScanSummary, len(policyIds))
-		for idx, summary := range summaries {
-			sumMap[string(summary.Id)+summary.Status] = summaries[idx]
-		}
-		for idx, policyResp := range policyGroupResps {
-			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusPassed]; ok {
-				policyGroupResps[idx].Passed = summary.Count
-			}
-			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusViolated]; ok {
-				policyGroupResps[idx].Violated = summary.Count
-			}
-			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusFailed]; ok {
-				policyGroupResps[idx].Failed = summary.Count
-			}
-			if summary, ok := sumMap[string(policyResp.Id)+common.PolicyStatusSuppressed]; ok {
-				policyGroupResps[idx].Suppressed = summary.Count
-			}
-		}
-	}
 	return page.PageResp{
 		Total:    p.MustTotal(),
 		PageSize: p.Size,
@@ -203,11 +126,68 @@ func UpdatePolicyGroup(c *ctx.ServiceContext, form *forms.UpdatePolicyGroupForm)
 		attr["enabled"] = form.Enabled
 	}
 
+	if form.HasKey("label") {
+		attr["label"] = form.Label
+	}
+
+	if form.HasKey("source") {
+		attr["source"] = form.Source
+	}
+
+	if form.HasKey("vcsId") {
+		attr["vcsId"] = form.VcsId
+	}
+
+	if form.HasKey("repoId") {
+		attr["repoId"] = form.RepoId
+	}
+
+	if form.HasKey("gitTags") {
+		attr["gitTags"] = form.GitTags
+	}
+
+	if form.HasKey("branch") {
+		attr["branch"] = form.Branch
+	}
+
+	if form.HasKey("dir") {
+		attr["dir"] = form.Dir
+	}
+
+	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
 	pg := models.PolicyGroup{}
 	pg.Id = form.Id
-	if err := services.UpdatePolicyGroup(c.DB(), &pg, attr); err != nil {
+	if err := services.UpdatePolicyGroup(tx, &pg, attr); err != nil {
+		_ = tx.Rollback()
 		return nil, err
 	}
+
+	// 重新同步策略前需要把之前的策略删除
+	if _, err := services.DeletePolicy(tx, pg.Id); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	// 策略仓库同步
+	err := RepoPolicyCreate(tx, &pg, c.OrgId, c.UserId)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
+
+
 	return nil, nil
 }
 
@@ -222,13 +202,20 @@ func DeletePolicyGroup(c *ctx.ServiceContext, form *forms.DeletePolicyGroupForm)
 	}()
 
 	// 解除策略与策略组的关系
-	// todo 手动解除关联的策略才可以删除 会好一些？
 	if err := services.RemovePoliciesGroupRelation(tx, form.Id); err != nil {
+		_ = tx.Rollback()
 		return nil, err
 	}
 
 	// 删除策略组
 	if err := services.DeletePolicyGroup(tx, form.Id); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	// 删除策略
+	if _, err := services.DeletePolicy(tx, form.Id); err != nil {
+		_ = tx.Rollback()
 		return nil, err
 	}
 
