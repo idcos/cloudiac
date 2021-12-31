@@ -34,6 +34,8 @@ type SearchTemplateResp struct {
 	RepoFullName      string      `json:"repoFullName"`
 	NewRepoAddr       string      `json:"newRepoAddr"`
 	VcsAddr           string      `json:"vcsAddr"`
+	PolicyEnable      bool        `json:"policyEnble"`
+	PolicyStatus      string      `json:"PolicyStatus"`
 }
 
 func getRepoAddr(vcsId models.Id, query *db.Session, repoId string) (string, error) {
@@ -159,9 +161,11 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		c.Logger().Errorf("error commit create template, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
-	// TODO 自动触发一次检测, 协程去开启？是否有封装好方法？
 	if form.PolicyEnable {
-
+		scanForm := &forms.ScanTemplateForm{
+			Id: template.Id,
+		}
+		go ScanTemplateOrEnv(c, scanForm, "")
 	}
 
 	return template, nil
@@ -399,6 +403,15 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 		if v.RepoAddr == "" {
 			vcsIds = append(vcsIds, v.VcsId)
 		}
+		// 如果开启
+		if v.PolicyEnable {
+			scanTask, err := services.GetTplLastScanTask(c.DB(), v.Id)
+			if err != nil {
+				return nil, e.New(e.DBError, err)
+			}
+			v.PolicyStatus = scanTask.Status
+		}
+
 	}
 
 	vcsList, err := services.GetVcsListByIds(c.DB(), vcsIds)
