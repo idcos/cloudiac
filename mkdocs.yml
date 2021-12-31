@@ -4,6 +4,7 @@ repo_url: https://github.com/idcos/cloudiac
 repo_name: IDCOS/CloudIaC
 edit_uri: edit/master/docs/mkdocs/
 theme:
+  language: zh
   name: material
   logo: assets/svg/icon.svg
   favicon: assets/svg/icon.svg
@@ -79,4 +80,5 @@ nav:
   - "API文档": 
     - "API简介": api-docs/index.md
   - "Releases": releases.md
+  - "视频介绍": https://space.bilibili.com/2138433328/channel/seriesdetail?sid=1908688
 
