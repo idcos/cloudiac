@@ -8,12 +8,14 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/logstorage"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -21,6 +23,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -1143,4 +1146,64 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	summaryResp.PolicyGroupViolated = p
 
 	return &summaryResp, nil
+}
+
+func RepoPolicyCreate(tx *db.Session, g *models.PolicyGroup, orgId, userId models.Id)e.Error {
+	// 策略仓库同步
+	// 1. 生成临时工作目录
+	logger := logs.Get()
+	logger.Debugf("creating tmp dir")
+	tmpDir, er := os.MkdirTemp("", "*")
+	if er != nil {
+		return e.New(e.InternalError, errors.Wrapf(er, "create tmp dir"), http.StatusInternalServerError)
+	}
+	//defer os.RemoveAll(tmpDir)
+	logger.Debugf("tmp dir %s", tmpDir)
+
+	// 2. clone 策略组
+	var wg sync.WaitGroup
+	result := services.DownloadPolicyGroupResult{Group: g}
+	wg.Add(1)
+	go services.DownloadPolicyGroup(db.Get(), tmpDir, &result, &wg)
+	wg.Wait()
+	if result.Error != nil {
+		logger.Errorf("error download policy group, err %s", result.Error)
+		return result.Error
+	}
+
+	// 3. 遍历策略组目录，解析策略文件
+	logger.Debugf("parsing policy group")
+	// TODO: import summary
+	policies, er := services.ParsePolicyGroup(filepath.Join(tmpDir, "code", g.Dir))
+	if er != nil {
+		return e.New(e.InternalError, errors.Wrapf(er, "parse rego"), http.StatusInternalServerError)
+	}
+
+	// 策略文件入库
+	logger.Debugf("creating policy")
+	for _, p := range policies {
+		p := models.Policy{
+			OrgId:     orgId,
+			CreatorId: userId,
+			GroupId:   g.Id,
+
+			Name:          p.Meta.Name,
+			RuleName:      p.Meta.Name,
+			ReferenceId:   p.Meta.ReferenceId,
+			Revision:      p.Meta.Version,
+			FixSuggestion: p.Meta.FixSuggestion,
+			Severity:      p.Meta.Severity,
+			ResourceType:  p.Meta.ResourceType,
+			PolicyType:    p.Meta.PolicyType,
+			Tags:          p.Meta.Category,
+
+			Rego: p.Rego,
+		}
+		_, er = tx.Save(p)
+		if er != nil {
+			return e.New(e.DBError, er)
+		}
+	}
+
+	return nil
 }

@@ -270,9 +270,9 @@ func SearchPolicy(dbSess *db.Session, form *forms.SearchPolicyForm) *db.Session 
 	return query
 }
 
-func DeletePolicy(dbSess *db.Session, id models.Id) (interface{}, e.Error) {
+func DeletePolicy(dbSess *db.Session, groupId models.Id) (interface{}, e.Error) {
 	if _, err := dbSess.
-		Where("id = ?", id).
+		Where("group_id = ?", groupId).
 		Delete(&models.Policy{}); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
