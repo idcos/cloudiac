@@ -132,4 +132,6 @@ type EnvDetail struct {
 	TaskId        Id     `json:"taskId"`        // 当前作业ID
 	CommitId      string `json:"commitId"`      // Commit ID
 	IsDrift       bool   `json:"isDrift"`
+	PolicyEnable  bool   `json:"policyEnable"`  // 是否开启合规检测
+	PolicyStatus  bool   `json:"policy_status"` // 环境合规检测任务状态
 }
