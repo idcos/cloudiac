@@ -49,7 +49,7 @@ func GetPolicyGroupById(tx *db.Session, id models.Id) (*models.PolicyGroup, e.Er
 
 func SearchPolicyGroup(dbSess *db.Session, orgId models.Id, q string) *db.Session {
 	pgTable := models.PolicyGroup{}.TableName()
-	query := dbSess.Table(pgTable).Debug().
+	query := dbSess.Table(pgTable).
 		Joins(fmt.Sprintf("left join (%s) as p on p.group_id = %s.id",
 			fmt.Sprintf("select count(group_id) as policy_count,group_id from %s group by group_id",
 				models.Policy{}.TableName()), pgTable)).
