@@ -56,8 +56,14 @@ type CreatePolicyGroupForm struct {
 
 	Name        string `json:"name" binding:"required" example:"安全合规策略组"`
 	Description string `json:"description" binding:"" example:"本组包含对于安全合规的检查策略"`
+	Label       string `json:"label" binding:"" example:"security,alicloud"`
 
-	//PolicyIds []string `json:"policyIds" binding:"" example:"[\"po-c3ek0co6n88ldvq1n6ag\"]"`
+	Source  string    `json:"source" binding:"required" enums:"vcs,registry" example:"来源"`
+	VcsId   models.Id `json:"vcsId" binding:"required" example:"vcs-c3lcrjxczjdywmk0go90"`
+	RepoId  string    `json:"repoId" binding:"required" example:"1234567890"`
+	GitTags string    `json:"gitTags" example:"Git Tags"`
+	Branch  string    `json:"branch" example:"master"`
+	Dir     string    `json:"dir" example:"/"`
 }
 
 type SearchPolicyGroupForm struct {

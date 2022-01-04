@@ -32,6 +32,7 @@ func CreateAutoDestroyTask(tx *db.Session, env *models.Env) (*models.Task, e.Err
 		BaseTask: models.BaseTask{
 			Type: models.TaskTypeDestroy,
 		},
+		Source: consts.TaskSourceAutoDestroy,
 	}
 
 	if env.LastResTaskId != "" {

@@ -129,7 +129,8 @@ type Task struct {
 	RetryDelay  int    `json:"retryDelay" gorm:"size:32;default:0"`  // 每次任务重试时间，单位为秒
 	RetryAble   bool   `json:"retryAble" gorm:"default:false"`
 	Callback    string `json:"callback" gorm:"default:''"`       // 外部请求的回调方式
-	IsDriftTask bool   `json:"isDritfTask" gorm:"default:false"` // 是否是偏移检测任务
+	IsDriftTask bool   `json:"isDriftTask" gorm:"default:false"` // 是否是偏移检测任务
+	Source      string `json:"source" gorm:"not null;default:manual;enum('manual','driftPlan','driftApply','webhookPlan', 'webhookApply', 'autoDestroy')"`
 }
 
 func (Task) TableName() string {

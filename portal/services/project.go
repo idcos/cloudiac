@@ -23,7 +23,7 @@ func CreateProject(tx *db.Session, project *models.Project) (*models.Project, e.
 }
 
 func SearchProject(dbSess *db.Session, orgId models.Id, q, status string) *db.Session {
-	query := dbSess.Table(models.Project{}.TableName()).Where(fmt.Sprintf("%s.org_id = ?", models.Project{}.TableName()), orgId)
+	query := dbSess.Model(&models.Project{}).Where(fmt.Sprintf("%s.org_id = ?", models.Project{}.TableName()), orgId)
 	if q != "" {
 		query = query.Where(fmt.Sprintf("%s.name like ?", models.Project{}.TableName()), fmt.Sprintf("%%%s%%", q))
 	}
@@ -78,7 +78,7 @@ func StatisticalProjectEnv(dbSess *db.Session, projectId models.Id) (*struct {
 		envInactive int64
 	)
 
-	if err := dbSess.Table(models.Env{}.TableName()).Select("count(status) as count, status").
+	if err := dbSess.Model(&models.Env{}).Select("count(status) as count, status").
 		Where("project_id = ?", projectId).Group("status").Find(&resp); err != nil {
 		return nil, err
 	}

@@ -288,6 +288,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		},
 		ExtraData: models.JSON(form.ExtraData),
 		Callback:  form.Callback,
+		Source:    consts.TaskSourceManual,
 	})
 
 	if err != nil {

@@ -40,6 +40,10 @@ func Register(g *gin.RouterGroup) {
 	g.Use(gin.Logger())
 
 	g.POST("/trigger/send", w(handlers.ApiTriggerHandler))
+
+	// sso token 验证
+	g.GET("/sso/tokens/verify", w(handlers.VerifySsoToken))
+
 	// 触发器
 	apiToken := g.Group("")
 	apiToken.Use(w(middleware.AuthApiToken))
@@ -49,6 +53,10 @@ func Register(g *gin.RouterGroup) {
 
 	// Authorization Header 鉴权
 	g.Use(w(middleware.Auth)) // 解析 header token
+
+	// 创建单点登录 token
+	g.POST("/sso/tokens", w(handlers.GenerateSsoToken))
+	// ctrl.Register(g.Group("tokens", ac()), &handlers.Token{})
 
 	// TODO 旧的 token 接口己不再使用，先注释, 后续版本删除
 	// ctrl.Register(g.Group("token", ac()), &handlers.Auth{})

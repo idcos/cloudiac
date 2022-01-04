@@ -31,6 +31,17 @@ const (
 	DefaultSysName  = "System"
 
 	DefaultTerraformVersion = "0.14.11"
+
+
+	// token subject
+	JwtSubjectUserAuth = "userAuth" // 用于用户认证
+	JwtSubjectSsoCode  = "ssoCode"  // 用于 sso 单点登录
+
+	DirRoot                          = "/"
+	PolicyGroupDownloadTimeoutSecond = 20 * time.Second
+	PolicySeverityHigh               = "HIGH"
+	PolicySeverityMedium             = "MEDIUM"
+	PolicySeverityLow                = "LOW"
 )
 
 const (
@@ -119,6 +130,13 @@ const (
 	HttpClientTimeout = 20
 
 	TaskCallbackKafka = "kafka"
+
+	TaskSourceManual       = "manual"
+	TaskSourceDriftPlan    = "driftPlan"
+	TaskSourceDriftApply   = "driftApply"
+	TaskSourceWebhookPlan  = "webhookPlan"
+	TaskSourceWebhookApply = "webhookApply"
+	TaskSourceAutoDestroy  = "autoDestroy"
 )
 
 var (
@@ -154,6 +172,6 @@ var (
 		common.TaskRunning:   EventTaskRunning,
 		common.TaskApproving: EventTaskApproving,
 		common.TaskRejected:  EventTaskFailed,
-		EvenvtCronDrift: EvenvtCronDrift,
+		EvenvtCronDrift:      EvenvtCronDrift,
 	}
 )

@@ -128,14 +128,10 @@ func (s *Session) Commit() error {
 }
 
 func (s *Session) Model(m interface{}) *Session {
-	switch v := m.(type) {
-	case string:
-		return s.Table(v)
-	default:
-		return ToSess(s.db.Model(m))
-	}
+	return ToSess(s.db.Model(m))
 }
 
+// 注意: Table() 与 Model() 不同的是，使用 Table() 时不会自动处理 delete_at_t 字段
 func (s *Session) Table(name string, args ...interface{}) *Session {
 	return ToSess(s.db.Table(name, args...))
 }
