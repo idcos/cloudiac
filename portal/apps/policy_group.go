@@ -187,7 +187,6 @@ func UpdatePolicyGroup(c *ctx.ServiceContext, form *forms.UpdatePolicyGroupForm)
 		return nil, e.New(e.DBError, err)
 	}
 
-
 	return nil, nil
 }
 
@@ -244,7 +243,7 @@ func OpPolicyAndPolicyGroupRel(c *ctx.ServiceContext, form *forms.OpnPolicyAndPo
 
 	if form.HasKey("addPolicyIds") && len(form.AddPolicyIds) > 0 {
 		for _, policyId := range form.AddPolicyIds {
-			policy, err := services.GetPolicyById(tx, models.Id(policyId))
+			policy, err := services.GetPolicyById(tx, models.Id(policyId), c.OrgId)
 			if err != nil {
 				_ = tx.Rollback()
 				return nil, err
@@ -268,7 +267,7 @@ func OpPolicyAndPolicyGroupRel(c *ctx.ServiceContext, form *forms.OpnPolicyAndPo
 
 	if form.HasKey("rmPolicyIds") && len(form.RmPolicyIds) > 0 {
 		for _, policyId := range form.RmPolicyIds {
-			policy, err := services.GetPolicyById(tx, models.Id(policyId))
+			policy, err := services.GetPolicyById(tx, models.Id(policyId), c.OrgId)
 			if err != nil {
 				_ = tx.Rollback()
 				return nil, err
@@ -327,7 +326,7 @@ func PolicyGroupScanTasks(c *ctx.ServiceContext, form *forms.PolicyLastTasksForm
 	for idx := range tasks {
 		policyIds = append(policyIds, tasks[idx].Id)
 	}
-	if summaries, err := services.PolicySummary(c.DB(), policyIds, consts.ScopeTask); err != nil {
+	if summaries, err := services.PolicySummary(c.DB(), policyIds, consts.ScopeTask, c.OrgId); err != nil {
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	} else if summaries != nil && len(summaries) > 0 {
 		sumMap := make(map[string]*services.PolicyScanSummary, len(policyIds))
