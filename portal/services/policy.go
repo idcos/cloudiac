@@ -650,14 +650,16 @@ type ScanStatusGroupBy struct {
 }
 
 // GetPolicyStatusByPolicy 查询指定时间范围内所有策略的执行结果，统计各策略每种检测状态下的数量
-func GetPolicyStatusByPolicy(query *db.Session, from time.Time, to time.Time, status string) ([]*ScanStatusGroupBy, e.Error) {
+func GetPolicyStatusByPolicy(query *db.Session, from time.Time, to time.Time, status string, orgId models.Id) ([]*ScanStatusGroupBy, e.Error) {
 	groupQuery := query.Model(models.PolicyResult{})
 	groupQuery = groupQuery.Where("start_at >= ? and start_at < ?", from, to).
 		Select("count(*) as count, policy_id as id, status").
+		Where("org_id = ?", orgId).
 		Group("policy_id,status").
 		Order("count desc")
 
 	q := query.Select("r.*,iac_policy.name,iac_policy.severity").Table("(?) as r", groupQuery.Expr()).
+		Where("org_id = ?", orgId).
 		Joins("left join iac_policy on iac_policy.id = r.id")
 
 	if status != "" {
