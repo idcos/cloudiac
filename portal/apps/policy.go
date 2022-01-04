@@ -1148,7 +1148,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	return &summaryResp, nil
 }
 
-func RepoPolicyCreate(tx *db.Session, g *models.PolicyGroup, orgId, userId models.Id)e.Error {
+func RepoPolicyCreate(tx *db.Session, g *models.PolicyGroup, orgId, userId models.Id) e.Error {
 	// 策略仓库同步
 	// 1. 生成临时工作目录
 	logger := logs.Get()
@@ -1199,7 +1199,7 @@ func RepoPolicyCreate(tx *db.Session, g *models.PolicyGroup, orgId, userId model
 
 			Rego: p.Rego,
 		}
-		_, er = tx.Save(p)
+		_, er = tx.Save(&p)
 		if er != nil {
 			return e.New(e.DBError, er)
 		}
