@@ -55,8 +55,8 @@ func SearchPolicyGroup(dbSess *db.Session, orgId models.Id, q string) *db.Sessio
 				models.Policy{}.TableName()), pgTable)).
 		Joins(fmt.Sprintf("left join (%s) as rel on rel.group_id = %s.id",
 			fmt.Sprintf("select count(group_id) as rel_count, group_id from %s group by group_id",
-				models.PolicyRel{}.TableName()), pgTable))
-		//Where(fmt.Sprintf("%s.org_id = ?", pgTable), orgId)
+				models.PolicyRel{}.TableName()), pgTable)).
+		Where(fmt.Sprintf("%s.org_id = ?", pgTable), orgId)
 	if q != "" {
 		qs := "%" + q + "%"
 		query = query.Where(fmt.Sprintf("%s.name like ?", pgTable), qs)
