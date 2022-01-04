@@ -98,6 +98,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/policies/templates/:id/groups", ac(), w(handlers.Policy{}.TplOfPolicyGroup))
 	g.GET("/policies/templates/:id/valid_policies", ac(), w(handlers.Policy{}.ValidTplOfPolicy))
 	g.POST("/policies/templates/:id/scan", ac(), w(handlers.Policy{}.ScanTemplate))
+	g.POST("/policies/templates/scans", ac(), w(handlers.Policy{}.ScanTemplates))
 	g.GET("/policies/templates/:id/result", ac(), w(handlers.Policy{}.TemplateScanResult))
 	g.GET("/policies/envs", ac(), w(handlers.Policy{}.SearchPolicyEnv))
 	g.PUT("/policies/envs/:id", ac(), w(handlers.Policy{}.UpdatePolicyEnv))
