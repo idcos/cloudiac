@@ -239,7 +239,7 @@ type PolicyResp struct {
 
 // SearchPolicy 查询策略列表
 func SearchPolicy(c *ctx.ServiceContext, form *forms.SearchPolicyForm) (interface{}, e.Error) {
-	query := services.SearchPolicy(c.DB(), form)
+	query := services.SearchPolicy(c.DB(), form, c.OrgId)
 	policyResps := make([]PolicyResp, 0)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	if err := p.Scan(&policyResps); err != nil {
@@ -251,7 +251,7 @@ func SearchPolicy(c *ctx.ServiceContext, form *forms.SearchPolicyForm) (interfac
 	for idx := range policyResps {
 		policyIds = append(policyIds, policyResps[idx].Id)
 	}
-	if summaries, err := services.PolicySummary(c.DB(), policyIds, consts.ScopePolicy); err != nil {
+	if summaries, err := services.PolicySummary(c.DB(), policyIds, consts.ScopePolicy, c.OrgId); err != nil {
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	} else if len(summaries) > 0 {
 		sumMap := make(map[string]*services.PolicyScanSummary, len(policyIds))

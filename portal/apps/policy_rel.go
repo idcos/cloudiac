@@ -132,13 +132,11 @@ func EnablePolicyScanRel(c *ctx.ServiceContext, form *forms.EnableScanForm) (*mo
 				OrgId:     env.OrgId,
 				ProjectId: env.ProjectId,
 				EnvId:     env.Id,
-				Enabled:   true,
 			}
 		} else {
 			rel = &models.PolicyRel{
 				OrgId:   tpl.OrgId,
 				TplId:   tpl.Id,
-				Enabled: true,
 			}
 		}
 
