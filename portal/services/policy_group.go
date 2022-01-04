@@ -443,7 +443,7 @@ func ParseMeta(regoFilePath string, metaFilePath string) (policy *Policy, err e.
 
 // ExtractStr 提取 # @keyword: xxx 格式字符串
 func ExtractStr(keyword string, input string) string {
-	regex := regexp.MustCompile(fmt.Sprintf("(?m)^\\s*#+\\s*@%s:\\s*(.*)$)", keyword))
+	regex := regexp.MustCompile(fmt.Sprintf("(?m)^\\s*#+\\s*@%s:\\s*(.*)$", keyword))
 	match := regex.FindStringSubmatch(input)
 	if len(match) == 2 {
 		return strings.TrimSpace(match[1])
