@@ -176,3 +176,27 @@ func (PolicyGroup) LastTasks(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.PolicyGroupScanTasks(c.Service(), form))
 }
+
+// PolicyGroupChecks
+// @Tags 合规/策略组
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Summary 创建策略组前检查名称工作目录是否正确
+// @Param IaC-Org-Id header string true "组织ID"
+// @Security AuthToken
+// @router /policies/groups/checks [POST]
+// @Param form query forms.PolicyGroupChecksForm true "parameter"
+// @Success 200 {object} ctx.JSONResult{result=apps.TemplateChecksResp}
+func PolicyGroupChecks(c *ctx.GinRequest) {
+	form := forms.PolicyGroupChecksForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.TemplateChecks(c.Service(), &forms.TemplateChecksForm{
+		Name:         "",
+		RepoId:       form.RepoId,
+		RepoRevision: form.RepoRevision,
+		VcsId:        form.VcsId,
+		Workdir:      form.Dir,
+	}))
+}
