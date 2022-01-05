@@ -61,7 +61,7 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 			panic(r)
 		}
 	}()
-	c.Logger()
+
 	logger.Debugf("creating policy group")
 	group, err := services.CreatePolicyGroup(tx, &g)
 	if err != nil && err.Code() == e.PolicyGroupAlreadyExist {

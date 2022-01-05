@@ -13,24 +13,6 @@ type Policy struct {
 	ctrl.GinController
 }
 
-// Create 创建策略
-// @Summary 创建策略
-// @Tags 合规/策略
-// @Accept  json
-// @Produce  json
-// @Security AuthToken
-// @Param IaC-Org-Id header string true "组织id"
-// @Param json body forms.CreatePolicyForm true "parameter"
-// @Success 200 {object}  ctx.JSONResult{result=models.Policy}
-// @Router /policies [post]
-func (Policy) Create(c *ctx.GinRequest) {
-	form := &forms.CreatePolicyForm{}
-	if err := c.Bind(form); err != nil {
-		return
-	}
-	c.JSONResult(apps.CreatePolicy(c.Service(), form))
-}
-
 // Search 查询策略列表
 // @Tags 合规/策略
 // @Summary 查询策略列表
@@ -50,45 +32,6 @@ func (Policy) Search(c *ctx.GinRequest) {
 		return
 	}
 	c.JSONResult(apps.SearchPolicy(c.Service(), form))
-}
-
-// Update 修改策略
-// @Tags 合规/策略
-// @Summary 修改策略
-// @Accept multipart/form-data
-// @Accept json
-// @Produce json
-// @Security AuthToken
-// @Param json body forms.UpdatePolicyForm true "parameter"
-// @Param IaC-Org-Id header string true "组织ID"
-// @Param policyId path string true "策略Id"
-// @Router /policies/{policyId} [put]
-// @Success 200 {object} ctx.JSONResult{result=models.Policy}
-func (Policy) Update(c *ctx.GinRequest) {
-	form := &forms.UpdatePolicyForm{}
-	if err := c.Bind(form); err != nil {
-		return
-	}
-	c.JSONResult(apps.UpdatePolicy(c.Service(), form))
-}
-
-// Delete 删除策略
-// @Tags 合规/策略
-// @Summary 删除策略
-// @Accept multipart/form-data
-// @Accept json
-// @Produce json
-// @Security AuthToken
-// @Param policyId path string true "策略Id"
-// @Param IaC-Org-Id header string true "组织ID"
-// @Router /policies/{policyId} [delete]
-// @Success 200 {object} ctx.JSONResult
-func (Policy) Delete(c *ctx.GinRequest) {
-	form := &forms.DeletePolicyForm{}
-	if err := c.Bind(form); err != nil {
-		return
-	}
-	c.JSONResult(apps.DeletePolicy(c.Service(), form))
 }
 
 // Detail 策略详情
