@@ -130,6 +130,7 @@ type Config struct {
 	SMTPServer   SMTPServerConfig `yaml:"smtpServer"`
 	SecretKey    string           `yaml:"secretKey"`
 	JwtSecretKey string           `yaml:"jwtSecretKey"`
+	RegistryAddr string           `yaml:"registryAddr"`
 
 	ExportSecretKey string `yaml:"exportSecretKey"`
 
