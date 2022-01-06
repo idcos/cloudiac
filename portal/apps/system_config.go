@@ -61,7 +61,7 @@ func UpdateSystemConfig(c *ctx.ServiceContext, form *forms.UpdateSystemConfigFor
 
 func CheckRegistryAddr(c *ctx.ServiceContext) (interface{}, e.Error) {
 	// check db
-	cfg, err := services.GetSystemConfigByName(c.DB(), models.SysCfgNamRegistryAddr)
+	cfg, err := services.GetSystemConfigByName(c.DB(), models.SysCfgNamRegistryHome)
 	if err == nil && cfg != nil {
 		return &models.RegistryAddrCheckResp{
 			IsExisted: true,
@@ -81,7 +81,7 @@ func CheckRegistryAddr(c *ctx.ServiceContext) (interface{}, e.Error) {
 }
 
 func GetRegistryAddr(c *ctx.ServiceContext) (interface{}, e.Error) {
-	cfg, err := services.GetSystemConfigByName(c.DB(), models.SysCfgNamRegistryAddr)
+	cfg, err := services.GetSystemConfigByName(c.DB(), models.SysCfgNamRegistryHome)
 	if err != nil {
 		return nil, err
 	}
