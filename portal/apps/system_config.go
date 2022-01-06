@@ -3,6 +3,7 @@
 package apps
 
 import (
+	"cloudiac/configs"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
@@ -59,6 +60,22 @@ func UpdateSystemConfig(c *ctx.ServiceContext, form *forms.UpdateSystemConfigFor
 }
 
 func CheckRegistryAddr(c *ctx.ServiceContext) (interface{}, e.Error) {
+	// check db
+	cfg, err := services.GetSystemConfigByName(c.DB(), models.SysCfgNamRegistryAddr)
+	if err == nil && cfg != nil {
+		return map[string]interface{}{
+			"isExisted": true,
+		}, nil
+	}
 
-	return nil, nil
+	// check config file
+	if configs.Get().RegistryAddr != "" {
+		return map[string]interface{}{
+			"isExisted": true,
+		}, nil
+	}
+
+	return map[string]interface{}{
+		"isExisted": false,
+	}, nil
 }
