@@ -254,7 +254,7 @@ func initVcs(tx *db.Session) error {
 	}
 
 	dbVcs := models.Vcs{}
-	err := services.QueryVcs("", "", "", true, tx).First(&dbVcs)
+	err := services.QueryVcs("", "", "", true, false, tx).First(&dbVcs)
 	if err != nil && !e.IsRecordNotFound(err) {
 		return err
 	}
@@ -286,7 +286,7 @@ func initRegistryVcs(tx *db.Session) error {
 	}
 
 	dbVcs := models.Vcs{}
-	err := services.QueryVcs("", "", "registry仓库", true, tx).First(&dbVcs)
+	err := services.QueryVcs("", "", "registry仓库", false, true, tx).First(&dbVcs)
 	if err != nil && !e.IsRecordNotFound(err) {
 		return err
 	}
