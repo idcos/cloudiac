@@ -90,3 +90,15 @@ func GetRegistryAddr(c *ctx.ServiceContext) (interface{}, e.Error) {
 		RegistryAddr: cfg.Value,
 	}, nil
 }
+
+func UpsertRegistryAddr(c *ctx.ServiceContext, form *forms.RegistryAddrForm) (interface{}, e.Error) {
+
+	cfg, err := services.UpsertRegistryAddr(c.DB(), form.RegistryAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.RegistryAddrResp{
+		RegistryAddr: cfg.Value,
+	}, nil
+}
