@@ -12,7 +12,6 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/utils"
-	"cloudiac/utils/logs"
 	"fmt"
 	"github.com/Masterminds/semver"
 	"net/http"
@@ -22,6 +21,7 @@ import (
 // CreatePolicyGroup 创建策略组
 func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm) (*models.PolicyGroup, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create policy group %s", form.Name))
+	logger := c.Logger()
 
 	g := models.PolicyGroup{
 		Name:        form.Name,
@@ -62,14 +62,14 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 		}
 	}()
 
-	logs.Get().Debugf("creating policy group")
+	logger.Debugf("creating policy group")
 	group, err := services.CreatePolicyGroup(tx, &g)
 	if err != nil && err.Code() == e.PolicyGroupAlreadyExist {
 		_ = tx.Rollback()
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
 		_ = tx.Rollback()
-		logs.Get().Errorf("error creating policy group, err %s", err)
+		logger.Errorf("error creating policy group, err %s", err)
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
@@ -81,7 +81,7 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 	}
 
 	if err := tx.Commit(); err != nil {
-		c.Logger().Errorf("error commit policy group, err %s", err)
+		logger.Errorf("error commit policy group, err %s", err)
 		_ = tx.Rollback()
 		return nil, e.New(e.DBError, err)
 	}

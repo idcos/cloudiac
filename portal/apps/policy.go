@@ -29,43 +29,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// CreatePolicy 创建策略
-func CreatePolicy(c *ctx.ServiceContext, form *forms.CreatePolicyForm) (*models.Policy, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("create policy %s", form.Name))
-
-	ruleName, policyType, resourceType, err := parseRegoHeader(form.Rego)
-	if err != nil {
-		c.Logger().Errorf("rego parse error: %v", err)
-	}
-
-	p := models.Policy{
-		Name:          form.Name,
-		CreatorId:     c.UserId,
-		FixSuggestion: form.FixSuggestion,
-		Severity:      form.Severity,
-		Rego:          form.Rego,
-		Tags:          form.Tags,
-		RuleName:      ruleName,
-		ResourceType:  resourceType,
-		PolicyType:    policyType,
-		GroupId:       form.GroupId,
-	}
-	refId, err := services.GetPolicyReferenceId(c.DB(), &p)
-	if err != nil {
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	}
-	p.ReferenceId = refId
-
-	policyInfo, err := services.CreatePolicy(c.DB(), &p)
-	if err != nil && err.Code() == e.PolicyAlreadyExist {
-		return nil, e.New(err.Code(), err, http.StatusBadRequest)
-	} else if err != nil {
-		c.Logger().Errorf("error creating policy, err %s", err)
-		return nil, e.AutoNew(err, e.DBError)
-	}
-
-	return policyInfo, nil
-}
 
 //parseRegoHeader 解析 rego 脚本获取入口，云商类型和资源类型
 func parseRegoHeader(rego string) (ruleName string, policyType string, resType string, err e.Error) {
@@ -281,96 +244,6 @@ func SearchPolicy(c *ctx.ServiceContext, form *forms.SearchPolicyForm) (interfac
 	}, nil
 }
 
-// UpdatePolicy 修改策略组
-func UpdatePolicy(c *ctx.ServiceContext, form *forms.UpdatePolicyForm) (interface{}, e.Error) {
-	tx := c.Tx()
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			panic(r)
-		}
-	}()
-
-	attr := models.Attrs{}
-	if form.HasKey("name") {
-		attr["name"] = form.Name
-	}
-
-	if form.HasKey("fixSuggestion") {
-		attr["fixSuggestion"] = form.FixSuggestion
-	}
-
-	if form.HasKey("severity") {
-		attr["severity"] = form.Severity
-	}
-
-	if form.HasKey("rego") {
-		attr["rego"] = form.Rego
-
-		ruleName, policyType, resourceType, err := parseRegoHeader(form.Rego)
-		if err != nil {
-			return nil, e.New(err.Code(), err, http.StatusBadRequest)
-		}
-		attr["ruleName"] = ruleName
-		attr["policyType"] = policyType
-		attr["resourceType"] = resourceType
-	}
-
-	if form.HasKey("tags") {
-		attr["tags"] = form.Tags
-	}
-
-	if form.HasKey("groupId") {
-		attr["groupId"] = form.GroupId
-	}
-
-	if form.HasKey("enabled") {
-		attr["enabled"] = form.Enabled
-
-		// 保持和策略屏蔽行为一致，禁用的时候添加一条屏蔽记录
-		sup, _ := services.GetPolicySuppressByPolicyId(tx, form.Id)
-		if !form.Enabled && sup == nil {
-			sup := models.PolicySuppress{
-				CreatorId:  c.UserId,
-				TargetId:   form.Id,
-				TargetType: consts.ScopePolicy,
-				PolicyId:   form.Id,
-				Type:       common.PolicySuppressTypePolicy,
-			}
-			if _, err := tx.Save(&sup); err != nil {
-				_ = tx.Rollback()
-				return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-			}
-		} else {
-			if sup != nil {
-				if _, err := services.DeletePolicySuppress(tx, sup.Id); err != nil {
-					_ = tx.Rollback()
-					return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-				}
-			}
-		}
-	}
-
-	pg := models.Policy{}
-	pg.Id = form.Id
-	if _, err := services.UpdatePolicy(tx, &pg, attr); err != nil {
-		_ = tx.Rollback()
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		_ = tx.Rollback()
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	}
-
-	return nil, nil
-}
-
-// DeletePolicy 删除策略组
-func DeletePolicy(c *ctx.ServiceContext, form *forms.DeletePolicyForm) (interface{}, e.Error) {
-	return services.DeletePolicy(c.DB(), form.Id)
-
-}
 
 // DetailPolicy 查询策略组详情
 func DetailPolicy(c *ctx.ServiceContext, form *forms.DetailPolicyForm) (interface{}, e.Error) {
@@ -1011,7 +884,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	summaryResp := PolicySummaryResp{}
 
 	// 近15天数据
-	scanStatus, err := services.GetPolicyStatusByPolicy(dbSess, from, to, "")
+	scanStatus, err := services.GetPolicyStatusByPolicy(dbSess, from, to, "", c.OrgId)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -1030,7 +903,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	}
 
 	// 16～30天数据
-	lastScanStatus, err := services.GetPolicyStatusByPolicy(dbSess, lastFrom, lastTo, "")
+	lastScanStatus, err := services.GetPolicyStatusByPolicy(dbSess, lastFrom, lastTo, "", c.OrgId)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -1118,7 +991,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	}
 
 	// 3. 策略未通过
-	violatedScanStatus, err := services.GetPolicyStatusByPolicy(dbSess, from, to, common.PolicyStatusViolated)
+	violatedScanStatus, err := services.GetPolicyStatusByPolicy(dbSess, from, to, common.PolicyStatusViolated, c.OrgId)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}

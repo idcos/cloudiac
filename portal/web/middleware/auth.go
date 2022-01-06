@@ -10,8 +10,9 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
 	"net/http"
+
+	"github.com/dgrijalva/jwt-go"
 )
 
 // Auth 用户认证
@@ -41,7 +42,9 @@ func Auth(c *ctx.GinRequest) {
 			return nil
 		}
 
-		if claims, ok := token.Claims.(*services.Claims); ok && token.Valid {
+		if claims, ok := token.Claims.(*services.Claims); ok && token.Valid &&
+			claims.Subject == consts.JwtSubjectUserAuth {
+
 			c.Service().UserId = claims.UserId
 			c.Service().Username = claims.Username
 			c.Service().IsSuperAdmin = claims.IsAdmin
