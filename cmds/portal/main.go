@@ -116,6 +116,10 @@ func appAutoInit(tx *db.Session) (err error) {
 		return errors.Wrap(err, "init vcs")
 	}
 
+	if err := initRegistryVcs(tx); err != nil {
+		return errors.Wrap(err, "init registry vcs")
+	}
+
 	if err := initTemplates(tx); err != nil {
 		return errors.Wrap(err, "init meat template")
 	}
@@ -251,6 +255,38 @@ func initVcs(tx *db.Session) error {
 
 	dbVcs := models.Vcs{}
 	err := services.QueryVcs("", "", "", true, tx).First(&dbVcs)
+	if err != nil && !e.IsRecordNotFound(err) {
+		return err
+	}
+
+	if dbVcs.Id == "" { // 未创建
+		_, err = services.CreateVcs(tx, vcs)
+		if err != nil {
+			return err
+		}
+	} else { // 己存在，进行更新
+		vcs.Status = "" // 不更新状态
+		_, err = tx.Model(&vcs).Where("id = ?", dbVcs.Id).Update(vcs)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// initRegistryVcs 初始化 registry vcs
+func initRegistryVcs(tx *db.Session) error {
+	vcs := models.Vcs{
+		OrgId:    "",
+		Name:     "registry仓库",
+		VcsType:  consts.GitTypeRegistry,
+		Status:   "enable",
+		Address:  consts.RegistryVcsPath,
+		VcsToken: "",
+	}
+
+	dbVcs := models.Vcs{}
+	err := services.QueryVcs("", "", "registry仓库", true, tx).First(&dbVcs)
 	if err != nil && !e.IsRecordNotFound(err) {
 		return err
 	}
