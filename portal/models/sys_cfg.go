@@ -31,3 +31,7 @@ func (o SystemCfg) Migrate(sess *db.Session) (err error) {
 	}
 	return nil
 }
+
+type RegistryAddrCheckResp struct {
+	IsExisted bool `json:"isExisted"`
+}

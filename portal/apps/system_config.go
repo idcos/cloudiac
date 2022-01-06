@@ -63,19 +63,19 @@ func CheckRegistryAddr(c *ctx.ServiceContext) (interface{}, e.Error) {
 	// check db
 	cfg, err := services.GetSystemConfigByName(c.DB(), models.SysCfgNamRegistryAddr)
 	if err == nil && cfg != nil {
-		return map[string]interface{}{
-			"isExisted": true,
+		return &models.RegistryAddrCheckResp{
+			IsExisted: true,
 		}, nil
 	}
 
 	// check config file
 	if configs.Get().RegistryAddr != "" {
-		return map[string]interface{}{
-			"isExisted": true,
+		return &models.RegistryAddrCheckResp{
+			IsExisted: true,
 		}, nil
 	}
 
-	return map[string]interface{}{
-		"isExisted": false,
+	return &models.RegistryAddrCheckResp{
+		IsExisted: false,
 	}, nil
 }
