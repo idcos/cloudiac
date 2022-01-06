@@ -51,6 +51,7 @@ type DetailPolicyForm struct {
 	Id models.Id `uri:"id"`
 }
 
+
 type CreatePolicyGroupForm struct {
 	BaseForm
 

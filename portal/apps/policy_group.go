@@ -81,7 +81,7 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 	}
 
 	if err := tx.Commit(); err != nil {
-		c.Logger().Errorf("error commit policy group, err %s", err)
+		logger.Errorf("error commit policy group, err %s", err)
 		_ = tx.Rollback()
 		return nil, e.New(e.DBError, err)
 	}
