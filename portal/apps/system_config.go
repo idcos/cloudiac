@@ -57,3 +57,8 @@ func UpdateSystemConfig(c *ctx.ServiceContext, form *forms.UpdateSystemConfigFor
 
 	return nil, nil
 }
+
+func CheckRegistryAddr(c *ctx.ServiceContext) (interface{}, e.Error) {
+
+	return nil, nil
+}

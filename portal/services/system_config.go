@@ -43,3 +43,12 @@ func CreateSystemConfig(tx *db.Session, cfg models.SystemCfg) (*models.SystemCfg
 
 	return &cfg, nil
 }
+
+func GetSystemConfigByName(tx *db.Session, name string) (*models.SystemCfg, e.Error) {
+	var cfg models.SystemCfg
+	if err := tx.Where("name = ?", name).First(&cfg); err != nil {
+		return nil, e.New(e.SystemConfigNotExist, err)
+	}
+
+	return &cfg, nil
+}
