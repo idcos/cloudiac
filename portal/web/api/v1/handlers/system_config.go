@@ -60,7 +60,19 @@ func (SystemConfig) Update(c *ctx.GinRequest) {
 // @Produce  json
 // @Security AuthToken
 // @Success 200 {object}  ctx.JSONResult{result=models.RegistryAddrCheckResp}
-// @Router /sys/registry/check [GET]
+// @Router /system_config/registry/check [GET]
 func CheckRegistryAddr(c *ctx.GinRequest) {
 	c.JSONResult(apps.CheckRegistryAddr(c.Service()))
+}
+
+// GetRegistryAddr 获取 registry addr 的配置
+// @Summary 获取 registry addr 的配置
+// @Tags registry
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Success 200 {object}  ctx.JSONResult{result=models.RegistryAddrResp}
+// @Router /system_config/registry/addr [GET]
+func GetRegistryAddr(c *ctx.GinRequest) {
+	c.JSONResult(apps.GetRegistryAddr(c.Service()))
 }

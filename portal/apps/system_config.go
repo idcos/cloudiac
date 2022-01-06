@@ -79,3 +79,14 @@ func CheckRegistryAddr(c *ctx.ServiceContext) (interface{}, e.Error) {
 		IsExisted: false,
 	}, nil
 }
+
+func GetRegistryAddr(c *ctx.ServiceContext) (interface{}, e.Error) {
+	cfg, err := services.GetSystemConfigByName(c.DB(), models.SysCfgNamRegistryAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.RegistryAddrResp{
+		RegistryAddr: cfg.Value,
+	}, nil
+}

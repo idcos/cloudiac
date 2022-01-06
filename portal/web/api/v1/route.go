@@ -195,7 +195,7 @@ func Register(g *gin.RouterGroup) {
 
 	// 系统设置
 	g.GET("/system_config/registry/check", w(handlers.CheckRegistryAddr)) // 检查是否有registry地址的设置
-	g.GET("/system_config/registry/addr")                                 // 获取registry地址的设置
+	g.GET("/system_config/registry/addr", w(handlers.GetRegistryAddr))    // 获取registry地址的设置
 	g.POST("/system_config/registry/addr")                                // 更新registry地址的设置
 
 	// 任务管理
