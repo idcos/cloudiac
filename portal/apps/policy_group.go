@@ -99,23 +99,23 @@ type PolicyGroupResp struct {
 // SearchPolicyGroup 查询策略组列表
 func SearchPolicyGroup(c *ctx.ServiceContext, form *forms.SearchPolicyGroupForm) (interface{}, e.Error) {
 	query := services.SearchPolicyGroup(c.DB(), c.OrgId, form.Q)
-	policyGroupReops := make([]PolicyGroupResp, 0)
+	policyGroupResps := make([]PolicyGroupResp, 0)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
-	if err := p.Scan(&policyGroupReops); err != nil {
+	if err := p.Scan(&policyGroupResps); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 
-	for index, pg := range policyGroupReops {
+	for index, pg := range policyGroupResps {
 		labels := make([]string, 0)
 		if pg.Label != "" {
 			labels = strings.Split(pg.Label, ",")
 		}
-		policyGroupReops[index].Labels = labels
+		policyGroupResps[index].Labels = labels
 	}
 	return page.PageResp{
 		Total:    p.MustTotal(),
 		PageSize: p.Size,
-		List:     policyGroupReops,
+		List:     policyGroupResps,
 	}, nil
 }
 
