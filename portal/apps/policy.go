@@ -175,19 +175,25 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 		// envId == "" && form.Parse
 		taskType = models.TaskTypeTplParse
 	}
-	task, err := services.CreateScanTask(tx, tpl, env, models.ScanTask{
-		Name:      models.ScanTask{}.GetTaskNameByType(taskType),
-		OrgId:     c.OrgId,
-		CreatorId: c.UserId,
-		TplId:     tpl.Id,
-		EnvId:     envId,
-		ProjectId: projectId,
-		BaseTask: models.BaseTask{
-			Type:        taskType,
-			StepTimeout: common.DefaultTaskStepTimeout,
-			RunnerId:    runnerId,
-		},
-	})
+	var task *models.ScanTask
+	if envId != "" {
+		task, err = services.CreateEnvScanTask(tx, tpl, env, taskType, c.UserId)
+	} else {
+		task, err = services.CreateScanTask(tx, tpl, env, models.ScanTask{
+			Name:      models.ScanTask{}.GetTaskNameByType(taskType),
+			OrgId:     c.OrgId,
+			CreatorId: c.UserId,
+			TplId:     tpl.Id,
+			EnvId:     envId,
+			ProjectId: projectId,
+			BaseTask: models.BaseTask{
+				Type:        taskType,
+				StepTimeout: common.DefaultTaskStepTimeout,
+				RunnerId:    runnerId,
+			},
+		})
+	}
+
 	if err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error creating scan task, err %s", err)

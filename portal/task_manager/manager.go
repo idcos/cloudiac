@@ -1310,7 +1310,7 @@ func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.Ta
 	}
 	taskReq.Env = runnerEnv
 
-	if task.Type == common.TaskTypeEnvScan {
+	if task.Type == common.TaskTypeEnvScan || task.Type == common.TaskTypeEnvParse {
 		env, _ := services.GetEnvById(dbSess, task.EnvId)
 		stateStore := runner.StateStore{
 			Backend: "consul",

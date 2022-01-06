@@ -296,6 +296,8 @@ func (t *Task) genIacTfFile(workspace string) error {
 	if t.req.StateStore.Address == "" {
 		if os.Getenv("IAC_WORKER_CONSUL") != "" {
 			t.req.StateStore.Address = os.Getenv("IAC_WORKER_CONSUL")
+			//t.req.StateStore.Backend = "consul"
+			//t.req.StateStore.Scheme = "http"
 		} else {
 			t.req.StateStore.Address = configs.Get().Consul.Address
 		}
@@ -627,7 +629,7 @@ var envParseCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 mkdir -p {{.PoliciesDir}} && \
 mkdir -p ~/.terrascan/pkg/policies/opa/rego/aws && \
-terrascan scan --iac-type tfplan --config-only -l debug -o json -f {{.TerraformPlanFile}} > {{.ScanInputFile}}
+/usr/yunji/cloudiac/iac-tool scan --parse-plan --plan {{.TerraformPlanFile}} > {{.ScanInputFile}}
 `))
 
 func (t *Task) stepEnvParse() (command string, err error) {
