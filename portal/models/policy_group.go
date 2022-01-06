@@ -7,7 +7,7 @@ import (
 type PolicyGroup struct {
 	TimedModel
 
-	OrgId     Id
+	OrgId     Id `json:"orgId" gorm:"size:32;comment:组织ID" example:"org-c3lcrjxczjdywmk0go90"`
 	CreatorId Id `json:"creatorId" gorm:"size:32;not null;comment:创建人ID" example:"u-c3lcrjxczjdywmk0go90"`
 
 	Name        string `json:"name" gorm:"not null;size:128;comment:策略组名称" example:"安全合规策略组"`

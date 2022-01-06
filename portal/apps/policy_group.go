@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"github.com/Masterminds/semver"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -22,11 +23,10 @@ import (
 func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm) (*models.PolicyGroup, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create policy group %s", form.Name))
 	logger := c.Logger()
-
 	g := models.PolicyGroup{
 		Name:        form.Name,
 		Description: form.Description,
-		Label:       form.Label,
+		Label:       strings.Join(form.Labels, ","),
 		Source:      form.Source,
 		VcsId:       form.VcsId,
 		RepoId:      form.RepoId,
@@ -34,7 +34,7 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 		CreatorId:   c.UserId,
 	}
 
-	if form.HasKey("gitTags") {
+	if form.HasKey("gitTags") && form.GitTags != "" {
 		g.GitTags = form.GitTags
 		// 检查是否有效的语义话版本
 		v, err := semver.NewVersion(g.GitTags)
@@ -42,7 +42,7 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 			return nil, e.AutoNew(fmt.Errorf("git tag is invalid semver"), e.BadParam)
 		}
 		g.Version = v.String()
-	} else if form.HasKey("branch") {
+	} else if form.HasKey("branch") && form.Branch != "" {
 		g.Branch = form.Branch
 		g.UseLatest = true
 	} else {
@@ -91,8 +91,9 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 
 type PolicyGroupResp struct {
 	models.PolicyGroup
-	PolicyCount uint `json:"policyCount" example:"10"`
-	RelCount    uint `json:"relCount"`
+	PolicyCount uint     `json:"policyCount" example:"10"`
+	RelCount    uint     `json:"relCount"`
+	Labels      []string `json:"labels" gorm:"-"`
 }
 
 // SearchPolicyGroup 查询策略组列表
@@ -104,6 +105,13 @@ func SearchPolicyGroup(c *ctx.ServiceContext, form *forms.SearchPolicyGroupForm)
 		return nil, e.New(e.DBError, err)
 	}
 
+	for index, pg := range policyGroupResps {
+		labels := make([]string, 0)
+		if pg.Label != "" {
+			labels = strings.Split(pg.Label, ",")
+		}
+		policyGroupResps[index].Labels = labels
+	}
 	return page.PageResp{
 		Total:    p.MustTotal(),
 		PageSize: p.Size,
@@ -126,8 +134,8 @@ func UpdatePolicyGroup(c *ctx.ServiceContext, form *forms.UpdatePolicyGroupForm)
 		attr["enabled"] = form.Enabled
 	}
 
-	if form.HasKey("label") {
-		attr["label"] = form.Label
+	if form.HasKey("labels") {
+		attr["label"] = strings.Join(form.Labels, ",")
 	}
 
 	if form.HasKey("source") {
@@ -151,7 +159,11 @@ func UpdatePolicyGroup(c *ctx.ServiceContext, form *forms.UpdatePolicyGroupForm)
 	}
 
 	if form.HasKey("dir") {
-		attr["dir"] = form.Dir
+		if form.Dir == "" {
+			attr["dir"] = form.Dir
+		} else {
+			attr["dir"] = consts.DirRoot
+		}
 	}
 
 	tx := c.Tx()
@@ -169,17 +181,21 @@ func UpdatePolicyGroup(c *ctx.ServiceContext, form *forms.UpdatePolicyGroupForm)
 		return nil, err
 	}
 
-	// 重新同步策略前需要把之前的策略删除
-	if _, err := services.DeletePolicy(tx, pg.Id); err != nil {
-		_ = tx.Rollback()
-		return nil, err
-	}
+	// 未对仓库信息进行修改时，不重新同步策略数据
+	if form.HasKey("vcsId") && form.HasKey("repoId") &&
+		(form.HasKey("gitTags") || form.HasKey("branch")) && form.HasKey("dir") {
+		// 重新同步策略前需要把之前的策略删除
+		if _, err := services.DeletePolicy(tx, pg.Id); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
 
-	// 策略仓库同步
-	err := RepoPolicyCreate(tx, &pg, c.OrgId, c.UserId)
-	if err != nil {
-		_ = tx.Rollback()
-		return nil, err
+		// 策略仓库同步
+		err := RepoPolicyCreate(tx, &pg, c.OrgId, c.UserId)
+		if err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -228,7 +244,19 @@ func DeletePolicyGroup(c *ctx.ServiceContext, form *forms.DeletePolicyGroupForm)
 
 // DetailPolicyGroup 查询策略组详情
 func DetailPolicyGroup(c *ctx.ServiceContext, form *forms.DetailPolicyGroupForm) (interface{}, e.Error) {
-	return services.DetailPolicyGroup(c.DB(), form.Id)
+	pg, err := services.DetailPolicyGroup(c.DB(), form.Id)
+	if err != nil {
+		return nil, err
+	}
+	labels := make([]string, 0)
+	if pg.Label != "" {
+		labels = strings.Split(pg.Label, ",")
+	}
+
+	return PolicyGroupResp{
+		PolicyGroup: *pg,
+		Labels:      labels,
+	}, nil
 }
 
 // OpPolicyAndPolicyGroupRel 创建和修改策略和策略组的关系
