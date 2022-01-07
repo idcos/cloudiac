@@ -3,7 +3,6 @@
 package handlers
 
 import (
-	"cloudiac/configs"
 	"cloudiac/portal/apps"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
@@ -213,7 +212,8 @@ func PolicyGroupChecks(c *ctx.GinRequest) {
 // @router /api/v1/registry/policy_groups [GET]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.PolicyGroup}}
 func SearchRegistryPolicyGroups(c *ctx.GinRequest) {
-	api := fmt.Sprintf("%s/%s/%s", configs.Get().RegistryAddr, "api/v1", "policy_groups")
+	addr := apps.GetRegistryAddrStr(c.Service())
+	api := fmt.Sprintf("%s/%s/%s", addr, "api/v1", "policy_groups")
 
 	utils.ReverseProxy(api, c.Context)
 }
@@ -227,7 +227,8 @@ func SearchRegistryPolicyGroups(c *ctx.GinRequest) {
 // @router /api/v1/policy_group/versions [GET]
 // @Success 200 {object} ctx.JSONResult{result=[]forms.RegistryPolicyGroupVersionsResp}
 func SearchRegistryPolicyGroupVersions(c *ctx.GinRequest) {
-	api := fmt.Sprintf("%s/%s/%s", configs.Get().RegistryAddr, "api/v1", "policy_group/versions")
+	addr := apps.GetRegistryAddrStr(c.Service())
+	api := fmt.Sprintf("%s/%s/%s", addr, "api/v1", "policy_group/versions")
 
 	utils.ReverseProxy(api, c.Context)
 }
