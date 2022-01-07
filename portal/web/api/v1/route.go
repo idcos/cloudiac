@@ -195,6 +195,10 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/resources/graph", ac(), w(handlers.Env{}.SearchResourcesGraph))
 	g.GET("/envs/:id/resources/graph/:resourceId", ac(), w(handlers.Env{}.ResourceGraphDetail))
 
+	// 系统设置
+	g.GET("/system_config/registry/addr", w(handlers.GetRegistryAddr))     // 获取registry地址的设置
+	g.POST("/system_config/registry/addr", w(handlers.UpsertRegistryAddr)) // 更新registry地址的设置
+
 	// 任务管理
 	g.GET("/tasks", ac(), w(handlers.Task{}.Search))
 	g.GET("/tasks/:id", ac(), w(handlers.Task{}.Detail))
