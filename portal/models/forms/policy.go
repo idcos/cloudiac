@@ -124,6 +124,13 @@ type ScanTemplateForm struct {
 	Parse bool      `json:"parse" binding:""  enums:"true,false" example:"false"` // 是否只执行解析
 }
 
+type ScanTemplateForms struct {
+	BaseForm
+
+	Ids   []models.Id `json:"ids" binding:"" example:"[tpl-c3ek0co6n88ldvq1n6ag, tpl-c3ek0co6n88ldvasdn6ag]"` // 云模板Id
+	Parse bool        `json:"parse" binding:""  enums:"true,false" example:"false"`                           // 是否只执行解析
+}
+
 type ScanEnvironmentForm struct {
 	BaseForm
 

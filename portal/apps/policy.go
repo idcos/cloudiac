@@ -58,6 +58,22 @@ func parseRegoHeader(rego string) (ruleName string, policyType string, resType s
 	return
 }
 
+// 发起执行多个云模版的合规检测任务
+func ScanTemplates(c *ctx.ServiceContext, form *forms.ScanTemplateForms) ([]*models.ScanTask, e.Error) {
+	scanTasks := []*models.ScanTask{}
+	for _, v := range form.Ids {
+		tplForm := &forms.ScanTemplateForm{
+			Id: v,
+		}
+		scanTask, err := ScanTemplateOrEnv(c, tplForm, "")
+		if err != nil {
+			return nil, err
+		}
+		scanTasks = append(scanTasks, scanTask)
+	}
+	return scanTasks, nil
+}
+
 // ScanTemplateOrEnv 扫描云模板或环境的合规策略
 func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envId models.Id) (*models.ScanTask, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("scan template %s", form.Id))

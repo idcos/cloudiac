@@ -28,6 +28,25 @@ func (Policy) ScanTemplate(c *ctx.GinRequest) {
 	c.JSONResult(apps.ScanTemplateOrEnv(c.Service(), form, ""))
 }
 
+// ScanTemplates 运行多个云模板策略扫描
+// @Summary 运行云模板策略扫描
+// @Tags 合规/云模板
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
+// @Param json body forms.ScanTemplateForms true "parameter"
+// @Success 200 {object}  ctx.JSONResult{result=[]models.ScanTask}
+// @Router /policies/templates/scans [post]
+func (Policy) ScanTemplates(c *ctx.GinRequest) {
+	form := &forms.ScanTemplateForms{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.ScanTemplates(c.Service(), form))
+
+}
+
 // TemplateScanResult 云模板策略扫描结果
 // @Tags 合规/云模板
 // @Summary 云模板策略扫描结果
