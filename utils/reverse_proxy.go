@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"cloudiac/utils/logs"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -22,6 +23,7 @@ func ReverseProxy(api string) gin.HandlerFunc {
 			req.URL.Host = u.Host
 			req.URL.Path = u.Path
 
+			logs.Get().Debugf("redirect to registry: %s %s", req.Method, req.URL.String())
 			// req.Header.Set("Content-Type", "application/json; charset=utf-8")
 		}
 

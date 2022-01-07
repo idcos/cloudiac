@@ -3,10 +3,15 @@
 package handlers
 
 import (
+	"cloudiac/configs"
 	"cloudiac/portal/apps"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
+	"cloudiac/utils"
+	"path"
+
+	"github.com/gin-gonic/gin"
 )
 
 type PolicyGroup struct {
@@ -199,4 +204,18 @@ func PolicyGroupChecks(c *ctx.GinRequest) {
 		VcsId:        form.VcsId,
 		Workdir:      form.Dir,
 	}))
+}
+
+// SearchRegistryPolicyGroups 策略组列表
+// @Tags policy_group
+// @Summary 策略组列表
+// @Accept application/x-www-form-urlencoded, application/json
+// @Produce json
+// @Param json body forms.SearchRegistryPolicyGroupForm true "parameter"
+// @router /api/v1/policy_groups [GET]
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.PolicyGroup}}
+func SearchRegistryPolicyGroups() gin.HandlerFunc {
+	api := path.Join(configs.Get().RegistryAddr, "/api/v1", "/policy_groups")
+
+	return utils.ReverseProxy(api)
 }
