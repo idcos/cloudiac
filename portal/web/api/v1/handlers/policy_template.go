@@ -85,7 +85,7 @@ func (Policy) UpdatePolicyTpl(c *ctx.GinRequest) {
 		return
 	}
 	form.Scope = consts.ScopeTemplate
-	c.JSONResult(apps.UpdatePolicyRel(c.Service(), form))
+	c.JSONResult(apps.UpdatePolicyRel(c.Service().Tx(), form))
 }
 
 // TplOfPolicy 云模板策略详情

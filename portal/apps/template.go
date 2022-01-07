@@ -126,7 +126,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 			Scope:          consts.ScopeTemplate,
 			PolicyGroupIds: form.PolicyGroup,
 		}
-		if _, err = UpdatePolicyRel(c, policyForm); err != nil {
+		if _, err = UpdatePolicyRel(tx, policyForm); err != nil {
 			_ = tx.Rollback()
 			return nil, err
 		}
@@ -246,7 +246,7 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 			Scope:          consts.ScopeTemplate,
 			PolicyGroupIds: form.PolicyGroup,
 		}
-		if _, err = UpdatePolicyRel(c, policyForm); err != nil {
+		if _, err = UpdatePolicyRel(tx, policyForm); err != nil {
 			_ = tx.Rollback()
 			return nil, err
 		}

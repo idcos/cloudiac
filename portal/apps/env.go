@@ -279,7 +279,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 			Scope:          consts.ScopeEnv,
 			PolicyGroupIds: form.PolicyGroup,
 		}
-		if _, err = UpdatePolicyRel(c, policyForm); err != nil {
+		if _, err = UpdatePolicyRel(tx, policyForm); err != nil {
 			_ = tx.Rollback()
 			return nil, err
 		}
@@ -499,7 +499,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 			Scope:          consts.ScopeEnv,
 			PolicyGroupIds: form.PolicyGroup,
 		}
-		if _, err = UpdatePolicyRel(c, policyForm); err != nil {
+		if _, err = UpdatePolicyRel(c.Tx(), policyForm); err != nil {
 			return nil, err
 		}
 	}
