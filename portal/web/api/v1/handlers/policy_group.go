@@ -9,9 +9,7 @@ import (
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
 	"cloudiac/utils"
-	"path"
-
-	"github.com/gin-gonic/gin"
+	"fmt"
 )
 
 type PolicyGroup struct {
@@ -206,16 +204,30 @@ func PolicyGroupChecks(c *ctx.GinRequest) {
 	}))
 }
 
-// SearchRegistryPolicyGroups 策略组列表
+// SearchRegistryPolicyGroups registry侧策略组列表
 // @Tags policy_group
-// @Summary 策略组列表
+// @Summary registry侧策略组列表
 // @Accept application/x-www-form-urlencoded, application/json
 // @Produce json
 // @Param json body forms.SearchRegistryPolicyGroupForm true "parameter"
-// @router /api/v1/policy_groups [GET]
+// @router /api/v1/registry/policy_groups [GET]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.PolicyGroup}}
-func SearchRegistryPolicyGroups() gin.HandlerFunc {
-	api := path.Join(configs.Get().RegistryAddr, "/api/v1", "/policy_groups")
+func SearchRegistryPolicyGroups(c *ctx.GinRequest) {
+	api := fmt.Sprintf("%s/%s/%s", configs.Get().RegistryAddr, "api/v1", "policy_groups")
 
-	return utils.ReverseProxy(api)
+	utils.ReverseProxy(api, c.Context)
+}
+
+// SearchRegistryPolicyGroupVersions registry侧策略组版本列表
+// @Tags policy_group
+// @Summary registry侧策略组版本列表
+// @Accept application/x-www-form-urlencoded, application/json
+// @Produce json
+// @Param json body forms.SearchRegistryPolicyGroupVersionForm true "parameter"
+// @router /api/v1/policy_group/versions [GET]
+// @Success 200 {object} ctx.JSONResult{result=[]forms.RegistryPolicyGroupVersionsResp}
+func SearchRegistryPolicyGroupVersions(c *ctx.GinRequest) {
+	api := fmt.Sprintf("%s/%s/%s", configs.Get().RegistryAddr, "api/v1", "policy_group/versions")
+
+	utils.ReverseProxy(api, c.Context)
 }

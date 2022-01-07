@@ -7,7 +7,6 @@ import (
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/web/api/v1/handlers"
 	"cloudiac/portal/web/middleware"
-	"cloudiac/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -118,8 +117,8 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/policies/groups/:id/last_tasks", ac(), w(handlers.PolicyGroup{}.LastTasks))
 
 	// Registry 侧策略组API
-	g.GET("/registry/policy_groups", handlers.SearchRegistryPolicyGroups())
-	g.GET("/registry/policy_group/versions", utils.ReverseProxy("http://localhost:9233/api/v1/policy_groups"))
+	g.GET("/registry/policy_groups", w(handlers.SearchRegistryPolicyGroups))
+	g.GET("/registry/policy_group/versions", w(handlers.SearchRegistryPolicyGroupVersions))
 
 	// 组织下的资源搜索(只需要有环境的读权限即可查看资源)
 	g.GET("/orgs/resources", ac("envs", "read"), w(handlers.Organization{}.SearchOrgResources))
