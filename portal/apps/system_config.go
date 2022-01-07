@@ -59,46 +59,29 @@ func UpdateSystemConfig(c *ctx.ServiceContext, form *forms.UpdateSystemConfigFor
 	return nil, nil
 }
 
-func CheckRegistryAddr(c *ctx.ServiceContext) (interface{}, e.Error) {
-	// check db
-	cfg, err := services.GetSystemConfigByName(c.DB(), models.SysCfgNamRegistryHome)
-	if err == nil && cfg != nil {
-		return &models.RegistryAddrCheckResp{
-			IsExisted: true,
-		}, nil
-	}
-
-	// check config file
-	if configs.Get().RegistryAddr != "" {
-		return &models.RegistryAddrCheckResp{
-			IsExisted: true,
-		}, nil
-	}
-
-	return &models.RegistryAddrCheckResp{
-		IsExisted: false,
-	}, nil
-}
-
 func GetRegistryAddr(c *ctx.ServiceContext) (interface{}, e.Error) {
 	cfg, err := services.GetSystemConfigByName(c.DB(), models.SysCfgNamRegistryHome)
-	if err != nil {
-		return nil, err
+	var cfgdb = ""
+	if err == nil {
+		cfgdb = cfg.Value
 	}
 
 	return &models.RegistryAddrResp{
-		RegistryAddr: cfg.Value,
+		RegistryAddrFromDB:  cfgdb,
+		RegistryAddrFromCfg: configs.Get().RegistryAddr,
 	}, nil
 }
 
 func UpsertRegistryAddr(c *ctx.ServiceContext, form *forms.RegistryAddrForm) (interface{}, e.Error) {
 
 	cfg, err := services.UpsertRegistryAddr(c.DB(), form.RegistryAddr)
-	if err != nil {
-		return nil, err
+	var cfgdb = ""
+	if err == nil {
+		cfgdb = cfg.Value
 	}
 
 	return &models.RegistryAddrResp{
-		RegistryAddr: cfg.Value,
+		RegistryAddrFromDB:  cfgdb,
+		RegistryAddrFromCfg: configs.Get().RegistryAddr,
 	}, nil
 }

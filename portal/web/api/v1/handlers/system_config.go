@@ -53,18 +53,6 @@ func (SystemConfig) Update(c *ctx.GinRequest) {
 	c.JSONResult(apps.UpdateSystemConfig(c.Service(), &form))
 }
 
-// CheckRegistryAddr 检查registry addr是否已配置
-// @Summary 检查registry addr是否已配置(先检查DB，再检查配置文件)
-// @Tags registry
-// @Accept  json
-// @Produce  json
-// @Security AuthToken
-// @Success 200 {object}  ctx.JSONResult{result=models.RegistryAddrCheckResp}
-// @Router /system_config/registry/check [GET]
-func CheckRegistryAddr(c *ctx.GinRequest) {
-	c.JSONResult(apps.CheckRegistryAddr(c.Service()))
-}
-
 // GetRegistryAddr 获取 registry addr 的配置
 // @Summary 获取 registry addr 的配置
 // @Tags registry
