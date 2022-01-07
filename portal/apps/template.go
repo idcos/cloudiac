@@ -251,9 +251,12 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 			return nil, err
 		}
 	}
-	// TODO 自动触发一次检测, 协程去开启？是否有封装好方法？
+	// 自动触发一次检测
 	if form.PolicyEnable {
-
+		tplScanForm := &forms.ScanTemplateForm{
+			Id: tpl.Id,
+		}
+		go ScanTemplateOrEnv(c, tplScanForm, "")
 	}
 	if form.HasKey("projectId") {
 		if err := services.DeleteTemplateProject(tx, form.Id); err != nil {

@@ -207,8 +207,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		AutoRepairDrift:  form.AutoRepairDrift,
 		CronDriftExpress: form.CronDriftExpress,
 		OpenCronDrift:    form.OpenCronDrift,
-		// TODO 这个参数哪里去调用?
-		PolicyEnable: form.PolicyEnable,
+		PolicyEnable:     form.PolicyEnable,
 	}
 	// 检查偏移检测参数
 	cronTaskType, err := GetCronTaskTypeAndCheckParam(form.CronDriftExpress, form.AutoRepairDrift, form.OpenCronDrift)
