@@ -52,8 +52,11 @@ func SearchPolicyGroup(dbSess *db.Session, orgId models.Id, q string) *db.Sessio
 	query := dbSess.Table(pgTable).
 		Joins(fmt.Sprintf("left join (%s) as p on p.group_id = %s.id",
 			fmt.Sprintf("select count(group_id) as policy_count,group_id from %s group by group_id",
-				models.Policy{}.TableName()), pgTable))
-		//Where(fmt.Sprintf("%s.org_id = ?", pgTable), orgId)
+				models.Policy{}.TableName()), pgTable)).
+		Joins(fmt.Sprintf("left join (%s) as rel on rel.group_id = %s.id",
+			fmt.Sprintf("select count(group_id) as rel_count, group_id from %s group by group_id",
+				models.PolicyRel{}.TableName()), pgTable)).
+		Where(fmt.Sprintf("%s.org_id = ?", pgTable), orgId)
 	if q != "" {
 		qs := "%" + q + "%"
 		query = query.Where(fmt.Sprintf("%s.name like ?", pgTable), qs)
@@ -190,7 +193,7 @@ func DownloadPolicyGroup(sess *db.Session, tmpDir string, result *DownloadPolicy
 	}
 	logger.Debugf("downloading git %s@%s to %s", repoAddr, commitId, filepath.Join(tmpDir, "code"))
 	er := GitCheckout(filepath.Join(tmpDir, "code"), repoAddr, commitId)
-	if err != nil {
+	if er != nil {
 		result.Error = e.New(e.InternalError, errors.Wrapf(er, "checkout repo"), http.StatusInternalServerError)
 		return
 	}
@@ -440,7 +443,7 @@ func ParseMeta(regoFilePath string, metaFilePath string) (policy *Policy, err e.
 
 // ExtractStr 提取 # @keyword: xxx 格式字符串
 func ExtractStr(keyword string, input string) string {
-	regex := regexp.MustCompile(fmt.Sprintf("(?m)^\\s*#+\\s*@%s:\\s*(.*)$)", keyword))
+	regex := regexp.MustCompile(fmt.Sprintf("(?m)^\\s*#+\\s*@%s:\\s*(.*)$", keyword))
 	match := regex.FindStringSubmatch(input)
 	if len(match) == 2 {
 		return strings.TrimSpace(match[1])

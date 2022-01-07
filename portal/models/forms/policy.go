@@ -79,6 +79,14 @@ type UpdatePolicyGroupForm struct {
 	Name        string    `json:"name" form:"name" `
 	Description string    `json:"description" binding:"" example:"本组包含对于安全合规的检查策略"`
 	Enabled     bool      `json:"enabled" form:"enabled"`
+
+	Label       string `json:"label" binding:"" example:"security,alicloud"`
+	Source  string    `json:"source" binding:"required" enums:"vcs,registry" example:"来源"`
+	VcsId   models.Id `json:"vcsId" binding:"required" example:"vcs-c3lcrjxczjdywmk0go90"`
+	RepoId  string    `json:"repoId" binding:"required" example:"1234567890"`
+	GitTags string    `json:"gitTags" example:"Git Tags"`
+	Branch  string    `json:"branch" example:"master"`
+	Dir     string    `json:"dir" example:"/"`
 }
 
 type DeletePolicyGroupForm struct {
@@ -172,7 +180,6 @@ type DeletePolicySuppressForm struct {
 type SearchPolicyTplForm struct {
 	NoPageSizeForm
 
-	OrgId models.Id `form:"orgId" binding:""` // 组织ID
 	TplId models.Id `form:"tplId" binding:""`
 	Q     string    `form:"q" json:"q" binding:""` // 模糊搜索
 }
@@ -200,7 +207,6 @@ type TplOfPolicyGroupForm struct {
 type SearchPolicyEnvForm struct {
 	NoPageSizeForm
 
-	OrgId     models.Id `form:"orgId" binding:""`
 	ProjectId models.Id `form:"projectId" binding:""`
 	EnvId     models.Id `form:"envId" binding:""`
 	Q         string    `form:"q" json:"q" binding:""` // 模糊搜索

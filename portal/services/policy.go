@@ -51,9 +51,9 @@ func GetPolicyReferenceId(query *db.Session, policy *models.Policy) (string, e.E
 	return fmt.Sprintf("%s_%s_%s_%d", "iac", typ, scope, lastId+1), nil
 }
 
-func GetPolicyById(tx *db.Session, id models.Id) (*models.Policy, e.Error) {
+func GetPolicyById(tx *db.Session, id, orgId models.Id) (*models.Policy, e.Error) {
 	po := models.Policy{}
-	if err := tx.Model(models.Policy{}).Where("id = ?", id).First(&po); err != nil {
+	if err := tx.Model(models.Policy{}).Where("id = ?", id).Where("org_id = ?", orgId).First(&po); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.PolicyNotExist, err)
 		}
@@ -245,9 +245,9 @@ func RemovePoliciesGroupRelation(tx *db.Session, groupId models.Id) e.Error {
 	return nil
 }
 
-func SearchPolicy(dbSess *db.Session, form *forms.SearchPolicyForm) *db.Session {
+func SearchPolicy(dbSess *db.Session, form *forms.SearchPolicyForm, orgId models.Id) *db.Session {
 	pTable := models.Policy{}.TableName()
-	query := dbSess.Table(pTable)
+	query := dbSess.Table(pTable).Where(fmt.Sprintf("%s.org_id in (?)", pTable), orgId)
 	if len(form.GroupId) > 0 {
 		query = query.Where(fmt.Sprintf("%s.group_id in (?)", pTable), form.GroupId)
 	}
@@ -270,9 +270,9 @@ func SearchPolicy(dbSess *db.Session, form *forms.SearchPolicyForm) *db.Session 
 	return query
 }
 
-func DeletePolicy(dbSess *db.Session, id models.Id) (interface{}, e.Error) {
+func DeletePolicy(dbSess *db.Session, groupId models.Id) (interface{}, e.Error) {
 	if _, err := dbSess.
-		Where("id = ?", id).
+		Where("group_id = ?", groupId).
 		Delete(&models.Policy{}); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
@@ -433,7 +433,7 @@ type PolicyScanSummary struct {
 }
 
 // PolicySummary 获取策略/策略组/任务执行结果
-func PolicySummary(query *db.Session, ids []models.Id, scope string) ([]*PolicyScanSummary, e.Error) {
+func PolicySummary(query *db.Session, ids []models.Id, scope string, orgId models.Id) ([]*PolicyScanSummary, e.Error) {
 	var key string
 	switch scope {
 	case consts.ScopePolicy:
@@ -443,7 +443,9 @@ func PolicySummary(query *db.Session, ids []models.Id, scope string) ([]*PolicyS
 	case consts.ScopeTask:
 		key = "task_id"
 	}
-	subQuery := query.Model(models.PolicyResult{}).Select("max(id)").Where(fmt.Sprintf("%s in (?)", key), ids)
+	subQuery := query.Model(models.PolicyResult{}).Select("max(id)").
+		Where(fmt.Sprintf("%s in (?)", key), ids).
+		Where("org_id = ?", orgId)
 
 	if scope == consts.ScopeTask {
 		subQuery = subQuery.Group(fmt.Sprintf("%s,env_id,tpl_id,policy_id", key))
@@ -625,8 +627,8 @@ func SubQueryUserTemplateIds(query *db.Session, userId models.Id) *db.Session {
 	return q.Where("org_id in (?)", orgIds)
 }
 
-func PolicyEnable(tx *db.Session, policyId models.Id, enabled bool) (*models.Policy, e.Error) {
-	policy, err := GetPolicyById(tx, policyId)
+func PolicyEnable(tx *db.Session, policyId models.Id, enabled bool, orgId models.Id) (*models.Policy, e.Error) {
+	policy, err := GetPolicyById(tx, policyId, orgId)
 	if err != nil {
 		return nil, err
 	}
@@ -648,14 +650,16 @@ type ScanStatusGroupBy struct {
 }
 
 // GetPolicyStatusByPolicy 查询指定时间范围内所有策略的执行结果，统计各策略每种检测状态下的数量
-func GetPolicyStatusByPolicy(query *db.Session, from time.Time, to time.Time, status string) ([]*ScanStatusGroupBy, e.Error) {
+func GetPolicyStatusByPolicy(query *db.Session, from time.Time, to time.Time, status string, orgId models.Id) ([]*ScanStatusGroupBy, e.Error) {
 	groupQuery := query.Model(models.PolicyResult{})
 	groupQuery = groupQuery.Where("start_at >= ? and start_at < ?", from, to).
 		Select("count(*) as count, policy_id as id, status").
+		Where("org_id = ?", orgId).
 		Group("policy_id,status").
 		Order("count desc")
 
 	q := query.Select("r.*,iac_policy.name,iac_policy.severity").Table("(?) as r", groupQuery.Expr()).
+		Where("org_id = ?", orgId).
 		Joins("left join iac_policy on iac_policy.id = r.id")
 
 	if status != "" {

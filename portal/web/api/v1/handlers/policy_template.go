@@ -56,6 +56,7 @@ func (Policy) TemplateScanResult(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param form query forms.SearchPolicyTplForm true "parameter"
 // @Router /policies/templates [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.RespPolicyTpl}}
@@ -74,6 +75,7 @@ func (Policy) SearchPolicyTpl(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param json body forms.UpdatePolicyRelForm true "parameter"
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
@@ -143,6 +145,7 @@ func (Policy) ValidTplOfPolicy(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param json body forms.EnableScanForm true "parameter"
 // @Param templateId path string true "云模板ID"
 // @Router /policies/templates/{templateId}/enabled [put]

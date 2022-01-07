@@ -8,12 +8,14 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/logstorage"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -21,48 +23,12 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 )
 
-// CreatePolicy 创建策略
-func CreatePolicy(c *ctx.ServiceContext, form *forms.CreatePolicyForm) (*models.Policy, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("create policy %s", form.Name))
-
-	ruleName, policyType, resourceType, err := parseRegoHeader(form.Rego)
-	if err != nil {
-		c.Logger().Errorf("rego parse error: %v", err)
-	}
-
-	p := models.Policy{
-		Name:          form.Name,
-		CreatorId:     c.UserId,
-		FixSuggestion: form.FixSuggestion,
-		Severity:      form.Severity,
-		Rego:          form.Rego,
-		Tags:          form.Tags,
-		RuleName:      ruleName,
-		ResourceType:  resourceType,
-		PolicyType:    policyType,
-		GroupId:       form.GroupId,
-	}
-	refId, err := services.GetPolicyReferenceId(c.DB(), &p)
-	if err != nil {
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	}
-	p.ReferenceId = refId
-
-	policyInfo, err := services.CreatePolicy(c.DB(), &p)
-	if err != nil && err.Code() == e.PolicyAlreadyExist {
-		return nil, e.New(err.Code(), err, http.StatusBadRequest)
-	} else if err != nil {
-		c.Logger().Errorf("error creating policy, err %s", err)
-		return nil, e.AutoNew(err, e.DBError)
-	}
-
-	return policyInfo, nil
-}
 
 //parseRegoHeader 解析 rego 脚本获取入口，云商类型和资源类型
 func parseRegoHeader(rego string) (ruleName string, policyType string, resType string, err e.Error) {
@@ -236,7 +202,7 @@ type PolicyResp struct {
 
 // SearchPolicy 查询策略列表
 func SearchPolicy(c *ctx.ServiceContext, form *forms.SearchPolicyForm) (interface{}, e.Error) {
-	query := services.SearchPolicy(c.DB(), form)
+	query := services.SearchPolicy(c.DB(), form, c.OrgId)
 	policyResps := make([]PolicyResp, 0)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	if err := p.Scan(&policyResps); err != nil {
@@ -248,7 +214,7 @@ func SearchPolicy(c *ctx.ServiceContext, form *forms.SearchPolicyForm) (interfac
 	for idx := range policyResps {
 		policyIds = append(policyIds, policyResps[idx].Id)
 	}
-	if summaries, err := services.PolicySummary(c.DB(), policyIds, consts.ScopePolicy); err != nil {
+	if summaries, err := services.PolicySummary(c.DB(), policyIds, consts.ScopePolicy, c.OrgId); err != nil {
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	} else if len(summaries) > 0 {
 		sumMap := make(map[string]*services.PolicyScanSummary, len(policyIds))
@@ -278,96 +244,6 @@ func SearchPolicy(c *ctx.ServiceContext, form *forms.SearchPolicyForm) (interfac
 	}, nil
 }
 
-// UpdatePolicy 修改策略组
-func UpdatePolicy(c *ctx.ServiceContext, form *forms.UpdatePolicyForm) (interface{}, e.Error) {
-	tx := c.Tx()
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			panic(r)
-		}
-	}()
-
-	attr := models.Attrs{}
-	if form.HasKey("name") {
-		attr["name"] = form.Name
-	}
-
-	if form.HasKey("fixSuggestion") {
-		attr["fixSuggestion"] = form.FixSuggestion
-	}
-
-	if form.HasKey("severity") {
-		attr["severity"] = form.Severity
-	}
-
-	if form.HasKey("rego") {
-		attr["rego"] = form.Rego
-
-		ruleName, policyType, resourceType, err := parseRegoHeader(form.Rego)
-		if err != nil {
-			return nil, e.New(err.Code(), err, http.StatusBadRequest)
-		}
-		attr["ruleName"] = ruleName
-		attr["policyType"] = policyType
-		attr["resourceType"] = resourceType
-	}
-
-	if form.HasKey("tags") {
-		attr["tags"] = form.Tags
-	}
-
-	if form.HasKey("groupId") {
-		attr["groupId"] = form.GroupId
-	}
-
-	if form.HasKey("enabled") {
-		attr["enabled"] = form.Enabled
-
-		// 保持和策略屏蔽行为一致，禁用的时候添加一条屏蔽记录
-		sup, _ := services.GetPolicySuppressByPolicyId(tx, form.Id)
-		if !form.Enabled && sup == nil {
-			sup := models.PolicySuppress{
-				CreatorId:  c.UserId,
-				TargetId:   form.Id,
-				TargetType: consts.ScopePolicy,
-				PolicyId:   form.Id,
-				Type:       common.PolicySuppressTypePolicy,
-			}
-			if _, err := tx.Save(&sup); err != nil {
-				_ = tx.Rollback()
-				return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-			}
-		} else {
-			if sup != nil {
-				if _, err := services.DeletePolicySuppress(tx, sup.Id); err != nil {
-					_ = tx.Rollback()
-					return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-				}
-			}
-		}
-	}
-
-	pg := models.Policy{}
-	pg.Id = form.Id
-	if _, err := services.UpdatePolicy(tx, &pg, attr); err != nil {
-		_ = tx.Rollback()
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		_ = tx.Rollback()
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	}
-
-	return nil, nil
-}
-
-// DeletePolicy 删除策略组
-func DeletePolicy(c *ctx.ServiceContext, form *forms.DeletePolicyForm) (interface{}, e.Error) {
-	return services.DeletePolicy(c.DB(), form.Id)
-
-}
 
 // DetailPolicy 查询策略组详情
 func DetailPolicy(c *ctx.ServiceContext, form *forms.DetailPolicyForm) (interface{}, e.Error) {
@@ -391,7 +267,7 @@ type RespPolicyTpl struct {
 func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (interface{}, e.Error) {
 	respPolicyTpls := make([]RespPolicyTpl, 0)
 	tplIds := make([]models.Id, 0)
-	query := services.SearchPolicyTpl(c.DB(), form.OrgId, form.TplId, form.Q)
+	query := services.SearchPolicyTpl(c.DB(), c.OrgId, form.TplId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	groupM := make(map[models.Id][]services.NewPolicyGroup, 0)
 	if err := p.Scan(&respPolicyTpls); err != nil {
@@ -472,7 +348,7 @@ type RespPolicyEnv struct {
 func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (interface{}, e.Error) {
 	respPolicyEnvs := make([]RespPolicyEnv, 0)
 	envIds := make([]models.Id, 0)
-	query := services.SearchPolicyEnv(c.DB(), form.OrgId, form.ProjectId, form.EnvId, form.Q)
+	query := services.SearchPolicyEnv(c.DB(), c.OrgId, form.ProjectId, form.EnvId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	groupM := make(map[models.Id][]services.NewPolicyGroup)
 
@@ -1008,7 +884,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	summaryResp := PolicySummaryResp{}
 
 	// 近15天数据
-	scanStatus, err := services.GetPolicyStatusByPolicy(dbSess, from, to, "")
+	scanStatus, err := services.GetPolicyStatusByPolicy(dbSess, from, to, "", c.OrgId)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -1027,7 +903,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	}
 
 	// 16～30天数据
-	lastScanStatus, err := services.GetPolicyStatusByPolicy(dbSess, lastFrom, lastTo, "")
+	lastScanStatus, err := services.GetPolicyStatusByPolicy(dbSess, lastFrom, lastTo, "", c.OrgId)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -1115,7 +991,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	}
 
 	// 3. 策略未通过
-	violatedScanStatus, err := services.GetPolicyStatusByPolicy(dbSess, from, to, common.PolicyStatusViolated)
+	violatedScanStatus, err := services.GetPolicyStatusByPolicy(dbSess, from, to, common.PolicyStatusViolated, c.OrgId)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -1143,4 +1019,64 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	summaryResp.PolicyGroupViolated = p
 
 	return &summaryResp, nil
+}
+
+func RepoPolicyCreate(tx *db.Session, g *models.PolicyGroup, orgId, userId models.Id) e.Error {
+	// 策略仓库同步
+	// 1. 生成临时工作目录
+	logger := logs.Get()
+	logger.Debugf("creating tmp dir")
+	tmpDir, er := os.MkdirTemp("", "*")
+	if er != nil {
+		return e.New(e.InternalError, errors.Wrapf(er, "create tmp dir"), http.StatusInternalServerError)
+	}
+	//defer os.RemoveAll(tmpDir)
+	logger.Debugf("tmp dir %s", tmpDir)
+
+	// 2. clone 策略组
+	var wg sync.WaitGroup
+	result := services.DownloadPolicyGroupResult{Group: g}
+	wg.Add(1)
+	go services.DownloadPolicyGroup(db.Get(), tmpDir, &result, &wg)
+	wg.Wait()
+	if result.Error != nil {
+		logger.Errorf("error download policy group, err %s", result.Error)
+		return result.Error
+	}
+
+	// 3. 遍历策略组目录，解析策略文件
+	logger.Debugf("parsing policy group")
+	// TODO: import summary
+	policies, er := services.ParsePolicyGroup(filepath.Join(tmpDir, "code", g.Dir))
+	if er != nil {
+		return e.New(e.InternalError, errors.Wrapf(er, "parse rego"), http.StatusInternalServerError)
+	}
+
+	// 策略文件入库
+	logger.Debugf("creating policy")
+	for _, p := range policies {
+		p := models.Policy{
+			OrgId:     orgId,
+			CreatorId: userId,
+			GroupId:   g.Id,
+
+			Name:          p.Meta.Name,
+			RuleName:      p.Meta.Name,
+			ReferenceId:   p.Meta.ReferenceId,
+			Revision:      p.Meta.Version,
+			FixSuggestion: p.Meta.FixSuggestion,
+			Severity:      p.Meta.Severity,
+			ResourceType:  p.Meta.ResourceType,
+			PolicyType:    p.Meta.PolicyType,
+			Tags:          p.Meta.Category,
+
+			Rego: p.Rego,
+		}
+		_, er = tx.Save(&p)
+		if er != nil {
+			return e.New(e.DBError, er)
+		}
+	}
+
+	return nil
 }

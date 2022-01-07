@@ -175,7 +175,7 @@ func GetPolicyGroupScanTasks(query *db.Session, policyGroupId models.Id) *db.Ses
 }
 
 func QueryPolicyResult(query *db.Session, taskId models.Id) *db.Session {
-	q := query.Model(models.PolicyResult{}).Where("task_id = ? and status != ?", taskId, common.PolicyStatusSuppressed)
+	q := query.Model(models.PolicyResult{}).Where("task_id = ?", taskId)
 
 	// 策略信息
 	q = q.Joins("left join iac_policy as p on p.id = iac_policy_result.policy_id").
