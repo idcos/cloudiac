@@ -3,6 +3,7 @@
 package services
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
@@ -36,7 +37,7 @@ func UpdateVcs(tx *db.Session, id models.Id, attrs models.Attrs) (vcs *models.Vc
 	return
 }
 
-func QueryVcs(orgId models.Id, status, q string, isShowdefaultVcs bool, query *db.Session) *db.Session {
+func QueryVcs(orgId models.Id, status, q string, isShowdefaultVcs, isShowRegistryVcs bool, query *db.Session) *db.Session {
 	query = query.Model(&models.Vcs{}).Where("org_id = ? or org_id = ''", orgId)
 	if status != "" {
 		query = query.Where("status = ?", status)
@@ -46,7 +47,10 @@ func QueryVcs(orgId models.Id, status, q string, isShowdefaultVcs bool, query *d
 		query = query.Where("name LIKE ?", qs)
 	}
 	if !isShowdefaultVcs {
-		query = query.Where("vcs_type != 'local'")
+		query = query.Where("vcs_type != ?", consts.GitTypeLocal)
+	}
+	if !isShowRegistryVcs {
+		query = query.Where("vcs_type != ?", consts.GitTypeRegistry)
 	}
 	return query.LazySelectAppend("id, org_id, project_id, name, status, vcs_type, address")
 }
