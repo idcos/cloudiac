@@ -125,6 +125,13 @@ type ScanTemplateForm struct {
 	Parse bool      `json:"parse" binding:""  enums:"true,false" example:"false"` // 是否只执行解析
 }
 
+type ScanTemplateForms struct {
+	BaseForm
+
+	Ids   []models.Id `json:"ids" binding:"" example:"[tpl-c3ek0co6n88ldvq1n6ag, tpl-c3ek0co6n88ldvasdn6ag]"` // 云模板Id
+	Parse bool        `json:"parse" binding:""  enums:"true,false" example:"false"`                           // 是否只执行解析
+}
+
 type ScanEnvironmentForm struct {
 	BaseForm
 
@@ -181,7 +188,6 @@ type DeletePolicySuppressForm struct {
 type SearchPolicyTplForm struct {
 	NoPageSizeForm
 
-	OrgId models.Id `form:"orgId" binding:""` // 组织ID
 	TplId models.Id `form:"tplId" binding:""`
 	Q     string    `form:"q" json:"q" binding:""` // 模糊搜索
 }
@@ -209,7 +215,6 @@ type TplOfPolicyGroupForm struct {
 type SearchPolicyEnvForm struct {
 	NoPageSizeForm
 
-	OrgId     models.Id `form:"orgId" binding:""`
 	ProjectId models.Id `form:"projectId" binding:""`
 	EnvId     models.Id `form:"envId" binding:""`
 	Q         string    `form:"q" json:"q" binding:""` // 模糊搜索

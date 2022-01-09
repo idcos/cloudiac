@@ -58,6 +58,22 @@ func parseRegoHeader(rego string) (ruleName string, policyType string, resType s
 	return
 }
 
+// 发起执行多个云模版的合规检测任务
+func ScanTemplates(c *ctx.ServiceContext, form *forms.ScanTemplateForms) ([]*models.ScanTask, e.Error) {
+	scanTasks := []*models.ScanTask{}
+	for _, v := range form.Ids {
+		tplForm := &forms.ScanTemplateForm{
+			Id: v,
+		}
+		scanTask, err := ScanTemplateOrEnv(c, tplForm, "")
+		if err != nil {
+			return nil, err
+		}
+		scanTasks = append(scanTasks, scanTask)
+	}
+	return scanTasks, nil
+}
+
 // ScanTemplateOrEnv 扫描云模板或环境的合规策略
 func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envId models.Id) (*models.ScanTask, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("scan template %s", form.Id))
@@ -267,7 +283,7 @@ type RespPolicyTpl struct {
 func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (interface{}, e.Error) {
 	respPolicyTpls := make([]RespPolicyTpl, 0)
 	tplIds := make([]models.Id, 0)
-	query := services.SearchPolicyTpl(c.DB(), form.OrgId, form.TplId, form.Q)
+	query := services.SearchPolicyTpl(c.DB(), c.OrgId, form.TplId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	groupM := make(map[models.Id][]services.NewPolicyGroup, 0)
 	if err := p.Scan(&respPolicyTpls); err != nil {
@@ -348,7 +364,7 @@ type RespPolicyEnv struct {
 func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (interface{}, e.Error) {
 	respPolicyEnvs := make([]RespPolicyEnv, 0)
 	envIds := make([]models.Id, 0)
-	query := services.SearchPolicyEnv(c.DB(), form.OrgId, form.ProjectId, form.EnvId, form.Q)
+	query := services.SearchPolicyEnv(c.DB(), c.OrgId, form.ProjectId, form.EnvId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	groupM := make(map[models.Id][]services.NewPolicyGroup)
 

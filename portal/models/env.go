@@ -83,6 +83,10 @@ type Env struct {
 	AutoRepairDrift   bool       `json:"autoRepairDrift" gorm:"default:false"`   // 是否进行自动纠偏
 	OpenCronDrift     bool       `json:"openCronDrift" gorm:"default:false"`     // 是否开启偏移检测
 	NextDriftTaskTime *time.Time `json:"nextDriftTaskTime" gorm:"type:datetime"` // 下次执行偏移检测任务的时间
+
+	// 合规相关
+	PolicyEnable bool `json:"policyEnable" grom:"default:false"` // 是否开启合规检测
+
 }
 
 func (Env) TableName() string {
@@ -128,4 +132,6 @@ type EnvDetail struct {
 	TaskId        Id     `json:"taskId"`        // 当前作业ID
 	CommitId      string `json:"commitId"`      // Commit ID
 	IsDrift       bool   `json:"isDrift"`
+	PolicyEnable  bool   `json:"policyEnable"`  // 是否开启合规检测
+	PolicyStatus  bool   `json:"policy_status"` // 环境合规检测任务状态
 }

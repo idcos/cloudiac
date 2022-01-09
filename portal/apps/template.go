@@ -19,21 +19,23 @@ import (
 )
 
 type SearchTemplateResp struct {
-	CreatedAt           models.Time `json:"createdAt"` // 创建时间
-	UpdatedAt           models.Time `json:"updatedAt"` // 更新时间
-	Id                  models.Id   `json:"id"`
-	Name                string      `json:"name"`
-	Description         string      `json:"description"`
-	RelationEnvironment int         `json:"relationEnvironment"`
-	RepoRevision        string      `json:"repoRevision"`
-	Creator             string      `json:"creator"`
-	RepoId              string      `json:"repoId"`
-	VcsId               string      `json:"vcsId"`
-	RepoAddr            string      `json:"repoAddr"`
-	TplType             string      `json:"tplType" `
-	RepoFullName        string      `json:"repoFullName"`
-	NewRepoAddr         string      `json:"newRepoAddr"`
-	VcsAddr             string      `json:"vcsAddr"`
+	CreatedAt         models.Time `json:"createdAt"` // 创建时间
+	UpdatedAt         models.Time `json:"updatedAt"` // 更新时间
+	Id                models.Id   `json:"id"`
+	Name              string      `json:"name"`
+	Description       string      `json:"description"`
+	ActiveEnvironment int         `json:"activeEnvironment"`
+	RepoRevision      string      `json:"repoRevision"`
+	Creator           string      `json:"creator"`
+	RepoId            string      `json:"repoId"`
+	VcsId             string      `json:"vcsId"`
+	RepoAddr          string      `json:"repoAddr"`
+	TplType           string      `json:"tplType" `
+	RepoFullName      string      `json:"repoFullName"`
+	NewRepoAddr       string      `json:"newRepoAddr"`
+	VcsAddr           string      `json:"vcsAddr"`
+	PolicyEnable      bool        `json:"policyEnble"`
+	PolicyStatus      string      `json:"PolicyStatus"`
 }
 
 func getRepoAddr(vcsId models.Id, query *db.Session, repoId string) (string, error) {
@@ -104,6 +106,8 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		PlayVarsFile: form.PlayVarsFile,
 		TfVarsFile:   form.TfVarsFile,
 		TfVersion:    form.TfVersion,
+		PolicyEnable: form.PolicyEnable,
+		Triggers:     form.Triggers,
 	})
 
 	if err != nil {
@@ -113,6 +117,19 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 			return nil, e.New(err.Code(), err.Err(), http.StatusBadRequest)
 		}
 		return nil, err
+	}
+
+	// 绑定云模版和策略组的关系
+	if len(form.PolicyGroup) > 0 {
+		policyForm := &forms.UpdatePolicyRelForm{
+			Id:             template.Id,
+			Scope:          consts.ScopeTemplate,
+			PolicyGroupIds: form.PolicyGroup,
+		}
+		if _, err = UpdatePolicyRel(tx, policyForm); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
 	}
 
 	// 创建模板与项目的关系
@@ -143,6 +160,12 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		_ = tx.Rollback()
 		c.Logger().Errorf("error commit create template, err %s", err)
 		return nil, e.New(e.DBError, err)
+	}
+	if form.PolicyEnable {
+		scanForm := &forms.ScanTemplateForm{
+			Id: template.Id,
+		}
+		go ScanTemplateOrEnv(c, scanForm, "")
 	}
 
 	return template, nil
@@ -189,6 +212,13 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 	if form.HasKey("repoRevision") {
 		attrs["repoRevision"] = form.RepoRevision
 	}
+	if form.HasKey("policyEnable") {
+		attrs["policyEnable"] = form.PolicyEnable
+	}
+	if form.HasKey("triggers") {
+		attrs["triggers"] = form.Triggers
+	}
+
 	if form.HasKey("vcsId") && form.HasKey("repoId") && form.HasKey("repoFullName") {
 		attrs["vcsId"] = form.VcsId
 		attrs["repoId"] = form.RepoId
@@ -208,6 +238,25 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 	if tpl, err = services.UpdateTemplate(tx, form.Id, attrs); err != nil {
 		_ = tx.Rollback()
 		return nil, err
+	}
+	// 更新和策略组的绑定关系
+	if form.HasKey("policyGroup") {
+		policyForm := &forms.UpdatePolicyRelForm{
+			Id:             tpl.Id,
+			Scope:          consts.ScopeTemplate,
+			PolicyGroupIds: form.PolicyGroup,
+		}
+		if _, err = UpdatePolicyRel(tx, policyForm); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+	}
+	// 自动触发一次检测
+	if form.PolicyEnable {
+		tplScanForm := &forms.ScanTemplateForm{
+			Id: tpl.Id,
+		}
+		go ScanTemplateOrEnv(c, tplScanForm, "")
 	}
 	if form.HasKey("projectId") {
 		if err := services.DeleteTemplateProject(tx, form.Id); err != nil {
@@ -357,6 +406,15 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 		if v.RepoAddr == "" {
 			vcsIds = append(vcsIds, v.VcsId)
 		}
+		// 如果开启
+		if v.PolicyEnable {
+			scanTask, err := services.GetTplLastScanTask(c.DB(), v.Id)
+			if err != nil {
+				return nil, e.New(e.DBError, err)
+			}
+			v.PolicyStatus = scanTask.Status
+		}
+
 	}
 
 	vcsList, err := services.GetVcsListByIds(c.DB(), vcsIds)

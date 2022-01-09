@@ -6,16 +6,18 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"cloudiac/utils/logs"
 	"fmt"
 	"net/http"
 )
 
 // UpdatePolicyRel 创建/更新策略关系
-func UpdatePolicyRel(c *ctx.ServiceContext, form *forms.UpdatePolicyRelForm) ([]models.PolicyRel, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("create policy relation %s %s", form.Scope, form.Id))
+func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]models.PolicyRel, e.Error) {
+	logs.Get().Info("action", fmt.Sprintf("create policy relation %s %s", form.Scope, form.Id))
 
 	var (
 		env  *models.Env
@@ -23,14 +25,6 @@ func UpdatePolicyRel(c *ctx.ServiceContext, form *forms.UpdatePolicyRelForm) ([]
 		rels []models.PolicyRel
 		err  e.Error
 	)
-	tx := c.Tx()
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			panic(r)
-		}
-	}()
-
 	if form.Scope == consts.ScopeEnv {
 		env, err = services.GetEnvById(tx, form.Id)
 		if err != nil {
@@ -83,7 +77,7 @@ func UpdatePolicyRel(c *ctx.ServiceContext, form *forms.UpdatePolicyRelForm) ([]
 	}
 
 	if err := tx.Commit(); err != nil {
-		c.Logger().Errorf("error commit policy relations, err %s", err)
+		logs.Get().Errorf("error commit policy relations, err %s", err)
 		_ = tx.Rollback()
 		return nil, e.New(e.DBError, err)
 	}
