@@ -224,7 +224,7 @@ func createTplScan(userId models.Id, tpl *models.Template, pushRef, baseRef, hea
 		return
 	}
 
-	taskType := models.TaskTypeScan
+	taskType := models.TaskTypeTplScan
 	task, err := services.CreateScanTask(db.Get(), tpl, nil, models.ScanTask{
 		Name:      models.ScanTask{}.GetTaskNameByType(taskType),
 		CreatorId: userId,
@@ -240,7 +240,7 @@ func createTplScan(userId models.Id, tpl *models.Template, pushRef, baseRef, hea
 		return
 	}
 
-	if task.Type == models.TaskTypeScan {
+	if task.Type == models.TaskTypeTplScan {
 		tpl.LastScanTaskId = task.Id
 		if _, err := db.Get().Save(tpl); err != nil {
 			logger.Errorf("save template, err %s", err)

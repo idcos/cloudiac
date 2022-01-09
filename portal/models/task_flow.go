@@ -12,12 +12,16 @@ import (
 )
 
 type TaskFlows struct {
-	Version string   `json:"version" yaml:"version"`
-	Plan    TaskFlow `json:"plan" yaml:"plan"`
-	Apply   TaskFlow `json:"apply" yaml:"apply"`
-	Destroy TaskFlow `json:"destroy" yaml:"destroy"`
-	Scan    TaskFlow `json:"scan" yaml:"scan"`
-	Parse   TaskFlow `json:"parse" yaml:"parse"`
+	Version  string   `json:"version" yaml:"version"`
+	Plan     TaskFlow `json:"plan" yaml:"plan"`
+	Apply    TaskFlow `json:"apply" yaml:"apply"`
+	Destroy  TaskFlow `json:"destroy" yaml:"destroy"`
+	Scan     TaskFlow `json:"scan" yaml:"scan"`
+	Parse    TaskFlow `json:"parse" yaml:"parse"`
+	EnvScan  TaskFlow `json:"envScan" yaml:"envScan"`
+	EnvParse TaskFlow `json:"parse" yaml:"envParse"`
+	TplScan  TaskFlow `json:"tplScan" yaml:"tplScan"`
+	TplParse TaskFlow `json:"tplParse" yaml:"tplParse"`
 }
 
 type TaskFlow struct {
@@ -104,6 +108,14 @@ func GetTaskFlow(flows *TaskFlows, typ string) (TaskFlow, error) {
 		return flows.Scan, nil
 	case common.TaskTypeParse:
 		return flows.Parse, nil
+	case common.TaskTypeEnvScan:
+		return flows.EnvScan, nil
+	case common.TaskTypeEnvParse:
+		return flows.EnvParse, nil
+	case common.TaskTypeTplScan:
+		return flows.TplScan, nil
+	case common.TaskTypeTplParse:
+		return flows.TplParse, nil
 	default:
 		return TaskFlow{}, fmt.Errorf("unknown task type: %v", typ)
 	}
