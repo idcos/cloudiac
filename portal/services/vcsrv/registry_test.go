@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// 改测试需要 registry侧服务的配合
+// 该测试需要 registry侧服务的配合
 
 func TestListBranches(t *testing.T) {
 	vcs := newRegistryVcs("http://localhost:9233")
