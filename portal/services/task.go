@@ -123,7 +123,7 @@ func CloneNewDriftTask(tx *db.Session, src models.Task, env *models.Env) (*model
 	// 克隆任务需要重置部分任务参数
 	var (
 		cronTaskType string
-		taskSource string
+		taskSource   string
 	)
 	if env.AutoRepairDrift {
 		cronTaskType = models.TaskTypeApply
@@ -269,7 +269,7 @@ func doCreateTask(tx *db.Session, task models.Task, tpl *models.Template, env *m
 			logger.WithField("step", fmt.Sprintf("%d(%s)", i, pipelineStep.Type)).
 				Infof("not have playbook, skip this step")
 			continue
-		} else if pipelineStep.Type == models.TaskStepOpaScan {
+		} else if pipelineStep.Type == models.TaskStepEnvScan || pipelineStep.Type == models.TaskStepOpaScan {
 			// 如果环境扫描未启用，则跳过扫描步骤
 			if enabled, _ := IsEnvEnabledScan(tx, task.EnvId); !enabled {
 				continue
@@ -284,7 +284,7 @@ func doCreateTask(tx *db.Session, task models.Task, tpl *models.Template, env *m
 			}
 		}
 
-		if pipelineStep.Type == models.TaskStepOpaScan {
+		if pipelineStep.Type == models.TaskStepEnvScan || pipelineStep.Type == models.TaskStepOpaScan {
 			// 对于包含扫描的任务，创建一个对应的 scanTask 作为扫描任务记录，便于后期扫描状态的查询
 			scanTask := CreateMirrorScanTask(&task)
 			if _, err := tx.Save(scanTask); err != nil {
@@ -1041,7 +1041,8 @@ func ChangeScanTaskStatusWithStep(dbSess *db.Session, task *models.ScanTask, ste
 	case common.TaskComplete:
 		task.PolicyStatus = common.PolicyStatusPassed
 	case common.TaskFailed:
-		if step.Type == common.TaskStepOpaScan && exitCode == common.TaskStepPolicyViolationExitCode {
+		if (step.Type == common.TaskStepEnvScan || step.Type == common.TaskStepTplScan || step.Type == common.TaskStepOpaScan) &&
+			exitCode == common.TaskStepPolicyViolationExitCode {
 			task.PolicyStatus = common.PolicyStatusViolated
 		} else {
 			task.PolicyStatus = common.PolicyStatusFailed
@@ -1050,6 +1051,90 @@ func ChangeScanTaskStatusWithStep(dbSess *db.Session, task *models.ScanTask, ste
 		panic(fmt.Errorf("invalid scan task status '%s'", taskStatus))
 	}
 	return ChangeScanTaskStatus(dbSess, task, taskStatus, step.Message)
+}
+
+func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, taskType string, creatorId models.Id) (*models.ScanTask, e.Error) {
+	logger := logs.Get().WithField("func", "CreateScanTask")
+
+	var (
+		er  error
+		err e.Error
+	)
+
+	// 使用默认 runner 执行扫描
+	runnerId, err := GetDefaultRunnerId()
+	if err != nil {
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
+	vars, er := GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
+	if er != nil {
+		return nil, e.New(e.InternalError, er, http.StatusInternalServerError)
+	}
+
+	task := models.ScanTask{
+		BaseTask: models.BaseTask{
+			Type:        taskType,
+			StepTimeout: common.DefaultTaskStepTimeout,
+			RunnerId:    runnerId,
+			Status:      models.TaskPending,
+		},
+		Name:         models.ScanTask{}.GetTaskNameByType(taskType),
+		CreatorId:    creatorId,
+		OrgId:        env.OrgId,
+		TplId:        env.TplId,
+		EnvId:        env.Id,
+		ProjectId:    env.ProjectId,
+		Revision:     env.Revision,
+		Variables:    vars,
+		Workdir:      tpl.Workdir,
+		TfVersion:    tpl.TfVersion,
+		TfVarsFile:   env.TfVarsFile,
+		PlayVarsFile: env.PlayVarsFile,
+		Playbook:     env.Playbook,
+		ExtraData:    env.ExtraData,
+		StatePath:    env.StatePath,
+		PolicyStatus: common.PolicyStatusPending,
+	}
+
+	task.Id = task.NewId()
+	logger = logger.WithField("taskId", task.Id)
+
+	task.RepoAddr, task.CommitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
+	if err != nil {
+		return nil, e.New(e.InternalError, err)
+	}
+
+	task.Pipeline = models.DefaultPipelineRaw()
+	pipeline := models.DefaultPipeline()
+
+	task.Flow = GetTaskFlowWithPipeline(pipeline, task.Type)
+	steps := make([]models.TaskStep, 0)
+	stepIndex := 0
+
+	for _, pipelineStep := range task.Flow.Steps {
+		taskStep := newScanTaskStep(tx, task, pipelineStep, stepIndex)
+		steps = append(steps, *taskStep)
+		stepIndex += 1
+	}
+
+	if len(steps) == 0 {
+		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps"))
+	}
+
+	if err := tx.Insert(&task); err != nil {
+		return nil, e.New(e.DBError, errors.Wrapf(err, "save task"))
+	}
+
+	for i := range steps {
+		if i+1 < len(steps) {
+			steps[i].NextStep = steps[i+1].Id
+		}
+		if err := tx.Insert(&steps[i]); err != nil {
+			return nil, e.New(e.DBError, errors.Wrapf(err, "save task step"))
+		}
+	}
+	return &task, nil
 }
 
 func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models.ScanTask) (*models.ScanTask, e.Error) {
@@ -1075,7 +1160,7 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 		// 以下为需要外部传入的属性
 		Name:      pt.Name,
 		CreatorId: pt.CreatorId,
-		Extra:     pt.Extra,
+		ExtraData: pt.ExtraData,
 		Revision:  utils.FirstValueStr(pt.Revision, envRevison, tpl.RepoRevision),
 
 		OrgId:     tpl.OrgId,
@@ -1118,19 +1203,13 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 		}
 	}
 
-	task.Pipeline, err = GetTplPipeline(tx, tpl.Id, task.Revision, task.Workdir)
-	if err != nil {
-		return nil, e.AutoNew(err, e.InvalidPipeline)
-	}
-
-	pipeline, err := DecodePipeline(task.Pipeline)
-	if err != nil {
-		return nil, e.New(e.InvalidPipeline, err)
-	}
+	task.Pipeline = models.DefaultPipelineRaw()
+	pipeline := models.DefaultPipeline()
 
 	task.Flow = GetTaskFlowWithPipeline(pipeline, task.Type)
 	steps := make([]models.TaskStep, 0)
 	stepIndex := 0
+
 	for _, pipelineStep := range task.Flow.Steps {
 		taskStep := newScanTaskStep(tx, task, pipelineStep, stepIndex)
 		steps = append(steps, *taskStep)
@@ -1183,6 +1262,13 @@ func CreateMirrorScanTask(task *models.Task) *models.ScanTask {
 		Workdir:      task.Workdir,
 		Mirror:       true,
 		MirrorTaskId: task.Id,
+		Playbook:     task.Playbook,
+		TfVarsFile:   task.TfVarsFile,
+		TfVersion:    task.TfVersion,
+		PlayVarsFile: task.PlayVarsFile,
+		Variables:    task.Variables,
+		StatePath:    task.StatePath,
+		ExtraData:    task.ExtraData,
 	}
 }
 
