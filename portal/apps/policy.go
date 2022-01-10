@@ -29,7 +29,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-
 //parseRegoHeader 解析 rego 脚本获取入口，云商类型和资源类型
 func parseRegoHeader(rego string) (ruleName string, policyType string, resType string, err e.Error) {
 	regex := regexp.MustCompile("(?m)^##ruleName (.*)$")
@@ -260,7 +259,6 @@ func SearchPolicy(c *ctx.ServiceContext, form *forms.SearchPolicyForm) (interfac
 	}, nil
 }
 
-
 // DetailPolicy 查询策略组详情
 func DetailPolicy(c *ctx.ServiceContext, form *forms.DetailPolicyForm) (interface{}, e.Error) {
 	return services.DetailPolicy(c.DB(), form.Id)
@@ -269,7 +267,6 @@ func DetailPolicy(c *ctx.ServiceContext, form *forms.DetailPolicyForm) (interfac
 type RespPolicyTpl struct {
 	models.Template
 
-	Enabled      bool   `json:"enabled"`
 	PolicyStatus string `json:"policyStatus"` // 策略检查状态, enum('passed','violated','pending','failed')
 
 	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
@@ -352,7 +349,6 @@ type RespPolicyEnv struct {
 
 	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
 	Summary
-	Enabled     bool   `json:"enabled"`
 	OrgName     string `json:"orgName" form:"orgName" `
 	ProjectName string `json:"projectName" form:"projectName" `
 
