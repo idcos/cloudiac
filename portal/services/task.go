@@ -1187,11 +1187,9 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 
 	task.Id = models.NewId("run")
 	logger = logger.WithField("taskId", task.Id)
-	logger.Debugf("befoer get repo")
 
 	task.RepoAddr, task.CommitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
 	if err != nil {
-		logger.Debugf("err get repo")
 		return nil, e.New(e.InternalError, err)
 	}
 
