@@ -179,7 +179,7 @@ func suppressedQuery(query *db.Session, envId models.Id, tplId models.Id) *db.Se
 		q = q.Where("iac_policy.id not in (?)", suppressQuery.Expr())
 	}
 
-	enableQuery := query.Model(models.PolicyRel{}).Where("iac_policy_rel.group_id = '' and iac_policy_rel.enabled = 1")
+	enableQuery := query.Model(models.PolicyRel{}).Where("iac_policy_rel.group_id = ''")
 	if envId != "" {
 		enableQuery = enableQuery.Select("env_id").Where("env_id = ?", envId)
 		q = q.Where("iac_policy_rel.env_id in (?)", enableQuery.Expr())
@@ -308,7 +308,7 @@ func SearchPolicyTpl(dbSess *db.Session, orgId, tplId models.Id, q string) *db.S
 	return query.LazySelect("tpl.*, task.policy_status").
 		Joins("LEFT JOIN iac_policy_rel on iac_policy_rel.tpl_id = tpl.id and iac_policy_rel.group_id = ''").
 		Joins("LEFT JOIN iac_org on iac_org.id = tpl.org_id").
-		LazySelectAppend("iac_policy_rel.enabled", "iac_org.name as org_name").
+		LazySelectAppend("iac_org.name as org_name").
 		Order("iac_org.created_at desc, tpl.created_at desc ")
 }
 
@@ -341,7 +341,7 @@ func SearchPolicyEnv(dbSess *db.Session, orgId, projectId, envId models.Id, q st
 		Joins("LEFT JOIN iac_policy_rel on iac_policy_rel.env_id = iac_env.id and iac_policy_rel.group_id = ''").
 		Joins("LEFT JOIN iac_org as org on org.id = iac_env.org_id").
 		Joins("LEFT JOIN iac_project as project on project.id = iac_env.project_id").
-		LazySelectAppend("iac_policy_rel.enabled", "org.name as org_name, project.name as project_name").
+		LazySelectAppend("org.name as org_name, project.name as project_name").
 		Order("org.created_at desc, project.created_at desc, iac_env.created_at desc")
 }
 
