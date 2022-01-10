@@ -117,6 +117,9 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/policies/groups/:id/report", ac(), w(handlers.PolicyGroup{}.ScanReport))
 	g.GET("/policies/groups/:id/last_tasks", ac(), w(handlers.PolicyGroup{}.LastTasks))
 
+	// Registry 侧策略组API
+	g.GET("/registry/policy_groups", w(handlers.SearchRegistryPolicyGroups))
+	g.GET("/registry/policy_group/versions", w(handlers.SearchRegistryPolicyGroupVersions))
 
 	// 组织下的资源搜索(只需要有环境的读权限即可查看资源)
 	g.GET("/orgs/resources", ac("envs", "read"), w(handlers.Organization{}.SearchOrgResources))

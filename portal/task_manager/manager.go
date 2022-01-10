@@ -509,7 +509,8 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		}
 
 		if runErr != nil {
-			if step.Type == common.TaskStepOpaScan && !task.StopOnViolation {
+			if (step.Type == common.TaskStepEnvScan || step.Type == common.TaskStepOpaScan) &&
+				!task.StopOnViolation {
 				// 合规任务失败不影响环境部署流程
 				logger.Warnf("run scan task step: %v", runErr)
 				continue
@@ -571,6 +572,8 @@ func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) 
 	}
 
 	switch step.Type {
+	case common.TaskStepEnvScan:
+		fallthrough
 	case common.TaskStepOpaScan:
 		return processScanResult()
 	}
@@ -888,7 +891,7 @@ loop:
 				return err
 			}
 			// 合规检测步骤不通过，不需要重试，跳出循环
-			if step.Type == models.TaskStepOpaScan &&
+			if (step.Type == models.TaskStepEnvScan || step.Type == models.TaskStepOpaScan) &&
 				stepResult.Result.ExitCode == common.TaskStepPolicyViolationExitCode {
 				message := "Scan task step finished with violations found."
 				changeStepStatusAndStepRetryTimes(models.TaskStepFailed, message, step)
@@ -1127,19 +1130,17 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 		}
 	}
 
-	if task.Type != common.TaskTypeParse {
-		if task.EnvId != "" { // 环境扫描
-			if err := services.UpdateEnvModel(m.db, task.EnvId,
-				models.Env{LastScanTaskId: task.Id}); err != nil {
-				logger.Errorf("update env lastScanTaskId: %v", err)
-				return
-			}
-		} else if task.TplId != "" { // 模板扫描
-			if _, err := m.db.Where("id = ?", task.TplId).
-				Update(&models.Template{LastScanTaskId: task.Id}); err != nil {
-				logger.Errorf("update template lastScanTaskId: %v", err)
-				return
-			}
+	if task.Type == common.TaskTypeEnvScan || (task.Type == common.TaskTypeScan && task.EnvId != "") {
+		if err := services.UpdateEnvModel(m.db, task.EnvId,
+			models.Env{LastScanTaskId: task.Id}); err != nil {
+			logger.Errorf("update env lastScanTaskId: %v", err)
+			return
+		}
+	} else if task.Type == common.TaskTypeTplScan || (task.Type == common.TaskTypeScan && task.EnvId == "") { // 模板扫描
+		if _, err := m.db.Where("id = ?", task.TplId).
+			Update(&models.Template{LastScanTaskId: task.Id}); err != nil {
+			logger.Errorf("update template lastScanTaskId: %v", err)
+			return
 		}
 	}
 
@@ -1254,7 +1255,7 @@ func (m *TaskManager) processScanTaskDone(taskId models.Id) {
 		logger.Errorf("update task status error: %v", err)
 	}
 
-	if task.Type == common.TaskTypeScan {
+	if task.Type == common.TaskTypeEnvScan || task.Type == common.TaskTypeScan {
 		if err := processTfResult(); err != nil {
 			logger.Errorf("process task scan: %s", err)
 		}
@@ -1273,19 +1274,58 @@ func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.Ta
 		StopOnViolation: true,
 		DockerImage:     task.Flow.Image,
 		ContainerId:     task.ContainerId,
-		//Repos: []runner.Repository{
-		//	{
-		//		RepoAddress:  task.RepoAddr,
-		//		RepoRevision: task.CommitId,
-		//	},
-		//},
+	}
+
+	runnerEnv := runner.TaskEnv{
+		Id:              string(task.EnvId),
+		Workdir:         task.Workdir,
+		TfVarsFile:      task.TfVarsFile,
+		Playbook:        task.Playbook,
+		PlayVarsFile:    task.PlayVarsFile,
+		TfVersion:       task.TfVersion,
+		EnvironmentVars: make(map[string]string),
+		TerraformVars:   make(map[string]string),
+		AnsibleVars:     make(map[string]string),
+	}
+	if runnerEnv.TfVersion == "" {
+		runnerEnv.TfVersion = consts.DefaultTerraformVersion
+	}
+
+	for _, v := range task.Variables {
+		value := v.Value
+		// 旧版本创建的敏感变量保存时不会添加 secret 前缀，这里判断一下，如果敏感变量无前缀则添加
+		if v.Sensitive && !strings.HasPrefix(v.Value, utils.SecretValuePrefix) {
+			value = utils.EncodeSecretVar(v.Value, v.Sensitive)
+		}
+		switch v.Type {
+		case consts.VarTypeEnv:
+			runnerEnv.EnvironmentVars[v.Name] = value
+		case consts.VarTypeTerraform:
+			runnerEnv.TerraformVars[v.Name] = value
+		case consts.VarTypeAnsible:
+			runnerEnv.AnsibleVars[v.Name] = value
+		default:
+			return nil, fmt.Errorf("unknown variable type: %s", v.Type)
+		}
+	}
+	taskReq.Env = runnerEnv
+
+	if task.Type == common.TaskTypeEnvScan || task.Type == common.TaskTypeEnvParse {
+		env, _ := services.GetEnvById(dbSess, task.EnvId)
+		stateStore := runner.StateStore{
+			Backend: "consul",
+			Scheme:  "http",
+			Path:    env.StatePath,
+			Address: "",
+		}
+		taskReq.StateStore = stateStore
 	}
 
 	if err := runTaskReqAddSysEnvs(taskReq); err != nil {
 		return nil, err
 	}
 
-	if step.Type == models.TaskStepOpaScan {
+	if step.Type == models.TaskStepOpaScan || step.Type == models.TaskStepEnvScan || step.Type == models.TaskStepTplScan {
 		taskReq.Policies, err = services.GetTaskPolicies(dbSess, task.Id)
 		if err != nil {
 			return nil, errors.Wrapf(err, "get scan task '%s' policies error: %v", task.Id, err)

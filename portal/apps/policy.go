@@ -144,43 +144,56 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 		_ = tx.Rollback()
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
-	taskType := models.TaskTypeScan
-	if form.Parse {
-		taskType = models.TaskTypeParse
+	// 确定任务类型
+	taskType := ""
+	if envId != "" && !form.Parse {
+		taskType = models.TaskTypeEnvScan
+	} else if envId != "" && form.Parse {
+		taskType = models.TaskTypeEnvParse
+	} else if envId == "" && !form.Parse {
+		taskType = models.TaskTypeTplScan
+	} else {
+		// envId == "" && form.Parse
+		taskType = models.TaskTypeTplParse
 	}
-	task, err := services.CreateScanTask(tx, tpl, env, models.ScanTask{
-		Name:      models.ScanTask{}.GetTaskNameByType(taskType),
-		CreatorId: c.UserId,
-		TplId:     tpl.Id,
-		EnvId:     envId,
-		ProjectId: projectId,
-		BaseTask: models.BaseTask{
-			Type:        taskType,
-			StepTimeout: common.DefaultTaskStepTimeout,
-			RunnerId:    runnerId,
-		},
-	})
+	var task *models.ScanTask
+	if envId != "" {
+		task, err = services.CreateEnvScanTask(tx, tpl, env, taskType, c.UserId)
+	} else {
+		task, err = services.CreateScanTask(tx, tpl, env, models.ScanTask{
+			Name:      models.ScanTask{}.GetTaskNameByType(taskType),
+			OrgId:     c.OrgId,
+			CreatorId: c.UserId,
+			TplId:     tpl.Id,
+			EnvId:     envId,
+			ProjectId: projectId,
+			BaseTask: models.BaseTask{
+				Type:        taskType,
+				StepTimeout: common.DefaultTaskStepTimeout,
+				RunnerId:    runnerId,
+			},
+		})
+	}
+
 	if err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error creating scan task, err %s", err)
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
-	if task.Type == models.TaskTypeScan {
-		if envId != "" { // 环境检查
-			env.LastScanTaskId = task.Id
-			if _, err := tx.Save(env); err != nil {
-				_ = tx.Rollback()
-				c.Logger().Errorf("save env, err %s", err)
-				return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-			}
-		} else { // 模板检查
-			tpl.LastScanTaskId = task.Id
-			if _, err := tx.Save(tpl); err != nil {
-				_ = tx.Rollback()
-				c.Logger().Errorf("save template, err %s", err)
-				return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-			}
+	if task.Type == models.TaskTypeEnvScan {
+		env.LastScanTaskId = task.Id
+		if _, err := tx.Save(env); err != nil {
+			_ = tx.Rollback()
+			c.Logger().Errorf("save env, err %s", err)
+			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+		}
+	} else if task.Type == models.TaskTypeTplScan {
+		tpl.LastScanTaskId = task.Id
+		if _, err := tx.Save(tpl); err != nil {
+			_ = tx.Rollback()
+			c.Logger().Errorf("save template, err %s", err)
+			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 		}
 	}
 
@@ -195,17 +208,82 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 // ScanEnvironment 扫描环境策略
 func ScanEnvironment(c *ctx.ServiceContext, form *forms.ScanEnvironmentForm) (*models.ScanTask, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("scan environment %s", form.Id))
+	if c.OrgId == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
 
-	env, err := services.GetEnvById(c.DB(), form.Id)
-	if err != nil {
+	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	envQuery := services.QueryWithOrgId(tx, c.OrgId)
+	env, err := services.GetEnvById(envQuery, form.Id)
+	if err != nil && err.Code() != e.EnvNotExists {
+		return nil, e.New(err.Code(), err, http.StatusNotFound)
+	} else if err != nil {
+		c.Logger().Errorf("error get env, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	// env 状态检查
+	if env.Archived {
+		return nil, e.New(e.EnvArchived, http.StatusBadRequest)
+	}
+
+	// 模板检查
+	tplQuery := services.QueryWithOrgId(tx, c.OrgId)
+	tpl, err := services.GetTemplateById(tplQuery, env.TplId)
+	if err != nil && err.Code() == e.TemplateNotExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		c.Logger().Errorf("error get template, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+	if tpl.Status == models.Disable {
+		return nil, e.New(e.TemplateDisabled, http.StatusBadRequest)
 	}
 
-	f := forms.ScanTemplateForm{
-		Id: env.TplId,
+	// 环境扫描未启用，不允许发起手动检测
+	if enabled, err := services.IsEnvEnabledScan(tx, env.Id); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	} else if !enabled && !form.Parse {
+		_ = tx.Rollback()
+		return nil, e.New(e.PolicyScanNotEnabled, http.StatusBadRequest)
 	}
 
-	return ScanTemplateOrEnv(c, &f, env.Id)
+	// 确定任务类型
+	taskType := ""
+	if form.Parse {
+		taskType = models.TaskTypeEnvParse
+	} else {
+		taskType = models.TaskTypeEnvScan
+	}
+
+	task, err := services.CreateEnvScanTask(tx, tpl, env, taskType, c.UserId)
+	if err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error creating scan task, err %s", err)
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
+	env.LastScanTaskId = task.Id
+	if _, err := tx.Save(env); err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("save env, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("commit env, err %s", err)
+		return nil, e.New(e.DBError, err)
+	}
+	return task, nil
 }
 
 type PolicyResp struct {
