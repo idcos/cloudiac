@@ -39,6 +39,7 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 		c.Logger().Errorf("webhook get vcs err: %s", err)
 		return nil, e.New(e.DBError, err)
 	}
+
 	// 根据VcsId & 仓库Id查询对应的云模板
 	tplList, err := services.QueryTemplateByVcsIdAndRepoId(tx, form.VcsId, getVcsRepoId(vcs.VcsType, form))
 	if err != nil {
@@ -57,24 +58,21 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 		prId         int    = form.PullRequest.Number
 	)
 
+	if vcs.VcsType == consts.GitTypeGitLab {
+		baseRef = form.ObjectAttributes.TargetBranch
+		headRef = form.ObjectAttributes.SourceBranch
+		prStatus = form.ObjectAttributes.State
+		prId = form.ObjectAttributes.Iid
+	}
+
 	// 查询云模板对应的环境
 	for _, tpl := range tplList {
-		switch vcs.VcsType {
-		case consts.GitTypeGitLab:
-			baseRef = form.ObjectAttributes.TargetBranch
-			headRef = form.ObjectAttributes.SourceBranch
-			prStatus = form.ObjectAttributes.State
-			prId = form.ObjectAttributes.Iid
-			//case consts.GitTypeGitEA:
-			//case consts.GitTypeGithub:
-			//case consts.GitTypeGitee:
-		}
-
 		sysUserId := models.Id(consts.SysUserId)
-		//todo 处理云模板的触发器
+
 		if len(tpl.Triggers) > 0 {
 			createTplScan(sysUserId, &tpl, pushRef, baseRef, headRef, prStatus, afterCommit, beforeCommit)
 		}
+
 		envs, err := services.GetEnvByTplId(tx, tpl.Id)
 		if err != nil {
 			logs.Get().WithField("webhook", "searchEnv").
@@ -110,9 +108,9 @@ func CreateWebhookTask(tx *db.Session, taskType, revision, commitId string, user
 		_ = tx.Rollback()
 		return e.New(e.DBError, er, http.StatusInternalServerError)
 	}
-	task := &models.Task{
-		Name: models.Task{}.GetTaskNameByType(taskType),
 
+	task := &models.Task{
+		Name:        models.Task{}.GetTaskNameByType(taskType),
 		Targets:     models.StrSlice{},
 		CreatorId:   userId,
 		KeyId:       env.KeyId,
@@ -134,6 +132,7 @@ func CreateWebhookTask(tx *db.Session, taskType, revision, commitId string, user
 		logs.Get().Errorf("error creating task, err %s", err)
 		return e.New(err.Code(), err, http.StatusInternalServerError)
 	}
+
 	if prId != 0 && taskType == models.TaskTypePlan {
 		// 创建pr与作业的关系
 		if err := services.CreateVcsPr(tx, models.VcsPr{
@@ -208,12 +207,13 @@ func createTplScan(userId models.Id, tpl *models.Template, pushRef, baseRef, hea
 		logger.Infof("template %s not open scan", tpl.Id)
 		return
 	}
+
 	if !checkVcsCallbackMessage(tpl.RepoRevision, pushRef, baseRef) {
 		return
 	}
 
 	// 目前云模板的webhook只有push一种
-	if tpl.Triggers[0] != consts.EnvTriggerCommit {
+	if len(tpl.Triggers) > 0 && tpl.Triggers[0] != consts.EnvTriggerCommit {
 		return
 	}
 

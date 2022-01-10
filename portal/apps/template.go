@@ -395,7 +395,7 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 		}
 	}
 	vcsIds := make([]string, 0)
-	query := services.QueryTemplateByOrgId(c.DB(), form.Q, c.OrgId, tplIdList)
+	query := services.QueryTemplateByOrgId(c.DB(), form.Q, c.OrgId, tplIdList, c.ProjectId)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	templates := make([]*SearchTemplateResp, 0)
 	if err := p.Scan(&templates); err != nil {

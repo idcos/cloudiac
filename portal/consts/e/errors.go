@@ -184,6 +184,9 @@ const (
 	//cron 315
 	CronExpressError = 31500
 	CronTaskFailed   = 31501
+
+	// system config 316
+	SystemConfigNotExist = 31610
 )
 
 var errorMsgs = map[int]map[string]string{
@@ -564,5 +567,8 @@ var errorMsgs = map[int]map[string]string{
 	},
 	PolicyRegoInvalid: {
 		"zh-cn": "rego 脚本解析无效",
+	},
+	SystemConfigNotExist: {
+		"zh-cn": "当前配置不存在",
 	},
 }

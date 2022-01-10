@@ -81,7 +81,7 @@ func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (vcs *models.Vc
 }
 
 func SearchVcs(c *ctx.ServiceContext, form *forms.SearchVcsForm) (interface{}, e.Error) {
-	rs, err := getPage(services.QueryVcs(c.OrgId, form.Status, form.Q, form.IsShowDefaultVcs, c.DB()), form, models.Vcs{})
+	rs, err := getPage(services.QueryVcs(c.OrgId, form.Status, form.Q, form.IsShowDefaultVcs, false, c.DB()), form, models.Vcs{})
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func GetReadme(c *ctx.ServiceContext, form *forms.GetReadmeForm) (interface{}, e
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
-	b, er := repo.ReadFileContent(form.Branch, "README.md")
+	b, er := repo.ReadFileContent(form.RepoRevision, "README.md")
 	if er != nil {
 		if strings.Contains(er.Error(), "not found") {
 			b = make([]byte, 0)

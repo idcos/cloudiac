@@ -80,6 +80,9 @@ func Register(g *gin.RouterGroup) {
 	// 系统状态
 	g.GET("/systems/status", w(handlers.PortalSystemStatusSearch))
 
+	// 要求组织 header
+	g.Use(w(middleware.AuthOrgId))
+
 	// 策略管理
 	ctrl.Register(g.Group("policies", ac()), &handlers.Policy{})
 	g.GET("/policies/summary", ac(), w(handlers.Policy{}.PolicySummary))
@@ -108,13 +111,12 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/policies/envs/:id/scan", ac(), w(handlers.Policy{}.ScanEnvironment))
 	g.GET("/policies/envs/:id/result", ac(), w(handlers.Policy{}.EnvScanResult))
 	ctrl.Register(g.Group("policies/groups", ac()), &handlers.PolicyGroup{})
+	g.POST("/policies/groups/checks", ac(), w(handlers.PolicyGroupChecks))
 	g.GET("/policies/groups/:id/policies", ac(), w(handlers.PolicyGroup{}.SearchGroupOfPolicy))
 	g.POST("/policies/groups/:id", ac(), w(handlers.PolicyGroup{}.OpPolicyAndPolicyGroupRel))
 	g.GET("/policies/groups/:id/report", ac(), w(handlers.PolicyGroup{}.ScanReport))
 	g.GET("/policies/groups/:id/last_tasks", ac(), w(handlers.PolicyGroup{}.LastTasks))
 
-	// 要求组织 header
-	g.Use(w(middleware.AuthOrgId))
 
 	// 组织下的资源搜索(只需要有环境的读权限即可查看资源)
 	g.GET("/orgs/resources", ac("envs", "read"), w(handlers.Organization{}.SearchOrgResources))
@@ -193,6 +195,10 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/policy_result", ac(), w(handlers.Env{}.PolicyResult))
 	g.GET("/envs/:id/resources/graph", ac(), w(handlers.Env{}.SearchResourcesGraph))
 	g.GET("/envs/:id/resources/graph/:resourceId", ac(), w(handlers.Env{}.ResourceGraphDetail))
+
+	// 系统设置
+	g.GET("/system_config/registry/addr", w(handlers.GetRegistryAddr))     // 获取registry地址的设置
+	g.POST("/system_config/registry/addr", w(handlers.UpsertRegistryAddr)) // 更新registry地址的设置
 
 	// 任务管理
 	g.GET("/tasks", ac(), w(handlers.Task{}.Search))
