@@ -414,7 +414,7 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 			}
 			v.PolicyStatus = scanTask.Status
 		} else {
-			v.PolicyStatus = "disEnable"
+			v.PolicyStatus = "disable"
 		}
 
 	}
