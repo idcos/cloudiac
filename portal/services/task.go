@@ -264,7 +264,6 @@ func doCreateTask(tx *db.Session, task models.Task, tpl *models.Template, env *m
 	task.Flow = GetTaskFlowWithPipeline(pipeline, task.Type)
 	steps := make([]models.TaskStep, 0)
 	stepIndex := 0
-	logger.Debugf("pipeline =========== %+v\n flow ===== %+v", pipeline, task.Flow)
 	for i, pipelineStep := range task.Flow.Steps {
 		if pipelineStep.Type == models.TaskStepPlay && task.Playbook == "" {
 			logger.WithField("step", fmt.Sprintf("%d(%s)", i, pipelineStep.Type)).
@@ -1112,7 +1111,6 @@ func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, ta
 	task.Flow = GetTaskFlowWithPipeline(pipeline, task.Type)
 	steps := make([]models.TaskStep, 0)
 	stepIndex := 0
-	logger.Debugf("type: %s, pipeline =========== %+v\n flow ===== %+v", task.Type, pipeline, task.Flow)
 
 	for _, pipelineStep := range task.Flow.Steps {
 		taskStep := newScanTaskStep(tx, task, pipelineStep, stepIndex)
@@ -1187,11 +1185,9 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 
 	task.Id = models.NewId("run")
 	logger = logger.WithField("taskId", task.Id)
-	logger.Debugf("befoer get repo")
 
 	task.RepoAddr, task.CommitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
 	if err != nil {
-		logger.Debugf("err get repo")
 		return nil, e.New(e.InternalError, err)
 	}
 
@@ -1213,7 +1209,6 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 	task.Flow = GetTaskFlowWithPipeline(pipeline, task.Type)
 	steps := make([]models.TaskStep, 0)
 	stepIndex := 0
-	logger.Debugf("type: %s, pipeline =========== %+v\n flow ===== %+v", task.Type, pipeline, task.Flow)
 
 	for _, pipelineStep := range task.Flow.Steps {
 		taskStep := newScanTaskStep(tx, task, pipelineStep, stepIndex)
