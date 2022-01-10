@@ -601,6 +601,8 @@ type PolicyResult struct {
 	PolicyName      string `json:"policyName" example:"VPC 安全组规则"`  // 策略名称
 	PolicyGroupName string `json:"policyGroupName" example:"安全策略组"` // 策略组名称
 	FixSuggestion   string `json:"fixSuggestion" example:"建议您创建一个专有网络..."`
+	Rego            string `json:"rego" example:""` //rego 代码文件内容
+
 }
 
 func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicyScanResultForm) (interface{}, e.Error) {

@@ -413,6 +413,8 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 				return nil, e.New(e.DBError, err)
 			}
 			v.PolicyStatus = scanTask.Status
+		} else {
+			v.PolicyStatus = "disable"
 		}
 
 	}
