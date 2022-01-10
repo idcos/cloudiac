@@ -88,27 +88,27 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/policies/summary", ac(), w(handlers.Policy{}.PolicySummary))
 	g.GET("/policies/:id/error", ac(), w(handlers.Policy{}.PolicyError))
 	g.GET("/policies/:id/suppress", ac(), w(handlers.Policy{}.SearchPolicySuppress))
-	g.POST("/policies/:id/suppress", ac(), w(handlers.Policy{}.UpdatePolicySuppress))
+	g.POST("/policies/:id/suppress", ac("suppress"), w(handlers.Policy{}.UpdatePolicySuppress))
 	g.GET("/policies/:id/suppress/sources", ac(), w(handlers.Policy{}.SearchPolicySuppressSource))
-	g.DELETE("/policies/:id/suppress/:suppressId", ac(), w(handlers.Policy{}.DeletePolicySuppress))
+	g.DELETE("/policies/:id/suppress/:suppressId", ac("suppress"), w(handlers.Policy{}.DeletePolicySuppress))
 	g.GET("/policies/:id/report", ac(), w(handlers.Policy{}.PolicyReport))
 	g.POST("/policies/parse", ac(), w(handlers.Policy{}.Parse))
 	g.POST("/policies/test", ac(), w(handlers.Policy{}.Test))
 	g.GET("/policies/templates", ac(), w(handlers.Policy{}.SearchPolicyTpl))
 	g.PUT("/policies/templates/:id", ac(), w(handlers.Policy{}.UpdatePolicyTpl))
-	g.PUT("/policies/templates/:id/enabled", ac(), w(handlers.Policy{}.EnablePolicyTpl))
+	g.PUT("/policies/templates/:id/enabled", ac("enablescan"), w(handlers.Policy{}.EnablePolicyTpl))
 	g.GET("/policies/templates/:id/policies", ac(), w(handlers.Policy{}.TplOfPolicy))
 	g.GET("/policies/templates/:id/groups", ac(), w(handlers.Policy{}.TplOfPolicyGroup))
 	g.GET("/policies/templates/:id/valid_policies", ac(), w(handlers.Policy{}.ValidTplOfPolicy))
-	g.POST("/policies/templates/:id/scan", ac(), w(handlers.Policy{}.ScanTemplate))
-	g.POST("/policies/templates/scans", ac(), w(handlers.Policy{}.ScanTemplates))
+	g.POST("/policies/templates/:id/scan", ac("scan"), w(handlers.Policy{}.ScanTemplate))
+	g.POST("/policies/templates/scans", ac("scan"), w(handlers.Policy{}.ScanTemplates))
 	g.GET("/policies/templates/:id/result", ac(), w(handlers.Policy{}.TemplateScanResult))
 	g.GET("/policies/envs", ac(), w(handlers.Policy{}.SearchPolicyEnv))
 	g.PUT("/policies/envs/:id", ac(), w(handlers.Policy{}.UpdatePolicyEnv))
-	g.PUT("/policies/envs/:id/enabled", ac(), w(handlers.Policy{}.EnablePolicyEnv))
+	g.PUT("/policies/envs/:id/enabled", ac("enablescan"), w(handlers.Policy{}.EnablePolicyEnv))
 	g.GET("/policies/envs/:id/policies", ac(), w(handlers.Policy{}.EnvOfPolicy))
 	g.GET("/policies/envs/:id/valid_policies", ac(), w(handlers.Policy{}.ValidEnvOfPolicy))
-	g.POST("/policies/envs/:id/scan", ac(), w(handlers.Policy{}.ScanEnvironment))
+	g.POST("/policies/envs/:id/scan", ac("scan"), w(handlers.Policy{}.ScanEnvironment))
 	g.GET("/policies/envs/:id/result", ac(), w(handlers.Policy{}.EnvScanResult))
 	ctrl.Register(g.Group("policies/groups", ac()), &handlers.PolicyGroup{})
 	g.POST("/policies/groups/checks", ac(), w(handlers.PolicyGroupChecks))
@@ -116,7 +116,6 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/policies/groups/:id", ac(), w(handlers.PolicyGroup{}.OpPolicyAndPolicyGroupRel))
 	g.GET("/policies/groups/:id/report", ac(), w(handlers.PolicyGroup{}.ScanReport))
 	g.GET("/policies/groups/:id/last_tasks", ac(), w(handlers.PolicyGroup{}.LastTasks))
-
 
 	// 组织下的资源搜索(只需要有环境的读权限即可查看资源)
 	g.GET("/orgs/resources", ac("envs", "read"), w(handlers.Organization{}.SearchOrgResources))
@@ -197,8 +196,8 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/resources/graph/:resourceId", ac(), w(handlers.Env{}.ResourceGraphDetail))
 
 	// 系统设置
-	g.GET("/system_config/registry/addr", w(handlers.GetRegistryAddr))     // 获取registry地址的设置
-	g.POST("/system_config/registry/addr", w(handlers.UpsertRegistryAddr)) // 更新registry地址的设置
+	g.GET("/system_config/registry/addr", ac(), w(handlers.GetRegistryAddr))     // 获取registry地址的设置
+	g.POST("/system_config/registry/addr", ac(), w(handlers.UpsertRegistryAddr)) // 更新registry地址的设置
 
 	// 任务管理
 	g.GET("/tasks", ac(), w(handlers.Task{}.Search))

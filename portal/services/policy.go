@@ -62,6 +62,30 @@ func GetPolicyById(tx *db.Session, id, orgId models.Id) (*models.Policy, e.Error
 	return &po, nil
 }
 
+func GetPolicyByName(tx *db.Session, name string, groupId, orgId models.Id) (*models.Policy, e.Error) {
+	po := models.Policy{}
+	if err := tx.Model(models.Policy{}).Where("name = ? AND group_id = ? AND org_id = ?",
+		name, orgId).First(&po); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.PolicyNotExist, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &po, nil
+}
+
+func GetPoliciesByGroupId(tx *db.Session, groupId, orgId models.Id) ([]*models.Policy, e.Error) {
+	var po []*models.Policy
+	if err := tx.Model(models.Policy{}).Where("group_id = ? AND org_id = ?",
+		orgId).Find(&po); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.PolicyNotExist, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return po, nil
+}
+
 func GetTaskPolicies(query *db.Session, taskId models.Id) ([]runner.TaskPolicy, e.Error) {
 	var taskPolicies []runner.TaskPolicy
 
@@ -768,17 +792,17 @@ func PolicyTargetSuppressSummary(query *db.Session, ids []models.Id, scope strin
 }
 
 func IsTemplateEnabledScan(tx *db.Session, tplId models.Id) (bool, e.Error) {
-	if enabled, err := tx.Model(models.PolicyRel{}).Where("tpl_id = ? and group_id = ''", tplId).Exists(); err != nil {
+	tpl, err := GetTemplateById(tx, tplId)
+	if err != nil {
 		return false, e.New(e.DBError, err)
-	} else {
-		return enabled, nil
 	}
+	return tpl.PolicyEnable, nil
 }
 
 func IsEnvEnabledScan(tx *db.Session, envId models.Id) (bool, e.Error) {
-	if enabled, err := tx.Model(models.PolicyRel{}).Where("env_id = ? and group_id = ''", envId).Exists(); err != nil {
+	env, err := GetEnvById(tx, envId)
+	if err != nil {
 		return false, e.New(e.DBError, err)
-	} else {
-		return enabled, nil
 	}
+	return env.PolicyEnable, nil
 }

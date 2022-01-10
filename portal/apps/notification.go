@@ -22,7 +22,7 @@ type RespNotification struct {
 	CreatorName string   `json:"creatorName" form:"creatorName" `
 }
 
-func SearchNotification(c *ctx.ServiceContext, form *forms.SearchNotificationForm) (interface{}, e.Error) {
+func SearchnotifiNotification(c *ctx.ServiceContext, form *forms.SearchNotificationForm) (interface{}, e.Error) {
 	notify := make([]*RespNotification, 0)
 	query := services.SearchNotification(c.DB(), c.OrgId, c.ProjectId)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
