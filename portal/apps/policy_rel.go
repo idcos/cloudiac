@@ -116,6 +116,7 @@ func EnablePolicyScanRel(c *ctx.ServiceContext, form *forms.EnableScanForm) (*mo
 	}
 
 	// 添加启用关联
+	attrs := models.Attrs{}
 	if form.Enabled {
 		if rel != nil {
 			return rel, nil
@@ -137,6 +138,17 @@ func EnablePolicyScanRel(c *ctx.ServiceContext, form *forms.EnableScanForm) (*mo
 		if _, err := services.CreatePolicyRel(query, rel); err != nil {
 			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 		}
+		if form.Scope == consts.ScopeEnv {
+			attrs["policyEnable"] = true
+			if _, err := services.UpdateEnv(query, env.Id, attrs); err != nil {
+				return nil, err
+			}
+		} else {
+			attrs["policyEnable"] = true
+			if _, err := services.UpdateTemplate(query, tpl.Id, attrs); err != nil {
+				return nil, err
+			}
+		}
 
 		return rel, nil
 	} else {
@@ -151,7 +163,18 @@ func EnablePolicyScanRel(c *ctx.ServiceContext, form *forms.EnableScanForm) (*mo
 			}
 			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 		}
-
+		if form.Scope == consts.ScopeEnv {
+			attrs["policyEnable"] = false
+			if _, err := services.UpdateEnv(query, env.Id, attrs); err != nil {
+				return nil, err
+			}
+		} else {
+			attrs["policyEnable"] = false
+			if _, err := services.UpdateTemplate(query, tpl.Id, attrs); err != nil {
+				return nil, err
+			}
+		}
+		
 		return nil, nil
 	}
 }
