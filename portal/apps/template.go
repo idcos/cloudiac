@@ -34,8 +34,8 @@ type SearchTemplateResp struct {
 	RepoFullName      string      `json:"repoFullName"`
 	NewRepoAddr       string      `json:"newRepoAddr"`
 	VcsAddr           string      `json:"vcsAddr"`
-	PolicyEnable      bool        `json:"policyEnble"`
-	PolicyStatus      string      `json:"PolicyStatus"`
+	PolicyEnable      bool        `json:"policyEnable"`
+	PolicyStatus      string      `json:"policyStatus"`
 }
 
 func getRepoAddr(vcsId models.Id, query *db.Session, repoId string) (string, error) {
