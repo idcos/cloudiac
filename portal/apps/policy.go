@@ -213,8 +213,7 @@ func ScanEnvironment(c *ctx.ServiceContext, form *forms.ScanEnvironmentForm) (*m
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
 
-	tx := c.Tx()
-	tx = services.QueryWithOrgId(tx, c.OrgId)
+	tx := services.QueryWithOrgId(c.Tx(), c.OrgId)
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -348,7 +347,6 @@ func DetailPolicy(c *ctx.ServiceContext, form *forms.DetailPolicyForm) (interfac
 type RespPolicyTpl struct {
 	models.Template
 
-	Enabled      bool   `json:"enabled"`
 	PolicyStatus string `json:"policyStatus"` // 策略检查状态, enum('passed','violated','pending','failed')
 
 	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
@@ -431,7 +429,6 @@ type RespPolicyEnv struct {
 
 	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
 	Summary
-	Enabled     bool   `json:"enabled"`
 	OrgName     string `json:"orgName" form:"orgName" `
 	ProjectName string `json:"projectName" form:"projectName" `
 
@@ -690,6 +687,8 @@ type PolicyResult struct {
 	PolicyName      string `json:"policyName" example:"VPC 安全组规则"`  // 策略名称
 	PolicyGroupName string `json:"policyGroupName" example:"安全策略组"` // 策略组名称
 	FixSuggestion   string `json:"fixSuggestion" example:"建议您创建一个专有网络..."`
+	Rego            string `json:"rego" example:""` //rego 代码文件内容
+
 }
 
 func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicyScanResultForm) (interface{}, e.Error) {

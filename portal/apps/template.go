@@ -34,8 +34,8 @@ type SearchTemplateResp struct {
 	RepoFullName      string      `json:"repoFullName"`
 	NewRepoAddr       string      `json:"newRepoAddr"`
 	VcsAddr           string      `json:"vcsAddr"`
-	PolicyEnable      bool        `json:"policyEnble"`
-	PolicyStatus      string      `json:"PolicyStatus"`
+	PolicyEnable      bool        `json:"policyEnable"`
+	PolicyStatus      string      `json:"policyStatus"`
 }
 
 func getRepoAddr(vcsId models.Id, query *db.Session, repoId string) (string, error) {
@@ -413,6 +413,8 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 				return nil, e.New(e.DBError, err)
 			}
 			v.PolicyStatus = scanTask.Status
+		} else {
+			v.PolicyStatus = "disable"
 		}
 
 	}

@@ -180,7 +180,7 @@ func QueryPolicyResult(query *db.Session, taskId models.Id) *db.Session {
 
 	// 策略信息
 	q = q.Joins("left join iac_policy as p on p.id = iac_policy_result.policy_id").
-		LazySelectAppend("p.name as policy_name, p.fix_suggestion,iac_policy_result.*")
+		LazySelectAppend("p.name as policy_name, p.fix_suggestion,iac_policy_result.*,p.rego")
 	// 策略组信息
 	q = q.Joins("left join iac_policy_group as g on g.id = iac_policy_result.policy_group_id").
 		LazySelectAppend("g.name as policy_group_name,iac_policy_result.*")
