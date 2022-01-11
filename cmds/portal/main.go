@@ -246,20 +246,19 @@ func initSystemConfig(tx *db.Session) (err error) {
 func initVcs(tx *db.Session) error {
 	vcs := models.Vcs{
 		OrgId:    "",
-		Name:     "默认仓库",
+		Name:     consts.DefaultVcsName,
 		VcsType:  consts.GitTypeLocal,
 		Status:   "enable",
 		Address:  consts.LocalGitReposPath,
 		VcsToken: "",
 	}
 
-	dbVcs := models.Vcs{}
-	err := services.QueryVcs("", "", "", true, false, tx).First(&dbVcs)
+	dbVcs, err := services.GetDefaultVcs(tx)
 	if err != nil && !e.IsRecordNotFound(err) {
 		return err
 	}
 
-	if dbVcs.Id == "" { // 未创建
+	if dbVcs == nil || dbVcs.Id == "" { // 未创建
 		_, err = services.CreateVcs(tx, vcs)
 		if err != nil {
 			return err
@@ -286,7 +285,7 @@ func initRegistryVcs(tx *db.Session) error {
 
 	vcs := models.Vcs{
 		OrgId:    "",
-		Name:     "registry仓库",
+		Name:     consts.RegistryVcsName,
 		VcsType:  consts.GitTypeRegistry,
 		Status:   "enable",
 		Address:  addr,
@@ -294,7 +293,7 @@ func initRegistryVcs(tx *db.Session) error {
 	}
 
 	dbVcs := models.Vcs{}
-	err = services.QueryVcs("", "", "registry仓库", false, true, tx).First(&dbVcs)
+	err = services.QueryVcsSample(tx.Where(&models.Vcs{Name: consts.RegistryVcsName})).Find(&dbVcs)
 	if err != nil && !e.IsRecordNotFound(err) {
 		return err
 	}

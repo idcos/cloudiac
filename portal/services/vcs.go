@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"gorm.io/gorm"
 )
 
 func CreateVcs(tx *db.Session, vcs models.Vcs) (*models.Vcs, e.Error) {
@@ -179,7 +180,19 @@ func ParseTfVariables(filename string, content []byte) ([]TemplateVariable, e.Er
 
 func GetDefaultVcs(session *db.Session) (*models.Vcs, error) {
 	vcs := &models.Vcs{}
-	err := session.Where("org_id = ''").First(vcs)
+	err := session.Where("org_id = '' AND name = ?", consts.DefaultVcsName).Find(vcs)
+	if vcs.Id == "" {
+		return vcs, gorm.ErrRecordNotFound
+	}
+	return vcs, err
+}
+
+func GetRegistryVcs(session *db.Session) (*models.Vcs, error) {
+	vcs := &models.Vcs{}
+	err := session.Where("org_id = '' AND name = ?", consts.RegistryVcsName).Find(vcs)
+	if vcs.Id == "" {
+		return vcs, gorm.ErrRecordNotFound
+	}
 	return vcs, err
 }
 

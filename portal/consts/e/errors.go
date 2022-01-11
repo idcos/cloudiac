@@ -154,6 +154,9 @@ const (
 	VcsNotExists   = 31110
 	VcsDeleteError = 31120
 
+	//// 317
+	RegistryServiceErr = 31710
+
 	//// policy 312
 	PolicyAlreadyExist           = 31210
 	PolicyNotExist               = 31211

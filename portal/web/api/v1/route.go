@@ -121,9 +121,9 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/policies/groups/:id/report", ac(), w(handlers.PolicyGroup{}.ScanReport))
 	g.GET("/policies/groups/:id/last_tasks", ac(), w(handlers.PolicyGroup{}.LastTasks))
 
-	// Registry 侧策略组API
-	g.GET("/registry/policy_groups", w(handlers.SearchRegistryPolicyGroups))
-	g.GET("/registry/policy_group/versions", w(handlers.SearchRegistryPolicyGroupVersions))
+	// 直接代理 registry 侧策略组API
+	// g.GET("/registry/policy_groups", w(handlers.SearchRegistryPolicyGroups))
+	// g.GET("/registry/policy_groups/versions", w(handlers.SearchRegistryPolicyGroupVersions))
 
 	// 组织下的资源搜索(只需要有环境的读权限即可查看资源)
 	g.GET("/orgs/resources", ac("envs", "read"), w(handlers.Organization{}.SearchOrgResources))
@@ -169,6 +169,10 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/vcs/:id/branch", ac(), w(handlers.Vcs{}.ListBranches))
 	g.GET("/vcs/:id/tag", ac(), w(handlers.Vcs{}.ListTags))
 	g.GET("/vcs/:id/readme", ac(), w(handlers.Vcs{}.GetReadmeContent))
+
+	g.GET("/vcs/registry/policy_groups", w(handlers.SearchRegistryPG))
+	g.GET("/vcs/registry/policy_groups/versions", w(handlers.SearchRegistryPGVersions))
+
 	// 云模板
 	ctrl.Register(g.Group("templates", ac()), &handlers.Template{})
 	g.GET("/templates/variables", ac(), w(handlers.TemplateVariableSearch))

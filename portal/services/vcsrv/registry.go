@@ -6,7 +6,6 @@ registry vcs 实现
 
 import (
 	"bytes"
-	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/models"
 	"encoding/json"
@@ -18,29 +17,24 @@ import (
 )
 
 type RegistryVcs struct {
-	vcs      *models.Vcs
-	basePath string
+	vcs *models.Vcs
 }
 
 func newRegistryVcs(vcs *models.Vcs) (VcsIface, error) {
-
-	return &RegistryVcs{vcs: vcs, basePath: consts.RegistryVcsBasePath}, nil
+	return &RegistryVcs{vcs: vcs}, nil
 }
 
-// TODO
 func (rv *RegistryVcs) GetRepo(repoPath string) (RepoIface, error) {
-	return &RegistryRepo{vcs: rv.vcs, basePath: rv.basePath, repoPath: repoPath}, nil
+	return &RegistryRepo{vcs: rv.vcs, repoPath: repoPath}, nil
 }
 
 // TODO
 func (rv *RegistryVcs) ListRepos(namespace string, search string, limit, offset int) ([]RepoIface, int64, error) {
-
-	return nil, 0, nil
+	return nil, 0, e.New(e.NotImplement)
 }
 
 type RegistryRepo struct {
 	vcs      *models.Vcs
-	basePath string
 	repoPath string // vcs 下repo的相对路径
 }
 
