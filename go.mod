@@ -8,6 +8,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/Shopify/sarama v1.28.0
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
+	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/armon/go-metrics v0.3.3 // indirect
 	github.com/casbin/casbin/v2 v2.31.9
 	github.com/containerd/containerd v1.5.5 // indirect
