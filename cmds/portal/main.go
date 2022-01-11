@@ -276,12 +276,13 @@ func initVcs(tx *db.Session) error {
 
 // initRegistryVcs 初始化 registry vcs
 func initRegistryVcs(tx *db.Session) error {
+
 	vcs := models.Vcs{
 		OrgId:    "",
 		Name:     "registry仓库",
 		VcsType:  consts.GitTypeRegistry,
 		Status:   "enable",
-		Address:  consts.RegistryVcsPath,
+		Address:  consts.RegistryVcsBasePath,
 		VcsToken: "",
 	}
 
