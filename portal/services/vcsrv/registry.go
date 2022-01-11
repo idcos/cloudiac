@@ -6,25 +6,30 @@ registry vcs 实现
 
 import (
 	"bytes"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
+	"cloudiac/portal/models"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"strings"
 )
 
 type RegistryVcs struct {
-	RegitryAddr string
+	vcs      *models.Vcs
+	basePath string
 }
 
-func newRegistryVcs(registryAddr string) *RegistryVcs {
-	return &RegistryVcs{RegitryAddr: registryAddr}
+func newRegistryVcs(vcs *models.Vcs) (VcsIface, error) {
+
+	return &RegistryVcs{vcs: vcs, basePath: consts.RegistryVcsBasePath}, nil
 }
 
 // TODO
-func (rv *RegistryVcs) GetRepo(path string) (RepoIface, error) {
-	return &RegistryRepo{VcsAddr: rv.RegitryAddr, RepoPath: path}, nil
+func (rv *RegistryVcs) GetRepo(repoPath string) (RepoIface, error) {
+	return &RegistryRepo{vcs: rv.vcs, basePath: rv.basePath, repoPath: repoPath}, nil
 }
 
 // TODO
@@ -34,14 +39,15 @@ func (rv *RegistryVcs) ListRepos(namespace string, search string, limit, offset 
 }
 
 type RegistryRepo struct {
-	VcsAddr  string
-	RepoPath string // vcs 下的相对路径
+	vcs      *models.Vcs
+	basePath string
+	repoPath string // vcs 下repo的相对路径
 }
 
 func (r *RegistryRepo) ListBranches() ([]string, error) {
-	path := fmt.Sprintf("%s/api/v1/vcs/repo/branches", r.VcsAddr)
+	path := fmt.Sprintf("%s/api/v1/vcs/repo/branches", r.vcs.Address)
 	_, body, err := registryVcsRequest(path, "GET", map[string]string{
-		"path": r.RepoPath,
+		"path": r.repoPath,
 	})
 	if err != nil {
 		return nil, err
@@ -62,9 +68,9 @@ func (r *RegistryRepo) ListBranches() ([]string, error) {
 }
 
 func (r *RegistryRepo) ListTags() ([]string, error) {
-	path := fmt.Sprintf("%s/api/v1/vcs/repo/tags", r.VcsAddr)
+	path := fmt.Sprintf("%s/api/v1/vcs/repo/tags", r.vcs.Address)
 	_, body, err := registryVcsRequest(path, "GET", map[string]string{
-		"path": r.RepoPath,
+		"path": r.repoPath,
 	})
 	if err != nil {
 		return nil, err
@@ -85,9 +91,9 @@ func (r *RegistryRepo) ListTags() ([]string, error) {
 }
 
 func (r *RegistryRepo) BranchCommitId(branch string) (string, error) {
-	path := fmt.Sprintf("%s/api/v1/vcs/repo/branch_commit_id", r.VcsAddr)
+	path := fmt.Sprintf("%s/api/v1/vcs/repo/branch_commit_id", r.vcs.Address)
 	_, body, err := registryVcsRequest(path, "GET", map[string]string{
-		"path":   r.RepoPath,
+		"path":   r.repoPath,
 		"branch": branch,
 	})
 	if err != nil {
@@ -109,13 +115,13 @@ func (r *RegistryRepo) BranchCommitId(branch string) (string, error) {
 }
 
 func (r *RegistryRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
-	path := fmt.Sprintf("%s/api/v1/vcs/repo/files", r.VcsAddr)
+	path := fmt.Sprintf("%s/api/v1/vcs/repo/files", r.vcs.Address)
 	recursive := "false"
 	if opt.Recursive {
 		recursive = "true"
 	}
 	_, body, err := registryVcsRequest(path, "GET", map[string]string{
-		"path":      r.RepoPath,
+		"path":      r.repoPath,
 		"ref":       opt.Ref,
 		"filePath":  opt.Path,
 		"search":    opt.Search,
@@ -142,9 +148,9 @@ func (r *RegistryRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
 }
 
 func (r *RegistryRepo) ReadFileContent(revision string, filePath string) (content []byte, err error) {
-	path := fmt.Sprintf("%s/api/v1/vcs/repo/file_content", r.VcsAddr)
+	path := fmt.Sprintf("%s/api/v1/vcs/repo/file_content", r.vcs.Address)
 	_, body, err := registryVcsRequest(path, "GET", map[string]string{
-		"path":     r.RepoPath,
+		"path":     r.repoPath,
 		"branch":   revision,
 		"filePath": filePath,
 	})
@@ -153,7 +159,10 @@ func (r *RegistryRepo) ReadFileContent(revision string, filePath string) (conten
 	}
 
 	var resp struct {
-		Result struct {
+		Code          int    `json:"code"`
+		Message       string `json:"message"`
+		MessageDetail string `json:"messageDetail"`
+		Result        struct {
 			Content string `json:"content"`
 		} `json:"result"`
 	}
@@ -163,13 +172,17 @@ func (r *RegistryRepo) ReadFileContent(revision string, filePath string) (conten
 		return nil, err
 	}
 
+	if resp.Code != 0 && strings.Contains(resp.MessageDetail, "file not exists") {
+		return nil, e.New(e.ObjectNotExists)
+	}
+
 	return []byte(resp.Result.Content), nil
 }
 
 func (r *RegistryRepo) FormatRepoSearch() (*Projects, e.Error) {
-	path := fmt.Sprintf("%s/api/v1/vcs/repo/info", r.VcsAddr)
+	path := fmt.Sprintf("%s/api/v1/vcs/repo/info", r.vcs.Address)
 	_, body, err := registryVcsRequest(path, "GET", map[string]string{
-		"path": r.RepoPath,
+		"path": r.repoPath,
 	})
 	if err != nil {
 		return nil, e.New(e.InternalError, err)
@@ -188,9 +201,9 @@ func (r *RegistryRepo) FormatRepoSearch() (*Projects, e.Error) {
 }
 
 func (r *RegistryRepo) DefaultBranch() string {
-	path := fmt.Sprintf("%s/api/v1/vcs/repo/default_branch", r.VcsAddr)
+	path := fmt.Sprintf("%s/api/v1/vcs/repo/default_branch", r.vcs.Address)
 	_, body, err := registryVcsRequest(path, "GET", map[string]string{
-		"path": r.RepoPath,
+		"path": r.repoPath,
 	})
 	if err != nil {
 		return ""

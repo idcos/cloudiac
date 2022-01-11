@@ -77,7 +77,7 @@ const (
 	LocalGitReposPath = "repos"  // 内置 http git server 服务目录
 	ReposUrlPrefix    = "/repos" // 内置 http git server url prefix
 
-	RegistryVcsPath = "repos/policies" // registry vcs 仓库路径
+	RegistryVcsBasePath = "repos/policies" // registry vcs 仓库路径
 
 	NotificationMessageTitle = "CloudIaC平台系统通知"
 

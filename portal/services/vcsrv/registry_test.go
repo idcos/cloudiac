@@ -1,15 +1,29 @@
 package vcsrv
 
 import (
+	"cloudiac/portal/models"
 	"fmt"
 	"testing"
 )
 
 // 该测试需要 registry侧服务的配合
 
+func getTestRepo() RepoIface {
+	var addr = "http://localhost:9233"
+	var testRepo = "test/myrepo"
+
+	vcs, err := newRegistryVcs(&models.Vcs{
+		Address: addr,
+	})
+	if err != nil {
+		panic(err)
+	}
+	repo, _ := vcs.GetRepo(testRepo)
+	return repo
+}
+
 func TestListBranches(t *testing.T) {
-	vcs := newRegistryVcs("http://localhost:9233")
-	repo, _ := vcs.GetRepo("test/myrepo")
+	repo := getTestRepo()
 
 	branches, err := repo.ListBranches()
 	if err != nil {
@@ -19,8 +33,7 @@ func TestListBranches(t *testing.T) {
 }
 
 func TestListTags(t *testing.T) {
-	vcs := newRegistryVcs("http://localhost:9233")
-	repo, _ := vcs.GetRepo("test/myrepo")
+	repo := getTestRepo()
 
 	branches, err := repo.ListTags()
 	if err != nil {
@@ -30,8 +43,7 @@ func TestListTags(t *testing.T) {
 }
 
 func TestBranchCommitId(t *testing.T) {
-	vcs := newRegistryVcs("http://localhost:9233")
-	repo, _ := vcs.GetRepo("test/myrepo")
+	repo := getTestRepo()
 
 	commitId, err := repo.BranchCommitId("master")
 	if err != nil {
@@ -41,8 +53,7 @@ func TestBranchCommitId(t *testing.T) {
 }
 
 func TestListFiles(t *testing.T) {
-	vcs := newRegistryVcs("http://localhost:9233")
-	repo, _ := vcs.GetRepo("test/myrepo")
+	repo := getTestRepo()
 
 	var opt = VcsIfaceOptions{
 		Ref: "master",
@@ -56,8 +67,7 @@ func TestListFiles(t *testing.T) {
 	fmt.Println(files)
 }
 func TestFileContent(t *testing.T) {
-	vcs := newRegistryVcs("http://localhost:9233")
-	repo, _ := vcs.GetRepo("test/myrepo")
+	repo := getTestRepo()
 
 	content, err := repo.ReadFileContent("master", "aaa")
 	if err != nil {
@@ -66,8 +76,7 @@ func TestFileContent(t *testing.T) {
 	fmt.Println(string(content))
 }
 func TestFormatRepoSearch(t *testing.T) {
-	vcs := newRegistryVcs("http://localhost:9233")
-	repo, _ := vcs.GetRepo("test/myrepo")
+	repo := getTestRepo()
 
 	proj, err := repo.FormatRepoSearch()
 	if err != nil {
@@ -76,8 +85,7 @@ func TestFormatRepoSearch(t *testing.T) {
 	fmt.Println(proj)
 }
 func TestDefaultBranch(t *testing.T) {
-	vcs := newRegistryVcs("http://localhost:9233")
-	repo, _ := vcs.GetRepo("test/myrepo")
+	repo := getTestRepo()
 
 	branch := repo.DefaultBranch()
 	fmt.Println(branch)
