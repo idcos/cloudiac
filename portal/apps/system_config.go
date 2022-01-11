@@ -60,7 +60,7 @@ func UpdateSystemConfig(c *ctx.ServiceContext, form *forms.UpdateSystemConfigFor
 }
 
 func GetRegistryAddr(c *ctx.ServiceContext) (interface{}, e.Error) {
-	cfg, err := services.GetSystemConfigByName(c.DB(), models.SysCfgNamRegistryHome)
+	cfg, err := services.GetSystemConfigByName(c.DB(), models.SysCfgNamRegistryAddr)
 	var cfgdb = ""
 	if err == nil {
 		cfgdb = cfg.Value

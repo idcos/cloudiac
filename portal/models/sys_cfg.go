@@ -9,7 +9,7 @@ import (
 const (
 	SysCfgNameMaxJobsPerRunner = "MAX_JOBS_PER_RUNNER"
 	SysCfgNamePeriodOfLogSave  = "PERIOD_OF_LOG_SAVE"
-	SysCfgNamRegistryHome      = "REGISTRY_HOME"
+	SysCfgNamRegistryAddr      = "REGISTRY_ADDR"
 )
 
 type SystemCfg struct {
