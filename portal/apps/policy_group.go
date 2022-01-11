@@ -83,6 +83,7 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 	// 策略创建
 	err = policiesUpsert(tx, c.UserId, c.OrgId, group, policies)
 	if err != nil {
+		_ = tx.Rollback()
 		return nil, e.AutoNew(err, http.StatusInternalServerError, e.DBError)
 	}
 
