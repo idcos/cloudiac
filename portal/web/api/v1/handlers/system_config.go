@@ -71,6 +71,7 @@ func GetRegistryAddr(c *ctx.GinRequest) {
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
+// @Param data body forms.RegistryAddrForm true "系统配置信息"
 // @Success 200 {object}  ctx.JSONResult{result=models.RegistryAddrResp}
 // @Router /system_config/registry/addr [POST]
 func UpsertRegistryAddr(c *ctx.GinRequest) {
