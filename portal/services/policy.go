@@ -529,10 +529,11 @@ type ScanStatusByTarget struct {
 	Name   string
 }
 
-func GetPolicyScanByTarget(query *db.Session, policyId models.Id, from, to time.Time, showCount int) ([]*ScanStatusByTarget, e.Error) {
+func GetPolicyScanByTarget(query *db.Session, policyId models.Id, from, to time.Time, showCount int, orgId models.Id) ([]*ScanStatusByTarget, e.Error) {
 	groupQuery := query.Model(models.PolicyResult{})
 	groupQuery = groupQuery.Where("start_at >= ? and start_at < ? and policy_id = ?", from, to, policyId).
 		Where("status != 'pending'"). // 跳过pending状态
+		Where("org_id = ?", orgId).
 		Select("count(*) as count, tpl_id, env_id").
 		Group("tpl_id,env_id")
 

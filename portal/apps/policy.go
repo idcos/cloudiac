@@ -598,7 +598,7 @@ func (PolicyErrorResp) TableName() string {
 
 // PolicyError 获取合规错误列表，包含最后一次检测错误和合规不通过，排除已经屏蔽的条目
 func PolicyError(c *ctx.ServiceContext, form *forms.PolicyErrorForm) (interface{}, e.Error) {
-	query := services.QueryWithOrgId(c.DB(), c.OrgId)
+	query := services.QueryWithOrgId(c.DB(), c.OrgId, models.PolicyResult{}.TableName())
 	query = services.PolicyError(query, form.Id)
 	if form.HasKey("q") {
 		query = query.Where(fmt.Sprintf("env_name LIKE '%%%s%%' or template_name LIKE '%%%s%%'", form.Q, form.Q))
@@ -672,10 +672,17 @@ func ParseTemplate(c *ctx.ServiceContext, form *forms.PolicyParseForm) (interfac
 }
 
 type ScanResultPageResp struct {
-	Task     *models.ScanTask `json:"task"`     // 扫描任务
-	Total    int64            `json:"total"`    // 总数
-	PageSize int              `json:"pageSize"` // 分页数量
-	List     []PolicyResult   `json:"list"`     // 扫描结果
+	Task     *models.ScanTask     `json:"task"`     // 扫描任务
+	Total    int64                `json:"total"`    // 总数
+	PageSize int                  `json:"pageSize"` // 分页数量
+	List     []*PolicyResultGroup `json:"groups"`   // 策略组
+}
+
+type PolicyResultGroup struct {
+	Id      models.Id      `json:"id"`
+	Name    string         `json:"name"`
+	Summary Summary        `json:"summary"`
+	List    []PolicyResult `json:"list"` // 策略扫描结果
 }
 
 type PolicyResult struct {
@@ -708,11 +715,13 @@ func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicySca
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
+	query = services.QueryWithOrgId(c.DB(), c.OrgId, models.PolicyResult{}.TableName())
 	query = services.QueryPolicyResult(query, scanTask.Id)
 	if form.SortField() == "" {
 		query = query.Order("policy_group_name, policy_name")
 	} else {
-		query = form.Order(query)
+		// 优先分组排序，再做分组内排序
+		query = query.Order(fmt.Sprintf("policy_group_name, %s %s", form.SortField(), form.SortOrder()))
 	}
 	results := make([]PolicyResult, 0)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
@@ -720,11 +729,35 @@ func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicySca
 		return nil, e.New(e.DBError, err)
 	}
 
+	// 按策略组分组
+	var lastGroup PolicyResultGroup
+	var resultGroups []*PolicyResultGroup
+	for i, r := range results {
+		if lastGroup.Name != r.PolicyGroupName {
+			lastGroup = PolicyResultGroup{
+				Id:   r.PolicyGroupId,
+				Name: r.PolicyGroupName,
+			}
+			resultGroups = append(resultGroups, &lastGroup)
+		}
+		lastGroup.List = append(lastGroup.List, results[i])
+		switch r.Status {
+		case common.PolicyStatusPassed:
+			lastGroup.Summary.Passed++
+		case common.PolicyStatusViolated:
+			lastGroup.Summary.Violated++
+		case common.PolicyStatusFailed:
+			lastGroup.Summary.Failed++
+		case common.PolicyStatusSuppressed:
+			lastGroup.Summary.Suppressed++
+		}
+	}
+
 	return ScanResultPageResp{
 		Task:     scanTask,
 		Total:    p.MustTotal(),
 		PageSize: p.Size,
-		List:     results,
+		List:     resultGroups,
 	}, nil
 }
 
@@ -852,7 +885,7 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 		Value: totalSummary.Failed,
 	})
 
-	scanTaskStatus, err := services.GetPolicyScanByTarget(query, form.Id, form.From, form.To, form.ShowCount)
+	scanTaskStatus, err := services.GetPolicyScanByTarget(c.DB(), form.Id, form.From, form.To, form.ShowCount, c.OrgId)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}

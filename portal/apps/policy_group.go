@@ -352,8 +352,7 @@ type LastScanTaskResp struct {
 }
 
 func PolicyGroupScanTasks(c *ctx.ServiceContext, form *forms.PolicyLastTasksForm) (interface{}, e.Error) {
-	query := services.QueryWithOrgId(c.DB(), c.OrgId)
-	query = services.GetPolicyGroupScanTasks(query, form.Id)
+	query := services.GetPolicyGroupScanTasks(c.DB(), form.Id, c.OrgId)
 
 	// 默认按创建时间逆序排序
 	if form.SortField() == "" {
