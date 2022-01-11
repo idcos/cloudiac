@@ -60,11 +60,11 @@ func GetSystemConfigByName(tx *db.Session, name string) (*models.SystemCfg, e.Er
 }
 
 func UpsertRegistryAddr(tx *db.Session, val string) (*models.SystemCfg, e.Error) {
-	cfg, err := GetSystemConfigByName(tx, models.SysCfgNamRegistryHome)
+	cfg, err := GetSystemConfigByName(tx, models.SysCfgNamRegistryAddr)
 	if err != nil {
 		if err.Err() == gorm.ErrRecordNotFound {
 			return CreateSystemConfig(tx, models.SystemCfg{
-				Name:  models.SysCfgNamRegistryHome,
+				Name:  models.SysCfgNamRegistryAddr,
 				Value: val,
 			})
 		} else {
