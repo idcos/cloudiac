@@ -403,9 +403,7 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		env.MergeTaskStatus()
 		// FIXME: 这里会在 for 循环中查询 db，需要优化
 		PopulateLastTask(c.DB(), env)
-		if env.PolicyStatus == "failed" {
-			env.PolicyStatus = common.PolicyStatusViolated
-		}
+		env.UpdateEnvPolicyStatus()
 	}
 
 	return page.PageResp{
@@ -621,6 +619,10 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	return detail, nil
 }
 
+func UpdateEnvPolicyStatus(env *models.EnvDetail) {
+
+}
+
 // EnvDetail 环境信息详情
 func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDetail, e.Error) {
 	if c.OrgId == "" || c.ProjectId == "" {
@@ -639,6 +641,14 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 
 	envDetail.MergeTaskStatus()
 	envDetail = PopulateLastTask(c.DB(), envDetail)
+	resp, err := services.GetPolicyRels(c.DB(), form.Id, consts.ScopeEnv)
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range resp {
+		envDetail.PolicyGroup = append(envDetail.PolicyGroup, v.PolicyGroupId)
+	}
+	envDetail.UpdateEnvPolicyStatus()
 
 	return envDetail, nil
 }

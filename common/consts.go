@@ -94,6 +94,8 @@ const (
 	PolicyStatusFailed     = "failed"
 	PolicyStatusViolated   = "violated"
 	PolicyStatusSuppressed = "suppressed"
+	PolicyStatusEnable     = "enable"
+	PolicyStatusDisable    = "disable"
 
 	PolicySeverityHigh   = "high"
 	PolicySeverityMedium = "medium"

@@ -15,6 +15,21 @@ import (
 	"net/http"
 )
 
+func UpdatePolicyRelNew(c *ctx.ServiceContext, form *forms.UpdatePolicyRelForm) ([]models.PolicyRel, e.Error) {
+	tx := c.Tx()
+	result, err := UpdatePolicyRel(tx, form)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		logs.Get().Errorf("error commit policy relations, err %s", err)
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
+	return result, nil
+}
+
 // UpdatePolicyRel 创建/更新策略关系
 func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]models.PolicyRel, e.Error) {
 	logs.Get().Info("action", fmt.Sprintf("create policy relation %s %s", form.Scope, form.Id))
@@ -28,13 +43,11 @@ func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]models.
 	if form.Scope == consts.ScopeEnv {
 		env, err = services.GetEnvById(tx, form.Id)
 		if err != nil {
-			_ = tx.Rollback()
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)
 		}
 	} else {
 		tpl, err = services.GetTemplateById(tx, form.Id)
 		if err != nil {
-			_ = tx.Rollback()
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)
 		}
 	}
@@ -48,7 +61,6 @@ func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]models.
 	for _, groupId := range form.PolicyGroupIds {
 		group, err := services.GetPolicyGroupById(tx, groupId)
 		if err != nil {
-			_ = tx.Rollback()
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)
 		}
 		if env != nil {
@@ -71,17 +83,9 @@ func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]models.
 
 	if len(rels) > 0 {
 		if er := models.CreateBatch(tx, rels); er != nil {
-			_ = tx.Rollback()
 			return nil, e.New(e.DBError, er)
 		}
 	}
-
-	if err := tx.Commit(); err != nil {
-		logs.Get().Errorf("error commit policy relations, err %s", err)
-		_ = tx.Rollback()
-		return nil, e.New(e.DBError, err)
-	}
-
 	return rels, nil
 }
 

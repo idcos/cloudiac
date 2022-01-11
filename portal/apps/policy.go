@@ -356,7 +356,7 @@ type RespPolicyTpl struct {
 }
 
 func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (interface{}, e.Error) {
-	respPolicyTpls := make([]RespPolicyTpl, 0)
+	respPolicyTpls := make([]*RespPolicyTpl, 0)
 	tplIds := make([]models.Id, 0)
 	query := services.SearchPolicyTpl(c.DB(), c.OrgId, form.TplId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
@@ -368,6 +368,8 @@ func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (in
 		tplIds = append(tplIds, v.Id)
 		if v.PolicyStatus == "failed" {
 			v.PolicyStatus = common.PolicyStatusViolated
+		} else if v.PolicyStatus == "" {
+			v.PolicyStatus = common.PolicyStatusEnable
 		}
 	}
 
@@ -439,7 +441,7 @@ type RespPolicyEnv struct {
 }
 
 func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (interface{}, e.Error) {
-	respPolicyEnvs := make([]RespPolicyEnv, 0)
+	respPolicyEnvs := make([]*RespPolicyEnv, 0)
 	envIds := make([]models.Id, 0)
 	query := services.SearchPolicyEnv(c.DB(), c.OrgId, form.ProjectId, form.EnvId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
@@ -449,7 +451,14 @@ func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (in
 		return nil, e.New(e.DBError, err)
 	}
 	for _, v := range respPolicyEnvs {
+		fmt.Println(v.PolicyStatus)
 		envIds = append(envIds, v.Id)
+		if v.PolicyStatus == "failed" {
+			v.PolicyStatus = common.PolicyStatusViolated
+		} else if v.PolicyStatus == "" {
+			v.PolicyStatus = common.PolicyStatusEnable
+			fmt.Println(v.PolicyStatus)
+		}
 	}
 
 	// 根据环境id查询出关联的所有策略组

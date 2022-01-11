@@ -73,7 +73,7 @@ func (Policy) UpdatePolicyEnv(c *ctx.GinRequest) {
 		return
 	}
 	form.Scope = consts.ScopeEnv
-	c.JSONResult(apps.UpdatePolicyRel(c.Service().Tx(), form))
+	c.JSONResult(apps.UpdatePolicyRelNew(c.Service(), form))
 }
 
 // ScanEnvironment 运行环境策略扫描
