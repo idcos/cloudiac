@@ -276,18 +276,25 @@ func initVcs(tx *db.Session) error {
 
 // initRegistryVcs 初始化 registry vcs
 func initRegistryVcs(tx *db.Session) error {
+	// 获取 registry vcs 服务的 http addr 配置
+	var cfg models.SystemCfg
+	var addr = configs.Get().RegistryAddr
+	err := tx.Where("name = ?", models.SysCfgNamRegistryAddr).First(&cfg)
+	if err == nil {
+		addr = cfg.Value
+	}
 
 	vcs := models.Vcs{
 		OrgId:    "",
 		Name:     "registry仓库",
 		VcsType:  consts.GitTypeRegistry,
 		Status:   "enable",
-		Address:  consts.RegistryVcsBasePath,
+		Address:  addr,
 		VcsToken: "",
 	}
 
 	dbVcs := models.Vcs{}
-	err := services.QueryVcs("", "", "registry仓库", false, true, tx).First(&dbVcs)
+	err = services.QueryVcs("", "", "registry仓库", false, true, tx).First(&dbVcs)
 	if err != nil && !e.IsRecordNotFound(err) {
 		return err
 	}
