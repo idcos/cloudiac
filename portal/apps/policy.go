@@ -366,6 +366,9 @@ func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (in
 	}
 	for _, v := range respPolicyTpls {
 		tplIds = append(tplIds, v.Id)
+		if v.PolicyStatus == "failed" {
+			v.PolicyStatus = common.PolicyStatusViolated
+		}
 	}
 
 	// 根据模板id查询出关联的所有策略组

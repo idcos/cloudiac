@@ -134,5 +134,5 @@ func (Policy) EnablePolicyEnv(c *ctx.GinRequest) {
 		return
 	}
 	form.Scope = consts.ScopeEnv
-	c.JSONResult(apps.EnablePolicyScanRel(c.Service(), form))
+	c.JSONResult(nil, apps.EnablePolicyScanRel(c.Service(), form))
 }

@@ -383,7 +383,7 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		query = query.Where("iac_env.name LIKE ? OR iac_template.name LIKE ?",
 			fmt.Sprintf("%%%s%%", form.Q),
 			fmt.Sprintf("%%%s%%", form.Q),
-			)
+		)
 	}
 
 	// 默认按创建时间逆序排序
@@ -403,6 +403,9 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		env.MergeTaskStatus()
 		// FIXME: 这里会在 for 循环中查询 db，需要优化
 		PopulateLastTask(c.DB(), env)
+		if env.PolicyStatus == "failed" {
+			env.PolicyStatus = common.PolicyStatusViolated
+		}
 	}
 
 	return page.PageResp{

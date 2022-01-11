@@ -3,6 +3,7 @@
 package apps
 
 import (
+	"cloudiac/common"
 	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
@@ -413,6 +414,10 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 				return nil, e.New(e.DBError, err)
 			}
 			v.PolicyStatus = scanTask.PolicyStatus
+			if v.PolicyStatus == "failed" {
+				v.PolicyStatus = common.PolicyStatusViolated
+			}
+
 		} else {
 			v.PolicyStatus = "disable"
 		}

@@ -86,14 +86,13 @@ func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]models.
 }
 
 // EnablePolicyScanRel 启用环境/云模板扫描
-func EnablePolicyScanRel(c *ctx.ServiceContext, form *forms.EnableScanForm) (*models.PolicyRel, e.Error) {
+func EnablePolicyScanRel(c *ctx.ServiceContext, form *forms.EnableScanForm) e.Error {
 	c.AddLogField("action", fmt.Sprintf("enable scan %s %s", form.Scope, form.Id))
 
 	var (
 		env *models.Env
 		tpl *models.Template
 		err e.Error
-		rel *models.PolicyRel
 	)
 
 	query := c.DB()
@@ -101,80 +100,44 @@ func EnablePolicyScanRel(c *ctx.ServiceContext, form *forms.EnableScanForm) (*mo
 	if form.Scope == consts.ScopeEnv {
 		env, err = services.GetEnvById(query, form.Id)
 		if err != nil {
-			return nil, e.New(err.Code(), err, http.StatusBadRequest)
+			return e.New(err.Code(), err, http.StatusBadRequest)
 		}
 	} else {
 		tpl, err = services.GetTemplateById(query, form.Id)
 		if err != nil {
-			return nil, e.New(err.Code(), err, http.StatusBadRequest)
+			return e.New(err.Code(), err, http.StatusBadRequest)
 		}
-	}
-
-	rel, err = services.GetPolicyRel(query, form.Id, form.Scope)
-	if err != nil && err.Code() != e.PolicyRelNotExist {
-		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
 	// 添加启用关联
 	attrs := models.Attrs{}
 	if form.Enabled {
-		if rel != nil {
-			return rel, nil
-		}
-
-		if form.Scope == consts.ScopeEnv {
-			rel = &models.PolicyRel{
-				OrgId:     env.OrgId,
-				ProjectId: env.ProjectId,
-				EnvId:     env.Id,
-			}
-		} else {
-			rel = &models.PolicyRel{
-				OrgId:   tpl.OrgId,
-				TplId:   tpl.Id,
-			}
-		}
-
-		if _, err := services.CreatePolicyRel(query, rel); err != nil {
-			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
-		}
 		if form.Scope == consts.ScopeEnv {
 			attrs["policyEnable"] = true
 			if _, err := services.UpdateEnv(query, env.Id, attrs); err != nil {
-				return nil, err
+				return err
 			}
 		} else {
 			attrs["policyEnable"] = true
 			if _, err := services.UpdateTemplate(query, tpl.Id, attrs); err != nil {
-				return nil, err
+				return err
 			}
 		}
 
-		return rel, nil
+		return nil
 	} else {
-		// 删除启用扫描关联
-		if rel == nil {
-			return nil, nil
-		}
-
-		if err := services.DeletePolicyEnabledRel(query, form.Id, form.Scope); err != nil {
-			if err.Code() == e.PolicyRelNotExist {
-				return nil, nil
-			}
-			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
-		}
 		if form.Scope == consts.ScopeEnv {
 			attrs["policyEnable"] = false
 			if _, err := services.UpdateEnv(query, env.Id, attrs); err != nil {
-				return nil, err
+				return err
 			}
 		} else {
 			attrs["policyEnable"] = false
 			if _, err := services.UpdateTemplate(query, tpl.Id, attrs); err != nil {
-				return nil, err
+				return err
 			}
 		}
-		
-		return nil, nil
+
+		return nil
 	}
 }
