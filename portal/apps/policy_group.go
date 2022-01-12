@@ -59,7 +59,7 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 	// 策略组仓库解析
 	policies, er := PolicyGroupRepoDownloadAndParse(&g)
 	if er != nil {
-		return nil, e.New(e.InternalError, errors.Wrapf(er, "parse rego"), http.StatusInternalServerError)
+		return nil, e.New(e.InternalError, errors.Wrapf(er, "download and parse"), http.StatusInternalServerError)
 	}
 
 	tx := c.Tx()

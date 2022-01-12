@@ -248,7 +248,7 @@ func ParseTfplan(planJsonFile string, planOutputFile string) error {
 	if err != nil {
 		return err
 	}
-	var filtered []interface{}
+	var output []byte
 	iter := query.Run(tfplan)
 	for {
 		v, ok := iter.Next()
@@ -258,12 +258,12 @@ func ParseTfplan(planJsonFile string, planOutputFile string) error {
 		if err, ok := v.(error); ok {
 			return err
 		}
-		filtered = append(filtered, v)
-	}
 
-	output, err := json.MarshalIndent(filtered, "", "  ")
-	if err != nil {
-		return err
+		filtered, err := json.MarshalIndent(v, "", "  ")
+		if err != nil {
+			return err
+		}
+		output = append(output, filtered...)
 	}
 
 	if planOutputFile == "" {
