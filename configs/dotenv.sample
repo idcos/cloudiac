@@ -16,6 +16,9 @@ PORTAL_ADDRESS=""
 # 需要配置为机器的内网 ip:port，不可使用 127.0.0.1
 CONSUL_ADDRESS=""
 
+# cloudiac registry 服务地址(选填)，示例：http://registry.cloudiac.org
+REGISTRY_ADDRESS=""
+
 # mysql 配置(必填)
 MYSQL_HOST=mysql
 MYSQL_PORT=3306

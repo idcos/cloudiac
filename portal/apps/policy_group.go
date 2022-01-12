@@ -14,11 +14,13 @@ import (
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"fmt"
-	"github.com/Masterminds/semver"
-	"github.com/pkg/errors"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/Masterminds/semver"
 )
 
 // CreatePolicyGroup 创建策略组
@@ -469,6 +471,98 @@ func PolicyGroupScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportFo
 	}
 
 	return &report, nil
+}
+
+type RegistryPGResp struct {
+	VcsId     string `json:"vcsId"`
+	RepoId    string `json:"repoId"`
+	Namespace string `json:"namespace"`
+	GroupId   string `json:"groupId"`
+	GroupName string `json:"groupName"`
+	Label     string `json:"label"`
+}
+
+func SearchRegistryPG(c *ctx.ServiceContext, form *forms.SearchRegistryPgForm) (interface{}, e.Error) {
+	// registry 侧接口的返回格式
+	type registryPG struct {
+		Id        string `json:"id"`
+		Namespace string `json:"namespace"`
+		Name      string `json:"name"`
+		Label     string `json:"label"`
+		RepoPath  string `json:"repoPath"`
+	}
+
+	type registryResult struct {
+		Page     int          `json:"page"`
+		PageSize int          `json:"pageSize"`
+		Total    int64        `json:"total"`
+		List     []registryPG `json:"list"`
+	}
+
+	rr := registryResult{}
+	val := url.Values{}
+	val.Add("q", form.Q)
+	val.Add("pageSize", fmt.Sprintf("%d", form.PageSize()))
+	val.Add("page", fmt.Sprintf("%d", form.CurrentPage()))
+	if err := services.RegistryGet("policies", val, &rr); err != nil {
+		return nil, e.AutoNew(err, e.RegistryServiceErr)
+	}
+
+	vcs, err := services.GetRegistryVcs(c.DB())
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	pgs := make([]RegistryPGResp, 0, len(rr.List))
+	for _, g := range rr.List {
+		pgs = append(pgs, RegistryPGResp{
+			VcsId:     vcs.Id.String(),
+			RepoId:    g.RepoPath,
+			Namespace: g.Namespace,
+			GroupId:   g.Id,
+			GroupName: g.Name,
+			Label:     g.Label,
+		})
+	}
+	return page.PageResp{
+		PageSize: rr.PageSize,
+		Total:    rr.Total,
+		List:     pgs,
+	}, nil
+}
+
+type RegistryPGVerResp struct {
+	Namespace string   `json:"namespace"`
+	GroupName string   `json:"groupName"`
+	GitTags   []string `json:"gitTags"`
+}
+
+func SearchRegistryPGVersions(c *ctx.ServiceContext, form *forms.SearchRegistryPgVersForm) (interface{}, e.Error) {
+	type registryPgVer struct {
+		Id        models.Id `json:"id"`
+		Namespace string    `json:"namespace"`
+		GroupName string    `json:"groupName"`
+		GitTag    string    `json:"gitTag"`
+		CommitId  string    `json:"commitId"`
+	}
+
+	rvs := make([]registryPgVer, 0)
+	val := url.Values{}
+	val.Add("ns", form.Namespace)
+	val.Add("gn", form.GroupName)
+	if err := services.RegistryGet("policies/versions", val, &rvs); err != nil {
+		return nil, e.AutoNew(err, e.RegistryServiceErr)
+	}
+
+	resp := &RegistryPGVerResp{}
+	for i, rv := range rvs {
+		if i == 0 {
+			resp.Namespace = rv.Namespace
+			resp.GroupName = rv.GroupName
+		}
+		resp.GitTags = append(resp.GitTags, rv.GitTag)
+	}
+	return resp, nil
 }
 
 func PolicyGroupChecks(c *ctx.ServiceContext, form *forms.PolicyGroupChecksForm) (interface{}, e.Error) {

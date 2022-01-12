@@ -51,7 +51,6 @@ type DetailPolicyForm struct {
 	Id models.Id `uri:"id"`
 }
 
-
 type CreatePolicyGroupForm struct {
 	BaseForm
 
@@ -281,7 +280,7 @@ type SearchGroupOfPolicyForm struct {
 
 type PolicyGroupChecksForm struct {
 	BaseForm
-	Name         string    `json:"name" form:"name" form:"name"`
+	Name         string    `json:"name" form:"name"`
 	RepoId       string    `json:"repoId" form:"repoId"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision"`
 	VcsId        models.Id `json:"vcsId" form:"vcsId"`

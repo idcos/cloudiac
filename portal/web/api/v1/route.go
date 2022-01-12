@@ -113,16 +113,13 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/policies/envs/:id/valid_policies", ac(), w(handlers.Policy{}.ValidEnvOfPolicy))
 	g.POST("/policies/envs/:id/scan", ac("scan"), w(handlers.Policy{}.ScanEnvironment))
 	g.GET("/policies/envs/:id/result", ac(), w(handlers.Policy{}.EnvScanResult))
+
 	ctrl.Register(g.Group("policies/groups", ac()), &handlers.PolicyGroup{})
 	g.POST("/policies/groups/checks", ac(), w(handlers.PolicyGroupChecks))
 	g.GET("/policies/groups/:id/policies", ac(), w(handlers.PolicyGroup{}.SearchGroupOfPolicy))
 	g.POST("/policies/groups/:id", ac(), w(handlers.PolicyGroup{}.OpPolicyAndPolicyGroupRel))
 	g.GET("/policies/groups/:id/report", ac(), w(handlers.PolicyGroup{}.ScanReport))
 	g.GET("/policies/groups/:id/last_tasks", ac(), w(handlers.PolicyGroup{}.LastTasks))
-
-	// Registry 侧策略组API
-	g.GET("/registry/policy_groups", ac(), w(handlers.SearchRegistryPolicyGroups))
-	g.GET("/registry/policy_group/versions", ac(), w(handlers.SearchRegistryPolicyGroupVersions))
 
 	// 组织下的资源搜索(只需要有环境的读权限即可查看资源)
 	g.GET("/orgs/resources", ac("envs", "read"), w(handlers.Organization{}.SearchOrgResources))
@@ -168,6 +165,10 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/vcs/:id/branch", ac(), w(handlers.Vcs{}.ListBranches))
 	g.GET("/vcs/:id/tag", ac(), w(handlers.Vcs{}.ListTags))
 	g.GET("/vcs/:id/readme", ac(), w(handlers.Vcs{}.GetReadmeContent))
+
+	g.GET("/registry/policy_groups", w(handlers.SearchRegistryPG))
+	g.GET("/registry/policy_groups/versions", w(handlers.SearchRegistryPGVersions))
+
 	// 云模板
 	ctrl.Register(g.Group("templates", ac()), &handlers.Template{})
 	g.GET("/templates/variables", ac(), w(handlers.TemplateVariableSearch))

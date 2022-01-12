@@ -7,8 +7,6 @@ import (
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
-	"cloudiac/utils"
-	"fmt"
 )
 
 type PolicyGroup struct {
@@ -197,32 +195,37 @@ func PolicyGroupChecks(c *ctx.GinRequest) {
 	c.JSONResult(apps.PolicyGroupChecks(c.Service(), &form))
 }
 
-// SearchRegistryPolicyGroups registry侧策略组列表
+// SearchRegistryPG registry侧策略组列表
 // @Tags policy_group
 // @Summary registry侧策略组列表
 // @Accept application/x-www-form-urlencoded, application/json
 // @Produce json
-// @Param json body forms.SearchRegistryPolicyGroupForm true "parameter"
-// @router /api/v1/registry/policy_groups [GET]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.PolicyGroup}}
-func SearchRegistryPolicyGroups(c *ctx.GinRequest) {
-	addr := apps.GetRegistryAddrStr(c.Service())
-	api := fmt.Sprintf("%s/%s/%s", addr, "api/v1", "policy_groups")
+// @Param json body forms.SearchRegistryPgForm true "parameter"
+// @router /registry/policy_groups [GET]
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.RegistryPgResp}}
 
-	utils.ReverseProxy(api, c.Context)
+func SearchRegistryPG(c *ctx.GinRequest) {
+	form := forms.SearchRegistryPgForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+
+	c.JSONResult(apps.SearchRegistryPG(c.Service(), &form))
 }
 
-// SearchRegistryPolicyGroupVersions registry侧策略组版本列表
+// SearchRegistryPGVersions registry侧策略组版本列表
 // @Tags policy_group
 // @Summary registry侧策略组版本列表
 // @Accept application/x-www-form-urlencoded, application/json
 // @Produce json
-// @Param json body forms.SearchRegistryPolicyGroupVersionForm true "parameter"
-// @router /api/v1/policy_group/versions [GET]
-// @Success 200 {object} ctx.JSONResult{result=[]forms.RegistryPolicyGroupVersionsResp}
-func SearchRegistryPolicyGroupVersions(c *ctx.GinRequest) {
-	addr := apps.GetRegistryAddrStr(c.Service())
-	api := fmt.Sprintf("%s/%s/%s", addr, "api/v1", "policy_group/versions")
+// @Param json body forms.SearchRegistryPgVersForm true "parameter"
+// @router /registry/policy_groups/versions [GET]
+// @Success 200 {object} ctx.JSONResult{result=[]apps.RegistryPGVerResp}
+func SearchRegistryPGVersions(c *ctx.GinRequest) {
+	form := forms.SearchRegistryPgVersForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
 
-	utils.ReverseProxy(api, c.Context)
+	c.JSONResult(apps.SearchRegistryPGVersions(c.Service(), &form))
 }

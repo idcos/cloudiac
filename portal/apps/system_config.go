@@ -87,10 +87,5 @@ func UpsertRegistryAddr(c *ctx.ServiceContext, form *forms.RegistryAddrForm) (in
 }
 
 func GetRegistryAddrStr(c *ctx.ServiceContext) string {
-	cfg, err := services.GetSystemConfigByName(c.DB(), models.SysCfgNamRegistryAddr)
-	if err == nil && cfg != nil {
-		return cfg.Value
-	}
-
-	return configs.Get().RegistryAddr
+	return services.GetRegistryAddrStr(c.DB())
 }
