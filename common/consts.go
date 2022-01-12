@@ -89,12 +89,18 @@ const (
 	VcsGitee  = "gitee"
 	VcsGithub = "github"
 
+	// PolicyStatusPending 检测中
 	PolicyStatusPending    = "pending"
+	// PolicyStatusPassed 通过
 	PolicyStatusPassed     = "passed"
 	PolicyStatusFailed     = "failed"
+	// PolicyStatusViolated 不通过
 	PolicyStatusViolated   = "violated"
+	// PolicyStatusSuppressed 屏蔽
 	PolicyStatusSuppressed = "suppressed"
+	//PolicyStatusEnable 未检测
 	PolicyStatusEnable     = "enable"
+	//PolicyStatusDisable 未开启
 	PolicyStatusDisable    = "disable"
 
 	PolicySeverityHigh   = "high"

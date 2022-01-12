@@ -425,7 +425,7 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 		}
 		// 如果开启
 		scanTask, err := services.GetTplLastScanTask(c.DB(), v.Id)
-		if err != nil {
+		if err != nil && !e.IsRecordNotFound(err){
 			return nil, e.New(e.DBError, err)
 		}
 		v.PolicyStatus = models.PolicyStatusConversion(scanTask.Status, v.PolicyEnable)
