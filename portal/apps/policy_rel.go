@@ -6,7 +6,6 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
-	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
@@ -24,7 +23,7 @@ func UpdatePolicyRelNew(c *ctx.ServiceContext, form *forms.UpdatePolicyRelForm) 
 		}
 	}()
 
-	result, err := UpdatePolicyRel(tx, form)
+	result, err := services.UpdatePolicyRel(tx, form)
 	if err != nil {
 		_ = tx.Rollback()
 		return nil, err
@@ -37,67 +36,8 @@ func UpdatePolicyRelNew(c *ctx.ServiceContext, form *forms.UpdatePolicyRelForm) 
 	return result, nil
 }
 
-// UpdatePolicyRel 创建/更新策略关系
-func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]models.PolicyRel, e.Error) {
-	logs.Get().Info("action", fmt.Sprintf("create policy relation %s %s", form.Scope, form.Id))
-
-	var (
-		env  *models.Env
-		tpl  *models.Template
-		rels []models.PolicyRel
-		err  e.Error
-	)
-	if form.Scope == consts.ScopeEnv {
-		env, err = services.GetEnvById(tx, form.Id)
-		if err != nil {
-			return nil, e.New(err.Code(), err, http.StatusBadRequest)
-		}
-	} else {
-		tpl, err = services.GetTemplateById(tx, form.Id)
-		if err != nil {
-			return nil, e.New(err.Code(), err, http.StatusBadRequest)
-		}
-	}
-
-	// 删除原有关联关系
-	if err := services.DeletePolicyGroupRel(tx, form.Id, form.Scope); err != nil {
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	}
-
-	// 创新新的关联关系
-	for _, groupId := range form.PolicyGroupIds {
-		group, err := services.GetPolicyGroupById(tx, groupId)
-		if err != nil {
-			return nil, e.New(err.Code(), err, http.StatusBadRequest)
-		}
-		if env != nil {
-			rels = append(rels, models.PolicyRel{
-				OrgId:     env.OrgId,
-				ProjectId: env.ProjectId,
-				GroupId:   group.Id,
-				EnvId:     env.Id,
-				Scope:     consts.ScopeEnv,
-			})
-		} else {
-			rels = append(rels, models.PolicyRel{
-				OrgId:   tpl.OrgId,
-				GroupId: group.Id,
-				TplId:   tpl.Id,
-				Scope:   models.PolicyRelScopeTpl,
-			})
-		}
-	}
-
-	if len(rels) > 0 {
-		if er := models.CreateBatch(tx, rels); er != nil {
-			return nil, e.New(e.DBError, er)
-		}
-	}
-	return rels, nil
-}
-
 // EnablePolicyScanRel 启用环境/云模板扫描
-func EnablePolicyScanRel(c *ctx.ServiceContext, form *forms.EnableScanForm) e.Error {
+func EnablePolicyScanRel(c *ctx.ServiceContext, form *forms.EnableScanForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("enable scan %s %s", form.Scope, form.Id))
 
 	var (
@@ -111,12 +51,12 @@ func EnablePolicyScanRel(c *ctx.ServiceContext, form *forms.EnableScanForm) e.Er
 	if form.Scope == consts.ScopeEnv {
 		env, err = services.GetEnvById(query, form.Id)
 		if err != nil {
-			return e.New(err.Code(), err, http.StatusBadRequest)
+			return nil, e.New(err.Code(), err, http.StatusBadRequest)
 		}
 	} else {
 		tpl, err = services.GetTemplateById(query, form.Id)
 		if err != nil {
-			return e.New(err.Code(), err, http.StatusBadRequest)
+			return nil, e.New(err.Code(), err, http.StatusBadRequest)
 		}
 	}
 
@@ -126,28 +66,25 @@ func EnablePolicyScanRel(c *ctx.ServiceContext, form *forms.EnableScanForm) e.Er
 		attrs["policyEnable"] = true
 		if form.Scope == consts.ScopeEnv {
 			if _, err := services.UpdateEnv(query, env.Id, attrs); err != nil {
-				return err
+				return nil, err
 			}
 		} else {
 			if _, err := services.UpdateTemplate(query, tpl.Id, attrs); err != nil {
-				return err
+				return nil, err
 			}
 		}
-
-		return nil
 	} else {
 		if form.Scope == consts.ScopeEnv {
 			attrs["policyEnable"] = false
 			if _, err := services.UpdateEnv(query, env.Id, attrs); err != nil {
-				return err
+				return nil, err
 			}
 		} else {
 			attrs["policyEnable"] = false
 			if _, err := services.UpdateTemplate(query, tpl.Id, attrs); err != nil {
-				return err
+				return nil, err
 			}
 		}
-
-		return nil
 	}
+	return nil, nil
 }

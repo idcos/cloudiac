@@ -368,11 +368,7 @@ func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (in
 	}
 	for _, v := range respPolicyTpls {
 		tplIds = append(tplIds, v.Id)
-		if v.PolicyStatus == "failed" {
-			v.PolicyStatus = common.PolicyStatusViolated
-		} else if v.PolicyStatus == "" {
-			v.PolicyStatus = common.PolicyStatusEnable
-		}
+		v.PolicyStatus = models.PolicyStatusConversion(v.PolicyStatus, v.PolicyEnable)
 	}
 
 	// 根据模板id查询出关联的所有策略组
@@ -453,14 +449,7 @@ func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (in
 		return nil, e.New(e.DBError, err)
 	}
 	for _, v := range respPolicyEnvs {
-		fmt.Println(v.PolicyStatus)
-		envIds = append(envIds, v.Id)
-		if v.PolicyStatus == "failed" {
-			v.PolicyStatus = common.PolicyStatusViolated
-		} else if v.PolicyStatus == "" {
-			v.PolicyStatus = common.PolicyStatusEnable
-			fmt.Println(v.PolicyStatus)
-		}
+		v.PolicyStatus = models.PolicyStatusConversion(v.PolicyStatus, v.PolicyEnable)
 	}
 
 	// 根据环境id查询出关联的所有策略组
