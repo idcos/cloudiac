@@ -19,7 +19,6 @@ CONSUL_ADDRESS=""
 # cloudiac registry 服务地址(选填)，示例：http://registry.cloudiac.org
 REGISTRY_ADDRESS=""
 
-
 # mysql 配置(必填)
 MYSQL_HOST=mysql
 MYSQL_PORT=3306

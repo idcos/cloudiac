@@ -106,7 +106,7 @@ func (Policy) UpdatePolicyTpl(c *ctx.GinRequest) {
 		return
 	}
 	form.Scope = consts.ScopeTemplate
-	c.JSONResult(apps.UpdatePolicyRel(c.Service().Tx(), form))
+	c.JSONResult(apps.UpdatePolicyRelNew(c.Service(), form))
 }
 
 // TplOfPolicy 云模板策略详情
@@ -175,5 +175,5 @@ func (Policy) EnablePolicyTpl(c *ctx.GinRequest) {
 		return
 	}
 	form.Scope = consts.ScopeTemplate
-	c.JSONResult(apps.EnablePolicyScanRel(c.Service(), form))
+	c.JSONResult(nil, apps.EnablePolicyScanRel(c.Service(), form))
 }

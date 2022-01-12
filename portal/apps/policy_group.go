@@ -11,6 +11,7 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
@@ -18,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/Masterminds/semver"
 )
 
@@ -41,7 +43,7 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 		// 检查是否有效的语义话版本
 		v, err := semver.NewVersion(g.GitTags)
 		if err != nil {
-			return nil, e.AutoNew(fmt.Errorf("git tag is invalid semver"), e.BadParam)
+			return nil, e.AutoNew(fmt.Errorf("git tag is invalid semver"), e.BadParam, http.StatusBadRequest)
 		}
 		g.Version = v.String()
 	} else if form.HasKey("branch") && form.Branch != "" {
@@ -56,6 +58,12 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 		g.Dir = consts.DirRoot
 	}
 
+	// 策略组仓库解析
+	policies, er := PolicyGroupRepoDownloadAndParse(&g)
+	if er != nil {
+		return nil, e.New(e.InternalError, errors.Wrapf(er, "download and parse"), http.StatusInternalServerError)
+	}
+
 	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
@@ -64,7 +72,7 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 		}
 	}()
 
-	logger.Debugf("creating policy group")
+	// 策略组创建
 	group, err := services.CreatePolicyGroup(tx, &g)
 	if err != nil && err.Code() == e.PolicyGroupAlreadyExist {
 		_ = tx.Rollback()
@@ -72,14 +80,14 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 	} else if err != nil {
 		_ = tx.Rollback()
 		logger.Errorf("error creating policy group, err %s", err)
-		return nil, e.AutoNew(err, e.DBError)
+		return nil, e.AutoNew(err, http.StatusInternalServerError, e.DBError)
 	}
 
-	// 策略仓库同步
-	err = RepoPolicyCreate(tx, group, c.OrgId, c.UserId)
+	// 策略创建
+	err = policiesUpsert(tx, c.UserId, c.OrgId, group, policies)
 	if err != nil {
 		_ = tx.Rollback()
-		return nil, err
+		return nil, e.AutoNew(err, http.StatusInternalServerError, e.DBError)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -100,7 +108,8 @@ type PolicyGroupResp struct {
 
 // SearchPolicyGroup 查询策略组列表
 func SearchPolicyGroup(c *ctx.ServiceContext, form *forms.SearchPolicyGroupForm) (interface{}, e.Error) {
-	query := services.SearchPolicyGroup(c.DB(), c.OrgId, form.Q)
+	query := services.QueryWithOrgId(c.DB(), c.OrgId)
+	query = services.SearchPolicyGroup(query, c.OrgId, form.Q)
 	policyGroupResps := make([]PolicyGroupResp, 0)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	if err := p.Scan(&policyGroupResps); err != nil {
@@ -168,7 +177,26 @@ func UpdatePolicyGroup(c *ctx.ServiceContext, form *forms.UpdatePolicyGroupForm)
 		}
 	}
 
-	tx := c.Tx()
+	pg := models.PolicyGroup{}
+	pg.Id = form.Id
+
+	var (
+		policies []*services.PolicyWithMeta
+		er       error
+	)
+	// 未对仓库信息进行修改时，不重新同步策略数据
+	needsSync := false
+	if form.HasKey("vcsId") && form.HasKey("repoId") &&
+		(form.HasKey("gitTags") || form.HasKey("branch")) && form.HasKey("dir") {
+		needsSync = true
+		// 策略组仓库解析
+		policies, er = PolicyGroupRepoDownloadAndParse(&pg)
+		if er != nil {
+			return nil, e.New(e.InternalError, errors.Wrapf(er, "parse rego"), http.StatusInternalServerError)
+		}
+	}
+
+	tx := services.QueryWithOrgId(c.Tx(), c.OrgId)
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -176,27 +204,17 @@ func UpdatePolicyGroup(c *ctx.ServiceContext, form *forms.UpdatePolicyGroupForm)
 		}
 	}()
 
-	pg := models.PolicyGroup{}
-	pg.Id = form.Id
 	if err := services.UpdatePolicyGroup(tx, &pg, attr); err != nil {
 		_ = tx.Rollback()
 		return nil, err
 	}
 
-	// 未对仓库信息进行修改时，不重新同步策略数据
-	if form.HasKey("vcsId") && form.HasKey("repoId") &&
-		(form.HasKey("gitTags") || form.HasKey("branch")) && form.HasKey("dir") {
-		// 重新同步策略前需要把之前的策略删除
-		if _, err := services.DeletePolicy(tx, pg.Id); err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
-
-		// 策略仓库同步
-		err := RepoPolicyCreate(tx, &pg, c.OrgId, c.UserId)
+	if needsSync {
+		// 策略同步
+		err := policiesUpsert(tx, c.UserId, c.OrgId, &pg, policies)
 		if err != nil {
 			_ = tx.Rollback()
-			return nil, err
+			return nil, e.AutoNew(err, http.StatusInternalServerError, e.DBError)
 		}
 	}
 
@@ -210,7 +228,7 @@ func UpdatePolicyGroup(c *ctx.ServiceContext, form *forms.UpdatePolicyGroupForm)
 
 // DeletePolicyGroup 删除策略组
 func DeletePolicyGroup(c *ctx.ServiceContext, form *forms.DeletePolicyGroupForm) (interface{}, e.Error) {
-	tx := c.Tx()
+	tx := services.QueryWithOrgId(c.Tx(), c.OrgId)
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -246,7 +264,8 @@ func DeletePolicyGroup(c *ctx.ServiceContext, form *forms.DeletePolicyGroupForm)
 
 // DetailPolicyGroup 查询策略组详情
 func DetailPolicyGroup(c *ctx.ServiceContext, form *forms.DetailPolicyGroupForm) (interface{}, e.Error) {
-	pg, err := services.DetailPolicyGroup(c.DB(), form.Id)
+	query := services.QueryWithOrgId(c.DB(), c.OrgId)
+	pg, err := services.DetailPolicyGroup(query, form.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +282,7 @@ func DetailPolicyGroup(c *ctx.ServiceContext, form *forms.DetailPolicyGroupForm)
 
 // OpPolicyAndPolicyGroupRel 创建和修改策略和策略组的关系
 func OpPolicyAndPolicyGroupRel(c *ctx.ServiceContext, form *forms.OpnPolicyAndPolicyGroupRelForm) (interface{}, e.Error) {
-	tx := c.Tx()
+	tx := services.QueryWithOrgId(c.Tx(), c.OrgId)
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -337,7 +356,7 @@ type LastScanTaskResp struct {
 }
 
 func PolicyGroupScanTasks(c *ctx.ServiceContext, form *forms.PolicyLastTasksForm) (interface{}, e.Error) {
-	query := services.GetPolicyGroupScanTasks(c.DB(), form.Id)
+	query := services.GetPolicyGroupScanTasks(c.DB(), form.Id, c.OrgId)
 
 	// 默认按创建时间逆序排序
 	if form.SortField() == "" {
@@ -388,7 +407,8 @@ func PolicyGroupScanTasks(c *ctx.ServiceContext, form *forms.PolicyLastTasksForm
 
 func SearchGroupOfPolicy(c *ctx.ServiceContext, form *forms.SearchGroupOfPolicyForm) (interface{}, e.Error) {
 	resp := make([]models.Policy, 0)
-	query := services.SearchGroupOfPolicy(c.DB(), form.Id, form.IsBind)
+	query := services.QueryWithOrgId(c.DB(), c.OrgId)
+	query = services.SearchGroupOfPolicy(query, form.Id, form.IsBind)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	if err := p.Scan(&resp); err != nil {
 		return nil, e.New(e.DBError, err)
@@ -412,7 +432,8 @@ func PolicyGroupScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportFo
 		// 往回 30 天
 		form.From = utils.LastDaysMidnight(30, form.To)
 	}
-	scanStatus, err := services.GetPolicyScanStatus(c.DB(), form.Id, form.From, form.To, consts.ScopePolicyGroup)
+	query := services.QueryWithOrgId(c.DB(), c.OrgId)
+	scanStatus, err := services.GetPolicyScanStatus(query, form.Id, form.From, form.To, consts.ScopePolicyGroup)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -542,4 +563,38 @@ func SearchRegistryPGVersions(c *ctx.ServiceContext, form *forms.SearchRegistryP
 		resp.GitTags = append(resp.GitTags, rv.GitTag)
 	}
 	return resp, nil
+}
+
+func PolicyGroupChecks(c *ctx.ServiceContext, form *forms.PolicyGroupChecksForm) (interface{}, e.Error) {
+	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
+
+	if err != nil {
+		return nil, err
+	}
+	vcsService, er := vcsrv.GetVcsInstance(vcs)
+	if er != nil {
+		return nil, e.New(e.VcsError, er)
+	}
+	repo, er := vcsService.GetRepo(form.RepoId)
+	if er != nil {
+		return nil, e.New(e.VcsError, er)
+	}
+
+	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
+		Ref:    form.RepoRevision,
+		Search: consts.PolicyRego,
+		Path:   form.Dir,
+	})
+
+	if er != nil {
+		return nil, e.New(e.VcsError, er)
+	}
+
+	if len(listFiles) == 0 {
+		return nil, e.New(e.PolicyGroupDirError, err)
+	}
+
+	return TemplateChecksResp{
+		CheckResult: consts.TplTfCheckSuccess,
+	}, nil
 }

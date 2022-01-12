@@ -80,6 +80,8 @@ const (
 	DefaultVcsName  = "默认仓库"
 	RegistryVcsName = "Registry"
 
+	PolicyRego = "*.rego"
+
 	NotificationMessageTitle = "CloudIaC平台系统通知"
 
 	GraphDimensionModule   = "module"

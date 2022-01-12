@@ -479,7 +479,6 @@ func GetResourcesGraphModule(resources []services.Resource) interface{} {
 					NodeName:     addr,
 				}
 
-
 				if res.ResourceName == "" {
 					res.ResourceName = addr
 				}

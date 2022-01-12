@@ -3,6 +3,7 @@
 package models
 
 import (
+	"cloudiac/common"
 	"cloudiac/portal/libs/db"
 	"path"
 	"time"
@@ -123,15 +124,28 @@ func (e *Env) MergeTaskStatus() string {
 
 type EnvDetail struct {
 	Env
-	Creator       string `json:"creator"`       // 创建人
-	OperatorId    Id     `json:"operatorId"`    // 执行人ID
-	Operator      string `json:"operator"`      // 执行人
-	ResourceCount int    `json:"resourceCount"` // 资源数量
-	TemplateName  string `json:"templateName"`  // 模板名称
-	KeyName       string `json:"keyName"`       // 密钥名称
-	TaskId        Id     `json:"taskId"`        // 当前作业ID
-	CommitId      string `json:"commitId"`      // Commit ID
-	IsDrift       bool   `json:"isDrift"`
-	PolicyEnable  bool   `json:"policyEnable"`  // 是否开启合规检测
-	PolicyStatus  bool   `json:"policyStatus"` // 环境合规检测任务状态
+	Creator       string   `json:"creator"`       // 创建人
+	OperatorId    Id       `json:"operatorId"`    // 执行人ID
+	Operator      string   `json:"operator"`      // 执行人
+	ResourceCount int      `json:"resourceCount"` // 资源数量
+	TemplateName  string   `json:"templateName"`  // 模板名称
+	KeyName       string   `json:"keyName"`       // 密钥名称
+	TaskId        Id       `json:"taskId"`        // 当前作业ID
+	CommitId      string   `json:"commitId"`      // Commit ID
+	IsDrift       bool     `json:"isDrift"`
+	PolicyEnable  bool     `json:"policyEnable"` // 是否开启合规检测
+	PolicyStatus  string   `json:"policyStatus"` // 环境合规检测任务状态
+	PolicyGroup   []string `json:"policyGroup"`  // 环境相关合规策略组
+}
+
+func (c *EnvDetail) UpdateEnvPolicyStatus() {
+	if c.PolicyEnable {
+		if c.PolicyStatus == "failed" {
+			c.PolicyStatus = common.PolicyStatusViolated
+		} else if c.PolicyStatus == "" {
+			c.PolicyStatus = common.PolicyStatusEnable
+		}
+	} else {
+		c.PolicyStatus = common.PolicyStatusDisable
+	}
 }

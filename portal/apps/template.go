@@ -3,6 +3,7 @@
 package apps
 
 import (
+	"cloudiac/common"
 	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
@@ -15,6 +16,7 @@ import (
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"fmt"
+	"github.com/lib/pq"
 	"net/http"
 )
 
@@ -107,7 +109,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		TfVarsFile:   form.TfVarsFile,
 		TfVersion:    form.TfVersion,
 		PolicyEnable: form.PolicyEnable,
-		Triggers:     form.Triggers,
+		Triggers:     form.TplTriggers,
 	})
 
 	if err != nil {
@@ -137,7 +139,6 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		_ = tx.Rollback()
 		return nil, err
 	}
-
 	{
 		updateVarsForm := forms.UpdateObjectVarsForm{
 			Scope:     consts.ScopeTemplate,
@@ -155,7 +156,6 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		_ = tx.Rollback()
 		return nil, err
 	}
-
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error commit create template, err %s", err)
@@ -216,7 +216,7 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 		attrs["policyEnable"] = form.PolicyEnable
 	}
 	if form.HasKey("triggers") {
-		attrs["triggers"] = form.Triggers
+		attrs["triggers"] = pq.StringArray(form.TplTriggers)
 	}
 
 	if form.HasKey("vcsId") && form.HasKey("repoId") && form.HasKey("repoFullName") {
@@ -325,6 +325,11 @@ func DeleteTemplate(c *ctx.ServiceContext, form *forms.DeleteTemplateForm) (inte
 		return nil, e.New(e.TemplateActiveEnvExists, http.StatusMethodNotAllowed,
 			fmt.Errorf("The cloud template cannot be deleted because there is an active environment"))
 	}
+	// 删除策略组关系
+	if err := services.DeletePolicyGroupRel(tx, form.Id, consts.ScopeTemplate); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
 
 	// 根据ID 删除云模板
 	if err := services.DeleteTemplate(tx, tpl.Id); err != nil {
@@ -332,6 +337,7 @@ func DeleteTemplate(c *ctx.ServiceContext, form *forms.DeleteTemplateForm) (inte
 		c.Logger().Errorf("error commit del template, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
+
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error commit del template, err %s", err)
@@ -346,6 +352,8 @@ type TemplateDetailResp struct {
 	*models.Template
 	Variables   []models.Variable `json:"variables"`
 	ProjectList []models.Id       `json:"projectId"`
+	PolicyGroup []string          `json:"policyGroup"`
+	TplTriggers []string          `json:"tplTriggers" form:"tplTriggers"`
 }
 
 func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*TemplateDetailResp, e.Error) {
@@ -372,11 +380,21 @@ func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*Tem
 		}
 		tpl.RepoFullName = repo.FullName
 	}
+	temp, err := services.GetPolicyRels(c.DB(), tpl.Id, consts.ScopeTemplate)
+	if err != nil {
+		return nil, err
+	}
+	policyGroups := []string{}
+	for _, v := range temp {
+		policyGroups = append(policyGroups, v.PolicyGroupId)
+	}
 
 	tplDetail := &TemplateDetailResp{
 		Template:    tpl,
 		Variables:   varialbeList,
 		ProjectList: project_ids,
+		PolicyGroup: policyGroups,
+		TplTriggers: tpl.Triggers,
 	}
 	return tplDetail, nil
 
@@ -410,11 +428,20 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 		if v.PolicyEnable {
 			scanTask, err := services.GetTplLastScanTask(c.DB(), v.Id)
 			if err != nil {
-				return nil, e.New(e.DBError, err)
+				if e.IsRecordNotFound(err) {
+					// 已经开启没有扫描状态
+					v.PolicyStatus = common.PolicyStatusEnable
+				} else {
+					return nil, e.New(e.DBError, err)
+				}
+			} else {
+				v.PolicyStatus = scanTask.PolicyStatus
+				if v.PolicyStatus == "failed" {
+					v.PolicyStatus = common.PolicyStatusViolated
+				}
 			}
-			v.PolicyStatus = scanTask.Status
 		} else {
-			v.PolicyStatus = "disable"
+			v.PolicyStatus = common.PolicyStatusDisable
 		}
 
 	}

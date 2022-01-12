@@ -192,13 +192,7 @@ func PolicyGroupChecks(c *ctx.GinRequest) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.TemplateChecks(c.Service(), &forms.TemplateChecksForm{
-		Name:         "",
-		RepoId:       form.RepoId,
-		RepoRevision: form.RepoRevision,
-		VcsId:        form.VcsId,
-		Workdir:      form.Dir,
-	}))
+	c.JSONResult(apps.PolicyGroupChecks(c.Service(), &form))
 }
 
 // SearchRegistryPG registry侧策略组列表
