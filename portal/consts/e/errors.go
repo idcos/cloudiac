@@ -171,6 +171,7 @@ const (
 	PolicyScanNotEnabled         = 31280
 	PolicyMetaInvalid            = 31281
 	PolicyRegoInvalid            = 31282
+	PolicyGroupDirError          = 31283
 
 	/// terraform 313
 	InvalidTfVersion = 31300

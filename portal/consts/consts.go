@@ -78,6 +78,7 @@ const (
 	ReposUrlPrefix    = "/repos" // 内置 http git server url prefix
 
 	RegistryVcsBasePath = "repos/policies" // registry vcs 仓库路径
+	PolicyRego = "*.rego"
 
 	NotificationMessageTitle = "CloudIaC平台系统通知"
 
