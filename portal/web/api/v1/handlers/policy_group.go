@@ -201,7 +201,7 @@ func PolicyGroupChecks(c *ctx.GinRequest) {
 // @Accept application/x-www-form-urlencoded, application/json
 // @Produce json
 // @Param json body forms.SearchRegistryPgForm true "parameter"
-// @router /vcs/registry/policy_groups [GET]
+// @router /registry/policy_groups [GET]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.RegistryPgResp}}
 
 func SearchRegistryPG(c *ctx.GinRequest) {
@@ -219,7 +219,7 @@ func SearchRegistryPG(c *ctx.GinRequest) {
 // @Accept application/x-www-form-urlencoded, application/json
 // @Produce json
 // @Param json body forms.SearchRegistryPgVersForm true "parameter"
-// @router /vcs/registry/policy_groups/versions [GET]
+// @router /registry/policy_groups/versions [GET]
 // @Success 200 {object} ctx.JSONResult{result=[]apps.RegistryPGVerResp}
 func SearchRegistryPGVersions(c *ctx.GinRequest) {
 	form := forms.SearchRegistryPgVersForm{}
