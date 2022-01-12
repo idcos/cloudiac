@@ -644,9 +644,6 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	return detail, nil
 }
 
-func UpdateEnvPolicyStatus(env *models.EnvDetail) {
-
-}
 
 // EnvDetail 环境信息详情
 func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDetail, e.Error) {
