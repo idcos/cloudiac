@@ -42,6 +42,7 @@ var Polices = []Policy{
 	//    3. login: （内置角色）登陆用户（无需组织信息）
 	//    4. admin: 组织管理员
 	//    5. member: 普通用户
+	//    6. compliancemanager: 合规管理员
 	//    项目角色
 	//    1. manager: 管理者
 	//    2. approver: 审批者
@@ -71,15 +72,27 @@ var Polices = []Policy{
 	{"login", "webhook", "*"},
 
 	// 合规策略
-	// 暂时只开放给平台管理员
-	{"root", "policies", "*"},
+	// 组织角色
+	{"admin", "policies", "*"},
+	{"member", "policies", "read"},
+	{"compliancemanager", "policies", "*"},
+	// 项目角色
+	{"manager", "policies", "suppress/enablescan/scan"},
+	{"approver", "policies", "suppress/enablescan/scan"},
+	{"operator", "policies", "suppress/scan"},
+	{"manager", "policies", "read"},
+	{"approver", "policies", "read"},
+	{"operator", "policies", "read"},
+	{"guest", "policies", "read"},
 
 	// 用户
 	{"admin", "users", "*"},
 	{"member", "users", "read"},
+	{"compliancemanager", "users", "read"},
 	{"login", "self", "read/update"},
 	{"admin", "self", "read/update"},
 	{"member", "self", "read/update"},
+	{"compliancemanager", "self", "read/update"},
 
 	// 组织
 	{"root", "orgs", "*"},
@@ -87,34 +100,33 @@ var Polices = []Policy{
 	{"admin", "orgs", "read/update"},
 	{"admin", "orgs", "listuser/adduser/removeuser/updaterole"},
 	{"member", "orgs", "read"},
-
-	// 资源账号(变量组)
-	{"admin", "var_groups", "*"},
-	{"member", "var_groups", "read"},
-
-	{"admin", "projects", "*"},
-	{"member", "projects", "read"},
-
-	{"admin", "templates", "*"},
-	{"member", "templates", "read"},
-
-	{"admin", "variables", "*"},
-	{"member", "variables", "read"},
+	{"compliancemanager", "orgs", "read"},
 
 	// 项目
+	{"admin", "projects", "*"},
+	{"member", "projects", "read"},
+	{"compliancemanager", "projects", "read"},
 	{"manager", "projects", "*"},
 	{"approver", "projects", "read"},
 	{"operator", "projects", "read"},
 	{"guest", "projects", "read"},
 
+	// 环境
 	{"manager", "envs", "*"},
-	{"manager", "tasks", "*"},
 	{"approver", "envs", "*"},
-	{"approver", "tasks", "*"},
 	{"operator", "envs", "read/update/deploy/destroy"},
-	{"operator", "tasks", "read"},
 	{"guest", "envs", "read"},
+
+	// 任务
+	{"manager", "tasks", "*"},
+	{"approver", "tasks", "*"},
+	{"operator", "tasks", "read"},
 	{"guest", "tasks", "read"},
+
+	// 云模板
+	{"admin", "templates", "*"},
+	{"member", "templates", "read"},
+	{"compliancemanager", "templates", "read"},
 
 	{"manager", "templates", "*"},
 	{"approver", "templates", "*"},
@@ -124,14 +136,21 @@ var Polices = []Policy{
 	// 变量
 	{"admin", "variables", "*"},
 	{"member", "variables", "read"},
+	{"compliancemanager", "variables", "read"},
 
 	{"manager", "variables", "*"},
 	{"approver", "variables", "*"},
 	{"operator", "variables", "*"},
 	{"guest", "variables", "read"},
 
+	// 资源账号(变量组)
+	{"admin", "var_groups", "*"},
+	{"member", "var_groups", "read"},
+	{"compliancemanager", "var_groups", "read"},
+
 	//token
 	{"admin", "tokens", "*"},
+	{"compliancemanager", "tokens", "*"},
 
 	{"manager", "tokens", "*"},
 	{"approver", "tokens", "*"},
@@ -140,10 +159,12 @@ var Polices = []Policy{
 	//通知
 	{"admin", "notifications", "*"},
 	{"member", "notifications", "read"},
+	{"compliancemanager", "notifications", "read"},
 
 	//vcs
 	{"admin", "vcs", "*"},
 	{"member", "vcs", "read"},
+	{"compliancemanager", "vcs", "read"},
 
 	{"manager", "vcs", "read"},
 	{"approver", "vcs", "read"},
@@ -152,6 +173,7 @@ var Polices = []Policy{
 
 	//runner
 	{"member", "runners", "read"},
+	{"compliancemanager", "runners", "read"},
 	{"manager", "runners", "read"},
 	{"approver", "runners", "read"},
 	{"operator", "runners", "read"},
@@ -160,6 +182,23 @@ var Polices = []Policy{
 	// 密钥
 	{"admin", "keys", "*"},
 	{"member", "keys", "*"},
+	{"compliancemanager", "keys", "*"},
+
+	// Registry 配置
+	{"admin", "system_config", "*"},
+	{"member", "system_config", "read"},
+	{"compliancemanager", "system_config", "read"},
+
+	{"manager", "system_config", "*"},
+	{"approver", "system_config", "read"},
+	{"operator", "system_config", "read"},
+	{"guest", "system_config", "read"},
+
+	// Registry
+	{"manager", "registry", "*"},
+	{"approver", "registry", "read"},
+	{"operator", "registry", "read"},
+	{"guest", "registry", "read"},
 
 	// 演示模式，当访问演示组织下的资源，进入受限模式
 	{"demo", "orgs", "read"},
@@ -175,4 +214,6 @@ var Polices = []Policy{
 	{"demo", "envs", "*"},
 	{"demo", "tasks", "*"},
 	{"demo", "variables", "*"},
+	{"demo", "policies", "read"},
+	{"demo", "registry", "read"},
 }

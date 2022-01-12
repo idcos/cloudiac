@@ -81,6 +81,7 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 	}
 
 	tx := c.Tx()
+	tx = services.QueryWithOrgId(tx, c.OrgId)
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -212,7 +213,7 @@ func ScanEnvironment(c *ctx.ServiceContext, form *forms.ScanEnvironmentForm) (*m
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
 
-	tx := c.Tx()
+	tx := services.QueryWithOrgId(c.Tx(), c.OrgId)
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -339,7 +340,8 @@ func SearchPolicy(c *ctx.ServiceContext, form *forms.SearchPolicyForm) (interfac
 
 // DetailPolicy 查询策略组详情
 func DetailPolicy(c *ctx.ServiceContext, form *forms.DetailPolicyForm) (interface{}, e.Error) {
-	return services.DetailPolicy(c.DB(), form.Id)
+	query := services.QueryWithOrgId(c.DB(), c.OrgId)
+	return services.DetailPolicy(query, form.Id)
 }
 
 type RespPolicyTpl struct {
@@ -559,7 +561,8 @@ type RespTplOfPolicyGroup struct {
 
 func TplOfPolicyGroup(c *ctx.ServiceContext, form *forms.TplOfPolicyGroupForm) (interface{}, e.Error) {
 	resp := make([]RespTplOfPolicyGroup, 0)
-	query := services.TplOfPolicyGroup(c.DB(), form)
+	query := services.QueryWithOrgId(c.DB(), c.OrgId)
+	query = services.TplOfPolicyGroup(query, form)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	if err := p.Scan(&resp); err != nil {
 		return nil, e.New(e.DBError, err)
@@ -592,7 +595,8 @@ func (PolicyErrorResp) TableName() string {
 
 // PolicyError 获取合规错误列表，包含最后一次检测错误和合规不通过，排除已经屏蔽的条目
 func PolicyError(c *ctx.ServiceContext, form *forms.PolicyErrorForm) (interface{}, e.Error) {
-	query := services.PolicyError(c.DB(), form.Id)
+	query := services.QueryWithOrgId(c.DB(), c.OrgId, models.PolicyResult{}.TableName())
+	query = services.PolicyError(query, form.Id)
 	if form.HasKey("q") {
 		query = query.Where(fmt.Sprintf("env_name LIKE '%%%s%%' or template_name LIKE '%%%s%%'", form.Q, form.Q))
 	}
@@ -606,11 +610,12 @@ type ParseResp struct {
 // ParseTemplate 解析云模板/环境源码
 func ParseTemplate(c *ctx.ServiceContext, form *forms.PolicyParseForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("parse template %s env %s", form.TemplateId, form.EnvId))
+	query := services.QueryWithOrgId(c.DB(), c.OrgId)
 
 	tplId := form.TemplateId
 	envId := models.Id("")
 	if form.HasKey("envId") {
-		env, err := services.GetEnvById(c.DB(), form.EnvId)
+		env, err := services.GetEnvById(query, form.EnvId)
 		if err != nil {
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)
 		}
@@ -634,7 +639,7 @@ func ParseTemplate(c *ctx.ServiceContext, form *forms.PolicyParseForm) (interfac
 
 	// 等待任务执行完成
 	for {
-		scanTask, err = services.GetScanTaskById(c.DB(), scanTask.Id)
+		scanTask, err = services.GetScanTaskById(query, scanTask.Id)
 		if scanTask.IsExitedStatus(scanTask.Status) {
 			break
 		}
@@ -664,10 +669,17 @@ func ParseTemplate(c *ctx.ServiceContext, form *forms.PolicyParseForm) (interfac
 }
 
 type ScanResultPageResp struct {
-	Task     *models.ScanTask `json:"task"`     // 扫描任务
-	Total    int64            `json:"total"`    // 总数
-	PageSize int              `json:"pageSize"` // 分页数量
-	List     []PolicyResult   `json:"list"`     // 扫描结果
+	Task     *models.ScanTask     `json:"task"`     // 扫描任务
+	Total    int64                `json:"total"`    // 总数
+	PageSize int                  `json:"pageSize"` // 分页数量
+	List     []*PolicyResultGroup `json:"groups"`   // 策略组
+}
+
+type PolicyResultGroup struct {
+	Id      models.Id      `json:"id"`
+	Name    string         `json:"name"`
+	Summary Summary        `json:"summary"`
+	List    []PolicyResult `json:"list"` // 策略扫描结果
 }
 
 type PolicyResult struct {
@@ -681,14 +693,16 @@ type PolicyResult struct {
 
 func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicyScanResultForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("scan result %s %s", scope, form.Id))
+	query := services.QueryWithOrgId(c.DB(), c.OrgId)
+
 	var (
 		scanTask *models.ScanTask
 		err      error
 	)
 	if scope == consts.ScopeEnv {
-		scanTask, err = services.GetEnvLastScanTask(c.DB(), form.Id)
+		scanTask, err = services.GetEnvLastScanTask(query, form.Id)
 	} else if scope == consts.ScopeTemplate {
-		scanTask, err = services.GetTplLastScanTask(c.DB(), form.Id)
+		scanTask, err = services.GetTplLastScanTask(query, form.Id)
 	} else {
 		return nil, e.New(e.InternalError, fmt.Errorf("unknown policy scan result scope '%s'", scope))
 	}
@@ -700,11 +714,13 @@ func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicySca
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	query := services.QueryPolicyResult(c.DB(), scanTask.Id)
+	query = services.QueryWithOrgId(c.DB(), c.OrgId, models.PolicyResult{}.TableName())
+	query = services.QueryPolicyResult(query, scanTask.Id)
 	if form.SortField() == "" {
 		query = query.Order("policy_group_name, policy_name")
 	} else {
-		query = form.Order(query)
+		// 优先分组排序，再做分组内排序
+		query = query.Order(fmt.Sprintf("policy_group_name, %s %s", form.SortField(), form.SortOrder()))
 	}
 	results := make([]PolicyResult, 0)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
@@ -712,11 +728,35 @@ func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicySca
 		return nil, e.New(e.DBError, err)
 	}
 
+	// 按策略组分组
+	var lastGroup PolicyResultGroup
+	var resultGroups []*PolicyResultGroup
+	for i, r := range results {
+		if lastGroup.Name != r.PolicyGroupName {
+			lastGroup = PolicyResultGroup{
+				Id:   r.PolicyGroupId,
+				Name: r.PolicyGroupName,
+			}
+			resultGroups = append(resultGroups, &lastGroup)
+		}
+		lastGroup.List = append(lastGroup.List, results[i])
+		switch r.Status {
+		case common.PolicyStatusPassed:
+			lastGroup.Summary.Passed++
+		case common.PolicyStatusViolated:
+			lastGroup.Summary.Violated++
+		case common.PolicyStatusFailed:
+			lastGroup.Summary.Failed++
+		case common.PolicyStatusSuppressed:
+			lastGroup.Summary.Suppressed++
+		}
+	}
+
 	return ScanResultPageResp{
 		Task:     scanTask,
 		Total:    p.MustTotal(),
 		PageSize: p.Size,
-		List:     results,
+		List:     resultGroups,
 	}, nil
 }
 
@@ -769,7 +809,8 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 		}
 	}
 
-	scanStatus, err := services.GetPolicyScanStatus(c.DB(), form.Id, form.From, form.To, consts.ScopePolicy)
+	query := services.QueryWithOrgId(c.DB(), c.OrgId)
+	scanStatus, err := services.GetPolicyScanStatus(query, form.Id, form.From, form.To, consts.ScopePolicy)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -843,7 +884,7 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 		Value: totalSummary.Failed,
 	})
 
-	scanTaskStatus, err := services.GetPolicyScanByTarget(c.DB(), form.Id, form.From, form.To, form.ShowCount)
+	scanTaskStatus, err := services.GetPolicyScanByTarget(c.DB(), form.Id, form.From, form.To, form.ShowCount, c.OrgId)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -972,11 +1013,11 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	lastTo := from
 	lastFrom := utils.LastDaysMidnight(15, lastTo)
 
-	dbSess := c.DB()
+	query := services.QueryWithOrgId(c.DB(), c.OrgId)
 	summaryResp := PolicySummaryResp{}
 
 	// 近15天数据
-	scanStatus, err := services.GetPolicyStatusByPolicy(dbSess, from, to, "", c.OrgId)
+	scanStatus, err := services.GetPolicyStatusByPolicy(query, from, to, "", c.OrgId)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -995,7 +1036,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	}
 
 	// 16～30天数据
-	lastScanStatus, err := services.GetPolicyStatusByPolicy(dbSess, lastFrom, lastTo, "", c.OrgId)
+	lastScanStatus, err := services.GetPolicyStatusByPolicy(query, lastFrom, lastTo, "", c.OrgId)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -1036,13 +1077,13 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	// 2. 未解决错误策略
 	{
 		// 最近 15 天
-		unresolvedPolicies, err := services.QueryPolicyStatusEveryTargetLastRun(dbSess, from, to)
+		unresolvedPolicies, err := services.QueryPolicyStatusEveryTargetLastRun(query, from, to)
 		if err != nil {
 			return nil, e.AutoNew(errors.Wrap(err, "QueryPolicyStatusEveryTargetLastRun"), e.DBError)
 		}
 
 		// 前一个 15天
-		lastUnresolvedPolicies, err := services.QueryPolicyStatusEveryTargetLastRun(dbSess, lastFrom, lastTo)
+		lastUnresolvedPolicies, err := services.QueryPolicyStatusEveryTargetLastRun(query, lastFrom, lastTo)
 		if err != nil {
 			return nil, e.AutoNew(errors.Wrap(err, "QueryPolicyStatusEveryTargetLastRun"), e.DBError)
 		}
@@ -1083,7 +1124,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	}
 
 	// 3. 策略未通过
-	violatedScanStatus, err := services.GetPolicyStatusByPolicy(dbSess, from, to, common.PolicyStatusViolated, c.OrgId)
+	violatedScanStatus, err := services.GetPolicyStatusByPolicy(query, from, to, common.PolicyStatusViolated, c.OrgId)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -1097,7 +1138,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	summaryResp.PolicyViolated = p
 
 	// 4. 策略组未通过
-	violatedGroupScanStatus, err := services.GetPolicyStatusByPolicyGroup(dbSess, from, to, common.PolicyStatusViolated)
+	violatedGroupScanStatus, err := services.GetPolicyStatusByPolicyGroup(query, from, to, common.PolicyStatusViolated)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -1113,16 +1154,16 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	return &summaryResp, nil
 }
 
-func RepoPolicyCreate(tx *db.Session, g *models.PolicyGroup, orgId, userId models.Id) e.Error {
-	// 策略仓库同步
+// PolicyGroupRepoDownloadAndParse 下载和解析策略组文件
+func PolicyGroupRepoDownloadAndParse(g *models.PolicyGroup) ([]*services.PolicyWithMeta, error) {
 	// 1. 生成临时工作目录
 	logger := logs.Get()
 	logger.Debugf("creating tmp dir")
 	tmpDir, er := os.MkdirTemp("", "*")
 	if er != nil {
-		return e.New(e.InternalError, errors.Wrapf(er, "create tmp dir"), http.StatusInternalServerError)
+		return nil, er
 	}
-	//defer os.RemoveAll(tmpDir)
+	defer os.RemoveAll(tmpDir)
 	logger.Debugf("tmp dir %s", tmpDir)
 
 	// 2. clone 策略组
@@ -1133,42 +1174,66 @@ func RepoPolicyCreate(tx *db.Session, g *models.PolicyGroup, orgId, userId model
 	wg.Wait()
 	if result.Error != nil {
 		logger.Errorf("error download policy group, err %s", result.Error)
-		return result.Error
+		return nil, result.Error
 	}
 
 	// 3. 遍历策略组目录，解析策略文件
 	logger.Debugf("parsing policy group")
-	// TODO: import summary
-	policies, er := services.ParsePolicyGroup(filepath.Join(tmpDir, "code", g.Dir))
-	if er != nil {
-		return e.New(e.InternalError, errors.Wrapf(er, "parse rego"), http.StatusInternalServerError)
+	return services.ParsePolicyGroup(filepath.Join(tmpDir, "code", g.Dir))
+}
+
+// policiesUpsert 策略文件同步
+func policiesUpsert(tx *db.Session, userId models.Id, orgId models.Id, policyGroup *models.PolicyGroup, policyMetas []*services.PolicyWithMeta) e.Error {
+	// 4. 策略同步
+
+	// 删除仓库中已经不存在的策略
+	ops, _ := services.GetPoliciesByGroupId(tx, policyGroup.Id, orgId)
+	if len(ops) > 0 {
+		for _, oldPolicy := range ops {
+			found := false
+			for _, newPolicy := range policyMetas {
+				if newPolicy.Meta.Name == oldPolicy.Name {
+					found = true
+				}
+			}
+			if !found {
+				_, er := tx.Delete(oldPolicy)
+				if er != nil {
+					return e.New(e.DBError, er)
+				}
+			}
+		}
 	}
 
-	// 策略文件入库
-	logger.Debugf("creating policy")
-	for _, p := range policies {
-		p := models.Policy{
+	// 创建/更新策略
+	for _, pm := range policyMetas {
+		np := models.Policy{
 			OrgId:     orgId,
 			CreatorId: userId,
-			GroupId:   g.Id,
+			GroupId:   policyGroup.Id,
 
-			Name:          p.Meta.Name,
-			RuleName:      p.Meta.Name,
-			ReferenceId:   p.Meta.ReferenceId,
-			Revision:      p.Meta.Version,
-			FixSuggestion: p.Meta.FixSuggestion,
-			Severity:      p.Meta.Severity,
-			ResourceType:  p.Meta.ResourceType,
-			PolicyType:    p.Meta.PolicyType,
-			Tags:          p.Meta.Category,
+			Name:          pm.Meta.Name,
+			RuleName:      pm.Meta.Name,
+			ReferenceId:   pm.Meta.ReferenceId,
+			Revision:      pm.Meta.Version,
+			FixSuggestion: pm.Meta.FixSuggestion,
+			Severity:      pm.Meta.Severity,
+			ResourceType:  pm.Meta.ResourceType,
+			PolicyType:    pm.Meta.PolicyType,
+			Tags:          pm.Meta.Category,
 
-			Rego: p.Rego,
+			Rego: pm.Rego,
 		}
-		_, er = tx.Save(&p)
+		// 如果策略已经存在则更新已经存在的策略
+		op, _ := services.GetPolicyByName(tx, np.Name, policyGroup.Id, orgId)
+		if op != nil {
+			np.Id = op.Id
+		}
+		_, er := tx.Save(&np)
+
 		if er != nil {
 			return e.New(e.DBError, er)
 		}
 	}
-
 	return nil
 }

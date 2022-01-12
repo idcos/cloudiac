@@ -269,7 +269,7 @@ type RegoFile struct {
 	RegoFile string
 }
 
-func ParsePolicyGroup(dirname string) ([]*Policy, error) {
+func ParsePolicyGroup(dirname string) ([]*PolicyWithMeta, error) {
 	files, err := ioutil.ReadDir(dirname)
 	if err != nil {
 		return nil, err
@@ -310,7 +310,7 @@ func ParsePolicyGroup(dirname string) ([]*Policy, error) {
 	}
 
 	// 解析 rego 元信息
-	var policies []*Policy
+	var policies []*PolicyWithMeta
 	for _, r := range regoFiles {
 		p, err := ParseMeta(r.RegoFile, r.MetaFile)
 		if err != nil {
@@ -322,7 +322,7 @@ func ParsePolicyGroup(dirname string) ([]*Policy, error) {
 	return policies, nil
 }
 
-type Policy struct {
+type PolicyWithMeta struct {
 	Id   string `json:"Id"`
 	Meta Meta   `json:"meta"`
 	Rego string `json:"rego"`
@@ -343,7 +343,7 @@ type Meta struct {
 }
 
 //ParseMeta 解析 rego metadata，如果存在 file.json 则从 json 文件读取 metadat，否则通过头部注释读取 metadata
-func ParseMeta(regoFilePath string, metaFilePath string) (policy *Policy, err e.Error) {
+func ParseMeta(regoFilePath string, metaFilePath string) (policy *PolicyWithMeta, err e.Error) {
 	var meta Meta
 	buf, er := os.ReadFile(regoFilePath)
 	if er != nil {
@@ -352,7 +352,7 @@ func ParseMeta(regoFilePath string, metaFilePath string) (policy *Policy, err e.
 	regoContent := string(buf)
 
 	// 1. 如果存在 json metadata，则解析 json 文件
-	policy = &Policy{}
+	policy = &PolicyWithMeta{}
 	if metaFilePath != "" {
 		content, er := os.ReadFile(metaFilePath)
 		if er != nil {
@@ -387,7 +387,7 @@ func ParseMeta(regoFilePath string, metaFilePath string) (policy *Policy, err e.
 	//	# @severity: HIGH
 	//
 	//	## 策略分类(或者叫标签)，多个分类使用逗号分隔
-	//	# @category: cat1,cat2
+	//	# @label: cat1,cat2
 	//
 	//	## 策略修复建议（支持多行）
 	//	# @fix_suggestion:

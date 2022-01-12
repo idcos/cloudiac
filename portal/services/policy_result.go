@@ -145,11 +145,12 @@ func finishPendingScanResult(tx *db.Session, task models.Tasker, message string,
 	return nil
 }
 
-func GetPolicyGroupScanTasks(query *db.Session, policyGroupId models.Id) *db.Session {
+func GetPolicyGroupScanTasks(query *db.Session, policyGroupId, orgId models.Id) *db.Session {
 	t := models.PolicyResult{}.TableName()
 	subQuery := query.Model(models.PolicyResult{}).
 		Select(fmt.Sprintf("%s.task_id,%s.policy_group_id,%s.env_id,%s.tpl_id", t, t, t, t)).
 		Where("iac_policy_result.policy_group_id = ?", policyGroupId).
+		Where("iac_policy_result.org_id = ?", orgId).
 		Group("iac_policy_result.task_id,iac_policy_result.env_id,iac_policy_result.tpl_id,iac_policy_result.policy_group_id")
 
 	q := query.Model(models.ScanTask{}).

@@ -96,7 +96,7 @@ func EnablePolicyScanRel(c *ctx.ServiceContext, form *forms.EnableScanForm) (*mo
 		rel *models.PolicyRel
 	)
 
-	query := c.DB()
+	query := services.QueryWithOrgId(c.DB(), c.OrgId)
 
 	if form.Scope == consts.ScopeEnv {
 		env, err = services.GetEnvById(query, form.Id)
@@ -129,8 +129,8 @@ func EnablePolicyScanRel(c *ctx.ServiceContext, form *forms.EnableScanForm) (*mo
 			}
 		} else {
 			rel = &models.PolicyRel{
-				OrgId:   tpl.OrgId,
-				TplId:   tpl.Id,
+				OrgId: tpl.OrgId,
+				TplId: tpl.Id,
 			}
 		}
 
