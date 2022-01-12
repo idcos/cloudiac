@@ -147,13 +147,13 @@ func ListRepos(c *ctx.ServiceContext, form *forms.GetGitProjectsForm) (interface
 	}
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.VcsError, er)
+		return nil, e.AutoNew(er, e.VcsError)
 	}
 	limit := form.PageSize()
 	offset := utils.PageSize2Offset(form.CurrentPage(), limit)
 	repo, total, er := vcsService.ListRepos("", form.Q, limit, offset)
 	if er != nil {
-		return nil, e.New(e.VcsError, er)
+		return nil, e.AutoNew(er, e.VcsError)
 	}
 	project := make([]*vcsrv.Projects, 0)
 	for _, repo := range repo {
@@ -198,13 +198,12 @@ func listRepoRevision(c *ctx.ServiceContext, form *forms.GetGitRevisionForm, rev
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
+
+	revision = make([]*Revision, 0)
 	for _, v := range revisionList {
-		revision = append(revision, &Revision{
-			v,
-		})
+		revision = append(revision, &Revision{v})
 	}
 	return revision, nil
-
 }
 
 func ListRepoBranches(c *ctx.ServiceContext, form *forms.GetGitRevisionForm) (brans []*Revision, err e.Error) {

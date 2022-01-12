@@ -70,7 +70,6 @@ func RegistryGet(path string, data url.Values, result interface{}) (err error) {
 	}
 
 	if err := json.Unmarshal(resp.Result, result); err != nil {
-		logs.Get().Debugf("response: %+v", resp)
 		logs.Get().Debugf("response body: %s", body)
 		return err
 	}

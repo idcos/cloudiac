@@ -287,9 +287,3 @@ type PolicyGroupChecksForm struct {
 	Dir          string    `json:"dir" form:"dir"`
 	TemplateId   models.Id `json:"templateId" form:"templateId"`
 }
-
-type SearchRegistryPgForm struct {
-	PageForm
-
-	Q string `json:"q" form:"q"`
-}

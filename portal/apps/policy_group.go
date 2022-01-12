@@ -458,6 +458,7 @@ type RegistryPGResp struct {
 	Namespace string `json:"namespace"`
 	GroupId   string `json:"groupId"`
 	GroupName string `json:"groupName"`
+	Label     string `json:"label"`
 }
 
 func SearchRegistryPG(c *ctx.ServiceContext, form *forms.SearchRegistryPgForm) (interface{}, e.Error) {
@@ -466,6 +467,7 @@ func SearchRegistryPG(c *ctx.ServiceContext, form *forms.SearchRegistryPgForm) (
 		Id        string `json:"id"`
 		Namespace string `json:"namespace"`
 		Name      string `json:"name"`
+		Label     string `json:"label"`
 		RepoPath  string `json:"repoPath"`
 	}
 
@@ -498,6 +500,7 @@ func SearchRegistryPG(c *ctx.ServiceContext, form *forms.SearchRegistryPgForm) (
 			Namespace: g.Namespace,
 			GroupId:   g.Id,
 			GroupName: g.Name,
+			Label:     g.Label,
 		})
 	}
 	return page.PageResp{
@@ -505,4 +508,38 @@ func SearchRegistryPG(c *ctx.ServiceContext, form *forms.SearchRegistryPgForm) (
 		Total:    rr.Total,
 		List:     pgs,
 	}, nil
+}
+
+type RegistryPGVerResp struct {
+	Namespace string   `json:"namespace"`
+	GroupName string   `json:"groupName"`
+	GitTags   []string `json:"gitTags"`
+}
+
+func SearchRegistryPGVersions(c *ctx.ServiceContext, form *forms.SearchRegistryPgVersForm) (interface{}, e.Error) {
+	type registryPgVer struct {
+		Id        models.Id `json:"id"`
+		Namespace string    `json:"namespace"`
+		GroupName string    `json:"groupName"`
+		GitTag    string    `json:"gitTag"`
+		CommitId  string    `json:"commitId"`
+	}
+
+	rvs := make([]registryPgVer, 0)
+	val := url.Values{}
+	val.Add("ns", form.Namespace)
+	val.Add("gn", form.GroupName)
+	if err := services.RegistryGet("policies/versions", val, &rvs); err != nil {
+		return nil, e.AutoNew(err, e.RegistryServiceErr)
+	}
+
+	resp := &RegistryPGVerResp{}
+	for i, rv := range rvs {
+		if i == 0 {
+			resp.Namespace = rv.Namespace
+			resp.GroupName = rv.GroupName
+		}
+		resp.GitTags = append(resp.GitTags, rv.GitTag)
+	}
+	return resp, nil
 }
