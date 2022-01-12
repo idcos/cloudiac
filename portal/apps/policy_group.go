@@ -11,6 +11,7 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"fmt"
 	"github.com/Masterminds/semver"
@@ -58,7 +59,7 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 	// 策略组仓库解析
 	policies, er := PolicyGroupRepoDownloadAndParse(&g)
 	if er != nil {
-		return nil, e.New(e.InternalError, errors.Wrapf(er, "parse rego"), http.StatusInternalServerError)
+		return nil, e.New(e.InternalError, errors.Wrapf(er, "download and parse"), http.StatusInternalServerError)
 	}
 
 	tx := c.Tx()
@@ -468,4 +469,38 @@ func PolicyGroupScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportFo
 	}
 
 	return &report, nil
+}
+
+func PolicyGroupChecks(c *ctx.ServiceContext, form *forms.PolicyGroupChecksForm) (interface{}, e.Error) {
+	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
+
+	if err != nil {
+		return nil, err
+	}
+	vcsService, er := vcsrv.GetVcsInstance(vcs)
+	if er != nil {
+		return nil, e.New(e.VcsError, er)
+	}
+	repo, er := vcsService.GetRepo(form.RepoId)
+	if er != nil {
+		return nil, e.New(e.VcsError, er)
+	}
+
+	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
+		Ref:    form.RepoRevision,
+		Search: consts.PolicyRego,
+		Path:   form.Dir,
+	})
+
+	if er != nil {
+		return nil, e.New(e.VcsError, er)
+	}
+
+	if len(listFiles) == 0 {
+		return nil, e.New(e.PolicyGroupDirError, err)
+	}
+
+	return TemplateChecksResp{
+		CheckResult: consts.TplTfCheckSuccess,
+	}, nil
 }

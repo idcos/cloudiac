@@ -24,8 +24,7 @@ func (PolicySuppressResp) TableName() string {
 }
 
 func SearchPolicySuppress(c *ctx.ServiceContext, form *forms.SearchPolicySuppressForm) (interface{}, e.Error) {
-	query := services.QueryWithOrgId(c.DB(), c.OrgId)
-	query = services.SearchPolicySuppress(query, form.Id)
+	query := services.SearchPolicySuppress(c.DB(), form.Id, c.OrgId)
 	if form.SortField() == "" {
 		query = query.Order(fmt.Sprintf("%s.created_at DESC", PolicySuppressResp{}.TableName()))
 	}
@@ -220,8 +219,7 @@ func (PolicySuppressSourceResp) TableName() string {
 }
 
 func SearchPolicySuppressSource(c *ctx.ServiceContext, form *forms.SearchPolicySuppressSourceForm) (interface{}, e.Error) {
-	query := services.QueryWithOrgId(c.DB(), c.OrgId)
-	policy, err := services.GetPolicyById(query, form.Id, c.OrgId)
+	policy, err := services.GetPolicyById(c.DB(), form.Id, c.OrgId)
 	if err != nil {
 		if err.Code() == e.PolicyNotExist {
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)
@@ -229,6 +227,6 @@ func SearchPolicySuppressSource(c *ctx.ServiceContext, form *forms.SearchPolicyS
 			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 		}
 	}
-	query = services.SearchPolicySuppressSource(c.DB(), form, c.UserId, form.Id, policy.GroupId, c.OrgId)
+	query := services.SearchPolicySuppressSource(c.DB(), form, c.UserId, form.Id, policy.GroupId, c.OrgId)
 	return getPage(query, form, PolicySuppressSourceResp{})
 }

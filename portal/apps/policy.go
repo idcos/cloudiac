@@ -573,7 +573,7 @@ type RespTplOfPolicyGroup struct {
 
 func TplOfPolicyGroup(c *ctx.ServiceContext, form *forms.TplOfPolicyGroupForm) (interface{}, e.Error) {
 	resp := make([]RespTplOfPolicyGroup, 0)
-	query := services.QueryWithOrgId(c.DB(), c.OrgId)
+	query := services.QueryWithOrgId(c.DB(), c.OrgId, models.PolicyGroup{}.TableName())
 	query = services.TplOfPolicyGroup(query, form)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	if err := p.Scan(&resp); err != nil {
