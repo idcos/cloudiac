@@ -8,7 +8,7 @@ import (
 	"fmt"
 )
 
-func SearchPolicySuppress(query *db.Session, id models.Id) *db.Session {
+func SearchPolicySuppress(query *db.Session, id, orgId models.Id) *db.Session {
 	q := query.Table(fmt.Sprintf("%s as s", models.PolicySuppress{}.TableName())).
 		LazySelect("s.*")
 
@@ -21,6 +21,7 @@ when s.target_type = 'template' then t.name
 when s.target_type = 'policy' then p.name
 end as target_name`).
 		Where("s.policy_id = ?", id).
+		Where("s.org_id = ?", orgId).
 		Joins("LEFT JOIN iac_user AS u ON s.creator_id = u.id").
 		LazySelectAppend("u.name as creator")
 
