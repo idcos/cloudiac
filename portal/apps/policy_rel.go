@@ -17,6 +17,13 @@ import (
 
 func UpdatePolicyRelNew(c *ctx.ServiceContext, form *forms.UpdatePolicyRelForm) ([]models.PolicyRel, e.Error) {
 	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
 	result, err := UpdatePolicyRel(tx, form)
 	if err != nil {
 		_ = tx.Rollback()
@@ -99,7 +106,7 @@ func EnablePolicyScanRel(c *ctx.ServiceContext, form *forms.EnableScanForm) e.Er
 		err e.Error
 	)
 
-	query := c.DB()
+	query := services.QueryWithOrgId(c.DB(), c.OrgId)
 
 	if form.Scope == consts.ScopeEnv {
 		env, err = services.GetEnvById(query, form.Id)
@@ -116,13 +123,12 @@ func EnablePolicyScanRel(c *ctx.ServiceContext, form *forms.EnableScanForm) e.Er
 	// 添加启用关联
 	attrs := models.Attrs{}
 	if form.Enabled {
+		attrs["policyEnable"] = true
 		if form.Scope == consts.ScopeEnv {
-			attrs["policyEnable"] = true
 			if _, err := services.UpdateEnv(query, env.Id, attrs); err != nil {
 				return err
 			}
 		} else {
-			attrs["policyEnable"] = true
 			if _, err := services.UpdateTemplate(query, tpl.Id, attrs); err != nil {
 				return err
 			}

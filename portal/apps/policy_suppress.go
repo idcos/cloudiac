@@ -24,7 +24,8 @@ func (PolicySuppressResp) TableName() string {
 }
 
 func SearchPolicySuppress(c *ctx.ServiceContext, form *forms.SearchPolicySuppressForm) (interface{}, e.Error) {
-	query := services.SearchPolicySuppress(c.DB(), form.Id)
+	query := services.QueryWithOrgId(c.DB(), c.OrgId)
+	query = services.SearchPolicySuppress(query, form.Id)
 	if form.SortField() == "" {
 		query = query.Order(fmt.Sprintf("%s.created_at DESC", PolicySuppressResp{}.TableName()))
 	}
@@ -34,7 +35,7 @@ func SearchPolicySuppress(c *ctx.ServiceContext, form *forms.SearchPolicySuppres
 func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppressForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update policy suppress %s", form.Id))
 
-	tx := c.Tx()
+	tx := services.QueryWithOrgId(c.Tx(), c.OrgId)
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -166,7 +167,7 @@ func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppres
 }
 
 func DeletePolicySuppress(c *ctx.ServiceContext, form *forms.DeletePolicySuppressForm) (interface{}, e.Error) {
-	tx := c.Tx()
+	tx := services.QueryWithOrgId(c.Tx(), c.OrgId)
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -219,7 +220,8 @@ func (PolicySuppressSourceResp) TableName() string {
 }
 
 func SearchPolicySuppressSource(c *ctx.ServiceContext, form *forms.SearchPolicySuppressSourceForm) (interface{}, e.Error) {
-	policy, err := services.GetPolicyById(c.DB(), form.Id, c.OrgId)
+	query := services.QueryWithOrgId(c.DB(), c.OrgId)
+	policy, err := services.GetPolicyById(query, form.Id, c.OrgId)
 	if err != nil {
 		if err.Code() == e.PolicyNotExist {
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)
@@ -227,6 +229,6 @@ func SearchPolicySuppressSource(c *ctx.ServiceContext, form *forms.SearchPolicyS
 			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 		}
 	}
-	query := services.SearchPolicySuppressSource(c.DB(), form, c.UserId, form.Id, policy.GroupId, c.OrgId)
+	query = services.SearchPolicySuppressSource(c.DB(), form, c.UserId, form.Id, policy.GroupId, c.OrgId)
 	return getPage(query, form, PolicySuppressSourceResp{})
 }
