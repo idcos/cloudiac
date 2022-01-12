@@ -3,7 +3,6 @@
 package apps
 
 import (
-	"cloudiac/common"
 	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
@@ -128,7 +127,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 			Scope:          consts.ScopeTemplate,
 			PolicyGroupIds: form.PolicyGroup,
 		}
-		if _, err = UpdatePolicyRel(tx, policyForm); err != nil {
+		if _, err = services.UpdatePolicyRel(tx, policyForm); err != nil {
 			_ = tx.Rollback()
 			return nil, err
 		}
@@ -246,7 +245,7 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 			Scope:          consts.ScopeTemplate,
 			PolicyGroupIds: form.PolicyGroup,
 		}
-		if _, err = UpdatePolicyRel(tx, policyForm); err != nil {
+		if _, err = services.UpdatePolicyRel(tx, policyForm); err != nil {
 			_ = tx.Rollback()
 			return nil, err
 		}
@@ -425,24 +424,11 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 			vcsIds = append(vcsIds, v.VcsId)
 		}
 		// 如果开启
-		if v.PolicyEnable {
-			scanTask, err := services.GetTplLastScanTask(c.DB(), v.Id)
-			if err != nil {
-				if e.IsRecordNotFound(err) {
-					// 已经开启没有扫描状态
-					v.PolicyStatus = common.PolicyStatusEnable
-				} else {
-					return nil, e.New(e.DBError, err)
-				}
-			} else {
-				v.PolicyStatus = scanTask.PolicyStatus
-				if v.PolicyStatus == "failed" {
-					v.PolicyStatus = common.PolicyStatusViolated
-				}
-			}
-		} else {
-			v.PolicyStatus = common.PolicyStatusDisable
+		scanTask, err := services.GetTplLastScanTask(c.DB(), v.Id)
+		if err != nil {
+			return nil, e.New(e.DBError, err)
 		}
+		v.PolicyStatus = models.PolicyStatusConversion(scanTask.Status, v.PolicyEnable)
 
 	}
 
