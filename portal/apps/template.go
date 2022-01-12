@@ -423,12 +423,18 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 		if v.RepoAddr == "" {
 			vcsIds = append(vcsIds, v.VcsId)
 		}
+		var scanTaskStatus string
 		// 如果开启
 		scanTask, err := services.GetTplLastScanTask(c.DB(), v.Id)
-		if err != nil && !e.IsRecordNotFound(err){
-			return nil, e.New(e.DBError, err)
+		if err != nil {
+			scanTaskStatus = ""
+			if !e.IsRecordNotFound(err) {
+				return nil, e.New(e.DBError, err)
+			}
+		}else {
+			scanTaskStatus = scanTask.Status
 		}
-		v.PolicyStatus = models.PolicyStatusConversion(scanTask.Status, v.PolicyEnable)
+		v.PolicyStatus = models.PolicyStatusConversion(scanTaskStatus, v.PolicyEnable)
 
 	}
 
