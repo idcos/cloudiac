@@ -59,7 +59,13 @@ const (
 	LdapError       = 10410 // ldap 出错
 	MailServerError = 10420
 	ConsulConnError = 10430
-	VcsError        = 10440
+
+	// vcs调用相关错误
+	VcsError          = 10440
+	VcsAddressError   = 10441
+	VcsInvalidToken   = 10442
+	VcsConnectError   = 10445
+	VcsConnectTimeOut = 10446
 
 	//// 导入导出错误 105
 	ImportError       = 10510
@@ -464,6 +470,18 @@ var errorMsgs = map[int]map[string]string{
 	},
 	VcsError: {
 		"zh-cn": "vcs仓库错误",
+	},
+	VcsAddressError: {
+		"zh-cn": "vcs地址错误",
+	},
+	VcsInvalidToken: {
+		"zh-cn": "vcs token权限不足",
+	},
+	VcsConnectError: {
+		"zh-cn": "vcs地址连接失败",
+	},
+	VcsConnectTimeOut: {
+		"zh-cn": "vcs地址连接超时",
 	},
 	VcsNotExists: {
 		"zh-cn": "vcs仓库不存在",
