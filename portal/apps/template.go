@@ -436,7 +436,7 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 				return nil, e.New(e.DBError, err)
 			}
 		} else {
-			scanTaskStatus = scanTask.Status
+			scanTaskStatus = scanTask.PolicyStatus
 		}
 		v.PolicyStatus = models.PolicyStatusConversion(scanTaskStatus, v.PolicyEnable)
 
