@@ -35,7 +35,7 @@ version: "3.2"
 services:
   iac-portal:
     container_name: iac-portal
-    image: "cloudiac/iac-portal:v0.8.1"
+    image: "${DOCKER_REGISTRY}cloudiac/iac-portal:v0.9.0-alpha5"
     volumes:
       - type: bind
         source: /usr/yunji/cloudiac/var
@@ -52,7 +52,7 @@ services:
 
   ct-runner:
     container_name: ct-runner
-    image: "cloudiac/ct-runner:v0.8.1"
+    image: "${DOCKER_REGISTRY}cloudiac/ct-runner:v0.9.0-alpha5"
     volumes:
       - type: bind
         source: /usr/yunji/cloudiac/var
@@ -69,16 +69,9 @@ services:
       - consul
     restart: always
 
-  ct-worker:
-    image: "cloudiac/ct-worker:v0.8.1"
-    container_name: "ct-worker-say-hi"
-    # 添加该服务只是为了自动 pull 镜像，并不需要后台运行
-    command: ["echo", "hello world!"]
-    restart: "no"
-
   iac-web:
     container_name: iac-web
-    image: "cloudiac/iac-web:v0.8.1"
+    image: "${DOCKER_REGISTRY}cloudiac/iac-web:v0.9.0-alpha5"
     ports:
       - 80:80
     restart: always
@@ -147,7 +140,6 @@ CONSUL_ADDRESS=""
 # cloudiac registry 服务地址(选填)，示例：http://registry.cloudiac.org
 REGISTRY_ADDRESS=""
 
-
 # mysql 配置(必填)
 MYSQL_HOST=mysql
 MYSQL_PORT=3306
@@ -163,8 +155,11 @@ SERVICE_ID=iac-portal-01
 ## portal 服务注册的 tags
 SERVICE_TAGS="iac-portal;portal-01"
 
+# docker reigstry 地址，默认为空(使用 docker hub)
+DOCKER_REGISTRY=""
+
 # logger 配置
-LOG_DEVEL="debug"
+LOG_DEVEL="info"
 
 # SMTP 配置(该配置只影响邮件通知的发送，不配置不影响其他功能)
 SMTP_ADDRESS=smtp.example.com:25
@@ -181,7 +176,6 @@ KAFKA_PARTITION=0
 KAFKA_BROKERS=[]
 KAFKA_SASL_USERNAME=""
 KAFKA_SASL_PASSWORD=""
-
 
 ######### 以下为 runner 配置 #############
 # runner 服务注册配置(均为必填)

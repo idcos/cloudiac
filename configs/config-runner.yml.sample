@@ -2,7 +2,7 @@ listen: "0.0.0.0:19030"
 secretKey: "${SECRET_KEY}"
 
 runner:
-  default_image: "cloudiac/ct-worker:latest"
+  default_image: "${DOCKER_REGISTRY}cloudiac/ct-worker:latest"
 
   ## 保存任务运行信息(脚本、日志等)
   storage_path: "var/storage"
