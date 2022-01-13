@@ -1118,6 +1118,8 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 		logger.Infof("task failed: %s", err)
 		startErr = err
 		_ = changeTaskStatus(models.TaskFailed, err.Error())
+		task.PolicyStatus = common.PolicyStatusFailed
+		_, _ = m.db.Save(task)
 	}
 
 	logger.Infof("run task: %s", task.Id)
@@ -1255,7 +1257,7 @@ func (m *TaskManager) processScanTaskDone(taskId models.Id) {
 		logger.Errorf("update task status error: %v", err)
 	}
 
-	if task.Type == common.TaskTypeEnvScan || task.Type == common.TaskTypeScan {
+	if task.Type == common.TaskTypeEnvScan || task.Type == common.TaskTypeScan || task.Type == common.TaskTypeTplScan {
 		if err := processTfResult(); err != nil {
 			logger.Errorf("process task scan: %s", err)
 		}
