@@ -9,6 +9,6 @@ type SearchRegistryPgForm struct {
 type SearchRegistryPgVersForm struct {
 	BaseForm
 
-	Namespace string `json:"ns" form:"ns" binding:"required"`
-	GroupName string `json:"gn" form:"gn" binding:"required"`
+	Namespace string `json:"ns" form:"ns" binding:"required"` // policy namespace
+	GroupName string `json:"gn" form:"gn" binding:"required"` // policy groupname
 }

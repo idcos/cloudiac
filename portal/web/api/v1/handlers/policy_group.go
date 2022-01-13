@@ -196,14 +196,13 @@ func PolicyGroupChecks(c *ctx.GinRequest) {
 }
 
 // SearchRegistryPG registry侧策略组列表
-// @Tags policy_group
+// @Tags registry
 // @Summary registry侧策略组列表
 // @Accept application/x-www-form-urlencoded, application/json
 // @Produce json
 // @Param json body forms.SearchRegistryPgForm true "parameter"
 // @router /registry/policy_groups [GET]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.RegistryPgResp}}
-
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.RegistryPGResp}}
 func SearchRegistryPG(c *ctx.GinRequest) {
 	form := forms.SearchRegistryPgForm{}
 	if err := c.Bind(&form); err != nil {
@@ -214,7 +213,7 @@ func SearchRegistryPG(c *ctx.GinRequest) {
 }
 
 // SearchRegistryPGVersions registry侧策略组版本列表
-// @Tags policy_group
+// @Tags registry
 // @Summary registry侧策略组版本列表
 // @Accept application/x-www-form-urlencoded, application/json
 // @Produce json
