@@ -410,7 +410,7 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		env.MergeTaskStatus()
 		// FIXME: 这里会在 for 循环中查询 db，需要优化
 		PopulateLastTask(c.DB(), env)
-		env.UpdateEnvPolicyStatus()
+		env.PolicyStatus = models.PolicyStatusConversion(env.PolicyStatus,env.PolicyEnable)
 	}
 
 	return page.PageResp{
@@ -677,7 +677,7 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 	for _, v := range resp {
 		envDetail.PolicyGroup = append(envDetail.PolicyGroup, v.PolicyGroupId)
 	}
-	envDetail.UpdateEnvPolicyStatus()
+	envDetail.PolicyStatus = models.PolicyStatusConversion(envDetail.PolicyStatus,envDetail.PolicyEnable)
 
 	return envDetail, nil
 }

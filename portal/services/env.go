@@ -98,7 +98,7 @@ func QueryEnvDetail(query *db.Session) *db.Session {
 		") AS rd ON rd.task_id = iac_env.last_res_task_id").
 		LazySelectAppend("!ISNULL(rd.task_id) AS is_drift")
 	query = query.Joins("left join iac_scan_task on iac_env.last_scan_task_id = iac_scan_task.id").
-		LazySelectAppend("iac_scan_task.status as policy_status")
+		LazySelectAppend("iac_scan_task.policy_status as policy_status")
 
 	return query
 }
