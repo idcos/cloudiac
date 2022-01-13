@@ -241,7 +241,7 @@ func main() {
 		{
 			"./docs/mkdocs/product-deploy/container.md",
 			[]ReplaceRule{
-				&LineRegexReplaceRule{expr: `image: "(cloudiac/[^:]+):latest"`, repl: fmt.Sprintf(`image: "$1:%s"`, version)},
+				&LineRegexReplaceRule{expr: `image: "([^/]*cloudiac/[^:]+):latest"`, repl: fmt.Sprintf(`image: "$1:%s"`, version)},
 			},
 		},
 		{
