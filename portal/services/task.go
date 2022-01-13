@@ -153,7 +153,8 @@ func CloneNewDriftTask(tx *db.Session, src models.Task, env *models.Env) (*model
 	task.AutoApprove = env.AutoApproval
 	task.StopOnViolation = env.StopOnViolation
 	task.RunnerId = env.RunnerId
-	task.KeyId = env.KeyId
+	// newCommonTask方法完成了对keyId赋值，这里不需要在进行一次赋值了
+	//task.KeyId = env.KeyId
 	task.Source = taskSource
 
 	return doCreateTask(tx, *task, tpl, env)
@@ -191,7 +192,7 @@ func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*mode
 		CreatorId:       pt.CreatorId,
 		Variables:       pt.Variables,
 		AutoApprove:     pt.AutoApprove,
-		KeyId:           models.Id(firstVal(string(pt.KeyId), string(env.KeyId))),
+		KeyId:           models.Id(firstVal(string(pt.KeyId), string(env.KeyId), string(tpl.KeyId))),
 		ExtraData:       pt.ExtraData,
 		Revision:        firstVal(pt.Revision, env.Revision, tpl.RepoRevision),
 		CommitId:        pt.CommitId,

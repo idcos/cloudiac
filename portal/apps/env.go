@@ -114,6 +114,10 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
 	}
 
+	if form.HasKey("playbook") && !form.HasKey("keyId") {
+		return nil, e.New(e.TemplateKeyIdNotSet)
+	}
+
 	// 检查模板
 	query := c.DB().Where("status = ?", models.Enable)
 	tpl, err := services.GetTemplateById(query, form.TplId)
@@ -133,6 +137,9 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	}
 	if !form.HasKey("playbook") {
 		form.Playbook = tpl.Playbook
+	}
+	if !form.HasKey("keyId") {
+		form.KeyId = tpl.KeyId
 	}
 
 	if form.Timeout == 0 {
@@ -465,7 +472,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 		return nil, e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
 	}
 
-	tx:=c.Tx()
+	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -643,7 +650,6 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	}
 	return detail, nil
 }
-
 
 // EnvDetail 环境信息详情
 func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDetail, e.Error) {

@@ -127,6 +127,7 @@ const (
 	TemplateNotExists       = 30711
 	TemplateDisabled        = 30712
 	TemplateActiveEnvExists = 30730
+	TemplateKeyIdNotSet     = 30731
 
 	//// environment 308
 	EnvAlreadyExists       = 30810
@@ -574,5 +575,8 @@ var errorMsgs = map[int]map[string]string{
 	},
 	SystemConfigNotExist: {
 		"zh-cn": "当前配置不存在",
+	},
+	TemplateKeyIdNotSet: {
+		"zh-cn": "SSH秘钥未配置",
 	},
 }
