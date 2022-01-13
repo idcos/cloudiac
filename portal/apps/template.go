@@ -215,7 +215,7 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 	if form.HasKey("policyEnable") {
 		attrs["policyEnable"] = form.PolicyEnable
 	}
-	if form.HasKey("triggers") {
+	if form.HasKey("tplTriggers") {
 		attrs["triggers"] = pq.StringArray(form.TplTriggers)
 	}
 	if form.HasKey("keyId") {
@@ -356,7 +356,6 @@ type TemplateDetailResp struct {
 	Variables   []models.Variable `json:"variables"`
 	ProjectList []models.Id       `json:"projectId"`
 	PolicyGroup []string          `json:"policyGroup"`
-	TplTriggers []string          `json:"tplTriggers" form:"tplTriggers"`
 }
 
 func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*TemplateDetailResp, e.Error) {
@@ -397,7 +396,6 @@ func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*Tem
 		Variables:   varialbeList,
 		ProjectList: project_ids,
 		PolicyGroup: policyGroups,
-		TplTriggers: tpl.Triggers,
 	}
 	return tplDetail, nil
 
