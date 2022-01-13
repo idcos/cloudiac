@@ -83,10 +83,6 @@ func getRepo(vcsId models.Id, query *db.Session, repoId string) (*vcsrv.Projects
 func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*models.Template, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create template %s", form.Name))
 
-	if form.HasKey("playbook") && !form.HasKey("keyId") {
-		return nil, e.New(e.TemplateKeyIdNotSet)
-	}
-
 	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
@@ -177,10 +173,6 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 
 func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*models.Template, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update template %s", form.Id))
-
-	if form.HasKey("playbook") && !form.HasKey("keyId") {
-		return nil, e.New(e.TemplateKeyIdNotSet)
-	}
 
 	tpl, err := services.GetTemplateById(c.DB(), form.Id)
 	if err != nil {
