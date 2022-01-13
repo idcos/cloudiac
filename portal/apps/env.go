@@ -527,6 +527,22 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	attrs["cronDriftExpress"] = cronDriftParam.CronDriftExpress
 	attrs["nextDriftTaskTime"] = cronDriftParam.NextDriftTaskTime
 
+	if form.HasKey("name") {
+		attrs["name"] = form.Name
+	}
+
+	if form.HasKey("description") {
+		attrs["description"] = form.Description
+	}
+
+	if form.HasKey("keyId") {
+		attrs["key_id"] = form.KeyId
+	}
+
+	if form.HasKey("runnerId") {
+		attrs["runner_id"] = form.RunnerId
+	}
+	
 	if form.HasKey("retryAble") {
 		attrs["retryAble"] = form.RetryAble
 	}
