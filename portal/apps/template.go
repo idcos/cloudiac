@@ -109,6 +109,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		TfVersion:    form.TfVersion,
 		PolicyEnable: form.PolicyEnable,
 		Triggers:     form.TplTriggers,
+		KeyId:        form.KeyId,
 	})
 
 	if err != nil {
@@ -216,6 +217,9 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 	}
 	if form.HasKey("triggers") {
 		attrs["triggers"] = pq.StringArray(form.TplTriggers)
+	}
+	if form.HasKey("keyId") {
+		attrs["keyId"] = form.KeyId
 	}
 
 	if form.HasKey("vcsId") && form.HasKey("repoId") && form.HasKey("repoFullName") {
@@ -431,7 +435,7 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 			if !e.IsRecordNotFound(err) {
 				return nil, e.New(e.DBError, err)
 			}
-		}else {
+		} else {
 			scanTaskStatus = scanTask.Status
 		}
 		v.PolicyStatus = models.PolicyStatusConversion(scanTaskStatus, v.PolicyEnable)

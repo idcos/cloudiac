@@ -127,6 +127,7 @@ const (
 	TemplateNotExists       = 30711
 	TemplateDisabled        = 30712
 	TemplateActiveEnvExists = 30730
+	TemplateKeyIdNotSet     = 30731
 
 	//// environment 308
 	EnvAlreadyExists       = 30810
@@ -487,16 +488,16 @@ var errorMsgs = map[int]map[string]string{
 		"zh-cn": "作业状态非待审批，不允许操作",
 	},
 	KeyAlreadyExists: {
-		"zh-cn": "管理秘钥已存在",
+		"zh-cn": "管理密钥已存在",
 	},
 	KeyNotExist: {
-		"zh-cn": "管理秘钥不存在",
+		"zh-cn": "管理密钥不存在",
 	},
 	KeyAliasDuplicate: {
-		"zh-cn": "管理秘钥名称重复",
+		"zh-cn": "管理密钥名称重复",
 	},
 	KeyDecryptFail: {
-		"zh-cn": "管理秘钥解析失败",
+		"zh-cn": "管理密钥解析失败",
 	},
 	EnvCannotArchiveActive: {
 		"zh-cn": "环境当前状态活跃, 无法归档",
@@ -574,5 +575,8 @@ var errorMsgs = map[int]map[string]string{
 	},
 	SystemConfigNotExist: {
 		"zh-cn": "当前配置不存在",
+	},
+	TemplateKeyIdNotSet: {
+		"zh-cn": "SSH 密钥未配置",
 	},
 }

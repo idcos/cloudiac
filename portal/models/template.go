@@ -45,6 +45,8 @@ type Template struct {
 	Triggers     pq.StringArray `json:"triggers" gorm:"type:text" swaggertype:"array,string"` // 触发器。commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
 	PolicyEnable bool           `json:"policyEnable" gorm:"default:false"`                    // 是否开启合规检测
 
+	KeyId Id `json:"keyId" gorm:"size:32"` // 部署密钥ID
+
 }
 
 func (Template) TableName() string {
