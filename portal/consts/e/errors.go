@@ -475,13 +475,13 @@ var errorMsgs = map[int]map[string]string{
 		"zh-cn": "vcs地址错误",
 	},
 	VcsInvalidToken: {
-		"zh-cn": "vcs token权限不足",
+		"zh-cn": "vcs token无效",
 	},
 	VcsConnectError: {
-		"zh-cn": "vcs地址连接失败",
+		"zh-cn": "vcs服务连接失败",
 	},
 	VcsConnectTimeOut: {
-		"zh-cn": "vcs地址连接超时",
+		"zh-cn": "vcs服务连接超时",
 	},
 	VcsNotExists: {
 		"zh-cn": "vcs仓库不存在",
