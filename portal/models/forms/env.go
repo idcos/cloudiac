@@ -74,10 +74,12 @@ type UpdateEnvForm struct {
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
 
-	Name        string    `form:"name" json:"name" binding:""`                      // 环境名称
-	Description string    `form:"description" json:"description" binding:"max=255"` // 环境描述
-	KeyId       models.Id `form:"keyId" json:"keyId" binding:""`                    // 部署密钥ID
-	RunnerId    string    `form:"runnerId" json:"runnerId" binding:""`              // 环境默认部署通道
+	//修改环境时不可以修改这些属性
+	//Name        string    `form:"name" json:"name" binding:""`                      // 环境名称
+	//Description string    `form:"description" json:"description" binding:"max=255"` // 环境描述
+	//KeyId       models.Id `form:"keyId" json:"keyId" binding:""`                    // 部署密钥ID
+	//RunnerId    string    `form:"runnerId" json:"runnerId" binding:""`              // 环境默认部署通道
+
 	Archived    bool      `form:"archived" json:"archived" enums:"true,false"`      // 归档状态，默认返回未归档环境
 
 	AutoApproval    bool `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"` // 是否自动审批

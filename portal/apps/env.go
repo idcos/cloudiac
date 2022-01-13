@@ -114,7 +114,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
 	}
 
-	if form.HasKey("playbook") && !form.HasKey("keyId") {
+	if form.Playbook != "" && form.KeyId == "" {
 		return nil, e.New(e.TemplateKeyIdNotSet)
 	}
 
@@ -527,21 +527,6 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	attrs["cronDriftExpress"] = cronDriftParam.CronDriftExpress
 	attrs["nextDriftTaskTime"] = cronDriftParam.NextDriftTaskTime
 
-	if form.HasKey("name") {
-		attrs["name"] = form.Name
-	}
-
-	if form.HasKey("description") {
-		attrs["description"] = form.Description
-	}
-
-	if form.HasKey("keyId") {
-		attrs["key_id"] = form.KeyId
-	}
-
-	if form.HasKey("runnerId") {
-		attrs["runner_id"] = form.RunnerId
-	}
 	if form.HasKey("retryAble") {
 		attrs["retryAble"] = form.RetryAble
 	}
@@ -695,6 +680,10 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	c.AddLogField("action", fmt.Sprintf("deploy env task %s", form.Id))
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+
+	if form.Playbook != "" && form.KeyId == "" {
+		return nil, e.New(e.TemplateKeyIdNotSet)
 	}
 
 	// 检查自动纠漂移、推送到分支时重新部署时，是否了配置自动审批
