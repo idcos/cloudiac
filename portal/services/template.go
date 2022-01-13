@@ -3,6 +3,7 @@
 package services
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
@@ -159,4 +160,17 @@ func GetTplByEnvId(sess *db.Session, envId models.Id) (*models.Template, e.Error
 	}
 	return GetTemplateById(sess, env.TplId)
 
+}
+
+func GetLastScanTaskByScope(sess *db.Session, scope string, id models.Id) (*models.ScanTask, error) {
+	task := models.ScanTask{}
+	switch scope {
+	case consts.ScopeTemplate:
+		sess = sess.Model(&models.Template{})
+	case consts.ScopeEnv:
+		sess = sess.Model(&models.Env{})
+	}
+	scanTaskIdQuery := sess.Where("id = ?", id).Select("last_scan_task_id")
+	err := sess.Model(&models.ScanTask{}).Where("id = (?)", scanTaskIdQuery.Expr()).First(&task)
+	return &task, err
 }

@@ -81,7 +81,7 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 	}
 
 	tx := c.Tx()
-	tx = services.QueryWithOrgId(tx, c.OrgId)
+	tx = services.QueryWithOrgIdAndGlobal(tx, c.OrgId)
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -670,10 +670,11 @@ func ParseTemplate(c *ctx.ServiceContext, form *forms.PolicyParseForm) (interfac
 }
 
 type ScanResultPageResp struct {
-	Task     *models.ScanTask     `json:"task"`     // 扫描任务
-	Total    int64                `json:"total"`    // 总数
-	PageSize int                  `json:"pageSize"` // 分页数量
-	List     []*PolicyResultGroup `json:"groups"`   // 策略组
+	PolicyStatus string               `json:"policyStatus"` // 扫描状态
+	Task         *models.ScanTask     `json:"task"`         // 扫描任务
+	Total        int64                `json:"total"`        // 总数
+	PageSize     int                  `json:"pageSize"`     // 分页数量
+	List         []*PolicyResultGroup `json:"groups"`       // 策略组
 }
 
 type PolicyResultGroup struct {
@@ -697,20 +698,25 @@ func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicySca
 	query := services.QueryWithOrgId(c.DB(), c.OrgId)
 
 	var (
-		scanTask *models.ScanTask
-		err      error
+		scanTask     *models.ScanTask
+		policyEnable bool
+		err          error
 	)
+
 	if scope == consts.ScopeEnv {
-		scanTask, err = services.GetEnvLastScanTask(query, form.Id)
+		policyEnable, _ = services.IsEnvEnabledScan(query, form.Id)
 	} else if scope == consts.ScopeTemplate {
-		scanTask, err = services.GetTplLastScanTask(query, form.Id)
+		policyEnable, _ = services.IsTemplateEnabledScan(query, form.Id)
 	} else {
-		return nil, e.New(e.InternalError, fmt.Errorf("unknown policy scan result scope '%s'", scope))
+		return nil, e.New(e.BadParam, fmt.Errorf("unknown policy scan result scope '%s'", scope))
 	}
 
+	scanTask, err = services.GetLastScanTaskByScope(query, scope, form.Id)
 	if err != nil {
 		if e.IsRecordNotFound(err) {
-			return nil, nil
+			return ScanResultPageResp{
+				PolicyStatus: services.MergeScanResultPolicyStatus(policyEnable, nil),
+			}, nil
 		}
 		return nil, e.AutoNew(err, e.DBError)
 	}
@@ -754,10 +760,11 @@ func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicySca
 	}
 
 	return ScanResultPageResp{
-		Task:     scanTask,
-		Total:    p.MustTotal(),
-		PageSize: p.Size,
-		List:     resultGroups,
+		PolicyStatus: services.MergeScanResultPolicyStatus(policyEnable, scanTask),
+		Task:         scanTask,
+		Total:        p.MustTotal(),
+		PageSize:     p.Size,
+		List:         resultGroups,
 	}, nil
 }
 

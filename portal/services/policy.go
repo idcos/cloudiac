@@ -147,8 +147,10 @@ func GetValidPolicies(query *db.Session, tplId, envId models.Id) (validPolicies 
 	}
 
 	// 获取环境策略
-	if enabled, err = IsEnvEnabledScan(query, envId); err != nil {
-		return
+	if envId != "" {
+		if enabled, err = IsEnvEnabledScan(query, envId); err != nil {
+			return
+		}
 	}
 	if envId != "" && enabled {
 		if envPolicies, err = GetPoliciesByEnvId(query, envId); err != nil {
@@ -806,4 +808,17 @@ func IsEnvEnabledScan(tx *db.Session, envId models.Id) (bool, e.Error) {
 		return false, e.New(e.DBError, err)
 	}
 	return env.PolicyEnable, nil
+}
+
+// MergeScanResultPolicyStatus 重新映射扫描状态给前端
+func MergeScanResultPolicyStatus(policyEnabled bool, lastScanTask *models.ScanTask) string {
+	if !policyEnabled {
+		return common.PolicyStatusDisable
+	} else {
+		if lastScanTask == nil {
+			return common.PolicyStatusEnable
+		} else {
+			return lastScanTask.PolicyStatus
+		}
+	}
 }
