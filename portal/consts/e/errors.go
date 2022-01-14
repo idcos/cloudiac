@@ -26,6 +26,7 @@ const (
 	//// 解析错误 101
 	JSONParseError = 10100
 	HCLParseError  = 10101
+	URLParseError  = 10102
 
 	//// db 错误 102
 	DBError           = 10200 // db 操作出错
@@ -214,6 +215,9 @@ var errorMsgs = map[int]map[string]string{
 	},
 	JSONParseError: {
 		"zh-cn": "JSON 数据解析出错",
+	},
+	URLParseError: {
+		"zh-cn": "URL解析出错",
 	},
 	NotImplement: {
 		"zh-cn": "暂未实现",

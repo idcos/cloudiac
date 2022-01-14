@@ -15,8 +15,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"path"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -101,15 +101,21 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*taskDetailRe
 		Creator: user.Name,
 	}
 	if strings.Contains(o.RepoAddr, `token:`) {
-		o.RepoAddr = replaceVcsToken(o.RepoAddr)
+		o.RepoAddr, err = replaceVcsToken(o.RepoAddr)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &o, nil
 }
 
-func replaceVcsToken(old string) string{
-	r,_ := regexp.Compile(`token:\w*@`)
-	v := r.FindStringSubmatch(old)
-	return strings.Replace(old, v[0], "",-1)
+func replaceVcsToken(old string) (string, e.Error) {
+	u, err := url.Parse(old)
+	if err != nil {
+		return "", e.New(e.URLParseError, err)
+	}
+	u.User = url.User("")
+	return u.Redacted(), nil
 }
 
 // LastTask 最新任务信息
