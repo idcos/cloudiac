@@ -413,6 +413,9 @@ func ParseMeta(regoFilePath string, metaFilePath string) (policy *PolicyWithMeta
 	}
 	ver := ExtractStr("version", regoContent)
 	meta.Version, _ = strconv.Atoi(ver)
+	if meta.ReferenceId == "" {
+		meta.ReferenceId = ExtractStr("id", regoContent)
+	}
 
 	// 多行注释提取
 	regex := regexp.MustCompile("(?s)@fix_suggestion:\\s*(.*)\\s*#+\\s*@fix_suggestion_end")

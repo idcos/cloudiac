@@ -690,7 +690,6 @@ type PolicyResult struct {
 	PolicyGroupName string `json:"policyGroupName" example:"安全策略组"` // 策略组名称
 	FixSuggestion   string `json:"fixSuggestion" example:"建议您创建一个专有网络..."`
 	Rego            string `json:"rego" example:""` //rego 代码文件内容
-
 }
 
 func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicyScanResultForm) (interface{}, e.Error) {
@@ -736,15 +735,15 @@ func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicySca
 	}
 
 	// 按策略组分组
-	var lastGroup PolicyResultGroup
+	lastGroup := &PolicyResultGroup{}
 	var resultGroups []*PolicyResultGroup
 	for i, r := range results {
 		if lastGroup.Name != r.PolicyGroupName {
-			lastGroup = PolicyResultGroup{
+			lastGroup = &PolicyResultGroup{
 				Id:   r.PolicyGroupId,
 				Name: r.PolicyGroupName,
 			}
-			resultGroups = append(resultGroups, &lastGroup)
+			resultGroups = append(resultGroups, lastGroup)
 		}
 		lastGroup.List = append(lastGroup.List, results[i])
 		switch r.Status {
