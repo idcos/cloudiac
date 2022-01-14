@@ -26,6 +26,7 @@ const (
 	//// 解析错误 101
 	JSONParseError = 10100
 	HCLParseError  = 10101
+	URLParseError  = 10102
 
 	//// db 错误 102
 	DBError           = 10200 // db 操作出错
@@ -59,7 +60,13 @@ const (
 	LdapError       = 10410 // ldap 出错
 	MailServerError = 10420
 	ConsulConnError = 10430
-	VcsError        = 10440
+
+	// vcs调用相关错误
+	VcsError          = 10440
+	VcsAddressError   = 10441
+	VcsInvalidToken   = 10442
+	VcsConnectError   = 10445
+	VcsConnectTimeOut = 10446
 
 	//// 导入导出错误 105
 	ImportError       = 10510
@@ -212,6 +219,9 @@ var errorMsgs = map[int]map[string]string{
 	},
 	JSONParseError: {
 		"zh-cn": "JSON 数据解析出错",
+	},
+	URLParseError: {
+		"zh-cn": "URL解析出错",
 	},
 	NotImplement: {
 		"zh-cn": "暂未实现",
@@ -468,6 +478,18 @@ var errorMsgs = map[int]map[string]string{
 	},
 	VcsError: {
 		"zh-cn": "vcs仓库错误",
+	},
+	VcsAddressError: {
+		"zh-cn": "vcs地址错误",
+	},
+	VcsInvalidToken: {
+		"zh-cn": "vcs token无效",
+	},
+	VcsConnectError: {
+		"zh-cn": "vcs服务连接失败",
+	},
+	VcsConnectTimeOut: {
+		"zh-cn": "vcs服务连接超时",
 	},
 	VcsNotExists: {
 		"zh-cn": "vcs仓库不存在",
