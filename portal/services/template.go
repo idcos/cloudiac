@@ -72,8 +72,8 @@ func QueryTemplateByOrgId(tx *db.Session, q string, orgId models.Id, templateIdL
 		query = query.Joins("left join iac_env on iac_template.id = iac_env.tpl_id and iac_env.project_id = ?", projectId).
 			Group("iac_template.id").LazySelectAppend("count(iac_env.id) as relation_environment")
 	} else {
-		query = query.Joins("left join iac_env on iac_template.id = iac_env.tpl_id").
-			Group("iac_template.id").LazySelectAppend("count(iac_env.id) as relation_environment")
+		query = query.Joins("left join iac_env on iac_template.id = iac_env.tpl_id and (iac_env.status = 'active' or iac_env.deploying = 1)").
+			Group("iac_template.id").LazySelectAppend("count(iac_env.id) as active_environment")
 	}
 	if q != "" {
 		qs := "%" + q + "%"
