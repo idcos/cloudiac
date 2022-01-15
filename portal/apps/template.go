@@ -15,8 +15,9 @@ import (
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"fmt"
-	"github.com/lib/pq"
 	"net/http"
+
+	"github.com/lib/pq"
 )
 
 type SearchTemplateResp struct {
@@ -451,13 +452,14 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 		vcsAttr[v.Id.String()] = v
 	}
 
+	portAddr := configs.Get().Portal.Address
 	for _, tpl := range templates {
 		if tpl.RepoAddr == "" && tpl.RepoFullName != "" {
 			if vcsAttr[tpl.VcsId].VcsType == consts.GitTypeLocal {
-				tpl.RepoAddr = fmt.Sprintf("%s/%s/%s.git", utils.GetUrl(configs.Get().Portal.Address), vcsAttr[tpl.VcsId].Address, tpl.RepoFullName)
-				continue
+				tpl.RepoAddr = utils.JoinURL(portAddr, vcsAttr[tpl.VcsId].Address, tpl.RepoId)
+			} else {
+				tpl.RepoAddr = utils.JoinURL(vcsAttr[tpl.VcsId].Address, tpl.RepoFullName)
 			}
-			tpl.RepoAddr = fmt.Sprintf("%s/%s.git", utils.GetUrl(vcsAttr[tpl.VcsId].Address), tpl.RepoFullName)
 		}
 	}
 
