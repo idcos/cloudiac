@@ -51,6 +51,9 @@ type CreateEnvForm struct {
 	AutoRepairDrift  bool   `json:"autoRepairDrift" form:"autoRepairDrift"`   // 是否进行自动纠偏
 	OpenCronDrift    bool   `json:"openCronDrift" form:"openCronDrift"`       // 是否开启偏移检测
 
+	PolicyEnable bool        `json:"policyEnable" form:"policyEnable"` // 是否开启合规检测
+	PolicyGroup  []models.Id `json:"policyGroup" form:"policyGroup"`   // 绑定策略组集合
+
 }
 
 type SampleVariables struct {
@@ -87,6 +90,10 @@ type UpdateEnvForm struct {
 	CronDriftExpress string   `json:"cronDriftExpress" form:"cronDriftExpress"`  // 偏移检测表达式
 	AutoRepairDrift  bool     `json:"autoRepairDrift" form:"autoRepairDrift"`    // 是否进行自动纠偏
 	OpenCronDrift    bool     `json:"openCronDrift" form:"openCronDrift"`        // 是否开启偏移检测
+
+	PolicyEnable bool        `json:"policyEnable" form:"policyEnable"` // 是否开启合规检测
+	PolicyGroup  []models.Id `json:"policyGroup" form:"policyGroup"`   // 绑定策略组集合
+
 }
 
 type DeployEnvForm struct {

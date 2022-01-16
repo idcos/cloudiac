@@ -451,7 +451,7 @@ func openDB(dsn string) error {
 		Logger: gormLogger.New(logs.Get(), gormLogger.Config{
 			SlowThreshold:             slowThreshold,
 			Colorful:                  false,
-			IgnoreRecordNotFoundError: false,
+			IgnoreRecordNotFoundError: true,
 			LogLevel:                  logLevel,
 		}),
 	})

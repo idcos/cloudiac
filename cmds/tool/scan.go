@@ -8,10 +8,14 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/runner"
 	"cloudiac/utils"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/itchyny/gojq"
 )
 
 // iac-tool scan 执行策略扫描
@@ -44,8 +48,11 @@ type ScanCmd struct {
 	SaveResultToDB bool   `long:"save-result" short:"s" description:"save scan result to database, default:false" required:"false"`
 	//PolicyId       string `long:"policy-id" short:"i" description:"scan with policy id, multiple id using \"id1,id2,...\"" required:"false"`
 	//PolicyGroupId  string `long:"policy-group-id" short:"g" description:"scan with policy group id, multiple id using \"id1,id2,...\"" required:"false"`
-	RemoteScan bool `long:"remote-scan" short:"r" description:"scan environment/template remotely" required:"false"`
-	Verbose    bool `long:"verbose" short:"v" description:"write verbose scan log message" required:"false"`
+	RemoteScan bool   `long:"remote-scan" short:"r" description:"scan environment/template remotely" required:"false"`
+	Verbose    bool   `long:"verbose" short:"v" description:"write verbose scan log message" required:"false"`
+	ParsePlan  bool   `long:"parse-plan" description:"parse tfplan to input.json" required:"false"`
+	PlanFile   string `long:"plan" description:"the tfplan json file path" required:"false"`
+	JsonFile   string `long:"json" description:"the json file path to output, default: output to stdout" required:"false"`
 }
 
 func (*ScanCmd) Usage() string {
@@ -81,6 +88,9 @@ func (c *ScanCmd) Execute(args []string) error {
 			regoFile = args[1]
 		}
 		return c.RunDebug(filePath, regoFile)
+	}
+	if c.ParsePlan {
+		return ParseTfplan(c.PlanFile, c.JsonFile)
 	}
 
 	if c.hasDB() {
@@ -147,8 +157,8 @@ func (c *ScanCmd) Execute(args []string) error {
 }
 
 func (c *ScanCmd) Parse(filePath string) error {
-	cmdString := utils.SprintTemplate("terrascan scan --parse-only -d . -o json > {{.TerrascanResultFile}}", map[string]interface{}{
-		"TFScanJsonFilePath": filepath.Join("./", runner.TerrascanJsonFile),
+	cmdString := utils.SprintTemplate("terrascan scan --parse-only -d . -o json > {{.ScanResultFile}}", map[string]interface{}{
+		"TFScanJsonFilePath": filepath.Join("./", runner.ScanInputFile),
 	})
 	result, err := RunCmd(cmdString)
 	if err != nil {
@@ -159,8 +169,8 @@ func (c *ScanCmd) Parse(filePath string) error {
 }
 
 func (c *ScanCmd) Scan(filePath string, regoDir string) error {
-	cmdString := utils.SprintTemplate("terrascan scan -d . -o json > {{.TerrascanResultFile}}", map[string]interface{}{
-		"TFScanJsonFilePath": filepath.Join("./", runner.TerrascanResultFile),
+	cmdString := utils.SprintTemplate("terrascan scan -d . -o json > {{.ScanResultFile}}", map[string]interface{}{
+		"TFScanJsonFilePath": filepath.Join("./", runner.ScanResultFile),
 	})
 	result, err := RunCmd(cmdString)
 	if err != nil {
@@ -192,7 +202,7 @@ opa eval -f pretty --data {{.RegoFile}} --input {{.JsonFile}} data > {{.RegoResu
 		"PolicyDir":      randomDir,
 		"ConfigFile":     configFile,
 		"IsDir":          isDir,
-		"JsonFile":       runner.TerrascanJsonFile,
+		"JsonFile":       runner.ScanInputFile,
 		"RegoFile":       regoFile,
 		"RegoResultFile": runner.RegoResultFile,
 	})
@@ -233,4 +243,56 @@ func (c *ParseCmd) Execute(args []string) error {
 	_, err := policy.RegoParse(regoFile, inputPath)
 	fmt.Printf("Execute rego parse return err %+v", err)
 	return err
+}
+
+var (
+	changesFilter = `[.resource_changes | .. | select(.type? != null and .address? != null and .mode? == "managed") | {id: .address?, type: .type?, name: .name?, config: (.change.after? + .change.after_unknown?), source: "", line: 0}] | group_by(.type) | map({key:(.[0].type),value:[ .[] ]}) | from_entries`
+)
+
+func ParseTfplan(planJsonFile string, planOutputFile string) error {
+	if planJsonFile == "" {
+		planJsonFile = "tfplan.json"
+	}
+
+	tfjson, err := ioutil.ReadFile(planJsonFile)
+	if err != nil {
+		return err
+	}
+	tfplan := make(map[string]interface{})
+	err = json.Unmarshal(tfjson, &tfplan)
+	if err != nil {
+		return err
+	}
+	query, err := gojq.Parse(changesFilter)
+	if err != nil {
+		return err
+	}
+	var output []byte
+	iter := query.Run(tfplan)
+	for {
+		v, ok := iter.Next()
+		if !ok {
+			break
+		}
+		if err, ok := v.(error); ok {
+			return err
+		}
+
+		filtered, err := json.MarshalIndent(v, "", "  ")
+		if err != nil {
+			return err
+		}
+		output = append(output, filtered...)
+	}
+
+	if planOutputFile == "" {
+		fmt.Printf("%s\n", output)
+	} else {
+		err = ioutil.WriteFile(planOutputFile, output, 0644)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

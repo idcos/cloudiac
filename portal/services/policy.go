@@ -51,15 +51,39 @@ func GetPolicyReferenceId(query *db.Session, policy *models.Policy) (string, e.E
 	return fmt.Sprintf("%s_%s_%s_%d", "iac", typ, scope, lastId+1), nil
 }
 
-func GetPolicyById(tx *db.Session, id models.Id) (*models.Policy, e.Error) {
+func GetPolicyById(tx *db.Session, id, orgId models.Id) (*models.Policy, e.Error) {
 	po := models.Policy{}
-	if err := tx.Model(models.Policy{}).Where("id = ?", id).First(&po); err != nil {
+	if err := tx.Model(models.Policy{}).Where("id = ?", id).Where("org_id = ?", orgId).First(&po); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.PolicyNotExist, err)
 		}
 		return nil, e.New(e.DBError, err)
 	}
 	return &po, nil
+}
+
+func GetPolicyByName(tx *db.Session, name string, groupId, orgId models.Id) (*models.Policy, e.Error) {
+	po := models.Policy{}
+	if err := tx.Model(models.Policy{}).Where("name = ? AND group_id = ? AND org_id = ?",
+		name, orgId).First(&po); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.PolicyNotExist, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &po, nil
+}
+
+func GetPoliciesByGroupId(tx *db.Session, groupId, orgId models.Id) ([]*models.Policy, e.Error) {
+	var po []*models.Policy
+	if err := tx.Model(models.Policy{}).Where("group_id = ? AND org_id = ?",
+		orgId).Find(&po); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.PolicyNotExist, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return po, nil
 }
 
 func GetTaskPolicies(query *db.Session, taskId models.Id) ([]runner.TaskPolicy, e.Error) {
@@ -123,8 +147,10 @@ func GetValidPolicies(query *db.Session, tplId, envId models.Id) (validPolicies 
 	}
 
 	// 获取环境策略
-	if enabled, err = IsEnvEnabledScan(query, envId); err != nil {
-		return
+	if envId != "" {
+		if enabled, err = IsEnvEnabledScan(query, envId); err != nil {
+			return
+		}
 	}
 	if envId != "" && enabled {
 		if envPolicies, err = GetPoliciesByEnvId(query, envId); err != nil {
@@ -179,7 +205,7 @@ func suppressedQuery(query *db.Session, envId models.Id, tplId models.Id) *db.Se
 		q = q.Where("iac_policy.id not in (?)", suppressQuery.Expr())
 	}
 
-	enableQuery := query.Model(models.PolicyRel{}).Where("iac_policy_rel.group_id = '' and iac_policy_rel.enabled = 1")
+	enableQuery := query.Model(models.PolicyRel{}).Where("iac_policy_rel.group_id = ''")
 	if envId != "" {
 		enableQuery = enableQuery.Select("env_id").Where("env_id = ?", envId)
 		q = q.Where("iac_policy_rel.env_id in (?)", enableQuery.Expr())
@@ -245,9 +271,9 @@ func RemovePoliciesGroupRelation(tx *db.Session, groupId models.Id) e.Error {
 	return nil
 }
 
-func SearchPolicy(dbSess *db.Session, form *forms.SearchPolicyForm) *db.Session {
+func SearchPolicy(dbSess *db.Session, form *forms.SearchPolicyForm, orgId models.Id) *db.Session {
 	pTable := models.Policy{}.TableName()
-	query := dbSess.Table(pTable)
+	query := dbSess.Table(pTable).Where(fmt.Sprintf("%s.org_id in (?)", pTable), orgId)
 	if len(form.GroupId) > 0 {
 		query = query.Where(fmt.Sprintf("%s.group_id in (?)", pTable), form.GroupId)
 	}
@@ -270,9 +296,9 @@ func SearchPolicy(dbSess *db.Session, form *forms.SearchPolicyForm) *db.Session 
 	return query
 }
 
-func DeletePolicy(dbSess *db.Session, id models.Id) (interface{}, e.Error) {
+func DeletePolicy(dbSess *db.Session, groupId models.Id) (interface{}, e.Error) {
 	if _, err := dbSess.
-		Where("id = ?", id).
+		Where("group_id = ?", groupId).
 		Delete(&models.Policy{}); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
@@ -308,7 +334,7 @@ func SearchPolicyTpl(dbSess *db.Session, orgId, tplId models.Id, q string) *db.S
 	return query.LazySelect("tpl.*, task.policy_status").
 		Joins("LEFT JOIN iac_policy_rel on iac_policy_rel.tpl_id = tpl.id and iac_policy_rel.group_id = ''").
 		Joins("LEFT JOIN iac_org on iac_org.id = tpl.org_id").
-		LazySelectAppend("iac_policy_rel.enabled", "iac_org.name as org_name").
+		LazySelectAppend("iac_org.name as org_name").
 		Order("iac_org.created_at desc, tpl.created_at desc ")
 }
 
@@ -341,7 +367,7 @@ func SearchPolicyEnv(dbSess *db.Session, orgId, projectId, envId models.Id, q st
 		Joins("LEFT JOIN iac_policy_rel on iac_policy_rel.env_id = iac_env.id and iac_policy_rel.group_id = ''").
 		Joins("LEFT JOIN iac_org as org on org.id = iac_env.org_id").
 		Joins("LEFT JOIN iac_project as project on project.id = iac_env.project_id").
-		LazySelectAppend("iac_policy_rel.enabled", "org.name as org_name, project.name as project_name").
+		LazySelectAppend("org.name as org_name, project.name as project_name").
 		Order("org.created_at desc, project.created_at desc, iac_env.created_at desc")
 }
 
@@ -433,7 +459,7 @@ type PolicyScanSummary struct {
 }
 
 // PolicySummary 获取策略/策略组/任务执行结果
-func PolicySummary(query *db.Session, ids []models.Id, scope string) ([]*PolicyScanSummary, e.Error) {
+func PolicySummary(query *db.Session, ids []models.Id, scope string, orgId models.Id) ([]*PolicyScanSummary, e.Error) {
 	var key string
 	switch scope {
 	case consts.ScopePolicy:
@@ -443,7 +469,9 @@ func PolicySummary(query *db.Session, ids []models.Id, scope string) ([]*PolicyS
 	case consts.ScopeTask:
 		key = "task_id"
 	}
-	subQuery := query.Model(models.PolicyResult{}).Select("max(id)").Where(fmt.Sprintf("%s in (?)", key), ids)
+	subQuery := query.Model(models.PolicyResult{}).Select("max(id)").
+		Where(fmt.Sprintf("%s in (?)", key), ids).
+		Where("org_id = ?", orgId)
 
 	if scope == consts.ScopeTask {
 		subQuery = subQuery.Group(fmt.Sprintf("%s,env_id,tpl_id,policy_id", key))
@@ -503,10 +531,11 @@ type ScanStatusByTarget struct {
 	Name   string
 }
 
-func GetPolicyScanByTarget(query *db.Session, policyId models.Id, from, to time.Time, showCount int) ([]*ScanStatusByTarget, e.Error) {
+func GetPolicyScanByTarget(query *db.Session, policyId models.Id, from, to time.Time, showCount int, orgId models.Id) ([]*ScanStatusByTarget, e.Error) {
 	groupQuery := query.Model(models.PolicyResult{})
 	groupQuery = groupQuery.Where("start_at >= ? and start_at < ? and policy_id = ?", from, to, policyId).
 		Where("status != 'pending'"). // 跳过pending状态
+		Where("org_id = ?", orgId).
 		Select("count(*) as count, tpl_id, env_id").
 		Group("tpl_id,env_id")
 
@@ -625,8 +654,8 @@ func SubQueryUserTemplateIds(query *db.Session, userId models.Id) *db.Session {
 	return q.Where("org_id in (?)", orgIds)
 }
 
-func PolicyEnable(tx *db.Session, policyId models.Id, enabled bool) (*models.Policy, e.Error) {
-	policy, err := GetPolicyById(tx, policyId)
+func PolicyEnable(tx *db.Session, policyId models.Id, enabled bool, orgId models.Id) (*models.Policy, e.Error) {
+	policy, err := GetPolicyById(tx, policyId, orgId)
 	if err != nil {
 		return nil, err
 	}
@@ -648,14 +677,16 @@ type ScanStatusGroupBy struct {
 }
 
 // GetPolicyStatusByPolicy 查询指定时间范围内所有策略的执行结果，统计各策略每种检测状态下的数量
-func GetPolicyStatusByPolicy(query *db.Session, from time.Time, to time.Time, status string) ([]*ScanStatusGroupBy, e.Error) {
+func GetPolicyStatusByPolicy(query *db.Session, from time.Time, to time.Time, status string, orgId models.Id) ([]*ScanStatusGroupBy, e.Error) {
 	groupQuery := query.Model(models.PolicyResult{})
 	groupQuery = groupQuery.Where("start_at >= ? and start_at < ?", from, to).
 		Select("count(*) as count, policy_id as id, status").
+		Where("org_id = ?", orgId).
 		Group("policy_id,status").
 		Order("count desc")
 
 	q := query.Select("r.*,iac_policy.name,iac_policy.severity").Table("(?) as r", groupQuery.Expr()).
+		Where("org_id = ?", orgId).
 		Joins("left join iac_policy on iac_policy.id = r.id")
 
 	if status != "" {
@@ -764,17 +795,30 @@ func PolicyTargetSuppressSummary(query *db.Session, ids []models.Id, scope strin
 }
 
 func IsTemplateEnabledScan(tx *db.Session, tplId models.Id) (bool, e.Error) {
-	if enabled, err := tx.Model(models.PolicyRel{}).Where("tpl_id = ? and group_id = ''", tplId).Exists(); err != nil {
+	tpl, err := GetTemplateById(tx, tplId)
+	if err != nil {
 		return false, e.New(e.DBError, err)
-	} else {
-		return enabled, nil
 	}
+	return tpl.PolicyEnable, nil
 }
 
 func IsEnvEnabledScan(tx *db.Session, envId models.Id) (bool, e.Error) {
-	if enabled, err := tx.Model(models.PolicyRel{}).Where("env_id = ? and group_id = ''", envId).Exists(); err != nil {
+	env, err := GetEnvById(tx, envId)
+	if err != nil {
 		return false, e.New(e.DBError, err)
+	}
+	return env.PolicyEnable, nil
+}
+
+// MergeScanResultPolicyStatus 重新映射扫描状态给前端
+func MergeScanResultPolicyStatus(policyEnabled bool, lastScanTask *models.ScanTask) string {
+	if !policyEnabled {
+		return common.PolicyStatusDisable
 	} else {
-		return enabled, nil
+		if lastScanTask == nil {
+			return common.PolicyStatusEnable
+		} else {
+			return lastScanTask.PolicyStatus
+		}
 	}
 }

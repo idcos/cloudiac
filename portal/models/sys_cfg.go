@@ -9,6 +9,7 @@ import (
 const (
 	SysCfgNameMaxJobsPerRunner = "MAX_JOBS_PER_RUNNER"
 	SysCfgNamePeriodOfLogSave  = "PERIOD_OF_LOG_SAVE"
+	SysCfgNamRegistryAddr      = "REGISTRY_ADDR"
 )
 
 type SystemCfg struct {
@@ -29,4 +30,9 @@ func (o SystemCfg) Migrate(sess *db.Session) (err error) {
 		return err
 	}
 	return nil
+}
+
+type RegistryAddrResp struct {
+	RegistryAddrFromDB  string `json:"registryAddrDB"`
+	RegistryAddrFromCfg string `json:"registryAddrCfg"`
 }

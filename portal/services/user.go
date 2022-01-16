@@ -119,7 +119,8 @@ func CheckPasswordFormat(password string) e.Error {
 func GetUserDetailById(query *db.Session, userId models.Id) (*models.UserWithRoleResp, e.Error) {
 	d := models.UserWithRoleResp{}
 	table := models.User{}.TableName()
-	if err := query.Model(&models.User{}).Where(fmt.Sprintf("%s.id = ?", table), userId).First(&d); err != nil {
+	if err := query.Model(&models.User{}).
+		Where(fmt.Sprintf("%s.id = ?", table), userId).Scan(&d); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.UserNotExists, err)
 		}
@@ -237,6 +238,13 @@ func UserHasManageUserPerm() {}
 
 func QueryWithOrgId(query *db.Session, orgId interface{}, tableName ...string) *db.Session {
 	return QueryWithCond(query, "org_id", orgId, tableName...)
+}
+
+func QueryWithOrgIdAndGlobal(query *db.Session, orgId interface{}, tableName ...string) *db.Session {
+	if len(tableName) > 0 {
+		return query.Where(fmt.Sprintf("`%s`.`org_id` = ? or `%s`.`org_id` = 0", tableName[0], orgId))
+	}
+	return query.Where("`org_id` = ? or `org_id` = 0", orgId)
 }
 
 func QueryWithProjectId(query *db.Session, projectId interface{}, tableName ...string) *db.Session {

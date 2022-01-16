@@ -49,6 +49,7 @@ type Meta struct {
 	Severity      string `json:"severity"`
 	Version       int    `json:"version"`
 	FixSuggestion string `json:"fix_suggestion"`
+	Description   string `json:"description"`
 }
 
 type Resource struct {
@@ -107,15 +108,15 @@ func UnmarshalOutputResult(bs []byte) (*OutputResult, error) {
 }
 
 func (s *Scanner) GetResultPath(res Resource) string {
-	return filepath.Join(s.WorkingDir, runner.TerrascanResultFile)
+	return filepath.Join(s.WorkingDir, runner.ScanResultFile)
 }
 
 func (s *Scanner) GetLogPath() string {
-	return filepath.Join(s.WorkingDir, runner.TerrascanLogFile)
+	return filepath.Join(s.WorkingDir, runner.ScanLogFile)
 }
 
 func (s *Scanner) GetConfigPath(res Resource) string {
-	return filepath.Join(s.WorkingDir, runner.TerrascanJsonFile)
+	return filepath.Join(s.WorkingDir, runner.ScanInputFile)
 }
 
 func (r Resource) GetUrl(task *models.Task) string {
@@ -397,14 +398,14 @@ mkdir -p ~/.terrascan/pkg/policies/opa/rego && \
 terrascan scan -d . -p {{.PolicyDir}} --show-passed \
 {{if .TfVars}}-var-file={{.TfVars}}{{end}} \
 
--o json > {{.TerrascanResultFile}} 2>{{.TerrascanLogFile}}
+-o json > {{.ScanResultFile}} 2>{{.ScanLogFile}}
 `
 	cmdline := utils.SprintTemplate(cmdlineTemplate, map[string]interface{}{
-		"CodeDir":             s.WorkingDir,
-		"TerrascanResultFile": s.GetResultPath(res),
-		"TerrascanLogFile":    s.GetLogPath(),
-		"PolicyDir":           s.PolicyDir,
-		"CloudIacDebug":       s.DebugLog,
+		"CodeDir":        s.WorkingDir,
+		"ScanResultFile": s.GetResultPath(res),
+		"ScanLogFile":    s.GetLogPath(),
+		"PolicyDir":      s.PolicyDir,
+		"CloudIacDebug":  s.DebugLog,
 	})
 	return cmdline
 }

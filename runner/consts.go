@@ -45,11 +45,12 @@ const (
 
 	FollowLogDelay = time.Second // follow 文件时读到 EOF 后进行下次读取的等待时长
 
-	PoliciesDir         = "policies"
-	TerrascanJsonFile   = "_tfscan.json"
-	TerrascanResultFile = "_tfresult.json"
-	TerrascanLogFile    = "_tsscan.log"
-	RegoResultFile      = "_rego.json"
+	PoliciesDir      = "policies"
+	ScanInputMapFile = "tfmap.json"
+	ScanInputFile    = "tfscan.json"
+	ScanResultFile   = "scan_result.json"
+	ScanLogFile      = "scan.log"
+	RegoResultFile   = "scan_raw.json"
 
 	PopulateSourceLineCount = 3
 )

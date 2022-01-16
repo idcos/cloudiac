@@ -29,7 +29,7 @@ func CreateVariable(tx *db.Session, variable models.Variable) (*models.Variable,
 
 func SearchVariable(dbSess *db.Session, orgId models.Id) ([]models.Variable, e.Error) {
 	variables := make([]models.Variable, 0)
-	if err := dbSess.Model(models.Variable{}.TableName()).
+	if err := dbSess.Model(&models.Variable{}).
 		Where("org_id = ?", orgId).
 		// 按照枚举值排序控制org类型在最上面
 		Order("scope asc").

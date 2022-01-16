@@ -145,11 +145,12 @@ func finishPendingScanResult(tx *db.Session, task models.Tasker, message string,
 	return nil
 }
 
-func GetPolicyGroupScanTasks(query *db.Session, policyGroupId models.Id) *db.Session {
+func GetPolicyGroupScanTasks(query *db.Session, policyGroupId, orgId models.Id) *db.Session {
 	t := models.PolicyResult{}.TableName()
 	subQuery := query.Model(models.PolicyResult{}).
 		Select(fmt.Sprintf("%s.task_id,%s.policy_group_id,%s.env_id,%s.tpl_id", t, t, t, t)).
 		Where("iac_policy_result.policy_group_id = ?", policyGroupId).
+		Where("iac_policy_result.org_id = ?", orgId).
 		Group("iac_policy_result.task_id,iac_policy_result.env_id,iac_policy_result.tpl_id,iac_policy_result.policy_group_id")
 
 	q := query.Model(models.ScanTask{}).
@@ -175,11 +176,11 @@ func GetPolicyGroupScanTasks(query *db.Session, policyGroupId models.Id) *db.Ses
 }
 
 func QueryPolicyResult(query *db.Session, taskId models.Id) *db.Session {
-	q := query.Model(models.PolicyResult{}).Where("task_id = ? and status != ?", taskId, common.PolicyStatusSuppressed)
+	q := query.Model(models.PolicyResult{}).Where("task_id = ?", taskId)
 
 	// 策略信息
 	q = q.Joins("left join iac_policy as p on p.id = iac_policy_result.policy_id").
-		LazySelectAppend("p.name as policy_name, p.fix_suggestion,iac_policy_result.*")
+		LazySelectAppend("p.name as policy_name, p.fix_suggestion,iac_policy_result.*,p.rego")
 	// 策略组信息
 	q = q.Joins("left join iac_policy_group as g on g.id = iac_policy_result.policy_group_id").
 		LazySelectAppend("g.name as policy_group_name,iac_policy_result.*")

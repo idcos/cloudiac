@@ -31,6 +31,16 @@ const (
 	DefaultSysName  = "System"
 
 	DefaultTerraformVersion = "0.14.11"
+
+	// token subject
+	JwtSubjectUserAuth = "userAuth" // 用于用户认证
+	JwtSubjectSsoCode  = "ssoCode"  // 用于 sso 单点登录
+
+	DirRoot                          = "/"
+	PolicyGroupDownloadTimeoutSecond = 20 * time.Second
+	PolicySeverityHigh               = "HIGH"
+	PolicySeverityMedium             = "MEDIUM"
+	PolicySeverityLow                = "LOW"
 )
 
 const (
@@ -45,11 +55,12 @@ const (
 	TerraformVar           = "TF_VAR_"
 	WorkFlow               = "workflow"
 
-	GitTypeGitLab = "gitlab"
-	GitTypeGitEA  = "gitea"
-	GitTypeGithub = "github"
-	GitTypeGitee  = "gitee"
-	GitTypeLocal  = "local"
+	GitTypeGitLab   = "gitlab"
+	GitTypeGitEA    = "gitea"
+	GitTypeGithub   = "github"
+	GitTypeGitee    = "gitee"
+	GitTypeLocal    = "local"
+	GitTypeRegistry = "registry"
 
 	MetaYmlMatch   = "meta.y*ml"
 	VariablePrefix = "variables.tf"
@@ -65,6 +76,11 @@ const (
 
 	LocalGitReposPath = "repos"  // 内置 http git server 服务目录
 	ReposUrlPrefix    = "/repos" // 内置 http git server url prefix
+
+	DefaultVcsName  = "默认仓库"
+	RegistryVcsName = "Registry"
+
+	PolicyRego = "*.rego"
 
 	NotificationMessageTitle = "CloudIaC平台系统通知"
 
@@ -119,6 +135,13 @@ const (
 	HttpClientTimeout = 20
 
 	TaskCallbackKafka = "kafka"
+
+	TaskSourceManual       = "manual"
+	TaskSourceDriftPlan    = "driftPlan"
+	TaskSourceDriftApply   = "driftApply"
+	TaskSourceWebhookPlan  = "webhookPlan"
+	TaskSourceWebhookApply = "webhookApply"
+	TaskSourceAutoDestroy  = "autoDestroy"
 )
 
 var (
@@ -154,6 +177,6 @@ var (
 		common.TaskRunning:   EventTaskRunning,
 		common.TaskApproving: EventTaskApproving,
 		common.TaskRejected:  EventTaskFailed,
-		EvenvtCronDrift: EvenvtCronDrift,
+		EvenvtCronDrift:      EvenvtCronDrift,
 	}
 )

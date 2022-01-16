@@ -114,6 +114,10 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
 	}
 
+	if form.Playbook != "" && form.KeyId == "" {
+		return nil, e.New(e.TemplateKeyIdNotSet)
+	}
+
 	// 检查模板
 	query := c.DB().Where("status = ?", models.Enable)
 	tpl, err := services.GetTemplateById(query, form.TplId)
@@ -133,6 +137,9 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	}
 	if !form.HasKey("playbook") {
 		form.Playbook = tpl.Playbook
+	}
+	if !form.HasKey("keyId") {
+		form.KeyId = tpl.KeyId
 	}
 
 	if form.Timeout == 0 {
@@ -207,6 +214,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		AutoRepairDrift:  form.AutoRepairDrift,
 		CronDriftExpress: form.CronDriftExpress,
 		OpenCronDrift:    form.OpenCronDrift,
+		PolicyEnable:     form.PolicyEnable,
 	}
 	// 检查偏移检测参数
 	cronTaskType, err := GetCronTaskTypeAndCheckParam(form.CronDriftExpress, form.AutoRepairDrift, form.OpenCronDrift)
@@ -270,7 +278,18 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		_ = tx.Rollback()
 		return nil, err
 	}
-
+	// 绑定策略组
+	if len(form.PolicyGroup) > 0 {
+		policyForm := &forms.UpdatePolicyRelForm{
+			Id:             env.Id,
+			Scope:          consts.ScopeEnv,
+			PolicyGroupIds: form.PolicyGroup,
+		}
+		if _, err = services.UpdatePolicyRel(tx, policyForm); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+	}
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
@@ -288,6 +307,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		},
 		ExtraData: models.JSON(form.ExtraData),
 		Callback:  form.Callback,
+		Source:    consts.TaskSourceManual,
 	})
 
 	if err != nil {
@@ -370,7 +390,7 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		query = query.Where("iac_env.name LIKE ? OR iac_template.name LIKE ?",
 			fmt.Sprintf("%%%s%%", form.Q),
 			fmt.Sprintf("%%%s%%", form.Q),
-			)
+		)
 	}
 
 	// 默认按创建时间逆序排序
@@ -390,6 +410,7 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		env.MergeTaskStatus()
 		// FIXME: 这里会在 for 循环中查询 db，需要优化
 		PopulateLastTask(c.DB(), env)
+		env.PolicyStatus = models.PolicyStatusConversion(env.PolicyStatus,env.PolicyEnable)
 	}
 
 	return page.PageResp{
@@ -451,12 +472,22 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 		return nil, e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
 	}
 
-	query := c.DB().Where("iac_env.org_id = ? AND iac_env.project_id = ?", c.OrgId, c.ProjectId)
+	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	query := tx.Where("iac_env.org_id = ? AND iac_env.project_id = ?", c.OrgId, c.ProjectId)
 
 	env, err := services.GetEnvById(query, form.Id)
 	if err != nil && err.Code() != e.EnvNotExists {
+		_ = tx.Rollback()
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
 	} else if err != nil {
+		_ = tx.Rollback()
 		c.Logger().Errorf("error get env, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
@@ -476,7 +507,20 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	})
 
 	if err != nil {
+		_ = tx.Rollback()
 		return nil, err
+	}
+	// 先更新合规绑定，若失败则不进行后续更新操作
+	if form.HasKey("policyGroup") && len(form.PolicyGroup) > 0 {
+		policyForm := &forms.UpdatePolicyRelForm{
+			Id:             env.Id,
+			Scope:          consts.ScopeEnv,
+			PolicyGroupIds: form.PolicyGroup,
+		}
+		if _, err = services.UpdatePolicyRel(tx, policyForm); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
 	}
 	attrs["autoRepairDrift"] = cronDriftParam.AutoRepairDrift
 	attrs["openCronDrift"] = cronDriftParam.OpenCronDrift
@@ -498,6 +542,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	if form.HasKey("runnerId") {
 		attrs["runner_id"] = form.RunnerId
 	}
+	
 	if form.HasKey("retryAble") {
 		attrs["retryAble"] = form.RetryAble
 	}
@@ -511,6 +556,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	if form.HasKey("autoApproval") {
 		if form.AutoApproval != env.AutoApproval {
 			if err := checkUserHasApprovalPerm(c); err != nil {
+				_ = tx.Rollback()
 				return nil, e.AutoNew(err, e.PermissionDeny)
 			}
 		}
@@ -524,6 +570,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	if form.HasKey("destroyAt") {
 		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
 		if err != nil {
+			_ = tx.Rollback()
 			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
 		}
 		attrs["auto_destroy_at"] = &destroyAt
@@ -531,6 +578,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	} else if form.HasKey("ttl") {
 		ttl, err := services.ParseTTL(form.TTL)
 		if err != nil {
+			_ = tx.Rollback()
 			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
 		}
 
@@ -550,15 +598,18 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 		// triggers有变更时，需要检测webhook的配置
 		tpl, err := services.GetTemplateById(c.DB(), env.TplId)
 		if err != nil && err.Code() == e.TemplateNotExists {
+			_ = tx.Rollback()
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)
 		} else if err != nil {
 			c.Logger().Errorf("error get template, err %s", err)
+			_ = tx.Rollback()
 			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 		}
 		vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
 		// 获取token
 		token, err := GetWebhookToken(c)
 		if err != nil {
+			_ = tx.Rollback()
 			return nil, err
 		}
 
@@ -569,25 +620,35 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 
 	if form.HasKey("archived") {
 		if env.Status != models.EnvStatusInactive {
+			_ = tx.Rollback()
 			return nil, e.New(e.EnvCannotArchiveActive,
 				fmt.Errorf("env can't be archive while env is %s", env.Status),
 				http.StatusBadRequest)
 		}
 		attrs["archived"] = form.Archived
 	}
+	if form.HasKey("policyEnable") {
+		attrs["policyEnable"] = form.PolicyEnable
+	}
 
-	env, err = services.UpdateEnv(c.DB(), form.Id, attrs)
+	env, err = services.UpdateEnv(tx, form.Id, attrs)
 	if err != nil && err.Code() == e.EnvAliasDuplicate {
+		_ = tx.Rollback()
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
+		_ = tx.Rollback()
 		c.Logger().Errorf("error update env, err %s", err)
 		return nil, err
 	}
 
 	env.MergeTaskStatus()
 	detail := &models.EnvDetail{Env: *env}
-	detail = PopulateLastTask(c.DB(), detail)
+	detail = PopulateLastTask(tx, detail)
 
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
 	return detail, nil
 }
 
@@ -609,6 +670,14 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 
 	envDetail.MergeTaskStatus()
 	envDetail = PopulateLastTask(c.DB(), envDetail)
+	resp, err := services.GetPolicyRels(c.DB(), form.Id, consts.ScopeEnv)
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range resp {
+		envDetail.PolicyGroup = append(envDetail.PolicyGroup, v.PolicyGroupId)
+	}
+	envDetail.PolicyStatus = models.PolicyStatusConversion(envDetail.PolicyStatus,envDetail.PolicyEnable)
 
 	return envDetail, nil
 }
@@ -627,6 +696,10 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	c.AddLogField("action", fmt.Sprintf("deploy env task %s", form.Id))
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+
+	if form.Playbook != "" && form.KeyId == "" {
+		return nil, e.New(e.TemplateKeyIdNotSet)
 	}
 
 	// 检查自动纠漂移、推送到分支时重新部署时，是否了配置自动审批

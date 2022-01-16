@@ -61,11 +61,15 @@ func (v *TaskExtra) Scan(value interface{}) error {
 }
 
 const (
-	TaskTypePlan    = common.TaskTypePlan
-	TaskTypeApply   = common.TaskTypeApply
-	TaskTypeDestroy = common.TaskTypeDestroy
-	TaskTypeScan    = common.TaskTypeScan
-	TaskTypeParse   = common.TaskTypeParse
+	TaskTypePlan     = common.TaskTypePlan
+	TaskTypeApply    = common.TaskTypeApply
+	TaskTypeDestroy  = common.TaskTypeDestroy
+	TaskTypeScan     = common.TaskTypeScan
+	TaskTypeParse    = common.TaskTypeParse
+	TaskTypeEnvScan  = common.TaskTypeEnvScan
+	TaskTypeEnvParse = common.TaskTypeEnvParse
+	TaskTypeTplScan  = common.TaskTypeTplScan
+	TaskTypeTplParse = common.TaskTypeTplParse
 
 	TaskPending   = common.TaskPending
 	TaskRunning   = common.TaskRunning
@@ -129,7 +133,8 @@ type Task struct {
 	RetryDelay  int    `json:"retryDelay" gorm:"size:32;default:0"`  // 每次任务重试时间，单位为秒
 	RetryAble   bool   `json:"retryAble" gorm:"default:false"`
 	Callback    string `json:"callback" gorm:"default:''"`       // 外部请求的回调方式
-	IsDriftTask bool   `json:"isDritfTask" gorm:"default:false"` // 是否是偏移检测任务
+	IsDriftTask bool   `json:"isDriftTask" gorm:"default:false"` // 是否是偏移检测任务
+	Source      string `json:"source" gorm:"not null;default:manual;enum('manual','driftPlan','driftApply','webhookPlan', 'webhookApply', 'autoDestroy')"`
 }
 
 func (Task) TableName() string {
@@ -194,6 +199,14 @@ func (BaseTask) GetTaskNameByType(typ string) string {
 		return common.TaskTypeScanName
 	case TaskTypeParse:
 		return common.TaskTypeParse
+	case TaskTypeEnvScan:
+		return common.TaskTypeEnvScanName
+	case TaskTypeEnvParse:
+		return common.TaskTypeEnvParseName
+	case TaskTypeTplScan:
+		return common.TaskTypeTplScanName
+	case TaskTypeTplParse:
+		return common.TaskTypeTplParseName
 	default:
 		panic("invalid task type")
 	}
@@ -212,11 +225,11 @@ func (t *Task) PlanJsonPath() string {
 }
 
 func (t *Task) TfParseJsonPath() string {
-	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TerrascanJsonFile)
+	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.ScanInputFile)
 }
 
 func (t *Task) TfResultJsonPath() string {
-	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TerrascanResultFile)
+	return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.ScanResultFile)
 }
 
 func (t *Task) TFPlanOutputLogPath(step string) string {

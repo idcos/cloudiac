@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -464,12 +465,10 @@ func IsFalseStr(s string) bool {
 	return StrInArray(strings.ToLower(s), "off", "false", "0", "no")
 }
 
-func JoinURL(address string, path ...string) string {
-	elems := append([]string{address}, path...)
-	for i := range elems {
-		elems[i] = strings.Trim(elems[i], "/")
-	}
-	return strings.Join(elems, "/")
+func JoinURL(address string, elems ...string) string {
+	return fmt.Sprintf("%s/%s",
+		strings.TrimRight(address, "/"),
+		strings.TrimLeft(path.Join(elems...), "/"))
 }
 
 // SprintTemplate 用模板参数格式化字符串
@@ -590,4 +589,8 @@ func RecoverdCall(fn func(), recoverFuncs ...func(error)) {
 		}
 	}()
 	fn()
+}
+
+func FileNameWithoutExt(filePath string) string {
+	return strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
 }
