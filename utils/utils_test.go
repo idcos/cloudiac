@@ -93,3 +93,26 @@ func TestGetUrlParams(t *testing.T) {
 		})
 	}
 }
+
+func TestJoinUrl(t *testing.T) {
+	cases := []struct {
+		elems  []string
+		except string
+	}{
+		{[]string{"http://example.com", "a"}, "http://example.com/a"},
+		{[]string{"http://example.com", "/a"}, "http://example.com/a"},
+		{[]string{"http://example.com/", "a"}, "http://example.com/a"},
+		{[]string{"http://example.com/", "a", "b"}, "http://example.com/a/b"},
+		{[]string{"http://example.com/", "a", "/b"}, "http://example.com/a/b"},
+		{[]string{"http://example.com/", "/a", "b"}, "http://example.com/a/b"},
+		{[]string{"http://example.com/", "/a", "/b"}, "http://example.com/a/b"},
+		{[]string{"http://example.com/", "", "/b"}, "http://example.com/b"},
+		{[]string{"http://example.com/", "", "b"}, "http://example.com/b"},
+	}
+	for _, c := range cases {
+		url := JoinURL(c.elems[0], c.elems[1:]...)
+		if url != c.except {
+			t.Fatalf("join url: %v, got: '%s', except: '%s'", c.elems, url, c.except)
+		}
+	}
+}
