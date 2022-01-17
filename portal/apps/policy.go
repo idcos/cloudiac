@@ -424,7 +424,7 @@ func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (in
 }
 
 type RespPolicyEnv struct {
-	models.EnvDetail
+	models.Env
 
 	PolicyStatus string `json:"policyStatus"` // 策略检查状态, enum('passed','violated','pending','failed')
 
@@ -443,7 +443,6 @@ func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (in
 	envIds := make([]models.Id, 0)
 	query := services.SearchPolicyEnv(c.DB(), c.OrgId, form.ProjectId, form.EnvId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
-	groupM := make(map[models.Id][]services.NewPolicyGroup)
 
 	if err := p.Scan(&respPolicyEnvs); err != nil {
 		return nil, e.New(e.DBError, err)
@@ -452,16 +451,20 @@ func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (in
 		v.PolicyStatus = models.PolicyStatusConversion(v.PolicyStatus, v.PolicyEnable)
 	}
 
+	for _, e := range respPolicyEnvs {
+		envIds = append(envIds, e.Id)
+	}
+
 	// 根据环境id查询出关联的所有策略组
 	groups, err := services.GetPolicyGroupByEnvIds(c.DB(), envIds)
 	if err != nil {
 		return nil, err
 	}
 
+	groupM := make(map[models.Id][]services.NewPolicyGroup)
 	for _, v := range groups {
 		if _, ok := groupM[v.EnvId]; !ok {
-			groupM[v.EnvId] = []services.NewPolicyGroup{v}
-			continue
+			groupM[v.EnvId] = []services.NewPolicyGroup{}
 		}
 		groupM[v.EnvId] = append(groupM[v.EnvId], v)
 	}
@@ -469,9 +472,9 @@ func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (in
 	for index, v := range respPolicyEnvs {
 		if _, ok := groupM[v.Id]; !ok {
 			respPolicyEnvs[index].PolicyGroups = []services.NewPolicyGroup{}
-			continue
+		} else {
+			respPolicyEnvs[index].PolicyGroups = groupM[v.Id]
 		}
-		respPolicyEnvs[index].PolicyGroups = groupM[v.Id]
 	}
 
 	// 扫描结果统计信息
@@ -1169,13 +1172,11 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 func PolicyGroupRepoDownloadAndParse(g *models.PolicyGroup) ([]*policy.PolicyWithMeta, error) {
 	// 1. 生成临时工作目录
 	logger := logs.Get()
-	logger.Debugf("creating tmp dir")
 	tmpDir, er := os.MkdirTemp("", "*")
 	if er != nil {
 		return nil, er
 	}
 	defer os.RemoveAll(tmpDir)
-	logger.Debugf("tmp dir %s", tmpDir)
 
 	// 2. clone 策略组
 	var wg sync.WaitGroup
@@ -1189,7 +1190,6 @@ func PolicyGroupRepoDownloadAndParse(g *models.PolicyGroup) ([]*policy.PolicyWit
 	}
 
 	// 3. 遍历策略组目录，解析策略文件
-	logger.Debugf("parsing policy group")
 	return policy.ParsePolicyGroup(filepath.Join(tmpDir, "code", g.Dir))
 }
 
