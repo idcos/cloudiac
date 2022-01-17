@@ -63,9 +63,9 @@ type Rule struct {
 }
 
 type Violation struct {
-	RuleName     string `json:"rule_name" gorm:"策略名称"`                          // 规则名称
-	Description  string `json:"description" gorm:"策略描述"`                        // 规则描述
-	RuleId       string `json:"rule_id" gorm:"规则ID(策略ID)"`                      // 规则ID（策略ID）
+	RuleName     string `json:"rule_name" gorm:"comment:策略名称"`                  // 规则名称
+	Description  string `json:"description" gorm:"comment:策略描述"`                // 规则描述
+	RuleId       string `json:"rule_id" gorm:"comment:规则ID(策略ID)"`              // 规则ID（策略ID）
 	Severity     string `json:"severity" gorm:"comment:严重程度"`                   // 严重程度
 	Category     string `json:"category" gorm:"comment:分类（策略组名称）"`              // 分类（策略组名称）
 	Comment      string `json:"skip_comment,omitempty" gorm:"comment:跳过说明"`     // 注释
