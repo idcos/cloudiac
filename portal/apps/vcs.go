@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -128,10 +129,12 @@ func GetReadme(c *ctx.ServiceContext, form *forms.GetReadmeForm) (interface{}, e
 		return nil, e.New(e.VcsError, er)
 	}
 
-	b, er := repo.ReadFileContent(form.RepoRevision, path.Join(form.Dir, "README.md"))
+	// 如果路径以 "/" 开头，部分 vcs 会报错
+	dir := strings.TrimLeft(form.Dir, "/")
+	b, er := repo.ReadFileContent(form.RepoRevision, path.Join(dir, "README.md"))
 	if er != nil && vcsrv.IsNotFoundErr(er) {
 		// README.md 文件不存在时尝试读 README 文件
-		b, er = repo.ReadFileContent(form.RepoRevision, path.Join(form.Dir, "README"))
+		b, er = repo.ReadFileContent(form.RepoRevision, path.Join(dir, "README"))
 	}
 	if er != nil {
 		if vcsrv.IsNotFoundErr(er) {
