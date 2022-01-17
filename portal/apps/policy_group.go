@@ -237,12 +237,6 @@ func DeletePolicyGroup(c *ctx.ServiceContext, form *forms.DeletePolicyGroupForm)
 		}
 	}()
 
-	// 解除策略与策略组的关系
-	if err := services.RemovePoliciesGroupRelation(tx, form.Id); err != nil {
-		_ = tx.Rollback()
-		return nil, err
-	}
-
 	// 删除策略组
 	if err := services.DeletePolicyGroup(tx, form.Id); err != nil {
 		_ = tx.Rollback()

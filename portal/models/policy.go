@@ -11,7 +11,7 @@ import (
 const MaxTagSize = 16
 
 type Policy struct {
-	TimedModel
+	SoftDeleteModel
 
 	OrgId     Id `json:"orgId" gorm:"size:32;comment:组织ID" example:"org-c3lcrjxczjdywmk0go90"`
 	GroupId   Id `json:"groupId" gorm:"size:32;comment:策略组ID" example:"lg-c3lcrjxczjdywmk0go90"`
