@@ -14,6 +14,7 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
+	"path"
 
 	"github.com/gin-gonic/gin"
 )
@@ -127,10 +128,10 @@ func GetReadme(c *ctx.ServiceContext, form *forms.GetReadmeForm) (interface{}, e
 		return nil, e.New(e.VcsError, er)
 	}
 
-	b, er := repo.ReadFileContent(form.RepoRevision, "README.md")
+	b, er := repo.ReadFileContent(form.RepoRevision, path.Join(form.Dir, "README.md"))
 	if er != nil && vcsrv.IsNotFoundErr(er) {
 		// README.md 文件不存在时尝试读 README 文件
-		b, er = repo.ReadFileContent(form.RepoRevision, "README")
+		b, er = repo.ReadFileContent(form.RepoRevision, path.Join(form.Dir, "README"))
 	}
 	if er != nil {
 		if vcsrv.IsNotFoundErr(er) {
