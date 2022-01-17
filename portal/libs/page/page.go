@@ -78,6 +78,10 @@ func (p *Paginator) getPage() *db.Session {
 	return sess
 }
 
+func (p *Paginator) GetPage() *db.Session {
+	return p.getPage()
+}
+
 func (p *Paginator) Scan(dest interface{}) error {
 	return p.getPage().Scan(dest)
 }
