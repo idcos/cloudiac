@@ -127,7 +127,12 @@ func GetReadme(c *ctx.ServiceContext, form *forms.GetReadmeForm) (interface{}, e
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
+
 	b, er := repo.ReadFileContent(form.RepoRevision, "README.md")
+	if er != nil && strings.Contains(er.Error(), "not found") {
+		// README.md 文件不存在时尝试读 README 文件
+		b, er = repo.ReadFileContent(form.RepoRevision, "README")
+	}
 	if er != nil {
 		if strings.Contains(er.Error(), "not found") {
 			b = make([]byte, 0)
