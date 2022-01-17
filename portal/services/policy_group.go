@@ -53,7 +53,7 @@ func SearchPolicyGroup(dbSess *db.Session, orgId models.Id, q string) *db.Sessio
 		qs := "%" + q + "%"
 		query = query.Where(fmt.Sprintf("%s.name like ?", pgTable), qs)
 	}
-	return query.LazySelectAppend(fmt.Sprintf("%s.*,p.policy_count", pgTable))
+	return query.LazySelectAppend(fmt.Sprintf("%s.*,p.policy_count,rel.rel_count", pgTable))
 }
 
 func UpdatePolicyGroup(query *db.Session, group *models.PolicyGroup, attr models.Attrs) e.Error {

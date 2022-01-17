@@ -42,7 +42,7 @@ var Polices = []Policy{
 	//    3. login: （内置角色）登陆用户（无需组织信息）
 	//    4. admin: 组织管理员
 	//    5. member: 普通用户
-	//    6. compliancemanager: 合规管理员
+	//    6. complianceManager: 合规管理员
 	//    项目角色
 	//    1. manager: 管理者
 	//    2. approver: 审批者
@@ -75,7 +75,7 @@ var Polices = []Policy{
 	// 组织角色
 	{"admin", "policies", "*"},
 	{"member", "policies", "read"},
-	{"compliancemanager", "policies", "*"},
+	{"complianceManager", "policies", "*"},
 	// 项目角色
 	{"manager", "policies", "suppress/enablescan/scan"},
 	{"approver", "policies", "suppress/enablescan/scan"},
@@ -88,11 +88,11 @@ var Polices = []Policy{
 	// 用户
 	{"admin", "users", "*"},
 	{"member", "users", "read"},
-	{"compliancemanager", "users", "read"},
+	{"complianceManager", "users", "read"},
 	{"login", "self", "read/update"},
 	{"admin", "self", "read/update"},
 	{"member", "self", "read/update"},
-	{"compliancemanager", "self", "read/update"},
+	{"complianceManager", "self", "read/update"},
 
 	// 组织
 	{"root", "orgs", "*"},
@@ -100,12 +100,12 @@ var Polices = []Policy{
 	{"admin", "orgs", "read/update"},
 	{"admin", "orgs", "listuser/adduser/removeuser/updaterole"},
 	{"member", "orgs", "read"},
-	{"compliancemanager", "orgs", "read"},
+	{"complianceManager", "orgs", "read"},
 
 	// 项目
 	{"admin", "projects", "*"},
 	{"member", "projects", "read"},
-	{"compliancemanager", "projects", "read"},
+	{"complianceManager", "projects", "read"},
 	{"manager", "projects", "*"},
 	{"approver", "projects", "read"},
 	{"operator", "projects", "read"},
@@ -126,7 +126,7 @@ var Polices = []Policy{
 	// 云模板
 	{"admin", "templates", "*"},
 	{"member", "templates", "read"},
-	{"compliancemanager", "templates", "read"},
+	{"complianceManager", "templates", "read"},
 
 	{"manager", "templates", "*"},
 	{"approver", "templates", "*"},
@@ -136,7 +136,7 @@ var Polices = []Policy{
 	// 变量
 	{"admin", "variables", "*"},
 	{"member", "variables", "read"},
-	{"compliancemanager", "variables", "read"},
+	{"complianceManager", "variables", "read"},
 
 	{"manager", "variables", "*"},
 	{"approver", "variables", "*"},
@@ -146,11 +146,11 @@ var Polices = []Policy{
 	// 资源账号(变量组)
 	{"admin", "var_groups", "*"},
 	{"member", "var_groups", "read"},
-	{"compliancemanager", "var_groups", "read"},
+	{"complianceManager", "var_groups", "read"},
 
 	//token
 	{"admin", "tokens", "*"},
-	{"compliancemanager", "tokens", "*"},
+	{"complianceManager", "tokens", "*"},
 
 	{"manager", "tokens", "*"},
 	{"approver", "tokens", "*"},
@@ -159,12 +159,12 @@ var Polices = []Policy{
 	//通知
 	{"admin", "notifications", "*"},
 	{"member", "notifications", "read"},
-	{"compliancemanager", "notifications", "read"},
+	{"complianceManager", "notifications", "read"},
 
 	//vcs
 	{"admin", "vcs", "*"},
 	{"member", "vcs", "read"},
-	{"compliancemanager", "vcs", "read"},
+	{"complianceManager", "vcs", "read"},
 
 	{"manager", "vcs", "read"},
 	{"approver", "vcs", "read"},
@@ -173,7 +173,7 @@ var Polices = []Policy{
 
 	//runner
 	{"member", "runners", "read"},
-	{"compliancemanager", "runners", "read"},
+	{"complianceManager", "runners", "read"},
 	{"manager", "runners", "read"},
 	{"approver", "runners", "read"},
 	{"operator", "runners", "read"},
@@ -182,12 +182,12 @@ var Polices = []Policy{
 	// 密钥
 	{"admin", "keys", "*"},
 	{"member", "keys", "*"},
-	{"compliancemanager", "keys", "*"},
+	{"complianceManager", "keys", "*"},
 
 	// Registry 配置
 	{"admin", "system_config", "*"},
 	{"member", "system_config", "read"},
-	{"compliancemanager", "system_config", "read"},
+	{"complianceManager", "system_config", "read"},
 
 	{"manager", "system_config", "*"},
 	{"approver", "system_config", "read"},
