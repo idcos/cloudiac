@@ -148,7 +148,7 @@ image-runner-arm64: build-linux-arm64-runner
 	$(DOCKER_BUILD) --build-arg WORKER_IMAGE=${DOCKER_REPO}/ct-worker:$(VERSION) \
 	  -t ${DOCKER_REPO}/ct-runner:$(VERSION) -f docker/runner/Dockerfile-arm64 .
 
-image-worker:
+image-worker: build-linux-amd64-portal
 	$(DOCKER_BUILD) -t ${DOCKER_REPO}/ct-worker:$(VERSION) -f docker/worker/Dockerfile .
 
 image-worker-arm64: image-worker
