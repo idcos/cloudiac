@@ -152,3 +152,13 @@ func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]models.
 	}
 	return rels, nil
 }
+
+func DeleteRelByPolicyGroupId(tx *db.Session, groupId models.Id) e.Error {
+	if _, err := tx.Where("group_id = ?", groupId).Delete(models.PolicyRel{}); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil
+		}
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
