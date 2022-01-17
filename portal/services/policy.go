@@ -129,56 +129,38 @@ func GetTaskPolicies(query *db.Session, taskId models.Id) ([]runner.TaskPolicy, 
 // GetValidPolicies 获取云模板/环境关联的策略
 func GetValidPolicies(query *db.Session, tplId, envId models.Id) (validPolicies []models.Policy, suppressedPolicies []models.Policy, err e.Error) {
 	var (
-		tplPolicies, tplValidPolicies, tplSuppressedPolicies []models.Policy
-		envPolicies, envSuppressedPolicies                   []models.Policy
-		enabled                                              bool
+		policies []models.Policy
+		enabled  bool
 	)
 
 	// 获取云模板策略
-	if enabled, err = IsTemplateEnabledScan(query, tplId); err != nil {
+	if envId == "" {
+		if enabled, err = IsTemplateEnabledScan(query, tplId); err != nil {
+			return
+		}
+		if enabled {
+			if policies, err = GetPoliciesByTemplateId(query, tplId); err != nil {
+				return
+			}
+			if validPolicies, suppressedPolicies, err = FilterSuppressPolicies(query, policies, tplId, consts.ScopeTemplate); err != nil {
+				return
+			}
+		}
 		return
-	}
-	if enabled {
-		if tplPolicies, err = GetPoliciesByTemplateId(query, tplId); err != nil {
-			return
-		}
-		if tplValidPolicies, tplSuppressedPolicies, err = FilterSuppressPolicies(query, tplPolicies, tplId, consts.ScopeTemplate); err != nil {
-			return
-		}
 	}
 
 	// 获取环境策略
-	if envId != "" {
-		if enabled, err = IsEnvEnabledScan(query, envId); err != nil {
-			return
-		}
+	if enabled, err = IsEnvEnabledScan(query, envId); err != nil {
+		return
 	}
-	if envId != "" && enabled {
-		if envPolicies, err = GetPoliciesByEnvId(query, envId); err != nil {
+	if enabled {
+		if policies, err = GetPoliciesByEnvId(query, envId); err != nil {
 			return
 		}
 
-		// 有效策略：valid = tpl valid + env valid - env suppress
-		policies := MergePolicies(tplValidPolicies, envPolicies)
-		if validPolicies, envSuppressedPolicies, err = FilterSuppressPolicies(query, policies, envId, consts.ScopeEnv); err != nil {
+		if validPolicies, suppressedPolicies, err = FilterSuppressPolicies(query, policies, envId, consts.ScopeEnv); err != nil {
 			return
 		}
-
-		// 屏蔽策略列表需要排除掉环境引入的策略
-		// suppress = tpl suppress - env valid + env suppress
-		envValidPoliciesMap := make(map[models.Id]int)
-		for _, policy := range envPolicies {
-			envValidPoliciesMap[policy.Id] = 1
-		}
-		for idx, policy := range tplSuppressedPolicies {
-			if _, ok := envValidPoliciesMap[policy.Id]; !ok {
-				suppressedPolicies = append(suppressedPolicies, tplSuppressedPolicies[idx])
-			}
-		}
-		suppressedPolicies = MergePolicies(suppressedPolicies, envSuppressedPolicies)
-	} else {
-		validPolicies = tplValidPolicies
-		suppressedPolicies = tplSuppressedPolicies
 	}
 
 	return

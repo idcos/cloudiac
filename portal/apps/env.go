@@ -279,6 +279,16 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, err
 	}
 	// 绑定策略组
+	// 获取云模板策略组
+	groups, err := services.GetPoliciesByTemplateId(tx, env.TplId)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+	// 复制策略组到环境
+	for _, g := range groups {
+		form.PolicyGroup = append(form.PolicyGroup, g.Id)
+	}
 	if len(form.PolicyGroup) > 0 {
 		policyForm := &forms.UpdatePolicyRelForm{
 			Id:             env.Id,
@@ -410,7 +420,7 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		env.MergeTaskStatus()
 		// FIXME: 这里会在 for 循环中查询 db，需要优化
 		PopulateLastTask(c.DB(), env)
-		env.PolicyStatus = models.PolicyStatusConversion(env.PolicyStatus,env.PolicyEnable)
+		env.PolicyStatus = models.PolicyStatusConversion(env.PolicyStatus, env.PolicyEnable)
 	}
 
 	return page.PageResp{
@@ -542,7 +552,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	if form.HasKey("runnerId") {
 		attrs["runner_id"] = form.RunnerId
 	}
-	
+
 	if form.HasKey("retryAble") {
 		attrs["retryAble"] = form.RetryAble
 	}
@@ -677,7 +687,7 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 	for _, v := range resp {
 		envDetail.PolicyGroup = append(envDetail.PolicyGroup, v.PolicyGroupId)
 	}
-	envDetail.PolicyStatus = models.PolicyStatusConversion(envDetail.PolicyStatus,envDetail.PolicyEnable)
+	envDetail.PolicyStatus = models.PolicyStatusConversion(envDetail.PolicyStatus, envDetail.PolicyEnable)
 
 	return envDetail, nil
 }
