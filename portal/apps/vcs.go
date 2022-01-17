@@ -14,7 +14,6 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -129,15 +128,15 @@ func GetReadme(c *ctx.ServiceContext, form *forms.GetReadmeForm) (interface{}, e
 	}
 
 	b, er := repo.ReadFileContent(form.RepoRevision, "README.md")
-	if er != nil && strings.Contains(er.Error(), "not found") {
+	if er != nil && vcsrv.IsNotFoundErr(er) {
 		// README.md 文件不存在时尝试读 README 文件
 		b, er = repo.ReadFileContent(form.RepoRevision, "README")
 	}
 	if er != nil {
-		if strings.Contains(er.Error(), "not found") {
+		if vcsrv.IsNotFoundErr(er) {
 			b = make([]byte, 0)
 		} else {
-			return nil, e.New(e.VcsError, er)
+			return nil, e.AutoNew(er, e.VcsError)
 		}
 	}
 
@@ -338,10 +337,10 @@ func SearchVcsFile(c *ctx.ServiceContext, form *forms.SearchVcsFileForm) (interf
 	}
 	b, er := repo.ReadFileContent(form.Branch, form.FileName)
 	if er != nil {
-		if strings.Contains(er.Error(), "not found") {
+		if vcsrv.IsNotFoundErr(er) {
 			b = make([]byte, 0)
 		} else {
-			return nil, e.New(e.VcsError, er)
+			return nil, e.AutoNew(er, e.VcsError)
 		}
 	}
 

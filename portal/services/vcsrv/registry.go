@@ -167,8 +167,14 @@ func (r *RegistryRepo) ReadFileContent(revision string, filePath string) (conten
 		return nil, err
 	}
 
-	if resp.Code != 0 && strings.Contains(resp.MessageDetail, "file not exists") {
-		return nil, e.New(e.ObjectNotExists)
+	if resp.Code != 0 {
+		if strings.Contains(resp.Message, "file not exists") ||
+			strings.Contains(resp.Message, "not found") ||
+			strings.Contains(resp.MessageDetail, "not found") {
+			return nil, e.New(e.ObjectNotExists)
+		} else {
+			return nil, e.New(e.VcsError, err)
+		}
 	}
 
 	return []byte(resp.Result.Content), nil
