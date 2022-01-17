@@ -97,11 +97,11 @@ func DeletePolicyEnabledRel(tx *db.Session, id models.Id, scope string) e.Error 
 }
 
 // UpdatePolicyRel 创建/更新策略关系
-func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]models.PolicyRel, e.Error) {
+func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]*models.PolicyRel, e.Error) {
 	var (
 		env  *models.Env
 		tpl  *models.Template
-		rels []models.PolicyRel
+		rels []*models.PolicyRel
 		err  e.Error
 	)
 	if form.Scope == consts.ScopeEnv {
@@ -128,7 +128,7 @@ func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]models.
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)
 		}
 		if env != nil {
-			rels = append(rels, models.PolicyRel{
+			rels = append(rels, &models.PolicyRel{
 				OrgId:     env.OrgId,
 				ProjectId: env.ProjectId,
 				GroupId:   group.Id,
@@ -136,7 +136,7 @@ func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]models.
 				Scope:     consts.ScopeEnv,
 			})
 		} else {
-			rels = append(rels, models.PolicyRel{
+			rels = append(rels, &models.PolicyRel{
 				OrgId:   tpl.OrgId,
 				GroupId: group.Id,
 				TplId:   tpl.Id,
