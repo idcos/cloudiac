@@ -213,7 +213,7 @@ func ScanEnvironment(c *ctx.ServiceContext, form *forms.ScanEnvironmentForm) (*m
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
 
-	tx := services.QueryWithOrgId(c.Tx(), c.OrgId)
+	tx := services.QueryWithOrgIdAndGlobal(c.Tx(), c.OrgId)
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
