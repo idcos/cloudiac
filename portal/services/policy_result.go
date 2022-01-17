@@ -4,6 +4,7 @@ package services
 
 import (
 	"cloudiac/common"
+	"cloudiac/policy"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
@@ -79,7 +80,7 @@ func InitScanResult(tx *db.Session, task *models.ScanTask) e.Error {
 }
 
 // UpdateScanResult 根据 terrascan 扫描结果批量更新
-func UpdateScanResult(tx *db.Session, task models.Tasker, result TsResult, policyStatus string) e.Error {
+func UpdateScanResult(tx *db.Session, task models.Tasker, result policy.TsResult, policyStatus string) e.Error {
 
 	var (
 		policyResults []*models.PolicyResult

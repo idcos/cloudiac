@@ -919,19 +919,14 @@ func (n Percent) MarshalJSON() ([]byte, error) {
 }
 
 type PolicyTestResp struct {
-	Data  interface{} `json:"data" swaggertype:"string" example:"{\n\"accurics\":{\n\"instanceWithNoVpc\":[\n{\n\"Id\":\"alicloud_instance.instance\"\n}\n]\n}\n}"` // 脚本测试输出，json文本
-	Error string      `json:"error" example:"1 error occurred: policy.rego:4: rego_parse_error: refs cannot be used for rule\n"`                                    // 脚本执行错误内容
+	Data         interface{} `json:"data" swaggertype:"string" example:"{\n\"accurics\":{\n\"instanceWithNoVpc\":[\n{\n\"Id\":\"alicloud_instance.instance\"\n}\n]\n}\n}"` // 脚本测试输出，json文本
+	Error        string      `json:"error" example:"1 error occurred: policy.rego:4: rego_parse_error: refs cannot be used for rule\n"`                                    // 脚本执行错误内容
+	PolicyStatus string      `json:"policyStatus"`
 }
 
 func PolicyTest(c *ctx.ServiceContext, form *forms.PolicyTestForm) (*PolicyTestResp, e.Error) {
 	c.AddLogField("action", "test template")
 
-	if _, _, _, err := parseRegoHeader(form.Rego); err != nil {
-		return &PolicyTestResp{
-			Data:  map[string]interface{}{},
-			Error: fmt.Sprintf("1 error occurred: %s", err.Error()),
-		}, nil
-	}
 	var value interface{}
 	if err := json.Unmarshal([]byte(form.Input), &value); err != nil {
 		return &PolicyTestResp{
@@ -956,15 +951,22 @@ func PolicyTest(c *ctx.ServiceContext, form *forms.PolicyTestForm) (*PolicyTestR
 		return nil, e.New(e.InternalError, err, http.StatusInternalServerError)
 	}
 
-	if result, err := policy.EngineScan(regoPath, inputPath); err != nil {
+	if result, err := policy.RegoParse(regoPath, inputPath); err != nil {
 		return &PolicyTestResp{
-			Data:  map[string]interface{}{},
-			Error: fmt.Sprintf("%s", err),
+			Data:         map[string]interface{}{},
+			Error:        fmt.Sprintf("%s", err),
+			PolicyStatus: common.PolicyStatusFailed,
 		}, nil
 	} else {
+		status := common.PolicyStatusPassed
+		res := (&policy.Rego{}).ParseResource(result)
+		if len(res) > 0 {
+			status = common.PolicyStatusViolated
+		}
 		return &PolicyTestResp{
-			Data:  result,
-			Error: "",
+			Data:         result,
+			Error:        "",
+			PolicyStatus: status,
 		}, nil
 	}
 }
@@ -1162,7 +1164,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 }
 
 // PolicyGroupRepoDownloadAndParse 下载和解析策略组文件
-func PolicyGroupRepoDownloadAndParse(g *models.PolicyGroup) ([]*services.PolicyWithMeta, error) {
+func PolicyGroupRepoDownloadAndParse(g *models.PolicyGroup) ([]*policy.PolicyWithMeta, error) {
 	// 1. 生成临时工作目录
 	logger := logs.Get()
 	logger.Debugf("creating tmp dir")
@@ -1186,11 +1188,11 @@ func PolicyGroupRepoDownloadAndParse(g *models.PolicyGroup) ([]*services.PolicyW
 
 	// 3. 遍历策略组目录，解析策略文件
 	logger.Debugf("parsing policy group")
-	return services.ParsePolicyGroup(filepath.Join(tmpDir, "code", g.Dir))
+	return policy.ParsePolicyGroup(filepath.Join(tmpDir, "code", g.Dir))
 }
 
 // policiesUpsert 策略文件同步
-func policiesUpsert(tx *db.Session, userId models.Id, orgId models.Id, policyGroup *models.PolicyGroup, policyMetas []*services.PolicyWithMeta) e.Error {
+func policiesUpsert(tx *db.Session, userId models.Id, orgId models.Id, policyGroup *models.PolicyGroup, policyMetas []*policy.PolicyWithMeta) e.Error {
 	// 4. 策略同步
 
 	// 删除仓库中已经不存在的策略
