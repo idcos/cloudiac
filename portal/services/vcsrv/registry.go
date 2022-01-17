@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/models"
+	"cloudiac/utils"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -39,7 +40,7 @@ type RegistryRepo struct {
 }
 
 func (r *RegistryRepo) ListBranches() ([]string, error) {
-	path := fmt.Sprintf("%s/api/v1/vcs/repo/branches", r.vcs.Address)
+	path := utils.JoinURL(r.vcs.Address, "/api/v1/vcs/repo/branches")
 	_, body, err := registryVcsRequest(path, "GET", map[string]string{
 		"path": r.repoPath,
 	})
@@ -62,7 +63,7 @@ func (r *RegistryRepo) ListBranches() ([]string, error) {
 }
 
 func (r *RegistryRepo) ListTags() ([]string, error) {
-	path := fmt.Sprintf("%s/api/v1/vcs/repo/tags", r.vcs.Address)
+	path := utils.JoinURL(r.vcs.Address, "/api/v1/vcs/repo/tags")
 	_, body, err := registryVcsRequest(path, "GET", map[string]string{
 		"path": r.repoPath,
 	})
@@ -85,7 +86,7 @@ func (r *RegistryRepo) ListTags() ([]string, error) {
 }
 
 func (r *RegistryRepo) BranchCommitId(branch string) (string, error) {
-	path := fmt.Sprintf("%s/api/v1/vcs/repo/branch_commit_id", r.vcs.Address)
+	path := utils.JoinURL(r.vcs.Address, "/api/v1/vcs/repo/branch_commit_id")
 	_, body, err := registryVcsRequest(path, "GET", map[string]string{
 		"path":   r.repoPath,
 		"branch": branch,
@@ -109,7 +110,7 @@ func (r *RegistryRepo) BranchCommitId(branch string) (string, error) {
 }
 
 func (r *RegistryRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
-	path := fmt.Sprintf("%s/api/v1/vcs/repo/files", r.vcs.Address)
+	path := utils.JoinURL(r.vcs.Address, "/api/v1/vcs/repo/files")
 	recursive := "false"
 	if opt.Recursive {
 		recursive = "true"
@@ -142,7 +143,7 @@ func (r *RegistryRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
 }
 
 func (r *RegistryRepo) ReadFileContent(revision string, filePath string) (content []byte, err error) {
-	path := fmt.Sprintf("%s/api/v1/vcs/repo/file_content", r.vcs.Address)
+	path := utils.JoinURL(r.vcs.Address, "/api/v1/vcs/repo/file_content")
 	_, body, err := registryVcsRequest(path, "GET", map[string]string{
 		"path":     r.repoPath,
 		"branch":   revision,
@@ -166,15 +167,21 @@ func (r *RegistryRepo) ReadFileContent(revision string, filePath string) (conten
 		return nil, err
 	}
 
-	if resp.Code != 0 && strings.Contains(resp.MessageDetail, "file not exists") {
-		return nil, e.New(e.ObjectNotExists)
+	if resp.Code != 0 {
+		if strings.Contains(resp.Message, "file not exists") ||
+			strings.Contains(resp.Message, "not found") ||
+			strings.Contains(resp.MessageDetail, "not found") {
+			return nil, e.New(e.ObjectNotExists)
+		} else {
+			return nil, e.New(e.VcsError, err)
+		}
 	}
 
 	return []byte(resp.Result.Content), nil
 }
 
 func (r *RegistryRepo) FormatRepoSearch() (*Projects, e.Error) {
-	path := fmt.Sprintf("%s/api/v1/vcs/repo/info", r.vcs.Address)
+	path := utils.JoinURL(r.vcs.Address, "/api/v1/vcs/repo/info")
 	_, body, err := registryVcsRequest(path, "GET", map[string]string{
 		"path": r.repoPath,
 	})
@@ -195,7 +202,7 @@ func (r *RegistryRepo) FormatRepoSearch() (*Projects, e.Error) {
 }
 
 func (r *RegistryRepo) DefaultBranch() string {
-	path := fmt.Sprintf("%s/api/v1/vcs/repo/default_branch", r.vcs.Address)
+	path := utils.JoinURL(r.vcs.Address, "/api/v1/vcs/repo/default_branch")
 	_, body, err := registryVcsRequest(path, "GET", map[string]string{
 		"path": r.repoPath,
 	})
