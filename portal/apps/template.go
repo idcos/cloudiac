@@ -256,13 +256,6 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 			return nil, err
 		}
 	}
-	// 自动触发一次检测
-	if form.PolicyEnable {
-		tplScanForm := &forms.ScanTemplateForm{
-			Id: tpl.Id,
-		}
-		go ScanTemplateOrEnv(c, tplScanForm, "")
-	}
 	if form.HasKey("projectId") {
 		if err := services.DeleteTemplateProject(tx, form.Id); err != nil {
 			_ = tx.Rollback()
@@ -297,6 +290,13 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 		_ = tx.Rollback()
 		c.Logger().Errorf("error commit update template, err %s", err)
 		return nil, e.New(e.DBError, err)
+	}
+	// 自动触发一次检测
+	if form.PolicyEnable {
+		tplScanForm := &forms.ScanTemplateForm{
+			Id: tpl.Id,
+		}
+		go ScanTemplateOrEnv(c, tplScanForm, "")
 	}
 	return tpl, err
 }
