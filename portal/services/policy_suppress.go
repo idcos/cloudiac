@@ -87,3 +87,9 @@ func GetPolicySuppressByPolicyId(query *db.Session, id models.Id) (*models.Polic
 
 	return &sup, nil
 }
+
+func QueryPolicySuppress(query *db.Session, targetType string, targetId models.Id) *db.Session {
+	query = query.Joins("left join iac_policy_suppress as ps on ps.policy_id = p.id and ps.target_type = ? and ps.target_id = ?", targetType, targetId).
+		LazySelectAppend("!ISNULL(ps.id) AS policy_suppress")
+	return query
+}

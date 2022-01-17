@@ -687,6 +687,7 @@ type PolicyResultGroup struct {
 type PolicyResult struct {
 	models.PolicyResult
 	PolicyName      string `json:"policyName" example:"VPC 安全组规则"`  // 策略名称
+	PolicySuppress  bool   `json:"policySuppress"`                  //是否屏蔽
 	PolicyGroupName string `json:"policyGroupName" example:"安全策略组"` // 策略组名称
 	FixSuggestion   string `json:"fixSuggestion" example:"建议您创建一个专有网络..."`
 	Rego            string `json:"rego" example:""` //rego 代码文件内容
@@ -722,6 +723,7 @@ func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicySca
 
 	query = services.QueryWithOrgId(c.DB(), c.OrgId, models.PolicyResult{}.TableName())
 	query = services.QueryPolicyResult(query, scanTask.Id)
+	query = services.QueryPolicySuppress(query, scope, form.Id)
 	if form.SortField() == "" {
 		query = query.Order("policy_group_name, policy_name")
 	} else {
