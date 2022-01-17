@@ -5,6 +5,7 @@ package task_manager
 import (
 	"cloudiac/common"
 	"cloudiac/configs"
+	"cloudiac/policy"
 	"cloudiac/portal/apps"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/libs/db"
@@ -534,7 +535,7 @@ func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) 
 	dbSess := m.db
 	processScanResult := func() error {
 		var (
-			tsResult services.TsResult
+			tsResult policy.TsResult
 			scanStep *models.TaskStep
 			scanTask *models.ScanTask
 			err      error
@@ -558,7 +559,7 @@ func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) 
 				return er
 			}
 			if bs, er := readIfExist(task.TfResultJsonPath()); er == nil && len(bs) > 0 {
-				if tfResultJson, er := services.UnmarshalTfResultJson(bs); er == nil {
+				if tfResultJson, er := policy.UnmarshalTfResultJson(bs); er == nil {
 					tsResult = tfResultJson.Results
 				}
 			}
@@ -1212,7 +1213,7 @@ func (m *TaskManager) processScanTaskDone(taskId models.Id) {
 
 	processTfResult := func() error {
 		var (
-			tsResult services.TsResult
+			tsResult policy.TsResult
 			bs       []byte
 			err      error
 		)
@@ -1222,7 +1223,7 @@ func (m *TaskManager) processScanTaskDone(taskId models.Id) {
 				return er
 			}
 			if bs, err = read(task.TfResultJsonPath()); err == nil && len(bs) > 0 {
-				if tfResultJson, err := services.UnmarshalTfResultJson(bs); err == nil {
+				if tfResultJson, err := policy.UnmarshalTfResultJson(bs); err == nil {
 					tsResult = tfResultJson.Results
 				}
 			}

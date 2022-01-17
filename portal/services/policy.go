@@ -4,6 +4,7 @@ package services
 
 import (
 	"cloudiac/common"
+	"cloudiac/policy"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
@@ -99,27 +100,27 @@ func GetTaskPolicies(query *db.Session, taskId models.Id) ([]runner.TaskPolicy, 
 		return nil, err
 	}
 
-	for _, policy := range policies {
+	for _, p := range policies {
 		category := "general"
-		group, _ := GetPolicyGroupById(query, policy.GroupId)
+		group, _ := GetPolicyGroupById(query, p.GroupId)
 		if group != nil {
 			category = group.Name
 		}
-		meta := map[string]interface{}{
-			"name":          policy.RuleName,
-			"file":          "policy.rego",
-			"policy_type":   policy.PolicyType,
-			"resource_type": policy.ResourceType,
-			"severity":      strings.ToUpper(policy.Severity),
-			"reference_id":  policy.ReferenceId,
-			"category":      category,
-			"version":       policy.Revision,
-			"id":            string(policy.Id),
+		meta := runner.Meta{
+			Name:         p.RuleName,
+			File:         p.RuleName + ".rego",
+			PolicyType:   p.PolicyType,
+			ResourceType: p.ResourceType,
+			Severity:     strings.ToUpper(p.Severity),
+			ReferenceId:  p.ReferenceId,
+			Category:     category,
+			Version:      p.Revision,
+			Id:           string(p.Id),
 		}
 		taskPolicies = append(taskPolicies, runner.TaskPolicy{
-			PolicyId: string(policy.Id),
+			PolicyId: string(p.Id),
 			Meta:     meta,
-			Rego:     policy.Rego,
+			Rego:     p.Rego,
 		})
 	}
 	return taskPolicies, nil
@@ -821,4 +822,31 @@ func MergeScanResultPolicyStatus(policyEnabled bool, lastScanTask *models.ScanTa
 			return lastScanTask.PolicyStatus
 		}
 	}
+}
+
+func GetScanPolicies(query *db.Session, policies []models.Policy) ([]policy.Policy, error) {
+	var ps []policy.Policy
+	for _, p := range policies {
+		group, err := GetPolicyGroupById(query, p.GroupId)
+		if err != nil {
+			return nil, err
+		}
+		ps = append(ps, policy.Policy{
+			Id: string(p.Id),
+			Meta: policy.Meta{
+				Category:     group.Name,
+				File:         "policy.rego",
+				Id:           string(p.Id),
+				Name:         p.Name,
+				PolicyType:   p.PolicyType,
+				ReferenceId:  p.ReferenceId,
+				ResourceType: p.ResourceType,
+				Severity:     p.Severity,
+				Version:      p.Revision,
+			},
+			Rego: p.Rego,
+		})
+	}
+
+	return ps, nil
 }

@@ -4,6 +4,7 @@ package apps
 
 import (
 	"cloudiac/common"
+	"cloudiac/policy"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
@@ -19,8 +20,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/Masterminds/semver"
+	"github.com/pkg/errors"
 )
 
 // CreatePolicyGroup 创建策略组
@@ -181,7 +182,7 @@ func UpdatePolicyGroup(c *ctx.ServiceContext, form *forms.UpdatePolicyGroupForm)
 	pg.Id = form.Id
 
 	var (
-		policies []*services.PolicyWithMeta
+		policies []*policy.PolicyWithMeta
 		er       error
 	)
 	// 未对仓库信息进行修改时，不重新同步策略数据
