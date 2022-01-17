@@ -14,7 +14,7 @@ import (
 	"net/http"
 )
 
-func UpdatePolicyRelNew(c *ctx.ServiceContext, form *forms.UpdatePolicyRelForm) ([]models.PolicyRel, e.Error) {
+func UpdatePolicyRelNew(c *ctx.ServiceContext, form *forms.UpdatePolicyRelForm) ([]*models.PolicyRel, e.Error) {
 	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {

@@ -10,6 +10,7 @@ import (
 	"cloudiac/utils"
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -169,7 +170,11 @@ func (c *ScanCmd) Execute(args []string) error {
 
 	err := scanner.Run()
 	if err != nil {
-		return err
+		if errors.Is(err, policy.ErrScanExitViolated) {
+			os.Exit(3)
+		} else {
+			os.Exit(1)
+		}
 	}
 
 	return nil

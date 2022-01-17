@@ -20,6 +20,11 @@ import (
 	"time"
 )
 
+var (
+	ErrScanExitViolated = errors.New("scan completed with violation")
+	ErrScanExitFailed   = errors.New("scan failed")
+)
+
 type Scanner struct {
 	Db         *db.Session
 	Logfp      *os.File
@@ -80,10 +85,11 @@ func (s *Scanner) Run() error {
 	}
 
 	// 批量扫描仓库
+	var errExit error
 	for _, resource := range s.Resources {
-		err = s.ScanResource(resource)
-		if err != nil {
-			err = fmt.Errorf("scan error %v", err)
+		errExit = s.ScanResource(resource)
+		if errExit != nil && !errors.Is(errExit, ErrScanExitViolated) {
+			break // break to cleanup
 		}
 	}
 
@@ -103,7 +109,7 @@ func (s *Scanner) Run() error {
 		}
 	}
 
-	return err
+	return errExit
 }
 
 func (s *Scanner) Prepare() error {
@@ -367,6 +373,7 @@ func (s *Scanner) RunInternalScan(code Resource) error {
 		return err
 	}
 
+	violated := false
 	for _, p := range policies {
 		result, err := RegoParse(filepath.Join(p.Meta.Root, p.Meta.File), s.GetConfigPath(code), p.Meta.Name)
 		if err != nil {
@@ -383,7 +390,7 @@ func (s *Scanner) RunInternalScan(code Resource) error {
 			}
 			output.Results.ScanErrors = append(output.Results.ScanErrors, scanError)
 			output.Results.ScanSummary.PoliciesError++
-			s.Console(s.GetMessage(MSG_TEMPLATE_ERROR, p))
+			s.Console(s.GetMessage(MSG_TEMPLATE_ERROR, scanError))
 			continue
 		}
 		// parse result
@@ -404,6 +411,7 @@ func (s *Scanner) RunInternalScan(code Resource) error {
 			output.Results.Violations = append(output.Results.Violations, violation)
 			output.Results.ScanSummary.ViolatedPolicies++
 			s.Console(s.GetMessage(MSG_TEMPLATE_VIOLATED, violation))
+			violated = true
 		} else {
 			rule := Rule{
 				RuleName:    p.Meta.Name,
@@ -438,6 +446,10 @@ func (s *Scanner) RunInternalScan(code Resource) error {
 		fmt.Printf("%s\n", outputB)
 	}
 
+	if violated {
+		return ErrScanExitViolated
+	}
+
 	return nil
 }
 
@@ -453,19 +465,18 @@ func (s *Scanner) ReadPolicies(policyDir string) ([]*PolicyWithMeta, error) {
 	}
 
 	var ret []*PolicyWithMeta
-	//var errs []*services.ScanError
 	// 遍历当前目录
 	for _, f := range policiesDir {
-		policies, _ := ParsePolicyGroup(filepath.Join(policyDir, f.Name()))
-		//if err != nil {
-		//	errs = append(errs, &services.ScanError{
-		//		IacType:   "terraform",
-		//		Directory: policyDir,
-		//		File:      filepath.Join(policyDir, f.Name()),
-		//		RuleId:    f.Name(),
-		//		ErrMsg:    s.ErrorMsg(""),
-		//	})
-		//}
+		policies, err := ParsePolicyGroup(filepath.Join(policyDir, f.Name()))
+		if err != nil {
+			scanError := ScanError{
+				RuleName: f.Name(),
+				File:     f.Name(),
+				RuleId:   f.Name(),
+				Error:    err,
+			}
+			s.Console(s.GetMessage(MSG_TEMPLATE_INVALID, scanError))
+		}
 		ret = append(ret, policies...)
 	}
 	return ret, nil

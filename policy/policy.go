@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/hashicorp/hcl"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
@@ -22,11 +23,16 @@ import (
 	"strings"
 )
 
-const (
-	MSG_TEMPLATE_ERROR     = "错误：策略组：{{.Category}}，策略名：{{.RuleName}}，策略ID：{{.RuleId}}，严重程度：{{.Severity}}，错误：{{.Error}}"
-	MSG_TEMPLATE_PASSED    = "通过：策略组：{{.Category}}，策略名：{{.RuleName}}，策略ID：{{.RuleId}}，严重程度：{{.Severity}}"
-	MSG_TEMPLATE_VIOLATED  = "不通过：策略组：{{.Category}}，策略名：{{.RuleName}}，策略ID：{{.RuleId}}，资源ID：{{.ResourceName}}，严重程度：{{.Severity}}"
-	MSG_TEMPLATE_SUPRESSED = "已屏蔽：策略组：{{.Category}}，策略名：{{.RuleName}}，策略ID：{{.RuleId}}，严重程度：{{.Severity}}"
+var (
+	green  = color.New(color.FgGreen).SprintFunc()
+	red    = color.New(color.FgRed).SprintFunc()
+	yellow = color.New(color.FgYellow).SprintFunc()
+
+	MSG_TEMPLATE_INVALID   = red("错误：\t") + "策略ID：{{.RuleId}}，错误详情：{{.Error}}"
+	MSG_TEMPLATE_ERROR     = red("错误：\t") + "策略组：{{.Category}}，策略名：{{.RuleName}}，策略ID：{{.RuleId}}，严重程度：{{.Severity}}\n详情：{{.Error}}"
+	MSG_TEMPLATE_PASSED    = green("通过：\t") + "策略组：{{.Category}}，策略名：{{.RuleName}}，策略ID：{{.RuleId}}，严重程度：{{.Severity}}"
+	MSG_TEMPLATE_VIOLATED  = red("不通过：") + "策略组：{{.Category}}，策略名：{{.RuleName}}，策略ID：{{.RuleId}}，资源ID：{{.ResourceName}}，严重程度：{{.Severity}}"
+	MSG_TEMPLATE_SUPRESSED = yellow("已屏蔽：\t") + "策略组：{{.Category}}，策略名：{{.RuleName}}，策略ID：{{.RuleId}}，严重程度：{{.Severity}}"
 )
 
 type Parser struct {
@@ -674,7 +680,7 @@ func ParseMeta(regoFilePath string, metaFilePath string) (p *PolicyWithMeta, err
 	var meta Meta
 	buf, er := os.ReadFile(regoFilePath)
 	if er != nil {
-		return nil, e.New(e.PolicyRegoInvalid, fmt.Errorf("read rego file: %v", err))
+		return nil, e.New(e.PolicyRegoInvalid, fmt.Errorf("read rego file: %v", er))
 	}
 	regoContent := string(buf)
 
@@ -683,12 +689,12 @@ func ParseMeta(regoFilePath string, metaFilePath string) (p *PolicyWithMeta, err
 	if metaFilePath != "" {
 		content, er := os.ReadFile(metaFilePath)
 		if er != nil {
-			return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("read meta file: %v", err))
+			return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("read meta file: %v", er))
 		}
 		er = json.Unmarshal(content, &meta)
 		meta.Root = filepath.Dir(metaFilePath)
 		if er != nil {
-			return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("unmarshal meta file: %v", err))
+			return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("unmarshal meta file: %v", er))
 		}
 		p.Meta = meta
 		p.Id = meta.Id
