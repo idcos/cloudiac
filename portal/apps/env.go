@@ -684,6 +684,7 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 	if err != nil {
 		return nil, err
 	}
+	envDetail.PolicyGroup = make([]string, 0)
 	for _, v := range resp {
 		envDetail.PolicyGroup = append(envDetail.PolicyGroup, v.PolicyGroupId)
 	}
