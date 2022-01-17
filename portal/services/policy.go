@@ -274,7 +274,8 @@ func RemovePoliciesGroupRelation(tx *db.Session, groupId models.Id) e.Error {
 
 func SearchPolicy(dbSess *db.Session, form *forms.SearchPolicyForm, orgId models.Id) *db.Session {
 	pTable := models.Policy{}.TableName()
-	query := dbSess.Table(pTable).Where(fmt.Sprintf("%s.org_id in (?)", pTable), orgId)
+	query := dbSess.Table(pTable).Where(fmt.Sprintf("%s.org_id in (?)", pTable), orgId).
+		Where("iac_policy.deleted_at_t = 0")
 	if len(form.GroupId) > 0 {
 		query = query.Where(fmt.Sprintf("%s.group_id in (?)", pTable), form.GroupId)
 	}

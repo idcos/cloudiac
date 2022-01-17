@@ -36,13 +36,6 @@ func (Policy) TableName() string {
 	return "iac_policy"
 }
 
-func (*Policy) Migrate(sess *db.Session) error {
-	if err := sess.DropColumn(Policy{}, "deleted_at_t"); err != nil {
-		return err
-	}
-
-	return nil
-}
 
 func (p *Policy) CustomBeforeCreate(*db.Session) error {
 	if p.Id == "" {
