@@ -11,7 +11,7 @@ import (
 const MaxTagSize = 16
 
 type Policy struct {
-	TimedModel
+	SoftDeleteModel
 
 	OrgId     Id `json:"orgId" gorm:"size:32;comment:组织ID" example:"org-c3lcrjxczjdywmk0go90"`
 	GroupId   Id `json:"groupId" gorm:"size:32;comment:策略组ID" example:"lg-c3lcrjxczjdywmk0go90"`
@@ -36,13 +36,6 @@ func (Policy) TableName() string {
 	return "iac_policy"
 }
 
-func (*Policy) Migrate(sess *db.Session) error {
-	if err := sess.DropColumn(Policy{}, "deleted_at_t"); err != nil {
-		return err
-	}
-
-	return nil
-}
 
 func (p *Policy) CustomBeforeCreate(*db.Session) error {
 	if p.Id == "" {

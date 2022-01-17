@@ -11,6 +11,7 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -213,4 +214,18 @@ func GetWebhookUrl(vcs *models.Vcs, apiToken string) string {
 	}
 	webhookUrl += fmt.Sprintf("/%s?token=%s", vcs.Id.String(), apiToken)
 	return webhookUrl
+}
+
+func IsNotFoundErr(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	if er, ok := err.(e.Error); ok && er.Code() == e.ObjectNotExists {
+		return true
+	}
+	if strings.Contains(err.Error(), "not found") {
+		return true
+	}
+	return false
 }
