@@ -66,7 +66,7 @@ func GetPolicyById(tx *db.Session, id, orgId models.Id) (*models.Policy, e.Error
 func GetPolicyByName(tx *db.Session, name string, groupId, orgId models.Id) (*models.Policy, e.Error) {
 	po := models.Policy{}
 	if err := tx.Model(models.Policy{}).Where("name = ? AND group_id = ? AND org_id = ?",
-		name, orgId).First(&po); err != nil {
+		name, groupId, orgId).First(&po); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.PolicyNotExist, err)
 		}
