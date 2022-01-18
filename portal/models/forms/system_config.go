@@ -21,5 +21,5 @@ type SystemCfg struct {
 
 type RegistryAddrForm struct {
 	BaseForm
-	RegistryAddr string `form:"registryAddr" json:"registryAddr" binding:"required"`
+	RegistryAddr string `form:"registryAddr" json:"registryAddr"`
 }
