@@ -189,9 +189,22 @@ func UpdatePolicyGroup(c *ctx.ServiceContext, form *forms.UpdatePolicyGroupForm)
 	needsSync := false
 	if form.HasKey("vcsId") && form.HasKey("repoId") &&
 		(form.HasKey("gitTags") || form.HasKey("branch")) && form.HasKey("dir") {
+
 		needsSync = true
 		// 策略组仓库解析
-		policies, er = PolicyGroupRepoDownloadAndParse(&pg)
+		policies, er = PolicyGroupRepoDownloadAndParse(&models.PolicyGroup{
+			SoftDeleteModel: models.SoftDeleteModel{
+				TimedModel: models.TimedModel{
+					BaseModel: models.BaseModel{Id: form.Id},
+				},
+			},
+			VcsId:   form.VcsId,
+			RepoId:  form.RepoId,
+			GitTags: form.GitTags,
+			Branch:  form.Branch,
+			Dir:     form.Dir,
+		})
+
 		if er != nil {
 			return nil, e.New(e.InternalError, errors.Wrapf(er, "parse rego"), http.StatusInternalServerError)
 		}
