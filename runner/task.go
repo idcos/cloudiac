@@ -394,7 +394,8 @@ func (t *Task) genStepScript() (string, error) {
 		var planCommand, scanCommand string
 		if planCommand, err = t.stepPlan(); err == nil {
 			if scanCommand, err = t.stepEnvScan(); err == nil {
-				command = planCommand + "\n" + scanCommand
+				// 多个流程间执行需要退回到工作目录
+				command = planCommand + "\ncd - > /dev/null\n" + scanCommand
 			}
 		}
 	case common.TaskStepEnvParse:
