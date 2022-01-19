@@ -153,7 +153,7 @@ image-worker: build-linux-amd64-portal
 
 image-worker-arm64: image-worker
 
-image: image-portal image-runner image-worker
+image: image-portal image-worker image-runner 
 image-arm64: image-portal-arm64 image-runner-arm64 image-worker-arm64
 
 push-image:
