@@ -30,8 +30,11 @@ func CreateVariableGroup(c *ctx.ServiceContext, form *forms.CreateVariableGroupF
 
 	vb := make([]models.VarGroupVariable, 0)
 	for index, v := range form.Variables {
-		if v.Sensitive {
-			value, _ := utils.AesEncrypt(v.Value)
+		if v.Sensitive && v.Value != "" {
+			value, err := utils.EncryptSecretVar(v.Value)
+			if err != nil {
+				return nil, e.AutoNew(err, e.EncryptError)
+			}
 			form.Variables[index].Value = value
 		}
 		vb = append(vb, models.VarGroupVariable{
@@ -110,7 +113,11 @@ func UpdateVariableGroup(c *ctx.ServiceContext, form *forms.UpdateVariableGroupF
 					// 传空值时表示不修改，我们赋值为 db 中己保存的值(如果存在)
 					v.Value = vgVarsMap[v.Name].Value
 				} else {
-					v.Value, _ = utils.AesEncrypt(v.Value)
+					var err error
+					v.Value, err = utils.EncryptSecretVar(v.Value)
+					if err != nil {
+						return nil, e.AutoNew(err, e.EncryptError)
+					}
 				}
 			}
 			vb = append(vb, models.VarGroupVariable{
