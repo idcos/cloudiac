@@ -395,7 +395,7 @@ func (t *Task) genStepScript() (string, error) {
 		if planCommand, err = t.stepPlan(); err == nil {
 			if scanCommand, err = t.stepEnvScan(); err == nil {
 				// 多个流程间执行需要退回到工作目录
-				command = planCommand + "\ncd - > /dev/null\n" + scanCommand
+				command = fmt.Sprintf("%s\ncd %s\n%s", planCommand , ContainerWorkspace, scanCommand)
 			}
 		}
 	case common.TaskStepEnvParse:
