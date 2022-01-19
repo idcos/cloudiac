@@ -3,6 +3,7 @@ package services
 import (
 	"cloudiac/configs"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
 )
 
 // 对传入的字符串使用 exportSecretKey 加密，并添加加密前缀标识
@@ -51,11 +52,15 @@ func ExportVariableValue(val string, senstive bool) string {
 	if val == "" {
 		return val
 	}
-
 	if !senstive {
 		return val
 	}
-	val, _ = utils.DecryptSecretVar(val)
+
+	var err error
+	val, err = utils.DecryptSecretVarForce(val)
+	if err != nil {
+		logs.Get().Panicln(err)
+	}
 	return ExportSecretStr(val, false)
 }
 
