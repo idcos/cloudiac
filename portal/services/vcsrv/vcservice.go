@@ -20,6 +20,12 @@ import (
 version control service 接口
 */
 
+type UserInfo struct {
+	Login string `json:"login" form:"login" `
+	Id    int    `json:"id" form:"id" `
+	Name  string `json:"name" form:"name" `
+}
+
 const (
 	WebhookUrlGitlab = "/webhooks/gitlab"
 	WebhookUrlGitea  = "/webhooks/gitea"
@@ -47,6 +53,9 @@ type VcsIface interface {
 	// param limit: 限制返回的文件数，传 0 表示无限制
 	// return in64(分页total数量)
 	ListRepos(namespace, search string, limit, offset int) ([]RepoIface, int64, error)
+
+	// UserInfo 获取用户信息
+	UserInfo() (UserInfo, error)
 }
 
 type RepoIface interface {
@@ -228,4 +237,12 @@ func IsNotFoundErr(err error) bool {
 		return true
 	}
 	return false
+}
+
+func GetUser(vcs *models.Vcs) (UserInfo, error) {
+	v, err := GetVcsInstance(vcs)
+	if err != nil {
+		return UserInfo{}, err
+	}
+	return v.UserInfo()
 }

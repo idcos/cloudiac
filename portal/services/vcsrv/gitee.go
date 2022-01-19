@@ -49,7 +49,6 @@ func (gitee *giteeVcs) GetRepo(idOrPath string) (RepoIface, error) {
 		repository: &rep,
 		urlParam:   gitee.urlParam,
 	}, nil
-
 }
 
 type RepositoryGitee struct {
@@ -94,6 +93,19 @@ func (gitee *giteeVcs) ListRepos(namespace, search string, limit, offset int) ([
 	}
 
 	return repoList, total, nil
+}
+
+// https://gitee.com/api/v5/user
+func (gitee *giteeVcs) UserInfo() (UserInfo, error) {
+	path := gitee.vcs.Address + fmt.Sprintf("/user?access_token=%s", gitee.urlParam.Get("access_token"))
+	_, body, er := giteeRequest(path, "GET", nil)
+	if er != nil {
+		return UserInfo{}, e.New(e.BadRequest, er)
+	}
+
+	rep := UserInfo{}
+	_ = json.Unmarshal(body, &rep)
+	return rep, nil
 }
 
 type giteeRepoIface struct {
@@ -267,7 +279,7 @@ func (gitee *giteeRepoIface) AddWebhook(url string) error {
 
 	if response.StatusCode >= 300 {
 		err = e.New(e.VcsError, fmt.Errorf("%s: %s", response.Status, string(respBody)))
-		return  err
+		return err
 	}
 	return nil
 }

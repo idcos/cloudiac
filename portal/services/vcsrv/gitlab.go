@@ -64,6 +64,11 @@ func (git *gitlabVcsIface) ListRepos(namespace, search string, limit, offset int
 	return repoList, int64(response.TotalItems), nil
 }
 
+func (git *gitlabVcsIface) UserInfo() (UserInfo, error) {
+
+	return UserInfo{}, nil
+}
+
 type gitlabRepoIface struct {
 	gitConn *gitlab.Client
 	Project *gitlab.Project

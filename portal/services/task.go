@@ -327,6 +327,7 @@ func GetTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision s
 		u         *url.URL
 		er        error
 		repoToken = tpl.RepoToken
+		repoUser = "token"
 	)
 
 	repoAddr = tpl.RepoAddr
@@ -342,6 +343,21 @@ func GetTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision s
 				return "", "", e.New(e.VcsNotExists, err)
 			}
 			return "", "", e.New(e.DBError, err)
+		}
+
+		if vcs.VcsType == models.VcsGitee {
+			newVcs, err := QueryVcsByVcsId(tpl.VcsId, tx)
+			if err != nil {
+				if e.IsRecordNotFound(err) {
+					return "", "", e.New(e.VcsNotExists, err)
+				}
+				return "", "", e.New(e.DBError, err)
+			}
+			user, er := vcsrv.GetUser(newVcs)
+			if er != nil {
+				return "", "", e.New(e.VcsError, er)
+			}
+			repoUser = user.Login
 		}
 
 		repo, er = vcsrv.GetRepo(vcs, tpl.RepoId)
@@ -382,7 +398,7 @@ func GetTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision s
 	if er != nil {
 		return "", "", e.New(e.InternalError, errors.Wrapf(er, "parse url: %v", repoAddr))
 	} else if repoToken != "" {
-		u.User = url.UserPassword("token", repoToken)
+		u.User = url.UserPassword(repoUser, repoToken)
 	}
 	repoAddr = u.String()
 
