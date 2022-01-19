@@ -186,8 +186,9 @@ func (s *Scanner) ScanResource(resource Resource) error {
 		}
 	}
 
+	var err error
 	if s.Internal {
-		if err := s.RunInternalScan(resource); err != nil {
+		if err = s.RunInternalScan(resource); err != nil && !errors.Is(err, ErrScanExitViolated) {
 			task.PolicyStatus = common.PolicyStatusFailed
 			return err
 		}
