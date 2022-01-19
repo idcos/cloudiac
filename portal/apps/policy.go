@@ -644,6 +644,9 @@ func ParseTemplate(c *ctx.ServiceContext, form *forms.PolicyParseForm) (interfac
 	// 等待任务执行完成
 	for {
 		scanTask, err = services.GetScanTaskById(query, scanTask.Id)
+		if err != nil {
+			return nil, e.New(e.PolicyErrorParseTemplate, fmt.Errorf("parse tempalte error: %+v", err), http.StatusInternalServerError)
+		}
 		if scanTask.IsExitedStatus(scanTask.Status) {
 			break
 		}
