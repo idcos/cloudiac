@@ -242,9 +242,9 @@ func QueryWithOrgId(query *db.Session, orgId interface{}, tableName ...string) *
 
 func QueryWithOrgIdAndGlobal(query *db.Session, orgId interface{}, tableName ...string) *db.Session {
 	if len(tableName) > 0 {
-		return query.Where(fmt.Sprintf("`%s`.`org_id` = ? or `%s`.`org_id` = 0", tableName[0], orgId))
+		return query.Where(fmt.Sprintf("`%s`.`org_id` = ? or `%s`.`org_id` = ''", tableName[0], orgId))
 	}
-	return query.Where("`org_id` = ? or `org_id` = 0", orgId)
+	return query.Where("`org_id` = ? or `org_id` = ''", orgId)
 }
 
 func QueryWithProjectId(query *db.Session, projectId interface{}, tableName ...string) *db.Session {
