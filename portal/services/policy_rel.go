@@ -117,7 +117,7 @@ func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]*models
 	}
 
 	// 删除原有关联关系
-	if err := DeletePolicyGroupRel(tx, form.Id, form.Scope); err != nil {
+	if err := DeletePolicyGroupRel(tx, form.Id, form.Scope); err != nil && !e.IsRecordNotFound(err) {
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
