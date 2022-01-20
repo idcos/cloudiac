@@ -279,16 +279,6 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, err
 	}
 	// 绑定策略组
-	// 获取云模板策略组
-	groups, err := services.GetPoliciesByTemplateId(tx, env.TplId)
-	if err != nil {
-		_ = tx.Rollback()
-		return nil, err
-	}
-	// 复制策略组到环境
-	for _, g := range groups {
-		form.PolicyGroup = append(form.PolicyGroup, g.Id)
-	}
 	if len(form.PolicyGroup) > 0 {
 		policyForm := &forms.UpdatePolicyRelForm{
 			Id:             env.Id,
@@ -854,7 +844,20 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	if form.HasKey("retryDelay") {
 		env.RetryDelay = form.RetryDelay
 	}
-
+	if form.HasKey("policyEnable") {
+		env.PolicyEnable = form.PolicyEnable
+	}
+	if len(form.PolicyGroup) > 0 {
+		policyForm := &forms.UpdatePolicyRelForm{
+			Id:             env.Id,
+			Scope:          consts.ScopeEnv,
+			PolicyGroupIds: form.PolicyGroup,
+		}
+		if _, err = services.UpdatePolicyRel(tx, policyForm); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+	}
 	if form.TaskType == "" {
 		return nil, e.New(e.BadParam, http.StatusBadRequest)
 	}
