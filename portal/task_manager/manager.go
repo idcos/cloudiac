@@ -510,13 +510,16 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		}
 
 		if runErr != nil {
+			logger.Infof("run task step err: %v", runErr)
+			if runErr == ErrTaskStepRejected {
+				break
+			}
 			if (step.Type == common.TaskStepEnvScan || step.Type == common.TaskStepOpaScan) &&
 				!task.StopOnViolation {
 				// 合规任务失败不影响环境部署流程
 				logger.Warnf("run scan task step: %v", runErr)
 				continue
 			}
-			logger.Infof("run task step: %v", runErr)
 			if err := services.UpdateTaskStepStatus(m.db, step.Id, common.TaskStepFailed, runErr.Error()); err != nil {
 				logger.Panicf("update task step status error: %v", err)
 			}
