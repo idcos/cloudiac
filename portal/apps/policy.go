@@ -360,7 +360,7 @@ type RespPolicyTpl struct {
 func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (interface{}, e.Error) {
 	respPolicyTpls := make([]*RespPolicyTpl, 0)
 	tplIds := make([]models.Id, 0)
-	query := services.SearchPolicyTpl(c.DB(), c.OrgId, form.TplId, form.Q)
+	query := services.SearchPolicyTpl(c.DB(), c.UserId, c.OrgId, form.TplId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	groupM := make(map[models.Id][]services.NewPolicyGroup, 0)
 	if err := p.Scan(&respPolicyTpls); err != nil {
@@ -441,7 +441,7 @@ type RespPolicyEnv struct {
 func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (interface{}, e.Error) {
 	respPolicyEnvs := make([]*RespPolicyEnv, 0)
 	envIds := make([]models.Id, 0)
-	query := services.SearchPolicyEnv(c.DB(), c.OrgId, form.ProjectId, form.EnvId, form.Q)
+	query := services.SearchPolicyEnv(c.DB(), c.UserId, c.OrgId, form.ProjectId, form.EnvId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 
 	if err := p.Scan(&respPolicyEnvs); err != nil {
@@ -1030,11 +1030,32 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	lastTo := from
 	lastFrom := utils.LastDaysMidnight(15, lastTo)
 
-	query := services.QueryWithOrgId(c.DB(), c.OrgId)
+	query := services.QueryWithOrgId(c.DB(), c.OrgId).Debug()
+	userQuery := query.Model(models.PolicyResult{})
+
+	// 用户项目隔离
+	// 1. manager / complianceManager 拥有所有项目读取权限
+	// 2. member 只能访问用户已授权的项目资源，包括：
+	//    1) 所有已授权项目的环境数据
+	//    2) 所有已授权项目关联的所有云模板
+	if services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleMember) {
+		tplIds, err := services.GetAvailableTemplateIdsByUserId(c.DB(), c.UserId, c.OrgId)
+		if err != nil && !e.IsRecordNotFound(err) {
+			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+		}
+		projectIds := services.UserProjectIds(c.UserId, c.OrgId)
+		if len(tplIds) > 0 {
+			userQuery = userQuery.Where("(env_id = '' AND tpl_id in (?)) OR (env_id != '') AND project_id in (?)",
+				tplIds, projectIds)
+		} else {
+			// 一个云模板都没有，返回空结果
+			return &PolicySummaryResp{}, nil
+		}
+	}
 	summaryResp := PolicySummaryResp{}
 
 	// 近15天数据
-	scanStatus, err := services.GetPolicyStatusByPolicy(query, from, to, "", c.OrgId)
+	scanStatus, err := services.GetPolicyStatusByPolicy(query, userQuery, from, to, "")
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -1053,7 +1074,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	}
 
 	// 16～30天数据
-	lastScanStatus, err := services.GetPolicyStatusByPolicy(query, lastFrom, lastTo, "", c.OrgId)
+	lastScanStatus, err := services.GetPolicyStatusByPolicy(query, userQuery, lastFrom, lastTo, "")
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -1094,13 +1115,13 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	// 2. 未解决错误策略
 	{
 		// 最近 15 天
-		unresolvedPolicies, err := services.QueryPolicyStatusEveryTargetLastRun(query, from, to)
+		unresolvedPolicies, err := services.QueryPolicyStatusEveryTargetLastRun(query, userQuery, from, to)
 		if err != nil {
 			return nil, e.AutoNew(errors.Wrap(err, "QueryPolicyStatusEveryTargetLastRun"), e.DBError)
 		}
 
 		// 前一个 15天
-		lastUnresolvedPolicies, err := services.QueryPolicyStatusEveryTargetLastRun(query, lastFrom, lastTo)
+		lastUnresolvedPolicies, err := services.QueryPolicyStatusEveryTargetLastRun(query, userQuery, lastFrom, lastTo)
 		if err != nil {
 			return nil, e.AutoNew(errors.Wrap(err, "QueryPolicyStatusEveryTargetLastRun"), e.DBError)
 		}
@@ -1141,7 +1162,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	}
 
 	// 3. 策略未通过
-	violatedScanStatus, err := services.GetPolicyStatusByPolicy(query, from, to, common.PolicyStatusViolated, c.OrgId)
+	violatedScanStatus, err := services.GetPolicyStatusByPolicy(query, userQuery, from, to, common.PolicyStatusViolated)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
@@ -1155,7 +1176,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	summaryResp.PolicyViolated = p
 
 	// 4. 策略组未通过
-	violatedGroupScanStatus, err := services.GetPolicyStatusByPolicyGroup(query, from, to, common.PolicyStatusViolated)
+	violatedGroupScanStatus, err := services.GetPolicyStatusByPolicyGroup(query, userQuery, from, to, common.PolicyStatusViolated)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}

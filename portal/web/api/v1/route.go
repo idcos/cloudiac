@@ -97,6 +97,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/policies/:id/report", ac(), w(handlers.Policy{}.PolicyReport))
 	g.POST("/policies/parse", ac(), w(handlers.Policy{}.Parse))
 	g.POST("/policies/test", ac(), w(handlers.Policy{}.Test))
+
 	g.GET("/policies/templates", ac(), w(handlers.Policy{}.SearchPolicyTpl))
 	g.PUT("/policies/templates/:id", ac(), w(handlers.Policy{}.UpdatePolicyTpl))
 	g.PUT("/policies/templates/:id/enabled", ac("enablescan"), w(handlers.Policy{}.EnablePolicyTpl))
@@ -106,6 +107,7 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/policies/templates/:id/scan", ac("scan"), w(handlers.Policy{}.ScanTemplate))
 	g.POST("/policies/templates/scans", ac("scan"), w(handlers.Policy{}.ScanTemplates))
 	g.GET("/policies/templates/:id/result", ac(), w(handlers.Policy{}.TemplateScanResult))
+
 	g.GET("/policies/envs", ac(), w(handlers.Policy{}.SearchPolicyEnv))
 	g.PUT("/policies/envs/:id", ac(), w(handlers.Policy{}.UpdatePolicyEnv))
 	g.PUT("/policies/envs/:id/enabled", ac("enablescan"), w(handlers.Policy{}.EnablePolicyEnv))
