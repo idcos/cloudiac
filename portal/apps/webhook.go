@@ -82,6 +82,10 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 		}
 
 		for _, env := range envs {
+			// 跳过已归档环境
+			if env.Archived {
+				continue
+			}
 			for _, v := range env.Triggers {
 				if er := actionPrOrPush(tx, v, sysUserId, &env, &tpl, pushRef, baseRef,
 					headRef, prStatus, afterCommit, beforeCommit, prId); er != nil {
