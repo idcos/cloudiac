@@ -78,13 +78,13 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*taskDetailRe
 		err  e.Error
 	)
 	task, err = services.GetTaskById(c.DB(), form.Id)
-	sort.Sort(task.Variables)
 	if err != nil && err.Code() == e.TaskNotExists {
 		return nil, e.New(e.TaskNotExists, err, http.StatusNotFound)
 	} else if err != nil {
 		c.Logger().Errorf("error get task by id, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
+	sort.Sort(task.Variables)
 	user, err = services.GetUserByIdRaw(c.DB(), task.CreatorId)
 	if err != nil && err.Code() == e.UserNotExists {
 		user = &models.User{}
