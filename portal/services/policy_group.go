@@ -201,23 +201,21 @@ func GetPolicyGroupCommitId(sess *db.Session, vcsId models.Id, repoId string, br
 		return "", "", e.New(e.DBError, err)
 	}
 
-	var repoUser = "token"
+	var repoUser = models.RepoUser
+	vcsInstance, er := vcsrv.GetVcsInstance(vcs)
+	if er != nil {
+		return "", "", e.New(e.VcsError, er)
+	}
+
 	if vcs.VcsType == models.VcsGitee {
-		newVcs, err := QueryVcsByVcsId(vcsId, sess)
-		if err != nil {
-			if e.IsRecordNotFound(err) {
-				return "", "", e.New(e.VcsNotExists, err)
-			}
-			return "", "", e.New(e.DBError, err)
-		}
-		user, er := vcsrv.GetUser(newVcs)
+		user, er := vcsInstance.UserInfo()
 		if er != nil {
 			return "", "", e.New(e.VcsError, er)
 		}
 		repoUser = user.Login
 	}
 
-	repo, er := vcsrv.GetRepo(vcs, repoId)
+	repo, er := vcsInstance.GetRepo(repoId)
 	if er != nil {
 		return "", "", e.New(e.VcsError, er)
 	}

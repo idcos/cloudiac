@@ -601,4 +601,7 @@ var errorMsgs = map[int]map[string]string{
 	TemplateKeyIdNotSet: {
 		"zh-cn": "SSH 密钥未配置",
 	},
+	PolicyGroupDirError: {
+		"zh-cn": "仓库在当前目录找不到策略文件",
+	},
 }
