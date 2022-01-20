@@ -34,6 +34,11 @@ func (rv *RegistryVcs) ListRepos(namespace string, search string, limit, offset 
 	return nil, 0, e.New(e.NotImplement)
 }
 
+func (rv *RegistryVcs) UserInfo() (UserInfo, error) {
+
+	return UserInfo{}, nil
+}
+
 type RegistryRepo struct {
 	vcs      *models.Vcs
 	repoPath string // vcs 下repo的相对路径

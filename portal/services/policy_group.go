@@ -201,7 +201,21 @@ func GetPolicyGroupCommitId(sess *db.Session, vcsId models.Id, repoId string, br
 		return "", "", e.New(e.DBError, err)
 	}
 
-	repo, er := vcsrv.GetRepo(vcs, repoId)
+	var repoUser = models.RepoUser
+	vcsInstance, er := vcsrv.GetVcsInstance(vcs)
+	if er != nil {
+		return "", "", e.New(e.VcsError, er)
+	}
+
+	if vcs.VcsType == models.VcsGitee {
+		user, er := vcsInstance.UserInfo()
+		if er != nil {
+			return "", "", e.New(e.VcsError, er)
+		}
+		repoUser = user.Login
+	}
+
+	repo, er := vcsInstance.GetRepo(repoId)
 	if er != nil {
 		return "", "", e.New(e.VcsError, er)
 	}
@@ -229,10 +243,9 @@ func GetPolicyGroupCommitId(sess *db.Session, vcsId models.Id, repoId string, br
 	if er != nil {
 		return "", "", e.New(e.InternalError, errors.Wrapf(er, "parse url: %v", repoAddr))
 	} else if token != "" {
-		u.User = url.UserPassword("token", token)
+		u.User = url.UserPassword(repoUser, token)
 	}
 	repoAddr = u.String()
-
 	return repoAddr, commitId, nil
 }
 

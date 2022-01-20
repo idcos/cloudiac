@@ -110,6 +110,12 @@ func (github *githubVcs) ListRepos(namespace, search string, limit, offset int) 
 	return repoList, int64(r.LastPage), nil
 }
 
+func (github *githubVcs) UserInfo() (UserInfo, error) {
+
+	return UserInfo{}, nil
+}
+
+
 type githubRepoIface struct {
 	vcs        *models.Vcs
 	repository *RepositoryGithub
