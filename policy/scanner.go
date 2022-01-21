@@ -186,11 +186,11 @@ func (s *Scanner) ScanResource(resource Resource) error {
 		}
 	}
 
-	var err error
+	var errExit error
 	if s.Internal {
-		if err = s.RunInternalScan(resource); err != nil && !errors.Is(err, ErrScanExitViolated) {
+		if errExit = s.RunInternalScan(resource); errExit != nil && !errors.Is(errExit, ErrScanExitViolated) {
 			task.PolicyStatus = common.PolicyStatusFailed
-			return err
+			return errExit
 		}
 	} else {
 		if err := s.RunScan(resource); err != nil {
@@ -237,7 +237,7 @@ func (s *Scanner) ScanResource(resource Resource) error {
 	//	}
 	//}
 
-	return nil
+	return errExit
 }
 
 func (s *Scanner) GetMessage(format string, data interface{}) string {
