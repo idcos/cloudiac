@@ -54,6 +54,9 @@ func InitScanResult(tx *db.Session, task *models.ScanTask) e.Error {
 
 			StartAt: models.Time(time.Now()),
 			Status:  common.TaskStepPending,
+			Violation: models.Violation{
+				Severity: policy.Severity,
+			},
 		})
 	}
 	for _, policy := range suppressedPolicies {
