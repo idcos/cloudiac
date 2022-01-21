@@ -16,6 +16,7 @@ import (
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param q query string false "模糊搜索"
 // @Router /policies/envs [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.RespPolicyEnv}}
@@ -34,6 +35,7 @@ func (Policy) SearchPolicyEnv(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param envId path string true "环境id"
 // @Router /policies/envs/{envId}/policies [get]
 // @Success 200 {object} ctx.JSONResult{result=models.Policy}
@@ -60,6 +62,7 @@ func (Policy) ValidEnvOfPolicy(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param json body forms.UpdatePolicyRelForm true "parameter"
 // @Param envId path string true "环境ID"
 // @Router /policies/envs/{envId} [put]
@@ -70,7 +73,7 @@ func (Policy) UpdatePolicyEnv(c *ctx.GinRequest) {
 		return
 	}
 	form.Scope = consts.ScopeEnv
-	c.JSONResult(apps.UpdatePolicyRel(c.Service(), form))
+	c.JSONResult(apps.UpdatePolicyRelNew(c.Service(), form))
 }
 
 // ScanEnvironment 运行环境策略扫描
@@ -79,6 +82,7 @@ func (Policy) UpdatePolicyEnv(c *ctx.GinRequest) {
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param envId path string true "环境ID"
 // @Param json body forms.ScanEnvironmentForm true "parameter"
 // @Success 200 {object}  ctx.JSONResult{result=models.ScanTask}
@@ -99,6 +103,7 @@ func (Policy) ScanEnvironment(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param form query forms.PolicyScanResultForm true "parameter"
 // @Param envId path string true "环境ID"
 // @Router /policies/envs/{envId}/result [get]
@@ -118,6 +123,7 @@ func (Policy) EnvScanResult(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param json body forms.EnableScanForm true "parameter"
 // @Param envId path string true "环境ID"
 // @Router /policies/envs/{envId}/enabled [put]

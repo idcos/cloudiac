@@ -17,6 +17,7 @@ type Option struct {
 	Version        common.VersionCommand `command:"version" description:"show version"`
 	InitDemo       InitDemo              `command:"init-demo" description:"init demo data with config file"`
 	Scan           ScanCmd               `command:"scan" description:"scan template with policy"`
+	Parse          ParseCmd              `command:"parse" description:"parse rego"`
 }
 
 var (

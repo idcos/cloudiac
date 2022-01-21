@@ -8,7 +8,7 @@ import (
 	"fmt"
 )
 
-func SearchPolicySuppress(query *db.Session, id models.Id) *db.Session {
+func SearchPolicySuppress(query *db.Session, id, orgId models.Id) *db.Session {
 	q := query.Table(fmt.Sprintf("%s as s", models.PolicySuppress{}.TableName())).
 		LazySelect("s.*")
 
@@ -21,6 +21,7 @@ when s.target_type = 'template' then t.name
 when s.target_type = 'policy' then p.name
 end as target_name`).
 		Where("s.policy_id = ?", id).
+		Where("s.org_id = ?", orgId).
 		Joins("LEFT JOIN iac_user AS u ON s.creator_id = u.id").
 		LazySelectAppend("u.name as creator")
 
@@ -50,18 +51,20 @@ func GetPolicySuppressById(query *db.Session, id models.Id) (*models.PolicySuppr
 	return &sup, nil
 }
 
-func SearchPolicySuppressSource(query *db.Session, form *forms.SearchPolicySuppressSourceForm, userId models.Id, policyId models.Id, policyGroupId models.Id) *db.Session {
+func SearchPolicySuppressSource(query *db.Session, form *forms.SearchPolicySuppressSourceForm, userId, policyId, policyGroupId, orgId models.Id) *db.Session {
 	subQueryPolicyGroupRel := query.Model(models.PolicyRel{}).Where("group_id = ?", policyGroupId)
 
 	envQuery := query.Model(models.Env{}).
 		Select("iac_env.id as target_id, iac_env.name as target_name, 'env' as target_type").
 		Where("id in (?)", SubQueryUserEnvIds(query, userId).Expr()).
-		Where("id in (?)", subQueryPolicyGroupRel.Select("env_id").Expr())
+		Where("id in (?)", subQueryPolicyGroupRel.Select("env_id").Expr()).
+		Where("org_id = ?", orgId)
 
 	templateQuery := query.Model(models.Template{}).
 		Select("iac_template.id as target_id, iac_template.name as target_name, 'template' as target_type").
 		Where("id in (?)", SubQueryUserTemplateIds(query, userId).Expr()).
-		Where("id in (?)", subQueryPolicyGroupRel.Select("tpl_id").Expr())
+		Where("id in (?)", subQueryPolicyGroupRel.Select("tpl_id").Expr()).
+		Where("org_id = ?", orgId)
 
 	suppressQuery := query.Model(models.PolicySuppress{}).Where("policy_id = ?", policyId).
 		Select("target_id")
@@ -83,4 +86,10 @@ func GetPolicySuppressByPolicyId(query *db.Session, id models.Id) (*models.Polic
 	}
 
 	return &sup, nil
+}
+
+func QueryPolicySuppress(query *db.Session, targetType string, targetId models.Id) *db.Session {
+	query = query.Joins("left join iac_policy_suppress as ps on ps.policy_id = p.id and ps.target_type = ? and ps.target_id = ?", targetType, targetId).
+		LazySelectAppend("!ISNULL(ps.id) AS policy_suppress")
+	return query
 }

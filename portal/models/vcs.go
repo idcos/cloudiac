@@ -13,6 +13,8 @@ const (
 	VcsGitea  = common.VcsGitea
 	VcsGitee  = common.VcsGitee
 	VcsGithub = common.VcsGithub
+	// git clone 鉴权时使用的user 默认为token
+	RepoUser = "token"
 )
 
 type Vcs struct {

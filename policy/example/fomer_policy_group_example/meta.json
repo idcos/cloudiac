@@ -1,0 +1,11 @@
+{
+  "category": "INFRASTRUCTURE SECURITY",
+  "file": "policy.rego",
+  "id": "po-c4ec520smpvc0c2qsq2g",
+  "name": "instanceWithNoVpc",
+  "policy_type": "alicloud",
+  "reference_id": "cloudiac_alicloud_security_p001",
+  "resource_type": "alicloud_instance",
+  "severity": "medium",
+  "version": 1
+}

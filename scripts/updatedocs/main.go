@@ -175,7 +175,8 @@ const releaseNoteTemplate = `# Releases
 ------
 ## v{{.Version}} {{.Date}}
 {{ range $type, $notes := .Content -}}
-#### {{$type}}
+**{{$type}}**
+
 {{ range $notes -}}
 - {{ . }}
 {{ end }}
@@ -185,7 +186,7 @@ const releaseNoteTemplate = `# Releases
 
 func generateReleaseNotes() error {
 	changelogFile := "changelog.json"
-	releaseNoteFile := "docs/mkdocs/release-notes.md"
+	releaseNoteFile := "docs/mkdocs/releases.md"
 
 	rp, err := os.Open(changelogFile)
 	if err != nil {
@@ -223,7 +224,7 @@ func main() {
 		rules []ReplaceRule
 	}{
 		{
-			"./docs/mkdocs/deploy/container.md",
+			"./docs/mkdocs/product-deploy/container.md",
 			[]ReplaceRule{
 				NewBlockReplaceRuleFromFile(
 					"# auto-replace-from: docker/docker-compose.yml",
@@ -238,13 +239,13 @@ func main() {
 			},
 		},
 		{
-			"./docs/mkdocs/deploy/container.md",
+			"./docs/mkdocs/product-deploy/container.md",
 			[]ReplaceRule{
-				&LineRegexReplaceRule{expr: `image: "(cloudiac/[^:]+):latest"`, repl: fmt.Sprintf(`image: "$1:%s"`, version)},
+				&LineRegexReplaceRule{expr: `image: "([^/]*cloudiac/[^:]+):latest"`, repl: fmt.Sprintf(`image: "$1:%s"`, version)},
 			},
 		},
 		{
-			"./docs/mkdocs/deploy/host.md",
+			"./docs/mkdocs/product-deploy/host.md",
 			[]ReplaceRule{
 				&LineStartReplaceRule{"VERSION=v", fmt.Sprintf("VERSION=%s\n", version)},
 			},

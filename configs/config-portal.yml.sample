@@ -3,6 +3,7 @@ mysql: "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL
 
 secretKey: "${SECRET_KEY}"
 jwtSecretKey: "${JWT_SECRET_KEY}"
+registryAddr: "${REGISTRY_ADDRESS}"
 
 portal:
   address: "${PORTAL_ADDRESS}"

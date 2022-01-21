@@ -16,24 +16,29 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
+
+	"github.com/lib/pq"
 )
 
 type SearchTemplateResp struct {
-	CreatedAt         models.Time `json:"createdAt"` // 创建时间
-	UpdatedAt         models.Time `json:"updatedAt"` // 更新时间
-	Id                models.Id   `json:"id"`
-	Name              string      `json:"name"`
-	Description       string      `json:"description"`
-	ActiveEnvironment int         `json:"activeEnvironment"`
-	RepoRevision      string      `json:"repoRevision"`
-	Creator           string      `json:"creator"`
-	RepoId            string      `json:"repoId"`
-	VcsId             string      `json:"vcsId"`
-	RepoAddr          string      `json:"repoAddr"`
-	TplType           string      `json:"tplType" `
-	RepoFullName      string      `json:"repoFullName"`
-	NewRepoAddr       string      `json:"newRepoAddr"`
-	VcsAddr           string      `json:"vcsAddr"`
+	CreatedAt           models.Time `json:"createdAt"` // 创建时间
+	UpdatedAt           models.Time `json:"updatedAt"` // 更新时间
+	Id                  models.Id   `json:"id"`
+	Name                string      `json:"name"`
+	Description         string      `json:"description"`
+	ActiveEnvironment   int         `json:"activeEnvironment"`
+	RelationEnvironment int         `json:"relationEnvironment"`
+	RepoRevision        string      `json:"repoRevision"`
+	Creator             string      `json:"creator"`
+	RepoId              string      `json:"repoId"`
+	VcsId               string      `json:"vcsId"`
+	RepoAddr            string      `json:"repoAddr"`
+	TplType             string      `json:"tplType" `
+	RepoFullName        string      `json:"repoFullName"`
+	NewRepoAddr         string      `json:"newRepoAddr"`
+	VcsAddr             string      `json:"vcsAddr"`
+	PolicyEnable        bool        `json:"policyEnable"`
+	PolicyStatus        string      `json:"policyStatus"`
 }
 
 func getRepoAddr(vcsId models.Id, query *db.Session, repoId string) (string, error) {
@@ -104,6 +109,9 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		PlayVarsFile: form.PlayVarsFile,
 		TfVarsFile:   form.TfVarsFile,
 		TfVersion:    form.TfVersion,
+		PolicyEnable: form.PolicyEnable,
+		Triggers:     form.TplTriggers,
+		KeyId:        form.KeyId,
 	})
 
 	if err != nil {
@@ -115,12 +123,24 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		return nil, err
 	}
 
+	// 绑定云模版和策略组的关系
+	if len(form.PolicyGroup) > 0 {
+		policyForm := &forms.UpdatePolicyRelForm{
+			Id:             template.Id,
+			Scope:          consts.ScopeTemplate,
+			PolicyGroupIds: form.PolicyGroup,
+		}
+		if _, err = services.UpdatePolicyRel(tx, policyForm); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+	}
+
 	// 创建模板与项目的关系
 	if err := services.CreateTemplateProject(tx, form.ProjectId, template.Id); err != nil {
 		_ = tx.Rollback()
 		return nil, err
 	}
-
 	{
 		updateVarsForm := forms.UpdateObjectVarsForm{
 			Scope:     consts.ScopeTemplate,
@@ -138,11 +158,16 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		_ = tx.Rollback()
 		return nil, err
 	}
-
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error commit create template, err %s", err)
 		return nil, e.New(e.DBError, err)
+	}
+	if form.PolicyEnable {
+		scanForm := &forms.ScanTemplateForm{
+			Id: template.Id,
+		}
+		go ScanTemplateOrEnv(c, scanForm, "")
 	}
 
 	return template, nil
@@ -189,6 +214,16 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 	if form.HasKey("repoRevision") {
 		attrs["repoRevision"] = form.RepoRevision
 	}
+	if form.HasKey("policyEnable") {
+		attrs["policyEnable"] = form.PolicyEnable
+	}
+	if form.HasKey("tplTriggers") {
+		attrs["triggers"] = pq.StringArray(form.TplTriggers)
+	}
+	if form.HasKey("keyId") {
+		attrs["keyId"] = form.KeyId
+	}
+
 	if form.HasKey("vcsId") && form.HasKey("repoId") && form.HasKey("repoFullName") {
 		attrs["vcsId"] = form.VcsId
 		attrs["repoId"] = form.RepoId
@@ -208,6 +243,18 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 	if tpl, err = services.UpdateTemplate(tx, form.Id, attrs); err != nil {
 		_ = tx.Rollback()
 		return nil, err
+	}
+	// 更新和策略组的绑定关系
+	if form.HasKey("policyGroup") {
+		policyForm := &forms.UpdatePolicyRelForm{
+			Id:             tpl.Id,
+			Scope:          consts.ScopeTemplate,
+			PolicyGroupIds: form.PolicyGroup,
+		}
+		if _, err = services.UpdatePolicyRel(tx, policyForm); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
 	}
 	if form.HasKey("projectId") {
 		if err := services.DeleteTemplateProject(tx, form.Id); err != nil {
@@ -244,6 +291,13 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 		c.Logger().Errorf("error commit update template, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
+	// 自动触发一次检测
+	if form.PolicyEnable {
+		tplScanForm := &forms.ScanTemplateForm{
+			Id: tpl.Id,
+		}
+		go ScanTemplateOrEnv(c, tplScanForm, "")
+	}
 	return tpl, err
 }
 
@@ -276,6 +330,11 @@ func DeleteTemplate(c *ctx.ServiceContext, form *forms.DeleteTemplateForm) (inte
 		return nil, e.New(e.TemplateActiveEnvExists, http.StatusMethodNotAllowed,
 			fmt.Errorf("The cloud template cannot be deleted because there is an active environment"))
 	}
+	// 删除策略组关系
+	if err := services.DeletePolicyGroupRel(tx, form.Id, consts.ScopeTemplate); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
 
 	// 根据ID 删除云模板
 	if err := services.DeleteTemplate(tx, tpl.Id); err != nil {
@@ -283,6 +342,7 @@ func DeleteTemplate(c *ctx.ServiceContext, form *forms.DeleteTemplateForm) (inte
 		c.Logger().Errorf("error commit del template, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
+
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error commit del template, err %s", err)
@@ -297,6 +357,7 @@ type TemplateDetailResp struct {
 	*models.Template
 	Variables   []models.Variable `json:"variables"`
 	ProjectList []models.Id       `json:"projectId"`
+	PolicyGroup []string          `json:"policyGroup"`
 }
 
 func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*TemplateDetailResp, e.Error) {
@@ -323,11 +384,20 @@ func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*Tem
 		}
 		tpl.RepoFullName = repo.FullName
 	}
+	temp, err := services.GetPolicyRels(c.DB(), tpl.Id, consts.ScopeTemplate)
+	if err != nil {
+		return nil, err
+	}
+	policyGroups := []string{}
+	for _, v := range temp {
+		policyGroups = append(policyGroups, v.PolicyGroupId)
+	}
 
 	tplDetail := &TemplateDetailResp{
 		Template:    tpl,
 		Variables:   varialbeList,
 		ProjectList: project_ids,
+		PolicyGroup: policyGroups,
 	}
 	return tplDetail, nil
 
@@ -346,7 +416,7 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 		}
 	}
 	vcsIds := make([]string, 0)
-	query := services.QueryTemplateByOrgId(c.DB(), form.Q, c.OrgId, tplIdList)
+	query := services.QueryTemplateByOrgId(c.DB(), form.Q, c.OrgId, tplIdList, c.ProjectId)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	templates := make([]*SearchTemplateResp, 0)
 	if err := p.Scan(&templates); err != nil {
@@ -357,6 +427,19 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 		if v.RepoAddr == "" {
 			vcsIds = append(vcsIds, v.VcsId)
 		}
+		var scanTaskStatus string
+		// 如果开启
+		scanTask, err := services.GetTplLastScanTask(c.DB(), v.Id)
+		if err != nil {
+			scanTaskStatus = ""
+			if !e.IsRecordNotFound(err) {
+				return nil, e.New(e.DBError, err)
+			}
+		} else {
+			scanTaskStatus = scanTask.PolicyStatus
+		}
+		v.PolicyStatus = models.PolicyStatusConversion(scanTaskStatus, v.PolicyEnable)
+
 	}
 
 	vcsList, err := services.GetVcsListByIds(c.DB(), vcsIds)
@@ -369,13 +452,14 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 		vcsAttr[v.Id.String()] = v
 	}
 
+	portAddr := configs.Get().Portal.Address
 	for _, tpl := range templates {
 		if tpl.RepoAddr == "" && tpl.RepoFullName != "" {
 			if vcsAttr[tpl.VcsId].VcsType == consts.GitTypeLocal {
-				tpl.RepoAddr = fmt.Sprintf("%s/%s/%s.git", utils.GetUrl(configs.Get().Portal.Address), vcsAttr[tpl.VcsId].Address, tpl.RepoFullName)
-				continue
+				tpl.RepoAddr = utils.JoinURL(portAddr, vcsAttr[tpl.VcsId].Address, tpl.RepoId)
+			} else {
+				tpl.RepoAddr = utils.JoinURL(vcsAttr[tpl.VcsId].Address, tpl.RepoFullName)
 			}
-			tpl.RepoAddr = fmt.Sprintf("%s/%s.git", utils.GetUrl(vcsAttr[tpl.VcsId].Address), tpl.RepoFullName)
 		}
 	}
 

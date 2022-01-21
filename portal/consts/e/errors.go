@@ -26,6 +26,7 @@ const (
 	//// 解析错误 101
 	JSONParseError = 10100
 	HCLParseError  = 10101
+	URLParseError  = 10102
 
 	//// db 错误 102
 	DBError           = 10200 // db 操作出错
@@ -59,7 +60,13 @@ const (
 	LdapError       = 10410 // ldap 出错
 	MailServerError = 10420
 	ConsulConnError = 10430
-	VcsError        = 10440
+
+	// vcs调用相关错误
+	VcsError          = 10440
+	VcsAddressError   = 10441
+	VcsInvalidToken   = 10442
+	VcsConnectError   = 10445
+	VcsConnectTimeOut = 10446
 
 	//// 导入导出错误 105
 	ImportError       = 10510
@@ -127,6 +134,7 @@ const (
 	TemplateNotExists       = 30711
 	TemplateDisabled        = 30712
 	TemplateActiveEnvExists = 30730
+	TemplateKeyIdNotSet     = 30731
 
 	//// environment 308
 	EnvAlreadyExists       = 30810
@@ -154,6 +162,9 @@ const (
 	VcsNotExists   = 31110
 	VcsDeleteError = 31120
 
+	//// 317
+	RegistryServiceErr = 31710
+
 	//// policy 312
 	PolicyAlreadyExist           = 31210
 	PolicyNotExist               = 31211
@@ -169,6 +180,9 @@ const (
 	PolicyRelNotExist            = 31270
 	PolicyRelAlreadyExist        = 31271
 	PolicyScanNotEnabled         = 31280
+	PolicyMetaInvalid            = 31281
+	PolicyRegoInvalid            = 31282
+	PolicyGroupDirError          = 31283
 
 	/// terraform 313
 	InvalidTfVersion = 31300
@@ -182,6 +196,9 @@ const (
 	//cron 315
 	CronExpressError = 31500
 	CronTaskFailed   = 31501
+
+	// system config 316
+	SystemConfigNotExist = 31610
 )
 
 var errorMsgs = map[int]map[string]string{
@@ -202,6 +219,9 @@ var errorMsgs = map[int]map[string]string{
 	},
 	JSONParseError: {
 		"zh-cn": "JSON 数据解析出错",
+	},
+	URLParseError: {
+		"zh-cn": "URL解析出错",
 	},
 	NotImplement: {
 		"zh-cn": "暂未实现",
@@ -459,6 +479,18 @@ var errorMsgs = map[int]map[string]string{
 	VcsError: {
 		"zh-cn": "vcs仓库错误",
 	},
+	VcsAddressError: {
+		"zh-cn": "vcs地址错误",
+	},
+	VcsInvalidToken: {
+		"zh-cn": "vcs token无效",
+	},
+	VcsConnectError: {
+		"zh-cn": "vcs服务连接失败",
+	},
+	VcsConnectTimeOut: {
+		"zh-cn": "vcs服务连接超时",
+	},
 	VcsNotExists: {
 		"zh-cn": "vcs仓库不存在",
 	},
@@ -478,16 +510,16 @@ var errorMsgs = map[int]map[string]string{
 		"zh-cn": "作业状态非待审批，不允许操作",
 	},
 	KeyAlreadyExists: {
-		"zh-cn": "管理秘钥已存在",
+		"zh-cn": "管理密钥已存在",
 	},
 	KeyNotExist: {
-		"zh-cn": "管理秘钥不存在",
+		"zh-cn": "管理密钥不存在",
 	},
 	KeyAliasDuplicate: {
-		"zh-cn": "管理秘钥名称重复",
+		"zh-cn": "管理密钥名称重复",
 	},
 	KeyDecryptFail: {
-		"zh-cn": "管理秘钥解析失败",
+		"zh-cn": "管理密钥解析失败",
 	},
 	EnvCannotArchiveActive: {
 		"zh-cn": "环境当前状态活跃, 无法归档",
@@ -556,5 +588,20 @@ var errorMsgs = map[int]map[string]string{
 	},
 	CronTaskFailed: {
 		"zh-cn": "cron定时任务执行失败",
+	},
+	PolicyMetaInvalid: {
+		"zh-cn": "策略元数据解析无效",
+	},
+	PolicyRegoInvalid: {
+		"zh-cn": "rego 脚本解析无效",
+	},
+	SystemConfigNotExist: {
+		"zh-cn": "当前配置不存在",
+	},
+	TemplateKeyIdNotSet: {
+		"zh-cn": "SSH 密钥未配置",
+	},
+	PolicyGroupDirError: {
+		"zh-cn": "仓库在当前目录找不到策略文件",
 	},
 }

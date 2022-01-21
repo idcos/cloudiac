@@ -11,6 +11,7 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -18,6 +19,12 @@ import (
 /*
 version control service 接口
 */
+
+type UserInfo struct {
+	Login string `json:"login" form:"login" `
+	Id    int    `json:"id" form:"id" `
+	Name  string `json:"name" form:"name" `
+}
 
 const (
 	WebhookUrlGitlab = "/webhooks/gitlab"
@@ -46,6 +53,9 @@ type VcsIface interface {
 	// param limit: 限制返回的文件数，传 0 表示无限制
 	// return in64(分页total数量)
 	ListRepos(namespace, search string, limit, offset int) ([]RepoIface, int64, error)
+
+	// UserInfo 获取用户信息
+	UserInfo() (UserInfo, error)
 }
 
 type RepoIface interface {
@@ -103,6 +113,8 @@ func GetVcsInstance(vcs *models.Vcs) (VcsIface, error) {
 		return newGithubInstance(vcs)
 	case consts.GitTypeGitee:
 		return newGiteeInstance(vcs)
+	case consts.GitTypeRegistry:
+		return newRegistryVcs(vcs)
 	default:
 		return nil, errors.New("vcs type doesn't exist")
 	}
@@ -211,4 +223,26 @@ func GetWebhookUrl(vcs *models.Vcs, apiToken string) string {
 	}
 	webhookUrl += fmt.Sprintf("/%s?token=%s", vcs.Id.String(), apiToken)
 	return webhookUrl
+}
+
+func IsNotFoundErr(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	if er, ok := err.(e.Error); ok && er.Code() == e.ObjectNotExists {
+		return true
+	}
+	if strings.Contains(err.Error(), "not found") {
+		return true
+	}
+	return false
+}
+
+func GetUser(vcs *models.Vcs) (UserInfo, error) {
+	v, err := GetVcsInstance(vcs)
+	if err != nil {
+		return UserInfo{}, err
+	}
+	return v.UserInfo()
 }

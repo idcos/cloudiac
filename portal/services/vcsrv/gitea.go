@@ -45,6 +45,7 @@ func (gitea *giteaVcs) GetRepo(idOrPath string) (RepoIface, error) {
 type SearchRepoResponse struct {
 	Repos []*Repository `json:"data"`
 }
+
 type Repository struct {
 	ID            int64     `json:"id"`
 	Description   string    `json:"description"`
@@ -98,6 +99,11 @@ func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([
 	}
 
 	return repoList, total, nil
+}
+
+func (gitea *giteaVcs) UserInfo() (UserInfo, error) {
+
+	return UserInfo{}, nil
 }
 
 type giteaRepoIface struct {

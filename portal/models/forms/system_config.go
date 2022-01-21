@@ -18,3 +18,8 @@ type SystemCfg struct {
 	Value       string `form:"value" json:"value" binding:"required"`
 	Description string `form:"description" json:"description"`
 }
+
+type RegistryAddrForm struct {
+	BaseForm
+	RegistryAddr string `form:"registryAddr" json:"registryAddr"`
+}

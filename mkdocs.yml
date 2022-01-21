@@ -1,31 +1,84 @@
-site_name: CloudIaC
+site_name: CloudIaC文档中心
 docs_dir: "docs/mkdocs"
-theme: readthedocs
-plugins: []
+repo_url: https://github.com/idcos/cloudiac
+repo_name: IDCOS/CloudIaC
+edit_uri: edit/master/docs/mkdocs/
+theme:
+  language: zh
+  name: material
+  logo: assets/svg/icon.svg
+  favicon: assets/svg/icon.svg
+  palette:
+    primary: deep purple
+  icon:
+    repo: fontawesome/brands/github
+plugins:
+  - search:
+      lang:
+        - en
+        - ja
+      separator: '[\s\-\.]+' # 分词分隔符
+extra:
+  version:
+    provider: mike
+    default: latest
+extra_css:
+  - 'assets/css/custom.css'
+  - 'assets/css/simpleLightbox.min.css'
+extra_javascript:
+  - 'assets/js/jquery.min.js'
+  - 'assets/js/simpleLightbox.min.js'
+  - 'assets/js/custom.js'
+markdown_extensions:
+  - markdown.extensions.attr_list
+  - meta
+  - toc:
+      permalink: "#"
+      baselevel: 1
+      separator: "_"
+  - footnotes
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid
 
 nav:
-  - "用户文档":
-    - "快速入门": user-guide/quick-start.md
-    - "云模板开发": user-guide/iac-template-develop.md
-
-  - "产品文档":
-    - "概述":  intra/summarize.md
-    - "组织": intra/organization.md
-    - "项目": intra/project.md
-    - "VCS": intra/vcs.md
-    - "模板": intra/template.md
-    - "变量": intra/variable.md
-    - "资源账号": intra/cloud_account.md
-    - "Pipeline": intra/pipeline.md
-    - "环境": intra/env.md
-    - "漂移检测": intra/resource_drift.md
-    - "角色": intra/role.md
-    - "合规": intra/opa.md
-
-  - "部署文档": 
-    - "容器化部署": deploy/container.md
-    - "手动部署": deploy/host.md
-    - "创建演示组织": deploy/demo-org.md
-
-  - "Releases": release-notes.md
+  - "产品介绍": 
+    - "产品简介": product-description/product-description.md
+    - "核心优势": product-description/product-advantage.md
+    - "术语解释": product-description/product-glossary.md
+    - "产品构架": product-description/product-architecture.md
+  - "快速入门": 
+    - "创建组织和项目": quick-start/create-org-project.md
+    - "集成vcs": quick-start/integrated-vcs.md
+    - "创建云模板": quick-start/create-template.md
+    - "部署环境": quick-start/deploy-env.md
+  - "产品功能": 
+    - "组织管理": product-features/organizations.md
+    - "项目管理": product-features/projects.md
+    - "变量管理": product-features/variables.md
+    - "云模板管理": product-features/templates.md
+    - "环境管理": product-features/envs.md
+    - "安全合规": product-features/compliance.md
+    - "Pipeline": product-features/pipeline.md
+    - "漂移检测": product-features/drift-scan.md
+    - "资源帐号": product-features/resource-account.md
+    - "VCS管理": product-features/vcs.md
+    - "密钥管理": product-features/keys.md
+    - "事件通知": product-features/notice.md
+    - "用户角色": product-features/user-role.md
+  - "产品部署": 
+    - "容器化部署": product-deploy/container.md
+    - "手动部署": product-deploy/host.md
+  - "常见问题":
+    - "常见问题": answer-questions/index.md
+  - "API文档": 
+    - "API简介": api-docs/index.md
+  - "Releases": releases.md
+  - "视频介绍": https://space.bilibili.com/2138433328/channel/seriesdetail?sid=1908688
 

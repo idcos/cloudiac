@@ -3,10 +3,12 @@
 package services
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"fmt"
+	"gorm.io/gorm"
 	"strings"
 )
 
@@ -60,15 +62,20 @@ func GetTemplateById(tx *db.Session, id models.Id) (*models.Template, e.Error) {
 
 }
 
-func QueryTemplateByOrgId(tx *db.Session, q string, orgId models.Id, templateIdList []models.Id) *db.Session {
+func QueryTemplateByOrgId(tx *db.Session, q string, orgId models.Id, templateIdList []models.Id, projectId models.Id) *db.Session {
 	query := tx.Model(&models.Template{}).Joins(
 		"LEFT  JOIN iac_user"+
 			"  ON iac_user.id = iac_template.creator_id").
 		LazySelectAppend(
 			"iac_user.name as creator",
 			"iac_template.*")
-	query = query.Joins("left join iac_env on iac_template.id = iac_env.tpl_id and (iac_env.status != 'inactive' or deploying = 1)").Group("iac_template.id").
-		LazySelectAppend("count(iac_env.id) as active_environment")
+	if projectId != "" {
+		query = query.Joins("left join iac_env on iac_template.id = iac_env.tpl_id and iac_env.project_id = ?", projectId).
+			Group("iac_template.id").LazySelectAppend("count(iac_env.id) as relation_environment")
+	} else {
+		query = query.Joins("left join iac_env on iac_template.id = iac_env.tpl_id and (iac_env.status = 'active' or iac_env.deploying = 1)").
+			Group("iac_template.id").LazySelectAppend("count(iac_env.id) as active_environment")
+	}
 	if q != "" {
 		qs := "%" + q + "%"
 		query = query.Where("iac_template.name LIKE ? OR iac_template.description LIKE ?", qs, qs)
@@ -154,4 +161,32 @@ func GetTplByEnvId(sess *db.Session, envId models.Id) (*models.Template, e.Error
 	}
 	return GetTemplateById(sess, env.TplId)
 
+}
+
+func GetLastScanTaskByScope(sess *db.Session, scope string, id models.Id) (*models.ScanTask, error) {
+	task := models.ScanTask{}
+	switch scope {
+	case consts.ScopeTemplate:
+		sess = sess.Model(&models.Template{})
+	case consts.ScopeEnv:
+		sess = sess.Model(&models.Env{})
+	}
+	scanTaskIdQuery := sess.Where("id = ?", id).Select("last_scan_task_id")
+	err := sess.Model(&models.ScanTask{}).Where("id = (?)", scanTaskIdQuery.Expr()).First(&task)
+	return &task, err
+}
+
+// GetAvailableTemplateIdsByUserId 获取用户已授权访问的云模板ID列表
+func GetAvailableTemplateIdsByUserId(sess *db.Session, userId, orgId models.Id) ([]*models.Id, e.Error) {
+	projectIds := UserProjectIds(userId, orgId)
+	if len(projectIds) == 0 {
+		return nil, e.AutoNew(gorm.ErrRecordNotFound, e.DBError)
+	}
+	var tplIds []*models.Id
+	if err := sess.Model(models.ProjectTemplate{}).
+		Where("project_id in (?)", projectIds).
+		Pluck("template_id", &tplIds); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return tplIds, nil
 }

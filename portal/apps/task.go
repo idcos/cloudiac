@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"path"
 	"sort"
 	"strconv"
@@ -77,13 +78,13 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*taskDetailRe
 		err  e.Error
 	)
 	task, err = services.GetTaskById(c.DB(), form.Id)
-	sort.Sort(task.Variables)
 	if err != nil && err.Code() == e.TaskNotExists {
 		return nil, e.New(e.TaskNotExists, err, http.StatusNotFound)
 	} else if err != nil {
 		c.Logger().Errorf("error get task by id, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
+	sort.Sort(task.Variables)
 	user, err = services.GetUserByIdRaw(c.DB(), task.CreatorId)
 	if err != nil && err.Code() == e.UserNotExists {
 		user = &models.User{}
@@ -99,8 +100,22 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*taskDetailRe
 		Task:    *task,
 		Creator: user.Name,
 	}
-
+	if strings.Contains(o.RepoAddr, `token:`) {
+		o.RepoAddr, err = replaceVcsToken(o.RepoAddr)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &o, nil
+}
+
+func replaceVcsToken(old string) (string, e.Error) {
+	u, err := url.Parse(old)
+	if err != nil {
+		return "", e.New(e.URLParseError, err)
+	}
+	u.User = url.User("")
+	return u.Redacted(), nil
 }
 
 // LastTask 最新任务信息
@@ -478,7 +493,6 @@ func GetResourcesGraphModule(resources []services.Resource) interface{} {
 					ResourceName: resource.Name,
 					NodeName:     addr,
 				}
-
 
 				if res.ResourceName == "" {
 					res.ResourceName = addr

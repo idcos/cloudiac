@@ -28,6 +28,25 @@ func (Policy) ScanTemplate(c *ctx.GinRequest) {
 	c.JSONResult(apps.ScanTemplateOrEnv(c.Service(), form, ""))
 }
 
+// ScanTemplates 运行多个云模板策略扫描
+// @Summary 运行云模板策略扫描
+// @Tags 合规/云模板
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
+// @Param json body forms.ScanTemplateForms true "parameter"
+// @Success 200 {object}  ctx.JSONResult{result=[]models.ScanTask}
+// @Router /policies/templates/scans [post]
+func (Policy) ScanTemplates(c *ctx.GinRequest) {
+	form := &forms.ScanTemplateForms{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.ScanTemplates(c.Service(), form))
+
+}
+
 // TemplateScanResult 云模板策略扫描结果
 // @Tags 合规/云模板
 // @Summary 云模板策略扫描结果
@@ -56,6 +75,7 @@ func (Policy) TemplateScanResult(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param form query forms.SearchPolicyTplForm true "parameter"
 // @Router /policies/templates [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.RespPolicyTpl}}
@@ -74,6 +94,7 @@ func (Policy) SearchPolicyTpl(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param json body forms.UpdatePolicyRelForm true "parameter"
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
@@ -85,7 +106,7 @@ func (Policy) UpdatePolicyTpl(c *ctx.GinRequest) {
 		return
 	}
 	form.Scope = consts.ScopeTemplate
-	c.JSONResult(apps.UpdatePolicyRel(c.Service(), form))
+	c.JSONResult(apps.UpdatePolicyRelNew(c.Service(), form))
 }
 
 // TplOfPolicy 云模板策略详情
@@ -143,6 +164,7 @@ func (Policy) ValidTplOfPolicy(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param json body forms.EnableScanForm true "parameter"
 // @Param templateId path string true "云模板ID"
 // @Router /policies/templates/{templateId}/enabled [put]

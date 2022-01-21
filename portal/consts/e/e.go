@@ -5,6 +5,7 @@ package e
 import (
 	"cloudiac/utils/logs"
 	"fmt"
+	"strings"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/pkg/errors"
@@ -74,7 +75,34 @@ func New(code int, errOrStatus ...interface{}) Error {
 		}
 	}
 
-	return convertError(code, err, status)
+	coverCode := converVcsError(code, err)
+	return convertError(coverCode, err, status)
+}
+
+func converVcsError(code int, err error) int {
+	if code == VcsError && err != nil {
+		info := err.Error()
+		switch {
+		// 前面的是否包含后面的
+		case strings.Contains(info, "unsupported protocol scheme"):
+			// vcs地址错误
+			return VcsAddressError
+		case strings.Contains(info, "Unauthorized"):
+			// vcs权限不足
+			return VcsInvalidToken
+		case strings.Contains(info, "connection refused"):
+			// vcs连接失败
+			return VcsConnectError
+		case strings.Contains(info, "handshake failure"):
+			// vcs 连接失败
+			return VcsConnectError
+		case strings.Contains(info, "timeout"):
+			// vcs 连接超时
+			return VcsConnectTimeOut
+		}
+	}
+	return code
+
 }
 
 func convertError(code int, err error, status int) Error {

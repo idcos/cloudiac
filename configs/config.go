@@ -130,6 +130,7 @@ type Config struct {
 	SMTPServer   SMTPServerConfig `yaml:"smtpServer"`
 	SecretKey    string           `yaml:"secretKey"`
 	JwtSecretKey string           `yaml:"jwtSecretKey"`
+	RegistryAddr string           `yaml:"registryAddr"`
 
 	ExportSecretKey string `yaml:"exportSecretKey"`
 
@@ -172,16 +173,10 @@ func ParsePortalConfig(filename string) error {
 	if err := parseConfig(filename, &cfg); err != nil {
 		return err
 	}
-	if cfg.SecretKey == "" {
-		panic("missing secret key config")
-	}
-	// 如果 SecretKey 不是 32 位字符则使用 md5 转为 32 位
-	if len(cfg.SecretKey) != 32 {
-		hash := md5.New()
-		hash.Write([]byte(cfg.SecretKey))
-		cfg.SecretKey = fmt.Sprintf("%x", hash.Sum(nil))
-	}
 
+	if err := ensureSecretKey(&cfg); err != nil {
+		panic(err)
+	}
 	if cfg.JwtSecretKey == "" {
 		cfg.JwtSecretKey = cfg.SecretKey
 	}
@@ -201,14 +196,35 @@ func ParseRunnerConfig(filename string) error {
 	if err := parseConfig(filename, &cfg); err != nil {
 		return err
 	}
-	if cfg.SecretKey == "" {
-		panic("missing secret key config")
+
+	if err := ensureSecretKey(&cfg); err != nil {
+		panic(err)
 	}
+
 	lock.Lock()
 	defer lock.Unlock()
 	config = &cfg
 
 	return nil
+}
+
+func ensureSecretKey(cfg *Config) error {
+	if cfg.SecretKey == "" {
+		return fmt.Errorf("missing secret key config")
+	}
+	// 如果 SecretKey 不是 32 位字符则使用 md5 转为 32 位
+	if len(cfg.SecretKey) != 32 {
+		hash := md5.New()
+		hash.Write([]byte(cfg.SecretKey))
+		cfg.SecretKey = fmt.Sprintf("%x", hash.Sum(nil))
+	}
+	return nil
+}
+
+// 直接传入 Config 结构设置 config
+// 目前主要用于编写测试用例时直接初始化 config
+func Set(cfg Config) {
+	config = &cfg
 }
 
 func Get() *Config {

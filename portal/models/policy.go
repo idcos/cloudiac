@@ -1,6 +1,7 @@
 package models
 
 import (
+	"cloudiac/common"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"strings"
@@ -10,8 +11,9 @@ import (
 const MaxTagSize = 16
 
 type Policy struct {
-	TimedModel
+	SoftDeleteModel
 
+	OrgId     Id `json:"orgId" gorm:"size:32;comment:组织ID" example:"org-c3lcrjxczjdywmk0go90"`
 	GroupId   Id `json:"groupId" gorm:"size:32;comment:策略组ID" example:"lg-c3lcrjxczjdywmk0go90"`
 	CreatorId Id `json:"creatorId" gorm:"size:32;not null;创建人" example:"u-c3lcrjxczjdywmk0go90"`
 
@@ -34,13 +36,6 @@ func (Policy) TableName() string {
 	return "iac_policy"
 }
 
-func (*Policy) Migrate(sess *db.Session) error {
-	if err := sess.DropColumn(Policy{}, "deleted_at_t"); err != nil {
-		return err
-	}
-
-	return nil
-}
 
 func (p *Policy) CustomBeforeCreate(*db.Session) error {
 	if p.Id == "" {
@@ -72,4 +67,34 @@ func (p *Policy) ValidateAttrs(attrs Attrs) error {
 		}
 	}
 	return nil
+}
+
+/*
+PolicyStatusConversion 转换规则
+开启状态	scan_task status	扫描状态	前端状态	policyStatus
+未开启	（无）	未开启	未开启	disable
+已开启	-（无扫描记录）	开启未检测	未检测	enable
+已开启	pending	检测中	“单鱼转”动画	pending
+已开启	passed	检测通过	合规	passed
+已开启	violated	检测不通过	不合规	violated
+已开启	failed	检测失败	不合规	violated
+已开启	violated	检测不通过+检测失败	不合规	violated
+*/
+func PolicyStatusConversion(status string, enable bool) string {
+	if !enable {
+		return common.PolicyStatusDisable
+	}
+
+	switch status {
+	case common.PolicyStatusPending:
+		return common.PolicyStatusPending
+	case common.PolicyStatusPassed:
+		return common.PolicyStatusPassed
+	case common.PolicyStatusViolated:
+		return common.PolicyStatusViolated
+	case common.PolicyStatusFailed:
+		return common.PolicyStatusViolated
+	default:
+		return common.PolicyStatusEnable
+	}
 }

@@ -5,9 +5,9 @@ import (
 )
 
 type PolicyGroup struct {
-	TimedModel
+	SoftDeleteModel
 
-	OrgId     Id
+	OrgId     Id `json:"orgId" gorm:"size:32;comment:组织ID" example:"org-c3lcrjxczjdywmk0go90"`
 	CreatorId Id `json:"creatorId" gorm:"size:32;not null;comment:创建人ID" example:"u-c3lcrjxczjdywmk0go90"`
 
 	Name        string `json:"name" gorm:"not null;size:128;comment:策略组名称" example:"安全合规策略组"`
@@ -15,7 +15,7 @@ type PolicyGroup struct {
 	Enabled     bool   `json:"enabled" gorm:"default:true;comment:是否启用" example:"true"`
 	Source      string `json:"source" gorm:"type:enum('vcs','registry');comment:来源：VCS/Registry"`
 	VcsId       Id     `json:"vcsId" gorm:"size:32;not null;comment:VCS ID"`
-	RepoId      Id     `json:"repoId" gorm:"not null;comment:VCS 仓库ID"`
+	RepoId      string `json:"repoId" gorm:"size:128;not null;comment:VCS 仓库ID"`
 	GitTags     string `json:"gitTags" gorm:"size:128;comment:Git 版本标签：\"v1.0.0\""`
 	Branch      string `json:"branch" gorm:"size:128;comment:分支"`
 	CommitId    string `json:"commitId" gorm:"size:128;not null;当前 git commit id"`

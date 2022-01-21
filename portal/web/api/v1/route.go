@@ -40,6 +40,10 @@ func Register(g *gin.RouterGroup) {
 	g.Use(gin.Logger())
 
 	g.POST("/trigger/send", w(handlers.ApiTriggerHandler))
+
+	// sso token 验证
+	g.GET("/sso/tokens/verify", w(handlers.VerifySsoToken))
+
 	// 触发器
 	apiToken := g.Group("")
 	apiToken.Use(w(middleware.AuthApiToken))
@@ -49,6 +53,10 @@ func Register(g *gin.RouterGroup) {
 
 	// Authorization Header 鉴权
 	g.Use(w(middleware.Auth)) // 解析 header token
+
+	// 创建单点登录 token
+	g.POST("/sso/tokens", w(handlers.GenerateSsoToken))
+	// ctrl.Register(g.Group("tokens", ac()), &handlers.Token{})
 
 	// TODO 旧的 token 接口己不再使用，先注释, 后续版本删除
 	// ctrl.Register(g.Group("token", ac()), &handlers.Auth{})
@@ -71,41 +79,49 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/systems", ac(), w(handlers.SystemConfig{}.Search))
 	// 系统状态
 	g.GET("/systems/status", w(handlers.PortalSystemStatusSearch))
+	// 系统设置registry addr 配置
+	g.GET("/system_config/registry/addr", ac(), w(handlers.GetRegistryAddr))     // 获取registry地址的设置
+	g.POST("/system_config/registry/addr", ac(), w(handlers.UpsertRegistryAddr)) // 更新registry地址的设置
+
+	// 要求组织 header
+	g.Use(w(middleware.AuthOrgId))
 
 	// 策略管理
 	ctrl.Register(g.Group("policies", ac()), &handlers.Policy{})
 	g.GET("/policies/summary", ac(), w(handlers.Policy{}.PolicySummary))
 	g.GET("/policies/:id/error", ac(), w(handlers.Policy{}.PolicyError))
 	g.GET("/policies/:id/suppress", ac(), w(handlers.Policy{}.SearchPolicySuppress))
-	g.POST("/policies/:id/suppress", ac(), w(handlers.Policy{}.UpdatePolicySuppress))
+	g.POST("/policies/:id/suppress", ac("suppress"), w(handlers.Policy{}.UpdatePolicySuppress))
 	g.GET("/policies/:id/suppress/sources", ac(), w(handlers.Policy{}.SearchPolicySuppressSource))
-	g.DELETE("/policies/:id/suppress/:suppressId", ac(), w(handlers.Policy{}.DeletePolicySuppress))
+	g.DELETE("/policies/:id/suppress/:suppressId", ac("suppress"), w(handlers.Policy{}.DeletePolicySuppress))
 	g.GET("/policies/:id/report", ac(), w(handlers.Policy{}.PolicyReport))
 	g.POST("/policies/parse", ac(), w(handlers.Policy{}.Parse))
 	g.POST("/policies/test", ac(), w(handlers.Policy{}.Test))
+
 	g.GET("/policies/templates", ac(), w(handlers.Policy{}.SearchPolicyTpl))
 	g.PUT("/policies/templates/:id", ac(), w(handlers.Policy{}.UpdatePolicyTpl))
-	g.PUT("/policies/templates/:id/enabled", ac(), w(handlers.Policy{}.EnablePolicyTpl))
+	g.PUT("/policies/templates/:id/enabled", ac("enablescan"), w(handlers.Policy{}.EnablePolicyTpl))
 	g.GET("/policies/templates/:id/policies", ac(), w(handlers.Policy{}.TplOfPolicy))
 	g.GET("/policies/templates/:id/groups", ac(), w(handlers.Policy{}.TplOfPolicyGroup))
 	g.GET("/policies/templates/:id/valid_policies", ac(), w(handlers.Policy{}.ValidTplOfPolicy))
-	g.POST("/policies/templates/:id/scan", ac(), w(handlers.Policy{}.ScanTemplate))
+	g.POST("/policies/templates/:id/scan", ac("scan"), w(handlers.Policy{}.ScanTemplate))
+	g.POST("/policies/templates/scans", ac("scan"), w(handlers.Policy{}.ScanTemplates))
 	g.GET("/policies/templates/:id/result", ac(), w(handlers.Policy{}.TemplateScanResult))
+
 	g.GET("/policies/envs", ac(), w(handlers.Policy{}.SearchPolicyEnv))
 	g.PUT("/policies/envs/:id", ac(), w(handlers.Policy{}.UpdatePolicyEnv))
-	g.PUT("/policies/envs/:id/enabled", ac(), w(handlers.Policy{}.EnablePolicyEnv))
+	g.PUT("/policies/envs/:id/enabled", ac("enablescan"), w(handlers.Policy{}.EnablePolicyEnv))
 	g.GET("/policies/envs/:id/policies", ac(), w(handlers.Policy{}.EnvOfPolicy))
 	g.GET("/policies/envs/:id/valid_policies", ac(), w(handlers.Policy{}.ValidEnvOfPolicy))
-	g.POST("/policies/envs/:id/scan", ac(), w(handlers.Policy{}.ScanEnvironment))
+	g.POST("/policies/envs/:id/scan", ac("scan"), w(handlers.Policy{}.ScanEnvironment))
 	g.GET("/policies/envs/:id/result", ac(), w(handlers.Policy{}.EnvScanResult))
+
 	ctrl.Register(g.Group("policies/groups", ac()), &handlers.PolicyGroup{})
+	g.POST("/policies/groups/checks", ac(), w(handlers.PolicyGroupChecks))
 	g.GET("/policies/groups/:id/policies", ac(), w(handlers.PolicyGroup{}.SearchGroupOfPolicy))
 	g.POST("/policies/groups/:id", ac(), w(handlers.PolicyGroup{}.OpPolicyAndPolicyGroupRel))
 	g.GET("/policies/groups/:id/report", ac(), w(handlers.PolicyGroup{}.ScanReport))
 	g.GET("/policies/groups/:id/last_tasks", ac(), w(handlers.PolicyGroup{}.LastTasks))
-
-	// 要求组织 header
-	g.Use(w(middleware.AuthOrgId))
 
 	// 组织下的资源搜索(只需要有环境的读权限即可查看资源)
 	g.GET("/orgs/resources", ac("envs", "read"), w(handlers.Organization{}.SearchOrgResources))
@@ -151,6 +167,10 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/vcs/:id/branch", ac(), w(handlers.Vcs{}.ListBranches))
 	g.GET("/vcs/:id/tag", ac(), w(handlers.Vcs{}.ListTags))
 	g.GET("/vcs/:id/readme", ac(), w(handlers.Vcs{}.GetReadmeContent))
+
+	g.GET("/registry/policy_groups", w(handlers.SearchRegistryPG))
+	g.GET("/registry/policy_groups/versions", w(handlers.SearchRegistryPGVersions))
+
 	// 云模板
 	ctrl.Register(g.Group("templates", ac()), &handlers.Template{})
 	g.GET("/templates/variables", ac(), w(handlers.TemplateVariableSearch))
