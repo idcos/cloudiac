@@ -39,6 +39,8 @@ jobs:
       - name: golangci-lint
         run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.43.0 && ./bin/golangci-lint run --out-format checkstyle --issues-exit-code 0 > report.xml
 
+      - name: Coverage
+        run: go test cloudiac/utils -coverprofile=coverage.out
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
