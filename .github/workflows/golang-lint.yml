@@ -37,7 +37,7 @@ jobs:
         run: go get github.com/swaggo/swag/cmd/swag && make build
 
       - name: golangci-lint
-        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.43.0 && golangci-lint run --out-format checkstyle > report.xml
+        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.43.0 && ./bin/golangci-lint run --out-format checkstyle > report.xml
 
 
       - name: SonarCloud Scan
