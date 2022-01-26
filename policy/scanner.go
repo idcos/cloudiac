@@ -374,6 +374,12 @@ func (s *Scanner) RunInternalScan(code Resource) error {
 		return err
 	}
 
+	inputResource := models.TfParse{}
+	inputContent, _ := ioutil.ReadFile(s.GetConfigPath(code))
+	if len(inputContent) > 0 {
+		_ = json.Unmarshal(inputContent, &inputResource)
+	}
+
 	violated := false
 	for _, p := range policies {
 		result, err := RegoParse(filepath.Join(p.Meta.Root, p.Meta.File), s.GetConfigPath(code), p.Meta.Name)
@@ -408,6 +414,9 @@ func (s *Scanner) RunInternalScan(code Resource) error {
 				Category:     p.Meta.Category,
 				ResourceName: resName,
 				ResourceType: resType,
+			}
+			if inputResource != nil {
+				violation.Line, violation.File = findLineNoFromMap(inputResource, resName)
 			}
 			output.Results.Violations = append(output.Results.Violations, violation)
 			output.Results.ScanSummary.ViolatedPolicies++
