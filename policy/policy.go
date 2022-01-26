@@ -700,6 +700,8 @@ func ParseMeta(regoFilePath string, metaFilePath string) (p *PolicyWithMeta, err
 		p.Id = meta.Id
 		p.Rego = regoContent
 
+		p.Meta.Severity = strings.ToLower(p.Meta.Severity)
+
 		return p, nil
 	}
 
@@ -773,6 +775,8 @@ func ParseMeta(regoFilePath string, metaFilePath string) (p *PolicyWithMeta, err
 	if meta.Severity == "" {
 		meta.Severity = consts.PolicySeverityMedium
 	}
+
+	p.Meta.Severity = strings.ToLower(p.Meta.Severity)
 
 	p.Id = meta.Id
 	p.Meta = meta
