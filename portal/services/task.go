@@ -291,9 +291,8 @@ func doCreateTask(tx *db.Session, task models.Task, tpl *models.Template, env *m
 			if _, err := tx.Save(scanTask); err != nil {
 				return nil, e.New(e.DBError, err)
 			}
-			env.LastScanTaskId = scanTask.Id
-			if _, err := tx.Save(env); err != nil {
-				return nil, e.New(e.DBError, errors.Wrapf(err, "update env scan task id"))
+			if err := InitScanResult(tx, scanTask); err != nil {
+				return nil, e.New(e.DBError, errors.Wrapf(err, "task '%s' init scan result error: %v", task.Id, err))
 			}
 		}
 
@@ -1314,7 +1313,7 @@ func SendVcsComment(session *db.Session, task *models.Task, taskStatus string) {
 	}
 
 	vcs, er := GetVcsRepoByTplId(session, task.TplId)
-	if err != nil {
+	if er != nil {
 		logs.Get().Errorf("vcs comment err, get vcs data err: %v", er)
 		return
 	}

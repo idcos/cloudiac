@@ -32,7 +32,7 @@ func InitScanResult(tx *db.Session, task *models.ScanTask) e.Error {
 		err                               e.Error
 	)
 
-	if validPolicies, suppressedPolicies, err = GetValidPolicies(tx, task.TplId, task.EnvId); err != nil {
+	if validPolicies, suppressedPolicies, err = GetValidPolicies(tx.Debug(), task.TplId, task.EnvId); err != nil {
 		return err
 	}
 
@@ -147,6 +147,15 @@ func finishPendingScanResult(tx *db.Session, task models.Tasker, message string,
 	sql := fmt.Sprintf("UPDATE %s SET status = ?, message = ? WHERE task_id = ? AND status = ?", table)
 	args := []interface{}{status, message, task.GetId(), common.PolicyStatusPending}
 	if _, err := tx.Exec(sql, args...); err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
+// CleanScanResult 任务失败的时候清除扫描结果
+func CleanScanResult(tx *db.Session, task models.Tasker) e.Error {
+	if _, err := tx.Where("task_id = ?", task.GetId()).
+		Delete(models.PolicyResult{}); err != nil {
 		return e.New(e.DBError, err)
 	}
 	return nil
