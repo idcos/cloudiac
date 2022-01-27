@@ -415,7 +415,7 @@ func (s *Scanner) RunInternalScan(code Resource) error {
 				ResourceName: resName,
 				ResourceType: resType,
 			}
-			if inputResource != nil {
+			if len(inputResource) > 0 {
 				violation.Line, violation.File = findLineNoFromMap(inputResource, resName)
 			}
 			output.Results.Violations = append(output.Results.Violations, violation)

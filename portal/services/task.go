@@ -749,8 +749,7 @@ func FetchTaskLog(ctx context.Context, task models.Tasker, stepType string, writ
 
 	for {
 		for _, s := range steps {
-			if stepType != "" && ((stepType != "tfscan" && s.Type != stepType) ||
-				(stepType == "tfscan" && !(s.Type == models.TaskStepOpaScan || s.Type == models.TaskStepTplScan || s.Type == models.TaskStepEnvScan))) {
+			if stepType != "" && s.Type != stepType {
 				continue
 			}
 			if _, ok := fetchedSteps[s.Id.String()]; ok {

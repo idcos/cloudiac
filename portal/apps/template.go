@@ -170,6 +170,18 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		go ScanTemplateOrEnv(c, scanForm, "")
 	}
 
+	// 设置webhook
+	vcs, _ := services.QueryVcsByVcsId(template.VcsId, c.DB())
+	// 获取token
+	token, err := GetWebhookToken(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := vcsrv.SetWebhook(vcs, template.RepoId, token.Key, form.TplTriggers); err != nil {
+		c.Logger().Errorf("set webhook err :%v", err)
+	}
+
 	return template, nil
 }
 
@@ -298,6 +310,19 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 		}
 		go ScanTemplateOrEnv(c, tplScanForm, "")
 	}
+
+	// 设置webhook
+	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
+	// 获取token
+	token, err := GetWebhookToken(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, tpl.Triggers); err != nil {
+		c.Logger().Errorf("set webhook err :%v", err)
+	}
+
 	return tpl, err
 }
 
@@ -347,6 +372,18 @@ func DeleteTemplate(c *ctx.ServiceContext, form *forms.DeleteTemplateForm) (inte
 		_ = tx.Rollback()
 		c.Logger().Errorf("error commit del template, err %s", err)
 		return nil, e.New(e.DBError, err)
+	}
+
+	// 删除webhook
+	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
+	// 获取token
+	token, err := GetWebhookToken(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, []string{}); err != nil {
+		c.Logger().Errorf("set webhook err :%v", err)
 	}
 
 	return nil, nil
