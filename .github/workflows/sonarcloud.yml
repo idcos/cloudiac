@@ -46,7 +46,7 @@ jobs:
         run: curl -sfL https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh -s v2.9.6 && ./bin/gosec  -fmt sonarqube -no-fail ./... > gosec-report.xml
 
       - name: Coverage
-        run: go test ./... -coverprofile=coverage.out
+        run: go test ./... -coverprofile=coverage.out || true
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
