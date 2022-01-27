@@ -189,7 +189,7 @@ func SetWebhook(vcs *models.Vcs, repoId, apiToken string, triggers []string) err
 		}
 		// 判断同vcs、仓库的环境是否存在
 		tplExist, err := db.Get().Model(&models.Template{}).
-			Where("tpl.vcs_id = ?", vcs.Id).
+			Where("iac_template.id = ?", vcs.Id).
 			Where("iac_template.triggers IS NOT NULL or iac_template.triggers != '{}'").Exists()
 		if err != nil {
 			return err
