@@ -180,15 +180,22 @@ func SetWebhook(vcs *models.Vcs, repoId, apiToken string, triggers []string) err
 	//空值时删除
 	if len(triggers) == 0 {
 		// 判断同vcs、仓库的环境是否存在
-		exist, err := db.Get().Model(&models.Env{}).
+		envExist, err := db.Get().Model(&models.Env{}).
 			Joins("left join iac_template as tpl on iac_env.tpl_id = tpl.id").
 			Where("tpl.vcs_id = ?", vcs.Id).
 			Where("iac_env.triggers IS NOT NULL or iac_env.triggers != '{}'").Exists()
 		if err != nil {
 			return err
 		}
-		//如果同vcs、仓库的环境不存在，则删除代码仓库中的webhook
-		if !exist {
+		// 判断同vcs、仓库的环境是否存在
+		tplExist, err := db.Get().Model(&models.Template{}).
+			Where("tpl.vcs_id = ?", vcs.Id).
+			Where("iac_template.triggers IS NOT NULL or iac_template.triggers != '{}'").Exists()
+		if err != nil {
+			return err
+		}
+		//如果同vcs、仓库的环境和云模板不存在，则删除代码仓库中的webhook
+		if !envExist && !tplExist {
 			if err := repo.DeleteWebhook(webhookId); err != nil {
 				return err
 			}
