@@ -586,7 +586,6 @@ func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) 
 	case common.TaskStepEnvScan:
 		fallthrough
 	case common.TaskStepOpaScan:
-		logs.Get().Errorf("task %+v", task)
 		return processScanResult()
 	}
 	return nil
@@ -1269,7 +1268,6 @@ func (m *TaskManager) processScanTaskDone(taskId models.Id) {
 	if err := updateTaskStatus(); err != nil {
 		logger.Errorf("update task status error: %v", err)
 	}
-	logs.Get().Errorf("scan task %+v", task)
 
 	if task.Type == common.TaskTypeEnvScan || task.Type == common.TaskTypeScan || task.Type == common.TaskTypeTplScan {
 		if err := processTfResult(); err != nil {
