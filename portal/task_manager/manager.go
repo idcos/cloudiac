@@ -441,11 +441,9 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 
 	if task.IsDriftTask {
 		if env, err := services.GetEnvById(m.db, task.EnvId); err != nil {
-			if err != nil {
-				logger.Errorf("get task environment %s: %v", task.EnvId, err)
-				taskStartFailed(errors.New("get task environment failed"))
-				return
-			}
+			logger.Errorf("get task environment %s: %v", task.EnvId, err)
+			taskStartFailed(errors.New("get task environment failed"))
+			return
 		} else if env.Status != models.EnvStatusActive {
 			startErr = errors.New("environment is not active")
 			_ = changeTaskStatus(models.TaskFailed, startErr.Error(), true)
@@ -466,6 +464,14 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 			Update(&models.Env{LastTaskId: task.Id}); er != nil {
 			logger.Errorf("update env lastTaskId: %v", er)
 			return
+		}
+		scanTask, _ := services.GetMirrorScanTask(m.db, task.Id)
+		if scanTask != nil {
+			if _, er := m.db.Model(&models.Env{}).Where("id = ?", task.EnvId).
+				Update(&models.Env{LastScanTaskId: task.Id}); er != nil {
+				logger.Errorf("update env lastTaskId: %v", er)
+				return
+			}
 		}
 	}
 
@@ -558,9 +564,6 @@ func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) 
 
 		// 处理扫描结果
 		if scanTask.PolicyStatus == common.PolicyStatusPassed || scanTask.PolicyStatus == common.PolicyStatusViolated {
-			if er := services.InitScanResult(dbSess, scanTask); er != nil {
-				return er
-			}
 			if bs, er := readIfExist(task.TfResultJsonPath()); er == nil && len(bs) > 0 {
 				if tfResultJson, er := policy.UnmarshalTfResultJson(bs); er == nil {
 					tsResult = tfResultJson.Results
@@ -569,6 +572,10 @@ func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) 
 
 			if err := services.UpdateScanResult(dbSess, scanTask, tsResult, scanTask.PolicyStatus); err != nil {
 				return fmt.Errorf("save scan result: %v", err)
+			}
+		} else if scanTask.PolicyStatus == common.PolicyStatusFailed {
+			if err := services.CleanScanResult(dbSess, task); err != nil {
+				return fmt.Errorf("clean scan result err: %v", err)
 			}
 		}
 
@@ -1222,9 +1229,6 @@ func (m *TaskManager) processScanTaskDone(taskId models.Id) {
 		)
 
 		if task.PolicyStatus == common.PolicyStatusPassed || task.PolicyStatus == common.PolicyStatusViolated {
-			if er := services.InitScanResult(dbSess, task); er != nil {
-				return er
-			}
 			if bs, err = read(task.TfResultJsonPath()); err == nil && len(bs) > 0 {
 				if tfResultJson, err := policy.UnmarshalTfResultJson(bs); err == nil {
 					tsResult = tfResultJson.Results
@@ -1233,6 +1237,10 @@ func (m *TaskManager) processScanTaskDone(taskId models.Id) {
 
 			if err := services.UpdateScanResult(dbSess, task, tsResult, task.PolicyStatus); err != nil {
 				return fmt.Errorf("save scan result: %v", err)
+			}
+		} else if task.PolicyStatus == common.PolicyStatusFailed {
+			if err := services.CleanScanResult(dbSess, task); err != nil {
+				return fmt.Errorf("clean scan result err: %v", err)
 			}
 		}
 

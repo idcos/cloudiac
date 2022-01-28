@@ -81,7 +81,7 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 	}
 
 	tx := c.Tx()
-	tx = services.QueryWithOrgIdAndGlobal(tx, c.OrgId)
+	txWithOrg := services.QueryWithOrgIdAndGlobal(tx, c.OrgId)
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -97,7 +97,7 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 	)
 
 	if envId != "" { // 环境检查
-		env, err = services.GetEnvById(tx, envId)
+		env, err = services.GetEnvById(txWithOrg, envId)
 		if err != nil && err.Code() == e.EnvNotExists {
 			_ = tx.Rollback()
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)
@@ -109,7 +109,7 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 		projectId = env.ProjectId
 
 		// 环境扫描未启用，不允许发起手动检测
-		if enabled, err := services.IsEnvEnabledScan(tx, envId); err != nil {
+		if enabled, err := services.IsEnvEnabledScan(txWithOrg, envId); err != nil {
 			_ = tx.Rollback()
 			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 		} else if !enabled && !form.Parse {
@@ -119,7 +119,7 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 	}
 
 	// 模板检查
-	tpl, err = services.GetTemplateById(tx, form.Id)
+	tpl, err = services.GetTemplateById(txWithOrg, form.Id)
 	if err != nil && err.Code() == e.TemplateNotExists {
 		_ = tx.Rollback()
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
@@ -130,7 +130,7 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 	}
 	if envId == "" {
 		// 云模板扫描未启用，不允许发起手动检测
-		if enabled, err := services.IsTemplateEnabledScan(tx, form.Id); err != nil {
+		if enabled, err := services.IsTemplateEnabledScan(txWithOrg, form.Id); err != nil {
 			_ = tx.Rollback()
 			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 		} else if !enabled && !form.Parse {
@@ -159,9 +159,9 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 	}
 	var task *models.ScanTask
 	if envId != "" {
-		task, err = services.CreateEnvScanTask(tx, tpl, env, taskType, c.UserId)
+		task, err = services.CreateEnvScanTask(txWithOrg, tpl, env, taskType, c.UserId)
 	} else {
-		task, err = services.CreateScanTask(tx, tpl, env, models.ScanTask{
+		task, err = services.CreateScanTask(txWithOrg, tpl, env, models.ScanTask{
 			Name:      models.ScanTask{}.GetTaskNameByType(taskType),
 			OrgId:     c.OrgId,
 			CreatorId: c.UserId,
@@ -180,6 +180,10 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 		_ = tx.Rollback()
 		c.Logger().Errorf("error creating scan task, err %s", err)
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
+	if err := services.InitScanResult(tx.Debug(), task); err != nil {
+		return nil, e.New(e.DBError, errors.Wrapf(err, "task '%s' init scan result error: %v", task.Id, err))
 	}
 
 	if task.Type == models.TaskTypeEnvScan {
@@ -213,7 +217,8 @@ func ScanEnvironment(c *ctx.ServiceContext, form *forms.ScanEnvironmentForm) (*m
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
 
-	tx := services.QueryWithOrgIdAndGlobal(c.Tx(), c.OrgId)
+	tx := c.Tx()
+	txWithOrg := services.QueryWithOrgIdAndGlobal(c.Tx(), c.OrgId)
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -236,7 +241,7 @@ func ScanEnvironment(c *ctx.ServiceContext, form *forms.ScanEnvironmentForm) (*m
 	}
 
 	// 模板检查
-	tplQuery := services.QueryWithOrgId(tx, c.OrgId)
+	tplQuery := services.QueryWithOrgId(txWithOrg, c.OrgId)
 	tpl, err := services.GetTemplateById(tplQuery, env.TplId)
 	if err != nil && err.Code() == e.TemplateNotExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
@@ -276,6 +281,11 @@ func ScanEnvironment(c *ctx.ServiceContext, form *forms.ScanEnvironmentForm) (*m
 	if _, err := tx.Save(env); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("save env, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	if err := services.InitScanResult(tx, task); err != nil {
+		_ = tx.Rollback()
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
@@ -430,8 +440,9 @@ type RespPolicyEnv struct {
 
 	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
 	Summary
-	OrgName     string `json:"orgName" form:"orgName" `
-	ProjectName string `json:"projectName" form:"projectName" `
+	OrgName      string `json:"orgName" form:"orgName" `
+	ProjectName  string `json:"projectName" form:"projectName" `
+	TemplateName string `json:"templateName"`
 
 	// 以下字段不返回
 	Status     string `json:"status,omitempty" gorm:"-" swaggerignore:"true"`     // 环境状态
@@ -451,8 +462,8 @@ func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (in
 		v.PolicyStatus = models.PolicyStatusConversion(v.PolicyStatus, v.PolicyEnable)
 	}
 
-	for _, e := range respPolicyEnvs {
-		envIds = append(envIds, e.Id)
+	for _, env := range respPolicyEnvs {
+		envIds = append(envIds, env.Id)
 	}
 
 	// 根据环境id查询出关联的所有策略组
@@ -725,6 +736,17 @@ func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicySca
 			}, nil
 		}
 		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	// 如果正在扫描中，返回空列表
+	if scanTask.PolicyStatus == common.TaskPending {
+		return ScanResultPageResp{
+			PolicyStatus: services.MergeScanResultPolicyStatus(policyEnable, scanTask),
+			Task:         scanTask,
+			Total:        0,
+			PageSize:     0,
+			List:         []*PolicyResultGroup{},
+		}, nil
 	}
 
 	query = services.QueryWithOrgId(c.DB(), c.OrgId, models.PolicyResult{}.TableName())
