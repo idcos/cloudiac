@@ -28,11 +28,11 @@ var (
 	red    = color.New(color.FgRed).SprintFunc()
 	yellow = color.New(color.FgYellow).SprintFunc()
 
-	MSG_TEMPLATE_INVALID   = red("错误：\t") + "策略ID：{{.RuleId}}，错误详情：{{.Error}}"
-	MSG_TEMPLATE_ERROR     = red("错误：\t") + "策略组：{{.Category}}，策略名：{{.RuleName}}，策略ID：{{.RuleId}}，严重程度：{{.Severity}}\n详情：{{.Error}}"
-	MSG_TEMPLATE_PASSED    = green("通过：\t") + "策略组：{{.Category}}，策略名：{{.RuleName}}，策略ID：{{.RuleId}}，严重程度：{{.Severity}}"
-	MSG_TEMPLATE_VIOLATED  = red("不通过：") + "策略组：{{.Category}}，策略名：{{.RuleName}}，策略ID：{{.RuleId}}，资源ID：{{.ResourceName}}，严重程度：{{.Severity}}"
-	MSG_TEMPLATE_SUPRESSED = yellow("已屏蔽：\t") + "策略组：{{.Category}}，策略名：{{.RuleName}}，策略ID：{{.RuleId}}，严重程度：{{.Severity}}"
+	MSG_TEMPLATE_INVALID   = red("Error:\t") + "id: {{.RuleId}}, detail: {{.Error}}"
+	MSG_TEMPLATE_ERROR     = red("Error: \t") + "group: {{.Category}}, name: {{.RuleName}}, id: {{.RuleId}}, severity: {{.Severity}}\ndetail: {{.Error}}"
+	MSG_TEMPLATE_PASSED    = green("Passed: \t") + "group: {{.Category}}, name: {{.RuleName}}, id: {{.RuleId}}, severity: {{.Severity}}"
+	MSG_TEMPLATE_VIOLATED  = red("Violated: \t") + "group: {{.Category}}, name: {{.RuleName}}, id: {{.RuleId}}, resource_id : {{.ResourceName}}, severity: {{.Severity}}"
+	MSG_TEMPLATE_SUPRESSED = yellow("Suppressed: \t") + "group: {{.Category}}, name: {{.RuleName}}, id: {{.RuleId}}, severity: {{.Severity}}"
 )
 
 type Parser struct {
