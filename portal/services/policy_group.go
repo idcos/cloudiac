@@ -186,7 +186,7 @@ func DownloadPolicyGroup(sess *db.Session, tmpDir string, result *DownloadPolicy
 	logger.Debugf("downloading git %s@%s to %s", repoAddr, commitId, filepath.Join(tmpDir, "code"))
 	er := GitCheckout(filepath.Join(tmpDir, "code"), repoAddr, commitId)
 	if er != nil {
-		result.Error = e.New(e.InternalError, errors.Wrapf(er, "checkout repo"), http.StatusInternalServerError)
+		result.Error = e.New(e.BadRequest, errors.Wrapf(er, "checkout repo"), http.StatusBadRequest)
 		return
 	}
 	logger.Debugf("download git complete")
