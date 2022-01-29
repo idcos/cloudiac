@@ -123,8 +123,8 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/policies/groups/:id/report", ac(), w(handlers.PolicyGroup{}.ScanReport))
 	g.GET("/policies/groups/:id/last_tasks", ac(), w(handlers.PolicyGroup{}.LastTasks))
 
-	// 组织下的资源搜索(只需要有环境的读权限即可查看资源)
-	g.GET("/orgs/resources", ac("envs", "read"), w(handlers.Organization{}.SearchOrgResources))
+	// 组织下的资源搜索(只需要有项目的读权限即可查看资源)
+	g.GET("/orgs/resources", ac("orgs", "read"), w(handlers.Organization{}.SearchOrgResources))
 
 	// 组织用户管理
 	g.GET("/orgs/:id/users", ac("orgs", "listuser"), w(handlers.Organization{}.SearchUser))
