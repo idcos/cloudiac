@@ -14,7 +14,9 @@ import (
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/version"
+	"github.com/pkg/errors"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -617,10 +619,10 @@ type PolicyWithMeta struct {
 	Rego string `json:"rego"`
 }
 
-func ParsePolicyGroup(dirname string) ([]*PolicyWithMeta, error) {
+func ParsePolicyGroup(dirname string) ([]*PolicyWithMeta, e.Error) {
 	files, err := ioutil.ReadDir(dirname)
 	if err != nil {
-		return nil, err
+		return nil, e.New(e.InternalError, err, http.StatusInternalServerError)
 	}
 
 	otherFiles := append(files)
@@ -662,7 +664,17 @@ func ParsePolicyGroup(dirname string) ([]*PolicyWithMeta, error) {
 	for _, r := range regoFiles {
 		p, err := ParseMeta(r.RegoFile, r.MetaFile)
 		if err != nil {
-			return nil, err
+			regoPath, _ := filepath.Rel(dirname, r.RegoFile)
+			if r.MetaFile != "" {
+				metaPath, _ := filepath.Rel(dirname, r.MetaFile)
+				return nil, e.New(e.BadRequest,
+					errors.Wrapf(err, "parse policy(%s,%s) error: %v", metaPath, regoPath, err),
+					http.StatusBadRequest)
+			}
+
+			return nil, e.New(e.BadRequest,
+				errors.Wrapf(err, "parse policy (%s) error: %v", regoPath, err),
+				http.StatusBadRequest)
 		}
 		policies = append(policies, p)
 	}
