@@ -1215,12 +1215,12 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 }
 
 // PolicyGroupRepoDownloadAndParse 下载和解析策略组文件
-func PolicyGroupRepoDownloadAndParse(g *models.PolicyGroup) ([]*policy.PolicyWithMeta, error) {
+func PolicyGroupRepoDownloadAndParse(g *models.PolicyGroup) ([]*policy.PolicyWithMeta, e.Error) {
 	// 1. 生成临时工作目录
 	logger := logs.Get()
 	tmpDir, er := os.MkdirTemp("", "*")
 	if er != nil {
-		return nil, er
+		return nil, e.New(e.InternalError, er, http.StatusInternalServerError)
 	}
 	defer os.RemoveAll(tmpDir)
 

@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
-	"github.com/pkg/errors"
 )
 
 // CreatePolicyGroup 创建策略组
@@ -60,9 +59,9 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 	}
 
 	// 策略组仓库解析
-	policies, er := PolicyGroupRepoDownloadAndParse(&g)
-	if er != nil {
-		return nil, e.New(e.InternalError, errors.Wrapf(er, "download and parse"), http.StatusInternalServerError)
+	policies, err := PolicyGroupRepoDownloadAndParse(&g)
+	if err != nil {
+		return nil, err
 	}
 
 	tx := c.Tx()
@@ -183,7 +182,7 @@ func UpdatePolicyGroup(c *ctx.ServiceContext, form *forms.UpdatePolicyGroupForm)
 
 	var (
 		policies []*policy.PolicyWithMeta
-		er       error
+		err      e.Error
 	)
 	// 未对仓库信息进行修改时，不重新同步策略数据
 	needsSync := false
@@ -199,10 +198,9 @@ func UpdatePolicyGroup(c *ctx.ServiceContext, form *forms.UpdatePolicyGroupForm)
 		g.Id = form.Id
 		needsSync = true
 		// 策略组仓库解析
-		policies, er = PolicyGroupRepoDownloadAndParse(g)
-
-		if er != nil {
-			return nil, e.New(e.InternalError, errors.Wrapf(er, "parse rego"), http.StatusInternalServerError)
+		policies, err = PolicyGroupRepoDownloadAndParse(g)
+		if err != nil {
+			return nil, err
 		}
 	}
 
