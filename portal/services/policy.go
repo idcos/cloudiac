@@ -90,13 +90,8 @@ func GetPoliciesByGroupId(tx *db.Session, groupId, orgId models.Id) ([]*models.P
 func GetTaskPolicies(query *db.Session, taskId models.Id) ([]runner.TaskPolicy, e.Error) {
 	var taskPolicies []runner.TaskPolicy
 
-	task, err := GetScanTaskById(query, taskId)
-	if err != nil {
-		return nil, err
-	}
-
-	policies, _, err := GetValidPolicies(query, task.TplId, task.EnvId)
-	if err != nil {
+	policies, err := GetPoliciesByTaskId(query, taskId)
+	if err != nil && !e.IsRecordNotFound(err) {
 		return nil, err
 	}
 

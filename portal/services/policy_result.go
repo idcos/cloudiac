@@ -24,6 +24,17 @@ func GetPolicyResultById(query *db.Session, taskId models.Id, policyId models.Id
 	return &result, nil
 }
 
+func GetPoliciesByTaskId(query *db.Session, taskId models.Id) ([]*models.Policy, e.Error) {
+	var policies []*models.Policy
+	resultQuery := query.Model(models.PolicyResult{}).Where("task_id = ?", taskId).Select("policy_id")
+	if err := query.Model(models.Policy{}).
+		Where("id in (?)", resultQuery.Expr()).
+		Find(&policies); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return policies, nil
+}
+
 // InitScanResult 初始化扫描结果
 func InitScanResult(tx *db.Session, task *models.ScanTask) e.Error {
 	var (
@@ -32,7 +43,7 @@ func InitScanResult(tx *db.Session, task *models.ScanTask) e.Error {
 		err                               e.Error
 	)
 
-	if validPolicies, suppressedPolicies, err = GetValidPolicies(tx.Debug(), task.TplId, task.EnvId); err != nil {
+	if validPolicies, suppressedPolicies, err = GetValidPolicies(tx, task.TplId, task.EnvId); err != nil {
 		return err
 	}
 
