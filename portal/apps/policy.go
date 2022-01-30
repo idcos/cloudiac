@@ -182,7 +182,7 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
-	if err := services.InitScanResult(tx.Debug(), task); err != nil {
+	if err := services.InitScanResult(tx, task); err != nil {
 		return nil, e.New(e.DBError, errors.Wrapf(err, "task '%s' init scan result error: %v", task.Id, err))
 	}
 
@@ -1052,7 +1052,7 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
 	lastTo := from
 	lastFrom := utils.LastDaysMidnight(15, lastTo)
 
-	query := services.QueryWithOrgId(c.DB(), c.OrgId).Debug()
+	query := services.QueryWithOrgId(c.DB(), c.OrgId)
 	userQuery := query.Model(models.PolicyResult{})
 
 	// 用户项目隔离
