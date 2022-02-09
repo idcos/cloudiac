@@ -227,6 +227,7 @@ func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*mode
 			CurrStep: 0,
 		},
 		Callback: pt.Callback,
+		Source: pt.Source,
 	}
 	task.Id = models.Task{}.NewId()
 	return &task, nil

@@ -108,7 +108,6 @@ func CreateWebhookTask(tx *db.Session, taskType, revision, commitId string, user
 		_ = tx.Rollback()
 		return e.New(e.DBError, er, http.StatusInternalServerError)
 	}
-
 	task := &models.Task{
 		Name:        models.Task{}.GetTaskNameByType(taskType),
 		Targets:     models.StrSlice{},
