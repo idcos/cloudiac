@@ -14,7 +14,9 @@ import (
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/version"
+	"github.com/pkg/errors"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -28,11 +30,11 @@ var (
 	red    = color.New(color.FgRed).SprintFunc()
 	yellow = color.New(color.FgYellow).SprintFunc()
 
-	MSG_TEMPLATE_INVALID   = red("错误：\t") + "策略ID：{{.RuleId}}，错误详情：{{.Error}}"
-	MSG_TEMPLATE_ERROR     = red("错误：\t") + "策略组：{{.Category}}，策略名：{{.RuleName}}，策略ID：{{.RuleId}}，严重程度：{{.Severity}}\n详情：{{.Error}}"
-	MSG_TEMPLATE_PASSED    = green("通过：\t") + "策略组：{{.Category}}，策略名：{{.RuleName}}，策略ID：{{.RuleId}}，严重程度：{{.Severity}}"
-	MSG_TEMPLATE_VIOLATED  = red("不通过：") + "策略组：{{.Category}}，策略名：{{.RuleName}}，策略ID：{{.RuleId}}，资源ID：{{.ResourceName}}，严重程度：{{.Severity}}"
-	MSG_TEMPLATE_SUPRESSED = yellow("已屏蔽：\t") + "策略组：{{.Category}}，策略名：{{.RuleName}}，策略ID：{{.RuleId}}，严重程度：{{.Severity}}"
+	MSG_TEMPLATE_INVALID   = red("Error:\t") + "id: {{.RuleId}}, detail: {{.Error}}"
+	MSG_TEMPLATE_ERROR     = red("Error: \t") + "group: {{.Category}}, name: {{.RuleName}}, id: {{.RuleId}}, severity: {{.Severity}}\ndetail: {{.Error}}"
+	MSG_TEMPLATE_PASSED    = green("Passed: \t") + "group: {{.Category}}, name: {{.RuleName}}, id: {{.RuleId}}, severity: {{.Severity}}"
+	MSG_TEMPLATE_VIOLATED  = red("Violated: \t") + "group: {{.Category}}, name: {{.RuleName}}, id: {{.RuleId}}, resource_id : {{.ResourceName}}, severity: {{.Severity}}"
+	MSG_TEMPLATE_SUPRESSED = yellow("Suppressed: \t") + "group: {{.Category}}, name: {{.RuleName}}, id: {{.RuleId}}, severity: {{.Severity}}"
 )
 
 type Parser struct {
@@ -617,10 +619,10 @@ type PolicyWithMeta struct {
 	Rego string `json:"rego"`
 }
 
-func ParsePolicyGroup(dirname string) ([]*PolicyWithMeta, error) {
+func ParsePolicyGroup(dirname string) ([]*PolicyWithMeta, e.Error) {
 	files, err := ioutil.ReadDir(dirname)
 	if err != nil {
-		return nil, err
+		return nil, e.New(e.InternalError, err, http.StatusInternalServerError)
 	}
 
 	otherFiles := append(files)
@@ -662,7 +664,17 @@ func ParsePolicyGroup(dirname string) ([]*PolicyWithMeta, error) {
 	for _, r := range regoFiles {
 		p, err := ParseMeta(r.RegoFile, r.MetaFile)
 		if err != nil {
-			return nil, err
+			regoPath, _ := filepath.Rel(dirname, r.RegoFile)
+			if r.MetaFile != "" {
+				metaPath, _ := filepath.Rel(dirname, r.MetaFile)
+				return nil, e.New(e.BadRequest,
+					errors.Wrapf(err, "parse policy(%s,%s) error: %v", metaPath, regoPath, err),
+					http.StatusBadRequest)
+			}
+
+			return nil, e.New(e.BadRequest,
+				errors.Wrapf(err, "parse policy (%s) error: %v", regoPath, err),
+				http.StatusBadRequest)
 		}
 		policies = append(policies, p)
 	}
@@ -699,6 +711,8 @@ func ParseMeta(regoFilePath string, metaFilePath string) (p *PolicyWithMeta, err
 		p.Meta = meta
 		p.Id = meta.Id
 		p.Rego = regoContent
+
+		p.Meta.Severity = strings.ToLower(p.Meta.Severity)
 
 		return p, nil
 	}
@@ -773,6 +787,8 @@ func ParseMeta(regoFilePath string, metaFilePath string) (p *PolicyWithMeta, err
 	if meta.Severity == "" {
 		meta.Severity = consts.PolicySeverityMedium
 	}
+
+	p.Meta.Severity = strings.ToLower(p.Meta.Severity)
 
 	p.Id = meta.Id
 	p.Meta = meta

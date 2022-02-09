@@ -186,11 +186,11 @@ func (s *Scanner) ScanResource(resource Resource) error {
 		}
 	}
 
-	var err error
+	var errExit error
 	if s.Internal {
-		if err = s.RunInternalScan(resource); err != nil && !errors.Is(err, ErrScanExitViolated) {
+		if errExit = s.RunInternalScan(resource); errExit != nil && !errors.Is(errExit, ErrScanExitViolated) {
 			task.PolicyStatus = common.PolicyStatusFailed
-			return err
+			return errExit
 		}
 	} else {
 		if err := s.RunScan(resource); err != nil {
@@ -237,7 +237,7 @@ func (s *Scanner) ScanResource(resource Resource) error {
 	//	}
 	//}
 
-	return nil
+	return errExit
 }
 
 func (s *Scanner) GetMessage(format string, data interface{}) string {
@@ -374,6 +374,12 @@ func (s *Scanner) RunInternalScan(code Resource) error {
 		return err
 	}
 
+	inputResource := models.TfParse{}
+	inputContent, _ := ioutil.ReadFile(s.GetConfigPath(code))
+	if len(inputContent) > 0 {
+		_ = json.Unmarshal(inputContent, &inputResource)
+	}
+
 	violated := false
 	for _, p := range policies {
 		result, err := RegoParse(filepath.Join(p.Meta.Root, p.Meta.File), s.GetConfigPath(code), p.Meta.Name)
@@ -408,6 +414,9 @@ func (s *Scanner) RunInternalScan(code Resource) error {
 				Category:     p.Meta.Category,
 				ResourceName: resName,
 				ResourceType: resType,
+			}
+			if len(inputResource) > 0 {
+				violation.Line, violation.File = findLineNoFromMap(inputResource, resName)
 			}
 			output.Results.Violations = append(output.Results.Violations, violation)
 			output.Results.ScanSummary.ViolatedPolicies++

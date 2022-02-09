@@ -82,6 +82,10 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 		}
 
 		for _, env := range envs {
+			// 跳过已归档环境
+			if env.Archived {
+				continue
+			}
 			for _, v := range env.Triggers {
 				if er := actionPrOrPush(tx, v, sysUserId, &env, &tpl, pushRef, baseRef,
 					headRef, prStatus, afterCommit, beforeCommit, prId); er != nil {
@@ -223,8 +227,16 @@ func createTplScan(userId models.Id, tpl *models.Template, pushRef, baseRef, hea
 		return
 	}
 
+	tx := db.Get().Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
 	taskType := models.TaskTypeTplScan
-	task, err := services.CreateScanTask(db.Get(), tpl, nil, models.ScanTask{
+	task, err := services.CreateScanTask(tx, tpl, nil, models.ScanTask{
 		Name:      models.ScanTask{}.GetTaskNameByType(taskType),
 		CreatorId: userId,
 		TplId:     tpl.Id,
@@ -235,14 +247,28 @@ func createTplScan(userId models.Id, tpl *models.Template, pushRef, baseRef, hea
 		},
 	})
 	if err != nil {
+		_ = tx.Rollback()
 		logger.Errorf("error creating scan task, err %s", err)
+		return
+	}
+
+	if err := services.InitScanResult(tx, task); err != nil {
+		_ = tx.Rollback()
+		logger.Errorf("task '%s' init scan result error: %v", task.Id, err)
 		return
 	}
 
 	if task.Type == models.TaskTypeTplScan {
 		tpl.LastScanTaskId = task.Id
 		if _, err := db.Get().Save(tpl); err != nil {
+			_ = tx.Rollback()
 			logger.Errorf("save template, err %s", err)
 		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		logger.Errorf("commit env, err %s", err)
+		return
 	}
 }

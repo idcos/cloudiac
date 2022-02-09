@@ -24,6 +24,17 @@ func GetPolicyResultById(query *db.Session, taskId models.Id, policyId models.Id
 	return &result, nil
 }
 
+func GetPoliciesByTaskId(query *db.Session, taskId models.Id) ([]*models.Policy, e.Error) {
+	var policies []*models.Policy
+	resultQuery := query.Model(models.PolicyResult{}).Where("task_id = ?", taskId).Select("policy_id")
+	if err := query.Model(models.Policy{}).
+		Where("id in (?)", resultQuery.Expr()).
+		Find(&policies); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return policies, nil
+}
+
 // InitScanResult 初始化扫描结果
 func InitScanResult(tx *db.Session, task *models.ScanTask) e.Error {
 	var (
@@ -54,6 +65,9 @@ func InitScanResult(tx *db.Session, task *models.ScanTask) e.Error {
 
 			StartAt: models.Time(time.Now()),
 			Status:  common.TaskStepPending,
+			Violation: models.Violation{
+				Severity: policy.Severity,
+			},
 		})
 	}
 	for _, policy := range suppressedPolicies {
@@ -69,6 +83,9 @@ func InitScanResult(tx *db.Session, task *models.ScanTask) e.Error {
 
 			StartAt: models.Time(time.Now()),
 			Status:  common.PolicyStatusSuppressed,
+			Violation: models.Violation{
+				Severity: policy.Severity,
+			},
 		})
 	}
 
@@ -141,6 +158,15 @@ func finishPendingScanResult(tx *db.Session, task models.Tasker, message string,
 	sql := fmt.Sprintf("UPDATE %s SET status = ?, message = ? WHERE task_id = ? AND status = ?", table)
 	args := []interface{}{status, message, task.GetId(), common.PolicyStatusPending}
 	if _, err := tx.Exec(sql, args...); err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
+// CleanScanResult 任务失败的时候清除扫描结果
+func CleanScanResult(tx *db.Session, task models.Tasker) e.Error {
+	if _, err := tx.Where("task_id = ?", task.GetId()).
+		Delete(models.PolicyResult{}); err != nil {
 		return e.New(e.DBError, err)
 	}
 	return nil

@@ -273,7 +273,7 @@ func doCreateTask(tx *db.Session, task models.Task, tpl *models.Template, env *m
 			continue
 		} else if pipelineStep.Type == models.TaskStepEnvScan || pipelineStep.Type == models.TaskStepOpaScan {
 			// 如果环境扫描未启用，则跳过扫描步骤
-			if enabled, _ := IsEnvEnabledScan(tx, task.EnvId); !enabled {
+			if !env.PolicyEnable {
 				continue
 			}
 		}
@@ -292,9 +292,8 @@ func doCreateTask(tx *db.Session, task models.Task, tpl *models.Template, env *m
 			if _, err := tx.Save(scanTask); err != nil {
 				return nil, e.New(e.DBError, err)
 			}
-			env.LastScanTaskId = scanTask.Id
-			if _, err := tx.Save(env); err != nil {
-				return nil, e.New(e.DBError, errors.Wrapf(err, "update env scan task id"))
+			if err := InitScanResult(tx, scanTask); err != nil {
+				return nil, e.New(e.DBError, errors.Wrapf(err, "task '%s' init scan result error: %v", task.Id, err))
 			}
 		}
 
@@ -328,7 +327,7 @@ func GetTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision s
 		u         *url.URL
 		er        error
 		repoToken = tpl.RepoToken
-		repoUser = models.RepoUser
+		repoUser  = models.RepoUser
 	)
 
 	repoAddr = tpl.RepoAddr
@@ -1314,7 +1313,7 @@ func SendVcsComment(session *db.Session, task *models.Task, taskStatus string) {
 	}
 
 	vcs, er := GetVcsRepoByTplId(session, task.TplId)
-	if err != nil {
+	if er != nil {
 		logs.Get().Errorf("vcs comment err, get vcs data err: %v", er)
 		return
 	}
