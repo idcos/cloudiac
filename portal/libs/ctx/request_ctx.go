@@ -181,7 +181,7 @@ func (c *GinRequest) Bind(form forms.BaseFormer) error {
 
 	// ShouldBind() 不支持 HTTP GET 请求通过 body json 传参，
 	// 所以我们针对 json 类型的 content-type 做特殊处理
-	if c.ContentType() == binding.MIMEJSON {
+	if c.ContentType() == binding.MIMEJSON && c.Request.Method != "GET" {
 		var body []byte
 		body, err = ioutil.ReadAll(c.Request.Body)
 		if err != nil {
