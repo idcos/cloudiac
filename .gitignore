@@ -5,6 +5,7 @@ config.yml
 config-portal.yml
 config-runner.yml
 .DS_Store
+.scannerwork
 ct-*/
 iac-*/
 *.tar.gz
@@ -20,3 +21,6 @@ plugin-cache/
 /site/
 /build/
 *_debug_test.go
+coverage.out
+report.xml
+gosec-report.xml
