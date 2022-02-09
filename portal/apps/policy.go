@@ -711,7 +711,8 @@ type PolicyResult struct {
 }
 
 func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicyScanResultForm) (interface{}, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("scan result %s %s", scope, form.Id))
+	c.AddLogField("action", fmt.Sprintf("scan result for %s:%s %s", scope, form.Id, form.TaskId))
+
 	query := services.QueryWithOrgId(c.DB(), c.OrgId)
 
 	var (
@@ -728,14 +729,27 @@ func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicySca
 		return nil, e.New(e.BadParam, fmt.Errorf("unknown policy scan result scope '%s'", scope))
 	}
 
-	scanTask, err = services.GetLastScanTaskByScope(query, scope, form.Id)
-	if err != nil {
-		if e.IsRecordNotFound(err) {
-			return ScanResultPageResp{
-				PolicyStatus: services.MergeScanResultPolicyStatus(policyEnable, nil),
-			}, nil
+	if form.TaskId != "" {
+		var er e.Error
+		scanTask, er = services.GetScanTaskById(query, form.TaskId)
+		if er != nil {
+			if er.Code() == e.TaskNotExists {
+				return ScanResultPageResp{
+					PolicyStatus: services.MergeScanResultPolicyStatus(policyEnable, nil),
+				}, nil
+			}
+			return nil, e.AutoNew(er, e.DBError)
 		}
-		return nil, e.AutoNew(err, e.DBError)
+	} else {
+		scanTask, err = services.GetLastScanTaskByScope(query, scope, form.Id)
+		if err != nil {
+			if e.IsRecordNotFound(err) {
+				return ScanResultPageResp{
+					PolicyStatus: services.MergeScanResultPolicyStatus(policyEnable, nil),
+				}, nil
+			}
+			return nil, e.AutoNew(err, e.DBError)
+		}
 	}
 
 	// 如果正在扫描中，返回空列表
