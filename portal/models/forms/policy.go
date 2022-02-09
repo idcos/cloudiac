@@ -245,7 +245,8 @@ type UpdatePolicySuppressForm struct {
 type PolicyScanResultForm struct {
 	NoPageSizeForm
 
-	Id models.Id `uri:"id" `
+	Id     models.Id `uri:"id"`                                                       // 环境ID
+	TaskId models.Id `json:"taskId" form:"taskId" example:"run-c3ek0co6n88ldvq1n6ag"` // 任务ID
 }
 
 type PolicyScanReportForm struct {
