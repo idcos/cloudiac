@@ -9,12 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/hashicorp/hcl"
-	"github.com/open-policy-agent/opa/ast"
-	"github.com/open-policy-agent/opa/rego"
-	"github.com/open-policy-agent/opa/version"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -23,6 +17,18 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/fatih/color"
+	"github.com/go-playground/locales/en"
+	translator "github.com/go-playground/universal-translator"
+	"github.com/go-playground/validator/v10"
+	en_translation "github.com/go-playground/validator/v10/translations/en"
+	"github.com/hashicorp/hcl"
+	"github.com/open-policy-agent/opa/ast"
+	"github.com/open-policy-agent/opa/rego"
+	"github.com/open-policy-agent/opa/version"
+
+	"github.com/pkg/errors"
 )
 
 var (
@@ -47,19 +53,19 @@ type Policy struct {
 }
 
 type Meta struct {
-	Category      string `json:"category"`
-	Root          string `json:"root"`
-	File          string `json:"file"`
-	Id            string `json:"id"`
-	Name          string `json:"name"`
-	Label         string `json:"label"`
-	PolicyType    string `json:"policy_type"`
-	ReferenceId   string `json:"reference_id"`
-	ResourceType  string `json:"resource_type"`
-	Severity      string `json:"severity"`
-	Version       int    `json:"version"`
-	FixSuggestion string `json:"fix_suggestion"`
-	Description   string `json:"description"`
+	Category      string `json:"category"`                                           // 分组
+	Root          string `json:"root" validate:"required"`                           // 根目录
+	File          string `json:"file" validate:"required"`                           // 文件名
+	Id            string `json:"id" validate:"required"`                             // 策略id
+	Name          string `json:"name" validate:"required"`                           // 策略名称
+	Label         string `json:"label"`                                              // 策略标签
+	PolicyType    string `json:"policy_type" binding:"required"`                     // 策略类型
+	ReferenceId   string `json:"reference_id"`                                       // 引用策略id
+	ResourceType  string `json:"resource_type" binding:"required"`                   // 资源类型
+	Severity      string `json:"severity" validate:"required,oneof=low medium high"` // 严重程度
+	Version       int    `json:"version"`                                            // 策略版本
+	FixSuggestion string `json:"fix_suggestion"`                                     // 修复建议
+	Description   string `json:"description"`                                        // 描述
 }
 
 type Resource struct {
@@ -688,7 +694,7 @@ type RegoFile struct {
 }
 
 //ParseMeta 解析 rego metadata，如果存在 file.json 则从 json 文件读取 metadata，否则通过头部注释读取 metadata
-func ParseMeta(regoFilePath string, metaFilePath string) (p *PolicyWithMeta, err e.Error) {
+func ParseMeta(regoFilePath string, metaFilePath string) (*PolicyWithMeta, e.Error) {
 	var meta Meta
 	buf, er := os.ReadFile(regoFilePath)
 	if er != nil {
@@ -697,84 +703,77 @@ func ParseMeta(regoFilePath string, metaFilePath string) (p *PolicyWithMeta, err
 	regoContent := string(buf)
 
 	// 1. 如果存在 json metadata，则解析 json 文件
-	p = &PolicyWithMeta{}
 	if metaFilePath != "" {
 		content, er := os.ReadFile(metaFilePath)
 		if er != nil {
 			return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("read meta file: %v", er))
 		}
 		er = json.Unmarshal(content, &meta)
-		meta.Root = filepath.Dir(metaFilePath)
 		if er != nil {
 			return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("unmarshal meta file: %v", er))
 		}
-		p.Meta = meta
-		p.Id = meta.Id
-		p.Rego = regoContent
-
-		p.Meta.Severity = strings.ToLower(p.Meta.Severity)
-
-		return p, nil
-	}
-
-	// 2. 无 json metadata，通过头部注释解析信息
-	//	## id 为策略在策略组中的唯一标识，由大小写英文字符、数字、"."、"_"、"-" 组成
-	//	## 建议按`组织_云商_资源名称/分类_编号`的格式进行命名
-	//	# @id: cloudiac_alicloud_security_p001
-	//
-	//	# @name: 策略名称A
-	//	# @description: 这是策略的描述
-	//
-	//	## 策略类型，如 aws, k8s, github, alicloud, ...
-	//	# @policy_type: alicloud
-	//
-	//	## 资源类型，如 aws_ami, k8s_pod, alicloud_ecs, ...
-	//	# @resource_type: aliyun_ami
-	//
-	//	## 策略严重级别: 可选 HIGH/MEDIUM/LOW
-	//	# @severity: HIGH
-	//
-	//	## 策略分类(或者叫标签)，多个分类使用逗号分隔
-	//	# @label: cat1,cat2
-	//
-	//	## 策略修复建议（支持多行）
-	//	# @fix_suggestion:
-	//	Terraform 代码去掉`associate_public_ip_address`配置
-	//	```
-	//resource "aws_instance" "bar" {
-	//  ...
-	//- associate_public_ip_address = true
-	//}
-	//```
-	//	# @fix_suggestion_end
-
-	meta = Meta{
-		Id:           ExtractStr("id", regoContent),
-		File:         filepath.Base(regoFilePath),
-		Root:         filepath.Dir(regoFilePath),
-		Name:         utils.FileNameWithoutExt(regoFilePath),
-		Description:  ExtractStr("description", regoContent),
-		PolicyType:   ExtractStr("policy_type", regoContent),
-		ResourceType: ExtractStr("resource_type", regoContent),
-		Label:        ExtractStr("label", regoContent),
-		Category:     ExtractStr("category", regoContent),
-		ReferenceId:  ExtractStr("reference_id", regoContent),
-		Severity:     ExtractStr("severity", regoContent),
-	}
-	ver := ExtractStr("version", regoContent)
-	meta.Version, _ = strconv.Atoi(ver)
-	if meta.ReferenceId == "" {
-		meta.ReferenceId = ExtractStr("id", regoContent)
-	}
-
-	// 多行注释提取
-	regex := regexp.MustCompile("(?s)@fix_suggestion:\\s*(.*)\\s*#+\\s*@fix_suggestion_end")
-	match := regex.FindStringSubmatch(regoContent)
-	if len(match) == 2 {
-		meta.FixSuggestion = strings.TrimSpace(match[1])
+		meta.File = filepath.Base(regoFilePath)
+		meta.Root = filepath.Dir(regoFilePath)
 	} else {
-		// 单行注释提取
-		meta.FixSuggestion = ExtractStr("fix_suggestion", regoContent)
+		// 2. 无 json metadata，通过头部注释解析信息
+		//	## id 为策略在策略组中的唯一标识，由大小写英文字符、数字、"."、"_"、"-" 组成
+		//	## 建议按`组织_云商_资源名称/分类_编号`的格式进行命名
+		//	# @id: cloudiac_alicloud_security_p001
+		//
+		//	# @name: 策略名称A
+		//	# @description: 这是策略的描述
+		//
+		//	## 策略类型，如 aws, k8s, github, alicloud, ...
+		//	# @policy_type: alicloud
+		//
+		//	## 资源类型，如 aws_ami, k8s_pod, alicloud_ecs, ...
+		//	# @resource_type: aliyun_ami
+		//
+		//	## 策略严重级别: 可选 HIGH/MEDIUM/LOW
+		//	# @severity: HIGH
+		//
+		//	## 策略分类(或者叫标签)，多个分类使用逗号分隔
+		//	# @label: cat1,cat2
+		//
+		//	## 策略修复建议（支持多行）
+		//	# @fix_suggestion:
+		//	Terraform 代码去掉`associate_public_ip_address`配置
+		//	```
+		//resource "aws_instance" "bar" {
+		//  ...
+		//- associate_public_ip_address = true
+		//}
+		//```
+		//	# @fix_suggestion_end
+
+		meta = Meta{
+			Id:           ExtractStr("id", regoContent),
+			File:         filepath.Base(regoFilePath),
+			Root:         filepath.Dir(regoFilePath),
+			Name:         utils.FileNameWithoutExt(regoFilePath),
+			Description:  ExtractStr("description", regoContent),
+			PolicyType:   ExtractStr("policy_type", regoContent),
+			ResourceType: ExtractStr("resource_type", regoContent),
+			Label:        ExtractStr("label", regoContent),
+			Category:     ExtractStr("category", regoContent),
+			ReferenceId:  ExtractStr("reference_id", regoContent),
+			Severity:     ExtractStr("severity", regoContent),
+		}
+		ver := ExtractStr("version", regoContent)
+		meta.Version, _ = strconv.Atoi(ver)
+		if meta.ReferenceId == "" {
+			meta.ReferenceId = ExtractStr("id", regoContent)
+		}
+
+		// 多行注释提取
+		regex := regexp.MustCompile(`(?s)@fix_suggestion:\\s*(.*)\\s*#+\\s*@fix_suggestion_end`)
+		match := regex.FindStringSubmatch(regoContent)
+		if len(match) == 2 {
+			meta.FixSuggestion = strings.TrimSpace(match[1])
+		} else {
+			// 单行注释提取
+			meta.FixSuggestion = ExtractStr("fix_suggestion", regoContent)
+		}
 	}
 
 	if meta.ResourceType == "" {
@@ -788,12 +787,26 @@ func ParseMeta(regoFilePath string, metaFilePath string) (p *PolicyWithMeta, err
 		meta.Severity = consts.PolicySeverityMedium
 	}
 
-	p.Meta.Severity = strings.ToLower(p.Meta.Severity)
+	meta.Severity = strings.ToLower(meta.Severity)
 
-	p.Id = meta.Id
-	p.Meta = meta
-	p.Rego = regoContent
-	return p, nil
+	uni := translator.New(en.New())
+	trans, _ := uni.GetTranslator("en")
+	validate := validator.New()
+	if err := en_translation.RegisterDefaultTranslations(validate, trans); err != nil {
+		return nil, e.New(e.InternalError, fmt.Errorf("register validator translator en error: %v", err))
+	}
+	if err := validate.Struct(meta); err != nil {
+		for _, err := range err.(validator.ValidationErrors) {
+			return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("invalid policy meta: %+v", fmt.Errorf(err.Translate(trans))))
+		}
+		return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("invalid policy meta: %+v", err))
+	}
+
+	return &PolicyWithMeta{
+		Id:   meta.Id,
+		Meta: meta,
+		Rego: regoContent,
+	}, nil
 }
 
 // ExtractStr 提取 # @keyword: xxx 格式字符串
