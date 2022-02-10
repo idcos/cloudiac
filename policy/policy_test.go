@@ -77,6 +77,31 @@ func Test_parseMeta(t *testing.T) {
 			"severity": "WRONG_SEVRITY",
 			"version": 1
 		}`, ""}, e.PolicyMetaInvalid},
+		{"valid rego", args{"", `package cloudiac
+		# @id: cloudiac_alicloud_security_p001
+		# @name: 策略名称A
+		# @description: 这是策略的描述
+		# @policy_type: alicloud
+		# @resource_type: aliyun_instance
+		# @severity: MEDIUM
+		# @label: cat1,cat2
+		# @fix_suggestion:
+		# Terraform 代码去掉 associate_public_ip_address 配置
+		# resource "aws_instance" "bar" {
+		#  ...
+		# - associate_public_ip_address = true
+		# }
+		# @fix_suggestion_end
+
+		instanceWithNoVpc[instance.id] {
+			instance := input.alicloud_instance[_]
+			not instance.config.vswitch_id
+		}
+
+		instanceWithNoVpc[instance.id] {
+			instance := input.alicloud_instance[_]
+			object.get(instance.config, "vswitch_id", "undefined") == "undefined"
+		}`}, 0},
 	}
 
 	defer os.Remove("meta.json")
