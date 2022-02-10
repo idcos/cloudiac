@@ -290,6 +290,13 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 			return nil, err
 		}
 	}
+
+	// 来源：手动触发、外部调用
+	taskSource := consts.TaskSourceManual
+	if form.Callback != "" {
+		taskSource = consts.TaskSourceApi
+	}
+
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
@@ -307,7 +314,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		},
 		ExtraData: models.JSON(form.ExtraData),
 		Callback:  form.Callback,
-		Source:    consts.TaskSourceManual,
+		Source:    taskSource,
 	})
 
 	if err != nil {

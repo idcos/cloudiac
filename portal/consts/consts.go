@@ -142,6 +142,7 @@ const (
 	TaskSourceWebhookPlan  = "webhookPlan"
 	TaskSourceWebhookApply = "webhookApply"
 	TaskSourceAutoDestroy  = "autoDestroy"
+	TaskSourceApi          = "api"
 )
 
 var (
