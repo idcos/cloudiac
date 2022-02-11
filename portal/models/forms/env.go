@@ -54,6 +54,7 @@ type CreateEnvForm struct {
 	PolicyEnable bool        `json:"policyEnable" form:"policyEnable"` // 是否开启合规检测
 	PolicyGroup  []models.Id `json:"policyGroup" form:"policyGroup"`   // 绑定策略组集合
 
+	Source string `json:"source" form:"source" ` // 调用来源
 }
 
 type SampleVariables struct {
