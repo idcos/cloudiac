@@ -512,7 +512,7 @@ func SearchRegistryPG(c *ctx.ServiceContext, form *forms.SearchRegistryPgForm) (
 	val.Add("q", form.Q)
 	val.Add("pageSize", fmt.Sprintf("%d", form.PageSize()))
 	val.Add("page", fmt.Sprintf("%d", form.CurrentPage()))
-	if err := services.RegistryGet("policies", val, &rr); err != nil {
+	if err := services.RegistryGet("iac/policy_groups", val, &rr); err != nil {
 		return nil, e.AutoNew(err, e.RegistryServiceErr)
 	}
 
@@ -558,7 +558,7 @@ func SearchRegistryPGVersions(c *ctx.ServiceContext, form *forms.SearchRegistryP
 	val := url.Values{}
 	val.Add("ns", form.Namespace)
 	val.Add("gn", form.GroupName)
-	if err := services.RegistryGet("policies/versions", val, &rvs); err != nil {
+	if err := services.RegistryGet("iac/policy_groups/versions", val, &rvs); err != nil {
 		return nil, e.AutoNew(err, e.RegistryServiceErr)
 	}
 
