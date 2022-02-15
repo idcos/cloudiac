@@ -42,6 +42,7 @@ func HttpService(reqUrl, method string, header *http.Header, data interface{}, c
 	c := httpClient(conntimeout, deadline)
 
 	var req *http.Request
+	var b []byte
 	var err error
 	if header == nil {
 		header = &http.Header{}
@@ -53,7 +54,7 @@ func HttpService(reqUrl, method string, header *http.Header, data interface{}, c
 	if http.MethodPost == method {
 		if data != nil {
 			if header.Get("Content-Type") == "application/json" {
-				b, err := json.Marshal(data)
+				b, err = json.Marshal(data)
 				if err != nil {
 					return nil, err
 				}
@@ -69,7 +70,7 @@ func HttpService(reqUrl, method string, header *http.Header, data interface{}, c
 	} else if http.MethodDelete == method {
 		if data != nil {
 			if header.Get("Content-Type") == "application/json" {
-				b, err := json.Marshal(data)
+				b, err = json.Marshal(data)
 				if err != nil {
 					return nil, err
 				}
@@ -85,7 +86,7 @@ func HttpService(reqUrl, method string, header *http.Header, data interface{}, c
 	} else if http.MethodPut == method {
 		if data != nil {
 			if header.Get("Content-Type") == "application/json" {
-				b, err := json.Marshal(data)
+				b, err = json.Marshal(data)
 				if err != nil {
 					return nil, err
 				}
