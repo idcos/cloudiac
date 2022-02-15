@@ -155,10 +155,10 @@ func GetTFList(mirrorURL string, preRelease bool) ([]string, error) {
 
 	var tfVersionList tfVersionList
 	var semver string
-	if preRelease == true {
+	if preRelease {
 		// Getting versions from body; should return match /X.X.X-@/ where X is a number,@ is a word character between a-z or A-Z
 		semver = `\/(\d+\.\d+\.\d+)(-[a-zA-z]+\d*)?\/`
-	} else if preRelease == false {
+	} else {
 		// Getting versions from body; should return match /X.X.X/ where X is a number
 		semver = `\/(\d+\.\d+\.\d+)\/`
 	}

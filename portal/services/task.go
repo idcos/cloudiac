@@ -618,7 +618,7 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 }
 
 func SaveTaskOutputs(dbSess *db.Session, task *models.Task, vars map[string]TfStateVariable) error {
-	task.Result.Outputs = make(map[string]interface{}, 0)
+	task.Result.Outputs = make(map[string]interface{})
 	for k, v := range vars {
 		task.Result.Outputs[k] = v
 	}

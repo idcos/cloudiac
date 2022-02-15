@@ -152,7 +152,7 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 	if err != nil {
 		return nil, err, scopes
 	}
-	variableM := make(map[string]models.Variable, 0)
+	variableM := make(map[string]models.Variable)
 	for index, v := range variables {
 		// 过滤掉变量一部分不需要应用的变量
 		if utils.InArrayStr(scopes, v.Scope) {

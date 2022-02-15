@@ -1477,7 +1477,7 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 
 func ParseResourceDriftInfo(bs []byte) map[string]models.ResourceDrift {
 	content := strings.Split(string(bs), "\n")
-	cronTaskInfoMap := make(map[string]models.ResourceDrift, 0)
+	cronTaskInfoMap := make(map[string]models.ResourceDrift)
 	for k, v := range content {
 		if strings.Contains(v, "#") && strings.Contains(v, "must be") || strings.Contains(v, "will be") {
 			var resourceDetail string
@@ -1486,10 +1486,8 @@ func ParseResourceDriftInfo(bs []byte) map[string]models.ResourceDrift {
 			result1 := reg1.FindAllStringSubmatch(v, 1)
 			address := stripansi.Strip(strings.TrimSpace(result1[0][0][1:]))
 			for k1, v2 := range content[k+1:] {
-				if strings.Contains(v2, "#") && strings.Contains(v2, "must be") || strings.Contains(v2, "will be") {
-					resourceDetail = strings.Join(content[k+1:k1+k], "\n")
-					break
-				} else if strings.Contains(v2, "Plan:") {
+				if strings.Contains(v2, "#") && strings.Contains(v2, "must be") ||
+					strings.Contains(v2, "will be") || strings.Contains(v2, "Plan:") {
 					resourceDetail = strings.Join(content[k+1:k1+k], "\n")
 					break
 				}

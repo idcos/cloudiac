@@ -197,7 +197,7 @@ func (ns *NotificationService) FindNotificationsAndMessageTpl() ([]models.Notifi
 		tplNotificationTemplate = consts.IacTaskCompleteTpl
 		markdownNotificationTemplate = consts.IacTaskCompleteMarkdown
 	case consts.EvenvtCronDrift:
-		if ns.Task.Type == models.TaskTypeApply && ns.Task.IsDriftTask == true {
+		if ns.Task.Type == models.TaskTypeApply && ns.Task.IsDriftTask {
 			tplNotificationTemplate = consts.IacCronDriftApplyTaskTpl
 			markdownNotificationTemplate = consts.IacCronDriftApplyTaskMarkDown
 		} else {
