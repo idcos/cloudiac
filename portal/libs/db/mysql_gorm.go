@@ -146,7 +146,8 @@ func (s *Session) Expr() interface{} {
 }
 
 func (s *Session) Raw(sql string, values ...interface{}) *Session {
-	// FIXME: gorm driver bugs //nolint
+	//nolint
+	// FIXME: gorm driver bugs
 	// gorm@v1.21.12~14: statement.go +204
 	//   subdb.Statement.Vars = stmt.Vars
 	// when values is a *DB (usually a sub query), the statement vars will be appended twice
