@@ -41,26 +41,6 @@ type SearchTemplateResp struct {
 	PolicyStatus        string      `json:"policyStatus"`
 }
 
-func getRepoAddr(vcsId models.Id, query *db.Session, repoId string) (string, error) {
-	vcs, err := services.QueryVcsByVcsId(vcsId, query)
-	if err != nil {
-		return "", err
-	}
-	vcsIface, er := vcsrv.GetVcsInstance(vcs)
-	if er != nil {
-		return "", er
-	}
-	repo, er := vcsIface.GetRepo(repoId)
-	if er != nil {
-		return "", er
-	}
-	repoAddr, er := vcsrv.GetRepoAddress(repo)
-	if er != nil {
-		return "", er
-	}
-	return repoAddr, nil
-}
-
 func getRepo(vcsId models.Id, query *db.Session, repoId string) (*vcsrv.Projects, error) {
 	vcs, err := services.QueryVcsByVcsId(vcsId, query)
 	if err != nil {
@@ -167,7 +147,12 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		scanForm := &forms.ScanTemplateForm{
 			Id: template.Id,
 		}
-		go ScanTemplateOrEnv(c, scanForm, "")
+		go func() {
+			_, err := ScanTemplateOrEnv(c, scanForm, "")
+			if err != nil {
+				c.Logger().Errorf("open tpl policy scan err: %v, tpl id: %s", err, template.Id)
+			}
+		}()
 	}
 
 	// 设置webhook
@@ -308,7 +293,12 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 		tplScanForm := &forms.ScanTemplateForm{
 			Id: tpl.Id,
 		}
-		go ScanTemplateOrEnv(c, tplScanForm, "")
+		go func() {
+			_, err := ScanTemplateOrEnv(c, tplScanForm, "")
+			if err != nil {
+				c.Logger().Errorf("open tpl policy scan err: %v, tpl id: %s", err, tpl.Id)
+			}
+		}()
 	}
 
 	// 设置webhook

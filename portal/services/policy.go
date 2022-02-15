@@ -161,40 +161,6 @@ func GetValidPolicies(query *db.Session, tplId, envId models.Id) (validPolicies 
 	return
 }
 
-func suppressedQuery(query *db.Session, envId models.Id, tplId models.Id) *db.Session {
-	q := query.Select("iac_policy.id").Table(models.PolicyRel{}.TableName()).
-		Joins("join iac_policy on iac_policy.group_id = iac_policy_rel.group_id").
-		Where("iac_policy.enabled = 1").
-		Joins("join iac_policy_group on iac_policy_group.id = iac_policy_rel.group_id").
-		Where("iac_policy_group.enabled = 1")
-
-	if envId != "" {
-		q = q.Where("iac_policy_rel.env_id = ?", envId)
-	} else if tplId != "" {
-		q = q.Where("iac_policy_rel.tpl_id = ?", tplId)
-	}
-
-	suppressQuery := query.Model(models.PolicySuppress{}).Select("policy_id")
-	if envId != "" {
-		suppressQuery = suppressQuery.Where("target_type = 'env' AND env_id = ?", envId)
-		q = q.Where("iac_policy.id not in (?)", suppressQuery.Expr())
-	} else if tplId != "" {
-		suppressQuery = suppressQuery.Where("target_type = 'template' AND tpl_id = ?", tplId)
-		q = q.Where("iac_policy.id not in (?)", suppressQuery.Expr())
-	}
-
-	enableQuery := query.Model(models.PolicyRel{}).Where("iac_policy_rel.group_id = ''")
-	if envId != "" {
-		enableQuery = enableQuery.Select("env_id").Where("env_id = ?", envId)
-		q = q.Where("iac_policy_rel.env_id in (?)", enableQuery.Expr())
-	} else if tplId != "" {
-		enableQuery = enableQuery.Select("tpl_id").Where("tpl_id = ?", tplId)
-		q = q.Where("iac_policy_rel.tpl_id in (?)", enableQuery.Expr())
-	}
-
-	return q
-}
-
 // GetPoliciesByEnvId 查询环境关联的所有策略
 func GetPoliciesByEnvId(query *db.Session, envId models.Id) ([]models.Policy, e.Error) {
 	var policies []models.Policy
