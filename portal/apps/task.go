@@ -67,7 +67,7 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*taskDetailRe
 		c.Logger().Errorf("error get task id by user, err %s", er)
 		return nil, e.New(e.DBError, er)
 	}
-	if c.OrgId.InArray(orgIds...) == false && c.IsSuperAdmin == false {
+	if !c.OrgId.InArray(orgIds...) && !c.IsSuperAdmin {
 		// 请求了一个不存在的 task，因为 task id 是在 path 传入，这里我们返回 404
 		return nil, e.New(e.TaskNotExists, http.StatusNotFound)
 	}
@@ -272,7 +272,7 @@ func TaskOutput(c *ctx.ServiceContext, form forms.DetailTaskForm) (interface{}, 
 		c.Logger().Errorf("error get task id by user, err %s", er)
 		return nil, e.New(e.DBError, er)
 	}
-	if c.OrgId.InArray(orgIds...) == false && c.IsSuperAdmin == false {
+	if !c.OrgId.InArray(orgIds...)  && !c.IsSuperAdmin  {
 		// 请求了一个不存在的 task，因为 task id 是在 path 传入，这里我们返回 404
 		return nil, e.New(e.TaskNotExists, http.StatusNotFound)
 	}

@@ -86,7 +86,7 @@ func SearchVariableGroupRel(dbSess *db.Session, objectAttr map[string]models.Id,
 		scopes = consts.VariableGroupOrg
 	}
 	// {objectType:{objectId:xxx}}
-	rels := make(map[models.Id]VarGroupRel, 0)
+	rels := make(map[models.Id]VarGroupRel)
 
 	coverRels := make(map[models.Id][]VarGroupRel)
 

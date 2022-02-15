@@ -16,7 +16,7 @@ import (
 func SystemStatusSearch() ([]api.AgentService, map[string]api.AgentCheck, []string, e.Error) {
 	serviceList := make([]string, 0)
 	IdInfo := make([]api.AgentService, 0)
-	serviceStatus := make(map[string]api.AgentCheck, 0)
+	serviceStatus := make(map[string]api.AgentCheck)
 	conf := configs.Get()
 	config := api.DefaultConfig()
 	config.Address = conf.Consul.Address
