@@ -94,7 +94,7 @@ func (exec *Executor) Start() (string, error) {
 		return "", err
 	}
 	logger.Infof("pull image: %s", exec.Image)
-	// FIXME: 补充 pull 失败的错误处理
+	// TODO: 补充 pull 失败的错误处理
 	exec.tryPullImage(cli)
 
 	conf := configs.Get()

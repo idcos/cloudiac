@@ -146,6 +146,7 @@ func (s *Session) Expr() interface{} {
 }
 
 func (s *Session) Raw(sql string, values ...interface{}) *Session {
+	//nolint
 	// FIXME: gorm driver bugs
 	// gorm@v1.21.12~14: statement.go +204
 	//   subdb.Statement.Vars = stmt.Vars

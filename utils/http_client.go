@@ -114,11 +114,13 @@ func HttpService(reqUrl, method string, header *http.Header, data interface{}, c
 	if err != nil {
 		return nil, err
 	}
-	returndata, err := ioutil.ReadAll(resp.Body)
-	if resp != nil {
-		resp.Body.Close()
-	}
-	return returndata, err
+	defer func() {
+		if resp != nil {
+			_ = resp.Body.Close()
+		}
+	}()
+
+	return ioutil.ReadAll(resp.Body)
 }
 
 type FormPart struct {

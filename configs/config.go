@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"gopkg.in/yaml.v2"
 )
@@ -22,10 +21,6 @@ type KafkaConfig struct {
 	Partition    int      `yaml:"partition"`
 	SaslUsername string   `yaml:"sasl_username"`
 	SaslPassword string   `yaml:"sasl_password"`
-}
-
-type yamlTimeDuration struct {
-	time.Duration
 }
 
 type ConsulConfig struct {
@@ -104,19 +99,6 @@ type SMTPServerConfig struct {
 
 type PolicyConfig struct {
 	Enabled bool `yaml:"enabled"`
-}
-
-func (ut *yamlTimeDuration) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var ds string
-	if err := unmarshal(&ds); err != nil {
-		return err
-	}
-	d, err := time.ParseDuration(ds)
-	if err != nil {
-		return err
-	}
-	ut.Duration = d
-	return nil
 }
 
 type Config struct {
