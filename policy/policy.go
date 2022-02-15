@@ -79,7 +79,6 @@ type Resource struct {
 	MapFile   string
 
 	StopOnViolation bool
-	workingDir      string
 	codeDir         string
 }
 
