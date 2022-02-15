@@ -34,6 +34,19 @@ linters-settings:
     # Useful if you need to load the template from a specific file.
     #template-path: /path/to/my/template.tmpl
 
+  cyclop:
+    # The maximal code complexity to report.
+    max-complexity: 15
+
+    # The maximal average package complexity.
+    # If it's higher than 0.0 (float) the check is enabled
+    # Default: 0.0
+    package-average: 0.0
+
+    # Should ignore tests.
+    # Default: false
+    skip-tests: false
+
 
 linters:
   # Disable all linters.
@@ -54,4 +67,5 @@ linters:
     - unused
     - varcheck
     - dupl
+    - cyclop
 
