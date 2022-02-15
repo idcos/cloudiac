@@ -75,11 +75,11 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 	}
 
 	// 查询云模板对应的环境
-	for _, tpl := range tplList {
+	for tIndex, tpl := range tplList {
 		sysUserId := models.Id(consts.SysUserId)
 
 		if len(tpl.Triggers) > 0 {
-			createTplScan(sysUserId, &tpl, options)
+			createTplScan(sysUserId, &tplList[tIndex], options)
 		}
 
 		envs, err := services.GetEnvByTplId(tx, tpl.Id)
@@ -90,13 +90,13 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 			continue
 		}
 
-		for _, env := range envs {
+		for eIndex, env := range envs {
 			// 跳过已归档环境
 			if env.Archived {
 				continue
 			}
 			for _, v := range env.Triggers {
-				if er := actionPrOrPush(tx, v, sysUserId, &env, &tpl, options); er != nil {
+				if er := actionPrOrPush(tx, v, sysUserId, &envs[eIndex],  &tplList[tIndex], options); er != nil {
 					logs.Get().WithField("webhook", "createTask").
 						Errorf("create task er: %v, envId: %s", er, env.Id)
 				}
