@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package models
 
@@ -47,7 +47,7 @@ apply:
   steps:
     - type: init
     - type: plan
-    - type: apply 
+    - type: apply
     - type: play
 
 destroy:
@@ -71,7 +71,7 @@ apply:
     - type: init
     - type: tfscan
     - type: plan
-    - type: apply 
+    - type: apply
     - type: play
 
 destroy:

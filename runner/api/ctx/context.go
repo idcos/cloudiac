@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package ctx
 
@@ -6,8 +6,9 @@ import (
 	"cloudiac/runner"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Context struct {
