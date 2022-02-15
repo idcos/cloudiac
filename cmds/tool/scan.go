@@ -10,11 +10,12 @@ import (
 	"cloudiac/utils"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/pkg/errors"
 
 	"github.com/itchyny/gojq"
 )
@@ -76,8 +77,10 @@ func (c *ScanCmd) hasDB() bool {
 func (c *ScanCmd) Execute(args []string) error {
 
 	if c.Debug {
-		filePath := "."
-		regoFile := ""
+		var (
+			filePath string
+			regoFile string
+		)
 		if c.CodeDir != "" {
 			// iac-tool scan --debug -d code xxx.rego
 			filePath = c.CodeDir
