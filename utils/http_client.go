@@ -4,6 +4,7 @@ package utils
 
 import (
 	"bytes"
+	"cloudiac/configs"
 	"cloudiac/utils/logs"
 	"crypto/tls"
 	"encoding/json"
@@ -31,7 +32,7 @@ func httpClient(conntimeout, deadline int) *http.Client {
 				return c, nil
 			},
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
+				InsecureSkipVerify: configs.Get().HttpClientInsecure,
 			},
 		},
 	}
