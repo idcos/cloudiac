@@ -56,7 +56,7 @@ func Create(tx *db.Session, o Modeler) error {
 	return err
 }
 
-//CreateBatch Fixme 目前切片Modeler类型无法与批量插入公用
+//CreateBatch 注意: 目前切片 Modeler 类型无法与批量插入公用
 func CreateBatch(tx *db.Session, o interface{}) error {
 	_, err := withTx(tx, func(x *db.Session) (int64, error) {
 		if err := x.Insert(o); err != nil {
