@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package handlers
 
@@ -243,4 +243,3 @@ func (Task) ResourceGraph(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.SearchTaskResourcesGraph(c.Service(), &form))
 }
-

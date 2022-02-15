@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package sshkey
 
@@ -15,10 +15,11 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	"github.com/pkg/errors"
-	"golang.org/x/crypto/ssh"
 	"os"
 	"path/filepath"
+
+	"github.com/pkg/errors"
+	"golang.org/x/crypto/ssh"
 )
 
 func generateSSHKeyPair(privatePath string, publicPath string) (err error) {

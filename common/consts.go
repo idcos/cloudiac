@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package common
 
@@ -90,18 +90,18 @@ const (
 	VcsGithub = "github"
 
 	// PolicyStatusPending 检测中
-	PolicyStatusPending    = "pending"
+	PolicyStatusPending = "pending"
 	// PolicyStatusPassed 通过
-	PolicyStatusPassed     = "passed"
-	PolicyStatusFailed     = "failed"
+	PolicyStatusPassed = "passed"
+	PolicyStatusFailed = "failed"
 	// PolicyStatusViolated 不通过
-	PolicyStatusViolated   = "violated"
+	PolicyStatusViolated = "violated"
 	// PolicyStatusSuppressed 屏蔽
 	PolicyStatusSuppressed = "suppressed"
 	//PolicyStatusEnable 未检测
-	PolicyStatusEnable     = "enable"
+	PolicyStatusEnable = "enable"
 	//PolicyStatusDisable 未开启
-	PolicyStatusDisable    = "disable"
+	PolicyStatusDisable = "disable"
 
 	PolicySeverityHigh   = "high"
 	PolicySeverityMedium = "medium"

@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -8,8 +8,9 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"fmt"
-	"gorm.io/gorm"
 	"strings"
+
+	"gorm.io/gorm"
 )
 
 func CreateTemplate(tx *db.Session, tpl models.Template) (*models.Template, e.Error) {

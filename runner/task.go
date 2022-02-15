@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package runner
 
@@ -530,7 +530,7 @@ cd 'code/{{.Req.Env.Workdir}}' && ansible-playbook \
 --extra @{{.Req.Env.PlayVarsFile}} \
 {{ end -}}
 {{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }} \
-{{.Req.Env.Playbook}} 
+{{.Req.Env.Playbook}}
 `))
 
 func (t *Task) stepPlay() (command string, err error) {

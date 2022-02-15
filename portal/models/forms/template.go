@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package forms
 
@@ -38,7 +38,7 @@ type CreateTemplateForm struct {
 	PolicyGroup    []models.Id `json:"policyGroup" form:"policyGroup"`   // 绑定的合规策略组
 	TplTriggers    []string    `json:"tplTriggers" form:"tplTriggers"`   // 分之推送自动触发合规 例如 ["commit"]
 
-	KeyId          models.Id   `form:"keyId" json:"keyId" binding:""`    // 部署密钥ID
+	KeyId models.Id `form:"keyId" json:"keyId" binding:""` // 部署密钥ID
 
 }
 
