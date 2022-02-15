@@ -53,4 +53,5 @@ linters:
     - typecheck
     - unused
     - varcheck
+    - dupl
 
