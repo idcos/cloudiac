@@ -21,41 +21,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 )
-
-//parseRegoHeader 解析 rego 脚本获取入口，云商类型和资源类型
-func parseRegoHeader(rego string) (ruleName string, policyType string, resType string, err e.Error) {
-	regex := regexp.MustCompile("(?m)^##ruleName (.*)$")
-	match := regex.FindStringSubmatch(rego)
-	if len(match) == 2 {
-		ruleName = strings.TrimSpace(match[1])
-	} else {
-		return "", "", "", e.New(e.PolicyRegoMissingComment, fmt.Errorf("missing ##ruleName comment"))
-	}
-
-	regex = regexp.MustCompile("(?m)^##policyType (.*)$")
-	match = regex.FindStringSubmatch(rego)
-	if len(match) == 2 {
-		policyType = strings.TrimSpace(match[1])
-	} else {
-		return "", "", "", e.New(e.PolicyRegoMissingComment, fmt.Errorf("missing ##policyType comment"))
-	}
-
-	regex = regexp.MustCompile("(?m)^##resourceType (.*)$")
-	match = regex.FindStringSubmatch(rego)
-	if len(match) == 2 {
-		resType = strings.TrimSpace(match[1])
-	} else {
-		return "", "", "", e.New(e.PolicyRegoMissingComment, fmt.Errorf("missing ##resourceType comment"))
-	}
-	return
-}
 
 // 发起执行多个云模版的合规检测任务
 func ScanTemplates(c *ctx.ServiceContext, form *forms.ScanTemplateForms) ([]*models.ScanTask, e.Error) {
