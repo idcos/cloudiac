@@ -341,33 +341,58 @@ func ChangeUserStatus(c *ctx.ServiceContext, form *forms.DisableUserForm) (*mode
 	return user, nil
 }
 
-// UserDetail 获取单个用户详情
-func UserDetail(c *ctx.ServiceContext, userId models.Id) (*models.UserWithRoleResp, e.Error) {
-	query := c.DB()
-
-	if c.IsSuperAdmin || c.UserId == userId {
+func queryByOrgAndProject(db, query *db.Session, userId, orgId, projectId, inputUserId models.Id, isSuperAdmin bool) e.Error {
+	if isSuperAdmin || userId == inputUserId {
 		// 管理员查询任意用户或自身查询
-	} else if c.OrgId != "" {
-		if c.ProjectId != "" {
+	} else if orgId != "" {
+		if projectId != "" {
 			// 查询项目用户：组织管理员或项目成员
-			if services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) ||
-				services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, "") {
-				userIds, _ := services.GetUserIdsByProject(c.DB(), c.ProjectId)
+			if services.UserHasOrgRole(userId, orgId, consts.OrgRoleAdmin) ||
+				services.UserHasProjectRole(userId, orgId, projectId, "") {
+				userIds, _ := services.GetUserIdsByProject(db, projectId)
 				query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
 			} else {
-				return nil, e.New(e.PermissionDeny, fmt.Errorf("project permission required"), http.StatusForbidden)
+				return e.New(e.PermissionDeny, fmt.Errorf("project permission required"), http.StatusForbidden)
 			}
 		} else {
 			// 查询组织用户
-			if services.UserHasOrgRole(c.UserId, c.OrgId, "") {
-				userIds, _ := services.GetUserIdsByOrg(c.DB(), c.OrgId)
+			if services.UserHasOrgRole(userId, orgId, "") {
+				userIds, _ := services.GetUserIdsByOrg(db, orgId)
 				query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
 			} else {
-				return nil, e.New(e.PermissionDeny, fmt.Errorf("org permission required"), http.StatusForbidden)
+				return e.New(e.PermissionDeny, fmt.Errorf("org permission required"), http.StatusForbidden)
 			}
 		}
 	} else {
-		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusForbidden)
+		return e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusForbidden)
+	}
+
+	return nil
+}
+
+func setUserRole(detail *models.UserWithRoleResp, userId, orgId, projectId models.Id, isSuperAdmin bool) {
+	if isSuperAdmin {
+		// 如果是平台管理员，自动拥有组织管理员权限和项目管理者权限
+		if orgId != "" {
+			detail.Role = consts.OrgRoleAdmin
+		}
+		if projectId != "" {
+			detail.ProjectRole = consts.ProjectRoleManager
+		}
+	} else if services.UserHasOrgRole(userId, orgId, consts.OrgRoleAdmin) {
+		// 如果是组织管理员自动拥有项目管理者权限
+		if projectId != "" {
+			detail.ProjectRole = consts.ProjectRoleManager
+		}
+	}
+}
+
+// UserDetail 获取单个用户详情
+func UserDetail(c *ctx.ServiceContext, userId models.Id) (*models.UserWithRoleResp, e.Error) {
+	query := c.DB()
+	err := queryByOrgAndProject(c.DB(), query, c.UserId, c.OrgId, c.ProjectId, userId, c.IsSuperAdmin)
+	if err != nil {
+		return nil, err
 	}
 
 	// 导出用户角色
@@ -391,21 +416,7 @@ func UserDetail(c *ctx.ServiceContext, userId models.Id) (*models.UserWithRoleRe
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
-	if c.IsSuperAdmin {
-		// 如果是平台管理员，自动拥有组织管理员权限和项目管理者权限
-		if c.OrgId != "" {
-			detail.Role = consts.OrgRoleAdmin
-		}
-		if c.ProjectId != "" {
-			detail.ProjectRole = consts.ProjectRoleManager
-		}
-	} else if services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) {
-		// 如果是组织管理员自动拥有项目管理者权限
-		if c.ProjectId != "" {
-			detail.ProjectRole = consts.ProjectRoleManager
-		}
-	}
-
+	setUserRole(detail, c.UserId, c.OrgId, c.ProjectId, c.IsSuperAdmin)
 	return detail, nil
 }
 
