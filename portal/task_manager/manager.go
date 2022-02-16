@@ -161,6 +161,10 @@ func (m *TaskManager) start() {
 	}
 }
 
+func loggerCreateCronDriftTaskError(logger logs.Logger, err error) {
+	logger.Errorf("create cronDriftTask failed, error: %v", err)
+}
+
 // 开始所有漂移检测任务
 func (m *TaskManager) beginCronDriftTask() {
 	logger := m.logger
@@ -174,13 +178,13 @@ func (m *TaskManager) beginCronDriftTask() {
 	for _, env := range cronDriftEnvs {
 		task, err := services.GetTaskById(m.db, env.LastTaskId)
 		if err != nil {
-			logger.Errorf("create cronDriftTask failed, error: %v", err)
+			loggerCreateCronDriftTaskError(logger, err)
 			continue
 		}
 		// 先查询这个环境有没有排队中的偏移检测任务了, 有就不创建了
 		existCronPendingTask, err := services.ListPendingCronTask(m.db, env.Id)
 		if err != nil {
-			logger.Errorf("create cronDriftTask failed, error: %v", err)
+			loggerCreateCronDriftTaskError(logger, err)
 			continue
 		}
 		// 如果查询出来有排队或执行中的漂移检测任务，则本次跳过
@@ -190,14 +194,14 @@ func (m *TaskManager) beginCronDriftTask() {
 		// 这里每次都去解析env表保存的最新的cron 表达式
 		envCronTaskType, err := apps.GetCronTaskTypeAndCheckParam(env.CronDriftExpress, env.AutoRepairDrift, env.OpenCronDrift)
 		if err != nil {
-			logger.Errorf("create cronDriftTask failed, error: %v", err)
+			loggerCreateCronDriftTaskError(logger, err)
 			continue
 		}
 		if envCronTaskType != "" {
 			attrs := models.Attrs{}
 			nextTime, err := apps.ParseCronpress(env.CronDriftExpress)
 			if err != nil {
-				logger.Errorf("create cronDriftTask failed, error: %v", err)
+				loggerCreateCronDriftTaskError(logger, err)
 				continue
 			}
 			task.Type = envCronTaskType
@@ -209,14 +213,14 @@ func (m *TaskManager) beginCronDriftTask() {
 			}
 			_, err = services.CloneNewDriftTask(m.db, *task, env)
 			if err != nil {
-				logger.Errorf("create cronDriftTask failed, error: %v", err)
+				loggerCreateCronDriftTaskError(logger, err)
 				continue
 			}
 
 			attrs["nextDriftTaskTime"] = nextTime
 			_, err = services.UpdateEnv(m.db, env.Id, attrs)
 			if err != nil {
-				logger.Errorf("create cronDriftTask failed, error: %v", err)
+				loggerCreateCronDriftTaskError(logger, err)
 				continue
 			}
 		}
@@ -424,7 +428,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 
 	changeTaskStatus := func(status, message string, skipUpdateEnv bool) error {
 		if er := services.ChangeTaskStatus(m.db, task, status, message, skipUpdateEnv); er != nil {
-			logger.Errorf("update task status error: %v", er)
+			logger.Errorf("update task status error: %v", er) //nolint
 			return er
 		}
 		return nil
@@ -465,7 +469,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 			Update(&models.Env{LastTaskId: task.Id}); er != nil {
 			logger.Errorf("update env lastTaskId: %v", er)
 			return
-		}
+		} //nolint
 	}
 
 	runTaskReq, err := buildRunTaskReq(m.db, *task)
@@ -773,7 +777,7 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 		}
 
 		if err := updateTaskStatus(); err != nil {
-			logger.Errorf("update task status error: %v", err)
+			logger.Errorf("update task status error: %v", err) //nolint
 		}
 
 		if task.IsEffectTask() {
@@ -1079,7 +1083,7 @@ func (m *TaskManager) processAutoDestroy() error {
 				_ = tx.Rollback()
 				logger.Errorf("update env error: %v", err)
 				return nil
-			}
+			} //nolint
 
 			if err := tx.Commit(); err != nil {
 				logger.Errorf("commit error: %v", err)
@@ -1108,7 +1112,7 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 
 	changeTaskStatus := func(status, message string) error {
 		if er := services.ChangeScanTaskStatus(m.db, task, status, message); er != nil {
-			logger.Errorf("update task status error: %v", er)
+			logger.Errorf("update task status error: %v", er) //nolint
 			return er
 		}
 		return nil
@@ -1143,7 +1147,7 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 			Update(&models.Template{LastScanTaskId: task.Id}); err != nil {
 			logger.Errorf("update template lastScanTaskId: %v", err)
 			return
-		}
+		} //nolint
 	}
 
 	steps, err := services.GetTaskSteps(m.db, task.Id)
@@ -1254,7 +1258,7 @@ func (m *TaskManager) processScanTaskDone(taskId models.Id) {
 	}
 
 	if err := updateTaskStatus(); err != nil {
-		logger.Errorf("update task status error: %v", err)
+		logger.Errorf("update task status error: %v", err) //nolint
 	}
 
 	if task.Type == common.TaskTypeEnvScan || task.Type == common.TaskTypeScan || task.Type == common.TaskTypeTplScan {

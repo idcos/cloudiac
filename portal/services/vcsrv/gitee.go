@@ -29,6 +29,7 @@ func newGiteeInstance(vcs *models.Vcs) (VcsIface, error) {
 	param.Add("access_token", vcsToken)
 	return &giteeVcs{vcs: vcs, urlParam: param}, nil
 }
+const giteeApiRoute = "/repos/%s/contents/%s?access_token=%s&ref=%s"
 
 type giteeVcs struct {
 	vcs      *models.Vcs
@@ -173,10 +174,10 @@ func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 	var path string = gitee.vcs.Address
 	branch := getBranch(gitee, option.Ref)
 	if option.Path != "" {
-		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s",
+		path += fmt.Sprintf(giteeApiRoute,
 			gitee.repository.FullName, option.Path, gitee.urlParam.Get("access_token"), branch)
 	} else {
-		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s",
+		path += fmt.Sprintf(giteeApiRoute,
 			gitee.repository.FullName, "%2F", gitee.urlParam.Get("access_token"), branch)
 	}
 	_, body, er := giteeRequest(path, "GET", nil)
@@ -209,7 +210,7 @@ type giteeReadContent struct {
 
 func (gitee *giteeRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
 	pathAddr := gitee.vcs.Address +
-		fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", gitee.repository.FullName, path, gitee.urlParam.Get("access_token"), branch)
+		fmt.Sprintf(giteeApiRoute, gitee.repository.FullName, path, gitee.urlParam.Get("access_token"), branch)
 	_, body, er := giteeRequest(pathAddr, "GET", nil)
 
 	if er != nil {

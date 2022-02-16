@@ -36,27 +36,6 @@ func (v *TaskFlow) Scan(value interface{}) error {
 	return UnmarshalValue(value, v)
 }
 
-const taskFlowsContent = `
-version: 0.1
-plan:
-  steps:
-    - type: init
-    - type: plan
-
-apply:
-  steps:
-    - type: init
-    - type: plan
-    - type: apply 
-    - type: play
-
-destroy:
-  steps:
-    - type: init
-    - type: plan
-      args: ["-destroy"]
-    - type: destroy
-`
 
 const taskFlowsWithScanContent = `
 version: 0.2
@@ -119,23 +98,6 @@ func GetTaskFlow(flows *TaskFlows, typ string) (TaskFlow, error) {
 	default:
 		return TaskFlow{}, fmt.Errorf("unknown task type: %v", typ)
 	}
-}
-
-func DefaultTaskFlow(typ string) (TaskFlow, error) {
-	return GetTaskFlow(&defaultTaskFlows, typ)
-}
-
-func DefaultTaskFlows(version string) TaskFlows {
-	return defaultTaskFlows
-}
-
-func decodeTaskFlow(taskFlowContent string) TaskFlows {
-	taskFlows := TaskFlows{}
-	buffer := bytes.NewBufferString(taskFlowContent)
-	if err := yaml.NewDecoder(buffer).Decode(&taskFlows); err != nil {
-		panic(err)
-	}
-	return taskFlows
 }
 
 func init() {

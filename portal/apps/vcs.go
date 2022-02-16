@@ -77,7 +77,7 @@ func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (vcs *models.Vc
 		attrs["vcsToken"] = token
 	}
 	vcs, err = services.UpdateVcs(c.DB(), form.Id, attrs)
-	return
+	return vcs, err
 }
 
 func SearchVcs(c *ctx.ServiceContext, form *forms.SearchVcsForm) (interface{}, e.Error) {

@@ -35,7 +35,7 @@ func SearchVariable(dbSess *db.Session, orgId models.Id) ([]models.Variable, e.E
 		Order("scope asc").
 		Find(&variables); err != nil {
 		return nil, e.New(e.DBError, err)
-	}
+	} //nolint
 	return variables, nil
 }
 
@@ -133,7 +133,7 @@ func deleteVariables(tx *db.Session, varIds []string) e.Error {
 func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId, envId models.Id, keepSensitive bool) (map[string]models.Variable, e.Error, []string) {
 
 	// 根据scope 构建变量应用范围
-	scopes := make([]string, 0)
+	scopes := make([]string, 0) //nolint
 	switch scope {
 	case consts.ScopeEnv:
 		scopes = consts.EnvScopeEnv

@@ -23,12 +23,14 @@ func newGiteaInstance(vcs *models.Vcs) (VcsIface, error) {
 
 }
 
+const giteaApiRoute = "/api/v1"
+
 type giteaVcs struct {
 	vcs *models.Vcs
 }
 
 func (gitea *giteaVcs) GetRepo(idOrPath string) (RepoIface, error) {
-	path := gitea.vcs.Address + fmt.Sprintf("/api/v1/repositories/%s", idOrPath)
+	path := gitea.vcs.Address + fmt.Sprintf("%s/repositories/%s", giteaApiRoute, idOrPath)
 	_, body, er := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)
@@ -74,7 +76,7 @@ func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([
 	if search != "" {
 		link.RawQuery = link.RawQuery + fmt.Sprintf("&q=%s", search)
 	}
-	path := gitea.vcs.Address + "/api/v1" + link.String()
+	path := gitea.vcs.Address + giteaApiRoute + link.String()
 	response, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 
 	if err != nil {
@@ -110,7 +112,7 @@ type giteaBranch struct {
 }
 
 func (gitea *giteaRepoIface) ListBranches() ([]string, error) {
-	path := gitea.vcs.Address + "/api/v1" +
+	path := gitea.vcs.Address + giteaApiRoute +
 		fmt.Sprintf("/repos/%s/branches?limit=0&page=0", gitea.repository.FullName)
 
 	_, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
@@ -132,7 +134,7 @@ type giteaTag struct {
 }
 
 func (gitea *giteaRepoIface) ListTags() ([]string, error) {
-	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/tags", gitea.repository.FullName)
+	path := gitea.vcs.Address + giteaApiRoute + fmt.Sprintf("/repos/%s/tags", gitea.repository.FullName)
 	_, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
@@ -154,7 +156,7 @@ type giteaCommit struct {
 }
 
 func (gitea *giteaRepoIface) BranchCommitId(branch string) (string, error) {
-	path := gitea.vcs.Address + "/api/v1" +
+	path := gitea.vcs.Address + giteaApiRoute +
 		fmt.Sprintf("/repos/%s/branches/%s?limit=0&page=0", gitea.repository.FullName, branch)
 	_, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if err != nil {
@@ -175,11 +177,11 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 	var path string = gitea.vcs.Address
 	branch := getBranch(gitea, option.Ref)
 	if option.Path != "" {
-		path += "/api/v1" +
+		path += giteaApiRoute +
 			fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0&ref=%s",
 				gitea.repository.FullName, option.Path, branch)
 	} else {
-		path += "/api/v1" +
+		path += giteaApiRoute +
 			fmt.Sprintf("/repos/%s/contents?limit=0&page=0&ref=%s",
 				gitea.repository.FullName, branch)
 	}
@@ -212,7 +214,7 @@ func (gitea *giteaRepoIface) ReadFileContent(branch, path string) (content []byt
 		}
 	}()
 
-	pathAddr := gitea.vcs.Address + "/api/v1" +
+	pathAddr := gitea.vcs.Address + giteaApiRoute +
 		fmt.Sprintf("/repos/%s/raw/%s?ref=%s", gitea.repository.FullName, path, branch)
 	response, body, er := giteaRequest(pathAddr, "GET", gitea.vcs.VcsToken, nil)
 	if er != nil {
@@ -247,7 +249,7 @@ func (gitea *giteaRepoIface) DefaultBranch() string {
 
 //AddWebhook doc: http://10.0.3.124:3000/api/swagger#/repository/repoDeleteHook
 func (gitea *giteaRepoIface) AddWebhook(url string) error {
-	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/hooks", gitea.repository.FullName)
+	path := gitea.vcs.Address + giteaApiRoute + fmt.Sprintf("/repos/%s/hooks", gitea.repository.FullName)
 	bodys := map[string]interface{}{
 		"active": true,
 		"config": map[string]interface{}{
@@ -276,23 +278,20 @@ func (gitea *giteaRepoIface) AddWebhook(url string) error {
 
 func (gitea *giteaRepoIface) ListWebhook() ([]ProjectsHook, error) {
 	ph := make([]ProjectsHook, 0)
-	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/hooks", gitea.repository.FullName)
-	_, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
+	path := gitea.vcs.Address + giteaApiRoute + fmt.Sprintf("/repos/%s/hooks", gitea.repository.FullName)
+	response, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
-	rep := make([]giteaTag, 0)
-
-	_ = json.Unmarshal(body, &rep)
-	tagList := []string{}
-	for _, v := range rep {
-		tagList = append(tagList, v.Name)
+	if response != nil && response.StatusCode > 300  {
+		return nil, e.New(e.VcsError, fmt.Sprintf("gitea list webhook error: %s", string(body)))
 	}
+	_ = json.Unmarshal(body, &ph)
 	return ph, nil
 }
 
 func (gitea *giteaRepoIface) DeleteWebhook(id int) error {
-	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/hooks/%d", gitea.repository.FullName, id)
+	path := gitea.vcs.Address + giteaApiRoute + fmt.Sprintf("/repos/%s/hooks/%d", gitea.repository.FullName, id)
 	_, body, err := giteaRequest(path, "DELETE", gitea.vcs.VcsToken, nil)
 	if err != nil {
 		return e.New(e.BadRequest, err)
@@ -304,7 +303,7 @@ func (gitea *giteaRepoIface) DeleteWebhook(id int) error {
 }
 
 func (gitea *giteaRepoIface) CreatePrComment(prId int, comment string) error {
-	path := gitea.vcs.Address + "/api/v1" + fmt.Sprintf("/repos/%s/pulls/%d/reviews", gitea.repository.FullName, prId)
+	path := gitea.vcs.Address + giteaApiRoute + fmt.Sprintf("/repos/%s/pulls/%d/reviews", gitea.repository.FullName, prId)
 	requestBody := map[string]string{
 		"body": comment,
 	}
@@ -354,7 +353,7 @@ type giteaUser struct {
 }
 
 func getGiteaUserMe(vcs *models.Vcs) (*giteaUser, error) {
-	path := vcs.Address + "/api/v1/user"
+	path := vcs.Address + giteaApiRoute +"/user"
 	_, body, err := giteaRequest(path, "GET", vcs.VcsToken, nil)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)

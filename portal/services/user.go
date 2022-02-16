@@ -33,7 +33,7 @@ func UpdateUser(tx *db.Session, id models.Id, attrs models.Attrs) (user *models.
 			return nil, e.New(e.UserEmailDuplicate)
 		}
 		return nil, e.New(e.DBError, fmt.Errorf("update user error: %v", err))
-	}
+	} //nolint
 	if err := tx.Where("id = ?", id).First(user); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("query user error: %v", err))
 	}
@@ -134,7 +134,7 @@ func GetUserRoleByOrg(dbSess *db.Session, userId, orgId models.Id, role string) 
 		Where("user_id = ?", userId).
 		Where("role = ?", role).
 		Where("org_id = ?", orgId).
-		Exists()
+		Exists() //nolint
 	if err != nil {
 		return isExists, e.New(e.DBError, err)
 	}
@@ -287,8 +287,8 @@ func getUserProjects(userId models.Id) map[models.Id]*models.UserProject {
 		return nil
 	}
 	userProjectsMap := make(map[models.Id]*models.UserProject)
-	for _, userProject := range userProjects {
-		userProjectsMap[userProject.ProjectId] = &userProject
+	for idx, userProject := range userProjects {
+		userProjectsMap[userProject.ProjectId] = &userProjects[idx]
 	}
 	return userProjectsMap
 }

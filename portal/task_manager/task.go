@@ -217,9 +217,9 @@ func pullTaskStepStatus(ctx context.Context, task models.Tasker, step *models.Ta
 			message := runner.TaskStatusMessage{}
 			if err := wsConn.ReadJSON(&message); err != nil {
 				if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-					logger.Tracef("read message error: %v", err)
+					logger.Tracef("read message error: %v", err) //nolint
 				} else {
-					logger.Warnf("read message error: %v", err)
+					logger.Warnf("read message error: %v", err) //nolint
 					if checkDone() {
 						return
 					}
@@ -269,7 +269,7 @@ func pullTaskStepStatus(ctx context.Context, task models.Tasker, step *models.Ta
 					return nil
 				}
 			case err := <-readErrChan:
-				return fmt.Errorf("read message error: %v", err)
+				return fmt.Errorf("read message error: %v", err) //nolint
 
 			case <-ctx.Done():
 				logger.Infof("context done with: %v", ctx.Err())

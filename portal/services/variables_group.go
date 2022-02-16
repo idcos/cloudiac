@@ -42,7 +42,7 @@ func UpdateVariableGroup(tx *db.Session, id models.Id, attrs models.Attrs) e.Err
 			return e.New(e.VariableGroupNotExist)
 		}
 		return e.New(e.DBError, fmt.Errorf("update variable group error: %v", err))
-	}
+	} //nolint
 	return nil
 }
 
