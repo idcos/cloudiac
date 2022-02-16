@@ -12,6 +12,8 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -213,39 +215,54 @@ func ApproveTask(c *ctx.ServiceContext, form *forms.ApproveTaskForm) (interface{
 	return nil, nil
 }
 
+func getTask(sc *ctx.ServiceContext, id models.Id) (models.Tasker, e.Error) {
+	query := services.QueryWithProjectId(services.QueryWithOrgId(sc.DB(), sc.OrgId), sc.ProjectId)
+
+	var (
+		tasker models.Tasker
+		er     e.Error
+	)
+	tasker, er = services.GetTask(query, id)
+	if er != nil {
+		if sc.IsSuperAdmin {
+			tasker, er = services.GetScanTaskById(sc.DB(), id)
+		}
+		if er != nil {
+			if er.Code() == e.TaskNotExists {
+				return nil, e.New(er.Code(), http.StatusNotFound)
+			}
+			return nil, er
+		}
+	}
+
+	return tasker, nil
+}
+
+func startTaskLog(rCtx context.Context, tasker models.Tasker, pw *io.PipeWriter, form forms.TaskLogForm, logger logs.Logger) {
+	if form.StepId != "" {
+		if err := services.FetchTaskStepLog(rCtx, tasker, pw, form.StepId); err != nil {
+			logger.Errorf("fetch task step log: %v", err)
+		}
+	} else {
+		if err := services.FetchTaskLog(rCtx, tasker, form.StepType, pw); err != nil {
+			logger.Errorf("fetch task log: %v", err)
+		}
+	}
+}
+
+// TODO tasker 的逻辑有疑问
 func FollowTaskLog(c *ctx.GinRequest, form forms.TaskLogForm) e.Error {
 	logger := c.Logger().WithField("func", "FollowTaskLog").WithField("taskId", form.Id)
 	sc := c.Service()
 	rCtx := c.Context.Request.Context()
 
-	query := services.QueryWithProjectId(services.QueryWithOrgId(sc.DB(), sc.OrgId), sc.ProjectId)
-	var tasker models.Tasker
-	tasker, er := services.GetTask(query, form.Id)
+	tasker, er := getTask(sc, form.Id)
 	if er != nil {
-		if sc.IsSuperAdmin {
-			tasker, er = services.GetScanTaskById(sc.DB(), form.Id)
-		}
-		if er != nil {
-			logger.Errorf("get task: %v", er)
-			if er.Code() == e.TaskNotExists {
-				return e.New(er.Code(), http.StatusNotFound)
-			}
-			return er
-		}
+		return er
 	}
 
 	pr, pw := io.Pipe()
-	go func() {
-		if form.StepId != "" {
-			if err := services.FetchTaskStepLog(rCtx, tasker, pw, form.StepId); err != nil {
-				logger.Errorf("fetch task step log: %v", err)
-			}
-		} else {
-			if err := services.FetchTaskLog(rCtx, tasker, form.StepType, pw); err != nil {
-				logger.Errorf("fetch task log: %v", err)
-			}
-		}
-	}()
+	go startTaskLog(rCtx, tasker, pw, form, logger)
 
 	scanner := bufio.NewScanner(pr)
 	eventId := 0 // to indicate the message id
