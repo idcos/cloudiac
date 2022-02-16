@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package runner
 
@@ -73,9 +73,24 @@ type TaskStopReq struct {
 }
 
 type TaskPolicy struct {
-	PolicyId string      `json:"policyId"`
-	Meta     interface{} `json:"meta"`
-	Rego     string      `json:"rego"`
+	PolicyId string `json:"policyId"`
+	Meta     Meta   `json:"meta"`
+	Rego     string `json:"rego"`
+}
+
+type Meta struct {
+	Category      string `json:"category"`
+	Root          string `json:"root"`
+	File          string `json:"file"`
+	Id            string `json:"id"`
+	Name          string `json:"name"`
+	PolicyType    string `json:"policy_type"`
+	ReferenceId   string `json:"reference_id"`
+	ResourceType  string `json:"resource_type"`
+	Severity      string `json:"severity"`
+	Version       int    `json:"version"`
+	FixSuggestion string `json:"fix_suggestion"`
+	Description   string `json:"description"`
 }
 
 type TaskLogReq TaskStatusReq

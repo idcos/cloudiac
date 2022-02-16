@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package apps
 
@@ -202,13 +202,13 @@ func DeleteResourceAccount(c *ctx.ServiceContext, form *forms.DeleteResourceAcco
 	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			panic(r)
 		}
 	}()
 
 	if err := services.DeleteResourceAccount(tx, form.Id, c.OrgId); err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return nil, err
 	} else if err := tx.Commit(); err != nil {
 		return nil, e.New(e.DBError, err)

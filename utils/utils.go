@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package utils
 
@@ -10,7 +10,7 @@ import (
 	"cloudiac/utils/logs"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec
 	crand "crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -50,7 +51,7 @@ func init() {
 func RandomStr(n int) string {
 	r := make([]byte, n)
 	for i := 0; i < n; i++ {
-		r[i] = letterAndDigit[rand.Intn(len(letterAndDigit))]
+		r[i] = letterAndDigit[rand.Intn(len(letterAndDigit))] //nolint:gosec
 	}
 	return string(r)
 }
@@ -118,7 +119,7 @@ func RemoveDuplicateElement(languages []string) []string {
 }
 
 func Md5String(ss ...string) string {
-	hm := md5.New()
+	hm := md5.New() //nolint:gosec
 	for i := range ss {
 		hm.Write([]byte(ss[i]))
 	}
@@ -126,7 +127,7 @@ func Md5String(ss ...string) string {
 }
 
 func Md5File(src io.ReadSeeker) (string, error) {
-	hash := md5.New()
+	hash := md5.New() //nolint:gosec
 	if _, err := io.Copy(hash, src); err != nil {
 		return "", err
 	}
@@ -140,7 +141,7 @@ func Md5File(src io.ReadSeeker) (string, error) {
 }
 
 func GenProcKey(cwd string, cmdline string) string {
-	return fmt.Sprintf("%s", Md5String(cwd, cmdline)[:16])
+	return Md5String(cwd, cmdline)[:16]
 }
 
 func SortedStringKV(m map[string]string) string {
@@ -212,44 +213,50 @@ func UnzipFile(src, dest string) error {
 	}
 
 	// Closure to address file descriptors issue with all the deferred .Close() methods
-	extractAndWriteFile := func(f *zip.File) error {
-		rc, err := f.Open()
-		if err != nil {
-			return err
-		}
-		defer rc.Close()
-
-		path := filepath.Join(dest, f.Name)
-		if f.FileInfo().IsDir() {
-			if err := os.MkdirAll(path, f.Mode()); err != nil {
-				return err
-			}
-		} else {
-			if err := os.MkdirAll(filepath.Dir(path), f.Mode()); err != nil {
-				return err
-			}
-
-			f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-
-			_, err = io.Copy(f, rc)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
 	for _, f := range r.File {
-		err := extractAndWriteFile(f)
+		err := extractAndWriteFile(dest, f)
 		if err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
+func extractAndWriteFile(destDir string, f *zip.File) error {
+	rc, err := f.Open()
+	if err != nil {
+		return err
+	}
+	defer rc.Close()
+
+	path := filepath.Join(destDir, f.Name) //nolint:gosec
+	if strings.HasPrefix(filepath.Clean(path)+string(os.PathSeparator), destDir) {
+		return fmt.Errorf("%s: illegal file path", f.Name)
+	}
+
+	if f.FileInfo().IsDir() {
+		return os.MkdirAll(path, f.Mode())
+	}
+
+	if err := os.MkdirAll(filepath.Dir(path), f.Mode()); err != nil {
+		return err
+	}
+
+	fp, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+	if err != nil {
+		return err
+	}
+	defer fp.Close()
+
+	for {
+		_, err := io.CopyN(fp, rc, 1024)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+	}
 	return nil
 }
 
@@ -332,7 +339,7 @@ const (
 
 func GenPasswd(length int, charset string) string {
 	//初始化密码切片
-	var passwd []byte = make([]byte, length, length)
+	var passwd []byte = make([]byte, length)
 	//源字符串
 	var sourceStr string
 	//判断字符类型,如果是数字
@@ -353,7 +360,7 @@ func GenPasswd(length int, charset string) string {
 
 	//遍历，生成一个随机index索引,
 	for i := 0; i < length; i++ {
-		index := rand.Intn(len(sourceStr))
+		index := rand.Intn(len(sourceStr)) //nolint:gosec
 		passwd[i] = sourceStr[index]
 	}
 	return string(passwd)
@@ -443,7 +450,7 @@ func ShortContainerId(id string) string {
 }
 
 // GetBoolEnv 判断环境变量 bool 值
-func GetBoolEnv(key string, _default bool) bool {
+func GetBoolEnv(key string, defaultVal bool) bool {
 	val := os.Getenv(key)
 	if IsFalseStr(val) {
 		// 明确设置了 "false" 值则返回 false
@@ -453,7 +460,7 @@ func GetBoolEnv(key string, _default bool) bool {
 		return true
 	}
 	// 其他情况返回默认值
-	return _default
+	return defaultVal
 }
 
 func IsTrueStr(s string) bool {
@@ -464,12 +471,10 @@ func IsFalseStr(s string) bool {
 	return StrInArray(strings.ToLower(s), "off", "false", "0", "no")
 }
 
-func JoinURL(address string, path ...string) string {
-	elems := append([]string{address}, path...)
-	for i := range elems {
-		elems[i] = strings.Trim(elems[i], "/")
-	}
-	return strings.Join(elems, "/")
+func JoinURL(address string, elems ...string) string {
+	return fmt.Sprintf("%s/%s",
+		strings.TrimRight(address, "/"),
+		strings.TrimLeft(path.Join(elems...), "/"))
 }
 
 // SprintTemplate 用模板参数格式化字符串
@@ -478,7 +483,7 @@ func SprintTemplate(format string, data interface{}) (str string) {
 		return format
 	} else {
 		var msg bytes.Buffer
-		tmpl.Execute(&msg, data)
+		_ = tmpl.Execute(&msg, data)
 		return msg.String()
 	}
 }
@@ -590,4 +595,8 @@ func RecoverdCall(fn func(), recoverFuncs ...func(error)) {
 		}
 	}()
 	fn()
+}
+
+func FileNameWithoutExt(filePath string) string {
+	return strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
 }

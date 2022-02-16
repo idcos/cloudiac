@@ -1,0 +1,57 @@
+# Reference: https://github.com/golangci/golangci-lint/blob/master/.golangci.example.yml
+
+linters-settings:
+  goheader:
+    # Supports two types 'const` and `regexp`.
+    # Values can be used recursively.
+    values:
+      const:
+        # Define here const type values in format k:v.
+        # For example:
+        # COMPANY: Hangzhou Yunji Technology Co., Ltd.
+      regexp:
+        # Define here regexp type values.
+        # for example:
+        # AUTHOR: .*@idcos\.com
+    # The template use for checking.
+    template: |-
+      Copyright (c) {{YEAR-RANGE}} CloudJ Technology Co., Ltd.
+    # As alternative of directive 'template', you may put the path to file with the template source.
+    # Useful if you need to load the template from a specific file.
+    #template-path: /path/to/my/template.tmpl
+
+  cyclop:
+    # The maximal code complexity to report.
+    max-complexity: 15
+
+    # The maximal average package complexity.
+    # If it's higher than 0.0 (float) the check is enabled
+    # Default: 0.0
+    package-average: 0.0
+
+    # Should ignore tests.
+    # Default: false
+    skip-tests: false
+
+
+linters:
+  # Disable all linters.
+  # disable-all: true
+  # Enable specific linter
+  # https://golangci-lint.run/usage/linters/#enabled-by-default-linters
+  enable:
+    - deadcode
+    - errcheck
+    - goheader
+    - gosimple
+    - gosec
+    - govet
+    - ineffassign
+    - staticcheck
+    - structcheck
+    - typecheck
+    - unused
+    - varcheck
+    - dupl
+    - cyclop
+

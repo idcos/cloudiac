@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package apps
 
 import (
@@ -24,7 +26,7 @@ func (PolicySuppressResp) TableName() string {
 }
 
 func SearchPolicySuppress(c *ctx.ServiceContext, form *forms.SearchPolicySuppressForm) (interface{}, e.Error) {
-	query := services.SearchPolicySuppress(c.DB(), form.Id)
+	query := services.SearchPolicySuppress(c.DB(), form.Id, c.OrgId)
 	if form.SortField() == "" {
 		query = query.Order(fmt.Sprintf("%s.created_at DESC", PolicySuppressResp{}.TableName()))
 	}
@@ -34,7 +36,7 @@ func SearchPolicySuppress(c *ctx.ServiceContext, form *forms.SearchPolicySuppres
 func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppressForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update policy suppress %s", form.Id))
 
-	tx := c.Tx()
+	tx := services.QueryWithOrgId(c.Tx(), c.OrgId)
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -74,7 +76,7 @@ func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppres
 				return nil, e.New(e.TemplateNotExists, fmt.Errorf("cannot access tpl %s", id), http.StatusForbidden)
 			}
 		} else if strings.HasPrefix(string(id), "po-") {
-			_, err := services.GetPolicyById(tx, id)
+			_, err := services.GetPolicyById(tx, id, c.OrgId)
 			if err != nil {
 				_ = tx.Rollback()
 				if err.Code() == e.PolicyNotExist {
@@ -130,7 +132,7 @@ func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppres
 			if form.Id != id {
 				return nil, e.New(e.BadParam, fmt.Errorf("invalid policy id to disable"), http.StatusBadRequest)
 			}
-			po, _ := services.GetPolicyById(tx, id)
+			po, _ := services.GetPolicyById(tx, id, c.OrgId)
 			sups = append(sups, models.PolicySuppress{
 				CreatorId:  c.UserId,
 				TargetId:   id,
@@ -166,7 +168,7 @@ func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppres
 }
 
 func DeletePolicySuppress(c *ctx.ServiceContext, form *forms.DeletePolicySuppressForm) (interface{}, e.Error) {
-	tx := c.Tx()
+	tx := services.QueryWithOrgId(c.Tx(), c.OrgId)
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -184,7 +186,7 @@ func DeletePolicySuppress(c *ctx.ServiceContext, form *forms.DeletePolicySuppres
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 	if sup.TargetType == consts.ScopePolicy {
-		_, err := services.PolicyEnable(tx, sup.TargetId, true)
+		_, err := services.PolicyEnable(tx, sup.TargetId, true, c.OrgId)
 		if err != nil {
 			_ = tx.Rollback()
 			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
@@ -219,7 +221,7 @@ func (PolicySuppressSourceResp) TableName() string {
 }
 
 func SearchPolicySuppressSource(c *ctx.ServiceContext, form *forms.SearchPolicySuppressSourceForm) (interface{}, e.Error) {
-	policy, err := services.GetPolicyById(c.DB(), form.Id)
+	policy, err := services.GetPolicyById(c.DB(), form.Id, c.OrgId)
 	if err != nil {
 		if err.Code() == e.PolicyNotExist {
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)
@@ -227,6 +229,6 @@ func SearchPolicySuppressSource(c *ctx.ServiceContext, form *forms.SearchPolicyS
 			return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 		}
 	}
-	query := services.SearchPolicySuppressSource(c.DB(), form, c.UserId, form.Id, policy.GroupId)
+	query := services.SearchPolicySuppressSource(c.DB(), form, c.UserId, form.Id, policy.GroupId, c.OrgId)
 	return getPage(query, form, PolicySuppressSourceResp{})
 }

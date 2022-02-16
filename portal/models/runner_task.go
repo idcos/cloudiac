@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package models
 
 import (
@@ -54,8 +56,17 @@ type ScanTask struct {
 
 	PolicyStatus string `json:"policyStatus" gorm:"size:16" enums:"'passed','violated','pending','failed'"` // 策略检查结果
 
+	Playbook     string `json:"playbook" gorm:"default:''"`
+	TfVarsFile   string `json:"tfVarsFile" gorm:"default:''"`
+	TfVersion    string `json:"tfVersion" gorm:"default:''"`
+	PlayVarsFile string `json:"playVarsFile" gorm:"default:''"`
+
+	Variables TaskVariables `json:"variables" gorm:"type:json"` // 本次执行使用的所有变量(继承、覆盖计算之后的)
+
+	StatePath string `json:"statePath" gorm:"not null"`
+
 	// 扩展属性，包括 source, transitionId 等
-	Extra TaskExtra `json:"extra" gorm:"type:json"` // 扩展属性
+	ExtraData JSON `json:"extraData" gorm:"type:json"` // 扩展属性
 }
 
 func (ScanTask) TableName() string {
@@ -64,17 +75,17 @@ func (ScanTask) TableName() string {
 
 func (t *ScanTask) TfParseJsonPath() string {
 	if t.EnvId != "" {
-		return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TerrascanJsonFile)
+		return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.ScanInputFile)
 	} else {
-		return path.Join(t.TplId.String(), t.Id.String(), runner.TerrascanJsonFile)
+		return path.Join(t.TplId.String(), t.Id.String(), runner.ScanInputFile)
 	}
 }
 
 func (t *ScanTask) TfResultJsonPath() string {
 	if t.EnvId != "" {
-		return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.TerrascanResultFile)
+		return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.ScanResultFile)
 	} else {
-		return path.Join(t.TplId.String(), t.Id.String(), runner.TerrascanResultFile)
+		return path.Join(t.TplId.String(), t.Id.String(), runner.ScanResultFile)
 	}
 }
 

@@ -2,7 +2,7 @@ version: "3.2"
 services:
   iac-portal:
     container_name: iac-portal
-    image: "cloudiac/iac-portal:latest"
+    image: "${DOCKER_REGISTRY}cloudiac/iac-portal:latest"
     volumes:
       - type: bind
         source: /usr/yunji/cloudiac/var
@@ -19,7 +19,7 @@ services:
 
   ct-runner:
     container_name: ct-runner
-    image: "cloudiac/ct-runner:latest"
+    image: "${DOCKER_REGISTRY}cloudiac/ct-runner:latest"
     volumes:
       - type: bind
         source: /usr/yunji/cloudiac/var
@@ -36,16 +36,9 @@ services:
       - consul
     restart: always
 
-  ct-worker:
-    image: "cloudiac/ct-worker:latest"
-    container_name: "ct-worker-say-hi"
-    # 添加该服务只是为了自动 pull 镜像，并不需要后台运行
-    command: ["echo", "hello world!"]
-    restart: "no"
-
   iac-web:
     container_name: iac-web
-    image: "cloudiac/iac-web:latest"
+    image: "${DOCKER_REGISTRY}cloudiac/iac-web:latest"
     ports:
       - 80:80
     restart: always

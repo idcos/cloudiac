@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -29,13 +29,13 @@ func CreateVariable(tx *db.Session, variable models.Variable) (*models.Variable,
 
 func SearchVariable(dbSess *db.Session, orgId models.Id) ([]models.Variable, e.Error) {
 	variables := make([]models.Variable, 0)
-	if err := dbSess.Model(models.Variable{}.TableName()).
+	if err := dbSess.Model(&models.Variable{}).
 		Where("org_id = ?", orgId).
 		// 按照枚举值排序控制org类型在最上面
 		Order("scope asc").
 		Find(&variables); err != nil {
 		return nil, e.New(e.DBError, err)
-	}
+	} //nolint
 	return variables, nil
 }
 
@@ -133,7 +133,7 @@ func deleteVariables(tx *db.Session, varIds []string) e.Error {
 func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId, envId models.Id, keepSensitive bool) (map[string]models.Variable, e.Error, []string) {
 
 	// 根据scope 构建变量应用范围
-	scopes := make([]string, 0)
+	scopes := make([]string, 0) //nolint
 	switch scope {
 	case consts.ScopeEnv:
 		scopes = consts.EnvScopeEnv
@@ -152,7 +152,7 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 	if err != nil {
 		return nil, err, scopes
 	}
-	variableM := make(map[string]models.Variable, 0)
+	variableM := make(map[string]models.Variable)
 	for index, v := range variables {
 		// 过滤掉变量一部分不需要应用的变量
 		if utils.InArrayStr(scopes, v.Scope) {

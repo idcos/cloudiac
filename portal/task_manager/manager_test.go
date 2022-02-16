@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package task_manager
 
 import (
@@ -90,13 +92,13 @@ func TestParseResourceDriftInfo(t *testing.T) {
 	}
 	tt := ParseResourceDriftInfo([]byte(TextCase))
 	if tt["random_password.password[0]"].DriftDetail != DriftMap["random_password.password[0]"].DriftDetail {
-		t.Error("random_password.password[0]解析失败")
+		t.Error("random_password.password[0]解析失败") //nolint
 	}
 	if tt["random_password.password[1]"].DriftDetail != DriftMap["random_password.password[1]"].DriftDetail {
-		t.Error("random_password.password[1]解析失败")
+		t.Error("random_password.password[1]解析失败") //nolint
 	}
 	if tt["random_password.password[2]"].DriftDetail != DriftMap["random_password.password[2]"].DriftDetail {
-		t.Error("random_password.password[2]解析失败")
+		t.Error("random_password.password[2]解析失败") //nolint
 	}
 
 }

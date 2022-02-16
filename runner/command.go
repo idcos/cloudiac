@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package runner
 
@@ -94,6 +94,7 @@ func (exec *Executor) Start() (string, error) {
 		return "", err
 	}
 	logger.Infof("pull image: %s", exec.Image)
+	// TODO: 补充 pull 失败的错误处理
 	exec.tryPullImage(cli)
 
 	conf := configs.Get()

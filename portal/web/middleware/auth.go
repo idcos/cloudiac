@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package middleware
 
@@ -10,8 +10,9 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
 	"net/http"
+
+	"github.com/dgrijalva/jwt-go"
 )
 
 // Auth 用户认证
@@ -41,7 +42,9 @@ func Auth(c *ctx.GinRequest) {
 			return nil
 		}
 
-		if claims, ok := token.Claims.(*services.Claims); ok && token.Valid {
+		if claims, ok := token.Claims.(*services.Claims); ok && token.Valid &&
+			claims.Subject == consts.JwtSubjectUserAuth {
+
 			c.Service().UserId = claims.UserId
 			c.Service().Username = claims.Username
 			c.Service().IsSuperAdmin = claims.IsAdmin
@@ -110,7 +113,6 @@ func AuthOrgId(c *ctx.GinRequest) {
 		c.JSONError(e.New(e.InvalidOrganizationId), http.StatusForbidden)
 		return
 	}
-	return
 }
 
 // AuthProjectId 验证项目ID是否有效
@@ -119,7 +121,6 @@ func AuthProjectId(c *ctx.GinRequest) {
 		c.JSONError(e.New(e.InvalidProjectId), http.StatusForbidden)
 		return
 	}
-	return
 }
 
 func AuthApiToken(c *ctx.GinRequest) {

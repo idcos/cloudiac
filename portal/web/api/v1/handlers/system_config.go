@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package handlers
 
@@ -51,4 +51,33 @@ func (SystemConfig) Update(c *ctx.GinRequest) {
 		return
 	}
 	c.JSONResult(apps.UpdateSystemConfig(c.Service(), &form))
+}
+
+// GetRegistryAddr 获取 registry addr 的配置
+// @Summary 获取 registry addr 的配置
+// @Tags registry
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Success 200 {object}  ctx.JSONResult{result=models.RegistryAddrResp}
+// @Router /system_config/registry/addr [GET]
+func GetRegistryAddr(c *ctx.GinRequest) {
+	c.JSONResult(apps.GetRegistryAddr(c.Service()))
+}
+
+// UpsertRegistryAddr 更新或创建 registry addr 的配置
+// @Summary 更新或创建 registry addr 的配置
+// @Tags registry
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Param data body forms.RegistryAddrForm true "系统配置信息"
+// @Success 200 {object}  ctx.JSONResult{result=models.RegistryAddrResp}
+// @Router /system_config/registry/addr [POST]
+func UpsertRegistryAddr(c *ctx.GinRequest) {
+	form := forms.RegistryAddrForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.UpsertRegistryAddr(c.Service(), &form))
 }

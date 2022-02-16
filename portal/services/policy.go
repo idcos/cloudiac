@@ -1,9 +1,10 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
 import (
 	"cloudiac/common"
+	"cloudiac/policy"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
@@ -51,9 +52,9 @@ func GetPolicyReferenceId(query *db.Session, policy *models.Policy) (string, e.E
 	return fmt.Sprintf("%s_%s_%s_%d", "iac", typ, scope, lastId+1), nil
 }
 
-func GetPolicyById(tx *db.Session, id models.Id) (*models.Policy, e.Error) {
+func GetPolicyById(tx *db.Session, id, orgId models.Id) (*models.Policy, e.Error) {
 	po := models.Policy{}
-	if err := tx.Model(models.Policy{}).Where("id = ?", id).First(&po); err != nil {
+	if err := tx.Model(models.Policy{}).Where("id = ?", id).Where("org_id = ?", orgId).First(&po); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.PolicyNotExist, err)
 		}
@@ -62,40 +63,59 @@ func GetPolicyById(tx *db.Session, id models.Id) (*models.Policy, e.Error) {
 	return &po, nil
 }
 
+func GetPolicyByName(tx *db.Session, name string, groupId, orgId models.Id) (*models.Policy, e.Error) {
+	po := models.Policy{}
+	if err := tx.Model(models.Policy{}).Where("name = ? AND group_id = ? AND org_id = ?",
+		name, groupId, orgId).First(&po); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.PolicyNotExist, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &po, nil
+}
+
+func GetPoliciesByGroupId(tx *db.Session, groupId, orgId models.Id) ([]*models.Policy, e.Error) {
+	var po []*models.Policy
+	if err := tx.Model(models.Policy{}).Where("group_id = ? AND org_id = ?",
+		orgId).Find(&po); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.PolicyNotExist, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return po, nil
+}
+
 func GetTaskPolicies(query *db.Session, taskId models.Id) ([]runner.TaskPolicy, e.Error) {
 	var taskPolicies []runner.TaskPolicy
 
-	task, err := GetScanTaskById(query, taskId)
-	if err != nil {
+	policies, err := GetPoliciesByTaskId(query, taskId)
+	if err != nil && !e.IsRecordNotFound(err) {
 		return nil, err
 	}
 
-	policies, _, err := GetValidPolicies(query, task.TplId, task.EnvId)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, policy := range policies {
+	for _, p := range policies {
 		category := "general"
-		group, _ := GetPolicyGroupById(query, policy.GroupId)
+		group, _ := GetPolicyGroupById(query, p.GroupId)
 		if group != nil {
 			category = group.Name
 		}
-		meta := map[string]interface{}{
-			"name":          policy.RuleName,
-			"file":          "policy.rego",
-			"policy_type":   policy.PolicyType,
-			"resource_type": policy.ResourceType,
-			"severity":      strings.ToUpper(policy.Severity),
-			"reference_id":  policy.ReferenceId,
-			"category":      category,
-			"version":       policy.Revision,
-			"id":            string(policy.Id),
+		meta := runner.Meta{
+			Name:         p.RuleName,
+			File:         p.RuleName + ".rego",
+			PolicyType:   p.PolicyType,
+			ResourceType: p.ResourceType,
+			Severity:     strings.ToUpper(p.Severity),
+			ReferenceId:  p.ReferenceId,
+			Category:     category,
+			Version:      p.Revision,
+			Id:           string(p.Id),
 		}
 		taskPolicies = append(taskPolicies, runner.TaskPolicy{
-			PolicyId: string(policy.Id),
+			PolicyId: string(p.Id),
 			Meta:     meta,
-			Rego:     policy.Rego,
+			Rego:     p.Rego,
 		})
 	}
 	return taskPolicies, nil
@@ -104,91 +124,41 @@ func GetTaskPolicies(query *db.Session, taskId models.Id) ([]runner.TaskPolicy, 
 // GetValidPolicies 获取云模板/环境关联的策略
 func GetValidPolicies(query *db.Session, tplId, envId models.Id) (validPolicies []models.Policy, suppressedPolicies []models.Policy, err e.Error) {
 	var (
-		tplPolicies, tplValidPolicies, tplSuppressedPolicies []models.Policy
-		envPolicies, envSuppressedPolicies                   []models.Policy
-		enabled                                              bool
+		policies []models.Policy
+		enabled  bool
 	)
 
 	// 获取云模板策略
-	if enabled, err = IsTemplateEnabledScan(query, tplId); err != nil {
+	if envId == "" {
+		if enabled, err = IsTemplateEnabledScan(query, tplId); err != nil {
+			return
+		}
+		if enabled {
+			if policies, err = GetPoliciesByTemplateId(query, tplId); err != nil {
+				return
+			}
+			if validPolicies, suppressedPolicies, err = FilterSuppressPolicies(query, policies, tplId, consts.ScopeTemplate); err != nil {
+				return
+			}
+		}
 		return
-	}
-	if enabled {
-		if tplPolicies, err = GetPoliciesByTemplateId(query, tplId); err != nil {
-			return
-		}
-		if tplValidPolicies, tplSuppressedPolicies, err = FilterSuppressPolicies(query, tplPolicies, tplId, consts.ScopeTemplate); err != nil {
-			return
-		}
 	}
 
 	// 获取环境策略
 	if enabled, err = IsEnvEnabledScan(query, envId); err != nil {
 		return
 	}
-	if envId != "" && enabled {
-		if envPolicies, err = GetPoliciesByEnvId(query, envId); err != nil {
+	if enabled {
+		if policies, err = GetPoliciesByEnvId(query, envId); err != nil {
 			return
 		}
 
-		// 有效策略：valid = tpl valid + env valid - env suppress
-		policies := MergePolicies(tplValidPolicies, envPolicies)
-		if validPolicies, envSuppressedPolicies, err = FilterSuppressPolicies(query, policies, envId, consts.ScopeEnv); err != nil {
+		if validPolicies, suppressedPolicies, err = FilterSuppressPolicies(query, policies, envId, consts.ScopeEnv); err != nil {
 			return
 		}
-
-		// 屏蔽策略列表需要排除掉环境引入的策略
-		// suppress = tpl suppress - env valid + env suppress
-		envValidPoliciesMap := make(map[models.Id]int)
-		for _, policy := range envPolicies {
-			envValidPoliciesMap[policy.Id] = 1
-		}
-		for idx, policy := range tplSuppressedPolicies {
-			if _, ok := envValidPoliciesMap[policy.Id]; !ok {
-				suppressedPolicies = append(suppressedPolicies, tplSuppressedPolicies[idx])
-			}
-		}
-		suppressedPolicies = MergePolicies(suppressedPolicies, envSuppressedPolicies)
-	} else {
-		validPolicies = tplValidPolicies
-		suppressedPolicies = tplSuppressedPolicies
 	}
 
 	return
-}
-
-func suppressedQuery(query *db.Session, envId models.Id, tplId models.Id) *db.Session {
-	q := query.Select("iac_policy.id").Table(models.PolicyRel{}.TableName()).
-		Joins("join iac_policy on iac_policy.group_id = iac_policy_rel.group_id").
-		Where("iac_policy.enabled = 1").
-		Joins("join iac_policy_group on iac_policy_group.id = iac_policy_rel.group_id").
-		Where("iac_policy_group.enabled = 1")
-
-	if envId != "" {
-		q = q.Where("iac_policy_rel.env_id = ?", envId)
-	} else if tplId != "" {
-		q = q.Where("iac_policy_rel.tpl_id = ?", tplId)
-	}
-
-	suppressQuery := query.Model(models.PolicySuppress{}).Select("policy_id")
-	if envId != "" {
-		suppressQuery = suppressQuery.Where("target_type = 'env' AND env_id = ?", envId)
-		q = q.Where("iac_policy.id not in (?)", suppressQuery.Expr())
-	} else if tplId != "" {
-		suppressQuery = suppressQuery.Where("target_type = 'template' AND tpl_id = ?", tplId)
-		q = q.Where("iac_policy.id not in (?)", suppressQuery.Expr())
-	}
-
-	enableQuery := query.Model(models.PolicyRel{}).Where("iac_policy_rel.group_id = '' and iac_policy_rel.enabled = 1")
-	if envId != "" {
-		enableQuery = enableQuery.Select("env_id").Where("env_id = ?", envId)
-		q = q.Where("iac_policy_rel.env_id in (?)", enableQuery.Expr())
-	} else if tplId != "" {
-		enableQuery = enableQuery.Select("tpl_id").Where("tpl_id = ?", tplId)
-		q = q.Where("iac_policy_rel.tpl_id in (?)", enableQuery.Expr())
-	}
-
-	return q
 }
 
 // GetPoliciesByEnvId 查询环境关联的所有策略
@@ -245,9 +215,9 @@ func RemovePoliciesGroupRelation(tx *db.Session, groupId models.Id) e.Error {
 	return nil
 }
 
-func SearchPolicy(dbSess *db.Session, form *forms.SearchPolicyForm) *db.Session {
+func SearchPolicy(dbSess *db.Session, form *forms.SearchPolicyForm, orgId models.Id) *db.Session {
 	pTable := models.Policy{}.TableName()
-	query := dbSess.Table(pTable)
+	query := dbSess.Model(models.Policy{}).Where(fmt.Sprintf("%s.org_id in (?)", pTable), orgId)
 	if len(form.GroupId) > 0 {
 		query = query.Where(fmt.Sprintf("%s.group_id in (?)", pTable), form.GroupId)
 	}
@@ -270,9 +240,9 @@ func SearchPolicy(dbSess *db.Session, form *forms.SearchPolicyForm) *db.Session 
 	return query
 }
 
-func DeletePolicy(dbSess *db.Session, id models.Id) (interface{}, e.Error) {
+func DeletePolicy(dbSess *db.Session, groupId models.Id) (interface{}, e.Error) {
 	if _, err := dbSess.
-		Where("id = ?", id).
+		Where("group_id = ?", groupId).
 		Delete(&models.Policy{}); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
@@ -293,26 +263,37 @@ func DetailPolicy(dbSess *db.Session, id models.Id) (interface{}, e.Error) {
 	return p, nil
 }
 
-func SearchPolicyTpl(dbSess *db.Session, orgId, tplId models.Id, q string) *db.Session {
-	query := dbSess.Table("iac_template AS tpl").Where("tpl.deleted_at_t = 0")
+func SearchPolicyTpl(dbSess *db.Session, userId, orgId, tplId models.Id, q string) *db.Session {
+	if UserHasOrgRole(userId, orgId, consts.OrgRoleMember) {
+		projectIds := UserProjectIds(userId, orgId)
+		tplIdsQuery := dbSess.Model(models.ProjectTemplate{}).
+			Where("project_id in (?)", projectIds).
+			Select("template_id")
+		dbSess = dbSess.Where("iac_template.id in (?)", tplIdsQuery.Expr())
+	}
+	query := dbSess.Model(models.Template{})
 	if orgId != "" {
-		query = query.Where("tpl.org_id = ?", orgId)
+		query = query.Where("iac_template.org_id = ?", orgId)
 	}
 	if tplId != "" {
-		query = query.Where("tpl.id = ?", tplId)
+		query = query.Where("iac_template.id = ?", tplId)
 	}
 	if q != "" {
-		query = query.WhereLike("tpl.name", q)
+		query = query.WhereLike("iac_template.name", q)
 	}
-	query = query.Joins("LEFT JOIN iac_scan_task AS task ON task.id = tpl.last_scan_task_id")
-	return query.LazySelect("tpl.*, task.policy_status").
-		Joins("LEFT JOIN iac_policy_rel on iac_policy_rel.tpl_id = tpl.id and iac_policy_rel.group_id = ''").
-		Joins("LEFT JOIN iac_org on iac_org.id = tpl.org_id").
-		LazySelectAppend("iac_policy_rel.enabled", "iac_org.name as org_name").
-		Order("iac_org.created_at desc, tpl.created_at desc ")
+	query = query.Joins("LEFT JOIN iac_scan_task AS task ON task.id = iac_template.last_scan_task_id")
+	return query.LazySelect("iac_template.*, task.policy_status").
+		Joins("LEFT JOIN iac_policy_rel on iac_policy_rel.tpl_id = iac_template.id and iac_policy_rel.group_id = ''").
+		Joins("LEFT JOIN iac_org on iac_org.id = iac_template.org_id").
+		LazySelectAppend("iac_org.name as org_name").
+		Order("iac_org.created_at desc, iac_template.created_at desc ")
 }
 
-func SearchPolicyEnv(dbSess *db.Session, orgId, projectId, envId models.Id, q string) *db.Session {
+func SearchPolicyEnv(dbSess *db.Session, userId, orgId, projectId, envId models.Id, q string) *db.Session {
+	if UserHasOrgRole(userId, orgId, consts.OrgRoleMember) {
+		projectIds := UserProjectIds(userId, orgId)
+		dbSess = dbSess.Where("iac_env.project_id in (?)", projectIds)
+	}
 	envTable := models.Env{}.TableName()
 	query := dbSess.Table(envTable).Where(fmt.Sprintf("%s.archived = 0", envTable))
 	if orgId != "" {
@@ -341,7 +322,7 @@ func SearchPolicyEnv(dbSess *db.Session, orgId, projectId, envId models.Id, q st
 		Joins("LEFT JOIN iac_policy_rel on iac_policy_rel.env_id = iac_env.id and iac_policy_rel.group_id = ''").
 		Joins("LEFT JOIN iac_org as org on org.id = iac_env.org_id").
 		Joins("LEFT JOIN iac_project as project on project.id = iac_env.project_id").
-		LazySelectAppend("iac_policy_rel.enabled", "org.name as org_name, project.name as project_name").
+		LazySelectAppend("org.name as org_name, project.name as project_name").
 		Order("org.created_at desc, project.created_at desc, iac_env.created_at desc")
 }
 
@@ -433,7 +414,7 @@ type PolicyScanSummary struct {
 }
 
 // PolicySummary 获取策略/策略组/任务执行结果
-func PolicySummary(query *db.Session, ids []models.Id, scope string) ([]*PolicyScanSummary, e.Error) {
+func PolicySummary(query *db.Session, ids []models.Id, scope string, orgId models.Id) ([]*PolicyScanSummary, e.Error) {
 	var key string
 	switch scope {
 	case consts.ScopePolicy:
@@ -443,7 +424,9 @@ func PolicySummary(query *db.Session, ids []models.Id, scope string) ([]*PolicyS
 	case consts.ScopeTask:
 		key = "task_id"
 	}
-	subQuery := query.Model(models.PolicyResult{}).Select("max(id)").Where(fmt.Sprintf("%s in (?)", key), ids)
+	subQuery := query.Model(models.PolicyResult{}).Select("max(id)").
+		Where(fmt.Sprintf("%s in (?)", key), ids).
+		Where("org_id = ?", orgId)
 
 	if scope == consts.ScopeTask {
 		subQuery = subQuery.Group(fmt.Sprintf("%s,env_id,tpl_id,policy_id", key))
@@ -503,10 +486,11 @@ type ScanStatusByTarget struct {
 	Name   string
 }
 
-func GetPolicyScanByTarget(query *db.Session, policyId models.Id, from, to time.Time, showCount int) ([]*ScanStatusByTarget, e.Error) {
+func GetPolicyScanByTarget(query *db.Session, policyId models.Id, from, to time.Time, showCount int, orgId models.Id) ([]*ScanStatusByTarget, e.Error) {
 	groupQuery := query.Model(models.PolicyResult{})
 	groupQuery = groupQuery.Where("start_at >= ? and start_at < ? and policy_id = ?", from, to, policyId).
 		Where("status != 'pending'"). // 跳过pending状态
+		Where("org_id = ?", orgId).
 		Select("count(*) as count, tpl_id, env_id").
 		Group("tpl_id,env_id")
 
@@ -625,8 +609,8 @@ func SubQueryUserTemplateIds(query *db.Session, userId models.Id) *db.Session {
 	return q.Where("org_id in (?)", orgIds)
 }
 
-func PolicyEnable(tx *db.Session, policyId models.Id, enabled bool) (*models.Policy, e.Error) {
-	policy, err := GetPolicyById(tx, policyId)
+func PolicyEnable(tx *db.Session, policyId models.Id, enabled bool, orgId models.Id) (*models.Policy, e.Error) {
+	policy, err := GetPolicyById(tx, policyId, orgId)
 	if err != nil {
 		return nil, err
 	}
@@ -648,8 +632,8 @@ type ScanStatusGroupBy struct {
 }
 
 // GetPolicyStatusByPolicy 查询指定时间范围内所有策略的执行结果，统计各策略每种检测状态下的数量
-func GetPolicyStatusByPolicy(query *db.Session, from time.Time, to time.Time, status string) ([]*ScanStatusGroupBy, e.Error) {
-	groupQuery := query.Model(models.PolicyResult{})
+func GetPolicyStatusByPolicy(query, userQuery *db.Session, from time.Time, to time.Time, status string) ([]*ScanStatusGroupBy, e.Error) {
+	groupQuery := userQuery.Model(models.PolicyResult{})
 	groupQuery = groupQuery.Where("start_at >= ? and start_at < ?", from, to).
 		Select("count(*) as count, policy_id as id, status").
 		Group("policy_id,status").
@@ -665,8 +649,8 @@ func GetPolicyStatusByPolicy(query *db.Session, from time.Time, to time.Time, st
 }
 
 // GetPolicyStatusByPolicyGroup 查询指定时间范围内所有策略组的执行结果，统计各策略组每种检测状态下的数量
-func GetPolicyStatusByPolicyGroup(query *db.Session, from time.Time, to time.Time, status string) ([]*ScanStatusGroupBy, e.Error) {
-	groupQuery := query.Model(models.PolicyResult{})
+func GetPolicyStatusByPolicyGroup(query, userQuery *db.Session, from time.Time, to time.Time, status string) ([]*ScanStatusGroupBy, e.Error) {
+	groupQuery := userQuery.Model(models.PolicyResult{})
 	groupQuery = groupQuery.Where("start_at >= ? and start_at < ?", from, to).
 		Select("count(*) as count, policy_group_id as id, status").
 		Group("policy_group_id,status").
@@ -690,22 +674,22 @@ func findScanStatusGroupBy(query *db.Session) ([]*ScanStatusGroupBy, e.Error) {
 }
 
 // QueryPolicyStatusEveryTargetLastRun 获取指定时间范围内每个策略在任意环境或云模板下的最后一次检测的状态统计
-func QueryPolicyStatusEveryTargetLastRun(sess *db.Session, from time.Time, to time.Time) ([]*models.Policy, e.Error) {
-	lastScanQuery := sess.Model(models.PolicyResult{}).
+func QueryPolicyStatusEveryTargetLastRun(sess, userQuery *db.Session, from time.Time, to time.Time) ([]*models.Policy, e.Error) {
+	lastScanQuery := userQuery.Model(models.PolicyResult{}).
 		Select("max(id)").
 		Group("env_id,tpl_id").
 		Where("start_at >= ? AND start_at < ?", from, to)
-	lastTaskQuery := sess.Model(models.PolicyResult{}).
+	lastTaskQuery := userQuery.Model(models.PolicyResult{}).
 		Select("task_id").
 		Where("id in (?)", lastScanQuery.Expr())
 
 	// 最后一次检测所有检测结果
-	policyLastResultQuery := sess.Model(models.PolicyResult{}).
+	policyLastResultQuery := userQuery.Model(models.PolicyResult{}).
 		Select("id").
 		Where("iac_policy_result.task_id in (?)", lastTaskQuery.Expr())
 
 	// 获取策略执行结果的统计数据
-	policyResultQuery := sess.Table("iac_policy_result").
+	policyResultQuery := userQuery.Model(models.PolicyResult{}).
 		Where("id IN (?)", policyLastResultQuery.Expr()).
 		Where("iac_policy_result.status = ? OR iac_policy_result.status = ?",
 			common.PolicyStatusFailed, common.PolicyStatusViolated).
@@ -713,7 +697,7 @@ func QueryPolicyStatusEveryTargetLastRun(sess *db.Session, from time.Time, to ti
 		Group("policy_id")
 
 	// 组合 iac_policy 表，获取策略严重级别
-	policyQuery := sess.Table("iac_policy").
+	policyQuery := sess.Model(models.Policy{}).
 		Select("iac_policy.id, iac_policy.severity").
 		Joins("join (?) as r on r.policy_id = iac_policy.id", policyResultQuery.Expr())
 
@@ -764,17 +748,57 @@ func PolicyTargetSuppressSummary(query *db.Session, ids []models.Id, scope strin
 }
 
 func IsTemplateEnabledScan(tx *db.Session, tplId models.Id) (bool, e.Error) {
-	if enabled, err := tx.Model(models.PolicyRel{}).Where("tpl_id = ? and group_id = ''", tplId).Exists(); err != nil {
+	tpl, err := GetTemplateById(tx, tplId)
+	if err != nil {
 		return false, e.New(e.DBError, err)
-	} else {
-		return enabled, nil
 	}
+	return tpl.PolicyEnable, nil
 }
 
 func IsEnvEnabledScan(tx *db.Session, envId models.Id) (bool, e.Error) {
-	if enabled, err := tx.Model(models.PolicyRel{}).Where("env_id = ? and group_id = ''", envId).Exists(); err != nil {
+	env, err := GetEnvById(tx, envId)
+	if err != nil {
 		return false, e.New(e.DBError, err)
-	} else {
-		return enabled, nil
 	}
+	return env.PolicyEnable, nil
+}
+
+// MergeScanResultPolicyStatus 重新映射扫描状态给前端
+func MergeScanResultPolicyStatus(policyEnabled bool, lastScanTask *models.ScanTask) string {
+	if !policyEnabled {
+		return common.PolicyStatusDisable
+	} else {
+		if lastScanTask == nil {
+			return common.PolicyStatusEnable
+		} else {
+			return lastScanTask.PolicyStatus
+		}
+	}
+}
+
+func GetScanPolicies(query *db.Session, policies []models.Policy) ([]policy.Policy, error) {
+	var ps []policy.Policy
+	for _, p := range policies {
+		group, err := GetPolicyGroupById(query, p.GroupId)
+		if err != nil {
+			return nil, err
+		}
+		ps = append(ps, policy.Policy{
+			Id: string(p.Id),
+			Meta: policy.Meta{
+				Category:     group.Name,
+				File:         "policy.rego",
+				Id:           string(p.Id),
+				Name:         p.Name,
+				PolicyType:   p.PolicyType,
+				ReferenceId:  p.ReferenceId,
+				ResourceType: p.ResourceType,
+				Severity:     p.Severity,
+				Version:      p.Revision,
+			},
+			Rego: p.Rego,
+		})
+	}
+
+	return ps, nil
 }

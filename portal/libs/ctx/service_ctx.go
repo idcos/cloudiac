@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package ctx
 
@@ -6,8 +6,9 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/utils/logs"
+	"crypto/rand"
 	"fmt"
-	"math/rand"
+	"math/big"
 )
 
 type ServiceContext struct {
@@ -24,7 +25,11 @@ type ServiceContext struct {
 }
 
 func NewServiceContext(rc RequestContext) *ServiceContext {
-	logger := logs.Get().WithField("req", fmt.Sprintf("%08d", rand.Intn(100000000)))
+	bigNum, err := rand.Int(rand.Reader, big.NewInt(100000000))
+	if err != nil {
+		panic(fmt.Errorf("get random number err: %+v", err))
+	}
+	logger := logs.Get().WithField("req", fmt.Sprintf("%08d", bigNum))
 
 	sc := &ServiceContext{
 		rc:     rc,

@@ -16,6 +16,12 @@ PORTAL_ADDRESS=""
 # 需要配置为机器的内网 ip:port，不可使用 127.0.0.1
 CONSUL_ADDRESS=""
 
+# cloudiac registry 服务地址(选填)，示例：http://registry.cloudiac.org
+REGISTRY_ADDRESS=""
+
+# 使用 https 向外（比如runner）发送请求的时候是否允许使用不安全证书
+HTTP_CLIENT_INSECURE=false
+
 # mysql 配置(必填)
 MYSQL_HOST=mysql
 MYSQL_PORT=3306
@@ -31,8 +37,11 @@ SERVICE_ID=iac-portal-01
 ## portal 服务注册的 tags
 SERVICE_TAGS="iac-portal;portal-01"
 
+# docker reigstry 地址，默认为空(使用 docker hub)
+DOCKER_REGISTRY=""
+
 # logger 配置
-LOG_DEVEL="debug"
+LOG_DEVEL="info"
 
 # SMTP 配置(该配置只影响邮件通知的发送，不配置不影响其他功能)
 SMTP_ADDRESS=smtp.example.com:25
@@ -49,7 +58,6 @@ KAFKA_PARTITION=0
 KAFKA_BROKERS=[]
 KAFKA_SASL_USERNAME=""
 KAFKA_SASL_PASSWORD=""
-
 
 ######### 以下为 runner 配置 #############
 # runner 服务注册配置(均为必填)

@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package apps
 
@@ -14,6 +14,7 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -77,11 +78,11 @@ func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (vcs *models.Vc
 		attrs["vcsToken"] = token
 	}
 	vcs, err = services.UpdateVcs(c.DB(), form.Id, attrs)
-	return
+	return vcs, err
 }
 
 func SearchVcs(c *ctx.ServiceContext, form *forms.SearchVcsForm) (interface{}, e.Error) {
-	rs, err := getPage(services.QueryVcs(c.OrgId, form.Status, form.Q, form.IsShowDefaultVcs, c.DB()), form, models.Vcs{})
+	rs, err := getPage(services.QueryVcs(c.OrgId, form.Status, form.Q, form.IsShowDefaultVcs, false, c.DB()), form, models.Vcs{})
 	if err != nil {
 		return nil, err
 	}
@@ -127,12 +128,19 @@ func GetReadme(c *ctx.ServiceContext, form *forms.GetReadmeForm) (interface{}, e
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
-	b, er := repo.ReadFileContent(form.Branch, "README.md")
+
+	// 如果路径以 "/" 开头，部分 vcs 会报错
+	dir := strings.TrimLeft(form.Dir, "/")
+	b, er := repo.ReadFileContent(form.RepoRevision, path.Join(dir, "README.md"))
+	if er != nil && vcsrv.IsNotFoundErr(er) {
+		// README.md 文件不存在时尝试读 README 文件
+		b, er = repo.ReadFileContent(form.RepoRevision, path.Join(dir, "README"))
+	}
 	if er != nil {
-		if strings.Contains(er.Error(), "not found") {
+		if vcsrv.IsNotFoundErr(er) {
 			b = make([]byte, 0)
 		} else {
-			return nil, e.New(e.VcsError, er)
+			return nil, e.AutoNew(er, e.VcsError)
 		}
 	}
 
@@ -147,13 +155,13 @@ func ListRepos(c *ctx.ServiceContext, form *forms.GetGitProjectsForm) (interface
 	}
 	vcsService, er := vcsrv.GetVcsInstance(vcs)
 	if er != nil {
-		return nil, e.New(e.VcsError, er)
+		return nil, e.AutoNew(er, e.VcsError)
 	}
 	limit := form.PageSize()
 	offset := utils.PageSize2Offset(form.CurrentPage(), limit)
 	repo, total, er := vcsService.ListRepos("", form.Q, limit, offset)
 	if er != nil {
-		return nil, e.New(e.VcsError, er)
+		return nil, e.AutoNew(er, e.VcsError)
 	}
 	project := make([]*vcsrv.Projects, 0)
 	for _, repo := range repo {
@@ -198,13 +206,12 @@ func listRepoRevision(c *ctx.ServiceContext, form *forms.GetGitRevisionForm, rev
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
+
+	revision = make([]*Revision, 0)
 	for _, v := range revisionList {
-		revision = append(revision, &Revision{
-			v,
-		})
+		revision = append(revision, &Revision{v})
 	}
 	return revision, nil
-
 }
 
 func ListRepoBranches(c *ctx.ServiceContext, form *forms.GetGitRevisionForm) (brans []*Revision, err e.Error) {
@@ -334,10 +341,10 @@ func SearchVcsFile(c *ctx.ServiceContext, form *forms.SearchVcsFileForm) (interf
 	}
 	b, er := repo.ReadFileContent(form.Branch, form.FileName)
 	if er != nil {
-		if strings.Contains(er.Error(), "not found") {
+		if vcsrv.IsNotFoundErr(er) {
 			b = make([]byte, 0)
 		} else {
-			return nil, e.New(e.VcsError, er)
+			return nil, e.AutoNew(er, e.VcsError)
 		}
 	}
 

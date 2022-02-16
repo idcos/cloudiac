@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package runner
 
@@ -217,7 +217,7 @@ func (t *Task) runStep() (err error) {
 		GetTaskDir(t.req.Env.Id, t.req.TaskId, t.req.Step),
 		TaskInfoFileName,
 	)
-	if err := os.WriteFile(stepInfoFile, infoJson, 0644); err != nil {
+	if err := os.WriteFile(stepInfoFile, infoJson, 0644); err != nil { //nolint:gosec
 		err = errors.Wrap(err, "write step info")
 		return err
 	}
@@ -283,7 +283,7 @@ locals {
 `))
 
 func execTpl2File(tpl *template.Template, data interface{}, savePath string) error {
-	fp, err := os.OpenFile(savePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	fp, err := os.OpenFile(savePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644) //nolint:gosec
 	if err != nil {
 		return err
 	}
@@ -296,6 +296,8 @@ func (t *Task) genIacTfFile(workspace string) error {
 	if t.req.StateStore.Address == "" {
 		if os.Getenv("IAC_WORKER_CONSUL") != "" {
 			t.req.StateStore.Address = os.Getenv("IAC_WORKER_CONSUL")
+			//t.req.StateStore.Backend = "consul"
+			//t.req.StateStore.Scheme = "http"
 		} else {
 			t.req.StateStore.Address = configs.Get().Consul.Address
 		}
@@ -318,7 +320,7 @@ var iacPlayVarsTpl = template.Must(template.New("").Parse(`
 `))
 
 func (t *Task) genPlayVarsFile(workspace string) error {
-	fp, err := os.OpenFile(filepath.Join(workspace, CloudIacPlayVars), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	fp, err := os.OpenFile(filepath.Join(workspace, CloudIacPlayVars), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644) //nolint:gosec
 	if err != nil {
 		return err
 	}
@@ -329,18 +331,18 @@ func (t *Task) genPolicyFiles(workspace string) error {
 	if len(t.req.Policies) == 0 {
 		return nil
 	}
-	if err := os.MkdirAll(filepath.Join(workspace, PoliciesDir), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(workspace, PoliciesDir), 0755); err != nil { //nolint:gosec
 		return err
 	}
 	for _, policy := range t.req.Policies {
-		if err := os.MkdirAll(filepath.Join(workspace, PoliciesDir, policy.PolicyId), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Join(workspace, PoliciesDir, policy.PolicyId), 0755); err != nil { //nolint:gosec
 			return err
 		}
 		js, _ := json.Marshal(policy.Meta)
-		if err := os.WriteFile(filepath.Join(workspace, PoliciesDir, policy.PolicyId, "meta.json"), js, 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(workspace, PoliciesDir, policy.PolicyId, policy.Meta.Name+".json"), js, 0644); err != nil { //nolint:gosec
 			return err
 		}
-		if err := os.WriteFile(filepath.Join(workspace, PoliciesDir, policy.PolicyId, "policy.rego"), []byte(policy.Rego), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(workspace, PoliciesDir, policy.PolicyId, policy.Meta.Name+".rego"), []byte(policy.Rego), 0644); err != nil { //nolint:gosec
 			return err
 		}
 	}
@@ -385,10 +387,25 @@ func (t *Task) genStepScript() (string, error) {
 		command, err = t.collectCommand()
 	case common.TaskStepScanInit:
 		command, err = t.stepScanInit()
-	case common.TaskStepRegoParse:
-		command, err = t.stepTfParse()
 	case common.TaskStepOpaScan:
-		command, err = t.stepTfScan()
+		// 兼容 0.3 版本 pipeline
+		// 为了保证 step envScan 步骤的正确运行，会自动插入 plan 步骤
+		// 该行为会导致执行两次 plan，导致执行速度变慢，作为一个兼容性的已知问题
+		var planCommand, scanCommand string
+		if planCommand, err = t.stepPlan(); err == nil {
+			if scanCommand, err = t.stepEnvScan(); err == nil {
+				// 多个流程间执行需要退回到工作目录
+				command = fmt.Sprintf("%s\ncd %s\n%s", planCommand, ContainerWorkspace, scanCommand)
+			}
+		}
+	case common.TaskStepEnvParse:
+		command, err = t.stepEnvParse()
+	case common.TaskStepEnvScan:
+		command, err = t.stepEnvScan()
+	case common.TaskStepTplParse:
+		command, err = t.stepTplParse()
+	case common.TaskStepTplScan:
+		command, err = t.stepTplScan()
 	default:
 		return "", fmt.Errorf("unknown step type '%s'", t.req.StepType)
 	}
@@ -513,7 +530,7 @@ cd 'code/{{.Req.Env.Workdir}}' && ansible-playbook \
 --extra @{{.Req.Env.PlayVarsFile}} \
 {{ end -}}
 {{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }} \
-{{.Req.Env.Playbook}} 
+{{.Req.Env.Playbook}}
 `))
 
 func (t *Task) stepPlay() (command string, err error) {
@@ -526,7 +543,7 @@ func (t *Task) stepPlay() (command string, err error) {
 }
 
 var cmdCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-(test -d 'code/{{.Req.Env.Workdir}}' && cd 'code/{{.Req.Env.Workdir}}')
+test -d 'code/{{.Req.Env.Workdir}}' && cd 'code/{{.Req.Env.Workdir}}'
 {{ range $index, $command := .Commands -}}
 {{$command}}
 {{ end -}}
@@ -559,40 +576,38 @@ func (t *Task) collectCommand() (string, error) {
 	})
 }
 
-var parseCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+var parseTplCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 mkdir -p {{.PoliciesDir}} && \
 mkdir -p ~/.terrascan/pkg/policies/opa/rego/aws && \
-terrascan scan --config-only -l debug -o json --iac-type terraform > {{.TFScanJsonFilePath}}
+terrascan scan --config-only -l debug -o json --iac-type terraform > {{.ScanInputFile}}
 `))
 
-func (t *Task) stepTfParse() (command string, err error) {
-	return t.executeTpl(parseCommandTpl, map[string]interface{}{
-		"Req":                 t.req,
-		"IacPlayVars":         t.up2Workspace(CloudIacPlayVars),
-		"TFScanJsonFilePath":  t.up2Workspace(TerrascanJsonFile),
-		"PoliciesDir":         t.up2Workspace(PoliciesDir),
-		"TerrascanResultFile": t.up2Workspace(TerrascanResultFile),
+func (t *Task) stepTplParse() (command string, err error) {
+	return t.executeTpl(parseTplCommandTpl, map[string]interface{}{
+		"Req":           t.req,
+		"ScanInputFile": t.up2Workspace(ScanInputFile),
+		"PoliciesDir":   t.up2Workspace(PoliciesDir),
 	})
 }
 
-var scanCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+var scanTplCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 mkdir -p {{.PoliciesDir}} && \
 mkdir -p ~/.terrascan/pkg/policies/opa/rego/aws && \
-echo scanning policies && \
-terrascan scan -p {{.PoliciesDir}} --show-passed --iac-type terraform -l debug -o json > {{.TerrascanResultFile}}
+terrascan scan --config-only -o json --iac-type terraform > {{.ScanInputFile}} 2>/dev/null && \
+/usr/yunji/cloudiac/iac-tool scan --internal -p {{.PoliciesDir}} -i {{.ScanInputFile}} -o {{.ScanResultFile}}
 `))
 
-func (t *Task) stepTfScan() (command string, err error) {
+func (t *Task) stepTplScan() (command string, err error) {
 	if err = t.genPolicyFiles(t.workspace); err != nil {
 		return "", errors.Wrap(err, "generate policy files")
 	}
-	return t.executeTpl(scanCommandTpl, map[string]interface{}{
-		"Req":                 t.req,
-		"IacPlayVars":         t.up2Workspace(CloudIacPlayVars),
-		"PoliciesDir":         t.up2Workspace(PoliciesDir),
-		"TerrascanResultFile": t.up2Workspace(TerrascanResultFile),
+	return t.executeTpl(scanTplCommandTpl, map[string]interface{}{
+		"Req":            t.req,
+		"PoliciesDir":    t.up2Workspace(PoliciesDir),
+		"ScanResultFile": t.up2Workspace(ScanResultFile),
+		"ScanInputFile":  t.up2Workspace(ScanInputFile),
 	})
 }
 
@@ -609,5 +624,44 @@ func (t *Task) stepScanInit() (command string, err error) {
 		"Req":             t.req,
 		"PluginCachePath": ContainerPluginCachePath,
 		"IacTfFile":       t.up2Workspace(CloudIacTfFile),
+	})
+}
+
+var envParseCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+cd 'code/{{.Req.Env.Workdir}}' && \
+/usr/yunji/cloudiac/iac-tool scan --parse-plan --plan {{.TerraformPlanFile}} > {{.ScanInputFile}}
+`))
+
+func (t *Task) stepEnvParse() (command string, err error) {
+	return t.executeTpl(envParseCommandTpl, map[string]interface{}{
+		"Req":               t.req,
+		"TerraformPlanFile": t.up2Workspace(TFPlanJsonFile),
+		"ScanInputFile":     t.up2Workspace(ScanInputFile),
+		"PoliciesDir":       t.up2Workspace(PoliciesDir),
+	})
+}
+
+var envScanCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+#!/bin/sh
+cd 'code/{{.Req.Env.Workdir}}' && \
+mkdir -p {{.PoliciesDir}} && \
+mkdir -p ~/.terrascan/pkg/policies/opa/rego/aws && \
+terrascan scan --config-only -o json --iac-type terraform > {{.ScanInputMapFile}} 2>/dev/null && \
+/usr/yunji/cloudiac/iac-tool scan --parse-plan --plan {{.TerraformPlanFile}} > {{.ScanInputFile}} && \
+/usr/yunji/cloudiac/iac-tool scan --internal -p {{.PoliciesDir}} -i {{.ScanInputFile}} -m {{.ScanInputMapFile}} -o {{.ScanResultFile}}
+`))
+
+func (t *Task) stepEnvScan() (command string, err error) {
+	if err = t.genPolicyFiles(t.workspace); err != nil {
+		return "", errors.Wrap(err, "generate policy files")
+	}
+	return t.executeTpl(envScanCommandTpl, map[string]interface{}{
+		"Req":               t.req,
+		"TerraformPlanFile": t.up2Workspace(TFPlanJsonFile),
+		"IacPlayVars":       t.up2Workspace(CloudIacPlayVars),
+		"PoliciesDir":       t.up2Workspace(PoliciesDir),
+		"ScanResultFile":    t.up2Workspace(ScanResultFile),
+		"ScanInputFile":     t.up2Workspace(ScanInputFile),
+		"ScanInputMapFile":  t.up2Workspace(ScanInputMapFile),
 	})
 }

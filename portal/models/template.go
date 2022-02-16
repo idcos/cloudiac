@@ -1,8 +1,12 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package models
 
-import "cloudiac/portal/libs/db"
+import (
+	"cloudiac/portal/libs/db"
+
+	"github.com/lib/pq"
+)
 
 type Template struct {
 	SoftDeleteModel
@@ -37,6 +41,13 @@ type Template struct {
 	LastScanTaskId Id `json:"lastScanTaskId" gorm:"size:32"` // 最后一次策略扫描任务 id
 
 	TfVersion string `json:"tfVersion" gorm:"default:''"` // 模版使用的terraform版本号
+
+	// 触发器设置
+	Triggers     pq.StringArray `json:"tplTriggers" gorm:"type:text" swaggertype:"array,string"` // 触发器。commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
+	PolicyEnable bool           `json:"policyEnable" gorm:"default:false"`                       // 是否开启合规检测
+
+	KeyId Id `json:"keyId" gorm:"size:32"` // 部署密钥ID
+
 }
 
 func (Template) TableName() string {

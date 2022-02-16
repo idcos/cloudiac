@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package common
 
@@ -9,7 +9,13 @@ var (
 		TaskJobPlan,
 		TaskJobApply,
 		TaskJobDestroy,
+		// 0.3
 		TaskJobScan,
 		TaskJobParse,
+		// 0.4
+		TaskJobEnvScan,
+		TaskJobEnvParse,
+		TaskJobTplScan,
+		TaskJobTplParse,
 	}
 )

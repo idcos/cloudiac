@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package db
 
@@ -128,14 +128,10 @@ func (s *Session) Commit() error {
 }
 
 func (s *Session) Model(m interface{}) *Session {
-	switch v := m.(type) {
-	case string:
-		return s.Table(v)
-	default:
-		return ToSess(s.db.Model(m))
-	}
+	return ToSess(s.db.Model(m))
 }
 
+// 注意: Table() 与 Model() 不同的是，使用 Table() 时不会自动处理 delete_at_t 字段
 func (s *Session) Table(name string, args ...interface{}) *Session {
 	return ToSess(s.db.Table(name, args...))
 }
@@ -150,6 +146,7 @@ func (s *Session) Expr() interface{} {
 }
 
 func (s *Session) Raw(sql string, values ...interface{}) *Session {
+	//nolint
 	// FIXME: gorm driver bugs
 	// gorm@v1.21.12~14: statement.go +204
 	//   subdb.Statement.Vars = stmt.Vars
@@ -455,7 +452,7 @@ func openDB(dsn string) error {
 		Logger: gormLogger.New(logs.Get(), gormLogger.Config{
 			SlowThreshold:             slowThreshold,
 			Colorful:                  false,
-			IgnoreRecordNotFoundError: false,
+			IgnoreRecordNotFoundError: true,
 			LogLevel:                  logLevel,
 		}),
 	})

@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package services
 
 import (
@@ -42,7 +44,7 @@ func UpdateVariableGroup(tx *db.Session, id models.Id, attrs models.Attrs) e.Err
 			return e.New(e.VariableGroupNotExist)
 		}
 		return e.New(e.DBError, fmt.Errorf("update variable group error: %v", err))
-	}
+	} //nolint
 	return nil
 }
 
@@ -84,7 +86,7 @@ func SearchVariableGroupRel(dbSess *db.Session, objectAttr map[string]models.Id,
 		scopes = consts.VariableGroupOrg
 	}
 	// {objectType:{objectId:xxx}}
-	rels := make(map[models.Id]VarGroupRel, 0)
+	rels := make(map[models.Id]VarGroupRel)
 
 	coverRels := make(map[models.Id][]VarGroupRel)
 

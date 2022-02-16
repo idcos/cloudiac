@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package main
 
@@ -114,6 +114,10 @@ func appAutoInit(tx *db.Session) (err error) {
 
 	if err := initVcs(tx); err != nil {
 		return errors.Wrap(err, "init vcs")
+	}
+
+	if err := initRegistryVcs(tx); err != nil {
+		return errors.Wrap(err, "init registry vcs")
 	}
 
 	if err := initTemplates(tx); err != nil {
@@ -242,15 +246,54 @@ func initSystemConfig(tx *db.Session) (err error) {
 func initVcs(tx *db.Session) error {
 	vcs := models.Vcs{
 		OrgId:    "",
-		Name:     "默认仓库",
+		Name:     consts.DefaultVcsName,
 		VcsType:  consts.GitTypeLocal,
 		Status:   "enable",
 		Address:  consts.LocalGitReposPath,
 		VcsToken: "",
 	}
 
+	dbVcs, err := services.GetDefaultVcs(tx)
+	if err != nil && !e.IsRecordNotFound(err) {
+		return err
+	}
+
+	if dbVcs == nil || dbVcs.Id == "" { // 未创建
+		_, err = services.CreateVcs(tx, vcs)
+		if err != nil {
+			return err
+		}
+	} else { // 己存在，进行更新
+		vcs.Status = "" // 不更新状态
+		_, err = tx.Model(&vcs).Where("id = ?", dbVcs.Id).Update(vcs)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// initRegistryVcs 初始化 registry vcs
+func initRegistryVcs(tx *db.Session) error {
+	// 获取 registry vcs 服务的 http addr 配置
+	var cfg models.SystemCfg
+	var addr = configs.Get().RegistryAddr
+	err := tx.Where("name = ?", models.SysCfgNamRegistryAddr).First(&cfg)
+	if err == nil {
+		addr = cfg.Value
+	}
+
+	vcs := models.Vcs{
+		OrgId:    "",
+		Name:     consts.RegistryVcsName,
+		VcsType:  consts.GitTypeRegistry,
+		Status:   "enable",
+		Address:  addr,
+		VcsToken: "",
+	}
+
 	dbVcs := models.Vcs{}
-	err := services.QueryVcs("", "", "", true, tx).First(&dbVcs)
+	err = services.QueryVcsSample(tx.Where(&models.Vcs{Name: consts.RegistryVcsName})).Find(&dbVcs)
 	if err != nil && !e.IsRecordNotFound(err) {
 		return err
 	}

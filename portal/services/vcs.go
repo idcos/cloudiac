@@ -1,8 +1,9 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"gorm.io/gorm"
 )
 
 func CreateVcs(tx *db.Session, vcs models.Vcs) (*models.Vcs, e.Error) {
@@ -29,14 +31,14 @@ func UpdateVcs(tx *db.Session, id models.Id, attrs models.Attrs) (vcs *models.Vc
 	vcs = &models.Vcs{}
 	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.Vcs{}, attrs); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("update vcs error: %v", err))
-	}
+	} //nolint
 	if err := tx.Where("id = ?", id).First(vcs); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("query vcs error: %v", err))
 	}
 	return
 }
 
-func QueryVcs(orgId models.Id, status, q string, isShowdefaultVcs bool, query *db.Session) *db.Session {
+func QueryVcs(orgId models.Id, status, q string, isShowdefaultVcs, isShowRegistryVcs bool, query *db.Session) *db.Session {
 	query = query.Model(&models.Vcs{}).Where("org_id = ? or org_id = ''", orgId)
 	if status != "" {
 		query = query.Where("status = ?", status)
@@ -46,7 +48,10 @@ func QueryVcs(orgId models.Id, status, q string, isShowdefaultVcs bool, query *d
 		query = query.Where("name LIKE ?", qs)
 	}
 	if !isShowdefaultVcs {
-		query = query.Where("vcs_type != 'local'")
+		query = query.Where("vcs_type != ?", consts.GitTypeLocal)
+	}
+	if !isShowRegistryVcs {
+		query = query.Where("vcs_type != ?", consts.GitTypeRegistry)
 	}
 	return query.LazySelectAppend("id, org_id, project_id, name, status, vcs_type, address")
 }
@@ -175,7 +180,19 @@ func ParseTfVariables(filename string, content []byte) ([]TemplateVariable, e.Er
 
 func GetDefaultVcs(session *db.Session) (*models.Vcs, error) {
 	vcs := &models.Vcs{}
-	err := session.Where("org_id = ''").First(vcs)
+	err := session.Where("org_id = '' AND name = ?", consts.DefaultVcsName).Find(vcs)
+	if vcs.Id == "" {
+		return vcs, gorm.ErrRecordNotFound
+	}
+	return vcs, err
+}
+
+func GetRegistryVcs(session *db.Session) (*models.Vcs, error) {
+	vcs := &models.Vcs{}
+	err := session.Where("org_id = '' AND name = ?", consts.RegistryVcsName).Find(vcs)
+	if vcs.Id == "" {
+		return vcs, gorm.ErrRecordNotFound
+	}
 	return vcs, err
 }
 

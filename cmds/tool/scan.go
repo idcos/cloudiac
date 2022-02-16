@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package main
 
 import (
@@ -8,10 +10,16 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/runner"
 	"cloudiac/utils"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/pkg/errors"
+
+	"github.com/itchyny/gojq"
 )
 
 // iac-tool scan 执行策略扫描
@@ -33,6 +41,8 @@ import (
 //    iac-tool scan -t tpl-xxxxxx
 // 4. 调试 rego 脚本
 //    iac-tool scan --debug xxx.tf xxx.rego
+// 5. 内置引擎扫描
+//    iac-tool scan --internal -p policies -f tfscan.json -o tfscan.json
 
 type ScanCmd struct {
 	Debug          bool   `long:"debug" description:"run raw rego script \nuse \"--debug -d code xxx.rego\" or \"--debug xxx.tf xxx.rego\"" required:"false"`
@@ -44,8 +54,14 @@ type ScanCmd struct {
 	SaveResultToDB bool   `long:"save-result" short:"s" description:"save scan result to database, default:false" required:"false"`
 	//PolicyId       string `long:"policy-id" short:"i" description:"scan with policy id, multiple id using \"id1,id2,...\"" required:"false"`
 	//PolicyGroupId  string `long:"policy-group-id" short:"g" description:"scan with policy group id, multiple id using \"id1,id2,...\"" required:"false"`
-	RemoteScan bool `long:"remote-scan" short:"r" description:"scan environment/template remotely" required:"false"`
-	Verbose    bool `long:"verbose" short:"v" description:"write verbose scan log message" required:"false"`
+	RemoteScan    bool   `long:"remote-scan" short:"r" description:"scan environment/template remotely" required:"false"`
+	Verbose       bool   `long:"verbose" short:"v" description:"write verbose scan log message" required:"false"`
+	ParsePlan     bool   `long:"parse-plan" description:"parse tfplan to input.json" required:"false"`
+	PlanFile      string `long:"plan" description:"the tfplan json file path" required:"false"`
+	JsonFile      string `long:"json" short:"o" description:"the json file path to output, default: output to stdout" required:"false"`
+	Internal      bool   `long:"internal" description:"use internal scan engine to execute scan" required:"false"`
+	InputFile     string `long:"input" short:"i" description:"the input json file path" required:"false"`
+	SourceMapFile string `long:"map" short:"m" description:"the source map json file path" required:"false"`
 }
 
 func (*ScanCmd) Usage() string {
@@ -63,8 +79,10 @@ func (c *ScanCmd) hasDB() bool {
 func (c *ScanCmd) Execute(args []string) error {
 
 	if c.Debug {
-		filePath := "."
-		regoFile := ""
+		var (
+			filePath string
+			regoFile string
+		)
 		if c.CodeDir != "" {
 			// iac-tool scan --debug -d code xxx.rego
 			filePath = c.CodeDir
@@ -82,6 +100,9 @@ func (c *ScanCmd) Execute(args []string) error {
 		}
 		return c.RunDebug(filePath, regoFile)
 	}
+	if c.ParsePlan {
+		return ParseTfplan(c.PlanFile, c.JsonFile)
+	}
 
 	if c.hasDB() {
 		configs.Init(opt.Config)
@@ -95,29 +116,34 @@ func (c *ScanCmd) Execute(args []string) error {
 	)
 
 	if c.EnvId != "" {
-		query := db.Get()
-		scanner, er = policy.NewScannerFromEnv(query, c.EnvId)
-		if er != nil {
-			return er
-		}
+		return fmt.Errorf("not implement")
+		//query := db.Get()
+		//scanner, er = NewScannerFromEnv(query, c.EnvId)
+		//if er != nil {
+		//	return er
+		//}
 	} else if c.TplId != "" {
-		query := db.Get()
-		scanner, er = policy.NewScannerFromTemplate(query, c.TplId)
-		if er != nil {
-			return er
-		}
+		return fmt.Errorf("not implement")
+		//query := db.Get()
+		//scanner, er = NewScannerFromTemplate(query, c.TplId)
+		//if er != nil {
+		//	return er
+		//}
 	} else {
 		// 执行本地扫描
 		if c.CodeDir == "" {
 			c.CodeDir = "code"
 		}
+		if !utils.FileExist(c.CodeDir) && !c.Internal {
+			return fmt.Errorf("missing code dir")
+		}
 		if c.PolicyDir == "" {
 			c.PolicyDir = "policies"
 		}
-		if !utils.FileExist(c.CodeDir) || !utils.FileExist(c.PolicyDir) {
-			return fmt.Errorf("missing code or policy dir")
+		if !utils.FileExist(c.PolicyDir) {
+			return fmt.Errorf("missing policy dir")
 		}
-		scanner, er = policy.NewScannerFromLocalDir(c.CodeDir, c.PolicyDir)
+		scanner, er = policy.NewScannerFromLocalDir(c.CodeDir, c.PolicyDir, c.InputFile, c.SourceMapFile)
 		if er != nil {
 			return er
 		}
@@ -137,18 +163,31 @@ func (c *ScanCmd) Execute(args []string) error {
 	if c.hasDB() {
 		scanner.Db = db.Get()
 	}
+	if c.Internal {
+		scanner.Internal = true
+	}
+	if c.JsonFile != "" {
+		scanner.ResultFile = c.JsonFile
+	}
+	if c.SourceMapFile != "" {
+		scanner.MapFile = c.SourceMapFile
+	}
 
 	err := scanner.Run()
 	if err != nil {
-		return err
+		if errors.Is(err, policy.ErrScanExitViolated) {
+			os.Exit(3)
+		} else {
+			os.Exit(1)
+		}
 	}
 
 	return nil
 }
 
 func (c *ScanCmd) Parse(filePath string) error {
-	cmdString := utils.SprintTemplate("terrascan scan --parse-only -d . -o json > {{.TerrascanResultFile}}", map[string]interface{}{
-		"TFScanJsonFilePath": filepath.Join("./", runner.TerrascanJsonFile),
+	cmdString := utils.SprintTemplate("terrascan scan --parse-only -d . -o json > {{.ScanResultFile}}", map[string]interface{}{
+		"TFScanJsonFilePath": filepath.Join("./", runner.ScanInputFile),
 	})
 	result, err := RunCmd(cmdString)
 	if err != nil {
@@ -159,8 +198,8 @@ func (c *ScanCmd) Parse(filePath string) error {
 }
 
 func (c *ScanCmd) Scan(filePath string, regoDir string) error {
-	cmdString := utils.SprintTemplate("terrascan scan -d . -o json > {{.TerrascanResultFile}}", map[string]interface{}{
-		"TFScanJsonFilePath": filepath.Join("./", runner.TerrascanResultFile),
+	cmdString := utils.SprintTemplate("terrascan scan -d . -o json > {{.ScanResultFile}}", map[string]interface{}{
+		"TFScanJsonFilePath": filepath.Join("./", runner.ScanResultFile),
 	})
 	result, err := RunCmd(cmdString)
 	if err != nil {
@@ -192,7 +231,7 @@ opa eval -f pretty --data {{.RegoFile}} --input {{.JsonFile}} data > {{.RegoResu
 		"PolicyDir":      randomDir,
 		"ConfigFile":     configFile,
 		"IsDir":          isDir,
-		"JsonFile":       runner.TerrascanJsonFile,
+		"JsonFile":       runner.ScanInputFile,
 		"RegoFile":       regoFile,
 		"RegoResultFile": runner.RegoResultFile,
 	})
@@ -215,3 +254,159 @@ func RunCmd(cmdString string) (string, error) {
 	}
 	return out.String(), nil
 }
+
+type ParseCmd struct {
+}
+
+func (*ParseCmd) Usage() string {
+	return ""
+}
+
+func (c *ParseCmd) Execute(args []string) error {
+	// iac-tool parse xxx.rego xxx.json
+	if len(args) < 2 {
+		return fmt.Errorf("missing iac file or rego script")
+	}
+	regoFile := args[0]
+	inputPath := args[1]
+	res, err := policy.RegoParse(regoFile, inputPath)
+	fmt.Printf("Execute rego parse return res %s, err %+v", res, err)
+	return err
+}
+
+var (
+	changesFilter = `[.resource_changes | .. | select(.type? != null and .address? != null and .mode? == "managed") | {id: .address?, type: .type?, name: .name?, config: (.change.after? + .change.after_unknown?), source: "", line: 0}] | group_by(.type) | map({key:(.[0].type),value:[ .[] ]}) | from_entries`
+)
+
+func ParseTfplan(planJsonFile string, planOutputFile string) error {
+	if planJsonFile == "" {
+		planJsonFile = "tfplan.json"
+	}
+
+	tfjson, err := ioutil.ReadFile(planJsonFile)
+	if err != nil {
+		return err
+	}
+	tfplan := make(map[string]interface{})
+	err = json.Unmarshal(tfjson, &tfplan)
+	if err != nil {
+		return err
+	}
+	query, err := gojq.Parse(changesFilter)
+	if err != nil {
+		return err
+	}
+	var output []byte
+	iter := query.Run(tfplan)
+	for {
+		v, ok := iter.Next()
+		if !ok {
+			break
+		}
+		if err, ok := v.(error); ok {
+			return err
+		}
+
+		filtered, err := json.MarshalIndent(v, "", "  ")
+		if err != nil {
+			return err
+		}
+		output = append(output, filtered...)
+	}
+
+	if planOutputFile == "" {
+		fmt.Printf("%s\n", output)
+	} else {
+		err = ioutil.WriteFile(planOutputFile, output, 0644)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+//
+//func NewScannerFromEnv(query *db.Session, envId string) (*policy.Scanner, error) {
+//	// 获取 git 仓库地址
+//	env, err := services.GetEnvById(query, models.Id(envId))
+//	if err != nil {
+//		return nil, err
+//	}
+//	tpl, err := services.GetTemplateById(query, env.TplId)
+//	if err != nil {
+//		return nil, err
+//	}
+//	repoAddr, commitId, err := services.GetTaskRepoAddrAndCommitId(query, tpl, env.Revision)
+//
+//	if err != nil {
+//		return nil, err
+//	}
+//	res := policy.Resource{
+//		ResourceType: "remote",
+//		RepoAddr:     repoAddr,
+//		Revision:     commitId,
+//		SubDir:       tpl.Workdir,
+//	}
+//
+//	// 获取 环境 关联 策略组 和 策略列表
+//	policies, err := services.GetPoliciesByEnvId(query, env.Id)
+//	if err != nil {
+//		return nil, err
+//	}
+//	if len(policies) == 0 {
+//		return nil, fmt.Errorf("no valid policy found")
+//	}
+//
+//	scanner, er := policy.NewScanner([]policy.Resource{res})
+//	if er != nil {
+//		return nil, er
+//	}
+//
+//	if policies, err := services.GetScanPolicies(query, policies); err != nil {
+//		return nil, err
+//	} else {
+//		scanner.Policies = policies
+//	}
+//
+//	return scanner, nil
+//}
+//
+//func NewScannerFromTemplate(query *db.Session, tplId string) (*policy.Scanner, error) {
+//	// 获取 git 仓库地址
+//	tpl, err := services.GetTemplateById(query, models.Id(tplId))
+//	if err != nil {
+//		return nil, err
+//	}
+//	repoAddr, commitId, err := services.GetTaskRepoAddrAndCommitId(query, tpl, tpl.RepoRevision)
+//	if err != nil {
+//		return nil, err
+//	}
+//	res := policy.Resource{
+//		ResourceType: "remote",
+//		RepoAddr:     repoAddr,
+//		Revision:     commitId,
+//		SubDir:       tpl.Workdir,
+//	}
+//
+//	// 获取 模板 关联 策略组 和 策略列表
+//	policies, err := services.GetPoliciesByTemplateId(query, tpl.Id)
+//	if err != nil {
+//		return nil, err
+//	}
+//	if len(policies) == 0 {
+//		return nil, fmt.Errorf("no valid policy found")
+//	}
+//	scanner, er := policy.NewScanner([]policy.Resource{res})
+//	if er != nil {
+//		return nil, er
+//	}
+//
+//	if policies, err := services.GetScanPolicies(query, policies); err != nil {
+//		return nil, err
+//	} else {
+//		scanner.Policies = policies
+//	}
+//
+//	return scanner, nil
+//}

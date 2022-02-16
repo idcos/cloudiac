@@ -5,6 +5,7 @@ package task_manager
 import (
 	"cloudiac/common"
 	"cloudiac/configs"
+	"cloudiac/policy"
 	"cloudiac/portal/apps"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/libs/db"
@@ -178,13 +179,13 @@ func (m *TaskManager) beginCronDriftTask() {
 			continue
 		}
 		// 先查询这个环境有没有排队中的偏移检测任务了, 有就不创建了
-		existCronPengdingTask, err := services.ListPendingCronTask(m.db, env.Id)
+		existCronPendingTask, err := services.ListPendingCronTask(m.db, env.Id)
 		if err != nil {
 			logger.Errorf("create cronDriftTask failed, error: %v", err)
 			continue
 		}
 		// 如果查询出来有排队或执行中的漂移检测任务，则本次跳过
-		if existCronPengdingTask {
+		if existCronPendingTask {
 			continue
 		}
 		// 这里每次都去解析env表保存的最新的cron 表达式
@@ -440,11 +441,9 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 
 	if task.IsDriftTask {
 		if env, err := services.GetEnvById(m.db, task.EnvId); err != nil {
-			if err != nil {
-				logger.Errorf("get task environment %s: %v", task.EnvId, err)
-				taskStartFailed(errors.New("get task environment failed"))
-				return
-			}
+			logger.Errorf("get task environment %s: %v", task.EnvId, err)
+			taskStartFailed(errors.New("get task environment failed"))
+			return
 		} else if env.Status != models.EnvStatusActive {
 			startErr = errors.New("environment is not active")
 			_ = changeTaskStatus(models.TaskFailed, startErr.Error(), true)
@@ -465,6 +464,14 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 			Update(&models.Env{LastTaskId: task.Id}); er != nil {
 			logger.Errorf("update env lastTaskId: %v", er)
 			return
+		}
+		scanTask, _ := services.GetMirrorScanTask(m.db, task.Id)
+		if scanTask != nil {
+			if _, er := m.db.Model(&models.Env{}).Where("id = ?", task.EnvId).
+				Update(&models.Env{LastScanTaskId: task.Id}); er != nil {
+				logger.Errorf("update env lastTaskId: %v", er)
+				return
+			}
 		}
 	}
 
@@ -509,12 +516,16 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		}
 
 		if runErr != nil {
-			if step.Type == common.TaskStepOpaScan && !task.StopOnViolation {
+			logger.Infof("run task step err: %v", runErr)
+			if runErr == ErrTaskStepRejected {
+				break
+			}
+			if (step.Type == common.TaskStepEnvScan || step.Type == common.TaskStepOpaScan) &&
+				!task.StopOnViolation {
 				// 合规任务失败不影响环境部署流程
 				logger.Warnf("run scan task step: %v", runErr)
 				continue
 			}
-			logger.Infof("run task step: %v", runErr)
 			if err := services.UpdateTaskStepStatus(m.db, step.Id, common.TaskStepFailed, runErr.Error()); err != nil {
 				logger.Panicf("update task step status error: %v", err)
 			}
@@ -533,7 +544,7 @@ func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) 
 	dbSess := m.db
 	processScanResult := func() error {
 		var (
-			tsResult services.TsResult
+			tsResult policy.TsResult
 			scanStep *models.TaskStep
 			scanTask *models.ScanTask
 			err      error
@@ -553,11 +564,8 @@ func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) 
 
 		// 处理扫描结果
 		if scanTask.PolicyStatus == common.PolicyStatusPassed || scanTask.PolicyStatus == common.PolicyStatusViolated {
-			if er := services.InitScanResult(dbSess, scanTask); er != nil {
-				return er
-			}
 			if bs, er := readIfExist(task.TfResultJsonPath()); er == nil && len(bs) > 0 {
-				if tfResultJson, er := services.UnmarshalTfResultJson(bs); er == nil {
+				if tfResultJson, er := policy.UnmarshalTfResultJson(bs); er == nil {
 					tsResult = tfResultJson.Results
 				}
 			}
@@ -565,12 +573,18 @@ func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) 
 			if err := services.UpdateScanResult(dbSess, scanTask, tsResult, scanTask.PolicyStatus); err != nil {
 				return fmt.Errorf("save scan result: %v", err)
 			}
+		} else if scanTask.PolicyStatus == common.PolicyStatusFailed {
+			if err := services.CleanScanResult(dbSess, task); err != nil {
+				return fmt.Errorf("clean scan result err: %v", err)
+			}
 		}
 
 		return err
 	}
 
 	switch step.Type {
+	case common.TaskStepEnvScan:
+		fallthrough
 	case common.TaskStepOpaScan:
 		return processScanResult()
 	}
@@ -888,7 +902,7 @@ loop:
 				return err
 			}
 			// 合规检测步骤不通过，不需要重试，跳出循环
-			if step.Type == models.TaskStepOpaScan &&
+			if (step.Type == models.TaskStepEnvScan || step.Type == models.TaskStepOpaScan) &&
 				stepResult.Result.ExitCode == common.TaskStepPolicyViolationExitCode {
 				message := "Scan task step finished with violations found."
 				changeStepStatusAndStepRetryTimes(models.TaskStepFailed, message, step)
@@ -1115,6 +1129,8 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 		logger.Infof("task failed: %s", err)
 		startErr = err
 		_ = changeTaskStatus(models.TaskFailed, err.Error())
+		task.PolicyStatus = common.PolicyStatusFailed
+		_, _ = m.db.Save(task)
 	}
 
 	logger.Infof("run task: %s", task.Id)
@@ -1127,19 +1143,17 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 		}
 	}
 
-	if task.Type != common.TaskTypeParse {
-		if task.EnvId != "" { // 环境扫描
-			if err := services.UpdateEnvModel(m.db, task.EnvId,
-				models.Env{LastScanTaskId: task.Id}); err != nil {
-				logger.Errorf("update env lastScanTaskId: %v", err)
-				return
-			}
-		} else if task.TplId != "" { // 模板扫描
-			if _, err := m.db.Where("id = ?", task.TplId).
-				Update(&models.Template{LastScanTaskId: task.Id}); err != nil {
-				logger.Errorf("update template lastScanTaskId: %v", err)
-				return
-			}
+	if task.Type == common.TaskTypeEnvScan || (task.Type == common.TaskTypeScan && task.EnvId != "") {
+		if err := services.UpdateEnvModel(m.db, task.EnvId,
+			models.Env{LastScanTaskId: task.Id}); err != nil {
+			logger.Errorf("update env lastScanTaskId: %v", err)
+			return
+		}
+	} else if task.Type == common.TaskTypeTplScan || (task.Type == common.TaskTypeScan && task.EnvId == "") { // 模板扫描
+		if _, err := m.db.Where("id = ?", task.TplId).
+			Update(&models.Template{LastScanTaskId: task.Id}); err != nil {
+			logger.Errorf("update template lastScanTaskId: %v", err)
+			return
 		}
 	}
 
@@ -1209,23 +1223,24 @@ func (m *TaskManager) processScanTaskDone(taskId models.Id) {
 
 	processTfResult := func() error {
 		var (
-			tsResult services.TsResult
+			tsResult policy.TsResult
 			bs       []byte
 			err      error
 		)
 
 		if task.PolicyStatus == common.PolicyStatusPassed || task.PolicyStatus == common.PolicyStatusViolated {
-			if er := services.InitScanResult(dbSess, task); er != nil {
-				return er
-			}
 			if bs, err = read(task.TfResultJsonPath()); err == nil && len(bs) > 0 {
-				if tfResultJson, err := services.UnmarshalTfResultJson(bs); err == nil {
+				if tfResultJson, err := policy.UnmarshalTfResultJson(bs); err == nil {
 					tsResult = tfResultJson.Results
 				}
 			}
 
 			if err := services.UpdateScanResult(dbSess, task, tsResult, task.PolicyStatus); err != nil {
 				return fmt.Errorf("save scan result: %v", err)
+			}
+		} else if task.PolicyStatus == common.PolicyStatusFailed {
+			if err := services.CleanScanResult(dbSess, task); err != nil {
+				return fmt.Errorf("clean scan result err: %v", err)
 			}
 		}
 
@@ -1254,7 +1269,7 @@ func (m *TaskManager) processScanTaskDone(taskId models.Id) {
 		logger.Errorf("update task status error: %v", err)
 	}
 
-	if task.Type == common.TaskTypeScan {
+	if task.Type == common.TaskTypeEnvScan || task.Type == common.TaskTypeScan || task.Type == common.TaskTypeTplScan {
 		if err := processTfResult(); err != nil {
 			logger.Errorf("process task scan: %s", err)
 		}
@@ -1273,19 +1288,58 @@ func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.Ta
 		StopOnViolation: true,
 		DockerImage:     task.Flow.Image,
 		ContainerId:     task.ContainerId,
-		//Repos: []runner.Repository{
-		//	{
-		//		RepoAddress:  task.RepoAddr,
-		//		RepoRevision: task.CommitId,
-		//	},
-		//},
+	}
+
+	runnerEnv := runner.TaskEnv{
+		Id:              string(task.EnvId),
+		Workdir:         task.Workdir,
+		TfVarsFile:      task.TfVarsFile,
+		Playbook:        task.Playbook,
+		PlayVarsFile:    task.PlayVarsFile,
+		TfVersion:       task.TfVersion,
+		EnvironmentVars: make(map[string]string),
+		TerraformVars:   make(map[string]string),
+		AnsibleVars:     make(map[string]string),
+	}
+	if runnerEnv.TfVersion == "" {
+		runnerEnv.TfVersion = consts.DefaultTerraformVersion
+	}
+
+	for _, v := range task.Variables {
+		value := v.Value
+		// 旧版本创建的敏感变量保存时不会添加 secret 前缀，这里判断一下，如果敏感变量无前缀则添加
+		if v.Sensitive && !strings.HasPrefix(v.Value, utils.SecretValuePrefix) {
+			value = utils.EncodeSecretVar(v.Value, v.Sensitive)
+		}
+		switch v.Type {
+		case consts.VarTypeEnv:
+			runnerEnv.EnvironmentVars[v.Name] = value
+		case consts.VarTypeTerraform:
+			runnerEnv.TerraformVars[v.Name] = value
+		case consts.VarTypeAnsible:
+			runnerEnv.AnsibleVars[v.Name] = value
+		default:
+			return nil, fmt.Errorf("unknown variable type: %s", v.Type)
+		}
+	}
+	taskReq.Env = runnerEnv
+
+	if task.Type == common.TaskTypeEnvScan || task.Type == common.TaskTypeEnvParse {
+		env, _ := services.GetEnvById(dbSess, task.EnvId)
+		stateStore := runner.StateStore{
+			Backend: "consul",
+			Scheme:  "http",
+			Path:    env.StatePath,
+			Address: "",
+		}
+		taskReq.StateStore = stateStore
 	}
 
 	if err := runTaskReqAddSysEnvs(taskReq); err != nil {
 		return nil, err
 	}
 
-	if step.Type == models.TaskStepOpaScan {
+	if step.Type == models.TaskStepOpaScan || step.Type == models.TaskStepEnvScan || step.Type == models.TaskStepTplScan {
 		taskReq.Policies, err = services.GetTaskPolicies(dbSess, task.Id)
 		if err != nil {
 			return nil, errors.Wrapf(err, "get scan task '%s' policies error: %v", task.Id, err)

@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package utils
 
@@ -34,6 +34,14 @@ func DecryptSecretVar(value string) (string, error) {
 		return AesDecrypt(val)
 	}
 	return val, nil
+}
+
+// 强制解密 value，不管是否带有加密前缀标识
+func DecryptSecretVarForce(value string) (string, error) {
+	// 先移除可能存在的加密前缀
+	val, _ := DecodeSecretVar(value)
+	// aes 解密
+	return AesDecrypt(val)
 }
 
 // 加密字符串，并添加前缀标识

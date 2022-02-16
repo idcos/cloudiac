@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package handler
 
@@ -45,7 +45,7 @@ func TaskStatus(c *ctx.Context) {
 	}
 
 	defer func() {
-		wsConn.Close()
+		_ = wsConn.Close()
 	}()
 
 	if err := doTaskStatus(wsConn, task, peerClosed); err != nil {
@@ -103,12 +103,12 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, closedCh <-c
 				msg.TfPlanJson = planJson
 			}
 
-			if parseJson, err := runner.FetchJson(task.EnvId, task.TaskId, runner.TerrascanJsonFile); err != nil {
+			if parseJson, err := runner.FetchJson(task.EnvId, task.TaskId, runner.ScanInputFile); err != nil {
 				logger.Errorf("fetch terrascan parsed json error: %v", err)
 			} else {
 				msg.TfScanJson = parseJson
 			}
-			if resultJson, err := runner.FetchJson(task.EnvId, task.TaskId, runner.TerrascanResultFile); err != nil {
+			if resultJson, err := runner.FetchJson(task.EnvId, task.TaskId, runner.ScanResultFile); err != nil {
 				logger.Errorf("fetch terrascan scan result json error: %v", err)
 			} else {
 				msg.TfResultJson = resultJson

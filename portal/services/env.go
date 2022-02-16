@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -97,6 +97,8 @@ func QueryEnvDetail(query *db.Session) *db.Session {
 		"    INNER JOIN iac_resource ON iac_resource.id = iac_resource_drift.res_id GROUP BY iac_resource.task_id" +
 		") AS rd ON rd.task_id = iac_env.last_res_task_id").
 		LazySelectAppend("!ISNULL(rd.task_id) AS is_drift")
+	query = query.Joins("left join iac_scan_task on iac_env.last_scan_task_id = iac_scan_task.id").
+		LazySelectAppend("iac_scan_task.policy_status as policy_status")
 
 	return query
 }

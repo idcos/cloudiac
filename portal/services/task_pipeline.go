@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package services
 
 import (
@@ -61,7 +63,7 @@ func GetTplPipeline(sess *db.Session, tplId models.Id, revision, workdir string)
 
 // 从 pipeline 中返回指定 typ 的 task，如果 pipeline 中未定义该类型 task 则返回默认 pipeline 中的值
 func GetTaskFlowWithPipeline(p models.Pipeline, typ string) models.PipelineTask {
-	defaultPipeline := models.MustGetPipelineByVersion(p.Version)
+	defaultPipeline := models.MustGetPipelineByVersion(models.DefaultPipelineVersion)
 
 	flow := defaultPipeline.GetTask(typ)
 	customFlow := p.GetTask(typ)

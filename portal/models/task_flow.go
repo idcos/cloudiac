@@ -12,12 +12,16 @@ import (
 )
 
 type TaskFlows struct {
-	Version string   `json:"version" yaml:"version"`
-	Plan    TaskFlow `json:"plan" yaml:"plan"`
-	Apply   TaskFlow `json:"apply" yaml:"apply"`
-	Destroy TaskFlow `json:"destroy" yaml:"destroy"`
-	Scan    TaskFlow `json:"scan" yaml:"scan"`
-	Parse   TaskFlow `json:"parse" yaml:"parse"`
+	Version  string   `json:"version" yaml:"version"`
+	Plan     TaskFlow `json:"plan" yaml:"plan"`
+	Apply    TaskFlow `json:"apply" yaml:"apply"`
+	Destroy  TaskFlow `json:"destroy" yaml:"destroy"`
+	Scan     TaskFlow `json:"scan" yaml:"scan"`
+	Parse    TaskFlow `json:"parse" yaml:"parse"`
+	EnvScan  TaskFlow `json:"envScan" yaml:"envScan"`
+	EnvParse TaskFlow `json:"parse" yaml:"envParse"`
+	TplScan  TaskFlow `json:"tplScan" yaml:"tplScan"`
+	TplParse TaskFlow `json:"tplParse" yaml:"tplParse"`
 }
 
 type TaskFlow struct {
@@ -38,14 +42,12 @@ plan:
   steps:
     - type: init
     - type: plan
-
 apply:
   steps:
     - type: init
     - type: plan
     - type: apply 
     - type: play
-
 destroy:
   steps:
     - type: init
@@ -61,7 +63,6 @@ plan:
     - type: init
     - type: tfscan
     - type: plan
-
 apply:
   steps:
     - type: init
@@ -69,19 +70,16 @@ apply:
     - type: plan
     - type: apply 
     - type: play
-
 destroy:
   steps:
     - type: init
     - type: plan
       args: ["-destroy"]
     - type: destroy
-
 scan:
   steps:
     - type: scaninit
     - type: tfscan
-
 parse:
   steps:
     - type: scaninit
@@ -104,6 +102,14 @@ func GetTaskFlow(flows *TaskFlows, typ string) (TaskFlow, error) {
 		return flows.Scan, nil
 	case common.TaskTypeParse:
 		return flows.Parse, nil
+	case common.TaskTypeEnvScan:
+		return flows.EnvScan, nil
+	case common.TaskTypeEnvParse:
+		return flows.EnvParse, nil
+	case common.TaskTypeTplScan:
+		return flows.TplScan, nil
+	case common.TaskTypeTplParse:
+		return flows.TplParse, nil
 	default:
 		return TaskFlow{}, fmt.Errorf("unknown task type: %v", typ)
 	}
