@@ -158,21 +158,9 @@ func (l *LocalRepo) getCommit(revision string) (*object.Commit, error) {
 	return l.repo.CommitObject(*hash)
 }
 
-func (l *LocalRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
-	branch := getBranch(l, opt.Ref)
-	commit, err := l.getCommit(branch)
-	if err != nil {
-		return nil, err
-	}
-
-	filesIter, err := commit.Files()
-	if err != nil {
-		return nil, err
-	}
-	defer filesIter.Close()
-
+func getMatchedFiles(filesIter *object.FileIter, opt VcsIfaceOptions) ([]string, error) {
 	results := make([]string, 0)
-	err = filesIter.ForEach(func(file *object.File) error {
+	err := filesIter.ForEach(func(file *object.File) error {
 		if !strings.HasPrefix(file.Name, opt.Path) {
 			return nil
 		}
@@ -190,6 +178,24 @@ func (l *LocalRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
 		}
 		return nil
 	})
+
+	return results, err
+}
+
+func (l *LocalRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
+	branch := getBranch(l, opt.Ref)
+	commit, err := l.getCommit(branch)
+	if err != nil {
+		return nil, err
+	}
+
+	filesIter, err := commit.Files()
+	if err != nil {
+		return nil, err
+	}
+	defer filesIter.Close()
+
+	results, err := getMatchedFiles(filesIter, opt)
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +269,7 @@ func (l *LocalRepo) DeleteWebhook(id int) error {
 	return nil
 }
 
-func (l *LocalRepo) CreatePrComment(prId int,comment string) error {
+func (l *LocalRepo) CreatePrComment(prId int, comment string) error {
 
 	return nil
 }
