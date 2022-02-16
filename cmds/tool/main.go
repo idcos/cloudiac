@@ -1,12 +1,13 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package main
 
 import (
 	"cloudiac/cmds/common"
+	"os"
+
 	"github.com/jessevdk/go-flags"
 	"github.com/sirupsen/logrus"
-	"os"
 )
 
 type Option struct {

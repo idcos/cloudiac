@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package services
 
 import (
@@ -15,9 +17,9 @@ func SearchPolicySuppress(query *db.Session, id, orgId models.Id) *db.Session {
 	q = q.Joins("LEFT JOIN iac_env AS e ON s.target_id = e.id AND s.target_type = 'env'").
 		Joins("LEFT JOIN iac_template AS t ON s.target_id = t.id AND s.target_type = 'template'").
 		Joins("LEFT JOIN iac_policy AS p ON s.policy_id = p.id AND s.target_type = 'policy'").
-		LazySelectAppend(`case 
-when s.target_type = 'env' then e.name 
-when s.target_type = 'template' then t.name 
+		LazySelectAppend(`case
+when s.target_type = 'env' then e.name
+when s.target_type = 'template' then t.name
 when s.target_type = 'policy' then p.name
 end as target_name`).
 		Where("s.policy_id = ?", id).

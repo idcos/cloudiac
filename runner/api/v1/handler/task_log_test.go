@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package handler
 
@@ -27,7 +27,10 @@ func TestExampleFollowFile(t *testing.T) {
 
 	go func() {
 		for {
-			fp.WriteString(time.Now().String() + "\n")
+			_, err := fp.WriteString(time.Now().String() + "\n")
+			if err != nil {
+				logger.Panic(err)
+			}
 			time.Sleep(time.Millisecond * 100)
 		}
 	}()

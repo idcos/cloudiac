@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package policy
 
 import (
@@ -9,15 +11,16 @@ import (
 	"cloudiac/utils"
 	"encoding/json"
 	"fmt"
-	"github.com/mitchellh/go-homedir"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -180,7 +183,7 @@ func (s *Scanner) ScanResource(resource Resource) error {
 		cmdline := s.genScanInit(&resource)
 		cmd := exec.Command("sh", "-c", cmdline)
 		output, err := cmd.CombinedOutput()
-		s.Logfp.Write(output)
+		_, _ = s.Logfp.Write(output)
 		if err != nil {
 			return fmt.Errorf("checkout error %v, output %s", err, output)
 		}
@@ -194,7 +197,9 @@ func (s *Scanner) ScanResource(resource Resource) error {
 		}
 	} else {
 		if err := s.RunScan(resource); err != nil {
-			defer s.handleScanError(&task, err)
+			defer func() {
+				_ = s.handleScanError(&task, err)
+			}()
 			code, err := utils.CmdGetCode(err)
 			if err != nil {
 				return err
@@ -205,7 +210,7 @@ func (s *Scanner) ScanResource(resource Resource) error {
 			case 0:
 				task.PolicyStatus = common.PolicyStatusPassed
 			case 1:
-				task.PolicyStatus = common.PolicyStatusFailed
+				task.PolicyStatus = common.PolicyStatusFailed //nolint
 				return err
 			default:
 				task.PolicyStatus = common.PolicyStatusFailed
@@ -226,7 +231,7 @@ func (s *Scanner) ScanResource(resource Resource) error {
 
 	if len(tfResultJson.Results.Violations) > 0 {
 		// 附加源码
-		if tfResultJson, err = PopulateViolateSource(s, resource, &task, tfResultJson); err != nil {
+		if _, err = PopulateViolateSource(s, resource, &task, tfResultJson); err != nil {
 			return err
 		}
 	}
@@ -245,19 +250,20 @@ func (s *Scanner) GetMessage(format string, data interface{}) string {
 }
 
 func (s *Scanner) handleScanError(task *models.ScanTask, err error) error {
-	if s.SaveResult {
+	// if s.SaveResult {
 		// 扫描出错的时候更新所有策略扫描结果为 failed
 		//emptyResult := TsResultJson{}
 		//if err := services.UpdateScanResult(s.Db, task, emptyResult.Results, task.PolicyStatus); err != nil {
 		//	return err
 		//}
-	}
+	// }
 
-	return err
+	// return err
+	return nil
 }
 
 // TODO
-func (s *Scanner) genScanScript(res Resource) string {
+func (s *Scanner) genScanScript(res Resource) string { //nolint
 	cmdlineTemplate := `
 cd {{.CodeDir}} && \
 mkdir -p ~/.terrascan/pkg/policies/opa/rego && \
@@ -365,7 +371,7 @@ func (s *Scanner) RunScan(resource Resource) error {
 
 func (s *Scanner) RunInternalScan(code Resource) error {
 	output := TsResultJson{}
-	output.Results.ScanSummary.ScannedAt = fmt.Sprintf("%s", time.Now().Format(time.RFC3339))
+	output.Results.ScanSummary.ScannedAt = time.Now().Format(time.RFC3339)
 	output.Results.ScanSummary.IacType = "terraform"
 	output.Results.ScanSummary.FileFolder = code.codeDir
 

@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package utils
 
@@ -27,8 +27,7 @@ func httpClient(conntimeout, deadline int) *http.Client {
 				if err != nil {
 					return nil, err
 				}
-				c.SetDeadline(deadline)
-				return c, nil
+				return c, c.SetDeadline(deadline)
 			},
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
@@ -83,7 +82,11 @@ func HttpService(reqUrl, method string, header *http.Header, data interface{}, c
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if resp != nil {
+			_ = resp.Body.Close()
+		}
+	}()
 
 	return ioutil.ReadAll(resp.Body)
 }

@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package models
 
@@ -19,7 +19,7 @@ type TaskFlows struct {
 	Scan     TaskFlow `json:"scan" yaml:"scan"`
 	Parse    TaskFlow `json:"parse" yaml:"parse"`
 	EnvScan  TaskFlow `json:"envScan" yaml:"envScan"`
-	EnvParse TaskFlow `json:"parse" yaml:"envParse"`
+	EnvParse TaskFlow `json:"envParse" yaml:"envParse"`
 	TplScan  TaskFlow `json:"tplScan" yaml:"tplScan"`
 	TplParse TaskFlow `json:"tplParse" yaml:"tplParse"`
 }
@@ -47,7 +47,7 @@ apply:
   steps:
     - type: init
     - type: plan
-    - type: apply 
+    - type: apply
     - type: play
 
 destroy:
@@ -71,7 +71,7 @@ apply:
     - type: init
     - type: tfscan
     - type: plan
-    - type: apply 
+    - type: apply
     - type: play
 
 destroy:

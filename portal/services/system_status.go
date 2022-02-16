@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -16,7 +16,7 @@ import (
 func SystemStatusSearch() ([]api.AgentService, map[string]api.AgentCheck, []string, e.Error) {
 	serviceList := make([]string, 0)
 	IdInfo := make([]api.AgentService, 0)
-	serviceStatus := make(map[string]api.AgentCheck, 0)
+	serviceStatus := make(map[string]api.AgentCheck)
 	conf := configs.Get()
 	config := api.DefaultConfig()
 	config.Address = conf.Consul.Address

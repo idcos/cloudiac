@@ -1,13 +1,14 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package utils
 
 import (
-	"github.com/gorilla/websocket"
 	"net/http"
 	"net/url"
 	"path"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 func WebsocketDail(server string, urlPath string, params url.Values) (*websocket.Conn, *http.Response, error) {
