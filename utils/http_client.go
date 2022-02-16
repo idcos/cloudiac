@@ -27,8 +27,7 @@ func httpClient(conntimeout, deadline int) *http.Client {
 				if err != nil {
 					return nil, err
 				}
-				c.SetDeadline(deadline)
-				return c, nil
+				return c, c.SetDeadline(deadline)
 			},
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,

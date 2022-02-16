@@ -22,7 +22,7 @@ func (j *JSON) Scan(value interface{}) error {
 	}
 	s, ok := value.([]byte)
 	if !ok {
-		errors.New("Invalid Scan Source")
+		return errors.New("Invalid Scan Source")
 	}
 	*j = append((*j)[0:0], s...)
 	return nil
