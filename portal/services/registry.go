@@ -49,7 +49,7 @@ func RegistryGet(path string, data url.Values, result interface{}) (err error) {
 	fullAddr := fmt.Sprintf("%s%s?%s", host, path, data.Encode())
 	logger.Debugf("request %s", fullAddr)
 
-	httpResp, err := http.Get(fullAddr)
+	httpResp, err := http.Get(fullAddr) //nolint:gosec
 	if err != nil {
 		return err
 	}
