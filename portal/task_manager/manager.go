@@ -5,6 +5,7 @@ package task_manager
 import (
 	"cloudiac/common"
 	"cloudiac/configs"
+	"cloudiac/policy"
 	"cloudiac/portal/apps"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/libs/db"
@@ -161,10 +162,6 @@ func (m *TaskManager) start() {
 	}
 }
 
-func loggerCreateCronDriftTaskError(logger logs.Logger, err error) {
-	logger.Errorf("create cronDriftTask failed, error: %v", err)
-}
-
 // 开始所有漂移检测任务
 func (m *TaskManager) beginCronDriftTask() {
 	logger := m.logger
@@ -178,13 +175,13 @@ func (m *TaskManager) beginCronDriftTask() {
 	for _, env := range cronDriftEnvs {
 		task, err := services.GetTaskById(m.db, env.LastTaskId)
 		if err != nil {
-			loggerCreateCronDriftTaskError(logger, err)
+			logger.Errorf("create cronDriftTask failed, error: %v", err)
 			continue
 		}
 		// 先查询这个环境有没有排队中的偏移检测任务了, 有就不创建了
 		existCronPendingTask, err := services.ListPendingCronTask(m.db, env.Id)
 		if err != nil {
-			loggerCreateCronDriftTaskError(logger, err)
+			logger.Errorf("create cronDriftTask failed, error: %v", err)
 			continue
 		}
 		// 如果查询出来有排队或执行中的漂移检测任务，则本次跳过
@@ -194,14 +191,14 @@ func (m *TaskManager) beginCronDriftTask() {
 		// 这里每次都去解析env表保存的最新的cron 表达式
 		envCronTaskType, err := apps.GetCronTaskTypeAndCheckParam(env.CronDriftExpress, env.AutoRepairDrift, env.OpenCronDrift)
 		if err != nil {
-			loggerCreateCronDriftTaskError(logger, err)
+			logger.Errorf("create cronDriftTask failed, error: %v", err)
 			continue
 		}
 		if envCronTaskType != "" {
 			attrs := models.Attrs{}
 			nextTime, err := apps.ParseCronpress(env.CronDriftExpress)
 			if err != nil {
-				loggerCreateCronDriftTaskError(logger, err)
+				logger.Errorf("create cronDriftTask failed, error: %v", err)
 				continue
 			}
 			task.Type = envCronTaskType
@@ -213,14 +210,14 @@ func (m *TaskManager) beginCronDriftTask() {
 			}
 			_, err = services.CloneNewDriftTask(m.db, *task, env)
 			if err != nil {
-				loggerCreateCronDriftTaskError(logger, err)
+				logger.Errorf("create cronDriftTask failed, error: %v", err)
 				continue
 			}
 
 			attrs["nextDriftTaskTime"] = nextTime
 			_, err = services.UpdateEnv(m.db, env.Id, attrs)
 			if err != nil {
-				loggerCreateCronDriftTaskError(logger, err)
+				logger.Errorf("create cronDriftTask failed, error: %v", err)
 				continue
 			}
 		}
@@ -428,7 +425,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 
 	changeTaskStatus := func(status, message string, skipUpdateEnv bool) error {
 		if er := services.ChangeTaskStatus(m.db, task, status, message, skipUpdateEnv); er != nil {
-			logger.Errorf("update task status error: %v", er) //nolint
+			logger.Errorf("update task status error: %v", er)
 			return er
 		}
 		return nil
@@ -444,11 +441,9 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 
 	if task.IsDriftTask {
 		if env, err := services.GetEnvById(m.db, task.EnvId); err != nil {
-			if err != nil {
-				logger.Errorf("get task environment %s: %v", task.EnvId, err)
-				taskStartFailed(errors.New("get task environment failed"))
-				return
-			}
+			logger.Errorf("get task environment %s: %v", task.EnvId, err)
+			taskStartFailed(errors.New("get task environment failed"))
+			return
 		} else if env.Status != models.EnvStatusActive {
 			startErr = errors.New("environment is not active")
 			_ = changeTaskStatus(models.TaskFailed, startErr.Error(), true)
@@ -469,7 +464,15 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 			Update(&models.Env{LastTaskId: task.Id}); er != nil {
 			logger.Errorf("update env lastTaskId: %v", er)
 			return
-		} //nolint
+		}
+		scanTask, _ := services.GetMirrorScanTask(m.db, task.Id)
+		if scanTask != nil {
+			if _, er := m.db.Model(&models.Env{}).Where("id = ?", task.EnvId).
+				Update(&models.Env{LastScanTaskId: task.Id}); er != nil {
+				logger.Errorf("update env lastTaskId: %v", er)
+				return
+			}
+		}
 	}
 
 	runTaskReq, err := buildRunTaskReq(m.db, *task)
@@ -513,13 +516,16 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		}
 
 		if runErr != nil {
+			logger.Infof("run task step err: %v", runErr)
+			if runErr == ErrTaskStepRejected {
+				break
+			}
 			if (step.Type == common.TaskStepEnvScan || step.Type == common.TaskStepOpaScan) &&
 				!task.StopOnViolation {
 				// 合规任务失败不影响环境部署流程
 				logger.Warnf("run scan task step: %v", runErr)
 				continue
 			}
-			logger.Infof("run task step: %v", runErr)
 			if err := services.UpdateTaskStepStatus(m.db, step.Id, common.TaskStepFailed, runErr.Error()); err != nil {
 				logger.Panicf("update task step status error: %v", err)
 			}
@@ -538,7 +544,7 @@ func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) 
 	dbSess := m.db
 	processScanResult := func() error {
 		var (
-			tsResult services.TsResult
+			tsResult policy.TsResult
 			scanStep *models.TaskStep
 			scanTask *models.ScanTask
 			err      error
@@ -558,17 +564,18 @@ func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) 
 
 		// 处理扫描结果
 		if scanTask.PolicyStatus == common.PolicyStatusPassed || scanTask.PolicyStatus == common.PolicyStatusViolated {
-			if er := services.InitScanResult(dbSess, scanTask); er != nil {
-				return er
-			}
 			if bs, er := readIfExist(task.TfResultJsonPath()); er == nil && len(bs) > 0 {
-				if tfResultJson, er := services.UnmarshalTfResultJson(bs); er == nil {
+				if tfResultJson, er := policy.UnmarshalTfResultJson(bs); er == nil {
 					tsResult = tfResultJson.Results
 				}
 			}
 
 			if err := services.UpdateScanResult(dbSess, scanTask, tsResult, scanTask.PolicyStatus); err != nil {
 				return fmt.Errorf("save scan result: %v", err)
+			}
+		} else if scanTask.PolicyStatus == common.PolicyStatusFailed {
+			if err := services.CleanScanResult(dbSess, task); err != nil {
+				return fmt.Errorf("clean scan result err: %v", err)
 			}
 		}
 
@@ -777,7 +784,7 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 		}
 
 		if err := updateTaskStatus(); err != nil {
-			logger.Errorf("update task status error: %v", err) //nolint
+			logger.Errorf("update task status error: %v", err)
 		}
 
 		if task.IsEffectTask() {
@@ -1083,7 +1090,7 @@ func (m *TaskManager) processAutoDestroy() error {
 				_ = tx.Rollback()
 				logger.Errorf("update env error: %v", err)
 				return nil
-			} //nolint
+			}
 
 			if err := tx.Commit(); err != nil {
 				logger.Errorf("commit error: %v", err)
@@ -1112,7 +1119,7 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 
 	changeTaskStatus := func(status, message string) error {
 		if er := services.ChangeScanTaskStatus(m.db, task, status, message); er != nil {
-			logger.Errorf("update task status error: %v", er) //nolint
+			logger.Errorf("update task status error: %v", er)
 			return er
 		}
 		return nil
@@ -1147,7 +1154,7 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 			Update(&models.Template{LastScanTaskId: task.Id}); err != nil {
 			logger.Errorf("update template lastScanTaskId: %v", err)
 			return
-		} //nolint
+		}
 	}
 
 	steps, err := services.GetTaskSteps(m.db, task.Id)
@@ -1216,23 +1223,24 @@ func (m *TaskManager) processScanTaskDone(taskId models.Id) {
 
 	processTfResult := func() error {
 		var (
-			tsResult services.TsResult
+			tsResult policy.TsResult
 			bs       []byte
 			err      error
 		)
 
 		if task.PolicyStatus == common.PolicyStatusPassed || task.PolicyStatus == common.PolicyStatusViolated {
-			if er := services.InitScanResult(dbSess, task); er != nil {
-				return er
-			}
 			if bs, err = read(task.TfResultJsonPath()); err == nil && len(bs) > 0 {
-				if tfResultJson, err := services.UnmarshalTfResultJson(bs); err == nil {
+				if tfResultJson, err := policy.UnmarshalTfResultJson(bs); err == nil {
 					tsResult = tfResultJson.Results
 				}
 			}
 
 			if err := services.UpdateScanResult(dbSess, task, tsResult, task.PolicyStatus); err != nil {
 				return fmt.Errorf("save scan result: %v", err)
+			}
+		} else if task.PolicyStatus == common.PolicyStatusFailed {
+			if err := services.CleanScanResult(dbSess, task); err != nil {
+				return fmt.Errorf("clean scan result err: %v", err)
 			}
 		}
 
@@ -1258,7 +1266,7 @@ func (m *TaskManager) processScanTaskDone(taskId models.Id) {
 	}
 
 	if err := updateTaskStatus(); err != nil {
-		logger.Errorf("update task status error: %v", err) //nolint
+		logger.Errorf("update task status error: %v", err)
 	}
 
 	if task.Type == common.TaskTypeEnvScan || task.Type == common.TaskTypeScan || task.Type == common.TaskTypeTplScan {

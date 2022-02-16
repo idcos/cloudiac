@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package models
 
 import (
@@ -5,7 +7,7 @@ import (
 )
 
 type PolicyGroup struct {
-	TimedModel
+	SoftDeleteModel
 
 	OrgId     Id `json:"orgId" gorm:"size:32;comment:组织ID" example:"org-c3lcrjxczjdywmk0go90"`
 	CreatorId Id `json:"creatorId" gorm:"size:32;not null;comment:创建人ID" example:"u-c3lcrjxczjdywmk0go90"`

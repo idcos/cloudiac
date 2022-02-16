@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package forms
 
@@ -49,9 +49,10 @@ type GetGitRevisionForm struct {
 
 type GetReadmeForm struct {
 	BaseForm
-	Id     models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`
-	RepoId string    `form:"repoId" json:"repoId" binding:"required"`
-	RepoRevision string `json:"repoRevision" form:"repoRevision" binding:"required"`
+	Id           models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`
+	RepoId       string    `form:"repoId" json:"repoId" binding:"required"`
+	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
+	Dir          string    `form:"dir" json:"dir"` // 指定目录名，默认读取根目录
 }
 
 type SearchVcsFileForm struct {

@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package e
 
@@ -600,5 +600,8 @@ var errorMsgs = map[int]map[string]string{
 	},
 	TemplateKeyIdNotSet: {
 		"zh-cn": "SSH 密钥未配置",
+	},
+	PolicyGroupDirError: {
+		"zh-cn": "仓库在当前目录找不到策略文件",
 	},
 }

@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package notificationrc
 
 import (
@@ -197,7 +199,7 @@ func (ns *NotificationService) FindNotificationsAndMessageTpl() ([]models.Notifi
 		tplNotificationTemplate = consts.IacTaskCompleteTpl
 		markdownNotificationTemplate = consts.IacTaskCompleteMarkdown
 	case consts.EvenvtCronDrift:
-		if ns.Task.Type == models.TaskTypeApply && ns.Task.IsDriftTask == true {
+		if ns.Task.Type == models.TaskTypeApply && ns.Task.IsDriftTask {
 			tplNotificationTemplate = consts.IacCronDriftApplyTaskTpl
 			markdownNotificationTemplate = consts.IacCronDriftApplyTaskMarkDown
 		} else {

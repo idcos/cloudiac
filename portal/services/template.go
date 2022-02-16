@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -9,6 +9,8 @@ import (
 	"cloudiac/portal/models"
 	"fmt"
 	"strings"
+
+	"gorm.io/gorm"
 )
 
 func CreateTemplate(tx *db.Session, tpl models.Template) (*models.Template, e.Error) {
@@ -173,4 +175,19 @@ func GetLastScanTaskByScope(sess *db.Session, scope string, id models.Id) (*mode
 	scanTaskIdQuery := sess.Where("id = ?", id).Select("last_scan_task_id")
 	err := sess.Model(&models.ScanTask{}).Where("id = (?)", scanTaskIdQuery.Expr()).First(&task)
 	return &task, err
+}
+
+// GetAvailableTemplateIdsByUserId 获取用户已授权访问的云模板ID列表
+func GetAvailableTemplateIdsByUserId(sess *db.Session, userId, orgId models.Id) ([]*models.Id, e.Error) {
+	projectIds := UserProjectIds(userId, orgId)
+	if len(projectIds) == 0 {
+		return nil, e.AutoNew(gorm.ErrRecordNotFound, e.DBError)
+	}
+	var tplIds []*models.Id
+	if err := sess.Model(models.ProjectTemplate{}).
+		Where("project_id in (?)", projectIds).
+		Pluck("template_id", &tplIds); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return tplIds, nil
 }

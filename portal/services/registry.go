@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package services
 
 import (
@@ -47,7 +49,7 @@ func RegistryGet(path string, data url.Values, result interface{}) (err error) {
 	fullAddr := fmt.Sprintf("%s%s?%s", host, path, data.Encode())
 	logger.Debugf("request %s", fullAddr)
 
-	httpResp, err := http.Get(fullAddr)
+	httpResp, err := http.Get(fullAddr) //nolint:gosec
 	if err != nil {
 		return err
 	}

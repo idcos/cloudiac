@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package vcsrv
 
@@ -12,14 +12,15 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	git "github.com/google/go-github/github"
-	"golang.org/x/oauth2"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	git "github.com/google/go-github/github"
+	"golang.org/x/oauth2"
 )
 
 //newGithubInstance
@@ -108,6 +109,11 @@ func (github *githubVcs) ListRepos(namespace, search string, limit, offset int) 
 	}
 
 	return repoList, int64(r.LastPage), nil
+}
+
+func (github *githubVcs) UserInfo() (UserInfo, error) {
+
+	return UserInfo{}, nil
 }
 
 type githubRepoIface struct {
@@ -332,7 +338,7 @@ func (github *githubRepoIface) DeleteWebhook(id int) error {
 func (github *githubRepoIface) CreatePrComment(prId int, comment string) error {
 	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/pulls/%d/reviews", github.repository.FullName, prId), nil)
 	requestBody := map[string]string{
-		"body": comment,
+		"body":  comment,
 		"event": "COMMENT",
 	}
 	b, er := json.Marshal(requestBody)

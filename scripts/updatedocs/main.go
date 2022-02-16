@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package main
 
 import (
@@ -115,6 +117,34 @@ func (r *FileReplacer) AddRule(rule ReplaceRule) *FileReplacer {
 	return r
 }
 
+func matchInRuleBegin(inRule ReplaceRule, rules []ReplaceRule, trimLine string) ReplaceRule {
+	if inRule != nil {
+		return inRule
+	}
+
+	for _, rule := range rules {
+		// log.Println("rule", rule)
+		if rule.IsBegin(trimLine) {
+			// log.Println("is being", trimLine)
+			return rule
+		}
+	}
+
+	return nil
+}
+
+func getRuleLineBytes(inRule ReplaceRule, line, trimLine string) []byte {
+	if inRule == nil {
+		return []byte(line)
+	}
+
+	if !inRule.IsEnd(trimLine) {
+		return nil
+	}
+
+	return inRule.Replace(line)
+}
+
 func (r *FileReplacer) Run() error {
 	log.Printf("run file replace: %s", r.filepath)
 	content, err := os.ReadFile(r.filepath)
@@ -127,40 +157,20 @@ func (r *FileReplacer) Run() error {
 	for scanner.Scan() {
 		line := scanner.Text() + "\n"
 		trimLine := strings.TrimRightFunc(line, unicode.IsSpace)
-		if r.inRule == nil {
-			for _, rule := range r.rules {
-				// log.Println("rule", rule)
-				if rule.IsBegin(trimLine) {
-					// log.Println("is being", trimLine)
-					r.inRule = rule
-					break
-				}
-			}
+		r.inRule = matchInRuleBegin(r.inRule, r.rules, trimLine)
+
+		lineBytes := getRuleLineBytes(r.inRule, line, trimLine)
+		if lineBytes == nil {
+			continue
 		}
 
-		if r.inRule != nil {
-			// 处于匹配规则中，或者当前行匹配到了 beging
-			// 当前行匹配了 beging，我们也需要同步检查是否匹配了 end
-			if r.inRule.IsEnd(trimLine) {
-				// log.Println("is end", trimLine)
-				if _, err := buffer.Write(r.inRule.Replace(line)); err != nil {
-					return err
-				}
-				r.inRule = nil
-			}
-		} else {
-			// 未找到匹配，直接写入当前行
-			_, err := buffer.WriteString(line)
-			if err != nil {
-				return err
-			}
+		if _, err := buffer.Write(lineBytes); err != nil {
+			return err
 		}
+		r.inRule = nil
 	}
 
-	if err := os.WriteFile(r.filepath, buffer.Bytes(), os.ModeType); err != nil {
-		return err
-	}
-	return nil
+	return os.WriteFile(r.filepath, buffer.Bytes(), os.ModeType)
 }
 
 type changeLog struct {

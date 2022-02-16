@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package models
 
@@ -134,7 +134,8 @@ type Task struct {
 	RetryAble   bool   `json:"retryAble" gorm:"default:false"`
 	Callback    string `json:"callback" gorm:"default:''"`       // 外部请求的回调方式
 	IsDriftTask bool   `json:"isDriftTask" gorm:"default:false"` // 是否是偏移检测任务
-	Source      string `json:"source" gorm:"not null;default:manual;enum('manual','driftPlan','driftApply','webhookPlan', 'webhookApply', 'autoDestroy')"`
+	Source      string `json:"source" gorm:"not null;default:manual;enum('manual','driftPlan','driftApply','webhookPlan', 'webhookApply', 'autoDestroy', 'api')"`
+	SourceSys   string `json:"sourceSys" gorm:"not null;default:''"`
 }
 
 func (Task) TableName() string {

@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package apps
 
@@ -290,6 +290,15 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 			return nil, err
 		}
 	}
+
+	// 来源：手动触发、外部调用
+	taskSource := consts.TaskSourceManual
+	taskSourceSys := ""
+	if form.Source != "" || form.Callback != "" {
+		taskSource = consts.TaskSourceApi
+		taskSourceSys = form.Source
+	}
+
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
@@ -307,7 +316,8 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		},
 		ExtraData: models.JSON(form.ExtraData),
 		Callback:  form.Callback,
-		Source:    consts.TaskSourceManual,
+		Source:    taskSource,
+		SourceSys: taskSourceSys,
 	})
 
 	if err != nil {
@@ -410,7 +420,7 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		env.MergeTaskStatus()
 		// FIXME: 这里会在 for 循环中查询 db，需要优化
 		PopulateLastTask(c.DB(), env)
-		env.PolicyStatus = models.PolicyStatusConversion(env.PolicyStatus,env.PolicyEnable)
+		env.PolicyStatus = models.PolicyStatusConversion(env.PolicyStatus, env.PolicyEnable)
 	}
 
 	return page.PageResp{
@@ -542,7 +552,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	if form.HasKey("runnerId") {
 		attrs["runner_id"] = form.RunnerId
 	}
-	
+
 	if form.HasKey("retryAble") {
 		attrs["retryAble"] = form.RetryAble
 	}
@@ -674,10 +684,11 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 	if err != nil {
 		return nil, err
 	}
+	envDetail.PolicyGroup = make([]string, 0)
 	for _, v := range resp {
 		envDetail.PolicyGroup = append(envDetail.PolicyGroup, v.PolicyGroupId)
 	}
-	envDetail.PolicyStatus = models.PolicyStatusConversion(envDetail.PolicyStatus,envDetail.PolicyEnable)
+	envDetail.PolicyStatus = models.PolicyStatusConversion(envDetail.PolicyStatus, envDetail.PolicyEnable)
 
 	return envDetail, nil
 }
@@ -843,7 +854,20 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	if form.HasKey("retryDelay") {
 		env.RetryDelay = form.RetryDelay
 	}
-
+	if form.HasKey("policyEnable") {
+		env.PolicyEnable = form.PolicyEnable
+	}
+	if len(form.PolicyGroup) > 0 {
+		policyForm := &forms.UpdatePolicyRelForm{
+			Id:             env.Id,
+			Scope:          consts.ScopeEnv,
+			PolicyGroupIds: form.PolicyGroup,
+		}
+		if _, err = services.UpdatePolicyRel(tx, policyForm); err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+	}
 	if form.TaskType == "" {
 		return nil, e.New(e.BadParam, http.StatusBadRequest)
 	}

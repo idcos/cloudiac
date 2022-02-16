@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -226,7 +226,9 @@ func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*mode
 			Message:  "",
 			CurrStep: 0,
 		},
-		Callback: pt.Callback,
+		Callback:  pt.Callback,
+		Source:    pt.Source,
+		SourceSys: pt.SourceSys,
 	}
 	task.Id = models.Task{}.NewId()
 	return &task, nil
@@ -272,7 +274,7 @@ func doCreateTask(tx *db.Session, task models.Task, tpl *models.Template, env *m
 			continue
 		} else if pipelineStep.Type == models.TaskStepEnvScan || pipelineStep.Type == models.TaskStepOpaScan {
 			// 如果环境扫描未启用，则跳过扫描步骤
-			if enabled, _ := IsEnvEnabledScan(tx, task.EnvId); !enabled {
+			if !env.PolicyEnable {
 				continue
 			}
 		}
@@ -291,9 +293,8 @@ func doCreateTask(tx *db.Session, task models.Task, tpl *models.Template, env *m
 			if _, err := tx.Save(scanTask); err != nil {
 				return nil, e.New(e.DBError, err)
 			}
-			env.LastScanTaskId = scanTask.Id
-			if _, err := tx.Save(env); err != nil {
-				return nil, e.New(e.DBError, errors.Wrapf(err, "update env scan task id"))
+			if err := InitScanResult(tx, scanTask); err != nil {
+				return nil, e.New(e.DBError, errors.Wrapf(err, "task '%s' init scan result error: %v", task.Id, err))
 			}
 		}
 
@@ -327,6 +328,7 @@ func GetTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision s
 		u         *url.URL
 		er        error
 		repoToken = tpl.RepoToken
+		repoUser  = models.RepoUser
 	)
 
 	repoAddr = tpl.RepoAddr
@@ -344,7 +346,20 @@ func GetTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision s
 			return "", "", e.New(e.DBError, err)
 		}
 
-		repo, er = vcsrv.GetRepo(vcs, tpl.RepoId)
+		vcsInstance, er := vcsrv.GetVcsInstance(vcs)
+		if er != nil {
+			return "", "", e.New(e.VcsError, er)
+		}
+
+		if vcs.VcsType == models.VcsGitee {
+			user, er := vcsInstance.UserInfo()
+			if er != nil {
+				return "", "", e.New(e.VcsError, er)
+			}
+			repoUser = user.Login
+		}
+
+		repo, er = vcsInstance.GetRepo(tpl.RepoId)
 		if er != nil {
 			return "", "", e.New(e.VcsError, er)
 		}
@@ -382,7 +397,7 @@ func GetTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision s
 	if er != nil {
 		return "", "", e.New(e.InternalError, errors.Wrapf(er, "parse url: %v", repoAddr))
 	} else if repoToken != "" {
-		u.User = url.UserPassword("token", repoToken)
+		u.User = url.UserPassword(repoUser, repoToken)
 	}
 	repoAddr = u.String()
 
@@ -603,7 +618,7 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 }
 
 func SaveTaskOutputs(dbSess *db.Session, task *models.Task, vars map[string]TfStateVariable) error {
-	task.Result.Outputs = make(map[string]interface{}, 0)
+	task.Result.Outputs = make(map[string]interface{})
 	for k, v := range vars {
 		task.Result.Outputs[k] = v
 	}
@@ -668,72 +683,6 @@ type TfParse map[string]TSResources
 
 func UnmarshalTfParseJson(bs []byte) (*TfParse, error) {
 	js := TfParse{}
-	err := json.Unmarshal(bs, &js)
-	return &js, err
-}
-
-type TsResultJson struct {
-	Results TsResult `json:"results"`
-}
-
-type TsResult struct {
-	ScanErrors        []ScanError `json:"scan_errors,omitempty"`
-	PassedRules       []Rule      `json:"passed_rules,omitempty"`
-	Violations        []Violation `json:"violations"`
-	SkippedViolations []Violation `json:"skipped_violations"`
-	ScanSummary       ScanSummary `json:"scan_summary"`
-}
-
-type ScanError struct {
-	IacType   string `json:"iac_type"`
-	Directory string `json:"directory"`
-	ErrMsg    string `json:"errMsg"`
-}
-
-type ScanSummary struct {
-	FileFolder        string `json:"file/folder"`
-	IacType           string `json:"iac_type"`
-	ScannedAt         string `json:"scanned_at"`
-	PoliciesValidated int    `json:"policies_validated"`
-	ViolatedPolicies  int    `json:"violated_policies"`
-	Low               int    `json:"low"`
-	Medium            int    `json:"medium"`
-	High              int    `json:"high"`
-}
-
-type Rule struct {
-	RuleName    string `json:"rule_name"`
-	Description string `json:"description"`
-	RuleId      string `json:"rule_id"`
-	Severity    string `json:"severity"`
-	Category    string `json:"category"`
-}
-
-type Violation struct {
-	RuleName     string `json:"rule_name"`
-	Description  string `json:"description"`
-	RuleId       string `json:"rule_id"`
-	Severity     string `json:"severity"`
-	Category     string `json:"category"`
-	Comment      string `json:"skip_comment,omitempty"`
-	ResourceName string `json:"resource_name"`
-	ResourceType string `json:"resource_type"`
-	ModuleName   string `json:"module_name,omitempty"`
-	File         string `json:"file,omitempty"`
-	PlanRoot     string `json:"plan_root,omitempty"`
-	Line         int    `json:"line,omitempty"`
-	Source       string `json:"source,omitempty"`
-}
-
-type TsCount struct {
-	Low    int `json:"low"`
-	Medium int `json:"medium"`
-	High   int `json:"high"`
-	Total  int `json:"total"`
-}
-
-func UnmarshalTfResultJson(bs []byte) (*TsResultJson, error) {
-	js := TsResultJson{}
 	err := json.Unmarshal(bs, &js)
 	return &js, err
 }
@@ -1358,7 +1307,7 @@ func SendVcsComment(session *db.Session, task *models.Task, taskStatus string) {
 	}
 
 	vcs, er := GetVcsRepoByTplId(session, task.TplId)
-	if err != nil {
+	if er != nil {
 		logs.Get().Errorf("vcs comment err, get vcs data err: %v", er)
 		return
 	}

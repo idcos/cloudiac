@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package e
 
@@ -80,7 +80,7 @@ func New(code int, errOrStatus ...interface{}) Error {
 }
 
 func converVcsError(code int, err error) int {
-	if code == VcsError {
+	if code == VcsError && err != nil {
 		info := err.Error()
 		switch {
 		// 前面的是否包含后面的

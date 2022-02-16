@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package apps
 
@@ -39,26 +39,6 @@ type SearchTemplateResp struct {
 	VcsAddr             string      `json:"vcsAddr"`
 	PolicyEnable        bool        `json:"policyEnable"`
 	PolicyStatus        string      `json:"policyStatus"`
-}
-
-func getRepoAddr(vcsId models.Id, query *db.Session, repoId string) (string, error) {
-	vcs, err := services.QueryVcsByVcsId(vcsId, query)
-	if err != nil {
-		return "", err
-	}
-	vcsIface, er := vcsrv.GetVcsInstance(vcs)
-	if er != nil {
-		return "", er
-	}
-	repo, er := vcsIface.GetRepo(repoId)
-	if er != nil {
-		return "", er
-	}
-	repoAddr, er := vcsrv.GetRepoAddress(repo)
-	if er != nil {
-		return "", er
-	}
-	return repoAddr, nil
 }
 
 func getRepo(vcsId models.Id, query *db.Session, repoId string) (*vcsrv.Projects, error) {
@@ -167,7 +147,24 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		scanForm := &forms.ScanTemplateForm{
 			Id: template.Id,
 		}
-		go ScanTemplateOrEnv(c, scanForm, "")
+		go func() {
+			_, err := ScanTemplateOrEnv(c, scanForm, "")
+			if err != nil {
+				c.Logger().Errorf("open tpl policy scan err: %v, tpl id: %s", err, template.Id)
+			}
+		}()
+	}
+
+	// 设置webhook
+	vcs, _ := services.QueryVcsByVcsId(template.VcsId, c.DB())
+	// 获取token
+	token, err := GetWebhookToken(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := vcsrv.SetWebhook(vcs, template.RepoId, token.Key, form.TplTriggers); err != nil {
+		c.Logger().Errorf("set webhook err :%v", err)
 	}
 
 	return template, nil
@@ -298,6 +295,19 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 		}
 		go ScanTemplateOrEnv(c, tplScanForm, "")
 	}
+
+	// 设置webhook
+	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
+	// 获取token
+	token, err := GetWebhookToken(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, tpl.Triggers); err != nil {
+		c.Logger().Errorf("set webhook err :%v", err)
+	}
+
 	return tpl, err
 }
 
@@ -347,6 +357,18 @@ func DeleteTemplate(c *ctx.ServiceContext, form *forms.DeleteTemplateForm) (inte
 		_ = tx.Rollback()
 		c.Logger().Errorf("error commit del template, err %s", err)
 		return nil, e.New(e.DBError, err)
+	}
+
+	// 删除webhook
+	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
+	// 获取token
+	token, err := GetWebhookToken(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, []string{}); err != nil {
+		c.Logger().Errorf("set webhook err :%v", err)
 	}
 
 	return nil, nil

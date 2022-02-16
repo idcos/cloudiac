@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package page
 
@@ -76,6 +76,10 @@ func (p *Paginator) getPage() *db.Session {
 		sess = sess.Order("`id`")
 	}
 	return sess
+}
+
+func (p *Paginator) GetPage() *db.Session {
+	return p.getPage()
 }
 
 func (p *Paginator) Scan(dest interface{}) error {

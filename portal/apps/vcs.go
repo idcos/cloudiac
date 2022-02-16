@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package apps
 
@@ -14,6 +14,7 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -127,12 +128,19 @@ func GetReadme(c *ctx.ServiceContext, form *forms.GetReadmeForm) (interface{}, e
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
-	b, er := repo.ReadFileContent(form.RepoRevision, "README.md")
+
+	// 如果路径以 "/" 开头，部分 vcs 会报错
+	dir := strings.TrimLeft(form.Dir, "/")
+	b, er := repo.ReadFileContent(form.RepoRevision, path.Join(dir, "README.md"))
+	if er != nil && vcsrv.IsNotFoundErr(er) {
+		// README.md 文件不存在时尝试读 README 文件
+		b, er = repo.ReadFileContent(form.RepoRevision, path.Join(dir, "README"))
+	}
 	if er != nil {
-		if strings.Contains(er.Error(), "not found") {
+		if vcsrv.IsNotFoundErr(er) {
 			b = make([]byte, 0)
 		} else {
-			return nil, e.New(e.VcsError, er)
+			return nil, e.AutoNew(er, e.VcsError)
 		}
 	}
 
@@ -333,10 +341,10 @@ func SearchVcsFile(c *ctx.ServiceContext, form *forms.SearchVcsFileForm) (interf
 	}
 	b, er := repo.ReadFileContent(form.Branch, form.FileName)
 	if er != nil {
-		if strings.Contains(er.Error(), "not found") {
+		if vcsrv.IsNotFoundErr(er) {
 			b = make([]byte, 0)
 		} else {
-			return nil, e.New(e.VcsError, er)
+			return nil, e.AutoNew(er, e.VcsError)
 		}
 	}
 

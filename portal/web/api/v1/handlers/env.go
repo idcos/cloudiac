@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package handlers
 
@@ -230,7 +230,7 @@ func (Env) SearchTasks(c *ctx.GinRequest) {
 	}
 	taskForm := &forms.SearchTaskForm{
 		NoPageSizeForm: form.NoPageSizeForm,
-		EnvId:    form.Id,
+		EnvId:          form.Id,
 	}
 	c.JSONResult(apps.SearchTask(c.Service(), taskForm))
 }

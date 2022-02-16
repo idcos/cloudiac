@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -97,11 +97,11 @@ func DeletePolicyEnabledRel(tx *db.Session, id models.Id, scope string) e.Error 
 }
 
 // UpdatePolicyRel 创建/更新策略关系
-func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]models.PolicyRel, e.Error) {
+func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]*models.PolicyRel, e.Error) {
 	var (
 		env  *models.Env
 		tpl  *models.Template
-		rels []models.PolicyRel
+		rels []*models.PolicyRel
 		err  e.Error
 	)
 	if form.Scope == consts.ScopeEnv {
@@ -117,7 +117,7 @@ func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]models.
 	}
 
 	// 删除原有关联关系
-	if err := DeletePolicyGroupRel(tx, form.Id, form.Scope); err != nil {
+	if err := DeletePolicyGroupRel(tx, form.Id, form.Scope); err != nil && !e.IsRecordNotFound(err) {
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
@@ -128,7 +128,7 @@ func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]models.
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)
 		}
 		if env != nil {
-			rels = append(rels, models.PolicyRel{
+			rels = append(rels, &models.PolicyRel{
 				OrgId:     env.OrgId,
 				ProjectId: env.ProjectId,
 				GroupId:   group.Id,
@@ -136,7 +136,7 @@ func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]models.
 				Scope:     consts.ScopeEnv,
 			})
 		} else {
-			rels = append(rels, models.PolicyRel{
+			rels = append(rels, &models.PolicyRel{
 				OrgId:   tpl.OrgId,
 				GroupId: group.Id,
 				TplId:   tpl.Id,
@@ -151,4 +151,14 @@ func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]models.
 		}
 	}
 	return rels, nil
+}
+
+func DeleteRelByPolicyGroupId(tx *db.Session, groupId models.Id) e.Error {
+	if _, err := tx.Where("group_id = ?", groupId).Delete(models.PolicyRel{}); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil
+		}
+		return e.New(e.DBError, err)
+	}
+	return nil
 }

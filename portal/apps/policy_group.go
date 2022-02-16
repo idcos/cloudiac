@@ -1,9 +1,10 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package apps
 
 import (
 	"cloudiac/common"
+	"cloudiac/policy"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
@@ -19,7 +20,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/Masterminds/semver"
 )
 
@@ -59,9 +59,9 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 	}
 
 	// 策略组仓库解析
-	policies, er := PolicyGroupRepoDownloadAndParse(&g)
-	if er != nil {
-		return nil, e.New(e.InternalError, errors.Wrapf(er, "download and parse"), http.StatusInternalServerError)
+	policies, err := PolicyGroupRepoDownloadAndParse(&g)
+	if err != nil {
+		return nil, err
 	}
 
 	tx := c.Tx()
@@ -181,18 +181,26 @@ func UpdatePolicyGroup(c *ctx.ServiceContext, form *forms.UpdatePolicyGroupForm)
 	pg.Id = form.Id
 
 	var (
-		policies []*services.PolicyWithMeta
-		er       error
+		policies []*policy.PolicyWithMeta
+		err      e.Error
 	)
 	// 未对仓库信息进行修改时，不重新同步策略数据
 	needsSync := false
 	if form.HasKey("vcsId") && form.HasKey("repoId") &&
 		(form.HasKey("gitTags") || form.HasKey("branch")) && form.HasKey("dir") {
+		g := &models.PolicyGroup{
+			VcsId:   form.VcsId,
+			RepoId:  form.RepoId,
+			GitTags: form.GitTags,
+			Branch:  form.Branch,
+			Dir:     form.Dir,
+		}
+		g.Id = form.Id
 		needsSync = true
 		// 策略组仓库解析
-		policies, er = PolicyGroupRepoDownloadAndParse(&pg)
-		if er != nil {
-			return nil, e.New(e.InternalError, errors.Wrapf(er, "parse rego"), http.StatusInternalServerError)
+		policies, err = PolicyGroupRepoDownloadAndParse(g)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -236,8 +244,8 @@ func DeletePolicyGroup(c *ctx.ServiceContext, form *forms.DeletePolicyGroupForm)
 		}
 	}()
 
-	// 解除策略与策略组的关系
-	if err := services.RemovePoliciesGroupRelation(tx, form.Id); err != nil {
+	// 解除策略组与环境、云模板的关系
+	if err := services.DeleteRelByPolicyGroupId(tx, form.Id); err != nil {
 		_ = tx.Rollback()
 		return nil, err
 	}
@@ -504,7 +512,7 @@ func SearchRegistryPG(c *ctx.ServiceContext, form *forms.SearchRegistryPgForm) (
 	val.Add("q", form.Q)
 	val.Add("pageSize", fmt.Sprintf("%d", form.PageSize()))
 	val.Add("page", fmt.Sprintf("%d", form.CurrentPage()))
-	if err := services.RegistryGet("policies", val, &rr); err != nil {
+	if err := services.RegistryGet("iac/policy_groups", val, &rr); err != nil {
 		return nil, e.AutoNew(err, e.RegistryServiceErr)
 	}
 
@@ -550,7 +558,7 @@ func SearchRegistryPGVersions(c *ctx.ServiceContext, form *forms.SearchRegistryP
 	val := url.Values{}
 	val.Add("ns", form.Namespace)
 	val.Add("gn", form.GroupName)
-	if err := services.RegistryGet("policies/versions", val, &rvs); err != nil {
+	if err := services.RegistryGet("iac/policy_groups/versions", val, &rvs); err != nil {
 		return nil, e.AutoNew(err, e.RegistryServiceErr)
 	}
 

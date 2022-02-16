@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package apps
 
@@ -67,7 +67,7 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*taskDetailRe
 		c.Logger().Errorf("error get task id by user, err %s", er)
 		return nil, e.New(e.DBError, er)
 	}
-	if c.OrgId.InArray(orgIds...) == false && c.IsSuperAdmin == false {
+	if !c.OrgId.InArray(orgIds...) && !c.IsSuperAdmin {
 		// 请求了一个不存在的 task，因为 task id 是在 path 传入，这里我们返回 404
 		return nil, e.New(e.TaskNotExists, http.StatusNotFound)
 	}
@@ -78,13 +78,13 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*taskDetailRe
 		err  e.Error
 	)
 	task, err = services.GetTaskById(c.DB(), form.Id)
-	sort.Sort(task.Variables)
 	if err != nil && err.Code() == e.TaskNotExists {
 		return nil, e.New(e.TaskNotExists, err, http.StatusNotFound)
 	} else if err != nil {
 		c.Logger().Errorf("error get task by id, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
+	sort.Sort(task.Variables)
 	user, err = services.GetUserByIdRaw(c.DB(), task.CreatorId)
 	if err != nil && err.Code() == e.UserNotExists {
 		user = &models.User{}
@@ -272,7 +272,7 @@ func TaskOutput(c *ctx.ServiceContext, form forms.DetailTaskForm) (interface{}, 
 		c.Logger().Errorf("error get task id by user, err %s", er)
 		return nil, e.New(e.DBError, er)
 	}
-	if c.OrgId.InArray(orgIds...) == false && c.IsSuperAdmin == false {
+	if !c.OrgId.InArray(orgIds...)  && !c.IsSuperAdmin  {
 		// 请求了一个不存在的 task，因为 task id 是在 path 传入，这里我们返回 404
 		return nil, e.New(e.TaskNotExists, http.StatusNotFound)
 	}

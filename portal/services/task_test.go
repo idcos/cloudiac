@@ -1,11 +1,13 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
 import (
+	"cloudiac/policy"
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const testStateJson = `
@@ -274,20 +276,20 @@ func TestUnmarshalTfResultJson(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *TsResultJson
+		want    *policy.TsResultJson
 		wantErr bool
 	}{
 		{
 			name: "Test parse terrascan result",
 			args: args{bs: []byte(tsresultJson)},
-			want: &TsResultJson{
-				Results: TsResult{
-					ScanSummary: ScanSummary{
+			want: &policy.TsResultJson{
+				Results: policy.TsResult{
+					ScanSummary: policy.ScanSummary{
 						Low:    0,
 						Medium: 0,
 						High:   0,
 					},
-					Violations: []Violation{
+					Violations: []policy.Violation{
 						{
 							RuleName:     "cloudfrontNoGeoRestriction",
 							Description:  "Ensure that geo restriction is enabled for your Amazon ...",
@@ -307,7 +309,7 @@ func TestUnmarshalTfResultJson(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := UnmarshalTfResultJson(tt.args.bs)
+			got, err := policy.UnmarshalTfResultJson(tt.args.bs)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UnmarshalTfResultJson() error = %v, wantErr %v", err, tt.wantErr)
 				return
