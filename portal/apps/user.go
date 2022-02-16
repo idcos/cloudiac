@@ -13,6 +13,7 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
 	"cloudiac/utils/mail"
 	"encoding/json"
 	"fmt"
@@ -35,16 +36,56 @@ var (
 	emailBodyResetPassword    = "尊敬的 {{.Name}}：\n\n您的密码已经被重置，这是您的新密码：\n\n密码：\t{{.InitPass}}\n\n请使用新密码登陆系统。\n\n为了保障您的安全，请立即登陆您的账号并修改密码。"
 )
 
+func createUserOrgRel(tx *db.Session, orgId models.Id, initPass string, form *forms.CreateUserForm, lg logs.Logger) (*models.User, e.Error) {
+	var (
+		user *models.User
+		err  e.Error
+	)
+
+	hashedPassword, err := services.HashPassword(initPass)
+	if err != nil {
+		lg.Errorf("error hash password, err %s", err)
+		return nil, err
+	}
+
+	user, err = services.CreateUser(tx, models.User{
+		Name:     form.Name,
+		Password: hashedPassword,
+		Phone:    form.Phone,
+		Email:    form.Email,
+	})
+	if err != nil && err.Code() == e.UserAlreadyExists {
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		lg.Errorf("error create user, err %s", err)
+		return nil, err
+	}
+
+	// 建立用户与组织间关联
+	_, err = services.CreateUserOrgRel(tx, models.UserOrg{
+		OrgId:  orgId,
+		UserId: user.Id,
+	})
+	if err != nil {
+		lg.Errorf("error create user , err %s", err)
+		return nil, err
+	}
+
+	// 新用户自动加入演示组织和项目
+	if orgId != models.Id(common.DemoOrgId) {
+		if err = services.TryAddDemoRelation(tx, user.Id); err != nil {
+			_ = tx.Rollback()
+			lg.Errorf("error add user demo rel, err %s", err)
+			return nil, err
+		}
+	}
+
+	return user, nil
+}
+
 // CreateUser 创建用户
 func CreateUser(c *ctx.ServiceContext, form *forms.CreateUserForm) (*CreateUserResp, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create user %s", form.Name))
-
-	initPass := utils.GenPasswd(6, "mix")
-	hashedPassword, err := services.HashPassword(initPass)
-	if err != nil {
-		c.Logger().Errorf("error hash password, err %s", err)
-		return nil, err
-	}
 
 	tx := c.Tx()
 	defer func() {
@@ -54,46 +95,8 @@ func CreateUser(c *ctx.ServiceContext, form *forms.CreateUserForm) (*CreateUserR
 		}
 	}()
 
-	user, err := func() (*models.User, e.Error) {
-		var (
-			user *models.User
-			err  e.Error
-		)
-
-		user, err = services.CreateUser(tx, models.User{
-			Name:     form.Name,
-			Password: hashedPassword,
-			Phone:    form.Phone,
-			Email:    form.Email,
-		})
-		if err != nil && err.Code() == e.UserAlreadyExists {
-			return nil, e.New(err.Code(), err, http.StatusBadRequest)
-		} else if err != nil {
-			c.Logger().Errorf("error create user, err %s", err)
-			return nil, err
-		}
-
-		// 建立用户与组织间关联
-		_, err = services.CreateUserOrgRel(tx, models.UserOrg{
-			OrgId:  c.OrgId,
-			UserId: user.Id,
-		})
-		if err != nil {
-			c.Logger().Errorf("error create user , err %s", err)
-			return nil, err
-		}
-
-		// 新用户自动加入演示组织和项目
-		if c.OrgId != models.Id(common.DemoOrgId) {
-			if err = services.TryAddDemoRelation(tx, user.Id); err != nil {
-				_ = tx.Rollback()
-				c.Logger().Errorf("error add user demo rel, err %s", err)
-				return nil, err
-			}
-		}
-
-		return user, nil
-	}()
+	initPass := utils.GenPasswd(6, "mix")
+	user, err := createUserOrgRel(tx, c.OrgId, initPass, form, c.Logger())
 	if err != nil {
 		_ = tx.Rollback()
 		return nil, err
