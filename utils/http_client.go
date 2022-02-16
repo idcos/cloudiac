@@ -38,6 +38,28 @@ func httpClient(conntimeout, deadline int) *http.Client {
 	return c
 }
 
+func getHttpRequest(reqUrl, method string, header *http.Header, data interface{}) (*http.Request, error) {
+	if http.MethodGet == method || data == nil {
+		return http.NewRequest(method, reqUrl, nil)
+	}
+
+	// json data
+	if header.Get("Content-Type") == "application/json" {
+		b, err := json.Marshal(data)
+		if err != nil {
+			return nil, err
+		}
+		return http.NewRequest(method, reqUrl, bytes.NewReader(b))
+	}
+
+	// string data
+	if value, ok := data.(string); ok {
+		return http.NewRequest(method, reqUrl, bytes.NewReader([]byte(value)))
+	}
+
+	return nil, fmt.Errorf("params err")
+}
+
 func HttpService(reqUrl, method string, header *http.Header, data interface{}, conntimeout, deadline int) ([]byte, error) {
 	c := httpClient(conntimeout, deadline)
 
@@ -49,62 +71,9 @@ func HttpService(reqUrl, method string, header *http.Header, data interface{}, c
 	if header.Get("Content-Type") == "" {
 		header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
+	req.Header = *header
 
-	if http.MethodPost == method {
-		if data != nil {
-			if header.Get("Content-Type") == "application/json" {
-				b, err := json.Marshal(data)
-				if err != nil {
-					return nil, err
-				}
-				req, err = http.NewRequest(method, reqUrl, bytes.NewReader(b))
-			} else if value, ok := data.(string); ok {
-				req, err = http.NewRequest(method, reqUrl, bytes.NewReader([]byte(value)))
-			} else {
-				return nil, fmt.Errorf("params err")
-			}
-		} else {
-			req, err = http.NewRequest(method, reqUrl, nil)
-		}
-	} else if http.MethodDelete == method {
-		if data != nil {
-			if header.Get("Content-Type") == "application/json" {
-				b, err := json.Marshal(data)
-				if err != nil {
-					return nil, err
-				}
-				req, err = http.NewRequest(method, reqUrl, bytes.NewReader(b))
-			} else if value, ok := data.(string); ok {
-				req, err = http.NewRequest(method, reqUrl, bytes.NewReader([]byte(value)))
-			} else {
-				return nil, fmt.Errorf("params err")
-			}
-		} else {
-			req, err = http.NewRequest(method, reqUrl, nil)
-		}
-	} else if http.MethodPut == method {
-		if data != nil {
-			if header.Get("Content-Type") == "application/json" {
-				b, err := json.Marshal(data)
-				if err != nil {
-					return nil, err
-				}
-				req, err = http.NewRequest(method, reqUrl, bytes.NewReader(b))
-			} else if value, ok := data.(string); ok {
-				req, err = http.NewRequest(method, reqUrl, bytes.NewReader([]byte(value)))
-			} else {
-				return nil, fmt.Errorf("params err")
-			}
-		} else {
-			req, err = http.NewRequest(method, reqUrl, nil)
-		}
-	} else if http.MethodGet == method {
-		req, err = http.NewRequest(method, reqUrl, nil)
-	}
-	if header != nil {
-		req.Header = *header
-	}
-
+	req, err = getHttpRequest(reqUrl, method, header, data)
 	if err != nil {
 		return nil, err
 	}
@@ -114,11 +83,9 @@ func HttpService(reqUrl, method string, header *http.Header, data interface{}, c
 	if err != nil {
 		return nil, err
 	}
-	returndata, err := ioutil.ReadAll(resp.Body)
-	if resp != nil {
-		resp.Body.Close()
-	}
-	return returndata, err
+	defer resp.Body.Close()
+
+	return ioutil.ReadAll(resp.Body)
 }
 
 type FormPart struct {
