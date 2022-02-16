@@ -272,7 +272,7 @@ func TaskOutput(c *ctx.ServiceContext, form forms.DetailTaskForm) (interface{}, 
 		c.Logger().Errorf("error get task id by user, err %s", er)
 		return nil, e.New(e.DBError, er)
 	}
-	if !c.OrgId.InArray(orgIds...)  && !c.IsSuperAdmin  {
+	if !c.OrgId.InArray(orgIds...) && !c.IsSuperAdmin {
 		// 请求了一个不存在的 task，因为 task id 是在 path 传入，这里我们返回 404
 		return nil, e.New(e.TaskNotExists, http.StatusNotFound)
 	}
@@ -423,16 +423,69 @@ type ResourceInfo struct {
 	IsDrift      bool        `json:"isDrift"`
 }
 
-func GetResourcesGraphModule(resources []services.Resource) interface{} {
-	// 构建根节点
-	rootModule := "rootModule"
-	rgm := &ResourcesGraphModule{
-		IsRoot:   true,
-		NodeName: rootModule,
-		NodeId:   rootModule,
-		Children: make([]*ResourcesGraphModule, 0),
+func genNodesFromResource(resource services.Resource, parentChildNode map[string][]string, resourceAttr map[string][]ResourceInfo, nodeNameAttr map[string]string) {
+	// 将module替替换为空
+	address := strings.Replace(resource.Address, "module.", "", -1)
+	addrs := strings.Split(address, ".")
+	if len(addrs) == 0 {
+		return
 	}
 
+	// first node
+	rootModule := "rootModule"
+	rootNodeId := strings.Join(addrs[:1], ".")
+	nodeNameAttr[rootNodeId] = addrs[0]
+	if _, ok := parentChildNode[rootModule]; !ok {
+		parentChildNode[rootModule] = []string{rootNodeId}
+	} else {
+		parentChildNode[rootModule] = append(parentChildNode[rootModule], rootNodeId)
+	}
+
+	// middle nodes
+	for index := 1; index < len(addrs)-1; index++ {
+		var (
+			parentNodeId string
+			nodeId       = strings.Join(addrs[:index+1], ".")
+		)
+		nodeNameAttr[nodeId] = addrs[index]
+		parentNodeId = strings.Join(addrs[:index], ".")
+
+		// 构造数据结构
+		if _, ok := parentChildNode[parentNodeId]; !ok {
+			parentChildNode[parentNodeId] = []string{nodeId}
+			continue
+		}
+		parentChildNode[parentNodeId] = append(parentChildNode[parentNodeId], nodeId)
+	}
+
+	// last node 处理最末级节点，将末级节点定义为资源
+	lastAddr := addrs[len(addrs)-1]
+	lastNodeId := strings.Join(addrs[:], ".")
+	nodeNameAttr[lastNodeId] = lastAddr
+	lastParentNodeId := strings.Join(addrs[:len(addrs)-1], ".")
+
+	res := ResourceInfo{
+		ResourceId:   resource.Id.String(),
+		ResourceName: resource.Name,
+		NodeName:     lastAddr,
+	}
+
+	if res.ResourceName == "" {
+		res.ResourceName = lastAddr
+	}
+
+	if resource.DriftDetail != "" {
+		res.IsDrift = true
+	}
+
+	if _, ok := resourceAttr[lastParentNodeId]; !ok {
+		resourceAttr[lastParentNodeId] = []ResourceInfo{res}
+	} else {
+		resourceAttr[lastParentNodeId] = append(resourceAttr[lastParentNodeId], res)
+	}
+}
+
+func genNodesFromAllResources(resources []services.Resource) (map[string][]string, map[string][]ResourceInfo, map[string]string) {
 	// 存储当前节点与父级节点的关系 父级节点id与子节点关系 {parentNodeId: [nodeId, nodeId]}
 	parentChildNode := make(map[string][]string)
 
@@ -471,54 +524,24 @@ func GetResourcesGraphModule(resources []services.Resource) interface{} {
 
 	*/
 	for _, resource := range resources {
-		// 将module替替换为空
-		address := strings.Replace(resource.Address, "module.", "", -1)
-		addrs := strings.Split(address, ".")
-		for index, addr := range addrs {
-			var (
-				parentNodeId string
-				nodeId       = strings.Join(addrs[:index+1], ".")
-			)
-			nodeNameAttr[nodeId] = addr
-			if index == 0 {
-				parentNodeId = rootModule
-			} else {
-				parentNodeId = strings.Join(addrs[:index], ".")
-			}
-
-			// 处理最末级节点，将末级节点定义为资源
-			if index == len(addrs)-1 {
-				res := ResourceInfo{
-					ResourceId:   resource.Id.String(),
-					ResourceName: resource.Name,
-					NodeName:     addr,
-				}
-
-				if res.ResourceName == "" {
-					res.ResourceName = addr
-				}
-
-				if resource.DriftDetail != "" {
-					res.IsDrift = true
-				}
-
-				if _, ok := resourceAttr[parentNodeId]; !ok {
-					resourceAttr[parentNodeId] = []ResourceInfo{res}
-					continue
-				}
-				resourceAttr[parentNodeId] = append(resourceAttr[parentNodeId], res)
-				continue
-			}
-
-			// 构造数据结构
-			if _, ok := parentChildNode[parentNodeId]; !ok {
-				parentChildNode[parentNodeId] = []string{nodeId}
-				continue
-			}
-			parentChildNode[parentNodeId] = append(parentChildNode[parentNodeId], nodeId)
-
-		}
+		genNodesFromResource(resource, parentChildNode, resourceAttr, nodeNameAttr)
 	}
+
+	return parentChildNode, resourceAttr, nodeNameAttr
+}
+
+func GetResourcesGraphModule(resources []services.Resource) interface{} {
+	// 构建根节点
+	rootModule := "rootModule"
+	rgm := &ResourcesGraphModule{
+		IsRoot:   true,
+		NodeName: rootModule,
+		NodeId:   rootModule,
+		Children: make([]*ResourcesGraphModule, 0),
+	}
+
+	// 存储当前节点与父级节点的关系 父级节点id与子节点关系 {parentNodeId: [nodeId, nodeId]}
+	parentChildNode, resourceAttr, nodeNameAttr := genNodesFromAllResources(resources)
 
 	// 根据address构造的叶子节点列表有可能重复，这里进行去重
 	/*
