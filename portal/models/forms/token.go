@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package forms
 
@@ -37,7 +37,7 @@ type DeleteTokenForm struct {
 
 type VcsWebhookUrlForm struct {
 	BaseForm
-	EnvId  models.Id `json:"envId" form:"envId" binding:"required"`
+	EnvId models.Id `json:"envId" form:"envId" binding:"required"`
 	//Action string    `json:"action" form:"action" binding:"required"`
 }
 

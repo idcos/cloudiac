@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package middleware
 
@@ -77,7 +77,7 @@ func AccessControl(args ...string) gin.HandlerFunc {
 			role = consts.RoleAnonymous
 		case s.IsSuperAdmin:
 			role = consts.RoleRoot
-		// FIXME 临时处理系统管理员权限
+		// 临时处理系统管理员权限
 		case s.UserId == consts.SysUserId:
 			role = consts.OrgRoleAdmin
 		case s.UserId != "" && s.OrgId == "":

@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package apps
 
@@ -261,7 +261,7 @@ func ChangeUserStatus(c *ctx.ServiceContext, form *forms.DisableUserForm) (*mode
 	query := c.DB()
 	if form.Id == consts.SysUserId {
 		return nil, e.New(e.PermissionDeny, fmt.Errorf("modify sys user denied"), http.StatusForbidden)
-	} else if c.IsSuperAdmin == false {
+	} else if !c.IsSuperAdmin {
 		return nil, e.New(e.PermissionDeny, http.StatusForbidden)
 	}
 
@@ -273,6 +273,7 @@ func ChangeUserStatus(c *ctx.ServiceContext, form *forms.DisableUserForm) (*mode
 	if err != nil && err.Code() == e.UserNotExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
+		//nolint
 		c.Logger().Errorf("error get user by id, err %s", err)
 		return nil, err
 	}

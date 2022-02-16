@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package apps
 
 import (
@@ -14,7 +16,7 @@ import (
 type TplExportForm struct {
 	forms.BaseForm
 
-	Ids      []models.Id `json:"ids" form:"ids" binding:required` // 待导出的云模板 id 列表
+	Ids      []models.Id `json:"ids" form:"ids" binding:"required"` // 待导出的云模板 id 列表
 	Download bool        `json:"download" form:"download"`        // download 模式(直接返回导出数据 ，并触发浏览器下载)
 }
 

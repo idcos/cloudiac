@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package vcsrv
 
@@ -263,7 +263,7 @@ func (l *LocalRepo) DeleteWebhook(id int) error {
 	return nil
 }
 
-func (l *LocalRepo) CreatePrComment(prId int,comment string) error {
+func (l *LocalRepo) CreatePrComment(prId int, comment string) error {
 
 	return nil
 }

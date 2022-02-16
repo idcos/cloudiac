@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package models
 
 import (
@@ -35,7 +37,6 @@ type Policy struct {
 func (Policy) TableName() string {
 	return "iac_policy"
 }
-
 
 func (p *Policy) CustomBeforeCreate(*db.Session) error {
 	if p.Id == "" {
