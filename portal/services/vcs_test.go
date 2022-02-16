@@ -1,10 +1,11 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestReadHCLFile(t *testing.T) {
@@ -17,13 +18,13 @@ func TestReadHCLFile(t *testing.T) {
 		{"variable \"key\" {\n default=1\n }\n"},
 		{"variable \"key\" {\n default=1\n description=\"description\"\n }\n"},
 		{`variable "key" {
-			default = 1 
+			default = 1
 			description = "description"
 			type = list(string)
 			sensitive = true
 		}`},
 		{`variable "key" {
-			default = 1 
+			default = 1
 			description = "description"
 			type = list(string)
 			sensitive = true

@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package middleware
 
@@ -113,7 +113,6 @@ func AuthOrgId(c *ctx.GinRequest) {
 		c.JSONError(e.New(e.InvalidOrganizationId), http.StatusForbidden)
 		return
 	}
-	return
 }
 
 // AuthProjectId 验证项目ID是否有效
@@ -122,7 +121,6 @@ func AuthProjectId(c *ctx.GinRequest) {
 		c.JSONError(e.New(e.InvalidProjectId), http.StatusForbidden)
 		return
 	}
-	return
 }
 
 func AuthApiToken(c *ctx.GinRequest) {

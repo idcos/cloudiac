@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package runner
 
@@ -217,7 +217,7 @@ func (t *Task) runStep() (err error) {
 		GetTaskDir(t.req.Env.Id, t.req.TaskId, t.req.Step),
 		TaskInfoFileName,
 	)
-	if err := os.WriteFile(stepInfoFile, infoJson, 0644); err != nil {
+	if err := os.WriteFile(stepInfoFile, infoJson, 0644); err != nil { //nolint:gosec
 		err = errors.Wrap(err, "write step info")
 		return err
 	}
@@ -283,7 +283,7 @@ locals {
 `))
 
 func execTpl2File(tpl *template.Template, data interface{}, savePath string) error {
-	fp, err := os.OpenFile(savePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	fp, err := os.OpenFile(savePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644) //nolint:gosec
 	if err != nil {
 		return err
 	}
@@ -320,7 +320,7 @@ var iacPlayVarsTpl = template.Must(template.New("").Parse(`
 `))
 
 func (t *Task) genPlayVarsFile(workspace string) error {
-	fp, err := os.OpenFile(filepath.Join(workspace, CloudIacPlayVars), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	fp, err := os.OpenFile(filepath.Join(workspace, CloudIacPlayVars), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644) //nolint:gosec
 	if err != nil {
 		return err
 	}
@@ -331,18 +331,18 @@ func (t *Task) genPolicyFiles(workspace string) error {
 	if len(t.req.Policies) == 0 {
 		return nil
 	}
-	if err := os.MkdirAll(filepath.Join(workspace, PoliciesDir), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(workspace, PoliciesDir), 0755); err != nil { //nolint:gosec
 		return err
 	}
 	for _, policy := range t.req.Policies {
-		if err := os.MkdirAll(filepath.Join(workspace, PoliciesDir, policy.PolicyId), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Join(workspace, PoliciesDir, policy.PolicyId), 0755); err != nil { //nolint:gosec
 			return err
 		}
 		js, _ := json.Marshal(policy.Meta)
-		if err := os.WriteFile(filepath.Join(workspace, PoliciesDir, policy.PolicyId, policy.Meta.Name+".json"), js, 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(workspace, PoliciesDir, policy.PolicyId, policy.Meta.Name+".json"), js, 0644); err != nil { //nolint:gosec
 			return err
 		}
-		if err := os.WriteFile(filepath.Join(workspace, PoliciesDir, policy.PolicyId, policy.Meta.Name+".rego"), []byte(policy.Rego), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(workspace, PoliciesDir, policy.PolicyId, policy.Meta.Name+".rego"), []byte(policy.Rego), 0644); err != nil { //nolint:gosec
 			return err
 		}
 	}
@@ -530,7 +530,7 @@ cd 'code/{{.Req.Env.Workdir}}' && ansible-playbook \
 --extra @{{.Req.Env.PlayVarsFile}} \
 {{ end -}}
 {{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }} \
-{{.Req.Env.Playbook}} 
+{{.Req.Env.Playbook}}
 `))
 
 func (t *Task) stepPlay() (command string, err error) {

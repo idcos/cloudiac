@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package policy
 
 import (
@@ -79,7 +81,6 @@ type Resource struct {
 	MapFile   string
 
 	StopOnViolation bool
-	workingDir      string
 	codeDir         string
 }
 

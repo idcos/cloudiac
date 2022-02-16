@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/utils"
 	"fmt"
+
 	"github.com/sirupsen/logrus"
 )
 

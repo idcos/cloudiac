@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package task_manager
 
@@ -420,6 +420,7 @@ func (m *TaskManager) runTask(ctx context.Context, task models.Tasker) error {
 }
 
 // doRunTask, startErr 只在任务启动出错时(执行步骤前出错)才会返回错误
+//nolint:cyclop
 func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startErr error) {
 	logger := m.logger.WithField("taskId", task.Id)
 
@@ -437,7 +438,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		_ = changeTaskStatus(models.TaskFailed, err.Error(), false)
 	}
 
-	logger.Infof("run task: %s", task.Id)
+	logger.Infof("run task start", task.Id)
 
 	if task.IsDriftTask {
 		if env, err := services.GetEnvById(m.db, task.EnvId); err != nil {
@@ -486,49 +487,16 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		taskStartFailed(errors.Wrap(err, "get task steps"))
 		return
 	}
-	var step *models.TaskStep
-	for _, step = range steps {
-		if step.Index < task.CurrStep {
-			// 跳过己执行的步骤
-			continue
-		}
 
-		if _, err = m.db.Model(task).UpdateAttrs(models.Attrs{"CurrStep": step.Index}); err != nil {
-			taskStartFailed(errors.Wrap(err, "update task"))
-			return
+	for _, step := range steps {
+		startErr, runErr := m.processStartStep(ctx, task, step, *runTaskReq)
+		if startErr != nil {
+			taskStartFailed(startErr)
+			return startErr
 		}
-		task.CurrStep = step.Index
-
-		{
-			// 获取 task 最新的 containerId
-			tTask, err := services.GetTaskById(m.db, task.Id)
-			if err != nil {
-				taskStartFailed(errors.Wrapf(err, "get task %s", task.Id.String()))
-				return
-			}
-			runTaskReq.ContainerId = tTask.ContainerId
-		}
-
-		runErr := m.runTaskStep(ctx, *runTaskReq, task, step)
-		if err := m.processStepDone(task, step); err != nil {
-			logger.Warnf("process step done error: %v", err)
-			break
-		}
-
 		if runErr != nil {
-			logger.Infof("run task step err: %v", runErr)
-			if runErr == ErrTaskStepRejected {
-				break
-			}
-			if (step.Type == common.TaskStepEnvScan || step.Type == common.TaskStepOpaScan) &&
-				!task.StopOnViolation {
-				// 合规任务失败不影响环境部署流程
-				logger.Warnf("run scan task step: %v", runErr)
-				continue
-			}
-			if err := services.UpdateTaskStepStatus(m.db, step.Id, common.TaskStepFailed, runErr.Error()); err != nil {
-				logger.Panicf("update task step status error: %v", err)
-			}
+			logger.WithField("step", fmt.Sprintf("%d(%s)", step.Index, step.Name)).
+				Warnf("run task step error: %v", err)
 			break
 		}
 	}
@@ -536,8 +504,62 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 	if err := m.runTaskStepsDoneActions(ctx, task.Id); err != nil {
 		logger.Errorf("runTaskStepsDoneActions: %v", err)
 	}
-	logger.Infof("run task finish")
+	logger.Infof("run task end")
 	return nil
+}
+
+func (m *TaskManager) processStartStep(
+	ctx context.Context,
+	task *models.Task,
+	step *models.TaskStep,
+	req runner.RunTaskReq) (startErr error, runErr error) {
+	logger := m.logger.WithField("taskId", task.Id)
+
+	if step.Index < task.CurrStep {
+		// 跳过己执行的步骤
+		return nil, nil
+	}
+
+	if _, err := m.db.Model(task).UpdateAttrs(models.Attrs{"CurrStep": step.Index}); err != nil {
+		// taskStartFailed(errors.Wrap(err, "update task"))
+		return errors.Wrap(err, "update task"), nil
+	}
+	task.CurrStep = step.Index
+
+	{
+		// 获取 task 最新的 containerId
+		tTask, err := services.GetTaskById(m.db, task.Id)
+		if err != nil {
+			// taskStartFailed(errors.Wrapf(err, "get task %s", task.Id.String()))
+			return errors.Wrapf(err, "get task %s", task.Id.String()), nil
+		}
+		req.ContainerId = tTask.ContainerId
+	}
+
+	runErr = m.runTaskStep(ctx, req, task, step)
+	if err := m.processStepDone(task, step); err != nil {
+		logger.Warnf("process step done error: %v", err)
+		return nil, err
+	}
+
+	if runErr != nil {
+		logger.Infof("run task step err: %v", runErr)
+		if runErr == ErrTaskStepRejected {
+			return nil, runErr
+		}
+
+		if (step.Type == common.TaskStepEnvScan || step.Type == common.TaskStepOpaScan) &&
+			!task.StopOnViolation {
+			// 合规任务失败不影响环境部署流程
+			logger.Warnf("run scan task step: %v", runErr)
+			return nil, nil
+		}
+		if err := services.UpdateTaskStepStatus(m.db, step.Id, common.TaskStepFailed, runErr.Error()); err != nil {
+			logger.Panicf("update task step status error: %v", err)
+		}
+		return nil, runErr
+	}
+	return nil, nil
 }
 
 func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) error {
@@ -952,6 +974,7 @@ func (m *TaskManager) stop() {
 
 // buildRunTaskReq 基于任务信息构建一个 RunTaskReq 对象。
 // 	注意这里不会设置 step 相关的数据，step 相关字段在 StartTaskStep() 方法中设置
+//nolint:cyclop
 func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunTaskReq, err error) {
 	runnerEnv := runner.TaskEnv{
 		Id:              string(task.EnvId),
@@ -1477,7 +1500,7 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 
 func ParseResourceDriftInfo(bs []byte) map[string]models.ResourceDrift {
 	content := strings.Split(string(bs), "\n")
-	cronTaskInfoMap := make(map[string]models.ResourceDrift, 0)
+	cronTaskInfoMap := make(map[string]models.ResourceDrift)
 	for k, v := range content {
 		if strings.Contains(v, "#") && strings.Contains(v, "must be") || strings.Contains(v, "will be") {
 			var resourceDetail string
@@ -1486,10 +1509,8 @@ func ParseResourceDriftInfo(bs []byte) map[string]models.ResourceDrift {
 			result1 := reg1.FindAllStringSubmatch(v, 1)
 			address := stripansi.Strip(strings.TrimSpace(result1[0][0][1:]))
 			for k1, v2 := range content[k+1:] {
-				if strings.Contains(v2, "#") && strings.Contains(v2, "must be") || strings.Contains(v2, "will be") {
-					resourceDetail = strings.Join(content[k+1:k1+k], "\n")
-					break
-				} else if strings.Contains(v2, "Plan:") {
+				if ((strings.Contains(v2, "#") && strings.Contains(v2, "must be")) || strings.Contains(v2, "will be")) ||
+					strings.Contains(v2, "Plan:") {
 					resourceDetail = strings.Join(content[k+1:k1+k], "\n")
 					break
 				}

@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package models
 
 import (
@@ -85,7 +87,7 @@ plan:
   steps:
     - type: checkout
       name: Checkout Code
-      
+
     - type: terraformInit
       name: Terraform Init
 
@@ -99,7 +101,7 @@ apply:
   steps:
     - type: checkout
       name: Checkout Code
-      
+
     - type: terraformInit
       name: Terraform Init
 
@@ -114,18 +116,18 @@ apply:
 
     - type: ansiblePlay
       name: Run playbook
-      
+
 destroy:
   steps:
     - type: checkout
       name: Checkout Code
-      
+
     - type: terraformInit
       name: Terraform Init
 
     - type: terraformPlan
       name: Terraform Plan
-      args: 
+      args:
         - "-destroy"
 
     - type: terraformDestroy
@@ -139,7 +141,7 @@ plan:
   steps:
     - type: checkout
       name: Checkout Code
-      
+
     - type: terraformInit
       name: Terraform Init
 
@@ -153,7 +155,7 @@ apply:
   steps:
     - type: checkout
       name: Checkout Code
-      
+
     - type: terraformInit
       name: Terraform Init
 
@@ -168,18 +170,18 @@ apply:
 
     - type: ansiblePlay
       name: Run playbook
-      
+
 destroy:
   steps:
     - type: checkout
       name: Checkout Code
-      
+
     - type: terraformInit
       name: Terraform Init
 
     - type: terraformPlan
       name: Terraform Plan
-      args: 
+      args:
         - "-destroy"
 
     - type: terraformDestroy
@@ -198,7 +200,7 @@ envParse:
     - type: checkout
     - type: terraformInit
     - type: terraformPlan
-    - type: envParse 
+    - type: envParse
 
 tplScan:
   steps:
@@ -208,7 +210,7 @@ tplScan:
 tplParse:
   steps:
     - type: scaninit
-    - type: tplParse 
+    - type: tplParse
 `
 
 const DefaultPipelineVersion = "0.4"

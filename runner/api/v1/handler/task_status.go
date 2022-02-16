@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package handler
 
@@ -45,7 +45,7 @@ func TaskStatus(c *ctx.Context) {
 	}
 
 	defer func() {
-		wsConn.Close()
+		_ = wsConn.Close()
 	}()
 
 	if err := doTaskStatus(wsConn, task, peerClosed); err != nil {
