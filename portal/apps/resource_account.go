@@ -5,6 +5,7 @@ package apps
 import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
@@ -135,6 +136,29 @@ func SearchResourceAccount(c *ctx.ServiceContext, form *forms.SearchResourceAcco
 	}, nil
 }
 
+func chkFormCtServiceIds(db *db.Session, form *forms.UpdateResourceAccountForm, rsAccountId models.Id) e.Error {
+	if !form.HasKey("ctServiceIds") {
+		return nil
+	}
+
+	err := services.DeleteCtResourceMap(db, form.Id)
+	if err != nil {
+		return err
+	}
+
+	for _, ctServiceId := range form.CtServiceIds {
+		_, err = services.CreateCtResourceMap(db, models.CtResourceMap{
+			ResourceAccountId: rsAccountId,
+			CtServiceId:       ctServiceId,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func UpdateResourceAccount(c *ctx.ServiceContext, form *forms.UpdateResourceAccountForm) (rsAccount *models.ResourceAccount, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update rsAccount %s", form.Id))
 	if form.Id == "" {
@@ -176,23 +200,8 @@ func UpdateResourceAccount(c *ctx.ServiceContext, form *forms.UpdateResourceAcco
 		return nil, err
 	}
 
-	if form.HasKey("ctServiceIds") {
-		err = services.DeleteCtResourceMap(c.DB(), form.Id)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, ctServiceId := range form.CtServiceIds {
-			_, err = services.CreateCtResourceMap(c.DB(), models.CtResourceMap{
-				ResourceAccountId: rsAccount.Id,
-				CtServiceId:       ctServiceId,
-			})
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
+	// check ctServiceIds
+	err = chkFormCtServiceIds(c.DB(), form, rsAccount.Id)
 	return
 }
 
