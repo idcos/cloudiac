@@ -127,7 +127,7 @@ func SearchUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{},
 	query := services.QueryUser(c.DB())
 
 	if c.OrgId == "" && !c.IsSuperAdmin {
-		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest)
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest) //nolint
 	}
 
 	if c.OrgId != "" {
@@ -136,14 +136,14 @@ func SearchUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{},
 			// 排除组织已有用户
 			// 应只有平台管理员可以调用
 			if !c.IsSuperAdmin {
-				return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest)
+				return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest) //nolint
 			}
 			rootIds, _ := services.GetRootUserIds(c.DB())
 			userIds = append(userIds, rootIds...)
 			query = query.Where(fmt.Sprintf("%s.id not in (?)", models.User{}.TableName()), userIds)
 		} else {
 			// 查询组织所有用户
-			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds) //nolint
 		}
 	}
 	if c.ProjectId != "" {
@@ -157,10 +157,10 @@ func SearchUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{},
 			excludeIds := append(userIds, orgAdminsIds...)
 			excludeIds = append(excludeIds, rootIds...)
 
-			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), orgUserIds)
+			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), orgUserIds) //nolint
 			query = query.Where(fmt.Sprintf("%s.id not in (?)", models.User{}.TableName()), excludeIds)
 		} else {
-			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds) //nolint
 		}
 	}
 
@@ -206,13 +206,13 @@ func SearchUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{},
 func UpdateUser(c *ctx.ServiceContext, form *forms.UpdateUserForm) (*models.User, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update user %s", form.Id))
 	if form.Id == consts.SysUserId {
-		return nil, e.New(e.PermissionDeny, fmt.Errorf("modify sys user denied"), http.StatusForbidden)
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("modify sys user denied"), http.StatusForbidden) //nolint
 	} else if c.UserId == form.Id || c.IsSuperAdmin {
 		// 自身编辑
 	} else if c.OrgId != "" && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) {
 		return nil, e.New(e.PermissionDeny, fmt.Errorf("admin required"), http.StatusForbidden)
 	} else if c.OrgId == "" && !c.IsSuperAdmin {
-		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusForbidden)
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusForbidden) //nolint
 	}
 
 	query := c.DB()
@@ -260,7 +260,7 @@ func ChangeUserStatus(c *ctx.ServiceContext, form *forms.DisableUserForm) (*mode
 	c.AddLogField("action", fmt.Sprintf("change user status %s", form.Id))
 	query := c.DB()
 	if form.Id == consts.SysUserId {
-		return nil, e.New(e.PermissionDeny, fmt.Errorf("modify sys user denied"), http.StatusForbidden)
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("modify sys user denied"), http.StatusForbidden) //nolint
 	} else if !c.IsSuperAdmin {
 		return nil, e.New(e.PermissionDeny, http.StatusForbidden)
 	}
@@ -274,7 +274,7 @@ func ChangeUserStatus(c *ctx.ServiceContext, form *forms.DisableUserForm) (*mode
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
 		//nolint
-		c.Logger().Errorf("error get user by id, err %s", err)
+		c.Logger().WithField("change","userStatus").Errorf("%s", err)
 		return nil, err
 	}
 
@@ -303,7 +303,7 @@ func UserDetail(c *ctx.ServiceContext, userId models.Id) (*models.UserWithRoleRe
 			if services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) ||
 				services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, "") {
 				userIds, _ := services.GetUserIdsByProject(c.DB(), c.ProjectId)
-				query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+				query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds) //nolint
 			} else {
 				return nil, e.New(e.PermissionDeny, fmt.Errorf("project permission required"), http.StatusForbidden)
 			}
@@ -311,13 +311,13 @@ func UserDetail(c *ctx.ServiceContext, userId models.Id) (*models.UserWithRoleRe
 			// 查询组织用户
 			if services.UserHasOrgRole(c.UserId, c.OrgId, "") {
 				userIds, _ := services.GetUserIdsByOrg(c.DB(), c.OrgId)
-				query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+				query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds) //nolint
 			} else {
 				return nil, e.New(e.PermissionDeny, fmt.Errorf("org permission required"), http.StatusForbidden)
 			}
 		}
 	} else {
-		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusForbidden)
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusForbidden) //nolint
 	}
 
 	// 导出用户角色
@@ -337,7 +337,7 @@ func UserDetail(c *ctx.ServiceContext, userId models.Id) (*models.UserWithRoleRe
 		// 通过 /auth/me 或者 /users/:userId 访问
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
 	} else if err != nil {
-		c.Logger().Errorf("error get user by id, err %s", err)
+		c.Logger().WithField("user","detail").Errorf("%s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
@@ -382,7 +382,7 @@ func DeleteUser(c *ctx.ServiceContext, form *forms.DeleteUserForm) (interface{},
 	if err != nil && err.Code() == e.UserNotExists {
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
 	} else if err != nil {
-		c.Logger().Errorf("error get user by id, err %s", err)
+		c.Logger().WithField("user","delete").Errorf("%s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
@@ -418,20 +418,20 @@ func DeleteUser(c *ctx.ServiceContext, form *forms.DeleteUserForm) (interface{},
 
 func QueryUserWithUserIdsByOrg(query *db.Session, orgId models.Id) *db.Session {
 	userIds, _ := services.GetUserIdsByOrg(query, orgId)
-	query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+	query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds) //nolint
 	return query
 }
 
 func QueryUserWithUserIdsByProject(query *db.Session, projectId models.Id) *db.Session {
 	userIds, _ := services.GetUserIdsByProject(query, projectId)
-	query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+	query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds) //nolint
 	return query
 }
 
 // UserPassReset 用户重置密码
 func UserPassReset(c *ctx.ServiceContext, form *forms.DetailUserForm) (*models.User, e.Error) {
 	if form.Id == consts.SysUserId {
-		return nil, e.New(e.PermissionDeny, fmt.Errorf("modify sys user denied"), http.StatusForbidden)
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("modify sys user denied"), http.StatusForbidden) //nolint
 	}
 
 	initPass := utils.GenPasswd(6, "mix")

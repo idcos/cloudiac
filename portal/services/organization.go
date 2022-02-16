@@ -27,12 +27,14 @@ func CreateOrganization(tx *db.Session, org models.Organization) (*models.Organi
 
 func UpdateOrganization(tx *db.Session, id models.Id, attrs models.Attrs) (org *models.Organization, re e.Error) {
 	org = &models.Organization{}
+	//nolint
 	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.Organization{}, attrs); err != nil {
 		if e.IsDuplicate(err) {
 			return nil, e.New(e.OrganizationAlreadyExists)
 		}
 		return nil, e.New(e.DBError, fmt.Errorf("update org error: %v", err))
 	}
+	//nolint
 	if err := tx.Where("id = ?", id).First(org); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("query org error: %v", err))
 	}
@@ -40,6 +42,7 @@ func UpdateOrganization(tx *db.Session, id models.Id, attrs models.Attrs) (org *
 }
 
 func DeleteOrganization(tx *db.Session, id models.Id) e.Error {
+	//nolint
 	if _, err := tx.Where("id = ?", id).Delete(&models.Organization{}); err != nil {
 		return e.New(e.DBError, fmt.Errorf("delete org error: %v", err))
 	}
@@ -48,6 +51,7 @@ func DeleteOrganization(tx *db.Session, id models.Id) e.Error {
 
 func GetOrganizationById(tx *db.Session, id models.Id) (*models.Organization, e.Error) {
 	o := models.Organization{}
+	//nolint
 	if err := tx.Where("id = ?", id).First(&o); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.OrganizationNotExists, err)

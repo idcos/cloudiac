@@ -33,7 +33,7 @@ import (
 
 func GetTask(dbSess *db.Session, id models.Id) (*models.Task, e.Error) {
 	task := models.Task{}
-	err := dbSess.Where("id = ?", id).First(&task)
+	err := dbSess.Where("id = ?", id).First(&task) //nolint
 	if err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.TaskNotExists, err)
@@ -46,7 +46,7 @@ func GetTask(dbSess *db.Session, id models.Id) (*models.Task, e.Error) {
 
 func DeleteTaskStep(tx *db.Session, taskId models.Id) e.Error {
 	step := models.TaskStep{}
-	_, err := tx.Where("task_id = ?", taskId).Delete(&step)
+	_, err := tx.Where("task_id = ?", taskId).Delete(&step) //nolint
 	if err != nil {
 		return e.New(e.DBError, err)
 	}
@@ -76,7 +76,7 @@ func DeleteEnvResourceDriftByAddressList(tx *db.Session, taskId models.Id, addre
 
 func DeleteTask(tx *db.Session, taskId models.Id) e.Error {
 	step := models.Task{}
-	_, err := tx.Where("id = ?", taskId).Delete(&step)
+	_, err := tx.Where("id = ?", taskId).Delete(&step) //nolint
 	if err != nil {
 		return e.New(e.DBError, err)
 	}
@@ -305,11 +305,11 @@ func doCreateTask(tx *db.Session, task models.Task, tpl *models.Template, env *m
 	}
 
 	if len(steps) == 0 {
-		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps"))
+		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps")) //nolint
 	}
 
 	if err = tx.Insert(&task); err != nil {
-		return nil, e.New(e.DBError, errors.Wrapf(err, "save task"))
+		return nil, e.New(e.DBError, errors.Wrapf(err, "save task")) //nolint
 	}
 
 	for i := range steps {
@@ -317,7 +317,7 @@ func doCreateTask(tx *db.Session, task models.Task, tpl *models.Template, env *m
 			steps[i].NextStep = steps[i+1].Id
 		}
 		if err = tx.Insert(&steps[i]); err != nil {
-			return nil, e.New(e.DBError, errors.Wrapf(err, "save task step"))
+			return nil, e.New(e.DBError, errors.Wrapf(err, "save task step")) //nolint
 		}
 	}
 	return &task, nil
@@ -416,7 +416,7 @@ func ListPendingCronTask(tx *db.Session, envId models.Id) (bool, e.Error) {
 
 func GetTaskById(tx *db.Session, id models.Id) (*models.Task, e.Error) {
 	o := models.Task{}
-	if err := tx.Where("id = ?", id).First(&o); err != nil {
+	if err := tx.Where("id = ?", id).First(&o); err != nil { //nolint
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.TaskNotExists, err)
 		}
@@ -623,7 +623,7 @@ func SaveTaskOutputs(dbSess *db.Session, task *models.Task, vars map[string]TfSt
 		task.Result.Outputs[k] = v
 	}
 	if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
-		UpdateColumn("result", task.Result); err != nil {
+		UpdateColumn("result", task.Result); err != nil { //nolint
 		return err
 	}
 	return nil
@@ -716,7 +716,7 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource)
 	task.Result.ResDestroyed = &resDestroyed
 
 	if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
-		UpdateColumn("result", task.Result); err != nil {
+		UpdateColumn("result", task.Result); err != nil { //nolint
 		return err
 	}
 	return nil
@@ -724,7 +724,7 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource)
 
 func GetTaskStepByStepId(tx *db.Session, stepId models.Id) (*models.TaskStep, error) {
 	taskStep := models.TaskStep{}
-	err := tx.Where("id = ?", stepId).First(&taskStep)
+	err := tx.Where("id = ?", stepId).First(&taskStep) //nolint
 	if err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.TaskStepNotExists)
@@ -1069,11 +1069,11 @@ func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, ta
 	}
 
 	if len(steps) == 0 {
-		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps"))
+		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps")) //nolint
 	}
 
 	if err := tx.Insert(&task); err != nil {
-		return nil, e.New(e.DBError, errors.Wrapf(err, "save task"))
+		return nil, e.New(e.DBError, errors.Wrapf(err, "save task"))  //nolint
 	}
 
 	for i := range steps {
@@ -1081,7 +1081,7 @@ func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, ta
 			steps[i].NextStep = steps[i+1].Id
 		}
 		if err := tx.Insert(&steps[i]); err != nil {
-			return nil, e.New(e.DBError, errors.Wrapf(err, "save task step"))
+			return nil, e.New(e.DBError, errors.Wrapf(err, "save task step")) //nolint
 		}
 	}
 	return &task, nil
@@ -1167,11 +1167,11 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 	}
 
 	if len(steps) == 0 {
-		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps"))
+		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps"))  //nolint
 	}
 
 	if err := tx.Insert(&task); err != nil {
-		return nil, e.New(e.DBError, errors.Wrapf(err, "save task"))
+		return nil, e.New(e.DBError, errors.Wrapf(err, "save task"))  //nolint
 	}
 
 	for i := range steps {
@@ -1179,7 +1179,7 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 			steps[i].NextStep = steps[i+1].Id
 		}
 		if err := tx.Insert(&steps[i]); err != nil {
-			return nil, e.New(e.DBError, errors.Wrapf(err, "save task step"))
+			return nil, e.New(e.DBError, errors.Wrapf(err, "save task step")) //nolint
 		}
 	}
 	return &task, nil
@@ -1187,7 +1187,7 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 
 func GetScanTaskById(tx *db.Session, id models.Id) (*models.ScanTask, e.Error) {
 	o := models.ScanTask{}
-	if err := tx.Where("id = ?", id).First(&o); err != nil {
+	if err := tx.Where("id = ?", id).First(&o); err != nil { //nolint
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.TaskNotExists, err)
 		}
@@ -1224,7 +1224,7 @@ func CreateMirrorScanTask(task *models.Task) *models.ScanTask {
 
 // 查询任务所有的步骤信息
 func QueryTaskStepsById(query *db.Session, taskId models.Id) *db.Session {
-	return query.Model(&models.TaskStep{}).Where("task_id = ?", taskId).Order("`index`")
+	return query.Model(&models.TaskStep{}).Where("task_id = ?", taskId).Order("`index`") //nolint
 }
 
 // 查询任务下某一个单独步骤的具体执行日志
@@ -1357,7 +1357,7 @@ func GetDriftResource(session *db.Session, envId, driftTaskId models.Id) ([]mode
 	if err := session.Model(&models.ResourceDrift{}).
 		Where("env_id = ?", envId).
 		Where("task_id = ?", driftTaskId).
-		Find(&driftResources); err != nil {
+		Find(&driftResources); err != nil { //nolint
 		return nil, e.New(e.DBError, err)
 	}
 	return driftResources, nil
@@ -1372,7 +1372,7 @@ func GetDriftResourceById(session *db.Session, id string) (*ResourceDriftResp, e
 	driftResources := &ResourceDriftResp{}
 	if err := session.Model(&models.ResourceDrift{}).
 		Where("id = ?", id).
-		First(driftResources); err != nil {
+		First(driftResources); err != nil { //nolint
 		return nil, e.New(e.DBError, err)
 	}
 	driftResources.IsDrift = true

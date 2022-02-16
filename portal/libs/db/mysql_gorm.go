@@ -208,15 +208,15 @@ func (s *Session) Omit(cols ...string) *Session {
 }
 
 func (s *Session) LazySelect(selectStat ...string) *Session {
-	return ToSess(s.db.Set("app:lazySelects", selectStat))
+	return ToSess(s.db.Set("app:lazySelects", selectStat)) //nolint
 }
 
 func (s *Session) LazySelectAppend(selectStat ...string) *Session {
-	stats, ok := s.db.Get("app:lazySelects")
+	stats, ok := s.db.Get("app:lazySelects") //nolint
 	if ok {
-		return ToSess(s.db.Set("app:lazySelects", append(stats.([]string), selectStat...)))
+		return ToSess(s.db.Set("app:lazySelects", append(stats.([]string), selectStat...))) //nolint
 	} else {
-		return ToSess(s.db.Set("app:lazySelects", selectStat))
+		return ToSess(s.db.Set("app:lazySelects", selectStat)) //nolint
 	}
 }
 
@@ -272,7 +272,7 @@ func (s *Session) Exists() (bool, error) {
 }
 
 func (s *Session) autoLazySelect() *Session {
-	selects, ok := s.db.Get("app:lazySelects")
+	selects, ok := s.db.Get("app:lazySelects") //nolint
 	if !ok {
 		return s
 	}

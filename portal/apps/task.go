@@ -81,7 +81,7 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*taskDetailRe
 	if err != nil && err.Code() == e.TaskNotExists {
 		return nil, e.New(e.TaskNotExists, err, http.StatusNotFound)
 	} else if err != nil {
-		c.Logger().Errorf("error get task by id, err %s", err)
+		c.Logger().WithField("task", "detail").Errorf("%s", err)
 		return nil, e.New(e.DBError, err)
 	}
 	sort.Sort(task.Variables)
@@ -128,7 +128,7 @@ func LastTask(c *ctx.ServiceContext, form *forms.LastTaskForm) (*taskDetailResp,
 	if err != nil && err.Code() == e.EnvNotExists {
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
 	} else if err != nil {
-		c.Logger().Errorf("error get task by id, err %s", err)
+		c.Logger().WithField("task", "last").Errorf("%s", err)
 		return nil, e.New(e.DBError, err)
 	}
 
@@ -141,7 +141,7 @@ func LastTask(c *ctx.ServiceContext, form *forms.LastTaskForm) (*taskDetailResp,
 	if err != nil && err.Code() == e.TaskNotExists {
 		return nil, e.New(e.TaskNotExists, err, http.StatusNotFound)
 	} else if err != nil {
-		c.Logger().Errorf("error get task by id, err %s", err)
+		c.Logger().WithField("task", "last").Errorf("%s", err)
 		return nil, e.New(e.DBError, err)
 	}
 	user, err := services.GetUserByIdRaw(c.DB(), task.CreatorId)
@@ -272,7 +272,7 @@ func TaskOutput(c *ctx.ServiceContext, form forms.DetailTaskForm) (interface{}, 
 		c.Logger().Errorf("error get task id by user, err %s", er)
 		return nil, e.New(e.DBError, er)
 	}
-	if !c.OrgId.InArray(orgIds...)  && !c.IsSuperAdmin  {
+	if !c.OrgId.InArray(orgIds...) && !c.IsSuperAdmin {
 		// 请求了一个不存在的 task，因为 task id 是在 path 传入，这里我们返回 404
 		return nil, e.New(e.TaskNotExists, http.StatusNotFound)
 	}
@@ -285,7 +285,7 @@ func TaskOutput(c *ctx.ServiceContext, form forms.DetailTaskForm) (interface{}, 
 	if err != nil && err.Code() == e.TaskNotExists {
 		return nil, e.New(e.TaskNotExists, err, http.StatusNotFound)
 	} else if err != nil {
-		c.Logger().Errorf("error get task by id, err %s", err)
+		c.Logger().WithField("task", "output").Errorf("%s", err)
 		return nil, e.New(e.DBError, err)
 	}
 
@@ -310,11 +310,9 @@ func SearchTaskResources(c *ctx.ServiceContext, form *forms.SearchTaskResourceFo
 		c.OrgId, c.ProjectId, task.EnvId, task.Id)
 	query = query.Joins("left join iac_resource_drift as rd on rd.res_id = r.id").LazySelectAppend("r.*, !ISNULL(rd.drift_detail) as is_drift")
 	if form.HasKey("q") {
+		q := fmt.Sprintf("%%%s%%", form.Q)
 		// 支持对 provider / type / name 进行模糊查询
-		query = query.Where("r.provider LIKE ? OR r.type LIKE ? OR r.name LIKE ?",
-			fmt.Sprintf("%%%s%%", form.Q),
-			fmt.Sprintf("%%%s%%", form.Q),
-			fmt.Sprintf("%%%s%%", form.Q))
+		query = query.Where("r.provider LIKE ? OR r.type LIKE ? OR r.name LIKE ?", q, q, q)
 	}
 
 	if form.SortField() == "" {
