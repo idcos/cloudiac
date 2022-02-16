@@ -430,54 +430,38 @@ func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*Tem
 
 }
 
-func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl interface{}, err e.Error) {
+func getTplIdList(db *db.Session, projectId models.Id) ([]models.Id, e.Error) {
 	tplIdList := make([]models.Id, 0)
-	if c.ProjectId != "" {
-		tplIdList, err = services.QueryTplByProjectId(c.DB(), c.ProjectId)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(tplIdList) == 0 {
-			return getEmptyListResult(form)
-		}
+	if projectId == "" {
+		return tplIdList, nil
 	}
+
+	return services.QueryTplByProjectId(db, projectId)
+}
+
+func updateTaskAndPolicyStatus(db *db.Session, templates []*SearchTemplateResp) ([]string, e.Error) {
 	vcsIds := make([]string, 0)
-	query := services.QueryTemplateByOrgId(c.DB(), form.Q, c.OrgId, tplIdList, c.ProjectId)
-	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	templates := make([]*SearchTemplateResp, 0)
-	if err := p.Scan(&templates); err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-
 	for _, v := range templates {
 		if v.RepoAddr == "" {
 			vcsIds = append(vcsIds, v.VcsId)
 		}
 		var scanTaskStatus string
 		// 如果开启
-		scanTask, err := services.GetTplLastScanTask(c.DB(), v.Id)
+		scanTask, err := services.GetTplLastScanTask(db, v.Id)
 		if err != nil {
 			scanTaskStatus = ""
 			if !e.IsRecordNotFound(err) {
-				return nil, e.New(e.DBError, err)
+				return vcsIds, e.New(e.DBError, err)
 			}
 		} else {
 			scanTaskStatus = scanTask.PolicyStatus
 		}
 		v.PolicyStatus = models.PolicyStatusConversion(scanTaskStatus, v.PolicyEnable)
-
 	}
+	return vcsIds, nil
+}
 
-	vcsList, err := services.GetVcsListByIds(c.DB(), vcsIds)
-	if err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-
-	vcsAttr := make(map[string]models.Vcs)
-	for _, v := range vcsList {
-		vcsAttr[v.Id.String()] = v
-	}
+func updateTmplRepoAddr(templates []*SearchTemplateResp, vcsAttr map[string]models.Vcs) {
 
 	portAddr := configs.Get().Portal.Address
 	for _, tpl := range templates {
@@ -489,6 +473,40 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 			}
 		}
 	}
+}
+
+func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl interface{}, err e.Error) {
+	tplIdList, err := getTplIdList(c.DB(), c.ProjectId)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(tplIdList) == 0 {
+		return getEmptyListResult(form)
+	}
+
+	query := services.QueryTemplateByOrgId(c.DB(), form.Q, c.OrgId, tplIdList, c.ProjectId)
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	templates := make([]*SearchTemplateResp, 0)
+	if err := p.Scan(&templates); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	vcsIds, err := updateTaskAndPolicyStatus(c.DB(), templates)
+	if err != nil {
+		return nil, err
+	}
+
+	vcsList, err := services.GetVcsListByIds(c.DB(), vcsIds)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	vcsAttr := make(map[string]models.Vcs)
+	for _, v := range vcsList {
+		vcsAttr[v.Id.String()] = v
+	}
+	updateTmplRepoAddr(templates, vcsAttr)
 
 	return page.PageResp{
 		Total:    p.MustTotal(),
