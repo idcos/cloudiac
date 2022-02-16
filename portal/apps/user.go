@@ -202,17 +202,45 @@ func SearchUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{},
 	}, nil
 }
 
+func chkUserIdentity(formId, userId, orgId models.Id, isSuperAdmin bool) e.Error {
+
+	if formId == consts.SysUserId {
+		return e.New(e.PermissionDeny, fmt.Errorf("modify sys user denied"), http.StatusForbidden)
+	} else if userId == formId || isSuperAdmin {
+		// 自身编辑
+	} else if orgId != "" && !services.UserHasOrgRole(userId, orgId, consts.OrgRoleAdmin) {
+		return e.New(e.PermissionDeny, fmt.Errorf("admin required"), http.StatusForbidden)
+	} else if orgId == "" && !isSuperAdmin {
+		return e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusForbidden)
+	}
+
+	return nil
+}
+
+func getNewPassword(oldPassword, newPassword, userPassword string) (string, e.Error) {
+
+	valid, err := utils.CheckPassword(oldPassword, userPassword)
+	if err != nil {
+		return "", e.New(e.DBError, http.StatusInternalServerError, err)
+	}
+	if !valid {
+		return "", e.New(e.InvalidPassword, http.StatusBadRequest)
+	}
+
+	newPassword, er := services.HashPassword(newPassword)
+	if er != nil {
+		return "", er
+	}
+	return newPassword, nil
+}
+
 // UpdateUser 用户信息编辑
 func UpdateUser(c *ctx.ServiceContext, form *forms.UpdateUserForm) (*models.User, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update user %s", form.Id))
-	if form.Id == consts.SysUserId {
-		return nil, e.New(e.PermissionDeny, fmt.Errorf("modify sys user denied"), http.StatusForbidden)
-	} else if c.UserId == form.Id || c.IsSuperAdmin {
-		// 自身编辑
-	} else if c.OrgId != "" && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) {
-		return nil, e.New(e.PermissionDeny, fmt.Errorf("admin required"), http.StatusForbidden)
-	} else if c.OrgId == "" && !c.IsSuperAdmin {
-		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusForbidden)
+
+	err := chkUserIdentity(form.Id, c.OrgId, c.UserId, c.IsSuperAdmin)
+	if err != nil {
+		return nil, err
 	}
 
 	query := c.DB()
@@ -232,24 +260,20 @@ func UpdateUser(c *ctx.ServiceContext, form *forms.UpdateUserForm) (*models.User
 		b, _ := json.Marshal(form.NewbieGuide)
 		attrs["newbie_guide"] = b
 	}
-	if form.HasKey("oldPassword") {
-		if !form.HasKey("newPassword") {
-			return nil, e.New(e.BadParam, http.StatusBadRequest)
-		}
-		valid, err := utils.CheckPassword(form.OldPassword, user.Password)
-		if err != nil {
-			return nil, e.New(e.DBError, http.StatusInternalServerError, err)
-		}
-		if !valid {
-			return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
-		}
 
-		newPassword, er := services.HashPassword(form.NewPassword)
-		if er != nil {
-			return nil, er
-		}
-		attrs["password"] = newPassword
+	if !form.HasKey("oldPassword") {
+		return services.UpdateUser(c.DB(), form.Id, attrs)
 	}
+
+	if !form.HasKey("newPassword") {
+		return nil, e.New(e.BadParam, http.StatusBadRequest)
+	}
+
+	newPassword, er := getNewPassword(form.OldPassword, form.NewPassword, user.Password)
+	if er != nil {
+		return nil, er
+	}
+	attrs["password"] = newPassword
 
 	return services.UpdateUser(c.DB(), form.Id, attrs)
 }
