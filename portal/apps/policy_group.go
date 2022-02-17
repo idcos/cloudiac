@@ -391,7 +391,7 @@ func PolicyGroupScanTasks(c *ctx.ServiceContext, form *forms.PolicyLastTasksForm
 	}
 	if summaries, err := services.PolicySummary(c.DB(), policyIds, consts.ScopeTask, c.OrgId); err != nil {
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	} else if summaries != nil && len(summaries) > 0 {
+	} else if len(summaries) > 0 {
 		sumMap := make(map[string]*services.PolicyScanSummary, len(policyIds))
 		for idx, summary := range summaries {
 			sumMap[string(summary.Id)+summary.Status] = summaries[idx]
@@ -463,7 +463,6 @@ func PolicyGroupScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportFo
 				if s.Status == common.PolicyStatusPassed {
 					r.Passed[idx] = s.Count
 				}
-				// FIXME: 是否跳过失败和屏蔽的策略？
 				r.Total[idx] += s.Count
 				r.Value[idx] = Percent(r.Passed[idx]) / Percent(r.Total[idx])
 				found = true

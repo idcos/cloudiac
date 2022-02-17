@@ -87,7 +87,7 @@ func RunnerSearch() ([]*api.AgentService, e.Error) {
 		return nil, e.New(e.ConsulConnError, err)
 	}
 
-	for serviceName, _ := range services {
+	for serviceName := range services {
 		if strings.Contains(strings.ToLower(serviceName), "runner") {
 			resp = append(resp, services[serviceName])
 		}

@@ -438,7 +438,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		_ = changeTaskStatus(models.TaskFailed, err.Error(), false)
 	}
 
-	logger.Infof("run task start", task.Id)
+	logger.Infof("run task start %s", task.Id)
 
 	if task.IsDriftTask {
 		if env, err := services.GetEnvById(m.db, task.EnvId); err != nil {
@@ -777,7 +777,7 @@ func (m *TaskManager) processTaskDone(taskId models.Id) {
 						}
 					} else {
 						addressList := []string{}
-						for address, _ := range driftInfoMap {
+						for address := range driftInfoMap {
 							addressList = append(addressList, address)
 						}
 						err = services.DeleteEnvResourceDriftByAddressList(dbSess, env.LastResTaskId, addressList)

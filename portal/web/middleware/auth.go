@@ -75,9 +75,8 @@ func Auth(c *ctx.GinRequest) {
 			c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("org disabled")), http.StatusForbidden)
 			return
 		}
-		if c.Service().IsSuperAdmin ||
-			services.UserHasOrgRole(c.Service().UserId, c.Service().OrgId, "") {
-		} else {
+		if !(c.Service().IsSuperAdmin ||
+			services.UserHasOrgRole(c.Service().UserId, c.Service().OrgId, "")) {
 			c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("not allow to access org")), http.StatusForbidden)
 			return
 		}

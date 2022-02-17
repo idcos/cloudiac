@@ -84,7 +84,7 @@ func (gitee *giteeVcs) ListRepos(namespace, search string, limit, offset int) ([
 	_ = json.Unmarshal(body, &rep)
 
 	repoList := make([]RepoIface, 0)
-	for index, _ := range rep {
+	for index := range rep {
 		repoList = append(repoList, &giteeRepoIface{
 			vcs:        gitee.vcs,
 			repository: &rep[index],

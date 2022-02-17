@@ -243,7 +243,7 @@ func GetVariableParent(dbSess *db.Session, name, scope, variableType string, sco
 
 func GetVariableBody(vars map[string]models.Variable) []models.VariableBody {
 	vb := make([]models.VariableBody, 0, len(vars))
-	for k, _ := range vars {
+	for k := range vars {
 		vb = append(vb, vars[k].VariableBody)
 	}
 	return vb
