@@ -110,44 +110,7 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 		return stepResult, err
 	}
 
-	if len(stepResult.Result.LogContent) > 0 {
-		content := stepResult.Result.LogContent
-		content = logstorage.CutLogContent(content)
-		if err := logstorage.Get().Write(step.LogPath, content); err != nil {
-			logger.WithField("path", step.LogPath).Errorf("write task log error: %v", err)
-			logger.Infof("task log content: %s", content)
-		}
-	}
-	if len(stepResult.Result.TfStateJson) > 0 {
-		path := task.StateJsonPath()
-		if err := logstorage.Get().Write(path, stepResult.Result.TfStateJson); err != nil {
-			logger.WithField("path", path).Errorf("write task state json error: %v", err)
-		}
-	}
-	if len(stepResult.Result.TFProviderSchemaJson) > 0 {
-		path := task.ProviderSchemaJsonPath()
-		if err := logstorage.Get().Write(path, stepResult.Result.TFProviderSchemaJson); err != nil {
-			logger.WithField("path", path).Errorf("write task provider json error: %v", err)
-		}
-	}
-	if len(stepResult.Result.TfPlanJson) > 0 {
-		path := task.PlanJsonPath()
-		if err := logstorage.Get().Write(path, stepResult.Result.TfPlanJson); err != nil {
-			logger.WithField("path", path).Errorf("write task plan json error: %v", err)
-		}
-	}
-	if len(stepResult.Result.TfScanJson) > 0 {
-		path := task.TfParseJsonPath()
-		if err := logstorage.Get().Write(path, stepResult.Result.TfScanJson); err != nil {
-			logger.WithField("path", path).Errorf("write task parse json error: %v", err)
-		}
-	}
-	if len(stepResult.Result.TfResultJson) > 0 {
-		path := task.TfResultJsonPath()
-		if err := logstorage.Get().Write(path, stepResult.Result.TfResultJson); err != nil {
-			logger.WithField("path", path).Errorf("write task scan result json error: %v", err)
-		}
-	}
+	saveTaskStepResultFiles(task, step, stepResult.Result)
 
 	message := ""
 	switch stepResult.Status {
@@ -162,6 +125,52 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 		return stepResult, er
 	}
 	return stepResult, err
+}
+
+func saveTaskStepResultFiles(task *models.Task, step *models.TaskStep, result runner.TaskStatusMessage) {
+	logger := logs.Get().
+		WithField("func", "saveTaskStepResultFiles").
+		WithField("taskId", task.Id).
+		WithField("step", fmt.Sprintf("%d(%s)", step.Index, step.Name))
+
+	if len(result.LogContent) > 0 {
+		content := result.LogContent
+		content = logstorage.CutLogContent(content)
+		if err := logstorage.Get().Write(step.LogPath, content); err != nil {
+			logger.WithField("path", step.LogPath).Errorf("write task log error: %v", err)
+			logger.Infof("task log content: %s", content)
+		}
+	}
+	if len(result.TfStateJson) > 0 {
+		path := task.StateJsonPath()
+		if err := logstorage.Get().Write(path, result.TfStateJson); err != nil {
+			logger.WithField("path", path).Errorf("write task state json error: %v", err)
+		}
+	}
+	if len(result.TFProviderSchemaJson) > 0 {
+		path := task.ProviderSchemaJsonPath()
+		if err := logstorage.Get().Write(path, result.TFProviderSchemaJson); err != nil {
+			logger.WithField("path", path).Errorf("write task provider json error: %v", err)
+		}
+	}
+	if len(result.TfPlanJson) > 0 {
+		path := task.PlanJsonPath()
+		if err := logstorage.Get().Write(path, result.TfPlanJson); err != nil {
+			logger.WithField("path", path).Errorf("write task plan json error: %v", err)
+		}
+	}
+	if len(result.TfScanJson) > 0 {
+		path := task.TfParseJsonPath()
+		if err := logstorage.Get().Write(path, result.TfScanJson); err != nil {
+			logger.WithField("path", path).Errorf("write task parse json error: %v", err)
+		}
+	}
+	if len(result.TfResultJson) > 0 {
+		path := task.TfResultJsonPath()
+		if err := logstorage.Get().Write(path, result.TfResultJson); err != nil {
+			logger.WithField("path", path).Errorf("write task scan result json error: %v", err)
+		}
+	}
 }
 
 // pullTaskStepStatus 获取任务最新状态，直到任务结束(或 ctx cancel)
@@ -236,6 +245,22 @@ func pullTaskStepStatus(ctx context.Context, task models.Tasker, step *models.Ta
 	}
 	go readMessage()
 
+	logger.Debugf("pulling step status, step=%s(%d)", step.Type, step.Index)
+	stepResult, err = pullTaskStepStatusLoop(ctx, messageChan, readErrChan, deadline)
+	if err != nil {
+		return stepResult, err
+	}
+	logger.Debugf("pull step status done, step=%s(%d), status=%v code=%d",
+		step.Type, step.Index, stepResult.Status, stepResult.Result.ExitCode)
+	return stepResult, nil
+}
+
+func pullTaskStepStatusLoop(
+	ctx context.Context,
+	messageChan chan *runner.TaskStatusMessage,
+	readErrChan chan error,
+	deadline time.Time) (result *waitStepResult, err error) {
+
 	now := time.Now()
 	var timeout *time.Timer
 	if deadline.Before(now) {
@@ -245,49 +270,38 @@ func pullTaskStepStatus(ctx context.Context, task models.Tasker, step *models.Ta
 		timeout = time.NewTimer(deadline.Sub(now))
 	}
 
-	//var lastStatus *runner.TaskStatusMessage
-	stepResult = &waitStepResult{}
-	selectLoop := func() error {
-		for {
-			select {
-			case msg := <-messageChan:
-				if msg == nil { // closed
-					return nil
-				}
-
-				stepResult.Result = *msg
-				//logger.Debugf("receive task status message: %v, %v", msg.Exited, msg.ExitCode)
-
-				if msg.Timeout {
-					stepResult.Status = models.TaskStepTimeout
-				} else if msg.Exited {
-					if msg.ExitCode == 0 {
-						stepResult.Status = models.TaskStepComplete
-					} else {
-						stepResult.Status = models.TaskStepFailed
-					}
-					return nil
-				}
-			case err := <-readErrChan:
-				return fmt.Errorf("read message error: %v", err)
-
-			case <-ctx.Done():
-				logger.Infof("context done with: %v", ctx.Err())
-				return nil
-
-			case <-timeout.C:
-				stepResult.Status = models.TaskStepTimeout
-				return nil
+	for {
+		select {
+		case msg := <-messageChan:
+			if msg == nil { // closed
+				return result, nil
 			}
+
+			result.Result = *msg
+			//logger.Debugf("receive task status message: %v, %v", msg.Exited, msg.ExitCode)
+
+			if msg.Timeout {
+				result.Status = models.TaskStepTimeout
+			} else if msg.Exited {
+				if msg.ExitCode == 0 {
+					result.Status = models.TaskStepComplete
+				} else {
+					result.Status = models.TaskStepFailed
+				}
+				return result, nil
+			}
+		case err := <-readErrChan:
+			return result, fmt.Errorf("read message error: %v", err)
+
+		case <-ctx.Done():
+			// logger.Infof("context done with: %v", ctx.Err())
+			return result, nil
+
+		case <-timeout.C:
+			result.Status = models.TaskStepTimeout
+			return result, nil
 		}
 	}
-
-	logger.Debugf("pulling step status, step=%s(%d)", step.Type, step.Index)
-	err = selectLoop()
-	logger.Debugf("pull step status done, step=%s(%d), status=%v code=%d",
-		step.Type, step.Index, stepResult.Status, stepResult.Result.ExitCode)
-
-	return stepResult, err
 }
 
 var (
