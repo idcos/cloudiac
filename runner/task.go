@@ -196,18 +196,7 @@ func (t *Task) runStep() (err error) {
 	// 后台协程监控到命令结束就会暂停容器，
 	// 同时 task.Wait() 函数也会在任务结束后暂停容器，两边同时处理保证容器被暂停
 	if t.req.PauseTask {
-		go func() {
-			_, err := (Executor{}).WaitCommand(context.Background(), execId)
-			if err != nil {
-				logger.Debugf("container %s: %v", t.req.ContainerId, err)
-				return
-			}
-
-			logger.Debugf("pause container %s", t.req.ContainerId)
-			if err := (&Executor{}).Pause(t.req.ContainerId); err != nil {
-				logger.Debugf("container %s: %v", t.req.ContainerId, err)
-			}
-		}()
+		go t.waitCommandThenPauseContainer(execId)
 	}
 
 	infoJson := utils.MustJSON(StartedTask{
@@ -229,6 +218,20 @@ func (t *Task) runStep() (err error) {
 		return err
 	}
 	return nil
+}
+
+func (t *Task) waitCommandThenPauseContainer(execId string) {
+	_, err := (Executor{}).WaitCommand(context.Background(), execId)
+	if err != nil {
+		logger.Debugf("container %s: %v", t.req.ContainerId, err)
+		return
+	}
+
+	logger.Debugf("pause container %s", t.req.ContainerId)
+	if err := (&Executor{}).Pause(t.req.ContainerId); err != nil {
+		logger.Debugf("container %s: %v", t.req.ContainerId, err)
+		return
+	}
 }
 
 func (t *Task) decryptVariables(vars map[string]string) error {
@@ -369,6 +372,7 @@ func (t *Task) stepDirName(step int) string {
 	return GetTaskDirName(step)
 }
 
+//nolint:cyclop
 func (t *Task) genStepScript() (string, error) {
 	var (
 		command string
