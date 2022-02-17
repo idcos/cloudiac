@@ -13,6 +13,7 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
 	"cloudiac/utils/mail"
 	"encoding/json"
 	"fmt"
@@ -35,16 +36,56 @@ var (
 	emailBodyResetPassword    = "尊敬的 {{.Name}}：\n\n您的密码已经被重置，这是您的新密码：\n\n密码：\t{{.InitPass}}\n\n请使用新密码登陆系统。\n\n为了保障您的安全，请立即登陆您的账号并修改密码。"
 )
 
+func createUserOrgRel(tx *db.Session, orgId models.Id, initPass string, form *forms.CreateUserForm, lg logs.Logger) (*models.User, e.Error) {
+	var (
+		user *models.User
+		err  e.Error
+	)
+
+	hashedPassword, err := services.HashPassword(initPass)
+	if err != nil {
+		lg.Errorf("error hash password, err %s", err)
+		return nil, err
+	}
+
+	user, err = services.CreateUser(tx, models.User{
+		Name:     form.Name,
+		Password: hashedPassword,
+		Phone:    form.Phone,
+		Email:    form.Email,
+	})
+	if err != nil && err.Code() == e.UserAlreadyExists {
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		lg.Errorf("error create user, err %s", err)
+		return nil, err
+	}
+
+	// 建立用户与组织间关联
+	_, err = services.CreateUserOrgRel(tx, models.UserOrg{
+		OrgId:  orgId,
+		UserId: user.Id,
+	})
+	if err != nil {
+		lg.Errorf("error create user , err %s", err)
+		return nil, err
+	}
+
+	// 新用户自动加入演示组织和项目
+	if orgId != models.Id(common.DemoOrgId) {
+		if err = services.TryAddDemoRelation(tx, user.Id); err != nil {
+			_ = tx.Rollback()
+			lg.Errorf("error add user demo rel, err %s", err)
+			return nil, err
+		}
+	}
+
+	return user, nil
+}
+
 // CreateUser 创建用户
 func CreateUser(c *ctx.ServiceContext, form *forms.CreateUserForm) (*CreateUserResp, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create user %s", form.Name))
-
-	initPass := utils.GenPasswd(6, "mix")
-	hashedPassword, err := services.HashPassword(initPass)
-	if err != nil {
-		c.Logger().Errorf("error hash password, err %s", err)
-		return nil, err
-	}
 
 	tx := c.Tx()
 	defer func() {
@@ -54,46 +95,8 @@ func CreateUser(c *ctx.ServiceContext, form *forms.CreateUserForm) (*CreateUserR
 		}
 	}()
 
-	user, err := func() (*models.User, e.Error) {
-		var (
-			user *models.User
-			err  e.Error
-		)
-
-		user, err = services.CreateUser(tx, models.User{
-			Name:     form.Name,
-			Password: hashedPassword,
-			Phone:    form.Phone,
-			Email:    form.Email,
-		})
-		if err != nil && err.Code() == e.UserAlreadyExists {
-			return nil, e.New(err.Code(), err, http.StatusBadRequest)
-		} else if err != nil {
-			c.Logger().Errorf("error create user, err %s", err)
-			return nil, err
-		}
-
-		// 建立用户与组织间关联
-		_, err = services.CreateUserOrgRel(tx, models.UserOrg{
-			OrgId:  c.OrgId,
-			UserId: user.Id,
-		})
-		if err != nil {
-			c.Logger().Errorf("error create user , err %s", err)
-			return nil, err
-		}
-
-		// 新用户自动加入演示组织和项目
-		if c.OrgId != models.Id(common.DemoOrgId) {
-			if err = services.TryAddDemoRelation(tx, user.Id); err != nil {
-				_ = tx.Rollback()
-				c.Logger().Errorf("error add user demo rel, err %s", err)
-				return nil, err
-			}
-		}
-
-		return user, nil
-	}()
+	initPass := utils.GenPasswd(6, "mix")
+	user, err := createUserOrgRel(tx, c.OrgId, initPass, form, c.Logger())
 	if err != nil {
 		_ = tx.Rollback()
 		return nil, err
@@ -122,46 +125,69 @@ func CreateUser(c *ctx.ServiceContext, form *forms.CreateUserForm) (*CreateUserR
 	return &resp, nil
 }
 
+func queryUserOrg(db, query *db.Session, orgId models.Id, isSuperAdmin bool, exclude string) e.Error {
+	if orgId == "" && !isSuperAdmin {
+		return e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest)
+	}
+
+	if orgId == "" {
+		return nil
+	}
+
+	userIds, _ := services.GetUserIdsByOrg(db, orgId)
+	if exclude == "org" {
+		// 排除组织已有用户
+		// 应只有平台管理员可以调用
+		if !isSuperAdmin {
+			return e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest)
+		}
+		rootIds, _ := services.GetRootUserIds(db)
+		userIds = append(userIds, rootIds...)
+		query = query.Where(fmt.Sprintf("%s.id not in (?)", models.User{}.TableName()), userIds)
+	} else {
+		// 查询组织所有用户
+		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+	}
+
+	return nil
+}
+
+func queryUserProject(db, query *db.Session, orgId, projectId models.Id, exclude string) e.Error {
+
+	if projectId == "" {
+		return nil
+	}
+
+	userIds, _ := services.GetUserIdsByProject(db, projectId)
+	if exclude == "project" {
+		// 排除组织里面的项目用户，包括所有组织管理员（自动获得项目权限）和已经加入组织的用户
+		orgUserIds, _ := services.GetUserIdsByOrg(db, orgId)
+
+		orgAdminsIds, _ := services.GetOrgAdminsByOrg(db, orgId)
+		rootIds, _ := services.GetRootUserIds(db)
+		excludeIds := append(userIds, orgAdminsIds...)
+		excludeIds = append(excludeIds, rootIds...)
+
+		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), orgUserIds)
+		query = query.Where(fmt.Sprintf("%s.id not in (?)", models.User{}.TableName()), excludeIds)
+	} else {
+		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+	}
+
+	return nil
+}
+
 // SearchUser 查询用户列表
 func SearchUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{}, e.Error) {
 	query := services.QueryUser(c.DB())
-
-	if c.OrgId == "" && !c.IsSuperAdmin {
-		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest)
+	err := queryUserOrg(c.DB(), query, c.OrgId, c.IsSuperAdmin, form.Exclude)
+	if err != nil {
+		return nil, err
 	}
 
-	if c.OrgId != "" {
-		userIds, _ := services.GetUserIdsByOrg(c.DB(), c.OrgId)
-		if form.Exclude == "org" {
-			// 排除组织已有用户
-			// 应只有平台管理员可以调用
-			if !c.IsSuperAdmin {
-				return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest)
-			}
-			rootIds, _ := services.GetRootUserIds(c.DB())
-			userIds = append(userIds, rootIds...)
-			query = query.Where(fmt.Sprintf("%s.id not in (?)", models.User{}.TableName()), userIds)
-		} else {
-			// 查询组织所有用户
-			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
-		}
-	}
-	if c.ProjectId != "" {
-		userIds, _ := services.GetUserIdsByProject(c.DB(), c.ProjectId)
-		if form.Exclude == "project" {
-			// 排除组织里面的项目用户，包括所有组织管理员（自动获得项目权限）和已经加入组织的用户
-			orgUserIds, _ := services.GetUserIdsByOrg(c.DB(), c.OrgId)
-
-			orgAdminsIds, _ := services.GetOrgAdminsByOrg(c.DB(), c.OrgId)
-			rootIds, _ := services.GetRootUserIds(c.DB())
-			excludeIds := append(userIds, orgAdminsIds...)
-			excludeIds = append(excludeIds, rootIds...)
-
-			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), orgUserIds)
-			query = query.Where(fmt.Sprintf("%s.id not in (?)", models.User{}.TableName()), excludeIds)
-		} else {
-			query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
-		}
+	err = queryUserProject(c.DB(), query, c.OrgId, c.ProjectId, form.Exclude)
+	if err != nil {
+		return nil, err
 	}
 
 	if form.Status != "" {
@@ -202,17 +228,45 @@ func SearchUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{},
 	}, nil
 }
 
+func chkUserIdentity(formId, userId, orgId models.Id, isSuperAdmin bool) e.Error {
+
+	if formId == consts.SysUserId {
+		return e.New(e.PermissionDeny, fmt.Errorf("modify sys user denied"), http.StatusForbidden)
+	} else if userId == formId || isSuperAdmin {
+		// 自身编辑
+	} else if orgId != "" && !services.UserHasOrgRole(userId, orgId, consts.OrgRoleAdmin) {
+		return e.New(e.PermissionDeny, fmt.Errorf("admin required"), http.StatusForbidden)
+	} else if orgId == "" && !isSuperAdmin {
+		return e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusForbidden)
+	}
+
+	return nil
+}
+
+func getNewPassword(oldPassword, newPassword, userPassword string) (string, e.Error) {
+
+	valid, err := utils.CheckPassword(oldPassword, userPassword)
+	if err != nil {
+		return "", e.New(e.DBError, http.StatusInternalServerError, err)
+	}
+	if !valid {
+		return "", e.New(e.InvalidPassword, http.StatusBadRequest)
+	}
+
+	newPassword, er := services.HashPassword(newPassword)
+	if er != nil {
+		return "", er
+	}
+	return newPassword, nil
+}
+
 // UpdateUser 用户信息编辑
 func UpdateUser(c *ctx.ServiceContext, form *forms.UpdateUserForm) (*models.User, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update user %s", form.Id))
-	if form.Id == consts.SysUserId {
-		return nil, e.New(e.PermissionDeny, fmt.Errorf("modify sys user denied"), http.StatusForbidden)
-	} else if c.UserId == form.Id || c.IsSuperAdmin {
-		// 自身编辑
-	} else if c.OrgId != "" && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) {
-		return nil, e.New(e.PermissionDeny, fmt.Errorf("admin required"), http.StatusForbidden)
-	} else if c.OrgId == "" && !c.IsSuperAdmin {
-		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusForbidden)
+
+	err := chkUserIdentity(form.Id, c.OrgId, c.UserId, c.IsSuperAdmin)
+	if err != nil {
+		return nil, err
 	}
 
 	query := c.DB()
@@ -232,24 +286,20 @@ func UpdateUser(c *ctx.ServiceContext, form *forms.UpdateUserForm) (*models.User
 		b, _ := json.Marshal(form.NewbieGuide)
 		attrs["newbie_guide"] = b
 	}
-	if form.HasKey("oldPassword") {
-		if !form.HasKey("newPassword") {
-			return nil, e.New(e.BadParam, http.StatusBadRequest)
-		}
-		valid, err := utils.CheckPassword(form.OldPassword, user.Password)
-		if err != nil {
-			return nil, e.New(e.DBError, http.StatusInternalServerError, err)
-		}
-		if !valid {
-			return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
-		}
 
-		newPassword, er := services.HashPassword(form.NewPassword)
-		if er != nil {
-			return nil, er
-		}
-		attrs["password"] = newPassword
+	if !form.HasKey("oldPassword") {
+		return services.UpdateUser(c.DB(), form.Id, attrs)
 	}
+
+	if !form.HasKey("newPassword") {
+		return nil, e.New(e.BadParam, http.StatusBadRequest)
+	}
+
+	newPassword, er := getNewPassword(form.OldPassword, form.NewPassword, user.Password)
+	if er != nil {
+		return nil, er
+	}
+	attrs["password"] = newPassword
 
 	return services.UpdateUser(c.DB(), form.Id, attrs)
 }
@@ -291,33 +341,58 @@ func ChangeUserStatus(c *ctx.ServiceContext, form *forms.DisableUserForm) (*mode
 	return user, nil
 }
 
-// UserDetail 获取单个用户详情
-func UserDetail(c *ctx.ServiceContext, userId models.Id) (*models.UserWithRoleResp, e.Error) {
-	query := c.DB()
-
-	if c.IsSuperAdmin || c.UserId == userId {
+func queryByOrgAndProject(db, query *db.Session, userId, orgId, projectId, inputUserId models.Id, isSuperAdmin bool) e.Error {
+	if isSuperAdmin || userId == inputUserId {
 		// 管理员查询任意用户或自身查询
-	} else if c.OrgId != "" {
-		if c.ProjectId != "" {
+	} else if orgId != "" {
+		if projectId != "" {
 			// 查询项目用户：组织管理员或项目成员
-			if services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) ||
-				services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, "") {
-				userIds, _ := services.GetUserIdsByProject(c.DB(), c.ProjectId)
+			if services.UserHasOrgRole(userId, orgId, consts.OrgRoleAdmin) ||
+				services.UserHasProjectRole(userId, orgId, projectId, "") {
+				userIds, _ := services.GetUserIdsByProject(db, projectId)
 				query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
 			} else {
-				return nil, e.New(e.PermissionDeny, fmt.Errorf("project permission required"), http.StatusForbidden)
+				return e.New(e.PermissionDeny, fmt.Errorf("project permission required"), http.StatusForbidden)
 			}
 		} else {
 			// 查询组织用户
-			if services.UserHasOrgRole(c.UserId, c.OrgId, "") {
-				userIds, _ := services.GetUserIdsByOrg(c.DB(), c.OrgId)
+			if services.UserHasOrgRole(userId, orgId, "") {
+				userIds, _ := services.GetUserIdsByOrg(db, orgId)
 				query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
 			} else {
-				return nil, e.New(e.PermissionDeny, fmt.Errorf("org permission required"), http.StatusForbidden)
+				return e.New(e.PermissionDeny, fmt.Errorf("org permission required"), http.StatusForbidden)
 			}
 		}
 	} else {
-		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusForbidden)
+		return e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusForbidden)
+	}
+
+	return nil
+}
+
+func setUserRole(detail *models.UserWithRoleResp, userId, orgId, projectId models.Id, isSuperAdmin bool) {
+	if isSuperAdmin {
+		// 如果是平台管理员，自动拥有组织管理员权限和项目管理者权限
+		if orgId != "" {
+			detail.Role = consts.OrgRoleAdmin
+		}
+		if projectId != "" {
+			detail.ProjectRole = consts.ProjectRoleManager
+		}
+	} else if services.UserHasOrgRole(userId, orgId, consts.OrgRoleAdmin) {
+		// 如果是组织管理员自动拥有项目管理者权限
+		if projectId != "" {
+			detail.ProjectRole = consts.ProjectRoleManager
+		}
+	}
+}
+
+// UserDetail 获取单个用户详情
+func UserDetail(c *ctx.ServiceContext, userId models.Id) (*models.UserWithRoleResp, e.Error) {
+	query := c.DB()
+	err := queryByOrgAndProject(c.DB(), query, c.UserId, c.OrgId, c.ProjectId, userId, c.IsSuperAdmin)
+	if err != nil {
+		return nil, err
 	}
 
 	// 导出用户角色
@@ -341,21 +416,7 @@ func UserDetail(c *ctx.ServiceContext, userId models.Id) (*models.UserWithRoleRe
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
-	if c.IsSuperAdmin {
-		// 如果是平台管理员，自动拥有组织管理员权限和项目管理者权限
-		if c.OrgId != "" {
-			detail.Role = consts.OrgRoleAdmin
-		}
-		if c.ProjectId != "" {
-			detail.ProjectRole = consts.ProjectRoleManager
-		}
-	} else if services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) {
-		// 如果是组织管理员自动拥有项目管理者权限
-		if c.ProjectId != "" {
-			detail.ProjectRole = consts.ProjectRoleManager
-		}
-	}
-
+	setUserRole(detail, c.UserId, c.OrgId, c.ProjectId, c.IsSuperAdmin)
 	return detail, nil
 }
 
