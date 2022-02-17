@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
@@ -316,10 +317,7 @@ func UpdateUserOrgRel(c *ctx.ServiceContext, form *forms.UpdateUserOrgRelForm) (
 	return &resp, nil
 }
 
-// InviteUser 邀请用户加入某个组织
-// 如果用户不存在，则创建并加入组织，如果用户已经存在，则加入该组织
-func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*models.UserWithRoleResp, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("invite user %s%s to org %s as %s", form.Name, form.UserId, form.Id, form.Role))
+func getInviteUserOrg(c *ctx.ServiceContext, form *forms.InviteUserForm) (*models.Organization, e.Error) {
 
 	org, err := services.GetOrganizationById(c.DB(), form.Id)
 	if err != nil && err.Code() == e.OrganizationNotExists {
@@ -328,20 +326,13 @@ func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*models.User
 		c.Logger().Errorf("error get org, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
-	if form.Role == "" {
-		form.Role = consts.OrgRoleMember
-	}
 
-	tx := c.Tx()
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			panic(r)
-		}
-	}()
+	return org, nil
+}
 
-	// 检查用户是否存在
+func checkInviteUser(c *ctx.ServiceContext, tx *db.Session, form *forms.InviteUserForm) (*models.User, e.Error) {
 	var user *models.User
+	var err e.Error
 
 	if form.UserId != "" {
 		user, err = services.GetUserById(tx, form.UserId)
@@ -361,17 +352,23 @@ func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*models.User
 	} else if form.Name == "" || form.Email == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
+
 	if user != nil && user.Id == consts.SysUserId {
 		return nil, e.New(e.UserNotExists, fmt.Errorf("should not use sys user"), http.StatusBadRequest)
 	}
 
-	initPass := utils.GenPasswd(6, "mix")
+	return user, nil
+
+}
+
+func createInviteUser(c *ctx.ServiceContext, tx *db.Session, form *forms.InviteUserForm, user *models.User, initPass string) (bool, e.Error) {
+	isNew := false
+
 	hashedPassword, err := services.HashPassword(initPass)
 	if err != nil {
 		c.Logger().Errorf("error hash password, err %s", err)
-		return nil, err
+		return isNew, err
 	}
-	isNew := false
 	if user == nil {
 		user, err = services.CreateUser(tx, models.User{
 			Name:     form.Name,
@@ -380,39 +377,85 @@ func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*models.User
 			Phone:    form.Phone,
 		})
 		if err != nil && err.Code() == e.UserAlreadyExists {
-			return nil, e.New(err.Code(), err, http.StatusBadRequest)
+			return isNew, e.New(err.Code(), err, http.StatusBadRequest)
 		} else if err != nil {
 			_ = tx.Rollback()
 			c.Logger().Errorf("error create user, err %s", err)
-			return nil, err
+			return isNew, err
 		}
 		isNew = true
 	}
 
-	// 建立用户与组织间关联
+	return isNew, nil
+}
+
+func createInviteUserOrgRel(c *ctx.ServiceContext, tx *db.Session, form *forms.InviteUserForm, user *models.User, isNew bool) e.Error {
 	if !isNew {
 		if err := services.DeleteUserOrgRel(tx, user.Id, form.Id); err != nil {
 			_ = tx.Rollback()
 			c.Logger().Errorf("error del user org rel, err %s", err)
 		}
 	}
-	if _, err = services.CreateUserOrgRel(tx, models.UserOrg{
+	if _, err := services.CreateUserOrgRel(tx, models.UserOrg{
 		OrgId:  form.Id,
 		UserId: user.Id,
 		Role:   form.Role,
 	}); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error create user org rel, err %s", err)
-		return nil, err
+		return err
 	}
 
 	// 新用户自动加入演示组织
 	if isNew && c.OrgId != models.Id(common.DemoOrgId) {
-		if err = services.TryAddDemoRelation(tx, user.Id); err != nil {
+		if err := services.TryAddDemoRelation(tx, user.Id); err != nil {
 			_ = tx.Rollback()
 			c.Logger().Errorf("error add user demo rel, err %s", err)
-			return nil, err
+			return err
 		}
+	}
+
+	return nil
+}
+
+// InviteUser 邀请用户加入某个组织
+// 如果用户不存在，则创建并加入组织，如果用户已经存在，则加入该组织
+func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*models.UserWithRoleResp, e.Error) {
+	c.AddLogField("action", fmt.Sprintf("invite user %s%s to org %s as %s", form.Name, form.UserId, form.Id, form.Role))
+
+	org, err := getInviteUserOrg(c, form)
+	if err != nil {
+		return nil, err
+	}
+	if form.Role == "" {
+		form.Role = consts.OrgRoleMember
+	}
+
+	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	// 检查用户是否存在
+	user, err := checkInviteUser(c, tx, form)
+	if err != nil {
+		return nil, err
+	}
+
+	initPass := utils.GenPasswd(6, "mix")
+	isNew, err := createInviteUser(c, tx, form, user, initPass)
+	if err != nil {
+		return nil, err
+	}
+
+	// 建立用户与组织间关联
+	// 新用户自动加入演示组织
+	err = createInviteUserOrgRel(c, tx, form, user, isNew)
+	if err != nil {
+		return nil, err
 	}
 
 	if err := tx.Commit(); err != nil {
