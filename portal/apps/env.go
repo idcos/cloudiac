@@ -471,26 +471,20 @@ func checkUserHasApprovalPerm(c *ctx.ServiceContext) error {
 	return e.New(e.PermDenyApproval, http.StatusForbidden)
 }
 
-// UpdateEnv 环境编辑
-func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDetail, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("update env %s", form.Id))
-	if c.OrgId == "" || c.ProjectId == "" {
-		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+func updateEnvCheck(orgId, projectId models.Id, form *forms.UpdateEnvForm) e.Error {
+	if orgId == "" || projectId == "" {
+		return e.New(e.BadRequest, http.StatusBadRequest)
 	}
 
 	// 检查自动纠漂移、推送到分支时重新部署时，是否了配置自动审批
 	if !services.CheckoutAutoApproval(form.AutoApproval, form.AutoRepairDrift, form.Triggers) {
-		return nil, e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
+		return e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
 	}
 
-	tx := c.Tx()
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			panic(r)
-		}
-	}()
+	return nil
+}
 
+func getEnvForUpdate(tx *db.Session, c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.Env, e.Error) {
 	query := tx.Where("iac_env.org_id = ? AND iac_env.project_id = ?", c.OrgId, c.ProjectId)
 
 	env, err := services.GetEnvById(query, form.Id)
@@ -506,6 +500,161 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	// 项目已归档，不允许编辑
 	if env.Archived && !form.Archived {
 		return nil, e.New(e.EnvArchived, http.StatusBadRequest)
+	}
+
+	return env, nil
+}
+
+func setUpdateEnvByForm(attrs models.Attrs, form *forms.UpdateEnvForm) {
+	if form.HasKey("name") {
+		attrs["name"] = form.Name
+	}
+
+	if form.HasKey("description") {
+		attrs["description"] = form.Description
+	}
+
+	if form.HasKey("keyId") {
+		attrs["key_id"] = form.KeyId
+	}
+
+	if form.HasKey("runnerId") {
+		attrs["runner_id"] = form.RunnerId
+	}
+
+	if form.HasKey("retryAble") {
+		attrs["retryAble"] = form.RetryAble
+	}
+	if form.HasKey("retryNumber") {
+		attrs["retryNumber"] = form.RetryNumber
+	}
+	if form.HasKey("retryDelay") {
+		attrs["retryDelay"] = form.RetryDelay
+	}
+	if form.HasKey("stopOnViolation") {
+		attrs["StopOnViolation"] = form.StopOnViolation
+	}
+	if form.HasKey("policyEnable") {
+		attrs["policyEnable"] = form.PolicyEnable
+	}
+}
+
+func setAndCheckUpdateEnvAutoApproval(c *ctx.ServiceContext, tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error {
+	if form.HasKey("autoApproval") {
+		if form.AutoApproval != env.AutoApproval {
+			if err := checkUserHasApprovalPerm(c); err != nil {
+				_ = tx.Rollback()
+				return e.AutoNew(err, e.PermissionDeny)
+			}
+		}
+		attrs["auto_approval"] = form.AutoApproval
+	}
+	return nil
+}
+
+func setAndCheckUpdateEnvDestroy(tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error {
+	if form.HasKey("destroyAt") {
+		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
+		if err != nil {
+			_ = tx.Rollback()
+			return e.New(e.BadParam, http.StatusBadRequest, err)
+		}
+		attrs["auto_destroy_at"] = &destroyAt
+		attrs["ttl"] = "" // 直接传入了销毁时间，需要同步清空 ttl
+	} else if form.HasKey("ttl") {
+		ttl, err := services.ParseTTL(form.TTL)
+		if err != nil {
+			_ = tx.Rollback()
+			return e.New(e.BadParam, http.StatusBadRequest, err)
+		}
+
+		attrs["ttl"] = form.TTL
+		if ttl == 0 {
+			// ttl 传 0 表示重置销毁时间
+			attrs["auto_destroy_at"] = nil
+		} else if env.Status != models.EnvStatusInactive {
+			// 活跃环境同步修改 destroyAt
+			at := models.Time(time.Now().Add(ttl))
+			attrs["auto_destroy_at"] = &at
+		}
+	}
+	return nil
+}
+
+func setAndCheckUpdateEnvTriggers(c *ctx.ServiceContext, tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error {
+	if form.HasKey("triggers") {
+		attrs["triggers"] = pq.StringArray(form.Triggers)
+		// triggers有变更时，需要检测webhook的配置
+		tpl, err := services.GetTemplateById(c.DB(), env.TplId)
+		if err != nil && err.Code() == e.TemplateNotExists {
+			_ = tx.Rollback()
+			return e.New(err.Code(), err, http.StatusBadRequest)
+		} else if err != nil {
+			c.Logger().Errorf("error get template, err %s", err)
+			_ = tx.Rollback()
+			return e.New(e.DBError, err, http.StatusInternalServerError)
+		}
+		vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
+		// 获取token
+		token, err := GetWebhookToken(c)
+		if err != nil {
+			_ = tx.Rollback()
+			return err
+		}
+
+		if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, form.Triggers); err != nil {
+			c.Logger().Errorf("set webhook err：%v", err)
+		}
+	}
+	return nil
+}
+
+func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error {
+
+	if err := setAndCheckUpdateEnvAutoApproval(c, tx, attrs, env, form); err != nil {
+		return err
+	}
+
+	if err := setAndCheckUpdateEnvDestroy(tx, attrs, env, form); err != nil {
+		return err
+	}
+
+	if err := setAndCheckUpdateEnvTriggers(c, tx, attrs, env, form); err != nil {
+		return err
+	}
+
+	if form.HasKey("archived") {
+		if env.Status != models.EnvStatusInactive {
+			_ = tx.Rollback()
+			return e.New(e.EnvCannotArchiveActive,
+				fmt.Errorf("env can't be archive while env is %s", env.Status),
+				http.StatusBadRequest)
+		}
+		attrs["archived"] = form.Archived
+	}
+
+	return nil
+}
+
+// UpdateEnv 环境编辑
+func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDetail, e.Error) {
+	c.AddLogField("action", fmt.Sprintf("update env %s", form.Id))
+
+	if err := updateEnvCheck(c.OrgId, c.ProjectId, form); err != nil {
+		return nil, err
+	}
+
+	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	env, err := getEnvForUpdate(tx, c, form)
+	if err != nil {
+		return nil, err
 	}
 
 	attrs := models.Attrs{}
@@ -538,108 +687,10 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	attrs["cronDriftExpress"] = cronDriftParam.CronDriftExpress
 	attrs["nextDriftTaskTime"] = cronDriftParam.NextDriftTaskTime
 
-	if form.HasKey("name") {
-		attrs["name"] = form.Name
-	}
-
-	if form.HasKey("description") {
-		attrs["description"] = form.Description
-	}
-
-	if form.HasKey("keyId") {
-		attrs["key_id"] = form.KeyId
-	}
-
-	if form.HasKey("runnerId") {
-		attrs["runner_id"] = form.RunnerId
-	}
-
-	if form.HasKey("retryAble") {
-		attrs["retryAble"] = form.RetryAble
-	}
-	if form.HasKey("retryNumber") {
-		attrs["retryNumber"] = form.RetryNumber
-	}
-	if form.HasKey("retryDelay") {
-		attrs["retryDelay"] = form.RetryDelay
-	}
-
-	if form.HasKey("autoApproval") {
-		if form.AutoApproval != env.AutoApproval {
-			if err := checkUserHasApprovalPerm(c); err != nil {
-				_ = tx.Rollback()
-				return nil, e.AutoNew(err, e.PermissionDeny)
-			}
-		}
-		attrs["auto_approval"] = form.AutoApproval
-	}
-
-	if form.HasKey("stopOnViolation") {
-		attrs["StopOnViolation"] = form.StopOnViolation
-	}
-
-	if form.HasKey("destroyAt") {
-		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
-		if err != nil {
-			_ = tx.Rollback()
-			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
-		}
-		attrs["auto_destroy_at"] = &destroyAt
-		attrs["ttl"] = "" // 直接传入了销毁时间，需要同步清空 ttl
-	} else if form.HasKey("ttl") {
-		ttl, err := services.ParseTTL(form.TTL)
-		if err != nil {
-			_ = tx.Rollback()
-			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
-		}
-
-		attrs["ttl"] = form.TTL
-		if ttl == 0 {
-			// ttl 传 0 表示重置销毁时间
-			attrs["auto_destroy_at"] = nil
-		} else if env.Status != models.EnvStatusInactive {
-			// 活跃环境同步修改 destroyAt
-			at := models.Time(time.Now().Add(ttl))
-			attrs["auto_destroy_at"] = &at
-		}
-	}
-
-	if form.HasKey("triggers") {
-		attrs["triggers"] = pq.StringArray(form.Triggers)
-		// triggers有变更时，需要检测webhook的配置
-		tpl, err := services.GetTemplateById(c.DB(), env.TplId)
-		if err != nil && err.Code() == e.TemplateNotExists {
-			_ = tx.Rollback()
-			return nil, e.New(err.Code(), err, http.StatusBadRequest)
-		} else if err != nil {
-			c.Logger().Errorf("error get template, err %s", err)
-			_ = tx.Rollback()
-			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-		}
-		vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
-		// 获取token
-		token, err := GetWebhookToken(c)
-		if err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
-
-		if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, form.Triggers); err != nil {
-			c.Logger().Errorf("set webhook err：%v", err)
-		}
-	}
-
-	if form.HasKey("archived") {
-		if env.Status != models.EnvStatusInactive {
-			_ = tx.Rollback()
-			return nil, e.New(e.EnvCannotArchiveActive,
-				fmt.Errorf("env can't be archive while env is %s", env.Status),
-				http.StatusBadRequest)
-		}
-		attrs["archived"] = form.Archived
-	}
-	if form.HasKey("policyEnable") {
-		attrs["policyEnable"] = form.PolicyEnable
+	setUpdateEnvByForm(attrs, form)
+	err = setAndCheckUpdateEnvByForm(c, tx, attrs, env, form)
+	if err != nil {
+		return nil, err
 	}
 
 	env, err = services.UpdateEnv(tx, form.Id, attrs)
