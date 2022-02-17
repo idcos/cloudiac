@@ -864,6 +864,10 @@ var (
 	ErrRunnerTaskNotExists = errors.New("runner task not exists")
 )
 
+func newReadMessageErr(err error) error {
+	return errors.Wrap(err, "read message error")
+}
+
 // 从 runner 获取任务日志，直到任务结束
 func fetchRunnerTaskStepLog(ctx context.Context, runnerId string, step *models.TaskStep, writer io.Writer) error {
 	logger := logs.Get().WithField("func", "fetchRunnerTaskStepLog").
@@ -904,10 +908,10 @@ func fetchRunnerTaskStepLog(ctx context.Context, runnerId string, step *models.T
 		_, reader, err = wsConn.NextReader()
 		if err != nil {
 			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-				logger.Tracef("read message error: %v", err)
+				logger.Traceln(newReadMessageErr(err))
 				return nil
 			} else {
-				logger.Warnf("read message error: %v", err)
+				logger.Warnln(newReadMessageErr(err))
 				return err
 			}
 		} else {

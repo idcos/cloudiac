@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/pkg/errors"
 
 	"cloudiac/portal/consts"
 	"cloudiac/portal/models"
@@ -173,6 +174,10 @@ func saveTaskStepResultFiles(task *models.Task, step *models.TaskStep, result ru
 	}
 }
 
+func newReadMessageErr(err error) error {
+	return errors.Wrap(err, "read message error")
+}
+
 // pullTaskStepStatus 获取任务最新状态，直到任务结束(或 ctx cancel)
 // 该函数允许重复调用，即使任务己结束 (runner 会在本地保存近期(约7天)任务执行信息)，如果任务结束则写入全量日志到存储
 func pullTaskStepStatus(ctx context.Context, task models.Tasker, step *models.TaskStep, deadline time.Time) (
@@ -226,9 +231,9 @@ func pullTaskStepStatus(ctx context.Context, task models.Tasker, step *models.Ta
 			message := runner.TaskStatusMessage{}
 			if err := wsConn.ReadJSON(&message); err != nil {
 				if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-					logger.Tracef("read message error: %v", err)
+					logger.Traceln(newReadMessageErr(err))
 				} else {
-					logger.Warnf("read message error: %v", err)
+					logger.Warnln(newReadMessageErr(err))
 					if checkDone() {
 						return
 					}
@@ -291,7 +296,7 @@ func pullTaskStepStatusLoop(
 				return result, nil
 			}
 		case err := <-readErrChan:
-			return result, fmt.Errorf("read message error: %v", err)
+			return result, newReadMessageErr(err)
 
 		case <-ctx.Done():
 			// logger.Infof("context done with: %v", ctx.Err())
