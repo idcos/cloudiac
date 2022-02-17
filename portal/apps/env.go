@@ -102,34 +102,24 @@ func GetCronDriftParam(form forms.CronDriftForm) (*CronDriftParam, e.Error) {
 	return cronDriftParam, nil
 }
 
-// CreateEnv 创建环境
-func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDetail, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("create env %s", form.Name))
-
+func createEnvCheck(c *ctx.ServiceContext, form *forms.CreateEnvForm) e.Error {
 	if c.OrgId == "" || c.ProjectId == "" {
-		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+		return e.New(e.BadRequest, http.StatusBadRequest)
 	}
 
 	// 检查自动纠漂移、推送到分支时重新部署时，是否了配置自动审批
 	if !services.CheckoutAutoApproval(form.AutoApproval, form.AutoRepairDrift, form.Triggers) {
-		return nil, e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
+		return e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
 	}
 
 	if form.Playbook != "" && form.KeyId == "" {
-		return nil, e.New(e.TemplateKeyIdNotSet)
+		return e.New(e.TemplateKeyIdNotSet)
 	}
 
-	// 检查模板
-	query := c.DB().Where("status = ?", models.Enable)
-	tpl, err := services.GetTemplateById(query, form.TplId)
-	if err != nil && err.Code() == e.TemplateNotExists {
-		return nil, e.New(err.Code(), err, http.StatusBadRequest)
-	} else if err != nil {
-		c.Logger().Errorf("error get template, err %s", err)
-		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	}
+	return nil
+}
 
-	// 以下值只在未传入时使用模板定义的值，如果入参有该字段即使值为空也不会使用模板中的值
+func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, destroyAt *models.Time) e.Error {
 	if !form.HasKey("tfVarsFile") {
 		form.TfVarsFile = tpl.TfVarsFile
 	}
@@ -147,21 +137,152 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		form.Timeout = common.DefaultTaskStepTimeout
 	}
 
-	var (
-		destroyAt models.Time
-	)
-
 	if form.DestroyAt != "" {
 		var err error
-		destroyAt, err = models.Time{}.Parse(form.DestroyAt)
+		*destroyAt, err = models.Time{}.Parse(form.DestroyAt)
 		if err != nil {
-			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
+			return e.New(e.BadParam, http.StatusBadRequest, err)
 		}
 	} else if form.TTL != "" {
 		_, err := services.ParseTTL(form.TTL) // 检查 ttl 格式
 		if err != nil {
-			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
+			return e.New(e.BadParam, http.StatusBadRequest, err)
 		}
+	}
+
+	return nil
+}
+
+func getRunnerId(form *forms.CreateEnvForm) (string, e.Error) {
+	var runnerId string = form.RunnerId
+	if runnerId == "" {
+		rId, err := services.GetDefaultRunner()
+		if err != nil {
+			return "", err
+		}
+		runnerId = rId
+	}
+	return runnerId, nil
+}
+
+func createEnvToDB(tx *db.Session, c *ctx.ServiceContext, form *forms.CreateEnvForm, envModel models.Env) (*models.Env, e.Error) {
+	// 检查偏移检测参数
+	cronTaskType, err := GetCronTaskTypeAndCheckParam(form.CronDriftExpress, form.AutoRepairDrift, form.OpenCronDrift)
+	if err != nil {
+		return nil, err
+	}
+	// 如果定时任务存在，保存参数到表内容
+	if cronTaskType != "" {
+		nextTime, err := ParseCronpress(form.CronDriftExpress)
+		if err != nil {
+			return nil, err
+		}
+		envModel.NextDriftTaskTime = nextTime
+	}
+	env, err := services.CreateEnv(tx, envModel)
+	if err != nil && err.Code() == e.EnvAlreadyExists {
+		_ = tx.Rollback()
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("error creating env, err %s", err)
+		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
+	return env, nil
+}
+
+func handlerCreateEnvVars(tx *db.Session, c *ctx.ServiceContext, form *forms.CreateEnvForm, env *models.Env) ([]string, []models.VariableBody, e.Error) {
+	// sampleVariables是外部下发的环境变量，会和计算出来的变量列表冲突，这里需要做一下处理
+	// FIXME 未对变量组的变量进行处理
+	sampleVars, err := services.GetSampleValidVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.SampleVariables)
+	if err != nil {
+		return nil, nil, e.New(err.Code(), err, http.StatusInternalServerError)
+	}
+
+	if len(sampleVars) > 0 {
+		form.Variables = append(form.Variables, sampleVars...)
+	}
+
+	// 创建变量
+	updateVarsForm := forms.UpdateObjectVarsForm{
+		Scope:     consts.ScopeEnv,
+		ObjectId:  env.Id,
+		Variables: form.Variables,
+	}
+	if _, er := updateObjectVars(c, tx, &updateVarsForm); er != nil {
+		_ = tx.Rollback()
+		return nil, nil, e.AutoNew(er, e.InternalError)
+	}
+
+	// 创建变量组与实例的关系
+	if err := services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeEnv, env.Id.String()); err != nil {
+		_ = tx.Rollback()
+		return nil, nil, err
+	}
+
+	targets := make([]string, 0)
+	if len(strings.TrimSpace(form.Targets)) > 0 {
+		targets = strings.Split(strings.TrimSpace(form.Targets), ",")
+	}
+
+	// 计算变量列表
+	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
+	if er != nil {
+		_ = tx.Rollback()
+		return nil, nil, err
+	}
+	// 绑定策略组
+	if len(form.PolicyGroup) > 0 {
+		policyForm := &forms.UpdatePolicyRelForm{
+			Id:             env.Id,
+			Scope:          consts.ScopeEnv,
+			PolicyGroupIds: form.PolicyGroup,
+		}
+		if _, err = services.UpdatePolicyRel(tx, policyForm); err != nil {
+			_ = tx.Rollback()
+			return nil, nil, err
+		}
+	}
+
+	return targets, vars, nil
+}
+
+func getCreateEnvTpl(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.Template, e.Error) {
+	query := c.DB().Where("status = ?", models.Enable)
+	tpl, err := services.GetTemplateById(query, form.TplId)
+	if err != nil && err.Code() == e.TemplateNotExists {
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		c.Logger().Errorf("error get template, err %s", err)
+		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
+	}
+
+	return tpl, nil
+}
+
+// CreateEnv 创建环境
+func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDetail, e.Error) {
+	c.AddLogField("action", fmt.Sprintf("create env %s", form.Name))
+
+	err := createEnvCheck(c, form)
+	if err != nil {
+		return nil, err
+	}
+
+	// 检查模板
+	tpl, err := getCreateEnvTpl(c, form)
+	if err != nil {
+		return nil, err
+	}
+
+	// 以下值只在未传入时使用模板定义的值，如果入参有该字段即使值为空也不会使用模板中的值
+	var (
+		destroyAt models.Time
+	)
+	err = setDefaultValueFromTpl(form, tpl, &destroyAt)
+	if err != nil {
+		return nil, err
 	}
 
 	tx := c.Tx()
@@ -172,13 +293,9 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		}
 	}()
 
-	var runnerId string = form.RunnerId
-	if runnerId == "" {
-		rId, err := services.GetDefaultRunner()
-		if err != nil {
-			return nil, err
-		}
-		runnerId = rId
+	runnerId, err := getRunnerId(form)
+	if err != nil {
+		return nil, err
 	}
 
 	envModel := models.Env{
@@ -217,79 +334,15 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		OpenCronDrift:    form.OpenCronDrift,
 		PolicyEnable:     form.PolicyEnable,
 	}
-	// 检查偏移检测参数
-	cronTaskType, err := GetCronTaskTypeAndCheckParam(form.CronDriftExpress, form.AutoRepairDrift, form.OpenCronDrift)
+
+	env, err := createEnvToDB(tx, c, form, envModel)
 	if err != nil {
 		return nil, err
 	}
-	// 如果定时任务存在，保存参数到表内容
-	if cronTaskType != "" {
-		nextTime, err := ParseCronpress(form.CronDriftExpress)
-		if err != nil {
-			return nil, err
-		}
-		envModel.NextDriftTaskTime = nextTime
-	}
-	env, err := services.CreateEnv(tx, envModel)
-	if err != nil && err.Code() == e.EnvAlreadyExists {
-		_ = tx.Rollback()
-		return nil, e.New(err.Code(), err, http.StatusBadRequest)
-	} else if err != nil {
-		_ = tx.Rollback()
-		c.Logger().Errorf("error creating env, err %s", err)
-		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
-	}
 
-	// sampleVariables是外部下发的环境变量，会和计算出来的变量列表冲突，这里需要做一下处理
-	// FIXME 未对变量组的变量进行处理
-	sampleVars, err := services.GetSampleValidVariables(tx, c.OrgId, c.ProjectId, env.TplId, env.Id, form.SampleVariables)
+	targets, vars, err := handlerCreateEnvVars(tx, c, form, env)
 	if err != nil {
-		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
-	}
-
-	if len(sampleVars) > 0 {
-		form.Variables = append(form.Variables, sampleVars...)
-	}
-
-	// 创建变量
-	updateVarsForm := forms.UpdateObjectVarsForm{
-		Scope:     consts.ScopeEnv,
-		ObjectId:  env.Id,
-		Variables: form.Variables,
-	}
-	if _, er := updateObjectVars(c, tx, &updateVarsForm); er != nil {
-		_ = tx.Rollback()
-		return nil, e.AutoNew(er, e.InternalError)
-	}
-
-	// 创建变量组与实例的关系
-	if err := services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeEnv, env.Id.String()); err != nil {
-		_ = tx.Rollback()
 		return nil, err
-	}
-
-	targets := make([]string, 0)
-	if len(strings.TrimSpace(form.Targets)) > 0 {
-		targets = strings.Split(strings.TrimSpace(form.Targets), ",")
-	}
-
-	// 计算变量列表
-	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
-	if er != nil {
-		_ = tx.Rollback()
-		return nil, err
-	}
-	// 绑定策略组
-	if len(form.PolicyGroup) > 0 {
-		policyForm := &forms.UpdatePolicyRelForm{
-			Id:             env.Id,
-			Scope:          consts.ScopeEnv,
-			PolicyGroupIds: form.PolicyGroup,
-		}
-		if _, err = services.UpdatePolicyRel(tx, policyForm); err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
 	}
 
 	// 来源：手动触发、外部调用
