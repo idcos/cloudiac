@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func Test_getGitUrl1(t *testing.T) {
+func TestGetGitUrl1(t *testing.T) {
 	type args struct {
 		repoAddr string
 		token    string
@@ -45,7 +45,7 @@ func Test_getGitUrl1(t *testing.T) {
 	}
 }
 
-func Test_parseMeta(t *testing.T) {
+func TestParseMeta(t *testing.T) {
 	type args struct {
 		meta string
 		rego string
