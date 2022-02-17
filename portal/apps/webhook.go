@@ -35,6 +35,38 @@ type webhookOptions struct {
 	PrId         int
 }
 
+func searchTplEnv(tx *db.Session, tplList []models.Template, options webhookOptions) {
+
+	for tIndex, tpl := range tplList {
+		sysUserId := models.Id(consts.SysUserId)
+
+		if len(tpl.Triggers) > 0 {
+			createTplScan(sysUserId, &tplList[tIndex], options)
+		}
+
+		envs, err := services.GetEnvByTplId(tx, tpl.Id)
+		if err != nil {
+			logs.Get().WithField("webhook", "searchEnv").
+				Errorf("search env err: %v, tplId: %s", err, tpl.Id)
+			// 记录个日志就行
+			continue
+		}
+
+		for eIndex, env := range envs {
+			// 跳过已归档环境
+			if env.Archived {
+				continue
+			}
+			for _, v := range env.Triggers {
+				if er := actionPrOrPush(tx, v, sysUserId, &envs[eIndex], &tplList[tIndex], options); er != nil {
+					logs.Get().WithField("webhook", "createTask").
+						Errorf("create task er: %v, envId: %s", er, env.Id)
+				}
+			}
+		}
+	}
+}
+
 func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (interface{}, e.Error) {
 	tx := c.Tx()
 	defer func() {
@@ -77,34 +109,7 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 	}
 
 	// 查询云模板对应的环境
-	for tIndex, tpl := range tplList {
-		sysUserId := models.Id(consts.SysUserId)
-
-		if len(tpl.Triggers) > 0 {
-			createTplScan(sysUserId, &tplList[tIndex], options)
-		}
-
-		envs, err := services.GetEnvByTplId(tx, tpl.Id)
-		if err != nil {
-			logs.Get().WithField("webhook", "searchEnv").
-				Errorf("search env err: %v, tplId: %s", err, tpl.Id)
-			// 记录个日志就行
-			continue
-		}
-
-		for eIndex, env := range envs {
-			// 跳过已归档环境
-			if env.Archived {
-				continue
-			}
-			for _, v := range env.Triggers {
-				if er := actionPrOrPush(tx, v, sysUserId, &envs[eIndex],  &tplList[tIndex], options); er != nil {
-					logs.Get().WithField("webhook", "createTask").
-						Errorf("create task er: %v, envId: %s", er, env.Id)
-				}
-			}
-		}
-	}
+	searchTplEnv(tx, tplList, options)
 
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()

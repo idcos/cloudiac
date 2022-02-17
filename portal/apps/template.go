@@ -170,19 +170,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 	return template, nil
 }
 
-func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*models.Template, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("update template %s", form.Id))
-
-	tpl, err := services.GetTemplateById(c.DB(), form.Id)
-	if err != nil {
-		return nil, e.New(e.TemplateNotExists, err, http.StatusBadRequest)
-	}
-
-	// 根据云模板ID, 组织ID查询该云模板是否属于该组织
-	if tpl.OrgId != c.OrgId {
-		return nil, e.New(e.TemplateNotExists, http.StatusForbidden, fmt.Errorf("the organization does not have permission to delete the current template"))
-	}
-	attrs := models.Attrs{}
+func setAttrsByFormKeys(attrs models.Attrs, form *forms.UpdateTemplateForm) {
 	if form.HasKey("name") {
 		attrs["name"] = form.Name
 	}
@@ -220,7 +208,9 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 	if form.HasKey("keyId") {
 		attrs["keyId"] = form.KeyId
 	}
+}
 
+func setAttrsVcsInfoByForm(attrs models.Attrs, form *forms.UpdateTemplateForm) {
 	if form.HasKey("vcsId") && form.HasKey("repoId") && form.HasKey("repoFullName") {
 		attrs["vcsId"] = form.VcsId
 		attrs["repoId"] = form.RepoId
@@ -230,6 +220,68 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 			attrs["repoAddr"] = ""
 		}
 	}
+}
+
+func updatetplByFormKey(c *ctx.ServiceContext, tx *db.Session, tpl *models.Template, form *forms.UpdateTemplateForm) e.Error {
+	var err e.Error
+	// 更新和策略组的绑定关系
+	if form.HasKey("policyGroup") {
+		policyForm := &forms.UpdatePolicyRelForm{
+			Id:             tpl.Id,
+			Scope:          consts.ScopeTemplate,
+			PolicyGroupIds: form.PolicyGroup,
+		}
+		_, err = services.UpdatePolicyRel(tx, policyForm)
+	}
+	if err != nil {
+		return err
+	}
+
+	if form.HasKey("projectId") {
+		if err = services.DeleteTemplateProject(tx, form.Id); err != nil {
+			return err
+		}
+		err = services.CreateTemplateProject(tx, form.ProjectId, form.Id)
+	}
+	if err != nil {
+		return err
+	}
+
+	if form.HasKey("variables") {
+		updateVarsForm := forms.UpdateObjectVarsForm{
+			Scope:     consts.ScopeTemplate,
+			ObjectId:  form.Id,
+			Variables: form.Variables,
+		}
+		_, err = updateObjectVars(c, tx, &updateVarsForm)
+	}
+	if err != nil {
+		return err
+	}
+
+	if form.HasKey("varGroupIds") || form.HasKey("delVarGroupIds") {
+		// 创建变量组与实例的关系
+		err = services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeTemplate, form.Id.String())
+	}
+	return err
+}
+
+func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*models.Template, e.Error) {
+	c.AddLogField("action", fmt.Sprintf("update template %s", form.Id))
+
+	tpl, err := services.GetTemplateById(c.DB(), form.Id)
+	if err != nil {
+		return nil, e.New(e.TemplateNotExists, err, http.StatusBadRequest)
+	}
+
+	// 根据云模板ID, 组织ID查询该云模板是否属于该组织
+	if tpl.OrgId != c.OrgId {
+		return nil, e.New(e.TemplateNotExists, http.StatusForbidden, fmt.Errorf("the organization does not have permission to delete the current template"))
+	}
+	attrs := models.Attrs{}
+	setAttrsByFormKeys(attrs, form)
+	setAttrsVcsInfoByForm(attrs, form)
+
 	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
@@ -241,46 +293,12 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 		_ = tx.Rollback()
 		return nil, err
 	}
-	// 更新和策略组的绑定关系
-	if form.HasKey("policyGroup") {
-		policyForm := &forms.UpdatePolicyRelForm{
-			Id:             tpl.Id,
-			Scope:          consts.ScopeTemplate,
-			PolicyGroupIds: form.PolicyGroup,
-		}
-		if _, err = services.UpdatePolicyRel(tx, policyForm); err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
-	}
-	if form.HasKey("projectId") {
-		if err := services.DeleteTemplateProject(tx, form.Id); err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
-		if err := services.CreateTemplateProject(tx, form.ProjectId, form.Id); err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
-	}
-	if form.HasKey("variables") {
-		updateVarsForm := forms.UpdateObjectVarsForm{
-			Scope:     consts.ScopeTemplate,
-			ObjectId:  form.Id,
-			Variables: form.Variables,
-		}
-		if _, er := updateObjectVars(c, tx, &updateVarsForm); er != nil {
-			_ = tx.Rollback()
-			return nil, er
-		}
-	}
 
-	if form.HasKey("varGroupIds") || form.HasKey("delVarGroupIds") {
-		// 创建变量组与实例的关系
-		if err := services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeTemplate, form.Id.String()); err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
+	// 更新和策略组的绑定关系
+	err = updatetplByFormKey(c, tx, tpl, form)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
 	}
 
 	if err := tx.Commit(); err != nil {
