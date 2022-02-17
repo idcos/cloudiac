@@ -14,6 +14,7 @@ import (
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
 	"fmt"
 	"net/http"
 	"sort"
@@ -703,27 +704,25 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (ret *models.En
 	return ret, er
 }
 
-func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm) (*models.EnvDetail, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("deploy env task %s", form.Id))
-	if c.OrgId == "" || c.ProjectId == "" {
-		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+func envPreCheck(orgId, projectId, keyId models.Id, playbook string) e.Error {
+	if orgId == "" || projectId == "" {
+		return e.New(e.BadRequest, http.StatusBadRequest)
 	}
 
-	if form.Playbook != "" && form.KeyId == "" {
-		return nil, e.New(e.TemplateKeyIdNotSet)
+	if playbook != "" && keyId == "" {
+		return e.New(e.TemplateKeyIdNotSet)
 	}
 
-	// 检查自动纠漂移、推送到分支时重新部署时，是否了配置自动审批
-	if !services.CheckoutAutoApproval(form.AutoApproval, form.AutoRepairDrift, form.Triggers) {
-		return nil, e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
-	}
+	return nil
+}
 
-	envQuery := services.QueryWithProjectId(services.QueryWithOrgId(tx, c.OrgId), c.ProjectId)
-	env, err := services.GetEnvById(envQuery, form.Id)
+func envCheck(tx *db.Session, orgId, projectId, id models.Id, lg logs.Logger) (*models.Env, e.Error) {
+	envQuery := services.QueryWithProjectId(services.QueryWithOrgId(tx, orgId), projectId)
+	env, err := services.GetEnvById(envQuery, id)
 	if err != nil && err.Code() != e.EnvNotExists {
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
 	} else if err != nil {
-		c.Logger().Errorf("error get env, err %s", err)
+		lg.Errorf("error get env, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
@@ -735,77 +734,31 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		return nil, e.New(e.EnvDeploying, http.StatusBadRequest)
 	}
 
-	// 模板检查
-	tplQuery := services.QueryWithOrgId(tx, c.OrgId)
-	tpl, err := services.GetTemplateById(tplQuery, env.TplId)
+	return env, nil
+}
+
+func envTplCheck(tx *db.Session, orgId, tplId models.Id, lg logs.Logger) (*models.Template, e.Error) {
+	tplQuery := services.QueryWithOrgId(tx, orgId)
+	tpl, err := services.GetTemplateById(tplQuery, tplId)
 	if err != nil && err.Code() == e.TemplateNotExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
-		c.Logger().Errorf("error get template, err %s", err)
+		lg.Errorf("error get template, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 	if tpl.Status == models.Disable {
 		return nil, e.New(e.TemplateDisabled, http.StatusBadRequest)
 	}
 
+	return tpl, nil
+}
+
+func setEnvByForm(env *models.Env, form *forms.DeployEnvForm) {
 	if form.HasKey("name") {
 		env.Name = form.Name
 	}
-	if form.HasKey("autoApproval") {
-		if form.AutoApproval != env.AutoApproval {
-			if err := checkUserHasApprovalPerm(c); err != nil {
-				return nil, e.AutoNew(err, e.PermissionDeny)
-			}
-		}
-		env.AutoApproval = form.AutoApproval
-	}
 	if form.HasKey("stopOnViolation") {
 		env.StopOnViolation = form.StopOnViolation
-	}
-
-	if form.HasKey("destroyAt") {
-		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
-		if err != nil {
-			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
-		}
-		env.AutoDestroyAt = &destroyAt
-		// 直接传入了销毁时间，需要同步清空 ttl
-		env.TTL = ""
-	} else if form.HasKey("ttl") {
-		ttl, err := services.ParseTTL(form.TTL)
-		if err != nil {
-			return nil, e.New(e.BadParam, http.StatusBadRequest, err)
-		}
-
-		env.TTL = form.TTL
-
-		if ttl == 0 { // ttl 传入 0 表示清空自动销毁时间
-			env.AutoDestroyAt = nil
-		} else if env.Status != models.EnvStatusInactive {
-			// 活跃环境同步修改 destroyAt
-			at := models.Time(time.Now().Add(ttl))
-			env.AutoDestroyAt = &at
-		}
-	}
-	cronDriftParam, err := GetCronDriftParam(forms.CronDriftForm{
-		BaseForm:         form.BaseForm,
-		CronDriftExpress: form.CronDriftExpress,
-		AutoRepairDrift:  form.AutoRepairDrift,
-		OpenCronDrift:    form.OpenCronDrift,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if cronDriftParam.AutoRepairDrift != nil {
-		env.AutoRepairDrift = *cronDriftParam.AutoRepairDrift
-	}
-	if cronDriftParam.OpenCronDrift != nil {
-		env.OpenCronDrift = *cronDriftParam.OpenCronDrift
-		env.NextDriftTaskTime = cronDriftParam.NextDriftTaskTime
-	}
-	if cronDriftParam.CronDriftExpress != nil {
-		env.CronDriftExpress = *cronDriftParam.CronDriftExpress
 	}
 
 	if form.HasKey("triggers") {
@@ -820,17 +773,6 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	}
 	if form.HasKey("timeout") {
 		env.Timeout = form.Timeout
-	}
-
-	if form.HasKey("variables") {
-		updateVarsForm := forms.UpdateObjectVarsForm{
-			Scope:     consts.ScopeEnv,
-			ObjectId:  env.Id,
-			Variables: form.Variables,
-		}
-		if _, er := updateObjectVars(c, tx, &updateVarsForm); er != nil {
-			return nil, e.AutoNew(er, e.InternalError)
-		}
 	}
 
 	if form.HasKey("tfVarsFile") {
@@ -857,30 +799,160 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	if form.HasKey("policyEnable") {
 		env.PolicyEnable = form.PolicyEnable
 	}
+}
+
+func setAndCheckEnvAutoApproval(c *ctx.ServiceContext, env *models.Env, form *forms.DeployEnvForm) e.Error {
+	if form.HasKey("autoApproval") {
+		if form.AutoApproval != env.AutoApproval {
+			if err := checkUserHasApprovalPerm(c); err != nil {
+				return e.AutoNew(err, e.PermissionDeny)
+			}
+		}
+		env.AutoApproval = form.AutoApproval
+	}
+
+	return nil
+}
+
+func setAndCheckEnvDestroy(env *models.Env, form *forms.DeployEnvForm) e.Error {
+	if form.HasKey("destroyAt") {
+		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
+		if err != nil {
+			return e.New(e.BadParam, http.StatusBadRequest, err)
+		}
+		env.AutoDestroyAt = &destroyAt
+		// 直接传入了销毁时间，需要同步清空 ttl
+		env.TTL = ""
+	} else if form.HasKey("ttl") {
+		ttl, err := services.ParseTTL(form.TTL)
+		if err != nil {
+			return e.New(e.BadParam, http.StatusBadRequest, err)
+		}
+
+		env.TTL = form.TTL
+
+		if ttl == 0 { // ttl 传入 0 表示清空自动销毁时间
+			env.AutoDestroyAt = nil
+		} else if env.Status != models.EnvStatusInactive {
+			// 活跃环境同步修改 destroyAt
+			at := models.Time(time.Now().Add(ttl))
+			env.AutoDestroyAt = &at
+		}
+	}
+
+	return nil
+}
+func setAndCheckEnvCron(env *models.Env, form *forms.DeployEnvForm) e.Error {
+	cronDriftParam, err := GetCronDriftParam(forms.CronDriftForm{
+		BaseForm:         form.BaseForm,
+		CronDriftExpress: form.CronDriftExpress,
+		AutoRepairDrift:  form.AutoRepairDrift,
+		OpenCronDrift:    form.OpenCronDrift,
+	})
+	if err != nil {
+		return err
+	}
+
+	if cronDriftParam.AutoRepairDrift != nil {
+		env.AutoRepairDrift = *cronDriftParam.AutoRepairDrift
+	}
+	if cronDriftParam.OpenCronDrift != nil {
+		env.OpenCronDrift = *cronDriftParam.OpenCronDrift
+		env.NextDriftTaskTime = cronDriftParam.NextDriftTaskTime
+	}
+	if cronDriftParam.CronDriftExpress != nil {
+		env.CronDriftExpress = *cronDriftParam.CronDriftExpress
+	}
+
+	return nil
+}
+
+func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error {
+
+	if err := setAndCheckEnvAutoApproval(c, env, form); err != nil {
+		return err
+	}
+
+	if err := setAndCheckEnvDestroy(env, form); err != nil {
+		return err
+	}
+
+	if err := setAndCheckEnvCron(env, form); err != nil {
+		return err
+	}
+
+	if form.HasKey("variables") {
+		updateVarsForm := forms.UpdateObjectVarsForm{
+			Scope:     consts.ScopeEnv,
+			ObjectId:  env.Id,
+			Variables: form.Variables,
+		}
+		if _, er := updateObjectVars(c, tx, &updateVarsForm); er != nil {
+			return e.AutoNew(er, e.InternalError)
+		}
+	}
+
 	if len(form.PolicyGroup) > 0 {
 		policyForm := &forms.UpdatePolicyRelForm{
 			Id:             env.Id,
 			Scope:          consts.ScopeEnv,
 			PolicyGroupIds: form.PolicyGroup,
 		}
-		if _, err = services.UpdatePolicyRel(tx, policyForm); err != nil {
+		if _, err := services.UpdatePolicyRel(tx, policyForm); err != nil {
 			_ = tx.Rollback()
-			return nil, err
+			return err
 		}
 	}
+
 	if form.TaskType == "" {
-		return nil, e.New(e.BadParam, http.StatusBadRequest)
+		return e.New(e.BadParam, http.StatusBadRequest)
+	}
+
+	if form.HasKey("varGroupIds") || form.HasKey("delVarGroupIds") {
+		// 创建变量组与实例的关系
+		if err := services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeEnv, env.Id.String()); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm) (*models.EnvDetail, e.Error) {
+	c.AddLogField("action", fmt.Sprintf("deploy env task %s", form.Id))
+	if err := envPreCheck(c.OrgId, c.ProjectId, form.KeyId, form.Playbook); err != nil {
+		return nil, err
+	}
+
+	// 检查自动纠漂移、推送到分支时重新部署时，是否了配置自动审批
+	if !services.CheckoutAutoApproval(form.AutoApproval, form.AutoRepairDrift, form.Triggers) {
+		return nil, e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
+	}
+
+	// env 检查
+	env, err := envCheck(tx, c.OrgId, c.ProjectId, form.Id, c.Logger())
+	if err != nil {
+		return nil, err
+	}
+
+	// 模板检查
+	tpl, err := envTplCheck(tx, c.OrgId, env.TplId, c.Logger())
+	if err != nil {
+		return nil, err
+	}
+
+	// set env from form
+	setEnvByForm(env, form)
+
+	// set and check autoApproval, destroyAt, cronDrift, TaskType ...
+	err = setAndCheckEnvByForm(c, tx, env, form)
+	if err != nil {
+		return nil, err
 	}
 
 	targets := make([]string, 0)
 	if len(strings.TrimSpace(form.Targets)) > 0 {
 		targets = strings.Split(strings.TrimSpace(form.Targets), ",")
-	}
-	if form.HasKey("varGroupIds") || form.HasKey("delVarGroupIds") {
-		// 创建变量组与实例的关系
-		if err := services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeEnv, env.Id.String()); err != nil {
-			return nil, err
-		}
 	}
 
 	// 计算变量列表
