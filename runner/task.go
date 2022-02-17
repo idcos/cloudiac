@@ -55,13 +55,6 @@ func (t *Task) Run() (cid string, err error) {
 }
 
 func (t *Task) start() (cid string, err error) {
-	for _, vars := range []map[string]string{
-		t.req.Env.EnvironmentVars, t.req.Env.TerraformVars, t.req.Env.AnsibleVars} {
-		if err = t.decryptVariables(vars); err != nil {
-			return "", errors.Wrap(err, "decrypt variables")
-		}
-	}
-
 	if t.req.PrivateKey != "" {
 		t.req.PrivateKey, err = utils.DecryptSecretVar(t.req.PrivateKey)
 		if err != nil {
@@ -98,6 +91,37 @@ func (t *Task) start() (cid string, err error) {
 	}
 	cmd.AutoRemove = !reserveContainer
 
+	if err := t.buildVarsAndCmdEnv(&cmd); err != nil {
+		return "", err
+	}
+
+	// 容器启动后执行 /bin/bash 以保持运行，然后通过 exec 在容器中执行步骤命令
+	cmd.Commands = []string{"/bin/bash"}
+
+	stepDir := GetTaskDir(t.req.Env.Id, t.req.TaskId, t.req.Step)
+	containerInfoFile := filepath.Join(stepDir, TaskContainerInfoFileName)
+	// 启动容器前先删除可能存在的 containerInfoFile，以支持步骤重试，
+	// 否则 containerInfoFile 文件存在 CommittedTask.Wait() 会直接返回
+	if err = os.Remove(containerInfoFile); err != nil && !os.IsNotExist(err) {
+		return "", errors.Wrap(err, "remove containerInfoFile")
+	}
+
+	t.logger.Infof("start task step, %s", stepDir)
+	if cid, err = cmd.Start(); err != nil {
+		return cid, err
+	}
+
+	return cid, nil
+}
+
+func (t *Task) buildVarsAndCmdEnv(cmd *Executor) error {
+	for _, vars := range []map[string]string{
+		t.req.Env.EnvironmentVars, t.req.Env.TerraformVars, t.req.Env.AnsibleVars} {
+		if err := t.decryptVariables(vars); err != nil {
+			return errors.Wrap(err, "decrypt variables")
+		}
+	}
+
 	tfPluginCacheDir := ""
 	for k, v := range t.req.Env.EnvironmentVars {
 		if k == "TF_PLUGIN_CACHE_DIR" {
@@ -122,24 +146,7 @@ func (t *Task) start() (cid string, err error) {
 	}
 	cmd.TerraformVersion = t.req.Env.TfVersion
 	cmd.Env = append(cmd.Env, fmt.Sprintf("TFENV_TERRAFORM_VERSION=%s", cmd.TerraformVersion))
-
-	// 容器启动后执行 /bin/bash 以保持运行，然后通过 exec 在容器中执行步骤命令
-	cmd.Commands = []string{"/bin/bash"}
-
-	stepDir := GetTaskDir(t.req.Env.Id, t.req.TaskId, t.req.Step)
-	containerInfoFile := filepath.Join(stepDir, TaskContainerInfoFileName)
-	// 启动容器前先删除可能存在的 containerInfoFile，以支持步骤重试，
-	// 否则 containerInfoFile 文件存在 CommittedTask.Wait() 会直接返回
-	if err = os.Remove(containerInfoFile); err != nil && !os.IsNotExist(err) {
-		return "", errors.Wrap(err, "remove containerInfoFile")
-	}
-
-	t.logger.Infof("start task step, %s", stepDir)
-	if cid, err = cmd.Start(); err != nil {
-		return cid, err
-	}
-
-	return cid, nil
+	return nil
 }
 
 func (t *Task) generateCommand(cmd string) []string {
