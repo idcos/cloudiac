@@ -234,8 +234,6 @@ func UserIsSuperAdmin(query *db.Session, userId models.Id) bool {
 	}
 }
 
-func UserHasManageUserPerm() {}
-
 func QueryWithOrgId(query *db.Session, orgId interface{}, tableName ...string) *db.Session {
 	return QueryWithCond(query, "org_id", orgId, tableName...)
 }

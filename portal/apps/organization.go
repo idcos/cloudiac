@@ -174,8 +174,7 @@ func OrganizationDetail(c *ctx.ServiceContext, form forms.DetailOrganizationForm
 	)
 	query := c.DB()
 	if !c.IsSuperAdmin {
-		query = query.Where("id in (?)", services.UserOrgIds(c.UserId))
-		query = query.Where("status = 'enable'")
+		query = query.Where("id in (?) AND status = 'enable'", services.UserOrgIds(c.UserId))
 	}
 
 	org, err = services.GetOrganizationById(query, form.Id)
