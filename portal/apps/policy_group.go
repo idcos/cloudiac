@@ -38,7 +38,7 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 		CreatorId:   c.UserId,
 	}
 
-	if form.HasKey("gitTags") && form.GitTags != "" {
+	if form.GitTags != "" {
 		g.GitTags = form.GitTags
 		// 检查是否有效的语义话版本
 		v, err := semver.NewVersion(g.GitTags)
@@ -46,12 +46,13 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 			return nil, e.AutoNew(fmt.Errorf("git tag is invalid semver"), e.BadParam, http.StatusBadRequest)
 		}
 		g.Version = v.String()
-	} else if form.HasKey("branch") && form.Branch != "" {
+	} else if form.Branch != "" {
 		g.Branch = form.Branch
 		g.UseLatest = true
 	} else {
 		return nil, e.New(e.BadParam, http.StatusBadRequest)
 	}
+
 	if form.HasKey("dir") {
 		g.Dir = form.Dir
 	} else {
@@ -132,50 +133,7 @@ func SearchPolicyGroup(c *ctx.ServiceContext, form *forms.SearchPolicyGroupForm)
 
 // UpdatePolicyGroup 修改策略组
 func UpdatePolicyGroup(c *ctx.ServiceContext, form *forms.UpdatePolicyGroupForm) (interface{}, e.Error) {
-	attr := models.Attrs{}
-	if form.HasKey("name") {
-		attr["name"] = form.Name
-	}
-
-	if form.HasKey("description") {
-		attr["description"] = form.Description
-	}
-
-	if form.HasKey("enabled") {
-		attr["enabled"] = form.Enabled
-	}
-
-	if form.HasKey("labels") {
-		attr["label"] = strings.Join(form.Labels, ",")
-	}
-
-	if form.HasKey("source") {
-		attr["source"] = form.Source
-	}
-
-	if form.HasKey("vcsId") {
-		attr["vcsId"] = form.VcsId
-	}
-
-	if form.HasKey("repoId") {
-		attr["repoId"] = form.RepoId
-	}
-
-	if form.HasKey("gitTags") {
-		attr["gitTags"] = form.GitTags
-	}
-
-	if form.HasKey("branch") {
-		attr["branch"] = form.Branch
-	}
-
-	if form.HasKey("dir") {
-		if form.Dir == "" {
-			attr["dir"] = form.Dir
-		} else {
-			attr["dir"] = consts.DirRoot
-		}
-	}
+	attr := updatePolicyGroupParamCheck(form)
 
 	pg := models.PolicyGroup{}
 	pg.Id = form.Id
@@ -232,6 +190,54 @@ func UpdatePolicyGroup(c *ctx.ServiceContext, form *forms.UpdatePolicyGroupForm)
 	}
 
 	return nil, nil
+}
+
+func updatePolicyGroupParamCheck(form *forms.UpdatePolicyGroupForm) models.Attrs {
+	attr := models.Attrs{}
+	if form.HasKey("name") {
+		attr["name"] = form.Name
+	}
+
+	if form.HasKey("description") {
+		attr["description"] = form.Description
+	}
+
+	if form.HasKey("enabled") {
+		attr["enabled"] = form.Enabled
+	}
+
+	if form.HasKey("labels") {
+		attr["label"] = strings.Join(form.Labels, ",")
+	}
+
+	if form.HasKey("source") {
+		attr["source"] = form.Source
+	}
+
+	if form.HasKey("vcsId") {
+		attr["vcsId"] = form.VcsId
+	}
+
+	if form.HasKey("repoId") {
+		attr["repoId"] = form.RepoId
+	}
+
+	if form.HasKey("gitTags") {
+		attr["gitTags"] = form.GitTags
+	}
+
+	if form.HasKey("branch") {
+		attr["branch"] = form.Branch
+	}
+
+	if form.HasKey("dir") {
+		if form.Dir != "" {
+			attr["dir"] = form.Dir
+		} else {
+			attr["dir"] = consts.DirRoot
+		}
+	}
+	return attr
 }
 
 // DeletePolicyGroup 删除策略组
