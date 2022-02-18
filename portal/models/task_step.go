@@ -66,6 +66,10 @@ func (TaskStep) TableName() string {
 	return "iac_task_step"
 }
 
+func (s TaskStep) String() string {
+	return fmt.Sprintf("%s(%d)", s.Type, s.Index)
+}
+
 func (t *TaskStep) Migrate(sess *db.Session) (err error) {
 	if err := sess.ModifyModelColumn(t, "type"); err != nil {
 		return err
