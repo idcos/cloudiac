@@ -302,7 +302,7 @@ func TaskOutput(c *ctx.ServiceContext, form forms.DetailTaskForm) (interface{}, 
 	if err != nil && err.Code() == e.TaskNotExists {
 		return nil, e.New(e.TaskNotExists, err, http.StatusNotFound)
 	} else if err != nil {
-		c.Logger().Errorf("get task by id err %s", err)
+		c.Logger().Errorf("error get task by id, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
 

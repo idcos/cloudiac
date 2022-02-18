@@ -323,7 +323,7 @@ func ChangeUserStatus(c *ctx.ServiceContext, form *forms.DisableUserForm) (*mode
 	if err != nil && err.Code() == e.UserNotExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
-		c.Logger().Errorf("change userStatus error %s", err)
+		c.Logger().Errorf("error get user by id, err %s", err)
 		return nil, err
 	}
 
@@ -411,7 +411,7 @@ func UserDetail(c *ctx.ServiceContext, userId models.Id) (*models.UserWithRoleRe
 		// 通过 /auth/me 或者 /users/:userId 访问
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
 	} else if err != nil {
-		c.Logger().WithField("user", "detail").Errorf("%s", err)
+		c.Logger().Errorf("error get user by id, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
@@ -442,7 +442,7 @@ func DeleteUser(c *ctx.ServiceContext, form *forms.DeleteUserForm) (interface{},
 	if err != nil && err.Code() == e.UserNotExists {
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
 	} else if err != nil {
-		c.Logger().WithField("user", "delete").Errorf("%s", err)
+		c.Logger().Errorf("error get user by id, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
