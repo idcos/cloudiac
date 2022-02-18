@@ -318,8 +318,8 @@ func OpPolicyAndPolicyGroupRel(c *ctx.ServiceContext, form *forms.OpnPolicyAndPo
 			}
 		}
 		// 批量更新
-		if affected, err := services.UpdatePolicy(tx.Where("id in (?)", form.AddPolicyIds),
-			&models.Policy{}, models.Attrs{"group_id": form.PolicyGroupId}); err != nil || int(affected) != len(form.AddPolicyIds) {
+		if err := services.UpdatePolicy(tx.Where("id in (?)", form.AddPolicyIds),
+			&models.Policy{}, models.Attrs{"group_id": form.PolicyGroupId}); err != nil {
 			_ = tx.Rollback()
 			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 		}
@@ -339,8 +339,8 @@ func OpPolicyAndPolicyGroupRel(c *ctx.ServiceContext, form *forms.OpnPolicyAndPo
 			}
 		}
 		// 批量更新
-		if affected, err := services.UpdatePolicy(tx.Where("id in (?)", form.RmPolicyIds),
-			&models.Policy{}, models.Attrs{"group_id": ""}); err != nil || int(affected) != len(form.RmPolicyIds) {
+		if err := services.UpdatePolicy(tx.Where("id in (?)", form.RmPolicyIds),
+			&models.Policy{}, models.Attrs{"group_id": ""}); err != nil {
 			_ = tx.Rollback()
 			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 		}
@@ -383,6 +383,7 @@ func PolicyGroupScanTasks(c *ctx.ServiceContext, form *forms.PolicyLastTasksForm
 	for idx := range tasks {
 		policyIds = append(policyIds, tasks[idx].Id)
 	}
+	// nolint
 	if summaries, err := services.PolicySummary(c.DB(), policyIds, consts.ScopeTask, c.OrgId); err != nil {
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	} else if len(summaries) > 0 {

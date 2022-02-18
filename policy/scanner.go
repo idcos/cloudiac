@@ -72,17 +72,6 @@ func (s *Scanner) Run() error {
 		err error
 	)
 
-	if s.SaveResult {
-		s.Db = s.Db.Begin()
-
-		defer func() {
-			if r := recover(); r != nil {
-				_ = s.Db.Rollback()
-				panic(r)
-			}
-		}()
-	}
-
 	if err = s.Prepare(); err != nil {
 		return err
 	}
@@ -101,14 +90,17 @@ func (s *Scanner) Run() error {
 	}
 
 	if s.SaveResult {
-		if err != nil {
+		s.Db = s.Db.Begin()
+		defer func() {
+			if r := recover(); r != nil {
+				_ = s.Db.Rollback()
+				panic(r)
+			}
+		}()
+
+		if err = s.Db.Commit(); err != nil {
 			_ = s.Db.Rollback()
 			return e.New(e.DBError, err)
-		} else {
-			if err = s.Db.Commit(); err != nil {
-				_ = s.Db.Rollback()
-				return e.New(e.DBError, err)
-			}
 		}
 	}
 
@@ -190,6 +182,7 @@ func (s *Scanner) ScanResource(resource Resource) error {
 	}
 
 	var errExit error
+
 	if s.Internal {
 		if errExit = s.RunInternalScan(resource); errExit != nil && !errors.Is(errExit, ErrScanExitViolated) {
 			task.PolicyStatus = common.PolicyStatusFailed
@@ -197,42 +190,15 @@ func (s *Scanner) ScanResource(resource Resource) error {
 		}
 	} else {
 		if err := s.RunScan(resource); err != nil {
-			defer func() {
-				_ = s.handleScanError(&task, err)
-			}()
-			code, err := utils.CmdGetCode(err)
-			if err != nil {
-				return err
-			}
-			switch code {
-			case 3:
-				task.PolicyStatus = common.PolicyStatusViolated
-			case 0:
-				task.PolicyStatus = common.PolicyStatusPassed
-			case 1:
-				fallthrough
-			default:
-				task.PolicyStatus = common.PolicyStatusFailed
+			if task.PolicyStatus, err = ParsePolicyStatusFromCmdCode(err); err != nil {
 				return err
 			}
 		}
 	}
 
-	bs, err := os.ReadFile(s.GetResultPath(resource))
-	if err != nil {
+	// 附加源码
+	if _, err := PopulateViolateSource(s, resource, &task); err != nil {
 		return err
-	}
-
-	var tfResultJson *TsResultJson
-	if tfResultJson, err = UnmarshalTfResultJson(bs); err != nil {
-		return err
-	}
-
-	if len(tfResultJson.Results.Violations) > 0 {
-		// 附加源码
-		if _, err = PopulateViolateSource(s, resource, &task, tfResultJson); err != nil {
-			return err
-		}
 	}
 
 	//if s.SaveResult {
@@ -242,6 +208,23 @@ func (s *Scanner) ScanResource(resource Resource) error {
 	//}
 
 	return errExit
+}
+
+func ParsePolicyStatusFromCmdCode(err error) (string, error) {
+	code, err := utils.CmdGetCode(err)
+	if err != nil {
+		return "", err
+	}
+	switch code {
+	case 3:
+		return common.PolicyStatusViolated, nil
+	case 0:
+		return common.PolicyStatusPassed, nil
+	case 1:
+		fallthrough
+	default:
+		return common.PolicyStatusFailed, nil
+	}
 }
 
 func (s *Scanner) GetMessage(format string, data interface{}) string {
@@ -379,10 +362,9 @@ func (s *Scanner) RunInternalScan(code Resource) error {
 		return err
 	}
 
-	inputResource := models.TfParse{}
-	inputContent, _ := ioutil.ReadFile(s.GetConfigPath(code))
-	if len(inputContent) > 0 {
-		_ = json.Unmarshal(inputContent, &inputResource)
+	inputResource, err := s.ReadInputFromJson(s.GetConfigPath(code))
+	if err != nil {
+		return err
 	}
 
 	violated := false
@@ -453,7 +435,7 @@ func (s *Scanner) RunInternalScan(code Resource) error {
 
 	if s.ResultFile != "" {
 		outputB, _ := json.Marshal(output)
-		if err := os.WriteFile(s.GetResultPath(code), outputB, 0644); err != nil {
+		if err := os.WriteFile(s.GetResultPath(code), outputB, 0644); err != nil { //nolint:gosec
 			return err
 		}
 	} else {
@@ -495,6 +477,16 @@ func (s *Scanner) ReadPolicies(policyDir string) ([]*PolicyWithMeta, error) {
 		ret = append(ret, policies...)
 	}
 	return ret, nil
+}
+
+func (s *Scanner) ReadInputFromJson(inputPath string) (models.TfParse, error) {
+	inputResource := models.TfParse{}
+	inputContent, _ := ioutil.ReadFile(inputPath)
+	if len(inputContent) > 0 {
+		_ = json.Unmarshal(inputContent, &inputResource)
+	}
+
+	return inputResource, nil
 }
 
 func (s *Scanner) Console(msg string) {
