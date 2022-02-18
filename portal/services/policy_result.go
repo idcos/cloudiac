@@ -277,7 +277,7 @@ func MergePolicies(policies1, policies2 []models.Policy) (mergedPolicies []model
 	for idx, policy := range policies2 {
 		policiesMap[policy.Id] = policies2[idx]
 	}
-	for id, _ := range policiesMap {
+	for id := range policiesMap {
 		mergedPolicies = append(mergedPolicies, policiesMap[id])
 	}
 

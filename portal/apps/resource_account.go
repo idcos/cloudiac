@@ -173,7 +173,7 @@ func UpdateResourceAccount(c *ctx.ServiceContext, form *forms.UpdateResourceAcco
 	if form.HasKey("description") {
 		attrs["description"] = form.Description
 	}
-	newVars := make(map[string]string, 0)
+	newVars := make(map[string]string)
 	vars := make([]forms.Params, 0)
 	ra, err := services.GetResourceAccountById(c.DB(), form.Id)
 	if err != nil {

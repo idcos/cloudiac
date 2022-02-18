@@ -56,7 +56,7 @@ func GetCronTaskTypeAndCheckParam(cronExpress string, autoRepairDrift, openCronD
 		}
 	}
 	if openCronDrift {
-		if autoRepairDrift == false {
+		if !autoRepairDrift {
 			return models.TaskTypePlan, nil
 		} else {
 			return models.TaskTypeApply, nil
@@ -472,7 +472,6 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 
 	for _, env := range details {
 		env.MergeTaskStatus()
-		// FIXME: 这里会在 for 循环中查询 db，需要优化
 		PopulateLastTask(c.DB(), env)
 		env.PolicyStatus = models.PolicyStatusConversion(env.PolicyStatus, env.PolicyEnable)
 	}
@@ -1214,7 +1213,7 @@ func ResourceDetail(c *ctx.ServiceContext, form *forms.ResourceDetailForm) (*mod
 		for _, value := range resource.SensitiveKeys {
 			set[value] = nil
 		}
-		for k, _ := range resultAttrs {
+		for k := range resultAttrs {
 			// 如果state 中value 存在与sensitive 设置，展示时不展示详情
 			if _, ok := set[k]; ok {
 				resultAttrs[k] = "(sensitive value)"
@@ -1277,7 +1276,7 @@ func ResourceGraphDetail(c *ctx.ServiceContext, form *forms.ResourceGraphDetailF
 		for _, value := range resource.SensitiveKeys {
 			set[value] = nil
 		}
-		for k, _ := range resultAttrs {
+		for k := range resultAttrs {
 			// 如果state 中value 存在与sensitive 设置，展示时不展示详情
 			if _, ok := set[k]; ok {
 				resultAttrs[k] = "(sensitive value)"

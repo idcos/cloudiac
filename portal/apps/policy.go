@@ -342,7 +342,7 @@ func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (in
 	tplIds := make([]models.Id, 0)
 	query := services.SearchPolicyTpl(c.DB(), c.UserId, c.OrgId, form.TplId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
-	groupM := make(map[models.Id][]services.NewPolicyGroup, 0)
+	groupM := make(map[models.Id][]services.NewPolicyGroup)
 	if err := p.Scan(&respPolicyTpls); err != nil {
 		return nil, e.New(e.DBError, err)
 	}

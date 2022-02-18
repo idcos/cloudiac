@@ -43,11 +43,9 @@ func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{},
 		return nil, e.New(e.DBError, err)
 	}
 
-	if details != nil {
-		for _, env := range details {
-			// 隐藏敏感字段
-			env.HideSensitiveVariable()
-		}
+	for _, env := range details {
+		// 隐藏敏感字段
+		env.HideSensitiveVariable()
 	}
 
 	return page.PageResp{
