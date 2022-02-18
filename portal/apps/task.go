@@ -81,7 +81,7 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*taskDetailRe
 	if err != nil && err.Code() == e.TaskNotExists {
 		return nil, e.New(e.TaskNotExists, err, http.StatusNotFound)
 	} else if err != nil {
-		c.Logger().WithField("task", "detail").Errorf("%s", err)
+		c.Logger().WithField("dbSearch task", form.Id).Errorf("%s", err)
 		return nil, e.New(e.DBError, err)
 	}
 	sort.Sort(task.Variables)
@@ -128,7 +128,7 @@ func LastTask(c *ctx.ServiceContext, form *forms.LastTaskForm) (*taskDetailResp,
 	if err != nil && err.Code() == e.EnvNotExists {
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
 	} else if err != nil {
-		c.Logger().WithField("task", "last").Errorf("%s", err)
+		c.Logger().WithField("dbSearch env", form.Id).Errorf("%s", err)
 		return nil, e.New(e.DBError, err)
 	}
 
@@ -141,7 +141,7 @@ func LastTask(c *ctx.ServiceContext, form *forms.LastTaskForm) (*taskDetailResp,
 	if err != nil && err.Code() == e.TaskNotExists {
 		return nil, e.New(e.TaskNotExists, err, http.StatusNotFound)
 	} else if err != nil {
-		c.Logger().WithField("task", "last").Errorf("%s", err)
+		c.Logger().WithField("dbSearch task", env.LastTaskId).Errorf("%s", err)
 		return nil, e.New(e.DBError, err)
 	}
 	user, err := services.GetUserByIdRaw(c.DB(), task.CreatorId)
@@ -285,7 +285,7 @@ func TaskOutput(c *ctx.ServiceContext, form forms.DetailTaskForm) (interface{}, 
 	if err != nil && err.Code() == e.TaskNotExists {
 		return nil, e.New(e.TaskNotExists, err, http.StatusNotFound)
 	} else if err != nil {
-		c.Logger().WithField("task", "output").Errorf("%s", err)
+		c.Logger().WithField("dbSearch task", form.Id).Errorf("%s", err)
 		return nil, e.New(e.DBError, err)
 	}
 

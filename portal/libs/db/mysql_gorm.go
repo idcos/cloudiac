@@ -27,6 +27,7 @@ import (
 var (
 	defaultDB      *gorm.DB
 	namingStrategy = schema.NamingStrategy{}
+	appLazySelects = "app:lazySelects"
 )
 
 type SoftDeletedAt uint
@@ -208,15 +209,15 @@ func (s *Session) Omit(cols ...string) *Session {
 }
 
 func (s *Session) LazySelect(selectStat ...string) *Session {
-	return ToSess(s.db.Set("app:lazySelects", selectStat)) //nolint
+	return ToSess(s.db.Set(appLazySelects, selectStat))
 }
 
 func (s *Session) LazySelectAppend(selectStat ...string) *Session {
-	stats, ok := s.db.Get("app:lazySelects") //nolint
+	stats, ok := s.db.Get(appLazySelects)
 	if ok {
-		return ToSess(s.db.Set("app:lazySelects", append(stats.([]string), selectStat...))) //nolint
+		return ToSess(s.db.Set(appLazySelects, append(stats.([]string), selectStat...)))
 	} else {
-		return ToSess(s.db.Set("app:lazySelects", selectStat)) //nolint
+		return ToSess(s.db.Set(appLazySelects, selectStat))
 	}
 }
 
@@ -272,7 +273,7 @@ func (s *Session) Exists() (bool, error) {
 }
 
 func (s *Session) autoLazySelect() *Session {
-	selects, ok := s.db.Get("app:lazySelects") //nolint
+	selects, ok := s.db.Get(appLazySelects)
 	if !ok {
 		return s
 	}
