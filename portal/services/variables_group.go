@@ -73,6 +73,38 @@ type VarGroupRel struct {
 	Overwrites []VarGroupRel `json:"overwrites" form:"overwrites" gorm:"-"` //回滚参数，无需回滚是为空
 }
 
+func addVarGroupRel(vgs []VarGroupRel, rels map[models.Id]VarGroupRel, coverRels map[models.Id][]VarGroupRel, index int) []VarGroupRel {
+	addRels := make([]VarGroupRel, 0)
+
+	for _, vg := range vgs {
+		// 如果进行初始化则直接写入Map
+		if _, ok := rels[vg.VarGroupId]; !ok && index == 0 {
+			rels[vg.VarGroupId] = vg
+			continue
+		}
+		// 比较是否有需要覆盖的变量
+		for k, v := range rels {
+			if MatchVarGroup(v, vg) {
+				// 需要覆盖则删除上一级的变量组
+				delete(rels, k)
+				// 记录覆盖的变量
+				if _, ok := coverRels[vg.VarGroupId]; !ok {
+					coverRels[vg.VarGroupId] = []VarGroupRel{
+						v,
+					}
+					continue
+				}
+				coverRels[vg.VarGroupId] = append(coverRels[vg.VarGroupId], v)
+			}
+
+		}
+		//临时存储需要添加的变量组,避免重复相同层级的变量进行比较
+		addRels = append(addRels, vg)
+	}
+
+	return addRels
+}
+
 func SearchVariableGroupRel(dbSess *db.Session, objectAttr map[string]models.Id, object string) ([]VarGroupRel, e.Error) {
 	scopes := make([]string, 0)
 	switch object {
@@ -92,38 +124,13 @@ func SearchVariableGroupRel(dbSess *db.Session, objectAttr map[string]models.Id,
 
 	// 按照继承顺序一层一层查询对应的变量组数据
 	for index, v := range scopes {
-		addRels := make([]VarGroupRel, 0)
 		// 查询当前作用域下的变量组信息
 		vgs, err := GetVariableGroupByObject(dbSess, v, objectAttr[v], objectAttr[consts.ScopeOrg])
 		if err != nil {
 			continue
 		}
 
-		for _, vg := range vgs {
-			// 如果进行初始化则直接写入Map
-			if _, ok := rels[vg.VarGroupId]; !ok && index == 0 {
-				rels[vg.VarGroupId] = vg
-				continue
-			}
-			// 比较是否有需要覆盖的变量
-			for k, v := range rels {
-				if MatchVarGroup(v, vg) {
-					// 需要覆盖则删除上一级的变量组
-					delete(rels, k)
-					// 记录覆盖的变量
-					if _, ok := coverRels[vg.VarGroupId]; !ok {
-						coverRels[vg.VarGroupId] = []VarGroupRel{
-							v,
-						}
-						continue
-					}
-					coverRels[vg.VarGroupId] = append(coverRels[vg.VarGroupId], v)
-				}
-
-			}
-			//临时存储需要添加的变量组,避免重复相同层级的变量进行比较
-			addRels = append(addRels, vg)
-		}
+		addRels := addVarGroupRel(vgs, rels, coverRels, index)
 
 		//进行批量添加
 		for _, rel := range addRels {

@@ -194,6 +194,26 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 	return variableM, nil, scopes
 }
 
+func checkVariable(v models.Variable, projectId, tplId models.Id) bool {
+	if v.ProjectId != "" {
+		if projectId == v.ProjectId {
+			return true
+		}
+	}
+
+	if v.TplId != "" {
+		if tplId == v.TplId {
+			return true
+		}
+	}
+
+	if v.TplId == "" && v.ProjectId == "" && v.EnvId == "" {
+		return true
+	}
+
+	return false
+}
+
 // GetVariableParent 获取上一级被覆盖的变量
 func GetVariableParent(dbSess *db.Session, name, scope, variableType string, scopes []string, orgId, projectId, tplId models.Id) (bool, models.Variable) {
 	variable := models.Variable{}
@@ -203,42 +223,28 @@ func GetVariableParent(dbSess *db.Session, name, scope, variableType string, sco
 		Where("scope in (?)", scopes).
 		Where("type = ?", variableType)
 
-	// 只有环境层级需要很细粒度的数据隔离
-	if scope == consts.ScopeEnv {
-		variables := make([]models.Variable, 0)
-		if err := query.Order("scope asc").Find(&variables); err != nil {
+	if scope != consts.ScopeEnv {
+		if err := query.
+			Order("scope desc").
+			First(&variable); err != nil {
 			return false, variable
+		} else {
+			return true, variable
 		}
-		for _, v := range variables {
-			if v.ProjectId != "" {
-				if projectId == v.ProjectId {
-					return true, v
-				}
-				continue
-			}
-
-			if v.TplId != "" {
-				if tplId == v.TplId {
-					return true, v
-				}
-				continue
-			}
-
-			if v.TplId == "" && v.ProjectId == "" && v.EnvId == "" {
-				return true, v
-			}
-
-		}
-		return false, variable
 	}
 
-	if err := query.
-		Order("scope desc").
-		First(&variable); err != nil {
+	// 只有环境层级需要很细粒度的数据隔离
+	variables := make([]models.Variable, 0)
+	if err := query.Order("scope asc").Find(&variables); err != nil {
 		return false, variable
 	}
+	for _, v := range variables {
+		if checkVariable(v, projectId, tplId) {
+			return true, v
+		}
+	}
+	return false, variable
 
-	return true, variable
 }
 
 func GetVariableBody(vars map[string]models.Variable) []models.VariableBody {

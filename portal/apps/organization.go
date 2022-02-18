@@ -329,16 +329,25 @@ func getInviteUserOrg(c *ctx.ServiceContext, form *forms.InviteUserForm) (*model
 	return org, nil
 }
 
+func getInviteUserById(c *ctx.ServiceContext, tx *db.Session, userId models.Id) (*models.User, e.Error) {
+	user, err := services.GetUserById(tx, userId)
+	if err != nil && err.Code() == e.UserNotExists {
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
+		c.Logger().Errorf("error get user by id, err %s", err)
+		return nil, err
+	}
+
+	return user, nil
+}
+
 func checkInviteUser(c *ctx.ServiceContext, tx *db.Session, form *forms.InviteUserForm) (*models.User, e.Error) {
 	var user *models.User
 	var err e.Error
 
 	if form.UserId != "" {
-		user, err = services.GetUserById(tx, form.UserId)
-		if err != nil && err.Code() == e.UserNotExists {
-			return nil, e.New(err.Code(), err, http.StatusBadRequest)
-		} else if err != nil {
-			c.Logger().Errorf("error get user by id, err %s", err)
+		user, err = getInviteUserById(c, tx, form.UserId)
+		if err != nil {
 			return nil, err
 		}
 	} else if form.Email != "" {
