@@ -496,7 +496,6 @@ func (r *Rego) ParseResource(result []interface{}) []string {
 				//invalid custom return id
 				continue
 			}
-			resId = res["Id"].(string)
 		case string:
 			resId = res
 		default:
