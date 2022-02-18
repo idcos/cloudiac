@@ -133,14 +133,14 @@ func GetValidPolicies(query *db.Session, tplId, envId models.Id) (validPolicies 
 		if enabled, err = IsTemplateEnabledScan(query, tplId); err != nil {
 			return
 		}
-		if enabled {
-			if policies, err = GetPoliciesByTemplateId(query, tplId); err != nil {
-				return
-			}
-			if validPolicies, suppressedPolicies, err = FilterSuppressPolicies(query, policies, tplId, consts.ScopeTemplate); err != nil {
-				return
-			}
+		if !enabled {
+			return
 		}
+
+		if policies, err = GetPoliciesByTemplateId(query, tplId); err != nil {
+			return
+		}
+		validPolicies, suppressedPolicies, err = FilterSuppressPolicies(query, policies, tplId, consts.ScopeTemplate)
 		return
 	}
 
@@ -148,16 +148,15 @@ func GetValidPolicies(query *db.Session, tplId, envId models.Id) (validPolicies 
 	if enabled, err = IsEnvEnabledScan(query, envId); err != nil {
 		return
 	}
-	if enabled {
-		if policies, err = GetPoliciesByEnvId(query, envId); err != nil {
-			return
-		}
-
-		if validPolicies, suppressedPolicies, err = FilterSuppressPolicies(query, policies, envId, consts.ScopeEnv); err != nil {
-			return
-		}
+	if !enabled {
+		return
 	}
 
+	if policies, err = GetPoliciesByEnvId(query, envId); err != nil {
+		return
+	}
+
+	validPolicies, suppressedPolicies, err = FilterSuppressPolicies(query, policies, envId, consts.ScopeEnv)
 	return
 }
 
