@@ -20,7 +20,6 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/rbac"
-	"cloudiac/portal/services/sshkey"
 	"cloudiac/portal/web"
 	"cloudiac/utils/kafka"
 	"cloudiac/utils/logs"
@@ -318,6 +317,6 @@ func initTemplates(tx *db.Session) error {
 	return nil
 }
 
-func initSSHKeyPair() error {
-	return sshkey.InitSSHKeyPair()
-}
+//func initSSHKeyPair() error {
+//	return sshkey.InitSSHKeyPair()
+//}
