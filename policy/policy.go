@@ -448,7 +448,7 @@ func (r *Rego) ParseResource(result []interface{}) []string {
 		resMap[resId] = true
 	}
 	var resources []string
-	for k, _ := range resMap {
+	for k := range resMap {
 		resources = append(resources, k)
 	}
 
@@ -632,7 +632,7 @@ func ParsePolicyGroup(dirname string) ([]*PolicyWithMeta, e.Error) {
 		return nil, e.New(e.InternalError, err, http.StatusInternalServerError)
 	}
 
-	otherFiles := append(files)
+	otherFiles := files
 	var regoFiles []RegoFile
 	// 遍历当前目录
 	for _, f := range files {
