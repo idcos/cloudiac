@@ -31,7 +31,8 @@ func httpClient(conntimeout, deadline int) *http.Client {
 				return c, c.SetDeadline(deadline)
 			},
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: configs.Get().HttpClientInsecure,
+				// 默认配置为 false，可通过配置 HttpClientInsecure 设置为跳过证书验证
+				InsecureSkipVerify: configs.Get().HttpClientInsecure, //nolint:gosec
 			},
 		},
 	}
