@@ -54,7 +54,7 @@ func AccessControl(args ...string) gin.HandlerFunc {
 		}
 
 		// 通过 HTTP method 解析资源动作
-		op := "read"
+		op := ""
 		switch c.Request.Method {
 		case "GET":
 			op = "read"
