@@ -377,8 +377,6 @@ func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (in
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
-	// 最后一次扫描结果
-	respPolicyTpls = PolicyTargetSummaryTpl(respPolicyTpls, summaries)
 
 	return page.PageResp{
 		Total:    p.MustTotal(),
