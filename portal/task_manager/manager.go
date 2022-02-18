@@ -438,7 +438,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		_ = changeTaskStatus(models.TaskFailed, err.Error(), false)
 	}
 
-	logger.Infof("run task start %s", task.Id)
+	logger.Infof("run task start", task.Id)
 
 	if task.IsDriftTask {
 		if env, err := services.GetEnvById(m.db, task.EnvId); err != nil {

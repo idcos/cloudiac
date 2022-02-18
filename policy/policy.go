@@ -172,32 +172,32 @@ func (p Parser) Parse(filePath string) error {
 	return nil
 }
 
-func PopulateViolateSource(scanner *Scanner, res Resource, task *models.ScanTask, resultJson *TsResultJson) (*TsResultJson, error) {
-	updated := false
-	tfmap := models.TfParse{}
-
-	if res.MapFile != "" {
-		tfmapContent, _ := ioutil.ReadFile(res.MapFile)
-		if len(tfmapContent) > 0 {
-			_ = json.Unmarshal(tfmapContent, &tfmap)
-		}
+func PopulateViolateSource(scanner *Scanner, res Resource, task *models.ScanTask) (*TsResultJson, error) {
+	resultJson, err := ReadTfResultJson(scanner.GetResultPath(res))
+	if err != nil {
+		return nil, err
 	}
+
+	updated := false
+
+	tfmap := ReadTfMapFile(res.MapFile)
+
 	for idx, policyResult := range resultJson.Results.Violations {
 		resLineNo := policyResult.Line
 		srcFile := policyResult.File
 
 		if (resLineNo == 0 || srcFile == "") && tfmap != nil {
-			resLineNo, srcFile = findLineNoFromMap(tfmap, policyResult.ResourceName)
+			resLineNo, srcFile = findLineNoFromMap(*tfmap, policyResult.ResourceName)
 			resultJson.Results.Violations[idx].Line = resLineNo
 			resultJson.Results.Violations[idx].File = srcFile
 		}
 
 		srcFp, err := os.Open(filepath.Join(srcFile))
-
 		if err != nil {
-			// "open src fail
+			// 读取源码失败，跳过
 			continue
 		}
+
 		reader := bufio.NewReader(srcFp)
 		srcLines := ""
 		for lineNo := 1; ; lineNo++ {
@@ -231,15 +231,44 @@ func PopulateViolateSource(scanner *Scanner, res Resource, task *models.ScanTask
 	}
 
 	if updated {
-		if js, err := json.MarshalIndent(resultJson, "", "  "); err == nil {
-			err := os.WriteFile(scanner.GetResultPath(res), js, 0644)
-			if err != nil {
-				return nil, err
-			}
+		err = UpdateTfResultJson(scanner.GetResultPath(res), resultJson)
+		if err != nil {
+			return nil, err
 		}
 	}
 
 	return resultJson, nil
+}
+
+func ReadTfResultJson(resultPath string) (*TsResultJson, error) {
+	bs, err := os.ReadFile(resultPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return UnmarshalTfResultJson(bs)
+}
+
+func ReadTfMapFile(mapFile string) *models.TfParse {
+	if mapFile == "" {
+		return nil
+	}
+
+	tfmap := models.TfParse{}
+	tfmapContent, _ := ioutil.ReadFile(mapFile)
+	if err := json.Unmarshal(tfmapContent, &tfmap); err != nil {
+		return nil
+	}
+
+	return &tfmap
+}
+
+func UpdateTfResultJson(resultPath string, resultJson *TsResultJson) error {
+	if js, err := json.MarshalIndent(resultJson, "", "  "); err != nil {
+		return err
+	} else {
+		return os.WriteFile(resultPath, js, 0644) //nolint:gosec
+	}
 }
 
 func findLineNoFromMap(tfmap models.TfParse, resourceName string) (int, string) {
@@ -265,10 +294,10 @@ func genPolicyFiles(policyDir string, policies []Policy) error {
 		}
 		js, _ := json.Marshal(policy.Meta)
 
-		if err := os.WriteFile(filepath.Join(policyDir, policy.Id, policy.Meta.Name+".json"), js, 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(policyDir, policy.Id, policy.Meta.Name+".json"), js, 0644); err != nil { //nolint:gosec
 			return err
 		}
-		if err := os.WriteFile(filepath.Join(policyDir, policy.Id, policy.Meta.Name+".rego"), []byte(policy.Rego), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(policyDir, policy.Id, policy.Meta.Name+".rego"), []byte(policy.Rego), 0644); err != nil { //nolint:gosec
 			return err
 		}
 	}
@@ -388,6 +417,39 @@ type Rego struct {
 	compiler *ast.Compiler
 }
 
+func (r *Rego) Init() error {
+	var err error
+	if r.filePath == "" {
+		return fmt.Errorf("rego file path is empty")
+	}
+
+	r.content, err = r.LoadRego()
+	if err != nil {
+		// error load rego file
+		return err
+	}
+
+	r.compiler, err = r.Compile()
+	if err != nil {
+		// error compiling rego
+		return err
+	}
+
+	r.pkg, err = r.ParsePackage()
+	if err != nil {
+		// error parse package
+		return err
+	}
+
+	r.rules, err = r.ParseRules()
+	if err != nil {
+		// error parse rules
+		return err
+	}
+
+	return nil
+}
+
 func (r *Rego) LoadRego() (string, error) {
 	content, err := ioutil.ReadFile(r.filePath)
 	if err != nil {
@@ -478,28 +540,7 @@ func RegoParse(regoFile string, inputFile string, ruleName ...string) ([]interfa
 		filePath: regoFile,
 	}
 	var err error
-
-	reg.content, err = reg.LoadRego()
-	if err != nil {
-		// error load rego file
-		return nil, err
-	}
-
-	reg.compiler, err = reg.Compile()
-	if err != nil {
-		// error compiling rego
-		return nil, err
-	}
-
-	reg.pkg, err = reg.ParsePackage()
-	if err != nil {
-		// error parse package
-		return nil, err
-	}
-
-	reg.rules, err = reg.ParseRules()
-	if err != nil {
-		// error parse rules
+	if err := reg.Init(); err != nil {
 		return nil, err
 	}
 
@@ -696,84 +737,26 @@ type RegoFile struct {
 
 //ParseMeta 解析 rego metadata，如果存在 file.json 则从 json 文件读取 metadata，否则通过头部注释读取 metadata
 func ParseMeta(regoFilePath string, metaFilePath string) (*PolicyWithMeta, e.Error) {
-	var meta Meta
 	buf, er := os.ReadFile(regoFilePath)
 	if er != nil {
 		return nil, e.New(e.PolicyRegoInvalid, fmt.Errorf("read rego file: %v", er))
 	}
 	regoContent := string(buf)
 
-	// 1. 如果存在 json metadata，则解析 json 文件
+	var meta *Meta
 	if metaFilePath != "" {
-		content, er := os.ReadFile(metaFilePath)
+		// 1. 如果存在 json metadata，则解析 json 文件
+		meta, er = ParseMetaFromJson(metaFilePath)
 		if er != nil {
-			return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("read meta file: %v", er))
-		}
-		er = json.Unmarshal(content, &meta)
-		if er != nil {
-			return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("unmarshal meta file: %v", er))
+			return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("parse json metadata: %v", er))
 		}
 		meta.File = filepath.Base(regoFilePath)
 		meta.Root = filepath.Dir(regoFilePath)
 	} else {
 		// 2. 无 json metadata，通过头部注释解析信息
-		//	## id 为策略在策略组中的唯一标识，由大小写英文字符、数字、"."、"_"、"-" 组成
-		//	## 建议按`组织_云商_资源名称/分类_编号`的格式进行命名
-		//	# @id: cloudiac_alicloud_security_p001
-		//
-		//	# @name: 策略名称A
-		//	# @description: 这是策略的描述
-		//
-		//	## 策略类型，如 aws, k8s, github, alicloud, ...
-		//	# @policy_type: alicloud
-		//
-		//	## 资源类型，如 aws_ami, k8s_pod, alicloud_ecs, ...
-		//	# @resource_type: aliyun_ami
-		//
-		//	## 策略严重级别: 可选 HIGH/MEDIUM/LOW
-		//	# @severity: HIGH
-		//
-		//	## 策略分类(或者叫标签)，多个分类使用逗号分隔
-		//	# @label: cat1,cat2
-		//
-		//	## 策略修复建议（支持多行）
-		//	# @fix_suggestion:
-		//	Terraform 代码去掉`associate_public_ip_address`配置
-		//	```
-		//resource "aws_instance" "bar" {
-		//  ...
-		//- associate_public_ip_address = true
-		//}
-		//```
-		//	# @fix_suggestion_end
-
-		meta = Meta{
-			Id:           ExtractStr("id", regoContent),
-			File:         filepath.Base(regoFilePath),
-			Root:         filepath.Dir(regoFilePath),
-			Name:         utils.FileNameWithoutExt(regoFilePath),
-			Description:  ExtractStr("description", regoContent),
-			PolicyType:   ExtractStr("policy_type", regoContent),
-			ResourceType: ExtractStr("resource_type", regoContent),
-			Label:        ExtractStr("label", regoContent),
-			Category:     ExtractStr("category", regoContent),
-			ReferenceId:  ExtractStr("reference_id", regoContent),
-			Severity:     ExtractStr("severity", regoContent),
-		}
-		ver := ExtractStr("version", regoContent)
-		meta.Version, _ = strconv.Atoi(ver)
-		if meta.ReferenceId == "" {
-			meta.ReferenceId = ExtractStr("id", regoContent)
-		}
-
-		// 多行注释提取
-		regex := regexp.MustCompile(`(?s)@fix_suggestion:\\s*(.*)\\s*#+\\s*@fix_suggestion_end`)
-		match := regex.FindStringSubmatch(regoContent)
-		if len(match) == 2 {
-			meta.FixSuggestion = strings.TrimSpace(match[1])
-		} else {
-			// 单行注释提取
-			meta.FixSuggestion = ExtractStr("fix_suggestion", regoContent)
+		meta, er = ParseMetaFromRego(regoFilePath, regoContent)
+		if er != nil {
+			return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("parse rego metadata: %v", er))
 		}
 	}
 
@@ -787,27 +770,109 @@ func ParseMeta(regoFilePath string, metaFilePath string) (*PolicyWithMeta, e.Err
 	if meta.Severity == "" {
 		meta.Severity = consts.PolicySeverityMedium
 	}
-
 	meta.Severity = strings.ToLower(meta.Severity)
 
-	uni := translator.New(en.New())
-	trans, _ := uni.GetTranslator("en")
-	validate := validator.New()
-	if err := en_translation.RegisterDefaultTranslations(validate, trans); err != nil {
-		return nil, e.New(e.InternalError, fmt.Errorf("register validator translator en error: %v", err))
-	}
-	if err := validate.Struct(meta); err != nil {
-		for _, err := range err.(validator.ValidationErrors) {
-			return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("invalid policy meta: %+v", fmt.Errorf(err.Translate(trans))))
-		}
-		return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("invalid policy meta: %+v", err))
+	if err := ValidateMeta(meta); err != nil {
+		return nil, err
 	}
 
 	return &PolicyWithMeta{
 		Id:   meta.Id,
-		Meta: meta,
+		Meta: *meta,
 		Rego: regoContent,
 	}, nil
+}
+
+func ParseMetaFromJson(metaFilePath string) (*Meta, error) {
+	content, er := os.ReadFile(metaFilePath)
+	if er != nil {
+		return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("read meta file: %v", er))
+	}
+	var meta *Meta
+	er = json.Unmarshal(content, meta)
+	if er != nil {
+		return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("unmarshal meta file: %v", er))
+	}
+	return meta, nil
+}
+
+func ParseMetaFromRego(regoFilePath string, regoContent string) (*Meta, error) {
+	//	## id 为策略在策略组中的唯一标识，由大小写英文字符、数字、"."、"_"、"-" 组成
+	//	## 建议按`组织_云商_资源名称/分类_编号`的格式进行命名
+	//	# @id: cloudiac_alicloud_security_p001
+	//
+	//	# @name: 策略名称A
+	//	# @description: 这是策略的描述
+	//
+	//	## 策略类型，如 aws, k8s, github, alicloud, ...
+	//	# @policy_type: alicloud
+	//
+	//	## 资源类型，如 aws_ami, k8s_pod, alicloud_ecs, ...
+	//	# @resource_type: aliyun_ami
+	//
+	//	## 策略严重级别: 可选 HIGH/MEDIUM/LOW
+	//	# @severity: HIGH
+	//
+	//	## 策略分类(或者叫标签)，多个分类使用逗号分隔
+	//	# @label: cat1,cat2
+	//
+	//	## 策略修复建议（支持多行）
+	//	# @fix_suggestion:
+	//	Terraform 代码去掉`associate_public_ip_address`配置
+	//	```
+	//resource "aws_instance" "bar" {
+	//  ...
+	//- associate_public_ip_address = true
+	//}
+	//```
+	//	# @fix_suggestion_end
+
+	meta := &Meta{
+		Id:           ExtractStr("id", regoContent),
+		File:         filepath.Base(regoFilePath),
+		Root:         filepath.Dir(regoFilePath),
+		Name:         utils.FileNameWithoutExt(regoFilePath),
+		Description:  ExtractStr("description", regoContent),
+		PolicyType:   ExtractStr("policy_type", regoContent),
+		ResourceType: ExtractStr("resource_type", regoContent),
+		Label:        ExtractStr("label", regoContent),
+		Category:     ExtractStr("category", regoContent),
+		ReferenceId:  ExtractStr("reference_id", regoContent),
+		Severity:     ExtractStr("severity", regoContent),
+	}
+	ver := ExtractStr("version", regoContent)
+	meta.Version, _ = strconv.Atoi(ver)
+	if meta.ReferenceId == "" {
+		meta.ReferenceId = ExtractStr("id", regoContent)
+	}
+
+	// 多行注释提取
+	regex := regexp.MustCompile(`(?s)@fix_suggestion:\\s*(.*)\\s*#+\\s*@fix_suggestion_end`)
+	match := regex.FindStringSubmatch(regoContent)
+	if len(match) == 2 {
+		meta.FixSuggestion = strings.TrimSpace(match[1])
+	} else {
+		// 单行注释提取
+		meta.FixSuggestion = ExtractStr("fix_suggestion", regoContent)
+	}
+
+	return meta, nil
+}
+
+func ValidateMeta(meta *Meta) e.Error {
+	uni := translator.New(en.New())
+	trans, _ := uni.GetTranslator("en")
+	validate := validator.New()
+	if err := en_translation.RegisterDefaultTranslations(validate, trans); err != nil {
+		return e.New(e.InternalError, fmt.Errorf("register validator translator en error: %v", err))
+	}
+	if err := validate.Struct(meta); err != nil {
+		for _, err := range err.(validator.ValidationErrors) {
+			return e.New(e.PolicyMetaInvalid, fmt.Errorf("invalid policy meta: %+v", fmt.Errorf(err.Translate(trans))))
+		}
+		return e.New(e.PolicyMetaInvalid, fmt.Errorf("invalid policy meta: %+v", err))
+	}
+	return nil
 }
 
 // ExtractStr 提取 # @keyword: xxx 格式字符串

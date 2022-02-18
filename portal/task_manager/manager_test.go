@@ -60,21 +60,21 @@ guarantee to take exactly these actions if you run "terraform apply" now.
 
 func TestParseResourceDriftInfo(t *testing.T) {
 	DriftMap := map[string]models.ResourceDrift{
-		"random_password.password[0]": models.ResourceDrift{
+		"random_password.password[0]": {
 			DriftDetail: `-/+ resource "random_password" "password" {
       ~ id               = "none" -> (known after apply)
       ~ length           = 12 -> 13 # forces replacement
       ~ result           = (sensitive value)
         # (9 unchanged attributes hidden)
     }`},
-		"random_password.password[1]": models.ResourceDrift{
+		"random_password.password[1]": {
 			DriftDetail: `-/+ resource "random_password" "password" {
       ~ id               = "none" -> (known after apply)
       ~ length           = 12 -> 13 # forces replacement
       ~ result           = (sensitive value)
         # (9 unchanged attributes hidden)
     }`},
-		"random_password.password[2]": models.ResourceDrift{
+		"random_password.password[2]": {
 			DriftDetail: `  + resource "random_password" "password" {
       + id               = (known after apply)
       + length           = 13

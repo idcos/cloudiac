@@ -63,7 +63,7 @@ func Auth(c *ctx.GinRequest) {
 	if orgId != "" {
 		c.Service().OrgId = orgId
 		// 校验api token所属组织是否与传入组织一致
-		if apiTokenOrgId != "" && !(orgId == apiTokenOrgId) {
+		if apiTokenOrgId != "" && orgId != apiTokenOrgId {
 			c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
 			return
 		}

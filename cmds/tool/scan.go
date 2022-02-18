@@ -78,8 +78,7 @@ func (c *ScanCmd) hasDB() bool {
 		c.SaveResultToDB
 }
 
-func (c *ScanCmd) Execute(args []string) error {
-
+func (c *ScanCmd) Execute(args []string) error { //nolint:cyclop
 	if c.Debug {
 		var (
 			filePath string
