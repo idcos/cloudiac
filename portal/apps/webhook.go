@@ -98,7 +98,7 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 				continue
 			}
 			for _, v := range env.Triggers {
-				if er := actionPrOrPush(tx, v, sysUserId, &envs[eIndex],  &tplList[tIndex], options); er != nil {
+				if er := actionPrOrPush(tx, v, sysUserId, &envs[eIndex], &tplList[tIndex], options); er != nil {
 					logs.Get().WithField("webhook", "createTask").
 						Errorf("create task er: %v, envId: %s", er, env.Id)
 				}
@@ -116,7 +116,7 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 }
 
 //nolint
-func  CreateWebhookTask(tx *db.Session, taskType, revision, commitId string,
+func CreateWebhookTask(tx *db.Session, taskType, revision, commitId string,
 	userId models.Id, env *models.Env, tpl *models.Template, prId int, source string) error {
 	// 计算变量列表
 	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)

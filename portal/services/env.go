@@ -15,7 +15,7 @@ import (
 
 func GetEnv(sess *db.Session, id models.Id) (*models.Env, error) {
 	env := models.Env{}
-	err := sess.Where("id = ?", id).First(&env) //nolint
+	err := sess.Where("id = ?", id).First(&env)
 	return &env, err
 }
 
@@ -38,14 +38,12 @@ func CreateEnv(tx *db.Session, env models.Env) (*models.Env, e.Error) {
 
 func UpdateEnv(tx *db.Session, id models.Id, attrs models.Attrs) (env *models.Env, re e.Error) {
 	env = &models.Env{}
-	//nolint
 	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.Env{}, attrs); err != nil {
 		if e.IsDuplicate(err) {
 			return nil, e.New(e.EnvAliasDuplicate)
 		}
 		return nil, e.New(e.DBError, fmt.Errorf("update env error: %v", err))
 	}
-	//nolint
 	if err := tx.Where("id = ?", id).First(env); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("query env error: %v", err))
 	}
@@ -53,7 +51,7 @@ func UpdateEnv(tx *db.Session, id models.Id, attrs models.Attrs) (env *models.En
 }
 
 func UpdateEnvModel(tx *db.Session, id models.Id, env models.Env) e.Error {
-	_, err := models.UpdateModel(tx.Where("id = ?", id), &env) //nolint
+	_, err := models.UpdateModel(tx.Where("id = ?", id), &env)
 	if err != nil {
 		return e.AutoNew(err, e.DBError)
 	}
@@ -61,7 +59,6 @@ func UpdateEnvModel(tx *db.Session, id models.Id, env models.Env) e.Error {
 }
 
 func DeleteEnv(tx *db.Session, id models.Id) e.Error {
-	//nolint
 	if _, err := tx.Where("id = ?", id).Delete(&models.Env{}); err != nil {
 		return e.New(e.DBError, fmt.Errorf("delete env error: %v", err))
 	}
@@ -70,7 +67,6 @@ func DeleteEnv(tx *db.Session, id models.Id) e.Error {
 
 func GetEnvById(tx *db.Session, id models.Id) (*models.Env, e.Error) {
 	o := models.Env{}
-	//nolint
 	if err := tx.Model(models.Env{}).Where("id = ?", id).First(&o); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.EnvNotExists, err)
@@ -109,7 +105,6 @@ func QueryEnvDetail(query *db.Session) *db.Session {
 
 func GetEnvDetailById(query *db.Session, id models.Id) (*models.EnvDetail, e.Error) {
 	d := models.EnvDetail{}
-	//nolint
 	if err := query.Where("iac_env.id = ?", id).First(&d); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.EnvNotExists, err)
@@ -121,7 +116,6 @@ func GetEnvDetailById(query *db.Session, id models.Id) (*models.EnvDetail, e.Err
 
 func GetEnvByTplId(tx *db.Session, tplId models.Id) ([]models.Env, error) {
 	env := make([]models.Env, 0)
-	//nolint
 	if err := tx.Where("tpl_id = ?", tplId).Find(&env); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
@@ -187,7 +181,7 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 		logger.Infof("change env to '%v'", envStatus)
 		attrs["status"] = envStatus
 	}
-	_, err := tx.Model(&models.Env{}).Where("id = ?", id).UpdateAttrs(attrs) //nolint
+	_, err := tx.Model(&models.Env{}).Where("id = ?", id).UpdateAttrs(attrs)
 	if err != nil {
 		if e.IsRecordNotFound(err) {
 			return e.New(e.EnvNotExists)

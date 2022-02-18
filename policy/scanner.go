@@ -251,11 +251,11 @@ func (s *Scanner) GetMessage(format string, data interface{}) string {
 
 func (s *Scanner) handleScanError(task *models.ScanTask, err error) error {
 	// if s.SaveResult {
-		// 扫描出错的时候更新所有策略扫描结果为 failed
-		//emptyResult := TsResultJson{}
-		//if err := services.UpdateScanResult(s.Db, task, emptyResult.Results, task.PolicyStatus); err != nil {
-		//	return err
-		//}
+	// 扫描出错的时候更新所有策略扫描结果为 failed
+	//emptyResult := TsResultJson{}
+	//if err := services.UpdateScanResult(s.Db, task, emptyResult.Results, task.PolicyStatus); err != nil {
+	//	return err
+	//}
 	// }
 
 	// return err
@@ -263,7 +263,7 @@ func (s *Scanner) handleScanError(task *models.ScanTask, err error) error {
 }
 
 // TODO
-func (s *Scanner) genScanScript(res Resource) string { //nolint
+func (s *Scanner) genScanScript(res Resource) string { //nolint:unused
 	cmdlineTemplate := `
 cd {{.CodeDir}} && \
 mkdir -p ~/.terrascan/pkg/policies/opa/rego && \
