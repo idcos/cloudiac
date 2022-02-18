@@ -325,11 +325,9 @@ func SearchTaskResources(c *ctx.ServiceContext, form *forms.SearchTaskResourceFo
 		c.OrgId, c.ProjectId, task.EnvId, task.Id)
 	query = query.Joins("left join iac_resource_drift as rd on rd.res_id = r.id").LazySelectAppend("r.*, !ISNULL(rd.drift_detail) as is_drift")
 	if form.HasKey("q") {
+		q := fmt.Sprintf("%%%s%%", form.Q)
 		// 支持对 provider / type / name 进行模糊查询
-		query = query.Where("r.provider LIKE ? OR r.type LIKE ? OR r.name LIKE ?",
-			fmt.Sprintf("%%%s%%", form.Q),
-			fmt.Sprintf("%%%s%%", form.Q),
-			fmt.Sprintf("%%%s%%", form.Q))
+		query = query.Where("r.provider LIKE ? OR r.type LIKE ? OR r.name LIKE ?", q, q, q)
 	}
 
 	if form.SortField() == "" {

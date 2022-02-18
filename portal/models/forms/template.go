@@ -133,7 +133,7 @@ type TemplateTfVersionSearchForm struct {
 
 type TemplateChecksForm struct {
 	BaseForm
-	Name         string    `json:"name" form:"name" form:"name"`
+	Name         string    `json:"name" form:"name"`
 	RepoId       string    `json:"repoId" form:"repoId"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision"`
 	RepoType     string    `json:"repoType" form:"repoType" `

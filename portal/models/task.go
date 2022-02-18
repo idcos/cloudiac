@@ -8,6 +8,7 @@ import (
 	"cloudiac/runner"
 	"cloudiac/utils"
 	"database/sql/driver"
+	"fmt"
 	"path"
 )
 
@@ -77,6 +78,10 @@ const (
 	TaskRejected  = common.TaskRejected
 	TaskFailed    = common.TaskFailed
 	TaskComplete  = common.TaskComplete
+)
+
+var (
+	ErrTaskNoSteps = fmt.Errorf("task has no steps")
 )
 
 type Tasker interface {

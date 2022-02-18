@@ -245,7 +245,7 @@ func (s *Scanner) handleScanError(task *models.ScanTask, err error) error {
 }
 
 // TODO
-func (s *Scanner) genScanScript(res Resource) string { //nolint
+func (s *Scanner) genScanScript(res Resource) string { //nolint:unused
 	cmdlineTemplate := `
 cd {{.CodeDir}} && \
 mkdir -p ~/.terrascan/pkg/policies/opa/rego && \

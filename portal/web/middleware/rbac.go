@@ -53,13 +53,9 @@ func parseRes(requestURI string) string {
 	return res
 }
 
-func parseOpRoleProj(g *gin.Context) (string, string, string) {
-	c := ctx.NewGinRequest(g)
-	s := c.Service()
-
-	// 通过 HTTP method 解析资源动作
-	op := "read"
-	switch c.Request.Method {
+func getOpFromMethod(method string) string {
+	op := ""
+	switch method {
 	case "GET":
 		op = "read"
 	case "POST":
@@ -73,7 +69,10 @@ func parseOpRoleProj(g *gin.Context) (string, string, string) {
 	default:
 		op = "other"
 	}
+	return op
+}
 
+func getCtxOrgRole(s *ctx.ServiceContext) string {
 	// 组织角色
 	role := ""
 	switch {
@@ -94,8 +93,11 @@ func parseOpRoleProj(g *gin.Context) (string, string, string) {
 		}
 	default:
 	}
-	//s.Role = role
 
+	return role
+}
+
+func getCtxProjectRole(s *ctx.ServiceContext) string {
 	// 项目角色
 	proj := ""
 	switch {
@@ -111,9 +113,8 @@ func parseOpRoleProj(g *gin.Context) (string, string, string) {
 		}
 	default:
 	}
-	//s.ProjectRole = proj
 
-	return op, role, proj
+	return proj
 }
 
 func rewriteACParams(op, act, res, obj, role, sub string) (string, string, string) {
@@ -153,8 +154,12 @@ func AccessControl(args ...string) gin.HandlerFunc {
 		// 通过 RequestURI 解析资源名称
 		res := parseRes(c.Request.RequestURI)
 
-		// 通过 HTTP method 解析资源动作,组织角色,项目角色
-		op, role, proj := parseOpRoleProj(g)
+		// 通过 HTTP method 解析资源动作,
+		op := getOpFromMethod(c.Request.Method)
+
+		// 通过 service ctx 获取组织角色,项目角色
+		role := getCtxOrgRole(s)
+		proj := getCtxProjectRole(s)
 
 		// 参数重写
 		action, object, role := rewriteACParams(op, act, res, obj, role, sub)

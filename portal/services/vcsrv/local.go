@@ -106,11 +106,11 @@ func newLocalRepo(dir string, path string) (*LocalRepo, error) {
 	}, nil
 }
 
-func getRevision(refs storer.ReferenceIter, err error) ([]string, error) {
+func getRevision(refs storer.ReferenceIter) ([]string, error) {
 	defer refs.Close()
 
 	branches := make([]string, 0)
-	err = refs.ForEach(func(ref *plumbing.Reference) error {
+	err := refs.ForEach(func(ref *plumbing.Reference) error {
 		branches = append(branches, ref.Name().Short())
 		return nil
 	})
@@ -125,7 +125,7 @@ func (l *LocalRepo) ListBranches() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return getRevision(refs, err)
+	return getRevision(refs)
 
 }
 
@@ -134,7 +134,7 @@ func (l *LocalRepo) ListTags() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return getRevision(refs, err)
+	return getRevision(refs)
 
 }
 

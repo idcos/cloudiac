@@ -268,7 +268,7 @@ func doCreateTask(tx *db.Session, task models.Task, tpl *models.Template, env *m
 	}
 
 	if len(steps) == 0 {
-		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps"))
+		return nil, e.New(e.TaskNotHaveStep, models.ErrTaskNoSteps)
 	}
 
 	if err = tx.Insert(&task); err != nil {
@@ -1058,7 +1058,6 @@ func ChangeScanTaskStatusWithStep(dbSess *db.Session, task *models.ScanTask, ste
 }
 
 func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, taskType string, creatorId models.Id) (*models.ScanTask, e.Error) {
-	// logger := logs.Get().WithField("func", "CreateScanTask")
 
 	var (
 		er  error
@@ -1102,7 +1101,6 @@ func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, ta
 	}
 
 	task.Id = task.NewId()
-	// logger = logger.WithField("taskId", task.Id)
 
 	task.RepoAddr, task.CommitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
 	if err != nil {
@@ -1115,7 +1113,6 @@ func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, ta
 	task.Flow = GetTaskFlowWithPipeline(pipeline, task.Type)
 	steps := make([]models.TaskStep, 0)
 	stepIndex := 0
-
 	for _, pipelineStep := range task.Flow.Steps {
 		taskStep := newScanTaskStep(task, pipelineStep, stepIndex)
 		steps = append(steps, *taskStep)
@@ -1123,7 +1120,7 @@ func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, ta
 	}
 
 	if len(steps) == 0 {
-		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps"))
+		return nil, e.New(e.TaskNotHaveStep, models.ErrTaskNoSteps)
 	}
 
 	if err := tx.Insert(&task); err != nil {
@@ -1142,7 +1139,6 @@ func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, ta
 }
 
 func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models.ScanTask) (*models.ScanTask, e.Error) {
-	// logger := logs.Get().WithField("func", "CreateScanTask")
 
 	var (
 		err error
@@ -1188,8 +1184,6 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 	}
 
 	task.Id = models.NewId("run")
-	// logger = logger.WithField("taskId", task.Id)
-
 	task.RepoAddr, task.CommitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
 	if err != nil {
 		return nil, e.New(e.InternalError, err)
@@ -1221,7 +1215,7 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 	}
 
 	if len(steps) == 0 {
-		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps"))
+		return nil, e.New(e.TaskNotHaveStep, models.ErrTaskNoSteps)
 	}
 
 	if err := tx.Insert(&task); err != nil {

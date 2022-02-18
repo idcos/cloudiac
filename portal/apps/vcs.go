@@ -53,7 +53,7 @@ func checkOrgVcsAuth(c *ctx.ServiceContext, id models.Id) (vcs *models.Vcs, err 
 }
 
 func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (vcs *models.Vcs, err e.Error) {
-	vcs, err = checkOrgVcsAuth(c, form.Id)
+	vcs, err = checkOrgVcsAuth(c, form.Id) //nolint
 	if err != nil {
 		return nil, err
 	}
@@ -77,8 +77,7 @@ func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (vcs *models.Vc
 		}
 		attrs["vcsToken"] = token
 	}
-	vcs, err = services.UpdateVcs(c.DB(), form.Id, attrs)
-	return
+	return services.UpdateVcs(c.DB(), form.Id, attrs)
 }
 
 func SearchVcs(c *ctx.ServiceContext, form *forms.SearchVcsForm) (interface{}, e.Error) {

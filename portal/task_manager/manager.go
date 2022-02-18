@@ -174,13 +174,13 @@ func (m *TaskManager) beginCronDriftTask() {
 	for _, env := range cronDriftEnvs {
 		task, err := services.GetTaskById(m.db, env.LastTaskId)
 		if err != nil {
-			logger.Errorf("create cronDriftTask failed, error: %v", err)
+			logger.Errorf("create cronDriftTask failed, error: %v", err) //nolint
 			continue
 		}
 		// 先查询这个环境有没有排队中的偏移检测任务了, 有就不创建了
 		existCronPendingTask, err := services.ListPendingCronTask(m.db, env.Id)
 		if err != nil {
-			logger.Errorf("create cronDriftTask failed, error: %v", err)
+			logger.Errorf("create cronDriftTask failed, error: %v", err) //nolint
 			continue
 		}
 		// 如果查询出来有排队或执行中的漂移检测任务，则本次跳过
@@ -190,14 +190,14 @@ func (m *TaskManager) beginCronDriftTask() {
 		// 这里每次都去解析env表保存的最新的cron 表达式
 		envCronTaskType, err := apps.GetCronTaskTypeAndCheckParam(env.CronDriftExpress, env.AutoRepairDrift, env.OpenCronDrift)
 		if err != nil {
-			logger.Errorf("create cronDriftTask failed, error: %v", err)
+			logger.Errorf("create cronDriftTask failed, error: %v", err) //nolint
 			continue
 		}
 		if envCronTaskType != "" {
 			attrs := models.Attrs{}
 			nextTime, err := apps.ParseCronpress(env.CronDriftExpress)
 			if err != nil {
-				logger.Errorf("create cronDriftTask failed, error: %v", err)
+				logger.Errorf("create cronDriftTask failed, error: %v", err) //nolint
 				continue
 			}
 			task.Type = envCronTaskType
@@ -209,14 +209,14 @@ func (m *TaskManager) beginCronDriftTask() {
 			}
 			_, err = services.CloneNewDriftTask(m.db, *task, env)
 			if err != nil {
-				logger.Errorf("create cronDriftTask failed, error: %v", err)
+				logger.Errorf("create cronDriftTask failed, error: %v", err) //nolint
 				continue
 			}
 
 			attrs["nextDriftTaskTime"] = nextTime
 			_, err = services.UpdateEnv(m.db, env.Id, attrs)
 			if err != nil {
-				logger.Errorf("create cronDriftTask failed, error: %v", err)
+				logger.Errorf("create cronDriftTask failed, error: %v", err) //nolint
 				continue
 			}
 		}
@@ -460,14 +460,14 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 	}
 
 	if task.IsEffectTask() {
-		if _, er := m.db.Model(&models.Env{}).Where("id = ?", task.EnvId).
+		if _, er := m.db.Model(&models.Env{}).Where("id = ?", task.EnvId). //nolint
 			Update(&models.Env{LastTaskId: task.Id}); er != nil {
 			logger.Errorf("update env lastTaskId: %v", er)
 			return
 		}
 		scanTask, _ := services.GetMirrorScanTask(m.db, task.Id)
 		if scanTask != nil {
-			if _, er := m.db.Model(&models.Env{}).Where("id = ?", task.EnvId).
+			if _, er := m.db.Model(&models.Env{}).Where("id = ?", task.EnvId). //nolint
 				Update(&models.Env{LastScanTaskId: task.Id}); er != nil {
 				logger.Errorf("update env lastTaskId: %v", er)
 				return
@@ -997,7 +997,7 @@ func (m *TaskManager) processAutoDestroy() error {
 				return nil
 			}
 
-			if _, err := tx.Model(&models.Env{}).Where("id = ?", env.Id).
+			if _, err := tx.Model(&models.Env{}).Where("id = ?", env.Id). //nolint
 				Update(&models.Env{AutoDestroyTaskId: task.Id}); err != nil {
 				_ = tx.Rollback()
 				logger.Errorf("update env error: %v", err)
@@ -1030,9 +1030,10 @@ func (m *TaskManager) processAutoDestroy() error {
 func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) (startErr error) {
 	logger := m.logger.WithField("taskId", task.Id)
 
+
 	changeTaskStatus := func(status, message string) error {
 		if er := services.ChangeScanTaskStatus(m.db, task, status, message); er != nil {
-			logger.Errorf("update task status error: %v", er)
+			logger.Errorf("update task status error: %v", er) //nolint
 			return er
 		}
 		return nil
@@ -1063,7 +1064,7 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 			return
 		}
 	} else if task.Type == common.TaskTypeTplScan || (task.Type == common.TaskTypeScan && task.EnvId == "") { // 模板扫描
-		if _, err := m.db.Where("id = ?", task.TplId).
+		if _, err := m.db.Where("id = ?", task.TplId). //nolint
 			Update(&models.Template{LastScanTaskId: task.Id}); err != nil {
 			logger.Errorf("update template lastScanTaskId: %v", err)
 			return

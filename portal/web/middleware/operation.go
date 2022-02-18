@@ -51,6 +51,9 @@ type OperationMethod struct {
 
 func (o *OperationMethod) putOperation() (err error) {
 	bodyBytes, err := ioutil.ReadAll(o.C.Request.Body)
+	if err != nil {
+		return err
+	}
 	o.C.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	cxt := o.C.Service()
 	url := o.C.Request.URL.String()
@@ -76,6 +79,9 @@ func (o *OperationMethod) postOperation() (err error) {
 	// 新建操作 需要记录新插入的数据
 	name := o.C.PostForm("name")
 	bodyBytes, err := ioutil.ReadAll(o.C.Request.Body)
+	if err != nil {
+		return err
+	}
 	o.C.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	cxt := o.C.Service()
 	url := o.C.Request.URL.String()
@@ -102,6 +108,9 @@ func (o *OperationMethod) deleteOperation() (err error) {
 	cxt := o.C.Service()
 	id := o.C.PostForm("id")
 	bodyBytes, err := ioutil.ReadAll(o.C.Request.Body)
+	if err != nil {
+		return err
+	}
 	o.C.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	url := o.C.Request.URL.String()
 	operationLog := models.OperationLog{
