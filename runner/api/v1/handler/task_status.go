@@ -61,65 +61,7 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, closedCh <-c
 
 	// 获取任务最新状态并通过 websocket 发送
 	sendStatus := func(withLog bool, isDeadline bool) error {
-		var msg runner.TaskStatusMessage
-		if isDeadline {
-			msg.Timeout = true
-		} else {
-			status, err := task.Status()
-			if err != nil {
-				return err
-			}
-			msg = runner.TaskStatusMessage{
-				Exited:   !status.Running,
-				ExitCode: status.ExitCode,
-			}
-		}
-
-		// 由于任务退出的时候 portal 会断开连接，所以如果判断已经退出，则直接发送全量日志
-		if withLog || msg.Timeout || msg.Exited {
-			logContent, err := runner.FetchTaskLog(task.EnvId, task.TaskId, task.Step)
-			if err != nil {
-				logger.Errorf("fetch task log error: %v", err)
-				msg.LogContent = utils.TaskLogMsgBytes("Fetch task log error: %v", err)
-			} else {
-				msg.LogContent = logContent
-			}
-
-			if stateJson, err := runner.FetchStateJson(task.EnvId, task.TaskId); err != nil {
-				logger.Errorf("fetch terraform state json error: %v", err)
-			} else {
-				msg.TfStateJson = stateJson
-			}
-
-			if providerJson, err := runner.FetchProviderJson(task.EnvId, task.TaskId); err != nil {
-				logger.Errorf("fetch terraform provider json error: %v", err)
-			} else {
-				msg.TFProviderSchemaJson = providerJson
-			}
-
-			if planJson, err := runner.FetchPlanJson(task.EnvId, task.TaskId); err != nil {
-				logger.Errorf("fetch terraform state json error: %v", err)
-			} else {
-				msg.TfPlanJson = planJson
-			}
-
-			if parseJson, err := runner.FetchJson(task.EnvId, task.TaskId, runner.ScanInputFile); err != nil {
-				logger.Errorf("fetch terrascan parsed json error: %v", err)
-			} else {
-				msg.TfScanJson = parseJson
-			}
-			if resultJson, err := runner.FetchJson(task.EnvId, task.TaskId, runner.ScanResultFile); err != nil {
-				logger.Errorf("fetch terrascan scan result json error: %v", err)
-			} else {
-				msg.TfResultJson = resultJson
-			}
-		}
-
-		if err := wsConn.WriteJSON(msg); err != nil {
-			logger.Warnf("write message error: %v", err)
-			return err
-		}
-		return nil
+		return doSendTaskStatus(wsConn, task, withLog, isDeadline)
 	}
 
 	ctx, cancelFun := context.WithCancel(context.Background())
@@ -128,7 +70,6 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, closedCh <-c
 	waitCh := make(chan error, 1)
 	go func() {
 		defer close(waitCh)
-
 		_, err := task.Wait(ctx)
 		waitCh <- err
 	}()
@@ -177,4 +118,66 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, closedCh <-c
 			return sendStatus(true, false)
 		}
 	}
+}
+
+func doSendTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, withLog bool, isDeadline bool) error {
+	var msg runner.TaskStatusMessage
+	if isDeadline {
+		msg.Timeout = true
+	} else {
+		status, err := task.Status()
+		if err != nil {
+			return err
+		}
+		msg = runner.TaskStatusMessage{
+			Exited:   !status.Running,
+			ExitCode: status.ExitCode,
+		}
+	}
+
+	// 由于任务退出的时候 portal 会断开连接，所以如果判断已经退出，则直接发送全量日志
+	if withLog || msg.Timeout || msg.Exited {
+		logContent, err := runner.FetchTaskLog(task.EnvId, task.TaskId, task.Step)
+		if err != nil {
+			logger.Errorf("fetch task log error: %v", err)
+			msg.LogContent = utils.TaskLogMsgBytes("Fetch task log error: %v", err)
+		} else {
+			msg.LogContent = logContent
+		}
+
+		if stateJson, err := runner.FetchStateJson(task.EnvId, task.TaskId); err != nil {
+			logger.Errorf("fetch terraform state json error: %v", err)
+		} else {
+			msg.TfStateJson = stateJson
+		}
+
+		if providerJson, err := runner.FetchProviderJson(task.EnvId, task.TaskId); err != nil {
+			logger.Errorf("fetch terraform provider json error: %v", err)
+		} else {
+			msg.TFProviderSchemaJson = providerJson
+		}
+
+		if planJson, err := runner.FetchPlanJson(task.EnvId, task.TaskId); err != nil {
+			logger.Errorf("fetch terraform state json error: %v", err)
+		} else {
+			msg.TfPlanJson = planJson
+		}
+
+		if parseJson, err := runner.FetchJson(task.EnvId, task.TaskId, runner.ScanInputFile); err != nil {
+			logger.Errorf("fetch terrascan parsed json error: %v", err)
+		} else {
+			msg.TfScanJson = parseJson
+		}
+		if resultJson, err := runner.FetchJson(task.EnvId, task.TaskId, runner.ScanResultFile); err != nil {
+			logger.Errorf("fetch terrascan scan result json error: %v", err)
+		} else {
+			msg.TfResultJson = resultJson
+		}
+	}
+
+	if err := wsConn.WriteJSON(msg); err != nil {
+		logger.Warnf("write message error: %v", err)
+		return err
+	}
+	return nil
 }
