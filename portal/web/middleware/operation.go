@@ -52,7 +52,7 @@ type OperationMethod struct {
 func (o *OperationMethod) putOperation() (err error) {
 	bodyBytes, err := ioutil.ReadAll(o.C.Request.Body)
 	if err != nil {
-		return nil
+		return err
 	}
 	o.C.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	cxt := o.C.Service()
@@ -80,7 +80,7 @@ func (o *OperationMethod) postOperation() (err error) {
 	name := o.C.PostForm("name")
 	bodyBytes, err := ioutil.ReadAll(o.C.Request.Body)
 	if err != nil {
-		return nil
+		return err
 	}
 	o.C.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	cxt := o.C.Service()
@@ -109,7 +109,7 @@ func (o *OperationMethod) deleteOperation() (err error) {
 	id := o.C.PostForm("id")
 	bodyBytes, err := ioutil.ReadAll(o.C.Request.Body)
 	if err != nil {
-		return nil
+		return err
 	}
 	o.C.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	url := o.C.Request.URL.String()

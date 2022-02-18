@@ -321,7 +321,9 @@ func (github *githubRepoIface) ListWebhook() ([]ProjectsHook, error) {
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
-	_ = json.Unmarshal(body, &ph)
+	if err = json.Unmarshal(body, &ph); err != nil {
+		return nil, err
+	}
 	return ph, nil
 }
 
