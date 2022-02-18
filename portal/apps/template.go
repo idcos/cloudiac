@@ -164,7 +164,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 	}
 
 	if err := vcsrv.SetWebhook(vcs, template.RepoId, token.Key, form.TplTriggers); err != nil {
-		c.Logger().Errorf("set webhook %v", err)
+		c.Logger().Errorf("set webhook err :%v", err)
 	}
 
 	return template, nil
@@ -328,7 +328,7 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 	}
 
 	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, tpl.Triggers); err != nil {
-		c.Logger().Errorf("set webhook %v", err)
+		c.Logger().Errorf("set webhook err :%v", err)
 	}
 
 	return tpl, err
@@ -391,7 +391,7 @@ func DeleteTemplate(c *ctx.ServiceContext, form *forms.DeleteTemplateForm) (inte
 	}
 
 	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, []string{}); err != nil {
-		c.Logger().Errorf("set webhook %v", err)
+		c.Logger().Errorf("set webhook err :%v", err)
 	}
 
 	return nil, nil
