@@ -170,19 +170,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 	return template, nil
 }
 
-func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*models.Template, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("update template %s", form.Id))
-
-	tpl, err := services.GetTemplateById(c.DB(), form.Id)
-	if err != nil {
-		return nil, e.New(e.TemplateNotExists, err, http.StatusBadRequest)
-	}
-
-	// 根据云模板ID, 组织ID查询该云模板是否属于该组织
-	if tpl.OrgId != c.OrgId {
-		return nil, e.New(e.TemplateNotExists, http.StatusForbidden, fmt.Errorf("the organization does not have permission to delete the current template"))
-	}
-	attrs := models.Attrs{}
+func setAttrsByFormKeys(attrs models.Attrs, form *forms.UpdateTemplateForm) {
 	if form.HasKey("name") {
 		attrs["name"] = form.Name
 	}
@@ -220,7 +208,9 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 	if form.HasKey("keyId") {
 		attrs["keyId"] = form.KeyId
 	}
+}
 
+func setAttrsVcsInfoByForm(attrs models.Attrs, form *forms.UpdateTemplateForm) {
 	if form.HasKey("vcsId") && form.HasKey("repoId") && form.HasKey("repoFullName") {
 		attrs["vcsId"] = form.VcsId
 		attrs["repoId"] = form.RepoId
@@ -230,6 +220,68 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 			attrs["repoAddr"] = ""
 		}
 	}
+}
+
+func updatetplByFormKey(c *ctx.ServiceContext, tx *db.Session, tpl *models.Template, form *forms.UpdateTemplateForm) e.Error {
+	var err e.Error
+	// 更新和策略组的绑定关系
+	if form.HasKey("policyGroup") {
+		policyForm := &forms.UpdatePolicyRelForm{
+			Id:             tpl.Id,
+			Scope:          consts.ScopeTemplate,
+			PolicyGroupIds: form.PolicyGroup,
+		}
+		_, err = services.UpdatePolicyRel(tx, policyForm)
+	}
+	if err != nil {
+		return err
+	}
+
+	if form.HasKey("projectId") {
+		if err = services.DeleteTemplateProject(tx, form.Id); err != nil {
+			return err
+		}
+		err = services.CreateTemplateProject(tx, form.ProjectId, form.Id)
+	}
+	if err != nil {
+		return err
+	}
+
+	if form.HasKey("variables") {
+		updateVarsForm := forms.UpdateObjectVarsForm{
+			Scope:     consts.ScopeTemplate,
+			ObjectId:  form.Id,
+			Variables: form.Variables,
+		}
+		_, err = updateObjectVars(c, tx, &updateVarsForm)
+	}
+	if err != nil {
+		return err
+	}
+
+	if form.HasKey("varGroupIds") || form.HasKey("delVarGroupIds") {
+		// 创建变量组与实例的关系
+		err = services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeTemplate, form.Id.String())
+	}
+	return err
+}
+
+func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*models.Template, e.Error) {
+	c.AddLogField("action", fmt.Sprintf("update template %s", form.Id))
+
+	tpl, err := services.GetTemplateById(c.DB(), form.Id)
+	if err != nil {
+		return nil, e.New(e.TemplateNotExists, err, http.StatusBadRequest)
+	}
+
+	// 根据云模板ID, 组织ID查询该云模板是否属于该组织
+	if tpl.OrgId != c.OrgId {
+		return nil, e.New(e.TemplateNotExists, http.StatusForbidden, fmt.Errorf("the organization does not have permission to delete the current template"))
+	}
+	attrs := models.Attrs{}
+	setAttrsByFormKeys(attrs, form)
+	setAttrsVcsInfoByForm(attrs, form)
+
 	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
@@ -241,46 +293,12 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 		_ = tx.Rollback()
 		return nil, err
 	}
-	// 更新和策略组的绑定关系
-	if form.HasKey("policyGroup") {
-		policyForm := &forms.UpdatePolicyRelForm{
-			Id:             tpl.Id,
-			Scope:          consts.ScopeTemplate,
-			PolicyGroupIds: form.PolicyGroup,
-		}
-		if _, err = services.UpdatePolicyRel(tx, policyForm); err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
-	}
-	if form.HasKey("projectId") {
-		if err := services.DeleteTemplateProject(tx, form.Id); err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
-		if err := services.CreateTemplateProject(tx, form.ProjectId, form.Id); err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
-	}
-	if form.HasKey("variables") {
-		updateVarsForm := forms.UpdateObjectVarsForm{
-			Scope:     consts.ScopeTemplate,
-			ObjectId:  form.Id,
-			Variables: form.Variables,
-		}
-		if _, er := updateObjectVars(c, tx, &updateVarsForm); er != nil {
-			_ = tx.Rollback()
-			return nil, er
-		}
-	}
 
-	if form.HasKey("varGroupIds") || form.HasKey("delVarGroupIds") {
-		// 创建变量组与实例的关系
-		if err := services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeTemplate, form.Id.String()); err != nil {
-			_ = tx.Rollback()
-			return nil, err
-		}
+	// 更新和策略组的绑定关系
+	err = updatetplByFormKey(c, tx, tpl, form)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -430,54 +448,38 @@ func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*Tem
 
 }
 
-func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl interface{}, err e.Error) {
+func getTplIdList(db *db.Session, projectId models.Id) ([]models.Id, e.Error) {
 	tplIdList := make([]models.Id, 0)
-	if c.ProjectId != "" {
-		tplIdList, err = services.QueryTplByProjectId(c.DB(), c.ProjectId)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(tplIdList) == 0 {
-			return getEmptyListResult(form)
-		}
+	if projectId == "" {
+		return tplIdList, nil
 	}
+
+	return services.QueryTplByProjectId(db, projectId)
+}
+
+func updateTaskAndPolicyStatus(db *db.Session, templates []*SearchTemplateResp) ([]string, e.Error) {
 	vcsIds := make([]string, 0)
-	query := services.QueryTemplateByOrgId(c.DB(), form.Q, c.OrgId, tplIdList, c.ProjectId)
-	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	templates := make([]*SearchTemplateResp, 0)
-	if err := p.Scan(&templates); err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-
 	for _, v := range templates {
 		if v.RepoAddr == "" {
 			vcsIds = append(vcsIds, v.VcsId)
 		}
 		var scanTaskStatus string
 		// 如果开启
-		scanTask, err := services.GetTplLastScanTask(c.DB(), v.Id)
+		scanTask, err := services.GetTplLastScanTask(db, v.Id)
 		if err != nil {
 			scanTaskStatus = ""
 			if !e.IsRecordNotFound(err) {
-				return nil, e.New(e.DBError, err)
+				return vcsIds, e.New(e.DBError, err)
 			}
 		} else {
 			scanTaskStatus = scanTask.PolicyStatus
 		}
 		v.PolicyStatus = models.PolicyStatusConversion(scanTaskStatus, v.PolicyEnable)
-
 	}
+	return vcsIds, nil
+}
 
-	vcsList, err := services.GetVcsListByIds(c.DB(), vcsIds)
-	if err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-
-	vcsAttr := make(map[string]models.Vcs)
-	for _, v := range vcsList {
-		vcsAttr[v.Id.String()] = v
-	}
+func updateTmplRepoAddr(templates []*SearchTemplateResp, vcsAttr map[string]models.Vcs) {
 
 	portAddr := configs.Get().Portal.Address
 	for _, tpl := range templates {
@@ -489,6 +491,40 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 			}
 		}
 	}
+}
+
+func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl interface{}, err e.Error) {
+	tplIdList, err := getTplIdList(c.DB(), c.ProjectId)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(tplIdList) == 0 {
+		return getEmptyListResult(form)
+	}
+
+	query := services.QueryTemplateByOrgId(c.DB(), form.Q, c.OrgId, tplIdList, c.ProjectId)
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	templates := make([]*SearchTemplateResp, 0)
+	if err := p.Scan(&templates); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	vcsIds, err := updateTaskAndPolicyStatus(c.DB(), templates)
+	if err != nil {
+		return nil, err
+	}
+
+	vcsList, err := services.GetVcsListByIds(c.DB(), vcsIds)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	vcsAttr := make(map[string]models.Vcs)
+	for _, v := range vcsList {
+		vcsAttr[v.Id.String()] = v
+	}
+	updateTmplRepoAddr(templates, vcsAttr)
 
 	return page.PageResp{
 		Total:    p.MustTotal(),

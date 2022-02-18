@@ -63,7 +63,7 @@ func (Task) Detail(c *ctx.GinRequest) {
 // @Param taskId path string true "任务ID"
 // @router /tasks/{taskId}/log/sse [get]
 // @Success 200 {string} string "日志实时数据流"
-func (Task) FollowLogSse(c *ctx.GinRequest) {
+func (Task) FollowLogSse(c *ctx.GinRequest) { //nolint
 	defer c.SSEvent("end", "end")
 
 	form := forms.TaskLogForm{}
@@ -88,7 +88,7 @@ func (Task) FollowLogSse(c *ctx.GinRequest) {
 // @Param stepId path string true "任务步骤ID"
 // @router /tasks/{id}/steps/{stepId}/log/sse [get]
 // @Success 200 {string} string "日志实时数据流"
-func (Task) FollowStepLogSse(c *ctx.GinRequest) {
+func (Task) FollowStepLogSse(c *ctx.GinRequest) { //nolint
 	defer c.SSEvent("end", "end")
 	form := forms.TaskLogForm{}
 	if err := c.Bind(&form); err != nil {
