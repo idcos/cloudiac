@@ -23,14 +23,12 @@ func CreateResourceAccount(tx *db.Session, rsAccount *models.ResourceAccount) (*
 
 func UpdateResourceAccount(tx *db.Session, id models.Id, attrs models.Attrs) (rsAccount *models.ResourceAccount, re e.Error) {
 	rsAccount = &models.ResourceAccount{}
-	//nolint
 	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.ResourceAccount{}, attrs); err != nil {
 		if e.IsDuplicate(err) {
 			return nil, e.New(e.NameDuplicate, err)
 		}
 		return nil, e.New(e.DBError, fmt.Errorf("update resourceAccount error: %v", err))
 	}
-	//nolint
 	if err := tx.Where("id = ?", id).First(rsAccount); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("query resourceAccount error: %v", err))
 	}
@@ -46,7 +44,6 @@ func DeleteResourceAccount(tx *db.Session, id models.Id, orgId models.Id) e.Erro
 
 func GetResourceAccountById(tx *db.Session, id models.Id) (*models.ResourceAccount, e.Error) {
 	r := models.ResourceAccount{}
-	//nolint
 	if err := tx.Where("id = ?", id).First(&r); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.ObjectNotExists, err)
@@ -104,7 +101,6 @@ func DeleteCtResourceMap(tx *db.Session, rsAccountId models.Id) e.Error {
 
 func GetResourceById(tx *db.Session, id models.Id) (*models.Resource, e.Error) {
 	r := models.Resource{}
-	//nolint
 	if err := tx.Where("id = ?", id).First(&r); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.ObjectNotExists, err)

@@ -25,11 +25,11 @@ func UpdateSystemConfig(tx *db.Session, name string, attrs models.Attrs) (cfg *m
 		UpdateRunnerMax(runnerMax)
 	}
 	cfg = &models.SystemCfg{}
-	if _, err := models.UpdateAttr(tx.Where("name = ?", name), &models.SystemCfg{}, attrs); err != nil { //nolint
+	if _, err := models.UpdateAttr(tx.Where("name = ?", name), &models.SystemCfg{}, attrs); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("update sys config error: %v", err))
 	}
 
-	if err := tx.Where("name = ?", name).First(cfg); err != nil { //nolint
+	if err := tx.Where("name = ?", name).First(cfg); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("query sys config error: %v", err))
 	}
 	return
@@ -48,7 +48,7 @@ func CreateSystemConfig(tx *db.Session, cfg models.SystemCfg) (*models.SystemCfg
 
 func GetSystemConfigByName(tx *db.Session, name string) (*models.SystemCfg, e.Error) {
 	var cfg models.SystemCfg
-	if err := tx.Where("name = ?", name).First(&cfg); err != nil { //nolint
+	if err := tx.Where("name = ?", name).First(&cfg); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, e.New(e.SystemConfigNotExist, err)
 		} else {

@@ -34,19 +34,19 @@ func CreateTemplate(tx *db.Session, tpl models.Template) (*models.Template, e.Er
 func UpdateTemplate(tx *db.Session, id models.Id, attrs models.Attrs) (tpl *models.Template, re e.Error) {
 	tpl = &models.Template{}
 	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.Template{}, attrs); err != nil {
-		if e.IsDuplicate(err) { //nolint
+		if e.IsDuplicate(err) {
 			return nil, e.New(e.TemplateAlreadyExists, err)
 		}
 		return nil, e.New(e.DBError, fmt.Errorf("update template error: %v", err))
 	}
-	if err := tx.Where("id = ?", id).First(tpl); err != nil { //nolint
+	if err := tx.Where("id = ?", id).First(tpl); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("query template error: %v", err))
 	}
 	return
 }
 
 func DeleteTemplate(tx *db.Session, id models.Id) e.Error {
-	if _, err := tx.Where("id = ?", id).Delete(&models.Template{}); err != nil { //nolint
+	if _, err := tx.Where("id = ?", id).Delete(&models.Template{}); err != nil {
 		return e.New(e.DBError, fmt.Errorf("delete template error: %v", err))
 	}
 	return nil
@@ -54,7 +54,7 @@ func DeleteTemplate(tx *db.Session, id models.Id) e.Error {
 
 func GetTemplateById(tx *db.Session, id models.Id) (*models.Template, e.Error) {
 	tpl := models.Template{}
-	if err := tx.Where("id = ?", id).First(&tpl); err != nil { //nolint
+	if err := tx.Where("id = ?", id).First(&tpl); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.TemplateNotExists, err)
 		}
@@ -130,7 +130,7 @@ func QueryTplByVcsId(tx *db.Session, VcsId models.Id) (bool, e.Error) {
 
 func GetTplLastScanTask(sess *db.Session, tplId models.Id) (*models.ScanTask, error) {
 	task := models.ScanTask{}
-	scanTaskIdQuery := sess.Model(&models.Template{}).Where("id = ?", tplId).Select("last_scan_task_id") //nolint
+	scanTaskIdQuery := sess.Model(&models.Template{}).Where("id = ?", tplId).Select("last_scan_task_id")
 	err := sess.Model(&models.ScanTask{}).Where("id = (?)", scanTaskIdQuery.Expr()).First(&task)
 	return &task, err
 }
@@ -172,7 +172,7 @@ func GetLastScanTaskByScope(sess *db.Session, scope string, id models.Id) (*mode
 	case consts.ScopeEnv:
 		sess = sess.Model(&models.Env{})
 	}
-	scanTaskIdQuery := sess.Where("id = ?", id).Select("last_scan_task_id") //nolint
+	scanTaskIdQuery := sess.Where("id = ?", id).Select("last_scan_task_id")
 	err := sess.Model(&models.ScanTask{}).Where("id = (?)", scanTaskIdQuery.Expr()).First(&task)
 	return &task, err
 }

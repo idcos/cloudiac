@@ -34,7 +34,6 @@ func BindProjectUsers(tx *db.Session, projectId models.Id, authorization []forms
 }
 
 func UpdateProjectUsers(tx *db.Session, projectId models.Id, authorization []forms.UserAuthorization) e.Error {
-	//nolint
 	if _, err := tx.Where("project_id = ?", projectId).Delete(&models.UserProject{}); err != nil {
 		return e.New(e.DBError, err)
 	}
@@ -43,7 +42,6 @@ func UpdateProjectUsers(tx *db.Session, projectId models.Id, authorization []for
 
 func SearchProjectUsers(tx *db.Session, projectId models.Id) ([]models.UserProject, e.Error) {
 	userProject := make([]models.UserProject, 0)
-	//nolint
 	if err := tx.Where("project_id = ?", projectId).Find(&userProject); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
@@ -104,7 +102,6 @@ func GetProjectsById(tx *db.Session, projectId models.Id) (*models.Project, e.Er
 func GetUserIdsByProject(query *db.Session, projectId models.Id) ([]models.Id, e.Error) {
 	var userProjects []*models.UserProject
 	var userIds []models.Id
-	//nolint
 	if err := query.Where("project_id = ?", projectId).Find(&userProjects); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
@@ -135,7 +132,6 @@ func GetRootUserIds(query *db.Session) ([]models.Id, e.Error) {
 //GetUserIdsByProjectUser 获取项目下的userid
 func GetUserIdsByProjectUser(query *db.Session, projectId models.Id) ([]models.Id, e.Error) {
 	var userIds []models.Id
-	//nolint
 	if err := query.Table(models.UserProject{}.TableName()).
 		Where("project_id = ?", projectId).
 		Pluck("user_id", &userIds); err != nil {

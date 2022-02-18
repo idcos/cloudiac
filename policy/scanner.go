@@ -210,8 +210,7 @@ func (s *Scanner) ScanResource(resource Resource) error {
 			case 0:
 				task.PolicyStatus = common.PolicyStatusPassed
 			case 1:
-				task.PolicyStatus = common.PolicyStatusFailed //nolint
-				return err
+				fallthrough
 			default:
 				task.PolicyStatus = common.PolicyStatusFailed
 				return err

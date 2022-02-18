@@ -24,10 +24,11 @@ import (
 	gormLogger "gorm.io/gorm/logger"
 )
 
+const DBCtxKeyLazySelects = "app:lazySelects"
+
 var (
 	defaultDB      *gorm.DB
 	namingStrategy = schema.NamingStrategy{}
-	appLazySelects = "app:lazySelects"
 )
 
 type SoftDeletedAt uint
@@ -209,15 +210,15 @@ func (s *Session) Omit(cols ...string) *Session {
 }
 
 func (s *Session) LazySelect(selectStat ...string) *Session {
-	return ToSess(s.db.Set(appLazySelects, selectStat))
+	return ToSess(s.db.Set(DBCtxKeyLazySelects, selectStat))
 }
 
 func (s *Session) LazySelectAppend(selectStat ...string) *Session {
-	stats, ok := s.db.Get(appLazySelects)
+	stats, ok := s.db.Get(DBCtxKeyLazySelects)
 	if ok {
-		return ToSess(s.db.Set(appLazySelects, append(stats.([]string), selectStat...)))
+		return ToSess(s.db.Set(DBCtxKeyLazySelects, append(stats.([]string), selectStat...)))
 	} else {
-		return ToSess(s.db.Set(appLazySelects, selectStat))
+		return ToSess(s.db.Set(DBCtxKeyLazySelects, selectStat))
 	}
 }
 
@@ -273,7 +274,7 @@ func (s *Session) Exists() (bool, error) {
 }
 
 func (s *Session) autoLazySelect() *Session {
-	selects, ok := s.db.Get(appLazySelects)
+	selects, ok := s.db.Get(DBCtxKeyLazySelects)
 	if !ok {
 		return s
 	}

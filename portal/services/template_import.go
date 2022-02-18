@@ -92,7 +92,7 @@ func (t *TplImporter) ImportTemplates(tx *db.Session) e.Error {
 		}
 
 		dbTpl := models.Template{}
-		if err := QueryTemplate(tx.Unscoped().Where("id = ?", tpl.Id)).Find(&dbTpl); err != nil { //nolint
+		if err := QueryTemplate(tx.Unscoped().Where("id = ?", tpl.Id)).Find(&dbTpl); err != nil {
 			return e.AutoNew(err, e.DBError)
 		}
 
@@ -205,7 +205,7 @@ func (t *TplImporter) ImportVcs(tx *db.Session) e.Error {
 		}
 
 		dbVcs := models.Vcs{}
-		if err := QueryVcsSample(tx.Unscoped().Where("id = ?", vcs.Id)).Find(&dbVcs); err != nil { //nolint
+		if err := QueryVcsSample(tx.Unscoped().Where("id = ?", vcs.Id)).Find(&dbVcs); err != nil {
 			return e.AutoNew(err, e.DBError)
 		}
 
@@ -236,7 +236,7 @@ func (t *TplImporter) ImportVarGroups(tx *db.Session) e.Error {
 		}
 
 		dbVg := models.VariableGroup{}
-		if err := QueryVarGroup(tx.Unscoped().Where("id = ?", vg.Id)).Find(&dbVg); err != nil { //nolint
+		if err := QueryVarGroup(tx.Unscoped().Where("id = ?", vg.Id)).Find(&dbVg); err != nil {
 			return e.AutoNew(err, e.DBError)
 		}
 

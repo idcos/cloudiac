@@ -28,7 +28,6 @@ func CreateKey(tx *db.Session, key models.Key) (*models.Key, e.Error) {
 
 func UpdateKey(tx *db.Session, id models.Id, attrs models.Attrs) (key *models.Key, er e.Error) {
 	key = &models.Key{}
-	//nolint
 	if aff, err := models.UpdateAttr(tx.Where("id = ?", id), &models.Key{}, attrs); err != nil {
 		if e.IsDuplicate(err) {
 			return nil, e.New(e.KeyAliasDuplicate)
@@ -41,7 +40,6 @@ func UpdateKey(tx *db.Session, id models.Id, attrs models.Attrs) (key *models.Ke
 			return nil, e.New(e.KeyNotExist)
 		}
 	}
-	//nolint
 	if err := tx.Where("id = ?", id).First(key); err != nil {
 		logrus.Errorf("query %s", tx.Expr())
 		return nil, e.New(e.DBError, fmt.Errorf("query key error: %v", err))
@@ -56,7 +54,6 @@ func QueryKey(query *db.Session) *db.Session {
 }
 
 func DeleteKey(tx *db.Session, id models.Id) e.Error {
-	//nolint
 	if _, err := tx.Where("id = ?", id).Delete(&models.Key{}); err != nil {
 		if e.IsRecordNotFound(err) {
 			return e.New(e.KeyNotExist)
@@ -70,7 +67,6 @@ func DeleteKey(tx *db.Session, id models.Id) e.Error {
 // decrypt bool 是否自动解密为原始密钥
 func GetKeyById(query *db.Session, id models.Id, decrypt bool) (*models.Key, e.Error) {
 	key := models.Key{}
-	//nolint
 	if err := query.Model(models.Key{}).Where("id = ?", id).First(&key); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.KeyNotExist)
