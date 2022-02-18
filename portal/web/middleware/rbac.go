@@ -18,10 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AccessControl 角色访问权限控制
-func AccessControl(args ...string) gin.HandlerFunc {
-	logger := logs.Get().WithField("func", "AccessControl")
-
+func parseArgs(lg logs.Logger, args ...string) (string, string, string) {
 	var sub, obj, act string
 	if len(args) >= 3 {
 		sub = args[0] // 角色
@@ -34,99 +31,136 @@ func AccessControl(args ...string) gin.HandlerFunc {
 		act = args[0]
 	}
 	if !(sub == "" && obj == "" && act == "") {
-		logger.Tracef("policy overwrites %s, %s, %s", sub, obj, act)
+		lg.Tracef("policy overwrites %s, %s, %s", sub, obj, act)
 	}
+
+	return sub, obj, act
+}
+
+func parseRes(requestURI string) string {
+	// 通过 RequestURI 解析资源名称
+	res := ""
+	// 请求 /api/v1/users/:userId，
+	// 匹配第三段的  ^^^^^^ users
+	regex := regexp.MustCompile("^/[^/]+/[^/]+/([^/?#]+)")
+	match := regex.FindStringSubmatch(requestURI)
+	if len(match) == 2 {
+		res = match[1]
+	} else {
+		res = "other"
+	}
+
+	return res
+}
+
+func parseOpRoleProj(g *gin.Context) (string, string, string) {
+	c := ctx.NewGinRequest(g)
+	s := c.Service()
+
+	// 通过 HTTP method 解析资源动作
+	op := "read"
+	switch c.Request.Method {
+	case "GET":
+		op = "read"
+	case "POST":
+		op = "create"
+	case "PUT":
+		op = "update"
+	case "PATCH":
+		op = "update"
+	case "DELETE":
+		op = "delete"
+	default:
+		op = "other"
+	}
+
+	// 组织角色
+	role := ""
+	switch {
+	case s.UserId == "":
+		role = consts.RoleAnonymous
+	case s.IsSuperAdmin:
+		role = consts.RoleRoot
+	// 临时处理系统管理员权限
+	case s.UserId == consts.SysUserId:
+		role = consts.OrgRoleAdmin
+	case s.UserId != "" && s.OrgId == "":
+		role = consts.RoleLogin
+	case s.OrgId != "":
+		userOrgs := services.UserOrgRoles(s.UserId)
+		userOrg := userOrgs[s.OrgId]
+		if userOrg != nil {
+			role = userOrg.Role
+		}
+	default:
+	}
+	//s.Role = role
+
+	// 项目角色
+	proj := ""
+	switch {
+	case s.IsSuperAdmin:
+		proj = consts.ProjectRoleManager
+	case services.UserHasOrgRole(s.UserId, s.OrgId, consts.OrgRoleAdmin):
+		proj = consts.ProjectRoleManager
+	case s.ProjectId != "":
+		userProjects := services.UserProjectRoles(s.UserId)
+		userProject := userProjects[s.ProjectId]
+		if userProject != nil {
+			proj = userProject.Role
+		}
+	default:
+	}
+	//s.ProjectRole = proj
+
+	return op, role, proj
+}
+
+func rewriteACParams(op, act, res, obj, role, sub string) (string, string, string) {
+	action := op
+	if act != "" {
+		action = act
+	}
+	object := res
+	if obj != "" {
+		object = obj
+	}
+	if sub != "" {
+		role = sub
+	}
+
+	return action, object, role
+}
+
+func changeToDemoRole(s *ctx.ServiceContext, role, proj string) (string, string) {
+	if !s.IsSuperAdmin && s.OrgId != "" && s.OrgId == models.Id(common.DemoOrgId) {
+		role = consts.RoleDemo
+		proj = consts.RoleDemo
+	}
+
+	return role, proj
+}
+
+// AccessControl 角色访问权限控制
+func AccessControl(args ...string) gin.HandlerFunc {
+	logger := logs.Get().WithField("func", "AccessControl")
+	var sub, obj, act = parseArgs(logger, args...)
 
 	return func(g *gin.Context) {
 		c := ctx.NewGinRequest(g)
 		s := c.Service()
 
 		// 通过 RequestURI 解析资源名称
-		res := ""
-		// 请求 /api/v1/users/:userId，
-		// 匹配第三段的  ^^^^^^ users
-		regex := regexp.MustCompile("^/[^/]+/[^/]+/([^/?#]+)")
-		match := regex.FindStringSubmatch(c.Request.RequestURI)
-		if len(match) == 2 {
-			res = match[1]
-		} else {
-			res = "other"
-		}
+		res := parseRes(c.Request.RequestURI)
 
-		// 通过 HTTP method 解析资源动作
-		op := ""
-		switch c.Request.Method {
-		case "GET":
-			op = "read"
-		case "POST":
-			op = "create"
-		case "PUT":
-			op = "update"
-		case "PATCH":
-			op = "update"
-		case "DELETE":
-			op = "delete"
-		default:
-			op = "other"
-		}
-
-		// 组织角色
-		role := ""
-		switch {
-		case s.UserId == "":
-			role = consts.RoleAnonymous
-		case s.IsSuperAdmin:
-			role = consts.RoleRoot
-		// 临时处理系统管理员权限
-		case s.UserId == consts.SysUserId:
-			role = consts.OrgRoleAdmin
-		case s.UserId != "" && s.OrgId == "":
-			role = consts.RoleLogin
-		case s.OrgId != "":
-			userOrgs := services.UserOrgRoles(s.UserId)
-			userOrg := userOrgs[s.OrgId]
-			if userOrg != nil {
-				role = userOrg.Role
-			}
-		default:
-		}
-		//s.Role = role
-
-		// 项目角色
-		proj := ""
-		switch {
-		case s.IsSuperAdmin:
-			proj = consts.ProjectRoleManager
-		case services.UserHasOrgRole(s.UserId, s.OrgId, consts.OrgRoleAdmin):
-			proj = consts.ProjectRoleManager
-		case s.ProjectId != "":
-			userProjects := services.UserProjectRoles(s.UserId)
-			userProject := userProjects[s.ProjectId]
-			if userProject != nil {
-				proj = userProject.Role
-			}
-		default:
-		}
-		//s.ProjectRole = proj
+		// 通过 HTTP method 解析资源动作,组织角色,项目角色
+		op, role, proj := parseOpRoleProj(g)
 
 		// 参数重写
-		action := op
-		if act != "" {
-			action = act
-		}
-		object := res
-		if obj != "" {
-			object = obj
-		}
-		if sub != "" {
-			role = sub
-		}
+		action, object, role := rewriteACParams(op, act, res, obj, role, sub)
 
 		// 访问演示组织资源的时候切换到演示模式角色
-		if !s.IsSuperAdmin && s.OrgId != "" && s.OrgId == models.Id(common.DemoOrgId) {
-			role = consts.RoleDemo
-			proj = consts.RoleDemo
-		}
+		role, proj = changeToDemoRole(s, role, proj)
 
 		// 根据 角色 和 项目角色 判断资源访问许可
 		allow, err := rbac.Enforce(role, proj, object, action)
