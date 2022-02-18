@@ -268,7 +268,7 @@ func doCreateTask(tx *db.Session, task models.Task, tpl *models.Template, env *m
 	}
 
 	if len(steps) == 0 {
-		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps"))
+		return nil, e.New(e.TaskNotHaveStep, models.ErrTaskNoSteps)
 	}
 
 	if err = tx.Insert(&task); err != nil {
@@ -1123,7 +1123,7 @@ func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, ta
 	}
 
 	if len(steps) == 0 {
-		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps"))
+		return nil, e.New(e.TaskNotHaveStep, models.ErrTaskNoSteps)
 	}
 
 	if err := tx.Insert(&task); err != nil {
@@ -1221,7 +1221,7 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 	}
 
 	if len(steps) == 0 {
-		return nil, e.New(e.TaskNotHaveStep, fmt.Errorf("task have no steps"))
+		return nil, e.New(e.TaskNotHaveStep, models.ErrTaskNoSteps)
 	}
 
 	if err := tx.Insert(&task); err != nil {

@@ -656,7 +656,7 @@ func setAndCheckUpdateEnvTriggers(c *ctx.ServiceContext, tx *db.Session, attrs m
 		}
 
 		if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, form.Triggers); err != nil {
-			c.Logger().Errorf("set webhook err：%v", err)
+			c.Logger().Errorf("set webhook err :%v", err)
 		}
 	}
 	return nil

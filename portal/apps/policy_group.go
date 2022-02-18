@@ -319,10 +319,7 @@ func OpPolicyAndPolicyGroupRel(c *ctx.ServiceContext, form *forms.OpnPolicyAndPo
 		}
 		// 批量更新
 		if affected, err := services.UpdatePolicy(tx.Where("id in (?)", form.AddPolicyIds),
-			&models.Policy{}, models.Attrs{"group_id": form.PolicyGroupId}); err != nil {
-			_ = tx.Rollback()
-			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-		} else if int(affected) != len(form.AddPolicyIds) {
+			&models.Policy{}, models.Attrs{"group_id": form.PolicyGroupId}); err != nil || int(affected) != len(form.AddPolicyIds) {
 			_ = tx.Rollback()
 			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 		}
@@ -343,10 +340,7 @@ func OpPolicyAndPolicyGroupRel(c *ctx.ServiceContext, form *forms.OpnPolicyAndPo
 		}
 		// 批量更新
 		if affected, err := services.UpdatePolicy(tx.Where("id in (?)", form.RmPolicyIds),
-			&models.Policy{}, models.Attrs{"group_id": ""}); err != nil {
-			_ = tx.Rollback()
-			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-		} else if int(affected) != len(form.RmPolicyIds) {
+			&models.Policy{}, models.Attrs{"group_id": ""}); err != nil || int(affected) != len(form.RmPolicyIds) {
 			_ = tx.Rollback()
 			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 		}

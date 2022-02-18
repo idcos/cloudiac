@@ -323,7 +323,6 @@ func ChangeUserStatus(c *ctx.ServiceContext, form *forms.DisableUserForm) (*mode
 	if err != nil && err.Code() == e.UserNotExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
-		//nolint
 		c.Logger().Errorf("error get user by id, err %s", err)
 		return nil, err
 	}
