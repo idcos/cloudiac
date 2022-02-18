@@ -355,7 +355,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	}
 
 	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, form.Triggers); err != nil {
-		c.Logger().WithField("action", "set webhook").Errorf("%v", err)
+		c.Logger().Errorf("set webhook err %v", err)
 	}
 	return &envDetail, nil
 }
@@ -624,7 +624,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 		}
 
 		if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, form.Triggers); err != nil {
-			c.Logger().WithField("action", "set webhook").Errorf("%v", err)
+			c.Logger().Errorf("set webhook %v", err)
 		}
 	}
 
@@ -931,7 +931,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	}
 
 	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, form.Triggers); err != nil {
-		c.Logger().WithField("action", "set webhook").Errorf("%v", err)
+		c.Logger().Errorf("set webhook %v", err)
 	}
 	return envDetail, nil
 }
