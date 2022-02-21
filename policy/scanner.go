@@ -231,7 +231,7 @@ func (s *Scanner) GetMessage(format string, data interface{}) string {
 	return utils.SprintTemplate(format, data)
 }
 
-func (s *Scanner) handleScanError(task *models.ScanTask, err error) error {
+func (s *Scanner) handleScanError(task *models.ScanTask, err error) error { //nolint:unused
 	// if s.SaveResult {
 	// 扫描出错的时候更新所有策略扫描结果为 failed
 	//emptyResult := TsResultJson{}

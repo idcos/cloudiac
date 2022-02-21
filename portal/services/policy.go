@@ -317,7 +317,7 @@ func SearchPolicyEnv(dbSess *db.Session, userId, orgId, projectId, envId models.
 		Order("org.created_at desc, project.created_at desc, iac_env.created_at desc")
 }
 
-func EnvOfPolicy(dbSess *db.Session, form *forms.EnvOfPolicyForm, orgId, projectId models.Id) *db.Session {
+func EnvOfPolicy(dbSess *db.Session, form *forms.EnvOfPolicyForm, orgId, projectId models.Id) *db.Session { //nolint:dupl
 	pTable := models.Policy{}.TableName()
 	query := dbSess.Table(pTable).Joins(fmt.Sprintf("left join %s as pg on pg.id = %s.group_id",
 		models.PolicyGroup{}.TableName(), pTable)).LazySelectAppend("pg.name as group_name, pg.id as group_id")
@@ -341,7 +341,7 @@ func EnvOfPolicy(dbSess *db.Session, form *forms.EnvOfPolicyForm, orgId, project
 	return query.LazySelectAppend(fmt.Sprintf("env.name as env_name, %s.*", pTable))
 }
 
-func TplOfPolicy(dbSess *db.Session, form *forms.TplOfPolicyForm, orgId, projectId models.Id) *db.Session {
+func TplOfPolicy(dbSess *db.Session, form *forms.TplOfPolicyForm, orgId, projectId models.Id) *db.Session { //nolint:dupl
 	pTable := models.Policy{}.TableName()
 	query := dbSess.Table(pTable).Joins(fmt.Sprintf("left join %s as pg on pg.id = %s.group_id",
 		models.PolicyGroup{}.TableName(), pTable)).LazySelectAppend("pg.name as group_name, pg.id as group_id")
@@ -405,7 +405,7 @@ type PolicyScanSummary struct {
 }
 
 // PolicySummary 获取策略/策略组/任务执行结果
-func PolicySummary(query *db.Session, ids []models.Id, scope string, orgId models.Id) ([]*PolicyScanSummary, e.Error) {
+func PolicySummary(query *db.Session, ids []models.Id, scope string, orgId models.Id) ([]*PolicyScanSummary, e.Error) { //nolint:cyclo
 	var key string
 	switch scope {
 	case consts.ScopePolicy:

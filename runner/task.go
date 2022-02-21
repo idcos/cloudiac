@@ -323,12 +323,6 @@ func (t *Task) genIacTfFile(workspace string) error {
 	return nil
 }
 
-var iacPlayVarsTpl = template.Must(template.New("").Parse(`
-{{- range $k,$v := .Env.AnsibleVars -}}
-{{$k}} = "{{$v}}"
-{{- end -}}
-`))
-
 func (t *Task) genPlayVarsFile(workspace string) error {
 	fp, err := os.OpenFile(filepath.Join(workspace, CloudIacPlayVars), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644) //nolint:gosec
 	if err != nil {
