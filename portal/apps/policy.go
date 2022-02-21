@@ -1006,7 +1006,7 @@ type PolicySummaryResp struct {
 	PolicyGroupViolated PieChar `json:"policyGroupViolated"` // 策略组不通过
 }
 
-func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
+func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) { //nolint:cyclop
 	// 策略概览
 	// 默认统计时间范围：最近15天
 	// 1. 活跃策略
@@ -1274,7 +1274,7 @@ func policiesUpsert(tx *db.Session, userId models.Id, orgId models.Id, policyGro
 	return nil
 }
 
-func PolicyTargetSummaryTpl(respPolicyTpls []*RespPolicyTpl, summaries []*services.PolicyScanSummary) []*RespPolicyTpl {
+func PolicyTargetSummaryTpl(respPolicyTpls []*RespPolicyTpl, summaries []*services.PolicyScanSummary) []*RespPolicyTpl { //nolint:dupl
 	if len(summaries) > 0 {
 		sumMap := make(map[string]*services.PolicyScanSummary)
 		for idx, summary := range summaries {
@@ -1299,7 +1299,7 @@ func PolicyTargetSummaryTpl(respPolicyTpls []*RespPolicyTpl, summaries []*servic
 	return respPolicyTpls
 }
 
-func PolicyTargetSummaryEnv(respPolicyEnvs []*RespPolicyEnv, summaries []*services.PolicyScanSummary) []*RespPolicyEnv {
+func PolicyTargetSummaryEnv(respPolicyEnvs []*RespPolicyEnv, summaries []*services.PolicyScanSummary) []*RespPolicyEnv { //nolint:dupl
 	if len(summaries) > 0 {
 		sumMap := make(map[string]*services.PolicyScanSummary)
 		for idx, summary := range summaries {
