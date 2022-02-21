@@ -110,6 +110,16 @@ func ExportTemplates(dbSess *db.Session, orgId models.Id, ids []models.Id) (*Tpl
 		VarGroups: make([]exportedVarGroup, 0),
 	}
 
+	er := appendTemplate(tpls, vars, dbSess, &resp)
+	if er != nil {
+		return nil, er
+	}
+	appendVcs(vcsList, &resp)
+	appendVgs(vgs, &resp)
+	return &resp, nil
+}
+
+func appendTemplate(tpls []models.Template, vars []models.Variable, dbSess *db.Session, resp *TplExportedData) e.Error {
 	for _, t := range tpls {
 		tpl := exportedTpl{
 			Id:           t.Id.String(),
@@ -148,13 +158,16 @@ func ExportTemplates(dbSess *db.Session, orgId models.Id, ids []models.Id) (*Tpl
 
 		vgIds, er := FindTemplateVgIds(dbSess, t.Id)
 		if er != nil {
-			return nil, er
+			return er
 		}
 		tpl.VarGroupIds = vgIds
 
 		resp.Templates = append(resp.Templates, tpl)
 	}
+	return nil
+}
 
+func appendVcs(vcsList []models.Vcs, resp *TplExportedData) {
 	for _, vcs := range vcsList {
 		resp.Vcs = append(resp.Vcs, exportedVcs{
 			Id:       vcs.Id.String(),
@@ -165,7 +178,9 @@ func ExportTemplates(dbSess *db.Session, orgId models.Id, ids []models.Id) (*Tpl
 			VcsToken: ExportSecretStr(vcs.VcsToken, true),
 		})
 	}
+}
 
+func appendVgs(vgs []models.VariableGroup, resp *TplExportedData) {
 	for _, vg := range vgs {
 		evg := exportedVarGroup{
 			Id:        vg.Id.String(),
@@ -179,6 +194,4 @@ func ExportTemplates(dbSess *db.Session, orgId models.Id, ids []models.Id) (*Tpl
 		}
 		resp.VarGroups = append(resp.VarGroups, evg)
 	}
-
-	return &resp, nil
 }

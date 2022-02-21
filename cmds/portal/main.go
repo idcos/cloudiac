@@ -20,7 +20,6 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/rbac"
-	"cloudiac/portal/services/sshkey"
 	"cloudiac/portal/web"
 	"cloudiac/utils/kafka"
 	"cloudiac/utils/logs"
@@ -48,10 +47,6 @@ func main() {
 	configs.Init(opt.Config)
 	conf := configs.Get().Log
 	logs.Init(conf.LogLevel, conf.LogPath, conf.LogMaxDays)
-
-	//if err := initSSHKeyPair(); err != nil {
-	//	panic(errors.Wrap(err, "init ssh key pair"))
-	//}
 
 	// 中间件及数据的初始化
 	{
@@ -318,6 +313,6 @@ func initTemplates(tx *db.Session) error {
 	return nil
 }
 
-func initSSHKeyPair() error {
-	return sshkey.InitSSHKeyPair()
-}
+//func initSSHKeyPair() error {
+//	return sshkey.InitSSHKeyPair()
+//}

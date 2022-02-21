@@ -19,6 +19,8 @@ import (
 	"time"
 )
 
+const HeaderContentType string = "Content-Type"
+
 func httpClient(conntimeout, deadline int) *http.Client {
 	c := &http.Client{
 		Transport: &http.Transport{
@@ -45,7 +47,7 @@ func getHttpRequest(reqUrl, method string, header *http.Header, data interface{}
 	}
 
 	// json data
-	if header.Get("Content-Type") == "application/json" {
+	if header.Get(HeaderContentType) == "application/json" { //nolint
 		b, err := json.Marshal(data)
 		if err != nil {
 			return nil, err
@@ -69,8 +71,8 @@ func HttpService(reqUrl, method string, header *http.Header, data interface{}, c
 	if header == nil {
 		header = &http.Header{}
 	}
-	if header.Get("Content-Type") == "" {
-		header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if header.Get(HeaderContentType) == "" {
+		header.Set(HeaderContentType, "application/x-www-form-urlencoded")
 	}
 	req.Header = *header
 
@@ -132,7 +134,7 @@ func HttpPostFiles(reqUrl string, header *http.Header, formParts []FormPart, con
 	if header != nil {
 		req.Header = *header
 	}
-	req.Header.Set("Content-Type", w.FormDataContentType())
+	req.Header.Set(HeaderContentType, w.FormDataContentType())
 
 	resp, err = c.Do(req)
 	return

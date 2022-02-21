@@ -68,33 +68,37 @@ func OperationVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id
 			value, _ = utils.AesEncrypt(v.Value)
 			attrs["value"] = value
 		}
-
 		// 不需要加密，数据不为空
 		if v.Value != "" && !v.Sensitive {
 			value = v.Value
 			attrs["value"] = value
 		}
 		// 需要加密，数据为空 不做操作
-
 		//id不为空修改变量，反之新建
-		if v.Id != "" {
-			err := updateVariable(tx, v.Id, attrs)
-			if err != nil && err.Code() == e.VariableAliasDuplicate {
-				return e.New(err.Code(), err, http.StatusBadRequest)
-			} else if err != nil {
-				return err
-			}
-			continue
-		} else {
-			vId := models.Variable{}.NewId()
-			if err := bq.AddRow(vId, v.Scope, v.Type, v.Name, value, v.Sensitive, v.Description,
-				orgId, projectId, tplId, envId, v.Options); err != nil {
-				return e.New(e.DBError, err)
-			}
+		if err := updateOrCreateVars(v, attrs, tx, value, bq, []models.Id{orgId, projectId, tplId, envId}); err != nil {
+			return err
 		}
 	}
 	if err := createVariables(tx, bq); err != nil {
 		return err
+	}
+	return nil
+}
+
+func updateOrCreateVars(v forms.Variable, attrs map[string]interface{}, tx *db.Session, value string, bq *utils.BatchSQL, ids []models.Id) e.Error {
+	if v.Id != "" {
+		err := updateVariable(tx, v.Id, attrs)
+		if err != nil && err.Code() == e.VariableAliasDuplicate {
+			return e.New(err.Code(), err, http.StatusBadRequest)
+		} else if err != nil {
+			return err
+		}
+	} else {
+		vId := models.Variable{}.NewId()
+		if err := bq.AddRow(vId, v.Scope, v.Type, v.Name, value, v.Sensitive, v.Description,
+			ids[0], ids[1], ids[2], ids[3], v.Options); err != nil {
+			return e.New(e.DBError, err)
+		}
 	}
 	return nil
 }
@@ -152,10 +156,17 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 	if err != nil {
 		return nil, err, scopes
 	}
+	variableM := getNewVarsMap(variables, scopes, keepSensitive, projectId, tplId, envId)
+
+	return variableM, nil, scopes
+}
+
+func getNewVarsMap(variables []models.Variable, scopes []string, keepSensitive bool, projectId, tplId, envId models.Id) map[string]models.Variable {
 	variableM := make(map[string]models.Variable)
 	for index, v := range variables {
 		// 过滤掉变量一部分不需要应用的变量
 		if utils.InArrayStr(scopes, v.Scope) {
+
 			if v.Sensitive && !keepSensitive {
 				variables[index].Value = ""
 			}
@@ -190,8 +201,16 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 
 		}
 	}
+	return variableM
+}
 
-	return variableM, nil, scopes
+type GetVarParentParams struct {
+	OrgId        models.Id
+	ProjectId    models.Id
+	TplId        models.Id
+	Name         string
+	Scope        string
+	VariableType string
 }
 
 func checkVariable(v models.Variable, projectId, tplId models.Id) bool {
@@ -215,15 +234,15 @@ func checkVariable(v models.Variable, projectId, tplId models.Id) bool {
 }
 
 // GetVariableParent 获取上一级被覆盖的变量
-func GetVariableParent(dbSess *db.Session, name, scope, variableType string, scopes []string, orgId, projectId, tplId models.Id) (bool, models.Variable) {
+func GetVariableParent(dbSess *db.Session, scopes []string, varParent GetVarParentParams) (bool, models.Variable) {
 	variable := models.Variable{}
-	query := dbSess.Where("org_id = ?", orgId).
-		Where("name = ?", name).
-		Where("scope != ?", scope).
+	query := dbSess.Where("org_id = ?", varParent.OrgId).
+		Where("name = ?", varParent.Name).
+		Where("scope != ?", varParent.Scope).
 		Where("scope in (?)", scopes).
-		Where("type = ?", variableType)
+		Where("type = ?", varParent.VariableType)
 
-	if scope != consts.ScopeEnv {
+	if varParent.Scope != consts.ScopeEnv {
 		if err := query.
 			Order("scope desc").
 			First(&variable); err != nil {
@@ -239,14 +258,13 @@ func GetVariableParent(dbSess *db.Session, name, scope, variableType string, sco
 		return false, variable
 	}
 	for _, v := range variables {
-		if checkVariable(v, projectId, tplId) {
+		if checkVariable(v, varParent.ProjectId, varParent.TplId) {
 			return true, v
 		}
 	}
 	return false, variable
 
 }
-
 func GetVariableBody(vars map[string]models.Variable) []models.VariableBody {
 	vb := make([]models.VariableBody, 0, len(vars))
 	for k := range vars {
@@ -259,6 +277,22 @@ func QueryVariable(dbSess *db.Session) *db.Session {
 	return dbSess.Model(&models.Variable{})
 }
 
+func processVarsforUpdate(varsMap map[string]models.Variable, vars []models.Variable) e.Error {
+	for i, v := range vars {
+		var err error
+		if v.Sensitive {
+			if v.Value != "" {
+				if v.Value, err = utils.EncryptSecretVar(v.Value); err != nil {
+					return e.AutoNew(err, e.EncryptError)
+				}
+				vars[i] = v
+			}
+		}
+		varsMap[v.Name] = vars[i]
+	}
+	return nil
+}
+
 // UpdateObjectVars 更新(或新增)实例的变量
 // vars 参数为待更新的变量,
 // 该函数为全量更新，vars 中不存在的变量会从实例的变量列表中删除，己存在的同名变量会被更新，新增变量会创建
@@ -266,18 +300,8 @@ func UpdateObjectVars(tx *db.Session, scope string, objectId models.Id, vars []m
 	table := models.Variable{}.TableName()
 
 	varsMap := make(map[string]models.Variable)
-	for i, v := range vars {
-		var err error
-		if v.Sensitive {
-			if v.Value != "" {
-				v.Value, err = utils.EncryptSecretVar(v.Value)
-				if err != nil {
-					return nil, e.AutoNew(err, e.EncryptError)
-				}
-				vars[i] = v
-			}
-		}
-		varsMap[v.Name] = vars[i]
+	if err := processVarsforUpdate(varsMap, vars); err != nil {
+		return nil, err
 	}
 
 	dbVars := make([]models.Variable, 0)
@@ -300,7 +324,17 @@ func UpdateObjectVars(tx *db.Session, scope string, objectId models.Id, vars []m
 		Where("name IN (?)", delVarNames).Delete(&models.Variable{}); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
+	if err := insertVars(dbVarsMap, vars, tx); err != nil {
+		return nil, err
+	}
+	retVars := make([]models.Variable, 0)
+	if err := WithVarScopeIdWhere(tx, table, scope, objectId).Find(&retVars); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return retVars, nil
+}
 
+func insertVars(dbVarsMap map[string]models.Variable, vars []models.Variable, tx *db.Session) e.Error {
 	insertSqls := utils.NewBatchSQL(1024, "INSERT INTO", models.Variable{}.TableName(),
 		"org_id", "project_id", "tpl_id", "env_id",
 		"id", "scope", "type", "name", "value", "sensitive", "description", "options")
@@ -317,7 +351,7 @@ func UpdateObjectVars(tx *db.Session, scope string, objectId models.Id, vars []m
 				v.Id = dbVar.Id
 			}
 			if _, err := models.UpdateModelAll(tx, v, "id = ?", dbVar.Id); err != nil {
-				return nil, e.AutoNew(err, e.DBError)
+				return e.AutoNew(err, e.DBError)
 			}
 		} else { // 否则插入新变量
 			insertSqls.MustAddRow(v.OrgId, v.ProjectId, v.TplId, v.EnvId,
@@ -328,15 +362,10 @@ func UpdateObjectVars(tx *db.Session, scope string, objectId models.Id, vars []m
 	for insertSqls.HasNext() {
 		sql, args := insertSqls.Next()
 		if _, err := tx.Exec(sql, args...); err != nil {
-			return nil, e.AutoNew(err, e.DBError)
+			return e.AutoNew(err, e.DBError)
 		}
 	}
-
-	retVars := make([]models.Variable, 0)
-	if err := WithVarScopeIdWhere(tx, table, scope, objectId).Find(&retVars); err != nil {
-		return nil, e.AutoNew(err, e.DBError)
-	}
-	return retVars, nil
+	return nil
 }
 
 func WithVarScopeIdWhere(query *db.Session, tableName string, scope string, id models.Id) *db.Session {
