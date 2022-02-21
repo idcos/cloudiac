@@ -76,6 +76,10 @@ func SearchVariableGroupRel(dbSess *db.Session, objectAttr map[string]models.Id,
 	switch object {
 	case consts.ScopeEnv:
 		scopes = consts.VariableGroupEnv
+		// 环境id为空时，只有新部署环境的场景，这里只要查询org/tpl/project作用域的变量组即可
+		if objectAttr[consts.ScopeEnv] == "" {
+			scopes = []string{consts.ScopeOrg, consts.ScopeProject, consts.ScopeTemplate}
+		}
 	case consts.ScopeTemplate:
 		scopes = consts.VariableGroupTpl
 	case consts.ScopeProject:
@@ -186,7 +190,7 @@ func CreateRelationship(dbSess *db.Session, rels []models.VariableGroupRel) e.Er
 
 func CheckVgRelationship(tx *db.Session, form *forms.BatchUpdateRelationshipForm, orgId models.Id) bool {
 	// 查询当前作用域下绑定的变量组
-	bindVgs, err := GetVariableGroupByObject(tx, form.ObjectType, "", orgId)
+	bindVgs, err := GetVariableGroupByObject(tx, form.ObjectType, form.ObjectId, orgId)
 	if err != nil {
 		logs.Get().Errorf("func GetVariableGroupByObject err: %v", err)
 		return false
