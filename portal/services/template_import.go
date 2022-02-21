@@ -82,53 +82,16 @@ func (t *TplImporter) ImportTemplates(tx *db.Session) e.Error {
 		"project_id", "template_id")
 
 	for i := range t.Data.Templates {
-		tpl, err := t.getTplFromExportData(t.Data.Templates[i])
-		if err != nil {
-			return e.AutoNew(err, e.InternalError)
-		}
-
-		if er := t.renameTplIf(tx, tpl); er != nil {
-			return er
-		}
-
-		dbTpl := models.Template{}
-		if err := QueryTemplate(tx.Unscoped().Where("id = ?", tpl.Id)).Find(&dbTpl); err != nil {
-			return e.AutoNew(err, e.DBError)
-		}
-
-		tplIdDuplicate := false
-		if dbTpl.Id != "" {
-			tplIdDuplicate = true
-			if t.WhenIdDuplicate == "update" && t.OrgId != dbTpl.OrgId {
-				return e.New(e.ImportUpdateOrgId)
-			}
-		}
-
-		if tplIdDuplicate {
-			t.Logger.Debugf("template %s, id duplicate", tpl.Id)
-		}
-		if er := t.doImport(tx, tpl.Id, tpl, tplIdDuplicate); er != nil {
-			return er
-		}
-
-		//// 云模板跳过处理了，其关联关系及变量也就不需要处理
-		if tplIdDuplicate && t.WhenIdDuplicate == "skip" {
+		tpl := t.Data.Templates[i]
+		if skip, err := t.importExportedTpl(tx, i, tpl); err != nil {
+			return err
+		} else if skip {
 			continue
 		}
 
-		// 处理云模板变量
-		er1 := t.processTplVars(tx, tpl, i, tplIdDuplicate)
-		if er1 != nil {
-			return er1
-		}
-
-		// 处理云模板关联的变量组
-		if err := t.processTplVarsGroup(i, tplIdDuplicate, tx, tpl); err != nil {
-			return err
-		}
 		// 处理云模板与项目的关联
 		for _, pid := range t.ProjectIds {
-			bs.MustAddRow(pid, t.getImportedId(tpl.Id.String()))
+			bs.MustAddRow(pid, t.getImportedId(tpl.Id))
 		}
 	}
 
@@ -140,6 +103,57 @@ func (t *TplImporter) ImportTemplates(tx *db.Session) e.Error {
 	}
 	return nil
 }
+
+// importExportedTpl
+func (t *TplImporter) importExportedTpl(tx *db.Session, i int, exportedTpl exportedTpl) (skip bool, er e.Error) {
+	tpl, err := t.getTplFromExportData(exportedTpl)
+	if err != nil {
+		return false, e.AutoNew(err, e.InternalError)
+	}
+
+	if er := t.renameTplIf(tx, tpl); er != nil {
+		return false, er
+	}
+
+	dbTpl := models.Template{}
+	if err := QueryTemplate(tx.Unscoped().Where("id = ?", tpl.Id)).Find(&dbTpl); err != nil {
+		return false, e.AutoNew(err, e.DBError)
+	}
+
+	tplIdDuplicate := false
+	if dbTpl.Id != "" {
+		tplIdDuplicate = true
+		if t.WhenIdDuplicate == "update" && t.OrgId != dbTpl.OrgId {
+			return false, e.New(e.ImportUpdateOrgId)
+		}
+	}
+
+	if tplIdDuplicate {
+		t.Logger.Debugf("template %s, id duplicate", tpl.Id)
+	}
+	if er := t.doImport(tx, tpl.Id, tpl, tplIdDuplicate); er != nil {
+		return false, er
+	}
+
+	//// 云模板跳过处理了，其关联关系及变量也就不需要处理
+	if tplIdDuplicate && t.WhenIdDuplicate == "skip" {
+		return true, nil
+	}
+
+	// 处理云模板变量
+	er1 := t.processTplVars(tx, tpl, i, tplIdDuplicate)
+	if er1 != nil {
+		return false, er1
+	}
+
+	// 处理云模板关联的变量组
+	if err := t.processTplVarsGroup(i, tplIdDuplicate, tx, tpl); err != nil {
+		return false, err
+	}
+
+	return false, nil
+}
+
 func (t *TplImporter) processTplVarsGroup(i int, tplIdDuplicate bool, tx *db.Session, tpl *models.Template) e.Error {
 	vgIds := t.Data.Templates[i].VarGroupIds
 	importedVgIds := make([]models.Id, 0, len(vgIds))
