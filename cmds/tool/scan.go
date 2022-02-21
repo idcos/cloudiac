@@ -64,6 +64,8 @@ type ScanCmd struct {
 	SourceMapFile string `long:"map" short:"m" description:"the source map json file path" required:"false"`
 }
 
+var ErrMissingIacFileOrRego = errors.New("missing iac file or rego script")
+
 func (*ScanCmd) Usage() string {
 	return ""
 }
@@ -76,8 +78,7 @@ func (c *ScanCmd) hasDB() bool {
 		c.SaveResultToDB
 }
 
-func (c *ScanCmd) Execute(args []string) error {
-
+func (c *ScanCmd) Execute(args []string) error { //nolint:cyclop
 	if c.Debug {
 		var (
 			filePath string
@@ -87,13 +88,13 @@ func (c *ScanCmd) Execute(args []string) error {
 			// iac-tool scan --debug -d code xxx.rego
 			filePath = c.CodeDir
 			if len(args) < 1 {
-				return fmt.Errorf("missing iac file or rego script")
+				return ErrMissingIacFileOrRego
 			}
 			regoFile = args[0]
 		} else {
 			// iac-tool scan --debug xxx.tf xxx.rego
 			if len(args) < 2 {
-				return fmt.Errorf("missing iac file or rego script")
+				return ErrMissingIacFileOrRego
 			}
 			filePath = args[0]
 			regoFile = args[1]
@@ -265,7 +266,7 @@ func (*ParseCmd) Usage() string {
 func (c *ParseCmd) Execute(args []string) error {
 	// iac-tool parse xxx.rego xxx.json
 	if len(args) < 2 {
-		return fmt.Errorf("missing iac file or rego script")
+		return ErrMissingIacFileOrRego
 	}
 	regoFile := args[0]
 	inputPath := args[1]

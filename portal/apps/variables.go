@@ -50,24 +50,7 @@ func UpdateObjectVars(c *ctx.ServiceContext, form *forms.UpdateObjectVarsForm) (
 	return result, err
 }
 
-func updateObjectVars(c *ctx.ServiceContext, tx *db.Session, form *forms.UpdateObjectVarsForm) (interface{}, e.Error) {
-	var (
-		orgId     = c.OrgId
-		projectId = c.ProjectId
-		scope     = form.Scope
-		objectId  = form.ObjectId
-	)
-
-	switch scope {
-	case consts.ScopeOrg:
-		if objectId != orgId {
-			return nil, e.New(e.BadOrgId)
-		}
-	case consts.ScopeProject:
-		if objectId != projectId {
-			return nil, e.New(e.BadProjectId)
-		}
-	}
+func getObjectVars(tx *db.Session, form *forms.UpdateObjectVarsForm, orgId, projectId models.Id) ([]models.Variable, e.Error) {
 
 	vars := make([]models.Variable, 0, len(form.Variables))
 	for _, v := range form.Variables {
@@ -97,6 +80,11 @@ func updateObjectVars(c *ctx.ServiceContext, tx *db.Session, form *forms.UpdateO
 		}
 		modelVar.Id = v.Id
 
+		var (
+			scope    = form.Scope
+			objectId = form.ObjectId
+		)
+
 		switch scope {
 		case consts.ScopeOrg:
 			modelVar.OrgId = orgId
@@ -117,6 +105,33 @@ func updateObjectVars(c *ctx.ServiceContext, tx *db.Session, form *forms.UpdateO
 			modelVar.EnvId = objectId
 		}
 		vars = append(vars, modelVar)
+	}
+
+	return vars, nil
+}
+
+func updateObjectVars(c *ctx.ServiceContext, tx *db.Session, form *forms.UpdateObjectVarsForm) (interface{}, e.Error) {
+	var (
+		orgId     = c.OrgId
+		projectId = c.ProjectId
+		scope     = form.Scope
+		objectId  = form.ObjectId
+	)
+
+	switch scope {
+	case consts.ScopeOrg:
+		if objectId != orgId {
+			return nil, e.New(e.BadOrgId)
+		}
+	case consts.ScopeProject:
+		if objectId != projectId {
+			return nil, e.New(e.BadProjectId)
+		}
+	}
+
+	vars, err := getObjectVars(tx, form, orgId, projectId)
+	if err != nil {
+		return nil, err
 	}
 
 	tx = services.QueryWithOrgId(tx, c.OrgId)

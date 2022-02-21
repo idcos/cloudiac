@@ -133,14 +133,14 @@ func GetValidPolicies(query *db.Session, tplId, envId models.Id) (validPolicies 
 		if enabled, err = IsTemplateEnabledScan(query, tplId); err != nil {
 			return
 		}
-		if enabled {
-			if policies, err = GetPoliciesByTemplateId(query, tplId); err != nil {
-				return
-			}
-			if validPolicies, suppressedPolicies, err = FilterSuppressPolicies(query, policies, tplId, consts.ScopeTemplate); err != nil {
-				return
-			}
+		if !enabled {
+			return
 		}
+
+		if policies, err = GetPoliciesByTemplateId(query, tplId); err != nil {
+			return
+		}
+		validPolicies, suppressedPolicies, err = FilterSuppressPolicies(query, policies, tplId, consts.ScopeTemplate)
 		return
 	}
 
@@ -148,16 +148,15 @@ func GetValidPolicies(query *db.Session, tplId, envId models.Id) (validPolicies 
 	if enabled, err = IsEnvEnabledScan(query, envId); err != nil {
 		return
 	}
-	if enabled {
-		if policies, err = GetPoliciesByEnvId(query, envId); err != nil {
-			return
-		}
-
-		if validPolicies, suppressedPolicies, err = FilterSuppressPolicies(query, policies, envId, consts.ScopeEnv); err != nil {
-			return
-		}
+	if !enabled {
+		return
 	}
 
+	if policies, err = GetPoliciesByEnvId(query, envId); err != nil {
+		return
+	}
+
+	validPolicies, suppressedPolicies, err = FilterSuppressPolicies(query, policies, envId, consts.ScopeEnv)
 	return
 }
 
@@ -195,22 +194,14 @@ func GetPoliciesByTemplateId(query *db.Session, tplId models.Id) ([]models.Polic
 	return policies, nil
 }
 
-func UpdatePolicy(tx *db.Session, policy *models.Policy, attr models.Attrs) (int64, e.Error) {
+func UpdatePolicy(tx *db.Session, policy *models.Policy, attr models.Attrs) e.Error {
 	affected, err := models.UpdateAttr(tx, policy, attr)
 	if err != nil {
 		if e.IsDuplicate(err) {
-			return affected, e.New(e.PolicyGroupAlreadyExist, err)
+			return e.New(e.PolicyGroupAlreadyExist, err)
+		} else if int(affected) != len(attr) {
+			return e.New(e.DBError, err)
 		}
-		return affected, e.AutoNew(err, e.DBError)
-	}
-	return affected, nil
-}
-
-//RemovePoliciesGroupRelation 移除策略组和策略的关系
-func RemovePoliciesGroupRelation(tx *db.Session, groupId models.Id) e.Error {
-	if _, err := UpdatePolicy(tx.Where("group_id = ?", groupId),
-		&models.Policy{}, models.Attrs{"group_id": ""}); err != nil {
-		return err
 	}
 	return nil
 }

@@ -321,12 +321,8 @@ func (github *githubRepoIface) ListWebhook() ([]ProjectsHook, error) {
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
-	rep := make([]githubTag, 0)
-
-	_ = json.Unmarshal(body, &rep)
-	tagList := []string{}
-	for _, v := range rep {
-		tagList = append(tagList, v.Name)
+	if err = json.Unmarshal(body, &ph); err != nil {
+		return nil, err
 	}
 	return ph, nil
 }

@@ -22,7 +22,7 @@ type BatchSQL struct {
 // 建议 batchSize 不要超过 1024
 func NewBatchSQL(batchSize int, op string, table string, columns ...string) *BatchSQL {
 	ph := make([]string, 0, len(columns))
-	for _ = range columns {
+	for range columns {
 		ph = append(ph, "?")
 	}
 

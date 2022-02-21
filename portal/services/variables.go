@@ -35,7 +35,7 @@ func SearchVariable(dbSess *db.Session, orgId models.Id) ([]models.Variable, e.E
 		Order("scope asc").
 		Find(&variables); err != nil {
 		return nil, e.New(e.DBError, err)
-	}
+	} //nolint
 	return variables, nil
 }
 
@@ -137,7 +137,7 @@ func deleteVariables(tx *db.Session, varIds []string) e.Error {
 func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId, envId models.Id, keepSensitive bool) (map[string]models.Variable, e.Error, []string) {
 
 	// 根据scope 构建变量应用范围
-	scopes := make([]string, 0)
+	var scopes []string
 	switch scope {
 	case consts.ScopeEnv:
 		scopes = consts.EnvScopeEnv
@@ -213,6 +213,26 @@ type GetVarParentParams struct {
 	VariableType string
 }
 
+func checkVariable(v models.Variable, projectId, tplId models.Id) bool {
+	if v.ProjectId != "" {
+		if projectId == v.ProjectId {
+			return true
+		}
+	}
+
+	if v.TplId != "" {
+		if tplId == v.TplId {
+			return true
+		}
+	}
+
+	if v.TplId == "" && v.ProjectId == "" && v.EnvId == "" {
+		return true
+	}
+
+	return false
+}
+
 // GetVariableParent 获取上一级被覆盖的变量
 func GetVariableParent(dbSess *db.Session, scopes []string, varParent GetVarParentParams) (bool, models.Variable) {
 	variable := models.Variable{}
@@ -222,47 +242,32 @@ func GetVariableParent(dbSess *db.Session, scopes []string, varParent GetVarPare
 		Where("scope in (?)", scopes).
 		Where("type = ?", varParent.VariableType)
 
-	// 只有环境层级需要很细粒度的数据隔离
-	if varParent.Scope == consts.ScopeEnv {
-		variables := make([]models.Variable, 0)
-		if err := query.Order("scope asc").Find(&variables); err != nil {
+	if varParent.Scope != consts.ScopeEnv {
+		if err := query.
+			Order("scope desc").
+			First(&variable); err != nil {
 			return false, variable
+		} else {
+			return true, variable
 		}
-		for _, v := range variables {
-			if v.ProjectId != "" {
-				if varParent.ProjectId == v.ProjectId {
-					return true, v
-				}
-				continue
-			}
-
-			if v.TplId != "" {
-				if varParent.TplId == v.TplId {
-					return true, v
-				}
-				continue
-			}
-
-			if v.TplId == "" && v.ProjectId == "" && v.EnvId == "" {
-				return true, v
-			}
-
-		}
-		return false, variable
 	}
 
-	if err := query.
-		Order("scope desc").
-		First(&variable); err != nil {
+	// 只有环境层级需要很细粒度的数据隔离
+	variables := make([]models.Variable, 0)
+	if err := query.Order("scope asc").Find(&variables); err != nil {
 		return false, variable
 	}
+	for _, v := range variables {
+		if checkVariable(v, varParent.ProjectId, varParent.TplId) {
+			return true, v
+		}
+	}
+	return false, variable
 
-	return true, variable
 }
-
 func GetVariableBody(vars map[string]models.Variable) []models.VariableBody {
 	vb := make([]models.VariableBody, 0, len(vars))
-	for k, _ := range vars {
+	for k := range vars {
 		vb = append(vb, vars[k].VariableBody)
 	}
 	return vb

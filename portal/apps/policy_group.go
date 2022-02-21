@@ -38,7 +38,7 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 		CreatorId:   c.UserId,
 	}
 
-	if form.HasKey("gitTags") && form.GitTags != "" {
+	if form.GitTags != "" {
 		g.GitTags = form.GitTags
 		// 检查是否有效的语义话版本
 		v, err := semver.NewVersion(g.GitTags)
@@ -46,12 +46,13 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 			return nil, e.AutoNew(fmt.Errorf("git tag is invalid semver"), e.BadParam, http.StatusBadRequest)
 		}
 		g.Version = v.String()
-	} else if form.HasKey("branch") && form.Branch != "" {
+	} else if form.Branch != "" {
 		g.Branch = form.Branch
 		g.UseLatest = true
 	} else {
 		return nil, e.New(e.BadParam, http.StatusBadRequest)
 	}
+
 	if form.HasKey("dir") {
 		g.Dir = form.Dir
 	} else {
@@ -132,50 +133,7 @@ func SearchPolicyGroup(c *ctx.ServiceContext, form *forms.SearchPolicyGroupForm)
 
 // UpdatePolicyGroup 修改策略组
 func UpdatePolicyGroup(c *ctx.ServiceContext, form *forms.UpdatePolicyGroupForm) (interface{}, e.Error) {
-	attr := models.Attrs{}
-	if form.HasKey("name") {
-		attr["name"] = form.Name
-	}
-
-	if form.HasKey("description") {
-		attr["description"] = form.Description
-	}
-
-	if form.HasKey("enabled") {
-		attr["enabled"] = form.Enabled
-	}
-
-	if form.HasKey("labels") {
-		attr["label"] = strings.Join(form.Labels, ",")
-	}
-
-	if form.HasKey("source") {
-		attr["source"] = form.Source
-	}
-
-	if form.HasKey("vcsId") {
-		attr["vcsId"] = form.VcsId
-	}
-
-	if form.HasKey("repoId") {
-		attr["repoId"] = form.RepoId
-	}
-
-	if form.HasKey("gitTags") {
-		attr["gitTags"] = form.GitTags
-	}
-
-	if form.HasKey("branch") {
-		attr["branch"] = form.Branch
-	}
-
-	if form.HasKey("dir") {
-		if form.Dir == "" {
-			attr["dir"] = form.Dir
-		} else {
-			attr["dir"] = consts.DirRoot
-		}
-	}
+	attr := updatePolicyGroupParamCheck(form)
 
 	pg := models.PolicyGroup{}
 	pg.Id = form.Id
@@ -232,6 +190,54 @@ func UpdatePolicyGroup(c *ctx.ServiceContext, form *forms.UpdatePolicyGroupForm)
 	}
 
 	return nil, nil
+}
+
+func updatePolicyGroupParamCheck(form *forms.UpdatePolicyGroupForm) models.Attrs {
+	attr := models.Attrs{}
+	if form.HasKey("name") {
+		attr["name"] = form.Name
+	}
+
+	if form.HasKey("description") {
+		attr["description"] = form.Description
+	}
+
+	if form.HasKey("enabled") {
+		attr["enabled"] = form.Enabled
+	}
+
+	if form.HasKey("labels") {
+		attr["label"] = strings.Join(form.Labels, ",")
+	}
+
+	if form.HasKey("source") {
+		attr["source"] = form.Source
+	}
+
+	if form.HasKey("vcsId") {
+		attr["vcsId"] = form.VcsId
+	}
+
+	if form.HasKey("repoId") {
+		attr["repoId"] = form.RepoId
+	}
+
+	if form.HasKey("gitTags") {
+		attr["gitTags"] = form.GitTags
+	}
+
+	if form.HasKey("branch") {
+		attr["branch"] = form.Branch
+	}
+
+	if form.HasKey("dir") {
+		if form.Dir != "" {
+			attr["dir"] = form.Dir
+		} else {
+			attr["dir"] = consts.DirRoot
+		}
+	}
+	return attr
 }
 
 // DeletePolicyGroup 删除策略组
@@ -312,11 +318,8 @@ func OpPolicyAndPolicyGroupRel(c *ctx.ServiceContext, form *forms.OpnPolicyAndPo
 			}
 		}
 		// 批量更新
-		if affected, err := services.UpdatePolicy(tx.Where("id in (?)", form.AddPolicyIds),
+		if err := services.UpdatePolicy(tx.Where("id in (?)", form.AddPolicyIds),
 			&models.Policy{}, models.Attrs{"group_id": form.PolicyGroupId}); err != nil {
-			_ = tx.Rollback()
-			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-		} else if int(affected) != len(form.AddPolicyIds) {
 			_ = tx.Rollback()
 			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 		}
@@ -336,11 +339,8 @@ func OpPolicyAndPolicyGroupRel(c *ctx.ServiceContext, form *forms.OpnPolicyAndPo
 			}
 		}
 		// 批量更新
-		if affected, err := services.UpdatePolicy(tx.Where("id in (?)", form.RmPolicyIds),
+		if err := services.UpdatePolicy(tx.Where("id in (?)", form.RmPolicyIds),
 			&models.Policy{}, models.Attrs{"group_id": ""}); err != nil {
-			_ = tx.Rollback()
-			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-		} else if int(affected) != len(form.RmPolicyIds) {
 			_ = tx.Rollback()
 			return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 		}
@@ -383,9 +383,10 @@ func PolicyGroupScanTasks(c *ctx.ServiceContext, form *forms.PolicyLastTasksForm
 	for idx := range tasks {
 		policyIds = append(policyIds, tasks[idx].Id)
 	}
+	// nolint
 	if summaries, err := services.PolicySummary(c.DB(), policyIds, consts.ScopeTask, c.OrgId); err != nil {
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	} else if summaries != nil && len(summaries) > 0 {
+	} else if len(summaries) > 0 {
 		sumMap := make(map[string]*services.PolicyScanSummary, len(policyIds))
 		for idx, summary := range summaries {
 			sumMap[string(summary.Id)+summary.Status] = summaries[idx]
@@ -457,7 +458,6 @@ func PolicyGroupScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportFo
 				if s.Status == common.PolicyStatusPassed {
 					r.Passed[idx] = s.Count
 				}
-				// FIXME: 是否跳过失败和屏蔽的策略？
 				r.Total[idx] += s.Count
 				r.Value[idx] = Percent(r.Passed[idx]) / Percent(r.Total[idx])
 				found = true
