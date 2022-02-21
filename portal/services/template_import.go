@@ -123,7 +123,9 @@ func (t *TplImporter) ImportTemplates(tx *db.Session) e.Error {
 		}
 
 		// 处理云模板关联的变量组
-
+		if err := t.processTplVarsGroup(i, tplIdDuplicate, tx, tpl); err != nil {
+			return err
+		}
 		// 处理云模板与项目的关联
 		for _, pid := range t.ProjectIds {
 			bs.MustAddRow(pid, t.getImportedId(tpl.Id.String()))

@@ -204,43 +204,40 @@ func getNewVarsMap(variables []models.Variable, scopes []string, keepSensitive b
 	return variableM
 }
 
-type StrParam struct {
+type GetVarParentParams struct {
+	OrgId        models.Id
+	ProjectId    models.Id
+	TplId        models.Id
 	Name         string
 	Scope        string
 	VariableType string
 }
 
-type IdParam struct {
-	OrgId     models.Id
-	ProjectId models.Id
-	TplId     models.Id
-}
-
 // GetVariableParent 获取上一级被覆盖的变量
-func GetVariableParent(dbSess *db.Session, strParam StrParam, scopes []string, idParam IdParam) (bool, models.Variable) {
+func GetVariableParent(dbSess *db.Session, scopes []string, varParent GetVarParentParams) (bool, models.Variable) {
 	variable := models.Variable{}
-	query := dbSess.Where("org_id = ?", idParam.OrgId).
-		Where("name = ?", strParam.Name).
-		Where("scope != ?", strParam.Scope).
+	query := dbSess.Where("org_id = ?", varParent.OrgId).
+		Where("name = ?", varParent.Name).
+		Where("scope != ?", varParent.Scope).
 		Where("scope in (?)", scopes).
-		Where("type = ?", strParam.VariableType)
+		Where("type = ?", varParent.VariableType)
 
 	// 只有环境层级需要很细粒度的数据隔离
-	if strParam.Scope == consts.ScopeEnv {
+	if varParent.Scope == consts.ScopeEnv {
 		variables := make([]models.Variable, 0)
 		if err := query.Order("scope asc").Find(&variables); err != nil {
 			return false, variable
 		}
 		for _, v := range variables {
 			if v.ProjectId != "" {
-				if idParam.ProjectId == v.ProjectId {
+				if varParent.ProjectId == v.ProjectId {
 					return true, v
 				}
 				continue
 			}
 
 			if v.TplId != "" {
-				if idParam.TplId == v.TplId {
+				if varParent.TplId == v.TplId {
 					return true, v
 				}
 				continue
