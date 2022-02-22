@@ -120,9 +120,20 @@ func WebhooksApiHandler(c *ctx.ServiceContext, form forms.WebhooksApiHandler) (i
 	return nil, err
 }
 
+type CreateWebhookTaskParam struct {
+	TaskType string
+	Revision string
+	CommitId string
+	UserId   models.Id
+	Env      *models.Env
+	Tpl      *models.Template
+	PrId     int
+	Source   string
+}
+
 //nolint
-func CreateWebhookTask(tx *db.Session, taskType, revision, commitId string,
-	userId models.Id, env *models.Env, tpl *models.Template, prId int, source string) error {
+func CreateWebhookTask(tx *db.Session, param CreateWebhookTaskParam) error {
+	env := param.Env
 	// 计算变量列表
 	vars, er := services.GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
 	if er != nil {
@@ -130,42 +141,42 @@ func CreateWebhookTask(tx *db.Session, taskType, revision, commitId string,
 		return e.New(e.DBError, er, http.StatusInternalServerError)
 	}
 	task := &models.Task{
-		Name:        models.Task{}.GetTaskNameByType(taskType),
+		Name:        models.Task{}.GetTaskNameByType(param.TaskType),
 		Targets:     models.StrSlice{},
-		CreatorId:   userId,
+		CreatorId:   param.UserId,
 		KeyId:       env.KeyId,
 		Variables:   vars,
 		AutoApprove: env.AutoApproval,
-		Revision:    revision,
-		CommitId:    commitId,
+		Revision:    param.Revision,
+		CommitId:    param.CommitId,
 		BaseTask: models.BaseTask{
-			Type:        taskType,
+			Type:        param.TaskType,
 			RunnerId:    env.RunnerId,
 			StepTimeout: env.Timeout,
 		},
-		Source: source,
+		Source: param.Source,
 	}
 
-	task, err := services.CreateTask(tx, tpl, env, *task)
+	task, err := services.CreateTask(tx, param.Tpl, env, *task)
 	if err != nil {
 		_ = tx.Rollback()
 		logs.Get().Errorf("error creating task, err %s", err)
 		return e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
-	if prId != 0 && taskType == models.TaskTypePlan {
+	if param.PrId != 0 && param.TaskType == models.TaskTypePlan {
 		// 创建pr与作业的关系
 		if err := services.CreateVcsPr(tx, models.VcsPr{
-			PrId:   prId,
+			PrId:   param.PrId,
 			TaskId: task.Id,
 			EnvId:  task.EnvId,
-			VcsId:  tpl.VcsId,
+			VcsId:  param.Tpl.VcsId,
 		}); err != nil {
 			logs.Get().Errorf("error creating vcs pr, err %s", err)
 			return e.New(err.Code(), err, http.StatusInternalServerError)
 		}
 	}
-	logs.Get().Infof("create webhook task success. envId:%s, task type: %s", env.Id, taskType)
+	logs.Get().Infof("create webhook task success. envId:%s, task type: %s", env.Id, param.TaskType)
 	return nil
 }
 
@@ -192,11 +203,32 @@ func actionPrOrPush(tx *db.Session, trigger string, userId models.Id,
 	// 判断pr类型并确认动作
 	// open状态的mr进行plan计划
 	if trigger == consts.EnvTriggerPRMR && options.PrStatus == GitlabPrOpened {
-		return CreateWebhookTask(tx, models.TaskTypePlan, options.HeadRef, "", userId, env, tpl, options.PrId, consts.TaskSourceWebhookPlan)
+		// models.TaskTypePlan, options.HeadRef, "", userId, env, tpl, options.PrId, consts.TaskSourceWebhookPlan)
+		param := CreateWebhookTaskParam{
+			TaskType: models.TaskTypePlan,
+			Revision: options.HeadRef,
+			CommitId: "",
+			UserId:   userId,
+			Env:      env,
+			Tpl:      tpl,
+			PrId:     options.PrId,
+			Source:   consts.TaskSourceWebhookPlan,
+		}
+		return CreateWebhookTask(tx, param)
 	}
 	// push操作，执行apply计划
 	if trigger == consts.EnvTriggerCommit && options.BeforeCommit != "" {
-		return CreateWebhookTask(tx, models.TaskTypeApply, env.Revision, options.AfterCommit, userId, env, tpl, options.PrId, consts.TaskSourceWebhookApply)
+		param := CreateWebhookTaskParam{
+			TaskType: models.TaskTypeApply,
+			Revision: env.Revision,
+			CommitId: options.AfterCommit,
+			UserId:   userId,
+			Env:      env,
+			Tpl:      tpl,
+			PrId:     options.PrId,
+			Source:   consts.TaskSourceWebhookApply,
+		}
+		return CreateWebhookTask(tx, param)
 	}
 
 	return nil
