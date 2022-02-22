@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -106,14 +106,12 @@ func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]*models
 	)
 	if form.Scope == consts.ScopeEnv {
 		env, err = GetEnvById(tx, form.Id)
-		if err != nil {
-			return nil, e.New(err.Code(), err, http.StatusBadRequest)
-		}
 	} else {
 		tpl, err = GetTemplateById(tx, form.Id)
-		if err != nil {
-			return nil, e.New(err.Code(), err, http.StatusBadRequest)
-		}
+	}
+
+	if err != nil {
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	}
 
 	// 删除原有关联关系
@@ -127,28 +125,27 @@ func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]*models
 		if err != nil {
 			return nil, e.New(err.Code(), err, http.StatusBadRequest)
 		}
-		if env != nil {
-			rels = append(rels, &models.PolicyRel{
-				OrgId:     env.OrgId,
-				ProjectId: env.ProjectId,
-				GroupId:   group.Id,
-				EnvId:     env.Id,
-				Scope:     consts.ScopeEnv,
-			})
-		} else {
-			rels = append(rels, &models.PolicyRel{
-				OrgId:   tpl.OrgId,
-				GroupId: group.Id,
-				TplId:   tpl.Id,
-				Scope:   models.PolicyRelScopeTpl,
-			})
+
+		rel := &models.PolicyRel{
+			OrgId:   tpl.OrgId,
+			GroupId: group.Id,
+			TplId:   tpl.Id,
+			Scope:   models.PolicyRelScopeTpl,
 		}
+
+		if env != nil {
+			rel.EnvId = env.Id
+		}
+
+		rels = append(rels, rel)
 	}
 
-	if len(rels) > 0 {
-		if er := models.CreateBatch(tx, rels); er != nil {
-			return nil, e.New(e.DBError, er)
-		}
+	if len(rels) <= 0 {
+		return rels, nil
+	}
+
+	if er := models.CreateBatch(tx, rels); er != nil {
+		return nil, e.New(e.DBError, er)
 	}
 	return rels, nil
 }

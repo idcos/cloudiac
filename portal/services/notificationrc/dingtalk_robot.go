@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package notificationrc
 
 import (
@@ -61,8 +63,9 @@ func (robot *DingTalkRobot) SendMessage(msg interface{}) error {
 	result, err := ioutil.ReadAll(res.Body)
 
 	if res.StatusCode != 200 {
-		return fmt.Errorf("send dingTalk message failed, %s", httpError(request, res, result, "http code is not 200"))
+		return fmt.Errorf("send dingTalk message status code err, %s", httpError(request, res, result, "http code is not 200"))
 	}
+
 	if err != nil {
 		return fmt.Errorf("send dingTalk message failed, %s", httpError(request, res, result, err.Error()))
 	}
@@ -73,11 +76,11 @@ func (robot *DingTalkRobot) SendMessage(msg interface{}) error {
 	var ret response
 
 	if err := json.Unmarshal(result, &ret); err != nil {
-		return fmt.Errorf("send dingTalk message failed, %s", httpError(request, res, result, err.Error()))
+		return fmt.Errorf("send dingTalk message unmarshal err, %s", httpError(request, res, result, err.Error()))
 	}
 
 	if ret.ErrCode != 0 {
-		return fmt.Errorf("send dingTalk message failed, %s", httpError(request, res, result, "errcode is not 0"))
+		return fmt.Errorf("send dingTalk message err code not 0, %s", httpError(request, res, result, "errcode is not 0"))
 	}
 
 	return nil

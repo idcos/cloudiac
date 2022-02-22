@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package models
 
@@ -8,6 +8,7 @@ import (
 	"cloudiac/runner"
 	"cloudiac/utils"
 	"database/sql/driver"
+	"fmt"
 	"path"
 )
 
@@ -77,6 +78,10 @@ const (
 	TaskRejected  = common.TaskRejected
 	TaskFailed    = common.TaskFailed
 	TaskComplete  = common.TaskComplete
+)
+
+var (
+	ErrTaskNoSteps = fmt.Errorf("task has no steps")
 )
 
 type Tasker interface {

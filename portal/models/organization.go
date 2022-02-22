@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package models
 
@@ -20,7 +20,7 @@ type Organization struct {
 	Description string `json:"description" gorm:"type:text;comment:组织描述" example:"示例公司 IaC 研发部"`                                                  // 组织描述
 	Status      string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:组织状态" example:"enable" enums:"enable,disable"` // 组织状态
 	CreatorId   Id     `json:"creatorId" gorm:"size:32;not null;comment:创建人" example:"u-c3ek0co6n88ldvq1n6ag"`                                    //创建人ID
-	RunnerId    string `json:"runnerId" gorm:"not null" example:"runner-01"`                                                            // 组织默认部署通道
+	RunnerId    string `json:"runnerId" gorm:"not null" example:"runner-01"`                                                                      // 组织默认部署通道
 
 	IsDemo bool `json:"isDemo,omitempty" gorm:"default:false"` // 是否演示组织
 }

@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package models
 
@@ -22,7 +22,7 @@ func (j *JSON) Scan(value interface{}) error {
 	}
 	s, ok := value.([]byte)
 	if !ok {
-		errors.New("Invalid Scan Source")
+		return errors.New("Invalid Scan Source")
 	}
 	*j = append((*j)[0:0], s...)
 	return nil

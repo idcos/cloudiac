@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package handlers
 
@@ -186,7 +186,6 @@ func (Organization) UpdateUserOrgRel(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.UpdateUserOrgRel(c.Service(), &form))
 }
-
 
 // SearchUser 查询组织用户列表
 // @Tags 用户

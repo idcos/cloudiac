@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -256,7 +256,7 @@ func FilterSuppressPolicies(query *db.Session, policies []models.Policy, targetI
 	}
 
 	// 区分有效策略和屏蔽策略
-	suppressPolicyMap := make(map[models.Id]models.Policy, 0)
+	suppressPolicyMap := make(map[models.Id]models.Policy)
 	for idx, policy := range suppressedPolicies {
 		suppressPolicyMap[policy.Id] = suppressedPolicies[idx]
 	}
@@ -270,14 +270,14 @@ func FilterSuppressPolicies(query *db.Session, policies []models.Policy, targetI
 }
 
 func MergePolicies(policies1, policies2 []models.Policy) (mergedPolicies []models.Policy) {
-	policiesMap := make(map[models.Id]models.Policy, 0)
+	policiesMap := make(map[models.Id]models.Policy)
 	for idx, policy := range policies1 {
 		policiesMap[policy.Id] = policies1[idx]
 	}
 	for idx, policy := range policies2 {
 		policiesMap[policy.Id] = policies2[idx]
 	}
-	for id, _ := range policiesMap {
+	for id := range policiesMap {
 		mergedPolicies = append(mergedPolicies, policiesMap[id])
 	}
 

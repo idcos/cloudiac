@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package mail
 
@@ -6,10 +6,11 @@ import (
 	"cloudiac/configs"
 	"cloudiac/portal/consts/e"
 	"cloudiac/utils/logs"
-	"gopkg.in/gomail.v2"
 	"mime"
 	"net"
 	"strconv"
+
+	"gopkg.in/gomail.v2"
 )
 
 func SendMail(tos []string, subject, content string) e.Error {

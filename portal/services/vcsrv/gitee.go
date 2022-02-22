@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package vcsrv
 
@@ -84,7 +84,7 @@ func (gitee *giteeVcs) ListRepos(namespace, search string, limit, offset int) ([
 	_ = json.Unmarshal(body, &rep)
 
 	repoList := make([]RepoIface, 0)
-	for index, _ := range rep {
+	for index := range rep {
 		repoList = append(repoList, &giteeRepoIface{
 			vcs:        gitee.vcs,
 			repository: &rep[index],
@@ -185,10 +185,10 @@ func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 	var path string = gitee.vcs.Address
 	branch := getBranch(gitee, option.Ref)
 	if option.Path != "" {
-		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s",
+		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", //nolint
 			gitee.repository.FullName, option.Path, gitee.urlParam.Get("access_token"), branch)
 	} else {
-		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s",
+		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", //nolint
 			gitee.repository.FullName, "%2F", gitee.urlParam.Get("access_token"), branch)
 	}
 	_, body, er := giteeRequest(path, "GET", nil)
@@ -222,7 +222,7 @@ type giteeReadContent struct {
 func (gitee *giteeRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
 	pathAddr := gitee.vcs.Address +
 		fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", gitee.repository.FullName, path, gitee.urlParam.Get("access_token"), branch)
-	_, body, er := giteeRequest(pathAddr, "GET", nil)
+	_, body, er := giteeRequest(pathAddr, "GET", nil) //nolint
 
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)

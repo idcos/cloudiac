@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package db
 
@@ -23,6 +23,8 @@ import (
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
 )
+
+const DBCtxKeyLazySelects = "app:lazySelects"
 
 var (
 	defaultDB      *gorm.DB
@@ -146,6 +148,7 @@ func (s *Session) Expr() interface{} {
 }
 
 func (s *Session) Raw(sql string, values ...interface{}) *Session {
+	//nolint
 	// FIXME: gorm driver bugs
 	// gorm@v1.21.12~14: statement.go +204
 	//   subdb.Statement.Vars = stmt.Vars
@@ -207,15 +210,15 @@ func (s *Session) Omit(cols ...string) *Session {
 }
 
 func (s *Session) LazySelect(selectStat ...string) *Session {
-	return ToSess(s.db.Set("app:lazySelects", selectStat))
+	return ToSess(s.db.Set(DBCtxKeyLazySelects, selectStat))
 }
 
 func (s *Session) LazySelectAppend(selectStat ...string) *Session {
-	stats, ok := s.db.Get("app:lazySelects")
+	stats, ok := s.db.Get(DBCtxKeyLazySelects)
 	if ok {
-		return ToSess(s.db.Set("app:lazySelects", append(stats.([]string), selectStat...)))
+		return ToSess(s.db.Set(DBCtxKeyLazySelects, append(stats.([]string), selectStat...)))
 	} else {
-		return ToSess(s.db.Set("app:lazySelects", selectStat))
+		return ToSess(s.db.Set(DBCtxKeyLazySelects, selectStat))
 	}
 }
 
@@ -271,7 +274,7 @@ func (s *Session) Exists() (bool, error) {
 }
 
 func (s *Session) autoLazySelect() *Session {
-	selects, ok := s.db.Get("app:lazySelects")
+	selects, ok := s.db.Get(DBCtxKeyLazySelects)
 	if !ok {
 		return s
 	}

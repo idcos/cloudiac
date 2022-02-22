@@ -1,7 +1,10 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package notificationrc
 
 import (
 	"encoding/json"
+
 	"github.com/unliar/utils/go/http"
 )
 

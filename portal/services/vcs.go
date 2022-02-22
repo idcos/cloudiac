@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -31,7 +31,7 @@ func UpdateVcs(tx *db.Session, id models.Id, attrs models.Attrs) (vcs *models.Vc
 	vcs = &models.Vcs{}
 	if _, err := models.UpdateAttr(tx.Where("id = ?", id), &models.Vcs{}, attrs); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("update vcs error: %v", err))
-	}
+	} //nolint
 	if err := tx.Where("id = ?", id).First(vcs); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("query vcs error: %v", err))
 	}

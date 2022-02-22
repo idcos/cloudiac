@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package policy
 
 import (
@@ -9,15 +11,16 @@ import (
 	"cloudiac/utils"
 	"encoding/json"
 	"fmt"
-	"github.com/mitchellh/go-homedir"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -69,17 +72,6 @@ func (s *Scanner) Run() error {
 		err error
 	)
 
-	if s.SaveResult {
-		s.Db = s.Db.Begin()
-
-		defer func() {
-			if r := recover(); r != nil {
-				_ = s.Db.Rollback()
-				panic(r)
-			}
-		}()
-	}
-
 	if err = s.Prepare(); err != nil {
 		return err
 	}
@@ -98,14 +90,17 @@ func (s *Scanner) Run() error {
 	}
 
 	if s.SaveResult {
-		if err != nil {
+		s.Db = s.Db.Begin()
+		defer func() {
+			if r := recover(); r != nil {
+				_ = s.Db.Rollback()
+				panic(r)
+			}
+		}()
+
+		if err = s.Db.Commit(); err != nil {
 			_ = s.Db.Rollback()
 			return e.New(e.DBError, err)
-		} else {
-			if err = s.Db.Commit(); err != nil {
-				_ = s.Db.Rollback()
-				return e.New(e.DBError, err)
-			}
 		}
 	}
 
@@ -180,13 +175,14 @@ func (s *Scanner) ScanResource(resource Resource) error {
 		cmdline := s.genScanInit(&resource)
 		cmd := exec.Command("sh", "-c", cmdline)
 		output, err := cmd.CombinedOutput()
-		s.Logfp.Write(output)
+		_, _ = s.Logfp.Write(output)
 		if err != nil {
 			return fmt.Errorf("checkout error %v, output %s", err, output)
 		}
 	}
 
 	var errExit error
+
 	if s.Internal {
 		if errExit = s.RunInternalScan(resource); errExit != nil && !errors.Is(errExit, ErrScanExitViolated) {
 			task.PolicyStatus = common.PolicyStatusFailed
@@ -194,41 +190,15 @@ func (s *Scanner) ScanResource(resource Resource) error {
 		}
 	} else {
 		if err := s.RunScan(resource); err != nil {
-			defer s.handleScanError(&task, err)
-			code, err := utils.CmdGetCode(err)
-			if err != nil {
-				return err
-			}
-			switch code {
-			case 3:
-				task.PolicyStatus = common.PolicyStatusViolated
-			case 0:
-				task.PolicyStatus = common.PolicyStatusPassed
-			case 1:
-				task.PolicyStatus = common.PolicyStatusFailed
-				return err
-			default:
-				task.PolicyStatus = common.PolicyStatusFailed
+			if task.PolicyStatus, err = ParsePolicyStatusFromCmdCode(err); err != nil {
 				return err
 			}
 		}
 	}
 
-	bs, err := os.ReadFile(s.GetResultPath(resource))
-	if err != nil {
+	// 附加源码
+	if _, err := PopulateViolateSource(s, resource, &task); err != nil {
 		return err
-	}
-
-	var tfResultJson *TsResultJson
-	if tfResultJson, err = UnmarshalTfResultJson(bs); err != nil {
-		return err
-	}
-
-	if len(tfResultJson.Results.Violations) > 0 {
-		// 附加源码
-		if tfResultJson, err = PopulateViolateSource(s, resource, &task, tfResultJson); err != nil {
-			return err
-		}
 	}
 
 	//if s.SaveResult {
@@ -240,24 +210,42 @@ func (s *Scanner) ScanResource(resource Resource) error {
 	return errExit
 }
 
+func ParsePolicyStatusFromCmdCode(err error) (string, error) {
+	code, err := utils.CmdGetCode(err)
+	if err != nil {
+		return "", err
+	}
+	switch code {
+	case 3:
+		return common.PolicyStatusViolated, nil
+	case 0:
+		return common.PolicyStatusPassed, nil
+	case 1:
+		fallthrough
+	default:
+		return common.PolicyStatusFailed, nil
+	}
+}
+
 func (s *Scanner) GetMessage(format string, data interface{}) string {
 	return utils.SprintTemplate(format, data)
 }
 
-func (s *Scanner) handleScanError(task *models.ScanTask, err error) error {
-	if s.SaveResult {
-		// 扫描出错的时候更新所有策略扫描结果为 failed
-		//emptyResult := TsResultJson{}
-		//if err := services.UpdateScanResult(s.Db, task, emptyResult.Results, task.PolicyStatus); err != nil {
-		//	return err
-		//}
-	}
+func (s *Scanner) handleScanError(task *models.ScanTask, err error) error { //nolint:unused
+	// if s.SaveResult {
+	// 扫描出错的时候更新所有策略扫描结果为 failed
+	//emptyResult := TsResultJson{}
+	//if err := services.UpdateScanResult(s.Db, task, emptyResult.Results, task.PolicyStatus); err != nil {
+	//	return err
+	//}
+	// }
 
-	return err
+	// return err
+	return nil
 }
 
 // TODO
-func (s *Scanner) genScanScript(res Resource) string {
+func (s *Scanner) genScanScript(res Resource) string { //nolint:unused
 	cmdlineTemplate := `
 cd {{.CodeDir}} && \
 mkdir -p ~/.terrascan/pkg/policies/opa/rego && \
@@ -365,7 +353,7 @@ func (s *Scanner) RunScan(resource Resource) error {
 
 func (s *Scanner) RunInternalScan(code Resource) error {
 	output := TsResultJson{}
-	output.Results.ScanSummary.ScannedAt = fmt.Sprintf("%s", time.Now().Format(time.RFC3339))
+	output.Results.ScanSummary.ScannedAt = time.Now().Format(time.RFC3339)
 	output.Results.ScanSummary.IacType = "terraform"
 	output.Results.ScanSummary.FileFolder = code.codeDir
 
@@ -374,10 +362,9 @@ func (s *Scanner) RunInternalScan(code Resource) error {
 		return err
 	}
 
-	inputResource := models.TfParse{}
-	inputContent, _ := ioutil.ReadFile(s.GetConfigPath(code))
-	if len(inputContent) > 0 {
-		_ = json.Unmarshal(inputContent, &inputResource)
+	inputResource, err := s.ReadInputFromJson(s.GetConfigPath(code))
+	if err != nil {
+		return err
 	}
 
 	violated := false
@@ -448,7 +435,7 @@ func (s *Scanner) RunInternalScan(code Resource) error {
 
 	if s.ResultFile != "" {
 		outputB, _ := json.Marshal(output)
-		if err := os.WriteFile(s.GetResultPath(code), outputB, 0644); err != nil {
+		if err := os.WriteFile(s.GetResultPath(code), outputB, 0644); err != nil { //nolint:gosec
 			return err
 		}
 	} else {
@@ -490,6 +477,16 @@ func (s *Scanner) ReadPolicies(policyDir string) ([]*PolicyWithMeta, error) {
 		ret = append(ret, policies...)
 	}
 	return ret, nil
+}
+
+func (s *Scanner) ReadInputFromJson(inputPath string) (models.TfParse, error) {
+	inputResource := models.TfParse{}
+	inputContent, _ := ioutil.ReadFile(inputPath)
+	if len(inputContent) > 0 {
+		_ = json.Unmarshal(inputContent, &inputResource)
+	}
+
+	return inputResource, nil
 }
 
 func (s *Scanner) Console(msg string) {

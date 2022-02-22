@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package services
 
 import (
@@ -80,104 +82,16 @@ func (t *TplImporter) ImportTemplates(tx *db.Session) e.Error {
 		"project_id", "template_id")
 
 	for i := range t.Data.Templates {
-		tpl, err := t.getTplFromExportData(t.Data.Templates[i])
-		if err != nil {
-			return e.AutoNew(err, e.InternalError)
-		}
-
-		if er := t.renameTplIf(tx, tpl); er != nil {
-			return er
-		}
-
-		dbTpl := models.Template{}
-		if err := QueryTemplate(tx.Unscoped().Where("id = ?", tpl.Id)).Find(&dbTpl); err != nil {
-			return e.AutoNew(err, e.DBError)
-		}
-
-		tplIdDuplicate := false
-		if dbTpl.Id != "" {
-			tplIdDuplicate = true
-			if t.WhenIdDuplicate == "update" && t.OrgId != dbTpl.OrgId {
-				return e.New(e.ImportUpdateOrgId)
-			}
-		}
-
-		if tplIdDuplicate {
-			t.Logger.Debugf("template %s, id duplicate", tpl.Id)
-		}
-		if er := t.doImport(tx, tpl.Id, tpl, tplIdDuplicate); er != nil {
-			return er
-		}
-
-		//// 云模板跳过处理了，其关联关系及变量也就不需要处理
-		if tplIdDuplicate && t.WhenIdDuplicate == "skip" {
+		tpl := t.Data.Templates[i]
+		if skip, err := t.importExportedTpl(tx, i, tpl); err != nil {
+			return err
+		} else if skip {
 			continue
-		}
-
-		// 处理云模板变量
-		{
-			tplVars, er := SearchVariableByTemplateId(tx, tpl.Id)
-			if er != nil {
-				return er
-			}
-			tplVarsMap := make(map[string]models.Variable, len(tplVars))
-			for _, v := range tplVars {
-				tplVarsMap[fmt.Sprintf("%s/%s", v.Type, v.Name)] = v
-			}
-
-			vars := t.Data.Templates[i].Variables
-			for _, iVar := range vars {
-				v := t.getVarFromExportData(t.Data.Templates[i], iVar)
-				if !tplIdDuplicate || t.WhenIdDuplicate == "copy" {
-					if er := models.Create(tx, v); er != nil {
-						return e.AutoNew(er, e.DBError)
-					}
-					t.addCount("created", v)
-				} else {
-					// update
-					dbVar, varDuplicate := tplVarsMap[fmt.Sprintf("%s/%s", v.Type, v.Name)]
-					if varDuplicate {
-						v.Id = dbVar.Id
-						if _, err := models.UpdateModelAll(tx, v); err != nil {
-							return e.AutoNew(err, e.DBError)
-						}
-						t.addCount("updated", v)
-					} else {
-						if er := models.Create(tx, v); er != nil {
-							return e.AutoNew(err, e.DBError)
-						}
-						t.addCount("created", v)
-					}
-				}
-			}
-		}
-
-		// 处理云模板关联的变量组
-		{
-			vgIds := t.Data.Templates[i].VarGroupIds
-			importedVgIds := make([]models.Id, 0, len(vgIds))
-			for _, id := range vgIds {
-				importedVgIds = append(importedVgIds, t.getImportedId(id.String()))
-			}
-
-			if !tplIdDuplicate || t.WhenIdDuplicate == "copy" {
-				if er := BatchUpdateRelationship(tx, importedVgIds, nil, consts.ScopeTemplate, tpl.Id.String()); er != nil {
-					return er
-				}
-			} else { // update
-				// 选择 update 策略时，会删除所有己关联的变量组，然后重新导入关联关系
-				if er := DeleteVarGroupRel(tx, consts.ScopeTemplate, tpl.Id); er != nil {
-					return er
-				}
-				if er := BatchUpdateRelationship(tx, importedVgIds, nil, consts.ScopeTemplate, tpl.Id.String()); er != nil {
-					return er
-				}
-			}
 		}
 
 		// 处理云模板与项目的关联
 		for _, pid := range t.ProjectIds {
-			bs.MustAddRow(pid, t.getImportedId(tpl.Id.String()))
+			bs.MustAddRow(pid, t.getImportedId(tpl.Id))
 		}
 	}
 
@@ -185,6 +99,118 @@ func (t *TplImporter) ImportTemplates(tx *db.Session) e.Error {
 		sql, args := bs.Next()
 		if _, err := tx.Exec(sql, args...); err != nil {
 			return e.AutoNew(err, e.DBError)
+		}
+	}
+	return nil
+}
+
+// importExportedTpl
+func (t *TplImporter) importExportedTpl(tx *db.Session, i int, exportedTpl exportedTpl) (skip bool, er e.Error) {
+	tpl, err := t.getTplFromExportData(exportedTpl)
+	if err != nil {
+		return false, e.AutoNew(err, e.InternalError)
+	}
+
+	if er := t.renameTplIf(tx, tpl); er != nil {
+		return false, er
+	}
+
+	dbTpl := models.Template{}
+	if err := QueryTemplate(tx.Unscoped().Where("id = ?", tpl.Id)).Find(&dbTpl); err != nil {
+		return false, e.AutoNew(err, e.DBError)
+	}
+
+	tplIdDuplicate := false
+	if dbTpl.Id != "" {
+		tplIdDuplicate = true
+		if t.WhenIdDuplicate == "update" && t.OrgId != dbTpl.OrgId {
+			return false, e.New(e.ImportUpdateOrgId)
+		}
+	}
+
+	if tplIdDuplicate {
+		t.Logger.Debugf("template %s, id duplicate", tpl.Id)
+	}
+	if er := t.doImport(tx, tpl.Id, tpl, tplIdDuplicate); er != nil {
+		return false, er
+	}
+
+	//// 云模板跳过处理了，其关联关系及变量也就不需要处理
+	if tplIdDuplicate && t.WhenIdDuplicate == "skip" {
+		return true, nil
+	}
+
+	// 处理云模板变量
+	er1 := t.processTplVars(tx, tpl, i, tplIdDuplicate)
+	if er1 != nil {
+		return false, er1
+	}
+
+	// 处理云模板关联的变量组
+	if err := t.processTplVarsGroup(i, tplIdDuplicate, tx, tpl); err != nil {
+		return false, err
+	}
+
+	return false, nil
+}
+
+func (t *TplImporter) processTplVarsGroup(i int, tplIdDuplicate bool, tx *db.Session, tpl *models.Template) e.Error {
+	vgIds := t.Data.Templates[i].VarGroupIds
+	importedVgIds := make([]models.Id, 0, len(vgIds))
+	for _, id := range vgIds {
+		importedVgIds = append(importedVgIds, t.getImportedId(id.String()))
+	}
+
+	if !tplIdDuplicate || t.WhenIdDuplicate == "copy" {
+		if er := BatchUpdateRelationship(tx, importedVgIds, nil, consts.ScopeTemplate, tpl.Id.String()); er != nil {
+			return er
+		}
+	} else { // update
+		// 选择 update 策略时，会删除所有己关联的变量组，然后重新导入关联关系
+		if er := DeleteVarGroupRel(tx, consts.ScopeTemplate, tpl.Id); er != nil {
+			return er
+		}
+		if er := BatchUpdateRelationship(tx, importedVgIds, nil, consts.ScopeTemplate, tpl.Id.String()); er != nil {
+			return er
+		}
+	}
+	return nil
+}
+
+// 处理云模版变量
+func (t *TplImporter) processTplVars(tx *db.Session, tpl *models.Template, i int, tplIdDuplicate bool) e.Error {
+	tplVars, er := SearchVariableByTemplateId(tx, tpl.Id)
+	if er != nil {
+		return er
+	}
+	tplVarsMap := make(map[string]models.Variable, len(tplVars))
+	for _, v := range tplVars {
+		tplVarsMap[fmt.Sprintf("%s/%s", v.Type, v.Name)] = v
+	}
+
+	vars := t.Data.Templates[i].Variables
+	for _, iVar := range vars {
+		v := t.getVarFromExportData(t.Data.Templates[i], iVar)
+		if !tplIdDuplicate || t.WhenIdDuplicate == "copy" {
+			if er := models.Create(tx, v); er != nil {
+				return e.AutoNew(er, e.DBError)
+			}
+			t.addCount("created", v)
+		} else {
+			// update
+			dbVar, varDuplicate := tplVarsMap[fmt.Sprintf("%s/%s", v.Type, v.Name)]
+			if varDuplicate {
+				v.Id = dbVar.Id
+				if _, err := models.UpdateModelAll(tx, v); err != nil {
+					return e.AutoNew(err, e.DBError)
+				}
+				t.addCount("updated", v)
+			} else {
+				if er := models.Create(tx, v); er != nil {
+					return e.AutoNew(er, e.DBError)
+				}
+				t.addCount("created", v)
+			}
 		}
 	}
 	return nil

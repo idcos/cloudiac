@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package policy
 
 import (
@@ -6,7 +8,7 @@ import (
 	"testing"
 )
 
-func Test_getGitUrl1(t *testing.T) {
+func TestGetGitUrl1(t *testing.T) {
 	type args struct {
 		repoAddr string
 		token    string
@@ -43,7 +45,7 @@ func Test_getGitUrl1(t *testing.T) {
 	}
 }
 
-func Test_parseMeta(t *testing.T) {
+func TestParseMeta(t *testing.T) {
 	type args struct {
 		meta string
 		rego string
@@ -109,19 +111,19 @@ func Test_parseMeta(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			metaFileName := tt.name + "meta.json"
+			if tt.args.meta != "" {
+				writeFile(tt.args.meta, metaFileName)
+				defer os.Remove(metaFileName)
+			} else {
+				metaFileName = ""
+			}
+
 			policyFileName := tt.name + "policy.rego"
 			writeFile(tt.args.rego, policyFileName)
 			defer os.Remove(policyFileName)
-			if tt.args.meta == "" {
-				if _, got := ParseMeta(policyFileName, ""); (got == nil && tt.want != 0) || (got != nil && got.Code() != tt.want) {
-					t.Errorf("parseMeta() = %v, want %v", got, tt.want)
-				}
-			} else {
-				writeFile(tt.args.meta, metaFileName)
-				defer os.Remove(metaFileName)
-				if _, got := ParseMeta(policyFileName, metaFileName); (got == nil && tt.want != 0) || (got != nil && got.Code() != tt.want) {
-					t.Errorf("parseMeta() = %v, want %v", got, tt.want)
-				}
+
+			if _, got := ParseMeta(policyFileName, metaFileName); (got == nil && tt.want != 0) || (got != nil && got.Code() != tt.want) {
+				t.Errorf("parseMeta() = %v, want %v", got, tt.want)
 			}
 		})
 	}

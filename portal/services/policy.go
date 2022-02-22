@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -133,14 +133,14 @@ func GetValidPolicies(query *db.Session, tplId, envId models.Id) (validPolicies 
 		if enabled, err = IsTemplateEnabledScan(query, tplId); err != nil {
 			return
 		}
-		if enabled {
-			if policies, err = GetPoliciesByTemplateId(query, tplId); err != nil {
-				return
-			}
-			if validPolicies, suppressedPolicies, err = FilterSuppressPolicies(query, policies, tplId, consts.ScopeTemplate); err != nil {
-				return
-			}
+		if !enabled {
+			return
 		}
+
+		if policies, err = GetPoliciesByTemplateId(query, tplId); err != nil {
+			return
+		}
+		validPolicies, suppressedPolicies, err = FilterSuppressPolicies(query, policies, tplId, consts.ScopeTemplate)
 		return
 	}
 
@@ -148,16 +148,15 @@ func GetValidPolicies(query *db.Session, tplId, envId models.Id) (validPolicies 
 	if enabled, err = IsEnvEnabledScan(query, envId); err != nil {
 		return
 	}
-	if enabled {
-		if policies, err = GetPoliciesByEnvId(query, envId); err != nil {
-			return
-		}
-
-		if validPolicies, suppressedPolicies, err = FilterSuppressPolicies(query, policies, envId, consts.ScopeEnv); err != nil {
-			return
-		}
+	if !enabled {
+		return
 	}
 
+	if policies, err = GetPoliciesByEnvId(query, envId); err != nil {
+		return
+	}
+
+	validPolicies, suppressedPolicies, err = FilterSuppressPolicies(query, policies, envId, consts.ScopeEnv)
 	return
 }
 
@@ -195,22 +194,14 @@ func GetPoliciesByTemplateId(query *db.Session, tplId models.Id) ([]models.Polic
 	return policies, nil
 }
 
-func UpdatePolicy(tx *db.Session, policy *models.Policy, attr models.Attrs) (int64, e.Error) {
+func UpdatePolicy(tx *db.Session, policy *models.Policy, attr models.Attrs) e.Error {
 	affected, err := models.UpdateAttr(tx, policy, attr)
 	if err != nil {
 		if e.IsDuplicate(err) {
-			return affected, e.New(e.PolicyGroupAlreadyExist, err)
+			return e.New(e.PolicyGroupAlreadyExist, err)
+		} else if int(affected) != len(attr) {
+			return e.New(e.DBError, err)
 		}
-		return affected, e.AutoNew(err, e.DBError)
-	}
-	return affected, nil
-}
-
-//RemovePoliciesGroupRelation 移除策略组和策略的关系
-func RemovePoliciesGroupRelation(tx *db.Session, groupId models.Id) e.Error {
-	if _, err := UpdatePolicy(tx.Where("group_id = ?", groupId),
-		&models.Policy{}, models.Attrs{"group_id": ""}); err != nil {
-		return err
 	}
 	return nil
 }
@@ -326,7 +317,7 @@ func SearchPolicyEnv(dbSess *db.Session, userId, orgId, projectId, envId models.
 		Order("org.created_at desc, project.created_at desc, iac_env.created_at desc")
 }
 
-func EnvOfPolicy(dbSess *db.Session, form *forms.EnvOfPolicyForm, orgId, projectId models.Id) *db.Session {
+func EnvOfPolicy(dbSess *db.Session, form *forms.EnvOfPolicyForm, orgId, projectId models.Id) *db.Session { //nolint:dupl
 	pTable := models.Policy{}.TableName()
 	query := dbSess.Table(pTable).Joins(fmt.Sprintf("left join %s as pg on pg.id = %s.group_id",
 		models.PolicyGroup{}.TableName(), pTable)).LazySelectAppend("pg.name as group_name, pg.id as group_id")
@@ -350,7 +341,7 @@ func EnvOfPolicy(dbSess *db.Session, form *forms.EnvOfPolicyForm, orgId, project
 	return query.LazySelectAppend(fmt.Sprintf("env.name as env_name, %s.*", pTable))
 }
 
-func TplOfPolicy(dbSess *db.Session, form *forms.TplOfPolicyForm, orgId, projectId models.Id) *db.Session {
+func TplOfPolicy(dbSess *db.Session, form *forms.TplOfPolicyForm, orgId, projectId models.Id) *db.Session { //nolint:dupl
 	pTable := models.Policy{}.TableName()
 	query := dbSess.Table(pTable).Joins(fmt.Sprintf("left join %s as pg on pg.id = %s.group_id",
 		models.PolicyGroup{}.TableName(), pTable)).LazySelectAppend("pg.name as group_name, pg.id as group_id")
@@ -414,7 +405,7 @@ type PolicyScanSummary struct {
 }
 
 // PolicySummary 获取策略/策略组/任务执行结果
-func PolicySummary(query *db.Session, ids []models.Id, scope string, orgId models.Id) ([]*PolicyScanSummary, e.Error) {
+func PolicySummary(query *db.Session, ids []models.Id, scope string, orgId models.Id) ([]*PolicyScanSummary, e.Error) { //nolint:cyclo
 	var key string
 	switch scope {
 	case consts.ScopePolicy:

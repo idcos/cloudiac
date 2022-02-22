@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package models
 
 import (
@@ -62,6 +64,10 @@ type TaskStep struct {
 
 func (TaskStep) TableName() string {
 	return "iac_task_step"
+}
+
+func (s TaskStep) String() string {
+	return fmt.Sprintf("%s(%d)", s.Type, s.Index)
 }
 
 func (t *TaskStep) Migrate(sess *db.Session) (err error) {

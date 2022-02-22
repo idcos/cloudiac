@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -59,7 +59,7 @@ func UpdateToken(tx *db.Session, id models.Id, attrs models.Attrs) (token *model
 			return nil, e.New(e.TokenAliasDuplicate)
 		}
 		return nil, e.New(e.DBError, fmt.Errorf("update token error: %v", err))
-	}
+	} //nolint
 	if err := tx.Where("id = ?", id).First(token); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("query token error: %v", err))
 	}

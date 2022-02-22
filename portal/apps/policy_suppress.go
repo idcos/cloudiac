@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package apps
 
 import (
@@ -5,6 +7,7 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
@@ -45,43 +48,8 @@ func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppres
 	// 权限检查
 	//ids := append(form.RmSourceIds, form.AddSourceIds...)
 	for _, id := range form.AddSourceIds {
-		if strings.HasPrefix(string(id), "env-") {
-			env, err := services.GetEnvById(tx, id)
-			if err != nil {
-				_ = tx.Rollback()
-				if err.Code() == e.EnvNotExists {
-					return nil, e.New(err.Code(), err, http.StatusBadRequest)
-				}
-				return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-			}
-
-			if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, env.OrgId, consts.OrgRoleAdmin) &&
-				!services.UserHasProjectRole(c.UserId, env.OrgId, env.ProjectId, "") {
-				_ = tx.Rollback()
-				return nil, e.New(e.EnvNotExists, fmt.Errorf("cannot access env %s", id), http.StatusForbidden)
-			}
-		} else if strings.HasPrefix(string(id), "tpl-") {
-			tpl, err := services.GetTemplateById(tx, id)
-			if err != nil {
-				_ = tx.Rollback()
-				if err.Code() == e.TemplateNotExists {
-					return nil, e.New(err.Code(), err, http.StatusBadRequest)
-				}
-				return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-			}
-			if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, tpl.OrgId, "") {
-				_ = tx.Rollback()
-				return nil, e.New(e.TemplateNotExists, fmt.Errorf("cannot access tpl %s", id), http.StatusForbidden)
-			}
-		} else if strings.HasPrefix(string(id), "po-") {
-			_, err := services.GetPolicyById(tx, id, c.OrgId)
-			if err != nil {
-				_ = tx.Rollback()
-				if err.Code() == e.PolicyNotExist {
-					return nil, e.New(err.Code(), err, http.StatusBadRequest)
-				}
-				return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-			}
+		if err := AllowAccessResource(tx, c, id); err != nil {
+			return nil, err
 		}
 	}
 
@@ -206,6 +174,48 @@ func DeletePolicySuppress(c *ctx.ServiceContext, form *forms.DeletePolicySuppres
 	}
 
 	return nil, nil
+}
+
+func AllowAccessResource(tx *db.Session, c *ctx.ServiceContext, id models.Id) e.Error {
+	if strings.HasPrefix(string(id), "env-") {
+		env, err := services.GetEnvById(tx, id)
+		if err != nil {
+			_ = tx.Rollback()
+			if err.Code() == e.EnvNotExists {
+				return e.New(err.Code(), err, http.StatusBadRequest)
+			}
+			return e.New(e.DBError, err, http.StatusInternalServerError)
+		}
+
+		if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, env.OrgId, consts.OrgRoleAdmin) &&
+			!services.UserHasProjectRole(c.UserId, env.OrgId, env.ProjectId, "") {
+			_ = tx.Rollback()
+			return e.New(e.EnvNotExists, fmt.Errorf("cannot access env %s", id), http.StatusForbidden)
+		}
+	} else if strings.HasPrefix(string(id), "tpl-") {
+		tpl, err := services.GetTemplateById(tx, id)
+		if err != nil {
+			_ = tx.Rollback()
+			if err.Code() == e.TemplateNotExists {
+				return e.New(err.Code(), err, http.StatusBadRequest)
+			}
+			return e.New(e.DBError, err, http.StatusInternalServerError)
+		}
+		if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, tpl.OrgId, "") {
+			_ = tx.Rollback()
+			return e.New(e.TemplateNotExists, fmt.Errorf("cannot access tpl %s", id), http.StatusForbidden)
+		}
+	} else if strings.HasPrefix(string(id), "po-") {
+		_, err := services.GetPolicyById(tx, id, c.OrgId)
+		if err != nil {
+			_ = tx.Rollback()
+			if err.Code() == e.PolicyNotExist {
+				return e.New(err.Code(), err, http.StatusBadRequest)
+			}
+			return e.New(e.DBError, err, http.StatusInternalServerError)
+		}
+	}
+	return nil
 }
 
 type PolicySuppressSourceResp struct {
