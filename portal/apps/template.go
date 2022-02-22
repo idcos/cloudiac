@@ -498,8 +498,7 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 	if err != nil {
 		return nil, err
 	}
-
-	if len(tplIdList) == 0 {
+	if c.ProjectId != "" && len(tplIdList) == 0 {
 		return getEmptyListResult(form)
 	}
 
