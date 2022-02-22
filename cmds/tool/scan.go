@@ -318,7 +318,7 @@ func ParseTfplan(planJsonFile string, planOutputFile string) error {
 	if planOutputFile == "" {
 		fmt.Printf("%s\n", output)
 	} else {
-		err = ioutil.WriteFile(planOutputFile, output, 0644)
+		err = ioutil.WriteFile(planOutputFile, output, 0644) //nolint:gosec
 		if err != nil {
 			return err
 		}

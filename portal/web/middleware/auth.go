@@ -116,7 +116,6 @@ func Auth(c *ctx.GinRequest) {
 		return
 	}
 	c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("not allow to access project")), http.StatusForbidden)
-	return
 }
 
 // AuthOrgId 验证组织ID是否有效

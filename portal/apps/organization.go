@@ -369,13 +369,13 @@ func checkInviteUser(c *ctx.ServiceContext, tx *db.Session, form *forms.InviteUs
 
 }
 
-func createInviteUser(c *ctx.ServiceContext, tx *db.Session, form *forms.InviteUserForm, user *models.User, initPass string) (bool, e.Error) {
+func createInviteUser(c *ctx.ServiceContext, tx *db.Session, form *forms.InviteUserForm, user *models.User, initPass string) (*models.User, bool, e.Error) {
 	isNew := false
 
 	hashedPassword, err := services.HashPassword(initPass)
 	if err != nil {
 		c.Logger().Errorf("error hash password, err %s", err)
-		return isNew, err
+		return user, isNew, err
 	}
 	if user == nil {
 		user, err = services.CreateUser(tx, models.User{
@@ -385,16 +385,16 @@ func createInviteUser(c *ctx.ServiceContext, tx *db.Session, form *forms.InviteU
 			Phone:    form.Phone,
 		})
 		if err != nil && err.Code() == e.UserAlreadyExists {
-			return isNew, e.New(err.Code(), err, http.StatusBadRequest)
+			return user, isNew, e.New(err.Code(), err, http.StatusBadRequest)
 		} else if err != nil {
 			_ = tx.Rollback()
 			c.Logger().Errorf("error create user, err %s", err)
-			return isNew, err
+			return user, isNew, err
 		}
 		isNew = true
 	}
 
-	return isNew, nil
+	return user, isNew, nil
 }
 
 func createInviteUserOrgRel(c *ctx.ServiceContext, tx *db.Session, form *forms.InviteUserForm, user *models.User, isNew bool) e.Error {
@@ -454,7 +454,7 @@ func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*models.User
 	}
 
 	initPass := utils.GenPasswd(6, "mix")
-	isNew, err := createInviteUser(c, tx, form, user, initPass)
+	user, isNew, err := createInviteUser(c, tx, form, user, initPass)
 	if err != nil {
 		return nil, err
 	}

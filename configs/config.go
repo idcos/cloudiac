@@ -3,7 +3,7 @@
 package configs
 
 import (
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -119,7 +119,9 @@ type Config struct {
 }
 
 const (
-	defaultExportSecretKey = "rIhfbOpPsZHTdDA1yLJOxYNxCTFgTEuh"
+	// 云模板等资源导出使用的默认加解密密钥，一般情况下不需要修改
+	// 如果用户需要进一步加强安全性，可以通过配置 ExportSecretKey 环境变量修改该值
+	defaultExportSecretKey = "rIhfbOpPsZHTdDA1yLJOxYNxCTFgTEuh" //nolint:gosec
 )
 
 var (
@@ -195,7 +197,7 @@ func ensureSecretKey(cfg *Config) error {
 	}
 	// 如果 SecretKey 不是 32 位字符则使用 md5 转为 32 位
 	if len(cfg.SecretKey) != 32 {
-		hash := md5.New()
+		hash := md5.New() //nolint:gosec
 		hash.Write([]byte(cfg.SecretKey))
 		cfg.SecretKey = fmt.Sprintf("%x", hash.Sum(nil))
 	}

@@ -646,46 +646,96 @@ type PolicyResult struct {
 	Rego            string `json:"rego" example:""` //rego 代码文件内容
 }
 
+func checkScopeEnabled(query *db.Session, scope string, id models.Id) (bool, e.Error) {
+
+	if scope == consts.ScopeEnv {
+		return services.IsEnvEnabledScan(query, id)
+	} else if scope == consts.ScopeTemplate {
+		return services.IsTemplateEnabledScan(query, id)
+	} else {
+		return false, e.New(e.BadParam, fmt.Errorf("unknown policy scan result scope '%s'", scope))
+	}
+}
+
+func getLastScanTaskByScope(query *db.Session, scope string, id models.Id) (*models.ScanTask, e.Error) {
+	scanTask, err := services.GetLastScanTaskByScope(query, scope, id)
+	if err != nil {
+		if e.IsRecordNotFound(err) {
+			if scope == consts.ScopeEnv {
+				return nil, e.AutoNew(err, e.EnvNotExists)
+			} else if scope == consts.ScopeTemplate {
+				return nil, e.AutoNew(err, e.TemplateNotExists)
+			}
+		}
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return scanTask, nil
+}
+
+func getScanTaskVarious(query *db.Session, taskId models.Id, scope string, id models.Id) (*models.ScanTask, e.Error) {
+	if taskId != "" {
+		scanTask, err := services.GetScanTaskById(query, taskId)
+		if err != nil {
+			if err.Code() == e.TaskNotExists {
+				return nil, e.AutoNew(err, e.ObjectNotExists)
+			}
+			return nil, e.AutoNew(err, e.DBError)
+		}
+		return scanTask, nil
+	} else {
+		scanTask, err := getLastScanTaskByScope(query, scope, id)
+		if err != nil {
+			if err.Code() == e.EnvNotExists || err.Code() == e.TemplateNotExists {
+				return nil, e.AutoNew(err, e.ObjectNotExists)
+			}
+			return nil, e.AutoNew(err, e.DBError)
+		}
+		return scanTask, nil
+	}
+}
+
+func groupByGroup(results []PolicyResult) []*PolicyResultGroup {
+	lastGroup := &PolicyResultGroup{}
+	var resultGroups []*PolicyResultGroup
+	for i, r := range results {
+		if lastGroup.Name != r.PolicyGroupName {
+			lastGroup = &PolicyResultGroup{
+				Id:   r.PolicyGroupId,
+				Name: r.PolicyGroupName,
+			}
+			resultGroups = append(resultGroups, lastGroup)
+		}
+		lastGroup.List = append(lastGroup.List, results[i])
+		switch r.Status {
+		case common.PolicyStatusPassed:
+			lastGroup.Summary.Passed++
+		case common.PolicyStatusViolated:
+			lastGroup.Summary.Violated++
+		case common.PolicyStatusFailed:
+			lastGroup.Summary.Failed++
+		case common.PolicyStatusSuppressed:
+			lastGroup.Summary.Suppressed++
+		}
+	}
+	return resultGroups
+}
+
 func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicyScanResultForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("scan result for %s:%s %s", scope, form.Id, form.TaskId))
 
 	query := services.QueryWithOrgId(c.DB(), c.OrgId)
 
-	var (
-		scanTask     *models.ScanTask
-		policyEnable bool
-		err          error
-	)
-
-	if scope == consts.ScopeEnv {
-		policyEnable, _ = services.IsEnvEnabledScan(query, form.Id)
-	} else if scope == consts.ScopeTemplate {
-		policyEnable, _ = services.IsTemplateEnabledScan(query, form.Id)
-	} else {
-		return nil, e.New(e.BadParam, fmt.Errorf("unknown policy scan result scope '%s'", scope))
-	}
-
-	if form.TaskId != "" {
-		var er e.Error
-		scanTask, er = services.GetScanTaskById(query, form.TaskId)
-		if er != nil {
-			if er.Code() == e.TaskNotExists {
-				return ScanResultPageResp{
-					PolicyStatus: services.MergeScanResultPolicyStatus(policyEnable, nil),
-				}, nil
+	policyEnable, _ := checkScopeEnabled(query, scope, form.Id)
+	scanTask, err := getScanTaskVarious(query, form.TaskId, scope, form.Id)
+	if err != nil {
+		if err.Code() == e.ObjectNotExists {
+			// 默认返回空列表
+			emptyResult := ScanResultPageResp{
+				PolicyStatus: services.MergeScanResultPolicyStatus(policyEnable, nil),
 			}
-			return nil, e.AutoNew(er, e.DBError)
+			return emptyResult, nil
 		}
-	} else {
-		scanTask, err = services.GetLastScanTaskByScope(query, scope, form.Id)
-		if err != nil {
-			if e.IsRecordNotFound(err) {
-				return ScanResultPageResp{
-					PolicyStatus: services.MergeScanResultPolicyStatus(policyEnable, nil),
-				}, nil
-			}
-			return nil, e.AutoNew(err, e.DBError)
-		}
+		return nil, err
 	}
 
 	// 如果正在扫描中，返回空列表
@@ -715,28 +765,7 @@ func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicySca
 	}
 
 	// 按策略组分组
-	lastGroup := &PolicyResultGroup{}
-	var resultGroups []*PolicyResultGroup
-	for i, r := range results {
-		if lastGroup.Name != r.PolicyGroupName {
-			lastGroup = &PolicyResultGroup{
-				Id:   r.PolicyGroupId,
-				Name: r.PolicyGroupName,
-			}
-			resultGroups = append(resultGroups, lastGroup)
-		}
-		lastGroup.List = append(lastGroup.List, results[i])
-		switch r.Status {
-		case common.PolicyStatusPassed:
-			lastGroup.Summary.Passed++
-		case common.PolicyStatusViolated:
-			lastGroup.Summary.Violated++
-		case common.PolicyStatusFailed:
-			lastGroup.Summary.Failed++
-		case common.PolicyStatusSuppressed:
-			lastGroup.Summary.Suppressed++
-		}
-	}
+	resultGroups := groupByGroup(results)
 
 	return ScanResultPageResp{
 		PolicyStatus: services.MergeScanResultPolicyStatus(policyEnable, scanTask),
@@ -773,7 +802,7 @@ type PolicyScanReportResp struct {
 	PolicyPassedRate PolylinePercent `json:"policyPassedRate"` // 检测通过率趋势
 }
 
-func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (*PolicyScanReportResp, e.Error) {
+func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (*PolicyScanReportResp, e.Error) { //nolint:cyclop
 	if !form.HasKey("showCount") {
 		// 默认展示最近五个
 		form.ShowCount = 5
@@ -977,7 +1006,7 @@ type PolicySummaryResp struct {
 	PolicyGroupViolated PieChar `json:"policyGroupViolated"` // 策略组不通过
 }
 
-func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) {
+func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) { //nolint:cyclop
 	// 策略概览
 	// 默认统计时间范围：最近15天
 	// 1. 活跃策略
@@ -1245,9 +1274,9 @@ func policiesUpsert(tx *db.Session, userId models.Id, orgId models.Id, policyGro
 	return nil
 }
 
-func PolicyTargetSummaryTpl(respPolicyTpls []*RespPolicyTpl, summaries []*services.PolicyScanSummary) []*RespPolicyTpl {
+func PolicyTargetSummaryTpl(respPolicyTpls []*RespPolicyTpl, summaries []*services.PolicyScanSummary) []*RespPolicyTpl { //nolint:dupl
 	if len(summaries) > 0 {
-		sumMap := make(map[string]*services.PolicyScanSummary, 0)
+		sumMap := make(map[string]*services.PolicyScanSummary)
 		for idx, summary := range summaries {
 			sumMap[string(summary.Id)+summary.Status] = summaries[idx]
 		}
@@ -1270,9 +1299,9 @@ func PolicyTargetSummaryTpl(respPolicyTpls []*RespPolicyTpl, summaries []*servic
 	return respPolicyTpls
 }
 
-func PolicyTargetSummaryEnv(respPolicyEnvs []*RespPolicyEnv, summaries []*services.PolicyScanSummary) []*RespPolicyEnv {
+func PolicyTargetSummaryEnv(respPolicyEnvs []*RespPolicyEnv, summaries []*services.PolicyScanSummary) []*RespPolicyEnv { //nolint:dupl
 	if len(summaries) > 0 {
-		sumMap := make(map[string]*services.PolicyScanSummary, 0)
+		sumMap := make(map[string]*services.PolicyScanSummary)
 		for idx, summary := range summaries {
 			sumMap[string(summary.Id)+summary.Status] = summaries[idx]
 		}

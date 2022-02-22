@@ -32,8 +32,8 @@ var (
 )
 
 var (
-	emailSubjectResetPassword = "密码重置通知【CloudIaC】"
-	emailBodyResetPassword    = "尊敬的 {{.Name}}：\n\n您的密码已经被重置，这是您的新密码：\n\n密码：\t{{.InitPass}}\n\n请使用新密码登陆系统。\n\n为了保障您的安全，请立即登陆您的账号并修改密码。"
+	emailSubjectResetPassword = "密码重置通知【CloudIaC】"                                                                                      //nolint:gosec
+	emailBodyResetPassword    = "尊敬的 {{.Name}}：\n\n您的密码已经被重置，这是您的新密码：\n\n密码：\t{{.InitPass}}\n\n请使用新密码登陆系统。\n\n为了保障您的安全，请立即登陆您的账号并修改密码。" //nolint:gosec
 )
 
 func createUserOrgRel(tx *db.Session, orgId models.Id, initPass string, form *forms.CreateUserForm, lg logs.Logger) (*models.User, e.Error) {
@@ -125,13 +125,13 @@ func CreateUser(c *ctx.ServiceContext, form *forms.CreateUserForm) (*CreateUserR
 	return &resp, nil
 }
 
-func queryUserOrg(db, query *db.Session, orgId models.Id, isSuperAdmin bool, exclude string) e.Error {
+func queryUserOrg(db, query *db.Session, orgId models.Id, isSuperAdmin bool, exclude string) (*db.Session, e.Error) {
 	if orgId == "" && !isSuperAdmin {
-		return e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest)
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest)
 	}
 
 	if orgId == "" {
-		return nil
+		return query, nil
 	}
 
 	userIds, _ := services.GetUserIdsByOrg(db, orgId)
@@ -139,23 +139,21 @@ func queryUserOrg(db, query *db.Session, orgId models.Id, isSuperAdmin bool, exc
 		// 排除组织已有用户
 		// 应只有平台管理员可以调用
 		if !isSuperAdmin {
-			return e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest)
+			return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusBadRequest)
 		}
 		rootIds, _ := services.GetRootUserIds(db)
 		userIds = append(userIds, rootIds...)
-		query = query.Where(fmt.Sprintf("%s.id not in (?)", models.User{}.TableName()), userIds)
+		return query.Where(fmt.Sprintf("%s.id not in (?)", models.User{}.TableName()), userIds), nil
 	} else {
 		// 查询组织所有用户
-		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+		return query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds), nil
 	}
-
-	return nil
 }
 
-func queryUserProject(db, query *db.Session, orgId, projectId models.Id, exclude string) e.Error {
+func queryUserProject(db, query *db.Session, orgId, projectId models.Id, exclude string) (*db.Session, e.Error) {
 
 	if projectId == "" {
-		return nil
+		return query, nil
 	}
 
 	userIds, _ := services.GetUserIdsByProject(db, projectId)
@@ -169,23 +167,21 @@ func queryUserProject(db, query *db.Session, orgId, projectId models.Id, exclude
 		excludeIds = append(excludeIds, rootIds...)
 
 		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), orgUserIds)
-		query = query.Where(fmt.Sprintf("%s.id not in (?)", models.User{}.TableName()), excludeIds)
+		return query.Where(fmt.Sprintf("%s.id not in (?)", models.User{}.TableName()), excludeIds), nil
 	} else {
-		query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+		return query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds), nil
 	}
-
-	return nil
 }
 
 // SearchUser 查询用户列表
 func SearchUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{}, e.Error) {
 	query := services.QueryUser(c.DB())
-	err := queryUserOrg(c.DB(), query, c.OrgId, c.IsSuperAdmin, form.Exclude)
+	query, err := queryUserOrg(c.DB(), query, c.OrgId, c.IsSuperAdmin, form.Exclude)
 	if err != nil {
 		return nil, err
 	}
 
-	err = queryUserProject(c.DB(), query, c.OrgId, c.ProjectId, form.Exclude)
+	query, err = queryUserProject(c.DB(), query, c.OrgId, c.ProjectId, form.Exclude)
 	if err != nil {
 		return nil, err
 	}
@@ -340,7 +336,7 @@ func ChangeUserStatus(c *ctx.ServiceContext, form *forms.DisableUserForm) (*mode
 	return user, nil
 }
 
-func queryByOrgAndProject(db, query *db.Session, userId, orgId, projectId, inputUserId models.Id, isSuperAdmin bool) e.Error {
+func queryByOrgAndProject(db, query *db.Session, userId, orgId, projectId, inputUserId models.Id, isSuperAdmin bool) (*db.Session, e.Error) {
 	if isSuperAdmin || userId == inputUserId {
 		// 管理员查询任意用户或自身查询
 	} else if orgId != "" {
@@ -349,24 +345,24 @@ func queryByOrgAndProject(db, query *db.Session, userId, orgId, projectId, input
 			if services.UserHasOrgRole(userId, orgId, consts.OrgRoleAdmin) ||
 				services.UserHasProjectRole(userId, orgId, projectId, "") {
 				userIds, _ := services.GetUserIdsByProject(db, projectId)
-				query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+				return query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds), nil
 			} else {
-				return e.New(e.PermissionDeny, fmt.Errorf("project permission required"), http.StatusForbidden)
+				return nil, e.New(e.PermissionDeny, fmt.Errorf("project permission required"), http.StatusForbidden)
 			}
 		} else {
 			// 查询组织用户
 			if services.UserHasOrgRole(userId, orgId, "") {
 				userIds, _ := services.GetUserIdsByOrg(db, orgId)
-				query = query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds)
+				return query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds), nil
 			} else {
-				return e.New(e.PermissionDeny, fmt.Errorf("org permission required"), http.StatusForbidden)
+				return nil, e.New(e.PermissionDeny, fmt.Errorf("org permission required"), http.StatusForbidden)
 			}
 		}
 	} else {
-		return e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusForbidden)
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusForbidden)
 	}
 
-	return nil
+	return query, nil
 }
 
 func setUserRole(detail *models.UserWithRoleResp, userId, orgId, projectId models.Id, isSuperAdmin bool) {
@@ -389,7 +385,7 @@ func setUserRole(detail *models.UserWithRoleResp, userId, orgId, projectId model
 // UserDetail 获取单个用户详情
 func UserDetail(c *ctx.ServiceContext, userId models.Id) (*models.UserWithRoleResp, e.Error) {
 	query := c.DB()
-	err := queryByOrgAndProject(c.DB(), query, c.UserId, c.OrgId, c.ProjectId, userId, c.IsSuperAdmin)
+	query, err := queryByOrgAndProject(c.DB(), query, c.UserId, c.OrgId, c.ProjectId, userId, c.IsSuperAdmin)
 	if err != nil {
 		return nil, err
 	}
