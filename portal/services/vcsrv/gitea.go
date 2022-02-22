@@ -283,19 +283,14 @@ func (gitea *giteaRepoIface) AddWebhook(url string) error {
 }
 
 func (gitea *giteaRepoIface) ListWebhook() ([]ProjectsHook, error) {
-	ph := make([]ProjectsHook, 0)
 	path := gitea.vcs.Address + giteaApiRoute + fmt.Sprintf("/repos/%s/hooks", gitea.repository.FullName)
 	_, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
-	rep := make([]giteaTag, 0)
 
-	_ = json.Unmarshal(body, &rep)
-	tagList := []string{}
-	for _, v := range rep {
-		tagList = append(tagList, v.Name)
-	}
+	ph := make([]ProjectsHook, 0)
+	_ = json.Unmarshal(body, &ph)
 	return ph, nil
 }
 

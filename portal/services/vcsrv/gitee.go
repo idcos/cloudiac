@@ -285,16 +285,15 @@ func (gitee *giteeRepoIface) AddWebhook(url string) error {
 }
 
 func (gitee *giteeRepoIface) ListWebhook() ([]ProjectsHook, error) {
-	ph := make([]ProjectsHook, 0)
 	path := gitee.vcs.Address +
 		fmt.Sprintf("/repos/%s/hooks?access_token=%s", gitee.repository.FullName, gitee.urlParam.Get("access_token"))
 	_, body, err := giteeRequest(path, http.MethodGet, nil)
 	if err != nil {
-		return ph, e.New(e.BadRequest, err)
+		return nil, e.New(e.BadRequest, err)
 	}
 
-	rep := []giteeCommit{}
-	_ = json.Unmarshal(body, &rep)
+	ph := make([]ProjectsHook, 0)
+	_ = json.Unmarshal(body, &ph)
 
 	return ph, nil
 }

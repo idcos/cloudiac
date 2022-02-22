@@ -213,6 +213,10 @@ type ProjectsHook struct {
 	DeploymentEvents         bool       `json:"deployment_events"`
 	EnableSSLVerification    bool       `json:"enable_ssl_verification"`
 	CreatedAt                *time.Time `json:"created_at"`
+	Config                   struct {
+		ContentType string `json:"content_type"`
+		Url         string `json:"url"`
+	} `json:"config"`
 }
 
 func (git *gitlabRepoIface) ListWebhook() ([]ProjectsHook, error) {
