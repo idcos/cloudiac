@@ -275,6 +275,7 @@ func pullTaskStepStatusLoop(
 		timeout = time.NewTimer(deadline.Sub(now))
 	}
 
+	result = &waitStepResult{}
 	for {
 		select {
 		case msg := <-messageChan:

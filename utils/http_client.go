@@ -52,12 +52,22 @@ func getHttpRequest(reqUrl, method string, header *http.Header, data interface{}
 		if err != nil {
 			return nil, err
 		}
-		return http.NewRequest(method, reqUrl, bytes.NewReader(b))
+		req, err := http.NewRequest(method, reqUrl, bytes.NewReader(b))
+		if err != nil {
+			return nil, err
+		}
+		req.Header = *header
+		return req, nil
 	}
 
 	// string data
 	if value, ok := data.(string); ok {
-		return http.NewRequest(method, reqUrl, bytes.NewReader([]byte(value)))
+		req, err := http.NewRequest(method, reqUrl, bytes.NewReader([]byte(value)))
+		if err != nil {
+			return nil, err
+		}
+		req.Header = *header
+		return req, nil
 	}
 
 	return nil, fmt.Errorf("params err")
@@ -66,7 +76,6 @@ func getHttpRequest(reqUrl, method string, header *http.Header, data interface{}
 func HttpService(reqUrl, method string, header *http.Header, data interface{}, conntimeout, deadline int) ([]byte, error) {
 	c := httpClient(conntimeout, deadline)
 
-	var req *http.Request
 	var err error
 	if header == nil {
 		header = &http.Header{}
@@ -74,8 +83,8 @@ func HttpService(reqUrl, method string, header *http.Header, data interface{}, c
 	if header.Get(HeaderContentType) == "" {
 		header.Set(HeaderContentType, "application/x-www-form-urlencoded")
 	}
-	req.Header = *header
 
+	var req *http.Request
 	req, err = getHttpRequest(reqUrl, method, header, data)
 	if err != nil {
 		return nil, err
