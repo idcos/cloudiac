@@ -380,6 +380,7 @@ func (s *Scanner) RunInternalScan(code Resource) error {
 				Directory:   "code",
 				RuleId:      p.Meta.Id,
 				File:        p.Meta.File,
+				ErrMsg:      err.Error(),
 				Error:       err,
 			}
 			output.Results.ScanErrors = append(output.Results.ScanErrors, scanError)

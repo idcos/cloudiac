@@ -534,43 +534,44 @@ type ScanResult struct {
 	Error      ScanError `json:"error"`
 }
 
-func RegoParse(regoFile string, inputFile string, ruleName ...string) ([]interface{}, error) {
-	reg := Rego{
-		filePath: regoFile,
-	}
-	var err error
-	if err := reg.Init(); err != nil {
-		return nil, err
-	}
-
+func searchRule(reg Rego, ruleName ...string) string {
 	// 规则名称：
 	// 1. 使用 meta 定义的 name
 	// 2. 使用 文件名 对应的 rule name
 	// 3. 使用 @rule 标记的规则
 	// 4. 使用第一条 rule
 	if len(ruleName) > 0 {
-		reg.rule = ruleName[0]
-	} else {
-		found := false
-		for _, r := range reg.rules {
-			if r == utils.FileNameWithoutExt(reg.filePath) {
-				reg.rule = r
-				found = true
-				break
-			}
-		}
-		if !found {
-			ruleReg := "(?m)\\s*#+\\s*@rule.*\\n\\s*([^\\s]*)\\s*{"
-			regex := regexp.MustCompile(ruleReg)
-			match := regex.FindStringSubmatch(reg.content)
-
-			if len(match) == 2 {
-				reg.rule = strings.TrimSpace(match[1])
-			} else {
-				reg.rule = reg.rules[0]
-			}
+		if utils.StrInArray(ruleName[0], reg.rules...) {
+			return ruleName[0]
 		}
 	}
+
+	if utils.StrInArray(utils.FileNameWithoutExt(reg.filePath), reg.rules...) {
+		return utils.FileNameWithoutExt(reg.filePath)
+	}
+
+	ruleReg := "(?m)\\s*#+\\s*@rule.*\\n\\s*([^\\s]*)\\s*{"
+	regex := regexp.MustCompile(ruleReg)
+	match := regex.FindStringSubmatch(reg.content)
+	if len(match) == 2 {
+		return strings.TrimSpace(match[1])
+	}
+
+	return reg.rules[0]
+}
+
+func RegoParse(regoFile string, inputFile string, ruleName ...string) ([]interface{}, error) {
+	reg := Rego{
+		filePath: regoFile,
+	}
+
+	var err error
+	if err := reg.Init(); err != nil {
+		return nil, err
+	}
+
+	reg.rule = searchRule(reg, ruleName...)
+
 	reg.query = fmt.Sprintf("data.%s.%s", reg.pkg, reg.rule)
 
 	// 读取待执行的输入文件
@@ -759,6 +760,15 @@ func ParseMeta(regoFilePath string, metaFilePath string) (*PolicyWithMeta, e.Err
 		}
 	}
 
+	if meta.Id == "" {
+		meta.Id = utils.FileNameWithoutExt(regoFilePath)
+	}
+	if meta.Name == "" {
+		meta.Name = meta.Id
+	}
+	if meta.ReferenceId == "" {
+		meta.ReferenceId = meta.Id
+	}
 	if meta.ResourceType == "" {
 		return nil, e.New(e.PolicyRegoMissingComment, fmt.Errorf("missing resource type info"))
 	}
@@ -787,7 +797,7 @@ func ParseMetaFromJson(metaFilePath string) (*Meta, error) {
 	if er != nil {
 		return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("read meta file: %v", er))
 	}
-	var meta *Meta
+	meta := &Meta{}
 	er = json.Unmarshal(content, meta)
 	if er != nil {
 		return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("unmarshal meta file: %v", er))
@@ -830,7 +840,7 @@ func ParseMetaFromRego(regoFilePath string, regoContent string) (*Meta, error) {
 		Id:           ExtractStr("id", regoContent),
 		File:         filepath.Base(regoFilePath),
 		Root:         filepath.Dir(regoFilePath),
-		Name:         utils.FileNameWithoutExt(regoFilePath),
+		Name:         ExtractStr("name", regoContent),
 		Description:  ExtractStr("description", regoContent),
 		PolicyType:   ExtractStr("policy_type", regoContent),
 		ResourceType: ExtractStr("resource_type", regoContent),
@@ -841,9 +851,6 @@ func ParseMetaFromRego(regoFilePath string, regoContent string) (*Meta, error) {
 	}
 	ver := ExtractStr("version", regoContent)
 	meta.Version, _ = strconv.Atoi(ver)
-	if meta.ReferenceId == "" {
-		meta.ReferenceId = ExtractStr("id", regoContent)
-	}
 
 	// 多行注释提取
 	regex := regexp.MustCompile(`(?s)@fix_suggestion:\\s*(.*)\\s*#+\\s*@fix_suggestion_end`)
