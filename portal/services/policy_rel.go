@@ -104,14 +104,21 @@ func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]*models
 		rels []*models.PolicyRel
 		err  e.Error
 	)
+
 	if form.Scope == consts.ScopeEnv {
 		env, err = GetEnvById(tx, form.Id)
+		if err != nil {
+			return nil, e.New(err.Code(), err, http.StatusBadRequest)
+		}
+		tpl, err = GetTemplateById(tx, env.TplId)
+		if err != nil {
+			return nil, e.New(err.Code(), err, http.StatusBadRequest)
+		}
 	} else {
 		tpl, err = GetTemplateById(tx, form.Id)
-	}
-
-	if err != nil {
-		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+		if err != nil {
+			return nil, e.New(err.Code(), err, http.StatusBadRequest)
+		}
 	}
 
 	// 删除原有关联关系
@@ -130,7 +137,7 @@ func UpdatePolicyRel(tx *db.Session, form *forms.UpdatePolicyRelForm) ([]*models
 			OrgId:   tpl.OrgId,
 			GroupId: group.Id,
 			TplId:   tpl.Id,
-			Scope:   models.PolicyRelScopeTpl,
+			Scope:   form.Scope,
 		}
 
 		if env != nil {

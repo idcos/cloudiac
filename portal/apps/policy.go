@@ -677,7 +677,7 @@ func getScanTaskVarious(query *db.Session, taskId models.Id, scope string, id mo
 		scanTask, err := services.GetScanTaskById(query, taskId)
 		if err != nil {
 			if err.Code() == e.TaskNotExists {
-				return nil, e.AutoNew(err, e.ObjectNotExists)
+				return nil, e.New(e.ObjectNotExists)
 			}
 			return nil, e.AutoNew(err, e.DBError)
 		}
@@ -686,7 +686,7 @@ func getScanTaskVarious(query *db.Session, taskId models.Id, scope string, id mo
 		scanTask, err := getLastScanTaskByScope(query, scope, id)
 		if err != nil {
 			if err.Code() == e.EnvNotExists || err.Code() == e.TemplateNotExists {
-				return nil, e.AutoNew(err, e.ObjectNotExists)
+				return nil, e.New(e.ObjectNotExists)
 			}
 			return nil, e.AutoNew(err, e.DBError)
 		}
