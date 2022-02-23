@@ -260,9 +260,8 @@ func (l *LocalRepo) AddWebhook(url string) error {
 	return nil
 }
 
-func (l *LocalRepo) ListWebhook() ([]ProjectsHook, error) {
-	ph := make([]ProjectsHook, 0)
-	return ph, nil
+func (l *LocalRepo) ListWebhook() ([]RepoHook, error) {
+	return nil, nil
 }
 
 func (l *LocalRepo) DeleteWebhook(id int) error {

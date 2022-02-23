@@ -314,17 +314,14 @@ func (github *githubRepoIface) AddWebhook(url string) error {
 	return nil
 }
 
-func (github *githubRepoIface) ListWebhook() ([]ProjectsHook, error) {
-	ph := make([]ProjectsHook, 0)
+func (github *githubRepoIface) ListWebhook() ([]RepoHook, error) {
 	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/hooks", github.repository.FullName), nil)
 	_, body, err := githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if err != nil {
 		return nil, e.New(e.BadRequest, err)
 	}
-	if err = json.Unmarshal(body, &ph); err != nil {
-		return nil, err
-	}
-	return ph, nil
+
+	return initRepoHook(body), nil
 }
 
 func (github *githubRepoIface) DeleteWebhook(id int) error {
