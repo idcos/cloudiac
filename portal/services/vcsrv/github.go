@@ -314,8 +314,7 @@ func (github *githubRepoIface) AddWebhook(url string) error {
 	return nil
 }
 
-func (github *githubRepoIface) ListWebhook() ([]ProjectsHook, error) {
-	ph := make([]ProjectsHook, 0)
+func (github *githubRepoIface) ListWebhook() ([]RepoHook, error) {
 	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/hooks", github.repository.FullName), nil)
 	_, body, err := githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if err != nil {

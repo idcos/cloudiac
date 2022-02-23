@@ -215,16 +215,16 @@ type ProjectsHook struct {
 	CreatedAt                *time.Time `json:"created_at"`
 }
 
-func (git *gitlabRepoIface) ListWebhook() ([]ProjectsHook, error) {
-	ph := make([]ProjectsHook, 0)
+func (git *gitlabRepoIface) ListWebhook() ([]RepoHook, error) {
+	resp := make([]RepoHook, 0)
 	projectsHook, _, err := git.gitConn.Projects.ListProjectHooks(git.Project.ID, &gitlab.ListProjectHooksOptions{})
 	for _, p := range projectsHook {
-		ph = append(ph, ProjectsHook{
-			ID:  p.ID,
-			URL: p.URL,
+		resp = append(resp, RepoHook{
+			Id:  p.ID,
+			Url: p.URL,
 		})
 	}
-	return ph, err
+	return resp, err
 }
 
 func (git *gitlabRepoIface) DeleteWebhook(id int) error {

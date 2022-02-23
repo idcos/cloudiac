@@ -235,9 +235,8 @@ func (r *RegistryRepo) AddWebhook(url string) error {
 	return nil
 }
 
-func (r *RegistryRepo) ListWebhook() ([]ProjectsHook, error) {
-	ph := make([]ProjectsHook, 0)
-	return ph, nil
+func (r *RegistryRepo) ListWebhook() ([]RepoHook, error) {
+	return nil, nil
 }
 
 func (r *RegistryRepo) DeleteWebhook(id int) error {
