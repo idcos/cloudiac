@@ -284,6 +284,24 @@ func (gitee *giteeRepoIface) AddWebhook(url string) error {
 	return nil
 }
 
+func initGiteeRepoHook(body []byte) []RepoHook {
+	ph := make([]struct {
+		Url string `json:"url"`
+		Id  int    `json:"id"`
+	}, 0)
+	_ = json.Unmarshal(body, &ph)
+
+	resp := make([]RepoHook, 0)
+
+	for _, v := range ph {
+		resp = append(resp, RepoHook{
+			Id:  v.Id,
+			Url: v.Url,
+		})
+	}
+	return resp
+}
+
 func (gitee *giteeRepoIface) ListWebhook() ([]RepoHook, error) {
 	path := gitee.vcs.Address +
 		fmt.Sprintf("/repos/%s/hooks?access_token=%s", gitee.repository.FullName, gitee.urlParam.Get("access_token"))
@@ -292,21 +310,7 @@ func (gitee *giteeRepoIface) ListWebhook() ([]RepoHook, error) {
 		return nil, e.New(e.BadRequest, err)
 	}
 
-	ph := make([]struct {
-		Url string `json:"url"`
-		Id  int    `json:"id"`
-	}, 0)
-	_ = json.Unmarshal(body, &ph)
-
-	resp := make([]RepoHook, 0)
-	for _, v := range ph {
-		resp = append(resp, RepoHook{
-			Id:  v.Id,
-			Url: v.Url,
-		})
-	}
-
-	return resp, nil
+	return initGiteeRepoHook(body), nil
 }
 
 func (gitee *giteeRepoIface) DeleteWebhook(id int) error {

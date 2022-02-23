@@ -282,13 +282,7 @@ func (gitea *giteaRepoIface) AddWebhook(url string) error {
 	return nil
 }
 
-func (gitea *giteaRepoIface) ListWebhook() ([]RepoHook, error) {
-	path := gitea.vcs.Address + giteaApiRoute + fmt.Sprintf("/repos/%s/hooks", gitea.repository.FullName)
-	_, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
-	if err != nil {
-		return nil, e.New(e.BadRequest, err)
-	}
-
+func initRepoHook(body []byte) []RepoHook {
 	ph := make([]struct {
 		Config struct {
 			ContentType string `json:"content_type"`
@@ -296,6 +290,7 @@ func (gitea *giteaRepoIface) ListWebhook() ([]RepoHook, error) {
 		} `json:"config"`
 		Id int `json:"id"`
 	}, 0)
+
 	_ = json.Unmarshal(body, &ph)
 
 	resp := make([]RepoHook, 0)
@@ -305,7 +300,17 @@ func (gitea *giteaRepoIface) ListWebhook() ([]RepoHook, error) {
 			Url: v.Config.Url,
 		})
 	}
-	return resp, nil
+	return resp
+}
+
+func (gitea *giteaRepoIface) ListWebhook() ([]RepoHook, error) {
+	path := gitea.vcs.Address + giteaApiRoute + fmt.Sprintf("/repos/%s/hooks", gitea.repository.FullName)
+	_, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
+	if err != nil {
+		return nil, e.New(e.BadRequest, err)
+	}
+
+	return initRepoHook(body), nil
 }
 
 func (gitea *giteaRepoIface) DeleteWebhook(id int) error {

@@ -321,24 +321,7 @@ func (github *githubRepoIface) ListWebhook() ([]RepoHook, error) {
 		return nil, e.New(e.BadRequest, err)
 	}
 
-	ph := make([]struct {
-		Config struct {
-			ContentType string `json:"content_type"`
-			Url         string `json:"url"`
-		} `json:"config"`
-		Id int `json:"id"`
-	}, 0)
-	_ = json.Unmarshal(body, &ph)
-
-	resp := make([]RepoHook, 0)
-	for _, v := range ph {
-		resp = append(resp, RepoHook{
-			Id:  v.Id,
-			Url: v.Config.Url,
-		})
-	}
-
-	return resp, nil
+	return initRepoHook(body), nil
 }
 
 func (github *githubRepoIface) DeleteWebhook(id int) error {
