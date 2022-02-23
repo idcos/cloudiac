@@ -51,7 +51,7 @@ type Env struct {
 
 	// 任务相关参数，获取详情的时候，如果有 last_task_id 则返回 last_task_id 相关参数
 	RunnerId string `json:"runnerId" gorm:"size:32;not null"`         //部署通道ID
-	Revision string `json:"revision" gorm:"size:64;default:'master'"` // Vcs仓库分支/标签
+	Revision string `json:"revision" gorm:"size:64;default:''"` // Vcs仓库分支/标签
 	KeyId    Id     `json:"keyId" gorm:"size:32"`                     // 部署密钥ID
 
 	LastTaskId    Id `json:"lastTaskId" gorm:"size:32"`    // 最后一次部署或销毁任务的 id(plan 任务不记录)

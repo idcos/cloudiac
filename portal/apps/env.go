@@ -132,6 +132,9 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 	if !form.HasKey("keyId") {
 		form.KeyId = tpl.KeyId
 	}
+	if !form.HasKey("revision") {
+		form.Revision = tpl.RepoRevision
+	}
 
 	if form.Timeout == 0 {
 		form.Timeout = common.DefaultTaskStepTimeout
