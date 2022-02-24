@@ -67,11 +67,11 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, closedCh <-c
 	ctx, cancelFun := context.WithCancel(context.Background())
 	defer cancelFun()
 
-	waitCh := make(chan error, 1)
+	waitTaskErrCh := make(chan error, 1)
 	go func() {
-		defer close(waitCh)
+		defer close(waitTaskErrCh)
 		_, err := task.Wait(ctx)
-		waitCh <- err
+		waitTaskErrCh <- err
 	}()
 
 	// 发送首次结果
@@ -82,8 +82,8 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, closedCh <-c
 	ticker := time.NewTicker(time.Second * 30)
 	defer ticker.Stop()
 
-	logger.Infof("watching task status")
-	defer logger.Infof("watch task status done")
+	logger.Infof("start watch task status")
+	defer logger.Infof("end watch task status")
 
 	closed := false
 	for {
@@ -104,7 +104,7 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, closedCh <-c
 			if err := sendStatus(false, false); err != nil {
 				logger.Warnf("send status error: %v", err)
 			}
-		case err := <-waitCh:
+		case err := <-waitTaskErrCh:
 			if closed { // 对端己断开连接
 				return nil
 			}

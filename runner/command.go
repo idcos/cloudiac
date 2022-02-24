@@ -45,21 +45,6 @@ type Container struct {
 	RunID   string
 }
 
-func DockerClient() (*client.Client, error) {
-	return dockerClient()
-}
-
-func dockerClient() (*client.Client, error) {
-	cli, err := client.NewClientWithOpts(
-		client.FromEnv,
-		client.WithAPIVersionNegotiation(),
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "create docker client")
-	}
-	return cli, nil
-}
-
 func (exec *Executor) tryPullImage(cli *client.Client) {
 	logger := logger.WithField("image", exec.Image).WithField("action", "TryPullImage")
 	if cli == nil {
@@ -229,17 +214,29 @@ func (Executor) Wait(ctx context.Context, cid string) error {
 	}
 }
 
-func (Executor) WaitCommand(ctx context.Context, execId string) (execInfo types.ContainerExecInspect, err error) {
+var ErrContainerNotRun = fmt.Errorf("container not running")
+
+func (Executor) WaitCommand(ctx context.Context, containerId string, execId string) (execInfo types.ContainerExecInspect, err error) {
 	cli, err := dockerClient()
 	if err != nil {
 		return execInfo, err
 	}
 
+	ticker := time.NewTicker(time.Second * 1)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return execInfo, ctx.Err()
+		case <-ticker.C:
 		default:
+		}
+
+		if ci, err := cli.ContainerInspect(ctx, containerId); err != nil {
+			return execInfo, errors.Wrap(err, "container inspect")
+		} else if ci.State.Paused || !ci.State.Running {
+			return execInfo, errors.Wrapf(ErrContainerNotRun, "container status is %s", ci.State.Status)
 		}
 
 		inspect, err := cli.ContainerExecInspect(ctx, execId)
@@ -252,17 +249,16 @@ func (Executor) WaitCommand(ctx context.Context, execId string) (execInfo types.
 		if !inspect.Running {
 			return execInfo, nil
 		}
-		time.Sleep(time.Second)
 	}
 }
 
-func (exec Executor) WaitCommandWithDeadline(ctx context.Context, execId string, deadline time.Time) (execInfo types.ContainerExecInspect, err error) {
+func (exec Executor) WaitCommandWithDeadline(ctx context.Context, containerId string, execId string, deadline time.Time) (execInfo types.ContainerExecInspect, err error) {
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithDeadline(ctx, deadline)
 	defer cancel()
 
 	logger.Debugf("wait exec %s, deadline: %s", execId, deadline.Format(time.RFC3339))
-	if execInfo, err = exec.WaitCommand(ctx, execId); err != nil {
+	if execInfo, err = exec.WaitCommand(ctx, containerId, execId); err != nil {
 		if err == context.DeadlineExceeded {
 			// logger.Infof("task %s/step%s: %v", exec..TaskId, t.req.Step, err)
 			if err := (Executor{}).StopCommand(execId); err != nil {

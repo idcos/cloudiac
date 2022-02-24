@@ -60,7 +60,7 @@ func doFollowTaskLog(wsConn *websocket.Conn, task *runner.StartedTask, offset in
 	logger := logger.WithField("func", "doFollowTaskLog").WithField("taskId", task.TaskId)
 
 	var (
-		taskExitChan = make(chan error)
+		waitTaskErrChan = make(chan error)
 	)
 
 	ctx, cancelCtx := context.WithCancel(context.Background())
@@ -71,13 +71,13 @@ func doFollowTaskLog(wsConn *websocket.Conn, task *runner.StartedTask, offset in
 
 	// 等待任务退出协程
 	go func() {
-		defer close(taskExitChan)
+		defer close(waitTaskErrChan)
 
 		_, err := task.Wait(ctx)
 		// followFile() 会在遇到 EOF 时延迟一定时间进行下一次读取，
 		// 如果这里立即发送信号 follow 会在当延迟结束后立即退出，导致最后写入的日志没有被读取
 		time.Sleep(runner.FollowLogDelay)
-		taskExitChan <- err
+		waitTaskErrChan <- err
 	}()
 
 	for {
@@ -92,7 +92,7 @@ func doFollowTaskLog(wsConn *websocket.Conn, task *runner.StartedTask, offset in
 				logger.Errorf("read content error: %v", err)
 				return err
 			}
-		case err := <-taskExitChan:
+		case err := <-waitTaskErrChan:
 			if err != nil {
 				logger.Errorf("wait task error: %v", err)
 			} else {
