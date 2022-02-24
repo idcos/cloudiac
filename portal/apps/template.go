@@ -155,18 +155,10 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		}()
 	}
 
-	// 设置webhook
-	vcs, _ := services.QueryVcsByVcsId(template.VcsId, c.DB())
-	// 获取token
-	token, err := GetWebhookToken(c)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := vcsrv.SetWebhook(vcs, template.RepoId, token.Key, form.TplTriggers); err != nil {
+	// 设置 webhook
+	if err := setVcsRepoWebhook(c, template.VcsId, template.RepoId, form.TplTriggers); err != nil {
 		c.Logger().Errorf("set webhook err :%v", err)
 	}
-
 	return template, nil
 }
 
@@ -319,15 +311,8 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 		}()
 	}
 
-	// 设置webhook
-	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
-	// 获取token
-	token, err := GetWebhookToken(c)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, tpl.Triggers); err != nil {
+	// 设置 webhook
+	if err := setVcsRepoWebhook(c, tpl.VcsId, tpl.RepoId, tpl.Triggers); err != nil {
 		c.Logger().Errorf("set webhook err :%v", err)
 	}
 
@@ -382,20 +367,11 @@ func DeleteTemplate(c *ctx.ServiceContext, form *forms.DeleteTemplateForm) (inte
 		return nil, e.New(e.DBError, err)
 	}
 
-	// 删除webhook
-	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
-	// 获取token
-	token, err := GetWebhookToken(c)
-	if err != nil {
-		return nil, err
+	// 删除 webhook
+	if err := delVcsRepoWebhook(c, tpl.VcsId, tpl.RepoId); err != nil {
+		c.Logger().Errorf("delete webhook err :%v", err)
 	}
-
-	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, []string{}); err != nil {
-		c.Logger().Errorf("set webhook err :%v", err)
-	}
-
 	return nil, nil
-
 }
 
 type TemplateDetailResp struct {
@@ -571,4 +547,26 @@ func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (inte
 	return TemplateChecksResp{
 		CheckResult: consts.TplTfCheckSuccess,
 	}, nil
+}
+
+func setVcsRepoWebhook(c *ctx.ServiceContext, vcsId models.Id, repoId string, triggers pq.StringArray) error {
+	vcs, err := services.QueryVcsByVcsId(vcsId, c.DB())
+	if err != nil {
+		return err
+	}
+
+	// 获取token
+	token, err := GetWebhookToken(c)
+	if err != nil {
+		return err
+	}
+
+	if err := vcsrv.SetWebhook(vcs, string(repoId), token.Key, triggers); err != nil {
+		return err
+	}
+	return nil
+}
+
+func delVcsRepoWebhook(c *ctx.ServiceContext, vcsId models.Id, repoId string) error {
+	return setVcsRepoWebhook(c, vcsId, repoId, []string{})
 }
