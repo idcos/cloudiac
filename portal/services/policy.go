@@ -91,7 +91,7 @@ func GetTaskPolicies(query *db.Session, task models.Tasker) ([]runner.TaskPolicy
 	var taskPolicies []runner.TaskPolicy
 	scanTask, err := GetScanTaskById(query, task.GetId())
 	if err != nil {
-		if err.Code() != e.TaskNotExists {
+		if err.Code() == e.TaskNotExists {
 			return nil, nil
 		}
 		return nil, err
