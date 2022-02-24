@@ -138,6 +138,16 @@ func UpdateScanResult(tx *db.Session, task models.Tasker, result policy.TsResult
 			policyResults = append(policyResults, policyResult)
 		}
 	}
+	for _, r := range result.ScanErrors {
+		if policyResult, err := GetPolicyResultById(tx, task.GetId(), models.Id(r.RuleId)); err != nil {
+			return err
+		} else {
+			policyResult.Status = common.PolicyStatusFailed
+			policyResult.Message = r.ErrMsg
+			policyResults = append(policyResults, policyResult)
+		}
+	}
+
 	for _, r := range policyResults {
 		if err := models.Save(tx, r); err != nil {
 			return e.New(e.DBError, fmt.Errorf("save scan result"))

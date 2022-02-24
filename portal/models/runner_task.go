@@ -54,7 +54,7 @@ type ScanTask struct {
 	Mirror       bool `json:"mirror"`       // 是否属于部署任务的扫描任务
 	MirrorTaskId Id   `json:"mirrorTaskId"` // 部署任务ID
 
-	PolicyStatus string `json:"policyStatus" gorm:"size:16" enums:"'passed','violated','pending','failed'"` // 策略检查结果
+	PolicyStatus string `json:"policyStatus" gorm:"size:16;default:'pending'" enums:"'passed','violated','pending','failed'"` // 策略检查结果
 
 	Playbook     string `json:"playbook" gorm:"default:''"`
 	TfVarsFile   string `json:"tfVarsFile" gorm:"default:''"`
