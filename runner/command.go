@@ -241,7 +241,7 @@ func (Executor) WaitCommand(ctx context.Context, containerId string, execId stri
 
 		inspect, err := cli.ContainerExecInspect(ctx, execId)
 		if err != nil {
-			if err == context.DeadlineExceeded {
+			if errors.Is(err, context.DeadlineExceeded) {
 				return execInfo, err
 			}
 			return execInfo, errors.Wrap(err, "container exec inspect")
@@ -259,7 +259,7 @@ func (exec Executor) WaitCommandWithDeadline(ctx context.Context, containerId st
 
 	logger.Debugf("wait exec %s, deadline: %s", execId, deadline.Format(time.RFC3339))
 	if execInfo, err = exec.WaitCommand(ctx, containerId, execId); err != nil {
-		if err == context.DeadlineExceeded {
+		if errors.Is(err, context.DeadlineExceeded) {
 			// logger.Infof("task %s/step%s: %v", exec..TaskId, t.req.Step, err)
 			if err := (Executor{}).StopCommand(execId); err != nil {
 				logger.WithField("cid", execInfo.ContainerID).Errorf("stop command error: %v", err)
