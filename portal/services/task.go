@@ -1267,6 +1267,7 @@ func CreateMirrorScanTask(task *models.Task) *models.ScanTask {
 		Variables:    task.Variables,
 		StatePath:    task.StatePath,
 		ExtraData:    task.ExtraData,
+		PolicyStatus: common.TaskPending,
 	}
 }
 

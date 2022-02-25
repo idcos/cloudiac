@@ -476,12 +476,20 @@ func EnvOfPolicy(c *ctx.ServiceContext, form *forms.EnvOfPolicyForm) (interface{
 	}, nil
 }
 
+type ValidPolicyResp struct {
+	ValidPolicies      []models.Policy `json:"validPolicies"`
+	SuppressedPolicies []models.Policy `json:"suppressedPolicies"`
+}
+
 func ValidEnvOfPolicy(c *ctx.ServiceContext, form *forms.EnvOfPolicyForm) (interface{}, e.Error) {
-	policies, err := services.GetPoliciesByEnvId(c.DB(), form.Id)
+	validPolicies, suppressedPolicies, err := services.GetValidPolicies(c.DB(), "", form.Id)
 	if err != nil {
 		return nil, err
 	}
-	return policies, nil
+	return ValidPolicyResp{
+		ValidPolicies:      validPolicies,
+		SuppressedPolicies: suppressedPolicies,
+	}, nil
 }
 
 type RespTplOfPolicy struct {
@@ -526,11 +534,14 @@ func TplOfPolicyGroup(c *ctx.ServiceContext, form *forms.TplOfPolicyGroupForm) (
 }
 
 func ValidTplOfPolicy(c *ctx.ServiceContext, form *forms.TplOfPolicyForm) (interface{}, e.Error) {
-	policies, err := services.GetPoliciesByTemplateId(c.DB(), form.Id)
+	validPolicies, suppressedPolicies, err := services.GetValidPolicies(c.DB(), form.Id, "")
 	if err != nil {
-		return getEmptyListResult(form)
+		return nil, err
 	}
-	return policies, nil
+	return ValidPolicyResp{
+		ValidPolicies:      validPolicies,
+		SuppressedPolicies: suppressedPolicies,
+	}, nil
 }
 
 type PolicyErrorResp struct {
