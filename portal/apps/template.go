@@ -531,7 +531,6 @@ func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (inte
 		searchForm := &forms.TemplateTfvarsSearchForm{
 			RepoId:       form.RepoId,
 			RepoRevision: form.RepoRevision,
-			RepoType:     form.RepoType,
 			VcsId:        form.VcsId,
 			TplChecks:    true,
 			Path:         form.Workdir,

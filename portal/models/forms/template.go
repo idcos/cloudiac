@@ -102,26 +102,26 @@ type TemplateTfvarsSearchForm struct {
 	BaseForm
 	RepoId       string    `json:"repoId" form:"repoId" binding:"required"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
-	RepoType     string    `json:"repoType" form:"repoType" `
 	VcsId        models.Id `uri:"id"`
 	TplChecks    bool      `json:"tplChecks" form:"tplChecks" swaggerignore:"true"`
 	Path         string    `json:"path" form:"path" swaggerignore:"true"`
+	Workdir      string    `json:"workdir" form:"workdir" `
 }
 
 type TemplateVariableSearchForm struct {
 	BaseForm
 	RepoId       string    `json:"repoId" form:"repoId" binding:"required"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
-	RepoType     string    `json:"repoType" form:"repoType" `
-	VcsId        models.Id `json:"vcsId" form:"vcsId" binding:"required"`
+	VcsId        models.Id `uri:"id"`
+	Workdir      string    `json:"workdir" form:"workdir" `
 }
 
 type TemplatePlaybookSearchForm struct {
 	BaseForm
 	RepoId       string    `json:"repoId" form:"repoId" binding:"required"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
-	RepoType     string    `json:"repoType" form:"repoType" `
 	VcsId        models.Id `uri:"id"`
+	Workdir      string    `json:"workdir" form:"workdir" `
 }
 
 type TemplateTfVersionSearchForm struct {
@@ -136,7 +136,6 @@ type TemplateChecksForm struct {
 	Name         string    `json:"name" form:"name"`
 	RepoId       string    `json:"repoId" form:"repoId"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision"`
-	RepoType     string    `json:"repoType" form:"repoType" `
 	VcsId        models.Id `json:"vcsId" form:"vcsId"`
 	Workdir      string    `json:"workdir" form:"workdir"`
 	TemplateId   models.Id `json:"templateId" form:"templateId"`

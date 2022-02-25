@@ -239,19 +239,20 @@ func VcsFileSearch(c *ctx.ServiceContext, form *forms.TemplateTfvarsSearchForm) 
 		return nil, e.New(e.VcsError, er)
 	}
 	var (
-		search string
-		path   string
+		search  string
+		dirPath string
 	)
 	if form.TplChecks {
 		search = consts.TplTfCheck
-		path = form.Path
+		dirPath = form.Path
 	} else {
 		search = consts.TfVarFileMatch
+		dirPath = path.Join(dirPath, form.Workdir)
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
 		Ref:    form.RepoRevision,
 		Search: search,
-		Path:   path,
+		Path:   dirPath,
 	})
 
 	if er != nil {
@@ -279,7 +280,7 @@ func VcsPlaybookSearch(c *ctx.ServiceContext, form *forms.TemplatePlaybookSearch
 		Ref:       form.RepoRevision,
 		Search:    consts.PlaybookMatch,
 		Recursive: true,
-		Path:      consts.Ansible,
+		Path:      path.Join(form.Workdir, consts.Ansible),
 	})
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
@@ -305,6 +306,7 @@ func VcsVariableSearch(c *ctx.ServiceContext, form *forms.TemplateVariableSearch
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
 		Ref:    form.RepoRevision,
 		Search: consts.VariablePrefix,
+		Path:   form.Workdir,
 	})
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
