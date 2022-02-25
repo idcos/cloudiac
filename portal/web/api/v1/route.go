@@ -173,7 +173,7 @@ func Register(g *gin.RouterGroup) {
 
 	// 云模板
 	ctrl.Register(g.Group("templates", ac()), &handlers.Template{})
-	g.GET("/templates/variables", ac(), w(handlers.TemplateVariableSearch))
+	g.GET("/vcs/:id/repos/variables", ac(), w(handlers.TemplateVariableSearch))
 	g.GET("/templates/tfversions", ac(), w(handlers.TemplateTfVersionSearch))
 	g.GET("/templates/autotfversion", ac(), w(handlers.AutoTemplateTfVersionChoice))
 	g.POST("/templates/checks", ac(), w(handlers.TemplateChecks))

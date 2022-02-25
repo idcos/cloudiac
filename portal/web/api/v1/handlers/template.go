@@ -145,7 +145,8 @@ func TemplateTfvarsSearch(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Security AuthToken
 // @Param form query forms.TemplateVariableSearchForm true "parameter"
-// @Router /templates/variables [get]
+// @Param vcsId path string true "vcs地址iD"
+// @Router /vcs/{vcsId}/repos/variables [get]
 // @Success 200 {object} ctx.JSONResult{result=[]services.TemplateVariable}
 func TemplateVariableSearch(c *ctx.GinRequest) {
 	form := forms.TemplateVariableSearchForm{}
