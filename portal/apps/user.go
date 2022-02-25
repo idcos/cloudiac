@@ -260,7 +260,7 @@ func getNewPassword(oldPassword, newPassword, userPassword string) (string, e.Er
 func UpdateUser(c *ctx.ServiceContext, form *forms.UpdateUserForm) (*models.User, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update user %s", form.Id))
 
-	err := chkUserIdentity(form.Id, c.OrgId, c.UserId, c.IsSuperAdmin)
+	err := chkUserIdentity(form.Id, c.UserId, c.OrgId, c.IsSuperAdmin)
 	if err != nil {
 		return nil, err
 	}
