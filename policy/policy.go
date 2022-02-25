@@ -716,12 +716,12 @@ func ParsePolicyGroup(dirname string) ([]*PolicyWithMeta, e.Error) {
 			if r.MetaFile != "" {
 				metaPath, _ := filepath.Rel(dirname, r.MetaFile)
 				return nil, e.New(e.BadRequest,
-					errors.Wrapf(err, "parse policy(%s,%s) error: %v", metaPath, regoPath, err),
+					errors.Wrapf(err, "parse policy(%s,%s)", metaPath, regoPath),
 					http.StatusBadRequest)
 			}
 
 			return nil, e.New(e.BadRequest,
-				errors.Wrapf(err, "parse policy (%s) error: %v", regoPath, err),
+				errors.Wrapf(err, "parse policy (%s)", regoPath),
 				http.StatusBadRequest)
 		}
 		policies = append(policies, p)

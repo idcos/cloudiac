@@ -925,7 +925,7 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 	if task.KeyId != "" {
 		mKey, err := services.GetKeyById(dbSess, task.KeyId, false)
 		if err != nil {
-			return nil, errors.Wrapf(err, "get key '%s' error: %v", task.KeyId, err)
+			return nil, errors.Wrapf(err, "get key '%s'", task.KeyId)
 		}
 		pk = mKey.Content
 	}
@@ -951,7 +951,7 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 	if scanStep, err := services.GetTaskScanStep(dbSess, task.Id); err == nil && scanStep != nil {
 		policies, err := services.GetTaskPolicies(dbSess, &task)
 		if err != nil {
-			return nil, errors.Wrapf(err, "get task '%s' policies error: %v", task.Id, err)
+			return nil, errors.Wrapf(err, "get task '%s' policies", task.Id)
 		}
 		taskReq.Policies = policies
 	}
@@ -983,7 +983,7 @@ func (m *TaskManager) processAutoDestroy() error {
 		Order("auto_destroy_at").Limit(limit).Find(&destroyEnvs)
 
 	if err != nil {
-		return errors.Wrapf(err, "query destroy task: %v", err)
+		return errors.Wrapf(err, "query destroy task")
 	}
 
 	for _, env := range destroyEnvs {
@@ -1246,7 +1246,7 @@ func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.Ta
 	if step.Type == models.TaskStepOpaScan || step.Type == models.TaskStepEnvScan || step.Type == models.TaskStepTplScan {
 		taskReq.Policies, err = services.GetTaskPolicies(dbSess, task)
 		if err != nil {
-			return nil, errors.Wrapf(err, "get scan task '%s' policies error: %v", task.Id, err)
+			return nil, errors.Wrapf(err, "get scan task '%s' policies", task.Id)
 		}
 	}
 

@@ -115,7 +115,7 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 	}
 
 	if err := services.InitScanResult(tx, task); err != nil {
-		return nil, e.New(e.DBError, errors.Wrapf(err, "task '%s' init scan result error: %v", task.Id, err))
+		return nil, e.New(e.DBError, errors.Wrapf(err, "task '%s' init scan result", task.Id))
 	}
 
 	if err := UpdateLastScanTaskId(tx, task, env, tpl); err != nil {
