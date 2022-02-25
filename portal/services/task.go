@@ -957,7 +957,9 @@ func fetchRunnerTaskStepLog(ctx context.Context, runnerId string, step *models.T
 
 		_, reader, err = wsConn.NextReader()
 		if err != nil {
-			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+			if websocket.IsCloseError(err,
+				websocket.CloseNormalClosure,
+				websocket.CloseInternalServerErr) {
 				logger.Traceln(newReadMessageErr(err))
 				return nil
 			} else {
