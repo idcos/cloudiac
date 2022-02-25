@@ -115,7 +115,7 @@ func ScanTemplateOrEnv(c *ctx.ServiceContext, form *forms.ScanTemplateForm, envI
 	}
 
 	if err := services.InitScanResult(tx, task); err != nil {
-		return nil, e.New(e.DBError, errors.Wrapf(err, "task '%s' init scan result error: %v", task.Id, err))
+		return nil, e.New(e.DBError, errors.Wrapf(err, "task '%s' init scan result", task.Id))
 	}
 
 	if err := UpdateLastScanTaskId(tx, task, env, tpl); err != nil {
@@ -476,12 +476,20 @@ func EnvOfPolicy(c *ctx.ServiceContext, form *forms.EnvOfPolicyForm) (interface{
 	}, nil
 }
 
+type ValidPolicyResp struct {
+	ValidPolicies      []models.Policy `json:"validPolicies"`
+	SuppressedPolicies []models.Policy `json:"suppressedPolicies"`
+}
+
 func ValidEnvOfPolicy(c *ctx.ServiceContext, form *forms.EnvOfPolicyForm) (interface{}, e.Error) {
-	policies, err := services.GetPoliciesByEnvId(c.DB(), form.Id)
+	validPolicies, suppressedPolicies, err := services.GetValidPolicies(c.DB(), "", form.Id)
 	if err != nil {
 		return nil, err
 	}
-	return policies, nil
+	return ValidPolicyResp{
+		ValidPolicies:      validPolicies,
+		SuppressedPolicies: suppressedPolicies,
+	}, nil
 }
 
 type RespTplOfPolicy struct {
@@ -526,11 +534,14 @@ func TplOfPolicyGroup(c *ctx.ServiceContext, form *forms.TplOfPolicyGroupForm) (
 }
 
 func ValidTplOfPolicy(c *ctx.ServiceContext, form *forms.TplOfPolicyForm) (interface{}, e.Error) {
-	policies, err := services.GetPoliciesByTemplateId(c.DB(), form.Id)
+	validPolicies, suppressedPolicies, err := services.GetValidPolicies(c.DB(), form.Id, "")
 	if err != nil {
-		return getEmptyListResult(form)
+		return nil, err
 	}
-	return policies, nil
+	return ValidPolicyResp{
+		ValidPolicies:      validPolicies,
+		SuppressedPolicies: suppressedPolicies,
+	}, nil
 }
 
 type PolicyErrorResp struct {
@@ -677,7 +688,7 @@ func getScanTaskVarious(query *db.Session, taskId models.Id, scope string, id mo
 		scanTask, err := services.GetScanTaskById(query, taskId)
 		if err != nil {
 			if err.Code() == e.TaskNotExists {
-				return nil, e.AutoNew(err, e.ObjectNotExists)
+				return nil, e.New(e.ObjectNotExists)
 			}
 			return nil, e.AutoNew(err, e.DBError)
 		}
@@ -686,7 +697,7 @@ func getScanTaskVarious(query *db.Session, taskId models.Id, scope string, id mo
 		scanTask, err := getLastScanTaskByScope(query, scope, id)
 		if err != nil {
 			if err.Code() == e.EnvNotExists || err.Code() == e.TemplateNotExists {
-				return nil, e.AutoNew(err, e.ObjectNotExists)
+				return nil, e.New(e.ObjectNotExists)
 			}
 			return nil, e.AutoNew(err, e.DBError)
 		}

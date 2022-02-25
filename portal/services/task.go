@@ -334,7 +334,7 @@ func createTaskStep(tx *db.Session, env *models.Env, task models.Task, pipelineS
 			return nil, e.New(e.DBError, err)
 		}
 		if err := InitScanResult(tx, scanTask); err != nil {
-			return nil, e.New(e.DBError, errors.Wrapf(err, "task '%s' init scan result error: %v", task.Id, err))
+			return nil, e.New(e.DBError, errors.Wrapf(err, "task '%s' init scan result", task.Id))
 		}
 	}
 	return newTaskStep(task, pipelineStep, stepIndex), nil
@@ -1269,6 +1269,7 @@ func CreateMirrorScanTask(task *models.Task) *models.ScanTask {
 		Variables:    task.Variables,
 		StatePath:    task.StatePath,
 		ExtraData:    task.ExtraData,
+		PolicyStatus: common.TaskPending,
 	}
 }
 

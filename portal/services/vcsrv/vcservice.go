@@ -89,7 +89,7 @@ type RepoIface interface {
 	DefaultBranch() string
 
 	//ListWebhook 查询Webhook列表
-	ListWebhook() ([]ProjectsHook, error)
+	ListWebhook() ([]RepoHook, error)
 
 	//DeleteWebhook 查询Webhook列表
 	DeleteWebhook(id int) error
@@ -99,6 +99,11 @@ type RepoIface interface {
 
 	//CreatePrComment 添加PR评论
 	CreatePrComment(prId int, comment string) error
+}
+
+type RepoHook struct {
+	Id  int    `json:"id"`
+	Url string `json:"url"`
 }
 
 func GetVcsInstance(vcs *models.Vcs) (VcsIface, error) {
@@ -194,9 +199,9 @@ func SetWebhook(vcs *models.Vcs, repoId, apiToken string, triggers []string) err
 	isExist := false
 	for _, webhook := range webhooks {
 		// 如果url相同，证明仓库中存在webhook；
-		if webhook.URL == webhookUrl {
+		if webhook.Url == webhookUrl {
 			isExist = true
-			webhookId = webhook.ID
+			webhookId = webhook.Id
 			break
 		}
 	}

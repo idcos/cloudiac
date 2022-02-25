@@ -424,11 +424,18 @@ func (m *TaskManager) runTask(ctx context.Context, task models.Tasker) error {
 //nolint:cyclop
 func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startErr error) {
 	logger := m.logger.WithField("taskId", task.Id)
+	scanTask, _ := services.GetMirrorScanTask(m.db, task.Id)
 
 	changeTaskStatus := func(status, message string, skipUpdateEnv bool) error {
 		if er := services.ChangeTaskStatus(m.db, task, status, message, skipUpdateEnv); er != nil {
 			logger.Errorf("update task status error: %v", er)
 			return er
+		}
+		if scanTask != nil {
+			if er := services.ChangeScanTaskStatus(m.db, scanTask, status, message); er != nil {
+				logger.Errorf("update task status error: %v", er)
+				return er
+			}
 		}
 		return nil
 	}
@@ -468,7 +475,6 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 			logger.Errorf("update env lastTaskId: %v", er)
 			return
 		}
-		scanTask, _ := services.GetMirrorScanTask(m.db, task.Id)
 		if scanTask != nil {
 			if _, er := m.db.Model(&models.Env{}).
 				Where("id = ?", task.EnvId). //nolint
@@ -632,6 +638,15 @@ func (m *TaskManager) processTaskDone(taskId models.Id) { //nolint:cyclop
 	logger.Debugln("start process task done")
 
 	dbSess := m.db
+
+	// 检查是否任务异常退出，是的话设置扫描任务状态为失败
+	scanTask, _ := services.GetMirrorScanTask(dbSess, taskId)
+	if scanTask != nil && scanTask.PolicyStatus == common.PolicyStatusPending {
+		scanTask.PolicyStatus = common.PolicyStatusFailed
+		if err := services.ChangeScanTaskStatus(dbSess, scanTask, common.TaskFailed, "scan task not run or stopped by accident"); err != nil {
+			logger.Errorf("update scan task status to failed err: %v", err)
+		}
+	}
 
 	// 重新查询获取 task，确保使用的是最新的 task 数据
 	task, err := services.GetTaskById(dbSess, taskId)
@@ -914,7 +929,7 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 	if task.KeyId != "" {
 		mKey, err := services.GetKeyById(dbSess, task.KeyId, false)
 		if err != nil {
-			return nil, errors.Wrapf(err, "get key '%s' error: %v", task.KeyId, err)
+			return nil, errors.Wrapf(err, "get key '%s'", task.KeyId)
 		}
 		pk = mKey.Content
 	}
@@ -938,9 +953,9 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 	}
 
 	if scanStep, err := services.GetTaskScanStep(dbSess, task.Id); err == nil && scanStep != nil {
-		policies, err := services.GetTaskPolicies(dbSess, task.Id)
+		policies, err := services.GetTaskPolicies(dbSess, &task)
 		if err != nil {
-			return nil, errors.Wrapf(err, "get task '%s' policies error: %v", task.Id, err)
+			return nil, errors.Wrapf(err, "get task '%s' policies", task.Id)
 		}
 		taskReq.Policies = policies
 	}
@@ -972,7 +987,7 @@ func (m *TaskManager) processAutoDestroy() error {
 		Order("auto_destroy_at").Limit(limit).Find(&destroyEnvs)
 
 	if err != nil {
-		return errors.Wrapf(err, "query destroy task: %v", err)
+		return errors.Wrapf(err, "query destroy task")
 	}
 
 	for _, env := range destroyEnvs {
@@ -1235,9 +1250,9 @@ func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.Ta
 	}
 
 	if step.Type == models.TaskStepOpaScan || step.Type == models.TaskStepEnvScan || step.Type == models.TaskStepTplScan {
-		taskReq.Policies, err = services.GetTaskPolicies(dbSess, task.Id)
+		taskReq.Policies, err = services.GetTaskPolicies(dbSess, task)
 		if err != nil {
-			return nil, errors.Wrapf(err, "get scan task '%s' policies error: %v", task.Id, err)
+			return nil, errors.Wrapf(err, "get scan task '%s' policies", task.Id)
 		}
 	}
 

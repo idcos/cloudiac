@@ -255,6 +255,16 @@ func isVarNewValid(v forms.SampleVariables, value models.Variable) bool {
 	return true
 }
 
+func varNewAppend(resp []forms.Variable, name, value, varType string) []forms.Variable {
+	resp = append(resp, forms.Variable{
+		Scope: consts.ScopeEnv,
+		Type:  varType,
+		Name:  name,
+		Value: value,
+	})
+	return resp
+}
+
 func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id, sampleVariables []forms.SampleVariables) ([]forms.Variable, e.Error) {
 	resp := make([]forms.Variable, 0)
 	vars, err, _ := GetValidVariables(tx, consts.ScopeEnv, orgId, projectId, tplId, envId, true)
@@ -262,22 +272,18 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 		return nil, e.New(e.DBError, fmt.Errorf("get vairables error: %v", err))
 	}
 	for _, v := range sampleVariables {
+		// 如果vars为空，则需要将sampleVariables所有的变量理解为新增变量
+		if len(vars) == 0 {
+			resp = varNewAppend(resp,v.Name,v.Value,consts.VarTypeEnv)
+			continue
+		}
+
 		for key, value := range vars {
 			if !isVarNewValid(v, value) {
-				resp = append(resp, forms.Variable{
-					Scope: consts.ScopeEnv,
-					Type:  vars[key].Type,
-					Name:  vars[key].Name,
-					Value: v.Value,
-				})
+				resp = varNewAppend(resp,vars[key].Name,v.Value, vars[key].Type)
 			} else {
 				// 这部分变量是新增的 需要新建
-				resp = append(resp, forms.Variable{
-					Scope: consts.ScopeEnv,
-					Type:  consts.VarTypeEnv,
-					Name:  v.Name,
-					Value: v.Value,
-				})
+				resp = varNewAppend(resp,v.Name,v.Value,consts.VarTypeEnv)
 			}
 		}
 	}
