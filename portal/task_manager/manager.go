@@ -372,7 +372,7 @@ func (m *TaskManager) processPendingTask(ctx context.Context) {
 		}
 
 		if err := m.runTask(ctx, task); err != nil {
-			if err == errHasRunningTask {
+			if errors.Is(err, errHasRunningTask)  {
 				continue
 			} else {
 				logger.WithField("taskId", task.GetId()).Errorf("run task error: %s", err)
@@ -553,7 +553,7 @@ func (m *TaskManager) processStartStep(
 
 	if runErr != nil {
 		logger.Infof("run task step err: %v", runErr)
-		if runErr == ErrTaskStepRejected {
+		if errors.Is(runErr, ErrTaskStepRejected)  {
 			return nil, runErr
 		}
 
@@ -791,7 +791,7 @@ func waitTaskStepApprove(ctx context.Context, db *db.Session, task *models.Task,
 		logger.Infof("waitting task step approve")
 		changeStepStatus(models.TaskStepApproving, "", step)
 		if newStep, err = WaitTaskStepApprove(ctx, db, step.TaskId, step.Index); err != nil {
-			if err == context.Canceled {
+			if errors.Is(err, context.Canceled) {
 				return nil, err
 			}
 

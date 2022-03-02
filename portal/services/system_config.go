@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/models"
 	"fmt"
 	"strconv"
+	"errors"
 
 	"gorm.io/gorm"
 )
@@ -49,7 +50,7 @@ func CreateSystemConfig(tx *db.Session, cfg models.SystemCfg) (*models.SystemCfg
 func GetSystemConfigByName(tx *db.Session, name string) (*models.SystemCfg, e.Error) {
 	var cfg models.SystemCfg
 	if err := tx.Where("name = ?", name).First(&cfg); err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, e.New(e.SystemConfigNotExist, err)
 		} else {
 			return nil, e.New(e.DBError, err)

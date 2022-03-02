@@ -866,7 +866,7 @@ func fetchTaskStepLog(ctx context.Context, task models.Tasker, writer io.Writer,
 		sleepDuration := consts.DbTaskPollInterval
 		for {
 			if err = fetchRunnerTaskStepLog(ctx, task.GetRunnerId(), step, writer); err != nil {
-				if err == ErrRunnerTaskNotExists && step.StartAt != nil &&
+				if errors.Is(err, ErrRunnerTaskNotExists) && step.StartAt != nil &&
 					time.Since(time.Time(*step.StartAt)) < consts.RunnerConnectTimeout*2 {
 					// 某些情况下可能步骤被标识为了 running 状态，但调用 runner 执行任务时因为网络等原因导致没有及时启动执行。
 					// 所以这里加一个判断, 如果是刚启动的任务会进行重试
@@ -975,7 +975,7 @@ func fetchRunnerTaskStepLog(ctx context.Context, runnerId string, step *models.T
 
 			_, err = io.Copy(writer, reader)
 			if err != nil {
-				if err == io.ErrClosedPipe {
+				if errors.Is(err, io.ErrClosedPipe) {
 					return nil
 				}
 				logger.Warnf("io copy error: %v", err)
