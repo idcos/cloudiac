@@ -873,7 +873,7 @@ func ValidateMeta(meta *Meta) e.Error {
 		return e.New(e.InternalError, fmt.Errorf("register validator translator en error: %v", err))
 	}
 	if err := validate.Struct(meta); err != nil {
-		for _, err := range err.(validator.ValidationErrors) {
+		for _, err := range err.(validator.ValidationErrors) { //nolint
 			return e.New(e.PolicyMetaInvalid, fmt.Errorf("invalid policy meta: %+v", fmt.Errorf(err.Translate(trans))))
 		}
 		return e.New(e.PolicyMetaInvalid, fmt.Errorf("invalid policy meta: %+v", err))

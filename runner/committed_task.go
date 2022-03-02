@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+	"errors"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -62,7 +63,8 @@ func (task *StartedTask) Cancel() error {
 		Force:         true,
 	}
 	if err := cli.ContainerRemove(context.Background(), task.ContainerId, containerRemoveOpts); err != nil {
-		if _, ok := err.(errdefs.ErrNotFound); ok {
+		var targetErr errdefs.ErrNotFound
+		if errors.As(err, &targetErr) {
 			return nil
 		}
 		return err

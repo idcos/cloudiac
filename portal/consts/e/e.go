@@ -108,8 +108,9 @@ func converVcsError(code int, err error) int {
 func convertError(code int, err error, status int) Error {
 	switch code {
 	case DBError:
-		if e, ok := err.(*mysql.MySQLError); ok {
-			switch e.Number {
+		var targetErr *mysql.MySQLError
+		if errors.As(err, &targetErr)  {
+			switch targetErr.Number {
 			case MysqlDuplicate:
 				return newError(ObjectAlreadyExists, err, status)
 			case MysqlUnknownColumn:
@@ -127,17 +128,19 @@ func convertError(code int, err error, status int) Error {
 }
 
 func Is(err error, code int) bool {
-	if er, ok := err.(Error); ok {
-		return er.Code() == code
+	var targetErr Error
+	if errors.As(err, &targetErr)  {
+		return targetErr.Code() == code
 	}
 	return false
 }
 
 func IsMysqlErr(err error, num int) bool {
-	if e, ok := err.(*mysql.MySQLError); ok {
+	var targetErr *mysql.MySQLError
+	if errors.As(err, &targetErr) {
 		if num == 0 {
 			return true
-		} else if e.Number == uint16(num) {
+		} else if targetErr.Number == uint16(num) {
 			return true
 		}
 		return false
@@ -147,8 +150,9 @@ func IsMysqlErr(err error, num int) bool {
 }
 
 func IsDuplicate(err error) bool {
-	if er, ok := err.(*MyError); ok {
-		err = er.Err()
+	var targetErr *MyError
+	if errors.As(err, &targetErr) {
+		err = targetErr.Err()
 	}
 	return IsMysqlErr(err, MysqlDuplicate)
 }
@@ -161,8 +165,9 @@ func IgnoreDuplicate(err error) error {
 }
 
 func IsRecordNotFound(err error) bool {
-	if er, ok := err.(*MyError); ok {
-		err = er.Err()
+	var targetErr *MyError
+	if errors.As(err, &targetErr)  {
+		err = targetErr.Err()
 	}
 	return errors.Is(err, gorm.ErrRecordNotFound)
 }
@@ -175,9 +180,10 @@ func IgnoreNotFound(err error) error {
 }
 
 func GetErr(err error) (*MyError, bool) {
-	er, ok := err.(*MyError)
+	var targetErr *MyError
 	// logs.Get().Warnf("GetErr: %T: %v, %v", err, er, ok)
-	return er, ok
+	result := errors.As(err, &targetErr)
+	return  targetErr, result
 }
 
 func AutoNew(err error, code int, status ...int) Error {

@@ -554,8 +554,9 @@ func SetGinMode() {
 // If no exit code is present, returns -1, original error
 func CmdGetCode(e error) (int, error) {
 	if e != nil {
-		if exitError, ok := e.(*exec.ExitError); ok {
-			exitCode := exitError.Sys().(syscall.WaitStatus).ExitStatus()
+		var targetErr *exec.ExitError
+		if errors.As(e, &targetErr) {
+			exitCode := targetErr.Sys().(syscall.WaitStatus).ExitStatus()
 			return exitCode, nil
 		} else {
 			return -1, e

@@ -796,7 +796,7 @@ func waitTaskStepApprove(ctx context.Context, db *db.Session, task *models.Task,
 			}
 
 			logger.Errorf("wait task step approve error: %v", err)
-			if err != ErrTaskStepRejected {
+			if !errors.Is(err, ErrTaskStepRejected) {
 				changeStepStatus(models.TaskStepFailed, err.Error(), step)
 			}
 			return nil, err

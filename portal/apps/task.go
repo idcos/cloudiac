@@ -22,6 +22,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"errors"
 
 	"github.com/gin-contrib/sse"
 )
@@ -274,7 +275,7 @@ func FollowTaskLog(c *ctx.GinRequest, form forms.TaskLogForm) e.Error {
 		eventId += 1
 	}
 
-	if err := scanner.Err(); err != nil && err != io.EOF {
+	if err := scanner.Err(); err != nil && !errors.Is(err, io.EOF) {
 		return e.New(e.InternalError, err)
 	}
 	return nil
