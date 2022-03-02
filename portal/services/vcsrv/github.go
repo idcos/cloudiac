@@ -173,9 +173,13 @@ type githubCommit struct {
 func (github *githubRepoIface) BranchCommitId(branch string) (string, error) {
 	path := utils.GenQueryURL(github.vcs.Address,
 		fmt.Sprintf("/repos/%s/commits/%s", github.repository.FullName, branch), nil)
-	_, body, err := githubRequest(path, "GET", github.vcs.VcsToken, nil)
+	response, body, err := githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if err != nil {
 		return "", e.New(e.VcsError, err)
+	}
+
+	if response.StatusCode == http.StatusUnauthorized {
+		return "", e.New(e.VcsInvalidToken, fmt.Errorf("invalid token"))
 	}
 
 	resp := githubCommit{}
@@ -184,8 +188,8 @@ func (github *githubRepoIface) BranchCommitId(branch string) (string, error) {
 		return "", e.New(e.VcsError, err)
 	}
 	if resp.Sha == "" {
-		logs.Get().Warnf("query github branch commit it failed")
-		return "", e.New(e.VcsError, fmt.Errorf("query commit id failed"))
+		logs.Get().Warnf("query github branch commit is failed")
+		return "", e.New(e.VcsGetCommitIdError, fmt.Errorf("query commit id failed"))
 	}
 	return resp.Sha, nil
 }

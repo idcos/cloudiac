@@ -62,11 +62,12 @@ const (
 	ConsulConnError = 10430
 
 	// vcs调用相关错误
-	VcsError          = 10440
-	VcsAddressError   = 10441
-	VcsInvalidToken   = 10442
-	VcsConnectError   = 10445
-	VcsConnectTimeOut = 10446
+	VcsError            = 10440
+	VcsAddressError     = 10441
+	VcsInvalidToken     = 10442
+	VcsConnectError     = 10445
+	VcsConnectTimeOut   = 10446
+	VcsGetCommitIdError = 10447
 
 	//// 导入导出错误 105
 	ImportError       = 10510
@@ -496,6 +497,9 @@ var errorMsgs = map[int]map[string]string{
 	},
 	VcsDeleteError: {
 		"zh-cn": "vcs存在相关依赖云模版，无法删除",
+	},
+	VcsGetCommitIdError: {
+		"zh-cn": "vcs获取commitId失败",
 	},
 	ImportError: {
 		"zh-cn": "导入出错",
