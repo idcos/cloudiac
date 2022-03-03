@@ -79,7 +79,7 @@ func CheckPassword(password, hashedPassword string) (bool, error) {
 
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	if err != nil {
-		if err == bcrypt.ErrMismatchedHashAndPassword {
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			return false, nil
 		} else {
 			return false, err
@@ -251,7 +251,7 @@ func extractAndWriteFile(destDir string, f *zip.File) error {
 	for {
 		_, err := io.CopyN(fp, rc, 1024)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 			return err
@@ -554,8 +554,9 @@ func SetGinMode() {
 // If no exit code is present, returns -1, original error
 func CmdGetCode(e error) (int, error) {
 	if e != nil {
-		if exitError, ok := e.(*exec.ExitError); ok {
-			exitCode := exitError.Sys().(syscall.WaitStatus).ExitStatus()
+		var targetErr *exec.ExitError
+		if errors.As(e, &targetErr) {
+			exitCode := targetErr.Sys().(syscall.WaitStatus).ExitStatus()
 			return exitCode, nil
 		} else {
 			return -1, e

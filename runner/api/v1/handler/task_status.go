@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -109,7 +110,7 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, closedCh <-c
 				return nil
 			}
 			if err != nil {
-				if err == context.DeadlineExceeded {
+				if errors.Is(err, context.DeadlineExceeded) {
 					return sendStatus(true, true)
 				}
 				return err

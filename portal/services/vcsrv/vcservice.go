@@ -241,8 +241,8 @@ func IsNotFoundErr(err error) bool {
 	if err == nil {
 		return false
 	}
-
-	if er, ok := err.(e.Error); ok && er.Code() == e.ObjectNotExists {
+	var targetErr e.Error
+	if errors.As(err, &targetErr) && targetErr.Code() == e.ObjectNotExists {
 		return true
 	}
 	if strings.Contains(err.Error(), "not found") {

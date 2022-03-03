@@ -6,6 +6,7 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -49,7 +50,7 @@ func CreateSystemConfig(tx *db.Session, cfg models.SystemCfg) (*models.SystemCfg
 func GetSystemConfigByName(tx *db.Session, name string) (*models.SystemCfg, e.Error) {
 	var cfg models.SystemCfg
 	if err := tx.Where("name = ?", name).First(&cfg); err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, e.New(e.SystemConfigNotExist, err)
 		} else {
 			return nil, e.New(e.DBError, err)
@@ -62,7 +63,7 @@ func GetSystemConfigByName(tx *db.Session, name string) (*models.SystemCfg, e.Er
 func UpsertRegistryAddr(tx *db.Session, val string) (*models.SystemCfg, e.Error) {
 	cfg, err := GetSystemConfigByName(tx, models.SysCfgNamRegistryAddr)
 	if err != nil {
-		if err.Err() == gorm.ErrRecordNotFound {
+		if errors.Is(err.Err(), gorm.ErrRecordNotFound) {
 			return CreateSystemConfig(tx, models.SystemCfg{
 				Name:  models.SysCfgNamRegistryAddr,
 				Value: val,

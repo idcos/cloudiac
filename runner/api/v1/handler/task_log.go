@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -148,7 +149,7 @@ func followFile(ctx context.Context, path string, offset int64) (<-chan []byte, 
 				case <-ctx.Done():
 					return
 				default:
-					if err == io.EOF {
+					if errors.Is(err, io.EOF) {
 						// 读到了文件末尾，等待一下再进行下一次读取
 						time.Sleep(runner.FollowLogDelay)
 						continue
