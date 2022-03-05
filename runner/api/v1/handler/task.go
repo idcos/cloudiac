@@ -3,9 +3,9 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strings"
-	"errors"
 
 	"github.com/docker/docker/errdefs"
 	"github.com/gin-gonic/gin"
@@ -15,6 +15,7 @@ import (
 )
 
 func RunTask(c *ctx.Context) {
+
 	req := runner.RunTaskReq{}
 	if err := c.BindJSON(&req); err != nil {
 		c.Error(err, http.StatusBadRequest)
@@ -23,6 +24,7 @@ func RunTask(c *ctx.Context) {
 
 	task := runner.NewTask(req, c.Logger)
 	if cid, err := task.Run(); err != nil {
+		task.CleanTaskWorkDirCode()
 		c.Error(err, http.StatusInternalServerError)
 		return
 	} else {
