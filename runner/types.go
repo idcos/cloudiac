@@ -68,6 +68,7 @@ type TaskStatusReq struct {
 }
 
 type TaskStopReq struct {
+	EnvId        string   `json:"envId" form:"envId" binding:""`
 	TaskId       string   `json:"taskId" form:"taskId" binding:"required"`
 	ContainerIds []string `json:"containerIds" form:"containerIds" binding:"required"`
 }
