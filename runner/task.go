@@ -36,13 +36,14 @@ func NewTask(req RunTaskReq, logger logs.Logger) *Task {
 	}
 }
 
-func (t *Task) CleanTaskWorkDirCode() error {
-	logger.Debugf("CleanTaskWorkDirCode params: workdir=%s\n", t.workspace)
-	if t.workspace == "" {
+func CleanTaskWorkDirCode(envId, taskId string) error {
+	logger.Debugf("CleanTaskWorkDirCode params: envId=%s, taskId=%s", envId, taskId)
+	workspace := GetTaskWorkspace(envId, taskId)
+	if workspace == "" {
 		return nil
 	}
 
-	err := os.RemoveAll(filepath.Join(t.workspace, "code"))
+	err := os.RemoveAll(filepath.Join(workspace, "code"))
 	if err != nil {
 		logger.Warnf("CleanTaskWorkDirCode error: %v\n", err)
 	}
@@ -249,10 +250,16 @@ func (t *Task) initWorkspace() (workspace string, err error) {
 	if t.req.Step != 0 {
 		return workspace, nil
 	}
+	fmt.Println("========================================")
+	fmt.Println(workspace)
+	fmt.Println("========================================")
 
 	if err = os.MkdirAll(workspace, 0755); err != nil {
 		return workspace, err
 	}
+	fmt.Println("========================================")
+	fmt.Println("create workspace")
+	fmt.Println("========================================")
 
 	privateKeyPath := filepath.Join(workspace, "ssh_key")
 	keyContent := fmt.Sprintf("%s\n", strings.TrimSpace(t.req.PrivateKey))
