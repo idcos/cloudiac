@@ -250,16 +250,10 @@ func (t *Task) initWorkspace() (workspace string, err error) {
 	if t.req.Step != 0 {
 		return workspace, nil
 	}
-	fmt.Println("========================================")
-	fmt.Println(workspace)
-	fmt.Println("========================================")
 
 	if err = os.MkdirAll(workspace, 0755); err != nil {
 		return workspace, err
 	}
-	fmt.Println("========================================")
-	fmt.Println("create workspace")
-	fmt.Println("========================================")
 
 	privateKeyPath := filepath.Join(workspace, "ssh_key")
 	keyContent := fmt.Sprintf("%s\n", strings.TrimSpace(t.req.PrivateKey))
