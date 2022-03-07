@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -132,7 +132,7 @@ func ChangeTaskStepStatusAndUpdate(dbSess *db.Session, task models.Tasker, taskS
 	return ChangeTaskStatusWithStep(dbSess, task, taskStep)
 }
 
-func newTaskStep(tx *db.Session, task models.Task, stepBody models.PipelineStep, index int) *models.TaskStep {
+func newTaskStep(task models.Task, stepBody models.PipelineStep, index int) *models.TaskStep {
 	s := models.TaskStep{
 		PipelineStep: stepBody,
 		OrgId:        task.OrgId,
@@ -156,10 +156,11 @@ func newTaskStep(tx *db.Session, task models.Task, stepBody models.PipelineStep,
 	return &s
 }
 
-func newScanTaskStep(tx *db.Session, task models.ScanTask, stepBody models.PipelineStep, index int) *models.TaskStep {
+func newScanTaskStep(task models.ScanTask, stepBody models.PipelineStep, index int) *models.TaskStep {
 	s := models.TaskStep{
 		PipelineStep: stepBody,
 		OrgId:        task.OrgId,
+		EnvId:        task.EnvId,
 		TaskId:       task.Id,
 		Index:        index,
 		Status:       models.TaskStepPending,
@@ -173,7 +174,8 @@ func newScanTaskStep(tx *db.Session, task models.ScanTask, stepBody models.Pipel
 
 func GetTaskScanStep(query *db.Session, taskId models.Id) (*models.TaskStep, e.Error) {
 	taskStep := models.TaskStep{}
-	err := query.Where("task_id = ? AND `type` = ?", taskId, common.TaskStepOpaScan).First(&taskStep)
+	err := query.Where("task_id = ? AND `type` in (?,?,?)",
+		taskId, common.TaskStepEnvScan, common.TaskStepTplScan, common.TaskStepOpaScan).First(&taskStep)
 	if err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.TaskStepNotExists)
@@ -196,7 +198,7 @@ func GetTaskLastStep(sess *db.Session, taskId models.Id) (*models.TaskStep, e.Er
 }
 
 func CreateTaskStep(tx *db.Session, task models.Task, stepBody models.PipelineStep, index int) (*models.TaskStep, e.Error) {
-	step := newTaskStep(tx, task, stepBody, index)
+	step := newTaskStep(task, stepBody, index)
 	if err := tx.Insert(step); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
@@ -204,7 +206,7 @@ func CreateTaskStep(tx *db.Session, task models.Task, stepBody models.PipelineSt
 }
 
 func CreateTaskCallbackStep(sess *db.Session, task models.Task, stepBody models.PipelineStep, index int) (*models.TaskStep, e.Error) {
-	step := newTaskStep(sess, task, stepBody, index)
+	step := newTaskStep(task, stepBody, index)
 	step.IsCallback = true
 	if err := sess.Insert(step); err != nil {
 		return nil, e.AutoNew(err, e.DBError)

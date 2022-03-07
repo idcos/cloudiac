@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package models
 
@@ -12,12 +12,16 @@ import (
 )
 
 type TaskFlows struct {
-	Version string   `json:"version" yaml:"version"`
-	Plan    TaskFlow `json:"plan" yaml:"plan"`
-	Apply   TaskFlow `json:"apply" yaml:"apply"`
-	Destroy TaskFlow `json:"destroy" yaml:"destroy"`
-	Scan    TaskFlow `json:"scan" yaml:"scan"`
-	Parse   TaskFlow `json:"parse" yaml:"parse"`
+	Version  string   `json:"version" yaml:"version"`
+	Plan     TaskFlow `json:"plan" yaml:"plan"`
+	Apply    TaskFlow `json:"apply" yaml:"apply"`
+	Destroy  TaskFlow `json:"destroy" yaml:"destroy"`
+	Scan     TaskFlow `json:"scan" yaml:"scan"`
+	Parse    TaskFlow `json:"parse" yaml:"parse"`
+	EnvScan  TaskFlow `json:"envScan" yaml:"envScan"`
+	EnvParse TaskFlow `json:"envParse" yaml:"envParse"`
+	TplScan  TaskFlow `json:"tplScan" yaml:"tplScan"`
+	TplParse TaskFlow `json:"tplParse" yaml:"tplParse"`
 }
 
 type TaskFlow struct {
@@ -32,28 +36,6 @@ func (v *TaskFlow) Scan(value interface{}) error {
 	return UnmarshalValue(value, v)
 }
 
-const taskFlowsContent = `
-version: 0.1
-plan:
-  steps:
-    - type: init
-    - type: plan
-
-apply:
-  steps:
-    - type: init
-    - type: plan
-    - type: apply 
-    - type: play
-
-destroy:
-  steps:
-    - type: init
-    - type: plan
-      args: ["-destroy"]
-    - type: destroy
-`
-
 const taskFlowsWithScanContent = `
 version: 0.2
 plan:
@@ -67,7 +49,7 @@ apply:
     - type: init
     - type: tfscan
     - type: plan
-    - type: apply 
+    - type: apply
     - type: play
 
 destroy:
@@ -104,6 +86,14 @@ func GetTaskFlow(flows *TaskFlows, typ string) (TaskFlow, error) {
 		return flows.Scan, nil
 	case common.TaskTypeParse:
 		return flows.Parse, nil
+	case common.TaskTypeEnvScan:
+		return flows.EnvScan, nil
+	case common.TaskTypeEnvParse:
+		return flows.EnvParse, nil
+	case common.TaskTypeTplScan:
+		return flows.TplScan, nil
+	case common.TaskTypeTplParse:
+		return flows.TplParse, nil
 	default:
 		return TaskFlow{}, fmt.Errorf("unknown task type: %v", typ)
 	}
@@ -117,7 +107,7 @@ func DefaultTaskFlows(version string) TaskFlows {
 	return defaultTaskFlows
 }
 
-func decodeTaskFlow(taskFlowContent string) TaskFlows {
+func decodeTaskFlow(taskFlowContent string) TaskFlows { //nolint:unused
 	taskFlows := TaskFlows{}
 	buffer := bytes.NewBufferString(taskFlowContent)
 	if err := yaml.NewDecoder(buffer).Decode(&taskFlows); err != nil {
@@ -127,8 +117,5 @@ func decodeTaskFlow(taskFlowContent string) TaskFlows {
 }
 
 func init() {
-	buffer := bytes.NewBufferString(defaultTaskFlowsContent)
-	if err := yaml.NewDecoder(buffer).Decode(&defaultTaskFlows); err != nil {
-		panic(err)
-	}
+	defaultTaskFlows = decodeTaskFlow(defaultTaskFlowsContent)
 }

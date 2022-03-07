@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package forms
 
@@ -34,6 +34,12 @@ type CreateTemplateForm struct {
 
 	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" `
 	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
+	PolicyEnable   bool        `json:"policyEnable" form:"policyEnable"` // 是否开启合规检测
+	PolicyGroup    []models.Id `json:"policyGroup" form:"policyGroup"`   // 绑定的合规策略组
+	TplTriggers    []string    `json:"tplTriggers" form:"tplTriggers"`   // 分之推送自动触发合规 例如 ["commit"]
+
+	KeyId models.Id `form:"keyId" json:"keyId" binding:""` // 部署密钥ID
+
 }
 
 type SearchTemplateForm struct {
@@ -65,6 +71,10 @@ type UpdateTemplateForm struct {
 
 	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" `
 	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `
+	PolicyEnable   bool        `json:"policyEnable" form:"policyEnable"` // 是否开启合规检测
+	PolicyGroup    []models.Id `json:"policyGroup" form:"policyGroup"`   // 绑定的合规策略组
+	TplTriggers    []string    `json:"tplTriggers" form:"tplTriggers"`   // 分之推送自动触发合规 例如 ["commit"]
+	KeyId          models.Id   `form:"keyId" json:"keyId" binding:""`    // 部署密钥ID
 }
 
 type DeleteTemplateForm struct {
@@ -92,26 +102,26 @@ type TemplateTfvarsSearchForm struct {
 	BaseForm
 	RepoId       string    `json:"repoId" form:"repoId" binding:"required"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
-	RepoType     string    `json:"repoType" form:"repoType" `
 	VcsId        models.Id `uri:"id"`
 	TplChecks    bool      `json:"tplChecks" form:"tplChecks" swaggerignore:"true"`
 	Path         string    `json:"path" form:"path" swaggerignore:"true"`
+	Workdir      string    `json:"workdir" form:"workdir" `
 }
 
 type TemplateVariableSearchForm struct {
 	BaseForm
 	RepoId       string    `json:"repoId" form:"repoId" binding:"required"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
-	RepoType     string    `json:"repoType" form:"repoType" `
-	VcsId        models.Id `json:"vcsId" form:"vcsId" binding:"required"`
+	VcsId        models.Id `uri:"id"`
+	Workdir      string    `json:"workdir" form:"workdir" `
 }
 
 type TemplatePlaybookSearchForm struct {
 	BaseForm
 	RepoId       string    `json:"repoId" form:"repoId" binding:"required"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
-	RepoType     string    `json:"repoType" form:"repoType" `
 	VcsId        models.Id `uri:"id"`
+	Workdir      string    `json:"workdir" form:"workdir" `
 }
 
 type TemplateTfVersionSearchForm struct {
@@ -123,11 +133,10 @@ type TemplateTfVersionSearchForm struct {
 
 type TemplateChecksForm struct {
 	BaseForm
-	Name         string    `json:"name" form:"name" form:"name"`
+	Name         string    `json:"name" form:"name"`
 	RepoId       string    `json:"repoId" form:"repoId"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision"`
-	RepoType     string    `json:"repoType" form:"repoType" `
 	VcsId        models.Id `json:"vcsId" form:"vcsId"`
-	Workdir      string    `json:"workdir" form:"path"`
+	Workdir      string    `json:"workdir" form:"workdir"`
 	TemplateId   models.Id `json:"templateId" form:"templateId"`
 }

@@ -9,6 +9,6 @@ COPY build/ct-runner ct-runner
 # runner 容器化部署时不能设置 assets_path
 # 同时如果指定了 WORKER_IMAGE，则做配置替换
 RUN sed -i -e 's/ assets_path:.*/ assets_path: ""/' \
-           -e 's#"cloudiac/ct-worker:latest"#"'$WORKER_IMAGE'"#g' config-runner.yml
+           -e 's#cloudiac/ct-worker:latest"#'$WORKER_IMAGE'"#g' config-runner.yml
 
 CMD ./ct-runner

@@ -1,9 +1,10 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package utils
 
 import (
 	"bytes"
+	"cloudiac/configs"
 	"cloudiac/utils/logs"
 	"crypto/tls"
 	"encoding/json"
@@ -18,6 +19,8 @@ import (
 	"time"
 )
 
+const HeaderContentType string = "Content-Type"
+
 func httpClient(conntimeout, deadline int) *http.Client {
 	c := &http.Client{
 		Transport: &http.Transport{
@@ -27,84 +30,62 @@ func httpClient(conntimeout, deadline int) *http.Client {
 				if err != nil {
 					return nil, err
 				}
-				c.SetDeadline(deadline)
-				return c, nil
+				return c, c.SetDeadline(deadline)
 			},
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
+				// 默认配置为 false，可通过配置 HttpClientInsecure 设置为跳过证书验证
+				InsecureSkipVerify: configs.Get().HttpClientInsecure, //nolint:gosec
 			},
 		},
 	}
 	return c
 }
 
+func getHttpRequest(reqUrl, method string, header *http.Header, data interface{}) (*http.Request, error) {
+	if http.MethodGet == method || data == nil {
+		return http.NewRequest(method, reqUrl, nil)
+	}
+
+	// json data
+	if header.Get(HeaderContentType) == "application/json" { //nolint
+		b, err := json.Marshal(data)
+		if err != nil {
+			return nil, err
+		}
+		req, err := http.NewRequest(method, reqUrl, bytes.NewReader(b))
+		if err != nil {
+			return nil, err
+		}
+		req.Header = *header
+		return req, nil
+	}
+
+	// string data
+	if value, ok := data.(string); ok {
+		req, err := http.NewRequest(method, reqUrl, bytes.NewReader([]byte(value)))
+		if err != nil {
+			return nil, err
+		}
+		req.Header = *header
+		return req, nil
+	}
+
+	return nil, fmt.Errorf("params err")
+}
+
 func HttpService(reqUrl, method string, header *http.Header, data interface{}, conntimeout, deadline int) ([]byte, error) {
 	c := httpClient(conntimeout, deadline)
 
-	var req *http.Request
 	var err error
 	if header == nil {
 		header = &http.Header{}
 	}
-	if header.Get("Content-Type") == "" {
-		header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if header.Get(HeaderContentType) == "" {
+		header.Set(HeaderContentType, "application/x-www-form-urlencoded")
 	}
 
-	if http.MethodPost == method {
-		if data != nil {
-			if header.Get("Content-Type") == "application/json" {
-				b, err := json.Marshal(data)
-				if err != nil {
-					return nil, err
-				}
-				req, err = http.NewRequest(method, reqUrl, bytes.NewReader(b))
-			} else if value, ok := data.(string); ok {
-				req, err = http.NewRequest(method, reqUrl, bytes.NewReader([]byte(value)))
-			} else {
-				return nil, fmt.Errorf("params err")
-			}
-		} else {
-			req, err = http.NewRequest(method, reqUrl, nil)
-		}
-	} else if http.MethodDelete == method {
-		if data != nil {
-			if header.Get("Content-Type") == "application/json" {
-				b, err := json.Marshal(data)
-				if err != nil {
-					return nil, err
-				}
-				req, err = http.NewRequest(method, reqUrl, bytes.NewReader(b))
-			} else if value, ok := data.(string); ok {
-				req, err = http.NewRequest(method, reqUrl, bytes.NewReader([]byte(value)))
-			} else {
-				return nil, fmt.Errorf("params err")
-			}
-		} else {
-			req, err = http.NewRequest(method, reqUrl, nil)
-		}
-	} else if http.MethodPut == method {
-		if data != nil {
-			if header.Get("Content-Type") == "application/json" {
-				b, err := json.Marshal(data)
-				if err != nil {
-					return nil, err
-				}
-				req, err = http.NewRequest(method, reqUrl, bytes.NewReader(b))
-			} else if value, ok := data.(string); ok {
-				req, err = http.NewRequest(method, reqUrl, bytes.NewReader([]byte(value)))
-			} else {
-				return nil, fmt.Errorf("params err")
-			}
-		} else {
-			req, err = http.NewRequest(method, reqUrl, nil)
-		}
-	} else if http.MethodGet == method {
-		req, err = http.NewRequest(method, reqUrl, nil)
-	}
-	if header != nil {
-		req.Header = *header
-	}
-
+	var req *http.Request
+	req, err = getHttpRequest(reqUrl, method, header, data)
 	if err != nil {
 		return nil, err
 	}
@@ -114,11 +95,13 @@ func HttpService(reqUrl, method string, header *http.Header, data interface{}, c
 	if err != nil {
 		return nil, err
 	}
-	returndata, err := ioutil.ReadAll(resp.Body)
-	if resp != nil {
-		resp.Body.Close()
-	}
-	return returndata, err
+	defer func() {
+		if resp != nil {
+			_ = resp.Body.Close()
+		}
+	}()
+
+	return ioutil.ReadAll(resp.Body)
 }
 
 type FormPart struct {
@@ -160,7 +143,7 @@ func HttpPostFiles(reqUrl string, header *http.Header, formParts []FormPart, con
 	if header != nil {
 		req.Header = *header
 	}
-	req.Header.Set("Content-Type", w.FormDataContentType())
+	req.Header.Set(HeaderContentType, w.FormDataContentType())
 
 	resp, err = c.Do(req)
 	return

@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package vcsrv
 
@@ -49,7 +49,6 @@ func (gitee *giteeVcs) GetRepo(idOrPath string) (RepoIface, error) {
 		repository: &rep,
 		urlParam:   gitee.urlParam,
 	}, nil
-
 }
 
 type RepositoryGitee struct {
@@ -85,7 +84,7 @@ func (gitee *giteeVcs) ListRepos(namespace, search string, limit, offset int) ([
 	_ = json.Unmarshal(body, &rep)
 
 	repoList := make([]RepoIface, 0)
-	for index, _ := range rep {
+	for index := range rep {
 		repoList = append(repoList, &giteeRepoIface{
 			vcs:        gitee.vcs,
 			repository: &rep[index],
@@ -94,6 +93,19 @@ func (gitee *giteeVcs) ListRepos(namespace, search string, limit, offset int) ([
 	}
 
 	return repoList, total, nil
+}
+
+// https://gitee.com/api/v5/user
+func (gitee *giteeVcs) UserInfo() (UserInfo, error) {
+	path := gitee.vcs.Address + fmt.Sprintf("/user?access_token=%s", gitee.urlParam.Get("access_token"))
+	_, body, er := giteeRequest(path, "GET", nil)
+	if er != nil {
+		return UserInfo{}, e.New(e.BadRequest, er)
+	}
+
+	rep := UserInfo{}
+	_ = json.Unmarshal(body, &rep)
+	return rep, nil
 }
 
 type giteeRepoIface struct {
@@ -173,10 +185,10 @@ func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 	var path string = gitee.vcs.Address
 	branch := getBranch(gitee, option.Ref)
 	if option.Path != "" {
-		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s",
+		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", //nolint
 			gitee.repository.FullName, option.Path, gitee.urlParam.Get("access_token"), branch)
 	} else {
-		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s",
+		path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", //nolint
 			gitee.repository.FullName, "%2F", gitee.urlParam.Get("access_token"), branch)
 	}
 	_, body, er := giteeRequest(path, "GET", nil)
@@ -210,7 +222,7 @@ type giteeReadContent struct {
 func (gitee *giteeRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
 	pathAddr := gitee.vcs.Address +
 		fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", gitee.repository.FullName, path, gitee.urlParam.Get("access_token"), branch)
-	_, body, er := giteeRequest(pathAddr, "GET", nil)
+	_, body, er := giteeRequest(pathAddr, "GET", nil) //nolint
 
 	if er != nil {
 		return nil, e.New(e.BadRequest, er)
@@ -267,24 +279,38 @@ func (gitee *giteeRepoIface) AddWebhook(url string) error {
 
 	if response.StatusCode >= 300 {
 		err = e.New(e.VcsError, fmt.Errorf("%s: %s", response.Status, string(respBody)))
-		return  err
+		return err
 	}
 	return nil
 }
 
-func (gitee *giteeRepoIface) ListWebhook() ([]ProjectsHook, error) {
-	ph := make([]ProjectsHook, 0)
+func initGiteeRepoHook(body []byte) []RepoHook {
+	ph := make([]struct {
+		Url string `json:"url"`
+		Id  int    `json:"id"`
+	}, 0)
+	_ = json.Unmarshal(body, &ph)
+
+	resp := make([]RepoHook, 0)
+
+	for _, v := range ph {
+		resp = append(resp, RepoHook{
+			Id:  v.Id,
+			Url: v.Url,
+		})
+	}
+	return resp
+}
+
+func (gitee *giteeRepoIface) ListWebhook() ([]RepoHook, error) {
 	path := gitee.vcs.Address +
 		fmt.Sprintf("/repos/%s/hooks?access_token=%s", gitee.repository.FullName, gitee.urlParam.Get("access_token"))
 	_, body, err := giteeRequest(path, http.MethodGet, nil)
 	if err != nil {
-		return ph, e.New(e.BadRequest, err)
+		return nil, e.New(e.BadRequest, err)
 	}
 
-	rep := []giteeCommit{}
-	_ = json.Unmarshal(body, &rep)
-
-	return ph, nil
+	return initGiteeRepoHook(body), nil
 }
 
 func (gitee *giteeRepoIface) DeleteWebhook(id int) error {

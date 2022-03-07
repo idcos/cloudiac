@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package apps
 
@@ -12,13 +12,17 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"path"
 	"sort"
 	"strconv"
 	"strings"
+	"errors"
 
 	"github.com/gin-contrib/sse"
 )
@@ -40,11 +44,9 @@ func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{},
 		return nil, e.New(e.DBError, err)
 	}
 
-	if details != nil {
-		for _, env := range details {
-			// 隐藏敏感字段
-			env.HideSensitiveVariable()
-		}
+	for _, env := range details {
+		// 隐藏敏感字段
+		env.HideSensitiveVariable()
 	}
 
 	return page.PageResp{
@@ -66,7 +68,7 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*taskDetailRe
 		c.Logger().Errorf("error get task id by user, err %s", er)
 		return nil, e.New(e.DBError, er)
 	}
-	if c.OrgId.InArray(orgIds...) == false && c.IsSuperAdmin == false {
+	if !c.OrgId.InArray(orgIds...) && !c.IsSuperAdmin {
 		// 请求了一个不存在的 task，因为 task id 是在 path 传入，这里我们返回 404
 		return nil, e.New(e.TaskNotExists, http.StatusNotFound)
 	}
@@ -77,13 +79,13 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*taskDetailRe
 		err  e.Error
 	)
 	task, err = services.GetTaskById(c.DB(), form.Id)
-	sort.Sort(task.Variables)
 	if err != nil && err.Code() == e.TaskNotExists {
 		return nil, e.New(e.TaskNotExists, err, http.StatusNotFound)
 	} else if err != nil {
 		c.Logger().Errorf("error get task by id, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
+	sort.Sort(task.Variables)
 	user, err = services.GetUserByIdRaw(c.DB(), task.CreatorId)
 	if err != nil && err.Code() == e.UserNotExists {
 		user = &models.User{}
@@ -99,8 +101,22 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*taskDetailRe
 		Task:    *task,
 		Creator: user.Name,
 	}
-
+	if strings.Contains(o.RepoAddr, `token:`) {
+		o.RepoAddr, err = replaceVcsToken(o.RepoAddr)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &o, nil
+}
+
+func replaceVcsToken(old string) (string, e.Error) {
+	u, err := url.Parse(old)
+	if err != nil {
+		return "", e.New(e.URLParseError, err)
+	}
+	u.User = url.User("")
+	return u.Redacted(), nil
 }
 
 // LastTask 最新任务信息
@@ -198,39 +214,54 @@ func ApproveTask(c *ctx.ServiceContext, form *forms.ApproveTaskForm) (interface{
 	return nil, nil
 }
 
+func getTask(sc *ctx.ServiceContext, id models.Id) (models.Tasker, e.Error) {
+	query := services.QueryWithProjectId(services.QueryWithOrgId(sc.DB(), sc.OrgId), sc.ProjectId)
+
+	var (
+		tasker models.Tasker
+		er     e.Error
+	)
+	tasker, er = services.GetTask(query, id)
+	if er != nil {
+		if sc.IsSuperAdmin {
+			tasker, er = services.GetScanTaskById(sc.DB(), id)
+		}
+		if er != nil {
+			if er.Code() == e.TaskNotExists {
+				return nil, e.New(er.Code(), http.StatusNotFound)
+			}
+			return nil, er
+		}
+	}
+
+	return tasker, nil
+}
+
+func startTaskLog(rCtx context.Context, tasker models.Tasker, pw *io.PipeWriter, form forms.TaskLogForm, logger logs.Logger) {
+	if form.StepId != "" {
+		if err := services.FetchTaskStepLog(rCtx, tasker, pw, form.StepId); err != nil {
+			logger.Errorf("fetch task step log: %v", err)
+		}
+	} else {
+		if err := services.FetchTaskLog(rCtx, tasker, form.StepType, pw); err != nil {
+			logger.Errorf("fetch task log: %v", err)
+		}
+	}
+}
+
+// TODO tasker 的逻辑有疑问
 func FollowTaskLog(c *ctx.GinRequest, form forms.TaskLogForm) e.Error {
 	logger := c.Logger().WithField("func", "FollowTaskLog").WithField("taskId", form.Id)
 	sc := c.Service()
 	rCtx := c.Context.Request.Context()
 
-	query := services.QueryWithProjectId(services.QueryWithOrgId(sc.DB(), sc.OrgId), sc.ProjectId)
-	var tasker models.Tasker
-	tasker, er := services.GetTask(query, form.Id)
+	tasker, er := getTask(sc, form.Id)
 	if er != nil {
-		if sc.IsSuperAdmin {
-			tasker, er = services.GetScanTaskById(sc.DB(), form.Id)
-		}
-		if er != nil {
-			logger.Errorf("get task: %v", er)
-			if er.Code() == e.TaskNotExists {
-				return e.New(er.Code(), http.StatusNotFound)
-			}
-			return er
-		}
+		return er
 	}
 
 	pr, pw := io.Pipe()
-	go func() {
-		if form.StepId != "" {
-			if err := services.FetchTaskStepLog(rCtx, tasker, pw, form.StepId); err != nil {
-				logger.Errorf("fetch task step log: %v", err)
-			}
-		} else {
-			if err := services.FetchTaskLog(rCtx, tasker, form.StepType, pw); err != nil {
-				logger.Errorf("fetch task log: %v", err)
-			}
-		}
-	}()
+	go startTaskLog(rCtx, tasker, pw, form, logger)
 
 	scanner := bufio.NewScanner(pr)
 	eventId := 0 // to indicate the message id
@@ -244,7 +275,7 @@ func FollowTaskLog(c *ctx.GinRequest, form forms.TaskLogForm) e.Error {
 		eventId += 1
 	}
 
-	if err := scanner.Err(); err != nil && err != io.EOF {
+	if err := scanner.Err(); err != nil && !errors.Is(err, io.EOF) {
 		return e.New(e.InternalError, err)
 	}
 	return nil
@@ -257,7 +288,7 @@ func TaskOutput(c *ctx.ServiceContext, form forms.DetailTaskForm) (interface{}, 
 		c.Logger().Errorf("error get task id by user, err %s", er)
 		return nil, e.New(e.DBError, er)
 	}
-	if c.OrgId.InArray(orgIds...) == false && c.IsSuperAdmin == false {
+	if !c.OrgId.InArray(orgIds...) && !c.IsSuperAdmin {
 		// 请求了一个不存在的 task，因为 task id 是在 path 传入，这里我们返回 404
 		return nil, e.New(e.TaskNotExists, http.StatusNotFound)
 	}
@@ -295,11 +326,9 @@ func SearchTaskResources(c *ctx.ServiceContext, form *forms.SearchTaskResourceFo
 		c.OrgId, c.ProjectId, task.EnvId, task.Id)
 	query = query.Joins("left join iac_resource_drift as rd on rd.res_id = r.id").LazySelectAppend("r.*, !ISNULL(rd.drift_detail) as is_drift")
 	if form.HasKey("q") {
+		q := fmt.Sprintf("%%%s%%", form.Q)
 		// 支持对 provider / type / name 进行模糊查询
-		query = query.Where("r.provider LIKE ? OR r.type LIKE ? OR r.name LIKE ?",
-			fmt.Sprintf("%%%s%%", form.Q),
-			fmt.Sprintf("%%%s%%", form.Q),
-			fmt.Sprintf("%%%s%%", form.Q))
+		query = query.Where("r.provider LIKE ? OR r.type LIKE ? OR r.name LIKE ?", q, q, q)
 	}
 
 	if form.SortField() == "" {
@@ -408,16 +437,69 @@ type ResourceInfo struct {
 	IsDrift      bool        `json:"isDrift"`
 }
 
-func GetResourcesGraphModule(resources []services.Resource) interface{} {
-	// 构建根节点
-	rootModule := "rootModule"
-	rgm := &ResourcesGraphModule{
-		IsRoot:   true,
-		NodeName: rootModule,
-		NodeId:   rootModule,
-		Children: make([]*ResourcesGraphModule, 0),
+func genNodesFromResource(resource services.Resource, parentChildNode map[string][]string, resourceAttr map[string][]ResourceInfo, nodeNameAttr map[string]string) {
+	// 将module替替换为空
+	address := strings.Replace(resource.Address, "module.", "", -1)
+	addrs := strings.Split(address, ".")
+	if len(addrs) == 0 {
+		return
 	}
 
+	// first node
+	rootModule := "rootModule"
+	rootNodeId := strings.Join(addrs[:1], ".")
+	nodeNameAttr[rootNodeId] = addrs[0]
+	if _, ok := parentChildNode[rootModule]; !ok {
+		parentChildNode[rootModule] = []string{rootNodeId}
+	} else {
+		parentChildNode[rootModule] = append(parentChildNode[rootModule], rootNodeId)
+	}
+
+	// middle nodes
+	for index := 1; index < len(addrs)-1; index++ {
+		var (
+			parentNodeId string
+			nodeId       = strings.Join(addrs[:index+1], ".")
+		)
+		nodeNameAttr[nodeId] = addrs[index]
+		parentNodeId = strings.Join(addrs[:index], ".")
+
+		// 构造数据结构
+		if _, ok := parentChildNode[parentNodeId]; !ok {
+			parentChildNode[parentNodeId] = []string{nodeId}
+			continue
+		}
+		parentChildNode[parentNodeId] = append(parentChildNode[parentNodeId], nodeId)
+	}
+
+	// last node 处理最末级节点，将末级节点定义为资源
+	lastAddr := addrs[len(addrs)-1]
+	lastNodeId := strings.Join(addrs[:], ".")
+	nodeNameAttr[lastNodeId] = lastAddr
+	lastParentNodeId := strings.Join(addrs[:len(addrs)-1], ".")
+
+	res := ResourceInfo{
+		ResourceId:   resource.Id.String(),
+		ResourceName: resource.Name,
+		NodeName:     lastAddr,
+	}
+
+	if res.ResourceName == "" {
+		res.ResourceName = lastAddr
+	}
+
+	if resource.DriftDetail != "" {
+		res.IsDrift = true
+	}
+
+	if _, ok := resourceAttr[lastParentNodeId]; !ok {
+		resourceAttr[lastParentNodeId] = []ResourceInfo{res}
+	} else {
+		resourceAttr[lastParentNodeId] = append(resourceAttr[lastParentNodeId], res)
+	}
+}
+
+func genNodesFromAllResources(resources []services.Resource) (map[string][]string, map[string][]ResourceInfo, map[string]string) {
 	// 存储当前节点与父级节点的关系 父级节点id与子节点关系 {parentNodeId: [nodeId, nodeId]}
 	parentChildNode := make(map[string][]string)
 
@@ -456,55 +538,24 @@ func GetResourcesGraphModule(resources []services.Resource) interface{} {
 
 	*/
 	for _, resource := range resources {
-		// 将module替替换为空
-		address := strings.Replace(resource.Address, "module.", "", -1)
-		addrs := strings.Split(address, ".")
-		for index, addr := range addrs {
-			var (
-				parentNodeId string
-				nodeId       = strings.Join(addrs[:index+1], ".")
-			)
-			nodeNameAttr[nodeId] = addr
-			if index == 0 {
-				parentNodeId = rootModule
-			} else {
-				parentNodeId = strings.Join(addrs[:index], ".")
-			}
-
-			// 处理最末级节点，将末级节点定义为资源
-			if index == len(addrs)-1 {
-				res := ResourceInfo{
-					ResourceId:   resource.Id.String(),
-					ResourceName: resource.Name,
-					NodeName:     addr,
-				}
-
-
-				if res.ResourceName == "" {
-					res.ResourceName = addr
-				}
-
-				if resource.DriftDetail != "" {
-					res.IsDrift = true
-				}
-
-				if _, ok := resourceAttr[parentNodeId]; !ok {
-					resourceAttr[parentNodeId] = []ResourceInfo{res}
-					continue
-				}
-				resourceAttr[parentNodeId] = append(resourceAttr[parentNodeId], res)
-				continue
-			}
-
-			// 构造数据结构
-			if _, ok := parentChildNode[parentNodeId]; !ok {
-				parentChildNode[parentNodeId] = []string{nodeId}
-				continue
-			}
-			parentChildNode[parentNodeId] = append(parentChildNode[parentNodeId], nodeId)
-
-		}
+		genNodesFromResource(resource, parentChildNode, resourceAttr, nodeNameAttr)
 	}
+
+	return parentChildNode, resourceAttr, nodeNameAttr
+}
+
+func GetResourcesGraphModule(resources []services.Resource) interface{} {
+	// 构建根节点
+	rootModule := "rootModule"
+	rgm := &ResourcesGraphModule{
+		IsRoot:   true,
+		NodeName: rootModule,
+		NodeId:   rootModule,
+		Children: make([]*ResourcesGraphModule, 0),
+	}
+
+	// 存储当前节点与父级节点的关系 父级节点id与子节点关系 {parentNodeId: [nodeId, nodeId]}
+	parentChildNode, resourceAttr, nodeNameAttr := genNodesFromAllResources(resources)
 
 	// 根据address构造的叶子节点列表有可能重复，这里进行去重
 	/*

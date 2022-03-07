@@ -1,8 +1,9 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package apps
 
 import (
+	"cloudiac/configs"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
@@ -56,4 +57,35 @@ func UpdateSystemConfig(c *ctx.ServiceContext, form *forms.UpdateSystemConfigFor
 	}
 
 	return nil, nil
+}
+
+func GetRegistryAddr(c *ctx.ServiceContext) (interface{}, e.Error) {
+	cfg, err := services.GetSystemConfigByName(c.DB(), models.SysCfgNamRegistryAddr)
+	var cfgdb = ""
+	if err == nil {
+		cfgdb = cfg.Value
+	}
+
+	return &models.RegistryAddrResp{
+		RegistryAddrFromDB:  cfgdb,
+		RegistryAddrFromCfg: configs.Get().RegistryAddr,
+	}, nil
+}
+
+func UpsertRegistryAddr(c *ctx.ServiceContext, form *forms.RegistryAddrForm) (interface{}, e.Error) {
+
+	cfg, err := services.UpsertRegistryAddr(c.DB(), form.RegistryAddr)
+	var cfgdb = ""
+	if err == nil {
+		cfgdb = cfg.Value
+	}
+
+	return &models.RegistryAddrResp{
+		RegistryAddrFromDB:  cfgdb,
+		RegistryAddrFromCfg: configs.Get().RegistryAddr,
+	}, nil
+}
+
+func GetRegistryAddrStr(c *ctx.ServiceContext) string {
+	return services.GetRegistryAddrStr(c.DB())
 }

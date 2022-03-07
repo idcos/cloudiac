@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package task_manager
 
 import (
@@ -58,21 +60,21 @@ guarantee to take exactly these actions if you run "terraform apply" now.
 
 func TestParseResourceDriftInfo(t *testing.T) {
 	DriftMap := map[string]models.ResourceDrift{
-		"random_password.password[0]": models.ResourceDrift{
+		"random_password.password[0]": {
 			DriftDetail: `-/+ resource "random_password" "password" {
       ~ id               = "none" -> (known after apply)
       ~ length           = 12 -> 13 # forces replacement
       ~ result           = (sensitive value)
         # (9 unchanged attributes hidden)
     }`},
-		"random_password.password[1]": models.ResourceDrift{
+		"random_password.password[1]": {
 			DriftDetail: `-/+ resource "random_password" "password" {
       ~ id               = "none" -> (known after apply)
       ~ length           = 12 -> 13 # forces replacement
       ~ result           = (sensitive value)
         # (9 unchanged attributes hidden)
     }`},
-		"random_password.password[2]": models.ResourceDrift{
+		"random_password.password[2]": {
 			DriftDetail: `  + resource "random_password" "password" {
       + id               = (known after apply)
       + length           = 13
@@ -90,13 +92,13 @@ func TestParseResourceDriftInfo(t *testing.T) {
 	}
 	tt := ParseResourceDriftInfo([]byte(TextCase))
 	if tt["random_password.password[0]"].DriftDetail != DriftMap["random_password.password[0]"].DriftDetail {
-		t.Error("random_password.password[0]解析失败")
+		t.Error("random_password.password[0]解析失败") //nolint
 	}
 	if tt["random_password.password[1]"].DriftDetail != DriftMap["random_password.password[1]"].DriftDetail {
-		t.Error("random_password.password[1]解析失败")
+		t.Error("random_password.password[1]解析失败") //nolint
 	}
 	if tt["random_password.password[2]"].DriftDetail != DriftMap["random_password.password[2]"].DriftDetail {
-		t.Error("random_password.password[2]解析失败")
+		t.Error("random_password.password[2]解析失败") //nolint
 	}
 
 }

@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package forms
 
@@ -53,9 +53,9 @@ type DetailUserForm struct {
 type AddUserOrgRelForm struct {
 	BaseForm
 
-	Id     models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`      // 组织ID
-	UserId models.Id `form:"userId" json:"userId" binding:""`                  // 用户ID
-	Role   string    `form:"role" json:"role" binding:"" enums:"admin,member"` // 用户在组织中的角色，组织管理员：admin，普通用户：member，默认 member
+	Id     models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`                        // 组织ID
+	UserId models.Id `form:"userId" json:"userId" binding:""`                                    // 用户ID
+	Role   string    `form:"role" json:"role" binding:"" enums:"admin,complianceManager,member"` // 用户在组织中的角色，组织管理员：admin，普通用户：member，默认 member
 }
 
 type DeleteUserOrgRelForm struct {
@@ -68,9 +68,9 @@ type DeleteUserOrgRelForm struct {
 type UpdateUserOrgRelForm struct {
 	BaseForm
 
-	Id     models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`              // 组织ID
-	UserId models.Id `uri:"userId" json:"userId" binding:"" swaggerignore:"true"`      // 用户ID
-	Role   string    `form:"role" json:"role" binding:"required" enums:"admin,member"` // 用户在组织中的角色，组织管理员：admin，普通用户：member，默认 member
+	Id     models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`                                // 组织ID
+	UserId models.Id `uri:"userId" json:"userId" binding:"" swaggerignore:"true"`                        // 用户ID
+	Role   string    `form:"role" json:"role" binding:"required" enums:"admin,complianceManager,member"` // 用户在组织中的角色，组织管理员：admin，普通用户：member，默认 member
 }
 
 type UpdateUserOrgForm struct {
@@ -80,5 +80,5 @@ type UpdateUserOrgForm struct {
 	UserId models.Id `uri:"userId" json:"userId" binding:"" swaggerignore:"true"` // 用户ID
 	Name   string    `form:"name" json:"name" binding:""`                         // 用户名
 	Phone  string    `form:"phone" json:"phone" binding:""`
-	Role   string    `form:"role" json:"role" binding:"required" enums:"admin,member"` // 用户在组织中的角色，组织管理员：admin，普通用户：member，默认 member
+	Role   string    `form:"role" json:"role" binding:"required" enums:"admin,complianceManager,member"` // 用户在组织中的角色，组织管理员：admin，普通用户：member，默认 member
 }

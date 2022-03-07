@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package runner
 
@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+	"errors"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -62,7 +63,8 @@ func (task *StartedTask) Cancel() error {
 		Force:         true,
 	}
 	if err := cli.ContainerRemove(context.Background(), task.ContainerId, containerRemoveOpts); err != nil {
-		if _, ok := err.(errdefs.ErrNotFound); ok {
+		var targetErr errdefs.ErrNotFound
+		if errors.As(err, &targetErr) {
 			return nil
 		}
 		return err
@@ -132,6 +134,7 @@ func (task *StartedTask) readContainerInfo() (info types.ContainerExecInspect, e
 
 // Wait 等待任务结束返回退出码，若超时返回 error=context.DeadlineExceeded
 // 如果等待到任务结束则会将容器状态信息写入到文件，并判断是否需要暂停容器
+// 注意：该函数可能会被多个请求源同时调用，不要在该函数中添加不可重复执行的逻辑。
 func (task *StartedTask) Wait(ctx context.Context) (int64, error) {
 	logger := logger.WithField("taskId", task.TaskId).
 		WithField("containerId", utils.ShortContainerId(task.ContainerId))
@@ -150,9 +153,9 @@ func (task *StartedTask) Wait(ctx context.Context) (int64, error) {
 	)
 	if task.StartedAt != nil && task.Timeout > 0 {
 		deadline := task.StartedAt.Add(time.Duration(task.Timeout) * time.Second)
-		info, err = Executor{}.WaitCommandWithDeadline(ctx, task.ExecId, deadline)
+		info, err = Executor{}.WaitCommandWithDeadline(ctx, task.ContainerId, task.ExecId, deadline)
 	} else {
-		info, err = Executor{}.WaitCommand(ctx, task.ExecId)
+		info, err = Executor{}.WaitCommand(ctx, task.ContainerId, task.ExecId)
 	}
 
 	if err != nil {
@@ -170,8 +173,10 @@ func (task *StartedTask) Wait(ctx context.Context) (int64, error) {
 		}
 
 		// 暂停容器
+		// 当有多个请求源同时调用该函数时，容器暂停操作可能被调用多次，这是允许的，多次调用 Pause() 不会报错。
+		// 但要保证调用 Pause() 是及时的，避免下一步骤己经启动了，前一步骤触发的 Pause 操作才被调用，这会导致容器被异常暂停。
 		if task.PauseOnFinish {
-			logger.Debugf("pause container %s", info.ContainerID)
+			logger.Debugf("pause container %s", utils.ShortContainerId(info.ContainerID))
 			if err := (Executor{}).Pause(info.ContainerID); err != nil {
 				logger.Warn(err)
 			}

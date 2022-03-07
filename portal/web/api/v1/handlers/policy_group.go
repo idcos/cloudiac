@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package handlers
 
@@ -175,4 +175,56 @@ func (PolicyGroup) LastTasks(c *ctx.GinRequest) {
 		return
 	}
 	c.JSONResult(apps.PolicyGroupScanTasks(c.Service(), form))
+}
+
+// PolicyGroupChecks
+// @Tags 合规/策略组
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Summary 创建策略组前检查名称工作目录是否正确
+// @Param IaC-Org-Id header string true "组织ID"
+// @Security AuthToken
+// @router /policies/groups/checks [POST]
+// @Param form query forms.PolicyGroupChecksForm true "parameter"
+// @Success 200 {object} ctx.JSONResult{result=apps.TemplateChecksResp}
+func PolicyGroupChecks(c *ctx.GinRequest) {
+	form := forms.PolicyGroupChecksForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.PolicyGroupChecks(c.Service(), &form))
+}
+
+// SearchRegistryPG registry侧策略组列表
+// @Tags registry
+// @Summary registry侧策略组列表
+// @Accept application/x-www-form-urlencoded, application/json
+// @Produce json
+// @Param json body forms.SearchRegistryPgForm true "parameter"
+// @router /registry/policy_groups [GET]
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.RegistryPGResp}}
+func SearchRegistryPG(c *ctx.GinRequest) {
+	form := forms.SearchRegistryPgForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+
+	c.JSONResult(apps.SearchRegistryPG(c.Service(), &form))
+}
+
+// SearchRegistryPGVersions registry侧策略组版本列表
+// @Tags registry
+// @Summary registry侧策略组版本列表
+// @Accept application/x-www-form-urlencoded, application/json
+// @Produce json
+// @Param json body forms.SearchRegistryPgVersForm true "parameter"
+// @router /registry/policy_groups/versions [GET]
+// @Success 200 {object} ctx.JSONResult{result=[]apps.RegistryPGVerResp}
+func SearchRegistryPGVersions(c *ctx.GinRequest) {
+	form := forms.SearchRegistryPgVersForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+
+	c.JSONResult(apps.SearchRegistryPGVersions(c.Service(), &form))
 }

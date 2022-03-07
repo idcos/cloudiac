@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package handler
 
@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -60,7 +61,7 @@ func doFollowTaskLog(wsConn *websocket.Conn, task *runner.StartedTask, offset in
 	logger := logger.WithField("func", "doFollowTaskLog").WithField("taskId", task.TaskId)
 
 	var (
-		taskExitChan = make(chan error)
+		waitTaskErrChan = make(chan error)
 	)
 
 	ctx, cancelCtx := context.WithCancel(context.Background())
@@ -71,13 +72,13 @@ func doFollowTaskLog(wsConn *websocket.Conn, task *runner.StartedTask, offset in
 
 	// 等待任务退出协程
 	go func() {
-		defer close(taskExitChan)
+		defer close(waitTaskErrChan)
 
 		_, err := task.Wait(ctx)
 		// followFile() 会在遇到 EOF 时延迟一定时间进行下一次读取，
 		// 如果这里立即发送信号 follow 会在当延迟结束后立即退出，导致最后写入的日志没有被读取
 		time.Sleep(runner.FollowLogDelay)
-		taskExitChan <- err
+		waitTaskErrChan <- err
 	}()
 
 	for {
@@ -92,7 +93,7 @@ func doFollowTaskLog(wsConn *websocket.Conn, task *runner.StartedTask, offset in
 				logger.Errorf("read content error: %v", err)
 				return err
 			}
-		case err := <-taskExitChan:
+		case err := <-waitTaskErrChan:
 			if err != nil {
 				logger.Errorf("wait task error: %v", err)
 			} else {
@@ -148,7 +149,7 @@ func followFile(ctx context.Context, path string, offset int64) (<-chan []byte, 
 				case <-ctx.Done():
 					return
 				default:
-					if err == io.EOF {
+					if errors.Is(err, io.EOF) {
 						// 读到了文件末尾，等待一下再进行下一次读取
 						time.Sleep(runner.FollowLogDelay)
 						continue

@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package models
 
@@ -9,6 +9,7 @@ import (
 const (
 	SysCfgNameMaxJobsPerRunner = "MAX_JOBS_PER_RUNNER"
 	SysCfgNamePeriodOfLogSave  = "PERIOD_OF_LOG_SAVE"
+	SysCfgNamRegistryAddr      = "REGISTRY_ADDR"
 )
 
 type SystemCfg struct {
@@ -29,4 +30,9 @@ func (o SystemCfg) Migrate(sess *db.Session) (err error) {
 		return err
 	}
 	return nil
+}
+
+type RegistryAddrResp struct {
+	RegistryAddrFromDB  string `json:"registryAddrDB"`
+	RegistryAddrFromCfg string `json:"registryAddrCfg"`
 }

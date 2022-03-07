@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package consul
 
@@ -7,10 +7,11 @@ import (
 	"cloudiac/portal/services"
 	"encoding/json"
 	"fmt"
-	consulapi "github.com/hashicorp/consul/api"
 	"log"
 	"strings"
 	"time"
+
+	consulapi "github.com/hashicorp/consul/api"
 )
 
 func Register(serviceName string, consulConfig configs.ConsulConfig) error {

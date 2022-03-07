@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package utils
 
@@ -91,5 +91,28 @@ func TestGetUrlParams(t *testing.T) {
 				t.Errorf("GetUrlParams() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestJoinUrl(t *testing.T) {
+	cases := []struct {
+		elems  []string
+		except string
+	}{
+		{[]string{"http://example.com", "a"}, "http://example.com/a"},
+		{[]string{"http://example.com", "/a"}, "http://example.com/a"},
+		{[]string{"http://example.com/", "a"}, "http://example.com/a"},
+		{[]string{"http://example.com/", "a", "b"}, "http://example.com/a/b"},
+		{[]string{"http://example.com/", "a", "/b"}, "http://example.com/a/b"},
+		{[]string{"http://example.com/", "/a", "b"}, "http://example.com/a/b"},
+		{[]string{"http://example.com/", "/a", "/b"}, "http://example.com/a/b"},
+		{[]string{"http://example.com/", "", "/b"}, "http://example.com/b"},
+		{[]string{"http://example.com/", "", "b"}, "http://example.com/b"},
+	}
+	for _, c := range cases {
+		url := JoinURL(c.elems[0], c.elems[1:]...)
+		if url != c.except {
+			t.Fatalf("join url: %v, got: '%s', except: '%s'", c.elems, url, c.except)
+		}
 	}
 }

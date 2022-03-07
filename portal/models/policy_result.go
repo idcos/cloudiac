@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package models
 
 type PolicyResult struct {
@@ -63,19 +65,19 @@ type Rule struct {
 }
 
 type Violation struct {
-	RuleName     string `json:"rule_name"`              // 规则名称
-	Description  string `json:"description"`            // 规则描述
-	RuleId       string `json:"rule_id"`                // 规则ID（策略ID）
-	Severity     string `json:"severity"`               // 严重程度
-	Category     string `json:"category"`               // 分类（策略组名称）
-	Comment      string `json:"skip_comment,omitempty"` // 注释
-	ResourceName string `json:"resource_name"`          // 资源名称
-	ResourceType string `json:"resource_type"`          // 资源类型
-	ModuleName   string `json:"module_name,omitempty"`  // 模块名称
-	File         string `json:"file,omitempty"`         // 文件路径
-	PlanRoot     string `json:"plan_root,omitempty"`    // 文件夹路径
-	Line         int    `json:"line,omitempty"`         // 错误源文件行号
-	Source       string `json:"source,omitempty"`       // 错误源码
+	RuleName     string `json:"rule_name" gorm:"comment:策略名称"`                  // 规则名称
+	Description  string `json:"description" gorm:"comment:策略描述"`                // 规则描述
+	RuleId       string `json:"rule_id" gorm:"comment:规则ID(策略ID)"`              // 规则ID（策略ID）
+	Severity     string `json:"severity" gorm:"comment:严重程度"`                   // 严重程度
+	Category     string `json:"category" gorm:"comment:分类（策略组名称）"`              // 分类（策略组名称）
+	Comment      string `json:"skip_comment,omitempty" gorm:"comment:跳过说明"`     // 注释
+	ResourceName string `json:"resource_name" gorm:"comment:资源名称"`              // 资源名称
+	ResourceType string `json:"resource_type" gorm:"comment:资源类型"`              // 资源类型
+	ModuleName   string `json:"module_name,omitempty" gorm:"comment:模块名称"`      // 模块名称
+	File         string `json:"file,omitempty" gorm:"comment:源码文件名"`            // 文件路径
+	PlanRoot     string `json:"plan_root,omitempty" gorm:"comment:源码文件夹"`       // 文件夹路径
+	Line         int    `json:"line,omitempty" gorm:"comment:错误资源源码行号"`         // 错误源文件行号
+	Source       string `json:"source,omitempty" gorm:"type:text;comment:错误源码"` // 错误源码
 }
 
 type TsCount struct {

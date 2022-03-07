@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -33,7 +33,7 @@ func UpdateUser(tx *db.Session, id models.Id, attrs models.Attrs) (user *models.
 			return nil, e.New(e.UserEmailDuplicate)
 		}
 		return nil, e.New(e.DBError, fmt.Errorf("update user error: %v", err))
-	}
+	} //nolint
 	if err := tx.Where("id = ?", id).First(user); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("query user error: %v", err))
 	}
@@ -119,7 +119,8 @@ func CheckPasswordFormat(password string) e.Error {
 func GetUserDetailById(query *db.Session, userId models.Id) (*models.UserWithRoleResp, e.Error) {
 	d := models.UserWithRoleResp{}
 	table := models.User{}.TableName()
-	if err := query.Table(table).Where(fmt.Sprintf("%s.id = ?", table), userId).First(&d); err != nil {
+	if err := query.Model(&models.User{}).
+		Where(fmt.Sprintf("%s.id = ?", table), userId).Scan(&d); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.UserNotExists, err)
 		}
@@ -133,7 +134,7 @@ func GetUserRoleByOrg(dbSess *db.Session, userId, orgId models.Id, role string) 
 		Where("user_id = ?", userId).
 		Where("role = ?", role).
 		Where("org_id = ?", orgId).
-		Exists()
+		Exists() //nolint
 	if err != nil {
 		return isExists, e.New(e.DBError, err)
 	}
@@ -233,10 +234,15 @@ func UserIsSuperAdmin(query *db.Session, userId models.Id) bool {
 	}
 }
 
-func UserHasManageUserPerm() {}
-
 func QueryWithOrgId(query *db.Session, orgId interface{}, tableName ...string) *db.Session {
 	return QueryWithCond(query, "org_id", orgId, tableName...)
+}
+
+func QueryWithOrgIdAndGlobal(query *db.Session, orgId interface{}, tableName ...string) *db.Session {
+	if len(tableName) > 0 {
+		return query.Where(fmt.Sprintf("`%s`.`org_id` = ? or `%s`.`org_id` = ''", tableName[0], orgId))
+	}
+	return query.Where("`org_id` = ? or `org_id` = ''", orgId)
 }
 
 func QueryWithProjectId(query *db.Session, projectId interface{}, tableName ...string) *db.Session {
@@ -279,8 +285,8 @@ func getUserProjects(userId models.Id) map[models.Id]*models.UserProject {
 		return nil
 	}
 	userProjectsMap := make(map[models.Id]*models.UserProject)
-	for _, userProject := range userProjects {
-		userProjectsMap[userProject.ProjectId] = &userProject
+	for index, userProject := range userProjects {
+		userProjectsMap[userProject.ProjectId] = &userProjects[index]
 	}
 	return userProjectsMap
 }

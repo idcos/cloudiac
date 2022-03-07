@@ -1,9 +1,10 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
 import (
 	"cloudiac/common"
+	"cloudiac/policy"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
@@ -21,6 +22,17 @@ func GetPolicyResultById(query *db.Session, taskId models.Id, policyId models.Id
 	}
 
 	return &result, nil
+}
+
+func GetPoliciesByTaskId(query *db.Session, taskId models.Id) ([]*models.Policy, e.Error) {
+	var policies []*models.Policy
+	resultQuery := query.Model(models.PolicyResult{}).Where("task_id = ?", taskId).Select("policy_id")
+	if err := query.Model(models.Policy{}).
+		Where("id in (?)", resultQuery.Expr()).
+		Find(&policies); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return policies, nil
 }
 
 // InitScanResult 初始化扫描结果
@@ -53,6 +65,9 @@ func InitScanResult(tx *db.Session, task *models.ScanTask) e.Error {
 
 			StartAt: models.Time(time.Now()),
 			Status:  common.TaskStepPending,
+			Violation: models.Violation{
+				Severity: policy.Severity,
+			},
 		})
 	}
 	for _, policy := range suppressedPolicies {
@@ -68,6 +83,9 @@ func InitScanResult(tx *db.Session, task *models.ScanTask) e.Error {
 
 			StartAt: models.Time(time.Now()),
 			Status:  common.PolicyStatusSuppressed,
+			Violation: models.Violation{
+				Severity: policy.Severity,
+			},
 		})
 	}
 
@@ -79,7 +97,7 @@ func InitScanResult(tx *db.Session, task *models.ScanTask) e.Error {
 }
 
 // UpdateScanResult 根据 terrascan 扫描结果批量更新
-func UpdateScanResult(tx *db.Session, task models.Tasker, result TsResult, policyStatus string) e.Error {
+func UpdateScanResult(tx *db.Session, task models.Tasker, result policy.TsResult, policyStatus string) e.Error {
 
 	var (
 		policyResults []*models.PolicyResult
@@ -120,6 +138,16 @@ func UpdateScanResult(tx *db.Session, task models.Tasker, result TsResult, polic
 			policyResults = append(policyResults, policyResult)
 		}
 	}
+	for _, r := range result.ScanErrors {
+		if policyResult, err := GetPolicyResultById(tx, task.GetId(), models.Id(r.RuleId)); err != nil {
+			return err
+		} else {
+			policyResult.Status = common.PolicyStatusFailed
+			policyResult.Message = r.ErrMsg
+			policyResults = append(policyResults, policyResult)
+		}
+	}
+
 	for _, r := range policyResults {
 		if err := models.Save(tx, r); err != nil {
 			return e.New(e.DBError, fmt.Errorf("save scan result"))
@@ -145,11 +173,21 @@ func finishPendingScanResult(tx *db.Session, task models.Tasker, message string,
 	return nil
 }
 
-func GetPolicyGroupScanTasks(query *db.Session, policyGroupId models.Id) *db.Session {
+// CleanScanResult 任务失败的时候清除扫描结果
+func CleanScanResult(tx *db.Session, task models.Tasker) e.Error {
+	if _, err := tx.Where("task_id = ?", task.GetId()).
+		Delete(models.PolicyResult{}); err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
+func GetPolicyGroupScanTasks(query *db.Session, policyGroupId, orgId models.Id) *db.Session {
 	t := models.PolicyResult{}.TableName()
 	subQuery := query.Model(models.PolicyResult{}).
 		Select(fmt.Sprintf("%s.task_id,%s.policy_group_id,%s.env_id,%s.tpl_id", t, t, t, t)).
 		Where("iac_policy_result.policy_group_id = ?", policyGroupId).
+		Where("iac_policy_result.org_id = ?", orgId).
 		Group("iac_policy_result.task_id,iac_policy_result.env_id,iac_policy_result.tpl_id,iac_policy_result.policy_group_id")
 
 	q := query.Model(models.ScanTask{}).
@@ -175,11 +213,11 @@ func GetPolicyGroupScanTasks(query *db.Session, policyGroupId models.Id) *db.Ses
 }
 
 func QueryPolicyResult(query *db.Session, taskId models.Id) *db.Session {
-	q := query.Model(models.PolicyResult{}).Where("task_id = ? and status != ?", taskId, common.PolicyStatusSuppressed)
+	q := query.Model(models.PolicyResult{}).Where("task_id = ?", taskId)
 
 	// 策略信息
 	q = q.Joins("left join iac_policy as p on p.id = iac_policy_result.policy_id").
-		LazySelectAppend("p.name as policy_name, p.fix_suggestion,iac_policy_result.*")
+		LazySelectAppend("p.name as policy_name, p.fix_suggestion,iac_policy_result.*,p.rego")
 	// 策略组信息
 	q = q.Joins("left join iac_policy_group as g on g.id = iac_policy_result.policy_group_id").
 		LazySelectAppend("g.name as policy_group_name,iac_policy_result.*")
@@ -228,7 +266,7 @@ func FilterSuppressPolicies(query *db.Session, policies []models.Policy, targetI
 	}
 
 	// 区分有效策略和屏蔽策略
-	suppressPolicyMap := make(map[models.Id]models.Policy, 0)
+	suppressPolicyMap := make(map[models.Id]models.Policy)
 	for idx, policy := range suppressedPolicies {
 		suppressPolicyMap[policy.Id] = suppressedPolicies[idx]
 	}
@@ -242,14 +280,14 @@ func FilterSuppressPolicies(query *db.Session, policies []models.Policy, targetI
 }
 
 func MergePolicies(policies1, policies2 []models.Policy) (mergedPolicies []models.Policy) {
-	policiesMap := make(map[models.Id]models.Policy, 0)
+	policiesMap := make(map[models.Id]models.Policy)
 	for idx, policy := range policies1 {
 		policiesMap[policy.Id] = policies1[idx]
 	}
 	for idx, policy := range policies2 {
 		policiesMap[policy.Id] = policies2[idx]
 	}
-	for id, _ := range policiesMap {
+	for id := range policiesMap {
 		mergedPolicies = append(mergedPolicies, policiesMap[id])
 	}
 

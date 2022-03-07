@@ -1,8 +1,9 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package models
 
 import (
+	"cloudiac/common"
 	"cloudiac/portal/libs/db"
 	"path"
 	"time"
@@ -49,9 +50,9 @@ type Env struct {
 	Playbook     string `json:"playbook" gorm:"default:''"`     // Ansible playbook 入口文件路径
 
 	// 任务相关参数，获取详情的时候，如果有 last_task_id 则返回 last_task_id 相关参数
-	RunnerId string `json:"runnerId" gorm:"size:32;not null"`         //部署通道ID
-	Revision string `json:"revision" gorm:"size:64;default:'master'"` // Vcs仓库分支/标签
-	KeyId    Id     `json:"keyId" gorm:"size32"`                      // 部署密钥ID
+	RunnerId string `json:"runnerId" gorm:"size:32;not null"`   //部署通道ID
+	Revision string `json:"revision" gorm:"size:64;default:''"` // Vcs仓库分支/标签
+	KeyId    Id     `json:"keyId" gorm:"size:32"`               // 部署密钥ID
 
 	LastTaskId    Id `json:"lastTaskId" gorm:"size:32"`    // 最后一次部署或销毁任务的 id(plan 任务不记录)
 	LastResTaskId Id `json:"lastResTaskId" gorm:"size:32"` // 最后一次进行了资源列表统计的部署任务的 id
@@ -83,6 +84,10 @@ type Env struct {
 	AutoRepairDrift   bool       `json:"autoRepairDrift" gorm:"default:false"`   // 是否进行自动纠偏
 	OpenCronDrift     bool       `json:"openCronDrift" gorm:"default:false"`     // 是否开启偏移检测
 	NextDriftTaskTime *time.Time `json:"nextDriftTaskTime" gorm:"type:datetime"` // 下次执行偏移检测任务的时间
+
+	// 合规相关
+	PolicyEnable bool `json:"policyEnable" grom:"default:false"` // 是否开启合规检测
+
 }
 
 func (Env) TableName() string {
@@ -119,6 +124,7 @@ func (e *Env) MergeTaskStatus() string {
 
 type EnvDetail struct {
 	Env
+
 	Creator       string `json:"creator"`       // 创建人
 	OperatorId    Id     `json:"operatorId"`    // 执行人ID
 	Operator      string `json:"operator"`      // 执行人
@@ -128,4 +134,25 @@ type EnvDetail struct {
 	TaskId        Id     `json:"taskId"`        // 当前作业ID
 	CommitId      string `json:"commitId"`      // Commit ID
 	IsDrift       bool   `json:"isDrift"`
+	PolicyEnable  bool   `json:"policyEnable"` // 是否开启合规检测
+	PolicyStatus  string `json:"policyStatus"` // 环境合规检测任务状态
+
+	// PolicyGroup 必须配置 struct tag `gorm:"-"`。
+	// 因为我们定义了 model struct PolicyGroup，
+	// gorm 解析该结构体的 PolicyGroup 字段时会将其理解为 PolicyGroup model 的关联字段，
+	// 但解析类型却发现是一个 []string， 而非 []struct{}，导致报错  "[error] unsupported data type: &[]"
+	// (这个报错只在 gorm 日志中打印，db.Error 无错误)。
+	PolicyGroup []string `json:"policyGroup" gorm:"-"` // 环境相关合规策略组
+}
+
+func (c *EnvDetail) UpdateEnvPolicyStatus() {
+	if c.PolicyEnable {
+		if c.PolicyStatus == "failed" {
+			c.PolicyStatus = common.PolicyStatusViolated
+		} else if c.PolicyStatus == "" {
+			c.PolicyStatus = common.PolicyStatusEnable
+		}
+	} else {
+		c.PolicyStatus = common.PolicyStatusDisable
+	}
 }

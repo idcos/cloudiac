@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package apps
 
@@ -27,7 +27,7 @@ type SystemStatusResp struct {
 
 func SystemStatusSearch() (interface{}, e.Error) {
 	resp := make([]*SystemStatusResp, 0)
-	serviceResp := make(map[string]*SystemStatusResp, 0)
+	serviceResp := make(map[string]*SystemStatusResp)
 	IdInfo, serviceStatus, serviceList, err := services.SystemStatusSearch()
 	if err != nil {
 		return nil, err

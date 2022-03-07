@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package forms
 
 import (
@@ -54,10 +56,16 @@ type DetailPolicyForm struct {
 type CreatePolicyGroupForm struct {
 	BaseForm
 
-	Name        string `json:"name" binding:"required" example:"安全合规策略组"`
-	Description string `json:"description" binding:"" example:"本组包含对于安全合规的检查策略"`
+	Name        string   `json:"name" binding:"required" example:"安全合规策略组"`
+	Description string   `json:"description" binding:"" example:"本组包含对于安全合规的检查策略"`
+	Labels      []string `json:"labels" binding:"" example:"[security,alicloud]"`
 
-	//PolicyIds []string `json:"policyIds" binding:"" example:"[\"po-c3ek0co6n88ldvq1n6ag\"]"`
+	Source  string    `json:"source" binding:"required" enums:"vcs,registry" example:"来源"`
+	VcsId   models.Id `json:"vcsId" binding:"required" example:"vcs-c3lcrjxczjdywmk0go90"`
+	RepoId  string    `json:"repoId" binding:"required" example:"1234567890"`
+	GitTags string    `json:"gitTags" example:"Git Tags"`
+	Branch  string    `json:"branch" example:"master"`
+	Dir     string    `json:"dir" example:"/"`
 }
 
 type SearchPolicyGroupForm struct {
@@ -73,6 +81,14 @@ type UpdatePolicyGroupForm struct {
 	Name        string    `json:"name" form:"name" `
 	Description string    `json:"description" binding:"" example:"本组包含对于安全合规的检查策略"`
 	Enabled     bool      `json:"enabled" form:"enabled"`
+
+	Labels  []string  `json:"labels" binding:"" example:"[security,alicloud]"`
+	Source  string    `json:"source" binding:"" enums:"vcs,registry" example:"来源"`
+	VcsId   models.Id `json:"vcsId" binding:"" example:"vcs-c3lcrjxczjdywmk0go90"`
+	RepoId  string    `json:"repoId" binding:"" example:"1234567890"`
+	GitTags string    `json:"gitTags" example:"Git Tags"`
+	Branch  string    `json:"branch" example:"master"`
+	Dir     string    `json:"dir" example:"/"`
 }
 
 type DeletePolicyGroupForm struct {
@@ -108,6 +124,13 @@ type ScanTemplateForm struct {
 
 	Id    models.Id `uri:"id" binding:"" example:"tpl-c3ek0co6n88ldvq1n6ag"`      // 云模板Id
 	Parse bool      `json:"parse" binding:""  enums:"true,false" example:"false"` // 是否只执行解析
+}
+
+type ScanTemplateForms struct {
+	BaseForm
+
+	Ids   []models.Id `json:"ids" binding:"" example:"[tpl-c3ek0co6n88ldvq1n6ag, tpl-c3ek0co6n88ldvasdn6ag]"` // 云模板Id
+	Parse bool        `json:"parse" binding:""  enums:"true,false" example:"false"`                           // 是否只执行解析
 }
 
 type ScanEnvironmentForm struct {
@@ -166,7 +189,6 @@ type DeletePolicySuppressForm struct {
 type SearchPolicyTplForm struct {
 	NoPageSizeForm
 
-	OrgId models.Id `form:"orgId" binding:""` // 组织ID
 	TplId models.Id `form:"tplId" binding:""`
 	Q     string    `form:"q" json:"q" binding:""` // 模糊搜索
 }
@@ -194,7 +216,6 @@ type TplOfPolicyGroupForm struct {
 type SearchPolicyEnvForm struct {
 	NoPageSizeForm
 
-	OrgId     models.Id `form:"orgId" binding:""`
 	ProjectId models.Id `form:"projectId" binding:""`
 	EnvId     models.Id `form:"envId" binding:""`
 	Q         string    `form:"q" json:"q" binding:""` // 模糊搜索
@@ -226,7 +247,8 @@ type UpdatePolicySuppressForm struct {
 type PolicyScanResultForm struct {
 	NoPageSizeForm
 
-	Id models.Id `uri:"id" `
+	Id     models.Id `uri:"id"`                                                       // 环境ID
+	TaskId models.Id `json:"taskId" form:"taskId" example:"run-c3ek0co6n88ldvq1n6ag"` // 任务ID
 }
 
 type PolicyScanReportForm struct {
@@ -257,4 +279,14 @@ type SearchGroupOfPolicyForm struct {
 
 	Id     models.Id `uri:"id" `
 	IsBind bool      `json:"bind" form:"bind" ` //  ture: 查询绑定策略组的策略，false: 查询未绑定的策略组的策略
+}
+
+type PolicyGroupChecksForm struct {
+	BaseForm
+	Name         string    `json:"name" form:"name"`
+	RepoId       string    `json:"repoId" form:"repoId"`
+	RepoRevision string    `json:"repoRevision" form:"repoRevision"`
+	VcsId        models.Id `json:"vcsId" form:"vcsId"`
+	Dir          string    `json:"dir" form:"dir"`
+	TemplateId   models.Id `json:"templateId" form:"templateId"`
 }

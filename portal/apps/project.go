@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package apps
 
@@ -123,7 +123,8 @@ func UpdateProject(c *ctx.ServiceContext, form *forms.UpdateProjectForm) (interf
 
 	//校验用户是否在该项目下有权限
 	isExist := IsUserOrgProjectPermission(tx, c.UserId, form.Id, consts.ProjectRoleManager)
-	if !isExist && !c.IsSuperAdmin {
+	isExistOrg := IsUserOrgPermission(tx, c.UserId, c.OrgId, consts.OrgRoleAdmin)
+	if !isExist && !c.IsSuperAdmin && !isExistOrg {
 		return nil, e.New(e.ObjectNotExistsOrNoPerm, http.StatusForbidden, errors.New("not permission"))
 	}
 

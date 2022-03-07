@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package vcsrv
 
@@ -62,6 +62,11 @@ func (git *gitlabVcsIface) ListRepos(namespace, search string, limit, offset int
 		})
 	}
 	return repoList, int64(response.TotalItems), nil
+}
+
+func (git *gitlabVcsIface) UserInfo() (UserInfo, error) {
+
+	return UserInfo{}, nil
 }
 
 type gitlabRepoIface struct {
@@ -210,16 +215,16 @@ type ProjectsHook struct {
 	CreatedAt                *time.Time `json:"created_at"`
 }
 
-func (git *gitlabRepoIface) ListWebhook() ([]ProjectsHook, error) {
-	ph := make([]ProjectsHook, 0)
+func (git *gitlabRepoIface) ListWebhook() ([]RepoHook, error) {
+	resp := make([]RepoHook, 0)
 	projectsHook, _, err := git.gitConn.Projects.ListProjectHooks(git.Project.ID, &gitlab.ListProjectHooksOptions{})
 	for _, p := range projectsHook {
-		ph = append(ph, ProjectsHook{
-			ID:  p.ID,
-			URL: p.URL,
+		resp = append(resp, RepoHook{
+			Id:  p.ID,
+			Url: p.URL,
 		})
 	}
-	return ph, err
+	return resp, err
 }
 
 func (git *gitlabRepoIface) DeleteWebhook(id int) error {

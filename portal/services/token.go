@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -31,6 +31,7 @@ func GenerateToken(uid models.Id, name string, isAdmin bool, expireDuration time
 		IsAdmin:  isAdmin,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expire.Unix(),
+			Subject:   consts.JwtSubjectUserAuth,
 		},
 	})
 
@@ -58,7 +59,7 @@ func UpdateToken(tx *db.Session, id models.Id, attrs models.Attrs) (token *model
 			return nil, e.New(e.TokenAliasDuplicate)
 		}
 		return nil, e.New(e.DBError, fmt.Errorf("update token error: %v", err))
-	}
+	} //nolint
 	if err := tx.Where("id = ?", id).First(token); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("query token error: %v", err))
 	}
@@ -138,5 +139,3 @@ func GetApiTokenByToken(dbSess *db.Session, token string) (*models.Token, e.Erro
 	}
 	return tokenResp, nil
 }
-
-

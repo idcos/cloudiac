@@ -1,32 +1,48 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package policy
 
 import (
 	"bufio"
-	"cloudiac/common"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
-	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
-	"cloudiac/portal/services"
-	"cloudiac/runner"
 	"cloudiac/utils"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
-	"time"
 
+	"github.com/fatih/color"
+	"github.com/go-playground/locales/en"
+	translator "github.com/go-playground/universal-translator"
+	"github.com/go-playground/validator/v10"
+	en_translation "github.com/go-playground/validator/v10/translations/en"
 	"github.com/hashicorp/hcl"
-	"github.com/mitchellh/go-homedir"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
 	"github.com/open-policy-agent/opa/version"
-	"github.com/sirupsen/logrus"
+
+	"github.com/pkg/errors"
+)
+
+var (
+	green  = color.New(color.FgGreen).SprintFunc()
+	red    = color.New(color.FgRed).SprintFunc()
+	yellow = color.New(color.FgYellow).SprintFunc()
+
+	MSG_TEMPLATE_INVALID   = red("Error:\t") + "id: {{.RuleId}}, detail: {{.Error}}"
+	MSG_TEMPLATE_ERROR     = red("Error: \t") + "group: {{.Category}}, name: {{.RuleName}}, id: {{.RuleId}}, severity: {{.Severity}}\ndetail: {{.Error}}"
+	MSG_TEMPLATE_PASSED    = green("Passed: \t") + "group: {{.Category}}, name: {{.RuleName}}, id: {{.RuleId}}, severity: {{.Severity}}"
+	MSG_TEMPLATE_VIOLATED  = red("Violated: \t") + "group: {{.Category}}, name: {{.RuleName}}, id: {{.RuleId}}, resource_id : {{.ResourceName}}, severity: {{.Severity}}"
+	MSG_TEMPLATE_SUPRESSED = yellow("Suppressed: \t") + "group: {{.Category}}, name: {{.RuleName}}, id: {{.RuleId}}, severity: {{.Severity}}"
 )
 
 type Parser struct {
@@ -39,15 +55,19 @@ type Policy struct {
 }
 
 type Meta struct {
-	Category     string `json:"category"`
-	File         string `json:"file"`
-	Id           string `json:"id"`
-	Name         string `json:"name"`
-	PolicyType   string `json:"policy_type"`
-	ReferenceId  string `json:"reference_id"`
-	ResourceType string `json:"resource_type"`
-	Severity     string `json:"severity"`
-	Version      int    `json:"version"`
+	Category      string `json:"category"`                                           // 分组
+	Root          string `json:"root" validate:"required"`                           // 根目录
+	File          string `json:"file" validate:"required"`                           // 文件名
+	Id            string `json:"id" validate:"required"`                             // 策略id
+	Name          string `json:"name" validate:"required"`                           // 策略名称
+	Label         string `json:"label"`                                              // 策略标签
+	PolicyType    string `json:"policy_type" binding:"required"`                     // 策略类型
+	ReferenceId   string `json:"reference_id"`                                       // 引用策略id
+	ResourceType  string `json:"resource_type" binding:"required"`                   // 资源类型
+	Severity      string `json:"severity" validate:"required,oneof=low medium high"` // 严重程度
+	Version       int    `json:"version"`                                            // 策略版本
+	FixSuggestion string `json:"fix_suggestion"`                                     // 修复建议
+	Description   string `json:"description"`                                        // 描述
 }
 
 type Resource struct {
@@ -57,8 +77,10 @@ type Resource struct {
 	Revision     string
 	SubDir       string
 
+	InputFile string
+	MapFile   string
+
 	StopOnViolation bool
-	workingDir      string
 	codeDir         string
 }
 
@@ -90,6 +112,10 @@ type Violation struct {
 	ResourceType string `json:"resource_type"`
 	File         string `json:"file"`
 	Line         int    `json:"line"`
+	Comment      string `json:"skip_comment,omitempty"`
+	ModuleName   string `json:"module_name,omitempty"`
+	PlanRoot     string `json:"plan_root,omitempty"`
+	Source       string `json:"source,omitempty"`
 }
 
 type TsCount struct {
@@ -99,44 +125,28 @@ type TsCount struct {
 	Total  int `json:"total"`
 }
 
+type ScanError struct {
+	IacType     string `json:"iac_type"`
+	Directory   string `json:"directory"`
+	ErrMsg      string `json:"errMsg"`
+	RuleName    string `json:"rule_name"`
+	Description string `json:"description"`
+	Severity    string `json:"severity"`
+	Category    string `json:"category"`
+	RuleId      string `json:"rule_id"`
+	File        string `json:"file"`
+	Error       error  `json:"-"`
+}
+
 func UnmarshalOutputResult(bs []byte) (*OutputResult, error) {
 	js := OutputResult{}
 	err := json.Unmarshal(bs, &js)
 	return &js, err
 }
 
-func (s *Scanner) GetResultPath(res Resource) string {
-	return filepath.Join(s.WorkingDir, runner.TerrascanResultFile)
-}
-
-func (s *Scanner) GetLogPath() string {
-	return filepath.Join(s.WorkingDir, runner.TerrascanLogFile)
-}
-
-func (s *Scanner) GetConfigPath(res Resource) string {
-	return filepath.Join(s.WorkingDir, runner.TerrascanJsonFile)
-}
-
 func (r Resource) GetUrl(task *models.Task) string {
 	u := getGitUrl(task.RepoAddr, "", task.CommitId, task.Workdir)
 	return u
-}
-
-type Scanner struct {
-	Db         *db.Session
-	Logfp      *os.File
-	DebugLog   bool // 是否输出详细调试日志
-	ParseOnly  bool // 是否只解析模板
-	SaveResult bool // 是否保持扫描结果到数据库（进针对环境和模板扫描）
-	RemoteScan bool // 是否由 terrascan 执行远程扫描
-	WorkingDir string
-	PolicyDir  string
-
-	Policies []Policy
-
-	Resources []Resource
-
-	Result []services.TsResultJson
 }
 
 func (p Parser) Parse(filePath string) error {
@@ -162,344 +172,114 @@ func (p Parser) Parse(filePath string) error {
 	return nil
 }
 
-func (s *Scanner) Run() error {
-	var (
-		err error
-	)
-
-	if s.SaveResult {
-		s.Db = s.Db.Begin()
-
-		defer func() {
-			if r := recover(); r != nil {
-				_ = s.Db.Rollback()
-				panic(r)
-			}
-		}()
-	}
-
-	if err = s.Prepare(); err != nil {
-		return err
-	}
-
-	// 批量扫描仓库
-	for _, resource := range s.Resources {
-		err = s.ScanResource(resource)
-		if err != nil {
-			err = fmt.Errorf("scan error %v", err)
-		}
-	}
-
-	if err = s.CleanUp(err); err != nil {
-		return err
-	}
-
-	if s.SaveResult {
-		if err != nil {
-			_ = s.Db.Rollback()
-			return e.New(e.DBError, err)
-		} else {
-			if err = s.Db.Commit(); err != nil {
-				_ = s.Db.Rollback()
-				return e.New(e.DBError, err)
-			}
-		}
-	}
-
-	return err
-}
-
-func (s *Scanner) Prepare() error {
-	var (
-		err error
-	)
-
-	// TODO
-	s.WorkingDir = "."
-
-	if len(s.Policies) > 0 {
-		s.PolicyDir = filepath.Join(s.WorkingDir, runner.PoliciesDir)
-		if s.ParseOnly {
-			if err := os.MkdirAll(s.PolicyDir, 0755); err != nil {
-				return err
-			}
-		} else {
-			if err := genPolicyFiles(s.PolicyDir, s.Policies); err != nil {
-				return err
-			}
-		}
-	}
-
-	s.Logfp, err = os.OpenFile(s.GetLogPath(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+func PopulateViolateSource(scanner *Scanner, res Resource, task *models.ScanTask) (*TsResultJson, error) {
+	resultJson, err := ReadTfResultJson(scanner.GetResultPath(res))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// 创建 terrascan 默认策略目录避免网络请求
-	homeDir, _ := homedir.Dir()
-	_ = os.MkdirAll(filepath.Join(homeDir, ".terrascan/pkg/policies/opa/rego/aws"), 0755)
-
-	return nil
-}
-
-// CleanUp 清理
-func (s *Scanner) CleanUp(er error) error {
-	//err := os.RemoveAll(s.WorkingDir)
-	//if err != nil {
-	//	return err
-	//}
-
-	if err := s.Logfp.Close(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *Scanner) ScanResource(resource Resource) error {
-	// TODO: handle relation with task
-	task := models.ScanTask{
-		OrgId:     "",
-		ProjectId: "",
-		TplId:     "",
-		EnvId:     "",
-	}
-	task.Id = ""
-
-	if s.SaveResult {
-		if err := services.InitScanResult(s.Db, &task); err != nil {
-			return err
-		}
-	}
-
-	if resource.ResourceType == "remote" && !s.RemoteScan {
-		resource.codeDir = "code"
-		cmdline := s.genScanInit(&resource)
-		cmd := exec.Command("sh", "-c", cmdline)
-		output, err := cmd.CombinedOutput()
-		s.Logfp.Write(output)
-		if err != nil {
-			return fmt.Errorf("checkout error %v, output %s", err, output)
-		}
-	}
-
-	if err := s.RunScan(resource); err != nil {
-		defer s.handleScanError(&task, err)
-		code, err := utils.CmdGetCode(err)
-		if err != nil {
-			return err
-		}
-		switch code {
-		case 3:
-			task.PolicyStatus = common.PolicyStatusViolated
-		case 0:
-			task.PolicyStatus = common.PolicyStatusPassed
-		case 1:
-			task.PolicyStatus = common.PolicyStatusFailed
-			return err
-		default:
-			task.PolicyStatus = common.PolicyStatusFailed
-			return err
-		}
-	}
-
-	bs, err := os.ReadFile(s.GetResultPath(resource))
-	if err != nil {
-		return err
-	}
-
-	var tfResultJson *services.TsResultJson
-	if tfResultJson, err = services.UnmarshalTfResultJson(bs); err != nil {
-		return err
-	}
-
-	if len(tfResultJson.Results.Violations) > 0 {
-		// 附加源码
-		if tfResultJson, err = PopulateViolateSource(s, resource, &task, tfResultJson); err != nil {
-			return err
-		}
-	}
-
-	if s.SaveResult {
-		if err := services.UpdateScanResult(s.Db, &task, tfResultJson.Results, task.PolicyStatus); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func PopulateViolateSource(scanner *Scanner, res Resource, task *models.ScanTask, resultJson *services.TsResultJson) (*services.TsResultJson, error) {
 	updated := false
+
+	tfmap := ReadTfMapFile(res.MapFile)
+
 	for idx, policyResult := range resultJson.Results.Violations {
-		logrus.Errorf("pupulate source: %s", policyResult)
-		if policyResult.File == "" {
-			continue
+		resLineNo := policyResult.Line
+		srcFile := policyResult.File
+
+		if (resLineNo == 0 || srcFile == "") && tfmap != nil {
+			resLineNo, srcFile = findLineNoFromMap(*tfmap, policyResult.ResourceName)
+			resultJson.Results.Violations[idx].Line = resLineNo
+			resultJson.Results.Violations[idx].File = srcFile
 		}
 
-		srcFile, err := os.Open(filepath.Join(scanner.WorkingDir, res.codeDir, policyResult.File))
+		srcFp, err := os.Open(filepath.Join(srcFile))
 		if err != nil {
-			fmt.Printf("open err %+v", err)
-
+			// 读取源码失败，跳过
 			continue
 		}
-		reader := bufio.NewReader(srcFile)
+
+		reader := bufio.NewReader(srcFp)
+		srcLines := ""
 		for lineNo := 1; ; lineNo++ {
 			line, err := reader.ReadBytes('\n')
 			if err != nil {
 				break
 			}
-			if lineNo < policyResult.Line {
+
+			srcLines = srcLines + string(line)
+			if lineNo < resLineNo {
 				continue
-			} else if lineNo-policyResult.Line >= runner.PopulateSourceLineCount {
-				break
+			} else if lineNo >= resLineNo {
+				resultJson.Results.Violations[idx].Source += string(line)
+
+				// 查找源码结束符
+				if strings.Contains(string(line), "}") {
+					break
+				}
+
+				if lineNo-resLineNo > 100 {
+					// 超长源码截断
+					resultJson.Results.Violations[idx].Source += string(line) + "  //...\n}"
+					break
+				}
 			}
 
-			resultJson.Results.Violations[idx].Source += string(line)
 			updated = true
 		}
-		fmt.Printf("violation with src %+v", resultJson.Results.Violations[idx])
-		_ = srcFile.Close()
+
+		_ = srcFp.Close()
 	}
-	fmt.Printf("updaetd %v", updated)
 
 	if updated {
-		if js, err := json.MarshalIndent(resultJson, "", "  "); err == nil {
-			fmt.Printf("result file %s", scanner.GetResultPath(res))
-			err := os.WriteFile(scanner.GetResultPath(res), js, 0644)
-			if err != nil {
-				fmt.Printf("update result error %+v", err)
-			}
+		err = UpdateTfResultJson(scanner.GetResultPath(res), resultJson)
+		if err != nil {
+			return nil, err
 		}
 	}
 
 	return resultJson, nil
 }
 
-func (s *Scanner) handleScanError(task *models.ScanTask, err error) error {
-	if s.SaveResult {
-		// 扫描出错的时候更新所有策略扫描结果为 failed
-		emptyResult := services.TsResultJson{}
-		if err := services.UpdateScanResult(s.Db, task, emptyResult.Results, task.PolicyStatus); err != nil {
-			return err
-		}
-	}
-
-	return err
-}
-
-// TODO
-func (s *Scanner) genScanScript(res Resource) string {
-	cmdlineTemplate := `
-cd {{.CodeDir}} && \
-mkdir -p ~/.terrascan/pkg/policies/opa/rego && \
-terrascan scan -d . -p {{.PolicyDir}} --show-passed \
-{{if .TfVars}}-var-file={{.TfVars}}{{end}} \
-
--o json > {{.TerrascanResultFile}} 2>{{.TerrascanLogFile}}
-`
-	cmdline := utils.SprintTemplate(cmdlineTemplate, map[string]interface{}{
-		"CodeDir":             s.WorkingDir,
-		"TerrascanResultFile": s.GetResultPath(res),
-		"TerrascanLogFile":    s.GetLogPath(),
-		"PolicyDir":           s.PolicyDir,
-		"CloudIacDebug":       s.DebugLog,
-	})
-	return cmdline
-}
-
-var scanInitCommandTpl = `#!/bin/sh
-git clone '{{.RepoAddress}}' code && \
-cd code && \
-echo "checkout $(git rev-parse --short HEAD)." && \
-git checkout -q '{{.Revision}}' && \
-cd '{{.SubDir}}'
-`
-
-func (s *Scanner) genScanInit(res *Resource) (command string) {
-	cmdline := utils.SprintTemplate(scanInitCommandTpl, map[string]interface{}{
-		"RepoAddress": res.RepoAddr,
-		"SubDir":      res.SubDir,
-		"Revision":    res.Revision,
-	})
-
-	return cmdline
-}
-
-func (s *Scanner) RunScan(resource Resource) error {
-	var (
-		cmdErr  error
-		timeout = 30 * time.Second
-	)
-
-	cmd := exec.Command("terrascan", "scan")
-	cmd.Dir = s.WorkingDir
-
-	// 扫描目标，可以通过 terrascan 远程扫描或者手动 checkout 后扫描本地
-	if resource.ResourceType == "remote" && s.RemoteScan {
-		address := getGitUrl(resource.RepoAddr, resource.codeDir, resource.Revision, resource.SubDir)
-		if address == "" {
-			return errors.New("get git url error")
-		}
-		cmd.Args = append(cmd.Args, "-r", "git", "-u", address)
-	} else {
-		// 本地扫描
-		cmd.Args = append(cmd.Args, "-d", resource.codeDir)
-	}
-
-	// 策略目录
-	cmd.Args = append(cmd.Args, "-p", s.PolicyDir)
-	// 输出结果为 json 格式
-	cmd.Args = append(cmd.Args, "-o", "json")
-	// 结果包含已经通过的规则
-	cmd.Args = append(cmd.Args, "--show-passed")
-	// 包含完整调试日志
-	if s.DebugLog {
-		cmd.Args = append(cmd.Args, "-l", "debug")
-	}
-	resultFile := s.GetResultPath(resource)
-	// 只解析，输出到 _tsscan.json
-	if s.ParseOnly {
-		cmd.Args = append(cmd.Args, "--config-only")
-		resultFile = s.GetConfigPath(resource)
-	}
-	resultFp, err := os.OpenFile(resultFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+func ReadTfResultJson(resultPath string) (*TsResultJson, error) {
+	bs, err := os.ReadFile(resultPath)
 	if err != nil {
-		return err
-	}
-	cmd.Stdout = resultFp
-	cmd.Stderr = s.Logfp
-
-	done := make(chan error)
-	go func() {
-		if err := cmd.Start(); err != nil {
-			logrus.Errorf("error start cmd %s, err: %v", cmd.Path, err)
-			done <- err
-		}
-		done <- cmd.Wait()
-	}()
-
-	select {
-	case <-time.After(timeout):
-		if err := cmd.Process.Kill(); err != nil {
-			logrus.Errorf("kill timeout process %s error %v", cmd.Path, err)
-		} else {
-			logrus.Errorf("kill timeout process %s with timeout %s seconds", cmd.Path, timeout)
-		}
-		cmdErr = fmt.Errorf("process timeout")
-	case err = <-done:
-		logrus.Errorf("command complete with error %v", err)
-		cmdErr = err
+		return nil, err
 	}
 
-	return cmdErr
+	return UnmarshalTfResultJson(bs)
 }
 
-func NewScanner(resources []Resource) (*Scanner, error) {
-	scanner := Scanner{
-		Resources: resources,
+func ReadTfMapFile(mapFile string) *models.TfParse {
+	if mapFile == "" {
+		return nil
 	}
-	return &scanner, nil
+
+	tfmap := models.TfParse{}
+	tfmapContent, _ := ioutil.ReadFile(mapFile)
+	if err := json.Unmarshal(tfmapContent, &tfmap); err != nil {
+		return nil
+	}
+
+	return &tfmap
+}
+
+func UpdateTfResultJson(resultPath string, resultJson *TsResultJson) error {
+	if js, err := json.MarshalIndent(resultJson, "", "  "); err != nil {
+		return err
+	} else {
+		return os.WriteFile(resultPath, js, 0644) //nolint:gosec
+	}
+}
+
+func findLineNoFromMap(tfmap models.TfParse, resourceName string) (int, string) {
+	for _, resources := range tfmap {
+		for _, resource := range resources {
+			if resource.Id == resourceName {
+				return resource.Line, resource.Source
+			}
+		}
+	}
+	return 0, ""
 }
 
 // genPolicyFiles 将策略文件写入策略目录
@@ -513,10 +293,11 @@ func genPolicyFiles(policyDir string, policies []Policy) error {
 			return err
 		}
 		js, _ := json.Marshal(policy.Meta)
-		if err := os.WriteFile(filepath.Join(policyDir, policy.Id, "meta.json"), js, 0644); err != nil {
+
+		if err := os.WriteFile(filepath.Join(policyDir, policy.Id, policy.Meta.Name+".json"), js, 0644); err != nil { //nolint:gosec
 			return err
 		}
-		if err := os.WriteFile(filepath.Join(policyDir, policy.Id, "policy.rego"), []byte(policy.Rego), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(policyDir, policy.Id, policy.Meta.Name+".rego"), []byte(policy.Rego), 0644); err != nil { //nolint:gosec
 			return err
 		}
 	}
@@ -556,161 +337,18 @@ func getGitUrl(repoAddr, token, version, subDir string) string {
 	return u.String()
 }
 
-func GetPoliciesFromDB(query *db.Session, policyIds []string) ([]Policy, error) {
-	var policies []models.Policy
-	if err := query.Model(models.Policy{}).Where("id in (?)").Find(&policies); err != nil {
-		return nil, err
-	}
-	if len(policies) != len(policyIds) {
-		return nil, fmt.Errorf("invalid policy id found")
-	}
-
-	var retPolicies []Policy
-	for _, policy := range policies {
-		category := "general"
-		group, _ := services.GetPolicyGroupById(query, policy.GroupId)
-		if group != nil {
-			category = group.Name
-		}
-		retPolicies = append(retPolicies, Policy{
-			Id: string(policy.Id),
-			Meta: Meta{
-				Category:     category,
-				File:         "policy.rego",
-				Id:           string(policy.Id),
-				Name:         policy.RuleName,
-				PolicyType:   policy.PolicyType,
-				ReferenceId:  policy.ReferenceId,
-				ResourceType: policy.ResourceType,
-				Severity:     policy.Severity,
-				Version:      policy.Revision,
-			},
-			Rego: policy.Rego,
-		})
-	}
-	return retPolicies, nil
-}
-
-func NewScannerFromLocalDir(srcPath string, policyDir string) (*Scanner, error) {
+func NewScannerFromLocalDir(srcPath string, policyDir string, inputFile string, mapFile string) (*Scanner, error) {
 	res := Resource{
 		ResourceType: "local",
 		RepoAddr:     srcPath,
+		codeDir:      srcPath,
+		InputFile:    inputFile,
+		MapFile:      mapFile,
 	}
 	scanner, err := NewScanner([]Resource{res})
 	scanner.PolicyDir = policyDir
 
 	return scanner, err
-}
-
-func NewScannerFromEnv(query *db.Session, envId string) (*Scanner, error) {
-	// 获取 git 仓库地址
-	env, err := services.GetEnvById(query, models.Id(envId))
-	if err != nil {
-		return nil, err
-	}
-	tpl, err := services.GetTemplateById(query, env.TplId)
-	if err != nil {
-		return nil, err
-	}
-	repoAddr, commitId, err := services.GetTaskRepoAddrAndCommitId(query, tpl, env.Revision)
-
-	if err != nil {
-		return nil, err
-	}
-	res := Resource{
-		ResourceType: "remote",
-		RepoAddr:     repoAddr,
-		Revision:     commitId,
-		SubDir:       tpl.Workdir,
-	}
-
-	// 获取 环境 关联 策略组 和 策略列表
-	policies, err := services.GetPoliciesByEnvId(query, env.Id)
-	if err != nil {
-		return nil, err
-	}
-	if len(policies) == 0 {
-		return nil, fmt.Errorf("no valid policy found")
-	}
-
-	scanner, er := NewScanner([]Resource{res})
-	if er != nil {
-		return nil, er
-	}
-
-	if policies, err := GetScanPolicies(query, policies); err != nil {
-		return nil, err
-	} else {
-		scanner.Policies = policies
-	}
-
-	return scanner, nil
-}
-
-func NewScannerFromTemplate(query *db.Session, tplId string) (*Scanner, error) {
-	// 获取 git 仓库地址
-	tpl, err := services.GetTemplateById(query, models.Id(tplId))
-	if err != nil {
-		return nil, err
-	}
-	repoAddr, commitId, err := services.GetTaskRepoAddrAndCommitId(query, tpl, tpl.RepoRevision)
-	if err != nil {
-		return nil, err
-	}
-	res := Resource{
-		ResourceType: "remote",
-		RepoAddr:     repoAddr,
-		Revision:     commitId,
-		SubDir:       tpl.Workdir,
-	}
-
-	// 获取 模板 关联 策略组 和 策略列表
-	policies, err := services.GetPoliciesByTemplateId(query, tpl.Id)
-	if err != nil {
-		return nil, err
-	}
-	if len(policies) == 0 {
-		return nil, fmt.Errorf("no valid policy found")
-	}
-	scanner, er := NewScanner([]Resource{res})
-	if er != nil {
-		return nil, er
-	}
-
-	if policies, err := GetScanPolicies(query, policies); err != nil {
-		return nil, err
-	} else {
-		scanner.Policies = policies
-	}
-
-	return scanner, nil
-}
-
-func GetScanPolicies(query *db.Session, policies []models.Policy) ([]Policy, error) {
-	var ps []Policy
-	for _, policy := range policies {
-		group, err := services.GetPolicyGroupById(query, policy.GroupId)
-		if err != nil {
-			return nil, err
-		}
-		ps = append(ps, Policy{
-			Id: string(policy.Id),
-			Meta: Meta{
-				Category:     group.Name,
-				File:         "policy.rego",
-				Id:           string(policy.Id),
-				Name:         policy.Name,
-				PolicyType:   policy.PolicyType,
-				ReferenceId:  policy.ReferenceId,
-				ResourceType: policy.ResourceType,
-				Severity:     policy.Severity,
-				Version:      policy.Revision,
-			},
-			Rego: policy.Rego,
-		})
-	}
-
-	return ps, nil
 }
 
 func EngineScan(regoFile string, configFile string) (interface{}, error) {
@@ -766,4 +404,489 @@ func EngineScan(regoFile string, configFile string) (interface{}, error) {
 	}
 
 	return result, nil
+}
+
+type Rego struct {
+	filePath string
+	content  string
+	pkg      string
+	rule     string
+	query    string
+	rules    []string
+
+	compiler *ast.Compiler
+}
+
+func (r *Rego) Init() error {
+	var err error
+	if r.filePath == "" {
+		return fmt.Errorf("rego file path is empty")
+	}
+
+	r.content, err = r.LoadRego()
+	if err != nil {
+		// error load rego file
+		return err
+	}
+
+	r.compiler, err = r.Compile()
+	if err != nil {
+		// error compiling rego
+		return err
+	}
+
+	r.pkg, err = r.ParsePackage()
+	if err != nil {
+		// error parse package
+		return err
+	}
+
+	r.rules, err = r.ParseRules()
+	if err != nil {
+		// error parse rules
+		return err
+	}
+
+	return nil
+}
+
+func (r *Rego) LoadRego() (string, error) {
+	content, err := ioutil.ReadFile(r.filePath)
+	if err != nil {
+		return "", nil
+	}
+	return string(content), nil
+}
+
+func (r *Rego) Compile() (*ast.Compiler, error) {
+	compiler, err := ast.CompileModules(map[string]string{
+		r.filePath: r.content,
+	})
+	return compiler, err
+}
+
+func (r *Rego) ParsePackage() (string, error) {
+	return strings.TrimPrefix(r.compiler.Modules[r.filePath].Package.String(), "package "), nil
+}
+
+func (r *Rego) ParseRules() ([]string, error) {
+	var rules []string
+	for _, r := range r.compiler.Modules[r.filePath].Rules {
+		rules = append(rules, r.Head.Name.String())
+	}
+
+	return rules, nil
+}
+
+func (r *Rego) ParseResource(result []interface{}) []string {
+	resMap := make(map[string]bool)
+	for _, v := range result {
+		var resId string
+		switch res := v.(type) {
+		// terrascan 自定义结果 返回
+		case map[string]interface{}:
+			_, ok := res["Id"]
+			if !ok {
+				// custom return id not found
+				continue
+			}
+
+			resId, ok = res["Id"].(string)
+			if !ok {
+				//invalid custom return id
+				continue
+			}
+		case string:
+			resId = res
+		default:
+			// violate id not found
+			continue
+		}
+		// remove array index from id
+		if strings.LastIndex(resId, "[") != -1 {
+			resId = resId[:strings.LastIndex(resId, "[")]
+		}
+		resMap[resId] = true
+	}
+	var resources []string
+	for k := range resMap {
+		resources = append(resources, k)
+	}
+
+	return resources
+}
+
+func (r *Rego) String() string {
+	str := fmt.Sprintf("file: %s\n", r.filePath)
+	str += fmt.Sprintf("package: %s\n", r.pkg)
+	for i, rule := range r.rules {
+		str += fmt.Sprintf("rule[%d]: %s\n", i, rule)
+	}
+	return str
+}
+
+type ScanResult struct {
+	FileFolder string    `json:"file/folder"`
+	IacType    string    `json:"iac_type"`
+	ScannedAt  string    `json:"scanned_at"`
+	Status     string    `json:"status"`
+	Priority   string    `json:"priority"`
+	Error      ScanError `json:"error"`
+}
+
+func searchRule(reg Rego, ruleName ...string) string {
+	// 规则名称：
+	// 1. 使用 meta 定义的 name
+	// 2. 使用 文件名 对应的 rule name
+	// 3. 使用 @rule 标记的规则
+	// 4. 使用第一条 rule
+	if len(ruleName) > 0 {
+		if utils.StrInArray(ruleName[0], reg.rules...) {
+			return ruleName[0]
+		}
+	}
+
+	if utils.StrInArray(utils.FileNameWithoutExt(reg.filePath), reg.rules...) {
+		return utils.FileNameWithoutExt(reg.filePath)
+	}
+
+	ruleReg := "(?m)\\s*#+\\s*@rule.*\\n\\s*([^\\s]*)\\s*{"
+	regex := regexp.MustCompile(ruleReg)
+	match := regex.FindStringSubmatch(reg.content)
+	if len(match) == 2 {
+		return strings.TrimSpace(match[1])
+	}
+
+	return reg.rules[0]
+}
+
+func RegoParse(regoFile string, inputFile string, ruleName ...string) ([]interface{}, error) {
+	reg := Rego{
+		filePath: regoFile,
+	}
+
+	var err error
+	if err := reg.Init(); err != nil {
+		return nil, err
+	}
+
+	reg.rule = searchRule(reg, ruleName...)
+
+	reg.query = fmt.Sprintf("data.%s.%s", reg.pkg, reg.rule)
+
+	// 读取待执行的输入文件
+	inputBuf, err := os.ReadFile(inputFile)
+	if err != nil {
+		return nil, fmt.Errorf("read configFile: %w", err)
+	}
+
+	var input interface{}
+	err = json.Unmarshal(inputBuf, &input)
+	if err != nil {
+		return nil, fmt.Errorf("parse input: %w", err)
+	}
+
+	// 初始化 rego 引擎
+	ctx := context.Background()
+	obj := ast.NewObject()
+	env := ast.NewObject()
+
+	for _, s := range os.Environ() {
+		parts := strings.SplitN(s, "=", 2)
+		if len(parts) == 1 {
+			env.Insert(ast.StringTerm(parts[0]), ast.NullTerm())
+		} else if len(parts) > 1 {
+			env.Insert(ast.StringTerm(parts[0]), ast.StringTerm(parts[1]))
+		}
+	}
+
+	obj.Insert(ast.StringTerm("env"), ast.NewTerm(env))
+	obj.Insert(ast.StringTerm("version"), ast.StringTerm(version.Version))
+	obj.Insert(ast.StringTerm("commit"), ast.StringTerm(version.Vcs))
+
+	info := ast.NewTerm(obj)
+
+	regoArgs := []func(*rego.Rego){
+		rego.Input(input),
+		rego.Query(reg.query),
+		rego.Load([]string{regoFile}, nil),
+		rego.Runtime(info),
+	}
+
+	// 执行规则检查
+	r := rego.New(regoArgs...)
+	resultSet, err := r.Eval(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("evaluating policy: %w", err)
+	}
+
+	// 获取结果
+	var result []interface{}
+	if len(resultSet) > 0 && len(resultSet[0].Expressions) > 0 {
+		result = resultSet[0].Expressions[0].Value.([]interface{})
+	}
+
+	return result, nil
+}
+
+type TsResult struct {
+	ScanErrors        []ScanError `json:"scan_errors,omitempty"`
+	PassedRules       []Rule      `json:"passed_rules,omitempty"`
+	Violations        []Violation `json:"violations"`
+	SuppressedRules   []Rule      `json:"suppressed_rules"`
+	SkippedViolations []Violation `json:"skipped_violations"`
+	ScanSummary       ScanSummary `json:"scan_summary"`
+}
+
+type ScanSummary struct {
+	FileFolder         string `json:"file/folder"`
+	IacType            string `json:"iac_type"`
+	ScannedAt          string `json:"scanned_at"`
+	PoliciesValidated  int    `json:"policies_validated"`
+	ViolatedPolicies   int    `json:"violated_policies"`
+	PoliciesSuppressed int    `json:"policies_suppressed"`
+	PoliciesError      int    `json:"policies_error"`
+	Low                int    `json:"low"`
+	Medium             int    `json:"medium"`
+	High               int    `json:"high"`
+}
+
+type TsResultJson struct {
+	Results TsResult `json:"results"`
+}
+
+func UnmarshalTfResultJson(bs []byte) (*TsResultJson, error) {
+	js := TsResultJson{}
+	err := json.Unmarshal(bs, &js)
+	return &js, err
+}
+
+type PolicyWithMeta struct {
+	Id   string `json:"Id"`
+	Meta Meta   `json:"meta"`
+	Rego string `json:"rego"`
+}
+
+func ParsePolicyGroup(dirname string) ([]*PolicyWithMeta, e.Error) {
+	files, err := ioutil.ReadDir(dirname)
+	if err != nil {
+		return nil, e.New(e.InternalError, err, http.StatusInternalServerError)
+	}
+
+	otherFiles := files
+	var regoFiles []RegoFile
+	// 遍历当前目录
+	for _, f := range files {
+		// 优先处理 json 的 meta 及对应的 rego 文件
+		if filepath.Ext(f.Name()) == ".json" {
+			regoFileName := utils.FileNameWithoutExt(f.Name()) + ".rego"
+			regoFilePath := filepath.Join(dirname, regoFileName)
+			if utils.FileExist(regoFilePath) {
+				regoFiles = append(regoFiles, RegoFile{
+					MetaFile: filepath.Join(dirname, f.Name()),
+					RegoFile: filepath.Join(dirname, regoFileName),
+				})
+				// 将已经处理的 rego 排除
+				for i, rf := range otherFiles {
+					if rf.Name() == regoFileName {
+						otherFiles[i] = otherFiles[len(otherFiles)-1]
+						otherFiles = otherFiles[:len(otherFiles)-1]
+						break
+					}
+				}
+			}
+		}
+	}
+
+	// 遍历其他没有 json meta 的 rego 文件
+	for _, f := range otherFiles {
+		if filepath.Ext(f.Name()) == ".rego" {
+			regoFiles = append(regoFiles, RegoFile{
+				RegoFile: filepath.Join(dirname, f.Name()),
+			})
+		}
+	}
+
+	// 解析 rego 元信息
+	var policies []*PolicyWithMeta
+	for _, r := range regoFiles {
+		p, err := ParseMeta(r.RegoFile, r.MetaFile)
+		if err != nil {
+			regoPath, _ := filepath.Rel(dirname, r.RegoFile)
+			if r.MetaFile != "" {
+				metaPath, _ := filepath.Rel(dirname, r.MetaFile)
+				return nil, e.New(e.BadRequest,
+					errors.Wrapf(err, "parse policy(%s,%s)", metaPath, regoPath),
+					http.StatusBadRequest)
+			}
+
+			return nil, e.New(e.BadRequest,
+				errors.Wrapf(err, "parse policy (%s)", regoPath),
+				http.StatusBadRequest)
+		}
+		policies = append(policies, p)
+	}
+
+	return policies, nil
+}
+
+type RegoFile struct {
+	MetaFile string
+	RegoFile string
+}
+
+//ParseMeta 解析 rego metadata，如果存在 file.json 则从 json 文件读取 metadata，否则通过头部注释读取 metadata
+func ParseMeta(regoFilePath string, metaFilePath string) (*PolicyWithMeta, e.Error) {
+	buf, er := os.ReadFile(regoFilePath)
+	if er != nil {
+		return nil, e.New(e.PolicyRegoInvalid, fmt.Errorf("read rego file: %v", er))
+	}
+	regoContent := string(buf)
+
+	var meta *Meta
+	if metaFilePath != "" {
+		// 1. 如果存在 json metadata，则解析 json 文件
+		meta, er = ParseMetaFromJson(metaFilePath)
+		if er != nil {
+			return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("parse json metadata: %v", er))
+		}
+		meta.File = filepath.Base(regoFilePath)
+		meta.Root = filepath.Dir(regoFilePath)
+	} else {
+		// 2. 无 json metadata，通过头部注释解析信息
+		meta, er = ParseMetaFromRego(regoFilePath, regoContent)
+		if er != nil {
+			return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("parse rego metadata: %v", er))
+		}
+	}
+
+	if meta.Id == "" {
+		meta.Id = utils.FileNameWithoutExt(regoFilePath)
+	}
+	if meta.Name == "" {
+		meta.Name = meta.Id
+	}
+	if meta.ReferenceId == "" {
+		meta.ReferenceId = meta.Id
+	}
+	if meta.ResourceType == "" {
+		return nil, e.New(e.PolicyRegoMissingComment, fmt.Errorf("missing resource type info"))
+	}
+	if meta.PolicyType == "" {
+		// alicloud_instance => alicloud
+		meta.PolicyType = meta.ResourceType[:strings.Index(meta.ResourceType, "_")]
+	}
+	if meta.Severity == "" {
+		meta.Severity = consts.PolicySeverityMedium
+	}
+	meta.Severity = strings.ToLower(meta.Severity)
+
+	if err := ValidateMeta(meta); err != nil {
+		return nil, err
+	}
+
+	return &PolicyWithMeta{
+		Id:   meta.Id,
+		Meta: *meta,
+		Rego: regoContent,
+	}, nil
+}
+
+func ParseMetaFromJson(metaFilePath string) (*Meta, error) {
+	content, er := os.ReadFile(metaFilePath)
+	if er != nil {
+		return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("read meta file: %v", er))
+	}
+	meta := &Meta{}
+	er = json.Unmarshal(content, meta)
+	if er != nil {
+		return nil, e.New(e.PolicyMetaInvalid, fmt.Errorf("unmarshal meta file: %v", er))
+	}
+	return meta, nil
+}
+
+func ParseMetaFromRego(regoFilePath string, regoContent string) (*Meta, error) {
+	//	## id 为策略在策略组中的唯一标识，由大小写英文字符、数字、"."、"_"、"-" 组成
+	//	## 建议按`组织_云商_资源名称/分类_编号`的格式进行命名
+	//	# @id: cloudiac_alicloud_security_p001
+	//
+	//	# @name: 策略名称A
+	//	# @description: 这是策略的描述
+	//
+	//	## 策略类型，如 aws, k8s, github, alicloud, ...
+	//	# @policy_type: alicloud
+	//
+	//	## 资源类型，如 aws_ami, k8s_pod, alicloud_ecs, ...
+	//	# @resource_type: aliyun_ami
+	//
+	//	## 策略严重级别: 可选 HIGH/MEDIUM/LOW
+	//	# @severity: HIGH
+	//
+	//	## 策略分类(或者叫标签)，多个分类使用逗号分隔
+	//	# @label: cat1,cat2
+	//
+	//	## 策略修复建议（支持多行）
+	//	# @fix_suggestion:
+	//	Terraform 代码去掉`associate_public_ip_address`配置
+	//	```
+	//resource "aws_instance" "bar" {
+	//  ...
+	//- associate_public_ip_address = true
+	//}
+	//```
+	//	# @fix_suggestion_end
+
+	meta := &Meta{
+		Id:           ExtractStr("id", regoContent),
+		File:         filepath.Base(regoFilePath),
+		Root:         filepath.Dir(regoFilePath),
+		Name:         ExtractStr("name", regoContent),
+		Description:  ExtractStr("description", regoContent),
+		PolicyType:   ExtractStr("policy_type", regoContent),
+		ResourceType: ExtractStr("resource_type", regoContent),
+		Label:        ExtractStr("label", regoContent),
+		Category:     ExtractStr("category", regoContent),
+		ReferenceId:  ExtractStr("reference_id", regoContent),
+		Severity:     ExtractStr("severity", regoContent),
+	}
+	ver := ExtractStr("version", regoContent)
+	meta.Version, _ = strconv.Atoi(ver)
+
+	// 多行注释提取
+	regex := regexp.MustCompile(`(?s)@fix_suggestion:\\s*(.*)\\s*#+\\s*@fix_suggestion_end`)
+	match := regex.FindStringSubmatch(regoContent)
+	if len(match) == 2 {
+		meta.FixSuggestion = strings.TrimSpace(match[1])
+	} else {
+		// 单行注释提取
+		meta.FixSuggestion = ExtractStr("fix_suggestion", regoContent)
+	}
+
+	return meta, nil
+}
+
+func ValidateMeta(meta *Meta) e.Error {
+	uni := translator.New(en.New())
+	trans, _ := uni.GetTranslator("en")
+	validate := validator.New()
+	if err := en_translation.RegisterDefaultTranslations(validate, trans); err != nil {
+		return e.New(e.InternalError, fmt.Errorf("register validator translator en error: %v", err))
+	}
+	if err := validate.Struct(meta); err != nil {
+		for _, err := range err.(validator.ValidationErrors) { //nolint
+			return e.New(e.PolicyMetaInvalid, fmt.Errorf("invalid policy meta: %+v", fmt.Errorf(err.Translate(trans))))
+		}
+		return e.New(e.PolicyMetaInvalid, fmt.Errorf("invalid policy meta: %+v", err))
+	}
+	return nil
+}
+
+// ExtractStr 提取 # @keyword: xxx 格式字符串
+func ExtractStr(keyword string, input string) string {
+	regex := regexp.MustCompile(fmt.Sprintf("(?m)^\\s*#+\\s*@%s:\\s*(.*)$", keyword))
+	match := regex.FindStringSubmatch(input)
+	if len(match) == 2 {
+		return strings.TrimSpace(match[1])
+	}
+	return ""
 }

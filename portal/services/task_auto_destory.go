@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package services
 
 import (
@@ -32,6 +34,7 @@ func CreateAutoDestroyTask(tx *db.Session, env *models.Env) (*models.Task, e.Err
 		BaseTask: models.BaseTask{
 			Type: models.TaskTypeDestroy,
 		},
+		Source: consts.TaskSourceAutoDestroy,
 	}
 
 	if env.LastResTaskId != "" {

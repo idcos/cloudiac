@@ -1,10 +1,11 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package apps
 
 import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
@@ -135,6 +136,29 @@ func SearchResourceAccount(c *ctx.ServiceContext, form *forms.SearchResourceAcco
 	}, nil
 }
 
+func chkFormCtServiceIds(db *db.Session, form *forms.UpdateResourceAccountForm, rsAccountId models.Id) e.Error {
+	if !form.HasKey("ctServiceIds") {
+		return nil
+	}
+
+	err := services.DeleteCtResourceMap(db, form.Id)
+	if err != nil {
+		return err
+	}
+
+	for _, ctServiceId := range form.CtServiceIds {
+		_, err = services.CreateCtResourceMap(db, models.CtResourceMap{
+			ResourceAccountId: rsAccountId,
+			CtServiceId:       ctServiceId,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func UpdateResourceAccount(c *ctx.ServiceContext, form *forms.UpdateResourceAccountForm) (rsAccount *models.ResourceAccount, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update rsAccount %s", form.Id))
 	if form.Id == "" {
@@ -149,7 +173,7 @@ func UpdateResourceAccount(c *ctx.ServiceContext, form *forms.UpdateResourceAcco
 	if form.HasKey("description") {
 		attrs["description"] = form.Description
 	}
-	newVars := make(map[string]string, 0)
+	newVars := make(map[string]string)
 	vars := make([]forms.Params, 0)
 	ra, err := services.GetResourceAccountById(c.DB(), form.Id)
 	if err != nil {
@@ -176,23 +200,8 @@ func UpdateResourceAccount(c *ctx.ServiceContext, form *forms.UpdateResourceAcco
 		return nil, err
 	}
 
-	if form.HasKey("ctServiceIds") {
-		err = services.DeleteCtResourceMap(c.DB(), form.Id)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, ctServiceId := range form.CtServiceIds {
-			_, err = services.CreateCtResourceMap(c.DB(), models.CtResourceMap{
-				ResourceAccountId: rsAccount.Id,
-				CtServiceId:       ctServiceId,
-			})
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
+	// check ctServiceIds
+	err = chkFormCtServiceIds(c.DB(), form, rsAccount.Id)
 	return
 }
 
@@ -202,13 +211,13 @@ func DeleteResourceAccount(c *ctx.ServiceContext, form *forms.DeleteResourceAcco
 	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			panic(r)
 		}
 	}()
 
 	if err := services.DeleteResourceAccount(tx, form.Id, c.OrgId); err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return nil, err
 	} else if err := tx.Commit(); err != nil {
 		return nil, e.New(e.DBError, err)

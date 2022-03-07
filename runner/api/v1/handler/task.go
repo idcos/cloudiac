@@ -1,10 +1,11 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package handler
 
 import (
 	"net/http"
 	"strings"
+	"errors"
 
 	"github.com/docker/docker/errdefs"
 	"github.com/gin-gonic/gin"
@@ -46,7 +47,8 @@ func StopTask(c *ctx.Context) {
 	for _, cid := range req.ContainerIds {
 		// default signal "SIGKILL"
 		if err := cli.ContainerKill(c.Context, cid, ""); err != nil {
-			if _, ok := err.(errdefs.ErrNotFound); ok {
+			var targetErr errdefs.ErrNotFound
+			if errors.As(err, &targetErr) {
 				continue
 			}
 

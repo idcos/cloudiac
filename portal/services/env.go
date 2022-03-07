@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -97,6 +97,8 @@ func QueryEnvDetail(query *db.Session) *db.Session {
 		"    INNER JOIN iac_resource ON iac_resource.id = iac_resource_drift.res_id GROUP BY iac_resource.task_id" +
 		") AS rd ON rd.task_id = iac_env.last_res_task_id").
 		LazySelectAppend("!ISNULL(rd.task_id) AS is_drift")
+	query = query.Joins("left join iac_scan_task on iac_env.last_scan_task_id = iac_scan_task.id").
+		LazySelectAppend("iac_scan_task.policy_status as policy_status")
 
 	return query
 }
@@ -239,9 +241,29 @@ func GetDefaultRunner() (string, e.Error) {
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list is null"))
 }
 
-//
-// tf变量
-// 环境变量
+func isVarNewValid(v forms.SampleVariables, value models.Variable) bool {
+	// 对于第三方调用api创建的环境来说，当前作用域是无变量的，sampleVariables中的变量一种是继承性下来的、另一种是新建的
+	// 这里需要判断变量如果修改了就在当前作用域创建一个变量
+	// 比较变量名是否相同，相同的变量比较变量的值是否发生变化, 发生变化则创建
+	if (v.Name == value.Name && value.Type == consts.VarTypeEnv) ||
+		(v.Name == fmt.Sprintf("TF_VAR_%s", value.Name) && value.Type == consts.VarTypeTerraform) &&
+			v.Value != value.Value {
+		// 如果匹配到了就不在继续匹配
+		return false
+	}
+
+	return true
+}
+
+func varNewAppend(resp []forms.Variable, name, value, varType string) []forms.Variable {
+	resp = append(resp, forms.Variable{
+		Scope: consts.ScopeEnv,
+		Type:  varType,
+		Name:  name,
+		Value: value,
+	})
+	return resp
+}
 
 func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId models.Id, sampleVariables []forms.SampleVariables) ([]forms.Variable, e.Error) {
 	resp := make([]forms.Variable, 0)
@@ -250,35 +272,19 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 		return nil, e.New(e.DBError, fmt.Errorf("get vairables error: %v", err))
 	}
 	for _, v := range sampleVariables {
-		isNewVaild := true
-		for key, value := range vars {
-			// 对于第三方调用api创建的环境来说，当前作用域是无变量的，sampleVariables中的变量一种是继承性下来的、另一种是新建的
-			// 这里需要判断变量如果修改了就在当前作用域创建一个变量
-			// 比较变量名是否相同，相同的变量比较变量的值是否发生变化, 发生变化则创建
-			if (v.Name == value.Name && value.Type == consts.VarTypeEnv) ||
-				(v.Name == fmt.Sprintf("TF_VAR_%s", value.Name) && value.Type == consts.VarTypeTerraform) {
-				if v.Value != value.Value {
-					resp = append(resp, forms.Variable{
-						Scope: consts.ScopeEnv,
-						Type:  vars[key].Type,
-						Name:  vars[key].Name,
-						Value: v.Value,
-					})
-					isNewVaild = false
-					// 如果匹配到了就不在继续匹配
-					break
-
-				}
-			}
+		// 如果vars为空，则需要将sampleVariables所有的变量理解为新增变量
+		if len(vars) == 0 {
+			resp = varNewAppend(resp,v.Name,v.Value,consts.VarTypeEnv)
+			continue
 		}
-		if isNewVaild {
-			// 这部分变量是新增的 需要新建
-			resp = append(resp, forms.Variable{
-				Scope: consts.ScopeEnv,
-				Type:  consts.VarTypeEnv,
-				Name:  v.Name,
-				Value: v.Value,
-			})
+
+		for key, value := range vars {
+			if !isVarNewValid(v, value) {
+				resp = varNewAppend(resp,vars[key].Name,v.Value, vars[key].Type)
+			} else {
+				// 这部分变量是新增的 需要新建
+				resp = varNewAppend(resp,v.Name,v.Value,consts.VarTypeEnv)
+			}
 		}
 	}
 

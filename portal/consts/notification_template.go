@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package consts
 
@@ -32,17 +32,17 @@ var IacTaskRunning = `
 <body>
 <p>尊敬的CloudIaC用户：</p>
 <br />
-<p>	【{{.Creator}}】在CloudIaC平台发起了部署任务，详情如下：</p> 
-<br />	
+<p>	【{{.Creator}}】在CloudIaC平台发起了部署任务，详情如下：</p>
+<br />
 <p>	所属组织：{{.OrgName}}</p>
 <p>	所属项目：{{.ProjectName}}</p>
 <p>	云模板：{{.TemplateName}}</p>
 <p>	分支/tag：{{.Revision}}</p>
 <p>	环境名称：{{.EnvName}}</p>
 <p>	任务类型：{{.TaskType}}</p>
-<br />	
+<br />
 <p>	更多详情请点击：{{.Addr}}</p>
-<br />	
+<br />
 <p>	-----该邮件由系统自动发出，请勿回复-----</p>
 </body>
 </html>
@@ -53,8 +53,8 @@ var IacTaskCompleteTpl = `
 <body>
 <p>尊敬的CloudIaC用户：</p>
 <br />
-<p>	【{{.Creator}}】在CloudIaC平台发起的部署任务已执行完成，详情如下：</p> 
-<br />	
+<p>	【{{.Creator}}】在CloudIaC平台发起的部署任务已执行完成，详情如下：</p>
+<br />
 <p>	所属组织：{{.OrgName}}</p>
 <p>	所属项目：{{.ProjectName}}</p>
 <p>	云模板：{{.TemplateName}}</p>
@@ -63,9 +63,9 @@ var IacTaskCompleteTpl = `
 <p>	任务类型：{{.TaskType}}</p>
 <p>	执行结果：成功</p>
 <p>	资源数量：{{.ResAdded}}+ {{.ResChanged}}~ {{.ResDestroyed}}-</p>
-<br />	
+<br />
 <p>	更多详情请点击：{{.Addr}}</p>
-<br />	
+<br />
 <p>	-----该邮件由系统自动发出，请勿回复-----</p>
 </body>
 </html>
@@ -76,8 +76,8 @@ var IacCronDriftPlanTaskTpl = `
 <body>
 <p>尊敬的 CloudIaC 用户：</p>
 <br />
-<p>	{{.EnvName}}环境检测到资源配置发生漂移,详情如下：</p> 
-<br />	
+<p>	{{.EnvName}}环境检测到资源配置发生漂移,详情如下：</p>
+<br />
 <p>	所属组织：{{.OrgName}}</p>
 <p>	所属项目：{{.ProjectName}}</p>
 <p>	云模板：{{.TemplateName}}</p>
@@ -92,8 +92,8 @@ var IacCronDriftApplyTaskTpl = `
 <body>
 <p>尊敬的 CloudIaC 用户：</p>
 <br />
-<p>	{{.EnvName}}环境检测到资源配置发生漂移,自动纠偏成功，详情如下：</p> 
-<br />	
+<p>	{{.EnvName}}环境检测到资源配置发生漂移,自动纠偏成功，详情如下：</p>
+<br />
 <p>	所属组织：{{.OrgName}}</p>
 <p>	所属项目：{{.ProjectName}}</p>
 <p>	云模板：{{.TemplateName}}</p>
@@ -108,8 +108,8 @@ var IacTaskFailedTpl = `
 <body>
 <p>尊敬的CloudIaC用户：</p>
 <br />
-<p>	【{{.Creator}}】在CloudIaC平台发起的部署任务执行失败，详情如下：</p> 
-<br />	
+<p>	【{{.Creator}}】在CloudIaC平台发起的部署任务执行失败，详情如下：</p>
+<br />
 <p>	所属组织：{{.OrgName}}</p>
 <p>	所属项目：{{.ProjectName}}</p>
 <p>	云模板：{{.TemplateName}}</p>
@@ -118,9 +118,9 @@ var IacTaskFailedTpl = `
 <p>	任务类型：{{.TaskType}}</p>
 <p>	执行结果：失败</p>
 <p>	失败原因：{{.Message}}</p>
-<br />	
+<br />
 <p>	更多详情请点击：{{.Addr}}</p>
-<br />	
+<br />
 <p>	-----该邮件由系统自动发出，请勿回复-----</p>
 </body>
 </html>
@@ -131,8 +131,8 @@ var IacTaskApprovingTpl = `
 <body>
 <p>尊敬的CloudIaC用户：</p>
 <br />
-<p>	【{{.Creator}}】在CloudIaC平台发起的部署任务等待审批中，详情如下：</p> 
-<br />	
+<p>	【{{.Creator}}】在CloudIaC平台发起的部署任务等待审批中，详情如下：</p>
+<br />
 <p>	所属组织：{{.OrgName}}</p>
 <p>	所属项目：{{.ProjectName}}</p>
 <p>	云模板：{{.TemplateName}}</p>
@@ -140,9 +140,9 @@ var IacTaskApprovingTpl = `
 <p>	环境名称：{{.EnvName}}</p>
 <p>	任务类型：{{.TaskType}}</p>
 <p>	执行结果：审批中</p>
-<br />	
+<br />
 <p>	更多详情请点击：{{.Addr}}</p>
-<br />	
+<br />
 <p>	-----该邮件由系统自动发出，请勿回复-----</p>
 </body>
 </html>

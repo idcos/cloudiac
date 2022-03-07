@@ -1,10 +1,9 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package apps
 
 import (
 	"cloudiac/portal/libs/ctx"
-	"fmt"
 	"reflect"
 
 	"cloudiac/portal/consts/e"
@@ -57,6 +56,6 @@ func getEmptyListResult(form forms.PageFormer) (interface{}, e.Error) {
 }
 
 func BaseHandler(c *ctx.ServiceContext, form *forms.BaseForm) (interface{}, e.Error) {
-	c.AddLogField("action", fmt.Sprintf("base"))
+	c.AddLogField("action", "base")
 	return nil, nil
 }

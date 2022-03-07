@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package models
 
 import (
@@ -10,16 +12,19 @@ import (
 )
 
 const (
-	TaskStepInit      = common.TaskStepTfInit
-	TaskStepPlan      = common.TaskStepTfPlan
-	TaskStepApply     = common.TaskStepTfApply
-	TaskStepDestroy   = common.TaskStepTfDestroy
-	TaskStepPlay      = common.TaskStepAnsiblePlay
-	TaskStepCommand   = common.TaskStepCommand
-	TaskStepCollect   = common.TaskStepCollect
-	TaskStepRegoParse = common.TaskStepRegoParse
-	TaskStepOpaScan   = common.TaskStepOpaScan
-	TaskStepScanInit  = common.TaskStepScanInit
+	TaskStepInit     = common.TaskStepTfInit
+	TaskStepPlan     = common.TaskStepTfPlan
+	TaskStepApply    = common.TaskStepTfApply
+	TaskStepDestroy  = common.TaskStepTfDestroy
+	TaskStepPlay     = common.TaskStepAnsiblePlay
+	TaskStepCommand  = common.TaskStepCommand
+	TaskStepCollect  = common.TaskStepCollect
+	TaskStepEnvParse = common.TaskStepEnvParse
+	TaskStepEnvScan  = common.TaskStepEnvScan
+	TaskStepTplParse = common.TaskStepTplParse
+	TaskStepTplScan  = common.TaskStepTplScan
+	TaskStepScanInit = common.TaskStepScanInit
+	TaskStepOpaScan  = common.TaskStepOpaScan
 
 	TaskStepPending   = common.TaskStepPending
 	TaskStepApproving = common.TaskStepApproving
@@ -59,6 +64,10 @@ type TaskStep struct {
 
 func (TaskStep) TableName() string {
 	return "iac_task_step"
+}
+
+func (s TaskStep) String() string {
+	return fmt.Sprintf("%s(%d)", s.Type, s.Index)
 }
 
 func (t *TaskStep) Migrate(sess *db.Session) (err error) {

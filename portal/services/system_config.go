@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -6,8 +6,11 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"errors"
 	"fmt"
 	"strconv"
+
+	"gorm.io/gorm"
 )
 
 func QuerySystemConfig(dbSess *db.Session) *db.Session {
@@ -42,4 +45,38 @@ func CreateSystemConfig(tx *db.Session, cfg models.SystemCfg) (*models.SystemCfg
 	}
 
 	return &cfg, nil
+}
+
+func GetSystemConfigByName(tx *db.Session, name string) (*models.SystemCfg, e.Error) {
+	var cfg models.SystemCfg
+	if err := tx.Where("name = ?", name).First(&cfg); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, e.New(e.SystemConfigNotExist, err)
+		} else {
+			return nil, e.New(e.DBError, err)
+		}
+	}
+
+	return &cfg, nil
+}
+
+func UpsertRegistryAddr(tx *db.Session, val string) (*models.SystemCfg, e.Error) {
+	cfg, err := GetSystemConfigByName(tx, models.SysCfgNamRegistryAddr)
+	if err != nil {
+		if errors.Is(err.Err(), gorm.ErrRecordNotFound) {
+			return CreateSystemConfig(tx, models.SystemCfg{
+				Name:  models.SysCfgNamRegistryAddr,
+				Value: val,
+			})
+		} else {
+			return nil, err
+		}
+	}
+
+	cfg.Value = val
+	if _, err := tx.Save(&cfg); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	return cfg, nil
 }

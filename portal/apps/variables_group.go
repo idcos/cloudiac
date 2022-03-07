@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package apps
 
 import (
@@ -30,8 +32,11 @@ func CreateVariableGroup(c *ctx.ServiceContext, form *forms.CreateVariableGroupF
 
 	vb := make([]models.VarGroupVariable, 0)
 	for index, v := range form.Variables {
-		if v.Sensitive {
-			value, _ := utils.AesEncrypt(v.Value)
+		if v.Sensitive && v.Value != "" {
+			value, err := utils.EncryptSecretVar(v.Value)
+			if err != nil {
+				return nil, e.AutoNew(err, e.EncryptError)
+			}
 			form.Variables[index].Value = value
 		}
 		vb = append(vb, models.VarGroupVariable{
@@ -83,6 +88,33 @@ func SearchVariableGroup(c *ctx.ServiceContext, form *forms.SearchVariableGroupF
 	}, nil
 }
 
+func getVarGroupVariables(variables []models.VarGroupVariable, vgVarsMap map[string]models.VarGroupVariable) ([]models.VarGroupVariable, e.Error) {
+
+	vb := make([]models.VarGroupVariable, 0)
+	for _, v := range variables {
+		if v.Sensitive {
+			if v.Value == "" {
+				// 传空值时表示不修改，我们赋值为 db 中己保存的值(如果存在)
+				v.Value = vgVarsMap[v.Name].Value
+			} else {
+				var err error
+				v.Value, err = utils.EncryptSecretVar(v.Value)
+				if err != nil {
+					return nil, e.AutoNew(err, e.EncryptError)
+				}
+			}
+		}
+		vb = append(vb, models.VarGroupVariable{
+			Id:          v.Id,
+			Name:        v.Name,
+			Value:       v.Value,
+			Sensitive:   v.Sensitive,
+			Description: v.Description,
+		})
+	}
+	return vb, nil
+}
+
 func UpdateVariableGroup(c *ctx.ServiceContext, form *forms.UpdateVariableGroupForm) (interface{}, e.Error) {
 	session := c.DB()
 	attrs := models.Attrs{}
@@ -103,24 +135,11 @@ func UpdateVariableGroup(c *ctx.ServiceContext, form *forms.UpdateVariableGroupF
 	}
 
 	if form.HasKey("variables") {
-		vb := make([]models.VarGroupVariable, 0)
-		for _, v := range form.Variables {
-			if v.Sensitive {
-				if v.Value == "" {
-					// 传空值时表示不修改，我们赋值为 db 中己保存的值(如果存在)
-					v.Value = vgVarsMap[v.Name].Value
-				} else {
-					v.Value, _ = utils.AesEncrypt(v.Value)
-				}
-			}
-			vb = append(vb, models.VarGroupVariable{
-				Id:          v.Id,
-				Name:        v.Name,
-				Value:       v.Value,
-				Sensitive:   v.Sensitive,
-				Description: v.Description,
-			})
+		vb, err := getVarGroupVariables(form.Variables, vgVarsMap)
+		if err != nil {
+			return nil, err
 		}
+
 		b, _ := models.VarGroupVariables(vb).Value()
 		attrs["variables"] = b
 	}

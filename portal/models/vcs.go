@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package models
 
@@ -13,6 +13,8 @@ const (
 	VcsGitea  = common.VcsGitea
 	VcsGitee  = common.VcsGitee
 	VcsGithub = common.VcsGithub
+	// git clone 鉴权时使用的user 默认为token
+	RepoUser = "token"
 )
 
 type Vcs struct {

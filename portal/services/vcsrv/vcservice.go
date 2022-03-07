@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package vcsrv
 
@@ -10,13 +10,21 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/utils"
 	"fmt"
-	"github.com/pkg/errors"
 	"path"
+	"strings"
+
+	"github.com/pkg/errors"
 )
 
 /*
 version control service 接口
 */
+
+type UserInfo struct {
+	Login string `json:"login" form:"login" `
+	Id    int    `json:"id" form:"id" `
+	Name  string `json:"name" form:"name" `
+}
 
 const (
 	WebhookUrlGitlab = "/webhooks/gitlab"
@@ -45,6 +53,9 @@ type VcsIface interface {
 	// param limit: 限制返回的文件数，传 0 表示无限制
 	// return in64(分页total数量)
 	ListRepos(namespace, search string, limit, offset int) ([]RepoIface, int64, error)
+
+	// UserInfo 获取用户信息
+	UserInfo() (UserInfo, error)
 }
 
 type RepoIface interface {
@@ -78,7 +89,7 @@ type RepoIface interface {
 	DefaultBranch() string
 
 	//ListWebhook 查询Webhook列表
-	ListWebhook() ([]ProjectsHook, error)
+	ListWebhook() ([]RepoHook, error)
 
 	//DeleteWebhook 查询Webhook列表
 	DeleteWebhook(id int) error
@@ -88,6 +99,11 @@ type RepoIface interface {
 
 	//CreatePrComment 添加PR评论
 	CreatePrComment(prId int, comment string) error
+}
+
+type RepoHook struct {
+	Id  int    `json:"id"`
+	Url string `json:"url"`
 }
 
 func GetVcsInstance(vcs *models.Vcs) (VcsIface, error) {
@@ -102,6 +118,8 @@ func GetVcsInstance(vcs *models.Vcs) (VcsIface, error) {
 		return newGithubInstance(vcs)
 	case consts.GitTypeGitee:
 		return newGiteeInstance(vcs)
+	case consts.GitTypeRegistry:
+		return newRegistryVcs(vcs)
 	default:
 		return nil, errors.New("vcs type doesn't exist")
 	}
@@ -144,6 +162,29 @@ func GetRepoAddress(repo RepoIface) (string, error) {
 	return p.HTTPURLToRepo, nil
 }
 
+func chkAndDelWebhook(repo RepoIface, vcsId models.Id, webhookId int) error {
+	// 判断同vcs、仓库的环境是否存在
+	envExist, err := db.Get().Model(&models.Env{}).
+		Joins("left join iac_template as tpl on iac_env.tpl_id = tpl.id").
+		Where("tpl.vcs_id = ?", vcsId).
+		Where("iac_env.triggers IS NOT NULL or iac_env.triggers != '{}'").Exists()
+	if err != nil {
+		return err
+	}
+	// 判断同vcs、仓库的环境是否存在
+	tplExist, err := db.Get().Model(&models.Template{}).
+		Where("iac_template.id = ?", vcsId).
+		Where("iac_template.triggers IS NOT NULL or iac_template.triggers != '{}'").Exists()
+	if err != nil {
+		return err
+	}
+	//如果同vcs、仓库的环境和云模板不存在，则删除代码仓库中的webhook
+	if !envExist && !tplExist {
+		return repo.DeleteWebhook(webhookId)
+	}
+	return nil
+}
+
 func SetWebhook(vcs *models.Vcs, repoId, apiToken string, triggers []string) error {
 	webhookUrl := GetWebhookUrl(vcs, apiToken)
 	repo, err := GetRepo(vcs, repoId)
@@ -158,38 +199,22 @@ func SetWebhook(vcs *models.Vcs, repoId, apiToken string, triggers []string) err
 	isExist := false
 	for _, webhook := range webhooks {
 		// 如果url相同，证明仓库中存在webhook；
-		if webhook.URL == webhookUrl {
+		if webhook.Url == webhookUrl {
 			isExist = true
-			webhookId = webhook.ID
+			webhookId = webhook.Id
 			break
 		}
 	}
 	//空值时删除
 	if len(triggers) == 0 {
-		// 判断同vcs、仓库的环境是否存在
-		exist, err := db.Get().Table(models.Env{}.TableName()).
-			Joins("left join iac_template as tpl on iac_env.tpl_id = tpl.id").
-			Where("tpl.vcs_id = ?", vcs.Id).
-			Where("iac_env.triggers IS NOT NULL or iac_env.triggers != '{}'").Exists()
-		if err != nil {
-			return err
-		}
-		//如果同vcs、仓库的环境不存在，则删除代码仓库中的webhook
-		if !exist {
-			if err := repo.DeleteWebhook(webhookId); err != nil {
-				return err
-			}
-		}
-		return nil
-	} else {
-		// 存在则忽略，不存在则添加
-		if !isExist {
-			if err := repo.AddWebhook(webhookUrl); err != nil {
-				return err
-			}
-		}
-		return nil
+		return chkAndDelWebhook(repo, vcs.Id, webhookId)
 	}
+
+	// 存在则忽略，不存在则添加
+	if !isExist {
+		return repo.AddWebhook(webhookUrl)
+	}
+	return nil
 }
 
 func GetVcsToken(token string) (string, error) {
@@ -210,4 +235,26 @@ func GetWebhookUrl(vcs *models.Vcs, apiToken string) string {
 	}
 	webhookUrl += fmt.Sprintf("/%s?token=%s", vcs.Id.String(), apiToken)
 	return webhookUrl
+}
+
+func IsNotFoundErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	var targetErr e.Error
+	if errors.As(err, &targetErr) && targetErr.Code() == e.ObjectNotExists {
+		return true
+	}
+	if strings.Contains(err.Error(), "not found") {
+		return true
+	}
+	return false
+}
+
+func GetUser(vcs *models.Vcs) (UserInfo, error) {
+	v, err := GetVcsInstance(vcs)
+	if err != nil {
+		return UserInfo{}, err
+	}
+	return v.UserInfo()
 }

@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package forms
 
@@ -17,4 +17,9 @@ type SystemCfg struct {
 	Name        string `form:"name" json:"name" binding:"required"`
 	Value       string `form:"value" json:"value" binding:"required"`
 	Description string `form:"description" json:"description"`
+}
+
+type RegistryAddrForm struct {
+	BaseForm
+	RegistryAddr string `form:"registryAddr" json:"registryAddr"`
 }

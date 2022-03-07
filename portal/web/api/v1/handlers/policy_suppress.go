@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package handlers
 
 import (
@@ -12,6 +14,7 @@ import (
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param json body forms.UpdatePolicySuppressForm true "parameter"
 // @Param policyId path string true "策略id"
 // @Router /policies/{policyId}/suppress [post]
@@ -30,6 +33,7 @@ func (Policy) UpdatePolicySuppress(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param policyId path string true "策略id"
 // @Param suppressId path string true "屏蔽策略id"
 // @Router /policies/{policyId}/suppress/{suppressId} [delete]
@@ -49,6 +53,7 @@ func (Policy) DeletePolicySuppress(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param policyId path string true "策略id"
 // @Router /policies/{policyId}/suppress [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.PolicySuppressResp}}
@@ -68,6 +73,7 @@ func (Policy) SearchPolicySuppress(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param policyId path string true "策略id"
 // @Router /policies/{policyId}/suppress/sources [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.PolicySuppressSourceResp}}

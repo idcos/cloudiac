@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package handlers
 
@@ -65,7 +65,7 @@ func (Env) Search(c *ctx.GinRequest) {
 // @Param envId path string true "环境ID"
 // @router /envs/{envId} [put]
 // @Success 200 {object} ctx.JSONResult{result=models.Env}
-func (Env) Update(c *ctx.GinRequest) {
+func (Env) Update(c *ctx.GinRequest) { //nolint:dupl
 	form := forms.UpdateEnvForm{}
 	if err := c.Bind(&form); err != nil {
 		return
@@ -104,7 +104,7 @@ func (Env) Detail(c *ctx.GinRequest) {
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/archive [put]
 // @Success 200 {object} ctx.JSONResult{result=models.EnvDetail}
-func (Env) Archive(c *ctx.GinRequest) {
+func (Env) Archive(c *ctx.GinRequest) { //nolint:dupl
 	form := forms.UpdateEnvForm{}
 	if err := c.Bind(&form); err != nil {
 		return
@@ -230,7 +230,7 @@ func (Env) SearchTasks(c *ctx.GinRequest) {
 	}
 	taskForm := &forms.SearchTaskForm{
 		NoPageSizeForm: form.NoPageSizeForm,
-		EnvId:    form.Id,
+		EnvId:          form.Id,
 	}
 	c.JSONResult(apps.SearchTask(c.Service(), taskForm))
 }

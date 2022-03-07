@@ -1,4 +1,4 @@
-// Copyright 2021 CloudJ Company Limited. All rights reserved.
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
 package apps
 
@@ -50,24 +50,7 @@ func UpdateObjectVars(c *ctx.ServiceContext, form *forms.UpdateObjectVarsForm) (
 	return result, err
 }
 
-func updateObjectVars(c *ctx.ServiceContext, tx *db.Session, form *forms.UpdateObjectVarsForm) (interface{}, e.Error) {
-	var (
-		orgId     = c.OrgId
-		projectId = c.ProjectId
-		scope     = form.Scope
-		objectId  = form.ObjectId
-	)
-
-	switch scope {
-	case consts.ScopeOrg:
-		if objectId != orgId {
-			return nil, e.New(e.BadOrgId)
-		}
-	case consts.ScopeProject:
-		if objectId != projectId {
-			return nil, e.New(e.BadProjectId)
-		}
-	}
+func getObjectVars(tx *db.Session, form *forms.UpdateObjectVarsForm, orgId, projectId models.Id) ([]models.Variable, e.Error) {
 
 	vars := make([]models.Variable, 0, len(form.Variables))
 	for _, v := range form.Variables {
@@ -97,6 +80,11 @@ func updateObjectVars(c *ctx.ServiceContext, tx *db.Session, form *forms.UpdateO
 		}
 		modelVar.Id = v.Id
 
+		var (
+			scope    = form.Scope
+			objectId = form.ObjectId
+		)
+
 		switch scope {
 		case consts.ScopeOrg:
 			modelVar.OrgId = orgId
@@ -117,6 +105,33 @@ func updateObjectVars(c *ctx.ServiceContext, tx *db.Session, form *forms.UpdateO
 			modelVar.EnvId = objectId
 		}
 		vars = append(vars, modelVar)
+	}
+
+	return vars, nil
+}
+
+func updateObjectVars(c *ctx.ServiceContext, tx *db.Session, form *forms.UpdateObjectVarsForm) (interface{}, e.Error) {
+	var (
+		orgId     = c.OrgId
+		projectId = c.ProjectId
+		scope     = form.Scope
+		objectId  = form.ObjectId
+	)
+
+	switch scope {
+	case consts.ScopeOrg:
+		if objectId != orgId {
+			return nil, e.New(e.BadOrgId)
+		}
+	case consts.ScopeProject:
+		if objectId != projectId {
+			return nil, e.New(e.BadProjectId)
+		}
+	}
+
+	vars, err := getObjectVars(tx, form, orgId, projectId)
+	if err != nil {
+		return nil, err
 	}
 
 	tx = services.QueryWithOrgId(tx, c.OrgId)
@@ -158,8 +173,17 @@ func SearchVariable(c *ctx.ServiceContext, form *forms.SearchVariableForm) (inte
 			Overwrites: nil,
 		}
 		// 获取上一级被覆盖的变量
+		varParent := services.GetVarParentParams{
+			OrgId:        c.OrgId,
+			ProjectId:    c.ProjectId,
+			TplId:        form.TplId,
+			Name:         variable.Name,
+			Scope:        variable.Scope,
+			VariableType: variable.Type,
+		}
+
 		if variable.Scope == form.Scope {
-			isExists, overwrites := services.GetVariableParent(c.DB(), variable.Name, variable.Scope, variable.Type, scopes, c.OrgId, c.ProjectId, form.TplId)
+			isExists, overwrites := services.GetVariableParent(c.DB(), scopes, varParent)
 			if isExists {
 				if overwrites.Sensitive {
 					overwrites.Value = ""
