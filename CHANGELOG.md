@@ -1,4 +1,71 @@
 ------
+## v0.9.0 20220307
+#### Features
+- 合规策略组改用代码库进行管理，支持通过分支或 tag 来管理版本
+- 重新实现的合规检测流程和检测引擎
+- 执行界面增加云模板和环境的合规开关和合规策略组绑定功能
+- 新增合规管理员角色
+- 云模板新增 ssh 密钥配置
+- 新增环境搜索功能，支持通过环境名称和云模板名称进行搜索
+- 环境部署历史增加触发类型字段，记录部署任务的触发来源
+- 环境部署历史页面增加合规状态展示
+- 新增 iac registry 地址配置，环境变量 REGISTRY_ADDRESS
+- 新增支持添加 iac registry 中发布的合规策略组
+- 新增 HTTP_CLIENT_INSECURE 配置，默认为 false
+- 增加 DOCKER_REGISTRY 环境变量配置，允许自定义 docker registry 地址
+
+#### Enhancements
+- 优化 docker clinet 连接调用，避免占用过多文件句柄
+- 启用代码质量检查，修复代码质量问题(360+)
+- 优化 vcs 服务报错，将 vcs 错误进一步细分为连接错误、认证错误等
+- 项目云模板列表的“活跃环境”字段改为关联环境，点击数字可跳转到环境列表页面
+ 
+#### Fixes
+- 修复设置工作目录后无法选择工作目录下的 ansible plabyook 和 tfvars 文件的问题
+- 修复组织管理员无权修改项目名称和描述的问题
+- 修复合规策略中的 @name 注释未生效的问题 
+- 修复任务 plan 失败后可能长时间不退出的问题
+- 修复第三方系统调用接口创建的环境总是使用 master 分支的问题
+- 修复部署环境资源账号继承问题
+- 修复项目下添加资源账号校验异常问题
+- 修复合规扫描过程中修改策略组绑定导致扫描结果异常问题
+- 修复 gitee 私有仓库无法认证的问题
+- 修复导出云模板时资源账号的敏感变量加解密处理错误的问题
+- 修复任务驳回后状态显示为“失败”的问题
+- 修复触发器触发归档环境部署问题
+- 修复部分查询未正常处理软删除的问题
+- 修复 runner 未处理非 32 位 secretKey 的问题
+- 修复 command 步骤 cd 目录失效的问题
+- 修复 local vcs 创建的云模板，仓库地址显示错误的问题
+
+#### BREAKING CHANGES
+- API 接口不再支持处理 GET 请求的 body
+- 本次发版对合规策略的管理进行了重新设计，旧版本的合规策略数据不再支持，所有合规策略需要重新导入
+
+#### 升级步骤
+**升级前注意备份数据**
+
+**SQL 更新:**
+```sql
+-- 合规数据清理
+DROP TABLE `iac_policy`;
+DROP TABLE `iac_policy_group`;
+DROP TABLE `iac_policy_rel`;
+DROP TABLE `iac_policy_result`;
+DROP TABLE `iac_policy_suppress`;
+DROP TABLE `iac_scan_task`;
+
+-- 清空last_scan_task_id
+UPDATE `iac_env` SET `last_scan_task_id` = '';
+UPDATE `iac_template` SET `last_scan_task_id` = '';
+
+-- 确让字段格式正确
+ALTER TABLE `iac_task` CHANGE `message` `message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+ALTER TABLE `iac_user_org` CHANGE `role` `role` enum('admin','member','complianceManager');
+```
+
+
+------
 ## v0.8.1 20211214
 #### Fixes
 - 修复新组织中创建环境时接口报错的问题
