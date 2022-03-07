@@ -173,7 +173,7 @@ SMTP_FROM=support@example.com
 
 # KAFKA配置(kafka 任务结果回调使用，不配置不影响其他功能)
 ## 开启kafka后，每次执行部署、重新部署、开启自动纠偏、开启推送到分支重新部署、销毁时都会向kafka发送任务执行的信息
-KAFKA_ENABLE=false
+KAFKA_DISABLED=true
 KAFKA_TOPIC="IAC_TASK_REPLY"
 KAFKA_GROUP_ID=""
 KAFKA_PARTITION=0

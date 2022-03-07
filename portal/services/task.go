@@ -529,7 +529,7 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 		TaskStatusChangeSendMessage(task, status)
 	}
 
-	if task.Exited() && (task.Type == common.TaskTypeApply || task.Type == common.TaskTypeDestroy) {
+	if task.Exited() {
 		taskStatusExitedCall(dbSess, task, status)
 	}
 
@@ -545,9 +545,11 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 
 // 当任务变为退出状态时执行的操作·
 func taskStatusExitedCall(dbSess *db.Session, task *models.Task, status string) {
-	// 回调的消息通知只发送一次, 作业结束后发送通知
-	if configs.Get().Kafka.Enable {
-		SendKafkaMessage(dbSess, task, status)
+	if task.Type == common.TaskTypeApply || task.Type == common.TaskTypeDestroy{
+		// 回调的消息通知只发送一次, 作业结束后发送通知
+		if !configs.Get().Kafka.Disabled {
+			SendKafkaMessage(dbSess, task, status)
+		}
 	}
 
 	//if task.Callback != "" {
