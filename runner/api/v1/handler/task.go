@@ -24,7 +24,6 @@ func RunTask(c *ctx.Context) {
 
 	task := runner.NewTask(req, c.Logger)
 	if cid, err := task.Run(); err != nil {
-		runner.CleanTaskWorkDirCode(req.Env.Id, req.TaskId)
 		c.Error(err, http.StatusInternalServerError)
 		return
 	} else {
@@ -40,7 +39,7 @@ func StopTask(c *ctx.Context) {
 	}
 
 	defer func() {
-		runner.CleanTaskWorkDirCode(req.EnvId, req.TaskId)
+		_ = runner.CleanTaskWorkDirCode(req.EnvId, req.TaskId)
 	}()
 
 	cli, err := runner.DockerClient()
