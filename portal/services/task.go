@@ -545,15 +545,21 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 
 // 当任务变为退出状态时执行的操作·
 func taskStatusExitedCall(dbSess *db.Session, task *models.Task, status string) {
-	// 回调的消息通知只发送一次, 作业结束后发送通知
-	if task.Callback != "" {
-		switch task.Callback {
-		case consts.TaskCallbackKafka:
+	if task.Type == common.TaskTypeApply || task.Type == common.TaskTypeDestroy{
+		// 回调的消息通知只发送一次, 作业结束后发送通知
+		if !configs.Get().Kafka.Disabled {
 			SendKafkaMessage(dbSess, task, status)
-		default:
-			logs.Get().Infof("callback type don't support")
 		}
 	}
+
+	//if task.Callback != "" {
+	//	switch task.Callback {
+	//	case consts.TaskCallbackKafka:
+	//		SendKafkaMessage(dbSess, task, status)
+	//	default:
+	//		logs.Get().Infof("callback type don't support")
+	//	}
+	//}
 
 	// 如果勾选提交pr自动plan，任务结束时 plan作业结果写入PR评论中
 	if task.Type == common.TaskTypePlan {
