@@ -10,7 +10,9 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/utils/logs"
 	"fmt"
+	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 func GetEnv(sess *db.Session, id models.Id) (*models.Env, error) {
@@ -274,16 +276,16 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 	for _, v := range sampleVariables {
 		// 如果vars为空，则需要将sampleVariables所有的变量理解为新增变量
 		if len(vars) == 0 {
-			resp = varNewAppend(resp,v.Name,v.Value,consts.VarTypeEnv)
+			resp = varNewAppend(resp, v.Name, v.Value, consts.VarTypeEnv)
 			continue
 		}
 
 		for key, value := range vars {
 			if !isVarNewValid(v, value) {
-				resp = varNewAppend(resp,vars[key].Name,v.Value, vars[key].Type)
+				resp = varNewAppend(resp, vars[key].Name, v.Value, vars[key].Type)
 			} else {
 				// 这部分变量是新增的 需要新建
-				resp = varNewAppend(resp,v.Name,v.Value,consts.VarTypeEnv)
+				resp = varNewAppend(resp, v.Name, v.Value, consts.VarTypeEnv)
 			}
 		}
 	}
@@ -309,4 +311,19 @@ func CheckoutAutoApproval(autoApproval, autoDrift bool, triggers []string) bool 
 	}
 
 	return true
+}
+
+func CheckEnvTags(tags string) e.Error {
+	parts := strings.Split(tags, ",")
+
+	if len(parts) > consts.EnvMaxTagNum {
+		return e.New(e.EnvTagNumLimited)
+	}
+
+	for _, t := range parts {
+		if utf8.RuneCountInString(t) > consts.EnvMaxTagLength {
+			return e.New(e.EnvTagLengthLimited)
+		}
+	}
+	return nil
 }

@@ -144,6 +144,8 @@ const (
 	EnvCannotArchiveActive = 30814
 	EnvDeploying           = 30815
 	EnvCheckAutoApproval   = 30816
+	EnvTagNumLimited       = 30821
+	EnvTagLengthLimited    = 30822
 
 	//// task 309
 	TaskAlreadyExists     = 30910
@@ -472,6 +474,12 @@ var errorMsgs = map[int]map[string]string{
 	},
 	TaskAlreadyExists: {
 		"zh-cn": "任务已经存在",
+	},
+	EnvTagNumLimited: {
+		"zh-cn": "环境 tag 数量超过限制",
+	},
+	EnvTagLengthLimited: {
+		"zh-cn": "环境 tag 长度超过限制",
 	},
 	TaskNotExists: {
 		"zh-cn": "任务不存在",
