@@ -154,15 +154,15 @@ func taskDoneProcessAutoDestroy(dbSess *db.Session, task *models.Task) error {
 	return nil
 }
 
-func StopTaskContainers(sess *db.Session, taskId models.Id) error {
-	return stopTaskContainers(sess, taskId, false)
+func StopTaskContainers(sess *db.Session, taskId, envId models.Id) error {
+	return stopTaskContainers(sess, taskId, envId, false)
 }
 
-func StopScanTaskContainers(sess *db.Session, taskId models.Id) error {
-	return stopTaskContainers(sess, taskId, true)
+func StopScanTaskContainers(sess *db.Session, taskId, envId models.Id) error {
+	return stopTaskContainers(sess, taskId, envId, true)
 }
 
-func stopTaskContainers(sess *db.Session, taskId models.Id, isScanTask bool) error {
+func stopTaskContainers(sess *db.Session, taskId, envId models.Id, isScanTask bool) error {
 	logs.Get().Infof("stop task container, taskId=%s", taskId)
 
 	var (
@@ -192,6 +192,7 @@ func stopTaskContainers(sess *db.Session, taskId models.Id, isScanTask bool) err
 
 	requestUrl := utils.JoinURL(runnerAddr, consts.RunnerStopTaskURL)
 	req := runner.TaskStopReq{
+		EnvId:        envId.String(),
 		TaskId:       taskId.String(),
 		ContainerIds: []string{},
 	}

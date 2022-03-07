@@ -36,7 +36,23 @@ func NewTask(req RunTaskReq, logger logs.Logger) *Task {
 	}
 }
 
+func CleanTaskWorkDirCode(envId, taskId string) error {
+	logger.Debugf("CleanTaskWorkDirCode params: envId=%s, taskId=%s", envId, taskId)
+	workspace := GetTaskWorkspace(envId, taskId)
+	if workspace == "" {
+		return nil
+	}
+
+	err := os.RemoveAll(filepath.Join(workspace, "code"))
+	if err != nil {
+		logger.Warnf("CleanTaskWorkDirCode error: %v\n", err)
+	}
+
+	return err
+}
+
 func (t *Task) Run() (cid string, err error) {
+
 	if t.req.ContainerId == "" {
 		cid, err = t.start()
 		if err != nil {
@@ -50,6 +66,7 @@ func (t *Task) Run() (cid string, err error) {
 			return "", errors.Wrap(err, "initial workspace")
 		}
 	}
+
 	return t.req.ContainerId, t.runStep()
 }
 
