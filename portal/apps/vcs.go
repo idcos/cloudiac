@@ -348,7 +348,7 @@ func SearchVcsFile(c *ctx.ServiceContext, form *forms.SearchVcsFileForm) (interf
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
-	b, er := repo.ReadFileContent(form.Branch, form.FileName)
+	b, er := repo.ReadFileContent(form.Branch, path.Join(form.Workdir, form.FileName))
 	if er != nil {
 		if vcsrv.IsNotFoundErr(er) {
 			b = make([]byte, 0)
