@@ -28,7 +28,7 @@ type IacKafkaCallbackResult struct {
 
 type IacKafkaContent struct {
 	EventType  string                 `json:"eventType"`
-	ExtraData  models.JSON            `json:"extraData"`
+	ExtraData  interface{}            `json:"extraData"`
 	TaskStatus string                 `json:"taskStatus"`
 	OrgId      models.Id              `json:"orgId"`
 	ProjectId  models.Id              `json:"projectId"`
@@ -39,7 +39,6 @@ type IacKafkaContent struct {
 
 func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus string, resources []models.Resource) []byte {
 	a := IacKafkaContent{
-		ExtraData:  task.ExtraData,
 		TaskStatus: taskStatus,
 		OrgId:      task.OrgId,
 		ProjectId:  task.ProjectId,
@@ -49,6 +48,13 @@ func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus strin
 			Resources: resources,
 		},
 	}
+
+	if task.ExtraData != nil{
+		a.ExtraData = task.ExtraData
+	}else {
+		a.ExtraData = make(map[string]interface{})
+	}
+
 	rep, _ := json.Marshal(&a)
 	return rep
 }
