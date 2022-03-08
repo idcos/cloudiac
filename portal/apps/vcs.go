@@ -259,6 +259,10 @@ func VcsFileSearch(c *ctx.ServiceContext, form *forms.TemplateTfvarsSearchForm) 
 		return nil, e.New(e.VcsError, er)
 	}
 
+	if search == consts.TfVarFileMatch && dirPath != "" {
+		listFiles = FilenameTrimLeft(listFiles, fmt.Sprintf("%s/", dirPath))
+	}
+
 	return listFiles, nil
 }
 
@@ -284,6 +288,10 @@ func VcsPlaybookSearch(c *ctx.ServiceContext, form *forms.TemplatePlaybookSearch
 	})
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
+	}
+
+	if form.Workdir != "" {
+		listFiles = FilenameTrimLeft(listFiles, fmt.Sprintf("%s/", form.Workdir))
 	}
 
 	return listFiles, nil
@@ -351,4 +359,14 @@ func SearchVcsFile(c *ctx.ServiceContext, form *forms.SearchVcsFileForm) (interf
 
 	res := gin.H{"content": string(b)}
 	return res, nil
+}
+
+func FilenameTrimLeft(files []string, value string) []string {
+	resp := make([]string, len(files))
+
+	for index, v := range files {
+		resp[index] = strings.TrimPrefix(v, value)
+	}
+
+	return resp
 }
