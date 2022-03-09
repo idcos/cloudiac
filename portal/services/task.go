@@ -366,7 +366,7 @@ func GetTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision s
 	if err != nil {
 		return "", "", e.New(e.InternalError, errors.Wrapf(err, "parse url: %v", repoInfo.Addr))
 	} else if repoInfo.Token != "" {
-		u.User = url.UserPassword(repoInfo.User, repoInfo.Token)
+		u.User = url.User(repoInfo.Token)
 	}
 
 	return u.String(), repoInfo.CommitId, nil
