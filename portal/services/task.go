@@ -342,7 +342,7 @@ func createTaskStep(tx *db.Session, env *models.Env, task models.Task, pipelineS
 
 func GetTaskRepoAddrAndCommitId(tx *db.Session, tpl *models.Template, revision string) (string, string, e.Error) {
 	repoInfo := &tplRepoInfo{
-		User:     models.RepoUser,
+		User:     tpl.RepoUser,
 		Addr:     tpl.RepoAddr,
 		Token:    tpl.RepoToken,
 		CommitId: "",
@@ -384,7 +384,7 @@ func getTplRepoInfo(tx *db.Session, tpl *models.Template, revision string) (*tpl
 		vcs      *models.Vcs
 		err      error
 		repo     vcsrv.RepoIface
-		repoInfo tplRepoInfo
+		repoInfo tplRepoInfo = tplRepoInfo{User: models.RepoUser}
 	)
 
 	if vcs, err = QueryVcsByVcsId(tpl.VcsId, tx); err != nil {
