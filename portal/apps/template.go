@@ -270,6 +270,10 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 	if tpl.OrgId != c.OrgId {
 		return nil, e.New(e.TemplateNotExists, http.StatusForbidden, fmt.Errorf("the organization does not have permission to delete the current template"))
 	}
+	// 检测云模版更新时，playbook 文件以及tfvars文件配置是否正确。
+	if err := CheckTemplateOrEnvConfig(c, form.TfVarsFile, form.Playbook, form.RepoId, form.RepoRevision, form.Workdir, form.VcsId); err != nil {
+		return nil, err
+	}
 	attrs := models.Attrs{}
 	setAttrsByFormKeys(attrs, form)
 	setAttrsVcsInfoByForm(attrs, form)
@@ -568,4 +572,44 @@ func setVcsRepoWebhook(c *ctx.ServiceContext, vcsId models.Id, repoId string, tr
 
 func delVcsRepoWebhook(c *ctx.ServiceContext, vcsId models.Id, repoId string) error {
 	return setVcsRepoWebhook(c, vcsId, repoId, []string{})
+}
+
+func CheckTemplateOrEnvConfig(c *ctx.ServiceContext, tfVarsFile, playbook, repoId, reporevision, workDir string, vcsId models.Id) e.Error {
+	if tfVarsFile != "" {
+		searchForm := &forms.TemplateTfvarsSearchForm{
+			RepoId:       repoId,
+			RepoRevision: reporevision,
+			VcsId:        vcsId,
+			Workdir:      workDir,
+		}
+		results, err := VcsFileSearch(c, searchForm)
+		if err != nil {
+			return err
+		}
+		if len(results.([]string)) == 0 {
+			return e.New(e.TfvarsFileNotExist, err)
+		}
+		if !utils.ArrayIsExistsStr(results.([]string), tfVarsFile) {
+			return e.New(e.TfvarsFileNotExist, err)
+		}
+	}
+	if playbook != "" {
+		searchForm := &forms.TemplatePlaybookSearchForm{
+			RepoId:       repoId,
+			RepoRevision: reporevision,
+			VcsId:        vcsId,
+			Workdir:      workDir,
+		}
+		results, err := VcsPlaybookSearch(c, searchForm)
+		if err != nil {
+			return err
+		}
+		if len(results.([]string)) == 0 {
+			return e.New(e.AnsiblePlayBookFileNotExist, err)
+		}
+		if !utils.ArrayIsExistsStr(results.([]string), playbook) {
+			return e.New(e.AnsiblePlayBookFileNotExist, err)
+		}
+	}
+	return nil
 }

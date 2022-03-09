@@ -41,20 +41,22 @@ const (
 	TagTooMuch        = 10215
 
 	//// 校验错误 103
-	BadOrgId               = 10310
-	BadProjectId           = 10311
-	BadTemplateId          = 10312
-	BadEnvId               = 10314
-	BadParam               = 10340 // 参数错误(参数值不对)
-	BadRequest             = 10341 // 请求错误(请求缺少必要参数)
-	InvalidPipeline        = 10350
-	InvalidPipelineVersion = 10351
-	InvalidExportVersion   = 10361
-	InvalidAccessKeyId     = 10380 // AccessKeyId错误
-	InvalidAccessKeySecret = 10381
-	ForbiddenAccessKey     = 10382
-	TemplateNameRepeat     = 10383
-	TemplateWorkdirError   = 10384
+	BadOrgId                    = 10310
+	BadProjectId                = 10311
+	BadTemplateId               = 10312
+	BadEnvId                    = 10314
+	BadParam                    = 10340 // 参数错误(参数值不对)
+	BadRequest                  = 10341 // 请求错误(请求缺少必要参数)
+	InvalidPipeline             = 10350
+	InvalidPipelineVersion      = 10351
+	InvalidExportVersion        = 10361
+	InvalidAccessKeyId          = 10380 // AccessKeyId错误
+	InvalidAccessKeySecret      = 10381
+	ForbiddenAccessKey          = 10382
+	TemplateNameRepeat          = 10383
+	TemplateWorkdirError        = 10384
+	TfvarsFileNotExist          = 10385
+	AnsiblePlayBookFileNotExist = 10386
 
 	//// 第三方服务错误 104
 	LdapError       = 10410 // ldap 出错
@@ -252,6 +254,12 @@ var errorMsgs = map[int]map[string]string{
 	},
 	TemplateWorkdirError: {
 		"zh-cn": "工作目录校验失败",
+	},
+	TfvarsFileNotExist: {
+		"zh-cn": "当前目录下tfvars文件不存在",
+	},
+	AnsiblePlayBookFileNotExist: {
+		"zh-cn": "当前目录下ansible playbook文件不存在",
 	},
 	BadRequest: {
 		"zh-cn": "无效请求",

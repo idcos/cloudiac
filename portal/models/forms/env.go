@@ -34,6 +34,7 @@ type CreateEnvForm struct {
 	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:""` // Ansible playbook 变量文件路径
 	Playbook     string    `form:"playbook" json:"playbook" binding:""`         // Ansible playbook 入口文件路径
 	KeyId        models.Id `form:"keyId" json:"keyId" binding:""`               // 部署密钥ID
+	WorkDir      string    `form:"workDir" json:"workDir" binding:""`           // 工作目录
 
 	RetryNumber int         `form:"retryNumber" json:"retryNumber" binding:""` // 重试总次数
 	RetryDelay  int         `form:"retryDelay" json:"retryDelay" binding:""`   // 重试时间间隔
@@ -123,6 +124,7 @@ type DeployEnvForm struct {
 	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:""` // Ansible playbook 变量文件路径
 	Playbook     string    `form:"playbook" json:"playbook" binding:""`         // Ansible playbook 入口文件路径
 	KeyId        models.Id `form:"keyId" json:"keyId" binding:""`               // 部署密钥ID
+	WorkDir      string    `form:"workDir" json:"workDir" binding:""`           //
 
 	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" `
 	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" `

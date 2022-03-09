@@ -268,14 +268,16 @@ func getCreateEnvTpl(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.
 func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDetail, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create env %s", form.Name))
 
-	err := createEnvCheck(c, form)
-	if err != nil {
+	if err := createEnvCheck(c, form); err != nil {
 		return nil, err
 	}
-
 	// 检查模板
 	tpl, err := getCreateEnvTpl(c, form)
 	if err != nil {
+		return nil, err
+	}
+	// 检测云模版更新时，playbook 文件以及tfvars文件配置是否正确。
+	if err := CheckTemplateOrEnvConfig(c, form.TfVarsFile, form.Playbook, tpl.RepoId, form.Revision, form.WorkDir, tpl.VcsId); err != nil { //nolint
 		return nil, err
 	}
 
@@ -283,8 +285,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	var (
 		destroyAt models.Time
 	)
-	err = setDefaultValueFromTpl(form, tpl, &destroyAt)
-	if err != nil {
+	if err = setDefaultValueFromTpl(form, tpl, &destroyAt); err != nil {
 		return nil, err
 	}
 
@@ -295,7 +296,6 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 			panic(r)
 		}
 	}()
-
 	runnerId, err := getRunnerId(form)
 	if err != nil {
 		return nil, err
@@ -1046,7 +1046,10 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	if err != nil {
 		return nil, err
 	}
-
+	// 检测云模版更新时，playbook 文件以及tfvars文件配置是否正确。
+	if err := CheckTemplateOrEnvConfig(c, form.TfVarsFile, form.Playbook, tpl.RepoId, tpl.RepoRevision, form.WorkDir, tpl.VcsId); err != nil {
+		return nil, err
+	}
 	// set env from form
 	setEnvByForm(env, form)
 
