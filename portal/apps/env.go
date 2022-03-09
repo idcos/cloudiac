@@ -1026,26 +1026,32 @@ func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env
 
 func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm) (*models.EnvDetail, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("deploy env task %s", form.Id))
+	lg := c.Logger()
+
 	if err := envPreCheck(c.OrgId, c.ProjectId, form.KeyId, form.Playbook); err != nil {
 		return nil, err
 	}
+	lg.Debugln("envDeploy -> envPreCheck finish")
 
 	// 检查自动纠漂移、推送到分支时重新部署时，是否了配置自动审批
 	if !services.CheckoutAutoApproval(form.AutoApproval, form.AutoRepairDrift, form.Triggers) {
 		return nil, e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
 	}
+	lg.Debugln("envDeploy -> CheckoutAutoApproval finish")
 
 	// env 检查
 	env, err := envCheck(tx, c.OrgId, c.ProjectId, form.Id, c.Logger())
 	if err != nil {
 		return nil, err
 	}
+	lg.Debugln("envDeploy -> envCheck finish")
 
 	// 模板检查
 	tpl, err := envTplCheck(tx, c.OrgId, env.TplId, c.Logger())
 	if err != nil {
 		return nil, err
 	}
+	lg.Debugln("envDeploy -> envTplCheck finish")
 
 	// set env from form
 	setEnvByForm(env, form)
@@ -1055,6 +1061,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	if err != nil {
 		return nil, err
 	}
+	lg.Debugln("envDeploy -> setAndCheckEnvByForm finish")
 
 	targets := make([]string, 0)
 	if len(strings.TrimSpace(form.Targets)) > 0 {
@@ -1066,6 +1073,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	if er != nil {
 		return nil, err
 	}
+	lg.Debugln("envDeploy -> GetValidVarsAndVgVars finish")
 
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
@@ -1088,6 +1096,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		c.Logger().Errorf("error creating task, err %s", err)
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
+	lg.Debugln("envDeploy -> CreateTask finish")
 
 	// Save() 调用会全量将结构体中的字段进行保存，即使字段为 zero value
 	if _, err := tx.Save(env); err != nil {
