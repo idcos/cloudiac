@@ -4,8 +4,11 @@ package apps
 
 import (
 	"cloudiac/portal/consts/e"
+	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"fmt"
+	"net/http"
 )
 
 type SystemStatusResp struct {
@@ -77,7 +80,12 @@ func RunnerSearch() (interface{}, e.Error) {
 	return services.RunnerSearch()
 }
 
-func ConsulTagUpdate(form forms.ConsulTagUpdateForm) (interface{}, e.Error) {
+func ConsulTagUpdate(c *ctx.ServiceContext, form forms.ConsulTagUpdateForm) (interface{}, e.Error) {
+	// 检查是否有修改tags的权限
+	if !c.IsSuperAdmin {
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusForbidden)
+	}
+
 	//将修改后的tag存到consul中
 	if err := services.ConsulKVSave(form.ServiceId, form.Tags); err != nil {
 		return nil, err

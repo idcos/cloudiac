@@ -54,5 +54,5 @@ func ConsulTagUpdate(c *ctx.GinRequest) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.ConsulTagUpdate(form))
+	c.JSONResult(apps.ConsulTagUpdate(c.Service(), form))
 }
