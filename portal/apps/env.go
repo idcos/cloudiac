@@ -310,11 +310,12 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		CreatorId: c.UserId,
 		TplId:     form.TplId,
 
-		Name:     form.Name,
-		RunnerId: runnerId,
-		Status:   models.EnvStatusInactive,
-		OneTime:  form.OneTime,
-		Timeout:  form.Timeout,
+		Name:       form.Name,
+		RunnerId:   runnerId,
+		RunnerTags: strings.Join(form.RunnerTags, ","),
+		Status:     models.EnvStatusInactive,
+		OneTime:    form.OneTime,
+		Timeout:    form.Timeout,
 
 		// 模板参数
 		TfVarsFile:   form.TfVarsFile,
