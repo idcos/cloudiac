@@ -481,6 +481,8 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		env.MergeTaskStatus()
 		PopulateLastTask(c.DB(), env)
 		env.PolicyStatus = models.PolicyStatusConversion(env.PolicyStatus, env.PolicyEnable)
+		// runner tags 数组形式返回
+		env.RunnerTagsArr = strings.Split(env.Env.RunnerTags, ",")
 	}
 
 	return page.PageResp{
@@ -801,6 +803,8 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 	}
 	envDetail.PolicyStatus = models.PolicyStatusConversion(envDetail.PolicyStatus, envDetail.PolicyEnable)
 
+	// runner tags 数组形式返回
+	envDetail.RunnerTagsArr = strings.Split(envDetail.Env.RunnerTags, ",")
 	return envDetail, nil
 }
 
