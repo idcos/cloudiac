@@ -618,3 +618,20 @@ func UniqStrings(list []string) []string {
 	}
 	return list
 }
+
+func ListContains(originlist, subList []string) bool {
+	for _, sub := range subList {
+		isContain := false
+		for _, origin := range originlist {
+			if sub == origin {
+				isContain = true
+				break
+			}
+		}
+		if !isContain {
+			return false
+		}
+	}
+
+	return true
+}

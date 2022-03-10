@@ -157,15 +157,18 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 }
 
 func getRunnerId(form *forms.CreateEnvForm) (string, e.Error) {
-	var runnerId string = form.RunnerId
-	if runnerId == "" {
-		rId, err := services.GetDefaultRunner()
-		if err != nil {
-			return "", err
-		}
-		runnerId = rId
+	// tags 匹配
+	if form.RunnerTags != nil && len(form.RunnerTags) > 0 {
+		return services.GetRunnerByTags(form.RunnerTags)
 	}
-	return runnerId, nil
+
+	// id 匹配
+	if form.RunnerId != "" {
+		return form.RunnerId, nil
+	}
+
+	// 默认runner
+	return services.GetDefaultRunner()
 }
 
 func createEnvToDB(tx *db.Session, c *ctx.ServiceContext, form *forms.CreateEnvForm, envModel models.Env) (*models.Env, e.Error) {
