@@ -2,7 +2,13 @@ module cloudiac
 
 go 1.16
 
-replace github.com/google/flatbuffers v1.12.0 => github.com/google/flatbuffers v1.12.1
+
+replace (
+	github.com/gin-gonic/gin v1.7.2 => github.com/gin-gonic/gin v1.7.7
+	github.com/google/flatbuffers v1.12.0 => github.com/google/flatbuffers v1.12.1
+	golang.org/x/crypto v0.0.0-20220112180741-5e0467b6c7ce => golang.org/x/crypto v0.0.0-20201203163018-be400aefbc4c
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible => github.com/golang-jwt/jwt/v4 v4.3.0
+)
 
 require (
 	github.com/Masterminds/semver v1.5.0
