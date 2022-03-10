@@ -14,14 +14,13 @@ require (
 	github.com/armon/go-metrics v0.3.10 // indirect
 	github.com/casbin/casbin/v2 v2.31.9
 	github.com/containerd/containerd v1.5.5 // indirect
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/docker/docker v20.10.7+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/elazarl/goproxy v0.0.0-20210801061803-8e322dfb79c4 // indirect
 	github.com/fatih/color v1.13.0
 	github.com/frankban/quicktest v1.14.0 // indirect
 	github.com/gin-contrib/sse v0.1.0
-	github.com/gin-gonic/gin v1.7.2
+	github.com/gin-gonic/gin v1.7.7
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/go-playground/locales v0.14.0
 	github.com/go-playground/universal-translator v0.18.0
@@ -29,6 +28,7 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/go-test/deep v1.0.7 // indirect
 	github.com/gofrs/uuid v4.0.0+incompatible
+	github.com/golang-jwt/jwt/v4 v4.3.0
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/google/go-cmp v0.5.7 // indirect
@@ -72,7 +72,7 @@ require (
 	github.com/unliar/utils v0.1.1
 	github.com/xanzy/go-gitlab v0.47.0
 	github.com/zclconf/go-cty v1.8.1 // indirect
-	golang.org/x/crypto v0.0.0-20220112180741-5e0467b6c7ce
+	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/sys v0.0.0-20220111092808-5a964db01320 // indirect
 	golang.org/x/tools v0.1.9 // indirect
