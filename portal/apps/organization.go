@@ -14,6 +14,7 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
 	"cloudiac/utils/mail"
 	"fmt"
 	"net/http"
@@ -317,7 +318,6 @@ func UpdateUserOrgRel(c *ctx.ServiceContext, form *forms.UpdateUserOrgRelForm) (
 }
 
 func getInviteUserOrg(c *ctx.ServiceContext, form *forms.InviteUserForm) (*models.Organization, e.Error) {
-
 	org, err := services.GetOrganizationById(c.DB(), form.Id)
 	if err != nil && err.Code() == e.OrganizationNotExists {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
@@ -473,21 +473,7 @@ func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*models.User
 	}
 
 	// 发送邀请邮件
-	data := emailInviteUserData{
-		User:         user,
-		IsNewUser:    isNew,
-		Inviter:      c.Username,
-		Organization: org.Name,
-		InitPass:     initPass,
-		Addr:         configs.Get().Portal.Address,
-	}
-	go func() {
-		err := mail.SendMail([]string{user.Email}, emailSubjectInviteUser, utils.SprintTemplate(consts.IacUserInvitationsTpl, data))
-		//err := mail.SendMail([]string{user.Email}, emailSubjectInviteUser, utils.SprintTemplate(emailBodyInviteUser, data))
-		if err != nil {
-			c.Logger().Errorf("error send mail to %s, err %s", user.Email, err)
-		}
-	}()
+	go sendInviteUserNotify(user, c.Username, org.Name, initPass, isNew)
 
 	resp := models.UserWithRoleResp{
 		User: *user,
@@ -604,4 +590,48 @@ func UpdateUserOrg(c *ctx.ServiceContext, form *forms.UpdateUserOrgForm) (userRe
 	}
 
 	return &resp, nil
+}
+
+func sendInviteUserNotify(user *models.User, inviter, orgName, initPass string, isNew bool) {
+	data := emailInviteUserData{
+		User:         user,
+		IsNewUser:    isNew,
+		Inviter:      inviter,
+		Organization: orgName,
+		InitPass:     initPass,
+		Addr:         configs.Get().Portal.Address,
+	}
+	err := mail.SendMail([]string{user.Email}, emailSubjectInviteUser, utils.SprintTemplate(consts.IacUserInvitationsTpl, data))
+	if err != nil {
+		logs.Get().Errorf("error send mail to %s, err %s", user.Email, err)
+	}
+}
+
+type InviteUsersBatchResp struct {
+	Success int `json:"success"`
+	Filed   int `json:"filed"`
+}
+
+// InviteUsersBatch 邀请多个用户加入某个组织
+func InviteUsersBatch(c *ctx.ServiceContext, form *forms.InviteUsersBatchForm) (interface{}, e.Error) {
+	var (
+		success int
+		filed   int
+	)
+	for _, v := range form.Email {
+		f := forms.InviteUserForm{
+			BaseForm: form.BaseForm,
+			Id:       form.Id,
+			Name:     v,
+			Email:    v,
+			Role:     form.Role,
+		}
+		if _, err := InviteUser(c, &f); err != nil {
+			filed++
+			c.Logger().Errorf("invite user err:%v", err)
+		}
+		success++
+	}
+
+	return InviteUsersBatchResp{success, filed}, nil
 }

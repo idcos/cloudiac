@@ -266,3 +266,24 @@ func (Organization) UpdateUserOrg(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.UpdateUserOrg(c.Service(), &form))
 }
+
+// InviteUsersBatch 批量邀请用户加入组织
+// @Tags 组织
+// @Summary 邀请内部或者外部用户加入组织
+// @Description 如果用户不存在，则创建并加入组织，如果用户已经存在，则加入该组织
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param form formData forms.InviteUsersBatch true "parameter"
+// @Param orgId path string true "组织ID"
+// @router /orgs/{orgId}/users/batch_invite [post]
+// @Success 200 {object} ctx.JSONResult{result=apps.InviteUsersBatchResp}
+func (Organization) InviteUsersBatch(c *ctx.GinRequest) {
+	form := forms.InviteUsersBatchForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.InviteUsersBatch(c.Service(), &form))
+}
