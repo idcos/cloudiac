@@ -28,6 +28,10 @@ type SystemStatusResp struct {
 	//Warn     uint64 `json:"warn" form:"warn" `
 }
 
+type RunnerTagsResp struct {
+	Tags []string `json:"tags"`
+}
+
 func SystemStatusSearch() (interface{}, e.Error) {
 	resp := make([]*SystemStatusResp, 0)
 	serviceResp := make(map[string]*SystemStatusResp)
@@ -100,4 +104,15 @@ func ConsulTagUpdate(c *ctx.ServiceContext, form forms.ConsulTagUpdateForm) (int
 		return nil, err
 	}
 	return nil, nil
+}
+
+func RunnerTags() (interface{}, e.Error) {
+	tags, err := services.SystemRunnerTags()
+	if err != nil {
+		return nil, err
+	}
+
+	return &RunnerTagsResp{
+		Tags: tags,
+	}, nil
 }

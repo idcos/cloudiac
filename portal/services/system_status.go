@@ -3,8 +3,10 @@
 package services
 
 import (
+	"cloudiac/common"
 	"cloudiac/configs"
 	"cloudiac/portal/consts/e"
+	"cloudiac/utils"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -48,6 +50,34 @@ func SystemStatusSearch() ([]api.AgentService, map[string]api.AgentCheck, []stri
 	}
 
 	return IdInfo, serviceStatus, serviceList, nil
+}
+
+func SystemRunnerTags() ([]string, e.Error) {
+
+	conf := configs.Get()
+	config := api.DefaultConfig()
+	config.Address = conf.Consul.Address
+	tags := make([]string, 0)
+
+	client, err := api.NewClient(config)
+	if err != nil {
+		return nil, e.New(e.ConsulConnError, err)
+	}
+
+	//获取所有实例
+	instancesInfo, err := client.Agent().Services()
+	if err != nil {
+		return nil, e.New(e.ConsulConnError, err)
+	}
+
+	for _, info := range instancesInfo {
+		if info.Service != common.RunnerServiceName {
+			continue
+		}
+		tags = append(tags, info.Tags...)
+	}
+
+	return utils.UniqStrings(tags), nil
 }
 
 func ConsulKVSearch(key string) (interface{}, e.Error) {
