@@ -276,7 +276,7 @@ func (Organization) UpdateUserOrg(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param form formData forms.InviteUsersBatch true "parameter"
+// @Param form formData forms.InviteUsersBatchForm true "parameter"
 // @Param orgId path string true "组织ID"
 // @router /orgs/{orgId}/users/batch_invite [post]
 // @Success 200 {object} ctx.JSONResult{result=apps.InviteUsersBatchResp}
