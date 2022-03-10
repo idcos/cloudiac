@@ -171,7 +171,8 @@ SMTP_PASSWORD=""
 SMTP_FROM_NAME=IaC
 SMTP_FROM=support@example.com
 
-# KAFKA配置(kafka 任务结果回调使用，不配置不影响其他功能)
+# KAFKA配置，配置后每次执行部署任务都会将环境的最新全量资源详情通过 kafka 消息发送
+KAFKA_DISABLED=false
 KAFKA_TOPIC="IAC_TASK_REPLY"
 KAFKA_GROUP_ID=""
 KAFKA_PARTITION=0

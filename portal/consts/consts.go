@@ -124,6 +124,9 @@ const (
 	EnvTriggerPRMR   = "prmr"
 	EnvTriggerCommit = "commit"
 
+	EnvMaxTagLength = 20
+	EnvMaxTagNum    = 5
+
 	EventTaskFailed    = "task.failed"
 	EventTaskComplete  = "task.complete"
 	EventTaskRunning   = "task.running"

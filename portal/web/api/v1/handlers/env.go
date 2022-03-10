@@ -332,3 +332,25 @@ func (Env) ResourceGraphDetail(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.ResourceGraphDetail(c.Service(), form))
 }
+
+// UpdateTags 全量更新环境 Tags
+// @Tags 环境
+// @Summary 全量更新环境 Tags
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param envId path string true "环境ID"
+// @Param tags formData forms.UpdateEnvTagsForm true "部署参数"
+// @router /envs/{envId}/tags [post]
+// @Success 200 {object} ctx.JSONResult{result=models.Env}
+func (Env) UpdateTags(c *ctx.GinRequest) {
+	form := forms.UpdateEnvTagsForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.EnvUpdateTags(c.Service(), &form))
+}

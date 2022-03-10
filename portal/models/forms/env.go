@@ -20,6 +20,8 @@ type CreateEnvForm struct {
 	OneTime  bool      `form:"oneTime" json:"oneTime" binding:""`                // 一次性环境标识
 	Triggers []string  `form:"triggers" json:"triggers" binding:""`              // 启用触发器，触发器：commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
 
+	Tags string `form:"tags" json:"tags" binding:""` // 环境的 tags，多个 tag 以 "," 分隔
+
 	AutoApproval    bool   `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"` // 是否自动审批
 	StopOnViolation bool   `form:"stopOnViolation" json:"stopOnViolation" enums:"true,false"`       // 合规不通过是否中止任务
 	TaskType        string `form:"taskType" json:"taskType" binding:"required" enums:"plan,apply"`  // 环境创建后触发的任务步骤，plan计划,apply部署
@@ -80,6 +82,8 @@ type UpdateEnvForm struct {
 	KeyId       models.Id `form:"keyId" json:"keyId" binding:""`                    // 部署密钥ID
 	RunnerId    string    `form:"runnerId" json:"runnerId" binding:""`              // 环境默认部署通道
 	Archived    bool      `form:"archived" json:"archived" enums:"true,false"`      // 归档状态，默认返回未归档环境
+
+	Tags string `form:"tags" json:"tags" binding:""` // 环境的 tags，多个 tag 以 "," 分隔
 
 	AutoApproval    bool `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"` // 是否自动审批
 	StopOnViolation bool `form:"stopOnViolation" json:"stopOnViolation" enums:"true,false"`       // 合规不通过是否中止任务
@@ -200,4 +204,11 @@ type ResourceGraphDetailForm struct {
 
 	Id         models.Id `uri:"id" json:"id" swaggerignore:"true"`                 // 环境ID，swagger 参数通过 param path 指定，这里忽略
 	ResourceId models.Id `uri:"resourceId" json:"resourceId" swaggerignore:"true"` // 部署成功后后资源ID
+}
+
+type UpdateEnvTagsForm struct {
+	BaseForm
+
+	Id   models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
+	Tags string    `json:"tags" form:"tags" binding:""`
 }
