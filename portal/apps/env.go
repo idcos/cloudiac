@@ -156,15 +156,15 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 	return nil
 }
 
-func getRunnerId(form *forms.CreateEnvForm) (string, e.Error) {
-	// tags 匹配
-	if form.RunnerTags != nil && len(form.RunnerTags) > 0 {
-		return services.GetRunnerByTags(form.RunnerTags)
+func getRunnerId(runnerTags []string, runnerId string) (string, e.Error) {
+	// 优先使用 id 匹配，兼容之前的方式
+	if runnerId != "" {
+		return runnerId, nil
 	}
 
-	// id 匹配
-	if form.RunnerId != "" {
-		return form.RunnerId, nil
+	// id不存在，使用tags 匹配
+	if runnerTags != nil && len(runnerTags) > 0 {
+		return services.GetRunnerByTags(runnerTags)
 	}
 
 	// 默认runner
@@ -299,7 +299,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		}
 	}()
 
-	runnerId, err := getRunnerId(form)
+	runnerId, err := getRunnerId(form.RunnerTags, form.RunnerId)
 	if err != nil {
 		return nil, err
 	}
@@ -882,9 +882,16 @@ func setEnvByForm(env *models.Env, form *forms.DeployEnvForm) {
 	if form.HasKey("keyId") {
 		env.KeyId = form.KeyId
 	}
+
+	runnerId := ""
 	if form.HasKey("runnerId") {
-		env.RunnerId = form.RunnerId
+		runnerId = form.RunnerId
+	} else if form.HasKey("runnerTags") {
+		env.RunnerTags = strings.Join(form.RunnerTags, ",")
+		runnerId, _ = getRunnerId(form.RunnerTags, form.RunnerId)
 	}
+	env.RunnerId = runnerId
+
 	if form.HasKey("timeout") {
 		env.Timeout = form.Timeout
 	}
