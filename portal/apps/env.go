@@ -912,6 +912,10 @@ func setEnvByForm(env *models.Env, form *forms.DeployEnvForm) {
 		env.PolicyEnable = form.PolicyEnable
 	}
 
+	setEnvRunnerInfoByForm(env, form)
+}
+
+func setEnvRunnerInfoByForm(env *models.Env, form *forms.DeployEnvForm) {
 	if form.HasKey("runnerId") {
 		env.RunnerId = form.RunnerId
 	}

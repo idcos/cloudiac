@@ -260,7 +260,7 @@ func GetRunnerByTags(tags []string) (string, e.Error) {
 
 	if len(validRunners) > 0 {
 		rand.Seed(time.Now().Unix())
-		return validRunners[rand.Intn(len(validRunners))].ID, nil
+		return validRunners[rand.Intn(len(validRunners))].ID, nil //nolint:gosec
 	}
 
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list with tags is null"))
