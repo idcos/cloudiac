@@ -609,14 +609,14 @@ func sendInviteUserNotify(user *models.User, inviter, orgName, initPass string, 
 
 type InviteUsersBatchResp struct {
 	Success int `json:"success"`
-	Filed   int `json:"filed"`
+	Failed  int `json:"failed"`
 }
 
 // InviteUsersBatch 邀请多个用户加入某个组织
 func InviteUsersBatch(c *ctx.ServiceContext, form *forms.InviteUsersBatchForm) (interface{}, e.Error) {
 	var (
 		success int
-		filed   int
+		failed  int
 	)
 	for _, v := range form.Email {
 		f := forms.InviteUserForm{
@@ -627,11 +627,11 @@ func InviteUsersBatch(c *ctx.ServiceContext, form *forms.InviteUsersBatchForm) (
 			Role:     form.Role,
 		}
 		if _, err := InviteUser(c, &f); err != nil {
-			filed++
+			failed++
 			c.Logger().Errorf("invite user err:%v", err)
 		}
 		success++
 	}
 
-	return InviteUsersBatchResp{success, filed}, nil
+	return InviteUsersBatchResp{success, failed}, nil
 }
