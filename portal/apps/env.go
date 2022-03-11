@@ -163,7 +163,7 @@ func getRunnerId(runnerTags []string, runnerId string) (string, e.Error) {
 	}
 
 	// id不存在，使用tags 匹配
-	if runnerTags != nil && len(runnerTags) > 0 {
+	if len(runnerTags) > 0 {
 		return services.GetRunnerByTags(runnerTags)
 	}
 
@@ -867,6 +867,17 @@ func envTplCheck(tx *db.Session, orgId, tplId models.Id, lg logs.Logger) (*model
 	return tpl, nil
 }
 
+func setEnvRunnerId(env *models.Env, form *forms.DeployEnvForm) {
+	runnerId := ""
+	if form.HasKey("runnerId") {
+		runnerId = form.RunnerId
+	} else if form.HasKey("runnerTags") {
+		env.RunnerTags = strings.Join(form.RunnerTags, ",")
+		runnerId, _ = getRunnerId(form.RunnerTags, form.RunnerId)
+	}
+	env.RunnerId = runnerId
+}
+
 func setEnvByForm(env *models.Env, form *forms.DeployEnvForm) {
 	if form.HasKey("name") {
 		env.Name = form.Name
@@ -883,14 +894,7 @@ func setEnvByForm(env *models.Env, form *forms.DeployEnvForm) {
 		env.KeyId = form.KeyId
 	}
 
-	runnerId := ""
-	if form.HasKey("runnerId") {
-		runnerId = form.RunnerId
-	} else if form.HasKey("runnerTags") {
-		env.RunnerTags = strings.Join(form.RunnerTags, ",")
-		runnerId, _ = getRunnerId(form.RunnerTags, form.RunnerId)
-	}
-	env.RunnerId = runnerId
+	setEnvRunnerId(env, form)
 
 	if form.HasKey("timeout") {
 		env.Timeout = form.Timeout
