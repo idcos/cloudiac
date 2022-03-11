@@ -602,23 +602,6 @@ func FileNameWithoutExt(filePath string) string {
 	return strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
 }
 
-func UniqStrings(list []string) []string {
-	// 创建一个临时map用来存储数组元素
-	temp := make(map[string]bool)
-	index := 0
-	for _, v := range list {
-		// 遍历数组元素，判断此元素是否已经存在map中
-		_, ok := temp[v]
-		if ok {
-			list = append(list[:index], list[index+1:]...)
-		} else {
-			temp[v] = true
-		}
-		index++
-	}
-	return list
-}
-
 func ListContains(originlist, subList []string) bool {
 	for _, sub := range subList {
 		isContain := false

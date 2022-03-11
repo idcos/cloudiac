@@ -77,7 +77,7 @@ func SystemRunnerTags() ([]string, e.Error) {
 		tags = append(tags, info.Tags...)
 	}
 
-	return utils.UniqStrings(tags), nil
+	return utils.RemoveDuplicateElement(tags), nil
 }
 
 func ConsulKVSearch(key string) (interface{}, e.Error) {
