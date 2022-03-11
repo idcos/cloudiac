@@ -11,6 +11,7 @@ import (
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/hashicorp/consul/api"
@@ -258,7 +259,8 @@ func GetRunnerByTags(tags []string) (string, e.Error) {
 	}
 
 	if len(validRunners) > 0 {
-		return validRunners[0].ID, nil
+		rand.Seed(time.Now().Unix())
+		return validRunners[rand.Intn(len(validRunners))].ID, nil
 	}
 
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list with tags is null"))
