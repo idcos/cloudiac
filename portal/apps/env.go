@@ -867,17 +867,6 @@ func envTplCheck(tx *db.Session, orgId, tplId models.Id, lg logs.Logger) (*model
 	return tpl, nil
 }
 
-func setEnvRunnerId(env *models.Env, form *forms.DeployEnvForm) {
-	runnerId := ""
-	if form.HasKey("runnerId") {
-		runnerId = form.RunnerId
-	} else if form.HasKey("runnerTags") {
-		env.RunnerTags = strings.Join(form.RunnerTags, ",")
-		runnerId, _ = getRunnerId(form.RunnerTags, form.RunnerId)
-	}
-	env.RunnerId = runnerId
-}
-
 func setEnvByForm(env *models.Env, form *forms.DeployEnvForm) {
 	if form.HasKey("name") {
 		env.Name = form.Name
@@ -893,8 +882,6 @@ func setEnvByForm(env *models.Env, form *forms.DeployEnvForm) {
 	if form.HasKey("keyId") {
 		env.KeyId = form.KeyId
 	}
-
-	setEnvRunnerId(env, form)
 
 	if form.HasKey("timeout") {
 		env.Timeout = form.Timeout
@@ -923,6 +910,15 @@ func setEnvByForm(env *models.Env, form *forms.DeployEnvForm) {
 	}
 	if form.HasKey("policyEnable") {
 		env.PolicyEnable = form.PolicyEnable
+	}
+
+	if form.HasKey("runnerId") {
+		env.RunnerId = form.RunnerId
+	}
+
+	if form.HasKey("runnerTags") {
+		env.RunnerTags = strings.Join(form.RunnerTags, ",")
+		env.RunnerId = ""
 	}
 }
 
@@ -1094,6 +1090,11 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	}
 	lg.Debugln("envDeploy -> GetValidVarsAndVgVars finish")
 
+	// 获取实际执行任务的runnerID
+	rId, err := getRunnerId(strings.Split(env.RunnerTags, ","), env.RunnerId)
+	if err != nil {
+		return nil, err
+	}
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
@@ -1107,7 +1108,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		BaseTask: models.BaseTask{
 			Type:        form.TaskType,
 			StepTimeout: form.Timeout,
-			RunnerId:    env.RunnerId,
+			RunnerId:    rId,
 		},
 	})
 
