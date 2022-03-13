@@ -133,6 +133,7 @@ func Register(g *gin.RouterGroup) {
 	g.PUT("/orgs/:id/users/:userId/role", ac("orgs", "updaterole"), w(handlers.Organization{}.UpdateUserOrgRel))
 	g.PUT("/orgs/:id/users/:userId", ac("orgs", "updaterole"), w(handlers.Organization{}.UpdateUserOrg))
 	g.POST("/orgs/:id/users/invite", ac("orgs", "adduser"), w(handlers.Organization{}.InviteUser))
+	g.POST("/orgs/:id/users/batch_invite", ac("orgs", "adduser"), w(handlers.Organization{}.InviteUsersBatch))
 	g.DELETE("/orgs/:id/users/:userId", ac("orgs", "removeuser"), w(handlers.Organization{}.RemoveUserForOrg))
 
 	g.GET("/projects/users", ac(), w(handlers.ProjectUser{}.Search))
