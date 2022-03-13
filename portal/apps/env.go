@@ -116,6 +116,10 @@ func createEnvCheck(c *ctx.ServiceContext, form *forms.CreateEnvForm) e.Error {
 		return e.New(e.TemplateKeyIdNotSet)
 	}
 
+	if er := services.CheckEnvTags(form.Tags); er != nil {
+		return er
+	}
+
 	return nil
 }
 
@@ -311,6 +315,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		TplId:     form.TplId,
 
 		Name:       form.Name,
+		Tags:       strings.TrimSpace(form.Tags),
 		RunnerId:   runnerId,
 		RunnerTags: strings.Join(form.RunnerTags, ","),
 		Status:     models.EnvStatusInactive,
@@ -457,11 +462,9 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 	}
 
 	if form.Q != "" {
+		qs := "%" + form.Q + "%"
 		query = query.Joins("left join iac_template on iac_env.tpl_id = iac_template.id")
-		query = query.Where("iac_env.name LIKE ? OR iac_template.name LIKE ?",
-			fmt.Sprintf("%%%s%%", form.Q),
-			fmt.Sprintf("%%%s%%", form.Q),
-		)
+		query = query.Where("iac_env.name LIKE ? OR iac_template.name LIKE ? OR iac_env.tags LIKE ?", qs, qs, qs)
 	}
 
 	// 默认按创建时间逆序排序
@@ -671,6 +674,11 @@ func setAndCheckUpdateEnvTriggers(c *ctx.ServiceContext, tx *db.Session, attrs m
 }
 
 func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error {
+	if er := services.CheckEnvTags(form.Tags); er != nil {
+		return er
+	} else {
+		attrs["tags"] = strings.TrimSpace(form.Tags)
+	}
 
 	if err := setAndCheckUpdateEnvAutoApproval(c, tx, attrs, env, form); err != nil {
 		return err
@@ -1324,4 +1332,18 @@ func ResourceGraphDetail(c *ctx.ServiceContext, form *forms.ResourceGraphDetailF
 	}
 	res.Attrs = resultAttrs
 	return res, nil
+}
+
+func EnvUpdateTags(c *ctx.ServiceContext, form *forms.UpdateEnvTagsForm) (resp interface{}, er e.Error) {
+	if er := services.CheckEnvTags(form.Tags); er != nil {
+		return nil, er
+	}
+
+	query := services.QueryWithOrgProject(c.DB(), c.OrgId, c.ProjectId)
+	tags := strings.TrimSpace(form.Tags)
+	if env, er := services.UpdateEnv(query, form.Id, models.Attrs{"tags": tags}); er != nil {
+		return nil, er
+	} else {
+		return env, nil
+	}
 }

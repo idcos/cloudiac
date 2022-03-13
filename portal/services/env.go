@@ -3,6 +3,14 @@
 package services
 
 import (
+	"fmt"
+	"math/rand"
+	"time"
+	"strings"
+	"unicode/utf8"
+
+	"github.com/hashicorp/consul/api"
+
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
@@ -10,11 +18,6 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
-	"fmt"
-	"math/rand"
-	"time"
-
-	"github.com/hashicorp/consul/api"
 )
 
 func GetEnv(sess *db.Session, id models.Id) (*models.Env, error) {
@@ -334,4 +337,19 @@ func CheckoutAutoApproval(autoApproval, autoDrift bool, triggers []string) bool 
 	}
 
 	return true
+}
+
+func CheckEnvTags(tags string) e.Error {
+	parts := strings.Split(tags, ",")
+
+	if len(parts) > consts.EnvMaxTagNum {
+		return e.New(e.EnvTagNumLimited)
+	}
+
+	for _, t := range parts {
+		if utf8.RuneCountInString(t) > consts.EnvMaxTagLength {
+			return e.New(e.EnvTagLengthLimited)
+		}
+	}
+	return nil
 }

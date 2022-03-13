@@ -27,7 +27,8 @@ type IacKafkaCallbackResult struct {
 }
 
 type IacKafkaContent struct {
-	ExtraData  models.JSON            `json:"extraData"`
+	EventType  string                 `json:"eventType"`
+	ExtraData  interface{}            `json:"extraData"`
 	TaskStatus string                 `json:"taskStatus"`
 	OrgId      models.Id              `json:"orgId"`
 	ProjectId  models.Id              `json:"projectId"`
@@ -38,7 +39,6 @@ type IacKafkaContent struct {
 
 func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus string, resources []models.Resource) []byte {
 	a := IacKafkaContent{
-		ExtraData:  task.ExtraData,
 		TaskStatus: taskStatus,
 		OrgId:      task.OrgId,
 		ProjectId:  task.ProjectId,
@@ -48,6 +48,13 @@ func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus strin
 			Resources: resources,
 		},
 	}
+
+	if task.ExtraData != nil{
+		a.ExtraData = task.ExtraData
+	}else {
+		a.ExtraData = make(map[string]interface{})
+	}
+
 	rep, _ := json.Marshal(&a)
 	return rep
 }
@@ -74,8 +81,13 @@ func (k *KafkaProducer) ConnAndSend(msg []byte) (err error) {
 
 func InitKafkaProducerBuilder() {
 	kaConf := configs.Get().Kafka
+	if kaConf.Disabled {
+		logs.Get().Info("kafka was not open")
+		return
+	}
+
 	conf := sarama.NewConfig()
-	conf.Producer.Retry.Max = 1
+	conf.Producer.Retry.Max = 3
 	conf.Producer.RequiredAcks = sarama.WaitForLocal
 	conf.Producer.Return.Successes = true
 	conf.Metadata.Full = true

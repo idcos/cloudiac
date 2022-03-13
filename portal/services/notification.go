@@ -55,7 +55,7 @@ func CreateNotification(tx *db.Session, notification models.Notification, eventT
 		return nil, e.New(e.DBError, err)
 	}
 
-	events := make([]models.NotificationEvent, len(eventType))
+	events := make([]models.NotificationEvent, 0, len(eventType))
 	for _, v := range eventType {
 		events = append(events, models.NotificationEvent{
 			NotificationId: notification.Id,

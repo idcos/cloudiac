@@ -42,6 +42,8 @@ type Env struct {
 	OneTime    bool   `json:"oneTime" gorm:"default:false"`             // 一次性环境标识
 	Deploying  bool   `json:"deploying" gorm:"not null;default:false"`  // 是否正在执行部署
 
+	Tags string `json:"tags" gorm:"type:text"`
+
 	StatePath string `json:"statePath" gorm:"not null" swaggerignore:"true"` // Terraform tfstate 文件路径（内部）
 
 	// 环境可以覆盖模板中的 vars file 配置，具体说明见 Template model
