@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"strings"
 	"time"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/hashicorp/consul/api"
