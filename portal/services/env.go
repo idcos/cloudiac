@@ -8,9 +8,13 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
+	"math/rand"
 	"time"
+
+	"github.com/hashicorp/consul/api"
 )
 
 func GetEnv(sess *db.Session, id models.Id) (*models.Env, error) {
@@ -241,6 +245,27 @@ func GetDefaultRunner() (string, e.Error) {
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list is null"))
 }
 
+func GetRunnerByTags(tags []string) (string, e.Error) {
+	runners, err := RunnerSearch()
+	if err != nil {
+		return "", err
+	}
+
+	validRunners := make([]*api.AgentService, 0)
+	for _, runner := range runners {
+		if utils.ListContains(runner.Tags, tags) {
+			validRunners = append(validRunners, runner)
+		}
+	}
+
+	if len(validRunners) > 0 {
+		rand.Seed(time.Now().Unix())
+		return validRunners[rand.Intn(len(validRunners))].ID, nil //nolint:gosec
+	}
+
+	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list with tags is null"))
+}
+
 func isVarNewValid(v forms.SampleVariables, value models.Variable) bool {
 	// 对于第三方调用api创建的环境来说，当前作用域是无变量的，sampleVariables中的变量一种是继承性下来的、另一种是新建的
 	// 这里需要判断变量如果修改了就在当前作用域创建一个变量
@@ -274,16 +299,16 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 	for _, v := range sampleVariables {
 		// 如果vars为空，则需要将sampleVariables所有的变量理解为新增变量
 		if len(vars) == 0 {
-			resp = varNewAppend(resp,v.Name,v.Value,consts.VarTypeEnv)
+			resp = varNewAppend(resp, v.Name, v.Value, consts.VarTypeEnv)
 			continue
 		}
 
 		for key, value := range vars {
 			if !isVarNewValid(v, value) {
-				resp = varNewAppend(resp,vars[key].Name,v.Value, vars[key].Type)
+				resp = varNewAppend(resp, vars[key].Name, v.Value, vars[key].Type)
 			} else {
 				// 这部分变量是新增的 需要新建
-				resp = varNewAppend(resp,v.Name,v.Value,consts.VarTypeEnv)
+				resp = varNewAppend(resp, v.Name, v.Value, consts.VarTypeEnv)
 			}
 		}
 	}

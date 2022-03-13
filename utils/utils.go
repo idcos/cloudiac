@@ -601,3 +601,20 @@ func RecoverdCall(fn func(), recoverFuncs ...func(error)) {
 func FileNameWithoutExt(filePath string) string {
 	return strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
 }
+
+func ListContains(originlist, subList []string) bool {
+	for _, sub := range subList {
+		isContain := false
+		for _, origin := range originlist {
+			if sub == origin {
+				isContain = true
+				break
+			}
+		}
+		if !isContain {
+			return false
+		}
+	}
+
+	return true
+}

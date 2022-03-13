@@ -109,6 +109,9 @@ const (
 
 	PolicySuppressTypeSource = "source"
 	PolicySuppressTypePolicy = "policy"
+
+	RunnerServiceName    = "CT-Runner"
+	IacPortalServiceName = "IaC-Portal"
 )
 
 var (

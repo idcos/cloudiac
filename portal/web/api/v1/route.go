@@ -67,6 +67,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/runners", ac(), w(handlers.RunnerSearch))
 	g.PUT("/consul/tags/update", ac(), w(handlers.ConsulTagUpdate))
 	g.GET("/consul/kv/search", ac(), w(handlers.ConsulKVSearch))
+	g.GET("/runners/tags", ac(), w(handlers.RunnerTags)) // 返回所有的runner tags
 
 	ctrl.Register(g.Group("orgs", ac()), &handlers.Organization{})
 	g.PUT("/orgs/:id/status", ac(), w(handlers.Organization{}.ChangeOrgStatus))
