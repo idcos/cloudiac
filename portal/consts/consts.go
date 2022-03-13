@@ -66,7 +66,7 @@ const (
 	VariablePrefix = "variables.tf"
 
 	TfVarFileMatch    = "*.tfvars"
-	TplTfCheck        = "*.tf"
+	TfFileMatch       = "*.tf"
 	TplTfCheckSuccess = "Success"
 	TplTfCheckFailed  = "Failed"
 	PlaybookMatch     = "*.y*ml"
@@ -123,6 +123,9 @@ const (
 
 	EnvTriggerPRMR   = "prmr"
 	EnvTriggerCommit = "commit"
+
+	EnvMaxTagLength = 20
+	EnvMaxTagNum    = 5
 
 	EventTaskFailed    = "task.failed"
 	EventTaskComplete  = "task.complete"

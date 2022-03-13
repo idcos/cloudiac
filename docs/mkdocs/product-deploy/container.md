@@ -35,7 +35,7 @@ version: "3.2"
 services:
   iac-portal:
     container_name: iac-portal
-    image: "${DOCKER_REGISTRY}cloudiac/iac-portal:v0.9.0"
+    image: "${DOCKER_REGISTRY}cloudiac/iac-portal:v0.9.1"
     volumes:
       - type: bind
         source: /usr/yunji/cloudiac/var
@@ -52,7 +52,7 @@ services:
 
   ct-runner:
     container_name: ct-runner
-    image: "${DOCKER_REGISTRY}cloudiac/ct-runner:v0.9.0"
+    image: "${DOCKER_REGISTRY}cloudiac/ct-runner:v0.9.1"
     volumes:
       - type: bind
         source: /usr/yunji/cloudiac/var
@@ -71,7 +71,7 @@ services:
 
   iac-web:
     container_name: iac-web
-    image: "${DOCKER_REGISTRY}cloudiac/iac-web:v0.9.0"
+    image: "${DOCKER_REGISTRY}cloudiac/iac-web:v0.9.1"
     ports:
       - 80:80
     restart: always
@@ -171,7 +171,8 @@ SMTP_PASSWORD=""
 SMTP_FROM_NAME=IaC
 SMTP_FROM=support@example.com
 
-# KAFKA配置(kafka 任务结果回调使用，不配置不影响其他功能)
+# KAFKA配置，配置后每次执行部署任务都会将环境的最新全量资源详情通过 kafka 消息发送
+KAFKA_DISABLED=false
 KAFKA_TOPIC="IAC_TASK_REPLY"
 KAFKA_GROUP_ID=""
 KAFKA_PARTITION=0

@@ -183,7 +183,7 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/templates/import", ac(), w(handlers.TemplateImport))
 	g.GET("/vcs/:id/repos/tfvars", ac(), w(handlers.TemplateTfvarsSearch))
 	g.GET("/vcs/:id/repos/playbook", ac(), w(handlers.TemplatePlaybookSearch))
-	g.GET("/vcs/:id/file", ac(), w(handlers.Vcs{}.SearchVcsFileContent))
+	g.GET("/vcs/:id/file", ac(), w(handlers.Vcs{}.GetVcsRepoFileContent))
 	ctrl.Register(g.Group("notifications", ac()), &handlers.Notification{})
 
 	// 任务实时日志（云模板检测无项目ID）
@@ -199,6 +199,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/tasks/last", ac(), w(handlers.Env{}.LastTask))
 	g.POST("/envs/:id/deploy", ac("envs", "deploy"), w(handlers.Env{}.Deploy))
 	g.POST("/envs/:id/destroy", ac("envs", "destroy"), w(handlers.Env{}.Destroy))
+	g.POST("/envs/:id/tags", ac("envs", "tags"), w(handlers.Env{}.UpdateTags))
 	g.GET("/envs/:id/resources", ac(), w(handlers.Env{}.SearchResources))
 	g.GET("/envs/:id/output", ac(), w(handlers.Env{}.Output))
 	g.GET("/envs/:id/resources/:resourceId", ac(), w(handlers.Env{}.ResourceDetail))

@@ -5,6 +5,7 @@ package handlers
 import (
 	"cloudiac/common"
 	"cloudiac/portal/apps"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
@@ -127,15 +128,15 @@ func (Template) Detail(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param vcsId path string true "vcs地址iD"
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param form query forms.TemplateTfvarsSearchForm true "parameter"
+// @Param form query forms.RepoFileSearchForm true "parameter"
 // @Router /vcs/{vcsId}/repos/tfvars  [get]
 // @Success 200 {object} ctx.JSONResult{result=[]vcsrv.VcsIfaceOptions}
 func TemplateTfvarsSearch(c *ctx.GinRequest) {
-	form := forms.TemplateTfvarsSearchForm{}
+	form := forms.RepoFileSearchForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.VcsFileSearch(c.Service(), &form))
+	c.JSONResult(apps.VcsRepoFileSearch(c.Service(), &form, consts.TfVarFileMatch))
 }
 
 // TemplateVariableSearch 查询云模板TF参数
@@ -162,16 +163,16 @@ func TemplateVariableSearch(c *ctx.GinRequest) {
 // @Accept application/x-www-form-urlencoded
 // @Param IaC-Org-Id header string true "组织ID"
 // @Security AuthToken
-// @Param form query forms.TemplatePlaybookSearchForm true "parameter"
+// @Param form query forms.RepoFileSearchForm true "parameter"
 // @Param vcsId path string true "vcs地址iD"
 // @router /vcs/{vcsId}/repos/playbook [get]
 // @Success 200 {object} ctx.JSONResult{result=[]vcsrv.VcsIfaceOptions}
 func TemplatePlaybookSearch(c *ctx.GinRequest) {
-	form := forms.TemplatePlaybookSearchForm{}
+	form := forms.RepoFileSearchForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.VcsPlaybookSearch(c.Service(), &form))
+	c.JSONResult(apps.VcsRepoFileSearch(c.Service(), &form, consts.PlaybookMatch))
 }
 
 // TemplateTfVersionSearch
