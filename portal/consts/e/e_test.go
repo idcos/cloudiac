@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func Test_getAcceptLanguage(t *testing.T) {
+func TestGetAcceptLanguage(t *testing.T) {
 	type args struct {
 		acceptLanguate string
 	}
