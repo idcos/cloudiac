@@ -44,8 +44,7 @@ func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{},
 	//根据执行人名称或邮箱查询
 	if form.User != "" {
 		users := "%" + form.User + "%"
-		query = query.Joins("left join iac_user on iac_task.creator_id = iac_user.id")
-		query = query.Where("iac_user.name like ?  or iac_user.email LIKE ?", users, users)
+		query = query.Where("u.name like ?  or u.email LIKE ?", users, users)
 	}
 	// 默认按创建时间逆序排序
 	if form.SortField() == "" {
