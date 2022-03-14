@@ -69,8 +69,8 @@ const (
 	TfFileMatch       = "*.tf"
 	TplTfCheckSuccess = "Success"
 	TplTfCheckFailed  = "Failed"
+	PlaybookDir       = "ansible"
 	PlaybookMatch     = "*.y*ml"
-	Ansible           = "ansible"
 
 	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀
 

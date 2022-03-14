@@ -535,7 +535,7 @@ func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (inte
 			VcsId:        form.VcsId,
 			Workdir:      form.Workdir,
 		}
-		results, err := VcsRepoFileSearch(c, searchForm, consts.TfFileMatch)
+		results, err := VcsRepoFileSearch(c, searchForm, "", consts.TfFileMatch)
 		if err != nil {
 			return nil, err
 		}
