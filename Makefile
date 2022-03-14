@@ -26,7 +26,7 @@ endif
 # base image 不支持自定义 docker registry
 BASE_IMAGE_DOCKER_REPO=cloudiac
 
-DOCKER_BUILD=docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" --build-arg WORKDIR=$(WORKDIR) 
+DOCKER_BUILD=docker build --platform linux/amd64 --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" --build-arg WORKDIR=$(WORKDIR) 
 
 BUILD_DIR=$(PWD)/build
 
@@ -51,7 +51,11 @@ reset-build-dir:
 	$(RM) -r $(BUILD_DIR)
 	mkdir -p $(BUILD_DIR)/assets/
 
-swag-docs:
+
+gen-lang:
+	go run cmds/gen-lang/main.go docs/lang.csv portal/consts/e/lang.go
+
+swag-docs: gen-lang
 	swag init -g portal/web/api/v1/route.go
 
 mkdocs: 

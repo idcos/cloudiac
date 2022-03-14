@@ -1,0 +1,129 @@
+﻿Code,Error,zh-cn,en-us
+10000,InternalError,未知错误,internal error
+10010,ObjectAlreadyExists,对象已存在,object already exists
+10011,ObjectNotExists,对象不存在,object not exists
+10013,ObjectNotExistsOrNoPerm,对象不存在或者无权限,object not exists or no permisson to access object
+10014,ObjectDisabled,对象已禁用,object disabled
+10100,JSONParseError,JSON 数据解析出错,invalid json
+10102,URLParseError,URL解析出错,invalid url
+10020,NotImplement,暂未实现,not implemented
+10200,DBError,数据库错误,database error
+10201,DBAttrValidateErr,字段验证错误,database attribute invalidate
+10310,BadOrgId,组织 ID 错误,invalid organization id
+10311,BadProjectId,项目 ID 错误,invalid project id
+10312,BadTemplateId,模板 ID 错误,invalid templated id
+10314,BadEnvId,环境 ID 错误,invalid environment id
+10340,BadParam,无效参数,invalid or missing parameter
+10383,TemplateNameRepeat,云模版名称重复,duplicated template name 
+10384,TemplateWorkdirError,工作目录校验失败,invalid template working directory
+10341,BadRequest,无效请求,bad request
+10350,InvalidPipeline,pipeline 格式错误,invalid pipeline definition
+10351,InvalidPipelineVersion,不支持的 pipeline 版本,invalid pipeline version
+10361,InvalidExportVersion,不支持的导出数据版本,data format version not supported
+10211,DataTooLong,内容过长,request data too large
+10212,NameTooLong,名称过长,name too long
+10213,RemarkTooLong,备注过长,remark too long
+10214,TagTooLong,标签过长,tag too long
+10215,TagTooMuch,标签过多,number of tags exceeds system limit
+10030,IOError,io 错误,unexpected io error
+10040,TooManyRetries,达到最大重试次数,too many retries
+10050,EncryptError,数据加密错误,data encryption error
+10051,DecryptError,数据解密错误,data dencryption error
+10420,MailServerError,邮件服务错误,failed to send email
+10380,InvalidAccessKeyId,AccessKeyId错误,invalid access key id
+10381,InvalidAccessKeySecret,AccessKeySecret错误,invalid access key secret
+10382,ForbiddenAccessKey,AccessKey权限不足,access denied 
+20000,InvalidToken,凭证无效,invalid token
+20001,InvalidTokenScope,凭证 scope 不匹配,invalid token scope
+20006,InvalidOrgId,无效的组织,invalid organization id
+20005,TokenExpired,凭证已过期,token expired
+10202,ColValidateError,字段校验错误,database column invalid
+20010,InvalidPassword,无效的邮箱或密码,invalid account or password
+10210,InvalidColumn,无效的字段名,invalid column
+20112,InvalidOperation,无效操作,invalid operation
+30110,UserAlreadyExists,用户已存在,user already exists
+30120,UserNotExists,用户不存在,user does not exists
+30130,UserEmailDuplicate,用户邮箱已存在,email address already exists
+30131,UserEmailDuplicateInactive,无效的用户邮箱,email address inactive
+30140,UserInvalidStatus,无效的用户状态,invalid user status
+30141,UserInactive,用户未激活,user is inactive
+30143,UserDisabled,用户已禁用,user is disabled
+30144,InvalidPasswordFormat,密码格式错误,password does not meet complexity requirement
+30145,UserActivated,账号已激活,user already activated
+30150,InvalidRoleName,无效角色名,invalid role name
+30151,RoleNameDuplicate,角色名重复,role name already exists
+20110,PermissionDeny,无权限,access denied 
+20113,PermDenyApproval,无审批权限,access denied 
+20111,ValidateError,验证失败,login validation fail
+30310,OrganizationAlreadyExists,组织已存在,organization already exists
+30311,OrganizationNotExists,组织不存在,organization not exists
+30312,OrganizationDisabled,组织被禁用,organization disabled
+30314,OrganizationInvalidStatus,无效的组织状态,organization invalid status
+30315,InvalidOrganizationId,无效的组织ID,invalid organization id
+10203,NameDuplicate,名称重复,user already exists
+30914,TaskStepNotExists,步骤不存在,task step does not exists
+20007,InvalidProjectId,无效的项目id,invalid project id
+30916,TaskNotHaveStep,任务无步骤,task have no steps
+30710,TemplateAlreadyExists,模板名称重复,template already exists
+10101,HCLParseError,模板语法解析错误,hcl parse error
+30510,VariableAlreadyExists,变量已存在,variable already exists
+30511,VariableAliasDuplicate,变量别名重复,variable alias name already exists
+30512,VariableScopeConflict,变量作用域冲突,variable scope conflict
+30513,InvalidVarName,无效变量名,invalid variable name
+30514,EmptyVarName,变量名不可为空,variable name is empty
+30515,EmptyVarValue,变量值不可为空,variable value is empty
+30420,ProjectUserAlreadyExists,项目用户已经存在,project user already exists
+30421,ProjectUserAliasDuplicate,项目别名重复,project name already exists
+30610,TokenAlreadyExists,Token已经存在,token already exists
+30611,TokenNotExists,Token不存在,token does not exists
+30613,TokenAliasDuplicate,Token别名重复,token alias already exists
+30711,TemplateNotExists,模板不存在,template not exists
+30712,TemplateDisabled,模板不可用,template disabled
+30730,TemplateActiveEnvExists,模板存在活跃环境,can not delete template which have active environment
+10430,ConsulConnError,consul链接失败,connect to consul error
+30810,EnvAlreadyExists,环境已经存在,environment already exists
+30811,EnvNotExists,环境不存在,environment not exists
+30812,EnvAliasDuplicate,环境别名重复,environment alias already exists
+30813,EnvArchived,环境已归档，不允许操作,environment had been archived
+30815,EnvDeploying,环境正在部署中，请不要重复发起,deployment in progress
+30816,EnvCheckAutoApproval,配置自动纠漂移、推送到分支时重新部署时，必须配置自动审批,auto approval is required 
+30910,TaskAlreadyExists,任务已经存在,task already exists
+30911,TaskNotExists,任务不存在,task does not exists
+10440,VcsError,VCS仓库错误,unknown VCS error
+10441,VcsAddressError,VCS地址错误,invalid VCS address
+10442,VcsInvalidToken,VCS令牌无效,VCS token invalid
+10445,VcsConnectError,VCS服务连接失败,connect to VCS failed
+10446,VcsConnectTimeOut,VCS服务连接超时,VCS connection time out
+31110,VcsNotExists,VCS仓库不存在,repository does not exist
+31120,VcsDeleteError,VCS存在相关依赖云模版，无法删除,VCS deletion failed, check if any templates associated with the VCS
+10510,ImportError,导入出错,failed to import
+10520,ImportIdDuplicate,id 重复,import id was duplicated
+10530,ImportUpdateOrgId,同 id 的数据己属于另一组织，无法使用“覆盖”方案(不允许更改组织 id),import failed, cannot overwrite existen organization
+30913,TaskApproveNotPending,作业状态非待审批，不允许操作,task is not awaiting for approve
+31010,KeyAlreadyExists,管理密钥已存在,key already exists
+31011,KeyNotExist,管理密钥不存在,key does not exist
+31012,KeyAliasDuplicate,管理密钥名称重复,key alias exists
+31013,KeyDecryptFail,管理密钥解析失败,key decryption fail
+30814,EnvCannotArchiveActive,环境当前状态活跃, 无法归档
+31300,InvalidTfVersion,自动选择版本失败,invalid terraform version
+31210,PolicyAlreadyExist,策略已存在,policy already exist
+31211,PolicyNotExist,策略不存在,policy does not exist
+31221,PolicyGroupAlreadyExist,策略组已存在,policy group already exist
+31222,PolicyGroupNotExist,策略组不存在,policy group does not exist
+31223,PolicyBelongedToAnotherGroup,策略属于其他策略组,policy belonged to another group
+31230,PolicyResultAlreadyExist,结果已存在,policy result already exist
+31231,PolicyResultNotExist,结果不存在,policy result does not exist
+31250,PolicyErrorParseTemplate,模板解析错误,template parse error
+31340,PolicyRegoMissingComment,Rego脚本头缺失,missing comment header in rego file
+31260,PolicySuppressNotExist,屏蔽记录不存在,suppress status does not exist
+31261,PolicySuppressAlreadyExist,屏蔽记录已存在,suppress status already exist
+31270,PolicyRelNotExist,策略关联关系不存在,policy relation does not exist
+31271,PolicyRelAlreadyExist,策略关联关系已存在,policy relation already exist
+31280,PolicyScanNotEnabled,扫描未启用,policy scan is not enabled
+31500,CronExpressError,cron定时任务表达式错误,invalid cron expression
+31501,CronTaskFailed,cron定时任务执行失败,cron task failed
+31281,PolicyMetaInvalid,策略元数据解析无效,invalid meta json definition
+31282,PolicyRegoInvalid,rego 脚本解析无效,invalid rego file
+31610,SystemConfigNotExist,当前配置不存在,system config does not exist
+30731,TemplateKeyIdNotSet,SSH 密钥未配置,ssh keypair is not setup 
+31283,PolicyGroupDirError,仓库在当前目录找不到策略文件,policy not found in the repository
