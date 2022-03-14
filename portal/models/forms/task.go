@@ -35,7 +35,10 @@ type TaskLogForm struct {
 type SearchTaskForm struct {
 	NoPageSizeForm
 
-	EnvId models.Id `json:"envId" form:"envId" binding:"required"` // 环境ID
+	EnvId    models.Id `json:"envId" form:"envId" binding:"required"` // 环境ID
+	TaskType string    `form:"taskType" json:"taskType" binding:""`   // 任务类型
+	Source   string    `form:"source" json:"source"`                  // 触发类型
+	User     string    `form:"user" json:"user"`                      // 可根据执行人姓名或邮箱模糊查询
 }
 
 type LastTaskForm struct {
@@ -76,7 +79,10 @@ type ApproveTaskForm struct {
 type SearchEnvTasksForm struct {
 	NoPageSizeForm
 
-	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
+	Id       models.Id `uri:"id" json:"id" swaggerignore:"true"`    // 环境ID，swagger 参数通过 param path 指定，这里忽略
+	TaskType string    `form:"taskType" json:"taskType" binding:""` // 任务类型
+	Source   string    `form:"source" json:"source"`                // 触发类型
+	User     string    `form:"user" json:"user"`                    // 可根据执行人姓名或邮箱模糊查询
 }
 
 type SearchTaskResourceForm struct {
