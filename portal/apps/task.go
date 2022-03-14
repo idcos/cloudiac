@@ -14,6 +14,7 @@ import (
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,7 +23,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"errors"
 
 	"github.com/gin-contrib/sse"
 )
@@ -32,6 +32,20 @@ func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{},
 	query := services.QueryTask(c.DB())
 	if form.EnvId != "" {
 		query = query.Where("env_id = ?", form.EnvId)
+	}
+	//根据任务类型查询
+	if form.TaskType != "" {
+		query = query.Where("iac_task.type = ?", form.TaskType)
+	}
+	//根据触发类型查询
+	if form.Source != "" {
+		query = query.Where("iac_task.source = ?", form.Source)
+	}
+	//根据执行人名称或邮箱查询
+	if form.Q != "" {
+		qs := "%" + form.Q + "%"
+		query = query.Joins("left join iac_user on iac_task.creator_id = iac_user.id")
+		query = query.Where("iac_user.name like ?  or iac_user.email LIKE ?", qs, qs)
 	}
 	// 默认按创建时间逆序排序
 	if form.SortField() == "" {
