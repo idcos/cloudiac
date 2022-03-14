@@ -16,12 +16,11 @@ import (
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
+	"github.com/robfig/cron/v3"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
-
-	"github.com/robfig/cron/v3"
 
 	"github.com/lib/pq"
 )
@@ -723,7 +722,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	}
 	if !env.Archived {
 		if form.Archived {
-			form.Name = env.Name + "-archived{" + time.Now().Format("2006-01-02/15:04:05") + "}"
+			form.Name = env.Name + "-archived-" + time.Now().Format("20060102150405")
 		}
 	}
 
