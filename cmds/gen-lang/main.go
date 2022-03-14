@@ -9,6 +9,8 @@ import (
 	"os"
 	"strings"
 	"text/template"
+
+	"golang.org/x/text/language"
 )
 
 type Config struct {
@@ -40,14 +42,17 @@ var errorMsgs = map[int]map[string]string{
 	{{- end }}
 }
 `
+	defaultLang = "zh-cn"
 )
 
 func main() {
 	// Usage:
-	// gen-lang [docs/langs.csv] [portal/consts/lang.go]
+	// gen-lang [docs/lang.csv] [portal/consts/e/lang.go]
 
-	if len(os.Args) < 2 {
-		panic(fmt.Errorf("missing csv and lang.go path"))
+	if len(os.Args) <= 2 {
+		fmt.Println("Usage:")
+		fmt.Println("gen-lang [docs/lang.csv] [portal/consts/e/lang.go]")
+		panic("missing csv and lang.go path")
 	}
 
 	csvPath := os.Args[1]
@@ -56,8 +61,13 @@ func main() {
 	fmt.Fprintf(os.Stderr, "Generate translate form %s to %s ...\n", csvPath, goPath)
 
 	// Load language definition from langs.csv
-	var langlist []string
+	langlist := []string{defaultLang}
+	defaultLangExist := false
 	translates := make([]Translation, 0)
+
+	standardLanguageName := func(lang string) string {
+		return language.MustParse(lang).String()
+	}
 
 	buf, err := ioutil.ReadFile(csvPath)
 	if err != nil {
@@ -77,9 +87,16 @@ func main() {
 				if colIdx < 2 {
 					continue // skip Code,Error cols
 				}
+				if col == defaultLang {
+					defaultLangExist = true
+					continue // skip default lang
+				}
 				langlist = append(langlist, col)
 			}
 			continue
+		}
+		if !defaultLangExist {
+			panic("zh-cn translation not exist")
 		}
 
 		//10000,ErrInternalError,内部错误,internal error
@@ -91,7 +108,7 @@ func main() {
 		for i, l := range langlist {
 			// Remove string quotes
 			msg := strings.TrimPrefix(strings.TrimSuffix(cols[i+2], "\""), "\"")
-			translate.Message[l] = msg
+			translate.Message[standardLanguageName(l)] = msg
 		}
 		// fmt.Printf("translate %+v\n", translate)
 
