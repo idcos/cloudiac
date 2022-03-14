@@ -136,7 +136,7 @@ func TemplateTfvarsSearch(c *ctx.GinRequest) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.VcsRepoFileSearch(c.Service(), &form, consts.TfVarFileMatch))
+	c.JSONResult(apps.VcsRepoFileSearch(c.Service(), &form, "", consts.TfVarFileMatch))
 }
 
 // TemplateVariableSearch 查询云模板TF参数
@@ -172,7 +172,7 @@ func TemplatePlaybookSearch(c *ctx.GinRequest) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.VcsRepoFileSearch(c.Service(), &form, consts.PlaybookMatch))
+	c.JSONResult(apps.VcsRepoFileSearch(c.Service(), &form, consts.PlaybookDir, consts.PlaybookMatch))
 }
 
 // TemplateTfVersionSearch
