@@ -618,3 +618,12 @@ func ListContains(originlist, subList []string) bool {
 
 	return true
 }
+
+func StrSliceTrimPrefix(ss []string, prefix string) []string {
+	rs := make([]string, 0, len(ss))
+	for _, s := range ss {
+		rs = append(rs, strings.TrimPrefix(s, prefix))
+	}
+	return rs
+}
+

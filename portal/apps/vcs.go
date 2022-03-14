@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -224,7 +225,7 @@ func ListRepoTags(c *ctx.ServiceContext, form *forms.GetGitRevisionForm) (tags [
 
 }
 
-func VcsFileSearch(c *ctx.ServiceContext, form *forms.TemplateTfvarsSearchForm) (interface{}, e.Error) {
+func VcsRepoFileSearch(c *ctx.ServiceContext, form *forms.RepoFileSearchForm, search string) ([]string, e.Error) {
 	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
 
 	if err != nil {
@@ -238,56 +239,20 @@ func VcsFileSearch(c *ctx.ServiceContext, form *forms.TemplateTfvarsSearchForm) 
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
-	var (
-		search  string
-		dirPath string
-	)
-	if form.TplChecks {
-		search = consts.TplTfCheck
-		dirPath = form.Path
-	} else {
-		search = consts.TfVarFileMatch
-		dirPath = path.Join(dirPath, form.Workdir)
-	}
+
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
 		Ref:    form.RepoRevision,
 		Search: search,
-		Path:   dirPath,
+		Path:   form.Workdir,
 	})
 
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
 
-	return listFiles, nil
+	return utils.StrSliceTrimPrefix(listFiles, form.Workdir), nil
 }
 
-func VcsPlaybookSearch(c *ctx.ServiceContext, form *forms.TemplatePlaybookSearchForm) (interface{}, e.Error) {
-	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
-	if err != nil {
-		return nil, err
-	}
-
-	vcsService, er := vcsrv.GetVcsInstance(vcs)
-	if er != nil {
-		return nil, e.New(e.VcsError, er)
-	}
-	repo, er := vcsService.GetRepo(form.RepoId)
-	if er != nil {
-		return nil, e.New(e.VcsError, er)
-	}
-	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
-		Ref:       form.RepoRevision,
-		Search:    consts.PlaybookMatch,
-		Recursive: true,
-		Path:      path.Join(form.Workdir, consts.Ansible),
-	})
-	if er != nil {
-		return nil, e.New(e.VcsError, er)
-	}
-
-	return listFiles, nil
-}
 
 func VcsVariableSearch(c *ctx.ServiceContext, form *forms.TemplateVariableSearchForm) (interface{}, e.Error) {
 	vcs, err := services.QueryVcsByVcsId(form.VcsId, c.DB())
@@ -327,7 +292,7 @@ func VcsVariableSearch(c *ctx.ServiceContext, form *forms.TemplateVariableSearch
 	return tvl, nil
 }
 
-func SearchVcsFile(c *ctx.ServiceContext, form *forms.SearchVcsFileForm) (interface{}, e.Error) {
+func GetVcsRepoFile(c *ctx.ServiceContext, form *forms.GetVcsRepoFileForm) (interface{}, e.Error) {
 	vcs, err := checkOrgVcsAuth(c, form.Id)
 	if err != nil {
 		return nil, err
@@ -340,7 +305,8 @@ func SearchVcsFile(c *ctx.ServiceContext, form *forms.SearchVcsFileForm) (interf
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
-	b, er := repo.ReadFileContent(form.Branch, form.FileName)
+
+	b, er := repo.ReadFileContent(form.Branch, filepath.Join(form.Workdir, form.FileName))
 	if er != nil {
 		if vcsrv.IsNotFoundErr(er) {
 			b = make([]byte, 0)

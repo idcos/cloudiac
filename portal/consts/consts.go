@@ -66,7 +66,7 @@ const (
 	VariablePrefix = "variables.tf"
 
 	TfVarFileMatch    = "*.tfvars"
-	TplTfCheck        = "*.tf"
+	TfFileMatch       = "*.tf"
 	TplTfCheckSuccess = "Success"
 	TplTfCheckFailed  = "Failed"
 	PlaybookMatch     = "*.y*ml"
