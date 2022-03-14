@@ -233,7 +233,7 @@ func (Env) SearchTasks(c *ctx.GinRequest) {
 		EnvId:          form.Id,
 		TaskType:       form.TaskType,
 		Source:         form.Source,
-		Q:              form.Q,
+		User:           form.User,
 	}
 	c.JSONResult(apps.SearchTask(c.Service(), taskForm))
 }

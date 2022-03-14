@@ -38,7 +38,7 @@ type SearchTaskForm struct {
 	EnvId    models.Id `json:"envId" form:"envId" binding:"required"` // 环境ID
 	TaskType string    `form:"taskType" json:"taskType" binding:""`   // 任务类型
 	Source   string    `form:"source" json:"source"`                  // 触发类型
-	Q        string    `form:"q" json:"q"`                            // 可根据执行人姓名或邮箱模糊查询
+	User     string    `form:"user" json:"user"`                      // 可根据执行人姓名或邮箱模糊查询
 }
 
 type LastTaskForm struct {
@@ -82,7 +82,7 @@ type SearchEnvTasksForm struct {
 	Id       models.Id `uri:"id" json:"id" swaggerignore:"true"`    // 环境ID，swagger 参数通过 param path 指定，这里忽略
 	TaskType string    `form:"taskType" json:"taskType" binding:""` // 任务类型
 	Source   string    `form:"source" json:"source"`                // 触发类型
-	Q        string    `form:"q" json:"q"`                          // 可根据执行人姓名或邮箱模糊查询
+	User     string    `form:"user" json:"user"`                    // 可根据执行人姓名或邮箱模糊查询
 }
 
 type SearchTaskResourceForm struct {
