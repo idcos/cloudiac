@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func Test_getAcceptLanguage(t *testing.T) {
+func TestGetAcceptLanguage(t *testing.T) {
 	type args struct {
 		acceptLanguate string
 	}
@@ -44,7 +44,7 @@ func TestErrorMsg(t *testing.T) {
 	}{
 		{"cn internal error", args{newError(10000, errors.New("test"), 500), "zh-CN"}, "未知错误"},
 		{"en internal error", args{newError(10000, errors.New("test"), 500), "en-US"}, "internal error"},
-		{"default cn internal error", args{newError(10000, errors.New("test"), 500), "en-US"}, "internal error"},
+		{"default cn internal error", args{newError(10000, errors.New("test"), 500), ""}, "未知错误"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
