@@ -16,12 +16,11 @@ import (
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
+	"github.com/robfig/cron/v3"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
-
-	"github.com/robfig/cron/v3"
 
 	"github.com/lib/pq"
 )
@@ -700,8 +699,10 @@ func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs mod
 				http.StatusBadRequest)
 		}
 		attrs["archived"] = form.Archived
+		if form.Name != "" {
+			attrs["name"] = form.Name
+		}
 	}
-
 	return nil
 }
 
@@ -724,6 +725,11 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	env, err := getEnvForUpdate(tx, c, form)
 	if err != nil {
 		return nil, err
+	}
+	if !env.Archived {
+		if form.Archived {
+			form.Name = env.Name + "-archived-" + time.Now().Format("20060102150405")
+		}
 	}
 
 	attrs := models.Attrs{}
@@ -755,7 +761,6 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	attrs["openCronDrift"] = cronDriftParam.OpenCronDrift
 	attrs["cronDriftExpress"] = cronDriftParam.CronDriftExpress
 	attrs["nextDriftTaskTime"] = cronDriftParam.NextDriftTaskTime
-
 	setUpdateEnvByForm(attrs, form)
 	err = setAndCheckUpdateEnvByForm(c, tx, attrs, env, form)
 	if err != nil {
