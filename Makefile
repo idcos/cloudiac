@@ -26,7 +26,7 @@ endif
 # base image 不支持自定义 docker registry
 BASE_IMAGE_DOCKER_REPO=cloudiac
 
-DOCKER_BUILD=docker build --platform linux/amd64 --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" --build-arg WORKDIR=$(WORKDIR) 
+DOCKER_BUILD=docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" --build-arg WORKDIR=$(WORKDIR) 
 
 BUILD_DIR=$(PWD)/build
 
