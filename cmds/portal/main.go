@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 
 	"cloudiac/cmds/common"
+	iac_common "cloudiac/common"
 	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
@@ -74,7 +75,7 @@ func main() {
 	}
 
 	// 注册到 consul
-	common.ReRegisterService(opt.ReRegister, "IaC-Portal")
+	common.ReRegisterService(opt.ReRegister, iac_common.IacPortalServiceName)
 
 	// 启动后台 worker
 	go task_manager.Start(configs.Get().Consul.ServiceID)

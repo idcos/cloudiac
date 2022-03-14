@@ -11,11 +11,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 type SsoTokenClaims struct {
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 
 	UserId models.Id `json:"userId"`
 }
@@ -26,8 +26,8 @@ func GenerateSsoToken(uid models.Id, expireDuration time.Duration) (string, erro
 	// 将 userId，姓名, 过期时间写入 token 中
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, SsoTokenClaims{
 		UserId: uid,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expire.Unix(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expire),
 			Subject:   consts.JwtSubjectSsoCode,
 		},
 	})

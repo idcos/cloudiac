@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 
 	"cloudiac/cmds/common"
+	iac_common "cloudiac/common"
 	"cloudiac/configs"
 	"cloudiac/utils/logs"
 )
@@ -52,7 +53,7 @@ func main() {
 	runnerConfJson, _ := json.Marshal(configs.Get().Runner)
 	logs.Get().Infof("runner configs: %s", runnerConfJson)
 
-	common.ReRegisterService(opt.ReRegister, "CT-Runner")
+	common.ReRegisterService(opt.ReRegister, iac_common.RunnerServiceName)
 	StartServer()
 }
 

@@ -601,3 +601,29 @@ func RecoverdCall(fn func(), recoverFuncs ...func(error)) {
 func FileNameWithoutExt(filePath string) string {
 	return strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
 }
+
+func ListContains(originlist, subList []string) bool {
+	for _, sub := range subList {
+		isContain := false
+		for _, origin := range originlist {
+			if sub == origin {
+				isContain = true
+				break
+			}
+		}
+		if !isContain {
+			return false
+		}
+	}
+
+	return true
+}
+
+func StrSliceTrimPrefix(ss []string, prefix string) []string {
+	rs := make([]string, 0, len(ss))
+	for _, s := range ss {
+		rs = append(rs, strings.TrimPrefix(s, prefix))
+	}
+	return rs
+}
+

@@ -51,7 +51,11 @@ reset-build-dir:
 	$(RM) -r $(BUILD_DIR)
 	mkdir -p $(BUILD_DIR)/assets/
 
-swag-docs:
+
+gen-lang:
+	go run cmds/gen-lang/main.go docs/lang.csv portal/consts/e/lang.go
+
+swag-docs: gen-lang
 	swag init -g portal/web/api/v1/route.go
 
 mkdocs: 

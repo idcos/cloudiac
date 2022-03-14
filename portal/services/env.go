@@ -3,16 +3,21 @@
 package services
 
 import (
+	"fmt"
+	"math/rand"
+	"strings"
+	"time"
+	"unicode/utf8"
+
+	"github.com/hashicorp/consul/api"
+
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/utils"
 	"cloudiac/utils/logs"
-	"fmt"
-	"strings"
-	"time"
-	"unicode/utf8"
 )
 
 func GetEnv(sess *db.Session, id models.Id) (*models.Env, error) {
@@ -241,6 +246,27 @@ func GetDefaultRunner() (string, e.Error) {
 		return runners[0].ID, nil
 	}
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list is null"))
+}
+
+func GetRunnerByTags(tags []string) (string, e.Error) {
+	runners, err := RunnerSearch()
+	if err != nil {
+		return "", err
+	}
+
+	validRunners := make([]*api.AgentService, 0)
+	for _, runner := range runners {
+		if utils.ListContains(runner.Tags, tags) {
+			validRunners = append(validRunners, runner)
+		}
+	}
+
+	if len(validRunners) > 0 {
+		rand.Seed(time.Now().Unix())
+		return validRunners[rand.Intn(len(validRunners))].ID, nil //nolint:gosec
+	}
+
+	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list with tags is null"))
 }
 
 func isVarNewValid(v forms.SampleVariables, value models.Variable) bool {

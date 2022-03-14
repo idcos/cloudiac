@@ -138,8 +138,7 @@ func matchGlob(search, name string) bool {
 		return true
 	}
 
-	pattern := fmt.Sprintf("*%s*", search)
-	matched, err := path.Match(pattern, name)
+	matched, err := path.Match(search, name)
 	if err != nil {
 		return false
 	}
