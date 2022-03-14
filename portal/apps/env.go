@@ -694,8 +694,10 @@ func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs mod
 				http.StatusBadRequest)
 		}
 		attrs["archived"] = form.Archived
+		if form.Name != "" {
+			attrs["name"] = form.Name
+		}
 	}
-
 	return nil
 }
 
@@ -718,6 +720,11 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	env, err := getEnvForUpdate(tx, c, form)
 	if err != nil {
 		return nil, err
+	}
+	if !env.Archived {
+		if form.Archived {
+			form.Name = env.Name + "-archived{" + time.Now().Format("2006-01-02/15:04:05") + "}"
+		}
 	}
 
 	attrs := models.Attrs{}
@@ -749,7 +756,6 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	attrs["openCronDrift"] = cronDriftParam.OpenCronDrift
 	attrs["cronDriftExpress"] = cronDriftParam.CronDriftExpress
 	attrs["nextDriftTaskTime"] = cronDriftParam.NextDriftTaskTime
-
 	setUpdateEnvByForm(attrs, form)
 	err = setAndCheckUpdateEnvByForm(c, tx, attrs, env, form)
 	if err != nil {
