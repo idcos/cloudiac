@@ -67,6 +67,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/runners", ac(), w(handlers.RunnerSearch))
 	g.PUT("/consul/tags/update", ac(), w(handlers.ConsulTagUpdate))
 	g.GET("/consul/kv/search", ac(), w(handlers.ConsulKVSearch))
+	g.GET("/runners/tags", ac(), w(handlers.RunnerTags)) // 返回所有的runner tags
 
 	ctrl.Register(g.Group("orgs", ac()), &handlers.Organization{})
 	g.PUT("/orgs/:id/status", ac(), w(handlers.Organization{}.ChangeOrgStatus))
@@ -132,6 +133,7 @@ func Register(g *gin.RouterGroup) {
 	g.PUT("/orgs/:id/users/:userId/role", ac("orgs", "updaterole"), w(handlers.Organization{}.UpdateUserOrgRel))
 	g.PUT("/orgs/:id/users/:userId", ac("orgs", "updaterole"), w(handlers.Organization{}.UpdateUserOrg))
 	g.POST("/orgs/:id/users/invite", ac("orgs", "adduser"), w(handlers.Organization{}.InviteUser))
+	g.POST("/orgs/:id/users/batch_invite", ac("orgs", "adduser"), w(handlers.Organization{}.InviteUsersBatch))
 	g.DELETE("/orgs/:id/users/:userId", ac("orgs", "removeuser"), w(handlers.Organization{}.RemoveUserForOrg))
 
 	g.GET("/projects/users", ac(), w(handlers.ProjectUser{}.Search))
@@ -181,7 +183,7 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/templates/import", ac(), w(handlers.TemplateImport))
 	g.GET("/vcs/:id/repos/tfvars", ac(), w(handlers.TemplateTfvarsSearch))
 	g.GET("/vcs/:id/repos/playbook", ac(), w(handlers.TemplatePlaybookSearch))
-	g.GET("/vcs/:id/file", ac(), w(handlers.Vcs{}.SearchVcsFileContent))
+	g.GET("/vcs/:id/file", ac(), w(handlers.Vcs{}.GetVcsRepoFileContent))
 	ctrl.Register(g.Group("notifications", ac()), &handlers.Notification{})
 
 	// 任务实时日志（云模板检测无项目ID）
@@ -197,6 +199,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/tasks/last", ac(), w(handlers.Env{}.LastTask))
 	g.POST("/envs/:id/deploy", ac("envs", "deploy"), w(handlers.Env{}.Deploy))
 	g.POST("/envs/:id/destroy", ac("envs", "destroy"), w(handlers.Env{}.Destroy))
+	g.POST("/envs/:id/tags", ac("envs", "tags"), w(handlers.Env{}.UpdateTags))
 	g.GET("/envs/:id/resources", ac(), w(handlers.Env{}.SearchResources))
 	g.GET("/envs/:id/output", ac(), w(handlers.Env{}.Output))
 	g.GET("/envs/:id/resources/:resourceId", ac(), w(handlers.Env{}.ResourceDetail))

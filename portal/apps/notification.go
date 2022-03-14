@@ -95,7 +95,7 @@ func UpdateNotification(c *ctx.ServiceContext, form *forms.UpdateNotificationFor
 		return nil, e.New(e.DBError, err)
 	}
 
-	events := make([]models.NotificationEvent, len(form.EventType))
+	events := make([]models.NotificationEvent, 0, len(form.EventType))
 	for _, v := range form.EventType {
 		events = append(events, models.NotificationEvent{
 			NotificationId: form.Id,

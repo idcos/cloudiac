@@ -66,11 +66,11 @@ const (
 	VariablePrefix = "variables.tf"
 
 	TfVarFileMatch    = "*.tfvars"
-	TplTfCheck        = "*.tf"
+	TfFileMatch       = "*.tf"
 	TplTfCheckSuccess = "Success"
 	TplTfCheckFailed  = "Failed"
+	PlaybookDir       = "ansible"
 	PlaybookMatch     = "*.y*ml"
-	Ansible           = "ansible"
 
 	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀
 
@@ -123,6 +123,9 @@ const (
 
 	EnvTriggerPRMR   = "prmr"
 	EnvTriggerCommit = "commit"
+
+	EnvMaxTagLength = 20
+	EnvMaxTagNum    = 5
 
 	EventTaskFailed    = "task.failed"
 	EventTaskComplete  = "task.complete"

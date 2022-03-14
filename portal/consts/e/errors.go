@@ -144,6 +144,8 @@ const (
 	EnvCannotArchiveActive = 30814
 	EnvDeploying           = 30815
 	EnvCheckAutoApproval   = 30816
+	EnvTagNumLimited       = 30821
+	EnvTagLengthLimited    = 30822
 
 	//// task 309
 	TaskAlreadyExists     = 30910

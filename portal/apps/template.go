@@ -526,21 +526,21 @@ func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (inte
 			return nil, err
 		}
 	}
+
 	if form.Workdir != "" {
 		// 检查工作目录下.tf 文件是否存在
-		searchForm := &forms.TemplateTfvarsSearchForm{
+		searchForm := &forms.RepoFileSearchForm{
 			RepoId:       form.RepoId,
 			RepoRevision: form.RepoRevision,
 			VcsId:        form.VcsId,
-			TplChecks:    true,
-			Path:         form.Workdir,
+			Workdir:      form.Workdir,
 		}
-		results, err := VcsFileSearch(c, searchForm)
+		results, err := VcsRepoFileSearch(c, searchForm, "", consts.TfFileMatch)
 		if err != nil {
 			return nil, err
 		}
-		if len(results.([]string)) == 0 {
-			return nil, e.New(e.TemplateWorkdirError, err)
+		if len(results) == 0 {
+			return nil, e.New(e.TemplateWorkdirError, fmt.Errorf("no '%s' files", consts.TfFileMatch))
 		}
 	}
 	return TemplateChecksResp{

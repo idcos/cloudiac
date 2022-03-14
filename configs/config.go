@@ -15,6 +15,7 @@ import (
 )
 
 type KafkaConfig struct {
+	Disabled     bool     `json:"disabled"`
 	Brokers      []string `yaml:"brokers"`
 	Topic        string   `yaml:"topic"`
 	GroupID      string   `yaml:"group_id"`

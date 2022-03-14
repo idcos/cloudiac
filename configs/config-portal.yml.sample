@@ -26,6 +26,7 @@ log:
   log_max_days: 7
 
 kafka:
+    disabled: ${KAFKA_DISABLED}
     topic: "${KAFKA_TOPIC}"
     group_id: "${KAFKA_GROUP_ID}"
     partition: ${KAFKA_PARTITION}
