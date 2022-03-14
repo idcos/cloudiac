@@ -137,7 +137,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	err = os.WriteFile(goPath, src.Bytes(), 0644)
+	err = os.WriteFile(goPath, src.Bytes(), 0644) //nolint:gosec
 	if err != nil {
 		panic(err)
 	}
