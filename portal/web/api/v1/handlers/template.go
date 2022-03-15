@@ -207,7 +207,7 @@ func AutoTemplateTfVersionChoice(c *ctx.GinRequest) {
 
 // TemplateChecks
 // @Tags 云模板
-// @Accept multipart/form-data
+// @Accept multipart/form-data, application/json
 // @Accept application/x-www-form-urlencoded
 // @Summary 创建云模版前检查名称是否重复和工作目录是否正确
 // @Param IaC-Org-Id header string true "组织ID"

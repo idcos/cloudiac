@@ -513,6 +513,11 @@ type TemplateChecksResp struct {
 	Reason      string `json:"reason"`
 }
 
+type TplCheckResult struct {
+	TfVarError    string `json:"tfVarError"`
+	PlayBookError string `json:"playBookError"`
+}
+
 func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (interface{}, e.Error) {
 
 	// 如果云模版名称传入，校验名称是否重复.
@@ -526,7 +531,6 @@ func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (inte
 			return nil, err
 		}
 	}
-
 	if form.Workdir != "" {
 		// 检查工作目录下.tf 文件是否存在
 		searchForm := &forms.RepoFileSearchForm{
@@ -543,9 +547,67 @@ func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (inte
 			return nil, e.New(e.TemplateWorkdirError, fmt.Errorf("no '%s' files", consts.TfFileMatch))
 		}
 	}
+
+	err, checkResult := CheckTemplateOrEnvConfig(c, form.TfVarsFile, form.Playbook, form.RepoId, form.RepoRevision, form.Workdir, form.VcsId)
+	if err != nil {
+		return nil, err
+	}
+	if len(checkResult) != 0 {
+		return checkResult, e.New(e.BadParam)
+	}
 	return TemplateChecksResp{
 		CheckResult: consts.TplTfCheckSuccess,
 	}, nil
+}
+
+func CheckTemplateOrEnvConfig(c *ctx.ServiceContext, tfVarsFile, playbook, repoId, reporevision, workDir string, vcsId models.Id) (e.Error, []TplCheckResult) {
+	checkResult := []TplCheckResult{}
+	if tfVarsFile != "" {
+		searchForm := &forms.RepoFileSearchForm{
+			RepoId:       repoId,
+			RepoRevision: reporevision,
+			VcsId:        vcsId,
+			Workdir:      workDir,
+		}
+		results, err := VcsRepoFileSearch(c, searchForm, "", consts.TfVarFileMatch)
+		fmt.Println("走2222", results)
+		if err != nil {
+			return err, nil
+		}
+		if len(results) == 0 {
+			checkResult = append(checkResult, TplCheckResult{
+				TfVarError: "当前工作目录下.tfvars结尾文件不存在",
+			})
+		} else if !utils.ArrayIsExistsStr(results, tfVarsFile) {
+			checkResult = append(checkResult, TplCheckResult{
+				TfVarError: "当前工作目录下.tfvars结尾文件不存在",
+			})
+		}
+	}
+	if playbook != "" {
+		searchForm := &forms.RepoFileSearchForm{
+			RepoId:       repoId,
+			RepoRevision: reporevision,
+			VcsId:        vcsId,
+			Workdir:      workDir,
+		}
+		results, err := VcsRepoFileSearch(c, searchForm, consts.PlaybookDir, consts.PlaybookMatch)
+		fmt.Println("走2222", results)
+		if err != nil {
+			return err, nil
+		}
+		if len(results) == 0 {
+			checkResult = append(checkResult, TplCheckResult{
+				PlayBookError: "当前工作目录下playbook文件不存在",
+			})
+		}
+		if !utils.ArrayIsExistsStr(results, playbook) {
+			checkResult = append(checkResult, TplCheckResult{
+				PlayBookError: "当前工作目录下playbook文件不存在",
+			})
+		}
+	}
+	return nil, checkResult
 }
 
 func setVcsRepoWebhook(c *ctx.ServiceContext, vcsId models.Id, repoId string, triggers pq.StringArray) error {
