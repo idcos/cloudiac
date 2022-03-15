@@ -111,6 +111,9 @@ func (e *Env) Migrate(sess *db.Session) (err error) {
 	if err = sess.ModifyModelColumn(&Env{}, "triggers"); err != nil {
 		return err
 	}
+	if err := sess.AddIndex("last_res_task_id_index", "last_res_task_id"); err != nil {
+		return err
+	}
 	return nil
 }
 

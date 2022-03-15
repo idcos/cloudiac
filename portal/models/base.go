@@ -90,6 +90,10 @@ func (AbstractModel) AddUniqueIndex(sess *db.Session, index string, columns ...s
 	return sess.AddUniqueIndex(index, columns...)
 }
 
+func (AbstractModel) AddIndex(sess *db.Session, index string, columns ...string) error {
+	return sess.AddIndex(index, columns...)
+}
+
 type BaseModel struct {
 	AbstractModel
 	Id Id `gorm:"size:32;primary_key" json:"id" example:"x-c3ek0co6n88ldvq1n6ag"` //ID

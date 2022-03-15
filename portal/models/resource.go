@@ -2,7 +2,10 @@
 
 package models
 
-import "database/sql/driver"
+import (
+	"cloudiac/portal/libs/db"
+	"database/sql/driver"
+)
 
 type ResAttrs map[string]interface{}
 
@@ -34,4 +37,12 @@ type Resource struct {
 
 func (Resource) TableName() string {
 	return "iac_resource"
+}
+
+func (r *Resource) Migrate(sess *db.Session) (err error) {
+	if err := r.AddIndex(sess,
+		"task_id_index", "task_id"); err != nil {
+		return err
+	}
+	return nil
 }

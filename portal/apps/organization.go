@@ -508,6 +508,8 @@ func SearchOrgResources(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm
 		query = query.Where("iac_resource.name Like ?", fmt.Sprintf("%%%s%%", form.Q))
 	} else if form.Module == "type" && form.Q != "" {
 		query = query.Where("iac_resource.type Like ?", fmt.Sprintf("%%%s%%", form.Q))
+	} else if form.Module == "content" && form.Q != "" {
+		query = query.Where("iac_resource.attrs Like ?", fmt.Sprintf("%%%s%%", form.Q))
 	}
 	if !c.IsSuperAdmin {
 		// 查一下当前用户属于哪些项目
