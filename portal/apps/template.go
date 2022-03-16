@@ -513,6 +513,14 @@ type TemplateChecksResp struct {
 	Reason      string `json:"reason"`
 }
 
+type TplCheckResult struct {
+	TfVars   TplCheckResultItem
+	Playbook TplCheckResultItem
+}
+type TplCheckResultItem struct {
+	Error string
+}
+
 func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (interface{}, e.Error) {
 
 	// 如果云模版名称传入，校验名称是否重复.
@@ -526,7 +534,6 @@ func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (inte
 			return nil, err
 		}
 	}
-
 	if form.Workdir != "" {
 		// 检查工作目录下.tf 文件是否存在
 		searchForm := &forms.RepoFileSearchForm{
@@ -543,9 +550,57 @@ func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (inte
 			return nil, e.New(e.TemplateWorkdirError, fmt.Errorf("no '%s' files", consts.TfFileMatch))
 		}
 	}
+
+	err, checkResult := CheckTemplateOrEnvConfig(c, form.TfVarsFile, form.Playbook, form.RepoId, form.RepoRevision, form.Workdir, form.VcsId)
+	if err != nil {
+		return nil, err
+	}
+	if checkResult.Playbook.Error != "" || checkResult.TfVars.Error != "" {
+		return checkResult, e.New(e.BadParam)
+	}
 	return TemplateChecksResp{
 		CheckResult: consts.TplTfCheckSuccess,
 	}, nil
+}
+
+func CheckTemplateOrEnvConfig(c *ctx.ServiceContext, tfVarsFile, playbook, repoId, reporevision, workDir string, vcsId models.Id) (e.Error, TplCheckResult) {
+	checkResult := TplCheckResult{}
+	if tfVarsFile != "" {
+		searchForm := &forms.RepoFileSearchForm{
+			RepoId:       repoId,
+			RepoRevision: reporevision,
+			VcsId:        vcsId,
+			Workdir:      workDir,
+		}
+		results, err := VcsRepoFileSearch(c, searchForm, "", consts.TfVarFileMatch)
+		if err != nil {
+			return err, checkResult
+		}
+		if len(results) == 0 {
+			checkResult.TfVars.Error = "Under the current working directory Tfvars end file does not exist"
+		} else if !utils.ArrayIsExistsStr(results, tfVarsFile) {
+			checkResult.TfVars.Error = "Under the current working directory Tfvars end file does not exist"
+		}
+	}
+	if playbook != "" {
+		searchForm := &forms.RepoFileSearchForm{
+			RepoId:       repoId,
+			RepoRevision: reporevision,
+			VcsId:        vcsId,
+			Workdir:      workDir,
+		}
+		results, err := VcsRepoFileSearch(c, searchForm, consts.PlaybookDir, consts.PlaybookMatch)
+		if err != nil {
+			return err, checkResult
+		}
+		if len(results) == 0 {
+			checkResult.Playbook.Error = "The playbook file in the current working directory does not exist"
+		}
+		if !utils.ArrayIsExistsStr(results, playbook) {
+			checkResult.Playbook.Error = "The playbook file in the current working directory does not exist"
+		}
+	}
+	return nil, checkResult
 }
 
 func setVcsRepoWebhook(c *ctx.ServiceContext, vcsId models.Id, repoId string, triggers pq.StringArray) error {
