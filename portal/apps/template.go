@@ -514,8 +514,11 @@ type TemplateChecksResp struct {
 }
 
 type TplCheckResult struct {
-	TfVarError    string `json:"tfVarError"`
-	PlayBookError string `json:"playBookError"`
+	TfVars   TplCheckResultItem
+	Playbook TplCheckResultItem
+}
+type TplCheckResultItem struct {
+	Error string
 }
 
 func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (interface{}, e.Error) {
@@ -552,7 +555,7 @@ func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (inte
 	if err != nil {
 		return nil, err
 	}
-	if len(checkResult) != 0 {
+	if checkResult.Playbook.Error != "" || checkResult.TfVars.Error != "" {
 		return checkResult, e.New(e.BadParam)
 	}
 	return TemplateChecksResp{
@@ -560,8 +563,8 @@ func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (inte
 	}, nil
 }
 
-func CheckTemplateOrEnvConfig(c *ctx.ServiceContext, tfVarsFile, playbook, repoId, reporevision, workDir string, vcsId models.Id) (e.Error, []TplCheckResult) {
-	checkResult := []TplCheckResult{}
+func CheckTemplateOrEnvConfig(c *ctx.ServiceContext, tfVarsFile, playbook, repoId, reporevision, workDir string, vcsId models.Id) (e.Error, TplCheckResult) {
+	checkResult := TplCheckResult{}
 	if tfVarsFile != "" {
 		searchForm := &forms.RepoFileSearchForm{
 			RepoId:       repoId,
@@ -570,18 +573,13 @@ func CheckTemplateOrEnvConfig(c *ctx.ServiceContext, tfVarsFile, playbook, repoI
 			Workdir:      workDir,
 		}
 		results, err := VcsRepoFileSearch(c, searchForm, "", consts.TfVarFileMatch)
-		fmt.Println("走2222", results)
 		if err != nil {
-			return err, nil
+			return err, checkResult
 		}
 		if len(results) == 0 {
-			checkResult = append(checkResult, TplCheckResult{
-				TfVarError: "当前工作目录下.tfvars结尾文件不存在",
-			})
+			checkResult.TfVars.Error = "Under the current working directory Tfvars end file does not exist"
 		} else if !utils.ArrayIsExistsStr(results, tfVarsFile) {
-			checkResult = append(checkResult, TplCheckResult{
-				TfVarError: "当前工作目录下.tfvars结尾文件不存在",
-			})
+			checkResult.TfVars.Error = "Under the current working directory Tfvars end file does not exist"
 		}
 	}
 	if playbook != "" {
@@ -592,19 +590,14 @@ func CheckTemplateOrEnvConfig(c *ctx.ServiceContext, tfVarsFile, playbook, repoI
 			Workdir:      workDir,
 		}
 		results, err := VcsRepoFileSearch(c, searchForm, consts.PlaybookDir, consts.PlaybookMatch)
-		fmt.Println("走2222", results)
 		if err != nil {
-			return err, nil
+			return err, checkResult
 		}
 		if len(results) == 0 {
-			checkResult = append(checkResult, TplCheckResult{
-				PlayBookError: "当前工作目录下playbook文件不存在",
-			})
+			checkResult.Playbook.Error = "The playbook file in the current working directory does not exist"
 		}
 		if !utils.ArrayIsExistsStr(results, playbook) {
-			checkResult = append(checkResult, TplCheckResult{
-				PlayBookError: "当前工作目录下playbook文件不存在",
-			})
+			checkResult.Playbook.Error = "The playbook file in the current working directory does not exist"
 		}
 	}
 	return nil, checkResult
