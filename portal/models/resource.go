@@ -3,7 +3,6 @@
 package models
 
 import (
-	"cloudiac/portal/libs/db"
 	"database/sql/driver"
 )
 
@@ -23,7 +22,7 @@ type Resource struct {
 	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
 	ProjectId Id `json:"projectId" gorm:"size:32;not null"`
 	EnvId     Id `json:"envId" gorm:"size:32;not null"`
-	TaskId    Id `json:"taskId" gorm:"size:32;not null"`
+	TaskId    Id `json:"taskId" gorm:"index;size:32;not null"`
 
 	Provider      string   `json:"provider" gorm:"not null"`
 	Module        string   `json:"module,omitempty" gorm:"not null;default:''"`
@@ -37,12 +36,4 @@ type Resource struct {
 
 func (Resource) TableName() string {
 	return "iac_resource"
-}
-
-func (r *Resource) Migrate(sess *db.Session) (err error) {
-	if err := r.AddIndex(sess,
-		"task_id_index", "task_id"); err != nil {
-		return err
-	}
-	return nil
 }

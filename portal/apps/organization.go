@@ -504,12 +504,8 @@ func SearchOrgResources(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm
 			"iac_resource.name as resource_name, iac_resource.task_id, iac_resource.project_id as project_id, " +
 			"iac_resource.env_id as env_id, iac_resource.provider, iac_resource.type, iac_resource.module")
 	query = query.Where("iac_env.org_id = ?", c.OrgId)
-	if form.Module == "name" && form.Q != "" {
-		query = query.Where("iac_resource.name Like ?", fmt.Sprintf("%%%s%%", form.Q))
-	} else if form.Module == "type" && form.Q != "" {
-		query = query.Where("iac_resource.type Like ?", fmt.Sprintf("%%%s%%", form.Q))
-	} else if form.Module == "content" && form.Q != "" {
-		query = query.Where("iac_resource.attrs Like ?", fmt.Sprintf("%%%s%%", form.Q))
+	if form.Q != "" {
+		query = query.Where("cancat(iac_resource.name, iac_resource.type, iac_resource.attrs) Like ?", fmt.Sprintf("%%%s%%", form.Q))
 	}
 	if !c.IsSuperAdmin {
 		// 查一下当前用户属于哪些项目

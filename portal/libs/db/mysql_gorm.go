@@ -75,19 +75,6 @@ func (s *Session) DropTable(table string) error {
 
 func (s *Session) AddUniqueIndex(indexName string, columns ...string) error {
 	stmt := s.db.Statement
-	if err := s.indexCheck(indexName); err != nil {
-		return err
-	}
-	err := s.db.Exec(fmt.Sprintf("CREATE UNIQUE INDEX `%s` ON `%s` (%s)",
-		indexName, stmt.Table, strings.Join(columns, ","))).Error
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *Session) indexCheck(indexName string) error {
-	stmt := s.db.Statement
 	if stmt.Model != nil {
 		if err := stmt.Parse(stmt.Model); err != nil {
 			return err
@@ -96,13 +83,9 @@ func (s *Session) indexCheck(indexName string) error {
 	if s.db.Migrator().HasIndex(stmt.Table, indexName) {
 		return nil
 	}
-	return nil
-}
-
-func (s *Session) AddIndex(indexName string, columns ...string) error {
-	stmt := s.db.Statement
-	if err := s.db.Exec(fmt.Sprintf("CREATE INDEX `%s` ON `%s` (%s)",
-		indexName, stmt.Table, strings.Join(columns, ","))).Error; err != nil {
+	err := s.db.Exec(fmt.Sprintf("CREATE UNIQUE INDEX `%s` ON `%s` (%s)",
+		indexName, stmt.Table, strings.Join(columns, ","))).Error
+	if err != nil {
 		return err
 	}
 	return nil

@@ -57,8 +57,8 @@ type Env struct {
 	Revision   string `json:"revision" gorm:"size:64;default:''"` // Vcs仓库分支/标签
 	KeyId      Id     `json:"keyId" gorm:"size:32"`               // 部署密钥ID
 
-	LastTaskId    Id `json:"lastTaskId" gorm:"size:32"`    // 最后一次部署或销毁任务的 id(plan 任务不记录)
-	LastResTaskId Id `json:"lastResTaskId" gorm:"size:32"` // 最后一次进行了资源列表统计的部署任务的 id
+	LastTaskId    Id `json:"lastTaskId" gorm:"size:32"`          // 最后一次部署或销毁任务的 id(plan 任务不记录)
+	LastResTaskId Id `json:"lastResTaskId" gorm:"index;size:32"` // 最后一次进行了资源列表统计的部署任务的 id
 
 	LastScanTaskId Id `json:"lastScanTaskId" gorm:"size:32"` // 最后一次策略扫描任务 id
 
@@ -109,9 +109,6 @@ func (e *Env) Migrate(sess *db.Session) (err error) {
 		return err
 	}
 	if err = sess.ModifyModelColumn(&Env{}, "triggers"); err != nil {
-		return err
-	}
-	if err := sess.AddIndex("last_res_task_id_index", "last_res_task_id"); err != nil {
 		return err
 	}
 	return nil

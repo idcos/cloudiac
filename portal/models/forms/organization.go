@@ -67,9 +67,7 @@ type InviteUserForm struct {
 
 type SearchOrgResourceForm struct {
 	PageForm
-
-	Module string `form:"module" json:"module" binding:"" enums:"name,type,content"` // 查询模式，选在通过资源名称或者资源类型进行查询
-	Q      string `form:"q" json:"q" binding:""`                                     // 资源名称，支持模糊查询
+	Q string `form:"q" json:"q" binding:""` // 资源名称，支持模糊查询
 }
 
 type InviteUsersBatchForm struct {
