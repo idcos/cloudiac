@@ -9,7 +9,6 @@ import (
 	"cloudiac/utils"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/consul/api"
 	"github.com/pkg/errors"
@@ -111,15 +110,29 @@ func RunnerSearch() ([]*api.AgentService, e.Error) {
 	if err != nil {
 		return nil, e.New(e.ConsulConnError, err)
 	}
-	//client.Catalog().ServiceMultipleTags()
+
+	checkes, _, err := client.Health().Checks(
+		common.RunnerServiceName,
+		&api.QueryOptions{
+			Filter: "Status==passing",
+		},
+	)
+	if err != nil {
+		return nil, e.New(e.ConsulConnError, err)
+	}
+	passingServices := make(map[string]struct{})
+	for _, c := range checkes {
+		passingServices[c.ServiceID] = struct{}{}
+	}
+
 	services, err := client.Agent().Services()
 	if err != nil {
 		return nil, e.New(e.ConsulConnError, err)
 	}
 
-	for serviceName := range services {
-		if strings.Contains(strings.ToLower(serviceName), "runner") {
-			resp = append(resp, services[serviceName])
+	for _, s := range services {
+		if _, ok := passingServices[s.ID]; ok && s.Service == common.RunnerServiceName {
+			resp = append(resp, s)
 		}
 	}
 
