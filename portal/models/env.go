@@ -56,6 +56,7 @@ type Env struct {
 	RunnerTags string `json:"runnerTags" gorm:"size:256"`         //部署通道Tags,逗号分割
 	Revision   string `json:"revision" gorm:"size:64;default:''"` // Vcs仓库分支/标签
 	KeyId      Id     `json:"keyId" gorm:"size:32"`               // 部署密钥ID
+	WorkDir    string `json:"workDir" gorm:"size:32;default:''"`  // 工作目录
 
 	LastTaskId    Id `json:"lastTaskId" gorm:"size:32"`    // 最后一次部署或销毁任务的 id(plan 任务不记录)
 	LastResTaskId Id `json:"lastResTaskId" gorm:"size:32"` // 最后一次进行了资源列表统计的部署任务的 id
