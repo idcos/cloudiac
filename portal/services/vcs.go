@@ -38,6 +38,20 @@ func UpdateVcs(tx *db.Session, id models.Id, attrs models.Attrs) (vcs *models.Vc
 	return
 }
 
+func VscTokenCheckByID(tx *db.Session, id models.Id, withNewToken string) error {
+	vcs, err := QueryVcsByVcsId(id, tx)
+	if err != nil {
+		return err
+	}
+	if len(withNewToken) != 0 {
+		vcs.VcsToken = withNewToken
+	}
+	if err := vcsrv.VerifyVcsToken(vcs); err != nil {
+		return err
+	}
+	return nil
+}
+
 func QueryVcs(orgId models.Id, status, q string, isShowdefaultVcs, isShowRegistryVcs bool, query *db.Session) *db.Session {
 	query = query.Model(&models.Vcs{}).Where("org_id = ? or org_id = ''", orgId)
 	if status != "" {

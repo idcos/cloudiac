@@ -69,6 +69,22 @@ func (git *gitlabVcsIface) UserInfo() (UserInfo, error) {
 	return UserInfo{}, nil
 }
 
+func (git *gitlabVcsIface) TokenCheck() error {
+	opt := &gitlab.ListProjectsOptions{}
+	opt.Page = utils.LimitOffset2Page(1, 1)
+
+	_, response, err := git.gitConn.Projects.ListProjects(opt)
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode > 300 {
+		return e.New(e.VcsInvalidToken, fmt.Sprintf("token valid check response code: %d", response.StatusCode))
+	}
+
+	return nil
+}
+
 type gitlabRepoIface struct {
 	gitConn *gitlab.Client
 	Project *gitlab.Project

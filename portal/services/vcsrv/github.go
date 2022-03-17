@@ -116,6 +116,26 @@ func (github *githubVcs) UserInfo() (UserInfo, error) {
 	return UserInfo{}, nil
 }
 
+func (github *githubVcs) TokenCheck() error {
+	limit, offset := 1, 1
+	page := utils.LimitOffset2Page(limit, offset)
+	urlParam := url.Values{}
+	urlParam.Set("page", strconv.Itoa(page))
+	urlParam.Set("per_page", strconv.Itoa(limit))
+
+	path := utils.GenQueryURL(github.vcs.Address, "/user/repos", urlParam)
+	response, _, err := githubRequest(path, "GET", github.vcs.VcsToken, nil)
+	if err != nil {
+		return e.New(e.BadRequest, err)
+	}
+
+	if response.StatusCode > 300 {
+		return e.New(e.VcsInvalidToken, fmt.Sprintf("token valid check response code: %d", response.StatusCode))
+	}
+
+	return nil
+}
+
 type githubRepoIface struct {
 	vcs        *models.Vcs
 	repository *RepositoryGithub
