@@ -6,13 +6,16 @@ replace github.com/google/flatbuffers v1.12.0 => github.com/google/flatbuffers v
 
 require (
 	github.com/Masterminds/semver v1.5.0
+	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/Shopify/sarama v1.28.0
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
+	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/armon/go-metrics v0.3.10 // indirect
 	github.com/casbin/casbin/v2 v2.31.9
 	github.com/containerd/containerd v1.5.5 // indirect
 	github.com/docker/docker v20.10.7+incompatible
+	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/elazarl/goproxy v0.0.0-20210801061803-8e322dfb79c4 // indirect
 	github.com/fatih/color v1.13.0
 	github.com/frankban/quicktest v1.14.0 // indirect
@@ -23,6 +26,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.0
 	github.com/go-playground/validator/v10 v10.10.0
 	github.com/go-sql-driver/mysql v1.6.0
+	github.com/go-test/deep v1.0.7 // indirect
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/golang-jwt/jwt/v4 v4.3.0
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -30,8 +34,8 @@ require (
 	github.com/google/go-cmp v0.5.7 // indirect
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/gorilla/websocket v1.4.2
-	github.com/gruntwork-io/terratest v0.40.6
 	github.com/hashicorp/consul/api v1.12.0
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-hclog v1.0.0 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -43,6 +47,7 @@ require (
 	github.com/joho/godotenv v1.3.0
 	github.com/jonboulle/clockwork v0.2.2 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
 	github.com/lestrrat-go/strftime v1.0.4 // indirect
 	github.com/lib/pq v1.10.4
@@ -50,8 +55,10 @@ require (
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-sqlite3 v2.0.1+incompatible // indirect
 	github.com/mitchellh/go-homedir v1.1.0
+	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
+	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/open-policy-agent/opa v0.32.0
 	github.com/parnurzeal/gorequest v0.2.16
 	github.com/pkg/errors v0.9.1
@@ -64,6 +71,7 @@ require (
 	github.com/swaggo/swag v1.7.9
 	github.com/unliar/utils v0.1.1
 	github.com/xanzy/go-gitlab v0.47.0
+	github.com/zclconf/go-cty v1.9.1 // indirect
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/sys v0.0.0-20220111092808-5a964db01320 // indirect

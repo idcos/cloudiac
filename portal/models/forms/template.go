@@ -129,4 +129,6 @@ type TemplateChecksForm struct {
 	VcsId        models.Id `json:"vcsId" form:"vcsId"`
 	Workdir      string    `json:"workdir" form:"workdir"`
 	TemplateId   models.Id `json:"templateId" form:"templateId"`
+	TfVarsFile   string    `json:"tfVarsFile" form:"tfVarsFile"`
+	Playbook     string    `json:"playbook" form:"playbook"`
 }
