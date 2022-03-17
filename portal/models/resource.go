@@ -2,7 +2,9 @@
 
 package models
 
-import "database/sql/driver"
+import (
+	"database/sql/driver"
+)
 
 type ResAttrs map[string]interface{}
 
@@ -20,7 +22,7 @@ type Resource struct {
 	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
 	ProjectId Id `json:"projectId" gorm:"size:32;not null"`
 	EnvId     Id `json:"envId" gorm:"size:32;not null"`
-	TaskId    Id `json:"taskId" gorm:"size:32;not null"`
+	TaskId    Id `json:"taskId" gorm:"index;size:32;not null"`
 
 	Provider      string   `json:"provider" gorm:"not null"`
 	Module        string   `json:"module,omitempty" gorm:"not null;default:''"`
