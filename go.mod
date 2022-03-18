@@ -5,12 +5,13 @@ go 1.16
 replace github.com/google/flatbuffers v1.12.0 => github.com/google/flatbuffers v1.12.1
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.0 // indirect
 	github.com/Masterminds/semver v1.5.0
 	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/Shopify/sarama v1.28.0
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
-	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
+	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/armon/go-metrics v0.3.10 // indirect
 	github.com/casbin/casbin/v2 v2.31.9
 	github.com/containerd/containerd v1.5.5 // indirect
@@ -42,6 +43,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/hcl/v2 v2.10.0
+	github.com/iancoleman/strcase v0.2.0 // indirect
 	github.com/itchyny/gojq v0.12.6
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/joho/godotenv v1.3.0
