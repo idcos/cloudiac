@@ -372,7 +372,7 @@ func (m *TaskManager) processPendingTask(ctx context.Context) {
 		}
 
 		if err := m.runTask(ctx, task); err != nil {
-			if errors.Is(err, errHasRunningTask)  {
+			if errors.Is(err, errHasRunningTask) {
 				continue
 			} else {
 				logger.WithField("taskId", task.GetId()).Errorf("run task error: %s", err)
@@ -553,7 +553,7 @@ func (m *TaskManager) processStartStep(
 
 	if runErr != nil {
 		logger.Infof("run task step err: %v", runErr)
-		if errors.Is(runErr, ErrTaskStepRejected)  {
+		if errors.Is(runErr, ErrTaskStepRejected) {
 			return nil, runErr
 		}
 
@@ -655,7 +655,7 @@ func (m *TaskManager) processTaskDone(taskId models.Id) { //nolint:cyclop
 		return
 	}
 
-	if err := StopTaskContainers(dbSess, task.Id); err != nil {
+	if err := StopTaskContainers(dbSess, task.Id, task.EnvId); err != nil {
 		logger.Warnf("stop task container: %v", err)
 	}
 
@@ -1158,7 +1158,7 @@ func (m *TaskManager) processScanTaskDone(taskId models.Id) {
 		return
 	}
 
-	if err := StopScanTaskContainers(dbSess, task.Id); err != nil {
+	if err := StopScanTaskContainers(dbSess, task.Id, task.EnvId); err != nil {
 		logger.Warnf("stop task container: %v", err)
 	}
 

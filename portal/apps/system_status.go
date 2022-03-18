@@ -4,8 +4,11 @@ package apps
 
 import (
 	"cloudiac/portal/consts/e"
+	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
+	"fmt"
+	"net/http"
 )
 
 type SystemStatusResp struct {
@@ -23,6 +26,10 @@ type SystemStatusResp struct {
 	//Passing  uint64 `json:"passing" form:"passing" `
 	//Critical uint64 `json:"critical" form:"critical" `
 	//Warn     uint64 `json:"warn" form:"warn" `
+}
+
+type RunnerTagsResp struct {
+	Tags []string `json:"tags"`
 }
 
 func SystemStatusSearch() (interface{}, e.Error) {
@@ -77,7 +84,12 @@ func RunnerSearch() (interface{}, e.Error) {
 	return services.RunnerSearch()
 }
 
-func ConsulTagUpdate(form forms.ConsulTagUpdateForm) (interface{}, e.Error) {
+func ConsulTagUpdate(c *ctx.ServiceContext, form forms.ConsulTagUpdateForm) (interface{}, e.Error) {
+	// 检查是否有修改tags的权限
+	if !c.IsSuperAdmin {
+		return nil, e.New(e.PermissionDeny, fmt.Errorf("super admin required"), http.StatusForbidden)
+	}
+
 	//将修改后的tag存到consul中
 	if err := services.ConsulKVSave(form.ServiceId, form.Tags); err != nil {
 		return nil, err
@@ -92,4 +104,15 @@ func ConsulTagUpdate(form forms.ConsulTagUpdateForm) (interface{}, e.Error) {
 		return nil, err
 	}
 	return nil, nil
+}
+
+func RunnerTags() (interface{}, e.Error) {
+	tags, err := services.SystemRunnerTags()
+	if err != nil {
+		return nil, err
+	}
+
+	return &RunnerTagsResp{
+		Tags: tags,
+	}, nil
 }
