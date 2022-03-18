@@ -81,7 +81,7 @@ func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (vcs *models.Vc
 		if err := services.VscTokenCheckByID(c.DB(), form.Id, vcsToken); err != nil {
 			return nil, e.AutoNew(err, e.VcsInvalidToken)
 		}
-		attrs["vcs_Token"] = vcsToken
+		attrs["vcs_token"] = vcsToken
 	}
 	return services.UpdateVcs(c.DB(), form.Id, attrs)
 }
