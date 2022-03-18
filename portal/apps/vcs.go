@@ -36,14 +36,8 @@ func CreateVcs(c *ctx.ServiceContext, form *forms.CreateVcsForm) (interface{}, e
 	if err := vcsrv.VerifyVcsToken(&v); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
-	vcs, err := services.CreateVcs(c.DB(), models.Vcs{
-		OrgId:    c.OrgId,
-		Name:     form.Name,
-		VcsType:  form.VcsType,
-		Address:  form.Address,
-		VcsToken: token,
-	})
 
+	vcs, err := services.CreateVcs(c.DB(), v)
 	if err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
@@ -80,14 +74,14 @@ func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (vcs *models.Vc
 	setAttrIfExist("vcsType", form.VcsType)
 	setAttrIfExist("address", form.Address)
 	if form.HasKey("vcsToken") && form.VcsToken != "" {
-		token, err := utils.EncryptSecretVar(form.VcsToken)
+		vcsToken, err := utils.EncryptSecretVar(form.VcsToken)
 		if err != nil {
 			return nil, e.New(e.VcsError, err)
 		}
-		if err := services.VscTokenCheckByID(c.DB(), form.Id, token); err != nil {
+		if err := services.VscTokenCheckByID(c.DB(), form.Id, vcsToken); err != nil {
 			return nil, e.AutoNew(err, e.VcsInvalidToken)
 		}
-		attrs["vcs_Token"] = token
+		attrs["vcs_Token"] = vcsToken
 	}
 	return services.UpdateVcs(c.DB(), form.Id, attrs)
 }
