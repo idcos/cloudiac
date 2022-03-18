@@ -10,7 +10,6 @@ import (
 	"cloudiac/portal/web/middleware"
 	"database/sql/driver"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -78,25 +77,19 @@ func userKeys() []string {
 func userVals() ([]string, []driver.Value) {
 	u := models.User{}
 	json.Unmarshal([]byte(userJson), &u)
+
 	ps := reflect.ValueOf(u)
-	fmt.Printf("ps: %v\n", ps)
 
 	keys := userKeys()
-	fmt.Printf("keys s: %v\n", keys)
 	var vals []driver.Value
+
 	for _, k := range keys {
-		fmt.Printf("key %s\n", k)
-
 		f := ps.FieldByName(strcase.ToCamel(k))
-
 		if !f.IsValid() {
 			vals = append(vals, nil)
 		} else {
 			vals = append(vals, f.Interface())
 		}
-		fmt.Printf("xxx")
-		fmt.Printf("%s: %v\n", k, f)
-		// vals = append(vals, f.Interface())
 	}
 	return keys, vals
 }
