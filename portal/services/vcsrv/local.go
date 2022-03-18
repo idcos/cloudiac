@@ -86,6 +86,10 @@ func (l *LocalVcs) UserInfo() (UserInfo, error) {
 	return UserInfo{}, nil
 }
 
+func (l *LocalVcs) TokenCheck() error {
+	return nil
+}
+
 type LocalRepo struct {
 	absPath string // 文件系统中的绝对路径
 	path    string // vcs 下的相对路径

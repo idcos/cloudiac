@@ -26,14 +26,18 @@ func CreateVcs(c *ctx.ServiceContext, form *forms.CreateVcsForm) (interface{}, e
 	if err != nil {
 		return nil, e.New(e.VcsError, err)
 	}
-	vcs, err := services.CreateVcs(c.DB(), models.Vcs{
+	v := models.Vcs{
 		OrgId:    c.OrgId,
 		Name:     form.Name,
 		VcsType:  form.VcsType,
 		Address:  form.Address,
 		VcsToken: token,
-	})
+	}
+	if err := vcsrv.VerifyVcsToken(&v); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
 
+	vcs, err := services.CreateVcs(c.DB(), v)
 	if err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
@@ -59,24 +63,25 @@ func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (vcs *models.Vc
 		return nil, err
 	}
 	attrs := models.Attrs{}
-	if form.HasKey("status") {
-		attrs["status"] = form.Status
+
+	setAttrIfExist := func(k, v string) {
+		if form.HasKey(k) {
+			attrs[k] = v
+		}
 	}
-	if form.HasKey("name") {
-		attrs["name"] = form.Name
-	}
-	if form.HasKey("vcsType") {
-		attrs["vcsType"] = form.VcsType
-	}
-	if form.HasKey("address") {
-		attrs["address"] = form.Address
-	}
+	setAttrIfExist("status", form.Status)
+	setAttrIfExist("name", form.Name)
+	setAttrIfExist("vcsType", form.VcsType)
+	setAttrIfExist("address", form.Address)
 	if form.HasKey("vcsToken") && form.VcsToken != "" {
-		token, err := utils.EncryptSecretVar(form.VcsToken)
+		vcsToken, err := utils.EncryptSecretVar(form.VcsToken)
 		if err != nil {
 			return nil, e.New(e.VcsError, err)
 		}
-		attrs["vcsToken"] = token
+		if err := services.VscTokenCheckByID(c.DB(), form.Id, vcsToken); err != nil {
+			return nil, e.AutoNew(err, e.VcsInvalidToken)
+		}
+		attrs["vcs_token"] = vcsToken
 	}
 	return services.UpdateVcs(c.DB(), form.Id, attrs)
 }

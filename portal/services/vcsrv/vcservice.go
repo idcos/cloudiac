@@ -56,6 +56,9 @@ type VcsIface interface {
 
 	// UserInfo 获取用户信息
 	UserInfo() (UserInfo, error)
+
+	// TokenCheck 检查 token 是否有效
+	TokenCheck() error
 }
 
 type RepoIface interface {
@@ -256,4 +259,12 @@ func GetUser(vcs *models.Vcs) (UserInfo, error) {
 		return UserInfo{}, err
 	}
 	return v.UserInfo()
+}
+
+func VerifyVcsToken(vcs *models.Vcs) error {
+	git, err := GetVcsInstance(vcs)
+	if err != nil {
+		return err
+	}
+	return git.TokenCheck()
 }
