@@ -49,7 +49,7 @@ markdown_extensions:
 
 nav:
   - "产品介绍": 
-    - "产品介绍": intro/product-intro.md
+    - "产品概述": index.md
     - "功能特性": intro/product-features.md
     - "产品优势": intro/product-advantage.md
     - "产品构架": intro/product-architecture.md
