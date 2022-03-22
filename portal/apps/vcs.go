@@ -33,7 +33,7 @@ func CreateVcs(c *ctx.ServiceContext, form *forms.CreateVcsForm) (interface{}, e
 		Address:  form.Address,
 		VcsToken: token,
 	}
-	if err := vcsrv.VerifyVcsToken(&v); err != nil {
+	if err := vcsrv.VerifyVcsToken(v); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 

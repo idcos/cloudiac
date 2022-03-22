@@ -46,7 +46,7 @@ func VscTokenCheckByID(tx *db.Session, id models.Id, withNewToken string) error 
 	if len(withNewToken) != 0 {
 		vcs.VcsToken = withNewToken
 	}
-	if err := vcsrv.VerifyVcsToken(vcs); err != nil {
+	if err := vcsrv.VerifyVcsToken(*vcs); err != nil {
 		return err
 	}
 	return nil

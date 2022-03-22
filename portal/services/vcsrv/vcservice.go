@@ -261,8 +261,8 @@ func GetUser(vcs *models.Vcs) (UserInfo, error) {
 	return v.UserInfo()
 }
 
-func VerifyVcsToken(vcs *models.Vcs) error {
-	git, err := GetVcsInstance(vcs)
+func VerifyVcsToken(vcs models.Vcs) error {
+	git, err := GetVcsInstance(&vcs)
 	if err != nil {
 		return err
 	}
