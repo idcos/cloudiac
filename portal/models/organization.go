@@ -32,8 +32,3 @@ func (Organization) TableName() string {
 func (o Organization) Migrate(sess *db.Session) (err error) {
 	return nil
 }
-
-type OrgDetailResp struct {
-	Organization
-	Creator string `json:"creator" example:"研发部负责人"` // 创建人名称
-}

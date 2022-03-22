@@ -23,7 +23,7 @@ type ProjectUser struct {
 // @Param IaC-Org-Id header string true "组织id"
 // @Param IaC-Project-Id header string true "项目id"
 // @Param json body forms.CreateProjectUserForm true "parameter"
-// @Success 200 {object}  ctx.JSONResult{result=models.Project}
+// @Success 200 {object}  ctx.JSONResult
 // @Router /projects/users [post]
 func (ProjectUser) Create(c *ctx.GinRequest) {
 	form := &forms.CreateProjectUserForm{}
@@ -42,7 +42,7 @@ func (ProjectUser) Create(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
 // @Param IaC-Project-Id header string true "项目id"
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Project}}
+// @Success 200 {object} ctx.JSONResult{result=[]resps.UserWithRoleResp}
 // @Router /projects/users [get]
 func (ProjectUser) Search(c *ctx.GinRequest) {
 	c.JSONResult(apps.SearchProjectUser(c.Service()))
@@ -59,7 +59,7 @@ func (ProjectUser) Search(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string true "项目id"
 // @Param id path string true "用户项目id"
 // @Param request body forms.UpdateProjectUserForm true "用户授权"
-// @Success 200 {object} ctx.JSONResult{result=models.Project}
+// @Success 200 {object} ctx.JSONResult
 // @Router /projects/users/{id}  [put]
 func (ProjectUser) Update(c *ctx.GinRequest) {
 	form := &forms.UpdateProjectUserForm{}
@@ -79,7 +79,7 @@ func (ProjectUser) Update(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织id"
 // @Param IaC-Project-Id header string true "项目id"
 // @Param id path string true "用户id"
-// @Success 200
+// @Success 200 {object} ctx.JSONResult
 // @Router /projects/users/{id} [delete]
 func (ProjectUser) Delete(c *ctx.GinRequest) {
 	form := &forms.DeleteProjectOrgUserForm{}
@@ -99,7 +99,7 @@ func (ProjectUser) Delete(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织id"
 // @Param IaC-Project-Id header string true "项目id"
 // @Param request body forms.SearchProjectAuthorizationUserForm true "用户授权"
-// @Success 200
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.UserWithRoleResp}}
 // @Router /projects/authorization/users [get]
 func (ProjectUser) SearchProjectAuthorizationUser(c *ctx.GinRequest) {
 	form := &forms.SearchProjectAuthorizationUserForm{}

@@ -9,6 +9,7 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services/logstorage"
 	"cloudiac/portal/services/notificationrc"
 	"cloudiac/portal/services/vcsrv"
@@ -545,7 +546,7 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 
 // 当任务变为退出状态时执行的操作·
 func taskStatusExitedCall(dbSess *db.Session, task *models.Task, status string) {
-	if task.Type == common.TaskTypeApply || task.Type == common.TaskTypeDestroy{
+	if task.Type == common.TaskTypeApply || task.Type == common.TaskTypeDestroy {
 		// 回调的消息通知只发送一次, 作业结束后发送通知
 		if !configs.Get().Kafka.Disabled {
 			SendKafkaMessage(dbSess, task, status)
@@ -713,28 +714,8 @@ func UnmarshalPlanJson(bs []byte) (*TfPlan, error) {
 	return &plan, err
 }
 
-type TSResource struct {
-	Id         string `json:"id"`
-	Name       string `json:"name"`
-	ModuleName string `json:"module_name"`
-	Source     string `json:"source"`
-	PlanRoot   string `json:"plan_root"`
-	Line       int    `json:"line"`
-	Type       string `json:"type"`
-
-	Config map[string]interface{} `json:"config"`
-
-	SkipRules   *bool  `json:"skip_rules"`
-	MaxSeverity string `json:"max_severity"`
-	MinSeverity string `json:"min_severity"`
-}
-
-type TSResources []TSResource
-
-type TfParse map[string]TSResources
-
-func UnmarshalTfParseJson(bs []byte) (*TfParse, error) {
-	js := TfParse{}
+func UnmarshalTfParseJson(bs []byte) (*resps.TfParse, error) {
+	js := resps.TfParse{}
 	err := json.Unmarshal(bs, &js)
 	return &js, err
 }

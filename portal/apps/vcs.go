@@ -9,6 +9,7 @@ import (
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
@@ -184,11 +185,7 @@ func ListRepos(c *ctx.ServiceContext, form *forms.GetGitProjectsForm) (interface
 	}, nil
 }
 
-type Revision struct {
-	Name string `json:"name"`
-}
-
-func listRepoRevision(c *ctx.ServiceContext, form *forms.GetGitRevisionForm, revisionType string) (revision []*Revision, err e.Error) {
+func listRepoRevision(c *ctx.ServiceContext, form *forms.GetGitRevisionForm, revisionType string) (revision []*resps.Revision, err e.Error) {
 	vcs, err := checkOrgVcsAuth(c, form.Id)
 	if err != nil {
 		return nil, err
@@ -212,19 +209,19 @@ func listRepoRevision(c *ctx.ServiceContext, form *forms.GetGitRevisionForm, rev
 		return nil, e.New(e.VcsError, er)
 	}
 
-	revision = make([]*Revision, 0)
+	revision = make([]*resps.Revision, 0)
 	for _, v := range revisionList {
-		revision = append(revision, &Revision{v})
+		revision = append(revision, &resps.Revision{Name: v})
 	}
 	return revision, nil
 }
 
-func ListRepoBranches(c *ctx.ServiceContext, form *forms.GetGitRevisionForm) (brans []*Revision, err e.Error) {
+func ListRepoBranches(c *ctx.ServiceContext, form *forms.GetGitRevisionForm) (brans []*resps.Revision, err e.Error) {
 	brans, err = listRepoRevision(c, form, "branches")
 	return brans, err
 }
 
-func ListRepoTags(c *ctx.ServiceContext, form *forms.GetGitRevisionForm) (tags []*Revision, err e.Error) {
+func ListRepoTags(c *ctx.ServiceContext, form *forms.GetGitRevisionForm) (tags []*resps.Revision, err e.Error) {
 	tags, err = listRepoRevision(c, form, "tags")
 	return tags, err
 

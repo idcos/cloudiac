@@ -100,7 +100,7 @@ func (Token) Delete(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param data body forms.VcsWebhookUrlForm true "DeleteTokenForm信息"
-// @Success 200 {object} ctx.JSONResult{result=models.Token}
+// @Success 200 {object} ctx.JSONResult{}
 // @Router /vcs/webhook [get]
 func (Token) VcsWebhookUrl(c *ctx.GinRequest) {
 	form := &forms.VcsWebhookUrlForm{}
@@ -110,6 +110,7 @@ func (Token) VcsWebhookUrl(c *ctx.GinRequest) {
 	c.JSONResult(apps.VcsWebhookUrl(c.Service(), form))
 }
 
+//todo swagger文档缺失
 func ApiTriggerHandler(c *ctx.GinRequest) {
 	form := forms.ApiTriggerHandler{}
 	if err := c.Bind(&form); err != nil {
