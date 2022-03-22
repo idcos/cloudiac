@@ -13,6 +13,8 @@ type ResourceAccount struct {
 	ctrl.GinController
 }
 
+//todo swagger 文档缺失
+
 func (ResourceAccount) Search(c *ctx.GinRequest) {
 	form := &forms.SearchResourceAccountForm{}
 	if err := c.Bind(form); err != nil {

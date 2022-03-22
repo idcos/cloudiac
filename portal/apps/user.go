@@ -11,6 +11,7 @@ import (
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
@@ -21,10 +22,6 @@ import (
 )
 
 // CreateUserResp 创建用户返回结果，带上初始化的随机密码
-type CreateUserResp struct {
-	*models.User
-	InitPass string `json:"initPass,omitempty" example:"rANd0m"` // 初始化密码
-}
 
 var (
 	emailSubjectCreateUser = "注册用户成功通知"
@@ -84,7 +81,7 @@ func createUserOrgRel(tx *db.Session, orgId models.Id, initPass string, form *fo
 }
 
 // CreateUser 创建用户
-func CreateUser(c *ctx.ServiceContext, form *forms.CreateUserForm) (*CreateUserResp, e.Error) {
+func CreateUser(c *ctx.ServiceContext, form *forms.CreateUserForm) (*resps.CreateUserResp, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create user %s", form.Name))
 
 	tx := c.Tx()
@@ -109,7 +106,7 @@ func CreateUser(c *ctx.ServiceContext, form *forms.CreateUserForm) (*CreateUserR
 	}
 
 	// 返回用户信息和初始化密码
-	resp := CreateUserResp{
+	resp := resps.CreateUserResp{
 		User:     user,
 		InitPass: initPass,
 	}
@@ -211,7 +208,7 @@ func SearchUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{},
 	}
 
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	users := make([]*models.UserWithRoleResp, 0)
+	users := make([]*resps.UserWithRoleResp, 0)
 	if err := p.Scan(&users); err != nil {
 		c.Logger().Errorf("error get users, err %s", err)
 		return nil, e.New(e.DBError, err)
@@ -365,7 +362,7 @@ func queryByOrgAndProject(db, query *db.Session, userId, orgId, projectId, input
 	return query, nil
 }
 
-func setUserRole(detail *models.UserWithRoleResp, userId, orgId, projectId models.Id, isSuperAdmin bool) {
+func setUserRole(detail *resps.UserWithRoleResp, userId, orgId, projectId models.Id, isSuperAdmin bool) {
 	if isSuperAdmin {
 		// 如果是平台管理员，自动拥有组织管理员权限和项目管理者权限
 		if orgId != "" {
@@ -383,7 +380,7 @@ func setUserRole(detail *models.UserWithRoleResp, userId, orgId, projectId model
 }
 
 // UserDetail 获取单个用户详情
-func UserDetail(c *ctx.ServiceContext, userId models.Id) (*models.UserWithRoleResp, e.Error) {
+func UserDetail(c *ctx.ServiceContext, userId models.Id) (*resps.UserWithRoleResp, e.Error) {
 	query := c.DB()
 	query, err := queryByOrgAndProject(c.DB(), query, c.UserId, c.OrgId, c.ProjectId, userId, c.IsSuperAdmin)
 	if err != nil {

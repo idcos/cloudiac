@@ -18,7 +18,7 @@ import (
 // @Param json body forms.UpdatePolicySuppressForm true "parameter"
 // @Param policyId path string true "策略id"
 // @Router /policies/{policyId}/suppress [post]
-// @Success 200 {object} ctx.JSONResult
+// @Success 200 {object} ctx.JSONResult{result=models.PolicySuppress}
 func (Policy) UpdatePolicySuppress(c *ctx.GinRequest) {
 	form := &forms.UpdatePolicySuppressForm{}
 	if err := c.Bind(form); err != nil {
@@ -56,7 +56,7 @@ func (Policy) DeletePolicySuppress(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param policyId path string true "策略id"
 // @Router /policies/{policyId}/suppress [get]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.PolicySuppressResp}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.PolicySuppressResp}}
 func (Policy) SearchPolicySuppress(c *ctx.GinRequest) {
 	form := &forms.SearchPolicySuppressForm{}
 	if err := c.Bind(form); err != nil {
@@ -76,7 +76,7 @@ func (Policy) SearchPolicySuppress(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param policyId path string true "策略id"
 // @Router /policies/{policyId}/suppress/sources [get]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.PolicySuppressSourceResp}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.PolicySuppressSourceResp}}
 func (Policy) SearchPolicySuppressSource(c *ctx.GinRequest) {
 	form := &forms.SearchPolicySuppressSourceForm{}
 	if err := c.Bind(form); err != nil {

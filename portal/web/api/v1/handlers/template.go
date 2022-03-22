@@ -49,7 +49,7 @@ func (Template) Create(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param form query forms.SearchTemplateForm true "parameter"
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.SearchTemplateResp}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.SearchTemplateResp}}
 // @Router /templates [get]
 func (Template) Search(c *ctx.GinRequest) {
 	form := forms.SearchTemplateForm{}
@@ -110,7 +110,7 @@ func (Template) Delete(c *ctx.GinRequest) {
 // @Param templateId path string true "云模板ID"
 // @Param form query forms.DetailTemplateForm true "parameter"
 // @Router /templates/{templateId} [get]
-// @Success 200 {object} ctx.JSONResult{result=models.Template}
+// @Success 200 {object} ctx.JSONResult{result=resps.TemplateDetailResp}
 func (Template) Detail(c *ctx.GinRequest) {
 	form := forms.DetailTemplateForm{}
 	if err := c.Bind(&form); err != nil {
@@ -130,7 +130,7 @@ func (Template) Detail(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param form query forms.RepoFileSearchForm true "parameter"
 // @Router /vcs/{vcsId}/repos/tfvars  [get]
-// @Success 200 {object} ctx.JSONResult{result=[]vcsrv.VcsIfaceOptions}
+// @Success 200 {object} ctx.JSONResult{result=[]string}
 func TemplateTfvarsSearch(c *ctx.GinRequest) {
 	form := forms.RepoFileSearchForm{}
 	if err := c.Bind(&form); err != nil {
@@ -166,7 +166,7 @@ func TemplateVariableSearch(c *ctx.GinRequest) {
 // @Param form query forms.RepoFileSearchForm true "parameter"
 // @Param vcsId path string true "vcs地址iD"
 // @router /vcs/{vcsId}/repos/playbook [get]
-// @Success 200 {object} ctx.JSONResult{result=[]vcsrv.VcsIfaceOptions}
+// @Success 200 {object} ctx.JSONResult{result=[]string}
 func TemplatePlaybookSearch(c *ctx.GinRequest) {
 	form := forms.RepoFileSearchForm{}
 	if err := c.Bind(&form); err != nil {
@@ -182,7 +182,7 @@ func TemplatePlaybookSearch(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @router /templates/tfversions [get]
-// @Success 200 {object} []string
+// @Success 200 {object} ctx.JSONResult{result=[]string}
 func TemplateTfVersionSearch(c *ctx.GinRequest) {
 	c.JSONResult(common.TerraformVersions, nil)
 }
@@ -196,7 +196,7 @@ func TemplateTfVersionSearch(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param form query forms.TemplateTfVersionSearchForm true "parameter"
 // @router /templates/autotfversion [GET]
-// @Success 200 {object} string
+// @Success 200 {object} ctx.JSONResult{result=string}
 func AutoTemplateTfVersionChoice(c *ctx.GinRequest) {
 	form := forms.TemplateTfVersionSearchForm{}
 	if err := c.Bind(&form); err != nil {
@@ -207,7 +207,7 @@ func AutoTemplateTfVersionChoice(c *ctx.GinRequest) {
 
 // TemplateChecks
 // @Tags 云模板
-// @Accept multipart/form-data
+// @Accept multipart/form-data, application/json
 // @Accept application/x-www-form-urlencoded
 // @Summary 创建云模版前检查名称是否重复和工作目录是否正确
 // @Param IaC-Org-Id header string true "组织ID"
@@ -215,7 +215,7 @@ func AutoTemplateTfVersionChoice(c *ctx.GinRequest) {
 // @Param form query forms.TemplateTfVersionSearchForm true "parameter"
 // @router /templates/checks [POST]
 // @Param form query forms.TemplateChecksForm true "parameter"
-// @Success 200 {object} ctx.JSONResult{result=apps.TemplateChecksResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.TemplateChecksResp}
 func TemplateChecks(c *ctx.GinRequest) {
 	form := forms.TemplateChecksForm{}
 	if err := c.Bind(&form); err != nil {

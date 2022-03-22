@@ -11,6 +11,7 @@ import (
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
@@ -100,18 +101,11 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 	return group, nil
 }
 
-type PolicyGroupResp struct {
-	models.PolicyGroup
-	PolicyCount uint     `json:"policyCount" example:"10"`
-	RelCount    uint     `json:"relCount"`
-	Labels      []string `json:"labels" gorm:"-"`
-}
-
 // SearchPolicyGroup 查询策略组列表
 func SearchPolicyGroup(c *ctx.ServiceContext, form *forms.SearchPolicyGroupForm) (interface{}, e.Error) {
 	query := services.QueryWithOrgId(c.DB(), c.OrgId)
 	query = services.SearchPolicyGroup(query, c.OrgId, form.Q)
-	policyGroupResps := make([]PolicyGroupResp, 0)
+	policyGroupResps := make([]resps.PolicyGroupResp, 0)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	if err := p.Scan(&policyGroupResps); err != nil {
 		return nil, e.New(e.DBError, err)
@@ -288,7 +282,7 @@ func DetailPolicyGroup(c *ctx.ServiceContext, form *forms.DetailPolicyGroupForm)
 		labels = strings.Split(pg.Label, ",")
 	}
 
-	return PolicyGroupResp{
+	return resps.PolicyGroupResp{
 		PolicyGroup: *pg,
 		Labels:      labels,
 	}, nil
@@ -353,16 +347,6 @@ func OpPolicyAndPolicyGroupRel(c *ctx.ServiceContext, form *forms.OpnPolicyAndPo
 	return nil, nil
 }
 
-type LastScanTaskResp struct {
-	models.ScanTask
-	TargetName  string `json:"targetName"`  // 检查目标
-	TargetType  string `json:"targetType"`  // 目标类型：环境/模板
-	OrgName     string `json:"orgName"`     // 组织名称
-	ProjectName string `json:"projectName"` // 项目
-	Creator     string `json:"creator"`     // 创建者
-	Summary
-}
-
 func PolicyGroupScanTasks(c *ctx.ServiceContext, form *forms.PolicyLastTasksForm) (interface{}, e.Error) {
 	query := services.GetPolicyGroupScanTasks(c.DB(), form.Id, c.OrgId)
 
@@ -373,7 +357,7 @@ func PolicyGroupScanTasks(c *ctx.ServiceContext, form *forms.PolicyLastTasksForm
 		query = form.Order(query)
 	}
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
-	tasks := make([]*LastScanTaskResp, 0)
+	tasks := make([]*resps.LastScanTaskResp, 0)
 	if err := p.Scan(&tasks); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
@@ -429,11 +413,7 @@ func SearchGroupOfPolicy(c *ctx.ServiceContext, form *forms.SearchGroupOfPolicyF
 	}, nil
 }
 
-type PolicyGroupScanReportResp struct {
-	PassedRate PolylinePercent `json:"passedRate"` // 检测通过率
-}
-
-func PolicyGroupScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (*PolicyGroupScanReportResp, e.Error) {
+func PolicyGroupScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (*resps.PolicyGroupScanReportResp, e.Error) {
 	if !form.HasKey("to") {
 		form.To = time.Now()
 	}
@@ -447,7 +427,7 @@ func PolicyGroupScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportFo
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
-	report := PolicyGroupScanReportResp{}
+	report := resps.PolicyGroupScanReportResp{}
 	r := &report.PassedRate
 
 	for _, s := range scanStatus {
@@ -459,7 +439,7 @@ func PolicyGroupScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportFo
 					r.Passed[idx] = s.Count
 				}
 				r.Total[idx] += s.Count
-				r.Value[idx] = Percent(r.Passed[idx]) / Percent(r.Total[idx])
+				r.Value[idx] = resps.Percent(r.Passed[idx]) / resps.Percent(r.Total[idx])
 				found = true
 				break
 			}
@@ -479,15 +459,6 @@ func PolicyGroupScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportFo
 	}
 
 	return &report, nil
-}
-
-type RegistryPGResp struct {
-	VcsId     string `json:"vcsId"`
-	RepoId    string `json:"repoId"`
-	Namespace string `json:"namespace"`
-	GroupId   string `json:"groupId"`
-	GroupName string `json:"groupName"`
-	Label     string `json:"label"`
 }
 
 func SearchRegistryPG(c *ctx.ServiceContext, form *forms.SearchRegistryPgForm) (interface{}, e.Error) {
@@ -521,9 +492,9 @@ func SearchRegistryPG(c *ctx.ServiceContext, form *forms.SearchRegistryPgForm) (
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	pgs := make([]RegistryPGResp, 0, len(rr.List))
+	pgs := make([]resps.RegistryPGResp, 0, len(rr.List))
 	for _, g := range rr.List {
-		pgs = append(pgs, RegistryPGResp{
+		pgs = append(pgs, resps.RegistryPGResp{
 			VcsId:     vcs.Id.String(),
 			RepoId:    g.RepoPath,
 			Namespace: g.Namespace,
@@ -537,12 +508,6 @@ func SearchRegistryPG(c *ctx.ServiceContext, form *forms.SearchRegistryPgForm) (
 		Total:    rr.Total,
 		List:     pgs,
 	}, nil
-}
-
-type RegistryPGVerResp struct {
-	Namespace string   `json:"namespace"`
-	GroupName string   `json:"groupName"`
-	GitTags   []string `json:"gitTags"`
 }
 
 func SearchRegistryPGVersions(c *ctx.ServiceContext, form *forms.SearchRegistryPgVersForm) (interface{}, e.Error) {
@@ -562,7 +527,7 @@ func SearchRegistryPGVersions(c *ctx.ServiceContext, form *forms.SearchRegistryP
 		return nil, e.AutoNew(err, e.RegistryServiceErr)
 	}
 
-	resp := &RegistryPGVerResp{}
+	resp := &resps.RegistryPGVerResp{}
 	for i, rv := range rvs {
 		if i == 0 {
 			resp.Namespace = rv.Namespace
@@ -602,7 +567,7 @@ func PolicyGroupChecks(c *ctx.ServiceContext, form *forms.PolicyGroupChecksForm)
 		return nil, e.New(e.PolicyGroupDirError, err)
 	}
 
-	return TemplateChecksResp{
+	return resps.TemplateChecksResp{
 		CheckResult: consts.TplTfCheckSuccess,
 	}, nil
 }

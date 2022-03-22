@@ -10,6 +10,7 @@ import (
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
@@ -52,7 +53,7 @@ func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{},
 	}
 
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	details := make([]*taskDetailResp, 0)
+	details := make([]*resps.TaskDetailResp, 0)
 	if err := p.Scan(&details); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
@@ -69,13 +70,8 @@ func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{},
 	}, nil
 }
 
-type taskDetailResp struct {
-	models.Task
-	Creator string `json:"creator" example:"超级管理员"`
-}
-
 // TaskDetail 任务信息详情
-func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*taskDetailResp, e.Error) {
+func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*resps.TaskDetailResp, e.Error) {
 	orgIds, er := services.GetOrgIdsByUser(c.DB(), c.UserId)
 	if er != nil {
 		c.Logger().Errorf("error get task id by user, err %s", er)
@@ -110,7 +106,7 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*taskDetailRe
 
 	// 隐藏敏感字段
 	task.HideSensitiveVariable()
-	var o = taskDetailResp{
+	var o = resps.TaskDetailResp{
 		Task:    *task,
 		Creator: user.Name,
 	}
@@ -133,7 +129,7 @@ func replaceVcsToken(old string) (string, e.Error) {
 }
 
 // LastTask 最新任务信息
-func LastTask(c *ctx.ServiceContext, form *forms.LastTaskForm) (*taskDetailResp, e.Error) {
+func LastTask(c *ctx.ServiceContext, form *forms.LastTaskForm) (*resps.TaskDetailResp, e.Error) {
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
@@ -169,7 +165,7 @@ func LastTask(c *ctx.ServiceContext, form *forms.LastTaskForm) (*taskDetailResp,
 
 	// 隐藏敏感字段
 	task.HideSensitiveVariable()
-	var t = taskDetailResp{
+	var t = resps.TaskDetailResp{
 		Task:    *task,
 		Creator: user.Name,
 	}
@@ -366,21 +362,9 @@ func SearchTaskResources(c *ctx.ServiceContext, form *forms.SearchTaskResourceFo
 	}, nil
 }
 
-type TaskStepDetail struct {
-	Id      models.Id    `json:"id"`
-	Index   int          `json:"index"`
-	Name    string       `json:"name"`
-	TaskId  models.Id    `json:"taskId"`
-	Status  string       `json:"status"`
-	Message string       `json:"message"`
-	StartAt *models.Time `json:"startAt"`
-	EndAt   *models.Time `json:"endAt"`
-	Type    string       `json:"type"`
-}
-
 func SearchTaskSteps(c *ctx.ServiceContext, form *forms.DetailTaskStepForm) (interface{}, e.Error) {
 	query := services.QueryTaskStepsById(c.DB(), form.TaskId)
-	details := make([]*TaskStepDetail, 0)
+	details := make([]*resps.TaskStepDetail, 0)
 	if err := query.Scan(&details); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
@@ -414,10 +398,13 @@ func SearchTaskResourcesGraph(c *ctx.ServiceContext, form *forms.SearchTaskResou
 	if err != nil {
 		return nil, err
 	}
+
 	for i := range rs {
 		rs[i].Provider = path.Base(rs[i].Provider)
-		// attrs 暂时不需要返回
-		rs[i].Attrs = nil
+		// 不需要返回 attrs, 避免返回的数据过大;
+		if form.Dimension != consts.GraphDimensionModule {
+			rs[i].Attrs = nil
+		}
 	}
 	return GetResourcesGraph(rs, form.Dimension), nil
 }
@@ -433,6 +420,36 @@ func GetResourcesGraph(rs []services.Resource, dimension string) interface{} {
 	default:
 		return nil
 	}
+}
+
+// GetResShowName
+// 建立规则库，通过各种规则确定资源的主要字段或者展示模板
+//		规则示例1: 如果资源的属性中有 public_ip 字段，则展示 public_ip;
+//    	规则示例2: 如果资源的属性中有 name 字段，则展示 name;
+//    	规则示例3: 如果资源的属性中有 tag 字段，则展示 name(tag1,tag2);
+// 不匹配规则库时展示: resource address(id), 如: "module1.alicloud_instance.web(i-xxxxxxx)";
+func GetResShowName(attrs map[string]interface{}, addr, id string) string {
+	outRuleName := fmt.Sprintf("%s(%s)", addr, id)
+	if attrs != nil {
+		get := func(key string) (string, bool) {
+			if val, ok := attrs[key]; ok {
+				return val.(string), true
+			}
+			return "", false
+		}
+		if publicIP, ok := get("public_ip"); ok {
+			return publicIP
+		}
+		if name, ok := get("name"); ok {
+			if tags, ok := get("tags"); ok {
+				return fmt.Sprintf("%s(%s)", name, tags)
+			}
+			return name
+		}
+		return outRuleName
+	}
+
+	return outRuleName
 }
 
 type ResourcesGraphModule struct {
@@ -493,7 +510,7 @@ func genNodesFromResource(resource services.Resource, parentChildNode map[string
 
 	res := ResourceInfo{
 		ResourceId:   resource.Id.String(),
-		ResourceName: resource.Name,
+		ResourceName: GetResShowName(resource.Attrs, resource.Address, string(resource.Id)),
 		NodeName:     lastAddr,
 	}
 

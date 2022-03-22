@@ -23,7 +23,7 @@ type Vcs struct {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param form formData forms.CreateVcsForm true "parameter"
 // @Router /vcs [post]
-// @Success 200 {object} ctx.JSONResult
+// @Success 200 {object} ctx.JSONResult{result=models.Vcs}
 func (Vcs) Create(c *ctx.GinRequest) {
 	form := &forms.CreateVcsForm{}
 	if err := c.Bind(form); err != nil {
@@ -126,7 +126,7 @@ func (Vcs) ListRepos(c *ctx.GinRequest) {
 // @Param vcsId path string true "Vcs仓库ID"
 // @Param form query forms.GetGitRevisionForm true "parameter"
 // @Router /vcs/{vcsId}/branch [get]
-// @Success 200 {object} ctx.JSONResult{result=[]apps.Revision}
+// @Success 200 {object} ctx.JSONResult{result=[]resps.Revision}
 func (Vcs) ListBranches(c *ctx.GinRequest) {
 	form := forms.GetGitRevisionForm{}
 	if err := c.Bind(&form); err != nil {
@@ -146,7 +146,7 @@ func (Vcs) ListBranches(c *ctx.GinRequest) {
 // @Param vcsId path string true "Vcs仓库ID"
 // @Param form query forms.GetGitRevisionForm true "parameter"
 // @Router /vcs/{vcsId}/tag [get]
-// @Success 200 {object} ctx.JSONResult{result=[]apps.Revision}
+// @Success 200 {object} ctx.JSONResult{result=[]resps.Revision}
 func (Vcs) ListTags(c *ctx.GinRequest) {
 	form := forms.GetGitRevisionForm{}
 	if err := c.Bind(&form); err != nil {

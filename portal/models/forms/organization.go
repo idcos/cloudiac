@@ -67,15 +67,13 @@ type InviteUserForm struct {
 
 type SearchOrgResourceForm struct {
 	PageForm
-
-	Module string `form:"module" json:"module" binding:"" enums:"name,type"` // 查询模式，选在通过资源名称或者资源类型进行查询
-	Q      string `form:"q" json:"q" binding:""`                             // 资源名称，支持模糊查询
+	Q string `form:"q" json:"q" binding:""` // 资源名称，支持模糊查询
 }
 
 type InviteUsersBatchForm struct {
 	BaseForm
 
-	Id     models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`      // 组织ID
-	Email  []string    `form:"email" json:"email" binding:""`                    // 电子邮件地址
-	Role   string    `form:"role" json:"role" binding:"" enums:"admin,member"` // 受邀请用户在组织中的角色，组织管理员：admin，普通用户：member
+	Id    models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`      // 组织ID
+	Email []string  `form:"email" json:"email" binding:""`                    // 电子邮件地址
+	Role  string    `form:"role" json:"role" binding:"" enums:"admin,member"` // 受邀请用户在组织中的角色，组织管理员：admin，普通用户：member
 }

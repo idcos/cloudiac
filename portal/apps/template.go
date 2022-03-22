@@ -11,6 +11,7 @@ import (
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
@@ -19,27 +20,6 @@ import (
 
 	"github.com/lib/pq"
 )
-
-type SearchTemplateResp struct {
-	CreatedAt           models.Time `json:"createdAt"` // 创建时间
-	UpdatedAt           models.Time `json:"updatedAt"` // 更新时间
-	Id                  models.Id   `json:"id"`
-	Name                string      `json:"name"`
-	Description         string      `json:"description"`
-	ActiveEnvironment   int         `json:"activeEnvironment"`
-	RelationEnvironment int         `json:"relationEnvironment"`
-	RepoRevision        string      `json:"repoRevision"`
-	Creator             string      `json:"creator"`
-	RepoId              string      `json:"repoId"`
-	VcsId               string      `json:"vcsId"`
-	RepoAddr            string      `json:"repoAddr"`
-	TplType             string      `json:"tplType" `
-	RepoFullName        string      `json:"repoFullName"`
-	NewRepoAddr         string      `json:"newRepoAddr"`
-	VcsAddr             string      `json:"vcsAddr"`
-	PolicyEnable        bool        `json:"policyEnable"`
-	PolicyStatus        string      `json:"policyStatus"`
-}
 
 func getRepo(vcsId models.Id, query *db.Session, repoId string) (*vcsrv.Projects, error) {
 	vcs, err := services.QueryVcsByVcsId(vcsId, query)
@@ -374,14 +354,7 @@ func DeleteTemplate(c *ctx.ServiceContext, form *forms.DeleteTemplateForm) (inte
 	return nil, nil
 }
 
-type TemplateDetailResp struct {
-	*models.Template
-	Variables   []models.Variable `json:"variables"`
-	ProjectList []models.Id       `json:"projectId"`
-	PolicyGroup []string          `json:"policyGroup"`
-}
-
-func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*TemplateDetailResp, e.Error) {
+func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*resps.TemplateDetailResp, e.Error) {
 	tpl, err := services.GetTemplateById(c.DB(), form.Id)
 	if err != nil && err.Code() == e.TemplateNotExists {
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
@@ -414,7 +387,7 @@ func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*Tem
 		policyGroups = append(policyGroups, v.PolicyGroupId)
 	}
 
-	tplDetail := &TemplateDetailResp{
+	tplDetail := &resps.TemplateDetailResp{
 		Template:    tpl,
 		Variables:   varialbeList,
 		ProjectList: project_ids,
@@ -433,7 +406,7 @@ func getTplIdList(db *db.Session, projectId models.Id) ([]models.Id, e.Error) {
 	return services.QueryTplByProjectId(db, projectId)
 }
 
-func updateTaskAndPolicyStatus(db *db.Session, templates []*SearchTemplateResp) ([]string, e.Error) {
+func updateTaskAndPolicyStatus(db *db.Session, templates []*resps.SearchTemplateResp) ([]string, e.Error) {
 	vcsIds := make([]string, 0)
 	for _, v := range templates {
 		if v.RepoAddr == "" {
@@ -455,7 +428,7 @@ func updateTaskAndPolicyStatus(db *db.Session, templates []*SearchTemplateResp) 
 	return vcsIds, nil
 }
 
-func updateTmplRepoAddr(templates []*SearchTemplateResp, vcsAttr map[string]models.Vcs) {
+func updateTmplRepoAddr(templates []*resps.SearchTemplateResp, vcsAttr map[string]models.Vcs) {
 
 	portAddr := configs.Get().Portal.Address
 	for _, tpl := range templates {
@@ -480,7 +453,7 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 
 	query := services.QueryTemplateByOrgId(c.DB(), form.Q, c.OrgId, tplIdList, c.ProjectId)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	templates := make([]*SearchTemplateResp, 0)
+	templates := make([]*resps.SearchTemplateResp, 0)
 	if err := p.Scan(&templates); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
@@ -508,9 +481,12 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 	}, nil
 }
 
-type TemplateChecksResp struct {
-	CheckResult string `json:"CheckResult"`
-	Reason      string `json:"reason"`
+type TplCheckResult struct {
+	TfVars   TplCheckResultItem
+	Playbook TplCheckResultItem
+}
+type TplCheckResultItem struct {
+	Error string
 }
 
 func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (interface{}, e.Error) {
@@ -526,7 +502,6 @@ func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (inte
 			return nil, err
 		}
 	}
-
 	if form.Workdir != "" {
 		// 检查工作目录下.tf 文件是否存在
 		searchForm := &forms.RepoFileSearchForm{
@@ -543,9 +518,57 @@ func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (inte
 			return nil, e.New(e.TemplateWorkdirError, fmt.Errorf("no '%s' files", consts.TfFileMatch))
 		}
 	}
-	return TemplateChecksResp{
+
+	err, checkResult := CheckTemplateOrEnvConfig(c, form.TfVarsFile, form.Playbook, form.RepoId, form.RepoRevision, form.Workdir, form.VcsId)
+	if err != nil {
+		return nil, err
+	}
+	if checkResult.Playbook.Error != "" || checkResult.TfVars.Error != "" {
+		return checkResult, e.New(e.BadParam)
+	}
+	return resps.TemplateChecksResp{
 		CheckResult: consts.TplTfCheckSuccess,
 	}, nil
+}
+
+func CheckTemplateOrEnvConfig(c *ctx.ServiceContext, tfVarsFile, playbook, repoId, reporevision, workDir string, vcsId models.Id) (e.Error, TplCheckResult) {
+	checkResult := TplCheckResult{}
+	if tfVarsFile != "" {
+		searchForm := &forms.RepoFileSearchForm{
+			RepoId:       repoId,
+			RepoRevision: reporevision,
+			VcsId:        vcsId,
+			Workdir:      workDir,
+		}
+		results, err := VcsRepoFileSearch(c, searchForm, "", consts.TfVarFileMatch)
+		if err != nil {
+			return err, checkResult
+		}
+		if len(results) == 0 {
+			checkResult.TfVars.Error = "Under the current working directory Tfvars end file does not exist"
+		} else if !utils.ArrayIsExistsStr(results, tfVarsFile) {
+			checkResult.TfVars.Error = "Under the current working directory Tfvars end file does not exist"
+		}
+	}
+	if playbook != "" {
+		searchForm := &forms.RepoFileSearchForm{
+			RepoId:       repoId,
+			RepoRevision: reporevision,
+			VcsId:        vcsId,
+			Workdir:      workDir,
+		}
+		results, err := VcsRepoFileSearch(c, searchForm, consts.PlaybookDir, consts.PlaybookMatch)
+		if err != nil {
+			return err, checkResult
+		}
+		if len(results) == 0 {
+			checkResult.Playbook.Error = "The playbook file in the current working directory does not exist"
+		}
+		if !utils.ArrayIsExistsStr(results, playbook) {
+			checkResult.Playbook.Error = "The playbook file in the current working directory does not exist"
+		}
+	}
+	return nil, checkResult
 }
 
 func setVcsRepoWebhook(c *ctx.ServiceContext, vcsId models.Id, repoId string, triggers pq.StringArray) error {

@@ -80,11 +80,9 @@ func (s *Session) AddUniqueIndex(indexName string, columns ...string) error {
 			return err
 		}
 	}
-
 	if s.db.Migrator().HasIndex(stmt.Table, indexName) {
 		return nil
 	}
-
 	err := s.db.Exec(fmt.Sprintf("CREATE UNIQUE INDEX `%s` ON `%s` (%s)",
 		indexName, stmt.Table, strings.Join(columns, ","))).Error
 	if err != nil {
