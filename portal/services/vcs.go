@@ -8,12 +8,12 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services/vcsrv"
-	"cloudiac/utils/logs"
+	"encoding/json"
+	"errors"
 	"fmt"
 
-	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/gohcl"
-	"github.com/hashicorp/hcl/v2/hclsyntax"
+	legacyhcl "github.com/hashicorp/hcl"
+	legacyast "github.com/hashicorp/hcl/hcl/ast"
 	"gorm.io/gorm"
 )
 
@@ -136,41 +136,31 @@ type TemplateVariable struct {
 	Name        string `json:"name" form:"name" `
 }
 
-type tfVariableConfig struct {
-	Upstreams []*tfVariableBlock `hcl:"variable,block"`
-}
-
 type tfVariableBlock struct {
-	Name        string      `hcl:",label"`
-	Default     string      `hcl:"default,optional"`
-	Type        interface{} `hcl:"type,optional"`
-	Description string      `hcl:"description,optional"`
-	Sensitive   bool        `hcl:"sensitive,optional"`
-	Validation  *struct {
-		Condition    interface{} `hcl:"condition,attr"`
-		ErrorMessage string      `hcl:"error_message,optional"`
-	} `hcl:"validation,block"`
+	Name        string `json:"name"`
+	Type        string `json:"type,omitempty"`
+	Description string `json:"description,omitempty"`
+
+	Default   interface{} `json:"default"`
+	Required  bool        `json:"required"`
+	Sensitive bool        `json:"sensitive,omitempty"`
 }
 
 // ParseTfVariables hcl parse doc: https://pkg.go.dev/github.com/hashicorp/hcl/v2/gohcl
 func ParseTfVariables(filename string, content []byte) ([]TemplateVariable, e.Error) {
-	logger := logs.Get().WithField("filename", filename)
-	file, diagErrs := hclsyntax.ParseConfig(content, filename, hcl.Pos{Line: 1, Column: 1})
-	if diagErrs != nil && diagErrs.HasErrors() {
-		logger.Error(fmt.Errorf("ParseConfig: %w", diagErrs))
-		return nil, e.New(e.HCLParseError, diagErrs)
-	}
-
-	c := &tfVariableConfig{}
-	diagErrs = gohcl.DecodeBody(file.Body, nil, c)
-	for _, d := range diagErrs {
-		logger.Warnf(d.Error())
+	tfVariable, err := parseVariables(content)
+	if err != nil {
+		return nil, e.New(e.HCLParseError, err)
 	}
 
 	tv := make([]TemplateVariable, 0)
-	for _, s := range c.Upstreams {
+	for _, s := range tfVariable {
+		b, err := json.Marshal(s.Default)
+		if err != nil {
+			return nil, e.New(e.JSONParseError)
+		}
 		tv = append(tv, TemplateVariable{
-			Value:       s.Default,
+			Value:       string(b),
 			Name:        s.Name,
 			Description: s.Description,
 		})
@@ -211,4 +201,88 @@ func GetVcsPrByTaskId(session *db.Session, task *models.Task) (models.VcsPr, err
 		return vp, err
 	}
 	return vp, nil
+}
+
+func parseVariables(src []byte) ([]tfVariableBlock, error) {
+	tv := make([]tfVariableBlock, 0)
+	hclRoot, err := legacyhcl.Parse(string(src))
+	if err != nil {
+		return tv, errors.New(fmt.Sprintf("Error parsing: %s", err))
+	}
+
+	list, ok := hclRoot.Node.(*legacyast.ObjectList)
+	if !ok {
+		return tv, errors.New("error parsing no root object")
+	}
+
+	if vars := list.Filter("variable"); len(vars.Items) > 0 {
+		vars = vars.Children()
+		type VariableBlock struct {
+			Type        string `hcl:"type"`
+			Default     interface{}
+			Description string
+			Fields      []string `hcl:",decodedFields"`
+		}
+
+		for _, item := range vars.Items {
+			unwrapLegacyHCLObjectKeysFromJSON(item, 1)
+
+			if len(item.Keys) != 1 {
+				return nil, errors.New(fmt.Sprintf("variable block at %s has no label", item.Pos()))
+			}
+
+			name := item.Keys[0].Token.Value().(string)
+
+			var block VariableBlock
+			err := legacyhcl.DecodeObject(&block, item.Val)
+			if err != nil {
+				return nil, errors.New(fmt.Sprintf("invalid variable block at %s: %s", item.Pos(), err))
+			}
+
+			if ms, ok := block.Default.([]map[string]interface{}); ok {
+				def := make(map[string]interface{})
+				for _, m := range ms {
+					for k, v := range m {
+						def[k] = v
+					}
+				}
+				block.Default = def
+			}
+
+			tv = append(tv, tfVariableBlock{
+				Name:        name,
+				Type:        block.Type,
+				Description: block.Description,
+				Default:     block.Default,
+				Required:    block.Default == nil,
+			})
+
+		}
+	}
+
+	return tv,nil
+}
+
+func unwrapLegacyHCLObjectKeysFromJSON(item *legacyast.ObjectItem, depth int) {
+	if len(item.Keys) > depth && item.Keys[0].Token.JSON {
+		for len(item.Keys) > depth {
+			// Pop off the last key
+			n := len(item.Keys)
+			key := item.Keys[n-1]
+			item.Keys[n-1] = nil
+			item.Keys = item.Keys[:n-1]
+
+			// Wrap our value in a list
+			item.Val = &legacyast.ObjectType{
+				List: &legacyast.ObjectList{
+					Items: []*legacyast.ObjectItem{
+						{
+							Keys: []*legacyast.ObjectKey{key},
+							Val:  item.Val,
+						},
+					},
+				},
+			}
+		}
+	}
 }
