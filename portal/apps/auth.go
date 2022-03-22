@@ -5,8 +5,8 @@ package apps
 import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
-	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"cloudiac/utils"
 	"fmt"
@@ -41,7 +41,7 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err 
 		return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
 	}
 
-	data := models.LoginResp{
+	data := resps.LoginResp{
 		//UserInfo: user,
 		Token: token,
 	}
@@ -58,7 +58,7 @@ func GenerateSsoToken(c *ctx.ServiceContext) (resp interface{}, err e.Error) {
 		return nil, e.New(e.InternalError, er, http.StatusInternalServerError)
 	}
 
-	data := models.SsoResp{
+	data := resps.SsoResp{
 		Token: token,
 	}
 
@@ -66,13 +66,13 @@ func GenerateSsoToken(c *ctx.ServiceContext) (resp interface{}, err e.Error) {
 }
 
 // VerifySsoToken 验证 SSO token
-func VerifySsoToken(c *ctx.ServiceContext, form *forms.VerifySsoTokenForm) (resp *models.VerifySsoTokenResp, err e.Error) {
+func VerifySsoToken(c *ctx.ServiceContext, form *forms.VerifySsoTokenForm) (resp *resps.VerifySsoTokenResp, err e.Error) {
 	user, err := services.VerifySsoToken(c.DB(), form.Token)
 	if err != nil {
 		return nil, err
 	}
 
-	return &models.VerifySsoTokenResp{
+	return &resps.VerifySsoTokenResp{
 		UserId: user.Id,
 		Email:  user.Email,
 	}, nil

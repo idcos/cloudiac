@@ -41,7 +41,7 @@ func (Project) Create(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
 // @Param form query forms.SearchProjectForm true "parameter"
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Project}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.ProjectResp}}
 // @Router /projects [get]
 func (Project) Search(c *ctx.GinRequest) {
 	form := &forms.SearchProjectForm{}
@@ -97,7 +97,7 @@ func (Project) Delete(c *ctx.GinRequest) {
 // @Produce  json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
-// @Success 200 {object} ctx.JSONResult{result=models.Project}
+// @Success 200 {object} ctx.JSONResult{result=resps.DetailProjectResp}
 // @Router /projects/{projectId}  [get]
 func (Project) Detail(c *ctx.GinRequest) {
 	form := &forms.DetailProjectForm{}

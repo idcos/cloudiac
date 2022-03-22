@@ -19,7 +19,7 @@ import (
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param q query string false "模糊搜索"
 // @Router /policies/envs [get]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.RespPolicyEnv}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.RespPolicyEnv}}
 func (Policy) SearchPolicyEnv(c *ctx.GinRequest) {
 	form := &forms.SearchPolicyEnvForm{}
 	if err := c.Bind(form); err != nil {
@@ -38,7 +38,7 @@ func (Policy) SearchPolicyEnv(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param envId path string true "环境id"
 // @Router /policies/envs/{envId}/policies [get]
-// @Success 200 {object} ctx.JSONResult{result=models.Policy}
+// @Success 200 {object} ctx.JSONResult{result=ctx.JSONResult{list=[]resps.RespEnvOfPolicy}}
 func (Policy) EnvOfPolicy(c *ctx.GinRequest) {
 	form := &forms.EnvOfPolicyForm{}
 	if err := c.Bind(form); err != nil {
@@ -47,6 +47,7 @@ func (Policy) EnvOfPolicy(c *ctx.GinRequest) {
 	c.JSONResult(apps.EnvOfPolicy(c.Service(), form))
 }
 
+//todo swagger 文档缺失
 func (Policy) ValidEnvOfPolicy(c *ctx.GinRequest) {
 	form := &forms.EnvOfPolicyForm{}
 	if err := c.Bind(form); err != nil {
@@ -66,7 +67,7 @@ func (Policy) ValidEnvOfPolicy(c *ctx.GinRequest) {
 // @Param json body forms.UpdatePolicyRelForm true "parameter"
 // @Param envId path string true "环境ID"
 // @Router /policies/envs/{envId} [put]
-// @Success 200 {object} ctx.JSONResult
+// @Success 200 {object} ctx.JSONResult{result=models.PolicyRel}
 func (Policy) UpdatePolicyEnv(c *ctx.GinRequest) {
 	form := &forms.UpdatePolicyRelForm{}
 	if err := c.Bind(form); err != nil {
@@ -107,7 +108,7 @@ func (Policy) ScanEnvironment(c *ctx.GinRequest) {
 // @Param form query forms.PolicyScanResultForm true "parameter"
 // @Param envId path string true "环境ID"
 // @Router /policies/envs/{envId}/result [get]
-// @Success 200 {object} apps.ScanResultPageResp
+// @Success 200 {object} ctx.JSONResult{result=resps.ScanResultPageResp}
 func (Policy) EnvScanResult(c *ctx.GinRequest) {
 	form := &forms.PolicyScanResultForm{}
 	if err := c.Bind(form); err != nil {

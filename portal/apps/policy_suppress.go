@@ -10,28 +10,19 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"fmt"
 	"net/http"
 	"strings"
 )
 
-type PolicySuppressResp struct {
-	models.PolicySuppress
-	TargetName string `json:"targetName"` // 检查目标
-	Creator    string `json:"creator"`    // 操作人
-}
-
-func (PolicySuppressResp) TableName() string {
-	return "s"
-}
-
 func SearchPolicySuppress(c *ctx.ServiceContext, form *forms.SearchPolicySuppressForm) (interface{}, e.Error) {
 	query := services.SearchPolicySuppress(c.DB(), form.Id, c.OrgId)
 	if form.SortField() == "" {
-		query = query.Order(fmt.Sprintf("%s.created_at DESC", PolicySuppressResp{}.TableName()))
+		query = query.Order(fmt.Sprintf("%s.created_at DESC", resps.PolicySuppressResp{}.TableName()))
 	}
-	return getPage(query, form, PolicySuppressResp{})
+	return getPage(query, form, resps.PolicySuppressResp{})
 }
 
 func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppressForm) (interface{}, e.Error) {
@@ -218,16 +209,6 @@ func AllowAccessResource(tx *db.Session, c *ctx.ServiceContext, id models.Id) e.
 	return nil
 }
 
-type PolicySuppressSourceResp struct {
-	TargetId   models.Id `json:"targetId" example:"env-c3lcrjxczjdywmk0go90"`   // 屏蔽源ID
-	TargetType string    `json:"targetType" enums:"env,template" example:"env"` // 源类型：env环境, template云模板
-	TargetName string    `json:"targetName" example:"测试环境"`                     // 名称
-}
-
-func (PolicySuppressSourceResp) TableName() string {
-	return "iac_policy_suppress"
-}
-
 func SearchPolicySuppressSource(c *ctx.ServiceContext, form *forms.SearchPolicySuppressSourceForm) (interface{}, e.Error) {
 	policy, err := services.GetPolicyById(c.DB(), form.Id, c.OrgId)
 	if err != nil {
@@ -238,5 +219,5 @@ func SearchPolicySuppressSource(c *ctx.ServiceContext, form *forms.SearchPolicyS
 		}
 	}
 	query := services.SearchPolicySuppressSource(c.DB(), form, c.UserId, form.Id, policy.GroupId, c.OrgId)
-	return getPage(query, form, PolicySuppressSourceResp{})
+	return getPage(query, form, resps.PolicySuppressSourceResp{})
 }

@@ -10,6 +10,7 @@ import (
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"errors"
 	"fmt"
@@ -69,11 +70,6 @@ func CreateProject(c *ctx.ServiceContext, form *forms.CreateProjectForm) (interf
 	return project, nil
 }
 
-type ProjectResp struct {
-	models.Project
-	Creator string `json:"creator" form:"creator" `
-}
-
 func SearchProject(c *ctx.ServiceContext, form *forms.SearchProjectForm) (interface{}, e.Error) {
 	query := services.SearchProject(c.DB(), c.OrgId, form.Q, form.Status)
 	if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) {
@@ -98,7 +94,7 @@ func SearchProject(c *ctx.ServiceContext, form *forms.SearchProjectForm) (interf
 		models.User{}.TableName(), models.Project{}.TableName())).
 		LazySelectAppend(fmt.Sprintf("%s.*,user.name as creator", models.Project{}.TableName()))
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	projectResp := make([]ProjectResp, 0)
+	projectResp := make([]resps.ProjectResp, 0)
 	if err := p.Scan(&projectResp); err != nil {
 		c.Logger().Errorf("error get project info, err %s", err)
 		return nil, e.New(e.DBError, err)
@@ -166,19 +162,6 @@ func DeleteProject(c *ctx.ServiceContext, form *forms.DeleteProjectForm) (interf
 	return nil, e.New(e.NotImplement)
 }
 
-type DetailProjectResp struct {
-	models.Project
-	UserAuthorization []models.UserProject `json:"userAuthorization" form:"userAuthorization" ` //用户认证信息
-	ProjectStatistics
-}
-
-type ProjectStatistics struct {
-	TplCount    int64 `json:"tplCount" form:"tplCount" `
-	EnvActive   int64 `json:"envActive" form:"envActive" `
-	EnvFailed   int64 `json:"envFailed" form:"envFailed" `
-	EnvInactive int64 `json:"envInactive" form:"envInactive" `
-}
-
 func DetailProject(c *ctx.ServiceContext, form *forms.DetailProjectForm) (interface{}, e.Error) {
 	tx := c.DB().Begin()
 	defer func() {
@@ -220,10 +203,10 @@ func DetailProject(c *ctx.ServiceContext, form *forms.DetailProjectForm) (interf
 		return nil, e.New(e.DBError, err)
 	}
 
-	return DetailProjectResp{
+	return resps.DetailProjectResp{
 		project,
 		projectUser,
-		ProjectStatistics{
+		resps.ProjectStatistics{
 			TplCount:    tplCount,
 			EnvActive:   envResp.EnvActive,
 			EnvFailed:   envResp.EnvFailed,

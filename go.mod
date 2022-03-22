@@ -9,7 +9,6 @@ require (
 	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/Shopify/sarama v1.28.0
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
-	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/armon/go-metrics v0.3.10 // indirect
 	github.com/casbin/casbin/v2 v2.31.9
@@ -68,7 +67,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	github.com/swaggo/gin-swagger v1.3.0
-	github.com/swaggo/swag v1.7.9
+	github.com/swaggo/swag v1.8.0 // indirect
 	github.com/unliar/utils v0.1.1
 	github.com/xanzy/go-gitlab v0.47.0
 	github.com/zclconf/go-cty v1.9.1 // indirect
