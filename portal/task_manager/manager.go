@@ -505,7 +505,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		}
 		if runErr != nil {
 			logger.WithField("step", fmt.Sprintf("%d(%s)", step.Index, step.Name)).
-				Warnf("run task step error: %v", err)
+				Warnf("run task step error: %v", runErr)
 			break
 		}
 	}
@@ -552,19 +552,12 @@ func (m *TaskManager) processStartStep(
 	}
 
 	if runErr != nil {
-		logger.Infof("run task step err: %v", runErr)
-		if errors.Is(runErr, ErrTaskStepRejected) {
-			return nil, runErr
-		}
-
+		logger.Warnf("run task step err: %v", runErr)
 		if (step.Type == common.TaskStepEnvScan || step.Type == common.TaskStepOpaScan) &&
 			!task.StopOnViolation {
 			// 合规任务失败不影响环境部署流程
-			logger.Warnf("run scan task step: %v", runErr)
+			logger.Infof("run scan task step: %v", runErr)
 			return nil, nil
-		}
-		if err := services.UpdateTaskStepStatus(m.db, step.Id, common.TaskStepFailed, runErr.Error()); err != nil {
-			logger.Panicf("update task step status error: %v", err)
 		}
 		return nil, runErr
 	}
@@ -771,6 +764,12 @@ func (m *TaskManager) runTaskStep(
 			message = step.Message
 		}
 		return fmt.Errorf(message)
+	case models.TaskStepAborted:
+		message := "aborted"
+		if step.Message != "" {
+			message = step.Message
+		}
+		return fmt.Errorf(message)
 	default:
 		return fmt.Errorf("unknown step status: %v", step.Status)
 	}
@@ -796,7 +795,7 @@ func waitTaskStepApprove(ctx context.Context, db *db.Session, task *models.Task,
 			}
 
 			logger.Errorf("wait task step approve error: %v", err)
-			if !errors.Is(err, ErrTaskStepRejected) {
+			if !errors.Is(err, ErrTaskStepRejected) && !errors.Is(err, ErrTaskStepAborted) {
 				changeStepStatus(models.TaskStepFailed, err.Error(), step)
 			}
 			return nil, err
@@ -1105,7 +1104,7 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 		}
 		if runErr != nil {
 			logger.WithField("step", fmt.Sprintf("%d(%s)", step.Index, step.Name)).
-				Warnf("run task step error: %v", err)
+				Warnf("run task step error: %v", runErr)
 			break
 		}
 	}
@@ -1296,6 +1295,8 @@ func (m *TaskManager) runScanTaskStep(ctx context.Context, taskReq runner.RunTas
 		return errors.New("failed")
 	case models.TaskStepTimeout:
 		return errors.New("timeout")
+	case models.TaskStepAborted:
+		return errors.New("aborted")
 	default:
 		return fmt.Errorf("unknown step status: %v", step.Status)
 	}

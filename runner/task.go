@@ -185,21 +185,13 @@ func (t *Task) runStep() (err error) {
 	var command string
 	if utils.StrInArray(t.req.StepType, common.TaskStepCheckout, common.TaskStepScanInit) {
 		// 移除日志中可能出现的 token 信息
-		command = fmt.Sprintf("set -o pipefail\n%s 2>&1 | sed -re 's/token:[^@]+/token:******/' >>%s", containerScriptPath, logPath)
+		command = fmt.Sprintf("set -o pipefail\n%s 2>&1 >>%s", containerScriptPath, logPath)
 	} else {
 		command = fmt.Sprintf("%s >>%s 2>&1", containerScriptPath, logPath)
 	}
 
-	if ok, err := (Executor{}).IsPaused(t.req.ContainerId); err != nil {
+	if err := (Executor{}).UnpauseIf(t.req.ContainerId); err != nil {
 		return err
-	} else if ok {
-		logger.Debugf("container %s is paused", t.req.ContainerId)
-
-		logger.Debugf("unpause container")
-		if err := (Executor{}).Unpause(t.req.ContainerId); err != nil {
-			return err
-		}
-		logger.Debugf("unpause container done")
 	}
 
 	execId, err := (&Executor{}).RunCommand(t.req.ContainerId, t.generateCommand(command))
@@ -208,20 +200,33 @@ func (t *Task) runStep() (err error) {
 	}
 
 	now := time.Now()
-	infoJson := utils.MustJSON(StartedTask{
+	infoJson := utils.MustJSON(StepInfo{
 		EnvId:         t.req.Env.Id,
 		TaskId:        t.req.TaskId,
 		Step:          t.req.Step,
+		Workdir:       t.req.Env.Workdir,
+		StatePath:     t.req.StateStore.Path,
 		ContainerId:   t.req.ContainerId,
 		PauseOnFinish: t.req.PauseTask,
 		ExecId:        execId,
 		StartedAt:     &now,
 		Timeout:       t.req.Timeout,
 	})
+
 	stepInfoFile := filepath.Join(
 		GetTaskDir(t.req.Env.Id, t.req.TaskId, t.req.Step),
-		TaskInfoFileName,
+		TaskStepInfoFileName,
 	)
+	latestStepInfoFile := filepath.Join(
+		GetTaskWorkspace(t.req.Env.Id, t.req.TaskId),
+		TaskStepInfoFileName,
+	)
+
+	if err := os.WriteFile(latestStepInfoFile, infoJson, 0644); err != nil { //nolint:gosec
+		err = errors.Wrap(err, "write latest step info")
+		return err
+	}
+
 	if err := os.WriteFile(stepInfoFile, infoJson, 0644); err != nil { //nolint:gosec
 		err = errors.Wrap(err, "write step info")
 		return err
@@ -433,7 +438,7 @@ func (t *Task) genStepScript() (string, error) {
 }
 
 var checkoutCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-if [[ ! -e code ]]; then git clone '{{.Req.RepoAddress}}' code || exit $?; fi && \
+if [[ ! -e code ]]; then git clone '{{.Req.RepoAddress}}' code 2>&1 | sed -re 's#(://[^:]+:)[^@]+#\1******#' || exit $?; fi && \
 cd code && \
 echo 'checkout {{.Req.RepoCommitId}}.' && \
 git checkout -q '{{.Req.RepoCommitId}}' && \

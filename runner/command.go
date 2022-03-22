@@ -3,8 +3,10 @@
 package runner
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -14,6 +16,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/pkg/errors"
 
 	"cloudiac/common"
@@ -187,6 +190,39 @@ func (Executor) RunCommand(cid string, command []string) (execId string, err err
 	return resp.ID, nil
 }
 
+// 执行命令并获取输出
+func (Executor) RunCommandOutput(cid string, command []string) (output []byte, err error) {
+	cli, err := dockerClient()
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := cli.ContainerExecCreate(context.Background(), cid, types.ExecConfig{
+		AttachStdin:  false,
+		AttachStderr: true,
+		AttachStdout: true,
+		Detach:       false,
+		Cmd:          command,
+	})
+	if err != nil {
+		err = errors.Wrap(err, "container exec create")
+		return nil, err
+	}
+
+	hijackedResp, err := cli.ContainerExecAttach(context.Background(), resp.ID, types.ExecStartCheck{})
+	if err != nil {
+		err = errors.Wrap(err, "container exec start")
+		return nil, err
+	}
+	defer hijackedResp.Close()
+
+	buffer := bytes.NewBuffer(nil)
+	if _, err := stdcopy.StdCopy(buffer, buffer, hijackedResp.Reader); err != nil && err != io.EOF {
+		return buffer.Bytes(), err
+	}
+	return buffer.Bytes(), nil
+}
+
 func (Executor) GetExecInfo(execId string) (execInfo types.ContainerExecInspect, err error) {
 	cli, err := dockerClient()
 	if err != nil {
@@ -252,6 +288,7 @@ func (Executor) WaitCommand(ctx context.Context, containerId string, execId stri
 	}
 }
 
+// 等待进程结束，如果提前触发了 deadline 则 kill 进程
 func (exec Executor) WaitCommandWithDeadline(ctx context.Context, containerId string, execId string, deadline time.Time) (execInfo types.ContainerExecInspect, err error) {
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithDeadline(ctx, deadline)
@@ -282,7 +319,13 @@ func (e Executor) StopCommand(execId string) (err error) {
 		return errors.Wrap(err, "container exec attach")
 	}
 
-	if _, err := e.RunCommand(inspect.ContainerID, []string{"kill", "-9", fmt.Sprintf("%d", inspect.Pid)}); err != nil {
+	// 先执行 kill，等待 30s，然后 kill -9
+	if _, err := e.RunCommand(inspect.ContainerID, []string{
+		"sh", "-c",
+		fmt.Sprintf(
+			"for i in `seq 1 30`;do kill %d && sleep 1 || break; done; kill -9 %d",
+			inspect.Pid, inspect.Pid),
+	}); err != nil {
 		return errors.Wrap(err, "kill process")
 	}
 	return nil
@@ -329,6 +372,19 @@ func (Executor) Unpause(cid string) (err error) {
 	if err := cli.ContainerUnpause(context.Background(), cid); err != nil {
 		err = errors.Wrapf(err, "unpause container %s", cid)
 		return err
+	}
+	return nil
+}
+
+func (Executor) UnpauseIf(cid string) (err error) {
+	if ok, err := (Executor{}).IsPaused(cid); err != nil {
+		return err
+	} else if ok {
+		logger.Debugf("unpause container %s", cid)
+		if err := (Executor{}).Unpause(cid); err != nil {
+			return err
+		}
+		logger.Debugf("unpause container %s, done", cid)
 	}
 	return nil
 }

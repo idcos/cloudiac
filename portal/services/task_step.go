@@ -73,6 +73,19 @@ func RejectTaskStep(dbSess *db.Session, taskId models.Id, step int, userId model
 	}
 }
 
+func ChangeTaskStep2Aborted(db *db.Session, taskId models.Id, step int) e.Error {
+	taskStep, er := GetTaskStep(db, taskId, step)
+	if er != nil {
+		return e.AutoNew(er, e.DBError)
+	}
+
+	if task, err := GetTask(db, taskStep.TaskId); err != nil {
+		return e.AutoNew(err, e.DBError)
+	} else {
+		return ChangeTaskStepStatusAndUpdate(db, task, taskStep, models.TaskStepAborted, "aborted")
+	}
+}
+
 func IsTerraformStep(typ string) bool {
 	return utils.StrInArray(typ, models.TaskStepInit, models.TaskStepPlan,
 		models.TaskStepApply, models.TaskStepDestroy)
