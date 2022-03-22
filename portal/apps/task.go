@@ -452,7 +452,7 @@ func GetResShowName(attrs map[string]interface{}, addr, id string) string {
 			return publicIP
 		}
 		if name, ok := get("name"); ok {
-			if tags, ok := get("tag"); ok {
+			if tags, ok := get("tags"); ok {
 				return fmt.Sprintf("%s(%s)", name, tags)
 			}
 			return name
