@@ -24,7 +24,7 @@ type Variable struct {
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param form body forms.BatchUpdateVariableForm true "parameter"
 // @router /variables/batch [put]
-// @Success 200 {object} ctx.JSONResult{}
+// @Success 200 {object} ctx.JSONResult
 func (Variable) BatchUpdate(c *ctx.GinRequest) {
 	form := forms.BatchUpdateVariableForm{}
 	if err := c.Bind(&form); err != nil {
@@ -67,7 +67,7 @@ func (Variable) UpdateObjectVars(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param form query forms.SearchVariableForm true "parameter"
 // @router /variables [get]
-// @Success 200 {object} ctx.JSONResult{result=[]models.Variable}
+// @Success 200 {object} ctx.JSONResult{result=[]resps.VariableResp}
 func (Variable) Search(c *ctx.GinRequest) {
 	form := forms.SearchVariableForm{}
 	if err := c.Bind(&form); err != nil {
@@ -86,7 +86,7 @@ func (Variable) Search(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param form query forms.SearchVariableForm true "parameter"
 // @router /variables/sample [get]
-// @Success 200 {object} ctx.JSONResult{result=[]models.Variable}
+// @Success 200 {object} ctx.JSONResult{result=[]models.VariableBody}
 func (Variable) SearchSampleVariable(c *ctx.GinRequest) {
 	form := forms.SearchVariableForm{}
 	if err := c.Bind(&form); err != nil {

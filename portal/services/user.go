@@ -7,6 +7,7 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/resps"
 	"cloudiac/utils"
 	"fmt"
 	"strings"
@@ -116,8 +117,8 @@ func CheckPasswordFormat(password string) e.Error {
 	return nil
 }
 
-func GetUserDetailById(query *db.Session, userId models.Id) (*models.UserWithRoleResp, e.Error) {
-	d := models.UserWithRoleResp{}
+func GetUserDetailById(query *db.Session, userId models.Id) (*resps.UserWithRoleResp, e.Error) {
+	d := resps.UserWithRoleResp{}
 	table := models.User{}.TableName()
 	if err := query.Model(&models.User{}).
 		Where(fmt.Sprintf("%s.id = ?", table), userId).Scan(&d); err != nil {

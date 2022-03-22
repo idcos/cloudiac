@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"fmt"
 	"strings"
@@ -15,15 +16,8 @@ import (
 	"github.com/lib/pq"
 )
 
-type RespNotification struct {
-	models.Notification
-	EventType   string   `json:"-" form:"-" gorm:"event_type"`
-	EventTypes  []string `json:"eventType" form:"eventType" gorm:"-"`
-	CreatorName string   `json:"creatorName" form:"creatorName" `
-}
-
 func SearchNotification(c *ctx.ServiceContext, form *forms.SearchNotificationForm) (interface{}, e.Error) {
-	notify := make([]*RespNotification, 0)
+	notify := make([]*resps.RespNotification, 0)
 	query := services.SearchNotification(c.DB(), c.OrgId, c.ProjectId)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	if err := p.Scan(&notify); err != nil {

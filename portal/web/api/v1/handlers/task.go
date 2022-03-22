@@ -23,7 +23,7 @@ type Task struct {
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param form query forms.SearchTaskForm true "parameter"
 // @router /tasks [get]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Task}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.TaskDetailResp}}
 func (Task) Search(c *ctx.GinRequest) {
 	form := forms.SearchTaskForm{}
 	if err := c.Bind(&form); err != nil {
@@ -42,7 +42,7 @@ func (Task) Search(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param taskId path string true "任务ID"
 // @router /tasks/{taskId} [get]
-// @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.TaskDetailResp}
 func (Task) Detail(c *ctx.GinRequest) {
 	form := forms.DetailTaskForm{}
 	if err := c.Bind(&form); err != nil {
@@ -111,7 +111,7 @@ func (Task) FollowStepLogSse(c *ctx.GinRequest) { //nolint:dupl
 // @Param taskId path string true "任务ID"
 // @Param form formData forms.ApproveTaskForm true "parameter"
 // @router /tasks/{taskId}/approve [post]
-// @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
+// @Success 200 {object} ctx.JSONResult
 func (Task) TaskApprove(c *ctx.GinRequest) {
 	form := &forms.ApproveTaskForm{}
 	if err := c.Bind(form); err != nil {
@@ -130,7 +130,7 @@ func (Task) TaskApprove(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param taskId path string true "任务ID"
 // @router /tasks/{taskId}/log [get]
-// @Success 200 {object} ctx.JSONResult{result=apps.taskDetailResp}
+// @Success 200 {object} ctx.JSONResult
 func (Task) Log(c *ctx.GinRequest) {
 	// TODO: 待实现
 	//form := forms.DetailTaskForm{}
@@ -171,7 +171,7 @@ func (Task) Output(c *ctx.GinRequest) {
 // @Param form query forms.SearchTaskResourceForm true "parameter"
 // @Param taskId path string true "任务ID"
 // @router /tasks/{taskId}/resources [get]
-// @Success 200 {object} ctx.JSONResult{result=models.Resource}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]services.Resource}}
 func (Task) Resource(c *ctx.GinRequest) {
 	form := forms.SearchTaskResourceForm{}
 	if err := c.Bind(&form); err != nil {
@@ -191,7 +191,7 @@ func (Task) Resource(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param taskId path string true "任务ID"
 // @router /tasks/{taskId}/steps [get]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.TaskStepDetail}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.TaskStepDetail}}
 func (Task) SearchTaskStep(c *ctx.GinRequest) {
 	form := forms.DetailTaskStepForm{}
 	if err := c.Bind(&form); err != nil {
@@ -213,7 +213,7 @@ func (Task) SearchTaskStep(c *ctx.GinRequest) {
 // @Param stepId path string true "任务步骤ID"
 // @Param form query forms.GetTaskStepLogForm true "parameter"
 // @router /tasks/{id}/steps/{stepId}/log [get]
-// @Success 200 {object} ctx.JSONResult{}
+// @Success 200 {object} ctx.JSONResult{result=string}
 func (Task) GetTaskStepLog(c *ctx.GinRequest) {
 	form := forms.GetTaskStepLogForm{}
 	if err := c.Bind(&form); err != nil {
@@ -235,7 +235,7 @@ func (Task) GetTaskStepLog(c *ctx.GinRequest) {
 // @Param form query forms.SearchTaskResourceGraphForm true "parameter"
 // @Param taskId path string true "任务ID"
 // @router /tasks/{taskId}/resources/graph [get]
-// @Success 200 {object} ctx.JSONResult{result=models.Resource}
+// @Success 200 {object} ctx.JSONResult
 func (Task) ResourceGraph(c *ctx.GinRequest) {
 	form := forms.SearchTaskResourceGraphForm{}
 	if err := c.Bind(&form); err != nil {

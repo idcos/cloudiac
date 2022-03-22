@@ -15,11 +15,13 @@ import (
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
-// @Success 200 {object} []apps.SystemStatusResp
+// @Success 200 {object} ctx.JSONResult{list=[]resps.SystemStatusResp}
 // @Router /systems/status [get]
 func PortalSystemStatusSearch(c *ctx.GinRequest) {
 	c.JSONResult(apps.SystemStatusSearch())
 }
+
+//todo swagger文件缺失
 
 func ConsulKVSearch(c *ctx.GinRequest) {
 	key := c.Query("key")
@@ -33,7 +35,7 @@ func ConsulKVSearch(c *ctx.GinRequest) {
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
-// @Success 200
+// @Success 200 {object} ctx.JSONResult
 // @Router /runners [get]
 func RunnerSearch(c *ctx.GinRequest) {
 	c.JSONResult(apps.RunnerSearch())
@@ -64,7 +66,7 @@ func ConsulTagUpdate(c *ctx.GinRequest) {
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
-// @Success 200
+// @Success 200 {object} ctx.JSONResult{result=resps.RunnerTagsResp}
 // @Router /runners/tags [get]
 func RunnerTags(c *ctx.GinRequest) {
 	c.JSONResult(apps.RunnerTags())
