@@ -211,7 +211,7 @@ func listRepoRevision(c *ctx.ServiceContext, form *forms.GetGitRevisionForm, rev
 
 	revision = make([]*resps.Revision, 0)
 	for _, v := range revisionList {
-		revision = append(revision, &resps.Revision{v})
+		revision = append(revision, &resps.Revision{Name: v})
 	}
 	return revision, nil
 }

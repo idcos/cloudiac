@@ -204,9 +204,9 @@ func DetailProject(c *ctx.ServiceContext, form *forms.DetailProjectForm) (interf
 	}
 
 	return resps.DetailProjectResp{
-		project,
-		projectUser,
-		resps.ProjectStatistics{
+		Project:           project,
+		UserAuthorization: projectUser,
+		ProjectStatistics: resps.ProjectStatistics{
 			TplCount:    tplCount,
 			EnvActive:   envResp.EnvActive,
 			EnvFailed:   envResp.EnvFailed,
