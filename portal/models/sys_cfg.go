@@ -31,8 +31,3 @@ func (o SystemCfg) Migrate(sess *db.Session) (err error) {
 	}
 	return nil
 }
-
-type RegistryAddrResp struct {
-	RegistryAddrFromDB  string `json:"registryAddrDB"`
-	RegistryAddrFromCfg string `json:"registryAddrCfg"`
-}

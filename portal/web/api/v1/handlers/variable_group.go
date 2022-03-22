@@ -22,7 +22,7 @@ type VariableGroup struct {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param form query forms.SearchVariableGroupForm true "parameter"
 // @router /var_groups [get]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.VariableGroup}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.SearchVariableGroupResp}}
 func (VariableGroup) Search(c *ctx.GinRequest) {
 	form := forms.SearchVariableGroupForm{}
 	if err := c.Bind(&form); err != nil {
@@ -79,7 +79,7 @@ func (VariableGroup) Update(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param form query forms.DeleteVariableGroupForm true "parameter"
 // @router /var_groups/{group_id} [delete]
-// @Success 200 {object} ctx.JSONResult{}
+// @Success 200 {object} ctx.JSONResult
 func (VariableGroup) Delete(c *ctx.GinRequest) {
 	form := forms.DeleteVariableGroupForm{}
 	if err := c.Bind(&form); err != nil {
@@ -136,7 +136,7 @@ func (VariableGroup) SearchRelationship(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param form query forms.BatchUpdateRelationshipForm true "parameter"
 // @router /var_groups/relationship/batch [put]
-// @Success 200 {object} ctx.JSONResult{}
+// @Success 200 {object} ctx.JSONResult
 func (VariableGroup) BatchUpdateRelationship(c *ctx.GinRequest) {
 	form := forms.BatchUpdateRelationshipForm{}
 	if err := c.Bind(&form); err != nil {

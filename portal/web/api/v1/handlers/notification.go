@@ -21,7 +21,7 @@ type Notification struct {
 // @Produce  json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.RespNotification}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.RespNotification}}
 // @Router /notifications [get]
 func (Notification) Search(c *ctx.GinRequest) {
 	form := &forms.SearchNotificationForm{}
@@ -81,7 +81,7 @@ func (Notification) Delete(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param id path string true "通知id"
 // @Param data body forms.UpdateNotificationForm true "ApiToken信息"
-// @Success 200
+// @Success 200 {object} ctx.JSONResult{result=models.Notification}
 // @Router /notifications/{id} [put]
 func (Notification) Update(c *ctx.GinRequest) {
 	form := &forms.UpdateNotificationForm{}
@@ -99,7 +99,7 @@ func (Notification) Update(c *ctx.GinRequest) {
 // @Produce  json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
-// @Success 200 {object} ctx.JSONResult{result=models.Notification}
+// @Success 200 {object} ctx.JSONResult{result=resps.RespDetailNotification}
 // @Router /notifications/{notificationId}  [get]
 func (Notification) Detail(c *ctx.GinRequest) {
 	form := &forms.DetailNotificationForm{}

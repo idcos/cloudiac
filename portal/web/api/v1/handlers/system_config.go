@@ -28,7 +28,7 @@ func (SystemConfig) Create(c *ctx.GinRequest) {
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
-// @Success 200 {object} ctx.JSONResult{result=[]apps.SearchSystemConfigResp}
+// @Success 200 {object} ctx.JSONResult{result=[]resps.SearchSystemConfigResp}
 // @Router /systems [get]
 func (SystemConfig) Search(c *ctx.GinRequest) {
 	c.JSONResult(apps.SearchSystemConfig(c.Service()))
@@ -43,7 +43,7 @@ func (SystemConfig) Search(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param id path string true "系统ID"
 // @Param data body forms.UpdateSystemConfigForm true "系统配置信息"
-// @Success 200 {object} models.SystemCfg
+// @Success 200 {object} ctx.JSONResult{result=models.SystemCfg}
 // @Router /systems [put]
 func (SystemConfig) Update(c *ctx.GinRequest) {
 	form := forms.UpdateSystemConfigForm{}
@@ -59,7 +59,7 @@ func (SystemConfig) Update(c *ctx.GinRequest) {
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
-// @Success 200 {object}  ctx.JSONResult{result=models.RegistryAddrResp}
+// @Success 200 {object}  ctx.JSONResult{result=resps.RegistryAddrResp}
 // @Router /system_config/registry/addr [GET]
 func GetRegistryAddr(c *ctx.GinRequest) {
 	c.JSONResult(apps.GetRegistryAddr(c.Service()))
@@ -72,7 +72,7 @@ func GetRegistryAddr(c *ctx.GinRequest) {
 // @Produce  json
 // @Security AuthToken
 // @Param data body forms.RegistryAddrForm true "系统配置信息"
-// @Success 200 {object}  ctx.JSONResult{result=models.RegistryAddrResp}
+// @Success 200 {object}  ctx.JSONResult{result=resps.RegistryAddrResp}
 // @Router /system_config/registry/addr [POST]
 func UpsertRegistryAddr(c *ctx.GinRequest) {
 	form := forms.RegistryAddrForm{}
