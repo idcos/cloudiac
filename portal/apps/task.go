@@ -414,8 +414,13 @@ func SearchTaskResourcesGraph(c *ctx.ServiceContext, form *forms.SearchTaskResou
 	if err != nil {
 		return nil, err
 	}
+
 	for i := range rs {
 		rs[i].Provider = path.Base(rs[i].Provider)
+		// 不需要返回 attrs, 避免返回的数据过大;
+		if form.Dimension != consts.GraphDimensionModule {
+			rs[i].Attrs = nil
+		}
 	}
 	return GetResourcesGraph(rs, form.Dimension), nil
 }
