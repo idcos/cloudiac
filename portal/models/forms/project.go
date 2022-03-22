@@ -12,8 +12,8 @@ type UserAuthorization struct {
 type CreateProjectForm struct {
 	BaseForm
 
-	Name              string              `json:"name" form:"name" binding:"required"` // 项目名称
-	Description       string              `json:"description" form:"description" `     // 项目描述
+	Name              string              `json:"name" form:"name" binding:"required,gte=2,lte=64"` // 项目名称
+	Description       string              `json:"description" form:"description" `                  // 项目描述
 	UserAuthorization []UserAuthorization `json:"userAuthorization" form:"userAuthorization" `
 }
 

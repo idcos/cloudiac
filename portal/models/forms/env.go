@@ -108,7 +108,7 @@ type DeployEnvForm struct {
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
 
-	Name            string   `form:"name" json:"name" binding:""`                                     // 环境名称
+	Name            string   `form:"name" json:"name" binding:"required,gte=2,lte=64"`                // 环境名称
 	Triggers        []string `form:"triggers" json:"triggers" binding:""`                             // 启用触发器，触发器：commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
 	AutoApproval    bool     `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"` // 是否自动审批
 	StopOnViolation bool     `form:"stopOnViolation" json:"stopOnViolation" enums:"true,false"`       // 合规不通过是否中止任务

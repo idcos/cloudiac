@@ -2,12 +2,14 @@
 
 package forms
 
-import "cloudiac/portal/models"
+import (
+	"cloudiac/portal/models"
+)
 
 type CreateOrganizationForm struct {
 	BaseForm
-	Name        string `form:"name" json:"name" binding:"required,gte=2,lte=64"` // 组织名称
-	Description string `form:"description" json:"description" binding:""`        // 组织描述
+	Name        string `form:"name" json:"name" binding:"required,lte=64,gte=2"` // 组织名称
+	Description string `form:"description" json:"description" binding:"max=255"` // 组织描述
 }
 
 type UpdateOrganizationForm struct {
@@ -59,10 +61,10 @@ type InviteUserForm struct {
 
 	Id     models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`      // 组织ID
 	UserId models.Id `form:"userId" json:"userId"`                             // 用户ID，用户ID 或 用户名+邮箱必须填写一个
-	Name   string    `form:"name" json:"name" binding:""`                      // 用户名
-	Email  string    `form:"email" json:"email" binding:""`                    // 电子邮件地址
+	Name   string    `form:"name" json:"name" binding:"gte=2,lte=32"`          // 用户名
+	Email  string    `form:"email" json:"email" binding:"email"`               // 电子邮件地址
 	Role   string    `form:"role" json:"role" binding:"" enums:"admin,member"` // 受邀请用户在组织中的角色，组织管理员：admin，普通用户：member
-	Phone  string    `form:"phone" json:"phone" binding:""`                    // 用户手机号
+	Phone  string    `form:"phone" json:"phone" binding:"max=11"`              // 用户手机号
 }
 
 type SearchOrgResourceForm struct {

@@ -32,7 +32,7 @@ type TplImportForm struct {
 
 	Data services.TplExportedData `json:"data"  swaggerignore:"true"` // 待导入数据(JSON 格式，与 file 参数二选一)
 
-	File *multipart.FileHeader `form:"file" swaggerignore:"true"` // 待导入文件(与 data 参数二选一)
+	File *multipart.FileHeader `form:"file" swaggerignore:"true" binding:"file"` // 待导入文件(与 data 参数二选一)
 }
 
 func TemplateImport(c *ctx.ServiceContext, form *TplImportForm) (result *services.TplImportResult, er e.Error) {

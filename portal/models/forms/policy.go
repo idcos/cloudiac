@@ -56,7 +56,7 @@ type DetailPolicyForm struct {
 type CreatePolicyGroupForm struct {
 	BaseForm
 
-	Name        string   `json:"name" binding:"required" example:"安全合规策略组"`
+	Name        string   `json:"name" binding:"required,gte=2,lte=64" example:"安全合规策略组"`
 	Description string   `json:"description" binding:"" example:"本组包含对于安全合规的检查策略"`
 	Labels      []string `json:"labels" binding:"" example:"[security,alicloud]"`
 

@@ -11,17 +11,17 @@ type SearchVariableGroupForm struct {
 
 type CreateVariableGroupForm struct {
 	BaseForm
-	Name      string                    `json:"name" form:"name"`
-	Type      string                    `json:"type" form:"type"`
-	Variables []models.VarGroupVariable `json:"variables" form:"variables" `
+	Name      string                    `json:"name" form:"name" binding:"required,gte=2,lte=64"`
+	Type      string                    `json:"type" form:"type" binding:"required"`
+	Variables []models.VarGroupVariable `json:"variables" form:"variables" binding:"required"`
 }
 
 type UpdateVariableGroupForm struct {
 	BaseForm
 
 	Id        models.Id                 `uri:"id"`
-	Name      string                    `json:"name" form:"name"`
-	Variables []models.VarGroupVariable `json:"variables" form:"variables" `
+	Name      string                    `json:"name" form:"name" binding:"required,gte=2,lte=64"`
+	Variables []models.VarGroupVariable `json:"variables" form:"variables" binding:"required"`
 }
 
 type DeleteVariableGroupForm struct {

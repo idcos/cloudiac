@@ -6,10 +6,10 @@ import "cloudiac/portal/models"
 
 type CreateVcsForm struct {
 	BaseForm
-	Name     string `form:"name" json:"name" binding:"required"`
-	VcsType  string `form:"vcsType" json:"vcsType" binding:"required"`
-	Address  string `form:"address" json:"address" binding:"required"`
-	VcsToken string `form:"vcsToken" json:"vcsToken" binding:"required"`
+	Name     string `form:"name" json:"name" binding:"required,lte=255"`
+	VcsType  string `form:"vcsType" json:"vcsType" binding:"required,lte=255"`
+	Address  string `form:"address" json:"address" binding:"required,lte=255"`
+	VcsToken string `form:"vcsToken" json:"vcsToken" binding:"required,lte=255"`
 }
 
 type UpdateVcsForm struct {

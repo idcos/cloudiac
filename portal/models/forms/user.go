@@ -78,7 +78,7 @@ type UpdateUserOrgForm struct {
 
 	Id     models.Id `uri:"id" json:"id" binding:"" swaggerignore:"true"`         // 组织ID
 	UserId models.Id `uri:"userId" json:"userId" binding:"" swaggerignore:"true"` // 用户ID
-	Name   string    `form:"name" json:"name" binding:""`                         // 用户名
-	Phone  string    `form:"phone" json:"phone" binding:""`
+	Name   string    `form:"name" json:"name" binding:"gte=2,lte=32"`             // 用户名
+	Phone  string    `form:"phone" json:"phone" binding:"max=11"`
 	Role   string    `form:"role" json:"role" binding:"required" enums:"admin,complianceManager,member"` // 用户在组织中的角色，组织管理员：admin，普通用户：member，默认 member
 }
