@@ -416,8 +416,6 @@ func SearchTaskResourcesGraph(c *ctx.ServiceContext, form *forms.SearchTaskResou
 	}
 	for i := range rs {
 		rs[i].Provider = path.Base(rs[i].Provider)
-		// attrs 暂时不需要返回
-		rs[i].Attrs = nil
 	}
 	return GetResourcesGraph(rs, form.Dimension), nil
 }
@@ -433,6 +431,36 @@ func GetResourcesGraph(rs []services.Resource, dimension string) interface{} {
 	default:
 		return nil
 	}
+}
+
+// GetResShowName
+// 建立规则库，通过各种规则确定资源的主要字段或者展示模板
+//		规则示例1: 如果资源的属性中有 public_ip 字段，则展示 public_ip;
+//    	规则示例2: 如果资源的属性中有 name 字段，则展示 name;
+//    	规则示例3: 如果资源的属性中有 tag 字段，则展示 name(tag1,tag2);
+// 不匹配规则库时展示: resource address(id), 如: "module1.alicloud_instance.web(i-xxxxxxx)";
+func GetResShowName(attrs map[string]interface{}, addr, id string) string {
+	outRuleName := fmt.Sprintf("%s(%s)", addr, id)
+	if attrs != nil {
+		get := func(key string) (string, bool) {
+			if val, ok := attrs[key]; ok {
+				return val.(string), true
+			}
+			return "", false
+		}
+		if publicIP, ok := get("public_ip"); ok {
+			return publicIP
+		}
+		if name, ok := get("name"); ok {
+			if tags, ok := get("tag"); ok {
+				return fmt.Sprintf("%s(%s)", name, tags)
+			}
+			return name
+		}
+		return outRuleName
+	}
+
+	return outRuleName
 }
 
 type ResourcesGraphModule struct {
@@ -493,7 +521,7 @@ func genNodesFromResource(resource services.Resource, parentChildNode map[string
 
 	res := ResourceInfo{
 		ResourceId:   resource.Id.String(),
-		ResourceName: resource.Name,
+		ResourceName: GetResShowName(resource.Attrs, resource.Address, string(resource.Id)),
 		NodeName:     lastAddr,
 	}
 
