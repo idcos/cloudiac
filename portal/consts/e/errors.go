@@ -201,4 +201,8 @@ const (
 
 	// system config 316
 	SystemConfigNotExist = 31610
+
+	// Ldap 317
+	LdapConnectFailed = 31710
+
 )

@@ -518,4 +518,8 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "policy not found in the repository",
 		"zh-CN": "仓库在当前目录找不到策略文件",
 	},
+	LdapConnectFailed: {
+		"zh-CN": "ldap链接服务端链接失败",
+		"en-US": "ldap servers connect failed",
+	},
 }
