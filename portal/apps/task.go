@@ -445,14 +445,26 @@ func GetResourcesGraph(rs []services.Resource, dimension string) interface{} {
 //    	规则示例3: 如果资源的属性中有 tag 字段，则展示 name(tag1,tag2);
 // 不匹配规则库时展示: resource address(id), 如: "module1.alicloud_instance.web(i-xxxxxxx)";
 func GetResShowName(attrs map[string]interface{}, addr string) string {
-	outRuleName := fmt.Sprintf("%s(%s)", addr, attrs["id"].(string))
-	if attrs != nil {
-		get := func(key string) (string, bool) {
-			if val, ok := attrs[key]; ok {
-				return val.(string), true
+	get := func(key string) (string, bool) {
+		if val, ok := attrs[key]; ok {
+			switch OriginalValue := val.(type) {
+			case map[string]string:
+				var expectedFormat = make([]string, 0) // "k1=v1,k2=v2,k3=v3..."
+				for k, v := range OriginalValue {
+					expectedFormat = append(expectedFormat, fmt.Sprintf("%s=%s", k, v))
+				}
+				return strings.Join(expectedFormat, ","), true
+			case []string:
+				// expect format: "v1,v2,v3..."
+				return fmt.Sprintf("%s", strings.Join(OriginalValue, ",")), true
+			default:
+				return fmt.Sprintf("%v", OriginalValue), true
 			}
-			return "", false
 		}
+		return "", false
+	}
+
+	if attrs != nil {
 		if publicIP, ok := get("public_ip"); ok {
 			return publicIP
 		}
@@ -462,10 +474,12 @@ func GetResShowName(attrs map[string]interface{}, addr string) string {
 			}
 			return name
 		}
-		return outRuleName
 	}
-
-	return outRuleName
+	outRuleName, ok := get("id")
+	if ok {
+		return fmt.Sprintf("%s(%s)", addr, outRuleName)
+	}
+	return fmt.Sprintf("%s", addr)
 }
 
 type ResourcesGraphModule struct {
