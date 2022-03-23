@@ -528,7 +528,8 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 	}
 
 	logs.Get().WithField("taskId", task.Id).Infof("change task to '%s'", status)
-	if _, err := models.UpdateModelAll(dbSess, task); err != nil {
+	dbSelect := dbSess.Select("status", "message", "start_at", "end_at")
+	if _, err := models.UpdateModel(dbSelect, task); err != nil {
 		return e.AutoNew(err, e.DBError)
 	}
 
@@ -1023,7 +1024,8 @@ func ChangeScanTaskStatus(dbSess *db.Session, task *models.ScanTask, status, mes
 	}
 
 	logs.Get().WithField("taskId", task.Id).Infof("change scan task to '%s'", status)
-	if _, err := dbSess.Model(task).Update(task); err != nil {
+	if _, err := dbSess.Select("status", "message", "start_at", "end_at").
+		Model(task).Update(task); err != nil {
 		return e.AutoNew(err, e.DBError)
 	}
 

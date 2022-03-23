@@ -704,7 +704,7 @@ type changeStepStatusFunc func(status, message string, step *models.TaskStep)
 func getChangeStepStatusFunc(db *db.Session, task models.Tasker, logger logs.Logger) changeStepStatusFunc {
 	return func(status, message string, step *models.TaskStep) {
 		var er error
-		if er = services.ChangeTaskStepStatusAndUpdate(db, task, step, status, message); er != nil {
+		if er = services.ChangeTaskStepStatus(db, task, step, status, message); er != nil {
 			er = errors.Wrap(er, "update step status error")
 			logger.Error(er)
 			panic(er)
@@ -844,8 +844,10 @@ func waitTaskStepDone(
 				if retryAble && task.RetryAble {
 					if step.RetryNumber > 0 && step.CurrentRetryCount < step.RetryNumber {
 						// 下次重试时间为当前任务失败时间点加任务设置重试间隔时间。
-						step.NextRetryTime = time.Now().Unix() + int64(task.RetryDelay)
-						step.CurrentRetryCount += 1
+						nextRetryTime := time.Now().Unix() + int64(task.RetryDelay)
+						if er := services.UpdateTaskStepRetryNum(db, step.Id, step.CurrentRetryCount+1, nextRetryTime); er != nil {
+							panic(errors.Wrapf(err, "update task step retry number"))
+						}
 						message := fmt.Sprintf("Task step start failed and try again. The current number of retries is %d", step.CurrentRetryCount)
 						changeStepStatus(models.TaskStepPending, message, step)
 					}
