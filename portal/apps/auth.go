@@ -12,32 +12,59 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"github.com/go-ldap/ldap/v3"
-	"log"
 	"net/http"
 	"time"
 )
 
+func validPassword(password, userPassword string) e.Error {
+	valid, er := utils.CheckPassword(password, userPassword)
+	if er != nil {
+		return e.New(e.ValidateError, http.StatusInternalServerError, er)
+	}
+	if !valid {
+		return e.New(e.InvalidPassword, http.StatusBadRequest)
+	}
+	return nil
+}
+
 // Login 用户登陆
 func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("user login: %s", form.Email))
-
 	user, err := services.GetUserByEmail(c.DB(), form.Email)
-	if err != nil {
-		if err.Code() == e.UserNotExists {
-			// 找不到账号时也返回 InvalidPassword 错误，避免暴露系统中己有用户账号
-			return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
+	// ldap 账号只能使用ldap账号进行登录
+	if err == nil {
+		if user.IsLdap {
+			if _, err = LdapAuthLogin(form.Email, form.Password); err != nil {
+				return nil, err
+			}
+		} else {
+			if err = validPassword(form.Password, user.Password); err != nil {
+				return nil, err
+			}
 		}
-		return nil, e.New(e.DBError, err)
+	} else {
+		if err.Code() == e.UserNotExists {
+			// 使用ldap 进行登录
+			username, ldapErr := LdapAuthLogin(form.Email, form.Password)
+			if ldapErr != nil {
+				// 找不到账号时也返回 InvalidPassword 错误，避免暴露系统中己有用户账号
+				return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
+			}
+			// 登录成功, 标记账号为ldap用户，并且在用户表中添加该用户
+			createUserform := &forms.CreateUserForm{
+				Name:   username,
+				Email:  form.Email,
+				IsLdap: true,
+			}
+			ldapUser, err := CreateUser(c, createUserform)
+			if err != nil {
+				return nil, err
+			}
+			user = ldapUser.User
+		} else {
+			return nil, e.New(e.DBError, err)
+		}
 	}
-
-	valid, er := utils.CheckPassword(form.Password, user.Password)
-	if er != nil {
-		return nil, e.New(e.ValidateError, http.StatusInternalServerError, er)
-	}
-	if !valid {
-		return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
-	}
-
 	token, er := services.GenerateToken(user.Id, user.Name, user.IsAdmin, 1*24*time.Hour)
 	if er != nil {
 		c.Logger().Errorf("name [%s] generateToken error: %v", user.Email, er)
@@ -82,44 +109,37 @@ func VerifySsoToken(c *ctx.ServiceContext, form *forms.VerifySsoTokenForm) (resp
 }
 
 // 处理Ldap 登录逻辑
-func LdapAuthLogin(username, password string) e.Error {
+func LdapAuthLogin(userEmail, password string) (username string, er e.Error) {
 	conf := configs.Get()
 	conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", conf.Ldap.LdapServer, conf.Ldap.LdapServerPort))
 	if err != nil {
-		return e.New(e.LdapConnectFailed, err)
+		return username, e.New(e.LdapConnectFailed, err)
 	}
 	defer conn.Close()
 	// 配置ldap 管理员dn信息，例如cn=Manager,dc=idcos,dc=com
 	err = conn.Bind(conf.Ldap.AdminDn, conf.Ldap.AdminPassword)
 	if err != nil {
-		return e.New(e.ValidateError, err)
+		return username, e.New(e.ValidateError, err)
 	}
-
 	searchRequest := ldap.NewSearchRequest(
-		// 这里是 basedn,我们将从这个节点开始搜索
-		"dc=idcos,dc=com",
-		// 这里几个参数分别是 scope, derefAliases, sizeLimit, timeLimit,  typesOnly
-		// 详情可以参考 RFC4511 中的定义,文末有链接
+		conf.Ldap.SearchBase,
 		ldap.ScopeWholeSubtree, ldap.DerefAlways, 0, 0, false,
-		// 这里是 LDAP 查询的 Filter.这个例子例子,我们通过查询 uid=username 且 objectClass=organizationalPerson.
-		// username 即我们需要认证的用户名
-		fmt.Sprintf("(&(objectClass=organizationalPerson)(uid=%s))","okr"),
+		fmt.Sprintf("(&(objectClass=organizationalPerson)(mail=%s))", userEmail),
 		// 这里是查询返回的属性,以数组形式提供.如果为空则会返回所有的属性
-		[]string{"dn"},
+		[]string{},
 		nil,
 	)
 	sr, err := conn.Search(searchRequest)
 	if err != nil {
-		log.Fatal(err)
+		return username, e.New(e.ValidateError, err)
 	}
-	fmt.Println("这里", sr)
-	userdn := sr.Entries[0].DN
-	fmt.Println("userdn", userdn)
-	err = conn.Bind(userdn, "123456")
+	if len(sr.Entries) != 1 {
+		return username, e.New(e.UserNotExists, err)
+	}
+	err = conn.Bind(sr.Entries[0].DN, password)
 	if err != nil {
-		fmt.Println("333", err)
-		log.Fatal(err)
+		return username, e.New(e.InvalidPassword, err)
 	}
-	fmt.Println("成功")
+	return sr.Entries[0].GetAttributeValue("uid"), nil
 
 }

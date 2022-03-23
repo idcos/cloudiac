@@ -7,9 +7,10 @@ import "cloudiac/portal/models"
 type CreateUserForm struct {
 	BaseForm
 
-	Name  string `form:"name" json:"name" binding:"required,gte=2,lte=32"` // 用户名
-	Phone string `form:"phone" json:"phone" binding:"max=11"`              // 电话
-	Email string `form:"email" json:"email" binding:"required,email"`      // 电子邮件地址
+	Name   string `form:"name" json:"name" binding:"required,gte=2,lte=32"` // 用户名
+	Phone  string `form:"phone" json:"phone" binding:"max=11"`              // 电话
+	Email  string `form:"email" json:"email" binding:"required,email"`      // 电子邮件地址
+	IsLdap bool   `form:"isLdap" json:"isLdap" default:"false"`
 }
 
 type UpdateUserForm struct {

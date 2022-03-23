@@ -522,4 +522,8 @@ var errorMsgs = map[int]map[string]string{
 		"zh-CN": "ldap链接服务端链接失败",
 		"en-US": "ldap servers connect failed",
 	},
+	LdapUpdateFailed: {
+		"zh-CN": "ldap账户不支持在iac服务端进行修改",
+		"en-US": "LDAP accounts cannot be modified on the IAC server",
+	},
 }
