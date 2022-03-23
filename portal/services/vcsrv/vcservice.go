@@ -110,19 +110,21 @@ type RepoHook struct {
 }
 
 func GetVcsInstance(vcs *models.Vcs) (VcsIface, error) {
+	// 先进行值拷贝再创建实例, 防止因为指针类型导致上层变量被修改;
+	vcsObject := *vcs
 	switch vcs.VcsType {
 	case consts.GitTypeLocal:
-		return newLocalVcs(vcs.Address), nil
+		return newLocalVcs(vcsObject.Address), nil
 	case consts.GitTypeGitLab:
-		return newGitlabInstance(vcs)
+		return newGitlabInstance(&vcsObject)
 	case consts.GitTypeGitEA:
-		return newGiteaInstance(vcs)
+		return newGiteaInstance(&vcsObject)
 	case consts.GitTypeGithub:
-		return newGithubInstance(vcs)
+		return newGithubInstance(&vcsObject)
 	case consts.GitTypeGitee:
-		return newGiteeInstance(vcs)
+		return newGiteeInstance(&vcsObject)
 	case consts.GitTypeRegistry:
-		return newRegistryVcs(vcs)
+		return newRegistryVcs(&vcsObject)
 	default:
 		return nil, errors.New("vcs type doesn't exist")
 	}
