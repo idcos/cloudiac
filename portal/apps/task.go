@@ -444,8 +444,8 @@ func GetResourcesGraph(rs []services.Resource, dimension string) interface{} {
 //    	规则示例2: 如果资源的属性中有 name 字段，则展示 name;
 //    	规则示例3: 如果资源的属性中有 tag 字段，则展示 name(tag1,tag2);
 // 不匹配规则库时展示: resource address(id), 如: "module1.alicloud_instance.web(i-xxxxxxx)";
-func GetResShowName(attrs map[string]interface{}, addr, id string) string {
-	outRuleName := fmt.Sprintf("%s(%s)", addr, id)
+func GetResShowName(attrs map[string]interface{}, addr string) string {
+	outRuleName := fmt.Sprintf("%s(%s)", addr, attrs["id"].(string))
 	if attrs != nil {
 		get := func(key string) (string, bool) {
 			if val, ok := attrs[key]; ok {
@@ -526,7 +526,7 @@ func genNodesFromResource(resource services.Resource, parentChildNode map[string
 
 	res := ResourceInfo{
 		ResourceId:   resource.Id.String(),
-		ResourceName: GetResShowName(resource.Attrs, resource.Address, string(resource.Id)),
+		ResourceName: GetResShowName(resource.Attrs, resource.Address),
 		NodeName:     lastAddr,
 	}
 
