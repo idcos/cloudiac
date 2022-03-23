@@ -174,7 +174,7 @@ type SearchPolicySuppressForm struct {
 }
 
 type SearchPolicySuppressSourceForm struct {
-	NoPageSizeForm `swaggerignore:"true"`
+	NoPageSizeForm
 
 	Id models.Id `uri:"id" swaggerignore:"true"`
 }
