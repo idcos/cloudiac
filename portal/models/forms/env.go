@@ -85,7 +85,8 @@ type UpdateEnvForm struct {
 	RunnerId    string    `form:"runnerId" json:"runnerId" binding:""`              // 环境默认部署通道
 	Archived    bool      `form:"archived" json:"archived" enums:"true,false"`      // 归档状态，默认返回未归档环境
 
-	Tags string `form:"tags" json:"tags" binding:""` // 环境的 tags，多个 tag 以 "," 分隔
+	Timeout int    `form:"timeout" json:"timeout" binding:""` // 部署超时时间（单位：秒）
+	Tags    string `form:"tags" json:"tags" binding:""`       // 环境的 tags，多个 tag 以 "," 分隔
 
 	AutoApproval    bool `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"` // 是否自动审批
 	StopOnViolation bool `form:"stopOnViolation" json:"stopOnViolation" enums:"true,false"`       // 合规不通过是否中止任务

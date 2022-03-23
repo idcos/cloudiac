@@ -174,6 +174,17 @@ func getRunnerId(runnerTags []string, runnerId string) (string, e.Error) {
 	return services.GetDefaultRunner()
 }
 
+func getTaskStepTimeout(timeout int) (int, e.Error) {
+	if timeout <= 0 {
+		sysTimeout, err := services.GetSystemTaskStepTimeout(db.Get())
+		if err != nil {
+			return -1, err
+		}
+		timeout = sysTimeout
+	}
+	return timeout, nil
+}
+
 func createEnvToDB(tx *db.Session, c *ctx.ServiceContext, form *forms.CreateEnvForm, envModel models.Env) (*models.Env, e.Error) {
 	// 检查偏移检测参数
 	cronTaskType, err := GetCronTaskTypeAndCheckParam(form.CronDriftExpress, form.AutoRepairDrift, form.OpenCronDrift)
@@ -307,6 +318,11 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, err
 	}
 
+	taskStepTimeout, err := getTaskStepTimeout(form.Timeout)
+	if err != nil {
+		return nil, err
+	}
+
 	envModel := models.Env{
 		OrgId:     c.OrgId,
 		ProjectId: c.ProjectId,
@@ -319,7 +335,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		RunnerTags: strings.Join(form.RunnerTags, ","),
 		Status:     models.EnvStatusInactive,
 		OneTime:    form.OneTime,
-		Timeout:    form.Timeout,
+		Timeout:    taskStepTimeout,
 
 		// 模板参数
 		TfVarsFile:   form.TfVarsFile,
@@ -600,6 +616,9 @@ func setUpdateEnvByForm(attrs models.Attrs, form *forms.UpdateEnvForm) {
 	}
 	if form.HasKey("policyEnable") {
 		attrs["policyEnable"] = form.PolicyEnable
+	}
+	if form.HasKey("timeout") {
+		attrs["timeout"] = form.Timeout
 	}
 }
 
