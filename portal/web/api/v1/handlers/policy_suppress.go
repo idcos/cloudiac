@@ -55,6 +55,7 @@ func (Policy) DeletePolicySuppress(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param policyId path string true "策略id"
+// @Param form query forms.SearchPolicySuppressForm true "parameter"
 // @Router /policies/{policyId}/suppress [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.PolicySuppressResp}}
 func (Policy) SearchPolicySuppress(c *ctx.GinRequest) {
@@ -75,6 +76,7 @@ func (Policy) SearchPolicySuppress(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param policyId path string true "策略id"
+// @Param form query forms.SearchPolicySuppressSourceForm true "parameter"
 // @Router /policies/{policyId}/suppress/sources [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.PolicySuppressSourceResp}}
 func (Policy) SearchPolicySuppressSource(c *ctx.GinRequest) {

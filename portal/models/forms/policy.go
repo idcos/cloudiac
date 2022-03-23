@@ -22,9 +22,9 @@ type CreatePolicyForm struct {
 type SearchPolicyForm struct {
 	PageForm
 
-	Q        string      `form:"q" json:"q" binding:""` // 策略组名称，支持模糊搜索
-	Severity string      `json:"severity" form:"severity" enums:"'high','medium','low','none'" example:"medium"`
-	GroupId  []models.Id `json:"groupId" form:"groupId" `
+	Q        string      `form:"q" json:"q" binding:""`                                                          // 策略组名称，支持模糊搜索
+	Severity string      `json:"severity" form:"severity" enums:"'high','medium','low','none'" example:"medium"` //严重性
+	GroupId  []models.Id `json:"groupId" form:"groupId" `                                                        //组织ID
 }
 
 type UpdatePolicyForm struct {
@@ -50,7 +50,7 @@ type DeletePolicyForm struct {
 type DetailPolicyForm struct {
 	BaseForm
 
-	Id models.Id `uri:"id"`
+	Id models.Id `uri:"id" swaggerignore:"true"`
 }
 
 type CreatePolicyGroupForm struct {
@@ -77,7 +77,7 @@ type SearchPolicyGroupForm struct {
 type UpdatePolicyGroupForm struct {
 	BaseForm
 
-	Id          models.Id `uri:"id"`
+	Id          models.Id `uri:"id" swaggerignore:"true"`
 	Name        string    `json:"name" form:"name" `
 	Description string    `json:"description" binding:"" example:"本组包含对于安全合规的检查策略"`
 	Enabled     bool      `json:"enabled" form:"enabled"`
@@ -106,7 +106,7 @@ type DetailPolicyGroupForm struct {
 type UpdatePolicyRelForm struct {
 	BaseForm
 
-	Id             models.Id   `uri:"id" binding:"" example:"tpl-c3ek0co6n88ldvq1n6ag"`
+	Id             models.Id   `uri:"id" binding:"" example:"tpl-c3ek0co6n88ldvq1n6ag" swaggerignore:"true"`
 	PolicyGroupIds []models.Id `json:"policyGroupIds" binding:"required" example:"pog-c3ek0co6n88ldvq1n6ag,pog-c3ek0co6n88ldvq1n6bg"`
 	Scope          string      `json:"-" swaggerignore:"true" binding:""`
 }
@@ -136,8 +136,8 @@ type ScanTemplateForms struct {
 type ScanEnvironmentForm struct {
 	BaseForm
 
-	Id    models.Id `uri:"id" binding:"" example:"env-c3ek0co6n88ldvq1n6ag"`      // 环境Id
-	Parse bool      `json:"parse" binding:""  enums:"true,false" example:"false"` // 是否只执行解析
+	Id    models.Id `uri:"id" binding:"" example:"env-c3ek0co6n88ldvq1n6ag" swaggerignore:"true"` // 环境Id
+	Parse bool      `json:"parse" binding:""  enums:"true,false" example:"false"`                 // 是否只执行解析
 }
 
 type PolicyParseForm struct {
@@ -150,7 +150,7 @@ type PolicyParseForm struct {
 type OpnPolicyAndPolicyGroupRelForm struct {
 	BaseForm
 
-	PolicyGroupId models.Id `uri:"id" json:"policyGroupId" form:"policyGroupId" `
+	PolicyGroupId models.Id `uri:"id" json:"policyGroupId" form:"policyGroupId" swaggerignore:"true"`
 	RmPolicyIds   []string  `json:"rmPolicyIds" binding:"" example:"po-c3ek0co6n88ldvq1n6ag"`
 	AddPolicyIds  []string  `json:"addPolicyIds" binding:"" example:"po-c3ek0co6n88ldvq1n6ag"`
 }
@@ -170,13 +170,13 @@ type CreatePolicySuppressForm struct {
 type SearchPolicySuppressForm struct {
 	PageForm
 
-	Id models.Id `uri:"id"`
+	Id models.Id `uri:"id" swaggerignore:"true"`
 }
 
 type SearchPolicySuppressSourceForm struct {
-	NoPageSizeForm
+	NoPageSizeForm `swaggerignore:"true"`
 
-	Id models.Id `uri:"id"`
+	Id models.Id `uri:"id" swaggerignore:"true"`
 }
 
 type DeletePolicySuppressForm struct {
@@ -224,7 +224,7 @@ type SearchPolicyEnvForm struct {
 type EnvOfPolicyForm struct {
 	PageForm
 
-	Id       models.Id `json:"id" form:"id" `
+	Id       models.Id `url:"id" json:"id" form:"id" swaggerignore:"true"`
 	Q        string    `form:"q" json:"q" binding:""` // 策略组名称，支持模糊搜索
 	Severity string    `json:"severity" form:"severity" enums:"'high','medium','low','none'" example:"medium"`
 	GroupId  models.Id `json:"groupId" form:"groupId" `
@@ -232,7 +232,7 @@ type EnvOfPolicyForm struct {
 
 type PolicyErrorForm struct {
 	PageForm
-	Id models.Id `uri:"id"`
+	Id models.Id `uri:"id" swaggerignore:"true"`
 	Q  string    `json:"q" form:"q"`
 }
 
@@ -247,7 +247,7 @@ type UpdatePolicySuppressForm struct {
 type PolicyScanResultForm struct {
 	NoPageSizeForm
 
-	Id     models.Id `uri:"id"`                                                       // 环境ID
+	Id     models.Id `uri:"id" json:"id" swaggerignore:"true"`                        // 环境ID
 	TaskId models.Id `json:"taskId" form:"taskId" example:"run-c3ek0co6n88ldvq1n6ag"` // 任务ID
 }
 
@@ -270,7 +270,7 @@ type PolicyTestForm struct {
 type PolicyLastTasksForm struct {
 	PageForm
 
-	Id    models.Id `uri:"id" `
+	Id    models.Id `uri:"id" swaggerignore:"true"`
 	Scope string    `json:"-"`
 }
 

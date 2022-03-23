@@ -134,6 +134,7 @@ func (Organization) ChangeOrgStatus(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param orgId path string true "组织ID"
 // @Param form formData forms.AddUserOrgRelForm true "parameter"
 // @router /orgs/{orgId}/users [post]
@@ -153,6 +154,7 @@ func (Organization) AddUserToOrg(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param orgId path string true "组织ID"
 // @Param userId path string true "用户ID"
 // @Param form formData forms.DeleteUserOrgRelForm true "parameter"
@@ -174,6 +176,7 @@ func (Organization) RemoveUserForOrg(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param orgId path string true "组织ID"
 // @Param userId path string true "用户ID"
 // @Param form formData forms.UpdateUserOrgRelForm true "parameter"
@@ -188,8 +191,8 @@ func (Organization) UpdateUserOrgRel(c *ctx.GinRequest) {
 }
 
 // SearchUser 查询组织用户列表
-// @Tags 用户
-// @Summary 用户查询
+// @Tags 组织
+// @Summary 查询组织用户列表
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken

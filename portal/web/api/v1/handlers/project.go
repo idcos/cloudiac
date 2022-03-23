@@ -59,6 +59,7 @@ func (Project) Search(c *ctx.GinRequest) {
 // @Produce  json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
+// @Param projectId path string true "项目id"
 // @Param request body forms.UpdateProjectForm true "用户授权"
 // @Success 200 {object} ctx.JSONResult{result=models.Project}
 // @Router /projects/{projectId}  [put]
@@ -78,7 +79,7 @@ func (Project) Update(c *ctx.GinRequest) {
 // @Produce  json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
-// @Param id query string true "项目id"
+// @Param projectId path string true "项目id"
 // @Success 200
 // @Router /projects/{projectId} [delete]
 func (Project) Delete(c *ctx.GinRequest) {
@@ -97,6 +98,7 @@ func (Project) Delete(c *ctx.GinRequest) {
 // @Produce  json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
+// @Param projectId path string true "项目id"
 // @Success 200 {object} ctx.JSONResult{result=resps.DetailProjectResp}
 // @Router /projects/{projectId}  [get]
 func (Project) Detail(c *ctx.GinRequest) {
