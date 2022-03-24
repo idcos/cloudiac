@@ -18,7 +18,7 @@ type DeleteProjectOrgUserForm struct {
 
 type UpdateProjectUserForm struct {
 	BaseForm
-	Id models.Id `uri:"id" json:"id" form:"id" `
+	Id models.Id `uri:"id" json:"id" form:"id" swaggerignore:"true"`
 	//UserId models.Id `json:"userId" form:"userId" `                                     // 用户id
 	Role string `json:"role" form:"role" enums:"'manager,approver,operator,guest"` // 角色 (manager,approver,operator,guest)
 }

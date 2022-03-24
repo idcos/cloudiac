@@ -17,7 +17,7 @@ import (
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param q query string false "模糊搜索"
+// @Param form query forms.SearchPolicyEnvForm true "parameter"
 // @Router /policies/envs [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.RespPolicyEnv}}
 func (Policy) SearchPolicyEnv(c *ctx.GinRequest) {
@@ -37,6 +37,7 @@ func (Policy) SearchPolicyEnv(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param envId path string true "环境id"
+// @Param form query forms.EnvOfPolicyForm true "parameter"
 // @Router /policies/envs/{envId}/policies [get]
 // @Success 200 {object} ctx.JSONResult{result=ctx.JSONResult{list=[]resps.RespEnvOfPolicy}}
 func (Policy) EnvOfPolicy(c *ctx.GinRequest) {
@@ -47,7 +48,18 @@ func (Policy) EnvOfPolicy(c *ctx.GinRequest) {
 	c.JSONResult(apps.EnvOfPolicy(c.Service(), form))
 }
 
-//todo swagger 文档缺失
+// ValidEnvOfPolicy 生效的环境策略
+// @Tags 合规/环境
+// @Summary 生效的环境策略
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param envId path string true "环境id"
+// @Param form query forms.EnvOfPolicyForm true "parameter"
+// @Router /policies/envs/{envId}/valid_policies [get]
+// @Success 200 {object} ctx.JSONResult{result=resps.ValidPolicyResp}
 func (Policy) ValidEnvOfPolicy(c *ctx.GinRequest) {
 	form := &forms.EnvOfPolicyForm{}
 	if err := c.Bind(form); err != nil {

@@ -19,15 +19,15 @@ type CreateTokenForm struct {
 
 type UpdateTokenForm struct {
 	BaseForm
-	Id          models.Id `uri:"id" form:"id" json:"id" binding:"required"`
+	Id          models.Id `uri:"id" form:"id" json:"id" binding:"required" swaggerignore:"true"`
 	Status      string    `form:"status" json:"status" binding:"required"`
 	Description string    `json:"description" form:"description" ` //描述
 }
 
 type SearchTokenForm struct {
 	PageForm
-	Q      string `form:"q" json:"q" binding:""`
-	Status string `form:"status" json:"status"`
+	Q      string `form:"q" json:"q" binding:""` //"模糊搜索"
+	Status string `form:"status" json:"status"`  //"ApiToken状态"
 }
 
 type DeleteTokenForm struct {

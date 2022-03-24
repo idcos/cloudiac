@@ -58,7 +58,7 @@ func (ProjectUser) Search(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织id"
 // @Param IaC-Project-Id header string true "项目id"
 // @Param id path string true "用户项目id"
-// @Param request body forms.UpdateProjectUserForm true "用户授权"
+// @Param form body forms.UpdateProjectUserForm true "用户授权"
 // @Success 200 {object} ctx.JSONResult
 // @Router /projects/users/{id}  [put]
 func (ProjectUser) Update(c *ctx.GinRequest) {
@@ -98,7 +98,7 @@ func (ProjectUser) Delete(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
 // @Param IaC-Project-Id header string true "项目id"
-// @Param request body forms.SearchProjectAuthorizationUserForm true "用户授权"
+// @Param form query forms.SearchProjectAuthorizationUserForm true "用户授权"
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.UserWithRoleResp}}
 // @Router /projects/authorization/users [get]
 func (ProjectUser) SearchProjectAuthorizationUser(c *ctx.GinRequest) {
