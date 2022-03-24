@@ -12,13 +12,14 @@ import (
 )
 
 func DeletePolicyGroupRel(tx *db.Session, id models.Id, scope string) e.Error {
-	sql := ""
+	query := tx.Where("scope = ?", scope)
 	if scope == consts.ScopeEnv {
-		sql = "env_id = ? and group_id != ''"
+		query = query.Where("env_id = ? and group_id != ''", id)
 	} else {
-		sql = "tpl_id = ? and env_id = '' and group_id != ''"
+		query = query.Where("tpl_id = ? and env_id = '' and group_id != ''", id)
 	}
-	if _, err := tx.Where(sql, id).Delete(models.PolicyRel{}); err != nil {
+
+	if _, err := query.Delete(models.PolicyRel{}); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil
 		}
@@ -28,14 +29,15 @@ func DeletePolicyGroupRel(tx *db.Session, id models.Id, scope string) e.Error {
 }
 
 func GetPolicyRel(query *db.Session, id models.Id, scope string) (*models.PolicyRel, e.Error) {
-	sql := ""
+	query = query.Where("scope = ?", scope)
 	if scope == consts.ScopeEnv {
-		sql = "env_id = ? and group_id = ''"
+		query = query.Where("env_id = ? and group_id = ''", id)
 	} else {
-		sql = "tpl_id = ? and group_id = ''"
+		query = query.Where("tpl_id = ? and group_id = ''", id)
 	}
+
 	rel := models.PolicyRel{}
-	if err := query.Model(models.PolicyRel{}).Where(sql, id).First(&rel); err != nil {
+	if err := query.Model(models.PolicyRel{}).First(&rel); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.PolicyRelNotExist, err)
 		}
@@ -50,23 +52,23 @@ type PolicyGroupsNameResp struct {
 }
 
 func GetPolicyRels(db *db.Session, id models.Id, scope string) ([]*PolicyGroupsNameResp, e.Error) {
-	sql := ""
+	query := db.Model(&models.PolicyRel{}).Where("scope = ?", scope)
 	if scope == consts.ScopeEnv {
-		sql = "env_id = ?"
+		query = query.Where("env_id = ?", id)
 	} else {
-		sql = "tpl_id = ?"
+		query = query.Where("tpl_id = ?", id)
 	}
-	rel := []*PolicyGroupsNameResp{}
-	query := db.Model(rel).Joins("left join iac_policy_group on iac_policy_rel.group_id = iac_policy_group.id").
+	rels := []*PolicyGroupsNameResp{}
+	query = query.Joins("left join iac_policy_group on iac_policy_rel.group_id = iac_policy_group.id").
 		LazySelectAppend("iac_policy_group.id as policy_group_id, iac_policy_rel.*")
 
-	if err := query.Where(sql, id).Scan(&rel); err != nil {
+	if err := query.Scan(&rels); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.PolicyRelNotExist, err)
 		}
 		return nil, e.New(e.DBError, err)
 	}
-	return rel, nil
+	return rels, nil
 }
 
 func CreatePolicyRel(tx *db.Session, rel *models.PolicyRel) (*models.PolicyRel, e.Error) {
@@ -81,13 +83,13 @@ func CreatePolicyRel(tx *db.Session, rel *models.PolicyRel) (*models.PolicyRel, 
 }
 
 func DeletePolicyEnabledRel(tx *db.Session, id models.Id, scope string) e.Error {
-	sql := ""
+	query := tx.Where("scope = ?", scope)
 	if scope == consts.ScopeEnv {
-		sql = "env_id = ? and group_id = ''"
+		query = query.Where("env_id = ? and group_id = ''", id)
 	} else {
-		sql = "tpl_id = ? and env_id = '' and group_id = ''"
+		query = query.Where("tpl_id = ? and env_id = '' and group_id = ''", id)
 	}
-	if _, err := tx.Where(sql, id).Delete(models.PolicyRel{}); err != nil {
+	if _, err := query.Delete(models.PolicyRel{}); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil
 		}
