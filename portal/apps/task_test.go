@@ -63,7 +63,7 @@ func TestGetResourcesGraphModule(t *testing.T) {
 
 func TestGetResShowName(t *testing.T) {
 	addr := "address"
-	const testIp string = "8.8.8.8"
+	const testIp string = "localhost"
 	tests := []struct {
 		name string
 		want string
