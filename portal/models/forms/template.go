@@ -51,24 +51,22 @@ type SearchTemplateForm struct {
 
 type UpdateTemplateForm struct {
 	BaseForm
-	Id           models.Id   `uri:"id" form:"id" json:"id" binding:"required,startswith=tpl-,max=32"`
-	Name         string      `form:"name" json:"name" binding:"omitempty,gte=2,lte=64"`
-	Description  string      `form:"description" json:"description" binding:"omitempty,max=255"`
-	Status       string      `form:"status" json:"status" binding:"omitempty,oneof=enable disable"`
-	Workdir      string      `form:"workdir" json:"workdir" binding:"max=255"`
-	RunnerId     string      `json:"runnerId" form:"runnerId" binding:"max=255"`
-	Playbook     string      `json:"playbook" form:"playbook" binding:"omitempty,endswith=.yml,max=255"`
-	PlayVarsFile string      `json:"playVarsFile" form:"playVarsFile" binding:"max=255"`
-	TfVarsFile   string      `form:"tfVarsFile" json:"tfVarsFile" binding:"max=255"`
-	ProjectId    []models.Id `form:"projectId" json:"projectId" binding:"omitempty,dive,required,startswith=p-,max=32"`
-	RepoRevision string      `form:"repoRevision" json:"repoRevision" binding:"max=64"`
-	VcsId        models.Id   `form:"vcsId" json:"vcsId" binding:"omitempty,startswith=vcs-,max=32"`
-	RepoId       string      `form:"repoId" json:"repoId" binding:"max=255"`
-	RepoFullName string      `form:"repoFullName" json:"repoFullName" binding:"max=255"`
-	TfVersion    string      `form:"tfVersion" json:"tfVersion" binding:"max=64"`
-
-	Variables []Variable `json:"variables" form:"variables" binding:"omitempty,dive,required"`
-
+	Id             models.Id   `uri:"id" form:"id" json:"id" binding:"required,startswith=tpl-,max=32" swaggerignore:"true"`
+	Name           string      `form:"name" json:"name" binding:"omitempty,gte=2,lte=64"`
+	Description    string      `form:"description" json:"description" binding:"omitempty,max=255"`
+	Status         string      `form:"status" json:"status" binding:"omitempty,oneof=enable disable"`
+	Workdir        string      `form:"workdir" json:"workdir" binding:"max=255"`
+	RunnerId       string      `json:"runnerId" form:"runnerId" binding:"max=255"`
+	Playbook       string      `json:"playbook" form:"playbook" binding:"omitempty,endswith=.yml,max=255"`
+	PlayVarsFile   string      `json:"playVarsFile" form:"playVarsFile" binding:"max=255"`
+	TfVarsFile     string      `form:"tfVarsFile" json:"tfVarsFile" binding:"max=255"`
+	ProjectId      []models.Id `form:"projectId" json:"projectId" binding:"omitempty,dive,required,startswith=p-,max=32"`
+	RepoRevision   string      `form:"repoRevision" json:"repoRevision" binding:"max=64"`
+	VcsId          models.Id   `form:"vcsId" json:"vcsId" binding:"omitempty,startswith=vcs-,max=32"`
+	RepoId         string      `form:"repoId" json:"repoId" binding:"max=255"`
+	RepoFullName   string      `form:"repoFullName" json:"repoFullName" binding:"max=255"`
+	TfVersion      string      `form:"tfVersion" json:"tfVersion" binding:"max=64"`
+	Variables      []Variable  `json:"variables" form:"variables" binding:"omitempty,dive,required"`
 	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" binding:"omitempty,dive,required,startswith=vg-,max=32"`
 	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" binding:"omitempty,dive,required,startswith=vg-,max=32"`
 	PolicyEnable   bool        `json:"policyEnable" form:"policyEnable"`                                                        // 是否开启合规检测
@@ -102,7 +100,7 @@ type RepoFileSearchForm struct {
 	BaseForm
 	RepoId       string    `json:"repoId" form:"repoId" binding:"required,max=255"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required,max=64"`
-	VcsId        models.Id `uri:"id" binding:"required,startswith=vcs-,max=32"`
+	VcsId        models.Id `uri:"id" binding:"required,startswith=vcs-,max=32" swaggerignore:"true"`
 	Workdir      string    `json:"workdir" form:"workdir" binding:"max=255"`
 }
 
@@ -110,7 +108,7 @@ type TemplateVariableSearchForm struct {
 	BaseForm
 	RepoId       string    `json:"repoId" form:"repoId" binding:"required,max=255"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required,max=64"`
-	VcsId        models.Id `uri:"id" binding:"required,startswith=vcs-,max=32"`
+	VcsId        models.Id `uri:"id" binding:"required,startswith=vcs-,max=32" swaggerignore:"true"`
 	Workdir      string    `json:"workdir" form:"workdir" binding:"max=255"`
 }
 

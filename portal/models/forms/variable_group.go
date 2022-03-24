@@ -18,8 +18,7 @@ type CreateVariableGroupForm struct {
 
 type UpdateVariableGroupForm struct {
 	BaseForm
-
-	Id        models.Id                 `uri:"id" binding:"required,startswith=vg-,max=32"`
+	Id        models.Id                 `uri:"id" binding:"required,startswith=vg-,max=32" swaggerignore:"true"`
 	Name      string                    `json:"name" form:"name" binding:"omitempty,gte=2,lte=64"`
 	Variables []models.VarGroupVariable `json:"variables" form:"variables" binding:"required"`
 }

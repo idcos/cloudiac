@@ -40,6 +40,7 @@ func (TaskComment) Create(c *ctx.GinRequest) {
 // @Produce  json
 // @Security AuthToken
 // @Param taskId path string true "作业ID"
+// @Param form query forms.SearchTaskCommentForm true "parameter"
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.TaskComment}}
 // @Router /tasks/{taskId}/comments [get]
 func (TaskComment) Search(c *ctx.GinRequest) {

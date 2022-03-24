@@ -12,7 +12,7 @@ type Params struct {
 }
 
 type CreateResourceAccountForm struct {
-	PageForm
+	BaseForm
 	Name         string   `form:"name" json:"name" binding:"required,gte=2,lte=32"`
 	Description  string   `form:"description" json:"description" binding:"max=255"`
 	Params       []Params `form:"params" json:"params" binding:"required"`
@@ -20,8 +20,8 @@ type CreateResourceAccountForm struct {
 }
 
 type UpdateResourceAccountForm struct {
-	PageForm
-	Id           models.Id `form:"id" json:"id" binding:"required"`
+	BaseForm
+	Id           models.Id `form:"id" json:"id" binding:"required" swaggerignore:"true"`
 	Name         string    `form:"name" json:"name" binding:"omitempty,gte=2,lte=32"`
 	Description  string    `form:"description" json:"description" binding:"max=255"`
 	Params       []Params  `form:"params" json:"params"`
@@ -31,12 +31,11 @@ type UpdateResourceAccountForm struct {
 
 type SearchResourceAccountForm struct {
 	PageForm
-
-	Q      string `form:"q" json:"q" binding:""`
-	Status string `form:"status" json:"status" binding:"omitempty,oneof=enable disable"`
+	Q      string `form:"q" json:"q" binding:""`                                         // 资源账号名或者描述 支持模糊查询
+	Status string `form:"status" json:"status" binding:"omitempty,oneof=enable disable"` // 资源账号状态
 }
 
 type DeleteResourceAccountForm struct {
-	PageForm
+	BaseForm
 	Id models.Id `uri:"id" json:"id" binding:"required"`
 }

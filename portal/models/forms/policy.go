@@ -21,10 +21,9 @@ type CreatePolicyForm struct {
 
 type SearchPolicyForm struct {
 	PageForm
-
-	Q        string      `form:"q" json:"q" binding:""` // 策略组名称，支持模糊搜索
-	Severity string      `json:"severity" form:"severity" binding:"omitempty,oneof=high medium low none" enums:"'high','medium','low','none'" example:"medium"`
-	GroupId  []models.Id `json:"groupId" form:"groupId" binding:"omitempty,dive,required,startswith=pog-,max=32"`
+	Q        string      `form:"q" json:"q" binding:""`                                                                                                         // 策略组名称，支持模糊搜索
+	Severity string      `json:"severity" form:"severity" binding:"omitempty,oneof=high medium low none" enums:"'high','medium','low','none'" example:"medium"` //严重性
+	GroupId  []models.Id `json:"groupId" form:"groupId" binding:"omitempty,dive,required,startswith=pog-,max=32"`                                               //组织ID
 }
 
 type UpdatePolicyForm struct {
@@ -49,8 +48,7 @@ type DeletePolicyForm struct {
 
 type DetailPolicyForm struct {
 	BaseForm
-
-	Id models.Id `uri:"id" binding:"required,startswith=po-,max=32"`
+	Id models.Id `uri:"id" binding:"required,startswith=po-,max=32" swaggerignore:"true"`
 }
 
 type CreatePolicyGroupForm struct {
@@ -76,19 +74,17 @@ type SearchPolicyGroupForm struct {
 
 type UpdatePolicyGroupForm struct {
 	BaseForm
-
-	Id          models.Id `uri:"id" binding:"required,startswith=pog-,max=32"`
+	Id          models.Id `uri:"id" binding:"required,startswith=pog-,max=32" swaggerignore:"true"`
 	Name        string    `json:"name" form:"name" binding:"omitempty,gte=2,lte=64"`
 	Description string    `json:"description" binding:"max=255" example:"本组包含对于安全合规的检查策略"`
 	Enabled     bool      `json:"enabled" form:"enabled" binding:""`
-
-	Labels  []string  `json:"labels" binding:"omitempty,dive,required,max=128" example:"[security,alicloud]"`
-	Source  string    `json:"source" binding:"omitempty,oneof=vcs registry" enums:"vcs,registry" example:"来源"`
-	VcsId   models.Id `json:"vcsId" binding:"omitempty,startswith=vcs-,max=32" example:"vcs-c3lcrjxczjdywmk0go90"`
-	RepoId  string    `json:"repoId" binding:"max=128" example:"1234567890"`
-	GitTags string    `json:"gitTags" example:"Git Tags" binding:"max=128"`
-	Branch  string    `json:"branch" example:"master" binding:"max=128"`
-	Dir     string    `json:"dir" example:"/" binding:"max=255"`
+	Labels      []string  `json:"labels" binding:"omitempty,dive,required,max=128" example:"[security,alicloud]"`
+	Source      string    `json:"source" binding:"omitempty,oneof=vcs registry" enums:"vcs,registry" example:"来源"`
+	VcsId       models.Id `json:"vcsId" binding:"omitempty,startswith=vcs-,max=32" example:"vcs-c3lcrjxczjdywmk0go90"`
+	RepoId      string    `json:"repoId" binding:"max=128" example:"1234567890"`
+	GitTags     string    `json:"gitTags" example:"Git Tags" binding:"max=128"`
+	Branch      string    `json:"branch" example:"master" binding:"max=128"`
+	Dir         string    `json:"dir" example:"/" binding:"max=255"`
 }
 
 type DeletePolicyGroupForm struct {
@@ -105,8 +101,7 @@ type DetailPolicyGroupForm struct {
 
 type UpdatePolicyRelForm struct {
 	BaseForm
-
-	Id             models.Id   `uri:"id" binding:"required,max=32" example:"tpl-c3ek0co6n88ldvq1n6ag"`
+	Id             models.Id   `uri:"id" binding:"required,max=32" example:"tpl-c3ek0co6n88ldvq1n6ag" swaggerignore:"true"`
 	PolicyGroupIds []models.Id `json:"policyGroupIds" binding:"required,dive,required,startswith=pog-,max=32" example:"pog-c3ek0co6n88ldvq1n6ag,pog-c3ek0co6n88ldvq1n6bg"`
 	Scope          string      `json:"-" swaggerignore:"true" binding:"omitempty,oneof=env template"`
 }
@@ -135,9 +130,8 @@ type ScanTemplateForms struct {
 
 type ScanEnvironmentForm struct {
 	BaseForm
-
-	Id    models.Id `uri:"id" binding:"required,startswith=env-,max=32" example:"env-c3ek0co6n88ldvq1n6ag"` // 环境Id
-	Parse bool      `json:"parse" binding:""  enums:"true,false" example:"false"`                           // 是否只执行解析
+	Id    models.Id `uri:"id" binding:"required,startswith=env-,max=32" example:"env-c3ek0co6n88ldvq1n6ag" swaggerignore:"true"` // 环境Id
+	Parse bool      `json:"parse" binding:""  enums:"true,false" example:"false"`                                                // 是否只执行解析
 }
 
 type PolicyParseForm struct {
@@ -149,8 +143,7 @@ type PolicyParseForm struct {
 
 type OpnPolicyAndPolicyGroupRelForm struct {
 	BaseForm
-
-	PolicyGroupId models.Id `uri:"id" json:"policyGroupId" form:"policyGroupId" binding:"required,startswith=pog-,max=32" `
+	PolicyGroupId models.Id `uri:"id" json:"policyGroupId" form:"policyGroupId" binding:"required,startswith=pog-,max=32" swaggerignore:"true"`
 	RmPolicyIds   []string  `json:"rmPolicyIds" binding:"omitempty,dive,required,startswith=po-,max=32" example:"po-c3ek0co6n88ldvq1n6ag"`
 	AddPolicyIds  []string  `json:"addPolicyIds" binding:"omitempty,dive,required,startswith=po-,max=32" example:"po-c3ek0co6n88ldvq1n6ag"`
 }
@@ -169,14 +162,12 @@ type CreatePolicySuppressForm struct {
 
 type SearchPolicySuppressForm struct {
 	PageForm
-
-	Id models.Id `uri:"id" binding:"required,startswith=po-,max=32"`
+	Id models.Id `uri:"id" binding:"required,startswith=po-,max=32" swaggerignore:"true"`
 }
 
 type SearchPolicySuppressSourceForm struct {
 	NoPageSizeForm
-
-	Id models.Id `uri:"id" binding:"required,startswith=po-,max=32"`
+	Id models.Id `uri:"id" binding:"required,startswith=po-,max=32" swaggerignore:"true"`
 }
 
 type DeletePolicySuppressForm struct {
@@ -223,8 +214,7 @@ type SearchPolicyEnvForm struct {
 
 type EnvOfPolicyForm struct {
 	PageForm
-
-	Id       models.Id `json:"id" form:"id" binding:"omitempty,startswith=env-,max=32" `
+	Id       models.Id `json:"id" form:"id" binding:"omitempty,startswith=env-,max=32" swaggerignore:"true"`
 	Q        string    `form:"q" json:"q" binding:""` // 策略组名称，支持模糊搜索
 	Severity string    `json:"severity" form:"severity" binding:"omitempty,oneof=high medium low none" enums:"'high','medium','low','none'" example:"medium"`
 	GroupId  models.Id `json:"groupId" form:"groupId" binding:"omitempty,startswith=pog-,max=32"`
@@ -232,7 +222,7 @@ type EnvOfPolicyForm struct {
 
 type PolicyErrorForm struct {
 	PageForm
-	Id models.Id `uri:"id" binding:"required,startswith=po-,max=32"`
+	Id models.Id `uri:"id" binding:"required,startswith=po-,max=32" swaggerignore:"true"`
 	Q  string    `json:"q" form:"q"`
 }
 
@@ -246,8 +236,7 @@ type UpdatePolicySuppressForm struct {
 
 type PolicyScanResultForm struct {
 	NoPageSizeForm
-
-	Id     models.Id `uri:"id" binding:"required,startswith=env-,max=32"`                                                        // 环境ID
+	Id     models.Id `uri:"id" binding:"required,startswith=env-,max=32" swaggerignore:"true"`                                   // 环境ID
 	TaskId models.Id `json:"taskId" form:"taskId" binding:"omitempty,startswith=run-,max=32" example:"run-c3ek0co6n88ldvq1n6ag"` // 任务ID
 }
 
@@ -269,8 +258,7 @@ type PolicyTestForm struct {
 
 type PolicyLastTasksForm struct {
 	PageForm
-
-	Id    models.Id `uri:"id" binding:"required,startswith=pog-,max=32"`
+	Id    models.Id `uri:"id" binding:"required,startswith=pog-,max=32" swaggerignore:"true"`
 	Scope string    `json:"-"`
 }
 
