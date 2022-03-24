@@ -178,12 +178,12 @@ func (User) PasswordReset(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param form query forms.SearchUserForm true "parameter"
-// @router /users/ldap [get]
+// @router /users/all [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.UserWithRoleResp}}
-func (User) LdapSearch(c *ctx.GinRequest) {
+func (User) SearchAllUsers(c *ctx.GinRequest) {
 	form := forms.SearchUserForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.SearchLdapUser(c.Service(), &form))
+	c.JSONResult(apps.SearchAllUser(c.Service(), &form))
 }

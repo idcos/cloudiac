@@ -54,8 +54,8 @@ func Register(g *gin.RouterGroup) {
 	// Authorization Header 鉴权
 	g.Use(w(middleware.Auth)) // 解析 header token
 
-	// ldap 用户允许搜索组织内所有用户信息
-	g.GET("/users/ldap", w(handlers.User{}.LdapSearch))
+	// 允许搜索组织内所有用户信息
+	g.GET("/users/all", w(handlers.User{}.SearchAllUsers))
 	// 创建单点登录 token
 	g.POST("/sso/tokens", w(handlers.GenerateSsoToken))
 	// ctrl.Register(g.Group("tokens", ac()), &handlers.Token{})

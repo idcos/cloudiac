@@ -3,7 +3,6 @@
 package apps
 
 import (
-	"cloudiac/configs"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
@@ -11,7 +10,6 @@ import (
 	"cloudiac/portal/services"
 	"cloudiac/utils"
 	"fmt"
-	"github.com/go-ldap/ldap/v3"
 	"net/http"
 	"time"
 )
@@ -34,7 +32,7 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err 
 	// ldap 账号只能使用ldap账号进行登录
 	if err == nil {
 		if user.IsLdap {
-			if _, err = LdapAuthLogin(form.Email, form.Password); err != nil {
+			if _, err = services.LdapAuthLogin(form.Email, form.Password); err != nil {
 				return nil, err
 			}
 		} else {
@@ -45,9 +43,10 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err 
 	} else {
 		if err.Code() == e.UserNotExists {
 			// 使用ldap 进行登录
-			username, ldapErr := LdapAuthLogin(form.Email, form.Password)
+			username, ldapErr := services.LdapAuthLogin(form.Email, form.Password)
 			if ldapErr != nil {
 				// 找不到账号时也返回 InvalidPassword 错误，避免暴露系统中己有用户账号
+				c.Logger().Error(ldapErr)
 				return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
 			}
 			// 登录成功, 标记账号为ldap用户，并且在用户表中添加该用户
@@ -106,40 +105,4 @@ func VerifySsoToken(c *ctx.ServiceContext, form *forms.VerifySsoTokenForm) (resp
 		UserId: user.Id,
 		Email:  user.Email,
 	}, nil
-}
-
-// 处理Ldap 登录逻辑
-func LdapAuthLogin(userEmail, password string) (username string, er e.Error) {
-	conf := configs.Get()
-	conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", conf.Ldap.LdapServer, conf.Ldap.LdapServerPort))
-	if err != nil {
-		return username, e.New(e.LdapConnectFailed, err)
-	}
-	defer conn.Close()
-	// 配置ldap 管理员dn信息，例如cn=Manager,dc=idcos,dc=com
-	err = conn.Bind(conf.Ldap.AdminDn, conf.Ldap.AdminPassword)
-	if err != nil {
-		return username, e.New(e.ValidateError, err)
-	}
-	searchRequest := ldap.NewSearchRequest(
-		conf.Ldap.SearchBase,
-		ldap.ScopeWholeSubtree, ldap.DerefAlways, 0, 0, false,
-		fmt.Sprintf("(&(objectClass=organizationalPerson)(mail=%s))", userEmail),
-		// 这里是查询返回的属性,以数组形式提供.如果为空则会返回所有的属性
-		[]string{},
-		nil,
-	)
-	sr, err := conn.Search(searchRequest)
-	if err != nil {
-		return username, e.New(e.ValidateError, err)
-	}
-	if len(sr.Entries) != 1 {
-		return username, e.New(e.UserNotExists, err)
-	}
-	err = conn.Bind(sr.Entries[0].DN, password)
-	if err != nil {
-		return username, e.New(e.InvalidPassword, err)
-	}
-	return sr.Entries[0].GetAttributeValue("uid"), nil
-
 }

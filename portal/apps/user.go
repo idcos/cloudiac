@@ -174,8 +174,8 @@ func queryUserProject(db, query *db.Session, orgId, projectId models.Id, exclude
 }
 
 // 提供私有化部署的用户搜索接口
-func SearchLdapUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{}, e.Error) {
-	query := services.QueryUser(c.DB())
+func SearchAllUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{}, e.Error) {
+	query := services.QueryUser(c.DB()).Limit(10)
 	return doSearchUser(c, query, form)
 }
 
