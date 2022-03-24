@@ -218,7 +218,7 @@ func actionPrOrPush(tx *db.Session, trigger string, userId models.Id,
 	}
 	// push操作，执行apply计划
 	if trigger == consts.EnvTriggerCommit && options.BeforeCommit != "" {
-		if env.LockedStatus {
+		if env.LockStatus {
 			logs.Get().WithField("webhook", "createTask").Errorf("env %s is locked don't allow apply", env.Id)
 			return nil
 		}
