@@ -119,6 +119,8 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 		message = "failed"
 	case models.TaskStepTimeout:
 		message = "timeout"
+	case models.TaskStepAborted:
+		message = "aborted"
 	}
 
 	if er := services.ChangeTaskStepStatusAndExitCode(
@@ -286,10 +288,13 @@ func pullTaskStepStatusLoop(
 			}
 
 			result.Result = *msg
-			//logger.Debugf("receive task status message: %v, %v", msg.Exited, msg.ExitCode)
 
 			if msg.Timeout {
 				result.Status = models.TaskStepTimeout
+				return result, nil
+			} else if msg.Aborted {
+				result.Status = models.TaskStepAborted
+				return result, nil
 			} else if msg.Exited {
 				if msg.ExitCode == 0 {
 					result.Status = models.TaskStepComplete
@@ -314,6 +319,7 @@ func pullTaskStepStatusLoop(
 
 var (
 	ErrTaskStepRejected = fmt.Errorf("rejected")
+	ErrTaskStepAborted  = fmt.Errorf("aborted")
 )
 
 // WaitTaskStepApprove
@@ -336,6 +342,8 @@ func WaitTaskStepApprove(ctx context.Context, dbSess *db.Session, taskId models.
 
 			if taskStep.Status == models.TaskStepRejected {
 				return nil, ErrTaskStepRejected
+			} else if taskStep.Status == models.TaskStepAborted {
+				return nil, ErrTaskStepAborted
 			} else if taskStep.IsApproved() {
 				return taskStep, nil
 			}

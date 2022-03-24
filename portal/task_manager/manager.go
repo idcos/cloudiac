@@ -505,7 +505,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		}
 		if runErr != nil {
 			logger.WithField("step", fmt.Sprintf("%d(%s)", step.Index, step.Name)).
-				Warnf("run task step error: %v", err)
+				Warnf("run task step error: %v", runErr)
 			break
 		}
 	}
@@ -552,19 +552,12 @@ func (m *TaskManager) processStartStep(
 	}
 
 	if runErr != nil {
-		logger.Infof("run task step err: %v", runErr)
-		if errors.Is(runErr, ErrTaskStepRejected) {
-			return nil, runErr
-		}
-
+		logger.Warnf("run task step err: %v", runErr)
 		if (step.Type == common.TaskStepEnvScan || step.Type == common.TaskStepOpaScan) &&
 			!task.StopOnViolation {
 			// 合规任务失败不影响环境部署流程
-			logger.Warnf("run scan task step: %v", runErr)
+			logger.Infof("run scan task step: %v", runErr)
 			return nil, nil
-		}
-		if err := services.UpdateTaskStepStatus(m.db, step.Id, common.TaskStepFailed, runErr.Error()); err != nil {
-			logger.Panicf("update task step status error: %v", err)
 		}
 		return nil, runErr
 	}
@@ -711,7 +704,7 @@ type changeStepStatusFunc func(status, message string, step *models.TaskStep)
 func getChangeStepStatusFunc(db *db.Session, task models.Tasker, logger logs.Logger) changeStepStatusFunc {
 	return func(status, message string, step *models.TaskStep) {
 		var er error
-		if er = services.ChangeTaskStepStatusAndUpdate(db, task, step, status, message); er != nil {
+		if er = services.ChangeTaskStepStatus(db, task, step, status, message); er != nil {
 			er = errors.Wrap(er, "update step status error")
 			logger.Error(er)
 			panic(er)
@@ -771,6 +764,12 @@ func (m *TaskManager) runTaskStep(
 			message = step.Message
 		}
 		return fmt.Errorf(message)
+	case models.TaskStepAborted:
+		message := "aborted"
+		if step.Message != "" {
+			message = step.Message
+		}
+		return fmt.Errorf(message)
 	default:
 		return fmt.Errorf("unknown step status: %v", step.Status)
 	}
@@ -796,7 +795,7 @@ func waitTaskStepApprove(ctx context.Context, db *db.Session, task *models.Task,
 			}
 
 			logger.Errorf("wait task step approve error: %v", err)
-			if !errors.Is(err, ErrTaskStepRejected) {
+			if !errors.Is(err, ErrTaskStepRejected) && !errors.Is(err, ErrTaskStepAborted) {
 				changeStepStatus(models.TaskStepFailed, err.Error(), step)
 			}
 			return nil, err
@@ -845,8 +844,10 @@ func waitTaskStepDone(
 				if retryAble && task.RetryAble {
 					if step.RetryNumber > 0 && step.CurrentRetryCount < step.RetryNumber {
 						// 下次重试时间为当前任务失败时间点加任务设置重试间隔时间。
-						step.NextRetryTime = time.Now().Unix() + int64(task.RetryDelay)
-						step.CurrentRetryCount += 1
+						nextRetryTime := time.Now().Unix() + int64(task.RetryDelay)
+						if er := services.UpdateTaskStepRetryNum(db, step.Id, step.CurrentRetryCount+1, nextRetryTime); er != nil {
+							panic(errors.Wrapf(err, "update task step retry number"))
+						}
 						message := fmt.Sprintf("Task step start failed and try again. The current number of retries is %d", step.CurrentRetryCount)
 						changeStepStatus(models.TaskStepPending, message, step)
 					}
@@ -1105,7 +1106,7 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 		}
 		if runErr != nil {
 			logger.WithField("step", fmt.Sprintf("%d(%s)", step.Index, step.Name)).
-				Warnf("run task step error: %v", err)
+				Warnf("run task step error: %v", runErr)
 			break
 		}
 	}
@@ -1296,6 +1297,8 @@ func (m *TaskManager) runScanTaskStep(ctx context.Context, taskReq runner.RunTas
 		return errors.New("failed")
 	case models.TaskStepTimeout:
 		return errors.New("timeout")
+	case models.TaskStepAborted:
+		return errors.New("aborted")
 	default:
 		return fmt.Errorf("unknown step status: %v", step.Status)
 	}

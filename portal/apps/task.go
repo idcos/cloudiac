@@ -7,6 +7,7 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
@@ -174,7 +175,7 @@ func LastTask(c *ctx.ServiceContext, form *forms.LastTaskForm) (*resps.TaskDetai
 }
 
 // ApproveTask 审批执行计划
-func ApproveTask(c *ctx.ServiceContext, form *forms.ApproveTaskForm) (interface{}, e.Error) {
+func ApproveTask(c *ctx.ServiceContext, form *forms.ApproveTaskForm) (interface{}, e.Error) { //nolint:cyclop
 	c.AddLogField("action", fmt.Sprintf("approve task %s", form.Id))
 
 	if c.OrgId == "" || c.ProjectId == "" {
@@ -191,7 +192,11 @@ func ApproveTask(c *ctx.ServiceContext, form *forms.ApproveTaskForm) (interface{
 	}
 
 	if task.Status != models.TaskApproving {
-		return nil, e.New(e.TaskApproveNotPending, http.StatusBadRequest)
+		return nil, e.New(e.TaskApproveNotPending, http.StatusConflict)
+	}
+
+	if task.Aborting {
+		return nil, e.New(e.TaskAborting, http.StatusConflict)
 	}
 
 	step, err := services.GetTaskStep(c.DB(), task.Id, task.CurrStep)
@@ -372,7 +377,7 @@ func SearchTaskSteps(c *ctx.ServiceContext, form *forms.DetailTaskStepForm) (int
 
 }
 
-func GetTaskStep(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (interface{}, e.Error) {
+func GetTaskStepLog(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (interface{}, e.Error) {
 	content, err := services.GetTaskStepLogById(c.DB(), form.StepId)
 	if err != nil {
 		return nil, err
@@ -715,4 +720,63 @@ func GetResourcesGraphType(rs []services.Resource) interface{} {
 	}
 
 	return rgt
+}
+
+func AbortTask(c *ctx.ServiceContext, form *forms.AbortTaskForm) (interface{}, e.Error) {
+	er := c.DB().Transaction(func(tx *db.Session) error {
+		task, er := services.GetTaskById(tx, form.TaskId)
+		if er != nil {
+			return er
+		}
+
+		if task.Aborting {
+			return e.New(e.TaskAborting)
+		}
+
+		step, er := services.GetTaskStep(tx, task.Id, task.CurrStep)
+		if er != nil {
+			return er
+		}
+
+		if task.Status == models.TaskPending {
+			task.Status = models.TaskAborted
+			if _, err := models.UpdateModel(tx, task); err != nil {
+				return e.AutoNew(err, e.DBError)
+			}
+		} else if step.Status == models.TaskStepApproving {
+			// 步骤在待审批状态时直接将状态改为 aborted 并同步修改任务状态
+			if er := services.ChangeTaskStep2Aborted(tx, task.Id, step.Index); er != nil {
+				return er
+			}
+		} else if task.Started() && !task.Exited() {
+			// 任务在执行状态时发送指令中断 runner 的任务执行，然后 runner 会上报步骤被中止
+			go utils.RecoverdCall(func() {
+				goAbortRunnerTask(c.Logger(), *task)
+			})
+			task.Aborting = true
+			if _, err := models.UpdateModel(tx, task); err != nil {
+				return e.AutoNew(err, e.DBError)
+			}
+		} else {
+			return e.New(e.TaskCannotAbort,
+				fmt.Errorf("task status is '%s'", task.Status), http.StatusConflict)
+		}
+		return nil
+	})
+
+	if er != nil {
+		return nil, e.AutoNew(er, e.InternalError)
+	}
+	return nil, nil
+}
+
+func goAbortRunnerTask(logger logs.Logger, task models.Task) {
+	logger = logger.WithField("action", "goAbortRunnerTask")
+	if er := services.AbortRunnerTask(task); er != nil {
+		task.Aborting = true
+		logger.Errorf("abort task error: %v", er)
+		if _, err := models.UpdateModel(db.Get(), &task); err != nil {
+			logger.Errorf("update task aborting error: %v", err)
+		}
+	}
 }

@@ -25,6 +25,14 @@ func UpdateSystemConfig(tx *db.Session, name string, attrs models.Attrs) (cfg *m
 		}
 		UpdateRunnerMax(runnerMax)
 	}
+	if name == models.SysCfgNameTaskStepTimeout {
+		timeoutInMinute, err := strconv.Atoi(attrs["value"].(string))
+		if err != nil {
+			return nil, e.New(e.BadRequest, fmt.Errorf("%s update err: %s",
+				models.SysCfgNameTaskStepTimeout, err))
+		}
+		attrs["value"] = strconv.Itoa(timeoutInMinute * 60)
+	}
 	cfg = &models.SystemCfg{}
 	if _, err := models.UpdateAttr(tx.Where("name = ?", name), &models.SystemCfg{}, attrs); err != nil {
 		return nil, e.New(e.DBError, fmt.Errorf("update sys config error: %v", err))
@@ -79,4 +87,18 @@ func UpsertRegistryAddr(tx *db.Session, val string) (*models.SystemCfg, e.Error)
 	}
 
 	return cfg, nil
+}
+
+// GetSystemTaskStepTimeout return the system task step timeout in second
+func GetSystemTaskStepTimeout(tx *db.Session) (int, e.Error) {
+	sysConfig, err := GetSystemConfigByName(tx, models.SysCfgNameTaskStepTimeout)
+	if err != nil {
+		return -1, e.AutoNew(err, e.DBError)
+	}
+
+	if timeout, err := strconv.Atoi(sysConfig.Value); err != nil {
+		return -1, e.AutoNew(err, e.InternalError)
+	} else {
+		return timeout, nil
+	}
 }

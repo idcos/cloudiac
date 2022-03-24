@@ -77,6 +77,7 @@ const (
 	TaskApproving = common.TaskApproving
 	TaskRejected  = common.TaskRejected
 	TaskFailed    = common.TaskFailed
+	TaskAborted   = common.TaskAborted
 	TaskComplete  = common.TaskComplete
 )
 
@@ -181,7 +182,7 @@ func (BaseTask) IsStartedStatus(status string) bool {
 }
 
 func (BaseTask) IsExitedStatus(status string) bool {
-	return utils.InArrayStr([]string{TaskFailed, TaskRejected, TaskComplete}, status)
+	return utils.InArrayStr([]string{TaskFailed, TaskRejected, TaskComplete, TaskAborted}, status)
 }
 
 func (t *BaseTask) IsEffectTask() bool {

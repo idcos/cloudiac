@@ -202,7 +202,7 @@ func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (int
 		AutoApprove: env.AutoApproval,
 		BaseTask: models.BaseTask{
 			Type:        taskType,
-			StepTimeout: env.Timeout,
+			StepTimeout: env.StepTimeout,
 			RunnerId:    env.RunnerId,
 		},
 	}

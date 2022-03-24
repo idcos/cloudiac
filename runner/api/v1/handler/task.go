@@ -48,7 +48,7 @@ func StopTask(c *ctx.Context) {
 		return
 	}
 
-	// 这里仅 kill container，container 的 remove 通过启动时的 AutoRemove 参数配置
+	// 这里仅 kill container，container 的删除通过启动时的 AutoRemove 参数配置
 	for _, cid := range req.ContainerIds {
 		// default signal "SIGKILL"
 		if err := cli.ContainerKill(c.Context, cid, ""); err != nil {

@@ -29,7 +29,7 @@ type CreateEnvForm struct {
 	RunnerId        string   `form:"runnerId" json:"runnerId" binding:"max=32"`                       // 环境默认部署通道
 	RunnerTags      []string `form:"runnerTags" json:"runnerTags" binding:"omitempty,dive,max=256"`   // 环境默认部署通道tags
 	Revision        string   `form:"revision" json:"revision" binding:"max=64"`                       // 分支/标签
-	Timeout         int      `form:"timeout" json:"timeout" binding:""`                               // 部署超时时间（单位：秒）
+	StepTimeout     int      `form:"stepTimeout" json:"stepTimeout" binding:""                        // 部署超时时间（单位：秒）
 
 	Variables []Variable `form:"variables" json:"variables" binding:"omitempty,dive,required"` // 自定义变量列表，该变量列表会覆盖现有的变量
 
@@ -84,8 +84,8 @@ type UpdateEnvForm struct {
 	KeyId       models.Id `form:"keyId" json:"keyId" binding:"omitempty,startswith=k-,max=32"` // 部署密钥ID
 	RunnerId    string    `form:"runnerId" json:"runnerId" binding:"max=32"`                   // 环境默认部署通道
 	Archived    bool      `form:"archived" json:"archived" enums:"true,false"`                 // 归档状态，默认返回未归档环境
-
 	Tags string `form:"tags" json:"tags" binding:"max=255"` // 环境的 tags，多个 tag 以 "," 分隔
+  StepTimeout int    `form:"stepTimeout" json:"stepTimeout" binding:""` // 部署超时时间（单位：秒）
 
 	AutoApproval    bool `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"` // 是否自动审批
 	StopOnViolation bool `form:"stopOnViolation" json:"stopOnViolation" enums:"true,false"`       // 合规不通过是否中止任务
@@ -118,7 +118,12 @@ type DeployEnvForm struct {
 	RunnerId   string   `form:"runnerId" json:"runnerId" binding:"max=32"`                                                       // 环境默认部署通道
 	RunnerTags []string `form:"runnerTags" json:"runnerTags" binding:"omitempty,dive,required,max=256"`                          // 环境默认部署通道Tags
 	Revision   string   `form:"revision" json:"revision" binding:"max=64"`                                                       // 分支/标签
-	Timeout    int      `form:"timeout" json:"timeout" binding:""`                                                               // 部署超时时间（单位：秒）
+	StepTimeout int      `form:"stepTimeout" json:"stepTimeout" binding:""`                                                      // 部署超时时间（单位：秒）
+	TaskType    string   `form:"taskType" json:"taskType" binding:"required" enums:"plan,apply,destroy"` // 环境创建后触发的任务步骤，plan计划,apply部署,destroy销毁资源
+	Targets     string   `form:"targets" json:"targets" binding:""`                                      // Terraform target 参数列表
+	RunnerId    string   `form:"runnerId" json:"runnerId" binding:""`                                    // 环境默认部署通道
+	RunnerTags  []string `form:"runnerTags" json:"runnerTags" binding:""`                                // 环境默认部署通道Tags
+	Revision    string   `form:"revision" json:"revision" binding:""`                                    // 分支/标签
 
 	RetryNumber int  `form:"retryNumber" json:"retryNumber" binding:""` // 重试总次数
 	RetryDelay  int  `form:"retryDelay" json:"retryDelay" binding:""`   // 重试时间间隔
