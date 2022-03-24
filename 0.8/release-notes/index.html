@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>Releases - CloudIaC</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
+
+  <link rel="stylesheet" href="../css/theme.css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+  <link href="../css/version-select.css" rel="stylesheet" />
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Releases";
+    var mkdocs_page_input_path = "release-notes.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+        <a href=".." class="icon icon-home"> CloudIaC</a>
+        
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+                <p class="caption"><span class="caption-text">用户文档</span></p>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../user-guide/quick-start/">快速入门</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../user-guide/iac-template-develop/">云模板开发</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">产品文档</span></p>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../intra/summarize/">概述</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../intra/organization/">组织</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../intra/project/">项目</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../intra/vcs/">VCS</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../intra/template/">模板</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../intra/variable/">变量</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../intra/cloud_account/">资源账号</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../intra/pipeline/">Pipeline</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../intra/env/">环境</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../intra/resource_drift/">漂移检测</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../intra/role/">角色</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../intra/opa/">合规</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">部署文档</span></p>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../deploy/container/">容器化部署</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../deploy/host/">手动部署</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../deploy/demo-org/">创建演示组织</a>
+                    </li>
+                </ul>
+                <ul class="current">
+                    <li class="toctree-l1 current"><a class="reference internal current" href="./">Releases</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#v081-20211214">v0.8.1 20211214</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#fixes">Fixes</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#v080-20211210">v0.8.0 20211210</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#enhancements">Enhancements</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#features">Features</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#fixes_1">Fixes</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#v071-20211116">v0.7.1 20211116</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#features_1">Features</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#fixes_2">Fixes</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#v070-20211105">v0.7.0 20211105</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#enhancements_1">Enhancements</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#features_2">Features</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#fixes_3">Fixes</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#v060-20210928">v0.6.0 20210928</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#features_3">Features</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#fixed">Fixed</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#v050-20210728">v0.5.0 20210728</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#features_4">Features</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                    </li>
+                </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">CloudIaC</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Releases</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  
+  <hr/>
+</div>
+
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="releases">Releases</h1>
+<hr />
+<h2 id="v081-20211214">v0.8.1 20211214</h2>
+<h4 id="fixes">Fixes</h4>
+<ul>
+<li>修复新组织中创建环境时接口报错的问题</li>
+<li>修复环境有敏感变量时执行部署报解密错误的问题</li>
+<li>修复执行任务容器异常退出会导致任务一直处于执行中状态且环境的资源一直累积的问题</li>
+</ul>
+<hr />
+<h2 id="v080-20211210">v0.8.0 20211210</h2>
+<h4 id="enhancements">Enhancements</h4>
+<ul>
+<li>优化环境列表和环境详情的展示效果</li>
+</ul>
+<h4 id="features">Features</h4>
+<ul>
+<li>新增环境漂移检测功能</li>
+<li>新增环境资源、模型可视化展示</li>
+<li>新增云模板及其关联数据的导出导入功能</li>
+<li>新增创建云模板时名称和工作目录有效性检查</li>
+<li>新增加 VCS 编辑功能</li>
+<li>新增执行 MR/PR 触发的 plan 任务时将日志回写到 review comment</li>
+<li>任务通知消息中增加任务类型说明</li>
+</ul>
+<h4 id="fixes_1">Fixes</h4>
+<ul>
+<li>修复步骤超时后不显示日志的问题</li>
+<li>修复编辑云模板时仓库名称可能显示为 id 的问题</li>
+</ul>
+<hr />
+<h2 id="v071-20211116">v0.7.1 20211116</h2>
+<h4 id="features_1">Features</h4>
+<ul>
+<li>新增 runner 的 offline mode</li>
+</ul>
+<h4 id="fixes_2">Fixes</h4>
+<ul>
+<li>修复预置 provider 不生效的问题</li>
+</ul>
+<hr />
+<h2 id="v070-20211105">v0.7.0 20211105</h2>
+<h4 id="enhancements_1">Enhancements</h4>
+<ul>
+<li>优化从组织和项目中移除用户功能</li>
+<li>组织中编辑用户时允许修改姓名和手机号</li>
+<li>优化环境列表、环境详情展示样式</li>
+</ul>
+<h4 id="features_2">Features</h4>
+<ul>
+<li>新增自定义 pipeline 功能，并将任务执行过程分步展示</li>
+<li>新增组织内资源查询功能</li>
+<li>新增资源账号管理功能</li>
+</ul>
+<h4 id="fixes_3">Fixes</h4>
+<ul>
+<li>修复从组织中删除用户后用户在项目中依然存在的问题</li>
+<li>修复设置环境自动触发 plan/apply 功能报错的问题</li>
+</ul>
+<hr />
+<h2 id="v060-20210928">v0.6.0 20210928</h2>
+<h4 id="features_3">Features</h4>
+<ul>
+<li>新增合规检测功能，平台管理员可进行合规策略管理</li>
+<li>新增消息通知功能，支持邮件、钉钉、微信、Slack 事件通知</li>
+<li>新增任务重试功能，可在环境设置中开启执行失败自动重试</li>
+<li>新增 tfvars 文件和 playbook 文件内容查看功能</li>
+<li>新增 terraform 版本选择功能，并支持版本的自动匹配</li>
+<li>新增环境的资源详情展示，点击资源名称可查看资源详情</li>
+<li>新增选择型变量，添加环境和 terraform 变量时可下拉选择</li>
+<li>任务增加审批驳回状态，审批驳回不再显示为“失败”</li>
+</ul>
+<h4 id="fixed">Fixed</h4>
+<ul>
+<li>修复环境部署过程中允许删除关联云模板的问题</li>
+<li>修复存在活跃环境的云模板在列表中活跃资源数显示为 0 的问题</li>
+</ul>
+<hr />
+<h2 id="v050-20210728">v0.5.0 20210728</h2>
+<h4 id="features_4">Features</h4>
+<ul>
+<li>全新 0.5 版本发布</li>
+</ul>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="../deploy/demo-org/" class="btn btn-neutral" title="创建演示组织"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../deploy/demo-org/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme_extra.js" defer></script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../js/version-select.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>

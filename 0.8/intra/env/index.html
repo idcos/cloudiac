@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  
+  <link rel="shortcut icon" href="../../img/favicon.ico">
+  <title>环境 - CloudIaC</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
+
+  <link rel="stylesheet" href="../../css/theme.css" />
+  <link rel="stylesheet" href="../../css/theme_extra.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+  <link href="../../css/version-select.css" rel="stylesheet" />
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "\u73af\u5883";
+    var mkdocs_page_input_path = "intra/env.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+        <a href="../.." class="icon icon-home"> CloudIaC</a>
+        
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+                <p class="caption"><span class="caption-text">用户文档</span></p>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../user-guide/quick-start/">快速入门</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../../user-guide/iac-template-develop/">云模板开发</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">产品文档</span></p>
+                <ul class="current">
+                    <li class="toctree-l1"><a class="reference internal" href="../summarize/">概述</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../organization/">组织</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../project/">项目</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../vcs/">VCS</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../template/">模板</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../variable/">变量</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../cloud_account/">资源账号</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../pipeline/">Pipeline</a>
+                    </li>
+                    <li class="toctree-l1 current"><a class="reference internal current" href="./">环境</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#_2">什么是环境</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_3">查看环境详细信息</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_4">环境状态</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_5">环境资源</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_6">存活时间</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_7">创建环境</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_8">销毁资源</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_9">重新部署环境</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_10">自动重试</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_11">审批流程</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#_12">存档环境</a>
+    </li>
+    </ul>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../resource_drift/">漂移检测</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../role/">角色</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../opa/">合规</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">部署文档</span></p>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../deploy/container/">容器化部署</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../../deploy/host/">手动部署</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../../deploy/demo-org/">创建演示组织</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../../release-notes/">Releases</a>
+                    </li>
+                </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../..">CloudIaC</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../..">Docs</a> &raquo;</li>
+    
+      
+        
+          <li>产品文档 &raquo;</li>
+        
+      
+    
+    <li>环境</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  
+  <hr/>
+</div>
+
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="_1">环境</h1>
+<h2 id="_2">什么是环境</h2>
+<p>环境是由 CloudIaC 管理的部署实例，是CloudIaC管理资源的核心；</p>
+<p>用户通过在组织下创建云模板，并运行云模板进行部署来创建新的环境，同时在项目下对环境进行管理；</p>
+<p>用户可以创建、重新部署环境，并可对环境下的资源进行销毁；</p>
+<p>CloudIaC 通过 Terraform 的状态文件来维护整个环境的状态，用户可以通过修改变量或修改资源描述配置文件来进行重新部署，新的部署会在上一次的状态下进行，通过这种机制，用户可以更加方便的实现对环境资源的扩缩容等操作；同时对于环境下资源的销毁，基于状态也可以快速的实现一键完全的清理。</p>
+<h2 id="_3">查看环境详细信息</h2>
+<p>您可以通过『项目』-『环境』菜单查看您的环境，该页面将列出该项目下所有的环境列表；</p>
+<p>对于每个环境，您可以看到它是由哪个云模板创建、创建人、当前状态、环境下创建的资源数量以及剩余的生存时间；</p>
+<p>点击环境，展开查看环境详情，在环境详情页面中，您可以执行『重新部署』、『销毁资源』等操作，还可以查看最新部署的日志、Terraform输出、部署中使用的变量以及部署历史记录。</p>
+<h2 id="_4">环境状态</h2>
+<p>环境的状态包括以下几种：</p>
+<ul>
+<li>
+<p><em>活跃</em>：成功部署并启动运行</p>
+</li>
+<li>
+<p><em>不活跃</em>：资源已销毁</p>
+</li>
+<li>
+<p><em>执行中</em>：正在部署或者销毁过程中</p>
+</li>
+<li>
+<p><em>失败</em>：在部署过程中发生错误</p>
+</li>
+<li>
+<p><em>待审批</em>：operator发起部署作业后等待Manager或Approver审批</p>
+</li>
+</ul>
+<p><img alt="" src="../../resources/environment-status.jpg" /></p>
+<h2 id="_5">环境资源</h2>
+<p>当您的环境处于<em>活跃</em>状态时，您只需单击环境即可查看其中包含的资源。</p>
+<p><img alt="" src="../../resources/environment-resources.png" /></p>
+<h2 id="_6">存活时间</h2>
+<p><em>存活时间</em>是 CloudIaC 从设置完存活时间的时间点到自动销毁环境下资源的时间长度(若是初始创建的环境则会在资源第一次创建成功后开始计算自动销毁时间)；</p>
+<p>可以在创建或重新部署环境时设置存活时间，预选值有：<em>不限</em>、<em>12小时</em>、<em>1天</em>、 <em>3天</em>、<em>1周</em>、<em>半个月</em>、<em>1个月</em>和<em>指定时间</em>，选择『指定时间』时可以直接设置一个具体截止时间；</p>
+<p>一个<em>不限</em>存活时间的环境将永远不会被自动销毁，通常生产环境等静态环境会设置为不限时间，开发、测试环境则可以根据需要设置合适的存活时间；</p>
+<h2 id="_7">创建环境</h2>
+<p>要创建环境，请选择『项目』-『云模板』，在要使用的模板上单击『部署』；</p>
+<p>在开始部署之前，您需要设置环境详细信息：环境名称、存活时间、基于代码仓库的哪个分支或tag进行创建，同时确定您要在哪个区域进行部署，则选择相应区域下的部署通道；</p>
+<p>对于变量，通常在云模板中已经定义好了相应的变量，您可以根据实际需要调整相应变量的值；</p>
+<p>点击『执行部署』，将进入环境详情页面，在部署日志中将实时显示执行日志，在部署过程中将会存储输出和状态；</p>
+<h2 id="_8">销毁资源</h2>
+<p>有两种方式对环境下的资源进行销毁；</p>
+<p>一种是设置了『存活时间』的环境，在达到时间限制时会自动销毁；</p>
+<p>另一种是手动销毁，在『环境详情』页面点击右上角的『销毁资源』来进行销毁操作；</p>
+<p>当<em>活跃</em>环境下的资源被销毁成功，环境状态将设置为<em>不活跃</em>，如果销毁资源失败，环境状态将设置为<em>失败</em>。</p>
+<h2 id="_9">重新部署环境</h2>
+<p>对于已经创建出来的环境，您可以重新部署，在环境详情页面，点击右上角的『重新部署』来进行；</p>
+<p>如果您的环境当前正在运行部署或销毁任务则无法发起新的部署，您需要等待前一次部署结束才能发起新的任务；</p>
+<p>当您重新部署『不活跃』环境时，在部署成功后，环境状态将自动转为『活跃』；</p>
+<p>重新部署时，除非手动重新设置存活时间，否则默认使用环境原有的存活时间。</p>
+<h2 id="_10">自动重试</h2>
+<p>在执行环境部署操作时，您可能希望CloudIaC在出现错误时自动重试；</p>
+<p>针对每个云模板您可以启用自动重试，并可以配置重试间隔和次数；</p>
+<p>CloudIaC 的每一次部署会有多个步骤，重试只会重新执行当前步骤，快成功执行的步骤不会重复执行。</p>
+<h2 id="_11">审批流程</h2>
+<p>对于在环境中执行的每个创建、销毁或重新部署作业， CloudIaC 首先创建一个<em>Terraform Plan</em>，然后会进入『待审批』状态，需要由项目的Manager或Approver角色用户来进行批准才能继续执行部署；</p>
+<p>Manager或Approver角色的用户可以在创建环境时选中『自动通过审批』来在后续的部署操作中自动批准而无需等待；</p>
+<p>如果用户没有设置自动批准，CloudIaC 将在<em>Terraform plan</em>创建后进入等待，直到Manager或Approver主动批准执行计划。</p>
+<h2 id="_12">存档环境</h2>
+<p>为了帮助用户管理环境，ClouidIaC 可以让用户归档不再使用（不活跃状态）的环境，归档后的环境将不再可用。</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../resource_drift/" class="btn btn-neutral float-right" title="漂移检测">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../pipeline/" class="btn btn-neutral" title="Pipeline"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../pipeline/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../resource_drift/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script>var base_url = '../..';</script>
+    <script src="../../js/theme_extra.js" defer></script>
+    <script src="../../js/theme.js" defer></script>
+      <script src="../../js/version-select.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>
