@@ -84,7 +84,7 @@ const (
 	TaskTypeTplParseName = "tplParse"
 
 	// 默认步骤超时时间(秒)
-	DefaultTaskStepTimeout = 1800
+	DefaultTaskStepTimeout = 3600
 
 	VcsGitlab = "gitlab"
 	VcsGitea  = "gitea"

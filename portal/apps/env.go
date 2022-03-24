@@ -139,8 +139,8 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 		form.Revision = tpl.RepoRevision
 	}
 
-	if form.Timeout == 0 {
-		form.Timeout = common.DefaultTaskStepTimeout
+	if form.StepTimeout == 0 {
+		form.StepTimeout = common.DefaultTaskStepTimeout
 	}
 
 	if form.DestroyAt != "" {
@@ -172,6 +172,17 @@ func getRunnerId(runnerTags []string, runnerId string) (string, e.Error) {
 
 	// 默认runner
 	return services.GetDefaultRunner()
+}
+
+func getTaskStepTimeout(timeout int) (int, e.Error) {
+	if timeout <= 0 {
+		sysTimeout, err := services.GetSystemTaskStepTimeout(db.Get())
+		if err != nil {
+			return -1, err
+		}
+		timeout = sysTimeout
+	}
+	return timeout, nil
 }
 
 func createEnvToDB(tx *db.Session, c *ctx.ServiceContext, form *forms.CreateEnvForm, envModel models.Env) (*models.Env, e.Error) {
@@ -307,19 +318,24 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, err
 	}
 
+	taskStepTimeout, err := getTaskStepTimeout(form.StepTimeout)
+	if err != nil {
+		return nil, err
+	}
+
 	envModel := models.Env{
 		OrgId:     c.OrgId,
 		ProjectId: c.ProjectId,
 		CreatorId: c.UserId,
 		TplId:     form.TplId,
 
-		Name:       form.Name,
-		Tags:       strings.TrimSpace(form.Tags),
-		RunnerId:   runnerId,
-		RunnerTags: strings.Join(form.RunnerTags, ","),
-		Status:     models.EnvStatusInactive,
-		OneTime:    form.OneTime,
-		Timeout:    form.Timeout,
+		Name:        form.Name,
+		Tags:        strings.TrimSpace(form.Tags),
+		RunnerId:    runnerId,
+		RunnerTags:  strings.Join(form.RunnerTags, ","),
+		Status:      models.EnvStatusInactive,
+		OneTime:     form.OneTime,
+		StepTimeout: taskStepTimeout,
 
 		// 模板参数
 		TfVarsFile:   form.TfVarsFile,
@@ -377,7 +393,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		StopOnViolation: env.StopOnViolation,
 		BaseTask: models.BaseTask{
 			Type:        form.TaskType,
-			StepTimeout: form.Timeout,
+			StepTimeout: form.StepTimeout,
 			RunnerId:    runnerId,
 		},
 		ExtraData: models.JSON(form.ExtraData),
@@ -600,6 +616,9 @@ func setUpdateEnvByForm(attrs models.Attrs, form *forms.UpdateEnvForm) {
 	}
 	if form.HasKey("policyEnable") {
 		attrs["policyEnable"] = form.PolicyEnable
+	}
+	if form.HasKey("stepTimeout") {
+		attrs["stepTimeout"] = form.StepTimeout
 	}
 }
 
@@ -897,8 +916,8 @@ func setEnvByForm(env *models.Env, form *forms.DeployEnvForm) {
 		env.KeyId = form.KeyId
 	}
 
-	if form.HasKey("timeout") {
-		env.Timeout = form.Timeout
+	if form.HasKey("stepTimeout") {
+		env.StepTimeout = form.StepTimeout
 	}
 
 	if form.HasKey("tfVarsFile") {
@@ -1128,7 +1147,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		StopOnViolation: env.StopOnViolation,
 		BaseTask: models.BaseTask{
 			Type:        form.TaskType,
-			StepTimeout: form.Timeout,
+			StepTimeout: form.StepTimeout,
 			RunnerId:    rId,
 		},
 	})

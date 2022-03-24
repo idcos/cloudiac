@@ -152,7 +152,7 @@ func CreateWebhookTask(tx *db.Session, param CreateWebhookTaskParam) error {
 		BaseTask: models.BaseTask{
 			Type:        param.TaskType,
 			RunnerId:    env.RunnerId,
-			StepTimeout: env.Timeout,
+			StepTimeout: env.StepTimeout,
 		},
 		Source: param.Source,
 	}
