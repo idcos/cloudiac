@@ -150,9 +150,9 @@ func (Policy) TplOfPolicyGroup(c *ctx.GinRequest) {
 	c.JSONResult(apps.TplOfPolicyGroup(c.Service(), form))
 }
 
-// ValidTplOfPolicy 有效云模板策略
+// ValidTplOfPolicy 生效的云模板策略
 // @Tags 合规/云模板
-// @Summary 有效云模板策略
+// @Summary 生效的云模板策略
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json

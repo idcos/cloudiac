@@ -224,7 +224,7 @@ type SearchPolicyEnvForm struct {
 type EnvOfPolicyForm struct {
 	PageForm
 
-	Id       models.Id `url:"id" json:"id" form:"id" swaggerignore:"true"`
+	Id       models.Id `uri:"id" json:"id" form:"id" swaggerignore:"true"`
 	Q        string    `form:"q" json:"q" binding:""` // 策略组名称，支持模糊搜索
 	Severity string    `json:"severity" form:"severity" enums:"'high','medium','low','none'" example:"medium"`
 	GroupId  models.Id `json:"groupId" form:"groupId" `

@@ -48,9 +48,9 @@ func (Policy) EnvOfPolicy(c *ctx.GinRequest) {
 	c.JSONResult(apps.EnvOfPolicy(c.Service(), form))
 }
 
-// ValidEnvOfPolicy 有效环境策略
+// ValidEnvOfPolicy 生效的环境策略
 // @Tags 合规/环境
-// @Summary 有效环境策略
+// @Summary 生效的环境策略
 // @Accept multipart/form-data
 // @Accept json
 // @Produce json
