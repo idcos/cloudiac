@@ -54,5 +54,18 @@ func ConsulTagUpdate(c *ctx.GinRequest) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.ConsulTagUpdate(form))
+	c.JSONResult(apps.ConsulTagUpdate(c.Service(), form))
+}
+
+// RunnerTags 查询runner tags列表
+// @Summary 查询runner tags列表
+// @Description 查询runner tags列表
+// @Tags runner
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Success 200
+// @Router /runners/tags [get]
+func RunnerTags(c *ctx.GinRequest) {
+	c.JSONResult(apps.RunnerTags())
 }

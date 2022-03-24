@@ -3,9 +3,9 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strings"
-	"errors"
 
 	"github.com/docker/docker/errdefs"
 	"github.com/gin-gonic/gin"
@@ -15,6 +15,7 @@ import (
 )
 
 func RunTask(c *ctx.Context) {
+
 	req := runner.RunTaskReq{}
 	if err := c.BindJSON(&req); err != nil {
 		c.Error(err, http.StatusBadRequest)
@@ -36,6 +37,10 @@ func StopTask(c *ctx.Context) {
 		c.Error(err, http.StatusBadRequest)
 		return
 	}
+
+	defer func() {
+		_ = runner.CleanTaskWorkDirCode(req.EnvId, req.TaskId)
+	}()
 
 	cli, err := runner.DockerClient()
 	if err != nil {

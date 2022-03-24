@@ -52,9 +52,10 @@ type Env struct {
 	Playbook     string `json:"playbook" gorm:"default:''"`     // Ansible playbook 入口文件路径
 
 	// 任务相关参数，获取详情的时候，如果有 last_task_id 则返回 last_task_id 相关参数
-	RunnerId string `json:"runnerId" gorm:"size:32;not null"`   //部署通道ID
-	Revision string `json:"revision" gorm:"size:64;default:''"` // Vcs仓库分支/标签
-	KeyId    Id     `json:"keyId" gorm:"size:32"`               // 部署密钥ID
+	RunnerId   string `json:"runnerId" gorm:"size:32"`            //部署通道ID
+	RunnerTags string `json:"runnerTags" gorm:"size:256"`         //部署通道Tags,逗号分割
+	Revision   string `json:"revision" gorm:"size:64;default:''"` // Vcs仓库分支/标签
+	KeyId      Id     `json:"keyId" gorm:"size:32"`               // 部署密钥ID
 
 	LastTaskId    Id `json:"lastTaskId" gorm:"size:32"`    // 最后一次部署或销毁任务的 id(plan 任务不记录)
 	LastResTaskId Id `json:"lastResTaskId" gorm:"size:32"` // 最后一次进行了资源列表统计的部署任务的 id
@@ -144,7 +145,8 @@ type EnvDetail struct {
 	// gorm 解析该结构体的 PolicyGroup 字段时会将其理解为 PolicyGroup model 的关联字段，
 	// 但解析类型却发现是一个 []string， 而非 []struct{}，导致报错  "[error] unsupported data type: &[]"
 	// (这个报错只在 gorm 日志中打印，db.Error 无错误)。
-	PolicyGroup []string `json:"policyGroup" gorm:"-"` // 环境相关合规策略组
+	PolicyGroup   []string `json:"policyGroup" gorm:"-"`   // 环境相关合规策略组
+	RunnerTagsArr []string `json:"runnerTagsArr" gorm:"-"` // runner tags array
 }
 
 func (c *EnvDetail) UpdateEnvPolicyStatus() {
