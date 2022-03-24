@@ -446,19 +446,32 @@ func GetResourcesGraph(rs []services.Resource, dimension string) interface{} {
 // 不匹配规则库时展示: resource address(id), 如: "module1.alicloud_instance.web(i-xxxxxxx)";
 func GetResShowName(attrs map[string]interface{}, addr string) string {
 	get := func(key string) (string, bool) {
+		// 如果 val 为空字符则视为无值
 		if val, ok := attrs[key]; ok {
 			switch OriginalValue := val.(type) {
 			case map[string]string:
-				var expectedFormat = make([]string, 0) // "k1=v1,k2=v2,k3=v3..."
+				var expectedFormat = make([]string, 0) // expect format: "k1=v1,k2=v2,k3=v3..."
 				for k, v := range OriginalValue {
 					expectedFormat = append(expectedFormat, fmt.Sprintf("%s=%s", k, v))
 				}
+				if len(expectedFormat) == 0 {
+					return "", false
+				}
 				return strings.Join(expectedFormat, ","), true
 			case []string:
-				// expect format: "v1,v2,v3..."
-				return fmt.Sprintf("%s", strings.Join(OriginalValue, ",")), true
+				expectFormat := strings.Join(OriginalValue, ",") // expect format: "v1,v2,v3..."
+				if len(expectFormat) == 0 {
+					return "", false
+				}
+				return expectFormat, true
+			case nil:
+				return "", false
 			default:
-				return fmt.Sprintf("%v", OriginalValue), true
+				str := fmt.Sprintf("%v", OriginalValue)
+				if len(str) == 0 {
+					return str, false
+				}
+				return str, true
 			}
 		}
 		return "", false
