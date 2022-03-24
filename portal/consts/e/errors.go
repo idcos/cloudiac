@@ -73,6 +73,9 @@ const (
 	ImportIdDuplicate = 10520 //  id 重复
 	ImportUpdateOrgId = 10530
 
+	//// runner 报错 106
+	RunnerError = 10610
+
 	// 权限认证 2
 	//// 认证 200
 	InvalidPassword   = 20010
@@ -154,6 +157,8 @@ const (
 	TaskApproveNotPending = 30913
 	TaskStepNotExists     = 30914
 	TaskNotHaveStep       = 30916
+	TaskAborting          = 30917
+	TaskCannotAbort       = 30918
 
 	//// ssh key 310
 	KeyAlreadyExists  = 31010

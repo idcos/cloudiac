@@ -54,7 +54,7 @@ func ApproveTaskStep(tx *db.Session, taskId models.Id, step int, userId models.I
 
 	// 审批通过将步骤标识为 pending 状态，任务被同步修改为 running 状态，
 	// task manager 会在检测到步骤通过审批后开始执行步骤, 并标识为 running 状态
-	return ChangeTaskStepStatusAndUpdate(tx, task, taskStep, models.TaskStepPending, "")
+	return ChangeTaskStepStatus(tx, task, taskStep, models.TaskStepPending, "")
 }
 
 // RejectTaskStep 驳回步骤审批
@@ -69,7 +69,20 @@ func RejectTaskStep(dbSess *db.Session, taskId models.Id, step int, userId model
 	if task, err := GetTask(dbSess, taskStep.TaskId); err != nil {
 		return e.AutoNew(err, e.DBError)
 	} else {
-		return ChangeTaskStepStatusAndUpdate(dbSess, task, taskStep, models.TaskStepRejected, "rejected")
+		return ChangeTaskStepStatus(dbSess, task, taskStep, models.TaskStepRejected, "rejected")
+	}
+}
+
+func ChangeTaskStep2Aborted(db *db.Session, taskId models.Id, step int) e.Error {
+	taskStep, er := GetTaskStep(db, taskId, step)
+	if er != nil {
+		return e.AutoNew(er, e.DBError)
+	}
+
+	if task, err := GetTask(db, taskStep.TaskId); err != nil {
+		return e.AutoNew(err, e.DBError)
+	} else {
+		return ChangeTaskStepStatus(db, task, taskStep, models.TaskStepAborted, "aborted")
 	}
 }
 
@@ -81,12 +94,12 @@ func IsTerraformStep(typ string) bool {
 func ChangeTaskStepStatusAndExitCode(dbSess *db.Session, task models.Tasker, taskStep *models.TaskStep,
 	status, message string, exitCode int) e.Error {
 	taskStep.ExitCode = exitCode
-	return ChangeTaskStepStatusAndUpdate(dbSess, task, taskStep, status, message)
+	return ChangeTaskStepStatus(dbSess, task, taskStep, status, message)
 }
 
-// ChangeTaskStepStatusAndUpdate 修改步骤状态并更新 taskStep
+// ChangeTaskStepStatus 修改步骤状态并更新 taskStep
 // 该函数会同步修改任务状态
-func ChangeTaskStepStatusAndUpdate(dbSess *db.Session, task models.Tasker, taskStep *models.TaskStep, status, message string) e.Error {
+func ChangeTaskStepStatus(dbSess *db.Session, task models.Tasker, taskStep *models.TaskStep, status, message string) e.Error {
 	if taskStep.Status == status && message == "" {
 		return nil
 	}
@@ -114,7 +127,9 @@ func ChangeTaskStepStatusAndUpdate(dbSess *db.Session, task models.Tasker, taskS
 		logger.Debugf("change step to '%s'", status)
 	}
 
-	if _, err := dbSess.Model(taskStep).Update(taskStep); err != nil {
+	if _, err := dbSess.Model(taskStep).
+		Select("status", "message", "start_at", "end_at").
+		Update(taskStep); err != nil {
 		return e.New(e.DBError, err)
 	}
 
@@ -230,4 +245,13 @@ func GetTaskPlanStep(sess *db.Session, taskId models.Id) (*models.TaskStep, e.Er
 func UpdateTaskStepStatus(sess *db.Session, stepId models.Id, status, message string) error {
 	_, err := sess.Where("id = ?", stepId).Update(models.TaskStep{Status: status, Message: message})
 	return err
+}
+
+// UpdateTaskStepRetryNum 更新步骤的重试次数和下次重试时间
+func UpdateTaskStepRetryNum(sess *db.Session, stepId models.Id, num int, nextTime int64) e.Error {
+	_, err := sess.Where("id = ?", stepId).Update(models.TaskStep{RetryNumber: num, NextRetryTime: nextTime})
+	if err != nil {
+		return e.AutoNew(err, e.DBError)
+	}
+	return nil
 }

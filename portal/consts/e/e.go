@@ -70,6 +70,10 @@ func New(code int, errOrStatus ...interface{}) Error {
 		err    error = nil
 	)
 	for _, es := range errOrStatus {
+		if es == nil {
+			continue
+		}
+
 		switch v := es.(type) {
 		case int:
 			status = v

@@ -26,7 +26,7 @@ type Template struct {
 // @Security AuthToken
 // @Produce json
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param form body forms.CreateTemplateForm true "parameter"
+// @Param json body forms.CreateTemplateForm true "parameter"
 // @Router /templates [post]
 // @Success 200 {object} ctx.JSONResult{result=models.Template}
 func (Template) Create(c *ctx.GinRequest) {
@@ -87,7 +87,6 @@ func (Template) Update(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param form query forms.DeleteTemplateForm true "parameter"
 // @Param templateId path string true "云模板ID"
 // @Router /templates/{templateId} [delete]
 // @Success 200 {object} ctx.JSONResult
@@ -108,7 +107,6 @@ func (Template) Delete(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param templateId path string true "云模板ID"
-// @Param form query forms.DetailTemplateForm true "parameter"
 // @Router /templates/{templateId} [get]
 // @Success 200 {object} ctx.JSONResult{result=resps.TemplateDetailResp}
 func (Template) Detail(c *ctx.GinRequest) {
@@ -212,7 +210,6 @@ func AutoTemplateTfVersionChoice(c *ctx.GinRequest) {
 // @Summary 创建云模版前检查名称是否重复和工作目录是否正确
 // @Param IaC-Org-Id header string true "组织ID"
 // @Security AuthToken
-// @Param form query forms.TemplateTfVersionSearchForm true "parameter"
 // @router /templates/checks [POST]
 // @Param form query forms.TemplateChecksForm true "parameter"
 // @Success 200 {object} ctx.JSONResult{result=resps.TemplateChecksResp}

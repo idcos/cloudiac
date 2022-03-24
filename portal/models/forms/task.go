@@ -76,6 +76,12 @@ type ApproveTaskForm struct {
 	Action string    `form:"action" json:"action" binding:"required" enums:"approved,rejected"` // 审批动作：approved通过, rejected驳回
 }
 
+type AbortTaskForm struct {
+	BaseForm
+
+	TaskId models.Id `uri:"id" json:"taskId" swaggerignore:"true"` // 任务ID，swagger 参数通过 param path 指定，这里忽略
+}
+
 type SearchEnvTasksForm struct {
 	NoPageSizeForm
 

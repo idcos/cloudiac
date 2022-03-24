@@ -482,6 +482,7 @@ var stepStatus2TaskStatusMap = map[string]string{
 	models.TaskStepRunning:   models.TaskRunning,
 	models.TaskStepFailed:    models.TaskFailed,
 	models.TaskStepTimeout:   models.TaskFailed,
+	models.TaskStepAborted:   models.TaskAborted,
 	models.TaskStepComplete:  models.TaskComplete,
 }
 
@@ -521,8 +522,14 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 		task.EndAt = &now
 	}
 
+	if task.Aborting && task.Exited() {
+		// 任务已结束，清空 aborting 状态
+		task.Aborting = false
+	}
+
 	logs.Get().WithField("taskId", task.Id).Infof("change task to '%s'", status)
-	if _, err := dbSess.Model(task).Update(task); err != nil {
+	dbSelect := dbSess.Select("status", "message", "start_at", "end_at")
+	if _, err := models.UpdateModel(dbSelect, task); err != nil {
 		return e.AutoNew(err, e.DBError)
 	}
 
@@ -1017,7 +1024,8 @@ func ChangeScanTaskStatus(dbSess *db.Session, task *models.ScanTask, status, mes
 	}
 
 	logs.Get().WithField("taskId", task.Id).Infof("change scan task to '%s'", status)
-	if _, err := dbSess.Model(task).Update(task); err != nil {
+	if _, err := dbSess.Select("status", "message", "start_at", "end_at").
+		Model(task).Update(task); err != nil {
 		return e.AutoNew(err, e.DBError)
 	}
 
@@ -1417,6 +1425,7 @@ func GetDriftResourceById(session *db.Session, id string) (*ResourceDriftResp, e
 	return driftResources, nil
 }
 
+
 func GetActiveTaskByEnvId(tx *db.Session, id models.Id) ([]models.Task, e.Error) {
 	taskActiveStatus := []string{"pending", "running", "approving"}
 	o := make([]models.Task, 0)
@@ -1429,4 +1438,44 @@ func GetActiveTaskByEnvId(tx *db.Session, id models.Id) ([]models.Task, e.Error)
 		return nil, e.New(e.DBError, err)
 	}
 	return o, nil
+}
+
+func AbortRunnerTask(task models.Task) e.Error {
+	logger := logs.Get().WithField("taskId", task.Id).WithField("action", "AbortTask")
+
+	header := &http.Header{}
+	header.Set("Content-Type", "application/json")
+
+	var runnerAddr string
+	runnerAddr, err := GetRunnerAddress(task.RunnerId)
+	if err != nil {
+		return e.AutoNew(err, e.InternalError)
+	}
+
+	requestUrl := utils.JoinURL(runnerAddr, consts.RunnerAbortTaskURL)
+	logger.Debugf("request runner: %s", requestUrl)
+
+	param := runner.TaskAbortReq{
+		EnvId:  task.EnvId.String(),
+		TaskId: task.Id.String(),
+	}
+
+	respData, err := utils.HttpService(requestUrl, "POST", header, param,
+		int(consts.RunnerConnectTimeout.Seconds()),
+		int(consts.RunnerConnectTimeout.Seconds())*10,
+	)
+	if err != nil {
+		return e.AutoNew(err, e.RunnerError)
+	}
+
+	resp := runner.Response{}
+	if err := json.Unmarshal(respData, &resp); err != nil {
+		return e.New(e.RunnerError, fmt.Errorf("unexpected response: %s", respData))
+	}
+	logger.Debugf("runner response: %s", respData)
+
+	if resp.Error != "" {
+		return e.New(e.RunnerError, fmt.Errorf(resp.Error))
+	}
+	return nil
 }

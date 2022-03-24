@@ -18,7 +18,7 @@ const (
 	MaxLogContentSize = 1024 * 1024 // 最大日志文件大小，超限会被截断
 
 	RunnerConnectTimeout = time.Second * 5
-	DbTaskPollInterval   = time.Second // 轮询 db 任务状态的间隔
+	DbTaskPollInterval   = time.Second * 3 // 轮询 db 任务状态的间隔
 
 	DefaultAdminEmail = "admin@example.com"
 

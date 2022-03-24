@@ -61,7 +61,7 @@ func (Env) Search(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
-// @Param form body forms.ArchiveEnvForm true "parameter"
+// @Param form body forms.UpdateEnvForm true "parameter"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId} [put]
 // @Success 200 {object} ctx.JSONResult{result=models.EnvDetail}
@@ -266,6 +266,7 @@ func (Env) LastTask(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param envId path string true "环境ID"
+// @Param form query forms.PolicyScanResultForm true "parameter"
 // @router /envs/{envId}/policy_result [get]
 // @Success 200 {object} ctx.JSONResult{result=resps.ScanResultPageResp}
 func (Env) PolicyResult(c *ctx.GinRequest) {
@@ -283,8 +284,9 @@ func (Env) PolicyResult(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
+// @Param envId path string true "环境ID"
 // @Param resourceId path string true "资源ID"
-// @route /envs/{envId}/resource/{resourceId} [get]
+// @route /envs/{envId}/resources/{resourceId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.ResAttrs}
 func (Env) ResourceDetail(c *ctx.GinRequest) {
 	form := &forms.ResourceDetailForm{}
