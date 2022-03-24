@@ -9,6 +9,7 @@ import (
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"cloudiac/utils"
 	"encoding/json"
@@ -91,11 +92,6 @@ func parseParams(params []forms.Params, newVars map[string]string) ([]byte, erro
 	return jsons, nil
 }
 
-type searchResourceAccountResp struct {
-	models.ResourceAccount
-	CtServiceIds []string `json:"ctServiceIds"`
-}
-
 func SearchResourceAccount(c *ctx.ServiceContext, form *forms.SearchResourceAccountForm) (interface{}, e.Error) {
 	query := services.QueryResourceAccount(c.DB())
 	query = query.Where("org_id = ?", c.OrgId)
@@ -109,7 +105,7 @@ func SearchResourceAccount(c *ctx.ServiceContext, form *forms.SearchResourceAcco
 
 	query = query.Order("created_at DESC")
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	rsAccounts := make([]*searchResourceAccountResp, 0)
+	rsAccounts := make([]*resps.SearchResourceAccountResp, 0)
 	if err := p.Scan(&rsAccounts); err != nil {
 		return nil, e.New(e.DBError, err)
 	}

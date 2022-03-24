@@ -108,6 +108,25 @@ func (gitee *giteeVcs) UserInfo() (UserInfo, error) {
 	return rep, nil
 }
 
+func (gitee *giteeVcs) TokenCheck() error {
+	limit, offset := 1, 1
+	link, _ := url.Parse("/user/repos")
+	page := utils.LimitOffset2Page(limit, offset)
+	link.RawQuery += fmt.Sprintf("access_token=%s&page=%d&per_page=%d",
+		gitee.urlParam.Get("access_token"), page, limit)
+	path := gitee.vcs.Address + link.String()
+	response, _, err := giteeRequest(path, "GET", nil)
+	if err != nil {
+		return e.New(e.BadRequest, err)
+	}
+
+	if response.StatusCode > 300 {
+		return e.New(e.VcsInvalidToken, fmt.Sprintf("token valid check response code: %d", response.StatusCode))
+	}
+
+	return nil
+}
+
 type giteeRepoIface struct {
 	vcs        *models.Vcs
 	repository *RepositoryGitee

@@ -6,6 +6,7 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils/logs"
 	"fmt"
@@ -88,17 +89,8 @@ func DetailPolicyGroup(dbSess *db.Session, groupId models.Id) (*models.PolicyGro
 	return pg, nil
 }
 
-type NewPolicyGroup struct {
-	models.PolicyGroup
-	OrgId     models.Id `json:"orgId"`
-	ProjectId models.Id `json:"projectId" `
-	TplId     models.Id `json:"tplId"`
-	EnvId     models.Id `json:"envId"`
-	Scope     string    `json:"scope"`
-}
-
-func GetPolicyGroupByTplIds(tx *db.Session, ids []models.Id) ([]NewPolicyGroup, e.Error) {
-	group := make([]NewPolicyGroup, 0)
+func GetPolicyGroupByTplIds(tx *db.Session, ids []models.Id) ([]resps.NewPolicyGroup, e.Error) {
+	group := make([]resps.NewPolicyGroup, 0)
 	if len(ids) == 0 {
 		return group, nil
 	}
@@ -116,8 +108,8 @@ func GetPolicyGroupByTplIds(tx *db.Session, ids []models.Id) ([]NewPolicyGroup, 
 	return group, nil
 }
 
-func GetPolicyGroupByEnvIds(tx *db.Session, ids []models.Id) ([]NewPolicyGroup, e.Error) {
-	group := make([]NewPolicyGroup, 0)
+func GetPolicyGroupByEnvIds(tx *db.Session, ids []models.Id) ([]resps.NewPolicyGroup, e.Error) {
+	group := make([]resps.NewPolicyGroup, 0)
 	if len(ids) == 0 {
 		return group, nil
 	}

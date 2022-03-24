@@ -56,10 +56,10 @@ func (Policy) ScanTemplates(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
-// @Param form query forms.PolicyScanResultForm true "parameter"
+// @Param taskId query string true "parameter"
 // @Param templateId path string true "环境ID"
 // @Router /policies/templates/{templateId}/result [get]
-// @Success 200 {object} apps.ScanResultPageResp
+// @Success 200 {object} ctx.JSONResult{result=resps.ScanResultPageResp}
 func (Policy) TemplateScanResult(c *ctx.GinRequest) {
 	form := &forms.PolicyScanResultForm{}
 	if err := c.Bind(form); err != nil {
@@ -78,7 +78,7 @@ func (Policy) TemplateScanResult(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param form query forms.SearchPolicyTplForm true "parameter"
 // @Router /policies/templates [get]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.RespPolicyTpl}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.RespPolicyTpl}}
 func (Policy) SearchPolicyTpl(c *ctx.GinRequest) {
 	form := &forms.SearchPolicyTplForm{}
 	if err := c.Bind(form); err != nil {
@@ -95,11 +95,11 @@ func (Policy) SearchPolicyTpl(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param json body forms.UpdatePolicyRelForm true "parameter"
-// @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
+// @Param json body forms.UpdatePolicyRelForm true "parameter"
+// @Param templateId path string true "云模板id"
 // @Router /policies/templates/{templateId} [put]
-// @Success 200 {object} ctx.JSONResult
+// @Success 200 {object} ctx.JSONResult{result=models.PolicyRel}
 func (Policy) UpdatePolicyTpl(c *ctx.GinRequest) {
 	form := &forms.UpdatePolicyRelForm{}
 	if err := c.Bind(form); err != nil {
@@ -119,8 +119,9 @@ func (Policy) UpdatePolicyTpl(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param templateId path string true "云模板id"
+// @Param form query forms.TplOfPolicyForm true "parameter"
 // @Router /policies/templates/{templateId}/policies [get]
-// @Success 200 {object} ctx.JSONResult{result=models.Policy}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.RespTplOfPolicy}}
 func (Policy) TplOfPolicy(c *ctx.GinRequest) {
 	form := &forms.TplOfPolicyForm{}
 	if err := c.Bind(form); err != nil {
@@ -139,7 +140,7 @@ func (Policy) TplOfPolicy(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param templateId path string true "云模板id"
-// @Router /policies/templates/{templateId}/policies/groups [get]
+// @Router /policies/templates/{templateId}/groups [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.PolicyGroup}}
 func (Policy) TplOfPolicyGroup(c *ctx.GinRequest) {
 	form := &forms.TplOfPolicyGroupForm{}
@@ -149,6 +150,19 @@ func (Policy) TplOfPolicyGroup(c *ctx.GinRequest) {
 	c.JSONResult(apps.TplOfPolicyGroup(c.Service(), form))
 }
 
+// ValidTplOfPolicy 生效的云模板策略
+// @Tags 合规/云模板
+// @Summary 生效的云模板策略
+// @Accept multipart/form-data
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string false "项目ID"
+// @Param form query forms.TplOfPolicyForm true "parameter"
+// @Param templateId path string true "云模板id"
+// @Router /policies/templates/{templateId}/valid_policies [get]
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.PolicyGroup}}
 func (Policy) ValidTplOfPolicy(c *ctx.GinRequest) {
 	form := &forms.TplOfPolicyForm{}
 	if err := c.Bind(form); err != nil {

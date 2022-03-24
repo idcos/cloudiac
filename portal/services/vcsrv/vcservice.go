@@ -56,6 +56,9 @@ type VcsIface interface {
 
 	// UserInfo 获取用户信息
 	UserInfo() (UserInfo, error)
+
+	// TokenCheck 检查 token 是否有效
+	TokenCheck() error
 }
 
 type RepoIface interface {
@@ -107,19 +110,21 @@ type RepoHook struct {
 }
 
 func GetVcsInstance(vcs *models.Vcs) (VcsIface, error) {
+	// 先进行值拷贝再创建实例, 防止因为指针类型导致上层变量被修改;
+	vcsObject := *vcs
 	switch vcs.VcsType {
 	case consts.GitTypeLocal:
-		return newLocalVcs(vcs.Address), nil
+		return newLocalVcs(vcsObject.Address), nil
 	case consts.GitTypeGitLab:
-		return newGitlabInstance(vcs)
+		return newGitlabInstance(&vcsObject)
 	case consts.GitTypeGitEA:
-		return newGiteaInstance(vcs)
+		return newGiteaInstance(&vcsObject)
 	case consts.GitTypeGithub:
-		return newGithubInstance(vcs)
+		return newGithubInstance(&vcsObject)
 	case consts.GitTypeGitee:
-		return newGiteeInstance(vcs)
+		return newGiteeInstance(&vcsObject)
 	case consts.GitTypeRegistry:
-		return newRegistryVcs(vcs)
+		return newRegistryVcs(&vcsObject)
 	default:
 		return nil, errors.New("vcs type doesn't exist")
 	}
@@ -256,4 +261,12 @@ func GetUser(vcs *models.Vcs) (UserInfo, error) {
 		return UserInfo{}, err
 	}
 	return v.UserInfo()
+}
+
+func VerifyVcsToken(vcs *models.Vcs) error {
+	git, err := GetVcsInstance(vcs)
+	if err != nil {
+		return err
+	}
+	return git.TokenCheck()
 }

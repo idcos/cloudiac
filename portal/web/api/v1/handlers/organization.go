@@ -41,7 +41,7 @@ func (Organization) Create(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param form query forms.SearchOrganizationForm true "parameter"
 // @router /orgs [get]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Organization}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.OrgDetailResp}}
 func (Organization) Search(c *ctx.GinRequest) {
 	form := forms.SearchOrganizationForm{}
 	if err := c.Bind(&form); err != nil {
@@ -81,7 +81,7 @@ func (Organization) Update(c *ctx.GinRequest) {
 // @Param orgId path string true "组织ID"
 // @Param form formData forms.DeleteOrganizationForm true "parameter"
 // @router /orgs/{orgId} [delete]
-// @Success 501 {object} ctx.JSONResult
+// @Success 501 {object} ctx.JSONResult{result=resps.UserWithRoleResp}
 func (Organization) Delete(c *ctx.GinRequest) {
 	form := forms.DeleteOrganizationForm{}
 	if err := c.Bind(&form); err != nil {
@@ -98,7 +98,7 @@ func (Organization) Delete(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param orgId path string true "组织ID"
 // @router /orgs/{orgId} [get]
-// @Success 200 {object} ctx.JSONResult{result=apps.organizationDetailResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.OrganizationDetailResp}
 func (Organization) Detail(c *ctx.GinRequest) {
 	form := forms.DetailOrganizationForm{}
 	if err := c.Bind(&form); err != nil {
@@ -134,10 +134,11 @@ func (Organization) ChangeOrgStatus(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param orgId path string true "组织ID"
 // @Param form formData forms.AddUserOrgRelForm true "parameter"
 // @router /orgs/{orgId}/users [post]
-// @Success 200 {object} ctx.JSONResult{result=models.UserWithRoleResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.UserWithRoleResp}
 func (Organization) AddUserToOrg(c *ctx.GinRequest) {
 	form := forms.AddUserOrgRelForm{}
 	if err := c.Bind(&form); err != nil {
@@ -153,11 +154,12 @@ func (Organization) AddUserToOrg(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param orgId path string true "组织ID"
 // @Param userId path string true "用户ID"
 // @Param form formData forms.DeleteUserOrgRelForm true "parameter"
 // @router /orgs/{orgId}/users/{userId} [delete]
-// @Success 200 {object} ctx.JSONResult{}
+// @Success 200 {object} ctx.JSONResult{result=resps.UserWithRoleResp}
 func (Organization) RemoveUserForOrg(c *ctx.GinRequest) {
 	form := forms.DeleteUserOrgRelForm{}
 	if err := c.Bind(&form); err != nil {
@@ -174,11 +176,12 @@ func (Organization) RemoveUserForOrg(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param orgId path string true "组织ID"
 // @Param userId path string true "用户ID"
 // @Param form formData forms.UpdateUserOrgRelForm true "parameter"
 // @router /orgs/{orgId}/users/{userId}/role [put]
-// @Success 200 {object} ctx.JSONResult{result=models.UserWithRoleResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.UserWithRoleResp}
 func (Organization) UpdateUserOrgRel(c *ctx.GinRequest) {
 	form := forms.UpdateUserOrgRelForm{}
 	if err := c.Bind(&form); err != nil {
@@ -188,8 +191,8 @@ func (Organization) UpdateUserOrgRel(c *ctx.GinRequest) {
 }
 
 // SearchUser 查询组织用户列表
-// @Tags 用户
-// @Summary 用户查询
+// @Tags 组织
+// @Summary 查询组织用户列表
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
@@ -197,7 +200,7 @@ func (Organization) UpdateUserOrgRel(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param form query forms.SearchUserForm true "parameter"
 // @router /orgs/{orgId}/users [get]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.User}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.UserWithRoleResp}}
 func (Organization) SearchUser(c *ctx.GinRequest) {
 	form := forms.SearchUserForm{}
 	if err := c.Bind(&form); err != nil {
@@ -219,7 +222,7 @@ func (Organization) SearchUser(c *ctx.GinRequest) {
 // @Param form formData forms.InviteUserForm true "parameter"
 // @Param orgId path string true "组织ID"
 // @router /orgs/{orgId}/users/invite [post]
-// @Success 200 {object} ctx.JSONResult{result=apps.CreateUserResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.UserWithRoleResp}
 func (Organization) InviteUser(c *ctx.GinRequest) {
 	form := forms.InviteUserForm{}
 	if err := c.Bind(&form); err != nil {
@@ -237,7 +240,7 @@ func (Organization) InviteUser(c *ctx.GinRequest) {
 //@Param IaC-Org-Id header string true "组织ID"
 //@Param form query forms.SearchOrgResourceForm true "parameter"
 //@router /orgs/resources [get]
-//@Success 200 {object} ctx.JSONResult{result=apps.OrgResourcesResp}
+//@Success 200 {object} ctx.JSONResult{result=resps.OrgResourcesResp}
 func (Organization) SearchOrgResources(c *ctx.GinRequest) {
 	form := forms.SearchOrgResourceForm{}
 	if err := c.Bind(&form); err != nil {
@@ -258,7 +261,7 @@ func (Organization) SearchOrgResources(c *ctx.GinRequest) {
 // @Param userId path string true "用户ID"
 // @Param form formData forms.UpdateUserOrgForm true "parameter"
 // @router /orgs/{orgId}/users/{userId} [put]
-// @Success 200 {object} ctx.JSONResult{result=models.UserWithRoleResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.UserWithRoleResp}
 func (Organization) UpdateUserOrg(c *ctx.GinRequest) {
 	form := forms.UpdateUserOrgForm{}
 	if err := c.Bind(&form); err != nil {
@@ -279,7 +282,7 @@ func (Organization) UpdateUserOrg(c *ctx.GinRequest) {
 // @Param form formData forms.InviteUsersBatchForm true "parameter"
 // @Param orgId path string true "组织ID"
 // @router /orgs/{orgId}/users/batch_invite [post]
-// @Success 200 {object} ctx.JSONResult{result=apps.InviteUsersBatchResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.InviteUsersBatchResp}
 func (Organization) InviteUsersBatch(c *ctx.GinRequest) {
 	form := forms.InviteUsersBatchForm{}
 	if err := c.Bind(&form); err != nil {

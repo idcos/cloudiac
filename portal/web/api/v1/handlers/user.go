@@ -25,7 +25,7 @@ type User struct {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param form formData forms.CreateUserForm true "parameter"
 // @router /users [post]
-// @Success 200 {object} ctx.JSONResult{result=apps.CreateUserResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.CreateUserResp}
 func (User) Create(c *ctx.GinRequest) {
 	form := forms.CreateUserForm{}
 	if err := c.Bind(&form); err != nil {
@@ -47,7 +47,7 @@ func (User) Create(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param form query forms.SearchUserForm true "parameter"
 // @router /users [get]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.User}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.UserWithRoleResp}}
 func (User) Search(c *ctx.GinRequest) {
 	form := forms.SearchUserForm{}
 	if err := c.Bind(&form); err != nil {
@@ -124,7 +124,6 @@ func (u User) UpdateSelf(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string false "组织ID"
 // @Param userId path string true "用户ID"
-// @Param form formData forms.DeleteUserForm true "parameter"
 // @router /users/{userId} [delete]
 // @Success 200 {object} ctx.JSONResult
 func (User) Delete(c *ctx.GinRequest) {
@@ -144,7 +143,7 @@ func (User) Delete(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string false "组织ID"
 // @Param userId path string true "用户ID"
 // @router /users/{userId} [get]
-// @Success 200 {object} ctx.JSONResult{result=models.User}
+// @Success 200 {object} ctx.JSONResult{result=resps.UserWithRoleResp}
 func (User) Detail(c *ctx.GinRequest) {
 	form := forms.DetailUserForm{}
 	if err := c.Bind(&form); err != nil {
@@ -163,7 +162,7 @@ func (User) Detail(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param userId path string true "用户ID"
 // @router /users/{userId}/password/reset [post]
-// @Success 200 {object} ctx.JSONResult{result=apps.CreateUserResp}
+// @Success 200 {object} ctx.JSONResult{result=models.User}
 func (User) PasswordReset(c *ctx.GinRequest) {
 	form := forms.DetailUserForm{}
 	if err := c.Bind(&form); err != nil {

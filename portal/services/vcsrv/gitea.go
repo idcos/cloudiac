@@ -108,6 +108,23 @@ func (gitea *giteaVcs) UserInfo() (UserInfo, error) {
 	return UserInfo{}, nil
 }
 
+func (gitea *giteaVcs) TokenCheck() error {
+	page, limit := 1, 1
+	link, _ := url.Parse("/user/repos")
+	link.RawQuery = fmt.Sprintf("page=%d&limit=%d", page, limit)
+	path := gitea.vcs.Address + giteaApiRoute + link.String()
+	response, _, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
+	if err != nil {
+		return e.New(e.BadRequest, err)
+	}
+
+	if response.StatusCode > 300 {
+		return e.New(e.VcsInvalidToken, fmt.Sprintf("token valid check response code: %d", response.StatusCode))
+	}
+
+	return nil
+}
+
 type giteaRepoIface struct {
 	vcs        *models.Vcs
 	repository *Repository

@@ -41,6 +41,10 @@ func (rv *RegistryVcs) UserInfo() (UserInfo, error) {
 	return UserInfo{}, nil
 }
 
+func (rv *RegistryVcs) TokenCheck() error {
+	return nil
+}
+
 type RegistryRepo struct {
 	vcs      *models.Vcs
 	repoPath string // vcs 下repo的相对路径
