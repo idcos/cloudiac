@@ -9,8 +9,8 @@ import (
 type CreateKeyForm struct {
 	BaseForm
 
-	Name string `json:"name" form:"name" binding:"required,lte=255"` // 密钥名称
-	Key  string `json:"key" form:"key"`                              // 密钥内容
+	Name string `json:"name" form:"name" binding:"required,gte=2,lte=255"`                                // 密钥名称
+	Key  string `json:"key" form:"key" binding:"required,startswith=-----BEGIN OPENSSH PRIVATE KEY-----"` // 密钥内容
 }
 
 type SearchKeyForm struct {
@@ -22,18 +22,18 @@ type SearchKeyForm struct {
 type DetailKeyForm struct {
 	BaseForm
 
-	Id models.Id `uri:"id" form:"id" json:"id" binding:"" swaggerignore:"true"` // 密钥ID
+	Id models.Id `uri:"id" form:"id" json:"id" binding:"required,startswith=k-,max=32" swaggerignore:"true"` // 密钥ID
 }
 
 type UpdateKeyForm struct {
 	BaseForm
 
-	Id   models.Id `uri:"id" form:"id" json:"id" binding:"" swaggerignore:"true"` // 密钥ID
-	Name string    `json:"name" form:"name"`                                      // 名称
+	Id   models.Id `uri:"id" form:"id" json:"id" binding:"required,startswith=k-,max=32" swaggerignore:"true"` // 密钥ID
+	Name string    `json:"name" form:"name" binding:"required,gte=2,lte=255"`                                  // 名称
 }
 
 type DeleteKeyForm struct {
 	BaseForm
 
-	Id models.Id `uri:"id" form:"id" json:"id" binding:"" swaggerignore:"true"` // 密钥ID
+	Id models.Id `uri:"id" form:"id" json:"id" binding:"required,startswith=k-,max=32" swaggerignore:"true"` // 密钥ID
 }
