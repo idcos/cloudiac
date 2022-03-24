@@ -21,8 +21,16 @@ func PortalSystemStatusSearch(c *ctx.GinRequest) {
 	c.JSONResult(apps.SystemStatusSearch())
 }
 
-//todo swagger文件缺失
-
+// ConsulKVSearch 服务查询
+// @Summary 查询系统状态
+// @Description 查询系统状态
+// @Tags 系统状态
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Param key query string true "key"
+// @Success 200 {object} ctx.JSONResult{result=string}
+// @Router /consul/kv/search [get]
 func ConsulKVSearch(c *ctx.GinRequest) {
 	key := c.Query("key")
 	c.JSONResult(apps.ConsulKVSearch(key))
@@ -49,8 +57,8 @@ func RunnerSearch(c *ctx.GinRequest) {
 // @Produce  json
 // @Security AuthToken
 // @Param data body forms.ConsulTagUpdateForm true "tag信息"
-// @Success 200
-// @Router /consul/tags [put]
+// @Success 200 {object} ctx.JSONResult
+// @Router /consul/tags/update [put]
 func ConsulTagUpdate(c *ctx.GinRequest) {
 	form := forms.ConsulTagUpdateForm{}
 	if err := c.Bind(&form); err != nil {

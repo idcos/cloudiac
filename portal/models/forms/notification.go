@@ -6,7 +6,7 @@ import "cloudiac/portal/models"
 
 type UpdateNotificationForm struct {
 	BaseForm
-	Id        models.Id `uri:"id" form:"notificationId" json:"notificationId" binding:"required"`
+	Id        models.Id `uri:"id" form:"notificationId" json:"notificationId" binding:"required" swaggerignore:"true"`
 	Name      string    `json:"name" form:"name" `
 	Type      string    `form:"type" json:"type" binding:"required"`
 	Secret    string    `json:"secret" form:"secret"`
@@ -27,7 +27,7 @@ type CreateNotificationForm struct {
 
 type DeleteNotificationForm struct {
 	BaseForm
-	Id models.Id `uri:"id" form:"id" json:"id" binding:"required"`
+	Id models.Id `uri:"id" form:"id" json:"id" binding:"required" swaggerignore:"true"`
 }
 
 type DetailNotificationForm struct {
