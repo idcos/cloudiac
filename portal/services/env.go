@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/hashicorp/consul/api"
+	"github.com/pkg/errors"
 
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
@@ -154,13 +155,22 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 		return nil
 	}
 
-	if task.Exited() {
+	if task.Started() && !task.Exited() {
+		envTaskStatus = task.Status
+		isDeploying = true
+	} else if task.Exited() {
 		switch task.Status {
 		case models.TaskRejected:
 			// 任务驳回，环境状态不变
-			break
+			envStatus = ""
 		case models.TaskFailed:
 			envStatus = models.EnvStatusFailed
+		case models.TaskAborted:
+			var err error
+			envStatus, err = getEnvStatusOnTaskAborted(tx, task.Id)
+			if err != nil {
+				return e.New(e.InternalError, errors.Wrap(err, "getEnvStatusOnTaskAborted"))
+			}
 		case models.TaskComplete:
 			if task.Type == models.TaskTypeApply {
 				envStatus = models.EnvStatusActive
@@ -168,11 +178,8 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 				envStatus = models.EnvStatusInactive
 			}
 		default:
-			return e.New(e.InternalError, fmt.Errorf("unknown exited task status: %v", task.Status))
+			return e.New(e.InternalError, fmt.Errorf("unknown task status: %v", task.Status))
 		}
-	} else if task.Started() {
-		envTaskStatus = task.Status
-		isDeploying = true
 	} else { // pending
 		// 任务进入 pending 状态不修改环境状态， 因为任务 pending 时可能同一个环境的其他任务正在执行
 		// (实际目前任务创建后即进入 pending 状态，并不触发 change status 调用链)
@@ -196,6 +203,23 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 		return e.New(e.DBError, err)
 	}
 	return nil
+}
+
+// 当任务被中止时需要根据当前执行哪此步骤来判断环境应该置为什么状态
+func getEnvStatusOnTaskAborted(db *db.Session, taskId models.Id) (string, error) {
+	steps, err := GetTaskSteps(db, taskId)
+	if err != nil {
+		return "", errors.Wrap(err, "get task steps")
+	}
+
+	for _, s := range steps {
+		// 如果执行了 apply 步骤则环境变为 failed 状态
+		if (s.Type == models.TaskStepApply || s.Type == models.TaskStepDestroy) && s.IsStarted() {
+			return models.EnvStatusFailed, nil
+		}
+	}
+	// 否则，环境状态保持不变
+	return "", nil
 }
 
 var (

@@ -78,6 +78,7 @@ var Polices = []Policy{
 	{"admin", "policies", "*"},
 	{"member", "policies", "read"},
 	{"complianceManager", "policies", "*"},
+
 	// 项目角色
 	{"manager", "policies", "suppress/enablescan/scan"},
 	{"approver", "policies", "suppress/enablescan/scan"},
@@ -122,7 +123,7 @@ var Polices = []Policy{
 	// 任务
 	{"manager", "tasks", "*"},
 	{"approver", "tasks", "*"},
-	{"operator", "tasks", "read"},
+	{"operator", "tasks", "read/abort"},
 	{"guest", "tasks", "read"},
 
 	// 云模板
