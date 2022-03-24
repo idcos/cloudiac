@@ -146,6 +146,8 @@ const (
 	TaskSourceWebhookApply = "webhookApply"
 	TaskSourceAutoDestroy  = "autoDestroy"
 	TaskSourceApi          = "api"
+
+	TaskAutoDestroyName = "Auto Destroy"
 )
 
 var (
