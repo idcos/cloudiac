@@ -418,7 +418,7 @@ func EnvUnLock(c *ctx.GinRequest){
 // @Param envId path string true "环境ID"
 // @Param tags formData forms.EnvUnLockConfirmForm true "部署参数"
 // @router /envs/{envId}/unlock/confirm [get]
-// @Success 200 {object} ctx.JSONResult{result=resps.EnvUnLockedConfirmResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.EnvUnLockConfirmResp}
 func EnvUnLockConfirm(c *ctx.GinRequest){
 	form := forms.EnvUnLockConfirmForm{}
 	if err := c.Bind(&form); err != nil {
