@@ -217,7 +217,8 @@ func (Executor) RunCommandOutput(cid string, command []string) (output []byte, e
 	defer hijackedResp.Close()
 
 	buffer := bytes.NewBuffer(nil)
-	if _, err := stdcopy.StdCopy(buffer, buffer, hijackedResp.Reader); err != nil && err != io.EOF {
+	_, err = stdcopy.StdCopy(buffer, buffer, hijackedResp.Reader)
+	if err != nil && !errors.Is(err, io.EOF) {
 		return buffer.Bytes(), err
 	}
 	return buffer.Bytes(), nil
