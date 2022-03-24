@@ -93,8 +93,7 @@ type Env struct {
 	PolicyEnable bool `json:"policyEnable" gorm:"default:false"` // 是否开启合规检测
 
 	//环境锁定
-	LockedStatus bool `json:"lockedStatus" gorm:"default:false"`
-
+	LockStatus bool `json:"lockStatus" gorm:"default:false"`
 }
 
 func (Env) TableName() string {

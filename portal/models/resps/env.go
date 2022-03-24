@@ -1,5 +1,5 @@
 package resps
 
-type EnvUnLockedConfirmResp struct {
+type EnvUnLockConfirmResp struct {
 	AutoDestroyPass bool `json:"autoDestroyPass"`
 }

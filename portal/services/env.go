@@ -384,10 +384,10 @@ func CheckEnvTags(tags string) e.Error {
 	return nil
 }
 
-func EnvLocked(dbSess *db.Session, id models.Id) e.Error {
+func EnvLock(dbSess *db.Session, id models.Id) e.Error {
 	if _, err := dbSess.Model(models.Env{}).
 		Where("id =?", id).
-		UpdateColumn("locked_status", true); err != nil {
+		UpdateColumn("lock_status", true); err != nil {
 		return e.New(e.DBError, err)
 	}
 	return nil
@@ -396,7 +396,7 @@ func EnvLocked(dbSess *db.Session, id models.Id) e.Error {
 func EnvUnLocked(dbSess *db.Session, id models.Id) e.Error {
 	if _, err := dbSess.Model(models.Env{}).
 		Where("id =?", id).
-		UpdateColumn("locked_status", false); err != nil {
+		UpdateColumn("lock_status", false); err != nil {
 		return e.New(e.DBError, err)
 	}
 	return nil

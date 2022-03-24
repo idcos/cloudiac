@@ -1377,7 +1377,7 @@ func EnvUpdateTags(c *ctx.ServiceContext, form *forms.UpdateEnvTagsForm) (resp i
 	}
 }
 
-func EnvLocked(c *ctx.ServiceContext, form *forms.EnvLockedForm) (interface{}, e.Error) {
+func EnvLock(c *ctx.ServiceContext, form *forms.EnvLockForm) (interface{}, e.Error) {
 	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
@@ -1392,10 +1392,10 @@ func EnvLocked(c *ctx.ServiceContext, form *forms.EnvLockedForm) (interface{}, e
 	}
 
 	if len(tasks) > 0 {
-		return nil, e.New(e.EnvLockedFailedTaskActive)
+		return nil, e.New(e.EnvLockFailedTaskActive)
 	}
 
-	if err := services.EnvLocked(tx, form.Id); err != nil {
+	if err := services.EnvLock(tx, form.Id); err != nil {
 		return nil, err
 	}
 
@@ -1405,9 +1405,9 @@ func EnvLocked(c *ctx.ServiceContext, form *forms.EnvLockedForm) (interface{}, e
 	return nil, nil
 }
 
-func EnvUnLocked(c *ctx.ServiceContext, form *forms.EnvUnLockedForm) (interface{}, e.Error) {
+func EnvUnLock(c *ctx.ServiceContext, form *forms.EnvUnLockForm) (interface{}, e.Error) {
 	attrs := models.Attrs{}
-	attrs["locked_status"] = false
+	attrs["lock_status"] = false
 
 	if form.ClearDestroyAt {
 		attrs["auto_destroy_at"] = nil
@@ -1420,13 +1420,13 @@ func EnvUnLocked(c *ctx.ServiceContext, form *forms.EnvUnLockedForm) (interface{
 	return nil, nil
 }
 
-func EnvUnLockedConfirm(c *ctx.ServiceContext, form *forms.EnvUnLockedConfirmForm) (interface{}, e.Error) {
+func EnvUnLockConfirm(c *ctx.ServiceContext, form *forms.EnvUnLockConfirmForm) (interface{}, e.Error) {
 	env, err := services.GetEnvById(c.DB(), form.Id)
 	if err != nil {
 		return nil, err
 	}
 
-	resp := resps.EnvUnLockedConfirmResp{}
+	resp := resps.EnvUnLockConfirmResp{}
 	if env.AutoDestroyAt != nil && time.Now().Unix() > env.AutoDestroyAt.Unix() && env.AutoDestroyAt.Unix() > 0 {
 		resp.AutoDestroyPass = true
 	}

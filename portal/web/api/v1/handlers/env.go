@@ -361,7 +361,7 @@ func (Env) UpdateTags(c *ctx.GinRequest) {
 }
 
 
-// EnvLocked 环境锁定
+// EnvLock 环境锁定
 // @Tags 环境
 // @Summary 环境锁定
 // @Accept multipart/form-data
@@ -372,18 +372,18 @@ func (Env) UpdateTags(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param envId path string true "环境ID"
-// @Param tags formData forms.EnvLockedForm true "部署参数"
-// @router /envs/{envId}/locked [post]
+// @Param tags formData forms.EnvLockForm true "部署参数"
+// @router /envs/{envId}/lock [post]
 // @Success 200
-func EnvLocked(c *ctx.GinRequest){
-	form := forms.EnvLockedForm{}
+func EnvLock(c *ctx.GinRequest){
+	form := forms.EnvLockForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.EnvLocked(c.Service(), &form))
+	c.JSONResult(apps.EnvLock(c.Service(), &form))
 }
 
-// EnvUnLocked 环境解锁
+// EnvUnLock 环境解锁
 // @Tags 环境
 // @Summary 环境解锁
 // @Accept multipart/form-data
@@ -394,18 +394,18 @@ func EnvLocked(c *ctx.GinRequest){
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param envId path string true "环境ID"
-// @Param tags formData forms.EnvUnLockedForm true "部署参数"
-// @router /envs/{envId}/unlocked [post]
+// @Param tags formData forms.EnvUnLockForm true "部署参数"
+// @router /envs/{envId}/unlock [post]
 // @Success 200
-func EnvUnLocked(c *ctx.GinRequest){
-	form := forms.EnvUnLockedForm{}
+func EnvUnLock(c *ctx.GinRequest){
+	form := forms.EnvUnLockForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.EnvUnLocked(c.Service(), &form))
+	c.JSONResult(apps.EnvUnLock(c.Service(), &form))
 }
 
-// EnvUnLockedConfirm 环境解锁确认
+// EnvUnLockConfirm 环境解锁确认
 // @Tags 环境
 // @Summary 环境解锁确认
 // @Accept multipart/form-data
@@ -416,15 +416,15 @@ func EnvUnLocked(c *ctx.GinRequest){
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param envId path string true "环境ID"
-// @Param tags formData forms.EnvUnLockedConfirmForm true "部署参数"
-// @router /envs/{envId}/unlocked/confirm [get]
+// @Param tags formData forms.EnvUnLockConfirmForm true "部署参数"
+// @router /envs/{envId}/unlock/confirm [get]
 // @Success 200 {object} ctx.JSONResult{result=resps.EnvUnLockedConfirmResp}
-func EnvUnLockedConfirm(c *ctx.GinRequest){
-	form := forms.EnvUnLockedConfirmForm{}
+func EnvUnLockConfirm(c *ctx.GinRequest){
+	form := forms.EnvUnLockConfirmForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.EnvUnLockedConfirm(c.Service(), &form))
+	c.JSONResult(apps.EnvUnLockConfirm(c.Service(), &form))
 }
 
 
