@@ -222,7 +222,7 @@ func initSystemConfig(tx *db.Session) (err error) {
 			Description: "日志保存周期",
 		}, {
 			Name:        models.SysCfgNameTaskStepTimeout,
-			Value:       "1800",
+			Value:       "3600",
 			Description: "步骤超时时间",
 		},
 	}
