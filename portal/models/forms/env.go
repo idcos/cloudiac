@@ -216,3 +216,22 @@ type UpdateEnvTagsForm struct {
 	Id   models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
 	Tags string    `json:"tags" form:"tags" binding:""`
 }
+
+type EnvLockedForm struct {
+	BaseForm
+
+	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
+}
+
+type EnvUnLockedForm struct {
+	BaseForm
+
+	Id             models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
+	ClearDestroyAt bool      `json:"clearDestroyAt" form:"clearDestroyAt" `
+}
+
+type EnvUnLockedConfirmForm struct {
+	BaseForm
+
+	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
+}

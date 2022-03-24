@@ -166,7 +166,8 @@ func (m *TaskManager) beginCronDriftTask() {
 	logger := m.logger.WithField("func", "beginCronDriftTask")
 	cronDriftEnvs := make([]*models.Env, 0)
 	query := m.db.Where("status = ? and open_cron_drift = ? and next_drift_task_time <= ?",
-		models.EnvStatusActive, true, time.Now())
+		models.EnvStatusActive, true, time.Now()).
+		Where("locked_status = ?", false)
 	if err := query.Model(&models.Env{}).Find(&cronDriftEnvs); err != nil {
 		logger.Error(err)
 		return

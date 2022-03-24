@@ -90,7 +90,10 @@ type Env struct {
 	NextDriftTaskTime *time.Time `json:"nextDriftTaskTime" gorm:"type:datetime"` // 下次执行偏移检测任务的时间
 
 	// 合规相关
-	PolicyEnable bool `json:"policyEnable" grom:"default:false"` // 是否开启合规检测
+	PolicyEnable bool `json:"policyEnable" gorm:"default:false"` // 是否开启合规检测
+
+	//环境锁定
+	LockedStatus bool `json:"lockedStatus" gorm:"default:false"`
 
 }
 

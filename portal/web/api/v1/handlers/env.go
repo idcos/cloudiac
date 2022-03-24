@@ -357,3 +357,72 @@ func (Env) UpdateTags(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.EnvUpdateTags(c.Service(), &form))
 }
+
+
+// EnvLocked 环境锁定
+// @Tags 环境
+// @Summary 环境锁定
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param envId path string true "环境ID"
+// @Param tags formData forms.EnvLockedForm true "部署参数"
+// @router /envs/{envId}/locked [post]
+// @Success 200
+func EnvLocked(c *ctx.GinRequest){
+	form := forms.EnvLockedForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.EnvLocked(c.Service(), &form))
+}
+
+// EnvUnLocked 环境解锁
+// @Tags 环境
+// @Summary 环境解锁
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param envId path string true "环境ID"
+// @Param tags formData forms.EnvUnLockedForm true "部署参数"
+// @router /envs/{envId}/unlocked [post]
+// @Success 200
+func EnvUnLocked(c *ctx.GinRequest){
+	form := forms.EnvUnLockedForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.EnvUnLocked(c.Service(), &form))
+}
+
+// EnvUnLockedConfirm 环境解锁确认
+// @Tags 环境
+// @Summary 环境解锁确认
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param envId path string true "环境ID"
+// @Param tags formData forms.EnvUnLockedConfirmForm true "部署参数"
+// @router /envs/{envId}/unlocked/confirm [get]
+// @Success 200 {object} ctx.JSONResult{result=resps.EnvUnLockedConfirmResp}
+func EnvUnLockedConfirm(c *ctx.GinRequest){
+	form := forms.EnvUnLockedConfirmForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.EnvUnLockedConfirm(c.Service(), &form))
+}
+
+

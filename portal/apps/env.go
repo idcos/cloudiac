@@ -11,6 +11,7 @@ import (
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
@@ -1355,4 +1356,61 @@ func EnvUpdateTags(c *ctx.ServiceContext, form *forms.UpdateEnvTagsForm) (resp i
 	} else {
 		return env, nil
 	}
+}
+
+func EnvLocked(c *ctx.ServiceContext, form *forms.EnvLockedForm) (interface{}, e.Error) {
+	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	// 查询环境下是否有执行中、待审批、排队中的任务
+	tasks, err := services.GetActiveTaskByEnvId(tx, form.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(tasks) > 0 {
+		return nil, e.New(e.EnvLockedFailedTaskActive)
+	}
+
+	if err := services.EnvLocked(tx, form.Id); err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return nil, nil
+}
+
+func EnvUnLocked(c *ctx.ServiceContext, form *forms.EnvUnLockedForm) (interface{}, e.Error) {
+	attrs := models.Attrs{}
+	attrs["locked_status"] = false
+
+	if form.ClearDestroyAt {
+		attrs["auto_destroy_at"] = nil
+		attrs["ttl"] = ""
+	}
+
+	if _, err := services.UpdateEnv(c.DB(), form.Id, attrs); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func EnvUnLockedConfirm(c *ctx.ServiceContext, form *forms.EnvUnLockedConfirmForm) (interface{}, e.Error) {
+	env, err := services.GetEnvById(c.DB(), form.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := resps.EnvUnLockedConfirmResp{}
+	if env.AutoDestroyAt != nil && time.Now().Unix() > env.AutoDestroyAt.Unix() && env.AutoDestroyAt.Unix() > 0 {
+		resp.AutoDestroyPass = true
+	}
+
+	return resp, nil
 }
