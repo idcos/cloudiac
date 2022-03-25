@@ -15,7 +15,10 @@ import (
 	"unicode"
 )
 
-var webVersion = "v0.9.2"
+const (
+	version = "v0.9.3"
+	webVersion = "v0.9.2"
+)
 
 type FileReplacer struct {
 	filepath string
@@ -225,19 +228,13 @@ func generateReleaseNotes() error {
 }
 
 func main() {
+	if version == "" || webVersion == "" {
+		log.Fatalln("version or webVersion is blank")
+	}
+
 	if err := generateReleaseNotes(); err != nil {
 		log.Fatalln(err)
 	}
-
-	versionBytes, err := os.ReadFile("VERSION")
-	if err != nil {
-		log.Fatalln(err)
-	}
-	version := strings.TrimSpace(string(versionBytes))
-
-        if webVersion == "" {
-          webVersion = version
-        }
 
 	configs := []struct {
 		file  string
