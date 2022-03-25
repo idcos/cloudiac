@@ -502,7 +502,11 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		PopulateLastTask(c.DB(), env)
 		env.PolicyStatus = models.PolicyStatusConversion(env.PolicyStatus, env.PolicyEnable)
 		// runner tags 数组形式返回
-		env.RunnerTags = strings.Split(env.Env.RunnerTags, ",")
+		if env.Env.RunnerTags != "" {
+			env.RunnerTags = strings.Split(env.Env.RunnerTags, ",")
+		} else {
+			env.RunnerTags = []string{}
+		}
 	}
 
 	return page.PageResp{
@@ -838,7 +842,11 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 	envDetail.PolicyStatus = models.PolicyStatusConversion(envDetail.PolicyStatus, envDetail.PolicyEnable)
 
 	// runner tags 数组形式返回
-	envDetail.RunnerTags = strings.Split(envDetail.Env.RunnerTags, ",")
+	if envDetail.Env.RunnerTags != "" {
+		envDetail.RunnerTags = strings.Split(envDetail.Env.RunnerTags, ",")
+	} else {
+		envDetail.RunnerTags = []string{}
+	}
 	return envDetail, nil
 }
 
@@ -959,6 +967,7 @@ func setEnvRunnerInfoByForm(env *models.Env, form *forms.DeployEnvForm) {
 
 	if form.HasKey("runnerTags") {
 		env.RunnerTags = strings.Join(form.RunnerTags, ",")
+		// 如果传了 tags 则清空 runnerId 值
 		env.RunnerId = ""
 	}
 }
