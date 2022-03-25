@@ -61,8 +61,8 @@ type InviteUserForm struct {
 
 	Id     models.Id `uri:"id" json:"id" binding:"required,startswith=org-,max=32" swaggerignore:"true"`                                       // 组织ID
 	UserId models.Id `form:"userId"  json:"userId" binding:"required_without_all=Name Email,omitempty,startswith=u-,max=32"`                   // 用户ID，用户ID 或 用户名+邮箱必须填写一个
-	Name   string    `form:"name" json:"name" binding:"required_without=UserId,gte=2,lte=32"`                                                  // 用户名
-	Email  string    `form:"email" json:"email" binding:"required_without=UserId,email,max=64"`                                                // 电子邮件地址
+	Name   string    `form:"name" json:"name" binding:"required_without=UserId,required_with=Email,omitempty,gte=2,lte=32"`                    // 用户名
+	Email  string    `form:"email" json:"email" binding:"required_without=UserId,required_with=Name,omitempty,email,max=64"`                   // 电子邮件地址
 	Role   string    `form:"role" json:"role" binding:"omitempty,oneof=admin member complianceManager" enums:"admin,member,complianceManager"` // 受邀请用户在组织中的角色，组织管理员：admin，普通用户：member
 	Phone  string    `form:"phone" json:"phone" binding:"max=11"`                                                                              // 用户手机号
 }

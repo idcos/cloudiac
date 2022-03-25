@@ -27,12 +27,12 @@ func TemplateExport(c *ctx.ServiceContext, form *TplExportForm) (interface{}, e.
 type TplImportForm struct {
 	forms.BaseForm
 
-	IdDuplicate string      `json:"idDuplicate" form:"idDuplicate" bind:"required"` // id 重复时的处理方式, enum('update','skip','copy','abort')
-	Projects    []models.Id `json:"projects" form:"projects"`                       // 关联项目 id 列表
+	IdDuplicate string      `json:"idDuplicate" form:"idDuplicate" bind:"required,oneof=update skip copy abort"`    // id 重复时的处理方式, enum('update','skip','copy','abort')
+	Projects    []models.Id `json:"projects" form:"projects" binding:"required,dive,required,startswith=p-,max=32"` // 关联项目 id 列表
 
-	Data services.TplExportedData `json:"data"  swaggerignore:"true"` // 待导入数据(JSON 格式，与 file 参数二选一)
+	Data services.TplExportedData `json:"data"  swaggerignore:"true" binding:"required_with_out=File,omitempty,json"` // 待导入数据(JSON 格式，与 file 参数二选一)
 
-	File *multipart.FileHeader `form:"file" swaggerignore:"true" binding:"file"` // 待导入文件(与 data 参数二选一)
+	File *multipart.FileHeader `form:"file" swaggerignore:"true" binding:"required_with_out=Data,omitempty,file"` // 待导入文件(与 data 参数二选一)
 }
 
 func TemplateImport(c *ctx.ServiceContext, form *TplImportForm) (result *services.TplImportResult, er e.Error) {
