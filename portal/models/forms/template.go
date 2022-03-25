@@ -51,7 +51,7 @@ type SearchTemplateForm struct {
 
 type UpdateTemplateForm struct {
 	BaseForm
-	Id           models.Id   `uri:"id" form:"id" json:"id" binding:"required"`
+	Id           models.Id   `uri:"id" form:"id" json:"id" binding:"required" swaggerignore:"true"`
 	Name         string      `form:"name" json:"name"`
 	Description  string      `form:"description" json:"description"`
 	Status       string      `form:"status" json:"status"`
@@ -102,7 +102,7 @@ type RepoFileSearchForm struct {
 	BaseForm
 	RepoId       string    `json:"repoId" form:"repoId" binding:"required"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
-	VcsId        models.Id `uri:"id"`
+	VcsId        models.Id `uri:"id" swaggerignore:"true"`
 	Workdir      string    `json:"workdir" form:"workdir" `
 }
 
@@ -110,7 +110,7 @@ type TemplateVariableSearchForm struct {
 	BaseForm
 	RepoId       string    `json:"repoId" form:"repoId" binding:"required"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
-	VcsId        models.Id `uri:"id"`
+	VcsId        models.Id `uri:"id" swaggerignore:"true"`
 	Workdir      string    `json:"workdir" form:"workdir" `
 }
 

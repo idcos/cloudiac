@@ -120,7 +120,28 @@ func (Task) TaskApprove(c *ctx.GinRequest) {
 	c.JSONResult(apps.ApproveTask(c.Service(), form))
 }
 
-// Log 任务日志
+// TaskAbort 中止任务
+// @Tags 环境
+// @Summary 中止部署任务
+// @Accept application/json
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param taskId path string true "任务ID"
+// @Param form formData forms.AbortTaskForm true "parameter"
+// @router /tasks/{taskId}/abort [post]
+// @Success 200 {object} ctx.JSONResult
+func (Task) TaskAbort(c *ctx.GinRequest) {
+	form := &forms.AbortTaskForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.AbortTask(c.Service(), form))
+}
+
+// Log 任务日志(待实现)
 // @Tags 环境
 // @Summary 任务日志
 // @Accept application/x-www-form-urlencoded
@@ -190,6 +211,7 @@ func (Task) Resource(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param taskId path string true "任务ID"
+// @Param form query forms.DetailTaskStepForm true "parameter"
 // @router /tasks/{taskId}/steps [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.TaskStepDetail}}
 func (Task) SearchTaskStep(c *ctx.GinRequest) {
@@ -211,7 +233,6 @@ func (Task) SearchTaskStep(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param id path string true "任务ID"
 // @Param stepId path string true "任务步骤ID"
-// @Param form query forms.GetTaskStepLogForm true "parameter"
 // @router /tasks/{id}/steps/{stepId}/log [get]
 // @Success 200 {object} ctx.JSONResult{result=string}
 func (Task) GetTaskStepLog(c *ctx.GinRequest) {
@@ -219,7 +240,7 @@ func (Task) GetTaskStepLog(c *ctx.GinRequest) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.GetTaskStep(c.Service(), &form))
+	c.JSONResult(apps.GetTaskStepLog(c.Service(), &form))
 
 }
 

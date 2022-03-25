@@ -15,6 +15,8 @@ import (
 	"unicode"
 )
 
+var webVersion = "v0.9.2"
+
 type FileReplacer struct {
 	filepath string
 	rules    []ReplaceRule
@@ -229,6 +231,10 @@ func main() {
 	}
 	version := strings.TrimSpace(string(versionBytes))
 
+        if webVersion == "" {
+          webVersion = version
+        }
+
 	configs := []struct {
 		file  string
 		rules []ReplaceRule
@@ -251,13 +257,16 @@ func main() {
 		{
 			"./docs/mkdocs/product-deploy/container.md",
 			[]ReplaceRule{
-				&LineRegexReplaceRule{expr: `image: "([^/]*cloudiac/[^:]+):latest"`, repl: fmt.Sprintf(`image: "$1:%s"`, version)},
+				&LineRegexReplaceRule{expr: `image: "([^/]*cloudiac/iac-portal):latest"`, repl: fmt.Sprintf(`image: "$1:%s"`, version)},
+				&LineRegexReplaceRule{expr: `image: "([^/]*cloudiac/ct-runner):latest"`, repl: fmt.Sprintf(`image: "$1:%s"`, version)},
+				&LineRegexReplaceRule{expr: `image: "([^/]*cloudiac/iac-web):latest"`, repl: fmt.Sprintf(`image: "$1:%s"`, webVersion)},
 			},
 		},
 		{
 			"./docs/mkdocs/product-deploy/host.md",
 			[]ReplaceRule{
 				&LineStartReplaceRule{"VERSION=v", fmt.Sprintf("VERSION=%s\n", version)},
+				&LineStartReplaceRule{"WEB_VERSION=v", fmt.Sprintf("WEB_VERSION=%s\n", webVersion)},
 			},
 		},
 	}

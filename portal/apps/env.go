@@ -16,11 +16,12 @@ import (
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
-	"github.com/robfig/cron/v3"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/robfig/cron/v3"
 
 	"github.com/lib/pq"
 )
@@ -502,7 +503,7 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		PopulateLastTask(c.DB(), env)
 		env.PolicyStatus = models.PolicyStatusConversion(env.PolicyStatus, env.PolicyEnable)
 		// runner tags 数组形式返回
-		env.RunnerTagsArr = strings.Split(env.Env.RunnerTags, ",")
+		env.RunnerTags = strings.Split(env.Env.RunnerTags, ",")
 		// 以分钟为单位返回
 		env.StepTimeout = env.StepTimeout / 60
 	}
@@ -841,7 +842,7 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 	envDetail.PolicyStatus = models.PolicyStatusConversion(envDetail.PolicyStatus, envDetail.PolicyEnable)
 
 	// runner tags 数组形式返回
-	envDetail.RunnerTagsArr = strings.Split(envDetail.Env.RunnerTags, ",")
+	envDetail.RunnerTags = strings.Split(envDetail.Env.RunnerTags, ",")
 	// 时间转化为分钟
 	envDetail.StepTimeout = envDetail.StepTimeout / 60
 	return envDetail, nil

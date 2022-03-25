@@ -35,6 +35,7 @@ const (
 	TaskApproving = "approving"
 	TaskRejected  = "rejected"
 	TaskFailed    = "failed"
+	TaskAborted   = "aborted"
 	TaskComplete  = "complete"
 
 	TaskStepCheckout  = "checkout"
@@ -69,6 +70,7 @@ const (
 	TaskStepFailed    = "failed"
 	TaskStepComplete  = "complete"
 	TaskStepTimeout   = "timeout"
+	TaskStepAborted   = "aborted"
 
 	TaskStepPolicyViolationExitCode = 3 // 合规检查不通过时的退出码
 
