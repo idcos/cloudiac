@@ -35,24 +35,21 @@ var (
 
 func createUserOrgRel(tx *db.Session, orgId models.Id, initPass string, form *forms.CreateUserForm, lg logs.Logger) (*models.User, e.Error) {
 	var (
-		user           *models.User
-		err            e.Error
-		hashedPassword string
+		user *models.User
+		err  e.Error
 	)
 
-	if !form.IsLdap {
-		hashedPassword, err = services.HashPassword(initPass)
-		if err != nil {
-			lg.Errorf("error hash password, err %s", err)
-			return nil, err
-		}
+	hashedPassword, err := services.HashPassword(initPass)
+	if err != nil {
+		lg.Errorf("error hash password, err %s", err)
+		return nil, err
 	}
+
 	user, err = services.CreateUser(tx, models.User{
 		Name:     form.Name,
 		Password: hashedPassword,
 		Phone:    form.Phone,
 		Email:    form.Email,
-		IsLdap:   form.IsLdap,
 	})
 	if err != nil && err.Code() == e.UserAlreadyExists {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
@@ -175,8 +172,8 @@ func queryUserProject(db, query *db.Session, orgId, projectId models.Id, exclude
 
 // 提供私有化部署的用户搜索接口
 func SearchAllUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{}, e.Error) {
-	query := services.QueryUser(c.DB()).Limit(10)
-	return doSearchUser(c, query, form)
+	query := services.QueryUser(c.DB())
+	return doSearchUser(c, query, form, 10)
 }
 
 // SearchUser 查询用户列表
@@ -202,10 +199,10 @@ func SearchUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{},
 			models.UserProject{}.TableName(), models.User{}.TableName()), c.ProjectId).
 			LazySelectAppend(fmt.Sprintf("p.role as project_role,%s.*", models.User{}.TableName()))
 	}
-	return doSearchUser(c, query, form)
+	return doSearchUser(c, query, form, 0)
 }
 
-func doSearchUser(c *ctx.ServiceContext, query *db.Session, form *forms.SearchUserForm) (interface{}, e.Error) {
+func doSearchUser(c *ctx.ServiceContext, query *db.Session, form *forms.SearchUserForm, limit int) (interface{}, e.Error) {
 	if form.Status != "" {
 		query = query.Where("status = ?", form.Status)
 	}
@@ -216,13 +213,15 @@ func doSearchUser(c *ctx.ServiceContext, query *db.Session, form *forms.SearchUs
 	if form.SortField() == "" {
 		query = query.Order("created_at DESC")
 	}
-	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	if limit != 0 {
+		limit = form.PageSize()
+	}
+	p := page.New(form.CurrentPage(), limit, query)
 	users := make([]*resps.UserWithRoleResp, 0)
 	if err := p.Scan(&users); err != nil {
 		c.Logger().Errorf("error get users, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
-
 	return page.PageResp{
 		Total:    p.MustTotal(),
 		PageSize: p.Size,

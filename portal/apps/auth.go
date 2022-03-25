@@ -5,6 +5,7 @@ package apps
 import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
@@ -50,16 +51,14 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err 
 				return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
 			}
 			// 登录成功, 标记账号为ldap用户，并且在用户表中添加该用户
-			createUserform := &forms.CreateUserForm{
+			user, err = services.CreateUser(c.DB(), models.User{
 				Name:   username,
 				Email:  form.Email,
 				IsLdap: true,
-			}
-			ldapUser, err := CreateUser(c, createUserform)
+			})
 			if err != nil {
 				return nil, err
 			}
-			user = ldapUser.User
 		} else {
 			return nil, e.New(e.DBError, err)
 		}
