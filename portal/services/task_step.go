@@ -98,20 +98,29 @@ func ChangeTaskStepStatusAndExitCode(dbSess *db.Session, task models.Tasker, tas
 }
 
 // ChangeTaskStepStatus 修改步骤状态并更新 taskStep
-// 该函数会同步修改任务状态
+// - 该函数会同步修改任务状态
+// - 该函数仅修改 status, message, start_at, end_at 字段
 func ChangeTaskStepStatus(dbSess *db.Session, task models.Tasker, taskStep *models.TaskStep, status, message string) e.Error {
 	if taskStep.Status == status && message == "" {
 		return nil
 	}
 
-	taskStep.Status = status
+	updateAttrs := models.Attrs{
+		"message": message,
+	}
 	taskStep.Message = message
+	if status != "" {
+		taskStep.Status = status
+		updateAttrs["status"] = status
+	}
 
 	now := models.Time(time.Now())
 	if taskStep.StartAt == nil && taskStep.IsStarted() {
 		taskStep.StartAt = &now
+		updateAttrs["start_at"] = &now
 	} else if taskStep.StartAt != nil && taskStep.EndAt == nil && taskStep.IsExited() {
 		taskStep.EndAt = &now
+		updateAttrs["end_at"] = &now
 	}
 
 	if taskStep.Id == "" {
@@ -120,16 +129,11 @@ func ChangeTaskStepStatus(dbSess *db.Session, task models.Tasker, taskStep *mode
 		return nil
 	}
 
-	logger := logs.Get().WithField("taskId", taskStep.TaskId).WithField("step", taskStep.Index)
-	if message != "" {
-		logger.Infof("change step to '%s', message: %s", status, message)
-	} else {
-		logger.Debugf("change step to '%s'", status)
-	}
+	logger := logs.Get().WithField("taskId", taskStep.TaskId).WithField("step", taskStep.String())
+	logger.Infof("change step to '%s'", status)
+	logger.Debugf("update step attrs: %s", utils.MustJSON(updateAttrs))
 
-	if _, err := dbSess.Model(taskStep).
-		Select("status", "message", "start_at", "end_at").
-		Update(taskStep); err != nil {
+	if _, err := dbSess.Model(taskStep).Where("id = ?", taskStep.Id).UpdateAttrs(updateAttrs); err != nil {
 		return e.New(e.DBError, err)
 	}
 
