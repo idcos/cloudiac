@@ -11,6 +11,7 @@ import (
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"fmt"
+	"strconv"
 )
 
 func SearchSystemConfig(c *ctx.ServiceContext) (interface{}, e.Error) {
@@ -18,6 +19,16 @@ func SearchSystemConfig(c *ctx.ServiceContext) (interface{}, e.Error) {
 	err := services.QuerySystemConfig(c.DB()).Find(&rs)
 	if err != nil {
 		return nil, e.New(e.DBError, err)
+	}
+
+	for index, cfg := range rs {
+		if cfg.Name == models.SysCfgNameTaskStepTimeout {
+			timeoutInSecond, err := strconv.Atoi(cfg.Value)
+			if err != nil {
+				return nil, e.New(e.InternalError, err)
+			}
+			rs[index].Value = strconv.Itoa(timeoutInSecond / 60)
+		}
 	}
 
 	return rs, nil
