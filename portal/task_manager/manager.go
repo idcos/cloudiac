@@ -432,7 +432,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 			return er
 		}
 		if scanTask != nil {
-			if er := services.ChangeScanTaskStatus(m.db, scanTask, status, message); er != nil {
+			if er := services.ChangeScanTaskStatus(m.db, scanTask, status, "", message); er != nil {
 				logger.Errorf("update task status error: %v", er)
 				return er
 			}
@@ -636,7 +636,8 @@ func (m *TaskManager) processTaskDone(taskId models.Id) { //nolint:cyclop
 	scanTask, _ := services.GetMirrorScanTask(dbSess, taskId)
 	if scanTask != nil && scanTask.PolicyStatus == common.PolicyStatusPending {
 		scanTask.PolicyStatus = common.PolicyStatusFailed
-		if err := services.ChangeScanTaskStatus(dbSess, scanTask, common.TaskFailed, "scan task not run or stopped by accident"); err != nil {
+		if err := services.ChangeScanTaskStatus(dbSess,
+			scanTask, common.TaskFailed, "", "scan task not run or stopped by accident"); err != nil {
 			logger.Errorf("update scan task status to failed err: %v", err)
 		}
 	}
@@ -778,7 +779,7 @@ func (m *TaskManager) runTaskStep(
 func waitTaskStepApprove(ctx context.Context, db *db.Session, task *models.Task, step *models.TaskStep) (*models.TaskStep, error) {
 	logger := logs.Get().
 		WithField("taskId", task.Id).
-		WithField("step", fmt.Sprintf("%d(%s)", step.Index, step.Name)).
+		WithField("step", fmt.Sprintf("%d(%s)", step.Index, step.Type)).
 		WithField("func", "waitTaskStepApprove")
 	changeStepStatus := getChangeStepStatusFunc(db, task, logger)
 
@@ -1052,7 +1053,7 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 	logger := m.logger.WithField("taskId", task.Id)
 
 	changeTaskStatus := func(status, message string) error {
-		if er := services.ChangeScanTaskStatus(m.db, task, status, message); er != nil {
+		if er := services.ChangeScanTaskStatus(m.db, task, status, "", message); er != nil {
 			logger.Errorf("update task status error: %v", er) //nolint
 			return er
 		}
@@ -1067,7 +1068,7 @@ func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) 
 		_, _ = m.db.Save(task)
 	}
 
-	logger.Infof("run task: %s", task.Id)
+	logger.Infof("run scan task: %s", task.Id)
 
 	if !task.Started() { // 任务可能为己启动状态(比如异常退出后的任务恢复)，这里判断一下
 		// 先更新任务为 running 状态
@@ -1342,7 +1343,7 @@ func waitScanTaskStepDone(
 			}
 		case models.TaskStepRunning:
 			if _, err := WaitScanTaskStep(ctx, db, task, step); err != nil {
-				logger.Errorf("wait task result error: %v", err)
+				logger.Errorf("wait scan task result error: %v", err)
 				changeStepStatus(models.TaskStepFailed, err.Error(), step)
 				return err
 			}
