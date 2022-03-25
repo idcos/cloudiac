@@ -482,6 +482,7 @@ var stepStatus2TaskStatusMap = map[string]string{
 	models.TaskStepRunning:   models.TaskRunning,
 	models.TaskStepFailed:    models.TaskFailed,
 	models.TaskStepTimeout:   models.TaskFailed,
+	models.TaskStepAborted:   models.TaskAborted,
 	models.TaskStepComplete:  models.TaskComplete,
 }
 
@@ -505,24 +506,42 @@ func ChangeTaskStatusWithStep(dbSess *db.Session, task models.Tasker, step *mode
 }
 
 // ChangeTaskStatus 修改任务状态(同步修改 StartAt、EndAt 等)，并同步修改 env 状态
+// 该函数只修改以下字段:
+// 	status, message, start_at, end_at, aborting
 func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message string, skipUpdateEnv bool) e.Error {
 	preStatus := task.Status
 	if preStatus == status && message == "" {
 		return nil
 	}
 
-	task.Status = status
+	updateAttrs := models.Attrs{
+		"message": message,
+	}
 	task.Message = message
+	if status != "" {
+		task.Status = status
+		updateAttrs["status"] = status
+	}
 	now := models.Time(time.Now())
 	if task.StartAt == nil && task.Started() {
 		task.StartAt = &now
+		updateAttrs["start_at"] = &now
 	}
-	if task.EndAt == nil && task.Exited() {
+	if task.StartAt != nil && task.EndAt == nil && task.Exited() {
 		task.EndAt = &now
+		updateAttrs["end_at"] = &now
 	}
 
-	logs.Get().WithField("taskId", task.Id).Infof("change task to '%s'", status)
-	if _, err := dbSess.Model(task).Update(task); err != nil {
+	if task.Aborting && task.Exited() {
+		// 任务已结束，清空 aborting 状态
+		task.Aborting = false
+		updateAttrs["aborting"] = false
+	}
+
+	logger := logs.Get().WithField("taskId", task.Id)
+	logger.Infof("change task to '%s'", status)
+	logger.Debugf("update task attrs: %s", utils.MustJSON(updateAttrs))
+	if _, err := dbSess.Model(task).Where("id = ?", task.Id).UpdateAttrs(updateAttrs); err != nil {
 		return e.AutoNew(err, e.DBError)
 	}
 
@@ -1001,23 +1020,39 @@ func TaskStatusChangeSendMessage(task *models.Task, status string) {
 // 扫描任务
 
 // ChangeScanTaskStatus 修改扫描任务状态
-func ChangeScanTaskStatus(dbSess *db.Session, task *models.ScanTask, status, message string) e.Error {
-	if task.Status == status && message == "" {
+// 该函数只更新以下字段:
+//	"status", "policy_status", "message", "start_at", "end_at"
+func ChangeScanTaskStatus(dbSess *db.Session, task *models.ScanTask, status, policyStatus, message string) e.Error {
+	if task.Status == status && task.PolicyStatus == policyStatus && message == "" {
 		return nil
 	}
 
-	task.Status = status
+	updateAttrs := models.Attrs{
+		"message": message,
+	}
 	task.Message = message
+	if status != "" {
+		task.Status = status
+		updateAttrs["status"] = status
+	}
+	if policyStatus != "" {
+		task.PolicyStatus = policyStatus
+		updateAttrs["policy_status"] = policyStatus
+	}
 	now := models.Time(time.Now())
 	if task.StartAt == nil && task.Started() {
 		task.StartAt = &now
+		updateAttrs["start_at"] = &now
 	}
-	if task.EndAt == nil && task.Exited() {
+	if task.StartAt != nil && task.EndAt == nil && task.Exited() {
 		task.EndAt = &now
+		updateAttrs["end_at"] = &now
 	}
 
-	logs.Get().WithField("taskId", task.Id).Infof("change scan task to '%s'", status)
-	if _, err := dbSess.Model(task).Update(task); err != nil {
+	logger := logs.Get().WithField("taskId", task.Id)
+	logger.Infof("change scan task to '%s'", status)
+	logger.Debugf("update scan task attrs: %s", utils.MustJSON(updateAttrs))
+	if _, err := dbSess.Model(task).Where("id = ?", task.Id).UpdateAttrs(updateAttrs); err != nil {
 		return e.AutoNew(err, e.DBError)
 	}
 
@@ -1026,24 +1061,25 @@ func ChangeScanTaskStatus(dbSess *db.Session, task *models.ScanTask, status, mes
 
 func ChangeScanTaskStatusWithStep(dbSess *db.Session, task *models.ScanTask, step *models.TaskStep) e.Error {
 	taskStatus := stepStatus2TaskStatus(step.Status)
+	policyStatus := ""
 	exitCode := step.ExitCode
 
 	switch taskStatus {
 	case common.TaskPending, common.TaskRunning:
-		task.PolicyStatus = common.PolicyStatusPending
+		policyStatus = common.PolicyStatusPending
 	case common.TaskComplete:
-		task.PolicyStatus = common.PolicyStatusPassed
+		policyStatus = common.PolicyStatusPassed
 	case common.TaskFailed:
 		if (step.Type == common.TaskStepEnvScan || step.Type == common.TaskStepTplScan || step.Type == common.TaskStepOpaScan) &&
 			exitCode == common.TaskStepPolicyViolationExitCode {
-			task.PolicyStatus = common.PolicyStatusViolated
+			policyStatus = common.PolicyStatusViolated
 		} else {
-			task.PolicyStatus = common.PolicyStatusFailed
+			policyStatus = common.PolicyStatusFailed
 		}
 	default: // "approving", "rejected", ...
 		panic(fmt.Errorf("invalid scan task status '%s'", taskStatus))
 	}
-	return ChangeScanTaskStatus(dbSess, task, taskStatus, step.Message)
+	return ChangeScanTaskStatus(dbSess, task, taskStatus, policyStatus, step.Message)
 }
 
 func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, taskType string, creatorId models.Id) (*models.ScanTask, e.Error) {
@@ -1415,4 +1451,44 @@ func GetDriftResourceById(session *db.Session, id string) (*ResourceDriftResp, e
 	}
 	driftResources.IsDrift = true
 	return driftResources, nil
+}
+
+func AbortRunnerTask(task models.Task) e.Error {
+	logger := logs.Get().WithField("taskId", task.Id).WithField("action", "AbortTask")
+
+	header := &http.Header{}
+	header.Set("Content-Type", "application/json")
+
+	var runnerAddr string
+	runnerAddr, err := GetRunnerAddress(task.RunnerId)
+	if err != nil {
+		return e.AutoNew(err, e.InternalError)
+	}
+
+	requestUrl := utils.JoinURL(runnerAddr, consts.RunnerAbortTaskURL)
+	logger.Debugf("request runner: %s", requestUrl)
+
+	param := runner.TaskAbortReq{
+		EnvId:  task.EnvId.String(),
+		TaskId: task.Id.String(),
+	}
+
+	respData, err := utils.HttpService(requestUrl, "POST", header, param,
+		int(consts.RunnerConnectTimeout.Seconds()),
+		int(consts.RunnerConnectTimeout.Seconds())*10,
+	)
+	if err != nil {
+		return e.AutoNew(err, e.RunnerError)
+	}
+
+	resp := runner.Response{}
+	if err := json.Unmarshal(respData, &resp); err != nil {
+		return e.New(e.RunnerError, fmt.Errorf("unexpected response: %s", respData))
+	}
+	logger.Debugf("runner response: %s", respData)
+
+	if resp.Error != "" {
+		return e.New(e.RunnerError, fmt.Errorf(resp.Error))
+	}
+	return nil
 }

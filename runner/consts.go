@@ -31,8 +31,9 @@ const (
 	TaskScriptName = "run.sh"
 	TaskLogName    = "output.log"
 
-	TaskInfoFileName          = "info.json"
+	TaskStepInfoFileName      = "step-info.json"
 	TaskContainerInfoFileName = "container.json"
+	TaskControlFileName       = "control.json"
 
 	CloudIacTfFile   = "_cloudiac.tf"
 	CloudIacPlayVars = "_cloudiac_play_vars.yml"

@@ -36,11 +36,11 @@ type Env struct {
 	Description string `json:"description" gorm:"type:text"`                                                               // 环境描述
 	Status      string `json:"status" gorm:"type:enum('active','failed','inactive')" enums:"'active','failed','inactive'"` // 环境状态, active活跃, inactive非活跃,failed错误,running部署中,approving审批中
 	// 任务状态，只同步部署任务的状态(apply,destroy)，plan 任务不会对环境产生影响，所以不同步
-	TaskStatus string `json:"taskStatus" gorm:"type:enum('','approving','running');default:''"`
-	Archived   bool   `json:"archived" gorm:"default:false"`            // 是否已归档
-	Timeout    int    `json:"timeout" gorm:"default:1800;comment:部署超时"` // 步骤超时时间（单位：秒）
-	OneTime    bool   `json:"oneTime" gorm:"default:false"`             // 一次性环境标识
-	Deploying  bool   `json:"deploying" gorm:"not null;default:false"`  // 是否正在执行部署
+	TaskStatus  string `json:"taskStatus" gorm:"type:enum('','approving','running');default:''"`
+	Archived    bool   `json:"archived" gorm:"default:false"`            // 是否已归档
+	StepTimeout int    `json:"timeout" gorm:"default:3600;comment:部署超时"` // 步骤超时时间（单位：秒）
+	OneTime     bool   `json:"oneTime" gorm:"default:false"`             // 一次性环境标识
+	Deploying   bool   `json:"deploying" gorm:"not null;default:false"`  // 是否正在执行部署
 
 	Tags string `json:"tags" gorm:"type:text"`
 
@@ -146,8 +146,8 @@ type EnvDetail struct {
 	// gorm 解析该结构体的 PolicyGroup 字段时会将其理解为 PolicyGroup model 的关联字段，
 	// 但解析类型却发现是一个 []string， 而非 []struct{}，导致报错  "[error] unsupported data type: &[]"
 	// (这个报错只在 gorm 日志中打印，db.Error 无错误)。
-	PolicyGroup   []string `json:"policyGroup" gorm:"-"`   // 环境相关合规策略组
-	RunnerTagsArr []string `json:"runnerTagsArr" gorm:"-"` // runner tags array
+	PolicyGroup []string `json:"policyGroup" gorm:"-"` // 环境相关合规策略组
+	RunnerTags  []string `json:"runnerTags" gorm:"-"`  // 将其转为数组返回给前端
 }
 
 func (c *EnvDetail) UpdateEnvPolicyStatus() {
