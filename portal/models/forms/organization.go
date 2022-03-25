@@ -67,7 +67,9 @@ type InviteUserForm struct {
 
 type SearchOrgResourceForm struct {
 	PageForm
-	Q string `form:"q" json:"q" binding:""` // 资源名称，支持模糊查询
+	Q         string   `form:"q" json:"q" binding:""` // 资源名称，支持模糊查询
+	EnvIds    []string `json:"env_ids" binding:""`    // 环境id列表
+	Providers []string `json:"providers" binding:""`  // provider 名称列表
 }
 
 type InviteUsersBatchForm struct {

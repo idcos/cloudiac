@@ -627,3 +627,14 @@ func StrSliceTrimPrefix(ss []string, prefix string) []string {
 	return rs
 }
 
+func Set(arr []string) []string {
+	resArr := make([]string, 0)
+	tmpMap := make(map[string]interface{})
+	for _, val := range arr {
+		if _, ok := tmpMap[val]; !ok {
+			resArr = append(resArr, val)
+			tmpMap[val] = nil
+		}
+	}
+	return resArr
+}
