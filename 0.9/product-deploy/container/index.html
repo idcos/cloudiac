@@ -974,7 +974,7 @@ chmod +x /usr/local/bin/docker-compose
 <span class="nt">services</span><span class="p">:</span>
   <span class="nt">iac-portal</span><span class="p">:</span>
     <span class="nt">container_name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">iac-portal</span>
-    <span class="nt">image</span><span class="p">:</span> <span class="s">&quot;${DOCKER_REGISTRY}cloudiac/iac-portal:v0.9.1&quot;</span>
+    <span class="nt">image</span><span class="p">:</span> <span class="s">&quot;${DOCKER_REGISTRY}cloudiac/iac-portal:v0.9.3&quot;</span>
     <span class="nt">volumes</span><span class="p">:</span>
       <span class="p p-Indicator">-</span> <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">bind</span>
         <span class="nt">source</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/usr/yunji/cloudiac/var</span>
@@ -991,7 +991,7 @@ chmod +x /usr/local/bin/docker-compose
 
   <span class="nt">ct-runner</span><span class="p">:</span>
     <span class="nt">container_name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">ct-runner</span>
-    <span class="nt">image</span><span class="p">:</span> <span class="s">&quot;${DOCKER_REGISTRY}cloudiac/ct-runner:v0.9.1&quot;</span>
+    <span class="nt">image</span><span class="p">:</span> <span class="s">&quot;${DOCKER_REGISTRY}cloudiac/ct-runner:v0.9.3&quot;</span>
     <span class="nt">volumes</span><span class="p">:</span>
       <span class="p p-Indicator">-</span> <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">bind</span>
         <span class="nt">source</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/usr/yunji/cloudiac/var</span>
@@ -1010,7 +1010,7 @@ chmod +x /usr/local/bin/docker-compose
 
   <span class="nt">iac-web</span><span class="p">:</span>
     <span class="nt">container_name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">iac-web</span>
-    <span class="nt">image</span><span class="p">:</span> <span class="s">&quot;${DOCKER_REGISTRY}cloudiac/iac-web:v0.9.1&quot;</span>
+    <span class="nt">image</span><span class="p">:</span> <span class="s">&quot;${DOCKER_REGISTRY}cloudiac/iac-web:v0.9.2&quot;</span>
     <span class="nt">ports</span><span class="p">:</span>
       <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">80:80</span>
     <span class="nt">restart</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">always</span>
