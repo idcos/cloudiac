@@ -109,7 +109,7 @@ type UpdatePolicyRelForm struct {
 type EnableScanForm struct {
 	BaseForm
 
-	Id      models.Id `uri:"id" swaggerignore:"true" binding:"omitempty,startswith=env-,max=32" example:"env-c3ek0co6n88ldvq1n6ag"` // ID
+	Id      models.Id `uri:"id" swaggerignore:"true" binding:"required" example:"env-c3ek0co6n88ldvq1n6ag"` // 环境ID或模版ID
 	Scope   string    `json:"-" swaggerignore:"true" binding:"omitempty,oneof=env template"`
 	Enabled bool      `json:"enabled" binding:"" example:"true"` // 是否启用扫描
 }
@@ -236,7 +236,7 @@ type UpdatePolicySuppressForm struct {
 
 type PolicyScanResultForm struct {
 	NoPageSizeForm
-	Id     models.Id `uri:"id" binding:"required,startswith=env-,max=32" swaggerignore:"true"`                                   // 环境ID
+	Id     models.Id `uri:"id" binding:"required" swaggerignore:"true"`                                                          // 环境ID或模版ID
 	TaskId models.Id `json:"taskId" form:"taskId" binding:"omitempty,startswith=run-,max=32" example:"run-c3ek0co6n88ldvq1n6ag"` // 任务ID
 }
 
