@@ -161,6 +161,8 @@ var (
 	VariableGroupProject = []string{ScopeOrg, ScopeProject}
 	VariableGroupOrg     = []string{ScopeOrg}
 
+	TaskActiveStatus = []string{common.TaskPending, common.TaskRunning, common.TaskApproving}
+
 	StatusTranslation = map[string]string{
 		"complete": "成功",
 		"failed":   "失败",

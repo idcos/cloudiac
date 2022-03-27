@@ -167,7 +167,7 @@ func (m *TaskManager) beginCronDriftTask() {
 	cronDriftEnvs := make([]*models.Env, 0)
 	query := m.db.Where("status = ? and open_cron_drift = ? and next_drift_task_time <= ?",
 		models.EnvStatusActive, true, time.Now()).
-		Where("locked_status = ?", false)
+		Where("locked = ?", false)
 	if err := query.Model(&models.Env{}).Find(&cronDriftEnvs); err != nil {
 		logger.Error(err)
 		return
@@ -985,6 +985,7 @@ func (m *TaskManager) processAutoDestroy() error {
 	destroyEnvs := make([]*models.Env, 0, limit)
 	err := dbSess.Model(&models.Env{}).
 		Where("status IN (?)", []string{models.EnvStatusActive, models.EnvStatusFailed}).
+		Where("locked = ?", false).
 		Where("auto_destroy_task_id = ''").
 		Where("auto_destroy_at <= ?", time.Now()).
 		Order("auto_destroy_at").Limit(limit).Find(&destroyEnvs)
@@ -1009,12 +1010,6 @@ func (m *TaskManager) processAutoDestroy() error {
 			if err != nil {
 				_ = tx.Rollback()
 				logger.Errorf("create auto destroy task: %v", err)
-				return nil
-			}
-
-			if err != nil {
-				_ = tx.Rollback()
-				logger.Errorf("create task error: %v", err)
 				// 创建任务失败继续处理其他任务
 				return nil
 			}

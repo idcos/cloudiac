@@ -1453,15 +1453,11 @@ func GetDriftResourceById(session *db.Session, id string) (*ResourceDriftResp, e
 	return driftResources, nil
 }
 
-
 func GetActiveTaskByEnvId(tx *db.Session, id models.Id) ([]models.Task, e.Error) {
-	taskActiveStatus := []string{"pending", "running", "approving"}
 	o := make([]models.Task, 0)
 	if err := tx.Model(models.Task{}).
 		Where("env_id = ?", id).
-		Where("status in (?)", taskActiveStatus).
-		Where("name != ?", consts.TaskAutoDestroyName).
-		Where("type != ?", common.TaskTypeDestroy).
+		Where("status in (?)", consts.TaskActiveStatus).
 		Find(&o); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
