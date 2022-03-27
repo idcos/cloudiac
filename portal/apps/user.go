@@ -173,7 +173,7 @@ func queryUserProject(db, query *db.Session, orgId, projectId models.Id, exclude
 // 提供私有化部署的用户搜索接口
 func SearchAllUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{}, e.Error) {
 	query := services.QueryUser(c.DB())
-	return doSearchUser(c, query, form, 10)
+	return doSearchUser(c, query, form, true)
 }
 
 // SearchUser 查询用户列表
@@ -199,10 +199,14 @@ func SearchUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{},
 			models.UserProject{}.TableName(), models.User{}.TableName()), c.ProjectId).
 			LazySelectAppend(fmt.Sprintf("p.role as project_role,%s.*", models.User{}.TableName()))
 	}
-	return doSearchUser(c, query, form, 0)
+	return doSearchUser(c, query, form, false)
 }
 
-func doSearchUser(c *ctx.ServiceContext, query *db.Session, form *forms.SearchUserForm, limit int) (interface{}, e.Error) {
+func doSearchUser(c *ctx.ServiceContext, query *db.Session, form *forms.SearchUserForm, isLimit bool) (interface{}, e.Error) {
+	var (
+		currentPage int
+		limit       int
+	)
 	if form.Status != "" {
 		query = query.Where("status = ?", form.Status)
 	}
@@ -213,10 +217,14 @@ func doSearchUser(c *ctx.ServiceContext, query *db.Session, form *forms.SearchUs
 	if form.SortField() == "" {
 		query = query.Order("created_at DESC")
 	}
-	if limit != 0 {
+	if isLimit {
+		limit = 10
+		currentPage = 1
+	} else {
 		limit = form.PageSize()
+		currentPage = form.CurrentPage()
 	}
-	p := page.New(form.CurrentPage(), limit, query)
+	p := page.New(currentPage, limit, query)
 	users := make([]*resps.UserWithRoleResp, 0)
 	if err := p.Scan(&users); err != nil {
 		c.Logger().Errorf("error get users, err %s", err)
