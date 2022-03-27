@@ -259,12 +259,12 @@ func (Organization) SearchOrgResources(c *ctx.GinRequest) {
 //@Param form query forms.SearchOrgResourceForm true "parameter"
 //@router /orgs/envs_info [get]
 //@Success 200 {object} ctx.JSONResult{result=[]resps.OrgEnvAndProviderResp}
-func (Organization) SearchOrgEnvAndProvider(c *ctx.GinRequest) {
+func (Organization) SearchOrgResourcesFilters(c *ctx.GinRequest) {
 	form := forms.SearchOrgResourceForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.GetOrgResourceEnvAndProvider(c.Service(), &form))
+	c.JSONResult(apps.SearchOrgResourcesFilters(c.Service(), &form))
 }
 
 // UpdateUserOrg 编辑组织用户信息

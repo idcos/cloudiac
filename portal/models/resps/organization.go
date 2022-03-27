@@ -24,20 +24,19 @@ type OrgResourcesResp struct {
 	EnvId        models.Id `json:"envId"`
 	ProjectId    models.Id `json:"projectId"`
 	ResourceId   models.Id `json:"resourceId"`
+	Attrs        string    `json:"attrs"`
 }
-
 
 type InviteUsersBatchResp struct {
 	Success int `json:"success"`
 	Failed  int `json:"failed"`
 }
 
-
 type EnvResp struct {
-	EnvName   string  `json:"env_name"`
-	EnvId     models.Id  `json:"env_id"`
+	EnvName string    `json:"envName"`
+	EnvId   models.Id `json:"envId"`
 }
 type OrgEnvAndProviderResp struct {
-	Envs     []EnvResp   `json:"envs"`
-	Providers []string    `json:""`
+	Envs      []EnvResp `json:"envs"`
+	Providers []string  `json:""`
 }
