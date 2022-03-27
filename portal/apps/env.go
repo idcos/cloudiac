@@ -17,11 +17,12 @@ import (
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
-	"github.com/robfig/cron/v3"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/robfig/cron/v3"
 
 	"github.com/lib/pq"
 )
@@ -175,6 +176,7 @@ func getRunnerId(runnerTags []string, runnerId string) (string, e.Error) {
 	return services.GetDefaultRunner()
 }
 
+// getTaskStepTimeout return timeout in second
 func getTaskStepTimeout(timeout int) (int, e.Error) {
 	if timeout <= 0 {
 		sysTimeout, err := services.GetSystemTaskStepTimeout(db.Get())
@@ -183,7 +185,7 @@ func getTaskStepTimeout(timeout int) (int, e.Error) {
 		}
 		timeout = sysTimeout
 	}
-	return timeout, nil
+	return timeout / 60, nil
 }
 
 func createEnvToDB(tx *db.Session, c *ctx.ServiceContext, form *forms.CreateEnvForm, envModel models.Env) (*models.Env, e.Error) {
@@ -501,8 +503,14 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		env.MergeTaskStatus()
 		PopulateLastTask(c.DB(), env)
 		env.PolicyStatus = models.PolicyStatusConversion(env.PolicyStatus, env.PolicyEnable)
+    // 以分钟为单位返回
+		env.StepTimeout = env.StepTimeout / 60
 		// runner tags 数组形式返回
-		env.RunnerTagsArr = strings.Split(env.Env.RunnerTags, ",")
+		if env.Env.RunnerTags != "" {
+			env.RunnerTags = strings.Split(env.Env.RunnerTags, ",")
+		} else {
+			env.RunnerTags = []string{}
+    }
 	}
 
 	return page.PageResp{
@@ -619,7 +627,8 @@ func setUpdateEnvByForm(attrs models.Attrs, form *forms.UpdateEnvForm) {
 		attrs["policyEnable"] = form.PolicyEnable
 	}
 	if form.HasKey("stepTimeout") {
-		attrs["stepTimeout"] = form.StepTimeout
+		// 将分钟转换为秒
+		attrs["stepTimeout"] = form.StepTimeout * 60
 	}
 }
 
@@ -836,9 +845,15 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 		envDetail.PolicyGroup = append(envDetail.PolicyGroup, v.PolicyGroupId)
 	}
 	envDetail.PolicyStatus = models.PolicyStatusConversion(envDetail.PolicyStatus, envDetail.PolicyEnable)
-
+	// 时间转化为分钟
+	envDetail.StepTimeout = envDetail.StepTimeout / 60
+  
 	// runner tags 数组形式返回
-	envDetail.RunnerTagsArr = strings.Split(envDetail.Env.RunnerTags, ",")
+	if envDetail.Env.RunnerTags != "" {
+		envDetail.RunnerTags = strings.Split(envDetail.Env.RunnerTags, ",")
+	} else {
+		envDetail.RunnerTags = []string{}
+	}
 	return envDetail, nil
 }
 
@@ -918,7 +933,8 @@ func setEnvByForm(env *models.Env, form *forms.DeployEnvForm) {
 	}
 
 	if form.HasKey("stepTimeout") {
-		env.StepTimeout = form.StepTimeout
+		// 将分钟转换为秒
+		env.StepTimeout = form.StepTimeout * 60
 	}
 
 	if form.HasKey("tfVarsFile") {
@@ -959,6 +975,7 @@ func setEnvRunnerInfoByForm(env *models.Env, form *forms.DeployEnvForm) {
 
 	if form.HasKey("runnerTags") {
 		env.RunnerTags = strings.Join(form.RunnerTags, ",")
+		// 如果传了 tags 则清空 runnerId 值
 		env.RunnerId = ""
 	}
 }

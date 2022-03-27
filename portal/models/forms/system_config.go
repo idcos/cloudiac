@@ -10,16 +10,16 @@ type SearchSystemConfigForm struct {
 
 type UpdateSystemConfigForm struct {
 	BaseForm
-	SystemCfg []SystemCfg `json:"systemCfg" form:"systemCfg" `
+	SystemCfg []SystemCfg `json:"systemCfg" form:"systemCfg" binding:"required,dive,required" `
 }
 
 type SystemCfg struct {
-	Name        string `form:"name" json:"name" binding:"required"`
-	Value       string `form:"value" json:"value" binding:"required"`
-	Description string `form:"description" json:"description"`
+	Name        string `form:"name" json:"name" binding:"required,gte=2,lte=255"`
+	Value       string `form:"value" json:"value" binding:"required,gte=2,lte=32"`
+	Description string `form:"description" json:"description" binding:"max=255"`
 }
 
 type RegistryAddrForm struct {
 	BaseForm
-	RegistryAddr string `form:"registryAddr" json:"registryAddr"`
+	RegistryAddr string `form:"registryAddr" json:"registryAddr" binding:"required,max=32"`
 }

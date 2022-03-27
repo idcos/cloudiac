@@ -148,8 +148,8 @@ type EnvDetail struct {
 	// gorm 解析该结构体的 PolicyGroup 字段时会将其理解为 PolicyGroup model 的关联字段，
 	// 但解析类型却发现是一个 []string， 而非 []struct{}，导致报错  "[error] unsupported data type: &[]"
 	// (这个报错只在 gorm 日志中打印，db.Error 无错误)。
-	PolicyGroup   []string `json:"policyGroup" gorm:"-"`   // 环境相关合规策略组
-	RunnerTagsArr []string `json:"runnerTagsArr" gorm:"-"` // runner tags array
+	PolicyGroup []string `json:"policyGroup" gorm:"-"` // 环境相关合规策略组
+	RunnerTags  []string `json:"runnerTags" gorm:"-"`  // 将其转为数组返回给前端
 }
 
 func (c *EnvDetail) UpdateEnvPolicyStatus() {
