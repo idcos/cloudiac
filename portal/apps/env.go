@@ -346,7 +346,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		Playbook:     form.Playbook,
 		Revision:     form.Revision,
 		KeyId:        form.KeyId,
-		WorkDir:      form.WorkDir,
+		Workdir:      form.Workdir,
 
 		TTL:             form.TTL,
 		AutoDestroyAt:   &destroyAt,
@@ -961,8 +961,8 @@ func setEnvByForm(env *models.Env, form *forms.DeployEnvForm) {
 	if form.HasKey("policyEnable") {
 		env.PolicyEnable = form.PolicyEnable
 	}
-	if form.HasKey("workDir") {
-		env.WorkDir = form.WorkDir
+	if form.HasKey("workdir") {
+		env.Workdir = form.Workdir
 	}
 
 	setEnvRunnerInfoByForm(env, form)

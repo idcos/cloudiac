@@ -36,7 +36,7 @@ type CreateEnvForm struct {
 	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:"max=255"`                 // Ansible playbook 变量文件路径
 	Playbook     string    `form:"playbook" json:"playbook" binding:"omitempty,endswith=.yml,max=255"` // Ansible playbook 入口文件路径
 	KeyId        models.Id `form:"keyId" json:"keyId" binding:"omitempty,startswith=k-,max=32"`        // 部署密钥ID
-	WorkDir      string    `form:"workDir" json:"workDir" binding:"max=32"`                            // 工作目录
+	Workdir      string    `form:"workdir" json:"workdir" binding:"max=32"`                            // 工作目录
 
 	RetryNumber int         `form:"retryNumber" json:"retryNumber" binding:""`           // 重试总次数
 	RetryDelay  int         `form:"retryDelay" json:"retryDelay" binding:""`             // 重试时间间隔
@@ -128,7 +128,7 @@ type DeployEnvForm struct {
 	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:"max=255"`                 // Ansible playbook 变量文件路径
 	Playbook     string    `form:"playbook" json:"playbook" binding:"omitempty,endswith=.yml,max=255"` // Ansible playbook 入口文件路径
 	KeyId        models.Id `form:"keyId" json:"keyId" binding:"omitempty,startswith=k-,max=32"`        // 部署密钥ID
-	WorkDir      string    `form:"workDir" json:"workDir" binding:"max=32"`                            // 工作目录
+	Workdir      string    `form:"workdir" json:"workdir" binding:"max=32"`                            // 工作目录
 
 	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" binding:"omitempty,dive,required,startswith=vg-,max=32"`
 	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" binding:"omitempty,dive,required,startswith=vg-,max=32"`
