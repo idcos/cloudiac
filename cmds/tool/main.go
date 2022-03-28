@@ -14,11 +14,12 @@ type Option struct {
 	Config string `short:"c" long:"config"  default:"config-portal.yml" description:"portal config file"`
 	//Verbose        []bool         `short:"v" long:"verbose" description:"Show verbose debug message"`
 
-	ChangePassword ChangePassword        `command:"password" description:"update user password"`
-	Version        common.VersionCommand `command:"version" description:"show version"`
-	InitDemo       InitDemo              `command:"init-demo" description:"init demo data with config file"`
-	Scan           ScanCmd               `command:"scan" description:"scan template with policy"`
-	Parse          ParseCmd              `command:"parse" description:"parse rego"`
+	ChangePassword             ChangePassword                `command:"password" description:"update user password"`
+	Version                    common.VersionCommand         `command:"version" description:"show version"`
+	InitDemo                   InitDemo                      `command:"init-demo" description:"init demo data with config file"`
+	Scan                       ScanCmd                       `command:"scan" description:"scan template with policy"`
+	Parse                      ParseCmd                      `command:"parse" description:"parse rego"`
+	ChangeRunnerIdToRunnerTags ChangeRunnerIdToRunnerTagsCmd `command:"update-env-id2tag" description:"change runner-id to runner-tags"`
 }
 
 var (
