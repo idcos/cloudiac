@@ -5,7 +5,7 @@ package forms
 type WebhooksApiHandler struct {
 	BaseForm
 	VcsType          string           `uri:"vcsType" binding:"required,oneof=gitlab github gitea gitee" swaggerignore:"true"` //url参数
-	VcsId            string           `uri:"vcsId" binding:"required,startswith=vcs-,max=32" swaggerignore:"true"`            //url参数
+	VcsId            string           `uri:"vcsId" binding:"required,max=32" swaggerignore:"true"`                            //url参数
 	ObjectKind       string           `json:"object_kind"`                                                                    // gitlab事件对象类型（push/merge_request）
 	Ref              string           `json:"ref"`                                                                            // push分支
 	UserId           uint             `json:"user_id"`                                                                        // 用户id

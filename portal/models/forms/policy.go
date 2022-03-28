@@ -59,7 +59,7 @@ type CreatePolicyGroupForm struct {
 	Labels      []string `json:"labels" binding:"omitempty,dive,required,max=128" example:"[security,alicloud]"`
 
 	Source  string    `json:"source" binding:"required,oneof=vcs registry" enums:"vcs,registry" example:"来源"`
-	VcsId   models.Id `json:"vcsId" binding:"required,startswith=vcs-,max=32" example:"vcs-c3lcrjxczjdywmk0go90"`
+	VcsId   models.Id `json:"vcsId" binding:"required,max=32" example:"vcs-c3lcrjxczjdywmk0go90"`
 	RepoId  string    `json:"repoId" binding:"required,max=128" example:"1234567890"`
 	GitTags string    `json:"gitTags" example:"Git Tags" binding:"max=128"`
 	Branch  string    `json:"branch" example:"master" binding:"max=128"`
@@ -80,7 +80,7 @@ type UpdatePolicyGroupForm struct {
 	Enabled     bool      `json:"enabled" form:"enabled" binding:""`
 	Labels      []string  `json:"labels" binding:"omitempty,dive,required,max=128" example:"[security,alicloud]"`
 	Source      string    `json:"source" binding:"omitempty,oneof=vcs registry" enums:"vcs,registry" example:"来源"`
-	VcsId       models.Id `json:"vcsId" binding:"omitempty,startswith=vcs-,max=32" example:"vcs-c3lcrjxczjdywmk0go90"`
+	VcsId       models.Id `json:"vcsId" binding:"omitempty,max=32" example:"vcs-c3lcrjxczjdywmk0go90"`
 	RepoId      string    `json:"repoId" binding:"max=128" example:"1234567890"`
 	GitTags     string    `json:"gitTags" example:"Git Tags" binding:"max=128"`
 	Branch      string    `json:"branch" example:"master" binding:"max=128"`
@@ -274,7 +274,7 @@ type PolicyGroupChecksForm struct {
 	Name         string    `json:"name" form:"name"`
 	RepoId       string    `json:"repoId" form:"repoId" binding:"required"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required"`
-	VcsId        models.Id `json:"vcsId" form:"vcsId" binding:"required,startswith=vcs-,max=32"`
+	VcsId        models.Id `json:"vcsId" form:"vcsId" binding:"required,max=32"`
 	Dir          string    `json:"dir" form:"dir"`
 	TemplateId   models.Id `json:"templateId" form:"templateId"`
 }
