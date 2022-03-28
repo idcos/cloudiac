@@ -664,16 +664,26 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 		rs = append(rs, traverseStateModule(&values.ChildModules[i])...)
 	}
 
+	resources, err := getResourceByEnvId(tx, task.EnvId)
+	if err != nil {
+		return err
+	}
 	for _, r := range rs {
-		resId := models.Id(r.Attrs["id"].(string))
-		resource, dbErr := getResourceByEnvAndResId(tx.GormDB(), task.EnvId, resId)
-		if dbErr != nil {
-			return dbErr
+		if _, ok := r.Attrs["id"]; !ok {
+			logs.Get().Warn("attrs key 'id' not exist")
 		}
-		if resource != nil {
-			r.AppliedAt = resource.AppliedAt
-		} else {
-			r.AppliedAt = models.Time(time.Now())
+		resId := fmt.Sprintf("%v", r.Attrs["id"])
+		if resId == "" {
+			logs.Get().Warn("attrs key 'id' is null")
+		}
+		r.AppliedAt = models.Time(time.Now())
+		if resources != nil {
+			for _, res := range resources {
+				if res.ResId == models.Id(resId) {
+					r.AppliedAt = res.AppliedAt
+					break
+				}
+			}
 		}
 		if len(proMap) > 0 {
 			providerKey := strings.Join([]string{r.Provider, r.Type}, "-")

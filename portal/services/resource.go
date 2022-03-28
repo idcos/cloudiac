@@ -3,18 +3,18 @@
 package services
 
 import (
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
-	"errors"
-	"gorm.io/gorm"
 )
 
-func getResourceByEnvAndResId(db *gorm.DB, envId models.Id, resId models.Id) (*models.Resource, error) {
-	resource := models.Resource{}
-	if err := db.Where("env_id", envId).Where("res_id", resId).Order("applied_at").First(&resource).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
+func getResourceByEnvId(tx *db.Session, envId models.Id) ([]models.Resource, error) {
+	resources := make([]models.Resource, 0)
+	if err := tx.Table(models.Resource{}.TableName()).Where("env_id", envId).Order("applied_at").Find(&resources); err != nil {
 		return nil, err
 	}
-	return &resource, nil
+	if len(resources) == 0 {
+		return nil, nil
+	} else {
+		return resources, nil
+	}
 }
