@@ -476,7 +476,7 @@ func GetResShowName(attrs map[string]interface{}, addr string) string {
 	if ok {
 		return fmt.Sprintf("%s(%s)", addr, outRuleName)
 	}
-	return fmt.Sprintf("%s", addr)
+	return addr
 }
 
 type ResourcesGraphModule struct {
