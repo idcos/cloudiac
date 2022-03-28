@@ -499,8 +499,7 @@ func SearchOrgResourcesFilters(c *ctx.ServiceContext, form *forms.SearchOrgResou
 			r.Envs = append(r.Envs, resps.EnvResp{EnvName: v.EnvName, EnvId: v.EnvId})
 			temp[v.EnvName] = nil
 		}
-		r.Providers = append(r.Providers, v.Provider)
-
+		r.Providers = append(r.Providers, path.Base(v.Provider))
 	}
 	r.Providers = utils.Set(r.Providers)
 
@@ -508,12 +507,18 @@ func SearchOrgResourcesFilters(c *ctx.ServiceContext, form *forms.SearchOrgResou
 }
 
 func SearchOrgResources(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm) (interface{}, e.Error) {
-	query := services.GetOrgResourcesQuery(c.DB().Debug().Model(&models.Resource{}), form.Q, c.OrgId, c.UserId, c.IsSuperAdmin)
+	query := services.GetOrgResourcesQuery(c.DB().Model(&models.Resource{}), form.Q, c.OrgId, c.UserId, c.IsSuperAdmin)
 	if len(form.EnvIds) != 0 {
 		query = query.Where("iac_env.id in (?)", strings.Split(form.EnvIds, ","))
 	}
 	if len(form.Providers) != 0 {
-		query = query.Where("iac_resource.provider in (?)", strings.Split(form.Providers, ","))
+		var tempSql []string
+		var tempList []interface{}
+		for _, v := range strings.Split(form.Providers, ",") {
+			tempSql = append(tempSql, "iac_resource.provider like ?")
+			tempList = append(tempList, strings.Join([]string{"%/", v}, ""))
+		}
+		query = query.Where(strings.Join(tempSql, " OR "), tempList...)
 	}
 	rs := make([]resps.OrgResourcesResp, 0)
 	query = query.Order("project_id, env_id, provider desc")
