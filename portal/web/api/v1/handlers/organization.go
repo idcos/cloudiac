@@ -249,7 +249,8 @@ func (Organization) SearchOrgResources(c *ctx.GinRequest) {
 	c.JSONResult(apps.SearchOrgResources(c.Service(), &form))
 }
 
-//SearchOrgEnvAndProvider 搜索当前组织下所有项目的活跃环境名称以及provider
+
+//SearchOrgResourcesFilters 搜索当前组织下所有项目的活跃环境名称以及provider
 //@Tags 组织
 //@Summary 搜索当前组织下所有项目的活跃资源列表
 //@Accept application/x-www-form-urlencoded
@@ -257,7 +258,7 @@ func (Organization) SearchOrgResources(c *ctx.GinRequest) {
 //@Security AuthToken
 //@Param IaC-Org-Id header string true "组织ID"
 //@Param form query forms.SearchOrgResourceForm true "parameter"
-//@router /orgs/envs_info [get]
+//@router /orgs/resources/filters [get]
 //@Success 200 {object} ctx.JSONResult{result=[]resps.OrgEnvAndProviderResp}
 func (Organization) SearchOrgResourcesFilters(c *ctx.GinRequest) {
 	form := forms.SearchOrgResourceForm{}
