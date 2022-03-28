@@ -23,7 +23,7 @@ type CreateTemplateForm struct {
 	RepoRevision string      `form:"repoRevision" json:"repoRevision" binding:"max=64"`
 	Extra        string      `form:"extra" json:"extra"`
 	Workdir      string      `form:"workdir" json:"workdir" binding:"max=255"`
-	VcsId        models.Id   `form:"vcsId" json:"vcsId" binding:"required,startswith=vcs-,max=32"`
+	VcsId        models.Id   `form:"vcsId" json:"vcsId" binding:"required,max=32"`
 	Playbook     string      `json:"playbook" form:"playbook" binding:"omitempty,endswith=.yml,max=255"`
 	PlayVarsFile string      `json:"playVarsFile" form:"playVarsFile" binding:"max=255"`
 	TfVarsFile   string      `form:"tfVarsFile" json:"tfVarsFile" binding:"max=255"`
@@ -62,7 +62,7 @@ type UpdateTemplateForm struct {
 	TfVarsFile     string      `form:"tfVarsFile" json:"tfVarsFile" binding:"max=255"`
 	ProjectId      []models.Id `form:"projectId" json:"projectId" binding:"omitempty,dive,required,startswith=p-,max=32"`
 	RepoRevision   string      `form:"repoRevision" json:"repoRevision" binding:"max=64"`
-	VcsId          models.Id   `form:"vcsId" json:"vcsId" binding:"omitempty,startswith=vcs-,max=32"`
+	VcsId          models.Id   `form:"vcsId" json:"vcsId" binding:"omitempty,max=32"`
 	RepoId         string      `form:"repoId" json:"repoId" binding:"max=255"`
 	RepoFullName   string      `form:"repoFullName" json:"repoFullName" binding:"max=255"`
 	TfVersion      string      `form:"tfVersion" json:"tfVersion" binding:"max=64"`
@@ -100,7 +100,7 @@ type RepoFileSearchForm struct {
 	BaseForm
 	RepoId       string    `json:"repoId" form:"repoId" binding:"required,max=255"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required,max=64"`
-	VcsId        models.Id `uri:"id" binding:"required,startswith=vcs-,max=32" swaggerignore:"true"`
+	VcsId        models.Id `uri:"id" binding:"required,max=32" swaggerignore:"true"`
 	Workdir      string    `json:"workdir" form:"workdir" binding:"max=255"`
 }
 
@@ -108,13 +108,13 @@ type TemplateVariableSearchForm struct {
 	BaseForm
 	RepoId       string    `json:"repoId" form:"repoId" binding:"required,max=255"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required,max=64"`
-	VcsId        models.Id `uri:"id" binding:"required,startswith=vcs-,max=32" swaggerignore:"true"`
+	VcsId        models.Id `uri:"id" binding:"required,max=32" swaggerignore:"true"`
 	Workdir      string    `json:"workdir" form:"workdir" binding:"max=255"`
 }
 
 type TemplateTfVersionSearchForm struct {
 	BaseForm
-	VcsId     models.Id `json:"vcsId" form:"vcsId" binding:"required,startswith=vcs-,max=32"`
+	VcsId     models.Id `json:"vcsId" form:"vcsId" binding:"required,max=32"`
 	VcsBranch string    `json:"vcsBranch" form:"vcsBranch" binding:"max=64"`
 	RepoId    string    `json:"repoId" form:"repoId" binding:"max=255"`
 }
@@ -124,7 +124,7 @@ type TemplateChecksForm struct {
 	Name         string    `json:"name" form:"name" binding:"omitempty,gte=2,lte=64"`
 	RepoId       string    `json:"repoId" form:"repoId" binding:"max=255"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"max=64"`
-	VcsId        models.Id `json:"vcsId" form:"vcsId" binding:"omitempty,startswith=vcs-,max=32"`
+	VcsId        models.Id `json:"vcsId" form:"vcsId" binding:"omitempty,max=32"`
 	Workdir      string    `json:"workdir" form:"workdir" binding:"max=255"`
 	TemplateId   models.Id `json:"templateId" form:"templateId" binding:"omitempty,startswith=tpl-,max=32"`
 	TfVarsFile   string    `json:"tfVarsFile" form:"tfVarsFile" binding:"max=255"`
