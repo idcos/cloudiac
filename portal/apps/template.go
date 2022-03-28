@@ -531,14 +531,14 @@ func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (inte
 	}, nil
 }
 
-func CheckTemplateOrEnvConfig(c *ctx.ServiceContext, tfVarsFile, playbook, repoId, reporevision, workDir string, vcsId models.Id) (e.Error, TplCheckResult) {
+func CheckTemplateOrEnvConfig(c *ctx.ServiceContext, tfVarsFile, playbook, repoId, reporevision, workdir string, vcsId models.Id) (e.Error, TplCheckResult) {
 	checkResult := TplCheckResult{}
 	if tfVarsFile != "" {
 		searchForm := &forms.RepoFileSearchForm{
 			RepoId:       repoId,
 			RepoRevision: reporevision,
 			VcsId:        vcsId,
-			Workdir:      workDir,
+			Workdir:      workdir,
 		}
 		results, err := VcsRepoFileSearch(c, searchForm, "", consts.TfVarFileMatch)
 		if err != nil {
@@ -555,7 +555,7 @@ func CheckTemplateOrEnvConfig(c *ctx.ServiceContext, tfVarsFile, playbook, repoI
 			RepoId:       repoId,
 			RepoRevision: reporevision,
 			VcsId:        vcsId,
-			Workdir:      workDir,
+			Workdir:      workdir,
 		}
 		results, err := VcsRepoFileSearch(c, searchForm, consts.PlaybookDir, consts.PlaybookMatch)
 		if err != nil {
