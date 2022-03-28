@@ -647,7 +647,6 @@ func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 			Attrs:    r.Values,
 		})
 	}
-
 	for i := range module.ChildModules {
 		rs = append(rs, traverseStateModule(&module.ChildModules[i])...)
 	}
@@ -658,7 +657,7 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Resource{}.TableName(),
 		"id", "org_id", "project_id", "env_id", "task_id",
-		"provider", "module", "address", "type", "name", "index", "attrs", "sensitive_keys")
+		"provider", "module", "address", "type", "name", "index", "attrs", "sensitive_keys", "applied_at", "res_id")
 
 	rs := make([]*models.Resource, 0)
 	rs = append(rs, traverseStateModule(&values.RootModule)...)
@@ -666,7 +665,25 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 		rs = append(rs, traverseStateModule(&values.ChildModules[i])...)
 	}
 
+	resources, err := getResourceByEnvId(tx, task.EnvId)
+	if err != nil {
+		return err
+	}
 	for _, r := range rs {
+		if _, ok := r.Attrs["id"]; !ok {
+			logs.Get().Warn("attrs key 'id' not exist")
+		}
+		resId := fmt.Sprintf("%v", r.Attrs["id"])
+		if resId == "" {
+			logs.Get().Warn("attrs key 'id' is null")
+		}
+		r.AppliedAt = models.Time(time.Now())
+		for _, res := range resources {
+			if res.ResId == models.Id(resId) {
+				r.AppliedAt = res.AppliedAt
+				break
+			}
+		}
 		if len(proMap) > 0 {
 			providerKey := strings.Join([]string{r.Provider, r.Type}, "-")
 			// 通过provider-type 拼接查找敏感词是否在proMap中
@@ -675,7 +692,7 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 			}
 		}
 		err := bq.AddRow(models.NewId("r"), task.OrgId, task.ProjectId, task.EnvId, task.Id,
-			r.Provider, r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys)
+			r.Provider, r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys, r.AppliedAt, resId)
 		if err != nil {
 			return err
 		}
