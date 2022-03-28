@@ -499,7 +499,7 @@ func SearchOrgResourcesFilters(c *ctx.ServiceContext, form *forms.SearchOrgResou
 			r.Envs = append(r.Envs, resps.EnvResp{EnvName: v.EnvName, EnvId: v.EnvId})
 			temp[v.EnvName] = nil
 		}
-		r.Providers = append(r.Providers, v.Provider)
+		r.Providers = append(r.Providers, strings.Split(v.Provider, "/")[2])
 
 	}
 	r.Providers = utils.Set(r.Providers)
@@ -513,7 +513,15 @@ func SearchOrgResources(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm
 		query = query.Where("iac_env.id in (?)", strings.Split(form.EnvIds, ","))
 	}
 	if len(form.Providers) != 0 {
-		query = query.Where("iac_resource.provider in (?)", strings.Split(form.Providers, ","))
+		var tempSql string
+		tempList := strings.Split(form.Providers, ",")
+		for index, v := range tempList {
+			tempSql = tempSql + fmt.Sprintf("iac_resource.provider like '%%/%s'", v)
+			if index != len(tempList)-1 {
+				tempSql = tempSql + " or "
+			}
+		}
+		query = query.Where(tempSql)
 	}
 	rs := make([]resps.OrgResourcesResp, 0)
 	query = query.Order("project_id, env_id, provider desc")
