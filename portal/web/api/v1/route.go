@@ -209,8 +209,8 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/policy_result", ac(), w(handlers.Env{}.PolicyResult))
 	g.GET("/envs/:id/resources/graph", ac(), w(handlers.Env{}.SearchResourcesGraph))
 	g.GET("/envs/:id/resources/graph/:resourceId", ac(), w(handlers.Env{}.ResourceGraphDetail))
-	g.POST("/envs/:id/lock", ac(), w(handlers.EnvLock))
-	g.POST("/envs/:id/unlock", ac(), w(handlers.EnvUnLock))
+	g.POST("/envs/:id/lock", ac("envs","lock"), w(handlers.EnvLock))
+	g.POST("/envs/:id/unlock", ac("envs","unlock"), w(handlers.EnvUnLock))
 	g.GET("/envs/:id/unlock/confirm", ac(), w(handlers.EnvUnLockConfirm))
 
 	// 任务管理
