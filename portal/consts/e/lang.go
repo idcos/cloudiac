@@ -374,6 +374,10 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "auto approval is required",
 		"zh-CN": "配置自动纠漂移、推送到分支时重新部署时，必须配置自动审批",
 	},
+	EnvLockFailedTaskActive: {
+		"en-US": "environment lock failed. Active tasks in the environment",
+		"zh-CN": "环境锁定失败，环境下有活跃任务",
+	},
 	TaskAlreadyExists: {
 		"en-US": "task already exists",
 		"zh-CN": "任务已经存在",

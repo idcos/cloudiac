@@ -140,15 +140,16 @@ const (
 	TemplateKeyIdNotSet     = 30731
 
 	//// environment 308
-	EnvAlreadyExists       = 30810
-	EnvNotExists           = 30811
-	EnvAliasDuplicate      = 30812
-	EnvArchived            = 30813
-	EnvCannotArchiveActive = 30814
-	EnvDeploying           = 30815
-	EnvCheckAutoApproval   = 30816
-	EnvTagNumLimited       = 30821
-	EnvTagLengthLimited    = 30822
+	EnvAlreadyExists        = 30810
+	EnvNotExists            = 30811
+	EnvAliasDuplicate       = 30812
+	EnvArchived             = 30813
+	EnvCannotArchiveActive  = 30814
+	EnvDeploying            = 30815
+	EnvCheckAutoApproval    = 30816
+	EnvLockFailedTaskActive = 30817
+	EnvTagNumLimited        = 30821
+	EnvTagLengthLimited     = 30822
 
 	//// task 309
 	TaskAlreadyExists     = 30910

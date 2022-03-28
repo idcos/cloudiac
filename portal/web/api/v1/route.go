@@ -126,6 +126,8 @@ func Register(g *gin.RouterGroup) {
 
 	// 组织下的资源搜索(只需要有项目的读权限即可查看资源)
 	g.GET("/orgs/resources", ac("orgs", "read"), w(handlers.Organization{}.SearchOrgResources))
+	// 列出组织下资源搜索得到的相关环境名称以及provider名称
+	g.GET("/orgs/resources/filters", ac("orgs", "read"), w(handlers.Organization{}.SearchOrgResourcesFilters))
 
 	// 组织用户管理
 	g.GET("/orgs/:id/users", ac("orgs", "listuser"), w(handlers.Organization{}.SearchUser))
@@ -207,6 +209,9 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/policy_result", ac(), w(handlers.Env{}.PolicyResult))
 	g.GET("/envs/:id/resources/graph", ac(), w(handlers.Env{}.SearchResourcesGraph))
 	g.GET("/envs/:id/resources/graph/:resourceId", ac(), w(handlers.Env{}.ResourceGraphDetail))
+	g.POST("/envs/:id/lock", ac(), w(handlers.EnvLock))
+	g.POST("/envs/:id/unlock", ac(), w(handlers.EnvUnLock))
+	g.GET("/envs/:id/unlock/confirm", ac(), w(handlers.EnvUnLockConfirm))
 
 	// 任务管理
 	g.GET("/tasks", ac(), w(handlers.Task{}.Search))
