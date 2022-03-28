@@ -22,33 +22,56 @@ func (*ChangeRunnerIdToRunnerTagsCmd) Execute(args []string) error {
 	db.Init(configs.Get().Mysql)
 	models.Init(false)
 
-	query := db.Get().Begin()
-	tx := db.Get()
-	query = services.QueryEnvDetail(query)
+	tx := db.Get().Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
 
-	form := forms.PageForm{}
-	p := page.New(form.CurrentPage(), form.PageSize(), query)
-
-	details := make([]*models.EnvDetail, 0)
-	if err := p.Scan(&details); err != nil {
-		return fmt.Errorf("database error")
+	envDetails, err := searchEnvDetails(tx)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
 	}
+
 	runners, err := services.RunnerSearch()
 	if err != nil {
 		return err
 	}
 
-	tags := make([]string, len(runners))
-	runnerIds := make([]string, len(runners))
-
+	runnerIds := make(map[string]string)
 	for _, runner := range runners {
-		runnerIds = append(runnerIds, runner.ID)
-		tags = append(tags, strings.Join(runner.Tags, ","))
+		runnerIds[runner.ID] = strings.Join(runner.Tags, ",")
 	}
+	if err := updateRunnerIdToRunnerTags(tx, envDetails, runnerIds); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return nil
+}
 
+func searchEnvDetails(query *db.Session) ([]*models.EnvDetail, error) {
+	query = services.QueryEnvDetail(query)
+	form := forms.PageForm{}
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+
+	details := make([]*models.EnvDetail, 0)
+	if err := p.Scan(&details); err != nil {
+		return nil, fmt.Errorf("database error")
+	}
+	return details, nil
+}
+
+func updateRunnerIdToRunnerTags(tx *db.Session, envDetails []*models.EnvDetail, runnerIds map[string]string) error {
 	attrs := models.Attrs{}
 	var noArchivedEnvs []*models.EnvDetail
-	for _, env := range details {
+	for _, env := range envDetails {
 		if !env.Env.Archived && env.Env.RunnerId != "" {
 			noArchivedEnvs = append(noArchivedEnvs, env)
 		}
@@ -57,24 +80,17 @@ func (*ChangeRunnerIdToRunnerTagsCmd) Execute(args []string) error {
 		return fmt.Errorf("no env runner-id needs to be modified")
 	}
 	for _, noArchivedEnv := range noArchivedEnvs {
-		for runnerIdIndex, runnerId := range runnerIds {
+		for runnerId, runnerTag := range runnerIds {
 			if noArchivedEnv.Env.RunnerId != runnerId {
 				continue
 			}
-			attrs["runner_tags"] = tags[runnerIdIndex]
+			attrs["runner_tags"] = runnerTag
 			attrs["runner_id"] = ""
 			if _, err := tx.Model(&models.Env{}).Where("id = ?", noArchivedEnv.Env.Id).UpdateAttrs(attrs); err != nil {
-				return fmt.Errorf("update has been fail,envId = %s", noArchivedEnv.Env.Id)
+				panic("update has been fail")
 			}
-			logger.Infof("change runnerId to runnerTags success, envId = %s,runnerId=%s,runnerTags = %s", noArchivedEnv.Env.Id, runnerId, tags[runnerIdIndex])
+			logger.Infof("change runnerId to runnerTags success, envId = %s,runnerId=%s,runnerTags = %s", noArchivedEnv.Env.Id, runnerId, runnerTag)
 		}
 	}
-	defer func() {
-		if r := recover(); r != nil {
-			_ = query.Rollback()
-			_ = tx.Rollback()
-			panic(r)
-		}
-	}()
 	return nil
 }
