@@ -433,15 +433,40 @@ func GetResourcesGraph(rs []services.Resource, dimension string) interface{} {
 //    	规则示例2: 如果资源的属性中有 name 字段，则展示 name;
 //    	规则示例3: 如果资源的属性中有 tag 字段，则展示 name(tag1,tag2);
 // 不匹配规则库时展示: resource address(id), 如: "module1.alicloud_instance.web(i-xxxxxxx)";
-func GetResShowName(attrs map[string]interface{}, addr, id string) string {
-	outRuleName := fmt.Sprintf("%s(%s)", addr, id)
-	if attrs != nil {
-		get := func(key string) (string, bool) {
-			if val, ok := attrs[key]; ok {
-				return val.(string), true
+func GetResShowName(attrs map[string]interface{}, addr string) string {
+	get := func(key string) (string, bool) {
+		// 如果 val 为空字符则视为无值
+		if val, ok := attrs[key]; ok {
+			switch OriginalValue := val.(type) {
+			case map[string]string:
+				var expectedFormat = make([]string, 0) // expect format: "k1=v1,k2=v2,k3=v3..."
+				for k, v := range OriginalValue {
+					expectedFormat = append(expectedFormat, fmt.Sprintf("%s=%s", k, v))
+				}
+				if len(expectedFormat) == 0 {
+					return "", false
+				}
+				return strings.Join(expectedFormat, ","), true
+			case []string:
+				expectFormat := strings.Join(OriginalValue, ",") // expect format: "v1,v2,v3..."
+				if len(expectFormat) == 0 {
+					return "", false
+				}
+				return expectFormat, true
+			case nil:
+				return "", false
+			default:
+				str := fmt.Sprintf("%v", OriginalValue)
+				if len(str) == 0 {
+					return str, false
+				}
+				return str, true
 			}
-			return "", false
 		}
+		return "", false
+	}
+
+	if attrs != nil {
 		if publicIP, ok := get("public_ip"); ok {
 			return publicIP
 		}
@@ -451,10 +476,12 @@ func GetResShowName(attrs map[string]interface{}, addr, id string) string {
 			}
 			return name
 		}
-		return outRuleName
 	}
-
-	return outRuleName
+	outRuleName, ok := get("id")
+	if ok {
+		return fmt.Sprintf("%s(%s)", addr, outRuleName)
+	}
+	return addr
 }
 
 type ResourcesGraphModule struct {
@@ -515,7 +542,7 @@ func genNodesFromResource(resource services.Resource, parentChildNode map[string
 
 	res := ResourceInfo{
 		ResourceId:   resource.Id.String(),
-		ResourceName: GetResShowName(resource.Attrs, resource.Address, string(resource.Id)),
+		ResourceName: GetResShowName(resource.Attrs, resource.Address),
 		NodeName:     lastAddr,
 	}
 
