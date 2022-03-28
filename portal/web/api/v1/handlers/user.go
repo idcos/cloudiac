@@ -7,7 +7,6 @@ import (
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -169,4 +168,21 @@ func (User) PasswordReset(c *ctx.GinRequest) {
 		return
 	}
 	c.JSONResult(apps.UserPassReset(c.Service(), &form))
+}
+
+// LdapSearch 平台所有用户查询
+// @Tags 用户
+// @Summary 用户列表查询
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param form query forms.SearchUserForm true "parameter"
+// @router /users/all [get]
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.UserWithRoleResp}}
+func (User) SearchAllUsers(c *ctx.GinRequest) {
+	form := forms.SearchUserForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.SearchAllUser(c.Service(), &form))
 }

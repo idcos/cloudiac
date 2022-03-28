@@ -170,6 +170,12 @@ func queryUserProject(db, query *db.Session, orgId, projectId models.Id, exclude
 	}
 }
 
+// 提供私有化部署的用户搜索接口
+func SearchAllUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{}, e.Error) {
+	query := services.QueryUser(c.DB())
+	return doSearchUser(c, query, form, true)
+}
+
 // SearchUser 查询用户列表
 func SearchUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{}, e.Error) {
 	query := services.QueryUser(c.DB())
@@ -177,23 +183,10 @@ func SearchUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{},
 	if err != nil {
 		return nil, err
 	}
-
 	query, err = queryUserProject(c.DB(), query, c.OrgId, c.ProjectId, form.Exclude)
 	if err != nil {
 		return nil, err
 	}
-
-	if form.Status != "" {
-		query = query.Where("status = ?", form.Status)
-	}
-	if form.Q != "" {
-		qs := "%" + form.Q + "%"
-		query = query.Where("name LIKE ? OR phone LIKE ? OR email LIKE ? ", qs, qs, qs)
-	}
-	if form.SortField() == "" {
-		query = query.Order("created_at DESC")
-	}
-
 	// 导出用户角色
 	if c.OrgId != "" {
 		query = query.Joins(fmt.Sprintf("left join %s as o on %s.id = o.user_id and o.org_id = ?",
@@ -206,14 +199,37 @@ func SearchUser(c *ctx.ServiceContext, form *forms.SearchUserForm) (interface{},
 			models.UserProject{}.TableName(), models.User{}.TableName()), c.ProjectId).
 			LazySelectAppend(fmt.Sprintf("p.role as project_role,%s.*", models.User{}.TableName()))
 	}
+	return doSearchUser(c, query, form, false)
+}
 
-	p := page.New(form.CurrentPage(), form.PageSize(), query)
+func doSearchUser(c *ctx.ServiceContext, query *db.Session, form *forms.SearchUserForm, isLimit bool) (interface{}, e.Error) {
+	var (
+		currentPage int
+		limit       int
+	)
+	if form.Status != "" {
+		query = query.Where("status = ?", form.Status)
+	}
+	if form.Q != "" {
+		qs := "%" + form.Q + "%"
+		query = query.Where("name LIKE ? OR phone LIKE ? OR email LIKE ? ", qs, qs, qs)
+	}
+	if form.SortField() == "" {
+		query = query.Order("created_at DESC")
+	}
+	if isLimit {
+		limit = 10
+		currentPage = 1
+	} else {
+		limit = form.PageSize()
+		currentPage = form.CurrentPage()
+	}
+	p := page.New(currentPage, limit, query)
 	users := make([]*resps.UserWithRoleResp, 0)
 	if err := p.Scan(&users); err != nil {
 		c.Logger().Errorf("error get users, err %s", err)
 		return nil, e.New(e.DBError, err)
 	}
-
 	return page.PageResp{
 		Total:    p.MustTotal(),
 		PageSize: p.Size,
@@ -256,7 +272,6 @@ func getNewPassword(oldPassword, newPassword, userPassword string) (string, e.Er
 // UpdateUser 用户信息编辑
 func UpdateUser(c *ctx.ServiceContext, form *forms.UpdateUserForm) (*models.User, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update user %s", form.Id))
-
 	err := chkUserIdentity(form.Id, c.UserId, c.OrgId, c.IsSuperAdmin)
 	if err != nil {
 		return nil, err
@@ -266,6 +281,9 @@ func UpdateUser(c *ctx.ServiceContext, form *forms.UpdateUserForm) (*models.User
 	user, err := services.GetUserById(query, form.Id)
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	}
+	if user.IsLdap {
+		return nil, e.New(e.LdapUpdateFailed)
 	}
 
 	attrs := models.Attrs{}

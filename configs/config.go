@@ -51,6 +51,14 @@ type PortalConfig struct {
 	SSHPublicKey  string `yaml:"ssh_public_key"`
 }
 
+type LdapConfig struct {
+	AdminDn     string `yaml:"admin_dn"`
+	AdminPassword string `yaml:"admin_password"`
+	LdapServer   string `yaml:"ldap_server"`
+	LdapServerPort int `yaml:"ldap_server_port"`
+	SearchBase   string `yaml:"search_base"`
+}
+
 func (c *RunnerConfig) mustAbs(path string) string {
 	p, err := filepath.Abs(path)
 	if err != nil {
@@ -117,6 +125,7 @@ type Config struct {
 	ExportSecretKey    string           `yaml:"exportSecretKey"`
 	HttpClientInsecure bool             `yaml:"httpClientInsecure"`
 	Policy             PolicyConfig     `yaml:"policy"`
+	Ldap			   LdapConfig       `yaml:"ldap"`
 }
 
 const (
