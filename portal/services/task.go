@@ -677,12 +677,10 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 			logs.Get().Warn("attrs key 'id' is null")
 		}
 		r.AppliedAt = models.Time(time.Now())
-		if resources != nil {
-			for _, res := range resources {
-				if res.ResId == models.Id(resId) {
-					r.AppliedAt = res.AppliedAt
-					break
-				}
+		for _, res := range resources {
+			if res.ResId == models.Id(resId) {
+				r.AppliedAt = res.AppliedAt
+				break
 			}
 		}
 		if len(proMap) > 0 {
