@@ -847,7 +847,7 @@ func fetchTaskStepLog(ctx context.Context, task models.Tasker, writer io.Writer,
 
 	storage := logstorage.Get()
 
-	if task, step, err = waitTaskStepStarted(ctx, task.GetId(), step.Index); err != nil {
+	if task, step, err = waitTaskStepStarted(ctx, task, step.Index); err != nil {
 		return err
 	}
 
@@ -888,28 +888,24 @@ func fetchTaskStepLog(ctx context.Context, task models.Tasker, writer io.Writer,
 	return nil
 }
 
-func waitTaskStepStarted(ctx context.Context, taskId models.Id, stepIndex int) (task models.Tasker, step *models.TaskStep, err error) {
+func waitTaskStepStarted(ctx context.Context, tasker models.Tasker, stepIndex int) (task models.Tasker, step *models.TaskStep, err error) {
 	sleepDuration := consts.DbTaskPollInterval
 	ticker := time.NewTicker(sleepDuration)
 	defer ticker.Stop()
 
 	for {
-		task, err = GetTask(db.Get(), taskId)
+		step, err = GetTaskStep(db.Get(), tasker.GetId(), stepIndex)
 		if err != nil {
-			return task, step, errors.Wrapf(err, "get task '%s'", taskId)
-		}
-		step, err = GetTaskStep(db.Get(), task.GetId(), stepIndex)
-		if err != nil {
-			return task, step, errors.Wrapf(err, "get task step %d", stepIndex)
+			return tasker, step, errors.Wrapf(err, "get task step %d", stepIndex)
 		}
 
-		if task.Exited() || step.IsStarted() {
-			return task, step, nil
+		if tasker.Exited() || step.IsStarted() {
+			return tasker, step, nil
 		}
 
 		select {
 		case <-ctx.Done():
-			return task, step, nil
+			return tasker, step, nil
 		case <-ticker.C:
 			continue
 		}
