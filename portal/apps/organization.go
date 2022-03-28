@@ -491,9 +491,15 @@ func SearchOrgResourcesFilters(c *ctx.ServiceContext, form *forms.SearchOrgResou
 		return nil, e.New(e.DBError, err)
 	}
 	r := &resps.OrgEnvAndProviderResp{}
+	temp := map[string]interface{}{}
 	for _, v := range rs {
-		r.Envs = append(r.Envs, resps.EnvResp{EnvName: v.EnvName, EnvId: v.EnvId})
+		if _, ok := temp[v.EnvName]; !ok {
+			// 通过map 对环境名称进行过滤
+			r.Envs = append(r.Envs, resps.EnvResp{EnvName: v.EnvName, EnvId: v.EnvId})
+			temp[v.EnvName] = nil
+		}
 		r.Providers = append(r.Providers, v.Provider)
+
 	}
 	r.Providers = utils.Set(r.Providers)
 
