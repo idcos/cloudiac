@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"strings"
 )
 
 type emailInviteUserData struct {
@@ -509,10 +510,10 @@ func SearchOrgResourcesFilters(c *ctx.ServiceContext, form *forms.SearchOrgResou
 func SearchOrgResources(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm) (interface{}, e.Error) {
 	query := services.GetOrgResourcesQuery(c.DB().Debug().Model(&models.Resource{}), form.Q, c.OrgId, c.UserId, c.IsSuperAdmin)
 	if len(form.EnvIds) != 0 {
-		query = query.Where("iac_env.id in (?)", form.EnvIds)
+		query = query.Where("iac_env.id in (?)", strings.Split(form.EnvIds, ","))
 	}
 	if len(form.Providers) != 0 {
-		query = query.Where("iac_resource.provider in (?)", form.Providers)
+		query = query.Where("iac_resource.provider in (?)", strings.Split(form.Providers, ","))
 	}
 	rs := make([]resps.OrgResourcesResp, 0)
 	query = query.Order("project_id, env_id, provider desc")
