@@ -152,7 +152,7 @@ func CreateWebhookTask(tx *db.Session, param CreateWebhookTaskParam) error {
 		BaseTask: models.BaseTask{
 			Type:        param.TaskType,
 			RunnerId:    env.RunnerId,
-			StepTimeout: env.Timeout,
+			StepTimeout: env.StepTimeout,
 		},
 		Source: param.Source,
 	}
@@ -218,6 +218,11 @@ func actionPrOrPush(tx *db.Session, trigger string, userId models.Id,
 	}
 	// push操作，执行apply计划
 	if trigger == consts.EnvTriggerCommit && options.BeforeCommit != "" {
+		if env.Locked {
+			logs.Get().WithField("webhook", "createTask").Errorf("env %s is locked don't allow apply", env.Id)
+			return nil
+		}
+
 		param := CreateWebhookTaskParam{
 			TaskType: models.TaskTypeApply,
 			Revision: env.Revision,

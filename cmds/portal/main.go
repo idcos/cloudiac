@@ -217,10 +217,13 @@ func initSystemConfig(tx *db.Session) (err error) {
 			Value:       "100",
 			Description: "每个CT-Runner同时启动的最大容器数",
 		}, {
-
 			Name:        models.SysCfgNamePeriodOfLogSave,
 			Value:       "Permanent",
 			Description: "日志保存周期",
+		}, {
+			Name:        models.SysCfgNameTaskStepTimeout,
+			Value:       "3600",
+			Description: "步骤超时时间",
 		},
 	}
 

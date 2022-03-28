@@ -35,6 +35,7 @@ const (
 	TaskApproving = "approving"
 	TaskRejected  = "rejected"
 	TaskFailed    = "failed"
+	TaskAborted   = "aborted"
 	TaskComplete  = "complete"
 
 	TaskStepCheckout  = "checkout"
@@ -69,6 +70,7 @@ const (
 	TaskStepFailed    = "failed"
 	TaskStepComplete  = "complete"
 	TaskStepTimeout   = "timeout"
+	TaskStepAborted   = "aborted"
 
 	TaskStepPolicyViolationExitCode = 3 // 合规检查不通过时的退出码
 
@@ -82,7 +84,7 @@ const (
 	TaskTypeTplParseName = "tplParse"
 
 	// 默认步骤超时时间(秒)
-	DefaultTaskStepTimeout = 1800
+	DefaultTaskStepTimeout = 3600
 
 	VcsGitlab = "gitlab"
 	VcsGitea  = "gitea"

@@ -61,7 +61,7 @@ func (Env) Search(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
-// @Param form body forms.ArchiveEnvForm true "parameter"
+// @Param form body forms.UpdateEnvForm true "parameter"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId} [put]
 // @Success 200 {object} ctx.JSONResult{result=models.EnvDetail}
@@ -266,6 +266,7 @@ func (Env) LastTask(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param envId path string true "环境ID"
+// @Param form query forms.PolicyScanResultForm true "parameter"
 // @router /envs/{envId}/policy_result [get]
 // @Success 200 {object} ctx.JSONResult{result=resps.ScanResultPageResp}
 func (Env) PolicyResult(c *ctx.GinRequest) {
@@ -283,8 +284,9 @@ func (Env) PolicyResult(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
+// @Param envId path string true "环境ID"
 // @Param resourceId path string true "资源ID"
-// @route /envs/{envId}/resource/{resourceId} [get]
+// @route /envs/{envId}/resources/{resourceId} [get]
 // @Success 200 {object} ctx.JSONResult{result=models.ResAttrs}
 func (Env) ResourceDetail(c *ctx.GinRequest) {
 	form := &forms.ResourceDetailForm{}
@@ -357,3 +359,72 @@ func (Env) UpdateTags(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.EnvUpdateTags(c.Service(), &form))
 }
+
+
+// EnvLock 环境锁定
+// @Tags 环境
+// @Summary 环境锁定
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param envId path string true "环境ID"
+// @Param tags formData forms.EnvLockForm true "部署参数"
+// @router /envs/{envId}/lock [post]
+// @Success 200
+func EnvLock(c *ctx.GinRequest){
+	form := forms.EnvLockForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.EnvLock(c.Service(), &form))
+}
+
+// EnvUnLock 环境解锁
+// @Tags 环境
+// @Summary 环境解锁
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param envId path string true "环境ID"
+// @Param tags formData forms.EnvUnLockForm true "部署参数"
+// @router /envs/{envId}/unlock [post]
+// @Success 200
+func EnvUnLock(c *ctx.GinRequest){
+	form := forms.EnvUnLockForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.EnvUnLock(c.Service(), &form))
+}
+
+// EnvUnLockConfirm 环境解锁确认
+// @Tags 环境
+// @Summary 环境解锁确认
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param envId path string true "环境ID"
+// @Param tags formData forms.EnvUnLockConfirmForm true "部署参数"
+// @router /envs/{envId}/unlock/confirm [get]
+// @Success 200 {object} ctx.JSONResult{result=resps.EnvUnLockConfirmResp}
+func EnvUnLockConfirm(c *ctx.GinRequest){
+	form := forms.EnvUnLockConfirmForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.EnvUnLockConfirm(c.Service(), &form))
+}
+
+

@@ -25,5 +25,6 @@ func RegisterRoute(apiV1 *gin.RouterGroup) {
 	apiV1.POST("/task/step/run", w(handler.RunTask))
 	apiV1.GET("/task/step/status", w(handler.TaskStatus))
 	apiV1.POST("/task/stop", w(handler.StopTask))
+	apiV1.POST("/task/abort", w(handler.AbortTask))
 	apiV1.GET("/task/step/log/follow", w(handler.TaskLogFollow))
 }

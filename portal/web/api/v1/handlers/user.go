@@ -123,7 +123,6 @@ func (u User) UpdateSelf(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string false "组织ID"
 // @Param userId path string true "用户ID"
-// @Param form formData forms.DeleteUserForm true "parameter"
 // @router /users/{userId} [delete]
 // @Success 200 {object} ctx.JSONResult
 func (User) Delete(c *ctx.GinRequest) {

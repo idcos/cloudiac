@@ -37,7 +37,7 @@ func (PolicyGroup) Create(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param q query string false "模糊搜索"
+// @Param form query forms.SearchPolicyGroupForm true "parameter"
 // @Router /policies/groups [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.PolicyGroupResp}}
 func (PolicyGroup) Search(c *ctx.GinRequest) {
@@ -149,6 +149,7 @@ func (PolicyGroup) OpPolicyAndPolicyGroupRel(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param policyGroupId path string true "策略id"
+// @Param form query forms.PolicyScanReportForm true "parameter"
 // @Router /policies/groups/{policyGroupId}/report [get]
 // @Success 200 {object} ctx.JSONResult{result=resps.PolicyGroupScanReportResp}
 func (PolicyGroup) ScanReport(c *ctx.GinRequest) {
@@ -167,6 +168,7 @@ func (PolicyGroup) ScanReport(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param policyGroupId path string true "策略id"
+// @Param form query forms.PolicyLastTasksForm true "parameter"
 // @Router /policies/groups/{policyGroupId}/last_tasks [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.LastScanTaskResp}}
 func (PolicyGroup) LastTasks(c *ctx.GinRequest) {

@@ -41,7 +41,6 @@ func (SystemConfig) Search(c *ctx.GinRequest) {
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
-// @Param id path string true "系统ID"
 // @Param data body forms.UpdateSystemConfigForm true "系统配置信息"
 // @Success 200 {object} ctx.JSONResult{result=models.SystemCfg}
 // @Router /systems [put]

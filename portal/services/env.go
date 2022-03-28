@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/hashicorp/consul/api"
+	"github.com/pkg/errors"
 
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
@@ -154,13 +155,22 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 		return nil
 	}
 
-	if task.Exited() {
+	if task.Started() && !task.Exited() {
+		envTaskStatus = task.Status
+		isDeploying = true
+	} else if task.Exited() {
 		switch task.Status {
 		case models.TaskRejected:
 			// 任务驳回，环境状态不变
-			break
+			envStatus = ""
 		case models.TaskFailed:
 			envStatus = models.EnvStatusFailed
+		case models.TaskAborted:
+			var err error
+			envStatus, err = getEnvStatusOnTaskAborted(tx, task.Id)
+			if err != nil {
+				return e.New(e.InternalError, errors.Wrap(err, "getEnvStatusOnTaskAborted"))
+			}
 		case models.TaskComplete:
 			if task.Type == models.TaskTypeApply {
 				envStatus = models.EnvStatusActive
@@ -168,11 +178,8 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 				envStatus = models.EnvStatusInactive
 			}
 		default:
-			return e.New(e.InternalError, fmt.Errorf("unknown exited task status: %v", task.Status))
+			return e.New(e.InternalError, fmt.Errorf("unknown task status: %v", task.Status))
 		}
-	} else if task.Started() {
-		envTaskStatus = task.Status
-		isDeploying = true
 	} else { // pending
 		// 任务进入 pending 状态不修改环境状态， 因为任务 pending 时可能同一个环境的其他任务正在执行
 		// (实际目前任务创建后即进入 pending 状态，并不触发 change status 调用链)
@@ -196,6 +203,23 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 		return e.New(e.DBError, err)
 	}
 	return nil
+}
+
+// 当任务被中止时需要根据当前执行哪此步骤来判断环境应该置为什么状态
+func getEnvStatusOnTaskAborted(db *db.Session, taskId models.Id) (string, error) {
+	steps, err := GetTaskSteps(db, taskId)
+	if err != nil {
+		return "", errors.Wrap(err, "get task steps")
+	}
+
+	for _, s := range steps {
+		// 如果执行了 apply 步骤则环境变为 failed 状态
+		if (s.Type == models.TaskStepApply || s.Type == models.TaskStepDestroy) && s.IsStarted() {
+			return models.EnvStatusFailed, nil
+		}
+	}
+	// 否则，环境状态保持不变
+	return "", nil
 }
 
 var (
@@ -248,6 +272,18 @@ func GetDefaultRunner() (string, e.Error) {
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list is null"))
 }
 
+func matchVar(v forms.SampleVariables, value models.Variable) bool {
+	// 对于第三方调用api创建的环境来说，当前作用域是无变量的，sampleVariables中的变量一种是继承性下来的、另一种是新建的
+	// 这里需要判断变量如果修改了就在当前作用域创建一个变量
+	// 比较变量名是否相同，相同的变量比较变量的值是否发生变化, 发生变化则创建
+	if (v.Name == value.Name && value.Type == consts.VarTypeEnv) ||
+		(v.Name == fmt.Sprintf("TF_VAR_%s", value.Name) && value.Type == consts.VarTypeTerraform) {
+		return true
+	}
+
+	return false
+}
+
 func GetRunnerByTags(tags []string) (string, e.Error) {
 	runners, err := RunnerSearch()
 	if err != nil {
@@ -269,20 +305,6 @@ func GetRunnerByTags(tags []string) (string, e.Error) {
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list with tags is null"))
 }
 
-func isVarNewValid(v forms.SampleVariables, value models.Variable) bool {
-	// 对于第三方调用api创建的环境来说，当前作用域是无变量的，sampleVariables中的变量一种是继承性下来的、另一种是新建的
-	// 这里需要判断变量如果修改了就在当前作用域创建一个变量
-	// 比较变量名是否相同，相同的变量比较变量的值是否发生变化, 发生变化则创建
-	if (v.Name == value.Name && value.Type == consts.VarTypeEnv) ||
-		(v.Name == fmt.Sprintf("TF_VAR_%s", value.Name) && value.Type == consts.VarTypeTerraform) &&
-			v.Value != value.Value {
-		// 如果匹配到了就不在继续匹配
-		return false
-	}
-
-	return true
-}
-
 func varNewAppend(resp []forms.Variable, name, value, varType string) []forms.Variable {
 	resp = append(resp, forms.Variable{
 		Scope: consts.ScopeEnv,
@@ -300,6 +322,7 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 		return nil, e.New(e.DBError, fmt.Errorf("get vairables error: %v", err))
 	}
 	for _, v := range sampleVariables {
+		isNewVaild := true
 		// 如果vars为空，则需要将sampleVariables所有的变量理解为新增变量
 		if len(vars) == 0 {
 			resp = varNewAppend(resp, v.Name, v.Value, consts.VarTypeEnv)
@@ -307,12 +330,19 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 		}
 
 		for key, value := range vars {
-			if !isVarNewValid(v, value) {
-				resp = varNewAppend(resp, vars[key].Name, v.Value, vars[key].Type)
-			} else {
-				// 这部分变量是新增的 需要新建
-				resp = varNewAppend(resp, v.Name, v.Value, consts.VarTypeEnv)
+			// 如果匹配到了就不在继续匹配
+			if matchVar(v, value) {
+				if v.Value != value.Value {
+					isNewVaild = false
+					resp = varNewAppend(resp, vars[key].Name, v.Value, vars[key].Type)
+				}
+				break
 			}
+		}
+
+		// 这部分变量是新增的 需要新建
+		if isNewVaild{
+			resp = varNewAppend(resp, v.Name, v.Value, consts.VarTypeEnv)
 		}
 	}
 
@@ -350,6 +380,24 @@ func CheckEnvTags(tags string) e.Error {
 		if utf8.RuneCountInString(t) > consts.EnvMaxTagLength {
 			return e.New(e.EnvTagLengthLimited)
 		}
+	}
+	return nil
+}
+
+func EnvLock(dbSess *db.Session, id models.Id) e.Error {
+	if _, err := dbSess.Model(models.Env{}).
+		Where("id =?", id).
+		UpdateColumn("locked", true); err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
+func EnvUnLocked(dbSess *db.Session, id models.Id) e.Error {
+	if _, err := dbSess.Model(models.Env{}).
+		Where("id =?", id).
+		UpdateColumn("locked", false); err != nil {
+		return e.New(e.DBError, err)
 	}
 	return nil
 }

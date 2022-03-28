@@ -64,6 +64,7 @@
 30914,TaskStepNotExists,步骤不存在,task step does not exists
 20007,InvalidProjectId,无效的项目id,invalid project id
 30916,TaskNotHaveStep,任务无步骤,task have no steps
+3091y,TaskAborting,任务正在中止,task is aborting
 30710,TemplateAlreadyExists,模板名称重复,template already exists
 10101,HCLParseError,模板语法解析错误,hcl parse error
 30510,VariableAlreadyExists,变量已存在,variable already exists
@@ -72,8 +73,11 @@
 30513,InvalidVarName,无效变量名,invalid variable name
 30514,EmptyVarName,变量名不可为空,variable name is empty
 30515,EmptyVarValue,变量值不可为空,variable value is empty
+30410,ProjectAlreadyExists,项目已存在,project already exists
+30411,ProjectNotExists,项目不存在,project not exists
+30412,ProjectAliasDuplicate,项目名称重复,project name already exists
 30420,ProjectUserAlreadyExists,项目用户已经存在,project user already exists
-30421,ProjectUserAliasDuplicate,项目别名重复,project name already exists
+30421,ProjectUserAliasDuplicate,项目名称重复,project name already exists
 30610,TokenAlreadyExists,Token已经存在,token already exists
 30611,TokenNotExists,Token不存在,token does not exists
 30613,TokenAliasDuplicate,Token别名重复,token alias already exists
@@ -87,6 +91,7 @@
 30813,EnvArchived,环境已归档，不允许操作,environment had been archived
 30815,EnvDeploying,环境正在部署中，请不要重复发起,deployment in progress
 30816,EnvCheckAutoApproval,配置自动纠漂移、推送到分支时重新部署时，必须配置自动审批,auto approval is required 
+30817,EnvLockFailedTaskActive,环境锁定失败，环境下有活跃任务,environment lock failed. Active tasks in the environment
 30910,TaskAlreadyExists,任务已经存在,task already exists
 30911,TaskNotExists,任务不存在,task does not exists
 10440,VcsError,VCS仓库错误,unknown VCS error

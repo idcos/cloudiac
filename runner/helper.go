@@ -172,3 +172,18 @@ func FetchJson(envId string, taskId string, jsonFile string) ([]byte, error) {
 	}
 	return content, nil
 }
+
+func GetLatestStepInfo(envId string, taskId string) (info StepInfo, err error) {
+	path := filepath.Join(GetTaskWorkspace(envId, taskId), TaskStepInfoFileName)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return info, nil
+		}
+		return info, err
+	}
+	if err := json.Unmarshal(data, &info); err != nil {
+		return info, err
+	}
+	return info, nil
+}

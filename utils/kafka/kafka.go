@@ -49,9 +49,9 @@ func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus strin
 		},
 	}
 
-	if task.ExtraData != nil{
+	if task.ExtraData != nil {
 		a.ExtraData = task.ExtraData
-	}else {
+	} else {
 		a.ExtraData = make(map[string]interface{})
 	}
 
@@ -81,7 +81,7 @@ func (k *KafkaProducer) ConnAndSend(msg []byte) (err error) {
 
 func InitKafkaProducerBuilder() {
 	kaConf := configs.Get().Kafka
-	if kaConf.Disabled {
+	if kaConf.Disabled || len(kaConf.Brokers) <= 0 {
 		logs.Get().Info("kafka was not open")
 		return
 	}

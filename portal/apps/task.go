@@ -7,6 +7,7 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
@@ -174,7 +175,7 @@ func LastTask(c *ctx.ServiceContext, form *forms.LastTaskForm) (*resps.TaskDetai
 }
 
 // ApproveTask 审批执行计划
-func ApproveTask(c *ctx.ServiceContext, form *forms.ApproveTaskForm) (interface{}, e.Error) {
+func ApproveTask(c *ctx.ServiceContext, form *forms.ApproveTaskForm) (interface{}, e.Error) { //nolint:cyclop
 	c.AddLogField("action", fmt.Sprintf("approve task %s", form.Id))
 
 	if c.OrgId == "" || c.ProjectId == "" {
@@ -191,7 +192,11 @@ func ApproveTask(c *ctx.ServiceContext, form *forms.ApproveTaskForm) (interface{
 	}
 
 	if task.Status != models.TaskApproving {
-		return nil, e.New(e.TaskApproveNotPending, http.StatusBadRequest)
+		return nil, e.New(e.TaskApproveNotPending, http.StatusConflict)
+	}
+
+	if task.Aborting {
+		return nil, e.New(e.TaskAborting, http.StatusConflict)
 	}
 
 	step, err := services.GetTaskStep(c.DB(), task.Id, task.CurrStep)
@@ -372,7 +377,7 @@ func SearchTaskSteps(c *ctx.ServiceContext, form *forms.DetailTaskStepForm) (int
 
 }
 
-func GetTaskStep(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (interface{}, e.Error) {
+func GetTaskStepLog(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (interface{}, e.Error) {
 	content, err := services.GetTaskStepLogById(c.DB(), form.StepId)
 	if err != nil {
 		return nil, err
@@ -398,10 +403,13 @@ func SearchTaskResourcesGraph(c *ctx.ServiceContext, form *forms.SearchTaskResou
 	if err != nil {
 		return nil, err
 	}
+
 	for i := range rs {
 		rs[i].Provider = path.Base(rs[i].Provider)
-		// attrs 暂时不需要返回
-		rs[i].Attrs = nil
+		// 不需要返回 attrs, 避免返回的数据过大;
+		if form.Dimension != consts.GraphDimensionModule {
+			rs[i].Attrs = nil
+		}
 	}
 	return GetResourcesGraph(rs, form.Dimension), nil
 }
@@ -417,6 +425,36 @@ func GetResourcesGraph(rs []services.Resource, dimension string) interface{} {
 	default:
 		return nil
 	}
+}
+
+// GetResShowName
+// 建立规则库，通过各种规则确定资源的主要字段或者展示模板
+//		规则示例1: 如果资源的属性中有 public_ip 字段，则展示 public_ip;
+//    	规则示例2: 如果资源的属性中有 name 字段，则展示 name;
+//    	规则示例3: 如果资源的属性中有 tag 字段，则展示 name(tag1,tag2);
+// 不匹配规则库时展示: resource address(id), 如: "module1.alicloud_instance.web(i-xxxxxxx)";
+func GetResShowName(attrs map[string]interface{}, addr, id string) string {
+	outRuleName := fmt.Sprintf("%s(%s)", addr, id)
+	if attrs != nil {
+		get := func(key string) (string, bool) {
+			if val, ok := attrs[key]; ok {
+				return val.(string), true
+			}
+			return "", false
+		}
+		if publicIP, ok := get("public_ip"); ok {
+			return publicIP
+		}
+		if name, ok := get("name"); ok {
+			if tags, ok := get("tags"); ok {
+				return fmt.Sprintf("%s(%s)", name, tags)
+			}
+			return name
+		}
+		return outRuleName
+	}
+
+	return outRuleName
 }
 
 type ResourcesGraphModule struct {
@@ -477,7 +515,7 @@ func genNodesFromResource(resource services.Resource, parentChildNode map[string
 
 	res := ResourceInfo{
 		ResourceId:   resource.Id.String(),
-		ResourceName: resource.Name,
+		ResourceName: GetResShowName(resource.Attrs, resource.Address, string(resource.Id)),
 		NodeName:     lastAddr,
 	}
 
@@ -682,4 +720,63 @@ func GetResourcesGraphType(rs []services.Resource) interface{} {
 	}
 
 	return rgt
+}
+
+func AbortTask(c *ctx.ServiceContext, form *forms.AbortTaskForm) (interface{}, e.Error) {
+	er := c.DB().Transaction(func(tx *db.Session) error {
+		task, er := services.GetTaskById(tx, form.TaskId)
+		if er != nil {
+			return er
+		}
+
+		if task.Aborting {
+			return e.New(e.TaskAborting)
+		}
+
+		step, er := services.GetTaskStep(tx, task.Id, task.CurrStep)
+		if er != nil {
+			return er
+		}
+
+		if task.Status == models.TaskPending {
+			task.Status = models.TaskAborted
+			if _, err := models.UpdateModel(tx, task); err != nil {
+				return e.AutoNew(err, e.DBError)
+			}
+		} else if step.Status == models.TaskStepApproving {
+			// 步骤在待审批状态时直接将状态改为 aborted 并同步修改任务状态
+			if er := services.ChangeTaskStep2Aborted(tx, task.Id, step.Index); er != nil {
+				return er
+			}
+		} else if task.Started() && !task.Exited() {
+			// 任务在执行状态时发送指令中断 runner 的任务执行，然后 runner 会上报步骤被中止
+			go utils.RecoverdCall(func() {
+				goAbortRunnerTask(c.Logger(), *task)
+			})
+			task.Aborting = true
+			if _, err := models.UpdateModel(tx, task); err != nil {
+				return e.AutoNew(err, e.DBError)
+			}
+		} else {
+			return e.New(e.TaskCannotAbort,
+				fmt.Errorf("task status is '%s'", task.Status), http.StatusConflict)
+		}
+		return nil
+	})
+
+	if er != nil {
+		return nil, e.AutoNew(er, e.InternalError)
+	}
+	return nil, nil
+}
+
+func goAbortRunnerTask(logger logs.Logger, task models.Task) {
+	logger = logger.WithField("action", "goAbortRunnerTask")
+	if er := services.AbortRunnerTask(task); er != nil {
+		task.Aborting = true
+		logger.Errorf("abort task error: %v", er)
+		if _, err := models.UpdateModel(db.Get(), &task); err != nil {
+			logger.Errorf("update task aborting error: %v", err)
+		}
+	}
 }

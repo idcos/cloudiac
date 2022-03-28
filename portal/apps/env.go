@@ -11,16 +11,18 @@ import (
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
-	"github.com/robfig/cron/v3"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/robfig/cron/v3"
 
 	"github.com/lib/pq"
 )
@@ -139,8 +141,8 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 		form.Revision = tpl.RepoRevision
 	}
 
-	if form.Timeout == 0 {
-		form.Timeout = common.DefaultTaskStepTimeout
+	if form.StepTimeout == 0 {
+		form.StepTimeout = common.DefaultTaskStepTimeout
 	}
 
 	if form.DestroyAt != "" {
@@ -172,6 +174,18 @@ func getRunnerId(runnerTags []string, runnerId string) (string, e.Error) {
 
 	// 默认runner
 	return services.GetDefaultRunner()
+}
+
+// getTaskStepTimeout return timeout in second
+func getTaskStepTimeout(timeout int) (int, e.Error) {
+	if timeout <= 0 {
+		sysTimeout, err := services.GetSystemTaskStepTimeout(db.Get())
+		if err != nil {
+			return -1, err
+		}
+		timeout = sysTimeout
+	}
+	return timeout / 60, nil
 }
 
 func createEnvToDB(tx *db.Session, c *ctx.ServiceContext, form *forms.CreateEnvForm, envModel models.Env) (*models.Env, e.Error) {
@@ -307,19 +321,24 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, err
 	}
 
+	taskStepTimeout, err := getTaskStepTimeout(form.StepTimeout)
+	if err != nil {
+		return nil, err
+	}
+
 	envModel := models.Env{
 		OrgId:     c.OrgId,
 		ProjectId: c.ProjectId,
 		CreatorId: c.UserId,
 		TplId:     form.TplId,
 
-		Name:       form.Name,
-		Tags:       strings.TrimSpace(form.Tags),
-		RunnerId:   runnerId,
-		RunnerTags: strings.Join(form.RunnerTags, ","),
-		Status:     models.EnvStatusInactive,
-		OneTime:    form.OneTime,
-		Timeout:    form.Timeout,
+		Name:        form.Name,
+		Tags:        strings.TrimSpace(form.Tags),
+		RunnerId:    runnerId,
+		RunnerTags:  strings.Join(form.RunnerTags, ","),
+		Status:      models.EnvStatusInactive,
+		OneTime:     form.OneTime,
+		StepTimeout: taskStepTimeout,
 
 		// 模板参数
 		TfVarsFile:   form.TfVarsFile,
@@ -327,7 +346,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		Playbook:     form.Playbook,
 		Revision:     form.Revision,
 		KeyId:        form.KeyId,
-		WorkDir:      form.WorkDir,
+		Workdir:      form.Workdir,
 
 		TTL:             form.TTL,
 		AutoDestroyAt:   &destroyAt,
@@ -377,7 +396,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		StopOnViolation: env.StopOnViolation,
 		BaseTask: models.BaseTask{
 			Type:        form.TaskType,
-			StepTimeout: form.Timeout,
+			StepTimeout: form.StepTimeout,
 			RunnerId:    runnerId,
 		},
 		ExtraData: models.JSON(form.ExtraData),
@@ -485,7 +504,13 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		PopulateLastTask(c.DB(), env)
 		env.PolicyStatus = models.PolicyStatusConversion(env.PolicyStatus, env.PolicyEnable)
 		// runner tags 数组形式返回
-		env.RunnerTagsArr = strings.Split(env.Env.RunnerTags, ",")
+		if env.Env.RunnerTags != "" {
+			env.RunnerTags = strings.Split(env.Env.RunnerTags, ",")
+		} else {
+			env.RunnerTags = []string{}
+		}
+		// 以分钟为单位返回
+		env.StepTimeout = env.StepTimeout / 60
 	}
 
 	return page.PageResp{
@@ -600,6 +625,10 @@ func setUpdateEnvByForm(attrs models.Attrs, form *forms.UpdateEnvForm) {
 	}
 	if form.HasKey("policyEnable") {
 		attrs["policyEnable"] = form.PolicyEnable
+	}
+	if form.HasKey("stepTimeout") {
+		// 将分钟转换为秒
+		attrs["stepTimeout"] = form.StepTimeout * 60
 	}
 }
 
@@ -816,9 +845,15 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 		envDetail.PolicyGroup = append(envDetail.PolicyGroup, v.PolicyGroupId)
 	}
 	envDetail.PolicyStatus = models.PolicyStatusConversion(envDetail.PolicyStatus, envDetail.PolicyEnable)
+	// 时间转化为分钟
+	envDetail.StepTimeout = envDetail.StepTimeout / 60
 
 	// runner tags 数组形式返回
-	envDetail.RunnerTagsArr = strings.Split(envDetail.Env.RunnerTags, ",")
+	if envDetail.Env.RunnerTags != "" {
+		envDetail.RunnerTags = strings.Split(envDetail.Env.RunnerTags, ",")
+	} else {
+		envDetail.RunnerTags = []string{}
+	}
 	return envDetail, nil
 }
 
@@ -897,8 +932,9 @@ func setEnvByForm(env *models.Env, form *forms.DeployEnvForm) {
 		env.KeyId = form.KeyId
 	}
 
-	if form.HasKey("timeout") {
-		env.Timeout = form.Timeout
+	if form.HasKey("stepTimeout") {
+		// 将分钟转换为秒
+		env.StepTimeout = form.StepTimeout * 60
 	}
 
 	if form.HasKey("tfVarsFile") {
@@ -925,8 +961,8 @@ func setEnvByForm(env *models.Env, form *forms.DeployEnvForm) {
 	if form.HasKey("policyEnable") {
 		env.PolicyEnable = form.PolicyEnable
 	}
-	if form.HasKey("workDir") {
-		env.WorkDir = form.WorkDir
+	if form.HasKey("workdir") {
+		env.Workdir = form.Workdir
 	}
 
 	setEnvRunnerInfoByForm(env, form)
@@ -939,6 +975,7 @@ func setEnvRunnerInfoByForm(env *models.Env, form *forms.DeployEnvForm) {
 
 	if form.HasKey("runnerTags") {
 		env.RunnerTags = strings.Join(form.RunnerTags, ",")
+		// 如果传了 tags 则清空 runnerId 值
 		env.RunnerId = ""
 	}
 }
@@ -1128,7 +1165,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		StopOnViolation: env.StopOnViolation,
 		BaseTask: models.BaseTask{
 			Type:        form.TaskType,
-			StepTimeout: form.Timeout,
+			StepTimeout: form.StepTimeout,
 			RunnerId:    rId,
 		},
 	})
@@ -1355,4 +1392,65 @@ func EnvUpdateTags(c *ctx.ServiceContext, form *forms.UpdateEnvTagsForm) (resp i
 	} else {
 		return env, nil
 	}
+}
+
+func EnvLock(c *ctx.ServiceContext, form *forms.EnvLockForm) (interface{}, e.Error) {
+	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	// 查询环境下是否有执行中、待审批、排队中的任务
+	tasks, err := services.GetActiveTaskByEnvId(tx, form.Id)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	if len(tasks) > 0 {
+		_ = tx.Rollback()
+		return nil, e.New(e.EnvLockFailedTaskActive)
+	}
+
+	if err := services.EnvLock(tx, form.Id); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
+	return nil, nil
+}
+
+func EnvUnLock(c *ctx.ServiceContext, form *forms.EnvUnLockForm) (interface{}, e.Error) {
+	attrs := models.Attrs{}
+	attrs["locked"] = false
+
+	if form.ClearDestroyAt {
+		attrs["auto_destroy_at"] = nil
+		attrs["ttl"] = ""
+	}
+
+	if _, err := services.UpdateEnv(c.DB(), form.Id, attrs); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func EnvUnLockConfirm(c *ctx.ServiceContext, form *forms.EnvUnLockConfirmForm) (interface{}, e.Error) {
+	env, err := services.GetEnvById(c.DB(), form.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := resps.EnvUnLockConfirmResp{}
+	if env.AutoDestroyAt != nil && time.Now().Unix() > env.AutoDestroyAt.Unix() && env.AutoDestroyAt.Unix() > 0 {
+		resp.AutoDestroyPass = true
+	}
+
+	return resp, nil
 }

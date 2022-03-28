@@ -134,6 +134,7 @@ func (Organization) ChangeOrgStatus(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param orgId path string true "组织ID"
 // @Param form formData forms.AddUserOrgRelForm true "parameter"
 // @router /orgs/{orgId}/users [post]
@@ -153,6 +154,7 @@ func (Organization) AddUserToOrg(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param orgId path string true "组织ID"
 // @Param userId path string true "用户ID"
 // @Param form formData forms.DeleteUserOrgRelForm true "parameter"
@@ -174,6 +176,7 @@ func (Organization) RemoveUserForOrg(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
 // @Param orgId path string true "组织ID"
 // @Param userId path string true "用户ID"
 // @Param form formData forms.UpdateUserOrgRelForm true "parameter"
@@ -188,8 +191,8 @@ func (Organization) UpdateUserOrgRel(c *ctx.GinRequest) {
 }
 
 // SearchUser 查询组织用户列表
-// @Tags 用户
-// @Summary 用户查询
+// @Tags 组织
+// @Summary 查询组织用户列表
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
@@ -244,6 +247,25 @@ func (Organization) SearchOrgResources(c *ctx.GinRequest) {
 		return
 	}
 	c.JSONResult(apps.SearchOrgResources(c.Service(), &form))
+}
+
+
+//SearchOrgResourcesFilters 搜索当前组织下所有项目的活跃环境名称以及provider
+//@Tags 组织
+//@Summary 搜索当前组织下所有项目的活跃资源列表
+//@Accept application/x-www-form-urlencoded
+//@Produce json
+//@Security AuthToken
+//@Param IaC-Org-Id header string true "组织ID"
+//@Param form query forms.SearchOrgResourceForm true "parameter"
+//@router /orgs/resources/filters [get]
+//@Success 200 {object} ctx.JSONResult{result=[]resps.OrgEnvAndProviderResp}
+func (Organization) SearchOrgResourcesFilters(c *ctx.GinRequest) {
+	form := forms.SearchOrgResourceForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.SearchOrgResourcesFilters(c.Service(), &form))
 }
 
 // UpdateUserOrg 编辑组织用户信息

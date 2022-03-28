@@ -73,6 +73,9 @@ const (
 	ImportIdDuplicate = 10520 //  id 重复
 	ImportUpdateOrgId = 10530
 
+	//// runner 报错 106
+	RunnerError = 10610
+
 	// 权限认证 2
 	//// 认证 200
 	InvalidPassword   = 20010
@@ -137,15 +140,16 @@ const (
 	TemplateKeyIdNotSet     = 30731
 
 	//// environment 308
-	EnvAlreadyExists       = 30810
-	EnvNotExists           = 30811
-	EnvAliasDuplicate      = 30812
-	EnvArchived            = 30813
-	EnvCannotArchiveActive = 30814
-	EnvDeploying           = 30815
-	EnvCheckAutoApproval   = 30816
-	EnvTagNumLimited       = 30821
-	EnvTagLengthLimited    = 30822
+	EnvAlreadyExists        = 30810
+	EnvNotExists            = 30811
+	EnvAliasDuplicate       = 30812
+	EnvArchived             = 30813
+	EnvCannotArchiveActive  = 30814
+	EnvDeploying            = 30815
+	EnvCheckAutoApproval    = 30816
+	EnvLockFailedTaskActive = 30817
+	EnvTagNumLimited        = 30821
+	EnvTagLengthLimited     = 30822
 
 	//// task 309
 	TaskAlreadyExists     = 30910
@@ -153,6 +157,8 @@ const (
 	TaskApproveNotPending = 30913
 	TaskStepNotExists     = 30914
 	TaskNotHaveStep       = 30916
+	TaskAborting          = 30917
+	TaskCannotAbort       = 30918
 
 	//// ssh key 310
 	KeyAlreadyExists  = 31010

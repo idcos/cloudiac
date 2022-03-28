@@ -8,6 +8,10 @@
 - 环境创建、销毁、重新部署时都发送 kafka 消息，通知环境最新资源数据
 
 
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.9.1](https://github.com/idcos/cloudiac/releases/tag/v0.9.1)
+
+
 ------
 ## v0.9.0 20220307
 **Enhancements**
@@ -18,7 +22,7 @@
 **Features**
 
 - 合规策略组改用代码库进行管理，支持通过分支或 tag 来管理版本
-- 重新实现的合规检测流程和检测引擎
+- 增强合规检测引擎，细化云模板及环境检测流程
 - 执行界面增加云模板和环境的合规开关和合规策略组绑定功能
 - 新增合规管理员角色
 - 新增环境搜索功能，支持通过环境名称和云模板名称进行搜索
@@ -36,6 +40,10 @@
 - 修复部分查询未正常处理软删除的问题
 
 
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.9.0](https://github.com/idcos/cloudiac/releases/tag/v0.9.0)
+
+
 ------
 ## v0.8.1 20211214
 **Fixes**
@@ -43,6 +51,10 @@
 - 修复新组织中创建环境时接口报错的问题
 - 修复环境有敏感变量时执行部署报解密错误的问题
 - 修复执行任务容器异常退出会导致任务一直处于执行中状态且环境的资源一直累积的问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.8.1](https://github.com/idcos/cloudiac/releases/tag/v0.8.1)
 
 
 ------
@@ -67,6 +79,10 @@
 - 修复编辑云模板时仓库名称可能显示为 id 的问题
 
 
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.8.0](https://github.com/idcos/cloudiac/releases/tag/v0.8.0)
+
+
 ------
 ## v0.7.1 20211116
 **Features**
@@ -76,6 +92,10 @@
 **Fixes**
 
 - 修复预置 provider 不生效的问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.7.1](https://github.com/idcos/cloudiac/releases/tag/v0.7.1)
 
 
 ------
@@ -98,6 +118,10 @@
 - 修复设置环境自动触发 plan/apply 功能报错的问题
 
 
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.7.0](https://github.com/idcos/cloudiac/releases/tag/v0.7.0)
+
+
 ------
 ## v0.6.0 20210928
 **Features**
@@ -117,11 +141,19 @@
 - 修复存在活跃环境的云模板在列表中活跃资源数显示为 0 的问题
 
 
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.6.0](https://github.com/idcos/cloudiac/releases/tag/v0.6.0)
+
+
 ------
-## v0.5.0 20210728
+## v0.5.1 20210806
 **Features**
 
 - 全新 0.5 版本发布
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.5.1](https://github.com/idcos/cloudiac/releases/tag/v0.5.1)
 
 
 

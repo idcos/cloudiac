@@ -266,6 +266,10 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "task have no steps",
 		"zh-CN": "任务无步骤",
 	},
+	TaskAborting: {
+		"en-US": "task is aborting",
+		"zh-CN": "任务正在中止",
+	},
 	TemplateAlreadyExists: {
 		"en-US": "template already exists",
 		"zh-CN": "模板名称重复",
@@ -298,13 +302,25 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "variable value is empty",
 		"zh-CN": "变量值不可为空",
 	},
+	ProjectAlreadyExists: {
+		"en-US": "project already exists",
+		"zh-CN": "项目已存在",
+	},
+	ProjectNotExists: {
+		"en-US": "project not exists",
+		"zh-CN": "项目不存在",
+	},
+	ProjectAliasDuplicate: {
+		"en-US": "project name already exists",
+		"zh-CN": "项目名称重复",
+	},
 	ProjectUserAlreadyExists: {
 		"en-US": "project user already exists",
 		"zh-CN": "项目用户已经存在",
 	},
 	ProjectUserAliasDuplicate: {
 		"en-US": "project name already exists",
-		"zh-CN": "项目别名重复",
+		"zh-CN": "项目名称重复",
 	},
 	TokenAlreadyExists: {
 		"en-US": "token already exists",
@@ -357,6 +373,10 @@ var errorMsgs = map[int]map[string]string{
 	EnvCheckAutoApproval: {
 		"en-US": "auto approval is required",
 		"zh-CN": "配置自动纠漂移、推送到分支时重新部署时，必须配置自动审批",
+	},
+	EnvLockFailedTaskActive: {
+		"en-US": "environment lock failed. Active tasks in the environment",
+		"zh-CN": "环境锁定失败，环境下有活跃任务",
 	},
 	TaskAlreadyExists: {
 		"en-US": "task already exists",
