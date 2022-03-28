@@ -479,24 +479,40 @@ func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*resps.UserW
 	return &resp, nil
 }
 
-func SearchOrgResources(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm) (interface{}, e.Error) {
-	query := c.DB().Model(&models.Resource{})
-
-	query = query.Joins("inner join iac_env on iac_env.last_res_task_id = iac_resource.task_id left join " +
-		"iac_project on iac_resource.project_id = iac_project.id").
-		LazySelectAppend("iac_project.name as project_name, iac_env.name as env_name, iac_resource.id as resource_id," +
-			"iac_resource.name as resource_name, iac_resource.task_id, iac_resource.project_id as project_id, " +
-			"iac_resource.env_id as env_id, iac_resource.provider, iac_resource.type, iac_resource.module")
-	query = query.Where("iac_env.org_id = ?", c.OrgId)
-	if form.Q != "" {
-		query = query.Where("iac_resource.name like ? OR iac_resource.type like ? OR iac_resource.attrs like ?", fmt.Sprintf("%%%s%%", form.Q),
-			fmt.Sprintf("%%%s%%", form.Q), fmt.Sprintf("%%%s%%", form.Q))
+func SearchOrgResourcesFilters(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm) (*resps.OrgEnvAndProviderResp, e.Error) {
+	query := services.GetOrgResourcesQuery(c.DB().Model(&models.Resource{}), form.Q, c.OrgId, c.UserId, c.IsSuperAdmin)
+	type SearchResult struct {
+		EnvName  string    `json:"env_name"`
+		EnvId    models.Id `json:"env_id"`
+		Provider string    `json:"provider"`
 	}
-	if !c.IsSuperAdmin {
-		// 查一下当前用户属于哪些项目
-		query = query.Joins("left join iac_user_project on iac_user_project.project_id = iac_resource.project_id").
-			LazySelectAppend("iac_user_project.user_id")
-		query = query.Where("iac_user_project.user_id = ?", c.UserId)
+	rs := make([]SearchResult, 0)
+	if err := query.Scan(&rs); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	r := &resps.OrgEnvAndProviderResp{}
+	temp := map[string]interface{}{}
+	for _, v := range rs {
+		if _, ok := temp[v.EnvName]; !ok {
+			// 通过map 对环境名称进行过滤
+			r.Envs = append(r.Envs, resps.EnvResp{EnvName: v.EnvName, EnvId: v.EnvId})
+			temp[v.EnvName] = nil
+		}
+		r.Providers = append(r.Providers, v.Provider)
+
+	}
+	r.Providers = utils.Set(r.Providers)
+
+	return r, nil
+}
+
+func SearchOrgResources(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm) (interface{}, e.Error) {
+	query := services.GetOrgResourcesQuery(c.DB().Debug().Model(&models.Resource{}), form.Q, c.OrgId, c.UserId, c.IsSuperAdmin)
+	if len(form.EnvIds) != 0 {
+		query = query.Where("iac_env.id in (?)", form.EnvIds)
+	}
+	if len(form.Providers) != 0 {
+		query = query.Where("iac_resource.provider in (?)", form.Providers)
 	}
 	rs := make([]resps.OrgResourcesResp, 0)
 	query = query.Order("project_id, env_id, provider desc")
