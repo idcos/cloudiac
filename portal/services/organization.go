@@ -170,3 +170,24 @@ func TryAddDemoRelation(tx *db.Session, userId models.Id) (err e.Error) {
 	})
 	return
 }
+
+func GetOrgResourcesQuery(tx *db.Session, searchStr string, orgId, userId models.Id, isSuperAdmin bool) *db.Session {
+	query := tx.Joins("inner join iac_env on iac_env.last_res_task_id = iac_resource.task_id left join " +
+		"iac_project on iac_resource.project_id = iac_project.id").
+		LazySelectAppend("iac_project.name as project_name, iac_env.name as env_name, iac_resource.id as resource_id," +
+			"iac_resource.name as resource_name, iac_resource.task_id, iac_resource.project_id as project_id, iac_resource.attrs as attrs," +
+			"iac_resource.env_id as env_id, iac_resource.provider as provider, iac_resource.type, iac_resource.module")
+	query = query.Where("iac_env.org_id = ?", orgId)
+	if searchStr != "" {
+		query = query.Where("iac_resource.name like ? OR iac_resource.type like ? OR iac_resource.attrs like ?", fmt.Sprintf("%%%s%%", searchStr),
+			fmt.Sprintf("%%%s%%", searchStr), fmt.Sprintf("%%%s%%", searchStr))
+	}
+	if !isSuperAdmin {
+		// 查一下当前用户属于哪些项目
+		query = query.Joins("left join iac_user_project on iac_user_project.project_id = iac_resource.project_id").
+			LazySelectAppend("iac_user_project.user_id")
+		query = query.Where("iac_user_project.user_id = ?", userId)
+	}
+	return query
+
+}

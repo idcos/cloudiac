@@ -12,6 +12,7 @@ import (
 	"cloudiac/portal/services"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 func SearchSystemConfig(c *ctx.ServiceContext) (interface{}, e.Error) {
@@ -74,7 +75,7 @@ func GetRegistryAddr(c *ctx.ServiceContext) (interface{}, e.Error) {
 }
 
 func UpsertRegistryAddr(c *ctx.ServiceContext, form *forms.RegistryAddrForm) (interface{}, e.Error) {
-
+	form.RegistryAddr = strings.TrimSpace(form.RegistryAddr)
 	cfg, err := services.UpsertRegistryAddr(c.DB(), form.RegistryAddr)
 	var cfgdb = ""
 	if err == nil {

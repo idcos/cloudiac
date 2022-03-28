@@ -57,7 +57,7 @@ func (Policy) ScanTemplates(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param taskId query string true "parameter"
-// @Param templateId path string true "环境ID"
+// @Param templateId path string true "云模板ID"
 // @Router /policies/templates/{templateId}/result [get]
 // @Success 200 {object} ctx.JSONResult{result=resps.ScanResultPageResp}
 func (Policy) TemplateScanResult(c *ctx.GinRequest) {
