@@ -249,6 +249,7 @@ func (Organization) SearchOrgResources(c *ctx.GinRequest) {
 	c.JSONResult(apps.SearchOrgResources(c.Service(), &form))
 }
 
+
 //SearchOrgResourcesFilters 搜索当前组织下所有项目的活跃环境名称以及provider
 //@Tags 组织
 //@Summary 搜索当前组织下所有项目的活跃资源列表

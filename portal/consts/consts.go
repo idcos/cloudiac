@@ -146,6 +146,8 @@ const (
 	TaskSourceWebhookApply = "webhookApply"
 	TaskSourceAutoDestroy  = "autoDestroy"
 	TaskSourceApi          = "api"
+
+	TaskAutoDestroyName = "Auto Destroy"
 )
 
 var (
@@ -158,6 +160,8 @@ var (
 	VariableGroupTpl     = []string{ScopeOrg, ScopeTemplate}
 	VariableGroupProject = []string{ScopeOrg, ScopeProject}
 	VariableGroupOrg     = []string{ScopeOrg}
+
+	TaskActiveStatus = []string{common.TaskPending, common.TaskRunning, common.TaskApproving}
 
 	StatusTranslation = map[string]string{
 		"complete": "成功",
