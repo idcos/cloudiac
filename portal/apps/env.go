@@ -503,14 +503,14 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		env.MergeTaskStatus()
 		PopulateLastTask(c.DB(), env)
 		env.PolicyStatus = models.PolicyStatusConversion(env.PolicyStatus, env.PolicyEnable)
-		// 以分钟为单位返回
-		env.StepTimeout = env.StepTimeout / 60
 		// runner tags 数组形式返回
 		if env.Env.RunnerTags != "" {
 			env.RunnerTags = strings.Split(env.Env.RunnerTags, ",")
 		} else {
 			env.RunnerTags = []string{}
 		}
+		// 以分钟为单位返回
+		env.StepTimeout = env.StepTimeout / 60
 	}
 
 	return page.PageResp{
