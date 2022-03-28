@@ -4,9 +4,7 @@ package main
 import (
 	"cloudiac/configs"
 	"cloudiac/portal/libs/db"
-	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
-	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
 	"fmt"
 	"strings"
@@ -30,7 +28,7 @@ func (*ChangeRunnerIdToRunnerTagsCmd) Execute(args []string) error {
 		}
 	}()
 
-	envDetails, err := searchEnvDetails(tx)
+	envs, err := searchEnvs(tx)
 	if err != nil {
 		_ = tx.Rollback()
 		return err
@@ -38,6 +36,7 @@ func (*ChangeRunnerIdToRunnerTagsCmd) Execute(args []string) error {
 
 	runners, err := services.RunnerSearch()
 	if err != nil {
+		_ = tx.Rollback()
 		return err
 	}
 
@@ -45,7 +44,8 @@ func (*ChangeRunnerIdToRunnerTagsCmd) Execute(args []string) error {
 	for _, runner := range runners {
 		runnerIds[runner.ID] = strings.Join(runner.Tags, ",")
 	}
-	if err := updateRunnerIdToRunnerTags(tx, envDetails, runnerIds); err != nil {
+
+	if err := updateRunnerIdToRunnerTags(tx, envs, runnerIds); err != nil {
 		_ = tx.Rollback()
 		return err
 	}
@@ -56,23 +56,20 @@ func (*ChangeRunnerIdToRunnerTagsCmd) Execute(args []string) error {
 	return nil
 }
 
-func searchEnvDetails(query *db.Session) ([]*models.EnvDetail, error) {
-	query = services.QueryEnvDetail(query)
-	form := forms.PageForm{}
-	p := page.New(form.CurrentPage(), form.PageSize(), query)
-
-	details := make([]*models.EnvDetail, 0)
-	if err := p.Scan(&details); err != nil {
+func searchEnvs(query *db.Session) ([]*models.Env, error) {
+	envs := make([]*models.Env, 0)
+	query = services.QueryEnv(query)
+	if err := query.Find(&envs); err != nil {
 		return nil, fmt.Errorf("database error")
 	}
-	return details, nil
+	return envs, nil
 }
 
-func updateRunnerIdToRunnerTags(tx *db.Session, envDetails []*models.EnvDetail, runnerIds map[string]string) error {
+func updateRunnerIdToRunnerTags(tx *db.Session, envs []*models.Env, runnerIds map[string]string) error {
 	attrs := models.Attrs{}
-	var noArchivedEnvs []*models.EnvDetail
-	for _, env := range envDetails {
-		if !env.Env.Archived && env.Env.RunnerId != "" {
+	var noArchivedEnvs []*models.Env
+	for _, env := range envs {
+		if !env.Archived && env.RunnerId != "" {
 			noArchivedEnvs = append(noArchivedEnvs, env)
 		}
 	}
@@ -81,15 +78,15 @@ func updateRunnerIdToRunnerTags(tx *db.Session, envDetails []*models.EnvDetail, 
 	}
 	for _, noArchivedEnv := range noArchivedEnvs {
 		for runnerId, runnerTag := range runnerIds {
-			if noArchivedEnv.Env.RunnerId != runnerId {
+			if noArchivedEnv.RunnerId != runnerId {
 				continue
 			}
 			attrs["runner_tags"] = runnerTag
 			attrs["runner_id"] = ""
-			if _, err := tx.Model(&models.Env{}).Where("id = ?", noArchivedEnv.Env.Id).UpdateAttrs(attrs); err != nil {
+			if _, err := tx.Model(&models.Env{}).Where("id = ?", noArchivedEnv.Id).UpdateAttrs(attrs); err != nil {
 				panic("update has been fail")
 			}
-			logger.Infof("change runnerId to runnerTags success, envId = %s,runnerId=%s,runnerTags = %s", noArchivedEnv.Env.Id, runnerId, runnerTag)
+			logger.Infof("change runnerId to runnerTags success, envId = %s,runnerId=%s,runnerTags = %s", noArchivedEnv.Id, runnerId, runnerTag)
 		}
 	}
 	return nil
