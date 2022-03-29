@@ -1355,10 +1355,13 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 
 	// CLOUDIAC_TASK_ID	当前任务的 id
 	sysEnvs["CLOUDIAC_TASK_ID"] = req.TaskId
+	sysEnvs["TF_VAR_cloudiac_task_id"] = req.TaskId
 	// CLOUDIAC_BRANCH	当前任务的云模板代码的分支
 	sysEnvs["CLOUDIAC_BRANCH"] = req.RepoBranch
+	sysEnvs["TF_VAR_cloudiac_branch"] = req.RepoBranch
 	// CLOUDIAC_COMMIT	当前任务的云模板代码 commit hash
 	sysEnvs["CLOUDIAC_COMMIT"] = req.RepoCommitId
+	sysEnvs["TF_VAR_cloudiac_commit"] = req.RepoCommitId
 
 	if req.Env.Id != "" {
 		env, err := services.GetEnvById(db.Get(), models.Id(req.Env.Id))
@@ -1373,24 +1376,33 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 
 		// 当前任务的组织 ID
 		sysEnvs["CLOUDIAC_ORG_ID"] = env.OrgId.String()
+		sysEnvs["TF_VAR_cloudiac_org_id"] = env.OrgId.String()
 		// 当前任务的项目 ID
 		sysEnvs["CLOUDIAC_PROJECT_ID"] = env.ProjectId.String()
+		sysEnvs["TF_VAR_cloudiac_project_id"] = env.ProjectId.String()
 
 		// CLOUDIAC_TEMPLATE_ID	当前任务的模板 ID
 		sysEnvs["CLOUDIAC_TEMPLATE_ID"] = env.TplId.String()
+		sysEnvs["TF_VAR_cloudiac_template_id"] = env.TplId.String()
 		// CLOUDIAC_ENV_ID	当前任务的环境 ID
 		sysEnvs["CLOUDIAC_ENV_ID"] = env.Id.String()
+		sysEnvs["TF_VAR_cloudiac_env_id"] = env.Id.String()
 		// CLOUDIAC_ENV_NAME	当前任务的环境名称
 		sysEnvs["CLOUDIAC_ENV_NAME"] = env.Name
+		sysEnvs["TF_VAR_cloudiac_env_name"] = env.Name
 		// CLOUDIAC_ENV_STATUS	当前环境状态(启动任务时)
 		sysEnvs["CLOUDIAC_ENV_STATUS"] = env.Status
+		sysEnvs["TF_VAR_cloudiac_env_status"] = env.Status
 		// 当前环境中的资源数量(启动任务时)
 		sysEnvs["CLOUDIAC_ENV_RESOURCES"] = fmt.Sprintf("%d", resCount)
+		sysEnvs["TF_VAR_cloudiac_env_resources"] = fmt.Sprintf("%d", resCount)
 		// CLOUDIAC_TF_VERSION	当前任务使用的 terraform 版本号(eg. 0.14.11)
 		sysEnvs["CLOUDIAC_TF_VERSION"] = req.Env.TfVersion
+		sysEnvs["TF_VAR_cloudiac_tf_version"] = req.Env.TfVersion
 	}
 
 	req.SysEnvironments = sysEnvs
+
 	return nil
 }
 
