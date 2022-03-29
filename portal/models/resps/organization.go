@@ -40,3 +40,46 @@ type OrgEnvAndProviderResp struct {
 	Envs      []EnvResp `json:"envs"`
 	Providers []string  `json:""`
 }
+
+type EnvStatResp struct {
+	Description string `json:"description"`
+	List        []struct {
+		Status string `json:"status"`
+		Count  int    `json:"count"`
+	} `json:"list"`
+}
+
+type ResStatResp struct {
+	Description string `json:"description"`
+	List        []struct {
+		ResType string `json:"resType"`
+		Count   int    `json:"count"`
+	} `json:"list"`
+}
+
+type ProjectStatResp struct {
+	Description string `json:"description"`
+	List        []struct {
+		ProjectId   string `json:"projectId"`
+		ProjectName string `json:"projectName"`
+		ResType     string `json:"resType"`
+		Count       int    `json:"count"`
+	} `json:"list"`
+}
+
+type ResGrowTrendResp struct {
+	Description string `json:"description"`
+	List        []struct {
+		ProjectId   string `json:"projectId"`
+		ProjectName string `json:"projectName"`
+		Date        string `json:"date"`
+		Count       int    `json:"count"`
+	} `json:"list"`
+}
+
+type OrgProjectsStatResp struct {
+	EnvStat      EnvStatResp      `json:"envStat"`
+	ResStat      ResStatResp      `json:"resStat"`
+	ProjectStat  ProjectStatResp  `json:"projectStat"`
+	ResGrowTrend ResGrowTrendResp `json:"resGrowTrend"`
+}

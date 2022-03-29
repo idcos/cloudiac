@@ -146,6 +146,9 @@ func Register(g *gin.RouterGroup) {
 	g.PUT("/projects/users/:id", ac(), w(handlers.ProjectUser{}.Update))
 	g.DELETE("/projects/users/:id", ac(), w(handlers.ProjectUser{}.Delete))
 
+	// 组织概览统计数据
+	g.GET("/orgs/:id/projects/statistics")
+
 	//项目管理
 	ctrl.Register(g.Group("projects", ac()), &handlers.Project{})
 
@@ -211,8 +214,8 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/policy_result", ac(), w(handlers.Env{}.PolicyResult))
 	g.GET("/envs/:id/resources/graph", ac(), w(handlers.Env{}.SearchResourcesGraph))
 	g.GET("/envs/:id/resources/graph/:resourceId", ac(), w(handlers.Env{}.ResourceGraphDetail))
-	g.POST("/envs/:id/lock", ac("envs","lock"), w(handlers.EnvLock))
-	g.POST("/envs/:id/unlock", ac("envs","unlock"), w(handlers.EnvUnLock))
+	g.POST("/envs/:id/lock", ac("envs", "lock"), w(handlers.EnvLock))
+	g.POST("/envs/:id/unlock", ac("envs", "unlock"), w(handlers.EnvUnLock))
 	g.GET("/envs/:id/unlock/confirm", ac(), w(handlers.EnvUnLockConfirm))
 
 	// 任务管理

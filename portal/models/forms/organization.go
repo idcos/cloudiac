@@ -81,3 +81,10 @@ type InviteUsersBatchForm struct {
 	Email []string  `form:"email" json:"email" binding:"required,dive,required,email,max=64"`             // 电子邮件地址
 	Role  string    `form:"role" json:"role" binding:"omitempty,oneof=admin member" enums:"admin,member"` // 受邀请用户在组织中的角色，组织管理员：admin，普通用户：member
 }
+
+type OrgProjectsStatForm struct {
+	BaseForm
+	Id         models.Id `uri:"id" json:"id" binding:"required,startswith=org-,max=32" swaggerignore:"true"` // 组织ID
+	ProjectIds []string  `form:"projectIds" json:"projectIds"`
+	Limit      int       `form:"limit" json:"limit"`
+}
