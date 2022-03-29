@@ -287,10 +287,44 @@ limit %d;`
 		sql = fmt.Sprintf(sql, orgId, "", limit)
 	} else {
 		pids := strings.Join(projectIds, `', '`)
-		sql = fmt.Sprintf(sql, orgId, `and iac_env.project_id ('`+pids+`')`, limit)
+		sql = fmt.Sprintf(sql, orgId, `and iac_env.project_id in ('`+pids+`')`, limit)
 	}
 
 	var results []resps.ProjectStatResp
+	if err := tx.Raw(sql).Scan(&results); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return results, nil
+}
+
+func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string) ([]resps.ResGrowTrendResp, e.Error) {
+	sql := `select
+	iac_resource.project_id as project_id,
+	iac_project.name as project_name,
+	count(*) as count,
+	DATE_FORMAT(applied_at, "%%Y-%%m-%%d") as date
+from
+	iac_resource
+JOIN iac_project ON
+	iac_project.id = iac_resource.project_id
+where
+	applied_at > DATE_SUB(CURDATE(), INTERVAL 15 DAY)
+	and iac_resource.org_id = '%s'
+	%s
+group by
+	date, iac_resource.project_id
+order by
+	date;`
+
+	if len(projectIds) == 0 {
+		sql = fmt.Sprintf(sql, orgId, "")
+	} else {
+		pids := strings.Join(projectIds, `', '`)
+		sql = fmt.Sprintf(sql, orgId, `and iac_resource.project_id in ('`+pids+`')`)
+	}
+
+	var results []resps.ResGrowTrendResp
 	if err := tx.Raw(sql).Scan(&results); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}

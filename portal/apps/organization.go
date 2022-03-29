@@ -661,10 +661,15 @@ func OrgProjectsStat(c *ctx.ServiceContext, form *forms.OrgProjectsStatForm) (in
 	}
 
 	// 资源新增趋势
+	resGrowTrend, err := services.GetOrgResGrowTrend(tx, c.OrgId, form.ProjectIds)
+	if err != nil {
+		return nil, err
+	}
 
 	return &resps.OrgProjectsStatResp{
-		EnvStat:     envStat,
-		ResStat:     resStat,
-		ProjectStat: projectStat,
+		EnvStat:      envStat,
+		ResStat:      resStat,
+		ProjectStat:  projectStat,
+		ResGrowTrend: resGrowTrend,
 	}, nil
 }
