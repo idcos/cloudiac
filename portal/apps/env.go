@@ -1166,7 +1166,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		StopOnViolation: env.StopOnViolation,
 		BaseTask: models.BaseTask{
 			Type:        form.TaskType,
-			StepTimeout: form.StepTimeout,
+			StepTimeout: env.StepTimeout,
 			RunnerId:    rId,
 		},
 	})
