@@ -181,6 +181,12 @@ KAFKA_BROKERS=[]
 KAFKA_SASL_USERNAME=""
 KAFKA_SASL_PASSWORD=""
 
+# LDAP 配置
+LDAP_ADMIN_DN=""
+LDAP_ADMIN_PASSWORD=""
+LDAP_SERVER=""
+LDAP_SEARCH_BASE=""
+
 ######### 以下为 runner 配置 #############
 # runner 服务注册配置(均为必填)
 ## runner 服务的 IP 地址， 容器化部署时无需修改, 手动部署时配置为内网 IP

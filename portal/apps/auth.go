@@ -3,6 +3,7 @@
 package apps
 
 import (
+	"cloudiac/configs"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
@@ -15,13 +16,22 @@ import (
 	"time"
 )
 
-func validPassword(password, userPassword string) e.Error {
-	valid, er := utils.CheckPassword(password, userPassword)
-	if er != nil {
-		return e.New(e.ValidateError, http.StatusInternalServerError, er)
+func validPassword(c *ctx.ServiceContext, user *models.User, email, password string) e.Error {
+	if user.IsLdap {
+		if _, err := services.LdapAuthLogin(email, password); err != nil {
+			c.Logger().Warnf("ldap login error: %v", err)
+			return e.New(e.InvalidPassword, http.StatusUnauthorized)
+		}
+		return nil
+	}
+
+	valid, err := utils.CheckPassword(password, user.Password)
+	if err != nil {
+		c.Logger().Warnf("check password error: %v", err)
+		return e.New(e.InternalError, http.StatusInternalServerError)
 	}
 	if !valid {
-		return e.New(e.InvalidPassword, http.StatusBadRequest)
+		return e.New(e.InvalidPassword, http.StatusUnauthorized)
 	}
 	return nil
 }
@@ -30,39 +40,32 @@ func validPassword(password, userPassword string) e.Error {
 func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("user login: %s", form.Email))
 	user, err := services.GetUserByEmail(c.DB(), form.Email)
-	// ldap 账号只能使用ldap账号进行登录
-	if err == nil {
-		if user.IsLdap {
-			if _, err = services.LdapAuthLogin(form.Email, form.Password); err != nil {
-				return nil, err
-			}
-		} else {
-			if err = validPassword(form.Password, user.Password); err != nil {
-				return nil, err
-			}
-		}
-	} else {
-		if err.Code() == e.UserNotExists {
+	if err != nil {
+		if err.Code() == e.UserNotExists && configs.Get().Ldap.LdapServer != "" {
 			// 使用ldap 进行登录
 			username, ldapErr := services.LdapAuthLogin(form.Email, form.Password)
 			if ldapErr != nil {
 				// 找不到账号时也返回 InvalidPassword 错误，避免暴露系统中己有用户账号
-				c.Logger().Error(ldapErr)
+				c.Logger().Warnf("ldap auth login: %v", ldapErr)
 				return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
 			}
+
 			// 登录成功, 标记账号为ldap用户，并且在用户表中添加该用户
 			user, err = services.CreateUser(c.DB(), models.User{
 				Name:   username,
 				Email:  form.Email,
 				IsLdap: true,
 			})
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, e.New(e.DBError, err)
 		}
+
+		if err != nil {
+			c.Logger().Warnf("get or create user error: %v", err)
+			return nil, e.New(e.InternalError, http.StatusInternalServerError)
+		}
+	} else if err := validPassword(c, user, form.Email, form.Password); err != nil {
+		return nil, err
 	}
+
 	token, er := services.GenerateToken(user.Id, user.Name, user.IsAdmin, 1*24*time.Hour)
 	if er != nil {
 		c.Logger().Errorf("name [%s] generateToken error: %v", user.Email, er)
