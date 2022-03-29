@@ -397,7 +397,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		StopOnViolation: env.StopOnViolation,
 		BaseTask: models.BaseTask{
 			Type:        form.TaskType,
-			StepTimeout: form.StepTimeout,
+			StepTimeout: taskStepTimeout,
 			RunnerId:    runnerId,
 		},
 		ExtraData: models.JSON(form.ExtraData),
