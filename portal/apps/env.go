@@ -176,16 +176,17 @@ func getRunnerId(runnerTags []string, runnerId string) (string, e.Error) {
 	return services.GetDefaultRunner()
 }
 
-// getTaskStepTimeout return timeout in second
-func getTaskStepTimeout(timeout int) (int, e.Error) {
-	if timeout <= 0 {
+// getTaskStepTimeoutInSecond return timeout in second
+func getTaskStepTimeoutInSecond(timeoutInMinute int) (int, e.Error) {
+	timeoutInSecond := timeoutInMinute * 60
+	if timeoutInSecond <= 0 {
 		sysTimeout, err := services.GetSystemTaskStepTimeout(db.Get())
 		if err != nil {
 			return -1, err
 		}
-		timeout = sysTimeout
+		timeoutInSecond = sysTimeout
 	}
-	return timeout / 60, nil
+	return timeoutInSecond, nil
 }
 
 func createEnvToDB(tx *db.Session, c *ctx.ServiceContext, form *forms.CreateEnvForm, envModel models.Env) (*models.Env, e.Error) {
@@ -321,7 +322,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, err
 	}
 
-	taskStepTimeout, err := getTaskStepTimeout(form.StepTimeout)
+	taskStepTimeout, err := getTaskStepTimeoutInSecond(form.StepTimeout)
 	if err != nil {
 		return nil, err
 	}
