@@ -228,3 +228,35 @@ group by
 
 	return results, nil
 }
+
+func GetOrgProjectsdResStat(tx *db.Session, orgId models.Id, projectIds []string, limit int) ([]resps.ResStatResp, e.Error) {
+	sql := `select
+	iac_resource.type as res_type,
+	count(*) as count
+from
+	iac_resource
+join iac_env on
+	iac_env.last_res_task_id = iac_resource.task_id
+where
+	iac_env.org_id = '%s'
+	%s
+group by
+	res_type
+order by
+	count desc
+limit %d;`
+
+	if len(projectIds) == 0 {
+		sql = fmt.Sprintf(sql, orgId, "", limit)
+	} else {
+		pids := strings.Join(projectIds, `', '`)
+		sql = fmt.Sprintf(sql, orgId, `and iac_env.project_id in ('`+pids+`')`, limit)
+	}
+
+	var results []resps.ResStatResp
+	if err := tx.Raw(sql).Scan(&results); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return results, nil
+}

@@ -638,6 +638,9 @@ func InviteUsersBatch(c *ctx.ServiceContext, form *forms.InviteUsersBatchForm) (
 
 // OrgProjectsStat 组织和项目概览页统计数据
 func OrgProjectsStat(c *ctx.ServiceContext, form *forms.OrgProjectsStatForm) (interface{}, e.Error) {
+	if form.Limit == 0 {
+		form.Limit = 10
+	}
 	tx := c.DB()
 	// 环境状态占比
 	envStat, err := services.GetOrgProjectsdEnvStat(tx, c.OrgId, form.ProjectIds)
@@ -646,6 +649,10 @@ func OrgProjectsStat(c *ctx.ServiceContext, form *forms.OrgProjectsStatForm) (in
 	}
 
 	// 资源类型占比
+	resStat, err := services.GetOrgProjectsdResStat(tx, c.OrgId, form.ProjectIds, form.Limit)
+	if err != nil {
+		return nil, err
+	}
 
 	// 项目资源数量
 
@@ -653,5 +660,6 @@ func OrgProjectsStat(c *ctx.ServiceContext, form *forms.OrgProjectsStatForm) (in
 
 	return &resps.OrgProjectsStatResp{
 		EnvStat: envStat,
+		ResStat: resStat,
 	}, nil
 }
