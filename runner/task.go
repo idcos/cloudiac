@@ -328,13 +328,13 @@ func (t *Task) genPlayVarsFile(workspace string) error {
 	if err != nil {
 		return err
 	}
-	var sysEnvsNoTf = make(map[string]string)
+	var ansibleVars = t.req.Env.AnsibleVars
 	for key, value := range t.req.SysEnvironments {
 		if key != "" && strings.HasPrefix(key, "CLOUDIAC_") {
-			sysEnvsNoTf[key] = value
+			ansibleVars[strings.ToLower(key)] = value
 		}
 	}
-	return yaml.NewEncoder(fp).Encode(sysEnvsNoTf)
+	return yaml.NewEncoder(fp).Encode(ansibleVars)
 }
 
 func (t *Task) genPolicyFiles(workspace string) error {
