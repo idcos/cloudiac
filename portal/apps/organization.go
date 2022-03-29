@@ -649,17 +649,22 @@ func OrgProjectsStat(c *ctx.ServiceContext, form *forms.OrgProjectsStatForm) (in
 	}
 
 	// 资源类型占比
-	resStat, err := services.GetOrgProjectsdResStat(tx, c.OrgId, form.ProjectIds, form.Limit)
+	resStat, err := services.GetOrgProjectsResStat(tx, c.OrgId, form.ProjectIds, form.Limit)
 	if err != nil {
 		return nil, err
 	}
 
 	// 项目资源数量
+	projectStat, err := services.GetOrgProjectStat(tx, c.OrgId, form.ProjectIds, form.Limit)
+	if err != nil {
+		return nil, err
+	}
 
 	// 资源新增趋势
 
 	return &resps.OrgProjectsStatResp{
-		EnvStat: envStat,
-		ResStat: resStat,
+		EnvStat:     envStat,
+		ResStat:     resStat,
+		ProjectStat: projectStat,
 	}, nil
 }
