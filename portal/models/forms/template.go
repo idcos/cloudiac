@@ -24,7 +24,7 @@ type CreateTemplateForm struct {
 	Extra        string      `form:"extra" json:"extra"`
 	Workdir      string      `form:"workdir" json:"workdir" binding:"max=255"`
 	VcsId        models.Id   `form:"vcsId" json:"vcsId" binding:"required,max=32"`
-	Playbook     string      `json:"playbook" form:"playbook" binding:"omitempty,endswith=.yml,max=255"`
+	Playbook     string      `json:"playbook" form:"playbook" binding:"omitempty,max=255"`
 	PlayVarsFile string      `json:"playVarsFile" form:"playVarsFile" binding:"max=255"`
 	TfVarsFile   string      `form:"tfVarsFile" json:"tfVarsFile" binding:"max=255"`
 	ProjectId    []models.Id `form:"projectId" json:"projectId" binding:"required,dive,required,startswith=p-,max=32"` // 项目ID
@@ -57,7 +57,7 @@ type UpdateTemplateForm struct {
 	Status         string      `form:"status" json:"status" binding:"omitempty,oneof=enable disable"`
 	Workdir        string      `form:"workdir" json:"workdir" binding:"max=255"`
 	RunnerId       string      `json:"runnerId" form:"runnerId" binding:"max=255"`
-	Playbook       string      `json:"playbook" form:"playbook" binding:"omitempty,endswith=.yml,max=255"`
+	Playbook       string      `json:"playbook" form:"playbook" binding:"omitempty,max=255"`
 	PlayVarsFile   string      `json:"playVarsFile" form:"playVarsFile" binding:"max=255"`
 	TfVarsFile     string      `form:"tfVarsFile" json:"tfVarsFile" binding:"max=255"`
 	ProjectId      []models.Id `form:"projectId" json:"projectId" binding:"omitempty,dive,required,startswith=p-,max=32"`
@@ -128,5 +128,5 @@ type TemplateChecksForm struct {
 	Workdir      string    `json:"workdir" form:"workdir" binding:"max=255"`
 	TemplateId   models.Id `json:"templateId" form:"templateId" binding:"omitempty,startswith=tpl-,max=32"`
 	TfVarsFile   string    `json:"tfVarsFile" form:"tfVarsFile" binding:"max=255"`
-	Playbook     string    `json:"playbook" form:"playbook" binding:"omitempty,endswith=.yml,max=255"`
+	Playbook     string    `json:"playbook" form:"playbook" binding:"omitempty,max=255"`
 }
