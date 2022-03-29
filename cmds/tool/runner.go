@@ -6,6 +6,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
+	"cloudiac/utils"
 	"fmt"
 	"strings"
 )
@@ -38,6 +39,12 @@ func (*ChangeRunnerIdToRunnerTagsCmd) Execute(args []string) error {
 	if err != nil {
 		_ = tx.Rollback()
 		return err
+	}
+
+	logger.Infof("find runners: %s", utils.MustJSON(runners))
+	if len(runners) <= 0 {
+		_ = tx.Rollback()
+		return fmt.Errorf("no runner services, please start ct-runner first")
 	}
 
 	runnerIds := make(map[string]string)
@@ -76,18 +83,27 @@ func updateRunnerIdToRunnerTags(tx *db.Session, envs []*models.Env, runnerIds ma
 	if len(noArchivedEnvs) == 0 {
 		return fmt.Errorf("no env runner-id needs to be modified")
 	}
+
+	replaces := make([]*models.Env, 0)
+	missed := make([]*models.Env, 0)
 	for _, noArchivedEnv := range noArchivedEnvs {
-		for runnerId, runnerTag := range runnerIds {
-			if noArchivedEnv.RunnerId != runnerId {
-				continue
-			}
+		if runnerTag, ok := runnerIds[noArchivedEnv.RunnerId]; ok {
 			attrs["runner_tags"] = runnerTag
 			attrs["runner_id"] = ""
 			if _, err := tx.Model(&models.Env{}).Where("id = ?", noArchivedEnv.Id).UpdateAttrs(attrs); err != nil {
 				panic("update has been fail")
 			}
-			logger.Infof("change runnerId to runnerTags success, envId = %s,runnerId=%s,runnerTags = %s", noArchivedEnv.Id, runnerId, runnerTag)
+			logger.Infof("replace runnerId to runnerTags success, envId=%s, runnerId=%s, runnerTags=%s",
+				noArchivedEnv.Id, noArchivedEnv.RunnerId, runnerTag)
+			replaces = append(replaces, noArchivedEnv)
+		} else {
+			missed = append(missed, noArchivedEnv)
 		}
 	}
+
+	for _, e := range missed {
+		logger.Warnf("runner not found, envId=%s, runnerId=%s", e.Id, e.RunnerId)
+	}
+	logger.Infof("summary, replaced: %d, missed: %d", len(replaces), len(missed))
 	return nil
 }

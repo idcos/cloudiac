@@ -158,7 +158,8 @@ const (
 	TaskStepNotExists     = 30914
 	TaskNotHaveStep       = 30916
 	TaskAborting          = 30917
-	TaskCannotAbort       = 30918
+	TaskAborted           = 30918
+	TaskCannotAbort       = 30919
 
 	//// ssh key 310
 	KeyAlreadyExists  = 31010

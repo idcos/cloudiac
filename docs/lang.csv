@@ -64,7 +64,9 @@
 30914,TaskStepNotExists,步骤不存在,task step does not exists
 20007,InvalidProjectId,无效的项目id,invalid project id
 30916,TaskNotHaveStep,任务无步骤,task have no steps
-3091y,TaskAborting,任务正在中止,task is aborting
+30917,TaskAborting,任务正在中止,task is aborting
+30918,TaskAborted,任务已中止,task aborted
+30919,TaskCannotAbort,任务当前无法中止,task cannot abort
 30710,TemplateAlreadyExists,模板名称重复,template already exists
 10101,HCLParseError,模板语法解析错误,hcl parse error
 30510,VariableAlreadyExists,变量已存在,variable already exists

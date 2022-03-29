@@ -88,12 +88,17 @@ func (task *StartedTask) Status() (info types.ContainerExecInspect, err error) {
 }
 
 func (task *StartedTask) IsAborted() bool {
+	if task.Step < 0 {
+		// 隐含步骤不会被中止
+		return false
+	}
+
 	info, err := task.ReadControlInfo()
 	if err != nil {
 		logger.Warnf("read control info error: %v", err)
 		return false
 	}
-	return !info.AbortedAt.IsZero()
+	return info.Aborted()
 }
 
 func (task *StartedTask) TaskDir() string {
@@ -102,10 +107,6 @@ func (task *StartedTask) TaskDir() string {
 
 func (task *StartedTask) containerInfoPath() string {
 	return filepath.Join(task.TaskDir(), TaskContainerInfoFileName)
-}
-
-func (task *StartedTask) controlFilePath() string {
-	return filepath.Join(task.TaskDir(), TaskControlFileName)
 }
 
 func (task *StartedTask) writeContainerInfo(info *types.ContainerExecInspect) error {
@@ -148,31 +149,24 @@ func (task *StartedTask) readContainerInfo() (info types.ContainerExecInspect, e
 	return info, err
 }
 
-type taskControlInfo struct {
+type TaskControlInfo struct {
+	EnvId     string
+	TaskId    string
 	AbortedAt time.Time
 }
 
-func (info *taskControlInfo) Aborted() bool {
+func (info *TaskControlInfo) Aborted() bool {
 	return !info.AbortedAt.IsZero()
 }
 
-func (task *StartedTask) WriteControlInfo(info taskControlInfo) error {
-	return os.WriteFile(task.controlFilePath(), utils.MustJSON(info), 0600)
+func (task *StartedTask) WriteControlInfo(info TaskControlInfo) error {
+	info.EnvId = task.EnvId
+	info.TaskId = task.TaskId
+	return WriteTaskControlInfo(info)
 }
 
-func (task *StartedTask) ReadControlInfo() (info taskControlInfo, err error) {
-	data, err := os.ReadFile(task.controlFilePath())
-	if err != nil {
-		if os.IsNotExist(err) {
-			return info, nil
-		}
-		return info, err
-	}
-
-	if err := json.Unmarshal(data, &info); err != nil {
-		return info, err
-	}
-	return info, nil
+func (task *StartedTask) ReadControlInfo() (info TaskControlInfo, err error) {
+	return ReadTaskControlInfo(task.EnvId, task.TaskId)
 }
 
 // Wait 等待任务结束返回退出码，若超时返回 error=context.DeadlineExceeded

@@ -176,16 +176,17 @@ func getRunnerId(runnerTags []string, runnerId string) (string, e.Error) {
 	return services.GetDefaultRunner()
 }
 
-// getTaskStepTimeout return timeout in second
-func getTaskStepTimeout(timeout int) (int, e.Error) {
-	if timeout <= 0 {
+// getTaskStepTimeoutInSecond return timeout in second
+func getTaskStepTimeoutInSecond(timeoutInMinute int) (int, e.Error) {
+	timeoutInSecond := timeoutInMinute * 60
+	if timeoutInSecond <= 0 {
 		sysTimeout, err := services.GetSystemTaskStepTimeout(db.Get())
 		if err != nil {
 			return -1, err
 		}
-		timeout = sysTimeout
+		timeoutInSecond = sysTimeout
 	}
-	return timeout / 60, nil
+	return timeoutInSecond, nil
 }
 
 func createEnvToDB(tx *db.Session, c *ctx.ServiceContext, form *forms.CreateEnvForm, envModel models.Env) (*models.Env, e.Error) {
@@ -280,8 +281,24 @@ func getCreateEnvTpl(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.
 		c.Logger().Errorf("error get template, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
-
 	return tpl, nil
+}
+
+func envWorkdirCheck(c *ctx.ServiceContext, repoId, repoRevision, workdir string, vcsId models.Id) e.Error {
+	searchForm := &forms.RepoFileSearchForm{
+		RepoId:       repoId,
+		RepoRevision: repoRevision,
+		VcsId:        vcsId,
+		Workdir:      workdir,
+	}
+	results, err := VcsRepoFileSearch(c, searchForm, "", consts.TfFileMatch)
+	if err != nil {
+		return err
+	}
+	if len(results) == 0 {
+		return e.New(e.TemplateWorkdirError, fmt.Errorf("no '%s' files", consts.TfFileMatch))
+	}
+	return nil
 }
 
 // CreateEnv 创建环境
@@ -298,7 +315,10 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	if err != nil {
 		return nil, err
 	}
-
+	// 检查环境传入工作目录
+	if err = envWorkdirCheck(c, tpl.RepoId, tpl.RepoRevision, form.Workdir, tpl.VcsId); err != nil {
+		return nil, err
+	}
 	// 以下值只在未传入时使用模板定义的值，如果入参有该字段即使值为空也不会使用模板中的值
 	var (
 		destroyAt models.Time
@@ -321,7 +341,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, err
 	}
 
-	taskStepTimeout, err := getTaskStepTimeout(form.StepTimeout)
+	taskStepTimeout, err := getTaskStepTimeoutInSecond(form.StepTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -396,7 +416,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		StopOnViolation: env.StopOnViolation,
 		BaseTask: models.BaseTask{
 			Type:        form.TaskType,
-			StepTimeout: form.StepTimeout,
+			StepTimeout: taskStepTimeout,
 			RunnerId:    runnerId,
 		},
 		ExtraData: models.JSON(form.ExtraData),
@@ -1122,6 +1142,10 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	// 模板检查
 	tpl, err := envTplCheck(tx, c.OrgId, env.TplId, c.Logger())
 	if err != nil {
+		return nil, err
+	}
+	// 环境下云模版工作目录检查
+	if err = envWorkdirCheck(c, tpl.RepoId, tpl.RepoRevision, form.Workdir, tpl.VcsId); err != nil {
 		return nil, err
 	}
 	lg.Debugln("envDeploy -> envTplCheck finish")

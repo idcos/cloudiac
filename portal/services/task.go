@@ -210,7 +210,7 @@ func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*mode
 		EnvId:     env.Id,
 		StatePath: env.StatePath,
 
-		Workdir:   tpl.Workdir,
+		Workdir:   firstVal(pt.Workdir, env.Workdir, tpl.Workdir),
 		TfVersion: tpl.TfVersion,
 
 		Playbook:     env.Playbook,
@@ -865,7 +865,7 @@ func fetchTaskStepLog(ctx context.Context, task models.Tasker, writer io.Writer,
 
 	storage := logstorage.Get()
 
-	if task, step, err = waitTaskStepStarted(ctx, task.GetId(), step.Index); err != nil {
+	if task, step, err = waitTaskStepStarted(ctx, task, step.Index); err != nil {
 		return err
 	}
 
@@ -906,28 +906,24 @@ func fetchTaskStepLog(ctx context.Context, task models.Tasker, writer io.Writer,
 	return nil
 }
 
-func waitTaskStepStarted(ctx context.Context, taskId models.Id, stepIndex int) (task models.Tasker, step *models.TaskStep, err error) {
+func waitTaskStepStarted(ctx context.Context, tasker models.Tasker, stepIndex int) (task models.Tasker, step *models.TaskStep, err error) {
 	sleepDuration := consts.DbTaskPollInterval
 	ticker := time.NewTicker(sleepDuration)
 	defer ticker.Stop()
 
 	for {
-		task, err = GetTask(db.Get(), taskId)
+		step, err = GetTaskStep(db.Get(), tasker.GetId(), stepIndex)
 		if err != nil {
-			return task, step, errors.Wrapf(err, "get task '%s'", taskId)
-		}
-		step, err = GetTaskStep(db.Get(), task.GetId(), stepIndex)
-		if err != nil {
-			return task, step, errors.Wrapf(err, "get task step %d", stepIndex)
+			return tasker, step, errors.Wrapf(err, "get task step %d", stepIndex)
 		}
 
-		if task.Exited() || step.IsStarted() {
-			return task, step, nil
+		if tasker.Exited() || step.IsStarted() {
+			return tasker, step, nil
 		}
 
 		select {
 		case <-ctx.Done():
-			return task, step, nil
+			return tasker, step, nil
 		case <-ticker.C:
 			continue
 		}
@@ -1483,6 +1479,14 @@ func GetActiveTaskByEnvId(tx *db.Session, id models.Id) ([]models.Task, e.Error)
 }
 
 func AbortRunnerTask(task models.Task) e.Error {
+	return doAbortRunnerTask(task, false)
+}
+
+func CheckRunnerTaskCanAbort(task models.Task) e.Error {
+	return doAbortRunnerTask(task, true)
+}
+
+func doAbortRunnerTask(task models.Task, justCheck bool) e.Error {
 	logger := logs.Get().WithField("taskId", task.Id).WithField("action", "AbortTask")
 
 	header := &http.Header{}
@@ -1498,8 +1502,9 @@ func AbortRunnerTask(task models.Task) e.Error {
 	logger.Debugf("request runner: %s", requestUrl)
 
 	param := runner.TaskAbortReq{
-		EnvId:  task.EnvId.String(),
-		TaskId: task.Id.String(),
+		EnvId:     task.EnvId.String(),
+		TaskId:    task.Id.String(),
+		JustCheck: justCheck,
 	}
 
 	respData, err := utils.HttpService(requestUrl, "POST", header, param,

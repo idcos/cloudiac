@@ -72,6 +72,14 @@ var Polices = []Policy{
 	{"login", "runner", "*"},
 	{"login", "consul", "*"},
 	{"login", "webhook", "*"},
+	{"login", "systems", "read"},
+	{"login", "system_config", "read"},
+
+	// 系统配置
+	{"admin", "systems", "read"},
+	{"admin", "system_config", "read"},
+	{"member", "systems", "read"},
+	{"member", "system_config", "read"},
 
 	// 合规策略
 	// 组织角色

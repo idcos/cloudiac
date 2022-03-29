@@ -8,6 +8,7 @@ import (
 	"cloudiac/policy"
 	"cloudiac/portal/apps"
 	"cloudiac/portal/consts"
+	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
@@ -842,6 +843,12 @@ func waitTaskStepDone(
 			changeStepStatus(models.TaskStepRunning, "", step)
 			if cid, retryAble, err := StartTaskStep(taskReq, *step); err != nil {
 				logger.Warnf("start task step %s(%d): %v", step.Type, step.Index, err)
+
+				if e.Is(err, e.TaskAborted) {
+					changeStepStatus(models.TaskStepAborted, err.Error(), step)
+					return err
+				}
+
 				// 如果是可重试错误，并且任务设定可以重试, 则运行重试逻辑
 				if retryAble && task.RetryAble {
 					if step.RetryNumber > 0 && step.CurrentRetryCount < step.RetryNumber {
@@ -1330,7 +1337,12 @@ func waitScanTaskStepDone(
 			logger.Infof("start task step %d(%s)", step.Index, step.Type)
 			if cid, _, err := StartTaskStep(taskReq, *step); err != nil {
 				logger.Errorf("start task step error: %s", err.Error())
-				changeStepStatus(models.TaskStepFailed, err.Error(), step)
+
+				if e.Is(err, e.TaskAborted) {
+					changeStepStatus(models.TaskStepAborted, err.Error(), step)
+				} else {
+					changeStepStatus(models.TaskStepFailed, err.Error(), step)
+				}
 				return err
 			} else if task.ContainerId == "" {
 				if err := services.UpdateScanTaskContainerId(db, models.Id(taskReq.TaskId), cid); err != nil {

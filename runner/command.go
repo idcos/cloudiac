@@ -252,6 +252,7 @@ func (Executor) Wait(ctx context.Context, cid string) error {
 }
 
 var ErrContainerNotRun = fmt.Errorf("container not running")
+var ErrTaskAborted = fmt.Errorf("task aborted")
 
 func (Executor) WaitCommand(ctx context.Context, containerId string, execId string) (execInfo types.ContainerExecInspect, err error) {
 	cli, err := dockerClient()

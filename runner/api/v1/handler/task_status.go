@@ -132,9 +132,11 @@ func doSendTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, withLog 
 			return err
 		}
 		msg = runner.TaskStatusMessage{
-			Aborted:  task.IsAborted(),
 			Exited:   !status.Running,
 			ExitCode: status.ExitCode,
+		}
+		if task.Step >= 0 {
+			msg.Aborted = task.IsAborted()
 		}
 	}
 
