@@ -280,8 +280,24 @@ func getCreateEnvTpl(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.
 		c.Logger().Errorf("error get template, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
-
 	return tpl, nil
+}
+
+func envWorkdirCheck(c *ctx.ServiceContext, repoId, repoRevision, workdir string, vcsId models.Id) e.Error {
+	searchForm := &forms.RepoFileSearchForm{
+		RepoId:       repoId,
+		RepoRevision: repoRevision,
+		VcsId:        vcsId,
+		Workdir:      workdir,
+	}
+	results, err := VcsRepoFileSearch(c, searchForm, "", consts.TfFileMatch)
+	if err != nil {
+		return err
+	}
+	if len(results) == 0 {
+		return e.New(e.TemplateWorkdirError, fmt.Errorf("no '%s' files", consts.TfFileMatch))
+	}
+	return nil
 }
 
 // CreateEnv 创建环境
@@ -298,7 +314,11 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	if err != nil {
 		return nil, err
 	}
-
+	// 检查环境传入工作目录
+	if err = envWorkdirCheck(c, tpl.RepoId, tpl.RepoRevision, form.Workdir, tpl.VcsId); err != nil {
+		return nil, err
+	}
+	tpl.Workdir = form.Workdir
 	// 以下值只在未传入时使用模板定义的值，如果入参有该字段即使值为空也不会使用模板中的值
 	var (
 		destroyAt models.Time
@@ -1124,6 +1144,11 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	if err != nil {
 		return nil, err
 	}
+	// 环境下云模版工作目录检查
+	if err = envWorkdirCheck(c, tpl.RepoId, tpl.RepoRevision, form.Workdir, tpl.VcsId); err != nil {
+		return nil, err
+	}
+	tpl.Workdir = form.Workdir
 	lg.Debugln("envDeploy -> envTplCheck finish")
 
 	// set env from form
