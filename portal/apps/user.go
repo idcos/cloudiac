@@ -283,7 +283,7 @@ func UpdateUser(c *ctx.ServiceContext, form *forms.UpdateUserForm) (*models.User
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	}
 	if user.IsLdap {
-		if form.HasKey("name") || form.HasKey("phone") || form.HasKey("oldPassword") || form.HasKey("newPassword") {
+		if form.HasKey("oldPassword") || form.HasKey("newPassword") {
 			return nil, e.New(e.LdapUpdateFailed)
 		}
 	}
