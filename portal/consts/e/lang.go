@@ -270,6 +270,14 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "task is aborting",
 		"zh-CN": "任务正在中止",
 	},
+	TaskAborted: {
+		"en-US": "task aborted",
+		"zh-CN": "任务已中止",
+	},
+	TaskCannotAbort: {
+		"en-US": "task cannot abort",
+		"zh-CN": "任务当前无法中止",
+	},
 	TemplateAlreadyExists: {
 		"en-US": "template already exists",
 		"zh-CN": "模板名称重复",
