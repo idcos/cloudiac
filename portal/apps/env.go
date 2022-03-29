@@ -318,7 +318,6 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	if err = envWorkdirCheck(c, tpl.RepoId, tpl.RepoRevision, form.Workdir, tpl.VcsId); err != nil {
 		return nil, err
 	}
-	tpl.Workdir = form.Workdir
 	// 以下值只在未传入时使用模板定义的值，如果入参有该字段即使值为空也不会使用模板中的值
 	var (
 		destroyAt models.Time
@@ -1148,7 +1147,6 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	if err = envWorkdirCheck(c, tpl.RepoId, tpl.RepoRevision, form.Workdir, tpl.VcsId); err != nil {
 		return nil, err
 	}
-	tpl.Workdir = form.Workdir
 	lg.Debugln("envDeploy -> envTplCheck finish")
 
 	// set env from form

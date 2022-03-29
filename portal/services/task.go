@@ -210,7 +210,7 @@ func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*mode
 		EnvId:     env.Id,
 		StatePath: env.StatePath,
 
-		Workdir:   tpl.Workdir,
+		Workdir:   firstVal(pt.Workdir, env.Workdir, tpl.Workdir),
 		TfVersion: tpl.TfVersion,
 
 		Playbook:     env.Playbook,
