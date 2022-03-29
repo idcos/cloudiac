@@ -3,6 +3,7 @@
 package task_manager
 
 import (
+	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"context"
 	"encoding/json"
@@ -67,6 +68,8 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (
 
 	if result, ok := resp.Result.(map[string]interface{}); !ok {
 		return "", false, fmt.Errorf("unexpected result: %v", resp.Result)
+	} else if aborted, ok := result["aborted"].(bool); ok && aborted {
+		return "", false, e.New(e.TaskAborted)
 	} else {
 		containerId = fmt.Sprintf("%v", result["containerId"])
 	}

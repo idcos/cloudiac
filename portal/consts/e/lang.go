@@ -270,6 +270,14 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "task is aborting",
 		"zh-CN": "任务正在中止",
 	},
+	TaskAborted: {
+		"en-US": "task aborted",
+		"zh-CN": "任务已中止",
+	},
+	TaskCannotAbort: {
+		"en-US": "task cannot abort",
+		"zh-CN": "任务当前无法中止",
+	},
 	TemplateAlreadyExists: {
 		"en-US": "template already exists",
 		"zh-CN": "模板名称重复",
@@ -539,11 +547,11 @@ var errorMsgs = map[int]map[string]string{
 		"zh-CN": "仓库在当前目录找不到策略文件",
 	},
 	LdapConnectFailed: {
-		"zh-CN": "ldap链接服务端链接失败",
 		"en-US": "ldap servers connect failed",
+		"zh-CN": "ldap链接服务端链接失败",
 	},
 	LdapUpdateFailed: {
-		"zh-CN": "ldap账户不支持在iac服务端进行修改",
 		"en-US": "LDAP accounts cannot be modified on the IAC server",
+		"zh-CN": "ldap账户不支持在iac服务端进行修改",
 	},
 }

@@ -52,7 +52,6 @@ func CleanTaskWorkDirCode(envId, taskId string) error {
 }
 
 func (t *Task) Run() (cid string, err error) {
-
 	if t.req.ContainerId == "" {
 		cid, err = t.start()
 		if err != nil {
@@ -188,6 +187,14 @@ func (t *Task) runStep() (err error) {
 		command = fmt.Sprintf("set -o pipefail\n%s 2>&1 >>%s", containerScriptPath, logPath)
 	} else {
 		command = fmt.Sprintf("%s >>%s 2>&1", containerScriptPath, logPath)
+	}
+
+	if t.req.Step >= 0 { // step < 0 表示是隐含步骤，不需要判断任务是否已中止
+		if info, err := ReadTaskControlInfo(t.req.Env.Id, t.req.TaskId); err != nil {
+			return err
+		} else if info.Aborted() {
+			return ErrTaskAborted
+		}
 	}
 
 	if err := (Executor{}).UnpauseIf(t.req.ContainerId); err != nil {

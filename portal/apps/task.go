@@ -771,19 +771,28 @@ func AbortTask(c *ctx.ServiceContext, form *forms.AbortTaskForm) (interface{}, e
 				return e.AutoNew(err, e.DBError)
 			}
 		} else if step.Status == models.TaskStepApproving {
+			task.Aborting = true
+			if _, err := models.UpdateModel(tx, task); err != nil {
+				return e.AutoNew(err, e.DBError)
+			}
 			// 步骤在待审批状态时直接将状态改为 aborted 并同步修改任务状态
 			if er := services.ChangeTaskStep2Aborted(tx, task.Id, step.Index); er != nil {
 				return er
 			}
 		} else if task.Started() && !task.Exited() {
-			// 任务在执行状态时发送指令中断 runner 的任务执行，然后 runner 会上报步骤被中止
-			go utils.RecoverdCall(func() {
-				goAbortRunnerTask(c.Logger(), *task)
-			})
+			if err := services.CheckRunnerTaskCanAbort(*task); err != nil {
+				return e.New(e.TaskCannotAbort, err)
+			}
+
 			task.Aborting = true
 			if _, err := models.UpdateModel(tx, task); err != nil {
 				return e.AutoNew(err, e.DBError)
 			}
+
+			// 任务在执行状态时发送指令中断 runner 的任务执行，然后 runner 会上报步骤被中止
+			go utils.RecoverdCall(func() {
+				goAbortRunnerTask(c.Logger(), *task)
+			})
 		} else {
 			return e.New(e.TaskCannotAbort,
 				fmt.Errorf("task status is '%s'", task.Status), http.StatusConflict)
@@ -800,9 +809,10 @@ func AbortTask(c *ctx.ServiceContext, form *forms.AbortTaskForm) (interface{}, e
 func goAbortRunnerTask(logger logs.Logger, task models.Task) {
 	logger = logger.WithField("action", "goAbortRunnerTask")
 	if er := services.AbortRunnerTask(task); er != nil {
-		task.Aborting = true
 		logger.Errorf("abort task error: %v", er)
-		if _, err := models.UpdateModel(db.Get(), &task); err != nil {
+		task.Aborting = false
+		if _, err := models.UpdateAttr(db.Get(), &models.Task{},
+			models.Attrs{"aborting": false}, "id = ?", task.Id); err != nil {
 			logger.Errorf("update task aborting error: %v", err)
 		}
 	}

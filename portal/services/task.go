@@ -1483,6 +1483,14 @@ func GetActiveTaskByEnvId(tx *db.Session, id models.Id) ([]models.Task, e.Error)
 }
 
 func AbortRunnerTask(task models.Task) e.Error {
+	return doAbortRunnerTask(task, false)
+}
+
+func CheckRunnerTaskCanAbort(task models.Task) e.Error {
+	return doAbortRunnerTask(task, true)
+}
+
+func doAbortRunnerTask(task models.Task, justCheck bool) e.Error {
 	logger := logs.Get().WithField("taskId", task.Id).WithField("action", "AbortTask")
 
 	header := &http.Header{}
@@ -1498,8 +1506,9 @@ func AbortRunnerTask(task models.Task) e.Error {
 	logger.Debugf("request runner: %s", requestUrl)
 
 	param := runner.TaskAbortReq{
-		EnvId:  task.EnvId.String(),
-		TaskId: task.Id.String(),
+		EnvId:     task.EnvId.String(),
+		TaskId:    task.Id.String(),
+		JustCheck: justCheck,
 	}
 
 	respData, err := utils.HttpService(requestUrl, "POST", header, param,

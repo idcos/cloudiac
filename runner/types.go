@@ -76,6 +76,8 @@ type TaskStopReq struct {
 type TaskAbortReq struct {
 	EnvId  string `json:"envId" form:"envId" binding:"required"`
 	TaskId string `json:"taskId" form:"taskId" binding:"required"`
+
+	JustCheck bool `json:"justCheck" form:"justCheck"` // 只检查任务是否可以 abort，不执行实际中止操作
 }
 
 type TaskPolicy struct {
