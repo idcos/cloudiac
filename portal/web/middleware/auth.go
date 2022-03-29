@@ -80,6 +80,11 @@ func Auth(c *ctx.GinRequest) {
 		return
 	}
 
+	// Remove Bearer from token string
+	if len(tokenStr) > 6 && tokenStr[0:6] == "Bearer" {
+		tokenStr = tokenStr[7:]
+	}
+
 	apiTokenOrgId, err := checkToken(c, tokenStr)
 	if err != nil {
 		c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
