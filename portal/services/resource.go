@@ -9,7 +9,7 @@ import (
 
 func GetResourceByEnvId(tx *db.Session, envId models.Id) (models.ResFields, error) {
 	resources := models.ResFields{}
-	if err := tx.Raw("SELECT res_id,any_value(applied_at) as applied_at FROM (SELECT * FROM iac_resource ORDER BY applied_at LIMIT 9999999) res Where env_id = ? GROUP BY res_id;", envId).Scan(&resources); err != nil {
+	if err := tx.Raw("select res_id,min(applied_at) as applied_at from iac_resource where env_id = ? and applied_at is not null group by res_id;", envId).Scan(&resources); err != nil {
 		return nil, err
 	}
 	if len(resources) == 0 {
