@@ -539,11 +539,11 @@ var errorMsgs = map[int]map[string]string{
 		"zh-CN": "仓库在当前目录找不到策略文件",
 	},
 	LdapConnectFailed: {
-		"zh-CN": "ldap链接服务端链接失败",
 		"en-US": "ldap servers connect failed",
+		"zh-CN": "ldap链接服务端链接失败",
 	},
 	LdapUpdateFailed: {
-		"zh-CN": "ldap账户不支持在iac服务端进行修改",
 		"en-US": "LDAP accounts cannot be modified on the IAC server",
+		"zh-CN": "ldap账户不支持在iac服务端进行修改",
 	},
 }

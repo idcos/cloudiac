@@ -131,6 +131,9 @@ func Register(g *gin.RouterGroup) {
 	// 列出组织下资源搜索得到的相关环境名称以及provider名称
 	g.GET("/orgs/resources/filters", ac("orgs", "read"), w(handlers.Organization{}.SearchOrgResourcesFilters))
 
+	// 组织概览统计数据
+	g.GET("/orgs/projects/statistics", ac(), w(handlers.Organization{}.OrgProjectsStat))
+
 	// 组织用户管理
 	g.GET("/orgs/:id/users", ac("orgs", "listuser"), w(handlers.Organization{}.SearchUser))
 	g.POST("/orgs/:id/users", ac("orgs", "adduser"), w(handlers.Organization{}.AddUserToOrg))
@@ -145,9 +148,6 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/projects/users", ac(), w(handlers.ProjectUser{}.Create))
 	g.PUT("/projects/users/:id", ac(), w(handlers.ProjectUser{}.Update))
 	g.DELETE("/projects/users/:id", ac(), w(handlers.ProjectUser{}.Delete))
-
-	// 组织概览统计数据
-	g.GET("/orgs/:id/projects/statistics")
 
 	//项目管理
 	ctrl.Register(g.Group("projects", ac()), &handlers.Project{})

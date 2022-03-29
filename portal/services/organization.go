@@ -8,7 +8,9 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/resps"
 	"fmt"
+	"strings"
 )
 
 func CreateOrganization(tx *db.Session, org models.Organization) (*models.Organization, e.Error) {
@@ -190,4 +192,39 @@ func GetOrgResourcesQuery(tx *db.Session, searchStr string, orgId, userId models
 	}
 	return query
 
+}
+
+func GetOrgProjectsdEnvStat(tx *db.Session, orgId models.Id, projectIds []string) ([]resps.EnvStatResp, e.Error) {
+	sql := `select
+	status,
+	count(*) as count
+from
+	(
+	select
+		if(task_status = '',
+		status,
+		task_status) as status
+	from
+		iac_env
+	where
+		archived = 0
+		and org_id = '%s'
+		%s
+) as t
+group by
+	status;`
+
+	if len(projectIds) == 0 {
+		sql = fmt.Sprintf(sql, orgId, "")
+	} else {
+		pids := strings.Join(projectIds, `', '`)
+		sql = fmt.Sprintf(sql, orgId, `and project_id in ('`+pids+`')`)
+	}
+
+	var results []resps.EnvStatResp
+	if err := tx.Raw(sql).Scan(&results); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return results, nil
 }

@@ -635,3 +635,23 @@ func InviteUsersBatch(c *ctx.ServiceContext, form *forms.InviteUsersBatchForm) (
 
 	return resps.InviteUsersBatchResp{Success: success, Failed: failed}, nil
 }
+
+// OrgProjectsStat 组织和项目概览页统计数据
+func OrgProjectsStat(c *ctx.ServiceContext, form *forms.OrgProjectsStatForm) (interface{}, e.Error) {
+	tx := c.DB()
+	// 环境状态占比
+	envStat, err := services.GetOrgProjectsdEnvStat(tx, c.OrgId, form.ProjectIds)
+	if err != nil {
+		return nil, err
+	}
+
+	// 资源类型占比
+
+	// 项目资源数量
+
+	// 资源新增趋势
+
+	return &resps.OrgProjectsStatResp{
+		EnvStat: envStat,
+	}, nil
+}

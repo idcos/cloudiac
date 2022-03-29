@@ -84,7 +84,6 @@ type InviteUsersBatchForm struct {
 
 type OrgProjectsStatForm struct {
 	BaseForm
-	Id         models.Id `uri:"id" json:"id" binding:"required,startswith=org-,max=32" swaggerignore:"true"` // 组织ID
-	ProjectIds []string  `form:"projectIds" json:"projectIds"`
-	Limit      int       `form:"limit" json:"limit"`
+	ProjectIds []string `form:"projectIds" json:"projectIds"`
+	Limit      int      `form:"limit" json:"limit"`
 }
