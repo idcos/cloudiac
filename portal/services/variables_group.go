@@ -279,6 +279,9 @@ func GetVariableGroupVar(vgs []VarGroupRel, vars map[string]models.Variable) map
 	}
 	// 将标准变量覆盖
 	for k, v := range vars {
+		if _, ok := variableM[k]; ok && v.Scope != variableM[k].Scope {
+			continue
+		}
 		variableM[k] = v
 	}
 	return variableM
