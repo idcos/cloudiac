@@ -195,34 +195,17 @@ func GetOrgResourcesQuery(tx *db.Session, searchStr string, orgId, userId models
 }
 
 func GetOrgProjectsdEnvStat(tx *db.Session, orgId models.Id, projectIds []string) ([]resps.EnvStatResp, e.Error) {
-	sql := `select
-	status,
-	count(*) as count
-from
-	(
-	select
-		if(task_status = '',
-		status,
-		task_status) as status
-	from
-		iac_env
-	where
-		archived = 0
-		and org_id = '%s'
-		%s
-) as t
-group by
-	status;`
+	subQuery := tx.Model(&models.Env{}).Select(`if(task_status = '', status, task_status) as status`)
+	subQuery = subQuery.Where("archived = ?", 0).Where("org_id = ?", orgId)
 
-	if len(projectIds) == 0 {
-		sql = fmt.Sprintf(sql, orgId, "")
-	} else {
-		pids := strings.Join(projectIds, `', '`)
-		sql = fmt.Sprintf(sql, orgId, `and project_id in ('`+pids+`')`)
+	if len(projectIds) > 0 {
+		subQuery = subQuery.Where("project_id in ?", projectIds)
 	}
 
+	query := tx.Table("(?) as t", subQuery.Expr()).Select(`status, count(*) as count`).Group("status")
+
 	var results []resps.EnvStatResp
-	if err := tx.Raw(sql).Scan(&results); err != nil {
+	if err := query.Find(&results); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
@@ -246,15 +229,18 @@ order by
 	count desc
 limit %d;`
 
-	if len(projectIds) == 0 {
-		sql = fmt.Sprintf(sql, orgId, "", limit)
-	} else {
-		pids := strings.Join(projectIds, `', '`)
-		sql = fmt.Sprintf(sql, orgId, `and iac_env.project_id in ('`+pids+`')`, limit)
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.type as res_type, count(*) as count`)
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
+	query = query.Where(`iac_env.org_id = ?`, orgId)
+
+	if len(projectIds) > 0 {
+		query = query.Where(`iac_env.project_id in ?`, projectIds)
 	}
 
+	query = query.Group("res_type").Order("count desc").Limit(limit)
+
 	var results []resps.ResStatResp
-	if err := tx.Raw(sql).Scan(&results); err != nil {
+	if err := query.Find(&results); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
