@@ -38,10 +38,10 @@ type CreateEnvForm struct {
 	KeyId        models.Id `form:"keyId" json:"keyId" binding:"omitempty,startswith=k-,max=32"` // 部署密钥ID
 	Workdir      string    `form:"workdir" json:"workdir" binding:"max=32"`                     // 工作目录
 
-	RetryNumber int         `form:"retryNumber" json:"retryNumber" binding:""`           // 重试总次数
-	RetryDelay  int         `form:"retryDelay" json:"retryDelay" binding:""`             // 重试时间间隔
-	RetryAble   bool        `form:"retryAble" json:"retryAble" binding:""`               // 是否允许任务进行重试
-	ExtraData   models.JSON `form:"extraData" json:"extraData" binding:"omitempty,json"` // 扩展字段，用于存储外部服务调用时的信息
+	RetryNumber int         `form:"retryNumber" json:"retryNumber" binding:""` // 重试总次数
+	RetryDelay  int         `form:"retryDelay" json:"retryDelay" binding:""`   // 重试时间间隔
+	RetryAble   bool        `form:"retryAble" json:"retryAble" binding:""`     // 是否允许任务进行重试
+	ExtraData   models.JSON `form:"extraData" json:"extraData" binding:""`     // 扩展字段，用于存储外部服务调用时的信息
 
 	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" binding:"omitempty,dive,required,startswith=vg-,max=32"`
 	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" binding:"omitempty,dive,required,startswith=vg-,max=32"`
