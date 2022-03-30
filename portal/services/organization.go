@@ -213,22 +213,6 @@ func GetOrgProjectsdEnvStat(tx *db.Session, orgId models.Id, projectIds []string
 }
 
 func GetOrgProjectsResStat(tx *db.Session, orgId models.Id, projectIds []string, limit int) ([]resps.ResStatResp, e.Error) {
-	sql := `select
-	iac_resource.type as res_type,
-	count(*) as count
-from
-	iac_resource
-join iac_env on
-	iac_env.last_res_task_id = iac_resource.task_id
-where
-	iac_env.org_id = '%s'
-	%s
-group by
-	res_type
-order by
-	count desc
-limit %d;`
-
 	query := tx.Model(&models.Resource{}).Select(`iac_resource.type as res_type, count(*) as count`)
 	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
 	query = query.Where(`iac_env.org_id = ?`, orgId)
