@@ -14,6 +14,10 @@ type ResourceAccount struct {
 	Description string `json:"description" gorm:"size:255;comment:资源账号描述"`
 	Params      JSON   `json:"params" gorm:"type:json;null;comment:账号变量"`
 	Status      string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:资源账号状态"`
+
+	CostEstimated bool   `json:"costEstimate" gorm:"default:false;comment:是否开启费用预估"`                                                              // 是否开启费用预估
+	CostCounted   bool   `json:"costCounted" gorm:"default:false;comment:是否开启费用统计"`                                                               // 是否开启费用统计
+	Provider      string `json:"provider" gorm:"type:enum('alicloud', 'aws', 'azure', 'google', 'tencentcloud', 'huaweicloud');comment:资源供应平台名称"` // 资源供应平台名称
 }
 
 func (ResourceAccount) TableName() string {
