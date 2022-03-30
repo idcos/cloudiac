@@ -2,10 +2,6 @@
 
 package models
 
-import (
-	"cloudiac/portal/libs/db"
-)
-
 type ResourceAccountProjectRel struct {
 	AbstractModel
 	ProjectId         Id `json:"projectId" gorm:"size:32;not null;comment:项目ID"`
