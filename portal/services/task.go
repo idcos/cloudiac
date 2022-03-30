@@ -153,10 +153,14 @@ func CloneNewDriftTask(tx *db.Session, src models.Task, env *models.Env) (*model
 	task.CreatorId = consts.SysUserId
 	task.AutoApprove = env.AutoApproval
 	task.StopOnViolation = env.StopOnViolation
-	task.RunnerId = env.RunnerId
 	// newCommonTask方法完成了对keyId赋值，这里不需要在进行一次赋值了
 	//task.KeyId = env.KeyId
 	task.Source = taskSource
+
+	task.RunnerId, er = GetAvailableRunnerId(env.RunnerId, strings.Split(env.RunnerTags, ","))
+	if er != nil {
+		return nil, er
+	}
 
 	return doCreateTask(tx, *task, tpl, env)
 }
