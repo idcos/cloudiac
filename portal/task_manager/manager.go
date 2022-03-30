@@ -673,11 +673,11 @@ func (m *TaskManager) processTaskDone(taskId models.Id) { //nolint:cyclop
 
 		// 任务执行成功才会进行 changes 统计，失败的话基于 plan 文件进行变更统计是不准确的
 		// (terraform 执行 apply 失败也不会输出资源变更情况)
-		if lastStep.Status == models.TaskComplete {
+		/*if lastStep.Status == models.TaskComplete {
 			if err := taskDoneProcessPlan(dbSess, task); err != nil {
 				logger.Errorf("process task plan: %v", err)
 			}
-		}
+		}*/
 	}
 
 	if lastStep.Status == models.TaskComplete && task.IsDriftTask {
@@ -792,6 +792,10 @@ func waitTaskStepApprove(ctx context.Context, db *db.Session, task *models.Task,
 	if step.MustApproval && !step.IsApproved() {
 		logger.Infof("waitting task step approve")
 		changeStepStatus(models.TaskStepApproving, "", step)
+		err = taskDoneProcessPlan(db, task)
+		if err != nil {
+			logger.Errorf("process task plan: %v", err)
+		}
 		if newStep, err = WaitTaskStepApprove(ctx, db, step.TaskId, step.Index); err != nil {
 			if errors.Is(err, context.Canceled) {
 				return nil, err
