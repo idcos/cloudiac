@@ -111,11 +111,10 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*resps.TaskDe
 		Task:    *task,
 		Creator: user.Name,
 	}
-	if strings.Contains(o.RepoAddr, `token:`) {
-		o.RepoAddr, err = replaceVcsToken(o.RepoAddr)
-		if err != nil {
-			return nil, err
-		}
+	// 清除url token
+	o.RepoAddr, err = replaceVcsToken(o.RepoAddr)
+	if err != nil {
+		return nil, err
 	}
 	return &o, nil
 }
