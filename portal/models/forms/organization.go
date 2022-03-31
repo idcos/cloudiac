@@ -84,6 +84,6 @@ type InviteUsersBatchForm struct {
 
 type OrgProjectsStatForm struct {
 	BaseForm
-	ProjectIds []string `form:"projectIds" json:"projectIds"`
-	Limit      int      `form:"limit" json:"limit"`
+	ProjectIds string `form:"projectIds" json:"projectIds"`
+	Limit      int    `form:"limit" json:"limit"`
 }

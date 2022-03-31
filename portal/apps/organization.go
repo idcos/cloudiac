@@ -642,26 +642,30 @@ func OrgProjectsStat(c *ctx.ServiceContext, form *forms.OrgProjectsStatForm) (in
 		form.Limit = 10
 	}
 	tx := c.DB()
+	var projectIds []string
+	if form.ProjectIds != "" {
+		projectIds = strings.Split(form.ProjectIds, ",")
+	}
 	// 环境状态占比
-	envStat, err := services.GetOrgProjectsdEnvStat(tx, c.OrgId, form.ProjectIds)
+	envStat, err := services.GetOrgProjectsdEnvStat(tx, c.OrgId, projectIds)
 	if err != nil {
 		return nil, err
 	}
 
 	// 资源类型占比
-	resStat, err := services.GetOrgProjectsResStat(tx, c.OrgId, form.ProjectIds, form.Limit)
+	resStat, err := services.GetOrgProjectsResStat(tx, c.OrgId, projectIds, form.Limit)
 	if err != nil {
 		return nil, err
 	}
 
 	// 项目资源数量
-	projectStat, err := services.GetOrgProjectStat(tx, c.OrgId, form.ProjectIds, form.Limit)
+	projectStat, err := services.GetOrgProjectStat(tx, c.OrgId, projectIds, form.Limit)
 	if err != nil {
 		return nil, err
 	}
 
 	// 资源新增趋势
-	resGrowTrend, err := services.GetOrgResGrowTrend(tx, c.OrgId, form.ProjectIds)
+	resGrowTrend, err := services.GetOrgResGrowTrend(tx, c.OrgId, projectIds)
 	if err != nil {
 		return nil, err
 	}

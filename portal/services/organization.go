@@ -221,7 +221,10 @@ func GetOrgProjectsResStat(tx *db.Session, orgId models.Id, projectIds []string,
 		query = query.Where(`iac_env.project_id in ?`, projectIds)
 	}
 
-	query = query.Group("res_type").Order("count desc").Limit(limit)
+	query = query.Group("res_type").Order("count desc")
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
 
 	var results []resps.ResStatResp
 	if err := query.Find(&results); err != nil {
