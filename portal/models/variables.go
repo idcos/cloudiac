@@ -57,6 +57,9 @@ type VariableGroup struct {
 	CreatorId Id                `json:"creatorId" gorm:"size:32;not null;comment:创建人" example:"u-c3ek0co6n88ldvq1n6ag"`
 	OrgId     Id                `json:"orgId" gorm:"size:32;not null"`
 	Variables VarGroupVariables `json:"variables" gorm:"type:json;null;comment:变量组下的变量"`
+
+	CostCounted bool   `json:"costCounted" gorm:"default:false;comment:是否开启费用统计"` // 是否开启费用统计
+	Provider    string `json:"provider" gorm:"comment:资源供应平台名称"`                  // 资源供应平台名称
 }
 
 func (VariableGroup) TableName() string {
