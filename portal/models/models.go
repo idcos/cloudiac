@@ -236,7 +236,6 @@ func Init(migrate bool) {
 	autoMigrate(&VariableGroup{}, sess)
 	autoMigrate(&VariableGroupRel{}, sess)
 	autoMigrate(&ResourceDrift{}, sess)
-	autoMigrate(&ResourceAccountProjectRel{}, sess)
 
 	dbMigrate(sess)
 }

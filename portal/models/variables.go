@@ -107,3 +107,14 @@ type VariableGroupRel struct {
 func (VariableGroupRel) TableName() string {
 	return "iac_variable_group_rel"
 }
+
+//VariableGroupProjectRel 变量组与项目的关联表
+type VariableGroupProjectRel struct {
+	AbstractModel
+	VarGroupId Id `json:"varGroupId" gorm:"size:32;not null"`
+	ProjectId  Id `json:"projectId" gorm:"size:32;not null"`
+}
+
+func (VariableGroupProjectRel) TableName() string {
+	return "iac_variable_group_project_rel"
+}
