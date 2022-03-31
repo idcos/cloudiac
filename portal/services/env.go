@@ -305,6 +305,16 @@ func GetRunnerByTags(tags []string) (string, e.Error) {
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list with tags is null"))
 }
 
+func GetAvailableRunnerId(runnerId string, runnerTags []string) (string, e.Error) {
+	if runnerId != "" {
+		return runnerId, nil
+	}
+	if len(runnerTags) > 0 {
+		return GetRunnerByTags(runnerTags)
+	}
+	return GetDefaultRunner()
+}
+
 func varNewAppend(resp []forms.Variable, name, value, varType string) []forms.Variable {
 	resp = append(resp, forms.Variable{
 		Scope: consts.ScopeEnv,
@@ -341,7 +351,7 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 		}
 
 		// 这部分变量是新增的 需要新建
-		if isNewVaild{
+		if isNewVaild {
 			resp = varNewAppend(resp, v.Name, v.Value, consts.VarTypeEnv)
 		}
 	}

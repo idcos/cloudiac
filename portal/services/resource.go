@@ -7,9 +7,9 @@ import (
 	"cloudiac/portal/models"
 )
 
-func getResourceByEnvId(tx *db.Session, envId models.Id) ([]models.Resource, error) {
-	resources := make([]models.Resource, 0)
-	if err := tx.Table(models.Resource{}.TableName()).Where("env_id", envId).Order("applied_at").Find(&resources); err != nil {
+func GetResourceByEnvId(tx *db.Session, envId models.Id) (models.ResFields, error) {
+	resources := models.ResFields{}
+	if err := tx.Raw("select res_id,min(applied_at) as applied_at from iac_resource where env_id = ? and applied_at is not null group by res_id;", envId).Scan(&resources); err != nil {
 		return nil, err
 	}
 	if len(resources) == 0 {
@@ -17,4 +17,15 @@ func getResourceByEnvId(tx *db.Session, envId models.Id) ([]models.Resource, err
 	} else {
 		return resources, nil
 	}
+}
+
+func SetResFieldsAsMap(field models.ResFields) map[string]interface{} {
+	if field == nil {
+		return nil
+	}
+	resources := make(map[string]interface{})
+	for _, res := range field {
+		resources[string(res.ResId)] = res.AppliedAt
+	}
+	return resources
 }

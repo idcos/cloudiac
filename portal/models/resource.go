@@ -40,3 +40,10 @@ type Resource struct {
 func (Resource) TableName() string {
 	return "iac_resource"
 }
+
+type ResFields []ResField
+
+type ResField struct {
+	ResId     Id   `json:"resId"`
+	AppliedAt Time `json:"appliedAt"`
+}
