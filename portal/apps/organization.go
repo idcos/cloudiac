@@ -638,9 +638,6 @@ func InviteUsersBatch(c *ctx.ServiceContext, form *forms.InviteUsersBatchForm) (
 
 // OrgProjectsStat 组织和项目概览页统计数据
 func OrgProjectsStat(c *ctx.ServiceContext, form *forms.OrgProjectsStatForm) (interface{}, e.Error) {
-	if form.Limit == 0 {
-		form.Limit = 10
-	}
 	tx := c.DB()
 	var projectIds []string
 	if form.ProjectIds != "" {
@@ -670,10 +667,17 @@ func OrgProjectsStat(c *ctx.ServiceContext, form *forms.OrgProjectsStatForm) (in
 		return nil, err
 	}
 
+	// 资源概览
+	orgResSummary, err := services.GetOrgResSummary(tx, c.OrgId, projectIds, form.Limit)
+	if err != nil {
+		return nil, err
+	}
+
 	return &resps.OrgProjectsStatResp{
-		EnvStat:      envStat,
-		ResStat:      resStat,
-		ProjectStat:  projectStat,
-		ResGrowTrend: resGrowTrend,
+		EnvStat:       envStat,
+		ResStat:       resStat,
+		ProjectStat:   projectStat,
+		ResGrowTrend:  resGrowTrend,
+		OrgResSummary: orgResSummary,
 	}, nil
 }
