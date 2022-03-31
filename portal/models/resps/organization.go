@@ -60,10 +60,8 @@ type ProjectStatResp struct {
 }
 
 type ResGrowTrendResp struct {
-	ProjectId   string `json:"projectId"`
-	ProjectName string `json:"projectName"`
-	Date        string `json:"date"`
-	Count       int    `json:"count"`
+	Date  string `json:"date"`
+	Count int    `json:"count"`
 }
 
 type OrgProjectsStatResp struct {

@@ -10,7 +10,6 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/resps"
 	"fmt"
-	"strings"
 )
 
 func CreateOrganization(tx *db.Session, org models.Organization) (*models.Organization, e.Error) {
@@ -285,33 +284,41 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 }
 
 func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, days int) ([]resps.ResGrowTrendResp, e.Error) {
-	sql := `select
-	iac_resource.project_id as project_id,
-	iac_project.name as project_name,
-	count(*) as count,
-	DATE_FORMAT(applied_at, "%%Y-%%m-%%d") as date
-from
-	iac_resource
-JOIN iac_project ON
-	iac_project.id = iac_resource.project_id
-where
-	applied_at > DATE_SUB(CURDATE(), INTERVAL 15 DAY)
-	and iac_resource.org_id = '%s'
-	%s
-group by
-	date, iac_resource.project_id
-order by
-	date;`
+	/* sample sql
+	select
+		DATE_FORMAT(applied_at, "%Y-%m-%d") as date,
+		count(*) as count
+	from
+		iac_resource
+	JOIN iac_env ON
+		iac_env.last_res_task_id = iac_resource.task_id
+	where
+		iac_env.org_id = 'org-c8gg9fosm56injdlb85g'
+		and iac_env.project_id in ('p-c8gg9josm56injdlb86g', 'aaa')
+		and (
+		applied_at > DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+			or (applied_at > DATE_SUB(DATE_SUB(CURDATE(), INTERVAL 7 DAY), INTERVAL 1 MONTH)
+				and applied_at <= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)))
+	group by
+		date
+	order by
+		date
+	*/
 
-	if len(projectIds) == 0 {
-		sql = fmt.Sprintf(sql, orgId, "")
-	} else {
-		pids := strings.Join(projectIds, `', '`)
-		sql = fmt.Sprintf(sql, orgId, `and iac_resource.project_id in ('`+pids+`')`)
+	query := tx.Model(&models.Resource{}).Select(`DATE_FORMAT(applied_at, "%Y-%m-%d") as date, count(*) as count`)
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
+
+	query = query.Where("iac_env.org_id = ?", orgId)
+	if len(projectIds) > 0 {
+		query = query.Where(`iac_env.project_id in ?`, projectIds)
 	}
 
+	query = query.Where(`applied_at > DATE_SUB(CURDATE(), INTERVAL 7 DAY) or (applied_at > DATE_SUB(DATE_SUB(CURDATE(), INTERVAL 7 DAY), INTERVAL 1 MONTH) and applied_at <= DATE_SUB(CURDATE(), INTERVAL 1 MONTH))`)
+
+	query = query.Group("date").Order("date")
+
 	var results []resps.ResGrowTrendResp
-	if err := tx.Raw(sql).Scan(&results); err != nil {
+	if err := query.Debug().Find(&results); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
