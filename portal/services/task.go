@@ -767,14 +767,18 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource,
 	for _, r := range rs {
 		actions := r.Change.Actions
 		switch {
-		case utils.SliceEqualStr(actions, []string{"no-op"}),
-			utils.SliceEqualStr(actions, []string{"create", "delete"}):
+		case utils.SliceEqualStr(actions, []string{"no-op"}):
 			continue
+		case utils.SliceEqualStr(actions, []string{"create", "delete"}):
+			resAdded += 1
+			resDestroyed += 1
 		case utils.SliceEqualStr(actions, []string{"create"}):
 			resAdded += 1
-		case utils.SliceEqualStr(actions, []string{"update"}),
-			utils.SliceEqualStr(actions, []string{"delete", "create"}):
+		case utils.SliceEqualStr(actions, []string{"update"}):
 			resChanged += 1
+		case utils.SliceEqualStr(actions, []string{"delete", "create"}):
+			resDestroyed += 1
+			resAdded += 1
 		case utils.SliceEqualStr(actions, []string{"delete"}):
 			resDestroyed += 1
 		default:
