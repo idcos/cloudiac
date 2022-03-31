@@ -55,6 +55,7 @@ type ProjectStatResp struct {
 	ProjectId   string `json:"projectId"`
 	ProjectName string `json:"projectName"`
 	ResType     string `json:"resType"`
+	Date        string `json:"date"`
 	Count       int    `json:"count"`
 }
 
