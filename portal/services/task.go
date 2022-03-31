@@ -757,7 +757,7 @@ func UnmarshalTfParseJson(bs []byte) (*resps.TfParse, error) {
 	return &js, err
 }
 
-func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource) error {
+func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource, isPlanResult bool) error {
 
 	var (
 		resAdded     = 0
@@ -781,17 +781,7 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource)
 			logs.Get().WithField("taskId", task.Id).Errorf("unknown change actions: %v", actions)
 		}
 	}
-	if task.PlanResult.ResChanged != nil && task.PlanResult.ResAdded != nil && task.PlanResult.ResDestroyed != nil {
-		task.Result.ResAdded = &resAdded
-		task.Result.ResChanged = &resChanged
-		task.Result.ResDestroyed = &resDestroyed
-		if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
-			UpdateColumn("result", task.Result); err != nil {
-			return err
-		}
-	}
-
-	if task.Result.ResChanged == nil && task.Result.ResAdded == nil && task.Result.ResDestroyed == nil {
+	if isPlanResult {
 		task.PlanResult.ResAdded = &resAdded
 		task.PlanResult.ResChanged = &resChanged
 		task.PlanResult.ResDestroyed = &resDestroyed
@@ -800,8 +790,15 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource)
 			UpdateColumn("plan_result", task.PlanResult); err != nil {
 			return err
 		}
+	} else {
+		task.Result.ResAdded = &resAdded
+		task.Result.ResChanged = &resChanged
+		task.Result.ResDestroyed = &resDestroyed
+		if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
+			UpdateColumn("result", task.Result); err != nil {
+			return err
+		}
 	}
-
 	return nil
 }
 
