@@ -137,6 +137,9 @@ func (t *Task) buildVarsAndCmdEnv(cmd *Executor) error {
 		}
 	}
 
+	// 设置默认的 LC_ALL，解决 ansible playbook 中输出中文乱码问题
+	cmd.Env = append(cmd.Env, "LC_ALL=en_US.UTF-8")
+
 	tfPluginCacheDir := ""
 	for k, v := range t.req.Env.EnvironmentVars {
 		if k == "TF_PLUGIN_CACHE_DIR" {
