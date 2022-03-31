@@ -665,7 +665,7 @@ func OrgProjectsStat(c *ctx.ServiceContext, form *forms.OrgProjectsStatForm) (in
 	}
 
 	// 资源新增趋势
-	resGrowTrend, err := services.GetOrgResGrowTrend(tx, c.OrgId, projectIds)
+	resGrowTrend, err := services.GetOrgResGrowTrend(tx, c.OrgId, projectIds, 7)
 	if err != nil {
 		return nil, err
 	}

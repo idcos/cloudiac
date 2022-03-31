@@ -244,11 +244,13 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 		count(*) as count
 	from
 		iac_resource
+	JOIN iac_env ON
+		iac_env.last_res_task_id = iac_resource.task_id
 	JOIN iac_project ON
 		iac_project.id = iac_resource.project_id
 	where
-		iac_resource.org_id = 'org-c8gg9fosm56injdlb85g'
-		AND iac_resource.project_id IN ('p-c8gg9josm56injdlb86g', 'aaa')
+		iac_env.org_id = 'org-c8gg9fosm56injdlb85g'
+		AND iac_env.project_id IN ('p-c8gg9josm56injdlb86g', 'aaa')
 		AND (DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(CURDATE(), "%Y-%m")
 			OR
 		DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m"))
@@ -261,10 +263,11 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 
 	query := tx.Model(&models.Resource{}).Select(`iac_resource.project_id as project_id, iac_project.name as project_name, iac_resource.type as es_type, DATE_FORMAT(iac_resource.applied_at, "%Y-%m") as date, count(*) as count`)
 
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
 	query = query.Joins("JOIN iac_project ON iac_project.id = iac_resource.project_id")
-	query = query.Where("iac_resource.org_id = ?", orgId)
+	query = query.Where("iac_env.org_id = ?", orgId)
 	if len(projectIds) > 0 {
-		query = query.Where(`iac_resource.project_id in ?`, projectIds)
+		query = query.Where(`iac_env.project_id in ?`, projectIds)
 	}
 	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(CURDATE(), "%Y-%m") OR DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m")`)
 
@@ -281,7 +284,7 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 	return results, nil
 }
 
-func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string) ([]resps.ResGrowTrendResp, e.Error) {
+func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, days int) ([]resps.ResGrowTrendResp, e.Error) {
 	sql := `select
 	iac_resource.project_id as project_id,
 	iac_project.name as project_name,
