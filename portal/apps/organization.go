@@ -437,7 +437,7 @@ func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*resps.UserW
 	}
 
 	if !c.IsSuperAdmin {
-		ok, er := services.HasInviteUserPerm(c.DB(), c.UserId, org.Id)
+		ok, er := services.HasInviteUserPerm(c.DB(), c.UserId, org.Id, form.Role)
 		if er != nil {
 			return nil, er
 		}

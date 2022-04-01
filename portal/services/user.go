@@ -355,17 +355,19 @@ func GetUserHighestProjectRole(db *db.Session, orgId models.Id, userId models.Id
 }
 
 // HasInviteUserPerm 判断用户是否有邀请其他用户加入组织的权限
-func HasInviteUserPerm(db *db.Session, userId models.Id, orgId models.Id) (bool, e.Error) {
+func HasInviteUserPerm(db *db.Session, userId models.Id, orgId models.Id, targetRole string) (bool, e.Error) {
 	if UserHasOrgRole(userId, orgId, consts.OrgRoleAdmin) {
 		return true, nil
 	}
 
-	// 邀请用户接口除了允许组织管理员访问还允许组织下的项目管理员访问
-	role, err := GetUserHighestProjectRole(db, orgId, userId)
-	if err != nil {
-		return false, err
-	} else if role == consts.ProjectRoleManager {
-		return true, nil
+	if targetRole == consts.OrgRoleMember {
+		// 组织下的项目管理员可以邀请用户成为组织成员
+		role, err := GetUserHighestProjectRole(db, orgId, userId)
+		if err != nil {
+			return false, err
+		} else if role == consts.ProjectRoleManager {
+			return true, nil
+		}
 	}
 	return false, nil
 }
