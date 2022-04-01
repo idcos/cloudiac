@@ -1,5 +1,11 @@
 package billcollect
 
+import (
+	"cloudiac/portal/consts"
+	"cloudiac/portal/models"
+	"github.com/pkg/errors"
+)
+
 type ResourceCost struct {
 	ProductCode    string `json:"productCode"`    // 产品类型
 	InstanceId     string `json:"instanceId"`     // 实例id
@@ -11,10 +17,23 @@ type ResourceCost struct {
 	Provider       string `json:"provider"`
 }
 
-type BillIface interface {
-	Clint() (ClintIface, error)
-}
 
 type ClintIface interface {
-	GetResourceCost() ([]ResourceCost, error)
+	// GetResourceMonthCost 获取月账单数据
+	// param billingCycle 账单采集周期
+	GetResourceMonthCost(billingCycle string) ([]ResourceCost, error)
+
+	// GetResourceDayCost 获取日账单数据
+	// param billingCycle 账单采集周期
+	GetResourceDayCost(billingCycle string) ([]ResourceCost, error)
+}
+
+func GetBillInstance(vg *models.VariableGroup)(ClintIface,error){
+	switch vg.Provider {
+	case consts.BillCollectAli :
+		return newAliBillInstance(vg)
+	default:
+		return nil,errors.New("bill type not exist")
+
+	}
 }

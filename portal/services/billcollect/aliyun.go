@@ -1,18 +1,14 @@
 package billcollect
 
 import (
+	"cloudiac/portal/models"
 	bssopenapi20171214 "github.com/alibabacloud-go/bssopenapi-20171214/client"
 	openapi "github.com/alibabacloud-go/darabonba-openapi/client"
 	"github.com/alibabacloud-go/tea/tea"
 	"github.com/pkg/errors"
 )
 
-type aliBill struct {
-	Ak string
-	Sk string
-}
-
-func (ab *aliBill) CreateClient() (*aliClint, error) {
+func newAliBillInstance(vg *models.VariableGroup) (*aliClint, error) {
 	config := &openapi.Config{
 		AccessKeyId:     &ab.Ak,
 		AccessKeySecret: &ab.Sk,
@@ -28,6 +24,15 @@ func (ab *aliBill) CreateClient() (*aliClint, error) {
 		pageNum:  1,
 		pageSize: 300,
 	}, err
+}
+
+type aliBill struct {
+	Ak string
+	Sk string
+}
+
+func (ab *aliBill) Clint() (ClintIface, error) {
+
 }
 
 type aliClint struct {
@@ -68,10 +73,14 @@ func (ac *aliClint) GetResourceMonthCost(billingCycle string) ([]ResourceCost, e
 	}
 
 	if *result.Body.Data.TotalCount > (ac.pageSize * ac.pageNum) {
-		ac.pageNum ++
+		ac.pageNum++
 		r, _ := ac.GetResourceMonthCost(billingCycle)
 		resp = append(resp, r...)
 	}
 
 	return nil, err
+}
+
+func (ac *aliClint) GetResourceDayCost(billingCycle string) ([]ResourceCost, error) {
+	return nil, nil
 }

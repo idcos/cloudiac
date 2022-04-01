@@ -148,6 +148,8 @@ const (
 	TaskSourceApi          = "api"
 
 	TaskAutoDestroyName = "Auto Destroy"
+
+	BillCollectAli = "alicloud"
 )
 
 var (

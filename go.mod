@@ -10,7 +10,9 @@ require (
 	github.com/Shopify/sarama v1.28.0
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/agext/levenshtein v1.2.3 // indirect
-	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
+	github.com/alibabacloud-go/bssopenapi-20171214 v1.0.8
+	github.com/alibabacloud-go/darabonba-openapi v0.1.16
+	github.com/alibabacloud-go/tea v1.1.17
 	github.com/armon/go-metrics v0.3.10 // indirect
 	github.com/casbin/casbin/v2 v2.31.9
 	github.com/containerd/containerd v1.5.5 // indirect
@@ -22,7 +24,7 @@ require (
 	github.com/gin-contrib/sse v0.1.0
 	github.com/gin-gonic/gin v1.7.7
 	github.com/go-git/go-git/v5 v5.4.2
-	github.com/go-ldap/ldap/v3 v3.4.2 // indirect
+	github.com/go-ldap/ldap/v3 v3.4.2
 	github.com/go-playground/locales v0.14.0
 	github.com/go-playground/universal-translator v0.18.0
 	github.com/go-playground/validator/v10 v10.10.0
