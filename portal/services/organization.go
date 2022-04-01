@@ -387,7 +387,7 @@ func GetOrgResSummary(tx *db.Session, orgId models.Id, projectIds []string, limi
 
 	var results = make([]resps.OrgResSummaryResp, 0)
 	for _, data := range curMonthData {
-		lastMonthCount := findLastMonthResCount(data.ResType, lastMonthData)
+		lastMonthCount := findOrgLastMonthResCount(data.ResType, lastMonthData)
 		data.Up = data.Count - lastMonthCount
 		results = append(results, data)
 	}
@@ -395,7 +395,7 @@ func GetOrgResSummary(tx *db.Session, orgId models.Id, projectIds []string, limi
 	return results, nil
 }
 
-func findLastMonthResCount(resType string, monthData []resps.OrgResSummaryResp) int {
+func findOrgLastMonthResCount(resType string, monthData []resps.OrgResSummaryResp) int {
 	for _, data := range monthData {
 		if data.ResType == resType {
 			return data.Count
@@ -422,7 +422,7 @@ func getOrgResSummaryByMonth(tx *db.Session, orgId models.Id, projectIds []strin
 	}
 
 	var results []resps.OrgResSummaryResp
-	if err := query.Debug().Find(&results); err != nil {
+	if err := query.Find(&results); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 

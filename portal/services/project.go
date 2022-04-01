@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/resps"
 	"fmt"
+	"time"
 )
 
 func CreateProject(tx *db.Session, project *models.Project) (*models.Project, e.Error) {
@@ -186,5 +187,66 @@ func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([]re
 // GetProjectResSummary 环境资源数量
 func GetProjectResSummary(tx *db.Session, projectId models.Id, limit int) ([]resps.EnvResSummaryResp, e.Error) {
 
-	return nil, nil
+	curMonthData, err := getProjectResSummaryByMonth(tx, projectId, time.Now().Format("2006-01"), limit)
+	if err != nil {
+		return nil, err
+	}
+
+	lastMonthData, err := getProjectResSummaryByMonth(tx, projectId, time.Now().AddDate(0, -1, 0).Format("2006-01"), limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// 上上月的数据
+	lastMonthData2, err := getProjectResSummaryByMonth(tx, projectId, time.Now().AddDate(0, -2, 0).Format("2006-01"), limit)
+	if err != nil {
+		return nil, err
+	}
+
+	var curMonthResults = make([]resps.EnvResSummaryResp, 0)
+	for _, data := range curMonthData {
+		lastMonthCount := findProjectLastMonthResCount(data.ResType, lastMonthData)
+		data.Up = data.Count - lastMonthCount
+		curMonthResults = append(curMonthResults, data)
+	}
+
+	var lastMonthResults = make([]resps.EnvResSummaryResp, 0)
+	for _, data := range lastMonthData {
+		lastMonthCount := findProjectLastMonthResCount(data.ResType, lastMonthData2)
+		data.Up = data.Count - lastMonthCount
+		lastMonthResults = append(lastMonthResults, data)
+	}
+
+	curMonthData = append(curMonthData, lastMonthResults...)
+	return curMonthData, nil
+}
+
+func findProjectLastMonthResCount(resType string, monthData []resps.EnvResSummaryResp) int {
+	for _, data := range monthData {
+		if data.ResType == resType {
+			return data.Count
+		}
+	}
+
+	return 0
+}
+
+func getProjectResSummaryByMonth(tx *db.Session, projectId models.Id, month string, limit int) ([]resps.EnvResSummaryResp, e.Error) {
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.type as res_type, count(*) as count, DATE_FORMAT(applied_at, "%Y-%m") as date`)
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
+	query = query.Where(`iac_env.project_id = ?`, projectId)
+
+	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m") = ?`, month)
+
+	query = query.Group("res_type,date")
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+
+	var results []resps.EnvResSummaryResp
+	if err := query.Find(&results); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return results, nil
 }

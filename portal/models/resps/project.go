@@ -32,6 +32,7 @@ type EnvResStatResp struct {
 
 type EnvResSummaryResp struct {
 	ResType string `json:"resType"`
+	Date    string `json:"date"`
 	Count   int    `json:"count"`
 	Up      int    `json:"up"` // 增长数量
 }
