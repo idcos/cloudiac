@@ -6,6 +6,7 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/resps"
 	"fmt"
 )
 
@@ -104,4 +105,28 @@ func StatisticalProjectEnv(dbSess *db.Session, projectId models.Id) (*struct {
 		EnvInactive: envInactive,
 	}, nil
 
+}
+
+func GetProjectEnvStat(tx *db.Session, projectId models.Id) ([]resps.EnvStatResp, e.Error) {
+	return nil, nil
+}
+
+func GetProjectResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.ResStatResp, e.Error) {
+	return nil, nil
+}
+
+func GetProjectEnvResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.EnvResStatResp, e.Error) {
+
+	return nil, nil
+}
+
+func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([]resps.ResGrowTrendResp, e.Error) {
+
+	return nil, nil
+}
+
+// GetProjectResSummary 项目资源概览
+func GetProjectResSummary(tx *db.Session, projectId models.Id, limit int) ([]resps.EnvResSummaryResp, e.Error) {
+
+	return nil, nil
 }

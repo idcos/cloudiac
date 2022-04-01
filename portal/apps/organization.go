@@ -644,7 +644,7 @@ func OrgProjectsStat(c *ctx.ServiceContext, form *forms.OrgProjectsStatForm) (in
 		projectIds = strings.Split(form.ProjectIds, ",")
 	}
 	// 环境状态占比
-	envStat, err := services.GetOrgProjectsdEnvStat(tx, c.OrgId, projectIds)
+	envStat, err := services.GetOrgProjectsEnvStat(tx, c.OrgId, projectIds)
 	if err != nil {
 		return nil, err
 	}
@@ -656,7 +656,7 @@ func OrgProjectsStat(c *ctx.ServiceContext, form *forms.OrgProjectsStatForm) (in
 	}
 
 	// 项目资源数量
-	projectStat, err := services.GetOrgProjectStat(tx, c.OrgId, projectIds, form.Limit)
+	projectResStat, err := services.GetOrgProjectStat(tx, c.OrgId, projectIds, form.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -674,10 +674,10 @@ func OrgProjectsStat(c *ctx.ServiceContext, form *forms.OrgProjectsStatForm) (in
 	}
 
 	return &resps.OrgProjectsStatResp{
-		EnvStat:       envStat,
-		ResStat:       resStat,
-		ProjectStat:   projectStat,
-		ResGrowTrend:  resGrowTrend,
-		OrgResSummary: orgResSummary,
+		EnvStat:        envStat,
+		ResStat:        resStat,
+		ProjectResStat: projectResStat,
+		ResGrowTrend:   resGrowTrend,
+		OrgResSummary:  orgResSummary,
 	}, nil
 }

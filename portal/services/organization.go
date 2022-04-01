@@ -195,7 +195,7 @@ func GetOrgResourcesQuery(tx *db.Session, searchStr string, orgId, userId models
 
 }
 
-func GetOrgProjectsdEnvStat(tx *db.Session, orgId models.Id, projectIds []string) ([]resps.EnvStatResp, e.Error) {
+func GetOrgProjectsEnvStat(tx *db.Session, orgId models.Id, projectIds []string) ([]resps.EnvStatResp, e.Error) {
 	subQuery := tx.Model(&models.Env{}).Select(`if(task_status = '', status, task_status) as status`)
 	subQuery = subQuery.Where("archived = ?", 0).Where("org_id = ?", orgId)
 
@@ -235,7 +235,7 @@ func GetOrgProjectsResStat(tx *db.Session, orgId models.Id, projectIds []string,
 	return results, nil
 }
 
-func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, limit int) ([]resps.ProjectStatResp, e.Error) {
+func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, limit int) ([]resps.ProjectResStatResp, e.Error) {
 	/* sample sql:
 	select
 		iac_resource.project_id as project_id,
@@ -277,7 +277,7 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 		query = query.Limit(limit)
 	}
 
-	var results []resps.ProjectStatResp
+	var results []resps.ProjectResStatResp
 	if err := query.Find(&results); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}

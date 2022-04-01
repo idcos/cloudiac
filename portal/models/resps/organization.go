@@ -51,7 +51,7 @@ type ResStatResp struct {
 	Count   int    `json:"count"`
 }
 
-type ProjectStatResp struct {
+type ProjectResStatResp struct {
 	ProjectId   string `json:"projectId"`
 	ProjectName string `json:"projectName"`
 	ResType     string `json:"resType"`
@@ -71,9 +71,9 @@ type OrgResSummaryResp struct {
 }
 
 type OrgProjectsStatResp struct {
-	EnvStat       []EnvStatResp       `json:"envStat"`
-	ResStat       []ResStatResp       `json:"resStat"`
-	ProjectStat   []ProjectStatResp   `json:"projectStat"`
-	ResGrowTrend  []ResGrowTrendResp  `json:"resGrowTrend"`
-	OrgResSummary []OrgResSummaryResp `json:"orgResSummary"`
+	EnvStat        []EnvStatResp        `json:"envStat"`
+	ResStat        []ResStatResp        `json:"resStat"`
+	ProjectResStat []ProjectResStatResp `json:"projectStat"`
+	ResGrowTrend   []ResGrowTrendResp   `json:"resGrowTrend"`
+	OrgResSummary  []OrgResSummaryResp  `json:"orgResSummary"`
 }
