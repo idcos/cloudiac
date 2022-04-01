@@ -10,6 +10,8 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/resps"
 	"fmt"
+	"sort"
+	"time"
 )
 
 func CreateOrganization(tx *db.Session, org models.Organization) (*models.Organization, e.Error) {
@@ -297,7 +299,7 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 		and iac_env.project_id in ('p-c8gg9josm56injdlb86g', 'aaa')
 		and (
 		applied_at > DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-			or (applied_at > DATE_SUB(DATE_SUB(CURDATE(), INTERVAL 7 DAY), INTERVAL 1 MONTH)
+			or (applied_at > DATE_SUB(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), INTERVAL 7 DAY)
 				and applied_at <= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)))
 	group by
 		date
@@ -313,7 +315,7 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 		query = query.Where(`iac_env.project_id in ?`, projectIds)
 	}
 
-	query = query.Where(`applied_at > DATE_SUB(CURDATE(), INTERVAL ? DAY) or (applied_at > DATE_SUB(DATE_SUB(CURDATE(), INTERVAL ? DAY), INTERVAL 1 MONTH) and applied_at <= DATE_SUB(CURDATE(), INTERVAL 1 MONTH))`, days, days)
+	query = query.Where(`applied_at > DATE_SUB(CURDATE(), INTERVAL ? DAY) or (applied_at > DATE_SUB(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), INTERVAL ? DAY) and applied_at <= DATE_SUB(CURDATE(), INTERVAL 1 MONTH))`, days, days)
 
 	query = query.Group("date").Order("date")
 
@@ -322,7 +324,52 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	return results, nil
+	return completeResGrowTrend(results, days), nil
+}
+
+// completeResGrowTrend 补全趋势数据中缺失的日期
+func completeResGrowTrend(input []resps.ResGrowTrendResp, days int) []resps.ResGrowTrendResp {
+	if len(input) == 0 {
+		return input
+	}
+
+	now := time.Now()
+	var m = make(map[string]int)
+
+	startDate := now.AddDate(0, 0, -1*days).AddDate(0, -1, 0)
+	endDate := now.AddDate(0, -1, 0)
+	// 初始化 上个月趋势 数据
+	for i := 0; i < days; i++ {
+		startDate = startDate.AddDate(0, 0, 1)
+		if startDate.After(endDate) {
+			break
+		}
+		m[startDate.Format("2006-01-02")] = 0
+	}
+
+	// 初始化 当前趋势 的数据
+	startDate = now.AddDate(0, 0, -1*days)
+	for i := 0; i < days; i++ {
+		startDate = startDate.AddDate(0, 0, 1)
+		m[startDate.Format("2006-01-02")] = 0
+	}
+
+	for _, data := range input {
+		m[data.Date] = data.Count
+	}
+
+	var results = make([]resps.ResGrowTrendResp, 0)
+	for k, v := range m {
+		results = append(results, resps.ResGrowTrendResp{
+			Date:  k,
+			Count: v,
+		})
+	}
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Date < results[j].Date
+	})
+
+	return results
 }
 
 func GetOrgResSummary(tx *db.Session, orgId models.Id, projectIds []string, limit int) ([]resps.OrgResSummaryResp, e.Error) {
