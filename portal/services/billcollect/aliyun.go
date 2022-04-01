@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NewAlicloudBillProvider(vg *models.VariableGroup) (*aliClint, error) {
+func NewAlicloudBillProvider(vg *models.VariableGroup) (*aliProvider, error) {
 	resAccount := parseResourceAccount(vg.Provider, vg.Variables)
 	if resAccount == nil {
 		return nil, fmt.Errorf("provider: %s, resource account is null", vg.Provider)
@@ -34,7 +34,7 @@ func NewAlicloudBillProvider(vg *models.VariableGroup) (*aliClint, error) {
 		return nil, err
 	}
 
-	return &aliClint{
+	return &aliProvider{
 		clint:    result,
 		pageNum:  1,
 		pageSize: 300,
@@ -43,12 +43,7 @@ func NewAlicloudBillProvider(vg *models.VariableGroup) (*aliClint, error) {
 	}, err
 }
 
-type aliBill struct {
-	Ak string
-	Sk string
-}
-
-type aliClint struct {
+type aliProvider struct {
 	clint    *bssopenapi20171214.Client
 	provider string
 	pageNum  int32
@@ -56,20 +51,20 @@ type aliClint struct {
 	vg       *models.VariableGroup
 }
 
-func (ac *aliClint) Provider() string {
-	return ac.provider
+func (ap *aliProvider) Provider() string {
+	return ap.provider
 }
 
-func (ac *aliClint) GetResourceMonthCost(billingCycle string) ([]*bssopenapi20171214.QueryInstanceBillResponseBodyDataItemsItem, error) {
+func (ap *aliProvider) GetResourceMonthCost(billingCycle string) ([]*bssopenapi20171214.QueryInstanceBillResponseBodyDataItemsItem, error) {
 	queryInstanceBillRequest := &bssopenapi20171214.QueryInstanceBillRequest{
 		//BillingCycle: tea.String("2022-03"),
 		BillingCycle: tea.String(billingCycle),
-		PageNum:      tea.Int32(ac.pageNum),
+		PageNum:      tea.Int32(ap.pageNum),
 		//单次请求最大值300
-		PageSize: tea.Int32(ac.pageSize),
+		PageSize: tea.Int32(ap.pageSize),
 	}
 
-	result, err := ac.clint.QueryInstanceBill(queryInstanceBillRequest)
+	result, err := ap.clint.QueryInstanceBill(queryInstanceBillRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -79,21 +74,21 @@ func (ac *aliClint) GetResourceMonthCost(billingCycle string) ([]*bssopenapi2017
 	resp := make([]*bssopenapi20171214.QueryInstanceBillResponseBodyDataItemsItem, 0)
 	resp = append(resp, result.Body.Data.Items.Item...)
 
-	if *result.Body.Data.TotalCount > (ac.pageSize * ac.pageNum) {
-		ac.pageNum++
-		r, _ := ac.GetResourceMonthCost(billingCycle)
+	if *result.Body.Data.TotalCount > (ap.pageSize * ap.pageNum) {
+		ap.pageNum++
+		r, _ := ap.GetResourceMonthCost(billingCycle)
 		resp = append(resp, r...)
 	}
 
 	return resp, err
 }
 
-func (ac *aliClint) GetResourceDayCost(billingCycle string) ([]ResourceCost, error) {
+func (ap *aliProvider) GetResourceDayCost(billingCycle string) ([]ResourceCost, error) {
 	return nil, nil
 }
 
-func (ac *aliClint) DownloadMonthBill(billingCycle string) (map[string]ResourceCost, []string, error) {
-	billData, err := ac.GetResourceMonthCost(billingCycle)
+func (ap *aliProvider) DownloadMonthBill(billingCycle string) (map[string]ResourceCost, []string, error) {
+	billData, err := ap.GetResourceMonthCost(billingCycle)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -106,7 +101,7 @@ func (ac *aliClint) DownloadMonthBill(billingCycle string) (map[string]ResourceC
 
 		m := structs.Map(&v)
 		insertDate = append(insertDate, models.BillData{
-			Provider:   ac.provider,
+			Provider:   ap.provider,
 			InstanceId: *v.InstanceID,
 			Attrs:      models.ResAttrs(m),
 		})
@@ -119,7 +114,7 @@ func (ac *aliClint) DownloadMonthBill(billingCycle string) (map[string]ResourceC
 			Region:         *v.Region,
 			Currency:       *v.Currency,
 			Cycle:          billingCycle,
-			Provider:       ac.provider,
+			Provider:       ap.provider,
 		}
 	}
 
@@ -130,6 +125,3 @@ func (ac *aliClint) DownloadMonthBill(billingCycle string) (map[string]ResourceC
 	return resp, resourceIds, nil
 }
 
-func (ac *aliClint) ParseBill(data []ResourceCost, resourceIds []string) ([]BillData, error) {
-	return nil, nil
-}

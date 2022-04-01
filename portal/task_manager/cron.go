@@ -22,7 +22,7 @@ func billCron(ctx context.Context) {
 	}
 
 	c := cron.New()
-	if _, err := c.AddFunc("@every 1s", f); err != nil {
+	if _, err := c.AddFunc("@daily", f); err != nil {
 		logs.Get().Error("bill cron task start failed")
 		return
 	}

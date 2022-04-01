@@ -22,21 +22,6 @@ type ResourceCost struct {
 	Provider       string  `json:"provider"`
 }
 
-type BillData struct {
-	ProductCode    string
-	InstanceId     string
-	InstanceConfig string
-	Cycle          string
-	PretaxAmount   int
-	Currency       string
-
-	Provider string
-	Region   string
-
-	EnvId string
-	ResId string
-}
-
 type BillProvider interface {
 	// Provider 返回云商名称, 如 aws, alicloud 等
 	Provider() string
@@ -52,8 +37,6 @@ type BillProvider interface {
 	// GetResourceDayCost 获取日账单数据
 	// param billingCycle 账单采集周期
 	GetResourceDayCost(billingCycle string) ([]ResourceCost, error)
-
-	ParseBill(data []ResourceCost, resourceIds []string) ([]BillData, error)
 }
 
 func GetBillProvider(vg *models.VariableGroup) (BillProvider, error) {
