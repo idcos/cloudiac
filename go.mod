@@ -20,6 +20,7 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/elazarl/goproxy v0.0.0-20210801061803-8e322dfb79c4 // indirect
 	github.com/fatih/color v1.13.0
+	github.com/fatih/structs v1.1.0
 	github.com/frankban/quicktest v1.14.0 // indirect
 	github.com/gin-contrib/sse v0.1.0
 	github.com/gin-gonic/gin v1.7.7

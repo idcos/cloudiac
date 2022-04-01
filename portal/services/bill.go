@@ -19,30 +19,34 @@ func GetVgByBillConf(dbSess *db.Session) ([]models.VariableGroup, e.Error) {
 	return resp, nil
 }
 
-func GetResourceByVg(dbSess *db.Session, vg models.VariableGroup) ([]models.Resource, e.Error) {
-	resp := make([]models.Resource, 0)
-	if err := dbSess.Model(models.VariableGroup{}).
-		Where("cost_counted = ?", true).
-		Find(&resp); err != nil {
-		return nil, e.New(e.DBError, err)
+func ParseBill(resCost map[string]billcollect.ResourceCost, res []models.Resource, vgId string) []models.Bill {
+	resp := make([]models.Bill, 0)
+	for _, v := range res {
+		if _, ok := resCost[v.ResId.String()]; ok {
+			resp = append(resp, models.Bill{
+				OrgId:          v.OrgId,
+				ProjectId:      v.ProjectId,
+				VgId:           models.Id(vgId),
+				ProductCode:    resCost[v.ResId.String()].ProductCode,
+				InstanceId:     resCost[v.ResId.String()].InstanceId,
+				InstanceConfig: resCost[v.ResId.String()].InstanceConfig,
+				PretaxAmount:   resCost[v.ResId.String()].PretaxAmount,
+				Region:         resCost[v.ResId.String()].Region,
+				Currency:       resCost[v.ResId.String()].Currency,
+				Cycle:          resCost[v.ResId.String()].Cycle,
+				Provider:       resCost[v.ResId.String()].Provider,
+			})
+		}
 	}
-	return resp, nil
+
+	return resp
 }
 
-func BillData(vg models.VariableGroup,billingCycle string) ([]billcollect.ResourceCost, e.Error) {
-	billInstance, err := billcollect.GetBillInstance(&vg)
-	if err != nil {
-		return nil, err
+func DeleteResourceBill(dbSess *db.Session, resIdS []string, cycle string) error {
+	if _, err := dbSess.Where("instance_id in (?)", resIdS).
+		Where("cycle = ?", cycle).
+		Delete(models.Bill{}); err != nil {
+		return err
 	}
-	cline, err := billInstance.Clint()
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := cline.GetResourceMonthCost(billingCycle)
-	if err != nil {
-		return nil, err
-	}
-
-	return resp, nil
+	return nil
 }

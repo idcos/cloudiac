@@ -2,7 +2,6 @@ package task_manager
 
 import (
 	"cloudiac/portal/libs/db"
-	"cloudiac/portal/models"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/billcollect"
 	"cloudiac/utils/logs"
@@ -31,9 +30,12 @@ func billCron(ctx context.Context) {
 }
 
 func cronTask() {
-	logger := logs.Get().WithField("bill", "cron task")
+	logger := logs.Get().WithField("acton", "billing cron task")
+	logger.Info("start bill collect")
+
+	billingCycle := time.Now().Format("2006-01")
+
 	tx := db.Get().Begin()
-	billingCycle:=time.Now()
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
@@ -48,25 +50,56 @@ func cronTask() {
 		return
 	}
 
-	resources := make([]models.Resource, 0)
-	billData := make([]billcollect.ResourceCost,0)
 	for _, v := range vg {
-		// 获取资源账号下的资源
-		rs, err := services.GetResourceByVg(tx, v)
+		// 获取账单provider
+		bp, err := billcollect.GetBillProvider(&v)
 		if err != nil {
-			logger.Errorf("get resource failed vg: %+v,err: %s", v, err)
+			logger.Errorf("get bill provider failed vgId: %s provider: %s,err: %s", v.Id, v.Provider, err)
 			continue
 		}
-		resources = append(resources, rs...)
+		// 下载账单
+		resCostAttr, resourceIds, err := bp.DownloadMonthBill(billingCycle)
+		if err != nil {
+			logger.Errorf("download bill failed vgId: %s provider: %s,err: %s", v.Id, v.Provider, err)
+			continue
+		}
 
-		// 获取账单数据
-		bd,err:=services.BillData(v,billingCycle)
-		if err!= nil{
-			logger.Errorf("get resource failed vg: %+v,err: %s", v, err)
+		// 查询资源账号关联的项目
+		projectIds, err := services.GetProjectIdsByVgId(tx, v.Id)
+		if err != nil {
+			logger.Errorf("query project ids failed vgId: %s provider: %s,err: %s", v.Id, v.Provider, err)
 			continue
 		}
-		billData = append(billData,bd...)
+
+		// 查询iac resource数据
+		res, err := services.GetResourceByIdsInProvider(tx, resourceIds, projectIds, v)
+		if err != nil {
+			logger.Errorf("query iac resource failed vgId: %s provider: %s,err: %s", v.Id, v.Provider, err)
+			continue
+		}
+		// 解析账单数据，构建入库数据
+		bills := services.ParseBill(resCostAttr, res, v.Provider)
+		if len(bills) == 0 {
+			logger.Infof("resource not matched collect billing vgId: %s provider: %s,err: %s", v.Id, v.Provider, err)
+			continue
+		}
+
+		// 删除上次采集的数据
+		if err := services.DeleteResourceBill(tx, resourceIds, billingCycle); err != nil {
+			logger.Errorf("del last bill data failed vgId: %s provider: %s,err: %s", v.Id, v.Provider, err)
+			continue
+		}
+
+		if err := tx.Insert(bills); err != nil {
+			logger.Errorf("bill insert failed vgId: %s provider: %s,err: %s", v.Id, v.Provider, err)
+			continue
+		}
 
 	}
-	// 数据匹配入库
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		logger.Errorf("bill task db commit err: %s", err)
+	}
+
+	logger.Info("stop bill collect")
 }

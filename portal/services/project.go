@@ -105,3 +105,13 @@ func StatisticalProjectEnv(dbSess *db.Session, projectId models.Id) (*struct {
 	}, nil
 
 }
+
+func GetProjectIdsByVgId(dbSess *db.Session, vgId models.Id) ([]string, error) {
+	ids := make([]string, 0)
+	if err := dbSess.Model(models.VariableGroupProjectRel{}).
+		Where("var_group_id = ?", vgId).
+		Pluck("project_id", &ids); err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
