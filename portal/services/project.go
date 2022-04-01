@@ -108,7 +108,17 @@ func StatisticalProjectEnv(dbSess *db.Session, projectId models.Id) (*struct {
 }
 
 func GetProjectEnvStat(tx *db.Session, projectId models.Id) ([]resps.EnvStatResp, e.Error) {
-	return nil, nil
+	subQuery := tx.Model(&models.Env{}).Select(`if(task_status = '', status, task_status) as status`)
+	subQuery = subQuery.Where("archived = ?", 0).Where("project_id = ?", projectId)
+
+	query := tx.Table("(?) as t", subQuery.Expr()).Select(`status, count(*) as count`).Group("status")
+
+	var results []resps.EnvStatResp
+	if err := query.Find(&results); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return results, nil
 }
 
 func GetProjectResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.ResStatResp, e.Error) {

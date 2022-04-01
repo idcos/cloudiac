@@ -153,7 +153,7 @@ func Register(g *gin.RouterGroup) {
 	ctrl.Register(g.Group("projects", ac()), &handlers.Project{})
 
 	// 项目概览统计数据
-	g.GET("/projects/:id/statistics", ac())
+	g.GET("/projects/:id/statistics", ac(), w(handlers.Project{}.ProjectStat))
 
 	//变量管理
 	g.PUT("/variables/batch", ac(), w(handlers.Variable{}.BatchUpdate))
