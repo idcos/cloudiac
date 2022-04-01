@@ -61,8 +61,9 @@ type CreateEnvForm struct {
 }
 
 type SampleVariables struct {
-	Name  string `json:"name" form:"name" binding:"required,lte=64"`
-	Value string `json:"value" form:"value" binding:""`
+	Name      string `json:"name" form:"name" binding:"required,lte=64"`
+	Value     string `json:"value" form:"value" binding:""`
+	Sensitive bool   `json:"sensitive" form:"sensitive" binding:""`
 }
 
 type CronDriftForm struct {
