@@ -61,7 +61,7 @@ type CreateEnvForm struct {
 }
 
 type SampleVariables struct {
-	Name  string `json:"name" form:"name" binding:"required,gte=2,lte=64"`
+	Name  string `json:"name" form:"name" binding:"required,lte=64"`
 	Value string `json:"value" form:"value" binding:""`
 }
 
