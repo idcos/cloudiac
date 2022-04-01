@@ -122,7 +122,21 @@ func GetProjectEnvStat(tx *db.Session, projectId models.Id) ([]resps.EnvStatResp
 }
 
 func GetProjectResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.ResStatResp, e.Error) {
-	return nil, nil
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.type as res_type, count(*) as count`)
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
+	query = query.Where(`iac_env.project_id = ?`, projectId)
+
+	query = query.Group("res_type").Order("count desc")
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+
+	var results []resps.ResStatResp
+	if err := query.Find(&results); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return results, nil
 }
 
 func GetProjectEnvResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.EnvResStatResp, e.Error) {
