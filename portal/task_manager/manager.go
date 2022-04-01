@@ -465,6 +465,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		lastResTask, err := services.GetTaskById(m.db, env.LastResTaskId)
 		if err != nil {
 			logger.Errorf("Get the latest configuration of the environment： %s", err)
+			taskStartFailed(errors.New("get task environment failed"))
 			return
 		}
 		task.RepoAddr = lastResTask.RepoAddr
