@@ -461,25 +461,17 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 			_ = changeTaskStatus(models.TaskFailed, startErr.Error(), true)
 			return
 		}
-		// 每次任务启动从最新的环境配置中获取配置内容
-		query := m.db.Where("status = ?", models.Enable)
-		tpl, err := services.GetTemplateById(query, env.TplId)
+		// 每次任务启动从最新的部署配置中获取配置内容
+		lastResTask, err := services.GetTaskById(m.db, env.LastResTaskId)
 		if err != nil {
 			logger.Errorf("Get the latest configuration of the environment： %s", err)
 			return
 		}
-		repoAddr, commitId, err := services.GetTaskRepoAddrAndCommitId(m.db, tpl, task.Revision)
-		if err != nil {
-			logger.Errorf("Get the latest configuration of the environment： %s", err)
-		}
-		if err != nil {
-			return
-		}
-		task.RepoAddr = repoAddr
-		task.CommitId = commitId
-		task.Playbook = env.Playbook
-		task.Workdir = env.Workdir
-		task.TfVarsFile = env.TfVarsFile
+		task.RepoAddr = lastResTask.RepoAddr
+		task.CommitId = lastResTask.CommitId
+		task.Playbook = lastResTask.Playbook
+		task.Workdir = lastResTask.Workdir
+		task.TfVarsFile = lastResTask.TfVarsFile
 
 	}
 
