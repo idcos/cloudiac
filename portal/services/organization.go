@@ -262,7 +262,7 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 	limit 10;
 	*/
 
-	query := tx.Model(&models.Resource{}).Select(`iac_resource.project_id as project_id, iac_project.name as project_name, iac_resource.type as es_type, DATE_FORMAT(iac_resource.applied_at, "%Y-%m") as date, count(*) as count`)
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.project_id as project_id, iac_project.name as project_name, iac_resource.type as res_type, DATE_FORMAT(iac_resource.applied_at, "%Y-%m") as date, count(*) as count`)
 
 	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
 	query = query.Joins("JOIN iac_project ON iac_project.id = iac_resource.project_id")

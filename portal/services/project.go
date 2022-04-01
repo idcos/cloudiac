@@ -107,6 +107,7 @@ func StatisticalProjectEnv(dbSess *db.Session, projectId models.Id) (*struct {
 
 }
 
+// GetProjectEnvStat 环境状态占比
 func GetProjectEnvStat(tx *db.Session, projectId models.Id) ([]resps.EnvStatResp, e.Error) {
 	subQuery := tx.Model(&models.Env{}).Select(`if(task_status = '', status, task_status) as status`)
 	subQuery = subQuery.Where("archived = ?", 0).Where("project_id = ?", projectId)
@@ -121,6 +122,7 @@ func GetProjectEnvStat(tx *db.Session, projectId models.Id) ([]resps.EnvStatResp
 	return results, nil
 }
 
+// GetProjectResStat 资源类型占比
 func GetProjectResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.ResStatResp, e.Error) {
 	query := tx.Model(&models.Resource{}).Select(`iac_resource.type as res_type, count(*) as count`)
 	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
@@ -139,17 +141,49 @@ func GetProjectResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.
 	return results, nil
 }
 
+// GetProjectEnvResStat 环境资源数量
 func GetProjectEnvResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.EnvResStatResp, e.Error) {
 
-	return nil, nil
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.env_id as env_id, iac_env.name as env_name, iac_resource.type as res_type, DATE_FORMAT(iac_resource.applied_at, "%Y-%m") as date, count(*) as count`)
+
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
+	query = query.Where(`iac_env.project_id = ?`, projectId)
+	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(CURDATE(), "%Y-%m") OR DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m")`)
+
+	query = query.Group("iac_resource.type,iac_resource.env_id,date")
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+
+	var results []resps.EnvResStatResp
+	if err := query.Find(&results); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return results, nil
 }
 
+// GetProjectResGrowTrend 最近7天资源及费用趋势
 func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([]resps.ResGrowTrendResp, e.Error) {
 
-	return nil, nil
+	query := tx.Model(&models.Resource{}).Select(`DATE_FORMAT(applied_at, "%Y-%m-%d") as date, count(*) as count`)
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
+
+	query = query.Where("iac_env.project_id = ?", projectId)
+
+	query = query.Where(`applied_at > DATE_SUB(CURDATE(), INTERVAL ? DAY) or (applied_at > DATE_SUB(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), INTERVAL ? DAY) and applied_at <= DATE_SUB(CURDATE(), INTERVAL 1 MONTH))`, days, days)
+
+	query = query.Group("date").Order("date")
+
+	var results []resps.ResGrowTrendResp
+	if err := query.Find(&results); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return completeResGrowTrend(results, days), nil
 }
 
-// GetProjectResSummary 项目资源概览
+// GetProjectResSummary 环境资源数量
 func GetProjectResSummary(tx *db.Session, projectId models.Id, limit int) ([]resps.EnvResSummaryResp, e.Error) {
 
 	return nil, nil
