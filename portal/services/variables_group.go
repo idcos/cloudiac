@@ -279,8 +279,36 @@ func GetVariableGroupVar(vgs []VarGroupRel, vars map[string]models.Variable) map
 	}
 	// 将标准变量覆盖
 	for k, v := range vars {
-		if _, ok := variableM[k]; ok && v.Scope != variableM[k].Scope {
-			continue
+		if _, ok := variableM[k]; ok {
+			switch v.Scope {
+			case "env":
+				variableM[k] = v
+			case "project":
+				switch variableM[k].Scope {
+				case "env":
+					continue
+				default:
+					variableM[k] = v
+				}
+			case "org":
+				switch variableM[k].Scope {
+				case "org":
+					variableM[k] = v
+				case "template":
+					variableM[k] = v
+				default:
+					continue
+				}
+			case "template":
+				switch variableM[k].Scope {
+				case "template":
+					variableM[k] = v
+				default:
+					continue
+				}
+			default:
+				logs.Get().Error("scope type err")
+			}
 		}
 		variableM[k] = v
 	}
@@ -310,6 +338,7 @@ func BatchUpdateRelationship(tx *db.Session, vgIds, delVgIds []models.Id, object
 // GetValidVarsAndVgVars 获取变量及变量组变量
 func GetValidVarsAndVgVars(tx *db.Session, orgId, projectId, tplId, envId models.Id) ([]models.VariableBody, error) {
 	vars, err, _ := GetValidVariables(tx, consts.ScopeEnv, orgId, projectId, tplId, envId, true)
+	logs.Get().Println("vars is ------", vars)
 	if err != nil {
 		return nil, fmt.Errorf("get vairables error: %v", err)
 	}
@@ -322,7 +351,6 @@ func GetValidVarsAndVgVars(tx *db.Session, orgId, projectId, tplId, envId models
 		consts.ScopeProject:  projectId,
 		consts.ScopeOrg:      orgId,
 	}, consts.ScopeEnv)
-
 	if err != nil {
 		return nil, fmt.Errorf("get vairable group var error: %v", err)
 	}
