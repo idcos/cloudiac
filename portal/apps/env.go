@@ -871,6 +871,20 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (ret *models.En
 	})
 	return ret, er
 }
+func EnvDeployCheck(c *ctx.ServiceContext, form *forms.DeployEnvForm) (interface{}, e.Error) {
+	env, err := services.GetEnvById(c.Tx(), form.Id)
+	if err != nil {
+		return nil, err
+	}
+	if env.Archived {
+		return nil, e.New(e.EnvArchived, "Environment archived")
+	}
+	task, _ := services.GetTaskById(c.Tx(), env.LastTaskId)
+	if !task.IsExitedStatus(task.Status) {
+		return nil, e.New(e.EnvDeploying, "Deployment initiation is not allowed")
+	}
+	return nil, nil
+}
 
 func envPreCheck(orgId, projectId, keyId models.Id, playbook string) e.Error {
 	if orgId == "" || projectId == "" {
