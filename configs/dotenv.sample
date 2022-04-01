@@ -37,21 +37,23 @@ SERVICE_ID=iac-portal-01
 ## portal 服务注册的 tags
 SERVICE_TAGS="iac-portal;portal-01"
 
-# docker reigstry 地址，默认为空(使用 docker hub)
+# docker reigstry 地址，为空时使用 docker hub
 DOCKER_REGISTRY=""
 
 # logger 配置
 LOG_DEVEL="info"
 
 # SMTP 配置(该配置只影响邮件通知的发送，不配置不影响其他功能)
-SMTP_ADDRESS=smtp.example.com:25
-SMTP_USERNAME=user@example.com
+## example: smtp.example.com:25
+SMTP_ADDRESS=""
+## example: user@example.com
+SMTP_USERNAME=""
 SMTP_PASSWORD=""
+## example: support@example.com
+SMTP_FROM=""
 SMTP_FROM_NAME=IaC
-SMTP_FROM=support@example.com
 
 # KAFKA配置，配置后每次执行部署任务都会将环境的最新全量资源详情通过 kafka 消息发送
-KAFKA_DISABLED=false
 KAFKA_TOPIC="IAC_TASK_REPLY"
 KAFKA_GROUP_ID=""
 KAFKA_PARTITION=0
@@ -70,4 +72,3 @@ RUNNER_SERVICE_TAGS="ct-runner;runner-01"
 
 ## 是否开启 offline mode，默认为 false
 RUNNER_OFFLINE_MODE="false"
-

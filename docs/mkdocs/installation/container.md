@@ -19,13 +19,14 @@ chmod +x /usr/local/bin/docker-compose
 
 ## 3. 创建部署目录
 
-部署目录固定为 /usr/yunji/cloudiac，**不可更改**，更改部署目录会导致执行部署任务失败。
+!!! Caution
+    **部署目录必须为 /usr/yunji/cloudiac，部署到其他目录将无法执行环境部署任务。**
 
 ```bash
 mkdir -p /usr/yunji/cloudiac/var/{consul,mysql} && cd /usr/yunji/cloudiac/
 ```
 
-## 4. 编写 docker-compose.yml 文件
+## 4. 创建 docker-compose.yml 文件
 
 文件路径 /usr/yunji/cloudiac/docker-compose.yml，内容如下:
 
@@ -113,9 +114,9 @@ services:
 
 ```
 
-## 5. 编写 .env 文件
+## 5. 创建 .env 文件
 
-文件路径 /usr/yunji/cloudiac/.env，内容如下(**请根据注释修改配置**):
+文件路径 /usr/yunji/cloudiac/.env，内容如下:
 
 ```bash
 # auto-replace-from: configs/dotenv.sample
@@ -158,21 +159,23 @@ SERVICE_ID=iac-portal-01
 ## portal 服务注册的 tags
 SERVICE_TAGS="iac-portal;portal-01"
 
-# docker reigstry 地址，默认为空(使用 docker hub)
+# docker reigstry 地址，为空时使用 docker hub
 DOCKER_REGISTRY=""
 
 # logger 配置
 LOG_DEVEL="info"
 
 # SMTP 配置(该配置只影响邮件通知的发送，不配置不影响其他功能)
-SMTP_ADDRESS=smtp.example.com:25
-SMTP_USERNAME=user@example.com
+## example: smtp.example.com:25
+SMTP_ADDRESS=""
+## example: user@example.com
+SMTP_USERNAME=""
 SMTP_PASSWORD=""
+## example: support@example.com
+SMTP_FROM=""
 SMTP_FROM_NAME=IaC
-SMTP_FROM=support@example.com
 
 # KAFKA配置，配置后每次执行部署任务都会将环境的最新全量资源详情通过 kafka 消息发送
-KAFKA_DISABLED=false
 KAFKA_TOPIC="IAC_TASK_REPLY"
 KAFKA_GROUP_ID=""
 KAFKA_PARTITION=0
@@ -191,18 +194,29 @@ RUNNER_SERVICE_TAGS="ct-runner;runner-01"
 
 ## 是否开启 offline mode，默认为 false
 RUNNER_OFFLINE_MODE="false"
-
 ```
 
-*通过 .env 可以配置大部分参数，需要更详细的配置可以拷贝镜像里的 config-portal.yml 和 config-runner.yml 文件，修改后再挂载到容器中进行替换*
+!!! Caution
+    `.env` 中以下配置为**必填项**，其他配置可根据需要修改：
+
+    - IAC_ADMIN_PASSWORD: 初始的平台管理员密码
+    - SECRET_KEY: 数据加密存储时使用的密钥
+    - PORTAL_ADDRESS: 对外地址服务的地址
+    - CONSUL_ADDRESS: consul 服务地址，配置为部署机内网 ip:8500 端口即可
+
+!!! Info
+    通过 `.env` 可以实现大部分配置的修改，更多配置项可查看 docker 镜像中的 config-portal.yml 和 config-runner.yml 文件，需要修改可以从镜像中拷贝文件，修改后再在容器启动时挂载进行替换。
 
 ## 6. 启动docker-compose
 
 ```bash
-docker-compose up -d
-
-# 前台调试启动：
-# dokcker-compose up
+docker-compose up
 ```
 
-*至此服务部署完成*
+> 默认为前台启动，以便于排查问题，在确定服务正常后可以改为后台启动：`dokcker-compose up -d`。
+
+
+## 7. 部署完成
+至此服务部署完成，访问 http://${PORTAL_ADDRESS} 进行登陆。
+
+默认的用户名为 admin@example.com (即 IAC_ADMIN_EMAIL)，密码为 `.env` 中配置的 `IAC_ADMIN_PASSWORD`。

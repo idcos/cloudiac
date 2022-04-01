@@ -234,7 +234,7 @@ func main() {
 		rules []ReplaceRule
 	}{
 		{
-			"./docs/mkdocs/product-deploy/container.md",
+			"./docs/mkdocs/installation/container.md",
 			[]ReplaceRule{
 				NewBlockReplaceRuleFromFile(
 					"# auto-replace-from: docker/docker-compose.yml",
@@ -249,13 +249,13 @@ func main() {
 			},
 		},
 		{
-			"./docs/mkdocs/product-deploy/container.md",
+			"./docs/mkdocs/installation/container.md",
 			[]ReplaceRule{
 				&LineRegexReplaceRule{expr: `image: "([^/]*cloudiac/[^:]+):latest"`, repl: fmt.Sprintf(`image: "$1:%s"`, version)},
 			},
 		},
 		{
-			"./docs/mkdocs/product-deploy/host.md",
+			"./docs/mkdocs/installation/linux.md",
 			[]ReplaceRule{
 				&LineStartReplaceRule{"VERSION=v", fmt.Sprintf("VERSION=%s\n", version)},
 			},

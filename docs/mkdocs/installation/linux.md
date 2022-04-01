@@ -2,8 +2,11 @@
 
 ## 环境依赖
 
-1. 操作系统：Linux x86_64 架构
+1. 操作系统：Centos 7 及以上版本
 2. 中间件：MySQL 8.0、Consul
+
+!!! Info
+    理论上任意 Linux 发行版本都可以支持部署，但该文档仅以 Centos 系统为例演示部署过程。
 
 ## 后端部署
 
@@ -11,7 +14,6 @@
 
 - 单机部署
 - 全新机器初始安装
-- 使用 centos 7 系统
 - 部署目录为 /usr/yunji/cloudiac
 
 以下部署过程全部使用 **root** 操作。
@@ -34,7 +36,8 @@ for PACK in cloudiac cloudiac-repos cloudiac-providers; do
 done
 ```
 
-**目前只支持部署到: `/usr/yunji/cloudiac` 目录**
+!!! Caution
+    **部署目录必须为 /usr/yunji/cloudiac，部署到其他目录将无法执行环境部署任务。**
 
 ### 2. 安装并启动 Docker
 
@@ -96,7 +99,17 @@ mv demo-conf.yml.sample demo-conf.yml
 
 - 编辑 .env 文件，依据注释修改配置。
 
-*通过 .env 可以配置大部分参数，更详细的配置可以直接修改 config-portal.yml 和 config-runner.yml*
+!!! Caution
+    `.env` 中以下配置为**必填项**，其他配置可根据需要修改：
+
+    - IAC_ADMIN_PASSWORD: 初始的平台管理员密码
+    - SECRET_KEY: 数据加密存储时使用的密钥
+    - PORTAL_ADDRESS: 对外地址服务的地址
+    - CONSUL_ADDRESS: consul 服务地址，配置为部署机内网 ip:8500 端口即可
+
+!!! Info
+    通过 `.env` 可以实现大部分配置的修改，更多配置项可查看 config-portal.yml 和 config-runner.yml。
+
 
 ### 6. 初始化 Mysql
 
@@ -122,7 +135,7 @@ systemctl start iac-portal ct-runner
 systemctl status -l iac-portal ct-runner
 ```
 
-### 9. 接取 ct-worker 镜像
+### 9. 拉取 ct-worker 镜像
 
 ct-worker 是执行部署任务的容器镜像，需要 pull 到本地:
 
@@ -159,9 +172,19 @@ server {
   listen 80;
   server_name _ default;
 
+  gzip  on;
+  gzip_min_length  1k;
+  gzip_buffers 4 16k;
+  gzip_http_version 1.1;
+  gzip_comp_level 9;
+  gzip_types text/plain application/x-javascript text/css application/xml text/javascript \
+    application/x-httpd-php application/javascript application/json;
+  gzip_disable "MSIE [1-6]\.";
+  gzip_vary on;
+
   location / {
     try_files $uri $uri/ /index.html /index.htm =404;
-    root /usr/yunji/cloudiac-web;
+    root /usr/nginx/cloudiac-web;
     index  index.html index.htm;
   }
 
@@ -174,17 +197,19 @@ server {
     proxy_cache off;
 
     proxy_read_timeout 1800;
-    proxy_pass http://iac-portal:9030;
+    proxy_pass http://127.0.0.1:9030;
   }
 
   location /repos/ {
-    proxy_pass http://iac-portal:9030;
+    proxy_pass http://127.0.0.1:9030;
   }
 }
 ```
 
-- 其中 `iac-portal` 需要替换为后端 portal 服务的 ip
-
 配置后重启 nginx，完成前端部署。
 
-*至此服务部署完成*
+
+## 部署完成
+至此服务部署完成，访问 http://${PORTAL_ADDRESS} 进行登陆。
+
+默认的用户名为 admin@example.com (即 IAC_ADMIN_EMAIL)，密码为 `.env` 中配置的 `IAC_ADMIN_PASSWORD`。
