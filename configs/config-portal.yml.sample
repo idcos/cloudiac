@@ -42,3 +42,9 @@ smtpServer:
   fromName: "${SMTP_FROM_NAME}" # 邮件发送方的名称，不配置则为空
   from: "${SMTP_FROM}"  # 邮件显示的发送方，不配置则使用 username 值
 
+ldap:
+  admin_dn: "${LDAP_ADMIN_DN}"
+  admin_password: "${LDAP_ADMIN_PASSWORD}"
+  ldap_server: "${LDAP_SERVER}"
+  ldap_server_port: 389
+  search_base: "${LDAP_SEARCH_BASE}"

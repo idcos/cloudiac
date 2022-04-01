@@ -153,10 +153,14 @@ func CloneNewDriftTask(tx *db.Session, src models.Task, env *models.Env) (*model
 	task.CreatorId = consts.SysUserId
 	task.AutoApprove = env.AutoApproval
 	task.StopOnViolation = env.StopOnViolation
-	task.RunnerId = env.RunnerId
 	// newCommonTask方法完成了对keyId赋值，这里不需要在进行一次赋值了
 	//task.KeyId = env.KeyId
 	task.Source = taskSource
+
+	task.RunnerId, er = GetAvailableRunnerId(env.RunnerId, strings.Split(env.RunnerTags, ","))
+	if er != nil {
+		return nil, er
+	}
 
 	return doCreateTask(tx, *task, tpl, env)
 }
@@ -664,11 +668,11 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 	for i := range values.ChildModules {
 		rs = append(rs, traverseStateModule(&values.ChildModules[i])...)
 	}
-
-	resources, err := getResourceByEnvId(tx, task.EnvId)
+	resources, err := GetResourceByEnvId(tx, task.EnvId)
 	if err != nil {
 		return err
 	}
+	resMap := SetResFieldsAsMap(resources)
 	for _, r := range rs {
 		if _, ok := r.Attrs["id"]; !ok {
 			logs.Get().Warn("attrs key 'id' not exist")
@@ -678,10 +682,9 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 			logs.Get().Warn("attrs key 'id' is null")
 		}
 		r.AppliedAt = models.Time(time.Now())
-		for _, res := range resources {
-			if res.ResId == models.Id(resId) {
-				r.AppliedAt = res.AppliedAt
-				break
+		if resMap != nil {
+			if resMap[resId] != nil {
+				r.AppliedAt = resMap[resId].(models.Time)
 			}
 		}
 		if len(proMap) > 0 {
@@ -757,7 +760,8 @@ func UnmarshalTfParseJson(bs []byte) (*resps.TfParse, error) {
 	return &js, err
 }
 
-func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource) error {
+func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource, isPlanResult bool) error {
+
 	var (
 		resAdded     = 0
 		resChanged   = 0
@@ -766,28 +770,41 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource)
 	for _, r := range rs {
 		actions := r.Change.Actions
 		switch {
-		case utils.SliceEqualStr(actions, []string{"no-op"}),
-			utils.SliceEqualStr(actions, []string{"create", "delete"}):
+		case utils.SliceEqualStr(actions, []string{"no-op"}):
 			continue
+		case utils.SliceEqualStr(actions, []string{"create", "delete"}):
+			resAdded += 1
+			resDestroyed += 1
 		case utils.SliceEqualStr(actions, []string{"create"}):
 			resAdded += 1
-		case utils.SliceEqualStr(actions, []string{"update"}),
-			utils.SliceEqualStr(actions, []string{"delete", "create"}):
+		case utils.SliceEqualStr(actions, []string{"update"}):
 			resChanged += 1
+		case utils.SliceEqualStr(actions, []string{"delete", "create"}):
+			resDestroyed += 1
+			resAdded += 1
 		case utils.SliceEqualStr(actions, []string{"delete"}):
 			resDestroyed += 1
 		default:
 			logs.Get().WithField("taskId", task.Id).Errorf("unknown change actions: %v", actions)
 		}
 	}
+	if isPlanResult {
+		task.PlanResult.ResAdded = &resAdded
+		task.PlanResult.ResChanged = &resChanged
+		task.PlanResult.ResDestroyed = &resDestroyed
 
-	task.Result.ResAdded = &resAdded
-	task.Result.ResChanged = &resChanged
-	task.Result.ResDestroyed = &resDestroyed
-
-	if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
-		UpdateColumn("result", task.Result); err != nil {
-		return err
+		if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
+			UpdateColumn("plan_result", task.PlanResult); err != nil {
+			return err
+		}
+	} else {
+		task.Result.ResAdded = &resAdded
+		task.Result.ResChanged = &resChanged
+		task.Result.ResDestroyed = &resDestroyed
+		if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
+			UpdateColumn("result", task.Result); err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -32,16 +32,16 @@ type CreateEnvForm struct {
 	StepTimeout     int        `form:"stepTimeout" json:"stepTimeout" binding:""`                       // 部署超时时间（单位：秒）
 	Variables       []Variable `form:"variables" json:"variables" binding:"omitempty,dive,required"`    // 自定义变量列表，该变量列表会覆盖现有的变量
 
-	TfVarsFile   string    `form:"tfVarsFile" json:"tfVarsFile" binding:"max=255"`                     // Terraform tfvars 变量文件路径
-	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:"max=255"`                 // Ansible playbook 变量文件路径
-	Playbook     string    `form:"playbook" json:"playbook" binding:"omitempty,endswith=.yml,max=255"` // Ansible playbook 入口文件路径
-	KeyId        models.Id `form:"keyId" json:"keyId" binding:"omitempty,startswith=k-,max=32"`        // 部署密钥ID
-	Workdir      string    `form:"workdir" json:"workdir" binding:"max=32"`                            // 工作目录
+	TfVarsFile   string    `form:"tfVarsFile" json:"tfVarsFile" binding:"max=255"`              // Terraform tfvars 变量文件路径
+	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:"max=255"`          // Ansible playbook 变量文件路径
+	Playbook     string    `form:"playbook" json:"playbook" binding:"omitempty,max=255"`        // Ansible playbook 入口文件路径
+	KeyId        models.Id `form:"keyId" json:"keyId" binding:"omitempty,startswith=k-,max=32"` // 部署密钥ID
+	Workdir      string    `form:"workdir" json:"workdir" binding:"max=32"`                     // 工作目录
 
-	RetryNumber int         `form:"retryNumber" json:"retryNumber" binding:""`           // 重试总次数
-	RetryDelay  int         `form:"retryDelay" json:"retryDelay" binding:""`             // 重试时间间隔
-	RetryAble   bool        `form:"retryAble" json:"retryAble" binding:""`               // 是否允许任务进行重试
-	ExtraData   models.JSON `form:"extraData" json:"extraData" binding:"omitempty,json"` // 扩展字段，用于存储外部服务调用时的信息
+	RetryNumber int         `form:"retryNumber" json:"retryNumber" binding:""` // 重试总次数
+	RetryDelay  int         `form:"retryDelay" json:"retryDelay" binding:""`   // 重试时间间隔
+	RetryAble   bool        `form:"retryAble" json:"retryAble" binding:""`     // 是否允许任务进行重试
+	ExtraData   models.JSON `form:"extraData" json:"extraData" binding:""`     // 扩展字段，用于存储外部服务调用时的信息
 
 	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" binding:"omitempty,dive,required,startswith=vg-,max=32"`
 	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" binding:"omitempty,dive,required,startswith=vg-,max=32"`
@@ -61,8 +61,9 @@ type CreateEnvForm struct {
 }
 
 type SampleVariables struct {
-	Name  string `json:"name" form:"name" binding:"required,gte=2,lte=64"`
-	Value string `json:"value" form:"value" binding:""`
+	Name      string `json:"name" form:"name" binding:"required,lte=64"`
+	Value     string `json:"value" form:"value" binding:""`
+	Sensitive bool   `json:"sensitive" form:"sensitive" binding:""`
 }
 
 type CronDriftForm struct {
@@ -124,11 +125,11 @@ type DeployEnvForm struct {
 
 	Variables []Variable `form:"variables" json:"variables" binding:"omitempty,dive,required"` // 自定义变量列表，该变量列表会覆盖现有的变量
 
-	TfVarsFile   string    `form:"tfVarsFile" json:"tfVarsFile" binding:"max=255"`                     // Terraform tfvars 变量文件路径
-	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:"max=255"`                 // Ansible playbook 变量文件路径
-	Playbook     string    `form:"playbook" json:"playbook" binding:"omitempty,endswith=.yml,max=255"` // Ansible playbook 入口文件路径
-	KeyId        models.Id `form:"keyId" json:"keyId" binding:"omitempty,startswith=k-,max=32"`        // 部署密钥ID
-	Workdir      string    `form:"workdir" json:"workdir" binding:"max=32"`                            // 工作目录
+	TfVarsFile   string    `form:"tfVarsFile" json:"tfVarsFile" binding:"max=255"`              // Terraform tfvars 变量文件路径
+	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:"max=255"`          // Ansible playbook 变量文件路径
+	Playbook     string    `form:"playbook" json:"playbook" binding:"omitempty,max=255"`        // Ansible playbook 入口文件路径
+	KeyId        models.Id `form:"keyId" json:"keyId" binding:"omitempty,startswith=k-,max=32"` // 部署密钥ID
+	Workdir      string    `form:"workdir" json:"workdir" binding:"max=32"`                     // 工作目录
 
 	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" binding:"omitempty,dive,required,startswith=vg-,max=32"`
 	DelVarGroupIds []models.Id `json:"delVarGroupIds" form:"delVarGroupIds" binding:"omitempty,dive,required,startswith=vg-,max=32"`

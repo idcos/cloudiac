@@ -283,7 +283,9 @@ func UpdateUser(c *ctx.ServiceContext, form *forms.UpdateUserForm) (*models.User
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	}
 	if user.IsLdap {
-		return nil, e.New(e.LdapUpdateFailed)
+		if form.HasKey("oldPassword") || form.HasKey("newPassword") {
+			return nil, e.New(e.LdapNotAllowUpdate)
+		}
 	}
 
 	attrs := models.Attrs{}
@@ -505,6 +507,14 @@ func UserPassReset(c *ctx.ServiceContext, form *forms.DetailUserForm) (*models.U
 		return nil, e.New(e.PermissionDeny, fmt.Errorf("modify sys user denied"), http.StatusForbidden)
 	}
 
+	user, er := services.GetUserById(c.DB(), form.Id)
+	if er != nil {
+		return nil, e.AutoNew(er, e.DBError)
+	}
+	if user.IsLdap {
+		return nil, e.New(e.LdapNotAllowUpdate)
+	}
+
 	initPass := utils.GenPasswd(6, "mix")
 	hashedPassword, err := services.HashPassword(initPass)
 	if err != nil {
@@ -515,7 +525,10 @@ func UserPassReset(c *ctx.ServiceContext, form *forms.DetailUserForm) (*models.U
 	attrs := models.Attrs{}
 	attrs["password"] = hashedPassword
 
-	user, err := services.UpdateUser(c.DB(), form.Id, attrs)
+	user, err = services.UpdateUser(c.DB(), form.Id, attrs)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
 
 	resp := struct {
 		*models.User

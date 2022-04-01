@@ -134,5 +134,5 @@
 31610,SystemConfigNotExist,当前配置不存在,system config does not exist
 30731,TemplateKeyIdNotSet,SSH 密钥未配置,ssh keypair is not setup 
 31283,PolicyGroupDirError,仓库在当前目录找不到策略文件,policy not found in the repository
-31710,LdapConnectFailed,ldap链接服务端链接失败,ldap servers connect failed
-31720,LdapUpdateFailed,ldap账户不支持在iac服务端进行修改,LDAP accounts cannot be modified on the IAC server
+31710,LdapConnectFailed,ldap 服务器连接 失败,ldap servers connect failed
+31720,LdapNotAllowUpdate,ldap 账号不支持修改,Ldap account cannot be modified
