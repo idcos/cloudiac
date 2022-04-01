@@ -1064,6 +1064,9 @@ func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env
 	if err := setAndCheckEnvCron(env, form); err != nil {
 		return err
 	}
+	if form.HasKey("extraData") {
+		env.ExtraData = form.ExtraData
+	}
 
 	if form.HasKey("variables") {
 		updateVarsForm := forms.UpdateObjectVarsForm{
@@ -1172,6 +1175,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		AutoApprove:     env.AutoApproval,
 		Revision:        env.Revision,
 		StopOnViolation: env.StopOnViolation,
+		ExtraData:       env.ExtraData,
 		BaseTask: models.BaseTask{
 			Type:        form.TaskType,
 			StepTimeout: env.StepTimeout,
