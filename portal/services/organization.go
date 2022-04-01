@@ -372,8 +372,41 @@ func completeResGrowTrend(input []resps.ResGrowTrendResp, days int) []resps.ResG
 	return results
 }
 
+// GetOrgResSummary 组织资源概览
 func GetOrgResSummary(tx *db.Session, orgId models.Id, projectIds []string, limit int) ([]resps.OrgResSummaryResp, e.Error) {
-	query := tx.Model(&models.Resource{}).Select(`iac_resource.type as res_type, count(*) as count, DATE_FORMAT(iac_resource.applied_at, "%Y-%m") as date`)
+
+	curMonthData, err := getOrgResSummaryByMonth(tx, orgId, projectIds, time.Now().Format("2006-01"), limit)
+	if err != nil {
+		return nil, err
+	}
+
+	lastMonthData, err := getOrgResSummaryByMonth(tx, orgId, projectIds, time.Now().AddDate(0, -1, 0).Format("2006-01"), limit)
+	if err != nil {
+		return nil, err
+	}
+
+	var results = make([]resps.OrgResSummaryResp, 0)
+	for _, data := range curMonthData {
+		lastMonthCount := findLastMonthResCount(data.ResType, lastMonthData)
+		data.Up = data.Count - lastMonthCount
+		results = append(results, data)
+	}
+
+	return results, nil
+}
+
+func findLastMonthResCount(resType string, monthData []resps.OrgResSummaryResp) int {
+	for _, data := range monthData {
+		if data.ResType == resType {
+			return data.Count
+		}
+	}
+
+	return 0
+}
+
+func getOrgResSummaryByMonth(tx *db.Session, orgId models.Id, projectIds []string, month string, limit int) ([]resps.OrgResSummaryResp, e.Error) {
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.type as res_type, count(*) as count`)
 	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
 	query = query.Where(`iac_env.org_id = ?`, orgId)
 
@@ -381,9 +414,9 @@ func GetOrgResSummary(tx *db.Session, orgId models.Id, projectIds []string, limi
 		query = query.Where(`iac_env.project_id in ?`, projectIds)
 	}
 
-	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(CURDATE(), "%Y-%m") OR DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m")`)
+	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m") = ?`, month)
 
-	query = query.Group("res_type,date")
+	query = query.Group("res_type")
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
