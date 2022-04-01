@@ -785,7 +785,7 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource,
 		case utils.SliceEqualStr(actions, []string{"delete"}):
 			resDestroyed += 1
 		default:
-			logs.Get().WithField("taskId", task.Id).Errorf("unknown change actions: %v", actions)
+			logs.Get().WithField("taskId", task.Id).Warnf("unknown plan change actions: %v", actions)
 		}
 	}
 	if isPlanResult {
