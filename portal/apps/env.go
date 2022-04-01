@@ -969,6 +969,9 @@ func setEnvByForm(env *models.Env, form *forms.DeployEnvForm) {
 	if form.HasKey("workdir") {
 		env.Workdir = form.Workdir
 	}
+	if form.HasKey("extraData") {
+		env.ExtraData = form.ExtraData
+	}
 
 	setEnvRunnerInfoByForm(env, form)
 }

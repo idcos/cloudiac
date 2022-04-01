@@ -112,15 +112,16 @@ type DeployEnvForm struct {
 	AutoApproval    bool     `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"`              // 是否自动审批
 	StopOnViolation bool     `form:"stopOnViolation" json:"stopOnViolation" enums:"true,false"`                    // 合规不通过是否中止任务
 
-	TaskType    string   `form:"taskType" json:"taskType" binding:"required,oneof=plan apply destroy" enums:"plan,apply,destroy"` // 环境创建后触发的任务步骤，plan计划,apply部署,destroy销毁资源
-	Targets     string   `form:"targets" json:"targets" binding:""`                                                               // Terraform target 参数列表
-	RunnerId    string   `form:"runnerId" json:"runnerId" binding:"max=32"`                                                       // 环境默认部署通道
-	RunnerTags  []string `form:"runnerTags" json:"runnerTags" binding:"omitempty,dive,required,max=256"`                          // 环境默认部署通道Tags
-	Revision    string   `form:"revision" json:"revision" binding:"max=64"`                                                       // 分支/标签
-	StepTimeout int      `form:"stepTimeout" json:"stepTimeout" binding:""`                                                       // 部署超时时间（单位：秒）
-	RetryNumber int      `form:"retryNumber" json:"retryNumber" binding:""`                                                       // 重试总次数
-	RetryDelay  int      `form:"retryDelay" json:"retryDelay" binding:""`                                                         // 重试时间间隔
-	RetryAble   bool     `form:"retryAble" json:"retryAble" binding:""`                                                           // 是否允许任务进行重试
+	TaskType    string      `form:"taskType" json:"taskType" binding:"required,oneof=plan apply destroy" enums:"plan,apply,destroy"` // 环境创建后触发的任务步骤，plan计划,apply部署,destroy销毁资源
+	Targets     string      `form:"targets" json:"targets" binding:""`                                                               // Terraform target 参数列表
+	RunnerId    string      `form:"runnerId" json:"runnerId" binding:"max=32"`                                                       // 环境默认部署通道
+	RunnerTags  []string    `form:"runnerTags" json:"runnerTags" binding:"omitempty,dive,required,max=256"`                          // 环境默认部署通道Tags
+	Revision    string      `form:"revision" json:"revision" binding:"max=64"`                                                       // 分支/标签
+	StepTimeout int         `form:"stepTimeout" json:"stepTimeout" binding:""`                                                       // 部署超时时间（单位：秒）
+	RetryNumber int         `form:"retryNumber" json:"retryNumber" binding:""`                                                       // 重试总次数
+	RetryDelay  int         `form:"retryDelay" json:"retryDelay" binding:""`                                                         // 重试时间间隔
+	RetryAble   bool        `form:"retryAble" json:"retryAble" binding:""`                                                           // 是否允许任务进行重试
+	ExtraData   models.JSON `form:"extraData" json:"extraData" binding:""`                                                           // 扩展字段，用于存储外部服务调用时的信息
 
 	Variables []Variable `form:"variables" json:"variables" binding:"omitempty,dive,required"` // 自定义变量列表，该变量列表会覆盖现有的变量
 
