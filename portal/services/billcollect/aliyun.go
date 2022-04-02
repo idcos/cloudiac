@@ -35,7 +35,7 @@ func NewAlicloudBillProvider(vg *models.VariableGroup) (*aliProvider, error) {
 	}
 
 	return &aliProvider{
-		clint:    result,
+		client:   result,
 		pageNum:  1,
 		pageSize: 300,
 		provider: vg.Provider,
@@ -44,7 +44,7 @@ func NewAlicloudBillProvider(vg *models.VariableGroup) (*aliProvider, error) {
 }
 
 type aliProvider struct {
-	clint    *bssopenapi20171214.Client
+	client   *bssopenapi20171214.Client
 	provider string
 	pageNum  int32
 	pageSize int32
@@ -64,7 +64,7 @@ func (ap *aliProvider) GetResourceMonthCost(billingCycle string) ([]*bssopenapi2
 		PageSize: tea.Int32(ap.pageSize),
 	}
 
-	result, err := ap.clint.QueryInstanceBill(queryInstanceBillRequest)
+	result, err := ap.client.QueryInstanceBill(queryInstanceBillRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -123,4 +123,3 @@ func (ap *aliProvider) DownloadMonthBill(billingCycle string) (map[string]Resour
 
 	return resp, resourceIds, nil
 }
-
