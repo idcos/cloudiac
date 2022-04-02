@@ -20,6 +20,7 @@ type Option struct {
 	Scan            ScanCmd               `command:"scan" description:"scan template with policy"`
 	Parse           ParseCmd              `command:"parse" description:"parse rego"`
 	Upgrade2v0dot10 Update2v0dot10Cmd     `command:"upgrade2v0.10" description:"update data to v0.10"`
+	Bill            BillCmd               `command:"bill-collect" description:"bill collect"`
 }
 
 var (

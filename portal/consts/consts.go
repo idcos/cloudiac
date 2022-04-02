@@ -148,6 +148,13 @@ const (
 	TaskSourceApi          = "api"
 
 	TaskAutoDestroyName = "Auto Destroy"
+
+	BillCollectAli = "alicloud"
+)
+
+const (
+	AlicloudAK = "ALICLOUD_ACCESS_KEY"
+	AlicloudSK = "ALICLOUD_SECRET_KEY"
 )
 
 var (
@@ -186,5 +193,9 @@ var (
 		common.TaskApproving: EventTaskApproving,
 		common.TaskRejected:  EventTaskFailed,
 		EvenvtCronDrift:      EvenvtCronDrift,
+	}
+
+	BillProviderResAccount = map[string][]string{
+		BillCollectAli: []string{AlicloudAK, AlicloudSK},
 	}
 )

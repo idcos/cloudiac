@@ -108,6 +108,16 @@ func StatisticalProjectEnv(dbSess *db.Session, projectId models.Id) (*struct {
 
 }
 
+func GetProjectIdsByVgId(dbSess *db.Session, vgId models.Id) ([]string, error) {
+	ids := make([]string, 0)
+	if err := dbSess.Model(models.VariableGroupProjectRel{}).
+		Where("var_group_id = ?", vgId).
+		Pluck("project_id", &ids); err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
 // GetProjectEnvStat 环境状态占比
 func GetProjectEnvStat(tx *db.Session, projectId models.Id) ([]resps.EnvStatResp, e.Error) {
 	subQuery := tx.Model(&models.Env{}).Select(`if(task_status = '', status, task_status) as status`)

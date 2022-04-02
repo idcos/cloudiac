@@ -135,6 +135,9 @@ func (m *TaskManager) start() {
 		cancel()
 	}()
 
+	// 启动账单采集定时任务
+	billCron(ctx)
+
 	// 恢复执行中的任务状态
 	if err = m.recoverTask(ctx); err != nil {
 		m.logger.Errorf("recover task error: %v", err)
