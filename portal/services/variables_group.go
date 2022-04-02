@@ -338,7 +338,6 @@ func BatchUpdateRelationship(tx *db.Session, vgIds, delVgIds []models.Id, object
 // GetValidVarsAndVgVars 获取变量及变量组变量
 func GetValidVarsAndVgVars(tx *db.Session, orgId, projectId, tplId, envId models.Id) ([]models.VariableBody, error) {
 	vars, err, _ := GetValidVariables(tx, consts.ScopeEnv, orgId, projectId, tplId, envId, true)
-	logs.Get().Println("vars is ------", vars)
 	if err != nil {
 		return nil, fmt.Errorf("get vairables error: %v", err)
 	}
@@ -351,6 +350,7 @@ func GetValidVarsAndVgVars(tx *db.Session, orgId, projectId, tplId, envId models
 		consts.ScopeProject:  projectId,
 		consts.ScopeOrg:      orgId,
 	}, consts.ScopeEnv)
+
 	if err != nil {
 		return nil, fmt.Errorf("get vairable group var error: %v", err)
 	}
