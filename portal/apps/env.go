@@ -918,7 +918,7 @@ func EnvDeployCheck(c *ctx.ServiceContext, envId models.Id) (interface{}, e.Erro
 	if err != nil {
 		return nil, err
 	}
-	if len(tasks) != 0 {
+	if len(tasks) > 0 {
 		return nil, e.New(e.EnvDeploying, "Deployment initiation is not allowed")
 	}
 	return nil, nil
