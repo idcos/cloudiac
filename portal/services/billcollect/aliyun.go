@@ -96,10 +96,9 @@ func (ap *aliProvider) DownloadMonthBill(billingCycle string) (map[string]Resour
 	insertDate := make([]models.BillData, 0, len(billData))
 	resp := make(map[string]ResourceCost)
 	resourceIds := make([]string, 0, len(billData))
-	for _, v := range billData {
+	for index, v := range billData {
 		resourceIds = append(resourceIds, *v.InstanceID)
-
-		m := structs.Map(&v)
+		m := structs.Map(&billData[index])
 		insertDate = append(insertDate, models.BillData{
 			Provider:   ap.provider,
 			InstanceId: *v.InstanceID,

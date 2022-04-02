@@ -52,9 +52,9 @@ func cronTask() {
 		return
 	}
 
-	for _, v := range vg {
+	for index, v := range vg {
 		// 获取账单provider
-		bp, err := billcollect.GetBillProvider(&v)
+		bp, err := billcollect.GetBillProvider(&vg[index])
 		if err != nil {
 			logger.Errorf("get bill provider failed vgId: %s provider: %s,err: %s", v.Id, v.Provider, err)
 			continue
