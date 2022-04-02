@@ -230,3 +230,45 @@ func IsUserOrgProjectPermission(dbSess *db.Session, userId, project models.Id, r
 	}
 	return isExists
 }
+
+// ProjectStat 组织和项目概览页统计数据
+func ProjectStat(c *ctx.ServiceContext, form *forms.ProjectStatForm) (interface{}, e.Error) {
+	tx := c.DB()
+	// 环境状态占比
+	envStat, err := services.GetProjectEnvStat(tx, form.ProjectId)
+	if err != nil {
+		return nil, err
+	}
+
+	// 资源类型占比
+	resStat, err := services.GetProjectResStat(tx, form.ProjectId, form.Limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// 环境资源数量
+	envResStat, err := services.GetProjectEnvResStat(tx, form.ProjectId, form.Limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// 资源新增趋势
+	resGrowTrend, err := services.GetProjectResGrowTrend(tx, form.ProjectId, 7)
+	if err != nil {
+		return nil, err
+	}
+
+	// 环境资源数量
+	envResSummary, err := services.GetProjectResSummary(tx, form.ProjectId, form.Limit)
+	if err != nil {
+		return nil, err
+	}
+
+	return &resps.ProjectStatResp{
+		EnvStat:       envStat,
+		ResStat:       resStat,
+		EnvResStat:    envResStat,
+		ResGrowTrend:  resGrowTrend,
+		EnvResSummary: envResSummary,
+	}, nil
+}

@@ -645,3 +645,49 @@ func InviteUsersBatch(c *ctx.ServiceContext, form *forms.InviteUsersBatchForm) (
 
 	return resps.InviteUsersBatchResp{Success: success, Failed: failed}, nil
 }
+
+// OrgProjectsStat 组织和项目概览页统计数据
+func OrgProjectsStat(c *ctx.ServiceContext, form *forms.OrgProjectsStatForm) (interface{}, e.Error) {
+	tx := c.DB()
+	var projectIds []string
+	if form.ProjectIds != "" {
+		projectIds = strings.Split(form.ProjectIds, ",")
+	}
+	// 环境状态占比
+	envStat, err := services.GetOrgProjectsEnvStat(tx, c.OrgId, projectIds)
+	if err != nil {
+		return nil, err
+	}
+
+	// 资源类型占比
+	resStat, err := services.GetOrgProjectsResStat(tx, c.OrgId, projectIds, form.Limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// 项目资源数量
+	projectResStat, err := services.GetOrgProjectStat(tx, c.OrgId, projectIds, form.Limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// 资源新增趋势
+	resGrowTrend, err := services.GetOrgResGrowTrend(tx, c.OrgId, projectIds, 7)
+	if err != nil {
+		return nil, err
+	}
+
+	// 资源概览
+	orgResSummary, err := services.GetOrgResSummary(tx, c.OrgId, projectIds, form.Limit)
+	if err != nil {
+		return nil, err
+	}
+
+	return &resps.OrgProjectsStatResp{
+		EnvStat:        envStat,
+		ResStat:        resStat,
+		ProjectResStat: projectResStat,
+		ResGrowTrend:   resGrowTrend,
+		OrgResSummary:  orgResSummary,
+	}, nil
+}

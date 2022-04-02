@@ -249,7 +249,6 @@ func (Organization) SearchOrgResources(c *ctx.GinRequest) {
 	c.JSONResult(apps.SearchOrgResources(c.Service(), &form))
 }
 
-
 //SearchOrgResourcesFilters 搜索当前组织下所有项目的活跃环境名称以及provider
 //@Tags 组织
 //@Summary 搜索当前组织下所有项目的活跃资源列表
@@ -308,4 +307,24 @@ func (Organization) InviteUsersBatch(c *ctx.GinRequest) {
 		return
 	}
 	c.JSONResult(apps.InviteUsersBatch(c.Service(), &form))
+}
+
+// OrgProjectsStat 组织和项目概览统计数据
+// @Tags 组织
+// @Summary 组织和项目概览统计数据
+// @Description 组织和项目概览统计数据
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param form formData forms.OrgProjectsStatForm true "parameter"
+// @router /orgs/projects/statistics [get]
+// @Success 200 {object} ctx.JSONResult{result=resps.OrgProjectsStatResp}
+func (Organization) OrgProjectsStat(c *ctx.GinRequest) {
+	form := forms.OrgProjectsStatForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.OrgProjectsStat(c.Service(), &form))
 }
