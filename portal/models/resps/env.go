@@ -27,5 +27,5 @@ type EnvCostDetail struct {
 type EnvStatisticsResp struct {
 	CostTypeStat  []EnvCostTypeStatResp  `json:"costTypeStat"`
 	CostTrendStat []EnvCostTrendStatResp `json:"costTrendStat"`
-	EnvCostList   []EnvCostDetail        `json:"envCostList"`
+	CostList      []EnvCostDetail        `json:"costList"`
 }

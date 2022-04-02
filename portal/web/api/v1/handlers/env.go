@@ -378,8 +378,7 @@ func (Env) EnvStat(c *ctx.GinRequest) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	//c.JSONResult(apps.EnvUnLockConfirm(c.Service(), &form))
-	return
+	c.JSONResult(apps.EnvStat(c.Service(), &form))
 }
 
 // EnvLock 环境锁定

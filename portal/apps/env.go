@@ -1467,3 +1467,33 @@ func EnvUnLockConfirm(c *ctx.ServiceContext, form *forms.EnvUnLockConfirmForm) (
 
 	return resp, nil
 }
+
+// EnvStat 环境概览页统计数据
+func EnvStat(c *ctx.ServiceContext, form *forms.EnvParam) (interface{}, e.Error) {
+
+	tx := c.DB()
+
+	// 费用类型统计
+	envCostTypeStat, err := services.EnvCostTypeStat(tx, form.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	// 费用趋势统计
+	envCostTrendStat, err := services.EnvCostTrendStat(tx, form.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	// 费用列表
+	envCostList, err := services.EnvCostList(tx, form.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &resps.EnvStatisticsResp{
+		CostTypeStat:  envCostTypeStat,
+		CostTrendStat: envCostTrendStat,
+		CostList:      envCostList,
+	}, nil
+}

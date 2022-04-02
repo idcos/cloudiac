@@ -17,6 +17,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 )
@@ -411,4 +412,19 @@ func EnvUnLocked(dbSess *db.Session, id models.Id) e.Error {
 		return e.New(e.DBError, err)
 	}
 	return nil
+}
+
+// EnvCostTypeStat 费用类型统计
+func EnvCostTypeStat(tx *db.Session, id models.Id) ([]resps.EnvCostTypeStatResp, e.Error) {
+	return nil, nil
+}
+
+// EnvCostTrendStat 费用趋势统计
+func EnvCostTrendStat(tx *db.Session, id models.Id) ([]resps.EnvCostTrendStatResp, e.Error) {
+	return nil, nil
+}
+
+// EnvCostList 费用列表
+func EnvCostList(tx *db.Session, id models.Id) ([]resps.EnvCostDetail, e.Error) {
+	return nil, nil
 }
