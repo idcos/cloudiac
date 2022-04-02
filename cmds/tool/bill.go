@@ -1,36 +1,41 @@
-// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
-
-package task_manager
+package main
 
 import (
+	"cloudiac/configs"
 	"cloudiac/portal/libs/db"
+	"cloudiac/portal/models"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/billcollect"
 	"cloudiac/utils/logs"
-	"context"
-	"github.com/robfig/cron/v3"
+	"fmt"
 	"time"
 )
 
-func billCron(ctx context.Context) {
-	c := cron.New()
-	if _, err := c.AddFunc("@daily", cronBillCollectTask); err != nil {
-		logs.Get().Error("bill cron task start failed")
-		return
-	}
-	c.Start()
+type BillCmd struct{}
 
-	go func() {
-		<-ctx.Done()
-		c.Stop()
-	}()
+func (*BillCmd) Usage() string {
+	return `<bill collect>`
 }
 
-func cronBillCollectTask() {
-	logger := logs.Get().WithField("action", "billing cron task")
-	logger.Info("start bill collect")
+func (b *BillCmd) Execute(args []string) error {
+	var billingCycle string
 
-	billingCycle := time.Now().Format("2006-01")
+	configs.Init(opt.Config)
+	db.Init(configs.Get().Mysql)
+	models.Init(false)
+
+	if len(args) == 1 {
+		billingCycle = args[0]
+	}
+
+	fmt.Println(billingCycle, "billingCycle1")
+
+	logger := logs.Get().WithField("acton", "billing cron task")
+	logger.Info("start bill collect")
+	if billingCycle == "" {
+		billingCycle = time.Now().Format("2006-01")
+	}
+	fmt.Println(billingCycle, "billingCycle2")
 
 	tx := db.Get().Begin()
 	defer func() {
@@ -44,7 +49,7 @@ func cronBillCollectTask() {
 	if err != nil {
 		_ = tx.Rollback()
 		logger.Errorf("get vg err: %s", err)
-		return
+		return err
 	}
 
 	for index, v := range vg {
@@ -99,4 +104,5 @@ func cronBillCollectTask() {
 	}
 
 	logger.Info("stop bill collect")
+	return nil
 }

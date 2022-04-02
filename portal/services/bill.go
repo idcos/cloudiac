@@ -28,6 +28,7 @@ func ParseBill(resCost map[string]billcollect.ResourceCost, res []models.Resourc
 			resp = append(resp, models.Bill{
 				OrgId:          v.OrgId,
 				ProjectId:      v.ProjectId,
+				EnvId:          v.EnvId,
 				VgId:           models.Id(vgId),
 				ProductCode:    resCost[v.ResId.String()].ProductCode,
 				InstanceId:     resCost[v.ResId.String()].InstanceId,

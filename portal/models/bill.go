@@ -7,7 +7,7 @@ type Bill struct {
 
 	OrgId          Id      `json:"orgId" gorm:"size:32;not null"`            // 组织ID
 	ProjectId      Id      `json:"projectId" gorm:"size:32;not null"`        // 项目ID
-	TplId          Id      `json:"tplId" gorm:"size:32;not null"`            // 模板ID
+	EnvId          Id      `json:"envId" gorm:"size:32;not null"`            // 模板ID
 	VgId           Id      `json:"vgId"  gorm:"size:32;not null"`            // 资源账号id
 	ProductCode    string  `json:"productCode" gorm:"not null"`              // 产品类型
 	InstanceId     string  `json:"instanceId" gorm:"not null"`               // 实例id

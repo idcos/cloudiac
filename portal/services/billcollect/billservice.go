@@ -8,7 +8,6 @@ import (
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
-	bssopenapi20171214 "github.com/alibabacloud-go/bssopenapi-20171214/client"
 )
 
 type ResourceCost struct {
@@ -30,9 +29,9 @@ type BillProvider interface {
 	// param billingCycle 账单采集周期
 	DownloadMonthBill(billingCycle string) (map[string]ResourceCost, []string, error)
 
-	// GetResourceMonthCost 获取月账单数据
-	// param billingCycle 账单采集周期
-	GetResourceMonthCost(billingCycle string) ([]*bssopenapi20171214.QueryInstanceBillResponseBodyDataItemsItem, error)
+	//// GetResourceMonthCost 获取月账单数据
+	//// param billingCycle 账单采集周期
+	//GetResourceMonthCost(billingCycle string) ([]*bssopenapi20171214.QueryInstanceBillResponseBodyDataItemsItem, error)
 
 	// GetResourceDayCost 获取日账单数据
 	// param billingCycle 账单采集周期
