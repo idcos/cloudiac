@@ -468,11 +468,17 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 			taskStartFailed(errors.New("get task environment failed"))
 			return
 		}
-		task.RepoAddr = lastResTask.RepoAddr
-		task.CommitId = lastResTask.CommitId
-		task.Playbook = lastResTask.Playbook
-		task.Workdir = lastResTask.Workdir
-		task.TfVarsFile = lastResTask.TfVarsFile
+		attrs := models.Attrs{
+			"repoAddr":   lastResTask.RepoAddr,
+			"playbook":   lastResTask.Playbook,
+			"workdir":    lastResTask.Workdir,
+			"tfVarsFile": lastResTask.TfVarsFile,
+			"commitId":   lastResTask.CommitId,
+		}
+		if _, err := models.UpdateAttr(db.Get(), &models.Task{},
+			attrs, "id = ?", task.Id); err != nil {
+			logger.Errorf("update task aborting error: %v", err)
+		}
 
 	}
 
