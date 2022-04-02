@@ -529,10 +529,6 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 		TaskStatusChangeSendMessage(task, status)
 	}
 
-	if task.Exited() {
-		taskStatusExitedCall(dbSess, task, status)
-	}
-
 	if !skipUpdateEnv {
 		step, er := GetTaskStep(dbSess, task.Id, task.CurrStep)
 		if er != nil {
@@ -540,12 +536,16 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 		}
 		return ChangeEnvStatusWithTaskAndStep(dbSess, task.EnvId, task, step)
 	}
+
+	if task.Exited() {
+		taskStatusExitedCall(dbSess, task, status)
+	}
 	return nil
 }
 
 // 当任务变为退出状态时执行的操作·
 func taskStatusExitedCall(dbSess *db.Session, task *models.Task, status string) {
-	if task.Type == common.TaskTypeApply || task.Type == common.TaskTypeDestroy{
+	if task.Type == common.TaskTypeApply || task.Type == common.TaskTypeDestroy {
 		// 回调的消息通知只发送一次, 作业结束后发送通知
 		if !configs.Get().Kafka.Disabled {
 			SendKafkaMessage(dbSess, task, status)
@@ -1304,8 +1304,13 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 		logs.Get().Errorf("kafka send error, get resource data err: %v", err)
 		return
 	}
+	env, err := GetEnvById(session, task.EnvId)
+	if err != nil {
+		logs.Get().Errorf("kafka send error, query env status err: %v", err)
+		return
+	}
 	k := kafka.Get()
-	message := k.GenerateKafkaContent(task, taskStatus, resources)
+	message := k.GenerateKafkaContent(task, taskStatus, env.Status, resources)
 	if err := k.ConnAndSend(message); err != nil {
 		logs.Get().Errorf("kafka send error: %v", err)
 		return
