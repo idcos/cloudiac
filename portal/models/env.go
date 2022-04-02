@@ -150,6 +150,8 @@ type EnvDetail struct {
 	// (这个报错只在 gorm 日志中打印，db.Error 无错误)。
 	PolicyGroup []string `json:"policyGroup" gorm:"-"` // 环境相关合规策略组
 	RunnerTags  []string `json:"runnerTags" gorm:"-"`  // 将其转为数组返回给前端
+
+	MonthCost float32 `json:"monthCost" form:"monthCost"` // 环境月度成本
 }
 
 func (c *EnvDetail) UpdateEnvPolicyStatus() {
