@@ -873,13 +873,22 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (ret *models.En
 }
 
 // EnvDeployCheck 创建新部署前检测
-func EnvDeployCheck(c *ctx.ServiceContext, form *forms.DeployEnvForm) (interface{}, e.Error) {
-	env, err := services.GetEnvById(c.Tx(), form.Id)
+func EnvDeployCheck(c *ctx.ServiceContext, envId models.Id) (interface{}, e.Error) {
+	if c.OrgId == "" || c.ProjectId == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+	env, err := services.GetEnvById(c.Tx(), envId)
 	if err != nil {
 		return nil, err
 	}
+	//判断环境是否已归档
+	if env.Archived {
+		return nil, e.New(e.EnvArchived, "Environment archived")
+	}
+	// 检查自动纠漂移、推送到分支时重新部署时，是否了配置自动审批
+
 	// 云模板检测
-	tpl, err := services.GetTplByEnvId(c.Tx(), form.Id)
+	tpl, err := services.GetTplByEnvId(c.Tx(), envId)
 	if err != nil {
 		return nil, err
 	}
@@ -905,15 +914,11 @@ func EnvDeployCheck(c *ctx.ServiceContext, form *forms.DeployEnvForm) (interface
 	if err := services.VscTokenCheckByID(c.Tx(), vcs.Id, vcs.VcsToken); err != nil {
 		return nil, e.New(e.VcsInvalidToken, err)
 	}
-	//判断环境是否已归档
-	if env.Archived {
-		return nil, e.New(e.EnvArchived, "Environment archived")
-	}
+	//环境运行中不允许再手动发布任务
 	task, err := services.GetTaskById(c.Tx(), env.LastTaskId)
 	if err != nil {
 		return nil, err
 	}
-	//环境运行中不允许再手动发布任务
 	if utils.InArrayStr([]string{models.TaskPending, models.TaskRunning, models.TaskApproving}, task.Status) {
 		return nil, e.New(e.EnvDeploying, "Deployment initiation is not allowed")
 	}

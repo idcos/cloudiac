@@ -202,6 +202,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/tasks", ac(), w(handlers.Env{}.SearchTasks))
 	g.GET("/envs/:id/tasks/last", ac(), w(handlers.Env{}.LastTask))
 	g.POST("/envs/:id/deploy", ac("envs", "deploy"), w(handlers.Env{}.Deploy))
+	g.POST("/envs/:id/deploy/check", ac("envs", "deploy"), w(handlers.Env{}.DeployCheck))
 	g.POST("/envs/:id/destroy", ac("envs", "destroy"), w(handlers.Env{}.Destroy))
 	g.POST("/envs/:id/tags", ac("envs", "tags"), w(handlers.Env{}.UpdateTags))
 	g.GET("/envs/:id/resources", ac(), w(handlers.Env{}.SearchResources))
@@ -211,8 +212,8 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/policy_result", ac(), w(handlers.Env{}.PolicyResult))
 	g.GET("/envs/:id/resources/graph", ac(), w(handlers.Env{}.SearchResourcesGraph))
 	g.GET("/envs/:id/resources/graph/:resourceId", ac(), w(handlers.Env{}.ResourceGraphDetail))
-	g.POST("/envs/:id/lock", ac("envs","lock"), w(handlers.EnvLock))
-	g.POST("/envs/:id/unlock", ac("envs","unlock"), w(handlers.EnvUnLock))
+	g.POST("/envs/:id/lock", ac("envs", "lock"), w(handlers.EnvLock))
+	g.POST("/envs/:id/unlock", ac("envs", "unlock"), w(handlers.EnvUnLock))
 	g.GET("/envs/:id/unlock/confirm", ac(), w(handlers.EnvUnLockConfirm))
 
 	// 任务管理

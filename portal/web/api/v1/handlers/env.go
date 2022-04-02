@@ -129,15 +129,10 @@ func (Env) Deploy(c *ctx.GinRequest) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	_, err := apps.EnvDeployCheck(c.Service(), &form)
-	if err != nil {
-		c.JSONResult(nil, err)
-	} else {
-		c.JSONResult(apps.EnvDeploy(c.Service(), &form))
-	}
+	c.JSONResult(apps.EnvDeploy(c.Service(), &form))
 }
 
-// DeployCheck 环境重新部署检测
+// DeployCheck 环境重新部署检测接口
 // @Tags 环境
 // @Summary 环境重新部署检测
 // @Accept json
@@ -145,16 +140,11 @@ func (Env) Deploy(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
-// @Param data body forms.DeployEnvForm true "部署参数"
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/deploy/check [post]
 // @Success 200 {object} ctx.JSONResult{}
 func (Env) DeployCheck(c *ctx.GinRequest) {
-	form := forms.DeployEnvForm{}
-	if err := c.Bind(&form); err != nil {
-		return
-	}
-	c.JSONResult(apps.EnvDeployCheck(c.Service(), &form))
+	c.JSONResult(apps.EnvDeployCheck(c.Service(), models.Id(c.Param("id"))))
 }
 
 // Destroy 销毁环境资源
