@@ -914,11 +914,11 @@ func EnvDeployCheck(c *ctx.ServiceContext, envId models.Id) (interface{}, e.Erro
 		return nil, e.New(e.VcsInvalidToken, err)
 	}
 	//环境运行中不允许再手动发布任务
-	task, err := services.GetTaskById(c.Tx(), env.LastTaskId)
+	tasks, err := services.GetActiveTaskByEnvId(c.Tx(), envId)
 	if err != nil {
 		return nil, err
 	}
-	if utils.InArrayStr([]string{models.TaskPending, models.TaskRunning, models.TaskApproving}, task.Status) {
+	if len(tasks) != 0 {
 		return nil, e.New(e.EnvDeploying, "Deployment initiation is not allowed")
 	}
 	return nil, nil
