@@ -760,7 +760,8 @@ func UnmarshalTfParseJson(bs []byte) (*resps.TfParse, error) {
 	return &js, err
 }
 
-func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource) error {
+func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource, isPlanResult bool) error {
+
 	var (
 		resAdded     = 0
 		resChanged   = 0
@@ -769,28 +770,41 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource)
 	for _, r := range rs {
 		actions := r.Change.Actions
 		switch {
-		case utils.SliceEqualStr(actions, []string{"no-op"}),
-			utils.SliceEqualStr(actions, []string{"create", "delete"}):
+		case utils.SliceEqualStr(actions, []string{"no-op"}):
 			continue
+		case utils.SliceEqualStr(actions, []string{"create", "delete"}):
+			resAdded += 1
+			resDestroyed += 1
 		case utils.SliceEqualStr(actions, []string{"create"}):
 			resAdded += 1
-		case utils.SliceEqualStr(actions, []string{"update"}),
-			utils.SliceEqualStr(actions, []string{"delete", "create"}):
+		case utils.SliceEqualStr(actions, []string{"update"}):
 			resChanged += 1
+		case utils.SliceEqualStr(actions, []string{"delete", "create"}):
+			resDestroyed += 1
+			resAdded += 1
 		case utils.SliceEqualStr(actions, []string{"delete"}):
 			resDestroyed += 1
 		default:
-			logs.Get().WithField("taskId", task.Id).Errorf("unknown change actions: %v", actions)
+			logs.Get().WithField("taskId", task.Id).Warnf("unknown plan change actions: %v", actions)
 		}
 	}
+	if isPlanResult {
+		task.PlanResult.ResAdded = &resAdded
+		task.PlanResult.ResChanged = &resChanged
+		task.PlanResult.ResDestroyed = &resDestroyed
 
-	task.Result.ResAdded = &resAdded
-	task.Result.ResChanged = &resChanged
-	task.Result.ResDestroyed = &resDestroyed
-
-	if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
-		UpdateColumn("result", task.Result); err != nil {
-		return err
+		if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
+			UpdateColumn("plan_result", task.PlanResult); err != nil {
+			return err
+		}
+	} else {
+		task.Result.ResAdded = &resAdded
+		task.Result.ResChanged = &resChanged
+		task.Result.ResDestroyed = &resDestroyed
+		if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
+			UpdateColumn("result", task.Result); err != nil {
+			return err
+		}
 	}
 	return nil
 }

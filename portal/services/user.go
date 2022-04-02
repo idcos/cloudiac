@@ -11,8 +11,9 @@ import (
 	"cloudiac/portal/models/resps"
 	"cloudiac/utils"
 	"fmt"
-	"github.com/go-ldap/ldap/v3"
 	"strings"
+
+	"github.com/go-ldap/ldap/v3"
 )
 
 func CreateUser(tx *db.Session, user models.User) (*models.User, e.Error) {
@@ -123,7 +124,9 @@ func GetUserDetailById(query *db.Session, userId models.Id) (*resps.UserWithRole
 	d := resps.UserWithRoleResp{}
 	table := models.User{}.TableName()
 	if err := query.Model(&models.User{}).
-		Where(fmt.Sprintf("%s.id = ?", table), userId).Scan(&d); err != nil {
+		Where(fmt.Sprintf("%s.id = ?", table), userId).
+		LazySelectAppend("iac_user.*").
+		Scan(&d); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.UserNotExists, err)
 		}
@@ -336,4 +339,35 @@ func LdapAuthLogin(userEmail, password string) (username string, er e.Error) {
 	}
 	return sr.Entries[0].GetAttributeValue("uid"), nil
 
+}
+
+// GetUserHighestProjectRole 获取用户在指定组织下的最高项目角色
+func GetUserHighestProjectRole(db *db.Session, orgId models.Id, userId models.Id) (string, e.Error) {
+	roles := make([]string, 0)
+	err := db.Model(&models.UserProject{}).
+		Joins("join iac_project as p on p.id = iac_user_project.project_id and p.org_id = ?", orgId).
+		Where("user_id = ?", userId).Group("role").
+		Select("role").Scan(&roles)
+	if err != nil {
+		return "", e.New(e.DBError, err)
+	}
+	return GetHighestRole(roles...), nil
+}
+
+// HasInviteUserPerm 判断用户是否有邀请其他用户加入组织的权限
+func HasInviteUserPerm(db *db.Session, userId models.Id, orgId models.Id, targetRole string) (bool, e.Error) {
+	if UserHasOrgRole(userId, orgId, consts.OrgRoleAdmin) {
+		return true, nil
+	}
+
+	if targetRole == consts.OrgRoleMember {
+		// 组织下的项目管理员可以邀请用户成为组织成员
+		role, err := GetUserHighestProjectRole(db, orgId, userId)
+		if err != nil {
+			return false, err
+		} else if role == consts.ProjectRoleManager {
+			return true, nil
+		}
+	}
+	return false, nil
 }

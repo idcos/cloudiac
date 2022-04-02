@@ -315,12 +315,13 @@ func GetAvailableRunnerId(runnerId string, runnerTags []string) (string, e.Error
 	return GetDefaultRunner()
 }
 
-func varNewAppend(resp []forms.Variable, name, value, varType string) []forms.Variable {
+func varNewAppend(resp []forms.Variable, name, value, varType string, sensitive bool) []forms.Variable {
 	resp = append(resp, forms.Variable{
-		Scope: consts.ScopeEnv,
-		Type:  varType,
-		Name:  name,
-		Value: value,
+		Scope:     consts.ScopeEnv,
+		Type:      varType,
+		Name:      name,
+		Value:     value,
+		Sensitive: sensitive,
 	})
 	return resp
 }
@@ -335,7 +336,7 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 		isNewVaild := true
 		// 如果vars为空，则需要将sampleVariables所有的变量理解为新增变量
 		if len(vars) == 0 {
-			resp = varNewAppend(resp, v.Name, v.Value, consts.VarTypeEnv)
+			resp = varNewAppend(resp, v.Name, v.Value, consts.VarTypeEnv, v.Sensitive)
 			continue
 		}
 
@@ -344,7 +345,7 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 			if matchVar(v, value) {
 				if v.Value != value.Value {
 					isNewVaild = false
-					resp = varNewAppend(resp, vars[key].Name, v.Value, vars[key].Type)
+					resp = varNewAppend(resp, vars[key].Name, v.Value, vars[key].Type, v.Sensitive)
 				}
 				break
 			}
@@ -352,7 +353,7 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 
 		// 这部分变量是新增的 需要新建
 		if isNewVaild {
-			resp = varNewAppend(resp, v.Name, v.Value, consts.VarTypeEnv)
+			resp = varNewAppend(resp, v.Name, v.Value, consts.VarTypeEnv, v.Sensitive)
 		}
 	}
 
