@@ -217,8 +217,8 @@ func GetProjectResSummary(tx *db.Session, projectId models.Id, limit int) ([]res
 		lastMonthResults = append(lastMonthResults, data)
 	}
 
-	curMonthData = append(curMonthData, lastMonthResults...)
-	return curMonthData, nil
+	curMonthResults = append(curMonthResults, lastMonthResults...)
+	return curMonthResults, nil
 }
 
 func findProjectLastMonthResCount(resType string, monthData []resps.EnvResSummaryResp) int {
