@@ -885,7 +885,6 @@ func EnvDeployCheck(c *ctx.ServiceContext, envId models.Id) (interface{}, e.Erro
 	if env.Archived {
 		return nil, e.New(e.EnvArchived, "Environment archived")
 	}
-	// 检查自动纠漂移、推送到分支时重新部署时，是否了配置自动审批
 
 	// 云模板检测
 	tpl, err := services.GetTplByEnvId(c.Tx(), envId)
