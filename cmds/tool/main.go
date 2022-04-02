@@ -29,6 +29,11 @@ var (
 )
 
 func main() {
+	logger.SetLevel(logrus.DebugLevel)
+	logger.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:   true,
+		TimestampFormat: "2006-01-02T15:04:05.000",
+	})
 	common.LoadDotEnv()
 
 	_, err := flags.Parse(&opt)
