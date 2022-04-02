@@ -129,7 +129,12 @@ func (Env) Deploy(c *ctx.GinRequest) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.EnvDeploy(c.Service(), &form))
+	_, err := apps.EnvDeployCheck(c.Service(), &form)
+	if err != nil {
+		c.JSONResult(nil, err)
+	} else {
+		c.JSONResult(apps.EnvDeploy(c.Service(), &form))
+	}
 }
 
 // DeployCheck 环境重新部署检测
