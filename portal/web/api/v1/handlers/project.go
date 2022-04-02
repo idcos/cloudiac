@@ -108,3 +108,23 @@ func (Project) Detail(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.DetailProject(c.Service(), form))
 }
+
+// ProjectStat 项目概览统计数据
+// @Tags 项目
+// @Summary 项目概览统计数据
+// @Description 项目概览统计数据
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param form formData forms.ProjectStatForm true "parameter"
+// @router /projects/{id}/statistics [get]
+// @Success 200 {object} ctx.JSONResult{result=resps.ProjectStatResp}
+func (Project) ProjectStat(c *ctx.GinRequest) {
+	form := forms.ProjectStatForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.ProjectStat(c.Service(), &form))
+}

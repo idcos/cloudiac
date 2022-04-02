@@ -43,7 +43,7 @@ func SearchKey(c *ctx.ServiceContext, form *forms.SearchKeyForm) (interface{}, e
 func CreateKey(c *ctx.ServiceContext, form *forms.CreateKeyForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create key %s", form.Name))
 
-	if !c.IsSuperAdmin && !services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.OrgRoleAdmin) {
+	if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) {
 		projectRole, err := services.GetUserHighestProjectRole(c.DB(), c.OrgId, c.UserId)
 		if err != nil {
 			return nil, err

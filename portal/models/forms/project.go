@@ -44,3 +44,9 @@ type DetailProjectForm struct {
 
 	Id models.Id `uri:"id" json:"id" binding:"required,startswith=p-,max=32" swaggerignore:"true"`
 }
+
+type ProjectStatForm struct {
+	BaseForm
+	ProjectId models.Id `uri:"id" json:"id" binding:"required"`
+	Limit     int       `form:"limit" json:"limit"`
+}

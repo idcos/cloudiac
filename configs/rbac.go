@@ -110,7 +110,8 @@ var Polices = []Policy{
 	{"login", "orgs", "read"},
 	{"admin", "orgs", "read/update"},
 	{"admin", "orgs", "listuser/adduser/removeuser/updaterole"},
-	{"member", "orgs", "read"},
+	{"member", "orgs", "read/listuser/adduser"},
+	// {"member", "orgs", "read"},
 	{"complianceManager", "orgs", "read"},
 	{"manager", "orgs", "listuser/adduser"},
 
