@@ -25,3 +25,8 @@ type SearchVariableGroupResp struct {
 	models.VariableGroup
 	Creator string `json:"creator" form:"creator" `
 }
+
+type CreateVariableGroupResp struct {
+	models.VariableGroup
+	ProjectIds []models.Id `json:"projectIds"`
+}
