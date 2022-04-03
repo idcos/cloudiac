@@ -30,7 +30,7 @@ type VarGroupVariablesCreate struct {
 }
 
 func CreateVariableGroup(c *ctx.ServiceContext, form *forms.CreateVariableGroupForm) (interface{}, e.Error) {
-	if form.Provider != "alicloud" && form.ConstCounted {
+	if form.Provider != "alicloud" && form.CostCounted {
 		return nil, e.New(e.BadParam, fmt.Errorf("cost statistics can only be enabled if the provider is alicloud"), http.StatusBadRequest)
 	}
 	session := c.DB()
@@ -59,7 +59,7 @@ func CreateVariableGroup(c *ctx.ServiceContext, form *forms.CreateVariableGroupF
 		OrgId:       c.OrgId,
 		CreatorId:   c.UserId,
 		Variables:   vb,
-		CostCounted: form.ConstCounted,
+		CostCounted: form.CostCounted,
 		Provider:    form.Provider,
 	})
 	if err != nil {
@@ -134,7 +134,7 @@ func getVarGroupVariables(variables []models.VarGroupVariable, vgVarsMap map[str
 }
 
 func UpdateVariableGroup(c *ctx.ServiceContext, form *forms.UpdateVariableGroupForm) (interface{}, e.Error) {
-	if form.Provider != "alicloud" && form.ConstCounted {
+	if form.Provider != "alicloud" && form.CostCounted {
 		return nil, e.New(e.BadParam, fmt.Errorf("cost statistics can only be enabled if the provider is alicloud"), http.StatusBadRequest)
 	}
 	session := c.DB()
@@ -166,7 +166,7 @@ func UpdateVariableGroup(c *ctx.ServiceContext, form *forms.UpdateVariableGroupF
 		attrs["provider"] = form.Provider
 	}
 	if form.HasKey("costCounted") {
-		attrs["costCounted"] = form.ConstCounted
+		attrs["costCounted"] = form.CostCounted
 	}
 	if err := services.UpdateVariableGroup(session, form.Id, attrs); err != nil {
 		return nil, err
