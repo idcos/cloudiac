@@ -30,7 +30,7 @@ type VarGroupVariablesCreate struct {
 }
 
 func CreateVariableGroup(c *ctx.ServiceContext, form *forms.CreateVariableGroupForm) (interface{}, e.Error) {
-	if form.Provider != "alicloud" && form.ConstCounted == true {
+	if form.Provider != "alicloud" && form.ConstCounted {
 		return nil, e.New(e.BadParam, fmt.Errorf("cost statistics can only be enabled if the provider is alicloud"), http.StatusBadRequest)
 	}
 	session := c.DB()
@@ -134,7 +134,7 @@ func getVarGroupVariables(variables []models.VarGroupVariable, vgVarsMap map[str
 }
 
 func UpdateVariableGroup(c *ctx.ServiceContext, form *forms.UpdateVariableGroupForm) (interface{}, e.Error) {
-	if form.Provider != "alicloud" && form.ConstCounted == true {
+	if form.Provider != "alicloud" && form.ConstCounted {
 		return nil, e.New(e.BadParam, fmt.Errorf("cost statistics can only be enabled if the provider is alicloud"), http.StatusBadRequest)
 	}
 	session := c.DB()
