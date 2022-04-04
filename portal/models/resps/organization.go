@@ -41,27 +41,35 @@ type OrgEnvAndProviderResp struct {
 	Providers []string  `json:""`
 }
 
+type ProjectDetailStatResp struct {
+	Id    string `json:"id"`
+	Name  string `json:"name"`
+	Count int    `json:"count"`
+}
+
 type EnvStatResp struct {
-	Status string `json:"status"`
-	Count  int    `json:"count"`
+	Status   string                  `json:"status"`
+	Count    int                     `json:"count"`
+	Projects []ProjectDetailStatResp `json:"projects"`
 }
 
 type ResStatResp struct {
-	ResType string `json:"resType"`
-	Count   int    `json:"count"`
+	ResType  string                  `json:"resType"`
+	Count    int                     `json:"count"`
+	Projects []ProjectDetailStatResp `json:"projects"`
 }
 
 type ProjectResStatResp struct {
-	ProjectId   string `json:"projectId"`
-	ProjectName string `json:"projectName"`
-	ResType     string `json:"resType"`
-	Date        string `json:"date"`
-	Count       int    `json:"count"`
+	ResType  string                  `json:"resType"`
+	Date     string                  `json:"date"`
+	Count    int                     `json:"count"`
+	Projects []ProjectDetailStatResp `json:"projects"`
 }
 
 type ResGrowTrendResp struct {
-	Date  string `json:"date"`
-	Count int    `json:"count"`
+	Date     string                  `json:"date"`
+	Count    int                     `json:"count"`
+	Projects []ProjectDetailStatResp `json:"projects"`
 }
 
 type OrgProjectsStatResp struct {

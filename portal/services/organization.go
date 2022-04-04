@@ -196,6 +196,27 @@ func GetOrgResourcesQuery(tx *db.Session, searchStr string, orgId, userId models
 }
 
 func GetOrgProjectsEnvStat(tx *db.Session, orgId models.Id, projectIds []string) ([]resps.EnvStatResp, e.Error) {
+	/* sample sql:
+	select
+		status,
+		count(*) as count
+	from
+		(
+		select
+			if(task_status = '',
+			status,
+			task_status) as status
+		from
+			iac_env
+		where
+			archived = 0
+			and org_id = 'org-c8gg9fosm56injdlb85g'
+			and project_id in ('p-c8gg9josm56injdlb86g', 'aaa')
+	) as t
+	group by
+		status;
+	*/
+
 	subQuery := tx.Model(&models.Env{}).Select(`if(task_status = '', status, task_status) as status`)
 	subQuery = subQuery.Where("archived = ?", 0).Where("org_id = ?", orgId)
 
@@ -214,6 +235,24 @@ func GetOrgProjectsEnvStat(tx *db.Session, orgId models.Id, projectIds []string)
 }
 
 func GetOrgProjectsResStat(tx *db.Session, orgId models.Id, projectIds []string, limit int) ([]resps.ResStatResp, e.Error) {
+	/* sample sql
+	select
+		iac_resource.type as res_type,
+		count(*) as count
+	from
+		iac_resource
+	join iac_env on
+		iac_env.last_res_task_id = iac_resource.task_id
+	where
+		iac_env.org_id = 'org-c8gg9fosm56injdlb85g'
+		and iac_env.project_id in ('p-c8gg9josm56injdlb86g', 'aaa')
+	group by
+		iac_resource.type
+	order by
+		count desc
+	limit 10;
+	*/
+
 	query := tx.Model(&models.Resource{}).Select(`iac_resource.type as res_type, count(*) as count`)
 	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
 	query = query.Where(`iac_env.org_id = ?`, orgId)
