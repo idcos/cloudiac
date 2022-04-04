@@ -132,6 +132,21 @@ func (Env) Deploy(c *ctx.GinRequest) {
 	c.JSONResult(apps.EnvDeploy(c.Service(), &form))
 }
 
+// DeployCheck 环境重新部署检测接口
+// @Tags 环境
+// @Summary 环境重新部署检测
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param envId path string true "环境ID"
+// @router /envs/{envId}/deploy/check [post]
+// @Success 200 {object} ctx.JSONResult{}
+func (Env) DeployCheck(c *ctx.GinRequest) {
+	c.JSONResult(apps.EnvDeployCheck(c.Service(), models.Id(c.Param("id"))))
+}
+
 // Destroy 销毁环境资源
 // @Tags 环境
 // @Summary 销毁环境资源
