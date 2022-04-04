@@ -416,15 +416,78 @@ func EnvUnLocked(dbSess *db.Session, id models.Id) e.Error {
 
 // EnvCostTypeStat 费用类型统计
 func EnvCostTypeStat(tx *db.Session, id models.Id) ([]resps.EnvCostTypeStatResp, e.Error) {
-	return nil, nil
+	/* sample sql:
+	select
+		iac_resource.type as res_type,
+		SUM(pretax_amount) as amount
+	from
+		iac_resource
+	JOIN iac_env ON
+		iac_env.last_res_task_id = iac_resource.task_id
+	JOIN iac_bill ON
+		iac_bill.env_id = iac_resource.env_id
+	where
+		iac_resource.env_id  = 'env-c8u10aosm56kh90t588g'
+		and iac_bill.cycle = DATE_FORMAT(CURDATE(), "%Y-%m")
+	group by
+		iac_resource.type
+	*/
+
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.type as res_type, SUM(pretax_amount) as amount`)
+	query = query.Joins(`JOIN iac_env ON iac_env.last_res_task_id = iac_resource.task_id`)
+	query = query.Joins(`JOIN iac_bill ON iac_bill.env_id = iac_resource.env_id`)
+
+	query = query.Where(`iac_resource.env_id = ?`, id)
+	query = query.Where(`iac_bill.cycle = DATE_FORMAT(CURDATE(), "%Y-%m")`)
+
+	query = query.Group("iac_resource.type")
+
+	var results []resps.EnvCostTypeStatResp
+	if err := query.Find(&results); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return results, nil
 }
 
 // EnvCostTrendStat 费用趋势统计
 func EnvCostTrendStat(tx *db.Session, id models.Id) ([]resps.EnvCostTrendStatResp, e.Error) {
-	return nil, nil
+	/* sample sql:
+	select
+		iac_bill.cycle as date,
+		SUM(pretax_amount) as amount
+	from
+		iac_resource
+	JOIN iac_env ON
+		iac_env.last_res_task_id = iac_resource.task_id
+	JOIN iac_bill ON
+		iac_bill.env_id = iac_resource.env_id
+	where
+		iac_resource.env_id  = 'env-c8u10aosm56kh90t588g'
+		and iac_bill.cycle = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 12 MONTH), "%Y-%m")
+	group by
+		iac_bill.cycle
+	*/
+
+	query := tx.Model(&models.Resource{}).Select(`iac_bill.cycle as date, SUM(pretax_amount) as amount`)
+	query = query.Joins(`JOIN iac_env ON iac_env.last_res_task_id = iac_resource.task_id`)
+	query = query.Joins(`JOIN iac_bill ON iac_bill.env_id = iac_resource.env_id`)
+
+	query = query.Where(`iac_resource.env_id = ?`, id)
+	query = query.Where(`iac_bill.cycle = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 12 MONTH), "%Y-%m")`)
+
+	query = query.Group("iac_bill.cycle")
+
+	var results []resps.EnvCostTrendStatResp
+	if err := query.Find(&results); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return results, nil
 }
 
 // EnvCostList 费用列表
 func EnvCostList(tx *db.Session, id models.Id) ([]resps.EnvCostDetail, e.Error) {
+
 	return nil, nil
 }

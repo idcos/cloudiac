@@ -7,13 +7,13 @@ type EnvUnLockConfirmResp struct {
 }
 
 type EnvCostTypeStatResp struct {
-	ResType      string  `json:"resType"`
-	PretaxAmount float32 `json:"pretaxAmount"`
+	ResType string  `json:"resType"`
+	Amount  float32 `json:"amount"`
 }
 
 type EnvCostTrendStatResp struct {
-	Date         string  `json:"date"`
-	PretaxAmount float32 `json:"pretaxAmount"`
+	Date   string  `json:"date"`
+	Amount float32 `json:"amount"`
 }
 
 type EnvCostDetail struct {
