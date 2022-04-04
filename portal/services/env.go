@@ -560,8 +560,8 @@ func curMonthEnvCostList(tx *db.Session, id models.Id) (map[string]*RawEnvCostDe
 	}
 
 	var m = make(map[string]*RawEnvCostDetail)
-	for _, data := range results {
-		m[data.ResType] = &data
+	for i, data := range results {
+		m[data.ResType] = &results[i]
 	}
 
 	return m, nil
@@ -601,8 +601,8 @@ func totalEnvCostList(tx *db.Session, id models.Id) (map[string]*RawEnvCostDetai
 	}
 
 	var m = make(map[string]*RawEnvCostDetail)
-	for _, data := range results {
-		m[data.ResType] = &data
+	for i, data := range results {
+		m[data.ResType] = &results[i]
 	}
 
 	return m, nil
