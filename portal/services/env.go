@@ -451,7 +451,7 @@ func EnvCostTypeStat(tx *db.Session, id models.Id) ([]resps.EnvCostTypeStatResp,
 }
 
 // EnvCostTrendStat 费用趋势统计
-func EnvCostTrendStat(tx *db.Session, id models.Id) ([]resps.EnvCostTrendStatResp, e.Error) {
+func EnvCostTrendStat(tx *db.Session, id models.Id, months int) ([]resps.EnvCostTrendStatResp, e.Error) {
 	/* sample sql:
 	select
 		iac_bill.cycle as date,
@@ -464,7 +464,7 @@ func EnvCostTrendStat(tx *db.Session, id models.Id) ([]resps.EnvCostTrendStatRes
 		iac_bill.env_id = iac_resource.env_id
 	where
 		iac_resource.env_id  = 'env-c8u10aosm56kh90t588g'
-		and iac_bill.cycle = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 12 MONTH), "%Y-%m")
+		and iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 12 MONTH), "%Y-%m")
 	group by
 		iac_bill.cycle
 	*/
@@ -474,7 +474,7 @@ func EnvCostTrendStat(tx *db.Session, id models.Id) ([]resps.EnvCostTrendStatRes
 	query = query.Joins(`JOIN iac_bill ON iac_bill.env_id = iac_resource.env_id`)
 
 	query = query.Where(`iac_resource.env_id = ?`, id)
-	query = query.Where(`iac_bill.cycle = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 12 MONTH), "%Y-%m")`)
+	query = query.Where(`iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? MONTH), "%Y-%m")`, months)
 
 	query = query.Group("iac_bill.cycle")
 
