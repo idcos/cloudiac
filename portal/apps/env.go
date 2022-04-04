@@ -1491,9 +1491,18 @@ func EnvStat(c *ctx.ServiceContext, form *forms.EnvParam) (interface{}, e.Error)
 		return nil, err
 	}
 
+	var results = make([]resps.EnvCostDetailResp, 0)
+	for _, envCost := range envCostList {
+		results = append(results, resps.EnvCostDetailResp{
+			ResType:    envCost.ResType,
+			ResAttr:    GetResShowName(envCost.Attrs, envCost.Address),
+			InstanceId: envCost.InstanceId,
+		})
+	}
+
 	return &resps.EnvStatisticsResp{
 		CostTypeStat:  envCostTypeStat,
 		CostTrendStat: envCostTrendStat,
-		CostList:      envCostList,
+		CostList:      results,
 	}, nil
 }

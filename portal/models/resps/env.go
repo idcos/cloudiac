@@ -16,9 +16,9 @@ type EnvCostTrendStatResp struct {
 	Amount float32 `json:"amount"`
 }
 
-type EnvCostDetail struct {
+type EnvCostDetailResp struct {
 	ResType      string  `json:"resType"`
-	ResAddr      string  `json:"resAddr"`
+	ResAttr      string  `json:"resAttr"`
 	InstanceId   string  `json:"instanceId"` // 实例id
 	CurMonthCost float32 `json:"curMonthCost"`
 	TotalCost    float32 `json:"totalCost"`
@@ -27,5 +27,5 @@ type EnvCostDetail struct {
 type EnvStatisticsResp struct {
 	CostTypeStat  []EnvCostTypeStatResp  `json:"costTypeStat"`
 	CostTrendStat []EnvCostTrendStatResp `json:"costTrendStat"`
-	CostList      []EnvCostDetail        `json:"costList"`
+	CostList      []EnvCostDetailResp    `json:"costList"`
 }
