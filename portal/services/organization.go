@@ -363,8 +363,8 @@ func GetOrgProjectsResStat(tx *db.Session, orgId models.Id, projectIds []string,
 func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, limit int) ([]resps.ProjectResStatResp, e.Error) {
 	/* sample sql:
 	select
-		iac_resource.project_id as project_id,
-		iac_project.name as project_name,
+		iac_resource.project_id as id,
+		iac_project.name as name,
 		iac_resource.type as res_type,
 		DATE_FORMAT(iac_resource.applied_at, "%Y-%m") as date,
 		count(*) as count
@@ -388,7 +388,7 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 	limit 10;
 	*/
 
-	query := tx.Model(&models.Resource{}).Select(`iac_resource.project_id as project_id, iac_project.name as project_name, iac_resource.type as res_type, DATE_FORMAT(iac_resource.applied_at, "%Y-%m") as date, count(*) as count`)
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.project_id as id, iac_project.name as name, iac_resource.type as res_type, DATE_FORMAT(iac_resource.applied_at, "%Y-%m") as date, count(*) as count`)
 
 	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 	query = query.Joins("JOIN iac_project ON iac_project.id = iac_resource.project_id")
@@ -403,9 +403,48 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 		query = query.Limit(limit)
 	}
 
-	var results []resps.ProjectResStatResp
-	if err := query.Find(&results); err != nil {
+	type dbResult struct {
+		ResType string
+		Date    string
+		Id      models.Id
+		Name    string
+		Count   int
+	}
+
+	var dbResults []dbResult
+	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	var m = make(map[[2]string][]dbResult)
+	var mTotalCount = make(map[[2]string]int)
+	for _, result := range dbResults {
+		key := [2]string{result.ResType, result.Date}
+		if _, ok := m[key]; !ok {
+			m[key] = make([]dbResult, 0)
+			mTotalCount[key] = 0
+		}
+		m[key] = append(m[key], result)
+		mTotalCount[key] += result.Count
+	}
+
+	var results []resps.ProjectResStatResp
+	for k, v := range m {
+		data := resps.ProjectResStatResp{
+			ResType:  k[0],
+			Date:     k[1],
+			Count:    mTotalCount[k],
+			Projects: make([]resps.ProjectDetailStatResp, 0),
+		}
+
+		for _, p := range v {
+			data.Projects = append(data.Projects, resps.ProjectDetailStatResp{
+				Id:    p.Id,
+				Name:  p.Name,
+				Count: p.Count,
+			})
+		}
+		results = append(results, data)
 	}
 
 	return results, nil
