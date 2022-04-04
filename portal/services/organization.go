@@ -198,37 +198,81 @@ func GetOrgResourcesQuery(tx *db.Session, searchStr string, orgId, userId models
 func GetOrgProjectsEnvStat(tx *db.Session, orgId models.Id, projectIds []string) ([]resps.EnvStatResp, e.Error) {
 	/* sample sql:
 	select
-		status,
+		t.status,
+		iac_project.id as id,
+		iac_project.name as name,
 		count(*) as count
 	from
 		(
 		select
 			if(task_status = '',
 			status,
-			task_status) as status
+			task_status) as status,
+			project_id
 		from
 			iac_env
 		where
 			archived = 0
 			and org_id = 'org-c8gg9fosm56injdlb85g'
-			and project_id in ('p-c8gg9josm56injdlb86g', 'aaa')
+			and project_id in ('p-c8gg9josm56injdlb86g', 'p-c8kmkngsm56jqosq6bkg')
 	) as t
+	JOIN iac_project ON
+		t.project_id = iac_project.id
 	group by
-		status;
+		t.status, iac_project.id;
 	*/
 
-	subQuery := tx.Model(&models.Env{}).Select(`if(task_status = '', status, task_status) as status`)
+	type dbResult struct {
+		Status string
+		Id     models.Id
+		Name   string
+		Count  int
+	}
+
+	subQuery := tx.Model(&models.Env{}).Select(`if(task_status = '', status, task_status) as status, project_id`)
 	subQuery = subQuery.Where("archived = ?", 0).Where("org_id = ?", orgId)
 
 	if len(projectIds) > 0 {
 		subQuery = subQuery.Where("project_id in ?", projectIds)
 	}
 
-	query := tx.Table("(?) as t", subQuery.Expr()).Select(`status, count(*) as count`).Group("status")
+	query := tx.Table("(?) as t", subQuery.Expr()).Select(`t.status, iac_project.id as id, iac_project.name as name, count(*) as count`)
 
-	var results []resps.EnvStatResp
-	if err := query.Find(&results); err != nil {
+	query = query.Joins(`JOIN iac_project ON t.project_id = iac_project.id`)
+	query = query.Group("t.status, iac_project.id")
+
+	var dbResults []dbResult
+	if err := query.Debug().Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	var m = make(map[string][]dbResult)
+	var mTotalCount = make(map[string]int)
+	for _, result := range dbResults {
+		if _, ok := m[result.Status]; !ok {
+			m[result.Status] = make([]dbResult, 0)
+			mTotalCount[result.Status] = 0
+		}
+		m[result.Status] = append(m[result.Status], result)
+		mTotalCount[result.Status] += result.Count
+	}
+
+	var results = make([]resps.EnvStatResp, 0)
+	for k, v := range m {
+		data := resps.EnvStatResp{
+			Status:   k,
+			Count:    mTotalCount[k],
+			Projects: make([]resps.ProjectDetailStatResp, 0),
+		}
+
+		for _, p := range v {
+			data.Projects = append(data.Projects, resps.ProjectDetailStatResp{
+				Id:    p.Id,
+				Name:  p.Name,
+				Count: p.Count,
+			})
+		}
+		results = append(results, data)
 	}
 
 	return results, nil

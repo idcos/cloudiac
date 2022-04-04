@@ -42,9 +42,9 @@ type OrgEnvAndProviderResp struct {
 }
 
 type ProjectDetailStatResp struct {
-	Id    string `json:"id"`
-	Name  string `json:"name"`
-	Count int    `json:"count"`
+	Id    models.Id `json:"id"`
+	Name  string    `json:"name"`
+	Count int       `json:"count"`
 }
 
 type EnvStatResp struct {
