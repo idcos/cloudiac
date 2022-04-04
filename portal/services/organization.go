@@ -242,7 +242,7 @@ func GetOrgProjectsEnvStat(tx *db.Session, orgId models.Id, projectIds []string)
 	query = query.Group("t.status, iac_project.id")
 
 	var dbResults []dbResult
-	if err := query.Debug().Find(&dbResults); err != nil {
+	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
@@ -282,37 +282,79 @@ func GetOrgProjectsResStat(tx *db.Session, orgId models.Id, projectIds []string,
 	/* sample sql
 	select
 		iac_resource.type as res_type,
+		iac_project.id as id,
+		iac_project.name as name,
 		count(*) as count
 	from
 		iac_resource
 	join iac_env on
 		iac_env.last_res_task_id = iac_resource.task_id
+		and iac_env.id = iac_resource.env_id
+	join iac_project on
+		iac_project.id = iac_resource.project_id
 	where
 		iac_env.org_id = 'org-c8gg9fosm56injdlb85g'
-		and iac_env.project_id in ('p-c8gg9josm56injdlb86g', 'aaa')
+		and iac_env.project_id in ('p-c8gg9josm56injdlb86g', 'p-c8kmkngsm56jqosq6bkg')
 	group by
-		iac_resource.type
+		iac_resource.type, iac_project.id
 	order by
 		count desc
 	limit 10;
 	*/
 
-	query := tx.Model(&models.Resource{}).Select(`iac_resource.type as res_type, count(*) as count`)
-	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.type as res_type, iac_project.id as id, iac_project.name as name, count(*) as count`)
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
+	query = query.Joins(`join iac_project on iac_project.id = iac_resource.project_id`)
 	query = query.Where(`iac_env.org_id = ?`, orgId)
 
 	if len(projectIds) > 0 {
 		query = query.Where(`iac_env.project_id in ?`, projectIds)
 	}
 
-	query = query.Group("res_type").Order("count desc")
+	query = query.Group("iac_resource.type, iac_project.id").Order("count desc")
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
 
-	var results []resps.ResStatResp
-	if err := query.Find(&results); err != nil {
+	type dbResult struct {
+		ResType string
+		Id      models.Id
+		Name    string
+		Count   int
+	}
+
+	var dbResults []dbResult
+	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	var m = make(map[string][]dbResult)
+	var mTotalCount = make(map[string]int)
+	for _, result := range dbResults {
+		if _, ok := m[result.ResType]; !ok {
+			m[result.ResType] = make([]dbResult, 0)
+			mTotalCount[result.ResType] = 0
+		}
+		m[result.ResType] = append(m[result.ResType], result)
+		mTotalCount[result.ResType] += result.Count
+	}
+
+	var results []resps.ResStatResp
+	for k, v := range m {
+		data := resps.ResStatResp{
+			ResType:  k,
+			Count:    mTotalCount[k],
+			Projects: make([]resps.ProjectDetailStatResp, 0),
+		}
+
+		for _, p := range v {
+			data.Projects = append(data.Projects, resps.ProjectDetailStatResp{
+				Id:    p.Id,
+				Name:  p.Name,
+				Count: p.Count,
+			})
+		}
+		results = append(results, data)
 	}
 
 	return results, nil
@@ -330,6 +372,7 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 		iac_resource
 	JOIN iac_env ON
 		iac_env.last_res_task_id = iac_resource.task_id
+		and iac_env.id = iac_resource.env_id
 	JOIN iac_project ON
 		iac_project.id = iac_resource.project_id
 	where
@@ -347,7 +390,7 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 
 	query := tx.Model(&models.Resource{}).Select(`iac_resource.project_id as project_id, iac_project.name as project_name, iac_resource.type as res_type, DATE_FORMAT(iac_resource.applied_at, "%Y-%m") as date, count(*) as count`)
 
-	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 	query = query.Joins("JOIN iac_project ON iac_project.id = iac_resource.project_id")
 	query = query.Where("iac_env.org_id = ?", orgId)
 	if len(projectIds) > 0 {
@@ -377,6 +420,7 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 		iac_resource
 	JOIN iac_env ON
 		iac_env.last_res_task_id = iac_resource.task_id
+		and iac_env.id = iac_resource.env_id
 	where
 		iac_env.org_id = 'org-c8gg9fosm56injdlb85g'
 		and iac_env.project_id in ('p-c8gg9josm56injdlb86g', 'aaa')
@@ -391,7 +435,7 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 	*/
 
 	query := tx.Model(&models.Resource{}).Select(`DATE_FORMAT(applied_at, "%Y-%m-%d") as date, count(*) as count`)
-	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 
 	query = query.Where("iac_env.org_id = ?", orgId)
 	if len(projectIds) > 0 {
