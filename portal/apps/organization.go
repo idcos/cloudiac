@@ -436,6 +436,16 @@ func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*resps.UserW
 		form.Role = consts.OrgRoleMember
 	}
 
+	if !c.IsSuperAdmin {
+		ok, er := services.HasInviteUserPerm(c.DB(), c.UserId, org.Id, form.Role)
+		if er != nil {
+			return nil, er
+		}
+		if !ok {
+			return nil, e.New(e.PermissionDeny, http.StatusForbidden)
+		}
+	}
+
 	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {

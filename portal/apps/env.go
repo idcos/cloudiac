@@ -872,6 +872,58 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (ret *models.En
 	return ret, er
 }
 
+// EnvDeployCheck 创建新部署前检测
+func EnvDeployCheck(c *ctx.ServiceContext, envId models.Id) (interface{}, e.Error) {
+	if c.OrgId == "" || c.ProjectId == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+	env, err := services.GetEnvById(c.Tx(), envId)
+	if err != nil {
+		return nil, err
+	}
+	//判断环境是否已归档
+	if env.Archived {
+		return nil, e.New(e.EnvArchived, "Environment archived")
+	}
+
+	// 云模板检测
+	tpl, err := services.GetTplByEnvId(c.Tx(), envId)
+	if err != nil {
+		return nil, err
+	}
+	if err = TemplateDeployCheck(c, &forms.TemplateChecksForm{
+		Name:         tpl.Name,
+		Workdir:      tpl.Workdir,
+		TfVarsFile:   tpl.TfVarsFile,
+		Playbook:     tpl.Playbook,
+		RepoId:       tpl.RepoId,
+		RepoRevision: tpl.RepoRevision,
+		VcsId:        tpl.VcsId,
+	}); err != nil {
+		return nil, err
+	}
+	//vcs 检测(是否禁用，token是否有效)
+	vcs, err := services.GetVcsById(c.Tx(), tpl.VcsId)
+	if err != nil {
+		return nil, err
+	}
+	if vcs.Status != "enable" {
+		return nil, e.New(e.VcsError, "vcs is disable")
+	}
+	if err := services.VscTokenCheckByID(c.Tx(), vcs.Id, vcs.VcsToken); err != nil {
+		return nil, e.New(e.VcsInvalidToken, err)
+	}
+	//环境运行中不允许再手动发布任务
+	tasks, err := services.GetActiveTaskByEnvId(c.Tx(), envId)
+	if err != nil {
+		return nil, err
+	}
+	if len(tasks) > 0 {
+		return nil, e.New(e.EnvDeploying, "Deployment initiation is not allowed")
+	}
+	return nil, nil
+}
+
 func envPreCheck(orgId, projectId, keyId models.Id, playbook string) e.Error {
 	if orgId == "" || projectId == "" {
 		return e.New(e.BadRequest, http.StatusBadRequest)
@@ -1064,6 +1116,9 @@ func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env
 	if err := setAndCheckEnvCron(env, form); err != nil {
 		return err
 	}
+	if form.HasKey("extraData") {
+		env.ExtraData = form.ExtraData
+	}
 
 	if form.HasKey("variables") {
 		updateVarsForm := forms.UpdateObjectVarsForm{
@@ -1172,6 +1227,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		AutoApprove:     env.AutoApproval,
 		Revision:        env.Revision,
 		StopOnViolation: env.StopOnViolation,
+		ExtraData:       env.ExtraData,
 		BaseTask: models.BaseTask{
 			Type:        form.TaskType,
 			StepTimeout: env.StepTimeout,

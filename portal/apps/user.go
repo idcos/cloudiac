@@ -382,20 +382,19 @@ func queryByOrgAndProject(db, query *db.Session, userId, orgId, projectId, input
 	return query, nil
 }
 
-func setUserRole(detail *resps.UserWithRoleResp, userId, orgId, projectId models.Id, isSuperAdmin bool) {
+func setUserDefaultRole(detail *resps.UserWithRoleResp, userId, orgId, projectId models.Id, isSuperAdmin bool) {
 	if isSuperAdmin {
 		// 如果是平台管理员，自动拥有组织管理员权限和项目管理者权限
-		if orgId != "" {
-			detail.Role = consts.OrgRoleAdmin
-		}
-		if projectId != "" {
-			detail.ProjectRole = consts.ProjectRoleManager
-		}
+		detail.Role = consts.OrgRoleAdmin
+		detail.ProjectRole = consts.ProjectRoleManager
 	} else if services.UserHasOrgRole(userId, orgId, consts.OrgRoleAdmin) {
 		// 如果是组织管理员自动拥有项目管理者权限
-		if projectId != "" {
-			detail.ProjectRole = consts.ProjectRoleManager
-		}
+		detail.ProjectRole = consts.ProjectRoleManager
+	} else if detail.ProjectRole == "" && projectId == "" && orgId != "" {
+		// 如果请求的不是具体项目下的角色，则将用户的项目角色设置为其在当前组织下权限最高的项目角色
+		var err error
+		detail.ProjectRole, err = services.GetUserHighestProjectRole(db.Get(), orgId, userId)
+		logs.Get().Errorf("GetUserHighestProjectRole: %v", err)
 	}
 }
 
@@ -407,18 +406,19 @@ func UserDetail(c *ctx.ServiceContext, userId models.Id) (*resps.UserWithRoleRes
 		return nil, err
 	}
 
-	// 导出用户角色
+	// 导出组织角色
 	if c.OrgId != "" {
 		query = query.Joins(fmt.Sprintf("left join %s as o on %s.id = o.user_id and o.org_id = ?",
 			models.UserOrg{}.TableName(), models.User{}.TableName()), c.OrgId).
-			LazySelectAppend(fmt.Sprintf("o.role,%s.*", models.User{}.TableName()))
+			LazySelectAppend("o.role")
 	}
 	// 导出项目角色
 	if c.ProjectId != "" {
 		query = query.Joins(fmt.Sprintf("left join %s as p on %s.id = p.user_id and p.project_id = ?",
 			models.UserProject{}.TableName(), models.User{}.TableName()), c.ProjectId).
-			LazySelectAppend(fmt.Sprintf("p.role as project_role,%s.*", models.User{}.TableName()))
+			LazySelectAppend("p.role as project_role")
 	}
+
 	detail, err := services.GetUserDetailById(query, userId)
 	if err != nil && err.Code() == e.UserNotExists {
 		// 通过 /auth/me 或者 /users/:userId 访问
@@ -428,7 +428,7 @@ func UserDetail(c *ctx.ServiceContext, userId models.Id) (*resps.UserWithRoleRes
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
-	setUserRole(detail, c.UserId, c.OrgId, c.ProjectId, c.IsSuperAdmin)
+	setUserDefaultRole(detail, c.UserId, c.OrgId, c.ProjectId, c.IsSuperAdmin)
 	return detail, nil
 }
 

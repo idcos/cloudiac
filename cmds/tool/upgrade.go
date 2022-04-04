@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-// ./iac-tool update-env-id2tag
+// ./iac-tool upgrade2v0.10
 
 type Update2v0dot10Cmd struct{}
 
@@ -48,16 +48,15 @@ func (*Update2v0dot10Cmd) Execute(args []string) error {
 		}
 
 		sqls := []string{
-			`update iac_resource SET res_id=JSON_EXTRACT(attrs, "$.id") where res_id = ''`,
+			`update iac_resource SET res_id=JSON_UNQUOTE(JSON_EXTRACT(attrs, "$.id")) where res_id = ''`,
 			`update iac_resource join (select iac_task.id, iac_task.end_at from iac_task join (
 				select env_id,max(end_at) as end_at from iac_task group by env_id) t 
 				on t.env_id = iac_task.env_id and t.end_at = iac_task.end_at
 			) tt on tt.id = iac_resource.task_id set iac_resource.applied_at=tt.end_at`,
-			`update iac_resource, (
-				select env_id,res_id,applied_at from iac_resource 
-				where applied_at is not NULL group by env_id,res_id,applied_at
-			) t SET iac_resource.applied_at=t.applied_at 
-			WHERE iac_resource.env_id = t.env_id AND iac_resource.res_id = t.res_id`,
+			`UPDATE iac_resource, ( select env_id,res_id,min(applied_at) as applied_at from iac_resource 
+				where applied_at is not NULL group by env_id,res_id) t 
+			SET iac_resource.applied_at=t.applied_at 
+			WHERE t.env_id = iac_resource.env_id AND t.res_id = iac_resource.res_id;`,
 		}
 		for _, sql := range sqls {
 			if _, err := tx.Debug().Exec(sql); err != nil {
