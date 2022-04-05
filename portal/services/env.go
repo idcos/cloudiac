@@ -424,6 +424,7 @@ func EnvCostTypeStat(tx *db.Session, id models.Id) ([]resps.EnvCostTypeStatResp,
 		iac_resource
 	JOIN iac_env ON
 		iac_env.last_res_task_id = iac_resource.task_id
+		and iac_env.id = iac_resource.env_id
 	JOIN iac_bill ON
 		iac_bill.env_id = iac_resource.env_id
 	where
@@ -434,7 +435,7 @@ func EnvCostTypeStat(tx *db.Session, id models.Id) ([]resps.EnvCostTypeStatResp,
 	*/
 
 	query := tx.Model(&models.Resource{}).Select(`iac_resource.type as res_type, SUM(pretax_amount) as amount`)
-	query = query.Joins(`JOIN iac_env ON iac_env.last_res_task_id = iac_resource.task_id`)
+	query = query.Joins(`JOIN iac_env ON iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 	query = query.Joins(`JOIN iac_bill ON iac_bill.env_id = iac_resource.env_id`)
 
 	query = query.Where(`iac_resource.env_id = ?`, id)
@@ -460,6 +461,7 @@ func EnvCostTrendStat(tx *db.Session, id models.Id, months int) ([]resps.EnvCost
 		iac_resource
 	JOIN iac_env ON
 		iac_env.last_res_task_id = iac_resource.task_id
+		and iac_env.id = iac_resource.env_id
 	JOIN iac_bill ON
 		iac_bill.env_id = iac_resource.env_id
 	where
@@ -470,7 +472,7 @@ func EnvCostTrendStat(tx *db.Session, id models.Id, months int) ([]resps.EnvCost
 	*/
 
 	query := tx.Model(&models.Resource{}).Select(`iac_bill.cycle as date, SUM(pretax_amount) as amount`)
-	query = query.Joins(`JOIN iac_env ON iac_env.last_res_task_id = iac_resource.task_id`)
+	query = query.Joins(`JOIN iac_env ON iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 	query = query.Joins(`JOIN iac_bill ON iac_bill.env_id = iac_resource.env_id`)
 
 	query = query.Where(`iac_resource.env_id = ?`, id)
@@ -536,6 +538,7 @@ func curMonthEnvCostList(tx *db.Session, id models.Id) (map[string]*RawEnvCostDe
 		iac_resource
 	JOIN iac_env ON
 		iac_env.last_res_task_id = iac_resource.task_id
+		and iac_env.id = iac_resource.env_id
 	JOIN iac_bill ON
 		iac_bill.env_id = iac_resource.env_id
 	where
@@ -546,7 +549,7 @@ func curMonthEnvCostList(tx *db.Session, id models.Id) (map[string]*RawEnvCostDe
 	*/
 
 	query := tx.Model(&models.Resource{}).Select(`iac_resource.attrs as attrs, iac_resource.address as address, iac_resource.type as res_type, iac_bill.instance_id as instance_id, SUM(pretax_amount) as cur_month_cost`)
-	query = query.Joins(`JOIN iac_env ON iac_env.last_res_task_id = iac_resource.task_id`)
+	query = query.Joins(`JOIN iac_env ON iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 	query = query.Joins(`JOIN iac_bill ON iac_bill.env_id = iac_resource.env_id`)
 
 	query = query.Where(`iac_resource.env_id = ?`, id)
