@@ -6,6 +6,7 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
@@ -13,6 +14,7 @@ import (
 	"cloudiac/portal/services"
 	"cloudiac/utils"
 	"fmt"
+	"net/http"
 )
 
 type CreateVariableGroupForm struct {
@@ -29,6 +31,9 @@ type VarGroupVariablesCreate struct {
 }
 
 func CreateVariableGroup(c *ctx.ServiceContext, form *forms.CreateVariableGroupForm) (interface{}, e.Error) {
+	if form.Provider != "alicloud" && form.CostCounted {
+		return nil, e.New(e.BadParam, fmt.Errorf("cost statistics can only be enabled if the provider is alicloud"), http.StatusBadRequest)
+	}
 	session := c.DB()
 
 	vb := make([]models.VarGroupVariable, 0)
@@ -50,42 +55,80 @@ func CreateVariableGroup(c *ctx.ServiceContext, form *forms.CreateVariableGroupF
 	}
 	// 创建变量组
 	vg, err := services.CreateVariableGroup(session, models.VariableGroup{
-		Name:      form.Name,
-		Type:      form.Type,
-		OrgId:     c.OrgId,
-		CreatorId: c.UserId,
-		Variables: models.VarGroupVariables(vb),
+		Name:        form.Name,
+		Type:        form.Type,
+		OrgId:       c.OrgId,
+		CreatorId:   c.UserId,
+		Variables:   vb,
+		CostCounted: form.CostCounted,
+		Provider:    form.Provider,
 	})
 	if err != nil {
 		return nil, err
 	}
+	for _, projectId := range form.ProjectIds {
+		err := services.CreateVariableGroupProjectRel(session, models.VariableGroupProjectRel{
+			VarGroupId: vg.Id,
+			ProjectId:  projectId,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	createVariableGroupResp := resps.CreateVariableGroupResp{
+		VariableGroup: vg,
+		ProjectIds:    form.ProjectIds,
+	}
 
-	return vg, nil
+	return createVariableGroupResp, nil
 }
 
 func SearchVariableGroup(c *ctx.ServiceContext, form *forms.SearchVariableGroupForm) (interface{}, e.Error) {
-	query := services.SearchVariableGroup(c.DB(), c.OrgId, form.Q)
+	query := services.SearchVariableGroup(c.DB(), c.OrgId, c.ProjectId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	resp := make([]resps.SearchVariableGroupResp, 0)
+	resp := make([]resps.SearchVariableGroupRespTemp, 0)
+
 	if err := p.Scan(&resp); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
+	resultTemp := make(map[models.Id][]string)
+
 	for _, v := range resp {
 		for index, variable := range v.Variables {
 			if variable.Sensitive {
 				v.Variables[index].Value = ""
 			}
 		}
+		resultTemp[v.Id] = append(resultTemp[v.Id], v.ProjectName)
 	}
+	resArr := make([]resps.SearchVariableGroupRespTemp, 0)
+	tmpMap := make(map[models.Id]interface{})
+	for _, val := range resp {
+		if _, ok := tmpMap[val.Id]; !ok {
+			resArr = append(resArr, val)
+			tmpMap[val.Id] = nil
+		}
+	}
+	result := make([]resps.SearchVariableGroupResp, 0)
+	for _, v := range resArr {
+		restemp := resps.SearchVariableGroupResp{
+			SearchVariableGroupRespTemp: v,
+			ProjectNames:                resultTemp[v.Id],
+		}
+		result = append(result, restemp)
+	}
+
 	return page.PageResp{
-		Total:    p.MustTotal(),
+		Total:    int64(len(result)),
 		PageSize: p.Size,
-		List:     resp,
+		List:     result,
 	}, nil
 }
 
 func getVarGroupVariables(variables []models.VarGroupVariable, vgVarsMap map[string]models.VarGroupVariable) ([]models.VarGroupVariable, e.Error) {
-
 	vb := make([]models.VarGroupVariable, 0)
 	for _, v := range variables {
 		if v.Sensitive {
@@ -112,17 +155,16 @@ func getVarGroupVariables(variables []models.VarGroupVariable, vgVarsMap map[str
 }
 
 func UpdateVariableGroup(c *ctx.ServiceContext, form *forms.UpdateVariableGroupForm) (interface{}, e.Error) {
+	if form.Provider != "alicloud" && form.CostCounted {
+		return nil, e.New(e.BadParam, fmt.Errorf("cost statistics can only be enabled if the provider is alicloud"), http.StatusBadRequest)
+	}
 	session := c.DB()
 	attrs := models.Attrs{}
 
 	// 修改变量组
-	if form.HasKey("name") {
-		attrs["name"] = form.Name
-	}
-
-	vg, err := services.GetVariableGroupById(session, form.Id)
-	if err != nil {
-		return nil, e.AutoNew(err, e.DBError)
+	vg, er := services.GetVariableGroupById(session, form.Id)
+	if er != nil {
+		return nil, e.AutoNew(er, e.DBError)
 	}
 
 	vgVarsMap := make(map[string]models.VarGroupVariable)
@@ -135,38 +177,75 @@ func UpdateVariableGroup(c *ctx.ServiceContext, form *forms.UpdateVariableGroupF
 		if err != nil {
 			return nil, err
 		}
-
 		b, _ := models.VarGroupVariables(vb).Value()
 		attrs["variables"] = b
 	}
-
-	if err := services.UpdateVariableGroup(session, form.Id, attrs); err != nil {
-		return nil, err
+	if form.HasKey("name") {
+		attrs["name"] = form.Name
 	}
+	if form.HasKey("provider") {
+		attrs["provider"] = form.Provider
+	}
+	if form.HasKey("costCounted") {
+		attrs["costCounted"] = form.CostCounted
+	}
+	err := session.Transaction(func(tx *db.Session) error {
+		if err := services.UpdateVariableGroup(tx, form.Id, attrs); err != nil {
+			return err
+		}
 
+		if form.HasKey("projectIds") {
+			queryVgpRels, err := services.SearchVariableGroupProjectRelByVgpId(tx, form.Id)
+			if err != nil {
+				return err
+			}
+			delVgpRelsId, addVgpRelsId := services.GetDelVgpRelsIdAndAddVgpRelsId(queryVgpRels, form.ProjectIds)
+			if err := services.UpdateVariableGroupProjectRel(tx, form.Id, delVgpRelsId, addVgpRelsId); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
 	return nil, nil
 }
 
 func DeleteVariableGroup(c *ctx.ServiceContext, form *forms.DeleteVariableGroupForm) (interface{}, e.Error) {
-	session := c.DB()
-	if err := services.DeleteVariableGroup(session, form.Id); err != nil {
-		return nil, err
+	err := c.DB().Transaction(func(tx *db.Session) error {
+		if err := services.DeleteVariableGroup(tx, form.Id); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
 	}
 	return nil, nil
 }
 
 func DetailVariableGroup(c *ctx.ServiceContext, form *forms.DetailVariableGroupForm) (interface{}, e.Error) {
-	vg := models.VariableGroup{}
+	vg := make([]resps.DetailVariableGroupRespTemp, 0)
 	vgQuery := services.DetailVariableGroup(c.DB(), form.Id, c.OrgId)
-	if err := vgQuery.First(&vg); err != nil {
+	if err := vgQuery.Scan(&vg); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	for index, v := range vg.Variables {
+	projectNames := []string{}
+	for _, v := range vg {
+		projectNames = append(projectNames, v.ProjectName)
+	}
+	variableResp := vg[0]
+	for index, v := range variableResp.Variables {
 		if v.Sensitive {
-			vg.Variables[index].Value = ""
+			variableResp.Variables[index].Value = ""
 		}
 	}
-	return vg, nil
+	result := resps.DetailVariableGroupResp{
+		DetailVariableGroupRespTemp: variableResp,
+		ProjectNames:                projectNames,
+	}
+	return result, nil
 }
 
 func SearchRelationship(c *ctx.ServiceContext, form *forms.SearchRelationshipForm) (interface{}, e.Error) {

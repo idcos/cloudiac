@@ -20,6 +20,7 @@ type VariableGroup struct {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
+// @Param Iac-Project-Id header string false "项目ID"
 // @Param form query forms.SearchVariableGroupForm true "parameter"
 // @router /var_groups [get]
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.SearchVariableGroupResp}}
@@ -57,9 +58,8 @@ func (VariableGroup) Create(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param IaC-Project-Id header string false "项目ID"
 // @Param group_id path string true "变量组id"
-// @Param form query forms.UpdateVariableGroupForm true "parameter"
+// @Param json body forms.UpdateVariableGroupForm true "parameter"
 // @router /var_groups/{group_id} [put]
 // @Success 200 {object} ctx.JSONResult{}
 func (VariableGroup) Update(c *ctx.GinRequest) {
@@ -99,7 +99,7 @@ func (VariableGroup) Delete(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param group_id path string true "变量组id"
 // @router /var_groups/{group_id} [get]
-// @Success 200 {object} ctx.JSONResult{result=models.VariableGroup}
+// @Success 200 {object} ctx.JSONResult{result=resps.DetailVariableGroupResp}
 func (VariableGroup) Detail(c *ctx.GinRequest) {
 	form := forms.DetailVariableGroupForm{}
 	if err := c.Bind(&form); err != nil {

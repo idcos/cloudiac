@@ -10,6 +10,7 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/utils/logs"
 	"fmt"
+	"strings"
 )
 
 func CreateVariableGroup(tx *db.Session, group models.VariableGroup) (models.VariableGroup, e.Error) {
@@ -24,12 +25,23 @@ func CreateVariableGroup(tx *db.Session, group models.VariableGroup) (models.Var
 	}
 	return group, nil
 }
+func CreateVariableGroupProjectRel(tx *db.Session, vpgRel models.VariableGroupProjectRel) e.Error {
+	if err := models.Create(tx, &vpgRel); err != nil {
+		return e.AutoNew(err, e.DBError)
+	}
+	return nil
+}
 
-func SearchVariableGroup(dbSess *db.Session, orgId models.Id, q string) *db.Session {
+func SearchVariableGroup(dbSess *db.Session, orgId models.Id, projectId models.Id, q string) *db.Session {
 	query := dbSess.Model(models.VariableGroup{}).Where("iac_variable_group.org_id = ?", orgId)
 	if q != "" {
 		query = query.WhereLike("iac_variable_group.name", q)
 	}
+	query = query.Joins("left join iac_variable_group_project_rel on iac_variable_group_project_rel.var_group_id = iac_variable_group.id  left join iac_project on " +
+		"iac_project.id = iac_variable_group_project_rel.project_id").
+		LazySelectAppend("iac_project.name as project_name, iac_variable_group_project_rel.project_id").
+		Where("iac_variable_group_project_rel.project_id = iac_project.id")
+
 	return query.Joins("left join iac_user as u on u.id = iac_variable_group.creator_id").
 		LazySelectAppend("iac_variable_group.*").
 		LazySelectAppend("u.name as creator")
@@ -47,6 +59,26 @@ func UpdateVariableGroup(tx *db.Session, id models.Id, attrs models.Attrs) e.Err
 	} //nolint
 	return nil
 }
+func UpdateVariableGroupProjectRel(tx *db.Session, varGroupId models.Id, delVgpRelsId []models.Id, addVgpRelsId []models.Id) e.Error {
+	if len(addVgpRelsId) > 0 {
+		for _, addVpgRelId := range addVgpRelsId {
+			if err := CreateVariableGroupProjectRel(tx, models.VariableGroupProjectRel{
+				VarGroupId: varGroupId,
+				ProjectId:  addVpgRelId,
+			}); err != nil {
+				return e.New(e.DBError, fmt.Errorf("update variable group rel error: %v", err))
+			}
+		}
+	}
+	if len(delVgpRelsId) > 0 {
+		for _, delVgpRelId := range delVgpRelsId {
+			if err := DeleteVariableGroupProjectRel(tx, varGroupId, delVgpRelId); err != nil {
+				return e.New(e.DBError, fmt.Errorf("update variable group rel error: %v", err))
+			}
+		}
+	}
+	return nil
+}
 
 func DeleteVariableGroup(tx *db.Session, vgId models.Id) e.Error {
 	//删除变量组
@@ -58,13 +90,32 @@ func DeleteVariableGroup(tx *db.Session, vgId models.Id) e.Error {
 	if err := DeleteRelationship(tx, []models.Id{vgId}); err != nil {
 		return e.New(e.DBError, err)
 	}
+
+	queryVgpRels, err := SearchVariableGroupProjectRelByVgpId(tx, vgId)
+	if err != nil {
+		return e.New(e.DBError, err)
+	}
+
+	if len(queryVgpRels) != 0 {
+		for _, queryVgpRel := range queryVgpRels {
+			if err := DeleteVariableGroupProjectRel(tx, vgId, queryVgpRel.ProjectId); err != nil {
+				return e.New(e.DBError, err)
+			}
+		}
+	}
+
 	return nil
 }
 
 func DetailVariableGroup(dbSess *db.Session, vgId, orgId models.Id) *db.Session {
-	return dbSess.Model(&models.VariableGroup{}).
-		Where("id = ?", vgId).
-		Where("org_id = ?", orgId)
+	query := dbSess.Model(&models.VariableGroup{}).
+		Where("iac_variable_group.id = ?", vgId).
+		Where("iac_variable_group.org_id = ?", orgId)
+	query = query.Joins("left join iac_variable_group_project_rel on " +
+		"iac_variable_group.id = iac_variable_group_project_rel.var_group_id left join iac_project " +
+		"on iac_project.id = iac_variable_group_project_rel.project_id").
+		LazySelectAppend("iac_project.name as project_name, iac_variable_group.*")
+	return query
 }
 
 type VarGroupRel struct {
@@ -150,6 +201,38 @@ func SearchVariableGroupRel(dbSess *db.Session, objectAttr map[string]models.Id,
 	}
 
 	return resp, nil
+}
+
+func SearchVariableGroupProjectRelByVgpId(dbSess *db.Session, vpgId models.Id) (vgpRel []models.VariableGroupProjectRel, err e.Error) {
+	if err := dbSess.Where("var_group_id = ?", vpgId).Find(&vgpRel); err != nil {
+		return nil, e.New(e.DBError, fmt.Errorf("search variable group rel error: %v", err))
+	}
+	return vgpRel, nil
+}
+func GetDelVgpRelsIdAndAddVgpRelsId(queryVgpRels []models.VariableGroupProjectRel, projectIds []models.Id) ([]models.Id, []models.Id) {
+	var (
+		strQueryProjectIds []string
+		strFormProjectIds  []string
+		delVgpRelsId       []models.Id
+		addVgpRelsId       []models.Id
+	)
+	for _, queryVpgRel := range queryVgpRels {
+		strQueryProjectIds = append(strQueryProjectIds, string(queryVpgRel.ProjectId))
+	}
+	for _, projectId := range projectIds {
+		strFormProjectIds = append(strFormProjectIds, string(projectId))
+	}
+	for _, strQueryProjectId := range strQueryProjectIds {
+		if !strings.Contains(strings.Join(strFormProjectIds, ","), strQueryProjectId) {
+			delVgpRelsId = append(delVgpRelsId, models.Id(strQueryProjectId))
+		}
+	}
+	for _, strFormProjectId := range strFormProjectIds {
+		if !strings.Contains(strings.Join(strQueryProjectIds, ","), strFormProjectId) {
+			addVgpRelsId = append(addVgpRelsId, models.Id(strFormProjectId))
+		}
+	}
+	return delVgpRelsId, addVgpRelsId
 }
 
 func GetVariableGroupByObject(dbSess *db.Session, objectType string, objectId, orgId models.Id) ([]VarGroupRel, e.Error) {
@@ -255,6 +338,13 @@ func DeleteRelationship(dbSess *db.Session, vgId []models.Id) e.Error {
 	}
 	if _, err := dbSess.Where("var_group_id in (?)", vgId).
 		Delete(&models.VariableGroupRel{}); err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+func DeleteVariableGroupProjectRel(dbSess *db.Session, vgId models.Id, projectId models.Id) e.Error {
+	if _, err := dbSess.Where("var_group_id = ? and project_id = ?", vgId, projectId).
+		Delete(&models.VariableGroupProjectRel{}); err != nil {
 		return e.New(e.DBError, err)
 	}
 	return nil
