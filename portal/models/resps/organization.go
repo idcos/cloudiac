@@ -41,22 +41,29 @@ type OrgEnvAndProviderResp struct {
 	Providers []string  `json:""`
 }
 
+type ProjectDetailStatResp struct {
+	Id    models.Id `json:"id"`
+	Name  string    `json:"name"`
+	Count int       `json:"count"`
+}
+
 type EnvStatResp struct {
-	Status string `json:"status"`
-	Count  int    `json:"count"`
+	Status   string                  `json:"status"`
+	Count    int                     `json:"count"`
+	Projects []ProjectDetailStatResp `json:"projects"`
 }
 
 type ResStatResp struct {
-	ResType string `json:"resType"`
-	Count   int    `json:"count"`
+	ResType  string                  `json:"resType"`
+	Count    int                     `json:"count"`
+	Projects []ProjectDetailStatResp `json:"projects"`
 }
 
 type ProjectResStatResp struct {
-	ProjectId   string `json:"projectId"`
-	ProjectName string `json:"projectName"`
-	ResType     string `json:"resType"`
-	Date        string `json:"date"`
-	Count       int    `json:"count"`
+	ResType  string                  `json:"resType"`
+	Date     string                  `json:"date"`
+	Count    int                     `json:"count"`
+	Projects []ProjectDetailStatResp `json:"projects"`
 }
 
 type ResGrowTrendResp struct {
@@ -64,16 +71,9 @@ type ResGrowTrendResp struct {
 	Count int    `json:"count"`
 }
 
-type OrgResSummaryResp struct {
-	ResType string `json:"resType"`
-	Count   int    `json:"count"`
-	Up      int    `json:"up"` // 增长数量
-}
-
 type OrgProjectsStatResp struct {
 	EnvStat        []EnvStatResp        `json:"envStat"`
 	ResStat        []ResStatResp        `json:"resStat"`
 	ProjectResStat []ProjectResStatResp `json:"projectStat"`
 	ResGrowTrend   []ResGrowTrendResp   `json:"resGrowTrend"`
-	OrgResSummary  []OrgResSummaryResp  `json:"orgResSummary"`
 }

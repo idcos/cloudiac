@@ -677,17 +677,10 @@ func OrgProjectsStat(c *ctx.ServiceContext, form *forms.OrgProjectsStatForm) (in
 		return nil, err
 	}
 
-	// 资源概览
-	orgResSummary, err := services.GetOrgResSummary(tx, c.OrgId, projectIds, form.Limit)
-	if err != nil {
-		return nil, err
-	}
-
 	return &resps.OrgProjectsStatResp{
 		EnvStat:        envStat,
 		ResStat:        resStat,
 		ProjectResStat: projectResStat,
 		ResGrowTrend:   resGrowTrend,
-		OrgResSummary:  orgResSummary,
 	}, nil
 }
