@@ -1018,7 +1018,7 @@ func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env
 		updateVarsForm := forms.UpdateObjectVarsForm{
 			Scope:     consts.ScopeEnv,
 			ObjectId:  env.Id,
-			Variables: form.Variables,
+			Variables: checkDeployVar(form.Variables),
 		}
 		if _, er := updateObjectVars(c, tx, &updateVarsForm); er != nil {
 			return e.AutoNew(er, e.InternalError)
@@ -1083,7 +1083,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	// set env from form
 	setEnvByForm(env, form)
 
-	// set and check autoApproval, destroyAt, cronDrift, TaskType ...
+	// set and check autoApproval, destroyAt, cronDrift, TaskType, variables...
 	err = setAndCheckEnvByForm(c, tx, env, form)
 	if err != nil {
 		return nil, err
@@ -1346,4 +1346,16 @@ func EnvUpdateTags(c *ctx.ServiceContext, form *forms.UpdateEnvTagsForm) (resp i
 	} else {
 		return env, nil
 	}
+}
+
+func checkDeployVar(vars []forms.Variable) []forms.Variable {
+	resp := make([]forms.Variable, 0)
+	for _, v := range vars {
+		if v.Scope != consts.ScopeEnv {
+			continue
+		}
+		resp = append(resp, v)
+	}
+
+	return resp
 }
