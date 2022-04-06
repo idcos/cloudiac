@@ -88,8 +88,9 @@ func UpdateKey(c *ctx.ServiceContext, form *forms.UpdateKeyForm) (key *models.Ke
 	if err := query.Find(key, form.Id); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
-	if key.CreatorId != c.UserId && !c.IsSuperAdmin &&
-		!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.OrgRoleAdmin) {
+	if ok, err := hasKeyDataPerm(c, key); err != nil {
+		return nil, e.AutoNew(err, e.InternalError)
+	} else if ok {
 		return nil, e.New(e.PermissionDeny, http.StatusOK)
 	}
 
@@ -112,15 +113,16 @@ func DeleteKey(c *ctx.ServiceContext, form *forms.DeleteKeyForm) (result interfa
 	if err := query.Find(&key, form.Id); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
-	if key.CreatorId != c.UserId && !c.IsSuperAdmin &&
-		!services.UserHasProjectRole(c.UserId, c.OrgId, c.ProjectId, consts.OrgRoleAdmin) {
+
+	if ok, err := hasKeyDataPerm(c, &key); err != nil {
+		return nil, e.AutoNew(err, e.InternalError)
+	} else if !ok {
 		return nil, e.New(e.PermissionDeny, http.StatusOK)
 	}
 
 	if err := services.DeleteKey(query, form.Id); err != nil {
 		return nil, err
 	}
-
 	return
 }
 
@@ -144,4 +146,24 @@ func DetailKey(c *ctx.ServiceContext, form *forms.DetailKeyForm) (result interfa
 		Key:     *key,
 		Creator: user.Name,
 	}, nil
+}
+
+func hasKeyDataPerm(c *ctx.ServiceContext, key *models.Key) (bool, error) {
+	if c.IsSuperAdmin {
+		return true, nil
+	}
+	if c.ProjectId != "" && services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) {
+		return true, nil
+	}
+
+	if c.UserId == key.CreatorId {
+		role, err := services.GetUserHighestProjectRole(c.DB(), c.OrgId, c.UserId)
+		if err != nil {
+			return false, e.AutoNew(err, e.DBError)
+		}
+		if role != consts.ProjectRoleGuest {
+			return true, nil
+		}
+	}
+	return false, nil
 }
