@@ -454,7 +454,8 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 	logger.Infof("run task start")
 
 	if task.IsDriftTask {
-		if env, err := services.GetEnvById(m.db, task.EnvId); err != nil {
+		env, err := services.GetEnvById(m.db, task.EnvId)
+		if err != nil {
 			logger.Errorf("get task environment %s: %v", task.EnvId, err)
 			taskStartFailed(errors.New("get task environment failed"))
 			return
@@ -463,6 +464,25 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 			_ = changeTaskStatus(models.TaskFailed, startErr.Error(), true)
 			return
 		}
+		// 每次任务启动从最新的部署配置中获取配置内容
+		lastResTask, err := services.GetTaskById(m.db, env.LastResTaskId)
+		if err != nil {
+			logger.Errorf("Get the latest configuration of the environment： %s", err)
+			taskStartFailed(errors.New("get task environment failed"))
+			return
+		}
+		attrs := models.Attrs{
+			"repoAddr":   lastResTask.RepoAddr,
+			"playbook":   lastResTask.Playbook,
+			"workdir":    lastResTask.Workdir,
+			"tfVarsFile": lastResTask.TfVarsFile,
+			"commitId":   lastResTask.CommitId,
+		}
+		if _, err := models.UpdateAttr(db.Get(), &models.Task{},
+			attrs, "id = ?", task.Id); err != nil {
+			logger.Errorf("Update the latest information of the task error: %v", err)
+		}
+
 	}
 
 	if !task.Started() { // 任务可能为己启动状态(比如异常退出后的任务恢复)，这里判断一下
