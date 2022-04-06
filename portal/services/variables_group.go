@@ -33,7 +33,7 @@ func CreateVariableGroupProjectRel(tx *db.Session, vpgRel models.VariableGroupPr
 }
 
 func SearchVariableGroup(dbSess *db.Session, orgId models.Id, projectId models.Id, q string) *db.Session {
-	query := dbSess.Debug().Model(models.VariableGroup{}).Where("iac_variable_group.org_id = ?", orgId)
+	query := dbSess.Model(models.VariableGroup{}).Where("iac_variable_group.org_id = ?", orgId)
 	if q != "" {
 		query = query.WhereLike("iac_variable_group.name", q)
 	}
