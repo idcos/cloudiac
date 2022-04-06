@@ -23,7 +23,7 @@ type VariableResp struct {
 
 type SearchVariableGroupResp struct {
 	models.VariableGroup
-	Creator string `json:"creator" form:"creator" `
+	Creator string `json:"creator"`
 }
 
 type CreateVariableGroupResp struct {

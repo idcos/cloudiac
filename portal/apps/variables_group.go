@@ -6,6 +6,7 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
@@ -107,7 +108,6 @@ func SearchVariableGroup(c *ctx.ServiceContext, form *forms.SearchVariableGroupF
 }
 
 func getVarGroupVariables(variables []models.VarGroupVariable, vgVarsMap map[string]models.VarGroupVariable) ([]models.VarGroupVariable, e.Error) {
-
 	vb := make([]models.VarGroupVariable, 0)
 	for _, v := range variables {
 		if v.Sensitive {
@@ -141,9 +141,9 @@ func UpdateVariableGroup(c *ctx.ServiceContext, form *forms.UpdateVariableGroupF
 	attrs := models.Attrs{}
 
 	// 修改变量组
-	vg, err := services.GetVariableGroupById(session, form.Id)
-	if err != nil {
-		return nil, e.AutoNew(err, e.DBError)
+	vg, er := services.GetVariableGroupById(session, form.Id)
+	if er != nil {
+		return nil, e.AutoNew(er, e.DBError)
 	}
 
 	vgVarsMap := make(map[string]models.VarGroupVariable)
@@ -168,29 +168,35 @@ func UpdateVariableGroup(c *ctx.ServiceContext, form *forms.UpdateVariableGroupF
 	if form.HasKey("costCounted") {
 		attrs["costCounted"] = form.CostCounted
 	}
-	if err := services.UpdateVariableGroup(session, form.Id, attrs); err != nil {
-		return nil, err
-	}
 
-	if form.HasKey("projectIds") {
-		queryVgpRels, err := services.SearchVariableGroupProjectRelByVgpId(session, form.Id)
-		if err != nil {
-			return nil, err
+	err := session.Transaction(func(tx *db.Session) error {
+		if err := services.UpdateVariableGroup(tx, form.Id, attrs); err != nil {
+			return err
 		}
-		delVgpRelsId, addVgpRelsId := services.GetDelVgpRelsIdAndAddVgpRelsId(queryVgpRels, form.ProjectIds)
-		if err := services.UpdateVariableGroupProjectRel(session, form.Id, delVgpRelsId, addVgpRelsId); err != nil {
-			return nil, err
+
+		if form.HasKey("projectIds") {
+			queryVgpRels, err := services.SearchVariableGroupProjectRelByVgpId(tx, form.Id)
+			if err != nil {
+				return err
+			}
+			delVgpRelsId, addVgpRelsId := services.GetDelVgpRelsIdAndAddVgpRelsId(queryVgpRels, form.ProjectIds)
+			if err := services.UpdateVariableGroupProjectRel(tx, form.Id, delVgpRelsId, addVgpRelsId); err != nil {
+				return err
+			}
 		}
-	}
-	return nil, nil
+		return nil
+	})
+	return nil, e.AutoNew(err, e.DBError)
 }
 
 func DeleteVariableGroup(c *ctx.ServiceContext, form *forms.DeleteVariableGroupForm) (interface{}, e.Error) {
-	session := c.DB()
-	if err := services.DeleteVariableGroup(session, form.Id); err != nil {
-		return nil, err
-	}
-	return nil, nil
+	err := c.DB().Transaction(func(tx *db.Session) error {
+		if err := services.DeleteVariableGroup(tx, form.Id); err != nil {
+			return err
+		}
+		return nil
+	})
+	return nil, e.AutoNew(err, e.DBError)
 }
 
 func DetailVariableGroup(c *ctx.ServiceContext, form *forms.DetailVariableGroupForm) (interface{}, e.Error) {
