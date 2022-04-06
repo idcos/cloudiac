@@ -89,21 +89,42 @@ func CreateVariableGroup(c *ctx.ServiceContext, form *forms.CreateVariableGroupF
 func SearchVariableGroup(c *ctx.ServiceContext, form *forms.SearchVariableGroupForm) (interface{}, e.Error) {
 	query := services.SearchVariableGroup(c.DB(), c.OrgId, c.ProjectId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	resp := make([]resps.SearchVariableGroupResp, 0)
+	resp := make([]resps.SearchVariableGroupRespTemp, 0)
+
 	if err := p.Scan(&resp); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
+	resultTemp := make(map[models.Id][]string, 0)
+
 	for _, v := range resp {
 		for index, variable := range v.Variables {
 			if variable.Sensitive {
 				v.Variables[index].Value = ""
 			}
 		}
+		resultTemp[v.Id] = append(resultTemp[v.Id], v.ProjectName)
 	}
+	resArr := make([]resps.SearchVariableGroupRespTemp, 0)
+	tmpMap := make(map[models.Id]interface{}, 0)
+	for _, val := range resp {
+		if _, ok := tmpMap[val.Id]; !ok {
+			resArr = append(resArr, val)
+			tmpMap[val.Id] = nil
+		}
+	}
+	result := make([]resps.SearchVariableGroupResp, 0)
+	for _, v := range resArr {
+		restemp := resps.SearchVariableGroupResp{
+			v,
+			resultTemp[v.Id],
+		}
+		result = append(result, restemp)
+	}
+
 	return page.PageResp{
-		Total:    p.MustTotal(),
+		Total:    int64(len(result)),
 		PageSize: p.Size,
-		List:     resp,
+		List:     result,
 	}, nil
 }
 
@@ -168,7 +189,6 @@ func UpdateVariableGroup(c *ctx.ServiceContext, form *forms.UpdateVariableGroupF
 	if form.HasKey("costCounted") {
 		attrs["costCounted"] = form.CostCounted
 	}
-
 	err := session.Transaction(func(tx *db.Session) error {
 		if err := services.UpdateVariableGroup(tx, form.Id, attrs); err != nil {
 			return err
@@ -186,7 +206,10 @@ func UpdateVariableGroup(c *ctx.ServiceContext, form *forms.UpdateVariableGroupF
 		}
 		return nil
 	})
-	return nil, e.AutoNew(err, e.DBError)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return nil, nil
 }
 
 func DeleteVariableGroup(c *ctx.ServiceContext, form *forms.DeleteVariableGroupForm) (interface{}, e.Error) {
@@ -196,21 +219,33 @@ func DeleteVariableGroup(c *ctx.ServiceContext, form *forms.DeleteVariableGroupF
 		}
 		return nil
 	})
-	return nil, e.AutoNew(err, e.DBError)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return nil, nil
 }
 
 func DetailVariableGroup(c *ctx.ServiceContext, form *forms.DetailVariableGroupForm) (interface{}, e.Error) {
-	vg := models.VariableGroup{}
+	vg := make([]resps.DetailVariableGroupRespTemp, 0)
 	vgQuery := services.DetailVariableGroup(c.DB(), form.Id, c.OrgId)
-	if err := vgQuery.First(&vg); err != nil {
+	if err := vgQuery.Scan(&vg); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	for index, v := range vg.Variables {
+	projectNames := []string{}
+	for _, v := range vg {
+		projectNames = append(projectNames, v.ProjectName)
+	}
+	variableResp := vg[0]
+	for index, v := range variableResp.Variables {
 		if v.Sensitive {
-			vg.Variables[index].Value = ""
+			variableResp.Variables[index].Value = ""
 		}
 	}
-	return vg, nil
+	result := resps.DetailVariableGroupResp{
+		variableResp,
+		projectNames,
+	}
+	return result, nil
 }
 
 func SearchRelationship(c *ctx.ServiceContext, form *forms.SearchRelationshipForm) (interface{}, e.Error) {

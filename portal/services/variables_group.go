@@ -33,14 +33,15 @@ func CreateVariableGroupProjectRel(tx *db.Session, vpgRel models.VariableGroupPr
 }
 
 func SearchVariableGroup(dbSess *db.Session, orgId models.Id, projectId models.Id, q string) *db.Session {
-	query := dbSess.Model(models.VariableGroup{}).Where("iac_variable_group.org_id = ?", orgId)
+	query := dbSess.Debug().Model(models.VariableGroup{}).Where("iac_variable_group.org_id = ?", orgId)
 	if q != "" {
 		query = query.WhereLike("iac_variable_group.name", q)
 	}
-	if projectId != "" {
-		query = query.Joins("left join iac_variable_group_project_rel as vgp on vgp.var_group_id = iac_variable_group.id").
-			Where("vgp.project_id = ?", projectId)
-	}
+	query = query.Joins("left join iac_variable_group_project_rel on iac_variable_group_project_rel.var_group_id = iac_variable_group.id  left join iac_project on " +
+		"iac_project.id = iac_variable_group_project_rel.project_id").
+		LazySelectAppend("iac_project.name as project_name, iac_variable_group_project_rel.project_id").
+		Where("iac_variable_group_project_rel.project_id = iac_project.id")
+
 	return query.Joins("left join iac_user as u on u.id = iac_variable_group.creator_id").
 		LazySelectAppend("iac_variable_group.*").
 		LazySelectAppend("u.name as creator")
@@ -107,9 +108,14 @@ func DeleteVariableGroup(tx *db.Session, vgId models.Id) e.Error {
 }
 
 func DetailVariableGroup(dbSess *db.Session, vgId, orgId models.Id) *db.Session {
-	return dbSess.Model(&models.VariableGroup{}).
-		Where("id = ?", vgId).
-		Where("org_id = ?", orgId)
+	query := dbSess.Model(&models.VariableGroup{}).
+		Where("iac_variable_group.id = ?", vgId).
+		Where("iac_variable_group.org_id = ?", orgId)
+	query = query.Joins("left join iac_variable_group_project_rel on " +
+		"iac_variable_group.id = iac_variable_group_project_rel.var_group_id left join iac_project " +
+		"on iac_project.id = iac_variable_group_project_rel.project_id").
+		LazySelectAppend("iac_project.name as project_name, iac_variable_group.*")
+	return query
 }
 
 type VarGroupRel struct {

@@ -99,7 +99,7 @@ func (VariableGroup) Delete(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param group_id path string true "变量组id"
 // @router /var_groups/{group_id} [get]
-// @Success 200 {object} ctx.JSONResult{result=models.VariableGroup}
+// @Success 200 {object} ctx.JSONResult{result=resps.DetailVariableGroupResp}
 func (VariableGroup) Detail(c *ctx.GinRequest) {
 	form := forms.DetailVariableGroupForm{}
 	if err := c.Bind(&form); err != nil {

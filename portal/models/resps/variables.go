@@ -21,12 +21,30 @@ type VariableResp struct {
 	Overwrites *models.Variable `json:"overwrites" form:"overwrites" ` //回滚参数，无需回滚是为空
 }
 
-type SearchVariableGroupResp struct {
+type SearchVariableGroupRespTemp struct {
 	models.VariableGroup
-	Creator string `json:"creator"`
+	Creator     string `json:"creator"`
+	ProjectName string `json:"projectName,omitempty"`
+}
+
+//ProjectNames []string `json:"ProjectNames"`
+
+type SearchVariableGroupResp struct {
+	SearchVariableGroupRespTemp
+	ProjectNames []string `json:"projectNames"`
 }
 
 type CreateVariableGroupResp struct {
 	models.VariableGroup
 	ProjectIds []models.Id `json:"projectIds"`
+}
+
+type DetailVariableGroupRespTemp struct {
+	models.VariableGroup
+	ProjectName string `json:"projectName,omitempty"`
+}
+
+type DetailVariableGroupResp struct {
+	DetailVariableGroupRespTemp
+	ProjectNames []string `json:"projectNames"`
 }
