@@ -477,7 +477,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		}
 		if _, err := models.UpdateAttr(db.Get(), &models.Task{},
 			attrs, "id = ?", task.Id); err != nil {
-			logger.Errorf("update task aborting error: %v", err)
+			logger.Errorf("Update the latest information of the task error: %v", err)
 		}
 
 	}
