@@ -22,7 +22,7 @@ type UpdateObjectVarsForm struct {
 }
 
 type Variable struct {
-	Id          models.Id       `json:"id" form:"id" binding:"omitempty,startswith=var-,max=32"`
+	Id          models.Id       `json:"id" form:"id" binding:"omitempty,max=32"`
 	Scope       string          `json:"scope" form:"scope" binding:"omitempty,oneof=org template project env"`    // 应用范围 ('org','template','project','env')
 	Type        string          `json:"type" form:"type" binding:"omitempty,oneof=environment terraform ansible"` // 类型 ('environment','terraform','ansible')
 	Name        string          `json:"name" form:"name" binding:"required,max=64"`                               // 名称
