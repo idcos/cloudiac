@@ -17,6 +17,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 )
@@ -411,4 +412,201 @@ func EnvUnLocked(dbSess *db.Session, id models.Id) e.Error {
 		return e.New(e.DBError, err)
 	}
 	return nil
+}
+
+// EnvCostTypeStat 费用类型统计
+func EnvCostTypeStat(tx *db.Session, id models.Id) ([]resps.EnvCostTypeStatResp, e.Error) {
+	/* sample sql:
+	select
+		iac_resource.type as res_type,
+		SUM(pretax_amount) as amount
+	from
+		iac_resource
+	JOIN iac_env ON
+		iac_env.last_res_task_id = iac_resource.task_id
+		and iac_env.id = iac_resource.env_id
+	JOIN iac_bill ON
+		iac_bill.env_id = iac_resource.env_id
+	where
+		iac_resource.env_id  = 'env-c8u10aosm56kh90t588g'
+		and iac_bill.cycle = DATE_FORMAT(CURDATE(), "%Y-%m")
+	group by
+		iac_resource.type
+	*/
+
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.type as res_type, SUM(pretax_amount) as amount`)
+	query = query.Joins(`JOIN iac_env ON iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
+	query = query.Joins(`JOIN iac_bill ON iac_bill.env_id = iac_resource.env_id`)
+
+	query = query.Where(`iac_resource.env_id = ?`, id)
+	query = query.Where(`iac_bill.cycle = DATE_FORMAT(CURDATE(), "%Y-%m")`)
+
+	query = query.Group("iac_resource.type")
+
+	var results []resps.EnvCostTypeStatResp
+	if err := query.Find(&results); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return results, nil
+}
+
+// EnvCostTrendStat 费用趋势统计
+func EnvCostTrendStat(tx *db.Session, id models.Id, months int) ([]resps.EnvCostTrendStatResp, e.Error) {
+	/* sample sql:
+	select
+		iac_bill.cycle as date,
+		SUM(pretax_amount) as amount
+	from
+		iac_resource
+	JOIN iac_env ON
+		iac_env.last_res_task_id = iac_resource.task_id
+		and iac_env.id = iac_resource.env_id
+	JOIN iac_bill ON
+		iac_bill.env_id = iac_resource.env_id
+	where
+		iac_resource.env_id  = 'env-c8u10aosm56kh90t588g'
+		and iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 12 MONTH), "%Y-%m")
+	group by
+		iac_bill.cycle
+	*/
+
+	query := tx.Model(&models.Resource{}).Select(`iac_bill.cycle as date, SUM(pretax_amount) as amount`)
+	query = query.Joins(`JOIN iac_env ON iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
+	query = query.Joins(`JOIN iac_bill ON iac_bill.env_id = iac_resource.env_id`)
+
+	query = query.Where(`iac_resource.env_id = ?`, id)
+	query = query.Where(`iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? MONTH), "%Y-%m")`, months)
+
+	query = query.Group("iac_bill.cycle")
+
+	var results []resps.EnvCostTrendStatResp
+	if err := query.Find(&results); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return results, nil
+}
+
+type RawEnvCostDetail struct {
+	ResType      string          `json:"resType"`
+	Attrs        models.ResAttrs `json:"attrs"`
+	Address      string          `json:"address"`
+	InstanceId   string          `json:"instanceId"` // 实例id
+	CurMonthCost float32         `json:"curMonthCost"`
+	TotalCost    float32         `json:"totalCost"`
+}
+
+// EnvCostList 费用列表
+func EnvCostList(tx *db.Session, id models.Id) ([]RawEnvCostDetail, e.Error) {
+	mCurMonth, err := curMonthEnvCostList(tx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	mTotal, err := totalEnvCostList(tx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// 合并 当前月费用 和 总体费用 的数据
+	for k, v := range mTotal {
+		if _, ok := mCurMonth[k]; ok {
+			mCurMonth[k].TotalCost = v.TotalCost
+		} else {
+			mCurMonth[k] = v
+		}
+	}
+
+	var results = make([]RawEnvCostDetail, 0)
+	for _, v := range mCurMonth {
+		results = append(results, *v)
+	}
+
+	return results, nil
+}
+
+func curMonthEnvCostList(tx *db.Session, id models.Id) (map[string]*RawEnvCostDetail, e.Error) {
+	/* sample sql:
+	select
+		iac_resource.attrs as attrs,
+		iac_resource.address as address,
+		iac_resource.type as res_type,
+		iac_bill.instance_id as instance_id,
+		SUM(pretax_amount) as cur_month_cost
+	from
+		iac_resource
+	JOIN iac_env ON
+		iac_env.last_res_task_id = iac_resource.task_id
+		and iac_env.id = iac_resource.env_id
+	JOIN iac_bill ON
+		iac_bill.env_id = iac_resource.env_id
+	where
+		iac_resource.env_id  = 'env-c8u10aosm56kh90t588g'
+		and iac_bill.cycle = DATE_FORMAT(CURDATE(), "%Y-%m")
+	group by
+		iac_resource.type
+	*/
+
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.attrs as attrs, iac_resource.address as address, iac_resource.type as res_type, iac_bill.instance_id as instance_id, SUM(pretax_amount) as cur_month_cost`)
+	query = query.Joins(`JOIN iac_env ON iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
+	query = query.Joins(`JOIN iac_bill ON iac_bill.env_id = iac_resource.env_id`)
+
+	query = query.Where(`iac_resource.env_id = ?`, id)
+	query = query.Where(`iac_bill.cycle = DATE_FORMAT(CURDATE(), "%Y-%m")`)
+
+	query = query.Group("iac_resource.type")
+
+	var results []RawEnvCostDetail
+	if err := query.Find(&results); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	var m = make(map[string]*RawEnvCostDetail)
+	for i, data := range results {
+		m[data.ResType] = &results[i]
+	}
+
+	return m, nil
+}
+
+func totalEnvCostList(tx *db.Session, id models.Id) (map[string]*RawEnvCostDetail, e.Error) {
+	/* sample sql:
+	select
+		iac_resource.attrs as attrs,
+		iac_resource.address as address,
+		iac_resource.type as res_type,
+		iac_bill.instance_id as instance_id,
+		SUM(pretax_amount) as total_cost
+	from
+		iac_resource
+	JOIN iac_env ON
+		iac_env.last_res_task_id = iac_resource.task_id
+	JOIN iac_bill ON
+		iac_bill.env_id = iac_resource.env_id
+	where
+		iac_resource.env_id  = 'env-c8u10aosm56kh90t588g'
+	group by
+		iac_resource.type
+	*/
+
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.attrs as attrs, iac_resource.address as address, iac_resource.type as res_type, iac_bill.instance_id as instance_id, SUM(pretax_amount) as total_cost`)
+	query = query.Joins(`JOIN iac_env ON iac_env.last_res_task_id = iac_resource.task_id`)
+	query = query.Joins(`JOIN iac_bill ON iac_bill.env_id = iac_resource.env_id`)
+
+	query = query.Where(`iac_resource.env_id = ?`, id)
+
+	query = query.Group("iac_resource.type")
+
+	var results []RawEnvCostDetail
+	if err := query.Find(&results); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	var m = make(map[string]*RawEnvCostDetail)
+	for i, data := range results {
+		m[data.ResType] = &results[i]
+	}
+
+	return m, nil
 }

@@ -222,6 +222,9 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/envs/:id/unlock", ac("envs", "unlock"), w(handlers.EnvUnLock))
 	g.GET("/envs/:id/unlock/confirm", ac(), w(handlers.EnvUnLockConfirm))
 
+	// 环境概览统计数据
+	g.GET("/envs/:id/statistics", ac(), w(handlers.Env{}.EnvStat))
+
 	// 任务管理
 	g.GET("/tasks", ac(), w(handlers.Task{}.Search))
 	g.GET("/tasks/:id", ac(), w(handlers.Task{}.Detail))
