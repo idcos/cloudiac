@@ -94,7 +94,7 @@ func SearchVariableGroup(c *ctx.ServiceContext, form *forms.SearchVariableGroupF
 	if err := p.Scan(&resp); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	resultTemp := make(map[models.Id][]string, 0)
+	resultTemp := make(map[models.Id][]string)
 
 	for _, v := range resp {
 		for index, variable := range v.Variables {
@@ -105,7 +105,7 @@ func SearchVariableGroup(c *ctx.ServiceContext, form *forms.SearchVariableGroupF
 		resultTemp[v.Id] = append(resultTemp[v.Id], v.ProjectName)
 	}
 	resArr := make([]resps.SearchVariableGroupRespTemp, 0)
-	tmpMap := make(map[models.Id]interface{}, 0)
+	tmpMap := make(map[models.Id]interface{})
 	for _, val := range resp {
 		if _, ok := tmpMap[val.Id]; !ok {
 			resArr = append(resArr, val)
@@ -115,8 +115,8 @@ func SearchVariableGroup(c *ctx.ServiceContext, form *forms.SearchVariableGroupF
 	result := make([]resps.SearchVariableGroupResp, 0)
 	for _, v := range resArr {
 		restemp := resps.SearchVariableGroupResp{
-			v,
-			resultTemp[v.Id],
+			SearchVariableGroupRespTemp: v,
+			ProjectNames:                resultTemp[v.Id],
 		}
 		result = append(result, restemp)
 	}
@@ -242,8 +242,8 @@ func DetailVariableGroup(c *ctx.ServiceContext, form *forms.DetailVariableGroupF
 		}
 	}
 	result := resps.DetailVariableGroupResp{
-		variableResp,
-		projectNames,
+		DetailVariableGroupRespTemp: variableResp,
+		ProjectNames:                projectNames,
 	}
 	return result, nil
 }
