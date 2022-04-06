@@ -529,20 +529,27 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 		TaskStatusChangeSendMessage(task, status)
 	}
 
+	defer func() {
+		if task.Exited() {
+			taskStatusExitedCall(dbSess, task, status)
+		}
+	}()
+
 	if !skipUpdateEnv {
 		step, er := GetTaskStep(dbSess, task.Id, task.CurrStep)
 		if er != nil {
+			logs.Get().WithField("currStep",task.CurrStep).
+				WithField("taskId", task.Id).Errorf("get task step error: %s", er)
 			return e.AutoNew(er, e.DBError)
 		}
 
 		if err := ChangeEnvStatusWithTaskAndStep(dbSess, task.EnvId, task, step); err != nil {
-			return nil
+			logs.Get().WithField("envId",task.EnvId).
+				WithField("taskId", task.Id).Errorf("change env to status error: %s", err)
+			return err
 		}
 	}
 
-	if task.Exited() {
-		taskStatusExitedCall(dbSess, task, status)
-	}
 	return nil
 }
 
