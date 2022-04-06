@@ -455,8 +455,8 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
-	query := c.DB().Where("iac_env.org_id = ? AND iac_env.project_id = ?", c.OrgId, c.ProjectId)
-	query = services.QueryEnvDetail(query)
+	//query := c.DB().Where("iac_env.org_id = ? AND iac_env.project_id = ?", c.OrgId, c.ProjectId)
+	query := services.QueryEnvDetail(c.DB(), c.OrgId, c.ProjectId)
 
 	if form.Status != "" {
 		if utils.InArrayStr(models.EnvStatus, form.Status) {
@@ -828,8 +828,8 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
-	query := c.DB().Where("iac_env.org_id = ? AND iac_env.project_id = ?", c.OrgId, c.ProjectId)
-	query = services.QueryEnvDetail(query)
+	//query := c.DB().Where("iac_env.org_id = ? AND iac_env.project_id = ?", c.OrgId, c.ProjectId)
+	query := services.QueryEnvDetail(c.DB(), c.OrgId, c.ProjectId)
 
 	envDetail, err := services.GetEnvDetailById(query, form.Id)
 	if err != nil && err.Code() == e.EnvNotExists {

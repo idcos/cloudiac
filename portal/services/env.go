@@ -85,7 +85,8 @@ func GetEnvById(tx *db.Session, id models.Id) (*models.Env, e.Error) {
 	return &o, nil
 }
 
-func QueryEnvDetail(query *db.Session) *db.Session {
+func QueryEnvDetail(dbSess *db.Session, orgId, projectId models.Id) *db.Session {
+	query := dbSess.Where("iac_env.org_id = ? AND iac_env.project_id = ?", orgId, projectId)
 	query = query.Model(&models.Env{}).LazySelectAppend("iac_env.*")
 
 	// 模板名称
@@ -108,6 +109,13 @@ func QueryEnvDetail(query *db.Session) *db.Session {
 		LazySelectAppend("!ISNULL(rd.task_id) AS is_drift")
 	query = query.Joins("left join iac_scan_task on iac_env.last_scan_task_id = iac_scan_task.id").
 		LazySelectAppend("iac_scan_task.policy_status as policy_status")
+
+	// 账单数据
+	filter := dbSess.Table("iac_bill as b").
+		Where("b.org_id = ? and b.project_id = ?", orgId, projectId).
+		Group("b.env_id").
+		Select("b.env_id,sum(b.pretax_amount) as month_cost")
+	query = query.Joins("left join (?) as b on b.env_id = iac_env.id", filter.Expr()).LazySelectAppend("b.month_cost")
 
 	return query
 }
