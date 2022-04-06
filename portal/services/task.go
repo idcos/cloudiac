@@ -534,7 +534,10 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 		if er != nil {
 			return e.AutoNew(er, e.DBError)
 		}
-		return ChangeEnvStatusWithTaskAndStep(dbSess, task.EnvId, task, step)
+
+		if err := ChangeEnvStatusWithTaskAndStep(dbSess, task.EnvId, task, step); err != nil {
+			return nil
+		}
 	}
 
 	if task.Exited() {
