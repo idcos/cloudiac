@@ -52,7 +52,6 @@ func UpdateObjectVars(c *ctx.ServiceContext, form *forms.UpdateObjectVarsForm) (
 }
 
 func getObjectVars(tx *db.Session, form *forms.UpdateObjectVarsForm, orgId, projectId models.Id) ([]models.Variable, e.Error) {
-
 	vars := make([]models.Variable, 0, len(form.Variables))
 	for _, v := range form.Variables {
 		if v.Scope != form.Scope {

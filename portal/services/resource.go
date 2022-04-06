@@ -42,7 +42,7 @@ func GetResourceByIdsInProvider(dbSess *db.Session, ids, projectIds []string, vg
 		Group("res_id").Group("env_id").
 		Select("res_id")
 
-	if err := dbSess.Debug().Model(models.Resource{}).
+	if err := dbSess.Model(models.Resource{}).
 		Where("res_id in (?)",query.Expr()).
 		Find(&resp); err != nil {
 		return nil, e.New(e.DBError, err)
