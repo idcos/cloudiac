@@ -68,7 +68,7 @@ type ProjectResGrowTrendResp struct {
 
 type ProjectStatResp struct {
 	EnvStat      []ProjectEnvStatResp        `json:"envStat"`
-	ResStat      []ProjectEnvResStatResp     `json:"resStat"`
+	ResStat      []EnvResStatResp            `json:"resStat"`
 	EnvResStat   []ProjectEnvResStatResp     `json:"envResStat"`
 	ResGrowTrend [][]ProjectResGrowTrendResp `json:"resGrowTrend"`
 }

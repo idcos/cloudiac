@@ -185,19 +185,76 @@ func GetProjectEnvStat(tx *db.Session, projectId models.Id) ([]resps.ProjectEnvS
 }
 
 // GetProjectResStat 资源类型占比
-func GetProjectResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.ResStatResp, e.Error) {
-	query := tx.Model(&models.Resource{}).Select(`iac_resource.type as res_type, count(*) as count`)
-	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
+func GetProjectResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.EnvResStatResp, e.Error) {
+	/* sample sql
+	select
+		iac_resource.type as res_type,
+		iac_env.id as id,
+		iac_env.name as name,
+		count(*) as count
+	from
+		iac_resource
+	join iac_env on
+		iac_env.last_res_task_id = iac_resource.task_id
+		and iac_env.id = iac_resource.env_id
+	where
+		iac_env.project_id = 'p-c8gg9josm56injdlb86g'
+	group by
+		iac_resource.type,
+		iac_env.id
+	order by
+		count desc
+	limit 10;
+	*/
+
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.type as res_type, iac_env.id as id, iac_env.name as name, count(*) as count`)
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 	query = query.Where(`iac_env.project_id = ?`, projectId)
 
-	query = query.Group("res_type").Order("count desc")
+	query = query.Group("iac_resource.type, iac_env.id").Order("count desc")
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
 
-	var results []resps.ResStatResp
-	if err := query.Find(&results); err != nil {
+	type dbResult struct {
+		ResType string
+		Id      models.Id
+		Name    string
+		Count   int
+	}
+
+	var dbResults []dbResult
+	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	var m = make(map[string][]dbResult)
+	var mTotalCount = make(map[string]int)
+	for _, result := range dbResults {
+		if _, ok := m[result.ResType]; !ok {
+			m[result.ResType] = make([]dbResult, 0)
+			mTotalCount[result.ResType] = 0
+		}
+		m[result.ResType] = append(m[result.ResType], result)
+		mTotalCount[result.ResType] += result.Count
+	}
+
+	var results []resps.EnvResStatResp
+	for k, v := range m {
+		data := resps.EnvResStatResp{
+			ResType: k,
+			Count:   mTotalCount[k],
+			Envs:    make([]resps.EnvDetailStatResp, 0),
+		}
+
+		for _, e := range v {
+			data.Envs = append(data.Envs, resps.EnvDetailStatResp{
+				Id:    e.Id,
+				Name:  e.Name,
+				Count: e.Count,
+			})
+		}
+		results = append(results, data)
 	}
 
 	return results, nil
