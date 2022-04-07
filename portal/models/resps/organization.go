@@ -41,39 +41,53 @@ type OrgEnvAndProviderResp struct {
 	Providers []string  `json:""`
 }
 
-type ProjectDetailStatResp struct {
+type DetailStatResp struct {
 	Id    models.Id `json:"id"`
 	Name  string    `json:"name"`
 	Count int       `json:"count"`
 }
 
 type EnvStatResp struct {
-	Status   string                  `json:"status"`
-	Count    int                     `json:"count"`
-	Projects []ProjectDetailStatResp `json:"projects" gorm:"-"`
+	Status  string           `json:"status"`
+	Count   int              `json:"count"`
+	Details []DetailStatResp `json:"details"`
 }
 
 type ResStatResp struct {
-	ResType  string                  `json:"resType"`
-	Count    int                     `json:"count"`
-	Projects []ProjectDetailStatResp `json:"projects"`
+	ResType string           `json:"resType"`
+	Count   int              `json:"count"`
+	Details []DetailStatResp `json:"details"`
 }
 
-type ProjectResStatResp struct {
-	ResType  string                  `json:"resType"`
-	Date     string                  `json:"date"`
-	Count    int                     `json:"count"`
-	Projects []ProjectDetailStatResp `json:"projects"`
+type DetailStatWithUpResp struct {
+	Id    models.Id `json:"id"`
+	Name  string    `json:"name"`
+	Count int       `json:"count"`
+	Up    int       `json:"up"`
+}
+
+type ResTypeDetailStatWithUpResp struct {
+	ResType string                 `json:"resType"`
+	Count   int                    `json:"count"`
+	Up      int                    `json:"up"`
+	Details []DetailStatWithUpResp `json:"details"`
+}
+
+type ProjOrEnvResStatResp struct {
+	Date     string                        `json:"date"`
+	ResTypes []ResTypeDetailStatWithUpResp `json:"ResTypes"`
 }
 
 type ResGrowTrendResp struct {
-	Date  string `json:"date"`
-	Count int    `json:"count"`
+	Date     string                        `json:"date"`
+	Count    int                           `json:"count"`
+	Up       int                           `json:"up"`
+	ResTypes []ResTypeDetailStatWithUpResp `json:"ResTypes"`
 }
 
 type OrgProjectsStatResp struct {
-	EnvStat        []EnvStatResp        `json:"envStat"`
-	ResStat        []ResStatResp        `json:"resStat"`
-	ProjectResStat []ProjectResStatResp `json:"projectStat"`
-	ResGrowTrend   []ResGrowTrendResp   `json:"resGrowTrend"`
+	EnvStat        []EnvStatResp          `json:"envStat"`
+	ResStat        []ResStatResp          `json:"resStat"`
+	ProjectResStat []ProjOrEnvResStatResp `json:"projectResStat"`
+	ResGrowTrend   [][]ResGrowTrendResp   `json:"resGrowTrend"`
 }

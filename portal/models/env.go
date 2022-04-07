@@ -151,7 +151,8 @@ type EnvDetail struct {
 	PolicyGroup []string `json:"policyGroup" gorm:"-"` // 环境相关合规策略组
 	RunnerTags  []string `json:"runnerTags" gorm:"-"`  // 将其转为数组返回给前端
 
-	MonthCost float32 `json:"monthCost" form:"monthCost"` // 环境月度成本
+	MonthCost float32 `json:"monthCost"` // 环境月度成本
+	IsBilling bool    `json:"isBilling"` // 是否开启账单采集
 }
 
 func (c *EnvDetail) UpdateEnvPolicyStatus() {

@@ -258,17 +258,10 @@ func ProjectStat(c *ctx.ServiceContext, form *forms.ProjectStatForm) (interface{
 		return nil, err
 	}
 
-	// 环境资源数量
-	envResSummary, err := services.GetProjectResSummary(tx, form.ProjectId, form.Limit)
-	if err != nil {
-		return nil, err
-	}
-
 	return &resps.ProjectStatResp{
-		EnvStat:       envStat,
-		ResStat:       resStat,
-		EnvResStat:    envResStat,
-		ResGrowTrend:  resGrowTrend,
-		EnvResSummary: envResSummary,
+		EnvStat:      envStat,
+		ResStat:      resStat,
+		EnvResStat:   envResStat,
+		ResGrowTrend: resGrowTrend,
 	}, nil
 }

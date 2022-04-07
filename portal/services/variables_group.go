@@ -517,3 +517,18 @@ func GetProjectVarGroups(sess *db.Session, projectId models.Id) ([]models.Variab
 	}
 	return vgs, nil
 }
+
+func GetVarGroupIsOpenBillCollectByVgIds(dbSess *db.Session, vgIds []models.Id, orgId, projectId models.Id) bool {
+	if len(vgIds) == 0 {
+		return false
+	}
+
+	exists, err := dbSess.Raw("select * from "+
+		"(select * from iac_variable_group as vg where vg.org_id = ? and vg.provider != '' and vg.cost_counted = ? and id in (?)) as vg "+
+		"left JOIN iac_variable_group_project_rel as vgpr on vg.id = vgpr.var_group_id and vgpr.project_id = ?", orgId, true, vgIds, projectId).Exists()
+	if err != nil {
+		return false
+	}
+
+	return exists
+}

@@ -8,7 +8,6 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/resps"
 	"fmt"
-	"time"
 )
 
 func CreateProject(tx *db.Session, project *models.Project) (*models.Project, e.Error) {
@@ -120,143 +119,160 @@ func GetProjectIdsByVgId(dbSess *db.Session, vgId models.Id) ([]string, error) {
 
 // GetProjectEnvStat 环境状态占比
 func GetProjectEnvStat(tx *db.Session, projectId models.Id) ([]resps.EnvStatResp, e.Error) {
-	subQuery := tx.Model(&models.Env{}).Select(`if(task_status = '', status, task_status) as status`)
-	subQuery = subQuery.Where("archived = ?", 0).Where("project_id = ?", projectId)
+	/* sample sql:
+	select
+		if(task_status = '',
+		status,
+		task_status) as my_status,
+		id,
+		name,
+		count(*) as count
+	from
+		iac_env t
+	where
+		archived = 0
+		and project_id = 'p-c8gg9josm56injdlb86g'
+	group by
+		t.status, t.id
+	*/
 
-	query := tx.Table("(?) as t", subQuery.Expr()).Select(`status, count(*) as count`).Group("status")
+	query := tx.Model(&models.Env{}).Select(`if(task_status = '', status, task_status) as my_status, id, name, count(*) as count`)
+	query = query.Where("archived = ?", 0).Where("project_id = ?", projectId)
+	query = query.Group("my_status, id")
 
-	var results []resps.EnvStatResp
-	if err := query.Find(&results); err != nil {
+	var dbResults []EnvStatResult
+	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	return results, nil
+	return dbResult2EnvStatResp(dbResults), nil
 }
 
 // GetProjectResStat 资源类型占比
 func GetProjectResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.ResStatResp, e.Error) {
-	query := tx.Model(&models.Resource{}).Select(`iac_resource.type as res_type, count(*) as count`)
-	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
+	/* sample sql
+	select
+		iac_resource.type as res_type,
+		iac_env.id as id,
+		iac_env.name as name,
+		count(*) as count
+	from
+		iac_resource
+	join iac_env on
+		iac_env.last_res_task_id = iac_resource.task_id
+		and iac_env.id = iac_resource.env_id
+	where
+		iac_env.project_id = 'p-c8gg9josm56injdlb86g'
+	group by
+		iac_resource.type,
+		iac_env.id
+	order by
+		count desc
+	limit 10;
+	*/
+
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.type as res_type, iac_env.id as id, iac_env.name as name, count(*) as count`)
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 	query = query.Where(`iac_env.project_id = ?`, projectId)
 
-	query = query.Group("res_type").Order("count desc")
+	query = query.Group("iac_resource.type, iac_env.id").Order("count desc")
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
 
-	var results []resps.ResStatResp
-	if err := query.Find(&results); err != nil {
+	var dbResults []ResStatResult
+	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	return results, nil
+	return dbResult2ResStatResp(dbResults), nil
 }
 
 // GetProjectEnvResStat 环境资源数量
-func GetProjectEnvResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.EnvResStatResp, e.Error) {
+func GetProjectEnvResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.ProjOrEnvResStatResp, e.Error) {
+	/* sample sql:
+	select
+		iac_resource.env_id as id,
+		iac_env.name as name,
+		iac_resource.type as res_type,
+		DATE_FORMAT(iac_resource.applied_at, "%Y-%m") as date,
+		count(*) as count
+	from
+		iac_resource
+	JOIN iac_env ON
+		iac_env.last_res_task_id = iac_resource.task_id
+		and iac_env.id = iac_resource.env_id
+	where
+		iac_env.project_id = 'p-c8gg9josm56injdlb86g'
+		AND (DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(CURDATE(), "%Y-%m")
+			OR
+		DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m"))
+	group by
+		date,
+		iac_resource.type,
+		iac_resource.env_id
+	limit 10;
+	*/
 
-	query := tx.Model(&models.Resource{}).Select(`iac_resource.env_id as env_id, iac_env.name as env_name, iac_resource.type as res_type, DATE_FORMAT(iac_resource.applied_at, "%Y-%m") as date, count(*) as count`)
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.env_id as id, iac_env.name as name, iac_resource.type as res_type, DATE_FORMAT(iac_resource.applied_at, "%Y-%m") as date, count(*) as count`)
 
-	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 	query = query.Where(`iac_env.project_id = ?`, projectId)
 	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(CURDATE(), "%Y-%m") OR DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m")`)
 
-	query = query.Group("iac_resource.type,iac_resource.env_id,date")
+	query = query.Group("date, iac_resource.type,iac_resource.env_id")
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
 
-	var results []resps.EnvResStatResp
-	if err := query.Find(&results); err != nil {
+	var dbResults []ProjectStatResult
+	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	return results, nil
+	return dbResult2ProjectResStatResp(dbResults), nil
 }
 
 // GetProjectResGrowTrend 最近7天资源及费用趋势
-func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([]resps.ResGrowTrendResp, e.Error) {
+func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([][]resps.ResGrowTrendResp, e.Error) {
+	/* sample sql
+	select
+		iac_resource.env_id as id,
+		iac_env.name as name,
+		iac_resource.type as res_type,
+		DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date,
+		count(*) as count
+	from
+		iac_resource
+	JOIN iac_env ON
+		iac_env.last_res_task_id = iac_resource.task_id
+		and iac_env.id = iac_resource.env_id
+	where
+		iac_env.project_id = 'p-c8gg9josm56injdlb86g'
+		and (
+		DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 7 DAY), "%Y-%m-%d")
+			or (DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(DATE_SUB(CURDATE(), INTERVAL 7 DAY), INTERVAL 1 MONTH), "%Y-%m-%d")
+				and DATE_FORMAT(applied_at, "%Y-%m-%d") <= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m-%d")))
+	group by
+		date,
+		iac_resource.type,
+		iac_resource.env_id
+	order by
+		date
+	*/
 
-	query := tx.Model(&models.Resource{}).Select(`DATE_FORMAT(applied_at, "%Y-%m-%d") as date, count(*) as count`)
-	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.env_id as id, iac_env.name as name, iac_resource.type as res_type, DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date, count(*) as count`)
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 
 	query = query.Where("iac_env.project_id = ?", projectId)
+	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? DAY), "%Y-%m-%d") or (DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(DATE_SUB(CURDATE(), INTERVAL ? DAY), INTERVAL 1 MONTH), "%Y-%m-%d") and DATE_FORMAT(applied_at, "%Y-%m-%d") <= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m-%d"))`, days, days)
 
-	query = query.Where(`applied_at > DATE_SUB(CURDATE(), INTERVAL ? DAY) or (applied_at > DATE_SUB(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), INTERVAL ? DAY) and applied_at <= DATE_SUB(CURDATE(), INTERVAL 1 MONTH))`, days, days)
+	query = query.Group("date, iac_resource.type, iac_resource.env_id").Order("date")
 
-	query = query.Group("date").Order("date")
-
-	var results []resps.ResGrowTrendResp
-	if err := query.Find(&results); err != nil {
+	var dbResults []ProjectStatResult
+	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	return completeResGrowTrend(results, days), nil
-}
-
-// GetProjectResSummary 环境资源数量
-func GetProjectResSummary(tx *db.Session, projectId models.Id, limit int) ([]resps.EnvResSummaryResp, e.Error) {
-
-	curMonthData, err := getProjectResSummaryByMonth(tx, projectId, time.Now().Format("2006-01"), limit)
-	if err != nil {
-		return nil, err
-	}
-
-	lastMonthData, err := getProjectResSummaryByMonth(tx, projectId, time.Now().AddDate(0, -1, 0).Format("2006-01"), limit)
-	if err != nil {
-		return nil, err
-	}
-
-	// 上上月的数据
-	lastMonthData2, err := getProjectResSummaryByMonth(tx, projectId, time.Now().AddDate(0, -2, 0).Format("2006-01"), limit)
-	if err != nil {
-		return nil, err
-	}
-
-	var curMonthResults = make([]resps.EnvResSummaryResp, 0)
-	for _, data := range curMonthData {
-		lastMonthCount := findProjectLastMonthResCount(data.ResType, lastMonthData)
-		data.Up = data.Count - lastMonthCount
-		curMonthResults = append(curMonthResults, data)
-	}
-
-	var lastMonthResults = make([]resps.EnvResSummaryResp, 0)
-	for _, data := range lastMonthData {
-		lastMonthCount := findProjectLastMonthResCount(data.ResType, lastMonthData2)
-		data.Up = data.Count - lastMonthCount
-		lastMonthResults = append(lastMonthResults, data)
-	}
-
-	curMonthResults = append(curMonthResults, lastMonthResults...)
-	return curMonthResults, nil
-}
-
-func findProjectLastMonthResCount(resType string, monthData []resps.EnvResSummaryResp) int {
-	for _, data := range monthData {
-		if data.ResType == resType {
-			return data.Count
-		}
-	}
-
-	return 0
-}
-
-func getProjectResSummaryByMonth(tx *db.Session, projectId models.Id, month string, limit int) ([]resps.EnvResSummaryResp, e.Error) {
-	query := tx.Model(&models.Resource{}).Select(`iac_resource.type as res_type, count(*) as count, DATE_FORMAT(applied_at, "%Y-%m") as date`)
-	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
-	query = query.Where(`iac_env.project_id = ?`, projectId)
-
-	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m") = ?`, month)
-
-	query = query.Group("res_type,date")
-	if limit > 0 {
-		query = query.Limit(limit)
-	}
-
-	var results []resps.EnvResSummaryResp
-	if err := query.Find(&results); err != nil {
-		return nil, e.AutoNew(err, e.DBError)
-	}
-
-	return results, nil
+	return dbResult2ResGrowTrendResp(dbResults, days), nil
 }

@@ -321,7 +321,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		}
 	}()
 
-	runnerId, err := services.GetAvailableRunnerId(form.RunnerId, form.RunnerTags)
+	runnerId, err := services.GetAvailableRunnerId(form.RunnerId, strings.Join(form.RunnerTags, ","))
 	if err != nil {
 		return nil, err
 	}
@@ -516,6 +516,9 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		}
 		// 以分钟为单位返回
 		env.StepTimeout = env.StepTimeout / 60
+
+		// 是否开启费用采集
+		env.IsBilling = getEnvIsBilling(c.DB(), env, c.OrgId, c.ProjectId)
 	}
 
 	return page.PageResp{
@@ -859,6 +862,9 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 	} else {
 		envDetail.RunnerTags = []string{}
 	}
+	// 是否开启费用采集
+	envDetail.IsBilling = getEnvIsBilling(c.DB(), envDetail, c.OrgId, c.ProjectId)
+
 	return envDetail, nil
 }
 
@@ -1213,7 +1219,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	lg.Debugln("envDeploy -> GetValidVarsAndVgVars finish")
 
 	// 获取实际执行任务的runnerID
-	rId, err := services.GetAvailableRunnerId(env.RunnerId, strings.Split(env.RunnerTags, ","))
+	rId, err := services.GetAvailableRunnerId(env.RunnerId, env.RunnerTags)
 	if err != nil {
 		return nil, err
 	}
@@ -1559,4 +1565,23 @@ func EnvStat(c *ctx.ServiceContext, form *forms.EnvParam) (interface{}, e.Error)
 		CostTrendStat: envCostTrendStat,
 		CostList:      results,
 	}, nil
+}
+
+func getEnvIsBilling(dbSess *db.Session, env *models.EnvDetail, orgId, projectId models.Id) bool {
+	vgs, err := services.SearchVariableGroupRel(dbSess, map[string]models.Id{
+		consts.ScopeEnv:      env.Id,
+		consts.ScopeTemplate: env.TplId,
+		consts.ScopeProject:  projectId,
+		consts.ScopeOrg:      orgId,
+	}, consts.ScopeEnv)
+	if err != nil {
+		logs.Get().Errorf("get env var group env id: %s, err: %s", env.Id, err)
+		return false
+	}
+	vgIds := make([]models.Id, len(vgs))
+	for index, v := range vgs {
+		vgIds[index] = v.Id
+	}
+	// 查询变量组是否开启账单采集，并且项目关联了项目
+	return services.GetVarGroupIsOpenBillCollectByVgIds(dbSess, vgIds, orgId, projectId)
 }
