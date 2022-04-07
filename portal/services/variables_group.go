@@ -39,8 +39,7 @@ func SearchVariableGroup(dbSess *db.Session, orgId models.Id, projectId models.I
 	}
 	query = query.Joins("left join iac_variable_group_project_rel on iac_variable_group_project_rel.var_group_id = iac_variable_group.id  left join iac_project on " +
 		"iac_project.id = iac_variable_group_project_rel.project_id").
-		LazySelectAppend("iac_project.name as project_name, iac_variable_group_project_rel.project_id").
-		Where("iac_variable_group_project_rel.project_id = iac_project.id")
+		LazySelectAppend("iac_project.name as project_name, iac_variable_group_project_rel.project_id")
 
 	return query.Joins("left join iac_user as u on u.id = iac_variable_group.creator_id").
 		LazySelectAppend("iac_variable_group.*").

@@ -87,6 +87,7 @@ func CreateVariableGroup(c *ctx.ServiceContext, form *forms.CreateVariableGroupF
 }
 
 func SearchVariableGroup(c *ctx.ServiceContext, form *forms.SearchVariableGroupForm) (interface{}, e.Error) {
+
 	query := services.SearchVariableGroup(c.DB(), c.OrgId, c.ProjectId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	resp := make([]resps.SearchVariableGroupRespTemp, 0)
@@ -234,8 +235,13 @@ func DetailVariableGroup(c *ctx.ServiceContext, form *forms.DetailVariableGroupF
 	projectNames := []string{}
 	projectIds := []string{}
 	for _, v := range vg {
-		projectNames = append(projectNames, v.ProjectName)
-		projectIds = append(projectIds, v.ProjectId)
+		if v.ProjectName != "" {
+			projectNames = append(projectNames, v.ProjectName)
+		}
+		if v.ProjectId != "" {
+			projectIds = append(projectIds, v.ProjectId)
+		}
+
 	}
 	variableResp := vg[0]
 	for index, v := range variableResp.Variables {
