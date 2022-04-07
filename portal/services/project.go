@@ -8,7 +8,6 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/resps"
 	"fmt"
-	"time"
 )
 
 func CreateProject(tx *db.Session, project *models.Project) (*models.Project, e.Error) {
@@ -347,25 +346,5 @@ func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([][]
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	now := time.Now()
-	var results = make([][]resps.ResGrowTrendResp, 2)
-
-	startDate := now.AddDate(0, -1, -1*days)
-	endDate := now.AddDate(0, -1, 0)
-	var mPreDateCount map[string]int
-	var mPreResTypeCount map[[2]string]int
-	var mPreDetailCount map[[3]string]int
-	results[0], mPreDateCount, mPreResTypeCount, mPreDetailCount = getResGrowTrendByDays(startDate, endDate, dbResults, days)
-
-	startDate = now.AddDate(0, 0, -1*days)
-	endDate = now
-	var mDateCount map[string]int
-	var mResTypeCount map[[2]string]int
-	var mDetailCount map[[3]string]int
-	results[1], mDateCount, mResTypeCount, mDetailCount = getResGrowTrendByDays(startDate, endDate, dbResults, days)
-
-	// 计算增长量
-	calcGrow(results[1], mPreDateCount, mDateCount, mPreResTypeCount, mResTypeCount, mPreDetailCount, mDetailCount, days)
-
-	return results, nil
+	return dbResult2ResGrowTrendResp(dbResults, days), nil
 }

@@ -584,6 +584,11 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
+	return dbResult2ResGrowTrendResp(dbResults, days), nil
+}
+
+func dbResult2ResGrowTrendResp(dbResults []ProjectStatResult, days int) [][]resps.ResGrowTrendResp {
+
 	now := time.Now()
 	var results = make([][]resps.ResGrowTrendResp, 2)
 
@@ -602,44 +607,38 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 	results[1], mDateCount, mResTypeCount, mDetailCount = getResGrowTrendByDays(startDate, endDate, dbResults, days)
 
 	// 计算增长量
-	calcGrow(results[1], mPreDateCount, mDateCount, mPreResTypeCount, mResTypeCount, mPreDetailCount, mDetailCount, days)
-
-	return results, nil
-}
-
-func calcGrow(curData []resps.ResGrowTrendResp, mPreDateCount, mDateCount map[string]int, mPreResTypeCount, mResTypeCount map[[2]string]int, mPreDetailCount, mDetailCount map[[3]string]int, days int) {
-
-	for i := range curData {
+	for i := range results[1] {
 		// 每天增长量
-		curDate := curData[i].Date
+		curDate := results[1][i].Date
 		preDate := calcPreDayKey(curDate, days)
-		curData[i].Up = mDateCount[curData[i].Date]
+		results[1][i].Up = mDateCount[results[1][i].Date]
 		if _, ok := mPreDateCount[preDate]; ok {
-			curData[i].Up -= mPreDateCount[preDate]
+			results[1][i].Up -= mPreDateCount[preDate]
 		}
 
 		// 每天每个资源类型增长量
-		for j := range curData[i].ResTypes {
-			resType := curData[i].ResTypes[j].ResType
+		for j := range results[1][i].ResTypes {
+			resType := results[1][i].ResTypes[j].ResType
 			curResKey := [2]string{curDate, resType}
 			preResKey := [2]string{preDate, resType}
-			curData[i].ResTypes[j].Up = mResTypeCount[curResKey]
+			results[1][i].ResTypes[j].Up = mResTypeCount[curResKey]
 			if _, ok := mPreResTypeCount[preResKey]; ok {
-				curData[i].ResTypes[j].Up -= mPreResTypeCount[preResKey]
+				results[1][i].ResTypes[j].Up -= mPreResTypeCount[preResKey]
 			}
 
 			// 每天每个资源类型下每个项目增长量
-			for k := range curData[i].ResTypes[j].Details {
-				projectId := curData[i].ResTypes[j].Details[k].Id.String()
+			for k := range results[1][i].ResTypes[j].Details {
+				projectId := results[1][i].ResTypes[j].Details[k].Id.String()
 				curDetailKey := [3]string{curDate, resType, projectId}
 				preDetailKey := [3]string{preDate, resType, projectId}
-				curData[i].ResTypes[j].Details[k].Up = mDetailCount[curDetailKey]
+				results[1][i].ResTypes[j].Details[k].Up = mDetailCount[curDetailKey]
 				if _, ok := mPreResTypeCount[preResKey]; ok {
-					curData[i].ResTypes[j].Details[k].Up -= mPreDetailCount[preDetailKey]
+					results[1][i].ResTypes[j].Details[k].Up -= mPreDetailCount[preDetailKey]
 				}
 			}
 		}
 	}
+	return results
 }
 
 func calcPreDayKey(nowStr string, days int) string {
