@@ -591,50 +591,55 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 	endDate := now.AddDate(0, -1, 0)
 	var mPreDateCount map[string]int
 	var mPreResTypeCount map[[2]string]int
-	var mPreProjectCount map[[3]string]int
-	results[0], mPreDateCount, mPreResTypeCount, mPreProjectCount = getResGrowTrendByDays(startDate, endDate, dbResults, days)
+	var mPreDetailCount map[[3]string]int
+	results[0], mPreDateCount, mPreResTypeCount, mPreDetailCount = getResGrowTrendByDays(startDate, endDate, dbResults, days)
 
 	startDate = now.AddDate(0, 0, -1*days)
 	endDate = now
 	var mDateCount map[string]int
 	var mResTypeCount map[[2]string]int
-	var mProjectCount map[[3]string]int
-	results[1], mDateCount, mResTypeCount, mProjectCount = getResGrowTrendByDays(startDate, endDate, dbResults, days)
+	var mDetailCount map[[3]string]int
+	results[1], mDateCount, mResTypeCount, mDetailCount = getResGrowTrendByDays(startDate, endDate, dbResults, days)
 
 	// 计算增长量
-	for i := range results[1] {
+	calcGrow(results[1], mPreDateCount, mDateCount, mPreResTypeCount, mResTypeCount, mPreDetailCount, mDetailCount, days)
+
+	return results, nil
+}
+
+func calcGrow(curData []resps.ResGrowTrendResp, mPreDateCount, mDateCount map[string]int, mPreResTypeCount, mResTypeCount map[[2]string]int, mPreDetailCount, mDetailCount map[[3]string]int, days int) {
+
+	for i := range curData {
 		// 每天增长量
-		curDate := results[1][i].Date
+		curDate := curData[i].Date
 		preDate := calcPreDayKey(curDate, days)
-		results[1][i].Up = mDateCount[results[1][i].Date]
+		curData[i].Up = mDateCount[curData[i].Date]
 		if _, ok := mPreDateCount[preDate]; ok {
-			results[1][i].Up -= mPreDateCount[preDate]
+			curData[i].Up -= mPreDateCount[preDate]
 		}
 
 		// 每天每个资源类型增长量
-		for j := range results[1][i].ResTypes {
-			resType := results[1][i].ResTypes[j].ResType
+		for j := range curData[i].ResTypes {
+			resType := curData[i].ResTypes[j].ResType
 			curResKey := [2]string{curDate, resType}
 			preResKey := [2]string{preDate, resType}
-			results[1][i].ResTypes[j].Up = mResTypeCount[curResKey]
+			curData[i].ResTypes[j].Up = mResTypeCount[curResKey]
 			if _, ok := mPreResTypeCount[preResKey]; ok {
-				results[1][i].ResTypes[j].Up -= mPreResTypeCount[preResKey]
+				curData[i].ResTypes[j].Up -= mPreResTypeCount[preResKey]
 			}
 
 			// 每天每个资源类型下每个项目增长量
-			for k := range results[1][i].ResTypes[j].Details {
-				projectId := results[1][i].ResTypes[j].Details[k].Id.String()
-				curProjectKey := [3]string{curDate, resType, projectId}
-				preProjectKey := [3]string{preDate, resType, projectId}
-				results[1][i].ResTypes[j].Details[k].Up = mProjectCount[curProjectKey]
+			for k := range curData[i].ResTypes[j].Details {
+				projectId := curData[i].ResTypes[j].Details[k].Id.String()
+				curDetailKey := [3]string{curDate, resType, projectId}
+				preDetailKey := [3]string{preDate, resType, projectId}
+				curData[i].ResTypes[j].Details[k].Up = mDetailCount[curDetailKey]
 				if _, ok := mPreResTypeCount[preResKey]; ok {
-					results[1][i].ResTypes[j].Details[k].Up -= mPreProjectCount[preProjectKey]
+					curData[i].ResTypes[j].Details[k].Up -= mPreDetailCount[preDetailKey]
 				}
 			}
 		}
 	}
-
-	return results, nil
 }
 
 func calcPreDayKey(nowStr string, days int) string {

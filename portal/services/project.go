@@ -354,48 +354,18 @@ func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([][]
 	endDate := now.AddDate(0, -1, 0)
 	var mPreDateCount map[string]int
 	var mPreResTypeCount map[[2]string]int
-	var mPreEnvCount map[[3]string]int
-	results[0], mPreDateCount, mPreResTypeCount, mPreEnvCount = getResGrowTrendByDays(startDate, endDate, dbResults, days)
+	var mPreDetailCount map[[3]string]int
+	results[0], mPreDateCount, mPreResTypeCount, mPreDetailCount = getResGrowTrendByDays(startDate, endDate, dbResults, days)
 
 	startDate = now.AddDate(0, 0, -1*days)
 	endDate = now
 	var mDateCount map[string]int
 	var mResTypeCount map[[2]string]int
-	var mEnvCount map[[3]string]int
-	results[1], mDateCount, mResTypeCount, mEnvCount = getResGrowTrendByDays(startDate, endDate, dbResults, days)
+	var mDetailCount map[[3]string]int
+	results[1], mDateCount, mResTypeCount, mDetailCount = getResGrowTrendByDays(startDate, endDate, dbResults, days)
 
 	// 计算增长量
-	for i := range results[1] {
-		// 每天增长量
-		curDate := results[1][i].Date
-		preDate := calcPreDayKey(curDate, days)
-		results[1][i].Up = mDateCount[results[1][i].Date]
-		if _, ok := mPreDateCount[preDate]; ok {
-			results[1][i].Up -= mPreDateCount[preDate]
-		}
-
-		// 每天每个资源类型增长量
-		for j := range results[1][i].ResTypes {
-			resType := results[1][i].ResTypes[j].ResType
-			curResKey := [2]string{curDate, resType}
-			preResKey := [2]string{preDate, resType}
-			results[1][i].ResTypes[j].Up = mResTypeCount[curResKey]
-			if _, ok := mPreResTypeCount[preResKey]; ok {
-				results[1][i].ResTypes[j].Up -= mPreResTypeCount[preResKey]
-			}
-
-			// 每天每个资源类型下每个环境增长量
-			for k := range results[1][i].ResTypes[j].Details {
-				envId := results[1][i].ResTypes[j].Details[k].Id.String()
-				curEnvKey := [3]string{curDate, resType, envId}
-				preEnvKey := [3]string{preDate, resType, envId}
-				results[1][i].ResTypes[j].Details[k].Up = mEnvCount[curEnvKey]
-				if _, ok := mPreResTypeCount[preResKey]; ok {
-					results[1][i].ResTypes[j].Details[k].Up -= mPreEnvCount[preEnvKey]
-				}
-			}
-		}
-	}
+	calcGrow(results[1], mPreDateCount, mDateCount, mPreResTypeCount, mResTypeCount, mPreDetailCount, mDetailCount, days)
 
 	return results, nil
 }
