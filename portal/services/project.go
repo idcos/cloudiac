@@ -125,7 +125,7 @@ func GetProjectEnvStat(tx *db.Session, projectId models.Id) ([]resps.ProjectEnvS
 	select
 		if(task_status = '',
 		status,
-		task_status) as status,
+		task_status) as my_status,
 		id,
 		name,
 		count(*) as count
@@ -139,15 +139,15 @@ func GetProjectEnvStat(tx *db.Session, projectId models.Id) ([]resps.ProjectEnvS
 	*/
 
 	type dbResult struct {
-		Status string
-		Id     models.Id
-		Name   string
-		Count  int
+		MyStatus string
+		Id       models.Id
+		Name     string
+		Count    int
 	}
 
 	query := tx.Model(&models.Env{}).Select(`if(task_status = '', status, task_status) as status, id, name, count(*) as count`)
 	query = query.Where("archived = ?", 0).Where("project_id = ?", projectId)
-	query = query.Group("t.status, t.id")
+	query = query.Group("my_status, id")
 
 	var dbResults []dbResult
 	if err := query.Find(&dbResults); err != nil {
@@ -157,12 +157,12 @@ func GetProjectEnvStat(tx *db.Session, projectId models.Id) ([]resps.ProjectEnvS
 	var m = make(map[string][]dbResult)
 	var mTotalCount = make(map[string]int)
 	for _, result := range dbResults {
-		if _, ok := m[result.Status]; !ok {
-			m[result.Status] = make([]dbResult, 0)
-			mTotalCount[result.Status] = 0
+		if _, ok := m[result.MyStatus]; !ok {
+			m[result.MyStatus] = make([]dbResult, 0)
+			mTotalCount[result.MyStatus] = 0
 		}
-		m[result.Status] = append(m[result.Status], result)
-		mTotalCount[result.Status] += result.Count
+		m[result.MyStatus] = append(m[result.MyStatus], result)
+		mTotalCount[result.MyStatus] += result.Count
 	}
 
 	var results = make([]resps.ProjectEnvStatResp, 0)
