@@ -554,4 +554,8 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "Ldap account cannot be modified",
 		"zh-CN": "ldap 账号不支持修改",
 	},
+	InvalidVarGroup: {
+		"en-US": "invalid resource account",
+		"zh-CN": "无效资源账号",
+	},
 }

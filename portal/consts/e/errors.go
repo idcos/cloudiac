@@ -201,6 +201,7 @@ const (
 	VariableGroupAlreadyExist   = 31410
 	VariableGroupNotExist       = 31411
 	VariableGroupAliasDuplicate = 31412
+	InvalidVarGroup             = 31413
 
 	//cron 315
 	CronExpressError = 31500
