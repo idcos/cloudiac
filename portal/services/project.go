@@ -136,52 +136,16 @@ func GetProjectEnvStat(tx *db.Session, projectId models.Id) ([]resps.EnvStatResp
 		t.status, t.id
 	*/
 
-	type dbResult struct {
-		MyStatus string
-		Id       models.Id
-		Name     string
-		Count    int
-	}
-
 	query := tx.Model(&models.Env{}).Select(`if(task_status = '', status, task_status) as my_status, id, name, count(*) as count`)
 	query = query.Where("archived = ?", 0).Where("project_id = ?", projectId)
 	query = query.Group("my_status, id")
 
-	var dbResults []dbResult
+	var dbResults []EnvStatResult
 	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	var m = make(map[string][]dbResult)
-	var mTotalCount = make(map[string]int)
-	for _, result := range dbResults {
-		if _, ok := m[result.MyStatus]; !ok {
-			m[result.MyStatus] = make([]dbResult, 0)
-			mTotalCount[result.MyStatus] = 0
-		}
-		m[result.MyStatus] = append(m[result.MyStatus], result)
-		mTotalCount[result.MyStatus] += result.Count
-	}
-
-	var results = make([]resps.EnvStatResp, 0)
-	for k, v := range m {
-		data := resps.EnvStatResp{
-			Status:  k,
-			Count:   mTotalCount[k],
-			Details: make([]resps.DetailStatResp, 0),
-		}
-
-		for _, e := range v {
-			data.Details = append(data.Details, resps.DetailStatResp{
-				Id:    e.Id,
-				Name:  e.Name,
-				Count: e.Count,
-			})
-		}
-		results = append(results, data)
-	}
-
-	return results, nil
+	return dbResult2EnvStatResp(dbResults), nil
 }
 
 // GetProjectResStat 资源类型占比
@@ -216,48 +180,12 @@ func GetProjectResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.
 		query = query.Limit(limit)
 	}
 
-	type dbResult struct {
-		ResType string
-		Id      models.Id
-		Name    string
-		Count   int
-	}
-
-	var dbResults []dbResult
+	var dbResults []ResStatResult
 	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	var m = make(map[string][]dbResult)
-	var mTotalCount = make(map[string]int)
-	for _, result := range dbResults {
-		if _, ok := m[result.ResType]; !ok {
-			m[result.ResType] = make([]dbResult, 0)
-			mTotalCount[result.ResType] = 0
-		}
-		m[result.ResType] = append(m[result.ResType], result)
-		mTotalCount[result.ResType] += result.Count
-	}
-
-	var results []resps.ResStatResp
-	for k, v := range m {
-		data := resps.ResStatResp{
-			ResType: k,
-			Count:   mTotalCount[k],
-			Details: make([]resps.DetailStatResp, 0),
-		}
-
-		for _, e := range v {
-			data.Details = append(data.Details, resps.DetailStatResp{
-				Id:    e.Id,
-				Name:  e.Name,
-				Count: e.Count,
-			})
-		}
-		results = append(results, data)
-	}
-
-	return results, nil
+	return dbResult2ResStatResp(dbResults), nil
 }
 
 // GetProjectEnvResStat 环境资源数量

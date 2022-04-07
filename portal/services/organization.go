@@ -195,10 +195,17 @@ func GetOrgResourcesQuery(tx *db.Session, searchStr string, orgId, userId models
 
 }
 
+type EnvStatResult struct {
+	MyStatus string
+	Id       models.Id
+	Name     string
+	Count    int
+}
+
 func GetOrgProjectsEnvStat(tx *db.Session, orgId models.Id, projectIds []string) ([]resps.EnvStatResp, e.Error) {
 	/* sample sql:
 	select
-		t.status,
+		t.status as my_status,
 		iac_project.id as id,
 		iac_project.name as name,
 		count(*) as count
@@ -222,13 +229,6 @@ func GetOrgProjectsEnvStat(tx *db.Session, orgId models.Id, projectIds []string)
 		t.status, iac_project.id;
 	*/
 
-	type dbResult struct {
-		Status string
-		Id     models.Id
-		Name   string
-		Count  int
-	}
-
 	subQuery := tx.Model(&models.Env{}).Select(`if(task_status = '', status, task_status) as status, project_id`)
 	subQuery = subQuery.Where("archived = ?", 0).Where("org_id = ?", orgId)
 
@@ -241,20 +241,24 @@ func GetOrgProjectsEnvStat(tx *db.Session, orgId models.Id, projectIds []string)
 	query = query.Joins(`JOIN iac_project ON t.project_id = iac_project.id`)
 	query = query.Group("t.status, iac_project.id")
 
-	var dbResults []dbResult
+	var dbResults []EnvStatResult
 	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	var m = make(map[string][]dbResult)
+	return dbResult2EnvStatResp(dbResults), nil
+}
+
+func dbResult2EnvStatResp(dbResults []EnvStatResult) []resps.EnvStatResp {
+	var m = make(map[string][]EnvStatResult)
 	var mTotalCount = make(map[string]int)
 	for _, result := range dbResults {
-		if _, ok := m[result.Status]; !ok {
-			m[result.Status] = make([]dbResult, 0)
-			mTotalCount[result.Status] = 0
+		if _, ok := m[result.MyStatus]; !ok {
+			m[result.MyStatus] = make([]EnvStatResult, 0)
+			mTotalCount[result.MyStatus] = 0
 		}
-		m[result.Status] = append(m[result.Status], result)
-		mTotalCount[result.Status] += result.Count
+		m[result.MyStatus] = append(m[result.MyStatus], result)
+		mTotalCount[result.MyStatus] += result.Count
 	}
 
 	var results = make([]resps.EnvStatResp, 0)
@@ -275,7 +279,14 @@ func GetOrgProjectsEnvStat(tx *db.Session, orgId models.Id, projectIds []string)
 		results = append(results, data)
 	}
 
-	return results, nil
+	return results
+}
+
+type ResStatResult struct {
+	ResType string
+	Id      models.Id
+	Name    string
+	Count   int
 }
 
 func GetOrgProjectsResStat(tx *db.Session, orgId models.Id, projectIds []string, limit int) ([]resps.ResStatResp, e.Error) {
@@ -316,23 +327,21 @@ func GetOrgProjectsResStat(tx *db.Session, orgId models.Id, projectIds []string,
 		query = query.Limit(limit)
 	}
 
-	type dbResult struct {
-		ResType string
-		Id      models.Id
-		Name    string
-		Count   int
-	}
-
-	var dbResults []dbResult
+	var dbResults []ResStatResult
 	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	var m = make(map[string][]dbResult)
+	return dbResult2ResStatResp(dbResults), nil
+}
+
+func dbResult2ResStatResp(dbResults []ResStatResult) []resps.ResStatResp {
+
+	var m = make(map[string][]ResStatResult)
 	var mTotalCount = make(map[string]int)
 	for _, result := range dbResults {
 		if _, ok := m[result.ResType]; !ok {
-			m[result.ResType] = make([]dbResult, 0)
+			m[result.ResType] = make([]ResStatResult, 0)
 			mTotalCount[result.ResType] = 0
 		}
 		m[result.ResType] = append(m[result.ResType], result)
@@ -357,7 +366,7 @@ func GetOrgProjectsResStat(tx *db.Session, orgId models.Id, projectIds []string,
 		results = append(results, data)
 	}
 
-	return results, nil
+	return results
 }
 
 type ProjectStatResult struct {
