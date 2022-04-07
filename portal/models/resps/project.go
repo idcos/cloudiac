@@ -22,25 +22,9 @@ type ProjectStatistics struct {
 	EnvInactive int64 `json:"envInactive" form:"envInactive" `
 }
 
-type EnvResStatResp struct {
-	EnvId   string `json:"envId"`
-	EnvName string `json:"envName"`
-	ResType string `json:"resType"`
-	Date    string `json:"date"`
-	Count   int    `json:"count"`
-}
-
-type EnvResSummaryResp struct {
-	ResType string `json:"resType"`
-	Date    string `json:"date"`
-	Count   int    `json:"count"`
-	Up      int    `json:"up"` // 增长数量
-}
-
 type ProjectStatResp struct {
-	EnvStat       []EnvStatResp       `json:"envStat"`
-	ResStat       []ResStatResp       `json:"resStat"`
-	EnvResStat    []EnvResStatResp    `json:"envResStat"`
-	ResGrowTrend  []ResGrowTrendResp  `json:"resGrowTrend"`
-	EnvResSummary []EnvResSummaryResp `json:"envResSummary"`
+	EnvStat      []EnvStatResp          `json:"envStat"`
+	ResStat      []ResStatResp          `json:"resStat"`
+	EnvResStat   []ProjOrEnvResStatResp `json:"envResStat"`
+	ResGrowTrend [][]ResGrowTrendResp   `json:"resGrowTrend"`
 }
