@@ -8,7 +8,6 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/resps"
 	"fmt"
-	"sort"
 	"time"
 )
 
@@ -120,7 +119,7 @@ func GetProjectIdsByVgId(dbSess *db.Session, vgId models.Id) ([]string, error) {
 }
 
 // GetProjectEnvStat 环境状态占比
-func GetProjectEnvStat(tx *db.Session, projectId models.Id) ([]resps.ProjectEnvStatResp, e.Error) {
+func GetProjectEnvStat(tx *db.Session, projectId models.Id) ([]resps.EnvStatResp, e.Error) {
 	/* sample sql:
 	select
 		if(task_status = '',
@@ -165,16 +164,16 @@ func GetProjectEnvStat(tx *db.Session, projectId models.Id) ([]resps.ProjectEnvS
 		mTotalCount[result.MyStatus] += result.Count
 	}
 
-	var results = make([]resps.ProjectEnvStatResp, 0)
+	var results = make([]resps.EnvStatResp, 0)
 	for k, v := range m {
-		data := resps.ProjectEnvStatResp{
-			Status: k,
-			Count:  mTotalCount[k],
-			Envs:   make([]resps.EnvDetailStatResp, 0),
+		data := resps.EnvStatResp{
+			Status:  k,
+			Count:   mTotalCount[k],
+			Details: make([]resps.DetailStatResp, 0),
 		}
 
 		for _, e := range v {
-			data.Envs = append(data.Envs, resps.EnvDetailStatResp{
+			data.Details = append(data.Details, resps.DetailStatResp{
 				Id:    e.Id,
 				Name:  e.Name,
 				Count: e.Count,
@@ -187,7 +186,7 @@ func GetProjectEnvStat(tx *db.Session, projectId models.Id) ([]resps.ProjectEnvS
 }
 
 // GetProjectResStat 资源类型占比
-func GetProjectResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.EnvResStatResp, e.Error) {
+func GetProjectResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.ResStatResp, e.Error) {
 	/* sample sql
 	select
 		iac_resource.type as res_type,
@@ -241,16 +240,16 @@ func GetProjectResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.
 		mTotalCount[result.ResType] += result.Count
 	}
 
-	var results []resps.EnvResStatResp
+	var results []resps.ResStatResp
 	for k, v := range m {
-		data := resps.EnvResStatResp{
+		data := resps.ResStatResp{
 			ResType: k,
 			Count:   mTotalCount[k],
-			Envs:    make([]resps.EnvDetailStatResp, 0),
+			Details: make([]resps.DetailStatResp, 0),
 		}
 
 		for _, e := range v {
-			data.Envs = append(data.Envs, resps.EnvDetailStatResp{
+			data.Details = append(data.Details, resps.DetailStatResp{
 				Id:    e.Id,
 				Name:  e.Name,
 				Count: e.Count,
@@ -263,7 +262,7 @@ func GetProjectResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.
 }
 
 // GetProjectEnvResStat 环境资源数量
-func GetProjectEnvResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.ProjectEnvResStatResp, e.Error) {
+func GetProjectEnvResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.ProjOrEnvResStatResp, e.Error) {
 	/* sample sql:
 	select
 		iac_resource.env_id as id,
@@ -304,69 +303,11 @@ func GetProjectEnvResStat(tx *db.Session, projectId models.Id, limit int) ([]res
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	return dbResult2ProjectEnvResStatResp(dbResults), nil
-}
-
-func dbResult2ProjectEnvResStatResp(dbResults []ProjectStatResult) []resps.ProjectEnvResStatResp {
-	// date -> resType -> data
-	now := time.Now()
-	curMonth := now.Format("2006-01")
-	lastMonth := now.AddDate(0, -1, 0).Format("2006-01")
-
-	m, mResTypeCount, mEnvCount := splitProjectResStatDataByMonth(dbResults)
-
-	var results = make([]resps.ProjectEnvResStatResp, 2)
-	results[0].Date = lastMonth
-	results[0].ResTypes = getProjectEnvResStatDataByMonth(m[lastMonth], mResTypeCount, mEnvCount, lastMonth)
-
-	results[1].Date = curMonth
-	results[1].ResTypes = getProjectEnvResStatDataByMonth(m[curMonth], mResTypeCount, mEnvCount, curMonth)
-
-	// 计算增长数量
-	for i := range results[1].ResTypes {
-		// 某资源类型下各个项目增长数量总和
-		resKey := [2]string{lastMonth, results[1].ResTypes[i].ResType}
-		results[1].ResTypes[i].Up = results[1].ResTypes[i].Count
-		if _, ok := mResTypeCount[resKey]; ok {
-			results[1].ResTypes[i].Up -= mResTypeCount[resKey]
-		}
-
-		// 某资源类型下某个项目增长数量
-		for j := range results[1].ResTypes[i].Envs {
-			envKey := [3]string{lastMonth, results[1].ResTypes[i].ResType, results[1].ResTypes[i].Envs[j].Id.String()}
-			results[1].ResTypes[i].Envs[j].Up = results[1].ResTypes[i].Envs[j].Count
-			if _, ok := mEnvCount[envKey]; ok {
-				results[1].ResTypes[i].Envs[j].Up -= mEnvCount[envKey]
-			}
-		}
-	}
-
-	return results
-}
-
-func getProjectEnvResStatDataByMonth(resTypeData map[string][]ProjectStatResult, mResTypeCount map[[2]string]int, mEnvCount map[[3]string]int, month string) []resps.ResTypeEnvetailStatWithUpResp {
-	var results = make([]resps.ResTypeEnvetailStatWithUpResp, 0)
-
-	for resType, data := range resTypeData {
-		envs := make([]resps.EnvDetailStatWithUpResp, 0)
-		for _, d := range data {
-			envs = append(envs, resps.EnvDetailStatWithUpResp{
-				Id:    d.Id,
-				Name:  d.Name,
-				Count: mEnvCount[[3]string{month, resType, d.Id.String()}],
-			})
-		}
-		results = append(results, resps.ResTypeEnvetailStatWithUpResp{
-			ResType: resType,
-			Count:   mResTypeCount[[2]string{month, resType}],
-			Envs:    envs,
-		})
-	}
-	return results
+	return dbResult2ProjectResStatResp(dbResults), nil
 }
 
 // GetProjectResGrowTrend 最近7天资源及费用趋势
-func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([][]resps.ProjectResGrowTrendResp, e.Error) {
+func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([][]resps.ResGrowTrendResp, e.Error) {
 	/* sample sql
 	select
 		iac_resource.env_id as id,
@@ -407,21 +348,21 @@ func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([][]
 	}
 
 	now := time.Now()
-	var results = make([][]resps.ProjectResGrowTrendResp, 2)
+	var results = make([][]resps.ResGrowTrendResp, 2)
 
 	startDate := now.AddDate(0, -1, -1*days)
 	endDate := now.AddDate(0, -1, 0)
 	var mPreDateCount map[string]int
 	var mPreResTypeCount map[[2]string]int
 	var mPreEnvCount map[[3]string]int
-	results[0], mPreDateCount, mPreResTypeCount, mPreEnvCount = getProjectResGrowTrendByDays(startDate, endDate, dbResults, days)
+	results[0], mPreDateCount, mPreResTypeCount, mPreEnvCount = getResGrowTrendByDays(startDate, endDate, dbResults, days)
 
 	startDate = now.AddDate(0, 0, -1*days)
 	endDate = now
 	var mDateCount map[string]int
 	var mResTypeCount map[[2]string]int
 	var mEnvCount map[[3]string]int
-	results[1], mDateCount, mResTypeCount, mEnvCount = getProjectResGrowTrendByDays(startDate, endDate, dbResults, days)
+	results[1], mDateCount, mResTypeCount, mEnvCount = getResGrowTrendByDays(startDate, endDate, dbResults, days)
 
 	// 计算增长量
 	for i := range results[1] {
@@ -444,99 +385,17 @@ func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([][]
 			}
 
 			// 每天每个资源类型下每个环境增长量
-			for k := range results[1][i].ResTypes[j].Envs {
-				envId := results[1][i].ResTypes[j].Envs[k].Id.String()
+			for k := range results[1][i].ResTypes[j].Details {
+				envId := results[1][i].ResTypes[j].Details[k].Id.String()
 				curEnvKey := [3]string{curDate, resType, envId}
 				preEnvKey := [3]string{preDate, resType, envId}
-				results[1][i].ResTypes[j].Envs[k].Up = mEnvCount[curEnvKey]
+				results[1][i].ResTypes[j].Details[k].Up = mEnvCount[curEnvKey]
 				if _, ok := mPreResTypeCount[preResKey]; ok {
-					results[1][i].ResTypes[j].Envs[k].Up -= mPreEnvCount[preEnvKey]
+					results[1][i].ResTypes[j].Details[k].Up -= mPreEnvCount[preEnvKey]
 				}
 			}
 		}
 	}
 
 	return results, nil
-}
-
-func getProjectResGrowTrendByDays(startDate, endDate time.Time, dbResults []ProjectStatResult, days int) ([]resps.ProjectResGrowTrendResp, map[string]int, map[[2]string]int, map[[3]string]int) {
-
-	// date -> resType -> project
-	var m = make(map[string]map[string][]ProjectStatResult)
-	var mDateCount = make(map[string]int)
-	var mResTypeCount = make(map[[2]string]int)
-	var mEnvCount = make(map[[3]string]int)
-
-	for i := 0; i < days; i++ {
-		startDate = startDate.AddDate(0, 0, 1)
-		if startDate.Format("2006-01-02") > endDate.Format("2006-01-02") {
-			break
-		}
-		m[startDate.Format("2006-01-02")] = make(map[string][]ProjectStatResult)
-	}
-
-	for _, data := range dbResults {
-		if _, ok := m[data.Date]; !ok {
-			continue
-		}
-
-		if _, ok := m[data.Date][data.ResType]; !ok {
-			m[data.Date][data.ResType] = make([]ProjectStatResult, 0)
-		}
-
-		m[data.Date][data.ResType] = append(m[data.Date][data.ResType], data)
-		if _, ok := mDateCount[data.Date]; !ok {
-			mDateCount[data.Date] = 0
-		}
-		mDateCount[data.Date] += data.Count
-
-		resTypeKey := [2]string{data.Date, data.ResType}
-		if _, ok := mResTypeCount[resTypeKey]; !ok {
-			mResTypeCount[resTypeKey] = 0
-		}
-		mResTypeCount[resTypeKey] += data.Count
-
-		envKey := [3]string{data.Date, data.ResType, data.Id.String()}
-		mEnvCount[envKey] = data.Count
-	}
-
-	return dbResults2ProjectResGrowTrendResp(m, mDateCount, mResTypeCount), mDateCount, mResTypeCount, mEnvCount
-}
-
-func dbResults2ProjectResGrowTrendResp(m map[string]map[string][]ProjectStatResult, mDateCount map[string]int, mResTypeCount map[[2]string]int) []resps.ProjectResGrowTrendResp {
-
-	var results = make([]resps.ProjectResGrowTrendResp, 0)
-	for date, mResType := range m {
-		resTypes := make([]resps.ResTypeEnvetailStatWithUpResp, 0)
-		for resType, data := range mResType {
-
-			envs := make([]resps.EnvDetailStatWithUpResp, 0)
-			for _, d := range data {
-				envs = append(envs, resps.EnvDetailStatWithUpResp{
-					Id:    d.Id,
-					Name:  d.Name,
-					Count: d.Count,
-				})
-			}
-
-			resKey := [2]string{date, resType}
-			resTypes = append(resTypes, resps.ResTypeEnvetailStatWithUpResp{
-				ResType: resType,
-				Count:   mResTypeCount[resKey],
-				Envs:    envs,
-			})
-		}
-
-		results = append(results, resps.ProjectResGrowTrendResp{
-			Date:     date,
-			Count:    mDateCount[date],
-			ResTypes: resTypes,
-		})
-	}
-
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].Date < results[j].Date
-	})
-
-	return results
 }
