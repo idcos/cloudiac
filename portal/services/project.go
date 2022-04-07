@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/resps"
 	"fmt"
+	"sort"
 	"time"
 )
 
@@ -365,21 +366,177 @@ func getProjectEnvResStatDataByMonth(resTypeData map[string][]ProjectStatResult,
 }
 
 // GetProjectResGrowTrend 最近7天资源及费用趋势
-func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([]resps.ResGrowTrendResp, e.Error) {
+func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([][]resps.ProjectResGrowTrendResp, e.Error) {
+	/* sample sql
+	select
+		iac_resource.env_id as id,
+		iac_env.name as name,
+		iac_resource.type as res_type,
+		DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date,
+		count(*) as count
+	from
+		iac_resource
+	JOIN iac_env ON
+		iac_env.last_res_task_id = iac_resource.task_id
+		and iac_env.id = iac_resource.env_id
+	where
+		iac_env.project_id = 'p-c8gg9josm56injdlb86g'
+		and (
+		DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 7 DAY), "%Y-%m-%d")
+			or (DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(DATE_SUB(CURDATE(), INTERVAL 7 DAY), INTERVAL 1 MONTH), "%Y-%m-%d")
+				and DATE_FORMAT(applied_at, "%Y-%m-%d") <= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m-%d")))
+	group by
+		date,
+		iac_resource.type,
+		iac_resource.env_id
+	order by
+		date
+	*/
 
-	query := tx.Model(&models.Resource{}).Select(`DATE_FORMAT(applied_at, "%Y-%m-%d") as date, count(*) as count`)
-	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.env_id as id, iac_env.name as name, iac_resource.type as res_type, DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date, count(*) as count`)
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 
 	query = query.Where("iac_env.project_id = ?", projectId)
+	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? DAY), "%Y-%m-%d") or (DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(DATE_SUB(CURDATE(), INTERVAL ? DAY), INTERVAL 1 MONTH), "%Y-%m-%d") and DATE_FORMAT(applied_at, "%Y-%m-%d") <= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m-%d"))`, days, days)
 
-	query = query.Where(`applied_at > DATE_SUB(CURDATE(), INTERVAL ? DAY) or (applied_at > DATE_SUB(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), INTERVAL ? DAY) and applied_at <= DATE_SUB(CURDATE(), INTERVAL 1 MONTH))`, days, days)
+	query = query.Group("date, iac_resource.type, iac_resource.env_id").Order("date")
 
-	query = query.Group("date").Order("date")
-
-	var results []resps.ResGrowTrendResp
-	if err := query.Find(&results); err != nil {
+	var dbResults []ProjectStatResult
+	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	return nil, nil
+	now := time.Now()
+	var results = make([][]resps.ProjectResGrowTrendResp, 2)
+
+	startDate := now.AddDate(0, -1, -1*days)
+	endDate := now.AddDate(0, -1, 0)
+	var mPreDateCount map[string]int
+	var mPreResTypeCount map[[2]string]int
+	var mPreEnvCount map[[3]string]int
+	results[0], mPreDateCount, mPreResTypeCount, mPreEnvCount = getProjectResGrowTrendByDays(startDate, endDate, dbResults, days)
+
+	startDate = now.AddDate(0, 0, -1*days)
+	endDate = now
+	var mDateCount map[string]int
+	var mResTypeCount map[[2]string]int
+	var mEnvCount map[[3]string]int
+	results[1], mDateCount, mResTypeCount, mEnvCount = getProjectResGrowTrendByDays(startDate, endDate, dbResults, days)
+
+	// 计算增长量
+	for i := range results[1] {
+		// 每天增长量
+		curDate := results[1][i].Date
+		preDate := calcPreDayKey(curDate, days)
+		results[1][i].Up = mDateCount[results[1][i].Date]
+		if _, ok := mPreDateCount[preDate]; ok {
+			results[1][i].Up -= mPreDateCount[preDate]
+		}
+
+		// 每天每个资源类型增长量
+		for j := range results[1][i].ResTypes {
+			resType := results[1][i].ResTypes[j].ResType
+			curResKey := [2]string{curDate, resType}
+			preResKey := [2]string{preDate, resType}
+			results[1][i].ResTypes[j].Up = mResTypeCount[curResKey]
+			if _, ok := mPreResTypeCount[preResKey]; ok {
+				results[1][i].ResTypes[j].Up -= mPreResTypeCount[preResKey]
+			}
+
+			// 每天每个资源类型下每个环境增长量
+			for k := range results[1][i].ResTypes[j].Envs {
+				envId := results[1][i].ResTypes[j].Envs[k].Id.String()
+				curEnvKey := [3]string{curDate, resType, envId}
+				preEnvKey := [3]string{preDate, resType, envId}
+				results[1][i].ResTypes[j].Envs[k].Up = mEnvCount[curEnvKey]
+				if _, ok := mPreResTypeCount[preResKey]; ok {
+					results[1][i].ResTypes[j].Envs[k].Up -= mPreEnvCount[preEnvKey]
+				}
+			}
+		}
+	}
+
+	return results, nil
+}
+
+func getProjectResGrowTrendByDays(startDate, endDate time.Time, dbResults []ProjectStatResult, days int) ([]resps.ProjectResGrowTrendResp, map[string]int, map[[2]string]int, map[[3]string]int) {
+
+	// date -> resType -> project
+	var m = make(map[string]map[string][]ProjectStatResult)
+	var mDateCount = make(map[string]int)
+	var mResTypeCount = make(map[[2]string]int)
+	var mEnvCount = make(map[[3]string]int)
+
+	for i := 0; i < days; i++ {
+		startDate = startDate.AddDate(0, 0, 1)
+		if startDate.Format("2006-01-02") > endDate.Format("2006-01-02") {
+			break
+		}
+		m[startDate.Format("2006-01-02")] = make(map[string][]ProjectStatResult)
+	}
+
+	for _, data := range dbResults {
+		if _, ok := m[data.Date]; !ok {
+			continue
+		}
+
+		if _, ok := m[data.Date][data.ResType]; !ok {
+			m[data.Date][data.ResType] = make([]ProjectStatResult, 0)
+		}
+
+		m[data.Date][data.ResType] = append(m[data.Date][data.ResType], data)
+		if _, ok := mDateCount[data.Date]; !ok {
+			mDateCount[data.Date] = 0
+		}
+		mDateCount[data.Date] += data.Count
+
+		resTypeKey := [2]string{data.Date, data.ResType}
+		if _, ok := mResTypeCount[resTypeKey]; !ok {
+			mResTypeCount[resTypeKey] = 0
+		}
+		mResTypeCount[resTypeKey] += data.Count
+
+		envKey := [3]string{data.Date, data.ResType, data.Id.String()}
+		mEnvCount[envKey] = data.Count
+	}
+
+	return dbResults2ProjectResGrowTrendResp(m, mDateCount, mResTypeCount), mDateCount, mResTypeCount, mEnvCount
+}
+
+func dbResults2ProjectResGrowTrendResp(m map[string]map[string][]ProjectStatResult, mDateCount map[string]int, mResTypeCount map[[2]string]int) []resps.ProjectResGrowTrendResp {
+
+	var results = make([]resps.ProjectResGrowTrendResp, 0)
+	for date, mResType := range m {
+		resTypes := make([]resps.ResTypeEnvetailStatWithUpResp, 0)
+		for resType, data := range mResType {
+
+			envs := make([]resps.EnvDetailStatWithUpResp, 0)
+			for _, d := range data {
+				envs = append(envs, resps.EnvDetailStatWithUpResp{
+					Id:    d.Id,
+					Name:  d.Name,
+					Count: d.Count,
+				})
+			}
+
+			resKey := [2]string{date, resType}
+			resTypes = append(resTypes, resps.ResTypeEnvetailStatWithUpResp{
+				ResType: resType,
+				Count:   mResTypeCount[resKey],
+				Envs:    envs,
+			})
+		}
+
+		results = append(results, resps.ProjectResGrowTrendResp{
+			Date:     date,
+			Count:    mDateCount[date],
+			ResTypes: resTypes,
+		})
+	}
+
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Date < results[j].Date
+	})
+
+	return results
 }
