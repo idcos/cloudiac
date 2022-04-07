@@ -42,9 +42,11 @@ type CreateVariableGroupResp struct {
 type DetailVariableGroupRespTemp struct {
 	models.VariableGroup
 	ProjectName string `json:"projectName,omitempty"`
+	ProjectId   string `json:"projectId,omitempty"`
 }
 
 type DetailVariableGroupResp struct {
 	DetailVariableGroupRespTemp
 	ProjectNames []string `json:"projectNames"`
+	ProjectIds   []string `json:"projectIds"`
 }

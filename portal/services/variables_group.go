@@ -114,7 +114,7 @@ func DetailVariableGroup(dbSess *db.Session, vgId, orgId models.Id) *db.Session 
 	query = query.Joins("left join iac_variable_group_project_rel on " +
 		"iac_variable_group.id = iac_variable_group_project_rel.var_group_id left join iac_project " +
 		"on iac_project.id = iac_variable_group_project_rel.project_id").
-		LazySelectAppend("iac_project.name as project_name, iac_variable_group.*")
+		LazySelectAppend("iac_project.name as project_name, iac_variable_group.*, iac_project.id as project_id")
 	return query
 }
 
