@@ -75,14 +75,14 @@ type ResTypeDetailStatWithUpResp struct {
 
 type ProjOrEnvResStatResp struct {
 	Date     string                        `json:"date"`
-	ResTypes []ResTypeDetailStatWithUpResp `json:"ResTypes"`
+	ResTypes []ResTypeDetailStatWithUpResp `json:"resTypes"`
 }
 
 type ResGrowTrendResp struct {
 	Date     string                        `json:"date"`
 	Count    int                           `json:"count"`
 	Up       int                           `json:"up"`
-	ResTypes []ResTypeDetailStatWithUpResp `json:"ResTypes"`
+	ResTypes []ResTypeDetailStatWithUpResp `json:"resTypes"`
 }
 
 type OrgProjectsStatResp struct {
