@@ -308,8 +308,9 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 		for key, value := range vars {
 			// 如果匹配到了就不在继续匹配
 			if matchVar(v, value) {
+				// 匹配到了，不管值是否相同都不需要新建变量
+				isNewVaild = false
 				if v.Value != value.Value {
-					isNewVaild = false
 					resp = varNewAppend(resp, vars[key].Name, v.Value, vars[key].Type)
 				}
 				break
