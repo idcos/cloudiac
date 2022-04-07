@@ -22,25 +22,53 @@ type ProjectStatistics struct {
 	EnvInactive int64 `json:"envInactive" form:"envInactive" `
 }
 
-type EnvResStatResp struct {
-	EnvId   string `json:"envId"`
-	EnvName string `json:"envName"`
-	ResType string `json:"resType"`
-	Date    string `json:"date"`
-	Count   int    `json:"count"`
+type EnvDetailStatResp struct {
+	Id    models.Id `json:"id"`
+	Name  string    `json:"name"`
+	Count int       `json:"count"`
 }
 
-type EnvResSummaryResp struct {
-	ResType string `json:"resType"`
-	Date    string `json:"date"`
-	Count   int    `json:"count"`
-	Up      int    `json:"up"` // 增长数量
+type ProjectEnvStatResp struct {
+	Status string              `json:"status"`
+	Count  int                 `json:"count"`
+	Envs   []EnvDetailStatResp `json:"envs"`
+}
+
+type EnvResStatResp struct {
+	ResType string              `json:"resType"`
+	Count   int                 `json:"count"`
+	Envs    []EnvDetailStatResp `json:"envs"`
+}
+
+type EnvDetailStatWithUpResp struct {
+	Id    models.Id `json:"id"`
+	Name  string    `json:"name"`
+	Count int       `json:"count"`
+	Up    int       `json:"up"`
+}
+
+type ResTypeEnvetailStatWithUpResp struct {
+	ResType string              `json:"resType"`
+	Count   int                 `json:"count"`
+	Up      int                 `json:"up"`
+	Envs    []EnvDetailStatResp `json:"envs"`
+}
+
+type ProjectEnvResStatResp struct {
+	Date     string                          `json:"date"`
+	ResTypes []ResTypeEnvetailStatWithUpResp `json:"ResTypes"`
+}
+
+type ProjectResGrowTrendResp struct {
+	Date     string                          `json:"date"`
+	Count    int                             `json:"count"`
+	Up       int                             `json:"up"`
+	ResTypes []ResTypeEnvetailStatWithUpResp `json:"ResTypes"`
 }
 
 type ProjectStatResp struct {
-	EnvStat       []EnvStatResp       `json:"envStat"`
-	ResStat       []ResStatResp       `json:"resStat"`
-	EnvResStat    []EnvResStatResp    `json:"envResStat"`
-	ResGrowTrend  []ResGrowTrendResp  `json:"resGrowTrend"`
-	EnvResSummary []EnvResSummaryResp `json:"envResSummary"`
+	EnvStat      []ProjectEnvStatResp        `json:"envStat"`
+	ResStat      []ProjectEnvResStatResp     `json:"resStat"`
+	EnvResStat   []ProjectEnvResStatResp     `json:"envResStat"`
+	ResGrowTrend [][]ProjectResGrowTrendResp `json:"resGrowTrend"`
 }
