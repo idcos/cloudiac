@@ -232,8 +232,10 @@ func DetailVariableGroup(c *ctx.ServiceContext, form *forms.DetailVariableGroupF
 		return nil, e.New(e.DBError, err)
 	}
 	projectNames := []string{}
+	projectIds := []string{}
 	for _, v := range vg {
 		projectNames = append(projectNames, v.ProjectName)
+		projectIds = append(projectIds, v.ProjectId)
 	}
 	variableResp := vg[0]
 	for index, v := range variableResp.Variables {
@@ -244,6 +246,7 @@ func DetailVariableGroup(c *ctx.ServiceContext, form *forms.DetailVariableGroupF
 	result := resps.DetailVariableGroupResp{
 		DetailVariableGroupRespTemp: variableResp,
 		ProjectNames:                projectNames,
+		ProjectIds:                  projectIds,
 	}
 	return result, nil
 }
