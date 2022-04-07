@@ -236,7 +236,7 @@ func GetOrgProjectsEnvStat(tx *db.Session, orgId models.Id, projectIds []string)
 		subQuery = subQuery.Where("project_id in ?", projectIds)
 	}
 
-	query := tx.Table("(?) as t", subQuery.Expr()).Select(`t.status, iac_project.id as id, iac_project.name as name, count(*) as count`)
+	query := tx.Table("(?) as t", subQuery.Expr()).Select(`t.status as my_status, iac_project.id as id, iac_project.name as name, count(*) as count`)
 
 	query = query.Joins(`JOIN iac_project ON t.project_id = iac_project.id`)
 	query = query.Group("t.status, iac_project.id")
