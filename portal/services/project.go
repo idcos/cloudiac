@@ -145,7 +145,7 @@ func GetProjectEnvStat(tx *db.Session, projectId models.Id) ([]resps.ProjectEnvS
 		Count    int
 	}
 
-	query := tx.Model(&models.Env{}).Select(`if(task_status = '', status, task_status) as status, id, name, count(*) as count`)
+	query := tx.Model(&models.Env{}).Select(`if(task_status = '', status, task_status) as my_status, id, name, count(*) as count`)
 	query = query.Where("archived = ?", 0).Where("project_id = ?", projectId)
 	query = query.Group("my_status, id")
 
