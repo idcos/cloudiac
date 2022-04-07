@@ -50,7 +50,7 @@ type ProjectDetailStatResp struct {
 type EnvStatResp struct {
 	Status   string                  `json:"status"`
 	Count    int                     `json:"count"`
-	Projects []ProjectDetailStatResp `json:"projects"`
+	Projects []ProjectDetailStatResp `json:"projects" gorm:"-"`
 }
 
 type ResStatResp struct {
