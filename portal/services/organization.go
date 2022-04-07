@@ -360,6 +360,14 @@ func GetOrgProjectsResStat(tx *db.Session, orgId models.Id, projectIds []string,
 	return results, nil
 }
 
+type OrgProjectStatResult struct {
+	ResType string
+	Date    string
+	Id      models.Id
+	Name    string
+	Count   int
+}
+
 func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, limit int) ([]resps.ProjectResStatResp, e.Error) {
 	/* sample sql:
 	select
@@ -382,9 +390,9 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 			OR
 		DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m"))
 	group by
+		date,
 		iac_resource.type,
-		iac_resource.project_id,
-		date
+		iac_resource.project_id
 	limit 10;
 	*/
 
@@ -398,56 +406,134 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 	}
 	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(CURDATE(), "%Y-%m") OR DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m")`)
 
-	query = query.Group("iac_resource.type,iac_resource.project_id,date")
+	query = query.Group("date,iac_resource.type,iac_resource.project_id")
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
 
-	type dbResult struct {
-		ResType string
-		Date    string
-		Id      models.Id
-		Name    string
-		Count   int
-	}
-
-	var dbResults []dbResult
+	var dbResults []OrgProjectStatResult
 	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	var m = make(map[[2]string][]dbResult)
-	var mTotalCount = make(map[[2]string]int)
-	for _, result := range dbResults {
-		key := [2]string{result.ResType, result.Date}
-		if _, ok := m[key]; !ok {
-			m[key] = make([]dbResult, 0)
-			mTotalCount[key] = 0
+	return dbResult2ProjectResStatResp(dbResults), nil
+}
+
+func dbResult2ProjectResStatResp(dbResults []OrgProjectStatResult) []resps.ProjectResStatResp {
+	// date -> resType -> data
+	now := time.Now()
+	curMonth := now.Format("2006-01")
+	lastMonth := now.AddDate(0, -1, 0).Format("2006-01")
+
+	m, mResTypeCount, mProjectCount := splitProjectResStatDataByMonth(dbResults)
+
+	var results = make([]resps.ProjectResStatResp, 2)
+	results[0].Date = lastMonth
+	results[0].ResTypes = getProjectResStatDataByMonth(m[lastMonth], mResTypeCount, mProjectCount, lastMonth)
+
+	results[1].Date = curMonth
+	results[1].ResTypes = getProjectResStatDataByMonth(m[curMonth], mResTypeCount, mProjectCount, curMonth)
+
+	// 计算增长数量
+	for i := range results[1].ResTypes {
+		// 某资源类型下各个项目增长数量总和
+		resKey := [2]string{lastMonth, results[1].ResTypes[i].ResType}
+		results[1].ResTypes[i].Up = results[1].ResTypes[i].Count
+		if _, ok := mResTypeCount[resKey]; ok {
+			results[1].ResTypes[i].Up -= mResTypeCount[resKey]
 		}
-		m[key] = append(m[key], result)
-		mTotalCount[key] += result.Count
+
+		// 某资源类型下某个项目增长数量
+		for j := range results[1].ResTypes[i].Projects {
+			projectKey := [3]string{lastMonth, results[1].ResTypes[i].ResType, results[1].ResTypes[i].Projects[j].Id.String()}
+			results[1].ResTypes[i].Projects[j].Up = results[1].ResTypes[i].Projects[j].Count
+			if _, ok := mProjectCount[projectKey]; ok {
+				results[1].ResTypes[i].Projects[j].Up -= mProjectCount[projectKey]
+			}
+		}
 	}
 
-	var results []resps.ProjectResStatResp
-	for k, v := range m {
-		data := resps.ProjectResStatResp{
-			ResType:  k[0],
-			Date:     k[1],
-			Count:    mTotalCount[k],
-			Projects: make([]resps.ProjectDetailStatResp, 0),
-		}
+	return results
+}
 
-		for _, p := range v {
-			data.Projects = append(data.Projects, resps.ProjectDetailStatResp{
-				Id:    p.Id,
-				Name:  p.Name,
-				Count: p.Count,
+func getProjectResStatDataByMonth(resTypeData map[string][]OrgProjectStatResult, mResTypeCount map[[2]string]int, mProjectCount map[[3]string]int, month string) []resps.ResTypeDetailStatWithUpResp {
+	var results = make([]resps.ResTypeDetailStatWithUpResp, 0)
+
+	for resType, data := range resTypeData {
+		projects := make([]resps.ProjectDetailStatWithUpResp, 0)
+		for _, d := range data {
+			projects = append(projects, resps.ProjectDetailStatWithUpResp{
+				Id:    d.Id,
+				Name:  d.Name,
+				Count: mProjectCount[[3]string{month, resType, d.Id.String()}],
 			})
 		}
-		results = append(results, data)
+		results = append(results, resps.ResTypeDetailStatWithUpResp{
+			ResType:  resType,
+			Count:    mResTypeCount[[2]string{month, resType}],
+			Projects: projects,
+		})
+	}
+	return results
+}
+
+func splitProjectResStatDataByMonth(dbResults []OrgProjectStatResult) (map[string]map[string][]OrgProjectStatResult, map[[2]string]int, map[[3]string]int) {
+
+	// date -> resType -> data
+	m := make(map[string]map[string][]OrgProjectStatResult)
+	now := time.Now()
+	curMonth := now.Format("2006-01")
+	lastMonth := now.AddDate(0, -1, 0).Format("2006-01")
+
+	m[curMonth] = make(map[string][]OrgProjectStatResult)
+	m[lastMonth] = make(map[string][]OrgProjectStatResult)
+
+	// 计算数量
+	mResTypeCount := make(map[[2]string]int) // date+resType
+	mProjectCount := make(map[[3]string]int) // date+resType+projectid
+
+	for _, result := range dbResults {
+		switch result.Date {
+		case curMonth:
+			if m[curMonth][result.ResType] == nil {
+				m[curMonth][result.ResType] = make([]OrgProjectStatResult, 0)
+			}
+			m[curMonth][result.ResType] = append(m[curMonth][result.ResType], result)
+		case lastMonth:
+			if m[lastMonth][result.ResType] == nil {
+				m[lastMonth][result.ResType] = make([]OrgProjectStatResult, 0)
+			}
+			m[lastMonth][result.ResType] = append(m[lastMonth][result.ResType], result)
+		}
+
+		resTypeKey := [2]string{result.Date, result.ResType}
+		if _, ok := mResTypeCount[resTypeKey]; !ok {
+			mResTypeCount[resTypeKey] = 0
+		}
+		mResTypeCount[resTypeKey] += 1
+
+		projectKey := [3]string{result.Date, result.ResType, string(result.Id)}
+		if _, ok := mProjectCount[projectKey]; !ok {
+			mProjectCount[projectKey] = 0
+		}
+		mProjectCount[projectKey] += 1
 	}
 
-	return results, nil
+	// 补全当前月缺失的资源类型
+	for resType, _ := range m[lastMonth] {
+		if _, ok := m[curMonth][resType]; !ok {
+			m[curMonth][resType] = make([]OrgProjectStatResult, 0)
+		}
+	}
+
+	// 补全上个月缺失的资源类型
+	for resType, _ := range m[curMonth] {
+		if _, ok := m[lastMonth][resType]; !ok {
+			m[lastMonth][resType] = make([]OrgProjectStatResult, 0)
+		}
+	}
+
+	return m, mResTypeCount, mProjectCount
 }
 
 func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, days int) ([]resps.ResGrowTrendResp, e.Error) {
