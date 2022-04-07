@@ -550,7 +550,6 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 	select
 		iac_resource.project_id as id,
 		iac_project.name as name,
-		iac_resource.type as res_type,
 		DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date,
 		count(*) as count
 	from
@@ -569,13 +568,12 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 				and DATE_FORMAT(applied_at, "%Y-%m-%d") <= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m-%d")))
 	group by
 		date,
-		iac_resource.type,
 		iac_resource.project_id
 	order by
 		date
 	*/
 
-	query := tx.Model(&models.Resource{}).Select(`iac_resource.project_id as id, iac_project.name as name, iac_resource.type as res_type, DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date, count(*) as count`)
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.project_id as id, iac_project.name as name, DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date, count(*) as count`)
 	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 	query = query.Joins("JOIN iac_project ON iac_project.id = iac_resource.project_id")
 
@@ -586,7 +584,7 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 
 	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? DAY), "%Y-%m-%d") or (DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(DATE_SUB(CURDATE(), INTERVAL ? DAY), INTERVAL 1 MONTH), "%Y-%m-%d") and DATE_FORMAT(applied_at, "%Y-%m-%d") <= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m-%d"))`, days, days)
 
-	query = query.Group("date, iac_resource.type, iac_resource.project_id").Order("date")
+	query = query.Group("date, iac_resource.project_id").Order("date")
 
 	var dbResults []ProjectStatResult
 	if err := query.Find(&dbResults); err != nil {
@@ -604,16 +602,14 @@ func dbResult2ResGrowTrendResp(dbResults []ProjectStatResult, days int) [][]resp
 	startDate := now.AddDate(0, -1, -1*days)
 	endDate := now.AddDate(0, -1, 0)
 	var mPreDateCount map[string]int
-	var mPreResTypeCount map[[2]string]int
-	var mPreDetailCount map[[3]string]int
-	results[0], mPreDateCount, mPreResTypeCount, mPreDetailCount = getResGrowTrendByDays(startDate, endDate, dbResults, days)
+	var mPreDetailCount map[[2]string]int
+	results[0], mPreDateCount, mPreDetailCount = getResGrowTrendByDays(startDate, endDate, dbResults, days)
 
 	startDate = now.AddDate(0, 0, -1*days)
 	endDate = now
 	var mDateCount map[string]int
-	var mResTypeCount map[[2]string]int
-	var mDetailCount map[[3]string]int
-	results[1], mDateCount, mResTypeCount, mDetailCount = getResGrowTrendByDays(startDate, endDate, dbResults, days)
+	var mDetailCount map[[2]string]int
+	results[1], mDateCount, mDetailCount = getResGrowTrendByDays(startDate, endDate, dbResults, days)
 
 	// 计算增长量
 	for i := range results[1] {
@@ -625,51 +621,40 @@ func dbResult2ResGrowTrendResp(dbResults []ProjectStatResult, days int) [][]resp
 			results[1][i].Up -= mPreDateCount[preDate]
 		}
 
-		// 每天每个资源类型增长量
-		for j := range results[1][i].ResTypes {
-			resType := results[1][i].ResTypes[j].ResType
-			curResKey := [2]string{curDate, resType}
-			preResKey := [2]string{preDate, resType}
-			results[1][i].ResTypes[j].Up = mResTypeCount[curResKey]
-			if _, ok := mPreResTypeCount[preResKey]; ok {
-				results[1][i].ResTypes[j].Up -= mPreResTypeCount[preResKey]
-			}
-
-			// 每天每个资源类型下每个项目增长量
-			for k := range results[1][i].ResTypes[j].Details {
-				projectId := results[1][i].ResTypes[j].Details[k].Id.String()
-				curDetailKey := [3]string{curDate, resType, projectId}
-				preDetailKey := [3]string{preDate, resType, projectId}
-				results[1][i].ResTypes[j].Details[k].Up = mDetailCount[curDetailKey]
-				if _, ok := mPreResTypeCount[preResKey]; ok {
-					results[1][i].ResTypes[j].Details[k].Up -= mPreDetailCount[preDetailKey]
-				}
+		// 每天每个(project or env)类型增长量
+		for j := range results[1][i].Details {
+			detailId := results[1][i].Details[j].Id.String()
+			curDetailKey := [2]string{curDate, detailId}
+			preDetailKey := [2]string{preDate, detailId}
+			results[1][i].Details[j].Up = mDetailCount[curDetailKey]
+			if _, ok := mPreDetailCount[preDetailKey]; ok {
+				results[1][i].Details[j].Up -= mPreDetailCount[preDetailKey]
 			}
 		}
 	}
+
 	return results
 }
 
 func calcPreDayKey(nowStr string, days int) string {
 	var layout = "2006-01-02"
 	now, _ := time.Parse(layout, nowStr)
-	return now.AddDate(0, 0, -1*days+1).AddDate(0, -1, 0).Format(layout)
+	return now.AddDate(0, -1, 0).Format(layout)
 }
 
-func getResGrowTrendByDays(startDate, endDate time.Time, dbResults []ProjectStatResult, days int) ([]resps.ResGrowTrendResp, map[string]int, map[[2]string]int, map[[3]string]int) {
+func getResGrowTrendByDays(startDate, endDate time.Time, dbResults []ProjectStatResult, days int) ([]resps.ResGrowTrendResp, map[string]int, map[[2]string]int) {
 
-	// date -> resType -> project
-	var m = make(map[string]map[string][]ProjectStatResult)
+	// date -> detail(project or env)
+	var m = make(map[string][]ProjectStatResult)
 	var mDateCount = make(map[string]int)
-	var mResTypeCount = make(map[[2]string]int)
-	var mProjectCount = make(map[[3]string]int)
+	var mDetailCount = make(map[[2]string]int)
 
 	for i := 0; i < days; i++ {
 		startDate = startDate.AddDate(0, 0, 1)
 		if startDate.Format("2006-01-02") > endDate.Format("2006-01-02") {
 			break
 		}
-		m[startDate.Format("2006-01-02")] = make(map[string][]ProjectStatResult)
+		m[startDate.Format("2006-01-02")] = make([]ProjectStatResult, 0)
 	}
 
 	for _, data := range dbResults {
@@ -677,57 +662,37 @@ func getResGrowTrendByDays(startDate, endDate time.Time, dbResults []ProjectStat
 			continue
 		}
 
-		if _, ok := m[data.Date][data.ResType]; !ok {
-			m[data.Date][data.ResType] = make([]ProjectStatResult, 0)
-		}
+		m[data.Date] = append(m[data.Date], data)
 
-		m[data.Date][data.ResType] = append(m[data.Date][data.ResType], data)
 		if _, ok := mDateCount[data.Date]; !ok {
 			mDateCount[data.Date] = 0
 		}
 		mDateCount[data.Date] += data.Count
 
-		resTypeKey := [2]string{data.Date, data.ResType}
-		if _, ok := mResTypeCount[resTypeKey]; !ok {
-			mResTypeCount[resTypeKey] = 0
-		}
-		mResTypeCount[resTypeKey] += data.Count
-
-		projectKey := [3]string{data.Date, data.ResType, data.Id.String()}
-		mProjectCount[projectKey] = data.Count
+		detailKey := [2]string{data.Date, data.Id.String()}
+		mDetailCount[detailKey] = data.Count
 	}
 
-	return dbResults2ResGrowTrendResp(m, mDateCount, mResTypeCount), mDateCount, mResTypeCount, mProjectCount
+	return dbResults2ResGrowTrendResp(m, mDateCount), mDateCount, mDetailCount
 }
 
-func dbResults2ResGrowTrendResp(m map[string]map[string][]ProjectStatResult, mDateCount map[string]int, mResTypeCount map[[2]string]int) []resps.ResGrowTrendResp {
+func dbResults2ResGrowTrendResp(m map[string][]ProjectStatResult, mDateCount map[string]int) []resps.ResGrowTrendResp {
 
 	var results = make([]resps.ResGrowTrendResp, 0)
-	for date, mResType := range m {
-		resTypes := make([]resps.ResTypeDetailStatWithUpResp, 0)
-		for resType, data := range mResType {
-
-			details := make([]resps.DetailStatWithUpResp, 0)
-			for _, d := range data {
-				details = append(details, resps.DetailStatWithUpResp{
-					Id:    d.Id,
-					Name:  d.Name,
-					Count: d.Count,
-				})
-			}
-
-			resKey := [2]string{date, resType}
-			resTypes = append(resTypes, resps.ResTypeDetailStatWithUpResp{
-				ResType: resType,
-				Count:   mResTypeCount[resKey],
-				Details: details,
+	for date, v := range m {
+		details := make([]resps.DetailStatWithUpResp, 0)
+		for _, d := range v {
+			details = append(details, resps.DetailStatWithUpResp{
+				Id:    d.Id,
+				Name:  d.Name,
+				Count: d.Count,
 			})
 		}
 
 		results = append(results, resps.ResGrowTrendResp{
-			Date:     date,
-			Count:    mDateCount[date],
-			ResTypes: resTypes,
+			Date:    date,
+			Count:   mDateCount[date],
+			Details: details,
 		})
 	}
 
