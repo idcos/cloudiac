@@ -111,8 +111,8 @@ func (VariableGroupRel) TableName() string {
 //VariableGroupProjectRel 变量组与项目的关联表
 type VariableGroupProjectRel struct {
 	AbstractModel
-	VarGroupId Id `json:"varGroupId" gorm:"size:32;not null"`
-	ProjectId  Id `json:"projectId" gorm:"size:32;not null"`
+	VarGroupId Id `json:"varGroupId" gorm:"uniqueIndex:idx_var_group_project;size:32;not null"`
+	ProjectId  Id `json:"projectId" gorm:"uniqueIndex:idx_var_group_project;size:32;not null"`
 }
 
 func (VariableGroupProjectRel) TableName() string {

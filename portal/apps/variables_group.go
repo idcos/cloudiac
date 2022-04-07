@@ -283,9 +283,9 @@ func BatchUpdateRelationship(c *ctx.ServiceContext, form *forms.BatchUpdateRelat
 		return nil, err
 	}
 
-	if services.CheckVgRelationship(tx, form, c.OrgId) {
+	if er := services.CheckVgRelationship(tx, form, c.OrgId, c.ProjectId); er != nil {
 		_ = tx.Rollback()
-		return nil, e.New(e.VariableAlreadyExists, fmt.Errorf("the variables under the variable group are repeated"))
+		return nil, er
 	}
 
 	for _, v := range form.VarGroupIds {

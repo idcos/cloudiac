@@ -33,19 +33,31 @@ func CreateVariableGroupProjectRel(tx *db.Session, vpgRel models.VariableGroupPr
 }
 
 func SearchVariableGroup(dbSess *db.Session, orgId models.Id, projectId models.Id, q string) *db.Session {
-	query := dbSess.Model(models.VariableGroup{}).Where("iac_variable_group.org_id = ?", orgId)
+	query := dbSess.Model(models.VariableGroup{}).
+		Where("iac_variable_group.org_id = ?", orgId).
+		LazySelectAppend("iac_variable_group.*")
+
 	if q != "" {
 		query = query.WhereLike("iac_variable_group.name", q)
 	}
-	query = query.Joins("left join iac_variable_group_project_rel on iac_variable_group_project_rel.var_group_id = iac_variable_group.id  left join iac_project on " +
-		"iac_project.id = iac_variable_group_project_rel.project_id").
-		LazySelectAppend("iac_project.name as project_name, iac_variable_group_project_rel.project_id").
-		Where("iac_variable_group_project_rel.project_id = iac_project.id")
 
-	return query.Joins("left join iac_user as u on u.id = iac_variable_group.creator_id").
-		LazySelectAppend("iac_variable_group.*").
+	if projectId != "" {
+		query = query.
+			Joins("join iac_variable_group_project_rel as vgpr on vgpr.var_group_id = iac_variable_group.id").
+			Joins("join iac_project as p on p.id = vgpr.project_id").
+			Where("vgpr.project_id = ?", projectId).
+			LazySelectAppend("p.name as project_name, vgpr.project_id")
+	} else {
+		query = query.
+			Joins("left join iac_variable_group_project_rel as vgpr on vgpr.var_group_id = iac_variable_group.id").
+			Joins("left join iac_project as p on p.id = vgpr.project_id").
+			LazySelectAppend("p.name as project_name, vgpr.project_id")
+	}
+
+	query = query.Joins("left join iac_user as u on u.id = iac_variable_group.creator_id").
 		LazySelectAppend("u.name as creator")
 
+	return query
 }
 
 func UpdateVariableGroup(tx *db.Session, id models.Id, attrs models.Attrs) e.Error {
@@ -280,18 +292,18 @@ func CreateRelationship(dbSess *db.Session, rels []models.VariableGroupRel) e.Er
 	return nil
 }
 
-func CheckVgRelationship(tx *db.Session, form *forms.BatchUpdateRelationshipForm, orgId models.Id) bool {
+func CheckVgRelationship(tx *db.Session, form *forms.BatchUpdateRelationshipForm, orgId models.Id, projectId models.Id) e.Error {
 	// 查询当前作用域下绑定的变量组
-	bindVgs, err := GetVariableGroupByObject(tx, form.ObjectType, form.ObjectId, orgId)
-	if err != nil {
-		logs.Get().Errorf("func GetVariableGroupByObject err: %v", err)
-		return false
+	bindVgs, er := GetVariableGroupByObject(tx, form.ObjectType, form.ObjectId, orgId)
+	if er != nil {
+		logs.Get().Errorf("func GetVariableGroupByObject err: %v", er)
+		return er
 	}
 	// 查询将要绑定的变量组
-	notBindVgs, err := GetVariableGroupListByIds(tx, form.VarGroupIds)
-	if err != nil {
-		logs.Get().Errorf("func GetVariableGroupListByIds err: %v", err)
-		return false
+	newBindVgs, er := GetVariableGroupListByIds(tx, form.VarGroupIds)
+	if er != nil {
+		logs.Get().Errorf("func GetVariableGroupListByIds err: %v", er)
+		return er
 	}
 	// 比较变量组下变量是否与其他变量组下变量存在冲突
 	// 利用map将当前作用域下绑定的变量组变量进行整理
@@ -302,15 +314,28 @@ func CheckVgRelationship(tx *db.Session, form *forms.BatchUpdateRelationshipForm
 		}
 	}
 
-	for _, notBindVg := range notBindVgs {
-		for _, vg := range notBindVg.Variables {
+	pvgs, er := GetProjectVarGroups(tx, projectId)
+	if er != nil {
+		return er
+	}
+	pvgsMap := make(map[models.Id]*models.VariableGroup)
+	for i := range pvgs {
+		pvgsMap[pvgs[i].Id] = &pvgs[i]
+	}
+
+	for _, vg := range newBindVgs {
+		if _, ok := pvgsMap[vg.Id]; !ok {
+			return e.New(e.InvalidVarGroup, fmt.Errorf("%s", vg.Name))
+		}
+
+		for _, v := range vg.Variables {
 			// 校验新绑定的变量组变量是否冲突
-			if _, ok := variables[vg.Name]; ok {
-				return true
+			if _, ok := variables[v.Name]; ok {
+				return e.New(e.VariableAlreadyExists, fmt.Errorf("variable name conflict: %s", v.Name))
 			}
 		}
 	}
-	return false
+	return nil
 }
 
 func GetVariableGroupById(dbSess *db.Session, id models.Id) (models.VariableGroup, e.Error) {
@@ -375,6 +400,33 @@ func GetVariableGroupVar(vgs []VarGroupRel, vars map[string]models.Variable) map
 }
 
 func BatchUpdateRelationship(tx *db.Session, vgIds, delVgIds []models.Id, objectType, objectId string) e.Error {
+	var projectId models.Id
+	switch objectType {
+	case consts.ScopeEnv:
+		if env, er := GetEnvById(tx, models.Id(objectId)); er != nil {
+			return er
+		} else {
+			projectId = env.ProjectId
+		}
+	case consts.ScopeProject:
+		projectId = models.Id(objectId)
+	}
+
+	pvgs, er := GetProjectVarGroups(tx, projectId)
+	if er != nil {
+		return er
+	}
+	vgsMap := make(map[models.Id]*models.VariableGroup)
+	for i := range pvgs {
+		vgsMap[pvgs[i].Id] = &pvgs[i]
+	}
+
+	for _, id := range vgIds {
+		if _, ok := vgsMap[id]; !ok {
+			return e.New(e.InvalidVarGroup, fmt.Errorf("%s", id))
+		}
+	}
+
 	rel := make([]models.VariableGroupRel, 0)
 	if err := DeleteRelationship(tx, delVgIds); err != nil {
 		return err
@@ -451,6 +503,19 @@ func DeleteVarGroupRel(sess *db.Session, objectType string, objectId models.Id) 
 		return e.AutoNew(err, e.DBError)
 	}
 	return nil
+}
+
+// GetProjectVarGroups 获取指定项目下可用的变量组
+func GetProjectVarGroups(sess *db.Session, projectId models.Id) ([]models.VariableGroup, e.Error) {
+	projectVgQuery := sess.Model(&models.VariableGroupProjectRel{}).Where("project_id = ?", projectId)
+	vgs := make([]models.VariableGroup, 0)
+	err := sess.Debug().Model(&models.VariableGroup{}).
+		Where("id IN (?)", projectVgQuery.Select("var_group_id").Expr()).
+		Find(&vgs)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return vgs, nil
 }
 
 func GetVarGroupIsOpenBillCollectByVgIds(dbSess *db.Session, vgIds []models.Id, orgId, projectId models.Id) bool {
