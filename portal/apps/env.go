@@ -321,7 +321,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		}
 	}()
 
-	runnerId, err := services.GetAvailableRunnerId(form.RunnerId, form.RunnerTags)
+	runnerId, err := services.GetAvailableRunnerId(form.RunnerId, strings.Join(form.RunnerTags, ","))
 	if err != nil {
 		return nil, err
 	}
@@ -1219,7 +1219,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	lg.Debugln("envDeploy -> GetValidVarsAndVgVars finish")
 
 	// 获取实际执行任务的runnerID
-	rId, err := services.GetAvailableRunnerId(env.RunnerId, strings.Split(env.RunnerTags, ","))
+	rId, err := services.GetAvailableRunnerId(env.RunnerId, env.RunnerTags)
 	if err != nil {
 		return nil, err
 	}
