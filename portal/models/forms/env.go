@@ -61,8 +61,9 @@ type CreateEnvForm struct {
 }
 
 type SampleVariables struct {
-	Name  string `json:"name" form:"name" `
-	Value string `json:"value" form:"value" `
+	Name      string `json:"name" form:"name" binding:"required,lte=64"`
+	Value     string `json:"value" form:"value" binding:""`
+	Sensitive bool   `json:"sensitive" form:"sensitive" binding:""`
 }
 
 type CronDriftForm struct {
@@ -119,9 +120,11 @@ type DeployEnvForm struct {
 	Revision   string   `form:"revision" json:"revision" binding:""`                                    // 分支/标签
 	Timeout    int      `form:"timeout" json:"timeout" binding:""`                                      // 部署超时时间（单位：秒）
 
-	RetryNumber int  `form:"retryNumber" json:"retryNumber" binding:""` // 重试总次数
-	RetryDelay  int  `form:"retryDelay" json:"retryDelay" binding:""`   // 重试时间间隔
-	RetryAble   bool `form:"retryAble" json:"retryAble" binding:""`     // 是否允许任务进行重试
+	RetryNumber int         `form:"retryNumber" json:"retryNumber" binding:""` // 重试总次数
+	RetryDelay  int         `form:"retryDelay" json:"retryDelay" binding:""`   // 重试时间间隔
+	RetryAble   bool        `form:"retryAble" json:"retryAble" binding:""`     // 是否允许任务进行重试
+
+	ExtraData   models.JSON `form:"extraData" json:"extraData" binding:""`     // 扩展字段，用于存储外部服务调用时的信息
 
 	Variables []Variable `form:"variables" json:"variables" binding:""` // 自定义变量列表，该变量列表会覆盖现有的变量
 

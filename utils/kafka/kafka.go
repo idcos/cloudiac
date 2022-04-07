@@ -85,7 +85,7 @@ func (k *KafkaProducer) ConnAndSend(msg []byte) (err error) {
 
 func InitKafkaProducerBuilder() {
 	kaConf := configs.Get().Kafka
-	if kaConf.Disabled {
+	if kaConf.Disabled || len(kaConf.Brokers) <= 0 {
 		logs.Get().Info("kafka was not open")
 		return
 	}
