@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/resps"
 	"fmt"
+	"time"
 )
 
 func CreateProject(tx *db.Session, project *models.Project) (*models.Project, e.Error) {
@@ -261,25 +262,106 @@ func GetProjectResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.
 }
 
 // GetProjectEnvResStat 环境资源数量
-func GetProjectEnvResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.EnvResStatResp, e.Error) {
+func GetProjectEnvResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.ProjectEnvResStatResp, e.Error) {
+	/* sample sql:
+	select
+		iac_resource.env_id as id,
+		iac_env.name as name,
+		iac_resource.type as res_type,
+		DATE_FORMAT(iac_resource.applied_at, "%Y-%m") as date,
+		count(*) as count
+	from
+		iac_resource
+	JOIN iac_env ON
+		iac_env.last_res_task_id = iac_resource.task_id
+		and iac_env.id = iac_resource.env_id
+	where
+		iac_env.project_id = 'p-c8gg9josm56injdlb86g'
+		AND (DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(CURDATE(), "%Y-%m")
+			OR
+		DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m"))
+	group by
+		date,
+		iac_resource.type,
+		iac_resource.env_id
+	limit 10;
+	*/
 
-	query := tx.Model(&models.Resource{}).Select(`iac_resource.env_id as env_id, iac_env.name as env_name, iac_resource.type as res_type, DATE_FORMAT(iac_resource.applied_at, "%Y-%m") as date, count(*) as count`)
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.env_id as id, iac_env.name as name, iac_resource.type as res_type, DATE_FORMAT(iac_resource.applied_at, "%Y-%m") as date, count(*) as count`)
 
-	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id`)
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 	query = query.Where(`iac_env.project_id = ?`, projectId)
 	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(CURDATE(), "%Y-%m") OR DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m")`)
 
-	query = query.Group("iac_resource.type,iac_resource.env_id,date")
+	query = query.Group("date, iac_resource.type,iac_resource.env_id")
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
 
-	var results []resps.EnvResStatResp
-	if err := query.Find(&results); err != nil {
+	var dbResults []ProjectStatResult
+	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	return results, nil
+	return dbResult2ProjectEnvResStatResp(dbResults), nil
+}
+
+func dbResult2ProjectEnvResStatResp(dbResults []ProjectStatResult) []resps.ProjectEnvResStatResp {
+	// date -> resType -> data
+	now := time.Now()
+	curMonth := now.Format("2006-01")
+	lastMonth := now.AddDate(0, -1, 0).Format("2006-01")
+
+	m, mResTypeCount, mEnvCount := splitProjectResStatDataByMonth(dbResults)
+
+	var results = make([]resps.ProjectEnvResStatResp, 2)
+	results[0].Date = lastMonth
+	results[0].ResTypes = getProjectEnvResStatDataByMonth(m[lastMonth], mResTypeCount, mEnvCount, lastMonth)
+
+	results[1].Date = curMonth
+	results[1].ResTypes = getProjectEnvResStatDataByMonth(m[curMonth], mResTypeCount, mEnvCount, curMonth)
+
+	// 计算增长数量
+	for i := range results[1].ResTypes {
+		// 某资源类型下各个项目增长数量总和
+		resKey := [2]string{lastMonth, results[1].ResTypes[i].ResType}
+		results[1].ResTypes[i].Up = results[1].ResTypes[i].Count
+		if _, ok := mResTypeCount[resKey]; ok {
+			results[1].ResTypes[i].Up -= mResTypeCount[resKey]
+		}
+
+		// 某资源类型下某个项目增长数量
+		for j := range results[1].ResTypes[i].Envs {
+			envKey := [3]string{lastMonth, results[1].ResTypes[i].ResType, results[1].ResTypes[i].Envs[j].Id.String()}
+			results[1].ResTypes[i].Envs[j].Up = results[1].ResTypes[i].Envs[j].Count
+			if _, ok := mEnvCount[envKey]; ok {
+				results[1].ResTypes[i].Envs[j].Up -= mEnvCount[envKey]
+			}
+		}
+	}
+
+	return results
+}
+
+func getProjectEnvResStatDataByMonth(resTypeData map[string][]ProjectStatResult, mResTypeCount map[[2]string]int, mEnvCount map[[3]string]int, month string) []resps.ResTypeEnvetailStatWithUpResp {
+	var results = make([]resps.ResTypeEnvetailStatWithUpResp, 0)
+
+	for resType, data := range resTypeData {
+		envs := make([]resps.EnvDetailStatWithUpResp, 0)
+		for _, d := range data {
+			envs = append(envs, resps.EnvDetailStatWithUpResp{
+				Id:    d.Id,
+				Name:  d.Name,
+				Count: mEnvCount[[3]string{month, resType, d.Id.String()}],
+			})
+		}
+		results = append(results, resps.ResTypeEnvetailStatWithUpResp{
+			ResType: resType,
+			Count:   mResTypeCount[[2]string{month, resType}],
+			Envs:    envs,
+		})
+	}
+	return results
 }
 
 // GetProjectResGrowTrend 最近7天资源及费用趋势

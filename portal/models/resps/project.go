@@ -48,10 +48,10 @@ type EnvDetailStatWithUpResp struct {
 }
 
 type ResTypeEnvetailStatWithUpResp struct {
-	ResType string              `json:"resType"`
-	Count   int                 `json:"count"`
-	Up      int                 `json:"up"`
-	Envs    []EnvDetailStatResp `json:"envs"`
+	ResType string                    `json:"resType"`
+	Count   int                       `json:"count"`
+	Up      int                       `json:"up"`
+	Envs    []EnvDetailStatWithUpResp `json:"envs"`
 }
 
 type ProjectEnvResStatResp struct {
