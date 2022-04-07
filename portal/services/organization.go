@@ -520,14 +520,14 @@ func splitProjectResStatDataByMonth(dbResults []OrgProjectStatResult) (map[strin
 	}
 
 	// 补全当前月缺失的资源类型
-	for resType, _ := range m[lastMonth] {
+	for resType := range m[lastMonth] {
 		if _, ok := m[curMonth][resType]; !ok {
 			m[curMonth][resType] = make([]OrgProjectStatResult, 0)
 		}
 	}
 
 	// 补全上个月缺失的资源类型
-	for resType, _ := range m[curMonth] {
+	for resType := range m[curMonth] {
 		if _, ok := m[lastMonth][resType]; !ok {
 			m[lastMonth][resType] = make([]OrgProjectStatResult, 0)
 		}
