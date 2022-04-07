@@ -160,15 +160,16 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 	return nil
 }
 
-func getRunnerId(runnerTags []string, runnerId string) (string, e.Error) {
+func getRunnerId(runnerTags string, runnerId string) (string, e.Error) {
 	// 优先使用 id 匹配，兼容之前的方式
 	if runnerId != "" {
 		return runnerId, nil
 	}
 
 	// id不存在，使用tags 匹配
-	if len(runnerTags) > 0 {
-		return services.GetRunnerByTags(runnerTags)
+	runnerTagsList := strings.Split(runnerTags, ",")
+	if runnerTags != "" && len(runnerTagsList) > 0 {
+		return services.GetRunnerByTags(runnerTagsList)
 	}
 
 	// 默认runner
@@ -303,7 +304,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		}
 	}()
 
-	runnerId, err := getRunnerId(form.RunnerTags, form.RunnerId)
+	runnerId, err := getRunnerId(strings.Join(form.RunnerTags, ","), form.RunnerId)
 	if err != nil {
 		return nil, err
 	}
@@ -1103,7 +1104,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	lg.Debugln("envDeploy -> GetValidVarsAndVgVars finish")
 
 	// 获取实际执行任务的runnerID
-	rId, err := getRunnerId(strings.Split(env.RunnerTags, ","), env.RunnerId)
+	rId, err := getRunnerId(env.RunnerTags, env.RunnerId)
 	if err != nil {
 		return nil, err
 	}
