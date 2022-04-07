@@ -142,6 +142,8 @@ type DeployEnvForm struct {
 
 	PolicyEnable bool        `json:"policyEnable" form:"policyEnable"` // 是否开启合规检测
 	PolicyGroup  []models.Id `json:"policyGroup" form:"policyGroup"`   // 绑定策略组集合
+
+	Source string `json:"source" form:"source" ` // 调用来源
 }
 
 type ArchiveEnvForm struct {
@@ -189,6 +191,8 @@ type DestroyEnvForm struct {
 	BaseForm
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
+
+	Source string `json:"source" form:"source" ` // 调用来源
 }
 
 type SearchEnvVariableForm struct {

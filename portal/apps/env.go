@@ -359,12 +359,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	}
 
 	// 来源：手动触发、外部调用
-	taskSource := consts.TaskSourceManual
-	taskSourceSys := ""
-	if form.Source != "" || form.Callback != "" {
-		taskSource = consts.TaskSourceApi
-		taskSourceSys = form.Source
-	}
+	taskSource, taskSourceSys := getEnvSource(form.Source)
 
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
@@ -1111,6 +1106,10 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	if err != nil {
 		return nil, err
 	}
+
+	// 来源：手动触发、外部调用
+	taskSource, taskSourceSys := getEnvSource(form.Source)
+
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
@@ -1127,6 +1126,8 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 			StepTimeout: form.Timeout,
 			RunnerId:    rId,
 		},
+		Source:    taskSource,
+		SourceSys: taskSourceSys,
 	})
 
 	if err != nil {
@@ -1363,4 +1364,14 @@ func checkDeployVar(vars []forms.Variable) []forms.Variable {
 	}
 
 	return resp
+}
+
+func getEnvSource(source string) (taskSource string, taskSourceSys string) {
+	taskSource = consts.TaskSourceManual
+	taskSourceSys = ""
+	if source != "" {
+		taskSource = consts.TaskSourceApi
+		taskSourceSys = source
+	}
+	return
 }
