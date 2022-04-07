@@ -314,13 +314,16 @@ func GetRunnerByTags(tags []string) (string, e.Error) {
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list with tags is null"))
 }
 
-func GetAvailableRunnerId(runnerId string, runnerTags []string) (string, e.Error) {
+func GetAvailableRunnerId(runnerId string, runnerTags string) (string, e.Error) {
 	if runnerId != "" {
 		return runnerId, nil
 	}
-	if len(runnerTags) > 0 {
-		return GetRunnerByTags(runnerTags)
+
+	runnerTagsList := strings.Split(runnerTags, ",")
+	if runnerTags != "" && len(runnerTagsList) > 0 {
+		return GetRunnerByTags(runnerTagsList)
 	}
+
 	return GetDefaultRunner()
 }
 
