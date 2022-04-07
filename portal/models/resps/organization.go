@@ -79,13 +79,15 @@ type ProjectResStatResp struct {
 }
 
 type ResGrowTrendResp struct {
-	Date  string `json:"date"`
-	Count int    `json:"count"`
+	Date     string                        `json:"date"`
+	Count    int                           `json:"count"`
+	Up       int                           `json:"up"`
+	ResTypes []ResTypeDetailStatWithUpResp `json:"ResTypes"`
 }
 
 type OrgProjectsStatResp struct {
 	EnvStat        []EnvStatResp        `json:"envStat"`
 	ResStat        []ResStatResp        `json:"resStat"`
 	ProjectResStat []ProjectResStatResp `json:"projectStat"`
-	ResGrowTrend   []ResGrowTrendResp   `json:"resGrowTrend"`
+	ResGrowTrend   [][]ResGrowTrendResp `json:"resGrowTrend"`
 }
