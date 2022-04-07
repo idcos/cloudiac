@@ -191,7 +191,7 @@ func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([]re
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	return completeResGrowTrend(results, days), nil
+	return nil, nil
 }
 
 // GetProjectResSummary 环境资源数量
