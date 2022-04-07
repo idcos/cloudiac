@@ -304,7 +304,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		}
 	}()
 
-	runnerId, err := getRunnerId(form.RunnerTags, form.RunnerId)
+	runnerId, err := getRunnerId(strings.Join(form.RunnerTags, ","), form.RunnerId)
 	if err != nil {
 		return nil, err
 	}
