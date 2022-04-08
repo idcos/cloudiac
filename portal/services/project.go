@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/resps"
 	"fmt"
+	"time"
 )
 
 func CreateProject(tx *db.Session, project *models.Project) (*models.Project, e.Error) {
@@ -234,7 +235,7 @@ func GetProjectEnvResStat(tx *db.Session, projectId models.Id, limit int) ([]res
 }
 
 // GetProjectResGrowTrend 最近7天资源及费用趋势
-func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([][]resps.ResGrowTrendResp, e.Error) {
+func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([]resps.ResGrowTrendResp, e.Error) {
 	/* sample sql
 	select
 		iac_resource.env_id as id,
@@ -248,10 +249,7 @@ func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([][]
 		and iac_env.id = iac_resource.env_id
 	where
 		iac_env.project_id = 'p-c8gg9josm56injdlb86g'
-		and (
-		DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 7 DAY), "%Y-%m-%d")
-			or (DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(DATE_SUB(CURDATE(), INTERVAL 7 DAY), INTERVAL 1 MONTH), "%Y-%m-%d")
-				and DATE_FORMAT(applied_at, "%Y-%m-%d") <= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m-%d")))
+		and DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 7 DAY), "%Y-%m-%d")
 	group by
 		date,
 		iac_resource.env_id
@@ -263,7 +261,7 @@ func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([][]
 	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 
 	query = query.Where("iac_env.project_id = ?", projectId)
-	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? DAY), "%Y-%m-%d") or (DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(DATE_SUB(CURDATE(), INTERVAL ? DAY), INTERVAL 1 MONTH), "%Y-%m-%d") and DATE_FORMAT(applied_at, "%Y-%m-%d") <= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m-%d"))`, days, days)
+	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? DAY), "%Y-%m-%d")`, days)
 
 	query = query.Group("date, iac_resource.env_id").Order("date")
 
@@ -272,5 +270,9 @@ func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([][]
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	return dbResult2ResGrowTrendResp(dbResults, days), nil
+	now := time.Now()
+	startDate := now.AddDate(0, 0, -1*days)
+	endDate := now
+
+	return getResGrowTrendByDays(startDate, endDate, dbResults, days), nil
 }
