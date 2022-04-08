@@ -21,15 +21,17 @@ func GetVgByBillConf(dbSess *db.Session) ([]models.VariableGroup, e.Error) {
 	return resp, nil
 }
 
-func ParseBill(resCost map[string]billcollect.ResourceCost, res []models.Resource, vgId string) []models.Bill {
+func ParseBill(resCost map[string]billcollect.ResourceCost, res []models.Resource, vgId models.Id) ([]models.Bill, []string) {
+	resIds := make([]string, 0)
 	resp := make([]models.Bill, 0)
 	for _, v := range res {
 		if _, ok := resCost[v.ResId.String()]; ok {
+			resIds = append(resIds, v.Id.String())
 			resp = append(resp, models.Bill{
 				OrgId:          v.OrgId,
 				ProjectId:      v.ProjectId,
 				EnvId:          v.EnvId,
-				VgId:           models.Id(vgId),
+				VgId:           vgId,
 				ProductCode:    resCost[v.ResId.String()].ProductCode,
 				InstanceId:     resCost[v.ResId.String()].InstanceId,
 				InstanceConfig: resCost[v.ResId.String()].InstanceConfig,
@@ -42,7 +44,7 @@ func ParseBill(resCost map[string]billcollect.ResourceCost, res []models.Resourc
 		}
 	}
 
-	return resp
+	return resp, resIds
 }
 
 func DeleteResourceBill(dbSess *db.Session, resIdS []string, cycle string) error {

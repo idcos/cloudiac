@@ -113,6 +113,7 @@ func QueryEnvDetail(dbSess *db.Session, orgId, projectId models.Id) *db.Session 
 	// 账单数据
 	filter := dbSess.Table("iac_bill as b").
 		Where("b.org_id = ? and b.project_id = ?", orgId, projectId).
+		Where("b.cycle = ?",time.Now().Format("2006-01")).
 		Group("b.env_id").
 		Select("b.env_id,sum(b.pretax_amount) as month_cost")
 	query = query.Joins("left join (?) as b on b.env_id = iac_env.id", filter.Expr()).LazySelectAppend("b.month_cost")
