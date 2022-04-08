@@ -37,7 +37,6 @@ func (b *BillCmd) Execute(args []string) error {
 	if billingCycle == "" {
 		billingCycle = time.Now().Format("2006-01")
 	}
-	fmt.Println(billingCycle, "billingCycle2")
 
 	tx := db.Get().Begin()
 	defer func() {
@@ -58,7 +57,7 @@ func (b *BillCmd) Execute(args []string) error {
 		// 获取账单provider
 		bp, err := billcollect.GetBillProvider(&vg[index])
 		if err != nil {
-			logger.Errorf("get bill provider failed vgId: %s provider: %s,err: %s", v.Id, v.Provider, err)
+			logger.Errorf("get bill provider failed vgId: %s provider: %s, err: %s", v.Id, v.Provider, err)
 			continue
 		}
 		// 下载账单
@@ -82,14 +81,14 @@ func (b *BillCmd) Execute(args []string) error {
 			continue
 		}
 		// 解析账单数据，构建入库数据
-		bills := services.ParseBill(resCostAttr, res, v.Provider)
+		bills, resIds := services.ParseBill(resCostAttr, res, v.Id)
 		if len(bills) == 0 {
 			logger.Infof("resource not matched collect billing vgId: %s provider: %s,err: %s", v.Id, v.Provider, err)
 			continue
 		}
 
 		// 删除上次采集的数据
-		if err := services.DeleteResourceBill(tx, resourceIds, billingCycle); err != nil {
+		if err := services.DeleteResourceBill(tx, resIds, billingCycle); err != nil {
 			logger.Errorf("del last bill data failed vgId: %s provider: %s,err: %s", v.Id, v.Provider, err)
 			continue
 		}
@@ -98,6 +97,7 @@ func (b *BillCmd) Execute(args []string) error {
 			logger.Errorf("bill insert failed vgId: %s provider: %s,err: %s", v.Id, v.Provider, err)
 			continue
 		}
+		logs.Get().Infof("vg: %s, billing collect done", v.Name)
 
 	}
 	if err := tx.Commit(); err != nil {

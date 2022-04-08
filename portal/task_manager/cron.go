@@ -75,14 +75,14 @@ func cronBillCollectTask() {
 			continue
 		}
 		// 解析账单数据，构建入库数据
-		bills := services.ParseBill(resCostAttr, res, v.Provider)
+		bills,resIds:= services.ParseBill(resCostAttr, res, v.Id)
 		if len(bills) == 0 {
 			logger.Infof("resource not matched collect billing vgId: %s provider: %s,err: %s", v.Id, v.Provider, err)
 			continue
 		}
 
 		// 删除上次采集的数据
-		if err := services.DeleteResourceBill(tx, resourceIds, billingCycle); err != nil {
+		if err := services.DeleteResourceBill(tx, resIds, billingCycle); err != nil {
 			logger.Errorf("del last bill data failed vgId: %s provider: %s,err: %s", v.Id, v.Provider, err)
 			continue
 		}
