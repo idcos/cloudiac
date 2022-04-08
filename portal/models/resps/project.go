@@ -26,5 +26,5 @@ type ProjectStatResp struct {
 	EnvStat      []EnvStatResp          `json:"envStat"`
 	ResStat      []ResStatResp          `json:"resStat"`
 	EnvResStat   []ProjOrEnvResStatResp `json:"envResStat"`
-	ResGrowTrend [][]ResGrowTrendResp   `json:"resGrowTrend"`
+	ResGrowTrend []ResGrowTrendResp     `json:"resGrowTrend"`
 }
