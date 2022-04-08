@@ -3,7 +3,6 @@ package main
 
 import (
 	"cloudiac/configs"
-	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
@@ -36,7 +35,9 @@ func (*Update2v0dot10Cmd) Execute(args []string) error {
 
 		logger.Infof("find runners: %s", utils.MustJSON(runners))
 		if len(runners) <= 0 {
-			return fmt.Errorf("no runner services, please start ct-runner first")
+			err = fmt.Errorf("no runner services, please start ct-runner first")
+			logger.Errorf("%s", err)
+			return err
 		}
 
 		runnerIds := make(map[string]string)
@@ -119,37 +120,12 @@ func updateRunnerIdToRunnerTags(tx *db.Session, envs []*models.Env, runnerIds ma
 	return nil
 }
 
-// 为旧的变量组设置项目关联
+// 将旧的变量组关联到组织下的所有项目
 func updateVarGroupProjects(tx *db.Session) error {
-	if count, err := tx.Model(&models.VariableGroupProjectRel{}).Count(); err != nil {
-		return err
-	} else if count > 0 {
-		logger.Infof("varGroup project relationship already exists, skip")
-		return nil
-	}
-
-	query := tx.Raw(`select vg.id as vg_id, p.id as project_id from iac_variable_group as vg 
-	join iac_project as p where p.org_id = vg.org_id`)
-
-	rs := make([]struct {
-		VgId      models.Id
-		ProjectId models.Id
-	}, 0)
-
-	if err := query.Scan(&rs); err != nil {
-		return err
-	}
-
-	for _, r := range rs {
-		logger.Infof("insert varGroup project relationship, vgId=%s, projectId=%s", r.VgId, r.ProjectId)
-		err := tx.Insert(&models.VariableGroupProjectRel{
-			VarGroupId: r.VgId,
-			ProjectId:  r.ProjectId,
-		})
-		if err != nil && !e.IsDuplicate(err) {
-			return err
-		}
-	}
-
-	return nil
+	n, err := tx.Debug().Exec(`insert into iac_variable_group_project_rel 
+	select id, '' from iac_variable_group where id not in (
+		select var_group_id from iac_variable_group_project_rel
+	)`)
+	logger.Infof("insert varGroup project relationships, affected_rows: %d", n)
+	return err
 }

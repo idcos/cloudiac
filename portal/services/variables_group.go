@@ -8,9 +8,9 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
-	"strings"
 )
 
 func CreateVariableGroup(tx *db.Session, group models.VariableGroup) (models.VariableGroup, e.Error) {
@@ -35,17 +35,18 @@ func CreateVariableGroupProjectRel(tx *db.Session, vpgRel models.VariableGroupPr
 func SearchVariableGroup(dbSess *db.Session, orgId models.Id, projectId models.Id, q string) *db.Session {
 	query := dbSess.Model(models.VariableGroup{}).
 		Where("iac_variable_group.org_id = ?", orgId).
+		Order("created_at desc").
 		LazySelectAppend("iac_variable_group.*")
 
 	if q != "" {
 		query = query.WhereLike("iac_variable_group.name", q)
 	}
 
-	if projectId != "" {
+	if projectId != "" { // projectId 不为空，表示只查询指定项目下的变量组
 		query = query.
 			Joins("join iac_variable_group_project_rel as vgpr on vgpr.var_group_id = iac_variable_group.id").
-			Joins("join iac_project as p on p.id = vgpr.project_id").
-			Where("vgpr.project_id = ?", projectId).
+			Joins("left join iac_project as p on p.id = vgpr.project_id").
+			Where("vgpr.project_id IN ('', ?)", projectId). // project_id 字段为 '' 表示资源账号关联所有项目
 			LazySelectAppend("p.name as project_name, vgpr.project_id")
 	} else {
 		query = query.
@@ -223,25 +224,27 @@ func SearchVariableGroupProjectRelByVgpId(dbSess *db.Session, vpgId models.Id) (
 }
 func GetDelVgpRelsIdAndAddVgpRelsId(queryVgpRels []models.VariableGroupProjectRel, projectIds []models.Id) ([]models.Id, []models.Id) {
 	var (
-		strQueryProjectIds []string
-		strFormProjectIds  []string
-		delVgpRelsId       []models.Id
-		addVgpRelsId       []models.Id
+		dbProjectIds   []string // db 中已存在的项目id
+		formProjectIds []string // 需要重新绑定的项目id
+		delVgpRelsId   []models.Id
+		addVgpRelsId   []models.Id
 	)
 	for _, queryVpgRel := range queryVgpRels {
-		strQueryProjectIds = append(strQueryProjectIds, string(queryVpgRel.ProjectId))
+		dbProjectIds = append(dbProjectIds, string(queryVpgRel.ProjectId))
 	}
 	for _, projectId := range projectIds {
-		strFormProjectIds = append(strFormProjectIds, string(projectId))
+		formProjectIds = append(formProjectIds, string(projectId))
 	}
-	for _, strQueryProjectId := range strQueryProjectIds {
-		if !strings.Contains(strings.Join(strFormProjectIds, ","), strQueryProjectId) {
-			delVgpRelsId = append(delVgpRelsId, models.Id(strQueryProjectId))
+
+	for _, pid := range dbProjectIds {
+		if !utils.StrInArray(pid, formProjectIds...) {
+			delVgpRelsId = append(delVgpRelsId, models.Id(pid))
 		}
 	}
-	for _, strFormProjectId := range strFormProjectIds {
-		if !strings.Contains(strings.Join(strQueryProjectIds, ","), strFormProjectId) {
-			addVgpRelsId = append(addVgpRelsId, models.Id(strFormProjectId))
+
+	for _, pid := range formProjectIds {
+		if !utils.StrInArray(pid, dbProjectIds...) {
+			addVgpRelsId = append(addVgpRelsId, models.Id(pid))
 		}
 	}
 	return delVgpRelsId, addVgpRelsId
@@ -507,9 +510,10 @@ func DeleteVarGroupRel(sess *db.Session, objectType string, objectId models.Id) 
 
 // GetProjectVarGroups 获取指定项目下可用的变量组
 func GetProjectVarGroups(sess *db.Session, projectId models.Id) ([]models.VariableGroup, e.Error) {
-	projectVgQuery := sess.Model(&models.VariableGroupProjectRel{}).Where("project_id = ?", projectId)
+	projectVgQuery := sess.Model(&models.VariableGroupProjectRel{}).Where("project_id IN ('', ?)", projectId)
+
 	vgs := make([]models.VariableGroup, 0)
-	err := sess.Debug().Model(&models.VariableGroup{}).
+	err := sess.Model(&models.VariableGroup{}).
 		Where("id IN (?)", projectVgQuery.Select("var_group_id").Expr()).
 		Find(&vgs)
 	if err != nil {
