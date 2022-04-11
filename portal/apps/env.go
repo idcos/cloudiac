@@ -883,7 +883,7 @@ func EnvDeployCheck(c *ctx.ServiceContext, envId models.Id) (interface{}, e.Erro
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
-	env, err := services.GetEnvById(c.Tx(), envId)
+	env, err := services.GetEnvById(c.DB(), envId)
 	if err != nil {
 		return nil, err
 	}
@@ -893,10 +893,16 @@ func EnvDeployCheck(c *ctx.ServiceContext, envId models.Id) (interface{}, e.Erro
 	}
 
 	// 云模板检测
-	tpl, err := services.GetTplByEnvId(c.Tx(), envId)
+	tpl, err := services.GetTplByEnvId(c.DB(), envId)
 	if err != nil {
 		return nil, err
 	}
+	//检测云模板是否绑定项目
+	_, checkErr := services.GetBindTemplate(c.DB(), c.ProjectId, tpl.Id)
+	if checkErr != nil {
+		return nil, checkErr
+	}
+	//检测云模板是否合法
 	if err = TemplateDeployCheck(c, &forms.TemplateChecksForm{
 		Name:         tpl.Name,
 		RepoId:       tpl.RepoId,
@@ -909,18 +915,18 @@ func EnvDeployCheck(c *ctx.ServiceContext, envId models.Id) (interface{}, e.Erro
 		return nil, err
 	}
 	//vcs 检测(是否禁用，token是否有效)
-	vcs, err := services.GetVcsById(c.Tx(), tpl.VcsId)
+	vcs, err := services.GetVcsById(c.DB(), tpl.VcsId)
 	if err != nil {
 		return nil, err
 	}
 	if vcs.Status != "enable" {
 		return nil, e.New(e.VcsError, "vcs is disable")
 	}
-	if err := services.VscTokenCheckByID(c.Tx(), vcs.Id, vcs.VcsToken); err != nil {
+	if err := services.VscTokenCheckByID(c.DB(), vcs.Id, vcs.VcsToken); err != nil {
 		return nil, e.New(e.VcsInvalidToken, err)
 	}
 	//环境运行中不允许再手动发布任务
-	tasks, err := services.GetActiveTaskByEnvId(c.Tx(), envId)
+	tasks, err := services.GetActiveTaskByEnvId(c.DB(), envId)
 	if err != nil {
 		return nil, err
 	}
