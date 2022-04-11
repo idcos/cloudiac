@@ -36,6 +36,7 @@ func cronBillCollectTask() {
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
+			panic(r)
 		}
 	}()
 

@@ -55,3 +55,19 @@ func DeleteResourceBill(dbSess *db.Session, resIdS []string, cycle string) error
 	}
 	return nil
 }
+
+// ProjectEnabledBill 检查项目是否启用了计费
+func ProjectEnabledBill(sess *db.Session, pid models.Id) (bool, e.Error) {
+	//select var_group_id from iac_variable_group_project_rel where project_id in ('', 'p-c8pkc3bn6m84mseaclrg')
+	varGroupIdQuery := sess.Model(&models.VariableGroupProjectRel{}).
+		Where("project_id IN ('', ?)", pid).
+		Select("var_group_id")
+
+	ok, err := sess.Model(&models.VariableGroup{}).
+		Where("id in (?) and cost_counted", varGroupIdQuery.Expr()).
+		Exists()
+	if err != nil {
+		return false, e.New(e.DBError, err)
+	}
+	return ok, nil
+}
