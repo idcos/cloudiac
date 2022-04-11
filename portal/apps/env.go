@@ -899,12 +899,12 @@ func EnvDeployCheck(c *ctx.ServiceContext, envId models.Id) (interface{}, e.Erro
 	}
 	if err = TemplateDeployCheck(c, &forms.TemplateChecksForm{
 		Name:         tpl.Name,
-		Workdir:      tpl.Workdir,
-		TfVarsFile:   tpl.TfVarsFile,
-		Playbook:     tpl.Playbook,
 		RepoId:       tpl.RepoId,
-		RepoRevision: tpl.RepoRevision,
 		VcsId:        tpl.VcsId,
+		Workdir:      env.Workdir,
+		TfVarsFile:   env.TfVarsFile,
+		Playbook:     env.Playbook,
+		RepoRevision: env.Revision,
 	}); err != nil {
 		return nil, err
 	}
