@@ -23,7 +23,7 @@ type VariableGroup struct {
 // @Param Iac-Project-Id header string false "项目ID"
 // @Param form query forms.SearchVariableGroupForm true "parameter"
 // @router /var_groups [get]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.SearchVariableGroupResp}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.SearchVarGroupResp}}
 func (VariableGroup) Search(c *ctx.GinRequest) {
 	form := forms.SearchVariableGroupForm{}
 	if err := c.Bind(&form); err != nil {
