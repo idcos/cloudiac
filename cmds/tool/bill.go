@@ -43,45 +43,11 @@ func (b *BillCmd) Execute(args []string) error {
 			panic(r)
 		}
 	}()
-	vgs := make([]models.VariableGroup, 0)
-	if b.OrgId != "" {
-		orgVgs, err := services.GetVgByOrgId(tx, b.OrgId)
-		if err != nil {
-			_ = tx.Rollback()
-			logger.Errorf("get org vg err: %s", err)
-			return err
-		}
-		vgs = append(vgs, orgVgs...)
-	}
 
-	if b.ProjectId != "" {
-		orgVgs, err := services.GetVgByProjectId(tx, b.ProjectId)
-		if err != nil {
-			_ = tx.Rollback()
-			logger.Errorf("get project vg err: %s", err)
-			return err
-		}
-		vgs = append(vgs, orgVgs...)
-	}
-
-	if b.VgId != "" {
-		orgVgs, err := services.GetVgById(tx, b.VgId)
-		if err != nil {
-			_ = tx.Rollback()
-			logger.Errorf("get vg err: %s", err)
-			return err
-		}
-		vgs = append(vgs, orgVgs...)
-	}
-
-	if b.OrgId == "" && b.ProjectId == "" && b.VgId == "" {
-		confVgs, err := services.GetVgByBillConf(tx)
-		if err != nil {
-			_ = tx.Rollback()
-			logger.Errorf("get vg err: %s", err)
-			return err
-		}
-		vgs = append(vgs, confVgs...)
+	vgs, err := buildVgs(tx, b.OrgId, b.ProjectId, b.VgId)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
 	}
 
 	// 去重
@@ -94,7 +60,7 @@ func (b *BillCmd) Execute(args []string) error {
 		newVgs = append(newVgs, v)
 	}
 
-	for index, _ := range newVgs {
+	for index := range newVgs {
 		services.BuildVgBilling(tx, newVgs[index], logger, billingCycle)
 	}
 
@@ -105,4 +71,44 @@ func (b *BillCmd) Execute(args []string) error {
 
 	logger.Info("stop bill collect")
 	return nil
+}
+
+func buildVgs(tx *db.Session, orgId, projectId, vgId string) ([]models.VariableGroup, error) {
+	vgs := make([]models.VariableGroup, 0)
+	if orgId != "" {
+		orgVgs, err := services.GetVgByOrgId(tx, orgId)
+		if err != nil {
+			logger.Errorf("get org vg err: %s", err)
+			return nil, err
+		}
+		vgs = append(vgs, orgVgs...)
+	}
+
+	if projectId != "" {
+		orgVgs, err := services.GetVgByProjectId(tx, projectId)
+		if err != nil {
+			logger.Errorf("get project vg err: %s", err)
+			return nil, err
+		}
+		vgs = append(vgs, orgVgs...)
+	}
+
+	if vgId != "" {
+		orgVgs, err := services.GetVgById(tx, vgId)
+		if err != nil {
+			logger.Errorf("get vg err: %s", err)
+			return nil, err
+		}
+		vgs = append(vgs, orgVgs...)
+	}
+
+	if orgId == "" && projectId == "" && vgId == "" {
+		confVgs, err := services.GetVgByBillConf(tx)
+		if err != nil {
+			logger.Errorf("get vg err: %s", err)
+			return nil, err
+		}
+		vgs = append(vgs, confVgs...)
+	}
+	return vgs, nil
 }

@@ -47,7 +47,7 @@ func cronBillCollectTask() {
 		return
 	}
 
-	for index, _ := range vgs {
+	for index := range vgs {
 		services.BuildVgBilling(tx, vgs[index], logger, billingCycle)
 	}
 
