@@ -13,6 +13,7 @@ import (
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 	en_translations "github.com/go-playground/validator/v10/translations/en"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -81,9 +82,10 @@ type JSONResult struct {
 
 func (c *GinRequest) JSON(status int, msg interface{}, result interface{}) {
 	var (
-		message = ""
-		code    = 0
-		detail  string
+		message     = ""
+		code        = 0
+		detail      string
+		fieldsError validator.FieldError
 	)
 	if msg != nil {
 		if er, ok := msg.(e.Error); ok {
@@ -93,10 +95,9 @@ func (c *GinRequest) JSON(status int, msg interface{}, result interface{}) {
 			}
 			message = e.ErrorMsg(er, c.GetHeader("accept-language"))
 			code = er.Code()
-			switch err := msg.(e.Error).Err().(type) {
-			case validator.FieldError:
-				detail = err.Translate(trans)
-			default:
+			if errors.As(msg.(e.Error).Err(), &fieldsError) {
+				detail = fieldsError.Translate(trans)
+			} else {
 				detail = er.Error()
 			}
 		} else {
@@ -188,8 +189,9 @@ func BindUriTagOnly(c *GinRequest, b interface{}) error {
 func (c *GinRequest) Bind(form forms.BaseFormer) error {
 
 	var (
-		jsonForm map[string]interface{}
-		err      error
+		jsonForm      map[string]interface{}
+		err           error
+		validateError validator.ValidationErrors
 	)
 
 	// 将 Params 绑定到 form 里面标记了 uri 的字段
@@ -222,15 +224,13 @@ func (c *GinRequest) Bind(form forms.BaseFormer) error {
 	}
 
 	if err != nil {
-		switch errs := err.(type) {
-		case validator.ValidationErrors:
-			for _, er := range errs {
+		if errors.As(err, &validateError) {
+			for _, er := range validateError {
 				c.JSONError(e.New(e.BadParam, er), http.StatusBadRequest)
 			}
-		default:
+		} else {
 			c.JSONError(e.New(e.BadParam, err), http.StatusBadRequest)
 		}
-
 		c.Abort()
 		return err
 	}
