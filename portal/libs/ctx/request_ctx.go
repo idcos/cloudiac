@@ -36,11 +36,15 @@ type GinRequest struct {
 }
 
 var (
-	trans ut.Translator
+	trans                     ut.Translator
+	registerTranslationsError error
 )
 
 func init() {
-	trans = register()
+	trans, registerTranslationsError = register()
+	if registerTranslationsError != nil {
+		return
+	}
 }
 
 func NewGinRequest(c *gin.Context) *GinRequest {
@@ -89,9 +93,10 @@ func (c *GinRequest) JSON(status int, msg interface{}, result interface{}) {
 			}
 			message = e.ErrorMsg(er, c.GetHeader("accept-language"))
 			code = er.Code()
-			if e, ok := msg.(e.Error).Err().(validator.FieldError); ok {
-				detail = e.Translate(trans)
-			} else {
+			switch err := msg.(e.Error).Err().(type) {
+			case validator.FieldError:
+				detail = err.Translate(trans)
+			default:
 				detail = er.Error()
 			}
 		} else {
@@ -217,12 +222,15 @@ func (c *GinRequest) Bind(form forms.BaseFormer) error {
 	}
 
 	if err != nil {
-
-		errs := err.(validator.ValidationErrors)
-
-		for _, err := range errs {
+		switch errs := err.(type) {
+		case validator.ValidationErrors:
+			for _, er := range errs {
+				c.JSONError(e.New(e.BadParam, er), http.StatusBadRequest)
+			}
+		default:
 			c.JSONError(e.New(e.BadParam, err), http.StatusBadRequest)
 		}
+
 		c.Abort()
 		return err
 	}
@@ -255,7 +263,7 @@ func (c *GinRequest) Bind(form forms.BaseFormer) error {
 	return nil
 }
 
-func register() ut.Translator {
+func register() (ut.Translator, error) {
 	var (
 		uni      *ut.UniversalTranslator
 		validate *validator.Validate
@@ -265,9 +273,14 @@ func register() ut.Translator {
 	trans, _ := uni.GetTranslator("en")
 
 	validate = binding.Validator.Engine().(*validator.Validate)
-	en_translations.RegisterDefaultTranslations(validate, trans)
-	registerTranslations(validate, trans)
-	return trans
+	err := en_translations.RegisterDefaultTranslations(validate, trans)
+	if err != nil {
+		return nil, err
+	}
+	if err := registerTranslations(validate, trans); err != nil {
+		return nil, err
+	}
+	return trans, nil
 }
 
 func registerTranslations(v *validator.Validate, trans ut.Translator) (err error) {
