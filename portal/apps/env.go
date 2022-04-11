@@ -504,6 +504,11 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		return nil, e.New(e.DBError, err)
 	}
 
+	enabledBill, err := services.ProjectEnabledBill(c.DB(), c.ProjectId)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
 	for _, env := range details {
 		env.MergeTaskStatus()
 		PopulateLastTask(c.DB(), env)
@@ -518,7 +523,7 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		env.StepTimeout = env.StepTimeout / 60
 
 		// 是否开启费用采集
-		env.IsBilling = getEnvIsBilling(c.DB(), env, c.OrgId, c.ProjectId)
+		env.IsBilling = enabledBill
 	}
 
 	return page.PageResp{
@@ -842,6 +847,11 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 		return nil, e.New(e.DBError, err)
 	}
 
+	enabledBill, err := services.ProjectEnabledBill(c.DB(), envDetail.ProjectId)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
 	envDetail.MergeTaskStatus()
 	envDetail = PopulateLastTask(c.DB(), envDetail)
 	resp, err := services.GetPolicyRels(c.DB(), form.Id, consts.ScopeEnv)
@@ -863,7 +873,7 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 		envDetail.RunnerTags = []string{}
 	}
 	// 是否开启费用采集
-	envDetail.IsBilling = getEnvIsBilling(c.DB(), envDetail, c.OrgId, c.ProjectId)
+	envDetail.IsBilling = enabledBill
 
 	return envDetail, nil
 }
@@ -890,7 +900,7 @@ func EnvDeployCheck(c *ctx.ServiceContext, envId models.Id) (interface{}, e.Erro
 	//判断环境是否已归档
 	if env.Archived {
 		return nil, e.New(e.EnvArchived, "Environment archived")
-	}
+	}	
 
 	// 云模板检测
 	tpl, err := services.GetTplByEnvId(c.Tx(), envId)
@@ -1565,23 +1575,4 @@ func EnvStat(c *ctx.ServiceContext, form *forms.EnvParam) (interface{}, e.Error)
 		CostTrendStat: envCostTrendStat,
 		CostList:      results,
 	}, nil
-}
-
-func getEnvIsBilling(dbSess *db.Session, env *models.EnvDetail, orgId, projectId models.Id) bool {
-	vgs, err := services.SearchVariableGroupRel(dbSess, map[string]models.Id{
-		consts.ScopeEnv:      env.Id,
-		consts.ScopeTemplate: env.TplId,
-		consts.ScopeProject:  projectId,
-		consts.ScopeOrg:      orgId,
-	}, consts.ScopeEnv)
-	if err != nil {
-		logs.Get().Errorf("get env var group env id: %s, err: %s", env.Id, err)
-		return false
-	}
-	vgIds := make([]models.Id, len(vgs))
-	for index, v := range vgs {
-		vgIds[index] = v.Id
-	}
-	// 查询变量组是否开启账单采集，并且项目关联了项目
-	return services.GetVarGroupIsOpenBillCollectByVgIds(dbSess, vgIds, orgId, projectId)
 }

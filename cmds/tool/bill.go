@@ -40,6 +40,7 @@ func (b *BillCmd) Execute(args []string) error {
 	defer func() {
 		if r := recover(); r != nil {
 			_ = tx.Rollback()
+			panic(r)
 		}
 	}()
 	vgs := make([]models.VariableGroup, 0)
