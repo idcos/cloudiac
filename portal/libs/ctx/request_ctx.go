@@ -9,6 +9,10 @@ import (
 	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
+	"github.com/go-playground/locales/en"
+	ut "github.com/go-playground/universal-translator"
+	"github.com/go-playground/validator/v10"
+	en_translations "github.com/go-playground/validator/v10/translations/en"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -29,6 +33,14 @@ type GinRequest struct {
 	*gin.Context
 	sc   *ServiceContext
 	form forms.BaseFormer
+}
+
+var (
+	trans ut.Translator
+)
+
+func init() {
+	trans = register()
 }
 
 func NewGinRequest(c *gin.Context) *GinRequest {
@@ -69,15 +81,19 @@ func (c *GinRequest) JSON(status int, msg interface{}, result interface{}) {
 		code    = 0
 		detail  string
 	)
-
 	if msg != nil {
 		if er, ok := msg.(e.Error); ok {
+
 			if er.Status() != 0 {
 				status = er.Status()
 			}
 			message = e.ErrorMsg(er, c.GetHeader("accept-language"))
 			code = er.Code()
-			detail = er.Error()
+			if e, ok := msg.(e.Error).Err().(validator.FieldError); ok {
+				detail = e.Translate(trans)
+			} else {
+				detail = er.Error()
+			}
 		} else {
 			code = e.InternalError
 			message = fmt.Sprintf("%v", msg)
@@ -201,7 +217,12 @@ func (c *GinRequest) Bind(form forms.BaseFormer) error {
 	}
 
 	if err != nil {
-		c.JSONError(e.New(e.BadParam, err), http.StatusBadRequest)
+
+		errs := err.(validator.ValidationErrors)
+
+		for _, err := range errs {
+			c.JSONError(e.New(e.BadParam, err), http.StatusBadRequest)
+		}
 		c.Abort()
 		return err
 	}
@@ -232,4 +253,104 @@ func (c *GinRequest) Bind(form forms.BaseFormer) error {
 	c.form = form
 
 	return nil
+}
+
+func register() ut.Translator {
+	var (
+		uni      *ut.UniversalTranslator
+		validate *validator.Validate
+	)
+	en := en.New()
+	uni = ut.New(en, en)
+	trans, _ := uni.GetTranslator("en")
+
+	validate = binding.Validator.Engine().(*validator.Validate)
+	en_translations.RegisterDefaultTranslations(validate, trans)
+	registerTranslations(validate, trans)
+	return trans
+}
+
+func registerTranslations(v *validator.Validate, trans ut.Translator) (err error) {
+	translations := []struct {
+		tag             string
+		translation     string
+		override        bool
+		customRegisFunc validator.RegisterTranslationsFunc
+		customTransFunc validator.TranslationFunc
+	}{
+		{
+			tag:         "startswith",
+			translation: "{0} must startswith {1}",
+			override:    false,
+			customTransFunc: func(ut ut.Translator, fe validator.FieldError) string {
+				var t string
+				t, err = ut.T(fe.Tag(), fe.Field(), fe.Param())
+				return t
+			},
+		},
+		{
+			tag:         "required_with",
+			translation: "{0} and {1} must be also provided",
+			override:    false,
+			customTransFunc: func(ut ut.Translator, fe validator.FieldError) string {
+				var t string
+				t, err = ut.T(fe.Tag(), fe.Field(), fe.Param())
+				return t
+			},
+		},
+		{
+			tag:         "required_without",
+			translation: " {0} must be provided if {1} is empty",
+			override:    false,
+			customTransFunc: func(ut ut.Translator, fe validator.FieldError) string {
+				var t string
+				t, err = ut.T(fe.Tag(), fe.Field(), fe.Param())
+				return t
+			},
+		},
+		{
+			tag:         "required_without_all",
+			translation: "either provide {0} or provide [{1}]",
+			override:    false,
+			customTransFunc: func(ut ut.Translator, fe validator.FieldError) string {
+				var t string
+				t, err = ut.T(fe.Tag(), fe.Field(), fe.Param())
+				return t
+			},
+		},
+	}
+	for _, t := range translations {
+
+		if t.customTransFunc != nil && t.customRegisFunc != nil {
+			err = v.RegisterTranslation(t.tag, trans, t.customRegisFunc, t.customTransFunc)
+		} else if t.customTransFunc != nil && t.customRegisFunc == nil {
+			err = v.RegisterTranslation(t.tag, trans, registrationFunc(t.tag, t.translation, t.override), t.customTransFunc)
+		} else if t.customTransFunc == nil && t.customRegisFunc != nil {
+			err = v.RegisterTranslation(t.tag, trans, t.customRegisFunc, translateFunc)
+		} else {
+			err = v.RegisterTranslation(t.tag, trans, registrationFunc(t.tag, t.translation, t.override), translateFunc)
+		}
+
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+func registrationFunc(tag string, translation string, override bool) validator.RegisterTranslationsFunc {
+	return func(ut ut.Translator) (err error) {
+		if err = ut.Add(tag, translation, override); err != nil {
+			return
+		}
+
+		return
+	}
+}
+func translateFunc(ut ut.Translator, fe validator.FieldError) string {
+	t, err := ut.T(fe.Tag(), fe.Field())
+	if err != nil {
+		return fe.(error).Error()
+	}
+
+	return t
 }
