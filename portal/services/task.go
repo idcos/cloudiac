@@ -157,11 +157,7 @@ func CloneNewDriftTask(tx *db.Session, src models.Task, env *models.Env) (*model
 	//task.KeyId = env.KeyId
 	task.Source = taskSource
 
-	runnerTags := make([]string, 0)
-	if env.RunnerTags != "" {
-		runnerTags = strings.Split(env.RunnerTags, ",")
-	}
-	task.RunnerId, er = GetAvailableRunnerId(env.RunnerId, runnerTags)
+	task.RunnerId, er = GetAvailableRunnerIdByStr(env.RunnerId, env.RunnerTags)
 	if er != nil {
 		return nil, er
 	}

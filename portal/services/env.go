@@ -315,10 +315,19 @@ func GetRunnerByTags(tags []string) (string, e.Error) {
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list with tags is null"))
 }
 
+func GetAvailableRunnerIdByStr(runnerId string, runnerTags string) (string, e.Error) {
+	tags := make([]string, 0)
+	if runnerTags != "" {
+		tags = strings.Split(runnerTags, ",")
+	}
+	return GetAvailableRunnerId(runnerId, tags)
+}
+
 func GetAvailableRunnerId(runnerId string, runnerTags []string) (string, e.Error) {
 	if runnerId != "" {
 		return runnerId, nil
 	}
+
 	if len(runnerTags) > 0 {
 		return GetRunnerByTags(runnerTags)
 	}

@@ -174,20 +174,6 @@ func getTaskStepTimeoutInSecond(timeoutInMinute int) (int, e.Error) {
 	return timeoutInSecond, nil
 }
 
-func getRunnerId(runnerTags string, runnerId string) (string, e.Error) {
-	// 优先使用 id 匹配，兼容之前的方式
-	if runnerId != "" {
-		return runnerId, nil
-	}
-
-	// id不存在，使用tags 匹配
-	runnerTagsList := strings.Split(runnerTags, ",")
-	if runnerTags != "" && len(runnerTagsList) > 0 {
-		return services.GetRunnerByTags(runnerTagsList)
-	}
-	return services.GetDefaultRunner()
-}
-
 func createEnvToDB(tx *db.Session, c *ctx.ServiceContext, form *forms.CreateEnvForm, envModel models.Env) (*models.Env, e.Error) {
 	// 检查偏移检测参数
 	cronTaskType, err := GetCronTaskTypeAndCheckParam(form.CronDriftExpress, form.AutoRepairDrift, form.OpenCronDrift)
@@ -335,7 +321,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		}
 	}()
 
-	runnerId, err := getRunnerId(strings.Join(form.RunnerTags, ","), form.RunnerId)
+	runnerId, err := services.GetAvailableRunnerId(form.RunnerId, form.RunnerTags)
 	if err != nil {
 		return nil, err
 	}
@@ -1232,7 +1218,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	lg.Debugln("envDeploy -> GetValidVarsAndVgVars finish")
 
 	// 获取实际执行任务的runnerID
-	rId, err := getRunnerId(env.RunnerTags, env.RunnerId)
+	rId, err := services.GetAvailableRunnerIdByStr(env.RunnerId, env.RunnerTags)
 	if err != nil {
 		return nil, err
 	}
