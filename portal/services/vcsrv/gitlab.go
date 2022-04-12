@@ -259,13 +259,13 @@ func (git *gitlabRepoIface) CreatePrComment(prId int, comment string) error {
 
 func (git *gitlabRepoIface) GetFullFilePath(address, filePath, repoRevision string) string {
 	u, _ := url.Parse(address)
-	u.Path = path.Join(u.Path, git.Project.Name, "-/blob", repoRevision, filePath)
+	u.Path = path.Join(u.Path, git.Project.PathWithNamespace, "-/blob", repoRevision, filePath)
 	return u.String()
 }
 
 func (git *gitlabRepoIface) GetCommitFullPath(address, commitId string) string {
 	u, _ := url.Parse(address)
-	u.Path = path.Join(u.Path, git.Project.Name, "commit", commitId)
+	u.Path = path.Join(u.Path, git.Project.PathWithNamespace, "commit", commitId)
 	return u.String()
 }
 
