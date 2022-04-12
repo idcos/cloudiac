@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -374,6 +375,18 @@ func (github *githubRepoIface) CreatePrComment(prId int, comment string) error {
 		return e.New(e.VcsError, fmt.Errorf("code: %s, err: %s", response.Status, string(body)))
 	}
 	return nil
+}
+
+func (github *githubRepoIface) GetFullFilePath(address, filePath, repoRevision string) string {
+	u, _ := url.Parse(address)
+	u.Path = path.Join(u.Path, github.repository.FullName, "blob", repoRevision, filePath)
+	return u.String()
+}
+
+func (github *githubRepoIface) GetCommitFullPath(address, commitId string) string {
+	u, _ := url.Parse(address)
+	u.Path = path.Join(u.Path, github.repository.FullName, "commit", commitId)
+	return u.String()
 }
 
 //giteaRequest

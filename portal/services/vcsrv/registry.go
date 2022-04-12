@@ -252,6 +252,14 @@ func (r *RegistryRepo) CreatePrComment(prId int, comment string) error {
 	return nil
 }
 
+func (r *RegistryRepo) GetFullFilePath(address, filePath, repoRevision string) string {
+	return ""
+}
+
+func (r *RegistryRepo) GetCommitFullPath(address, commitId string) string {
+	return ""
+}
+
 func registryVcsRequest(path, method string, params map[string]string) (*http.Response, []byte, error) {
 	payload := &bytes.Buffer{}
 	writer := multipart.NewWriter(payload)
