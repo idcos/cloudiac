@@ -1,0 +1,1121 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.2.3, mkdocs-material-8.1.3">
+    
+    
+      
+        <title>容器化部署 - CloudIaC文档中心</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.edf004c2.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.e6a45f82.min.css">
+        
+      
+    
+    
+    
+      
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+  
+    
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#_1" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="CloudIaC文档中心" class="md-header__button md-logo" aria-label="CloudIaC文档中心" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            CloudIaC文档中心
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              容器化部署
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="CloudIaC文档中心" class="md-nav__button md-logo" aria-label="CloudIaC文档中心" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    CloudIaC文档中心
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_1" type="checkbox" id="__nav_1" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_1">
+          产品介绍
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="产品介绍" data-md-level="1">
+        <label class="md-nav__title" for="__nav_1">
+          <span class="md-nav__icon md-icon"></span>
+          产品介绍
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-description/product-description/" class="md-nav__link">
+        产品简介
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-description/product-advantage/" class="md-nav__link">
+        核心优势
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-description/product-glossary/" class="md-nav__link">
+        术语解释
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-description/product-architecture/" class="md-nav__link">
+        产品构架
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2">
+          快速入门
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="快速入门" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          快速入门
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quick-start/create-org-project/" class="md-nav__link">
+        创建组织和项目
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quick-start/integrated-vcs/" class="md-nav__link">
+        集成vcs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quick-start/create-template/" class="md-nav__link">
+        创建云模板
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quick-start/deploy-env/" class="md-nav__link">
+        部署环境
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3">
+          产品功能
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="产品功能" data-md-level="1">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          产品功能
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-features/organizations/" class="md-nav__link">
+        组织管理
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-features/projects/" class="md-nav__link">
+        项目管理
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-features/variables/" class="md-nav__link">
+        变量管理
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-features/templates/" class="md-nav__link">
+        云模板管理
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-features/envs/" class="md-nav__link">
+        环境管理
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-features/compliance/" class="md-nav__link">
+        安全合规
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-features/pipeline/" class="md-nav__link">
+        Pipeline
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-features/drift-scan/" class="md-nav__link">
+        漂移检测
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-features/resource-account/" class="md-nav__link">
+        资源帐号
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-features/vcs/" class="md-nav__link">
+        VCS管理
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-features/keys/" class="md-nav__link">
+        密钥管理
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-features/notice/" class="md-nav__link">
+        事件通知
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-features/user-role/" class="md-nav__link">
+        用户角色
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4">
+          产品部署
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="产品部署" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          产品部署
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          容器化部署
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        容器化部署
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-docker" class="md-nav__link">
+    1. 安装并启动 docker
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-docker-compose" class="md-nav__link">
+    2. 安装 docker-compose
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3" class="md-nav__link">
+    3. 创建部署目录
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-docker-composeyml" class="md-nav__link">
+    4. 编写 docker-compose.yml 文件
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-env" class="md-nav__link">
+    5. 编写 .env 文件
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-docker-compose" class="md-nav__link">
+    6. 启动docker-compose
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../host/" class="md-nav__link">
+        手动部署
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5" type="checkbox" id="__nav_5" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_5">
+          常见问题
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="常见问题" data-md-level="1">
+        <label class="md-nav__title" for="__nav_5">
+          <span class="md-nav__icon md-icon"></span>
+          常见问题
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../answer-questions/" class="md-nav__link">
+        常见问题
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" type="checkbox" id="__nav_6" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_6">
+          API文档
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="API文档" data-md-level="1">
+        <label class="md-nav__title" for="__nav_6">
+          <span class="md-nav__icon md-icon"></span>
+          API文档
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-docs/" class="md-nav__link">
+        API简介
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/" class="md-nav__link">
+        Releases
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-docker" class="md-nav__link">
+    1. 安装并启动 docker
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-docker-compose" class="md-nav__link">
+    2. 安装 docker-compose
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3" class="md-nav__link">
+    3. 创建部署目录
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-docker-composeyml" class="md-nav__link">
+    4. 编写 docker-compose.yml 文件
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-env" class="md-nav__link">
+    5. 编写 .env 文件
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-docker-compose" class="md-nav__link">
+    6. 启动docker-compose
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+
+<h1 id="_1">容器部署</h1>
+<p>该文档使用容器部署了所有组件，包括 mysql 和 consul，实际生产环境请根据需要进行调整。</p>
+<h2 id="1-docker">1. 安装并启动 docker</h2>
+<pre><code class="language-bash">curl -fsSL https://get.docker.com | bash -s docker &amp;&amp; \
+systemctl enable docker &amp;&amp; \
+systemctl start docker
+</code></pre>
+<h2 id="2-docker-compose">2. 安装 docker-compose</h2>
+<pre><code class="language-bash">curl -L https://get.daocloud.io/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` &gt; /usr/local/bin/docker-compose &amp;&amp; \
+chmod +x /usr/local/bin/docker-compose
+</code></pre>
+<h2 id="3">3. 创建部署目录</h2>
+<p>部署目录固定为 /usr/yunji/cloudiac，<strong>不可更改</strong>，更改部署目录会导致执行部署任务失败。</p>
+<pre><code class="language-bash">mkdir -p /usr/yunji/cloudiac/var/{consul,mysql} &amp;&amp; cd /usr/yunji/cloudiac/
+</code></pre>
+<h2 id="4-docker-composeyml">4. 编写 docker-compose.yml 文件</h2>
+<p>文件路径 /usr/yunji/cloudiac/docker-compose.yml，内容如下:</p>
+<pre><code class="language-yaml"># auto-replace-from: docker/docker-compose.yml
+version: &quot;3.2&quot;
+services:
+  iac-portal:
+    container_name: iac-portal
+    image: &quot;cloudiac/iac-portal:v0.8.1&quot;
+    volumes:
+      - type: bind
+        source: /usr/yunji/cloudiac/var
+        target: /usr/yunji/cloudiac/var
+      - type: bind
+        source: /usr/yunji/cloudiac/.env
+        target: /usr/yunji/cloudiac/.env
+    ports:
+      - &quot;9030:9030&quot;
+    depends_on:
+      - mysql
+      - consul
+    restart: always
+
+  ct-runner:
+    container_name: ct-runner
+    image: &quot;cloudiac/ct-runner:v0.8.1&quot;
+    volumes:
+      - type: bind
+        source: /usr/yunji/cloudiac/var
+        target: /usr/yunji/cloudiac/var
+      - type: bind
+        source: /usr/yunji/cloudiac/.env
+        target: /usr/yunji/cloudiac/.env
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+    ports:
+      - &quot;19030:19030&quot;
+    depends_on:
+      - consul
+    restart: always
+
+  ct-worker:
+    image: &quot;cloudiac/ct-worker:v0.8.1&quot;
+    container_name: &quot;ct-worker-say-hi&quot;
+    # 添加该服务只是为了自动 pull 镜像，并不需要后台运行
+    command: [&quot;echo&quot;, &quot;hello world!&quot;]
+    restart: &quot;no&quot;
+
+  iac-web:
+    container_name: iac-web
+    image: &quot;cloudiac/iac-web:v0.8.0&quot;
+    ports:
+      - 80:80
+    restart: always
+    depends_on:
+      - iac-portal
+
+  mysql:
+    container_name: mysql
+    image: &quot;mysql:8.0&quot;
+    command: [
+        &quot;--character-set-server=utf8mb4&quot;,
+        &quot;--collation-server=utf8mb4_unicode_ci&quot;,
+        &quot;--sql_mode=STRICT_TRANS_TABLES,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION&quot;
+    ]
+    volumes:
+      - type: bind
+        source: /usr/yunji/cloudiac/var/mysql
+        target: /var/lib/mysql
+    environment:
+      - MYSQL_RANDOM_ROOT_PASSWORD=yes
+      - MYSQL_USER
+      - MYSQL_PASSWORD
+      - MYSQL_DATABASE
+    restart: always
+
+  consul:
+    container_name: consul
+    image: &quot;consul:latest&quot;
+    volumes:
+      - type: bind
+        source: /usr/yunji/cloudiac/var/consul
+        target: /consul/data
+    ports:
+      - &quot;8500:8500&quot;
+    command: &gt;
+      consul agent -server -bootstrap-expect=1 -ui -bind=0.0.0.0
+      -client=0.0.0.0 -enable-script-checks=true -data-dir=/consul/data
+    restart: always
+
+</code></pre>
+<h2 id="5-env">5. 编写 .env 文件</h2>
+<p>文件路径 /usr/yunji/cloudiac/.env，内容如下(<strong>请根据注释修改配置</strong>):</p>
+<pre><code class="language-bash"># auto-replace-from: configs/dotenv.sample
+# 平台管理员账号密码(均为必填)
+# 该账号密码只在系统初始化时使用，后续修改不影响己创建的账号
+IAC_ADMIN_EMAIL=&quot;admin@example.com&quot;
+# 密码要求长度大于 8 且包含字母、数字、特殊字符
+IAC_ADMIN_PASSWORD=&quot;&quot;
+
+# 加密密钥配置(必填)
+# 敏感数据使用该密钥进行加密
+SECRET_KEY=&quot;&quot;
+
+# IaC 对外提供服务的地址(必填), 示例: http://cloudiac.example.com
+# 该地址需要带协议(http/https)，结尾不可以加 &quot;/&quot;
+PORTAL_ADDRESS=&quot;&quot;
+
+# consul 地址(必填)，示例: private.host.ip:8500
+# 需要配置为机器的内网 ip:port，不可使用 127.0.0.1
+CONSUL_ADDRESS=&quot;&quot;
+
+# mysql 配置(必填)
+MYSQL_HOST=mysql
+MYSQL_PORT=3306
+MYSQL_DATABASE=cloudiac
+MYSQL_USER=cloudiac
+MYSQL_PASSWORD=&quot;mysqlpass&quot;
+
+# portal 服务注册信息配置 (均为必填)
+## portal 服务的 IP 地址， 容器化部署时无需修改, 手动部署时配置为内网 IP
+SERVICE_IP=iac-portal
+## portal 服务注册的 id(需要保证唯一)
+SERVICE_ID=iac-portal-01
+## portal 服务注册的 tags
+SERVICE_TAGS=&quot;iac-portal;portal-01&quot;
+
+# logger 配置
+LOG_DEVEL=&quot;debug&quot;
+
+# SMTP 配置(该配置只影响邮件通知的发送，不配置不影响其他功能)
+SMTP_ADDRESS=smtp.example.com:25
+SMTP_USERNAME=user@example.com
+SMTP_PASSWORD=&quot;&quot;
+SMTP_FROM_NAME=IaC
+SMTP_FROM=support@example.com
+
+# KAFKA配置(kafka 任务结果回调使用，不配置不影响其他功能)
+KAFKA_TOPIC=&quot;IAC_TASK_REPLY&quot;
+KAFKA_GROUP_ID=&quot;&quot;
+KAFKA_PARTITION=0
+## example: KAFKA_BROKERS: [&quot;kafka.example.com:9092&quot;, &quot;...&quot;]
+KAFKA_BROKERS=[]
+KAFKA_SASL_USERNAME=&quot;&quot;
+KAFKA_SASL_PASSWORD=&quot;&quot;
+
+
+######### 以下为 runner 配置 #############
+# runner 服务注册配置(均为必填)
+## runner 服务的 IP 地址， 容器化部署时无需修改, 手动部署时配置为内网 IP
+RUNNER_SERVICE_IP=ct-runner
+## runner 服务注册的 id(需要保证唯一)
+RUNNER_SERVICE_ID=ct-runner-01
+RUNNER_SERVICE_TAGS=&quot;ct-runner;runner-01&quot;
+
+## 是否开启 offline mode，默认为 false
+RUNNER_OFFLINE_MODE=&quot;false&quot;
+
+</code></pre>
+<p><em>通过 .env 可以配置大部分参数，需要更详细的配置可以拷贝镜像里的 config-portal.yml 和 config-runner.yml 文件，修改后再挂载到容器中进行替换</em></p>
+<h2 id="6-docker-compose">6. 启动docker-compose</h2>
+<pre><code class="language-bash">docker-compose up -d
+
+# 前台调试启动：
+# dokcker-compose up
+</code></pre>
+<p><em>至此服务部署完成</em></p>
+
+              
+            </article>
+          </div>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    <nav class="md-footer__inner md-grid" aria-label="Footer">
+      
+        
+        <a href="../../product-features/user-role/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 用户角色" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              用户角色
+            </div>
+          </div>
+        </a>
+      
+      
+        
+        <a href="../host/" class="md-footer__link md-footer__link--next" aria-label="Next: 手动部署" rel="next">
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              手动部署
+            </div>
+          </div>
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+          </div>
+        </a>
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../assets/javascripts/workers/search.0bbba5b5.min.js"}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.e1a181d9.min.js"></script>
+      
+    
+  </body>
+</html>

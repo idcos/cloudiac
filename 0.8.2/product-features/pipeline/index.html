@@ -1,0 +1,1184 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.2.3, mkdocs-material-8.1.3">
+    
+    
+      
+        <title>Pipeline - CloudIaC文档中心</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.edf004c2.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.e6a45f82.min.css">
+        
+      
+    
+    
+    
+      
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+  
+    
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#pipeline" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="CloudIaC文档中心" class="md-header__button md-logo" aria-label="CloudIaC文档中心" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            CloudIaC文档中心
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Pipeline
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="CloudIaC文档中心" class="md-nav__button md-logo" aria-label="CloudIaC文档中心" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    CloudIaC文档中心
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_1" type="checkbox" id="__nav_1" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_1">
+          产品介绍
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="产品介绍" data-md-level="1">
+        <label class="md-nav__title" for="__nav_1">
+          <span class="md-nav__icon md-icon"></span>
+          产品介绍
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-description/product-description/" class="md-nav__link">
+        产品简介
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-description/product-advantage/" class="md-nav__link">
+        核心优势
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-description/product-glossary/" class="md-nav__link">
+        术语解释
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-description/product-architecture/" class="md-nav__link">
+        产品构架
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2">
+          快速入门
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="快速入门" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          快速入门
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quick-start/create-org-project/" class="md-nav__link">
+        创建组织和项目
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quick-start/integrated-vcs/" class="md-nav__link">
+        集成vcs
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quick-start/create-template/" class="md-nav__link">
+        创建云模板
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quick-start/deploy-env/" class="md-nav__link">
+        部署环境
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3">
+          产品功能
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="产品功能" data-md-level="1">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          产品功能
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../organizations/" class="md-nav__link">
+        组织管理
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../projects/" class="md-nav__link">
+        项目管理
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../variables/" class="md-nav__link">
+        变量管理
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../templates/" class="md-nav__link">
+        云模板管理
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../envs/" class="md-nav__link">
+        环境管理
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../compliance/" class="md-nav__link">
+        安全合规
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Pipeline
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Pipeline
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline_1" class="md-nav__link">
+    如何使用 Pipeline
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline_2" class="md-nav__link">
+    Pipeline 标准流程模板
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline_3" class="md-nav__link">
+    Pipeline 的任务类型和步骤
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command" class="md-nav__link">
+    Command 步骤类型
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline_4" class="md-nav__link">
+    Pipeline 回调
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline_5" class="md-nav__link">
+    完整的自定义 Pipeline 示例
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../drift-scan/" class="md-nav__link">
+        漂移检测
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../resource-account/" class="md-nav__link">
+        资源帐号
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vcs/" class="md-nav__link">
+        VCS管理
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../keys/" class="md-nav__link">
+        密钥管理
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notice/" class="md-nav__link">
+        事件通知
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-role/" class="md-nav__link">
+        用户角色
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4">
+          产品部署
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="产品部署" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          产品部署
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-deploy/container/" class="md-nav__link">
+        容器化部署
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../product-deploy/host/" class="md-nav__link">
+        手动部署
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5" type="checkbox" id="__nav_5" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_5">
+          常见问题
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="常见问题" data-md-level="1">
+        <label class="md-nav__title" for="__nav_5">
+          <span class="md-nav__icon md-icon"></span>
+          常见问题
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../answer-questions/" class="md-nav__link">
+        常见问题
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" type="checkbox" id="__nav_6" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_6">
+          API文档
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="API文档" data-md-level="1">
+        <label class="md-nav__title" for="__nav_6">
+          <span class="md-nav__icon md-icon"></span>
+          API文档
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api-docs/" class="md-nav__link">
+        API简介
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/" class="md-nav__link">
+        Releases
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline_1" class="md-nav__link">
+    如何使用 Pipeline
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline_2" class="md-nav__link">
+    Pipeline 标准流程模板
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline_3" class="md-nav__link">
+    Pipeline 的任务类型和步骤
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command" class="md-nav__link">
+    Command 步骤类型
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline_4" class="md-nav__link">
+    Pipeline 回调
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline_5" class="md-nav__link">
+    完整的自定义 Pipeline 示例
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+
+<h1 id="pipeline">Pipeline</h1>
+<p>CloudIaC 支持 Pipeline，将环境的 Plan、部署、销毁任务拆分为多个步骤，默认的我们为所有任务类型定义了标准步骤流程，用户可以自定义 pipeline，来增加步骤、调整步骤执行顺序等。</p>
+<p>同时在前端，任务也是分步骤展示： <img alt="img" src="https://cloudiac.readthedocs.io/zh/latest/resources/pipeline-steps-1.png" /></p>
+<h2 id="pipeline_1">如何使用 Pipeline</h2>
+<p>自定义 Pipeline 通过在云模板代码库中增加 pipeline 文件实现，文件名为 <code>.cloudiac-pipeline.yml</code>。</p>
+<p>文件查找逻辑如下:</p>
+<ol>
+<li>如果云模板设置了工作目录，则在工作目录下查找 <code>.cloudiac-pipeline.yml</code>，存在则使用</li>
+<li>如果工作目录不存在则在代码库根目录下查找 <code>.cloudiac-pipeline.yml</code>，存在则使用</li>
+<li>否则使用默认的 pipeline 标准流程模板</li>
+</ol>
+<h2 id="pipeline_2">Pipeline 标准流程模板</h2>
+<p>Pipeline 使用 yaml 格式定义，标准的流程模板如下:</p>
+<pre><code class="language-yaml">version: 0.3    # pipeline 格式版本号，为了保证多版本的兼容性
+
+# plan 任务
+plan:
+  steps:    # 任务的步骤
+    - type: checkout    # 步骤类型
+      name: Checkout Code   # 步骤的展示名称，未提供名称则展示为步骤类型
+
+    - type: terraformInit
+      name: Terraform Init
+
+    - type: opaScan
+      name: OPA Scan
+
+    - type: terraformPlan
+      name: Terraform Plan
+
+apply:
+  steps:
+    - type: checkout
+      name: Checkout Code
+
+    - type: terraformInit
+      name: Terraform Init
+
+    - type: opaScan
+      name: OPA Scan
+
+    - type: terraformPlan
+      name: Terraform Plan
+
+    - type: terraformApply
+      name: Terraform Apply
+
+    - type: ansiblePlay
+      name: Run playbook
+
+destroy:
+  steps:
+    - type: checkout
+      name: Checkout Code
+
+    - type: terraformInit
+      name: Terraform Init
+
+    - type: terraformPlan
+      name: Terraform Plan
+      args: 
+        - &quot;-destroy&quot;
+
+    - type: terraformDestroy
+      name: Terraform Destroy
+</code></pre>
+<h2 id="pipeline_3">Pipeline 的任务类型和步骤</h2>
+<p>从标准 pipeline 模板中可以看到，CloudIaC 支持对 plan、apply、destroy 三种任务进行自定义，分别对应环境的 Plan、部署任务、销毁任务。</p>
+<p>自定义 pipeline 时可以只对指定的任务类型做定义，未定义的任务类型会使用标准 pipeline 流程步骤。</p>
+<p>每一个任务类型都可以定义各自的步骤列表，CloudIaC 支持的步骤列表如下:</p>
+<table>
+<thead>
+<tr>
+<th>步骤类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>checkout</td>
+<td>代码检出</td>
+</tr>
+<tr>
+<td>terraformInit</td>
+<td>terraform init</td>
+</tr>
+<tr>
+<td>terraformPlan</td>
+<td>terraform plan</td>
+</tr>
+<tr>
+<td>terraformApply</td>
+<td>terraform apply</td>
+</tr>
+<tr>
+<td>terraformDestroy</td>
+<td>terraform destroy</td>
+</tr>
+<tr>
+<td>ansiblePlay</td>
+<td>ansible-playbook</td>
+</tr>
+<tr>
+<td>opaScan</td>
+<td>OPA 策略扫描</td>
+</tr>
+<tr>
+<td>regoParse</td>
+<td>解析资源属性为 rego input</td>
+</tr>
+<tr>
+<td>command</td>
+<td>执行自定义命令</td>
+</tr>
+</tbody>
+</table>
+<p>同时步骤还支持 args 参数，terraform 和 ansible 相关步骤类型的 args 会以命令行参数的形式传递给执行的命令，如 terraformPlan 步骤传入 "-destroy" 参数用于生成 terraform destroy，command 步骤的 args 参数表示需要执行的 shell 命令。</p>
+<h2 id="command">Command 步骤类型</h2>
+<p>command 步骤允许您执行任意 shell 命令，基于 command 命令您可以实现功能强大的自定义流程。</p>
+<p>一些 command 命令使用场景示例:</p>
+<pre><code class="language-yaml">apply:
+  steps:
+    - name: Instal amazon.aws
+      type: command
+      args: 
+        - yum install -y python2-pip
+        - pip install botocore==1.21.41 boto3==1.18.41
+        - ansible-galaxy collection install amazon.aws
+
+    - name: Download alicloud provider
+      type: command
+      args: 
+        - &quot;curl -Ls https://github.com/aliyun/terraform-provider-alicloud/releases/download/v1.126.0/terraform-provider-alicloud_1.126.0_linux_amd64.zip &gt;/usr/share/terraform/plugins/registry.terraform.io/aliyun/alicloud/terraform-provider-alicloud_1.126.0_linux_amd64.zip&quot;
+
+    - name: Trigger workflow
+      type: command
+      args: 
+        - &quot;curl -d token=${WORKFLOW_TOKEN} https://workflow.example.com/step/${WORKFLOW_STEPID}/start&quot;
+</code></pre>
+<ul>
+<li>为避免与 yaml 格式特殊字符冲突，args 参数建议使用双引号包含</li>
+<li>CloudIaC 的任务步骤都是在容器中执行，不会影响宿主系统</li>
+</ul>
+<h2 id="pipeline_4">Pipeline 回调</h2>
+<p>除了给任务定义步骤之后 CloudIaC 还支持定义回调步骤，回调步骤基于任务的运行状态选择性执行。目前支持的回调类型有 <code>onSuccces</code> 和 <code>onFail</code>，onSuccess 步骤在任务所有步骤执行成功时回调，onFail 步骤在任务任意步骤执行失败时回调。</p>
+<p>回调使用示例:</p>
+<pre><code class="language-yaml">apply:
+  onSuccess:
+    name: 任务成功
+    type: command
+    args: 
+      - echo &quot;Task successful&quot;
+      - test &quot;$CLOUDIAC_ENV_STATUS&quot; = &quot;inactive&quot; &amp;&amp; echo &quot;Environment created&quot;
+      - test &quot;$CLOUDIAC_ENV_STATUS&quot; = &quot;failed&quot; &amp;&amp; echo &quot;Environment recovered&quot;
+
+  onFail:
+    name: 任务失败
+    type: command
+    args: 
+      - echo &quot;Task failed&quot;
+
+  steps: [] # 流程步骤省略
+</code></pre>
+<p>在 command 步骤中可以引用环境变量的值，通过判断变量值来执行不同的操作。如示例中基于环境在任务启动时的状态来判断是创建环境还是恢复失败状态的环境。</p>
+<p>CLOUDIAC_ENV_STATUS 为任务启动时平台自动导出的环境变量，完整的导出环境变量列表见文档: <a href="https://cloudiac.readthedocs.io/zh/latest/intra/variable/">变量</a></p>
+<p>回调步骤总是在流程的最后展示，流程步骤展示效果: <img alt="img" src="https://cloudiac.readthedocs.io/zh/latest/resources/pipeline-steps-2.png" /></p>
+<h2 id="pipeline_5">完整的自定义 Pipeline 示例</h2>
+<p>一个完整的自定义 pipeline 示例：</p>
+<pre><code class="language-yaml">--- 
+version: 0.3
+
+plan:
+  steps: 
+    - type: checkout
+      name: &quot;Checkout code&quot;
+
+    - type: terraformInit
+      name: &quot;Terraform Init&quot;
+
+    - type: opaScan
+      name: OPA Scan
+
+    - type: terraformPlan
+      name: &quot;Terraform Plan&quot;
+
+
+apply: 
+  onFail: 
+    type: command
+    args: 
+      - echo &quot;Job failed&quot;
+
+  onSuccess: 
+    type: command
+    args: 
+      - echo &quot;Job successful&quot;
+
+  steps: 
+    - type: command
+      args: 
+        - &quot;echo \&quot;get somethings\&quot;&quot;
+        - &quot;bash script.sh&quot;
+        - &quot;curl 127.0.0.1/api/action&quot;
+
+    - type: checkout
+      name: &quot;Checkout code&quot;
+
+    - type: terraformInit
+      name: &quot;Terraform Init&quot;
+
+    - type: opaScan
+      name: OPA Scan
+
+    - type: terraformPlan
+      name: &quot;Terraform Plan&quot;
+
+    - type: terraformApply
+      name: &quot;Terraform Apply&quot;
+
+    - type: ansiblePlay
+      name: &quot;Run playbook&quot;
+
+
+
+destroy: 
+  steps: 
+    - type: checkout
+      name: &quot;Checkout code&quot;
+
+    - type: terraformInit
+      name: &quot;Terraform Init&quot;
+
+    - type: terraformPlan
+      name: &quot;Terraform Plan&quot;
+      args: 
+        - &quot;-destroy&quot;
+
+    - type: terraformDestroy
+      name: &quot;Terraform Destroy&quot;
+
+    - type: command
+      name: &quot;Say Bye&quot;
+      args: 
+        - echo &quot;Bye!&quot;
+</code></pre>
+
+              
+            </article>
+          </div>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    <nav class="md-footer__inner md-grid" aria-label="Footer">
+      
+        
+        <a href="../compliance/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 安全合规" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              安全合规
+            </div>
+          </div>
+        </a>
+      
+      
+        
+        <a href="../drift-scan/" class="md-footer__link md-footer__link--next" aria-label="Next: 漂移检测" rel="next">
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              漂移检测
+            </div>
+          </div>
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+          </div>
+        </a>
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../assets/javascripts/workers/search.0bbba5b5.min.js"}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.e1a181d9.min.js"></script>
+      
+    
+  </body>
+</html>
