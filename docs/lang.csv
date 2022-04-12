@@ -137,3 +137,4 @@
 31710,LdapConnectFailed,ldap 服务器连接 失败,ldap servers connect failed
 31720,LdapNotAllowUpdate,ldap 账号不支持修改,Ldap account cannot be modified
 314410,InvalidVarGroup,无效资源账号,invalid resource account
+30823,TemplateNotBind,云模板未绑定当前项目,template is not bound to the project
