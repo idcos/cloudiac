@@ -7,6 +7,8 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/utils"
 	"fmt"
+	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -253,6 +255,18 @@ func (git *gitlabRepoIface) CreatePrComment(prId int, comment string) error {
 		return err
 	}
 	return nil
+}
+
+func (git *gitlabRepoIface) GetFullFilePath(address, filePath, repoRevision string) string {
+	u, _ := url.Parse(address)
+	u.Path = path.Join(u.Path, git.Project.PathWithNamespace, "-/blob", repoRevision, filePath)
+	return u.String()
+}
+
+func (git *gitlabRepoIface) GetCommitFullPath(address, commitId string) string {
+	u, _ := url.Parse(address)
+	u.Path = path.Join(u.Path, git.Project.PathWithNamespace, "commit", commitId)
+	return u.String()
 }
 
 func GetGitConn(gitlabToken, gitlabUrl string) (*gitlab.Client, e.Error) {

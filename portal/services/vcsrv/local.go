@@ -276,3 +276,11 @@ func (l *LocalRepo) CreatePrComment(prId int, comment string) error {
 
 	return nil
 }
+
+func (l *LocalRepo) GetFullFilePath(address, filePath, repoRevision string) string {
+	return ""
+}
+
+func (l *LocalRepo) GetCommitFullPath(address, commitId string) string {
+	return ""
+}

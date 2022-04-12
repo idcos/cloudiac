@@ -319,3 +319,27 @@ func GetVcsRepoFile(c *ctx.ServiceContext, form *forms.GetVcsRepoFileForm) (inte
 	res := gin.H{"content": string(b)}
 	return res, nil
 }
+
+func GetVcsFullFilePath(c *ctx.ServiceContext, form *forms.GetFileFullPathForm) (interface{}, e.Error) {
+	vcs, err := checkOrgVcsAuth(c, form.Id)
+	if err != nil {
+		return nil, err
+	}
+	vcsService, er := vcsrv.GetVcsInstance(vcs)
+	if er != nil {
+		return nil, e.New(e.VcsError, er)
+	}
+	repo, er := vcsService.GetRepo(form.RepoId)
+	if er != nil {
+		return nil, e.New(e.VcsError, er)
+	}
+	vcs, err = services.GetVcsById(c.DB(), form.Id)
+	if err != nil {
+		return nil, err
+	}
+	if form.CommitId != "" {
+		return repo.GetCommitFullPath(vcs.Address, form.CommitId), nil
+	}
+
+	return repo.GetFullFilePath(vcs.Address, form.Path, form.RepoRevision), nil
+}

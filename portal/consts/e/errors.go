@@ -150,6 +150,7 @@ const (
 	EnvLockFailedTaskActive = 30817
 	EnvTagNumLimited        = 30821
 	EnvTagLengthLimited     = 30822
+	TemplateNotBind         = 30823
 
 	//// task 309
 	TaskAlreadyExists     = 30910

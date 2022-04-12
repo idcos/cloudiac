@@ -63,3 +63,12 @@ type GetVcsRepoFileForm struct {
 	FileName string    `json:"fileName" form:"fileName" binding:"required,max=255"`
 	Workdir  string    `json:"workdir" form:"workdir" binding:"max=255"`
 }
+
+type GetFileFullPathForm struct {
+	BaseForm
+	Id           models.Id `uri:"id" json:"id" binding:"required,max=32" swaggerignore:"true"`
+	RepoId       string    `form:"repoId" json:"repoId" binding:"required,max=255"`
+	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required,max=64"`
+	Path         string    `json:"path" form:"path"` // 文件路径 如workdir/test.tfvars
+	CommitId     string    `json:"commitId" form:"commitId"`
+}

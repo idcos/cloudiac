@@ -157,13 +157,21 @@ func (Env) DeployCheck(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param envId path string true "环境ID"
+// @Param data body forms.DestroyEnvForm true "销毁参数"
 // @router /envs/{envId}/destroy [post]
 // @Success 200 {object} ctx.JSONResult{result=models.EnvDetail}
 func (Env) Destroy(c *ctx.GinRequest) {
-	form := forms.DeployEnvForm{}
-	form.Id = models.Id(c.Param("id"))
-	form.TaskType = models.TaskTypeDestroy
-	c.JSONResult(apps.EnvDeploy(c.Service(), &form))
+	form := forms.DestroyEnvForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+
+	deployForm := forms.DeployEnvForm{
+		Id:       form.Id,
+		TaskType: models.TaskTypeDestroy,
+		Source:   form.Source,
+	}
+	c.JSONResult(apps.EnvDeploy(c.Service(), &deployForm))
 }
 
 // SearchResources 获取环境资源列表
