@@ -531,33 +531,6 @@ func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (inte
 	}, nil
 }
 
-func TemplateDeployCheck(c *ctx.ServiceContext, form *forms.TemplateChecksForm) e.Error {
-	if form.Workdir != "" {
-		// 检查工作目录下.tf 文件是否存在
-		searchForm := &forms.RepoFileSearchForm{
-			RepoId:       form.RepoId,
-			RepoRevision: form.RepoRevision,
-			VcsId:        form.VcsId,
-			Workdir:      form.Workdir,
-		}
-		results, err := VcsRepoFileSearch(c, searchForm, "", consts.TfFileMatch)
-		if err != nil {
-			return err
-		}
-		if len(results) == 0 {
-			return e.New(e.TemplateWorkdirError, fmt.Errorf("no '%s' files", consts.TfFileMatch))
-		}
-	}
-	err, checkResult := CheckTemplateOrEnvConfig(c, form.TfVarsFile, form.Playbook, form.RepoId, form.RepoRevision, form.Workdir, form.VcsId)
-	if err != nil {
-		return err
-	}
-	if checkResult.Playbook.Error != "" || checkResult.TfVars.Error != "" {
-		return e.New(e.BadParam)
-	}
-	return nil
-}
-
 func CheckTemplateOrEnvConfig(c *ctx.ServiceContext, tfVarsFile, playbook, repoId, reporevision, workdir string, vcsId models.Id) (e.Error, TplCheckResult) {
 	checkResult := TplCheckResult{}
 	if tfVarsFile != "" {
