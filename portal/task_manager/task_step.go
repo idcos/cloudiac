@@ -34,6 +34,8 @@ func (m *TaskManager) runTaskStepsDoneActions(ctx context.Context, taskId models
 	// 执行 callback 步骤
 	m.taskStepDoneCallback(ctx, task, currStep, *runTaskReq)
 
+	// TODO applied task will not collect state
+
 	if task.IsEffectTask() && !currStep.IsRejected() {
 		// 执行信息采集步骤
 		logger.Infof("run task collect step")
