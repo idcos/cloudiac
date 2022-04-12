@@ -204,7 +204,7 @@ func (Vcs) GetVcsRepoFileContent(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param vcsId path string true "vcs仓库ID"
 // @Param form query forms.GetFileFullPathForm true "parameter"
-// @Router /vcs/{vcsId}/file/full_path [get]
+// @Router /vcs/{vcsId}/repos/url [get]
 // @Success 200 {object} ctx.JSONResult{result=string}
 func (Vcs) GetFileFullPath(c *ctx.GinRequest) {
 	form := forms.GetFileFullPathForm{}
