@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -356,6 +357,18 @@ func (gitea *giteaRepoIface) CreatePrComment(prId int, comment string) error {
 		return e.New(e.BadRequest, err)
 	}
 	return nil
+}
+
+func (gitea *giteaRepoIface) GetFullFilePath(address, filePath, repoRevision string) string {
+	u, _ := url.Parse(address)
+	u.Path = path.Join(u.Path, gitea.repository.FullName, "src/branch", repoRevision, filePath)
+	return u.String()
+}
+
+func (gitea *giteaRepoIface) GetCommitFullPath(address, commitId string) string {
+	u, _ := url.Parse(address)
+	u.Path = path.Join(u.Path, gitea.repository.FullName, "commit", commitId)
+	return u.String()
 }
 
 //giteeRequest

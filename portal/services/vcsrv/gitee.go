@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
 	"time"
 )
@@ -358,6 +359,18 @@ func (gitee *giteeRepoIface) CreatePrComment(prId int, comment string) error {
 		return e.New(e.BadRequest, err)
 	}
 	return nil
+}
+
+func (gitee *giteeRepoIface) GetFullFilePath(address, filePath, repoRevision string) string {
+	u, _ := url.Parse(address)
+	u.Path = path.Join(u.Path, gitee.repository.FullName, "blob", repoRevision, filePath)
+	return u.String()
+}
+
+func (gitee *giteeRepoIface) GetCommitFullPath(address, commitId string) string {
+	u, _ := url.Parse(address)
+	u.Path = path.Join(u.Path, gitee.repository.FullName, "commit", commitId)
+	return u.String()
 }
 
 //giteeRequest

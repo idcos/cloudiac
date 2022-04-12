@@ -193,6 +193,7 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/templates/import", ac(), w(handlers.TemplateImport))
 	g.GET("/vcs/:id/repos/tfvars", ac(), w(handlers.TemplateTfvarsSearch))
 	g.GET("/vcs/:id/repos/playbook", ac(), w(handlers.TemplatePlaybookSearch))
+	g.GET("/vcs/:id/file/full_path", ac(), w(handlers.Vcs{}.GetFileFullPath))
 	g.GET("/vcs/:id/file", ac(), w(handlers.Vcs{}.GetVcsRepoFileContent))
 	ctrl.Register(g.Group("notifications", ac()), &handlers.Notification{})
 
