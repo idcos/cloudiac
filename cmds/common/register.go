@@ -13,10 +13,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	IacPortalLockKey = "iac-portal-lock"
-)
-
 func ServiceRegister(serviceName string) error {
 	conf := configs.Get()
 	logger := logs.Get()
@@ -61,17 +57,17 @@ func start(isBoot bool, serviceName string) {
 	ctx := context.Background()
 	defer ctx.Done()
 
-	lg.Infof("acquire iac portal lock ...")
+	lg.Infof("acquire %s lock ...", serviceName)
 	var err error
 	var lockLostCh = make(<-chan struct{})
 	for {
-		lockLostCh, err = acquireLock(ctx)
+		lockLostCh, err = acquireLock(ctx, serviceName)
 		if err == nil {
 			break
 		}
 
 		// 正常情况下 acquireLock 会阻塞直到成功获取锁，如果报错了就是出现了异常(可能是连接问题)
-		lg.Errorf("acquire iac portal lock failed: %v", err)
+		lg.Errorf("acquire %s lock failed: %v", serviceName, err)
 		time.Sleep(time.Second * 10)
 	}
 
@@ -79,7 +75,7 @@ func start(isBoot bool, serviceName string) {
 		// 注册服务
 		err = ServiceRegister(serviceName)
 		if err != nil {
-			lg.Errorf("iac portal service register failed: %v", err)
+			lg.Errorf("%s service register failed: %v", serviceName, err)
 		}
 	}
 
@@ -88,8 +84,8 @@ func start(isBoot bool, serviceName string) {
 	lg.Warnf("disconnected from consul")
 }
 
-func acquireLock(ctx context.Context) (<-chan struct{}, error) {
-	locker, err := consul.GetLocker(IacPortalLockKey, []byte(IacPortalLockKey), configs.Get().Consul.Address)
+func acquireLock(ctx context.Context, serviceName string) (<-chan struct{}, error) {
+	locker, err := consul.GetLocker(serviceName+"-lock", []byte(serviceName), configs.Get().Consul.Address)
 	if err != nil {
 		return nil, errors.Wrap(err, "get locker")
 	}
