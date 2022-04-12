@@ -157,7 +157,11 @@ func CloneNewDriftTask(tx *db.Session, src models.Task, env *models.Env) (*model
 	//task.KeyId = env.KeyId
 	task.Source = taskSource
 
-	task.RunnerId, er = GetAvailableRunnerId(env.RunnerId, env.RunnerTags)
+	runnerTags := make([]string, 0)
+	if env.RunnerTags != "" {
+		runnerTags = strings.Split(env.RunnerTags, ",")
+	}
+	task.RunnerId, er = GetAvailableRunnerId(env.RunnerId, runnerTags)
 	if er != nil {
 		return nil, er
 	}
@@ -553,17 +557,27 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 		TaskStatusChangeSendMessage(task, status)
 	}
 
-	if task.Exited() {
-		go taskStatusExitedCall(dbSess, task, status)
-	}
+	defer func() {
+		if task.Exited() {
+			go taskStatusExitedCall(dbSess, task, status)
+		}
+	}()
 
 	if !skipUpdateEnv {
 		step, er := GetTaskStep(dbSess, task.Id, task.CurrStep)
 		if er != nil {
+			logs.Get().WithField("currStep", task.CurrStep).
+				WithField("taskId", task.Id).Errorf("get task step error: %s", er)
 			return e.AutoNew(er, e.DBError)
 		}
-		return ChangeEnvStatusWithTaskAndStep(dbSess, task.EnvId, task, step)
+
+		if err := ChangeEnvStatusWithTaskAndStep(dbSess, task.EnvId, task, step); err != nil {
+			logs.Get().WithField("envId", task.EnvId).
+				WithField("taskId", task.Id).Errorf("change env to status error: %s", err)
+			return err
+		}
 	}
+
 	return nil
 }
 
@@ -1352,8 +1366,13 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 		logs.Get().Errorf("kafka send error, get resource data err: %v", err)
 		return
 	}
+	env, err := GetEnvById(session, task.EnvId)
+	if err != nil {
+		logs.Get().Errorf("kafka send error, query env status err: %v", err)
+		return
+	}
 	k := kafka.Get()
-	message := k.GenerateKafkaContent(task, taskStatus, resources)
+	message := k.GenerateKafkaContent(task, taskStatus, env.Status, resources)
 	if err := k.ConnAndSend(message); err != nil {
 		logs.Get().Errorf("kafka send error: %v", err)
 		return
