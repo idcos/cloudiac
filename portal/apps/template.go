@@ -531,27 +531,6 @@ func TemplateChecks(c *ctx.ServiceContext, form *forms.TemplateChecksForm) (inte
 	}, nil
 }
 
-//TemplateDeployCheck 只检测选择的目录下template是否合法
-func TemplateDeployCheck(c *ctx.ServiceContext, form *forms.TemplateChecksForm) e.Error {
-	// 检查工作目录下.tf 文件是否存在
-	if form.Workdir != "" {
-		searchForm := &forms.RepoFileSearchForm{
-			RepoId:       form.RepoId,
-			RepoRevision: form.RepoRevision,
-			VcsId:        form.VcsId,
-			Workdir:      form.Workdir,
-		}
-		results, err := VcsRepoFileSearch(c, searchForm, "", consts.TfFileMatch)
-		if err != nil {
-			return err
-		}
-		if len(results) == 0 {
-			return e.New(e.TemplateWorkdirError, fmt.Errorf("no '%s' files", consts.TfFileMatch))
-		}
-	}
-	return nil
-}
-
 func CheckTemplateOrEnvConfig(c *ctx.ServiceContext, tfVarsFile, playbook, repoId, reporevision, workdir string, vcsId models.Id) (e.Error, TplCheckResult) {
 	checkResult := TplCheckResult{}
 	if tfVarsFile != "" {

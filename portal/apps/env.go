@@ -902,18 +902,6 @@ func EnvDeployCheck(c *ctx.ServiceContext, envId models.Id) (interface{}, e.Erro
 	if checkErr != nil {
 		return nil, checkErr
 	}
-	//检测云模板是否合法
-	if err = TemplateDeployCheck(c, &forms.TemplateChecksForm{
-		Name:         tpl.Name,
-		RepoId:       tpl.RepoId,
-		VcsId:        tpl.VcsId,
-		Workdir:      env.Workdir,
-		TfVarsFile:   env.TfVarsFile,
-		Playbook:     env.Playbook,
-		RepoRevision: env.Revision,
-	}); err != nil {
-		return nil, err
-	}
 	//vcs 检测(是否禁用，token是否有效)
 	vcs, err := services.GetVcsById(c.DB(), tpl.VcsId)
 	if err != nil {
