@@ -1,6 +1,6 @@
 
 <!doctype html>
-<html lang="en" class="no-js">
+<html lang="zh" class="no-js">
   <head>
     
       <meta charset="utf-8">
@@ -8,7 +8,7 @@
       
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../assets/svg/icon.svg">
       <meta name="generator" content="mkdocs-1.2.3, mkdocs-material-8.1.3">
     
     
@@ -22,6 +22,10 @@
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.e6a45f82.min.css">
         
+          
+          
+          <meta name="theme-color" content="#7e56c2">
+        
       
     
     
@@ -33,6 +37,10 @@
         <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
       
     
+    
+      <link rel="stylesheet" href="../assets/css/custom.css">
+    
+      <link rel="stylesheet" href="../assets/css/simpleLightbox.min.css">
     
     <script>__md_scope=new URL("..",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -48,7 +56,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="deep-purple" data-md-color-accent="">
   
     
     
@@ -59,7 +67,7 @@
       
         
         <a href="#releases" class="md-skip">
-          Skip to content
+          跳转至
         </a>
       
     </div>
@@ -67,15 +75,20 @@
       
     </div>
     
+      <div data-md-component="outdated" hidden>
+        <aside class="md-banner md-banner--warning">
+          
+        </aside>
+      </div>
+    
     
       
 
 <header class="md-header" data-md-component="header">
-  <nav class="md-header__inner md-grid" aria-label="Header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
     <a href=".." title="CloudIaC文档中心" class="md-header__button md-logo" aria-label="CloudIaC文档中心" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+  <img src="../assets/svg/icon.svg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -100,6 +113,51 @@
     
     
     
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" aria-label="清空当前内容" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/idcos/cloudiac/" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    IDCOS/CloudIaC
+  </div>
+</a>
+      </div>
     
   </nav>
   
@@ -123,16 +181,27 @@
                     
 
 
-<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+<nav class="md-nav md-nav--primary" aria-label="导航栏" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
     <a href=".." title="CloudIaC文档中心" class="md-nav__button md-logo" aria-label="CloudIaC文档中心" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+  <img src="../assets/svg/icon.svg" alt="logo">
 
     </a>
     CloudIaC文档中心
   </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/idcos/cloudiac/" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    IDCOS/CloudIaC
+  </div>
+</a>
+    </div>
   
   <ul class="md-nav__list" data-md-scrollfix>
     
@@ -718,7 +787,7 @@
       
         
 
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+<nav class="md-nav md-nav--secondary" aria-label="目录">
   
   
   
@@ -727,47 +796,47 @@
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
-      Table of contents
+      目录
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#v081-20211214" class="md-nav__link">
+  <a href="#v081_20211214" class="md-nav__link">
     v0.8.1 20211214
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#v080-20211210" class="md-nav__link">
+  <a href="#v080_20211210" class="md-nav__link">
     v0.8.0 20211210
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#v071-20211116" class="md-nav__link">
+  <a href="#v071_20211116" class="md-nav__link">
     v0.7.1 20211116
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#v070-20211105" class="md-nav__link">
+  <a href="#v070_20211105" class="md-nav__link">
     v0.7.0 20211105
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#v060-20210928" class="md-nav__link">
+  <a href="#v060_20210928" class="md-nav__link">
     v0.6.0 20210928
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#v050-20210728" class="md-nav__link">
+  <a href="#v050_20210728" class="md-nav__link">
     v0.5.0 20210728
   </a>
   
@@ -777,6 +846,21 @@
   
 </nav>
       
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://space.bilibili.com/2138433328/channel/seriesdetail?sid=1908688" class="md-nav__link">
+        视频介绍
+      </a>
     </li>
   
 
@@ -794,7 +878,7 @@
                   <div class="md-sidebar__inner">
                     
 
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+<nav class="md-nav md-nav--secondary" aria-label="目录">
   
   
   
@@ -803,47 +887,47 @@
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
-      Table of contents
+      目录
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#v081-20211214" class="md-nav__link">
+  <a href="#v081_20211214" class="md-nav__link">
     v0.8.1 20211214
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#v080-20211210" class="md-nav__link">
+  <a href="#v080_20211210" class="md-nav__link">
     v0.8.0 20211210
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#v071-20211116" class="md-nav__link">
+  <a href="#v071_20211116" class="md-nav__link">
     v0.7.1 20211116
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#v070-20211105" class="md-nav__link">
+  <a href="#v070_20211105" class="md-nav__link">
     v0.7.0 20211105
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#v060-20210928" class="md-nav__link">
+  <a href="#v060_20210928" class="md-nav__link">
     v0.6.0 20210928
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#v050-20210728" class="md-nav__link">
+  <a href="#v050_20210728" class="md-nav__link">
     v0.5.0 20210728
   </a>
   
@@ -861,10 +945,14 @@
             <article class="md-content__inner md-typeset">
               
                 
+<a href="https://github.com/idcos/cloudiac/edit/master/docs/mkdocs/releases.md" title="编辑此页" class="md-content__button md-icon">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+</a>
 
-<h1 id="releases">Releases</h1>
+
+<h1 id="releases">Releases<a class="headerlink" href="#releases" title="Permanent link">#</a></h1>
 <hr />
-<h2 id="v081-20211214">v0.8.1 20211214</h2>
+<h2 id="v081_20211214">v0.8.1 20211214<a class="headerlink" href="#v081_20211214" title="Permanent link">#</a></h2>
 <p><strong>Fixes</strong></p>
 <ul>
 <li>修复新组织中创建环境时接口报错的问题</li>
@@ -872,7 +960,7 @@
 <li>修复执行任务容器异常退出会导致任务一直处于执行中状态且环境的资源一直累积的问题</li>
 </ul>
 <hr />
-<h2 id="v080-20211210">v0.8.0 20211210</h2>
+<h2 id="v080_20211210">v0.8.0 20211210<a class="headerlink" href="#v080_20211210" title="Permanent link">#</a></h2>
 <p><strong>Enhancements</strong></p>
 <ul>
 <li>优化环境列表和环境详情的展示效果</li>
@@ -893,7 +981,7 @@
 <li>修复编辑云模板时仓库名称可能显示为 id 的问题</li>
 </ul>
 <hr />
-<h2 id="v071-20211116">v0.7.1 20211116</h2>
+<h2 id="v071_20211116">v0.7.1 20211116<a class="headerlink" href="#v071_20211116" title="Permanent link">#</a></h2>
 <p><strong>Features</strong></p>
 <ul>
 <li>新增 runner 的 offline mode</li>
@@ -903,7 +991,7 @@
 <li>修复预置 provider 不生效的问题</li>
 </ul>
 <hr />
-<h2 id="v070-20211105">v0.7.0 20211105</h2>
+<h2 id="v070_20211105">v0.7.0 20211105<a class="headerlink" href="#v070_20211105" title="Permanent link">#</a></h2>
 <p><strong>Enhancements</strong></p>
 <ul>
 <li>优化从组织和项目中移除用户功能</li>
@@ -922,7 +1010,7 @@
 <li>修复设置环境自动触发 plan/apply 功能报错的问题</li>
 </ul>
 <hr />
-<h2 id="v060-20210928">v0.6.0 20210928</h2>
+<h2 id="v060_20210928">v0.6.0 20210928<a class="headerlink" href="#v060_20210928" title="Permanent link">#</a></h2>
 <p><strong>Features</strong></p>
 <ul>
 <li>新增合规检测功能，平台管理员可进行合规策略管理</li>
@@ -940,7 +1028,7 @@
 <li>修复存在活跃环境的云模板在列表中活跃资源数显示为 0 的问题</li>
 </ul>
 <hr />
-<h2 id="v050-20210728">v0.5.0 20210728</h2>
+<h2 id="v050_20210728">v0.5.0 20210728<a class="headerlink" href="#v050_20210728" title="Permanent link">#</a></h2>
 <p><strong>Features</strong></p>
 <ul>
 <li>全新 0.5 版本发布</li>
@@ -955,17 +1043,17 @@
       
         <footer class="md-footer">
   
-    <nav class="md-footer__inner md-grid" aria-label="Footer">
+    <nav class="md-footer__inner md-grid" aria-label="页脚">
       
         
-        <a href="../api-docs/" class="md-footer__link md-footer__link--prev" aria-label="Previous: API简介" rel="prev">
+        <a href="../api-docs/" class="md-footer__link md-footer__link--prev" aria-label="上一页: API简介" rel="prev">
           <div class="md-footer__button md-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
           </div>
           <div class="md-footer__title">
             <div class="md-ellipsis">
               <span class="md-footer__direction">
-                Previous
+                上一页
               </span>
               API简介
             </div>
@@ -995,10 +1083,16 @@
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../assets/javascripts/workers/search.0bbba5b5.min.js"}</script>
+    <script id="__config" type="application/json">{"base": "..", "features": [], "translations": {"clipboard.copy": "\u590d\u5236", "clipboard.copied": "\u5df2\u590d\u5236", "search.config.lang": "ja", "search.config.pipeline": "trimmer, stemmer", "search.config.separator": "[\\uff0c\\u3002]+", "search.placeholder": "\u641c\u7d22", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.term.missing": "\u7f3a\u5c11", "select.version.title": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}, "search": "../assets/javascripts/workers/search.0bbba5b5.min.js", "version": {"provider": "mike", "default": "latest"}}</script>
     
     
       <script src="../assets/javascripts/bundle.e1a181d9.min.js"></script>
+      
+        <script src="../assets/js/jquery.min.js"></script>
+      
+        <script src="../assets/js/simpleLightbox.min.js"></script>
+      
+        <script src="../assets/js/custom.js"></script>
       
     
   </body>
