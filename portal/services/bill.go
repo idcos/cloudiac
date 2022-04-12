@@ -110,7 +110,7 @@ func BuildVgBilling(tx *db.Session, vg models.VariableGroup, lg logs.Logger, bil
 		return
 	}
 
-	// 写入原始账单数据
+	// 账单原始数据入库
 	if err := tx.Insert(&insertDate); err != nil {
 		return
 	}

@@ -25,7 +25,7 @@ type BillProvider interface {
 	// Provider 返回云商名称, 如 aws, alicloud 等
 	Provider() string
 
-	// ParseMonthBill 获取下载账单数据
+	// ParseMonthBill 解析账单数据
 	// param billingCycle 账单采集周期
 	ParseMonthBill(billingCycle string) (map[string]ResourceCost, []string, []models.BillData, error)
 
