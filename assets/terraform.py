@@ -374,6 +374,7 @@ def _execute_shell():
         sys.stderr.write(str(err_ws) + '\n')
         sys.exit(1)
     else:
+        os.putenv("TF_LOG", "")
         tf_command = [TERRAFORM_PATH, 'state', 'pull']
         proc_tf_cmd = Popen(tf_command,
                             cwd=TERRAFORM_DIR,

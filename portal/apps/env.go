@@ -321,7 +321,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		}
 	}()
 
-	runnerId, err := services.GetAvailableRunnerId(form.RunnerId, strings.Join(form.RunnerTags, ","))
+	runnerId, err := services.GetAvailableRunnerId(form.RunnerId, form.RunnerTags)
 	if err != nil {
 		return nil, err
 	}
@@ -382,12 +382,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	}
 
 	// 来源：手动触发、外部调用
-	taskSource := consts.TaskSourceManual
-	taskSourceSys := ""
-	if form.Source != "" || form.Callback != "" {
-		taskSource = consts.TaskSourceApi
-		taskSourceSys = form.Source
-	}
+	taskSource, taskSourceSys := getEnvSource(form.Source)
 
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
@@ -504,6 +499,11 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		return nil, e.New(e.DBError, err)
 	}
 
+	enabledBill, err := services.ProjectEnabledBill(c.DB(), c.ProjectId)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
 	for _, env := range details {
 		env.MergeTaskStatus()
 		PopulateLastTask(c.DB(), env)
@@ -518,7 +518,7 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		env.StepTimeout = env.StepTimeout / 60
 
 		// 是否开启费用采集
-		env.IsBilling = getEnvIsBilling(c.DB(), env, c.OrgId, c.ProjectId)
+		env.IsBilling = enabledBill
 	}
 
 	return page.PageResp{
@@ -842,6 +842,11 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 		return nil, e.New(e.DBError, err)
 	}
 
+	enabledBill, err := services.ProjectEnabledBill(c.DB(), envDetail.ProjectId)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
 	envDetail.MergeTaskStatus()
 	envDetail = PopulateLastTask(c.DB(), envDetail)
 	resp, err := services.GetPolicyRels(c.DB(), form.Id, consts.ScopeEnv)
@@ -863,7 +868,7 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 		envDetail.RunnerTags = []string{}
 	}
 	// 是否开启费用采集
-	envDetail.IsBilling = getEnvIsBilling(c.DB(), envDetail, c.OrgId, c.ProjectId)
+	envDetail.IsBilling = enabledBill
 
 	return envDetail, nil
 }
@@ -883,7 +888,7 @@ func EnvDeployCheck(c *ctx.ServiceContext, envId models.Id) (interface{}, e.Erro
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
-	env, err := services.GetEnvById(c.Tx(), envId)
+	env, err := services.GetEnvById(c.DB(), envId)
 	if err != nil {
 		return nil, err
 	}
@@ -893,34 +898,28 @@ func EnvDeployCheck(c *ctx.ServiceContext, envId models.Id) (interface{}, e.Erro
 	}
 
 	// 云模板检测
-	tpl, err := services.GetTplByEnvId(c.Tx(), envId)
+	tpl, err := services.GetTplByEnvId(c.DB(), envId)
 	if err != nil {
 		return nil, err
 	}
-	if err = TemplateDeployCheck(c, &forms.TemplateChecksForm{
-		Name:         tpl.Name,
-		Workdir:      tpl.Workdir,
-		TfVarsFile:   tpl.TfVarsFile,
-		Playbook:     tpl.Playbook,
-		RepoId:       tpl.RepoId,
-		RepoRevision: tpl.RepoRevision,
-		VcsId:        tpl.VcsId,
-	}); err != nil {
-		return nil, err
+	//检测云模板是否绑定项目
+	_, checkErr := services.GetBindTemplate(c.DB(), c.ProjectId, tpl.Id)
+	if checkErr != nil {
+		return nil, checkErr
 	}
 	//vcs 检测(是否禁用，token是否有效)
-	vcs, err := services.GetVcsById(c.Tx(), tpl.VcsId)
+	vcs, err := services.GetVcsById(c.DB(), tpl.VcsId)
 	if err != nil {
 		return nil, err
 	}
 	if vcs.Status != "enable" {
 		return nil, e.New(e.VcsError, "vcs is disable")
 	}
-	if err := services.VscTokenCheckByID(c.Tx(), vcs.Id, vcs.VcsToken); err != nil {
+	if err := services.VscTokenCheckByID(c.DB(), vcs.Id, vcs.VcsToken); err != nil {
 		return nil, e.New(e.VcsInvalidToken, err)
 	}
 	//环境运行中不允许再手动发布任务
-	tasks, err := services.GetActiveTaskByEnvId(c.Tx(), envId)
+	tasks, err := services.GetActiveTaskByEnvId(c.DB(), envId)
 	if err != nil {
 		return nil, err
 	}
@@ -1130,7 +1129,7 @@ func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env
 		updateVarsForm := forms.UpdateObjectVarsForm{
 			Scope:     consts.ScopeEnv,
 			ObjectId:  env.Id,
-			Variables: form.Variables,
+			Variables: checkDeployVar(form.Variables),
 		}
 		if _, er := updateObjectVars(c, tx, &updateVarsForm); er != nil {
 			return e.AutoNew(er, e.InternalError)
@@ -1199,7 +1198,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	// set env from form
 	setEnvByForm(env, form)
 
-	// set and check autoApproval, destroyAt, cronDrift, TaskType ...
+	// set and check autoApproval, destroyAt, cronDrift, TaskType, variables...
 	err = setAndCheckEnvByForm(c, tx, env, form)
 	if err != nil {
 		return nil, err
@@ -1219,10 +1218,14 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	lg.Debugln("envDeploy -> GetValidVarsAndVgVars finish")
 
 	// 获取实际执行任务的runnerID
-	rId, err := services.GetAvailableRunnerId(env.RunnerId, env.RunnerTags)
+	rId, err := services.GetAvailableRunnerIdByStr(env.RunnerId, env.RunnerTags)
 	if err != nil {
 		return nil, err
 	}
+
+	// 来源：手动触发、外部调用
+	taskSource, taskSourceSys := getEnvSource(form.Source)
+
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
@@ -1239,6 +1242,8 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 			StepTimeout: env.StepTimeout,
 			RunnerId:    rId,
 		},
+		Source:    taskSource,
+		SourceSys: taskSourceSys,
 	})
 
 	if err != nil {
@@ -1567,21 +1572,24 @@ func EnvStat(c *ctx.ServiceContext, form *forms.EnvParam) (interface{}, e.Error)
 	}, nil
 }
 
-func getEnvIsBilling(dbSess *db.Session, env *models.EnvDetail, orgId, projectId models.Id) bool {
-	vgs, err := services.SearchVariableGroupRel(dbSess, map[string]models.Id{
-		consts.ScopeEnv:      env.Id,
-		consts.ScopeTemplate: env.TplId,
-		consts.ScopeProject:  projectId,
-		consts.ScopeOrg:      orgId,
-	}, consts.ScopeEnv)
-	if err != nil {
-		logs.Get().Errorf("get env var group env id: %s, err: %s", env.Id, err)
-		return false
+func checkDeployVar(vars []forms.Variable) []forms.Variable {
+	resp := make([]forms.Variable, 0)
+	for _, v := range vars {
+		if v.Scope != consts.ScopeEnv {
+			continue
+		}
+		resp = append(resp, v)
 	}
-	vgIds := make([]models.Id, len(vgs))
-	for index, v := range vgs {
-		vgIds[index] = v.Id
+
+	return resp
+}
+
+func getEnvSource(source string) (taskSource string, taskSourceSys string) {
+	taskSource = consts.TaskSourceManual
+	taskSourceSys = ""
+	if source != "" {
+		taskSource = consts.TaskSourceApi
+		taskSourceSys = source
 	}
-	// 查询变量组是否开启账单采集，并且项目关联了项目
-	return services.GetVarGroupIsOpenBillCollectByVgIds(dbSess, vgIds, orgId, projectId)
+	return
 }

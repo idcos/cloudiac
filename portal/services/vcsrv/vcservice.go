@@ -102,6 +102,12 @@ type RepoIface interface {
 
 	//CreatePrComment 添加PR评论
 	CreatePrComment(prId int, comment string) error
+
+	// GetVcsFullFilePath 获取文件完整路径
+	GetFullFilePath(address, filePath, repoRevision string) string
+
+	// GetCommitFullPath  获取仓库commit的完整路径
+	GetCommitFullPath(address, commitId string) string
 }
 
 type RepoHook struct {
