@@ -160,15 +160,16 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 	return nil
 }
 
-func getRunnerId(runnerTags []string, runnerId string) (string, e.Error) {
+func getRunnerId(runnerTags string, runnerId string) (string, e.Error) {
 	// 优先使用 id 匹配，兼容之前的方式
 	if runnerId != "" {
 		return runnerId, nil
 	}
 
 	// id不存在，使用tags 匹配
-	if len(runnerTags) > 0 {
-		return services.GetRunnerByTags(runnerTags)
+	runnerTagsList := strings.Split(runnerTags, ",")
+	if runnerTags != "" && len(runnerTagsList) > 0 {
+		return services.GetRunnerByTags(runnerTagsList)
 	}
 
 	// 默认runner
@@ -303,7 +304,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		}
 	}()
 
-	runnerId, err := getRunnerId(form.RunnerTags, form.RunnerId)
+	runnerId, err := getRunnerId(strings.Join(form.RunnerTags, ","), form.RunnerId)
 	if err != nil {
 		return nil, err
 	}
@@ -358,12 +359,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	}
 
 	// 来源：手动触发、外部调用
-	taskSource := consts.TaskSourceManual
-	taskSourceSys := ""
-	if form.Source != "" || form.Callback != "" {
-		taskSource = consts.TaskSourceApi
-		taskSourceSys = form.Source
-	}
+	taskSource, taskSourceSys := getEnvSource(form.Source)
 
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
@@ -1013,12 +1009,15 @@ func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env
 	if err := setAndCheckEnvCron(env, form); err != nil {
 		return err
 	}
+	if form.HasKey("extraData") {
+		env.ExtraData = form.ExtraData
+	}
 
 	if form.HasKey("variables") {
 		updateVarsForm := forms.UpdateObjectVarsForm{
 			Scope:     consts.ScopeEnv,
 			ObjectId:  env.Id,
-			Variables: form.Variables,
+			Variables: checkDeployVar(form.Variables),
 		}
 		if _, er := updateObjectVars(c, tx, &updateVarsForm); er != nil {
 			return e.AutoNew(er, e.InternalError)
@@ -1083,7 +1082,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	// set env from form
 	setEnvByForm(env, form)
 
-	// set and check autoApproval, destroyAt, cronDrift, TaskType ...
+	// set and check autoApproval, destroyAt, cronDrift, TaskType, variables...
 	err = setAndCheckEnvByForm(c, tx, env, form)
 	if err != nil {
 		return nil, err
@@ -1103,10 +1102,14 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	lg.Debugln("envDeploy -> GetValidVarsAndVgVars finish")
 
 	// 获取实际执行任务的runnerID
-	rId, err := getRunnerId(strings.Split(env.RunnerTags, ","), env.RunnerId)
+	rId, err := getRunnerId(env.RunnerTags, env.RunnerId)
 	if err != nil {
 		return nil, err
 	}
+
+	// 来源：手动触发、外部调用
+	taskSource, taskSourceSys := getEnvSource(form.Source)
+
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
@@ -1117,11 +1120,14 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		AutoApprove:     env.AutoApproval,
 		Revision:        env.Revision,
 		StopOnViolation: env.StopOnViolation,
+		ExtraData:       env.ExtraData,
 		BaseTask: models.BaseTask{
 			Type:        form.TaskType,
 			StepTimeout: form.Timeout,
 			RunnerId:    rId,
 		},
+		Source:    taskSource,
+		SourceSys: taskSourceSys,
 	})
 
 	if err != nil {
@@ -1346,4 +1352,26 @@ func EnvUpdateTags(c *ctx.ServiceContext, form *forms.UpdateEnvTagsForm) (resp i
 	} else {
 		return env, nil
 	}
+}
+
+func checkDeployVar(vars []forms.Variable) []forms.Variable {
+	resp := make([]forms.Variable, 0)
+	for _, v := range vars {
+		if v.Scope != consts.ScopeEnv {
+			continue
+		}
+		resp = append(resp, v)
+	}
+
+	return resp
+}
+
+func getEnvSource(source string) (taskSource string, taskSourceSys string) {
+	taskSource = consts.TaskSourceManual
+	taskSourceSys = ""
+	if source != "" {
+		taskSource = consts.TaskSourceApi
+		taskSourceSys = source
+	}
+	return
 }

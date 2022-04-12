@@ -281,12 +281,23 @@ func GetRunnerByTags(tags []string) (string, e.Error) {
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list with tags is null"))
 }
 
-func varNewAppend(resp []forms.Variable, name, value, varType string) []forms.Variable {
+func GetAvailableRunnerId(runnerId string, runnerTags []string) (string, e.Error) {
+	if runnerId != "" {
+		return runnerId, nil
+	}
+	if len(runnerTags) > 0 {
+		return GetRunnerByTags(runnerTags)
+	}
+	return GetDefaultRunner()
+}
+
+func varNewAppend(resp []forms.Variable, name, value, varType string, sensitive bool) []forms.Variable {
 	resp = append(resp, forms.Variable{
-		Scope: consts.ScopeEnv,
-		Type:  varType,
-		Name:  name,
-		Value: value,
+		Scope:     consts.ScopeEnv,
+		Type:      varType,
+		Name:      name,
+		Value:     value,
+		Sensitive: sensitive,
 	})
 	return resp
 }
@@ -301,24 +312,25 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 		isNewVaild := true
 		// 如果vars为空，则需要将sampleVariables所有的变量理解为新增变量
 		if len(vars) == 0 {
-			resp = varNewAppend(resp, v.Name, v.Value, consts.VarTypeEnv)
+			resp = varNewAppend(resp, v.Name, v.Value, consts.VarTypeEnv, v.Sensitive)
 			continue
 		}
 
 		for key, value := range vars {
 			// 如果匹配到了就不在继续匹配
 			if matchVar(v, value) {
+				// 匹配到了，不管值是否相同都不需要新建变量
+				isNewVaild = false
 				if v.Value != value.Value {
-					isNewVaild = false
-					resp = varNewAppend(resp, vars[key].Name, v.Value, vars[key].Type)
+					resp = varNewAppend(resp, vars[key].Name, v.Value, vars[key].Type, v.Sensitive)
 				}
 				break
 			}
 		}
 
 		// 这部分变量是新增的 需要新建
-		if isNewVaild{
-			resp = varNewAppend(resp, v.Name, v.Value, consts.VarTypeEnv)
+		if isNewVaild {
+			resp = varNewAppend(resp, v.Name, v.Value, consts.VarTypeEnv, v.Sensitive)
 		}
 	}
 

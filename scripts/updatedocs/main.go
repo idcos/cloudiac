@@ -193,6 +193,10 @@ const releaseNoteTemplate = `# Releases
 - {{ . }}
 {{ end }}
 {{ end }}
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v{{.Version}}](https://github.com/idcos/cloudiac/releases/tag/v{{.Version}})
+
+
 {{end}}
 `
 
