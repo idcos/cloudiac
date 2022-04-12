@@ -79,6 +79,7 @@ func main() {
 	if err := common.ReRegisterService(opt.ReRegister, iac_common.IacPortalServiceName); err != nil {
 		log.Fatal(err)
 	}
+	go common.CheckAndReConnectConsul(iac_common.IacPortalServiceName)
 
 	// 启动后台 worker
 	go task_manager.Start(configs.Get().Consul.ServiceID)

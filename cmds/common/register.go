@@ -46,17 +46,17 @@ func ReRegisterService(register bool, serviceName string) error {
 
 // 丢失consul连接时，尝试重新连接
 func CheckAndReConnectConsul(serviceName string) {
-	start()
+	// 首次启动获取锁
+	start(true, serviceName)
 
+	// 锁丢失后重新获取锁，获取之后重新注册服务
 	for {
-		start()
+		start(false, serviceName)
 		time.Sleep(time.Second * 10)
 	}
-
-	//ServiceRegister(serviceName)
 }
 
-func start() {
+func start(isBoot bool, serviceName string) {
 	lg := logs.Get().WithField("func", "CheckAndReConnectConsul->start")
 	ctx := context.Background()
 	defer ctx.Done()
@@ -75,8 +75,17 @@ func start() {
 		time.Sleep(time.Second * 10)
 	}
 
+	if !isBoot {
+		// 注册服务
+		err = ServiceRegister(serviceName)
+		if err != nil {
+			lg.Errorf("iac portal service register failed: %v", err)
+		}
+	}
+
 	// 丢失lock时，中止
 	<-lockLostCh
+	lg.Warnf("disconnected from consul")
 }
 
 func acquireLock(ctx context.Context) (<-chan struct{}, error) {
