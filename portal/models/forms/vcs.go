@@ -70,5 +70,5 @@ type GetFileFullPathForm struct {
 	RepoId       string    `form:"repoId" json:"repoId" binding:"required,max=255"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"required,max=64"`
 	Path         string    `json:"path" form:"path"` // 文件路径 如workdir/test.tfvars
-	CommitId     string    `json:"CommitId" form:"commitId"`
+	CommitId     string    `json:"commitId" form:"commitId"`
 }
