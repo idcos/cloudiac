@@ -815,10 +815,6 @@ func waitTaskStepApprove(ctx context.Context, db *db.Session, task *models.Task,
 	if step.MustApproval && !step.IsApproved() {
 		logger.Infof("waitting task step approve")
 		changeStepStatus(models.TaskStepApproving, "", step)
-		err = taskDoneProcessPlan(db, task, true)
-		if err != nil {
-			logger.Errorf("process task plan: %v", err)
-		}
 		if newStep, err = WaitTaskStepApprove(ctx, db, step.TaskId, step.Index); err != nil {
 			if errors.Is(err, context.Canceled) {
 				return nil, err
@@ -902,6 +898,12 @@ func waitTaskStepDone(
 				logger.Errorf("wait task result error: %v", err)
 				changeStepStatus(models.TaskStepFailed, err.Error(), step)
 				return err
+			}
+			if step.Type == common.TaskStepTfPlan && stepResult.Status == models.TaskStepComplete {
+				err = taskDoneProcessPlan(db, task, true)
+				if err != nil {
+					logger.Errorf("process task plan: %v", err)
+				}
 			}
 			// 合规检测步骤不通过，不需要重试，跳出循环
 			if (step.Type == models.TaskStepEnvScan || step.Type == models.TaskStepOpaScan) &&
