@@ -34,7 +34,7 @@ func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{},
 	query := services.QueryTask(c.DB())
 
 	if form.EnvId != "" {
-		query = query.Where("env_id = ? AND is_drift_task != 1 OR  is_drift_task = 1 AND applied = ?",
+		query = query.Where("env_id = ? AND is_drift_task != 1 OR  (is_drift_task = 1 AND applied = ?)",
 			form.EnvId, true)
 	}
 	//根据任务类型查询
