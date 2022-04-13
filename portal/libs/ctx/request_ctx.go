@@ -78,7 +78,7 @@ type JSONResult struct {
 	Message        string            `json:"message" example:"ok"`
 	MessageDetail  string            `json:"message_detail,omitempty" example:"ok"`
 	Result         interface{}       `json:"result,omitempty" swaggertype:"object"`
-	ValidateErrors map[string]string `json:"validateErrors,omitempty"`
+	ValidateErrors map[string]string `json:"validate_errors,omitempty"`
 }
 
 func (c *GinRequest) JSON(status int, msg interface{}, result interface{}) {
@@ -271,59 +271,56 @@ func (c *GinRequest) Bind(form forms.BaseFormer) error {
 }
 
 func setDetailAndValidateErrors(validationError validator.ValidationErrors, trans ut.Translator) (string, map[string]string) {
-	data, _ := json.Marshal(validationError.Translate(trans))
+	var data string
 	validationErrors := make(map[string]string, len(validationError.Translate(trans)))
+	valueArrays := make([]string, 0)
 	for key, value := range validationError.Translate(trans) {
 		newKey := key[strings.Index(key, ".")+1:]
 		validationErrors[newKey] = value
+		valueArrays = append(valueArrays, value)
 	}
-	return string(data), validationErrors
+	data = strings.Join(valueArrays, "\n")
+	return data, validationErrors
 }
 
 func register() (ut.Translator, ut.Translator) {
-	var (
-		uniEn    *ut.UniversalTranslator
-		uniZh    *ut.UniversalTranslator
-		validate *validator.Validate
-	)
-	translatorEn := en.New()
+	f := func(ut ut.Translator, fe validator.FieldError) string {
+		t, _ := ut.T(fe.Tag(), fe.Field(), fe.Param())
+		return t
+	}
+	validate := binding.Validator.Engine().(*validator.Validate)
+	return zhRegisterTranslation(validate, f), enRegisterTranslation(validate, f)
+}
+
+func zhRegisterTranslation(validate *validator.Validate, f func(ut ut.Translator, fe validator.FieldError) string) ut.Translator {
 	translatorZh := zh.New()
-	uniEn = ut.New(translatorEn, translatorEn)
-	uniZh = ut.New(translatorZh, translatorZh)
-	validate = binding.Validator.Engine().(*validator.Validate)
-	tranEn, _ := uniEn.GetTranslator("en")
+	uniZh := ut.New(translatorZh, translatorZh)
 	tranZh, _ := uniZh.GetTranslator("zh")
 	err := zh_translations.RegisterDefaultTranslations(validate, tranZh)
 	if err != nil {
 		panic(err)
 	}
-	err = en_translations.RegisterDefaultTranslations(validate, tranEn)
+	re(validate, tranZh, "required_with", registrationFunc("required_with", "{0}和{1}必须同时存在", false), f)
+	re(validate, tranZh, "required_without", registrationFunc("required_without", "{0}必须存在如果{1}不存在", false), f)
+	re(validate, tranZh, "required_without_all", registrationFunc("required_without_all", "{0}和[{1}]必须存在其中一种", false), f)
+	re(validate, tranZh, "file", registrationFunc("file", "{0}必须为文件路径", false), f)
+	return tranZh
+}
+
+func enRegisterTranslation(validate *validator.Validate, f func(ut ut.Translator, fe validator.FieldError) string) ut.Translator {
+	translatorEn := en.New()
+	uniEn := ut.New(translatorEn, translatorEn)
+	tranEn, _ := uniEn.GetTranslator("en")
+	err := en_translations.RegisterDefaultTranslations(validate, tranEn)
 	if err != nil {
 		panic(err)
 	}
-
-	registerTranslations(validate, tranZh, true)
-	registerTranslations(validate, tranEn, false)
-	return tranZh, tranEn
-}
-func registerTranslations(v *validator.Validate, trans ut.Translator, isZh bool) {
-	f := func(ut ut.Translator, fe validator.FieldError) string {
-		t, _ := ut.T(fe.Tag(), fe.Field(), fe.Param())
-		return t
-	}
-	if isZh {
-		re(v, trans, "required_with", registrationFunc("required_with", "{0}和{1}必须同时提供", false), f)
-		re(v, trans, "required_without", registrationFunc("required_without", "{0}必须提供如果{1}为空", false), f)
-		re(v, trans, "required_without_all", registrationFunc("required_without_all", "提供{0}或[{1}]", false), f)
-		re(v, trans, "file", registrationFunc("file", "{0}必须为文件路径", false), f)
-	} else {
-		re(v, trans, "startswith", registrationFunc("startswith", "{0} must startswith {1}", false), f)
-		re(v, trans, "required_with", registrationFunc("required_with", "{0} and {1} must be also provided", false), f)
-		re(v, trans, "required_without", registrationFunc("required_without", "{0} must be provided if {1} is empty", false), f)
-		re(v, trans, "required_without_all", registrationFunc("required_without_all", "either provide {0} or provide [{1}]", false), f)
-		re(v, trans, "file", registrationFunc("file", "{0} must be a valid file", false), f)
-	}
-
+	re(validate, tranEn, "startswith", registrationFunc("startswith", "{0} must startswith '{1}'", false), f)
+	re(validate, tranEn, "required_with", registrationFunc("required_with", "{0} and {1} must be also provided", false), f)
+	re(validate, tranEn, "required_without", registrationFunc("required_without", "{0} must be provided if {1} is empty", false), f)
+	re(validate, tranEn, "required_without_all", registrationFunc("required_without_all", "either provide {0} or provide [{1}]", false), f)
+	re(validate, tranEn, "file", registrationFunc("file", "{0} must be a valid file", false), f)
+	return tranEn
 }
 func re(v *validator.Validate, trans ut.Translator, tag string, customRegisFunc validator.RegisterTranslationsFunc, customTransFunc validator.TranslationFunc) {
 	if err := v.RegisterTranslation(tag, trans, customRegisFunc, customTransFunc); err != nil {
