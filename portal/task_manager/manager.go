@@ -591,13 +591,9 @@ func (m *TaskManager) processStartStep(
 
 func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) error {
 	dbSess := m.db
-	logger := logs.Get()
-	if step.Type == common.TaskStepTfPlan && step.Status == models.TaskComplete {
-		err := taskDoneProcessPlan(dbSess, task, true)
-		if err != nil {
-			logger.Errorf("process task plan: %v", err)
-		}
-	}
+
+	changePlanResult(dbSess, task, step)
+
 	processScanResult := func() error {
 		var (
 			tsResult policy.TsResult
@@ -645,6 +641,16 @@ func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) 
 		return processScanResult()
 	}
 	return nil
+}
+
+func changePlanResult(dbSess *db.Session, task *models.Task, step *models.TaskStep) {
+	logger := logs.Get()
+	if step.Type == common.TaskStepTfPlan && step.Status == models.TaskComplete {
+		err := taskDoneProcessPlan(dbSess, task, true)
+		if err != nil {
+			logger.Errorf("process task plan: %v", err)
+		}
+	}
 }
 
 func readIfExist(path string) ([]byte, error) {
