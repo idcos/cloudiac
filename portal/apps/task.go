@@ -32,13 +32,10 @@ import (
 // SearchTask 任务查询
 func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{}, e.Error) {
 	query := services.QueryTask(c.DB())
-	taskSourcePlan := consts.TaskSourceDriftPlan
-	taskSourceApplay := consts.TaskSourceDriftApply
 
 	if form.EnvId != "" {
-		//query = query.Where("env_id = ?", form.EnvId)
-		query = query.Where("env_id = ? and source != ? and source != ? or source = ? and applied = ?",
-			form.EnvId, taskSourcePlan, taskSourceApplay, taskSourceApplay, true)
+		query = query.Where("env_id = ? AND is_drift_task != 1 OR  is_drift_task = 1 AND applied = ?",
+			form.EnvId, true)
 	}
 	//根据任务类型查询
 	if form.TaskType != "" {

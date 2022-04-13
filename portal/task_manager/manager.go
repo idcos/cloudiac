@@ -525,24 +525,28 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		if step.PipelineStep.Type == models.TaskStepPlan {
 			PlanIndex = step.Index
 		}
-		if step.PipelineStep.Type == models.TaskStepApply && task.Source == consts.TaskSourceDriftApply {
-			if bs, err := readIfExist(task.TFPlanOutputLogPath(fmt.Sprintf("step%d", PlanIndex))); err != nil {
-				logger.Errorf("read plan output log: %v", err)
-			} else {
-				driftInfo := ParseResourceDriftInfo(bs)
-				if len(driftInfo) <= 0 {
-					_ = changeTaskStatus(models.TaskStepComplete, "autoDrift source nothing changed", false)
-					logger.WithField("step", fmt.Sprintf("%d(%s)", step.Index, step.Name)).
-						Infof("auto task drift step stop ")
-					break
+		if step.PipelineStep.Type == models.TaskStepApply {
+			if task.Source == consts.TaskSourceDriftApply {
+				if bs, err := readIfExist(task.TFPlanOutputLogPath(fmt.Sprintf("step%d", PlanIndex))); err != nil {
+					logger.Errorf("read plan output log: %v", err)
+				} else {
+					driftInfo := ParseResourceDriftInfo(bs)
+					if len(driftInfo) <= 0 {
+						_ = changeTaskStatus(models.TaskStepComplete, "autoDrift source nothing changed", false)
+						logger.WithField("step", fmt.Sprintf("%d(%s)", step.Index, step.Name)).
+							Infof("auto task drift step stop ")
+						break
+					}
 				}
 			}
+
 			if _, er := m.db.Model(&models.Task{}).
 				Where("id = ?", step.TaskId). //nolint
 				Update(&models.Task{Applied: true}); er != nil {
 				logger.Errorf("update task  terraformApply applied: %v", er)
 			}
 		}
+
 		startErr, runErr := m.processStartStep(ctx, task, step, *runTaskReq)
 		if startErr != nil {
 			taskStartFailed(startErr)
@@ -558,6 +562,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 	if err := m.runTaskStepsDoneActions(ctx, task.Id); err != nil {
 		logger.Errorf("runTaskStepsDoneActions: %v", err)
 	}
+
 	logger.Infof("run task end")
 	return nil
 }
