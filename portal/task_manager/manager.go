@@ -591,6 +591,13 @@ func (m *TaskManager) processStartStep(
 
 func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) error {
 	dbSess := m.db
+	logger := logs.Get()
+	if step.Type == common.TaskStepTfPlan && step.Status == models.TaskComplete {
+		err := taskDoneProcessPlan(dbSess, task, true)
+		if err != nil {
+			logger.Errorf("process task plan: %v", err)
+		}
+	}
 	processScanResult := func() error {
 		var (
 			tsResult policy.TsResult
@@ -898,12 +905,6 @@ func waitTaskStepDone(
 				logger.Errorf("wait task result error: %v", err)
 				changeStepStatus(models.TaskStepFailed, err.Error(), step)
 				return err
-			}
-			if step.Type == common.TaskStepTfPlan && stepResult.Status == models.TaskStepComplete {
-				err = taskDoneProcessPlan(db, task, true)
-				if err != nil {
-					logger.Errorf("process task plan: %v", err)
-				}
 			}
 			// 合规检测步骤不通过，不需要重试，跳出循环
 			if (step.Type == models.TaskStepEnvScan || step.Type == models.TaskStepOpaScan) &&
