@@ -35,7 +35,7 @@ func (m *TaskManager) runTaskStepsDoneActions(ctx context.Context, taskId models
 	m.taskStepDoneCallback(ctx, task, currStep, *runTaskReq)
 
 	// 未执行过 apply 操作的任务进行信息采集
-	if !task.Applied {
+	if task.IsEffectTask() && !currStep.IsRejected() && !task.Applied {
 		// 执行信息采集步骤
 		logger.Infof("run task collect step")
 		if err := m.runTaskStep(ctx, *runTaskReq, task, &models.TaskStep{
