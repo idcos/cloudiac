@@ -15,7 +15,7 @@ import (
 	"unicode"
 )
 
-var webVersion = "v0.9.2"
+var webVersion = "v0.9.4"
 
 type FileReplacer struct {
 	filepath string
