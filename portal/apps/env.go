@@ -1074,7 +1074,7 @@ func setAndCheckEnvDestroy(env *models.Env, form *forms.DeployEnvForm) e.Error {
 
 		if ttl == 0 { // ttl 传入 0 表示清空自动销毁时间
 			env.AutoDestroyAt = nil
-		} else if env.Status != models.EnvStatusInactive {
+		} else if env.Status != models.EnvStatusDestroyed {
 			// 活跃环境同步修改 destroyAt
 			at := models.Time(time.Now().Add(ttl))
 			env.AutoDestroyAt = &at
