@@ -616,6 +616,9 @@ func (m *TaskManager) processStartStep(
 
 func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) error {
 	dbSess := m.db
+
+	changePlanResult(dbSess, task, step)
+
 	processScanResult := func() error {
 		var (
 			tsResult policy.TsResult
@@ -663,6 +666,16 @@ func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) 
 		return processScanResult()
 	}
 	return nil
+}
+
+func changePlanResult(dbSess *db.Session, task *models.Task, step *models.TaskStep) {
+	logger := logs.Get()
+	if step.Type == common.TaskStepTfPlan && step.Status == models.TaskComplete {
+		err := taskDoneProcessPlan(dbSess, task, true)
+		if err != nil {
+			logger.Errorf("process task plan: %v", err)
+		}
+	}
 }
 
 func readIfExist(path string) ([]byte, error) {
@@ -840,10 +853,6 @@ func waitTaskStepApprove(ctx context.Context, db *db.Session, task *models.Task,
 	if step.MustApproval && !step.IsApproved() {
 		logger.Infof("waitting task step approve")
 		changeStepStatus(models.TaskStepApproving, "", step)
-		err = taskDoneProcessPlan(db, task, true)
-		if err != nil {
-			logger.Errorf("process task plan: %v", err)
-		}
 		if newStep, err = WaitTaskStepApprove(ctx, db, step.TaskId, step.Index); err != nil {
 			if errors.Is(err, context.Canceled) {
 				return nil, err
