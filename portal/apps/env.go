@@ -673,7 +673,7 @@ func setAndCheckUpdateEnvDestroy(tx *db.Session, attrs models.Attrs, env *models
 		if ttl == 0 {
 			// ttl 传 0 表示重置销毁时间
 			attrs["auto_destroy_at"] = nil
-		} else if env.Status != models.EnvStatusDestroyed {
+		} else if env.Status != models.EnvStatusDestroyed && env.Status != models.EnvStatusInactive {
 			// 活跃环境同步修改 destroyAt
 			at := models.Time(time.Now().Add(ttl))
 			attrs["auto_destroy_at"] = &at
@@ -1074,7 +1074,7 @@ func setAndCheckEnvDestroy(env *models.Env, form *forms.DeployEnvForm) e.Error {
 
 		if ttl == 0 { // ttl 传入 0 表示清空自动销毁时间
 			env.AutoDestroyAt = nil
-		} else if env.Status != models.EnvStatusDestroyed {
+		} else if env.Status != models.EnvStatusDestroyed && env.Status != models.EnvStatusInactive {
 			// 活跃环境同步修改 destroyAt
 			at := models.Time(time.Now().Add(ttl))
 			env.AutoDestroyAt = &at
