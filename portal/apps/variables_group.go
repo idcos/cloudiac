@@ -144,7 +144,7 @@ func getVarGroupVariables(variables []models.VarGroupVariable, vgVarsMap map[str
 		if v.Sensitive {
 			if v.Value == "" {
 				// 传空值时表示不修改，我们赋值为 db 中己保存的值(如果存在)
-				v.Value = vgVarsMap[v.Name].Value
+				v.Value = vgVarsMap[v.Id].Value
 			} else {
 				var err error
 				v.Value, err = utils.EncryptSecretVar(v.Value)
@@ -180,7 +180,7 @@ func UpdateVariableGroup(c *ctx.ServiceContext, form *forms.UpdateVariableGroupF
 
 	vgVarsMap := make(map[string]models.VarGroupVariable)
 	for _, v := range vg.Variables {
-		vgVarsMap[v.Name] = v
+		vgVarsMap[v.Id] = v
 	}
 
 	if form.HasKey("variables") {
