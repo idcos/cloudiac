@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	EnvStatusActive   = "active"   // 成功部署
-	EnvStatusFailed   = "failed"   // apply 过程中出现错误
-	EnvStatusInactive = "inactive" // 资源未部署或已销毁
+	EnvStatusActive    = "active"    // 成功部署
+	EnvStatusFailed    = "failed"    // apply 过程中出现错误
+	EnvStatusInactive  = "inactive"  // 资源未部署
+	EnvStatusDestroyed = "destroyed" // 已销毁
 
 	//EnvStatusDeploying = "deploying" // apply 运行中(plan 作业不改变状态)
 	//EnvStatusApproving = "approving" // 等待审批
