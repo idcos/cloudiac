@@ -66,18 +66,20 @@ func StatisticalProjectTpl(dbSess *db.Session, projectId models.Id) (int64, erro
 }
 
 func StatisticalProjectEnv(dbSess *db.Session, projectId models.Id) (*struct {
-	EnvActive   int64
-	EnvFailed   int64
-	EnvInactive int64
+	EnvActive    int64
+	EnvFailed    int64
+	EnvInactive  int64
+	EnvDestroyed int64
 }, error) {
 	var (
 		resp []struct {
 			Count  int64
 			Status string
 		}
-		envActive   int64
-		envFailed   int64
-		envInactive int64
+		envActive    int64
+		envFailed    int64
+		envInactive  int64
+		envDestroyed int64
 	)
 
 	if err := dbSess.Model(&models.Env{}).Select("count(status) as count, status").
@@ -93,17 +95,21 @@ func StatisticalProjectEnv(dbSess *db.Session, projectId models.Id) (*struct {
 			envActive = v.Count
 		case models.EnvStatusInactive:
 			envInactive = v.Count
+		case models.EnvStatusDestroyed:
+			envDestroyed = v.Count
 		}
 	}
 
 	return &struct {
-		EnvActive   int64
-		EnvFailed   int64
-		EnvInactive int64
+		EnvActive    int64
+		EnvFailed    int64
+		EnvInactive  int64
+		EnvDestroyed int64
 	}{
-		EnvActive:   envActive,
-		EnvFailed:   envFailed,
-		EnvInactive: envInactive,
+		EnvActive:    envActive,
+		EnvFailed:    envFailed,
+		EnvInactive:  envInactive,
+		EnvDestroyed: envDestroyed,
 	}, nil
 
 }
