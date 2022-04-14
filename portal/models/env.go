@@ -22,7 +22,7 @@ const (
 )
 
 var (
-	EnvStatus     = []string{EnvStatusActive, EnvStatusFailed, EnvStatusInactive}
+	EnvStatus     = []string{EnvStatusActive, EnvStatusFailed, EnvStatusInactive, EnvStatusDestroyed}
 	EnvTaskStatus = []string{TaskRunning, TaskApproving} // 环境 taskStatus 有效值
 )
 
