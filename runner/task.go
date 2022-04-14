@@ -523,7 +523,6 @@ terraform apply -input=false -auto-approve \
 {{ range $arg := .Req.StepArgs}}{{$arg}} {{ end }}_cloudiac.tfplan
 
 # state collect command
-cd 'code/{{.Req.Env.Workdir}}' && \
 terraform show -no-color -json >{{.TFStateJsonFilePath}} && \
 terraform providers schema -json > {{.TFProviderSchema}}
 `))
