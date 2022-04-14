@@ -73,6 +73,13 @@ type TaskStopReq struct {
 	ContainerIds []string `json:"containerIds" form:"containerIds" binding:"required"`
 }
 
+type TaskAbortReq struct {
+	EnvId  string `json:"envId" form:"envId" binding:"required"`
+	TaskId string `json:"taskId" form:"taskId" binding:"required"`
+
+	JustCheck bool `json:"justCheck" form:"justCheck"` // 只检查任务是否可以 abort，不执行实际中止操作
+}
+
 type TaskPolicy struct {
 	PolicyId string `json:"policyId"`
 	Meta     Meta   `json:"meta"`
@@ -99,6 +106,7 @@ type TaskLogReq TaskStatusReq
 // TaskStatusMessage runner 通知任务状态到 portal
 type TaskStatusMessage struct {
 	Timeout bool `json:"timeout"` // 任务是否己超时？
+	Aborted bool `json:"aborted"` // 任务被中止?
 
 	// 当 timeout 为 true 时，以下两个字段无意义
 	Exited   bool `json:"exited"`

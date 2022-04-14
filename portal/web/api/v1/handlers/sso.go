@@ -14,7 +14,7 @@ import (
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
-// @Success 200 {object}  ctx.JSONResult{result=models.SsoResp}
+// @Success 200 {object}  ctx.JSONResult{result=resps.SsoResp}
 // @Router /sso/tokens [post]
 func GenerateSsoToken(c *ctx.GinRequest) {
 	c.JSONResult(apps.GenerateSsoToken(c.Service()))
@@ -27,7 +27,7 @@ func GenerateSsoToken(c *ctx.GinRequest) {
 // @Produce  json
 // @Security AuthToken
 // @Param token query string true "sso token"
-// @Success 200 {object}  ctx.JSONResult{result=models.VerifySsoTokenResp}
+// @Success 200 {object}  ctx.JSONResult{result=resps.VerifySsoTokenResp}
 // @Router /sso/tokens/verify [get]
 func VerifySsoToken(c *ctx.GinRequest) {
 	form := forms.VerifySsoTokenForm{}

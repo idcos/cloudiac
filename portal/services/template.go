@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"fmt"
+	"github.com/pkg/errors"
 	"strings"
 
 	"gorm.io/gorm"
@@ -190,4 +191,16 @@ func GetAvailableTemplateIdsByUserId(sess *db.Session, userId, orgId models.Id) 
 		return nil, e.AutoNew(err, e.DBError)
 	}
 	return tplIds, nil
+}
+
+func GetBindTemplate(sess *db.Session, projectId, tplId models.Id) (*models.ProjectTemplate, e.Error) {
+	pt := models.ProjectTemplate{}
+	if err := sess.Model(&models.ProjectTemplate{}).Where("project_id = ? and template_id = ?",
+		projectId, tplId).First(&pt); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, e.New(e.TemplateNotBind, err)
+		}
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return &pt, nil
 }

@@ -3,13 +3,17 @@
 package services
 
 import (
+	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/resps"
 	"cloudiac/utils"
 	"fmt"
 	"strings"
+
+	"github.com/go-ldap/ldap/v3"
 )
 
 func CreateUser(tx *db.Session, user models.User) (*models.User, e.Error) {
@@ -116,11 +120,13 @@ func CheckPasswordFormat(password string) e.Error {
 	return nil
 }
 
-func GetUserDetailById(query *db.Session, userId models.Id) (*models.UserWithRoleResp, e.Error) {
-	d := models.UserWithRoleResp{}
+func GetUserDetailById(query *db.Session, userId models.Id) (*resps.UserWithRoleResp, e.Error) {
+	d := resps.UserWithRoleResp{}
 	table := models.User{}.TableName()
 	if err := query.Model(&models.User{}).
-		Where(fmt.Sprintf("%s.id = ?", table), userId).Scan(&d); err != nil {
+		Where(fmt.Sprintf("%s.id = ?", table), userId).
+		LazySelectAppend("iac_user.*").
+		Scan(&d); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.UserNotExists, err)
 		}
@@ -297,4 +303,71 @@ func GetUsersByUserIds(dbSess *db.Session, userId []string) []models.User {
 		return nil
 	}
 	return users
+}
+
+// 处理Ldap 登录逻辑
+func LdapAuthLogin(userEmail, password string) (username string, er e.Error) {
+	conf := configs.Get()
+	conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", conf.Ldap.LdapServer, conf.Ldap.LdapServerPort))
+	if err != nil {
+		return username, e.New(e.LdapConnectFailed, err)
+	}
+	defer conn.Close()
+	// 配置ldap 管理员dn信息，例如cn=Manager,dc=idcos,dc=com
+	err = conn.Bind(conf.Ldap.AdminDn, conf.Ldap.AdminPassword)
+	if err != nil {
+		return username, e.New(e.ValidateError, err)
+	}
+	searchRequest := ldap.NewSearchRequest(
+		conf.Ldap.SearchBase,
+		ldap.ScopeWholeSubtree, ldap.DerefAlways, 0, 0, false,
+		fmt.Sprintf("(mail=%s)", userEmail),
+		// 这里是查询返回的属性,以数组形式提供.如果为空则会返回所有的属性
+		[]string{},
+		nil,
+	)
+	sr, err := conn.Search(searchRequest)
+	if err != nil {
+		return username, e.New(e.ValidateError, err)
+	}
+	if len(sr.Entries) != 1 {
+		return username, e.New(e.UserNotExists, err)
+	}
+	err = conn.Bind(sr.Entries[0].DN, password)
+	if err != nil {
+		return username, e.New(e.InvalidPassword, err)
+	}
+	return sr.Entries[0].GetAttributeValue("uid"), nil
+
+}
+
+// GetUserHighestProjectRole 获取用户在指定组织下的最高项目角色
+func GetUserHighestProjectRole(db *db.Session, orgId models.Id, userId models.Id) (string, e.Error) {
+	roles := make([]string, 0)
+	err := db.Model(&models.UserProject{}).
+		Joins("join iac_project as p on p.id = iac_user_project.project_id and p.org_id = ?", orgId).
+		Where("user_id = ?", userId).Group("role").
+		Select("role").Scan(&roles)
+	if err != nil {
+		return "", e.New(e.DBError, err)
+	}
+	return GetHighestRole(roles...), nil
+}
+
+// HasInviteUserPerm 判断用户是否有邀请其他用户加入组织的权限
+func HasInviteUserPerm(db *db.Session, userId models.Id, orgId models.Id, targetRole string) (bool, e.Error) {
+	if UserHasOrgRole(userId, orgId, consts.OrgRoleAdmin) {
+		return true, nil
+	}
+
+	if targetRole == consts.OrgRoleMember {
+		// 组织下的项目管理员可以邀请用户成为组织成员
+		role, err := GetUserHighestProjectRole(db, orgId, userId)
+		if err != nil {
+			return false, err
+		} else if role == consts.ProjectRoleManager {
+			return true, nil
+		}
+	}
+	return false, nil
 }

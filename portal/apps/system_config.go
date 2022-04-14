@@ -8,26 +8,28 @@ import (
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"fmt"
+	"strconv"
+	"strings"
 )
 
-type SearchSystemConfigResp struct {
-	Id          models.Id `json:"id"`
-	Name        string    `json:"name"`
-	Value       string    `json:"value"`
-	Description string    `json:"description"`
-}
-
-func (m *SearchSystemConfigResp) TableName() string {
-	return models.SystemCfg{}.TableName()
-}
-
 func SearchSystemConfig(c *ctx.ServiceContext) (interface{}, e.Error) {
-	rs := make([]SearchSystemConfigResp, 0)
+	rs := make([]resps.SearchSystemConfigResp, 0)
 	err := services.QuerySystemConfig(c.DB()).Find(&rs)
 	if err != nil {
 		return nil, e.New(e.DBError, err)
+	}
+
+	for index, cfg := range rs {
+		if cfg.Name == models.SysCfgNameTaskStepTimeout {
+			timeoutInSecond, err := strconv.Atoi(cfg.Value)
+			if err != nil {
+				return nil, e.New(e.InternalError, err)
+			}
+			rs[index].Value = strconv.Itoa(timeoutInSecond / 60)
+		}
 	}
 
 	return rs, nil
@@ -66,21 +68,21 @@ func GetRegistryAddr(c *ctx.ServiceContext) (interface{}, e.Error) {
 		cfgdb = cfg.Value
 	}
 
-	return &models.RegistryAddrResp{
+	return &resps.RegistryAddrResp{
 		RegistryAddrFromDB:  cfgdb,
 		RegistryAddrFromCfg: configs.Get().RegistryAddr,
 	}, nil
 }
 
 func UpsertRegistryAddr(c *ctx.ServiceContext, form *forms.RegistryAddrForm) (interface{}, e.Error) {
-
+	form.RegistryAddr = strings.TrimSpace(form.RegistryAddr)
 	cfg, err := services.UpsertRegistryAddr(c.DB(), form.RegistryAddr)
 	var cfgdb = ""
 	if err == nil {
 		cfgdb = cfg.Value
 	}
 
-	return &models.RegistryAddrResp{
+	return &resps.RegistryAddrResp{
 		RegistryAddrFromDB:  cfgdb,
 		RegistryAddrFromCfg: configs.Get().RegistryAddr,
 	}, nil

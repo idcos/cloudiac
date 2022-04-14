@@ -51,7 +51,7 @@ func taskDoneProcessState(dbSess *db.Session, task *models.Task) error {
 	return nil
 }
 
-func taskDoneProcessPlan(dbSess *db.Session, task *models.Task) error {
+func taskDoneProcessPlan(dbSess *db.Session, task *models.Task, isPlanResult bool) error {
 	if bs, err := readIfExist(task.PlanJsonPath()); err != nil {
 		return fmt.Errorf("read plan json: %v", err)
 	} else if len(bs) > 0 {
@@ -59,7 +59,7 @@ func taskDoneProcessPlan(dbSess *db.Session, task *models.Task) error {
 		if err != nil {
 			return fmt.Errorf("unmarshal plan json: %v", err)
 		}
-		if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges); err != nil {
+		if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges, isPlanResult); err != nil {
 			return fmt.Errorf("save task changes: %v", err)
 		}
 	}
@@ -127,7 +127,7 @@ func taskDoneProcessAutoDestroy(dbSess *db.Session, task *models.Task) error {
 
 	updateAttrs := models.Attrs{}
 
-	if task.Type == models.TaskTypeDestroy && env.Status == models.EnvStatusInactive {
+	if task.Type == models.TaskTypeDestroy && env.Status == models.EnvStatusDestroyed {
 		// 环境销毁后清空自动销毁设置，以支持通过再次部署重建环境。
 		// ttl 需要保留，做为重建环境的默认 ttl
 		updateAttrs["AutoDestroyAt"] = nil

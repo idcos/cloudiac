@@ -18,7 +18,7 @@ const (
 	MaxLogContentSize = 1024 * 1024 // 最大日志文件大小，超限会被截断
 
 	RunnerConnectTimeout = time.Second * 5
-	DbTaskPollInterval   = time.Second // 轮询 db 任务状态的间隔
+	DbTaskPollInterval   = time.Second * 3 // 轮询 db 任务状态的间隔
 
 	DefaultAdminEmail = "admin@example.com"
 
@@ -146,6 +146,15 @@ const (
 	TaskSourceWebhookApply = "webhookApply"
 	TaskSourceAutoDestroy  = "autoDestroy"
 	TaskSourceApi          = "api"
+
+	TaskAutoDestroyName = "Auto Destroy"
+
+	BillCollectAli = "alicloud"
+)
+
+const (
+	AlicloudAK = "ALICLOUD_ACCESS_KEY"
+	AlicloudSK = "ALICLOUD_SECRET_KEY"
 )
 
 var (
@@ -158,6 +167,8 @@ var (
 	VariableGroupTpl     = []string{ScopeOrg, ScopeTemplate}
 	VariableGroupProject = []string{ScopeOrg, ScopeProject}
 	VariableGroupOrg     = []string{ScopeOrg}
+
+	TaskActiveStatus = []string{common.TaskPending, common.TaskRunning, common.TaskApproving}
 
 	StatusTranslation = map[string]string{
 		"complete": "成功",
@@ -182,5 +193,9 @@ var (
 		common.TaskApproving: EventTaskApproving,
 		common.TaskRejected:  EventTaskFailed,
 		EvenvtCronDrift:      EvenvtCronDrift,
+	}
+
+	BillProviderResAccount = map[string][]string{
+		BillCollectAli: []string{AlicloudAK, AlicloudSK},
 	}
 )

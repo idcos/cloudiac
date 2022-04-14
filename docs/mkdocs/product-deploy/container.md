@@ -35,7 +35,7 @@ version: "3.2"
 services:
   iac-portal:
     container_name: iac-portal
-    image: "${DOCKER_REGISTRY}cloudiac/iac-portal:v0.9.4"
+    image: "${DOCKER_REGISTRY}cloudiac/iac-portal:v0.9.3"
     volumes:
       - type: bind
         source: /usr/yunji/cloudiac/var
@@ -52,7 +52,7 @@ services:
 
   ct-runner:
     container_name: ct-runner
-    image: "${DOCKER_REGISTRY}cloudiac/ct-runner:v0.9.4"
+    image: "${DOCKER_REGISTRY}cloudiac/ct-runner:v0.9.3"
     volumes:
       - type: bind
         source: /usr/yunji/cloudiac/var
@@ -71,7 +71,7 @@ services:
 
   iac-web:
     container_name: iac-web
-    image: "${DOCKER_REGISTRY}cloudiac/iac-web:v0.9.4"
+    image: "${DOCKER_REGISTRY}cloudiac/iac-web:v0.9.2"
     ports:
       - 80:80
     restart: always
@@ -164,7 +164,7 @@ DOCKER_REGISTRY=""
 # logger 配置
 LOG_DEVEL="info"
 
-# SMTP 配置(该配置只影响邮件通知的发送，不配置不影响其他功能)
+# SMTP 配置(该配置只影响邮件通知的发送)
 SMTP_ADDRESS=smtp.example.com:25
 SMTP_USERNAME=user@example.com
 SMTP_PASSWORD=""
@@ -180,6 +180,12 @@ KAFKA_PARTITION=0
 KAFKA_BROKERS=[]
 KAFKA_SASL_USERNAME=""
 KAFKA_SASL_PASSWORD=""
+
+# LDAP 配置(用于接入 ldap 认证，可选配置)
+LDAP_ADMIN_DN="cn=manager,dc=example,dc=com"
+LDAP_ADMIN_PASSWORD="password"
+LDAP_SERVER="ldap.example.com"
+LDAP_SEARCH_BASE="dc=example,dc=com"
 
 ######### 以下为 runner 配置 #############
 # runner 服务注册配置(均为必填)

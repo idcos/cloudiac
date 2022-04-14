@@ -57,6 +57,9 @@ type VariableGroup struct {
 	CreatorId Id                `json:"creatorId" gorm:"size:32;not null;comment:创建人" example:"u-c3ek0co6n88ldvq1n6ag"`
 	OrgId     Id                `json:"orgId" gorm:"size:32;not null"`
 	Variables VarGroupVariables `json:"variables" gorm:"type:json;null;comment:变量组下的变量"`
+
+	CostCounted bool   `json:"costCounted" gorm:"default:false;comment:是否开启费用统计"` // 是否开启费用统计
+	Provider    string `json:"provider" gorm:"comment:资源供应平台名称"`                  // 资源供应平台名称
 }
 
 func (VariableGroup) TableName() string {
@@ -103,4 +106,15 @@ type VariableGroupRel struct {
 
 func (VariableGroupRel) TableName() string {
 	return "iac_variable_group_rel"
+}
+
+//VariableGroupProjectRel 变量组与项目的关联表
+type VariableGroupProjectRel struct {
+	AbstractModel
+	VarGroupId Id `json:"varGroupId" gorm:"uniqueIndex:idx_var_group_project;size:32;not null"`
+	ProjectId  Id `json:"projectId" gorm:"uniqueIndex:idx_var_group_project;size:32;not null"`
+}
+
+func (VariableGroupProjectRel) TableName() string {
+	return "iac_variable_group_project_rel"
 }

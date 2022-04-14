@@ -9,6 +9,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"fmt"
 	"net/http"
@@ -51,7 +52,6 @@ func UpdateObjectVars(c *ctx.ServiceContext, form *forms.UpdateObjectVarsForm) (
 }
 
 func getObjectVars(tx *db.Session, form *forms.UpdateObjectVarsForm, orgId, projectId models.Id) ([]models.Variable, e.Error) {
-
 	vars := make([]models.Variable, 0, len(form.Variables))
 	for _, v := range form.Variables {
 		if v.Scope != form.Scope {
@@ -143,32 +143,15 @@ func updateObjectVars(c *ctx.ServiceContext, tx *db.Session, form *forms.UpdateO
 	return services.VarsDesensitization(retVars), nil
 }
 
-type newVariable []VariableResp
-
-func (v newVariable) Len() int {
-	return len(v)
-}
-func (v newVariable) Less(i, j int) bool {
-	return v[i].Name < v[j].Name
-}
-func (v newVariable) Swap(i, j int) {
-	v[i], v[j] = v[j], v[i]
-}
-
-type VariableResp struct {
-	models.Variable
-	Overwrites *models.Variable `json:"overwrites" form:"overwrites" ` //回滚参数，无需回滚是为空
-}
-
 func SearchVariable(c *ctx.ServiceContext, form *forms.SearchVariableForm) (interface{}, e.Error) {
 	variableM, err, scopes := services.GetValidVariables(c.DB(), form.Scope, c.OrgId, c.ProjectId, form.TplId, form.EnvId, false)
 	if err != nil {
 		return nil, err
 	}
 
-	rs := make([]VariableResp, 0)
+	rs := make([]resps.VariableResp, 0)
 	for _, variable := range variableM {
-		vr := VariableResp{
+		vr := resps.VariableResp{
 			Variable:   variable,
 			Overwrites: nil,
 		}
@@ -194,7 +177,7 @@ func SearchVariable(c *ctx.ServiceContext, form *forms.SearchVariableForm) (inte
 
 		rs = append(rs, vr)
 	}
-	sort.Sort(newVariable(rs))
+	sort.Sort(resps.NewVariable(rs))
 
 	return rs, nil
 }
@@ -206,7 +189,7 @@ func SearchSampleVariable(c *ctx.ServiceContext, form *forms.SearchVariableForm)
 		return nil, err
 	}
 	if rs != nil {
-		for _, v := range rs.([]VariableResp) {
+		for _, v := range rs.([]resps.VariableResp) {
 			if v.Type == consts.VarTypeTerraform {
 				newRs = append(newRs, models.VariableBody{
 					Scope:       v.Scope,

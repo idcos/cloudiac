@@ -25,7 +25,7 @@ func CreateAutoDestroyTask(tx *db.Session, env *models.Env) (*models.Task, e.Err
 	}
 
 	paramTask := models.Task{
-		Name:            "Auto Destroy",
+		Name:            consts.TaskAutoDestroyName,
 		Targets:         nil,
 		CreatorId:       consts.SysUserId,
 		Variables:       vars,

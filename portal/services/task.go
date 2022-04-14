@@ -9,6 +9,7 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services/logstorage"
 	"cloudiac/portal/services/notificationrc"
 	"cloudiac/portal/services/vcsrv"
@@ -152,10 +153,14 @@ func CloneNewDriftTask(tx *db.Session, src models.Task, env *models.Env) (*model
 	task.CreatorId = consts.SysUserId
 	task.AutoApprove = env.AutoApproval
 	task.StopOnViolation = env.StopOnViolation
-	task.RunnerId = env.RunnerId
 	// newCommonTask方法完成了对keyId赋值，这里不需要在进行一次赋值了
 	//task.KeyId = env.KeyId
 	task.Source = taskSource
+
+	task.RunnerId, er = GetAvailableRunnerIdByStr(env.RunnerId, env.RunnerTags)
+	if er != nil {
+		return nil, er
+	}
 
 	return doCreateTask(tx, *task, tpl, env)
 }
@@ -209,7 +214,7 @@ func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*mode
 		EnvId:     env.Id,
 		StatePath: env.StatePath,
 
-		Workdir:   tpl.Workdir,
+		Workdir:   firstVal(pt.Workdir, env.Workdir, tpl.Workdir),
 		TfVersion: tpl.TfVersion,
 
 		Playbook:     env.Playbook,
@@ -481,6 +486,7 @@ var stepStatus2TaskStatusMap = map[string]string{
 	models.TaskStepRunning:   models.TaskRunning,
 	models.TaskStepFailed:    models.TaskFailed,
 	models.TaskStepTimeout:   models.TaskFailed,
+	models.TaskStepAborted:   models.TaskAborted,
 	models.TaskStepComplete:  models.TaskComplete,
 }
 
@@ -504,24 +510,42 @@ func ChangeTaskStatusWithStep(dbSess *db.Session, task models.Tasker, step *mode
 }
 
 // ChangeTaskStatus 修改任务状态(同步修改 StartAt、EndAt 等)，并同步修改 env 状态
+// 该函数只修改以下字段:
+// 	status, message, start_at, end_at, aborting
 func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message string, skipUpdateEnv bool) e.Error {
 	preStatus := task.Status
 	if preStatus == status && message == "" {
 		return nil
 	}
 
-	task.Status = status
+	updateAttrs := models.Attrs{
+		"message": message,
+	}
 	task.Message = message
+	if status != "" {
+		task.Status = status
+		updateAttrs["status"] = status
+	}
 	now := models.Time(time.Now())
 	if task.StartAt == nil && task.Started() {
 		task.StartAt = &now
+		updateAttrs["start_at"] = &now
 	}
-	if task.EndAt == nil && task.Exited() {
+	if task.StartAt != nil && task.EndAt == nil && task.Exited() {
 		task.EndAt = &now
+		updateAttrs["end_at"] = &now
 	}
 
-	logs.Get().WithField("taskId", task.Id).Infof("change task to '%s'", status)
-	if _, err := dbSess.Model(task).Update(task); err != nil {
+	if task.Aborting && task.Exited() {
+		// 任务已结束，清空 aborting 状态
+		task.Aborting = false
+		updateAttrs["aborting"] = false
+	}
+
+	logger := logs.Get().WithField("taskId", task.Id)
+	logger.Infof("change task to '%s'", status)
+	logger.Debugf("update task attrs: %s", utils.MustJSON(updateAttrs))
+	if _, err := dbSess.Model(task).Where("id = ?", task.Id).UpdateAttrs(updateAttrs); err != nil {
 		return e.AutoNew(err, e.DBError)
 	}
 
@@ -538,13 +562,13 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 	if !skipUpdateEnv {
 		step, er := GetTaskStep(dbSess, task.Id, task.CurrStep)
 		if er != nil {
-			logs.Get().WithField("currStep",task.CurrStep).
+			logs.Get().WithField("currStep", task.CurrStep).
 				WithField("taskId", task.Id).Errorf("get task step error: %s", er)
 			return e.AutoNew(er, e.DBError)
 		}
 
 		if err := ChangeEnvStatusWithTaskAndStep(dbSess, task.EnvId, task, step); err != nil {
-			logs.Get().WithField("envId",task.EnvId).
+			logs.Get().WithField("envId", task.EnvId).
 				WithField("taskId", task.Id).Errorf("change env to status error: %s", err)
 			return err
 		}
@@ -637,7 +661,6 @@ func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 			Attrs:    r.Values,
 		})
 	}
-
 	for i := range module.ChildModules {
 		rs = append(rs, traverseStateModule(&module.ChildModules[i])...)
 	}
@@ -648,15 +671,32 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Resource{}.TableName(),
 		"id", "org_id", "project_id", "env_id", "task_id",
-		"provider", "module", "address", "type", "name", "index", "attrs", "sensitive_keys")
+		"provider", "module", "address", "type", "name", "index", "attrs", "sensitive_keys", "applied_at", "res_id")
 
 	rs := make([]*models.Resource, 0)
 	rs = append(rs, traverseStateModule(&values.RootModule)...)
 	for i := range values.ChildModules {
 		rs = append(rs, traverseStateModule(&values.ChildModules[i])...)
 	}
-
+	resources, err := GetResourceByEnvId(tx, task.EnvId)
+	if err != nil {
+		return err
+	}
+	resMap := SetResFieldsAsMap(resources)
 	for _, r := range rs {
+		if _, ok := r.Attrs["id"]; !ok {
+			logs.Get().Warn("attrs key 'id' not exist")
+		}
+		resId := fmt.Sprintf("%v", r.Attrs["id"])
+		if resId == "" {
+			logs.Get().Warn("attrs key 'id' is null")
+		}
+		r.AppliedAt = models.Time(time.Now())
+		if resMap != nil {
+			if resMap[resId] != nil {
+				r.AppliedAt = resMap[resId].(models.Time)
+			}
+		}
 		if len(proMap) > 0 {
 			providerKey := strings.Join([]string{r.Provider, r.Type}, "-")
 			// 通过provider-type 拼接查找敏感词是否在proMap中
@@ -665,7 +705,7 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 			}
 		}
 		err := bq.AddRow(models.NewId("r"), task.OrgId, task.ProjectId, task.EnvId, task.Id,
-			r.Provider, r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys)
+			r.Provider, r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys, r.AppliedAt, resId)
 		if err != nil {
 			return err
 		}
@@ -724,33 +764,14 @@ func UnmarshalPlanJson(bs []byte) (*TfPlan, error) {
 	return &plan, err
 }
 
-type TSResource struct {
-	Id         string `json:"id"`
-	Name       string `json:"name"`
-	ModuleName string `json:"module_name"`
-	Source     string `json:"source"`
-	PlanRoot   string `json:"plan_root"`
-	Line       int    `json:"line"`
-	Type       string `json:"type"`
-
-	Config map[string]interface{} `json:"config"`
-
-	SkipRules   *bool  `json:"skip_rules"`
-	MaxSeverity string `json:"max_severity"`
-	MinSeverity string `json:"min_severity"`
-}
-
-type TSResources []TSResource
-
-type TfParse map[string]TSResources
-
-func UnmarshalTfParseJson(bs []byte) (*TfParse, error) {
-	js := TfParse{}
+func UnmarshalTfParseJson(bs []byte) (*resps.TfParse, error) {
+	js := resps.TfParse{}
 	err := json.Unmarshal(bs, &js)
 	return &js, err
 }
 
-func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource) error {
+func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource, isPlanResult bool) error {
+
 	var (
 		resAdded     = 0
 		resChanged   = 0
@@ -759,28 +780,41 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource)
 	for _, r := range rs {
 		actions := r.Change.Actions
 		switch {
-		case utils.SliceEqualStr(actions, []string{"no-op"}),
-			utils.SliceEqualStr(actions, []string{"create", "delete"}):
+		case utils.SliceEqualStr(actions, []string{"no-op"}):
 			continue
+		case utils.SliceEqualStr(actions, []string{"create", "delete"}):
+			resAdded += 1
+			resDestroyed += 1
 		case utils.SliceEqualStr(actions, []string{"create"}):
 			resAdded += 1
-		case utils.SliceEqualStr(actions, []string{"update"}),
-			utils.SliceEqualStr(actions, []string{"delete", "create"}):
+		case utils.SliceEqualStr(actions, []string{"update"}):
 			resChanged += 1
+		case utils.SliceEqualStr(actions, []string{"delete", "create"}):
+			resDestroyed += 1
+			resAdded += 1
 		case utils.SliceEqualStr(actions, []string{"delete"}):
 			resDestroyed += 1
 		default:
-			logs.Get().WithField("taskId", task.Id).Errorf("unknown change actions: %v", actions)
+			logs.Get().WithField("taskId", task.Id).Warnf("unknown plan change actions: %v", actions)
 		}
 	}
+	if isPlanResult {
+		task.PlanResult.ResAdded = &resAdded
+		task.PlanResult.ResChanged = &resChanged
+		task.PlanResult.ResDestroyed = &resDestroyed
 
-	task.Result.ResAdded = &resAdded
-	task.Result.ResChanged = &resChanged
-	task.Result.ResDestroyed = &resDestroyed
-
-	if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
-		UpdateColumn("result", task.Result); err != nil {
-		return err
+		if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
+			UpdateColumn("plan_result", task.PlanResult); err != nil {
+			return err
+		}
+	} else {
+		task.Result.ResAdded = &resAdded
+		task.Result.ResChanged = &resChanged
+		task.Result.ResDestroyed = &resDestroyed
+		if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
+			UpdateColumn("result", task.Result); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -858,7 +892,7 @@ func fetchTaskStepLog(ctx context.Context, task models.Tasker, writer io.Writer,
 
 	storage := logstorage.Get()
 
-	if task, step, err = waitTaskStepStarted(ctx, task.GetId(), step.Index); err != nil {
+	if task, step, err = waitTaskStepStarted(ctx, task, step.Index); err != nil {
 		return err
 	}
 
@@ -899,28 +933,24 @@ func fetchTaskStepLog(ctx context.Context, task models.Tasker, writer io.Writer,
 	return nil
 }
 
-func waitTaskStepStarted(ctx context.Context, taskId models.Id, stepIndex int) (task models.Tasker, step *models.TaskStep, err error) {
+func waitTaskStepStarted(ctx context.Context, tasker models.Tasker, stepIndex int) (task models.Tasker, step *models.TaskStep, err error) {
 	sleepDuration := consts.DbTaskPollInterval
 	ticker := time.NewTicker(sleepDuration)
 	defer ticker.Stop()
 
 	for {
-		task, err = GetTask(db.Get(), taskId)
+		step, err = GetTaskStep(db.Get(), tasker.GetId(), stepIndex)
 		if err != nil {
-			return task, step, errors.Wrapf(err, "get task '%s'", taskId)
-		}
-		step, err = GetTaskStep(db.Get(), task.GetId(), stepIndex)
-		if err != nil {
-			return task, step, errors.Wrapf(err, "get task step %d", stepIndex)
+			return tasker, step, errors.Wrapf(err, "get task step %d", stepIndex)
 		}
 
-		if task.Exited() || step.IsStarted() {
-			return task, step, nil
+		if tasker.Exited() || step.IsStarted() {
+			return tasker, step, nil
 		}
 
 		select {
 		case <-ctx.Done():
-			return task, step, nil
+			return tasker, step, nil
 		case <-ticker.C:
 			continue
 		}
@@ -1031,23 +1061,39 @@ func TaskStatusChangeSendMessage(task *models.Task, status string) {
 // 扫描任务
 
 // ChangeScanTaskStatus 修改扫描任务状态
-func ChangeScanTaskStatus(dbSess *db.Session, task *models.ScanTask, status, message string) e.Error {
-	if task.Status == status && message == "" {
+// 该函数只更新以下字段:
+//	"status", "policy_status", "message", "start_at", "end_at"
+func ChangeScanTaskStatus(dbSess *db.Session, task *models.ScanTask, status, policyStatus, message string) e.Error {
+	if task.Status == status && task.PolicyStatus == policyStatus && message == "" {
 		return nil
 	}
 
-	task.Status = status
+	updateAttrs := models.Attrs{
+		"message": message,
+	}
 	task.Message = message
+	if status != "" {
+		task.Status = status
+		updateAttrs["status"] = status
+	}
+	if policyStatus != "" {
+		task.PolicyStatus = policyStatus
+		updateAttrs["policy_status"] = policyStatus
+	}
 	now := models.Time(time.Now())
 	if task.StartAt == nil && task.Started() {
 		task.StartAt = &now
+		updateAttrs["start_at"] = &now
 	}
-	if task.EndAt == nil && task.Exited() {
+	if task.StartAt != nil && task.EndAt == nil && task.Exited() {
 		task.EndAt = &now
+		updateAttrs["end_at"] = &now
 	}
 
-	logs.Get().WithField("taskId", task.Id).Infof("change scan task to '%s'", status)
-	if _, err := dbSess.Model(task).Update(task); err != nil {
+	logger := logs.Get().WithField("taskId", task.Id)
+	logger.Infof("change scan task to '%s'", status)
+	logger.Debugf("update scan task attrs: %s", utils.MustJSON(updateAttrs))
+	if _, err := dbSess.Model(task).Where("id = ?", task.Id).UpdateAttrs(updateAttrs); err != nil {
 		return e.AutoNew(err, e.DBError)
 	}
 
@@ -1056,24 +1102,25 @@ func ChangeScanTaskStatus(dbSess *db.Session, task *models.ScanTask, status, mes
 
 func ChangeScanTaskStatusWithStep(dbSess *db.Session, task *models.ScanTask, step *models.TaskStep) e.Error {
 	taskStatus := stepStatus2TaskStatus(step.Status)
+	policyStatus := ""
 	exitCode := step.ExitCode
 
 	switch taskStatus {
 	case common.TaskPending, common.TaskRunning:
-		task.PolicyStatus = common.PolicyStatusPending
+		policyStatus = common.PolicyStatusPending
 	case common.TaskComplete:
-		task.PolicyStatus = common.PolicyStatusPassed
+		policyStatus = common.PolicyStatusPassed
 	case common.TaskFailed:
 		if (step.Type == common.TaskStepEnvScan || step.Type == common.TaskStepTplScan || step.Type == common.TaskStepOpaScan) &&
 			exitCode == common.TaskStepPolicyViolationExitCode {
-			task.PolicyStatus = common.PolicyStatusViolated
+			policyStatus = common.PolicyStatusViolated
 		} else {
-			task.PolicyStatus = common.PolicyStatusFailed
+			policyStatus = common.PolicyStatusFailed
 		}
 	default: // "approving", "rejected", ...
 		panic(fmt.Errorf("invalid scan task status '%s'", taskStatus))
 	}
-	return ChangeScanTaskStatus(dbSess, task, taskStatus, step.Message)
+	return ChangeScanTaskStatus(dbSess, task, taskStatus, policyStatus, step.Message)
 }
 
 func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, taskType string, creatorId models.Id) (*models.ScanTask, e.Error) {
@@ -1450,4 +1497,64 @@ func GetDriftResourceById(session *db.Session, id string) (*ResourceDriftResp, e
 	}
 	driftResources.IsDrift = true
 	return driftResources, nil
+}
+
+func GetActiveTaskByEnvId(tx *db.Session, id models.Id) ([]models.Task, e.Error) {
+	o := make([]models.Task, 0)
+	if err := tx.Model(models.Task{}).
+		Where("env_id = ?", id).
+		Where("status in (?)", consts.TaskActiveStatus).
+		Find(&o); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return o, nil
+}
+
+func AbortRunnerTask(task models.Task) e.Error {
+	return doAbortRunnerTask(task, false)
+}
+
+func CheckRunnerTaskCanAbort(task models.Task) e.Error {
+	return doAbortRunnerTask(task, true)
+}
+
+func doAbortRunnerTask(task models.Task, justCheck bool) e.Error {
+	logger := logs.Get().WithField("taskId", task.Id).WithField("action", "AbortTask")
+
+	header := &http.Header{}
+	header.Set("Content-Type", "application/json")
+
+	var runnerAddr string
+	runnerAddr, err := GetRunnerAddress(task.RunnerId)
+	if err != nil {
+		return e.AutoNew(err, e.InternalError)
+	}
+
+	requestUrl := utils.JoinURL(runnerAddr, consts.RunnerAbortTaskURL)
+	logger.Debugf("request runner: %s", requestUrl)
+
+	param := runner.TaskAbortReq{
+		EnvId:     task.EnvId.String(),
+		TaskId:    task.Id.String(),
+		JustCheck: justCheck,
+	}
+
+	respData, err := utils.HttpService(requestUrl, "POST", header, param,
+		int(consts.RunnerConnectTimeout.Seconds()),
+		int(consts.RunnerConnectTimeout.Seconds())*10,
+	)
+	if err != nil {
+		return e.AutoNew(err, e.RunnerError)
+	}
+
+	resp := runner.Response{}
+	if err := json.Unmarshal(respData, &resp); err != nil {
+		return e.New(e.RunnerError, fmt.Errorf("unexpected response: %s", respData))
+	}
+	logger.Debugf("runner response: %s", respData)
+
+	if resp.Error != "" {
+		return e.New(e.RunnerError, fmt.Errorf(resp.Error))
+	}
+	return nil
 }

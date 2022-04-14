@@ -37,9 +37,9 @@ func (PolicyGroup) Create(c *ctx.GinRequest) {
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param q query string false "模糊搜索"
+// @Param form query forms.SearchPolicyGroupForm true "parameter"
 // @Router /policies/groups [get]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.PolicyGroup}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.PolicyGroupResp}}
 func (PolicyGroup) Search(c *ctx.GinRequest) {
 	form := &forms.SearchPolicyGroupForm{}
 	if err := c.Bind(form); err != nil {
@@ -58,7 +58,7 @@ func (PolicyGroup) Search(c *ctx.GinRequest) {
 // @Param json body forms.UpdatePolicyGroupForm true "parameter"
 // @Param policyGroupId path string true "策略组Id"
 // @Router /policies/groups/{policyGroupId} [put]
-// @Success 200 {object} ctx.JSONResult{result=models.PolicyGroup}
+// @Success 200 {object} ctx.JSONResult
 func (PolicyGroup) Update(c *ctx.GinRequest) {
 	form := &forms.UpdatePolicyGroupForm{}
 	if err := c.Bind(form); err != nil {
@@ -94,7 +94,7 @@ func (PolicyGroup) Delete(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param policyGroupId path string true "策略组Id"
 // @Router /policies/groups/{policyGroupId} [get]
-// @Success 200 {object} ctx.JSONResult{result=models.PolicyGroup}
+// @Success 200 {object} ctx.JSONResult{result=resps.PolicyGroupResp}
 func (PolicyGroup) Detail(c *ctx.GinRequest) {
 	form := &forms.DetailPolicyGroupForm{}
 	if err := c.Bind(form); err != nil {
@@ -149,8 +149,9 @@ func (PolicyGroup) OpPolicyAndPolicyGroupRel(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param policyGroupId path string true "策略id"
+// @Param form query forms.PolicyScanReportForm true "parameter"
 // @Router /policies/groups/{policyGroupId}/report [get]
-// @Success 200 {object} ctx.JSONResult{result=apps.PolicyGroupScanReportResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.PolicyGroupScanReportResp}
 func (PolicyGroup) ScanReport(c *ctx.GinRequest) {
 	form := &forms.PolicyScanReportForm{}
 	if err := c.Bind(form); err != nil {
@@ -167,8 +168,9 @@ func (PolicyGroup) ScanReport(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param policyGroupId path string true "策略id"
+// @Param form query forms.PolicyLastTasksForm true "parameter"
 // @Router /policies/groups/{policyGroupId}/last_tasks [get]
-// @Success 200 {object} ctx.JSONResult{result=[]apps.LastScanTaskResp}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.LastScanTaskResp}}
 func (PolicyGroup) LastTasks(c *ctx.GinRequest) {
 	form := &forms.PolicyLastTasksForm{}
 	if err := c.Bind(form); err != nil {
@@ -186,7 +188,7 @@ func (PolicyGroup) LastTasks(c *ctx.GinRequest) {
 // @Security AuthToken
 // @router /policies/groups/checks [POST]
 // @Param form query forms.PolicyGroupChecksForm true "parameter"
-// @Success 200 {object} ctx.JSONResult{result=apps.TemplateChecksResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.TemplateChecksResp}
 func PolicyGroupChecks(c *ctx.GinRequest) {
 	form := forms.PolicyGroupChecksForm{}
 	if err := c.Bind(&form); err != nil {
@@ -202,7 +204,7 @@ func PolicyGroupChecks(c *ctx.GinRequest) {
 // @Produce json
 // @Param json body forms.SearchRegistryPgForm true "parameter"
 // @router /registry/policy_groups [GET]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]apps.RegistryPGResp}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.RegistryPGResp}}
 func SearchRegistryPG(c *ctx.GinRequest) {
 	form := forms.SearchRegistryPgForm{}
 	if err := c.Bind(&form); err != nil {
@@ -219,7 +221,7 @@ func SearchRegistryPG(c *ctx.GinRequest) {
 // @Produce json
 // @Param json body forms.SearchRegistryPgVersForm true "parameter"
 // @router /registry/policy_groups/versions [GET]
-// @Success 200 {object} ctx.JSONResult{result=[]apps.RegistryPGVerResp}
+// @Success 200 {object} ctx.JSONResult{result=[]resps.RegistryPGVerResp}
 func SearchRegistryPGVersions(c *ctx.GinRequest) {
 	form := forms.SearchRegistryPgVersForm{}
 	if err := c.Bind(&form); err != nil {

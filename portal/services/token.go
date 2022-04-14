@@ -18,7 +18,7 @@ type Claims struct {
 	UserId   models.Id `json:"userId"`
 	Username string    `json:"username"`
 	IsAdmin  bool      `json:"isAdmin"`
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 }
 
 func GenerateToken(uid models.Id, name string, isAdmin bool, expireDuration time.Duration) (string, error) {
@@ -29,8 +29,8 @@ func GenerateToken(uid models.Id, name string, isAdmin bool, expireDuration time
 		UserId:   uid,
 		Username: name,
 		IsAdmin:  isAdmin,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: expire.Unix(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expire),
 			Subject:   consts.JwtSubjectUserAuth,
 		},
 	})

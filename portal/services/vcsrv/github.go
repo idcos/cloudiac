@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -43,7 +44,6 @@ func (github *githubVcs) GetRepo(idOrPath string) (RepoIface, error) {
 
 	rep := RepositoryGithub{}
 	_ = json.Unmarshal(body, &rep)
-
 	return &githubRepoIface{
 		vcs:        github.vcs,
 		repository: &rep,
@@ -114,6 +114,26 @@ func (github *githubVcs) ListRepos(namespace, search string, limit, offset int) 
 func (github *githubVcs) UserInfo() (UserInfo, error) {
 
 	return UserInfo{}, nil
+}
+
+func (github *githubVcs) TokenCheck() error {
+	limit, offset := 1, 1
+	page := utils.LimitOffset2Page(limit, offset)
+	urlParam := url.Values{}
+	urlParam.Set("page", strconv.Itoa(page))
+	urlParam.Set("per_page", strconv.Itoa(limit))
+
+	path := utils.GenQueryURL(github.vcs.Address, "/user/repos", urlParam)
+	response, _, err := githubRequest(path, "GET", github.vcs.VcsToken, nil)
+	if err != nil {
+		return e.New(e.BadRequest, err)
+	}
+
+	if response.StatusCode > 300 {
+		return e.New(e.VcsInvalidToken, fmt.Sprintf("token valid check response code: %d", response.StatusCode))
+	}
+
+	return nil
 }
 
 type githubRepoIface struct {
@@ -354,6 +374,18 @@ func (github *githubRepoIface) CreatePrComment(prId int, comment string) error {
 		return e.New(e.VcsError, fmt.Errorf("code: %s, err: %s", response.Status, string(body)))
 	}
 	return nil
+}
+
+func (github *githubRepoIface) GetFullFilePath(address, filePath, repoRevision string) string {
+	u, _ := url.Parse("https://github.com/")
+	u.Path = path.Join(u.Path, github.repository.FullName, "blob", repoRevision, filePath)
+	return u.String()
+}
+
+func (github *githubRepoIface) GetCommitFullPath(address, commitId string) string {
+	u, _ := url.Parse("https://github.com/")
+	u.Path = path.Join(u.Path, github.repository.FullName, "commit", commitId)
+	return u.String()
 }
 
 //giteaRequest

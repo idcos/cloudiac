@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -106,6 +107,23 @@ func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([
 func (gitea *giteaVcs) UserInfo() (UserInfo, error) {
 
 	return UserInfo{}, nil
+}
+
+func (gitea *giteaVcs) TokenCheck() error {
+	page, limit := 1, 1
+	link, _ := url.Parse("/user/repos")
+	link.RawQuery = fmt.Sprintf("page=%d&limit=%d", page, limit)
+	path := gitea.vcs.Address + giteaApiRoute + link.String()
+	response, _, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
+	if err != nil {
+		return e.New(e.BadRequest, err)
+	}
+
+	if response.StatusCode > 300 {
+		return e.New(e.VcsInvalidToken, fmt.Sprintf("token valid check response code: %d", response.StatusCode))
+	}
+
+	return nil
 }
 
 type giteaRepoIface struct {
@@ -339,6 +357,18 @@ func (gitea *giteaRepoIface) CreatePrComment(prId int, comment string) error {
 		return e.New(e.BadRequest, err)
 	}
 	return nil
+}
+
+func (gitea *giteaRepoIface) GetFullFilePath(address, filePath, repoRevision string) string {
+	u, _ := url.Parse(address)
+	u.Path = path.Join(u.Path, gitea.repository.FullName, "src/branch", repoRevision, filePath)
+	return u.String()
+}
+
+func (gitea *giteaRepoIface) GetCommitFullPath(address, commitId string) string {
+	u, _ := url.Parse(address)
+	u.Path = path.Join(u.Path, gitea.repository.FullName, "commit", commitId)
+	return u.String()
 }
 
 //giteeRequest

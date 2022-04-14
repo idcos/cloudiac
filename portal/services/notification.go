@@ -6,6 +6,7 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/resps"
 	"fmt"
 	"strings"
 )
@@ -90,14 +91,8 @@ func DeleteNotification(tx *db.Session, id models.Id, orgId models.Id) e.Error {
 	return nil
 }
 
-type RespDetailNotification struct {
-	models.Notification
-	EventType  string   `json:"-" `
-	EventTypes []string `json:"eventType" gorm:"-"`
-}
-
 func DetailNotification(dbSess *db.Session, id models.Id) (interface{}, e.Error) {
-	resp := RespDetailNotification{}
+	resp := resps.RespDetailNotification{}
 	if err := dbSess.Table(models.Notification{}.TableName()).
 		Joins(fmt.Sprintf("left join %s as ne on %s.id = ne.notification_id",
 			models.NotificationEvent{}.TableName(), models.Notification{}.TableName())).

@@ -9,10 +9,10 @@ import (
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"context"
+	"errors"
 	"net/http"
 	"os"
 	"time"
-	"errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -80,8 +80,8 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, closedCh <-c
 		return err
 	}
 
-	ticker := time.NewTicker(time.Second * 30)
-	defer ticker.Stop()
+	heartbeatTicker := time.NewTicker(time.Second * 30)
+	defer heartbeatTicker.Stop()
 
 	logger.Infof("start watch task status")
 	defer logger.Infof("end watch task status")
@@ -100,7 +100,7 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, closedCh <-c
 		}
 
 		select {
-		case <-ticker.C:
+		case <-heartbeatTicker.C:
 			// 定时发送最新任务状态
 			if err := sendStatus(false, false); err != nil {
 				logger.Warnf("send status error: %v", err)
@@ -123,6 +123,7 @@ func doTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, closedCh <-c
 
 func doSendTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, withLog bool, isDeadline bool) error {
 	var msg runner.TaskStatusMessage
+
 	if isDeadline {
 		msg.Timeout = true
 	} else {
@@ -134,10 +135,13 @@ func doSendTaskStatus(wsConn *websocket.Conn, task *runner.StartedTask, withLog 
 			Exited:   !status.Running,
 			ExitCode: status.ExitCode,
 		}
+		if task.Step >= 0 {
+			msg.Aborted = task.IsAborted()
+		}
 	}
 
 	// 由于任务退出的时候 portal 会断开连接，所以如果判断已经退出，则直接发送全量日志
-	if withLog || msg.Timeout || msg.Exited {
+	if withLog || msg.Timeout || msg.Exited || msg.Aborted {
 		logContent, err := runner.FetchTaskLog(task.EnvId, task.TaskId, task.Step)
 		if err != nil {
 			logger.Errorf("fetch task log error: %v", err)

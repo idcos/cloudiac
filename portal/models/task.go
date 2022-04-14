@@ -77,6 +77,7 @@ const (
 	TaskApproving = common.TaskApproving
 	TaskRejected  = common.TaskRejected
 	TaskFailed    = common.TaskFailed
+	TaskAborted   = common.TaskAborted
 	TaskComplete  = common.TaskComplete
 )
 
@@ -132,15 +133,16 @@ type Task struct {
 	StopOnViolation bool `json:"stopOnViolation" gorm:"default:false"`
 
 	// 任务执行结果，如 add/change/delete 的资源数量、outputs 等
-	Result TaskResult `json:"result" gorm:"type:json"` // 任务执行结果
-
-	RetryNumber int    `json:"retryNumber" gorm:"size:32;default:0"` // 任务重试次数
-	RetryDelay  int    `json:"retryDelay" gorm:"size:32;default:0"`  // 每次任务重试时间，单位为秒
-	RetryAble   bool   `json:"retryAble" gorm:"default:false"`
-	Callback    string `json:"callback" gorm:"default:''"`       // 外部请求的回调方式
-	IsDriftTask bool   `json:"isDriftTask" gorm:"default:false"` // 是否是偏移检测任务
-	Source      string `json:"source" gorm:"not null;default:manual;enum('manual','driftPlan','driftApply','webhookPlan', 'webhookApply', 'autoDestroy', 'api')"`
-	SourceSys   string `json:"sourceSys" gorm:"not null;default:''"`
+	Result      TaskResult `json:"result" gorm:"type:json"`              // 任务执行结果
+	PlanResult  TaskResult `json:"planResult" gorm:"type:json"`          //plan的执行结果
+	RetryNumber int        `json:"retryNumber" gorm:"size:32;default:0"` // 任务重试次数
+	RetryDelay  int        `json:"retryDelay" gorm:"size:32;default:0"`  // 每次任务重试时间，单位为秒
+	RetryAble   bool       `json:"retryAble" gorm:"default:false"`
+	Callback    string     `json:"callback" gorm:"default:''"`       // 外部请求的回调方式
+	IsDriftTask bool       `json:"isDriftTask" gorm:"default:false"` // 是否是偏移检测任务
+	Applied     bool       `json:"applied" gorm:"default:false"`     // 是否漂移执行了terraformApply
+	Source      string     `json:"source" gorm:"not null;default:manual;enum('manual','driftPlan','driftApply','webhookPlan', 'webhookApply', 'autoDestroy', 'api')"`
+	SourceSys   string     `json:"sourceSys" gorm:"not null;default:''"`
 }
 
 func (Task) TableName() string {
@@ -181,7 +183,7 @@ func (BaseTask) IsStartedStatus(status string) bool {
 }
 
 func (BaseTask) IsExitedStatus(status string) bool {
-	return utils.InArrayStr([]string{TaskFailed, TaskRejected, TaskComplete}, status)
+	return utils.InArrayStr([]string{TaskFailed, TaskRejected, TaskComplete, TaskAborted}, status)
 }
 
 func (t *BaseTask) IsEffectTask() bool {

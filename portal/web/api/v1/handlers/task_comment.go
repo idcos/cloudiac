@@ -22,7 +22,7 @@ type TaskComment struct {
 // @Security AuthToken
 // @Param taskId path string true "作业ID"
 // @Param data body forms.CreateTaskCommentForm true "作业评论信息"
-// @Success 200 {object} models.TaskComment
+// @Success 200 {object} ctx.JSONResult{result=models.TaskComment}
 // @Router /tasks/{taskId}/comments [post]
 func (TaskComment) Create(c *ctx.GinRequest) {
 	form := &forms.CreateTaskCommentForm{}
@@ -40,6 +40,7 @@ func (TaskComment) Create(c *ctx.GinRequest) {
 // @Produce  json
 // @Security AuthToken
 // @Param taskId path string true "作业ID"
+// @Param form query forms.SearchTaskCommentForm true "parameter"
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.TaskComment}}
 // @Router /tasks/{taskId}/comments [get]
 func (TaskComment) Search(c *ctx.GinRequest) {

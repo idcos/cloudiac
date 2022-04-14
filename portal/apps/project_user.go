@@ -7,6 +7,7 @@ import (
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"fmt"
 	"net/http"
@@ -68,7 +69,7 @@ func SearchProjectUser(c *ctx.ServiceContext) (interface{}, e.Error) {
 			LazySelectAppend(fmt.Sprintf("o.role,%s.*", models.User{}.TableName()))
 	}
 
-	users := make([]*models.UserWithRoleResp, 0)
+	users := make([]*resps.UserWithRoleResp, 0)
 	if err := query.Scan(&users); err != nil {
 		c.Logger().Errorf("error get users, err %s", err)
 		return nil, e.New(e.DBError, err)
@@ -124,7 +125,7 @@ func SearchProjectAuthorizationUser(c *ctx.ServiceContext, form *forms.SearchPro
 			LazySelectAppend(fmt.Sprintf("o.role,%s.*", models.User{}.TableName()))
 	}
 
-	rs, err := getPage(query, form, &models.UserWithRoleResp{})
+	rs, err := getPage(query, form, &resps.UserWithRoleResp{})
 	if err != nil {
 		c.Logger().Errorf("error get page, err %s", err)
 	}

@@ -54,6 +54,8 @@ func Register(g *gin.RouterGroup) {
 	// Authorization Header 鉴权
 	g.Use(w(middleware.Auth)) // 解析 header token
 
+	// 允许搜索组织内所有用户信息
+	g.GET("/users/all", w(handlers.User{}.SearchAllUsers))
 	// 创建单点登录 token
 	g.POST("/sso/tokens", w(handlers.GenerateSsoToken))
 	// ctrl.Register(g.Group("tokens", ac()), &handlers.Token{})
@@ -126,6 +128,11 @@ func Register(g *gin.RouterGroup) {
 
 	// 组织下的资源搜索(只需要有项目的读权限即可查看资源)
 	g.GET("/orgs/resources", ac("orgs", "read"), w(handlers.Organization{}.SearchOrgResources))
+	// 列出组织下资源搜索得到的相关环境名称以及provider名称
+	g.GET("/orgs/resources/filters", ac("orgs", "read"), w(handlers.Organization{}.SearchOrgResourcesFilters))
+
+	// 组织概览统计数据
+	g.GET("/orgs/projects/statistics", ac(), w(handlers.Organization{}.OrgProjectsStat))
 
 	// 组织用户管理
 	g.GET("/orgs/:id/users", ac("orgs", "listuser"), w(handlers.Organization{}.SearchUser))
@@ -144,6 +151,9 @@ func Register(g *gin.RouterGroup) {
 
 	//项目管理
 	ctrl.Register(g.Group("projects", ac()), &handlers.Project{})
+
+	// 项目概览统计数据
+	g.GET("/projects/:id/statistics", ac(), w(handlers.Project{}.ProjectStat))
 
 	//变量管理
 	g.PUT("/variables/batch", ac(), w(handlers.Variable{}.BatchUpdate))
@@ -183,6 +193,7 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/templates/import", ac(), w(handlers.TemplateImport))
 	g.GET("/vcs/:id/repos/tfvars", ac(), w(handlers.TemplateTfvarsSearch))
 	g.GET("/vcs/:id/repos/playbook", ac(), w(handlers.TemplatePlaybookSearch))
+	g.GET("/vcs/:id/repos/url", ac(), w(handlers.Vcs{}.GetFileFullPath))
 	g.GET("/vcs/:id/file", ac(), w(handlers.Vcs{}.GetVcsRepoFileContent))
 	ctrl.Register(g.Group("notifications", ac()), &handlers.Notification{})
 
@@ -198,6 +209,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/tasks", ac(), w(handlers.Env{}.SearchTasks))
 	g.GET("/envs/:id/tasks/last", ac(), w(handlers.Env{}.LastTask))
 	g.POST("/envs/:id/deploy", ac("envs", "deploy"), w(handlers.Env{}.Deploy))
+	g.POST("/envs/:id/deploy/check", ac("envs", "deploy"), w(handlers.Env{}.DeployCheck))
 	g.POST("/envs/:id/destroy", ac("envs", "destroy"), w(handlers.Env{}.Destroy))
 	g.POST("/envs/:id/tags", ac("envs", "tags"), w(handlers.Env{}.UpdateTags))
 	g.GET("/envs/:id/resources", ac(), w(handlers.Env{}.SearchResources))
@@ -207,6 +219,12 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/policy_result", ac(), w(handlers.Env{}.PolicyResult))
 	g.GET("/envs/:id/resources/graph", ac(), w(handlers.Env{}.SearchResourcesGraph))
 	g.GET("/envs/:id/resources/graph/:resourceId", ac(), w(handlers.Env{}.ResourceGraphDetail))
+	g.POST("/envs/:id/lock", ac("envs", "lock"), w(handlers.EnvLock))
+	g.POST("/envs/:id/unlock", ac("envs", "unlock"), w(handlers.EnvUnLock))
+	g.GET("/envs/:id/unlock/confirm", ac(), w(handlers.EnvUnLockConfirm))
+
+	// 环境概览统计数据
+	g.GET("/envs/:id/statistics", ac(), w(handlers.Env{}.EnvStat))
 
 	// 任务管理
 	g.GET("/tasks", ac(), w(handlers.Task{}.Search))
@@ -214,6 +232,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/tasks/:id/log", ac(), w(handlers.Task{}.Log))
 	g.GET("/tasks/:id/output", ac(), w(handlers.Task{}.Output))
 	g.GET("/tasks/:id/resources", ac(), w(handlers.Task{}.Resource))
+	g.POST("/tasks/:id/abort", ac("tasks", "abort"), w(handlers.Task{}.TaskAbort))
 	g.POST("/tasks/:id/approve", ac("tasks", "approve"), w(handlers.Task{}.TaskApprove))
 	g.POST("/tasks/:id/comment", ac(), w(handlers.TaskComment{}.Create))
 	g.GET("/tasks/:id/comment", ac(), w(handlers.TaskComment{}.Search))

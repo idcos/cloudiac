@@ -41,6 +41,10 @@ func (rv *RegistryVcs) UserInfo() (UserInfo, error) {
 	return UserInfo{}, nil
 }
 
+func (rv *RegistryVcs) TokenCheck() error {
+	return nil
+}
+
 type RegistryRepo struct {
 	vcs      *models.Vcs
 	repoPath string // vcs 下repo的相对路径
@@ -246,6 +250,14 @@ func (r *RegistryRepo) DeleteWebhook(id int) error {
 func (r *RegistryRepo) CreatePrComment(prId int, comment string) error {
 
 	return nil
+}
+
+func (r *RegistryRepo) GetFullFilePath(address, filePath, repoRevision string) string {
+	return ""
+}
+
+func (r *RegistryRepo) GetCommitFullPath(address, commitId string) string {
+	return ""
 }
 
 func registryVcsRequest(path, method string, params map[string]string) (*http.Response, []byte, error) {
