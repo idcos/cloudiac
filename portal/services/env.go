@@ -185,7 +185,7 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 			if task.Type == models.TaskTypeApply {
 				envStatus = models.EnvStatusActive
 			} else if task.Type == models.TaskTypeDestroy {
-				envStatus = models.EnvStatusInactive
+				envStatus = models.EnvStatusDestroyed
 			}
 		default:
 			return e.New(e.InternalError, fmt.Errorf("unknown task status: %v", task.Status))
