@@ -52,9 +52,11 @@ func CleanTaskWorkDirCode(envId, taskId string) error {
 }
 
 func (t *Task) Run() (cid string, err error) {
+	t.logger.Debugln("task start to run...")
 	if t.req.ContainerId == "" {
 		cid, err = t.start()
 		if err != nil {
+			t.logger.Errorf("task start error: %v", err)
 			return cid, err
 		}
 		t.req.ContainerId = cid
@@ -62,10 +64,12 @@ func (t *Task) Run() (cid string, err error) {
 		// 初始化 workspace 路径名称
 		t.workspace, err = t.initWorkspace()
 		if err != nil {
+			t.logger.Errorf("initWorkspace error: %v", err)
 			return "", errors.Wrap(err, "initial workspace")
 		}
 	}
 
+	t.logger.Debugf("task [%s] is started", t.req.ContainerId)
 	return t.req.ContainerId, t.runStep()
 }
 
