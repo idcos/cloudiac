@@ -9,7 +9,9 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils/logs"
+	"encoding/json"
 	"fmt"
+	ctyjson "github.com/zclconf/go-cty/cty/json"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
@@ -156,7 +158,7 @@ type tfVariableConfig struct {
 
 type tfVariableBlock struct {
 	Name        string      `hcl:",label"`
-	Default     string      `hcl:"default,optional"`
+	Default     interface{} `hcl:"default,optional"`
 	Type        interface{} `hcl:"type,optional"`
 	Description string      `hcl:"description,optional"`
 	Sensitive   bool        `hcl:"sensitive,optional"`
@@ -183,11 +185,27 @@ func ParseTfVariables(filename string, content []byte) ([]TemplateVariable, e.Er
 
 	tv := make([]TemplateVariable, 0)
 	for _, s := range c.Upstreams {
-		tv = append(tv, TemplateVariable{
-			Value:       s.Default,
-			Name:        s.Name,
-			Description: s.Description,
-		})
+		if v, ok := s.Default.(*hcl.Attribute); ok {
+			val, _ := v.Expr.Value(nil)
+			if val.IsWhollyKnown() {
+				valJSON, err := ctyjson.Marshal(val, val.Type())
+				if err != nil {
+					return nil, e.New(e.HCLParseError, fmt.Errorf("failed to serialize default value as JSON: %s", err))
+				}
+				var def interface{}
+				err = json.Unmarshal(valJSON, &def)
+				if err != nil {
+					return nil, e.New(e.HCLParseError, fmt.Errorf("failed to re-parse default value from JSON: %s", err))
+				}
+				s.Default = def
+				tv = append(tv, TemplateVariable{
+					Value:       fmt.Sprintf("%v", s.Default),
+					Name:        s.Name,
+					Description: s.Description,
+				})
+			}
+		}
+
 	}
 	return tv, nil
 }
