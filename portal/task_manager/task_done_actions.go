@@ -127,7 +127,7 @@ func taskDoneProcessAutoDestroy(dbSess *db.Session, task *models.Task) error {
 
 	updateAttrs := models.Attrs{}
 
-	if task.Type == models.TaskTypeDestroy && env.Status == models.EnvStatusInactive {
+	if task.Type == models.TaskTypeDestroy && env.Status == models.EnvStatusDestroyed {
 		// 环境销毁后清空自动销毁设置，以支持通过再次部署重建环境。
 		// ttl 需要保留，做为重建环境的默认 ttl
 		updateAttrs["AutoDestroyAt"] = nil

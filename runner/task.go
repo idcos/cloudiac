@@ -521,11 +521,17 @@ var applyCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 terraform apply -input=false -auto-approve \
 {{ range $arg := .Req.StepArgs}}{{$arg}} {{ end }}_cloudiac.tfplan
+
+# state collect command
+terraform show -no-color -json >{{.TFStateJsonFilePath}} && \
+terraform providers schema -json > {{.TFProviderSchema}}
 `))
 
 func (t *Task) stepApply() (command string, err error) {
 	return t.executeTpl(applyCommandTpl, map[string]interface{}{
-		"Req": t.req,
+		"Req":                 t.req,
+		"TFStateJsonFilePath": t.up2Workspace(TFStateJsonFile),
+		"TFProviderSchema":    t.up2Workspace(TFProviderSchema),
 	})
 }
 

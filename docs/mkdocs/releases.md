@@ -1,6 +1,18 @@
 # Releases
 
 ------
+## v0.9.4 20220310
+**Features**
+
+- 任务结束后的 kafka 回调消息中增加任务类型和环境状态
+- 销毁资源、重新部署接口增加 source 字段，第三方服务调用时可通过该字段设置触发来源
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.9.4](https://github.com/idcos/cloudiac/releases/tag/v0.9.4)
+
+
+------
 ## v0.9.1 20220310
 **Features**
 

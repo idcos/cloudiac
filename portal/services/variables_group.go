@@ -295,7 +295,15 @@ func CreateRelationship(dbSess *db.Session, rels []models.VariableGroupRel) e.Er
 	return nil
 }
 
+// CheckVgRelationship 检查变量组是否可以绑定到实例
+// 检查项目:
+// 	1. 新绑定的变量组与已绑定的变量组是否存在同名变量
+// 	2. 如果 projectId 不为空，则检查新绑定的变量组是否被授权在该项目下使用
 func CheckVgRelationship(tx *db.Session, form *forms.BatchUpdateRelationshipForm, orgId models.Id, projectId models.Id) e.Error {
+	if len(form.VarGroupIds) == 0 {
+		return nil
+	}
+
 	// 查询当前作用域下绑定的变量组
 	bindVgs, er := GetVariableGroupByObject(tx, form.ObjectType, form.ObjectId, orgId)
 	if er != nil {
@@ -317,20 +325,25 @@ func CheckVgRelationship(tx *db.Session, form *forms.BatchUpdateRelationshipForm
 		}
 	}
 
-	pvgs, er := GetProjectVarGroups(tx, projectId)
-	if er != nil {
-		return er
-	}
-	pvgsMap := make(map[models.Id]*models.VariableGroup)
-	for i := range pvgs {
-		pvgsMap[pvgs[i].Id] = &pvgs[i]
+	if projectId != "" {
+		pvgs, er := GetProjectVarGroups(tx, projectId)
+		if er != nil {
+			return er
+		}
+		pvgsMap := make(map[models.Id]*models.VariableGroup)
+		for i := range pvgs {
+			pvgsMap[pvgs[i].Id] = &pvgs[i]
+		}
+
+		for _, vg := range newBindVgs {
+			if _, ok := pvgsMap[vg.Id]; !ok {
+				// 变量组未被授权在该项目下使用
+				return e.New(e.InvalidVarGroup, fmt.Errorf("%s", vg.Name))
+			}
+		}
 	}
 
 	for _, vg := range newBindVgs {
-		if _, ok := pvgsMap[vg.Id]; !ok {
-			return e.New(e.InvalidVarGroup, fmt.Errorf("%s", vg.Name))
-		}
-
 		for _, v := range vg.Variables {
 			// 校验新绑定的变量组变量是否冲突
 			if _, ok := variables[v.Name]; ok {

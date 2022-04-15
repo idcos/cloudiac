@@ -7,9 +7,9 @@ import "cloudiac/portal/models"
 type CreateUserForm struct {
 	BaseForm
 
-	Name   string `form:"name" json:"name" binding:"required,gte=2,lte=32"` // 用户名
-	Phone  string `form:"phone" json:"phone" binding:"max=11"`              // 电话
-	Email  string `form:"email" json:"email" binding:"required,email,max=64"`      // 电子邮件地址
+	Name   string `form:"name" json:"name" binding:"required,gte=2,lte=32"`   // 用户名
+	Phone  string `form:"phone" json:"phone" binding:"max=11"`                // 电话
+	Email  string `form:"email" json:"email" binding:"required,email,max=64"` // 电子邮件地址
 	IsLdap bool   `form:"isLdap" json:"isLdap" default:"false"`
 }
 
@@ -19,7 +19,7 @@ type UpdateUserForm struct {
 	Id          models.Id         `uri:"id" json:"id" binding:"required,startswith=u-,max=32" swaggerignore:"true"`     // 用户ID
 	Name        string            `form:"name" json:"name" binding:"omitempty,gte=2,lte=64"`                            // 用户名
 	Phone       string            `form:"phone" json:"phone" binding:"max=11"`                                          // 电话
-	OldPassword string            `form:"oldPassword" json:"oldPassword" binding:"omitempty,ascii,nefield=NewPassword"` // 原始密码
+	OldPassword string            `form:"oldPassword" json:"oldPassword" binding:"omitempty,ascii"`                     // 原始密码
 	NewPassword string            `form:"newPassword" json:"newPassword" binding:"omitempty,ascii,nefield=OldPassword"` // 新密码
 	NewbieGuide map[string]uint64 `form:"newbieGuide" json:"newbieGuide" binding:"" swaggertype:"string"`               // 新用户向导内容
 }
