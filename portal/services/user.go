@@ -318,10 +318,21 @@ func LdapAuthLogin(userEmail, password string) (username string, er e.Error) {
 	if err != nil {
 		return username, e.New(e.ValidateError, err)
 	}
+	var seachFilter string
+	if conf.Ldap.SearchFilter != "" {
+		seachFilter = conf.Ldap.SearchFilter
+	} else {
+		if conf.Ldap.EmailAttribute != "" {
+			seachFilter = fmt.Sprintf("(%s=%s)", conf.Ldap.EmailAttribute, userEmail)
+		} else {
+			seachFilter = fmt.Sprintf("(main=%s)", userEmail)
+		}
+
+	}
 	searchRequest := ldap.NewSearchRequest(
 		conf.Ldap.SearchBase,
 		ldap.ScopeWholeSubtree, ldap.DerefAlways, 0, 0, false,
-		fmt.Sprintf("(mail=%s)", userEmail),
+		seachFilter,
 		// 这里是查询返回的属性,以数组形式提供.如果为空则会返回所有的属性
 		[]string{},
 		nil,
@@ -337,7 +348,13 @@ func LdapAuthLogin(userEmail, password string) (username string, er e.Error) {
 	if err != nil {
 		return username, e.New(e.InvalidPassword, err)
 	}
-	return sr.Entries[0].GetAttributeValue("uid"), nil
+	var account string
+	if conf.Ldap.AccountAttribute != "" {
+		account = conf.Ldap.AccountAttribute
+	} else {
+		account = "uid"
+	}
+	return sr.Entries[0].GetAttributeValue(account), nil
 
 }
 
