@@ -506,6 +506,17 @@ func beforeCreateCallback(db *gorm.DB) {
 	}
 }
 
+func InitMockDb(mockDb *sql.DB) {
+	gormDb, err := gorm.Open(mysql.New(mysql.Config{
+		SkipInitializeWithVersion: true,
+		Conn:                      mockDb,
+	}), &gorm.Config{})
+	if err != nil {
+		panic(err)
+	}
+	defaultDB = gormDb
+}
+
 func Init(dsn string) {
 	if err := openDB(dsn); err != nil {
 		logs.Get().Fatalln(err)
