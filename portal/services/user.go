@@ -327,7 +327,6 @@ func LdapAuthLogin(userEmail, password string) (username string, er e.Error) {
 		} else {
 			seachFilter = fmt.Sprintf("(main=%s)", userEmail)
 		}
-
 	}
 	searchRequest := ldap.NewSearchRequest(
 		conf.Ldap.SearchBase,
