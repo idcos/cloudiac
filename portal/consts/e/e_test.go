@@ -25,7 +25,7 @@ func TestGetAcceptLanguage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getAcceptLanguage(tt.args.acceptLanguate); got != tt.want {
+			if got := GetAcceptLanguage(tt.args.acceptLanguate); got != tt.want {
 				t.Errorf("getAcceptLanguage() = %v, want %v", got, tt.want)
 			}
 		})

@@ -210,7 +210,7 @@ func AutoNew(err error, code int, status ...int) Error {
 }
 
 func ErrorMsg(err Error, langs string) string {
-	lang := getAcceptLanguage(langs)
+	lang := GetAcceptLanguage(langs)
 
 	if m, ok := errorMsgs[err.Code()]; ok {
 		if msg, ok := m[lang]; ok {
@@ -222,7 +222,7 @@ func ErrorMsg(err Error, langs string) string {
 	return err.Error()
 }
 
-func getAcceptLanguage(acceptLanguate string) string {
+func GetAcceptLanguage(acceptLanguate string) string {
 	var matcher = language.NewMatcher(langTags)
 	t, _, _ := language.ParseAcceptLanguage(acceptLanguate)
 	tag, _, _ := matcher.Match(t...)
