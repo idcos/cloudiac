@@ -33,9 +33,9 @@ type Env struct {
 	TplId     Id `json:"tplId" gorm:"size:32;not null"`     // 模板ID
 	CreatorId Id `json:"creatorId" gorm:"size:32;not null"` // 创建人ID
 
-	Name        string `json:"name" gorm:"not null"`                                                                       // 环境名称
-	Description string `json:"description" gorm:"type:text"`                                                               // 环境描述
-	Status      string `json:"status" gorm:"type:enum('active','failed','inactive')" enums:"'active','failed','inactive'"` // 环境状态, active活跃, inactive非活跃,failed错误,running部署中,approving审批中
+	Name        string `json:"name" gorm:"not null"`                                                                                                 // 环境名称
+	Description string `json:"description" gorm:"type:text"`                                                                                         // 环境描述
+	Status      string `json:"status" gorm:"type:enum('active','failed','inactive', 'destroyed')" enums:"'active','failed','inactive', 'destroyed'"` // 环境状态, active活跃, inactive非活跃,failed错误,running部署中,approving审批中
 	// 任务状态，只同步部署任务的状态(apply,destroy)，plan 任务不会对环境产生影响，所以不同步
 	TaskStatus  string `json:"taskStatus" gorm:"type:enum('','approving','running');default:''"`
 	Archived    bool   `json:"archived" gorm:"default:false"`                // 是否已归档
