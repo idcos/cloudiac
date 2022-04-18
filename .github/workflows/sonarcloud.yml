@@ -46,7 +46,7 @@ jobs:
         run: make run-mysql-unittest
 
       - name: Coverage
-        run: go test ./... -coverprofile=coverage.out || true
+        run: make coverage
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master

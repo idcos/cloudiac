@@ -108,10 +108,10 @@ dumpdb: tool
 	$(BUILD_DIR)/iac-tool dumpdb ./dumpdb/
 
 test:
-	$(GOTEST) ./...
+	$(GOTEST) -parallel 1 ./...
 
 coverage:
-	$(GOTEST) ./... -coverprofile=coverage.out || true
+	$(GOTEST) -parallel 1 ./... -coverpkg=./... -coverprofile=coverage.out || true
 
 view-coverage:
 	go tool cover -func=coverage.out
