@@ -49,6 +49,6 @@ ldap:
   ldap_server_port: 389
   search_base: "${LDAP_SEARCH_BASE}"
   search_filter: "${SEARCH_FILTER}"
-  email_attribute: "mail"
-  account_attribute: "uid"
+  email_attribute: "${EMAIL_ATTRIBUTE}"
+  account_attribute: "${ACCOUNT_ATTRIBUTE}"
 

@@ -322,11 +322,7 @@ func LdapAuthLogin(userEmail, password string) (username string, er e.Error) {
 	if conf.Ldap.SearchFilter != "" {
 		seachFilter = conf.Ldap.SearchFilter
 	} else {
-		if conf.Ldap.EmailAttribute != "" {
-			seachFilter = fmt.Sprintf("(%s=%s)", conf.Ldap.EmailAttribute, userEmail)
-		} else {
-			seachFilter = fmt.Sprintf("(main=%s)", userEmail)
-		}
+		seachFilter = fmt.Sprintf("(%s=%s)", conf.Ldap.EmailAttribute, userEmail)
 	}
 	searchRequest := ldap.NewSearchRequest(
 		conf.Ldap.SearchBase,
