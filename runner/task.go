@@ -480,8 +480,10 @@ terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }}
 func (t *Task) up2Workspace(name string) string {
 	ups := make([]string, 0)
 	ups = append(ups, "..") // 代码仓库被 clone 到 code 目录，所以默认有一层目录包装
-	for range filepath.SplitList(t.req.Env.Workdir) {
-		ups = append(ups, "..")
+	for _, v := range strings.Split(t.req.Env.Workdir, string(os.PathSeparator)) {
+		if v != "" {
+			ups = append(ups, "..")
+		}
 	}
 	return filepath.Join(append(ups, name)...)
 }
