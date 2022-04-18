@@ -100,11 +100,40 @@ func SearchProject(c *ctx.ServiceContext, form *forms.SearchProjectForm) (interf
 		return nil, e.New(e.DBError, err)
 	}
 
+	// 是否需要统计数据
+	if form.WithStat {
+		err := setProjectResStatData(c.DB(), projectResp)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return page.PageResp{
 		Total:    p.MustTotal(),
 		PageSize: p.Size,
 		List:     projectResp,
 	}, nil
+}
+
+func setProjectResStatData(db *db.Session, projectResp []resps.ProjectResp) e.Error {
+	// 参与检索的projects
+	searchedProjectIds := make([]models.Id, 0)
+	for _, resp := range projectResp {
+		searchedProjectIds = append(searchedProjectIds, resp.Id)
+	}
+
+	// 获取项目的资源变化趋势
+	mResStatData, err := services.GetResGrowTrendByProjects(db, searchedProjectIds, 7)
+	if err != nil {
+		return err
+	}
+
+	// 加入项目的资源变化趋势数据
+	for i := range projectResp {
+		projectResp[i].ResStats = mResStatData[projectResp[i].Id]
+	}
+
+	return nil
 }
 
 func UpdateProject(c *ctx.ServiceContext, form *forms.UpdateProjectForm) (interface{}, e.Error) {

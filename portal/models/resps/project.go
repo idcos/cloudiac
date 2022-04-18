@@ -7,7 +7,7 @@ import "cloudiac/portal/models"
 type ProjectResp struct {
 	models.Project
 	Creator  string               `json:"creator" form:"creator"`
-	ResStats []ProjectResStatResp `json:"resStats"`
+	ResStats []ProjectResStatResp `json:"resStats,omitempty" gorm:"-"`
 }
 
 type ProjectResStatResp struct {
