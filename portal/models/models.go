@@ -7,13 +7,9 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
-
-	"gopkg.in/yaml.v2"
-	"gorm.io/gorm"
 )
 
 type errorFunc func(tx *db.Session) (int64, error)
@@ -164,10 +160,8 @@ func dbMigrate(sess *db.Session) {
 }
 
 var autoMigration = false
-var modelers = make(map[string]Modeler)
 
 func autoMigrate(m Modeler, sess *db.Session) {
-	modelers[m.TableName()] = m
 	if !autoMigration {
 		return
 	}
@@ -186,28 +180,6 @@ func autoMigrate(m Modeler, sess *db.Session) {
 		panic(fmt.Errorf("auto migrate %T: %v", m, err))
 	}
 
-}
-
-func ExportDBYaml(db *gorm.DB, yamlFileName string) error {
-	dbData := make(map[string]interface{})
-	for tableName, modeler := range modelers {
-
-		tableData := []interface{}{}
-		if err := db.Model(modeler).Find(tableData).Error; err != nil {
-			panic(err)
-		}
-		dbData[tableName] = tableData
-	}
-	dbYaml, err := yaml.Marshal(dbData)
-	if err != nil {
-		panic(err)
-	}
-
-	if err := ioutil.WriteFile(yamlFileName, dbYaml, 0644); err != nil {
-		panic(err)
-	}
-
-	return nil
 }
 
 func Init(migrate bool) {
@@ -266,9 +238,6 @@ func Init(migrate bool) {
 	autoMigrate(&VariableGroupRel{}, sess)
 	autoMigrate(&ResourceDrift{}, sess)
 	autoMigrate(&VariableGroupProjectRel{}, sess)
-
-	autoMigrate(&Bill{}, sess)
-	autoMigrate(&BillData{}, sess)
 
 	dbMigrate(sess)
 }

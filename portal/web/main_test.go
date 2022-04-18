@@ -16,7 +16,6 @@ import (
 	"testing"
 	"time"
 
-	txdb "github.com/DATA-DOG/go-txdb"
 	"github.com/gin-gonic/gin"
 	"github.com/go-testfixtures/testfixtures/v3"
 	"github.com/stretchr/testify/assert"
@@ -95,7 +94,7 @@ func prepareTestDatabase(t *testing.T) (sess *db.Session, cleanup func() error) 
 // TestMain 该函数在所有测试用例执行之前会被调用
 func TestMain(m *testing.M) {
 	fmt.Println("test main=============")
-	txdb.Register("mysqltx", "mysql", fmt.Sprintf("root:%s@tcp(localhost:%d)/iac_test?charset=utf8mb4&parseTime=True&loc=Local", "Yunjikeji", 3307))
+	// txdb.Register("mysqltx", "mysql", fmt.Sprintf("root:%s@tcp(localhost:%d)/iac_test?charset=utf8mb4&parseTime=True&loc=Local", "Yunjikeji", 3307))
 
 	// 初始化 config 的 jwt key，login 接口需要使用
 	configs.Set(configs.Config{

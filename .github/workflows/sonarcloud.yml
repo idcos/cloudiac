@@ -42,8 +42,8 @@ jobs:
       - name: Golangci-lint
         run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.43.0 && ./bin/golangci-lint run --out-format checkstyle --issues-exit-code 0 --timeout 2m > report.xml
 
-      - name: Unittest Mysql DB
-        run: make run-mysql-unittest
+      - name: Start Mysql database instance for unittest
+        run: make start-mysql-unittest
 
       - name: Coverage
         run: make coverage

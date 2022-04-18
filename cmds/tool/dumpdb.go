@@ -26,6 +26,11 @@ func (*DumpDb) Execute(args []string) error {
 	models.Init(true)
 	sqlDb, _ := db.Get().GormDB().DB()
 
+	// 只初始化数据库不做导出
+	if outputDir == "init-only" {
+		return nil
+	}
+
 	dumper, err := testfixtures.NewDumper(
 		testfixtures.DumpDatabase(sqlDb),
 		testfixtures.DumpDialect("mysql"), // or your database of choice

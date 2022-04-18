@@ -511,17 +511,6 @@ func beforeCreateCallback(db *gorm.DB) {
 	}
 }
 
-func InitMockDb(mockDb *sql.DB) {
-	gormDb, err := gorm.Open(mysql.New(mysql.Config{
-		SkipInitializeWithVersion: true,
-		Conn:                      mockDb,
-	}), &gorm.Config{})
-	if err != nil {
-		panic(err)
-	}
-	defaultDB = gormDb
-}
-
 //InitWithTxdb 使用 txdb 初始化单元测试数据库
 func InitWithTxdb(dsn string, driverName string) error {
 	if err := openDB(dsn, driverName); err != nil {
