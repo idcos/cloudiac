@@ -21,6 +21,7 @@ type Option struct {
 	Parse           ParseCmd              `command:"parse" description:"parse rego"`
 	Upgrade2v0dot10 Update2v0dot10Cmd     `command:"upgrade2v0.10" description:"update data to v0.10"`
 	Bill            BillCmd               `command:"bill-collect" description:"bill collect"`
+	DumpDb          DumpDb                `command:"dumpdb" description:"dump db to yaml"`
 }
 
 var (

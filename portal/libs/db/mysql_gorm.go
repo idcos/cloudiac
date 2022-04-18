@@ -415,7 +415,7 @@ func Get() *Session {
 	return ToSess(defaultDB)
 }
 
-func openDB(dsn string) error {
+func openDB(dsn string, driverNames ...string) error {
 	slowThresholdEnv := os.Getenv("GORM_SLOW_THRESHOLD")
 	slowThreshold := time.Second
 	if slowThresholdEnv != "" {
@@ -443,7 +443,12 @@ func openDB(dsn string) error {
 		}
 	}
 
+	driverName := "mysql"
+	if len(driverNames) > 0 {
+		driverName = driverNames[0]
+	}
 	mysqlDial := mysql.New(mysql.Config{
+		DriverName:        driverName,
 		DSN:               dsn,
 		DefaultStringSize: 255,
 	})
@@ -515,6 +520,15 @@ func InitMockDb(mockDb *sql.DB) {
 		panic(err)
 	}
 	defaultDB = gormDb
+}
+
+//InitWithTxdb 使用 txdb 初始化单元测试数据库
+func InitWithTxdb(dsn string, driverName string) error {
+	if err := openDB(dsn, driverName); err != nil {
+		return err
+	}
+	defaultDB = defaultDB.Debug()
+	return nil
 }
 
 func Init(dsn string) {

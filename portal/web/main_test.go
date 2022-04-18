@@ -2,159 +2,176 @@ package web
 
 import (
 	"cloudiac/configs"
-	_ "cloudiac/docs"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/services"
 	"cloudiac/portal/web/api/v1/handlers"
 	"cloudiac/portal/web/middleware"
-	"database/sql/driver"
-	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
-	sqlmock "github.com/DATA-DOG/go-sqlmock"
+	txdb "github.com/DATA-DOG/go-txdb"
 	"github.com/gin-gonic/gin"
-	"github.com/iancoleman/strcase"
+	"github.com/go-testfixtures/testfixtures/v3"
 	"github.com/stretchr/testify/assert"
 )
 
-func performRequest(r http.Handler, method, path string, body string) *httptest.ResponseRecorder {
+var (
+	fixtures *testfixtures.Loader
+)
+
+func performRequest(r http.Handler, method, path string, body string, headers map[string]string) *httptest.ResponseRecorder {
 	bodyReader := strings.NewReader(body)
 	req, _ := http.NewRequest(method, path, bodyReader)
 	if method == "POST" {
 		req.Header.Add("Content-Type", "application/json")
 	}
-	w := httptest.NewRecorder()
+	for header := range headers {
+		req.Header.Add(header, headers[header])
+	}
+	w := httptest.NewRecorder() // http.ResponseWriter
 	r.ServeHTTP(w, req)
 	return w
 }
 
-const (
-	userJson = `{
-    "id": "u-c8q36oqs1s472lf4rdbg",
-    "created_at": "2022-03-18 15:23:15",
-    "updated_at": "2022-03-18 15:25:02",
-    "deleted_at": null,
-    "deleted_at_t": 0,
-    "name": "admin",
-    "email": "admin@example.com",
-    "password": "$2a$10$3JhWsgA8OVIXTOydpq.SNutsVFu/qUlm69tK5V6ENHrQE8etMyu.a",
-    "phone": "",
-    "is_admin": 0,
-    "status": "enable",
-    "newbie_guide": null
-  }`
-)
-
-type AnyTime struct{}
-
-func (a AnyTime) Match(v driver.Value) bool {
-	_, ok := v.(time.Time)
-	return ok
-}
-
-type Any struct{}
-
-func (a Any) Match(v driver.Value) bool {
-	return true
-}
-
-func userKeys() []string {
-	m := make(map[string]interface{})
-	json.Unmarshal([]byte(userJson), &m)
-	var keys []string
-	for k := range m {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-func userVals() ([]string, []driver.Value) {
-	u := models.User{}
-	json.Unmarshal([]byte(userJson), &u)
-
-	ps := reflect.ValueOf(u)
-
-	keys := userKeys()
-	var vals []driver.Value
-
-	for _, k := range keys {
-		f := ps.FieldByName(strcase.ToCamel(k))
-		if !f.IsValid() {
-			vals = append(vals, nil)
-		} else {
-			vals = append(vals, f.Interface())
-		}
-	}
-	return keys, vals
-}
-
-func TestOperationLogMiddleware(t *testing.T) {
-	mockDB, mock, err := sqlmock.New()
+//prepareMySQLDB 为测试用例 T 准备一个新的数据库连接
+func prepareMySQLDB(t *testing.T) (sess *db.Session, cleanup func() error) {
+	dsn := fmt.Sprintf("root:%s@tcp(localhost:%d)/iac_test", "Yunjikeji", 3307)
+	// cName := fmt.Sprintf("tx_10") //, t.Name(), time.Now().UnixNano())
+	err := db.InitWithTxdb(dsn, "mysql")
 	if err != nil {
-		t.Fatalf("init mockdb error %v", err)
+		t.Fatalf("open mysqltx connection: %s, err: %s", dsn, err)
 	}
-	defer mockDB.Close()
 
-	db.InitMockDb(mockDB)
+	close := func() error {
+		sqlDb, err := db.Get().GormDB().DB()
+		if err != nil {
+			t.Fatalf("close db: %s", err)
+		}
+		return sqlDb.Close()
+	}
+
+	// 初始化数据库表
+	// models.Init(true)
+
+	sess = db.Get()
+	sqlDb, _ := sess.GormDB().DB()
+
+	// 初始化数据，这里会导入默认的管理员用户/组织/项目
+	fixtures, err = testfixtures.New(
+		testfixtures.Database(sqlDb),
+		testfixtures.Dialect("mysql"),
+		// 加载测试数据，可以使用 Paths, Directory, Files 这几种方式进行加载
+		testfixtures.Paths(
+			"../../unittest_init",
+			"testdata/fixtures",
+		),
+	)
+	if err != nil {
+		t.Fatalf("load fixtures: %s", err)
+	}
+
+	return db.Get(), close
+}
+
+//prepareTestDatabase 加载测试数据，每次测试前都需要执行
+func prepareTestDatabase(t *testing.T) (sess *db.Session, cleanup func() error) {
+	fmt.Println("reload database =============")
+	sess, cleanup = prepareMySQLDB(t)
+
+	// 每次 load 都会清理旧数据并重新加载
+	if err := fixtures.Load(); err != nil {
+		t.Fatalf("load fixtures: %s", err)
+	}
+	return sess, cleanup
+}
+
+// TestMain 该函数在所有测试用例执行之前会被调用
+func TestMain(m *testing.M) {
+	fmt.Println("test main=============")
+	txdb.Register("mysqltx", "mysql", fmt.Sprintf("root:%s@tcp(localhost:%d)/iac_test?charset=utf8mb4&parseTime=True&loc=Local", "Yunjikeji", 3307))
 
 	// 初始化 config 的 jwt key，login 接口需要使用
 	configs.Set(configs.Config{
 		JwtSecretKey: "6xGzLKiX4dl0UE6aVuBGCmRWL7cQ+90W",
 	})
 
-	// 从 user json 转换为 key slice 和 value slice，作为后续查询记录返回使用
-	keys, vals := userVals()
-	// 单独处理 user.password,因为 user 的 password 字段被忽略
-	for i, key := range keys {
-		if key == "password" {
-			vals[i] = "$2a$10$3JhWsgA8OVIXTOydpq.SNutsVFu/qUlm69tK5V6ENHrQE8etMyu.a"
-		}
-	}
-
-	// mock 第一条数据库操作，返回 user 记录
-	mock.ExpectQuery(`SELECT .*`). // 正则匹配查询语句 "SELECT * FROM `iac_user` WHERE email = ? AND `iac_user`.`deleted_at_t` = ? ORDER BY `iac_user`.`id` LIMIT 1"
-		// 匹配 ? 查询参数
-		WithArgs("admin@example.com", 0).
-		WillReturnRows(
-			// 返回结果 rows 的列名 []string
-			sqlmock.NewRows(keys).
-				// 返回查询记录 []driver.Value...
-				AddRow(vals...))
-
-	// mock 第二个数据库操作，插入一条操作记录
-	mock.ExpectBegin()                                       // mock 开启事务
-	mock.ExpectExec("INSERT INTO `iac_operation_log` (.+)"). // INSERT INTO `iac_operation_log` (`id`,`user_id`,`username`,`user_addr`,`operation_at`,`operation_url`,`operation_type`,`operation_info`,`operation_status`,`desc`) VALUES (?,?,?,?,?,?,?,?,?,?)
-		// 按字段顺序填写 values 参数
-		WithArgs(Any{}, Any{}, Any{}, Any{}, AnyTime{}, "/api/v1/auth/login", "Create", "创建了auth中的数据", 200, `
-	{
-    "email": "admin@example.com",
-    "password": "Yunjikeji#123"
+	// 调用 os.Exit 开始测试，测试完成退出测试
+	os.Exit(m.Run())
 }
-	`).
-		// exec 操作返回参数 lastInsertId, affectedRows
-		WillReturnResult(sqlmock.NewResult(1, 1))
-	mock.ExpectCommit() // mock 提交事务
+
+// func TestOperationLogMiddleware(t *testing.T) {
+// 	t.Parallel()
+// 	TestLogGet(t)
+// 	TestLogPost(t)
+// }
+
+func TestLogPost(t *testing.T) {
+	_, cleanup := prepareTestDatabase(t)
+	// 如果测试过程中有创建临时文件，需要在测试结束的时候删除
+	defer cleanup() // 测试完成关闭数据库连接，数据会被清理掉
 
 	// 初始化 gin
 	w := ctrl.WrapHandler
 	e := gin.New()
+
+	// 本次测试的中间件，其他单元测试可以不引入
 	e.Use(w(middleware.Operation))
+
+	// 测试的路由，这里忽略了 rbac 验证的 ac() 函数，因为这里只是测试中间件，不需要验证权限
 	e.POST("/api/v1/auth/login", w(handlers.Auth{}.Login))
 
-	// 执行动作
+	// 执行测试动作
 	r := performRequest(e, "POST", "/api/v1/auth/login", `
 	{
     "email": "admin@example.com",
     "password": "Yunjikeji#123"
 }
-	`)
+	`, nil)
 
 	// 检查结果
 	assert.Equal(t, http.StatusOK, r.Code)
+}
+
+func TestLogGet(t *testing.T) {
+	_, cleanup := prepareTestDatabase(t)
+	// 如果测试过程中有创建临时文件，需要在测试结束的时候删除
+	defer cleanup() // 测试完成关闭数据库连接，数据会被清理掉
+
+	// 初始化 gin
+	w := ctrl.WrapHandler
+	e := gin.New()
+
+	// 本次测试的中间件，其他单元测试可以不引入
+	e.Use(w(middleware.Operation))
+
+	// 一般都需要引入，在检查token有效性的同时解析了用户/组织/项目等信息，在大部分API中都需要
+	e.Use(w(middleware.Auth))
+
+	// 测试的路由
+	e.GET("/api/v1/auth/me", w(handlers.Auth{}.GetUserByToken))
+
+	// 执行测试动作
+	r := performRequest(e, "GET", "/api/v1/auth/me", "", map[string]string{
+		"Authorization": fmt.Sprintf("Bearer %s", getNewLoginToken(t)),
+	})
+
+	// 检查结果
+	assert.Equal(t, http.StatusOK, r.Code)
+	// 检查是否有操作日志记录
+}
+
+func getNewLoginToken(t *testing.T) string {
+	// 生成登录授权
+	token, err := services.GenerateToken(models.Id("u-c9cgu32s1s4c17dvmjug"), "admin@example.com", true, 1*24*time.Hour)
+	if err != nil {
+		t.Fatalf("generate token: %s", err)
+	}
+	return token
 }
