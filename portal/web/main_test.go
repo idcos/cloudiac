@@ -56,9 +56,6 @@ func prepareMySQLDB(t *testing.T) (sess *db.Session, cleanup func() error) {
 		return sqlDb.Close()
 	}
 
-	// 初始化数据库表
-	// models.Init(true)
-
 	sess = db.Get()
 	sqlDb, _ := sess.GormDB().DB()
 
