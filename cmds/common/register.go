@@ -57,17 +57,21 @@ func start(isBoot bool, serviceName string) {
 	ctx := context.Background()
 	defer ctx.Done()
 
-	lg.Infof("acquire %s lock ...", serviceName)
+	// 从配置文件中获取当前服务的ID
+	conf := configs.Get()
+	serviceId := conf.Consul.ServiceID
+
+	lg.Infof("acquire %s lock ...", serviceId)
 	var err error
 	var lockLostCh = make(<-chan struct{})
 	for {
-		lockLostCh, err = acquireLock(ctx, serviceName)
+		lockLostCh, err = acquireLock(ctx, serviceId)
 		if err == nil {
 			break
 		}
 
 		// 正常情况下 acquireLock 会阻塞直到成功获取锁，如果报错了就是出现了异常(可能是连接问题)
-		lg.Errorf("acquire %s lock failed: %v", serviceName, err)
+		lg.Errorf("acquire %s lock failed: %v", serviceId, err)
 		time.Sleep(time.Second * 10)
 	}
 
@@ -84,8 +88,8 @@ func start(isBoot bool, serviceName string) {
 	lg.Warnf("disconnected from consul")
 }
 
-func acquireLock(ctx context.Context, serviceName string) (<-chan struct{}, error) {
-	locker, err := consul.GetLocker(serviceName+"-lock", []byte(serviceName), configs.Get().Consul.Address)
+func acquireLock(ctx context.Context, serviceId string) (<-chan struct{}, error) {
+	locker, err := consul.GetLocker(serviceId+"-lock", []byte(serviceId), configs.Get().Consul.Address)
 	if err != nil {
 		return nil, errors.Wrap(err, "get locker")
 	}
