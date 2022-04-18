@@ -20,8 +20,9 @@ type CreateProjectForm struct {
 type SearchProjectForm struct {
 	NoPageSizeForm
 
-	Q      string `json:"q" form:"q" `
-	Status string `json:"status" form:"status" binding:"omitempty,oneof=enable disable"`
+	Q        string `json:"q" form:"q" `
+	Status   string `json:"status" form:"status" binding:"omitempty,oneof=enable disable"`
+	WithStat bool   `json:"withStat" form:"withStat"`
 }
 
 type UpdateProjectForm struct {
