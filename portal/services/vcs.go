@@ -9,7 +9,6 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils/logs"
-	"encoding/json"
 	"fmt"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 
@@ -192,14 +191,8 @@ func ParseTfVariables(filename string, content []byte) ([]TemplateVariable, e.Er
 				if err != nil {
 					return nil, e.New(e.HCLParseError, fmt.Errorf("failed to serialize default value as JSON: %s", err))
 				}
-				var def interface{}
-				err = json.Unmarshal(valJSON, &def)
-				if err != nil {
-					return nil, e.New(e.HCLParseError, fmt.Errorf("failed to re-parse default value from JSON: %s", err))
-				}
-				s.Default = def
 				tv = append(tv, TemplateVariable{
-					Value:       fmt.Sprintf("%v", s.Default),
+					Value:       string(valJSON),
 					Name:        s.Name,
 					Description: s.Description,
 				})
