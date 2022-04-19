@@ -6,7 +6,13 @@ import "cloudiac/portal/models"
 
 type ProjectResp struct {
 	models.Project
-	Creator string `json:"creator" form:"creator" `
+	Creator  string               `json:"creator" form:"creator"`
+	ResStats []ProjectResStatResp `json:"resStats" gorm:"-"`
+}
+
+type ProjectResStatResp struct {
+	Date  string `json:"date"`
+	Count int    `json:"count"`
 }
 
 type DetailProjectResp struct {

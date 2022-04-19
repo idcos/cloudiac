@@ -72,8 +72,9 @@ func CreateProject(c *ctx.ServiceContext, form *forms.CreateProjectForm) (interf
 
 func SearchProject(c *ctx.ServiceContext, form *forms.SearchProjectForm) (interface{}, e.Error) {
 	query := services.SearchProject(c.DB(), c.OrgId, form.Q, form.Status)
+
 	if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) {
-		projectIds, err := services.GetProjectsByUserOrg(query, c.UserId, c.OrgId)
+		projectIds, err := getSearchProjectIds(query, c.UserId, c.OrgId, form.ProjectId)
 		if err != nil {
 			c.Logger().Errorf("error get projects, err %s", err)
 			return nil, e.New(e.DBError, err)
@@ -82,6 +83,10 @@ func SearchProject(c *ctx.ServiceContext, form *forms.SearchProjectForm) (interf
 			query = query.Where(fmt.Sprintf("%s.id in (?)", models.Project{}.TableName()), projectIds)
 		} else {
 			return getEmptyListResult(form)
+		}
+	} else {
+		if form.ProjectId != "" {
+			query = query.Where(fmt.Sprintf("%s.id = ?", models.Project{}.TableName()), form.ProjectId)
 		}
 	}
 
@@ -100,11 +105,65 @@ func SearchProject(c *ctx.ServiceContext, form *forms.SearchProjectForm) (interf
 		return nil, e.New(e.DBError, err)
 	}
 
+	// 是否需要统计数据
+	if form.WithStat {
+		err := setProjectResStatData(c.DB(), projectResp)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return page.PageResp{
 		Total:    p.MustTotal(),
 		PageSize: p.Size,
 		List:     projectResp,
 	}, nil
+}
+
+func getSearchProjectIds(query *db.Session, userId, orgId, projectId models.Id) ([]models.Id, e.Error) {
+	projectIds, err := services.GetProjectsByUserOrg(query, userId, orgId)
+	if err != nil {
+		return nil, err
+	}
+
+	if projectId == "" {
+		return projectIds, nil
+	}
+
+	var isExist = false
+	for _, id := range projectIds {
+		if projectId == id {
+			isExist = true
+			break
+		}
+	}
+
+	if !isExist {
+		return nil, e.New(e.InvalidProjectId, fmt.Errorf("Can not access this project Id: %s", projectId))
+	}
+
+	return []models.Id{projectId}, nil
+}
+
+func setProjectResStatData(db *db.Session, projectResp []resps.ProjectResp) e.Error {
+	// 参与检索的projects
+	searchedProjectIds := make([]models.Id, 0)
+	for _, resp := range projectResp {
+		searchedProjectIds = append(searchedProjectIds, resp.Id)
+	}
+
+	// 获取项目的资源变化趋势
+	mResStatData, err := services.GetResGrowTrendByProjects(db, searchedProjectIds, 7)
+	if err != nil {
+		return err
+	}
+
+	// 加入项目的资源变化趋势数据
+	for i := range projectResp {
+		projectResp[i].ResStats = mResStatData[projectResp[i].Id]
+	}
+
+	return nil
 }
 
 func UpdateProject(c *ctx.ServiceContext, form *forms.UpdateProjectForm) (interface{}, e.Error) {
