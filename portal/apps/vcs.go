@@ -271,7 +271,7 @@ func VcsVariableSearch(c *ctx.ServiceContext, form *forms.TemplateVariableSearch
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
 		Ref:    form.RepoRevision,
-		Search: consts.VariablePrefix,
+		Search: consts.TfFileMatch,
 		Path:   form.Workdir,
 	})
 	if er != nil {
