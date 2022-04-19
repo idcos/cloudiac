@@ -5,9 +5,9 @@ package consul
 import (
 	"cloudiac/configs"
 	"cloudiac/portal/services"
+	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -15,11 +15,12 @@ import (
 )
 
 func Register(serviceName string, consulConfig configs.ConsulConfig) error {
+	logger := logs.Get()
 	config := consulapi.DefaultConfig()
 	config.Address = consulConfig.Address
 	client, err := consulapi.NewClient(config)
 	if err != nil {
-		log.Fatal("consul client error : ", err)
+		logger.Errorf("consul client error : ", err)
 		return err
 	}
 	consulTags, _ := services.ConsulKVSearch(consulConfig.ServiceID)
@@ -49,7 +50,7 @@ func Register(serviceName string, consulConfig configs.ConsulConfig) error {
 
 	err = client.Agent().ServiceRegister(registration)
 	if err != nil {
-		log.Fatal("register server error : ", err)
+		logger.Errorf("register server error : ", err)
 		return err
 	}
 	return nil
