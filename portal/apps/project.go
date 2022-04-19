@@ -72,11 +72,9 @@ func CreateProject(c *ctx.ServiceContext, form *forms.CreateProjectForm) (interf
 
 func SearchProject(c *ctx.ServiceContext, form *forms.SearchProjectForm) (interface{}, e.Error) {
 	query := services.SearchProject(c.DB(), c.OrgId, form.Q, form.Status)
-	var projectIds = make([]models.Id, 0)
-	var err error
 
 	if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) {
-		projectIds, err = getSearchProjectIds(query, c.UserId, c.OrgId, form.ProjectId)
+		projectIds, err := getSearchProjectIds(query, c.UserId, c.OrgId, form.ProjectId)
 		if err != nil {
 			c.Logger().Errorf("error get projects, err %s", err)
 			return nil, e.New(e.DBError, err)
