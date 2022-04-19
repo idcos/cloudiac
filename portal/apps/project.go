@@ -121,11 +121,28 @@ func SearchProject(c *ctx.ServiceContext, form *forms.SearchProjectForm) (interf
 }
 
 func getSearchProjectIds(query *db.Session, userId, orgId, projectId models.Id) ([]models.Id, e.Error) {
-	if projectId != "" {
-		return []models.Id{projectId}, nil
+	projectIds, err := services.GetProjectsByUserOrg(query, userId, orgId)
+	if err != nil {
+		return nil, err
 	}
 
-	return services.GetProjectsByUserOrg(query, userId, orgId)
+	if projectId == "" {
+		return projectIds, nil
+	}
+
+	var isExist = false
+	for _, id := range projectIds {
+		if projectId == id {
+			isExist = true
+			break
+		}
+	}
+
+	if !isExist {
+		return nil, e.New(e.InvalidProjectId, fmt.Errorf("Can not access this project Id: %s", projectId))
+	}
+
+	return []models.Id{projectId}, nil
 }
 
 func setProjectResStatData(db *db.Session, projectResp []resps.ProjectResp) e.Error {
