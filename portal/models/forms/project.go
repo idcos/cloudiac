@@ -20,9 +20,10 @@ type CreateProjectForm struct {
 type SearchProjectForm struct {
 	NoPageSizeForm
 
-	Q        string `json:"q" form:"q" `
-	Status   string `json:"status" form:"status" binding:"omitempty,oneof=enable disable"`
-	WithStat bool   `json:"withStat" form:"withStat"`
+	Q         string    `json:"q" form:"q" `
+	Status    string    `json:"status" form:"status" binding:"omitempty,oneof=enable disable"`
+	WithStat  bool      `json:"withStat" form:"withStat"`
+	ProjectId models.Id `json:"projectId" form:"projectId"`
 }
 
 type UpdateProjectForm struct {

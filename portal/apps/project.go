@@ -72,8 +72,11 @@ func CreateProject(c *ctx.ServiceContext, form *forms.CreateProjectForm) (interf
 
 func SearchProject(c *ctx.ServiceContext, form *forms.SearchProjectForm) (interface{}, e.Error) {
 	query := services.SearchProject(c.DB(), c.OrgId, form.Q, form.Status)
+	var projectIds = make([]models.Id, 0)
+	var err error
+
 	if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) {
-		projectIds, err := services.GetProjectsByUserOrg(query, c.UserId, c.OrgId)
+		projectIds, err = getSearchProjectIds(query, c.UserId, c.OrgId, form.ProjectId)
 		if err != nil {
 			c.Logger().Errorf("error get projects, err %s", err)
 			return nil, e.New(e.DBError, err)
@@ -82,6 +85,10 @@ func SearchProject(c *ctx.ServiceContext, form *forms.SearchProjectForm) (interf
 			query = query.Where(fmt.Sprintf("%s.id in (?)", models.Project{}.TableName()), projectIds)
 		} else {
 			return getEmptyListResult(form)
+		}
+	} else {
+		if form.ProjectId != "" {
+			query = query.Where(fmt.Sprintf("%s.id = ?", models.Project{}.TableName()), form.ProjectId)
 		}
 	}
 
@@ -113,6 +120,14 @@ func SearchProject(c *ctx.ServiceContext, form *forms.SearchProjectForm) (interf
 		PageSize: p.Size,
 		List:     projectResp,
 	}, nil
+}
+
+func getSearchProjectIds(query *db.Session, userId, orgId, projectId models.Id) ([]models.Id, e.Error) {
+	if projectId != "" {
+		return []models.Id{projectId}, nil
+	}
+
+	return services.GetProjectsByUserOrg(query, userId, orgId)
 }
 
 func setProjectResStatData(db *db.Session, projectResp []resps.ProjectResp) e.Error {
