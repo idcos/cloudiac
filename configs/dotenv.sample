@@ -65,6 +65,10 @@ LDAP_ADMIN_DN="cn=manager,dc=example,dc=com"
 LDAP_ADMIN_PASSWORD="password"
 LDAP_SERVER="ldap.example.com"
 LDAP_SEARCH_BASE="dc=example,dc=com"
+SEARCH_FILTER=""
+EMAIL_ATTRIBUTE="mail"
+ACCOUNT_ATTRIBUTE="uid"
+
 
 ######### 以下为 runner 配置 #############
 # runner 服务注册配置(均为必填)
