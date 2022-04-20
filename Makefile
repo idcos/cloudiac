@@ -5,7 +5,7 @@ GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
 HOSTOS=$(shell go env GOHOSTOS)
 HOSTARCH=$(shell go env GOHOSTARCH)
-MYSQL_ROOT_PASSWORD=Yunjikeji
+#MYSQL_ROOT_PASSWORD=
 MYSQL_PORT=3307
 
 RM=/bin/rm -f
@@ -104,7 +104,7 @@ dumpdb: tool
 	$(BUILD_DIR)/iac-tool dumpdb ./dumpdb/
 
 test:
-	$(GOTEST) -parallel 1 ./...
+	$(GOTEST) -v -parallel 1 ./...
 
 coverage:
 	$(GOTEST) -parallel 1 ./... -coverpkg=./... -coverprofile=coverage.out || true

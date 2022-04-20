@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"testing"
 	"time"
 
 	"gorm.io/gorm/clause"
@@ -18,6 +19,7 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/utils/logs"
 
+	"github.com/go-testfixtures/testfixtures/v3"
 	"github.com/pkg/errors"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -511,17 +513,68 @@ func beforeCreateCallback(db *gorm.DB) {
 	}
 }
 
-//InitWithTxdb 使用 txdb 初始化单元测试数据库
-func InitWithTxdb(dsn string, driverName string) error {
-	if err := openDB(dsn, driverName); err != nil {
-		return err
-	}
-	defaultDB = defaultDB.Debug()
-	return nil
-}
-
 func Init(dsn string) {
 	if err := openDB(dsn); err != nil {
 		logs.Get().Fatalln(err)
 	}
+}
+
+func tError(t *testing.T, err error, format string, args ...interface{}) {
+	if t == nil {
+		panic(errors.Wrapf(err, format, args...))
+	} else {
+		t.Fatalf(format, args...)
+	}
+}
+
+//prepareTestDatabase 为测试用例 T 准备一个新的数据库连接
+func prepareTestDatabase(t *testing.T, paths []string) (sess *Session, fixtures *testfixtures.Loader) {
+	defaultPort := os.Getenv("MYSQL_PORT")
+	if defaultPort == "" {
+		defaultPort = "3307"
+	}
+	defaultPwd := os.Getenv("MYSQL_ROOT_PASSWORD")
+	if defaultPwd == "" {
+		tError(t, errors.New("$MYSQL_ROOT_PASSWORD is empty"), "$MYSQL_ROOT_PASSWORD is empty")
+	}
+	defaultDatabase := os.Getenv("MYSQL_DATABASE")
+	if defaultDatabase == "" {
+		defaultDatabase = "iac_test"
+	}
+
+	dsn := fmt.Sprintf("root:%s@tcp(localhost:%s)/%s", defaultPwd, defaultPort, defaultDatabase)
+	err := openDB(dsn)
+	if err != nil {
+		tError(t, err, "open test database connection: %s, err: %s", dsn, err)
+	}
+
+	// 打印数据库调试信息
+	if os.Getenv("MYSQL_DEBUG") != "" {
+		defaultDB = defaultDB.Debug()
+	}
+
+	// 初始化 fixtures 数据
+	sqlDb, _ := Get().GormDB().DB()
+	fixtures, err = testfixtures.New(
+		testfixtures.Database(sqlDb),
+		testfixtures.Dialect("mysql"),
+		testfixtures.Paths(paths...),
+	)
+	if err != nil {
+		tError(t, err, "new fixtures %s", err)
+	}
+
+	return Get(), fixtures
+}
+
+//LoadTestDatabase 加载测试数据，每次测试前执行
+func LoadTestDatabase(t *testing.T, paths []string) (sess *Session) {
+	sess, fixtures := prepareTestDatabase(t, paths)
+
+	// 每次 load 都会清理旧数据并重新加载
+	if err := fixtures.Load(); err != nil {
+		t.Fatalf("load fixtures: %s", err)
+	}
+
+	return sess
 }

@@ -17,12 +17,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-testfixtures/testfixtures/v3"
 	"github.com/stretchr/testify/assert"
-)
-
-var (
-	fixtures *testfixtures.Loader
 )
 
 func performRequest(r http.Handler, method, path string, body string, headers map[string]string) *httptest.ResponseRecorder {
@@ -39,79 +34,28 @@ func performRequest(r http.Handler, method, path string, body string, headers ma
 	return w
 }
 
-//prepareMySQLDB 为测试用例 T 准备一个新的数据库连接
-func prepareMySQLDB(t *testing.T) (sess *db.Session, cleanup func() error) {
-	dsn := fmt.Sprintf("root:%s@tcp(localhost:%d)/iac_test", "Yunjikeji", 3307)
-	// cName := fmt.Sprintf("tx_10") //, t.Name(), time.Now().UnixNano())
-	err := db.InitWithTxdb(dsn, "mysql")
-	if err != nil {
-		t.Fatalf("open mysqltx connection: %s, err: %s", dsn, err)
-	}
-
-	close := func() error {
-		sqlDb, err := db.Get().GormDB().DB()
-		if err != nil {
-			t.Fatalf("close db: %s", err)
-		}
-		return sqlDb.Close()
-	}
-
-	sess = db.Get()
-	sqlDb, _ := sess.GormDB().DB()
-
-	// 初始化数据，这里会导入默认的管理员用户/组织/项目
-	fixtures, err = testfixtures.New(
-		testfixtures.Database(sqlDb),
-		testfixtures.Dialect("mysql"),
-		// 加载测试数据，可以使用 Paths, Directory, Files 这几种方式进行加载
-		testfixtures.Paths(
-			"../../unittest_init",
-			"testdata/fixtures",
-		),
-	)
-	if err != nil {
-		t.Fatalf("load fixtures: %s", err)
-	}
-
-	return db.Get(), close
-}
-
-//prepareTestDatabase 加载测试数据，每次测试前都需要执行
-func prepareTestDatabase(t *testing.T) (sess *db.Session, cleanup func() error) {
-	fmt.Println("reload database =============")
-	sess, cleanup = prepareMySQLDB(t)
-
-	// 每次 load 都会清理旧数据并重新加载
-	if err := fixtures.Load(); err != nil {
-		t.Fatalf("load fixtures: %s", err)
-	}
-	return sess, cleanup
-}
-
 // TestMain 该函数在所有测试用例执行之前会被调用
 func TestMain(m *testing.M) {
-	fmt.Println("test main=============")
-	// txdb.Register("mysqltx", "mysql", fmt.Sprintf("root:%s@tcp(localhost:%d)/iac_test?charset=utf8mb4&parseTime=True&loc=Local", "Yunjikeji", 3307))
-
 	// 初始化 config 的 jwt key，login 接口需要使用
 	configs.Set(configs.Config{
 		JwtSecretKey: "6xGzLKiX4dl0UE6aVuBGCmRWL7cQ+90W",
 	})
 
+	// 如果所有测试用例都用同一个数据库，可以在这里调用 LoadTestDatabase
+	// _ = db.LoadTestDatabase(nil, []string{
+	//	"../../unittest_init", // 基础数据
+	//	"testdata/fixtures",   // 测试用例自定义数据
+	// })
+
 	// 调用 os.Exit 开始测试，测试完成退出测试
 	os.Exit(m.Run())
 }
 
-// func TestOperationLogMiddleware(t *testing.T) {
-// 	t.Parallel()
-// 	TestLogGet(t)
-// 	TestLogPost(t)
-// }
-
 func TestLogPost(t *testing.T) {
-	_, cleanup := prepareTestDatabase(t)
-	// 如果测试过程中有创建临时文件，需要在测试结束的时候删除
-	defer cleanup() // 测试完成关闭数据库连接，数据会被清理掉
+	_ = db.LoadTestDatabase(t, []string{
+		"../../unittest_init",
+		"testdata/fixtures",
+	})
 
 	// 初始化 gin
 	w := ctrl.WrapHandler
@@ -136,9 +80,10 @@ func TestLogPost(t *testing.T) {
 }
 
 func TestLogGet(t *testing.T) {
-	_, cleanup := prepareTestDatabase(t)
-	// 如果测试过程中有创建临时文件，需要在测试结束的时候删除
-	defer cleanup() // 测试完成关闭数据库连接，数据会被清理掉
+	_ = db.LoadTestDatabase(t, []string{
+		"../../unittest_init",
+		"testdata/fixtures",
+	})
 
 	// 初始化 gin
 	w := ctrl.WrapHandler
