@@ -454,18 +454,25 @@ func (t *Task) genStepScript() (string, error) {
 }
 
 var checkoutCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-mkdir -p code
-
 # clone code
-git clone '{{.Req.RepoAddress}}' code 2>&1 | sed -re 's#(://[^:]+:)[^@]+#\1******#' && \
-cd code && \
-echo 'checkout {{.Req.RepoCommitId}}.' && \
-git checkout -q '{{.Req.RepoCommitId}}'
+clone_output=` + "`git clone '{{.Req.RepoAddress}}' code 2>&1`" + `
+clone_result=$?
+
+# output clone info
+echo "$clone_output" | sed -re 's#(://[^:]+:)[^@]+#\1******#'
+
+mkdir -p code && cd code
+# clone success
+if [ $clone_result -eq 0 ]; then
+	echo 'checkout {{.Req.RepoCommitId}}.' && \
+	git checkout -q '{{.Req.RepoCommitId}}'
+fi
 
 # create workdir in spite of clone was failed or not
-mkdir -p '{{.Req.Env.Workdir}}'
-cd '{{.Req.Env.Workdir}}' && \
+mkdir -p '{{.Req.Env.Workdir}}' && cd '{{.Req.Env.Workdir}}'
+
 ln -sf '{{.IacTfFile}}'
+exit $clone_result
 `))
 
 func (t *Task) stepCheckout() (command string, err error) {
