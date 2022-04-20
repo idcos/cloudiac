@@ -1,5 +1,6 @@
 FROM alpine
-RUN apk add netcat-openbsd curl
+RUN apk add --no-cache netcat-openbsd curl tzdata 
+ENV TZ="Asia/Shanghai"
 
 ARG WORKDIR=/usr/yunji/cloudiac/
 WORKDIR ${WORKDIR}
