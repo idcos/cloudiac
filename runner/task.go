@@ -454,12 +454,10 @@ func (t *Task) genStepScript() (string, error) {
 }
 
 var checkoutCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+set -o pipefail
 # clone code
-clone_output=` + "`git clone '{{.Req.RepoAddress}}' code 2>&1`" + `
+git clone '{{.Req.RepoAddress}}' code 2>&1 | sed -re 's#(://[^:]+:)[^@]+#\1******#'
 clone_result=$?
-
-# output clone info
-echo "$clone_output" | sed -re 's#(://[^:]+:)[^@]+#\1******#'
 
 mkdir -p code && cd code
 # clone success
