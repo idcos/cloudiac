@@ -302,7 +302,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, err
 	}
 	// 检查环境传入工作目录
-	if err = envWorkdirCheck(c, tpl.RepoId, tpl.RepoRevision, form.Workdir, tpl.VcsId); err != nil {
+	if err = envWorkdirCheck(c, tpl.RepoId, form.Revision, form.Workdir, tpl.VcsId); err != nil {
 		return nil, err
 	}
 	// 以下值只在未传入时使用模板定义的值，如果入参有该字段即使值为空也不会使用模板中的值
@@ -1191,7 +1191,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		return nil, err
 	}
 	// 环境下云模版工作目录检查
-	if err = envWorkdirCheck(c, tpl.RepoId, tpl.RepoRevision, form.Workdir, tpl.VcsId); err != nil {
+	if err = envWorkdirCheck(c, tpl.RepoId, form.Revision, form.Workdir, tpl.VcsId); err != nil {
 		return nil, err
 	}
 	lg.Debugln("envDeploy -> envTplCheck finish")
