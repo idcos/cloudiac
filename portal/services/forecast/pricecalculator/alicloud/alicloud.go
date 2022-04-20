@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package alicloud
 
 import (
@@ -15,7 +17,7 @@ type AliCloud struct {
 	AccessKeySecret *string
 }
 
-func NewAliCloudBillService(vg *models.VariableGroup,  f func(provider string, vars models.VarGroupVariables) map[string]string) (*AliCloud, error) {
+func NewAliCloudBillService(vg *models.VariableGroup, f func(provider string, vars models.VarGroupVariables) map[string]string) (*AliCloud, error) {
 	resAccount := f(vg.Provider, vg.Variables)
 	if resAccount == nil {
 		return nil, fmt.Errorf("provider: %s, resource account is null", vg.Provider)
@@ -26,19 +28,23 @@ func NewAliCloudBillService(vg *models.VariableGroup,  f func(provider string, v
 	}
 
 	return &AliCloud{
-		AccessKeyId:   tea.String(resAccount[consts.AlicloudAK]),
-		AccessKeySecret:  tea.String(resAccount[consts.AlicloudSK]),
-
+		AccessKeyId:     tea.String(resAccount[consts.AlicloudAK]),
+		AccessKeySecret: tea.String(resAccount[consts.AlicloudSK]),
 	}, nil
 }
 
 func (a *AliCloud) GetResourcePrice(r *schema.Resource) (*bssopenapi20171214.GetPayAsYouGoPriceResponse, error) {
 	config := &openapi.Config{
-		// 您的AccessKey ID
 		AccessKeyId: a.AccessKeyId,
-		// 您的AccessKey Secret
 		AccessKeySecret: a.AccessKeySecret,
+		Endpoint:        tea.String("business.aliyuncs.com"),
 	}
+
+	client, _err := bssopenapi20171214.NewClient(config)
+	if _err != nil {
+		return nil, _err
+	}
+
 	request := make([]*bssopenapi20171214.GetPayAsYouGoPriceRequestModuleList, 0, len(r.RequestData))
 	for _, v := range r.RequestData {
 		request = append(request, &bssopenapi20171214.GetPayAsYouGoPriceRequestModuleList{
@@ -46,15 +52,6 @@ func (a *AliCloud) GetResourcePrice(r *schema.Resource) (*bssopenapi20171214.Get
 			PriceType:  tea.String("Hour"),
 			Config:     tea.String(v.Value),
 		})
-	}
-	//fmt.Println(request,"qqqqq")
-
-	// 访问的域名
-	config.Endpoint = tea.String("business.aliyuncs.com")
-	client := &bssopenapi20171214.Client{}
-	client, _err := bssopenapi20171214.NewClient(config)
-	if _err != nil {
-		return nil, _err
 	}
 
 	getPayAsYouGoPriceRequest := &bssopenapi20171214.GetPayAsYouGoPriceRequest{

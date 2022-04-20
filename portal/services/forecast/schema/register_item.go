@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package schema
 
 type ReferenceIDFunc func(d *ResourceData) []string
