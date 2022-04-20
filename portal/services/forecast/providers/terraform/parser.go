@@ -10,17 +10,14 @@ func ParserPlanJson(b []byte) []*schema.Resource {
 	resource := make([]*schema.Resource, 0)
 	parsed := gjson.ParseBytes(b)
 	for _, v := range parsed.Get("planned_values.root_module.resources").Array() {
-		r := &schema.ResourceData{
-			Type:         v.Get("type").String(),
-			RawValues:    v.Get("values"),
-			Address:      v.Get("address").String(),
-			ProviderName: v.Get("provider_name").String(),
-		}
+		resourceData := schema.NewResourceData(v.Get("type").String(),
+			v.Get("provider_name").String(), v.Get("address").String(), v.Get("values"))
 
 		if registryItem, ok := (*registryMap)[v.Get("type").String()]; ok {
-			res := registryItem.RFunc(r)
+			res := registryItem.RFunc(resourceData)
 			resource = append(resource, res)
 		}
 	}
+
 	return resource
 }
