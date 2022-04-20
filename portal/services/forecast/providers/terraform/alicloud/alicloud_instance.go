@@ -20,11 +20,21 @@ func NewInstance(d *schema.ResourceData) *schema.Resource {
 
 	a := &alicloud.Instance{
 		Address:            d.Address,
+		Provider:           d.ProviderName,
 		Region:             region,
 		InstanceType:       d.Get("instance_type").String(),
 		SystemDiskSize:     d.Get("system_disk_size").Int(),
 		SystemDiskCategory: d.Get("system_disk_category").String(),
 	}
+	disk := make([]alicloud.DataDisks, 0)
+	for _, v := range d.Get("data_disks").Array() {
+		disk = append(disk, alicloud.DataDisks{
+			Category: v.Get("category").String(),
+			Size:     v.Get("size").Int(),
+		})
+	}
+
+	a.DataDisks = disk
 
 	return a.BuildResource()
 

@@ -8,9 +8,9 @@ type Resource struct {
 	Name        string
 	PriceType   string
 	PriceCode   string
+	Provider    string
 	RequestData []*PriceRequest
 }
-
 
 type PriceRequest struct {
 	Name  string

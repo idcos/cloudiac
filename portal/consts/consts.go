@@ -150,6 +150,11 @@ const (
 	TaskAutoDestroyName = "Auto Destroy"
 
 	BillCollectAli = "alicloud"
+
+	//terraform action type
+	TerraformActionCreate = "create"
+	TerraformActionUpdate = "update"
+	TerraformActionDelete = "delete"
 )
 
 const (
