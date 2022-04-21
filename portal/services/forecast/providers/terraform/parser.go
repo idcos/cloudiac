@@ -16,7 +16,6 @@ func ParserPlanJson(b []byte) (createResource []*schema.Resource, deleteResource
 		t := v.Get("type").String()
 		providerName := path.Base(v.Get("provider_name").String())
 		address := v.Get("address").String()
-
 		actions := v.Get("change.actions").Array()
 		if len(actions) < 0 {
 			continue

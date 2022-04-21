@@ -38,8 +38,8 @@ func TestParserPlanJson(t *testing.T) {
 	type args struct {
 		b []byte
 	}
-	b,err:=os.ReadFile("./plan.json")
-	fmt.Println(err,"1111")
+	b, err := os.ReadFile("./plan.json")
+	fmt.Println(err, "1111")
 	tests := []struct {
 		name                     string
 		args                     args
@@ -50,15 +50,15 @@ func TestParserPlanJson(t *testing.T) {
 		{
 			name: "test-01",
 			args: args{
-				b:b,
+				b: b,
 			},
 			wantCreateResource: []*schema.Resource{
 				&schema.Resource{
-					Name:        "alicloud_instance.instance1",
-					PriceType:   "",
-					PriceCode:   "ecs",
+					Name:      "alicloud_instance.instance1",
+					PriceType: "",
+					PriceCode: "ecs",
 					RequestData: []*schema.PriceRequest{
-						&schema.PriceRequest{Name:  "", Value: "",},
+						&schema.PriceRequest{Name: "", Value: ""},
 					},
 				},
 			},
@@ -67,9 +67,14 @@ func TestParserPlanJson(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotCreateResource, gotDeleteResource, gotUpdateBeforeResource := ParserPlanJson(tt.args.b)
-			t.Log(gotCreateResource,"gotCreateResource")
-			t.Log(gotDeleteResource,"gotDeleteResource")
-			t.Log(gotUpdateBeforeResource,"gotUpdateBeforeResource")
+			for _, Create := range gotCreateResource {
+				for _, value := range Create.RequestData {
+					fmt.Println(value)
+				}
+			}
+			t.Log(gotCreateResource, "gotCreateResource")
+			t.Log(gotDeleteResource, "gotDeleteResource")
+			t.Log(gotUpdateBeforeResource, "gotUpdateBeforeResource")
 			//if !reflect.DeepEqual(gotCreateResource, tt.wantCreateResource) {
 			//	t.Errorf("ParserPlanJson() gotCreateResource = %v, want %v", gotCreateResource, tt.wantCreateResource)
 			//}
