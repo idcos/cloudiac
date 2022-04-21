@@ -9,6 +9,8 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
+	"cloudiac/portal/services/forecast/pricecalculator"
+	"cloudiac/portal/services/forecast/schema"
 	"cloudiac/runner"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
@@ -17,6 +19,7 @@ import (
 	"net/http"
 	"time"
 
+	bssopenapi20171214 "github.com/alibabacloud-go/bssopenapi-20171214/client"
 	"github.com/pkg/errors"
 )
 
@@ -64,6 +67,58 @@ func taskDoneProcessPlan(dbSess *db.Session, task *models.Task, isPlanResult boo
 		}
 	}
 	return nil
+}
+
+func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byte) (*float32, *float32, error) {
+	var (
+		addedCost     *float32 // 新增资源的费用
+		destroyedCost *float32 // 删除资源的费用
+		err           error
+	)
+
+	// get variable group
+
+	// get resources
+	//createResources, deleteResources, updateBeforeResources := terraform.ParserPlanJson(bs)
+
+	// compute cost
+
+	return addedCost, destroyedCost, err
+}
+
+func getPriceService(dbSess *db.Session, projectId models.Id, provider string) (pricecalculator.PriceService, error) {
+	vg, err := services.GetBillVarGroupByProjectId(dbSess, projectId, provider)
+	if err != nil {
+		return nil, err
+	}
+
+	return pricecalculator.NewPriceService(vg, provider)
+}
+
+func computeResourceCost(dbSess *db.Session, projectId models.Id, resources []*schema.Resource) (*float32, error) {
+	var (
+		cost      *float32
+		err       error
+		ps        pricecalculator.PriceService
+		priceResp *bssopenapi20171214.GetPayAsYouGoPriceResponse
+	)
+	for _, res := range resources {
+		if ps == nil {
+			ps, err = getPriceService(dbSess, projectId, res.Provider)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		priceResp, err = ps.GetResourcePrice(res)
+		if err != nil {
+			return nil, err
+		}
+
+		fmt.Println(priceResp)
+	}
+
+	return cost, nil
 }
 
 func taskDoneProcessDriftTask(logger logs.Logger, dbSess *db.Session, task *models.Task) error {

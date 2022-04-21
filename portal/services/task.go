@@ -803,6 +803,8 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource,
 		task.PlanResult.ResChanged = &resChanged
 		task.PlanResult.ResDestroyed = &resDestroyed
 
+		// TODO 预估费用
+
 		if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
 			UpdateColumn("plan_result", task.PlanResult); err != nil {
 			return err
