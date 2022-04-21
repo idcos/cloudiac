@@ -63,14 +63,23 @@ func taskDoneProcessPlan(dbSess *db.Session, task *models.Task, isPlanResult boo
 		if err != nil {
 			return fmt.Errorf("unmarshal plan json: %v", err)
 		}
-		if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges, isPlanResult); err != nil {
+
+		var costs []float32
+		if isPlanResult {
+			costs, err = getForecastCostWhenTaskPlan(dbSess, task, bs)
+			if err != nil {
+				return fmt.Errorf("get prices after plan error: %v", err)
+			}
+		}
+
+		if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges, isPlanResult, costs); err != nil {
 			return fmt.Errorf("save task changes: %v", err)
 		}
 	}
 	return nil
 }
 
-func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byte) (float32, float32, error) {
+func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byte) ([]float32, error) {
 	var (
 		addedCost        float32 // 新增资源的费用
 		updateBeforeCost float32 // 变更前的资源费用
@@ -84,20 +93,20 @@ func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byt
 	// compute cost
 	addedCost, err = computeResourceCost(dbSess, task.ProjectId, createResources)
 	if err != nil {
-		return addedCost, destroyedCost, err
+		return nil, err
 	}
 
 	updateBeforeCost, err = computeResourceCost(dbSess, task.ProjectId, updateBeforeResources)
 	if err != nil {
-		return addedCost, destroyedCost, err
+		return nil, err
 	}
 
 	destroyedCost, err = computeResourceCost(dbSess, task.ProjectId, deleteResources)
 	if err != nil {
-		return addedCost, destroyedCost, err
+		return nil, err
 	}
 
-	return addedCost - updateBeforeCost, destroyedCost, err
+	return []float32{addedCost - updateBeforeCost, destroyedCost}, err
 }
 
 func getPriceService(dbSess *db.Session, projectId models.Id, provider string) (pricecalculator.PriceService, error) {
