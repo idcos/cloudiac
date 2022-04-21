@@ -241,7 +241,6 @@ acl = {
 EOF
 ```
 
-
 开启consul配置tls访问
 > 证书名称固定 ca.pem,client.key,client.pem
 

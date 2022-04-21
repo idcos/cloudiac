@@ -168,8 +168,6 @@ source /etc/profile
 systemctl restart consul
 ```
 
-
-
 以上配置仅用于单机测试时使用，完整的 consul 集群部署请参考官方文档:
 https://learn.hashicorp.com/tutorials/consul/get-started-install
 
