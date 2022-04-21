@@ -17,17 +17,15 @@ type PriceService interface {
 	GetResourcePrice(r *schema.Resource) (*bssopenapi20171214.GetPayAsYouGoPriceResponse, error)
 }
 
-func NewPriceService(vg *models.VariableGroup,providerName string) (PriceService,error) {
+func NewPriceService(vg *models.VariableGroup, providerName string) (PriceService, error) {
 	switch vg.Provider {
 	case providerName:
-		return alicloud.NewAliCloudBillService(vg,parseResourceAccount)
+		return alicloud.NewAliCloudBillService(vg, parseResourceAccount)
 	default:
 		logs.Get().Errorf("price service unsupported provider %s", vg.Provider)
 		return nil, fmt.Errorf("price service  unsupported provider %s", vg.Provider)
-
 	}
 }
-
 
 func parseResourceAccount(provider string, vars models.VarGroupVariables) map[string]string {
 	resp := make(map[string]string)

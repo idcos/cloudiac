@@ -7,6 +7,7 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/services/forecast/schema"
 	"fmt"
+
 	bssopenapi20171214 "github.com/alibabacloud-go/bssopenapi-20171214/client"
 	openapi "github.com/alibabacloud-go/darabonba-openapi/client"
 	"github.com/alibabacloud-go/tea/tea"
@@ -35,7 +36,7 @@ func NewAliCloudBillService(vg *models.VariableGroup, f func(provider string, va
 
 func (a *AliCloud) GetResourcePrice(r *schema.Resource) (*bssopenapi20171214.GetPayAsYouGoPriceResponse, error) {
 	config := &openapi.Config{
-		AccessKeyId: a.AccessKeyId,
+		AccessKeyId:     a.AccessKeyId,
 		AccessKeySecret: a.AccessKeySecret,
 		Endpoint:        tea.String("business.aliyuncs.com"),
 	}
@@ -62,4 +63,24 @@ func (a *AliCloud) GetResourcePrice(r *schema.Resource) (*bssopenapi20171214.Get
 	}
 
 	return client.GetPayAsYouGoPrice(getPayAsYouGoPriceRequest)
+}
+
+func GetPriceFromResponse(resp *bssopenapi20171214.GetPayAsYouGoPriceResponse) (float32, error) {
+	if resp == nil || resp.Body == nil || resp.Body.Data == nil || resp.Body.Data.ModuleDetails == nil {
+		return 0, fmt.Errorf("GetPayAsYouGoPrice response does not have price info")
+	}
+
+	if !*resp.Body.Success {
+		return 0, fmt.Errorf("access GetPayAsYouGoPrice failed, code: %s\tmessage: %s\n", *resp.Body.Code, *resp.Body.Message)
+	}
+
+	var sum float32 = 0.0
+	for _, detail := range (*resp.Body.Data.ModuleDetails).ModuleDetail {
+		// 优惠价格最为实际的价格
+		if detail.CostAfterDiscount != nil {
+			sum += *detail.CostAfterDiscount
+		}
+	}
+
+	return sum, nil
 }
