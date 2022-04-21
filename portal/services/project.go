@@ -364,3 +364,31 @@ func completeDays(m map[models.Id]map[string]int, days int) map[models.Id][]resp
 
 	return results
 }
+
+// GetProjectActiveEnvs 获取项目的活跃环境数量
+func GetProjectActiveEnvs(tx *db.Session, projectIds []models.Id) (map[models.Id]int, e.Error) {
+	m := make(map[models.Id]int)
+	if len(projectIds) <= 0 {
+		return m, nil
+	}
+
+	query := tx.Model(&models.Project{}).Select(`iac_project.id as id, COUNT(*) as count `)
+	query = query.Joins(`join iac_env on iac_env.project_id = iac_project.id`)
+	query = query.Where(`iac_env.status = 'active'`)
+	query = query.Group("iac_project.id")
+
+	var dbResults []struct {
+		Id    string
+		Count int
+	}
+
+	if err := query.Find(&dbResults); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	for _, result := range dbResults {
+		m[models.Id(result.Id)] = result.Count
+	}
+
+	return m, nil
+}

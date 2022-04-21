@@ -105,9 +105,15 @@ func SearchProject(c *ctx.ServiceContext, form *forms.SearchProjectForm) (interf
 		return nil, e.New(e.DBError, err)
 	}
 
+	db := c.DB()
+	// 活跃的环境数量
+	if err := setProjectActiveEnvs(db, projectResp); err != nil {
+		return nil, err
+	}
+
 	// 是否需要统计数据
 	if form.WithStat {
-		err := setProjectResStatData(c.DB(), projectResp)
+		err := setProjectResStatData(db, projectResp)
 		if err != nil {
 			return nil, err
 		}
@@ -161,6 +167,25 @@ func setProjectResStatData(db *db.Session, projectResp []resps.ProjectResp) e.Er
 	// 加入项目的资源变化趋势数据
 	for i := range projectResp {
 		projectResp[i].ResStats = mResStatData[projectResp[i].Id]
+	}
+
+	return nil
+}
+
+func setProjectActiveEnvs(db *db.Session, projectResp []resps.ProjectResp) e.Error {
+	searchedProjectIds := make([]models.Id, 0)
+	for _, resp := range projectResp {
+		searchedProjectIds = append(searchedProjectIds, resp.Id)
+	}
+
+	m, err := services.GetProjectActiveEnvs(db, searchedProjectIds)
+	if err != nil {
+		return err
+	}
+
+	// 加入项目的活跃环境数量
+	for i := range projectResp {
+		projectResp[i].ActiveEnvironment = m[projectResp[i].Id]
 	}
 
 	return nil
