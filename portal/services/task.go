@@ -804,9 +804,10 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource,
 		task.PlanResult.ResDestroyed = &resDestroyed
 
 		//  预估费用
-		if costs != nil && len(costs) >= 2 {
+		if costs != nil && len(costs) == 3 {
 			task.PlanResult.ResAddedCost = &costs[0]
 			task.PlanResult.ResDestroyedCost = &costs[1]
+			task.PlanResult.ResUpdatedCost = &costs[2]
 		}
 
 		if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).

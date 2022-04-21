@@ -83,12 +83,13 @@ func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byt
 	var (
 		addedCost        float32 // 新增资源的费用
 		updateBeforeCost float32 // 变更前的资源费用
+		updateAfterCost  float32 // 变更前的资源费用
 		destroyedCost    float32 // 删除资源的费用
 		err              error
 	)
 
 	// get resources
-	createResources, deleteResources, updateBeforeResources := terraform.ParserPlanJson(bs)
+	createResources, deleteResources, updateBeforeResources, updateAfterResources := terraform.ParserPlanJson(bs)
 
 	// compute cost
 	addedCost, err = computeResourceCost(dbSess, task.ProjectId, createResources)
@@ -101,12 +102,17 @@ func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byt
 		return nil, err
 	}
 
+	updateAfterCost, err = computeResourceCost(dbSess, task.ProjectId, updateAfterResources)
+	if err != nil {
+		return nil, err
+	}
+
 	destroyedCost, err = computeResourceCost(dbSess, task.ProjectId, deleteResources)
 	if err != nil {
 		return nil, err
 	}
 
-	return []float32{addedCost - updateBeforeCost, destroyedCost}, err
+	return []float32{addedCost, destroyedCost, updateAfterCost - updateBeforeCost}, err
 }
 
 func getPriceService(dbSess *db.Session, projectId models.Id, provider string) (pricecalculator.PriceService, error) {
