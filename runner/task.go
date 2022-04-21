@@ -454,16 +454,29 @@ func (t *Task) genStepScript() (string, error) {
 }
 
 var checkoutCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-if [[ ! -e code ]]; then git clone '{{.Req.RepoAddress}}' code 2>&1 | sed -re 's#(://[^:]+:)[^@]+#\1******#' || exit $?; fi && \
-cd code && \
-echo 'checkout {{.Req.RepoCommitId}}.' && \
-git checkout -q '{{.Req.RepoCommitId}}' && \
-cd '{{.Req.Env.Workdir}}'
+set -o pipefail
+# clone code
+git clone '{{.Req.RepoAddress}}' code 2>&1 | sed -re 's#(://[^:]+:)[^@]+#\1******#'
+clone_result=$?
+
+mkdir -p code && cd code
+# clone success
+if [ $clone_result -eq 0 ]; then
+	echo 'checkout {{.Req.RepoCommitId}}.' && \
+	git checkout -q '{{.Req.RepoCommitId}}'
+fi
+
+# create workdir in spite of clone was failed or not
+mkdir -p '{{.Req.Env.Workdir}}' && cd '{{.Req.Env.Workdir}}'
+
+ln -sf '{{.IacTfFile}}'
+exit $clone_result
 `))
 
 func (t *Task) stepCheckout() (command string, err error) {
 	return t.executeTpl(checkoutCommandTpl, map[string]interface{}{
-		"Req": t.req,
+		"Req":       t.req,
+		"IacTfFile": t.up2Workspace(CloudIacTfFile),
 	})
 }
 
