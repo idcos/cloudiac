@@ -11,4 +11,5 @@ var ResourceRegistry []*schema.RegistryItem = []*schema.RegistryItem{
 	getSlbRegistryItem(),
 	getSlbLoadBalancerRegistryItem(),
 	getKvStoreInstanceRegistryItem(),
+	getDiskRegistryItem(),
 }
