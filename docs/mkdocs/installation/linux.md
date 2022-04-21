@@ -83,6 +83,93 @@ systemctl enable consul
 systemctl start consul
 ```
 
+- consul开启acl
+
+```bash
+# 新增consul配置acl.hcl
+cat >> /etc/consul.d/acl.hcl <<EOF
+acl = {
+  enabled = true
+  default_policy = "deny"
+  enable_token_persistence = true
+}
+EOF
+
+# 重启consul
+systemctl restart consul
+
+# 生成token
+consul acl bootstrap
+
+# 加入SecretID作为token加入acl.hcl配置
+cat > /etc/consul.d/acl.hcl <<EOF
+acl = {
+  enabled = true
+  default_policy = "deny"
+  enable_token_persistence = true
+  tokens {
+    master = "5ecc86f0-fa68-6ddc-e848-ef382d7737ec" #SecretID
+  }
+}
+EOF
+```
+
+- consul开启tls
+
+> 证书名称固定 ca.pem,client.key,client.pem
+
+```bash
+mkdir -p /usr/yunji/tls && \
+cd /usr/yunji/tls &&
+ 
+ #生成根证书key
+openssl genrsa -out ca.key 2048
+#生成根证书密钥
+openssl req -new -x509 -days 7200 -key ca.key   -out ca.pem
+
+#生成客户端私钥
+openssl genrsa -out client.key 2048
+
+#生成的客户端的CSR
+openssl req -new -key client.key  -out client.csr
+
+# 创建宿舍机对应的签名证书  IP宿主机
+echo subjectAltName = IP:127.0.0.1 > extfile.cnf
+
+#客户端自签名的证书
+openssl x509 -req -days 365 -in client.csr -CA ca.pem -CAkey ca.key -CAcreateserial \
+   -out client.pem -extfile extfile.cnf
+   
+# 新增consul配置tls.json
+cat >> /etc/consul.d/tls.json <<EOF
+{
+  "verify_incoming": false,
+  "verify_incoming_rpc": true,
+  "ports": {
+    "http": -1,
+    "https": 8500
+  },
+  "ca_file": "/usr/yunji/tls/ca.pem",
+  "cert_file": "/usr/yunji/tls/client.pem",
+  "key_file": "/usr/yunji/tls/client.key"
+}
+EOF
+
+# 新增环境变量
+cat >> /etc/profile <<EOF
+export CONSUL_HTTP_SSL=true
+export CONSUL_HTTP_SSL_VERIFY=false
+EOF
+
+#环境变量生效
+source /etc/profile
+
+# 重启consul
+systemctl restart consul
+```
+
+
+
 以上配置仅用于单机测试时使用，完整的 consul 集群部署请参考官方文档:
 https://learn.hashicorp.com/tutorials/consul/get-started-install
 

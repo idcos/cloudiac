@@ -23,7 +23,7 @@ chmod +x /usr/local/bin/docker-compose
     **部署目录必须为 /usr/yunji/cloudiac，部署到其他目录将无法执行环境部署任务。**
 
 ```bash
-mkdir -p /usr/yunji/cloudiac/var/{consul,mysql} && cd /usr/yunji/cloudiac/
+mkdir -p /usr/yunji/cloudiac/var/{consul,mysql,acltls} && cd /usr/yunji/cloudiac/
 ```
 
 ## 4. 创建 docker-compose.yml 文件
@@ -104,14 +104,182 @@ services:
     volumes:
       - type: bind
         source: /usr/yunji/cloudiac/var/consul
-        target: /consul/data
+        target: /consul/data   
     ports:
       - "8500:8500"
     command: >
       consul agent -server -bootstrap-expect=1 -ui -bind=0.0.0.0
-      -client=0.0.0.0 -enable-script-checks=true -data-dir=/consul/data
+      -client=0.0.0.0 -enable-script-checks=true -data-dir=/consul/data 
     restart: always
 
+```
+
+> 开启acl和tls部署的docker-compose.yaml
+
+文件路径 /usr/yunji/cloudiac/docker-compose.yml，内容如下:
+```yaml
+# auto-replace-from: docker/docker-compose.yml
+version: "3.2"
+services:
+  iac-portal:
+    container_name: iac-portal
+    image: "${DOCKER_REGISTRY}cloudiac/iac-portal:v0.9.1"
+    volumes:
+      - type: bind
+        source: /usr/yunji/cloudiac/var
+        target: /usr/yunji/cloudiac/var
+      - type: bind
+        source: /usr/yunji/cloudiac/.env
+        target: /usr/yunji/cloudiac/.env
+    ports:
+      - "9030:9030"
+    depends_on:
+      - mysql
+      - consul
+    restart: always
+
+  ct-runner:
+    container_name: ct-runner
+    image: "${DOCKER_REGISTRY}cloudiac/ct-runner:v0.9.1"
+    volumes:
+      - type: bind
+        source: /usr/yunji/cloudiac/var
+        target: /usr/yunji/cloudiac/var
+      - type: bind
+        source: /usr/yunji/cloudiac/.env
+        target: /usr/yunji/cloudiac/.env
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+    ports:
+      - "19030:19030"
+    depends_on:
+      - consul
+    restart: always
+
+  iac-web:
+    container_name: iac-web
+    image: "${DOCKER_REGISTRY}cloudiac/iac-web:v0.9.1"
+    ports:
+      - 80:80
+    restart: always
+    depends_on:
+      - iac-portal
+
+  mysql:
+    container_name: mysql
+    image: "mysql:8.0"
+    command: [
+        "--character-set-server=utf8mb4",
+        "--collation-server=utf8mb4_unicode_ci",
+        "--sql_mode=STRICT_TRANS_TABLES,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"
+    ]
+    volumes:
+      - type: bind
+        source: /usr/yunji/cloudiac/var/mysql
+        target: /var/lib/mysql
+    environment:
+      - MYSQL_RANDOM_ROOT_PASSWORD=yes
+      - MYSQL_USER
+      - MYSQL_PASSWORD
+      - MYSQL_DATABASE
+    restart: always
+
+  consul:
+    container_name: consul
+    image: "consul:latest"
+    environment:
+      - CONSUL_HTTP_SSL_VERIFY=false
+      - CONSUL_HTTP_SSL=true
+    volumes:
+      - type: bind
+        source: /usr/yunji/cloudiac/var/consul
+        target: /consul/data
+      - type: bind
+        source: /usr/yunji/cloudiac/var/acltls
+        target: /consul/config    
+    ports:
+      - "8500:8500"
+    command: >
+      consul agent -server -bootstrap-expect=1 -ui -bind=0.0.0.0
+      -client=0.0.0.0 -enable-script-checks=true -data-dir=/consul/data -config-dir=/consul/config
+    restart: always
+```
+
+开启consul配置acl
+```bash
+# 新增consul配置acl.hcl
+cat >> /usr/yunji/cloudiac/var/acltls/acl.hcl <<EOF
+acl = {
+  enabled = true
+  default_policy = "deny"
+  enable_token_persistence = true
+}
+EOF
+
+# 重启consul
+docker restart consul
+
+# 进入容器
+docker exec -it consul sh
+
+# 生成token,保存好生成的SecretID
+consul acl bootstrap
+
+#退出容器
+
+# 加入SecretID作为token加入acl.hcl配置
+cat > /usr/yunji/cloudiac/var/acltls/acl.hcl <<EOF
+acl = {
+  enabled = true
+  default_policy = "deny"
+  enable_token_persistence = true
+  tokens {
+    master = "5ecc86f0-fa68-6ddc-e848-ef382d7737ec" #SecretID
+  }
+}
+EOF
+```
+
+
+开启consul配置tls访问
+> 证书名称固定 ca.pem,client.key,client.pem
+
+```bash
+cd /usr/yunji/cloudiac/var/acltls
+
+ #生成根证书key
+openssl genrsa -out ca.key 2048
+#生成根证书密钥
+openssl req -new -x509 -days 7200 -key ca.key   -out ca.pem
+
+#生成客户端私钥
+openssl genrsa -out client.key 2048
+
+#生成的客户端的CSR
+openssl req -new -key client.key  -out client.csr
+
+# 创建宿舍机对应的签名证书  IP宿主机
+echo subjectAltName = IP:127.0.0.1 > extfile.cnf
+
+#客户端自签名的证书
+openssl x509 -req -days 365 -in client.csr -CA ca.pem -CAkey ca.key -CAcreateserial \
+   -out client.pem -extfile extfile.cnf
+   
+# 新增consul配置tls.json
+cat >> /usr/yunji/cloudiac/var/acltls <<EOF
+{
+  "verify_incoming": false,
+  "verify_incoming_rpc": true,
+  "ports": {
+    "http": -1,
+    "https": 8500
+  },
+  "ca_file": "/consul/config/ca.pem",
+  "cert_file": "/consul/config/client.pem",
+  "key_file": "/consul/config/client.key"
+}
+EOF
 ```
 
 ## 5. 创建 .env 文件
