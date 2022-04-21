@@ -318,10 +318,12 @@ func LdapAuthLogin(userEmail, password string) (username string, er e.Error) {
 	if err != nil {
 		return username, e.New(e.ValidateError, err)
 	}
+	// SearchFilter 需要内填入搜索条件，单个用括号包裹，例如 (objectClass=person)(!(userAccountControl=514))
+	seachFilter := fmt.Sprintf("(&%s(%s=%s))", conf.Ldap.SearchFilter, conf.Ldap.EmailAttribute, userEmail)
 	searchRequest := ldap.NewSearchRequest(
 		conf.Ldap.SearchBase,
 		ldap.ScopeWholeSubtree, ldap.DerefAlways, 0, 0, false,
-		fmt.Sprintf("(mail=%s)", userEmail),
+		seachFilter,
 		// 这里是查询返回的属性,以数组形式提供.如果为空则会返回所有的属性
 		[]string{},
 		nil,
@@ -337,7 +339,13 @@ func LdapAuthLogin(userEmail, password string) (username string, er e.Error) {
 	if err != nil {
 		return username, e.New(e.InvalidPassword, err)
 	}
-	return sr.Entries[0].GetAttributeValue("uid"), nil
+	var account string
+	if conf.Ldap.AccountAttribute != "" {
+		account = conf.Ldap.AccountAttribute
+	} else {
+		account = "uid"
+	}
+	return sr.Entries[0].GetAttributeValue(account), nil
 
 }
 

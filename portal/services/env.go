@@ -113,7 +113,7 @@ func QueryEnvDetail(dbSess *db.Session, orgId, projectId models.Id) *db.Session 
 	// 账单数据
 	filter := dbSess.Table("iac_bill as b").
 		Where("b.org_id = ? and b.project_id = ?", orgId, projectId).
-		Where("b.cycle = ?",time.Now().Format("2006-01")).
+		Where("b.cycle = ?", time.Now().Format("2006-01")).
 		Group("b.env_id").
 		Select("b.env_id,sum(b.pretax_amount) as month_cost")
 	query = query.Joins("left join (?) as b on b.env_id = iac_env.id", filter.Expr()).LazySelectAppend("b.month_cost")
@@ -185,7 +185,7 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 			if task.Type == models.TaskTypeApply {
 				envStatus = models.EnvStatusActive
 			} else if task.Type == models.TaskTypeDestroy {
-				envStatus = models.EnvStatusInactive
+				envStatus = models.EnvStatusDestroyed
 			}
 		default:
 			return e.New(e.InternalError, fmt.Errorf("unknown task status: %v", task.Status))
@@ -315,16 +315,22 @@ func GetRunnerByTags(tags []string) (string, e.Error) {
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list with tags is null"))
 }
 
-func GetAvailableRunnerId(runnerId string, runnerTags string) (string, e.Error) {
+func GetAvailableRunnerIdByStr(runnerId string, runnerTags string) (string, e.Error) {
+	tags := make([]string, 0)
+	if runnerTags != "" {
+		tags = strings.Split(runnerTags, ",")
+	}
+	return GetAvailableRunnerId(runnerId, tags)
+}
+
+func GetAvailableRunnerId(runnerId string, runnerTags []string) (string, e.Error) {
 	if runnerId != "" {
 		return runnerId, nil
 	}
 
-	runnerTagsList := strings.Split(runnerTags, ",")
-	if runnerTags != "" && len(runnerTagsList) > 0 {
-		return GetRunnerByTags(runnerTagsList)
+	if len(runnerTags) > 0 {
+		return GetRunnerByTags(runnerTags)
 	}
-
 	return GetDefaultRunner()
 }
 
@@ -356,8 +362,9 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 		for key, value := range vars {
 			// 如果匹配到了就不在继续匹配
 			if matchVar(v, value) {
+				// 匹配到了，不管值是否相同都不需要新建变量
+				isNewVaild = false
 				if v.Value != value.Value {
-					isNewVaild = false
 					resp = varNewAppend(resp, vars[key].Name, v.Value, vars[key].Type, v.Sensitive)
 				}
 				break

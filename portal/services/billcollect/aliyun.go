@@ -4,7 +4,6 @@ package billcollect
 
 import (
 	"cloudiac/portal/consts"
-	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"fmt"
 	bssopenapi20171214 "github.com/alibabacloud-go/bssopenapi-20171214/client"
@@ -87,10 +86,10 @@ func (ap *aliProvider) GetResourceDayCost(billingCycle string) ([]ResourceCost, 
 	return nil, nil
 }
 
-func (ap *aliProvider) DownloadMonthBill(billingCycle string) (map[string]ResourceCost, []string, error) {
+func (ap *aliProvider) ParseMonthBill(billingCycle string) (map[string]ResourceCost, []string, []models.BillData, error) {
 	billData, err := ap.GetResourceMonthCost(billingCycle)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	insertDate := make([]models.BillData, 0, len(billData))
@@ -117,9 +116,5 @@ func (ap *aliProvider) DownloadMonthBill(billingCycle string) (map[string]Resour
 		}
 	}
 
-	if err := db.Get().Insert(&insertDate); err != nil {
-		return nil, nil, err
-	}
-
-	return resp, resourceIds, nil
+	return resp, resourceIds, insertDate, nil
 }

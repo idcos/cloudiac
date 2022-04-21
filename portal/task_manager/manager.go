@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/acarl005/stripansi"
-
 	"github.com/pkg/errors"
 )
 
@@ -521,8 +520,33 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		taskStartFailed(errors.Wrap(err, "get task steps"))
 		return
 	}
-
+	var PlanIndex int
 	for _, step := range steps {
+		if step.PipelineStep.Type == models.TaskStepPlan {
+			PlanIndex = step.Index
+		}
+		if step.PipelineStep.Type == models.TaskStepApply {
+			if task.Source == consts.TaskSourceDriftApply {
+				if bs, err := readIfExist(task.TFPlanOutputLogPath(fmt.Sprintf("step%d", PlanIndex))); err != nil {
+					logger.Errorf("read plan output log: %v", err)
+				} else {
+					driftInfo := ParseResourceDriftInfo(bs)
+					if len(driftInfo) <= 0 {
+						_ = changeTaskStatus(models.TaskStepComplete, "autoDrift source nothing changed", false)
+						logger.WithField("step", fmt.Sprintf("%d(%s)", step.Index, step.Name)).
+							Infof("auto task drift step stop ")
+						break
+					}
+				}
+			}
+
+			if _, er := m.db.Model(&models.Task{}).
+				Where("id = ?", step.TaskId). //nolint
+				Update(&models.Task{Applied: true}); er != nil {
+				logger.Errorf("update task  terraformApply applied: %v", er)
+			}
+		}
+
 		startErr, runErr := m.processStartStep(ctx, task, step, *runTaskReq)
 		if startErr != nil {
 			taskStartFailed(startErr)
@@ -538,6 +562,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 	if err := m.runTaskStepsDoneActions(ctx, task.Id); err != nil {
 		logger.Errorf("runTaskStepsDoneActions: %v", err)
 	}
+
 	logger.Infof("run task end")
 	return nil
 }
@@ -591,6 +616,9 @@ func (m *TaskManager) processStartStep(
 
 func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) error {
 	dbSess := m.db
+
+	changePlanResult(dbSess, task, step)
+
 	processScanResult := func() error {
 		var (
 			tsResult policy.TsResult
@@ -638,6 +666,16 @@ func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) 
 		return processScanResult()
 	}
 	return nil
+}
+
+func changePlanResult(dbSess *db.Session, task *models.Task, step *models.TaskStep) {
+	logger := logs.Get()
+	if step.Type == common.TaskStepTfPlan && step.Status == models.TaskComplete {
+		err := taskDoneProcessPlan(dbSess, task, true)
+		if err != nil {
+			logger.Errorf("process task plan: %v", err)
+		}
+	}
 }
 
 func readIfExist(path string) ([]byte, error) {
@@ -815,10 +853,6 @@ func waitTaskStepApprove(ctx context.Context, db *db.Session, task *models.Task,
 	if step.MustApproval && !step.IsApproved() {
 		logger.Infof("waitting task step approve")
 		changeStepStatus(models.TaskStepApproving, "", step)
-		err = taskDoneProcessPlan(db, task, true)
-		if err != nil {
-			logger.Errorf("process task plan: %v", err)
-		}
 		if newStep, err = WaitTaskStepApprove(ctx, db, step.TaskId, step.Index); err != nil {
 			if errors.Is(err, context.Canceled) {
 				return nil, err

@@ -484,8 +484,10 @@ terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }}
 func (t *Task) up2Workspace(name string) string {
 	ups := make([]string, 0)
 	ups = append(ups, "..") // 代码仓库被 clone 到 code 目录，所以默认有一层目录包装
-	for range filepath.SplitList(t.req.Env.Workdir) {
-		ups = append(ups, "..")
+	for _, v := range strings.Split(t.req.Env.Workdir, string(os.PathSeparator)) {
+		if v != "" {
+			ups = append(ups, "..")
+		}
 	}
 	return filepath.Join(append(ups, name)...)
 }
@@ -525,11 +527,17 @@ var applyCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
 terraform apply -input=false -auto-approve \
 {{ range $arg := .Req.StepArgs}}{{$arg}} {{ end }}_cloudiac.tfplan
+
+# state collect command
+terraform show -no-color -json >{{.TFStateJsonFilePath}} && \
+terraform providers schema -json > {{.TFProviderSchema}}
 `))
 
 func (t *Task) stepApply() (command string, err error) {
 	return t.executeTpl(applyCommandTpl, map[string]interface{}{
-		"Req": t.req,
+		"Req":                 t.req,
+		"TFStateJsonFilePath": t.up2Workspace(TFStateJsonFile),
+		"TFProviderSchema":    t.up2Workspace(TFProviderSchema),
 	})
 }
 
@@ -537,7 +545,9 @@ func (t *Task) stepDestroy() (command string, err error) {
 	// destroy 任务通过会先执行 plan(传入 --destroy 参数)，然后再 apply plan 文件实现。
 	// 这样可以保证 destroy 时执行的是用户审批时看到的 plan 内容
 	return t.executeTpl(applyCommandTpl, map[string]interface{}{
-		"Req": t.req,
+		"Req":                 t.req,
+		"TFStateJsonFilePath": t.up2Workspace(TFStateJsonFile),
+		"TFProviderSchema":    t.up2Workspace(TFProviderSchema),
 	})
 }
 

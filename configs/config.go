@@ -56,11 +56,14 @@ type PortalConfig struct {
 }
 
 type LdapConfig struct {
-	AdminDn        string `yaml:"admin_dn"`
-	AdminPassword  string `yaml:"admin_password"`
-	LdapServer     string `yaml:"ldap_server"`
-	LdapServerPort int    `yaml:"ldap_server_port"`
-	SearchBase     string `yaml:"search_base"`
+	AdminDn          string `yaml:"admin_dn"`
+	AdminPassword    string `yaml:"admin_password"`
+	LdapServer       string `yaml:"ldap_server"`
+	LdapServerPort   int    `yaml:"ldap_server_port"`
+	SearchBase       string `yaml:"search_base"`
+	SearchFilter     string `yaml:"search_filter"`   // 自定义搜索条件
+	EmailAttribute   string `yaml:"email_attribute"` // 用户定义邮箱字段名 默认值为mail
+	AccountAttribute string `yaml:"account_attribute"`
 }
 
 func (c *RunnerConfig) mustAbs(path string) string {

@@ -140,6 +140,7 @@ type Task struct {
 	RetryAble   bool       `json:"retryAble" gorm:"default:false"`
 	Callback    string     `json:"callback" gorm:"default:''"`       // 外部请求的回调方式
 	IsDriftTask bool       `json:"isDriftTask" gorm:"default:false"` // 是否是偏移检测任务
+	Applied     bool       `json:"applied" gorm:"default:false"`     // 是否漂移执行了terraformApply
 	Source      string     `json:"source" gorm:"not null;default:manual;enum('manual','driftPlan','driftApply','webhookPlan', 'webhookApply', 'autoDestroy', 'api')"`
 	SourceSys   string     `json:"sourceSys" gorm:"not null;default:''"`
 }

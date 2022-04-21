@@ -127,6 +127,7 @@ func SearchVariableGroup(c *ctx.ServiceContext, form *forms.SearchVariableGroupF
 	for _, v := range rs {
 		if _, ok := idSet[v.Id]; !ok {
 			results = append(results, resultsMap[v.Id])
+			idSet[v.Id] = struct{}{}
 		}
 	}
 

@@ -161,6 +161,7 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 	return nil
 }
 
+
 // getTaskStepTimeoutInSecond return timeout in second
 func getTaskStepTimeoutInSecond(timeoutInMinute int) (int, e.Error) {
 	timeoutInSecond := timeoutInMinute * 60
@@ -301,7 +302,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, err
 	}
 	// 检查环境传入工作目录
-	if err = envWorkdirCheck(c, tpl.RepoId, tpl.RepoRevision, form.Workdir, tpl.VcsId); err != nil {
+	if err = envWorkdirCheck(c, tpl.RepoId, form.Revision, form.Workdir, tpl.VcsId); err != nil {
 		return nil, err
 	}
 	// 以下值只在未传入时使用模板定义的值，如果入参有该字段即使值为空也不会使用模板中的值
@@ -321,7 +322,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		}
 	}()
 
-	runnerId, err := services.GetAvailableRunnerId(form.RunnerId, strings.Join(form.RunnerTags, ","))
+	runnerId, err := services.GetAvailableRunnerId(form.RunnerId, form.RunnerTags)
 	if err != nil {
 		return nil, err
 	}
@@ -382,12 +383,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	}
 
 	// 来源：手动触发、外部调用
-	taskSource := consts.TaskSourceManual
-	taskSourceSys := ""
-	if form.Source != "" || form.Callback != "" {
-		taskSource = consts.TaskSourceApi
-		taskSourceSys = form.Source
-	}
+	taskSource, taskSourceSys := getEnvSource(form.Source)
 
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
@@ -678,7 +674,7 @@ func setAndCheckUpdateEnvDestroy(tx *db.Session, attrs models.Attrs, env *models
 		if ttl == 0 {
 			// ttl 传 0 表示重置销毁时间
 			attrs["auto_destroy_at"] = nil
-		} else if env.Status != models.EnvStatusInactive {
+		} else if env.Status != models.EnvStatusDestroyed && env.Status != models.EnvStatusInactive {
 			// 活跃环境同步修改 destroyAt
 			at := models.Time(time.Now().Add(ttl))
 			attrs["auto_destroy_at"] = &at
@@ -893,44 +889,38 @@ func EnvDeployCheck(c *ctx.ServiceContext, envId models.Id) (interface{}, e.Erro
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
-	env, err := services.GetEnvById(c.Tx(), envId)
+	env, err := services.GetEnvById(c.DB(), envId)
 	if err != nil {
 		return nil, err
 	}
 	//判断环境是否已归档
 	if env.Archived {
 		return nil, e.New(e.EnvArchived, "Environment archived")
-	}	
+	}
 
 	// 云模板检测
-	tpl, err := services.GetTplByEnvId(c.Tx(), envId)
+	tpl, err := services.GetTplByEnvId(c.DB(), envId)
 	if err != nil {
 		return nil, err
 	}
-	if err = TemplateDeployCheck(c, &forms.TemplateChecksForm{
-		Name:         tpl.Name,
-		Workdir:      tpl.Workdir,
-		TfVarsFile:   tpl.TfVarsFile,
-		Playbook:     tpl.Playbook,
-		RepoId:       tpl.RepoId,
-		RepoRevision: tpl.RepoRevision,
-		VcsId:        tpl.VcsId,
-	}); err != nil {
-		return nil, err
+	//检测云模板是否绑定项目
+	_, checkErr := services.GetBindTemplate(c.DB(), c.ProjectId, tpl.Id)
+	if checkErr != nil {
+		return nil, checkErr
 	}
 	//vcs 检测(是否禁用，token是否有效)
-	vcs, err := services.GetVcsById(c.Tx(), tpl.VcsId)
+	vcs, err := services.GetVcsById(c.DB(), tpl.VcsId)
 	if err != nil {
 		return nil, err
 	}
 	if vcs.Status != "enable" {
 		return nil, e.New(e.VcsError, "vcs is disable")
 	}
-	if err := services.VscTokenCheckByID(c.Tx(), vcs.Id, vcs.VcsToken); err != nil {
+	if err := services.VscTokenCheckByID(c.DB(), vcs.Id, vcs.VcsToken); err != nil {
 		return nil, e.New(e.VcsInvalidToken, err)
 	}
 	//环境运行中不允许再手动发布任务
-	tasks, err := services.GetActiveTaskByEnvId(c.Tx(), envId)
+	tasks, err := services.GetActiveTaskByEnvId(c.DB(), envId)
 	if err != nil {
 		return nil, err
 	}
@@ -1085,7 +1075,7 @@ func setAndCheckEnvDestroy(env *models.Env, form *forms.DeployEnvForm) e.Error {
 
 		if ttl == 0 { // ttl 传入 0 表示清空自动销毁时间
 			env.AutoDestroyAt = nil
-		} else if env.Status != models.EnvStatusInactive {
+		} else if env.Status != models.EnvStatusDestroyed && env.Status != models.EnvStatusInactive {
 			// 活跃环境同步修改 destroyAt
 			at := models.Time(time.Now().Add(ttl))
 			env.AutoDestroyAt = &at
@@ -1140,7 +1130,7 @@ func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env
 		updateVarsForm := forms.UpdateObjectVarsForm{
 			Scope:     consts.ScopeEnv,
 			ObjectId:  env.Id,
-			Variables: form.Variables,
+			Variables: checkDeployVar(form.Variables),
 		}
 		if _, er := updateObjectVars(c, tx, &updateVarsForm); er != nil {
 			return e.AutoNew(er, e.InternalError)
@@ -1201,7 +1191,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		return nil, err
 	}
 	// 环境下云模版工作目录检查
-	if err = envWorkdirCheck(c, tpl.RepoId, tpl.RepoRevision, form.Workdir, tpl.VcsId); err != nil {
+	if err = envWorkdirCheck(c, tpl.RepoId, form.Revision, form.Workdir, tpl.VcsId); err != nil {
 		return nil, err
 	}
 	lg.Debugln("envDeploy -> envTplCheck finish")
@@ -1209,7 +1199,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	// set env from form
 	setEnvByForm(env, form)
 
-	// set and check autoApproval, destroyAt, cronDrift, TaskType ...
+	// set and check autoApproval, destroyAt, cronDrift, TaskType, variables...
 	err = setAndCheckEnvByForm(c, tx, env, form)
 	if err != nil {
 		return nil, err
@@ -1229,10 +1219,14 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	lg.Debugln("envDeploy -> GetValidVarsAndVgVars finish")
 
 	// 获取实际执行任务的runnerID
-	rId, err := services.GetAvailableRunnerId(env.RunnerId, env.RunnerTags)
+	rId, err := services.GetAvailableRunnerIdByStr(env.RunnerId, env.RunnerTags)
 	if err != nil {
 		return nil, err
 	}
+
+	// 来源：手动触发、外部调用
+	taskSource, taskSourceSys := getEnvSource(form.Source)
+
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
@@ -1249,6 +1243,8 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 			StepTimeout: env.StepTimeout,
 			RunnerId:    rId,
 		},
+		Source:    taskSource,
+		SourceSys: taskSourceSys,
 	})
 
 	if err != nil {
@@ -1575,4 +1571,26 @@ func EnvStat(c *ctx.ServiceContext, form *forms.EnvParam) (interface{}, e.Error)
 		CostTrendStat: envCostTrendStat,
 		CostList:      results,
 	}, nil
+}
+
+func checkDeployVar(vars []forms.Variable) []forms.Variable {
+	resp := make([]forms.Variable, 0)
+	for _, v := range vars {
+		if v.Scope != consts.ScopeEnv {
+			continue
+		}
+		resp = append(resp, v)
+	}
+
+	return resp
+}
+
+func getEnvSource(source string) (taskSource string, taskSourceSys string) {
+	taskSource = consts.TaskSourceManual
+	taskSourceSys = ""
+	if source != "" {
+		taskSource = consts.TaskSourceApi
+		taskSourceSys = source
+	}
+	return
 }

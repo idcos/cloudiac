@@ -66,18 +66,20 @@ func StatisticalProjectTpl(dbSess *db.Session, projectId models.Id) (int64, erro
 }
 
 func StatisticalProjectEnv(dbSess *db.Session, projectId models.Id) (*struct {
-	EnvActive   int64
-	EnvFailed   int64
-	EnvInactive int64
+	EnvActive    int64
+	EnvFailed    int64
+	EnvInactive  int64
+	EnvDestroyed int64
 }, error) {
 	var (
 		resp []struct {
 			Count  int64
 			Status string
 		}
-		envActive   int64
-		envFailed   int64
-		envInactive int64
+		envActive    int64
+		envFailed    int64
+		envInactive  int64
+		envDestroyed int64
 	)
 
 	if err := dbSess.Model(&models.Env{}).Select("count(status) as count, status").
@@ -93,17 +95,21 @@ func StatisticalProjectEnv(dbSess *db.Session, projectId models.Id) (*struct {
 			envActive = v.Count
 		case models.EnvStatusInactive:
 			envInactive = v.Count
+		case models.EnvStatusDestroyed:
+			envDestroyed = v.Count
 		}
 	}
 
 	return &struct {
-		EnvActive   int64
-		EnvFailed   int64
-		EnvInactive int64
+		EnvActive    int64
+		EnvFailed    int64
+		EnvInactive  int64
+		EnvDestroyed int64
 	}{
-		EnvActive:   envActive,
-		EnvFailed:   envFailed,
-		EnvInactive: envInactive,
+		EnvActive:    envActive,
+		EnvFailed:    envFailed,
+		EnvInactive:  envInactive,
+		EnvDestroyed: envDestroyed,
 	}, nil
 
 }
@@ -275,4 +281,86 @@ func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([]re
 	endDate := now
 
 	return getResGrowTrendByDays(startDate, endDate, dbResults, days), nil
+}
+
+// GetResGrowTrendByProjects 获取项目的资源变化趋势
+func GetResGrowTrendByProjects(tx *db.Session, projectIds []models.Id, days int) (map[models.Id][]resps.ProjectResStatResp, e.Error) {
+
+	/* sample sql
+	select
+		iac_resource.project_id as id,
+		DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date,
+		count(*) as count
+	from
+		iac_resource
+	JOIN iac_env ON
+		iac_env.last_res_task_id = iac_resource.task_id
+		and iac_env.id = iac_resource.env_id
+	where
+		iac_env.project_id IN ('p-c9cjgrosm56nr7049qpg')
+		and DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 7 DAY), "%Y-%m-%d")
+	group by
+		iac_resource.project_id, date
+	order by
+		date
+	*/
+
+	if len(projectIds) <= 0 {
+		return make(map[models.Id][]resps.ProjectResStatResp), nil
+	}
+
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.project_id as id, DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date, count(*) as count`)
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
+
+	query = query.Where("iac_env.project_id in ?", projectIds)
+	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? DAY), "%Y-%m-%d")`, days)
+
+	query = query.Group("iac_resource.project_id, date").Order("date")
+
+	var dbResults []ProjectStatResult
+	if err := query.Find(&dbResults); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	// mProjDateCount: projectId -> date -> count
+	var mProjDateCount = make(map[models.Id]map[string]int)
+	for _, dbResult := range dbResults {
+		if _, ok := mProjDateCount[dbResult.Id]; !ok {
+			mProjDateCount[dbResult.Id] = make(map[string]int)
+		}
+
+		mProjDateCount[dbResult.Id][dbResult.Date] = dbResult.Count
+	}
+
+	return completeDays(mProjDateCount, days), nil
+}
+
+func completeDays(m map[models.Id]map[string]int, days int) map[models.Id][]resps.ProjectResStatResp {
+	var results = make(map[models.Id][]resps.ProjectResStatResp)
+
+	now := time.Now()
+	// loop projects
+	for k, v := range m {
+		results[k] = make([]resps.ProjectResStatResp, 0)
+
+		startDate := now.AddDate(0, 0, -1*days)
+		// loop days
+		for i := 0; i < days; i++ {
+			startDate = startDate.AddDate(0, 0, 1)
+			dateStr := startDate.Format("2006-01-02")
+
+			// 日期不存在，count默认值是0
+			count := 0
+			if _, ok := v[dateStr]; ok {
+				count = m[k][dateStr]
+			}
+
+			results[k] = append(results[k], resps.ProjectResStatResp{
+				Date:  dateStr,
+				Count: count,
+			})
+		}
+	}
+
+	return results
 }
