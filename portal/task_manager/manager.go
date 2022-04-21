@@ -955,11 +955,27 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		return nil, err
 	}
 
-	stateStore := runner.StateStore{
-		Backend: "consul",
-		Scheme:  "http",
-		Path:    task.StatePath,
-		Address: "",
+	var stateStore runner.StateStore
+
+	if configs.Get().Consul.ConsulTls {
+		stateStore = runner.StateStore{
+			Backend:     "consul",
+			Scheme:      "http",
+			Path:        task.StatePath,
+			Address:     "",
+			ConsulToken: configs.Get().Consul.ConsulAclToken,
+			CaPath:      common.ConsulContainerPath + common.ConsulCa,
+			CakeyPath:   common.ConsulContainerPath + common.ConsulCakey,
+			CapemPath:   common.ConsulContainerPath + common.ConsulCapem,
+		}
+	} else {
+		stateStore = runner.StateStore{
+			Backend:     "consul",
+			Scheme:      "http",
+			Path:        task.StatePath,
+			Address:     "",
+			ConsulToken: configs.Get().Consul.ConsulAclToken,
+		}
 	}
 
 	pk := ""
@@ -1268,11 +1284,26 @@ func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.Ta
 
 	if task.Type == common.TaskTypeEnvScan || task.Type == common.TaskTypeEnvParse {
 		env, _ := services.GetEnvById(dbSess, task.EnvId)
-		stateStore := runner.StateStore{
-			Backend: "consul",
-			Scheme:  "http",
-			Path:    env.StatePath,
-			Address: "",
+		var stateStore runner.StateStore
+		if configs.Get().Consul.ConsulTls {
+			stateStore = runner.StateStore{
+				Backend:     "consul",
+				Scheme:      "http",
+				Path:        env.StatePath,
+				Address:     "",
+				ConsulToken: configs.Get().Consul.ConsulAclToken,
+				CaPath:      common.ConsulContainerPath + common.ConsulCa,
+				CakeyPath:   common.ConsulContainerPath + common.ConsulCakey,
+				CapemPath:   common.ConsulContainerPath + common.ConsulCapem,
+			}
+		} else {
+			stateStore = runner.StateStore{
+				Backend:     "consul",
+				Scheme:      "http",
+				Path:        env.StatePath,
+				Address:     "",
+				ConsulToken: configs.Get().Consul.ConsulAclToken,
+			}
 		}
 		taskReq.StateStore = stateStore
 	}

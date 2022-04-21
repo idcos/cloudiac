@@ -5,6 +5,7 @@ package consul
 import (
 	"cloudiac/configs"
 	"cloudiac/portal/services"
+	"cloudiac/utils/consulClient"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -15,9 +16,7 @@ import (
 )
 
 func Register(serviceName string, consulConfig configs.ConsulConfig) error {
-	config := consulapi.DefaultConfig()
-	config.Address = consulConfig.Address
-	client, err := consulapi.NewClient(config)
+	client, err := consulClient.NewConsulClient()
 	if err != nil {
 		log.Fatal("consul client error : ", err)
 		return err
@@ -56,7 +55,7 @@ func Register(serviceName string, consulConfig configs.ConsulConfig) error {
 }
 
 func GetLocker(key string, value []byte, address string) (*consulapi.Lock, error) {
-	client, err := consulapi.NewClient(&consulapi.Config{Address: address})
+	client, err := consulClient.NewConsulClient()
 	if err != nil {
 		return nil, err
 	}

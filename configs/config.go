@@ -33,6 +33,10 @@ type ConsulConfig struct {
 	Interval        string `yaml:"interval"`
 	Timeout         string `yaml:"timeout"`
 	DeregisterAfter string `yaml:"deregister_after"`
+	ConsulAcl       bool   `yaml:"consul_acl"`
+	ConsulCertPath  string `yaml:"consul_cert_path"`
+	ConsulAclToken  string `yaml:"consul_acl_token"`
+	ConsulTls       bool   `yaml:"consul_tls"`
 }
 
 type RunnerConfig struct {
@@ -52,11 +56,11 @@ type PortalConfig struct {
 }
 
 type LdapConfig struct {
-	AdminDn     string `yaml:"admin_dn"`
-	AdminPassword string `yaml:"admin_password"`
-	LdapServer   string `yaml:"ldap_server"`
-	LdapServerPort int `yaml:"ldap_server_port"`
-	SearchBase   string `yaml:"search_base"`
+	AdminDn        string `yaml:"admin_dn"`
+	AdminPassword  string `yaml:"admin_password"`
+	LdapServer     string `yaml:"ldap_server"`
+	LdapServerPort int    `yaml:"ldap_server_port"`
+	SearchBase     string `yaml:"search_base"`
 }
 
 func (c *RunnerConfig) mustAbs(path string) string {
@@ -125,7 +129,7 @@ type Config struct {
 	ExportSecretKey    string           `yaml:"exportSecretKey"`
 	HttpClientInsecure bool             `yaml:"httpClientInsecure"`
 	Policy             PolicyConfig     `yaml:"policy"`
-	Ldap			   LdapConfig       `yaml:"ldap"`
+	Ldap               LdapConfig       `yaml:"ldap"`
 }
 
 const (

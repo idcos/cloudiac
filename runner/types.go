@@ -23,10 +23,14 @@ type TaskEnv struct {
 }
 
 type StateStore struct {
-	Backend string `json:"backend" binding:""`
-	Scheme  string `json:"scheme" binding:""`
-	Path    string `json:"path" binding:""`
-	Address string `json:"address" binding:""` // consul 地址 runner 会自动设置
+	Backend     string `json:"backend" binding:""`
+	Scheme      string `json:"scheme" binding:""`
+	Path        string `json:"path" binding:""`
+	ConsulToken string `json:"consul_token" binding:""`
+	CaPath      string `json:"ca_path" binding:""`
+	CakeyPath   string `json:"cakey_path" binding:""`
+	CapemPath   string `json:"capem_path" binding:""`
+	Address     string `json:"address" binding:""` // consul 地址 runner 会自动设置
 }
 
 type RunTaskReq struct {

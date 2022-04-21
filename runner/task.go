@@ -293,6 +293,10 @@ var iacTerraformTpl = template.Must(template.New("").Parse(` terraform {
     path    = "{{.State.Path}}"
     lock    = true
     gzip    = false
+    access_token = "{{.State.ConsulToken}}"
+    ca_file = "{{.State.CaPath}}"
+    cert_file = "{{.State.CapemPath}}"
+    key_file = "{{.State.CakeyPath}}"
   }
 }
 
