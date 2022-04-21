@@ -219,8 +219,8 @@ func ensureSecretKey(cfg *Config) error {
 
 // 直接传入 Config 结构设置 config
 // 目前主要用于编写测试用例时直接初始化 config
-func Set(cfg Config) {
-	config = &cfg
+func Set(cfg *Config) {
+	config = cfg
 }
 
 func Get() *Config {

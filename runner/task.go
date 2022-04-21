@@ -22,9 +22,9 @@ import (
 )
 
 type Task struct {
-	req       RunTaskReq
-	logger    logs.Logger
-	config    configs.RunnerConfig
+	req    RunTaskReq
+	logger logs.Logger
+	// config    configs.RunnerConfig
 	workspace string
 }
 
@@ -32,7 +32,7 @@ func NewTask(req RunTaskReq, logger logs.Logger) *Task {
 	return &Task{
 		req:    req,
 		logger: logger,
-		config: configs.Get().Runner,
+		// config: configs.Get().Runner,
 	}
 }
 
@@ -307,8 +307,8 @@ func execTpl2File(tpl *template.Template, data interface{}, savePath string) err
 	if err != nil {
 		return err
 	}
-
 	defer fp.Close()
+
 	return tpl.Execute(fp, data)
 }
 
@@ -338,6 +338,10 @@ func (t *Task) genPlayVarsFile(workspace string) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		_ = fp.Close()
+	}()
+
 	var ansibleVars = t.req.Env.AnsibleVars
 	for key, value := range t.req.SysEnvironments {
 		if key != "" && strings.HasPrefix(key, "CLOUDIAC_") {
@@ -345,6 +349,37 @@ func (t *Task) genPlayVarsFile(workspace string) error {
 		}
 	}
 	return yaml.NewEncoder(fp).Encode(ansibleVars)
+}
+
+var terraformrcTpl = template.Must(template.New("").Parse(`provider_installation {
+  filesystem_mirror {
+    path = "/cloudiac/terraform/plugins"
+  }
+
+  {{ if .NetworkMirrorUrl }}
+  network_mirror {
+	url = "{{.NetworkMirrorUrl}}"
+	include = ["registry.terraform.io/*/*"]
+  }
+  {{ end }}
+
+  direct {
+	exclude = ["{{ .DirectExclude }}"]
+  }
+}`))
+
+func (t *Task) genTerraformrcFile(workspace string) error {
+	path := filepath.Join(workspace, TerraformrcFileName)
+	directExclude := "idcos/*"
+	offline := configs.Get().Runner.OfflineMode
+	if offline || t.req.NetworkMirror != "" {
+		directExclude = "registry.terraform.io/*/*"
+	}
+
+	return execTpl2File(terraformrcTpl, map[string]interface{}{
+		"NetworkMirrorUrl": t.req.NetworkMirror,
+		"DirectExclude":    directExclude,
+	}, path)
 }
 
 func (t *Task) genPolicyFiles(workspace string) error {

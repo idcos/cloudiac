@@ -35,6 +35,8 @@ const (
 	TaskContainerInfoFileName = "container.json"
 	TaskControlFileName       = "control.json"
 
+	TerraformrcFileName = "terraformrc"
+
 	CloudIacTfFile   = "_cloudiac.tf"
 	CloudIacPlayVars = "_cloudiac_play_vars.yml"
 
