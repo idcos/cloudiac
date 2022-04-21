@@ -9,7 +9,7 @@ import (
 	"path"
 )
 
-func ParserPlanJson(b []byte) (createResource []*schema.Resource, deleteResource []*schema.Resource, updateBeforeResource []*schema.Resource) {
+func ParserPlanJson(b []byte) (createResource, deleteResource, updateBeforeResource, updateAfterResource []*schema.Resource) {
 	registryMap := GetResourceRegistryMap()
 	parsed := gjson.ParseBytes(b)
 	for _, v := range parsed.Get("resource_changes").Array() {
@@ -31,7 +31,7 @@ func ParserPlanJson(b []byte) (createResource []*schema.Resource, deleteResource
 		}
 
 		if actions[0].String() == consts.TerraformActionUpdate {
-			createResource = BuildResource(createResource, registryMap, t, providerName, address, v.Get("change.after"))
+			updateAfterResource = BuildResource(updateAfterResource, registryMap, t, providerName, address, v.Get("change.after"))
 			updateBeforeResource = BuildResource(updateBeforeResource, registryMap, t, providerName, address, v.Get("change.before"))
 		}
 	}
