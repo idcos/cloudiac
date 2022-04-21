@@ -6,5 +6,9 @@ import "cloudiac/portal/services/forecast/schema"
 
 var ResourceRegistry []*schema.RegistryItem = []*schema.RegistryItem{
 	getInstanceRegistryItem(),
+	getDBInstanceRegistryItem(),
+	getSlbRegistryItem(),
+	getSlbLoadBalancerRegistryItem(),
+	getKvStoreInstanceRegistryItem(),
 }
 
