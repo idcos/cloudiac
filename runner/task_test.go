@@ -96,7 +96,7 @@ func TestGenTerraformrcFile(t *testing.T) {
 
   direct {
 	exclude = [
-	  "idcos/*"
+	  "registry.terraform.io/idcos/*"
 	]
   }
 }`},

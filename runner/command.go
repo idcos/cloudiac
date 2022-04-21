@@ -93,6 +93,12 @@ func (exec *Executor) Start() (string, error) {
 			Target: ContainerWorkspace,
 		},
 		{
+			// 将 terraformrc 文件挂载到容器
+			Type:   mount.TypeBind,
+			Source: filepath.Join(exec.HostWorkdir, TerraformrcFileName),
+			Target: ContainerTerraformrcPath,
+		},
+		{
 			Type:   mount.TypeBind,
 			Source: conf.Runner.AbsPluginCachePath(),
 			Target: ContainerPluginCachePath,
