@@ -115,6 +115,9 @@ func (e *Env) Migrate(sess *db.Session) (err error) {
 	if err = sess.ModifyModelColumn(&Env{}, "triggers"); err != nil {
 		return err
 	}
+	if err = sess.ModifyModelColumn(&Env{}, "status"); err != nil {
+		return err
+	}
 	return nil
 }
 
