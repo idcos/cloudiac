@@ -26,7 +26,9 @@ type StateStore struct {
 	Backend     string `json:"backend" binding:""`
 	Scheme      string `json:"scheme" binding:""`
 	Path        string `json:"path" binding:""`
+	ConsulAcl   bool   `json:"consul_acl" binding:""`
 	ConsulToken string `json:"consul_token" binding:""`
+	ConsulTls   bool   `json:"consul_tls" binding:""`
 	CaPath      string `json:"ca_path" binding:""`
 	CakeyPath   string `json:"cakey_path" binding:""`
 	CapemPath   string `json:"capem_path" binding:""`
