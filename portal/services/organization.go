@@ -400,6 +400,7 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 	where
 		iac_env.org_id = 'org-c8gg9fosm56injdlb85g'
 		AND iac_env.project_id IN ('p-c8gg9josm56injdlb86g', 'aaa')
+		and iac_project.status = 'enable'
 		AND (DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(CURDATE(), "%Y-%m")
 			OR
 		DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m"))
@@ -418,6 +419,7 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 	if len(projectIds) > 0 {
 		query = query.Where(`iac_env.project_id in ?`, projectIds)
 	}
+	query = query.Where(`iac_project.status = 'enable'`)
 	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(CURDATE(), "%Y-%m") OR DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m")`)
 
 	query = query.Group("date,iac_resource.type,iac_resource.project_id")
