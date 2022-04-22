@@ -114,7 +114,7 @@ services:
 
 ```
 
-> 开启acl和tls部署的docker-compose.yaml
+> 如需开启acl和tls部署的使用下面的docker-compose.yaml
 
 文件路径 /usr/yunji/cloudiac/docker-compose.yml，内容如下:
 ```yaml
@@ -204,81 +204,6 @@ services:
       consul agent -server -bootstrap-expect=1 -ui -bind=0.0.0.0
       -client=0.0.0.0 -enable-script-checks=true -data-dir=/consul/data -config-dir=/consul/config
     restart: always
-```
-
-开启consul配置acl
-```bash
-# 新增consul配置acl.hcl
-cat >> /usr/yunji/cloudiac/var/acltls/acl.hcl <<EOF
-acl = {
-  enabled = true
-  default_policy = "deny"
-  enable_token_persistence = true
-}
-EOF
-
-# 重启consul
-docker restart consul
-
-# 进入容器
-docker exec -it consul sh
-
-# 生成token,保存好生成的SecretID
-consul acl bootstrap
-
-#退出容器
-
-# 加入SecretID作为token加入acl.hcl配置
-cat > /usr/yunji/cloudiac/var/acltls/acl.hcl <<EOF
-acl = {
-  enabled = true
-  default_policy = "deny"
-  enable_token_persistence = true
-  tokens {
-    master = "5ecc86f0-fa68-6ddc-e848-ef382d7737ec" #SecretID
-  }
-}
-EOF
-```
-
-开启consul配置tls访问
-> 证书名称固定 ca.pem,client.key,client.pem
-
-```bash
-cd /usr/yunji/cloudiac/var/acltls
-
- #生成根证书key
-openssl genrsa -out ca.key 2048
-#生成根证书密钥
-openssl req -new -x509 -days 7200 -key ca.key   -out ca.pem
-
-#生成客户端私钥
-openssl genrsa -out client.key 2048
-
-#生成的客户端的CSR
-openssl req -new -key client.key  -out client.csr
-
-# 创建宿舍机对应的签名证书  IP宿主机
-echo subjectAltName = IP:127.0.0.1 > extfile.cnf
-
-#客户端自签名的证书
-openssl x509 -req -days 365 -in client.csr -CA ca.pem -CAkey ca.key -CAcreateserial \
-   -out client.pem -extfile extfile.cnf
-   
-# 新增consul配置tls.json
-cat >> /usr/yunji/cloudiac/var/acltls <<EOF
-{
-  "verify_incoming": false,
-  "verify_incoming_rpc": true,
-  "ports": {
-    "http": -1,
-    "https": 8500
-  },
-  "ca_file": "/consul/config/ca.pem",
-  "cert_file": "/consul/config/client.pem",
-  "key_file": "/consul/config/client.key"
-}
-EOF
 ```
 
 ## 5. 创建 .env 文件
@@ -379,9 +304,85 @@ RUNNER_OFFLINE_MODE="false"
 ```bash
 docker-compose up
 ```
-
 > 默认为前台启动，以便于排查问题，在确定服务正常后可以改为后台启动：`dokcker-compose up -d`。
 
+---
+> 如需开启acl和tls配置的进行如下配置
+
+开启consul配置acl
+```bash
+# 新增consul配置acl.hcl
+cat >> /usr/yunji/cloudiac/var/acltls/acl.hcl <<EOF
+acl = {
+  enabled = true
+  default_policy = "deny"
+  enable_token_persistence = true
+}
+EOF
+
+# 重启consul
+docker restart consul
+
+# 进入容器
+docker exec -it consul sh
+
+# 生成token,保存好生成的SecretID
+consul acl bootstrap
+
+#退出容器
+
+# 加入SecretID作为token加入acl.hcl配置
+cat > /usr/yunji/cloudiac/var/acltls/acl.hcl <<EOF
+acl = {
+  enabled = true
+  default_policy = "deny"
+  enable_token_persistence = true
+  tokens {
+    master = "5ecc86f0-fa68-6ddc-e848-ef382d7737ec" #SecretID
+  }
+}
+EOF
+```
+
+开启consul配置tls访问
+> 证书名称固定 ca.pem,client.key,client.pem
+
+```bash
+cd /usr/yunji/cloudiac/var/acltls
+
+ #生成根证书key
+openssl genrsa -out ca.key 2048
+#生成根证书密钥
+openssl req -new -x509 -days 7200 -key ca.key   -out ca.pem
+
+#生成客户端私钥
+openssl genrsa -out client.key 2048
+
+#生成的客户端的CSR
+openssl req -new -key client.key  -out client.csr
+
+# 创建宿舍机对应的签名证书  IP宿主机
+echo subjectAltName = IP:127.0.0.1 > extfile.cnf
+
+#客户端自签名的证书
+openssl x509 -req -days 365 -in client.csr -CA ca.pem -CAkey ca.key -CAcreateserial \
+   -out client.pem -extfile extfile.cnf
+   
+# 新增consul配置tls.json
+cat >> /usr/yunji/cloudiac/var/acltls <<EOF
+{
+  "verify_incoming": false,
+  "verify_incoming_rpc": true,
+  "ports": {
+    "http": -1,
+    "https": 8500
+  },
+  "ca_file": "/consul/config/ca.pem",
+  "cert_file": "/consul/config/client.pem",
+  "key_file": "/consul/config/client.key"
+}
+EOF
+```
 
 ## 7. 部署完成
 至此服务部署完成，访问 http://${PORTAL_ADDRESS} 进行登陆。
