@@ -10,6 +10,7 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
+	"errors"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -567,7 +568,7 @@ func GetBillVarGroupByProjectOrOrg(dbSess *db.Session, projectId, orgId models.I
 		return &vg, nil
 	}
 
-	if err != gorm.ErrRecordNotFound {
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
