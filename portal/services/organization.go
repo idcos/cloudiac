@@ -569,6 +569,7 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 	where
 		iac_env.org_id = 'org-c8gg9fosm56injdlb85g'
 		and iac_env.project_id in ('p-c8gg9josm56injdlb86g', 'aaa')
+		and iac_project.status = 'enable'
 		and DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 7 DAY), "%Y-%m-%d")
 	group by
 		date,
@@ -585,6 +586,7 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 	if len(projectIds) > 0 {
 		query = query.Where(`iac_env.project_id in ?`, projectIds)
 	}
+	query = query.Where(`iac_project.status = 'enable'`)
 
 	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? DAY), "%Y-%m-%d")`, days)
 
