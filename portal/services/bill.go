@@ -7,6 +7,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services/billcollect"
+	"cloudiac/utils"
 	"cloudiac/utils/logs"
 )
 
@@ -62,8 +63,9 @@ func BuildBillData(resCost map[string]billcollect.ResourceCost, res []models.Res
 	resIds := make([]string, 0)
 	resp := make([]models.Bill, 0)
 	for _, v := range res {
-		if _, ok := resCost[v.ResId.String()]; ok {
-			resIds = append(resIds, v.ResId.String())
+		resId:= v.ResId.String()
+		if _, ok := resCost[resId]; ok && utils.InArrayStr(resIds,resId){
+			resIds = append(resIds, resId)
 			resp = append(resp, models.Bill{
 				OrgId:          v.OrgId,
 				ProjectId:      v.ProjectId,
@@ -84,8 +86,8 @@ func BuildBillData(resCost map[string]billcollect.ResourceCost, res []models.Res
 	return resp, resIds
 }
 
-func DeleteResourceBill(dbSess *db.Session, resIdS []string, cycle string) error {
-	if _, err := dbSess.Where("instance_id in (?)", resIdS).
+func DeleteResourceBill(dbSess *db.Session, resIds []string, cycle string) error {
+	if _, err := dbSess.Where("instance_id in (?)", resIds).
 		Where("cycle = ?", cycle).
 		Delete(models.Bill{}); err != nil {
 		return err
