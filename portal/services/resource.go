@@ -34,16 +34,19 @@ func SetResFieldsAsMap(field models.ResFields) map[string]interface{} {
 
 func GetResourceByIdsInProvider(dbSess *db.Session, ids, projectIds []string, vg models.VariableGroup) ([]models.Resource, e.Error) {
 	resp := make([]models.Resource, 0)
-	query:= dbSess.Model(models.Resource{}).
+	query := dbSess.Model(models.Resource{}).
 		Where("provider like ?", fmt.Sprintf("%%%s", vg.Provider)).
 		Where("org_id = ?", vg.OrgId).
-		Where("project_id  in  (?)", projectIds).
-		Where("res_id in (?)",ids).
+		Where("res_id in (?)", ids).
 		Group("res_id").Group("env_id").
 		Select("res_id")
 
+	if !(len(projectIds) == 1 && projectIds[0] == "") {
+		query = query.Where("project_id  in  (?)", projectIds)
+	}
+
 	if err := dbSess.Model(models.Resource{}).
-		Where("res_id in (?)",query.Expr()).
+		Where("res_id in (?)", query.Expr()).
 		Find(&resp); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
