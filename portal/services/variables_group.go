@@ -11,6 +11,8 @@ import (
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
+
+	"gorm.io/gorm"
 )
 
 func CreateVariableGroup(tx *db.Session, group models.VariableGroup) (models.VariableGroup, e.Error) {
@@ -550,15 +552,33 @@ func GetVarGroupIsOpenBillCollectByVgIds(dbSess *db.Session, vgIds []models.Id, 
 	return exists
 }
 
-func GetBillVarGroupByProjectId(dbSess *db.Session, projectId models.Id, provider string) (*models.VariableGroup, e.Error) {
+func GetBillVarGroupByProjectOrOrg(dbSess *db.Session, projectId, orgId models.Id, provider string) (*models.VariableGroup, e.Error) {
 	query := dbSess.Model(&models.VariableGroup{}).Joins(`join iac_variable_group_project_rel on iac_variable_group.id = iac_variable_group_project_rel.var_group_id`)
 
 	query = query.Where("iac_variable_group_project_rel.project_id = ?", projectId)
 	query = query.Where("iac_variable_group.type = ?", "environment")
+	query = query.Where("iac_variable_group.cost_counted = ?", 1)
 	query = query.Where("iac_variable_group.provider = ?", provider)
 
 	var vg models.VariableGroup
-	if err := query.First(&vg); err != nil {
+	err := query.First(&vg)
+
+	if err == nil {
+		return &vg, nil
+	}
+
+	if err != gorm.ErrRecordNotFound {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	// record not found, search by orgid
+	query = dbSess.Model(&models.VariableGroup{}).Where("iac_variable_group_project_rel.org_id = ?", orgId)
+	query = query.Where("iac_variable_group.type = ?", "environment")
+	query = query.Where("iac_variable_group.cost_counted = ?", 1)
+	query = query.Where("iac_variable_group.provider = ?", provider)
+
+	err = query.First(&vg)
+	if err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 

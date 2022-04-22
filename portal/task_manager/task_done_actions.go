@@ -92,22 +92,22 @@ func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byt
 	createResources, deleteResources, updateBeforeResources, updateAfterResources := terraform.ParserPlanJson(bs)
 
 	// compute cost
-	addedCost, err = computeResourceCost(dbSess, task.ProjectId, createResources)
+	addedCost, err = computeResourceCost(dbSess, task.ProjectId, task.OrgId, createResources)
 	if err != nil {
 		return nil, err
 	}
 
-	updateBeforeCost, err = computeResourceCost(dbSess, task.ProjectId, updateBeforeResources)
+	updateBeforeCost, err = computeResourceCost(dbSess, task.ProjectId, task.OrgId, updateBeforeResources)
 	if err != nil {
 		return nil, err
 	}
 
-	updateAfterCost, err = computeResourceCost(dbSess, task.ProjectId, updateAfterResources)
+	updateAfterCost, err = computeResourceCost(dbSess, task.ProjectId, task.OrgId, updateAfterResources)
 	if err != nil {
 		return nil, err
 	}
 
-	destroyedCost, err = computeResourceCost(dbSess, task.ProjectId, deleteResources)
+	destroyedCost, err = computeResourceCost(dbSess, task.ProjectId, task.OrgId, deleteResources)
 	if err != nil {
 		return nil, err
 	}
@@ -115,8 +115,8 @@ func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byt
 	return []float32{addedCost * 730, destroyedCost * 730, (updateAfterCost - updateBeforeCost) * 730}, err
 }
 
-func getPriceService(dbSess *db.Session, projectId models.Id, provider string) (pricecalculator.PriceService, error) {
-	vg, err := services.GetBillVarGroupByProjectId(dbSess, projectId, provider)
+func getPriceService(dbSess *db.Session, projectId, orgId models.Id, provider string) (pricecalculator.PriceService, error) {
+	vg, err := services.GetBillVarGroupByProjectOrOrg(dbSess, projectId, orgId, provider)
 	if err != nil {
 		return nil, err
 	}
@@ -124,14 +124,14 @@ func getPriceService(dbSess *db.Session, projectId models.Id, provider string) (
 	return pricecalculator.NewPriceService(vg, provider)
 }
 
-func computeResourceCost(dbSess *db.Session, projectId models.Id, resources []*schema.Resource) (float32, error) {
+func computeResourceCost(dbSess *db.Session, projectId, orgId models.Id, resources []*schema.Resource) (float32, error) {
 	var cost float32
 
 	mPriceServ := make(map[string]pricecalculator.PriceService)
 	for _, res := range resources {
 		key := projectId.String() + res.Provider
 		if _, ok := mPriceServ[key]; !ok {
-			ps, err := getPriceService(dbSess, projectId, res.Provider)
+			ps, err := getPriceService(dbSess, projectId, orgId, res.Provider)
 			if err != nil {
 				return cost, err
 			}
