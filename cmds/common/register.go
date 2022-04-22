@@ -43,15 +43,18 @@ func ReRegisterService(register bool, serviceName string) error {
 
 // 丢失consul连接时，尝试重新连接
 func CheckAndReConnectConsul(serviceName string) error {
+	lg := logs.Get().WithField("func", "CheckAndReConnectConsul")
 	// 首次启动获取锁
 	if err := start(serviceName, true); err != nil {
+		lg.Warnf("start failed, error: %v", err)
 		return err
 	}
 
 	// 锁丢失后重新获取锁，获取之后重新注册服务
 	go func() {
 		for {
-			start(serviceName, false)
+			err := start(serviceName, false)
+			lg.Warnf("restart failed, error: %v", err)
 			time.Sleep(time.Second * 10)
 		}
 	}()
