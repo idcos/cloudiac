@@ -9,7 +9,7 @@ import (
 	"path"
 )
 
-func ParserPlanJson(b []byte) (createResource []*schema.Resource, deleteResource []*schema.Resource, updateBeforeResource []*schema.Resource) {
+func ParserPlanJson(b []byte) (createResource, deleteResource, updateBeforeResource, updateAfterResource []*schema.Resource) {
 	registryMap := GetResourceRegistryMap()
 	parsed := gjson.ParseBytes(b)
 	for _, v := range parsed.Get("resource_changes").Array() {
@@ -17,25 +17,21 @@ func ParserPlanJson(b []byte) (createResource []*schema.Resource, deleteResource
 		providerName := path.Base(v.Get("provider_name").String())
 		address := v.Get("address").String()
 		actions := v.Get("change.actions").Array()
-		if len(actions) < 0 {
+		if len(actions) <= 0 {
 			continue
 		}
 
 		if actions[0].String() == consts.TerraformActionCreate {
 			createResource = BuildResource(createResource, registryMap, t, providerName, address, v.Get("change.after"))
-			//createResource = append(createResource, BuildResource(createResource,registryMap, t, providerName, address, v.Get("after")))
 		}
 
 		if actions[0].String() == consts.TerraformActionDelete {
 			deleteResource = BuildResource(deleteResource, registryMap, t, providerName, address, v.Get("change.before"))
-			//deleteResource = append(deleteResource, BuildResource(registryMap, t, providerName, address, v.Get("before")))
 		}
 
 		if actions[0].String() == consts.TerraformActionUpdate {
-			createResource = BuildResource(createResource, registryMap, t, providerName, address, v.Get("change.after"))
+			updateAfterResource = BuildResource(updateAfterResource, registryMap, t, providerName, address, v.Get("change.after"))
 			updateBeforeResource = BuildResource(updateBeforeResource, registryMap, t, providerName, address, v.Get("change.before"))
-			//createResource = append(createResource, BuildResource(registryMap, t, providerName, address, v.Get("after")))
-			//updateBeforeResource = append(updateBeforeResource, BuildResource(registryMap, t, providerName, address, v.Get("before")))
 		}
 	}
 
