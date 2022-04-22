@@ -63,8 +63,8 @@ func BuildBillData(resCost map[string]billcollect.ResourceCost, res []models.Res
 	resIds := make([]string, 0)
 	resp := make([]models.Bill, 0)
 	for _, v := range res {
-		resId:= v.ResId.String()
-		if _, ok := resCost[resId]; ok && utils.InArrayStr(resIds,resId){
+		resId := v.ResId.String()
+		if _, ok := resCost[resId]; ok && !utils.InArrayStr(resIds, resId) {
 			resIds = append(resIds, resId)
 			resp = append(resp, models.Bill{
 				OrgId:          v.OrgId,
@@ -109,6 +109,12 @@ func BuildVgBilling(tx *db.Session, vg models.VariableGroup, lg logs.Logger, bil
 	resCostAttr, resourceIds, insertDate, err := bp.ParseMonthBill(billingCycle)
 	if err != nil {
 		lg.Errorf("parse bill failed vgId: %s, vgName: %s, provider: %s, err: %s", vg.Id, vg.Name, vg.Provider, err)
+		return
+	}
+
+	// 删除上一次的原始账单数据
+	if err := DeleteBillData(tx, resourceIds); err != nil {
+		lg.Errorf("del last bill data failed vgId: %s, vgName: %s, provider: %s, err: %s", vg.Id, vg.Name, vg.Provider, err)
 		return
 	}
 
@@ -172,4 +178,12 @@ func ProjectEnabledBill(sess *db.Session, pid models.Id) (bool, e.Error) {
 		return false, e.New(e.DBError, err)
 	}
 	return ok, nil
+}
+
+func DeleteBillData(dbSess *db.Session, resIds []string) error {
+	if _, err := dbSess.Where("instance_id in (?)", resIds).
+		Delete(models.BillData{}); err != nil {
+		return err
+	}
+	return nil
 }
