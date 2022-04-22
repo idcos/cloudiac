@@ -309,6 +309,7 @@ func GetOrgProjectsResStat(tx *db.Session, orgId models.Id, projectIds []string,
 	where
 		iac_env.org_id = 'org-c8gg9fosm56injdlb85g'
 		and iac_env.project_id in ('p-c8gg9josm56injdlb86g', 'p-c8kmkngsm56jqosq6bkg')
+		and iac_project.status = 'enable'
 	group by
 		iac_resource.type, iac_project.id
 	order by
@@ -324,6 +325,7 @@ func GetOrgProjectsResStat(tx *db.Session, orgId models.Id, projectIds []string,
 	if len(projectIds) > 0 {
 		query = query.Where(`iac_env.project_id in ?`, projectIds)
 	}
+	query = query.Where(`iac_project.status = 'enable'`)
 
 	query = query.Group("iac_resource.type, iac_project.id").Order("count desc")
 	if limit > 0 {
