@@ -81,7 +81,7 @@ func (m *TaskManager) reset() {
 }
 
 func (m *TaskManager) acquireLock(ctx context.Context) (<-chan struct{}, error) {
-	locker, err := consul.GetLocker(TaskManagerLockKey, []byte(m.id), configs.Get().Consul.Address)
+	locker, err := consul.GetLocker(TaskManagerLockKey, []byte(m.id), configs.Get().Consul.Address, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "get locker")
 	}

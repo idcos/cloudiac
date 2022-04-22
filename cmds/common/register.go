@@ -7,6 +7,7 @@ import (
 	"cloudiac/utils/consul"
 	"cloudiac/utils/logs"
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -41,18 +42,24 @@ func ReRegisterService(register bool, serviceName string) error {
 }
 
 // 丢失consul连接时，尝试重新连接
-func CheckAndReConnectConsul(serviceName string) {
+func CheckAndReConnectConsul(serviceName string) error {
 	// 首次启动获取锁
-	start(true, serviceName)
+	if err := start(serviceName, true); err != nil {
+		return err
+	}
 
 	// 锁丢失后重新获取锁，获取之后重新注册服务
-	for {
-		start(false, serviceName)
-		time.Sleep(time.Second * 10)
-	}
+	go func() {
+		for {
+			start(serviceName, false)
+			time.Sleep(time.Second * 10)
+		}
+	}()
+
+	return nil
 }
 
-func start(isBoot bool, serviceName string) {
+func start(serviceName string, isTryOnce bool) error {
 	lg := logs.Get().WithField("func", "CheckAndReConnectConsul->start")
 	ctx := context.Background()
 	defer ctx.Done()
@@ -62,12 +69,16 @@ func start(isBoot bool, serviceName string) {
 	serviceId := conf.Consul.ServiceID
 
 	lg.Infof("acquire %s lock ...", serviceId)
+
 	var err error
 	var lockLostCh = make(<-chan struct{})
 	for {
-		lockLostCh, err = acquireLock(ctx, serviceId)
+		lockLostCh, err = acquireLock(ctx, serviceId, isTryOnce)
 		if err == nil {
 			break
+		}
+		if err != nil && isTryOnce {
+			return err
 		}
 
 		// 正常情况下 acquireLock 会阻塞直到成功获取锁，如果报错了就是出现了异常(可能是连接问题)
@@ -75,21 +86,23 @@ func start(isBoot bool, serviceName string) {
 		time.Sleep(time.Second * 10)
 	}
 
-	if !isBoot {
-		// 注册服务
-		err = ServiceRegister(serviceName)
-		if err != nil {
-			lg.Errorf("%s service register failed: %v", serviceName, err)
-		}
+	// 注册服务
+	err = ServiceRegister(serviceName)
+	if err != nil {
+		lg.Errorf("%s service register failed: %v", serviceName, err)
+	}
+	if isTryOnce {
+		return err
 	}
 
 	// 丢失lock时，中止
 	<-lockLostCh
 	lg.Warnf("disconnected from consul")
+	return nil
 }
 
-func acquireLock(ctx context.Context, serviceId string) (<-chan struct{}, error) {
-	locker, err := consul.GetLocker(serviceId+"-lock", []byte(serviceId), configs.Get().Consul.Address)
+func acquireLock(ctx context.Context, serviceId string, isTryOnce bool) (<-chan struct{}, error) {
+	locker, err := consul.GetLocker(serviceId+"-lock", []byte(serviceId), configs.Get().Consul.Address, isTryOnce)
 	if err != nil {
 		return nil, errors.Wrap(err, "get locker")
 	}
@@ -109,6 +122,9 @@ func acquireLock(ctx context.Context, serviceId string) (<-chan struct{}, error)
 	lockLostCh, err := locker.Lock(stopLockCh)
 	if err != nil {
 		return nil, errors.Wrap(err, "acquire lock")
+	}
+	if lockLostCh == nil {
+		return nil, errors.Wrap(fmt.Errorf("lock is already held by others"), "acquire lock")
 	}
 	lockHeld = true
 	return lockLostCh, nil
