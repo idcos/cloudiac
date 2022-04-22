@@ -11,13 +11,12 @@ type Disk struct {
 	Region   string
 	Provider string
 
-	Category                       string      `json:"category"`
-	Size                           int         `json:"size"`
+	Category string `json:"category"`
+	Size     int    `json:"size"`
 }
 
 func (a *Disk) BuildResource() *schema.Resource {
 	p := make([]*schema.PriceRequest, 0)
-
 
 	return &schema.Resource{
 		Name:        a.Address,

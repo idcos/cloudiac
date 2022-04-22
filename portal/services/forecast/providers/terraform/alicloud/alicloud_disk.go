@@ -19,9 +19,9 @@ func NewDisk(d *schema.ResourceData) *schema.Resource {
 	region := d.Get("region").String()
 
 	a := &alicloud.Disk{
-		Address:       d.Address,
-		Provider:      d.ProviderName,
-		Region:        region,
+		Address:  d.Address,
+		Provider: d.ProviderName,
+		Region:   region,
 	}
 
 	return a.BuildResource()

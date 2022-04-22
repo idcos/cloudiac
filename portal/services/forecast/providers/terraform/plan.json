@@ -624,6 +624,229 @@
       "type": "alicloud_instance"
     },
     {
+      "address": "alicloud_instance.instance1",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "allocate_public_ip": null,
+          "auto_release_time": null,
+          "auto_renew_period": null,
+          "availability_zone": "cn-beijing-b",
+          "data_disks": [
+            {
+              "auto_snapshot_policy_id": null,
+              "category": "cloud_efficiency",
+              "delete_with_instance": true,
+              "description": "disk2",
+              "encrypted": false,
+              "kms_key_id": null,
+              "name": "disk2",
+              "size": 20,
+              "snapshot_id": null
+            }
+          ],
+          "deletion_protection": false,
+          "deployment_set_id": null,
+          "description": null,
+          "dry_run": false,
+          "force_delete": null,
+          "hpc_cluster_id": null,
+          "image_id": "centos_8_4_x64_20G_alibase_20210824.vhd",
+          "include_data_disks": null,
+          "instance_charge_type": "PostPaid",
+          "instance_name": "tf_ecs_test",
+          "instance_type": "ecs.sn1.medium",
+          "internet_charge_type": "PayByTraffic",
+          "internet_max_bandwidth_out": 10,
+          "io_optimized": null,
+          "is_outdated": null,
+          "kms_encrypted_password": null,
+          "kms_encryption_context": null,
+          "password": "User@123",
+          "period": null,
+          "period_unit": null,
+          "renewal_status": null,
+          "resource_group_id": null,
+          "security_enhancement_strategy": null,
+          "security_groups": [
+            "sg-2zebp64tbvzy3pe2llfy"
+          ],
+          "spot_price_limit": null,
+          "spot_strategy": "NoSpot",
+          "status": "Running",
+          "system_disk_auto_snapshot_policy_id": null,
+          "system_disk_category": "cloud_efficiency",
+          "system_disk_description": null,
+          "system_disk_name": null,
+          "system_disk_size": 40,
+          "tags": null,
+          "timeouts": null,
+          "user_data": null,
+          "vswitch_id": "vsw-2zecb3v6g5x02fzvumxtt"
+        },
+        "after_unknown": {
+          "credit_specification": true,
+          "data_disks": [
+            {
+              "performance_level": true
+            }
+          ],
+          "deployment_set_group_no": true,
+          "host_name": true,
+          "id": true,
+          "internet_max_bandwidth_in": true,
+          "key_name": true,
+          "private_ip": true,
+          "public_ip": true,
+          "role_name": true,
+          "secondary_private_ip_address_count": true,
+          "secondary_private_ips": true,
+          "security_groups": [
+            false
+          ],
+          "subnet_id": true,
+          "system_disk_performance_level": true,
+          "volume_tags": true
+        },
+        "before": null
+      },
+      "mode": "managed",
+      "name": "instance1",
+      "provider_name": "registry.terraform.io/aliyun/alicloud",
+      "type": "alicloud_instance"
+    },
+    {
+      "address": "alicloud_nat_gateway.gateway1",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "availability_zone": "cn-beijing-b",
+          "nat_type": "Enhanced"
+        }
+      },
+      "mode": "managed",
+      "name": "gateway1",
+      "provider_name": "registry.terraform.io/aliyun/alicloud",
+      "type": "alicloud_nat_gateway"
+    },
+    {
+      "address": "alicloud_nat_gateway.gateway2",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "availability_zone": "cn-beijing-b",
+          "nat_type": "Enhanced",
+          "specification": "Small",
+          "internet_charge_type": "PayBySpec",
+          "network_type": "internet"
+        }
+      },
+      "mode": "managed",
+      "name": "gateway2",
+      "provider_name": "registry.terraform.io/aliyun/alicloud",
+      "type": "alicloud_nat_gateway"
+    },
+    {
+      "address": "alicloud_instance.instance1",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "allocate_public_ip": null,
+          "auto_release_time": null,
+          "auto_renew_period": null,
+          "availability_zone": "cn-beijing-b",
+          "data_disks": [
+            {
+              "auto_snapshot_policy_id": null,
+              "category": "cloud_efficiency",
+              "delete_with_instance": true,
+              "description": "disk2",
+              "encrypted": false,
+              "kms_key_id": null,
+              "name": "disk2",
+              "size": 20,
+              "snapshot_id": null
+            }
+          ],
+          "deletion_protection": false,
+          "deployment_set_id": null,
+          "description": null,
+          "dry_run": false,
+          "force_delete": null,
+          "hpc_cluster_id": null,
+          "image_id": "centos_8_4_x64_20G_alibase_20210824.vhd",
+          "include_data_disks": null,
+          "instance_charge_type": "PostPaid",
+          "instance_name": "tf_ecs_test",
+          "instance_type": "ecs.sn1.medium",
+          "internet_charge_type": "PayByTraffic",
+          "internet_max_bandwidth_out": 10,
+          "io_optimized": null,
+          "is_outdated": null,
+          "kms_encrypted_password": null,
+          "kms_encryption_context": null,
+          "password": "User@123",
+          "period": null,
+          "period_unit": null,
+          "renewal_status": null,
+          "resource_group_id": null,
+          "security_enhancement_strategy": null,
+          "security_groups": [
+            "sg-2zebp64tbvzy3pe2llfy"
+          ],
+          "spot_price_limit": null,
+          "spot_strategy": "NoSpot",
+          "status": "Running",
+          "system_disk_auto_snapshot_policy_id": null,
+          "system_disk_category": "cloud_efficiency",
+          "system_disk_description": null,
+          "system_disk_name": null,
+          "system_disk_size": 40,
+          "tags": null,
+          "timeouts": null,
+          "user_data": null,
+          "vswitch_id": "vsw-2zecb3v6g5x02fzvumxtt"
+        },
+        "after_unknown": {
+          "credit_specification": true,
+          "data_disks": [
+            {
+              "performance_level": true
+            }
+          ],
+          "deployment_set_group_no": true,
+          "host_name": true,
+          "id": true,
+          "internet_max_bandwidth_in": true,
+          "key_name": true,
+          "private_ip": true,
+          "public_ip": true,
+          "role_name": true,
+          "secondary_private_ip_address_count": true,
+          "secondary_private_ips": true,
+          "security_groups": [
+            false
+          ],
+          "subnet_id": true,
+          "system_disk_performance_level": true,
+          "volume_tags": true
+        },
+        "before": null
+      },
+      "mode": "managed",
+      "name": "instance1",
+      "provider_name": "registry.terraform.io/aliyun/alicloud",
+      "type": "alicloud_instance"
+    },
+    {
       "address": "alicloud_instance.instance[0]",
       "change": {
         "actions": [
