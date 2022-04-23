@@ -1,5 +1,8 @@
 ###  consul开启acl和tls配置
-- 修改docker-compose.yaml,替换consul部分
+
+#### 修改docker-compose.yaml
+
+修改docker-compose.yaml,替换consul部分
 
 文件路径 /usr/yunji/cloudiac/docker-compose.yml，内容如下:
 ```yaml
@@ -28,7 +31,7 @@
 > 配置说明
 
 !!! Caution
-    `docker-compose.yaml` 中新增以下配置为，其他配置可根据需要修改：
+    `docker-compose.yaml` 中新增以下配置，其他配置可根据需要修改,如果不需要开启tls可以不加环境变量
 
     - CONSUL_HTTP_SSL_VERIFY=false: 私有化部署SSL证书不验证
     - CONSUL_HTTP_SSL=true: 启动https URI方案和http api的SSl连接
@@ -39,7 +42,7 @@
 !!! Info
     以下配置开启请在替换docker-compose.yaml中consul部分,并执行docker-compose up以后进行。
 
-开启consul配置acl
+#### 开启consul配置acl
 ```bash
 # 新增consul配置acl.hcl
 cat >> /usr/yunji/cloudiac/acl.hcl <<EOF
@@ -74,7 +77,7 @@ acl = {
 EOF
 ```
 
-开启consul配置tls访问
+#### 开启consul配置tls访问
 > 证书名称固定 ca.pem,client.key,client.pem
 
 ```bash
