@@ -42,38 +42,40 @@ func ReRegisterService(register bool, serviceName string) error {
 }
 
 // 丢失consul连接时，尝试重新连接
-func CheckAndReConnectConsul(serviceName string) error {
+func CheckAndReConnectConsul(serviceName string, serviceId string) error {
 	lg := logs.Get().WithField("func", "CheckAndReConnectConsul")
-	// 首次启动获取锁
-	if err := start(serviceName, true); err != nil {
+
+	// 首次启动获取锁并注册服务
+	lockLostCh, cancelCtx, err := lockAndRegister(serviceName, serviceId, true)
+	if err != nil {
 		lg.Warnf("start failed, error: %v", err)
 		return err
 	}
 
-	// 锁丢失后重新获取锁，获取之后重新注册服务
 	go func() {
 		for {
-			err := start(serviceName, false)
+			// lock 丢失，主动结束 ctx 避免 context 泄漏
+			<-lockLostCh
+			cancelCtx()
+			lg.Warnf("disconnected from consul")
+
+			// 锁丢失后重新获取锁，并重新注册服务
+			lockLostCh, cancelCtx, err = lockAndRegister(serviceName, serviceId, false)
 			if err != nil {
 				lg.Warnf("restart failed, error: %v", err)
+				time.Sleep(time.Second * 10)
 			}
-			time.Sleep(time.Second * 10)
 		}
 	}()
 
 	return nil
 }
 
-func start(serviceName string, isTryOnce bool) error {
+func lockAndRegister(serviceName string, serviceId string, isTryOnce bool) (<-chan struct{}, context.CancelFunc, error) {
 	lg := logs.Get().WithField("func", "CheckAndReConnectConsul->start")
-	ctx := context.Background()
-	defer ctx.Done()
-
-	// 从配置文件中获取当前服务的ID
-	conf := configs.Get()
-	serviceId := conf.Consul.ServiceID
-
 	lg.Infof("acquire %s lock ...", serviceId)
+
+	ctx, cancel := context.WithCancel(context.Background())
 
 	var err error
 	var lockLostCh = make(<-chan struct{})
@@ -83,7 +85,8 @@ func start(serviceName string, isTryOnce bool) error {
 			break
 		}
 		if err != nil && isTryOnce {
-			return err
+			cancel()
+			return nil, nil, err
 		}
 
 		// 正常情况下 acquireLock 会阻塞直到成功获取锁，如果报错了就是出现了异常(可能是连接问题)
@@ -93,18 +96,12 @@ func start(serviceName string, isTryOnce bool) error {
 
 	// 注册服务
 	err = ServiceRegister(serviceName)
-	if isTryOnce {
-		return err
-	}
-
 	if err != nil {
-		return err
+		cancel()
+		return nil, nil, err
 	}
 
-	// 丢失lock时，中止
-	<-lockLostCh
-	lg.Warnf("disconnected from consul")
-	return nil
+	return lockLostCh, cancel, nil
 }
 
 func acquireLock(ctx context.Context, serviceId string, isTryOnce bool) (<-chan struct{}, error) {
