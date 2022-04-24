@@ -18,6 +18,10 @@ consul:
   interval: "3s"
   timeout: "5s"
   deregister_after: "1m"
+  consul_acl: ${CONSUL_ACL}
+  consul_acl_token: "${CONSUL_ACL_TOKEN}"
+  consul_tls: ${CONSUL_TLS}
+  consul_cert_path: "${CONSUL_CERT_PATH}"
 
 log:
   log_level: "${LOG_LEVEL}"

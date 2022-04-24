@@ -114,6 +114,11 @@ const (
 
 	RunnerServiceName    = "CT-Runner"
 	IacPortalServiceName = "IaC-Portal"
+
+	ConsulCa            = "ca.pem"
+	ConsulCakey         = "client.key"
+	ConsulCapem         = "client.pem"
+	ConsulContainerPath = "/cloudiac/cert/"
 )
 
 var (
