@@ -60,10 +60,14 @@ func CheckAndReConnectConsul(serviceName string, serviceId string) error {
 			lg.Warnf("disconnected from consul")
 
 			// 锁丢失后重新获取锁，并重新注册服务
-			lockLostCh, cancelCtx, err = lockAndRegister(serviceName, serviceId, false)
-			if err != nil {
-				lg.Warnf("restart failed, error: %v", err)
-				time.Sleep(time.Second * 10)
+			for {
+				lockLostCh, cancelCtx, err = lockAndRegister(serviceName, serviceId, false)
+				if err != nil {
+					lg.Warnf("restart failed, error: %v", err)
+					time.Sleep(time.Second * 10)
+				} else {
+					break
+				}
 			}
 		}
 	}()
@@ -77,21 +81,12 @@ func lockAndRegister(serviceName string, serviceId string, isTryOnce bool) (<-ch
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	var err error
-	var lockLostCh = make(<-chan struct{})
-	for {
-		lockLostCh, err = acquireLock(ctx, serviceId, isTryOnce)
-		if err == nil {
-			break
-		}
-		if err != nil && isTryOnce {
-			cancel()
-			return nil, nil, err
-		}
-
+	lockLostCh, err := acquireLock(ctx, serviceId, isTryOnce)
+	if err != nil {
 		// 正常情况下 acquireLock 会阻塞直到成功获取锁，如果报错了就是出现了异常(可能是连接问题)
 		lg.Errorf("acquire %s lock failed: %v", serviceId, err)
-		time.Sleep(time.Second * 10)
+		cancel()
+		return nil, nil, err
 	}
 
 	// 注册服务
