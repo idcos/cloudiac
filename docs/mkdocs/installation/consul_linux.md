@@ -179,6 +179,13 @@ source /etc/profile
 systemctl restart consul
 ```
 
+!!! info
+    环境变量说明
+
+    - CONSUL_HTTP_SSL_VERIFY=false: 私有化部署SSL证书不验证
+    - CONSUL_HTTP_SSL=true: 启动https URI方案和http api的SSl连接
+
+
 以上配置仅用于单机测试时使用，完整的 consul 集群部署请参考官方文档:
 https://learn.hashicorp.com/tutorials/consul/get-started-install
 
@@ -196,7 +203,7 @@ mv demo-conf.yml.sample demo-conf.yml
 - 编辑 .env 文件，依据注释修改配置。
 
 !!! Caution
-`.env` 中以下配置为**必填项**，其他配置可根据需要修改：
+    `.env` 中以下配置为**必填项**，其他配置可根据需要修改：
 
     - IAC_ADMIN_PASSWORD: 初始的平台管理员密码
     - SECRET_KEY: 数据加密存储时使用的密钥
@@ -204,7 +211,7 @@ mv demo-conf.yml.sample demo-conf.yml
     - CONSUL_ADDRESS: consul 服务地址，配置为部署机内网 ip:8500 端口即可
 
 !!! Info
-通过 `.env` 可以实现大部分配置的修改，更多配置项可查看 config-portal.yml 和 config-runner.yml。
+    通过 `.env` 可以实现大部分配置的修改，更多配置项可查看 config-portal.yml 和 config-runner.yml。
 
 
 ### 6. 初始化 Mysql
