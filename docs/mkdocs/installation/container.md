@@ -114,9 +114,12 @@ services:
 
 ```
 
+!!! 关于离线部署的说明 Info
+    如果您希望离线部署 cloudiac，则需要手动将上面文件中依赖的 docker 镜像下载到本地。但需要注意，除了上面文件中的镜像外 cloudiac 还需要一个 ct-worker 镜像，正常情况下该镜像会在执行部署任务时自动下载，但在离线部署的情况下该镜像也需要您手动下载到本地。镜像名称为 "cloudiac/ct-worker:vx.y.z"，其中 vx.y.z 为版本 tag，与上面文件中 ct-runner 镜像的版本号保持一致即可。
+
 ## 5. 创建 .env 文件
 
-文件路径 /usr/yunji/cloudiac/.env，内容如下:
+文件路径 /usr/yunji/cloudiac/.env，填入如下内容:
 
 ```bash
 # auto-replace-from: configs/dotenv.sample
@@ -196,7 +199,7 @@ RUNNER_SERVICE_TAGS="ct-runner;runner-01"
 RUNNER_OFFLINE_MODE="false"
 ```
 
-!!! Caution
+!!! 配置说明 Caution
     `.env` 中以下配置为**必填项**，其他配置可根据需要修改：
 
     - IAC_ADMIN_PASSWORD: 初始的平台管理员密码
