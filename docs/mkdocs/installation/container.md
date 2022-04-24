@@ -220,3 +220,5 @@ docker-compose up
 至此服务部署完成，访问 http://${PORTAL_ADDRESS} 进行登陆。
 
 默认的用户名为 admin@example.com (即 IAC_ADMIN_EMAIL)，密码为 `.env` 中配置的 `IAC_ADMIN_PASSWORD`。
+
+*如果需要开启consul的acl和tls配置,请参考文档: [consul开启acl/tls](./consul.md)*
