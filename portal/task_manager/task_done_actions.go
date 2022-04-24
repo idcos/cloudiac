@@ -112,7 +112,7 @@ func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byt
 		return nil, err
 	}
 
-	return []float32{addedCost * 730, destroyedCost * 730, (updateAfterCost - updateBeforeCost) * 730}, err
+	return []float32{addedCost * 730, -1 * destroyedCost * 730, (updateAfterCost - updateBeforeCost) * 730}, err
 }
 
 func getPriceService(dbSess *db.Session, projectId, orgId models.Id, provider string) (pricecalculator.PriceService, error) {
