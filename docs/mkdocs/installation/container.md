@@ -104,12 +104,12 @@ services:
     volumes:
       - type: bind
         source: /usr/yunji/cloudiac/var/consul
-        target: /consul/data
+        target: /consul/data   
     ports:
       - "8500:8500"
     command: >
       consul agent -server -bootstrap-expect=1 -ui -bind=0.0.0.0
-      -client=0.0.0.0 -enable-script-checks=true -data-dir=/consul/data
+      -client=0.0.0.0 -enable-script-checks=true -data-dir=/consul/data 
     restart: always
 
 ```
@@ -215,12 +215,13 @@ RUNNER_OFFLINE_MODE="false"
 ```bash
 docker-compose up
 ```
-
 > 默认为前台启动，以便于排查问题，在确定服务正常后可以改为后台启动：`dokcker-compose up -d`。
 
+---
 
 ## 7. 部署完成
 至此服务部署完成，访问 http://${PORTAL_ADDRESS} 进行登陆。
 
 默认的用户名为 admin@example.com (即 IAC_ADMIN_EMAIL)，密码为 `.env` 中配置的 `IAC_ADMIN_PASSWORD`。
 
+*如果需要开启consul的acl和tls配置,请参考文档: [consul开启acl/tls](./consul.md)*
