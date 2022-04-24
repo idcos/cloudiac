@@ -76,7 +76,7 @@ func main() {
 	}
 
 	// 注册到 consul
-	if err := common.CheckAndReConnectConsul(iac_common.IacPortalServiceName); err != nil {
+	if err := common.CheckAndReConnectConsul(iac_common.IacPortalServiceName, configs.Get().Consul.ServiceID); err != nil {
 		log.Fatal(err)
 	}
 
