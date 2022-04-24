@@ -71,7 +71,9 @@ nav:
   - "部署安装": 
     - "容器部署": installation/container.md
     - "二进制部署": installation/linux.md
-    - "consul开启acl/tls配置": installation/consul.md
+  - "consul开启acl/tls":
+      - "容器部署": installation/consul_container.md
+      - "二进制部署": installation/consul_linux.md
   - "Releases": releases.md
   - "视频介绍": https://space.bilibili.com/2138433328/channel/seriesdetail?sid=1908688
 

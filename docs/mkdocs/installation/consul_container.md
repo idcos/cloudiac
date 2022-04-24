@@ -26,6 +26,8 @@ chmod +x /usr/local/bin/docker-compose
 mkdir -p /usr/yunji/cloudiac/var/{consul,mysql} && cd /usr/yunji/cloudiac/
 ```
 
+
+
 ## 4. 创建 docker-compose.yml 文件
 
 文件路径 /usr/yunji/cloudiac/docker-compose.yml，内容如下:
@@ -101,20 +103,96 @@ services:
   consul:
     container_name: consul
     image: "consul:latest"
+    environment:
+      - CONSUL_HTTP_SSL_VERIFY=false
+      - CONSUL_HTTP_SSL=true
     volumes:
       - type: bind
         source: /usr/yunji/cloudiac/var/consul
-        target: /consul/data   
+        target: /consul/data
+      - type: bind
+        source: /usr/yunji/cloudiac
+        target: /consul/config
     ports:
       - "8500:8500"
     command: >
       consul agent -server -bootstrap-expect=1 -ui -bind=0.0.0.0
-      -client=0.0.0.0 -enable-script-checks=true -data-dir=/consul/data 
+      -client=0.0.0.0 -enable-script-checks=true -data-dir=/consul/data -config-dir=/consul/config
     restart: always
 
 ```
 
-## 5. 创建 .env 文件
+> 配置说明
+
+!!! Caution
+    `docker-compose.yaml` 中 **consul** 新增以下配置，其他配置可根据需要修改
+
+    - CONSUL_HTTP_SSL_VERIFY=false: 私有化部署SSL证书不验证
+    - CONSUL_HTTP_SSL=true: 启动https URI方案和http api的SSl连接
+    - -config-dir=/consul/config: 容器启动Command新增挂载指定配置目录
+    - /usr/yunji/cloudiac:/consul/config:新增挂载目录 
+
+
+## 5. 创建consul开启acl和tls配置文件
+
+文件路径 /usr/yunji/cloudiac/acl.hcl,/usr/yunji/cloudiac/tls.json,内容如下:
+
+- 开启acl配置文件
+
+```yaml
+# auto-replace-from: /usr/yunji/cloudiac/acl.hcl
+cat >> /usr/yunji/cloudiac/acl.hcl <<EOF
+acl = {
+  enabled = true
+  default_policy = "deny"
+  enable_token_persistence = true
+}
+EOF
+```
+
+- 开启tls配置文件
+
+> 证书名称固定 ca.pem,client.key,client.pem
+
+```bash
+cd /usr/yunji/cloudiac/
+
+ #生成根证书key
+openssl genrsa -out ca.key 2048
+#生成根证书密钥
+openssl req -new -x509 -days 7200 -key ca.key   -out ca.pem
+
+#生成客户端私钥
+openssl genrsa -out client.key 2048
+
+#生成的客户端的CSR
+openssl req -new -key client.key  -out client.csr
+
+# 创建宿主机机对应的签名证书  IP为当前部署环境的主机ip,不可用127.0.0.1或者localhost
+echo subjectAltName = IP:xx.xx.xx.xx > extfile.cnf
+
+#客户端自签名的证书
+openssl x509 -req -days 365 -in client.csr -CA ca.pem -CAkey ca.key -CAcreateserial \
+   -out client.pem -extfile extfile.cnf
+   
+# 新增consul配置tls.json
+cat >> /usr/yunji/cloudiac/tls.json <<EOF
+{
+  "verify_incoming": false,
+  "verify_incoming_rpc": true,
+  "ports": {
+    "http": -1,
+    "https": 8500
+  },
+  "ca_file": "/consul/config/ca.pem",
+  "cert_file": "/consul/config/client.pem",
+  "key_file": "/consul/config/client.key"
+}
+EOF
+```
+
+
+## 6. 创建 .env 文件
 
 文件路径 /usr/yunji/cloudiac/.env，内容如下:
 
@@ -207,7 +285,7 @@ RUNNER_OFFLINE_MODE="false"
 !!! Info
     通过 `.env` 可以实现大部分配置的修改，更多配置项可查看 docker 镜像中的 config-portal.yml 和 config-runner.yml 文件，需要修改可以从镜像中拷贝文件，修改后再在容器启动时挂载进行替换。
 
-## 6. 启动docker-compose
+## 7. 启动docker-compose
 
 ```bash
 docker-compose up
@@ -216,7 +294,46 @@ docker-compose up
 
 ---
 
-## 7. 部署完成
+## 8. 配置acl的token
+
+```bash
+# 进入容器
+docker exec -it consul sh
+
+# 生成token,保存好生成的SecretID
+consul acl bootstrap
+
+#退出容器
+
+# 加入SecretID作为token加入acl.hcl配置
+cat > /usr/yunji/cloudiac/acl.hcl <<EOF
+acl = {
+  enabled = true
+  default_policy = "deny"
+  enable_token_persistence = true
+  tokens {
+    master = "a0419d88-cd14-f96f-e144-a02a0f03f683" 
+  }
+}
+EOF
+```
+!!! Info
+    consul acl bootstrap执行结果如下,SecretID为所需要的token
+    ```bash
+     # consul acl bootstrap
+    AccessorID:       af48d2cf-690d-eafe-5e5a-40e3239efa9e
+    SecretID:         a0419d88-cd14-f96f-e144-a02a0f03f683
+    Description:      Bootstrap Token (Global Management)
+    Local:            false
+    Create Time:      2022-04-14 09:00:05.914372 +0000 UTC
+    Policies:
+       00000000-0000-0000-0000-000000000001 - global-management
+    ```
+
+
+
+
+## 9. 部署完成
 至此服务部署完成，访问 http://${PORTAL_ADDRESS} 进行登陆。
 
 默认的用户名为 admin@example.com (即 IAC_ADMIN_EMAIL)，密码为 `.env` 中配置的 `IAC_ADMIN_PASSWORD`。

@@ -83,6 +83,102 @@ systemctl enable consul
 systemctl start consul
 ```
 
+- consul开启acl
+
+```bash
+# 新增consul配置acl.hcl
+cat >> /etc/consul.d/acl.hcl <<EOF
+acl = {
+  enabled = true
+  default_policy = "deny"
+  enable_token_persistence = true
+}
+EOF
+
+# 重启consul
+systemctl restart consul
+
+# 生成token
+consul acl bootstrap
+
+# 加入SecretID作为token加入acl.hcl配置
+cat > /etc/consul.d/acl.hcl <<EOF
+acl = {
+  enabled = true
+  default_policy = "deny"
+  enable_token_persistence = true
+  tokens {
+    master = "a0419d88-cd14-f96f-e144-a02a0f03f683" 
+  }
+}
+EOF
+```
+!!! Info
+    consul acl bootstrap执行结果如下,SecretID为所需要的token
+    ```bash
+    # consul acl bootstrap
+    AccessorID:       af48d2cf-690d-eafe-5e5a-40e3239efa9e
+    SecretID:         a0419d88-cd14-f96f-e144-a02a0f03f683
+    Description:      Bootstrap Token (Global Management)
+    Local:            false
+    Create Time:      2022-04-14 09:00:05.914372 +0000 UTC
+    Policies:
+    00000000-0000-0000-0000-000000000001 - global-management
+    ```
+
+- consul开启tls
+
+> 证书名称固定 ca.pem,client.key,client.pem
+
+```bash
+cd /usr/yunji/cloudiac 
+ 
+ #生成根证书key
+openssl genrsa -out ca.key 2048
+#生成根证书密钥
+openssl req -new -x509 -days 7200 -key ca.key   -out ca.pem
+
+#生成客户端私钥
+openssl genrsa -out client.key 2048
+
+#生成的客户端的CSR
+openssl req -new -key client.key  -out client.csr
+
+# 创建宿主机机对应的签名证书  IP为当前部署环境的主机ip,不可用127.0.0.1或者localhost
+echo subjectAltName = IP:xx.xx.xx.xx > extfile.cnf
+
+#客户端自签名的证书
+openssl x509 -req -days 365 -in client.csr -CA ca.pem -CAkey ca.key -CAcreateserial \
+   -out client.pem -extfile extfile.cnf
+   
+# 新增consul配置tls.json
+cat >> /etc/consul.d/tls.json <<EOF
+{
+  "verify_incoming": false,
+  "verify_incoming_rpc": true,
+  "ports": {
+    "http": -1,
+    "https": 8500
+  },
+  "ca_file": "/usr/yunji/cloudiac/ca.pem",
+  "cert_file": "/usr/yunji/cloudiac/client.pem",
+  "key_file": "/usr/yunji/cloudiac/client.key"
+}
+EOF
+
+# 新增环境变量
+cat >> /etc/profile <<EOF
+export CONSUL_HTTP_SSL=true
+export CONSUL_HTTP_SSL_VERIFY=false
+EOF
+
+#环境变量生效
+source /etc/profile
+
+# 重启consul
+systemctl restart consul
+```
+
 以上配置仅用于单机测试时使用，完整的 consul 集群部署请参考官方文档:
 https://learn.hashicorp.com/tutorials/consul/get-started-install
 
@@ -100,7 +196,7 @@ mv demo-conf.yml.sample demo-conf.yml
 - 编辑 .env 文件，依据注释修改配置。
 
 !!! Caution
-    `.env` 中以下配置为**必填项**，其他配置可根据需要修改：
+`.env` 中以下配置为**必填项**，其他配置可根据需要修改：
 
     - IAC_ADMIN_PASSWORD: 初始的平台管理员密码
     - SECRET_KEY: 数据加密存储时使用的密钥
@@ -108,7 +204,7 @@ mv demo-conf.yml.sample demo-conf.yml
     - CONSUL_ADDRESS: consul 服务地址，配置为部署机内网 ip:8500 端口即可
 
 !!! Info
-    通过 `.env` 可以实现大部分配置的修改，更多配置项可查看 config-portal.yml 和 config-runner.yml。
+通过 `.env` 可以实现大部分配置的修改，更多配置项可查看 config-portal.yml 和 config-runner.yml。
 
 
 ### 6. 初始化 Mysql
