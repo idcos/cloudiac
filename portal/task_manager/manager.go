@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"regexp"
 	"runtime/debug"
 	"strings"
@@ -996,6 +997,18 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		Address: "",
 	}
 
+	if configs.Get().Consul.ConsulAcl {
+		stateStore.ConsulAcl = configs.Get().Consul.ConsulAcl
+		stateStore.ConsulToken = configs.Get().Consul.ConsulAclToken
+	}
+
+	if configs.Get().Consul.ConsulTls {
+		stateStore.ConsulTls = configs.Get().Consul.ConsulTls
+		stateStore.CaPath = path.Join(common.ConsulContainerPath, common.ConsulCa)
+		stateStore.CakeyPath = path.Join(common.ConsulContainerPath, common.ConsulCakey)
+		stateStore.CapemPath = path.Join(common.ConsulContainerPath, common.ConsulCapem)
+	}
+
 	pk := ""
 	if task.KeyId != "" {
 		mKey, err := services.GetKeyById(dbSess, task.KeyId, false)
@@ -1302,12 +1315,26 @@ func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.Ta
 
 	if task.Type == common.TaskTypeEnvScan || task.Type == common.TaskTypeEnvParse {
 		env, _ := services.GetEnvById(dbSess, task.EnvId)
+
 		stateStore := runner.StateStore{
 			Backend: "consul",
 			Scheme:  "http",
 			Path:    env.StatePath,
 			Address: "",
 		}
+
+		if configs.Get().Consul.ConsulAcl {
+			stateStore.ConsulAcl = configs.Get().Consul.ConsulAcl
+			stateStore.ConsulToken = configs.Get().Consul.ConsulAclToken
+		}
+
+		if configs.Get().Consul.ConsulTls {
+			stateStore.ConsulTls = configs.Get().Consul.ConsulTls
+			stateStore.CaPath = path.Join(common.ConsulContainerPath, common.ConsulCa)
+			stateStore.CakeyPath = path.Join(common.ConsulContainerPath, common.ConsulCakey)
+			stateStore.CapemPath = path.Join(common.ConsulContainerPath, common.ConsulCapem)
+		}
+
 		taskReq.StateStore = stateStore
 	}
 

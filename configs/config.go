@@ -33,6 +33,10 @@ type ConsulConfig struct {
 	Interval        string `yaml:"interval"`
 	Timeout         string `yaml:"timeout"`
 	DeregisterAfter string `yaml:"deregister_after"`
+	ConsulAcl       bool   `yaml:"consul_acl"`
+	ConsulCertPath  string `yaml:"consul_cert_path"`
+	ConsulAclToken  string `yaml:"consul_acl_token"`
+	ConsulTls       bool   `yaml:"consul_tls"`
 }
 
 type RunnerConfig struct {
