@@ -54,7 +54,9 @@ func CheckAndReConnectConsul(serviceName string) error {
 	go func() {
 		for {
 			err := start(serviceName, false)
-			lg.Warnf("restart failed, error: %v", err)
+			if err != nil {
+				lg.Warnf("restart failed, error: %v", err)
+			}
 			time.Sleep(time.Second * 10)
 		}
 	}()
@@ -91,10 +93,11 @@ func start(serviceName string, isTryOnce bool) error {
 
 	// 注册服务
 	err = ServiceRegister(serviceName)
-	if err != nil {
-		lg.Errorf("%s service register failed: %v", serviceName, err)
-	}
 	if isTryOnce {
+		return err
+	}
+
+	if err != nil {
 		return err
 	}
 
