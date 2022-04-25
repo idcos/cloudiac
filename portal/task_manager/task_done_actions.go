@@ -68,7 +68,7 @@ func taskDoneProcessPlan(dbSess *db.Session, task *models.Task, isPlanResult boo
 		if isPlanResult {
 			costs, err = getForecastCostWhenTaskPlan(dbSess, task, bs)
 			if err != nil {
-				return fmt.Errorf("get prices after plan error: %v", err)
+				logs.Get().Warnf("get prices after plan error: %v", err)
 			}
 		}
 
@@ -83,7 +83,7 @@ func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byt
 	var (
 		addedCost        float32 // 新增资源的费用
 		updateBeforeCost float32 // 变更前的资源费用
-		updateAfterCost  float32 // 变更前的资源费用
+		updateAfterCost  float32 // 变更后的资源费用
 		destroyedCost    float32 // 删除资源的费用
 		err              error
 	)
@@ -112,6 +112,7 @@ func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byt
 		return nil, err
 	}
 
+	// 获取的费用是以小时计算的，乘以730算月费用
 	return []float32{addedCost * 730, -1 * destroyedCost * 730, (updateAfterCost - updateBeforeCost) * 730}, err
 }
 

@@ -573,7 +573,7 @@ func GetBillVarGroupByProjectOrOrg(dbSess *db.Session, projectId, orgId models.I
 	}
 
 	// record not found, search by orgid
-	query = dbSess.Model(&models.VariableGroup{}).Where("iac_variable_group_project_rel.org_id = ?", orgId)
+	query = dbSess.Model(&models.VariableGroup{}).Where("iac_variable_group.org_id = ?", orgId)
 	query = query.Where("iac_variable_group.type = ?", "environment")
 	query = query.Where("iac_variable_group.cost_counted = ?", 1)
 	query = query.Where("iac_variable_group.provider = ?", provider)
