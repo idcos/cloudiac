@@ -21,17 +21,19 @@ func ParserPlanJson(b []byte) (createResource, deleteResource, updateBeforeResou
 			continue
 		}
 
-		if actions[0].String() == consts.TerraformActionCreate {
-			createResource = BuildResource(createResource, registryMap, t, providerName, address, v.Get("change.after"))
-		}
+		for _, action := range actions {
+			if action.String() == consts.TerraformActionCreate {
+				createResource = BuildResource(createResource, registryMap, t, providerName, address, v.Get("change.after"))
+			}
 
-		if actions[0].String() == consts.TerraformActionDelete {
-			deleteResource = BuildResource(deleteResource, registryMap, t, providerName, address, v.Get("change.before"))
-		}
+			if action.String() == consts.TerraformActionDelete {
+				deleteResource = BuildResource(deleteResource, registryMap, t, providerName, address, v.Get("change.before"))
+			}
 
-		if actions[0].String() == consts.TerraformActionUpdate {
-			updateAfterResource = BuildResource(updateAfterResource, registryMap, t, providerName, address, v.Get("change.after"))
-			updateBeforeResource = BuildResource(updateBeforeResource, registryMap, t, providerName, address, v.Get("change.before"))
+			if action.String() == consts.TerraformActionUpdate {
+				updateAfterResource = BuildResource(updateAfterResource, registryMap, t, providerName, address, v.Get("change.after"))
+				updateBeforeResource = BuildResource(updateBeforeResource, registryMap, t, providerName, address, v.Get("change.before"))
+			}
 		}
 	}
 
