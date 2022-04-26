@@ -110,6 +110,14 @@ func (exec *Executor) Start() (string, error) {
 		},
 	}
 
+	if conf.Consul.ConsulTls {
+		mountConfigs = append(mountConfigs, mount.Mount{
+			Type:   mount.TypeBind,
+			Source: conf.Consul.ConsulCertPath,
+			Target: ContainerCertificateDir,
+		})
+	}
+
 	// assets_path 配置为空则表示直接使用 worker 容器中打包的 assets。
 	// 在 runner 容器化部署时运行 runner 的宿主机(docker host)并没有 assets 目录，
 	// 如果配置了 assets 路径，进行 bind mount 时会因为源目录不存在而报错。
