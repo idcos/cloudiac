@@ -517,20 +517,20 @@ fi
 # create workdir in spite of clone was failed or not
 mkdir -p '{{.Req.Env.Workdir}}' && cd '{{.Req.Env.Workdir}}'
 
-ln -sf '{{.IacTfFile}}'
+ln -sf '{{.IacTfFile}}' && ln -sf '{{.TerraformRcFile}}' ~/.terraformrc
 exit $clone_result
 `))
 
 func (t *Task) stepCheckout() (command string, err error) {
 	return t.executeTpl(checkoutCommandTpl, map[string]interface{}{
-		"Req":       t.req,
-		"IacTfFile": t.up2Workspace(CloudIacTfFile),
+		"Req":             t.req,
+		"IacTfFile":       t.up2Workspace(CloudIacTfFile),
+		"TerraformRcFile": t.up2Workspace(TerraformrcFileName),
 	})
 }
 
 var initCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
-ln -sf '{{.IacTfFile}}' . && \
 tfenv install $TFENV_TERRAFORM_VERSION && \
 tfenv use $TFENV_TERRAFORM_VERSION  && \
 terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }}
@@ -552,7 +552,6 @@ func (t *Task) stepInit() (command string, err error) {
 	return t.executeTpl(initCommandTpl, map[string]interface{}{
 		"Req":             t.req,
 		"PluginCachePath": ContainerPluginCachePath,
-		"IacTfFile":       t.up2Workspace(CloudIacTfFile),
 	})
 }
 
