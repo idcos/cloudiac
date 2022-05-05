@@ -225,6 +225,8 @@ func GetOrgProjectsEnvStat(tx *db.Session, orgId models.Id, projectIds []string)
 	) as t
 	JOIN iac_project ON
 		t.project_id = iac_project.id
+	where
+		iac_project.status = 'enable'
 	group by
 		t.status, iac_project.id;
 	*/
@@ -239,6 +241,7 @@ func GetOrgProjectsEnvStat(tx *db.Session, orgId models.Id, projectIds []string)
 	query := tx.Table("(?) as t", subQuery.Expr()).Select(`t.status as my_status, iac_project.id as id, iac_project.name as name, count(*) as count`)
 
 	query = query.Joins(`JOIN iac_project ON t.project_id = iac_project.id`)
+	query = query.Where(`iac_project.status = 'enable'`)
 	query = query.Group("t.status, iac_project.id")
 
 	var dbResults []EnvStatResult
@@ -306,6 +309,7 @@ func GetOrgProjectsResStat(tx *db.Session, orgId models.Id, projectIds []string,
 	where
 		iac_env.org_id = 'org-c8gg9fosm56injdlb85g'
 		and iac_env.project_id in ('p-c8gg9josm56injdlb86g', 'p-c8kmkngsm56jqosq6bkg')
+		and iac_project.status = 'enable'
 	group by
 		iac_resource.type, iac_project.id
 	order by
@@ -321,6 +325,7 @@ func GetOrgProjectsResStat(tx *db.Session, orgId models.Id, projectIds []string,
 	if len(projectIds) > 0 {
 		query = query.Where(`iac_env.project_id in ?`, projectIds)
 	}
+	query = query.Where(`iac_project.status = 'enable'`)
 
 	query = query.Group("iac_resource.type, iac_project.id").Order("count desc")
 	if limit > 0 {
@@ -395,6 +400,7 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 	where
 		iac_env.org_id = 'org-c8gg9fosm56injdlb85g'
 		AND iac_env.project_id IN ('p-c8gg9josm56injdlb86g', 'aaa')
+		and iac_project.status = 'enable'
 		AND (DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(CURDATE(), "%Y-%m")
 			OR
 		DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m"))
@@ -413,6 +419,7 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 	if len(projectIds) > 0 {
 		query = query.Where(`iac_env.project_id in ?`, projectIds)
 	}
+	query = query.Where(`iac_project.status = 'enable'`)
 	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(CURDATE(), "%Y-%m") OR DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m")`)
 
 	query = query.Group("date,iac_resource.type,iac_resource.project_id")
@@ -562,6 +569,7 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 	where
 		iac_env.org_id = 'org-c8gg9fosm56injdlb85g'
 		and iac_env.project_id in ('p-c8gg9josm56injdlb86g', 'aaa')
+		and iac_project.status = 'enable'
 		and DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 7 DAY), "%Y-%m-%d")
 	group by
 		date,
@@ -578,6 +586,7 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 	if len(projectIds) > 0 {
 		query = query.Where(`iac_env.project_id in ?`, projectIds)
 	}
+	query = query.Where(`iac_project.status = 'enable'`)
 
 	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? DAY), "%Y-%m-%d")`, days)
 
