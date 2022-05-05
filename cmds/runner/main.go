@@ -54,10 +54,9 @@ func main() {
 	runnerConfJson, _ := json.Marshal(configs.Get().Runner)
 	logs.Get().Infof("runner configs: %s", runnerConfJson)
 
-	if err := common.ReRegisterService(opt.ReRegister, iac_common.RunnerServiceName); err != nil {
+	if err := common.CheckAndReConnectConsul(iac_common.RunnerServiceName, configs.Get().Consul.ServiceID); err != nil {
 		log.Fatal(err)
 	}
-	go common.CheckAndReConnectConsul(iac_common.RunnerServiceName)
 
 	StartServer()
 }

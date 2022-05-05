@@ -76,10 +76,9 @@ func main() {
 	}
 
 	// 注册到 consul
-	if err := common.ReRegisterService(opt.ReRegister, iac_common.IacPortalServiceName); err != nil {
+	if err := common.CheckAndReConnectConsul(iac_common.IacPortalServiceName, configs.Get().Consul.ServiceID); err != nil {
 		log.Fatal(err)
 	}
-	go common.CheckAndReConnectConsul(iac_common.IacPortalServiceName)
 
 	// 启动后台 worker
 	go task_manager.Start(configs.Get().Consul.ServiceID)
