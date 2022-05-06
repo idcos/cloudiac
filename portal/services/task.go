@@ -770,7 +770,7 @@ func UnmarshalTfParseJson(bs []byte) (*resps.TfParse, error) {
 	return &js, err
 }
 
-func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource, isPlanResult bool) error {
+func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource, isPlanResult bool, costs []float32) error {
 
 	var (
 		resAdded     = 0
@@ -802,6 +802,13 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource,
 		task.PlanResult.ResAdded = &resAdded
 		task.PlanResult.ResChanged = &resChanged
 		task.PlanResult.ResDestroyed = &resDestroyed
+
+		//  预估费用
+		if len(costs) == 3 {
+			task.PlanResult.ResAddedCost = &costs[0]
+			task.PlanResult.ResDestroyedCost = &costs[1]
+			task.PlanResult.ResUpdatedCost = &costs[2]
+		}
 
 		if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
 			UpdateColumn("plan_result", task.PlanResult); err != nil {

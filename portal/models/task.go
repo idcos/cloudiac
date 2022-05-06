@@ -37,6 +37,10 @@ type TaskResult struct {
 	ResChanged   *int `json:"resChanged"`
 	ResDestroyed *int `json:"resDestroyed"`
 
+	ResAddedCost     *float32 `json:"resAddedCost"`     // 新增资源的费用
+	ResDestroyedCost *float32 `json:"resDestroyedCost"` // 删除资源的费用
+	ResUpdatedCost   *float32 `json:"resUpdatedCost"`   // 变更资源的费用
+
 	Outputs map[string]interface{} `json:"outputs"`
 }
 

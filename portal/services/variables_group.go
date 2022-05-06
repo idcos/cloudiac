@@ -549,3 +549,21 @@ func GetVarGroupIsOpenBillCollectByVgIds(dbSess *db.Session, vgIds []models.Id, 
 
 	return exists
 }
+
+func GetBillVarGroupByProjectOrOrg(dbSess *db.Session, projectId, orgId models.Id, provider string) (*models.VariableGroup, e.Error) {
+	query := dbSess.Model(&models.VariableGroup{}).Joins(`join iac_variable_group_project_rel on iac_variable_group.id = iac_variable_group_project_rel.var_group_id`)
+
+	query = query.Where("iac_variable_group_project_rel.project_id IN (?, '')", projectId)
+	query = query.Where("iac_variable_group.type = ?", "environment")
+	query = query.Where("iac_variable_group.cost_counted = ?", 1)
+	query = query.Where("iac_variable_group.provider = ?", provider)
+	query = query.Where("iac_variable_group.org_id = ?", orgId)
+
+	var vg models.VariableGroup
+	err := query.Debug().First(&vg)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return &vg, nil
+}

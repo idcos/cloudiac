@@ -9,6 +9,10 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
+	"cloudiac/portal/services/forecast/pricecalculator"
+	"cloudiac/portal/services/forecast/pricecalculator/alicloud"
+	"cloudiac/portal/services/forecast/providers/terraform"
+	"cloudiac/portal/services/forecast/schema"
 	"cloudiac/runner"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
@@ -59,11 +63,96 @@ func taskDoneProcessPlan(dbSess *db.Session, task *models.Task, isPlanResult boo
 		if err != nil {
 			return fmt.Errorf("unmarshal plan json: %v", err)
 		}
-		if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges, isPlanResult); err != nil {
+
+		var costs []float32
+		if isPlanResult {
+			costs, err = getForecastCostWhenTaskPlan(dbSess, task, bs)
+			if err != nil {
+				logs.Get().Warnf("get prices after plan error: %v", err)
+			}
+		}
+
+		if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges, isPlanResult, costs); err != nil {
 			return fmt.Errorf("save task changes: %v", err)
 		}
 	}
 	return nil
+}
+
+func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byte) ([]float32, error) {
+	var (
+		addedCost        float32 // 新增资源的费用
+		updateBeforeCost float32 // 变更前的资源费用
+		updateAfterCost  float32 // 变更后的资源费用
+		destroyedCost    float32 // 删除资源的费用
+		err              error
+	)
+
+	// get resources
+	createResources, deleteResources, updateBeforeResources, updateAfterResources := terraform.ParserPlanJson(bs)
+
+	// compute cost
+	addedCost, err = computeResourceCost(dbSess, task.ProjectId, task.OrgId, createResources)
+	if err != nil {
+		return nil, err
+	}
+
+	updateBeforeCost, err = computeResourceCost(dbSess, task.ProjectId, task.OrgId, updateBeforeResources)
+	if err != nil {
+		return nil, err
+	}
+
+	updateAfterCost, err = computeResourceCost(dbSess, task.ProjectId, task.OrgId, updateAfterResources)
+	if err != nil {
+		return nil, err
+	}
+
+	destroyedCost, err = computeResourceCost(dbSess, task.ProjectId, task.OrgId, deleteResources)
+	if err != nil {
+		return nil, err
+	}
+
+	// 获取的费用是以小时计算的，乘以730算月费用
+	return []float32{addedCost * 730, -1 * destroyedCost * 730, (updateAfterCost - updateBeforeCost) * 730}, err
+}
+
+func getPriceService(dbSess *db.Session, projectId, orgId models.Id, provider string) (pricecalculator.PriceService, error) {
+	vg, err := services.GetBillVarGroupByProjectOrOrg(dbSess, projectId, orgId, provider)
+	if err != nil {
+		return nil, err
+	}
+
+	return pricecalculator.NewPriceService(vg, provider)
+}
+
+func computeResourceCost(dbSess *db.Session, projectId, orgId models.Id, resources []*schema.Resource) (float32, error) {
+	var cost float32
+
+	mPriceServ := make(map[string]pricecalculator.PriceService)
+	for _, res := range resources {
+		key := projectId.String() + res.Provider
+		if _, ok := mPriceServ[key]; !ok {
+			ps, err := getPriceService(dbSess, projectId, orgId, res.Provider)
+			if err != nil {
+				return cost, err
+			}
+			mPriceServ[key] = ps
+		}
+
+		priceResp, err := mPriceServ[key].GetResourcePrice(res)
+		if err != nil {
+			return cost, err
+		}
+
+		price, err := alicloud.GetPriceFromResponse(priceResp)
+		if err != nil {
+			return cost, err
+		}
+
+		cost = cost + price
+	}
+
+	return cost, nil
 }
 
 func taskDoneProcessDriftTask(logger logs.Logger, dbSess *db.Session, task *models.Task) error {
