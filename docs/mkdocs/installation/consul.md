@@ -59,9 +59,9 @@ cat >> /usr/yunji/cloudiac/tls.json <<EOF
     "http": -1,
     "https": 8500
   },
-  "ca_file": "/consul/config/ca.pem",
-  "cert_file": "/consul/config/client.pem",
-  "key_file": "/consul/config/client.key"
+  "ca_file": "/usr/yunji/cloudiac/ca.pem",
+  "cert_file": "/usr/yunji/cloudiac/client.pem",
+  "key_file": "/usr/yunji/cloudiac/client.key"
 }
 EOF
 ```
