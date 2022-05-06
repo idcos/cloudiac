@@ -543,9 +543,12 @@ cd 'code/{{.Req.Env.Workdir}}' && \
 terraform apply -input=false -auto-approve \
 {{ range $arg := .Req.StepArgs}}{{$arg}} {{ end }}_cloudiac.tfplan
 
+result=$?
+
 # state collect command
 terraform show -no-color -json >{{.TFStateJsonFilePath}} && \
 terraform providers schema -json > {{.TFProviderSchema}}
+exit $result
 `))
 
 func (t *Task) stepApply() (command string, err error) {
