@@ -47,11 +47,11 @@ smtpServer:
   from: "${SMTP_FROM}"  # 邮件显示的发送方，不配置则使用 username 值
 
 ldap:
-  admin_dn: "${LDAP_ADMIN_DN}"
-  admin_password: "${LDAP_ADMIN_PASSWORD}"
-  ldap_server: "${LDAP_SERVER}"
+  admin_dn: "${LDAP_ADMIN_DN}" # 必填
+  admin_password: "${LDAP_ADMIN_PASSWORD}" # 必填
+  ldap_server: "${LDAP_SERVER}" # 必填
   ldap_server_port: 389
-  search_base: "${LDAP_SEARCH_BASE}"
+  search_base: "${LDAP_SEARCH_BASE}" # 必填
   search_filter: "${LDAP_SEARCH_FILTER}"
   email_attribute: "${LDAP_EMAIL_ATTRIBUTE}"
   account_attribute: "${LDAP_ACCOUNT_ATTRIBUTE}"

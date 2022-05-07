@@ -11,6 +11,7 @@ import (
 	"cloudiac/utils/logs"
 	"fmt"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
+	"strings"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
@@ -181,10 +182,10 @@ func ParseTfVariables(filename string, content []byte) ([]TemplateVariable, e.Er
 	for _, d := range diagErrs {
 		logger.Warnf(d.Error())
 	}
-
 	tv := make([]TemplateVariable, 0)
 	for _, s := range c.Upstreams {
-		if v, ok := s.Default.(*hcl.Attribute); ok {
+		v, ok := s.Default.(*hcl.Attribute)
+		if ok {
 			val, _ := v.Expr.Value(nil)
 			if val.IsWhollyKnown() {
 				valJSON, err := ctyjson.Marshal(val, val.Type())
@@ -192,11 +193,16 @@ func ParseTfVariables(filename string, content []byte) ([]TemplateVariable, e.Er
 					return nil, e.New(e.HCLParseError, fmt.Errorf("failed to serialize default value as JSON: %s", err))
 				}
 				tv = append(tv, TemplateVariable{
-					Value:       string(valJSON),
+					Value:       strings.Trim(string(valJSON), "\""),
 					Name:        s.Name,
 					Description: s.Description,
 				})
 			}
+		} else {
+			tv = append(tv, TemplateVariable{
+				Name:        s.Name,
+				Description: s.Description,
+			})
 		}
 
 	}
