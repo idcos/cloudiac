@@ -186,6 +186,10 @@ LDAP_ADMIN_DN="cn=manager,dc=example,dc=com"
 LDAP_ADMIN_PASSWORD="password"
 LDAP_SERVER="ldap.example.com"
 LDAP_SEARCH_BASE="dc=example,dc=com"
+LDAP_SEARCH_FILTER=""
+LDAP_EMAIL_ATTRIBUTE="mail"
+LDAP_ACCOUNT_ATTRIBUTE="uid"
+
 
 ######### 以下为 runner 配置 #############
 # runner 服务注册配置(均为必填)
@@ -197,6 +201,16 @@ RUNNER_SERVICE_TAGS="ct-runner;runner-01"
 
 ## 是否开启 offline mode，默认为 false
 RUNNER_OFFLINE_MODE="false"
+
+# consul 配置
+## 是否开启consul acl认证
+CONSUL_ACL=false
+## consul token信息(开启acl认证必填)
+CONSUL_ACL_TOKEN=""
+## 是否开启consul tls认证
+CONSUL_TLS=false
+### tls证书地址(开始tls认证必填)
+CONSUL_CERT_PATH=""
 
 ```
 
