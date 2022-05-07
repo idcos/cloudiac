@@ -49,7 +49,18 @@ func CheckAndReConnectConsul(serviceName string, serviceId string) error {
 	lockLostCh, cancelCtx, err := lockAndRegister(serviceName, serviceId, true)
 	if err != nil {
 		lg.Warnf("start failed, error: %v", err)
-		return err
+
+		// 首次启动失败后， 等待 SessionTTL(默认10s) 时间后再次尝试获取锁
+		sleepSeconds := configs.Get().Consul.WaitLockRelease
+		if sleepSeconds == 0 {
+			sleepSeconds = 20
+		}
+		time.Sleep(time.Duration(sleepSeconds) * time.Second)
+		lockLostCh, cancelCtx, err = lockAndRegister(serviceName, serviceId, true)
+		if err != nil {
+			lg.Warnf("the second time start failed, error: %v", err)
+			return err
+		}
 	}
 
 	go func() {
