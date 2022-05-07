@@ -558,6 +558,10 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "invalid resource account",
 		"zh-CN": "无效资源账号",
 	},
+	VariableGroupPermDeny: {
+		"en-US": "resource account permission deny",
+		"zh-CN": "无权限的资源账号",
+	},
 	TemplateNotBind: {
 		"en-US": "template is not bound to the project",
 		"zh-CN": "云模板未绑定当前项目",

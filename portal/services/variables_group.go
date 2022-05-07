@@ -338,7 +338,7 @@ func CheckVgRelationship(tx *db.Session, form *forms.BatchUpdateRelationshipForm
 		for _, vg := range newBindVgs {
 			if _, ok := pvgsMap[vg.Id]; !ok {
 				// 变量组未被授权在该项目下使用
-				return e.New(e.InvalidVarGroup, fmt.Errorf("%s", vg.Name))
+				return e.New(e.VariableGroupPermDeny, fmt.Errorf("%s", vg.Name))
 			}
 		}
 	}
@@ -428,18 +428,20 @@ func BatchUpdateRelationship(tx *db.Session, vgIds, delVgIds []models.Id, object
 		projectId = models.Id(objectId)
 	}
 
-	pvgs, er := GetProjectVarGroups(tx, projectId)
-	if er != nil {
-		return er
-	}
-	vgsMap := make(map[models.Id]*models.VariableGroup)
-	for i := range pvgs {
-		vgsMap[pvgs[i].Id] = &pvgs[i]
-	}
+	if projectId != "" { // 如果能关联到项目id，则需要检查变量组是否被授权在该项目下使用
+		pvgs, er := GetProjectVarGroups(tx, projectId)
+		if er != nil {
+			return er
+		}
+		vgsMap := make(map[models.Id]*models.VariableGroup)
+		for i := range pvgs {
+			vgsMap[pvgs[i].Id] = &pvgs[i]
+		}
 
-	for _, id := range vgIds {
-		if _, ok := vgsMap[id]; !ok {
-			return e.New(e.InvalidVarGroup, fmt.Errorf("%s", id))
+		for _, id := range vgIds {
+			if _, ok := vgsMap[id]; !ok {
+				return e.New(e.VariableGroupPermDeny, fmt.Errorf("%s", id))
+			}
 		}
 	}
 
