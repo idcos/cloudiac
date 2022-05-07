@@ -10,6 +10,7 @@ require (
 	github.com/Shopify/sarama v1.28.0
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/agext/levenshtein v1.2.3 // indirect
+	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alibabacloud-go/bssopenapi-20171214 v1.0.8
 	github.com/alibabacloud-go/darabonba-openapi v0.1.16
 	github.com/alibabacloud-go/tea v1.1.17
