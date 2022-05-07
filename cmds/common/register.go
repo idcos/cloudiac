@@ -44,17 +44,18 @@ func ReRegisterService(register bool, serviceName string) error {
 // 丢失consul连接时，尝试重新连接
 func CheckAndReConnectConsul(serviceName string, serviceId string) error {
 	lg := logs.Get().WithField("func", "CheckAndReConnectConsul")
+	// 首次启动失败后， 等待 20s 后再次尝试获取锁
+	sleepSeconds := configs.Get().Consul.WaitLockRelease
+	if sleepSeconds == 0 {
+		sleepSeconds = 20
+	}
 
 	// 首次启动获取锁并注册服务
 	lockLostCh, cancelCtx, err := lockAndRegister(serviceName, serviceId, true)
 	if err != nil {
 		lg.Warnf("start failed, error: %v", err)
 
-		// 首次启动失败后， 等待 SessionTTL(默认10s) 时间后再次尝试获取锁
-		sleepSeconds := configs.Get().Consul.WaitLockRelease
-		if sleepSeconds == 0 {
-			sleepSeconds = 20
-		}
+		// 首次启动失败后， 再次尝试获取锁
 		time.Sleep(time.Duration(sleepSeconds) * time.Second)
 		lockLostCh, cancelCtx, err = lockAndRegister(serviceName, serviceId, true)
 		if err != nil {
@@ -120,8 +121,11 @@ func acquireLock(ctx context.Context, serviceId string, isTryOnce bool) (<-chan 
 	lockHeld := false
 	go func() {
 		<-ctx.Done()
+		fmt.Println("start to unlock1111")
 		close(stopLockCh)
+		fmt.Println("start to unlock2222")
 		if lockHeld {
+			fmt.Println("start to unlock3333")
 			if err := locker.Unlock(); err != nil {
 				logs.Get().Errorf("release lock error: %v", err)
 			}
