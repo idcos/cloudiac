@@ -121,11 +121,8 @@ func acquireLock(ctx context.Context, serviceId string, isTryOnce bool) (<-chan 
 	lockHeld := false
 	go func() {
 		<-ctx.Done()
-		fmt.Println("start to unlock1111")
 		close(stopLockCh)
-		fmt.Println("start to unlock2222")
 		if lockHeld {
-			fmt.Println("start to unlock3333")
 			if err := locker.Unlock(); err != nil {
 				logs.Get().Errorf("release lock error: %v", err)
 			}
