@@ -216,3 +216,39 @@ systemctl restart consul
 
     - CONSUL_HTTP_SSL_VERIFY=false: 私有化部署SSL证书不验证
     - CONSUL_HTTP_SSL=true: 启动https URI方案和http api的SSl连接
+
+
+## 5. 修改.env配置
+在文件末尾添加开启tls和acl开启信息
+
+```yaml
+# consul 配置
+## 是否开启consul acl认证
+CONSUL_ACL=true
+## consul token信息(开启acl认证必填)
+CONSUL_ACL_TOKEN=""
+## 是否开启consul tls认证
+CONSUL_TLS=true
+### tls证书地址(开始tls认证必填)
+CONSUL_CERT_PATH=""
+```
+
+## 6.重启服务
+#### 容器部署
+```yaml
+# 重启 iac-portal
+docker-compose restart iac-portal 
+
+# 重启 ct-runner
+docker-compose restart ct-runner
+```
+
+#### 二进制部署
+```yaml
+# 重启服务
+systemctl restart iac-portal ct-runner
+
+# 确定服务状态
+systemctl status -l iac-portal ct-runner
+
+```
