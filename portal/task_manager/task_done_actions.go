@@ -65,21 +65,22 @@ func taskDoneProcessPlan(dbSess *db.Session, task *models.Task, isPlanResult boo
 		}
 
 		var costs []float32
+		var forecaseFailed []string
 		if isPlanResult {
-			costs, err = getForecastCostWhenTaskPlan(dbSess, task, bs)
+			costs, forecaseFailed,err = getForecastCostWhenTaskPlan(dbSess, task, bs)
 			if err != nil {
 				logs.Get().Warnf("get prices after plan error: %v", err)
 			}
 		}
 
-		if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges, isPlanResult, costs); err != nil {
+		if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges, isPlanResult, costs,forecaseFailed); err != nil {
 			return fmt.Errorf("save task changes: %v", err)
 		}
 	}
 	return nil
 }
 
-func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byte) ([]float32, error) {
+func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byte) ([]float32, []string, error) {
 	var (
 		addedCost        float32 // 新增资源的费用
 		updateBeforeCost float32 // 变更前的资源费用
@@ -92,28 +93,35 @@ func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byt
 	createResources, deleteResources, updateBeforeResources, updateAfterResources := terraform.ParserPlanJson(bs)
 
 	// compute cost
-	addedCost, err = computeResourceCost(dbSess, task.ProjectId, task.OrgId, createResources)
+	addedCost, addedForecast, err := computeResourceCost(dbSess, task.ProjectId, task.OrgId, createResources)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	updateBeforeCost, err = computeResourceCost(dbSess, task.ProjectId, task.OrgId, updateBeforeResources)
+	updateBeforeCost, updateBeforeForecast, err := computeResourceCost(dbSess, task.ProjectId, task.OrgId, updateBeforeResources)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	updateAfterCost, err = computeResourceCost(dbSess, task.ProjectId, task.OrgId, updateAfterResources)
+	updateAfterCost, updateAfterForecast, err := computeResourceCost(dbSess, task.ProjectId, task.OrgId, updateAfterResources)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	destroyedCost, err = computeResourceCost(dbSess, task.ProjectId, task.OrgId, deleteResources)
+	destroyedCost, destroyedForecast, err := computeResourceCost(dbSess, task.ProjectId, task.OrgId, deleteResources)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+
+	// 整理询价失败的resource
+	failedForecast := make([]string, 0)
+	failedForecast = append(failedForecast, destroyedForecast...)
+	failedForecast = append(failedForecast, updateBeforeForecast...)
+	failedForecast = append(failedForecast, updateAfterForecast...)
+	failedForecast = append(failedForecast, addedForecast...)
 
 	// 获取的费用是以小时计算的，乘以730算月费用
-	return []float32{addedCost * 730, -1 * destroyedCost * 730, (updateAfterCost - updateBeforeCost) * 730}, err
+	return []float32{addedCost * 730, -1 * destroyedCost * 730, (updateAfterCost - updateBeforeCost) * 730}, utils.RemoveDuplicateElement(failedForecast), err
 }
 
 func getPriceService(dbSess *db.Session, projectId, orgId models.Id, provider string) (pricecalculator.PriceService, error) {
@@ -125,34 +133,43 @@ func getPriceService(dbSess *db.Session, projectId, orgId models.Id, provider st
 	return pricecalculator.NewPriceService(vg, provider)
 }
 
-func computeResourceCost(dbSess *db.Session, projectId, orgId models.Id, resources []*schema.Resource) (float32, error) {
+func computeResourceCost(dbSess *db.Session, projectId, orgId models.Id, resources []*schema.Resource) (float32, []string, error) {
 	var cost float32
+	// 询价失败产品的address
+	forecastFailed := make([]string, 0)
 
 	mPriceServ := make(map[string]pricecalculator.PriceService)
 	for _, res := range resources {
 		key := projectId.String() + res.Provider
+
 		if _, ok := mPriceServ[key]; !ok {
 			ps, err := getPriceService(dbSess, projectId, orgId, res.Provider)
 			if err != nil {
-				return cost, err
+				forecastFailed = append(forecastFailed, res.Name)
+				logs.Get().WithField("cost_forecast", "getPriceService").Error(err)
+				continue
 			}
 			mPriceServ[key] = ps
 		}
 
 		priceResp, err := mPriceServ[key].GetResourcePrice(res)
 		if err != nil {
-			return cost, err
+			forecastFailed = append(forecastFailed, res.Name)
+			logs.Get().WithField("cost_forecast", "GetResourcePrice").Error(err)
+			continue
 		}
 
 		price, err := alicloud.GetPriceFromResponse(priceResp)
 		if err != nil {
-			return cost, err
+			forecastFailed = append(forecastFailed, res.Name)
+			logs.Get().WithField("cost_forecast", "GetPriceFromResponse").Error(err)
+			continue
 		}
 
 		cost = cost + price
 	}
 
-	return cost, nil
+	return cost, forecastFailed, nil
 }
 
 func taskDoneProcessDriftTask(logger logs.Logger, dbSess *db.Session, task *models.Task) error {

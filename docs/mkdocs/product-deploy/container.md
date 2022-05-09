@@ -182,10 +182,10 @@ KAFKA_SASL_USERNAME=""
 KAFKA_SASL_PASSWORD=""
 
 # LDAP 配置(用于接入 ldap 认证，可选配置)
-LDAP_ADMIN_DN="cn=manager,dc=example,dc=com"
-LDAP_ADMIN_PASSWORD="password"
-LDAP_SERVER="ldap.example.com"
-LDAP_SEARCH_BASE="dc=example,dc=com"
+LDAP_ADMIN_DN="cn=manager,dc=example,dc=com" # (必填)
+LDAP_ADMIN_PASSWORD="password" # (必填)
+LDAP_SERVER="ldap.example.com" # (必填)
+LDAP_SEARCH_BASE="dc=example,dc=com" # (必填)
 LDAP_SEARCH_FILTER=""
 LDAP_EMAIL_ATTRIBUTE="mail"
 LDAP_ACCOUNT_ATTRIBUTE="uid"
