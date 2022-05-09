@@ -161,7 +161,6 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 	return nil
 }
 
-
 // getTaskStepTimeoutInSecond return timeout in second
 func getTaskStepTimeoutInSecond(timeoutInMinute int) (int, e.Error) {
 	timeoutInSecond := timeoutInMinute * 60
@@ -456,7 +455,11 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 
 	if form.Status != "" {
 		if utils.InArrayStr(models.EnvStatus, form.Status) {
-			query = query.Where("iac_env.status = ? and iac_env.deploying = 0", form.Status)
+			if form.Status == models.EnvStatusInactive {
+				query = query.Where("(iac_env.status = ? or iac_env.status = ?) and iac_env.deploying = 0", form.Status, models.EnvStatusDestroyed)
+			} else {
+				query = query.Where("iac_env.status = ? and iac_env.deploying = 0", form.Status)
+			}
 		} else if utils.InArrayStr(models.EnvTaskStatus, form.Status) {
 			query = query.Where("iac_env.task_status = ? and iac_env.deploying = 1", form.Status)
 		} else {
