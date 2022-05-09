@@ -190,7 +190,11 @@ func (t *TplImporter) processTplVars(tx *db.Session, tpl *models.Template, i int
 
 	vars := t.Data.Templates[i].Variables
 	for _, iVar := range vars {
-		v := t.getVarFromExportData(t.Data.Templates[i], iVar)
+		v, err := t.getVarFromExportData(t.Data.Templates[i], iVar)
+		if err != nil {
+			return e.AutoNew(err, e.InternalError)
+		}
+
 		if !tplIdDuplicate || t.WhenIdDuplicate == "copy" {
 			if er := models.Create(tx, v); er != nil {
 				return e.AutoNew(er, e.DBError)
@@ -427,7 +431,12 @@ func (t *TplImporter) getTplFromExportData(tpl exportedTpl) (*models.Template, e
 	return &newTpl, nil
 }
 
-func (t *TplImporter) getVarFromExportData(tpl exportedTpl, v exportedTplVar) *models.Variable {
+func (t *TplImporter) getVarFromExportData(tpl exportedTpl, v exportedTplVar) (*models.Variable, error) {
+	value, err := ImportVariableValue(v.Value, v.Sensitive)
+	if err != nil {
+		return nil, err
+	}
+
 	mVar := models.Variable{
 		OrgId:     t.OrgId,
 		ProjectId: "",
@@ -437,7 +446,7 @@ func (t *TplImporter) getVarFromExportData(tpl exportedTpl, v exportedTplVar) *m
 			Scope:       v.Scope,
 			Type:        v.Type,
 			Name:        v.Name,
-			Value:       v.Value,
+			Value:       value,
 			Options:     v.Options,
 			Sensitive:   v.Sensitive,
 			Description: v.Description,
@@ -445,7 +454,7 @@ func (t *TplImporter) getVarFromExportData(tpl exportedTpl, v exportedTplVar) *m
 	}
 	// 变量以名称唯一标识，导入变量时总是生成一个新 id
 	mVar.Id = mVar.NewId()
-	return &mVar
+	return &mVar, nil
 }
 
 func (t *TplImporter) getVcsFromExportData(vcs exportedVcs) (*models.Vcs, error) {
