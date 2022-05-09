@@ -119,6 +119,7 @@ const (
 	ConsulCakey         = "client.key"
 	ConsulCapem         = "client.pem"
 	ConsulContainerPath = "/cloudiac/cert/"
+	ConsulSessionTTL    = 10
 )
 
 var (

@@ -37,7 +37,6 @@ type ConsulConfig struct {
 	ConsulCertPath  string `yaml:"consul_cert_path"`
 	ConsulAclToken  string `yaml:"consul_acl_token"`
 	ConsulTls       bool   `yaml:"consul_tls"`
-	WaitLockRelease int    `yaml:"wait_lock_release"` // 等待 consul 自动释放锁
 }
 
 type RunnerConfig struct {
