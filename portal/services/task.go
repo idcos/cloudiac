@@ -157,6 +157,7 @@ func CloneNewDriftTask(tx *db.Session, src models.Task, env *models.Env) (*model
 	//task.KeyId = env.KeyId
 	task.Source = taskSource
 
+	// 自动纠偏任务总是使用环境的最新部署通道配置
 	task.RunnerId, er = GetAvailableRunnerIdByStr(env.RunnerId, env.RunnerTags)
 	if er != nil {
 		return nil, er
@@ -185,6 +186,11 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		task.CommitId = commitId
 	}
 
+	// 最后再进行一次保底 runnerId 设置，如果任务有 runnerId 了则直接使用，否则通过环境的 runnerTags 获取 runnerId
+	task.RunnerId, er = GetAvailableRunnerIdByStr(task.RunnerId, env.RunnerTags)
+	if er != nil {
+		return nil, er
+	}
 	return doCreateTask(tx, *task, tpl, env)
 }
 

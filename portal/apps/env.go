@@ -321,11 +321,6 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		}
 	}()
 
-	runnerId, err := services.GetAvailableRunnerId(form.RunnerId, form.RunnerTags)
-	if err != nil {
-		return nil, err
-	}
-
 	taskStepTimeout, err := getTaskStepTimeoutInSecond(form.StepTimeout)
 	if err != nil {
 		return nil, err
@@ -339,7 +334,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 
 		Name:        form.Name,
 		Tags:        strings.TrimSpace(form.Tags),
-		RunnerId:    runnerId,
+		RunnerId:    form.RunnerId,
 		RunnerTags:  strings.Join(form.RunnerTags, ","),
 		Status:      models.EnvStatusInactive,
 		OneTime:     form.OneTime,
@@ -397,7 +392,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		BaseTask: models.BaseTask{
 			Type:        form.TaskType,
 			StepTimeout: taskStepTimeout,
-			RunnerId:    runnerId,
+			RunnerId:    env.RunnerId,
 		},
 		ExtraData: models.JSON(form.ExtraData),
 		Callback:  form.Callback,

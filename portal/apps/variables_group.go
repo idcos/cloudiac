@@ -106,6 +106,13 @@ func SearchVariableGroup(c *ctx.ServiceContext, form *forms.SearchVariableGroupF
 	for _, v := range rs {
 		r, ok := resultsMap[v.Id]
 		if !ok {
+			// 处理敏感变量
+			for index, variable := range v.Variables {
+				if variable.Sensitive {
+					v.Variables[index].Value = ""
+				}
+			}
+
 			r = &resps.SearchVarGroupResp{
 				VariableGroup: v.VariableGroup,
 				Creator:       v.Creator,

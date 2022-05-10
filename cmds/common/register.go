@@ -3,6 +3,7 @@
 package common
 
 import (
+	"cloudiac/common"
 	"cloudiac/configs"
 	"cloudiac/utils/consul"
 	"cloudiac/utils/logs"
@@ -44,12 +45,18 @@ func ReRegisterService(register bool, serviceName string) error {
 // 丢失consul连接时，尝试重新连接
 func CheckAndReConnectConsul(serviceName string, serviceId string) error {
 	lg := logs.Get().WithField("func", "CheckAndReConnectConsul")
-
 	// 首次启动获取锁并注册服务
 	lockLostCh, cancelCtx, err := lockAndRegister(serviceName, serviceId, true)
 	if err != nil {
 		lg.Warnf("start failed, error: %v", err)
-		return err
+
+		// 首次启动失败后， 等待 ConsulSessionTTL* 2后再次尝试获取锁
+		time.Sleep(time.Duration(common.ConsulSessionTTL*2) * time.Second)
+		lockLostCh, cancelCtx, err = lockAndRegister(serviceName, serviceId, true)
+		if err != nil {
+			lg.Warnf("the second time start failed, error: %v", err)
+			return err
+		}
 	}
 
 	go func() {
