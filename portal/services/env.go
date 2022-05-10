@@ -437,26 +437,25 @@ func EnvUnLocked(dbSess *db.Session, id models.Id) e.Error {
 func EnvCostTypeStat(tx *db.Session, id models.Id) ([]resps.EnvCostTypeStatResp, e.Error) {
 	/* sample sql:
 	select
-		iac_resource.type as res_type,
+		t.res_type as res_type,
 		SUM(pretax_amount) as amount
 	from
-		iac_resource
-	JOIN iac_bill ON
-		iac_bill.instance_id = iac_resource.res_id
-	where
-		iac_resource.env_id  = 'env-c8u10aosm56kh90t588g'
-		and iac_bill.cycle = DATE_FORMAT(CURDATE(), "%Y-%m")
+		iac_bill
+	join (SELECT DISTINCT res_id, type as res_type from iac_resource where iac_resource.env_id  = 'env-c870jh4bh95lubaf3mf0') as t ON
+		iac_bill.instance_id = t.res_id
+	where iac_bill.cycle = DATE_FORMAT(CURDATE(), "%Y-%m")
 	group by
-		iac_resource.type
+		t.res_type
 	*/
 
-	query := tx.Model(&models.Resource{}).Select(`iac_resource.type as res_type, SUM(pretax_amount) as amount`)
-	query = query.Joins(`JOIN iac_bill ON iac_bill.instance_id = iac_resource.res_id`)
+	subQuery := tx.Model(&models.Resource{}).Select(`DISTINCT(res_id), iac_resource.type as res_type`)
+	subQuery = subQuery.Where(`iac_resource.env_id  = ?`, id)
 
-	query = query.Where(`iac_resource.env_id = ?`, id)
+	query := tx.Model(&models.Bill{}).Select(`t.res_type as res_type, SUM(pretax_amount) as amount`)
+	query = query.Joins(`JOIN (?) as t ON iac_bill.instance_id = t.res_id`, subQuery.Expr())
+
 	query = query.Where(`iac_bill.cycle = DATE_FORMAT(CURDATE(), "%Y-%m")`)
-
-	query = query.Group("iac_resource.type")
+	query = query.Group("t.res_type")
 
 	var results []resps.EnvCostTypeStatResp
 	if err := query.Find(&results); err != nil {
