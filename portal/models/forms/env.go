@@ -57,7 +57,7 @@ type CreateEnvForm struct {
 	PolicyEnable bool        `json:"policyEnable" form:"policyEnable" binding:""`                                             // 是否开启合规检测
 	PolicyGroup  []models.Id `json:"policyGroup" form:"policyGroup" binding:"omitempty,dive,required,startswith=pog-,max=32"` // 绑定策略组集合
 
-	Source string `json:"source" form:"source" ` // 调用来源
+	Source string `json:"source" form:"source" binding:"required"` // 调用来源
 }
 
 type SampleVariables struct {
@@ -144,7 +144,7 @@ type DeployEnvForm struct {
 	PolicyEnable bool        `json:"policyEnable" form:"policyEnable" binding:""`                                             // 是否开启合规检测
 	PolicyGroup  []models.Id `json:"policyGroup" form:"policyGroup" binding:"omitempty,dive,required,startswith=pog-,max=32"` // 绑定策略组集合
 
-	Source string `json:"source" form:"source" ` // 调用来源
+	Source string `json:"source" form:"source" binding:"required"` // 调用来源
 }
 
 type ArchiveEnvForm struct {
@@ -193,7 +193,7 @@ type DestroyEnvForm struct {
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true" binding:"required,startswith=env-,max=32"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
 
-	Source string `json:"source" form:"source" ` // 调用来源
+	Source string `json:"source" form:"source" binding:"required"` // 调用来源
 }
 
 type SearchEnvVariableForm struct {
