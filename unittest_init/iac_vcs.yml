@@ -1,0 +1,16 @@
+- id: vcs-c9cgovqs1s4bq6ebdi9g
+  org_id: ""
+  project_id: ""
+  name: 默认仓库
+  status: enable
+  vcs_type: local
+  address: repos
+  vcs_token: ""
+- id: vcs-c9cgovqs1s4bq6ebdia0
+  org_id: ""
+  project_id: ""
+  name: Registry
+  status: enable
+  vcs_type: registry
+  address: ""
+  vcs_token: ""
