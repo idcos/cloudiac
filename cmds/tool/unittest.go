@@ -6,12 +6,12 @@ import (
 	"cloudiac/portal/models"
 )
 
-// ./iac-tool InitDB root:Yunjikeji@tcp(127.0.0.1:3307)/iac_test?charset=utf8mb4&parseTime=True&loc=Local
+// ./iac-tool initdb user:password@tcp(127.0.0.1:3307)/iac_test?charset=utf8mb4&parseTime=True&loc=Local
 
 type InitDB struct{}
 
 const (
-	defaultDsn = "root:Yunjikeji@tcp(127.0.0.1:3307)/iac_test?charset=utf8mb4&parseTime=True&loc=Local"
+	defaultDsn = "root:@tcp(127.0.0.1:3307)/iac_test?charset=utf8mb4&parseTime=True&loc=Local"
 )
 
 func (*InitDB) Execute(args []string) error {
@@ -26,3 +26,4 @@ func (*InitDB) Execute(args []string) error {
 
 	return nil
 }
+
