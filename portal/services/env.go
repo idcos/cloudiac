@@ -473,20 +473,19 @@ func EnvCostTrendStat(tx *db.Session, id models.Id, months int) ([]resps.EnvCost
 		iac_bill.cycle as date,
 		SUM(pretax_amount) as amount
 	from
-		iac_resource
-	JOIN iac_bill ON
-		iac_bill.instance_id = iac_resource.res_id
+		iac_bill
 	where
-		iac_resource.env_id  = 'env-c8u10aosm56kh90t588g'
-		and iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 12 MONTH), "%Y-%m")
+		iac_bill.instance_id IN (SELECT DISTINCT  res_id from iac_resource where iac_resource.env_id  = 'env-c870jh4bh95lubaf3mf0')
+		AND iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 12 MONTH), "%Y-%m")
 	group by
 		iac_bill.cycle
 	*/
 
-	query := tx.Model(&models.Resource{}).Select(`iac_bill.cycle as date, SUM(pretax_amount) as amount`)
-	query = query.Joins(`JOIN iac_bill ON iac_bill.instance_id = iac_resource.res_id`)
+	subQuery := tx.Model(&models.Resource{}).Select(`DISTINCT(res_id)`).Where(`iac_resource.env_id  = ?`, id)
 
-	query = query.Where(`iac_resource.env_id = ?`, id)
+	query := tx.Model(&models.Bill{}).Select(`iac_bill.cycle as date, SUM(pretax_amount) as amount`)
+
+	query = query.Where(`iac_bill.instance_id IN (?)`, subQuery.Expr())
 	query = query.Where(`iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? MONTH), "%Y-%m")`, months)
 
 	query = query.Group("iac_bill.cycle")
