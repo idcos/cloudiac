@@ -5,7 +5,7 @@ GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
 HOSTOS=$(shell go env GOHOSTOS)
 HOSTARCH=$(shell go env GOHOSTARCH)
-#MYSQL_ROOT_PASSWORD=
+MYSQL_ROOT_PASSWORD?=cloudiac
 MYSQL_PORT=3307
 
 RM=/bin/rm -f
@@ -92,12 +92,12 @@ run-tool:
 	$(GORUN) ./cmds/tool -v -c config-portal.yml
 
 start-mysql-unittest: stop-mysql-unittest tool
-	$(DOCKER_RUN) --name mysql-unittest -e MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD} -e MYSQL_DATABASE=iac_test -p ${MYSQL_PORT}:3306 mysql:5.7 mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --sql_mode=STRICT_TRANS_TABLES,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
-	while ! docker exec mysql-unittest mysql -h 127.0.0.1 -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "SELECT 1" ; do echo "waiting for mysql ready..."; sleep 1; done
-	$(BUILD_DIR)/iac-tool initdb
+	$(DOCKER_RUN) --name cloudiac-mysql-unittest -e MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD} -e MYSQL_DATABASE=iac_test -p $(MYSQL_PORT):3306 mysql:5.7 mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --sql_mode=STRICT_TRANS_TABLES,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+	while ! docker exec cloudiac-mysql-unittest mysql -h127.0.0.1 -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "SELECT 1" ; do echo "waiting for mysql ready..."; sleep 1; done
+	$(BUILD_DIR)/iac-tool initdb "root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:$(MYSQL_PORT))/iac_test?charset=utf8mb4&parseTime=True&loc=Local"
 
 stop-mysql-unittest:
-	$(DOCKER_STOP) mysql-unittest || true
+	$(DOCKER_STOP) cloudiac-mysql-unittest || true
 
 dumpdb: tool
 	mkdir -p ./dumpdb/
