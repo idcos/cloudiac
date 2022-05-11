@@ -6,6 +6,7 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services/forecast/schema"
+	"cloudiac/utils/logs"
 	"fmt"
 
 	bssopenapi20171214 "github.com/alibabacloud-go/bssopenapi-20171214/client"
@@ -62,7 +63,13 @@ func (a *AliCloud) GetResourcePrice(r *schema.Resource) (*bssopenapi20171214.Get
 		ProductType:      tea.String(r.PriceType),
 	}
 
-	return client.GetPayAsYouGoPrice(getPayAsYouGoPriceRequest)
+	resp, err := client.GetPayAsYouGoPrice(getPayAsYouGoPriceRequest)
+	if err != nil || (resp != nil && resp.Body != nil && *resp.Body.Code != "Success") {
+		logs.Get().WithField("cost_forecast", "GetResourcePrice").Errorf("api request param: %+v", request)
+		return nil, fmt.Errorf("api request error")
+	}
+
+	return resp, nil
 }
 
 func GetPriceFromResponse(resp *bssopenapi20171214.GetPayAsYouGoPriceResponse) (float32, error) {
