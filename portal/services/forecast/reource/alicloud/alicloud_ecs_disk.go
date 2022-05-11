@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-type Disk struct {
+type EcsDisk struct {
 	Address  string
 	Region   string
 	Provider string
@@ -15,7 +15,7 @@ type Disk struct {
 	Size     int64  `json:"size"`
 }
 
-func (a *Disk) BuildResource() *schema.Resource {
+func (a *EcsDisk) BuildResource() *schema.Resource {
 	p := make([]*schema.PriceRequest, 0)
 
 	if a.Size > 0 && a.Category != "" {

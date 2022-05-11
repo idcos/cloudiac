@@ -1,5 +1,4 @@
 // Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
-
 package alicloud
 
 import (
@@ -7,18 +6,18 @@ import (
 	"cloudiac/portal/services/forecast/schema"
 )
 
-func getDiskRegistryItem() *schema.RegistryItem {
+func getEcsDiskRegistryItem() *schema.RegistryItem {
 	return &schema.RegistryItem{
-		Name:  "alicloud_disk",
+		Name:  "alicloud_ecs_disk",
 		Notes: []string{},
-		RFunc: NewDisk,
+		RFunc: NewEcsDisk,
 	}
 }
 
-func NewDisk(d *schema.ResourceData) *schema.Resource {
+func NewEcsDisk(d *schema.ResourceData) *schema.Resource {
 	region := d.Get("region").String()
 
-	a := &alicloud.Disk{
+	a := &alicloud.EcsDisk{
 		Address:  d.Address,
 		Provider: d.ProviderName,
 		Region:   region,
