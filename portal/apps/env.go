@@ -729,7 +729,7 @@ func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs mod
 	}
 
 	if form.HasKey("archived") {
-		if env.Status != models.EnvStatusInactive {
+		if env.Status != models.EnvStatusInactive && env.Status != models.EnvStatusDestroyed {
 			_ = tx.Rollback()
 			return e.New(e.EnvCannotArchiveActive,
 				fmt.Errorf("env can't be archive while env is %s", env.Status),
