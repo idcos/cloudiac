@@ -21,7 +21,7 @@ type SearchProjectForm struct {
 	NoPageSizeForm
 
 	Q         string    `json:"q" form:"q" `
-	Status    string    `json:"status" form:"status" binding:"omitempty,oneof=enable disable"`
+	Status    string    `json:"status" form:"status" binding:"omitempty,oneof=enable disable"` // 过滤项目状态(enable/disable, 默认为 enable)
 	WithStat  bool      `json:"withStat" form:"withStat"`
 	ProjectId models.Id `json:"projectId" form:"projectId"`
 }

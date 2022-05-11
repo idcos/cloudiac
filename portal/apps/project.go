@@ -3,6 +3,7 @@
 package apps
 
 import (
+	"cloudiac/common"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
@@ -71,7 +72,12 @@ func CreateProject(c *ctx.ServiceContext, form *forms.CreateProjectForm) (interf
 }
 
 func SearchProject(c *ctx.ServiceContext, form *forms.SearchProjectForm) (interface{}, e.Error) {
-	query := services.SearchProject(c.DB(), c.OrgId, form.Q, form.Status)
+	queryStatus := form.Status
+	if queryStatus == "" {
+		// 默认只查询启用状态的项目
+		queryStatus = common.ProjectStatusEnable
+	}
+	query := services.SearchProject(c.DB(), c.OrgId, form.Q, queryStatus)
 
 	if !c.IsSuperAdmin && !services.UserHasOrgRole(c.UserId, c.OrgId, consts.OrgRoleAdmin) {
 		projectIds, err := getSearchProjectIds(query, c.UserId, c.OrgId, form.ProjectId)

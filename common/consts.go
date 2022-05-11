@@ -83,6 +83,9 @@ const (
 	TaskTypeTplScanName  = "tplScan"
 	TaskTypeTplParseName = "tplParse"
 
+	ProjectStatusEnable  = "enable"
+	ProjectStatusDisable = "disable"
+
 	// 默认步骤超时时间(秒)
 	DefaultTaskStepTimeout = 3600
 
