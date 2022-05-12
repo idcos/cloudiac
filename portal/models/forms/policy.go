@@ -137,7 +137,7 @@ type ScanEnvironmentForm struct {
 type PolicyParseForm struct {
 	BaseForm
 
-	TemplateId models.Id `form:"tplId" json:"tplId" binding:"required,startswith=tpl-,max=32" example:"tpl-c3ek0co6n88ldvq1n6ag"`  // 云模板Id
+	TemplateId models.Id `form:"tplId" json:"tplId" binding:"omitempty,startswith=tpl-,max=32" example:"tpl-c3ek0co6n88ldvq1n6ag"` // 云模板Id
 	EnvId      models.Id `form:"envId" json:"envId" binding:"omitempty,startswith=env-,max=32" example:"env-c3ek0co6n88ldvq1n6ag"` // 环境Id
 }
 
