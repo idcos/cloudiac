@@ -504,7 +504,7 @@ func EnvCostTrendStat(tx *db.Session, id models.Id, months int) ([]resps.EnvCost
 
 // completeEnvCostTrendData 补充缺失的月份数据
 func completeEnvCostTrendData(results []resps.EnvCostTrendStatResp) ([]resps.EnvCostTrendStatResp, e.Error) {
-	if results == nil || len(results) == 0 {
+	if len(results) == 0 {
 		return results, nil
 	}
 
