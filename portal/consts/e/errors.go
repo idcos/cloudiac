@@ -27,6 +27,7 @@ const (
 	JSONParseError = 10100
 	HCLParseError  = 10101
 	URLParseError  = 10102
+	DateParseError = 10103
 
 	//// db 错误 102
 	DBError           = 10200 // db 操作出错

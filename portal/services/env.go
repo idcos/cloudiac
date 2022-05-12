@@ -478,6 +478,8 @@ func EnvCostTrendStat(tx *db.Session, id models.Id, months int) ([]resps.EnvCost
 		AND iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 12 MONTH), "%Y-%m")
 	group by
 		iac_bill.cycle
+	order by
+		iac_bill.cycle asc
 	*/
 
 	subQuery := tx.Model(&models.Resource{}).Select(`DISTINCT(res_id)`).Where(`iac_resource.env_id  = ?`, id)
@@ -488,13 +490,51 @@ func EnvCostTrendStat(tx *db.Session, id models.Id, months int) ([]resps.EnvCost
 	query = query.Where(`iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? MONTH), "%Y-%m")`, months)
 
 	query = query.Group("iac_bill.cycle")
+	query = query.Order("iac_bill.cycle asc")
 
 	var results []resps.EnvCostTrendStatResp
 	if err := query.Find(&results); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	return results, nil
+	return completeEnvCostTrendData(results)
+}
+
+// completeEnvCostTrendData 补充缺失的月份数据
+func completeEnvCostTrendData(results []resps.EnvCostTrendStatResp) ([]resps.EnvCostTrendStatResp, e.Error) {
+	if len(results) == 0 {
+		return results, nil
+	}
+
+	var allResults = make([]resps.EnvCostTrendStatResp, 0)
+	curMonth, err := time.Parse("2006-01", results[0].Date)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DateParseError)
+	}
+	// 第一个日期加入
+	allResults = append(allResults, results[0])
+	for _, result := range results[1:] {
+		curMonth = curMonth.AddDate(0, 1, 0)
+
+		// 补充缺失的日期
+		for {
+			curMonthStr := curMonth.Format("2006-01")
+			// 日期连续时
+			if curMonthStr == result.Date {
+				allResults = append(allResults, result)
+				break
+			}
+
+			// 日期不连续时，补充0
+			allResults = append(allResults, resps.EnvCostTrendStatResp{
+				Date:   curMonth.Format("2006-01"),
+				Amount: 0.0,
+			})
+			curMonth = curMonth.AddDate(0, 1, 0)
+		}
+	}
+
+	return allResults, nil
 }
 
 type RawEnvCostDetail struct {
