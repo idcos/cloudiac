@@ -214,5 +214,4 @@ const (
 
 	// Ldap 317
 	LdapConnectFailed  = 31710
-	LdapNotAllowUpdate = 31720
 )

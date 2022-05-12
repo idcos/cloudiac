@@ -4,6 +4,7 @@ package apps
 
 import (
 	"cloudiac/common"
+	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
@@ -252,16 +253,21 @@ func chkUserIdentity(formId, userId, orgId models.Id, isSuperAdmin bool) e.Error
 	return nil
 }
 
-func getNewPassword(oldPassword, newPassword, userPassword string) (string, e.Error) {
-
+func getNewPassword(oldPassword, newPassword, userPassword, userEmail string) (string, e.Error) {
 	valid, err := utils.CheckPassword(oldPassword, userPassword)
 	if err != nil {
 		return "", e.New(e.DBError, http.StatusInternalServerError, err)
 	}
 	if !valid {
-		return "", e.New(e.InvalidPassword, http.StatusBadRequest)
+		if configs.Get().Ldap.LdapServer != "" {
+			// 当校验失败的时候，去检验是否符合ldap 登陆密码，成功则依旧可以修改本地密码
+			if _, ldapErr := services.LdapAuthLogin(userEmail, oldPassword); ldapErr != nil {
+				return "", e.New(e.DBError, http.StatusInternalServerError, err)
+			}
+		} else {
+			return "", e.New(e.InvalidPassword, http.StatusBadRequest)
+		}
 	}
-
 	newPassword, er := services.HashPassword(newPassword)
 	if er != nil {
 		return "", er
@@ -282,12 +288,6 @@ func UpdateUser(c *ctx.ServiceContext, form *forms.UpdateUserForm) (*models.User
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	}
-	if user.IsLdap {
-		if form.HasKey("oldPassword") || form.HasKey("newPassword") {
-			return nil, e.New(e.LdapNotAllowUpdate)
-		}
-	}
-
 	attrs := models.Attrs{}
 	if form.HasKey("name") {
 		attrs["name"] = form.Name
@@ -308,7 +308,7 @@ func UpdateUser(c *ctx.ServiceContext, form *forms.UpdateUserForm) (*models.User
 		return nil, e.New(e.BadParam, http.StatusBadRequest)
 	}
 
-	newPassword, er := getNewPassword(form.OldPassword, form.NewPassword, user.Password)
+	newPassword, er := getNewPassword(form.OldPassword, form.NewPassword, user.Password, user.Email)
 	if er != nil {
 		return nil, er
 	}
@@ -511,10 +511,6 @@ func UserPassReset(c *ctx.ServiceContext, form *forms.DetailUserForm) (*models.U
 	if er != nil {
 		return nil, e.AutoNew(er, e.DBError)
 	}
-	if user.IsLdap {
-		return nil, e.New(e.LdapNotAllowUpdate)
-	}
-
 	initPass := utils.GenPasswd(6, "mix")
 	hashedPassword, err := services.HashPassword(initPass)
 	if err != nil {
