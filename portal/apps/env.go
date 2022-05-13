@@ -1586,7 +1586,7 @@ func checkDeployVar(vars []forms.Variable) []forms.Variable {
 func getEnvSource(source string) (taskSource string, taskSourceSys string) {
 	taskSource = consts.TaskSourceManual
 	taskSourceSys = ""
-	if source != consts.TaskSourceManual {
+	if source != "" {
 		taskSource = consts.TaskSourceApi
 		taskSourceSys = source
 	}
