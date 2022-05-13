@@ -360,6 +360,11 @@ func (t *Task) genPlayVarsFile(workspace string) error {
 	return yaml.NewEncoder(fp).Encode(ansibleVars)
 }
 
+/*
+    network mirror 段添加了 exclude = ["registry.terraform.io/idcos/*"]，
+	因为 idcos 这个命名空间是我们之前特殊处理的，在 registry.terraform.io 上不存在（即使存在也不属于我们管理），
+	所以当启用 network mirror 的时候也需要排除掉。
+*/
 var terraformrcTpl = template.Must(template.New("").Parse(`provider_installation {
   filesystem_mirror {
     path = "/cloudiac/terraform/plugins"
@@ -369,6 +374,7 @@ var terraformrcTpl = template.Must(template.New("").Parse(`provider_installation
   network_mirror {
     url = "{{.NetworkMirrorUrl}}"
     include = ["registry.terraform.io/*/*"]
+    exclude = ["registry.terraform.io/idcos/*"]
   }
   {{ end }}
 
@@ -525,7 +531,7 @@ func (t *Task) stepCheckout() (command string, err error) {
 	return t.executeTpl(checkoutCommandTpl, map[string]interface{}{
 		"Req":             t.req,
 		"IacTfFile":       t.up2Workspace(CloudIacTfFile),
-		"TerraformRcFile": t.up2Workspace(TerraformrcFileName),
+		"TerraformRcFile": filepath.Join(ContainerWorkspace, TerraformrcFileName),
 	})
 }
 
