@@ -135,7 +135,6 @@
 30731,TemplateKeyIdNotSet,SSH 密钥未配置,ssh keypair is not setup 
 31283,PolicyGroupDirError,仓库在当前目录找不到策略文件,policy not found in the repository
 31710,LdapConnectFailed,ldap 服务器连接 失败,ldap servers connect failed
-31720,LdapNotAllowUpdate,ldap 账号不支持修改,Ldap account cannot be modified
 31413,InvalidVarGroup,无效资源账号,invalid resource account
 31414,VariableGroupPermDeny,无权限的资源账号,resource account permission deny
 30823,TemplateNotBind,云模板未绑定当前项目,template is not bound to the project
