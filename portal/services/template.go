@@ -8,8 +8,9 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"fmt"
-	"github.com/pkg/errors"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"gorm.io/gorm"
 )
@@ -65,24 +66,25 @@ func GetTemplateById(tx *db.Session, id models.Id) (*models.Template, e.Error) {
 }
 
 func QueryTemplateByOrgId(tx *db.Session, q string, orgId models.Id, templateIdList []models.Id, projectId models.Id) *db.Session {
-	query := tx.Model(&models.Template{}).Joins(
-		"LEFT  JOIN iac_user"+
-			"  ON iac_user.id = iac_template.creator_id").
-		LazySelectAppend(
-			"iac_user.name as creator",
-			"iac_template.*")
+	query := tx.Model(&models.Template{}).Joins("LEFT JOIN iac_user ON iac_user.id = iac_template.creator_id").
+		LazySelectAppend("iac_user.name as creator", "iac_template.*")
+
+	envJoinQuery := "left join iac_env on iac_template.id = iac_env.tpl_id " +
+		"and iac_env.deleted_at_t = 0 and iac_env.archived = 0"
 	if projectId != "" {
-		query = query.Joins("left join iac_env on iac_template.id = iac_env.tpl_id and iac_env.project_id = ?", projectId).
-			Group("iac_template.id").LazySelectAppend("count(iac_env.id) as relation_environment")
+		envJoinQuery += " and iac_env.project_id = ?"
+		query = query.Joins(envJoinQuery, projectId)
 	} else {
-		query = query.Joins("left join iac_env on iac_template.id = iac_env.tpl_id and (iac_env.status = 'active' or iac_env.deploying = 1)").
-			Group("iac_template.id").LazySelectAppend("count(iac_env.id) as active_environment")
+		query = query.Joins(envJoinQuery)
 	}
+	query = query.Group("iac_template.id").LazySelectAppend("count(iac_env.id) as relation_environment")
+
 	if q != "" {
 		qs := "%" + q + "%"
 		query = query.Where("iac_template.name LIKE ? OR iac_template.description LIKE ?", qs, qs)
 	}
 	query = query.Where("iac_template.org_id = ?", orgId).Order("iac_template.created_at DESC")
+
 	if len(templateIdList) != 0 {
 		// 如果传入项目id，需要项目ID 再次筛选
 		query = query.Where("iac_template.id in (?) ", templateIdList)

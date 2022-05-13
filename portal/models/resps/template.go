@@ -10,7 +10,6 @@ type SearchTemplateResp struct {
 	Id                  models.Id   `json:"id"`
 	Name                string      `json:"name"`
 	Description         string      `json:"description"`
-	ActiveEnvironment   int         `json:"activeEnvironment"`
 	RelationEnvironment int         `json:"relationEnvironment"`
 	RepoRevision        string      `json:"repoRevision"`
 	Creator             string      `json:"creator"`
