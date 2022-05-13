@@ -61,6 +61,7 @@ func TestGenTerraformrcFile(t *testing.T) {
   network_mirror {
 	url = "https://registry.example.org/v1/mirrors/providers/"
 	include = ["registry.terraform.io/*/*"]
+	exclude=["registry.terraform.io/idcos/*"]
   }
 
 
@@ -79,6 +80,7 @@ func TestGenTerraformrcFile(t *testing.T) {
   network_mirror {
 	url = "https://registry.example.org/v1/mirrors/providers/"
 	include = ["registry.terraform.io/*/*"]
+	exclude=["registry.terraform.io/idcos/*"]
   }
 
 

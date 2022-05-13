@@ -9,10 +9,6 @@ httpClientInsecure: ${HTTP_CLIENT_INSECURE}
 portal:
   address: "${PORTAL_ADDRESS}"
 
-networkMirror:
-  url: "https://registry.cloudiac.org/v1/mirrors/providers/"
-  disable: true
-
 consul:
   address: "${CONSUL_ADDRESS}"
   id: "${SERVICE_ID}"
