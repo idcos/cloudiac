@@ -22,9 +22,9 @@ import (
 )
 
 type Task struct {
-	req       RunTaskReq
-	logger    logs.Logger
-	config    configs.RunnerConfig
+	req    RunTaskReq
+	logger logs.Logger
+	// config    configs.RunnerConfig
 	workspace string
 }
 
@@ -32,7 +32,7 @@ func NewTask(req RunTaskReq, logger logs.Logger) *Task {
 	return &Task{
 		req:    req,
 		logger: logger,
-		config: configs.Get().Runner,
+		// config: configs.Get().Runner,
 	}
 }
 
@@ -282,6 +282,9 @@ func (t *Task) initWorkspace() (workspace string, err error) {
 	if err = t.genPlayVarsFile(workspace); err != nil {
 		return workspace, errors.Wrap(err, "generate play vars file")
 	}
+	if err = t.genTerraformrcFile(workspace); err != nil {
+		return workspace, errors.Wrap(err, "generate terraformrc file")
+	}
 
 	return workspace, nil
 }
@@ -313,8 +316,8 @@ func execTpl2File(tpl *template.Template, data interface{}, savePath string) err
 	if err != nil {
 		return err
 	}
-
 	defer fp.Close()
+
 	return tpl.Execute(fp, data)
 }
 
@@ -344,6 +347,10 @@ func (t *Task) genPlayVarsFile(workspace string) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		_ = fp.Close()
+	}()
+
 	var ansibleVars = t.req.Env.AnsibleVars
 	for key, value := range t.req.SysEnvironments {
 		if key != "" && strings.HasPrefix(key, "CLOUDIAC_") {
@@ -351,6 +358,47 @@ func (t *Task) genPlayVarsFile(workspace string) error {
 		}
 	}
 	return yaml.NewEncoder(fp).Encode(ansibleVars)
+}
+
+/*
+    network mirror 段添加了 exclude = ["registry.terraform.io/idcos/*"]，
+	因为 idcos 这个命名空间是我们之前特殊处理的，在 registry.terraform.io 上不存在（即使存在也不属于我们管理），
+	所以当启用 network mirror 的时候也需要排除掉。
+*/
+var terraformrcTpl = template.Must(template.New("").Parse(`provider_installation {
+  filesystem_mirror {
+    path = "/cloudiac/terraform/plugins"
+  }
+
+  {{ if .NetworkMirrorUrl }}
+  network_mirror {
+    url = "{{.NetworkMirrorUrl}}"
+    include = ["registry.terraform.io/*/*"]
+    exclude = ["registry.terraform.io/idcos/*"]
+  }
+  {{ end }}
+
+  direct {
+    exclude = ["{{ .DirectExclude }}"]
+  }
+}`))
+
+func (t *Task) genTerraformrcFile(workspace string) error {
+	path := filepath.Join(workspace, TerraformrcFileName)
+
+	// 默认情况下我们只针对 idcos 命名空间下的 provider 禁用 terraform 官方 registry
+	// （如果不主动禁用，terraform cli 的默认行为总是会查询官方 registry 获取 provider 版本列表）
+	directExclude := "registry.terraform.io/idcos/*"
+	offline := configs.Get().Runner.OfflineMode
+	if offline || t.req.NetworkMirror != "" {
+		// 如果开启了 offline 或者 network mirror 则全局禁用 terraform 默认 registry
+		directExclude = "registry.terraform.io/*/*"
+	}
+
+	return execTpl2File(terraformrcTpl, map[string]interface{}{
+		"NetworkMirrorUrl": t.req.NetworkMirror,
+		"DirectExclude":    directExclude,
+	}, path)
 }
 
 func (t *Task) genPolicyFiles(workspace string) error {
@@ -475,21 +523,20 @@ fi
 # create workdir in spite of clone was failed or not
 mkdir -p '{{.Req.Env.Workdir}}' && cd '{{.Req.Env.Workdir}}'
 
-ln -sf '{{.IacTfFile}}'
+ln -sf '{{.IacTfFile}}' && ln -sf '{{.TerraformRcFile}}' ~/.terraformrc
 exit $clone_result
 `))
 
 func (t *Task) stepCheckout() (command string, err error) {
 	return t.executeTpl(checkoutCommandTpl, map[string]interface{}{
-		"Req":       t.req,
-		"IacTfFile": t.up2Workspace(CloudIacTfFile),
+		"Req":             t.req,
+		"IacTfFile":       t.up2Workspace(CloudIacTfFile),
+		"TerraformRcFile": filepath.Join(ContainerWorkspace, TerraformrcFileName),
 	})
 }
 
 var initCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd 'code/{{.Req.Env.Workdir}}' && \
-ln -sf '{{.IacTfFile}}' . && \
-ln -sf '{{.terraformrc}}' ~/.terraformrc && \
 tfenv install $TFENV_TERRAFORM_VERSION && \
 tfenv use $TFENV_TERRAFORM_VERSION  && \
 terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }}
@@ -508,16 +555,9 @@ func (t *Task) up2Workspace(name string) string {
 }
 
 func (t *Task) stepInit() (command string, err error) {
-	tfrcName := "terraformrc-default"
-	if configs.Get().Runner.OfflineMode {
-		tfrcName = "terraformrc-offline"
-	}
-	tfrc := filepath.Join(ContainerAssetsDir, tfrcName)
 	return t.executeTpl(initCommandTpl, map[string]interface{}{
 		"Req":             t.req,
-		"terraformrc":     tfrc,
 		"PluginCachePath": ContainerPluginCachePath,
-		"IacTfFile":       t.up2Workspace(CloudIacTfFile),
 	})
 }
 
