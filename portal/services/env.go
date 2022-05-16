@@ -141,7 +141,8 @@ func GetEnvByTplId(tx *db.Session, tplId models.Id) ([]models.Env, error) {
 }
 
 func QueryActiveEnv(query *db.Session) *db.Session {
-	return query.Model(&models.Env{}).Where("status != ? OR deploying = ?", models.EnvStatusInactive, true)
+	return query.Model(&models.Env{}).Where("status in (?,?) OR deploying = ?",
+		models.EnvStatusActive, models.EnvStatusFailed, true)
 }
 
 func QueryDeploySucessEnv(query *db.Session) *db.Session {
