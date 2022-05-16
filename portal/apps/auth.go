@@ -38,23 +38,28 @@ func validPassword(c *ctx.ServiceContext, user *models.User, email, password str
 func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("user login: %s", form.Email))
 	user, err := services.GetUserByEmail(c.DB(), form.Email)
-	if err != nil && err.Code() == e.UserNotExists && configs.Get().Ldap.LdapServer != "" {
-		// 当错误为用户邮箱不存在的时候，尝试使用ldap 进行登录
-		username, ldapErr := services.LdapAuthLogin(form.Email, form.Password)
-		if ldapErr != nil {
-			// 找不到账号时也返回 InvalidPassword 错误，避免暴露系统中己有用户账号
-			c.Logger().Warnf("ldap auth login: %v", ldapErr)
-			return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
+	if err != nil {
+		if err.Code() == e.UserNotExists && configs.Get().Ldap.LdapServer != "" {
+			// 当错误为用户邮箱不存在的时候，尝试使用ldap 进行登录
+			username, ldapErr := services.LdapAuthLogin(form.Email, form.Password)
+			if ldapErr != nil {
+				// 找不到账号时也返回 InvalidPassword 错误，避免暴露系统中己有用户账号
+				c.Logger().Warnf("ldap auth login: %v", ldapErr)
+				return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
+			}
+			// 登录成功, 在用户表中添加该用户
+			if user, err = services.CreateUser(c.DB(), models.User{
+				Name:  username,
+				Email: form.Email,
+			}); err != nil {
+				c.Logger().Warnf("create user error: %v", err)
+				return nil, e.New(e.InternalError, http.StatusInternalServerError)
+			}
+		} else {
+			return nil, err
 		}
-		// 登录成功, 标记账号为ldap用户，并且在用户表中添加该用户
-		if user, err = services.CreateUser(c.DB(), models.User{
-			Name:  username,
-			Email: form.Email,
-		}); err != nil {
-			c.Logger().Warnf("create user error: %v", err)
-			return nil, e.New(e.InternalError, http.StatusInternalServerError)
-		}
-	} else if er1 := validPassword(c, user, form.Email, form.Password); er1 != nil {
+	}
+	if er1 := validPassword(c, user, form.Email, form.Password); er1 != nil {
 		return nil, err
 	}
 	token, er := services.GenerateToken(user.Id, user.Name, user.IsAdmin, 1*24*time.Hour)
