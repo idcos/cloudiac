@@ -287,7 +287,7 @@ func envWorkdirCheck(c *ctx.ServiceContext, repoId, repoRevision, workdir string
 }
 
 // CreateEnv 创建环境
-func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm, projectId models.Id) (*models.EnvDetail, e.Error) {
+func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDetail, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create env %s", form.Name))
 
 	err := createEnvCheck(c, form)
@@ -295,7 +295,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm, projectId model
 		return nil, err
 	}
 
-	err = services.IsTplAssociationCurrentProject(c, projectId, form.TplId)
+	err = services.IsTplAssociationCurrentProject(c, c.ProjectId, form.TplId)
 	if err != nil {
 		return nil, err
 	}
