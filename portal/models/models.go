@@ -238,8 +238,6 @@ func Init(migrate bool) {
 	autoMigrate(&VariableGroupRel{}, sess)
 	autoMigrate(&ResourceDrift{}, sess)
 	autoMigrate(&VariableGroupProjectRel{}, sess)
-	autoMigrate(&Bill{}, sess)
-	autoMigrate(&BillData{}, sess)
 
 	autoMigrate(&Bill{}, sess)
 	autoMigrate(&BillData{}, sess)
