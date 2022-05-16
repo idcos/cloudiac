@@ -28,10 +28,11 @@ type Env struct {
 // @Success 200 {object} ctx.JSONResult{result=models.EnvDetail}
 func (Env) Create(c *ctx.GinRequest) {
 	form := forms.CreateEnvForm{}
+	projectId := c.GetHeader("IaC-Project-Id")
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.CreateEnv(c.Service(), &form))
+	c.JSONResult(apps.CreateEnv(c.Service(), &form, models.Id(projectId)))
 }
 
 // Search 环境查询
