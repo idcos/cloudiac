@@ -87,7 +87,7 @@ func GetEnvById(tx *db.Session, id models.Id) (*models.Env, e.Error) {
 	return &o, nil
 }
 
-func IsTplAssociationCurrentProject(c *ctx.ServiceContext, projectId models.Id, tplId models.Id) e.Error {
+func IsTplAssociationCurrentProject(c *ctx.ServiceContext, tplId models.Id) e.Error {
 	projectTemplate := &models.ProjectTemplate{}
 	err := c.DB().Model(&models.ProjectTemplate{}).Where("template_id = ?", tplId).First(&projectTemplate)
 	if err != nil {
@@ -96,7 +96,7 @@ func IsTplAssociationCurrentProject(c *ctx.ServiceContext, projectId models.Id, 
 		}
 		return e.New(e.DBError, err)
 	}
-	if projectId != projectTemplate.ProjectId {
+	if c.ProjectId != projectTemplate.ProjectId {
 		return e.New(e.TemplateNotAssociationCurrentProject, fmt.Errorf("the passed tplId is not associated with the current project and cannot create an environment"))
 	}
 	return nil

@@ -295,7 +295,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, err
 	}
 
-	err = services.IsTplAssociationCurrentProject(c, c.ProjectId, form.TplId)
+	err = services.IsTplAssociationCurrentProject(c, form.TplId)
 	if err != nil {
 		return nil, err
 	}
