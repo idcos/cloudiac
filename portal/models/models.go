@@ -241,5 +241,8 @@ func Init(migrate bool) {
 	autoMigrate(&Bill{}, sess)
 	autoMigrate(&BillData{}, sess)
 
+	autoMigrate(&Bill{}, sess)
+	autoMigrate(&BillData{}, sess)
+
 	dbMigrate(sess)
 }

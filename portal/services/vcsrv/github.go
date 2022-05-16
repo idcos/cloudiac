@@ -39,7 +39,7 @@ func (github *githubVcs) GetRepo(idOrPath string) (RepoIface, error) {
 	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s", idOrPath), nil)
 	_, body, er := githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if er != nil {
-		return nil, e.New(e.BadRequest, er)
+		return nil, e.New(e.VcsError, er)
 	}
 
 	rep := RepositoryGithub{}
@@ -74,7 +74,7 @@ func (github *githubVcs) ListRepos(namespace, search string, limit, offset int) 
 	path := utils.GenQueryURL(github.vcs.Address, "/user/repos", urlParam)
 	_, body, err := githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if err != nil {
-		return nil, 0, e.New(e.BadRequest, err)
+		return nil, 0, e.New(e.VcsError, err)
 	}
 
 	token, err := GetVcsToken(github.vcs.VcsToken)
@@ -94,7 +94,7 @@ func (github *githubVcs) ListRepos(namespace, search string, limit, offset int) 
 		},
 	})
 	if err != nil {
-		return nil, 0, e.New(e.BadRequest, err)
+		return nil, 0, e.New(e.VcsError, err)
 	}
 
 	rep := make([]*RepositoryGithub, 0)
@@ -126,7 +126,7 @@ func (github *githubVcs) TokenCheck() error {
 	path := utils.GenQueryURL(github.vcs.Address, "/user/repos", urlParam)
 	response, _, err := githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if err != nil {
-		return e.New(e.BadRequest, err)
+		return e.New(e.VcsError, err)
 	}
 
 	if response.StatusCode > 300 {
@@ -152,7 +152,7 @@ func (github *githubRepoIface) ListBranches() ([]string, error) {
 		fmt.Sprintf("/repos/%s/branches", github.repository.FullName), nil)
 	_, body, err := githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if err != nil {
-		return nil, e.New(e.BadRequest, err)
+		return nil, e.New(e.VcsError, err)
 	}
 	rep := make([]githubBranch, 0)
 
@@ -172,7 +172,7 @@ func (github *githubRepoIface) ListTags() ([]string, error) {
 	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/tags", github.repository.FullName), nil)
 	_, body, err := githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if err != nil {
-		return nil, e.New(e.BadRequest, err)
+		return nil, e.New(e.VcsError, err)
 	}
 	rep := make([]githubTag, 0)
 
@@ -229,7 +229,7 @@ func (github *githubRepoIface) ListFiles(option VcsIfaceOptions) ([]string, erro
 	}
 	_, body, er := githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if er != nil {
-		return []string{}, e.New(e.BadRequest, er)
+		return []string{}, e.New(e.VcsError, er)
 	}
 	resp := make([]string, 0)
 	rep := make([]githubFiles, 0)
@@ -268,7 +268,7 @@ func (github *githubRepoIface) ReadFileContent(branch, path string) (content []b
 		fmt.Sprintf("/repos/%s/contents/%s", github.repository.FullName, path), urlParam)
 	response, body, er := githubRequest(pathAddr, "GET", github.vcs.VcsToken, nil)
 	if er != nil {
-		return nil, e.New(e.BadRequest, er)
+		return nil, e.New(e.VcsError, er)
 	}
 	grc := githubReadContent{}
 	if err := json.Unmarshal(body[:], &grc); err != nil {
@@ -282,7 +282,7 @@ func (github *githubRepoIface) ReadFileContent(branch, path string) (content []b
 
 	decoded, err := base64.StdEncoding.DecodeString(grc.Content)
 	if err != nil {
-		return nil, e.New(e.BadRequest, er)
+		return nil, e.New(e.VcsError, er)
 	}
 	return decoded[:], nil
 
@@ -324,7 +324,7 @@ func (github *githubRepoIface) AddWebhook(url string) error {
 	response, respBody, err := githubRequest(path, "POST", github.vcs.VcsToken, b)
 
 	if err != nil {
-		return e.New(e.BadRequest, err)
+		return e.New(e.VcsError, err)
 	}
 
 	if response.StatusCode >= 300 && !strings.Contains(string(respBody), "Hook already exists on this repository") {
@@ -338,7 +338,7 @@ func (github *githubRepoIface) ListWebhook() ([]RepoHook, error) {
 	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/hooks", github.repository.FullName), nil)
 	_, body, err := githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if err != nil {
-		return nil, e.New(e.BadRequest, err)
+		return nil, e.New(e.VcsError, err)
 	}
 
 	return initRepoHook(body), nil
@@ -348,7 +348,7 @@ func (github *githubRepoIface) DeleteWebhook(id int) error {
 	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/hooks/%d", github.repository.FullName, id), nil)
 	_, _, err := githubRequest(path, "DELETE", github.vcs.VcsToken, nil)
 	if err != nil {
-		return e.New(e.BadRequest, err)
+		return e.New(e.VcsError, err)
 	}
 	return nil
 }
@@ -367,7 +367,7 @@ func (github *githubRepoIface) CreatePrComment(prId int, comment string) error {
 	response, body, err := githubRequest(path, http.MethodPost, github.vcs.VcsToken, b)
 
 	if err != nil {
-		return e.New(e.BadRequest, err)
+		return e.New(e.VcsError, err)
 	}
 
 	if response.StatusCode > 300 {

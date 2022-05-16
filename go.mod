@@ -5,7 +5,6 @@ go 1.16
 replace github.com/google/flatbuffers v1.12.0 => github.com/google/flatbuffers v1.12.1
 
 require (
-	github.com/DATA-DOG/go-txdb v0.1.5
 	github.com/Masterminds/semver v1.5.0
 	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/Shopify/sarama v1.28.0
@@ -80,13 +79,13 @@ require (
 	github.com/tidwall/gjson v1.14.0
 	github.com/unliar/utils v0.1.1
 	github.com/xanzy/go-gitlab v0.47.0
-	github.com/zclconf/go-cty v1.9.1 // indirect
+	github.com/zclconf/go-cty v1.9.1
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/sys v0.0.0-20220111092808-5a964db01320 // indirect
 	golang.org/x/text v0.3.7
 	golang.org/x/tools v0.1.9 // indirect
-	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa
+	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa // indirect
 	google.golang.org/grpc v1.43.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
