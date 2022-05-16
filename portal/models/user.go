@@ -16,7 +16,6 @@ type User struct {
 	IsAdmin     bool   `json:"isAdmin" gorm:"default:false;comment:是否为系统管理员" example:"false"`                                                     // 是否为系统管理员
 	Status      string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:用户状态" enums:"enable,disable" example:"enable"` // 用户状态
 	NewbieGuide JSON   `json:"newbieGuide" gorm:"type:json;null;comment:新手引导状态" swaggertype:"string" example:"{\"1\"}"`                           // 新手引导状态
-	IsLdap      bool   `json:"isLdap" gorm:"default:false;comment:是否为ldap账号"`                                                                     // 是否为Ldap 账号
 }
 
 func (User) TableName() string {
