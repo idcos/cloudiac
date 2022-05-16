@@ -19,6 +19,9 @@ CONSUL_ADDRESS=""
 # cloudiac registry 服务地址(选填)，示例：http://registry.cloudiac.org
 REGISTRY_ADDRESS=""
 
+# iac服务器ip(生成openssl证书必填)
+IAC_DOMAIN_IP =""
+
 # 使用 https 向外（比如runner）发送请求的时候是否允许使用不安全证书
 HTTP_CLIENT_INSECURE=false
 
