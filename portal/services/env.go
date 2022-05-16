@@ -3,7 +3,9 @@
 package services
 
 import (
+	"cloudiac/portal/libs/ctx"
 	"fmt"
+	"gorm.io/gorm"
 	"math/rand"
 	"strings"
 	"time"
@@ -85,6 +87,21 @@ func GetEnvById(tx *db.Session, id models.Id) (*models.Env, e.Error) {
 	return &o, nil
 }
 
+func IsTplAssociationCurrentProject(c *ctx.ServiceContext, tplId models.Id) e.Error {
+	projectTemplate := &models.ProjectTemplate{}
+	err := c.DB().Model(&models.ProjectTemplate{}).Where("template_id = ?", tplId).First(&projectTemplate)
+	if err != nil {
+		if errors.As(err, &gorm.ErrRecordNotFound) {
+			return e.New(e.TemplateNotAssociationCurrentProject, fmt.Errorf("the passed tplId is not associated with the current project and cannot create an environment"))
+		}
+		return e.New(e.DBError, err)
+	}
+	if c.ProjectId != projectTemplate.ProjectId {
+		return e.New(e.TemplateNotAssociationCurrentProject, fmt.Errorf("the passed tplId is not associated with the current project and cannot create an environment"))
+	}
+	return nil
+}
+
 func QueryEnvDetail(dbSess *db.Session, orgId, projectId models.Id) *db.Session {
 	query := dbSess.Where("iac_env.org_id = ? AND iac_env.project_id = ?", orgId, projectId)
 	query = query.Model(&models.Env{}).LazySelectAppend("iac_env.*")
@@ -141,7 +158,8 @@ func GetEnvByTplId(tx *db.Session, tplId models.Id) ([]models.Env, error) {
 }
 
 func QueryActiveEnv(query *db.Session) *db.Session {
-	return query.Model(&models.Env{}).Where("status != ? OR deploying = ?", models.EnvStatusInactive, true)
+	return query.Model(&models.Env{}).Where("status in (?,?) OR deploying = ?",
+		models.EnvStatusActive, models.EnvStatusFailed, true)
 }
 
 func QueryDeploySucessEnv(query *db.Session) *db.Session {

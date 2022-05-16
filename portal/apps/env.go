@@ -295,6 +295,11 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, err
 	}
 
+	err = services.IsTplAssociationCurrentProject(c, form.TplId)
+	if err != nil {
+		return nil, err
+	}
+
 	// 检查模板
 	tpl, err := getCreateEnvTpl(c, form)
 	if err != nil {

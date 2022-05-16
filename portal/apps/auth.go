@@ -59,8 +59,8 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err 
 			return nil, err
 		}
 	}
-	if er1 := validPassword(c, user, form.Email, form.Password); er1 != nil {
-		return nil, err
+	if err := validPassword(c, user, form.Email, form.Password); err != nil {
+		return nil, e.New(e.InvalidPassword, http.StatusInternalServerError)
 	}
 	token, er := services.GenerateToken(user.Id, user.Name, user.IsAdmin, 1*24*time.Hour)
 	if er != nil {

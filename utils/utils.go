@@ -23,7 +23,6 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -472,10 +471,13 @@ func IsFalseStr(s string) bool {
 	return StrInArray(strings.ToLower(s), "off", "false", "0", "no")
 }
 
-func JoinURL(address string, elems ...string) string {
-	return fmt.Sprintf("%s/%s",
-		strings.TrimRight(address, "/"),
-		strings.TrimLeft(path.Join(elems...), "/"))
+func JoinURL(prefix string, elems ...string) string {
+	if len(elems) == 0 {
+		return prefix
+	} else {
+		prefix = fmt.Sprintf("%s/%s", strings.TrimSuffix(prefix, "/"), strings.TrimPrefix(elems[0], "/"))
+		return JoinURL(prefix, elems[1:]...)
+	}
 }
 
 // SprintTemplate 用模板参数格式化字符串
@@ -641,7 +643,7 @@ func Set(arr []string) []string {
 }
 
 // StructToMap 结构体转为map[string]interface{}
-func StructToMap(in interface{}, tagName string) (map[string]interface{}, error){
+func StructToMap(in interface{}, tagName string) (map[string]interface{}, error) {
 	out := make(map[string]interface{})
 
 	v := reflect.ValueOf(in)
@@ -649,7 +651,7 @@ func StructToMap(in interface{}, tagName string) (map[string]interface{}, error)
 		v = v.Elem()
 	}
 
-	if v.Kind() != reflect.Struct {  // 非结构体返回错误提示
+	if v.Kind() != reflect.Struct { // 非结构体返回错误提示
 		return nil, fmt.Errorf("StructToMap only accepts struct; got %T", v)
 	}
 

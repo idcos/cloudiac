@@ -48,6 +48,8 @@ type RunTaskReq struct {
 	RepoBranch   string     `json:"repoBranch" binding:""`  // git branch or tag
 	RepoCommitId string     `json:"repoCommitId" binding:""`
 
+	NetworkMirror string `json:"networkMirror"` // terraform network mirror url
+
 	SysEnvironments map[string]string `json:"sysEnvironments "` // 系统注入的环境变量
 
 	Timeout    int    `json:"timeout"`

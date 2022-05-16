@@ -41,6 +41,8 @@ const (
 	PolicySeverityHigh               = "HIGH"
 	PolicySeverityMedium             = "MEDIUM"
 	PolicySeverityLow                = "LOW"
+
+	RegistryMirrorUri = "/v1/mirrors/providers/"
 )
 
 const (
