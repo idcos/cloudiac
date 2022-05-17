@@ -91,3 +91,6 @@ CONSUL_TLS=false
 ### tls证书地址(开始tls认证必填)
 CONSUL_CERT_PATH=""
 
+# 询价服务端地址
+COST_SERVE = ""
+

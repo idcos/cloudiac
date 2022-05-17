@@ -212,6 +212,9 @@ CONSUL_TLS=false
 ### tls证书地址(开始tls认证必填)
 CONSUL_CERT_PATH=""
 
+# 询价服务端地址
+COST_SERVE = ""
+
 ```
 
 *通过 .env 可以配置大部分参数，需要更详细的配置可以拷贝镜像里的 config-portal.yml 和 config-runner.yml 文件，修改后再挂载到容器中进行替换*

@@ -133,6 +133,7 @@ type Config struct {
 	HttpClientInsecure bool             `yaml:"httpClientInsecure"`
 	Policy             PolicyConfig     `yaml:"policy"`
 	Ldap               LdapConfig       `yaml:"ldap"`
+	CostServe          string           `yaml:"cost_serve"`
 }
 
 const (
