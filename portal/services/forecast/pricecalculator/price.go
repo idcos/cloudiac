@@ -5,22 +5,51 @@ package pricecalculator
 import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/models"
-	"cloudiac/portal/services/forecast/pricecalculator/alicloud"
 	"cloudiac/portal/services/forecast/schema"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
-	bssopenapi20171214 "github.com/alibabacloud-go/bssopenapi-20171214/client"
 )
 
+type CloudCostPriceRequest struct {
+	Results []Result `json:"results"`
+}
+
+type Result struct {
+	Address  string     `json:"address"`
+	Provider string     `json:"provider"`
+	Region   string     `json:"region"`
+	Resource []Resource `json:"resource"`
+}
+
+type Resource struct {
+	Type      string            `json:"type"`
+	Attribute map[string]string `json:"attribute"`
+}
+
+type PriceResp struct {
+	Results []ResultResp `json:"results"`
+}
+
+type ResultResp struct {
+	Address   string              `json:"address"`
+	PriceAttr []map[string]string `json:"priceAttr"`
+}
+
+type CloudCostPriceResp struct {
+	Code    int       `json:"code"`
+	Message string    `json:"message"`
+	Result  PriceResp `json:"result"`
+}
+
 type PriceService interface {
-	GetResourcePrice(r *schema.Resource) (*bssopenapi20171214.GetPayAsYouGoPriceResponse, error)
+	GetResourcePrice(r *schema.Resource) (CloudCostPriceResp, error)
 }
 
 func NewPriceService(vg *models.VariableGroup, providerName string) (PriceService, error) {
 	switch vg.Provider {
 	case providerName:
-		return alicloud.NewAliCloudBillService(vg, parseResourceAccount)
+		return NewAliCloudBillService(vg, parseResourceAccount)
 	default:
 		logs.Get().Errorf("price service unsupported provider %s", vg.Provider)
 		return nil, fmt.Errorf("price service  unsupported provider %s", vg.Provider)
