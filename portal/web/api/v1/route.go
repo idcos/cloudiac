@@ -143,6 +143,8 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/orgs/:id/users/batch_invite", ac("orgs", "adduser"), w(handlers.Organization{}.InviteUsersBatch))
 	g.DELETE("/orgs/:id/users/:userId", ac("orgs", "removeuser"), w(handlers.Organization{}.RemoveUserForOrg))
 
+	g.GET("/orgs/:id/ous", ac())
+
 	g.GET("/projects/users", ac(), w(handlers.ProjectUser{}.Search))
 	g.GET("/projects/authorization/users", ac(), w(handlers.ProjectUser{}.SearchProjectAuthorizationUser))
 	g.POST("/projects/users", ac(), w(handlers.ProjectUser{}.Create))
