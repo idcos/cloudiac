@@ -6,10 +6,21 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
+	"cloudiac/portal/services"
 )
 
 func GetLdapOUs(c *ctx.ServiceContext) (interface{}, e.Error) {
-	return nil, nil
+	ous, err := services.SearchLdapOUs()
+	if err != nil {
+		return nil, err
+	}
+
+	var resp = &resps.LdapOUListResp{
+		LdapOUs: ous,
+	}
+
+	return resp, nil
 }
 
 func GetLdapUsers(c *ctx.ServiceContext, form *forms.SearchLdapUserForm) (interface{}, e.Error) {

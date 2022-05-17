@@ -3,8 +3,8 @@
 package resps
 
 type LdapOUResp struct {
-	Dn  string   `json:"dn"`
-	OUs []string `json:"ous"`
+	DN string `json:"dn"`
+	OU string `json:"ou"`
 }
 
 type LdapOUListResp struct {

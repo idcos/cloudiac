@@ -16,7 +16,7 @@ import (
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
 // @Success 200 {object}  ctx.JSONResult{result=resps.LdapOUListResp}
-// @Router /orgs/{id}/ldap_ous [get]
+// @Router /orgs/ldap_ous [get]
 func GetLdapOUs(c *ctx.GinRequest) {
 	c.JSONResult(apps.GetLdapOUs(c.Service()))
 }
@@ -30,7 +30,7 @@ func GetLdapOUs(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织id"
 // @Param form query forms.SearchLdapUserForm true "parameter"
 // @Success 200 {object}  ctx.JSONResult{result=resps.LdapUserListResp}
-// @Router /orgs/{id}/ldap_users [get]
+// @Router /orgs/ldap_users [get]
 func GetLdapUsers(c *ctx.GinRequest) {
 	form := &forms.SearchLdapUserForm{}
 	if err := c.Bind(form); err != nil {
