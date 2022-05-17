@@ -32,7 +32,7 @@ func closeLdap(conn *ldap.Conn) {
 	}
 }
 
-func SearchLdapOUs() ([]resps.LdapOUResp, e.Error) {
+func SearchLdapOUs() (*resps.LdapOUResp, e.Error) {
 	conn, er := connectLdap()
 	if er != nil {
 		return nil, e.New(e.LdapConnectFailed, er)

@@ -3,12 +3,9 @@
 package resps
 
 type LdapOUResp struct {
-	DN string `json:"dn"`
-	OU string `json:"ou"`
-}
-
-type LdapOUListResp struct {
-	LdapOUs []LdapOUResp `json:"ldap_ous"`
+	DN       string       `json:"dn"`
+	OU       string       `json:"ou"`
+	Children []LdapOUResp `json:"children"`
 }
 
 type LdapUserResp struct {

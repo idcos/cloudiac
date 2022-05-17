@@ -12,15 +12,7 @@ import (
 
 func GetLdapOUs(c *ctx.ServiceContext) (interface{}, e.Error) {
 	ous, err := services.SearchLdapOUs()
-	if err != nil {
-		return nil, err
-	}
-
-	var resp = &resps.LdapOUListResp{
-		LdapOUs: ous,
-	}
-
-	return resp, nil
+	return ous, err
 }
 
 // TODO: 未过滤用户，前端过滤，返回所有用户
