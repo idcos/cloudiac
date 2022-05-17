@@ -23,7 +23,6 @@ func GetRegistryAddrStr(db *db.Session) string {
 	if err == nil && cfg != nil {
 		return strings.TrimRight(cfg.Value, "/")
 	}
-
 	return strings.TrimRight(configs.Get().RegistryAddr, "/")
 }
 
@@ -82,5 +81,8 @@ func RegistryGet(path string, data url.Values, result interface{}) (err error) {
 
 func GetRegistryMirrorUrl(db *db.Session) string {
 	hostAddr := GetRegistryAddrStr(db)
+	if hostAddr == "" {
+		return ""
+	}
 	return utils.JoinURL(hostAddr, consts.RegistryMirrorUri)
 }
