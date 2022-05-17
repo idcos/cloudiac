@@ -2,7 +2,7 @@
 
 package models
 
-type LdapOrgUnit struct {
+type LdapOUOrg struct {
 	BaseModel
 
 	OrgId Id     `json:"orgId" gorm:"size:32;not null;comment:组织ID"`                                   // 组织ID
@@ -11,6 +11,19 @@ type LdapOrgUnit struct {
 	OU    string `json:"ou" gorm:"type:text"`                                                          // org units
 }
 
-func (LdapOrgUnit) TableName() string {
-	return "iac_ldap_org_unit"
+func (LdapOUOrg) TableName() string {
+	return "iac_ldap_ou_org"
+}
+
+type LdapOUProject struct {
+	BaseModel
+
+	ProjectId Id     `json:"projectId" gorm:"size:32;not null"`
+	Role      string `json:"role" gorm:"type:enum('admin','complianceManager','member');default:'member'"` // 角色
+	DN        string `json:"dn" gorm:"type:text"`                                                          // 识别名
+	OU        string `json:"ou" gorm:"type:text"`                                                          // org units
+}
+
+func (LdapOUProject) TableName() string {
+	return "iac_ldap_ou_project"
 }

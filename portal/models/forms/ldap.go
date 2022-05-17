@@ -21,6 +21,7 @@ type AuthLdapUserForm struct {
 type AuthLdapOUForm struct {
 	BaseForm
 
-	Dn   string `json:"db" form:"db"`     // 识别名
+	DN   string `json:"dn" form:"dn"`     // 识别名
+	OU   string `json:"ou" form:"ou"`     // organizationalUnit
 	Role string `json:"role" form:"role"` // 角色
 }

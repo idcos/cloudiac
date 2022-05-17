@@ -5,6 +5,7 @@ package apps
 import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
@@ -34,5 +35,12 @@ func AuthLdapUser(c *ctx.ServiceContext, form *forms.AuthLdapUserForm) (interfac
 }
 
 func AuthLdapOU(c *ctx.ServiceContext, form *forms.AuthLdapOUForm) (interface{}, e.Error) {
-	return nil, nil
+	result, err := services.CreateOUOrg(c.DB(), models.LdapOUOrg{
+		OrgId: c.OrgId,
+		DN:    form.DN,
+		OU:    form.OU,
+		Role:  form.Role,
+	})
+
+	return result, err
 }

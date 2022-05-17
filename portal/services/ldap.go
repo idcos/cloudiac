@@ -5,6 +5,8 @@ package services
 import (
 	"cloudiac/configs"
 	"cloudiac/portal/consts/e"
+	"cloudiac/portal/libs/db"
+	"cloudiac/portal/models"
 	"cloudiac/portal/models/resps"
 	"fmt"
 
@@ -140,4 +142,15 @@ func SearchLdapUsers(q string, count int) ([]resps.LdapUserResp, e.Error) {
 	}
 
 	return results, nil
+}
+
+func CreateOUOrg(sess *db.Session, m models.LdapOUOrg) (*resps.AuthLdapOUResp, e.Error) {
+	err := sess.Insert(&m)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	return &resps.AuthLdapOUResp{
+		Id: m.Id.String(),
+	}, nil
 }
