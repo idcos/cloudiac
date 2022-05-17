@@ -12,7 +12,7 @@ type LdapOUListResp struct {
 }
 
 type LdapUserResp struct {
-	Dn    string `json:"dn"`
+	DN    string `json:"dn"`
 	Uid   string `json:"uid"`
 	Email string `json:"email"`
 }

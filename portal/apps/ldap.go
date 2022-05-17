@@ -23,8 +23,18 @@ func GetLdapOUs(c *ctx.ServiceContext) (interface{}, e.Error) {
 	return resp, nil
 }
 
+// TODO: 未过滤用户，前端过滤，返回所有用户
 func GetLdapUsers(c *ctx.ServiceContext, form *forms.SearchLdapUserForm) (interface{}, e.Error) {
-	return nil, nil
+	users, err := services.SearchLdapUsers(form.Q, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp = &resps.LdapUserListResp{
+		LdapUsers: users,
+	}
+
+	return resp, nil
 }
 
 func AuthLdapUser(c *ctx.ServiceContext, form *forms.AuthLdapUserForm) (interface{}, e.Error) {
