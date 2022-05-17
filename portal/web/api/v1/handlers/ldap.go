@@ -38,3 +38,39 @@ func GetLdapUsers(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.GetLdapUsers(c.Service(), form))
 }
+
+// AuthLdapUser ldap user 授权
+// @Summary ldap user 授权
+// @Tags ldap
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
+// @Param form query forms.AuthLdapUserForm true "parameter"
+// @Success 200 {object}  ctx.JSONResult{result=resps.AuthLdapUserResp}
+// @Router /orgs/{id}/ldap_user [post]
+func AuthLdapUser(c *ctx.GinRequest) {
+	form := &forms.AuthLdapUserForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.AuthLdapUser(c.Service(), form))
+}
+
+// AuthLdapOU ldap ou 授权
+// @Summary ldap ou 授权
+// @Tags ldap
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
+// @Param form query forms.AuthLdapOUForm true "parameter"
+// @Success 200 {object}  ctx.JSONResult{result=resps.AuthLdapOUResp}
+// @Router /orgs/{id}/ldap_user [post]
+func AuthLdapOU(c *ctx.GinRequest) {
+	form := &forms.AuthLdapOUForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.AuthLdapOU(c.Service(), form))
+}

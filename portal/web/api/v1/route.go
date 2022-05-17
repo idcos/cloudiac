@@ -145,9 +145,9 @@ func Register(g *gin.RouterGroup) {
 
 	// ldap 相关
 	g.GET("/orgs/:id/ldap_ous", ac(), w(handlers.GetLdapOUs))
-	g.GET("/orgs/:id/ldap_users", ac())
-	g.POST("/orgs/:id/ldap_user", ac())
-	g.POST("/orgs/:id/ldap_ou", ac())
+	g.GET("/orgs/:id/ldap_users", ac(), w(handlers.GetLdapUsers))
+	g.POST("/orgs/:id/ldap_user", ac(), w(handlers.AuthLdapUser))
+	g.POST("/orgs/:id/ldap_ou", ac(), w(handlers.AuthLdapOU))
 
 	g.GET("/projects/users", ac(), w(handlers.ProjectUser{}.Search))
 	g.GET("/projects/authorization/users", ac(), w(handlers.ProjectUser{}.SearchProjectAuthorizationUser))

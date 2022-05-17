@@ -21,10 +21,10 @@ type LdapUserListResp struct {
 	LdapUsers []LdapUserResp `json:"ldap_users"`
 }
 
-type LdapUserAuthResp struct {
+type AuthLdapUserResp struct {
 	Id string `json:"id"`
 }
 
-type LdapOUAuthResp struct {
+type AuthLdapOUResp struct {
 	Id string `json:"id"`
 }

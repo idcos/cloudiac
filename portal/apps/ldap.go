@@ -15,3 +15,11 @@ func GetLdapOUs(c *ctx.ServiceContext) (interface{}, e.Error) {
 func GetLdapUsers(c *ctx.ServiceContext, form *forms.SearchLdapUserForm) (interface{}, e.Error) {
 	return nil, nil
 }
+
+func AuthLdapUser(c *ctx.ServiceContext, form *forms.AuthLdapUserForm) (interface{}, e.Error) {
+	return nil, nil
+}
+
+func AuthLdapOU(c *ctx.ServiceContext, form *forms.AuthLdapOUForm) (interface{}, e.Error) {
+	return nil, nil
+}
