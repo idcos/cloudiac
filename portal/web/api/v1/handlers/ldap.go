@@ -15,7 +15,7 @@ import (
 // @Produce  json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
-// @Success 200 {object}  ctx.JSONResult{result=resps.LdapOUListResp}
+// @Success 200 {object}  ctx.JSONResult{result=resps.LdapOUResp}
 // @Router /orgs/ldap_ous [get]
 func GetLdapOUs(c *ctx.GinRequest) {
 	c.JSONResult(apps.GetLdapOUs(c.Service()))
