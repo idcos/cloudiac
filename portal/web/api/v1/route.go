@@ -144,7 +144,7 @@ func Register(g *gin.RouterGroup) {
 	g.DELETE("/orgs/:id/users/:userId", ac("orgs", "removeuser"), w(handlers.Organization{}.RemoveUserForOrg))
 
 	// ldap 相关
-	g.GET("/orgs/:id/ldap_ous", ac())
+	g.GET("/orgs/:id/ldap_ous", ac(), w(handlers.GetLdapOUs))
 	g.GET("/orgs/:id/ldap_users", ac())
 	g.POST("/orgs/:id/ldap_user", ac())
 	g.POST("/orgs/:id/ldap_ou", ac())
