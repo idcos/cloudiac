@@ -17,21 +17,19 @@ import (
 )
 
 func validPassword(c *ctx.ServiceContext, user *models.User, email, password string) e.Error {
-	if user.IsLdap {
-		if _, err := services.LdapAuthLogin(email, password); err != nil {
-			c.Logger().Warnf("ldap login error: %v", err)
-			return e.New(e.InvalidPassword, http.StatusUnauthorized)
-		}
-		return nil
-	}
-
 	valid, err := utils.CheckPassword(password, user.Password)
 	if err != nil {
 		c.Logger().Warnf("check password error: %v", err)
 		return e.New(e.InternalError, http.StatusInternalServerError)
 	}
 	if !valid {
-		return e.New(e.InvalidPassword, http.StatusUnauthorized)
+		// 如果本地账号验证未通过，进行ldap登陆验证
+		if configs.Get().Ldap.LdapServer != "" {
+			if _, err := services.LdapAuthLogin(email, password); err != nil {
+				c.Logger().Warnf("login error: %v", err)
+				return e.New(e.InvalidPassword, http.StatusUnauthorized)
+			}
+		}
 	}
 	return nil
 }
@@ -42,36 +40,33 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err 
 	user, err := services.GetUserByEmail(c.DB(), form.Email)
 	if err != nil {
 		if err.Code() == e.UserNotExists && configs.Get().Ldap.LdapServer != "" {
-			// 使用ldap 进行登录
+			// 当错误为用户邮箱不存在的时候，尝试使用ldap 进行登录
 			username, ldapErr := services.LdapAuthLogin(form.Email, form.Password)
 			if ldapErr != nil {
 				// 找不到账号时也返回 InvalidPassword 错误，避免暴露系统中己有用户账号
 				c.Logger().Warnf("ldap auth login: %v", ldapErr)
 				return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
 			}
-
-			// 登录成功, 标记账号为ldap用户，并且在用户表中添加该用户
-			user, err = services.CreateUser(c.DB(), models.User{
-				Name:   username,
-				Email:  form.Email,
-				IsLdap: true,
-			})
+			// 登录成功, 在用户表中添加该用户
+			if user, err = services.CreateUser(c.DB(), models.User{
+				Name:  username,
+				Email: form.Email,
+			}); err != nil {
+				c.Logger().Warnf("create user error: %v", err)
+				return nil, e.New(e.InternalError, http.StatusInternalServerError)
+			}
+		} else {
+			return nil, err
 		}
-
-		if err != nil {
-			c.Logger().Warnf("get or create user error: %v", err)
-			return nil, e.New(e.InternalError, http.StatusInternalServerError)
-		}
-	} else if err := validPassword(c, user, form.Email, form.Password); err != nil {
-		return nil, err
 	}
-
+	if err := validPassword(c, user, form.Email, form.Password); err != nil {
+		return nil, e.New(e.InvalidPassword, http.StatusInternalServerError)
+	}
 	token, er := services.GenerateToken(user.Id, user.Name, user.IsAdmin, 1*24*time.Hour)
 	if er != nil {
 		c.Logger().Errorf("name [%s] generateToken error: %v", user.Email, er)
 		return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
 	}
-
 	data := resps.LoginResp{
 		//UserInfo: user,
 		Token: token,

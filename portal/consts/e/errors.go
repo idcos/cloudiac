@@ -27,6 +27,7 @@ const (
 	JSONParseError = 10100
 	HCLParseError  = 10101
 	URLParseError  = 10102
+	DateParseError = 10103
 
 	//// db 错误 102
 	DBError           = 10200 // db 操作出错
@@ -133,11 +134,12 @@ const (
 	TokenAliasDuplicate = 30613
 
 	//// template 307
-	TemplateAlreadyExists   = 30710
-	TemplateNotExists       = 30711
-	TemplateDisabled        = 30712
-	TemplateActiveEnvExists = 30730
-	TemplateKeyIdNotSet     = 30731
+	TemplateAlreadyExists                = 30710
+	TemplateNotExists                    = 30711
+	TemplateDisabled                     = 30712
+	TemplateNotAssociationCurrentProject = 30713
+	TemplateActiveEnvExists              = 30730
+	TemplateKeyIdNotSet                  = 30731
 
 	//// environment 308
 	EnvAlreadyExists        = 30810
@@ -214,5 +216,4 @@ const (
 
 	// Ldap 317
 	LdapConnectFailed  = 31710
-	LdapNotAllowUpdate = 31720
 )

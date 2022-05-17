@@ -4,8 +4,10 @@ package services
 
 import (
 	"cloudiac/configs"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
@@ -21,7 +23,6 @@ func GetRegistryAddrStr(db *db.Session) string {
 	if err == nil && cfg != nil {
 		return strings.TrimRight(cfg.Value, "/")
 	}
-
 	return strings.TrimRight(configs.Get().RegistryAddr, "/")
 }
 
@@ -76,4 +77,12 @@ func RegistryGet(path string, data url.Values, result interface{}) (err error) {
 		return err
 	}
 	return nil
+}
+
+func GetRegistryMirrorUrl(db *db.Session) string {
+	hostAddr := GetRegistryAddrStr(db)
+	if hostAddr == "" {
+		return ""
+	}
+	return utils.JoinURL(hostAddr, consts.RegistryMirrorUri)
 }

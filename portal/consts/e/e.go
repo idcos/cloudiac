@@ -99,7 +99,9 @@ func converVcsError(code int, err error) int {
 		case strings.Contains(info, "Unauthorized"):
 			// vcs权限不足
 			return VcsInvalidToken
-		case strings.Contains(info, "connection refused"):
+		case strings.Contains(info, "connection refused") ||
+			strings.Contains(info, "no such host") ||
+			strings.Contains(info, "no route to host"):
 			// vcs连接失败
 			return VcsConnectError
 		case strings.Contains(info, "handshake failure"):

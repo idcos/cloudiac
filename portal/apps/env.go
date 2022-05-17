@@ -295,6 +295,11 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, err
 	}
 
+	err = services.IsTplAssociationCurrentProject(c, form.TplId)
+	if err != nil {
+		return nil, err
+	}
+
 	// 检查模板
 	tpl, err := getCreateEnvTpl(c, form)
 	if err != nil {
@@ -1586,7 +1591,7 @@ func checkDeployVar(vars []forms.Variable) []forms.Variable {
 func getEnvSource(source string) (taskSource string, taskSourceSys string) {
 	taskSource = consts.TaskSourceManual
 	taskSourceSys = ""
-	if source != consts.TaskSourceManual {
+	if source != "" {
 		taskSource = consts.TaskSourceApi
 		taskSourceSys = source
 	}

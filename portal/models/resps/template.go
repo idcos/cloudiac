@@ -10,8 +10,8 @@ type SearchTemplateResp struct {
 	Id                  models.Id   `json:"id"`
 	Name                string      `json:"name"`
 	Description         string      `json:"description"`
-	ActiveEnvironment   int         `json:"activeEnvironment"`
-	RelationEnvironment int         `json:"relationEnvironment"`
+	ActiveEnvironment   *int        `json:"activeEnvironment,omitempty"` // 定义为 *int，以区分数值 0 和未赋值
+	RelationEnvironment *int        `json:"relationEnvironment,omitempty"`
 	RepoRevision        string      `json:"repoRevision"`
 	Creator             string      `json:"creator"`
 	RepoId              string      `json:"repoId"`
