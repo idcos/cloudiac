@@ -240,7 +240,7 @@ func (Organization) InviteUser(c *ctx.GinRequest) {
 //@Param IaC-Org-Id header string true "组织ID"
 //@Param form query forms.SearchOrgResourceForm true "parameter"
 //@router /orgs/resources [get]
-//@Success 200 {object} ctx.JSONResult{result=resps.OrgResourcesResp}
+//@Success 200 {object} ctx.JSONResult{result=resps.OrgOrProjectResourcesResp}
 func (Organization) SearchOrgResources(c *ctx.GinRequest) {
 	form := forms.SearchOrgResourceForm{}
 	if err := c.Bind(&form); err != nil {
@@ -249,16 +249,16 @@ func (Organization) SearchOrgResources(c *ctx.GinRequest) {
 	c.JSONResult(apps.SearchOrgResources(c.Service(), &form))
 }
 
-//SearchOrgResourcesFilters 搜索当前组织下所有项目的活跃环境名称以及provider
+//SearchOrgResourcesFilters 搜索当前组织下所有项目名称以及provider
 //@Tags 组织
-//@Summary 搜索当前组织下所有项目的活跃资源列表
+//@Summary 搜索当前组织下所有项目名称以及provider
 //@Accept application/x-www-form-urlencoded
 //@Produce json
 //@Security AuthToken
 //@Param IaC-Org-Id header string true "组织ID"
 //@Param form query forms.SearchOrgResourceForm true "parameter"
 //@router /orgs/resources/filters [get]
-//@Success 200 {object} ctx.JSONResult{result=[]resps.OrgEnvAndProviderResp}
+//@Success 200 {object} ctx.JSONResult{result=[]resps.OrgProjectAndProviderResp}
 func (Organization) SearchOrgResourcesFilters(c *ctx.GinRequest) {
 	form := forms.SearchOrgResourceForm{}
 	if err := c.Bind(&form); err != nil {

@@ -52,3 +52,10 @@ type ProjectStatForm struct {
 	ProjectId models.Id `uri:"id" json:"id" binding:"required"`
 	Limit     int       `form:"limit" json:"limit"`
 }
+
+type SearchProjectResourceForm struct {
+	PageForm
+	Q         string `form:"q" json:"q" binding:""`                 // 资源名称，支持模糊查询
+	EnvIds    string `form:"envIds" json:"envIds" binding:""`       // 环境id列表
+	Providers string `form:"providers" json:"providers" binding:""` // provider 名称列表
+}

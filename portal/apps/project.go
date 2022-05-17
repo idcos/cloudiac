@@ -13,9 +13,12 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
+	"cloudiac/utils"
 	"errors"
 	"fmt"
 	"net/http"
+	"path"
+	"strings"
 )
 
 func CreateProject(c *ctx.ServiceContext, form *forms.CreateProjectForm) (interface{}, e.Error) {
@@ -250,6 +253,51 @@ func UpdateProject(c *ctx.ServiceContext, form *forms.UpdateProjectForm) (interf
 
 func DeleteProject(c *ctx.ServiceContext, form *forms.DeleteProjectForm) (interface{}, e.Error) {
 	return nil, e.New(e.NotImplement)
+}
+
+func SearchProjectResourcesFilters(c *ctx.ServiceContext, form *forms.SearchProjectResourceForm) (*resps.OrgEnvAndProviderResp, e.Error) {
+	query := services.GetOrgOrProjectResourcesQuery(c.DB().Model(&models.Resource{}), form.Q, c.OrgId, c.ProjectId, c.UserId, c.IsSuperAdmin)
+	type SearchResult struct {
+		EnvName  string    `json:"env_name"`
+		EnvId    models.Id `json:"env_id"`
+		Provider string    `json:"provider"`
+	}
+	rs := make([]SearchResult, 0)
+	if err := query.Scan(&rs); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	r := &resps.OrgEnvAndProviderResp{}
+	temp := map[string]interface{}{}
+	for _, v := range rs {
+		if _, ok := temp[v.EnvName]; !ok {
+			// 通过map 对环境名称进行过滤
+			r.Envs = append(r.Envs, resps.EnvResp{EnvName: v.EnvName, EnvId: v.EnvId})
+			temp[v.EnvName] = nil
+		}
+		r.Providers = append(r.Providers, path.Base(v.Provider))
+	}
+	r.Providers = utils.Set(r.Providers)
+
+	return r, nil
+}
+
+func SearchProjectResources(c *ctx.ServiceContext, form *forms.SearchProjectResourceForm) (interface{}, e.Error) {
+	query := services.GetOrgOrProjectResourcesQuery(c.DB().Model(&models.Resource{}), form.Q, c.OrgId, c.ProjectId, c.UserId, c.IsSuperAdmin)
+	if len(form.EnvIds) != 0 {
+		query = query.Where("iac_env.id in (?)", strings.Split(form.EnvIds, ","))
+	}
+	query = services.GetProviderQuery(form.Providers, query)
+	query = query.Order("project_id, env_id, provider desc")
+	rs, p, err := services.GetOrgOrProjectResourcesResp(form.CurrentPage(), form.PageSize(), query)
+	if err != nil {
+		return nil, err
+	}
+	return &page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     rs,
+	}, nil
+
 }
 
 func DetailProject(c *ctx.ServiceContext, form *forms.DetailProjectForm) (interface{}, e.Error) {
