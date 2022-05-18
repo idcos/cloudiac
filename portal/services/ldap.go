@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"github.com/go-ldap/ldap/v3"
+	"gorm.io/gorm"
 )
 
 func connectLdap() (*ldap.Conn, e.Error) {
@@ -145,12 +146,87 @@ func SearchLdapUsers(q string, count int) ([]resps.LdapUserResp, e.Error) {
 }
 
 func CreateOUOrg(sess *db.Session, m models.LdapOUOrg) (*resps.AuthLdapOUResp, e.Error) {
-	err := sess.Insert(&m)
+	// 判断ou是否存在
+	var ouOrg models.LdapOUOrg
+	err := sess.Model(&models.LdapOUOrg{}).Where(`org_id = ?`, m.OrgId).Where(`dn = ?`, m.DN).First(&ouOrg)
+
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, e.New(e.DBError, err)
+	}
+
+	if err == gorm.ErrRecordNotFound {
+		err = sess.Insert(&m)
+	} else {
+		m.Id = ouOrg.Id
+		_, err = sess.Model(&ouOrg).Update(models.LdapOUOrg{Role: m.Role})
+	}
+
 	if err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 
 	return &resps.AuthLdapOUResp{
 		Id: m.Id.String(),
+	}, nil
+}
+
+func CreateLdapUserOrg(sess *db.Session, orgId models.Id, m models.User, role string) (*resps.AuthLdapUserResp, e.Error) {
+	var err error
+	// 判断 user 是否存在
+	var user models.User
+	err = sess.Model(&models.User{}).Where(`email = ?`, m.Email).First(&user)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, e.New(e.DBError, err)
+	}
+
+	tx := sess.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	// 用户不存在
+	userId := user.Id
+	if err == gorm.ErrRecordNotFound {
+		err = tx.Insert(&m)
+		if err != nil {
+			_ = tx.Rollback()
+			return nil, e.New(e.DBError, err)
+		}
+
+		userId = m.Id
+	}
+
+	// 用户授权不存在
+	var userOrg models.UserOrg
+	err = sess.Model(&models.UserOrg{}).Where("user_id = ? and org_id = ?", userId, orgId).First(&userOrg)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, e.New(e.DBError, err)
+	}
+
+	if err == gorm.ErrRecordNotFound {
+		err = sess.Insert(&models.UserOrg{
+			UserId: user.Id,
+			OrgId:  orgId,
+			Role:   role,
+		})
+	} else {
+		_, err = sess.Model(&userOrg).Update(models.UserOrg{OrgId: orgId, UserId: userId, Role: role})
+	}
+
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
+
+	return &resps.AuthLdapUserResp{
+		Id: string(userId),
 	}, nil
 }

@@ -31,7 +31,13 @@ func GetLdapUsers(c *ctx.ServiceContext, form *forms.SearchLdapUserForm) (interf
 }
 
 func AuthLdapUser(c *ctx.ServiceContext, form *forms.AuthLdapUserForm) (interface{}, e.Error) {
-	return nil, nil
+	result, err := services.CreateLdapUserOrg(c.DB(), c.OrgId, models.User{
+		Name:  form.Uid,
+		Email: form.Email,
+		Phone: form.Phone,
+	}, form.Role)
+
+	return result, err
 }
 
 func AuthLdapOU(c *ctx.ServiceContext, form *forms.AuthLdapOUForm) (interface{}, e.Error) {
