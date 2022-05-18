@@ -34,6 +34,18 @@ func GetLdapOUsFromDB(c *ctx.ServiceContext, form *forms.SearchLdapOUForm) (inte
 	}, nil
 }
 
+func DeleteLdapOUFromDB(c *ctx.ServiceContext, form *forms.DeleteLdapOUForm) (interface{}, e.Error) {
+
+	_, err := c.DB().Where(`id = ?`, form.Id).Delete(&models.LdapOUOrg{})
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	return resps.DeleteLdapOUResp{
+		Id: form.Id,
+	}, nil
+}
+
 // TODO: 未过滤用户，前端过滤，返回所有用户
 func GetLdapUsers(c *ctx.ServiceContext, form *forms.SearchLdapUserForm) (interface{}, e.Error) {
 	users, err := services.SearchLdapUsers(form.Q, 0)

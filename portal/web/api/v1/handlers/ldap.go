@@ -92,3 +92,21 @@ func GetLdapOUsFromDB(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.GetLdapOUsFromDB(c.Service(), form))
 }
+
+// DeleteLdapOUFromDB 删除 ldap ou
+// @Summary 删除 ldap ou
+// @Tags ldap
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
+// @Param form query forms.DeleteLdapOUForm true "parameter"
+// @Success 200 {object} ctx.JSONResult{result=resps.DeleteLdapOUResp}
+// @Router /orgs/{id}/ldap_ou [delete]
+func DeleteLdapOUFromDB(c *ctx.GinRequest) {
+	form := &forms.DeleteLdapOUForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.DeleteLdapOUFromDB(c.Service(), form))
+}

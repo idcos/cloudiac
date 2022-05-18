@@ -33,3 +33,7 @@ type AuthLdapUserResp struct {
 type AuthLdapOUResp struct {
 	Id string `json:"id"`
 }
+
+type DeleteLdapOUResp struct {
+	Id string `json:"id"`
+}

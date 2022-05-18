@@ -29,3 +29,9 @@ type AuthLdapOUForm struct {
 	OU   string `json:"ou" form:"ou"`     // organizationalUnit
 	Role string `json:"role" form:"role"` // 角色
 }
+
+type DeleteLdapOUForm struct {
+	BaseForm
+
+	Id string `json:"id" form:"id"` // ldap ou id
+}
