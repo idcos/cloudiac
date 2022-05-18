@@ -144,12 +144,12 @@ func Register(g *gin.RouterGroup) {
 	g.DELETE("/orgs/:id/users/:userId", ac("orgs", "removeuser"), w(handlers.Organization{}.RemoveUserForOrg))
 
 	// orgs ldap 相关
-	g.GET("/orgs/:id/ldap_ous", ac(), w(handlers.GetLdapOUsFromDB))
-	g.DELETE("/orgs/:id/ldap_ou", ac(), w(handlers.DeleteLdapOUFromDB))
-	g.GET("/orgs/ldap_ous", ac(), w(handlers.GetLdapOUsFromLdap))
-	g.GET("/orgs/ldap_users", ac(), w(handlers.GetLdapUsers))
-	g.POST("/orgs/:id/ldap_user", ac(), w(handlers.AuthLdapUser))
-	g.POST("/orgs/:id/ldap_ou", ac(), w(handlers.AuthLdapOU))
+	g.GET("/ldap/org_ous", ac(), w(handlers.GetLdapOUsFromDB))
+	g.DELETE("/ldap/org_ou", ac(), w(handlers.DeleteLdapOUFromDB))
+	g.GET("/ldap/ous", ac(), w(handlers.GetLdapOUsFromLdap))
+	g.GET("/ldap/users", ac(), w(handlers.GetLdapUsers))
+	g.POST("/ldap/auth/org_user", ac(), w(handlers.AuthLdapUser))
+	g.POST("/ldap/auth/org_ou", ac(), w(handlers.AuthLdapOU))
 
 	g.GET("/projects/users", ac(), w(handlers.ProjectUser{}.Search))
 	g.GET("/projects/authorization/users", ac(), w(handlers.ProjectUser{}.SearchProjectAuthorizationUser))
@@ -164,10 +164,9 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/projects/:id/statistics", ac(), w(handlers.Project{}.ProjectStat))
 
 	// projects ldap 相关
-	g.GET("/projects/ldap_ous", ac(), w(handlers.GetLdapOUsFromOrg))
-	g.GET("/projects/:id/ldap_ous", ac(), w(handlers.GetLdapOUsFromOrg))
-	g.DELETE("/projects/:id/ldap_ou", ac(), w(handlers.DeleteProjectLdapOU))
-	g.POST("/projects/:id/ldap_ou", ac(), w(handlers.AuthProjectLdapOU))
+	g.GET("/ldap/org_ous", ac(), w(handlers.GetLdapOUsFromOrg))
+	g.DELETE("/ldap/project_ou", ac(), w(handlers.DeleteProjectLdapOU))
+	g.POST("/ldap/auth/project_ou", ac(), w(handlers.AuthProjectLdapOU))
 
 	//变量管理
 	g.PUT("/variables/batch", ac(), w(handlers.Variable{}.BatchUpdate))

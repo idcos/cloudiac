@@ -42,3 +42,7 @@ type OrgLdapOUsResp struct {
 	DN string `json:"dn"`
 	OU string `json:"ou"`
 }
+
+type OrgLdapOUListResp struct {
+	OrgLdapOUs []OrgLdapOUsResp `json:"org_ldap_ous"`
+}

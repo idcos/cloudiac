@@ -82,7 +82,9 @@ func AuthLdapOU(c *ctx.ServiceContext, form *forms.AuthLdapOUForm) (interface{},
 
 func GetOrgLdapOUs(c *ctx.ServiceContext) (interface{}, e.Error) {
 	results, err := services.GetOrgLdapOUs(c.DB(), c.OrgId)
-	return results, err
+	return &resps.OrgLdapOUListResp{
+		OrgLdapOUs: results,
+	}, err
 }
 
 func DeleteProjectLdapOU(c *ctx.ServiceContext, form *forms.DeleteLdapOUForm) (interface{}, e.Error) {
