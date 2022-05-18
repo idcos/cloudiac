@@ -8,8 +8,8 @@ import (
 	"cloudiac/portal/models/forms"
 )
 
-// GetLdapOUs ldap ou 列表
-// @Summary ldap ou 列表
+// GetLdapOUsFromLdap ldap ou 列表(from ldap)
+// @Summary ldap ou 列表(from ldap)
 // @Tags ldap
 // @Accept  json
 // @Produce  json
@@ -17,7 +17,7 @@ import (
 // @Param IaC-Org-Id header string true "组织id"
 // @Success 200 {object}  ctx.JSONResult{result=resps.LdapOUResp}
 // @Router /orgs/ldap_ous [get]
-func GetLdapOUs(c *ctx.GinRequest) {
+func GetLdapOUsFromLdap(c *ctx.GinRequest) {
 	c.JSONResult(apps.GetLdapOUs(c.Service()))
 }
 
@@ -73,4 +73,22 @@ func AuthLdapOU(c *ctx.GinRequest) {
 		return
 	}
 	c.JSONResult(apps.AuthLdapOU(c.Service(), form))
+}
+
+// GetLdapOUsFromDB ldap ou 列表
+// @Summary ldap ou 列表
+// @Tags ldap
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
+// @Param form query forms.SearchLdapOUForm true "parameter"
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.LdapOUDBResp}}
+// @Router /orgs/{id}/ldap_ous [get]
+func GetLdapOUsFromDB(c *ctx.GinRequest) {
+	form := &forms.SearchLdapOUForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.GetLdapOUsFromDB(c.Service(), form))
 }

@@ -5,6 +5,7 @@ package apps
 import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
@@ -14,6 +15,23 @@ import (
 func GetLdapOUs(c *ctx.ServiceContext) (interface{}, e.Error) {
 	ous, err := services.SearchLdapOUs()
 	return ous, err
+}
+
+func GetLdapOUsFromDB(c *ctx.ServiceContext, form *forms.SearchLdapOUForm) (interface{}, e.Error) {
+	query := c.DB().Model(&models.LdapOUOrg{}).Select("id", "dn", "ou", "role", "created_at")
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+
+	var list = make([]resps.LdapOUDBResp, 0)
+	if err := p.Scan(&list); err != nil {
+		c.Logger().Errorf("error get ldap ous, err %s", err)
+		return nil, e.New(e.DBError, err)
+	}
+
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     list,
+	}, nil
 }
 
 // TODO: 未过滤用户，前端过滤，返回所有用户

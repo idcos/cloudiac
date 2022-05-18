@@ -3,7 +3,7 @@
 package models
 
 type LdapOUOrg struct {
-	BaseModel
+	TimedModel
 
 	OrgId Id     `json:"orgId" gorm:"size:32;not null;comment:组织ID"`                                   // 组织ID
 	Role  string `json:"role" gorm:"type:enum('admin','complianceManager','member');default:'member'"` // 角色
@@ -16,7 +16,7 @@ func (LdapOUOrg) TableName() string {
 }
 
 type LdapOUProject struct {
-	BaseModel
+	TimedModel
 
 	ProjectId Id     `json:"projectId" gorm:"size:32;not null"`
 	Role      string `json:"role" gorm:"type:enum('admin','complianceManager','member');default:'member'"` // 角色

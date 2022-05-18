@@ -9,6 +9,10 @@ type SearchLdapUserForm struct {
 	Count int    `json:"count" form:"count"` // 检索数量
 }
 
+type SearchLdapOUForm struct {
+	NoPageSizeForm
+}
+
 type AuthLdapUserForm struct {
 	BaseForm
 
