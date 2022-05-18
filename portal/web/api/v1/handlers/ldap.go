@@ -151,7 +151,7 @@ func DeleteProjectLdapOU(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织id"
 // @Param form query forms.AuthProjectLdapOUForm true "parameter"
 // @Success 200 {object}  ctx.JSONResult{result=resps.AuthLdapOUResp}
-// @Router /orgs/{id}/ldap_user [post]
+// @Router /projects/{id}/ldap_user [post]
 func AuthProjectLdapOU(c *ctx.GinRequest) {
 	form := &forms.AuthProjectLdapOUForm{}
 	if err := c.Bind(form); err != nil {

@@ -91,5 +91,12 @@ func DeleteProjectLdapOU(c *ctx.ServiceContext, form *forms.DeleteLdapOUForm) (i
 }
 
 func AuthProjectLdapOU(c *ctx.ServiceContext, form *forms.AuthProjectLdapOUForm) (interface{}, e.Error) {
-	return nil, nil
+	result, err := services.CreateOUProject(c.DB(), models.LdapOUProject{
+		OrgId:     c.OrgId,
+		ProjectId: models.Id(form.ProjectId),
+		DN:        form.DN,
+		OU:        form.OU,
+		Role:      form.Role,
+	})
+	return result, err
 }
