@@ -23,7 +23,7 @@ type LdapUserResp struct {
 }
 
 type LdapUserListResp struct {
-	LdapUsers []LdapUserResp `json:"ldap_users"`
+	LdapUsers []LdapUserResp `json:"ldapUsers"`
 }
 
 type AuthLdapUserResp struct {
@@ -44,5 +44,5 @@ type OrgLdapOUsResp struct {
 }
 
 type OrgLdapOUListResp struct {
-	OrgLdapOUs []OrgLdapOUsResp `json:"org_ldap_ous"`
+	OrgLdapOUs []OrgLdapOUsResp `json:"orgLdapOUs"`
 }

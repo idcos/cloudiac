@@ -164,7 +164,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/projects/:id/statistics", ac(), w(handlers.Project{}.ProjectStat))
 
 	// projects ldap 相关
-	g.GET("/ldap/org_ous", ac(), w(handlers.GetLdapOUsFromOrg))
+	g.GET("/ldap/project_ous", ac(), w(handlers.GetLdapOUsFromOrg))
 	g.DELETE("/ldap/project_ou", ac(), w(handlers.DeleteProjectLdapOU))
 	g.POST("/ldap/auth/project_ou", ac(), w(handlers.AuthProjectLdapOU))
 
