@@ -37,3 +37,8 @@ type AuthLdapOUResp struct {
 type DeleteLdapOUResp struct {
 	Id string `json:"id"`
 }
+
+type OrgLdapOUsResp struct {
+	DN string `json:"dn"`
+	OU string `json:"ou"`
+}

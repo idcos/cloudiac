@@ -231,3 +231,13 @@ func CreateLdapUserOrg(sess *db.Session, orgId models.Id, m models.User, role st
 		Id: string(userId),
 	}, nil
 }
+
+func GetOrgLdapOUs(sess *db.Session, orgId models.Id) ([]resps.OrgLdapOUsResp, e.Error) {
+	var results = make([]resps.OrgLdapOUsResp, 0)
+	err := sess.Model(&models.LdapOUOrg{}).Select("dn", "ou").Find(&results)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	return results, nil
+}
