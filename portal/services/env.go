@@ -516,35 +516,36 @@ func EnvCostTrendStat(tx *db.Session, id models.Id, months int) ([]resps.EnvCost
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	return completeEnvCostTrendData(results)
+	return completeEnvCostTrendData(results, months)
 }
 
 // completeEnvCostTrendData 补充缺失的月份数据
-func completeEnvCostTrendData(results []resps.EnvCostTrendStatResp) ([]resps.EnvCostTrendStatResp, e.Error) {
+func completeEnvCostTrendData(results []resps.EnvCostTrendStatResp, months int) ([]resps.EnvCostTrendStatResp, e.Error) {
 	if len(results) == 0 {
 		return results, nil
 	}
 
 	var allResults = make([]resps.EnvCostTrendStatResp, 0)
-	curMonth := time.Now()
+	startMonth := time.Now().AddDate(0, -1*(months-1), 0)
 
 	// 第一个日期加入
 	for _, result := range results {
 		// 补充缺失的日期
 		for {
-			curMonthStr := curMonth.Format("2006-01")
+			startMonthStr := startMonth.Format("2006-01")
 			// 日期连续时
-			if curMonthStr == result.Date {
+			if startMonthStr == result.Date {
 				allResults = append(allResults, result)
+				startMonth = startMonth.AddDate(0, 1, 0)
 				break
 			}
 
 			// 日期不连续时，补充0
 			allResults = append(allResults, resps.EnvCostTrendStatResp{
-				Date:   curMonth.Format("2006-01"),
+				Date:   startMonth.Format("2006-01"),
 				Amount: 0.0,
 			})
-			curMonth = curMonth.AddDate(0, 1, 0)
+			startMonth = startMonth.AddDate(0, 1, 0)
 		}
 	}
 
@@ -562,9 +563,22 @@ type RawEnvCostDetail struct {
 
 // EnvCostList 费用列表
 func EnvCostList(tx *db.Session, id models.Id) ([]RawEnvCostDetail, e.Error) {
-	mCurMonth, err := curMonthEnvCostList(tx, id)
+	mCurMonth, err := monthEnvCostList(tx, id, true)
 	if err != nil {
 		return nil, err
+	}
+
+	mOtherMonth, err := monthEnvCostList(tx, id, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// 合并当前月和其他月份
+	for k, v := range mOtherMonth {
+		if _, ok := mCurMonth[k]; !ok {
+			mCurMonth[k] = v
+			mCurMonth[k].CurMonthCost = 0
+		}
 	}
 
 	mTotal, err := totalEnvCostListByInstanceId(tx, id)
@@ -587,7 +601,7 @@ func EnvCostList(tx *db.Session, id models.Id) ([]RawEnvCostDetail, e.Error) {
 	return results, nil
 }
 
-func curMonthEnvCostList(tx *db.Session, id models.Id) (map[string]*RawEnvCostDetail, e.Error) {
+func monthEnvCostList(tx *db.Session, id models.Id, isCurMonth bool) (map[string]*RawEnvCostDetail, e.Error) {
 	/* sample sql:
 	select
 		iac_resource.attrs as attrs,
@@ -601,6 +615,7 @@ func curMonthEnvCostList(tx *db.Session, id models.Id) (map[string]*RawEnvCostDe
 		iac_bill.instance_id = iac_resource.res_id
 	where
 		iac_resource.env_id  = 'env-c8u10aosm56kh90t588g'
+		and iac_resource.address NOT LIKE 'data.%'
 		and iac_bill.cycle = DATE_FORMAT(CURDATE(), "%Y-%m")
 	*/
 
@@ -608,7 +623,12 @@ func curMonthEnvCostList(tx *db.Session, id models.Id) (map[string]*RawEnvCostDe
 	query = query.Joins(`JOIN iac_bill ON iac_bill.instance_id = iac_resource.res_id`)
 
 	query = query.Where(`iac_resource.env_id = ?`, id)
-	query = query.Where(`iac_bill.cycle = DATE_FORMAT(CURDATE(), "%Y-%m")`)
+	query = query.Where(`iac_resource.address NOT LIKE 'data.%'`)
+	if isCurMonth {
+		query = query.Where(`iac_bill.cycle = DATE_FORMAT(CURDATE(), "%Y-%m")`)
+	} else {
+		query = query.Where(`iac_bill.cycle != DATE_FORMAT(CURDATE(), "%Y-%m")`)
+	}
 
 	var results []RawEnvCostDetail
 	if err := query.Find(&results); err != nil {
