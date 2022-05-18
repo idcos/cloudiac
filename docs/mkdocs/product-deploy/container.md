@@ -213,7 +213,7 @@ CONSUL_TLS=false
 CONSUL_CERT_PATH=""
 
 # 询价服务端地址
-COST_SERVE = ""
+COST_SERVE=""
 
 ```
 
