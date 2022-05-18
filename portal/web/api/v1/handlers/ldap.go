@@ -110,3 +110,52 @@ func DeleteLdapOUFromDB(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.DeleteLdapOUFromDB(c.Service(), form))
 }
+
+// GetLdapOUsFromOrg 获取组织下的 ldap ou 列表
+// @Summary 获取组织下的 ldap ou 列表
+// @Tags ldap
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
+// @Success 200 {object} ctx.JSONResult{result=[]resps.LdapOUDBResp}
+// @Router /projects/{id}/ldap_ous [get]
+func GetLdapOUsFromOrg(c *ctx.GinRequest) {
+	c.JSONResult(apps.GetOrgLdapOUs(c.Service()))
+}
+
+// DeleteProjectLdapOU 移除 project的 ldap ou
+// @Summary 移除 project的 ldap ou
+// @Tags ldap
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
+// @Param form query forms.DeleteLdapOUForm true "parameter"
+// @Success 200 {object} ctx.JSONResult{result=resps.DeleteLdapOUResp}
+// @Router /projects/{id}/ldap_ou [delete]
+func DeleteProjectLdapOU(c *ctx.GinRequest) {
+	form := &forms.DeleteLdapOUForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.DeleteProjectLdapOU(c.Service(), form))
+}
+
+// AuthProjectLdapOU ldap ou 授权
+// @Summary ldap ou 授权
+// @Tags ldap
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
+// @Param form query forms.AuthProjectLdapOUForm true "parameter"
+// @Success 200 {object}  ctx.JSONResult{result=resps.AuthLdapOUResp}
+// @Router /orgs/{id}/ldap_user [post]
+func AuthProjectLdapOU(c *ctx.GinRequest) {
+	form := &forms.AuthProjectLdapOUForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.AuthProjectLdapOU(c.Service(), form))
+}

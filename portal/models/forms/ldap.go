@@ -35,3 +35,12 @@ type DeleteLdapOUForm struct {
 
 	Id string `json:"id" form:"id"` // ldap ou id
 }
+
+type AuthProjectLdapOUForm struct {
+	BaseForm
+
+	Id   string `json:"id" form:"id"`     // project id
+	DN   string `json:"dn" form:"dn"`     // 识别名
+	OU   string `json:"ou" form:"ou"`     // organizationalUnit
+	Role string `json:"role" form:"role"` // 角色
+}

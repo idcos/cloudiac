@@ -80,3 +80,15 @@ func AuthLdapOU(c *ctx.ServiceContext, form *forms.AuthLdapOUForm) (interface{},
 
 	return result, err
 }
+
+func GetOrgLdapOUs(c *ctx.ServiceContext) (interface{}, e.Error) {
+	return nil, nil
+}
+
+func DeleteProjectLdapOU(c *ctx.ServiceContext, form *forms.DeleteLdapOUForm) (interface{}, e.Error) {
+	return nil, nil
+}
+
+func AuthProjectLdapOU(c *ctx.ServiceContext, form *forms.AuthProjectLdapOUForm) (interface{}, e.Error) {
+	return nil, nil
+}
