@@ -35,7 +35,6 @@ func GetLdapOUsFromDB(c *ctx.ServiceContext, form *forms.SearchLdapOUForm) (inte
 }
 
 func DeleteLdapOUFromDB(c *ctx.ServiceContext, form *forms.DeleteLdapOUForm) (interface{}, e.Error) {
-
 	_, err := c.DB().Where(`id = ?`, form.Id).Delete(&models.LdapOUOrg{})
 	if err != nil {
 		return nil, e.New(e.DBError, err)
@@ -87,7 +86,14 @@ func GetOrgLdapOUs(c *ctx.ServiceContext) (interface{}, e.Error) {
 }
 
 func DeleteProjectLdapOU(c *ctx.ServiceContext, form *forms.DeleteLdapOUForm) (interface{}, e.Error) {
-	return nil, nil
+	_, err := c.DB().Where(`id = ?`, form.Id).Delete(&models.LdapOUProject{})
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	return resps.DeleteLdapOUResp{
+		Id: form.Id,
+	}, nil
 }
 
 func AuthProjectLdapOU(c *ctx.ServiceContext, form *forms.AuthProjectLdapOUForm) (interface{}, e.Error) {
