@@ -190,6 +190,7 @@ func CreateLdapUserOrg(sess *db.Session, orgId models.Id, m models.User, role st
 	// 用户不存在
 	userId := user.Id
 	if err == gorm.ErrRecordNotFound {
+		m.Id = models.NewId("u")
 		err = tx.Insert(&m)
 		if err != nil {
 			_ = tx.Rollback()
@@ -208,7 +209,7 @@ func CreateLdapUserOrg(sess *db.Session, orgId models.Id, m models.User, role st
 
 	if err == gorm.ErrRecordNotFound {
 		err = sess.Insert(&models.UserOrg{
-			UserId: user.Id,
+			UserId: userId,
 			OrgId:  orgId,
 			Role:   role,
 		})
