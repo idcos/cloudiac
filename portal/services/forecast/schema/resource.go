@@ -6,13 +6,12 @@ type ResourceFunc func(*ResourceData) *Resource
 
 type Resource struct {
 	Name        string
-	PriceType   string
-	PriceCode   string
+	Region      string `json:"region"`
 	Provider    string
-	RequestData []*PriceRequest
+	RequestData []PriceRequest
 }
 
 type PriceRequest struct {
-	Name  string
-	Value string
+	Type      string            `json:"type"`
+	Attribute map[string]string `json:"attribute"`
 }

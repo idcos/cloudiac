@@ -4,7 +4,6 @@ package alicloud
 
 import (
 	"cloudiac/portal/services/forecast/schema"
-	"fmt"
 )
 
 type KvStoreInstance struct {
@@ -21,16 +20,16 @@ func (a *KvStoreInstance) BuildResource() *schema.Resource {
 
 	if a.InstanceClass != "" {
 		p = append(p, &schema.PriceRequest{
-			Name:  "InstanceClass",
-			Value: fmt.Sprintf("InstanceClass:%s", a.InstanceClass),
+			//Name:  "InstanceClass",
+			//Value: fmt.Sprintf("InstanceClass:%s", a.InstanceClass),
 		})
 	}
 
 	return &schema.Resource{
 		Name:        a.Address,
 		Provider:    a.Provider,
-		RequestData: p,
-		PriceCode:   "redisa",
-		PriceType:   "",
+		//RequestData: p,
+		//PriceCode:   "redisa",
+		//PriceType:   "",
 	}
 }

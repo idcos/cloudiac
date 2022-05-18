@@ -16,12 +16,10 @@ func getInstanceRegistryItem() *schema.RegistryItem {
 }
 
 func NewInstance(d *schema.ResourceData) *schema.Resource {
-	region := d.Get("region").String()
-
 	a := &alicloud.Instance{
 		Address:            d.Address,
 		Provider:           d.ProviderName,
-		Region:             region,
+		Region:             d.Region,
 		InstanceType:       d.Get("instance_type").String(),
 		SystemDiskSize:     d.Get("system_disk_size").Int(),
 		SystemDiskCategory: d.Get("system_disk_category").String(),

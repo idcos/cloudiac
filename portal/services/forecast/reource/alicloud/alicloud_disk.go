@@ -16,13 +16,13 @@ type Disk struct {
 }
 
 func (a *Disk) BuildResource() *schema.Resource {
-	p := make([]*schema.PriceRequest, 0)
+	//p := make([]*schema.PriceRequest, 0)
 
 	return &schema.Resource{
 		Name:        a.Address,
 		Provider:    a.Provider,
-		RequestData: p,
-		PriceCode:   "yundisk",
-		PriceType:   "",
+		//RequestData: p,
+		//PriceCode:   "yundisk",
+		//PriceType:   "",
 	}
 }

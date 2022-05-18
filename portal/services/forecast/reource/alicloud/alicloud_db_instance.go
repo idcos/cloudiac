@@ -4,7 +4,6 @@ package alicloud
 
 import (
 	"cloudiac/portal/services/forecast/schema"
-	"fmt"
 )
 
 type DBInstance struct {
@@ -24,21 +23,21 @@ func (a *DBInstance) BuildResource() *schema.Resource {
 
 	if a.InstanceType != "" {
 		p = append(p, &schema.PriceRequest{
-			Name:  "DBInstanceClass",
-			Value: fmt.Sprintf("DBInstanceClass:%s,EngineVersion:%s", a.InstanceType, a.EngineVersion),
+			//Name:  "DBInstanceClass",
+			//Value: fmt.Sprintf("DBInstanceClass:%s,EngineVersion:%s", a.InstanceType, a.EngineVersion),
 		})
 	}
 
 	if a.InstanceStorage != 0 {
 		priceRequest := &schema.PriceRequest{
-			Name:  "DBInstanceStorage",
-			Value: fmt.Sprintf("DBInstanceStorage:%d,DBInstanceStorageType:%s", a.InstanceStorage, a.DbInstanceStorageType),
+			//Name:  "DBInstanceStorage",
+			//Value: fmt.Sprintf("DBInstanceStorage:%d,DBInstanceStorageType:%s", a.InstanceStorage, a.DbInstanceStorageType),
 		}
 
 		if a.DbInstanceStorageType != "" {
-			priceRequest.Value = fmt.Sprintf("DBInstanceStorage:%d,DBInstanceStorageType:%s", a.InstanceStorage, a.DbInstanceStorageType)
+			//priceRequest.Value = fmt.Sprintf("DBInstanceStorage:%d,DBInstanceStorageType:%s", a.InstanceStorage, a.DbInstanceStorageType)
 		} else {
-			priceRequest.Value = fmt.Sprintf("DBInstanceStorage:%d", a.InstanceStorage)
+			//priceRequest.Value = fmt.Sprintf("DBInstanceStorage:%d", a.InstanceStorage)
 		}
 
 		p = append(p, priceRequest)
@@ -48,8 +47,8 @@ func (a *DBInstance) BuildResource() *schema.Resource {
 	return &schema.Resource{
 		Name:        a.Address,
 		Provider:    a.Provider,
-		RequestData: p,
-		PriceCode:   "rds",
-		PriceType:   "bards",
+		//RequestData: p,
+		//PriceCode:   "rds",
+		//PriceType:   "bards",
 	}
 }

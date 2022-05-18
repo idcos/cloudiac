@@ -10,7 +10,6 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/forecast/pricecalculator"
-	"cloudiac/portal/services/forecast/pricecalculator/alicloud"
 	"cloudiac/portal/services/forecast/providers/terraform"
 	"cloudiac/portal/services/forecast/schema"
 	"cloudiac/runner"
@@ -65,15 +64,15 @@ func taskDoneProcessPlan(dbSess *db.Session, task *models.Task, isPlanResult boo
 		}
 
 		var costs []float32
-		var forecaseFailed []string
+		var forecastFailed []string
 		if isPlanResult {
-			costs, forecaseFailed,err = getForecastCostWhenTaskPlan(dbSess, task, bs)
+			costs, forecastFailed, err = getForecastCostWhenTaskPlan(dbSess, task, bs)
 			if err != nil {
 				logs.Get().Warnf("get prices after plan error: %v", err)
 			}
 		}
 
-		if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges, isPlanResult, costs,forecaseFailed); err != nil {
+		if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges, isPlanResult, costs, forecastFailed); err != nil {
 			return fmt.Errorf("save task changes: %v", err)
 		}
 	}
@@ -87,11 +86,28 @@ func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byt
 		updateAfterCost  float32 // 变更后的资源费用
 		destroyedCost    float32 // 删除资源的费用
 		err              error
+		aliRegion        string //阿里云region
 	)
 
-	// get resources
-	createResources, deleteResources, updateBeforeResources, updateAfterResources := terraform.ParserPlanJson(bs)
+	// 通过环境变量获取区域
+	for _, i := range task.Variables {
+		if i.Name == "ALICLOUD_REGION" && i.Type == consts.VarTypeEnv {
+			if i.Sensitive {
+				value, err := utils.DecryptSecretVarForce(i.Value)
+				if err != nil {
+					logs.Get().Errorf("DecryptSecretVarForce err: %s", err)
+					break
+				}
+				aliRegion = value
+			} else {
+				aliRegion = i.Value
+			}
+			break
+		}
+	}
 
+	// get resources
+	createResources, deleteResources, updateBeforeResources, updateAfterResources := terraform.ParserPlanJson(bs, aliRegion)
 	// compute cost
 	addedCost, addedForecast, err := computeResourceCost(dbSess, task.ProjectId, task.OrgId, createResources)
 	if err != nil {
@@ -159,7 +175,7 @@ func computeResourceCost(dbSess *db.Session, projectId, orgId models.Id, resourc
 			continue
 		}
 
-		price, err := alicloud.GetPriceFromResponse(priceResp)
+		price, err := pricecalculator.GetPriceFromResponse(priceResp)
 		if err != nil {
 			forecastFailed = append(forecastFailed, res.Name)
 			logs.Get().WithField("cost_forecast", "GetPriceFromResponse").Error(err)

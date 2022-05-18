@@ -4,7 +4,6 @@ package alicloud
 
 import (
 	"cloudiac/portal/services/forecast/schema"
-	"fmt"
 )
 
 type SlbLoadBalancer struct {
@@ -20,12 +19,12 @@ func (a *SlbLoadBalancer) BuildResource() *schema.Resource {
 	p := make([]*schema.PriceRequest, 0)
 
 	priceRequest := &schema.PriceRequest{
-		Name: "LoadBalancerSpec",
+		//Name: "LoadBalancerSpec",
 	}
 	if a.LoadBalancerSpec != "" {
-		priceRequest.Value = fmt.Sprintf("LoadBalancerSpec:%s", a.LoadBalancerSpec)
+		//priceRequest.Value = fmt.Sprintf("LoadBalancerSpec:%s", a.LoadBalancerSpec)
 	} else if a.Specification != "" {
-		priceRequest.Value = fmt.Sprintf("LoadBalancerSpec:%s", a.Specification)
+		//priceRequest.Value = fmt.Sprintf("LoadBalancerSpec:%s", a.Specification)
 	}
 
 	p = append(p, priceRequest)
@@ -33,8 +32,8 @@ func (a *SlbLoadBalancer) BuildResource() *schema.Resource {
 	return &schema.Resource{
 		Name:        a.Address,
 		Provider:    a.Provider,
-		RequestData: p,
-		PriceCode:   "slb",
-		PriceType:   "",
+		//RequestData: p,
+		//PriceCode:   "slb",
+		//PriceType:   "",
 	}
 }

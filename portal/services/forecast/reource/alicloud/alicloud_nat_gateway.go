@@ -4,7 +4,6 @@ package alicloud
 
 import (
 	"cloudiac/portal/services/forecast/schema"
-	"fmt"
 )
 
 type NatGateway struct {
@@ -21,15 +20,15 @@ func (n *NatGateway) BuildResource() *schema.Resource {
 	p := make([]*schema.PriceRequest, 0)
 
 	p = append(p, &schema.PriceRequest{
-		Name:  "NatType",
-		Value: fmt.Sprintf("NatType:%s", n.NatType),
+		//Name:  "NatType",
+		//Value: fmt.Sprintf("NatType:%s", n.NatType),
 	})
 
 	if n.Spec != "" {
 		if n.InternetChargeType == "PayBySpec" && n.NetworkType == "internet" {
 			p = append(p, &schema.PriceRequest{
-				Name:  "Spec",
-				Value: fmt.Sprintf("Spec:%s", n.Spec),
+				//Name:  "Spec",
+				//Value: fmt.Sprintf("Spec:%s", n.Spec),
 			})
 		}
 	}
@@ -37,7 +36,7 @@ func (n *NatGateway) BuildResource() *schema.Resource {
 	return &schema.Resource{
 		Name:        n.Address,
 		Provider:    n.Provider,
-		RequestData: p,
-		PriceCode:   "nat_gw",
+		//RequestData: p,
+		//PriceCode:   "nat_gw",
 	}
 }

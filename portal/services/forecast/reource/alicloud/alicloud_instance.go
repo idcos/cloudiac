@@ -4,7 +4,7 @@ package alicloud
 
 import (
 	"cloudiac/portal/services/forecast/schema"
-	"fmt"
+	"strconv"
 )
 
 type Instance struct {
@@ -27,27 +27,35 @@ type DataDisks struct {
 }
 
 func (a *Instance) BuildResource() *schema.Resource {
-	p := make([]*schema.PriceRequest, 0)
+	p := make([]schema.PriceRequest, 0)
 
 	if a.InstanceType != "" {
-		p = append(p, &schema.PriceRequest{
-			Name:  "InstanceType",
-			Value: fmt.Sprintf("InstanceType:%s", a.InstanceType),
+		p = append(p, schema.PriceRequest{
+			Type: "ecs",
+			Attribute: map[string]string{
+				"instanceId": a.InstanceType,
+			},
 		})
 	}
 
 	if a.SystemDiskSize != 0 && a.SystemDiskCategory != "" {
-		p = append(p, &schema.PriceRequest{
-			Name:  "SystemDisk",
-			Value: fmt.Sprintf("SystemDisk.Category:%s,SystemDisk.Size:%d", a.SystemDiskCategory, a.SystemDiskSize),
+		p = append(p, schema.PriceRequest{
+			Type: "disk",
+			Attribute: map[string]string{
+				"type": a.SystemDiskCategory,
+				"size": strconv.Itoa(int(a.SystemDiskSize)),
+			},
 		})
 	}
 
 	if len(a.DataDisks) > 0 {
 		for _, v := range a.DataDisks {
-			p = append(p, &schema.PriceRequest{
-				Name:  "DataDisk",
-				Value: fmt.Sprintf("DataDisk.Category:%s,DataDisk.Size:%d", v.Category, v.Size),
+			p = append(p, schema.PriceRequest{
+				Type: "disk",
+				Attribute: map[string]string{
+					"type": v.Category,
+					"size": strconv.Itoa(int(v.Size)),
+				},
 			})
 		}
 	}
@@ -56,6 +64,6 @@ func (a *Instance) BuildResource() *schema.Resource {
 		Name:        a.Address,
 		Provider:    a.Provider,
 		RequestData: p,
-		PriceCode:   "ecs",
+		Region:      a.Region,
 	}
 }
