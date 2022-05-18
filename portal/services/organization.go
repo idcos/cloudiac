@@ -7,10 +7,13 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
+	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/resps"
 	"fmt"
+	"path"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -174,13 +177,18 @@ func TryAddDemoRelation(tx *db.Session, userId models.Id) (err e.Error) {
 	return
 }
 
-func GetOrgResourcesQuery(tx *db.Session, searchStr string, orgId, userId models.Id, isSuperAdmin bool) *db.Session {
+func GetOrgOrProjectResourcesQuery(tx *db.Session, searchStr string, orgId, projectId, userId models.Id, isSuperAdmin bool) *db.Session {
 	query := tx.Joins("inner join iac_env on iac_env.last_res_task_id = iac_resource.task_id left join " +
 		"iac_project on iac_resource.project_id = iac_project.id").
 		LazySelectAppend("iac_project.name as project_name, iac_env.name as env_name, iac_resource.id as resource_id," +
 			"iac_resource.name as resource_name, iac_resource.task_id, iac_resource.project_id as project_id, iac_resource.attrs as attrs," +
 			"iac_resource.env_id as env_id, iac_resource.provider as provider, iac_resource.type, iac_resource.module")
-	query = query.Where("iac_env.org_id = ?", orgId)
+	if orgId != "" {
+		query = query.Where("iac_env.org_id = ?", orgId)
+	}
+	if orgId != "" && projectId != "" {
+		query = query.Where("iac_env.project_id = ?", projectId)
+	}
 	if searchStr != "" {
 		query = query.Where("iac_resource.name like ? OR iac_resource.type like ? OR iac_resource.attrs like ?", fmt.Sprintf("%%%s%%", searchStr),
 			fmt.Sprintf("%%%s%%", searchStr), fmt.Sprintf("%%%s%%", searchStr))
@@ -193,6 +201,31 @@ func GetOrgResourcesQuery(tx *db.Session, searchStr string, orgId, userId models
 	}
 	return query
 
+}
+
+func GetProviderQuery(providers string, query *db.Session) *db.Session {
+	if len(providers) != 0 {
+		var tempSql []string
+		var tempList []interface{}
+		for _, v := range strings.Split(providers, ",") {
+			tempSql = append(tempSql, "iac_resource.provider like ?")
+			tempList = append(tempList, strings.Join([]string{"%/", v}, ""))
+		}
+		query = query.Where(strings.Join(tempSql, " OR "), tempList...)
+	}
+	return query
+}
+
+func GetOrgOrProjectResourcesResp(currentPage, pageSize int, query *db.Session) (*[]resps.OrgOrProjectResourcesResp, *page.Paginator, e.Error) {
+	rs := make([]resps.OrgOrProjectResourcesResp, 0)
+	p := page.New(currentPage, pageSize, query)
+	if err := p.Scan(&rs); err != nil {
+		return nil, nil, e.New(e.DBError, err)
+	}
+	for i := range rs {
+		rs[i].Provider = path.Base(rs[i].Provider)
+	}
+	return &rs, p, nil
 }
 
 type EnvStatResult struct {

@@ -14,7 +14,7 @@ type OrganizationDetailResp struct {
 	Creator string `json:"creator" example:"超级管理员"`
 }
 
-type OrgResourcesResp struct {
+type OrgOrProjectResourcesResp struct {
 	ProjectName  string    `json:"projectName"`
 	EnvName      string    `json:"envName"`
 	ResourceName string    `json:"resourceName"`
@@ -36,9 +36,17 @@ type EnvResp struct {
 	EnvName string    `json:"envName"`
 	EnvId   models.Id `json:"envId"`
 }
+type OrgProjectResp struct {
+	ProjectName string    `json:"projectName"`
+	ProjectId   models.Id `json:"projectId"`
+}
 type OrgEnvAndProviderResp struct {
 	Envs      []EnvResp `json:"envs"`
 	Providers []string  `json:""`
+}
+type OrgProjectAndProviderResp struct {
+	Projects  []OrgProjectResp `json:"projects"`
+	Providers []string         `json:""`
 }
 
 type DetailStatResp struct {

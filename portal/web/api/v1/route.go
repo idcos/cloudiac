@@ -126,10 +126,15 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/policies/groups/:id/report", ac(), w(handlers.PolicyGroup{}.ScanReport))
 	g.GET("/policies/groups/:id/last_tasks", ac(), w(handlers.PolicyGroup{}.LastTasks))
 
-	// 组织下的资源搜索(只需要有项目的读权限即可查看资源)
+	// 组织下的资源搜索(只需要有组织的读权限即可查看资源)
 	g.GET("/orgs/resources", ac("orgs", "read"), w(handlers.Organization{}.SearchOrgResources))
-	// 列出组织下资源搜索得到的相关环境名称以及provider名称
+	// 列出组织下资源搜索得到的相关项目名称以及provider名称
 	g.GET("/orgs/resources/filters", ac("orgs", "read"), w(handlers.Organization{}.SearchOrgResourcesFilters))
+
+	// 项目下的资源搜索(只需要有项目的读权限即可查看资源)
+	g.GET("/projects/resources", ac("projects", "read"), w(handlers.Project{}.SearchProjectResources))
+	// 列出项目下资源搜索得到的相关环境名称以及provider名称
+	g.GET("/projects/resources/filters", ac("projects", "read"), w(handlers.Project{}.SearchProjectResourcesFilters))
 
 	// 组织概览统计数据
 	g.GET("/orgs/projects/statistics", ac(), w(handlers.Organization{}.OrgProjectsStat))

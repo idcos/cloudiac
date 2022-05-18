@@ -490,24 +490,24 @@ func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*resps.UserW
 	return &resp, nil
 }
 
-func SearchOrgResourcesFilters(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm) (*resps.OrgEnvAndProviderResp, e.Error) {
-	query := services.GetOrgResourcesQuery(c.DB().Model(&models.Resource{}), form.Q, c.OrgId, c.UserId, c.IsSuperAdmin)
+func SearchOrgResourcesFilters(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm) (*resps.OrgProjectAndProviderResp, e.Error) {
+	query := services.GetOrgOrProjectResourcesQuery(c.DB().Model(&models.Resource{}), form.Q, c.OrgId, c.ProjectId, c.UserId, c.IsSuperAdmin)
 	type SearchResult struct {
-		EnvName  string    `json:"env_name"`
-		EnvId    models.Id `json:"env_id"`
-		Provider string    `json:"provider"`
+		ProjectName string    `json:"project_name"`
+		ProjectId   models.Id `json:"project_id"`
+		Provider    string    `json:"provider"`
 	}
 	rs := make([]SearchResult, 0)
 	if err := query.Scan(&rs); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	r := &resps.OrgEnvAndProviderResp{}
+	r := &resps.OrgProjectAndProviderResp{}
 	temp := map[string]interface{}{}
 	for _, v := range rs {
-		if _, ok := temp[v.EnvName]; !ok {
-			// 通过map 对环境名称进行过滤
-			r.Envs = append(r.Envs, resps.EnvResp{EnvName: v.EnvName, EnvId: v.EnvId})
-			temp[v.EnvName] = nil
+		if _, ok := temp[v.ProjectName]; !ok {
+			// 通过map 对项目名称进行过滤
+			r.Projects = append(r.Projects, resps.OrgProjectResp{ProjectName: v.ProjectName, ProjectId: v.ProjectId})
+			temp[v.ProjectName] = nil
 		}
 		r.Providers = append(r.Providers, path.Base(v.Provider))
 	}
@@ -517,27 +517,15 @@ func SearchOrgResourcesFilters(c *ctx.ServiceContext, form *forms.SearchOrgResou
 }
 
 func SearchOrgResources(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm) (interface{}, e.Error) {
-	query := services.GetOrgResourcesQuery(c.DB().Model(&models.Resource{}), form.Q, c.OrgId, c.UserId, c.IsSuperAdmin)
-	if len(form.EnvIds) != 0 {
-		query = query.Where("iac_env.id in (?)", strings.Split(form.EnvIds, ","))
+	query := services.GetOrgOrProjectResourcesQuery(c.DB().Model(&models.Resource{}), form.Q, c.OrgId, c.ProjectId, c.UserId, c.IsSuperAdmin)
+	if len(form.ProjectIds) != 0 {
+		query = query.Where("iac_env.project_id in (?)", strings.Split(form.ProjectIds, ","))
 	}
-	if len(form.Providers) != 0 {
-		var tempSql []string
-		var tempList []interface{}
-		for _, v := range strings.Split(form.Providers, ",") {
-			tempSql = append(tempSql, "iac_resource.provider like ?")
-			tempList = append(tempList, strings.Join([]string{"%/", v}, ""))
-		}
-		query = query.Where(strings.Join(tempSql, " OR "), tempList...)
-	}
-	rs := make([]resps.OrgResourcesResp, 0)
+	query = services.GetProviderQuery(form.Providers, query)
 	query = query.Order("project_id, env_id, provider desc")
-	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	if err := p.Scan(&rs); err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-	for i := range rs {
-		rs[i].Provider = path.Base(rs[i].Provider)
+	rs, p, err := services.GetOrgOrProjectResourcesResp(form.CurrentPage(), form.PageSize(), query)
+	if err != nil {
+		return nil, err
 	}
 	return &page.PageResp{
 		Total:    p.MustTotal(),
