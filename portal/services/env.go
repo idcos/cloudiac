@@ -5,11 +5,12 @@ package services
 import (
 	"cloudiac/portal/libs/ctx"
 	"fmt"
-	"gorm.io/gorm"
 	"math/rand"
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"gorm.io/gorm"
 
 	"github.com/hashicorp/consul/api"
 	"github.com/pkg/errors"
@@ -493,7 +494,7 @@ func EnvCostTrendStat(tx *db.Session, id models.Id, months int) ([]resps.EnvCost
 		iac_bill
 	where
 		iac_bill.instance_id IN (SELECT DISTINCT  res_id from iac_resource where iac_resource.env_id  = 'env-c870jh4bh95lubaf3mf0')
-		AND iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 12 MONTH), "%Y-%m")
+		AND iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 6 MONTH), "%Y-%m")
 	group by
 		iac_bill.cycle
 	order by
@@ -525,15 +526,10 @@ func completeEnvCostTrendData(results []resps.EnvCostTrendStatResp) ([]resps.Env
 	}
 
 	var allResults = make([]resps.EnvCostTrendStatResp, 0)
-	curMonth, err := time.Parse("2006-01", results[0].Date)
-	if err != nil {
-		return nil, e.AutoNew(err, e.DateParseError)
-	}
-	// 第一个日期加入
-	allResults = append(allResults, results[0])
-	for _, result := range results[1:] {
-		curMonth = curMonth.AddDate(0, 1, 0)
+	curMonth := time.Now()
 
+	// 第一个日期加入
+	for _, result := range results {
 		// 补充缺失的日期
 		for {
 			curMonthStr := curMonth.Format("2006-01")

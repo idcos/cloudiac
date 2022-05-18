@@ -1547,7 +1547,7 @@ func EnvStat(c *ctx.ServiceContext, form *forms.EnvParam) (interface{}, e.Error)
 	}
 
 	// 费用趋势统计
-	envCostTrendStat, err := services.EnvCostTrendStat(tx, form.Id, 12)
+	envCostTrendStat, err := services.EnvCostTrendStat(tx, form.Id, 6)
 	if err != nil {
 		return nil, err
 	}
