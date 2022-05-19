@@ -11,6 +11,7 @@ var ResourceRegistry []*schema.RegistryItem = []*schema.RegistryItem{
 	getNatGatewayRegistryItem(),
 	getDBInstanceRegistryItem(),
 	getEipRegistryItem(),
+	getEipAddressRegistryItem(),
 	getSlbRegistryItem(),
 	getSlbLoadBalancerRegistryItem(),
 	getKvStoreInstanceRegistryItem(),
