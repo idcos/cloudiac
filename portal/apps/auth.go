@@ -13,6 +13,7 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -25,7 +26,7 @@ func validPassword(c *ctx.ServiceContext, user *models.User, email, password str
 	if !valid {
 		// 如果本地账号验证未通过，进行ldap登陆验证
 		if configs.Get().Ldap.LdapServer != "" {
-			if _, err := services.LdapAuthLogin(email, password); err != nil {
+			if _, _, err := services.LdapAuthLogin(email, password); err != nil {
 				c.Logger().Warnf("login error: %v", err)
 				return e.New(e.InvalidPassword, http.StatusUnauthorized)
 			}
@@ -41,19 +42,16 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err 
 	if err != nil {
 		if err.Code() == e.UserNotExists && configs.Get().Ldap.LdapServer != "" {
 			// 当错误为用户邮箱不存在的时候，尝试使用ldap 进行登录
-			username, ldapErr := services.LdapAuthLogin(form.Email, form.Password)
+			username, dn, ldapErr := services.LdapAuthLogin(form.Email, form.Password)
 			if ldapErr != nil {
 				// 找不到账号时也返回 InvalidPassword 错误，避免暴露系统中己有用户账号
 				c.Logger().Warnf("ldap auth login: %v", ldapErr)
 				return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
 			}
 			// 登录成功, 在用户表中添加该用户
-			if user, err = services.CreateUser(c.DB(), models.User{
-				Name:  username,
-				Email: form.Email,
-			}); err != nil {
+			if err = createLdapUserAndRole(c, username, form.Email, dn); err != nil {
 				c.Logger().Warnf("create user error: %v", err)
-				return nil, e.New(e.InternalError, http.StatusInternalServerError)
+				return nil, err
 			}
 		} else {
 			return nil, err
@@ -73,6 +71,65 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err 
 	}
 
 	return data, nil
+}
+
+func createLdapUserAndRole(c *ctx.ServiceContext, username, email, dn string) e.Error {
+	tx := c.DB().Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	// 登录成功, 在用户表中添加该用户
+	user, err := services.CreateUser(tx, models.User{
+		Name:  username,
+		Email: email,
+	})
+	if err != nil {
+		c.Logger().Warnf("create user error: %v", err)
+		_ = tx.Rollback()
+		return e.New(e.InternalError, http.StatusInternalServerError)
+	}
+
+	// 获取ldap用户的OU信息
+	userOU := strings.TrimPrefix(dn, fmt.Sprintf("uid=%s,", username))
+
+	// 根据OU获取组织权限
+	ldapUserOrgOUs, err := services.GetLdapOUOrgByDN(tx, userOU)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	// 更新用户组织权限
+	err = services.RefreshUserOrgRoles(tx, user.Id, ldapUserOrgOUs)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	// 根据OU获取项目权限
+	ldapUserProjectOUs, err := services.GetLdapOUProjectByDN(tx, userOU)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	// 更新用户项目权限
+	err = services.RefreshUserProjectRoles(tx, user.Id, ldapUserProjectOUs)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		c.Logger().Errorf("createLdapUserAndRole commit err: %s", err)
+	}
+
+	return nil
 }
 
 // GenerateSsoToken 生成 SSO token

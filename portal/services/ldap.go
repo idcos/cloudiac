@@ -266,3 +266,25 @@ func CreateOUProject(sess *db.Session, m models.LdapOUProject) (*resps.AuthLdapO
 		Id: m.Id.String(),
 	}, nil
 }
+
+// GetLdapOUOrgByDN 根据dn检索所有的org关联角色
+func GetLdapOUOrgByDN(tx *db.Session, dn string) ([]models.LdapOUOrg, e.Error) {
+	var results = make([]models.LdapOUOrg, 0)
+	err := tx.Model(&models.LdapOUOrg{}).Where(`dn = ?`, dn).Find(&results)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	return results, nil
+}
+
+// GetLdapOUProjectByDN 根据dn检索所有的project关联角色
+func GetLdapOUProjectByDN(tx *db.Session, dn string) ([]models.LdapOUProject, e.Error) {
+	var results = make([]models.LdapOUProject, 0)
+	err := tx.Model(&models.LdapOUProject{}).Where(`dn = ?`, dn).Find(&results)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	return results, nil
+}
