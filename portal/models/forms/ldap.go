@@ -23,8 +23,8 @@ type AuthLdapUserForm struct {
 type AuthLdapOUForm struct {
 	BaseForm
 
-	DN   string `json:"dn" form:"dn"`     // 识别名
-	Role string `json:"role" form:"role"` // 角色
+	DN   []string `json:"dn" form:"dn"`     // 识别名
+	Role string   `json:"role" form:"role"` // 角色
 }
 
 type DeleteLdapOUForm struct {
@@ -43,6 +43,6 @@ type UpdateLdapOUForm struct {
 type AuthProjectLdapOUForm struct {
 	BaseForm
 
-	DN   string `json:"dn" form:"dn"`     // 识别名
-	Role string `json:"role" form:"role"` // 角色
+	DN   []string `json:"dn" form:"dn"`     // 识别名
+	Role string   `json:"role" form:"role"` // 角色
 }

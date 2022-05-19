@@ -136,10 +136,15 @@ func UpdateLdapOU(c *ctx.GinRequest) {
 // @Produce  json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
-// @Success 200 {object} ctx.JSONResult{result=resps.OrgLdapOUListResp}
+// @Param form query forms.SearchLdapOUForm true "parameter"
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.LdapOUDBResp}}
 // @Router /ldap/project_ous [get]
-func GetLdapOUsFromOrg(c *ctx.GinRequest) {
-	c.JSONResult(apps.GetOrgLdapOUs(c.Service()))
+func GetProjectLdapOUs(c *ctx.GinRequest) {
+	form := &forms.SearchLdapOUForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.GetOrgLdapOUs(c.Service(), form))
 }
 
 // DeleteProjectLdapOU 移除 project的 ldap ou

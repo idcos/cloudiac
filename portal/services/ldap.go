@@ -176,29 +176,27 @@ func SearchLdapUsers(q string, count int) ([]resps.LdapUserResp, e.Error) {
 	return results, nil
 }
 
-func CreateOUOrg(sess *db.Session, m models.LdapOUOrg) (*resps.AuthLdapOUResp, e.Error) {
+func CreateOUOrg(tx *db.Session, m models.LdapOUOrg) (models.Id, e.Error) {
 	// 判断ou是否存在
 	var ouOrg models.LdapOUOrg
-	err := sess.Model(&models.LdapOUOrg{}).Where(`org_id = ?`, m.OrgId).Where(`dn = ?`, m.DN).First(&ouOrg)
+	err := tx.Model(&models.LdapOUOrg{}).Where(`org_id = ?`, m.OrgId).Where(`dn = ?`, m.DN).First(&ouOrg)
 
 	if err != nil && err != gorm.ErrRecordNotFound {
-		return nil, e.New(e.DBError, err)
+		return "", e.New(e.DBError, err)
 	}
 
 	if err == gorm.ErrRecordNotFound {
-		err = sess.Insert(&m)
+		err = tx.Insert(&m)
 	} else {
 		m.Id = ouOrg.Id
-		_, err = sess.Model(&ouOrg).Update(models.LdapOUOrg{Role: m.Role})
+		_, err = tx.Model(&ouOrg).Update(models.LdapOUOrg{Role: m.Role})
 	}
 
 	if err != nil {
-		return nil, e.New(e.DBError, err)
+		return "", e.New(e.DBError, err)
 	}
 
-	return &resps.AuthLdapOUResp{
-		Id: m.Id.String(),
-	}, nil
+	return m.Id, nil
 }
 
 func CreateLdapUserOrg(sess *db.Session, orgId models.Id, m models.User, role string) (*resps.AuthLdapUserResp, e.Error) {
@@ -263,39 +261,27 @@ func CreateLdapUserOrg(sess *db.Session, orgId models.Id, m models.User, role st
 	}, nil
 }
 
-func GetOrgLdapOUs(sess *db.Session, orgId models.Id) ([]resps.OrgLdapOUsResp, e.Error) {
-	var results = make([]resps.OrgLdapOUsResp, 0)
-	err := sess.Model(&models.LdapOUOrg{}).Select("dn", "ou").Find(&results)
-	if err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-
-	return results, nil
-}
-
-func CreateOUProject(sess *db.Session, m models.LdapOUProject) (*resps.AuthLdapOUResp, e.Error) {
+func CreateOUProject(tx *db.Session, m models.LdapOUProject) (models.Id, e.Error) {
 	// 判断ou是否存在
 	var ouProject models.LdapOUProject
-	err := sess.Model(&models.LdapOUProject{}).Where(`org_id = ?`, m.OrgId).Where(`dn = ?`, m.DN).Where(`project_id = ?`, m.ProjectId).First(&ouProject)
+	err := tx.Model(&models.LdapOUProject{}).Where(`org_id = ?`, m.OrgId).Where(`dn = ?`, m.DN).Where(`project_id = ?`, m.ProjectId).First(&ouProject)
 
 	if err != nil && err != gorm.ErrRecordNotFound {
-		return nil, e.New(e.DBError, err)
+		return "", e.New(e.DBError, err)
 	}
 
 	if err == gorm.ErrRecordNotFound {
-		err = sess.Insert(&m)
+		err = tx.Insert(&m)
 	} else {
 		m.Id = ouProject.Id
-		_, err = sess.Model(&ouProject).Update(models.LdapOUProject{Role: m.Role})
+		_, err = tx.Model(&ouProject).Update(models.LdapOUProject{Role: m.Role})
 	}
 
 	if err != nil {
-		return nil, e.New(e.DBError, err)
+		return "", e.New(e.DBError, err)
 	}
 
-	return &resps.AuthLdapOUResp{
-		Id: m.Id.String(),
-	}, nil
+	return m.Id, nil
 }
 
 // GetLdapOUOrgByDN 根据dn检索所有的org关联角色
