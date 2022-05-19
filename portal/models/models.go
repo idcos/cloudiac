@@ -241,6 +241,8 @@ func Init(migrate bool) {
 
 	autoMigrate(&Bill{}, sess)
 	autoMigrate(&BillData{}, sess)
+	autoMigrate(&LdapOUOrg{}, sess)
+	autoMigrate(&LdapOUProject{}, sess)
 
 	dbMigrate(sess)
 }

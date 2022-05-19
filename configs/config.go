@@ -64,6 +64,7 @@ type LdapConfig struct {
 	SearchFilter     string `yaml:"search_filter"`   // 自定义搜索条件
 	EmailAttribute   string `yaml:"email_attribute"` // 用户定义邮箱字段名 默认值为mail
 	AccountAttribute string `yaml:"account_attribute"`
+	OUSearchBase     string `yaml:"ou_search_base"`
 }
 
 func (c *RunnerConfig) mustAbs(path string) string {

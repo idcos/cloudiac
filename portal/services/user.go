@@ -63,6 +63,52 @@ func GetUserByIdRaw(tx *db.Session, id models.Id) (*models.User, e.Error) {
 	return &u, nil
 }
 
+// RefreshUserOrgRoles 刷新用户的组织权限
+func RefreshUserOrgRoles(tx *db.Session, userId models.Id, ldapUserOrgOUs []models.LdapOUOrg) e.Error {
+	_, err := tx.Where(`user_id = ?`, userId).Delete(&models.UserOrg{})
+	if err != nil {
+		return e.New(e.DBError, err)
+	}
+
+	userOrgs := make([]models.UserOrg, 0)
+	for _, item := range ldapUserOrgOUs {
+		userOrgs = append(userOrgs, models.UserOrg{
+			UserId: userId,
+			OrgId:  item.OrgId,
+			Role:   item.Role,
+		})
+	}
+
+	err = tx.Insert(&userOrgs)
+	if err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
+// RefreshUserProjectRoles 刷新用户的项目权限
+func RefreshUserProjectRoles(tx *db.Session, userId models.Id, ldapUserProjectOUs []models.LdapOUProject) e.Error {
+	_, err := tx.Where(`user_id = ?`, userId).Delete(&models.UserProject{})
+	if err != nil {
+		return e.New(e.DBError, err)
+	}
+
+	userProjects := make([]models.UserProject, 0)
+	for _, item := range ldapUserProjectOUs {
+		userProjects = append(userProjects, models.UserProject{
+			UserId:    userId,
+			ProjectId: item.ProjectId,
+			Role:      item.Role,
+		})
+	}
+	err = tx.Insert(&userProjects)
+	if err != nil {
+		return e.New(e.DBError, err)
+	}
+
+	return nil
+}
+
 // GetUserById 按 ID 查找用户
 func GetUserById(tx *db.Session, id models.Id) (*models.User, e.Error) {
 	tx = tx.Where("id != ?", consts.SysUserId)
@@ -306,17 +352,17 @@ func GetUsersByUserIds(dbSess *db.Session, userId []string) []models.User {
 }
 
 // 处理Ldap 登录逻辑
-func LdapAuthLogin(userEmail, password string) (username string, er e.Error) {
+func LdapAuthLogin(userEmail, password string) (username, dn string, er e.Error) {
 	conf := configs.Get()
 	conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", conf.Ldap.LdapServer, conf.Ldap.LdapServerPort))
 	if err != nil {
-		return username, e.New(e.LdapConnectFailed, err)
+		return username, dn, e.New(e.LdapConnectFailed, err)
 	}
 	defer conn.Close()
 	// 配置ldap 管理员dn信息，例如cn=Manager,dc=idcos,dc=com
 	err = conn.Bind(conf.Ldap.AdminDn, conf.Ldap.AdminPassword)
 	if err != nil {
-		return username, e.New(e.ValidateError, err)
+		return username, dn, e.New(e.ValidateError, err)
 	}
 	// SearchFilter 需要内填入搜索条件，单个用括号包裹，例如 (objectClass=person)(!(userAccountControl=514))
 	seachFilter := fmt.Sprintf("(&%s(%s=%s))", conf.Ldap.SearchFilter, conf.Ldap.EmailAttribute, userEmail)
@@ -330,14 +376,14 @@ func LdapAuthLogin(userEmail, password string) (username string, er e.Error) {
 	)
 	sr, err := conn.Search(searchRequest)
 	if err != nil {
-		return username, e.New(e.ValidateError, err)
+		return username, dn, e.New(e.ValidateError, err)
 	}
 	if len(sr.Entries) != 1 {
-		return username, e.New(e.UserNotExists, err)
+		return username, dn, e.New(e.UserNotExists, err)
 	}
 	err = conn.Bind(sr.Entries[0].DN, password)
 	if err != nil {
-		return username, e.New(e.InvalidPassword, err)
+		return username, dn, e.New(e.InvalidPassword, err)
 	}
 	var account string
 	if conf.Ldap.AccountAttribute != "" {
@@ -345,7 +391,7 @@ func LdapAuthLogin(userEmail, password string) (username string, er e.Error) {
 	} else {
 		account = "uid"
 	}
-	return sr.Entries[0].GetAttributeValue(account), nil
+	return sr.Entries[0].GetAttributeValue(account), sr.Entries[0].DN, nil
 
 }
 

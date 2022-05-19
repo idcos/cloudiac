@@ -148,6 +148,14 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/orgs/:id/users/batch_invite", ac("orgs", "adduser"), w(handlers.Organization{}.InviteUsersBatch))
 	g.DELETE("/orgs/:id/users/:userId", ac("orgs", "removeuser"), w(handlers.Organization{}.RemoveUserForOrg))
 
+	// orgs ldap 相关
+	g.GET("/ldap/org_ous", ac(), w(handlers.GetLdapOUsFromDB))
+	g.DELETE("/ldap/org_ou", ac(), w(handlers.DeleteLdapOUFromDB))
+	g.GET("/ldap/ous", ac(), w(handlers.GetLdapOUsFromLdap))
+	g.GET("/ldap/users", ac(), w(handlers.GetLdapUsers))
+	g.POST("/ldap/auth/org_user", ac(), w(handlers.AuthLdapUser))
+	g.POST("/ldap/auth/org_ou", ac(), w(handlers.AuthLdapOU))
+
 	g.GET("/projects/users", ac(), w(handlers.ProjectUser{}.Search))
 	g.GET("/projects/authorization/users", ac(), w(handlers.ProjectUser{}.SearchProjectAuthorizationUser))
 	g.POST("/projects/users", ac(), w(handlers.ProjectUser{}.Create))
@@ -159,6 +167,11 @@ func Register(g *gin.RouterGroup) {
 
 	// 项目概览统计数据
 	g.GET("/projects/:id/statistics", ac(), w(handlers.Project{}.ProjectStat))
+
+	// projects ldap 相关
+	g.GET("/ldap/project_ous", ac(), w(handlers.GetLdapOUsFromOrg))
+	g.DELETE("/ldap/project_ou", ac(), w(handlers.DeleteProjectLdapOU))
+	g.POST("/ldap/auth/project_ou", ac(), w(handlers.AuthProjectLdapOU))
 
 	//变量管理
 	g.PUT("/variables/batch", ac(), w(handlers.Variable{}.BatchUpdate))
