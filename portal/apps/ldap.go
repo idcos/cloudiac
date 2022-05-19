@@ -10,6 +10,7 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
+	"strings"
 )
 
 func GetLdapOUs(c *ctx.ServiceContext) (interface{}, e.Error) {
@@ -71,31 +72,81 @@ func GetLdapUsers(c *ctx.ServiceContext, form *forms.SearchLdapUserForm) (interf
 }
 
 func AuthLdapUser(c *ctx.ServiceContext, form *forms.AuthLdapUserForm) (interface{}, e.Error) {
-	result, err := services.CreateLdapUserOrg(c.DB(), c.OrgId, models.User{
-		Name:  form.Uid,
-		Email: form.Email,
-		Phone: form.Phone,
-	}, form.Role)
+	user, err := services.GetLdapUserByEmail(form.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	user.Email = form.Email
+	result, err := services.CreateLdapUserOrg(c.DB(), c.OrgId, *user, form.Role)
 
 	return result, err
 }
 
 func AuthLdapOU(c *ctx.ServiceContext, form *forms.AuthLdapOUForm) (interface{}, e.Error) {
-	result, err := services.CreateOUOrg(c.DB(), models.LdapOUOrg{
-		OrgId: c.OrgId,
-		DN:    form.DN,
-		OU:    form.OU,
-		Role:  form.Role,
-	})
+	tx := c.DB().Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
 
-	return result, err
+	result := &resps.AuthLdapOUResp{}
+	result.Ids = make([]string, 0)
+
+	for _, dn := range form.DN {
+		id, err := services.CreateOUOrg(tx, models.LdapOUOrg{
+			OrgId: c.OrgId,
+			DN:    dn,
+			OU:    getOUFromDN(dn),
+			Role:  form.Role,
+		})
+		if err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+
+		result.Ids = append(result.Ids, string(id))
+	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
+
+	return result, nil
 }
 
-func GetOrgLdapOUs(c *ctx.ServiceContext) (interface{}, e.Error) {
-	results, err := services.GetOrgLdapOUs(c.DB(), c.OrgId)
-	return &resps.OrgLdapOUListResp{
-		OrgLdapOUs: results,
-	}, err
+func getOUFromDN(dn string) string {
+	ous := strings.Split(dn, ",")
+	if len(ous) == 0 {
+		return ""
+	}
+
+	firstOUs := strings.Split(ous[0], "=")
+	if len(firstOUs) != 2 {
+		return ""
+	}
+
+	return firstOUs[1]
+}
+
+func GetOrgLdapOUs(c *ctx.ServiceContext, form *forms.SearchLdapOUForm) (interface{}, e.Error) {
+	query := c.DB().Model(&models.LdapOUProject{}).Where(`org_id = ? and project_id = ?`, c.OrgId, c.ProjectId).Select("id", "dn", "ou", "role", "created_at")
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+
+	var list = make([]resps.LdapOUDBResp, 0)
+	if err := p.Scan(&list); err != nil {
+		c.Logger().Errorf("error get project ldap ous, err %s", err)
+		return nil, e.New(e.DBError, err)
+	}
+
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     list,
+	}, nil
 }
 
 func DeleteProjectLdapOU(c *ctx.ServiceContext, form *forms.DeleteLdapOUForm) (interface{}, e.Error) {
@@ -121,12 +172,37 @@ func UpdateProjectLdapOU(c *ctx.ServiceContext, form *forms.UpdateLdapOUForm) (i
 }
 
 func AuthProjectLdapOU(c *ctx.ServiceContext, form *forms.AuthProjectLdapOUForm) (interface{}, e.Error) {
-	result, err := services.CreateOUProject(c.DB(), models.LdapOUProject{
-		OrgId:     c.OrgId,
-		ProjectId: models.Id(form.ProjectId),
-		DN:        form.DN,
-		OU:        form.OU,
-		Role:      form.Role,
-	})
-	return result, err
+	tx := c.DB().Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	result := &resps.AuthLdapOUResp{}
+	result.Ids = make([]string, 0)
+
+	for _, dn := range form.DN {
+		id, err := services.CreateOUProject(tx, models.LdapOUProject{
+			OrgId:     c.OrgId,
+			ProjectId: c.ProjectId,
+			DN:        dn,
+			OU:        getOUFromDN(dn),
+			Role:      form.Role,
+		})
+		if err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+
+		result.Ids = append(result.Ids, string(id))
+	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
+
+	return result, nil
 }

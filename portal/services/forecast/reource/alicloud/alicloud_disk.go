@@ -26,6 +26,10 @@ func (a *Disk) BuildResource() *schema.Resource {
 				"size": strconv.Itoa(int(a.Size)),
 			},
 		})
+		//p = append(p, &schema.PriceRequest{
+		//	Name:  "DataDisk.Category",
+		//	Value: fmt.Sprintf("DataDisk.Category:%s,DataDisk.Size:%d", a.Category, a.Size),
+		//})
 	}
 
 	return &schema.Resource{
