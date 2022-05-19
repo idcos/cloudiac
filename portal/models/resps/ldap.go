@@ -38,6 +38,10 @@ type DeleteLdapOUResp struct {
 	Id string `json:"id"`
 }
 
+type UpdateLdapOUResp struct {
+	Id string `json:"id"`
+}
+
 type OrgLdapOUsResp struct {
 	DN string `json:"dn"`
 	OU string `json:"ou"`

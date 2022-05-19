@@ -16,7 +16,7 @@ import (
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
 // @Success 200 {object}  ctx.JSONResult{result=resps.LdapOUResp}
-// @Router /orgs/ldap_ous [get]
+// @Router /ldap/ous [get]
 func GetLdapOUsFromLdap(c *ctx.GinRequest) {
 	c.JSONResult(apps.GetLdapOUs(c.Service()))
 }
@@ -30,7 +30,7 @@ func GetLdapOUsFromLdap(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织id"
 // @Param form query forms.SearchLdapUserForm true "parameter"
 // @Success 200 {object}  ctx.JSONResult{result=resps.LdapUserListResp}
-// @Router /orgs/ldap_users [get]
+// @Router /ldap/users [get]
 func GetLdapUsers(c *ctx.GinRequest) {
 	form := &forms.SearchLdapUserForm{}
 	if err := c.Bind(form); err != nil {
@@ -48,7 +48,7 @@ func GetLdapUsers(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织id"
 // @Param form query forms.AuthLdapUserForm true "parameter"
 // @Success 200 {object}  ctx.JSONResult{result=resps.AuthLdapUserResp}
-// @Router /orgs/{id}/ldap_user [post]
+// @Router /ldap/auth/org_user [post]
 func AuthLdapUser(c *ctx.GinRequest) {
 	form := &forms.AuthLdapUserForm{}
 	if err := c.Bind(form); err != nil {
@@ -66,7 +66,7 @@ func AuthLdapUser(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织id"
 // @Param form query forms.AuthLdapOUForm true "parameter"
 // @Success 200 {object}  ctx.JSONResult{result=resps.AuthLdapOUResp}
-// @Router /orgs/{id}/ldap_user [post]
+// @Router /ldap/auth/org_ou [post]
 func AuthLdapOU(c *ctx.GinRequest) {
 	form := &forms.AuthLdapOUForm{}
 	if err := c.Bind(form); err != nil {
@@ -84,7 +84,7 @@ func AuthLdapOU(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织id"
 // @Param form query forms.SearchLdapOUForm true "parameter"
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.LdapOUDBResp}}
-// @Router /orgs/{id}/ldap_ous [get]
+// @Router /ldap/org_ous [get]
 func GetLdapOUsFromDB(c *ctx.GinRequest) {
 	form := &forms.SearchLdapOUForm{}
 	if err := c.Bind(form); err != nil {
@@ -102,7 +102,7 @@ func GetLdapOUsFromDB(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织id"
 // @Param form query forms.DeleteLdapOUForm true "parameter"
 // @Success 200 {object} ctx.JSONResult{result=resps.DeleteLdapOUResp}
-// @Router /orgs/{id}/ldap_ou [delete]
+// @Router /ldap/org_ou [delete]
 func DeleteLdapOUFromDB(c *ctx.GinRequest) {
 	form := &forms.DeleteLdapOUForm{}
 	if err := c.Bind(form); err != nil {
@@ -119,7 +119,7 @@ func DeleteLdapOUFromDB(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织id"
 // @Success 200 {object} ctx.JSONResult{result=resps.OrgLdapOUListResp}
-// @Router /projects/ldap_ous [get]
+// @Router /ldap/project_ous [get]
 func GetLdapOUsFromOrg(c *ctx.GinRequest) {
 	c.JSONResult(apps.GetOrgLdapOUs(c.Service()))
 }
@@ -133,13 +133,31 @@ func GetLdapOUsFromOrg(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织id"
 // @Param form query forms.DeleteLdapOUForm true "parameter"
 // @Success 200 {object} ctx.JSONResult{result=resps.DeleteLdapOUResp}
-// @Router /projects/{id}/ldap_ou [delete]
+// @Router /ldap/project_ou [delete]
 func DeleteProjectLdapOU(c *ctx.GinRequest) {
 	form := &forms.DeleteLdapOUForm{}
 	if err := c.Bind(form); err != nil {
 		return
 	}
 	c.JSONResult(apps.DeleteProjectLdapOU(c.Service(), form))
+}
+
+// UpdateProjectLdapOU 更新 project的 ldap ou
+// @Summary 更新 project的 ldap ou
+// @Tags ldap
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
+// @Param form query forms.UpdateLdapOUForm true "parameter"
+// @Success 200 {object} ctx.JSONResult{result=resps.UpdateLdapOUResp}
+// @Router /ldap/project_ou [PUT]
+func UpdateProjectLdapOU(c *ctx.GinRequest) {
+	form := &forms.UpdateLdapOUForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.UpdateProjectLdapOU(c.Service(), form))
 }
 
 // AuthProjectLdapOU ldap ou 授权
@@ -151,7 +169,7 @@ func DeleteProjectLdapOU(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织id"
 // @Param form query forms.AuthProjectLdapOUForm true "parameter"
 // @Success 200 {object}  ctx.JSONResult{result=resps.AuthLdapOUResp}
-// @Router /projects/{id}/ldap_user [post]
+// @Router /ldap/auth/project_ou [post]
 func AuthProjectLdapOU(c *ctx.GinRequest) {
 	form := &forms.AuthProjectLdapOUForm{}
 	if err := c.Bind(form); err != nil {

@@ -98,6 +98,17 @@ func DeleteProjectLdapOU(c *ctx.ServiceContext, form *forms.DeleteLdapOUForm) (i
 	}, nil
 }
 
+func UpdateProjectLdapOU(c *ctx.ServiceContext, form *forms.UpdateLdapOUForm) (interface{}, e.Error) {
+	_, err := c.DB().Model(&models.LdapOUProject{}).Where(`id = ?`, form.Id).Update(&models.LdapOUProject{Role: form.Role})
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	return resps.DeleteLdapOUResp{
+		Id: form.Id,
+	}, nil
+}
+
 func AuthProjectLdapOU(c *ctx.ServiceContext, form *forms.AuthProjectLdapOUForm) (interface{}, e.Error) {
 	result, err := services.CreateOUProject(c.DB(), models.LdapOUProject{
 		OrgId:     c.OrgId,
