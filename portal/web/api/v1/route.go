@@ -218,7 +218,7 @@ func Register(g *gin.RouterGroup) {
 	g.Use(w(middleware.AuthProjectId))
 
 	// projects ldap 相关
-	g.GET("/ldap/project_ous", ac(), w(handlers.GetLdapOUsFromOrg))
+	g.GET("/ldap/project_ous", ac(), w(handlers.GetProjectLdapOUs))
 	g.DELETE("/ldap/project_ou", ac(), w(handlers.DeleteProjectLdapOU))
 	g.PUT("/ldap/project_ou", ac(), w(handlers.UpdateProjectLdapOU))
 	g.POST("/ldap/auth/project_ou", ac(), w(handlers.AuthProjectLdapOU))

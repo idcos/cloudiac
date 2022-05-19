@@ -108,11 +108,21 @@ func getOUFromDN(dn string) string {
 	return firstOUs[1]
 }
 
-func GetOrgLdapOUs(c *ctx.ServiceContext) (interface{}, e.Error) {
-	results, err := services.GetOrgLdapOUs(c.DB(), c.OrgId)
-	return &resps.OrgLdapOUListResp{
-		OrgLdapOUs: results,
-	}, err
+func GetOrgLdapOUs(c *ctx.ServiceContext, form *forms.SearchLdapOUForm) (interface{}, e.Error) {
+	query := c.DB().Model(&models.LdapOUProject{}).Where(`org_id = ? and project_id = ?`, c.OrgId, c.ProjectId).Select("id", "dn", "ou", "role", "created_at")
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+
+	var list = make([]resps.LdapOUDBResp, 0)
+	if err := p.Scan(&list); err != nil {
+		c.Logger().Errorf("error get project ldap ous, err %s", err)
+		return nil, e.New(e.DBError, err)
+	}
+
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     list,
+	}, nil
 }
 
 func DeleteProjectLdapOU(c *ctx.ServiceContext, form *forms.DeleteLdapOUForm) (interface{}, e.Error) {

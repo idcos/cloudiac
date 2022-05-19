@@ -263,16 +263,6 @@ func CreateLdapUserOrg(sess *db.Session, orgId models.Id, m models.User, role st
 	}, nil
 }
 
-func GetOrgLdapOUs(sess *db.Session, orgId models.Id) ([]resps.OrgLdapOUsResp, e.Error) {
-	var results = make([]resps.OrgLdapOUsResp, 0)
-	err := sess.Model(&models.LdapOUOrg{}).Select("dn", "ou").Find(&results)
-	if err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-
-	return results, nil
-}
-
 func CreateOUProject(sess *db.Session, m models.LdapOUProject) (*resps.AuthLdapOUResp, e.Error) {
 	// 判断ou是否存在
 	var ouProject models.LdapOUProject
