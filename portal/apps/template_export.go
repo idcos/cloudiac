@@ -44,10 +44,18 @@ func TemplateImport(c *ctx.ServiceContext, form *TplImportForm) (result *service
 		Logger:          c.Logger().WithField("action", "ImportTemplate"),
 		OrgId:           c.OrgId,
 		CreatorId:       creatorId,
-		ProjectIds:      form.Projects,
+		ProjectIds:      make([]models.Id, 0),
 		Data:            form.Data,
 		WhenIdDuplicate: form.IdDuplicate,
 	}
+
+	for _, pid := range form.Projects {
+		if pid == "" {
+			continue
+		}
+		importer.ProjectIds = append(importer.ProjectIds, pid)
+	}
+
 	// return importer.Import(c.DB())
 
 	_ = c.DB().Transaction(func(tx *db.Session) error {
