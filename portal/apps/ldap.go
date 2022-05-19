@@ -84,14 +84,38 @@ func AuthLdapUser(c *ctx.ServiceContext, form *forms.AuthLdapUserForm) (interfac
 }
 
 func AuthLdapOU(c *ctx.ServiceContext, form *forms.AuthLdapOUForm) (interface{}, e.Error) {
-	result, err := services.CreateOUOrg(c.DB(), models.LdapOUOrg{
-		OrgId: c.OrgId,
-		DN:    form.DN,
-		OU:    getOUFromDN(form.DN),
-		Role:  form.Role,
-	})
+	tx := c.DB().Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
 
-	return result, err
+	result := &resps.AuthLdapOUResp{}
+	result.Ids = make([]string, 0)
+
+	for _, dn := range form.DN {
+		id, err := services.CreateOUOrg(tx, models.LdapOUOrg{
+			OrgId: c.OrgId,
+			DN:    dn,
+			OU:    getOUFromDN(dn),
+			Role:  form.Role,
+		})
+		if err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+
+		result.Ids = append(result.Ids, string(id))
+	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
+
+	return result, nil
 }
 
 func getOUFromDN(dn string) string {
@@ -148,12 +172,37 @@ func UpdateProjectLdapOU(c *ctx.ServiceContext, form *forms.UpdateLdapOUForm) (i
 }
 
 func AuthProjectLdapOU(c *ctx.ServiceContext, form *forms.AuthProjectLdapOUForm) (interface{}, e.Error) {
-	result, err := services.CreateOUProject(c.DB(), models.LdapOUProject{
-		OrgId:     c.OrgId,
-		ProjectId: c.ProjectId,
-		DN:        form.DN,
-		OU:        getOUFromDN(form.DN),
-		Role:      form.Role,
-	})
-	return result, err
+	tx := c.DB().Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	result := &resps.AuthLdapOUResp{}
+	result.Ids = make([]string, 0)
+
+	for _, dn := range form.DN {
+		id, err := services.CreateOUProject(tx, models.LdapOUProject{
+			OrgId:     c.OrgId,
+			ProjectId: c.ProjectId,
+			DN:        dn,
+			OU:        getOUFromDN(dn),
+			Role:      form.Role,
+		})
+		if err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+
+		result.Ids = append(result.Ids, string(id))
+	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
+
+	return result, nil
 }

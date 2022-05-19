@@ -31,7 +31,7 @@ type AuthLdapUserResp struct {
 }
 
 type AuthLdapOUResp struct {
-	Id string `json:"id"`
+	Ids []string `json:"ids"`
 }
 
 type DeleteLdapOUResp struct {
