@@ -16,12 +16,11 @@ func getSlbRegistryItem() *schema.RegistryItem {
 }
 
 func NewSlb(d *schema.ResourceData) *schema.Resource {
-	region := d.Get("region").String()
 
 	a := &alicloud.Slb{
 		Address:       d.Address,
 		Provider:      d.ProviderName,
-		Region:        region,
+		Region:        d.Region,
 		Specification: d.Get("specification").String(),
 	}
 

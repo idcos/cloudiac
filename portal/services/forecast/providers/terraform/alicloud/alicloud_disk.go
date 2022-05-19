@@ -16,12 +16,11 @@ func getDiskRegistryItem() *schema.RegistryItem {
 }
 
 func NewDisk(d *schema.ResourceData) *schema.Resource {
-	region := d.Get("region").String()
 
 	a := &alicloud.Disk{
 		Address:  d.Address,
 		Provider: d.ProviderName,
-		Region:   region,
+		Region:   d.Region,
 		Size:     d.Get("size").Int(),
 		Category: d.Get("category").String(),
 	}

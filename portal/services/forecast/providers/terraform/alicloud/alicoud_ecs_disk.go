@@ -15,12 +15,11 @@ func getEcsDiskRegistryItem() *schema.RegistryItem {
 }
 
 func NewEcsDisk(d *schema.ResourceData) *schema.Resource {
-	region := d.Get("region").String()
 
 	a := &alicloud.EcsDisk{
 		Address:  d.Address,
 		Provider: d.ProviderName,
-		Region:   region,
+		Region:   d.Region,
 		Size:     d.Get("size").Int(),
 		Category: d.Get("category").String(),
 	}

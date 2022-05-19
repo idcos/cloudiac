@@ -16,12 +16,11 @@ func getEipRegistryItem() *schema.RegistryItem {
 }
 
 func NewEip(d *schema.ResourceData) *schema.Resource {
-	region := d.Get("region").String()
 
 	e := &alicloud.Eip{
 		Address:  d.Address,
 		Provider: d.ProviderName,
-		Region:   region,
+		Region:   d.Region,
 	}
 	return e.BuildResource()
 

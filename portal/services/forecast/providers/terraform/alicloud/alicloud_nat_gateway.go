@@ -16,12 +16,11 @@ func getNatGatewayRegistryItem() *schema.RegistryItem {
 }
 
 func NewNatGateway(d *schema.ResourceData) *schema.Resource {
-	region := d.Get("region").String()
 
 	n := &alicloud.NatGateway{
 		Address:  d.Address,
 		Provider: d.ProviderName,
-		Region:   region,
+		Region:   d.Region,
 	}
 	return n.BuildResource()
 

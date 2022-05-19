@@ -16,13 +16,11 @@ func getSlbLoadBalancerRegistryItem() *schema.RegistryItem {
 }
 
 func NewSlbLoadBalancer(d *schema.ResourceData) *schema.Resource {
-	region := d.Get("region").String()
 
 	a := &alicloud.SlbLoadBalancer{
 		Address:          d.Address,
 		Provider:         d.ProviderName,
-		Region:           region,
-		Specification:    d.Get("specification").String(),
+		Region:           d.Region,
 		LoadBalancerSpec: d.Get("load_balancer_spec").String(),
 	}
 

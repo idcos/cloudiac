@@ -17,7 +17,6 @@ func (e *Eip) BuildResource() *schema.Resource {
 	return &schema.Resource{
 		Name:     e.Address,
 		Provider: e.Provider,
-		//RequestData: p,
-		Region: e.Region,
+		Region:   e.Region,
 	}
 }

@@ -26,7 +26,6 @@ func (a *EcsDisk) BuildResource() *schema.Resource {
 				"size": strconv.Itoa(int(a.Size)),
 			},
 		})
-		//p := make([]*schema.PriceRequest, 0)
 	}
 
 	return &schema.Resource{

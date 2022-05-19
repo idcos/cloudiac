@@ -17,7 +17,6 @@ func (n *NatGateway) BuildResource() *schema.Resource {
 	return &schema.Resource{
 		Name:     n.Address,
 		Provider: n.Provider,
-		//RequestData: p,
-		Region: n.Region,
+		Region:   n.Region,
 	}
 }
