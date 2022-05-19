@@ -285,16 +285,14 @@ func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([]re
 
 // GetResGrowTrendByProjects 获取项目的资源变化趋势
 func GetResGrowTrendByProjects(tx *db.Session, projectIds []models.Id, days int) (map[models.Id][]resps.ProjectResStatResp, e.Error) {
-
 	/* sample sql
 	select
 		iac_resource.project_id as id,
 		DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date,
-		count(*) as count
+		count(DISTINCT iac_resource.env_id, iac_resource.address) as count
 	from
 		iac_resource
 	JOIN iac_env ON
-		iac_env.last_res_task_id = iac_resource.task_id
 		and iac_env.id = iac_resource.env_id
 	where
 		iac_env.project_id IN ('p-c9cjgrosm56nr7049qpg')
@@ -309,8 +307,8 @@ func GetResGrowTrendByProjects(tx *db.Session, projectIds []models.Id, days int)
 		return make(map[models.Id][]resps.ProjectResStatResp), nil
 	}
 
-	query := tx.Model(&models.Resource{}).Select(`iac_resource.project_id as id, DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date, count(*) as count`)
-	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.project_id as id, DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date, count(DISTINCT iac_resource.env_id, iac_resource.address) as count`)
+	query = query.Joins(`join iac_env on iac_env.id = iac_resource.env_id`)
 
 	query = query.Where("iac_env.project_id in ?", projectIds)
 	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? DAY), "%Y-%m-%d")`, days)
