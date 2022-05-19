@@ -43,8 +43,6 @@ type UpdateLdapOUForm struct {
 type AuthProjectLdapOUForm struct {
 	BaseForm
 
-	ProjectId string `json:"projectId" form:"projectId"` // project id
-	DN        string `json:"dn" form:"dn"`               // 识别名
-	OU        string `json:"ou" form:"ou"`               // organizationalUnit
-	Role      string `json:"role" form:"role"`           // 角色
+	DN   string `json:"dn" form:"dn"`     // 识别名
+	Role string `json:"role" form:"role"` // 角色
 }

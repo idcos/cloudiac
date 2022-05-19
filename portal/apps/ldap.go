@@ -140,9 +140,9 @@ func UpdateProjectLdapOU(c *ctx.ServiceContext, form *forms.UpdateLdapOUForm) (i
 func AuthProjectLdapOU(c *ctx.ServiceContext, form *forms.AuthProjectLdapOUForm) (interface{}, e.Error) {
 	result, err := services.CreateOUProject(c.DB(), models.LdapOUProject{
 		OrgId:     c.OrgId,
-		ProjectId: models.Id(form.ProjectId),
+		ProjectId: c.ProjectId,
 		DN:        form.DN,
-		OU:        form.OU,
+		OU:        getOUFromDN(form.DN),
 		Role:      form.Role,
 	})
 	return result, err
