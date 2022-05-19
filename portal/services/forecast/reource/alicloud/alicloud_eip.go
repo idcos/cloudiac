@@ -6,18 +6,18 @@ import (
 	"cloudiac/portal/services/forecast/schema"
 )
 
-type NatGateway struct {
+type Eip struct {
 	Address  string
 	Region   string
 	Provider string
 }
 
-func (n *NatGateway) BuildResource() *schema.Resource {
+func (e *Eip) BuildResource() *schema.Resource {
 
 	return &schema.Resource{
-		Name:     n.Address,
-		Provider: n.Provider,
+		Name:     e.Address,
+		Provider: e.Provider,
 		//RequestData: p,
-		Region: n.Region,
+		Region: e.Region,
 	}
 }

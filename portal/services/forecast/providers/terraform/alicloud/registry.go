@@ -10,6 +10,7 @@ var ResourceRegistry []*schema.RegistryItem = []*schema.RegistryItem{
 	getEcsDiskRegistryItem(),
 	getNatGatewayRegistryItem(),
 	getDBInstanceRegistryItem(),
+	getEipRegistryItem(),
 	getSlbRegistryItem(),
 	getSlbLoadBalancerRegistryItem(),
 	getKvStoreInstanceRegistryItem(),

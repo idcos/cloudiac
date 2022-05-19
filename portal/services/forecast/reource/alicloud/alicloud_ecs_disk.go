@@ -4,7 +4,7 @@ package alicloud
 
 import (
 	"cloudiac/portal/services/forecast/schema"
-	"fmt"
+	"strconv"
 )
 
 type EcsDisk struct {
@@ -16,12 +16,15 @@ type EcsDisk struct {
 }
 
 func (a *EcsDisk) BuildResource() *schema.Resource {
-	p := make([]*schema.PriceRequest, 0)
+	p := make([]schema.PriceRequest, 0)
 
 	if a.Size > 0 && a.Category != "" {
-		p = append(p, &schema.PriceRequest{
-			Name:  "DataDisk.Category",
-			Value: fmt.Sprintf("DataDisk.Category:%s,DataDisk.Size:%d", a.Category, a.Size),
+		p = append(p, schema.PriceRequest{
+			Type: "disk",
+			Attribute: map[string]string{
+				"type": a.Category,
+				"size": strconv.Itoa(int(a.Size)),
+			},
 		})
 	}
 
@@ -29,7 +32,6 @@ func (a *EcsDisk) BuildResource() *schema.Resource {
 		Name:        a.Address,
 		Provider:    a.Provider,
 		RequestData: p,
-		PriceCode:   "yundisk",
-		PriceType:   "",
+		Region:      a.Region,
 	}
 }

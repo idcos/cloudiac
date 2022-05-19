@@ -7,22 +7,22 @@ import (
 	"cloudiac/portal/services/forecast/schema"
 )
 
-func getNatGatewayRegistryItem() *schema.RegistryItem {
+func getEipRegistryItem() *schema.RegistryItem {
 	return &schema.RegistryItem{
-		Name:  "alicloud_nat_gateway",
+		Name:  "alicloud_eip",
 		Notes: []string{},
-		RFunc: NewNatGateway,
+		RFunc: NewEip,
 	}
 }
 
-func NewNatGateway(d *schema.ResourceData) *schema.Resource {
+func NewEip(d *schema.ResourceData) *schema.Resource {
 	region := d.Get("region").String()
 
-	n := &alicloud.NatGateway{
+	e := &alicloud.Eip{
 		Address:  d.Address,
 		Provider: d.ProviderName,
 		Region:   region,
 	}
-	return n.BuildResource()
+	return e.BuildResource()
 
 }

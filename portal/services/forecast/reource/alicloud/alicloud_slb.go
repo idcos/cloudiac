@@ -15,20 +15,21 @@ type Slb struct {
 }
 
 func (a *Slb) BuildResource() *schema.Resource {
-	p := make([]*schema.PriceRequest, 0)
+	p := make([]schema.PriceRequest, 0)
 
 	if a.Specification != "" {
-		p = append(p, &schema.PriceRequest{
-			//Name:  "LoadBalancerSpec",
-			//Value: fmt.Sprintf("LoadBalancerSpec:%s", a.Specification),
+		p = append(p, schema.PriceRequest{
+			Type: "slb",
+			Attribute: map[string]string{
+				"spec": a.Specification,
+			},
 		})
 	}
 
 	return &schema.Resource{
 		Name:        a.Address,
 		Provider:    a.Provider,
-		//RequestData: p,
-		//PriceCode:   "slb",
-		//PriceType:   "",
+		RequestData: p,
+		Region:      a.Region,
 	}
 }
