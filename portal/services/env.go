@@ -613,6 +613,9 @@ func monthEnvCostList(tx *db.Session, id models.Id, isCurMonth bool) (map[string
 		iac_resource
 	JOIN iac_bill ON
 		iac_bill.instance_id = iac_resource.res_id
+	JOIN iac_env ON
+		iac_env.id = iac_resource.env_id
+		and iac_resource.task_id = iac_env.last_res_task_id
 	where
 		iac_resource.env_id  = 'env-c8u10aosm56kh90t588g'
 		and iac_resource.address NOT LIKE 'data.%'
@@ -621,6 +624,7 @@ func monthEnvCostList(tx *db.Session, id models.Id, isCurMonth bool) (map[string
 
 	query := tx.Model(&models.Resource{}).Select(`iac_resource.attrs as attrs, iac_resource.address as address, iac_resource.type as res_type, iac_bill.instance_id as instance_id, pretax_amount as cur_month_cost`)
 	query = query.Joins(`JOIN iac_bill ON iac_bill.instance_id = iac_resource.res_id`)
+	query = query.Joins(`JOIN iac_env ON iac_env.id = iac_resource.env_id and iac_resource.task_id = iac_env.last_res_task_id`)
 
 	query = query.Where(`iac_resource.env_id = ?`, id)
 	query = query.Where(`iac_resource.address NOT LIKE 'data.%'`)
