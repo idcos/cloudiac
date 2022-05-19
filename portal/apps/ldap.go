@@ -45,6 +45,17 @@ func DeleteLdapOUFromDB(c *ctx.ServiceContext, form *forms.DeleteLdapOUForm) (in
 	}, nil
 }
 
+func UpdateLdapOU(c *ctx.ServiceContext, form *forms.UpdateLdapOUForm) (interface{}, e.Error) {
+	_, err := c.DB().Model(&models.LdapOUOrg{}).Where(`id = ?`, form.Id).Update(&models.LdapOUOrg{Role: form.Role})
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	return resps.UpdateLdapOUResp{
+		Id: form.Id,
+	}, nil
+}
+
 // TODO: 未过滤用户，前端过滤，返回所有用户
 func GetLdapUsers(c *ctx.ServiceContext, form *forms.SearchLdapUserForm) (interface{}, e.Error) {
 	users, err := services.SearchLdapUsers(form.Q, 0)
@@ -94,6 +105,17 @@ func DeleteProjectLdapOU(c *ctx.ServiceContext, form *forms.DeleteLdapOUForm) (i
 	}
 
 	return resps.DeleteLdapOUResp{
+		Id: form.Id,
+	}, nil
+}
+
+func UpdateProjectLdapOU(c *ctx.ServiceContext, form *forms.UpdateLdapOUForm) (interface{}, e.Error) {
+	_, err := c.DB().Model(&models.LdapOUProject{}).Where(`id = ?`, form.Id).Update(&models.LdapOUProject{Role: form.Role})
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	return resps.UpdateLdapOUResp{
 		Id: form.Id,
 	}, nil
 }
