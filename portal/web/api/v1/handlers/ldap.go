@@ -111,6 +111,24 @@ func DeleteLdapOUFromDB(c *ctx.GinRequest) {
 	c.JSONResult(apps.DeleteLdapOUFromDB(c.Service(), form))
 }
 
+// UpdateLdapOU 更新 org 的 ldap ou
+// @Summary 更新 org 的 ldap ou
+// @Tags ldap
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织id"
+// @Param form query forms.UpdateLdapOUForm true "parameter"
+// @Success 200 {object} ctx.JSONResult{result=resps.UpdateLdapOUResp}
+// @Router /ldap/project_ou [PUT]
+func UpdateLdapOU(c *ctx.GinRequest) {
+	form := &forms.UpdateLdapOUForm{}
+	if err := c.Bind(form); err != nil {
+		return
+	}
+	c.JSONResult(apps.UpdateLdapOU(c.Service(), form))
+}
+
 // GetLdapOUsFromOrg 获取组织下的 ldap ou 列表
 // @Summary 获取组织下的 ldap ou 列表
 // @Tags ldap
