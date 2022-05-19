@@ -110,6 +110,37 @@ func genOUTree(conn *ldap.Conn, root *resps.LdapOUResp) error {
 	return nil
 }
 
+func GetLdapUserByEmail(email string) (*models.User, e.Error) {
+	conn, er := connectLdap()
+	if er != nil {
+		return nil, e.New(e.LdapConnectFailed, er)
+	}
+	defer closeLdap(conn)
+
+	conf := configs.Get()
+	seachFilter := fmt.Sprintf("(&%s(%s=%s))", conf.Ldap.SearchFilter, conf.Ldap.EmailAttribute, email)
+	searchRequest := ldap.NewSearchRequest(
+		conf.Ldap.SearchBase,
+		ldap.ScopeWholeSubtree, ldap.DerefAlways, 0, 0, false,
+		seachFilter,
+		// 这里是查询返回的属性,以数组形式提供.如果为空则会返回所有的属性
+		[]string{},
+		nil,
+	)
+
+	sr, err := conn.Search(searchRequest)
+	if err != nil {
+		return nil, e.New(e.ValidateError, err)
+	}
+	if len(sr.Entries) != 1 {
+		return nil, e.New(e.UserNotExists, err)
+	}
+	return &models.User{
+		Name:  sr.Entries[0].GetAttributeValue("uid"),
+		Phone: sr.Entries[0].GetAttributeValue("mobile"),
+	}, nil
+}
+
 func SearchLdapUsers(q string, count int) ([]resps.LdapUserResp, e.Error) {
 	conn, er := connectLdap()
 	if er != nil {

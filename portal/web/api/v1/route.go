@@ -169,12 +169,6 @@ func Register(g *gin.RouterGroup) {
 	// 项目概览统计数据
 	g.GET("/projects/:id/statistics", ac(), w(handlers.Project{}.ProjectStat))
 
-	// projects ldap 相关
-	g.GET("/ldap/project_ous", ac(), w(handlers.GetLdapOUsFromOrg))
-	g.DELETE("/ldap/project_ou", ac(), w(handlers.DeleteProjectLdapOU))
-	g.PUT("/ldap/project_ou", ac(), w(handlers.UpdateProjectLdapOU))
-	g.POST("/ldap/auth/project_ou", ac(), w(handlers.AuthProjectLdapOU))
-
 	//变量管理
 	g.PUT("/variables/batch", ac(), w(handlers.Variable{}.BatchUpdate))
 	g.PUT("/variables/scope/:scope/:id", ac(), w(handlers.Variable{}.UpdateObjectVars))
@@ -222,6 +216,12 @@ func Register(g *gin.RouterGroup) {
 
 	// 项目资源
 	g.Use(w(middleware.AuthProjectId))
+
+	// projects ldap 相关
+	g.GET("/ldap/project_ous", ac(), w(handlers.GetLdapOUsFromOrg))
+	g.DELETE("/ldap/project_ou", ac(), w(handlers.DeleteProjectLdapOU))
+	g.PUT("/ldap/project_ou", ac(), w(handlers.UpdateProjectLdapOU))
+	g.POST("/ldap/auth/project_ou", ac(), w(handlers.AuthProjectLdapOU))
 
 	// 环境管理
 	ctrl.Register(g.Group("envs", ac()), &handlers.Env{})

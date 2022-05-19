@@ -10,6 +10,7 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
+	"strings"
 )
 
 func GetLdapOUs(c *ctx.ServiceContext) (interface{}, e.Error) {
@@ -71,11 +72,13 @@ func GetLdapUsers(c *ctx.ServiceContext, form *forms.SearchLdapUserForm) (interf
 }
 
 func AuthLdapUser(c *ctx.ServiceContext, form *forms.AuthLdapUserForm) (interface{}, e.Error) {
-	result, err := services.CreateLdapUserOrg(c.DB(), c.OrgId, models.User{
-		Name:  form.Uid,
-		Email: form.Email,
-		Phone: form.Phone,
-	}, form.Role)
+	user, err := services.GetLdapUserByEmail(form.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	user.Email = form.Email
+	result, err := services.CreateLdapUserOrg(c.DB(), c.OrgId, *user, form.Role)
 
 	return result, err
 }
@@ -84,11 +87,25 @@ func AuthLdapOU(c *ctx.ServiceContext, form *forms.AuthLdapOUForm) (interface{},
 	result, err := services.CreateOUOrg(c.DB(), models.LdapOUOrg{
 		OrgId: c.OrgId,
 		DN:    form.DN,
-		OU:    form.OU,
+		OU:    getOUFromDN(form.DN),
 		Role:  form.Role,
 	})
 
 	return result, err
+}
+
+func getOUFromDN(dn string) string {
+	ous := strings.Split(dn, ",")
+	if len(ous) == 0 {
+		return ""
+	}
+
+	firstOUs := strings.Split(ous[0], "=")
+	if len(firstOUs) != 2 {
+		return ""
+	}
+
+	return firstOUs[1]
 }
 
 func GetOrgLdapOUs(c *ctx.ServiceContext) (interface{}, e.Error) {

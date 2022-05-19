@@ -17,16 +17,13 @@ type AuthLdapUserForm struct {
 	BaseForm
 
 	Email string `json:"email" form:"email"` // 邮箱
-	Uid   string `json:"uid" form:"uid"`     // 用户名称
 	Role  string `json:"role" form:"role"`   // 角色
-	Phone string `json:"phone" form:"phone"` // 手机号
 }
 
 type AuthLdapOUForm struct {
 	BaseForm
 
 	DN   string `json:"dn" form:"dn"`     // 识别名
-	OU   string `json:"ou" form:"ou"`     // organizationalUnit
 	Role string `json:"role" form:"role"` // 角色
 }
 
