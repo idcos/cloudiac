@@ -49,7 +49,7 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err 
 				return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
 			}
 			// 登录成功, 在用户表中添加该用户
-			if err = createLdapUserAndRole(c, username, form.Email, dn); err != nil {
+			if user, err = createLdapUserAndRole(c, username, form.Email, dn); err != nil {
 				c.Logger().Warnf("create user error: %v", err)
 				return nil, err
 			}
@@ -73,7 +73,7 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err 
 	return data, nil
 }
 
-func createLdapUserAndRole(c *ctx.ServiceContext, username, email, dn string) e.Error {
+func createLdapUserAndRole(c *ctx.ServiceContext, username, email, dn string) (*models.User, e.Error) {
 	tx := c.DB().Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -90,7 +90,7 @@ func createLdapUserAndRole(c *ctx.ServiceContext, username, email, dn string) e.
 	if err != nil {
 		c.Logger().Warnf("create user error: %v", err)
 		_ = tx.Rollback()
-		return e.New(e.InternalError, http.StatusInternalServerError)
+		return nil, e.New(e.InternalError, http.StatusInternalServerError)
 	}
 
 	// 获取ldap用户的OU信息
@@ -100,36 +100,37 @@ func createLdapUserAndRole(c *ctx.ServiceContext, username, email, dn string) e.
 	ldapUserOrgOUs, err := services.GetLdapOUOrgByDN(tx, userOU)
 	if err != nil {
 		_ = tx.Rollback()
-		return err
+		return nil, err
 	}
 
 	// 更新用户组织权限
 	err = services.RefreshUserOrgRoles(tx, user.Id, ldapUserOrgOUs)
 	if err != nil {
 		_ = tx.Rollback()
-		return err
+		return nil, err
 	}
 
 	// 根据OU获取项目权限
 	ldapUserProjectOUs, err := services.GetLdapOUProjectByDN(tx, userOU)
 	if err != nil {
 		_ = tx.Rollback()
-		return err
+		return nil, err
 	}
 
 	// 更新用户项目权限
 	err = services.RefreshUserProjectRoles(tx, user.Id, ldapUserProjectOUs)
 	if err != nil {
 		_ = tx.Rollback()
-		return err
+		return nil, err
 	}
 
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("createLdapUserAndRole commit err: %s", err)
+		return nil, e.New(e.DBError, err)
 	}
 
-	return nil
+	return user, nil
 }
 
 // GenerateSsoToken 生成 SSO token
