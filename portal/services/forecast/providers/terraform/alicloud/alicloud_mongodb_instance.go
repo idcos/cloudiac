@@ -7,20 +7,20 @@ import (
 	"cloudiac/portal/services/forecast/schema"
 )
 
-func getKvStoreInstanceRegistryItem() *schema.RegistryItem {
+func getMongodbInstanceRegistryItem() *schema.RegistryItem {
 	return &schema.RegistryItem{
-		Name:  "alicloud_kvstore_instance",
+		Name:  "alicloud_mongodb_instance",
 		Notes: []string{},
-		RFunc: NewKvStoreInstance,
+		RFunc: NewMongodbInstance,
 	}
 }
 
-func NewKvStoreInstance(d *schema.ResourceData) *schema.Resource {
-	a := &alicloud.KvStoreInstance{
+func NewMongodbInstance(d *schema.ResourceData) *schema.Resource {
+	a := &alicloud.MongodbInstance{
 		Address:       d.Address,
 		Provider:      d.ProviderName,
 		Region:        d.Region,
-		InstanceClass: d.Get("instance_class").String(),
+		DBInstanceClass: d.Get("db_instance_class").String(),
 	}
 
 	return a.BuildResource()

@@ -19,36 +19,24 @@ type DBInstance struct {
 }
 
 func (a *DBInstance) BuildResource() *schema.Resource {
-	p := make([]*schema.PriceRequest, 0)
+	p := make([]schema.PriceRequest, 0)
 
 	if a.InstanceType != "" {
-		p = append(p, &schema.PriceRequest{
-			//Name:  "DBInstanceClass",
-			//Value: fmt.Sprintf("DBInstanceClass:%s,EngineVersion:%s", a.InstanceType, a.EngineVersion),
+		p = append(p, schema.PriceRequest{
+			Type: "ecs",
+			Attribute: map[string]string{
+				"instance_type": a.InstanceType,
+			},
 		})
 	}
 
-	if a.InstanceStorage != 0 {
-		priceRequest := &schema.PriceRequest{
-			//Name:  "DBInstanceStorage",
-			//Value: fmt.Sprintf("DBInstanceStorage:%d,DBInstanceStorageType:%s", a.InstanceStorage, a.DbInstanceStorageType),
-		}
-
-		if a.DbInstanceStorageType != "" {
-			//priceRequest.Value = fmt.Sprintf("DBInstanceStorage:%d,DBInstanceStorageType:%s", a.InstanceStorage, a.DbInstanceStorageType)
-		} else {
-			//priceRequest.Value = fmt.Sprintf("DBInstanceStorage:%d", a.InstanceStorage)
-		}
-
-		p = append(p, priceRequest)
-
-	}
+	// todo 存储价格
+	if a.InstanceStorage != 0 {}
 
 	return &schema.Resource{
 		Name:        a.Address,
 		Provider:    a.Provider,
-		//RequestData: p,
-		//PriceCode:   "rds",
-		//PriceType:   "bards",
+		Region:      a.Region,
+		RequestData: p,
 	}
 }

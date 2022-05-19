@@ -6,23 +6,22 @@ import (
 	"cloudiac/portal/services/forecast/schema"
 )
 
-type KvStoreInstance struct {
+type MongodbInstance struct {
 	Address  string
 	Region   string
 	Provider string
 
-	InstanceClass string `json:"instance_class"`
-	InstanceType  string `json:"instance_type"`
+	DBInstanceClass string `json:"db_instance_class"`
 }
 
-func (a *KvStoreInstance) BuildResource() *schema.Resource {
+func (a *MongodbInstance) BuildResource() *schema.Resource {
 	p := make([]schema.PriceRequest, 0)
 
-	if a.InstanceClass != "" {
+	if a.DBInstanceClass != "" {
 		p = append(p, schema.PriceRequest{
-			Type: "redis",
+			Type: "mongodb",
 			Attribute: map[string]string{
-				"instance_class": a.InstanceClass,
+				"db_instance_class": a.DBInstanceClass,
 			},
 		})
 	}
