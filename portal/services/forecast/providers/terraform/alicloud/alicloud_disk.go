@@ -16,7 +16,6 @@ func getDiskRegistryItem() *schema.RegistryItem {
 }
 
 func NewDisk(d *schema.ResourceData) *schema.Resource {
-
 	a := &alicloud.Disk{
 		Address:  d.Address,
 		Provider: d.ProviderName,

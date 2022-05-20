@@ -12,11 +12,18 @@ type NatGateway struct {
 	Provider string
 }
 
-func (n *NatGateway) BuildResource() *schema.Resource {
+func (a *NatGateway) BuildResource() *schema.Resource {
+	p := make([]schema.PriceRequest, 0)
+	p = append(p, schema.PriceRequest{
+		Type:      "nat",
+		Attribute: map[string]string{},
+	})
 
 	return &schema.Resource{
-		Name:     n.Address,
-		Provider: n.Provider,
-		Region:   n.Region,
+		Name:        a.Address,
+		Provider:    a.Provider,
+		Region:      a.Region,
+		RequestData: p,
 	}
+
 }

@@ -23,7 +23,7 @@ func (a *DBInstance) BuildResource() *schema.Resource {
 
 	if a.InstanceType != "" {
 		p = append(p, schema.PriceRequest{
-			Type: "ecs",
+			Type: "rds",
 			Attribute: map[string]string{
 				"instance_type": a.InstanceType,
 			},

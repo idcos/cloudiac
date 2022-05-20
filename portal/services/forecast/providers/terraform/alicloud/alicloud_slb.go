@@ -16,7 +16,6 @@ func getSlbRegistryItem() *schema.RegistryItem {
 }
 
 func NewSlb(d *schema.ResourceData) *schema.Resource {
-
 	a := &alicloud.Slb{
 		Address:       d.Address,
 		Provider:      d.ProviderName,

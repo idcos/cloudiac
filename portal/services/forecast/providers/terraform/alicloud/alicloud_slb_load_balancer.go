@@ -16,7 +16,6 @@ func getSlbLoadBalancerRegistryItem() *schema.RegistryItem {
 }
 
 func NewSlbLoadBalancer(d *schema.ResourceData) *schema.Resource {
-
 	a := &alicloud.SlbLoadBalancer{
 		Address:          d.Address,
 		Provider:         d.ProviderName,

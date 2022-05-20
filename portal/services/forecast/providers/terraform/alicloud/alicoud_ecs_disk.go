@@ -15,7 +15,6 @@ func getEcsDiskRegistryItem() *schema.RegistryItem {
 }
 
 func NewEcsDisk(d *schema.ResourceData) *schema.Resource {
-
 	a := &alicloud.EcsDisk{
 		Address:  d.Address,
 		Provider: d.ProviderName,

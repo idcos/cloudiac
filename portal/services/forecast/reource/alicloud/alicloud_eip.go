@@ -12,11 +12,17 @@ type Eip struct {
 	Provider string
 }
 
-func (e *Eip) BuildResource() *schema.Resource {
+func (a *Eip) BuildResource() *schema.Resource {
+	p := make([]schema.PriceRequest, 0)
+	p = append(p, schema.PriceRequest{
+		Type:      "eip",
+		Attribute: map[string]string{},
+	})
 
 	return &schema.Resource{
-		Name:     e.Address,
-		Provider: e.Provider,
-		Region:   e.Region,
+		Name:        a.Address,
+		Provider:    a.Provider,
+		Region:      a.Region,
+		RequestData: p,
 	}
 }
