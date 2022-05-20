@@ -140,6 +140,7 @@ func GetLdapUserByEmail(emails []string) ([]*models.User, e.Error) {
 		}
 
 		users = append(users, &models.User{
+			Email: email,
 			Name:  sr.Entries[0].GetAttributeValue("uid"),
 			Phone: sr.Entries[0].GetAttributeValue("mobile"),
 		})
