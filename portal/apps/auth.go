@@ -26,9 +26,16 @@ func validPassword(c *ctx.ServiceContext, user *models.User, email, password str
 	if !valid {
 		// 如果本地账号验证未通过，进行ldap登陆验证
 		if configs.Get().Ldap.LdapServer != "" {
-			if _, _, err := services.LdapAuthLogin(email, password); err != nil {
+			_, dn, err := services.LdapAuthLogin(email, password)
+			if err != nil {
 				c.Logger().Warnf("login error: %v", err)
 				return e.New(e.InvalidPassword, http.StatusUnauthorized)
+			}
+
+			// 刷新用户权限
+			if err := refreshLdapUserRole(c, user, dn); err != nil {
+				c.Logger().Warnf("refresh user role error: %v", err)
+				return err
 			}
 		}
 	}
@@ -49,10 +56,17 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err 
 				return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
 			}
 			// 登录成功, 在用户表中添加该用户
-			if user, err = createLdapUserAndRole(c, username, form.Email, dn); err != nil {
+			if user, err = createLdapUser(c, username, form.Email); err != nil {
 				c.Logger().Warnf("create user error: %v", err)
 				return nil, err
 			}
+
+			// 刷新用户权限
+			if err = refreshLdapUserRole(c, user, dn); err != nil {
+				c.Logger().Warnf("refresh user role error: %v", err)
+				return nil, err
+			}
+
 		} else {
 			return nil, err
 		}
@@ -73,7 +87,21 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err 
 	return data, nil
 }
 
-func createLdapUserAndRole(c *ctx.ServiceContext, username, email, dn string) (*models.User, e.Error) {
+func createLdapUser(c *ctx.ServiceContext, username, email string) (*models.User, e.Error) {
+	// 登录成功, 在用户表中添加该用户
+	user, err := services.CreateUser(c.DB(), models.User{
+		Name:  username,
+		Email: email,
+	})
+	if err != nil {
+		c.Logger().Warnf("create user error: %v", err)
+		return nil, e.New(e.InternalError, http.StatusInternalServerError)
+	}
+
+	return user, nil
+}
+
+func refreshLdapUserRole(c *ctx.ServiceContext, user *models.User, dn string) e.Error {
 	tx := c.DB().Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -82,55 +110,44 @@ func createLdapUserAndRole(c *ctx.ServiceContext, username, email, dn string) (*
 		}
 	}()
 
-	// 登录成功, 在用户表中添加该用户
-	user, err := services.CreateUser(tx, models.User{
-		Name:  username,
-		Email: email,
-	})
-	if err != nil {
-		c.Logger().Warnf("create user error: %v", err)
-		_ = tx.Rollback()
-		return nil, e.New(e.InternalError, http.StatusInternalServerError)
-	}
-
 	// 获取ldap用户的OU信息
-	userOU := strings.TrimPrefix(dn, fmt.Sprintf("uid=%s,", username))
+	userOU := strings.TrimPrefix(dn, fmt.Sprintf("uid=%s,", user.Name))
 
 	// 根据OU获取组织权限
 	ldapUserOrgOUs, err := services.GetLdapOUOrgByDN(tx, userOU)
 	if err != nil {
 		_ = tx.Rollback()
-		return nil, err
+		return err
 	}
 
 	// 更新用户组织权限
 	err = services.RefreshUserOrgRoles(tx, user.Id, ldapUserOrgOUs)
 	if err != nil {
 		_ = tx.Rollback()
-		return nil, err
+		return err
 	}
 
 	// 根据OU获取项目权限
 	ldapUserProjectOUs, err := services.GetLdapOUProjectByDN(tx, userOU)
 	if err != nil {
 		_ = tx.Rollback()
-		return nil, err
+		return err
 	}
 
 	// 更新用户项目权限
 	err = services.RefreshUserProjectRoles(tx, user.Id, ldapUserProjectOUs)
 	if err != nil {
 		_ = tx.Rollback()
-		return nil, err
+		return err
 	}
 
 	if err := tx.Commit(); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("createLdapUserAndRole commit err: %s", err)
-		return nil, e.New(e.DBError, err)
+		return e.New(e.DBError, err)
 	}
 
-	return user, nil
+	return nil
 }
 
 // GenerateSsoToken 生成 SSO token

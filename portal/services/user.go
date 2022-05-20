@@ -79,9 +79,11 @@ func RefreshUserOrgRoles(tx *db.Session, userId models.Id, ldapUserOrgOUs []mode
 		})
 	}
 
-	err = tx.Insert(&userOrgs)
-	if err != nil {
-		return e.New(e.DBError, err)
+	if len(userOrgs) > 0 {
+		err = tx.Insert(&userOrgs)
+		if err != nil {
+			return e.New(e.DBError, err)
+		}
 	}
 	return nil
 }
@@ -101,9 +103,12 @@ func RefreshUserProjectRoles(tx *db.Session, userId models.Id, ldapUserProjectOU
 			Role:      item.Role,
 		})
 	}
-	err = tx.Insert(&userProjects)
-	if err != nil {
-		return e.New(e.DBError, err)
+
+	if len(userProjects) > 0 {
+		err = tx.Insert(&userProjects)
+		if err != nil {
+			return e.New(e.DBError, err)
+		}
 	}
 
 	return nil
