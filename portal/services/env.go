@@ -172,7 +172,7 @@ func QueryProjectEnvResource(query *db.Session, projectId models.Id) *db.Session
 }
 
 func QueryActiveEnv(query *db.Session) *db.Session {
-	return query.Model(&models.Env{}).Where("(status in (?,?) OR deploying = ?)",
+	return query.Model(&models.Env{}).Where("status in (?,?) OR deploying = ?",
 		models.EnvStatusActive, models.EnvStatusFailed, true)
 }
 
