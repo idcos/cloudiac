@@ -158,8 +158,21 @@ func GetEnvByTplId(tx *db.Session, tplId models.Id) ([]models.Env, error) {
 	return env, nil
 }
 
+func GetProActiveEnvs(query *db.Session) ([]models.Env, e.Error) {
+	var activeEnv []models.Env
+	err := query.Find(&activeEnv)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return activeEnv, nil
+}
+
+func QueryProjectEnvResource(query *db.Session, projectId models.Id) *db.Session {
+	return query.Where("iac_env.project_id = ?", projectId)
+}
+
 func QueryActiveEnv(query *db.Session) *db.Session {
-	return query.Model(&models.Env{}).Where("status in (?,?) OR deploying = ?",
+	return query.Model(&models.Env{}).Where("(status in (?,?) OR deploying = ?)",
 		models.EnvStatusActive, models.EnvStatusFailed, true)
 }
 

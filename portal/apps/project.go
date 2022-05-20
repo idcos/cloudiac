@@ -228,6 +228,18 @@ func UpdateProject(c *ctx.ServiceContext, form *forms.UpdateProjectForm) (interf
 	}
 
 	if form.HasKey("status") {
+		if form.Status == "disable" {
+			query := services.QueryProjectEnvResource(tx, form.Id)
+			query = services.QueryActiveEnv(query)
+			activeEnvs, err := services.GetProActiveEnvs(query)
+			if err != nil {
+				return nil, err
+			}
+			if len(activeEnvs) > 0 {
+				return nil, e.New(e.ProjectHasActiveEnvs,
+					fmt.Errorf("project exists active env"))
+			}
+		}
 		attrs["status"] = form.Status
 	}
 
