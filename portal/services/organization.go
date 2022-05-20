@@ -591,12 +591,11 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 		iac_resource.project_id as id,
 		iac_project.name as name,
 		DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date,
-		count(*) as count
+		count(DISTINCT iac_resource.env_id, iac_resource.address) as count
 	from
 		iac_resource
 	JOIN iac_env ON
-		iac_env.last_res_task_id = iac_resource.task_id
-		and iac_env.id = iac_resource.env_id
+		iac_env.id = iac_resource.env_id
 	JOIN iac_project ON
 		iac_project.id = iac_resource.project_id
 	where
@@ -611,8 +610,8 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 		date
 	*/
 
-	query := tx.Model(&models.Resource{}).Select(`iac_resource.project_id as id, iac_project.name as name, DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date, count(*) as count`)
-	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.project_id as id, iac_project.name as name, DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date, count(DISTINCT iac_resource.env_id, iac_resource.address) as count`)
+	query = query.Joins(`join iac_env on iac_env.id = iac_resource.env_id`)
 	query = query.Joins("JOIN iac_project ON iac_project.id = iac_resource.project_id")
 
 	query = query.Where("iac_env.org_id = ?", orgId)
