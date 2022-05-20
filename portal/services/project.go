@@ -247,12 +247,11 @@ func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([]re
 		iac_resource.env_id as id,
 		iac_env.name as name,
 		DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date,
-		count(*) as count
+		count(DISTINCT iac_resource.env_id, iac_resource.address) as count
 	from
 		iac_resource
 	JOIN iac_env ON
-		iac_env.last_res_task_id = iac_resource.task_id
-		and iac_env.id = iac_resource.env_id
+		iac_env.id = iac_resource.env_id
 	where
 		iac_env.project_id = 'p-c8gg9josm56injdlb86g'
 		and DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 7 DAY), "%Y-%m-%d")
@@ -263,8 +262,8 @@ func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([]re
 		date
 	*/
 
-	query := tx.Model(&models.Resource{}).Select(`iac_resource.env_id as id, iac_env.name as name, DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date, count(*) as count`)
-	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.env_id as id, iac_env.name as name, DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date, count(DISTINCT iac_resource.env_id, iac_resource.address) as count`)
+	query = query.Joins(`join iac_env on iac_env.id = iac_resource.env_id`)
 
 	query = query.Where("iac_env.project_id = ?", projectId)
 	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? DAY), "%Y-%m-%d")`, days)
