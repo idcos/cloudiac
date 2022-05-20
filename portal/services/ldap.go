@@ -38,7 +38,8 @@ func closeLdap(conn *ldap.Conn) {
 func SearchLdapOUs() (*resps.LdapOUResp, e.Error) {
 	conn, er := connectLdap()
 	if er != nil {
-		return nil, e.New(e.LdapConnectFailed, er)
+		// return nil, e.New(e.LdapConnectFailed, er)
+		return nil, nil
 	}
 	defer closeLdap(conn)
 
@@ -113,7 +114,8 @@ func genOUTree(conn *ldap.Conn, root *resps.LdapOUResp) error {
 func GetLdapUserByEmail(emails []string) ([]*models.User, e.Error) {
 	conn, er := connectLdap()
 	if er != nil {
-		return nil, e.New(e.LdapConnectFailed, er)
+		// return nil, e.New(e.LdapConnectFailed, er)
+		return nil, nil
 	}
 	defer closeLdap(conn)
 
@@ -151,7 +153,8 @@ func GetLdapUserByEmail(emails []string) ([]*models.User, e.Error) {
 func SearchLdapUsers(q string, count int) ([]resps.LdapUserResp, e.Error) {
 	conn, er := connectLdap()
 	if er != nil {
-		return nil, e.New(e.LdapConnectFailed, er)
+		// return nil, e.New(e.LdapConnectFailed, er)
+		return nil, nil
 	}
 	defer closeLdap(conn)
 
