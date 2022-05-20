@@ -178,9 +178,10 @@ func SearchLdapUsers(q string, count int) ([]resps.LdapUserResp, e.Error) {
 	var results = make([]resps.LdapUserResp, 0)
 	for _, sr := range searchResults.Entries {
 		results = append(results, resps.LdapUserResp{
-			DN:    sr.DN,
-			Email: sr.GetAttributeValue(conf.Ldap.EmailAttribute),
-			Uid:   sr.GetAttributeValue(conf.Ldap.AccountAttribute),
+			DN:          sr.DN,
+			Email:       sr.GetAttributeValue(conf.Ldap.EmailAttribute),
+			Uid:         sr.GetAttributeValue(conf.Ldap.AccountAttribute),
+			DisplayName: sr.GetAttributeValue("displayName"),
 		})
 	}
 

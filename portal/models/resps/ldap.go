@@ -17,9 +17,10 @@ type LdapOUDBResp struct {
 }
 
 type LdapUserResp struct {
-	DN    string `json:"dn"`
-	Uid   string `json:"uid"`
-	Email string `json:"email"`
+	DN          string `json:"dn"`
+	Uid         string `json:"uid"`
+	Email       string `json:"email"`
+	DisplayName string `json:"displayName"`
 }
 
 type LdapUserListResp struct {
