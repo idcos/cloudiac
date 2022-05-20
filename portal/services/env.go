@@ -10,8 +10,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"gorm.io/gorm"
-
 	"github.com/hashicorp/consul/api"
 	"github.com/pkg/errors"
 
@@ -89,13 +87,10 @@ func GetEnvById(tx *db.Session, id models.Id) (*models.Env, e.Error) {
 }
 
 func IsTplAssociationCurrentProject(c *ctx.ServiceContext, tplId models.Id) e.Error {
-	projectTemplate := &models.ProjectTemplate{}
-	err := c.DB().Model(&models.ProjectTemplate{}).Where("template_id = ?", tplId).Where("project_id = ?", c.ProjectId).First(&projectTemplate)
-	if err != nil {
-		if errors.As(err, &gorm.ErrRecordNotFound) {
-			return e.New(e.TemplateNotAssociationCurrentProject, fmt.Errorf("the passed tplId is not associated with the current project and cannot create an environment"))
-		}
+	if ok, err := c.DB().Model(&models.ProjectTemplate{}).Where("template_id = ?", tplId).Where("project_id = ?", c.ProjectId).Exists(); err != nil {
 		return e.New(e.DBError, err)
+	} else if !ok {
+		return e.New(e.TemplateNotAssociationCurrentProject, fmt.Errorf("the passed tplId is not associated with the current project and cannot create an environment"))
 	}
 	return nil
 }
