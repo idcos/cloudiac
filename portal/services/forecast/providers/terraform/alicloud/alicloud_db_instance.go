@@ -16,12 +16,10 @@ func getDBInstanceRegistryItem() *schema.RegistryItem {
 }
 
 func NewDBInstance(d *schema.ResourceData) *schema.Resource {
-	region := d.Get("region").String()
-
 	a := &alicloud.DBInstance{
 		Address:               d.Address,
 		Provider:              d.ProviderName,
-		Region:                region,
+		Region:                d.Region,
 		InstanceType:          d.Get("instance_type").String(),
 		DbInstanceStorageType: d.Get("db_instance_storage_type").String(),
 		InstanceStorage:       d.Get("instance_storage").Int(),
