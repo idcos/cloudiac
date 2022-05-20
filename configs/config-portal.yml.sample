@@ -54,6 +54,7 @@ ldap:
   ldap_server: "${LDAP_SERVER}" # 必填
   ldap_server_port: 389
   search_base: "${LDAP_SEARCH_BASE}" # 必填
+  ou_search_base: "${LDAP_OU_SEARCH_BASE}"
   search_filter: "${LDAP_SEARCH_FILTER}"
   email_attribute: "${LDAP_EMAIL_ATTRIBUTE}"
   account_attribute: "${LDAP_ACCOUNT_ATTRIBUTE}"
