@@ -27,7 +27,7 @@ type LdapUserListResp struct {
 }
 
 type AuthLdapUserResp struct {
-	Id string `json:"id"`
+	Ids []string `json:"ids"`
 }
 
 type AuthLdapOUResp struct {

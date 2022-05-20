@@ -20,6 +20,10 @@ func GetLdapOUs(c *ctx.ServiceContext) (interface{}, e.Error) {
 
 func GetLdapOUsFromDB(c *ctx.ServiceContext, form *forms.SearchLdapOUForm) (interface{}, e.Error) {
 	query := c.DB().Model(&models.LdapOUOrg{}).Select("id", "dn", "ou", "role", "created_at")
+	if form.FilterProjectId != "" {
+		subQuery := c.DB().Model(&models.LdapOUProject{}).Where(`project_id = ?`, form.FilterProjectId).Select("dn")
+		query = query.Where(`dn NOT IN (?)`, subQuery.Expr())
+	}
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 
 	var list = make([]resps.LdapOUDBResp, 0)
@@ -59,7 +63,7 @@ func UpdateLdapOU(c *ctx.ServiceContext, form *forms.UpdateLdapOUForm) (interfac
 
 // TODO: 未过滤用户，前端过滤，返回所有用户
 func GetLdapUsers(c *ctx.ServiceContext, form *forms.SearchLdapUserForm) (interface{}, e.Error) {
-	users, err := services.SearchLdapUsers(form.Q, 0)
+	users, err := services.SearchLdapUsers(form.Q, form.Count)
 	if err != nil {
 		return nil, err
 	}
@@ -72,13 +76,36 @@ func GetLdapUsers(c *ctx.ServiceContext, form *forms.SearchLdapUserForm) (interf
 }
 
 func AuthLdapUser(c *ctx.ServiceContext, form *forms.AuthLdapUserForm) (interface{}, e.Error) {
-	user, err := services.GetLdapUserByEmail(form.Email)
+	users, err := services.GetLdapUserByEmail(form.Emails)
 	if err != nil {
 		return nil, err
 	}
 
-	user.Email = form.Email
-	result, err := services.CreateLdapUserOrg(c.DB(), c.OrgId, *user, form.Role)
+	tx := c.DB().Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	result := &resps.AuthLdapUserResp{}
+	result.Ids = make([]string, 0)
+
+	for _, user := range users {
+		id, err := services.CreateLdapUserOrg(tx, c.OrgId, *user, form.Role)
+		if err != nil {
+			_ = tx.Rollback()
+			return nil, err
+		}
+
+		result.Ids = append(result.Ids, string(id))
+	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
 
 	return result, err
 }
