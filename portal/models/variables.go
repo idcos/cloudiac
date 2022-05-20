@@ -109,6 +109,10 @@ func (VariableGroupRel) TableName() string {
 }
 
 //VariableGroupProjectRel 变量组与项目的关联表
+/*
+如果用户没有为变量指定绑定的项目，则默认表示绑定到所有项目（包括之后新创建的项目）。
+在该表中使用 ProjectId  为 "" 的记录表示绑定到所有项目。
+*/
 type VariableGroupProjectRel struct {
 	AbstractModel
 	VarGroupId Id `json:"varGroupId" gorm:"uniqueIndex:idx_var_group_project;size:32;not null"`
