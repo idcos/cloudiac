@@ -20,6 +20,10 @@ func GetLdapOUs(c *ctx.ServiceContext) (interface{}, e.Error) {
 
 func GetLdapOUsFromDB(c *ctx.ServiceContext, form *forms.SearchLdapOUForm) (interface{}, e.Error) {
 	query := c.DB().Model(&models.LdapOUOrg{}).Select("id", "dn", "ou", "role", "created_at")
+	if form.FilterProjectId != "" {
+		subQuery := c.DB().Model(&models.LdapOUProject{}).Where(`project_id = ?`, form.FilterProjectId).Select("dn")
+		query = query.Where(`dn NOT IN (?)`, subQuery.Expr())
+	}
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 
 	var list = make([]resps.LdapOUDBResp, 0)

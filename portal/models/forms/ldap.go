@@ -11,6 +11,7 @@ type SearchLdapUserForm struct {
 
 type SearchLdapOUForm struct {
 	NoPageSizeForm
+	FilterProjectId string `json:"filterProjectId" form:"filterProjectId"` // 过滤project关联的OU
 }
 
 type AuthLdapUserForm struct {
