@@ -7,22 +7,21 @@ import (
 	"cloudiac/portal/services/forecast/schema"
 )
 
-func getSlbRegistryItem() *schema.RegistryItem {
+func getMongodbInstanceRegistryItem() *schema.RegistryItem {
 	return &schema.RegistryItem{
-		Name:  "alicloud_slb",
+		Name:  "alicloud_mongodb_instance",
 		Notes: []string{},
-		RFunc: NewSlb,
+		RFunc: NewMongodbInstance,
 	}
 }
 
-func NewSlb(d *schema.ResourceData) *schema.Resource {
-	a := &alicloud.Slb{
+func NewMongodbInstance(d *schema.ResourceData) *schema.Resource {
+	a := &alicloud.MongodbInstance{
 		Address:       d.Address,
 		Provider:      d.ProviderName,
 		Region:        d.Region,
-		Specification: d.Get("specification").String(),
+		DBInstanceClass: d.Get("db_instance_class").String(),
 	}
 
 	return a.BuildResource()
-
 }

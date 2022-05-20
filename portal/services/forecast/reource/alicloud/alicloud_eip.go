@@ -6,16 +6,16 @@ import (
 	"cloudiac/portal/services/forecast/schema"
 )
 
-type NatGateway struct {
+type Eip struct {
 	Address  string
 	Region   string
 	Provider string
 }
 
-func (a *NatGateway) BuildResource() *schema.Resource {
+func (a *Eip) BuildResource() *schema.Resource {
 	p := make([]schema.PriceRequest, 0)
 	p = append(p, schema.PriceRequest{
-		Type:      "nat",
+		Type:      "eip",
 		Attribute: map[string]string{},
 	})
 
@@ -25,5 +25,4 @@ func (a *NatGateway) BuildResource() *schema.Resource {
 		Region:      a.Region,
 		RequestData: p,
 	}
-
 }
