@@ -61,7 +61,6 @@ func UpdateLdapOU(c *ctx.ServiceContext, form *forms.UpdateLdapOUForm) (interfac
 	}, nil
 }
 
-// TODO: 未过滤用户，前端过滤，返回所有用户
 func GetLdapUsers(c *ctx.ServiceContext, form *forms.SearchLdapUserForm) (interface{}, e.Error) {
 	users, err := services.SearchLdapUsers(form.Q, form.Count)
 	if err != nil {
