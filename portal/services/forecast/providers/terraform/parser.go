@@ -52,8 +52,8 @@ func ParserPlanJson(b []byte, aliRegion string) (createResource, deleteResource,
 			}
 
 			if action.String() == consts.TerraformActionUpdate {
-				updateAfterResource = BuildResource(updateAfterResource, registryMap, t, providerName, aliRegion, address, v.Get("change.after"))
-				updateBeforeResource = BuildResource(updateBeforeResource, registryMap, t, providerName, aliRegion, address, v.Get("change.before"))
+				updateAfterResource = BuildResource(updateAfterResource, registryMap, t, providerName, address, aliRegion, v.Get("change.after"))
+				updateBeforeResource = BuildResource(updateBeforeResource, registryMap, t, providerName, address, aliRegion, v.Get("change.before"))
 			}
 		}
 	}
