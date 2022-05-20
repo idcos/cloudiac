@@ -16,6 +16,12 @@ import (
 
 func connectLdap() (*ldap.Conn, e.Error) {
 	conf := configs.Get()
+
+	// ldap 未配置
+	if conf.Ldap.LdapServer == "" {
+		return nil, e.New(e.LdapNotExisted, fmt.Errorf("ldap 未配置"))
+	}
+
 	conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", conf.Ldap.LdapServer, conf.Ldap.LdapServerPort))
 	if err != nil {
 		return nil, e.New(e.LdapConnectFailed, err)
@@ -38,8 +44,10 @@ func closeLdap(conn *ldap.Conn) {
 func SearchLdapOUs() (*resps.LdapOUResp, e.Error) {
 	conn, er := connectLdap()
 	if er != nil {
-		// return nil, e.New(e.LdapConnectFailed, er)
-		return nil, nil
+		if er.Code() == e.LdapNotExisted {
+			return nil, nil
+		}
+		return nil, e.New(e.LdapConnectFailed, er)
 	}
 	defer closeLdap(conn)
 
@@ -114,8 +122,10 @@ func genOUTree(conn *ldap.Conn, root *resps.LdapOUResp) error {
 func GetLdapUserByEmail(emails []string) ([]*models.User, e.Error) {
 	conn, er := connectLdap()
 	if er != nil {
-		// return nil, e.New(e.LdapConnectFailed, er)
-		return nil, nil
+		if er.Code() == e.LdapNotExisted {
+			return nil, nil
+		}
+		return nil, e.New(e.LdapConnectFailed, er)
 	}
 	defer closeLdap(conn)
 
@@ -153,8 +163,10 @@ func GetLdapUserByEmail(emails []string) ([]*models.User, e.Error) {
 func SearchLdapUsers(q string, count int) ([]resps.LdapUserResp, e.Error) {
 	conn, er := connectLdap()
 	if er != nil {
-		// return nil, e.New(e.LdapConnectFailed, er)
-		return nil, nil
+		if er.Code() == e.LdapNotExisted {
+			return nil, nil
+		}
+		return nil, e.New(e.LdapConnectFailed, er)
 	}
 	defer closeLdap(conn)
 
