@@ -139,9 +139,14 @@ func GetLdapUserByEmail(emails []string) ([]*models.User, e.Error) {
 			return nil, e.New(e.UserNotExists, err)
 		}
 
+		username := sr.Entries[0].GetAttributeValue("uid")
+		if sr.Entries[0].GetAttributeValue("displayName") != "" {
+			username = sr.Entries[0].GetAttributeValue("displayName")
+		}
+
 		users = append(users, &models.User{
 			Email: email,
-			Name:  sr.Entries[0].GetAttributeValue("uid"),
+			Name:  username,
 			Phone: sr.Entries[0].GetAttributeValue("mobile"),
 		})
 	}
