@@ -156,7 +156,11 @@ func SearchLdapUsers(q string, count int) ([]resps.LdapUserResp, e.Error) {
 
 	conf := configs.Get()
 	// SearchFilter 需要内填入搜索条件，单个用括号包裹，例如 (objectClass=person)(!(userAccountControl=514))
-	seachFilter := fmt.Sprintf("(&%s(%s=%s))", conf.Ldap.SearchFilter, conf.Ldap.AccountAttribute, "*")
+	emailAttr := "*"
+	if q != "" {
+		emailAttr = "*" + q + "*"
+	}
+	seachFilter := fmt.Sprintf("(&%s(%s=%s))", conf.Ldap.SearchFilter, conf.Ldap.EmailAttribute, emailAttr)
 	searchRequest := ldap.NewSearchRequest(
 		conf.Ldap.SearchBase,
 		ldap.ScopeWholeSubtree, ldap.DerefAlways, 0, 0, false,
@@ -177,6 +181,10 @@ func SearchLdapUsers(q string, count int) ([]resps.LdapUserResp, e.Error) {
 			Email: sr.GetAttributeValue(conf.Ldap.EmailAttribute),
 			Uid:   sr.GetAttributeValue(conf.Ldap.AccountAttribute),
 		})
+	}
+
+	if count > 0 && len(results) > count {
+		return results[:count], nil
 	}
 
 	return results, nil
