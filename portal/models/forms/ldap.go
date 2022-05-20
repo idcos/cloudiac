@@ -16,8 +16,8 @@ type SearchLdapOUForm struct {
 type AuthLdapUserForm struct {
 	BaseForm
 
-	Email string `json:"email" form:"email"` // 邮箱
-	Role  string `json:"role" form:"role"`   // 角色
+	Emails []string `json:"email" form:"email"` // 邮箱
+	Role   string   `json:"role" form:"role"`   // 角色
 }
 
 type AuthLdapOUForm struct {
