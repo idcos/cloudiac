@@ -111,7 +111,13 @@ func getCtxProjectRole(s *ctx.ServiceContext) string {
 		if userProject != nil {
 			proj = userProject.Role
 		}
-	default:
+	case s.ProjectId == "":
+		role, err := services.GetUserHighestProjectRole(s.DB(), s.OrgId, s.UserId)
+		if err != nil {
+			s.Logger().Errorf("get user highest project role error: %s", err)
+		} else {
+			proj = role
+		}
 	}
 
 	return proj

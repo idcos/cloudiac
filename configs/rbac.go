@@ -110,10 +110,15 @@ var Polices = []Policy{
 	{"login", "orgs", "read"},
 	{"admin", "orgs", "read/update"},
 	{"admin", "orgs", "listuser/adduser/removeuser/updaterole"},
-	{"member", "orgs", "read/listuser/adduser"},
+	{"member", "orgs", "read/listuser"},
 	// {"member", "orgs", "read"},
 	{"complianceManager", "orgs", "read"},
 	{"manager", "orgs", "listuser/adduser"},
+
+	// LDAP
+	{"admin", "ldap", "*"},
+	{"member", "ldap", "read/list"},
+	{"manager", "ldap", "*"},
 
 	// 项目
 	{"admin", "projects", "*"},

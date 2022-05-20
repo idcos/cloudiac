@@ -16,6 +16,12 @@ import (
 
 func connectLdap() (*ldap.Conn, e.Error) {
 	conf := configs.Get()
+
+	// ldap 未配置
+	if conf.Ldap.LdapServer == "" {
+		return nil, e.New(e.LdapNotExisted, fmt.Errorf("ldap 未配置"))
+	}
+
 	conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", conf.Ldap.LdapServer, conf.Ldap.LdapServerPort))
 	if err != nil {
 		return nil, e.New(e.LdapConnectFailed, err)
@@ -38,6 +44,9 @@ func closeLdap(conn *ldap.Conn) {
 func SearchLdapOUs() (*resps.LdapOUResp, e.Error) {
 	conn, er := connectLdap()
 	if er != nil {
+		if er.Code() == e.LdapNotExisted {
+			return nil, nil
+		}
 		return nil, e.New(e.LdapConnectFailed, er)
 	}
 	defer closeLdap(conn)
@@ -110,47 +119,64 @@ func genOUTree(conn *ldap.Conn, root *resps.LdapOUResp) error {
 	return nil
 }
 
-func GetLdapUserByEmail(email string) (*models.User, e.Error) {
+func GetLdapUserByEmail(emails []string) ([]*models.User, e.Error) {
 	conn, er := connectLdap()
 	if er != nil {
+		if er.Code() == e.LdapNotExisted {
+			return nil, nil
+		}
 		return nil, e.New(e.LdapConnectFailed, er)
 	}
 	defer closeLdap(conn)
 
 	conf := configs.Get()
-	seachFilter := fmt.Sprintf("(&%s(%s=%s))", conf.Ldap.SearchFilter, conf.Ldap.EmailAttribute, email)
-	searchRequest := ldap.NewSearchRequest(
-		conf.Ldap.SearchBase,
-		ldap.ScopeWholeSubtree, ldap.DerefAlways, 0, 0, false,
-		seachFilter,
-		// 这里是查询返回的属性,以数组形式提供.如果为空则会返回所有的属性
-		[]string{},
-		nil,
-	)
+	users := make([]*models.User, 0)
 
-	sr, err := conn.Search(searchRequest)
-	if err != nil {
-		return nil, e.New(e.ValidateError, err)
+	for _, email := range emails {
+		seachFilter := fmt.Sprintf("(&%s(%s=%s))", conf.Ldap.SearchFilter, conf.Ldap.EmailAttribute, email)
+		searchRequest := ldap.NewSearchRequest(
+			conf.Ldap.SearchBase,
+			ldap.ScopeWholeSubtree, ldap.DerefAlways, 0, 0, false,
+			seachFilter,
+			// 这里是查询返回的属性,以数组形式提供.如果为空则会返回所有的属性
+			[]string{},
+			nil,
+		)
+
+		sr, err := conn.Search(searchRequest)
+		if err != nil {
+			return nil, e.New(e.ValidateError, err)
+		}
+		if len(sr.Entries) != 1 {
+			return nil, e.New(e.UserNotExists, err)
+		}
+
+		users = append(users, &models.User{
+			Email: email,
+			Name:  sr.Entries[0].GetAttributeValue("uid"),
+			Phone: sr.Entries[0].GetAttributeValue("mobile"),
+		})
 	}
-	if len(sr.Entries) != 1 {
-		return nil, e.New(e.UserNotExists, err)
-	}
-	return &models.User{
-		Name:  sr.Entries[0].GetAttributeValue("uid"),
-		Phone: sr.Entries[0].GetAttributeValue("mobile"),
-	}, nil
+	return users, nil
 }
 
 func SearchLdapUsers(q string, count int) ([]resps.LdapUserResp, e.Error) {
 	conn, er := connectLdap()
 	if er != nil {
+		if er.Code() == e.LdapNotExisted {
+			return nil, nil
+		}
 		return nil, e.New(e.LdapConnectFailed, er)
 	}
 	defer closeLdap(conn)
 
 	conf := configs.Get()
 	// SearchFilter 需要内填入搜索条件，单个用括号包裹，例如 (objectClass=person)(!(userAccountControl=514))
-	seachFilter := fmt.Sprintf("(&%s(%s=%s))", conf.Ldap.SearchFilter, conf.Ldap.AccountAttribute, "*")
+	emailAttr := "*"
+	if q != "" {
+		emailAttr = "*" + q + "*"
+	}
+	seachFilter := fmt.Sprintf("(&%s(%s=%s))", conf.Ldap.SearchFilter, conf.Ldap.EmailAttribute, emailAttr)
 	searchRequest := ldap.NewSearchRequest(
 		conf.Ldap.SearchBase,
 		ldap.ScopeWholeSubtree, ldap.DerefAlways, 0, 0, false,
@@ -171,6 +197,10 @@ func SearchLdapUsers(q string, count int) ([]resps.LdapUserResp, e.Error) {
 			Email: sr.GetAttributeValue(conf.Ldap.EmailAttribute),
 			Uid:   sr.GetAttributeValue(conf.Ldap.AccountAttribute),
 		})
+	}
+
+	if count > 0 && len(results) > count {
+		return results[:count], nil
 	}
 
 	return results, nil
@@ -199,22 +229,14 @@ func CreateOUOrg(tx *db.Session, m models.LdapOUOrg) (models.Id, e.Error) {
 	return m.Id, nil
 }
 
-func CreateLdapUserOrg(sess *db.Session, orgId models.Id, m models.User, role string) (*resps.AuthLdapUserResp, e.Error) {
+func CreateLdapUserOrg(tx *db.Session, orgId models.Id, m models.User, role string) (models.Id, e.Error) {
 	var err error
 	// 判断 user 是否存在
 	var user models.User
-	err = sess.Model(&models.User{}).Where(`email = ?`, m.Email).First(&user)
+	err = tx.Model(&models.User{}).Where(`email = ?`, m.Email).First(&user)
 	if err != nil && err != gorm.ErrRecordNotFound {
-		return nil, e.New(e.DBError, err)
+		return "", e.New(e.DBError, err)
 	}
-
-	tx := sess.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			panic(r)
-		}
-	}()
 
 	// 用户不存在
 	userId := user.Id
@@ -223,7 +245,7 @@ func CreateLdapUserOrg(sess *db.Session, orgId models.Id, m models.User, role st
 		err = tx.Insert(&m)
 		if err != nil {
 			_ = tx.Rollback()
-			return nil, e.New(e.DBError, err)
+			return "", e.New(e.DBError, err)
 		}
 
 		userId = m.Id
@@ -231,34 +253,26 @@ func CreateLdapUserOrg(sess *db.Session, orgId models.Id, m models.User, role st
 
 	// 用户授权不存在
 	var userOrg models.UserOrg
-	err = sess.Model(&models.UserOrg{}).Where("user_id = ? and org_id = ?", userId, orgId).First(&userOrg)
+	err = tx.Model(&models.UserOrg{}).Where("user_id = ? and org_id = ?", userId, orgId).First(&userOrg)
 	if err != nil && err != gorm.ErrRecordNotFound {
-		return nil, e.New(e.DBError, err)
+		return "", e.New(e.DBError, err)
 	}
 
 	if err == gorm.ErrRecordNotFound {
-		err = sess.Insert(&models.UserOrg{
+		err = tx.Insert(&models.UserOrg{
 			UserId: userId,
 			OrgId:  orgId,
 			Role:   role,
 		})
 	} else {
-		_, err = sess.Model(&userOrg).Update(models.UserOrg{OrgId: orgId, UserId: userId, Role: role})
+		_, err = tx.Model(&userOrg).Update(models.UserOrg{OrgId: orgId, UserId: userId, Role: role})
 	}
 
 	if err != nil {
-		_ = tx.Rollback()
-		return nil, e.New(e.DBError, err)
+		return "", e.New(e.DBError, err)
 	}
 
-	if err := tx.Commit(); err != nil {
-		_ = tx.Rollback()
-		return nil, e.New(e.DBError, err)
-	}
-
-	return &resps.AuthLdapUserResp{
-		Id: string(userId),
-	}, nil
+	return userId, nil
 }
 
 func CreateOUProject(tx *db.Session, m models.LdapOUProject) (models.Id, e.Error) {

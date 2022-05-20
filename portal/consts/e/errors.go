@@ -217,4 +217,5 @@ const (
 
 	// Ldap 317
 	LdapConnectFailed = 31710
+	LdapNotExisted    = 31711
 )
