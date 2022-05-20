@@ -97,9 +97,6 @@ func IsTplAssociationCurrentProject(c *ctx.ServiceContext, tplId models.Id) e.Er
 		}
 		return e.New(e.DBError, err)
 	}
-	if c.ProjectId != projectTemplate.ProjectId {
-		return e.New(e.TemplateNotAssociationCurrentProject, fmt.Errorf("the passed tplId is not associated with the current project and cannot create an environment"))
-	}
 	return nil
 }
 
