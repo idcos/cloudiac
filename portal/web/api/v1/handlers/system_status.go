@@ -21,10 +21,10 @@ func PortalSystemStatusSearch(c *ctx.GinRequest) {
 	c.JSONResult(apps.SystemStatusSearch())
 }
 
-// SystemSwitchesStatus 查询任务中止状态
-// @Summary 查询任务中止状态
-// @Description 查询任务中止状态
-// @Tags 任务中止系统状态
+// SystemSwitchesStatus 查询系统功能开关状态
+// @Summary 查询系统功能开关状态
+// @Description 查询系统功能开关状态
+// @Tags 查询系统功能开关状态
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
