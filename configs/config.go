@@ -119,22 +119,23 @@ type PolicyConfig struct {
 }
 
 type Config struct {
-	Mysql              string           `yaml:"mysql"`
-	Listen             string           `yaml:"listen"`
-	Consul             ConsulConfig     `yaml:"consul"`
-	Portal             PortalConfig     `yaml:"portal"`
-	Runner             RunnerConfig     `yaml:"runner"`
-	Log                LogConfig        `yaml:"log"`
-	Kafka              KafkaConfig      `yaml:"kafka"`
-	SMTPServer         SMTPServerConfig `yaml:"smtpServer"`
-	SecretKey          string           `yaml:"secretKey"`
-	JwtSecretKey       string           `yaml:"jwtSecretKey"`
-	RegistryAddr       string           `yaml:"registryAddr"`
-	ExportSecretKey    string           `yaml:"exportSecretKey"`
-	HttpClientInsecure bool             `yaml:"httpClientInsecure"`
-	Policy             PolicyConfig     `yaml:"policy"`
-	Ldap               LdapConfig       `yaml:"ldap"`
-	CostServe          string           `yaml:"cost_serve"`
+	Mysql               string           `yaml:"mysql"`
+	Listen              string           `yaml:"listen"`
+	Consul              ConsulConfig     `yaml:"consul"`
+	Portal              PortalConfig     `yaml:"portal"`
+	Runner              RunnerConfig     `yaml:"runner"`
+	Log                 LogConfig        `yaml:"log"`
+	Kafka               KafkaConfig      `yaml:"kafka"`
+	SMTPServer          SMTPServerConfig `yaml:"smtpServer"`
+	SecretKey           string           `yaml:"secretKey"`
+	JwtSecretKey        string           `yaml:"jwtSecretKey"`
+	RegistryAddr        string           `yaml:"registryAddr"`
+	ExportSecretKey     string           `yaml:"exportSecretKey"`
+	HttpClientInsecure  bool             `yaml:"httpClientInsecure"`
+	Policy              PolicyConfig     `yaml:"policy"`
+	Ldap                LdapConfig       `yaml:"ldap"`
+	CostServe           string           `yaml:"cost_serve"`
+	EnvTaskAbortManager bool             `yaml:"envTaskAbortManger"`
 }
 
 const (

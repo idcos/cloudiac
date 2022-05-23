@@ -3,6 +3,7 @@
 package apps
 
 import (
+	"cloudiac/configs"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
@@ -62,6 +63,12 @@ func ConsulKVSearch(key string) (interface{}, e.Error) {
 
 func RunnerSearch() (interface{}, e.Error) {
 	return services.RunnerSearch()
+}
+
+func SystemTaskAbortStatus() (interface{}, e.Error) {
+	conf := configs.Get()
+	abortStatus := conf.EnvTaskAbortManager
+	return map[string]bool{"abortStatus": abortStatus}, nil
 }
 
 func ConsulTagUpdate(c *ctx.ServiceContext, form forms.ConsulTagUpdateForm) (interface{}, e.Error) {
