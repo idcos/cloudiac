@@ -386,6 +386,10 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "environment lock failed. Active tasks in the environment",
 		"zh-CN": "环境锁定失败，环境下有活跃任务",
 	},
+	EnvLocked: {
+		"en-US": "environment locked",
+		"zh-CN": "环境已锁定",
+	},
 	TaskAlreadyExists: {
 		"en-US": "task already exists",
 		"zh-CN": "任务已经存在",

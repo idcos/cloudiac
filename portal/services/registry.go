@@ -20,7 +20,7 @@ import (
 
 func GetRegistryAddrStr(db *db.Session) string {
 	cfg, err := GetSystemConfigByName(db, models.SysCfgNamRegistryAddr)
-	if err == nil && cfg != nil {
+	if err == nil && cfg != nil && cfg.Value != "" {
 		return strings.TrimRight(cfg.Value, "/")
 	}
 	return strings.TrimRight(configs.Get().RegistryAddr, "/")

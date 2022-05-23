@@ -150,6 +150,7 @@ const (
 	EnvDeploying            = 30815
 	EnvCheckAutoApproval    = 30816
 	EnvLockFailedTaskActive = 30817
+	EnvLocked               = 30818
 	EnvTagNumLimited        = 30821
 	EnvTagLengthLimited     = 30822
 	TemplateNotBind         = 30823

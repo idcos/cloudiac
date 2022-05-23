@@ -768,6 +768,9 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	if err != nil {
 		return nil, err
 	}
+	if env.Locked {
+		return nil, e.New(e.EnvLocked, http.StatusBadRequest)
+	}
 	if !env.Archived {
 		if form.Archived {
 			form.Name = env.Name + "-archived-" + time.Now().Format("20060102150405")
@@ -961,6 +964,9 @@ func envCheck(tx *db.Session, orgId, projectId, id models.Id, lg logs.Logger) (*
 	}
 	if env.Deploying {
 		return nil, e.New(e.EnvDeploying, http.StatusBadRequest)
+	}
+	if env.Locked {
+		return nil, e.New(e.EnvLocked, http.StatusBadRequest)
 	}
 
 	return env, nil
