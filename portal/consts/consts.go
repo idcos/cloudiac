@@ -126,6 +126,8 @@ const (
 	EnvTriggerPRMR   = "prmr"
 	EnvTriggerCommit = "commit"
 
+	EnvAbortManager = ""
+
 	EnvMaxTagLength = 20
 	EnvMaxTagNum    = 5
 

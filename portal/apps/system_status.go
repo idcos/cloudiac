@@ -3,6 +3,7 @@
 package apps
 
 import (
+	"cloudiac/configs"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
@@ -62,6 +63,19 @@ func ConsulKVSearch(key string) (interface{}, e.Error) {
 
 func RunnerSearch() (interface{}, e.Error) {
 	return services.RunnerSearch()
+}
+
+func SystemSwitchStatus() (interface{}, e.Error) {
+	//开关接口返回的格式
+	type systemSwitches struct {
+		AbortStatus bool `json:"abortStatus"`
+	}
+
+	conf := configs.Get()
+	systemSwitchs := &systemSwitches{}
+	systemSwitchs.AbortStatus = conf.EnableTaskAbort
+
+	return systemSwitchs, nil
 }
 
 func ConsulTagUpdate(c *ctx.ServiceContext, form forms.ConsulTagUpdateForm) (interface{}, e.Error) {

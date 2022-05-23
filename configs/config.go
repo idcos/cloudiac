@@ -135,6 +135,7 @@ type Config struct {
 	Policy             PolicyConfig     `yaml:"policy"`
 	Ldap               LdapConfig       `yaml:"ldap"`
 	CostServe          string           `yaml:"cost_serve"`
+	EnableTaskAbort    bool             `yaml:"enableTaskAbort"`
 }
 
 const (

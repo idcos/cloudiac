@@ -21,6 +21,19 @@ func PortalSystemStatusSearch(c *ctx.GinRequest) {
 	c.JSONResult(apps.SystemStatusSearch())
 }
 
+// SystemSwitchesStatus 查询系统功能开关状态
+// @Summary 查询系统功能开关状态
+// @Description 查询系统功能开关状态
+// @Tags 查询系统功能开关状态
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Success 200 {object} ctx.JSONResult{abortStatus=bool}
+// @Router /system_config/switches [get]
+func SystemSwitchesStatus(c *ctx.GinRequest) {
+	c.JSONResult(apps.SystemSwitchStatus())
+}
+
 // ConsulKVSearch 服务查询
 // @Summary 查询系统状态
 // @Description 查询系统状态

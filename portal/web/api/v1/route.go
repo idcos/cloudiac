@@ -85,6 +85,7 @@ func Register(g *gin.RouterGroup) {
 	// 系统设置registry addr 配置
 	g.GET("/system_config/registry/addr", ac(), w(handlers.GetRegistryAddr))     // 获取registry地址的设置
 	g.POST("/system_config/registry/addr", ac(), w(handlers.UpsertRegistryAddr)) // 更新registry地址的设置
+	g.GET("/system_config/switches", ac(), w(handlers.SystemSwitchesStatus))     // 更新registry地址的设置
 
 	// 要求组织 header
 	g.Use(w(middleware.AuthOrgId))
