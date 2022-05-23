@@ -1,0 +1,23 @@
+name: Provider 开发申请
+description: 提出 Provider 开发申请
+title: "[provider feature]"
+labels: question
+assignees: licairong, jxinging
+body:
+  - type: markdown
+    id: contacts_title
+    attributes:
+      value: "## 联系方式"
+  - type: input
+    id: contacts
+    validations:
+      required: false
+    attributes:
+      label: "联系方式"
+      description: "可以快速联系到您的方式：交流群号及昵称、邮箱等"
+  - type: textarea
+    id: description
+    attributes:
+      label: "请描述您需要开发 Provider 的平台及服务信息"
+    validations:
+      required: true
