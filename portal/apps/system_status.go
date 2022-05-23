@@ -65,10 +65,17 @@ func RunnerSearch() (interface{}, e.Error) {
 	return services.RunnerSearch()
 }
 
-func SystemTaskAbortStatus() (interface{}, e.Error) {
+func SystemSwitchStatus() (interface{}, e.Error) {
+	//开关接口返回的格式
+	type systemSwitches struct {
+		AbortStatus bool `json:"abortStatus"`
+	}
+
 	conf := configs.Get()
-	abortStatus := conf.EnvTaskAbortManager
-	return map[string]bool{"abortStatus": abortStatus}, nil
+	systemSwitchs := &systemSwitches{}
+	systemSwitchs.AbortStatus = conf.EnableTaskAbort
+
+	return systemSwitchs, nil
 }
 
 func ConsulTagUpdate(c *ctx.ServiceContext, form forms.ConsulTagUpdateForm) (interface{}, e.Error) {

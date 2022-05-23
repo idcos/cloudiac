@@ -21,7 +21,7 @@ func PortalSystemStatusSearch(c *ctx.GinRequest) {
 	c.JSONResult(apps.SystemStatusSearch())
 }
 
-// PortalSystemTaskAbortStatus 查询任务中止状态
+// SystemSwitchesStatus 查询任务中止状态
 // @Summary 查询任务中止状态
 // @Description 查询任务中止状态
 // @Tags 任务中止系统状态
@@ -29,9 +29,9 @@ func PortalSystemStatusSearch(c *ctx.GinRequest) {
 // @Produce  json
 // @Security AuthToken
 // @Success 200 {object} ctx.JSONResult{abortStatus=bool}
-// @Router /systems/task/abort/status [get]
-func PortalSystemTaskAbortStatus(c *ctx.GinRequest) {
-	c.JSONResult(apps.SystemTaskAbortStatus())
+// @Router /system_config/switches [get]
+func SystemSwitchesStatus(c *ctx.GinRequest) {
+	c.JSONResult(apps.SystemSwitchStatus())
 }
 
 // ConsulKVSearch 服务查询
