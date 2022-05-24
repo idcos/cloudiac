@@ -4,6 +4,7 @@ package alicloud
 
 import (
 	"cloudiac/portal/services/forecast/schema"
+	"fmt"
 	"strconv"
 )
 
@@ -41,23 +42,35 @@ func (a *Instance) BuildResource() *schema.Resource {
 	}
 
 	if a.SystemDiskSize != 0 && a.SystemDiskCategory != "" {
+		attribute := map[string]string{
+			"type": a.SystemDiskCategory,
+			"size": strconv.Itoa(int(a.SystemDiskSize)),
+		}
+
+		if a.SystemDiskCategory == "cloud_essd" {
+			attribute["type"] = fmt.Sprintf("%s_%s", a.SystemDiskCategory, a.PerformanceLevel)
+		}
+
 		p = append(p, schema.PriceRequest{
-			Type: "disk",
-			Attribute: map[string]string{
-				"type": a.SystemDiskCategory,
-				"size": strconv.Itoa(int(a.SystemDiskSize)),
-			},
+			Type:      "disk",
+			Attribute: attribute,
 		})
 	}
 
 	if len(a.DataDisks) > 0 {
 		for _, v := range a.DataDisks {
+			attribute := map[string]string{
+				"type": v.Category,
+				"size": strconv.Itoa(int(v.Size)),
+			}
+
+			if a.SystemDiskCategory == "cloud_essd" {
+				attribute["type"] = fmt.Sprintf("%s_%s", v.Category, v.PerformanceLevel)
+			}
+
 			p = append(p, schema.PriceRequest{
-				Type: "disk",
-				Attribute: map[string]string{
-					"type": v.Category,
-					"size": strconv.Itoa(int(v.Size)),
-				},
+				Type:      "disk",
+				Attribute: attribute,
 			})
 		}
 	}
