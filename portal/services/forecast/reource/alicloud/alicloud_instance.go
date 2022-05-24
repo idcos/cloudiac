@@ -9,18 +9,18 @@ import (
 )
 
 type Instance struct {
-	Address                 string
-	Region                  string
-	Provider                string
-	AvailabilityZone        string      `json:"availability_zone"`
-	DataDisks               []DataDisks `json:"data_disks"`
-	ImageId                 string      `json:"image_id"`
-	InstanceType            string      `json:"instance_type"`
-	InternetMaxBandwidthOut int         `json:"internet_max_bandwidth_out"`
-	IoOptimized             interface{} `json:"io_optimized"`
-	SystemDiskCategory      string      `json:"system_disk_category"`
-	SystemDiskSize          int64       `json:"system_disk_size"`
-	PerformanceLevel        string      `json:"performance_level"`
+	Address                    string
+	Region                     string
+	Provider                   string
+	AvailabilityZone           string      `json:"availability_zone"`
+	DataDisks                  []DataDisks `json:"data_disks"`
+	ImageId                    string      `json:"image_id"`
+	InstanceType               string      `json:"instance_type"`
+	InternetMaxBandwidthOut    int         `json:"internet_max_bandwidth_out"`
+	IoOptimized                interface{} `json:"io_optimized"`
+	SystemDiskCategory         string      `json:"system_disk_category"`
+	SystemDiskSize             int64       `json:"system_disk_size"`
+	SystemDiskPerformanceLevel string      `json:"system_disk_performance_level"`
 }
 
 type DataDisks struct {
@@ -32,6 +32,18 @@ type DataDisks struct {
 func (a *Instance) BuildResource() *schema.Resource {
 	p := make([]schema.PriceRequest, 0)
 
+	f := func(category, size, performanceLevel string) map[string]string {
+		attribute := map[string]string{
+			"type": category,
+			"size": size,
+		}
+		if category == "cloud_essd" {
+			attribute["type"] = fmt.Sprintf("%s_%s", category, performanceLevel)
+		}
+
+		return attribute
+	}
+
 	if a.InstanceType != "" {
 		p = append(p, schema.PriceRequest{
 			Type: "ecs",
@@ -42,18 +54,9 @@ func (a *Instance) BuildResource() *schema.Resource {
 	}
 
 	if a.SystemDiskSize != 0 && a.SystemDiskCategory != "" {
-		attribute := map[string]string{
-			"type": a.SystemDiskCategory,
-			"size": strconv.Itoa(int(a.SystemDiskSize)),
-		}
-
-		if a.SystemDiskCategory == "cloud_essd" {
-			attribute["type"] = fmt.Sprintf("%s_%s", a.SystemDiskCategory, a.PerformanceLevel)
-		}
-
 		p = append(p, schema.PriceRequest{
 			Type:      "disk",
-			Attribute: attribute,
+			Attribute: f(a.SystemDiskCategory, strconv.Itoa(int(a.SystemDiskSize)), a.SystemDiskPerformanceLevel),
 		})
 	}
 
@@ -70,7 +73,7 @@ func (a *Instance) BuildResource() *schema.Resource {
 
 			p = append(p, schema.PriceRequest{
 				Type:      "disk",
-				Attribute: attribute,
+				Attribute: f(v.Category, strconv.Itoa(int(v.Size)), v.PerformanceLevel),
 			})
 		}
 	}
