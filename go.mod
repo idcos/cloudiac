@@ -75,9 +75,10 @@ require (
 	github.com/rs/xid v1.2.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
-	github.com/swaggo/gin-swagger v1.3.0
-	github.com/swaggo/swag v1.8.0
+	github.com/swaggo/gin-swagger v1.4.3
+	github.com/swaggo/swag v1.8.1
 	github.com/tidwall/gjson v1.14.0
+	github.com/ugorji/go v1.1.13 // indirect
 	github.com/unliar/utils v0.1.1
 	github.com/xanzy/go-gitlab v0.47.0
 	github.com/zclconf/go-cty v1.9.1
@@ -89,6 +90,8 @@ require (
 	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa // indirect
 	google.golang.org/grpc v1.43.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
+	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
+	gopkg.in/go-playground/validator.v8 v8.18.2 // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/mysql v1.1.1

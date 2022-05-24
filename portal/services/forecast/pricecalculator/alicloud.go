@@ -4,7 +4,6 @@ package pricecalculator
 
 import (
 	"cloudiac/configs"
-	"cloudiac/portal/consts"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services/forecast/schema"
 	"cloudiac/utils"
@@ -12,8 +11,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-
-	"github.com/alibabacloud-go/tea/tea"
 )
 
 type AliCloud struct {
@@ -22,18 +19,18 @@ type AliCloud struct {
 }
 
 func NewAliCloudBillService(vg *models.VariableGroup, f func(provider string, vars models.VarGroupVariables) map[string]string) (*AliCloud, error) {
-	resAccount := f(vg.Provider, vg.Variables)
-	if resAccount == nil {
-		return nil, fmt.Errorf("provider: %s, resource account is null", vg.Provider)
-	}
-
-	if resAccount[consts.AlicloudAK] == "" || resAccount[consts.AlicloudSK] == "" {
-		return nil, fmt.Errorf("provider: %s, resource account not exist", vg.Provider)
-	}
+	//resAccount := f(vg.Provider, vg.Variables)
+	//if resAccount == nil {
+	//	return nil, fmt.Errorf("provider: %s, resource account is null", vg.Provider)
+	//}
+	//
+	//if resAccount[consts.AlicloudAK] == "" || resAccount[consts.AlicloudSK] == "" {
+	//	return nil, fmt.Errorf("provider: %s, resource account not exist", vg.Provider)
+	//}
 
 	return &AliCloud{
-		AccessKeyId:     tea.String(resAccount[consts.AlicloudAK]),
-		AccessKeySecret: tea.String(resAccount[consts.AlicloudSK]),
+		//AccessKeyId:     tea.String(resAccount[consts.AlicloudAK]),
+		//AccessKeySecret: tea.String(resAccount[consts.AlicloudSK]),
 	}, nil
 }
 
@@ -78,20 +75,4 @@ func (a *AliCloud) GetResourcePrice(r *schema.Resource) (CloudCostPriceResp, err
 	}
 
 	return resp, nil
-}
-
-func GetPriceFromResponse(resp CloudCostPriceResp) (float32, error) {
-	var sum float32 = 0.0
-	for _, detail := range resp.Result.Results {
-		// 优惠价格最为实际的价格
-		for _, attr := range detail.PriceAttr {
-			if _, ok := attr["price"]; ok {
-				sum += float32(utils.Str2float(attr["price"]))
-			}
-
-		}
-
-	}
-
-	return sum, nil
 }
