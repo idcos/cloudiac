@@ -80,6 +80,7 @@
 30412,ProjectAliasDuplicate,项目名称重复,project name already exists
 30420,ProjectUserAlreadyExists,项目用户已经存在,project user already exists
 30421,ProjectUserAliasDuplicate,项目名称重复,project name already exists
+30422,ProjectHasActiveEnvs,项目存在活跃环境,one or more active environments exist in the project
 30610,TokenAlreadyExists,Token已经存在,token already exists
 30611,TokenNotExists,Token不存在,token does not exists
 30613,TokenAliasDuplicate,Token别名重复,token alias already exists
