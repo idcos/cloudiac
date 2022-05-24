@@ -965,9 +965,6 @@ func envCheck(tx *db.Session, orgId, projectId, id models.Id, lg logs.Logger) (*
 	if env.Deploying {
 		return nil, e.New(e.EnvDeploying, http.StatusBadRequest)
 	}
-	if env.Locked {
-		return nil, e.New(e.EnvLocked, http.StatusBadRequest)
-	}
 
 	return env, nil
 }
@@ -1193,6 +1190,10 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		return nil, err
 	}
 	lg.Debugln("envDeploy -> envCheck finish")
+
+	if form.TaskType != common.TaskTypePlan && env.Locked {
+		return nil, e.New(e.EnvLocked, http.StatusBadRequest)
+	}
 
 	// 模板检查
 	tpl, err := envTplCheck(tx, c.OrgId, env.TplId, c.Logger())
