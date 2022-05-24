@@ -119,6 +119,7 @@ const (
 	ProjectAliasDuplicate     = 30412
 	ProjectUserAlreadyExists  = 30420
 	ProjectUserAliasDuplicate = 30421
+	ProjectHasActiveEnvs      = 30422
 
 	//// variable 305
 	VariableAlreadyExists  = 30510
