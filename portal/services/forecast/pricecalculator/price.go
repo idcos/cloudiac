@@ -3,12 +3,15 @@
 package pricecalculator
 
 import (
+	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services/forecast/schema"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
+	"encoding/json"
 	"fmt"
+	"net/http"
 )
 
 type CloudCostPriceRequest struct {
@@ -73,4 +76,62 @@ func parseResourceAccount(provider string, vars models.VarGroupVariables) map[st
 		}
 	}
 	return resp
+}
+
+func GetResourcePrice(r *schema.Resource) (CloudCostPriceResp, error) {
+	logger := logs.Get().WithField("func", "GetResourcePrice")
+	resp := CloudCostPriceResp{}
+
+	header := &http.Header{}
+	header.Set("Content-Type", "application/json")
+
+	costUrl := fmt.Sprintf("%s/price/search", configs.Get().CostServe)
+	result := Result{
+		Address:  r.Name,
+		Provider: r.Provider,
+		Region:   r.Region,
+	}
+
+	resources := make([]Resource, 0)
+	for _, v := range r.RequestData {
+		resources = append(resources, Resource{
+			Type:      v.Type,
+			Attribute: v.Attribute,
+		})
+	}
+	result.Resource = resources
+
+	param := CloudCostPriceRequest{
+		[]Result{result},
+	}
+
+	logger.Infof("%+v", param)
+
+	respData, err := utils.HttpService(costUrl, "POST", header, param, 5, 30)
+	if err != nil {
+		return resp, err
+	}
+
+	logger.Infof(fmt.Sprintf("%s", string(respData)))
+
+	if err := json.Unmarshal(respData, &resp); err != nil {
+		return resp, err
+	}
+
+	return resp, nil
+}
+
+func GetPriceFromResponse(resp CloudCostPriceResp) (float32, error) {
+	var sum float32 = 0.0
+	for _, detail := range resp.Result.Results {
+		for _, attr := range detail.PriceAttr {
+			if _, ok := attr["price"]; ok {
+				sum += float32(utils.Str2float(attr["price"]))
+			}
+
+		}
+
+	}
+
+	return sum, nil
 }

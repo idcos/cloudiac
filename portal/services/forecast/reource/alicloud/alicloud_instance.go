@@ -19,11 +19,13 @@ type Instance struct {
 	IoOptimized             interface{} `json:"io_optimized"`
 	SystemDiskCategory      string      `json:"system_disk_category"`
 	SystemDiskSize          int64       `json:"system_disk_size"`
+	PerformanceLevel        string      `json:"performance_level"`
 }
 
 type DataDisks struct {
-	Category string `json:"category"`
-	Size     int64  `json:"size"`
+	Category         string `json:"category"`
+	Size             int64  `json:"size"`
+	PerformanceLevel string `json:"performance_level"`
 }
 
 func (a *Instance) BuildResource() *schema.Resource {

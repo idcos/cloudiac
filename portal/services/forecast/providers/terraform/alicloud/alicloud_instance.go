@@ -23,12 +23,14 @@ func NewInstance(d *schema.ResourceData) *schema.Resource {
 		InstanceType:       d.Get("instance_type").String(),
 		SystemDiskSize:     d.Get("system_disk_size").Int(),
 		SystemDiskCategory: d.Get("system_disk_category").String(),
+		PerformanceLevel:   d.Get("performance_level").String(),
 	}
 	disk := make([]alicloud.DataDisks, 0)
 	for _, v := range d.Get("data_disks").Array() {
 		disk = append(disk, alicloud.DataDisks{
-			Category: v.Get("category").String(),
-			Size:     v.Get("size").Int(),
+			Category:         v.Get("category").String(),
+			Size:             v.Get("size").Int(),
+			PerformanceLevel: d.Get("performance_level").String(),
 		})
 	}
 
