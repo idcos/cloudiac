@@ -109,22 +109,22 @@ func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byt
 	// get resources
 	createResources, deleteResources, updateBeforeResources, updateAfterResources := terraform.ParserPlanJson(bs, aliRegion)
 	// compute cost
-	addedCost, addedForecast, err := computeResourceCost(dbSess, task.ProjectId, task.OrgId, createResources)
+	addedCost, addedForecast, err := computeResourceCost(createResources)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	updateBeforeCost, updateBeforeForecast, err := computeResourceCost(dbSess, task.ProjectId, task.OrgId, updateBeforeResources)
+	updateBeforeCost, updateBeforeForecast, err := computeResourceCost(updateBeforeResources)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	updateAfterCost, updateAfterForecast, err := computeResourceCost(dbSess, task.ProjectId, task.OrgId, updateAfterResources)
+	updateAfterCost, updateAfterForecast, err := computeResourceCost(updateAfterResources)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	destroyedCost, destroyedForecast, err := computeResourceCost(dbSess, task.ProjectId, task.OrgId, deleteResources)
+	destroyedCost, destroyedForecast, err := computeResourceCost(deleteResources)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -149,26 +149,13 @@ func getPriceService(dbSess *db.Session, projectId, orgId models.Id, provider st
 	return pricecalculator.NewPriceService(vg, provider)
 }
 
-func computeResourceCost(dbSess *db.Session, projectId, orgId models.Id, resources []*schema.Resource) (float32, []string, error) {
+func computeResourceCost(resources []*schema.Resource) (float32, []string, error) {
 	var cost float32
 	// 询价失败产品的address
 	forecastFailed := make([]string, 0)
 
-	mPriceServ := make(map[string]pricecalculator.PriceService)
 	for _, res := range resources {
-		key := projectId.String() + res.Provider
-
-		if _, ok := mPriceServ[key]; !ok {
-			ps, err := getPriceService(dbSess, projectId, orgId, res.Provider)
-			if err != nil {
-				forecastFailed = append(forecastFailed, res.Name)
-				logs.Get().WithField("cost_forecast", "getPriceService").Error(err)
-				continue
-			}
-			mPriceServ[key] = ps
-		}
-
-		priceResp, err := mPriceServ[key].GetResourcePrice(res)
+		priceResp, err := pricecalculator.GetResourcePrice(res)
 		if err != nil {
 			forecastFailed = append(forecastFailed, res.Name)
 			logs.Get().WithField("cost_forecast", "GetResourcePrice").Error(err)

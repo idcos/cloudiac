@@ -17,18 +17,20 @@ func getInstanceRegistryItem() *schema.RegistryItem {
 
 func NewInstance(d *schema.ResourceData) *schema.Resource {
 	a := &alicloud.Instance{
-		Address:            d.Address,
-		Provider:           d.ProviderName,
-		Region:             d.Region,
-		InstanceType:       d.Get("instance_type").String(),
-		SystemDiskSize:     d.Get("system_disk_size").Int(),
-		SystemDiskCategory: d.Get("system_disk_category").String(),
+		Address:                    d.Address,
+		Provider:                   d.ProviderName,
+		Region:                     d.Region,
+		InstanceType:               d.Get("instance_type").String(),
+		SystemDiskSize:             d.Get("system_disk_size").Int(),
+		SystemDiskCategory:         d.Get("system_disk_category").String(),
+		SystemDiskPerformanceLevel: d.Get("system_disk_performance_level").String(),
 	}
 	disk := make([]alicloud.DataDisks, 0)
 	for _, v := range d.Get("data_disks").Array() {
 		disk = append(disk, alicloud.DataDisks{
-			Category: v.Get("category").String(),
-			Size:     v.Get("size").Int(),
+			Category:         v.Get("category").String(),
+			Size:             v.Get("size").Int(),
+			PerformanceLevel: d.Get("performance_level").String(),
 		})
 	}
 
