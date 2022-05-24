@@ -330,6 +330,10 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "project name already exists",
 		"zh-CN": "项目名称重复",
 	},
+	ProjectHasActiveEnvs: {
+		"en-US": "one or more active environments exist in the project",
+		"zh-CN": "项目存在活跃环境",
+	},
 	TokenAlreadyExists: {
 		"en-US": "token already exists",
 		"zh-CN": "Token已经存在",
