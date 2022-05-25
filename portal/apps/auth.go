@@ -10,74 +10,69 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
-	"cloudiac/utils"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 )
 
-func validPassword(c *ctx.ServiceContext, user *models.User, email, password string) e.Error {
-	valid, err := utils.CheckPassword(password, user.Password)
-	if err != nil {
-		c.Logger().Warnf("check password error: %v", err)
-		return e.New(e.InternalError, http.StatusInternalServerError)
-	}
-	if !valid {
-		// 如果本地账号验证未通过，进行ldap登陆验证
-		if configs.Get().Ldap.LdapServer != "" {
-			_, dn, err := services.LdapAuthLogin(email, password)
-			if err != nil {
-				c.Logger().Warnf("login error: %v", err)
-				return e.New(e.InvalidPassword, http.StatusUnauthorized)
-			}
-
-			// 刷新用户权限
-			if err := refreshLdapUserRole(c, user, dn); err != nil {
-				c.Logger().Warnf("refresh user role error: %v", err)
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 // Login 用户登陆
-func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, err e.Error) {
+func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, er e.Error) {
 	c.AddLogField("action", fmt.Sprintf("user login: %s", form.Email))
-	user, err := services.GetUserByEmail(c.DB(), form.Email)
-	if err != nil {
-		if err.Code() == e.UserNotExists && configs.Get().Ldap.LdapServer != "" {
-			// 当错误为用户邮箱不存在的时候，尝试使用ldap 进行登录
-			username, dn, ldapErr := services.LdapAuthLogin(form.Email, form.Password)
-			if ldapErr != nil {
-				// 找不到账号时也返回 InvalidPassword 错误，避免暴露系统中己有用户账号
-				c.Logger().Warnf("ldap auth login: %v", ldapErr)
-				return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
-			}
-			// 登录成功, 在用户表中添加该用户
-			if user, err = createLdapUser(c, username, form.Email); err != nil {
-				c.Logger().Warnf("create user error: %v", err)
-				return nil, err
-			}
-
-			// 刷新用户权限
-			if err = refreshLdapUserRole(c, user, dn); err != nil {
-				c.Logger().Warnf("refresh user role error: %v", err)
-				return nil, err
-			}
-
+	user, er := services.GetUserByEmail(c.DB(), form.Email)
+	loginSucceed := false
+	localUserNotExists := false
+	if er != nil {
+		// 当错误为用户邮箱不存在的时候，尝试使用ldap 进行登录
+		if er.Code() == e.UserNotExists {
+			localUserNotExists = true
 		} else {
-			return nil, err
+			return nil, er
+		}
+	} else {
+		if valid, err := services.VerifyLocalPassword(user, form.Password); err != nil {
+			return nil, e.New(e.InternalError, http.StatusInternalServerError)
+		} else if valid {
+			loginSucceed = true
 		}
 	}
-	if err := validPassword(c, user, form.Email, form.Password); err != nil {
-		return nil, e.New(e.InvalidPassword, http.StatusInternalServerError)
+
+	if !loginSucceed && configs.Get().Ldap.LdapServer != "" { // 本地登录失败，尝试 ldap 登录
+		username, _, er := services.VerifyLdapPassword(form.Email, form.Password)
+		if er != nil {
+			return nil, er
+		}
+
+		loginSucceed = true
+		if localUserNotExists {
+			// ldap 登录成功, 在用户表中添加该用户
+			if user, er = createLdapUser(c, username, form.Email); er != nil {
+				c.Logger().Warnf("create ldap user error: %v", er)
+				return nil, er
+			}
+		}
 	}
-	token, er := services.GenerateToken(user.Id, user.Name, user.IsAdmin, 1*24*time.Hour)
+
+	if !loginSucceed {
+		return nil, e.New(e.InvalidPassword)
+	}
+
+	dn, er := services.QueryLdapUserDN(user.Email)
 	if er != nil {
-		c.Logger().Errorf("name [%s] generateToken error: %v", user.Email, er)
-		return nil, e.New(e.InvalidPassword, http.StatusBadRequest)
+		c.Logger().Debugf("query user dn error: %v", er)
+		return nil, er
+	}
+
+	// 刷新用户权限
+	if er := refreshLdapUserRole(c, user, dn); er != nil {
+		c.Logger().Warnf("refresh user role error: %v", er)
+		return nil, er
+	}
+
+	token, err := services.GenerateToken(user.Id, user.Name, user.IsAdmin, 1*24*time.Hour)
+	if err != nil {
+		c.Logger().Errorf("name [%s] generateToken error: %v", user.Email, err)
+		return nil, e.New(e.InvalidPassword)
 	}
 	data := resps.LoginResp{
 		//UserInfo: user,
@@ -112,6 +107,7 @@ func refreshLdapUserRole(c *ctx.ServiceContext, user *models.User, dn string) e.
 
 	// 获取ldap用户的OU信息
 	userOU := strings.TrimPrefix(dn, fmt.Sprintf("uid=%s,", user.Name))
+	c.Logger().Debugf("user ldap ou: %s", userOU)
 
 	// 根据OU获取组织权限
 	ldapUserOrgOUs, err := services.GetLdapOUOrgByDN(tx, userOU)
@@ -121,6 +117,7 @@ func refreshLdapUserRole(c *ctx.ServiceContext, user *models.User, dn string) e.
 	}
 
 	// 更新用户组织权限
+	c.Logger().Debugf("refresh ldap user org roles: %+v", ldapUserOrgOUs)
 	err = services.RefreshUserOrgRoles(tx, user.Id, ldapUserOrgOUs)
 	if err != nil {
 		_ = tx.Rollback()
@@ -135,6 +132,7 @@ func refreshLdapUserRole(c *ctx.ServiceContext, user *models.User, dn string) e.
 	}
 
 	// 更新用户项目权限
+	c.Logger().Debugf("refresh ldap user project roles: %+v", ldapUserProjectOUs)
 	err = services.RefreshUserProjectRoles(tx, user.Id, ldapUserProjectOUs)
 	if err != nil {
 		_ = tx.Rollback()

@@ -217,6 +217,10 @@ const (
 	SystemConfigNotExist = 31610
 
 	// Ldap 317
-	LdapConnectFailed = 31710
-	LdapNotExisted    = 31711
+	LdapConnectFailed  = 31710
+	LdapNotExisted     = 31711
+	LdapAdminBindError = 31712
+	LdapBindError      = 31713
+	LdapUnknowError    = 31714
+	LdapUserNotExist   = 31715
 )
