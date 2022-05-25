@@ -749,7 +749,7 @@ func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs mod
 }
 
 // UpdateEnv 环境编辑
-func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDetail, e.Error) {
+func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDetail, e.Error) { // nolint:cyclop
 	c.AddLogField("action", fmt.Sprintf("update env %s", form.Id))
 
 	if err := updateEnvCheck(c.OrgId, c.ProjectId, form); err != nil {
@@ -1169,7 +1169,7 @@ func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env
 	return nil
 }
 
-func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm) (*models.EnvDetail, e.Error) {
+func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm) (*models.EnvDetail, e.Error) { // nolint:cyclop
 	c.AddLogField("action", fmt.Sprintf("deploy env task %s", form.Id))
 	lg := c.Logger()
 
