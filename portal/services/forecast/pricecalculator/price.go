@@ -4,8 +4,6 @@ package pricecalculator
 
 import (
 	"cloudiac/configs"
-	"cloudiac/portal/consts"
-	"cloudiac/portal/models"
 	"cloudiac/portal/services/forecast/schema"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
@@ -45,39 +43,6 @@ type CloudCostPriceResp struct {
 	Result  PriceResp `json:"result"`
 }
 
-type PriceService interface {
-	GetResourcePrice(r *schema.Resource) (CloudCostPriceResp, error)
-}
-
-func NewPriceService(vg *models.VariableGroup, providerName string) (PriceService, error) {
-	switch vg.Provider {
-	case providerName:
-		return NewAliCloudBillService(vg, parseResourceAccount)
-	default:
-		logs.Get().Errorf("price service unsupported provider %s", vg.Provider)
-		return nil, fmt.Errorf("price service  unsupported provider %s", vg.Provider)
-	}
-}
-
-func parseResourceAccount(provider string, vars models.VarGroupVariables) map[string]string {
-	resp := make(map[string]string)
-	for _, v := range vars {
-		if utils.ArrayIsExistsStr(consts.BillProviderResAccount[provider], v.Name) {
-			if v.Sensitive {
-				value, err := utils.DecryptSecretVarForce(v.Value)
-				if err != nil {
-					logs.Get().Errorf("get resource as sk error: %s", err)
-					return nil
-				}
-				resp[v.Name] = value
-				continue
-			}
-			resp[v.Name] = v.Value
-		}
-	}
-	return resp
-}
-
 func GetResourcePrice(r *schema.Resource) (CloudCostPriceResp, error) {
 	logger := logs.Get().WithField("func", "GetResourcePrice")
 	resp := CloudCostPriceResp{}
@@ -112,7 +77,7 @@ func GetResourcePrice(r *schema.Resource) (CloudCostPriceResp, error) {
 		return resp, err
 	}
 
-	logger.Infof(fmt.Sprintf("%s", string(respData)))
+	logger.Infof("%s", string(respData))
 
 	if err := json.Unmarshal(respData, &resp); err != nil {
 		return resp, err
