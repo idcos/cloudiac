@@ -12,7 +12,7 @@ type EcsDisk struct {
 	Address          string
 	Region           string
 	Provider         string
-	Category         string `json:"category"`
+	Category         string `json:"diskDefaultCategory"`
 	Size             int64  `json:"size"`
 	PerformanceLevel string `json:"performance_level"`
 }
@@ -46,10 +46,10 @@ func (a *EcsDisk) BuildResource() *schema.Resource {
 
 func (a *EcsDisk) InitDefault() {
 	if a.Category == "" {
-		a.Category = category
+		a.Category = diskDefaultCategory
 	}
 
 	if a.PerformanceLevel == "" {
-		a.PerformanceLevel = performanceLevel
+		a.PerformanceLevel = diskDefaultPerformanceLevel
 	}
 }

@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	performanceLevel = "PL1"
-	category         = "cloud_efficiency"
+	diskDefaultPerformanceLevel = "PL1"
+	diskDefaultCategory         = "cloud_efficiency"
 )
 
 type Instance struct {
@@ -29,7 +29,7 @@ type Instance struct {
 }
 
 type DataDisks struct {
-	Category         string `json:"category"`
+	Category         string `json:"diskDefaultCategory"`
 	Size             int64  `json:"size"`
 	PerformanceLevel string `json:"performance_level"`
 }
@@ -93,20 +93,20 @@ func (a *Instance) BuildResource() *schema.Resource {
 
 func (a *Instance) InitDefault() {
 	if a.SystemDiskCategory == "" {
-		a.SystemDiskCategory = category
+		a.SystemDiskCategory = diskDefaultCategory
 	}
 
 	if a.SystemDiskPerformanceLevel == "" {
-		a.SystemDiskPerformanceLevel = performanceLevel
+		a.SystemDiskPerformanceLevel = diskDefaultPerformanceLevel
 	}
 
 	for _, disk := range a.DataDisks {
 		if disk.Category == "" {
-			disk.Category = category
+			disk.Category = diskDefaultCategory
 		}
 
 		if disk.PerformanceLevel == "" {
-			disk.PerformanceLevel = performanceLevel
+			disk.PerformanceLevel = diskDefaultPerformanceLevel
 		}
 	}
 }
