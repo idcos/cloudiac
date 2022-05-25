@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/resps"
+	"errors"
 	"fmt"
 
 	"github.com/go-ldap/ldap/v3"
@@ -217,11 +218,11 @@ func CreateOUOrg(tx *db.Session, m models.LdapOUOrg) (models.Id, e.Error) {
 	var ouOrg models.LdapOUOrg
 	err := tx.Model(&models.LdapOUOrg{}).Where(`org_id = ?`, m.OrgId).Where(`dn = ?`, m.DN).First(&ouOrg)
 
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return "", e.New(e.DBError, err)
 	}
 
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		err = tx.Insert(&m)
 	} else {
 		m.Id = ouOrg.Id
@@ -240,13 +241,13 @@ func CreateLdapUserOrg(tx *db.Session, orgId models.Id, m models.User, role stri
 	// 判断 user 是否存在
 	var user models.User
 	err = tx.Model(&models.User{}).Where(`email = ?`, m.Email).First(&user)
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return "", e.New(e.DBError, err)
 	}
 
 	// 用户不存在
 	userId := user.Id
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		m.Id = models.NewId("u")
 		err = tx.Insert(&m)
 		if err != nil {
@@ -260,11 +261,11 @@ func CreateLdapUserOrg(tx *db.Session, orgId models.Id, m models.User, role stri
 	// 用户授权不存在
 	var userOrg models.UserOrg
 	err = tx.Model(&models.UserOrg{}).Where("user_id = ? and org_id = ?", userId, orgId).First(&userOrg)
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return "", e.New(e.DBError, err)
 	}
 
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		err = tx.Insert(&models.UserOrg{
 			UserId: userId,
 			OrgId:  orgId,
@@ -286,11 +287,11 @@ func CreateOUProject(tx *db.Session, m models.LdapOUProject) (models.Id, e.Error
 	var ouProject models.LdapOUProject
 	err := tx.Model(&models.LdapOUProject{}).Where(`org_id = ?`, m.OrgId).Where(`dn = ?`, m.DN).Where(`project_id = ?`, m.ProjectId).First(&ouProject)
 
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return "", e.New(e.DBError, err)
 	}
 
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		err = tx.Insert(&m)
 	} else {
 		m.Id = ouProject.Id
