@@ -25,5 +25,7 @@ func NewDisk(d *schema.ResourceData) *schema.Resource {
 		PerformanceLevel: d.Get("performance_level").String(),
 	}
 
+	a.InitDefault()
+
 	return a.BuildResource()
 }

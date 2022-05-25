@@ -43,3 +43,13 @@ func (a *Disk) BuildResource() *schema.Resource {
 		Region:      a.Region,
 	}
 }
+
+func (a *Disk) InitDefault() {
+	if a.Category == "" {
+		a.Category = category
+	}
+
+	if a.PerformanceLevel == "" {
+		a.PerformanceLevel = performanceLevel
+	}
+}
