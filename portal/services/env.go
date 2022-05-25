@@ -6,6 +6,7 @@ import (
 	"cloudiac/portal/libs/ctx"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -164,6 +165,7 @@ func QueryEnv(query *db.Session) *db.Session {
 }
 
 // ChangeEnvStatusWithTaskAndStep 基于任务和步骤的状态更新环境状态
+// nolint:cyclop
 func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.Task, step *models.TaskStep) e.Error {
 	var (
 		envStatus     = ""
@@ -670,4 +672,41 @@ func totalEnvCostListByInstanceId(tx *db.Session, id models.Id) (map[string]floa
 	}
 
 	return m, nil
+}
+
+func FilterEnvStatus(query *db.Session, status string) (*db.Session, e.Error) {
+	if status == "" {
+		return query, nil
+	}
+
+	if utils.InArrayStr(models.EnvStatus, status) {
+		if status == models.EnvStatusInactive {
+			query = query.Where("(iac_env.status = ? or iac_env.status = ?) and iac_env.deploying = 0", status, models.EnvStatusDestroyed)
+		} else {
+			query = query.Where("iac_env.status = ? and iac_env.deploying = 0", status)
+		}
+	} else if utils.InArrayStr(models.EnvTaskStatus, status) {
+		query = query.Where("iac_env.task_status = ? and iac_env.deploying = 1", status)
+	} else {
+		return nil, e.New(e.BadParam, http.StatusBadRequest)
+	}
+	return query, nil
+}
+
+func FilterEnvArchiveStatus(query *db.Session, archiveQ string) (*db.Session, e.Error) {
+	switch archiveQ {
+	case "":
+		// 默认返回未归档环境
+		return query.Where("iac_env.archived = 0"), nil
+	case "all":
+		return query, nil
+	case "true":
+		// 已归档
+		return query.Where("iac_env.archived = 1"), nil
+	case "false":
+		// 未归档
+		return query.Where("iac_env.archived = 0"), nil
+	default:
+		return nil, e.New(e.BadParam, http.StatusBadRequest)
+	}
 }

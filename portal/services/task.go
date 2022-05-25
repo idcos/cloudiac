@@ -515,15 +515,7 @@ func ChangeTaskStatusWithStep(dbSess *db.Session, task models.Tasker, step *mode
 	}
 }
 
-// ChangeTaskStatus 修改任务状态(同步修改 StartAt、EndAt 等)，并同步修改 env 状态
-// 该函数只修改以下字段:
-// 	status, message, start_at, end_at, aborting
-func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message string, skipUpdateEnv bool) e.Error {
-	preStatus := task.Status
-	if preStatus == status && message == "" {
-		return nil
-	}
-
+func changeTaskStatusSetAttrs(dbSess *db.Session, task *models.Task, status, message string) models.Attrs {
 	updateAttrs := models.Attrs{
 		"message": message,
 	}
@@ -547,7 +539,19 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 		task.Aborting = false
 		updateAttrs["aborting"] = false
 	}
+	return updateAttrs
+}
 
+// ChangeTaskStatus 修改任务状态(同步修改 StartAt、EndAt 等)，并同步修改 env 状态
+// 该函数只修改以下字段:
+// 	status, message, start_at, end_at, aborting
+func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message string, skipUpdateEnv bool) e.Error {
+	preStatus := task.Status
+	if preStatus == status && message == "" {
+		return nil
+	}
+
+	updateAttrs := changeTaskStatusSetAttrs(dbSess, task, status, message)
 	logger := logs.Get().WithField("taskId", task.Id)
 	logger.Infof("change task to '%s'", status)
 	logger.Debugf("update task attrs: %s", utils.MustJSON(updateAttrs))
