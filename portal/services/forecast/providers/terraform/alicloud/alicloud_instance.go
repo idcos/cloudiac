@@ -36,6 +36,8 @@ func NewInstance(d *schema.ResourceData) *schema.Resource {
 
 	a.DataDisks = disk
 
+	a.InitDefault()
+
 	return a.BuildResource()
 
 }

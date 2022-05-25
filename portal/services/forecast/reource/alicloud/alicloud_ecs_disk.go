@@ -41,8 +41,15 @@ func (a *EcsDisk) BuildResource() *schema.Resource {
 		Provider:    a.Provider,
 		RequestData: p,
 		Region:      a.Region,
-		//RequestData: p,
-		//PriceCode:   "yundisk",
-		//PriceType:   "",
+	}
+}
+
+func (a *EcsDisk) InitDefault() {
+	if a.Category == "" {
+		a.Category = diskDefaultCategory
+	}
+
+	if a.PerformanceLevel == "" {
+		a.PerformanceLevel = diskDefaultPerformanceLevel
 	}
 }

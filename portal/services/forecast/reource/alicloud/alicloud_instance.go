@@ -8,6 +8,11 @@ import (
 	"strconv"
 )
 
+const (
+	diskDefaultPerformanceLevel = "PL1"
+	diskDefaultCategory         = "cloud_efficiency"
+)
+
 type Instance struct {
 	Address                    string
 	Region                     string
@@ -83,5 +88,25 @@ func (a *Instance) BuildResource() *schema.Resource {
 		Provider:    a.Provider,
 		RequestData: p,
 		Region:      a.Region,
+	}
+}
+
+func (a *Instance) InitDefault() {
+	if a.SystemDiskCategory == "" {
+		a.SystemDiskCategory = diskDefaultCategory
+	}
+
+	if a.SystemDiskPerformanceLevel == "" {
+		a.SystemDiskPerformanceLevel = diskDefaultPerformanceLevel
+	}
+
+	for _, disk := range a.DataDisks {
+		if disk.Category == "" {
+			disk.Category = diskDefaultCategory
+		}
+
+		if disk.PerformanceLevel == "" {
+			disk.PerformanceLevel = diskDefaultPerformanceLevel
+		}
 	}
 }
