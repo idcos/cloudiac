@@ -140,15 +140,6 @@ func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byt
 	return []float32{addedCost * 730, -1 * destroyedCost * 730, (updateAfterCost - updateBeforeCost) * 730}, utils.RemoveDuplicateElement(failedForecast), err
 }
 
-func getPriceService(dbSess *db.Session, projectId, orgId models.Id, provider string) (pricecalculator.PriceService, error) {
-	vg, err := services.GetBillVarGroupByProjectOrOrg(dbSess, projectId, orgId, provider)
-	if err != nil {
-		return nil, err
-	}
-
-	return pricecalculator.NewPriceService(vg, provider)
-}
-
 func computeResourceCost(resources []*schema.Resource) (float32, []string, error) {
 	var cost float32
 	// 询价失败产品的address
