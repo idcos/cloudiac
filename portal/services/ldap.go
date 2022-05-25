@@ -259,7 +259,7 @@ func CreateLdapUserOrg(tx *db.Session, orgId models.Id, m models.User, role stri
 
 	// 用户授权不存在
 	var userOrg models.UserOrg
-	err = tx.Model(&models.UserOrg{}).Where("user_id = ? and org_id = ?", userId, orgId).Where(`is_from_ldap = ?`, true).First(&userOrg)
+	err = tx.Model(&models.UserOrg{}).Where("user_id = ? and org_id = ?", userId, orgId).Where(`is_from_ldap = ?`, false).First(&userOrg)
 	if err != nil && err != gorm.ErrRecordNotFound {
 		return "", e.New(e.DBError, err)
 	}
@@ -269,7 +269,7 @@ func CreateLdapUserOrg(tx *db.Session, orgId models.Id, m models.User, role stri
 			UserId:     userId,
 			OrgId:      orgId,
 			Role:       role,
-			IsFromLdap: true,
+			IsFromLdap: false,
 		})
 	} else {
 		_, err = tx.Model(&userOrg).Update(models.UserOrg{Role: role})
