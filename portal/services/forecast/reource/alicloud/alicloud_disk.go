@@ -12,7 +12,7 @@ type Disk struct {
 	Address          string
 	Region           string
 	Provider         string
-	Category         string `json:"diskDefaultCategory"`
+	Category         string `json:"category"`
 	Size             int64  `json:"size"`
 	PerformanceLevel string `json:"performance_level"`
 }

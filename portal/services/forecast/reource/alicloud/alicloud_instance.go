@@ -29,7 +29,7 @@ type Instance struct {
 }
 
 type DataDisks struct {
-	Category         string `json:"diskDefaultCategory"`
+	Category         string `json:"category"`
 	Size             int64  `json:"size"`
 	PerformanceLevel string `json:"performance_level"`
 }
