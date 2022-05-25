@@ -10,6 +10,7 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/resps"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
 	"fmt"
 	"strings"
 
@@ -367,7 +368,7 @@ func LdapAuthLogin(userEmail, password string) (username, dn string, er e.Error)
 	// 配置ldap 管理员dn信息，例如cn=Manager,dc=idcos,dc=com
 	err = conn.Bind(conf.Ldap.AdminDn, conf.Ldap.AdminPassword)
 	if err != nil {
-		return username, dn, e.New(e.ValidateError, err)
+		return username, dn, e.New(e.LdapAdminBindError, err)
 	}
 	// SearchFilter 需要内填入搜索条件，单个用括号包裹，例如 (objectClass=person)(!(userAccountControl=514))
 	seachFilter := fmt.Sprintf("(&%s(%s=%s))", conf.Ldap.SearchFilter, conf.Ldap.EmailAttribute, userEmail)
@@ -381,14 +382,14 @@ func LdapAuthLogin(userEmail, password string) (username, dn string, er e.Error)
 	)
 	sr, err := conn.Search(searchRequest)
 	if err != nil {
-		return username, dn, e.New(e.ValidateError, err)
+		return username, dn, e.New(e.LdapUnknowError, err)
 	}
 	if len(sr.Entries) != 1 {
-		return username, dn, e.New(e.UserNotExists, err)
+		return username, dn, e.New(e.LdapUserNotExist, err)
 	}
 	err = conn.Bind(sr.Entries[0].DN, password)
 	if err != nil {
-		return username, dn, e.New(e.InvalidPassword, err)
+		return username, dn, e.New(e.LdapBindError, err)
 	}
 	var account string
 	if conf.Ldap.AccountAttribute != "" {
@@ -397,7 +398,6 @@ func LdapAuthLogin(userEmail, password string) (username, dn string, er e.Error)
 		account = "uid"
 	}
 	return sr.Entries[0].GetAttributeValue(account), sr.Entries[0].DN, nil
-
 }
 
 // GetUserHighestProjectRole 获取用户在指定组织下的最高项目角色
@@ -429,4 +429,51 @@ func HasInviteUserPerm(db *db.Session, userId models.Id, orgId models.Id, target
 		}
 	}
 	return false, nil
+}
+
+func VerifyLocalPassword(user *models.User, password string) (valid bool, err error) {
+	return utils.CheckPassword(password, user.Password)
+}
+
+func VerifyLdapPassword(email string, password string) (username, dn string, er e.Error) {
+	username, dn, er = LdapAuthLogin(email, password)
+	if er != nil {
+		logs.Get().WithField("email", email).Debugf("LdapAuthLogin error: %v", er)
+		er = e.New(e.InvalidPassword)
+	}
+	return username, dn, er
+}
+
+// 处理Ldap 登录逻辑
+func QueryLdapUserDN(email string) (dn string, er e.Error) {
+	conf := configs.Get()
+	conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", conf.Ldap.LdapServer, conf.Ldap.LdapServerPort))
+	if err != nil {
+		return dn, e.New(e.LdapConnectFailed, err)
+	}
+	defer conn.Close()
+
+	err = conn.Bind(conf.Ldap.AdminDn, conf.Ldap.AdminPassword)
+	if err != nil {
+		return dn, e.New(e.LdapAdminBindError, err)
+	}
+	// SearchFilter 需要内填入搜索条件，单个用括号包裹，例如 (objectClass=person)(!(userAccountControl=514))
+	seachFilter := fmt.Sprintf("(&%s(%s=%s))", conf.Ldap.SearchFilter, conf.Ldap.EmailAttribute, email)
+	searchRequest := ldap.NewSearchRequest(
+		conf.Ldap.SearchBase,
+		ldap.ScopeWholeSubtree, ldap.DerefAlways, 0, 0, false,
+		seachFilter,
+		// 这里是查询返回的属性,以数组形式提供.如果为空则会返回所有的属性
+		[]string{},
+		nil,
+	)
+	sr, err := conn.Search(searchRequest)
+	if err != nil {
+		return dn, e.New(e.LdapUnknowError, err)
+	}
+
+	if len(sr.Entries) != 1 {
+		return dn, e.New(e.LdapUserNotExist, err)
+	}
+	return sr.Entries[0].DN, nil
 }
