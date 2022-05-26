@@ -137,7 +137,7 @@ func (Project) SearchProjectResources(c *ctx.GinRequest) {
 //@Param IaC-Org-Id header string true "组织ID"
 //@Param IaC-Project-Id header string true "项目ID"
 //@Param form query forms.SearchProjectResourceForm true "parameter"
-//@router /projects/resources/filters [get]
+//@router /projects/resources/filter s [get]
 //@Success 200 {object} ctx.JSONResult{result=resps.OrgEnvAndProviderResp}
 func (Project) SearchProjectResourcesFilters(c *ctx.GinRequest) {
 	form := forms.SearchProjectResourceForm{}

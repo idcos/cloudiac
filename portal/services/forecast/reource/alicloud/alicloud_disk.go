@@ -17,6 +17,7 @@ type Disk struct {
 	PerformanceLevel string `json:"performance_level"`
 }
 
+//nolint
 func (a *Disk) BuildResource() *schema.Resource {
 	p := make([]schema.PriceRequest, 0)
 
@@ -44,6 +45,7 @@ func (a *Disk) BuildResource() *schema.Resource {
 	}
 }
 
+//nolint
 func (a *Disk) InitDefault() {
 	if a.Category == "" {
 		a.Category = diskDefaultCategory

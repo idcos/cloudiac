@@ -13,7 +13,6 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
-	"cloudiac/utils"
 	"errors"
 	"fmt"
 	"net/http"
@@ -264,29 +263,36 @@ func DeleteProject(c *ctx.ServiceContext, form *forms.DeleteProjectForm) (interf
 }
 
 func SearchProjectResourcesFilters(c *ctx.ServiceContext, form *forms.SearchProjectResourceForm) (*resps.OrgEnvAndProviderResp, e.Error) {
+	providers := make([]string, 0)
+	envResp := make([]resps.EnvResp, 0)
+
 	query := services.GetOrgOrProjectResourcesQuery(c.DB().Model(&models.Resource{}), form.Q, c.OrgId, c.ProjectId, c.UserId, c.IsSuperAdmin)
-	type SearchResult struct {
-		EnvName  string    `json:"env_name"`
-		EnvId    models.Id `json:"env_id"`
-		Provider string    `json:"provider"`
-	}
-	rs := make([]SearchResult, 0)
-	if err := query.Scan(&rs); err != nil {
+	if err := query.Group("iac_resource.provider").
+		Pluck("iac_resource.provider", &providers); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	r := &resps.OrgEnvAndProviderResp{}
-	temp := map[string]interface{}{}
-	for _, v := range rs {
-		if _, ok := temp[v.EnvName]; !ok {
-			// 通过map 对环境名称进行过滤
-			r.Envs = append(r.Envs, resps.EnvResp{EnvName: v.EnvName, EnvId: v.EnvId})
-			temp[v.EnvName] = nil
-		}
-		r.Providers = append(r.Providers, path.Base(v.Provider))
+
+	if err := c.DB().Raw("select env_id,env_name from (?) as t group by env_id,env_name", query.Expr()).
+		Find(&envResp); err != nil {
+		return nil, e.New(e.DBError, err)
 	}
-	r.Providers = utils.Set(r.Providers)
+
+	r := &resps.OrgEnvAndProviderResp{
+		Providers: providerPathBase(providers),
+		Envs:      envResp,
+	}
 
 	return r, nil
+}
+
+func providerPathBase(providers []string) []string {
+	newProvider := make([]string, 0)
+
+	for _, v := range providers {
+		newProvider = append(newProvider, path.Base(v))
+	}
+
+	return newProvider
 }
 
 func SearchProjectResources(c *ctx.ServiceContext, form *forms.SearchProjectResourceForm) (interface{}, e.Error) {
@@ -294,17 +300,7 @@ func SearchProjectResources(c *ctx.ServiceContext, form *forms.SearchProjectReso
 	if len(form.EnvIds) != 0 {
 		query = query.Where("iac_env.id in (?)", strings.Split(form.EnvIds, ","))
 	}
-	query = services.GetProviderQuery(form.Providers, query)
-	query = query.Order("project_id, env_id, provider desc")
-	rs, p, err := services.GetOrgOrProjectResourcesResp(form.CurrentPage(), form.PageSize(), query)
-	if err != nil {
-		return nil, err
-	}
-	return &page.PageResp{
-		Total:    p.MustTotal(),
-		PageSize: p.Size,
-		List:     rs,
-	}, nil
+	return searchResource(query, form.Providers, form.CurrentPage(), form.PageSize())
 
 }
 
