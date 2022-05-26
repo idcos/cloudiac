@@ -37,7 +37,7 @@ func performRequest(r http.Handler, method, path string, body string, headers ma
 // TestMain 该函数在所有测试用例执行之前会被调用
 func TestMain(m *testing.M) {
 	// 初始化 config 的 jwt key，login 接口需要使用
-	configs.Set(configs.Config{
+	configs.Set(&configs.Config{
 		JwtSecretKey: "6xGzLKiX4dl0UE6aVuBGCmRWL7cQ+90W",
 	})
 
