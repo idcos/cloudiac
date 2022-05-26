@@ -1,5 +1,7 @@
 // Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
+
+// nolint:dupl
 package alicloud
 
 import (
@@ -17,7 +19,7 @@ type Disk struct {
 	PerformanceLevel string `json:"performance_level"`
 }
 
-//nolint
+// nolint:dupl
 func (a *Disk) BuildResource() *schema.Resource {
 	p := make([]schema.PriceRequest, 0)
 
