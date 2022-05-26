@@ -12,7 +12,7 @@ import (
 	"cloudiac/portal/services"
 	"fmt"
 	"net/http"
-	"strings"
+	"regexp"
 	"time"
 )
 
@@ -105,7 +105,8 @@ func refreshLdapUserRole(c *ctx.ServiceContext, user *models.User, dn string) e.
 	}()
 
 	// 获取ldap用户的OU信息
-	userOU := strings.TrimPrefix(dn, fmt.Sprintf("uid=%s,", user.Name))
+	reg := regexp.MustCompile(`^uid=[^,]*,`)
+	userOU := reg.ReplaceAllString(dn, "")
 	c.Logger().Debugf("user ldap ou: %s", userOU)
 
 	// 根据OU获取组织权限
