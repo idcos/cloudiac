@@ -22,6 +22,7 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, er e
 	user, er := services.GetUserByEmail(c.DB(), form.Email)
 	loginSucceed := false
 	localUserNotExists := false
+
 	if er != nil {
 		// 当错误为用户邮箱不存在的时候，尝试使用ldap 进行登录
 		if er.Code() == e.UserNotExists {
@@ -58,17 +59,15 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, er e
 	}
 
 	dn, er := services.QueryLdapUserDN(user.Email)
-	if er != nil {
-		c.Logger().Debugf("query user dn error: %v", er)
-		return nil, er
+	if er == nil {
+		// 刷新用户权限
+		if er := refreshLdapUserRole(c, user, dn); er != nil {
+			c.Logger().Warnf("refresh user role error: %v", er)
+			return nil, er
+		}
 	}
 
-	// 刷新用户权限
-	if er := refreshLdapUserRole(c, user, dn); er != nil {
-		c.Logger().Warnf("refresh user role error: %v", er)
-		return nil, er
-	}
-
+	c.Logger().Debugf("query user dn error: %v", er)
 	token, err := services.GenerateToken(user.Id, user.Name, user.IsAdmin, 1*24*time.Hour)
 	if err != nil {
 		c.Logger().Errorf("name [%s] generateToken error: %v", user.Email, err)

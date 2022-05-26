@@ -66,17 +66,25 @@ func GetUserByIdRaw(tx *db.Session, id models.Id) (*models.User, e.Error) {
 
 // RefreshUserOrgRoles 刷新用户的组织权限
 func RefreshUserOrgRoles(tx *db.Session, userId models.Id, ldapUserOrgOUs []models.LdapOUOrg) e.Error {
-	_, err := tx.Where(`user_id = ?`, userId).Delete(&models.UserOrg{})
+
+	_, err := tx.Where(`user_id = ?`, userId).Where(`is_from_ldap = ?`, true).Delete(&models.UserOrg{})
 	if err != nil {
 		return e.New(e.DBError, err)
 	}
 
 	userOrgs := make([]models.UserOrg, 0)
 	for _, item := range ldapUserOrgOUs {
+		// 用户在组织下是否已经有角色
+		cnt, _ := tx.Model(&models.UserOrg{}).Where(`user_id = ? and org_id = ?`, userId, item.OrgId).Count()
+		if cnt > 0 {
+			continue
+		}
+
 		userOrgs = append(userOrgs, models.UserOrg{
-			UserId: userId,
-			OrgId:  item.OrgId,
-			Role:   item.Role,
+			UserId:     userId,
+			OrgId:      item.OrgId,
+			Role:       item.Role,
+			IsFromLdap: true,
 		})
 	}
 
@@ -91,17 +99,23 @@ func RefreshUserOrgRoles(tx *db.Session, userId models.Id, ldapUserOrgOUs []mode
 
 // RefreshUserProjectRoles 刷新用户的项目权限
 func RefreshUserProjectRoles(tx *db.Session, userId models.Id, ldapUserProjectOUs []models.LdapOUProject) e.Error {
-	_, err := tx.Where(`user_id = ?`, userId).Delete(&models.UserProject{})
+	_, err := tx.Where(`user_id = ?`, userId).Where(`is_from_ldap = ?`, true).Delete(&models.UserProject{})
 	if err != nil {
 		return e.New(e.DBError, err)
 	}
 
 	userProjects := make([]models.UserProject, 0)
 	for _, item := range ldapUserProjectOUs {
+		// 用户在项目中是否已经有角色
+		cnt, _ := tx.Model(&models.UserProject{}).Where(`user_id = ? and project_id = ?`, userId, item.ProjectId).Count()
+		if cnt > 0 {
+			continue
+		}
 		userProjects = append(userProjects, models.UserProject{
-			UserId:    userId,
-			ProjectId: item.ProjectId,
-			Role:      item.Role,
+			UserId:     userId,
+			ProjectId:  item.ProjectId,
+			Role:       item.Role,
+			IsFromLdap: true,
 		})
 	}
 

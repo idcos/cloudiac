@@ -267,12 +267,13 @@ func CreateLdapUserOrg(tx *db.Session, orgId models.Id, m models.User, role stri
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		err = tx.Insert(&models.UserOrg{
-			UserId: userId,
-			OrgId:  orgId,
-			Role:   role,
+			UserId:     userId,
+			OrgId:      orgId,
+			Role:       role,
+			IsFromLdap: false,
 		})
 	} else {
-		_, err = tx.Model(&userOrg).Update(models.UserOrg{OrgId: orgId, UserId: userId, Role: role})
+		_, err = tx.Model(&userOrg).Update(models.UserOrg{Role: role})
 	}
 
 	if err != nil {
