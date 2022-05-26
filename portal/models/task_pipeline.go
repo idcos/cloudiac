@@ -219,6 +219,7 @@ var (
 	defaultPipelineTpls = map[string]string{
 		"0.3": pipelineV0dot3,
 		"0.4": pipelineV0dot4,
+		"0.5": pipelineV0dot5,
 	}
 	defaultPipelines = make(map[string]Pipeline)
 )
