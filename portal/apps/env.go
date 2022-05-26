@@ -14,7 +14,6 @@ import (
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/vcsrv"
-	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
 	"net/http"
@@ -452,36 +451,18 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 	}
 	//query := c.DB().Where("iac_env.org_id = ? AND iac_env.project_id = ?", c.OrgId, c.ProjectId)
 	query := services.QueryEnvDetail(c.DB(), c.OrgId, c.ProjectId)
+	var er e.Error
 
-	if form.Status != "" {
-		if utils.InArrayStr(models.EnvStatus, form.Status) {
-			if form.Status == models.EnvStatusInactive {
-				query = query.Where("(iac_env.status = ? or iac_env.status = ?) and iac_env.deploying = 0", form.Status, models.EnvStatusDestroyed)
-			} else {
-				query = query.Where("iac_env.status = ? and iac_env.deploying = 0", form.Status)
-			}
-		} else if utils.InArrayStr(models.EnvTaskStatus, form.Status) {
-			query = query.Where("iac_env.task_status = ? and iac_env.deploying = 1", form.Status)
-		} else {
-			return nil, e.New(e.BadParam, http.StatusBadRequest)
-		}
+	// 环境状态过滤
+	query, er = services.FilterEnvStatus(query, form.Status)
+	if er != nil {
+		return nil, er
 	}
 
-	// 环境归档状态
-	switch form.Archived {
-	case "":
-		// 默认返回未归档环境
-		query = query.Where("iac_env.archived = ?", 0)
-	case "all":
-	// do nothing
-	case "true":
-		// 已归档
-		query = query.Where("iac_env.archived = 1")
-	case "false":
-		// 未归档
-		query = query.Where("iac_env.archived = 0")
-	default:
-		return nil, e.New(e.BadParam, http.StatusBadRequest)
+	// 环境归档状态过滤
+	query, er = services.FilterEnvArchiveStatus(query, form.Archived)
+	if er != nil {
+		return nil, er
 	}
 
 	if form.Q != "" {
@@ -749,7 +730,7 @@ func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs mod
 }
 
 // UpdateEnv 环境编辑
-func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDetail, e.Error) {
+func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDetail, e.Error) { // nolint:cyclop
 	c.AddLogField("action", fmt.Sprintf("update env %s", form.Id))
 
 	if err := updateEnvCheck(c.OrgId, c.ProjectId, form); err != nil {
@@ -1169,7 +1150,7 @@ func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env
 	return nil
 }
 
-func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm) (*models.EnvDetail, e.Error) {
+func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm) (*models.EnvDetail, e.Error) { // nolint:cyclop
 	c.AddLogField("action", fmt.Sprintf("deploy env task %s", form.Id))
 	lg := c.Logger()
 

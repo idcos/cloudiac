@@ -65,7 +65,7 @@ gen-lang:
 	GOOS="" go run cmds/gen-lang/main.go docs/lang.csv portal/consts/e/lang.go
 
 swag-docs: gen-lang
-	swag init -g portal/web/api/v1/route.go
+	which swag || go install github.com/swaggo/swag/cmd/swag; swag init -g portal/web/api/v1/route.go
 
 mkdocs: 
 	GOOS="" GOARCH="" go run scripts/updatedocs/main.go

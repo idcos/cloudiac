@@ -30,9 +30,6 @@ func (a *DBInstance) BuildResource() *schema.Resource {
 		})
 	}
 
-	// todo 存储价格
-	if a.InstanceStorage != 0 {}
-
 	return &schema.Resource{
 		Name:        a.Address,
 		Provider:    a.Provider,
