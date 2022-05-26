@@ -65,6 +65,7 @@ func GetUserByIdRaw(tx *db.Session, id models.Id) (*models.User, e.Error) {
 }
 
 // RefreshUserOrgRoles 刷新用户的组织权限
+// nolint:dupl
 func RefreshUserOrgRoles(tx *db.Session, userId models.Id, ldapUserOrgOUs []models.LdapOUOrg) e.Error {
 
 	_, err := tx.Where(`user_id = ?`, userId).Where(`is_from_ldap = ?`, true).Delete(&models.UserOrg{})
@@ -98,6 +99,7 @@ func RefreshUserOrgRoles(tx *db.Session, userId models.Id, ldapUserOrgOUs []mode
 }
 
 // RefreshUserProjectRoles 刷新用户的项目权限
+// nolint:dupl
 func RefreshUserProjectRoles(tx *db.Session, userId models.Id, ldapUserProjectOUs []models.LdapOUProject) e.Error {
 	_, err := tx.Where(`user_id = ?`, userId).Where(`is_from_ldap = ?`, true).Delete(&models.UserProject{})
 	if err != nil {
