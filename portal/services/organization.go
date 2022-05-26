@@ -197,7 +197,7 @@ func GetOrgOrProjectResourcesQuery(tx *db.Session, searchStr string, orgId, proj
 			fmt.Sprintf("%%%s%%", searchStr), fmt.Sprintf("%%%s%%", searchStr))
 	}
 
-	if !isSuperAdmin {
+	if !isSuperAdmin && !UserHasOrgRole(userId, orgId, consts.OrgRoleAdmin) {
 		// 查一下当前用户属于哪些项目
 		query = query.Joins("left join iac_user_project on iac_user_project.project_id = iac_resource.project_id").
 			LazySelectAppend("iac_user_project.user_id")
