@@ -207,19 +207,6 @@ func GetOrgOrProjectResourcesQuery(tx *db.Session, searchStr string, orgId, proj
 	return query
 }
 
-func resourceFiltersQuery(query *db.Session, orgId, projectId, envId models.Id) *db.Session {
-	query = query.Where("r.org_id = ?", orgId)
-	if projectId != "" {
-		query = query.Joins("left join iac_resource as r on r.p")
-	}
-
-	if envId != "" {
-
-	}
-
-	return query
-}
-
 func GetProviderQuery(providers string, query *db.Session) *db.Session {
 	if len(providers) != 0 {
 		var tempSql []string

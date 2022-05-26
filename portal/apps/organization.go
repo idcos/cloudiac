@@ -490,13 +490,13 @@ func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*resps.UserW
 }
 
 func SearchOrgResourcesFilters(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm) (*resps.OrgProjectAndProviderResp, e.Error) {
-	providers := make([]string, 0)
 	projectResp := make([]resps.OrgProjectResp, 0)
 
 	query := services.GetOrgOrProjectResourcesQuery(c.DB().Model(&models.Resource{}), form.Q, c.OrgId, c.ProjectId, c.UserId, c.IsSuperAdmin)
-	if err := query.Group("iac_resource.provider").
-		Pluck("iac_resource.provider", &providers); err != nil {
-		return nil, e.New(e.DBError, err)
+
+	providers, err := resourceProviderFilters(query)
+	if err != nil {
+		return nil, err
 	}
 
 	if err := c.DB().Raw("select project_id,project_name from (?) as t group by project_id,project_name", query.Expr()).

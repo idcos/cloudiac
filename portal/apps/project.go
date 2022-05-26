@@ -263,13 +263,12 @@ func DeleteProject(c *ctx.ServiceContext, form *forms.DeleteProjectForm) (interf
 }
 
 func SearchProjectResourcesFilters(c *ctx.ServiceContext, form *forms.SearchProjectResourceForm) (*resps.OrgEnvAndProviderResp, e.Error) {
-	providers := make([]string, 0)
 	envResp := make([]resps.EnvResp, 0)
-
 	query := services.GetOrgOrProjectResourcesQuery(c.DB().Model(&models.Resource{}), form.Q, c.OrgId, c.ProjectId, c.UserId, c.IsSuperAdmin)
-	if err := query.Group("iac_resource.provider").
-		Pluck("iac_resource.provider", &providers); err != nil {
-		return nil, e.New(e.DBError, err)
+
+	providers, err := resourceProviderFilters(query)
+	if err != nil {
+		return nil, err
 	}
 
 	if err := c.DB().Raw("select env_id,env_name from (?) as t group by env_id,env_name", query.Expr()).
@@ -283,6 +282,17 @@ func SearchProjectResourcesFilters(c *ctx.ServiceContext, form *forms.SearchProj
 	}
 
 	return r, nil
+}
+
+func resourceProviderFilters(query *db.Session) ([]string, e.Error) {
+	providers := make([]string, 0)
+
+	if err := query.Group("iac_resource.provider").
+		Pluck("iac_resource.provider", &providers); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	return providers, nil
 }
 
 func providerPathBase(providers []string) []string {
