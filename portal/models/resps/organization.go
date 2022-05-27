@@ -36,17 +36,20 @@ type EnvResp struct {
 	EnvName string    `json:"envName"`
 	EnvId   models.Id `json:"envId"`
 }
+
 type OrgProjectResp struct {
 	ProjectName string    `json:"projectName"`
 	ProjectId   models.Id `json:"projectId"`
 }
+
 type OrgEnvAndProviderResp struct {
 	Envs      []EnvResp `json:"envs"`
-	Providers []string  `json:""`
+	Providers []string  `json:"providers"`
 }
+
 type OrgProjectAndProviderResp struct {
 	Projects  []OrgProjectResp `json:"projects"`
-	Providers []string         `json:""`
+	Providers []string         `json:"providers"`
 }
 
 type DetailStatResp struct {

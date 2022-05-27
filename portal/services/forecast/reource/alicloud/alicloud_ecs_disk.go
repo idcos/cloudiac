@@ -1,5 +1,6 @@
 // Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
+// nolint:dupl
 package alicloud
 
 import (
@@ -17,6 +18,7 @@ type EcsDisk struct {
 	PerformanceLevel string `json:"performance_level"`
 }
 
+//nolint
 func (a *EcsDisk) BuildResource() *schema.Resource {
 	p := make([]schema.PriceRequest, 0)
 
@@ -44,6 +46,7 @@ func (a *EcsDisk) BuildResource() *schema.Resource {
 	}
 }
 
+//nolint
 func (a *EcsDisk) InitDefault() {
 	if a.Category == "" {
 		a.Category = diskDefaultCategory

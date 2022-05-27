@@ -1,5 +1,7 @@
 // Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
 
+
+// nolint:dupl
 package alicloud
 
 import (
@@ -17,6 +19,7 @@ type Disk struct {
 	PerformanceLevel string `json:"performance_level"`
 }
 
+// nolint:dupl
 func (a *Disk) BuildResource() *schema.Resource {
 	p := make([]schema.PriceRequest, 0)
 
@@ -44,6 +47,7 @@ func (a *Disk) BuildResource() *schema.Resource {
 	}
 }
 
+//nolint
 func (a *Disk) InitDefault() {
 	if a.Category == "" {
 		a.Category = diskDefaultCategory

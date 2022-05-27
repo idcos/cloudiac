@@ -12,7 +12,7 @@ import (
 	"cloudiac/portal/services"
 	"fmt"
 	"net/http"
-	"regexp"
+	"strings"
 	"time"
 )
 
@@ -59,7 +59,9 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, er e
 	}
 
 	dn, er := services.QueryLdapUserDN(user.Email)
-	if er == nil {
+	if er != nil {
+		c.Logger().Debugf("query user dn error: %v", er)
+	} else {
 		// 刷新用户权限
 		if er := refreshLdapUserRole(c, user, dn); er != nil {
 			c.Logger().Warnf("refresh user role error: %v", er)
@@ -67,7 +69,6 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, er e
 		}
 	}
 
-	c.Logger().Debugf("query user dn error: %v", er)
 	token, err := services.GenerateToken(user.Id, user.Name, user.IsAdmin, 1*24*time.Hour)
 	if err != nil {
 		c.Logger().Errorf("name [%s] generateToken error: %v", user.Email, err)
@@ -105,12 +106,15 @@ func refreshLdapUserRole(c *ctx.ServiceContext, user *models.User, dn string) e.
 	}()
 
 	// 获取ldap用户的OU信息
-	reg := regexp.MustCompile(`^uid=[^,]*,`)
-	userOU := reg.ReplaceAllString(dn, "")
-	c.Logger().Debugf("user ldap ou: %s", userOU)
+	userOu := dn
+	index := strings.Index(dn, "ou=")
+	if index > 0 {
+		userOu = dn[index:]
+	}
+	c.Logger().Debugf("user ldap ou: %s", userOu)
 
 	// 根据OU获取组织权限
-	ldapUserOrgOUs, err := services.GetLdapOUOrgByDN(tx, userOU)
+	ldapUserOrgOUs, err := services.GetLdapOUOrgByDN(tx, userOu)
 	if err != nil {
 		_ = tx.Rollback()
 		return err
@@ -125,7 +129,7 @@ func refreshLdapUserRole(c *ctx.ServiceContext, user *models.User, dn string) e.
 	}
 
 	// 根据OU获取项目权限
-	ldapUserProjectOUs, err := services.GetLdapOUProjectByDN(tx, userOU)
+	ldapUserProjectOUs, err := services.GetLdapOUProjectByDN(tx, userOu)
 	if err != nil {
 		_ = tx.Rollback()
 		return err

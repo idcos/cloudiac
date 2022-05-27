@@ -19,7 +19,6 @@ import (
 	"cloudiac/utils/mail"
 	"fmt"
 	"net/http"
-	"path"
 	"strings"
 )
 
@@ -491,27 +490,24 @@ func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*resps.UserW
 }
 
 func SearchOrgResourcesFilters(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm) (*resps.OrgProjectAndProviderResp, e.Error) {
+	projectResp := make([]resps.OrgProjectResp, 0)
+
 	query := services.GetOrgOrProjectResourcesQuery(c.DB().Model(&models.Resource{}), form.Q, c.OrgId, c.ProjectId, c.UserId, c.IsSuperAdmin)
-	type SearchResult struct {
-		ProjectName string    `json:"project_name"`
-		ProjectId   models.Id `json:"project_id"`
-		Provider    string    `json:"provider"`
+
+	providers, err := resourceProviderFilters(query)
+	if err != nil {
+		return nil, err
 	}
-	rs := make([]SearchResult, 0)
-	if err := query.Scan(&rs); err != nil {
+
+	if err := c.DB().Raw("select project_id,project_name from (?) as t group by project_id,project_name", query.Expr()).
+		Find(&projectResp); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	r := &resps.OrgProjectAndProviderResp{}
-	temp := map[string]interface{}{}
-	for _, v := range rs {
-		if _, ok := temp[v.ProjectName]; !ok {
-			// 通过map 对项目名称进行过滤
-			r.Projects = append(r.Projects, resps.OrgProjectResp{ProjectName: v.ProjectName, ProjectId: v.ProjectId})
-			temp[v.ProjectName] = nil
-		}
-		r.Providers = append(r.Providers, path.Base(v.Provider))
+
+	r := &resps.OrgProjectAndProviderResp{
+		Providers: providerPathBase(providers),
+		Projects:  projectResp,
 	}
-	r.Providers = utils.Set(r.Providers)
 
 	return r, nil
 }
@@ -521,18 +517,22 @@ func SearchOrgResources(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm
 	if len(form.ProjectIds) != 0 {
 		query = query.Where("iac_env.project_id in (?)", strings.Split(form.ProjectIds, ","))
 	}
-	query = services.GetProviderQuery(form.Providers, query)
-	query = query.Order("project_id, env_id, provider desc")
-	rs, p, err := services.GetOrgOrProjectResourcesResp(form.CurrentPage(), form.PageSize(), query)
+	return searchResource(query, form.Providers, form.CurrentPage(), form.PageSize())
+}
+
+func searchResource(query *db.Session, provider string, currentPage, pageSize int) (interface{}, e.Error) {
+	query = services.GetProviderQuery(provider, query).
+		Order("project_id, env_id, provider desc")
+	rs, p, err := services.GetOrgOrProjectResourcesResp(currentPage, pageSize, query)
 	if err != nil {
 		return nil, err
 	}
+
 	return &page.PageResp{
 		Total:    p.MustTotal(),
 		PageSize: p.Size,
 		List:     rs,
 	}, nil
-
 }
 
 // UpdateUserOrg 更新组织用户信息
