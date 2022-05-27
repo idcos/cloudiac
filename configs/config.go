@@ -67,6 +67,32 @@ type LdapConfig struct {
 	OUSearchBase     string `yaml:"ou_search_base"`
 }
 
+type DemoConfig struct {
+	Enable bool `yaml:"enable"` // 是否启用演示组织(默认为否)
+
+	VcsName    string `yaml:"vcs_name"`
+	VcsType    string `yaml:"vcs_type"`
+	VcsAddress string `yaml:"vcs_address"`
+	VcsToken   string `yaml:"vcs_token"`
+
+	ProjectName string `yaml:"project_name"`
+
+	Templates []DemoTemplate `yaml:"templates"`
+}
+
+type DemoTemplate struct {
+	Name      string `yaml:"name"`
+	RepoId    string `yaml:"repo_id"`
+	Revison   string `yaml:"revision"`
+	TfVars    string `yaml:"tf_vars"`
+	Variables []struct {
+		Name        string `yaml:"name"`
+		Value       string `yaml:"value"`
+		Sensitive   bool   `yaml:"sensitive"`
+		Description string `yaml:"description"`
+	} `yaml:"variables"`
+}
+
 func (c *RunnerConfig) mustAbs(path string) string {
 	p, err := filepath.Abs(path)
 	if err != nil {
@@ -136,6 +162,8 @@ type Config struct {
 	Ldap               LdapConfig       `yaml:"ldap"`
 	CostServe          string           `yaml:"cost_serve"`
 	EnableTaskAbort    bool             `yaml:"enableTaskAbort"`
+
+	Demo DemoConfig `yaml:"demo"` // 演示组织配置
 }
 
 const (

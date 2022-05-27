@@ -6,6 +6,7 @@ import (
 	"cloudiac/configs"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
@@ -179,4 +180,46 @@ func VerifySsoToken(c *ctx.ServiceContext, form *forms.VerifySsoTokenForm) (resp
 		UserId: user.Id,
 		Email:  user.Email,
 	}, nil
+}
+
+func UserRegister(c *ctx.ServiceContext, form *forms.UserRegisterForm) (resp interface{}, er e.Error) {
+	user, er := services.GetUserByEmail(c.DB(), form.Email)
+	if er != nil && er.Code() != e.UserNotExists {
+		return nil, er
+	}
+	if user != nil && user.Id != "" {
+		return nil, e.New(e.UserAlreadyExists)
+	}
+
+	hashPasswd, er := services.HashPassword(form.Password)
+	if er != nil {
+		return nil, er
+	}
+
+	err := c.DB().Transaction(func(tx *db.Session) error {
+		user, er := services.CreateUser(tx, models.User{
+			Name:     form.Name,
+			Email:    form.Email,
+			Password: hashPasswd,
+			Phone:    form.Phone,
+			Company:  form.Company,
+		})
+		if er != nil {
+			return er
+		}
+
+		// 创建演示组织
+		if configs.Get().Demo.Enable {
+			if er = services.CreateUserDemoOrgData(c, tx, user); er != nil {
+				return er
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return nil, nil
 }

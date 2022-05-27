@@ -73,3 +73,11 @@ func (a Auth) Login(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.Login(c.Service(), &form))
 }
+
+func (a Auth) Register(c *ctx.GinRequest) {
+	form := forms.UserRegisterForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.UserRegister(c.Service(), &form))
+}

@@ -3,7 +3,6 @@
 package apps
 
 import (
-	"cloudiac/common"
 	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
@@ -67,15 +66,6 @@ func createUserOrgRel(tx *db.Session, orgId models.Id, initPass string, form *fo
 	if err != nil {
 		lg.Errorf("error create user , err %s", err)
 		return nil, err
-	}
-
-	// 新用户自动加入演示组织和项目
-	if orgId != models.Id(common.DemoOrgId) {
-		if err = services.TryAddDemoRelation(tx, user.Id); err != nil {
-			_ = tx.Rollback()
-			lg.Errorf("error add user demo rel, err %s", err)
-			return nil, err
-		}
 	}
 
 	return user, nil

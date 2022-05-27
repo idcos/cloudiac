@@ -3,7 +3,6 @@
 package apps
 
 import (
-	"cloudiac/common"
 	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
@@ -408,15 +407,6 @@ func createInviteUserOrgRel(c *ctx.ServiceContext, tx *db.Session, form *forms.I
 		_ = tx.Rollback()
 		c.Logger().Errorf("error create user org rel, err %s", err)
 		return err
-	}
-
-	// 新用户自动加入演示组织
-	if isNew && c.OrgId != models.Id(common.DemoOrgId) {
-		if err := services.TryAddDemoRelation(tx, user.Id); err != nil {
-			_ = tx.Rollback()
-			c.Logger().Errorf("error add user demo rel, err %s", err)
-			return err
-		}
 	}
 
 	return nil
