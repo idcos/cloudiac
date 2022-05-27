@@ -159,6 +159,8 @@ const (
 	TerraformActionCreate = "create"
 	TerraformActionUpdate = "update"
 	TerraformActionDelete = "delete"
+
+	DemoEnvTTL = "12h"
 )
 
 const (

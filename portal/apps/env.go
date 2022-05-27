@@ -286,6 +286,7 @@ func envWorkdirCheck(c *ctx.ServiceContext, repoId, repoRevision, workdir string
 }
 
 // CreateEnv 创建环境
+// nolint:cyclop
 func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDetail, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create env %s", form.Name))
 
@@ -371,7 +372,9 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	}
 
 	if tpl.IsDemo {
-		envModel.TTL = "12h"
+		// 演示环境强制设置自动销毁
+		envModel.TTL = consts.DemoEnvTTL
+		envModel.AutoDestroyAt = nil
 	}
 
 	env, err := createEnvToDB(tx, c, form, envModel)
@@ -643,6 +646,20 @@ func setAndCheckUpdateEnvAutoApproval(c *ctx.ServiceContext, tx *db.Session, att
 }
 
 func setAndCheckUpdateEnvDestroy(tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error {
+	if !form.HasKey("destroyAt") && !form.HasKey("destroyAfter") {
+		return nil
+	}
+
+	tpl, er := services.GetTemplateById(tx, env.TplId)
+	if er != nil {
+		return er
+	}
+
+	if tpl.IsDemo {
+		// 演示云模板创建的环境不允许修改存活时间，这里直接忽略入参
+		return nil
+	}
+
 	if form.HasKey("destroyAt") {
 		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
 		if err != nil {
@@ -758,12 +775,12 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	}
 	if !env.Archived {
 		if form.Archived {
+			// 环境归档时自动重新命名
 			form.Name = env.Name + "-archived-" + time.Now().Format("20060102150405")
 		}
 	}
 
 	attrs := models.Attrs{}
-
 	cronDriftParam, err := GetCronDriftParam(forms.CronDriftForm{
 		BaseForm:         form.BaseForm,
 		CronDriftExpress: form.CronDriftExpress,
@@ -1047,7 +1064,21 @@ func setAndCheckEnvAutoApproval(c *ctx.ServiceContext, env *models.Env, form *fo
 	return nil
 }
 
-func setAndCheckEnvDestroy(env *models.Env, form *forms.DeployEnvForm) e.Error {
+func setAndCheckEnvDestroy(tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error {
+	if !form.HasKey("destroyAt") && !form.HasKey("destroyAfter") {
+		return nil
+	}
+
+	tpl, er := services.GetTemplateById(tx, env.TplId)
+	if er != nil {
+		return er
+	}
+
+	if tpl.IsDemo {
+		// 演示云模板创建的环境不允许修改存活时间，这里直接忽略入参
+		return nil
+	}
+
 	if form.HasKey("destroyAt") {
 		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
 		if err != nil {
@@ -1106,7 +1137,7 @@ func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env
 		return err
 	}
 
-	if err := setAndCheckEnvDestroy(env, form); err != nil {
+	if err := setAndCheckEnvDestroy(tx, env, form); err != nil {
 		return err
 	}
 
@@ -1200,6 +1231,12 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		return nil, err
 	}
 	lg.Debugln("envDeploy -> setAndCheckEnvByForm finish")
+
+	if tpl.IsDemo && env.Status == models.EnvStatusDestroyed {
+		// 演示环境销毁后重新部署也强制设置自动销毁
+		env.TTL = consts.DemoEnvTTL
+		env.AutoDestroyAt = nil
+	}
 
 	targets := make([]string, 0)
 	if len(strings.TrimSpace(form.Targets)) > 0 {
