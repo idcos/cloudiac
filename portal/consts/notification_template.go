@@ -279,3 +279,19 @@ const (
   -----该消息由系统自动发出，请勿回复-----
 `
 )
+
+var UserApplyAccountMail = `
+<html>
+<body>
+尊敬的 {{.Name}}：
+<br/> &nbsp;&nbsp;&nbsp;&nbsp;欢迎申请 CloudIaC 体验云服务，该平台目的为用户提供快速体验及测试，不建议在体验平台上创建正式的环境进行使用，祝您体验愉快！
+<br/> &nbsp;&nbsp;&nbsp;&nbsp;您的体验帐号为您的邮箱：{{.Email}}
+<br/> &nbsp;&nbsp;&nbsp;&nbsp;密码：{{.Password}}
+<br/> &nbsp;&nbsp;&nbsp;&nbsp;登录地址：{{.Address}}
+<br/> &nbsp;&nbsp;&nbsp;&nbsp;建议登录后修改为您方便记忆的密码。
+<br/> &nbsp;&nbsp;&nbsp;&nbsp;如有任何问题和建议，欢迎在社区提交 Issue ，您的任何建议，都将帮助我们更好的完善 CloudIaC ，如果您对 CloudIaC 项目感兴趣，也欢迎您提交 PR，一起推进 IaC 生态在国内的落地。
+<br/> &nbsp;&nbsp;&nbsp;&nbsp;----------
+<br/> &nbsp;&nbsp;&nbsp;&nbsp;此邮件为 CloudIaC 平台自动发送，请勿回复。
+</body>
+</html>
+`

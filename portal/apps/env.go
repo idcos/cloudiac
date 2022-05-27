@@ -370,6 +370,10 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		PolicyEnable:     form.PolicyEnable,
 	}
 
+	if tpl.IsDemo {
+		envModel.TTL = "12h"
+	}
+
 	env, err := createEnvToDB(tx, c, form, envModel)
 	if err != nil {
 		return nil, err

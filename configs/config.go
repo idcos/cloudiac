@@ -14,6 +14,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+/*
+配置
+*/
+
 type KafkaConfig struct {
 	Disabled     bool     `json:"disabled"`
 	Brokers      []string `yaml:"brokers"`

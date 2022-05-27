@@ -11,6 +11,7 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
+	"cloudiac/utils"
 	"fmt"
 	"net/http"
 	"strings"
@@ -182,7 +183,7 @@ func VerifySsoToken(c *ctx.ServiceContext, form *forms.VerifySsoTokenForm) (resp
 	}, nil
 }
 
-func UserRegister(c *ctx.ServiceContext, form *forms.UserRegisterForm) (resp interface{}, er e.Error) {
+func ApplyAccount(c *ctx.ServiceContext, form *forms.ApplyAccountForm) (resp interface{}, er e.Error) {
 	user, er := services.GetUserByEmail(c.DB(), form.Email)
 	if er != nil && er.Code() != e.UserNotExists {
 		return nil, er
@@ -191,13 +192,14 @@ func UserRegister(c *ctx.ServiceContext, form *forms.UserRegisterForm) (resp int
 		return nil, e.New(e.UserAlreadyExists)
 	}
 
-	hashPasswd, er := services.HashPassword(form.Password)
+	initPassword := utils.RandomStr(8)
+	hashPasswd, er := services.HashPassword(initPassword)
 	if er != nil {
 		return nil, er
 	}
 
 	err := c.DB().Transaction(func(tx *db.Session) error {
-		user, er := services.CreateUser(tx, models.User{
+		user, er = services.CreateUser(tx, models.User{
 			Name:     form.Name,
 			Email:    form.Email,
 			Password: hashPasswd,
@@ -208,8 +210,8 @@ func UserRegister(c *ctx.ServiceContext, form *forms.UserRegisterForm) (resp int
 			return er
 		}
 
-		// 创建演示组织
 		if configs.Get().Demo.Enable {
+			// 创建演示组织
 			if er = services.CreateUserDemoOrgData(c, tx, user); er != nil {
 				return er
 			}
@@ -221,5 +223,5 @@ func UserRegister(c *ctx.ServiceContext, form *forms.UserRegisterForm) (resp int
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	return nil, nil
+	return nil, services.SendApplyAccountMail(user, initPassword)
 }

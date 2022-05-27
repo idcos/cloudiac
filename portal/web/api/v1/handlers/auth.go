@@ -74,10 +74,10 @@ func (a Auth) Login(c *ctx.GinRequest) {
 	c.JSONResult(apps.Login(c.Service(), &form))
 }
 
-func (a Auth) Register(c *ctx.GinRequest) {
-	form := forms.UserRegisterForm{}
+func (a Auth) ApplyAccount(c *ctx.GinRequest) {
+	form := forms.ApplyAccountForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.UserRegister(c.Service(), &form))
+	c.JSONResult(apps.ApplyAccount(c.Service(), &form))
 }

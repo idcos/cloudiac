@@ -49,7 +49,7 @@ func Register(g *gin.RouterGroup) {
 	apiToken.Use(w(middleware.AuthApiToken))
 	apiToken.POST("/webhooks/:vcsType/:vcsId", w(handlers.WebhooksApiHandler))
 
-	g.POST("/auth/register", w(handlers.Auth{}.Register))
+	g.POST("/auth/account", w(handlers.Auth{}.ApplyAccount))
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
 
 	// Authorization Header 鉴权
