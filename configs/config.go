@@ -165,7 +165,9 @@ type Config struct {
 	Policy             PolicyConfig     `yaml:"policy"`
 	Ldap               LdapConfig       `yaml:"ldap"`
 	CostServe          string           `yaml:"cost_serve"`
-	EnableTaskAbort    bool             `yaml:"enableTaskAbort"`
+
+	EnableTaskAbort    bool `yaml:"enableTaskAbort"`    // 启用任务中止功能
+	EnableApplyAccount bool `yaml:"enableApplyAccount"` // 启用账号申请功能
 
 	Demo DemoConfig `yaml:"demo"` // 演示组织配置
 }
