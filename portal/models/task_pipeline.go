@@ -67,9 +67,12 @@ type PipelineTaskWithType struct {
 }
 
 type PipelineStep struct {
-	Type string   `json:"type,omitempty" yaml:"type" gorm:"size:32;not null"`
-	Name string   `json:"name,omitempty" yaml:"name" gorm:"size:32;not null"`
-	Args StrSlice `json:"args,omitempty" yaml:"args" gorm:"type:text"`
+	Type       string   `json:"type,omitempty" yaml:"type" gorm:"size:32;not null"`
+	Name       string   `json:"name,omitempty" yaml:"name" gorm:"size:32;not null"`
+	Timeout    int      `json:"timeout,omitempty" yaml:"timeout"`
+	BeforeCmds StrSlice `json:"before,omitempty" yaml:"before" gorm:"type:text"`
+	AfterCmds  StrSlice `json:"after,omitempty" yaml:"after" gorm:"type:text"`
+	Args       StrSlice `json:"args,omitempty" yaml:"args" gorm:"type:text"`
 }
 
 func (v PipelineTask) Value() (driver.Value, error) {
@@ -173,19 +176,19 @@ apply:
 
 destroy:
   steps:
-    - type: checkout
-      name: Checkout Code
+  - type: checkout
+    name: Checkout Code
 
-    - type: terraformInit
-      name: Terraform Init
+  - type: terraformInit
+    name: Terraform Init
 
-    - type: terraformPlan
-      name: Terraform Plan
-      args:
-        - "-destroy"
+  - type: terraformPlan
+    name: Terraform Plan
+    args:
+      - "-destroy"
 
-    - type: terraformDestroy
-      name: Terraform Destroy
+  - type: terraformDestroy
+    name: Terraform Destroy
 
 # scan 和 parse 暂不开发自定义工作流
 envScan:
@@ -252,7 +255,15 @@ func init() {
 	for v, tpl := range defaultPipelineTpls {
 		buffer := bytes.NewBufferString(tpl)
 		p := Pipeline{}
-		if err := yaml.NewDecoder(buffer).Decode(&p); err != nil {
+		var err error
+
+		if v == "0.5" {
+			p, err = ConvertPipelineDot5Compatibility(buffer)
+		} else {
+			err = yaml.NewDecoder(buffer).Decode(&p)
+		}
+
+		if err != nil {
 			panic(err)
 		}
 		defaultPipelines[v] = p
