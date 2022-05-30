@@ -184,6 +184,10 @@ func VerifySsoToken(c *ctx.ServiceContext, form *forms.VerifySsoTokenForm) (resp
 }
 
 func ApplyAccount(c *ctx.ServiceContext, form *forms.ApplyAccountForm) (resp interface{}, er e.Error) {
+	if configs.Get().EnableApplyAccount {
+		return nil, e.New(e.ErrDisabled, http.StatusBadRequest)
+	}
+
 	user, er := services.GetUserByEmail(c.DB(), form.Email)
 	if er != nil && er.Code() != e.UserNotExists {
 		return nil, er
