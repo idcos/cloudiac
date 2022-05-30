@@ -1,3 +1,97 @@
+## v0.11.0 20220530
+#### Features
+- 组织和项目支持批量邀请用户
+- 环境的部署通道改为使用 runner tag 进行匹配
+- 新增，支持 ldap 登陆
+- 新增，环境锁定功能
+- 新增，环境归档后名称添加后缀
+- 新增，环境支持设置工作目录
+- 新增，环境和系统设置中增加部署任务的步骤超时时间设置(默认 60 分钟)
+- 组织资源查询支持搜索资源属性关键字及环境和 provider 过滤
+- 新增，组织和项目概览页统计数据
+- 新增，aliyun 资源费用采集
+- 新增环境概览页面，展示环境详情和统计数据
+- 新增，资源账号增加项目关联及 provider 和费用统计选项
+- 新增，审批时展示资源变更数据
+- 项目管理员新增组织用户邀请权限
+- 新增价格预估功能，在审批部署任务时展示资源变更的预估费用情况
+- 增加 registry network mirror 支持，配置了 registry 服务地址后会自动启用该地址作为 network mirror server
+- 接入自研 cloudcost 询价服务，目前支持的产品 aliyun ecs/disk/nat/slb/eip/rds/redis/mongodb
+- 支持 ldap ou 或用户预授权
+- 支持 consul 开启 acl 认证
+
+#### Enhancements
+- vcs 创建或编辑保存时对 token 有效性做校验
+- 漂移检测任务运行时会再次获取环境最新一次执行部署时使用的配置信息
+- 优化环境可部署状态检查接口，现在只检查环境关联的云模板 和 vcs 是否有效
+- 任务类型为 apply 但未执行 terraformApply 步骤的漂移检测任务在部署历史中不展示
+- 优化自动纠偏任务执行完 plan 后会判断是否有漂移，若无漂移则提前结束任务
+- 优化 vcs 连接失败时的报错
+- 组织层级的云模板列表接口返回关联环境数量
+- 环境增加已销毁状态
+- consul 服务创建锁并自动重新注册
+
+#### Fixes
+- 修复设置工作目录后 tfvars 和 playbook 文件路径保存错误的问题
+- 修复 playbook 中输出中文内容会乱码的问题
+- 修复开启 terraform debug 时执行 playbook 会报错的问题
+- 修复工作目录不支持二层以上子目录的问题
+- 修复导入云模板时因为没有选择关联项目导致报错的问题
+- 修复云模板中的敏感变量导入后变为乱码的问题
+- 修复查询资源账号时敏感变量值没有返回为空的问题
+- 修复项目列表默认展示了已归档项目的问题
+- 修复创建云模板或者测试策略组不绑定项目会报错的问题
+- 修复环境锁定后 plan 完成可以发起部署的问题
+
+
+#### 配置更新
+若要开启 consul acl访问，需在 .env 中添加(不配置默认为 false)
+```
+CONSUL_ACL=true
+CONSUL_ACL_TOKEN=""
+```
+
+ldap配置，需在 .env 中添加
+```
+LDAP_ADMIN_DN=""
+LDAP_ADMIN_PASSWORD=""
+LDAP_SERVER=""
+LDAP_SEARCH_BASE=""
+SEARCH_FILTER=""
+EMAIL_ATTRIBUTE=""
+ACCOUNT_ATTRIBUTE=""
+```
+
+询价服务配置，需在 .env 中添加
+```
+COST_SERVE=""
+```
+
+
+#### BREAKING CHANGES
+- 旧环境配置的 runner id 替换为 tags
+- 为旧的 iac_resource 数据自动设置 res_id 和 applied_at 值
+- iac_task新增字段 applied
+- 设置旧环境的工作目录为其使用的云模板的工作目录
+
+#### 升级步骤
+**升级前注意备份数据**
+
+**数据升级**
+执行 `iac-tool upgrade2v0.10` 进行数据升级。
+如果是容器化部署执行: `docker-compose exec iac-portal ./iac-tool upgrade2v0.10`
+
+**SQL 更新:**
+```sql
+-- iac_task新增字段 applied
+update iac_task set applied = 1 where id in (select task_id from      iac_task_step where type = 'terraformApply' and status != 'pending') ;
+
+-- 设置旧环境的工作目录为其使用的云模板的工作目录(只能升级后执行一次)
+update iac_env join iac_template on iac_env.tpl_id = iac_template.id set iac_env.workdir = iac_template.workdir where iac_env.workdir = '';
+```
+
+
+------
 ## v0.9.4 20220414
 #### Features
 - 任务结束后的 kafka 回调消息中增加任务类型和环境状态
