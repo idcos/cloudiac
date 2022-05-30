@@ -49,6 +49,8 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (
 	taskReq.Step = step.Index
 	taskReq.StepType = step.Type
 	taskReq.StepArgs = step.Args
+	taskReq.StepBeforeCmds = step.BeforeCmds
+	taskReq.StepAfterCmds = step.AfterCmds
 
 	respData, err := utils.HttpService(requestUrl, "POST", header, taskReq,
 		int(consts.RunnerConnectTimeout.Seconds()), int(consts.RunnerConnectTimeout.Seconds())*10)
