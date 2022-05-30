@@ -40,7 +40,7 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, er e
 		}
 	}
 
-	if !loginSucceed && configs.Get().Ldap.LdapServer != "" { // 本地登录失败，尝试 ldap 登录
+	if !loginSucceed && configs.Get().LdapEnabled() { // 本地登录失败，尝试 ldap 登录
 		username, _, er := services.VerifyLdapPassword(form.Email, form.Password)
 		if er != nil {
 			return nil, er
@@ -184,7 +184,7 @@ func VerifySsoToken(c *ctx.ServiceContext, form *forms.VerifySsoTokenForm) (resp
 }
 
 func ApplyAccount(c *ctx.ServiceContext, form *forms.ApplyAccountForm) (resp interface{}, er e.Error) {
-	if configs.Get().EnableApplyAccount {
+	if !configs.Get().EnableApplyAccount {
 		return nil, e.New(e.ErrDisabled, http.StatusBadRequest)
 	}
 

@@ -126,6 +126,10 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "data dencryption error",
 		"zh-CN": "数据解密错误",
 	},
+	ErrDisabled: {
+		"en-US": "function disabled",
+		"zh-CN": "已停用",
+	},
 	MailServerError: {
 		"en-US": "failed to send email",
 		"zh-CN": "邮件服务错误",

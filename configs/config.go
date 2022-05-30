@@ -190,6 +190,10 @@ var (
 	}
 )
 
+func (c *Config) LdapEnabled() bool {
+	return c.Ldap.LdapServer != ""
+}
+
 func parseConfig(filename string, out interface{}) error {
 	bs, err := ioutil.ReadFile(filename)
 	if err != nil {

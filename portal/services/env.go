@@ -674,7 +674,11 @@ func totalEnvCostListByInstanceId(tx *db.Session, id models.Id) (map[string]floa
 	return m, nil
 }
 
-func FilterEnvStatus(query *db.Session, status string) (*db.Session, e.Error) {
+func FilterEnvStatus(query *db.Session, status string, deploying *bool) (*db.Session, e.Error) {
+	if deploying != nil {
+		query = query.Where("iac_env.deploying = ?", deploying)
+	}
+
 	if status == "" {
 		return query, nil
 	}

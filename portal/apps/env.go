@@ -373,6 +373,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 
 	if tpl.IsDemo {
 		// 演示环境强制设置自动销毁
+		envModel.IsDemo = true
 		envModel.TTL = consts.DemoEnvTTL
 		envModel.AutoDestroyAt = nil
 		envModel.AutoApproval = true
@@ -462,7 +463,7 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 	var er e.Error
 
 	// 环境状态过滤
-	query, er = services.FilterEnvStatus(query, form.Status)
+	query, er = services.FilterEnvStatus(query, form.Status, form.Deploying)
 	if er != nil {
 		return nil, er
 	}
@@ -707,14 +708,14 @@ func setAndCheckUpdateEnvTriggers(c *ctx.ServiceContext, tx *db.Session, attrs m
 	return nil
 }
 
-func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm, isDemo bool) e.Error {
+func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error {
 	if er := services.CheckEnvTags(form.Tags); er != nil {
 		return er
 	} else {
 		attrs["tags"] = strings.TrimSpace(form.Tags)
 	}
 
-	if !isDemo { // 演示环境不允许修改自动审批和存活时间
+	if !env.IsDemo { // 演示环境不允许修改自动审批和存活时间
 		if err := setAndCheckUpdateEnvAutoApproval(c, tx, attrs, env, form); err != nil {
 			return err
 		}
@@ -775,12 +776,6 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 		}
 	}
 
-	tpl, err := services.GetTemplateById(tx, env.TplId)
-	if err != nil {
-		_ = tx.Rollback()
-		return nil, err
-	}
-
 	attrs := models.Attrs{}
 	cronDriftParam, err := GetCronDriftParam(forms.CronDriftForm{
 		BaseForm:         form.BaseForm,
@@ -810,7 +805,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	attrs["cronDriftExpress"] = cronDriftParam.CronDriftExpress
 	attrs["nextDriftTaskTime"] = cronDriftParam.NextDriftTaskTime
 	setUpdateEnvByForm(attrs, form)
-	err = setAndCheckUpdateEnvByForm(c, tx, attrs, env, form, tpl.IsDemo)
+	err = setAndCheckUpdateEnvByForm(c, tx, attrs, env, form)
 	if err != nil {
 		return nil, err
 	}
@@ -1122,9 +1117,8 @@ func setAndCheckEnvCron(env *models.Env, form *forms.DeployEnvForm) e.Error {
 	return nil
 }
 
-func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env, form *forms.DeployEnvForm, isDemo bool) e.Error {
-
-	if !isDemo { // 演示环境不允许修改自动审批和自动销毁设置
+func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error {
+	if !env.IsDemo { // 演示环境不允许修改自动审批和自动销毁设置
 		if err := setAndCheckEnvAutoApproval(c, env, form); err != nil {
 			return err
 		}
@@ -1223,13 +1217,13 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	setEnvByForm(env, form)
 
 	// set and check autoApproval, destroyAt, cronDrift, TaskType, variables...
-	err = setAndCheckEnvByForm(c, tx, env, form, tpl.IsDemo)
+	err = setAndCheckEnvByForm(c, tx, env, form)
 	if err != nil {
 		return nil, err
 	}
 	lg.Debugln("envDeploy -> setAndCheckEnvByForm finish")
 
-	if tpl.IsDemo && env.Status == models.EnvStatusDestroyed {
+	if env.IsDemo && env.Status == models.EnvStatusDestroyed {
 		// 演示环境销毁后重新部署也强制设置自动销毁
 		env.TTL = consts.DemoEnvTTL
 		env.AutoDestroyAt = nil

@@ -249,7 +249,7 @@ func getNewPassword(oldPassword, newPassword, userPassword, userEmail string) (s
 		return "", e.New(e.DBError, http.StatusInternalServerError, err)
 	}
 	if !valid {
-		if configs.Get().Ldap.LdapServer != "" {
+		if configs.Get().LdapEnabled() {
 			// 当校验失败的时候，去检验是否符合ldap 登陆密码，成功则依旧可以修改本地密码
 			if _, _, ldapErr := services.LdapAuthLogin(userEmail, oldPassword); ldapErr != nil {
 				return "", e.New(e.LdapError, http.StatusInternalServerError, err)
