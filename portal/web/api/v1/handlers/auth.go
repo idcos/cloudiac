@@ -74,6 +74,14 @@ func (a Auth) Login(c *ctx.GinRequest) {
 	c.JSONResult(apps.Login(c.Service(), &form))
 }
 
+// ApplyAccount 账号申请
+// @Tags 鉴权
+// @Summary 申请体验账号
+// @Accept multipart/form-data
+// @Accept json
+// @Param body formData forms.ApplyAccountForm true "parameter"
+// @router /auth/account [post]
+// @Success 200 {object} ctx.JSONResult{}
 func (a Auth) ApplyAccount(c *ctx.GinRequest) {
 	form := forms.ApplyAccountForm{}
 	if err := c.Bind(&form); err != nil {

@@ -373,8 +373,10 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 
 	if tpl.IsDemo {
 		// 演示环境强制设置自动销毁
+		envModel.IsDemo = true
 		envModel.TTL = consts.DemoEnvTTL
 		envModel.AutoDestroyAt = nil
+		envModel.AutoApproval = true
 	}
 
 	env, err := createEnvToDB(tx, c, form, envModel)
@@ -650,16 +652,6 @@ func setAndCheckUpdateEnvDestroy(tx *db.Session, attrs models.Attrs, env *models
 		return nil
 	}
 
-	tpl, er := services.GetTemplateById(tx, env.TplId)
-	if er != nil {
-		return er
-	}
-
-	if tpl.IsDemo {
-		// 演示云模板创建的环境不允许修改存活时间，这里直接忽略入参
-		return nil
-	}
-
 	if form.HasKey("destroyAt") {
 		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
 		if err != nil {
@@ -723,12 +715,14 @@ func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs mod
 		attrs["tags"] = strings.TrimSpace(form.Tags)
 	}
 
-	if err := setAndCheckUpdateEnvAutoApproval(c, tx, attrs, env, form); err != nil {
-		return err
-	}
+	if !env.IsDemo { // 演示环境不允许修改自动审批和存活时间
+		if err := setAndCheckUpdateEnvAutoApproval(c, tx, attrs, env, form); err != nil {
+			return err
+		}
 
-	if err := setAndCheckUpdateEnvDestroy(tx, attrs, env, form); err != nil {
-		return err
+		if err := setAndCheckUpdateEnvDestroy(tx, attrs, env, form); err != nil {
+			return err
+		}
 	}
 
 	if err := setAndCheckUpdateEnvTriggers(c, tx, attrs, env, form); err != nil {
@@ -768,9 +762,11 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 
 	env, err := getEnvForUpdate(tx, c, form)
 	if err != nil {
+		_ = tx.Rollback()
 		return nil, err
 	}
 	if env.Locked {
+		_ = tx.Rollback()
 		return nil, e.New(e.EnvLocked, http.StatusBadRequest)
 	}
 	if !env.Archived {
@@ -1069,16 +1065,6 @@ func setAndCheckEnvDestroy(tx *db.Session, env *models.Env, form *forms.DeployEn
 		return nil
 	}
 
-	tpl, er := services.GetTemplateById(tx, env.TplId)
-	if er != nil {
-		return er
-	}
-
-	if tpl.IsDemo {
-		// 演示云模板创建的环境不允许修改存活时间，这里直接忽略入参
-		return nil
-	}
-
 	if form.HasKey("destroyAt") {
 		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
 		if err != nil {
@@ -1133,12 +1119,13 @@ func setAndCheckEnvCron(env *models.Env, form *forms.DeployEnvForm) e.Error {
 
 func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error {
 
-	if err := setAndCheckEnvAutoApproval(c, env, form); err != nil {
-		return err
-	}
-
-	if err := setAndCheckEnvDestroy(tx, env, form); err != nil {
-		return err
+	if !env.IsDemo { // 演示环境不允许修改自动审批和自动销毁设置
+		if err := setAndCheckEnvAutoApproval(c, env, form); err != nil {
+			return err
+		}
+		if err := setAndCheckEnvDestroy(tx, env, form); err != nil {
+			return err
+		}
 	}
 
 	if err := setAndCheckEnvCron(env, form); err != nil {
@@ -1232,10 +1219,11 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	}
 	lg.Debugln("envDeploy -> setAndCheckEnvByForm finish")
 
-	if tpl.IsDemo && env.Status == models.EnvStatusDestroyed {
+	if env.IsDemo && env.Status == models.EnvStatusDestroyed {
 		// 演示环境销毁后重新部署也强制设置自动销毁
 		env.TTL = consts.DemoEnvTTL
 		env.AutoDestroyAt = nil
+		env.AutoApproval = true
 	}
 
 	targets := make([]string, 0)

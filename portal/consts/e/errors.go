@@ -22,6 +22,7 @@ const (
 	TooManyRetries          = 10040
 	EncryptError            = 10050
 	DecryptError            = 10051
+	ErrDisabled             = 10052
 
 	//// 解析错误 101
 	JSONParseError = 10100
