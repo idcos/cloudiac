@@ -24,11 +24,11 @@ func PortalSystemStatusSearch(c *ctx.GinRequest) {
 // SystemSwitchesStatus 查询系统功能开关状态
 // @Summary 查询系统功能开关状态
 // @Description 查询系统功能开关状态
-// @Tags 查询系统功能开关状态
+// @Tags 系统状态
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
-// @Success 200 {object} ctx.JSONResult{abortStatus=bool}
+// @Success 200 {object} ctx.JSONResult{result=resps.SystemSwitchesStatusResp}
 // @Router /system_config/switches [get]
 func SystemSwitchesStatus(c *ctx.GinRequest) {
 	c.JSONResult(apps.SystemSwitchStatus())

@@ -19,7 +19,7 @@ func connectLdap() (*ldap.Conn, e.Error) {
 	conf := configs.Get()
 
 	// ldap 未配置
-	if conf.Ldap.LdapServer == "" {
+	if !conf.LdapEnabled() {
 		return nil, e.New(e.LdapNotExisted, fmt.Errorf("ldap 未配置"))
 	}
 

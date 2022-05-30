@@ -66,18 +66,12 @@ func RunnerSearch() (interface{}, e.Error) {
 }
 
 func SystemSwitchStatus() (interface{}, e.Error) {
-	//开关接口返回的格式
-	type systemSwitches struct {
-		AbortStatus        bool `json:"abortStatus"`
-		EnableAbortTask    bool `json:"enableAbortTask"`
-		EnableApplyAccount bool `json:"enableApplyAccount"`
-	}
-
 	conf := configs.Get()
-	systemSwitchs := &systemSwitches{
+	systemSwitchs := &resps.SystemSwitchesStatusResp{
 		AbortStatus:        conf.EnableTaskAbort,
 		EnableAbortTask:    conf.EnableTaskAbort,
 		EnableApplyAccount: conf.EnableApplyAccount,
+		EnableLdap:         conf.LdapEnabled(),
 	}
 
 	return systemSwitchs, nil
