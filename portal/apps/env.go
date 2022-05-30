@@ -463,7 +463,7 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 	var er e.Error
 
 	// 环境状态过滤
-	query, er = services.FilterEnvStatus(query, form.Status)
+	query, er = services.FilterEnvStatus(query, form.Status, form.Deploying)
 	if er != nil {
 		return nil, er
 	}
