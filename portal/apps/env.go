@@ -1209,7 +1209,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		return nil, err
 	}
 
-	if !form.HasKey("workDis") {
+	if !form.HasKey("workdir") {
 		form.Workdir = env.Workdir
 	}
 
