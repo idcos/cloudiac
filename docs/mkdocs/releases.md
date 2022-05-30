@@ -1,6 +1,38 @@
 # Releases
 
 ------
+## v0.11.0 20220530
+**Enhancements**
+
+- 优化环境可部署状态检查接口，现在只检查环境关联的云模板 和 vcs 是否有效
+- 优化自动纠偏任务执行完 plan 后会判断是否有漂移，若无漂移则提前结束任务
+- consul 服务创建锁并自动重新注册
+
+**Features**
+
+- 组织和项目支持批量邀请用户
+- 新增，支持 ldap 登陆
+- 新增，环境支持设置工作目录
+- 新增，组织和项目概览页统计数据
+- 新增，aliyun 资源费用采集
+- 新增价格预估功能，在审批部署任务时展示资源变更的预估费用情况
+- 增加 registry network mirror 支持，配置了 registry 服务地址后会自动启用该地址作为 network mirror server
+- 接入自研 cloudcost 询价服务，目前支持的产品 aliyun ecs/disk/nat/slb/eip/rds/redis/mongodb
+
+**Fixes**
+
+- 修复设置工作目录后 tfvars 和 playbook 文件路径保存错误的问题
+- 修复 playbook 中输出中文内容会乱码的问题
+- 修复工作目录不支持二层以上子目录的问题
+- 修复云模板中的敏感变量导入后变为乱码的问题
+- 修复环境锁定后 plan 完成可以发起部署的问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.11.0](https://github.com/idcos/cloudiac/releases/tag/v0.11.0)
+
+
+------
 ## v0.9.4 20220310
 **Features**
 
