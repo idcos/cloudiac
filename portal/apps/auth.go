@@ -184,7 +184,7 @@ func VerifySsoToken(c *ctx.ServiceContext, form *forms.VerifySsoTokenForm) (resp
 }
 
 func ApplyAccount(c *ctx.ServiceContext, form *forms.ApplyAccountForm) (resp interface{}, er e.Error) {
-	if configs.Get().EnableApplyAccount {
+	if !configs.Get().EnableApplyAccount {
 		return nil, e.New(e.ErrDisabled, http.StatusBadRequest)
 	}
 

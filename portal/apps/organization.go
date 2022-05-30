@@ -38,17 +38,38 @@ var (
 func CreateOrganization(c *ctx.ServiceContext, form *forms.CreateOrganizationForm) (*models.Organization, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create org %s", form.Name))
 
-	// 创建组织
-	org, err := services.CreateOrganization(c.DB(), models.Organization{
-		Name:        form.Name,
-		CreatorId:   c.UserId,
-		Description: form.Description,
+	var org *models.Organization
+
+	er := c.DB().Transaction(func(tx *db.Session) error {
+		var er e.Error
+		// 创建组织
+		org, er = services.CreateOrganization(tx, models.Organization{
+			Name:        form.Name,
+			CreatorId:   c.UserId,
+			Description: form.Description,
+		})
+		if er != nil && er.Code() == e.OrganizationAlreadyExists {
+			return er
+		} else if er != nil {
+			c.Logger().Errorf("error creating org, err %s", er)
+			return e.AutoNew(er, e.DBError)
+		}
+
+		// 非超级管理员创建组织后自动成为组织管理员
+		if !c.IsSuperAdmin {
+			if _, err := services.CreateUserOrgRel(tx, models.UserOrg{
+				OrgId:  org.Id,
+				UserId: c.UserId,
+				Role:   consts.OrgRoleAdmin,
+			}); err != nil {
+				c.Logger().Errorf("error create user org rel, err %s", err)
+				return err
+			}
+		}
+		return nil
 	})
-	if err != nil && err.Code() == e.OrganizationAlreadyExists {
-		return nil, e.New(err.Code(), err, http.StatusBadRequest)
-	} else if err != nil {
-		c.Logger().Errorf("error creating org, err %s", err)
-		return nil, e.AutoNew(err, e.DBError)
+	if er != nil {
+		return nil, e.AutoNew(er, e.DBError)
 	}
 
 	return org, nil
