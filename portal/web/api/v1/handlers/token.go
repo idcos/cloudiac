@@ -39,8 +39,7 @@ func (Token) Create(c *ctx.GinRequest) {
 // @Accept  json
 // @Produce  json
 // @Security AuthToken
-// @Param q query string false "模糊搜索"
-// @Param status query string false "ApiToken状态"
+// @Param form query forms.SearchTokenForm true "parameter"
 // @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Token}}
 // @Router /tokens [get]
 func (Token) Search(c *ctx.GinRequest) {
@@ -61,7 +60,7 @@ func (Token) Search(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param tokenId path string true "TokenID"
 // @Param data body forms.UpdateTokenForm true "ApiToken信息"
-// @Success 200
+// @Success 200 {object} ctx.JSONResult
 // @Router /tokens/{tokenId} [put]
 func (Token) Update(c *ctx.GinRequest) {
 	form := &forms.UpdateTokenForm{}
@@ -80,7 +79,6 @@ func (Token) Update(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param tokenId path string true "TokenID"
-// @Param data body forms.DeleteTokenForm true "DeleteTokenForm信息"
 // @Success 200
 // @Router /tokens/{tokenId} [delete]
 func (Token) Delete(c *ctx.GinRequest) {
@@ -99,8 +97,8 @@ func (Token) Delete(c *ctx.GinRequest) {
 // @Produce  json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param data body forms.VcsWebhookUrlForm true "DeleteTokenForm信息"
-// @Success 200 {object} ctx.JSONResult{result=models.Token}
+// @Param data query forms.VcsWebhookUrlForm true "DeleteTokenForm信息"
+// @Success 200 {object} ctx.JSONResult{}
 // @Router /vcs/webhook [get]
 func (Token) VcsWebhookUrl(c *ctx.GinRequest) {
 	form := &forms.VcsWebhookUrlForm{}
@@ -110,6 +108,16 @@ func (Token) VcsWebhookUrl(c *ctx.GinRequest) {
 	c.JSONResult(apps.VcsWebhookUrl(c.Service(), form))
 }
 
+// ApiTriggerHandler TriggerHandler
+// @Summary TriggerHandler
+// @Tags Token
+// @Accept  json
+// @Produce  json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param form query forms.ApiTriggerHandler true "parameter"
+// @Success 200 {object} ctx.JSONResult
+// @Router /trigger/send [post]
 func ApiTriggerHandler(c *ctx.GinRequest) {
 	form := forms.ApiTriggerHandler{}
 	if err := c.Bind(&form); err != nil {

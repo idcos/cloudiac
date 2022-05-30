@@ -23,8 +23,8 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"syscall"
@@ -471,10 +471,13 @@ func IsFalseStr(s string) bool {
 	return StrInArray(strings.ToLower(s), "off", "false", "0", "no")
 }
 
-func JoinURL(address string, elems ...string) string {
-	return fmt.Sprintf("%s/%s",
-		strings.TrimRight(address, "/"),
-		strings.TrimLeft(path.Join(elems...), "/"))
+func JoinURL(prefix string, elems ...string) string {
+	if len(elems) == 0 {
+		return prefix
+	} else {
+		prefix = fmt.Sprintf("%s/%s", strings.TrimSuffix(prefix, "/"), strings.TrimPrefix(elems[0], "/"))
+		return JoinURL(prefix, elems[1:]...)
+	}
 }
 
 // SprintTemplate 用模板参数格式化字符串
@@ -627,3 +630,39 @@ func StrSliceTrimPrefix(ss []string, prefix string) []string {
 	return rs
 }
 
+func Set(arr []string) []string {
+	resArr := make([]string, 0)
+	tmpMap := make(map[string]interface{})
+	for _, val := range arr {
+		if _, ok := tmpMap[val]; !ok {
+			resArr = append(resArr, val)
+			tmpMap[val] = nil
+		}
+	}
+	return resArr
+}
+
+// StructToMap 结构体转为map[string]interface{}
+func StructToMap(in interface{}, tagName string) (map[string]interface{}, error) {
+	out := make(map[string]interface{})
+
+	v := reflect.ValueOf(in)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+	if v.Kind() != reflect.Struct { // 非结构体返回错误提示
+		return nil, fmt.Errorf("StructToMap only accepts struct; got %T", v)
+	}
+
+	t := v.Type()
+	// 遍历结构体字段
+	// 指定tagName值为map中key;字段值为map中value
+	for i := 0; i < v.NumField(); i++ {
+		fi := t.Field(i)
+		if tagValue := fi.Tag.Get(tagName); tagValue != "" {
+			out[tagValue] = v.Field(i).Interface()
+		}
+	}
+	return out, nil
+}

@@ -5,9 +5,13 @@ package consul
 import (
 	"cloudiac/configs"
 	"cloudiac/portal/services"
+	"cloudiac/utils/consulClient"
+
+	"cloudiac/common"
+	"cloudiac/utils/logs"
+
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -15,11 +19,11 @@ import (
 )
 
 func Register(serviceName string, consulConfig configs.ConsulConfig) error {
-	config := consulapi.DefaultConfig()
-	config.Address = consulConfig.Address
-	client, err := consulapi.NewClient(config)
+	logger := logs.Get()
+	client, err := consulClient.NewConsulClient()
+
 	if err != nil {
-		log.Fatal("consul client error : ", err)
+		logger.Errorf("consul client error : ", err)
 		return err
 	}
 	consulTags, _ := services.ConsulKVSearch(consulConfig.ServiceID)
@@ -49,14 +53,14 @@ func Register(serviceName string, consulConfig configs.ConsulConfig) error {
 
 	err = client.Agent().ServiceRegister(registration)
 	if err != nil {
-		log.Fatal("register server error : ", err)
+		logger.Errorf("register server error : ", err)
 		return err
 	}
 	return nil
 }
 
-func GetLocker(key string, value []byte, address string) (*consulapi.Lock, error) {
-	client, err := consulapi.NewClient(&consulapi.Config{Address: address})
+func GetLocker(key string, value []byte, address string, isTryOnce bool) (*consulapi.Lock, error) {
+	client, err := consulClient.NewConsulClient()
 	if err != nil {
 		return nil, err
 	}
@@ -64,9 +68,9 @@ func GetLocker(key string, value []byte, address string) (*consulapi.Lock, error
 	return client.LockOpts(&consulapi.LockOptions{
 		Key:          key,
 		Value:        value,
-		SessionTTL:   "10s",       // session 超时时间, 超时后锁会被自动锁放
-		LockTryOnce:  false,       // 重复尝试，直到加锁成功
-		LockWaitTime: time.Second, // 加锁 api 请求的等待时间
-		LockDelay:    time.Second, // consul server 的加锁操作等待时间
+		SessionTTL:   fmt.Sprintf("%ds", common.ConsulSessionTTL), // session 超时时间, 超时后锁会被自动锁放
+		LockTryOnce:  isTryOnce,                                   // false: 重复尝试，直到加锁成功
+		LockWaitTime: time.Second,                                 // 加锁 api 请求的等待时间
+		LockDelay:    time.Second,                                 // consul server 的加锁操作等待时间
 	})
 }

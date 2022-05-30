@@ -80,6 +80,11 @@ func Auth(c *ctx.GinRequest) {
 		return
 	}
 
+	// Remove Bearer from token string
+	if len(tokenStr) > 6 && tokenStr[0:6] == "Bearer" {
+		tokenStr = tokenStr[7:]
+	}
+
 	apiTokenOrgId, err := checkToken(c, tokenStr)
 	if err != nil {
 		c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
@@ -99,7 +104,7 @@ func Auth(c *ctx.GinRequest) {
 
 	c.Service().ProjectId = projectId
 	if project, err := services.GetProjectsById(c.Service().DB(), projectId); err != nil {
-		c.JSONError(e.New(e.ProjectNotExists, fmt.Errorf("not allow to access project")), http.StatusBadRequest)
+		c.JSONError(e.New(e.ProjectNotExists), http.StatusBadRequest)
 		return
 	} else if project.OrgId != c.Service().OrgId {
 		c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("invalid project id")), http.StatusForbidden)

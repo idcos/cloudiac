@@ -23,10 +23,16 @@ type TaskEnv struct {
 }
 
 type StateStore struct {
-	Backend string `json:"backend" binding:""`
-	Scheme  string `json:"scheme" binding:""`
-	Path    string `json:"path" binding:""`
-	Address string `json:"address" binding:""` // consul 地址 runner 会自动设置
+	Backend     string `json:"backend" binding:""`
+	Scheme      string `json:"scheme" binding:""`
+	Path        string `json:"path" binding:""`
+	ConsulAcl   bool   `json:"consul_acl" binding:""`
+	ConsulToken string `json:"consul_token" binding:""`
+	ConsulTls   bool   `json:"consul_tls" binding:""`
+	CaPath      string `json:"ca_path" binding:""`
+	CakeyPath   string `json:"cakey_path" binding:""`
+	CapemPath   string `json:"capem_path" binding:""`
+	Address     string `json:"address" binding:""` // consul 地址 runner 会自动设置
 }
 
 type RunTaskReq struct {
@@ -41,6 +47,8 @@ type RunTaskReq struct {
 	RepoAddress  string     `json:"repoAddress" binding:""` // 带 token 的完整路径
 	RepoBranch   string     `json:"repoBranch" binding:""`  // git branch or tag
 	RepoCommitId string     `json:"repoCommitId" binding:""`
+
+	NetworkMirror string `json:"networkMirror"` // terraform network mirror url
 
 	SysEnvironments map[string]string `json:"sysEnvironments "` // 系统注入的环境变量
 
@@ -73,6 +81,13 @@ type TaskStopReq struct {
 	ContainerIds []string `json:"containerIds" form:"containerIds" binding:"required"`
 }
 
+type TaskAbortReq struct {
+	EnvId  string `json:"envId" form:"envId" binding:"required"`
+	TaskId string `json:"taskId" form:"taskId" binding:"required"`
+
+	JustCheck bool `json:"justCheck" form:"justCheck"` // 只检查任务是否可以 abort，不执行实际中止操作
+}
+
 type TaskPolicy struct {
 	PolicyId string `json:"policyId"`
 	Meta     Meta   `json:"meta"`
@@ -99,6 +114,7 @@ type TaskLogReq TaskStatusReq
 // TaskStatusMessage runner 通知任务状态到 portal
 type TaskStatusMessage struct {
 	Timeout bool `json:"timeout"` // 任务是否己超时？
+	Aborted bool `json:"aborted"` // 任务被中止?
 
 	// 当 timeout 为 true 时，以下两个字段无意义
 	Exited   bool `json:"exited"`

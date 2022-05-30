@@ -53,7 +53,7 @@ func (Auth) Delete(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @router /auth/me [get]
-// @Success 200 {object} ctx.JSONResult{result=models.User}
+// @Success 200 {object} ctx.JSONResult{result=resps.UserWithRoleResp}
 func (Auth) GetUserByToken(c *ctx.GinRequest) {
 	c.JSONResult(apps.UserDetail(c.Service(), c.Service().UserId))
 }
@@ -65,7 +65,7 @@ func (Auth) GetUserByToken(c *ctx.GinRequest) {
 // @Accept json
 // @Param body formData forms.LoginForm true "parameter"
 // @router /auth/login [post]
-// @Success 200 {object} ctx.JSONResult{result=models.LoginResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.LoginResp}
 func (a Auth) Login(c *ctx.GinRequest) {
 	form := forms.LoginForm{}
 	if err := c.Bind(&form); err != nil {

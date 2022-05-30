@@ -11,9 +11,9 @@ import (
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/vcsrv"
-	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
 	"net/http"
@@ -140,8 +140,8 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 		form.Revision = tpl.RepoRevision
 	}
 
-	if form.Timeout == 0 {
-		form.Timeout = common.DefaultTaskStepTimeout
+	if form.StepTimeout == 0 {
+		form.StepTimeout = common.DefaultTaskStepTimeout
 	}
 
 	if form.DestroyAt != "" {
@@ -160,20 +160,17 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 	return nil
 }
 
-func getRunnerId(runnerTags string, runnerId string) (string, e.Error) {
-	// 优先使用 id 匹配，兼容之前的方式
-	if runnerId != "" {
-		return runnerId, nil
+// getTaskStepTimeoutInSecond return timeout in second
+func getTaskStepTimeoutInSecond(timeoutInMinute int) (int, e.Error) {
+	timeoutInSecond := timeoutInMinute * 60
+	if timeoutInSecond <= 0 {
+		sysTimeout, err := services.GetSystemTaskStepTimeout(db.Get())
+		if err != nil {
+			return -1, err
+		}
+		timeoutInSecond = sysTimeout
 	}
-
-	// id不存在，使用tags 匹配
-	runnerTagsList := strings.Split(runnerTags, ",")
-	if runnerTags != "" && len(runnerTagsList) > 0 {
-		return services.GetRunnerByTags(runnerTagsList)
-	}
-
-	// 默认runner
-	return services.GetDefaultRunner()
+	return timeoutInSecond, nil
 }
 
 func createEnvToDB(tx *db.Session, c *ctx.ServiceContext, form *forms.CreateEnvForm, envModel models.Env) (*models.Env, e.Error) {
@@ -268,8 +265,24 @@ func getCreateEnvTpl(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.
 		c.Logger().Errorf("error get template, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
-
 	return tpl, nil
+}
+
+func envWorkdirCheck(c *ctx.ServiceContext, repoId, repoRevision, workdir string, vcsId models.Id) e.Error {
+	searchForm := &forms.RepoFileSearchForm{
+		RepoId:       repoId,
+		RepoRevision: repoRevision,
+		VcsId:        vcsId,
+		Workdir:      workdir,
+	}
+	results, err := VcsRepoFileSearch(c, searchForm, "", consts.TfFileMatch)
+	if err != nil {
+		return err
+	}
+	if len(results) == 0 {
+		return e.New(e.TemplateWorkdirError, fmt.Errorf("no '%s' files", consts.TfFileMatch))
+	}
+	return nil
 }
 
 // CreateEnv 创建环境
@@ -281,12 +294,20 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, err
 	}
 
+	err = services.IsTplAssociationCurrentProject(c, form.TplId)
+	if err != nil {
+		return nil, err
+	}
+
 	// 检查模板
 	tpl, err := getCreateEnvTpl(c, form)
 	if err != nil {
 		return nil, err
 	}
-
+	// 检查环境传入工作目录
+	if err = envWorkdirCheck(c, tpl.RepoId, form.Revision, form.Workdir, tpl.VcsId); err != nil {
+		return nil, err
+	}
 	// 以下值只在未传入时使用模板定义的值，如果入参有该字段即使值为空也不会使用模板中的值
 	var (
 		destroyAt models.Time
@@ -304,7 +325,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		}
 	}()
 
-	runnerId, err := getRunnerId(strings.Join(form.RunnerTags, ","), form.RunnerId)
+	taskStepTimeout, err := getTaskStepTimeoutInSecond(form.StepTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -315,13 +336,13 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		CreatorId: c.UserId,
 		TplId:     form.TplId,
 
-		Name:       form.Name,
-		Tags:       strings.TrimSpace(form.Tags),
-		RunnerId:   runnerId,
-		RunnerTags: strings.Join(form.RunnerTags, ","),
-		Status:     models.EnvStatusInactive,
-		OneTime:    form.OneTime,
-		Timeout:    form.Timeout,
+		Name:        form.Name,
+		Tags:        strings.TrimSpace(form.Tags),
+		RunnerId:    form.RunnerId,
+		RunnerTags:  strings.Join(form.RunnerTags, ","),
+		Status:      models.EnvStatusInactive,
+		OneTime:     form.OneTime,
+		StepTimeout: taskStepTimeout,
 
 		// 模板参数
 		TfVarsFile:   form.TfVarsFile,
@@ -329,6 +350,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		Playbook:     form.Playbook,
 		Revision:     form.Revision,
 		KeyId:        form.KeyId,
+		Workdir:      form.Workdir,
 
 		TTL:             form.TTL,
 		AutoDestroyAt:   &destroyAt,
@@ -373,8 +395,8 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		StopOnViolation: env.StopOnViolation,
 		BaseTask: models.BaseTask{
 			Type:        form.TaskType,
-			StepTimeout: form.Timeout,
-			RunnerId:    runnerId,
+			StepTimeout: taskStepTimeout,
+			RunnerId:    env.RunnerId,
 		},
 		ExtraData: models.JSON(form.ExtraData),
 		Callback:  form.Callback,
@@ -427,34 +449,20 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
-	query := c.DB().Where("iac_env.org_id = ? AND iac_env.project_id = ?", c.OrgId, c.ProjectId)
-	query = services.QueryEnvDetail(query)
+	//query := c.DB().Where("iac_env.org_id = ? AND iac_env.project_id = ?", c.OrgId, c.ProjectId)
+	query := services.QueryEnvDetail(c.DB(), c.OrgId, c.ProjectId)
+	var er e.Error
 
-	if form.Status != "" {
-		if utils.InArrayStr(models.EnvStatus, form.Status) {
-			query = query.Where("iac_env.status = ? and iac_env.deploying = 0", form.Status)
-		} else if utils.InArrayStr(models.EnvTaskStatus, form.Status) {
-			query = query.Where("iac_env.task_status = ? and iac_env.deploying = 1", form.Status)
-		} else {
-			return nil, e.New(e.BadParam, http.StatusBadRequest)
-		}
+	// 环境状态过滤
+	query, er = services.FilterEnvStatus(query, form.Status)
+	if er != nil {
+		return nil, er
 	}
 
-	// 环境归档状态
-	switch form.Archived {
-	case "":
-		// 默认返回未归档环境
-		query = query.Where("iac_env.archived = ?", 0)
-	case "all":
-	// do nothing
-	case "true":
-		// 已归档
-		query = query.Where("iac_env.archived = 1")
-	case "false":
-		// 未归档
-		query = query.Where("iac_env.archived = 0")
-	default:
-		return nil, e.New(e.BadParam, http.StatusBadRequest)
+	// 环境归档状态过滤
+	query, er = services.FilterEnvArchiveStatus(query, form.Archived)
+	if er != nil {
+		return nil, er
 	}
 
 	if form.Q != "" {
@@ -476,12 +484,26 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		return nil, e.New(e.DBError, err)
 	}
 
+	enabledBill, err := services.ProjectEnabledBill(c.DB(), c.ProjectId)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
 	for _, env := range details {
 		env.MergeTaskStatus()
 		PopulateLastTask(c.DB(), env)
 		env.PolicyStatus = models.PolicyStatusConversion(env.PolicyStatus, env.PolicyEnable)
 		// runner tags 数组形式返回
-		env.RunnerTagsArr = strings.Split(env.Env.RunnerTags, ",")
+		if env.Env.RunnerTags != "" {
+			env.RunnerTags = strings.Split(env.Env.RunnerTags, ",")
+		} else {
+			env.RunnerTags = []string{}
+		}
+		// 以分钟为单位返回
+		env.StepTimeout = env.StepTimeout / 60
+
+		// 是否开启费用采集
+		env.IsBilling = enabledBill
 	}
 
 	return page.PageResp{
@@ -597,6 +619,10 @@ func setUpdateEnvByForm(attrs models.Attrs, form *forms.UpdateEnvForm) {
 	if form.HasKey("policyEnable") {
 		attrs["policyEnable"] = form.PolicyEnable
 	}
+	if form.HasKey("stepTimeout") {
+		// 将分钟转换为秒
+		attrs["stepTimeout"] = form.StepTimeout * 60
+	}
 }
 
 func setAndCheckUpdateEnvAutoApproval(c *ctx.ServiceContext, tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error {
@@ -632,7 +658,7 @@ func setAndCheckUpdateEnvDestroy(tx *db.Session, attrs models.Attrs, env *models
 		if ttl == 0 {
 			// ttl 传 0 表示重置销毁时间
 			attrs["auto_destroy_at"] = nil
-		} else if env.Status != models.EnvStatusInactive {
+		} else if env.Status != models.EnvStatusDestroyed && env.Status != models.EnvStatusInactive {
 			// 活跃环境同步修改 destroyAt
 			at := models.Time(time.Now().Add(ttl))
 			attrs["auto_destroy_at"] = &at
@@ -689,20 +715,22 @@ func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs mod
 	}
 
 	if form.HasKey("archived") {
-		if env.Status != models.EnvStatusInactive {
+		if env.Status != models.EnvStatusInactive && env.Status != models.EnvStatusDestroyed {
 			_ = tx.Rollback()
 			return e.New(e.EnvCannotArchiveActive,
 				fmt.Errorf("env can't be archive while env is %s", env.Status),
 				http.StatusBadRequest)
 		}
 		attrs["archived"] = form.Archived
+		if form.Name != "" {
+			attrs["name"] = form.Name
+		}
 	}
-
 	return nil
 }
 
 // UpdateEnv 环境编辑
-func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDetail, e.Error) {
+func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDetail, e.Error) { // nolint:cyclop
 	c.AddLogField("action", fmt.Sprintf("update env %s", form.Id))
 
 	if err := updateEnvCheck(c.OrgId, c.ProjectId, form); err != nil {
@@ -720,6 +748,14 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	env, err := getEnvForUpdate(tx, c, form)
 	if err != nil {
 		return nil, err
+	}
+	if env.Locked {
+		return nil, e.New(e.EnvLocked, http.StatusBadRequest)
+	}
+	if !env.Archived {
+		if form.Archived {
+			form.Name = env.Name + "-archived-" + time.Now().Format("20060102150405")
+		}
 	}
 
 	attrs := models.Attrs{}
@@ -751,7 +787,6 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	attrs["openCronDrift"] = cronDriftParam.OpenCronDrift
 	attrs["cronDriftExpress"] = cronDriftParam.CronDriftExpress
 	attrs["nextDriftTaskTime"] = cronDriftParam.NextDriftTaskTime
-
 	setUpdateEnvByForm(attrs, form)
 	err = setAndCheckUpdateEnvByForm(c, tx, attrs, env, form)
 	if err != nil {
@@ -784,8 +819,8 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
-	query := c.DB().Where("iac_env.org_id = ? AND iac_env.project_id = ?", c.OrgId, c.ProjectId)
-	query = services.QueryEnvDetail(query)
+	//query := c.DB().Where("iac_env.org_id = ? AND iac_env.project_id = ?", c.OrgId, c.ProjectId)
+	query := services.QueryEnvDetail(c.DB(), c.OrgId, c.ProjectId)
 
 	envDetail, err := services.GetEnvDetailById(query, form.Id)
 	if err != nil && err.Code() == e.EnvNotExists {
@@ -793,6 +828,11 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 	} else if err != nil {
 		c.Logger().Errorf("error get env by id, err %s", err)
 		return nil, e.New(e.DBError, err)
+	}
+
+	enabledBill, err := services.ProjectEnabledBill(c.DB(), envDetail.ProjectId)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
 	}
 
 	envDetail.MergeTaskStatus()
@@ -806,9 +846,18 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 		envDetail.PolicyGroup = append(envDetail.PolicyGroup, v.PolicyGroupId)
 	}
 	envDetail.PolicyStatus = models.PolicyStatusConversion(envDetail.PolicyStatus, envDetail.PolicyEnable)
+	// 时间转化为分钟
+	envDetail.StepTimeout = envDetail.StepTimeout / 60
 
 	// runner tags 数组形式返回
-	envDetail.RunnerTagsArr = strings.Split(envDetail.Env.RunnerTags, ",")
+	if envDetail.Env.RunnerTags != "" {
+		envDetail.RunnerTags = strings.Split(envDetail.Env.RunnerTags, ",")
+	} else {
+		envDetail.RunnerTags = []string{}
+	}
+	// 是否开启费用采集
+	envDetail.IsBilling = enabledBill
+
 	return envDetail, nil
 }
 
@@ -820,6 +869,52 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (ret *models.En
 		return er
 	})
 	return ret, er
+}
+
+// EnvDeployCheck 创建新部署前检测
+func EnvDeployCheck(c *ctx.ServiceContext, envId models.Id) (interface{}, e.Error) {
+	if c.OrgId == "" || c.ProjectId == "" {
+		return nil, e.New(e.BadRequest, http.StatusBadRequest)
+	}
+	env, err := services.GetEnvById(c.DB(), envId)
+	if err != nil {
+		return nil, err
+	}
+	//判断环境是否已归档
+	if env.Archived {
+		return nil, e.New(e.EnvArchived, "Environment archived")
+	}
+
+	// 云模板检测
+	tpl, err := services.GetTplByEnvId(c.DB(), envId)
+	if err != nil {
+		return nil, err
+	}
+	//检测云模板是否绑定项目
+	_, checkErr := services.GetBindTemplate(c.DB(), c.ProjectId, tpl.Id)
+	if checkErr != nil {
+		return nil, checkErr
+	}
+	//vcs 检测(是否禁用，token是否有效)
+	vcs, err := services.GetVcsById(c.DB(), tpl.VcsId)
+	if err != nil {
+		return nil, err
+	}
+	if vcs.Status != "enable" {
+		return nil, e.New(e.VcsError, "vcs is disable")
+	}
+	if err := services.VscTokenCheckByID(c.DB(), vcs.Id, vcs.VcsToken); err != nil {
+		return nil, e.New(e.VcsInvalidToken, err)
+	}
+	//环境运行中不允许再手动发布任务
+	tasks, err := services.GetActiveTaskByEnvId(c.DB(), envId)
+	if err != nil {
+		return nil, err
+	}
+	if len(tasks) > 0 {
+		return nil, e.New(e.EnvDeploying, "Deployment initiation is not allowed")
+	}
+	return nil, nil
 }
 
 func envPreCheck(orgId, projectId, keyId models.Id, playbook string) e.Error {
@@ -887,8 +982,9 @@ func setEnvByForm(env *models.Env, form *forms.DeployEnvForm) {
 		env.KeyId = form.KeyId
 	}
 
-	if form.HasKey("timeout") {
-		env.Timeout = form.Timeout
+	if form.HasKey("stepTimeout") {
+		// 将分钟转换为秒
+		env.StepTimeout = form.StepTimeout * 60
 	}
 
 	if form.HasKey("tfVarsFile") {
@@ -915,6 +1011,9 @@ func setEnvByForm(env *models.Env, form *forms.DeployEnvForm) {
 	if form.HasKey("policyEnable") {
 		env.PolicyEnable = form.PolicyEnable
 	}
+	if form.HasKey("workdir") {
+		env.Workdir = form.Workdir
+	}
 
 	setEnvRunnerInfoByForm(env, form)
 }
@@ -926,6 +1025,7 @@ func setEnvRunnerInfoByForm(env *models.Env, form *forms.DeployEnvForm) {
 
 	if form.HasKey("runnerTags") {
 		env.RunnerTags = strings.Join(form.RunnerTags, ",")
+		// 如果传了 tags 则清空 runnerId 值
 		env.RunnerId = ""
 	}
 }
@@ -962,7 +1062,7 @@ func setAndCheckEnvDestroy(env *models.Env, form *forms.DeployEnvForm) e.Error {
 
 		if ttl == 0 { // ttl 传入 0 表示清空自动销毁时间
 			env.AutoDestroyAt = nil
-		} else if env.Status != models.EnvStatusInactive {
+		} else if env.Status != models.EnvStatusDestroyed && env.Status != models.EnvStatusInactive {
 			// 活跃环境同步修改 destroyAt
 			at := models.Time(time.Now().Add(ttl))
 			env.AutoDestroyAt = &at
@@ -1050,7 +1150,7 @@ func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env
 	return nil
 }
 
-func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm) (*models.EnvDetail, e.Error) {
+func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm) (*models.EnvDetail, e.Error) { // nolint:cyclop
 	c.AddLogField("action", fmt.Sprintf("deploy env task %s", form.Id))
 	lg := c.Logger()
 
@@ -1072,9 +1172,17 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	}
 	lg.Debugln("envDeploy -> envCheck finish")
 
+	if form.TaskType != common.TaskTypePlan && env.Locked {
+		return nil, e.New(e.EnvLocked, http.StatusBadRequest)
+	}
+
 	// 模板检查
 	tpl, err := envTplCheck(tx, c.OrgId, env.TplId, c.Logger())
 	if err != nil {
+		return nil, err
+	}
+	// 环境下云模版工作目录检查
+	if err = envWorkdirCheck(c, tpl.RepoId, form.Revision, form.Workdir, tpl.VcsId); err != nil {
 		return nil, err
 	}
 	lg.Debugln("envDeploy -> envTplCheck finish")
@@ -1102,7 +1210,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	lg.Debugln("envDeploy -> GetValidVarsAndVgVars finish")
 
 	// 获取实际执行任务的runnerID
-	rId, err := getRunnerId(env.RunnerTags, env.RunnerId)
+	rId, err := services.GetAvailableRunnerIdByStr(env.RunnerId, env.RunnerTags)
 	if err != nil {
 		return nil, err
 	}
@@ -1123,7 +1231,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		ExtraData:       env.ExtraData,
 		BaseTask: models.BaseTask{
 			Type:        form.TaskType,
-			StepTimeout: form.Timeout,
+			StepTimeout: env.StepTimeout,
 			RunnerId:    rId,
 		},
 		Source:    taskSource,
@@ -1354,6 +1462,108 @@ func EnvUpdateTags(c *ctx.ServiceContext, form *forms.UpdateEnvTagsForm) (resp i
 	}
 }
 
+func EnvLock(c *ctx.ServiceContext, form *forms.EnvLockForm) (interface{}, e.Error) {
+	tx := c.Tx()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	// 查询环境下是否有执行中、待审批、排队中的任务
+	tasks, err := services.GetActiveTaskByEnvId(tx, form.Id)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	if len(tasks) > 0 {
+		_ = tx.Rollback()
+		return nil, e.New(e.EnvLockFailedTaskActive)
+	}
+
+	if err := services.EnvLock(tx, form.Id); err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		return nil, e.New(e.DBError, err)
+	}
+	return nil, nil
+}
+
+func EnvUnLock(c *ctx.ServiceContext, form *forms.EnvUnLockForm) (interface{}, e.Error) {
+	attrs := models.Attrs{}
+	attrs["locked"] = false
+
+	if form.ClearDestroyAt {
+		attrs["auto_destroy_at"] = nil
+		attrs["ttl"] = ""
+	}
+
+	if _, err := services.UpdateEnv(c.DB(), form.Id, attrs); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func EnvUnLockConfirm(c *ctx.ServiceContext, form *forms.EnvUnLockConfirmForm) (interface{}, e.Error) {
+	env, err := services.GetEnvById(c.DB(), form.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := resps.EnvUnLockConfirmResp{}
+	if env.AutoDestroyAt != nil && time.Now().Unix() > env.AutoDestroyAt.Unix() && env.AutoDestroyAt.Unix() > 0 {
+		resp.AutoDestroyPass = true
+	}
+
+	return resp, nil
+}
+
+// EnvStat 环境概览页统计数据
+func EnvStat(c *ctx.ServiceContext, form *forms.EnvParam) (interface{}, e.Error) {
+
+	tx := c.DB()
+
+	// 费用类型统计
+	envCostTypeStat, err := services.EnvCostTypeStat(tx, form.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	// 费用趋势统计
+	envCostTrendStat, err := services.EnvCostTrendStat(tx, form.Id, 6)
+	if err != nil {
+		return nil, err
+	}
+
+	// 费用列表
+	envCostList, err := services.EnvCostList(tx, form.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	var results = make([]resps.EnvCostDetailResp, 0)
+	for _, envCost := range envCostList {
+		results = append(results, resps.EnvCostDetailResp{
+			ResType:      envCost.ResType,
+			ResAttr:      GetResShowName(envCost.Attrs, envCost.Address),
+			InstanceId:   envCost.InstanceId,
+			CurMonthCost: envCost.CurMonthCost,
+			TotalCost:    envCost.TotalCost,
+		})
+	}
+
+	return &resps.EnvStatisticsResp{
+		CostTypeStat:  envCostTypeStat,
+		CostTrendStat: envCostTrendStat,
+		CostList:      results,
+	}, nil
+}
+
 func checkDeployVar(vars []forms.Variable) []forms.Variable {
 	resp := make([]forms.Variable, 0)
 	for _, v := range vars {
@@ -1369,7 +1579,7 @@ func checkDeployVar(vars []forms.Variable) []forms.Variable {
 func getEnvSource(source string) (taskSource string, taskSourceSys string) {
 	taskSource = consts.TaskSourceManual
 	taskSourceSys = ""
-	if source != "" {
+	if source != consts.TaskSourceManual {
 		taskSource = consts.TaskSourceApi
 		taskSourceSys = source
 	}

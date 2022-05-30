@@ -33,6 +33,10 @@ type ConsulConfig struct {
 	Interval        string `yaml:"interval"`
 	Timeout         string `yaml:"timeout"`
 	DeregisterAfter string `yaml:"deregister_after"`
+	ConsulAcl       bool   `yaml:"consul_acl"`
+	ConsulCertPath  string `yaml:"consul_cert_path"`
+	ConsulAclToken  string `yaml:"consul_acl_token"`
+	ConsulTls       bool   `yaml:"consul_tls"`
 }
 
 type RunnerConfig struct {
@@ -49,6 +53,18 @@ type PortalConfig struct {
 	Address       string `yaml:"address"` // portal 对外提供服务的 url
 	SSHPrivateKey string `yaml:"ssh_private_key"`
 	SSHPublicKey  string `yaml:"ssh_public_key"`
+}
+
+type LdapConfig struct {
+	AdminDn          string `yaml:"admin_dn"`
+	AdminPassword    string `yaml:"admin_password"`
+	LdapServer       string `yaml:"ldap_server"`
+	LdapServerPort   int    `yaml:"ldap_server_port"`
+	SearchBase       string `yaml:"search_base"`
+	SearchFilter     string `yaml:"search_filter"`   // 自定义搜索条件
+	EmailAttribute   string `yaml:"email_attribute"` // 用户定义邮箱字段名 默认值为mail
+	AccountAttribute string `yaml:"account_attribute"`
+	OUSearchBase     string `yaml:"ou_search_base"`
 }
 
 func (c *RunnerConfig) mustAbs(path string) string {
@@ -117,6 +133,9 @@ type Config struct {
 	ExportSecretKey    string           `yaml:"exportSecretKey"`
 	HttpClientInsecure bool             `yaml:"httpClientInsecure"`
 	Policy             PolicyConfig     `yaml:"policy"`
+	Ldap               LdapConfig       `yaml:"ldap"`
+	CostServe          string           `yaml:"cost_serve"`
+	EnableTaskAbort    bool             `yaml:"enableTaskAbort"`
 }
 
 const (
@@ -207,8 +226,8 @@ func ensureSecretKey(cfg *Config) error {
 
 // 直接传入 Config 结构设置 config
 // 目前主要用于编写测试用例时直接初始化 config
-func Set(cfg Config) {
-	config = &cfg
+func Set(cfg *Config) {
+	config = cfg
 }
 
 func Get() *Config {

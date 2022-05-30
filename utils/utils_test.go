@@ -108,6 +108,7 @@ func TestJoinUrl(t *testing.T) {
 		{[]string{"http://example.com/", "/a", "/b"}, "http://example.com/a/b"},
 		{[]string{"http://example.com/", "", "/b"}, "http://example.com/b"},
 		{[]string{"http://example.com/", "", "b"}, "http://example.com/b"},
+		{[]string{"http://example.com/", "a/"}, "http://example.com/a/"},
 	}
 	for _, c := range cases {
 		url := JoinURL(c.elems[0], c.elems[1:]...)

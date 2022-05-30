@@ -9,7 +9,7 @@ import (
 )
 
 func TestExportVariatbleValue(t *testing.T) {
-	configs.Set(configs.Config{
+	configs.Set(&configs.Config{
 		SecretKey:       utils.Md5String("secretKey"),
 		ExportSecretKey: utils.Md5String("exportSecretKey"),
 	})

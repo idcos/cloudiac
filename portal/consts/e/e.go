@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/pkg/errors"
+	"golang.org/x/text/language"
 	"gorm.io/gorm"
 )
 
@@ -26,6 +27,10 @@ type MyError struct {
 }
 
 var logger = logs.Get()
+var langTags = []language.Tag{}
+var langMap = map[string]string{}
+
+const defaultLang = "zh-CN"
 
 func (e *MyError) Status() int {
 	return e.httpStatus
@@ -65,6 +70,10 @@ func New(code int, errOrStatus ...interface{}) Error {
 		err    error = nil
 	)
 	for _, es := range errOrStatus {
+		if es == nil {
+			continue
+		}
+
 		switch v := es.(type) {
 		case int:
 			status = v
@@ -90,7 +99,9 @@ func converVcsError(code int, err error) int {
 		case strings.Contains(info, "Unauthorized"):
 			// vcs权限不足
 			return VcsInvalidToken
-		case strings.Contains(info, "connection refused"):
+		case strings.Contains(info, "connection refused") ||
+			strings.Contains(info, "no such host") ||
+			strings.Contains(info, "no route to host"):
 			// vcs连接失败
 			return VcsConnectError
 		case strings.Contains(info, "handshake failure"):
@@ -109,7 +120,7 @@ func convertError(code int, err error, status int) Error {
 	switch code {
 	case DBError:
 		var targetErr *mysql.MySQLError
-		if errors.As(err, &targetErr)  {
+		if errors.As(err, &targetErr) {
 			switch targetErr.Number {
 			case MysqlDuplicate:
 				return newError(ObjectAlreadyExists, err, status)
@@ -129,7 +140,7 @@ func convertError(code int, err error, status int) Error {
 
 func Is(err error, code int) bool {
 	var targetErr Error
-	if errors.As(err, &targetErr)  {
+	if errors.As(err, &targetErr) {
 		return targetErr.Code() == code
 	}
 	return false
@@ -166,7 +177,7 @@ func IgnoreDuplicate(err error) error {
 
 func IsRecordNotFound(err error) bool {
 	var targetErr *MyError
-	if errors.As(err, &targetErr)  {
+	if errors.As(err, &targetErr) {
 		err = targetErr.Err()
 	}
 	return errors.Is(err, gorm.ErrRecordNotFound)
@@ -183,7 +194,7 @@ func GetErr(err error) (*MyError, bool) {
 	var targetErr *MyError
 	// logs.Get().Warnf("GetErr: %T: %v, %v", err, er, ok)
 	result := errors.As(err, &targetErr)
-	return  targetErr, result
+	return targetErr, result
 }
 
 func AutoNew(err error, code int, status ...int) Error {
@@ -200,12 +211,8 @@ func AutoNew(err error, code int, status ...int) Error {
 	}
 }
 
-const defaultLang = "zh-cn"
-
-func ErrorMsg(err Error, lang string) string {
-	if lang == "" {
-		lang = defaultLang
-	}
+func ErrorMsg(err Error, langs string) string {
+	lang := GetAcceptLanguage(langs)
 
 	if m, ok := errorMsgs[err.Code()]; ok {
 		if msg, ok := m[lang]; ok {
@@ -215,4 +222,44 @@ func ErrorMsg(err Error, lang string) string {
 		}
 	}
 	return err.Error()
+}
+
+func GetAcceptLanguage(acceptLanguate string) string {
+	var matcher = language.NewMatcher(langTags)
+	t, _, _ := language.ParseAcceptLanguage(acceptLanguate)
+	tag, _, _ := matcher.Match(t...)
+	base, _ := tag.Base()
+
+	// exact match en-US
+	if langMap[tag.String()] != "" {
+		return tag.String()
+	}
+	// en-AU matches en
+	if langMap[base.String()] != "" {
+		return base.String()
+	}
+
+	// en-AU matches en-US
+	for langTag := range langMap {
+		langBase := strings.Split(langTag, "-")[0]
+		if langBase == base.String() {
+			return langTag
+		}
+	}
+
+	return defaultLang
+}
+
+func init() {
+	langTags = []language.Tag{language.MustParse(defaultLang)}
+	langMap[language.MustParse(defaultLang).String()] = defaultLang
+
+	for _, lang := range langs {
+		standardLang := language.MustParse(lang).String()
+		if standardLang == defaultLang {
+			continue
+		}
+		langTags = append(langTags, language.MustParse(lang))
+		langMap[standardLang] = lang
+	}
 }

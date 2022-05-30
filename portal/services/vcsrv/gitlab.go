@@ -7,6 +7,8 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/utils"
 	"fmt"
+	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -67,6 +69,22 @@ func (git *gitlabVcsIface) ListRepos(namespace, search string, limit, offset int
 func (git *gitlabVcsIface) UserInfo() (UserInfo, error) {
 
 	return UserInfo{}, nil
+}
+
+func (git *gitlabVcsIface) TokenCheck() error {
+	opt := &gitlab.ListProjectsOptions{}
+	opt.Page = utils.LimitOffset2Page(1, 1)
+
+	_, response, err := git.gitConn.Projects.ListProjects(opt)
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode > 300 {
+		return e.New(e.VcsInvalidToken, fmt.Sprintf("token valid check response code: %d", response.StatusCode))
+	}
+
+	return nil
 }
 
 type gitlabRepoIface struct {
@@ -237,6 +255,18 @@ func (git *gitlabRepoIface) CreatePrComment(prId int, comment string) error {
 		return err
 	}
 	return nil
+}
+
+func (git *gitlabRepoIface) GetFullFilePath(address, filePath, repoRevision string) string {
+	u, _ := url.Parse(address)
+	u.Path = path.Join(u.Path, git.Project.PathWithNamespace, "-/blob", repoRevision, filePath)
+	return u.String()
+}
+
+func (git *gitlabRepoIface) GetCommitFullPath(address, commitId string) string {
+	u, _ := url.Parse(address)
+	u.Path = path.Join(u.Path, git.Project.PathWithNamespace, "commit", commitId)
+	return u.String()
 }
 
 func GetGitConn(gitlabToken, gitlabUrl string) (*gitlab.Client, e.Error) {

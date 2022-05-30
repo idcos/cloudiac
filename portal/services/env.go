@@ -3,19 +3,23 @@
 package services
 
 import (
+	"cloudiac/portal/libs/ctx"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/hashicorp/consul/api"
+	"github.com/pkg/errors"
 
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 )
@@ -83,7 +87,17 @@ func GetEnvById(tx *db.Session, id models.Id) (*models.Env, e.Error) {
 	return &o, nil
 }
 
-func QueryEnvDetail(query *db.Session) *db.Session {
+func IsTplAssociationCurrentProject(c *ctx.ServiceContext, tplId models.Id) e.Error {
+	if ok, err := c.DB().Model(&models.ProjectTemplate{}).Where("template_id = ?", tplId).Where("project_id = ?", c.ProjectId).Exists(); err != nil {
+		return e.New(e.DBError, err)
+	} else if !ok {
+		return e.New(e.TemplateNotAssociationCurrentProject, fmt.Errorf("the passed tplId is not associated with the current project and cannot create an environment"))
+	}
+	return nil
+}
+
+func QueryEnvDetail(dbSess *db.Session, orgId, projectId models.Id) *db.Session {
+	query := dbSess.Where("iac_env.org_id = ? AND iac_env.project_id = ?", orgId, projectId)
 	query = query.Model(&models.Env{}).LazySelectAppend("iac_env.*")
 
 	// 模板名称
@@ -106,6 +120,14 @@ func QueryEnvDetail(query *db.Session) *db.Session {
 		LazySelectAppend("!ISNULL(rd.task_id) AS is_drift")
 	query = query.Joins("left join iac_scan_task on iac_env.last_scan_task_id = iac_scan_task.id").
 		LazySelectAppend("iac_scan_task.policy_status as policy_status")
+
+	// 账单数据
+	filter := dbSess.Table("iac_bill as b").
+		Where("b.org_id = ? and b.project_id = ?", orgId, projectId).
+		Where("b.cycle = ?", time.Now().Format("2006-01")).
+		Group("b.env_id").
+		Select("b.env_id,sum(b.pretax_amount) as month_cost")
+	query = query.Joins("left join (?) as b on b.env_id = iac_env.id", filter.Expr()).LazySelectAppend("b.month_cost")
 
 	return query
 }
@@ -130,7 +152,8 @@ func GetEnvByTplId(tx *db.Session, tplId models.Id) ([]models.Env, error) {
 }
 
 func QueryActiveEnv(query *db.Session) *db.Session {
-	return query.Model(&models.Env{}).Where("status != ? OR deploying = ?", models.EnvStatusInactive, true)
+	return query.Model(&models.Env{}).Where("status in (?,?) OR deploying = ?",
+		models.EnvStatusActive, models.EnvStatusFailed, true)
 }
 
 func QueryDeploySucessEnv(query *db.Session) *db.Session {
@@ -142,6 +165,7 @@ func QueryEnv(query *db.Session) *db.Session {
 }
 
 // ChangeEnvStatusWithTaskAndStep 基于任务和步骤的状态更新环境状态
+// nolint:cyclop
 func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.Task, step *models.TaskStep) e.Error {
 	var (
 		envStatus     = ""
@@ -154,25 +178,31 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 		return nil
 	}
 
-	if task.Exited() {
+	if task.Started() && !task.Exited() {
+		envTaskStatus = task.Status
+		isDeploying = true
+	} else if task.Exited() {
 		switch task.Status {
 		case models.TaskRejected:
 			// 任务驳回，环境状态不变
-			break
+			envStatus = ""
 		case models.TaskFailed:
 			envStatus = models.EnvStatusFailed
+		case models.TaskAborted:
+			var err error
+			envStatus, err = getEnvStatusOnTaskAborted(tx, task.Id)
+			if err != nil {
+				return e.New(e.InternalError, errors.Wrap(err, "getEnvStatusOnTaskAborted"))
+			}
 		case models.TaskComplete:
 			if task.Type == models.TaskTypeApply {
 				envStatus = models.EnvStatusActive
 			} else if task.Type == models.TaskTypeDestroy {
-				envStatus = models.EnvStatusInactive
+				envStatus = models.EnvStatusDestroyed
 			}
 		default:
-			return e.New(e.InternalError, fmt.Errorf("unknown exited task status: %v", task.Status))
+			return e.New(e.InternalError, fmt.Errorf("unknown task status: %v", task.Status))
 		}
-	} else if task.Started() {
-		envTaskStatus = task.Status
-		isDeploying = true
 	} else { // pending
 		// 任务进入 pending 状态不修改环境状态， 因为任务 pending 时可能同一个环境的其他任务正在执行
 		// (实际目前任务创建后即进入 pending 状态，并不触发 change status 调用链)
@@ -196,6 +226,23 @@ func ChangeEnvStatusWithTaskAndStep(tx *db.Session, id models.Id, task *models.T
 		return e.New(e.DBError, err)
 	}
 	return nil
+}
+
+// 当任务被中止时需要根据当前执行哪此步骤来判断环境应该置为什么状态
+func getEnvStatusOnTaskAborted(db *db.Session, taskId models.Id) (string, error) {
+	steps, err := GetTaskSteps(db, taskId)
+	if err != nil {
+		return "", errors.Wrap(err, "get task steps")
+	}
+
+	for _, s := range steps {
+		// 如果执行了 apply 步骤则环境变为 failed 状态
+		if (s.Type == models.TaskStepApply || s.Type == models.TaskStepDestroy) && s.IsStarted() {
+			return models.EnvStatusFailed, nil
+		}
+	}
+	// 否则，环境状态保持不变
+	return "", nil
 }
 
 var (
@@ -281,10 +328,19 @@ func GetRunnerByTags(tags []string) (string, e.Error) {
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list with tags is null"))
 }
 
+func GetAvailableRunnerIdByStr(runnerId string, runnerTags string) (string, e.Error) {
+	tags := make([]string, 0)
+	if runnerTags != "" {
+		tags = strings.Split(runnerTags, ",")
+	}
+	return GetAvailableRunnerId(runnerId, tags)
+}
+
 func GetAvailableRunnerId(runnerId string, runnerTags []string) (string, e.Error) {
 	if runnerId != "" {
 		return runnerId, nil
 	}
+
 	if len(runnerTags) > 0 {
 		return GetRunnerByTags(runnerTags)
 	}
@@ -370,4 +426,287 @@ func CheckEnvTags(tags string) e.Error {
 		}
 	}
 	return nil
+}
+
+func EnvLock(dbSess *db.Session, id models.Id) e.Error {
+	if _, err := dbSess.Model(models.Env{}).
+		Where("id =?", id).
+		UpdateColumn("locked", true); err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
+func EnvUnLocked(dbSess *db.Session, id models.Id) e.Error {
+	if _, err := dbSess.Model(models.Env{}).
+		Where("id =?", id).
+		UpdateColumn("locked", false); err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
+// EnvCostTypeStat 费用类型统计
+func EnvCostTypeStat(tx *db.Session, id models.Id) ([]resps.EnvCostTypeStatResp, e.Error) {
+	/* sample sql:
+	select
+		t.res_type as res_type,
+		SUM(pretax_amount) as amount
+	from
+		iac_bill
+	join (SELECT DISTINCT res_id, type as res_type from iac_resource where iac_resource.env_id  = 'env-c870jh4bh95lubaf3mf0') as t ON
+		iac_bill.instance_id = t.res_id
+	where iac_bill.cycle = DATE_FORMAT(CURDATE(), "%Y-%m")
+	group by
+		t.res_type
+	*/
+
+	subQuery := tx.Model(&models.Resource{}).Select(`DISTINCT(res_id), iac_resource.type as res_type`)
+	subQuery = subQuery.Where(`iac_resource.env_id  = ?`, id)
+
+	query := tx.Model(&models.Bill{}).Select(`t.res_type as res_type, SUM(pretax_amount) as amount`)
+	query = query.Joins(`JOIN (?) as t ON iac_bill.instance_id = t.res_id`, subQuery.Expr())
+
+	query = query.Where(`iac_bill.cycle = DATE_FORMAT(CURDATE(), "%Y-%m")`)
+	query = query.Group("t.res_type")
+
+	var results []resps.EnvCostTypeStatResp
+	if err := query.Find(&results); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return results, nil
+}
+
+// EnvCostTrendStat 费用趋势统计
+func EnvCostTrendStat(tx *db.Session, id models.Id, months int) ([]resps.EnvCostTrendStatResp, e.Error) {
+	/* sample sql:
+	select
+		iac_bill.cycle as date,
+		SUM(pretax_amount) as amount
+	from
+		iac_bill
+	where
+		iac_bill.instance_id IN (SELECT DISTINCT  res_id from iac_resource where iac_resource.env_id  = 'env-c870jh4bh95lubaf3mf0')
+		AND iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 6 MONTH), "%Y-%m")
+	group by
+		iac_bill.cycle
+	order by
+		iac_bill.cycle asc
+	*/
+
+	subQuery := tx.Model(&models.Resource{}).Select(`DISTINCT(res_id)`).Where(`iac_resource.env_id  = ?`, id)
+
+	query := tx.Model(&models.Bill{}).Select(`iac_bill.cycle as date, SUM(pretax_amount) as amount`)
+
+	query = query.Where(`iac_bill.instance_id IN (?)`, subQuery.Expr())
+	query = query.Where(`iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? MONTH), "%Y-%m")`, months)
+
+	query = query.Group("iac_bill.cycle")
+	query = query.Order("iac_bill.cycle asc")
+
+	var results []resps.EnvCostTrendStatResp
+	if err := query.Find(&results); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return completeEnvCostTrendData(results, months)
+}
+
+// completeEnvCostTrendData 补充缺失的月份数据
+func completeEnvCostTrendData(results []resps.EnvCostTrendStatResp, months int) ([]resps.EnvCostTrendStatResp, e.Error) {
+	if len(results) == 0 {
+		return results, nil
+	}
+
+	var allResults = make([]resps.EnvCostTrendStatResp, 0)
+	startMonth := time.Now().AddDate(0, -1*(months-1), 0)
+
+	// 第一个日期加入
+	for _, result := range results {
+		// 补充缺失的日期
+		for {
+			startMonthStr := startMonth.Format("2006-01")
+			// 日期连续时
+			if startMonthStr == result.Date {
+				allResults = append(allResults, result)
+				startMonth = startMonth.AddDate(0, 1, 0)
+				break
+			}
+
+			// 日期不连续时，补充0
+			allResults = append(allResults, resps.EnvCostTrendStatResp{
+				Date:   startMonth.Format("2006-01"),
+				Amount: 0.0,
+			})
+			startMonth = startMonth.AddDate(0, 1, 0)
+		}
+	}
+
+	return allResults, nil
+}
+
+type RawEnvCostDetail struct {
+	ResType      string          `json:"resType"`
+	Attrs        models.ResAttrs `json:"attrs"`
+	Address      string          `json:"address"`
+	InstanceId   string          `json:"instanceId"` // 实例id
+	CurMonthCost float32         `json:"curMonthCost"`
+	TotalCost    float32         `json:"totalCost"`
+}
+
+// EnvCostList 费用列表
+func EnvCostList(tx *db.Session, id models.Id) ([]RawEnvCostDetail, e.Error) {
+	mCurMonth, err := monthEnvCostList(tx, id, true)
+	if err != nil {
+		return nil, err
+	}
+
+	mOtherMonth, err := monthEnvCostList(tx, id, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// 合并当前月和其他月份
+	for k, v := range mOtherMonth {
+		if _, ok := mCurMonth[k]; !ok {
+			mCurMonth[k] = v
+			mCurMonth[k].CurMonthCost = 0
+		}
+	}
+
+	mTotal, err := totalEnvCostListByInstanceId(tx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// 合并 当前月费用 和 总体费用 的数据
+	for k, v := range mTotal {
+		if _, ok := mCurMonth[k]; ok {
+			mCurMonth[k].TotalCost = v
+		}
+	}
+
+	var results = make([]RawEnvCostDetail, 0)
+	for _, v := range mCurMonth {
+		results = append(results, *v)
+	}
+
+	return results, nil
+}
+
+func monthEnvCostList(tx *db.Session, id models.Id, isCurMonth bool) (map[string]*RawEnvCostDetail, e.Error) {
+	/* sample sql:
+	select
+		iac_resource.attrs as attrs,
+		iac_resource.address as address,
+		iac_resource.type as res_type,
+		iac_bill.instance_id as instance_id,
+		pretax_amount as cur_month_cost
+	from
+		iac_resource
+	JOIN iac_bill ON
+		iac_bill.instance_id = iac_resource.res_id
+	JOIN iac_env ON
+		iac_env.id = iac_resource.env_id
+		and iac_resource.task_id = iac_env.last_res_task_id
+	where
+		iac_resource.env_id  = 'env-c8u10aosm56kh90t588g'
+		and iac_resource.address NOT LIKE 'data.%'
+		and iac_bill.cycle = DATE_FORMAT(CURDATE(), "%Y-%m")
+	*/
+
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.attrs as attrs, iac_resource.address as address, iac_resource.type as res_type, iac_bill.instance_id as instance_id, pretax_amount as cur_month_cost`)
+	query = query.Joins(`JOIN iac_bill ON iac_bill.instance_id = iac_resource.res_id`)
+	query = query.Joins(`JOIN iac_env ON iac_env.id = iac_resource.env_id and iac_resource.task_id = iac_env.last_res_task_id`)
+
+	query = query.Where(`iac_resource.env_id = ?`, id)
+	query = query.Where(`iac_resource.address NOT LIKE 'data.%'`)
+	if isCurMonth {
+		query = query.Where(`iac_bill.cycle = DATE_FORMAT(CURDATE(), "%Y-%m")`)
+	} else {
+		query = query.Where(`iac_bill.cycle != DATE_FORMAT(CURDATE(), "%Y-%m")`)
+	}
+
+	var results []RawEnvCostDetail
+	if err := query.Find(&results); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	var m = make(map[string]*RawEnvCostDetail)
+	for i, data := range results {
+		m[data.InstanceId] = &results[i]
+	}
+
+	return m, nil
+}
+
+func totalEnvCostListByInstanceId(tx *db.Session, id models.Id) (map[string]float32, e.Error) {
+	/* sample sql:
+	select
+		instance_id,
+		SUM(pretax_amount) as total_cost
+	from
+		iac_bill
+	where env_id = 'env-c8u10aosm56kh90t588g'
+	group by
+		instance_id
+	*/
+
+	query := tx.Model(&models.Bill{}).Select(`instance_id, SUM(pretax_amount) as total_cost`)
+
+	query = query.Where(`env_id = ?`, id)
+	query = query.Group("instance_id")
+
+	var results []struct {
+		InstanceId string
+		TotalCost  float32
+	}
+	if err := query.Find(&results); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	var m = make(map[string]float32)
+	for _, data := range results {
+		m[data.InstanceId] = data.TotalCost
+	}
+
+	return m, nil
+}
+
+func FilterEnvStatus(query *db.Session, status string) (*db.Session, e.Error) {
+	if status == "" {
+		return query, nil
+	}
+
+	if utils.InArrayStr(models.EnvStatus, status) {
+		if status == models.EnvStatusInactive {
+			query = query.Where("(iac_env.status = ? or iac_env.status = ?) and iac_env.deploying = 0", status, models.EnvStatusDestroyed)
+		} else {
+			query = query.Where("iac_env.status = ? and iac_env.deploying = 0", status)
+		}
+	} else if utils.InArrayStr(models.EnvTaskStatus, status) {
+		query = query.Where("iac_env.task_status = ? and iac_env.deploying = 1", status)
+	} else {
+		return nil, e.New(e.BadParam, http.StatusBadRequest)
+	}
+	return query, nil
+}
+
+func FilterEnvArchiveStatus(query *db.Session, archiveQ string) (*db.Session, e.Error) {
+	switch archiveQ {
+	case "":
+		// 默认返回未归档环境
+		return query.Where("iac_env.archived = 0"), nil
+	case "all":
+		return query, nil
+	case "true":
+		// 已归档
+		return query.Where("iac_env.archived = 1"), nil
+	case "false":
+		// 未归档
+		return query.Where("iac_env.archived = 0"), nil
+	default:
+		return nil, e.New(e.BadParam, http.StatusBadRequest)
+	}
 }

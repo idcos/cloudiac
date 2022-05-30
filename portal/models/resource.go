@@ -2,7 +2,9 @@
 
 package models
 
-import "database/sql/driver"
+import (
+	"database/sql/driver"
+)
 
 type ResAttrs map[string]interface{}
 
@@ -19,9 +21,10 @@ type Resource struct {
 
 	OrgId     Id `json:"orgId" gorm:"size:32;not null"`
 	ProjectId Id `json:"projectId" gorm:"size:32;not null"`
-	EnvId     Id `json:"envId" gorm:"size:32;not null"`
-	TaskId    Id `json:"taskId" gorm:"size:32;not null"`
+	EnvId     Id `json:"envId" gorm:"index;size:32;not null"`
+	TaskId    Id `json:"taskId" gorm:"index;size:32;not null"`
 
+	ResId         Id       `json:"resId" gorm:"index;not null;default:''"`
 	Provider      string   `json:"provider" gorm:"not null"`
 	Module        string   `json:"module,omitempty" gorm:"not null;default:''"`
 	Address       string   `json:"address" gorm:"not null"`
@@ -30,8 +33,17 @@ type Resource struct {
 	Index         string   `json:"index" gorm:"not null;default:''"`
 	Attrs         ResAttrs `json:"attrs,omitempty" gorm:"type:json"`
 	SensitiveKeys StrSlice `json:"sensitiveKeys,omitempty" gorm:"type:json"`
+
+	AppliedAt Time `json:"appliedAt" gorm:"type:datetime;column:applied_at;default:null"`
 }
 
 func (Resource) TableName() string {
 	return "iac_resource"
+}
+
+type ResFields []ResField
+
+type ResField struct {
+	ResId     Id   `json:"resId"`
+	AppliedAt Time `json:"appliedAt"`
 }

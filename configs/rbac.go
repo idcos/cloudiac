@@ -72,12 +72,21 @@ var Polices = []Policy{
 	{"login", "runner", "*"},
 	{"login", "consul", "*"},
 	{"login", "webhook", "*"},
+	{"login", "systems", "read"},
+	{"login", "system_config", "read"},
+
+	// 系统配置
+	{"admin", "systems", "read"},
+	{"admin", "system_config", "read"},
+	{"member", "systems", "read"},
+	{"member", "system_config", "read"},
 
 	// 合规策略
 	// 组织角色
 	{"admin", "policies", "*"},
 	{"member", "policies", "read"},
 	{"complianceManager", "policies", "*"},
+
 	// 项目角色
 	{"manager", "policies", "suppress/enablescan/scan"},
 	{"approver", "policies", "suppress/enablescan/scan"},
@@ -101,8 +110,15 @@ var Polices = []Policy{
 	{"login", "orgs", "read"},
 	{"admin", "orgs", "read/update"},
 	{"admin", "orgs", "listuser/adduser/removeuser/updaterole"},
-	{"member", "orgs", "read"},
+	{"member", "orgs", "read/listuser"},
+	// {"member", "orgs", "read"},
 	{"complianceManager", "orgs", "read"},
+	{"manager", "orgs", "listuser/adduser"},
+
+	// LDAP
+	{"admin", "ldap", "*"},
+	{"member", "ldap", "read/list"},
+	{"manager", "ldap", "*"},
 
 	// 项目
 	{"admin", "projects", "*"},
@@ -122,7 +138,7 @@ var Polices = []Policy{
 	// 任务
 	{"manager", "tasks", "*"},
 	{"approver", "tasks", "*"},
-	{"operator", "tasks", "read"},
+	{"operator", "tasks", "read/abort"},
 	{"guest", "tasks", "read"},
 
 	// 云模板
