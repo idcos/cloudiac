@@ -89,7 +89,14 @@ func DecodePipeline(s string) (models.Pipeline, error) {
 	}
 	buffer := bytes.NewBufferString(s)
 	err := yaml.NewDecoder(buffer).Decode(&p)
-	return p, err
+	if err == nil {
+		return p, err
+	}
+
+	// 尝试 v0.5 解析
+	logs.Get().Debugf("解析 pipeline error: %v", err)
+	buffer = bytes.NewBufferString(s)
+	return models.ConvertPipelineDot5Compatibility(buffer)
 }
 
 func UpdateTaskContainerId(sess *db.Session, taskId models.Id, containerId string) e.Error {

@@ -61,11 +61,6 @@ type PipelineTask struct {
 	OnFail    *PipelineStep `json:"onFail,omitempty" yaml:"onFail"`
 }
 
-type PipelineTaskWithType struct {
-	PipelineTask
-	Type string `json:"type"`
-}
-
 type PipelineStep struct {
 	Type       string   `json:"type,omitempty" yaml:"type" gorm:"size:32;not null"`
 	Name       string   `json:"name,omitempty" yaml:"name" gorm:"size:32;not null"`
