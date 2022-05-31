@@ -8,6 +8,7 @@ jwtSecretKey: "${JWT_SECRET_KEY}"
 registryAddr: "${REGISTRY_ADDRESS}"
 httpClientInsecure: ${HTTP_CLIENT_INSECURE}
 enableTaskAbort: ${ENABLE_TASK_ABORT}
+enableRegister: false
 
 portal:
   address: "${PORTAL_ADDRESS}"

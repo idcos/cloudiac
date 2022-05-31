@@ -45,6 +45,6 @@ type SystemSwitchesStatusResp struct {
 	AbortStatus     bool `json:"abortStatus"` // 与 enableAbortTask 值相同(兼容处理)
 	EnableAbortTask bool `json:"enableAbortTask"`
 
-	EnableApplyAccount bool `json:"enableApplyAccount"`
-	EnableLdap         bool `json:"enableLdap"`
+	EnableRegister bool `json:"enableRegister"`
+	EnableLdap     bool `json:"enableLdap"`
 }

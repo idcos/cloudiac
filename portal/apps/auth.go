@@ -183,8 +183,8 @@ func VerifySsoToken(c *ctx.ServiceContext, form *forms.VerifySsoTokenForm) (resp
 	}, nil
 }
 
-func ApplyAccount(c *ctx.ServiceContext, form *forms.ApplyAccountForm) (resp interface{}, er e.Error) {
-	if !configs.Get().EnableApplyAccount {
+func Register(c *ctx.ServiceContext, form *forms.RegistryForm) (resp interface{}, er e.Error) {
+	if !configs.Get().EnableRegister {
 		return nil, e.New(e.ErrDisabled, http.StatusBadRequest)
 	}
 
@@ -202,6 +202,7 @@ func ApplyAccount(c *ctx.ServiceContext, form *forms.ApplyAccountForm) (resp int
 		return nil, er
 	}
 
+	var token string
 	err := c.DB().Transaction(func(tx *db.Session) error {
 		user, er = services.CreateUser(tx, models.User{
 			Name:     form.Name,
@@ -212,6 +213,12 @@ func ApplyAccount(c *ctx.ServiceContext, form *forms.ApplyAccountForm) (resp int
 		})
 		if er != nil {
 			return er
+		}
+
+		var err error
+		token, err = services.GenerateActivateToken(user.Email)
+		if err != nil {
+			return e.New(e.InternalError, err)
 		}
 
 		if configs.Get().Demo.Enable {
@@ -227,5 +234,5 @@ func ApplyAccount(c *ctx.ServiceContext, form *forms.ApplyAccountForm) (resp int
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	return nil, services.SendApplyAccountMail(user, initPassword)
+	return nil, services.SendActivateAccountMail(user, token)
 }

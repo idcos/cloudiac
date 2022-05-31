@@ -53,11 +53,12 @@ type ApiTriggerHandler struct {
 	Token string `json:"token" form:"token" binding:"required,max=255"`
 }
 
-type ApplyAccountForm struct {
+type RegistryForm struct {
 	BaseForm
 
-	Name  string `json:"name" form:"name" binding:"max=64"`
-	Email string `json:"email" form:"email" binding:"required,email,max=64"` // 登陆的用户电子邮箱地址
+	Name     string `json:"name" form:"name" binding:"required,max=64"`
+	Email    string `json:"email" form:"email" binding:"required,email,max=64"`        // 登陆的用户电子邮箱地址
+	Password string `json:"password" form:"password" binding:"required,ascii,max=255"` // 密码
 
 	Phone   string `json:"phone" form:"phone" binding:""`
 	Company string `json:"company" form:"company" binding:""`

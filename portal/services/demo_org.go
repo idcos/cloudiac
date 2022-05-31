@@ -164,19 +164,18 @@ func CreateDemoVcs(tx *db.Session, orgId models.Id, typ, addr, name, token strin
 	return vcs, nil
 }
 
-func SendApplyAccountMail(user *models.User, password string) e.Error {
+func SendActivateAccountMail(user *models.User, token string) e.Error {
 	name := user.Name
 	if name == "" {
 		name = strings.Split(user.Email, "@")[0]
 	}
-	content := utils.SprintTemplate(consts.UserApplyAccountMail, map[string]interface{}{
-		"Name":     name,
-		"Email":    user.Email,
-		"Password": password,
-		"Address":  configs.Get().Portal.Address,
+	content := utils.SprintTemplate(consts.UserActivteMail, map[string]interface{}{
+		"Name":    name,
+		"Email":   user.Email,
+		"Address": utils.JoinURL(configs.Get().Portal.Address, "register/activation/", token),
 	})
 
-	er := mail.SendMail([]string{user.Email}, "欢迎体验 CloudIac", content)
+	er := mail.SendMail([]string{user.Email}, "欢迎注册 CloudIac", content)
 	if er != nil {
 		logs.Get().Errorf("error send mail to %s, err %s", user.Email, er)
 		return er

@@ -280,18 +280,32 @@ const (
 `
 )
 
-var UserApplyAccountMail = `
+var UserActivteMail = `
 <html>
 <body>
+<div>
 尊敬的 {{.Name}}：
-<br/> &nbsp;&nbsp;&nbsp;&nbsp;欢迎申请 CloudIaC 体验云服务，该平台目的为用户提供快速体验及测试，不建议在体验平台上创建正式的环境进行使用，祝您体验愉快！
-<br/> &nbsp;&nbsp;&nbsp;&nbsp;您的体验帐号为您的邮箱：{{.Email}}
-<br/> &nbsp;&nbsp;&nbsp;&nbsp;密码：{{.Password}}
-<br/> &nbsp;&nbsp;&nbsp;&nbsp;登录地址：{{.Address}}
-<br/> &nbsp;&nbsp;&nbsp;&nbsp;建议登录后修改为您方便记忆的密码。
-<br/> &nbsp;&nbsp;&nbsp;&nbsp;如有任何问题和建议，欢迎在社区提交 Issue ，您的任何建议，都将帮助我们更好的完善 CloudIaC ，如果您对 CloudIaC 项目感兴趣，也欢迎您提交 PR，一起推进 IaC 生态在国内的落地。
-<br/> &nbsp;&nbsp;&nbsp;&nbsp;----------
-<br/> &nbsp;&nbsp;&nbsp;&nbsp;此邮件为 CloudIaC 平台自动发送，请勿回复。
+<p>
+&nbsp;&nbsp;&nbsp;&nbsp;欢迎使用 CloudIaC，您的登录帐号就是注册时使用的邮箱：{{.Email}}，请点击以下链接激活您的帐号（该链接有效时间为24个小时）：
+</p>
+
+<p>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="{{.Address}}">点击此处激活帐号</a>
+<br/>
+<span style="font-size:0.8em;">
+<br/>&nbsp;&nbsp;&nbsp;&nbsp;如链接跳转有问题，请手动复制如下地址，在浏览器中粘贴并打开：
+<br/>&nbsp;&nbsp;&nbsp;&nbsp;{{.Address}}
+</span>
+</p>
+
+<p>
+&nbsp;&nbsp;&nbsp;&nbsp;如有任何问题和建议，欢迎在社区提交 Issue ，您的任何建议，都将帮助我们更好的完善 CloudIaC ，如果您对 CloudIaC 项目感兴
+趣，也欢迎您提交 PR，一起推进 IaC 生态在国内的落地。
+<br/>&nbsp;&nbsp;&nbsp;&nbsp;----------
+<br/>&nbsp;&nbsp;&nbsp;&nbsp;此邮件为 CloudIaC 平台自动发送，请勿回复。
+</p>
+
+</div>
 </body>
 </html>
 `

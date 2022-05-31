@@ -74,18 +74,18 @@ func (a Auth) Login(c *ctx.GinRequest) {
 	c.JSONResult(apps.Login(c.Service(), &form))
 }
 
-// ApplyAccount 账号申请
+// Registry 账号注册
 // @Tags 鉴权
 // @Summary 申请体验账号
 // @Accept multipart/form-data
 // @Accept json
-// @Param body formData forms.ApplyAccountForm true "parameter"
-// @router /auth/account [post]
+// @Param body formData forms.RegistryForm true "parameter"
+// @router /auth/register [post]
 // @Success 200 {object} ctx.JSONResult{}
-func (a Auth) ApplyAccount(c *ctx.GinRequest) {
-	form := forms.ApplyAccountForm{}
+func (a Auth) Registry(c *ctx.GinRequest) {
+	form := forms.RegistryForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.ApplyAccount(c.Service(), &form))
+	c.JSONResult(apps.Register(c.Service(), &form))
 }

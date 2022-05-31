@@ -68,10 +68,10 @@ func RunnerSearch() (interface{}, e.Error) {
 func SystemSwitchStatus() (interface{}, e.Error) {
 	conf := configs.Get()
 	systemSwitchs := &resps.SystemSwitchesStatusResp{
-		AbortStatus:        conf.EnableTaskAbort,
-		EnableAbortTask:    conf.EnableTaskAbort,
-		EnableApplyAccount: conf.EnableApplyAccount,
-		EnableLdap:         conf.LdapEnabled(),
+		AbortStatus:     conf.EnableTaskAbort,
+		EnableAbortTask: conf.EnableTaskAbort,
+		EnableRegister:  conf.EnableRegister,
+		EnableLdap:      conf.LdapEnabled(),
 	}
 
 	return systemSwitchs, nil
