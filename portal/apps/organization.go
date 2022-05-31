@@ -438,9 +438,9 @@ func createInviteUserOrgRel(c *ctx.ServiceContext, tx *db.Session, form *forms.I
 func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*resps.UserWithRoleResp, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("invite user %s%s to org %s as %s", form.Name, form.UserId, form.Id, form.Role))
 
-	org, err := getInviteUserOrg(c, form)
-	if err != nil {
-		return nil, err
+	org, er := getInviteUserOrg(c, form)
+	if er != nil {
+		return nil, er
 	}
 	if form.Role == "" {
 		form.Role = consts.OrgRoleMember
@@ -456,37 +456,41 @@ func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*resps.UserW
 		}
 	}
 
-	tx := c.Tx()
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			panic(r)
+	var (
+		isNew    bool
+		user     *models.User
+		initPass string
+	)
+	err := c.DB().Transaction(func(tx *db.Session) error {
+		var er e.Error
+		// 检查用户是否存在
+		user, er = checkInviteUser(c, tx, form)
+		if er != nil {
+			return er
 		}
-	}()
 
-	// 检查用户是否存在
-	user, err := checkInviteUser(c, tx, form)
+		initPass = utils.GenPasswd(6, "mix")
+		user, isNew, er = createInviteUser(c, tx, form, user, initPass)
+		if er != nil {
+			return er
+		}
+
+		if isNew {
+			if er := services.CreateUserDemoOrgData(c, tx, user); er != nil {
+				return er
+			}
+		}
+
+		// 建立用户与组织间关联
+		if er := createInviteUserOrgRel(c, tx, form, user, isNew); er != nil {
+			return er
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		return nil, err
-	}
-
-	initPass := utils.GenPasswd(6, "mix")
-	user, isNew, err := createInviteUser(c, tx, form, user, initPass)
-	if err != nil {
-		return nil, err
-	}
-
-	// 建立用户与组织间关联
-	// 新用户自动加入演示组织
-	err = createInviteUserOrgRel(c, tx, form, user, isNew)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		_ = tx.Rollback()
-		c.Logger().Errorf("error commit invite user, err %s", err)
-		return nil, e.New(e.DBError, err)
+		return nil, e.AutoNew(err, e.DBError)
 	}
 
 	// 发送邀请邮件
