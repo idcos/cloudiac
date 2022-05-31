@@ -520,7 +520,9 @@ func completeEnvCostTrendData(results []resps.EnvCostTrendStatResp, months int) 
 	}
 
 	var allResults = make([]resps.EnvCostTrendStatResp, 0)
-	startMonth := time.Now().AddDate(0, -1*(months-1), 0)
+	// golang AddDate 减一个月相当于减30天，包含2月份需注意
+	now, _ := time.Parse("2006-01", time.Now().Format("2006-01"))
+	startMonth := now.AddDate(0, -1*(months-1), 0)
 
 	// 第一个日期加入
 	for _, result := range results {
