@@ -411,7 +411,7 @@ func dbResult2ResStatResp(dbResults []ResStatResult) []resps.ResStatResp {
 	return results
 }
 
-type ProjectStatResult struct {
+type ProjectOrEnvStatResult struct {
 	ResType string
 	Date    string
 	Id      models.Id
@@ -425,7 +425,6 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 		iac_resource.project_id as id,
 		iac_project.name as name,
 		iac_resource.type as res_type,
-		DATE_FORMAT(iac_resource.applied_at, "%Y-%m") as date,
 		count(*) as count
 	from
 		iac_resource
@@ -438,17 +437,13 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 		iac_env.org_id = 'org-c8gg9fosm56injdlb85g'
 		AND iac_env.project_id IN ('p-c8gg9josm56injdlb86g', 'aaa')
 		and iac_project.status = 'enable'
-		AND (DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(CURDATE(), "%Y-%m")
-			OR
-		DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m"))
 	group by
-		date,
 		iac_resource.type,
 		iac_resource.project_id
 	limit 10;
 	*/
 
-	query := tx.Model(&models.Resource{}).Select(`iac_resource.project_id as id, iac_project.name as name, iac_resource.type as res_type, DATE_FORMAT(iac_resource.applied_at, "%Y-%m") as date, count(*) as count`)
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.project_id as id, iac_project.name as name, iac_resource.type as res_type, count(*) as count`)
 
 	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 	query = query.Joins("JOIN iac_project ON iac_project.id = iac_resource.project_id")
@@ -457,136 +452,52 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 		query = query.Where(`iac_env.project_id in ?`, projectIds)
 	}
 	query = query.Where(`iac_project.status = 'enable'`)
-	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(CURDATE(), "%Y-%m") OR DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m")`)
 
-	query = query.Group("date,iac_resource.type,iac_resource.project_id")
+	query = query.Group("iac_resource.type,iac_resource.project_id")
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
 
-	var dbResults []ProjectStatResult
+	var dbResults []ProjectOrEnvStatResult
 	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	return dbResult2ProjectResStatResp(dbResults), nil
+	return dbResult2ProjectOrEnvResStatResp(dbResults), nil
 }
 
-func dbResult2ProjectResStatResp(dbResults []ProjectStatResult) []resps.ProjOrEnvResStatResp {
-	// date -> resType -> data
-	now := time.Now()
-	curMonth := now.Format("2006-01")
-	lastMonth := now.AddDate(0, -1, 0).Format("2006-01")
+func dbResult2ProjectOrEnvResStatResp(dbResults []ProjectOrEnvStatResult) []resps.ProjOrEnvResStatResp {
+	// resType -> projectId -> data
+	mCount := make(map[string]int)
+	m := make(map[string][]resps.DetailStatResp)
 
-	m, mResTypeCount, mProjectCount := splitProjectResStatDataByMonth(dbResults)
-
-	var results = make([]resps.ProjOrEnvResStatResp, 2)
-	results[0].Date = lastMonth
-	results[0].ResTypes = getProjectResStatDataByMonth(m[lastMonth], mResTypeCount, mProjectCount, lastMonth)
-
-	results[1].Date = curMonth
-	results[1].ResTypes = getProjectResStatDataByMonth(m[curMonth], mResTypeCount, mProjectCount, curMonth)
-
-	// 计算增长数量
-	for i := range results[1].ResTypes {
-		// 某资源类型下各个项目增长数量总和
-		resKey := [2]string{lastMonth, results[1].ResTypes[i].ResType}
-		results[1].ResTypes[i].Up = results[1].ResTypes[i].Count
-		if _, ok := mResTypeCount[resKey]; ok {
-			results[1].ResTypes[i].Up -= mResTypeCount[resKey]
+	// 统计每个资源类型下，每个项目包含此资源类型的数量
+	for _, result := range dbResults {
+		if _, ok := mCount[result.ResType]; !ok {
+			mCount[result.ResType] = 0
 		}
+		mCount[result.ResType] += result.Count
 
-		// 某资源类型下某个项目增长数量
-		for j := range results[1].ResTypes[i].Details {
-			projectKey := [3]string{lastMonth, results[1].ResTypes[i].ResType, results[1].ResTypes[i].Details[j].Id.String()}
-			results[1].ResTypes[i].Details[j].Up = results[1].ResTypes[i].Details[j].Count
-			if _, ok := mProjectCount[projectKey]; ok {
-				results[1].ResTypes[i].Details[j].Up -= mProjectCount[projectKey]
-			}
+		if _, ok := m[result.ResType]; !ok {
+			m[result.ResType] = make([]resps.DetailStatResp, 0)
 		}
-	}
-
-	return results
-}
-
-func getProjectResStatDataByMonth(resTypeData map[string][]ProjectStatResult, mResTypeCount map[[2]string]int, mProjectCount map[[3]string]int, month string) []resps.ResTypeDetailStatWithUpResp {
-	var results = make([]resps.ResTypeDetailStatWithUpResp, 0)
-
-	for resType, data := range resTypeData {
-		details := make([]resps.DetailStatWithUpResp, 0)
-		for _, d := range data {
-			details = append(details, resps.DetailStatWithUpResp{
-				Id:    d.Id,
-				Name:  d.Name,
-				Count: mProjectCount[[3]string{month, resType, d.Id.String()}],
-			})
-		}
-		results = append(results, resps.ResTypeDetailStatWithUpResp{
-			ResType: resType,
-			Count:   mResTypeCount[[2]string{month, resType}],
-			Details: details,
+		m[result.ResType] = append(m[result.ResType], resps.DetailStatResp{
+			Id:    result.Id,
+			Name:  result.Name,
+			Count: result.Count,
 		})
 	}
+
+	var results = make([]resps.ProjOrEnvResStatResp, 0)
+	for k, v := range m {
+		results = append(results, resps.ProjOrEnvResStatResp{
+			ResType: k,
+			Count:   mCount[k],
+			Details: v,
+		})
+	}
+
 	return results
-}
-
-func splitProjectResStatDataByMonth(dbResults []ProjectStatResult) (map[string]map[string][]ProjectStatResult, map[[2]string]int, map[[3]string]int) {
-
-	// date -> resType -> data
-	m := make(map[string]map[string][]ProjectStatResult)
-	now := time.Now()
-	curMonth := now.Format("2006-01")
-	lastMonth := now.AddDate(0, -1, 0).Format("2006-01")
-
-	m[curMonth] = make(map[string][]ProjectStatResult)
-	m[lastMonth] = make(map[string][]ProjectStatResult)
-
-	// 计算数量
-	mResTypeCount := make(map[[2]string]int) // date+resType
-	mProjectCount := make(map[[3]string]int) // date+resType+projectid
-
-	for _, result := range dbResults {
-		switch result.Date {
-		case curMonth:
-			if m[curMonth][result.ResType] == nil {
-				m[curMonth][result.ResType] = make([]ProjectStatResult, 0)
-			}
-			m[curMonth][result.ResType] = append(m[curMonth][result.ResType], result)
-		case lastMonth:
-			if m[lastMonth][result.ResType] == nil {
-				m[lastMonth][result.ResType] = make([]ProjectStatResult, 0)
-			}
-			m[lastMonth][result.ResType] = append(m[lastMonth][result.ResType], result)
-		}
-
-		resTypeKey := [2]string{result.Date, result.ResType}
-		if _, ok := mResTypeCount[resTypeKey]; !ok {
-			mResTypeCount[resTypeKey] = 0
-		}
-		mResTypeCount[resTypeKey] += 1
-
-		projectKey := [3]string{result.Date, result.ResType, string(result.Id)}
-		if _, ok := mProjectCount[projectKey]; !ok {
-			mProjectCount[projectKey] = 0
-		}
-		mProjectCount[projectKey] += 1
-	}
-
-	// 补全当前月缺失的资源类型
-	for resType := range m[lastMonth] {
-		if _, ok := m[curMonth][resType]; !ok {
-			m[curMonth][resType] = make([]ProjectStatResult, 0)
-		}
-	}
-
-	// 补全上个月缺失的资源类型
-	for resType := range m[curMonth] {
-		if _, ok := m[lastMonth][resType]; !ok {
-			m[lastMonth][resType] = make([]ProjectStatResult, 0)
-		}
-	}
-
-	return m, mResTypeCount, mProjectCount
 }
 
 func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, days int) ([]resps.ResGrowTrendResp, e.Error) {
@@ -628,7 +539,7 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 
 	query = query.Group("date, iac_resource.project_id").Order("date")
 
-	var dbResults []ProjectStatResult
+	var dbResults []ProjectOrEnvStatResult
 	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
@@ -640,10 +551,10 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 	return getResGrowTrendByDays(startDate, endDate, dbResults, days), nil
 }
 
-func getResGrowTrendByDays(startDate, endDate time.Time, dbResults []ProjectStatResult, days int) []resps.ResGrowTrendResp {
+func getResGrowTrendByDays(startDate, endDate time.Time, dbResults []ProjectOrEnvStatResult, days int) []resps.ResGrowTrendResp {
 
 	// date -> detail(project or env)
-	var m = make(map[string][]ProjectStatResult)
+	var m = make(map[string][]ProjectOrEnvStatResult)
 	var mDateCount = make(map[string]int)
 	var mDetailCount = make(map[[2]string]int)
 
@@ -652,7 +563,7 @@ func getResGrowTrendByDays(startDate, endDate time.Time, dbResults []ProjectStat
 		if startDate.Format("2006-01-02") > endDate.Format("2006-01-02") {
 			break
 		}
-		m[startDate.Format("2006-01-02")] = make([]ProjectStatResult, 0)
+		m[startDate.Format("2006-01-02")] = make([]ProjectOrEnvStatResult, 0)
 	}
 
 	for _, data := range dbResults {
@@ -674,7 +585,7 @@ func getResGrowTrendByDays(startDate, endDate time.Time, dbResults []ProjectStat
 	return dbResults2ResGrowTrendResp(m, mDateCount)
 }
 
-func dbResults2ResGrowTrendResp(m map[string][]ProjectStatResult, mDateCount map[string]int) []resps.ResGrowTrendResp {
+func dbResults2ResGrowTrendResp(m map[string][]ProjectOrEnvStatResult, mDateCount map[string]int) []resps.ResGrowTrendResp {
 
 	var results = make([]resps.ResGrowTrendResp, 0)
 	for date, v := range m {
