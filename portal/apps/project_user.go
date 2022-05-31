@@ -13,30 +13,22 @@ import (
 )
 
 func CreateProjectUser(c *ctx.ServiceContext, form *forms.CreateProjectUserForm) (interface{}, e.Error) {
-	projectUser := make([]*models.UserProject, len(form.UserId))
-
 	// 检查用户是否属于本组织用户
-	for index, v := range form.UserId {
-		if !services.UserHasOrgRole(v, c.OrgId, "") {
-			return nil, e.New(e.BadParam, fmt.Errorf("invalid user"), http.StatusBadRequest)
-		}
-
-		projectUser[index] = &models.UserProject{
-			Role:      form.Role,
-			UserId:    v,
-			ProjectId: c.ProjectId,
-		}
+	if !services.UserHasOrgRole(form.UserId, c.OrgId, "") {
+		return nil, e.New(e.BadParam, fmt.Errorf("invalid user"), http.StatusBadRequest)
 	}
-
-	if err := models.CreateBatch(c.DB(), projectUser); err != nil {
-		if e.IsDuplicate(err) {
-			return nil, e.New(e.ProjectUserAlreadyExists, err)
-		}
+	pu, err := services.CreateProjectUser(c.DB(), models.UserProject{
+		Role:      form.Role,
+		UserId:    form.UserId,
+		ProjectId: c.ProjectId,
+	})
+	if err != nil && err.Code() == e.ProjectUserAlreadyExists {
+		return nil, e.New(err.Code(), err, http.StatusBadRequest)
+	} else if err != nil {
 		c.Logger().Errorf("error create project user, err %s", err)
-		return nil, e.New(e.DBError, err)
+		return nil, e.AutoNew(err, e.DBError)
 	}
-
-	return nil, nil
+	return pu, nil
 }
 
 // SearchProjectUser 查询组织下某个项目的用户(不包含已经关联项目的用户)
