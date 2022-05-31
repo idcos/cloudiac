@@ -76,7 +76,7 @@ func (a Auth) Login(c *ctx.GinRequest) {
 
 // Registry 账号注册
 // @Tags 鉴权
-// @Summary 申请体验账号
+// @Summary 账号注册
 // @Accept multipart/form-data
 // @Accept json
 // @Param body formData forms.RegistryForm true "parameter"
