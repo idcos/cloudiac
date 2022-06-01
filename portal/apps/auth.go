@@ -4,6 +4,7 @@ package apps
 
 import (
 	"cloudiac/configs"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/libs/db"
@@ -227,7 +228,7 @@ func Register(c *ctx.ServiceContext, form *forms.RegistryForm) (resp interface{}
 			Password:     hashPasswd,
 			Phone:        form.Phone,
 			Company:      form.Company,
-			ActiveStatus: "inactive",
+			ActiveStatus: consts.UserEmailINActivate,
 		})
 		if er != nil {
 			return er

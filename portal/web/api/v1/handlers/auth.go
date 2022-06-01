@@ -95,7 +95,7 @@ func (a Auth) Registry(c *ctx.GinRequest) {
 // @Summary 用户邮箱验重
 // @Accept multipart/form-data
 // @Accept json
-// @Param body formData forms.CheckEmail true "parameter"
+// @Param body formData forms.EmailForm true "parameter"
 // @router /auth/email [get]
 // @Success 200 {object} ctx.JSONResult{result=resps.CheckEmailResp}
 func (a Auth) CheckEmail(c *ctx.GinRequest) {
