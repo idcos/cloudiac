@@ -80,12 +80,13 @@ const (
 
 	// 权限认证 2
 	//// 认证 200
-	InvalidPassword   = 20010
-	InvalidToken      = 20000 // 无效 token
-	InvalidTokenScope = 20001 // 无效 token scope
-	TokenExpired      = 20005
-	InvalidOrgId      = 20006 // 无效的 orgId
-	InvalidProjectId  = 20007 // 无效的 projectId
+	InvalidPassword    = 20010
+	InvalidToken       = 20000 // 无效 token
+	InvalidTokenScope  = 20001 // 无效 token scope
+	TokenExpired       = 20005
+	InvalidOrgId       = 20006 // 无效的 orgId
+	InvalidProjectId   = 20007 // 无效的 projectId
+	InvalidActiveEmail = 20011 // 无效的 projectId
 
 	//// 权限 201
 	PermissionDeny   = 20110

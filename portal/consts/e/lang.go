@@ -266,6 +266,10 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "invalid project id",
 		"zh-CN": "无效的项目id",
 	},
+	InvalidActiveEmail: {
+		"en-US": "inactive user email",
+		"zh-CN": "未激活的邮箱",
+	},
 	TaskNotHaveStep: {
 		"en-US": "task have no steps",
 		"zh-CN": "任务无步骤",

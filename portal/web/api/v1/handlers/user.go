@@ -186,3 +186,15 @@ func (User) SearchAllUsers(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.SearchAllUser(c.Service(), &form))
 }
+
+// ActiveUserEmail 邮箱激活
+// @Tags 邮箱
+// @Summary 邮箱激活
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @router /activation/ [get]
+// @Success 200 {object} ctx.JSONResult{result=models.User}
+func (User) ActiveUserEmail(c *ctx.GinRequest) {
+	c.JSONResult(apps.ActiveUserEmail(c.Service()))
+}

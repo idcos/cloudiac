@@ -51,12 +51,15 @@ func Register(g *gin.RouterGroup) {
 
 	g.POST("/auth/register", w(handlers.Auth{}.Registry))
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
+	g.GET("/auth/email", w(handlers.Auth{}.CheckEmail))
 
 	g.GET("/system_config/switches", w(handlers.SystemSwitchesStatus))
 
 	// Authorization Header 鉴权
 	g.Use(w(middleware.Auth)) // 解析 header token
 
+	// 激活邮箱
+	g.GET("/activation", w(handlers.User{}.ActiveUserEmail))
 	// 允许搜索组织内所有用户信息
 	g.GET("/users/all", w(handlers.User{}.SearchAllUsers))
 	// 创建单点登录 token
