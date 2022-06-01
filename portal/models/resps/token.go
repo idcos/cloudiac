@@ -17,7 +17,3 @@ type VerifySsoTokenResp struct {
 	UserId models.Id `json:"userId"`
 	Email  string    `json:"email"`
 }
-
-type CheckEmailResp struct {
-	Email string `json:"email"`
-}
