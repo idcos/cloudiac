@@ -509,6 +509,15 @@ func (t *Task) genStepScript() (string, error) {
 
 var checkoutCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 set -o pipefail
+# before checkout
+{{- if .Before }}
+{{.Before}}
+{{- end}}
+
+if [ $? -ne 0 ]; then
+	exit $?
+fi
+
 # clone code
 git clone '{{.Req.RepoAddress}}' code 2>&1 | sed -re 's#(://[^:]+:)[^@]+#\1******#'
 clone_result=$?
@@ -524,14 +533,36 @@ fi
 mkdir -p '{{.Req.Env.Workdir}}' && cd '{{.Req.Env.Workdir}}'
 
 ln -sf '{{.IacTfFile}}' && ln -sf '{{.TerraformRcFile}}' ~/.terraformrc
+
+# after checkout
+{{- if .After }}
+{{.After}}
+{{- end}}
+
+if [ $? -ne 0 ]; then
+	exit $?
+fi
+
 exit $clone_result
 `))
 
 func (t *Task) stepCheckout() (command string, err error) {
+	beforeCmds := ""
+	if len(t.req.StepBeforeCmds) > 0 {
+		beforeCmds = strings.Join(t.req.StepBeforeCmds, " && ")
+	}
+
+	afterCmds := ""
+	if len(t.req.StepAfterCmds) > 0 {
+		afterCmds = strings.Join(t.req.StepAfterCmds, " && ")
+	}
+
 	return t.executeTpl(checkoutCommandTpl, map[string]interface{}{
 		"Req":             t.req,
 		"IacTfFile":       t.up2Workspace(CloudIacTfFile),
 		"TerraformRcFile": filepath.Join(ContainerWorkspace, TerraformrcFileName),
+		"Before":          beforeCmds,
+		"After":           afterCmds,
 	})
 }
 
