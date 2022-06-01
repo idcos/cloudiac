@@ -639,10 +639,13 @@ func (t *Task) stepApply() (command string, err error) {
 func (t *Task) stepDestroy() (command string, err error) {
 	// destroy 任务通过会先执行 plan(传入 --destroy 参数)，然后再 apply plan 文件实现。
 	// 这样可以保证 destroy 时执行的是用户审批时看到的 plan 内容
+	beforeCmds, afterCmds := getBeforeAfterCmds(t.req.StepBeforeCmds, t.req.StepAfterCmds)
 	return t.executeTpl(applyCommandTpl, map[string]interface{}{
 		"Req":                 t.req,
 		"TFStateJsonFilePath": t.up2Workspace(TFStateJsonFile),
 		"TFProviderSchema":    t.up2Workspace(TFProviderSchema),
+		"Before":              beforeCmds,
+		"After":               afterCmds,
 	})
 }
 
