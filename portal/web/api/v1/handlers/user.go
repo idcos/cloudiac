@@ -194,7 +194,7 @@ func (User) SearchAllUsers(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @router /register/activation/ [get]
-// @Success 200 {object} ctx.JSONResult{result==models.User}
+// @Success 200 {object} ctx.JSONResult{result=models.User}
 func (User) ActiveUserEmail(c *ctx.GinRequest) {
 	c.JSONResult(apps.ActiveUserEmail(c.Service(), c.Service().UserId))
 }
