@@ -55,6 +55,8 @@ func Register(g *gin.RouterGroup) {
 
 	// 重新发送邮件
 	g.GET("/activation/retry", w(handlers.User{}.ActiveUserEmailRetry))
+	// 过期重启发送邮件
+	g.GET("/activation/expired/retry", w(handlers.User{}.ActiveUserEmailExpiredRetry))
 
 	g.GET("/system_config/switches", w(handlers.SystemSwitchesStatus))
 

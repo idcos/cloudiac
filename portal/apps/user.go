@@ -287,8 +287,8 @@ func ActiveUserEmail(c *ctx.ServiceContext) (interface{}, e.Error) {
 }
 
 // ActiveUserEmailRetry
-func ActiveUserEmailRetry(c *ctx.ServiceContext, form *forms.EmailForm) (interface{}, e.Error) {
-	user, er := services.GetUserByEmail(c.DB(), form.Email)
+func ActiveUserEmailRetry(c *ctx.ServiceContext, email string) (interface{}, e.Error) {
+	user, er := services.GetUserByEmail(c.DB(), email)
 	if er != nil {
 		return nil, e.New(e.DBError, er)
 	}
