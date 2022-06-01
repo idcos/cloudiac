@@ -37,6 +37,7 @@ const (
 	JwtSubjectSsoCode   = "ssoCode"  // 用于 sso 单点登录
 	JwtSubjectActivate  = "activate" // 用于账号激活
 	UserEmailINActivate = "inactive" // 用于账号激活
+	UserEmailActivate   = "active"   // 用于账号激活
 
 	DirRoot                          = "/"
 	PolicyGroupDownloadTimeoutSecond = 20 * time.Second

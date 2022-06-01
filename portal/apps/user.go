@@ -272,11 +272,11 @@ func ActiveUserEmail(c *ctx.ServiceContext) (*models.User, e.Error) {
 		return nil, e.New(e.DBError, er)
 	}
 
-	if user.ActiveStatus == "active" {
+	if user.ActiveStatus == consts.UserEmailActivate {
 		return user, nil
 	}
 	attrs := models.Attrs{}
-	attrs["active_status"] = "active"
+	attrs["active_status"] = consts.UserEmailActivate
 	return services.UpdateUser(c.DB(), user.Id, attrs)
 }
 
