@@ -547,16 +547,7 @@ exit $clone_result
 `))
 
 func (t *Task) stepCheckout() (command string, err error) {
-	beforeCmds := ""
-	if len(t.req.StepBeforeCmds) > 0 {
-		beforeCmds = strings.Join(t.req.StepBeforeCmds, " && ")
-	}
-
-	afterCmds := ""
-	if len(t.req.StepAfterCmds) > 0 {
-		afterCmds = strings.Join(t.req.StepAfterCmds, " && ")
-	}
-
+	beforeCmds, afterCmds := getBeforeAfterCmds(t.req.StepBeforeCmds, t.req.StepAfterCmds)
 	return t.executeTpl(checkoutCommandTpl, map[string]interface{}{
 		"Req":             t.req,
 		"IacTfFile":       t.up2Workspace(CloudIacTfFile),
@@ -588,16 +579,7 @@ func (t *Task) up2Workspace(name string) string {
 }
 
 func (t *Task) stepInit() (command string, err error) {
-	beforeCmds := ""
-	if len(t.req.StepBeforeCmds) > 0 {
-		beforeCmds = strings.Join(t.req.StepBeforeCmds, " && ")
-	}
-
-	afterCmds := ""
-	if len(t.req.StepAfterCmds) > 0 {
-		afterCmds = strings.Join(t.req.StepAfterCmds, " && ")
-	}
-
+	beforeCmds, afterCmds := getBeforeAfterCmds(t.req.StepBeforeCmds, t.req.StepAfterCmds)
 	return t.executeTpl(initCommandTpl, map[string]interface{}{
 		"Req":             t.req,
 		"PluginCachePath": ContainerPluginCachePath,
@@ -617,15 +599,7 @@ terraform show -no-color -json _cloudiac.tfplan >{{.TFPlanJsonFilePath}} {{- if 
 `))
 
 func (t *Task) stepPlan() (command string, err error) {
-	beforeCmds := ""
-	if len(t.req.StepBeforeCmds) > 0 {
-		beforeCmds = strings.Join(t.req.StepBeforeCmds, " && ")
-	}
-
-	afterCmds := ""
-	if len(t.req.StepAfterCmds) > 0 {
-		afterCmds = strings.Join(t.req.StepAfterCmds, " && ")
-	}
+	beforeCmds, afterCmds := getBeforeAfterCmds(t.req.StepBeforeCmds, t.req.StepAfterCmds)
 	return t.executeTpl(planCommandTpl, map[string]interface{}{
 		"Req":                t.req,
 		"TfVars":             t.req.Env.TfVarsFile,
@@ -815,4 +789,18 @@ func (t *Task) stepEnvScan() (command string, err error) {
 		"ScanInputFile":     t.up2Workspace(ScanInputFile),
 		"ScanInputMapFile":  t.up2Workspace(ScanInputMapFile),
 	})
+}
+
+func getBeforeAfterCmds(StepBeforeCmds, StepAfterCmds []string) (string, string) {
+	beforeCmds := ""
+	if len(StepBeforeCmds) > 0 {
+		beforeCmds = strings.Join(StepBeforeCmds, " && ")
+	}
+
+	afterCmds := ""
+	if len(StepAfterCmds) > 0 {
+		afterCmds = strings.Join(StepAfterCmds, " && ")
+	}
+
+	return beforeCmds, afterCmds
 }
