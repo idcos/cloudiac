@@ -567,10 +567,12 @@ func (t *Task) stepCheckout() (command string, err error) {
 }
 
 var initCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+{{if .Before}}{{.Before}} && \{{- end}}
 cd 'code/{{.Req.Env.Workdir}}' && \
 tfenv install $TFENV_TERRAFORM_VERSION && \
 tfenv use $TFENV_TERRAFORM_VERSION  && \
-terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }}
+terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }} {{- if .After}} && \
+{{.After}}{{- end}}
 `))
 
 // 将 workspace 根目录下的文件名转为可以在环境的 code/workdir 下访问的相对路径
@@ -586,25 +588,50 @@ func (t *Task) up2Workspace(name string) string {
 }
 
 func (t *Task) stepInit() (command string, err error) {
+	beforeCmds := ""
+	if len(t.req.StepBeforeCmds) > 0 {
+		beforeCmds = strings.Join(t.req.StepBeforeCmds, " && ")
+	}
+
+	afterCmds := ""
+	if len(t.req.StepAfterCmds) > 0 {
+		afterCmds = strings.Join(t.req.StepAfterCmds, " && ")
+	}
+
 	return t.executeTpl(initCommandTpl, map[string]interface{}{
 		"Req":             t.req,
 		"PluginCachePath": ContainerPluginCachePath,
+		"Before":          beforeCmds,
+		"After":           afterCmds,
 	})
 }
 
 var planCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+{{if .Before}}{{.Before}} && \{{- end}}
 cd 'code/{{.Req.Env.Workdir}}' && \
 terraform plan -input=false -out=_cloudiac.tfplan \
 {{if .TfVars}}-var-file={{.TfVars}}{{end}} \
 {{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }}&& \
-terraform show -no-color -json _cloudiac.tfplan >{{.TFPlanJsonFilePath}}
+terraform show -no-color -json _cloudiac.tfplan >{{.TFPlanJsonFilePath}} {{- if .After}} && \
+{{.After}}{{- end}}
 `))
 
 func (t *Task) stepPlan() (command string, err error) {
+	beforeCmds := ""
+	if len(t.req.StepBeforeCmds) > 0 {
+		beforeCmds = strings.Join(t.req.StepBeforeCmds, " && ")
+	}
+
+	afterCmds := ""
+	if len(t.req.StepAfterCmds) > 0 {
+		afterCmds = strings.Join(t.req.StepAfterCmds, " && ")
+	}
 	return t.executeTpl(planCommandTpl, map[string]interface{}{
 		"Req":                t.req,
 		"TfVars":             t.req.Env.TfVarsFile,
 		"TFPlanJsonFilePath": t.up2Workspace(TFPlanJsonFile),
+		"Before":             beforeCmds,
+		"After":              afterCmds,
 	})
 }
 
