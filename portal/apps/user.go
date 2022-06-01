@@ -266,8 +266,8 @@ func getNewPassword(oldPassword, newPassword, userPassword, userEmail string) (s
 }
 
 // ActiveUserEmail
-func ActiveUserEmail(c *ctx.ServiceContext, userId models.Id) (*models.User, e.Error) {
-	user, er := services.GetUserById(c.DB(), userId)
+func ActiveUserEmail(c *ctx.ServiceContext) (*models.User, e.Error) {
+	user, er := services.GetUserByEmail(c.DB(), c.Email)
 	if er != nil {
 		return nil, e.New(e.DBError, er)
 	}
@@ -277,7 +277,7 @@ func ActiveUserEmail(c *ctx.ServiceContext, userId models.Id) (*models.User, e.E
 	}
 	attrs := models.Attrs{}
 	attrs["active_status"] = "active"
-	return services.UpdateUser(c.DB(), userId, attrs)
+	return services.UpdateUser(c.DB(), user.Id, attrs)
 }
 
 // UpdateUser 用户信息编辑

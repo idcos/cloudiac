@@ -18,6 +18,7 @@ type Claims struct {
 	UserId   models.Id `json:"userId"`
 	Username string    `json:"username"`
 	IsAdmin  bool      `json:"isAdmin"`
+	Email    string    `json:"email"`
 	jwt.RegisteredClaims
 }
 
@@ -45,7 +46,7 @@ type ActiveateTokenClaims struct {
 
 func GenerateActivateToken(email string) (string, error) {
 	expire := time.Now().Add(time.Hour * 24)
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, ActiveateTokenClaims{
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		Email: email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expire),
