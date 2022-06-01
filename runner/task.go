@@ -611,9 +611,11 @@ func (t *Task) stepPlan() (command string, err error) {
 
 // 当指定了 plan 文件时不需要也不能传 -var-file 参数
 var applyCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+{{if .Before}}{{.Before}} && \{{- end}}
 cd 'code/{{.Req.Env.Workdir}}' && \
 terraform apply -input=false -auto-approve \
-{{ range $arg := .Req.StepArgs}}{{$arg}} {{ end }}_cloudiac.tfplan
+{{ range $arg := .Req.StepArgs}}{{$arg}} {{ end }}_cloudiac.tfplan {{- if .After}} && \
+{{.After}}{{- end}}
 
 result=$?
 
@@ -624,10 +626,13 @@ exit $result
 `))
 
 func (t *Task) stepApply() (command string, err error) {
+	beforeCmds, afterCmds := getBeforeAfterCmds(t.req.StepBeforeCmds, t.req.StepAfterCmds)
 	return t.executeTpl(applyCommandTpl, map[string]interface{}{
 		"Req":                 t.req,
 		"TFStateJsonFilePath": t.up2Workspace(TFStateJsonFile),
 		"TFProviderSchema":    t.up2Workspace(TFProviderSchema),
+		"Before":              beforeCmds,
+		"After":               afterCmds,
 	})
 }
 
