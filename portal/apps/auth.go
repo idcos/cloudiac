@@ -98,6 +98,23 @@ func createLdapUser(c *ctx.ServiceContext, username, email string) (*models.User
 	return user, nil
 }
 
+func CheckEmail(c *ctx.ServiceContext, form *forms.EmailForm) (interface{}, e.Error) {
+	c.AddLogField("check", fmt.Sprintf("user login: %s", form.Email))
+	user, er := services.GetUserByEmail(c.DB(), form.Email)
+
+	email := ""
+	activeStatus := ""
+
+	if er == nil {
+		email = user.Email
+		activeStatus = user.ActiveStatus
+	}
+	return &resps.UserEmailStatus{
+		Email:        email,
+		ActiveStatus: activeStatus,
+	}, nil
+}
+
 func refreshLdapUserRole(c *ctx.ServiceContext, user *models.User, dn string) e.Error {
 	tx := c.DB().Begin()
 	defer func() {
@@ -205,11 +222,12 @@ func Register(c *ctx.ServiceContext, form *forms.RegistryForm) (resp interface{}
 	var token string
 	err := c.DB().Transaction(func(tx *db.Session) error {
 		user, er = services.CreateUser(tx, models.User{
-			Name:     form.Name,
-			Email:    form.Email,
-			Password: hashPasswd,
-			Phone:    form.Phone,
-			Company:  form.Company,
+			Name:         form.Name,
+			Email:        form.Email,
+			Password:     hashPasswd,
+			Phone:        form.Phone,
+			Company:      form.Company,
+			ActiveStatus: "inactive",
 		})
 		if er != nil {
 			return er

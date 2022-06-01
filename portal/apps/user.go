@@ -265,6 +265,21 @@ func getNewPassword(oldPassword, newPassword, userPassword, userEmail string) (s
 	return newPassword, nil
 }
 
+// ActiveUserEmail
+func ActiveUserEmail(c *ctx.ServiceContext, userId models.Id) (*models.User, e.Error) {
+	user, er := services.GetUserById(c.DB(), userId)
+	if er != nil {
+		return nil, e.New(e.DBError, er)
+	}
+
+	if user.ActiveStatus == "active" {
+		return user, nil
+	}
+	attrs := models.Attrs{}
+	attrs["active_status"] = "active"
+	return services.UpdateUser(c.DB(), userId, attrs)
+}
+
 // UpdateUser 用户信息编辑
 func UpdateUser(c *ctx.ServiceContext, form *forms.UpdateUserForm) (*models.User, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update user %s", form.Id))
