@@ -467,6 +467,11 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 }
 
 func dbResult2ProjectOrEnvResStatResp(dbResults []ProjectOrEnvStatResult) []resps.ProjOrEnvResStatResp {
+	uniqDetails := make(map[models.Id]ProjectOrEnvStatResult)
+	for _, result := range dbResults {
+		uniqDetails[result.Id] = result
+	}
+
 	// resType -> projectId -> data
 	mCount := make(map[string]int)
 	m := make(map[string][]resps.DetailStatResp)
@@ -479,13 +484,9 @@ func dbResult2ProjectOrEnvResStatResp(dbResults []ProjectOrEnvStatResult) []resp
 		mCount[result.ResType] += result.Count
 
 		if _, ok := m[result.ResType]; !ok {
-			m[result.ResType] = make([]resps.DetailStatResp, 0)
+			m[result.ResType] = getFullDetails(uniqDetails)
 		}
-		m[result.ResType] = append(m[result.ResType], resps.DetailStatResp{
-			Id:    result.Id,
-			Name:  result.Name,
-			Count: result.Count,
-		})
+		setStatDetail(result, m)
 	}
 
 	var results = make([]resps.ProjOrEnvResStatResp, 0)
@@ -498,6 +499,28 @@ func dbResult2ProjectOrEnvResStatResp(dbResults []ProjectOrEnvStatResult) []resp
 	}
 
 	return results
+}
+
+func getFullDetails(uniqDetails map[models.Id]ProjectOrEnvStatResult) []resps.DetailStatResp {
+	fullDetails := make([]resps.DetailStatResp, 0)
+	for k, v := range uniqDetails {
+		fullDetails = append(fullDetails, resps.DetailStatResp{
+			Id:    k,
+			Name:  v.Name,
+			Count: 0,
+		})
+	}
+
+	return fullDetails
+}
+
+func setStatDetail(result ProjectOrEnvStatResult, m map[string][]resps.DetailStatResp) {
+	for i, detail := range m[result.ResType] {
+		if detail.Id != result.Id {
+			continue
+		}
+		m[result.ResType][i].Count = result.Count
+	}
 }
 
 func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, days int) ([]resps.ResGrowTrendResp, e.Error) {
