@@ -38,6 +38,23 @@ func GenerateToken(uid models.Id, name string, isAdmin bool, expireDuration time
 	return token.SignedString([]byte(configs.Get().JwtSecretKey))
 }
 
+type ActiveateTokenClaims struct {
+	jwt.RegisteredClaims
+	Email string `json:"email"`
+}
+
+func GenerateActivateToken(email string) (string, error) {
+	expire := time.Now().Add(time.Hour * 24)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, ActiveateTokenClaims{
+		Email: email,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expire),
+			Subject:   consts.JwtSubjectActivate,
+		},
+	})
+	return token.SignedString([]byte(configs.Get().JwtSecretKey))
+}
+
 func CreateToken(tx *db.Session, token models.Token) (*models.Token, e.Error) {
 	if token.Id == "" {
 		token.Id = token.NewId()

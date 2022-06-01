@@ -6,10 +6,12 @@ import (
 	"cloudiac/configs"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
+	"cloudiac/utils"
 	"fmt"
 	"net/http"
 	"strings"
@@ -38,7 +40,7 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, er e
 		}
 	}
 
-	if !loginSucceed && configs.Get().Ldap.LdapServer != "" { // 本地登录失败，尝试 ldap 登录
+	if !loginSucceed && configs.Get().LdapEnabled() { // 本地登录失败，尝试 ldap 登录
 		username, _, er := services.VerifyLdapPassword(form.Email, form.Password)
 		if er != nil {
 			return nil, er
@@ -179,4 +181,58 @@ func VerifySsoToken(c *ctx.ServiceContext, form *forms.VerifySsoTokenForm) (resp
 		UserId: user.Id,
 		Email:  user.Email,
 	}, nil
+}
+
+func Register(c *ctx.ServiceContext, form *forms.RegistryForm) (resp interface{}, er e.Error) {
+	if !configs.Get().EnableRegister {
+		return nil, e.New(e.ErrDisabled, http.StatusBadRequest)
+	}
+
+	user, er := services.GetUserByEmail(c.DB(), form.Email)
+	if er != nil && er.Code() != e.UserNotExists {
+		return nil, er
+	}
+	if user != nil && user.Id != "" {
+		return nil, e.New(e.UserAlreadyExists)
+	}
+
+	initPassword := utils.RandomStr(8)
+	hashPasswd, er := services.HashPassword(initPassword)
+	if er != nil {
+		return nil, er
+	}
+
+	var token string
+	err := c.DB().Transaction(func(tx *db.Session) error {
+		user, er = services.CreateUser(tx, models.User{
+			Name:     form.Name,
+			Email:    form.Email,
+			Password: hashPasswd,
+			Phone:    form.Phone,
+			Company:  form.Company,
+		})
+		if er != nil {
+			return er
+		}
+
+		var err error
+		token, err = services.GenerateActivateToken(user.Email)
+		if err != nil {
+			return e.New(e.InternalError, err)
+		}
+
+		if configs.Get().Demo.Enable {
+			// 创建演示组织
+			if er = services.CreateUserDemoOrgData(c, tx, user); er != nil {
+				return er
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return nil, services.SendActivateAccountMail(user, token)
 }

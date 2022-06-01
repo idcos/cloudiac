@@ -50,6 +50,8 @@ func main() {
 	conf := configs.Get().Log
 	logs.Init(conf.LogLevel, conf.LogPath, conf.LogMaxDays)
 
+	logs.Get().Debugf("%+v", configs.Get().Demo)
+
 	// 中间件及数据的初始化
 	{
 		db.Init(configs.Get().Mysql)

@@ -29,6 +29,7 @@
 10040,TooManyRetries,达到最大重试次数,too many retries
 10050,EncryptError,数据加密错误,data encryption error
 10051,DecryptError,数据解密错误,data dencryption error
+10052,ErrDisabled,已停用,function disabled
 10420,MailServerError,邮件服务错误,failed to send email
 10380,InvalidAccessKeyId,AccessKeyId错误,invalid access key id
 10381,InvalidAccessKeySecret,AccessKeySecret错误,invalid access key secret

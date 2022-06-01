@@ -286,6 +286,7 @@ func envWorkdirCheck(c *ctx.ServiceContext, repoId, repoRevision, workdir string
 }
 
 // CreateEnv 创建环境
+// nolint:cyclop
 func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDetail, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create env %s", form.Name))
 
@@ -368,6 +369,14 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		CronDriftExpress: form.CronDriftExpress,
 		OpenCronDrift:    form.OpenCronDrift,
 		PolicyEnable:     form.PolicyEnable,
+	}
+
+	if tpl.IsDemo {
+		// 演示环境强制设置自动销毁
+		envModel.IsDemo = true
+		envModel.TTL = consts.DemoEnvTTL
+		envModel.AutoDestroyAt = nil
+		envModel.AutoApproval = true
 	}
 
 	env, err := createEnvToDB(tx, c, form, envModel)
@@ -454,7 +463,7 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 	var er e.Error
 
 	// 环境状态过滤
-	query, er = services.FilterEnvStatus(query, form.Status)
+	query, er = services.FilterEnvStatus(query, form.Status, form.Deploying)
 	if er != nil {
 		return nil, er
 	}
@@ -639,6 +648,10 @@ func setAndCheckUpdateEnvAutoApproval(c *ctx.ServiceContext, tx *db.Session, att
 }
 
 func setAndCheckUpdateEnvDestroy(tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error {
+	if !form.HasKey("destroyAt") && !form.HasKey("destroyAfter") {
+		return nil
+	}
+
 	if form.HasKey("destroyAt") {
 		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
 		if err != nil {
@@ -702,12 +715,14 @@ func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs mod
 		attrs["tags"] = strings.TrimSpace(form.Tags)
 	}
 
-	if err := setAndCheckUpdateEnvAutoApproval(c, tx, attrs, env, form); err != nil {
-		return err
-	}
+	if !env.IsDemo { // 演示环境不允许修改自动审批和存活时间
+		if err := setAndCheckUpdateEnvAutoApproval(c, tx, attrs, env, form); err != nil {
+			return err
+		}
 
-	if err := setAndCheckUpdateEnvDestroy(tx, attrs, env, form); err != nil {
-		return err
+		if err := setAndCheckUpdateEnvDestroy(tx, attrs, env, form); err != nil {
+			return err
+		}
 	}
 
 	if err := setAndCheckUpdateEnvTriggers(c, tx, attrs, env, form); err != nil {
@@ -747,19 +762,21 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 
 	env, err := getEnvForUpdate(tx, c, form)
 	if err != nil {
+		_ = tx.Rollback()
 		return nil, err
 	}
 	if env.Locked {
+		_ = tx.Rollback()
 		return nil, e.New(e.EnvLocked, http.StatusBadRequest)
 	}
 	if !env.Archived {
 		if form.Archived {
+			// 环境归档时自动重新命名
 			form.Name = env.Name + "-archived-" + time.Now().Format("20060102150405")
 		}
 	}
 
 	attrs := models.Attrs{}
-
 	cronDriftParam, err := GetCronDriftParam(forms.CronDriftForm{
 		BaseForm:         form.BaseForm,
 		CronDriftExpress: form.CronDriftExpress,
@@ -1043,7 +1060,11 @@ func setAndCheckEnvAutoApproval(c *ctx.ServiceContext, env *models.Env, form *fo
 	return nil
 }
 
-func setAndCheckEnvDestroy(env *models.Env, form *forms.DeployEnvForm) e.Error {
+func setAndCheckEnvDestroy(tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error {
+	if !form.HasKey("destroyAt") && !form.HasKey("destroyAfter") {
+		return nil
+	}
+
 	if form.HasKey("destroyAt") {
 		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
 		if err != nil {
@@ -1097,13 +1118,13 @@ func setAndCheckEnvCron(env *models.Env, form *forms.DeployEnvForm) e.Error {
 }
 
 func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error {
-
-	if err := setAndCheckEnvAutoApproval(c, env, form); err != nil {
-		return err
-	}
-
-	if err := setAndCheckEnvDestroy(env, form); err != nil {
-		return err
+	if !env.IsDemo { // 演示环境不允许修改自动审批和自动销毁设置
+		if err := setAndCheckEnvAutoApproval(c, env, form); err != nil {
+			return err
+		}
+		if err := setAndCheckEnvDestroy(tx, env, form); err != nil {
+			return err
+		}
 	}
 
 	if err := setAndCheckEnvCron(env, form); err != nil {
@@ -1181,6 +1202,11 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	if err != nil {
 		return nil, err
 	}
+
+	if !form.HasKey("workdir") {
+		form.Workdir = env.Workdir
+	}
+
 	// 环境下云模版工作目录检查
 	if err = envWorkdirCheck(c, tpl.RepoId, form.Revision, form.Workdir, tpl.VcsId); err != nil {
 		return nil, err
@@ -1196,6 +1222,13 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		return nil, err
 	}
 	lg.Debugln("envDeploy -> setAndCheckEnvByForm finish")
+
+	if env.IsDemo && env.Status == models.EnvStatusDestroyed {
+		// 演示环境销毁后重新部署也强制设置自动销毁
+		env.TTL = consts.DemoEnvTTL
+		env.AutoDestroyAt = nil
+		env.AutoApproval = true
+	}
 
 	targets := make([]string, 0)
 	if len(strings.TrimSpace(form.Targets)) > 0 {

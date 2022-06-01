@@ -23,6 +23,7 @@ type SearchTemplateResp struct {
 	VcsAddr             string      `json:"vcsAddr"`
 	PolicyEnable        bool        `json:"policyEnable"`
 	PolicyStatus        string      `json:"policyStatus"`
+	IsDemo              bool        `json:"isDemo"`
 }
 
 type TemplateDetailResp struct {

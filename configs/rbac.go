@@ -107,13 +107,12 @@ var Polices = []Policy{
 
 	// 组织
 	{"root", "orgs", "*"},
-	{"login", "orgs", "read"},
-	{"admin", "orgs", "read/update"},
+	{"login", "orgs", "create/read"},
+	{"admin", "orgs", "create/update/read"},
 	{"admin", "orgs", "listuser/adduser/removeuser/updaterole"},
-	{"member", "orgs", "read/listuser"},
-	// {"member", "orgs", "read"},
+	{"member", "orgs", "create/read/listuser"},
 	{"complianceManager", "orgs", "read"},
-	{"manager", "orgs", "listuser/adduser"},
+	{"manager", "orgs", "create/read/listuser/adduser"},
 
 	// LDAP
 	{"admin", "ldap", "*"},

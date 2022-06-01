@@ -14,6 +14,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+/*
+配置
+*/
+
 type KafkaConfig struct {
 	Disabled     bool     `json:"disabled"`
 	Brokers      []string `yaml:"brokers"`
@@ -65,6 +69,32 @@ type LdapConfig struct {
 	EmailAttribute   string `yaml:"email_attribute"` // 用户定义邮箱字段名 默认值为mail
 	AccountAttribute string `yaml:"account_attribute"`
 	OUSearchBase     string `yaml:"ou_search_base"`
+}
+
+type DemoConfig struct {
+	Enable bool `yaml:"enable"` // 是否启用演示组织(默认为否)
+
+	VcsName    string `yaml:"vcs_name"`
+	VcsType    string `yaml:"vcs_type"`
+	VcsAddress string `yaml:"vcs_address"`
+	VcsToken   string `yaml:"vcs_token"`
+
+	ProjectName string `yaml:"project_name"`
+
+	Templates []DemoTemplate `yaml:"templates"`
+}
+
+type DemoTemplate struct {
+	Name      string `yaml:"name"`
+	RepoId    string `yaml:"repo_id"`
+	Revison   string `yaml:"revision"`
+	TfVars    string `yaml:"tf_vars"`
+	Variables []struct {
+		Name        string `yaml:"name"`
+		Value       string `yaml:"value"`
+		Sensitive   bool   `yaml:"sensitive"`
+		Description string `yaml:"description"`
+	} `yaml:"variables"`
 }
 
 func (c *RunnerConfig) mustAbs(path string) string {
@@ -135,7 +165,11 @@ type Config struct {
 	Policy             PolicyConfig     `yaml:"policy"`
 	Ldap               LdapConfig       `yaml:"ldap"`
 	CostServe          string           `yaml:"cost_serve"`
-	EnableTaskAbort    bool             `yaml:"enableTaskAbort"`
+
+	EnableTaskAbort bool `yaml:"enableTaskAbort"` // 启用任务中止功能
+	EnableRegister  bool `yaml:"enableRegister"`  // 启用注册
+
+	Demo DemoConfig `yaml:"demo"` // 演示组织配置
 }
 
 const (
@@ -155,6 +189,10 @@ var (
 		},
 	}
 )
+
+func (c *Config) LdapEnabled() bool {
+	return c.Ldap.LdapServer != ""
+}
 
 func parseConfig(filename string, out interface{}) error {
 	bs, err := ioutil.ReadFile(filename)

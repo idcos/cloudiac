@@ -49,6 +49,7 @@ type Template struct {
 
 	KeyId Id `json:"keyId" gorm:"size:32"` // 部署密钥ID
 
+	IsDemo bool `json:"isDemo"`
 }
 
 func (Template) TableName() string {

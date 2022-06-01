@@ -8,15 +8,15 @@ import (
 )
 
 type VariableBody struct {
-	Scope       string `json:"scope" gorm:"not null;type:enum('org','template','project','env')"`
-	Type        string `json:"type" gorm:"not null;type:enum('environment','terraform','ansible')"`
-	Name        string `json:"name" gorm:"size:64;not null"`
-	Value       string `json:"value" gorm:"type:text"`
-	Sensitive   bool   `json:"sensitive,omitempty" gorm:"default:false"`
-	Description string `json:"description,omitempty" gorm:"type:text"`
+	Scope       string `yaml:"scope" json:"scope" gorm:"not null;type:enum('org','template','project','env')"`
+	Type        string `yaml:"type" json:"type" gorm:"not null;type:enum('environment','terraform','ansible')"`
+	Name        string `yaml:"name" json:"name" gorm:"size:64;not null"`
+	Value       string `yaml:"value" json:"value" gorm:"type:text"`
+	Sensitive   bool   `yaml:"sensitive" json:"sensitive,omitempty" gorm:"default:false"`
+	Description string `yaml:"description" json:"description,omitempty" gorm:"type:text"`
 
 	// 继承关系依赖数据创建枚举的顺序，后续新增枚举值时请按照新的继承顺序增加
-	Options StrSlice `json:"options" gorm:"type:json"`
+	Options StrSlice `yaml:"options" json:"options" gorm:"type:json"` // 可选值列表
 }
 
 type Variable struct {

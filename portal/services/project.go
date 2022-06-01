@@ -202,7 +202,6 @@ func GetProjectEnvResStat(tx *db.Session, projectId models.Id, limit int) ([]res
 		iac_resource.env_id as id,
 		iac_env.name as name,
 		iac_resource.type as res_type,
-		DATE_FORMAT(iac_resource.applied_at, "%Y-%m") as date,
 		count(*) as count
 	from
 		iac_resource
@@ -211,33 +210,28 @@ func GetProjectEnvResStat(tx *db.Session, projectId models.Id, limit int) ([]res
 		and iac_env.id = iac_resource.env_id
 	where
 		iac_env.project_id = 'p-c8gg9josm56injdlb86g'
-		AND (DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(CURDATE(), "%Y-%m")
-			OR
-		DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m"))
 	group by
-		date,
 		iac_resource.type,
 		iac_resource.env_id
 	limit 10;
 	*/
 
-	query := tx.Model(&models.Resource{}).Select(`iac_resource.env_id as id, iac_env.name as name, iac_resource.type as res_type, DATE_FORMAT(iac_resource.applied_at, "%Y-%m") as date, count(*) as count`)
+	query := tx.Model(&models.Resource{}).Select(`iac_resource.env_id as id, iac_env.name as name, iac_resource.type as res_type, count(*) as count`)
 
 	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 	query = query.Where(`iac_env.project_id = ?`, projectId)
-	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(CURDATE(), "%Y-%m") OR DATE_FORMAT(applied_at, "%Y-%m") = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), "%Y-%m")`)
 
-	query = query.Group("date, iac_resource.type,iac_resource.env_id")
+	query = query.Group("iac_resource.type,iac_resource.env_id")
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
 
-	var dbResults []ProjectStatResult
+	var dbResults []ProjectOrEnvStatResult
 	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	return dbResult2ProjectResStatResp(dbResults), nil
+	return dbResult2ProjectOrEnvResStatResp(dbResults), nil
 }
 
 // GetProjectResGrowTrend 最近7天资源及费用趋势
@@ -270,7 +264,7 @@ func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([]re
 
 	query = query.Group("date, iac_resource.env_id").Order("date")
 
-	var dbResults []ProjectStatResult
+	var dbResults []ProjectOrEnvStatResult
 	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
@@ -314,7 +308,7 @@ func GetResGrowTrendByProjects(tx *db.Session, projectIds []models.Id, days int)
 
 	query = query.Group("iac_resource.project_id, date").Order("date")
 
-	var dbResults []ProjectStatResult
+	var dbResults []ProjectOrEnvStatResult
 	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}

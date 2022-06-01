@@ -12,6 +12,8 @@ type Project struct {
 	Description string `json:"description" gorm:"type:text"`      //组织详情
 	CreatorId   Id     `json:"creatorId" form:"creatorId" `       //用户id
 	Status      string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:状态"`
+
+	IsDemo bool `json:"isDemo"`
 }
 
 func (Project) TableName() string {
