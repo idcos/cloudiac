@@ -34,13 +34,17 @@ func checkToken(c *ctx.GinRequest, tokenStr string) (models.Id, error) {
 		return apiTokenOrgId, nil
 	}
 
-	if claims, ok := token.Claims.(*services.Claims); ok && token.Valid &&
-		claims.Subject == consts.JwtSubjectUserAuth {
-
-		c.Service().UserId = claims.UserId
-		c.Service().Username = claims.Username
-		c.Service().IsSuperAdmin = claims.IsAdmin
-		c.Service().UserIpAddr = c.ClientIP()
+	if claims, ok := token.Claims.(*services.Claims); ok && token.Valid {
+		if claims.Subject == consts.JwtSubjectUserAuth {
+			c.Service().UserId = claims.UserId
+			c.Service().Username = claims.Username
+			c.Service().IsSuperAdmin = claims.IsAdmin
+			c.Service().UserIpAddr = c.ClientIP()
+		} else if claims.Subject == consts.JwtSubjectActivate {
+			c.Service().Email = claims.Email
+		} else {
+			return apiTokenOrgId, e.New(e.InvalidToken)
+		}
 	} else {
 		return apiTokenOrgId, e.New(e.InvalidToken)
 	}
@@ -114,6 +118,7 @@ func Auth(c *ctx.GinRequest) {
 		c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("project disabled")), http.StatusForbidden)
 		return
 	}
+
 	if c.Service().IsSuperAdmin ||
 		services.UserHasOrgRole(c.Service().UserId, c.Service().OrgId, consts.OrgRoleAdmin) ||
 		services.UserHasProjectRole(c.Service().UserId, c.Service().OrgId, c.Service().ProjectId, "") {
