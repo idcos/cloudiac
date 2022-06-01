@@ -193,8 +193,24 @@ func (User) SearchAllUsers(c *ctx.GinRequest) {
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
-// @router /activation/ [get]
+// @router /activation [post]
 // @Success 200 {object} ctx.JSONResult{result=models.User}
 func (User) ActiveUserEmail(c *ctx.GinRequest) {
 	c.JSONResult(apps.ActiveUserEmail(c.Service()))
+}
+
+// ActiveUserEmailRetry 重新发送邮件
+// @Tags 邮箱
+// @Summary 重新发送邮件
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Param form query forms.EmailForm true "parameter"
+// @router /activation/retry [get]
+// @Success 200 {object} ctx.JSONResult{}
+func (User) ActiveUserEmailRetry(c *ctx.GinRequest) {
+	form := forms.EmailForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.ActiveUserEmailRetry(c.Service(), &form))
 }

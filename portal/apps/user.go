@@ -266,18 +266,38 @@ func getNewPassword(oldPassword, newPassword, userPassword, userEmail string) (s
 }
 
 // ActiveUserEmail
-func ActiveUserEmail(c *ctx.ServiceContext) (*models.User, e.Error) {
+func ActiveUserEmail(c *ctx.ServiceContext) (interface{}, e.Error) {
 	user, er := services.GetUserByEmail(c.DB(), c.Email)
 	if er != nil {
 		return nil, e.New(e.DBError, er)
 	}
 
+	type userActivateStatus struct {
+		isActivate bool
+	}
+
 	if user.ActiveStatus == consts.UserEmailActivate {
-		return user, nil
+		return &userActivateStatus{
+			isActivate: true,
+		}, nil
 	}
 	attrs := models.Attrs{}
 	attrs["active_status"] = consts.UserEmailActivate
 	return services.UpdateUser(c.DB(), user.Id, attrs)
+}
+
+// ActiveUserEmailRetry
+func ActiveUserEmailRetry(c *ctx.ServiceContext, form *forms.EmailForm) (interface{}, e.Error) {
+	user, er := services.GetUserByEmail(c.DB(), form.Email)
+	if er != nil {
+		return nil, e.New(e.DBError, er)
+	}
+
+	token, err := services.GenerateActivateToken(user.Email)
+	if err != nil {
+		return nil, e.New(e.InternalError, err)
+	}
+	return nil, services.SendActivateAccountMail(user, token)
 }
 
 // UpdateUser 用户信息编辑

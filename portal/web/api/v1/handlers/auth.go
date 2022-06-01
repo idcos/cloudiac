@@ -97,7 +97,7 @@ func (a Auth) Registry(c *ctx.GinRequest) {
 // @Accept json
 // @Param body formData forms.EmailForm true "parameter"
 // @router /auth/email [get]
-// @Success 200 {object} ctx.JSONResult{result=resps.CheckEmailResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.UserEmailStatus}
 func (a Auth) CheckEmail(c *ctx.GinRequest) {
 	form := forms.EmailForm{}
 	if err := c.Bind(&form); err != nil {

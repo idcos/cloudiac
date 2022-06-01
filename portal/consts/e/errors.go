@@ -86,7 +86,7 @@ const (
 	TokenExpired       = 20005
 	InvalidOrgId       = 20006 // 无效的 orgId
 	InvalidProjectId   = 20007 // 无效的 projectId
-	InvalidActiveEmail = 20011 // 无效的 projectId
+	InvalidActiveEmail = 20011 // 未激活的邮箱
 
 	//// 权限 201
 	PermissionDeny   = 20110
