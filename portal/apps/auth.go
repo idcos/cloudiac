@@ -12,7 +12,6 @@ import (
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
-	"cloudiac/utils"
 	"fmt"
 	"net/http"
 	"strings"
@@ -23,6 +22,7 @@ import (
 func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, er e.Error) {
 	c.AddLogField("action", fmt.Sprintf("user login: %s", form.Email))
 	user, er := services.GetUserByEmail(c.DB(), form.Email)
+
 	loginSucceed := false
 	localUserNotExists := false
 
@@ -34,6 +34,9 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, er e
 			return nil, er
 		}
 	} else {
+		if user.ActiveStatus == consts.UserEmailINActivate {
+			return nil, e.New(e.InvalidActiveEmail)
+		}
 		if valid, err := services.VerifyLocalPassword(user, form.Password); err != nil {
 			return nil, e.New(e.InternalError, http.StatusInternalServerError)
 		} else if valid {
@@ -56,11 +59,9 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, er e
 			}
 		}
 	}
-
 	if !loginSucceed {
 		return nil, e.New(e.InvalidPassword)
 	}
-
 	dn, er := services.QueryLdapUserDN(user.Email)
 	if er != nil {
 		c.Logger().Debugf("query user dn error: %v", er)
@@ -214,8 +215,8 @@ func Register(c *ctx.ServiceContext, form *forms.RegistryForm) (resp interface{}
 		return nil, e.New(e.UserAlreadyExists)
 	}
 
-	initPassword := utils.RandomStr(8)
-	hashPasswd, er := services.HashPassword(initPassword)
+	//initPassword := utils.RandomStr(8)
+	hashPasswd, er := services.HashPassword(form.Password)
 	if er != nil {
 		return nil, er
 	}

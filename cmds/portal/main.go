@@ -7,14 +7,12 @@ import (
 	"cloudiac/portal/apps"
 	"cloudiac/portal/task_manager"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/pkg/errors"
 
 	"cloudiac/cmds/common"
-	iac_common "cloudiac/common"
 	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
@@ -78,9 +76,9 @@ func main() {
 	}
 
 	// 注册到 consul
-	if err := common.CheckAndReConnectConsul(iac_common.IacPortalServiceName, configs.Get().Consul.ServiceID); err != nil {
-		log.Fatal(err)
-	}
+	//if err := common.CheckAndReConnectConsul(iac_common.IacPortalServiceName, configs.Get().Consul.ServiceID); err != nil {
+	//	log.Fatal(err)
+	//}
 
 	// 启动后台 worker
 	go task_manager.Start(configs.Get().Consul.ServiceID)

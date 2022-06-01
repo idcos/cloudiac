@@ -59,7 +59,7 @@ func Register(g *gin.RouterGroup) {
 	g.Use(w(middleware.Auth)) // 解析 header token
 
 	// 激活邮箱
-	g.GET("/register/activation/", w(handlers.User{}.ActiveUserEmail))
+	g.GET("/activation/", w(handlers.User{}.ActiveUserEmail))
 	// 允许搜索组织内所有用户信息
 	g.GET("/users/all", w(handlers.User{}.SearchAllUsers))
 	// 创建单点登录 token
