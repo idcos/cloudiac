@@ -222,7 +222,7 @@ type UpdateEnvTagsForm struct {
 	BaseForm
 
 	Id   models.Id `uri:"id" json:"id" swaggerignore:"true" binding:"required,startswith=env-,max=32"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
-	Tags string    `json:"tags" form:"tags" binding:"required,max=255"`
+	Tags string    `json:"tags" form:"tags" binding:"max=255"`
 }
 
 type EnvLockForm struct {

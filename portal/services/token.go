@@ -45,7 +45,7 @@ type ActiveateTokenClaims struct {
 }
 
 func GenerateActivateToken(email string) (string, error) {
-	expire := time.Now().Add(time.Hour * 24)
+	expire := time.Now().Add(time.Hour * 25)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		Email: email,
 		RegisteredClaims: jwt.RegisteredClaims{

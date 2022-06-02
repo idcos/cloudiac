@@ -28,6 +28,7 @@ type SearchOrganizationForm struct {
 
 	Q      string `form:"q" json:"q" binding:""`                                                                // 组织名称，支持模糊查询
 	Status string `form:"status" json:"status" binding:"omitempty,oneof=enable disable" enums:"enable,disable"` // 组织状态
+	IsDemo bool   `form:"isDemo" json:"IsDemo"`                                                                 // 演示组织
 }
 
 type DeleteOrganizationForm struct {
