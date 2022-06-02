@@ -654,6 +654,7 @@ export ANSIBLE_HOST_KEY_CHECKING="False"
 export ANSIBLE_TF_DIR="."
 export ANSIBLE_NOCOWS="1"
 
+{{if .Before}}{{.Before}} && \{{- end}}
 cd 'code/{{.Req.Env.Workdir}}' && ansible-playbook \
 --inventory {{.AnsibleStateAnalysis}} \
 --user "root" \
@@ -663,15 +664,19 @@ cd 'code/{{.Req.Env.Workdir}}' && ansible-playbook \
 --extra @{{.Req.Env.PlayVarsFile}} \
 {{ end -}}
 {{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }} \
-{{.Req.Env.Playbook}}
+{{.Req.Env.Playbook}} {{- if .After}} && \
+{{.After}}{{- end}}
 `))
 
 func (t *Task) stepPlay() (command string, err error) {
+	beforeCmds, afterCmds := getBeforeAfterCmds(t.req.StepBeforeCmds, t.req.StepAfterCmds)
 	return t.executeTpl(playCommandTpl, map[string]interface{}{
 		"Req":                  t.req,
 		"IacPlayVars":          t.up2Workspace(CloudIacPlayVars),
 		"PrivateKeyPath":       t.up2Workspace("ssh_key"),
 		"AnsibleStateAnalysis": filepath.Join(ContainerAssetsDir, AnsibleStateAnalysisName),
+		"Before":               beforeCmds,
+		"After":                afterCmds,
 	})
 }
 
