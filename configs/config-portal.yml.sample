@@ -63,24 +63,24 @@ ldap:
   account_attribute: "${LDAP_ACCOUNT_ATTRIBUTE}"
 
 demo:
-  enable: false
+  enable: ${DEMO_ENABLE}
   vcs_name: "演示 VCS"
-  vcs_type: "github"
-  vcs_address: "https://api.github.com"
-  vcs_token: "<your vcs token>"
+  vcs_type: "${DEMO_VCS_TYPE}"
+  vcs_address: "${DEMO_VCS_ADDRESS}"
+  vcs_token: "${DEMO_VCS_TOKEN}"
   project_name: "演示项目"
   templates: 
     - name: 演示云模板
-      repo_id: ""  # 仓库的数字 id
+      repo_id: "${DEMO_TEM_REPO_ID}"  # 仓库的数字 id
       revision: "master"
       tfvars: ""
       variables: 
-        - name: ALICLOUD_ACCESS_KEY
-          value: "ak"
+        - name: "${DEMO_TEM_AK_NAME}"
+          value: "${DEMO_TEM_AK_VALUE}"
           sensitive: false
           description: "演示用 ak"
-        - name: ALICLOUD_SECRET_KEY
-          value: "sk"
+        - name: "${DEMO_TEM_SK_NAME}"
+          value: "${DEMO_TEM_SK_VALUE}"
           sensitive: true
           description: "演示用 sk"
 
