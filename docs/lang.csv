@@ -64,7 +64,7 @@
 10203,NameDuplicate,名称重复,user already exists
 30914,TaskStepNotExists,步骤不存在,task step does not exists
 20007,InvalidProjectId,无效的项目id,invalid project id
-20011,InvalidActiveEmail,未激活的邮箱,inactive user email
+20011,InvalidActiveEmail,邮箱未激活,inactive user email
 30916,TaskNotHaveStep,任务无步骤,task have no steps
 30917,TaskAborting,任务正在中止,task is aborting
 30918,TaskAborted,任务已中止,task aborted

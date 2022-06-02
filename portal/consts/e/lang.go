@@ -268,7 +268,7 @@ var errorMsgs = map[int]map[string]string{
 	},
 	InvalidActiveEmail: {
 		"en-US": "inactive user email",
-		"zh-CN": "未激活的邮箱",
+		"zh-CN": "邮箱未激活",
 	},
 	TaskNotHaveStep: {
 		"en-US": "task have no steps",
