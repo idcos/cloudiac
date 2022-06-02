@@ -87,6 +87,10 @@ func SearchOrganization(c *ctx.ServiceContext, form *forms.SearchOrganizationFor
 		query = query.Where("iac_org.status = 'enable'")
 	}
 
+	if form.IsDemo == false {
+		query = query.Where("iac_org.is_demo = 'false'")
+	}
+
 	if form.Q != "" {
 		query = query.WhereLike("iac_org.name", form.Q)
 	}
