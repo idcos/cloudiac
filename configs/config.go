@@ -85,11 +85,13 @@ type DemoConfig struct {
 }
 
 type DemoTemplate struct {
-	Name      string `yaml:"name"`
-	RepoId    string `yaml:"repo_id"`
-	Revison   string `yaml:"revision"`
-	TfVars    string `yaml:"tf_vars"`
-	Variables []struct {
+	Name         string `yaml:"name"`
+	RepoId       string `yaml:"repo_id"`
+	Revison      string `yaml:"revision"`
+	TfVars       string `yaml:"tf_vars"`
+	TfVersion    string `yaml:"tf_version"`
+	RepoFullName string `yaml:"repo_full_name"`
+	Variables    []struct {
 		Name        string `yaml:"name"`
 		Value       string `yaml:"value"`
 		Sensitive   bool   `yaml:"sensitive"`
