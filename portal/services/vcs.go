@@ -148,6 +148,7 @@ func DeleteVcs(tx *db.Session, id models.Id) e.Error {
 
 type TemplateVariable struct {
 	Description string `json:"description" form:"description" `
+	Sensitive   bool   `json:"sensitive" form:"sensitive"`
 	Value       string `json:"value" form:"value" `
 	Name        string `json:"name" form:"name" `
 }
@@ -195,6 +196,7 @@ func ParseTfVariables(filename string, content []byte) ([]TemplateVariable, e.Er
 				tv = append(tv, TemplateVariable{
 					Value:       strings.Trim(string(valJSON), "\""),
 					Name:        s.Name,
+					Sensitive:   s.Sensitive,
 					Description: s.Description,
 				})
 			}
