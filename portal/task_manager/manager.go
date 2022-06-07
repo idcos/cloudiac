@@ -1478,8 +1478,6 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 			sysEnvs["CLOUDIAC_USERNAME"] = user.Name
 		}
 	}
-	fmt.Println(req.CreatorId, "CreatorId")
-	fmt.Println(sysEnvs["CLOUDIAC_USERNAME"], "sysEnvs[\"CLOUDIAC_USERNAME\"]")
 
 	if req.Env.Id != "" {
 		env, err := services.GetEnvById(db.Get(), models.Id(req.Env.Id))
