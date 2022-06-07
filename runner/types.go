@@ -62,6 +62,8 @@ type RunTaskReq struct {
 
 	ContainerId string `json:"containerId"`
 	PauseTask   bool   `json:"pauseTask"` // 本次执行结束后暂停任务
+
+	CreatorId string `json:"creatorId"`
 }
 
 type Repository struct {
