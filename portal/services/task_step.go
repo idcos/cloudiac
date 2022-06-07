@@ -93,20 +93,24 @@ func IsTerraformStep(typ string) bool {
 
 func ChangeTaskStepStatusAndExitCode(dbSess *db.Session, task models.Tasker, taskStep *models.TaskStep,
 	status, message string, exitCode int) e.Error {
-	taskStep.ExitCode = exitCode
-	return ChangeTaskStepStatus(dbSess, task, taskStep, status, message)
+	return changeTaskStepStatusAndExitCode(dbSess, task, taskStep, exitCode, status, message)
 }
 
 // ChangeTaskStepStatus 修改步骤状态并更新 taskStep
 // - 该函数会同步修改任务状态
 // - 该函数仅修改 status, message, start_at, end_at 字段
 func ChangeTaskStepStatus(dbSess *db.Session, task models.Tasker, taskStep *models.TaskStep, status, message string) e.Error {
+	return changeTaskStepStatusAndExitCode(dbSess, task, taskStep, taskStep.ExitCode, status, message)
+}
+
+func changeTaskStepStatusAndExitCode(dbSess *db.Session, task models.Tasker, taskStep *models.TaskStep, exitCode int, status, message string) e.Error {
 	if taskStep.Status == status && message == "" {
 		return nil
 	}
 
 	updateAttrs := models.Attrs{
-		"message": message,
+		"message":   message,
+		"exit_code": exitCode,
 	}
 	taskStep.Message = message
 	if status != "" {
