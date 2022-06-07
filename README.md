@@ -66,10 +66,4 @@ curl -fsSL https://raw.githubusercontent.com/idcos/cloudiac-docs/master/script/c
 
 <img src="https://user-images.githubusercontent.com/11749193/147626753-ca8069dc-3b6e-4989-ad7c-541ba97794ed.png" alt="助手二维码" width="200"/>
 
-### 技术栈
-
--   后端: [Golang](https://go.dev/)
--   前端: [React](https://reactjs.org/)
--   中间件: [MySQL](https://www.mysql.com/), [Kafka](https://kafka.apache.org/), [Consul](https://www.consul.io/)
--   基础设施: [Docker](https://www.docker.com/), [Kubernetes](https://kubernetes.io/)
 
