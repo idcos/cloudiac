@@ -9,7 +9,7 @@
 </p>
 <hr />
 
-CloudIaC 是基于基础设施即代码构建的云环境自动化管理平台。
+CloudIaC https://cloudiac.org 是基于基础设施即代码构建的云环境自动化管理平台。
 
 CloudIaC 将易于使用的界面与强大的治理工具相结合，让您和您团队的成员可以快速轻松的在云中部署和管理环境。
 
@@ -57,7 +57,7 @@ curl -fsSL https://raw.githubusercontent.com/idcos/cloudiac-docs/master/script/c
 
 如果您在使用过程中有任何疑问或建议，欢迎提交 [GitHub Issue](https://github.com/idcos/cloudiac/issues/new/choose) 或加入我们的社区进一步交流沟通。
 
-项目官网: https://www.cloudiac.org/
+项目官网: https://cloudiac.org
 
 #### 微信交流群
 欢迎加入CloudIaC开源技术交流群：
