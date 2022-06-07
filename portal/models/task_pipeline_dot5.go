@@ -79,7 +79,7 @@ destroy:
       type: terraformDestroy
       name: Terraform Apply
 
-# scan 和 parse 暂不开发自定义工作流
+# scan 和 parse 暂不开放自定义工作流
 envScan:
   steps:
     - type: checkout
