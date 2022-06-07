@@ -1474,8 +1474,10 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 		}
 		if user.Name == "" {
 			sysEnvs["CLOUDIAC_USERNAME"] = user.Email
+			sysEnvs["TF_VAR_cloudiac_username"] = user.Email
 		} else {
 			sysEnvs["CLOUDIAC_USERNAME"] = user.Name
+			sysEnvs["TF_VAR_cloudiac_username"] = user.Name
 		}
 	}
 
