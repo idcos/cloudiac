@@ -73,6 +73,9 @@ type PipelineDot5 struct {
 	Plan    PipelineDot5Task `json:"plan" yaml:"plan"`
 	Apply   PipelineDot5Task `json:"apply" yaml:"apply"`
 	Destroy PipelineDot5Task `json:"destroy" yaml:"destroy"`
+
+	PolicyScan PipelineDot5Task `json:"scan" yaml:"scan"`
+	EnvScan    PipelineDot5Task `json:"envScan" yaml:"envScan"`
 }
 
 type PipelineDot5Task struct {
@@ -91,6 +94,10 @@ func (p PipelineDot5) GetTask(typ string) PipelineDot5Task {
 		return p.Apply
 	case common.TaskJobDestroy:
 		return p.Destroy
+	case common.TaskJobScan:
+		return p.PolicyScan
+	case common.TaskJobEnvScan:
+		return p.EnvScan
 	default:
 		panic(fmt.Errorf("unknown pipeline job type '%s'", typ))
 	}
@@ -117,11 +124,18 @@ func GetTaskFlowWithPipelineDot5(pDot5 PipelineDot5Task, taskNames []string) Pip
 	p := PipelineTaskFlow{}
 	p.Image = pDot5.Image
 	p.OnSuccess = pDot5.OnSuccess
+	if p.OnSuccess != nil {
+		p.OnSuccess.Type = common.TaskStepCommand
+	}
 	p.OnFail = pDot5.OnFail
+	if p.OnFail != nil {
+		p.OnFail.Type = common.TaskStepCommand
+	}
 
 	p.Steps = make([]PipelineStep, 0)
 	steps := pDot5.Steps
 	for _, stepName := range taskNames {
+		steps[stepName].Type = stepName
 		p.Steps = append(p.Steps, *steps[stepName])
 	}
 
