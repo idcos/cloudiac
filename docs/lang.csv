@@ -98,6 +98,7 @@
 30816,EnvCheckAutoApproval,配置自动纠漂移、推送到分支时重新部署时，必须配置自动审批,auto approval is required 
 30817,EnvLockFailedTaskActive,环境锁定失败，环境下有活跃任务,environment lock failed. Active tasks in the environment
 30818,EnvLocked,环境已锁定,environment locked
+30819,EnvLockedFailedEnvIsDemo,环境锁定失败，演示环境不能被锁定,environment locked failed. this is demo environment
 30910,TaskAlreadyExists,任务已经存在,task already exists
 30911,TaskNotExists,任务不存在,task does not exists
 10440,VcsError,VCS仓库错误,unknown VCS error

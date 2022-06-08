@@ -1515,6 +1515,17 @@ func EnvLock(c *ctx.ServiceContext, form *forms.EnvLockForm) (interface{}, e.Err
 		return nil, e.New(e.EnvLockFailedTaskActive)
 	}
 
+	env, err := services.GetEnvDetailById(tx, form.Id)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	if env.IsDemo {
+		_ = tx.Rollback()
+		return nil, e.New(e.EnvLockedFailedEnvIsDemo)
+	}
+
 	if err := services.EnvLock(tx, form.Id); err != nil {
 		_ = tx.Rollback()
 		return nil, err
