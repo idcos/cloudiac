@@ -77,6 +77,9 @@ func (git *gitlabVcsIface) TokenCheck() error {
 
 	_, response, err := git.gitConn.Projects.ListProjects(opt)
 	if err != nil {
+		if strings.Contains(err.Error(), "Unauthorized") {
+			return e.New(e.VcsInvalidToken, err)
+		}
 		return err
 	}
 

@@ -35,7 +35,7 @@ func CreateVcs(c *ctx.ServiceContext, form *forms.CreateVcsForm) (interface{}, e
 		VcsToken: token,
 	}
 	if err := vcsrv.VerifyVcsToken(&v); err != nil {
-		return nil, e.AutoNew(err, e.DBError)
+		return nil, e.AutoNew(err, e.VcsInvalidToken)
 	}
 
 	vcs, err := services.CreateVcs(c.DB(), v)
