@@ -1468,7 +1468,7 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 	sysEnvs["TF_VAR_cloudiac_commit"] = req.RepoCommitId
 
 	if req.CreatorId != "" {
-		user, err := services.GetUserById(db.Get(), models.Id(req.CreatorId))
+		user, err := services.GetUserByIdRaw(db.Get(), models.Id(req.CreatorId))
 		if err != nil {
 			return errors.Wrapf(err, "query user %s", req.CreatorId)
 		}
