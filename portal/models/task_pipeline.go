@@ -5,6 +5,7 @@ package models
 import (
 	"bytes"
 	"cloudiac/portal/consts/e"
+	"database/sql/driver"
 	"fmt"
 
 	"gopkg.in/yaml.v2"
@@ -46,6 +47,14 @@ type PipelineStep struct {
 	BeforeCmds StrSlice `json:"before,omitempty" yaml:"before" gorm:"type:text"`
 	AfterCmds  StrSlice `json:"after,omitempty" yaml:"after" gorm:"type:text"`
 	Args       StrSlice `json:"args,omitempty" yaml:"args" gorm:"type:text"`
+}
+
+func (v PipelineTaskFlow) Value() (driver.Value, error) {
+	return MarshalValue(v)
+}
+
+func (v *PipelineTaskFlow) Scan(value interface{}) error {
+	return UnmarshalValue(value, v)
 }
 
 const DefaultPipelineVersion = "0.4"

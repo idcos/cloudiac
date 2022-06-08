@@ -76,6 +76,7 @@ type PipelineDot5 struct {
 }
 
 type PipelineDot5Task struct {
+	Image string                   `json:"image,omitempty" yaml:"image"`
 	Steps map[string]*PipelineStep `json:"steps,omitempty" yaml:"steps"`
 
 	OnSuccess *PipelineStep `json:"onSuccess,omitempty" yaml:"onSuccess"`
@@ -96,7 +97,8 @@ func (p PipelineDot5) GetTask(typ string) PipelineDot5Task {
 }
 
 func (p PipelineDot5) GetTaskFlowWithPipeline(typ string) PipelineTaskFlow {
-	return PipelineTaskFlow{}
+	task := p.GetTask(typ)
+	return GetTaskFlowWithPipelineDot5(task, mTaskStepNames[typ])
 }
 
 func (p PipelineDot5) GetVersion() string {
@@ -111,9 +113,26 @@ func (v *PipelineDot5) Scan(value interface{}) error {
 	return UnmarshalValue(value, v)
 }
 
-var PlanTaskStepNames = []string{common.TaskStepCheckout, common.TaskStepTfInit, common.TaskStepTfPlan, common.TaskStepEnvScan}
-var ApplyTaskStepNames = []string{common.TaskStepCheckout, common.TaskStepTfInit, common.TaskStepTfPlan, common.TaskStepEnvScan, common.TaskStepTfApply, common.TaskStepAnsiblePlay}
-var DestroyTaskStepNames = []string{common.TaskStepCheckout, common.TaskStepTfInit, common.TaskStepTfPlan, common.TaskStepEnvScan, common.TaskStepTfDestroy}
+func GetTaskFlowWithPipelineDot5(pDot5 PipelineDot5Task, taskNames []string) PipelineTaskFlow {
+	p := PipelineTaskFlow{}
+	p.Image = pDot5.Image
+	p.OnSuccess = pDot5.OnSuccess
+	p.OnFail = pDot5.OnFail
+
+	p.Steps = make([]PipelineStep, 0)
+	steps := pDot5.Steps
+	for _, stepName := range taskNames {
+		p.Steps = append(p.Steps, *steps[stepName])
+	}
+
+	return p
+}
+
+var mTaskStepNames = map[string][]string{
+	common.TaskJobPlan:    {common.TaskStepCheckout, common.TaskStepTfInit, common.TaskStepTfPlan, common.TaskStepEnvScan},
+	common.TaskJobApply:   {common.TaskStepCheckout, common.TaskStepTfInit, common.TaskStepTfPlan, common.TaskStepEnvScan, common.TaskStepTfApply, common.TaskStepAnsiblePlay},
+	common.TaskJobDestroy: {common.TaskStepCheckout, common.TaskStepTfInit, common.TaskStepTfPlan, common.TaskStepEnvScan, common.TaskStepTfDestroy},
+}
 
 func NewPipelineDot5(content string) (PipelineDot5, error) {
 	buffer := bytes.NewBufferString(content)
@@ -126,26 +145,26 @@ func NewPipelineDot5(content string) (PipelineDot5, error) {
 
 func CompletePipelineDot5(p *PipelineDot5) {
 	// plan
-	for _, stepName := range PlanTaskStepNames {
+	for _, stepName := range mTaskStepNames[common.TaskJobPlan] {
 		if _, ok := p.Plan.Steps[stepName]; !ok {
 			p.Plan.Steps[stepName] = &PipelineStep{Name: stepName}
 		}
 	}
 
 	// apply
-	for _, stepName := range ApplyTaskStepNames {
+	for _, stepName := range mTaskStepNames[common.TaskJobApply] {
 		if _, ok := p.Apply.Steps[stepName]; !ok {
 			p.Apply.Steps[stepName] = &PipelineStep{Name: stepName}
 		}
 	}
 
 	// destroy
-	for _, stepName := range DestroyTaskStepNames {
+	for _, stepName := range mTaskStepNames[common.TaskJobDestroy] {
 		if _, ok := p.Destroy.Steps[stepName]; !ok {
 			p.Destroy.Steps[stepName] = &PipelineStep{Name: stepName}
 		}
 
-		// plan args with --destroy
+		// complete plan args with --destroy
 		if stepName == common.TaskStepTfPlan {
 			findDestroyArgs := false
 			args := p.Destroy.Steps[stepName].Args

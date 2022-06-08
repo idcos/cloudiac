@@ -53,11 +53,11 @@ func GetTplPipeline(sess *db.Session, tplId models.Id, revision, workdir string)
 }
 
 // 从 pipeline 中返回指定 typ 的 task，如果 pipeline 中未定义该类型 task 则返回默认 pipeline 中的值
-func GetTaskFlowWithPipeline(p models.PipelineDot34, typ string) models.PipelineTaskDot34 {
+func GetTaskFlowWithPipeline(p models.IPipeline, typ string) models.PipelineTaskFlow {
 	defaultPipeline := models.MustGetPipelineByVersion(models.DefaultPipelineVersion)
 
-	flow := defaultPipeline.GetTask(typ)
-	customFlow := p.GetTask(typ)
+	flow := defaultPipeline.GetTaskFlowWithPipeline(typ)
+	customFlow := p.GetTaskFlowWithPipeline(typ)
 	if customFlow.Image != "" {
 		flow.Image = customFlow.Image
 	}

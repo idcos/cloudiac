@@ -203,7 +203,14 @@ func (p PipelineDot34) GetTask(typ string) PipelineTaskDot34 {
 }
 
 func (p PipelineDot34) GetTaskFlowWithPipeline(typ string) PipelineTaskFlow {
-	return PipelineTaskFlow{}
+	task := p.GetTask(typ)
+
+	return PipelineTaskFlow{
+		Image:     task.Image,
+		Steps:     task.Steps,
+		OnSuccess: task.OnSuccess,
+		OnFail:    task.OnFail,
+	}
 }
 
 func (p PipelineDot34) GetVersion() string {
