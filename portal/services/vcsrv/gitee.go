@@ -52,6 +52,10 @@ func (gitee *giteeVcs) GetRepo(idOrPath string) (RepoIface, error) {
 	}, nil
 }
 
+func (v *giteeVcs) RepoBaseHttpAddr() string {
+	return v.vcs.Address
+}
+
 type RepositoryGitee struct {
 	ID            int64     `json:"id"`
 	Description   string    `json:"description"`

@@ -71,7 +71,8 @@ demo:
   project_name: "演示项目"
   templates: 
     - name: 演示云模板
-      repo_id: "${DEMO_TEM_REPO_ID}"  # 仓库的数字 id
+      # 仓库 id(根据 vcs 类型不同可以为数值或者字符)
+      repo_id: "${DEMO_TEM_REPO_ID}"  
       revision: "master"
       tfvars: ""
       variables: 

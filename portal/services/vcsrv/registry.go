@@ -45,6 +45,10 @@ func (rv *RegistryVcs) TokenCheck() error {
 	return nil
 }
 
+func (v *RegistryVcs) RepoBaseHttpAddr() string {
+	return v.vcs.Address
+}
+
 type RegistryRepo struct {
 	vcs      *models.Vcs
 	repoPath string // vcs 下repo的相对路径

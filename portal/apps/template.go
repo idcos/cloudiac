@@ -3,7 +3,6 @@
 package apps
 
 import (
-	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
@@ -15,6 +14,7 @@ import (
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
 	"fmt"
 	"net/http"
 
@@ -429,14 +429,13 @@ func updateTaskAndPolicyStatus(db *db.Session, templates []*resps.SearchTemplate
 }
 
 func updateTmplRepoAddr(templates []*resps.SearchTemplateResp, vcsAttr map[string]models.Vcs) {
-
-	portAddr := configs.Get().Portal.Address
 	for _, tpl := range templates {
 		if tpl.RepoAddr == "" && tpl.RepoFullName != "" {
-			if vcsAttr[tpl.VcsId].VcsType == consts.GitTypeLocal {
-				tpl.RepoAddr = utils.JoinURL(portAddr, vcsAttr[tpl.VcsId].Address, tpl.RepoId)
-			} else {
-				tpl.RepoAddr = utils.JoinURL(vcsAttr[tpl.VcsId].Address, tpl.RepoFullName)
+			var err error
+			vcs := vcsAttr[tpl.VcsId]
+			tpl.RepoAddr, err = vcsrv.GetRepoHttpAddr(&vcs, tpl.RepoFullName)
+			if err != nil {
+				logs.Get().Warnf("get repo http address error: %v", err)
 			}
 		}
 	}
