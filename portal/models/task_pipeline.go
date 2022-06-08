@@ -6,29 +6,75 @@ import (
 	"bytes"
 	"cloudiac/common"
 	"database/sql/driver"
+	"errors"
 	"fmt"
 
 	"gopkg.in/yaml.v2"
 )
 
-type Pipeline struct {
-	Version string       `json:"version" yaml:"version"`
-	Plan    PipelineTask `json:"plan" yaml:"plan"`
-	Apply   PipelineTask `json:"apply" yaml:"apply"`
-	Destroy PipelineTask `json:"destroy" yaml:"destroy"`
-
-	// 0.3 pipeline 扫描步骤
-	PolicyScan  PipelineTask `json:"scan" yaml:"scan"`
-	PolicyParse PipelineTask `json:"parse" yaml:"parse"`
-
-	// 0.4 pipeline 扫描步骤
-	EnvScan  PipelineTask `json:"envScan" yaml:"envScan"`
-	EnvParse PipelineTask `json:"envParse" yaml:"envParse"`
-	TplScan  PipelineTask `json:"tplScan" yaml:"tplScan"`
-	TplParse PipelineTask `json:"tplParse" yaml:"tplParse"`
+// 通用 pipeline 接口
+type IPipeline interface {
+	GetTask(typ string) interface{}
 }
 
-func (p Pipeline) GetTask(typ string) PipelineTask {
+type Pipeline struct {
+	Version string `json:"version" yaml:"version"`
+}
+
+func (p *Pipeline) GetVersion(content string) (string, error) {
+	if p.Version != "" {
+		return p.Version, nil
+	}
+
+	buffer := bytes.NewBufferString(content)
+	err := yaml.NewDecoder(buffer).Decode(&p)
+
+	return p.Version, err
+}
+
+// pipeline 0.3 和 0.4 版本
+type PipelineDot34 struct {
+	Pipeline
+	Plan    PipelineTaskDot34 `json:"plan" yaml:"plan"`
+	Apply   PipelineTaskDot34 `json:"apply" yaml:"apply"`
+	Destroy PipelineTaskDot34 `json:"destroy" yaml:"destroy"`
+
+	// 0.3 pipeline 扫描步骤
+	PolicyScan  PipelineTaskDot34 `json:"scan" yaml:"scan"`
+	PolicyParse PipelineTaskDot34 `json:"parse" yaml:"parse"`
+
+	// 0.4 pipeline 扫描步骤
+	EnvScan  PipelineTaskDot34 `json:"envScan" yaml:"envScan"`
+	EnvParse PipelineTaskDot34 `json:"envParse" yaml:"envParse"`
+	TplScan  PipelineTaskDot34 `json:"tplScan" yaml:"tplScan"`
+	TplParse PipelineTaskDot34 `json:"tplParse" yaml:"tplParse"`
+}
+
+type PipelineTaskDot34 struct {
+	Image string         `json:"image,omitempty" yaml:"image"`
+	Steps []PipelineStep `json:"steps,omitempty" yaml:"steps"`
+
+	OnSuccess *PipelineStep `json:"onSuccess,omitempty" yaml:"onSuccess"`
+	OnFail    *PipelineStep `json:"onFail,omitempty" yaml:"onFail"`
+}
+
+type PipelineStep struct {
+	Type       string   `json:"type,omitempty" yaml:"type" gorm:"size:32;not null"`
+	Name       string   `json:"name,omitempty" yaml:"name" gorm:"size:32;not null"`
+	Timeout    int      `json:"timeout,omitempty" yaml:"timeout"`
+	BeforeCmds StrSlice `json:"before,omitempty" yaml:"before" gorm:"type:text"`
+	AfterCmds  StrSlice `json:"after,omitempty" yaml:"after" gorm:"type:text"`
+	Args       StrSlice `json:"args,omitempty" yaml:"args" gorm:"type:text"`
+}
+
+func NewPipelineDot34(content string) (PipelineDot34, error) {
+	buffer := bytes.NewBufferString(content)
+	pipeline := PipelineDot34{}
+	err := yaml.NewDecoder(buffer).Decode(&pipeline)
+	return pipeline, err
+}
+
+func (p PipelineDot34) GetTask(typ string) interface{} {
 	switch typ {
 	case common.TaskJobPlan:
 		return p.Plan
@@ -53,28 +99,11 @@ func (p Pipeline) GetTask(typ string) PipelineTask {
 	}
 }
 
-type PipelineTask struct {
-	Image string         `json:"image,omitempty" yaml:"image"`
-	Steps []PipelineStep `json:"steps,omitempty" yaml:"steps"`
-
-	OnSuccess *PipelineStep `json:"onSuccess,omitempty" yaml:"onSuccess"`
-	OnFail    *PipelineStep `json:"onFail,omitempty" yaml:"onFail"`
-}
-
-type PipelineStep struct {
-	Type       string   `json:"type,omitempty" yaml:"type" gorm:"size:32;not null"`
-	Name       string   `json:"name,omitempty" yaml:"name" gorm:"size:32;not null"`
-	Timeout    int      `json:"timeout,omitempty" yaml:"timeout"`
-	BeforeCmds StrSlice `json:"before,omitempty" yaml:"before" gorm:"type:text"`
-	AfterCmds  StrSlice `json:"after,omitempty" yaml:"after" gorm:"type:text"`
-	Args       StrSlice `json:"args,omitempty" yaml:"args" gorm:"type:text"`
-}
-
-func (v PipelineTask) Value() (driver.Value, error) {
+func (v PipelineTaskDot34) Value() (driver.Value, error) {
 	return MarshalValue(v)
 }
 
-func (v *PipelineTask) Scan(value interface{}) error {
+func (v *PipelineTaskDot34) Scan(value interface{}) error {
 	return UnmarshalValue(value, v)
 }
 
@@ -219,23 +248,23 @@ var (
 		"0.4": pipelineV0dot4,
 		"0.5": pipelineV0dot5,
 	}
-	defaultPipelines = make(map[string]Pipeline)
+	defaultPipelines = make(map[string]IPipeline)
 )
 
 func DefaultPipelineRaw() string {
 	return defaultPipelineTpls[DefaultPipelineVersion]
 }
 
-func DefaultPipeline() Pipeline {
+func DefaultPipeline() IPipeline {
 	return MustGetPipelineByVersion(DefaultPipelineVersion)
 }
 
-func GetPipelineByVersion(version string) (Pipeline, bool) {
+func GetPipelineByVersion(version string) (IPipeline, bool) {
 	p, ok := defaultPipelines[version]
 	return p, ok
 }
 
-func MustGetPipelineByVersion(version string) Pipeline {
+func MustGetPipelineByVersion(version string) IPipeline {
 	if version == "" {
 		version = DefaultPipelineVersion
 	}
@@ -248,14 +277,16 @@ func MustGetPipelineByVersion(version string) Pipeline {
 
 func init() {
 	for v, tpl := range defaultPipelineTpls {
-		buffer := bytes.NewBufferString(tpl)
-		p := Pipeline{}
+		var p IPipeline
 		var err error
 
-		if v == "0.5" {
-			p, err = ConvertPipelineDot5Compatibility(buffer)
-		} else {
-			err = yaml.NewDecoder(buffer).Decode(&p)
+		switch v {
+		case "0.3", "0.4":
+			p, err = NewPipelineDot34(tpl)
+		case "0.5":
+			p, err = NewPipelineDot5(tpl)
+		default:
+			err = errors.New("wrong pipeline version")
 		}
 
 		if err != nil {

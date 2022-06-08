@@ -5,7 +5,8 @@ package models
 import (
 	"bytes"
 	"cloudiac/common"
-	"cloudiac/utils/logs"
+	"database/sql/driver"
+	"fmt"
 
 	"gopkg.in/yaml.v2"
 )
@@ -78,43 +79,13 @@ destroy:
     terraformDestroy:
       type: terraformDestroy
       name: Terraform Apply
-
-# scan 和 parse 暂不开放自定义工作流
-envScan:
-  steps:
-    - type: checkout
-    - type: terraformInit
-    - type: terraformPlan
-    - type: envScan
-
-envParse:
-  steps:
-    - type: checkout
-    - type: terraformInit
-    - type: terraformPlan
-    - type: envParse
-
-tplScan:
-  steps:
-    - type: scaninit
-    - type: tplScan
-
-tplParse:
-  steps:
-    - type: scaninit
-    - type: tplParse
 `
 
 type PipelineDot5 struct {
-	Version string           `json:"version" yaml:"version"`
+	Pipeline
 	Plan    PipelineDot5Task `json:"plan" yaml:"plan"`
 	Apply   PipelineDot5Task `json:"apply" yaml:"apply"`
 	Destroy PipelineDot5Task `json:"destroy" yaml:"destroy"`
-
-	EnvScan  PipelineTask `json:"envScan" yaml:"envScan"`
-	EnvParse PipelineTask `json:"envParse" yaml:"envParse"`
-	TplScan  PipelineTask `json:"tplScan" yaml:"tplScan"`
-	TplParse PipelineTask `json:"tplParse" yaml:"tplParse"`
 }
 
 type PipelineDot5Task struct {
@@ -124,63 +95,34 @@ type PipelineDot5Task struct {
 	OnFail    *PipelineStep `json:"onFail,omitempty" yaml:"onFail"`
 }
 
-var planTaskStepNames = []string{common.TaskStepCheckout, common.TaskStepTfInit, common.TaskStepTfPlan,
-	common.TaskStepEnvScan}
-var applyTaskStepNames = []string{common.TaskStepCheckout, common.TaskStepTfInit, common.TaskStepTfPlan,
-	common.TaskStepEnvScan, common.TaskStepTfApply, common.TaskStepAnsiblePlay}
-var destroyTaskStepNames = []string{common.TaskStepCheckout, common.TaskStepTfInit, common.TaskStepTfPlan,
-	common.TaskStepEnvScan, common.TaskStepTfDestroy}
-
-func decodePipelineDot5(buf *bytes.Buffer) (PipelineDot5, error) {
-	p := PipelineDot5{}
-	if err := yaml.NewDecoder(buf).Decode(&p); err != nil {
-		return p, err
+func (p PipelineDot5) GetTask(typ string) interface{} {
+	switch typ {
+	case common.TaskJobPlan:
+		return p.Plan
+	case common.TaskJobApply:
+		return p.Apply
+	case common.TaskJobDestroy:
+		return p.Destroy
+	default:
+		panic(fmt.Errorf("unknown pipeline job type '%s'", typ))
 	}
-
-	return p, nil
 }
 
-// ConvertPipelineDot5Compatibility 转换 v0.5 为之前兼容的版本
-func ConvertPipelineDot5Compatibility(buf *bytes.Buffer) (Pipeline, error) {
-	p := Pipeline{}
-	pDot5, err := decodePipelineDot5(buf)
-	if err != nil {
-		return p, err
-	}
-
-	// 兼容的部分
-	p.Version = pDot5.Version
-	p.EnvScan = pDot5.EnvScan
-	p.EnvParse = pDot5.EnvParse
-	p.TplScan = pDot5.TplScan
-	p.TplParse = pDot5.TplParse
-
-	// plan
-	p.Plan = pipelineV0dot5Downgrade(pDot5.Plan, planTaskStepNames)
-
-	// apply
-	p.Apply = pipelineV0dot5Downgrade(pDot5.Apply, applyTaskStepNames)
-
-	// destroy
-	p.Destroy = pipelineV0dot5Downgrade(pDot5.Destroy, destroyTaskStepNames)
-
-	return p, nil
+func (v PipelineDot5) Value() (driver.Value, error) {
+	return MarshalValue(v)
 }
 
-func pipelineV0dot5Downgrade(pDot5 PipelineDot5Task, taskNames []string) PipelineTask {
-	p := PipelineTask{}
-	p.OnSuccess = pDot5.OnSuccess
-	p.OnFail = pDot5.OnFail
+func (v *PipelineDot5) Scan(value interface{}) error {
+	return UnmarshalValue(value, v)
+}
 
-	p.Steps = make([]PipelineStep, 0)
-	steps := pDot5.Steps
-	for _, stepName := range taskNames {
-		if _, ok := steps[stepName]; !ok {
-			logs.Get().Warnf("step %s is omitted.", stepName)
-			continue
-		}
-		p.Steps = append(p.Steps, steps[stepName])
-	}
+var planTaskStepNames = []string{common.TaskStepCheckout, common.TaskStepTfInit, common.TaskStepTfPlan, common.TaskStepEnvScan}
+var applyTaskStepNames = []string{common.TaskStepCheckout, common.TaskStepTfInit, common.TaskStepTfPlan, common.TaskStepEnvScan, common.TaskStepTfApply, common.TaskStepAnsiblePlay}
+var destroyTaskStepNames = []string{common.TaskStepCheckout, common.TaskStepTfInit, common.TaskStepTfPlan, common.TaskStepEnvScan, common.TaskStepTfDestroy}
 
-	return p
+func NewPipelineDot5(content string) (PipelineDot5, error) {
+	buffer := bytes.NewBufferString(content)
+	pipeline := PipelineDot5{}
+	err := yaml.NewDecoder(buffer).Decode(&pipeline)
+	return pipeline, err
 }
