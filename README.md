@@ -25,17 +25,15 @@ CloudIaC https://cloudiac.org 是基于基础设施即代码(IaC, Infrastructure
 -   **持续部署**：通过 Pipeline 无缝对接 CI 工具，将部署融入持续交付和 DevOps 体系；
 -   **团队协作**：团队协作管理环境，支持不同管理层级角色授权。
 
-### 文档和演示视频：
+### 文档
 
 -   [完整文档](https://docs.cloudiac.org/)
 -   [视频介绍](https://space.bilibili.com/2138433328/channel/seriesdetail?sid=1908688)
 
-### 快速开始
+### 一键安装
 
-快速安装部署 CloudIaC：
-
-- 准备一台 Linux 主机，安装 docker 、docker-compose；
-- 以 root 用户执行如下命令一键部署 CloudIaC。
+- 准备一台 Linux 主机，安装 docker, docker-compose；
+- 以 root 用户执行如下命令
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/idcos/cloudiac-docs/master/script/cloudiac-docker.sh | bash
