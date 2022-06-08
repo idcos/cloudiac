@@ -3,15 +3,12 @@
 package services
 
 import (
-	"bytes"
 	"cloudiac/common"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/utils/logs"
 	"path/filepath"
-
-	"gopkg.in/yaml.v2"
 )
 
 func GetTplPipeline(sess *db.Session, tplId models.Id, revision, workdir string) (pipeline string, er e.Error) {
@@ -48,14 +45,8 @@ func GetTplPipeline(sess *db.Session, tplId models.Id, revision, workdir string)
 		return "", nil
 	}
 
-	if pipeline, err := DecodePipeline(string(content)); err != nil {
+	if _, err := DecodePipeline(string(content)); err != nil {
 		return "", e.AutoNew(err, e.InvalidPipeline)
-	} else {
-		// 检查 version 是否合法
-		_, ok := models.GetPipelineByVersion(pipeline.Version)
-		if !ok {
-			return "", e.New(e.InvalidPipelineVersion)
-		}
 	}
 
 	return string(content), nil
@@ -82,21 +73,27 @@ func GetTaskFlowWithPipeline(p models.PipelineDot34, typ string) models.Pipeline
 	return flow
 }
 
-func DecodePipeline(s string) (models.PipelineDot34, error) {
-	p := models.PipelineDot34{}
+func DecodePipeline(s string) (models.IPipeline, error) {
+	defaultPipeline := models.DefaultPipeline()
 	if s == "" {
-		return p, nil
-	}
-	buffer := bytes.NewBufferString(s)
-	err := yaml.NewDecoder(buffer).Decode(&p)
-	if err == nil {
-		return p, err
+		return defaultPipeline, nil
 	}
 
-	// 尝试 v0.5 解析
-	logs.Get().Debugf("解析 pipeline error: %v", err)
-	buffer = bytes.NewBufferString(s)
-	return models.ConvertPipelineDot5Compatibility(buffer)
+	p := models.Pipeline{}
+	ver, err := p.GetVersion(s)
+	if err != nil {
+		return nil, err
+	}
+
+	if ver == "0.3" || ver == "0.4" {
+		return models.NewPipelineDot34(s)
+	}
+
+	if ver == "0.5" {
+		return models.NewPipelineDot5(s)
+	}
+
+	return nil, e.New(e.InvalidPipelineVersion)
 }
 
 func UpdateTaskContainerId(sess *db.Session, taskId models.Id, containerId string) e.Error {

@@ -17,67 +17,54 @@ version: 0.5
 plan:
   steps:
     checkout:
-      type: checkout
       name: Checkout Code
 
     terraformInit:
-      type: terraformInit
       name: Terraform Init
 
     terraformPlan:
-      type: terraformPlan
       name: Terraform Plan
 
     envScan:
-      type: opaScan
       name: OPA Scan
 
 apply:
   steps:
     checkout:
-      type: checkout
       name: Checkout Code
 
     terraformInit:
-      type: terraformInit
       name: Terraform Init
 
     terraformPlan:
-      type: terraformPlan
       name: Terraform Plan
 
     envScan:
-      type: envScan
       name: OPA Scan
 
     terraformApply:
-      type: terraformApply
       name: Terraform Apply
 
     ansiblePlay:
-      type: ansiblePlay
       name: Run playbook
 
 destroy:
   steps:
     checkout:
-      type: checkout
       name: Checkout Code
 
     terraformInit:
-      type: terraformInit
       name: Terraform Init
 
     terraformPlan:
-      type: terraformPlan
       name: Terraform Plan
+      args:
+        - "-destroy"
 
     envScan:
-      type: envScan
       name: OPA Scan
 
     terraformDestroy:
-      type: terraformDestroy
       name: Terraform Apply
 `
 
@@ -89,13 +76,13 @@ type PipelineDot5 struct {
 }
 
 type PipelineDot5Task struct {
-	Steps map[string]PipelineStep `json:"steps,omitempty" yaml:"steps"`
+	Steps map[string]*PipelineStep `json:"steps,omitempty" yaml:"steps"`
 
 	OnSuccess *PipelineStep `json:"onSuccess,omitempty" yaml:"onSuccess"`
 	OnFail    *PipelineStep `json:"onFail,omitempty" yaml:"onFail"`
 }
 
-func (p PipelineDot5) GetTask(typ string) interface{} {
+func (p PipelineDot5) GetTask(typ string) PipelineDot5Task {
 	switch typ {
 	case common.TaskJobPlan:
 		return p.Plan
@@ -108,6 +95,14 @@ func (p PipelineDot5) GetTask(typ string) interface{} {
 	}
 }
 
+func (p PipelineDot5) GetTaskFlowWithPipeline(typ string) PipelineTaskFlow {
+	return PipelineTaskFlow{}
+}
+
+func (p PipelineDot5) GetVersion() string {
+	return p.Version
+}
+
 func (v PipelineDot5) Value() (driver.Value, error) {
 	return MarshalValue(v)
 }
@@ -116,13 +111,59 @@ func (v *PipelineDot5) Scan(value interface{}) error {
 	return UnmarshalValue(value, v)
 }
 
-var planTaskStepNames = []string{common.TaskStepCheckout, common.TaskStepTfInit, common.TaskStepTfPlan, common.TaskStepEnvScan}
-var applyTaskStepNames = []string{common.TaskStepCheckout, common.TaskStepTfInit, common.TaskStepTfPlan, common.TaskStepEnvScan, common.TaskStepTfApply, common.TaskStepAnsiblePlay}
-var destroyTaskStepNames = []string{common.TaskStepCheckout, common.TaskStepTfInit, common.TaskStepTfPlan, common.TaskStepEnvScan, common.TaskStepTfDestroy}
+var PlanTaskStepNames = []string{common.TaskStepCheckout, common.TaskStepTfInit, common.TaskStepTfPlan, common.TaskStepEnvScan}
+var ApplyTaskStepNames = []string{common.TaskStepCheckout, common.TaskStepTfInit, common.TaskStepTfPlan, common.TaskStepEnvScan, common.TaskStepTfApply, common.TaskStepAnsiblePlay}
+var DestroyTaskStepNames = []string{common.TaskStepCheckout, common.TaskStepTfInit, common.TaskStepTfPlan, common.TaskStepEnvScan, common.TaskStepTfDestroy}
 
 func NewPipelineDot5(content string) (PipelineDot5, error) {
 	buffer := bytes.NewBufferString(content)
 	pipeline := PipelineDot5{}
 	err := yaml.NewDecoder(buffer).Decode(&pipeline)
+
+	CompletePipelineDot5(&pipeline)
 	return pipeline, err
+}
+
+func CompletePipelineDot5(p *PipelineDot5) {
+	// plan
+	for _, stepName := range PlanTaskStepNames {
+		if _, ok := p.Plan.Steps[stepName]; !ok {
+			p.Plan.Steps[stepName] = &PipelineStep{Name: stepName}
+		}
+	}
+
+	// apply
+	for _, stepName := range ApplyTaskStepNames {
+		if _, ok := p.Apply.Steps[stepName]; !ok {
+			p.Apply.Steps[stepName] = &PipelineStep{Name: stepName}
+		}
+	}
+
+	// destroy
+	for _, stepName := range DestroyTaskStepNames {
+		if _, ok := p.Destroy.Steps[stepName]; !ok {
+			p.Destroy.Steps[stepName] = &PipelineStep{Name: stepName}
+		}
+
+		// plan args with --destroy
+		if stepName == common.TaskStepTfPlan {
+			findDestroyArgs := false
+			args := p.Destroy.Steps[stepName].Args
+			if args == nil {
+				args = []string{"-destroy"}
+			}
+
+			for _, arg := range args {
+				if arg == "-destroy" {
+					findDestroyArgs = true
+					break
+				}
+			}
+			if !findDestroyArgs {
+				args = append(args, "-destroy")
+			}
+
+			p.Destroy.Steps[stepName].Args = args
+		}
+	}
 }
