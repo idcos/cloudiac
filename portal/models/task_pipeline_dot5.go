@@ -159,6 +159,9 @@ func NewPipelineDot5(content string) (PipelineDot5, error) {
 
 func CompletePipelineDot5(p *PipelineDot5) {
 	// plan
+	if p.Plan.Steps == nil {
+		p.Plan.Steps = make(map[string]*PipelineStep)
+	}
 	for _, stepName := range mTaskStepNames[common.TaskJobPlan] {
 		if _, ok := p.Plan.Steps[stepName]; !ok {
 			p.Plan.Steps[stepName] = &PipelineStep{Name: stepName}
@@ -166,6 +169,9 @@ func CompletePipelineDot5(p *PipelineDot5) {
 	}
 
 	// apply
+	if p.Apply.Steps == nil {
+		p.Apply.Steps = make(map[string]*PipelineStep)
+	}
 	for _, stepName := range mTaskStepNames[common.TaskJobApply] {
 		if _, ok := p.Apply.Steps[stepName]; !ok {
 			p.Apply.Steps[stepName] = &PipelineStep{Name: stepName}
@@ -173,6 +179,9 @@ func CompletePipelineDot5(p *PipelineDot5) {
 	}
 
 	// destroy
+	if p.Destroy.Steps == nil {
+		p.Destroy.Steps = make(map[string]*PipelineStep)
+	}
 	for _, stepName := range mTaskStepNames[common.TaskJobDestroy] {
 		if _, ok := p.Destroy.Steps[stepName]; !ok {
 			p.Destroy.Steps[stepName] = &PipelineStep{Name: stepName}
