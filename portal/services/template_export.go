@@ -88,7 +88,7 @@ func ExportTemplates(dbSess *db.Session, orgId models.Id, ids []models.Id) (*Tpl
 
 	vars := make([]models.Variable, 0)
 	if err := QueryVariable(dbSess.Where(
-		"scope = ? AND tpl_id IN (?)", consts.ScopeTemplate, tplIds)).Debug().Find(&vars); err != nil {
+		"scope = ? AND tpl_id IN (?)", consts.ScopeTemplate, tplIds)).Find(&vars); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
