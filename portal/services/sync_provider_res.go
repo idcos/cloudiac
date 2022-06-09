@@ -10,7 +10,6 @@ import (
 	"cloudiac/utils/logs"
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
 	"time"
 )
@@ -30,17 +29,6 @@ type syncResource struct {
 	ResourceId   string `json:"resource_id"`
 	OperateType  string `json:"operate_type"`
 	OperateTime  string `json:"operate_time"`
-}
-
-func readIfExist(path string) ([]byte, error) {
-	content, err := logstorage.Get().Read(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return content, nil
 }
 
 func syncManagedResToProvider(task *models.Task) {
@@ -133,22 +121,24 @@ func syncManagedResToProvider(task *models.Task) {
 		}
 	}
 
-	if len(syncRess) > 0 {
-		err := syncManagedResToAlicloud(syncResRequest{
-			Source:    "cloudiac",
-			OrgId:     task.OrgId.String(),
-			ProjectId: task.ProjectId.String(),
-			EnvId:     task.EnvId.String(),
-			TaskId:    task.Id.String(),
-			Resources: syncRess,
-		})
-		if err != nil {
-			logger.Errorf("%v", err)
-		}
+	err := syncManagedResToAlicloud(syncResRequest{
+		Source:    "cloudiac",
+		OrgId:     task.OrgId.String(),
+		ProjectId: task.ProjectId.String(),
+		EnvId:     task.EnvId.String(),
+		TaskId:    task.Id.String(),
+		Resources: syncRess,
+	})
+	if err != nil {
+		logger.Errorf("%v", err)
 	}
 }
 
 func syncManagedResToAlicloud(req syncResRequest) error {
+	if len(req.Resources) <= 0 {
+		return nil
+	}
+
 	header := make(http.Header)
 	header.Add("content-type", "application/json")
 	apiUrl := configs.Get().AlicloudResSyncApi
