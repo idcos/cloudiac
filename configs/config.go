@@ -172,6 +172,8 @@ type Config struct {
 	EnableRegister  bool `yaml:"enableRegister"`  // 启用注册
 
 	Demo DemoConfig `yaml:"demo"` // 演示组织配置
+
+	AlicloudResSyncApi string `yaml:"alicloud_res_sync_api"`
 }
 
 const (

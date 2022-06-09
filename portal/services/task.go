@@ -595,6 +595,8 @@ func taskStatusExitedCall(dbSess *db.Session, task *models.Task, status string) 
 		if !kaConf.Disabled && len(kaConf.Brokers) > 0 {
 			SendKafkaMessage(dbSess, task, status)
 		}
+
+		syncManagedResToProvider(task)
 	}
 
 	//if task.Callback != "" {
@@ -752,6 +754,7 @@ type TfPlan struct {
 type TfPlanResource struct {
 	Address       string `json:"address"`
 	ModuleAddress string `json:"module_address,omitempty"`
+	ProviderName  string `json:"provider_name"`
 
 	Mode  string `json:"mode"` // managed、data
 	Type  string `json:"type"`
