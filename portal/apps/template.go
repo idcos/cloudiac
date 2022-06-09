@@ -314,17 +314,17 @@ func DeleteTemplate(c *ctx.ServiceContext, form *forms.DeleteTemplateForm) (inte
 	}()
 	// 根据ID 查询云模板是否存在
 	tpl, err := services.GetTemplateById(tx, form.Id)
-
-	if tpl.IsDemo {
-		return nil, e.New(e.TemplateDemoNotAllowDelete)
-	}
-
 	if err != nil && err.Code() == e.TemplateNotExists {
 		return nil, e.New(err.Code(), err, http.StatusNotFound)
 	} else if err != nil {
 		c.Logger().Errorf("error get template by id, err %v", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
+
+	if tpl.IsDemo {
+		return nil, e.New(e.TemplateDemoNotAllowDelete)
+	}
+
 	// 根据云模板ID, 组织ID查询该云模板是否属于该组织
 	if tpl.OrgId != c.OrgId {
 		return nil, e.New(e.TemplateNotExists, http.StatusForbidden, fmt.Errorf("The organization does not have permission to delete the current template"))
