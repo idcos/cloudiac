@@ -91,6 +91,7 @@ type DemoTemplate struct {
 	TfVars       string `yaml:"tf_vars"`
 	TfVersion    string `yaml:"tf_version"`
 	RepoFullName string `yaml:"repo_full_name"`
+	Description  string `yaml:"description"`
 	Variables    []struct {
 		Name        string `yaml:"name"`
 		Value       string `yaml:"value"`

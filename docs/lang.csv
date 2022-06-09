@@ -88,6 +88,8 @@
 30613,TokenAliasDuplicate,Token别名重复,token alias already exists
 30711,TemplateNotExists,模板不存在,template not exists
 30712,TemplateDisabled,模板不可用,template disabled
+30714,TemplateDemoNotAllowEdit,演示云模板不可编辑,demo template is not allowed edit
+30715,TemplateDemoNotAllowDelete,演示云模板不可删除,demo template is not allowed delete
 30730,TemplateActiveEnvExists,模板存在活跃环境,can not delete template which have active environment
 10430,ConsulConnError,consul链接失败,connect to consul error
 30810,EnvAlreadyExists,环境已经存在,environment already exists

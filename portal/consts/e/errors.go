@@ -141,6 +141,8 @@ const (
 	TemplateNotExists                    = 30711
 	TemplateDisabled                     = 30712
 	TemplateNotAssociationCurrentProject = 30713
+	TemplateDemoNotAllowEdit             = 30714
+	TemplateDemoNotAllowDelete           = 30715
 	TemplateActiveEnvExists              = 30730
 	TemplateKeyIdNotSet                  = 30731
 

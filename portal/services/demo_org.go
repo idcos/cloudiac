@@ -98,7 +98,7 @@ func CreateDemoTemplate(tx *db.Session, orgId, vcsId, projectId, userId models.I
 	tpl, er := CreateTemplate(tx, models.Template{
 		Name:         t.Name,
 		OrgId:        orgId,
-		Description:  "",
+		Description:  t.Description,
 		VcsId:        vcsId,
 		RepoId:       t.RepoId,
 		RepoFullName: t.RepoFullName,

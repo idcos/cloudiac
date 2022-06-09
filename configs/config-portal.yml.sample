@@ -75,6 +75,9 @@ demo:
       repo_id: "${DEMO_TEM_REPO_ID}"  
       revision: "master"
       tfvars: ""
+      tf_version: ""
+      repo_full_name: ""
+      description: ""
       variables: 
         - name: "${DEMO_TEM_AK_NAME}"
           value: "${DEMO_TEM_AK_VALUE}"
