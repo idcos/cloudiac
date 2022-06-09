@@ -79,13 +79,16 @@ func ExportTemplates(dbSess *db.Session, orgId models.Id, ids []models.Id) (*Tpl
 	tplIds := make([]models.Id, 0)
 	vcsIdSet := make(map[models.Id]struct{})
 	for _, t := range tpls {
+		if t.IsDemo {
+			continue
+		}
 		vcsIdSet[t.VcsId] = struct{}{}
 		tplIds = append(tplIds, t.Id)
 	}
 
 	vars := make([]models.Variable, 0)
 	if err := QueryVariable(dbSess.Where(
-		"scope = ? AND tpl_id IN (?)", consts.ScopeTemplate, tplIds)).Find(&vars); err != nil {
+		"scope = ? AND tpl_id IN (?)", consts.ScopeTemplate, tplIds)).Debug().Find(&vars); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
@@ -121,6 +124,9 @@ func ExportTemplates(dbSess *db.Session, orgId models.Id, ids []models.Id) (*Tpl
 
 func appendTemplate(tpls []models.Template, vars []models.Variable, dbSess *db.Session, resp *TplExportedData) e.Error {
 	for _, t := range tpls {
+		if t.IsDemo {
+			continue
+		}
 		tpl := exportedTpl{
 			Id:           t.Id.String(),
 			Name:         t.Name,
