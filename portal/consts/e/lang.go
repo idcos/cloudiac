@@ -362,6 +362,14 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "template disabled",
 		"zh-CN": "模板不可用",
 	},
+	TemplateDemoNotAllowEdit: {
+		"en-US": "demo template is not allowed edit",
+		"zh-CN": "演示云模板不可编辑",
+	},
+	TemplateDemoNotAllowDelete: {
+		"en-US": "demo template is not allowed delete",
+		"zh-CN": "演示云模板不可删除",
+	},
 	TemplateActiveEnvExists: {
 		"en-US": "can not delete template which have active environment",
 		"zh-CN": "模板存在活跃环境",
