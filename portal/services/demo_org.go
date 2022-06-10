@@ -170,13 +170,13 @@ func SendActivateAccountMail(user *models.User, token string) e.Error {
 	if name == "" {
 		name = strings.Split(user.Email, "@")[0]
 	}
-	content := utils.SprintTemplate(consts.UserActivteMail, map[string]interface{}{
+	content := utils.SprintTemplate(consts.UserActiveMail, map[string]interface{}{
 		"Name":    name,
 		"Email":   user.Email,
 		"Address": utils.JoinURL(configs.Get().Portal.Address, "/activation/", token),
 	})
 
-	er := mail.SendMail([]string{user.Email}, "欢迎注册 CloudIac", content)
+	er := mail.SendMail([]string{user.Email}, "欢迎注册 CloudIaC", content)
 	if er != nil {
 		logs.Get().Errorf("error send mail to %s, err %s", user.Email, er)
 		return er
