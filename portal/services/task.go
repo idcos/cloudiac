@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/acarl005/stripansi"
+	"github.com/alessio/shellescape"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 )
@@ -333,7 +334,7 @@ func createTaskStep(tx *db.Session, env *models.Env, task models.Task, pipelineS
 	if len(task.Targets) != 0 && IsTerraformStep(pipelineStep.Type) {
 		if pipelineStep.Type != models.TaskStepInit {
 			for _, t := range task.Targets {
-				pipelineStep.Args = append(pipelineStep.Args, fmt.Sprintf("-target=%s", t))
+				pipelineStep.Args = append(pipelineStep.Args, fmt.Sprintf("-target=%s", shellescape.Quote(t)))
 			}
 		}
 	}
