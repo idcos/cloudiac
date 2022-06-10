@@ -248,7 +248,7 @@ func ScanEnvironment(c *ctx.ServiceContext, form *forms.ScanEnvironmentForm) (*m
 	task, err := services.CreateEnvScanTask(tx, tpl, env, taskType, c.UserId)
 	if err != nil {
 		_ = tx.Rollback()
-		c.Logger().Errorf("error creating scan task, err %s", err)
+		c.Logger().Errorf("create env scan task, err %s", err)
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 

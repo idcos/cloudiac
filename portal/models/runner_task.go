@@ -5,6 +5,7 @@ package models
 import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/runner"
+	"encoding/json"
 	"path"
 )
 
@@ -72,6 +73,17 @@ type ScanTask struct {
 
 func (ScanTask) TableName() string {
 	return "iac_scan_task"
+}
+
+func (t ScanTask) MarshalJSON() ([]byte, error) {
+	type Tt ScanTask
+	tt := Tt(t)
+	for i, v := range tt.Variables {
+		if v.Sensitive {
+			tt.Variables[i].Value = ""
+		}
+	}
+	return json.Marshal(tt)
 }
 
 func (t *ScanTask) TfParseJsonPath() string {

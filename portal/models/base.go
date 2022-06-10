@@ -4,6 +4,7 @@ package models
 
 import (
 	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -162,8 +163,8 @@ func (v *StrSlice) Scan(value interface{}) error {
 type Time time.Time
 
 func (t *Time) UnmarshalJSON(bs []byte) error {
-	tt, err := time.Parse(time.RFC3339, string(bs))
-	if err != nil {
+	tt := time.Time{}
+	if err := json.Unmarshal(bs, &tt); err != nil {
 		return err
 	}
 	*t = Time(tt)
@@ -171,7 +172,7 @@ func (t *Time) UnmarshalJSON(bs []byte) error {
 }
 
 func (t Time) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf("\"%s\"", time.Time(t).Format(time.RFC3339))), nil
+	return time.Time(t).MarshalJSON()
 }
 
 func (Time) Parse(s string) (t Time, err error) {

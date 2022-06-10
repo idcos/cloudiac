@@ -42,7 +42,7 @@ func CreateVcs(c *ctx.ServiceContext, form *forms.CreateVcsForm) (interface{}, e
 	if err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
-	return vcs, nil
+	return models.NewDesensitizedVcs(*vcs), nil
 }
 
 // 判断前端传递组织id是否具有该vcs仓库读写权限
@@ -58,8 +58,8 @@ func checkOrgVcsAuth(c *ctx.ServiceContext, id models.Id) (vcs *models.Vcs, err 
 
 }
 
-func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (vcs *models.Vcs, err e.Error) {
-	vcs, err = checkOrgVcsAuth(c, form.Id) //nolint
+func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (*models.DesensitizedVcs, e.Error) {
+	vcs, err := checkOrgVcsAuth(c, form.Id) //nolint
 	if err != nil {
 		return nil, err
 	}
@@ -84,16 +84,20 @@ func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (vcs *models.Vc
 		}
 		attrs["vcs_token"] = vcsToken
 	}
-	return services.UpdateVcs(c.DB(), form.Id, attrs)
+	vcs, err = services.UpdateVcs(c.DB(), form.Id, attrs)
+	if err != nil {
+		return nil, err
+	}
+
+	return models.NewDesensitizedVcs(*vcs), nil
 }
 
 func SearchVcs(c *ctx.ServiceContext, form *forms.SearchVcsForm) (interface{}, e.Error) {
-	rs, err := getPage(services.QueryVcs(c.OrgId, form.Status, form.Q, form.IsShowDefaultVcs, false, c.DB()), form, models.Vcs{})
+	rs, err := getPage(services.QueryVcs(c.OrgId, form.Status, form.Q, form.IsShowDefaultVcs, false, c.DB()), form, models.DesensitizedVcs{})
 	if err != nil {
 		return nil, err
 	}
 	return rs, nil
-
 }
 
 func DeleteVcs(c *ctx.ServiceContext, form *forms.DeleteVcsForm) (result interface{}, re e.Error) {
@@ -117,8 +121,15 @@ func DeleteVcs(c *ctx.ServiceContext, form *forms.DeleteVcsForm) (result interfa
 }
 
 func ListEnableVcs(c *ctx.ServiceContext) (interface{}, e.Error) {
-	return services.QueryEnableVcs(c.OrgId, c.DB())
-
+	vcsList, er := services.FindEnableVcs(c.OrgId, c.DB())
+	if er != nil {
+		return nil, er
+	}
+	rs := make([]*models.DesensitizedVcs, 0, len(vcsList))
+	for _, v := range vcsList {
+		rs = append(rs, models.NewDesensitizedVcs(v))
+	}
+	return rs, nil
 }
 
 func GetReadme(c *ctx.ServiceContext, form *forms.GetReadmeForm) (interface{}, e.Error) {

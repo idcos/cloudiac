@@ -8,6 +8,7 @@ import (
 	"cloudiac/runner"
 	"cloudiac/utils"
 	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"path"
 )
@@ -156,6 +157,17 @@ func (Task) TableName() string {
 
 func (Task) DefaultTaskName() string {
 	return ""
+}
+
+func (t Task) MarshalJSON() ([]byte, error) {
+	type Tt Task
+	tt := Tt(t)
+	for i, v := range tt.Variables {
+		if v.Sensitive {
+			tt.Variables[i].Value = ""
+		}
+	}
+	return json.Marshal(tt)
 }
 
 func (BaseTask) NewId() Id {

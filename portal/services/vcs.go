@@ -10,8 +10,9 @@ import (
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils/logs"
 	"fmt"
-	ctyjson "github.com/zclconf/go-cty/cty/json"
 	"strings"
+
+	ctyjson "github.com/zclconf/go-cty/cty/json"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
@@ -69,7 +70,7 @@ func QueryVcs(orgId models.Id, status, q string, isShowdefaultVcs, isShowRegistr
 	if !isShowRegistryVcs {
 		query = query.Where("vcs_type != ?", consts.GitTypeRegistry)
 	}
-	return query.LazySelectAppend("id, org_id, project_id, name, status, vcs_type, address")
+	return query
 }
 
 func QueryVcsSample(query *db.Session) *db.Session {
@@ -131,7 +132,7 @@ func GetVcsRepoByTplId(sess *db.Session, tplId models.Id) (vcsrv.RepoIface, e.Er
 	}
 }
 
-func QueryEnableVcs(orgId models.Id, query *db.Session) (interface{}, e.Error) {
+func FindEnableVcs(orgId models.Id, query *db.Session) ([]models.Vcs, e.Error) {
 	vcs := make([]models.Vcs, 0)
 	if err := query.Model(&models.Vcs{}).Where("org_id = ? or org_id = 0", orgId).Where("status = 'enable'").Find(&vcs); err != nil {
 		return nil, e.New(e.DBError, err)

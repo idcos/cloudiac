@@ -38,6 +38,19 @@ func (Vcs) NewId() Id {
 	return NewId("vcs")
 }
 
+type DesensitizedVcs struct {
+	Vcs
+	VcsToken string `json:"vcsToken" gorm:"-"`
+}
+
+func NewDesensitizedVcs(v Vcs) *DesensitizedVcs {
+	dv := DesensitizedVcs{
+		Vcs:      v,
+		VcsToken: "",
+	}
+	return &dv
+}
+
 func (v Vcs) Migrate(sess *db.Session) (err error) {
 	if err = v.AddUniqueIndex(sess, "unique__org_vcs_name", "org_id", "name"); err != nil {
 		return err

@@ -1159,6 +1159,7 @@ func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, ta
 
 	vars, er := GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
 	if er != nil {
+		logs.Get().Debugf("get valid vars and vgVars error: %v", er)
 		return nil, e.New(e.InternalError, er, http.StatusInternalServerError)
 	}
 
@@ -1191,6 +1192,7 @@ func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, ta
 
 	task.RepoAddr, task.CommitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
 	if err != nil {
+		logs.Get().Debugf("get task repo addr and commit id failed: %v", err)
 		return nil, e.New(e.InternalError, err)
 	}
 

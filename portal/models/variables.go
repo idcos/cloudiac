@@ -5,6 +5,7 @@ package models
 import (
 	"cloudiac/portal/libs/db"
 	"database/sql/driver"
+	"encoding/json"
 )
 
 type VariableBody struct {
@@ -41,6 +42,15 @@ func (Variable) TableName() string {
 	return "iac_variable"
 }
 
+func (v Variable) MarshalJSON() ([]byte, error) {
+	type Tv Variable
+	tv := Tv(v)
+	if tv.Sensitive {
+		tv.Value = ""
+	}
+	return json.Marshal(tv)
+}
+
 func (v Variable) Migrate(sess *db.Session) error {
 	// 变量名在各 scope 下唯一
 	// 注意这些 id 字段需要默认设置为 ''，否则联合唯一索引可能会因为存在 null 值而不生效
@@ -72,6 +82,17 @@ func (VariableGroup) TableName() string {
 
 func (VariableGroup) NewId() Id {
 	return NewId("vg")
+}
+
+func (vg VariableGroup) MarshalJSON() ([]byte, error) {
+	type Tvg VariableGroup
+	tvg := Tvg(vg)
+	for i, v := range tvg.Variables {
+		if v.Sensitive {
+			tvg.Variables[i].Value = ""
+		}
+	}
+	return json.Marshal(tvg)
 }
 
 func (v VariableGroup) Migrate(sess *db.Session) error {
