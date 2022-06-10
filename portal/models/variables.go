@@ -19,6 +19,10 @@ type VariableBody struct {
 	Options StrSlice `yaml:"options" json:"options" gorm:"type:json"` // 可选值列表
 }
 
+func (v *VariableBody) Key() string {
+	return v.Type + ":" + v.Name
+}
+
 type Variable struct {
 	BaseModel
 	VariableBody
