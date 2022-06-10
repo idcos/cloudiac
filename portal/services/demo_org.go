@@ -28,16 +28,17 @@ func CreateUserDemoOrgData(c *ctx.ServiceContext, tx *db.Session, user *models.U
 		er      e.Error
 	)
 
+	demoCfg := configs.Get().Demo
 	// 尝试获取一个可用的组织名称
 	for i := 0; i < 80; i++ { // 限制重试次数
-		demoName := fmt.Sprintf("%s的演示组织", userName)
+		demoName := fmt.Sprintf("%s%s", userName, demoCfg.OrgNameSuffix)
 		if i > 0 { // 第一次尝试不加随机后缀，此后都加至少两位的随机后缀(每尝试10次后缀长度加1)
 			demoName += utils.RandomStr(i/10 + 2)
 		}
 		logger.Debugf("i=%v, demo name: %v", i, demoName)
 		org, er = CreateOrganization(tx, models.Organization{
 			Name:        demoName,
-			Description: "",
+			Description: demoCfg.OrgDescription,
 			CreatorId:   user.Id,
 			IsDemo:      true,
 		})
@@ -51,8 +52,6 @@ func CreateUserDemoOrgData(c *ctx.ServiceContext, tx *db.Session, user *models.U
 	}
 	logger.Infof("create demo org: %s(%s)", org.Name, org.Id)
 
-	// 创建 demo vcs
-	demoCfg := configs.Get().Demo
 	vcs, er = CreateDemoVcs(tx, org.Id, demoCfg.VcsType, demoCfg.VcsAddress, demoCfg.VcsName, demoCfg.VcsToken)
 	if er != nil {
 		return er

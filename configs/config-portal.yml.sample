@@ -64,6 +64,8 @@ ldap:
 
 demo:
   enable: ${DEMO_ENABLE}
+  org_name_suffix: "的演示组织"
+  org_description: "演示组织描述内容"
   vcs_name: "演示 VCS"
   vcs_type: "${DEMO_VCS_TYPE}"
   vcs_address: "${DEMO_VCS_ADDRESS}"

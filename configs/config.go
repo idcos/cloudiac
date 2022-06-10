@@ -74,6 +74,9 @@ type LdapConfig struct {
 type DemoConfig struct {
 	Enable bool `yaml:"enable"` // 是否启用演示组织(默认为否)
 
+	OrgNameSuffix  string `yaml:"org_name_suffix"` // 演示组织名称后缀
+	OrgDescription string `yaml:"org_description"` // 演示组织描述
+
 	VcsName    string `yaml:"vcs_name"`
 	VcsType    string `yaml:"vcs_type"`
 	VcsAddress string `yaml:"vcs_address"`
@@ -191,6 +194,10 @@ var (
 		Portal: PortalConfig{
 			SSHPrivateKey: "var/private_key",
 			SSHPublicKey:  "var/private_key.pub",
+		},
+		Demo: DemoConfig{
+			OrgNameSuffix:  "的演示组织",
+			OrgDescription: "",
 		},
 	}
 )
