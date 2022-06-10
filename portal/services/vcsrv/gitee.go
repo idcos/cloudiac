@@ -54,7 +54,7 @@ func (gitee *giteeVcs) GetRepo(idOrPath string) (RepoIface, error) {
 }
 
 func (v *giteeVcs) RepoBaseHttpAddr() string {
-	return strings.TrimRight(v.vcs.Address, "/api/v5")
+	return strings.TrimSuffix(v.vcs.Address, "/api/v5")
 }
 
 type RepositoryGitee struct {
