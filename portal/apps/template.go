@@ -375,9 +375,15 @@ func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*res
 	if err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	varialbeList, err := services.SearchVariableByTemplateId(c.DB(), form.Id)
+	variableList, err := services.SearchVariableByTemplateId(c.DB(), form.Id)
 	if err != nil {
 		return nil, e.New(e.DBError, err)
+	}
+
+	for index, v := range variableList {
+		if v.Sensitive {
+			variableList[index].Value = ""
+		}
 	}
 
 	if tpl.RepoFullName == "" {
@@ -398,7 +404,7 @@ func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*res
 
 	tplDetail := &resps.TemplateDetailResp{
 		Template:    tpl,
-		Variables:   varialbeList,
+		Variables:   variableList,
 		ProjectList: project_ids,
 		PolicyGroup: policyGroups,
 	}
