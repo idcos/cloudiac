@@ -3,7 +3,6 @@
 package services
 
 import (
-	"cloudiac/common"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
@@ -158,24 +157,24 @@ func GetDemoOrganization(tx *db.Session) (*models.Organization, e.Error) {
 	return &o, nil
 }
 
-func TryAddDemoRelation(tx *db.Session, userId models.Id) (err e.Error) {
-	if common.DemoOrgId == "" {
-		return
-	}
-	demoProject, _ := GetDemoProject(tx, models.Id(common.DemoOrgId))
-	// 用户加入演示组织
-	_, err = CreateUserOrgRel(tx, models.UserOrg{OrgId: models.Id(common.DemoOrgId), UserId: userId, Role: consts.OrgRoleAdmin})
-	if err != nil {
-		return
-	}
-	// 用户加入演示项目
-	_, err = CreateProjectUser(tx, models.UserProject{
-		Role:      consts.ProjectRoleManager,
-		UserId:    userId,
-		ProjectId: demoProject.Id,
-	})
-	return
-}
+// func TryAddDemoRelation(tx *db.Session, userId models.Id) (err e.Error) {
+// 	if common.DemoOrgId == "" {
+// 		return
+// 	}
+// 	demoProject, _ := GetDemoProject(tx, models.Id(common.DemoOrgId))
+// 	// 用户加入演示组织
+// 	_, err = CreateUserOrgRel(tx, models.UserOrg{OrgId: models.Id(common.DemoOrgId), UserId: userId, Role: consts.OrgRoleAdmin})
+// 	if err != nil {
+// 		return
+// 	}
+// 	// 用户加入演示项目
+// 	_, err = CreateProjectUser(tx, models.UserProject{
+// 		Role:      consts.ProjectRoleManager,
+// 		UserId:    userId,
+// 		ProjectId: demoProject.Id,
+// 	})
+// 	return
+// }
 
 func GetOrgOrProjectResourcesQuery(tx *db.Session, searchStr string, orgId, projectId, userId models.Id, isSuperAdmin bool) *db.Session {
 	query := tx.Joins("inner join iac_env on iac_env.last_res_task_id = iac_resource.task_id left join " +

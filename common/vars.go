@@ -3,7 +3,9 @@
 package common
 
 var (
-	DemoOrgId string
+	// 旧版本中演示组织是全局使用一个，会在初始化时设置该变量。
+	// 新版本演示组织是每个用户有一个，所以该特性不再需要。
+	// DemoOrgId string
 
 	TaskJobTypes = []string{
 		TaskJobPlan,
