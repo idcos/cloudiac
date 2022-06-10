@@ -280,13 +280,13 @@ const (
 `
 )
 
-var UserActivteMail = `
+var UserActiveMail = `
 <html>
 <body>
 <div>
 尊敬的 {{.Name}}：
 <p>
-&nbsp;&nbsp;&nbsp;&nbsp;欢迎使用 CloudIaC，您的登录帐号就是注册时使用的邮箱：{{.Email}}，请点击以下链接激活您的帐号（该链接有效时间为24个小时）：
+&nbsp;&nbsp;&nbsp;&nbsp;欢迎使用 CloudIaC，请点击以下链接激活您的帐号（该链接有效时间为24个小时）：
 </p>
 
 <p>
