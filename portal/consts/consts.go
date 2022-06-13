@@ -10,7 +10,9 @@ import (
 const (
 	LowerCaseLetter = "abcdefghijklmnopqrstuvwxyz"
 	UpperCaseLetter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	CaseLetter      = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	DigitChars      = "0123456789"
+	SpecialChars    = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
 
 	DefaultPageSize = 15   // 默认分页大小
 	MaxPageSize     = 5000 // 最大单页数据条数
