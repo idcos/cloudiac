@@ -282,26 +282,28 @@ const (
 
 const UserActiveMail = `
 <html>
-<body style="width:100%;background:#FFF;text-align:left;">
-  <div style="padding: 50px;background: #f3f4f6;width: 800px;margin: 25px auto;">
-    尊敬的 {{.Name}}：
-    <p>&nbsp;&nbsp;&nbsp;&nbsp;欢迎使用 CloudIaC，请点击以下链接激活您的帐号（该链接有效时间为24个小时）：
-    </p>
-    <p>
-    &nbsp;&nbsp;&nbsp;&nbsp;<a href="{{.Address}}" style="font-size: 14px;color: white;line-height: 22px;display: inline-block;padding: 8px 18px;font-weight: normal;text-decoration: none;border: 1px solid #0C8CF6;border-radius: 2px; background: #0C8CF6">点击此处激活帐号</a><br/><span style="font-size:0.8em;">
+<body style="background:#FFF;text-align:left;">
+  <div style="max-width: 800px;margin: 25px auto;">
+    <div style="padding: 50px;background: #f3f4f6;margin: 25px auto;">
+      尊敬的 {{.Name}}：
+      <p>&nbsp;&nbsp;&nbsp;&nbsp;欢迎使用 CloudIaC，请点击以下链接激活您的帐号（该链接有效时间为24个小时）：
+      </p>
+      <p>
+      &nbsp;&nbsp;&nbsp;&nbsp;<a href="{{.Address}}" style="font-size: 14px;color: white;line-height: 22px;display: inline-block;padding: 8px 18px;font-weight: normal; text-decoration: none;border: 1px solid #0C8CF6;border-radius: 2px; background: #0C8CF6">点击此处激活帐号</a><br/><span style="font-size:0.8em;">
+        <br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;如链接跳转有问题，请手动复制如下地址，在浏览器中粘贴并打开：
+        <br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;{{.Address}}
+      </span>
+      </p>
+      <p>
+      &nbsp;&nbsp;&nbsp;&nbsp;如有任何问题和建议，欢迎在社区提交 Issue，您的任何建议都将帮助我们更好的完善 CloudIaC，如果您对 CloudIaC 项目感兴趣，也欢迎您提交 PR，一起推进 IaC 生态在国内的落地。
       <br/>
-      &nbsp;&nbsp;&nbsp;&nbsp;如链接跳转有问题，请手动复制如下地址，在浏览器中粘贴并打开：
+      &nbsp;&nbsp;&nbsp;&nbsp;----------
       <br/>
-      &nbsp;&nbsp;&nbsp;&nbsp;{{.Address}}
-    </span>
-    </p>
-    <p>
-    &nbsp;&nbsp;&nbsp;&nbsp;如有任何问题和建议，欢迎在社区提交 Issue，您的任何建议，都将帮助我们更好的完善 CloudIaC，如果您对 CloudIaC 项目感兴趣，也欢迎您提交 PR，一起推进 IaC 生态在国内的落地。
-    <br/>
-    &nbsp;&nbsp;&nbsp;&nbsp;----------
-    <br/>
-    &nbsp;&nbsp;&nbsp;&nbsp;此邮件为 CloudIaC 平台自动发送，请勿回复。
-    </p>
+      &nbsp;&nbsp;&nbsp;&nbsp;此邮件为 CloudIaC 平台自动发送，请勿回复。
+      </p>
+    </div>
   </div>
 </body>
 </html>
