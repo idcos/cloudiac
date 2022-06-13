@@ -176,7 +176,7 @@ func CheckPasswordFormat(password string) e.Error {
 	}
 
 	typeCount := 0
-	for _, chars := range []string{consts.CaseLetter, consts.DigitChars, consts.SpecialChars} {
+	for _, chars := range []string{consts.Letter, consts.DigitChars, consts.SpecialChars} {
 		if strings.ContainsAny(password, chars) {
 			typeCount += 1
 		}

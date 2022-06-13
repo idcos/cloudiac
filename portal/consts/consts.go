@@ -10,7 +10,7 @@ import (
 const (
 	LowerCaseLetter = "abcdefghijklmnopqrstuvwxyz"
 	UpperCaseLetter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	CaseLetter      = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	Letter          = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	DigitChars      = "0123456789"
 	SpecialChars    = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
 
