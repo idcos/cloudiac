@@ -9,6 +9,7 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/validate"
 	api_v1 "cloudiac/portal/web/api/v1"
 	"cloudiac/portal/web/middleware"
 	"cloudiac/utils"
@@ -42,6 +43,7 @@ func GetRouter() *gin.Engine {
 			"build":   common.BUILD,
 		})
 	}))
+	validate.RegisterValida()
 	api_v1.Register(e.Group("/api/v1"))
 
 	// 直接提供静态文件访问，生产环境部署时也可以使用 nginx 反代
