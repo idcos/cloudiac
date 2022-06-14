@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package validate
 
 import (
@@ -37,7 +39,6 @@ var registerTranslationsFunc = func(ut ut.Translator, fe validator.FieldError) s
 func initRegisterTranslation() (ut.Translator, ut.Translator) {
 	return zhRegisterTranslation(GetValidate(), registerTranslationsFunc), enRegisterTranslation(GetValidate(), registerTranslationsFunc)
 }
-
 
 func initValidate() *validator.Validate {
 	v, ok := binding.Validator.Engine().(*validator.Validate)
