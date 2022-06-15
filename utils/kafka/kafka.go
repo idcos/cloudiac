@@ -37,6 +37,7 @@ type IacKafkaContent struct {
 	ProjectId    models.Id              `json:"projectId"`
 	TplId        models.Id              `json:"tplId"`
 	EnvId        models.Id              `json:"envId"`
+	TaskId       models.Id              `json:"taskId"`
 	Result       IacKafkaCallbackResult `json:"result"`
 }
 
@@ -55,6 +56,7 @@ func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus, envS
 		ProjectId:    task.ProjectId,
 		TplId:        task.TplId,
 		EnvId:        task.EnvId,
+		TaskId:       task.Id,
 		Result: IacKafkaCallbackResult{
 			Resources: resources,
 		},
