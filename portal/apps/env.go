@@ -123,21 +123,40 @@ func createEnvCheck(c *ctx.ServiceContext, form *forms.CreateEnvForm) e.Error {
 	return nil
 }
 
-func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, destroyAt *models.Time) e.Error {
+func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, destroyAt *models.Time, session *db.Session) e.Error {
 	if !form.HasKey("tfVarsFile") {
 		form.TfVarsFile = tpl.TfVarsFile
 	}
+
 	if !form.HasKey("playVarsFile") {
 		form.PlayVarsFile = tpl.PlayVarsFile
 	}
+
 	if !form.HasKey("playbook") {
 		form.Playbook = tpl.Playbook
 	}
+
 	if !form.HasKey("keyId") {
 		form.KeyId = tpl.KeyId
 	}
+
 	if !form.HasKey("revision") {
 		form.Revision = tpl.RepoRevision
+	}
+
+	if !form.HasKey("policyEnable") {
+		form.PolicyEnable = tpl.PolicyEnable
+		if form.PolicyEnable {
+			temp, err := services.GetPolicyRels(session, tpl.Id, consts.ScopeTemplate)
+			if err != nil {
+				return err
+			}
+			policyGroups := make([]models.Id, 0)
+			for _, v := range temp {
+				policyGroups = append(policyGroups, models.Id(v.PolicyGroupId))
+			}
+			form.PolicyGroup = policyGroups
+		}
 	}
 
 	if form.StepTimeout == 0 {
@@ -305,15 +324,17 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	if err != nil {
 		return nil, err
 	}
+
 	// 检查环境传入工作目录
 	if err = envWorkdirCheck(c, tpl.RepoId, form.Revision, form.Workdir, tpl.VcsId); err != nil {
 		return nil, err
 	}
+
 	// 以下值只在未传入时使用模板定义的值，如果入参有该字段即使值为空也不会使用模板中的值
 	var (
 		destroyAt models.Time
 	)
-	err = setDefaultValueFromTpl(form, tpl, &destroyAt)
+	err = setDefaultValueFromTpl(form, tpl, &destroyAt, c.DB())
 	if err != nil {
 		return nil, err
 	}
