@@ -80,7 +80,7 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*resps.TaskDe
 		c.Logger().Errorf("error get task id by user, err %s", er)
 		return nil, e.New(e.DBError, er)
 	}
-	if !c.OrgId.InArray(orgIds...) && !c.IsSuperAdmin {
+	if !c.OrgId.InArray(orgIds...) && !c.IsSuperAdmin && c.UserId != consts.SysUserId {
 		// 请求了一个不存在的 task，因为 task id 是在 path 传入，这里我们返回 404
 		return nil, e.New(e.TaskNotExists, http.StatusNotFound)
 	}
