@@ -16,7 +16,6 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"net/http"
-	"time"
 )
 
 func SearchToken(c *ctx.ServiceContext, form *forms.SearchTokenForm) (interface{}, e.Error) {
@@ -49,16 +48,16 @@ func CreateToken(c *ctx.ServiceContext, form *forms.CreateTokenForm) (*models.To
 	c.AddLogField("action", fmt.Sprintf("create token for user %s", c.UserId))
 	var (
 		expiredAt models.Time
+		er        error
 	)
 
 	tokenStr, _ := utils.GetUUID()
 
 	if form.ExpiredAt != "" {
-		t, er := time.Parse(time.RFC3339, form.ExpiredAt)
+		expiredAt, er = models.Time{}.Parse(form.ExpiredAt)
 		if er != nil {
 			return nil, e.New(e.BadParam, http.StatusBadRequest, er)
 		}
-		expiredAt = models.Time(t)
 	}
 
 	token, err := services.CreateToken(c.DB(), models.Token{
