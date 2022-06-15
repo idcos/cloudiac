@@ -1388,7 +1388,7 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 	}
 
 	scanTask, err := GetScanTaskById(session, task.Id)
-	if err != nil {
+	if err != nil && err.Code() != e.TaskNotExists {
 		logs.Get().Errorf("kafka send error, get scanTask data err: %v, taskId: %s", err, task.Id)
 		return
 	}

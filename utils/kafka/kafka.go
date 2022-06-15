@@ -41,10 +41,15 @@ type IacKafkaContent struct {
 }
 
 func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus, envStatus string, resources []models.Resource, scanTask *models.ScanTask) []byte {
+	var policyStatus string
+	if scanTask != nil {
+		policyStatus = scanTask.PolicyStatus
+	}
+
 	a := IacKafkaContent{
 		TaskStatus:   taskStatus,
 		TaskType:     task.Type,
-		PolicyStatus: scanTask.PolicyStatus,
+		PolicyStatus: policyStatus,
 		EnvStatus:    envStatus,
 		OrgId:        task.OrgId,
 		ProjectId:    task.ProjectId,
