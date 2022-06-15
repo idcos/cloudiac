@@ -146,7 +146,10 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 
 	if !form.HasKey("policyEnable") {
 		form.PolicyEnable = tpl.PolicyEnable
-		if form.PolicyEnable {
+	}
+
+	if form.PolicyEnable {
+		if !form.HasKey("policyGroup") || len(form.PolicyGroup) == 0 {
 			temp, err := services.GetPolicyRels(session, tpl.Id, consts.ScopeTemplate)
 			if err != nil {
 				return err

@@ -41,12 +41,7 @@ type IacKafkaContent struct {
 	Result       IacKafkaCallbackResult `json:"result"`
 }
 
-func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus, envStatus string, resources []models.Resource, scanTask *models.ScanTask) []byte {
-	var policyStatus string
-	if scanTask != nil {
-		policyStatus = scanTask.PolicyStatus
-	}
-
+func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus, envStatus,policyStatus string, resources []models.Resource) []byte {
 	a := IacKafkaContent{
 		TaskStatus:   taskStatus,
 		TaskType:     task.Type,
