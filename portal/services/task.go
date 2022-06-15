@@ -1386,13 +1386,26 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 		logs.Get().Errorf("kafka send error, get resource data err: %v", err)
 		return
 	}
+
+	var policyStatus string
+	scanTask, err := GetScanTaskById(session, task.Id)
+	if err != nil && err.Code() != e.TaskNotExists {
+		logs.Get().Errorf("kafka send error, get scanTask data err: %v, taskId: %s", err, task.Id)
+		return
+	}
+
+	if scanTask != nil {
+		policyStatus = scanTask.PolicyStatus
+	}
+
 	env, err := GetEnvById(session, task.EnvId)
 	if err != nil {
 		logs.Get().Errorf("kafka send error, query env status err: %v", err)
 		return
 	}
+
 	k := kafka.Get()
-	message := k.GenerateKafkaContent(task, taskStatus, env.Status, resources)
+	message := k.GenerateKafkaContent(task, taskStatus, env.Status, policyStatus, resources)
 	if err := k.ConnAndSend(message); err != nil {
 		logs.Get().Errorf("kafka send error: %v", err)
 		return
