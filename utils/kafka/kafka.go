@@ -27,27 +27,29 @@ type IacKafkaCallbackResult struct {
 }
 
 type IacKafkaContent struct {
-	EventType  string                 `json:"eventType"`
-	ExtraData  interface{}            `json:"extraData"`
-	TaskStatus string                 `json:"taskStatus"`
-	TaskType   string                 `json:"taskType"`
-	EnvStatus  string                 `json:"envStatus"`
-	OrgId      models.Id              `json:"orgId"`
-	ProjectId  models.Id              `json:"projectId"`
-	TplId      models.Id              `json:"tplId"`
-	EnvId      models.Id              `json:"envId"`
-	Result     IacKafkaCallbackResult `json:"result"`
+	EventType    string                 `json:"eventType"`
+	ExtraData    interface{}            `json:"extraData"`
+	TaskStatus   string                 `json:"taskStatus"`
+	PolicyStatus string                 `json:"policyStatus"`
+	TaskType     string                 `json:"taskType"`
+	EnvStatus    string                 `json:"envStatus"`
+	OrgId        models.Id              `json:"orgId"`
+	ProjectId    models.Id              `json:"projectId"`
+	TplId        models.Id              `json:"tplId"`
+	EnvId        models.Id              `json:"envId"`
+	Result       IacKafkaCallbackResult `json:"result"`
 }
 
-func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus, envStatus string, resources []models.Resource) []byte {
+func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus, envStatus string, resources []models.Resource, scanTask *models.ScanTask) []byte {
 	a := IacKafkaContent{
-		TaskStatus: taskStatus,
-		TaskType:   task.Type,
-		EnvStatus:  envStatus,
-		OrgId:      task.OrgId,
-		ProjectId:  task.ProjectId,
-		TplId:      task.TplId,
-		EnvId:      task.EnvId,
+		TaskStatus:   taskStatus,
+		TaskType:     task.Type,
+		PolicyStatus: scanTask.PolicyStatus,
+		EnvStatus:    envStatus,
+		OrgId:        task.OrgId,
+		ProjectId:    task.ProjectId,
+		TplId:        task.TplId,
+		EnvId:        task.EnvId,
 		Result: IacKafkaCallbackResult{
 			Resources: resources,
 		},
