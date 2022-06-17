@@ -52,6 +52,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 			panic(r)
 		}
 	}()
+
 	template, err := services.CreateTemplate(tx, models.Template{
 		Name:         form.Name,
 		OrgId:        c.OrgId,
@@ -72,6 +73,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		PolicyEnable: form.PolicyEnable,
 		Triggers:     form.TplTriggers,
 		KeyId:        form.KeyId,
+		Source:       form.Source,
 	})
 
 	if err != nil {

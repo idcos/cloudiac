@@ -166,6 +166,9 @@ const (
 	TerraformActionDelete = "delete"
 
 	DemoEnvTTL = "12h"
+
+	TemplateSourceVcs      = "vcs"
+	TemplateSourceRegistry = "registry"
 )
 
 const (

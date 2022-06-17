@@ -201,6 +201,7 @@ func Register(g *gin.RouterGroup) {
 	ctrl.Register(g.Group("keys", ac()), &handlers.Key{})
 
 	ctrl.Register(g.Group("vcs", ac()), &handlers.Vcs{})
+	g.GET("/vcs/registry", ac(), w(handlers.Vcs{}.GetRegistryVcs))
 	g.GET("/vcs/:id/repo", ac(), w(handlers.Vcs{}.ListRepos))
 	g.GET("/vcs/:id/branch", ac(), w(handlers.Vcs{}.ListBranches))
 	g.GET("/vcs/:id/tag", ac(), w(handlers.Vcs{}.ListTags))

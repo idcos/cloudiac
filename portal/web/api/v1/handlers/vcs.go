@@ -214,3 +214,17 @@ func (Vcs) GetFileFullPath(c *ctx.GinRequest) {
 	c.JSONResult(apps.GetVcsFullFilePath(c.Service(), &form))
 
 }
+
+// GetRegistryVcs 查询Registry vcs
+// @Tags Vcs仓库
+// @Summary 查询Registry vcs
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Router /vcs/registry [get]
+// @Success 200 {object} ctx.JSONResult{result=models.Vcs}
+func (Vcs) GetRegistryVcs(c *ctx.GinRequest) {
+	c.JSONResult(apps.GetRegistryVcs(c.Service()))
+}
