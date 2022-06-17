@@ -9,6 +9,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/desensitize"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
@@ -404,12 +405,11 @@ func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*res
 
 	tplDetail := &resps.TemplateDetailResp{
 		Template:    tpl,
-		Variables:   variableList,
+		Variables:   desensitize.NewVariableSlice(variableList),
 		ProjectList: project_ids,
 		PolicyGroup: policyGroups,
 	}
 	return tplDetail, nil
-
 }
 
 func getTplIdList(db *db.Session, projectId models.Id) ([]models.Id, e.Error) {
