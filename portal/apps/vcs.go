@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/desensitize"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
@@ -42,7 +43,7 @@ func CreateVcs(c *ctx.ServiceContext, form *forms.CreateVcsForm) (interface{}, e
 	if err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
-	return models.NewDesensitizedVcs(*vcs), nil
+	return desensitize.NewVcsPtr(vcs), nil
 }
 
 // 判断前端传递组织id是否具有该vcs仓库读写权限
@@ -58,7 +59,7 @@ func checkOrgVcsAuth(c *ctx.ServiceContext, id models.Id) (vcs *models.Vcs, err 
 
 }
 
-func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (*models.DesensitizedVcs, e.Error) {
+func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (*desensitize.Vcs, e.Error) {
 	vcs, err := checkOrgVcsAuth(c, form.Id) //nolint
 	if err != nil {
 		return nil, err
@@ -89,11 +90,12 @@ func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (*models.Desens
 		return nil, err
 	}
 
-	return models.NewDesensitizedVcs(*vcs), nil
+	return desensitize.NewVcsPtr(vcs), nil
 }
 
 func SearchVcs(c *ctx.ServiceContext, form *forms.SearchVcsForm) (interface{}, e.Error) {
-	rs, err := getPage(services.QueryVcs(c.OrgId, form.Status, form.Q, form.IsShowDefaultVcs, false, c.DB()), form, models.DesensitizedVcs{})
+	query := services.QueryVcs(c.OrgId, form.Status, form.Q, form.IsShowDefaultVcs, false, c.DB())
+	rs, err := getPage(query, form, desensitize.Vcs{})
 	if err != nil {
 		return nil, err
 	}
@@ -125,11 +127,7 @@ func ListEnableVcs(c *ctx.ServiceContext) (interface{}, e.Error) {
 	if er != nil {
 		return nil, er
 	}
-	rs := make([]*models.DesensitizedVcs, 0, len(vcsList))
-	for _, v := range vcsList {
-		rs = append(rs, models.NewDesensitizedVcs(v))
-	}
-	return rs, nil
+	return desensitize.NewVcsSlice(vcsList), nil
 }
 
 func GetReadme(c *ctx.ServiceContext, form *forms.GetReadmeForm) (interface{}, e.Error) {

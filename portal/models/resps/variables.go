@@ -2,7 +2,10 @@
 
 package resps
 
-import "cloudiac/portal/models"
+import (
+	"cloudiac/portal/models"
+	"cloudiac/portal/models/desensitize"
+)
 
 type NewVariable []VariableResp
 
@@ -17,8 +20,8 @@ func (v NewVariable) Swap(i, j int) {
 }
 
 type VariableResp struct {
-	models.Variable
-	Overwrites *models.Variable `json:"overwrites" form:"overwrites" ` //回滚参数，无需回滚是为空
+	desensitize.Variable
+	Overwrites *desensitize.Variable `json:"overwrites" form:"overwrites" ` //回滚参数，无需回滚是为空
 }
 
 type SearchVarGroupScanResult struct {

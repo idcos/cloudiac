@@ -10,13 +10,14 @@ import (
 	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
-	"github.com/go-playground/validator/v10"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
 	"strconv"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/pkg/errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
