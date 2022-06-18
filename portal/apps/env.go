@@ -1232,6 +1232,10 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		form.Workdir = env.Workdir
 	}
 
+	if !form.HasKey("revision") {
+		form.Revision = env.Revision
+	}
+
 	// 环境下云模版工作目录检查
 	if err = envWorkdirCheck(c, tpl.RepoId, form.Revision, form.Workdir, tpl.VcsId); err != nil {
 		return nil, err
