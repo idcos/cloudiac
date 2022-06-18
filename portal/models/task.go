@@ -162,7 +162,6 @@ func (Task) DefaultTaskName() string {
 func (v *Task) Desensitize() Task {
 	rv := Task{}
 	utils.DeepCopy(&rv, v)
-	// rv := *v
 	for i := 0; i < len(rv.Variables); i++ {
 		rv.Variables[i].Value = ""
 	}
