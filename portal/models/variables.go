@@ -3,9 +3,11 @@
 package models
 
 import (
-	"cloudiac/portal/libs/db"
 	"database/sql/driver"
-	"encoding/json"
+
+	"cloudiac/portal/libs/db"
+
+	"github.com/jinzhu/copier"
 )
 
 type VariableBody struct {
@@ -42,13 +44,18 @@ func (Variable) TableName() string {
 	return "iac_variable"
 }
 
-func (v Variable) MarshalJSON() ([]byte, error) {
-	type Tv Variable
-	tv := Tv(v)
-	if tv.Sensitive {
-		tv.Value = ""
+//go:generate go run cloudiac/code-gen/desenitize Variable ./desensitize/
+func (v *Variable) Desensitize() Variable {
+	if !v.Sensitive {
+		return *v
 	}
-	return json.Marshal(tv)
+
+	rv := Variable{}
+	_ = copier.CopyWithOption(&rv, v, copier.Option{DeepCopy: true})
+	if rv.Sensitive {
+		rv.Value = ""
+	}
+	return rv
 }
 
 func (v Variable) Migrate(sess *db.Session) error {
@@ -84,15 +91,16 @@ func (VariableGroup) NewId() Id {
 	return NewId("vg")
 }
 
-func (vg VariableGroup) MarshalJSON() ([]byte, error) {
-	type Tvg VariableGroup
-	tvg := Tvg(vg)
-	for i, v := range tvg.Variables {
-		if v.Sensitive {
-			tvg.Variables[i].Value = ""
+//go:generate go run cloudiac/code-gen/desenitize VariableGroup ./desensitize/
+func (vg *VariableGroup) Desensitize() VariableGroup {
+	rvg := VariableGroup{}
+	_ = copier.CopyWithOption(&rvg, vg, copier.Option{DeepCopy: true})
+	for i := range rvg.Variables {
+		if rvg.Variables[i].Sensitive {
+			rvg.Variables[i].Value = ""
 		}
 	}
-	return json.Marshal(tvg)
+	return rvg
 }
 
 func (v VariableGroup) Migrate(sess *db.Session) error {

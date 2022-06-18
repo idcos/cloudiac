@@ -6,6 +6,8 @@ import (
 	"cloudiac/common"
 	"cloudiac/portal/libs/db"
 	"cloudiac/utils"
+
+	"github.com/jinzhu/copier"
 )
 
 const (
@@ -38,17 +40,12 @@ func (Vcs) NewId() Id {
 	return NewId("vcs")
 }
 
-type DesensitizedVcs struct {
-	Vcs
-	VcsToken string `json:"vcsToken" gorm:"-"`
-}
-
-func NewDesensitizedVcs(v Vcs) *DesensitizedVcs {
-	dv := DesensitizedVcs{
-		Vcs:      v,
-		VcsToken: "",
-	}
-	return &dv
+//go:generate go run cloudiac/code-gen/desenitize Vcs ./desensitize/
+func (v *Vcs) Desensitize() Vcs {
+	rv := Vcs{}
+	_ = copier.CopyWithOption(&rv, v, copier.Option{DeepCopy: true})
+	rv.VcsToken = ""
+	return rv
 }
 
 func (v Vcs) Migrate(sess *db.Session) (err error) {

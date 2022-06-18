@@ -8,9 +8,10 @@ import (
 	"cloudiac/runner"
 	"cloudiac/utils"
 	"database/sql/driver"
-	"encoding/json"
 	"fmt"
 	"path"
+
+	"github.com/jinzhu/copier"
 )
 
 type TaskVariables []VariableBody
@@ -159,15 +160,14 @@ func (Task) DefaultTaskName() string {
 	return ""
 }
 
-func (t Task) MarshalJSON() ([]byte, error) {
-	type Tt Task
-	tt := Tt(t)
-	for i, v := range tt.Variables {
-		if v.Sensitive {
-			tt.Variables[i].Value = ""
-		}
+//go:generate go run cloudiac/code-gen/desenitize Task ./desensitize/
+func (v *Task) Desensitize() Task {
+	rv := Task{}
+	_ = copier.CopyWithOption(&rv, v, copier.Option{DeepCopy: true})
+	for i := 0; i < len(rv.Variables); i++ {
+		rv.Variables[i].Value = ""
 	}
-	return json.Marshal(tt)
+	return rv
 }
 
 func (BaseTask) NewId() Id {
