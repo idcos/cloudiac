@@ -10,8 +10,6 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"path"
-
-	"github.com/jinzhu/copier"
 )
 
 type TaskVariables []VariableBody
@@ -163,7 +161,8 @@ func (Task) DefaultTaskName() string {
 //go:generate go run cloudiac/code-gen/desenitize Task ./desensitize/
 func (v *Task) Desensitize() Task {
 	rv := Task{}
-	_ = copier.CopyWithOption(&rv, v, copier.Option{DeepCopy: true})
+	utils.DeepCopy(&rv, v)
+	// rv := *v
 	for i := 0; i < len(rv.Variables); i++ {
 		rv.Variables[i].Value = ""
 	}

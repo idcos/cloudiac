@@ -6,8 +6,6 @@ import (
 	"cloudiac/common"
 	"cloudiac/portal/libs/db"
 	"cloudiac/utils"
-
-	"github.com/jinzhu/copier"
 )
 
 const (
@@ -43,7 +41,7 @@ func (Vcs) NewId() Id {
 //go:generate go run cloudiac/code-gen/desenitize Vcs ./desensitize/
 func (v *Vcs) Desensitize() Vcs {
 	rv := Vcs{}
-	_ = copier.CopyWithOption(&rv, v, copier.Option{DeepCopy: true})
+	utils.DeepCopy(&rv, v)
 	rv.VcsToken = ""
 	return rv
 }
