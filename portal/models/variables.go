@@ -6,8 +6,7 @@ import (
 	"database/sql/driver"
 
 	"cloudiac/portal/libs/db"
-
-	"github.com/jinzhu/copier"
+	"cloudiac/utils"
 )
 
 type VariableBody struct {
@@ -51,7 +50,7 @@ func (v *Variable) Desensitize() Variable {
 	}
 
 	rv := Variable{}
-	_ = copier.CopyWithOption(&rv, v, copier.Option{DeepCopy: true})
+	utils.DeepCopy(&rv, v)
 	if rv.Sensitive {
 		rv.Value = ""
 	}
@@ -94,7 +93,7 @@ func (VariableGroup) NewId() Id {
 //go:generate go run cloudiac/code-gen/desenitize VariableGroup ./desensitize/
 func (vg *VariableGroup) Desensitize() VariableGroup {
 	rvg := VariableGroup{}
-	_ = copier.CopyWithOption(&rvg, vg, copier.Option{DeepCopy: true})
+	utils.DeepCopy(&rvg, vg)
 	for i := range rvg.Variables {
 		if rvg.Variables[i].Sensitive {
 			rvg.Variables[i].Value = ""
