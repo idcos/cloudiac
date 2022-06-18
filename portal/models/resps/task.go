@@ -4,11 +4,11 @@ package resps
 
 import (
 	"cloudiac/portal/models"
-	"cloudiac/portal/models/desensitize"
 )
 
 type TaskDetailResp struct {
-	desensitize.Task
+	//desensitize.Task
+	models.Task
 	Creator string `json:"creator" example:"超级管理员"`
 }
 

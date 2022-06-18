@@ -6,8 +6,6 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/runner"
 	"path"
-
-	"github.com/jinzhu/copier"
 )
 
 type BaseTask struct {
@@ -97,11 +95,11 @@ func (t *ScanTask) Migrate(sess *db.Session) (err error) {
 }
 
 //go:generate go run cloudiac/code-gen/desenitize ScanTask ./desensitize/
-func (v *ScanTask) Desensitize() ScanTask {
-	rv := ScanTask{}
-	_ = copier.CopyWithOption(&rv, v, copier.Option{DeepCopy: true})
-	for i := 0; i < len(rv.Variables); i++ {
-		rv.Variables[i].Value = ""
-	}
-	return rv
-}
+//func (v *ScanTask) Desensitize() ScanTask {
+//	rv := ScanTask{}
+//	_ = copier.CopyWithOption(&rv, v, copier.Option{DeepCopy: true})
+//	for i := 0; i < len(rv.Variables); i++ {
+//		rv.Variables[i].Value = ""
+//	}
+//	return rv
+//}

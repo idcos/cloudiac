@@ -11,7 +11,6 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
-	"cloudiac/portal/models/desensitize"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
@@ -656,7 +655,8 @@ func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicySca
 	if scanTask.PolicyStatus == common.TaskPending {
 		return resps.ScanResultPageResp{
 			PolicyStatus: services.MergeScanResultPolicyStatus(policyEnable, scanTask),
-			Task:         desensitize.NewScanTaskPtr(scanTask),
+			//Task:         desensitize.NewScanTaskPtr(scanTask),
+			Task:         scanTask,
 			Total:        0,
 			PageSize:     0,
 			List:         []*resps.PolicyResultGroup{},
@@ -683,7 +683,8 @@ func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicySca
 
 	return resps.ScanResultPageResp{
 		PolicyStatus: services.MergeScanResultPolicyStatus(policyEnable, scanTask),
-		Task:         desensitize.NewScanTaskPtr(scanTask),
+		Task:         scanTask,
+		//Task:         desensitize.NewScanTaskPtr(scanTask),
 		Total:        p.MustTotal(),
 		PageSize:     p.Size,
 		List:         resultGroups,

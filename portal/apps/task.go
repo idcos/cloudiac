@@ -10,7 +10,6 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
-	"cloudiac/portal/models/desensitize"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
@@ -101,7 +100,8 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*resps.TaskDe
 	// 隐藏敏感字段
 	task.HideSensitiveVariable()
 	var o = resps.TaskDetailResp{
-		Task:    desensitize.NewTask(*task),
+		//Task:    desensitize.NewTask(*task),
+		Task:    *task,
 		Creator: user.Name,
 	}
 	// 清除url token
@@ -159,7 +159,8 @@ func LastTask(c *ctx.ServiceContext, form *forms.LastTaskForm) (*resps.TaskDetai
 	// 隐藏敏感字段
 	task.HideSensitiveVariable()
 	var t = resps.TaskDetailResp{
-		Task:    desensitize.NewTask(*task),
+		//Task:    desensitize.NewTask(*task),
+		Task:    *task,
 		Creator: user.Name,
 	}
 

@@ -4,13 +4,12 @@ package resps
 
 import (
 	"cloudiac/portal/models"
-	"cloudiac/portal/models/desensitize"
 	"fmt"
 )
 
 type ScanResultPageResp struct {
 	PolicyStatus string                `json:"policyStatus"` // 扫描状态
-	Task         *desensitize.ScanTask `json:"task"`         // 扫描任务
+	Task         *models.ScanTask `json:"task"`         // 扫描任务
 	Total        int64                 `json:"total"`        // 总数
 	PageSize     int                   `json:"pageSize"`     // 分页数量
 	List         []*PolicyResultGroup  `json:"groups"`       // 策略组

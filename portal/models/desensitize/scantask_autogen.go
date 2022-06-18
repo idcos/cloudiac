@@ -5,7 +5,6 @@
 package desensitize
 
 import (
-	"encoding/json"
 	"cloudiac/portal/models"
 )
 
@@ -13,33 +12,33 @@ type ScanTask struct {
 	models.ScanTask
 }
 
-func (v ScanTask) MarshalJSON() ([]byte, error) {
-	return json.Marshal(v.ScanTask.Desensitize())
-}
+//func (v ScanTask) MarshalJSON() ([]byte, error) {
+//	return json.Marshal(v.ScanTask.Desensitize())
+//}
+//
+//func NewScanTask(v models.ScanTask) ScanTask {
+//	rv := ScanTask{v.Desensitize()}
+//	return rv
+//}
+//
+//func NewScanTaskPtr(v *models.ScanTask) *ScanTask {
+//	rv := ScanTask{v.Desensitize()}
+//	return &rv
+//}
 
-func NewScanTask(v models.ScanTask) ScanTask {
-	rv := ScanTask{v.Desensitize()}
-	return rv
-}
-
-func NewScanTaskPtr(v *models.ScanTask) *ScanTask {
-	rv := ScanTask{v.Desensitize()}
-	return &rv
-}
-
-func NewScanTaskSlice(vs []models.ScanTask) []ScanTask {
-	rvs := make([]ScanTask, len(vs))
-	for i := 0; i < len(vs); i++ {
-		rvs[i] = NewScanTask(vs[i])
-	}
-	return rvs
-}
-
-func NewScanTaskSlicePtr(vs []*models.ScanTask) []*ScanTask {
-	rvs := make([]*ScanTask, len(vs))
-	for i := 0; i < len(vs); i++ {
-		v := NewScanTask(*vs[i])
-		rvs[i] = &v
-	}
-	return rvs
-}
+//func NewScanTaskSlice(vs []models.ScanTask) []ScanTask {
+//	rvs := make([]ScanTask, len(vs))
+//	for i := 0; i < len(vs); i++ {
+//		rvs[i] = NewScanTask(vs[i])
+//	}
+//	return rvs
+//}
+//
+//func NewScanTaskSlicePtr(vs []*models.ScanTask) []*ScanTask {
+//	rvs := make([]*ScanTask, len(vs))
+//	for i := 0; i < len(vs); i++ {
+//		v := NewScanTask(*vs[i])
+//		rvs[i] = &v
+//	}
+//	return rvs
+//}
