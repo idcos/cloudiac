@@ -391,6 +391,10 @@ func PolicyGroupScanTasks(c *ctx.ServiceContext, form *forms.PolicyLastTasksForm
 		}
 	}
 
+	for i := range tasks {
+		// ScanTask 是直接 db 查询出的，并没有脱敏，这里主动做脱敏处理
+		tasks[i].ScanTask = tasks[i].ScanTask.Desensitize()
+	}
 	return page.PageResp{
 		Total:    p.MustTotal(),
 		PageSize: p.Size,
