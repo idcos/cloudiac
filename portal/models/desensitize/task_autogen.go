@@ -5,7 +5,7 @@
 package desensitize
 
 import (
-	"encoding/json"
+	// "encoding/json"
 	"cloudiac/portal/models"
 )
 
@@ -13,8 +13,20 @@ type Task struct {
 	models.Task
 }
 
-func (v Task) MarshalJSON() ([]byte, error) {
-	return json.Marshal(v.Task.Desensitize())
+
+// 不定义 MarshalJSON() 方法，因为一旦定义了该结构体就无法组合使用了，
+// 会覆盖 MarshalJSON() 方法以导致组合的其他字段不输出。 比如定义结构体:
+// type TaskWithExt struct {
+// 		models.Task
+//		Ext	string
+// }
+// 当我们调用 json.Marshal(TaskWithExt{}) 时 Ext 字段不会输出，
+// 因为直接调用了 models.Task.MarshalJSON() 方法。
+// func (v Task) MarshalJSON() ([]byte, error) {
+// 	return json.Marshal(v.Task.Desensitize())
+// }
+func (v Task) Desensitize() Task {
+	return Task{v.Task.Desensitize()}
 }
 
 func NewTask(v models.Task) Task {
