@@ -33,6 +33,7 @@ type Resource struct {
 	Index         string   `json:"index" gorm:"not null;default:''"`
 	Attrs         ResAttrs `json:"attrs,omitempty" gorm:"type:json"`
 	SensitiveKeys StrSlice `json:"sensitiveKeys,omitempty" gorm:"type:json"`
+	Dependencies  StrSlice `json:"dependencies,omitempty" gorm:"type:json"`
 
 	AppliedAt Time `json:"appliedAt" gorm:"type:datetime;column:applied_at;default:null"`
 }

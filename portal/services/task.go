@@ -646,6 +646,7 @@ type TfStateResource struct {
 	Type         string      `json:"type"`
 	Name         string      `json:"name"`
 	Index        interface{} `json:"index"` // index 可以为整型或字符串
+	DependsOn    []string    `json:"depends_on"`
 
 	Values map[string]interface{} `json:"values"`
 }
@@ -665,13 +666,14 @@ func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 			idx = fmt.Sprintf("%v", r.Index)
 		}
 		rs = append(rs, &models.Resource{
-			Provider: r.ProviderName,
-			Module:   moduleName,
-			Address:  r.Address,
-			Type:     r.Type,
-			Name:     r.Name,
-			Index:    idx,
-			Attrs:    r.Values,
+			Provider:     r.ProviderName,
+			Module:       moduleName,
+			Address:      r.Address,
+			Type:         r.Type,
+			Name:         r.Name,
+			Index:        idx,
+			Attrs:        r.Values,
+			Dependencies: r.DependsOn,
 		})
 	}
 	for i := range module.ChildModules {
@@ -683,8 +685,8 @@ func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, proMap runner.ProviderSensitiveAttrMap) error {
 
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Resource{}.TableName(),
-		"id", "org_id", "project_id", "env_id", "task_id",
-		"provider", "module", "address", "type", "name", "index", "attrs", "sensitive_keys", "applied_at", "res_id")
+		"id", "org_id", "project_id", "env_id", "task_id", "provider", "module",
+		"address", "type", "name", "index", "attrs", "sensitive_keys", "applied_at", "res_id", "dependencies")
 
 	rs := make([]*models.Resource, 0)
 	rs = append(rs, traverseStateModule(&values.RootModule)...)
@@ -717,8 +719,8 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 				r.SensitiveKeys = proMap[providerKey]
 			}
 		}
-		err := bq.AddRow(models.NewId("r"), task.OrgId, task.ProjectId, task.EnvId, task.Id,
-			r.Provider, r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys, r.AppliedAt, resId)
+		err := bq.AddRow(models.NewId("r"), task.OrgId, task.ProjectId, task.EnvId, task.Id, r.Provider,
+			r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys, r.AppliedAt, resId, r.Dependencies)
 		if err != nil {
 			return err
 		}
