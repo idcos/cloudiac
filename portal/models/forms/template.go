@@ -2,7 +2,9 @@
 
 package forms
 
-import "cloudiac/portal/models"
+import (
+	"cloudiac/portal/models"
+)
 
 type Var struct {
 	Id          string `form:"id" json:"id" binding:"required"`
@@ -40,6 +42,7 @@ type CreateTemplateForm struct {
 
 	KeyId models.Id `form:"keyId" json:"keyId" binding:"omitempty,startswith=k-,max=32"` // 部署密钥ID
 
+	Source string `json:"source" form:"source" ` //云模板来源
 }
 
 type SearchTemplateForm struct {

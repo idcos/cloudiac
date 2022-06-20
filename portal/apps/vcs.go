@@ -352,3 +352,11 @@ func GetVcsFullFilePath(c *ctx.ServiceContext, form *forms.GetFileFullPathForm) 
 
 	return repo.GetFullFilePath(vcs.Address, form.Path, form.RepoRevision), nil
 }
+
+func GetRegistryVcs(c *ctx.ServiceContext) (interface{}, e.Error) {
+	vcs, err := services.GetRegistryVcs(c.DB())
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return vcs, nil
+}

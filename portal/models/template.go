@@ -49,7 +49,8 @@ type Template struct {
 
 	KeyId Id `json:"keyId" gorm:"size:32"` // 部署密钥ID
 
-	IsDemo bool `json:"isDemo"`
+	IsDemo bool   `json:"isDemo"`
+	Source string `json:"source"  gorm:"type:enum('registry','vcs');default:'vcs';comment:云模板来源"`
 }
 
 func (Template) TableName() string {
