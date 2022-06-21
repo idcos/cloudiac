@@ -806,13 +806,22 @@ func (t *Task) stepEnvScan() (command string, err error) {
 
 func getBeforeAfterCmds(StepBeforeCmds, StepAfterCmds []string) (string, string) {
 	beforeCmds := ""
+
 	if len(StepBeforeCmds) > 0 {
-		beforeCmds = strings.Join(StepBeforeCmds, " && ")
+		cmds := make([]string, 0)
+		cmds = append(cmds, `echo "BEGIN BEFORE COMMANDS>>>"`)
+		cmds = append(cmds, StepBeforeCmds...)
+		cmds = append(cmds, `echo -e "<<<END BEFORE COMMANDS\n"`)
+		beforeCmds = strings.Join(cmds, " && ")
 	}
 
 	afterCmds := ""
 	if len(StepAfterCmds) > 0 {
-		afterCmds = strings.Join(StepAfterCmds, " && ")
+		cmds := make([]string, 0)
+		cmds = append(cmds, `echo -e "\nBEGIN AFTER COMMANDS>>>"`)
+		cmds = append(cmds, StepAfterCmds...)
+		cmds = append(cmds, `echo "<<<END AFTER COMMANDS"`)
+		afterCmds = strings.Join(cmds, " && ")
 	}
 
 	return beforeCmds, afterCmds
