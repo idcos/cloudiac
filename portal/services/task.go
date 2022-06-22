@@ -221,7 +221,8 @@ func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*mode
 		EnvId:     env.Id,
 		StatePath: env.StatePath,
 
-		Workdir:   firstVal(pt.Workdir, env.Workdir, tpl.Workdir),
+		// 任务、环境工作目录为空，工作目录就应该为空，这里不需要在引用云模板的工作目录
+		Workdir:   firstVal(pt.Workdir, env.Workdir),
 		TfVersion: tpl.TfVersion,
 
 		Playbook:     env.Playbook,
