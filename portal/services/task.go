@@ -680,7 +680,7 @@ func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 	return rs
 }
 
-func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, proMap runner.ProviderSensitiveAttrMap) error {
+func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, proMap runner.ProviderSensitiveAttrMap, sensitiveKeys []string) error {
 
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Resource{}.TableName(),
 		"id", "org_id", "project_id", "env_id", "task_id",
@@ -717,6 +717,9 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 				r.SensitiveKeys = proMap[providerKey]
 			}
 		}
+		// sensitive values
+		r.Attrs = SensitiveAttrs(r.Attrs, sensitiveKeys, "")
+
 		err := bq.AddRow(models.NewId("r"), task.OrgId, task.ProjectId, task.EnvId, task.Id,
 			r.Provider, r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys, r.AppliedAt, resId)
 		if err != nil {
