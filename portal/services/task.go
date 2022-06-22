@@ -657,7 +657,7 @@ func UnmarshalStateJson(bs []byte) (*TfState, error) {
 	return &state, err
 }
 
-func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
+func TraverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 	parts := strings.Split(module.Address, ".")
 	moduleName := parts[len(parts)-1]
 	for _, r := range module.Resources {
@@ -677,7 +677,7 @@ func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 		})
 	}
 	for i := range module.ChildModules {
-		rs = append(rs, traverseStateModule(&module.ChildModules[i])...)
+		rs = append(rs, TraverseStateModule(&module.ChildModules[i])...)
 	}
 	return rs
 }
@@ -689,9 +689,9 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 		"address", "type", "name", "index", "attrs", "sensitive_keys", "applied_at", "res_id", "dependencies")
 
 	rs := make([]*models.Resource, 0)
-	rs = append(rs, traverseStateModule(&values.RootModule)...)
+	rs = append(rs, TraverseStateModule(&values.RootModule)...)
 	for i := range values.ChildModules {
-		rs = append(rs, traverseStateModule(&values.ChildModules[i])...)
+		rs = append(rs, TraverseStateModule(&values.ChildModules[i])...)
 	}
 	resources, err := GetResourceByEnvId(tx, task.EnvId)
 	if err != nil {
