@@ -31,7 +31,7 @@ func TestCheckPasswordFormat(t *testing.T) {
 			if err != nil {
 				t.Errorf("password %s, err %v", c.password, err)
 			}
-		}else {
+		} else {
 			if err == nil {
 				t.Errorf("password %s, err %v", c.password, err)
 			}

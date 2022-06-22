@@ -3,9 +3,12 @@
 package utils
 
 import (
+	"cloudiac/portal/consts"
+	"math/rand"
 	"net/url"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -114,6 +117,30 @@ func TestJoinUrl(t *testing.T) {
 		url := JoinURL(c.elems[0], c.elems[1:]...)
 		if url != c.except {
 			t.Fatalf("join url: %v, got: '%s', except: '%s'", c.elems, url, c.except)
+		}
+	}
+}
+
+func TestGenPasswd(t *testing.T) {
+	pwsList := make([]string, 0)
+	charset := []string{"advance", "mix"}
+	for i := 0; i < 100; i++ {
+		pwsList = append(pwsList, GenPasswd(rand.Intn(25)+6, charset[rand.Intn(2)]))
+	}
+
+	for _, pwd := range pwsList {
+		if len(pwd) < 6 || len(pwd) > 30 {
+			t.Errorf("password: %s, error: password length",pwd)
+		}
+
+		typeCount := 0
+		for _, chars := range []string{consts.Letter, consts.DigitChars, consts.SpecialChars} {
+			if strings.ContainsAny(pwd, chars) {
+				typeCount += 1
+			}
+		}
+		if typeCount < 2 {
+			t.Errorf("password: %s, error: password strength",pwd)
 		}
 	}
 }
