@@ -70,7 +70,7 @@ func AddDependenciesData() error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			addDependenciesByStateJSON(i, tfstateRecords[left:right])
+			addDependenciesByStateJSON(tfstateRecords[left:right])
 		}()
 	}
 
@@ -81,7 +81,7 @@ func AddDependenciesData() error {
 	return nil
 }
 
-func addDependenciesByStateJSON(traceID int, tfstateRecords []models.DBStorage) {
+func addDependenciesByStateJSON(tfstateRecords []models.DBStorage) {
 	sess := db.Get()
 	size := len(tfstateRecords)
 	for index, row := range tfstateRecords {
