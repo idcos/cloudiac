@@ -32,6 +32,7 @@ func SensitiveAttrs(attrs map[string]interface{}, sensitiveKeys []string, parent
 		fmt.Println("-----------------------")
 		fmt.Printf("parentKey: %v\n", parentKey)
 		fmt.Printf("k: %v\n", k)
+		fmt.Printf("v: %v\n", v)
 		fmt.Println("-----------------------")
 
 		key := k
@@ -43,18 +44,23 @@ func SensitiveAttrs(attrs map[string]interface{}, sensitiveKeys []string, parent
 			continue
 		}
 
-		vals, ok := v.([]map[string]interface{})
+		vals, ok := v.([]interface{})
 		if !ok {
 			sensitiveAttrs[k] = v
 			continue
 		}
 
 		arrAttrs := make([]map[string]interface{}, 0)
-		for _, valMap := range vals {
-			arrAttrs = append(arrAttrs, SensitiveAttrs(valMap, sensitiveKeys, key))
+		for _, val := range vals {
+			if valMap, ok := val.(map[string]interface{}); ok {
+				arrAttrs = append(arrAttrs, SensitiveAttrs(valMap, sensitiveKeys, key))
+			}
 		}
 		sensitiveAttrs[k] = arrAttrs
 	}
+	fmt.Println("-----------------------")
+	fmt.Printf("sensitiveAttrs: %v\n", sensitiveAttrs)
+	fmt.Println("-----------------------")
 
 	return sensitiveAttrs
 }
