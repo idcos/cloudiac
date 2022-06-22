@@ -4,13 +4,12 @@ package services
 
 import (
 	"cloudiac/utils"
-	"fmt"
 
 	"github.com/tidwall/gjson"
 )
 
-func GetSensitiveKeysFromTfPlan(content []byte) []string {
-	sensitiveKeys := make([]string, 0)
+func GetSensitiveKeysFromTfPlan(content []byte) map[string][]string {
+	sensitiveKeys := make(map[string][]string)
 
 	resouces := gjson.GetBytes(content, "configuration.root_module.resources")
 	variables := gjson.GetBytes(content, "configuration.root_module.variables")
@@ -29,12 +28,6 @@ func SensitiveAttrs(attrs map[string]interface{}, sensitiveKeys []string, parent
 	sensitiveAttrs := make(map[string]interface{})
 
 	for k, v := range attrs {
-		fmt.Println("-----------------------")
-		fmt.Printf("parentKey: %v\n", parentKey)
-		fmt.Printf("k: %v\n", k)
-		fmt.Printf("v: %v\n", v)
-		fmt.Println("-----------------------")
-
 		key := k
 		if parentKey != "" {
 			key = parentKey + "->" + k
@@ -58,9 +51,6 @@ func SensitiveAttrs(attrs map[string]interface{}, sensitiveKeys []string, parent
 		}
 		sensitiveAttrs[k] = arrAttrs
 	}
-	fmt.Println("-----------------------")
-	fmt.Printf("sensitiveAttrs: %v\n", sensitiveAttrs)
-	fmt.Println("-----------------------")
 
 	return sensitiveAttrs
 }
@@ -83,14 +73,20 @@ func findSensitiveNames(variables gjson.Result) []string {
 }
 
 // findSensitiveStateKeys 找出 state 文件中对应的 sensitive key
-func findSensitiveStateKeys(resources gjson.Result, sensitiveNames []string) []string {
-	keysInState := make([]string, 0)
+func findSensitiveStateKeys(resources gjson.Result, sensitiveNames []string) map[string][]string {
+	sensitiveKeys := make(map[string][]string)
 	if !resources.Exists() {
-		return keysInState
+		return sensitiveKeys
 	}
 
 	for _, resource := range resources.Array() {
+		keysInState := make([]string, 0)
+
 		if !resource.Get("expressions").Exists() {
+			continue
+		}
+
+		if !resource.Get("address").Exists() {
 			continue
 		}
 
@@ -107,9 +103,13 @@ func findSensitiveStateKeys(resources gjson.Result, sensitiveNames []string) []s
 				keysInState = append(keysInState, keys...)
 			}
 		}
+
+		if len(keysInState) > 0 {
+			sensitiveKeys[resource.Get("address").String()] = keysInState
+		}
 	}
 
-	return keysInState
+	return sensitiveKeys
 }
 
 func findSensitiveStateKeyInObjRes(obj gjson.Result, sensitiveNames []string) bool {
