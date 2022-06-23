@@ -38,9 +38,11 @@ func (date *UpdateDb) Execute(args []string) error {
 
 func dbInit() {
 	configs.Init(opt.Config)
-	fmt.Printf("mysql uri: %+v\n", configs.Get().Mysql)
+	fmt.Println("config init finished")
 
 	db.Init(configs.Get().Mysql)
+	fmt.Println("mysql init finished")
+
 	models.Init(false)
 }
 
