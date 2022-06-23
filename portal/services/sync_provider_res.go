@@ -70,9 +70,9 @@ func syncManagedResToProvider(task *models.Task) {
 		}
 
 		rs := make([]*models.Resource, 0)
-		rs = append(rs, traverseStateModule(&tfState.Values.RootModule)...)
+		rs = append(rs, TraverseStateModule(&tfState.Values.RootModule)...)
 		for i := range tfState.Values.ChildModules {
-			rs = append(rs, traverseStateModule(&tfState.Values.ChildModules[i])...)
+			rs = append(rs, TraverseStateModule(&tfState.Values.ChildModules[i])...)
 		}
 		for _, r := range rs {
 			envResMap[r.Address] = r
