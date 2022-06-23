@@ -339,30 +339,51 @@ const (
 
 func GenPasswd(length int, charset string) string {
 	//初始化密码切片
-	var passwd []byte = make([]byte, length)
+	var passwd []byte = make([]byte, 0)
 	//源字符串
-	var sourceStr string
+	var sourceSties []string
 	//判断字符类型,如果是数字
 	if charset == "num" {
-		sourceStr = NUmStr
+		sourceSties = []string{NUmStr}
 		//如果选的是字符
 	} else if charset == "char" {
-		sourceStr = charset
+		sourceSties = []string{CharStr}
 		//如果选的是混合模式
 	} else if charset == "mix" {
-		sourceStr = fmt.Sprintf("%s%s", NUmStr, CharStr)
+		sourceSties = []string{NUmStr, CharStr}
 		//如果选的是高级模式
 	} else if charset == "advance" {
-		sourceStr = fmt.Sprintf("%s%s%s", NUmStr, CharStr, SpecStr)
+		sourceSties = []string{NUmStr, CharStr, SpecStr}
 	} else {
-		sourceStr = NUmStr
+		sourceSties = []string{NUmStr}
 	}
 
-	//遍历，生成一个随机index索引,
-	for i := 0; i < length; i++ {
-		index := rand.Intn(len(sourceStr)) //nolint:gosec
-		passwd[i] = sourceStr[index]
+	f := func(length int, sourceStr string) []byte {
+
+		var pwd []byte = make([]byte, 0)
+		for i := 0; i < length; i++ {
+			index := rand.Intn(len(sourceStr)) //nolint:gosec
+			pwd = append(pwd, sourceStr[index])
+		}
+		return pwd
 	}
+
+	var newLength int = length
+	for idx, s := range sourceSties {
+		if idx == len(sourceSties)-1 {
+			passwd = append(passwd, f(newLength, s)...)
+			continue
+		}
+
+		strLength := rand.Intn(newLength) //nolint:gosec
+		if strLength == 0 {
+			strLength++
+		}
+
+		passwd = append(passwd, f(strLength, s)...)
+		newLength -= strLength
+	}
+
 	return string(passwd)
 }
 

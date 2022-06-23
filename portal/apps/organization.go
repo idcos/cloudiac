@@ -391,7 +391,7 @@ func checkInviteUser(c *ctx.ServiceContext, tx *db.Session, form *forms.InviteUs
 }
 
 func createInviteUser(c *ctx.ServiceContext, tx *db.Session, form *forms.InviteUserForm, user *models.User, initPass string) (*models.User, bool, e.Error) {
-	isNew := false
+	var isNew bool
 
 	hashedPassword, err := services.HashPassword(initPass)
 	if err != nil {
