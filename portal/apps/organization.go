@@ -480,7 +480,7 @@ func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*resps.UserW
 			return er
 		}
 
-		if isNew {
+		if isNew && configs.Get().Demo.Enable {
 			if er := services.CreateUserDemoOrgData(c, tx, user); er != nil {
 				return er
 			}
