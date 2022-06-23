@@ -673,7 +673,7 @@ func setAndCheckUpdateEnvAutoApproval(c *ctx.ServiceContext, tx *db.Session, att
 }
 
 func setAndCheckUpdateEnvDestroy(tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error {
-	if !form.HasKey("destroyAt") && !form.HasKey("destroyAfter") {
+	if !form.HasKey("destroyAt") && !form.HasKey("ttl") {
 		return nil
 	}
 
@@ -1086,7 +1086,7 @@ func setAndCheckEnvAutoApproval(c *ctx.ServiceContext, env *models.Env, form *fo
 }
 
 func setAndCheckEnvDestroy(tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error {
-	if !form.HasKey("destroyAt") && !form.HasKey("destroyAfter") {
+	if !form.HasKey("destroyAt") && !form.HasKey("ttl") {
 		return nil
 	}
 
