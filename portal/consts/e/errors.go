@@ -157,6 +157,7 @@ const (
 	EnvLockFailedTaskActive  = 30817
 	EnvLocked                = 30818
 	EnvLockedFailedEnvIsDemo = 30819
+	EnvNameDuplicated        = 30820
 	EnvTagNumLimited         = 30821
 	EnvTagLengthLimited      = 30822
 	TemplateNotBind          = 30823

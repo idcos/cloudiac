@@ -414,6 +414,10 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "environment locked failed. this is demo environment",
 		"zh-CN": "环境锁定失败，演示环境不能被锁定",
 	},
+	EnvNameDuplicated: {
+		"en-US": "environment name duplicated",
+		"zh-CN": "环境名称重复",
+	},
 	TaskAlreadyExists: {
 		"en-US": "task already exists",
 		"zh-CN": "任务已经存在",
