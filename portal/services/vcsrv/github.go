@@ -141,9 +141,9 @@ func (v *githubVcs) RepoBaseHttpAddr() string {
 	if err != nil {
 		return ""
 	}
-	if strings.HasPrefix(u.Host, "api.") {
-		u.Host = strings.TrimPrefix(u.Host, "api.")
-	}
+
+	u.Host = strings.TrimPrefix(u.Host, "api.")
+
 	return u.String()
 }
 
