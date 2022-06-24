@@ -25,6 +25,7 @@ type OrgOrProjectResourcesResp struct {
 	ProjectId    models.Id `json:"projectId"`
 	ResourceId   models.Id `json:"resourceId"`
 	Attrs        string    `json:"attrs"`
+	Dependencies string    `json:"dependencies"`
 }
 
 type InviteUsersBatchResp struct {

@@ -56,7 +56,7 @@ func VscTokenCheckByID(tx *db.Session, id models.Id, withNewToken string) error 
 }
 
 func QueryVcs(orgId models.Id, status, q string, isShowdefaultVcs, isShowRegistryVcs bool, query *db.Session) *db.Session {
-	query = query.Model(&models.Vcs{}).Where("org_id = ? or org_id = ''", orgId)
+	query = query.Model(&models.Vcs{}).Omit("vcs_token").Where("org_id = ? or org_id = ''", orgId)
 	if status != "" {
 		query = query.Where("status = ?", status)
 	}

@@ -85,11 +85,16 @@ func UpdateToken(tx *db.Session, id models.Id, attrs models.Attrs) (token *model
 }
 
 func QueryToken(query *db.Session, tokenType string) *db.Session {
-	query = query.Model(&models.Token{}).
-		Where("`expired_at` > ? or expired_at is null", time.Now())
+	query = query.Model(&models.Token{})
+
 	if tokenType != "" {
 		query = query.Where("type = ?", tokenType)
 	}
+
+	if tokenType != consts.TokenApi {
+		query = query.Where("`expired_at` > ? or expired_at is null", time.Now())
+	}
+
 	return query
 }
 

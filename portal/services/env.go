@@ -39,7 +39,7 @@ func CreateEnv(tx *db.Session, env models.Env) (*models.Env, e.Error) {
 	}
 	if err := models.Create(tx, &env); err != nil {
 		if e.IsDuplicate(err) {
-			return nil, e.New(e.EnvAlreadyExists, err)
+			return nil, e.New(e.EnvNameDuplicated, err)
 		}
 		return nil, e.New(e.DBError, err)
 	}

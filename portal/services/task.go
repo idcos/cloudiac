@@ -221,7 +221,8 @@ func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*mode
 		EnvId:     env.Id,
 		StatePath: env.StatePath,
 
-		Workdir:   firstVal(pt.Workdir, env.Workdir, tpl.Workdir),
+		// 任务、环境工作目录为空，工作目录就应该为空，这里不需要在引用云模板的工作目录
+		Workdir:   firstVal(pt.Workdir, env.Workdir),
 		TfVersion: tpl.TfVersion,
 
 		Playbook:     env.Playbook,
@@ -646,6 +647,7 @@ type TfStateResource struct {
 	Type         string      `json:"type"`
 	Name         string      `json:"name"`
 	Index        interface{} `json:"index"` // index 可以为整型或字符串
+	DependsOn    []string    `json:"depends_on"`
 
 	Values map[string]interface{} `json:"values"`
 }
@@ -656,7 +658,7 @@ func UnmarshalStateJson(bs []byte) (*TfState, error) {
 	return &state, err
 }
 
-func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
+func TraverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 	parts := strings.Split(module.Address, ".")
 	moduleName := parts[len(parts)-1]
 	for _, r := range module.Resources {
@@ -665,17 +667,18 @@ func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 			idx = fmt.Sprintf("%v", r.Index)
 		}
 		rs = append(rs, &models.Resource{
-			Provider: r.ProviderName,
-			Module:   moduleName,
-			Address:  r.Address,
-			Type:     r.Type,
-			Name:     r.Name,
-			Index:    idx,
-			Attrs:    r.Values,
+			Provider:     r.ProviderName,
+			Module:       moduleName,
+			Address:      r.Address,
+			Type:         r.Type,
+			Name:         r.Name,
+			Index:        idx,
+			Attrs:        r.Values,
+			Dependencies: r.DependsOn,
 		})
 	}
 	for i := range module.ChildModules {
-		rs = append(rs, traverseStateModule(&module.ChildModules[i])...)
+		rs = append(rs, TraverseStateModule(&module.ChildModules[i])...)
 	}
 	return rs
 }
@@ -683,13 +686,13 @@ func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, proMap runner.ProviderSensitiveAttrMap, sensitiveKeys map[string][]string) error {
 
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Resource{}.TableName(),
-		"id", "org_id", "project_id", "env_id", "task_id",
-		"provider", "module", "address", "type", "name", "index", "attrs", "sensitive_keys", "applied_at", "res_id")
+		"id", "org_id", "project_id", "env_id", "task_id", "provider", "module",
+		"address", "type", "name", "index", "attrs", "sensitive_keys", "applied_at", "res_id", "dependencies")
 
 	rs := make([]*models.Resource, 0)
-	rs = append(rs, traverseStateModule(&values.RootModule)...)
+	rs = append(rs, TraverseStateModule(&values.RootModule)...)
 	for i := range values.ChildModules {
-		rs = append(rs, traverseStateModule(&values.ChildModules[i])...)
+		rs = append(rs, TraverseStateModule(&values.ChildModules[i])...)
 	}
 	resources, err := GetResourceByEnvId(tx, task.EnvId)
 	if err != nil {
@@ -722,8 +725,8 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 			r.Attrs = SensitiveAttrs(r.Attrs, keys, "")
 		}
 
-		err := bq.AddRow(models.NewId("r"), task.OrgId, task.ProjectId, task.EnvId, task.Id,
-			r.Provider, r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys, r.AppliedAt, resId)
+		err := bq.AddRow(models.NewId("r"), task.OrgId, task.ProjectId, task.EnvId, task.Id, r.Provider,
+			r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys, r.AppliedAt, resId, r.Dependencies)
 		if err != nil {
 			return err
 		}

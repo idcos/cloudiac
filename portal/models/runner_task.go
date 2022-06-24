@@ -5,7 +5,7 @@ package models
 import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/runner"
-	"encoding/json"
+	"cloudiac/utils"
 	"path"
 )
 
@@ -75,17 +75,6 @@ func (ScanTask) TableName() string {
 	return "iac_scan_task"
 }
 
-func (t ScanTask) MarshalJSON() ([]byte, error) {
-	type Tt ScanTask
-	tt := Tt(t)
-	for i, v := range tt.Variables {
-		if v.Sensitive {
-			tt.Variables[i].Value = ""
-		}
-	}
-	return json.Marshal(tt)
-}
-
 func (t *ScanTask) TfParseJsonPath() string {
 	if t.EnvId != "" {
 		return path.Join(t.ProjectId.String(), t.EnvId.String(), t.Id.String(), runner.ScanInputFile)
@@ -104,4 +93,14 @@ func (t *ScanTask) TfResultJsonPath() string {
 
 func (t *ScanTask) Migrate(sess *db.Session) (err error) {
 	return TaskModelMigrate(sess, t)
+}
+
+//go:generate go run cloudiac/code-gen/desenitize ScanTask ./desensitize/
+func (v *ScanTask) Desensitize() ScanTask {
+	rv := ScanTask{}
+	utils.DeepCopy(&rv, v)
+	for i := 0; i < len(rv.Variables); i++ {
+		rv.Variables[i].Value = ""
+	}
+	return rv
 }
