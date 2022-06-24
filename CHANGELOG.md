@@ -1,14 +1,14 @@
 ------
 ## v0.12.0 20220624
-#### Changes
-- 『云模板』统一改名为『Stack』
-
 #### Features
 - 新增用户注册功能
 - kafka回调消息增加任务id和合规状态字段
 - resource表中增加依赖关系字段
 - 资源查询接口支持展示依赖数据
 - 获取ldap ou信息时增加加上组织过滤
+
+#### Changes
+- 『云模板』统一更名为『Stack』
 
 #### Enhancements
 - 对任务入参做处理，避免 shell 注入
