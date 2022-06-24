@@ -3,11 +3,9 @@
 package middleware
 
 import (
-	"cloudiac/common"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
-	"cloudiac/portal/models"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/rbac"
 	"cloudiac/utils/logs"
@@ -139,14 +137,14 @@ func rewriteACParams(op, act, res, obj, role, sub string) (string, string, strin
 	return action, object, role
 }
 
-func changeToDemoRole(s *ctx.ServiceContext, role, proj string) (string, string) {
-	if !s.IsSuperAdmin && s.OrgId != "" && s.OrgId == models.Id(common.DemoOrgId) {
-		role = consts.RoleDemo
-		proj = consts.RoleDemo
-	}
+// func changeToDemoRole(s *ctx.ServiceContext, role, proj string) (string, string) {
+// 	if !s.IsSuperAdmin && s.OrgId != "" && s.OrgId == models.Id(common.DemoOrgId) {
+// 		role = consts.RoleDemo
+// 		proj = consts.RoleDemo
+// 	}
 
-	return role, proj
-}
+// 	return role, proj
+// }
 
 // AccessControl 角色访问权限控制
 func AccessControl(args ...string) gin.HandlerFunc {
@@ -169,9 +167,6 @@ func AccessControl(args ...string) gin.HandlerFunc {
 
 		// 参数重写
 		action, object, role := rewriteACParams(op, act, res, obj, role, sub)
-
-		// 访问演示组织资源的时候切换到演示模式角色
-		role, proj = changeToDemoRole(s, role, proj)
 
 		// 根据 角色 和 项目角色 判断资源访问许可
 		allow, err := rbac.Enforce(role, proj, object, action)

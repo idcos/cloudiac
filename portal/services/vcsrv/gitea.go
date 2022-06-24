@@ -415,3 +415,7 @@ func getGiteaUserMe(vcs *models.Vcs) (*giteaUser, error) {
 	_ = json.Unmarshal(body, user)
 	return user, nil
 }
+
+func (v *giteaVcs) RepoBaseHttpAddr() string {
+	return v.vcs.Address
+}

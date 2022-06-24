@@ -15,6 +15,7 @@ func (j JSON) Value() (driver.Value, error) {
 	}
 	return string(j), nil
 }
+
 func (j *JSON) Scan(value interface{}) error {
 	if value == nil {
 		*j = nil
@@ -27,12 +28,14 @@ func (j *JSON) Scan(value interface{}) error {
 	*j = append((*j)[0:0], s...)
 	return nil
 }
+
 func (m JSON) MarshalJSON() ([]byte, error) {
 	if m == nil {
 		return []byte("null"), nil
 	}
 	return m, nil
 }
+
 func (m *JSON) UnmarshalJSON(data []byte) error {
 	if m == nil {
 		return errors.New("null point exception")
@@ -40,6 +43,7 @@ func (m *JSON) UnmarshalJSON(data []byte) error {
 	*m = append((*m)[0:0], data...)
 	return nil
 }
+
 func (j JSON) IsNull() bool {
 	return len(j) == 0 || string(j) == "null"
 }

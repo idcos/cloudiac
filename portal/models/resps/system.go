@@ -40,3 +40,16 @@ type SystemStatusResp struct {
 type RunnerTagsResp struct {
 	Tags []string `json:"tags"`
 }
+
+type SystemSwitchesStatusResp struct {
+	AbortStatus     bool `json:"abortStatus"` // 与 enableAbortTask 值相同(兼容处理)
+	EnableAbortTask bool `json:"enableAbortTask"`
+
+	EnableRegister bool `json:"enableRegister"`
+	EnableLdap     bool `json:"enableLdap"`
+}
+
+type UserEmailStatus struct {
+	Email        string `json:"email"`
+	ActiveStatus string `json:"activeStatus"`
+}

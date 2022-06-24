@@ -107,13 +107,12 @@ var Polices = []Policy{
 
 	// 组织
 	{"root", "orgs", "*"},
-	{"login", "orgs", "read"},
-	{"admin", "orgs", "read/update"},
+	{"login", "orgs", "create/read"},
+	{"admin", "orgs", "create/update/read"},
 	{"admin", "orgs", "listuser/adduser/removeuser/updaterole"},
-	{"member", "orgs", "read/listuser"},
-	// {"member", "orgs", "read"},
+	{"member", "orgs", "create/read/listuser"},
 	{"complianceManager", "orgs", "read"},
-	{"manager", "orgs", "listuser/adduser"},
+	{"manager", "orgs", "create/read/listuser/adduser"},
 
 	// LDAP
 	{"admin", "ldap", "*"},
@@ -143,13 +142,13 @@ var Polices = []Policy{
 
 	// 云模板
 	{"admin", "templates", "*"},
-	{"member", "templates", "read"},
+	//{"member", "templates", "read"},
 	{"complianceManager", "templates", "read"},
 
 	{"manager", "templates", "*"},
-	{"approver", "templates", "*"},
-	{"operator", "templates", "read"},
-	{"guest", "templates", "read"},
+	//{"approver", "templates", "*"},
+	//{"operator", "templates", "read"},
+	//{"guest", "templates", "read"},
 
 	// 变量
 	{"admin", "variables", "*"},
@@ -181,13 +180,13 @@ var Polices = []Policy{
 
 	//vcs
 	{"admin", "vcs", "*"},
-	{"member", "vcs", "read"},
+	// {"member", "vcs", "read"},
 	{"complianceManager", "vcs", "read"},
 
 	{"manager", "vcs", "read"},
-	{"approver", "vcs", "read"},
-	{"operator", "vcs", "read"},
-	{"guest", "vcs", "read"},
+	// {"approver", "vcs", "read"},
+	// {"operator", "vcs", "read"},
+	// {"guest", "vcs", "read"},
 
 	//runner
 	{"member", "runners", "read"},
@@ -218,6 +217,7 @@ var Polices = []Policy{
 	{"operator", "registry", "read"},
 	{"guest", "registry", "read"},
 
+	// 注意：以下为旧版本演示模式用户权限配置，新版本中每个用户都有自己的演示组织，以下权限配置不再生效。
 	// 演示模式，当访问演示组织下的资源，进入受限模式
 	{"demo", "orgs", "read"},
 	{"demo", "users", "read"},

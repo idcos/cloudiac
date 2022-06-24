@@ -95,6 +95,8 @@ type Env struct {
 
 	//环境锁定
 	Locked bool `json:"locked" gorm:"default:false"`
+
+	IsDemo bool `json:"isDemo" gorm:"default:false"` // 是否是演示环境
 }
 
 func (Env) TableName() string {

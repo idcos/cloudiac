@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/desensitize"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
@@ -152,7 +153,7 @@ func SearchVariable(c *ctx.ServiceContext, form *forms.SearchVariableForm) (inte
 	rs := make([]resps.VariableResp, 0)
 	for _, variable := range variableM {
 		vr := resps.VariableResp{
-			Variable:   variable,
+			Variable:   desensitize.NewVariable(variable),
 			Overwrites: nil,
 		}
 		// 获取上一级被覆盖的变量
@@ -168,10 +169,7 @@ func SearchVariable(c *ctx.ServiceContext, form *forms.SearchVariableForm) (inte
 		if variable.Scope == form.Scope {
 			isExists, overwrites := services.GetVariableParent(c.DB(), scopes, varParent)
 			if isExists {
-				if overwrites.Sensitive {
-					overwrites.Value = ""
-				}
-				vr.Overwrites = &overwrites
+				vr.Overwrites = desensitize.NewVariablePtr(&overwrites)
 			}
 		}
 

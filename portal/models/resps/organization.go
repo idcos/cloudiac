@@ -25,6 +25,7 @@ type OrgOrProjectResourcesResp struct {
 	ProjectId    models.Id `json:"projectId"`
 	ResourceId   models.Id `json:"resourceId"`
 	Attrs        string    `json:"attrs"`
+	Dependencies string    `json:"dependencies"`
 }
 
 type InviteUsersBatchResp struct {
@@ -85,8 +86,9 @@ type ResTypeDetailStatWithUpResp struct {
 }
 
 type ProjOrEnvResStatResp struct {
-	Date     string                        `json:"date"`
-	ResTypes []ResTypeDetailStatWithUpResp `json:"resTypes"`
+	ResType string           `json:"resType"`
+	Count   int              `json:"count"`
+	Details []DetailStatResp `json:"details"`
 }
 
 type ResGrowTrendResp struct {

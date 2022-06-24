@@ -136,6 +136,17 @@ func (github *githubVcs) TokenCheck() error {
 	return nil
 }
 
+func (v *githubVcs) RepoBaseHttpAddr() string {
+	u, err := url.Parse(v.vcs.Address)
+	if err != nil {
+		return ""
+	}
+
+	u.Host = strings.TrimPrefix(u.Host, "api.")
+
+	return u.String()
+}
+
 type githubRepoIface struct {
 	vcs        *models.Vcs
 	repository *RepositoryGithub

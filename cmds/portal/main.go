@@ -3,7 +3,6 @@
 package main
 
 import (
-	common2 "cloudiac/common"
 	"cloudiac/portal/apps"
 	"cloudiac/portal/task_manager"
 	"fmt"
@@ -50,6 +49,8 @@ func main() {
 	conf := configs.Get().Log
 	logs.Init(conf.LogLevel, conf.LogPath, conf.LogMaxDays)
 
+	logs.Get().Debugf("%+v", configs.Get().Demo)
+
 	// 中间件及数据的初始化
 	{
 		db.Init(configs.Get().Mysql)
@@ -83,11 +84,11 @@ func main() {
 	// 启动后台 worker
 	go task_manager.Start(configs.Get().Consul.ServiceID)
 
-	// 获取演示组织ID
-	org, _ := services.GetDemoOrganization(db.Get())
-	if org != nil {
-		common2.DemoOrgId = org.Id.String()
-	}
+	// // 获取演示组织ID
+	// org, _ := services.GetDemoOrganization(db.Get())
+	// if org != nil {
+	// 	common2.DemoOrgId = org.Id.String()
+	// }
 	// 初始化tfversions list
 	apps.InitTfVersions()
 	// 启动 web server

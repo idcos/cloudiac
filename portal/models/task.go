@@ -158,6 +158,16 @@ func (Task) DefaultTaskName() string {
 	return ""
 }
 
+//go:generate go run cloudiac/code-gen/desenitize Task ./desensitize/
+func (v *Task) Desensitize() Task {
+	rv := Task{}
+	utils.DeepCopy(&rv, v)
+	for i := 0; i < len(rv.Variables); i++ {
+		rv.Variables[i].Value = ""
+	}
+	return rv
+}
+
 func (BaseTask) NewId() Id {
 	return NewId("run")
 }

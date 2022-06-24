@@ -10,8 +10,9 @@ import (
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils/logs"
 	"fmt"
-	ctyjson "github.com/zclconf/go-cty/cty/json"
 	"strings"
+
+	ctyjson "github.com/zclconf/go-cty/cty/json"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
@@ -55,7 +56,7 @@ func VscTokenCheckByID(tx *db.Session, id models.Id, withNewToken string) error 
 }
 
 func QueryVcs(orgId models.Id, status, q string, isShowdefaultVcs, isShowRegistryVcs bool, query *db.Session) *db.Session {
-	query = query.Model(&models.Vcs{}).Where("org_id = ? or org_id = ''", orgId)
+	query = query.Model(&models.Vcs{}).Omit("vcs_token").Where("org_id = ? or org_id = ''", orgId)
 	if status != "" {
 		query = query.Where("status = ?", status)
 	}
@@ -69,7 +70,7 @@ func QueryVcs(orgId models.Id, status, q string, isShowdefaultVcs, isShowRegistr
 	if !isShowRegistryVcs {
 		query = query.Where("vcs_type != ?", consts.GitTypeRegistry)
 	}
-	return query.LazySelectAppend("id, org_id, project_id, name, status, vcs_type, address")
+	return query
 }
 
 func QueryVcsSample(query *db.Session) *db.Session {
@@ -131,7 +132,7 @@ func GetVcsRepoByTplId(sess *db.Session, tplId models.Id) (vcsrv.RepoIface, e.Er
 	}
 }
 
-func QueryEnableVcs(orgId models.Id, query *db.Session) (interface{}, e.Error) {
+func FindEnableVcs(orgId models.Id, query *db.Session) ([]models.Vcs, e.Error) {
 	vcs := make([]models.Vcs, 0)
 	if err := query.Model(&models.Vcs{}).Where("org_id = ? or org_id = 0", orgId).Where("status = 'enable'").Find(&vcs); err != nil {
 		return nil, e.New(e.DBError, err)
@@ -148,6 +149,7 @@ func DeleteVcs(tx *db.Session, id models.Id) e.Error {
 
 type TemplateVariable struct {
 	Description string `json:"description" form:"description" `
+	Sensitive   bool   `json:"sensitive" form:"sensitive"`
 	Value       string `json:"value" form:"value" `
 	Name        string `json:"name" form:"name" `
 }
@@ -195,6 +197,7 @@ func ParseTfVariables(filename string, content []byte) ([]TemplateVariable, e.Er
 				tv = append(tv, TemplateVariable{
 					Value:       strings.Trim(string(valJSON), "\""),
 					Name:        s.Name,
+					Sensitive:   s.Sensitive,
 					Description: s.Description,
 				})
 			}

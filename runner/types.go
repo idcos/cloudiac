@@ -6,6 +6,12 @@ package runner
 portal 和 runner 通信使用的消息结构体
 */
 
+import (
+	"fmt"
+
+	"github.com/alessio/shellescape"
+)
+
 type EnvVariables struct {
 }
 
@@ -62,6 +68,29 @@ type RunTaskReq struct {
 
 	ContainerId string `json:"containerId"`
 	PauseTask   bool   `json:"pauseTask"` // 本次执行结束后暂停任务
+
+	CreatorId string `json:"creatorId"`
+}
+
+func (r RunTaskReq) Validate() error {
+	vs := []struct {
+		Name  string
+		Value string
+	}{
+		{"workdir", r.Env.Workdir},
+		{"playVarsFile", r.Env.PlayVarsFile},
+		{"playbook", r.Env.Playbook},
+		{"tfVarsFile", r.Env.TfVarsFile},
+		{"tfVersion", r.Env.TfVersion},
+	}
+
+	for _, v := range vs {
+		// 检查，如果这些变量的值中含有特殊的 shell 符号则报错
+		if v.Value != "" && shellescape.Quote(v.Value) != v.Value {
+			return fmt.Errorf("invalid %s value: %s", v.Name, v.Value)
+		}
+	}
+	return nil
 }
 
 type Repository struct {

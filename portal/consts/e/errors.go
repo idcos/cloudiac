@@ -22,6 +22,7 @@ const (
 	TooManyRetries          = 10040
 	EncryptError            = 10050
 	DecryptError            = 10051
+	ErrDisabled             = 10052
 
 	//// 解析错误 101
 	JSONParseError = 10100
@@ -79,12 +80,13 @@ const (
 
 	// 权限认证 2
 	//// 认证 200
-	InvalidPassword   = 20010
-	InvalidToken      = 20000 // 无效 token
-	InvalidTokenScope = 20001 // 无效 token scope
-	TokenExpired      = 20005
-	InvalidOrgId      = 20006 // 无效的 orgId
-	InvalidProjectId  = 20007 // 无效的 projectId
+	InvalidPassword    = 20010
+	InvalidToken       = 20000 // 无效 token
+	InvalidTokenScope  = 20001 // 无效 token scope
+	TokenExpired       = 20005
+	InvalidOrgId       = 20006 // 无效的 orgId
+	InvalidProjectId   = 20007 // 无效的 projectId
+	InvalidActiveEmail = 20011 // 邮箱未激活
 
 	//// 权限 201
 	PermissionDeny   = 20110
@@ -139,22 +141,26 @@ const (
 	TemplateNotExists                    = 30711
 	TemplateDisabled                     = 30712
 	TemplateNotAssociationCurrentProject = 30713
+	TemplateDemoNotAllowEdit             = 30714
+	TemplateDemoNotAllowDelete           = 30715
 	TemplateActiveEnvExists              = 30730
 	TemplateKeyIdNotSet                  = 30731
 
 	//// environment 308
-	EnvAlreadyExists        = 30810
-	EnvNotExists            = 30811
-	EnvAliasDuplicate       = 30812
-	EnvArchived             = 30813
-	EnvCannotArchiveActive  = 30814
-	EnvDeploying            = 30815
-	EnvCheckAutoApproval    = 30816
-	EnvLockFailedTaskActive = 30817
-	EnvLocked               = 30818
-	EnvTagNumLimited        = 30821
-	EnvTagLengthLimited     = 30822
-	TemplateNotBind         = 30823
+	EnvAlreadyExists         = 30810
+	EnvNotExists             = 30811
+	EnvAliasDuplicate        = 30812
+	EnvArchived              = 30813
+	EnvCannotArchiveActive   = 30814
+	EnvDeploying             = 30815
+	EnvCheckAutoApproval     = 30816
+	EnvLockFailedTaskActive  = 30817
+	EnvLocked                = 30818
+	EnvLockedFailedEnvIsDemo = 30819
+	EnvNameDuplicated        = 30820
+	EnvTagNumLimited         = 30821
+	EnvTagLengthLimited      = 30822
+	TemplateNotBind          = 30823
 
 	//// task 309
 	TaskAlreadyExists     = 30910

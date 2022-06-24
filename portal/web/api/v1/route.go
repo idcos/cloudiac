@@ -49,10 +49,22 @@ func Register(g *gin.RouterGroup) {
 	apiToken.Use(w(middleware.AuthApiToken))
 	apiToken.POST("/webhooks/:vcsType/:vcsId", w(handlers.WebhooksApiHandler))
 
+	g.POST("/auth/register", w(handlers.Auth{}.Registry))
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
+	g.GET("/auth/email", w(handlers.Auth{}.CheckEmail))
+
+	// 重新发送邮件
+	g.GET("/activation/retry", w(handlers.User{}.ActiveUserEmailRetry))
+	// 过期重启发送邮件
+	g.GET("/activation/expired/retry", w(handlers.User{}.ActiveUserEmailExpiredRetry))
+
+	g.GET("/system_config/switches", w(handlers.SystemSwitchesStatus))
 
 	// Authorization Header 鉴权
 	g.Use(w(middleware.Auth)) // 解析 header token
+
+	// 激活邮箱
+	g.POST("/activation", w(handlers.User{}.ActiveUserEmail))
 
 	// 允许搜索组织内所有用户信息
 	g.GET("/users/all", w(handlers.User{}.SearchAllUsers))
@@ -85,7 +97,6 @@ func Register(g *gin.RouterGroup) {
 	// 系统设置registry addr 配置
 	g.GET("/system_config/registry/addr", ac(), w(handlers.GetRegistryAddr))     // 获取registry地址的设置
 	g.POST("/system_config/registry/addr", ac(), w(handlers.UpsertRegistryAddr)) // 更新registry地址的设置
-	g.GET("/system_config/switches", ac(), w(handlers.SystemSwitchesStatus))     // 更新registry地址的设置
 
 	// 要求组织 header
 	g.Use(w(middleware.AuthOrgId))
@@ -190,6 +201,7 @@ func Register(g *gin.RouterGroup) {
 	ctrl.Register(g.Group("keys", ac()), &handlers.Key{})
 
 	ctrl.Register(g.Group("vcs", ac()), &handlers.Vcs{})
+	g.GET("/vcs/registry", ac(), w(handlers.Vcs{}.GetRegistryVcs))
 	g.GET("/vcs/:id/repo", ac(), w(handlers.Vcs{}.ListRepos))
 	g.GET("/vcs/:id/branch", ac(), w(handlers.Vcs{}.ListBranches))
 	g.GET("/vcs/:id/tag", ac(), w(handlers.Vcs{}.ListTags))

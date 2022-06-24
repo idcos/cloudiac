@@ -3,7 +3,6 @@
 package apps
 
 import (
-	"cloudiac/common"
 	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
@@ -39,17 +38,38 @@ var (
 func CreateOrganization(c *ctx.ServiceContext, form *forms.CreateOrganizationForm) (*models.Organization, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create org %s", form.Name))
 
-	// 创建组织
-	org, err := services.CreateOrganization(c.DB(), models.Organization{
-		Name:        form.Name,
-		CreatorId:   c.UserId,
-		Description: form.Description,
+	var org *models.Organization
+
+	er := c.DB().Transaction(func(tx *db.Session) error {
+		var er e.Error
+		// 创建组织
+		org, er = services.CreateOrganization(tx, models.Organization{
+			Name:        form.Name,
+			CreatorId:   c.UserId,
+			Description: form.Description,
+		})
+		if er != nil && er.Code() == e.OrganizationAlreadyExists {
+			return er
+		} else if er != nil {
+			c.Logger().Errorf("error creating org, err %s", er)
+			return e.AutoNew(er, e.DBError)
+		}
+
+		// 非超级管理员创建组织后自动成为组织管理员
+		if !c.IsSuperAdmin {
+			if _, err := services.CreateUserOrgRel(tx, models.UserOrg{
+				OrgId:  org.Id,
+				UserId: c.UserId,
+				Role:   consts.OrgRoleAdmin,
+			}); err != nil {
+				c.Logger().Errorf("error create user org rel, err %s", err)
+				return err
+			}
+		}
+		return nil
 	})
-	if err != nil && err.Code() == e.OrganizationAlreadyExists {
-		return nil, e.New(err.Code(), err, http.StatusBadRequest)
-	} else if err != nil {
-		c.Logger().Errorf("error creating org, err %s", err)
-		return nil, e.AutoNew(err, e.DBError)
+	if er != nil {
+		return nil, e.AutoNew(er, e.DBError)
 	}
 
 	return org, nil
@@ -62,6 +82,11 @@ func SearchOrganization(c *ctx.ServiceContext, form *forms.SearchOrganizationFor
 		if form.Status != "" {
 			query = query.Where("iac_org.status = ?", form.Status)
 		}
+
+		if !form.IsDemo {
+			query = query.Where("iac_org.is_demo = ?", false)
+		}
+
 	} else {
 		query = query.Where("iac_org.id in (?)", services.UserOrgIds(c.UserId))
 		query = query.Where("iac_org.status = 'enable'")
@@ -366,7 +391,7 @@ func checkInviteUser(c *ctx.ServiceContext, tx *db.Session, form *forms.InviteUs
 }
 
 func createInviteUser(c *ctx.ServiceContext, tx *db.Session, form *forms.InviteUserForm, user *models.User, initPass string) (*models.User, bool, e.Error) {
-	isNew := false
+	var isNew bool
 
 	hashedPassword, err := services.HashPassword(initPass)
 	if err != nil {
@@ -410,15 +435,6 @@ func createInviteUserOrgRel(c *ctx.ServiceContext, tx *db.Session, form *forms.I
 		return err
 	}
 
-	// 新用户自动加入演示组织
-	if isNew && c.OrgId != models.Id(common.DemoOrgId) {
-		if err := services.TryAddDemoRelation(tx, user.Id); err != nil {
-			_ = tx.Rollback()
-			c.Logger().Errorf("error add user demo rel, err %s", err)
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -427,9 +443,9 @@ func createInviteUserOrgRel(c *ctx.ServiceContext, tx *db.Session, form *forms.I
 func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*resps.UserWithRoleResp, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("invite user %s%s to org %s as %s", form.Name, form.UserId, form.Id, form.Role))
 
-	org, err := getInviteUserOrg(c, form)
-	if err != nil {
-		return nil, err
+	org, er := getInviteUserOrg(c, form)
+	if er != nil {
+		return nil, er
 	}
 	if form.Role == "" {
 		form.Role = consts.OrgRoleMember
@@ -445,37 +461,41 @@ func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*resps.UserW
 		}
 	}
 
-	tx := c.Tx()
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			panic(r)
+	var (
+		isNew    bool
+		user     *models.User
+		initPass string
+	)
+	err := c.DB().Transaction(func(tx *db.Session) error {
+		var er e.Error
+		// 检查用户是否存在
+		user, er = checkInviteUser(c, tx, form)
+		if er != nil {
+			return er
 		}
-	}()
 
-	// 检查用户是否存在
-	user, err := checkInviteUser(c, tx, form)
+		initPass = utils.GenPasswd(6, "mix")
+		user, isNew, er = createInviteUser(c, tx, form, user, initPass)
+		if er != nil {
+			return er
+		}
+
+		if isNew && configs.Get().Demo.Enable {
+			if er := services.CreateUserDemoOrgData(c, tx, user); er != nil {
+				return er
+			}
+		}
+
+		// 建立用户与组织间关联
+		if er := createInviteUserOrgRel(c, tx, form, user, isNew); er != nil {
+			return er
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		return nil, err
-	}
-
-	initPass := utils.GenPasswd(6, "mix")
-	user, isNew, err := createInviteUser(c, tx, form, user, initPass)
-	if err != nil {
-		return nil, err
-	}
-
-	// 建立用户与组织间关联
-	// 新用户自动加入演示组织
-	err = createInviteUserOrgRel(c, tx, form, user, isNew)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		_ = tx.Rollback()
-		c.Logger().Errorf("error commit invite user, err %s", err)
-		return nil, e.New(e.DBError, err)
+		return nil, e.AutoNew(err, e.DBError)
 	}
 
 	// 发送邀请邮件

@@ -3,7 +3,6 @@
 package apps
 
 import (
-	"cloudiac/common"
 	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
@@ -67,15 +66,6 @@ func createUserOrgRel(tx *db.Session, orgId models.Id, initPass string, form *fo
 	if err != nil {
 		lg.Errorf("error create user , err %s", err)
 		return nil, err
-	}
-
-	// 新用户自动加入演示组织和项目
-	if orgId != models.Id(common.DemoOrgId) {
-		if err = services.TryAddDemoRelation(tx, user.Id); err != nil {
-			_ = tx.Rollback()
-			lg.Errorf("error add user demo rel, err %s", err)
-			return nil, err
-		}
 	}
 
 	return user, nil
@@ -259,7 +249,7 @@ func getNewPassword(oldPassword, newPassword, userPassword, userEmail string) (s
 		return "", e.New(e.DBError, http.StatusInternalServerError, err)
 	}
 	if !valid {
-		if configs.Get().Ldap.LdapServer != "" {
+		if configs.Get().LdapEnabled() {
 			// 当校验失败的时候，去检验是否符合ldap 登陆密码，成功则依旧可以修改本地密码
 			if _, _, ldapErr := services.LdapAuthLogin(userEmail, oldPassword); ldapErr != nil {
 				return "", e.New(e.LdapError, http.StatusInternalServerError, err)
@@ -273,6 +263,41 @@ func getNewPassword(oldPassword, newPassword, userPassword, userEmail string) (s
 		return "", er
 	}
 	return newPassword, nil
+}
+
+// ActiveUserEmail
+func ActiveUserEmail(c *ctx.ServiceContext) (interface{}, e.Error) {
+	user, er := services.GetUserByEmail(c.DB(), c.Email)
+	if er != nil {
+		return nil, e.New(e.DBError, er)
+	}
+
+	type userActivateStatus struct {
+		isActivate bool
+	}
+
+	if user.ActiveStatus == consts.UserEmailActivate {
+		return &userActivateStatus{
+			isActivate: true,
+		}, nil
+	}
+	attrs := models.Attrs{}
+	attrs["active_status"] = consts.UserEmailActivate
+	return services.UpdateUser(c.DB(), user.Id, attrs)
+}
+
+// ActiveUserEmailRetry
+func ActiveUserEmailRetry(c *ctx.ServiceContext, email string) (interface{}, e.Error) {
+	user, er := services.GetUserByEmail(c.DB(), email)
+	if er != nil {
+		return nil, e.New(e.DBError, er)
+	}
+
+	token, err := services.GenerateActivateToken(user.Email)
+	if err != nil {
+		return nil, e.New(e.InternalError, err)
+	}
+	return nil, services.SendActivateAccountMail(user, token)
 }
 
 // UpdateUser 用户信息编辑

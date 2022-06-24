@@ -39,7 +39,7 @@ func CreateEnv(tx *db.Session, env models.Env) (*models.Env, e.Error) {
 	}
 	if err := models.Create(tx, &env); err != nil {
 		if e.IsDuplicate(err) {
-			return nil, e.New(e.EnvAlreadyExists, err)
+			return nil, e.New(e.EnvNameDuplicated, err)
 		}
 		return nil, e.New(e.DBError, err)
 	}
@@ -520,7 +520,9 @@ func completeEnvCostTrendData(results []resps.EnvCostTrendStatResp, months int) 
 	}
 
 	var allResults = make([]resps.EnvCostTrendStatResp, 0)
-	startMonth := time.Now().AddDate(0, -1*(months-1), 0)
+	// golang AddDate 减一个月相当于减30天，包含2月份需注意
+	now, _ := time.Parse("2006-01", time.Now().Format("2006-01"))
+	startMonth := now.AddDate(0, -1*(months-1), 0)
 
 	// 第一个日期加入
 	for _, result := range results {
@@ -674,7 +676,11 @@ func totalEnvCostListByInstanceId(tx *db.Session, id models.Id) (map[string]floa
 	return m, nil
 }
 
-func FilterEnvStatus(query *db.Session, status string) (*db.Session, e.Error) {
+func FilterEnvStatus(query *db.Session, status string, deploying *bool) (*db.Session, e.Error) {
+	if deploying != nil {
+		query = query.Where("iac_env.deploying = ?", deploying)
+	}
+
 	if status == "" {
 		return query, nil
 	}

@@ -19,6 +19,11 @@ func RunTask(c *ctx.Context) {
 		return
 	}
 
+	if err := req.Validate(); err != nil {
+		c.Error(err, http.StatusBadRequest)
+		return
+	}
+
 	task := runner.NewTask(req, c.Logger)
 	if cid, err := task.Run(); err != nil {
 		if errors.Is(err, runner.ErrTaskAborted) {

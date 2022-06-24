@@ -2,7 +2,10 @@
 
 package resps
 
-import "cloudiac/portal/models"
+import (
+	"cloudiac/portal/models"
+	"cloudiac/portal/models/desensitize"
+)
 
 type SearchTemplateResp struct {
 	CreatedAt           models.Time `json:"createdAt"` // 创建时间
@@ -23,11 +26,12 @@ type SearchTemplateResp struct {
 	VcsAddr             string      `json:"vcsAddr"`
 	PolicyEnable        bool        `json:"policyEnable"`
 	PolicyStatus        string      `json:"policyStatus"`
+	IsDemo              bool        `json:"isDemo"`
 }
 
 type TemplateDetailResp struct {
 	*models.Template
-	Variables   []models.Variable `json:"variables"`
-	ProjectList []models.Id       `json:"projectId"`
-	PolicyGroup []string          `json:"policyGroup"`
+	Variables   []desensitize.Variable `json:"variables"`
+	ProjectList []models.Id            `json:"projectId"`
+	PolicyGroup []string               `json:"policyGroup"`
 }
