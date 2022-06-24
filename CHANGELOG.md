@@ -1,3 +1,23 @@
+------
+## v0.12.0 20220624
+#### Features
+
+#### Enhancements
+
+#### Fixes
+- 修复plan后直接部署、销毁时 workdir 问题
+- 修复使用云模板导入传入 json 时 panic 问题
+- 修复趋势费用缺少2月份数据的问题
+
+#### 升级步骤
+**升级前注意备份数据**
+
+**数据升级**
+执行 `./iac-tool updateDB resource -d` 进行数据升级。
+如果是容器化部署执行: `docker-compose exec iac-portal ./iac-tool updateDB resource -d`
+
+
+------
 ## v0.11.0 20220530
 #### Features
 - 组织和项目支持批量邀请用户
