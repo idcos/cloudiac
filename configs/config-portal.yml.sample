@@ -61,32 +61,3 @@ ldap:
   search_filter: "${LDAP_SEARCH_FILTER}"
   email_attribute: "${LDAP_EMAIL_ATTRIBUTE}"
   account_attribute: "${LDAP_ACCOUNT_ATTRIBUTE}"
-
-demo:
-  enable: ${DEMO_ENABLE}
-  org_name_suffix: "的演示组织"
-  org_description: "演示组织描述内容"
-  vcs_name: "演示 VCS"
-  vcs_type: "${DEMO_VCS_TYPE}"
-  vcs_address: "${DEMO_VCS_ADDRESS}"
-  vcs_token: "${DEMO_VCS_TOKEN}"
-  project_name: "演示项目"
-  templates: 
-    - name: 演示云模板
-      # 仓库 id(根据 vcs 类型不同可以为数值或者字符)
-      repo_id: "${DEMO_TEM_REPO_ID}"  
-      revision: "master"
-      tfvars: ""
-      tf_version: ""
-      repo_full_name: ""
-      description: ""
-      variables: 
-        - name: "${DEMO_TEM_AK_NAME}"
-          value: "${DEMO_TEM_AK_VALUE}"
-          sensitive: false
-          description: "演示用 ak"
-        - name: "${DEMO_TEM_SK_NAME}"
-          value: "${DEMO_TEM_SK_VALUE}"
-          sensitive: true
-          description: "演示用 sk"
-
