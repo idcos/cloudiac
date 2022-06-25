@@ -142,13 +142,13 @@ var Polices = []Policy{
 
 	// 云模板
 	{"admin", "templates", "*"},
-	//{"member", "templates", "read"},
+	{"member", "templates", "read"},
 	{"complianceManager", "templates", "read"},
 
 	{"manager", "templates", "*"},
-	//{"approver", "templates", "*"},
-	//{"operator", "templates", "read"},
-	//{"guest", "templates", "read"},
+	{"approver", "templates", "*"},
+	{"operator", "templates", "read"},
+	{"guest", "templates", "read"},
 
 	// 变量
 	{"admin", "variables", "*"},
