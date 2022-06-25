@@ -1,6 +1,17 @@
 # Releases
 
 ------
+## v0.12.1 20220625
+**Fixes**
+
+- 修复项目审批员的访问权限问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.12.1](https://github.com/idcos/cloudiac/releases/tag/v0.12.1)
+
+
+------
 ## v0.12.0 20220624
 **Changes**
 
