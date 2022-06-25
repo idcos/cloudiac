@@ -180,13 +180,13 @@ var Polices = []Policy{
 
 	//vcs
 	{"admin", "vcs", "*"},
-	// {"member", "vcs", "read"},
+	{"member", "vcs", "read"},
 	{"complianceManager", "vcs", "read"},
 
 	{"manager", "vcs", "read"},
-	// {"approver", "vcs", "read"},
-	// {"operator", "vcs", "read"},
-	// {"guest", "vcs", "read"},
+	{"approver", "vcs", "read"},
+	{"operator", "vcs", "read"},
+	{"guest", "vcs", "read"},
 
 	//runner
 	{"member", "runners", "read"},
