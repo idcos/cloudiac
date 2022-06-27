@@ -42,17 +42,19 @@ type StateStore struct {
 }
 
 type RunTaskReq struct {
-	Env          TaskEnv    `json:"env" binding:""`
-	RunnerId     string     `json:"runnerId" binding:""`
-	TaskId       string     `json:"taskId" binding:"required"`
-	Step         int        `json:"step" binding:""`
-	StepType     string     `json:"stepType" binding:"required"`
-	StepArgs     []string   `json:"stepArgs"`
-	DockerImage  string     `json:"dockerImage"`
-	StateStore   StateStore `json:"stateStore" binding:""`
-	RepoAddress  string     `json:"repoAddress" binding:""` // 带 token 的完整路径
-	RepoBranch   string     `json:"repoBranch" binding:""`  // git branch or tag
-	RepoCommitId string     `json:"repoCommitId" binding:""`
+	Env            TaskEnv    `json:"env" binding:""`
+	RunnerId       string     `json:"runnerId" binding:""`
+	TaskId         string     `json:"taskId" binding:"required"`
+	Step           int        `json:"step" binding:""`
+	StepType       string     `json:"stepType" binding:"required"`
+	StepArgs       []string   `json:"stepArgs"`
+	StepBeforeCmds []string   `json:"stepBeforeCmds"`
+	StepAfterCmds  []string   `json:"stepAfterCmds"`
+	DockerImage    string     `json:"dockerImage"`
+	StateStore     StateStore `json:"stateStore" binding:""`
+	RepoAddress    string     `json:"repoAddress" binding:""` // 带 token 的完整路径
+	RepoBranch     string     `json:"repoBranch" binding:""`  // git branch or tag
+	RepoCommitId   string     `json:"repoCommitId" binding:""`
 
 	NetworkMirror string `json:"networkMirror"` // terraform network mirror url
 
