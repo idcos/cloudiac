@@ -809,18 +809,18 @@ func getBeforeAfterCmds(StepBeforeCmds, StepAfterCmds []string) (string, string)
 
 	if len(StepBeforeCmds) > 0 {
 		cmds := make([]string, 0)
-		cmds = append(cmds, `echo "BEGIN BEFORE COMMANDS>>>"`)
+		cmds = append(cmds, `echo "===== before commands ====="`)
 		cmds = append(cmds, StepBeforeCmds...)
-		cmds = append(cmds, `echo -e "<<<END BEFORE COMMANDS\n"`)
+		cmds = append(cmds, `echo -e "===== end =====\n"`)
 		beforeCmds = strings.Join(cmds, " && ")
 	}
 
 	afterCmds := ""
 	if len(StepAfterCmds) > 0 {
 		cmds := make([]string, 0)
-		cmds = append(cmds, `echo -e "\nBEGIN AFTER COMMANDS>>>"`)
+		cmds = append(cmds, `echo -e "\n===== after commands ====="`)
 		cmds = append(cmds, StepAfterCmds...)
-		cmds = append(cmds, `echo "<<<END AFTER COMMANDS"`)
+		cmds = append(cmds, `echo "===== end ====="`)
 		afterCmds = strings.Join(cmds, " && ")
 	}
 
