@@ -48,3 +48,8 @@ type SystemSwitchesStatusResp struct {
 	EnableRegister bool `json:"enableRegister"`
 	EnableLdap     bool `json:"enableLdap"`
 }
+
+type UserEmailStatus struct {
+	Email        string `json:"email"`
+	ActiveStatus string `json:"activeStatus"`
+}

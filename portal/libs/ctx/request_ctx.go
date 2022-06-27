@@ -5,23 +5,19 @@ package ctx
 import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
+	"cloudiac/portal/libs/validate"
 	"cloudiac/portal/models/forms"
 	"cloudiac/utils/logs"
 	"encoding/json"
 	"fmt"
-	"github.com/go-playground/locales/en"
-	"github.com/go-playground/locales/zh"
-	ut "github.com/go-playground/universal-translator"
-	"github.com/go-playground/validator/v10"
-	en_translations "github.com/go-playground/validator/v10/translations/en"
-	zh_translations "github.com/go-playground/validator/v10/translations/zh"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
 	"strconv"
-	"strings"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/pkg/errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -37,15 +33,6 @@ type GinRequest struct {
 	*gin.Context
 	sc   *ServiceContext
 	form forms.BaseFormer
-}
-
-var (
-	transZh ut.Translator
-	transEn ut.Translator
-)
-
-func init() {
-	transZh, transEn = register()
 }
 
 func NewGinRequest(c *gin.Context) *GinRequest {
@@ -100,9 +87,9 @@ func (c *GinRequest) JSON(status int, msg interface{}, result interface{}) {
 			lang := e.GetAcceptLanguage(c.GetHeader("accept-language"))
 			if errors.As(msg.(e.Error).Err(), &validationError) {
 				if lang == "en-US" {
-					detail, validateErrors = setDetailAndValidateErrors(validationError, transEn)
+					detail, validateErrors = validate.SetDetailAndValidateErrors(validationError, validate.TransEn)
 				} else {
-					detail, validateErrors = setDetailAndValidateErrors(validationError, transZh)
+					detail, validateErrors = validate.SetDetailAndValidateErrors(validationError, validate.TransZh)
 				}
 			} else {
 				detail = er.Error()
@@ -268,70 +255,4 @@ func (c *GinRequest) Bind(form forms.BaseFormer) error {
 	c.form = form
 
 	return nil
-}
-
-func setDetailAndValidateErrors(validationError validator.ValidationErrors, trans ut.Translator) (string, map[string]string) {
-	var data string
-	validationErrors := make(map[string]string, len(validationError.Translate(trans)))
-	valueArrays := make([]string, 0)
-	for key, value := range validationError.Translate(trans) {
-		newKey := key[strings.Index(key, ".")+1:]
-		validationErrors[newKey] = value
-		valueArrays = append(valueArrays, value)
-	}
-	data = strings.Join(valueArrays, "\n")
-	return data, validationErrors
-}
-
-func register() (ut.Translator, ut.Translator) {
-	f := func(ut ut.Translator, fe validator.FieldError) string {
-		t, _ := ut.T(fe.Tag(), fe.Field(), fe.Param())
-		return t
-	}
-	validate := binding.Validator.Engine().(*validator.Validate)
-	return zhRegisterTranslation(validate, f), enRegisterTranslation(validate, f)
-}
-
-func zhRegisterTranslation(validate *validator.Validate, f func(ut ut.Translator, fe validator.FieldError) string) ut.Translator {
-	translatorZh := zh.New()
-	uniZh := ut.New(translatorZh, translatorZh)
-	tranZh, _ := uniZh.GetTranslator("zh")
-	err := zh_translations.RegisterDefaultTranslations(validate, tranZh)
-	if err != nil {
-		panic(err)
-	}
-	re(validate, tranZh, "required_with", registrationFunc("required_with", "{0}和{1}必须同时存在", false), f)
-	re(validate, tranZh, "required_without", registrationFunc("required_without", "{0}必须存在如果{1}不存在", false), f)
-	re(validate, tranZh, "required_without_all", registrationFunc("required_without_all", "{0}和[{1}]必须存在其中一种", false), f)
-	re(validate, tranZh, "file", registrationFunc("file", "{0}必须为文件路径", false), f)
-	return tranZh
-}
-
-func enRegisterTranslation(validate *validator.Validate, f func(ut ut.Translator, fe validator.FieldError) string) ut.Translator {
-	translatorEn := en.New()
-	uniEn := ut.New(translatorEn, translatorEn)
-	tranEn, _ := uniEn.GetTranslator("en")
-	err := en_translations.RegisterDefaultTranslations(validate, tranEn)
-	if err != nil {
-		panic(err)
-	}
-	re(validate, tranEn, "startswith", registrationFunc("startswith", "{0} must startswith '{1}'", false), f)
-	re(validate, tranEn, "required_with", registrationFunc("required_with", "{0} and {1} must be also provided", false), f)
-	re(validate, tranEn, "required_without", registrationFunc("required_without", "{0} must be provided if {1} is empty", false), f)
-	re(validate, tranEn, "required_without_all", registrationFunc("required_without_all", "either provide {0} or provide [{1}]", false), f)
-	re(validate, tranEn, "file", registrationFunc("file", "{0} must be a valid file", false), f)
-	return tranEn
-}
-func re(v *validator.Validate, trans ut.Translator, tag string, customRegisFunc validator.RegisterTranslationsFunc, customTransFunc validator.TranslationFunc) {
-	if err := v.RegisterTranslation(tag, trans, customRegisFunc, customTransFunc); err != nil {
-		panic(err)
-	}
-}
-func registrationFunc(tag string, translation string, override bool) validator.RegisterTranslationsFunc {
-	return func(ut ut.Translator) (err error) {
-		if err = ut.Add(tag, translation, override); err != nil {
-			return
-		}
-		return
-	}
 }

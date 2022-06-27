@@ -266,6 +266,10 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "invalid project id",
 		"zh-CN": "无效的项目id",
 	},
+	InvalidActiveEmail: {
+		"en-US": "inactive user email",
+		"zh-CN": "邮箱未激活",
+	},
 	TaskNotHaveStep: {
 		"en-US": "task have no steps",
 		"zh-CN": "任务无步骤",
@@ -358,6 +362,14 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "template disabled",
 		"zh-CN": "模板不可用",
 	},
+	TemplateDemoNotAllowEdit: {
+		"en-US": "demo template is not allowed edit",
+		"zh-CN": "演示云模板不可编辑",
+	},
+	TemplateDemoNotAllowDelete: {
+		"en-US": "demo template is not allowed delete",
+		"zh-CN": "演示云模板不可删除",
+	},
 	TemplateActiveEnvExists: {
 		"en-US": "can not delete template which have active environment",
 		"zh-CN": "模板存在活跃环境",
@@ -397,6 +409,14 @@ var errorMsgs = map[int]map[string]string{
 	EnvLocked: {
 		"en-US": "environment locked",
 		"zh-CN": "环境已锁定",
+	},
+	EnvLockedFailedEnvIsDemo: {
+		"en-US": "environment locked failed. this is demo environment",
+		"zh-CN": "环境锁定失败，演示环境不能被锁定",
+	},
+	EnvNameDuplicated: {
+		"en-US": "environment name duplicated",
+		"zh-CN": "环境名称重复",
 	},
 	TaskAlreadyExists: {
 		"en-US": "task already exists",

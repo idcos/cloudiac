@@ -2,10 +2,13 @@
 
 package resps
 
-import "cloudiac/portal/models"
+import (
+	"cloudiac/portal/models"
+	"cloudiac/portal/models/desensitize"
+)
 
 type TaskDetailResp struct {
-	models.Task
+	desensitize.Task
 	Creator string `json:"creator" example:"超级管理员"`
 }
 

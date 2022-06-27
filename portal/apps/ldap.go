@@ -24,6 +24,7 @@ func GetLdapOUsFromDB(c *ctx.ServiceContext, form *forms.SearchLdapOUForm) (inte
 		subQuery := c.DB().Model(&models.LdapOUProject{}).Where(`project_id = ?`, form.FilterProjectId).Select("dn")
 		query = query.Where(`dn NOT IN (?)`, subQuery.Expr())
 	}
+	query = query.Where("org_id = ?", c.OrgId)
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 
 	var list = make([]resps.LdapOUDBResp, 0)

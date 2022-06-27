@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/acarl005/stripansi"
+	"github.com/alessio/shellescape"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 )
@@ -220,7 +221,8 @@ func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*mode
 		EnvId:     env.Id,
 		StatePath: env.StatePath,
 
-		Workdir:   firstVal(pt.Workdir, env.Workdir, tpl.Workdir),
+		// 任务、环境工作目录为空，工作目录就应该为空，这里不需要在引用云模板的工作目录
+		Workdir:   firstVal(pt.Workdir, env.Workdir),
 		TfVersion: tpl.TfVersion,
 
 		Playbook:     env.Playbook,
@@ -333,7 +335,7 @@ func createTaskStep(tx *db.Session, env *models.Env, task models.Task, pipelineS
 	if len(task.Targets) != 0 && IsTerraformStep(pipelineStep.Type) {
 		if pipelineStep.Type != models.TaskStepInit {
 			for _, t := range task.Targets {
-				pipelineStep.Args = append(pipelineStep.Args, fmt.Sprintf("-target=%s", t))
+				pipelineStep.Args = append(pipelineStep.Args, fmt.Sprintf("-target=%s", shellescape.Quote(t)))
 			}
 		}
 	}
@@ -595,6 +597,8 @@ func taskStatusExitedCall(dbSess *db.Session, task *models.Task, status string) 
 		if !kaConf.Disabled && len(kaConf.Brokers) > 0 {
 			SendKafkaMessage(dbSess, task, status)
 		}
+
+		syncManagedResToProvider(task)
 	}
 
 	//if task.Callback != "" {
@@ -643,6 +647,7 @@ type TfStateResource struct {
 	Type         string      `json:"type"`
 	Name         string      `json:"name"`
 	Index        interface{} `json:"index"` // index 可以为整型或字符串
+	DependsOn    []string    `json:"depends_on"`
 
 	Values map[string]interface{} `json:"values"`
 }
@@ -653,7 +658,7 @@ func UnmarshalStateJson(bs []byte) (*TfState, error) {
 	return &state, err
 }
 
-func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
+func TraverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 	parts := strings.Split(module.Address, ".")
 	moduleName := parts[len(parts)-1]
 	for _, r := range module.Resources {
@@ -662,17 +667,18 @@ func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 			idx = fmt.Sprintf("%v", r.Index)
 		}
 		rs = append(rs, &models.Resource{
-			Provider: r.ProviderName,
-			Module:   moduleName,
-			Address:  r.Address,
-			Type:     r.Type,
-			Name:     r.Name,
-			Index:    idx,
-			Attrs:    r.Values,
+			Provider:     r.ProviderName,
+			Module:       moduleName,
+			Address:      r.Address,
+			Type:         r.Type,
+			Name:         r.Name,
+			Index:        idx,
+			Attrs:        r.Values,
+			Dependencies: r.DependsOn,
 		})
 	}
 	for i := range module.ChildModules {
-		rs = append(rs, traverseStateModule(&module.ChildModules[i])...)
+		rs = append(rs, TraverseStateModule(&module.ChildModules[i])...)
 	}
 	return rs
 }
@@ -680,13 +686,13 @@ func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, proMap runner.ProviderSensitiveAttrMap) error {
 
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Resource{}.TableName(),
-		"id", "org_id", "project_id", "env_id", "task_id",
-		"provider", "module", "address", "type", "name", "index", "attrs", "sensitive_keys", "applied_at", "res_id")
+		"id", "org_id", "project_id", "env_id", "task_id", "provider", "module",
+		"address", "type", "name", "index", "attrs", "sensitive_keys", "applied_at", "res_id", "dependencies")
 
 	rs := make([]*models.Resource, 0)
-	rs = append(rs, traverseStateModule(&values.RootModule)...)
+	rs = append(rs, TraverseStateModule(&values.RootModule)...)
 	for i := range values.ChildModules {
-		rs = append(rs, traverseStateModule(&values.ChildModules[i])...)
+		rs = append(rs, TraverseStateModule(&values.ChildModules[i])...)
 	}
 	resources, err := GetResourceByEnvId(tx, task.EnvId)
 	if err != nil {
@@ -714,8 +720,8 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 				r.SensitiveKeys = proMap[providerKey]
 			}
 		}
-		err := bq.AddRow(models.NewId("r"), task.OrgId, task.ProjectId, task.EnvId, task.Id,
-			r.Provider, r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys, r.AppliedAt, resId)
+		err := bq.AddRow(models.NewId("r"), task.OrgId, task.ProjectId, task.EnvId, task.Id, r.Provider,
+			r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys, r.AppliedAt, resId, r.Dependencies)
 		if err != nil {
 			return err
 		}
@@ -752,6 +758,7 @@ type TfPlan struct {
 type TfPlanResource struct {
 	Address       string `json:"address"`
 	ModuleAddress string `json:"module_address,omitempty"`
+	ProviderName  string `json:"provider_name"`
 
 	Mode  string `json:"mode"` // managed、data
 	Type  string `json:"type"`
@@ -1156,6 +1163,7 @@ func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, ta
 
 	vars, er := GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
 	if er != nil {
+		logs.Get().Debugf("get valid vars and vgVars error: %v", er)
 		return nil, e.New(e.InternalError, er, http.StatusInternalServerError)
 	}
 
@@ -1188,6 +1196,7 @@ func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, ta
 
 	task.RepoAddr, task.CommitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
 	if err != nil {
+		logs.Get().Debugf("get task repo addr and commit id failed: %v", err)
 		return nil, e.New(e.InternalError, err)
 	}
 
@@ -1380,13 +1389,26 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 		logs.Get().Errorf("kafka send error, get resource data err: %v", err)
 		return
 	}
+
+	var policyStatus string
+	scanTask, err := GetScanTaskById(session, task.Id)
+	if err != nil && err.Code() != e.TaskNotExists {
+		logs.Get().Errorf("kafka send error, get scanTask data err: %v, taskId: %s", err, task.Id)
+		return
+	}
+
+	if scanTask != nil {
+		policyStatus = scanTask.PolicyStatus
+	}
+
 	env, err := GetEnvById(session, task.EnvId)
 	if err != nil {
 		logs.Get().Errorf("kafka send error, query env status err: %v", err)
 		return
 	}
+
 	k := kafka.Get()
-	message := k.GenerateKafkaContent(task, taskStatus, env.Status, resources)
+	message := k.GenerateKafkaContent(task, taskStatus, env.Status, policyStatus, resources)
 	if err := k.ConnAndSend(message); err != nil {
 		logs.Get().Errorf("kafka send error: %v", err)
 		return

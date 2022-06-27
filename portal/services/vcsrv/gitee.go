@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -50,6 +51,10 @@ func (gitee *giteeVcs) GetRepo(idOrPath string) (RepoIface, error) {
 		repository: &rep,
 		urlParam:   gitee.urlParam,
 	}, nil
+}
+
+func (v *giteeVcs) RepoBaseHttpAddr() string {
+	return strings.TrimSuffix(v.vcs.Address, "/api/v5")
 }
 
 type RepositoryGitee struct {

@@ -38,6 +38,14 @@ func (Vcs) NewId() Id {
 	return NewId("vcs")
 }
 
+//go:generate go run cloudiac/code-gen/desenitize Vcs ./desensitize/
+func (v *Vcs) Desensitize() Vcs {
+	rv := Vcs{}
+	utils.DeepCopy(&rv, v)
+	rv.VcsToken = ""
+	return rv
+}
+
 func (v Vcs) Migrate(sess *db.Session) (err error) {
 	if err = v.AddUniqueIndex(sess, "unique__org_vcs_name", "org_id", "name"); err != nil {
 		return err

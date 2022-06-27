@@ -64,6 +64,7 @@
 10203,NameDuplicate,名称重复,user already exists
 30914,TaskStepNotExists,步骤不存在,task step does not exists
 20007,InvalidProjectId,无效的项目id,invalid project id
+20011,InvalidActiveEmail,邮箱未激活,inactive user email
 30916,TaskNotHaveStep,任务无步骤,task have no steps
 30917,TaskAborting,任务正在中止,task is aborting
 30918,TaskAborted,任务已中止,task aborted
@@ -87,6 +88,8 @@
 30613,TokenAliasDuplicate,Token别名重复,token alias already exists
 30711,TemplateNotExists,模板不存在,template not exists
 30712,TemplateDisabled,模板不可用,template disabled
+30714,TemplateDemoNotAllowEdit,演示云模板不可编辑,demo template is not allowed edit
+30715,TemplateDemoNotAllowDelete,演示云模板不可删除,demo template is not allowed delete
 30730,TemplateActiveEnvExists,模板存在活跃环境,can not delete template which have active environment
 10430,ConsulConnError,consul链接失败,connect to consul error
 30810,EnvAlreadyExists,环境已经存在,environment already exists
@@ -97,6 +100,8 @@
 30816,EnvCheckAutoApproval,配置自动纠漂移、推送到分支时重新部署时，必须配置自动审批,auto approval is required 
 30817,EnvLockFailedTaskActive,环境锁定失败，环境下有活跃任务,environment lock failed. Active tasks in the environment
 30818,EnvLocked,环境已锁定,environment locked
+30819,EnvLockedFailedEnvIsDemo,环境锁定失败，演示环境不能被锁定,environment locked failed. this is demo environment
+30820,EnvNameDuplicated,环境名称重复,environment name duplicated
 30910,TaskAlreadyExists,任务已经存在,task already exists
 30911,TaskNotExists,任务不存在,task does not exists
 10440,VcsError,VCS仓库错误,unknown VCS error

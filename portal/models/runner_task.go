@@ -5,6 +5,7 @@ package models
 import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/runner"
+	"cloudiac/utils"
 	"path"
 )
 
@@ -92,4 +93,14 @@ func (t *ScanTask) TfResultJsonPath() string {
 
 func (t *ScanTask) Migrate(sess *db.Session) (err error) {
 	return TaskModelMigrate(sess, t)
+}
+
+//go:generate go run cloudiac/code-gen/desenitize ScanTask ./desensitize/
+func (v *ScanTask) Desensitize() ScanTask {
+	rv := ScanTask{}
+	utils.DeepCopy(&rv, v)
+	for i := 0; i < len(rv.Variables); i++ {
+		rv.Variables[i].Value = ""
+	}
+	return rv
 }

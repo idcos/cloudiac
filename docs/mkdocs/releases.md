@@ -1,6 +1,49 @@
 # Releases
 
 ------
+## v0.12.1 20220625
+**Fixes**
+
+- 修复项目审批员的访问权限问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.12.1](https://github.com/idcos/cloudiac/releases/tag/v0.12.1)
+
+
+------
+## v0.12.0 20220624
+**Changes**
+
+- 『云模板』统一更名为『Stack』
+
+**Enhancements**
+
+- 优化任务执行安全性，避免shell注入
+- 优化注册密码强度
+- 优化用户查看内容的权限
+- 密钥管理支持设置RSA密钥
+
+**Features**
+
+- 新增资源查询依赖资源
+- kafka回调消息增加任务id和合规状态字段
+
+**Fixes**
+
+- 修复plan后直接部署、销毁时 workdir 问题
+- 修复趋势费用缺少2月份数据的问题
+- 修复使用 Stack 导入功能，传入 json结构 时 panic 问题
+- 修复环境标签只剩一个的情况下无法删除的问题
+- 修复敏感变量加密问题
+- 修复VCS相关的一些问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.12.0](https://github.com/idcos/cloudiac/releases/tag/v0.12.0)
+
+
+------
 ## v0.11.0 20220530
 **Enhancements**
 

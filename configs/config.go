@@ -74,6 +74,9 @@ type LdapConfig struct {
 type DemoConfig struct {
 	Enable bool `yaml:"enable"` // 是否启用演示组织(默认为否)
 
+	OrgNameSuffix  string `yaml:"org_name_suffix"` // 演示组织名称后缀
+	OrgDescription string `yaml:"org_description"` // 演示组织描述
+
 	VcsName    string `yaml:"vcs_name"`
 	VcsType    string `yaml:"vcs_type"`
 	VcsAddress string `yaml:"vcs_address"`
@@ -85,11 +88,14 @@ type DemoConfig struct {
 }
 
 type DemoTemplate struct {
-	Name      string `yaml:"name"`
-	RepoId    string `yaml:"repo_id"`
-	Revison   string `yaml:"revision"`
-	TfVars    string `yaml:"tf_vars"`
-	Variables []struct {
+	Name         string `yaml:"name"`
+	RepoId       string `yaml:"repo_id"`
+	Revison      string `yaml:"revision"`
+	TfVars       string `yaml:"tf_vars"`
+	TfVersion    string `yaml:"tf_version"`
+	RepoFullName string `yaml:"repo_full_name"`
+	Description  string `yaml:"description"`
+	Variables    []struct {
 		Name        string `yaml:"name"`
 		Value       string `yaml:"value"`
 		Sensitive   bool   `yaml:"sensitive"`
@@ -170,6 +176,8 @@ type Config struct {
 	EnableRegister  bool `yaml:"enableRegister"`  // 启用注册
 
 	Demo DemoConfig `yaml:"demo"` // 演示组织配置
+
+	AlicloudResSyncApi string `yaml:"alicloud_res_sync_api"`
 }
 
 const (
@@ -186,6 +194,10 @@ var (
 		Portal: PortalConfig{
 			SSHPrivateKey: "var/private_key",
 			SSHPublicKey:  "var/private_key.pub",
+		},
+		Demo: DemoConfig{
+			OrgNameSuffix:  "的演示组织",
+			OrgDescription: "",
 		},
 	}
 )

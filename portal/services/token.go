@@ -18,6 +18,7 @@ type Claims struct {
 	UserId   models.Id `json:"userId"`
 	Username string    `json:"username"`
 	IsAdmin  bool      `json:"isAdmin"`
+	Email    string    `json:"email"`
 	jwt.RegisteredClaims
 }
 
@@ -44,8 +45,8 @@ type ActiveateTokenClaims struct {
 }
 
 func GenerateActivateToken(email string) (string, error) {
-	expire := time.Now().Add(time.Hour * 24)
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, ActiveateTokenClaims{
+	expire := time.Now().Add(time.Hour * 25)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		Email: email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expire),
@@ -84,11 +85,16 @@ func UpdateToken(tx *db.Session, id models.Id, attrs models.Attrs) (token *model
 }
 
 func QueryToken(query *db.Session, tokenType string) *db.Session {
-	query = query.Model(&models.Token{}).
-		Where("`expired_at` > ? or expired_at is null", time.Now())
+	query = query.Model(&models.Token{})
+
 	if tokenType != "" {
 		query = query.Where("type = ?", tokenType)
 	}
+
+	if tokenType != consts.TokenApi {
+		query = query.Where("`expired_at` > ? or expired_at is null", time.Now())
+	}
+
 	return query
 }
 

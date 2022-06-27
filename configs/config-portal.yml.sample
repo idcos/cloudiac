@@ -8,10 +8,11 @@ jwtSecretKey: "${JWT_SECRET_KEY}"
 registryAddr: "${REGISTRY_ADDRESS}"
 httpClientInsecure: ${HTTP_CLIENT_INSECURE}
 enableTaskAbort: ${ENABLE_TASK_ABORT}
-enableRegister: false
+enableRegister: ${ENABLE_REGISTER}
 
 portal:
   address: "${PORTAL_ADDRESS}"
+
 
 consul:
   address: "${CONSUL_ADDRESS}"
@@ -60,26 +61,3 @@ ldap:
   search_filter: "${LDAP_SEARCH_FILTER}"
   email_attribute: "${LDAP_EMAIL_ATTRIBUTE}"
   account_attribute: "${LDAP_ACCOUNT_ATTRIBUTE}"
-
-demo:
-  enable: false
-  vcs_name: "演示 VCS"
-  vcs_type: "github"
-  vcs_address: "https://api.github.com"
-  vcs_token: "<your vcs token>"
-  project_name: "演示项目"
-  templates: 
-    - name: 演示云模板
-      repo_id: ""  # 仓库的数字 id
-      revision: "master"
-      tfvars: ""
-      variables: 
-        - name: ALICLOUD_ACCESS_KEY
-          value: "ak"
-          sensitive: false
-          description: "演示用 ak"
-        - name: ALICLOUD_SECRET_KEY
-          value: "sk"
-          sensitive: true
-          description: "演示用 sk"
-

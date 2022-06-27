@@ -3,8 +3,10 @@
 package models
 
 import (
-	"cloudiac/portal/libs/db"
 	"database/sql/driver"
+
+	"cloudiac/portal/libs/db"
+	"cloudiac/utils"
 )
 
 type VariableBody struct {
@@ -17,6 +19,10 @@ type VariableBody struct {
 
 	// 继承关系依赖数据创建枚举的顺序，后续新增枚举值时请按照新的继承顺序增加
 	Options StrSlice `yaml:"options" json:"options" gorm:"type:json"` // 可选值列表
+}
+
+func (v *VariableBody) Key() string {
+	return v.Type + ":" + v.Name
 }
 
 type Variable struct {
@@ -35,6 +41,20 @@ func (Variable) NewId() Id {
 
 func (Variable) TableName() string {
 	return "iac_variable"
+}
+
+//go:generate go run cloudiac/code-gen/desenitize Variable ./desensitize/
+func (v *Variable) Desensitize() Variable {
+	if !v.Sensitive {
+		return *v
+	}
+
+	rv := Variable{}
+	utils.DeepCopy(&rv, v)
+	if rv.Sensitive {
+		rv.Value = ""
+	}
+	return rv
 }
 
 func (v Variable) Migrate(sess *db.Session) error {
@@ -68,6 +88,18 @@ func (VariableGroup) TableName() string {
 
 func (VariableGroup) NewId() Id {
 	return NewId("vg")
+}
+
+//go:generate go run cloudiac/code-gen/desenitize VariableGroup ./desensitize/
+func (vg *VariableGroup) Desensitize() VariableGroup {
+	rvg := VariableGroup{}
+	utils.DeepCopy(&rvg, vg)
+	for i := range rvg.Variables {
+		if rvg.Variables[i].Sensitive {
+			rvg.Variables[i].Value = ""
+		}
+	}
+	return rvg
 }
 
 func (v VariableGroup) Migrate(sess *db.Session) error {

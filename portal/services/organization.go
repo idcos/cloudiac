@@ -3,7 +3,6 @@
 package services
 
 import (
-	"cloudiac/common"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
@@ -158,31 +157,31 @@ func GetDemoOrganization(tx *db.Session) (*models.Organization, e.Error) {
 	return &o, nil
 }
 
-func TryAddDemoRelation(tx *db.Session, userId models.Id) (err e.Error) {
-	if common.DemoOrgId == "" {
-		return
-	}
-	demoProject, _ := GetDemoProject(tx, models.Id(common.DemoOrgId))
-	// 用户加入演示组织
-	_, err = CreateUserOrgRel(tx, models.UserOrg{OrgId: models.Id(common.DemoOrgId), UserId: userId, Role: consts.OrgRoleAdmin})
-	if err != nil {
-		return
-	}
-	// 用户加入演示项目
-	_, err = CreateProjectUser(tx, models.UserProject{
-		Role:      consts.ProjectRoleManager,
-		UserId:    userId,
-		ProjectId: demoProject.Id,
-	})
-	return
-}
+// func TryAddDemoRelation(tx *db.Session, userId models.Id) (err e.Error) {
+// 	if common.DemoOrgId == "" {
+// 		return
+// 	}
+// 	demoProject, _ := GetDemoProject(tx, models.Id(common.DemoOrgId))
+// 	// 用户加入演示组织
+// 	_, err = CreateUserOrgRel(tx, models.UserOrg{OrgId: models.Id(common.DemoOrgId), UserId: userId, Role: consts.OrgRoleAdmin})
+// 	if err != nil {
+// 		return
+// 	}
+// 	// 用户加入演示项目
+// 	_, err = CreateProjectUser(tx, models.UserProject{
+// 		Role:      consts.ProjectRoleManager,
+// 		UserId:    userId,
+// 		ProjectId: demoProject.Id,
+// 	})
+// 	return
+// }
 
 func GetOrgOrProjectResourcesQuery(tx *db.Session, searchStr string, orgId, projectId, userId models.Id, isSuperAdmin bool) *db.Session {
 	query := tx.Joins("inner join iac_env on iac_env.last_res_task_id = iac_resource.task_id left join " +
 		"iac_project on iac_resource.project_id = iac_project.id").
 		LazySelectAppend("iac_project.name as project_name, iac_env.name as env_name, iac_resource.id as resource_id," +
 			"iac_resource.name as resource_name, iac_resource.task_id, iac_resource.project_id as project_id, iac_resource.attrs as attrs," +
-			"iac_resource.env_id as env_id, iac_resource.provider as provider, iac_resource.type, iac_resource.module")
+			"iac_resource.dependencies as dependencies, iac_resource.env_id as env_id, iac_resource.provider as provider, iac_resource.type, iac_resource.module")
 
 	if orgId != "" {
 		query = query.Where("iac_env.org_id = ?", orgId)
@@ -467,6 +466,11 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 }
 
 func dbResult2ProjectOrEnvResStatResp(dbResults []ProjectOrEnvStatResult) []resps.ProjOrEnvResStatResp {
+	uniqDetails := make(map[models.Id]ProjectOrEnvStatResult)
+	for _, result := range dbResults {
+		uniqDetails[result.Id] = result
+	}
+
 	// resType -> projectId -> data
 	mCount := make(map[string]int)
 	m := make(map[string][]resps.DetailStatResp)
@@ -479,13 +483,9 @@ func dbResult2ProjectOrEnvResStatResp(dbResults []ProjectOrEnvStatResult) []resp
 		mCount[result.ResType] += result.Count
 
 		if _, ok := m[result.ResType]; !ok {
-			m[result.ResType] = make([]resps.DetailStatResp, 0)
+			m[result.ResType] = getFullDetails(uniqDetails)
 		}
-		m[result.ResType] = append(m[result.ResType], resps.DetailStatResp{
-			Id:    result.Id,
-			Name:  result.Name,
-			Count: result.Count,
-		})
+		setStatDetail(result, m)
 	}
 
 	var results = make([]resps.ProjOrEnvResStatResp, 0)
@@ -498,6 +498,28 @@ func dbResult2ProjectOrEnvResStatResp(dbResults []ProjectOrEnvStatResult) []resp
 	}
 
 	return results
+}
+
+func getFullDetails(uniqDetails map[models.Id]ProjectOrEnvStatResult) []resps.DetailStatResp {
+	fullDetails := make([]resps.DetailStatResp, 0)
+	for k, v := range uniqDetails {
+		fullDetails = append(fullDetails, resps.DetailStatResp{
+			Id:    k,
+			Name:  v.Name,
+			Count: 0,
+		})
+	}
+
+	return fullDetails
+}
+
+func setStatDetail(result ProjectOrEnvStatResult, m map[string][]resps.DetailStatResp) {
+	for i, detail := range m[result.ResType] {
+		if detail.Id != result.Id {
+			continue
+		}
+		m[result.ResType][i].Count = result.Count
+	}
 }
 
 func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, days int) ([]resps.ResGrowTrendResp, e.Error) {

@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package services
 
 import (
@@ -28,16 +30,17 @@ func CreateUserDemoOrgData(c *ctx.ServiceContext, tx *db.Session, user *models.U
 		er      e.Error
 	)
 
+	demoCfg := configs.Get().Demo
 	// 尝试获取一个可用的组织名称
 	for i := 0; i < 80; i++ { // 限制重试次数
-		demoName := fmt.Sprintf("%s的演示组织", userName)
+		demoName := fmt.Sprintf("%s%s", userName, demoCfg.OrgNameSuffix)
 		if i > 0 { // 第一次尝试不加随机后缀，此后都加至少两位的随机后缀(每尝试10次后缀长度加1)
 			demoName += utils.RandomStr(i/10 + 2)
 		}
 		logger.Debugf("i=%v, demo name: %v", i, demoName)
 		org, er = CreateOrganization(tx, models.Organization{
 			Name:        demoName,
-			Description: "",
+			Description: demoCfg.OrgDescription,
 			CreatorId:   user.Id,
 			IsDemo:      true,
 		})
@@ -51,8 +54,6 @@ func CreateUserDemoOrgData(c *ctx.ServiceContext, tx *db.Session, user *models.U
 	}
 	logger.Infof("create demo org: %s(%s)", org.Name, org.Id)
 
-	// 创建 demo vcs
-	demoCfg := configs.Get().Demo
 	vcs, er = CreateDemoVcs(tx, org.Id, demoCfg.VcsType, demoCfg.VcsAddress, demoCfg.VcsName, demoCfg.VcsToken)
 	if er != nil {
 		return er
@@ -98,11 +99,12 @@ func CreateDemoTemplate(tx *db.Session, orgId, vcsId, projectId, userId models.I
 	tpl, er := CreateTemplate(tx, models.Template{
 		Name:         t.Name,
 		OrgId:        orgId,
-		Description:  "",
+		Description:  t.Description,
 		VcsId:        vcsId,
 		RepoId:       t.RepoId,
-		RepoFullName: "",
+		RepoFullName: t.RepoFullName,
 		RepoRevision: t.Revison,
+		TfVersion:    t.TfVersion,
 		CreatorId:    userId,
 		Workdir:      "",
 		TfVarsFile:   t.TfVars,
@@ -169,13 +171,13 @@ func SendActivateAccountMail(user *models.User, token string) e.Error {
 	if name == "" {
 		name = strings.Split(user.Email, "@")[0]
 	}
-	content := utils.SprintTemplate(consts.UserActivteMail, map[string]interface{}{
+	content := utils.SprintTemplate(consts.UserActiveMail, map[string]interface{}{
 		"Name":    name,
 		"Email":   user.Email,
-		"Address": utils.JoinURL(configs.Get().Portal.Address, "register/activation/", token),
+		"Address": utils.JoinURL(configs.Get().Portal.Address, "/activation/", token),
 	})
 
-	er := mail.SendMail([]string{user.Email}, "欢迎注册 CloudIac", content)
+	er := mail.SendMail([]string{user.Email}, "欢迎注册 CloudIaC", content)
 	if er != nil {
 		logs.Get().Errorf("error send mail to %s, err %s", user.Email, er)
 		return er

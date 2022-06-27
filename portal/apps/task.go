@@ -10,6 +10,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/desensitize"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
@@ -75,22 +76,12 @@ func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{},
 
 // TaskDetail 任务信息详情
 func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*resps.TaskDetailResp, e.Error) {
-	orgIds, er := services.GetOrgIdsByUser(c.DB(), c.UserId)
-	if er != nil {
-		c.Logger().Errorf("error get task id by user, err %s", er)
-		return nil, e.New(e.DBError, er)
-	}
-	if !c.OrgId.InArray(orgIds...) && !c.IsSuperAdmin {
-		// 请求了一个不存在的 task，因为 task id 是在 path 传入，这里我们返回 404
-		return nil, e.New(e.TaskNotExists, http.StatusNotFound)
-	}
-
 	var (
 		task *models.Task
 		user *models.User
 		err  e.Error
 	)
-	task, err = services.GetTaskById(c.DB(), form.Id)
+	task, err = services.GetTaskById(services.QueryWithOrgId(c.DB(), c.OrgId), form.Id)
 	if err != nil && err.Code() == e.TaskNotExists {
 		return nil, e.New(e.TaskNotExists, err, http.StatusNotFound)
 	} else if err != nil {
@@ -110,7 +101,7 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*resps.TaskDe
 	// 隐藏敏感字段
 	task.HideSensitiveVariable()
 	var o = resps.TaskDetailResp{
-		Task:    *task,
+		Task:    desensitize.NewTask(*task),
 		Creator: user.Name,
 	}
 	// 清除url token
@@ -168,7 +159,7 @@ func LastTask(c *ctx.ServiceContext, form *forms.LastTaskForm) (*resps.TaskDetai
 	// 隐藏敏感字段
 	task.HideSensitiveVariable()
 	var t = resps.TaskDetailResp{
-		Task:    *task,
+		Task:    desensitize.NewTask(*task),
 		Creator: user.Name,
 	}
 
@@ -298,21 +289,11 @@ func FollowTaskLog(c *ctx.GinRequest, form forms.TaskLogForm) e.Error {
 
 // TaskOutput 任务Output信息详情
 func TaskOutput(c *ctx.ServiceContext, form forms.DetailTaskForm) (interface{}, e.Error) {
-	orgIds, er := services.GetOrgIdsByUser(c.DB(), c.UserId)
-	if er != nil {
-		c.Logger().Errorf("error get task id by user, err %s", er)
-		return nil, e.New(e.DBError, er)
-	}
-	if !c.OrgId.InArray(orgIds...) && !c.IsSuperAdmin {
-		// 请求了一个不存在的 task，因为 task id 是在 path 传入，这里我们返回 404
-		return nil, e.New(e.TaskNotExists, http.StatusNotFound)
-	}
-
 	var (
 		task *models.Task
 		err  e.Error
 	)
-	task, err = services.GetTaskById(c.DB(), form.Id)
+	task, err = services.GetTaskById(services.QueryWithOrgId(c.DB(), c.OrgId), form.Id)
 	if err != nil && err.Code() == e.TaskNotExists {
 		return nil, e.New(e.TaskNotExists, err, http.StatusNotFound)
 	} else if err != nil {

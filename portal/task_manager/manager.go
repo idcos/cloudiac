@@ -1031,6 +1031,7 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		Timeout:         task.StepTimeout,
 		StopOnViolation: task.StopOnViolation,
 		ContainerId:     task.ContainerId,
+		CreatorId:       task.CreatorId.String(),
 	}
 
 	if err := runTaskReqAddSysEnvs(taskReq); err != nil {
@@ -1294,6 +1295,7 @@ func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.Ta
 		StopOnViolation: true,
 		DockerImage:     task.Flow.Image,
 		ContainerId:     task.ContainerId,
+		CreatorId:       task.CreatorId.String(),
 	}
 
 	runnerEnv := runner.TaskEnv{
@@ -1464,6 +1466,20 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 	// CLOUDIAC_COMMIT	当前任务的云模板代码 commit hash
 	sysEnvs["CLOUDIAC_COMMIT"] = req.RepoCommitId
 	sysEnvs["TF_VAR_cloudiac_commit"] = req.RepoCommitId
+
+	if req.CreatorId != "" {
+		user, err := services.GetUserByIdRaw(db.Get(), models.Id(req.CreatorId))
+		if err != nil {
+			return errors.Wrapf(err, "query user %s", req.CreatorId)
+		}
+		if user.Name == "" {
+			sysEnvs["CLOUDIAC_USERNAME"] = user.Email
+			sysEnvs["TF_VAR_cloudiac_username"] = user.Email
+		} else {
+			sysEnvs["CLOUDIAC_USERNAME"] = user.Name
+			sysEnvs["TF_VAR_cloudiac_username"] = user.Name
+		}
+	}
 
 	if req.Env.Id != "" {
 		env, err := services.GetEnvById(db.Get(), models.Id(req.Env.Id))

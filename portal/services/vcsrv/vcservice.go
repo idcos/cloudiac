@@ -59,12 +59,16 @@ type VcsIface interface {
 
 	// TokenCheck 检查 token 是否有效
 	TokenCheck() error
+
+	RepoBaseHttpAddr() string
 }
 
 type RepoIface interface {
 	// ListBranches 获取分支列表
 	ListBranches() ([]string, error)
 	ListTags() ([]string, error)
+
+	// HttpAddress() string
 
 	// BranchCommitId
 	//param branch: 分支
@@ -275,4 +279,12 @@ func VerifyVcsToken(vcs *models.Vcs) error {
 		return err
 	}
 	return git.TokenCheck()
+}
+
+func GetRepoHttpAddr(vcs *models.Vcs, repoFullName string) (string, error) {
+	v, err := GetVcsInstance(vcs)
+	if err != nil {
+		return "", err
+	}
+	return utils.JoinURL(v.RepoBaseHttpAddr(), repoFullName), nil
 }

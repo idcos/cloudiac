@@ -288,7 +288,7 @@ func processVarsforUpdate(varsMap map[string]models.Variable, vars []models.Vari
 				vars[i] = v
 			}
 		}
-		varsMap[v.Name] = vars[i]
+		varsMap[v.Key()] = vars[i]
 	}
 	return nil
 }
@@ -310,20 +310,24 @@ func UpdateObjectVars(tx *db.Session, scope string, objectId models.Id, vars []m
 	}
 	dbVarsMap := make(map[string]models.Variable)
 	for _, v := range dbVars {
-		dbVarsMap[v.Name] = v
+		dbVarsMap[v.Key()] = v
 	}
 
 	// 删除实例己有，但此次未提交的变量
-	delVarNames := make([]string, 0)
+	delVars := make(map[string][]string)
 	for _, v := range dbVars {
-		if _, ok := varsMap[v.Name]; !ok {
-			delVarNames = append(delVarNames, v.Name)
+		if _, ok := varsMap[v.Key()]; !ok {
+			delVars[v.Type] = append(delVars[v.Type], v.Name)
 		}
 	}
-	if _, err := WithVarScopeIdWhere(tx, table, scope, objectId).
-		Where("name IN (?)", delVarNames).Delete(&models.Variable{}); err != nil {
-		return nil, e.AutoNew(err, e.DBError)
+	for typ, names := range delVars {
+		if _, err := WithVarScopeIdWhere(tx.Debug(), table, scope, objectId).
+			Where("`type` = ? AND name in (?)", typ, names).
+			Delete(&models.Variable{}); err != nil {
+			return nil, e.AutoNew(err, e.DBError)
+		}
 	}
+
 	if err := insertVars(dbVarsMap, vars, tx); err != nil {
 		return nil, err
 	}
@@ -340,7 +344,7 @@ func insertVars(dbVarsMap map[string]models.Variable, vars []models.Variable, tx
 		"id", "scope", "type", "name", "value", "sensitive", "description", "options")
 
 	for _, v := range vars {
-		if dbVar, ok := dbVarsMap[v.Name]; ok { // 同名变量己存在，进行更新
+		if dbVar, ok := dbVarsMap[v.Key()]; ok { // 同名变量己存在，进行更新
 			//敏感变量提交空值表示不进行修改
 			if v.Sensitive && v.Value == "" {
 				continue

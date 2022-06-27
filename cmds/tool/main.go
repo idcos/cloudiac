@@ -22,6 +22,7 @@ type Option struct {
 	Bill            BillCmd               `command:"bill-collect" description:"bill collect"`
 	DumpDb          DumpDb                `command:"dumpdb" description:"dump db to yaml"`
 	InitDB          InitDB                `command:"initdb" description:"init database structure"`
+	UpdateDb        UpdateDb              `command:"updateDB" description:"update database data"`
 
 	// 初始化演示项目。
 	// 旧版本中通过这个命令来创建一个共用的演示项目，但在 0.12 版本演示项目改为了为每个用户单独创建，所以废弃该命令

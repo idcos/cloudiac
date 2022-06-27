@@ -14,8 +14,8 @@ type UpdateSystemConfigForm struct {
 }
 
 type SystemCfg struct {
-	Name        string `form:"name" json:"name" binding:"required,gte=2,lte=255"`
-	Value       string `form:"value" json:"value" binding:"required,gte=2,lte=32"`
+	Name        string `form:"name" json:"name" binding:"required,gte=1,lte=255"`
+	Value       string `form:"value" json:"value" binding:"required,gte=1,lte=32"`
 	Description string `form:"description" json:"description" binding:"max=255"`
 }
 

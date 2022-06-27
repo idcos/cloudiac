@@ -10,6 +10,7 @@ import (
 	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
+	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
 	"io/fs"
@@ -88,6 +89,11 @@ func (l *LocalVcs) UserInfo() (UserInfo, error) {
 
 func (l *LocalVcs) TokenCheck() error {
 	return nil
+}
+
+func (l *LocalVcs) RepoBaseHttpAddr() string {
+	portAddr := configs.Get().Portal.Address
+	return utils.JoinURL(portAddr, consts.LocalGitReposPath)
 }
 
 type LocalRepo struct {
