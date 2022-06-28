@@ -4,6 +4,7 @@ package services
 
 import (
 	"cloudiac/utils"
+	"fmt"
 
 	"github.com/tidwall/gjson"
 )
@@ -11,16 +12,14 @@ import (
 func GetSensitiveKeysFromTfPlan(content []byte) map[string][]string {
 	sensitiveKeys := make(map[string][]string)
 
-	resouces := gjson.GetBytes(content, "configuration.root_module.resources")
-	variables := gjson.GetBytes(content, "configuration.root_module.variables")
-
+	rootModule := gjson.GetBytes(content, "configuration.root_module")
 	// 查找 sensitive 变量
-	sensitiveNames := findSensitiveNames(variables)
+	sensitiveNames := findSensitiveNames(rootModule)
 	if len(sensitiveNames) == 0 {
 		return sensitiveKeys
 	}
 
-	sensitiveKeys = findSensitiveStateKeys(resouces, sensitiveNames)
+	sensitiveKeys = findSensitiveStateKeys(rootModule, sensitiveNames)
 	return sensitiveKeys
 }
 
@@ -55,28 +54,72 @@ func SensitiveAttrs(attrs map[string]interface{}, sensitiveKeys []string, parent
 	return sensitiveAttrs
 }
 
-// findSensitiveNames 找出 tf 文件中定义的敏感变量
-func findSensitiveNames(variables gjson.Result) []string {
-	namesInTf := make([]string, 0)
-	if !variables.Exists() {
-		return namesInTf
+func getSensitiveVars(vars gjson.Result) []string {
+	sNames := make([]string, 0)
+
+	if !vars.Exists() {
+		return sNames
 	}
 
-	for k, v := range variables.Map() {
+	for k, v := range vars.Map() {
 		sensitive := v.Get("sensitive")
 		if sensitive.Exists() && sensitive.Bool() {
-			namesInTf = append(namesInTf, "var."+k)
+			sNames = append(sNames, "var."+k)
 		}
 	}
 
-	return namesInTf
+	return sNames
 }
 
-// findSensitiveStateKeys 找出 state 文件中对应的 sensitive key
-func findSensitiveStateKeys(resources gjson.Result, sensitiveNames []string) map[string][]string {
-	sensitiveKeys := make(map[string][]string)
+// findSensitiveNames 找出 tf 文件中定义的敏感变量
+func findSensitiveNames(rootModule gjson.Result) []string {
+	rootVars := rootModule.Get("variables")
+
+	// root module variables
+	sNames := getSensitiveVars(rootVars)
+
+	// child module variables
+	children := rootModule.Get("module_calls")
+	sNames = findSensitiveNamesInChildren(sNames, children)
+
+	return sNames
+}
+
+func updateSensitiveNamesByExpressions(sNames []string, expressions gjson.Result) []string {
+	if !expressions.Exists() {
+		return sNames
+	}
+
+	for k, v := range expressions.Map() {
+		if findSensitiveStateKeyInObjRes(v, sNames) {
+			sNames = append(sNames, "var."+k)
+		}
+	}
+
+	return sNames
+}
+
+func findSensitiveNamesInChildren(sNames []string, children gjson.Result) []string {
+	if !children.Exists() {
+		return sNames
+	}
+
+	for _, child := range children.Map() {
+		vars := child.Get("module.variables")
+		sNames = append(sNames, getSensitiveVars(vars)...)
+
+		// update sensitive names: 当前模块没有设置sensitive，但是上层模块设置了 sensitive的变量
+		sNames = updateSensitiveNamesByExpressions(sNames, child.Get("expressions"))
+
+		sNames = findSensitiveNamesInChildren(sNames, child.Get("module.module_calls"))
+	}
+
+	return sNames
+}
+
+func getSensitiveStateKeysInResource(resources gjson.Result, sensitiveNames []string, sKeys map[string][]string, modulePrefix string) {
 	if !resources.Exists() {
-		return sensitiveKeys
+		return
 	}
 
 	for _, resource := range resources.Array() {
@@ -105,11 +148,47 @@ func findSensitiveStateKeys(resources gjson.Result, sensitiveNames []string) map
 		}
 
 		if len(keysInState) > 0 {
-			sensitiveKeys[resource.Get("address").String()] = keysInState
+			k := resource.Get("address").String()
+			// 补充资源 address 的 module 前缀
+			if modulePrefix != "" {
+				k = fmt.Sprintf("%s.%s", modulePrefix, k)
+			}
+
+			sKeys[k] = keysInState
 		}
 	}
+}
+
+// findSensitiveStateKeys 找出 state 文件中对应的 sensitive key
+func findSensitiveStateKeys(rootModule gjson.Result, sensitiveNames []string) map[string][]string {
+	sensitiveKeys := make(map[string][]string)
+	// root module resources
+	resources := rootModule.Get("resources")
+	getSensitiveStateKeysInResource(resources, sensitiveNames, sensitiveKeys, "")
+
+	// children module resources
+	children := rootModule.Get("module_calls")
+	findSensitiveStateKeysInChildren(children, sensitiveNames, sensitiveKeys, "")
 
 	return sensitiveKeys
+}
+
+func findSensitiveStateKeysInChildren(children gjson.Result, sensitiveNames []string, sKeys map[string][]string, modulePrefix string) {
+	if !children.Exists() {
+		return
+	}
+
+	for mName, child := range children.Map() {
+		mName = fmt.Sprintf("module.%s", mName)
+		if modulePrefix != "" {
+			mName = fmt.Sprintf("%s.%s", modulePrefix, mName)
+		}
+
+		resources := child.Get("module.resources")
+		getSensitiveStateKeysInResource(resources, sensitiveNames, sKeys, mName)
+
+		findSensitiveStateKeysInChildren(child.Get("module.module_calls"), sensitiveNames, sKeys, mName)
+	}
 }
 
 func findSensitiveStateKeyInObjRes(obj gjson.Result, sensitiveNames []string) bool {
