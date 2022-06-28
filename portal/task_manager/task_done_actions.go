@@ -43,7 +43,15 @@ func taskDoneProcessState(dbSess *db.Session, task *models.Task) error {
 				return err
 			}
 		}
-		if err = services.SaveTaskResources(dbSess, task, tfState.Values, proMap); err != nil {
+
+		// parse tfplan to get sensitive keys
+		planBytes, err := readIfExist(task.PlanJsonPath())
+		if err != nil {
+			return fmt.Errorf("read tfplan json: %v", err)
+		}
+		sensitiveKeys := services.GetSensitiveKeysFromTfPlan(planBytes)
+
+		if err = services.SaveTaskResources(dbSess, task, tfState.Values, proMap, sensitiveKeys); err != nil {
 			return fmt.Errorf("save task resources: %v", err)
 		}
 		if err = services.SaveTaskOutputs(dbSess, task, tfState.Values.Outputs); err != nil {

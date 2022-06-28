@@ -301,7 +301,24 @@ func TaskOutput(c *ctx.ServiceContext, form forms.DetailTaskForm) (interface{}, 
 		return nil, e.New(e.DBError, err)
 	}
 
-	return task.Result.Outputs, nil
+	outputs := make(map[string]interface{})
+	for k, v := range task.Result.Outputs {
+		m, ok := v.(map[string]interface{})
+		if !ok {
+			outputs[k] = v
+			continue
+		}
+
+		if _, ok := m["sensitive"]; !ok {
+			outputs[k] = v
+			continue
+		}
+
+		m["value"] = "(sensitive value)"
+		outputs[k] = m
+	}
+
+	return outputs, nil
 }
 
 // SearchTaskResources 查询环境资源列表
