@@ -561,12 +561,11 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 		return e.AutoNew(err, e.DBError)
 	}
 
-	if preStatus != status && !task.IsDriftTask {
-		// 忽略任务类型由 审批中 变更为其他状态时的消息通知
-		// 其他状态变更为审批中时已经进行过通知了，这里就不需要在重复通知了
-		if preStatus != common.TaskApproving {
-			TaskStatusChangeSendMessage(task, status)
-		}
+	if preStatus != status && !task.IsDriftTask &&
+		// 忽略任务类型由 审批中 变更为 running 状态时的消息通知
+		// running 状态变更为审批中时已经进行过通知了，这里就不需要在重复通知了
+		!(preStatus == common.TaskApproving && status == common.TaskRunning) {
+		TaskStatusChangeSendMessage(task, status)
 	}
 
 	defer func() {
