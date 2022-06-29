@@ -98,17 +98,17 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*resps.TaskDe
 		return nil, e.New(e.DBError, err)
 	}
 
-	// 隐藏敏感字段
-	task.HideSensitiveVariable()
 	var o = resps.TaskDetailResp{
 		Task:    desensitize.NewTask(*task),
 		Creator: user.Name,
 	}
+
 	// 清除url token
 	o.RepoAddr, err = replaceVcsToken(o.RepoAddr)
 	if err != nil {
 		return nil, err
 	}
+
 	return &o, nil
 }
 
