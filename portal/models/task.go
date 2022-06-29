@@ -163,7 +163,9 @@ func (v *Task) Desensitize() Task {
 	rv := Task{}
 	utils.DeepCopy(&rv, v)
 	for i := 0; i < len(rv.Variables); i++ {
-		rv.Variables[i].Value = ""
+		if rv.Variables[i].Sensitive {
+			rv.Variables[i].Value = ""
+		}
 	}
 	return rv
 }

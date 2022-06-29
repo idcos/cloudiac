@@ -131,6 +131,7 @@ func TestGenPasswd(t *testing.T) {
 	for _, pwd := range pwsList {
 		if len(pwd) < 6 || len(pwd) > 30 {
 			t.Errorf("password: %s, error: password length",pwd)
+			continue
 		}
 
 		typeCount := 0
