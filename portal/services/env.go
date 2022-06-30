@@ -115,7 +115,7 @@ func QueryEnvDetail(dbSess *db.Session, orgId, projectId models.Id) *db.Session 
 	// 资源是否发生漂移
 	query = query.Joins("LEFT JOIN (" +
 		"  SELECT iac_resource.task_id FROM iac_resource_drift " +
-		"    INNER JOIN iac_resource ON iac_resource.id = iac_resource_drift.res_id GROUP BY iac_resource.task_id" +
+		"INNER JOIN iac_resource ON iac_resource.id = iac_resource_drift.res_id GROUP BY iac_resource.task_id" +
 		") AS rd ON rd.task_id = iac_env.last_res_task_id").
 		LazySelectAppend("!ISNULL(rd.task_id) AS is_drift")
 	query = query.Joins("left join iac_scan_task on iac_env.last_scan_task_id = iac_scan_task.id").
@@ -685,18 +685,23 @@ func FilterEnvStatus(query *db.Session, status string, deploying *bool) (*db.Ses
 		return query, nil
 	}
 
-	if utils.InArrayStr(models.EnvStatus, status) {
-		if status == models.EnvStatusInactive {
-			query = query.Where("(iac_env.status = ? or iac_env.status = ?) and iac_env.deploying = 0", status, models.EnvStatusDestroyed)
+	q := db.Get()
+
+	for _, v := range strings.Split(status, ",") {
+		if utils.InArrayStr(models.EnvStatus, v) {
+			if status == models.EnvStatusInactive {
+				q = q.Or("(iac_env.status = ? or iac_env.status = ?) and iac_env.deploying = 0", v, models.EnvStatusDestroyed)
+			} else {
+				q = q.Or("iac_env.status = ? and iac_env.deploying = 0", v)
+			}
+		} else if utils.InArrayStr(models.EnvTaskStatus, v) {
+			q = q.Or("iac_env.task_status = ? and iac_env.deploying = 1", v)
 		} else {
-			query = query.Where("iac_env.status = ? and iac_env.deploying = 0", status)
+			return nil, e.New(e.BadParam, http.StatusBadRequest)
 		}
-	} else if utils.InArrayStr(models.EnvTaskStatus, status) {
-		query = query.Where("iac_env.task_status = ? and iac_env.deploying = 1", status)
-	} else {
-		return nil, e.New(e.BadParam, http.StatusBadRequest)
 	}
-	return query, nil
+
+	return query.Where(q.Expr()), nil
 }
 
 func FilterEnvArchiveStatus(query *db.Session, archiveQ string) (*db.Session, e.Error) {
@@ -715,4 +720,12 @@ func FilterEnvArchiveStatus(query *db.Session, archiveQ string) (*db.Session, e.
 	default:
 		return nil, e.New(e.BadParam, http.StatusBadRequest)
 	}
+}
+
+func FilterEnvUpdatedTime(query *db.Session, startTime, endTime *time.Time) *db.Session {
+	if startTime == nil || endTime == nil {
+		return query
+	}
+
+	return query.Where("iac_env.updated_at > ? and iac_env.updated_at < ?", startTime, endTime)
 }

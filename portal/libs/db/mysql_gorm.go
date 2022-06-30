@@ -230,6 +230,10 @@ func (s *Session) WhereLike(col string, pattern string) *Session {
 	return ToSess(s.db.Where("? LIKE ?", gorm.Expr(col), "%"+pattern+"%"))
 }
 
+func (s *Session) Or(query interface{}, args ...interface{}) *Session {
+	return ToSess(s.db.Or(query, args...))
+}
+
 func (s *Session) Joins(query string, args ...interface{}) *Session {
 	return ToSess(s.db.Joins(query, args...))
 }

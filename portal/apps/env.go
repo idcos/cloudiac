@@ -499,6 +499,9 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		return nil, er
 	}
 
+	// 环境更新时间过滤
+	query = services.FilterEnvUpdatedTime(query, form.StartTime, form.EndTime)
+
 	if form.Q != "" {
 		qs := "%" + form.Q + "%"
 		query = query.Joins("left join iac_template on iac_env.tpl_id = iac_template.id")
