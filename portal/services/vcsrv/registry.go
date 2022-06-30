@@ -8,6 +8,7 @@ registry vcs 实现
 
 import (
 	"bytes"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/models"
 	"cloudiac/utils"
@@ -46,8 +47,9 @@ func (rv *RegistryVcs) TokenCheck() error {
 	return nil
 }
 
+//RepoBaseHttpAddr 返回示例: http://localhost/repos
 func (v *RegistryVcs) RepoBaseHttpAddr() string {
-	return v.vcs.Address
+	return utils.JoinURL(v.vcs.Address, consts.LocalGitReposPath)
 }
 
 type RegistryRepo struct {

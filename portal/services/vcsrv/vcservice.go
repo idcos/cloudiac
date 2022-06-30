@@ -286,5 +286,5 @@ func GetRepoHttpAddr(vcs *models.Vcs, repoFullName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return utils.JoinURL(v.RepoBaseHttpAddr(), repoFullName), nil
+	return utils.JoinURL(v.RepoBaseHttpAddr(), fmt.Sprintf("%s.git", repoFullName)), nil
 }
