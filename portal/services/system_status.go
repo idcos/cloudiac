@@ -7,6 +7,7 @@ import (
 	"cloudiac/configs"
 	"cloudiac/portal/consts/e"
 	"cloudiac/utils"
+	"cloudiac/utils/consulClient"
 	"encoding/json"
 	"fmt"
 
@@ -18,11 +19,8 @@ func SystemStatusSearch() ([]api.AgentService, map[string]api.AgentCheck, []stri
 	serviceList := make([]string, 0)
 	IdInfo := make([]api.AgentService, 0)
 	serviceStatus := make(map[string]api.AgentCheck)
-	conf := configs.Get()
-	config := api.DefaultConfig()
-	config.Address = conf.Consul.Address
+	client, err := consulClient.NewConsulClient()
 
-	client, err := api.NewClient(config)
 	if err != nil {
 		return nil, nil, nil, e.New(e.ConsulConnError, err)
 	}
@@ -52,13 +50,9 @@ func SystemStatusSearch() ([]api.AgentService, map[string]api.AgentCheck, []stri
 }
 
 func SystemRunnerTags() ([]string, e.Error) {
-
-	conf := configs.Get()
-	config := api.DefaultConfig()
-	config.Address = conf.Consul.Address
 	tags := make([]string, 0)
+	client, err := consulClient.NewConsulClient()
 
-	client, err := api.NewClient(config)
 	if err != nil {
 		return nil, e.New(e.ConsulConnError, err)
 	}
@@ -80,11 +74,8 @@ func SystemRunnerTags() ([]string, e.Error) {
 }
 
 func ConsulKVSearch(key string) (interface{}, e.Error) {
-	conf := configs.Get()
-	config := api.DefaultConfig()
-	config.Address = conf.Consul.Address
+	client, err := consulClient.NewConsulClient()
 
-	client, err := api.NewClient(config)
 	if err != nil {
 		return nil, e.New(e.ConsulConnError, err)
 	}
@@ -101,12 +92,8 @@ func ConsulKVSearch(key string) (interface{}, e.Error) {
 
 func RunnerSearch() ([]*api.AgentService, e.Error) {
 	resp := make([]*api.AgentService, 0)
+	client, err := consulClient.NewConsulClient()
 
-	conf := configs.Get()
-	config := api.DefaultConfig()
-	config.Address = conf.Consul.Address
-
-	client, err := api.NewClient(config)
 	if err != nil {
 		return nil, e.New(e.ConsulConnError, err)
 	}
@@ -140,11 +127,8 @@ func RunnerSearch() ([]*api.AgentService, e.Error) {
 }
 
 func ConsulKVSave(key string, values []string) e.Error {
-	conf := configs.Get()
-	config := api.DefaultConfig()
-	config.Address = conf.Consul.Address
+	client, err := consulClient.NewConsulClient()
 
-	client, err := api.NewClient(config)
 	if err != nil {
 		return e.New(e.ConsulConnError, err)
 	}
@@ -158,11 +142,8 @@ func ConsulKVSave(key string, values []string) e.Error {
 }
 
 func ConsulServiceInfo(serviceId string) (*api.AgentService, e.Error) {
-	conf := configs.Get()
-	config := api.DefaultConfig()
-	config.Address = conf.Consul.Address
+	client, err := consulClient.NewConsulClient()
 
-	client, err := api.NewClient(config)
 	if err != nil {
 		return nil, e.New(e.ConsulConnError, err)
 	}
@@ -175,10 +156,9 @@ func ConsulServiceInfo(serviceId string) (*api.AgentService, e.Error) {
 }
 
 func ConsulServiceRegistered(serviceInfo *api.AgentService, tags []string) e.Error {
+	client, err := consulClient.NewConsulClient()
 	consulConfig := configs.Get().Consul
-	config := api.DefaultConfig()
-	config.Address = consulConfig.Address
-	client, err := api.NewClient(config)
+
 	if err != nil {
 		return e.New(e.ConsulConnError, fmt.Errorf("consul client error : %v", err))
 	}

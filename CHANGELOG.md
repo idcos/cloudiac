@@ -1,12 +1,170 @@
+## v0.12.1 20220625
+#### Fixes
+- 修复项目审批员的访问权限问题
+
 ------
-## v0.10.0 20220314(未发布)
+## v0.12.0 20220624
 #### Features
-- 部署任务结束后自动删除 workspace 下的 code 目录，减少磁盘空间占用
-- 环境的部署通道改为使用 runner tag 进行匹配(待前端支持，暂未联调)
-- 组织和项目支持批量邀请用户(待前端支持，暂未联调)
+- 新增用户注册功能
+- kafka回调消息增加任务id和合规状态字段
+- resource表中增加依赖关系字段
+- 资源查询接口支持展示依赖数据
+- 获取ldap ou信息时增加加上组织过滤
+
+#### Changes
+- 『云模板』统一更名为『Stack』
+
+#### Enhancements
+- 对任务入参做处理，避免 shell 注入
+    - 存在可能导入注入的入参时直接报错
+    - 针对 targets 参数会做 shellescape 处理
+- 密钥管理支持RSA密钥
+- 优化注册密码强度
+    - 字母、数字、符号至少包含两种，长度6-30
+- 优化任务详情及output接口鉴权逻辑
+- 优化vcs相关查询接口权限
+- 优化环境名称重复时的提示信息
+- 优化token输出，不在屏蔽已过期的token
+- 优化Stack相关查询权限
+
+#### Fixes
+- 修复plan后直接部署、销毁时 workdir 问题
+- 修复使用Stack导入功能，传入 json结构 时 panic 问题
+- 修复趋势费用缺少2月份数据的问题
+- 组织概览左下角图的统计维度调整
+- 修复环境标签只剩一个的情况下无法删除的问题
+- 修复敏感变量加密问题
+- 修复合规检测错误,列表显示问题
+- 修复 Stack 的仓库地址展示错误的问题
+- 修复 gitlab vcs token 验证失败时的报错
+- 修复 Stack 敏感变量输出了 value 的问题
+- 修复 portal 的 rego runtime 会暴露敏感环境变量的问题
+- 修复环境变量和 terraform 变量有同名时无法删除的问题
+- task/scantask/variable/varGroup/vcs 相关接口返回做脱敏处理
+- 修复解析时间类型字符串异常问题
+- 系统参数设置字符长度限制
+- 重新部署/编辑环境存活时间更新失败
+- 环境部署时，设置工作目录为空不生效的问题
+- 修复继承的变量可以被删除的问题
+
+#### 升级步骤
+**升级前注意备份数据**
+
+**数据升级**
+执行 `./iac-tool updateDB resource -d` 进行数据升级。
+如果是容器化部署执行: `docker-compose exec iac-portal ./iac-tool updateDB resource -d`
+
+------
+## v0.11.0 20220530
+#### Features
+- 组织和项目支持批量邀请用户
+- 环境的部署通道改为使用 runner tag 进行匹配
+- 新增，支持 ldap 登陆
+- 新增，环境锁定功能
+- 新增，环境归档后名称添加后缀
+- 新增，环境支持设置工作目录
+- 新增，环境和系统设置中增加部署任务的步骤超时时间设置(默认 60 分钟)
+- 组织资源查询支持搜索资源属性关键字及环境和 provider 过滤
+- 新增，组织和项目概览页统计数据
+- 新增，aliyun 资源费用采集
+- 新增环境概览页面，展示环境详情和统计数据
+- 新增，资源账号增加项目关联及 provider 和费用统计选项
+- 新增，审批时展示资源变更数据
+- 项目管理员新增组织用户邀请权限
+- 新增价格预估功能，在审批部署任务时展示资源变更的预估费用情况
+- 增加 registry network mirror 支持，配置了 registry 服务地址后会自动启用该地址作为 network mirror server
+- 接入自研 cloudcost 询价服务，目前支持的产品 aliyun ecs/disk/nat/slb/eip/rds/redis/mongodb
+- 支持 ldap ou 或用户预授权
+- 支持 consul 开启 acl 认证
+
+#### Enhancements
+- vcs 创建或编辑保存时对 token 有效性做校验
+- 漂移检测任务运行时会再次获取环境最新一次执行部署时使用的配置信息
+- 优化环境可部署状态检查接口，现在只检查环境关联的云模板 和 vcs 是否有效
+- 任务类型为 apply 但未执行 terraformApply 步骤的漂移检测任务在部署历史中不展示
+- 优化自动纠偏任务执行完 plan 后会判断是否有漂移，若无漂移则提前结束任务
+- 优化 vcs 连接失败时的报错
+- 组织层级的云模板列表接口返回关联环境数量
+- 环境增加已销毁状态
+- consul 服务创建锁并自动重新注册
 
 #### Fixes
 - 修复设置工作目录后 tfvars 和 playbook 文件路径保存错误的问题
+- 修复 playbook 中输出中文内容会乱码的问题
+- 修复开启 terraform debug 时执行 playbook 会报错的问题
+- 修复工作目录不支持二层以上子目录的问题
+- 修复导入云模板时因为没有选择关联项目导致报错的问题
+- 修复云模板中的敏感变量导入后变为乱码的问题
+- 修复查询资源账号时敏感变量值没有返回为空的问题
+- 修复项目列表默认展示了已归档项目的问题
+- 修复创建云模板或者测试策略组不绑定项目会报错的问题
+- 修复环境锁定后 plan 完成可以发起部署的问题
+
+
+#### 配置更新
+若要开启 consul acl访问，需在 .env 中添加(不配置默认为 false)
+```
+CONSUL_ACL=true
+CONSUL_ACL_TOKEN=""
+```
+
+ldap配置，需在 .env 中添加
+```
+LDAP_ADMIN_DN=""
+LDAP_ADMIN_PASSWORD=""
+LDAP_SERVER=""
+LDAP_SEARCH_BASE=""
+SEARCH_FILTER=""
+EMAIL_ATTRIBUTE=""
+ACCOUNT_ATTRIBUTE=""
+```
+
+询价服务配置，需在 .env 中添加
+```
+COST_SERVE=""
+```
+
+
+#### BREAKING CHANGES
+- 旧环境配置的 runner id 替换为 tags
+- 为旧的 iac_resource 数据自动设置 res_id 和 applied_at 值
+- iac_task新增字段 applied
+- 设置旧环境的工作目录为其使用的云模板的工作目录
+
+#### 升级步骤
+**升级前注意备份数据**
+
+**数据升级**
+执行 `iac-tool upgrade2v0.10` 进行数据升级。
+如果是容器化部署执行: `docker-compose exec iac-portal ./iac-tool upgrade2v0.10`
+
+**SQL 更新:**
+```sql
+-- iac_task新增字段 applied
+update iac_task set applied = 1 where id in (select task_id from      iac_task_step where type = 'terraformApply' and status != 'pending') ;
+
+-- 设置旧环境的工作目录为其使用的云模板的工作目录(只能升级后执行一次)
+update iac_env join iac_template on iac_env.tpl_id = iac_template.id set iac_env.workdir = iac_template.workdir where iac_env.workdir = '';
+```
+
+
+------
+## v0.9.4 20220414
+#### Features
+- 任务结束后的 kafka 回调消息中增加任务类型和环境状态
+- 销毁资源、重新部署接口增加 source 字段，第三方服务调用时可通过该字段设置触发来源
+
+
+------
+## v0.9.3 20220323
+#### Fixes
+- 修复策略组查询时未正确处理 scope 导致创建环境报错的问题
+
+
+------
+## v0.9.2 20220318
+#### Fixes
+- 修复创建环境时 sampleVariable 变量会重复添加的问题
 
 
 ------
@@ -20,7 +178,7 @@
 ## v0.9.0 20220307
 #### Features
 - 合规策略组改用代码库进行管理，支持通过分支或 tag 来管理版本
-- 重新实现的合规检测流程和检测引擎
+- 增强合规检测引擎，细化云模板及环境检测流程
 - 执行界面增加云模板和环境的合规开关和合规策略组绑定功能
 - 新增合规管理员角色
 - 云模板新增 ssh 密钥配置

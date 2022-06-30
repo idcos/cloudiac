@@ -23,7 +23,7 @@ type Vcs struct {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param form formData forms.CreateVcsForm true "parameter"
 // @Router /vcs [post]
-// @Success 200 {object} ctx.JSONResult
+// @Success 200 {object} ctx.JSONResult{result=models.Vcs}
 func (Vcs) Create(c *ctx.GinRequest) {
 	form := &forms.CreateVcsForm{}
 	if err := c.Bind(form); err != nil {
@@ -79,7 +79,6 @@ func (Vcs) Update(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
-// @Param form formData forms.DeleteVcsForm true "parameter"
 // @Param vcsId path string true "vcs仓库Id"
 // @Router /vcs/{vcsId} [delete]
 // @Success 200 {object} ctx.JSONResult
@@ -126,7 +125,7 @@ func (Vcs) ListRepos(c *ctx.GinRequest) {
 // @Param vcsId path string true "Vcs仓库ID"
 // @Param form query forms.GetGitRevisionForm true "parameter"
 // @Router /vcs/{vcsId}/branch [get]
-// @Success 200 {object} ctx.JSONResult{result=[]apps.Revision}
+// @Success 200 {object} ctx.JSONResult{result=[]resps.Revision}
 func (Vcs) ListBranches(c *ctx.GinRequest) {
 	form := forms.GetGitRevisionForm{}
 	if err := c.Bind(&form); err != nil {
@@ -146,7 +145,7 @@ func (Vcs) ListBranches(c *ctx.GinRequest) {
 // @Param vcsId path string true "Vcs仓库ID"
 // @Param form query forms.GetGitRevisionForm true "parameter"
 // @Router /vcs/{vcsId}/tag [get]
-// @Success 200 {object} ctx.JSONResult{result=[]apps.Revision}
+// @Success 200 {object} ctx.JSONResult{result=[]resps.Revision}
 func (Vcs) ListTags(c *ctx.GinRequest) {
 	form := forms.GetGitRevisionForm{}
 	if err := c.Bind(&form); err != nil {
@@ -193,4 +192,39 @@ func (Vcs) GetVcsRepoFileContent(c *ctx.GinRequest) {
 		return
 	}
 	c.JSONResult(apps.GetVcsRepoFile(c.Service(), &form))
+}
+
+// GetFileFullPath 查询文件具体URL路径
+// @Tags Vcs仓库
+// @Summary 查询代码仓库下文件完整URL
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param vcsId path string true "vcs仓库ID"
+// @Param form query forms.GetFileFullPathForm true "parameter"
+// @Router /vcs/{vcsId}/repos/url [get]
+// @Success 200 {object} ctx.JSONResult{result=string}
+func (Vcs) GetFileFullPath(c *ctx.GinRequest) {
+	form := forms.GetFileFullPathForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.GetVcsFullFilePath(c.Service(), &form))
+
+}
+
+// GetRegistryVcs 查询Registry vcs
+// @Tags Vcs仓库
+// @Summary 查询Registry vcs
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Router /vcs/registry [get]
+// @Success 200 {object} ctx.JSONResult{result=models.Vcs}
+func (Vcs) GetRegistryVcs(c *ctx.GinRequest) {
+	c.JSONResult(apps.GetRegistryVcs(c.Service()))
 }

@@ -25,7 +25,7 @@
 - 预置 proviers: cloudiac-providers_${VERSION}.tar.gz
 
 ```
-VERSION=v0.9.1
+VERSION=v0.12.1
 mkdir -p /usr/yunji/cloudiac && \
 cd /usr/yunji/cloudiac && \
 for PACK in cloudiac cloudiac-repos cloudiac-providers; do
@@ -137,11 +137,11 @@ docker pull cloudiac/ct-worker
 ### 1. 下载前端部署包并解压
 
 ```
-VERSION=v0.9.1
+WEB_VERSION=0.9.2
 mkdir -p /usr/yunji/cloudiac-web && \
 cd /usr/yunji/cloudiac-web && \
-curl -sL https://github.com/idcos/cloudiac-web/releases/download/${VERSION}/cloudiac-web_${VERSION}.tar.gz -o cloudiac-web_${VERSION}.tar.gz && \
-tar -xf cloudiac-web_${VERSION}.tar.gz
+curl -sL https://github.com/idcos/cloudiac-web/releases/download/${WEB_VERSION}/cloudiac-web_${WEB_VERSION}.tar.gz -o cloudiac-web_${WEB_VERSION}.tar.gz && \
+tar -xf cloudiac-web_${WEB_VERSION}.tar.gz
 ```
 
 ### 2. 安装 nginx

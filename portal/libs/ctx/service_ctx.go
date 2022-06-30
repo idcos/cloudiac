@@ -19,6 +19,7 @@ type ServiceContext struct {
 	UserId       models.Id // 登陆用户ID
 	OrgId        models.Id // 组织ID
 	ProjectId    models.Id // 项目ID
+	Email        string    // 用户邮箱
 	Username     string    // 用户名称
 	IsSuperAdmin bool      // 是否平台管理员
 	UserIpAddr   string

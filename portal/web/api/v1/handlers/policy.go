@@ -21,11 +21,9 @@ type Policy struct {
 // @Produce json
 // @Security AuthToken
 // @Param q query string false "模糊搜索"
-// @Param severity query string false "严重性"
-// @Param groupId query string false "策略组Id"
-// @Param IaC-Org-Id header string true "组织ID"
+// @Param form query forms.SearchPolicyForm true "parameter"
 // @Router /policies [get]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.Policy}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.PolicyResp}}
 func (Policy) Search(c *ctx.GinRequest) {
 	form := &forms.SearchPolicyForm{}
 	if err := c.Bind(form); err != nil {
@@ -61,8 +59,9 @@ func (Policy) Detail(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param policyId path string true "策略id"
 // @Param IaC-Org-Id header string true "组织ID"
+// @Param form query forms.PolicyErrorForm true "parameter"
 // @Router /policies/{policyId}/error [get]
-// @Success 200 {object} ctx.JSONResult{result=apps.PolicyErrorResp}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.PolicyErrorResp}}
 func (Policy) PolicyError(c *ctx.GinRequest) {
 	form := &forms.PolicyErrorForm{}
 	if err := c.Bind(form); err != nil {
@@ -80,8 +79,9 @@ func (Policy) PolicyError(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param policyId path string true "策略id"
 // @Param IaC-Org-Id header string true "组织ID"
+// @Param form query forms.PolicyScanReportForm true "parameter"
 // @Router /policies/{policyId}/report [get]
-// @Success 200 {object} ctx.JSONResult{result=apps.PolicyScanReportResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.PolicyScanReportResp}
 func (Policy) PolicyReport(c *ctx.GinRequest) {
 	form := &forms.PolicyScanReportForm{}
 	if err := c.Bind(form); err != nil {
@@ -99,7 +99,7 @@ func (Policy) PolicyReport(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param json body forms.PolicyParseForm true "parameter"
 // @Param IaC-Org-Id header string true "组织ID"
-// @Success 200 {object}  ctx.JSONResult{result=apps.ParseResp}
+// @Success 200 {object}  ctx.JSONResult{result=resps.ParseResp}
 // @Router /policies/parse [post]
 func (Policy) Parse(c *ctx.GinRequest) {
 	form := &forms.PolicyParseForm{}
@@ -117,7 +117,7 @@ func (Policy) Parse(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param json body forms.PolicyTestForm true "parameter"
 // @Param IaC-Org-Id header string true "组织ID"
-// @Success 200 {object}  ctx.JSONResult{result=apps.PolicyTestResp}
+// @Success 200 {object}  ctx.JSONResult{result=resps.PolicyTestResp}
 // @Router /policies/test [post]
 func (Policy) Test(c *ctx.GinRequest) {
 	form := &forms.PolicyTestForm{}
@@ -135,7 +135,7 @@ func (Policy) Test(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string true "组织ID"
 // @Router /policies/summary [get]
-// @Success 200 {object} ctx.JSONResult{result=apps.PolicySummaryResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.PolicySummaryResp}
 func (Policy) PolicySummary(c *ctx.GinRequest) {
 	c.JSONResult(apps.PolicySummary(c.Service()))
 }

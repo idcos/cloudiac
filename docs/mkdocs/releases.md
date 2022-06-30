@@ -1,11 +1,102 @@
 # Releases
 
 ------
+## v0.12.1 20220625
+**Fixes**
+
+- 修复项目审批员的访问权限问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.12.1](https://github.com/idcos/cloudiac/releases/tag/v0.12.1)
+
+
+------
+## v0.12.0 20220624
+**Changes**
+
+- 『云模板』统一更名为『Stack』
+
+**Enhancements**
+
+- 优化任务执行安全性，避免shell注入
+- 优化注册密码强度
+- 优化用户查看内容的权限
+- 密钥管理支持设置RSA密钥
+
+**Features**
+
+- 新增资源查询依赖资源
+- kafka回调消息增加任务id和合规状态字段
+
+**Fixes**
+
+- 修复plan后直接部署、销毁时 workdir 问题
+- 修复趋势费用缺少2月份数据的问题
+- 修复使用 Stack 导入功能，传入 json结构 时 panic 问题
+- 修复环境标签只剩一个的情况下无法删除的问题
+- 修复敏感变量加密问题
+- 修复VCS相关的一些问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.12.0](https://github.com/idcos/cloudiac/releases/tag/v0.12.0)
+
+
+------
+## v0.11.0 20220530
+**Enhancements**
+
+- 优化环境可部署状态检查接口，现在只检查环境关联的云模板 和 vcs 是否有效
+- 优化自动纠偏任务执行完 plan 后会判断是否有漂移，若无漂移则提前结束任务
+- consul 服务创建锁并自动重新注册
+
+**Features**
+
+- 组织和项目支持批量邀请用户
+- 新增，支持 ldap 登陆
+- 新增，环境支持设置工作目录
+- 新增，组织和项目概览页统计数据
+- 新增，aliyun 资源费用采集
+- 新增价格预估功能，在审批部署任务时展示资源变更的预估费用情况
+- 增加 registry network mirror 支持，配置了 registry 服务地址后会自动启用该地址作为 network mirror server
+- 接入自研 cloudcost 询价服务，目前支持的产品 aliyun ecs/disk/nat/slb/eip/rds/redis/mongodb
+
+**Fixes**
+
+- 修复设置工作目录后 tfvars 和 playbook 文件路径保存错误的问题
+- 修复 playbook 中输出中文内容会乱码的问题
+- 修复工作目录不支持二层以上子目录的问题
+- 修复云模板中的敏感变量导入后变为乱码的问题
+- 修复环境锁定后 plan 完成可以发起部署的问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.11.0](https://github.com/idcos/cloudiac/releases/tag/v0.11.0)
+
+
+------
+## v0.9.4 20220310
+**Features**
+
+- 任务结束后的 kafka 回调消息中增加任务类型和环境状态
+- 销毁资源、重新部署接口增加 source 字段，第三方服务调用时可通过该字段设置触发来源
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.9.4](https://github.com/idcos/cloudiac/releases/tag/v0.9.4)
+
+
+------
 ## v0.9.1 20220310
 **Features**
 
 - 环境支持设置及展示标签
 - 环境创建、销毁、重新部署时都发送 kafka 消息，通知环境最新资源数据
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.9.1](https://github.com/idcos/cloudiac/releases/tag/v0.9.1)
 
 
 ------
@@ -18,7 +109,7 @@
 **Features**
 
 - 合规策略组改用代码库进行管理，支持通过分支或 tag 来管理版本
-- 重新实现的合规检测流程和检测引擎
+- 增强合规检测引擎，细化云模板及环境检测流程
 - 执行界面增加云模板和环境的合规开关和合规策略组绑定功能
 - 新增合规管理员角色
 - 新增环境搜索功能，支持通过环境名称和云模板名称进行搜索
@@ -36,6 +127,10 @@
 - 修复部分查询未正常处理软删除的问题
 
 
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.9.0](https://github.com/idcos/cloudiac/releases/tag/v0.9.0)
+
+
 ------
 ## v0.8.1 20211214
 **Fixes**
@@ -43,6 +138,10 @@
 - 修复新组织中创建环境时接口报错的问题
 - 修复环境有敏感变量时执行部署报解密错误的问题
 - 修复执行任务容器异常退出会导致任务一直处于执行中状态且环境的资源一直累积的问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.8.1](https://github.com/idcos/cloudiac/releases/tag/v0.8.1)
 
 
 ------
@@ -67,6 +166,10 @@
 - 修复编辑云模板时仓库名称可能显示为 id 的问题
 
 
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.8.0](https://github.com/idcos/cloudiac/releases/tag/v0.8.0)
+
+
 ------
 ## v0.7.1 20211116
 **Features**
@@ -76,6 +179,10 @@
 **Fixes**
 
 - 修复预置 provider 不生效的问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.7.1](https://github.com/idcos/cloudiac/releases/tag/v0.7.1)
 
 
 ------
@@ -98,6 +205,10 @@
 - 修复设置环境自动触发 plan/apply 功能报错的问题
 
 
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.7.0](https://github.com/idcos/cloudiac/releases/tag/v0.7.0)
+
+
 ------
 ## v0.6.0 20210928
 **Features**
@@ -117,11 +228,19 @@
 - 修复存在活跃环境的云模板在列表中活跃资源数显示为 0 的问题
 
 
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.6.0](https://github.com/idcos/cloudiac/releases/tag/v0.6.0)
+
+
 ------
-## v0.5.0 20210728
+## v0.5.1 20210806
 **Features**
 
 - 全新 0.5 版本发布
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v0.5.1](https://github.com/idcos/cloudiac/releases/tag/v0.5.1)
 
 
 

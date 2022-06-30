@@ -3,6 +3,7 @@
 package task_manager
 
 import (
+	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"context"
 	"encoding/json"
@@ -48,6 +49,8 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (
 	taskReq.Step = step.Index
 	taskReq.StepType = step.Type
 	taskReq.StepArgs = step.Args
+	taskReq.StepBeforeCmds = step.BeforeCmds
+	taskReq.StepAfterCmds = step.AfterCmds
 
 	respData, err := utils.HttpService(requestUrl, "POST", header, taskReq,
 		int(consts.RunnerConnectTimeout.Seconds()), int(consts.RunnerConnectTimeout.Seconds())*10)
@@ -67,6 +70,8 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (
 
 	if result, ok := resp.Result.(map[string]interface{}); !ok {
 		return "", false, fmt.Errorf("unexpected result: %v", resp.Result)
+	} else if aborted, ok := result["aborted"].(bool); ok && aborted {
+		return "", false, e.New(e.TaskAborted)
 	} else {
 		containerId = fmt.Sprintf("%v", result["containerId"])
 	}
@@ -89,7 +94,11 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 	}
 
 	// runner 端己经增加了超时处理，portal 端的超时暂时保留，但时间设置为给定时间的 2 倍
-	taskDeadline := time.Time(*step.StartAt).Add(time.Duration(task.StepTimeout*2) * time.Second)
+	timeout := task.StepTimeout
+	if step.Timeout > 0 {
+		timeout = step.Timeout
+	}
+	taskDeadline := time.Time(*step.StartAt).Add(time.Duration(timeout*2) * time.Second)
 
 	// 当前版本实现中需要 portal 主动连接到 runner 获取状态
 	err = utils.RetryFunc(10, time.Second*5, func(retryN int) (retry bool, er error) {
@@ -103,7 +112,7 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 		// 但发现有任务在 running 状态时函数返回的情况，所以这里进行一次状态检查，如果任务不是退出状态则继续重试
 		if !(models.TaskStep{}).IsExitedStatus(stepResult.Status) {
 			logger.Warnf("pull task status done, but task status is '%s', retry(%d)", stepResult.Status, retryN)
-			return true, fmt.Errorf("unexpected task step staus '%s'", stepResult.Status)
+			return true, fmt.Errorf("unexpected task step status '%s'", stepResult.Status)
 		}
 		return false, nil
 	})
@@ -119,6 +128,8 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 		message = "failed"
 	case models.TaskStepTimeout:
 		message = "timeout"
+	case models.TaskStepAborted:
+		message = "aborted"
 	}
 
 	if er := services.ChangeTaskStepStatusAndExitCode(
@@ -286,10 +297,13 @@ func pullTaskStepStatusLoop(
 			}
 
 			result.Result = *msg
-			//logger.Debugf("receive task status message: %v, %v", msg.Exited, msg.ExitCode)
 
 			if msg.Timeout {
 				result.Status = models.TaskStepTimeout
+				return result, nil
+			} else if msg.Aborted {
+				result.Status = models.TaskStepAborted
+				return result, nil
 			} else if msg.Exited {
 				if msg.ExitCode == 0 {
 					result.Status = models.TaskStepComplete
@@ -314,6 +328,7 @@ func pullTaskStepStatusLoop(
 
 var (
 	ErrTaskStepRejected = fmt.Errorf("rejected")
+	ErrTaskStepAborted  = fmt.Errorf("aborted")
 )
 
 // WaitTaskStepApprove
@@ -336,6 +351,8 @@ func WaitTaskStepApprove(ctx context.Context, dbSess *db.Session, taskId models.
 
 			if taskStep.Status == models.TaskStepRejected {
 				return nil, ErrTaskStepRejected
+			} else if taskStep.Status == models.TaskStepAborted {
+				return nil, ErrTaskStepAborted
 			} else if taskStep.IsApproved() {
 				return taskStep, nil
 			}

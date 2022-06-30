@@ -392,8 +392,13 @@ func (s *Scanner) RunInternalScan(code Resource) error {
 		res := (&Rego{}).ParseResource(result)
 		// generate result
 		if len(res) > 0 {
+			// {resType}.{resName}, example: alicloud_instance.web
 			resName := res[0]
-			resType := res[0][0:strings.Index(res[0], ".")]
+			resType := "unknown"
+			if strings.Index(resName, ".") > 0 {
+				resType = resName[0:strings.Index(resName, ".")]
+				resName = resName[strings.Index(resName, ".")+1:]
+			}
 			violation := Violation{
 				RuleName:     p.Meta.Name,
 				Description:  p.Meta.Description,

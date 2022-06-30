@@ -5,12 +5,17 @@ package runner
 import (
 	"cloudiac/common"
 	"cloudiac/configs"
+	"cloudiac/utils"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/docker/docker/errdefs"
+	"github.com/pkg/errors"
 )
 
 type IaCTemplate struct {
@@ -171,4 +176,75 @@ func FetchJson(envId string, taskId string, jsonFile string) ([]byte, error) {
 		return nil, err
 	}
 	return content, nil
+}
+
+func GetLatestStepInfo(envId string, taskId string) (info StepInfo, err error) {
+	path := filepath.Join(GetTaskWorkspace(envId, taskId), TaskStepInfoFileName)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return info, nil
+		}
+		return info, err
+	}
+	if err := json.Unmarshal(data, &info); err != nil {
+		return info, err
+	}
+	return info, nil
+}
+
+func WriteTaskControlInfo(info TaskControlInfo) error {
+	path := TaskControlFilePath(info.EnvId, info.TaskId)
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	logger.Debugf(">>> @feat-task-abort write task control info to: %v, info=%#v", path, info)
+	return os.WriteFile(path, utils.MustJSON(info), 0600)
+}
+
+func ReadTaskControlInfo(envId, taskId string) (info TaskControlInfo, err error) {
+	data, err := os.ReadFile(TaskControlFilePath(envId, taskId))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return info, nil
+		}
+		return info, err
+	}
+
+	if err := json.Unmarshal(data, &info); err != nil {
+		return info, err
+	}
+	return info, nil
+}
+
+func TaskControlFilePath(envId, taskId string) string {
+	return filepath.Join(GetTaskWorkspace(envId, taskId), TaskControlFileName)
+}
+
+func KillContainers(ctx context.Context, cids ...string) error {
+	cli, err := DockerClient()
+	if err != nil {
+		return err
+	}
+
+	// 这里仅 kill container，container 的删除通过启动时的 AutoRemove 参数配置
+	for _, cid := range cids {
+		// default signal "SIGKILL"
+		if err := cli.ContainerKill(ctx, cid, ""); err != nil {
+			var targetErr errdefs.ErrNotFound
+			if errors.As(err, &targetErr) {
+				continue
+			}
+
+			// 有可能己经提交了删除请求，这里忽略掉这些报错
+			if !strings.Contains(err.Error(), "already in progress") &&
+				!strings.Contains(err.Error(), "No such container") {
+				logger.Info("kill container error: %v", err)
+				continue
+			}
+			return err
+		}
+	}
+	return nil
 }

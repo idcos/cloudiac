@@ -33,6 +33,7 @@ const (
 	TaskStepFailed    = common.TaskStepFailed
 	TaskStepComplete  = common.TaskStepComplete
 	TaskStepTimeout   = common.TaskStepTimeout
+	TaskStepAborted   = common.TaskStepAborted
 )
 
 type TaskStep struct {
@@ -45,7 +46,7 @@ type TaskStep struct {
 	TaskId    Id     `json:"taskId" gorm:"size:32;not null"`
 	NextStep  Id     `json:"nextStep" gorm:"size:32;default:''"`
 	Index     int    `json:"index" gorm:"size:32;not null"`
-	Status    string `json:"status" gorm:"type:enum('pending','approving','rejected','running','failed','complete','timeout')"`
+	Status    string `json:"status" gorm:"type:enum('pending','approving','rejected','running','failed','complete','timeout','aborted')"`
 	ExitCode  int    `json:"exitCode" gorm:"default:0"` // 执行退出码，status 为 failed 时才有意义
 	Message   string `json:"message" gorm:"type:text"`
 	StartAt   *Time  `json:"startAt" gorm:"type:datetime"`
@@ -74,6 +75,9 @@ func (t *TaskStep) Migrate(sess *db.Session) (err error) {
 	if err := sess.ModifyModelColumn(t, "type"); err != nil {
 		return err
 	}
+	if err := sess.ModifyModelColumn(t, "status"); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -86,7 +90,12 @@ func (s *TaskStep) IsExited() bool {
 }
 
 func (TaskStep) IsExitedStatus(status string) bool {
-	return utils.StrInArray(status, TaskStepRejected, TaskStepComplete, TaskStepFailed, TaskStepTimeout)
+	return utils.StrInArray(status,
+		TaskStepRejected,
+		TaskStepComplete,
+		TaskStepFailed,
+		TaskStepTimeout,
+		TaskStepAborted)
 }
 
 // 执行成功
@@ -95,8 +104,14 @@ func (s *TaskStep) IsSuccess() bool {
 }
 
 // 执行失败
+// 当前 IsFail() 只用于 pipeline 回调时判断任务状态，
+// 在没有单独的 timeout 和 aborted 回调之前这两个状态都当作 fail
 func (s *TaskStep) IsFail() bool {
-	return utils.StrInArray(s.Status, TaskStepTimeout, TaskStepFailed)
+	return utils.StrInArray(s.Status,
+		TaskStepFailed,
+		TaskStepTimeout,
+		TaskStepAborted,
+	)
 }
 
 func (s *TaskStep) IsApproved() bool {

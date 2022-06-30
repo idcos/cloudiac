@@ -70,6 +70,10 @@ func New(code int, errOrStatus ...interface{}) Error {
 		err    error = nil
 	)
 	for _, es := range errOrStatus {
+		if es == nil {
+			continue
+		}
+
 		switch v := es.(type) {
 		case int:
 			status = v
@@ -95,7 +99,9 @@ func converVcsError(code int, err error) int {
 		case strings.Contains(info, "Unauthorized"):
 			// vcs权限不足
 			return VcsInvalidToken
-		case strings.Contains(info, "connection refused"):
+		case strings.Contains(info, "connection refused") ||
+			strings.Contains(info, "no such host") ||
+			strings.Contains(info, "no route to host"):
 			// vcs连接失败
 			return VcsConnectError
 		case strings.Contains(info, "handshake failure"):
@@ -206,7 +212,7 @@ func AutoNew(err error, code int, status ...int) Error {
 }
 
 func ErrorMsg(err Error, langs string) string {
-	lang := getAcceptLanguage(langs)
+	lang := GetAcceptLanguage(langs)
 
 	if m, ok := errorMsgs[err.Code()]; ok {
 		if msg, ok := m[lang]; ok {
@@ -218,7 +224,7 @@ func ErrorMsg(err Error, langs string) string {
 	return err.Error()
 }
 
-func getAcceptLanguage(acceptLanguate string) string {
+func GetAcceptLanguage(acceptLanguate string) string {
 	var matcher = language.NewMatcher(langTags)
 	t, _, _ := language.ParseAcceptLanguage(acceptLanguate)
 	tag, _, _ := matcher.Match(t...)

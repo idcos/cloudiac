@@ -126,6 +126,10 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "data dencryption error",
 		"zh-CN": "数据解密错误",
 	},
+	ErrDisabled: {
+		"en-US": "function disabled",
+		"zh-CN": "已停用",
+	},
 	MailServerError: {
 		"en-US": "failed to send email",
 		"zh-CN": "邮件服务错误",
@@ -262,9 +266,25 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "invalid project id",
 		"zh-CN": "无效的项目id",
 	},
+	InvalidActiveEmail: {
+		"en-US": "inactive user email",
+		"zh-CN": "邮箱未激活",
+	},
 	TaskNotHaveStep: {
 		"en-US": "task have no steps",
 		"zh-CN": "任务无步骤",
+	},
+	TaskAborting: {
+		"en-US": "task is aborting",
+		"zh-CN": "任务正在中止",
+	},
+	TaskAborted: {
+		"en-US": "task aborted",
+		"zh-CN": "任务已中止",
+	},
+	TaskCannotAbort: {
+		"en-US": "task cannot abort",
+		"zh-CN": "任务当前无法中止",
 	},
 	TemplateAlreadyExists: {
 		"en-US": "template already exists",
@@ -298,13 +318,29 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "variable value is empty",
 		"zh-CN": "变量值不可为空",
 	},
+	ProjectAlreadyExists: {
+		"en-US": "project already exists",
+		"zh-CN": "项目已存在",
+	},
+	ProjectNotExists: {
+		"en-US": "project not exists",
+		"zh-CN": "项目不存在",
+	},
+	ProjectAliasDuplicate: {
+		"en-US": "project name already exists",
+		"zh-CN": "项目名称重复",
+	},
 	ProjectUserAlreadyExists: {
 		"en-US": "project user already exists",
 		"zh-CN": "项目用户已经存在",
 	},
 	ProjectUserAliasDuplicate: {
 		"en-US": "project name already exists",
-		"zh-CN": "项目别名重复",
+		"zh-CN": "项目名称重复",
+	},
+	ProjectHasActiveEnvs: {
+		"en-US": "one or more active environments exist in the project",
+		"zh-CN": "项目存在活跃环境",
 	},
 	TokenAlreadyExists: {
 		"en-US": "token already exists",
@@ -325,6 +361,14 @@ var errorMsgs = map[int]map[string]string{
 	TemplateDisabled: {
 		"en-US": "template disabled",
 		"zh-CN": "模板不可用",
+	},
+	TemplateDemoNotAllowEdit: {
+		"en-US": "demo template is not allowed edit",
+		"zh-CN": "演示云模板不可编辑",
+	},
+	TemplateDemoNotAllowDelete: {
+		"en-US": "demo template is not allowed delete",
+		"zh-CN": "演示云模板不可删除",
 	},
 	TemplateActiveEnvExists: {
 		"en-US": "can not delete template which have active environment",
@@ -357,6 +401,22 @@ var errorMsgs = map[int]map[string]string{
 	EnvCheckAutoApproval: {
 		"en-US": "auto approval is required",
 		"zh-CN": "配置自动纠漂移、推送到分支时重新部署时，必须配置自动审批",
+	},
+	EnvLockFailedTaskActive: {
+		"en-US": "environment lock failed. Active tasks in the environment",
+		"zh-CN": "环境锁定失败，环境下有活跃任务",
+	},
+	EnvLocked: {
+		"en-US": "environment locked",
+		"zh-CN": "环境已锁定",
+	},
+	EnvLockedFailedEnvIsDemo: {
+		"en-US": "environment locked failed. this is demo environment",
+		"zh-CN": "环境锁定失败，演示环境不能被锁定",
+	},
+	EnvNameDuplicated: {
+		"en-US": "environment name duplicated",
+		"zh-CN": "环境名称重复",
 	},
 	TaskAlreadyExists: {
 		"en-US": "task already exists",
@@ -517,5 +577,21 @@ var errorMsgs = map[int]map[string]string{
 	PolicyGroupDirError: {
 		"en-US": "policy not found in the repository",
 		"zh-CN": "仓库在当前目录找不到策略文件",
+	},
+	LdapConnectFailed: {
+		"en-US": "ldap servers connect failed",
+		"zh-CN": "ldap 服务器连接 失败",
+	},
+	InvalidVarGroup: {
+		"en-US": "invalid resource account",
+		"zh-CN": "无效资源账号",
+	},
+	VariableGroupPermDeny: {
+		"en-US": "resource account permission deny",
+		"zh-CN": "无权限的资源账号",
+	},
+	TemplateNotBind: {
+		"en-US": "template is not bound to the project",
+		"zh-CN": "云模板未绑定当前项目",
 	},
 }

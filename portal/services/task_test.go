@@ -4,6 +4,7 @@ package services
 
 import (
 	"cloudiac/policy"
+	"cloudiac/portal/models/resps"
 	"encoding/json"
 	"testing"
 
@@ -191,14 +192,14 @@ func TestUnmarshalTfParseJson(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *TfParse
+		want    *resps.TfParse
 		wantErr bool
 	}{
 		{
 			name: "Test parse terrascan config",
 			args: args{bs: []byte(tfconfigJson)},
-			want: &TfParse{
-				"alicloud_instance": TSResources{
+			want: &resps.TfParse{
+				"alicloud_instance": resps.TSResources{
 					{
 						Id:         "alicloud_instance.instance",
 						Name:       "instance",

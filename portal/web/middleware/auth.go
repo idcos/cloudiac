@@ -34,13 +34,17 @@ func checkToken(c *ctx.GinRequest, tokenStr string) (models.Id, error) {
 		return apiTokenOrgId, nil
 	}
 
-	if claims, ok := token.Claims.(*services.Claims); ok && token.Valid &&
-		claims.Subject == consts.JwtSubjectUserAuth {
-
-		c.Service().UserId = claims.UserId
-		c.Service().Username = claims.Username
-		c.Service().IsSuperAdmin = claims.IsAdmin
-		c.Service().UserIpAddr = c.ClientIP()
+	if claims, ok := token.Claims.(*services.Claims); ok && token.Valid {
+		if claims.Subject == consts.JwtSubjectUserAuth {
+			c.Service().UserId = claims.UserId
+			c.Service().Username = claims.Username
+			c.Service().IsSuperAdmin = claims.IsAdmin
+			c.Service().UserIpAddr = c.ClientIP()
+		} else if claims.Subject == consts.JwtSubjectActivate {
+			c.Service().Email = claims.Email
+		} else {
+			return apiTokenOrgId, e.New(e.InvalidToken)
+		}
 	} else {
 		return apiTokenOrgId, e.New(e.InvalidToken)
 	}
@@ -80,6 +84,11 @@ func Auth(c *ctx.GinRequest) {
 		return
 	}
 
+	// Remove Bearer from token string
+	if len(tokenStr) > 6 && tokenStr[0:6] == "Bearer" {
+		tokenStr = tokenStr[7:]
+	}
+
 	apiTokenOrgId, err := checkToken(c, tokenStr)
 	if err != nil {
 		c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
@@ -99,7 +108,7 @@ func Auth(c *ctx.GinRequest) {
 
 	c.Service().ProjectId = projectId
 	if project, err := services.GetProjectsById(c.Service().DB(), projectId); err != nil {
-		c.JSONError(e.New(e.ProjectNotExists, fmt.Errorf("not allow to access project")), http.StatusBadRequest)
+		c.JSONError(e.New(e.ProjectNotExists), http.StatusBadRequest)
 		return
 	} else if project.OrgId != c.Service().OrgId {
 		c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("invalid project id")), http.StatusForbidden)
@@ -109,6 +118,7 @@ func Auth(c *ctx.GinRequest) {
 		c.JSONError(e.New(e.PermissionDeny, fmt.Errorf("project disabled")), http.StatusForbidden)
 		return
 	}
+
 	if c.Service().IsSuperAdmin ||
 		services.UserHasOrgRole(c.Service().UserId, c.Service().OrgId, consts.OrgRoleAdmin) ||
 		services.UserHasProjectRole(c.Service().UserId, c.Service().OrgId, c.Service().ProjectId, "") {

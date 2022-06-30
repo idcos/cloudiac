@@ -72,12 +72,21 @@ var Polices = []Policy{
 	{"login", "runner", "*"},
 	{"login", "consul", "*"},
 	{"login", "webhook", "*"},
+	{"login", "systems", "read"},
+	{"login", "system_config", "read"},
+
+	// 系统配置
+	{"admin", "systems", "read"},
+	{"admin", "system_config", "read"},
+	{"member", "systems", "read"},
+	{"member", "system_config", "read"},
 
 	// 合规策略
 	// 组织角色
 	{"admin", "policies", "*"},
 	{"member", "policies", "read"},
 	{"complianceManager", "policies", "*"},
+
 	// 项目角色
 	{"manager", "policies", "suppress/enablescan/scan"},
 	{"approver", "policies", "suppress/enablescan/scan"},
@@ -98,11 +107,17 @@ var Polices = []Policy{
 
 	// 组织
 	{"root", "orgs", "*"},
-	{"login", "orgs", "read"},
-	{"admin", "orgs", "read/update"},
+	{"login", "orgs", "create/read"},
+	{"admin", "orgs", "create/update/read"},
 	{"admin", "orgs", "listuser/adduser/removeuser/updaterole"},
-	{"member", "orgs", "read"},
+	{"member", "orgs", "create/read/listuser"},
 	{"complianceManager", "orgs", "read"},
+	{"manager", "orgs", "create/read/listuser/adduser"},
+
+	// LDAP
+	{"admin", "ldap", "*"},
+	{"member", "ldap", "read/list"},
+	{"manager", "ldap", "*"},
 
 	// 项目
 	{"admin", "projects", "*"},
@@ -122,7 +137,7 @@ var Polices = []Policy{
 	// 任务
 	{"manager", "tasks", "*"},
 	{"approver", "tasks", "*"},
-	{"operator", "tasks", "read"},
+	{"operator", "tasks", "read/abort"},
 	{"guest", "tasks", "read"},
 
 	// 云模板
@@ -202,6 +217,7 @@ var Polices = []Policy{
 	{"operator", "registry", "read"},
 	{"guest", "registry", "read"},
 
+	// 注意：以下为旧版本演示模式用户权限配置，新版本中每个用户都有自己的演示组织，以下权限配置不再生效。
 	// 演示模式，当访问演示组织下的资源，进入受限模式
 	{"demo", "orgs", "read"},
 	{"demo", "users", "read"},

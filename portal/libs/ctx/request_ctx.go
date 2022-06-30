@@ -5,6 +5,7 @@ package ctx
 import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
+	"cloudiac/portal/libs/validate"
 	"cloudiac/portal/models/forms"
 	"cloudiac/utils/logs"
 	"encoding/json"
@@ -14,6 +15,9 @@ import (
 	"net/url"
 	"reflect"
 	"strconv"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/pkg/errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -57,27 +61,39 @@ func (c *GinRequest) Logger() logs.Logger {
 }
 
 type JSONResult struct {
-	Code          int         `json:"code" example:"200"`
-	Message       string      `json:"message" example:"ok"`
-	MessageDetail string      `json:"message_detail,omitempty" example:"ok"`
-	Result        interface{} `json:"result,omitempty" swaggertype:"object"`
+	Code           int               `json:"code" example:"200"`
+	Message        string            `json:"message" example:"ok"`
+	MessageDetail  string            `json:"message_detail,omitempty" example:"ok"`
+	Result         interface{}       `json:"result,omitempty" swaggertype:"object"`
+	ValidateErrors map[string]string `json:"validate_errors,omitempty"`
 }
 
 func (c *GinRequest) JSON(status int, msg interface{}, result interface{}) {
 	var (
-		message = ""
-		code    = 0
-		detail  string
+		message         = ""
+		code            = 0
+		detail          string
+		validateErrors  map[string]string
+		validationError validator.ValidationErrors
 	)
-
 	if msg != nil {
 		if er, ok := msg.(e.Error); ok {
+
 			if er.Status() != 0 {
 				status = er.Status()
 			}
 			message = e.ErrorMsg(er, c.GetHeader("accept-language"))
 			code = er.Code()
-			detail = er.Error()
+			lang := e.GetAcceptLanguage(c.GetHeader("accept-language"))
+			if errors.As(msg.(e.Error).Err(), &validationError) {
+				if lang == "en-US" {
+					detail, validateErrors = validate.SetDetailAndValidateErrors(validationError, validate.TransEn)
+				} else {
+					detail, validateErrors = validate.SetDetailAndValidateErrors(validationError, validate.TransZh)
+				}
+			} else {
+				detail = er.Error()
+			}
 		} else {
 			code = e.InternalError
 			message = fmt.Sprintf("%v", msg)
@@ -91,10 +107,11 @@ func (c *GinRequest) JSON(status int, msg interface{}, result interface{}) {
 	}
 
 	jsonResult := JSONResult{
-		Code:          code,
-		Message:       message,
-		MessageDetail: detail,
-		Result:        result,
+		Code:           code,
+		Message:        message,
+		MessageDetail:  detail,
+		Result:         result,
+		ValidateErrors: validateErrors,
 	}
 
 	c.Context.JSON(status, jsonResult)
@@ -167,8 +184,9 @@ func BindUriTagOnly(c *GinRequest, b interface{}) error {
 func (c *GinRequest) Bind(form forms.BaseFormer) error {
 
 	var (
-		jsonForm map[string]interface{}
-		err      error
+		jsonForm      map[string]interface{}
+		err           error
+		validateError validator.ValidationErrors
 	)
 
 	// 将 Params 绑定到 form 里面标记了 uri 的字段
@@ -201,7 +219,12 @@ func (c *GinRequest) Bind(form forms.BaseFormer) error {
 	}
 
 	if err != nil {
-		c.JSONError(e.New(e.BadParam, err), http.StatusBadRequest)
+		if errors.As(err, &validateError) {
+			c.JSONError(e.New(e.BadParam, validateError), http.StatusBadRequest)
+
+		} else {
+			c.JSONError(e.New(e.BadParam, err), http.StatusBadRequest)
+		}
 		c.Abort()
 		return err
 	}

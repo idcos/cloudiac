@@ -10,6 +10,7 @@ import (
 	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
+	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
 	"io/fs"
@@ -84,6 +85,15 @@ func (l *LocalVcs) ListRepos(namespace string, search string, limit, offset int)
 func (l *LocalVcs) UserInfo() (UserInfo, error) {
 
 	return UserInfo{}, nil
+}
+
+func (l *LocalVcs) TokenCheck() error {
+	return nil
+}
+
+func (l *LocalVcs) RepoBaseHttpAddr() string {
+	portAddr := configs.Get().Portal.Address
+	return utils.JoinURL(portAddr, consts.LocalGitReposPath)
 }
 
 type LocalRepo struct {
@@ -271,4 +281,12 @@ func (l *LocalRepo) DeleteWebhook(id int) error {
 func (l *LocalRepo) CreatePrComment(prId int, comment string) error {
 
 	return nil
+}
+
+func (l *LocalRepo) GetFullFilePath(address, filePath, repoRevision string) string {
+	return ""
+}
+
+func (l *LocalRepo) GetCommitFullPath(address, commitId string) string {
+	return ""
 }

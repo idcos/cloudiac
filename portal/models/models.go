@@ -179,6 +179,7 @@ func autoMigrate(m Modeler, sess *db.Session) {
 	if err := m.Migrate(sess); err != nil {
 		panic(fmt.Errorf("auto migrate %T: %v", m, err))
 	}
+
 }
 
 func Init(migrate bool) {
@@ -236,6 +237,12 @@ func Init(migrate bool) {
 	autoMigrate(&VariableGroup{}, sess)
 	autoMigrate(&VariableGroupRel{}, sess)
 	autoMigrate(&ResourceDrift{}, sess)
+	autoMigrate(&VariableGroupProjectRel{}, sess)
+
+	autoMigrate(&Bill{}, sess)
+	autoMigrate(&BillData{}, sess)
+	autoMigrate(&LdapOUOrg{}, sess)
+	autoMigrate(&LdapOUProject{}, sess)
 
 	dbMigrate(sess)
 }

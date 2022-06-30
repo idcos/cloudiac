@@ -22,7 +22,7 @@ type Organization struct {
 	CreatorId   Id     `json:"creatorId" gorm:"size:32;not null;comment:创建人" example:"u-c3ek0co6n88ldvq1n6ag"`                                    //创建人ID
 	RunnerId    string `json:"runnerId" gorm:"not null" example:"runner-01"`                                                                      // 组织默认部署通道
 
-	IsDemo bool `json:"isDemo,omitempty" gorm:"default:false"` // 是否演示组织
+	IsDemo bool `json:"isDemo" gorm:"default:false"` // 是否演示组织
 }
 
 func (Organization) TableName() string {
@@ -31,9 +31,4 @@ func (Organization) TableName() string {
 
 func (o Organization) Migrate(sess *db.Session) (err error) {
 	return nil
-}
-
-type OrgDetailResp struct {
-	Organization
-	Creator string `json:"creator" example:"研发部负责人"` // 创建人名称
 }

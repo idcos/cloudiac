@@ -3,38 +3,19 @@
 package apps
 
 import (
+	"cloudiac/configs"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"fmt"
 	"net/http"
 )
 
-type SystemStatusResp struct {
-	Service  string `json:"service" form:"service" `
-	Children []struct {
-		ID      string
-		Tags    []string `json:"tags" form:"tags" `
-		Port    int      `json:"port" form:"port" `
-		Address string   `json:"address" form:"address" `
-		Status  string   `json:"status" form:"status" `
-		Node    string   `json:"node" form:"node" `
-		Notes   string   `json:"notes" form:"notes" `
-		Output  string   `json:"output" form:"output" `
-	}
-	//Passing  uint64 `json:"passing" form:"passing" `
-	//Critical uint64 `json:"critical" form:"critical" `
-	//Warn     uint64 `json:"warn" form:"warn" `
-}
-
-type RunnerTagsResp struct {
-	Tags []string `json:"tags"`
-}
-
 func SystemStatusSearch() (interface{}, e.Error) {
-	resp := make([]*SystemStatusResp, 0)
-	serviceResp := make(map[string]*SystemStatusResp)
+	resp := make([]*resps.SystemStatusResp, 0)
+	serviceResp := make(map[string]*resps.SystemStatusResp)
 	IdInfo, serviceStatus, serviceList, err := services.SystemStatusSearch()
 	if err != nil {
 		return nil, err
@@ -42,7 +23,7 @@ func SystemStatusSearch() (interface{}, e.Error) {
 
 	//构建返回值
 	for _, service := range serviceList {
-		serviceResp[service] = &SystemStatusResp{
+		serviceResp[service] = &resps.SystemStatusResp{
 			Service: service,
 		}
 	}
@@ -84,6 +65,18 @@ func RunnerSearch() (interface{}, e.Error) {
 	return services.RunnerSearch()
 }
 
+func SystemSwitchStatus() (interface{}, e.Error) {
+	conf := configs.Get()
+	systemSwitchs := &resps.SystemSwitchesStatusResp{
+		AbortStatus:     conf.EnableTaskAbort,
+		EnableAbortTask: conf.EnableTaskAbort,
+		EnableRegister:  conf.EnableRegister,
+		EnableLdap:      conf.LdapEnabled(),
+	}
+
+	return systemSwitchs, nil
+}
+
 func ConsulTagUpdate(c *ctx.ServiceContext, form forms.ConsulTagUpdateForm) (interface{}, e.Error) {
 	// 检查是否有修改tags的权限
 	if !c.IsSuperAdmin {
@@ -112,7 +105,7 @@ func RunnerTags() (interface{}, e.Error) {
 		return nil, err
 	}
 
-	return &RunnerTagsResp{
+	return &resps.RunnerTagsResp{
 		Tags: tags,
 	}, nil
 }

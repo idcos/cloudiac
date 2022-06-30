@@ -14,9 +14,8 @@ import (
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
-	"net/http"
-
 	"github.com/pkg/errors"
+	"net/http"
 )
 
 func SearchToken(c *ctx.ServiceContext, form *forms.SearchTokenForm) (interface{}, e.Error) {
@@ -53,6 +52,7 @@ func CreateToken(c *ctx.ServiceContext, form *forms.CreateTokenForm) (*models.To
 	)
 
 	tokenStr, _ := utils.GetUUID()
+
 	if form.ExpiredAt != "" {
 		expiredAt, er = models.Time{}.Parse(form.ExpiredAt)
 		if er != nil {
@@ -202,7 +202,7 @@ func ApiTriggerHandler(c *ctx.ServiceContext, form forms.ApiTriggerHandler) (int
 		AutoApprove: env.AutoApproval,
 		BaseTask: models.BaseTask{
 			Type:        taskType,
-			StepTimeout: env.Timeout,
+			StepTimeout: env.StepTimeout,
 			RunnerId:    env.RunnerId,
 		},
 	}

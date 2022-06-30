@@ -5,6 +5,7 @@ package models
 import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/runner"
+	"cloudiac/utils"
 	"path"
 )
 
@@ -14,19 +15,20 @@ type BaseTask struct {
 	/* 通用任务参数 */
 	Type string `json:"type" gorm:"not null;enum('plan','apply','destroy','scan')" enums:"'plan','apply','destroy','scan'"` // 任务类型。1. plan: 计划 2. apply: 部署 3. destroy: 销毁
 
-	Pipeline string       `json:"-" gorm:"type:text"`        // 用户自定义 pipeline 内容
-	Flow     PipelineTask `json:"-" gorm:"type:json"`        // 实际生成的任务执行流程
-	CurrStep int          `json:"currStep" gorm:"default:0"` // 当前在执行的流程步骤
+	Pipeline string           `json:"-" gorm:"type:text"`        // 用户自定义 pipeline 内容
+	Flow     PipelineTaskFlow `json:"-" gorm:"type:json"`        // 实际生成的任务执行流程
+	CurrStep int              `json:"currStep" gorm:"default:0"` // 当前在执行的流程步骤
 
 	ContainerId string `json:"-" gorm:"size:64"`
 
 	// 任务每一步的执行超时(整个任务无超时控制)
-	StepTimeout int `json:"stepTimeout" gorm:"default:1800;comment:执行超时"`
+	StepTimeout int `json:"stepTimeout" gorm:"default:3600;comment:执行超时"`
 
 	RunnerId string `json:"runnerId" gorm:"not null"` // 部署通道
 
-	Status  string `json:"status" gorm:"type:enum('pending','running','approving','rejected','failed','complete','timeout');default:'pending'" enums:"'pending','running','approving','rejected','failed','complete','timeout'"`
-	Message string `json:"message" gorm:"type:text"` // 任务的状态描述信息，如失败原因等
+	Status   string `json:"status" gorm:"type:enum('pending','running','approving','rejected','failed','complete','timeout','aborted');default:'pending'" enums:"'pending','running','approving','rejected','failed','complete','timeout'"`
+	Message  string `json:"message" gorm:"type:text"` // 任务的状态描述信息，如失败原因等
+	Aborting bool   `json:"aborting" gorm:""`         // 任务正在中止
 
 	StartAt *Time `json:"startAt" gorm:"type:datetime;comment:任务开始时间"` // 任务开始时间
 	EndAt   *Time `json:"endAt" gorm:"type:datetime;comment:任务结束时间"`   // 任务结束时间
@@ -91,4 +93,14 @@ func (t *ScanTask) TfResultJsonPath() string {
 
 func (t *ScanTask) Migrate(sess *db.Session) (err error) {
 	return TaskModelMigrate(sess, t)
+}
+
+//go:generate go run cloudiac/code-gen/desenitize ScanTask ./desensitize/
+func (v *ScanTask) Desensitize() ScanTask {
+	rv := ScanTask{}
+	utils.DeepCopy(&rv, v)
+	for i := 0; i < len(rv.Variables); i++ {
+		rv.Variables[i].Value = ""
+	}
+	return rv
 }

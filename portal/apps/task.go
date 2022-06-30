@@ -7,9 +7,12 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/desensitize"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
@@ -30,8 +33,10 @@ import (
 // SearchTask 任务查询
 func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{}, e.Error) {
 	query := services.QueryTask(c.DB())
+
 	if form.EnvId != "" {
-		query = query.Where("env_id = ?", form.EnvId)
+		query = query.Where("env_id = ?", form.EnvId).
+			Where("is_drift_task != 1 OR  (is_drift_task = 1 AND applied = 1)")
 	}
 	//根据任务类型查询
 	if form.TaskType != "" {
@@ -52,7 +57,7 @@ func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{},
 	}
 
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	details := make([]*taskDetailResp, 0)
+	details := make([]*resps.TaskDetailResp, 0)
 	if err := p.Scan(&details); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
@@ -69,29 +74,14 @@ func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{},
 	}, nil
 }
 
-type taskDetailResp struct {
-	models.Task
-	Creator string `json:"creator" example:"超级管理员"`
-}
-
 // TaskDetail 任务信息详情
-func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*taskDetailResp, e.Error) {
-	orgIds, er := services.GetOrgIdsByUser(c.DB(), c.UserId)
-	if er != nil {
-		c.Logger().Errorf("error get task id by user, err %s", er)
-		return nil, e.New(e.DBError, er)
-	}
-	if !c.OrgId.InArray(orgIds...) && !c.IsSuperAdmin {
-		// 请求了一个不存在的 task，因为 task id 是在 path 传入，这里我们返回 404
-		return nil, e.New(e.TaskNotExists, http.StatusNotFound)
-	}
-
+func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*resps.TaskDetailResp, e.Error) {
 	var (
 		task *models.Task
 		user *models.User
 		err  e.Error
 	)
-	task, err = services.GetTaskById(c.DB(), form.Id)
+	task, err = services.GetTaskById(services.QueryWithOrgId(c.DB(), c.OrgId), form.Id)
 	if err != nil && err.Code() == e.TaskNotExists {
 		return nil, e.New(e.TaskNotExists, err, http.StatusNotFound)
 	} else if err != nil {
@@ -108,18 +98,17 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*taskDetailRe
 		return nil, e.New(e.DBError, err)
 	}
 
-	// 隐藏敏感字段
-	task.HideSensitiveVariable()
-	var o = taskDetailResp{
-		Task:    *task,
+	var o = resps.TaskDetailResp{
+		Task:    desensitize.NewTask(*task),
 		Creator: user.Name,
 	}
-	if strings.Contains(o.RepoAddr, `token:`) {
-		o.RepoAddr, err = replaceVcsToken(o.RepoAddr)
-		if err != nil {
-			return nil, err
-		}
+
+	// 清除url token
+	o.RepoAddr, err = replaceVcsToken(o.RepoAddr)
+	if err != nil {
+		return nil, err
 	}
+
 	return &o, nil
 }
 
@@ -133,7 +122,7 @@ func replaceVcsToken(old string) (string, e.Error) {
 }
 
 // LastTask 最新任务信息
-func LastTask(c *ctx.ServiceContext, form *forms.LastTaskForm) (*taskDetailResp, e.Error) {
+func LastTask(c *ctx.ServiceContext, form *forms.LastTaskForm) (*resps.TaskDetailResp, e.Error) {
 	if c.OrgId == "" || c.ProjectId == "" {
 		return nil, e.New(e.BadRequest, http.StatusBadRequest)
 	}
@@ -169,8 +158,8 @@ func LastTask(c *ctx.ServiceContext, form *forms.LastTaskForm) (*taskDetailResp,
 
 	// 隐藏敏感字段
 	task.HideSensitiveVariable()
-	var t = taskDetailResp{
-		Task:    *task,
+	var t = resps.TaskDetailResp{
+		Task:    desensitize.NewTask(*task),
 		Creator: user.Name,
 	}
 
@@ -178,7 +167,7 @@ func LastTask(c *ctx.ServiceContext, form *forms.LastTaskForm) (*taskDetailResp,
 }
 
 // ApproveTask 审批执行计划
-func ApproveTask(c *ctx.ServiceContext, form *forms.ApproveTaskForm) (interface{}, e.Error) {
+func ApproveTask(c *ctx.ServiceContext, form *forms.ApproveTaskForm) (interface{}, e.Error) { //nolint:cyclop
 	c.AddLogField("action", fmt.Sprintf("approve task %s", form.Id))
 
 	if c.OrgId == "" || c.ProjectId == "" {
@@ -195,7 +184,11 @@ func ApproveTask(c *ctx.ServiceContext, form *forms.ApproveTaskForm) (interface{
 	}
 
 	if task.Status != models.TaskApproving {
-		return nil, e.New(e.TaskApproveNotPending, http.StatusBadRequest)
+		return nil, e.New(e.TaskApproveNotPending, http.StatusConflict)
+	}
+
+	if task.Aborting {
+		return nil, e.New(e.TaskAborting, http.StatusConflict)
 	}
 
 	step, err := services.GetTaskStep(c.DB(), task.Id, task.CurrStep)
@@ -296,21 +289,11 @@ func FollowTaskLog(c *ctx.GinRequest, form forms.TaskLogForm) e.Error {
 
 // TaskOutput 任务Output信息详情
 func TaskOutput(c *ctx.ServiceContext, form forms.DetailTaskForm) (interface{}, e.Error) {
-	orgIds, er := services.GetOrgIdsByUser(c.DB(), c.UserId)
-	if er != nil {
-		c.Logger().Errorf("error get task id by user, err %s", er)
-		return nil, e.New(e.DBError, er)
-	}
-	if !c.OrgId.InArray(orgIds...) && !c.IsSuperAdmin {
-		// 请求了一个不存在的 task，因为 task id 是在 path 传入，这里我们返回 404
-		return nil, e.New(e.TaskNotExists, http.StatusNotFound)
-	}
-
 	var (
 		task *models.Task
 		err  e.Error
 	)
-	task, err = services.GetTaskById(c.DB(), form.Id)
+	task, err = services.GetTaskById(services.QueryWithOrgId(c.DB(), c.OrgId), form.Id)
 	if err != nil && err.Code() == e.TaskNotExists {
 		return nil, e.New(e.TaskNotExists, err, http.StatusNotFound)
 	} else if err != nil {
@@ -318,7 +301,24 @@ func TaskOutput(c *ctx.ServiceContext, form forms.DetailTaskForm) (interface{}, 
 		return nil, e.New(e.DBError, err)
 	}
 
-	return task.Result.Outputs, nil
+	outputs := make(map[string]interface{})
+	for k, v := range task.Result.Outputs {
+		m, ok := v.(map[string]interface{})
+		if !ok {
+			outputs[k] = v
+			continue
+		}
+
+		if _, ok := m["sensitive"]; !ok {
+			outputs[k] = v
+			continue
+		}
+
+		m["value"] = "(sensitive value)"
+		outputs[k] = m
+	}
+
+	return outputs, nil
 }
 
 // SearchTaskResources 查询环境资源列表
@@ -366,21 +366,9 @@ func SearchTaskResources(c *ctx.ServiceContext, form *forms.SearchTaskResourceFo
 	}, nil
 }
 
-type TaskStepDetail struct {
-	Id      models.Id    `json:"id"`
-	Index   int          `json:"index"`
-	Name    string       `json:"name"`
-	TaskId  models.Id    `json:"taskId"`
-	Status  string       `json:"status"`
-	Message string       `json:"message"`
-	StartAt *models.Time `json:"startAt"`
-	EndAt   *models.Time `json:"endAt"`
-	Type    string       `json:"type"`
-}
-
 func SearchTaskSteps(c *ctx.ServiceContext, form *forms.DetailTaskStepForm) (interface{}, e.Error) {
 	query := services.QueryTaskStepsById(c.DB(), form.TaskId)
-	details := make([]*TaskStepDetail, 0)
+	details := make([]*resps.TaskStepDetail, 0)
 	if err := query.Scan(&details); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
@@ -388,7 +376,7 @@ func SearchTaskSteps(c *ctx.ServiceContext, form *forms.DetailTaskStepForm) (int
 
 }
 
-func GetTaskStep(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (interface{}, e.Error) {
+func GetTaskStepLog(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (interface{}, e.Error) {
 	content, err := services.GetTaskStepLogById(c.DB(), form.StepId)
 	if err != nil {
 		return nil, err
@@ -414,10 +402,13 @@ func SearchTaskResourcesGraph(c *ctx.ServiceContext, form *forms.SearchTaskResou
 	if err != nil {
 		return nil, err
 	}
+
 	for i := range rs {
 		rs[i].Provider = path.Base(rs[i].Provider)
-		// attrs 暂时不需要返回
-		rs[i].Attrs = nil
+		// 不需要返回 attrs, 避免返回的数据过大;
+		if form.Dimension != consts.GraphDimensionModule {
+			rs[i].Attrs = nil
+		}
 	}
 	return GetResourcesGraph(rs, form.Dimension), nil
 }
@@ -433,6 +424,63 @@ func GetResourcesGraph(rs []services.Resource, dimension string) interface{} {
 	default:
 		return nil
 	}
+}
+
+// GetResShowName
+// 建立规则库，通过各种规则确定资源的主要字段或者展示模板
+//		规则示例1: 如果资源的属性中有 public_ip 字段，则展示 public_ip;
+//    	规则示例2: 如果资源的属性中有 name 字段，则展示 name;
+//    	规则示例3: 如果资源的属性中有 tag 字段，则展示 name(tag1,tag2);
+// 不匹配规则库时展示: resource address(id), 如: "module1.alicloud_instance.web(i-xxxxxxx)";
+func GetResShowName(attrs map[string]interface{}, addr string) string {
+	get := func(key string) (string, bool) {
+		// 如果 val 为空字符则视为无值
+		if val, ok := attrs[key]; ok {
+			switch OriginalValue := val.(type) {
+			case map[string]string:
+				var expectedFormat = make([]string, 0) // expect format: "k1=v1,k2=v2,k3=v3..."
+				for k, v := range OriginalValue {
+					expectedFormat = append(expectedFormat, fmt.Sprintf("%s=%s", k, v))
+				}
+				if len(expectedFormat) == 0 {
+					return "", false
+				}
+				return strings.Join(expectedFormat, ","), true
+			case []string:
+				expectFormat := strings.Join(OriginalValue, ",") // expect format: "v1,v2,v3..."
+				if len(expectFormat) == 0 {
+					return "", false
+				}
+				return expectFormat, true
+			case nil:
+				return "", false
+			default:
+				str := fmt.Sprintf("%v", OriginalValue)
+				if len(str) == 0 {
+					return str, false
+				}
+				return str, true
+			}
+		}
+		return "", false
+	}
+
+	if attrs != nil {
+		if publicIP, ok := get("public_ip"); ok {
+			return publicIP
+		}
+		if name, ok := get("name"); ok {
+			if tags, ok := get("tags"); ok {
+				return fmt.Sprintf("%s(%s)", name, tags)
+			}
+			return name
+		}
+	}
+	outRuleName, ok := get("id")
+	if ok {
+		return fmt.Sprintf("%s(%s)", addr, outRuleName)
+	}
+	return addr
 }
 
 type ResourcesGraphModule struct {
@@ -493,7 +541,7 @@ func genNodesFromResource(resource services.Resource, parentChildNode map[string
 
 	res := ResourceInfo{
 		ResourceId:   resource.Id.String(),
-		ResourceName: resource.Name,
+		ResourceName: GetResShowName(resource.Attrs, resource.Address),
 		NodeName:     lastAddr,
 	}
 
@@ -698,4 +746,73 @@ func GetResourcesGraphType(rs []services.Resource) interface{} {
 	}
 
 	return rgt
+}
+
+func AbortTask(c *ctx.ServiceContext, form *forms.AbortTaskForm) (interface{}, e.Error) {
+	er := c.DB().Transaction(func(tx *db.Session) error {
+		task, er := services.GetTaskById(tx, form.TaskId)
+		if er != nil {
+			return er
+		}
+
+		if task.Aborting {
+			return e.New(e.TaskAborting)
+		}
+
+		step, er := services.GetTaskStep(tx, task.Id, task.CurrStep)
+		if er != nil {
+			return er
+		}
+
+		if task.Status == models.TaskPending {
+			task.Status = models.TaskAborted
+			if _, err := models.UpdateModel(tx, task); err != nil {
+				return e.AutoNew(err, e.DBError)
+			}
+		} else if step.Status == models.TaskStepApproving {
+			task.Aborting = true
+			if _, err := models.UpdateModel(tx, task); err != nil {
+				return e.AutoNew(err, e.DBError)
+			}
+			// 步骤在待审批状态时直接将状态改为 aborted 并同步修改任务状态
+			if er := services.ChangeTaskStep2Aborted(tx, task.Id, step.Index); er != nil {
+				return er
+			}
+		} else if task.Started() && !task.Exited() {
+			if err := services.CheckRunnerTaskCanAbort(*task); err != nil {
+				return e.New(e.TaskCannotAbort, err)
+			}
+
+			task.Aborting = true
+			if _, err := models.UpdateModel(tx, task); err != nil {
+				return e.AutoNew(err, e.DBError)
+			}
+
+			// 任务在执行状态时发送指令中断 runner 的任务执行，然后 runner 会上报步骤被中止
+			go utils.RecoverdCall(func() {
+				goAbortRunnerTask(c.Logger(), *task)
+			})
+		} else {
+			return e.New(e.TaskCannotAbort,
+				fmt.Errorf("task status is '%s'", task.Status), http.StatusConflict)
+		}
+		return nil
+	})
+
+	if er != nil {
+		return nil, e.AutoNew(er, e.InternalError)
+	}
+	return nil, nil
+}
+
+func goAbortRunnerTask(logger logs.Logger, task models.Task) {
+	logger = logger.WithField("action", "goAbortRunnerTask")
+	if er := services.AbortRunnerTask(task); er != nil {
+		logger.Errorf("abort task error: %v", er)
+		task.Aborting = false
+		if _, err := models.UpdateAttr(db.Get(), &models.Task{},
+			models.Attrs{"aborting": false}, "id = ?", task.Id); err != nil {
+			logger.Errorf("update task aborting error: %v", err)
+		}
+	}
 }

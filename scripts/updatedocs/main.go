@@ -15,6 +15,11 @@ import (
 	"unicode"
 )
 
+const (
+	version    = "v0.12.1"
+	webVersion = "v0.12.1"
+)
+
 type FileReplacer struct {
 	filepath string
 	rules    []ReplaceRule
@@ -191,6 +196,10 @@ const releaseNoteTemplate = `# Releases
 - {{ . }}
 {{ end }}
 {{ end }}
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v{{.Version}}](https://github.com/idcos/cloudiac/releases/tag/v{{.Version}})
+
+
 {{end}}
 `
 
@@ -219,15 +228,13 @@ func generateReleaseNotes() error {
 }
 
 func main() {
+	if version == "" || webVersion == "" {
+		log.Fatalln("version or webVersion is blank")
+	}
+
 	if err := generateReleaseNotes(); err != nil {
 		log.Fatalln(err)
 	}
-
-	versionBytes, err := os.ReadFile("VERSION")
-	if err != nil {
-		log.Fatalln(err)
-	}
-	version := strings.TrimSpace(string(versionBytes))
 
 	configs := []struct {
 		file  string
@@ -251,13 +258,16 @@ func main() {
 		{
 			"./docs/mkdocs/product-deploy/container.md",
 			[]ReplaceRule{
-				&LineRegexReplaceRule{expr: `image: "([^/]*cloudiac/[^:]+):latest"`, repl: fmt.Sprintf(`image: "$1:%s"`, version)},
+				&LineRegexReplaceRule{expr: `image: "([^/]*cloudiac/iac-portal):latest"`, repl: fmt.Sprintf(`image: "$1:%s"`, version)},
+				&LineRegexReplaceRule{expr: `image: "([^/]*cloudiac/ct-runner):latest"`, repl: fmt.Sprintf(`image: "$1:%s"`, version)},
+				&LineRegexReplaceRule{expr: `image: "([^/]*cloudiac/iac-web):latest"`, repl: fmt.Sprintf(`image: "$1:%s"`, webVersion)},
 			},
 		},
 		{
 			"./docs/mkdocs/product-deploy/host.md",
 			[]ReplaceRule{
 				&LineStartReplaceRule{"VERSION=v", fmt.Sprintf("VERSION=%s\n", version)},
+				&LineStartReplaceRule{"WEB_VERSION=v", fmt.Sprintf("WEB_VERSION=%s\n", webVersion)},
 			},
 		},
 	}

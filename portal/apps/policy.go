@@ -11,7 +11,9 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/desensitize"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/logstorage"
 	"cloudiac/utils"
@@ -247,7 +249,7 @@ func ScanEnvironment(c *ctx.ServiceContext, form *forms.ScanEnvironmentForm) (*m
 	task, err := services.CreateEnvScanTask(tx, tpl, env, taskType, c.UserId)
 	if err != nil {
 		_ = tx.Rollback()
-		c.Logger().Errorf("error creating scan task, err %s", err)
+		c.Logger().Errorf("create env scan task, err %s", err)
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
@@ -271,17 +273,10 @@ func ScanEnvironment(c *ctx.ServiceContext, form *forms.ScanEnvironmentForm) (*m
 	return task, nil
 }
 
-type PolicyResp struct {
-	models.Policy
-	GroupName string `json:"groupName"`
-	Creator   string `json:"creator"`
-	Summary
-}
-
 // SearchPolicy 查询策略列表
 func SearchPolicy(c *ctx.ServiceContext, form *forms.SearchPolicyForm) (interface{}, e.Error) {
 	query := services.SearchPolicy(c.DB(), form, c.OrgId)
-	policyResps := make([]PolicyResp, 0)
+	policyResps := make([]resps.PolicyResp, 0)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	if err := p.Scan(&policyResps); err != nil {
 		return nil, e.New(e.DBError, err)
@@ -328,25 +323,12 @@ func DetailPolicy(c *ctx.ServiceContext, form *forms.DetailPolicyForm) (interfac
 	return services.DetailPolicy(query, form.Id)
 }
 
-type RespPolicyTpl struct {
-	models.Template
-
-	PolicyStatus string `json:"policyStatus"` // 策略检查状态, enum('passed','violated','pending','failed')
-
-	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
-	OrgName      string                    `json:"orgName" form:"orgName" `
-	Summary
-
-	// 以下字段不返回
-	Status string `json:"status,omitempty" gorm:"-" swaggerignore:"true"` // 模板状态(enabled, disable)
-}
-
 func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (interface{}, e.Error) {
-	respPolicyTpls := make([]*RespPolicyTpl, 0)
+	respPolicyTpls := make([]*resps.RespPolicyTpl, 0)
 	tplIds := make([]models.Id, 0)
 	query := services.SearchPolicyTpl(c.DB(), c.UserId, c.OrgId, form.TplId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
-	groupM := make(map[models.Id][]services.NewPolicyGroup)
+	groupM := make(map[models.Id][]resps.NewPolicyGroup)
 	if err := p.Scan(&respPolicyTpls); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
@@ -362,7 +344,7 @@ func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (in
 	}
 	for _, v := range groups {
 		if _, ok := groupM[v.TplId]; !ok {
-			groupM[v.TplId] = []services.NewPolicyGroup{v}
+			groupM[v.TplId] = []resps.NewPolicyGroup{v}
 			continue
 		}
 		groupM[v.TplId] = append(groupM[v.TplId], v)
@@ -370,7 +352,7 @@ func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (in
 
 	for index, v := range respPolicyTpls {
 		if _, ok := groupM[v.Id]; !ok {
-			respPolicyTpls[index].PolicyGroups = []services.NewPolicyGroup{}
+			respPolicyTpls[index].PolicyGroups = []resps.NewPolicyGroup{}
 			continue
 		}
 		respPolicyTpls[index].PolicyGroups = groupM[v.Id]
@@ -388,24 +370,8 @@ func SearchPolicyTpl(c *ctx.ServiceContext, form *forms.SearchPolicyTplForm) (in
 	}, nil
 }
 
-type RespPolicyEnv struct {
-	models.Env
-
-	PolicyStatus string `json:"policyStatus"` // 策略检查状态, enum('passed','violated','pending','failed')
-
-	PolicyGroups []services.NewPolicyGroup `json:"policyGroups" gorm:"-"`
-	Summary
-	OrgName      string `json:"orgName" form:"orgName" `
-	ProjectName  string `json:"projectName" form:"projectName" `
-	TemplateName string `json:"templateName"`
-
-	// 以下字段不返回
-	Status     string `json:"status,omitempty" gorm:"-" swaggerignore:"true"`     // 环境状态
-	TaskStatus string `json:"taskStatus,omitempty" gorm:"-" swaggerignore:"true"` // 环境部署任务状态
-}
-
 func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (interface{}, e.Error) {
-	respPolicyEnvs := make([]*RespPolicyEnv, 0)
+	respPolicyEnvs := make([]*resps.RespPolicyEnv, 0)
 	envIds := make([]models.Id, 0)
 	query := services.SearchPolicyEnv(c.DB(), c.UserId, c.OrgId, form.ProjectId, form.EnvId, form.Q)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
@@ -427,17 +393,17 @@ func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (in
 		return nil, err
 	}
 
-	groupM := make(map[models.Id][]services.NewPolicyGroup)
+	groupM := make(map[models.Id][]resps.NewPolicyGroup)
 	for _, v := range groups {
 		if _, ok := groupM[v.EnvId]; !ok {
-			groupM[v.EnvId] = []services.NewPolicyGroup{}
+			groupM[v.EnvId] = []resps.NewPolicyGroup{}
 		}
 		groupM[v.EnvId] = append(groupM[v.EnvId], v)
 	}
 
 	for index, v := range respPolicyEnvs {
 		if _, ok := groupM[v.Id]; !ok {
-			respPolicyEnvs[index].PolicyGroups = []services.NewPolicyGroup{}
+			respPolicyEnvs[index].PolicyGroups = []resps.NewPolicyGroup{}
 		} else {
 			respPolicyEnvs[index].PolicyGroups = groupM[v.Id]
 		}
@@ -455,15 +421,8 @@ func SearchPolicyEnv(c *ctx.ServiceContext, form *forms.SearchPolicyEnvForm) (in
 	}, nil
 }
 
-type RespEnvOfPolicy struct {
-	models.Policy
-	GroupName string `json:"groupName"`
-	GroupId   string `json:"groupId"`
-	EnvName   string `json:"envName"`
-}
-
 func EnvOfPolicy(c *ctx.ServiceContext, form *forms.EnvOfPolicyForm) (interface{}, e.Error) {
-	resp := make([]RespEnvOfPolicy, 0)
+	resp := make([]resps.RespEnvOfPolicy, 0)
 	query := services.EnvOfPolicy(c.DB(), form, c.OrgId, c.ProjectId)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	if err := p.Scan(&resp); err != nil {
@@ -476,31 +435,19 @@ func EnvOfPolicy(c *ctx.ServiceContext, form *forms.EnvOfPolicyForm) (interface{
 	}, nil
 }
 
-type ValidPolicyResp struct {
-	ValidPolicies      []models.Policy `json:"validPolicies"`
-	SuppressedPolicies []models.Policy `json:"suppressedPolicies"`
-}
-
 func ValidEnvOfPolicy(c *ctx.ServiceContext, form *forms.EnvOfPolicyForm) (interface{}, e.Error) {
 	validPolicies, suppressedPolicies, err := services.GetValidPolicies(c.DB(), "", form.Id)
 	if err != nil {
 		return nil, err
 	}
-	return ValidPolicyResp{
+	return resps.ValidPolicyResp{
 		ValidPolicies:      validPolicies,
 		SuppressedPolicies: suppressedPolicies,
 	}, nil
 }
 
-type RespTplOfPolicy struct {
-	models.Policy
-	GroupName string `json:"groupName"`
-	GroupId   string `json:"groupId"`
-	TplName   string `json:"tplName"`
-}
-
 func TplOfPolicy(c *ctx.ServiceContext, form *forms.TplOfPolicyForm) (interface{}, e.Error) {
-	resp := make([]RespTplOfPolicy, 0)
+	resp := make([]resps.RespTplOfPolicy, 0)
 	query := services.TplOfPolicy(c.DB(), form, c.OrgId, c.ProjectId)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	if err := p.Scan(&resp); err != nil {
@@ -513,13 +460,8 @@ func TplOfPolicy(c *ctx.ServiceContext, form *forms.TplOfPolicyForm) (interface{
 	}, nil
 }
 
-type RespTplOfPolicyGroup struct {
-	GroupName string `json:"groupName"`
-	GroupId   string `json:"groupId"`
-}
-
 func TplOfPolicyGroup(c *ctx.ServiceContext, form *forms.TplOfPolicyGroupForm) (interface{}, e.Error) {
-	resp := make([]RespTplOfPolicyGroup, 0)
+	resp := make([]resps.RespTplOfPolicyGroup, 0)
 	query := services.QueryWithOrgId(c.DB(), c.OrgId, models.PolicyGroup{}.TableName())
 	query = services.TplOfPolicyGroup(query, form)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
@@ -538,21 +480,10 @@ func ValidTplOfPolicy(c *ctx.ServiceContext, form *forms.TplOfPolicyForm) (inter
 	if err != nil {
 		return nil, err
 	}
-	return ValidPolicyResp{
+	return resps.ValidPolicyResp{
 		ValidPolicies:      validPolicies,
 		SuppressedPolicies: suppressedPolicies,
 	}, nil
-}
-
-type PolicyErrorResp struct {
-	models.PolicyResult
-	TargetId     models.Id `json:"targetId"`
-	EnvName      string    `json:"envName"`
-	TemplateName string    `json:"templateName"`
-}
-
-func (PolicyErrorResp) TableName() string {
-	return models.PolicyResult{}.TableName()
 }
 
 // PolicyError 获取合规错误列表，包含最后一次检测错误和合规不通过，排除已经屏蔽的条目
@@ -562,11 +493,7 @@ func PolicyError(c *ctx.ServiceContext, form *forms.PolicyErrorForm) (interface{
 	if form.HasKey("q") {
 		query = query.Where(fmt.Sprintf("env_name LIKE '%%%s%%' or template_name LIKE '%%%s%%'", form.Q, form.Q))
 	}
-	return getPage(query, form, PolicyErrorResp{})
-}
-
-type ParseResp struct {
-	Template *services.TfParse `json:"template"`
+	return getPage(query, form, resps.PolicyErrorResp{})
 }
 
 // ParseTemplate 解析云模板/环境源码
@@ -626,35 +553,11 @@ func ParseTemplate(c *ctx.ServiceContext, form *forms.PolicyParseForm) (interfac
 		if err != nil {
 			return nil, e.New(e.PolicyErrorParseTemplate, fmt.Errorf("parse tempalte error: %v", err), http.StatusInternalServerError)
 		}
-		return ParseResp{
+		return resps.ParseResp{
 			Template: js,
 		}, nil
 	}
 	return nil, e.New(e.PolicyErrorParseTemplate, fmt.Errorf("execute parse tempalte error: %v", err), http.StatusInternalServerError)
-}
-
-type ScanResultPageResp struct {
-	PolicyStatus string               `json:"policyStatus"` // 扫描状态
-	Task         *models.ScanTask     `json:"task"`         // 扫描任务
-	Total        int64                `json:"total"`        // 总数
-	PageSize     int                  `json:"pageSize"`     // 分页数量
-	List         []*PolicyResultGroup `json:"groups"`       // 策略组
-}
-
-type PolicyResultGroup struct {
-	Id      models.Id      `json:"id"`
-	Name    string         `json:"name"`
-	Summary Summary        `json:"summary"`
-	List    []PolicyResult `json:"list"` // 策略扫描结果
-}
-
-type PolicyResult struct {
-	models.PolicyResult
-	PolicyName      string `json:"policyName" example:"VPC 安全组规则"`  // 策略名称
-	PolicySuppress  bool   `json:"policySuppress"`                  //是否屏蔽
-	PolicyGroupName string `json:"policyGroupName" example:"安全策略组"` // 策略组名称
-	FixSuggestion   string `json:"fixSuggestion" example:"建议您创建一个专有网络..."`
-	Rego            string `json:"rego" example:""` //rego 代码文件内容
 }
 
 func checkScopeEnabled(query *db.Session, scope string, id models.Id) (bool, e.Error) {
@@ -705,12 +608,12 @@ func getScanTaskVarious(query *db.Session, taskId models.Id, scope string, id mo
 	}
 }
 
-func groupByGroup(results []PolicyResult) []*PolicyResultGroup {
-	lastGroup := &PolicyResultGroup{}
-	var resultGroups []*PolicyResultGroup
+func groupByGroup(results []resps.PolicyResult) []*resps.PolicyResultGroup {
+	lastGroup := &resps.PolicyResultGroup{}
+	var resultGroups []*resps.PolicyResultGroup
 	for i, r := range results {
 		if lastGroup.Name != r.PolicyGroupName {
-			lastGroup = &PolicyResultGroup{
+			lastGroup = &resps.PolicyResultGroup{
 				Id:   r.PolicyGroupId,
 				Name: r.PolicyGroupName,
 			}
@@ -741,7 +644,7 @@ func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicySca
 	if err != nil {
 		if err.Code() == e.ObjectNotExists {
 			// 默认返回空列表
-			emptyResult := ScanResultPageResp{
+			emptyResult := resps.ScanResultPageResp{
 				PolicyStatus: services.MergeScanResultPolicyStatus(policyEnable, nil),
 			}
 			return emptyResult, nil
@@ -751,12 +654,12 @@ func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicySca
 
 	// 如果正在扫描中，返回空列表
 	if scanTask.PolicyStatus == common.TaskPending {
-		return ScanResultPageResp{
+		return resps.ScanResultPageResp{
 			PolicyStatus: services.MergeScanResultPolicyStatus(policyEnable, scanTask),
-			Task:         scanTask,
+			Task:         desensitize.NewScanTaskPtr(scanTask),
 			Total:        0,
 			PageSize:     0,
-			List:         []*PolicyResultGroup{},
+			List:         []*resps.PolicyResultGroup{},
 		}, nil
 	}
 
@@ -769,7 +672,7 @@ func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicySca
 		// 优先分组排序，再做分组内排序
 		query = query.Order(fmt.Sprintf("policy_group_name, %s %s", form.SortField(), form.SortOrder()))
 	}
-	results := make([]PolicyResult, 0)
+	results := make([]resps.PolicyResult, 0)
 	p := page.New(form.CurrentPage(), form.PageSize(), form.Order(query))
 	if err := p.Scan(&results); err != nil {
 		return nil, e.New(e.DBError, err)
@@ -778,42 +681,16 @@ func PolicyScanResult(c *ctx.ServiceContext, scope string, form *forms.PolicySca
 	// 按策略组分组
 	resultGroups := groupByGroup(results)
 
-	return ScanResultPageResp{
+	return resps.ScanResultPageResp{
 		PolicyStatus: services.MergeScanResultPolicyStatus(policyEnable, scanTask),
-		Task:         scanTask,
+		Task:         desensitize.NewScanTaskPtr(scanTask),
 		Total:        p.MustTotal(),
 		PageSize:     p.Size,
 		List:         resultGroups,
 	}, nil
 }
 
-type Summary struct {
-	Passed     int `json:"passed"`
-	Violated   int `json:"violated"`
-	Suppressed int `json:"suppressed"`
-	Failed     int `json:"failed"`
-}
-
-type Polyline struct {
-	Column []string `json:"column,omitempty" example:"08-20,08-21"`
-	Value  []int    `json:"value,omitempty" example:"101,103"`
-}
-
-type PieChar []PieSector
-
-type PieSector struct {
-	Name  string `json:"name" example:"08-20"`
-	Value int    `json:"value" example:"10"`
-}
-
-type PolicyScanReportResp struct {
-	Total            PieChar         `json:"total"`            // 检测结果比例
-	TaskScanCount    Polyline        `json:"scanCount"`        // 检测源执行次数
-	PolicyScanCount  Polyline        `json:"policyScanCount"`  // 策略运行趋势
-	PolicyPassedRate PolylinePercent `json:"policyPassedRate"` // 检测通过率趋势
-}
-
-func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (*PolicyScanReportResp, e.Error) { //nolint:cyclop
+func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (*resps.PolicyScanReportResp, e.Error) { //nolint:cyclop
 	if !form.HasKey("showCount") {
 		// 默认展示最近五个
 		form.ShowCount = 5
@@ -842,10 +719,10 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
 
-	report := PolicyScanReportResp{}
+	report := resps.PolicyScanReportResp{}
 	totalScan := &report.PolicyScanCount
 	passedScan := &report.PolicyPassedRate
-	totalSummary := Summary{}
+	totalSummary := resps.Summary{}
 
 	// 初始化返回的时间点序列，保证没有查询到数据的时候点也会自动填充 0 值
 	for _, d := range timePoints {
@@ -866,7 +743,7 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 					totalScan.Value[idx] += s.Count
 				}
 				if s.Status == common.PolicyStatusPassed {
-					passedScan.Value[idx] = Percent(s.Count)
+					passedScan.Value[idx] = resps.Percent(s.Count)
 				}
 
 				found = true
@@ -883,7 +760,7 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 				passedScan.Value[idx] = 0
 				continue
 			}
-			passedScan.Value[idx] = passedScan.Value[idx] / Percent(totalScan.Value[idx])
+			passedScan.Value[idx] = passedScan.Value[idx] / resps.Percent(totalScan.Value[idx])
 		}
 
 		switch s.Status {
@@ -897,16 +774,16 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 			totalSummary.Failed += s.Count
 		}
 	}
-	report.Total = append(report.Total, PieSector{
+	report.Total = append(report.Total, resps.PieSector{
 		Name:  common.PolicyStatusPassed,
 		Value: totalSummary.Passed,
-	}, PieSector{
+	}, resps.PieSector{
 		Name:  common.PolicyStatusViolated,
 		Value: totalSummary.Violated,
-	}, PieSector{
+	}, resps.PieSector{
 		Name:  common.PolicyStatusSuppressed,
 		Value: totalSummary.Suppressed,
-	}, PieSector{
+	}, resps.PieSector{
 		Name:  common.PolicyStatusFailed,
 		Value: totalSummary.Failed,
 	})
@@ -925,31 +802,12 @@ func PolicyScanReport(c *ctx.ServiceContext, form *forms.PolicyScanReportForm) (
 	return &report, nil
 }
 
-type PolylinePercent struct {
-	Column []string  `json:"column,omitempty" example:"08-20,08-21"`
-	Value  []Percent `json:"value,omitempty" example:"0.951,0.962"`
-	Passed []int     `json:"-"`
-	Total  []int     `json:"-"`
-}
-
-type Percent float64 // 百分比，保留1位百分比小数，0.951 = 95.1%
-
-func (n Percent) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf("%.3f", n)), nil
-}
-
-type PolicyTestResp struct {
-	Data         interface{} `json:"data" swaggertype:"string" example:"{\n\"accurics\":{\n\"instanceWithNoVpc\":[\n{\n\"Id\":\"alicloud_instance.instance\"\n}\n]\n}\n}"` // 脚本测试输出，json文本
-	Error        string      `json:"error" example:"1 error occurred: policy.rego:4: rego_parse_error: refs cannot be used for rule\n"`                                    // 脚本执行错误内容
-	PolicyStatus string      `json:"policyStatus"`
-}
-
-func PolicyTest(c *ctx.ServiceContext, form *forms.PolicyTestForm) (*PolicyTestResp, e.Error) {
+func PolicyTest(c *ctx.ServiceContext, form *forms.PolicyTestForm) (*resps.PolicyTestResp, e.Error) {
 	c.AddLogField("action", "test template")
 
 	var value interface{}
 	if err := json.Unmarshal([]byte(form.Input), &value); err != nil {
-		return &PolicyTestResp{
+		return &resps.PolicyTestResp{
 			Data:  map[string]interface{}{},
 			Error: fmt.Sprintf("invalid input %v", err),
 		}, nil
@@ -972,7 +830,7 @@ func PolicyTest(c *ctx.ServiceContext, form *forms.PolicyTestForm) (*PolicyTestR
 	}
 
 	if result, err := policy.RegoParse(regoPath, inputPath); err != nil {
-		return &PolicyTestResp{
+		return &resps.PolicyTestResp{
 			Data:         map[string]interface{}{},
 			Error:        fmt.Sprintf("%s", err),
 			PolicyStatus: common.PolicyStatusFailed,
@@ -983,7 +841,7 @@ func PolicyTest(c *ctx.ServiceContext, form *forms.PolicyTestForm) (*PolicyTestR
 		if len(res) > 0 {
 			status = common.PolicyStatusViolated
 		}
-		return &PolicyTestResp{
+		return &resps.PolicyTestResp{
 			Data:         result,
 			Error:        "",
 			PolicyStatus: status,
@@ -998,26 +856,7 @@ type PieSectorPercent struct {
 	Value float64 `json:"value" example:"0.2"`
 }
 
-type PolicySummaryResp struct {
-	ActivePolicy struct {
-		Total   int     `json:"total"`   // 最近 15 天产生扫描记录的策略数量
-		Last    int     `json:"last"`    // 16～30 天产生扫描记录的策略数量
-		Changes float64 `json:"changes"` // 相较上次变化
-		Summary PieChar `json:"summary"` // 策略状态包含
-	} `json:"activePolicy"`
-
-	UnresolvedPolicy struct {
-		Total   int     `json:"total"`   // 最近 15 天产生扫描记录的策略数量
-		Last    int     `json:"last"`    // 16～30 天产生扫描记录的策略数量
-		Changes float64 `json:"changes"` // 相较上次变化： (total - last) / last
-		Summary PieChar `json:"summary"` // 策略严重级别统计
-	} `json:"unresolvedPolicy"`
-
-	PolicyViolated      PieChar `json:"policyViolated"`      // 策略不通过
-	PolicyGroupViolated PieChar `json:"policyGroupViolated"` // 策略组不通过
-}
-
-func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) { //nolint:cyclop
+func PolicySummary(c *ctx.ServiceContext) (*resps.PolicySummaryResp, e.Error) { //nolint:cyclop
 	// 策略概览
 	// 默认统计时间范围：最近15天
 	// 1. 活跃策略
@@ -1061,10 +900,10 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) { //noli
 				tplIds, projectIds)
 		} else {
 			// 一个云模板都没有，返回空结果
-			return &PolicySummaryResp{}, nil
+			return &resps.PolicySummaryResp{}, nil
 		}
 	}
-	summaryResp := PolicySummaryResp{}
+	summaryResp := resps.PolicySummaryResp{}
 
 	// 近15天数据
 	scanStatus, err := services.GetPolicyStatusByPolicy(query, userQuery, from, to, "")
@@ -1108,17 +947,17 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) { //noli
 		summaryResp.ActivePolicy.Changes = 1
 	}
 
-	s := PieChar{}
-	s = append(s, PieSector{
+	s := resps.PieChar{}
+	s = append(s, resps.PieSector{
 		Name:  common.PolicyStatusPassed,
 		Value: policyStatusMap[common.PolicyStatusPassed],
-	}, PieSector{
+	}, resps.PieSector{
 		Name:  common.PolicyStatusViolated,
 		Value: policyStatusMap[common.PolicyStatusViolated],
-	}, PieSector{
+	}, resps.PieSector{
 		Name:  common.PolicyStatusFailed,
 		Value: policyStatusMap[common.PolicyStatusFailed],
-	}, PieSector{
+	}, resps.PieSector{
 		Name:  common.PolicyStatusSuppressed,
 		Value: policyStatusMap[common.PolicyStatusSuppressed],
 	})
@@ -1159,14 +998,14 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) { //noli
 				low++
 			}
 		}
-		s = PieChar{}
-		s = append(s, PieSector{
+		s = resps.PieChar{}
+		s = append(s, resps.PieSector{
 			Name:  common.PolicySeverityHigh,
 			Value: high,
-		}, PieSector{
+		}, resps.PieSector{
 			Name:  common.PolicySeverityMedium,
 			Value: medium,
-		}, PieSector{
+		}, resps.PieSector{
 			Name:  common.PolicySeverityLow,
 			Value: low,
 		})
@@ -1178,9 +1017,9 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) { //noli
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
-	p := PieChar{}
+	p := resps.PieChar{}
 	for i := 0; i < 5 && i < len(violatedScanStatus); i++ {
-		p = append(p, PieSector{
+		p = append(p, resps.PieSector{
 			Name:  violatedScanStatus[i].Name,
 			Value: violatedScanStatus[i].Count,
 		})
@@ -1192,9 +1031,9 @@ func PolicySummary(c *ctx.ServiceContext) (*PolicySummaryResp, e.Error) { //noli
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusInternalServerError)
 	}
-	p = PieChar{}
+	p = resps.PieChar{}
 	for i := 0; i < 5 && i < len(violatedGroupScanStatus); i++ {
-		p = append(p, PieSector{
+		p = append(p, resps.PieSector{
 			Name:  violatedGroupScanStatus[i].Name,
 			Value: violatedGroupScanStatus[i].Count,
 		})
@@ -1285,7 +1124,7 @@ func policiesUpsert(tx *db.Session, userId models.Id, orgId models.Id, policyGro
 	return nil
 }
 
-func PolicyTargetSummaryTpl(respPolicyTpls []*RespPolicyTpl, summaries []*services.PolicyScanSummary) []*RespPolicyTpl { //nolint:dupl
+func PolicyTargetSummaryTpl(respPolicyTpls []*resps.RespPolicyTpl, summaries []*services.PolicyScanSummary) []*resps.RespPolicyTpl { //nolint:dupl
 	if len(summaries) > 0 {
 		sumMap := make(map[string]*services.PolicyScanSummary)
 		for idx, summary := range summaries {
@@ -1310,7 +1149,7 @@ func PolicyTargetSummaryTpl(respPolicyTpls []*RespPolicyTpl, summaries []*servic
 	return respPolicyTpls
 }
 
-func PolicyTargetSummaryEnv(respPolicyEnvs []*RespPolicyEnv, summaries []*services.PolicyScanSummary) []*RespPolicyEnv { //nolint:dupl
+func PolicyTargetSummaryEnv(respPolicyEnvs []*resps.RespPolicyEnv, summaries []*services.PolicyScanSummary) []*resps.RespPolicyEnv { //nolint:dupl
 	if len(summaries) > 0 {
 		sumMap := make(map[string]*services.PolicyScanSummary)
 		for idx, summary := range summaries {

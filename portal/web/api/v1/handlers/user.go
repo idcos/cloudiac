@@ -3,12 +3,16 @@
 package handlers
 
 import (
+	"cloudiac/configs"
 	"cloudiac/portal/apps"
+	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
-
+	"cloudiac/portal/services"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v4"
+	"net/http"
 )
 
 type User struct {
@@ -25,7 +29,7 @@ type User struct {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param form formData forms.CreateUserForm true "parameter"
 // @router /users [post]
-// @Success 200 {object} ctx.JSONResult{result=apps.CreateUserResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.CreateUserResp}
 func (User) Create(c *ctx.GinRequest) {
 	form := forms.CreateUserForm{}
 	if err := c.Bind(&form); err != nil {
@@ -47,7 +51,7 @@ func (User) Create(c *ctx.GinRequest) {
 // @Param IaC-Project-Id header string false "项目ID"
 // @Param form query forms.SearchUserForm true "parameter"
 // @router /users [get]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.User}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.UserWithRoleResp}}
 func (User) Search(c *ctx.GinRequest) {
 	form := forms.SearchUserForm{}
 	if err := c.Bind(&form); err != nil {
@@ -124,7 +128,6 @@ func (u User) UpdateSelf(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param IaC-Org-Id header string false "组织ID"
 // @Param userId path string true "用户ID"
-// @Param form formData forms.DeleteUserForm true "parameter"
 // @router /users/{userId} [delete]
 // @Success 200 {object} ctx.JSONResult
 func (User) Delete(c *ctx.GinRequest) {
@@ -144,7 +147,7 @@ func (User) Delete(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string false "组织ID"
 // @Param userId path string true "用户ID"
 // @router /users/{userId} [get]
-// @Success 200 {object} ctx.JSONResult{result=models.User}
+// @Success 200 {object} ctx.JSONResult{result=resps.UserWithRoleResp}
 func (User) Detail(c *ctx.GinRequest) {
 	form := forms.DetailUserForm{}
 	if err := c.Bind(&form); err != nil {
@@ -163,11 +166,84 @@ func (User) Detail(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param userId path string true "用户ID"
 // @router /users/{userId}/password/reset [post]
-// @Success 200 {object} ctx.JSONResult{result=apps.CreateUserResp}
+// @Success 200 {object} ctx.JSONResult{result=models.User}
 func (User) PasswordReset(c *ctx.GinRequest) {
 	form := forms.DetailUserForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
 	c.JSONResult(apps.UserPassReset(c.Service(), &form))
+}
+
+// LdapSearch 平台所有用户查询
+// @Tags 用户
+// @Summary 用户列表查询
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param form query forms.SearchUserForm true "parameter"
+// @router /users/all [get]
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.UserWithRoleResp}}
+func (User) SearchAllUsers(c *ctx.GinRequest) {
+	form := forms.SearchUserForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.SearchAllUser(c.Service(), &form))
+}
+
+// ActiveUserEmail 邮箱激活
+// @Tags 邮箱
+// @Summary 邮箱激活
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @router /activation [post]
+// @Success 200 {object} ctx.JSONResult{result=models.User}
+func (User) ActiveUserEmail(c *ctx.GinRequest) {
+	c.JSONResult(apps.ActiveUserEmail(c.Service()))
+}
+
+// ActiveUserEmailRetry 重新发送邮件
+// @Tags 邮箱
+// @Summary 重新发送邮件
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Param form query forms.EmailForm true "parameter"
+// @router /activation/retry [get]
+// @Success 200 {object} ctx.JSONResult{}
+func (User) ActiveUserEmailRetry(c *ctx.GinRequest) {
+	form := forms.EmailForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.ActiveUserEmailRetry(c.Service(), form.Email))
+}
+
+// ActiveUserEmailExpiredRetry 过期重新发送邮件
+// @Tags 邮箱
+// @Summary 过期重新发送邮件
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @router /activation/expired/retry [get]
+// @Success 200 {object} ctx.JSONResult{}
+func (User) ActiveUserEmailExpiredRetry(c *ctx.GinRequest) {
+	tokenStr := c.GetHeader("Authorization")
+	if tokenStr == "" {
+		c.Logger().Infof("missing token")
+		c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
+		return
+	}
+
+	// Remove Bearer from token string
+	if len(tokenStr) > 6 && tokenStr[0:6] == "Bearer" {
+		tokenStr = tokenStr[7:]
+	}
+
+	token, _ := jwt.ParseWithClaims(tokenStr, &services.Claims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(configs.Get().JwtSecretKey), nil
+	})
+	claims, _ := token.Claims.(*services.Claims)
+	c.JSONResult(apps.ActiveUserEmailRetry(c.Service(), claims.Email))
 }

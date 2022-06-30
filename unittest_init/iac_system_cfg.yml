@@ -1,0 +1,12 @@
+- id: c9cgovqs1s4bq6ebdi80
+  name: MAX_JOBS_PER_RUNNER
+  value: "100"
+  description: 每个CT-Runner同时启动的最大容器数
+- id: c9cgovqs1s4bq6ebdi8g
+  name: PERIOD_OF_LOG_SAVE
+  value: Permanent
+  description: 日志保存周期
+- id: c9cgovqs1s4bq6ebdi90
+  name: TASK_STEP_TIMEOUT
+  value: "3600"
+  description: 步骤超时时间

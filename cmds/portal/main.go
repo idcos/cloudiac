@@ -3,10 +3,10 @@
 package main
 
 import (
-	common2 "cloudiac/common"
 	"cloudiac/portal/apps"
 	"cloudiac/portal/task_manager"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/jessevdk/go-flags"
@@ -49,6 +49,8 @@ func main() {
 	conf := configs.Get().Log
 	logs.Init(conf.LogLevel, conf.LogPath, conf.LogMaxDays)
 
+	logs.Get().Debugf("%+v", configs.Get().Demo)
+
 	// 中间件及数据的初始化
 	{
 		db.Init(configs.Get().Mysql)
@@ -75,16 +77,18 @@ func main() {
 	}
 
 	// 注册到 consul
-	common.ReRegisterService(opt.ReRegister, iac_common.IacPortalServiceName)
+	if err := common.CheckAndReConnectConsul(iac_common.IacPortalServiceName, configs.Get().Consul.ServiceID); err != nil {
+		log.Fatal(err)
+	}
 
 	// 启动后台 worker
 	go task_manager.Start(configs.Get().Consul.ServiceID)
 
-	// 获取演示组织ID
-	org, _ := services.GetDemoOrganization(db.Get())
-	if org != nil {
-		common2.DemoOrgId = org.Id.String()
-	}
+	// // 获取演示组织ID
+	// org, _ := services.GetDemoOrganization(db.Get())
+	// if org != nil {
+	// 	common2.DemoOrgId = org.Id.String()
+	// }
 	// 初始化tfversions list
 	apps.InitTfVersions()
 	// 启动 web server
@@ -217,10 +221,13 @@ func initSystemConfig(tx *db.Session) (err error) {
 			Value:       "100",
 			Description: "每个CT-Runner同时启动的最大容器数",
 		}, {
-
 			Name:        models.SysCfgNamePeriodOfLogSave,
 			Value:       "Permanent",
 			Description: "日志保存周期",
+		}, {
+			Name:        models.SysCfgNameTaskStepTimeout,
+			Value:       "3600",
+			Description: "步骤超时时间",
 		},
 	}
 
