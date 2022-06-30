@@ -81,8 +81,9 @@ const (
 
 	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀
 
-	LocalGitReposPath = "repos"  // 内置 http git server 服务目录
-	ReposUrlPrefix    = "/repos" // 内置 http git server url prefix
+	LocalGitReposPath                            = "repos"    // 内置 http git server 服务目录
+	LocalGitReposLocalGitReposPathSubdirectories = "cloudiac" // 内置 http git server 服务子目录
+	ReposUrlPrefix                               = "/repos"   // 内置 http git server url prefix
 
 	DefaultVcsName  = "默认仓库"
 	RegistryVcsName = "Registry"

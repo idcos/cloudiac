@@ -91,9 +91,10 @@ func (l *LocalVcs) TokenCheck() error {
 	return nil
 }
 
+//RepoBaseHttpAddr 返回示例: http://localhost/repos/cloudiac
 func (l *LocalVcs) RepoBaseHttpAddr() string {
 	portAddr := configs.Get().Portal.Address
-	return utils.JoinURL(portAddr, consts.LocalGitReposPath)
+	return utils.JoinURL(portAddr, consts.LocalGitReposPath, consts.LocalGitReposLocalGitReposPathSubdirectories)
 }
 
 type LocalRepo struct {
