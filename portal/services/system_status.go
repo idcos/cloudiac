@@ -93,33 +93,18 @@ func ConsulKVSearch(key string) (interface{}, e.Error) {
 func RunnerSearch() ([]*api.AgentService, e.Error) {
 	resp := make([]*api.AgentService, 0)
 	client, err := consulClient.NewConsulClient()
-
 	if err != nil {
 		return nil, e.New(e.ConsulConnError, err)
 	}
 
-	checkes, _, err := client.Health().Checks(
-		common.RunnerServiceName,
-		&api.QueryOptions{
-			Filter: "Status==passing",
-		},
-	)
-	if err != nil {
-		return nil, e.New(e.ConsulConnError, err)
-	}
-	passingServices := make(map[string]struct{})
-	for _, c := range checkes {
-		passingServices[c.ServiceID] = struct{}{}
-	}
-
-	services, err := client.Agent().Services()
+	_, services, err := client.Agent().AgentHealthServiceByName(common.RunnerServiceName)
 	if err != nil {
 		return nil, e.New(e.ConsulConnError, err)
 	}
 
 	for _, s := range services {
-		if _, ok := passingServices[s.ID]; ok && s.Service == common.RunnerServiceName {
-			resp = append(resp, s)
+		if s.AggregatedStatus == api.HealthPassing {
+			resp = append(resp, s.Service)
 		}
 	}
 
