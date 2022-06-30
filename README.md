@@ -30,15 +30,6 @@ CloudIaC https://cloudiac.org 是基于基础设施即代码(IaC, Infrastructure
 -   [完整文档](https://docs.cloudiac.org/)
 -   [视频介绍](https://space.bilibili.com/2138433328/channel/seriesdetail?sid=1908688)
 
-### Self-Hosted
-
-- 准备一台 Linux 主机，安装 docker, docker-compose；
-- 以 root 用户执行如下命令
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/idcos/cloudiac-docs/master/script/cloudiac-docker.sh | bash
-```
-
 ### CloudIaC in Cloud
 
 - [**START FOR FREE**](https://app.cloudiac.org)
@@ -55,6 +46,15 @@ curl -fsSL https://raw.githubusercontent.com/idcos/cloudiac-docs/master/script/c
   
 - **Pro Team**(comming soon)
 - **Enterprise**(comming soon)
+
+### Self-Hosted
+
+- 准备一台 Linux 主机，安装 docker, docker-compose；
+- 以 root 用户执行如下命令
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/idcos/cloudiac-docs/master/script/cloudiac-docker.sh | bash
+```
 
 ### 社区
 
