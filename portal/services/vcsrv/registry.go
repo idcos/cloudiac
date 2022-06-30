@@ -47,6 +47,7 @@ func (rv *RegistryVcs) TokenCheck() error {
 	return nil
 }
 
+//RepoBaseHttpAddr 返回示例: http://localhost/repos
 func (v *RegistryVcs) RepoBaseHttpAddr() string {
 	return utils.JoinURL(v.vcs.Address, consts.LocalGitReposPath)
 }
