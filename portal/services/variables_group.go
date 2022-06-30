@@ -391,12 +391,16 @@ func DeleteVariableGroupProjectRel(dbSess *db.Session, vgId models.Id, projectId
 	return nil
 }
 
-func GetVariableGroupVar(vgs []VarGroupRel, vars map[string]models.Variable) map[string]models.Variable {
-	variableM := make(map[string]models.Variable)
-	//newVariableM := make(map[string]models.Variable)
+// MergeVariableGroupVars 合并变量组下的变量和普通变量
+// 合并规则：
+// 	- 两者 scope 相同时普通变量覆盖资源账号变量
+//	- 两者 scope 不同时 scope 优先级高的覆盖优先级低的（环境级覆盖项目级）
+func MergeVariableGroupVars(vgs []VarGroupRel, vars map[string]models.Variable) map[string]models.Variable {
+	vgVars := make(map[string]models.Variable)
+	mergedVars := make(map[string]models.Variable)
 	for _, v := range vgs {
 		for _, variable := range v.Variables {
-			variableM[fmt.Sprintf("%s%s", variable.Name, v.Type)] = models.Variable{
+			vgVars[fmt.Sprintf("%s%s", variable.Name, v.Type)] = models.Variable{
 				VariableBody: models.VariableBody{
 					Scope:       v.ObjectType,
 					Type:        v.Type,
@@ -408,42 +412,24 @@ func GetVariableGroupVar(vgs []VarGroupRel, vars map[string]models.Variable) map
 			}
 		}
 	}
-	// 将标准变量覆盖
-	for k, v := range vars {
-		if _, ok := variableM[k]; ok {
-			switch v.Scope {
-			case "env":
-				variableM[k] = v
-			case "project":
-				switch variableM[k].Scope {
-				case "env":
-					continue
-				default:
-					variableM[k] = v
-				}
-			case "org":
-				switch variableM[k].Scope {
-				case "org":
-					variableM[k] = v
-				case "template":
-					variableM[k] = v
-				default:
-					continue
-				}
-			case "template":
-				switch variableM[k].Scope {
-				case "template":
-					variableM[k] = v
-				default:
-					continue
-				}
-			default:
-				logs.Get().Error("scope type err")
+
+	// 按变量 scope 优先级，从低到高遍历，实现高优先级的变量覆盖低优先级的变量
+	for _, scope := range consts.SortedVarScopes {
+		// 先取当前 scope 下的变量组变量赋值
+		for k, v := range vgVars {
+			if v.Scope == scope {
+				mergedVars[k] = v
 			}
 		}
-		variableM[k] = v
+
+		// 再取当前 scope 下的普通变量赋值，实现普通变量覆盖变量组变量
+		for k, v := range vars {
+			if v.Scope == scope {
+				mergedVars[k] = v
+			}
+		}
 	}
-	return variableM
+	return mergedVars
 }
 
 func BatchUpdateRelationship(tx *db.Session, vgIds, delVgIds []models.Id, objectType, objectId string) e.Error {
@@ -514,7 +500,7 @@ func GetValidVarsAndVgVars(tx *db.Session, orgId, projectId, tplId, envId models
 	if err != nil {
 		return nil, fmt.Errorf("get vairable group var error: %v", err)
 	}
-	return GetVariableBody(GetVariableGroupVar(varGroup, vars)), nil
+	return GetVariableBody(MergeVariableGroupVars(varGroup, vars)), nil
 }
 
 // 查询指定模板直接关联的变量组

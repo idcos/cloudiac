@@ -1,8 +1,8 @@
 package services
 
 import (
-	"testing"
 	"encoding/json"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 
@@ -43,7 +43,8 @@ func TestGetVariableGroupVar(t *testing.T) {
 							"测试",
 							"environment",
 							"u-c90hkoqsahsj54g0s8qg",
-							"org-c90hl2qsahsj54g0s8ug", models.VarGroupVariables{
+							"org-c90hl2qsahsj54g0s8ug",
+							models.VarGroupVariables{
 								models.VarGroupVariable{
 									Id:          "44ac4d00-881c-4ab3-a3e1-284a4a2998ca",
 									Name:        "TF_VAR_ak",
@@ -52,6 +53,8 @@ func TestGetVariableGroupVar(t *testing.T) {
 									Description: "",
 								},
 							},
+							false,
+							"",
 						},
 						Overwrites: []VarGroupRel{},
 					},
@@ -116,7 +119,8 @@ func TestGetVariableGroupVar(t *testing.T) {
 							"测试",
 							"environment",
 							"u-c90hkoqsahsj54g0s8qg",
-							"org-c90hl2qsahsj54g0s8ug", models.VarGroupVariables{
+							"org-c90hl2qsahsj54g0s8ug",
+							models.VarGroupVariables{
 								models.VarGroupVariable{
 									Id:          "44ac4d00-881c-4ab3-a3e1-284a4a2998ca",
 									Name:        "TF_VAR_ak",
@@ -125,6 +129,8 @@ func TestGetVariableGroupVar(t *testing.T) {
 									Description: "",
 								},
 							},
+							false,
+							"",
 						},
 						Overwrites: []VarGroupRel{},
 					},
@@ -314,7 +320,7 @@ func TestGetVariableGroupVar(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, GetVariableGroupVar(tt.args.vgs, tt.args.vars), "GetVariableGroupVar(%v, %v)", tt.args.vgs, tt.args.vars)
+			assert.Equalf(t, tt.want, MergeVariableGroupVars(tt.args.vgs, tt.args.vars), "GetVariableGroupVar(%v, %v)", tt.args.vgs, tt.args.vars)
 		})
 	}
 }
@@ -338,4 +344,3 @@ func TestVarGroupRelMarshal(t *testing.T) {
 	}
 	t.Logf("%s", bs)
 }
-
