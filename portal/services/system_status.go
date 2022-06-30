@@ -10,7 +10,6 @@ import (
 	"cloudiac/utils/consulClient"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/consul/api"
 	"github.com/pkg/errors"
@@ -94,19 +93,18 @@ func ConsulKVSearch(key string) (interface{}, e.Error) {
 func RunnerSearch() ([]*api.AgentService, e.Error) {
 	resp := make([]*api.AgentService, 0)
 	client, err := consulClient.NewConsulClient()
-
-	if err != nil {
-		return nil, e.New(e.ConsulConnError, err)
-	}
-	//client.Catalog().ServiceMultipleTags()
-	services, err := client.Agent().Services()
 	if err != nil {
 		return nil, e.New(e.ConsulConnError, err)
 	}
 
-	for serviceName := range services {
-		if strings.Contains(strings.ToLower(serviceName), "runner") {
-			resp = append(resp, services[serviceName])
+	_, services, err := client.Agent().AgentHealthServiceByName(common.RunnerServiceName)
+	if err != nil {
+		return nil, e.New(e.ConsulConnError, err)
+	}
+
+	for _, s := range services {
+		if s.AggregatedStatus == api.HealthPassing {
+			resp = append(resp, s.Service)
 		}
 	}
 
