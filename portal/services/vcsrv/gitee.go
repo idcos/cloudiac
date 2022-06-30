@@ -13,7 +13,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -39,7 +41,7 @@ func (gitee *giteeVcs) GetRepo(idOrPath string) (RepoIface, error) {
 	path := gitee.vcs.Address + fmt.Sprintf("/repos/%s?access_token=%s", idOrPath, gitee.urlParam.Get("access_token"))
 	_, body, er := giteeRequest(path, "GET", nil)
 	if er != nil {
-		return nil, e.New(e.BadRequest, er)
+		return nil, e.New(e.VcsError, er)
 	}
 
 	rep := RepositoryGitee{}
@@ -49,6 +51,10 @@ func (gitee *giteeVcs) GetRepo(idOrPath string) (RepoIface, error) {
 		repository: &rep,
 		urlParam:   gitee.urlParam,
 	}, nil
+}
+
+func (v *giteeVcs) RepoBaseHttpAddr() string {
+	return strings.TrimSuffix(v.vcs.Address, "/api/v5")
 }
 
 type RepositoryGitee struct {
@@ -73,7 +79,7 @@ func (gitee *giteeVcs) ListRepos(namespace, search string, limit, offset int) ([
 	response, body, err := giteeRequest(path, "GET", nil)
 
 	if err != nil {
-		return nil, 0, e.New(e.BadRequest, err)
+		return nil, 0, e.New(e.VcsError, err)
 	}
 
 	var total int64
@@ -100,7 +106,7 @@ func (gitee *giteeVcs) UserInfo() (UserInfo, error) {
 	path := gitee.vcs.Address + fmt.Sprintf("/user?access_token=%s", gitee.urlParam.Get("access_token"))
 	_, body, er := giteeRequest(path, "GET", nil)
 	if er != nil {
-		return UserInfo{}, e.New(e.BadRequest, er)
+		return UserInfo{}, e.New(e.VcsError, er)
 	}
 
 	rep := UserInfo{}
@@ -117,7 +123,7 @@ func (gitee *giteeVcs) TokenCheck() error {
 	path := gitee.vcs.Address + link.String()
 	response, _, err := giteeRequest(path, "GET", nil)
 	if err != nil {
-		return e.New(e.BadRequest, err)
+		return e.New(e.VcsError, err)
 	}
 
 	if response.StatusCode > 300 {
@@ -142,7 +148,7 @@ func (gitee *giteeRepoIface) ListBranches() ([]string, error) {
 		fmt.Sprintf("/repos/%s/branches?access_token=%s", gitee.repository.FullName, gitee.urlParam.Get("access_token"))
 	_, body, err := giteeRequest(path, "GET", nil)
 	if err != nil {
-		return nil, e.New(e.BadRequest, err)
+		return nil, e.New(e.VcsError, err)
 	}
 
 	rep := make([]giteeBranch, 0)
@@ -163,7 +169,7 @@ func (gitee *giteeRepoIface) ListTags() ([]string, error) {
 	path := gitee.vcs.Address + fmt.Sprintf("/repos/%s/tags", gitee.repository.FullName)
 	_, body, err := giteeRequest(path, "GET", nil)
 	if err != nil {
-		return nil, e.New(e.BadRequest, err)
+		return nil, e.New(e.VcsError, err)
 	}
 
 	rep := make([]giteeTag, 0)
@@ -186,7 +192,7 @@ func (gitee *giteeRepoIface) BranchCommitId(branch string) (string, error) {
 		fmt.Sprintf("/repos/%s/commits/%s?access_token=%s", gitee.repository.FullName, branch, gitee.urlParam.Get("access_token"))
 	_, body, err := giteeRequest(path, "GET", nil)
 	if err != nil {
-		return "", e.New(e.BadRequest, err)
+		return "", e.New(e.VcsError, err)
 	}
 
 	rep := giteeCommit{}
@@ -212,7 +218,7 @@ func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 	}
 	_, body, er := giteeRequest(path, "GET", nil)
 	if er != nil {
-		return []string{}, e.New(e.BadRequest, er)
+		return []string{}, e.New(e.VcsError, er)
 	}
 
 	resp := make([]string, 0)
@@ -244,7 +250,7 @@ func (gitee *giteeRepoIface) ReadFileContent(branch, path string) (content []byt
 	_, body, er := giteeRequest(pathAddr, "GET", nil) //nolint
 
 	if er != nil {
-		return nil, e.New(e.BadRequest, er)
+		return nil, e.New(e.VcsError, er)
 	}
 
 	grc := giteeReadContent{}
@@ -258,7 +264,7 @@ func (gitee *giteeRepoIface) ReadFileContent(branch, path string) (content []byt
 
 	decoded, err := base64.StdEncoding.DecodeString(grc.Content)
 	if err != nil {
-		return nil, e.New(e.BadRequest, er)
+		return nil, e.New(e.VcsError, er)
 	}
 	return decoded[:], nil
 }
@@ -293,7 +299,7 @@ func (gitee *giteeRepoIface) AddWebhook(url string) error {
 	response, respBody, err := giteeRequest(path, http.MethodPost, b)
 
 	if err != nil {
-		return e.New(e.BadRequest, err)
+		return e.New(e.VcsError, err)
 	}
 
 	if response.StatusCode >= 300 {
@@ -326,7 +332,7 @@ func (gitee *giteeRepoIface) ListWebhook() ([]RepoHook, error) {
 		fmt.Sprintf("/repos/%s/hooks?access_token=%s", gitee.repository.FullName, gitee.urlParam.Get("access_token"))
 	_, body, err := giteeRequest(path, http.MethodGet, nil)
 	if err != nil {
-		return nil, e.New(e.BadRequest, err)
+		return nil, e.New(e.VcsError, err)
 	}
 
 	return initGiteeRepoHook(body), nil
@@ -337,7 +343,7 @@ func (gitee *giteeRepoIface) DeleteWebhook(id int) error {
 		fmt.Sprintf("/repos/%s/hooks/%d?access_token=%s", gitee.repository.FullName, id, gitee.urlParam.Get("access_token"))
 	_, _, err := giteeRequest(path, "DELETE", nil)
 	if err != nil {
-		return e.New(e.BadRequest, err)
+		return e.New(e.VcsError, err)
 	}
 	return nil
 }
@@ -355,9 +361,21 @@ func (gitee *giteeRepoIface) CreatePrComment(prId int, comment string) error {
 	}
 	_, _, err := giteeRequest(path, http.MethodPost, b)
 	if err != nil {
-		return e.New(e.BadRequest, err)
+		return e.New(e.VcsError, err)
 	}
 	return nil
+}
+
+func (gitee *giteeRepoIface) GetFullFilePath(address, filePath, repoRevision string) string {
+	u, _ := url.Parse(address)
+	u.Path = path.Join(u.Path, gitee.repository.FullName, "blob", repoRevision, filePath)
+	return u.String()
+}
+
+func (gitee *giteeRepoIface) GetCommitFullPath(address, commitId string) string {
+	u, _ := url.Parse(address)
+	u.Path = path.Join(u.Path, gitee.repository.FullName, "commit", commitId)
+	return u.String()
 }
 
 //giteeRequest

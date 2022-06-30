@@ -28,6 +28,7 @@ type SearchOrganizationForm struct {
 
 	Q      string `form:"q" json:"q" binding:""`                                                                // 组织名称，支持模糊查询
 	Status string `form:"status" json:"status" binding:"omitempty,oneof=enable disable" enums:"enable,disable"` // 组织状态
+	IsDemo bool   `form:"isDemo" json:"IsDemo"`                                                                 // 演示组织
 }
 
 type DeleteOrganizationForm struct {
@@ -69,9 +70,9 @@ type InviteUserForm struct {
 
 type SearchOrgResourceForm struct {
 	PageForm
-	Q         string `form:"q" json:"q" binding:""`                 // 资源名称，支持模糊查询
-	EnvIds    string `form:"envIds" json:"envIds" binding:""`       // 环境id列表
-	Providers string `form:"providers" json:"providers" binding:""` // provider 名称列表
+	Q          string `form:"q" json:"q" binding:""`                   // 资源名称，支持模糊查询
+	ProjectIds string `form:"projectIds" json:"projectIds" binding:""` // 项目id列表
+	Providers  string `form:"providers" json:"providers" binding:""`   // provider 名称列表
 }
 
 type InviteUsersBatchForm struct {
@@ -80,4 +81,10 @@ type InviteUsersBatchForm struct {
 	Id    models.Id `uri:"id" json:"id" binding:"required,startswith=org-,max=32" swaggerignore:"true"`   // 组织ID
 	Email []string  `form:"email" json:"email" binding:"required,dive,required,email,max=64"`             // 电子邮件地址
 	Role  string    `form:"role" json:"role" binding:"omitempty,oneof=admin member" enums:"admin,member"` // 受邀请用户在组织中的角色，组织管理员：admin，普通用户：member
+}
+
+type OrgProjectsStatForm struct {
+	BaseForm
+	ProjectIds string `form:"projectIds" json:"projectIds"`
+	Limit      int    `form:"limit" json:"limit"`
 }

@@ -83,6 +83,9 @@ const (
 	TaskTypeTplScanName  = "tplScan"
 	TaskTypeTplParseName = "tplParse"
 
+	ProjectStatusEnable  = "enable"
+	ProjectStatusDisable = "disable"
+
 	// 默认步骤超时时间(秒)
 	DefaultTaskStepTimeout = 3600
 
@@ -114,6 +117,12 @@ const (
 
 	RunnerServiceName    = "CT-Runner"
 	IacPortalServiceName = "IaC-Portal"
+
+	ConsulCa            = "ca.pem"
+	ConsulCakey         = "client.key"
+	ConsulCapem         = "client.pem"
+	ConsulContainerPath = "/cloudiac/cert/"
+	ConsulSessionTTL    = 10
 )
 
 var (

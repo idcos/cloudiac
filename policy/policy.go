@@ -589,18 +589,20 @@ func RegoParse(regoFile string, inputFile string, ruleName ...string) ([]interfa
 	// 初始化 rego 引擎
 	ctx := context.Background()
 	obj := ast.NewObject()
-	env := ast.NewObject()
 
-	for _, s := range os.Environ() {
-		parts := strings.SplitN(s, "=", 2)
-		if len(parts) == 1 {
-			env.Insert(ast.StringTerm(parts[0]), ast.NullTerm())
-		} else if len(parts) > 1 {
-			env.Insert(ast.StringTerm(parts[0]), ast.StringTerm(parts[1]))
-		}
-	}
+	// 将环境变量注入到 rego 运行时可能导致敏感环境变量泄漏，环境变量当前并未使用到，所以这里先注释，
+	// 如果后续确有需要时再针对性的将指定变量注入到运行时.
+	// env := ast.NewObject()
+	// for _, s := range os.Environ() {
+	// 	parts := strings.SplitN(s, "=", 2)
+	// 	if len(parts) == 1 {
+	// 		env.Insert(ast.StringTerm(parts[0]), ast.NullTerm())
+	// 	} else if len(parts) > 1 {
+	// 		env.Insert(ast.StringTerm(parts[0]), ast.StringTerm(parts[1]))
+	// 	}
+	// }
+	// obj.Insert(ast.StringTerm("env"), ast.NewTerm(env))
 
-	obj.Insert(ast.StringTerm("env"), ast.NewTerm(env))
 	obj.Insert(ast.StringTerm("version"), ast.StringTerm(version.Version))
 	obj.Insert(ast.StringTerm("commit"), ast.StringTerm(version.Vcs))
 

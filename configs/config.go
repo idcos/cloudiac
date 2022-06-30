@@ -14,6 +14,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+/*
+配置
+*/
+
 type KafkaConfig struct {
 	Disabled     bool     `json:"disabled"`
 	Brokers      []string `yaml:"brokers"`
@@ -33,6 +37,10 @@ type ConsulConfig struct {
 	Interval        string `yaml:"interval"`
 	Timeout         string `yaml:"timeout"`
 	DeregisterAfter string `yaml:"deregister_after"`
+	ConsulAcl       bool   `yaml:"consul_acl"`
+	ConsulCertPath  string `yaml:"consul_cert_path"`
+	ConsulAclToken  string `yaml:"consul_acl_token"`
+	ConsulTls       bool   `yaml:"consul_tls"`
 }
 
 type RunnerConfig struct {
@@ -52,11 +60,47 @@ type PortalConfig struct {
 }
 
 type LdapConfig struct {
-	AdminDn     string `yaml:"admin_dn"`
-	AdminPassword string `yaml:"admin_password"`
-	LdapServer   string `yaml:"ldap_server"`
-	LdapServerPort int `yaml:"ldap_server_port"`
-	SearchBase   string `yaml:"search_base"`
+	AdminDn          string `yaml:"admin_dn"`
+	AdminPassword    string `yaml:"admin_password"`
+	LdapServer       string `yaml:"ldap_server"`
+	LdapServerPort   int    `yaml:"ldap_server_port"`
+	SearchBase       string `yaml:"search_base"`
+	SearchFilter     string `yaml:"search_filter"`   // 自定义搜索条件
+	EmailAttribute   string `yaml:"email_attribute"` // 用户定义邮箱字段名 默认值为mail
+	AccountAttribute string `yaml:"account_attribute"`
+	OUSearchBase     string `yaml:"ou_search_base"`
+}
+
+type DemoConfig struct {
+	Enable bool `yaml:"enable"` // 是否启用演示组织(默认为否)
+
+	OrgNameSuffix  string `yaml:"org_name_suffix"` // 演示组织名称后缀
+	OrgDescription string `yaml:"org_description"` // 演示组织描述
+
+	VcsName    string `yaml:"vcs_name"`
+	VcsType    string `yaml:"vcs_type"`
+	VcsAddress string `yaml:"vcs_address"`
+	VcsToken   string `yaml:"vcs_token"`
+
+	ProjectName string `yaml:"project_name"`
+
+	Templates []DemoTemplate `yaml:"templates"`
+}
+
+type DemoTemplate struct {
+	Name         string `yaml:"name"`
+	RepoId       string `yaml:"repo_id"`
+	Revison      string `yaml:"revision"`
+	TfVars       string `yaml:"tf_vars"`
+	TfVersion    string `yaml:"tf_version"`
+	RepoFullName string `yaml:"repo_full_name"`
+	Description  string `yaml:"description"`
+	Variables    []struct {
+		Name        string `yaml:"name"`
+		Value       string `yaml:"value"`
+		Sensitive   bool   `yaml:"sensitive"`
+		Description string `yaml:"description"`
+	} `yaml:"variables"`
 }
 
 func (c *RunnerConfig) mustAbs(path string) string {
@@ -125,7 +169,15 @@ type Config struct {
 	ExportSecretKey    string           `yaml:"exportSecretKey"`
 	HttpClientInsecure bool             `yaml:"httpClientInsecure"`
 	Policy             PolicyConfig     `yaml:"policy"`
-	Ldap			   LdapConfig       `yaml:"ldap"`
+	Ldap               LdapConfig       `yaml:"ldap"`
+	CostServe          string           `yaml:"cost_serve"`
+
+	EnableTaskAbort bool `yaml:"enableTaskAbort"` // 启用任务中止功能
+	EnableRegister  bool `yaml:"enableRegister"`  // 启用注册
+
+	Demo DemoConfig `yaml:"demo"` // 演示组织配置
+
+	AlicloudResSyncApi string `yaml:"alicloud_res_sync_api"`
 }
 
 const (
@@ -143,8 +195,16 @@ var (
 			SSHPrivateKey: "var/private_key",
 			SSHPublicKey:  "var/private_key.pub",
 		},
+		Demo: DemoConfig{
+			OrgNameSuffix:  "的演示组织",
+			OrgDescription: "",
+		},
 	}
 )
+
+func (c *Config) LdapEnabled() bool {
+	return c.Ldap.LdapServer != ""
+}
 
 func parseConfig(filename string, out interface{}) error {
 	bs, err := ioutil.ReadFile(filename)
@@ -216,8 +276,8 @@ func ensureSecretKey(cfg *Config) error {
 
 // 直接传入 Config 结构设置 config
 // 目前主要用于编写测试用例时直接初始化 config
-func Set(cfg Config) {
-	config = &cfg
+func Set(cfg *Config) {
+	config = cfg
 }
 
 func Get() *Config {

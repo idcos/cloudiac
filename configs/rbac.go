@@ -107,11 +107,17 @@ var Polices = []Policy{
 
 	// 组织
 	{"root", "orgs", "*"},
-	{"login", "orgs", "read"},
-	{"admin", "orgs", "read/update"},
+	{"login", "orgs", "create/read"},
+	{"admin", "orgs", "create/update/read"},
 	{"admin", "orgs", "listuser/adduser/removeuser/updaterole"},
-	{"member", "orgs", "read"},
+	{"member", "orgs", "create/read/listuser"},
 	{"complianceManager", "orgs", "read"},
+	{"manager", "orgs", "create/read/listuser/adduser"},
+
+	// LDAP
+	{"admin", "ldap", "*"},
+	{"member", "ldap", "read/list"},
+	{"manager", "ldap", "*"},
 
 	// 项目
 	{"admin", "projects", "*"},
@@ -211,6 +217,7 @@ var Polices = []Policy{
 	{"operator", "registry", "read"},
 	{"guest", "registry", "read"},
 
+	// 注意：以下为旧版本演示模式用户权限配置，新版本中每个用户都有自己的演示组织，以下权限配置不再生效。
 	// 演示模式，当访问演示组织下的资源，进入受限模式
 	{"demo", "orgs", "read"},
 	{"demo", "users", "read"},

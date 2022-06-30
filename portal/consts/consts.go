@@ -10,7 +10,9 @@ import (
 const (
 	LowerCaseLetter = "abcdefghijklmnopqrstuvwxyz"
 	UpperCaseLetter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	Letter          = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	DigitChars      = "0123456789"
+	SpecialChars    = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
 
 	DefaultPageSize = 15   // 默认分页大小
 	MaxPageSize     = 5000 // 最大单页数据条数
@@ -33,14 +35,19 @@ const (
 	DefaultTerraformVersion = "0.14.11"
 
 	// token subject
-	JwtSubjectUserAuth = "userAuth" // 用于用户认证
-	JwtSubjectSsoCode  = "ssoCode"  // 用于 sso 单点登录
+	JwtSubjectUserAuth  = "userAuth" // 用于用户认证
+	JwtSubjectSsoCode   = "ssoCode"  // 用于 sso 单点登录
+	JwtSubjectActivate  = "activate" // 用于账号激活
+	UserEmailINActivate = "inactive" // 用于账号激活
+	UserEmailActivate   = "active"   // 用于账号激活
 
 	DirRoot                          = "/"
 	PolicyGroupDownloadTimeoutSecond = 20 * time.Second
 	PolicySeverityHigh               = "HIGH"
 	PolicySeverityMedium             = "MEDIUM"
 	PolicySeverityLow                = "LOW"
+
+	RegistryMirrorUri = "/v1/mirrors/providers/"
 )
 
 const (
@@ -124,6 +131,8 @@ const (
 	EnvTriggerPRMR   = "prmr"
 	EnvTriggerCommit = "commit"
 
+	EnvAbortManager = ""
+
 	EnvMaxTagLength = 20
 	EnvMaxTagNum    = 5
 
@@ -148,6 +157,23 @@ const (
 	TaskSourceApi          = "api"
 
 	TaskAutoDestroyName = "Auto Destroy"
+
+	BillCollectAli = "alicloud"
+
+	//terraform action type
+	TerraformActionCreate = "create"
+	TerraformActionUpdate = "update"
+	TerraformActionDelete = "delete"
+
+	DemoEnvTTL = "12h"
+
+	TemplateSourceVcs      = "vcs"
+	TemplateSourceRegistry = "registry"
+)
+
+const (
+	AlicloudAK = "ALICLOUD_ACCESS_KEY"
+	AlicloudSK = "ALICLOUD_SECRET_KEY"
 )
 
 var (
@@ -186,5 +212,9 @@ var (
 		common.TaskApproving: EventTaskApproving,
 		common.TaskRejected:  EventTaskFailed,
 		EvenvtCronDrift:      EvenvtCronDrift,
+	}
+
+	BillProviderResAccount = map[string][]string{
+		BillCollectAli: []string{AlicloudAK, AlicloudSK},
 	}
 )

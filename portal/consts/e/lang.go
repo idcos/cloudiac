@@ -126,6 +126,10 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "data dencryption error",
 		"zh-CN": "数据解密错误",
 	},
+	ErrDisabled: {
+		"en-US": "function disabled",
+		"zh-CN": "已停用",
+	},
 	MailServerError: {
 		"en-US": "failed to send email",
 		"zh-CN": "邮件服务错误",
@@ -262,6 +266,10 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "invalid project id",
 		"zh-CN": "无效的项目id",
 	},
+	InvalidActiveEmail: {
+		"en-US": "inactive user email",
+		"zh-CN": "邮箱未激活",
+	},
 	TaskNotHaveStep: {
 		"en-US": "task have no steps",
 		"zh-CN": "任务无步骤",
@@ -330,6 +338,10 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "project name already exists",
 		"zh-CN": "项目名称重复",
 	},
+	ProjectHasActiveEnvs: {
+		"en-US": "one or more active environments exist in the project",
+		"zh-CN": "项目存在活跃环境",
+	},
 	TokenAlreadyExists: {
 		"en-US": "token already exists",
 		"zh-CN": "Token已经存在",
@@ -349,6 +361,14 @@ var errorMsgs = map[int]map[string]string{
 	TemplateDisabled: {
 		"en-US": "template disabled",
 		"zh-CN": "模板不可用",
+	},
+	TemplateDemoNotAllowEdit: {
+		"en-US": "demo template is not allowed edit",
+		"zh-CN": "演示云模板不可编辑",
+	},
+	TemplateDemoNotAllowDelete: {
+		"en-US": "demo template is not allowed delete",
+		"zh-CN": "演示云模板不可删除",
 	},
 	TemplateActiveEnvExists: {
 		"en-US": "can not delete template which have active environment",
@@ -385,6 +405,18 @@ var errorMsgs = map[int]map[string]string{
 	EnvLockFailedTaskActive: {
 		"en-US": "environment lock failed. Active tasks in the environment",
 		"zh-CN": "环境锁定失败，环境下有活跃任务",
+	},
+	EnvLocked: {
+		"en-US": "environment locked",
+		"zh-CN": "环境已锁定",
+	},
+	EnvLockedFailedEnvIsDemo: {
+		"en-US": "environment locked failed. this is demo environment",
+		"zh-CN": "环境锁定失败，演示环境不能被锁定",
+	},
+	EnvNameDuplicated: {
+		"en-US": "environment name duplicated",
+		"zh-CN": "环境名称重复",
 	},
 	TaskAlreadyExists: {
 		"en-US": "task already exists",
@@ -550,8 +582,16 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "ldap servers connect failed",
 		"zh-CN": "ldap 服务器连接 失败",
 	},
-	LdapNotAllowUpdate: {
-		"en-US": "Ldap account cannot be modified",
-		"zh-CN": "ldap 账号不支持修改",
+	InvalidVarGroup: {
+		"en-US": "invalid resource account",
+		"zh-CN": "无效资源账号",
+	},
+	VariableGroupPermDeny: {
+		"en-US": "resource account permission deny",
+		"zh-CN": "无权限的资源账号",
+	},
+	TemplateNotBind: {
+		"en-US": "template is not bound to the project",
+		"zh-CN": "云模板未绑定当前项目",
 	},
 }

@@ -2,7 +2,10 @@
 
 package resps
 
-import "cloudiac/portal/models"
+import (
+	"cloudiac/portal/models"
+	"cloudiac/portal/models/desensitize"
+)
 
 type PolicyGroupResp struct {
 	models.PolicyGroup
@@ -16,7 +19,7 @@ type PolicyGroupScanReportResp struct {
 }
 
 type LastScanTaskResp struct {
-	models.ScanTask
+	desensitize.ScanTask
 	TargetName  string `json:"targetName"`  // 检查目标
 	TargetType  string `json:"targetType"`  // 目标类型：环境/模板
 	OrgName     string `json:"orgName"`     // 组织名称

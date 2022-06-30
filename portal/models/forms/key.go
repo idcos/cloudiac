@@ -9,8 +9,8 @@ import (
 type CreateKeyForm struct {
 	BaseForm
 
-	Name string `json:"name" form:"name" binding:"required,gte=2,lte=255"`                                // 密钥名称
-	Key  string `json:"key" form:"key" binding:"required,startswith=-----BEGIN OPENSSH PRIVATE KEY-----"` // 密钥内容
+	Name string `json:"name" form:"name" binding:"required,gte=2,lte=255"` // 密钥名称
+	Key  string `json:"key" form:"key" binding:"required,keysstartswith"`  // 密钥内容
 }
 
 type SearchKeyForm struct {

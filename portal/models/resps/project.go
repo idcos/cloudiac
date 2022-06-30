@@ -6,7 +6,14 @@ import "cloudiac/portal/models"
 
 type ProjectResp struct {
 	models.Project
-	Creator string `json:"creator" form:"creator" `
+	Creator           string               `json:"creator" form:"creator"`
+	ActiveEnvironment int                  `json:"activeEnvironment"`
+	ResStats          []ProjectResStatResp `json:"resStats" gorm:"-"`
+}
+
+type ProjectResStatResp struct {
+	Date  string `json:"date"`
+	Count int    `json:"count"`
 }
 
 type DetailProjectResp struct {
@@ -20,4 +27,11 @@ type ProjectStatistics struct {
 	EnvActive   int64 `json:"envActive" form:"envActive" `
 	EnvFailed   int64 `json:"envFailed" form:"envFailed" `
 	EnvInactive int64 `json:"envInactive" form:"envInactive" `
+}
+
+type ProjectStatResp struct {
+	EnvStat      []EnvStatResp          `json:"envStat"`
+	ResStat      []ResStatResp          `json:"resStat"`
+	EnvResStat   []ProjOrEnvResStatResp `json:"envResStat"`
+	ResGrowTrend []ResGrowTrendResp     `json:"resGrowTrend"`
 }

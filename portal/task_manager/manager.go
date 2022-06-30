@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"regexp"
 	"runtime/debug"
 	"strings"
@@ -27,7 +28,6 @@ import (
 	"time"
 
 	"github.com/acarl005/stripansi"
-
 	"github.com/pkg/errors"
 )
 
@@ -82,7 +82,7 @@ func (m *TaskManager) reset() {
 }
 
 func (m *TaskManager) acquireLock(ctx context.Context) (<-chan struct{}, error) {
-	locker, err := consul.GetLocker(TaskManagerLockKey, []byte(m.id), configs.Get().Consul.Address)
+	locker, err := consul.GetLocker(TaskManagerLockKey, []byte(m.id), configs.Get().Consul.Address, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "get locker")
 	}
@@ -134,6 +134,9 @@ func (m *TaskManager) start() {
 		m.logger.Infof("task manager lock lost")
 		cancel()
 	}()
+
+	// 启动账单采集定时任务
+	billCron(ctx)
 
 	// 恢复执行中的任务状态
 	if err = m.recoverTask(ctx); err != nil {
@@ -451,7 +454,8 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 	logger.Infof("run task start")
 
 	if task.IsDriftTask {
-		if env, err := services.GetEnvById(m.db, task.EnvId); err != nil {
+		env, err := services.GetEnvById(m.db, task.EnvId)
+		if err != nil {
 			logger.Errorf("get task environment %s: %v", task.EnvId, err)
 			taskStartFailed(errors.New("get task environment failed"))
 			return
@@ -460,6 +464,25 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 			_ = changeTaskStatus(models.TaskFailed, startErr.Error(), true)
 			return
 		}
+		// 每次任务启动从最新的部署配置中获取配置内容
+		lastResTask, err := services.GetTaskById(m.db, env.LastResTaskId)
+		if err != nil {
+			logger.Errorf("Get the latest configuration of the environment： %s", err)
+			taskStartFailed(errors.New("get task environment failed"))
+			return
+		}
+		attrs := models.Attrs{
+			"repoAddr":   lastResTask.RepoAddr,
+			"playbook":   lastResTask.Playbook,
+			"workdir":    lastResTask.Workdir,
+			"tfVarsFile": lastResTask.TfVarsFile,
+			"commitId":   lastResTask.CommitId,
+		}
+		if _, err := models.UpdateAttr(db.Get(), &models.Task{},
+			attrs, "id = ?", task.Id); err != nil {
+			logger.Errorf("Update the latest information of the task error: %v", err)
+		}
+
 	}
 
 	if !task.Started() { // 任务可能为己启动状态(比如异常退出后的任务恢复)，这里判断一下
@@ -498,8 +521,33 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 		taskStartFailed(errors.Wrap(err, "get task steps"))
 		return
 	}
-
+	var PlanIndex int
 	for _, step := range steps {
+		if step.PipelineStep.Type == models.TaskStepPlan {
+			PlanIndex = step.Index
+		}
+		if step.PipelineStep.Type == models.TaskStepApply {
+			if task.Source == consts.TaskSourceDriftApply {
+				if bs, err := readIfExist(task.TFPlanOutputLogPath(fmt.Sprintf("step%d", PlanIndex))); err != nil {
+					logger.Errorf("read plan output log: %v", err)
+				} else {
+					driftInfo := ParseResourceDriftInfo(bs)
+					if len(driftInfo) <= 0 {
+						_ = changeTaskStatus(models.TaskStepComplete, "autoDrift source nothing changed", false)
+						logger.WithField("step", fmt.Sprintf("%d(%s)", step.Index, step.Name)).
+							Infof("auto task drift step stop ")
+						break
+					}
+				}
+			}
+
+			if _, er := m.db.Model(&models.Task{}).
+				Where("id = ?", step.TaskId). //nolint
+				Update(&models.Task{Applied: true}); er != nil {
+				logger.Errorf("update task  terraformApply applied: %v", er)
+			}
+		}
+
 		startErr, runErr := m.processStartStep(ctx, task, step, *runTaskReq)
 		if startErr != nil {
 			taskStartFailed(startErr)
@@ -515,6 +563,7 @@ func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startEr
 	if err := m.runTaskStepsDoneActions(ctx, task.Id); err != nil {
 		logger.Errorf("runTaskStepsDoneActions: %v", err)
 	}
+
 	logger.Infof("run task end")
 	return nil
 }
@@ -568,6 +617,9 @@ func (m *TaskManager) processStartStep(
 
 func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) error {
 	dbSess := m.db
+
+	changePlanResult(dbSess, task, step)
+
 	processScanResult := func() error {
 		var (
 			tsResult policy.TsResult
@@ -615,6 +667,16 @@ func (m *TaskManager) processStepDone(task *models.Task, step *models.TaskStep) 
 		return processScanResult()
 	}
 	return nil
+}
+
+func changePlanResult(dbSess *db.Session, task *models.Task, step *models.TaskStep) {
+	logger := logs.Get()
+	if step.Type == common.TaskStepTfPlan && step.Status == models.TaskComplete {
+		err := taskDoneProcessPlan(dbSess, task, true)
+		if err != nil {
+			logger.Errorf("process task plan: %v", err)
+		}
+	}
 }
 
 func readIfExist(path string) ([]byte, error) {
@@ -792,10 +854,6 @@ func waitTaskStepApprove(ctx context.Context, db *db.Session, task *models.Task,
 	if step.MustApproval && !step.IsApproved() {
 		logger.Infof("waitting task step approve")
 		changeStepStatus(models.TaskStepApproving, "", step)
-		err = taskDoneProcessPlan(db, task, true)
-		if err != nil {
-			logger.Errorf("process task plan: %v", err)
-		}
 		if newStep, err = WaitTaskStepApprove(ctx, db, step.TaskId, step.Index); err != nil {
 			if errors.Is(err, context.Canceled) {
 				return nil, err
@@ -939,6 +997,18 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		Address: "",
 	}
 
+	if configs.Get().Consul.ConsulAcl {
+		stateStore.ConsulAcl = configs.Get().Consul.ConsulAcl
+		stateStore.ConsulToken = configs.Get().Consul.ConsulAclToken
+	}
+
+	if configs.Get().Consul.ConsulTls {
+		stateStore.ConsulTls = configs.Get().Consul.ConsulTls
+		stateStore.CaPath = path.Join(common.ConsulContainerPath, common.ConsulCa)
+		stateStore.CakeyPath = path.Join(common.ConsulContainerPath, common.ConsulCakey)
+		stateStore.CapemPath = path.Join(common.ConsulContainerPath, common.ConsulCapem)
+	}
+
 	pk := ""
 	if task.KeyId != "" {
 		mKey, err := services.GetKeyById(dbSess, task.KeyId, false)
@@ -957,9 +1027,11 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		RepoAddress:     task.RepoAddr,
 		RepoBranch:      task.Revision,
 		RepoCommitId:    task.CommitId,
+		NetworkMirror:   services.GetRegistryMirrorUrl(dbSess),
 		Timeout:         task.StepTimeout,
 		StopOnViolation: task.StopOnViolation,
 		ContainerId:     task.ContainerId,
+		CreatorId:       task.CreatorId.String(),
 	}
 
 	if err := runTaskReqAddSysEnvs(taskReq); err != nil {
@@ -1219,9 +1291,11 @@ func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.Ta
 		RepoAddress:     task.RepoAddr,
 		RepoBranch:      task.Revision,
 		RepoCommitId:    task.CommitId,
+		NetworkMirror:   services.GetRegistryMirrorUrl(dbSess),
 		StopOnViolation: true,
 		DockerImage:     task.Flow.Image,
 		ContainerId:     task.ContainerId,
+		CreatorId:       task.CreatorId.String(),
 	}
 
 	runnerEnv := runner.TaskEnv{
@@ -1245,12 +1319,26 @@ func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.Ta
 
 	if task.Type == common.TaskTypeEnvScan || task.Type == common.TaskTypeEnvParse {
 		env, _ := services.GetEnvById(dbSess, task.EnvId)
+
 		stateStore := runner.StateStore{
 			Backend: "consul",
 			Scheme:  "http",
 			Path:    env.StatePath,
 			Address: "",
 		}
+
+		if configs.Get().Consul.ConsulAcl {
+			stateStore.ConsulAcl = configs.Get().Consul.ConsulAcl
+			stateStore.ConsulToken = configs.Get().Consul.ConsulAclToken
+		}
+
+		if configs.Get().Consul.ConsulTls {
+			stateStore.ConsulTls = configs.Get().Consul.ConsulTls
+			stateStore.CaPath = path.Join(common.ConsulContainerPath, common.ConsulCa)
+			stateStore.CakeyPath = path.Join(common.ConsulContainerPath, common.ConsulCakey)
+			stateStore.CapemPath = path.Join(common.ConsulContainerPath, common.ConsulCapem)
+		}
+
 		taskReq.StateStore = stateStore
 	}
 
@@ -1378,6 +1466,20 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 	// CLOUDIAC_COMMIT	当前任务的云模板代码 commit hash
 	sysEnvs["CLOUDIAC_COMMIT"] = req.RepoCommitId
 	sysEnvs["TF_VAR_cloudiac_commit"] = req.RepoCommitId
+
+	if req.CreatorId != "" {
+		user, err := services.GetUserByIdRaw(db.Get(), models.Id(req.CreatorId))
+		if err != nil {
+			return errors.Wrapf(err, "query user %s", req.CreatorId)
+		}
+		if user.Name == "" {
+			sysEnvs["CLOUDIAC_USERNAME"] = user.Email
+			sysEnvs["TF_VAR_cloudiac_username"] = user.Email
+		} else {
+			sysEnvs["CLOUDIAC_USERNAME"] = user.Name
+			sysEnvs["TF_VAR_cloudiac_username"] = user.Name
+		}
+	}
 
 	if req.Env.Id != "" {
 		env, err := services.GetEnvById(db.Get(), models.Id(req.Env.Id))

@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/acarl005/stripansi"
+	"github.com/alessio/shellescape"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 )
@@ -157,7 +158,8 @@ func CloneNewDriftTask(tx *db.Session, src models.Task, env *models.Env) (*model
 	//task.KeyId = env.KeyId
 	task.Source = taskSource
 
-	task.RunnerId, er = GetAvailableRunnerId(env.RunnerId, strings.Split(env.RunnerTags, ","))
+	// 自动纠偏任务总是使用环境的最新部署通道配置
+	task.RunnerId, er = GetAvailableRunnerIdByStr(env.RunnerId, env.RunnerTags)
 	if er != nil {
 		return nil, er
 	}
@@ -185,6 +187,11 @@ func CreateTask(tx *db.Session, tpl *models.Template, env *models.Env, pt models
 		task.CommitId = commitId
 	}
 
+	// 最后再进行一次保底 runnerId 设置，如果任务有 runnerId 了则直接使用，否则通过环境的 runnerTags 获取 runnerId
+	task.RunnerId, er = GetAvailableRunnerIdByStr(task.RunnerId, env.RunnerTags)
+	if er != nil {
+		return nil, er
+	}
 	return doCreateTask(tx, *task, tpl, env)
 }
 
@@ -214,7 +221,8 @@ func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*mode
 		EnvId:     env.Id,
 		StatePath: env.StatePath,
 
-		Workdir:   firstVal(pt.Workdir, env.Workdir, tpl.Workdir),
+		// 任务、环境工作目录为空，工作目录就应该为空，这里不需要在引用云模板的工作目录
+		Workdir:   firstVal(pt.Workdir, env.Workdir),
 		TfVersion: tpl.TfVersion,
 
 		Playbook:     env.Playbook,
@@ -327,7 +335,7 @@ func createTaskStep(tx *db.Session, env *models.Env, task models.Task, pipelineS
 	if len(task.Targets) != 0 && IsTerraformStep(pipelineStep.Type) {
 		if pipelineStep.Type != models.TaskStepInit {
 			for _, t := range task.Targets {
-				pipelineStep.Args = append(pipelineStep.Args, fmt.Sprintf("-target=%s", t))
+				pipelineStep.Args = append(pipelineStep.Args, fmt.Sprintf("-target=%s", shellescape.Quote(t)))
 			}
 		}
 	}
@@ -509,15 +517,7 @@ func ChangeTaskStatusWithStep(dbSess *db.Session, task models.Tasker, step *mode
 	}
 }
 
-// ChangeTaskStatus 修改任务状态(同步修改 StartAt、EndAt 等)，并同步修改 env 状态
-// 该函数只修改以下字段:
-// 	status, message, start_at, end_at, aborting
-func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message string, skipUpdateEnv bool) e.Error {
-	preStatus := task.Status
-	if preStatus == status && message == "" {
-		return nil
-	}
-
+func changeTaskStatusSetAttrs(dbSess *db.Session, task *models.Task, status, message string) models.Attrs {
 	updateAttrs := models.Attrs{
 		"message": message,
 	}
@@ -541,7 +541,19 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 		task.Aborting = false
 		updateAttrs["aborting"] = false
 	}
+	return updateAttrs
+}
 
+// ChangeTaskStatus 修改任务状态(同步修改 StartAt、EndAt 等)，并同步修改 env 状态
+// 该函数只修改以下字段:
+// 	status, message, start_at, end_at, aborting
+func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message string, skipUpdateEnv bool) e.Error {
+	preStatus := task.Status
+	if preStatus == status && message == "" {
+		return nil
+	}
+
+	updateAttrs := changeTaskStatusSetAttrs(dbSess, task, status, message)
 	logger := logs.Get().WithField("taskId", task.Id)
 	logger.Infof("change task to '%s'", status)
 	logger.Debugf("update task attrs: %s", utils.MustJSON(updateAttrs))
@@ -549,21 +561,34 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 		return e.AutoNew(err, e.DBError)
 	}
 
-	if preStatus != status && !task.IsDriftTask {
+	if preStatus != status && !task.IsDriftTask &&
+		// 忽略任务类型由 审批中 变更为 running 状态时的消息通知
+		// running 状态变更为审批中时已经进行过通知了，这里就不需要在重复通知了
+		!(preStatus == common.TaskApproving && status == common.TaskRunning) {
 		TaskStatusChangeSendMessage(task, status)
 	}
 
-	if task.Exited() {
-		go taskStatusExitedCall(dbSess, task, status)
-	}
+	defer func() {
+		if task.Exited() {
+			go taskStatusExitedCall(dbSess, task, status)
+		}
+	}()
 
 	if !skipUpdateEnv {
 		step, er := GetTaskStep(dbSess, task.Id, task.CurrStep)
 		if er != nil {
+			logs.Get().WithField("currStep", task.CurrStep).
+				WithField("taskId", task.Id).Errorf("get task step error: %s", er)
 			return e.AutoNew(er, e.DBError)
 		}
-		return ChangeEnvStatusWithTaskAndStep(dbSess, task.EnvId, task, step)
+
+		if err := ChangeEnvStatusWithTaskAndStep(dbSess, task.EnvId, task, step); err != nil {
+			logs.Get().WithField("envId", task.EnvId).
+				WithField("taskId", task.Id).Errorf("change env to status error: %s", err)
+			return err
+		}
 	}
+
 	return nil
 }
 
@@ -575,6 +600,8 @@ func taskStatusExitedCall(dbSess *db.Session, task *models.Task, status string) 
 		if !kaConf.Disabled && len(kaConf.Brokers) > 0 {
 			SendKafkaMessage(dbSess, task, status)
 		}
+
+		syncManagedResToProvider(task)
 	}
 
 	//if task.Callback != "" {
@@ -623,6 +650,7 @@ type TfStateResource struct {
 	Type         string      `json:"type"`
 	Name         string      `json:"name"`
 	Index        interface{} `json:"index"` // index 可以为整型或字符串
+	DependsOn    []string    `json:"depends_on"`
 
 	Values map[string]interface{} `json:"values"`
 }
@@ -633,7 +661,7 @@ func UnmarshalStateJson(bs []byte) (*TfState, error) {
 	return &state, err
 }
 
-func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
+func TraverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 	parts := strings.Split(module.Address, ".")
 	moduleName := parts[len(parts)-1]
 	for _, r := range module.Resources {
@@ -642,31 +670,32 @@ func traverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 			idx = fmt.Sprintf("%v", r.Index)
 		}
 		rs = append(rs, &models.Resource{
-			Provider: r.ProviderName,
-			Module:   moduleName,
-			Address:  r.Address,
-			Type:     r.Type,
-			Name:     r.Name,
-			Index:    idx,
-			Attrs:    r.Values,
+			Provider:     r.ProviderName,
+			Module:       moduleName,
+			Address:      r.Address,
+			Type:         r.Type,
+			Name:         r.Name,
+			Index:        idx,
+			Attrs:        r.Values,
+			Dependencies: r.DependsOn,
 		})
 	}
 	for i := range module.ChildModules {
-		rs = append(rs, traverseStateModule(&module.ChildModules[i])...)
+		rs = append(rs, TraverseStateModule(&module.ChildModules[i])...)
 	}
 	return rs
 }
 
-func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, proMap runner.ProviderSensitiveAttrMap) error {
+func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, proMap runner.ProviderSensitiveAttrMap, sensitiveKeys map[string][]string) error {
 
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Resource{}.TableName(),
-		"id", "org_id", "project_id", "env_id", "task_id",
-		"provider", "module", "address", "type", "name", "index", "attrs", "sensitive_keys", "applied_at", "res_id")
+		"id", "org_id", "project_id", "env_id", "task_id", "provider", "module",
+		"address", "type", "name", "index", "attrs", "sensitive_keys", "applied_at", "res_id", "dependencies")
 
 	rs := make([]*models.Resource, 0)
-	rs = append(rs, traverseStateModule(&values.RootModule)...)
+	rs = append(rs, TraverseStateModule(&values.RootModule)...)
 	for i := range values.ChildModules {
-		rs = append(rs, traverseStateModule(&values.ChildModules[i])...)
+		rs = append(rs, TraverseStateModule(&values.ChildModules[i])...)
 	}
 	resources, err := GetResourceByEnvId(tx, task.EnvId)
 	if err != nil {
@@ -694,8 +723,13 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 				r.SensitiveKeys = proMap[providerKey]
 			}
 		}
-		err := bq.AddRow(models.NewId("r"), task.OrgId, task.ProjectId, task.EnvId, task.Id,
-			r.Provider, r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys, r.AppliedAt, resId)
+		// sensitive values
+		if keys, ok := sensitiveKeys[r.Address]; ok {
+			r.Attrs = SensitiveAttrs(r.Attrs, keys, "")
+		}
+
+		err := bq.AddRow(models.NewId("r"), task.OrgId, task.ProjectId, task.EnvId, task.Id, r.Provider,
+			r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys, r.AppliedAt, resId, r.Dependencies)
 		if err != nil {
 			return err
 		}
@@ -732,6 +766,7 @@ type TfPlan struct {
 type TfPlanResource struct {
 	Address       string `json:"address"`
 	ModuleAddress string `json:"module_address,omitempty"`
+	ProviderName  string `json:"provider_name"`
 
 	Mode  string `json:"mode"` // managed、data
 	Type  string `json:"type"`
@@ -760,7 +795,7 @@ func UnmarshalTfParseJson(bs []byte) (*resps.TfParse, error) {
 	return &js, err
 }
 
-func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource, isPlanResult bool) error {
+func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource, isPlanResult bool, costs []float32, forecastFailed []string) error {
 
 	var (
 		resAdded     = 0
@@ -785,13 +820,21 @@ func SaveTaskChanges(dbSess *db.Session, task *models.Task, rs []TfPlanResource,
 		case utils.SliceEqualStr(actions, []string{"delete"}):
 			resDestroyed += 1
 		default:
-			logs.Get().WithField("taskId", task.Id).Errorf("unknown change actions: %v", actions)
+			logs.Get().WithField("taskId", task.Id).Warnf("unknown plan change actions: %v", actions)
 		}
 	}
 	if isPlanResult {
 		task.PlanResult.ResAdded = &resAdded
 		task.PlanResult.ResChanged = &resChanged
 		task.PlanResult.ResDestroyed = &resDestroyed
+
+		//  预估费用
+		if len(costs) == 3 {
+			task.PlanResult.ResAddedCost = &costs[0]
+			task.PlanResult.ResDestroyedCost = &costs[1]
+			task.PlanResult.ResUpdatedCost = &costs[2]
+			task.PlanResult.ForecastFailed = forecastFailed
+		}
 
 		if _, err := dbSess.Model(&models.Task{}).Where("id = ?", task.Id).
 			UpdateColumn("plan_result", task.PlanResult); err != nil {
@@ -1128,6 +1171,7 @@ func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, ta
 
 	vars, er := GetValidVarsAndVgVars(tx, env.OrgId, env.ProjectId, env.TplId, env.Id)
 	if er != nil {
+		logs.Get().Debugf("get valid vars and vgVars error: %v", er)
 		return nil, e.New(e.InternalError, er, http.StatusInternalServerError)
 	}
 
@@ -1160,6 +1204,7 @@ func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, ta
 
 	task.RepoAddr, task.CommitId, err = GetTaskRepoAddrAndCommitId(tx, tpl, task.Revision)
 	if err != nil {
+		logs.Get().Debugf("get task repo addr and commit id failed: %v", err)
 		return nil, e.New(e.InternalError, err)
 	}
 
@@ -1352,8 +1397,26 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 		logs.Get().Errorf("kafka send error, get resource data err: %v", err)
 		return
 	}
+
+	var policyStatus string
+	scanTask, err := GetScanTaskById(session, task.Id)
+	if err != nil && err.Code() != e.TaskNotExists {
+		logs.Get().Errorf("kafka send error, get scanTask data err: %v, taskId: %s", err, task.Id)
+		return
+	}
+
+	if scanTask != nil {
+		policyStatus = scanTask.PolicyStatus
+	}
+
+	env, err := GetEnvById(session, task.EnvId)
+	if err != nil {
+		logs.Get().Errorf("kafka send error, query env status err: %v", err)
+		return
+	}
+
 	k := kafka.Get()
-	message := k.GenerateKafkaContent(task, taskStatus, resources)
+	message := k.GenerateKafkaContent(task, taskStatus, env.Status, policyStatus, resources)
 	if err := k.ConnAndSend(message); err != nil {
 		logs.Get().Errorf("kafka send error: %v", err)
 		return

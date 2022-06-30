@@ -6,6 +6,12 @@ package runner
 portal 和 runner 通信使用的消息结构体
 */
 
+import (
+	"fmt"
+
+	"github.com/alessio/shellescape"
+)
+
 type EnvVariables struct {
 }
 
@@ -23,24 +29,34 @@ type TaskEnv struct {
 }
 
 type StateStore struct {
-	Backend string `json:"backend" binding:""`
-	Scheme  string `json:"scheme" binding:""`
-	Path    string `json:"path" binding:""`
-	Address string `json:"address" binding:""` // consul 地址 runner 会自动设置
+	Backend     string `json:"backend" binding:""`
+	Scheme      string `json:"scheme" binding:""`
+	Path        string `json:"path" binding:""`
+	ConsulAcl   bool   `json:"consul_acl" binding:""`
+	ConsulToken string `json:"consul_token" binding:""`
+	ConsulTls   bool   `json:"consul_tls" binding:""`
+	CaPath      string `json:"ca_path" binding:""`
+	CakeyPath   string `json:"cakey_path" binding:""`
+	CapemPath   string `json:"capem_path" binding:""`
+	Address     string `json:"address" binding:""` // consul 地址 runner 会自动设置
 }
 
 type RunTaskReq struct {
-	Env          TaskEnv    `json:"env" binding:""`
-	RunnerId     string     `json:"runnerId" binding:""`
-	TaskId       string     `json:"taskId" binding:"required"`
-	Step         int        `json:"step" binding:""`
-	StepType     string     `json:"stepType" binding:"required"`
-	StepArgs     []string   `json:"stepArgs"`
-	DockerImage  string     `json:"dockerImage"`
-	StateStore   StateStore `json:"stateStore" binding:""`
-	RepoAddress  string     `json:"repoAddress" binding:""` // 带 token 的完整路径
-	RepoBranch   string     `json:"repoBranch" binding:""`  // git branch or tag
-	RepoCommitId string     `json:"repoCommitId" binding:""`
+	Env            TaskEnv    `json:"env" binding:""`
+	RunnerId       string     `json:"runnerId" binding:""`
+	TaskId         string     `json:"taskId" binding:"required"`
+	Step           int        `json:"step" binding:""`
+	StepType       string     `json:"stepType" binding:"required"`
+	StepArgs       []string   `json:"stepArgs"`
+	StepBeforeCmds []string   `json:"stepBeforeCmds"`
+	StepAfterCmds  []string   `json:"stepAfterCmds"`
+	DockerImage    string     `json:"dockerImage"`
+	StateStore     StateStore `json:"stateStore" binding:""`
+	RepoAddress    string     `json:"repoAddress" binding:""` // 带 token 的完整路径
+	RepoBranch     string     `json:"repoBranch" binding:""`  // git branch or tag
+	RepoCommitId   string     `json:"repoCommitId" binding:""`
+
+	NetworkMirror string `json:"networkMirror"` // terraform network mirror url
 
 	SysEnvironments map[string]string `json:"sysEnvironments "` // 系统注入的环境变量
 
@@ -54,6 +70,29 @@ type RunTaskReq struct {
 
 	ContainerId string `json:"containerId"`
 	PauseTask   bool   `json:"pauseTask"` // 本次执行结束后暂停任务
+
+	CreatorId string `json:"creatorId"`
+}
+
+func (r RunTaskReq) Validate() error {
+	vs := []struct {
+		Name  string
+		Value string
+	}{
+		{"workdir", r.Env.Workdir},
+		{"playVarsFile", r.Env.PlayVarsFile},
+		{"playbook", r.Env.Playbook},
+		{"tfVarsFile", r.Env.TfVarsFile},
+		{"tfVersion", r.Env.TfVersion},
+	}
+
+	for _, v := range vs {
+		// 检查，如果这些变量的值中含有特殊的 shell 符号则报错
+		if v.Value != "" && shellescape.Quote(v.Value) != v.Value {
+			return fmt.Errorf("invalid %s value: %s", v.Name, v.Value)
+		}
+	}
+	return nil
 }
 
 type Repository struct {

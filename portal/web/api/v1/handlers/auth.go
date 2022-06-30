@@ -73,3 +73,35 @@ func (a Auth) Login(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.Login(c.Service(), &form))
 }
+
+// Registry 账号注册
+// @Tags 鉴权
+// @Summary 账号注册
+// @Accept multipart/form-data
+// @Accept json
+// @Param body formData forms.RegistryForm true "parameter"
+// @router /auth/register [post]
+// @Success 200 {object} ctx.JSONResult{}
+func (a Auth) Registry(c *ctx.GinRequest) {
+	form := forms.RegistryForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.Register(c.Service(), &form))
+}
+
+// CheckEmail 用户邮箱验重
+// @Tags 验证
+// @Summary 用户邮箱验重
+// @Accept multipart/form-data
+// @Accept json
+// @Param body formData forms.EmailForm true "parameter"
+// @router /auth/email [get]
+// @Success 200 {object} ctx.JSONResult{result=resps.UserEmailStatus}
+func (a Auth) CheckEmail(c *ctx.GinRequest) {
+	form := forms.EmailForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.CheckEmail(c.Service(), &form))
+}

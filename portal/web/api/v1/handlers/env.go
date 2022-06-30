@@ -132,6 +132,21 @@ func (Env) Deploy(c *ctx.GinRequest) {
 	c.JSONResult(apps.EnvDeploy(c.Service(), &form))
 }
 
+// DeployCheck 环境重新部署检测接口
+// @Tags 环境
+// @Summary 环境重新部署检测
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param envId path string true "环境ID"
+// @router /envs/{envId}/deploy/check [post]
+// @Success 200 {object} ctx.JSONResult{}
+func (Env) DeployCheck(c *ctx.GinRequest) {
+	c.JSONResult(apps.EnvDeployCheck(c.Service(), models.Id(c.Param("id"))))
+}
+
 // Destroy 销毁环境资源
 // @Tags 环境
 // @Summary 销毁环境资源
@@ -142,13 +157,21 @@ func (Env) Deploy(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param envId path string true "环境ID"
+// @Param data body forms.DestroyEnvForm true "销毁参数"
 // @router /envs/{envId}/destroy [post]
 // @Success 200 {object} ctx.JSONResult{result=models.EnvDetail}
 func (Env) Destroy(c *ctx.GinRequest) {
-	form := forms.DeployEnvForm{}
-	form.Id = models.Id(c.Param("id"))
-	form.TaskType = models.TaskTypeDestroy
-	c.JSONResult(apps.EnvDeploy(c.Service(), &form))
+	form := forms.DestroyEnvForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+
+	deployForm := forms.DeployEnvForm{
+		Id:       form.Id,
+		TaskType: models.TaskTypeDestroy,
+		Source:   form.Source,
+	}
+	c.JSONResult(apps.EnvDeploy(c.Service(), &deployForm))
 }
 
 // SearchResources 获取环境资源列表
@@ -360,6 +383,26 @@ func (Env) UpdateTags(c *ctx.GinRequest) {
 	c.JSONResult(apps.EnvUpdateTags(c.Service(), &form))
 }
 
+// EnvStat 环境概览
+// @Tags 环境
+// @Summary 环境概览
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param envId path string true "环境ID"
+// @router /envs/{Id}/statistics [get]
+// @Success 200 {object} ctx.JSONResult{result=resps.EnvStatisticsResp}
+func (Env) EnvStat(c *ctx.GinRequest) {
+	form := forms.EnvParam{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.EnvStat(c.Service(), &form))
+}
 
 // EnvLock 环境锁定
 // @Tags 环境
@@ -375,7 +418,7 @@ func (Env) UpdateTags(c *ctx.GinRequest) {
 // @Param tags formData forms.EnvLockForm true "部署参数"
 // @router /envs/{envId}/lock [post]
 // @Success 200
-func EnvLock(c *ctx.GinRequest){
+func EnvLock(c *ctx.GinRequest) {
 	form := forms.EnvLockForm{}
 	if err := c.Bind(&form); err != nil {
 		return
@@ -397,7 +440,7 @@ func EnvLock(c *ctx.GinRequest){
 // @Param tags formData forms.EnvUnLockForm true "部署参数"
 // @router /envs/{envId}/unlock [post]
 // @Success 200
-func EnvUnLock(c *ctx.GinRequest){
+func EnvUnLock(c *ctx.GinRequest) {
 	form := forms.EnvUnLockForm{}
 	if err := c.Bind(&form); err != nil {
 		return
@@ -419,12 +462,10 @@ func EnvUnLock(c *ctx.GinRequest){
 // @Param tags formData forms.EnvUnLockConfirmForm true "部署参数"
 // @router /envs/{envId}/unlock/confirm [get]
 // @Success 200 {object} ctx.JSONResult{result=resps.EnvUnLockConfirmResp}
-func EnvUnLockConfirm(c *ctx.GinRequest){
+func EnvUnLockConfirm(c *ctx.GinRequest) {
 	form := forms.EnvUnLockConfirmForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
 	c.JSONResult(apps.EnvUnLockConfirm(c.Service(), &form))
 }
-
-

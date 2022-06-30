@@ -23,8 +23,8 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"syscall"
@@ -339,30 +339,51 @@ const (
 
 func GenPasswd(length int, charset string) string {
 	//初始化密码切片
-	var passwd []byte = make([]byte, length)
+	var passwd []byte = make([]byte, 0)
 	//源字符串
-	var sourceStr string
+	var sourceSties []string
 	//判断字符类型,如果是数字
 	if charset == "num" {
-		sourceStr = NUmStr
+		sourceSties = []string{NUmStr}
 		//如果选的是字符
 	} else if charset == "char" {
-		sourceStr = charset
+		sourceSties = []string{CharStr}
 		//如果选的是混合模式
 	} else if charset == "mix" {
-		sourceStr = fmt.Sprintf("%s%s", NUmStr, CharStr)
+		sourceSties = []string{NUmStr, CharStr}
 		//如果选的是高级模式
 	} else if charset == "advance" {
-		sourceStr = fmt.Sprintf("%s%s%s", NUmStr, CharStr, SpecStr)
+		sourceSties = []string{NUmStr, CharStr, SpecStr}
 	} else {
-		sourceStr = NUmStr
+		sourceSties = []string{NUmStr}
 	}
 
-	//遍历，生成一个随机index索引,
-	for i := 0; i < length; i++ {
-		index := rand.Intn(len(sourceStr)) //nolint:gosec
-		passwd[i] = sourceStr[index]
+	f := func(length int, sourceStr string) []byte {
+
+		var pwd []byte = make([]byte, 0)
+		for i := 0; i < length; i++ {
+			index := rand.Intn(len(sourceStr)) //nolint:gosec
+			pwd = append(pwd, sourceStr[index])
+		}
+		return pwd
 	}
+
+	var newLength int = length
+	for idx, s := range sourceSties {
+		if idx == len(sourceSties)-1 {
+			passwd = append(passwd, f(newLength, s)...)
+			continue
+		}
+
+		strLength := rand.Intn(newLength) //nolint:gosec
+		if strLength == 0 {
+			strLength++
+		}
+
+		passwd = append(passwd, f(strLength, s)...)
+		newLength -= strLength
+	}
+
 	return string(passwd)
 }
 
@@ -471,10 +492,13 @@ func IsFalseStr(s string) bool {
 	return StrInArray(strings.ToLower(s), "off", "false", "0", "no")
 }
 
-func JoinURL(address string, elems ...string) string {
-	return fmt.Sprintf("%s/%s",
-		strings.TrimRight(address, "/"),
-		strings.TrimLeft(path.Join(elems...), "/"))
+func JoinURL(prefix string, elems ...string) string {
+	if len(elems) == 0 {
+		return prefix
+	} else {
+		prefix = fmt.Sprintf("%s/%s", strings.TrimSuffix(prefix, "/"), strings.TrimPrefix(elems[0], "/"))
+		return JoinURL(prefix, elems[1:]...)
+	}
 }
 
 // SprintTemplate 用模板参数格式化字符串
@@ -637,4 +661,29 @@ func Set(arr []string) []string {
 		}
 	}
 	return resArr
+}
+
+// StructToMap 结构体转为map[string]interface{}
+func StructToMap(in interface{}, tagName string) (map[string]interface{}, error) {
+	out := make(map[string]interface{})
+
+	v := reflect.ValueOf(in)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+	if v.Kind() != reflect.Struct { // 非结构体返回错误提示
+		return nil, fmt.Errorf("StructToMap only accepts struct; got %T", v)
+	}
+
+	t := v.Type()
+	// 遍历结构体字段
+	// 指定tagName值为map中key;字段值为map中value
+	for i := 0; i < v.NumField(); i++ {
+		fi := t.Field(i)
+		if tagValue := fi.Tag.Get(tagName); tagValue != "" {
+			out[tagValue] = v.Field(i).Interface()
+		}
+	}
+	return out, nil
 }

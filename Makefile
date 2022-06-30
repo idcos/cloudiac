@@ -3,6 +3,10 @@ GOCMD=CGO_ENABLED=0 go
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
+HOSTOS=$(shell go env GOHOSTOS)
+HOSTARCH=$(shell go env GOHOSTARCH)
+MYSQL_ROOT_PASSWORD?=cloudiac
+MYSQL_PORT=3307
 
 RM=/bin/rm -f
 
@@ -27,6 +31,11 @@ endif
 BASE_IMAGE_DOCKER_REPO=cloudiac
 
 DOCKER_BUILD=docker build --build-arg http_proxy="$(http_proxy)" --build-arg https_proxy="$(https_proxy)" --build-arg WORKDIR=$(WORKDIR) 
+DOCKER_RUN=docker run --rm -d
+ifeq (${HOSTOS}_${HOSTARCH}, darwin_arm64)
+        DOCKER_RUN=DOCKER_DEFAULT_PLATFORM=linux/amd64 docker run --rm -d 
+endif
+DOCKER_STOP=docker stop
 
 BUILD_DIR=$(PWD)/build
 
@@ -55,8 +64,11 @@ reset-build-dir:
 gen-lang:
 	GOOS="" go run cmds/gen-lang/main.go docs/lang.csv portal/consts/e/lang.go
 
+gen-code:
+	go generate ./portal/models
+
 swag-docs: gen-lang
-	swag init -g portal/web/api/v1/route.go
+	which swag || go install github.com/swaggo/swag/cmd/swag; swag init -g portal/web/api/v1/route.go
 
 mkdocs: 
 	GOOS="" GOARCH="" go run scripts/updatedocs/main.go
@@ -71,7 +83,6 @@ tool:
 	$(GOBUILD) -o $(BUILD_DIR)/iac-tool ./cmds/tool
 
 
-
 run: run-portal
 
 run-portal: swag-docs
@@ -82,6 +93,27 @@ run-runner:
 
 run-tool:
 	$(GORUN) ./cmds/tool -v -c config-portal.yml
+
+start-mysql-unittest: stop-mysql-unittest tool
+	$(DOCKER_RUN) --name cloudiac-mysql-unittest -e MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD} -e MYSQL_DATABASE=iac_test -p $(MYSQL_PORT):3306 mysql:5.7 mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --sql_mode=STRICT_TRANS_TABLES,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+	while ! docker exec cloudiac-mysql-unittest mysql -h127.0.0.1 -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "SELECT 1" ; do echo "waiting for mysql ready..."; sleep 1; done
+	$(BUILD_DIR)/iac-tool initdb "root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:$(MYSQL_PORT))/iac_test?charset=utf8mb4&parseTime=True&loc=Local"
+
+stop-mysql-unittest:
+	$(DOCKER_STOP) cloudiac-mysql-unittest || true
+
+dumpdb: tool
+	mkdir -p ./dumpdb/
+	$(BUILD_DIR)/iac-tool dumpdb ./dumpdb/
+
+test:
+	$(GOTEST) -v -parallel 1 ./...
+
+coverage:
+	$(GOTEST) -parallel 1 ./... -coverpkg=./... -coverprofile=coverage.out || true
+
+view-coverage:
+	go tool cover -func=coverage.out
 
 clean: reset-build-dir
 	$(GOCLEAN) ./cmds/portal
@@ -198,4 +230,5 @@ PROVIDERS_SHA1SUM=$(shell tar -c ./assets/providers | $(CMD_MD5SUM))
 PROVIDERS_PACKAGE_NAME=cloudiac-providers_$(VERSION)_$(PROVIDERS_SHA1SUM).tar.gz
 providers-package:
 	@if [[ ! -e "$(PROVIDERS_PACKAGE_NAME)" ]]; then echo "Package $(PROVIDERS_PACKAGE_NAME)"; tar -czf $(PROVIDERS_PACKAGE_NAME) ./assets/providers; fi
+
 

@@ -1,13 +1,18 @@
 listen: "0.0.0.0:9030"
 mysql: "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL_DATABASE}?charset=utf8mb4&parseTime=True&loc=Local"
 
+cost_serve: "${COST_SERVE}"
+
 secretKey: "${SECRET_KEY}"
 jwtSecretKey: "${JWT_SECRET_KEY}"
 registryAddr: "${REGISTRY_ADDRESS}"
 httpClientInsecure: ${HTTP_CLIENT_INSECURE}
+enableTaskAbort: ${ENABLE_TASK_ABORT}
+enableRegister: ${ENABLE_REGISTER}
 
 portal:
   address: "${PORTAL_ADDRESS}"
+
 
 consul:
   address: "${CONSUL_ADDRESS}"
@@ -18,6 +23,10 @@ consul:
   interval: "3s"
   timeout: "5s"
   deregister_after: "1m"
+  consul_acl: ${CONSUL_ACL}
+  consul_acl_token: "${CONSUL_ACL_TOKEN}"
+  consul_tls: ${CONSUL_TLS}
+  consul_cert_path: "${CONSUL_CERT_PATH}"
 
 log:
   log_level: "${LOG_LEVEL}"
@@ -43,8 +52,12 @@ smtpServer:
   from: "${SMTP_FROM}"  # 邮件显示的发送方，不配置则使用 username 值
 
 ldap:
-  admin_dn: "${LDAP_ADMIN_DN}"
-  admin_password: "${LDAP_ADMIN_PASSWORD}"
-  ldap_server: "${LDAP_SERVER}"
+  admin_dn: "${LDAP_ADMIN_DN}" # 必填
+  admin_password: "${LDAP_ADMIN_PASSWORD}" # 必填
+  ldap_server: "${LDAP_SERVER}" # 必填
   ldap_server_port: 389
-  search_base: "${LDAP_SEARCH_BASE}"
+  search_base: "${LDAP_SEARCH_BASE}" # 必填
+  ou_search_base: "${LDAP_OU_SEARCH_BASE}"
+  search_filter: "${LDAP_SEARCH_FILTER}"
+  email_attribute: "${LDAP_EMAIL_ATTRIBUTE}"
+  account_attribute: "${LDAP_ACCOUNT_ATTRIBUTE}"

@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"fmt"
 )
@@ -24,16 +25,40 @@ func CreateVariableGroup(tx *db.Session, group models.VariableGroup) (models.Var
 	}
 	return group, nil
 }
+func CreateVariableGroupProjectRel(tx *db.Session, vpgRel models.VariableGroupProjectRel) e.Error {
+	if err := models.Create(tx, &vpgRel); err != nil {
+		return e.AutoNew(err, e.DBError)
+	}
+	return nil
+}
 
-func SearchVariableGroup(dbSess *db.Session, orgId models.Id, q string) *db.Session {
-	query := dbSess.Model(models.VariableGroup{}).Where("iac_variable_group.org_id = ?", orgId)
+func SearchVariableGroup(dbSess *db.Session, orgId models.Id, projectId models.Id, q string) *db.Session {
+	query := dbSess.Model(models.VariableGroup{}).
+		Where("iac_variable_group.org_id = ?", orgId).
+		Order("created_at desc").
+		LazySelectAppend("iac_variable_group.*")
+
 	if q != "" {
 		query = query.WhereLike("iac_variable_group.name", q)
 	}
-	return query.Joins("left join iac_user as u on u.id = iac_variable_group.creator_id").
-		LazySelectAppend("iac_variable_group.*").
+
+	if projectId != "" { // projectId 不为空，表示只查询指定项目下的变量组
+		query = query.
+			Joins("join iac_variable_group_project_rel as vgpr on vgpr.var_group_id = iac_variable_group.id").
+			Joins("left join iac_project as p on p.id = vgpr.project_id").
+			Where("vgpr.project_id IN ('', ?)", projectId). // project_id 字段为 '' 表示资源账号关联所有项目
+			LazySelectAppend("p.name as project_name, vgpr.project_id")
+	} else {
+		query = query.
+			Joins("left join iac_variable_group_project_rel as vgpr on vgpr.var_group_id = iac_variable_group.id").
+			Joins("left join iac_project as p on p.id = vgpr.project_id").
+			LazySelectAppend("p.name as project_name, vgpr.project_id")
+	}
+
+	query = query.Joins("left join iac_user as u on u.id = iac_variable_group.creator_id").
 		LazySelectAppend("u.name as creator")
 
+	return query
 }
 
 func UpdateVariableGroup(tx *db.Session, id models.Id, attrs models.Attrs) e.Error {
@@ -47,6 +72,26 @@ func UpdateVariableGroup(tx *db.Session, id models.Id, attrs models.Attrs) e.Err
 	} //nolint
 	return nil
 }
+func UpdateVariableGroupProjectRel(tx *db.Session, varGroupId models.Id, delVgpRelsId []models.Id, addVgpRelsId []models.Id) e.Error {
+	if len(addVgpRelsId) > 0 {
+		for _, addVpgRelId := range addVgpRelsId {
+			if err := CreateVariableGroupProjectRel(tx, models.VariableGroupProjectRel{
+				VarGroupId: varGroupId,
+				ProjectId:  addVpgRelId,
+			}); err != nil {
+				return e.New(e.DBError, fmt.Errorf("update variable group rel error: %v", err))
+			}
+		}
+	}
+	if len(delVgpRelsId) > 0 {
+		for _, delVgpRelId := range delVgpRelsId {
+			if err := DeleteVariableGroupProjectRel(tx, varGroupId, delVgpRelId); err != nil {
+				return e.New(e.DBError, fmt.Errorf("update variable group rel error: %v", err))
+			}
+		}
+	}
+	return nil
+}
 
 func DeleteVariableGroup(tx *db.Session, vgId models.Id) e.Error {
 	//删除变量组
@@ -58,13 +103,32 @@ func DeleteVariableGroup(tx *db.Session, vgId models.Id) e.Error {
 	if err := DeleteRelationship(tx, []models.Id{vgId}); err != nil {
 		return e.New(e.DBError, err)
 	}
+
+	queryVgpRels, err := SearchVariableGroupProjectRelByVgpId(tx, vgId)
+	if err != nil {
+		return e.New(e.DBError, err)
+	}
+
+	if len(queryVgpRels) != 0 {
+		for _, queryVgpRel := range queryVgpRels {
+			if err := DeleteVariableGroupProjectRel(tx, vgId, queryVgpRel.ProjectId); err != nil {
+				return e.New(e.DBError, err)
+			}
+		}
+	}
+
 	return nil
 }
 
 func DetailVariableGroup(dbSess *db.Session, vgId, orgId models.Id) *db.Session {
-	return dbSess.Model(&models.VariableGroup{}).
-		Where("id = ?", vgId).
-		Where("org_id = ?", orgId)
+	query := dbSess.Model(&models.VariableGroup{}).
+		Where("iac_variable_group.id = ?", vgId).
+		Where("iac_variable_group.org_id = ?", orgId)
+	query = query.Joins("left join iac_variable_group_project_rel on " +
+		"iac_variable_group.id = iac_variable_group_project_rel.var_group_id left join iac_project " +
+		"on iac_project.id = iac_variable_group_project_rel.project_id").
+		LazySelectAppend("iac_project.name as project_name, iac_variable_group.*, iac_project.id as project_id")
+	return query
 }
 
 type VarGroupRel struct {
@@ -152,6 +216,40 @@ func SearchVariableGroupRel(dbSess *db.Session, objectAttr map[string]models.Id,
 	return resp, nil
 }
 
+func SearchVariableGroupProjectRelByVgpId(dbSess *db.Session, vpgId models.Id) (vgpRel []models.VariableGroupProjectRel, err e.Error) {
+	if err := dbSess.Where("var_group_id = ?", vpgId).Find(&vgpRel); err != nil {
+		return nil, e.New(e.DBError, fmt.Errorf("search variable group rel error: %v", err))
+	}
+	return vgpRel, nil
+}
+func GetDelVgpRelsIdAndAddVgpRelsId(queryVgpRels []models.VariableGroupProjectRel, projectIds []models.Id) ([]models.Id, []models.Id) {
+	var (
+		dbProjectIds   []string // db 中已存在的项目id
+		formProjectIds []string // 需要重新绑定的项目id
+		delVgpRelsId   []models.Id
+		addVgpRelsId   []models.Id
+	)
+	for _, queryVpgRel := range queryVgpRels {
+		dbProjectIds = append(dbProjectIds, string(queryVpgRel.ProjectId))
+	}
+	for _, projectId := range projectIds {
+		formProjectIds = append(formProjectIds, string(projectId))
+	}
+
+	for _, pid := range dbProjectIds {
+		if !utils.StrInArray(pid, formProjectIds...) {
+			delVgpRelsId = append(delVgpRelsId, models.Id(pid))
+		}
+	}
+
+	for _, pid := range formProjectIds {
+		if !utils.StrInArray(pid, dbProjectIds...) {
+			addVgpRelsId = append(addVgpRelsId, models.Id(pid))
+		}
+	}
+	return delVgpRelsId, addVgpRelsId
+}
+
 func GetVariableGroupByObject(dbSess *db.Session, objectType string, objectId, orgId models.Id) ([]VarGroupRel, e.Error) {
 	vg := make([]VarGroupRel, 0)
 	query := dbSess.Table(fmt.Sprintf("%s as rel", models.VariableGroupRel{}.TableName())).
@@ -197,18 +295,26 @@ func CreateRelationship(dbSess *db.Session, rels []models.VariableGroupRel) e.Er
 	return nil
 }
 
-func CheckVgRelationship(tx *db.Session, form *forms.BatchUpdateRelationshipForm, orgId models.Id) bool {
+// CheckVgRelationship 检查变量组是否可以绑定到实例
+// 检查项目:
+// 	1. 新绑定的变量组与已绑定的变量组是否存在同名变量
+// 	2. 如果 projectId 不为空，则检查新绑定的变量组是否被授权在该项目下使用
+func CheckVgRelationship(tx *db.Session, form *forms.BatchUpdateRelationshipForm, orgId models.Id, projectId models.Id) e.Error {
+	if len(form.VarGroupIds) == 0 {
+		return nil
+	}
+
 	// 查询当前作用域下绑定的变量组
-	bindVgs, err := GetVariableGroupByObject(tx, form.ObjectType, form.ObjectId, orgId)
-	if err != nil {
-		logs.Get().Errorf("func GetVariableGroupByObject err: %v", err)
-		return false
+	bindVgs, er := GetVariableGroupByObject(tx, form.ObjectType, form.ObjectId, orgId)
+	if er != nil {
+		logs.Get().Errorf("func GetVariableGroupByObject err: %v", er)
+		return er
 	}
 	// 查询将要绑定的变量组
-	notBindVgs, err := GetVariableGroupListByIds(tx, form.VarGroupIds)
-	if err != nil {
-		logs.Get().Errorf("func GetVariableGroupListByIds err: %v", err)
-		return false
+	newBindVgs, er := GetVariableGroupListByIds(tx, form.VarGroupIds)
+	if er != nil {
+		logs.Get().Errorf("func GetVariableGroupListByIds err: %v", er)
+		return er
 	}
 	// 比较变量组下变量是否与其他变量组下变量存在冲突
 	// 利用map将当前作用域下绑定的变量组变量进行整理
@@ -219,15 +325,33 @@ func CheckVgRelationship(tx *db.Session, form *forms.BatchUpdateRelationshipForm
 		}
 	}
 
-	for _, notBindVg := range notBindVgs {
-		for _, vg := range notBindVg.Variables {
-			// 校验新绑定的变量组变量是否冲突
-			if _, ok := variables[vg.Name]; ok {
-				return true
+	if projectId != "" {
+		pvgs, er := GetProjectVarGroups(tx, projectId)
+		if er != nil {
+			return er
+		}
+		pvgsMap := make(map[models.Id]*models.VariableGroup)
+		for i := range pvgs {
+			pvgsMap[pvgs[i].Id] = &pvgs[i]
+		}
+
+		for _, vg := range newBindVgs {
+			if _, ok := pvgsMap[vg.Id]; !ok {
+				// 变量组未被授权在该项目下使用
+				return e.New(e.VariableGroupPermDeny, fmt.Errorf("%s", vg.Name))
 			}
 		}
 	}
-	return false
+
+	for _, vg := range newBindVgs {
+		for _, v := range vg.Variables {
+			// 校验新绑定的变量组变量是否冲突
+			if _, ok := variables[v.Name]; ok {
+				return e.New(e.VariableAlreadyExists, fmt.Errorf("variable name conflict: %s", v.Name))
+			}
+		}
+	}
+	return nil
 }
 
 func GetVariableGroupById(dbSess *db.Session, id models.Id) (models.VariableGroup, e.Error) {
@@ -255,6 +379,13 @@ func DeleteRelationship(dbSess *db.Session, vgId []models.Id) e.Error {
 	}
 	if _, err := dbSess.Where("var_group_id in (?)", vgId).
 		Delete(&models.VariableGroupRel{}); err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+func DeleteVariableGroupProjectRel(dbSess *db.Session, vgId models.Id, projectId models.Id) e.Error {
+	if _, err := dbSess.Where("var_group_id = ? and project_id = ?", vgId, projectId).
+		Delete(&models.VariableGroupProjectRel{}); err != nil {
 		return e.New(e.DBError, err)
 	}
 	return nil
@@ -316,6 +447,35 @@ func GetVariableGroupVar(vgs []VarGroupRel, vars map[string]models.Variable) map
 }
 
 func BatchUpdateRelationship(tx *db.Session, vgIds, delVgIds []models.Id, objectType, objectId string) e.Error {
+	var projectId models.Id
+	switch objectType {
+	case consts.ScopeEnv:
+		if env, er := GetEnvById(tx, models.Id(objectId)); er != nil {
+			return er
+		} else {
+			projectId = env.ProjectId
+		}
+	case consts.ScopeProject:
+		projectId = models.Id(objectId)
+	}
+
+	if projectId != "" { // 如果能关联到项目id，则需要检查变量组是否被授权在该项目下使用
+		pvgs, er := GetProjectVarGroups(tx, projectId)
+		if er != nil {
+			return er
+		}
+		vgsMap := make(map[models.Id]*models.VariableGroup)
+		for i := range pvgs {
+			vgsMap[pvgs[i].Id] = &pvgs[i]
+		}
+
+		for _, id := range vgIds {
+			if _, ok := vgsMap[id]; !ok {
+				return e.New(e.VariableGroupPermDeny, fmt.Errorf("%s", id))
+			}
+		}
+	}
+
 	rel := make([]models.VariableGroupRel, 0)
 	if err := DeleteRelationship(tx, delVgIds); err != nil {
 		return err
@@ -392,4 +552,51 @@ func DeleteVarGroupRel(sess *db.Session, objectType string, objectId models.Id) 
 		return e.AutoNew(err, e.DBError)
 	}
 	return nil
+}
+
+// GetProjectVarGroups 获取指定项目下可用的变量组
+func GetProjectVarGroups(sess *db.Session, projectId models.Id) ([]models.VariableGroup, e.Error) {
+	projectVgQuery := sess.Model(&models.VariableGroupProjectRel{}).Where("project_id IN ('', ?)", projectId)
+
+	vgs := make([]models.VariableGroup, 0)
+	err := sess.Model(&models.VariableGroup{}).
+		Where("id IN (?)", projectVgQuery.Select("var_group_id").Expr()).
+		Find(&vgs)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+	return vgs, nil
+}
+
+func GetVarGroupIsOpenBillCollectByVgIds(dbSess *db.Session, vgIds []models.Id, orgId, projectId models.Id) bool {
+	if len(vgIds) == 0 {
+		return false
+	}
+
+	exists, err := dbSess.Raw("select * from "+
+		"(select * from iac_variable_group as vg where vg.org_id = ? and vg.provider != '' and vg.cost_counted = ? and id in (?)) as vg "+
+		"left JOIN iac_variable_group_project_rel as vgpr on vg.id = vgpr.var_group_id and vgpr.project_id = ?", orgId, true, vgIds, projectId).Exists()
+	if err != nil {
+		return false
+	}
+
+	return exists
+}
+
+func GetBillVarGroupByProjectOrOrg(dbSess *db.Session, projectId, orgId models.Id, provider string) (*models.VariableGroup, e.Error) {
+	query := dbSess.Model(&models.VariableGroup{}).Joins(`join iac_variable_group_project_rel on iac_variable_group.id = iac_variable_group_project_rel.var_group_id`)
+
+	query = query.Where("iac_variable_group_project_rel.project_id IN (?, '')", projectId)
+	query = query.Where("iac_variable_group.type = ?", "environment")
+	query = query.Where("iac_variable_group.cost_counted = ?", 1)
+	query = query.Where("iac_variable_group.provider = ?", provider)
+	query = query.Where("iac_variable_group.org_id = ?", orgId)
+
+	var vg models.VariableGroup
+	err := query.Debug().First(&vg)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return &vg, nil
 }

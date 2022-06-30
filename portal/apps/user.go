@@ -3,7 +3,7 @@
 package apps
 
 import (
-	"cloudiac/common"
+	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
@@ -66,15 +66,6 @@ func createUserOrgRel(tx *db.Session, orgId models.Id, initPass string, form *fo
 	if err != nil {
 		lg.Errorf("error create user , err %s", err)
 		return nil, err
-	}
-
-	// 新用户自动加入演示组织和项目
-	if orgId != models.Id(common.DemoOrgId) {
-		if err = services.TryAddDemoRelation(tx, user.Id); err != nil {
-			_ = tx.Rollback()
-			lg.Errorf("error add user demo rel, err %s", err)
-			return nil, err
-		}
 	}
 
 	return user, nil
@@ -252,21 +243,61 @@ func chkUserIdentity(formId, userId, orgId models.Id, isSuperAdmin bool) e.Error
 	return nil
 }
 
-func getNewPassword(oldPassword, newPassword, userPassword string) (string, e.Error) {
-
+func getNewPassword(oldPassword, newPassword, userPassword, userEmail string) (string, e.Error) {
 	valid, err := utils.CheckPassword(oldPassword, userPassword)
 	if err != nil {
 		return "", e.New(e.DBError, http.StatusInternalServerError, err)
 	}
 	if !valid {
-		return "", e.New(e.InvalidPassword, http.StatusBadRequest)
+		if configs.Get().LdapEnabled() {
+			// 当校验失败的时候，去检验是否符合ldap 登陆密码，成功则依旧可以修改本地密码
+			if _, _, ldapErr := services.LdapAuthLogin(userEmail, oldPassword); ldapErr != nil {
+				return "", e.New(e.LdapError, http.StatusInternalServerError, err)
+			}
+		} else {
+			return "", e.New(e.InvalidPassword, http.StatusBadRequest)
+		}
 	}
-
 	newPassword, er := services.HashPassword(newPassword)
 	if er != nil {
 		return "", er
 	}
 	return newPassword, nil
+}
+
+// ActiveUserEmail
+func ActiveUserEmail(c *ctx.ServiceContext) (interface{}, e.Error) {
+	user, er := services.GetUserByEmail(c.DB(), c.Email)
+	if er != nil {
+		return nil, e.New(e.DBError, er)
+	}
+
+	type userActivateStatus struct {
+		isActivate bool
+	}
+
+	if user.ActiveStatus == consts.UserEmailActivate {
+		return &userActivateStatus{
+			isActivate: true,
+		}, nil
+	}
+	attrs := models.Attrs{}
+	attrs["active_status"] = consts.UserEmailActivate
+	return services.UpdateUser(c.DB(), user.Id, attrs)
+}
+
+// ActiveUserEmailRetry
+func ActiveUserEmailRetry(c *ctx.ServiceContext, email string) (interface{}, e.Error) {
+	user, er := services.GetUserByEmail(c.DB(), email)
+	if er != nil {
+		return nil, e.New(e.DBError, er)
+	}
+
+	token, err := services.GenerateActivateToken(user.Email)
+	if err != nil {
+		return nil, e.New(e.InternalError, err)
+	}
+	return nil, services.SendActivateAccountMail(user, token)
 }
 
 // UpdateUser 用户信息编辑
@@ -282,12 +313,6 @@ func UpdateUser(c *ctx.ServiceContext, form *forms.UpdateUserForm) (*models.User
 	if err != nil {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	}
-	if user.IsLdap {
-		if form.HasKey("oldPassword") || form.HasKey("newPassword") {
-			return nil, e.New(e.LdapNotAllowUpdate)
-		}
-	}
-
 	attrs := models.Attrs{}
 	if form.HasKey("name") {
 		attrs["name"] = form.Name
@@ -308,7 +333,7 @@ func UpdateUser(c *ctx.ServiceContext, form *forms.UpdateUserForm) (*models.User
 		return nil, e.New(e.BadParam, http.StatusBadRequest)
 	}
 
-	newPassword, er := getNewPassword(form.OldPassword, form.NewPassword, user.Password)
+	newPassword, er := getNewPassword(form.OldPassword, form.NewPassword, user.Password, user.Email)
 	if er != nil {
 		return nil, er
 	}
@@ -382,20 +407,19 @@ func queryByOrgAndProject(db, query *db.Session, userId, orgId, projectId, input
 	return query, nil
 }
 
-func setUserRole(detail *resps.UserWithRoleResp, userId, orgId, projectId models.Id, isSuperAdmin bool) {
+func setUserDefaultRole(detail *resps.UserWithRoleResp, userId, orgId, projectId models.Id, isSuperAdmin bool) {
 	if isSuperAdmin {
 		// 如果是平台管理员，自动拥有组织管理员权限和项目管理者权限
-		if orgId != "" {
-			detail.Role = consts.OrgRoleAdmin
-		}
-		if projectId != "" {
-			detail.ProjectRole = consts.ProjectRoleManager
-		}
+		detail.Role = consts.OrgRoleAdmin
+		detail.ProjectRole = consts.ProjectRoleManager
 	} else if services.UserHasOrgRole(userId, orgId, consts.OrgRoleAdmin) {
 		// 如果是组织管理员自动拥有项目管理者权限
-		if projectId != "" {
-			detail.ProjectRole = consts.ProjectRoleManager
-		}
+		detail.ProjectRole = consts.ProjectRoleManager
+	} else if detail.ProjectRole == "" && projectId == "" && orgId != "" {
+		// 如果请求的不是具体项目下的角色，则将用户的项目角色设置为其在当前组织下权限最高的项目角色
+		var err error
+		detail.ProjectRole, err = services.GetUserHighestProjectRole(db.Get(), orgId, userId)
+		logs.Get().Errorf("GetUserHighestProjectRole: %v", err)
 	}
 }
 
@@ -407,18 +431,19 @@ func UserDetail(c *ctx.ServiceContext, userId models.Id) (*resps.UserWithRoleRes
 		return nil, err
 	}
 
-	// 导出用户角色
+	// 导出组织角色
 	if c.OrgId != "" {
 		query = query.Joins(fmt.Sprintf("left join %s as o on %s.id = o.user_id and o.org_id = ?",
 			models.UserOrg{}.TableName(), models.User{}.TableName()), c.OrgId).
-			LazySelectAppend(fmt.Sprintf("o.role,%s.*", models.User{}.TableName()))
+			LazySelectAppend("o.role")
 	}
 	// 导出项目角色
 	if c.ProjectId != "" {
 		query = query.Joins(fmt.Sprintf("left join %s as p on %s.id = p.user_id and p.project_id = ?",
 			models.UserProject{}.TableName(), models.User{}.TableName()), c.ProjectId).
-			LazySelectAppend(fmt.Sprintf("p.role as project_role,%s.*", models.User{}.TableName()))
+			LazySelectAppend("p.role as project_role")
 	}
+
 	detail, err := services.GetUserDetailById(query, userId)
 	if err != nil && err.Code() == e.UserNotExists {
 		// 通过 /auth/me 或者 /users/:userId 访问
@@ -428,7 +453,7 @@ func UserDetail(c *ctx.ServiceContext, userId models.Id) (*resps.UserWithRoleRes
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
 
-	setUserRole(detail, c.UserId, c.OrgId, c.ProjectId, c.IsSuperAdmin)
+	setUserDefaultRole(detail, c.UserId, c.OrgId, c.ProjectId, c.IsSuperAdmin)
 	return detail, nil
 }
 
@@ -511,10 +536,6 @@ func UserPassReset(c *ctx.ServiceContext, form *forms.DetailUserForm) (*models.U
 	if er != nil {
 		return nil, e.AutoNew(er, e.DBError)
 	}
-	if user.IsLdap {
-		return nil, e.New(e.LdapNotAllowUpdate)
-	}
-
 	initPass := utils.GenPasswd(6, "mix")
 	hashedPassword, err := services.HashPassword(initPass)
 	if err != nil {

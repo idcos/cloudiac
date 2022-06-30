@@ -2,7 +2,9 @@
 
 package forms
 
-import "cloudiac/portal/models"
+import (
+	"cloudiac/portal/models"
+)
 
 type Var struct {
 	Id          string `form:"id" json:"id" binding:"required"`
@@ -27,8 +29,8 @@ type CreateTemplateForm struct {
 	Playbook     string      `json:"playbook" form:"playbook" binding:"omitempty,max=255"`
 	PlayVarsFile string      `json:"playVarsFile" form:"playVarsFile" binding:"max=255"`
 	TfVarsFile   string      `form:"tfVarsFile" json:"tfVarsFile" binding:"max=255"`
-	ProjectId    []models.Id `form:"projectId" json:"projectId" binding:"required,dive,required,startswith=p-,max=32"` // 项目ID
-	TfVersion    string      `form:"tfVersion" json:"tfVersion" binding:"max=255"`                                     // 模版使用terraform版本号
+	ProjectId    []models.Id `form:"projectId" json:"projectId" binding:"omitempty,dive,required,startswith=p-,max=32"` // 项目ID
+	TfVersion    string      `form:"tfVersion" json:"tfVersion" binding:"max=255"`                                      // 模版使用terraform版本号
 
 	Variables []Variable `json:"variables" form:"variables" binding:"omitempty,dive,required"`
 
@@ -40,6 +42,7 @@ type CreateTemplateForm struct {
 
 	KeyId models.Id `form:"keyId" json:"keyId" binding:"omitempty,startswith=k-,max=32"` // 部署密钥ID
 
+	Source string `json:"source" form:"source" ` //云模板来源
 }
 
 type SearchTemplateForm struct {

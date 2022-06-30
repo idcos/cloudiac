@@ -11,16 +11,22 @@ type SearchVariableGroupForm struct {
 
 type CreateVariableGroupForm struct {
 	BaseForm
-	Name      string                    `json:"name" form:"name" binding:"required,gte=2,lte=64"`
-	Type      string                    `json:"type" form:"type" binding:"required,oneof=environment terraform"`
-	Variables []models.VarGroupVariable `json:"variables" form:"variables" binding:"required,dive,required"`
+	Name        string                    `json:"name" form:"name" binding:"required,gte=2,lte=64"`
+	Type        string                    `json:"type" form:"type" binding:"required,oneof=environment terraform"`
+	Variables   []models.VarGroupVariable `json:"variables" form:"variables" binding:"dive,required"`
+	ProjectIds  []models.Id               `json:"projectIds" form:"projectIds" binding:"dive"`
+	Provider    string                    `json:"provider" form:"provider" binding:""`
+	CostCounted bool                      `json:"costCounted" form:"costCounted" binding:""`
 }
 
 type UpdateVariableGroupForm struct {
 	BaseForm
-	Id        models.Id                 `uri:"id" binding:"required,startswith=vg-,max=32" swaggerignore:"true"`
-	Name      string                    `json:"name" form:"name" binding:"omitempty,gte=2,lte=64"`
-	Variables []models.VarGroupVariable `json:"variables" form:"variables" binding:"required"`
+	Id          models.Id                 `uri:"id" binding:"required,startswith=vg-,max=32" swaggerignore:"true"`
+	Name        string                    `json:"name" form:"name" binding:"omitempty,gte=2,lte=64"`
+	Variables   []models.VarGroupVariable `json:"variables" form:"variables" binding:"required"`
+	ProjectIds  []models.Id               `json:"projectIds" form:"projectIds" binding:"omitempty,dive,required,startswith=p-"`
+	Provider    string                    `json:"provider" form:"provider" binding:""`
+	CostCounted bool                      `json:"costCounted" form:"costCounted" binding:""`
 }
 
 type DeleteVariableGroupForm struct {

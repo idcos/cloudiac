@@ -9,6 +9,9 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/services"
+	"cloudiac/portal/services/forecast/pricecalculator"
+	"cloudiac/portal/services/forecast/providers/terraform"
+	"cloudiac/portal/services/forecast/schema"
 	"cloudiac/runner"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
@@ -40,7 +43,15 @@ func taskDoneProcessState(dbSess *db.Session, task *models.Task) error {
 				return err
 			}
 		}
-		if err = services.SaveTaskResources(dbSess, task, tfState.Values, proMap); err != nil {
+
+		// parse tfplan to get sensitive keys
+		planBytes, err := readIfExist(task.PlanJsonPath())
+		if err != nil {
+			return fmt.Errorf("read tfplan json: %v", err)
+		}
+		sensitiveKeys := services.GetSensitiveKeysFromTfPlan(planBytes)
+
+		if err = services.SaveTaskResources(dbSess, task, tfState.Values, proMap, sensitiveKeys); err != nil {
 			return fmt.Errorf("save task resources: %v", err)
 		}
 		if err = services.SaveTaskOutputs(dbSess, task, tfState.Values.Outputs); err != nil {
@@ -59,11 +70,108 @@ func taskDoneProcessPlan(dbSess *db.Session, task *models.Task, isPlanResult boo
 		if err != nil {
 			return fmt.Errorf("unmarshal plan json: %v", err)
 		}
-		if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges, isPlanResult); err != nil {
+
+		var costs []float32
+		var forecastFailed []string
+		if isPlanResult {
+			costs, forecastFailed, err = getForecastCostWhenTaskPlan(dbSess, task, bs)
+			if err != nil {
+				logs.Get().Warnf("get prices after plan error: %v", err)
+			}
+		}
+
+		if err = services.SaveTaskChanges(dbSess, task, tfPlan.ResourceChanges, isPlanResult, costs, forecastFailed); err != nil {
 			return fmt.Errorf("save task changes: %v", err)
 		}
 	}
 	return nil
+}
+
+func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byte) ([]float32, []string, error) {
+	var (
+		addedCost        float32 // 新增资源的费用
+		updateBeforeCost float32 // 变更前的资源费用
+		updateAfterCost  float32 // 变更后的资源费用
+		destroyedCost    float32 // 删除资源的费用
+		err              error
+		aliRegion        string //阿里云region
+	)
+
+	// 通过环境变量获取区域
+	for _, i := range task.Variables {
+		if i.Name == "ALICLOUD_REGION" && i.Type == consts.VarTypeEnv {
+			if i.Sensitive {
+				value, err := utils.DecryptSecretVarForce(i.Value)
+				if err != nil {
+					logs.Get().Errorf("DecryptSecretVarForce err: %s", err)
+					break
+				}
+				aliRegion = value
+			} else {
+				aliRegion = i.Value
+			}
+			break
+		}
+	}
+
+	// get resources
+	createResources, deleteResources, updateBeforeResources, updateAfterResources := terraform.ParserPlanJson(bs, aliRegion)
+	// compute cost
+	addedCost, addedForecast, err := computeResourceCost(createResources)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	updateBeforeCost, updateBeforeForecast, err := computeResourceCost(updateBeforeResources)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	updateAfterCost, updateAfterForecast, err := computeResourceCost(updateAfterResources)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	destroyedCost, destroyedForecast, err := computeResourceCost(deleteResources)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// 整理询价失败的resource
+	failedForecast := make([]string, 0)
+	failedForecast = append(failedForecast, destroyedForecast...)
+	failedForecast = append(failedForecast, updateBeforeForecast...)
+	failedForecast = append(failedForecast, updateAfterForecast...)
+	failedForecast = append(failedForecast, addedForecast...)
+
+	// 获取的费用是以小时计算的，乘以730算月费用
+	return []float32{addedCost * 730, -1 * destroyedCost * 730, (updateAfterCost - updateBeforeCost) * 730}, utils.RemoveDuplicateElement(failedForecast), err
+}
+
+func computeResourceCost(resources []*schema.Resource) (float32, []string, error) {
+	var cost float32
+	// 询价失败产品的address
+	forecastFailed := make([]string, 0)
+
+	for _, res := range resources {
+		priceResp, err := pricecalculator.GetResourcePrice(res)
+		if err != nil {
+			forecastFailed = append(forecastFailed, res.Name)
+			logs.Get().WithField("cost_forecast", "GetResourcePrice").Error(err)
+			continue
+		}
+
+		price, err := pricecalculator.GetPriceFromResponse(priceResp)
+		if err != nil {
+			forecastFailed = append(forecastFailed, res.Name)
+			logs.Get().WithField("cost_forecast", "GetPriceFromResponse").Error(err)
+			continue
+		}
+
+		cost = cost + price
+	}
+
+	return cost, forecastFailed, nil
 }
 
 func taskDoneProcessDriftTask(logger logs.Logger, dbSess *db.Session, task *models.Task) error {
@@ -127,7 +235,7 @@ func taskDoneProcessAutoDestroy(dbSess *db.Session, task *models.Task) error {
 
 	updateAttrs := models.Attrs{}
 
-	if task.Type == models.TaskTypeDestroy && env.Status == models.EnvStatusInactive {
+	if task.Type == models.TaskTypeDestroy && env.Status == models.EnvStatusDestroyed {
 		// 环境销毁后清空自动销毁设置，以支持通过再次部署重建环境。
 		// ttl 需要保留，做为重建环境的默认 ttl
 		updateAttrs["AutoDestroyAt"] = nil

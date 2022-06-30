@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/desensitize"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
@@ -35,14 +36,14 @@ func CreateVcs(c *ctx.ServiceContext, form *forms.CreateVcsForm) (interface{}, e
 		VcsToken: token,
 	}
 	if err := vcsrv.VerifyVcsToken(&v); err != nil {
-		return nil, e.AutoNew(err, e.DBError)
+		return nil, e.AutoNew(err, e.VcsInvalidToken)
 	}
 
 	vcs, err := services.CreateVcs(c.DB(), v)
 	if err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
-	return vcs, nil
+	return desensitize.NewVcsPtr(vcs), nil
 }
 
 // 判断前端传递组织id是否具有该vcs仓库读写权限
@@ -58,8 +59,8 @@ func checkOrgVcsAuth(c *ctx.ServiceContext, id models.Id) (vcs *models.Vcs, err 
 
 }
 
-func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (vcs *models.Vcs, err e.Error) {
-	vcs, err = checkOrgVcsAuth(c, form.Id) //nolint
+func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (*desensitize.Vcs, e.Error) {
+	vcs, err := checkOrgVcsAuth(c, form.Id) //nolint
 	if err != nil {
 		return nil, err
 	}
@@ -84,16 +85,21 @@ func UpdateVcs(c *ctx.ServiceContext, form *forms.UpdateVcsForm) (vcs *models.Vc
 		}
 		attrs["vcs_token"] = vcsToken
 	}
-	return services.UpdateVcs(c.DB(), form.Id, attrs)
+	vcs, err = services.UpdateVcs(c.DB(), form.Id, attrs)
+	if err != nil {
+		return nil, err
+	}
+
+	return desensitize.NewVcsPtr(vcs), nil
 }
 
 func SearchVcs(c *ctx.ServiceContext, form *forms.SearchVcsForm) (interface{}, e.Error) {
-	rs, err := getPage(services.QueryVcs(c.OrgId, form.Status, form.Q, form.IsShowDefaultVcs, false, c.DB()), form, models.Vcs{})
+	query := services.QueryVcs(c.OrgId, form.Status, form.Q, form.IsShowDefaultVcs, false, c.DB())
+	rs, err := getPage(query, form, desensitize.Vcs{})
 	if err != nil {
 		return nil, err
 	}
 	return rs, nil
-
 }
 
 func DeleteVcs(c *ctx.ServiceContext, form *forms.DeleteVcsForm) (result interface{}, re e.Error) {
@@ -117,8 +123,11 @@ func DeleteVcs(c *ctx.ServiceContext, form *forms.DeleteVcsForm) (result interfa
 }
 
 func ListEnableVcs(c *ctx.ServiceContext) (interface{}, e.Error) {
-	return services.QueryEnableVcs(c.OrgId, c.DB())
-
+	vcsList, er := services.FindEnableVcs(c.OrgId, c.DB())
+	if er != nil {
+		return nil, er
+	}
+	return desensitize.NewVcsSlice(vcsList), nil
 }
 
 func GetReadme(c *ctx.ServiceContext, form *forms.GetReadmeForm) (interface{}, e.Error) {
@@ -271,7 +280,7 @@ func VcsVariableSearch(c *ctx.ServiceContext, form *forms.TemplateVariableSearch
 	}
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
 		Ref:    form.RepoRevision,
-		Search: consts.VariablePrefix,
+		Search: consts.TfFileMatch,
 		Path:   form.Workdir,
 	})
 	if er != nil {
@@ -318,4 +327,36 @@ func GetVcsRepoFile(c *ctx.ServiceContext, form *forms.GetVcsRepoFileForm) (inte
 
 	res := gin.H{"content": string(b)}
 	return res, nil
+}
+
+func GetVcsFullFilePath(c *ctx.ServiceContext, form *forms.GetFileFullPathForm) (interface{}, e.Error) {
+	vcs, err := checkOrgVcsAuth(c, form.Id)
+	if err != nil {
+		return nil, err
+	}
+	vcsService, er := vcsrv.GetVcsInstance(vcs)
+	if er != nil {
+		return nil, e.New(e.VcsError, er)
+	}
+	repo, er := vcsService.GetRepo(form.RepoId)
+	if er != nil {
+		return nil, e.New(e.VcsError, er)
+	}
+	vcs, err = services.GetVcsById(c.DB(), form.Id)
+	if err != nil {
+		return nil, err
+	}
+	if form.CommitId != "" {
+		return repo.GetCommitFullPath(vcs.Address, form.CommitId), nil
+	}
+
+	return repo.GetFullFilePath(vcs.Address, form.Path, form.RepoRevision), nil
+}
+
+func GetRegistryVcs(c *ctx.ServiceContext) (interface{}, e.Error) {
+	vcs, err := services.GetRegistryVcs(c.DB())
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return vcs, nil
 }

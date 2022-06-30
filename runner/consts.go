@@ -22,6 +22,7 @@ provider plugin 的查找逻辑:
 const (
 	ContainerWorkspace = "/cloudiac/workspace"
 
+	ContainerCertificateDir  = "/cloudiac/cert"                    // 挂载consul证书资源
 	ContainerAssetsDir       = "/cloudiac/assets"                  // 挂载依赖资源，如 terraform.py 等(己打包到 worker 镜像)
 	ContainerPluginPath      = "/cloudiac/terraform/plugins"       // 预置 providers 目录(己打包到镜像)
 	ContainerPluginCachePath = "/cloudiac/terraform/plugins-cache" // terraform plugins 缓存目录
@@ -34,6 +35,8 @@ const (
 	TaskStepInfoFileName      = "step-info.json"
 	TaskContainerInfoFileName = "container.json"
 	TaskControlFileName       = "control.json"
+
+	TerraformrcFileName = "terraformrc"
 
 	CloudIacTfFile   = "_cloudiac.tf"
 	CloudIacPlayVars = "_cloudiac_play_vars.yml"

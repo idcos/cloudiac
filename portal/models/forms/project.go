@@ -20,8 +20,10 @@ type CreateProjectForm struct {
 type SearchProjectForm struct {
 	NoPageSizeForm
 
-	Q      string `json:"q" form:"q" `
-	Status string `json:"status" form:"status" binding:"omitempty,oneof=enable disable"`
+	Q         string    `json:"q" form:"q" `
+	Status    string    `json:"status" form:"status" binding:"omitempty,oneof=enable disable"` // 过滤项目状态(enable/disable, 默认为 enable)
+	WithStat  bool      `json:"withStat" form:"withStat"`
+	ProjectId models.Id `json:"projectId" form:"projectId"`
 }
 
 type UpdateProjectForm struct {
@@ -43,4 +45,17 @@ type DetailProjectForm struct {
 	BaseForm
 
 	Id models.Id `uri:"id" json:"id" binding:"required,startswith=p-,max=32" swaggerignore:"true"`
+}
+
+type ProjectStatForm struct {
+	BaseForm
+	ProjectId models.Id `uri:"id" json:"id" binding:"required"`
+	Limit     int       `form:"limit" json:"limit"`
+}
+
+type SearchProjectResourceForm struct {
+	PageForm
+	Q         string `form:"q" json:"q" binding:""`                 // 资源名称，支持模糊查询
+	EnvIds    string `form:"envIds" json:"envIds" binding:""`       // 环境id列表
+	Providers string `form:"providers" json:"providers" binding:""` // provider 名称列表
 }

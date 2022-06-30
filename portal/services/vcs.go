@@ -10,6 +10,9 @@ import (
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils/logs"
 	"fmt"
+	"strings"
+
+	ctyjson "github.com/zclconf/go-cty/cty/json"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
@@ -53,7 +56,7 @@ func VscTokenCheckByID(tx *db.Session, id models.Id, withNewToken string) error 
 }
 
 func QueryVcs(orgId models.Id, status, q string, isShowdefaultVcs, isShowRegistryVcs bool, query *db.Session) *db.Session {
-	query = query.Model(&models.Vcs{}).Where("org_id = ? or org_id = ''", orgId)
+	query = query.Model(&models.Vcs{}).Omit("vcs_token").Where("org_id = ? or org_id = ''", orgId)
 	if status != "" {
 		query = query.Where("status = ?", status)
 	}
@@ -67,7 +70,7 @@ func QueryVcs(orgId models.Id, status, q string, isShowdefaultVcs, isShowRegistr
 	if !isShowRegistryVcs {
 		query = query.Where("vcs_type != ?", consts.GitTypeRegistry)
 	}
-	return query.LazySelectAppend("id, org_id, project_id, name, status, vcs_type, address")
+	return query
 }
 
 func QueryVcsSample(query *db.Session) *db.Session {
@@ -129,7 +132,7 @@ func GetVcsRepoByTplId(sess *db.Session, tplId models.Id) (vcsrv.RepoIface, e.Er
 	}
 }
 
-func QueryEnableVcs(orgId models.Id, query *db.Session) (interface{}, e.Error) {
+func FindEnableVcs(orgId models.Id, query *db.Session) ([]models.Vcs, e.Error) {
 	vcs := make([]models.Vcs, 0)
 	if err := query.Model(&models.Vcs{}).Where("org_id = ? or org_id = 0", orgId).Where("status = 'enable'").Find(&vcs); err != nil {
 		return nil, e.New(e.DBError, err)
@@ -146,6 +149,7 @@ func DeleteVcs(tx *db.Session, id models.Id) e.Error {
 
 type TemplateVariable struct {
 	Description string `json:"description" form:"description" `
+	Sensitive   bool   `json:"sensitive" form:"sensitive"`
 	Value       string `json:"value" form:"value" `
 	Name        string `json:"name" form:"name" `
 }
@@ -156,7 +160,7 @@ type tfVariableConfig struct {
 
 type tfVariableBlock struct {
 	Name        string      `hcl:",label"`
-	Default     string      `hcl:"default,optional"`
+	Default     interface{} `hcl:"default,optional"`
 	Type        interface{} `hcl:"type,optional"`
 	Description string      `hcl:"description,optional"`
 	Sensitive   bool        `hcl:"sensitive,optional"`
@@ -180,14 +184,30 @@ func ParseTfVariables(filename string, content []byte) ([]TemplateVariable, e.Er
 	for _, d := range diagErrs {
 		logger.Warnf(d.Error())
 	}
-
 	tv := make([]TemplateVariable, 0)
 	for _, s := range c.Upstreams {
-		tv = append(tv, TemplateVariable{
-			Value:       s.Default,
-			Name:        s.Name,
-			Description: s.Description,
-		})
+		v, ok := s.Default.(*hcl.Attribute)
+		if ok {
+			val, _ := v.Expr.Value(nil)
+			if val.IsWhollyKnown() {
+				valJSON, err := ctyjson.Marshal(val, val.Type())
+				if err != nil {
+					return nil, e.New(e.HCLParseError, fmt.Errorf("failed to serialize default value as JSON: %s", err))
+				}
+				tv = append(tv, TemplateVariable{
+					Value:       strings.Trim(string(valJSON), "\""),
+					Name:        s.Name,
+					Sensitive:   s.Sensitive,
+					Description: s.Description,
+				})
+			}
+		} else {
+			tv = append(tv, TemplateVariable{
+				Name:        s.Name,
+				Description: s.Description,
+			})
+		}
+
 	}
 	return tv, nil
 }

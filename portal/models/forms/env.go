@@ -57,12 +57,13 @@ type CreateEnvForm struct {
 	PolicyEnable bool        `json:"policyEnable" form:"policyEnable" binding:""`                                             // 是否开启合规检测
 	PolicyGroup  []models.Id `json:"policyGroup" form:"policyGroup" binding:"omitempty,dive,required,startswith=pog-,max=32"` // 绑定策略组集合
 
-	Source string `json:"source" form:"source" ` // 调用来源
+	Source string `json:"source" form:"source" binding:"required"` // 调用来源
 }
 
 type SampleVariables struct {
-	Name  string `json:"name" form:"name" binding:"required,gte=2,lte=64"`
-	Value string `json:"value" form:"value" binding:""`
+	Name      string `json:"name" form:"name" binding:"required,lte=64"`
+	Value     string `json:"value" form:"value" binding:""`
+	Sensitive bool   `json:"sensitive" form:"sensitive" binding:""`
 }
 
 type CronDriftForm struct {
@@ -118,9 +119,12 @@ type DeployEnvForm struct {
 	RunnerTags  []string `form:"runnerTags" json:"runnerTags" binding:"omitempty,dive,required,max=256"`                          // 环境默认部署通道Tags
 	Revision    string   `form:"revision" json:"revision" binding:"max=64"`                                                       // 分支/标签
 	StepTimeout int      `form:"stepTimeout" json:"stepTimeout" binding:""`                                                       // 部署超时时间（单位：秒）
-	RetryNumber int      `form:"retryNumber" json:"retryNumber" binding:""`                                                       // 重试总次数
-	RetryDelay  int      `form:"retryDelay" json:"retryDelay" binding:""`                                                         // 重试时间间隔
-	RetryAble   bool     `form:"retryAble" json:"retryAble" binding:""`                                                           // 是否允许任务进行重试
+
+	RetryNumber int  `form:"retryNumber" json:"retryNumber" binding:""` // 重试总次数
+	RetryDelay  int  `form:"retryDelay" json:"retryDelay" binding:""`   // 重试时间间隔
+	RetryAble   bool `form:"retryAble" json:"retryAble" binding:""`     // 是否允许任务进行重试
+
+	ExtraData models.JSON `form:"extraData" json:"extraData" binding:""` // 扩展字段，用于存储外部服务调用时的信息
 
 	Variables []Variable `form:"variables" json:"variables" binding:"omitempty,dive,required"` // 自定义变量列表，该变量列表会覆盖现有的变量
 
@@ -139,6 +143,8 @@ type DeployEnvForm struct {
 
 	PolicyEnable bool        `json:"policyEnable" form:"policyEnable" binding:""`                                             // 是否开启合规检测
 	PolicyGroup  []models.Id `json:"policyGroup" form:"policyGroup" binding:"omitempty,dive,required,startswith=pog-,max=32"` // 绑定策略组集合
+
+	Source string `json:"source" form:"source" binding:"required"` // 调用来源
 }
 
 type ArchiveEnvForm struct {
@@ -155,6 +161,8 @@ type SearchEnvForm struct {
 	Q        string `form:"q" json:"q" binding:""`                                                                                                                    // 环境名称，支持模糊查询
 	Status   string `form:"status" json:"status" binding:"omitempty,oneof=active failed inactive running approving" enums:"active,failed,inactive,running,approving"` // 环境状态，active活跃, inactive非活跃,failed错误,running部署中,approving审批中
 	Archived string `form:"archived" json:"archived" binding:"omitempty,oneof=true false all" enums:"true,false,all"`                                                 // 归档状态，默认返回未归档环境
+
+	Deploying *bool `form:"deploying" json:"deploying" binding:""` // 环境部署状态，不传则表示不过滤部署状态
 }
 
 type DeleteEnvForm struct {
@@ -186,6 +194,8 @@ type DestroyEnvForm struct {
 	BaseForm
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true" binding:"required,startswith=env-,max=32"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
+
+	Source string `json:"source" form:"source" binding:"required"` // 调用来源
 }
 
 type SearchEnvVariableForm struct {
@@ -212,7 +222,7 @@ type UpdateEnvTagsForm struct {
 	BaseForm
 
 	Id   models.Id `uri:"id" json:"id" swaggerignore:"true" binding:"required,startswith=env-,max=32"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
-	Tags string    `json:"tags" form:"tags" binding:"required,max=255"`
+	Tags string    `json:"tags" form:"tags" binding:"max=255"`
 }
 
 type EnvLockForm struct {

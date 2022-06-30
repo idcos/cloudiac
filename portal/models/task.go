@@ -37,6 +37,11 @@ type TaskResult struct {
 	ResChanged   *int `json:"resChanged"`
 	ResDestroyed *int `json:"resDestroyed"`
 
+	ResAddedCost     *float32 `json:"resAddedCost"`     // 新增资源的费用
+	ResDestroyedCost *float32 `json:"resDestroyedCost"` // 删除资源的费用
+	ResUpdatedCost   *float32 `json:"resUpdatedCost"`   // 变更资源的费用
+	ForecastFailed   []string `json:"forecastFailed"`   // 询价失败的resource
+
 	Outputs map[string]interface{} `json:"outputs"`
 }
 
@@ -140,6 +145,7 @@ type Task struct {
 	RetryAble   bool       `json:"retryAble" gorm:"default:false"`
 	Callback    string     `json:"callback" gorm:"default:''"`       // 外部请求的回调方式
 	IsDriftTask bool       `json:"isDriftTask" gorm:"default:false"` // 是否是偏移检测任务
+	Applied     bool       `json:"applied" gorm:"default:false"`     // 是否漂移执行了terraformApply
 	Source      string     `json:"source" gorm:"not null;default:manual;enum('manual','driftPlan','driftApply','webhookPlan', 'webhookApply', 'autoDestroy', 'api')"`
 	SourceSys   string     `json:"sourceSys" gorm:"not null;default:''"`
 }
@@ -150,6 +156,18 @@ func (Task) TableName() string {
 
 func (Task) DefaultTaskName() string {
 	return ""
+}
+
+//go:generate go run cloudiac/code-gen/desenitize Task ./desensitize/
+func (v *Task) Desensitize() Task {
+	rv := Task{}
+	utils.DeepCopy(&rv, v)
+	for i := 0; i < len(rv.Variables); i++ {
+		if rv.Variables[i].Sensitive {
+			rv.Variables[i].Value = ""
+		}
+	}
+	return rv
 }
 
 func (BaseTask) NewId() Id {

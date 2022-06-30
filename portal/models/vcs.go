@@ -26,6 +26,8 @@ type Vcs struct {
 	VcsType   string `json:"vcsType" gorm:"not null;comment:vcs代码库类型"`
 	Address   string `json:"address" gorm:"not null;comment:vcs代码库地址"`
 	VcsToken  string `json:"vcsToken" gorm:"not null; comment:代码库的token值"`
+
+	IsDemo bool `json:"isDemo"`
 }
 
 func (Vcs) TableName() string {
@@ -34,6 +36,14 @@ func (Vcs) TableName() string {
 
 func (Vcs) NewId() Id {
 	return NewId("vcs")
+}
+
+//go:generate go run cloudiac/code-gen/desenitize Vcs ./desensitize/
+func (v *Vcs) Desensitize() Vcs {
+	rv := Vcs{}
+	utils.DeepCopy(&rv, v)
+	rv.VcsToken = ""
+	return rv
 }
 
 func (v Vcs) Migrate(sess *db.Session) (err error) {

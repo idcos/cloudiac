@@ -27,23 +27,31 @@ type IacKafkaCallbackResult struct {
 }
 
 type IacKafkaContent struct {
-	EventType  string                 `json:"eventType"`
-	ExtraData  interface{}            `json:"extraData"`
-	TaskStatus string                 `json:"taskStatus"`
-	OrgId      models.Id              `json:"orgId"`
-	ProjectId  models.Id              `json:"projectId"`
-	TplId      models.Id              `json:"tplId"`
-	EnvId      models.Id              `json:"envId"`
-	Result     IacKafkaCallbackResult `json:"result"`
+	EventType    string                 `json:"eventType"`
+	ExtraData    interface{}            `json:"extraData"`
+	TaskStatus   string                 `json:"taskStatus"`
+	PolicyStatus string                 `json:"policyStatus"`
+	TaskType     string                 `json:"taskType"`
+	EnvStatus    string                 `json:"envStatus"`
+	OrgId        models.Id              `json:"orgId"`
+	ProjectId    models.Id              `json:"projectId"`
+	TplId        models.Id              `json:"tplId"`
+	EnvId        models.Id              `json:"envId"`
+	TaskId       models.Id              `json:"taskId"`
+	Result       IacKafkaCallbackResult `json:"result"`
 }
 
-func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus string, resources []models.Resource) []byte {
+func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus, envStatus,policyStatus string, resources []models.Resource) []byte {
 	a := IacKafkaContent{
-		TaskStatus: taskStatus,
-		OrgId:      task.OrgId,
-		ProjectId:  task.ProjectId,
-		TplId:      task.TplId,
-		EnvId:      task.EnvId,
+		TaskStatus:   taskStatus,
+		TaskType:     task.Type,
+		PolicyStatus: policyStatus,
+		EnvStatus:    envStatus,
+		OrgId:        task.OrgId,
+		ProjectId:    task.ProjectId,
+		TplId:        task.TplId,
+		EnvId:        task.EnvId,
+		TaskId:       task.Id,
 		Result: IacKafkaCallbackResult{
 			Resources: resources,
 		},

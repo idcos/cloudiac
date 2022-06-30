@@ -3,7 +3,6 @@
 package apps
 
 import (
-	"cloudiac/common"
 	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
@@ -19,7 +18,6 @@ import (
 	"cloudiac/utils/mail"
 	"fmt"
 	"net/http"
-	"path"
 	"strings"
 )
 
@@ -40,17 +38,38 @@ var (
 func CreateOrganization(c *ctx.ServiceContext, form *forms.CreateOrganizationForm) (*models.Organization, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create org %s", form.Name))
 
-	// 创建组织
-	org, err := services.CreateOrganization(c.DB(), models.Organization{
-		Name:        form.Name,
-		CreatorId:   c.UserId,
-		Description: form.Description,
+	var org *models.Organization
+
+	er := c.DB().Transaction(func(tx *db.Session) error {
+		var er e.Error
+		// 创建组织
+		org, er = services.CreateOrganization(tx, models.Organization{
+			Name:        form.Name,
+			CreatorId:   c.UserId,
+			Description: form.Description,
+		})
+		if er != nil && er.Code() == e.OrganizationAlreadyExists {
+			return er
+		} else if er != nil {
+			c.Logger().Errorf("error creating org, err %s", er)
+			return e.AutoNew(er, e.DBError)
+		}
+
+		// 非超级管理员创建组织后自动成为组织管理员
+		if !c.IsSuperAdmin {
+			if _, err := services.CreateUserOrgRel(tx, models.UserOrg{
+				OrgId:  org.Id,
+				UserId: c.UserId,
+				Role:   consts.OrgRoleAdmin,
+			}); err != nil {
+				c.Logger().Errorf("error create user org rel, err %s", err)
+				return err
+			}
+		}
+		return nil
 	})
-	if err != nil && err.Code() == e.OrganizationAlreadyExists {
-		return nil, e.New(err.Code(), err, http.StatusBadRequest)
-	} else if err != nil {
-		c.Logger().Errorf("error creating org, err %s", err)
-		return nil, e.AutoNew(err, e.DBError)
+	if er != nil {
+		return nil, e.AutoNew(er, e.DBError)
 	}
 
 	return org, nil
@@ -63,6 +82,11 @@ func SearchOrganization(c *ctx.ServiceContext, form *forms.SearchOrganizationFor
 		if form.Status != "" {
 			query = query.Where("iac_org.status = ?", form.Status)
 		}
+
+		if !form.IsDemo {
+			query = query.Where("iac_org.is_demo = ?", false)
+		}
+
 	} else {
 		query = query.Where("iac_org.id in (?)", services.UserOrgIds(c.UserId))
 		query = query.Where("iac_org.status = 'enable'")
@@ -367,7 +391,7 @@ func checkInviteUser(c *ctx.ServiceContext, tx *db.Session, form *forms.InviteUs
 }
 
 func createInviteUser(c *ctx.ServiceContext, tx *db.Session, form *forms.InviteUserForm, user *models.User, initPass string) (*models.User, bool, e.Error) {
-	isNew := false
+	var isNew bool
 
 	hashedPassword, err := services.HashPassword(initPass)
 	if err != nil {
@@ -411,15 +435,6 @@ func createInviteUserOrgRel(c *ctx.ServiceContext, tx *db.Session, form *forms.I
 		return err
 	}
 
-	// 新用户自动加入演示组织
-	if isNew && c.OrgId != models.Id(common.DemoOrgId) {
-		if err := services.TryAddDemoRelation(tx, user.Id); err != nil {
-			_ = tx.Rollback()
-			c.Logger().Errorf("error add user demo rel, err %s", err)
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -428,45 +443,59 @@ func createInviteUserOrgRel(c *ctx.ServiceContext, tx *db.Session, form *forms.I
 func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*resps.UserWithRoleResp, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("invite user %s%s to org %s as %s", form.Name, form.UserId, form.Id, form.Role))
 
-	org, err := getInviteUserOrg(c, form)
-	if err != nil {
-		return nil, err
+	org, er := getInviteUserOrg(c, form)
+	if er != nil {
+		return nil, er
 	}
 	if form.Role == "" {
 		form.Role = consts.OrgRoleMember
 	}
 
-	tx := c.Tx()
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			panic(r)
+	if !c.IsSuperAdmin {
+		ok, er := services.HasInviteUserPerm(c.DB(), c.UserId, org.Id, form.Role)
+		if er != nil {
+			return nil, er
 		}
-	}()
-
-	// 检查用户是否存在
-	user, err := checkInviteUser(c, tx, form)
-	if err != nil {
-		return nil, err
+		if !ok {
+			return nil, e.New(e.PermissionDeny, http.StatusForbidden)
+		}
 	}
 
-	initPass := utils.GenPasswd(6, "mix")
-	user, isNew, err := createInviteUser(c, tx, form, user, initPass)
-	if err != nil {
-		return nil, err
-	}
+	var (
+		isNew    bool
+		user     *models.User
+		initPass string
+	)
+	err := c.DB().Transaction(func(tx *db.Session) error {
+		var er e.Error
+		// 检查用户是否存在
+		user, er = checkInviteUser(c, tx, form)
+		if er != nil {
+			return er
+		}
 
-	// 建立用户与组织间关联
-	// 新用户自动加入演示组织
-	err = createInviteUserOrgRel(c, tx, form, user, isNew)
-	if err != nil {
-		return nil, err
-	}
+		initPass = utils.GenPasswd(6, "mix")
+		user, isNew, er = createInviteUser(c, tx, form, user, initPass)
+		if er != nil {
+			return er
+		}
 
-	if err := tx.Commit(); err != nil {
-		_ = tx.Rollback()
-		c.Logger().Errorf("error commit invite user, err %s", err)
-		return nil, e.New(e.DBError, err)
+		if isNew && configs.Get().Demo.Enable {
+			if er := services.CreateUserDemoOrgData(c, tx, user); er != nil {
+				return er
+			}
+		}
+
+		// 建立用户与组织间关联
+		if er := createInviteUserOrgRel(c, tx, form, user, isNew); er != nil {
+			return er
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
 	}
 
 	// 发送邀请邮件
@@ -480,61 +509,50 @@ func InviteUser(c *ctx.ServiceContext, form *forms.InviteUserForm) (*resps.UserW
 	return &resp, nil
 }
 
-func SearchOrgResourcesFilters(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm) (*resps.OrgEnvAndProviderResp, e.Error) {
-	query := services.GetOrgResourcesQuery(c.DB().Model(&models.Resource{}), form.Q, c.OrgId, c.UserId, c.IsSuperAdmin)
-	type SearchResult struct {
-		EnvName  string    `json:"env_name"`
-		EnvId    models.Id `json:"env_id"`
-		Provider string    `json:"provider"`
+func SearchOrgResourcesFilters(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm) (*resps.OrgProjectAndProviderResp, e.Error) {
+	projectResp := make([]resps.OrgProjectResp, 0)
+
+	query := services.GetOrgOrProjectResourcesQuery(c.DB().Model(&models.Resource{}), form.Q, c.OrgId, c.ProjectId, c.UserId, c.IsSuperAdmin)
+
+	providers, err := resourceProviderFilters(query)
+	if err != nil {
+		return nil, err
 	}
-	rs := make([]SearchResult, 0)
-	if err := query.Scan(&rs); err != nil {
+
+	if err := c.DB().Raw("select project_id,project_name from (?) as t group by project_id,project_name", query.Expr()).
+		Find(&projectResp); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	r := &resps.OrgEnvAndProviderResp{}
-	temp := map[string]interface{}{}
-	for _, v := range rs {
-		if _, ok := temp[v.EnvName]; !ok {
-			// 通过map 对环境名称进行过滤
-			r.Envs = append(r.Envs, resps.EnvResp{EnvName: v.EnvName, EnvId: v.EnvId})
-			temp[v.EnvName] = nil
-		}
-		r.Providers = append(r.Providers, path.Base(v.Provider))
+
+	r := &resps.OrgProjectAndProviderResp{
+		Providers: providerPathBase(providers),
+		Projects:  projectResp,
 	}
-	r.Providers = utils.Set(r.Providers)
 
 	return r, nil
 }
 
 func SearchOrgResources(c *ctx.ServiceContext, form *forms.SearchOrgResourceForm) (interface{}, e.Error) {
-	query := services.GetOrgResourcesQuery(c.DB().Model(&models.Resource{}), form.Q, c.OrgId, c.UserId, c.IsSuperAdmin)
-	if len(form.EnvIds) != 0 {
-		query = query.Where("iac_env.id in (?)", strings.Split(form.EnvIds, ","))
+	query := services.GetOrgOrProjectResourcesQuery(c.DB().Model(&models.Resource{}), form.Q, c.OrgId, c.ProjectId, c.UserId, c.IsSuperAdmin)
+	if len(form.ProjectIds) != 0 {
+		query = query.Where("iac_env.project_id in (?)", strings.Split(form.ProjectIds, ","))
 	}
-	if len(form.Providers) != 0 {
-		var tempSql []string
-		var tempList []interface{}
-		for _, v := range strings.Split(form.Providers, ",") {
-			tempSql = append(tempSql, "iac_resource.provider like ?")
-			tempList = append(tempList, strings.Join([]string{"%/", v}, ""))
-		}
-		query = query.Where(strings.Join(tempSql, " OR "), tempList...)
+	return searchResource(query, form.Providers, form.CurrentPage(), form.PageSize())
+}
+
+func searchResource(query *db.Session, provider string, currentPage, pageSize int) (interface{}, e.Error) {
+	query = services.GetProviderQuery(provider, query).
+		Order("project_id, env_id, provider desc")
+	rs, p, err := services.GetOrgOrProjectResourcesResp(currentPage, pageSize, query)
+	if err != nil {
+		return nil, err
 	}
-	rs := make([]resps.OrgResourcesResp, 0)
-	query = query.Order("project_id, env_id, provider desc")
-	p := page.New(form.CurrentPage(), form.PageSize(), query)
-	if err := p.Scan(&rs); err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-	for i := range rs {
-		rs[i].Provider = path.Base(rs[i].Provider)
-	}
+
 	return &page.PageResp{
 		Total:    p.MustTotal(),
 		PageSize: p.Size,
 		List:     rs,
 	}, nil
-
 }
 
 // UpdateUserOrg 更新组织用户信息
@@ -634,4 +652,43 @@ func InviteUsersBatch(c *ctx.ServiceContext, form *forms.InviteUsersBatchForm) (
 	}
 
 	return resps.InviteUsersBatchResp{Success: success, Failed: failed}, nil
+}
+
+// OrgProjectsStat 组织和项目概览页统计数据
+func OrgProjectsStat(c *ctx.ServiceContext, form *forms.OrgProjectsStatForm) (interface{}, e.Error) {
+	tx := c.DB()
+	var projectIds []string
+	if form.ProjectIds != "" {
+		projectIds = strings.Split(form.ProjectIds, ",")
+	}
+	// 环境状态占比
+	envStat, err := services.GetOrgProjectsEnvStat(tx, c.OrgId, projectIds)
+	if err != nil {
+		return nil, err
+	}
+
+	// 资源类型占比
+	resStat, err := services.GetOrgProjectsResStat(tx, c.OrgId, projectIds, form.Limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// 项目资源数量
+	projectResStat, err := services.GetOrgProjectStat(tx, c.OrgId, projectIds, form.Limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// 资源新增趋势
+	resGrowTrend, err := services.GetOrgResGrowTrend(tx, c.OrgId, projectIds, 7)
+	if err != nil {
+		return nil, err
+	}
+
+	return &resps.OrgProjectsStatResp{
+		EnvStat:        envStat,
+		ResStat:        resStat,
+		ProjectResStat: projectResStat,
+		ResGrowTrend:   resGrowTrend,
+	}, nil
 }

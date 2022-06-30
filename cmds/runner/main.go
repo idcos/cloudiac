@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -53,7 +54,10 @@ func main() {
 	runnerConfJson, _ := json.Marshal(configs.Get().Runner)
 	logs.Get().Infof("runner configs: %s", runnerConfJson)
 
-	common.ReRegisterService(opt.ReRegister, iac_common.RunnerServiceName)
+	if err := common.CheckAndReConnectConsul(iac_common.RunnerServiceName, configs.Get().Consul.ServiceID); err != nil {
+		log.Fatal(err)
+	}
+
 	StartServer()
 }
 

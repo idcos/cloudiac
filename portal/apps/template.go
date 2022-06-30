@@ -3,18 +3,19 @@
 package apps
 
 import (
-	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/desensitize"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
 	"fmt"
 	"net/http"
 
@@ -52,6 +53,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 			panic(r)
 		}
 	}()
+
 	template, err := services.CreateTemplate(tx, models.Template{
 		Name:         form.Name,
 		OrgId:        c.OrgId,
@@ -72,6 +74,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		PolicyEnable: form.PolicyEnable,
 		Triggers:     form.TplTriggers,
 		KeyId:        form.KeyId,
+		Source:       form.Source,
 	})
 
 	if err != nil {
@@ -246,6 +249,10 @@ func UpdateTemplate(c *ctx.ServiceContext, form *forms.UpdateTemplateForm) (*mod
 		return nil, e.New(e.TemplateNotExists, err, http.StatusBadRequest)
 	}
 
+	if tpl.IsDemo {
+		return nil, e.New(e.TemplateDemoNotAllowEdit)
+	}
+
 	// 根据云模板ID, 组织ID查询该云模板是否属于该组织
 	if tpl.OrgId != c.OrgId {
 		return nil, e.New(e.TemplateNotExists, http.StatusForbidden, fmt.Errorf("the organization does not have permission to delete the current template"))
@@ -316,6 +323,11 @@ func DeleteTemplate(c *ctx.ServiceContext, form *forms.DeleteTemplateForm) (inte
 		c.Logger().Errorf("error get template by id, err %v", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
+
+	if tpl.IsDemo {
+		return nil, e.New(e.TemplateDemoNotAllowDelete)
+	}
+
 	// 根据云模板ID, 组织ID查询该云模板是否属于该组织
 	if tpl.OrgId != c.OrgId {
 		return nil, e.New(e.TemplateNotExists, http.StatusForbidden, fmt.Errorf("The organization does not have permission to delete the current template"))
@@ -366,9 +378,15 @@ func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*res
 	if err != nil {
 		return nil, e.New(e.DBError, err)
 	}
-	varialbeList, err := services.SearchVariableByTemplateId(c.DB(), form.Id)
+	variableList, err := services.SearchVariableByTemplateId(c.DB(), form.Id)
 	if err != nil {
 		return nil, e.New(e.DBError, err)
+	}
+
+	for index, v := range variableList {
+		if v.Sensitive {
+			variableList[index].Value = ""
+		}
 	}
 
 	if tpl.RepoFullName == "" {
@@ -389,12 +407,11 @@ func TemplateDetail(c *ctx.ServiceContext, form *forms.DetailTemplateForm) (*res
 
 	tplDetail := &resps.TemplateDetailResp{
 		Template:    tpl,
-		Variables:   varialbeList,
+		Variables:   desensitize.NewVariableSlice(variableList),
 		ProjectList: project_ids,
 		PolicyGroup: policyGroups,
 	}
 	return tplDetail, nil
-
 }
 
 func getTplIdList(db *db.Session, projectId models.Id) ([]models.Id, e.Error) {
@@ -429,14 +446,13 @@ func updateTaskAndPolicyStatus(db *db.Session, templates []*resps.SearchTemplate
 }
 
 func updateTmplRepoAddr(templates []*resps.SearchTemplateResp, vcsAttr map[string]models.Vcs) {
-
-	portAddr := configs.Get().Portal.Address
 	for _, tpl := range templates {
 		if tpl.RepoAddr == "" && tpl.RepoFullName != "" {
-			if vcsAttr[tpl.VcsId].VcsType == consts.GitTypeLocal {
-				tpl.RepoAddr = utils.JoinURL(portAddr, vcsAttr[tpl.VcsId].Address, tpl.RepoId)
-			} else {
-				tpl.RepoAddr = utils.JoinURL(vcsAttr[tpl.VcsId].Address, tpl.RepoFullName)
+			var err error
+			vcs := vcsAttr[tpl.VcsId]
+			tpl.RepoAddr, err = vcsrv.GetRepoHttpAddr(&vcs, tpl.RepoFullName)
+			if err != nil {
+				logs.Get().Warnf("get repo http address error: %v", err)
 			}
 		}
 	}

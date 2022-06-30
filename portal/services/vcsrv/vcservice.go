@@ -59,12 +59,16 @@ type VcsIface interface {
 
 	// TokenCheck 检查 token 是否有效
 	TokenCheck() error
+
+	RepoBaseHttpAddr() string
 }
 
 type RepoIface interface {
 	// ListBranches 获取分支列表
 	ListBranches() ([]string, error)
 	ListTags() ([]string, error)
+
+	// HttpAddress() string
 
 	// BranchCommitId
 	//param branch: 分支
@@ -102,6 +106,12 @@ type RepoIface interface {
 
 	//CreatePrComment 添加PR评论
 	CreatePrComment(prId int, comment string) error
+
+	// GetVcsFullFilePath 获取文件完整路径
+	GetFullFilePath(address, filePath, repoRevision string) string
+
+	// GetCommitFullPath  获取仓库commit的完整路径
+	GetCommitFullPath(address, commitId string) string
 }
 
 type RepoHook struct {
@@ -269,4 +279,12 @@ func VerifyVcsToken(vcs *models.Vcs) error {
 		return err
 	}
 	return git.TokenCheck()
+}
+
+func GetRepoHttpAddr(vcs *models.Vcs, repoFullName string) (string, error) {
+	v, err := GetVcsInstance(vcs)
+	if err != nil {
+		return "", err
+	}
+	return utils.JoinURL(v.RepoBaseHttpAddr(), repoFullName), nil
 }

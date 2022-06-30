@@ -22,11 +22,13 @@ const (
 	TooManyRetries          = 10040
 	EncryptError            = 10050
 	DecryptError            = 10051
+	ErrDisabled             = 10052
 
 	//// 解析错误 101
 	JSONParseError = 10100
 	HCLParseError  = 10101
 	URLParseError  = 10102
+	DateParseError = 10103
 
 	//// db 错误 102
 	DBError           = 10200 // db 操作出错
@@ -78,12 +80,13 @@ const (
 
 	// 权限认证 2
 	//// 认证 200
-	InvalidPassword   = 20010
-	InvalidToken      = 20000 // 无效 token
-	InvalidTokenScope = 20001 // 无效 token scope
-	TokenExpired      = 20005
-	InvalidOrgId      = 20006 // 无效的 orgId
-	InvalidProjectId  = 20007 // 无效的 projectId
+	InvalidPassword    = 20010
+	InvalidToken       = 20000 // 无效 token
+	InvalidTokenScope  = 20001 // 无效 token scope
+	TokenExpired       = 20005
+	InvalidOrgId       = 20006 // 无效的 orgId
+	InvalidProjectId   = 20007 // 无效的 projectId
+	InvalidActiveEmail = 20011 // 邮箱未激活
 
 	//// 权限 201
 	PermissionDeny   = 20110
@@ -118,6 +121,7 @@ const (
 	ProjectAliasDuplicate     = 30412
 	ProjectUserAlreadyExists  = 30420
 	ProjectUserAliasDuplicate = 30421
+	ProjectHasActiveEnvs      = 30422
 
 	//// variable 305
 	VariableAlreadyExists  = 30510
@@ -133,23 +137,30 @@ const (
 	TokenAliasDuplicate = 30613
 
 	//// template 307
-	TemplateAlreadyExists   = 30710
-	TemplateNotExists       = 30711
-	TemplateDisabled        = 30712
-	TemplateActiveEnvExists = 30730
-	TemplateKeyIdNotSet     = 30731
+	TemplateAlreadyExists                = 30710
+	TemplateNotExists                    = 30711
+	TemplateDisabled                     = 30712
+	TemplateNotAssociationCurrentProject = 30713
+	TemplateDemoNotAllowEdit             = 30714
+	TemplateDemoNotAllowDelete           = 30715
+	TemplateActiveEnvExists              = 30730
+	TemplateKeyIdNotSet                  = 30731
 
 	//// environment 308
-	EnvAlreadyExists        = 30810
-	EnvNotExists            = 30811
-	EnvAliasDuplicate       = 30812
-	EnvArchived             = 30813
-	EnvCannotArchiveActive  = 30814
-	EnvDeploying            = 30815
-	EnvCheckAutoApproval    = 30816
-	EnvLockFailedTaskActive = 30817
-	EnvTagNumLimited        = 30821
-	EnvTagLengthLimited     = 30822
+	EnvAlreadyExists         = 30810
+	EnvNotExists             = 30811
+	EnvAliasDuplicate        = 30812
+	EnvArchived              = 30813
+	EnvCannotArchiveActive   = 30814
+	EnvDeploying             = 30815
+	EnvCheckAutoApproval     = 30816
+	EnvLockFailedTaskActive  = 30817
+	EnvLocked                = 30818
+	EnvLockedFailedEnvIsDemo = 30819
+	EnvNameDuplicated        = 30820
+	EnvTagNumLimited         = 30821
+	EnvTagLengthLimited      = 30822
+	TemplateNotBind          = 30823
 
 	//// task 309
 	TaskAlreadyExists     = 30910
@@ -201,6 +212,8 @@ const (
 	VariableGroupAlreadyExist   = 31410
 	VariableGroupNotExist       = 31411
 	VariableGroupAliasDuplicate = 31412
+	InvalidVarGroup             = 31413
+	VariableGroupPermDeny       = 31414
 
 	//cron 315
 	CronExpressError = 31500
@@ -211,5 +224,9 @@ const (
 
 	// Ldap 317
 	LdapConnectFailed  = 31710
-	LdapNotAllowUpdate = 31720
+	LdapNotExisted     = 31711
+	LdapAdminBindError = 31712
+	LdapBindError      = 31713
+	LdapUnknowError    = 31714
+	LdapUserNotExist   = 31715
 )

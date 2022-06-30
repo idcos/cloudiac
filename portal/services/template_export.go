@@ -79,6 +79,9 @@ func ExportTemplates(dbSess *db.Session, orgId models.Id, ids []models.Id) (*Tpl
 	tplIds := make([]models.Id, 0)
 	vcsIdSet := make(map[models.Id]struct{})
 	for _, t := range tpls {
+		if t.IsDemo {
+			continue
+		}
 		vcsIdSet[t.VcsId] = struct{}{}
 		tplIds = append(tplIds, t.Id)
 	}
@@ -121,6 +124,9 @@ func ExportTemplates(dbSess *db.Session, orgId models.Id, ids []models.Id) (*Tpl
 
 func appendTemplate(tpls []models.Template, vars []models.Variable, dbSess *db.Session, resp *TplExportedData) e.Error {
 	for _, t := range tpls {
+		if t.IsDemo {
+			continue
+		}
 		tpl := exportedTpl{
 			Id:           t.Id.String(),
 			Name:         t.Name,

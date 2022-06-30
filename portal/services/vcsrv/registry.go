@@ -31,9 +31,10 @@ func (rv *RegistryVcs) GetRepo(repoPath string) (RepoIface, error) {
 	return &RegistryRepo{vcs: rv.vcs, repoPath: repoPath}, nil
 }
 
-// TODO
+// TODO 未实现暂时先返回空
 func (rv *RegistryVcs) ListRepos(namespace string, search string, limit, offset int) ([]RepoIface, int64, error) {
-	return nil, 0, e.New(e.NotImplement)
+	return []RepoIface{}, 0, nil
+	//return nil, 0, e.New(e.NotImplement)
 }
 
 func (rv *RegistryVcs) UserInfo() (UserInfo, error) {
@@ -43,6 +44,10 @@ func (rv *RegistryVcs) UserInfo() (UserInfo, error) {
 
 func (rv *RegistryVcs) TokenCheck() error {
 	return nil
+}
+
+func (v *RegistryVcs) RepoBaseHttpAddr() string {
+	return v.vcs.Address
 }
 
 type RegistryRepo struct {
@@ -250,6 +255,14 @@ func (r *RegistryRepo) DeleteWebhook(id int) error {
 func (r *RegistryRepo) CreatePrComment(prId int, comment string) error {
 
 	return nil
+}
+
+func (r *RegistryRepo) GetFullFilePath(address, filePath, repoRevision string) string {
+	return ""
+}
+
+func (r *RegistryRepo) GetCommitFullPath(address, commitId string) string {
+	return ""
 }
 
 func registryVcsRequest(path, method string, params map[string]string) (*http.Response, []byte, error) {

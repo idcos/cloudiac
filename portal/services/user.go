@@ -10,9 +10,11 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/resps"
 	"cloudiac/utils"
+	"cloudiac/utils/logs"
 	"fmt"
-	"github.com/go-ldap/ldap/v3"
 	"strings"
+
+	"github.com/go-ldap/ldap/v3"
 )
 
 func CreateUser(tx *db.Session, user models.User) (*models.User, e.Error) {
@@ -62,6 +64,73 @@ func GetUserByIdRaw(tx *db.Session, id models.Id) (*models.User, e.Error) {
 	return &u, nil
 }
 
+// RefreshUserOrgRoles 刷新用户的组织权限
+// nolint:dupl
+func RefreshUserOrgRoles(tx *db.Session, userId models.Id, ldapUserOrgOUs []models.LdapOUOrg) e.Error {
+
+	_, err := tx.Where(`user_id = ?`, userId).Where(`is_from_ldap = ?`, true).Delete(&models.UserOrg{})
+	if err != nil {
+		return e.New(e.DBError, err)
+	}
+
+	userOrgs := make([]models.UserOrg, 0)
+	for _, item := range ldapUserOrgOUs {
+		// 用户在组织下是否已经有角色
+		cnt, _ := tx.Model(&models.UserOrg{}).Where(`user_id = ? and org_id = ?`, userId, item.OrgId).Count()
+		if cnt > 0 {
+			continue
+		}
+
+		userOrgs = append(userOrgs, models.UserOrg{
+			UserId:     userId,
+			OrgId:      item.OrgId,
+			Role:       item.Role,
+			IsFromLdap: true,
+		})
+	}
+
+	if len(userOrgs) > 0 {
+		err = tx.Insert(&userOrgs)
+		if err != nil {
+			return e.New(e.DBError, err)
+		}
+	}
+	return nil
+}
+
+// RefreshUserProjectRoles 刷新用户的项目权限
+// nolint:dupl
+func RefreshUserProjectRoles(tx *db.Session, userId models.Id, ldapUserProjectOUs []models.LdapOUProject) e.Error {
+	_, err := tx.Where(`user_id = ?`, userId).Where(`is_from_ldap = ?`, true).Delete(&models.UserProject{})
+	if err != nil {
+		return e.New(e.DBError, err)
+	}
+
+	userProjects := make([]models.UserProject, 0)
+	for _, item := range ldapUserProjectOUs {
+		// 用户在项目中是否已经有角色
+		cnt, _ := tx.Model(&models.UserProject{}).Where(`user_id = ? and project_id = ?`, userId, item.ProjectId).Count()
+		if cnt > 0 {
+			continue
+		}
+		userProjects = append(userProjects, models.UserProject{
+			UserId:     userId,
+			ProjectId:  item.ProjectId,
+			Role:       item.Role,
+			IsFromLdap: true,
+		})
+	}
+
+	if len(userProjects) > 0 {
+		err = tx.Insert(&userProjects)
+		if err != nil {
+			return e.New(e.DBError, err)
+		}
+	}
+
+	return nil
+}
+
 // GetUserById 按 ID 查找用户
 func GetUserById(tx *db.Session, id models.Id) (*models.User, e.Error) {
 	tx = tx.Where("id != ?", consts.SysUserId)
@@ -107,7 +176,7 @@ func CheckPasswordFormat(password string) e.Error {
 	}
 
 	typeCount := 0
-	for _, chars := range []string{consts.LowerCaseLetter, consts.UpperCaseLetter, consts.DigitChars} {
+	for _, chars := range []string{consts.Letter, consts.DigitChars, consts.SpecialChars} {
 		if strings.ContainsAny(password, chars) {
 			typeCount += 1
 		}
@@ -123,7 +192,9 @@ func GetUserDetailById(query *db.Session, userId models.Id) (*resps.UserWithRole
 	d := resps.UserWithRoleResp{}
 	table := models.User{}.TableName()
 	if err := query.Model(&models.User{}).
-		Where(fmt.Sprintf("%s.id = ?", table), userId).Scan(&d); err != nil {
+		Where(fmt.Sprintf("%s.id = ?", table), userId).
+		LazySelectAppend("iac_user.*").
+		Scan(&d); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.UserNotExists, err)
 		}
@@ -303,37 +374,122 @@ func GetUsersByUserIds(dbSess *db.Session, userId []string) []models.User {
 }
 
 // 处理Ldap 登录逻辑
-func LdapAuthLogin(userEmail, password string) (username string, er e.Error) {
+func LdapAuthLogin(userEmail, password string) (username, dn string, er e.Error) {
 	conf := configs.Get()
 	conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", conf.Ldap.LdapServer, conf.Ldap.LdapServerPort))
 	if err != nil {
-		return username, e.New(e.LdapConnectFailed, err)
+		return username, dn, e.New(e.LdapConnectFailed, err)
 	}
 	defer conn.Close()
 	// 配置ldap 管理员dn信息，例如cn=Manager,dc=idcos,dc=com
 	err = conn.Bind(conf.Ldap.AdminDn, conf.Ldap.AdminPassword)
 	if err != nil {
-		return username, e.New(e.ValidateError, err)
+		return username, dn, e.New(e.LdapAdminBindError, err)
 	}
+	// SearchFilter 需要内填入搜索条件，单个用括号包裹，例如 (objectClass=person)(!(userAccountControl=514))
+	seachFilter := fmt.Sprintf("(&%s(%s=%s))", conf.Ldap.SearchFilter, conf.Ldap.EmailAttribute, userEmail)
 	searchRequest := ldap.NewSearchRequest(
 		conf.Ldap.SearchBase,
 		ldap.ScopeWholeSubtree, ldap.DerefAlways, 0, 0, false,
-		fmt.Sprintf("(mail=%s)", userEmail),
+		seachFilter,
 		// 这里是查询返回的属性,以数组形式提供.如果为空则会返回所有的属性
 		[]string{},
 		nil,
 	)
 	sr, err := conn.Search(searchRequest)
 	if err != nil {
-		return username, e.New(e.ValidateError, err)
+		return username, dn, e.New(e.LdapUnknowError, err)
 	}
 	if len(sr.Entries) != 1 {
-		return username, e.New(e.UserNotExists, err)
+		return username, dn, e.New(e.LdapUserNotExist, err)
 	}
 	err = conn.Bind(sr.Entries[0].DN, password)
 	if err != nil {
-		return username, e.New(e.InvalidPassword, err)
+		return username, dn, e.New(e.LdapBindError, err)
 	}
-	return sr.Entries[0].GetAttributeValue("uid"), nil
+	var account string
+	if conf.Ldap.AccountAttribute != "" {
+		account = conf.Ldap.AccountAttribute
+	} else {
+		account = "uid"
+	}
+	return sr.Entries[0].GetAttributeValue(account), sr.Entries[0].DN, nil
+}
 
+// GetUserHighestProjectRole 获取用户在指定组织下的最高项目角色
+func GetUserHighestProjectRole(db *db.Session, orgId models.Id, userId models.Id) (string, e.Error) {
+	roles := make([]string, 0)
+	err := db.Model(&models.UserProject{}).
+		Joins("join iac_project as p on p.id = iac_user_project.project_id and p.org_id = ?", orgId).
+		Where("user_id = ?", userId).Group("role").
+		Select("role").Scan(&roles)
+	if err != nil {
+		return "", e.New(e.DBError, err)
+	}
+	return GetHighestRole(roles...), nil
+}
+
+// HasInviteUserPerm 判断用户是否有邀请其他用户加入组织的权限
+func HasInviteUserPerm(db *db.Session, userId models.Id, orgId models.Id, targetRole string) (bool, e.Error) {
+	if UserHasOrgRole(userId, orgId, consts.OrgRoleAdmin) {
+		return true, nil
+	}
+
+	if targetRole == consts.OrgRoleMember {
+		// 组织下的项目管理员可以邀请用户成为组织成员
+		role, err := GetUserHighestProjectRole(db, orgId, userId)
+		if err != nil {
+			return false, err
+		} else if role == consts.ProjectRoleManager {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func VerifyLocalPassword(user *models.User, password string) (valid bool, err error) {
+	return utils.CheckPassword(password, user.Password)
+}
+
+func VerifyLdapPassword(email string, password string) (username, dn string, er e.Error) {
+	username, dn, er = LdapAuthLogin(email, password)
+	if er != nil {
+		logs.Get().WithField("email", email).Debugf("LdapAuthLogin error: %v", er)
+		er = e.New(e.InvalidPassword)
+	}
+	return username, dn, er
+}
+
+// 处理Ldap 登录逻辑
+func QueryLdapUserDN(email string) (dn string, er e.Error) {
+	conf := configs.Get()
+	conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", conf.Ldap.LdapServer, conf.Ldap.LdapServerPort))
+	if err != nil {
+		return dn, e.New(e.LdapConnectFailed, err)
+	}
+	defer conn.Close()
+
+	err = conn.Bind(conf.Ldap.AdminDn, conf.Ldap.AdminPassword)
+	if err != nil {
+		return dn, e.New(e.LdapAdminBindError, err)
+	}
+	// SearchFilter 需要内填入搜索条件，单个用括号包裹，例如 (objectClass=person)(!(userAccountControl=514))
+	seachFilter := fmt.Sprintf("(&%s(%s=%s))", conf.Ldap.SearchFilter, conf.Ldap.EmailAttribute, email)
+	searchRequest := ldap.NewSearchRequest(
+		conf.Ldap.SearchBase,
+		ldap.ScopeWholeSubtree, ldap.DerefAlways, 0, 0, false,
+		seachFilter,
+		// 这里是查询返回的属性,以数组形式提供.如果为空则会返回所有的属性
+		[]string{},
+		nil,
+	)
+	sr, err := conn.Search(searchRequest)
+	if err != nil {
+		return dn, e.New(e.LdapUnknowError, err)
+	}
+
+	if len(sr.Entries) != 1 {
+		return dn, e.New(e.LdapUserNotExist, err)
+	}
+	return sr.Entries[0].DN, nil
 }

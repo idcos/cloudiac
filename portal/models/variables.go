@@ -3,20 +3,26 @@
 package models
 
 import (
-	"cloudiac/portal/libs/db"
 	"database/sql/driver"
+
+	"cloudiac/portal/libs/db"
+	"cloudiac/utils"
 )
 
 type VariableBody struct {
-	Scope       string `json:"scope" gorm:"not null;type:enum('org','template','project','env')"`
-	Type        string `json:"type" gorm:"not null;type:enum('environment','terraform','ansible')"`
-	Name        string `json:"name" gorm:"size:64;not null"`
-	Value       string `json:"value" gorm:"type:text"`
-	Sensitive   bool   `json:"sensitive,omitempty" gorm:"default:false"`
-	Description string `json:"description,omitempty" gorm:"type:text"`
+	Scope       string `yaml:"scope" json:"scope" gorm:"not null;type:enum('org','template','project','env')"`
+	Type        string `yaml:"type" json:"type" gorm:"not null;type:enum('environment','terraform','ansible')"`
+	Name        string `yaml:"name" json:"name" gorm:"size:64;not null"`
+	Value       string `yaml:"value" json:"value" gorm:"type:text"`
+	Sensitive   bool   `yaml:"sensitive" json:"sensitive,omitempty" gorm:"default:false"`
+	Description string `yaml:"description" json:"description,omitempty" gorm:"type:text"`
 
 	// 继承关系依赖数据创建枚举的顺序，后续新增枚举值时请按照新的继承顺序增加
-	Options StrSlice `json:"options" gorm:"type:json"`
+	Options StrSlice `yaml:"options" json:"options" gorm:"type:json"` // 可选值列表
+}
+
+func (v *VariableBody) Key() string {
+	return v.Type + ":" + v.Name
 }
 
 type Variable struct {
@@ -35,6 +41,20 @@ func (Variable) NewId() Id {
 
 func (Variable) TableName() string {
 	return "iac_variable"
+}
+
+//go:generate go run cloudiac/code-gen/desenitize Variable ./desensitize/
+func (v *Variable) Desensitize() Variable {
+	if !v.Sensitive {
+		return *v
+	}
+
+	rv := Variable{}
+	utils.DeepCopy(&rv, v)
+	if rv.Sensitive {
+		rv.Value = ""
+	}
+	return rv
 }
 
 func (v Variable) Migrate(sess *db.Session) error {
@@ -68,6 +88,18 @@ func (VariableGroup) TableName() string {
 
 func (VariableGroup) NewId() Id {
 	return NewId("vg")
+}
+
+//go:generate go run cloudiac/code-gen/desenitize VariableGroup ./desensitize/
+func (vg *VariableGroup) Desensitize() VariableGroup {
+	rvg := VariableGroup{}
+	utils.DeepCopy(&rvg, vg)
+	for i := range rvg.Variables {
+		if rvg.Variables[i].Sensitive {
+			rvg.Variables[i].Value = ""
+		}
+	}
+	return rvg
 }
 
 func (v VariableGroup) Migrate(sess *db.Session) error {
@@ -109,10 +141,14 @@ func (VariableGroupRel) TableName() string {
 }
 
 //VariableGroupProjectRel 变量组与项目的关联表
+/*
+如果用户没有为变量指定绑定的项目，则默认表示绑定到所有项目（包括之后新创建的项目）。
+在该表中使用 ProjectId  为 "" 的记录表示绑定到所有项目。
+*/
 type VariableGroupProjectRel struct {
 	AbstractModel
-	VarGroupId Id `json:"varGroupId" gorm:"size:32;not null"`
-	ProjectId  Id `json:"projectId" gorm:"size:32;not null"`
+	VarGroupId Id `json:"varGroupId" gorm:"uniqueIndex:idx_var_group_project;size:32;not null"`
+	ProjectId  Id `json:"projectId" gorm:"uniqueIndex:idx_var_group_project;size:32;not null"`
 }
 
 func (VariableGroupProjectRel) TableName() string {

@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -33,7 +34,7 @@ func (gitea *giteaVcs) GetRepo(idOrPath string) (RepoIface, error) {
 	path := gitea.vcs.Address + fmt.Sprintf("%s/repositories/%s", giteaApiRoute, idOrPath)
 	_, body, er := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if er != nil {
-		return nil, e.New(e.BadRequest, er)
+		return nil, e.New(e.VcsError, er)
 	}
 	rep := Repository{}
 	_ = json.Unmarshal(body, &rep)
@@ -69,7 +70,7 @@ type Repository struct {
 func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([]RepoIface, int64, error) {
 	user, err := getGiteaUserMe(gitea.vcs)
 	if err != nil {
-		return nil, 0, e.New(e.BadRequest, err)
+		return nil, 0, e.New(e.VcsError, err)
 	}
 	link, _ := url.Parse("/repos/search")
 	page := utils.LimitOffset2Page(limit, offset)
@@ -81,7 +82,7 @@ func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([
 	response, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 
 	if err != nil {
-		return nil, 0, e.New(e.BadRequest, err)
+		return nil, 0, e.New(e.VcsError, err)
 	}
 
 	var total int64
@@ -115,7 +116,7 @@ func (gitea *giteaVcs) TokenCheck() error {
 	path := gitea.vcs.Address + giteaApiRoute + link.String()
 	response, _, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if err != nil {
-		return e.New(e.BadRequest, err)
+		return e.New(e.VcsError, err)
 	}
 
 	if response.StatusCode > 300 {
@@ -140,7 +141,7 @@ func (gitea *giteaRepoIface) ListBranches() ([]string, error) {
 
 	_, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if err != nil {
-		return nil, e.New(e.BadRequest, err)
+		return nil, e.New(e.VcsError, err)
 	}
 	rep := make([]giteaBranch, 0)
 
@@ -160,7 +161,7 @@ func (gitea *giteaRepoIface) ListTags() ([]string, error) {
 	path := gitea.vcs.Address + giteaApiRoute + fmt.Sprintf("/repos/%s/tags", gitea.repository.FullName)
 	_, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if err != nil {
-		return nil, e.New(e.BadRequest, err)
+		return nil, e.New(e.VcsError, err)
 	}
 	rep := make([]giteaTag, 0)
 
@@ -183,7 +184,7 @@ func (gitea *giteaRepoIface) BranchCommitId(branch string) (string, error) {
 		fmt.Sprintf("/repos/%s/branches/%s?limit=0&page=0", gitea.repository.FullName, branch)
 	_, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if err != nil {
-		return "", e.New(e.BadRequest, err)
+		return "", e.New(e.VcsError, err)
 	}
 	rep := giteaCommit{}
 	_ = json.Unmarshal(body, &rep)
@@ -210,7 +211,7 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 	}
 	_, body, er := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if er != nil {
-		return []string{}, e.New(e.BadRequest, er)
+		return []string{}, e.New(e.VcsError, er)
 	}
 	resp := make([]string, 0)
 	rep := make([]giteaFiles, 0)
@@ -241,7 +242,7 @@ func (gitea *giteaRepoIface) ReadFileContent(branch, path string) (content []byt
 		fmt.Sprintf("/repos/%s/raw/%s?ref=%s", gitea.repository.FullName, path, branch)
 	response, body, er := giteaRequest(pathAddr, "GET", gitea.vcs.VcsToken, nil)
 	if er != nil {
-		return []byte{}, e.New(e.BadRequest, er)
+		return []byte{}, e.New(e.VcsError, er)
 	}
 	defer response.Body.Close()
 
@@ -288,7 +289,7 @@ func (gitea *giteaRepoIface) AddWebhook(url string) error {
 	b, _ := json.Marshal(&bodys)
 	response, body, err := giteaRequest(path, http.MethodPost, gitea.vcs.VcsToken, b)
 	if err != nil {
-		return e.New(e.BadRequest, err)
+		return e.New(e.VcsError, err)
 	}
 
 	if response.StatusCode >= 300 {
@@ -324,7 +325,7 @@ func (gitea *giteaRepoIface) ListWebhook() ([]RepoHook, error) {
 	path := gitea.vcs.Address + giteaApiRoute + fmt.Sprintf("/repos/%s/hooks", gitea.repository.FullName)
 	_, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if err != nil {
-		return nil, e.New(e.BadRequest, err)
+		return nil, e.New(e.VcsError, err)
 	}
 
 	return initRepoHook(body), nil
@@ -334,7 +335,7 @@ func (gitea *giteaRepoIface) DeleteWebhook(id int) error {
 	path := gitea.vcs.Address + giteaApiRoute + fmt.Sprintf("/repos/%s/hooks/%d", gitea.repository.FullName, id)
 	_, body, err := giteaRequest(path, "DELETE", gitea.vcs.VcsToken, nil)
 	if err != nil {
-		return e.New(e.BadRequest, err)
+		return e.New(e.VcsError, err)
 	}
 	rep := make([]giteaTag, 0)
 
@@ -353,9 +354,21 @@ func (gitea *giteaRepoIface) CreatePrComment(prId int, comment string) error {
 	}
 	_, _, err = giteaRequest(path, http.MethodPost, gitea.vcs.VcsToken, b)
 	if err != nil {
-		return e.New(e.BadRequest, err)
+		return e.New(e.VcsError, err)
 	}
 	return nil
+}
+
+func (gitea *giteaRepoIface) GetFullFilePath(address, filePath, repoRevision string) string {
+	u, _ := url.Parse(address)
+	u.Path = path.Join(u.Path, gitea.repository.FullName, "src/branch", repoRevision, filePath)
+	return u.String()
+}
+
+func (gitea *giteaRepoIface) GetCommitFullPath(address, commitId string) string {
+	u, _ := url.Parse(address)
+	u.Path = path.Join(u.Path, gitea.repository.FullName, "commit", commitId)
+	return u.String()
 }
 
 //giteeRequest
@@ -396,9 +409,13 @@ func getGiteaUserMe(vcs *models.Vcs) (*giteaUser, error) {
 	path := vcs.Address + "/api/v1/user"
 	_, body, err := giteaRequest(path, "GET", vcs.VcsToken, nil)
 	if err != nil {
-		return nil, e.New(e.BadRequest, err)
+		return nil, e.New(e.VcsError, err)
 	}
 	user := &giteaUser{}
 	_ = json.Unmarshal(body, user)
 	return user, nil
+}
+
+func (v *giteaVcs) RepoBaseHttpAddr() string {
+	return v.vcs.Address
 }

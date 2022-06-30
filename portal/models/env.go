@@ -12,16 +12,17 @@ import (
 )
 
 const (
-	EnvStatusActive   = "active"   // 成功部署
-	EnvStatusFailed   = "failed"   // apply 过程中出现错误
-	EnvStatusInactive = "inactive" // 资源未部署或已销毁
+	EnvStatusActive    = "active"    // 成功部署
+	EnvStatusFailed    = "failed"    // apply 过程中出现错误
+	EnvStatusInactive  = "inactive"  // 资源未部署
+	EnvStatusDestroyed = "destroyed" // 已销毁
 
 	//EnvStatusDeploying = "deploying" // apply 运行中(plan 作业不改变状态)
 	//EnvStatusApproving = "approving" // 等待审批
 )
 
 var (
-	EnvStatus     = []string{EnvStatusActive, EnvStatusFailed, EnvStatusInactive}
+	EnvStatus     = []string{EnvStatusActive, EnvStatusFailed, EnvStatusInactive, EnvStatusDestroyed}
 	EnvTaskStatus = []string{TaskRunning, TaskApproving} // 环境 taskStatus 有效值
 )
 
@@ -32,9 +33,9 @@ type Env struct {
 	TplId     Id `json:"tplId" gorm:"size:32;not null"`     // 模板ID
 	CreatorId Id `json:"creatorId" gorm:"size:32;not null"` // 创建人ID
 
-	Name        string `json:"name" gorm:"not null"`                                                                       // 环境名称
-	Description string `json:"description" gorm:"type:text"`                                                               // 环境描述
-	Status      string `json:"status" gorm:"type:enum('active','failed','inactive')" enums:"'active','failed','inactive'"` // 环境状态, active活跃, inactive非活跃,failed错误,running部署中,approving审批中
+	Name        string `json:"name" gorm:"not null"`                                                                                                 // 环境名称
+	Description string `json:"description" gorm:"type:text"`                                                                                         // 环境描述
+	Status      string `json:"status" gorm:"type:enum('active','failed','inactive', 'destroyed')" enums:"'active','failed','inactive', 'destroyed'"` // 环境状态, active活跃, inactive非活跃,failed错误,running部署中,approving审批中
 	// 任务状态，只同步部署任务的状态(apply,destroy)，plan 任务不会对环境产生影响，所以不同步
 	TaskStatus  string `json:"taskStatus" gorm:"type:enum('','approving','running');default:''"`
 	Archived    bool   `json:"archived" gorm:"default:false"`                // 是否已归档
@@ -94,6 +95,8 @@ type Env struct {
 
 	//环境锁定
 	Locked bool `json:"locked" gorm:"default:false"`
+
+	IsDemo bool `json:"isDemo" gorm:"default:false"` // 是否是演示环境
 }
 
 func (Env) TableName() string {
@@ -112,6 +115,9 @@ func (e *Env) Migrate(sess *db.Session) (err error) {
 		return err
 	}
 	if err = sess.ModifyModelColumn(&Env{}, "triggers"); err != nil {
+		return err
+	}
+	if err = sess.ModifyModelColumn(&Env{}, "status"); err != nil {
 		return err
 	}
 	return nil
@@ -150,6 +156,9 @@ type EnvDetail struct {
 	// (这个报错只在 gorm 日志中打印，db.Error 无错误)。
 	PolicyGroup []string `json:"policyGroup" gorm:"-"` // 环境相关合规策略组
 	RunnerTags  []string `json:"runnerTags" gorm:"-"`  // 将其转为数组返回给前端
+
+	MonthCost float32 `json:"monthCost"` // 环境月度成本
+	IsBilling bool    `json:"isBilling"` // 是否开启账单采集
 }
 
 func (c *EnvDetail) UpdateEnvPolicyStatus() {
