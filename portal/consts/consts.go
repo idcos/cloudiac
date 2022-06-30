@@ -182,6 +182,9 @@ var (
 	EnvScopeProject = []string{ScopeProject, ScopeOrg}
 	EnvScopeOrg     = []string{ScopeOrg}
 
+	// 按优先级从低到高排序的变量 scopes
+	SortedVarScopes = []string{ScopeOrg, ScopeTemplate, ScopeProject, ScopeEnv}
+
 	VariableGroupEnv     = []string{ScopeOrg, ScopeProject, ScopeTemplate, ScopeEnv}
 	VariableGroupTpl     = []string{ScopeOrg, ScopeTemplate}
 	VariableGroupProject = []string{ScopeOrg, ScopeProject}
