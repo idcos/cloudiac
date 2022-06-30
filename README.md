@@ -53,8 +53,8 @@ curl -fsSL https://raw.githubusercontent.com/idcos/cloudiac-docs/master/script/c
   - Platform Security
   - Cloud Flexibility
   
-- Pro Team(comming soon)
-- Enterprise(comming soon)
+- **Pro Team**(comming soon)
+- **Enterprise**(comming soon)
 
 ### 社区
 
