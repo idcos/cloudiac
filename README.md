@@ -39,8 +39,9 @@ CloudIaC https://cloudiac.org 是基于基础设施即代码(IaC, Infrastructure
 curl -fsSL https://raw.githubusercontent.com/idcos/cloudiac-docs/master/script/cloudiac-docker.sh | bash
 ```
 
-### 在线体验
-> CloudIaC 体验云服务（Beta）即将推出，敬请期待！
+### 在线试用
+
+- [免费试用](https://app.cloudiac.org)
 
 ### 社区
 
