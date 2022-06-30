@@ -727,5 +727,5 @@ func FilterEnvUpdatedTime(query *db.Session, startTime, endTime *time.Time) *db.
 		return query
 	}
 
-	return query.Where("iac_env.updated_at > ? and iac_env.updated_at < ?", startTime, endTime)
+	return query.Where("iac_env.updated_at >= ? and iac_env.updated_at <= ?", startTime, endTime)
 }
