@@ -41,7 +41,7 @@ curl -fsSL https://raw.githubusercontent.com/idcos/cloudiac-docs/master/script/c
 
 ### CloudIaC in Cloud
 
-- [Start FREE](https://app.cloudiac.org)
+- [**START FOR FREE**](https://app.cloudiac.org)
   - $0 per month
   - Unlimited Number of Users
   - Unlimited Number of Projects
