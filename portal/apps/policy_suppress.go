@@ -62,7 +62,7 @@ func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppres
 			env, _ := services.GetEnvById(tx, id)
 			sups = append(sups, models.PolicySuppress{
 				CreatorId:  c.UserId,
-				OrgId:      env.OrgId,
+				OrgId:      c.OrgId,
 				ProjectId:  env.ProjectId,
 				TargetId:   id,
 				TargetType: consts.ScopeEnv,
@@ -71,10 +71,9 @@ func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppres
 				Reason:     form.Reason,
 			})
 		} else if strings.HasPrefix(string(id), "tpl-") {
-			tpl, _ := services.GetTemplateById(tx, id)
 			sups = append(sups, models.PolicySuppress{
 				CreatorId:  c.UserId,
-				OrgId:      tpl.OrgId,
+				OrgId:      c.OrgId,
 				TargetId:   id,
 				TargetType: consts.ScopeTemplate,
 				PolicyId:   form.Id,
@@ -97,6 +96,7 @@ func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppres
 				PolicyId:   form.Id,
 				Type:       common.PolicySuppressTypePolicy,
 				Reason:     form.Reason,
+				OrgId:      c.OrgId,
 			})
 			// 禁用此策略在添加屏蔽的同时设置策略状态为禁用
 			po.Enabled = false
