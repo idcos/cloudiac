@@ -1,0 +1,16 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
+package resps
+
+type BaseDataCount struct {
+	Total  int `json:"total"`
+	Active int `json:"active"`
+}
+
+type PlatformBasedataResp struct {
+	OrgCount     BaseDataCount `json:"orgCount"`
+	ProjectCount BaseDataCount `json:"projectCount"`
+	EnvCount     BaseDataCount `json:"envCount"`
+	StackCount   BaseDataCount `json:"stackCount"`
+	UserCount    BaseDataCount `json:"userCount"`
+}
