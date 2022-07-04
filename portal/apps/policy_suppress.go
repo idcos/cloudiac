@@ -32,7 +32,7 @@ func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppres
 		err e.Error
 	)
 	_ = c.DB().Transaction(func(tx *db.Session) error {
-		tx = services.QueryWithOrgId(c.DB(), c.OrgId)
+		tx = services.QueryWithOrgId(tx, c.OrgId)
 		for _, id := range form.AddSourceIds {
 			// 权限检查
 			if err := AllowAccessResource(tx, c, id); err != nil {
