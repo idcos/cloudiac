@@ -3,8 +3,8 @@
 package resps
 
 type BaseDataCount struct {
-	Total  int `json:"total"`
-	Active int `json:"active"`
+	Total  int64 `json:"total"`
+	Active int64 `json:"active"`
 }
 
 type PlatformBasedataResp struct {
