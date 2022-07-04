@@ -27,108 +27,88 @@ func SearchPolicySuppress(c *ctx.ServiceContext, form *forms.SearchPolicySuppres
 
 func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppressForm) (interface{}, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update policy suppress %s", form.Id))
-
-	tx := services.QueryWithOrgId(c.Tx(), c.OrgId)
-	defer func() {
-		if r := recover(); r != nil {
-			_ = tx.Rollback()
-			panic(r)
-		}
-	}()
-
-	// 权限检查
-	//ids := append(form.RmSourceIds, form.AddSourceIds...)
-	for _, id := range form.AddSourceIds {
-		if err := AllowAccessResource(tx, c, id); err != nil {
-			return nil, err
-		}
-	}
-
-	// 删除屏蔽记录
-	//if err := services.DeletePolicySuppressIds(tx, form.Id, form.RmSourceIds); err != nil {
-	//	_ = tx.Rollback()
-	//	if err.Code() == e.PolicySuppressNotExist {
-	//		return nil, e.New(e.DBError, err, http.StatusBadRequest)
-	//	}
-	//	return nil, e.New(e.DBError, err, http.StatusInternalServerError)
-	//}
-
-	// 创新新的屏蔽记录
 	var (
 		sups []models.PolicySuppress
+		err e.Error
 	)
-	for _, id := range form.AddSourceIds {
-		if strings.HasPrefix(string(id), "env-") {
-			env, _ := services.GetEnvById(tx, id)
-			if env.OrgId != c.OrgId {
-				c.Logger().Errorf("env do not belong to org, env: %s, org: %s", env.Id, c.OrgId)
-				continue
-			}
-			sups = append(sups, models.PolicySuppress{
-				CreatorId:  c.UserId,
-				OrgId:      c.OrgId,
-				ProjectId:  env.ProjectId,
-				TargetId:   id,
-				TargetType: consts.ScopeEnv,
-				PolicyId:   form.Id,
-				Type:       common.PolicySuppressTypeSource,
-				Reason:     form.Reason,
-			})
-		} else if strings.HasPrefix(string(id), "tpl-") {
-			tpl, _ := services.GetTemplateById(tx, id)
-			if tpl.OrgId != c.OrgId {
-				c.Logger().Errorf("tpl do not belong to org, env: %s, org: %s", tpl.Id, c.OrgId)
-				continue
-			}
-			sups = append(sups, models.PolicySuppress{
-				CreatorId:  c.UserId,
-				OrgId:      c.OrgId,
-				TargetId:   id,
-				TargetType: consts.ScopeTemplate,
-				PolicyId:   form.Id,
-				Type:       common.PolicySuppressTypeSource,
-				Reason:     form.Reason,
-			})
-		} else if strings.HasPrefix(string(id), "po-") {
-			// 一次只能提交一个策略禁用
-			if len(form.AddSourceIds) > 1 {
-				return nil, e.New(e.BadParam, fmt.Errorf("one policy id a time"), http.StatusBadRequest)
-			}
-			if form.Id != id {
-				return nil, e.New(e.BadParam, fmt.Errorf("invalid policy id to disable"), http.StatusBadRequest)
-			}
-			po, _ := services.GetPolicyById(tx, id, c.OrgId)
-			sups = append(sups, models.PolicySuppress{
-				CreatorId:  c.UserId,
-				TargetId:   id,
-				TargetType: consts.ScopePolicy,
-				PolicyId:   form.Id,
-				Type:       common.PolicySuppressTypePolicy,
-				Reason:     form.Reason,
-				OrgId:      c.OrgId,
-			})
-			// 禁用此策略在添加屏蔽的同时设置策略状态为禁用
-			po.Enabled = false
-			if _, err := tx.Save(po); err != nil {
-				_ = tx.Rollback()
-				return nil, e.New(e.DBError, err)
+	_ = c.DB().Transaction(func(tx *db.Session) error {
+		tx = services.QueryWithOrgId(c.DB(), c.OrgId)
+		for _, id := range form.AddSourceIds {
+			// 权限检查
+			if err := AllowAccessResource(tx, c, id); err != nil {
+				return  err
 			}
 		}
-	}
-
-	if er := models.CreateBatch(tx, sups); er != nil {
-		_ = tx.Rollback()
-		if e.IsDuplicate(er) {
-			return nil, e.New(e.PolicySuppressAlreadyExist, er, http.StatusBadRequest)
+		// 创新新的屏蔽记录
+		for _, id := range form.AddSourceIds {
+			if strings.HasPrefix(string(id), "env-") {
+				env, _ := services.GetEnvById(tx, id)
+				if env.OrgId != c.OrgId {
+					c.Logger().Errorf("env do not belong to org, env: %s, org: %s", env.Id, c.OrgId)
+					continue
+				}
+				sups = append(sups, models.PolicySuppress{
+					CreatorId:  c.UserId,
+					OrgId:      c.OrgId,
+					ProjectId:  env.ProjectId,
+					TargetId:   id,
+					TargetType: consts.ScopeEnv,
+					PolicyId:   form.Id,
+					Type:       common.PolicySuppressTypeSource,
+					Reason:     form.Reason,
+				})
+			} else if strings.HasPrefix(string(id), "tpl-") {
+				tpl, _ := services.GetTemplateById(tx, id)
+				if tpl.OrgId != c.OrgId {
+					c.Logger().Errorf("tpl do not belong to org, env: %s, org: %s", tpl.Id, c.OrgId)
+					continue
+				}
+				sups = append(sups, models.PolicySuppress{
+					CreatorId:  c.UserId,
+					OrgId:      c.OrgId,
+					TargetId:   id,
+					TargetType: consts.ScopeTemplate,
+					PolicyId:   form.Id,
+					Type:       common.PolicySuppressTypeSource,
+					Reason:     form.Reason,
+				})
+			} else if strings.HasPrefix(string(id), "po-") {
+				// 一次只能提交一个策略禁用
+				if len(form.AddSourceIds) > 1 {
+					return e.New(e.BadParam, fmt.Errorf("one policy id a time"), http.StatusBadRequest)
+				}
+				if form.Id != id {
+					return e.New(e.BadParam, fmt.Errorf("invalid policy id to disable"), http.StatusBadRequest)
+				}
+				po, _ := services.GetPolicyById(tx, id, c.OrgId)
+				sups = append(sups, models.PolicySuppress{
+					CreatorId:  c.UserId,
+					TargetId:   id,
+					TargetType: consts.ScopePolicy,
+					PolicyId:   form.Id,
+					Type:       common.PolicySuppressTypePolicy,
+					Reason:     form.Reason,
+					OrgId:      c.OrgId,
+				})
+				// 禁用此策略在添加屏蔽的同时设置策略状态为禁用
+				po.Enabled = false
+				if _, err := tx.Save(po); err != nil {
+					_ = tx.Rollback()
+					return  e.New(e.DBError, err)
+				}
+			}
 		}
-		return nil, e.New(e.DBError, er)
-	}
 
-	if err := tx.Commit(); err != nil {
-		c.Logger().Errorf("error commit policy suppress, err %s", err)
-		_ = tx.Rollback()
-		return nil, e.New(e.DBError, err)
-	}
+		if er := models.CreateBatch(tx, sups); er != nil {
+			_ = tx.Rollback()
+			if e.IsDuplicate(er) {
+				return  e.New(e.PolicySuppressAlreadyExist, er, http.StatusBadRequest)
+			}
+			return  e.New(e.DBError, er)
+		}
+
+		return err
+	})
 
 	return sups, nil
 }
