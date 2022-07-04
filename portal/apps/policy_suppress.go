@@ -60,6 +60,10 @@ func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppres
 	for _, id := range form.AddSourceIds {
 		if strings.HasPrefix(string(id), "env-") {
 			env, _ := services.GetEnvById(tx, id)
+			if env.OrgId != c.OrgId {
+				c.Logger().Errorf("env do not belong to org, env: %s, org: %s", env.Id, c.OrgId)
+				continue
+			}
 			sups = append(sups, models.PolicySuppress{
 				CreatorId:  c.UserId,
 				OrgId:      c.OrgId,
@@ -71,6 +75,11 @@ func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppres
 				Reason:     form.Reason,
 			})
 		} else if strings.HasPrefix(string(id), "tpl-") {
+			tpl, _ := services.GetTemplateById(tx, id)
+			if tpl.OrgId != c.OrgId {
+				c.Logger().Errorf("tpl do not belong to org, env: %s, org: %s", tpl.Id, c.OrgId)
+				continue
+			}
 			sups = append(sups, models.PolicySuppress{
 				CreatorId:  c.UserId,
 				OrgId:      c.OrgId,
