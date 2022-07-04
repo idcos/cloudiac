@@ -104,10 +104,11 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*resps.TaskDe
 	}
 
 	// 清除url token
-	o.RepoAddr, err = replaceVcsToken(o.RepoAddr)
-	if err != nil {
-		return nil, err
-	}
+	// o.RepoAddr, err = replaceVcsToken(o.RepoAddr)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	o.RepoAddr = ""
 
 	return &o, nil
 }
