@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"path"
 	"sort"
 	"strconv"
@@ -113,14 +112,14 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*resps.TaskDe
 	return &o, nil
 }
 
-func replaceVcsToken(old string) (string, e.Error) {
-	u, err := url.Parse(old)
-	if err != nil {
-		return "", e.New(e.URLParseError, err)
-	}
-	u.User = url.User("")
-	return u.Redacted(), nil
-}
+// func replaceVcsToken(old string) (string, e.Error) {
+// 	u, err := url.Parse(old)
+// 	if err != nil {
+// 		return "", e.New(e.URLParseError, err)
+// 	}
+// 	u.User = url.User("")
+// 	return u.Redacted(), nil
+// }
 
 // LastTask 最新任务信息
 func LastTask(c *ctx.ServiceContext, form *forms.LastTaskForm) (*resps.TaskDetailResp, e.Error) {
