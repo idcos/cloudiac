@@ -7,10 +7,15 @@ type BaseDataCount struct {
 	Active int64 `json:"active"`
 }
 
-type PlatformBasedataResp struct {
+type PfBasedataResp struct {
 	OrgCount     BaseDataCount `json:"orgCount"`
 	ProjectCount BaseDataCount `json:"projectCount"`
 	EnvCount     BaseDataCount `json:"envCount"`
 	StackCount   BaseDataCount `json:"stackCount"`
 	UserCount    BaseDataCount `json:"userCount"`
+}
+
+type PfProEnvStatResp struct {
+	ProName string `json:"proName"`
+	Count   int64  `json:"count"`
 }

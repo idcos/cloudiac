@@ -25,3 +25,17 @@ type Platform struct {
 func (Platform) PlatformStatBasedata(c *ctx.GinRequest) {
 	c.JSONResult(apps.PlatformStatBasedata(c.Service()))
 }
+
+// PlatformStatProEnv provider环境数量统计
+// @Tags 平台
+// @Summary provider环境数量统计
+// @Description provider环境数量统计
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @router /platform/stat/provider/env [get]
+// @Success 200 {object} ctx.JSONResult{result=[]resps.PfProEnvStatResp}
+func (Platform) PlatformStatProEnv(c *ctx.GinRequest) {
+	c.JSONResult(apps.PlatformStatProEnv(c.Service()))
+}

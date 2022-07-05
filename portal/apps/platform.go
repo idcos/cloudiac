@@ -12,3 +12,7 @@ import (
 func PlatformStatBasedata(c *ctx.ServiceContext) (interface{}, e.Error) {
 	return services.GetBaseDataCount(c.DB())
 }
+
+func PlatformStatProEnv(c *ctx.ServiceContext) (interface{}, e.Error) {
+	return services.GetProviderEnvCount(c.DB())
+}

@@ -9,9 +9,9 @@ import (
 	"cloudiac/portal/models/resps"
 )
 
-func GetBaseDataCount(dbSess *db.Session) (*resps.PlatformBasedataResp, e.Error) {
+func GetBaseDataCount(dbSess *db.Session) (*resps.PfBasedataResp, e.Error) {
 	var err error
-	var result = &resps.PlatformBasedataResp{}
+	var result = &resps.PfBasedataResp{}
 
 	// organization
 	result.OrgCount.Total, result.OrgCount.Active, err = getTotalAndActiveCount(dbSess, models.Organization{}.TableName(), models.Enable)
@@ -58,4 +58,8 @@ func getTotalAndActiveCount(dbSess *db.Session, tableName, status string) (int64
 	}
 
 	return cntTotal, cntActive, nil
+}
+
+func GetProviderEnvCount(dbSess *db.Session) ([]resps.PfProEnvStatResp, e.Error) {
+	return nil, nil
 }
