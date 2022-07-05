@@ -7,7 +7,6 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/resps"
-	"strings"
 )
 
 // activeDays 判断活跃度的天数
@@ -20,11 +19,6 @@ func buildActiveEnvQuery(query *db.Session, selStr string, orgIds []string) *db.
 	query = query.Where(`updated_at > DATE_SUB(CURDATE(), INTERVAL ? DAY)`, activeDays)
 
 	return query
-}
-
-func getProviderName(provider string) string {
-	providers := strings.Split(provider, "/")
-	return providers[len(providers)-1]
 }
 
 func GetOrgTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, int64, error) {
@@ -141,7 +135,7 @@ func GetProviderEnvCount(dbSess *db.Session, orgIds []string) ([]resps.PfProEnvS
 	FROM
 			(
 		select
-			provider,
+			SUBSTRING_INDEX(provider,'/',-1) as provider,
 			env_id
 		from
 			iac_resource
@@ -158,7 +152,7 @@ func GetProviderEnvCount(dbSess *db.Session, orgIds []string) ([]resps.PfProEnvS
 	group by
 		t.provider
 	*/
-	subQuery := dbSess.Model(&models.Resource{}).Select(`provider, env_id`)
+	subQuery := dbSess.Model(&models.Resource{}).Select(`SUBSTRING_INDEX(provider,'/',-1) as provider, env_id`)
 	subQuery = subQuery.Joins(`join iac_env ON iac_env.last_res_task_id = iac_resource.task_id AND iac_resource.env_id = iac_env.id`)
 	subQuery = subQuery.Where("iac_env.archived = ?", 0)
 	if len(orgIds) > 0 {
@@ -174,18 +168,13 @@ func GetProviderEnvCount(dbSess *db.Session, orgIds []string) ([]resps.PfProEnvS
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	// provider 名称截取最后一段
-	for i, result := range dbResults {
-		dbResults[i].Provider = getProviderName(result.Provider)
-	}
-
 	return dbResults, nil
 }
 
 func GetProviderResCount(dbSess *db.Session, orgIds []string) ([]resps.PfProResStatResp, e.Error) {
 	/* sample sql
 	SELECT
-		provider,
+		SUBSTRING_INDEX(provider,'/',-1) as provider,
 		COUNT(*) as count
 	from
 		iac_resource
@@ -196,20 +185,45 @@ func GetProviderResCount(dbSess *db.Session, orgIds []string) ([]resps.PfProResS
 	GROUP BY
 		provider
 	*/
-	query := dbSess.Model(&models.Resource{}).Select(`provider, COUNT(*) as count`)
+	query := dbSess.Model(&models.Resource{}).Select(`SUBSTRING_INDEX(provider,'/',-1) as provider, COUNT(*) as count`)
 	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 	if len(orgIds) > 0 {
 		query = query.Where(`iac_resource.org_id IN (?)`, orgIds)
 	}
+	query = query.Group("provider")
 
 	var dbResults []resps.PfProResStatResp
 	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	// provider 名称截取最后一段
-	for i, result := range dbResults {
-		dbResults[i].Provider = getProviderName(result.Provider)
+	return dbResults, nil
+}
+
+func GetResTypeCount(dbSess *db.Session, orgIds []string) ([]resps.PfResTypeStatResp, e.Error) {
+	/* sample sql
+	SELECT
+		iac_resource.`type` as res_type,
+		COUNT(*) as count
+	from
+		iac_resource
+	join iac_env on
+		iac_env.last_res_task_id = iac_resource.task_id
+		and iac_env.id = iac_resource.env_id
+	where iac_resource.org_id IN ('xxx', 'yyy')
+	GROUP BY
+		iac_resource.`type`
+	*/
+	query := dbSess.Model(&models.Resource{}).Select("iac_resource.`type` as res_type, COUNT(*) as count")
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
+	if len(orgIds) > 0 {
+		query = query.Where(`iac_resource.org_id IN (?)`, orgIds)
+	}
+	query = query.Group("iac_resource.`type`")
+
+	var dbResults []resps.PfResTypeStatResp
+	if err := query.Find(&dbResults); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
 	}
 
 	return dbResults, nil

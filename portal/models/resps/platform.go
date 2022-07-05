@@ -24,3 +24,8 @@ type PfProResStatResp struct {
 	Provider string `json:"provider"`
 	Count    int64  `json:"count"`
 }
+
+type PfResTypeStatResp struct {
+	ResType string `json:"resType"`
+	Count   int64  `json:"count"`
+}

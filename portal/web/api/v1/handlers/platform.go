@@ -69,3 +69,22 @@ func (Platform) PlatformStatProRes(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.PlatformStatProRes(c.Service(), &form))
 }
+
+// PlatformStatResType 资源类型占比
+// @Tags 平台
+// @Summary 资源类型占比
+// @Description 资源类型占比
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param form formData forms.PfStatForm true "parameter"
+// @router /platform/stat/resource/type [get]
+// @Success 200 {object} ctx.JSONResult{result=[]resps.PfResTypeStatResp}
+func (Platform) PlatformStatResType(c *ctx.GinRequest) {
+	form := forms.PfStatForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.PlatformStatResType(c.Service(), &form))
+}

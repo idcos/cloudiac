@@ -73,3 +73,9 @@ func PlatformStatProRes(c *ctx.ServiceContext, form *forms.PfStatForm) (interfac
 	orgIds := parseOrgIds(form.OrgIds)
 	return services.GetProviderResCount(c.DB(), orgIds)
 }
+
+// PlatformStatResType 资源类型占比
+func PlatformStatResType(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+	orgIds := parseOrgIds(form.OrgIds)
+	return services.GetResTypeCount(c.DB(), orgIds)
+}
