@@ -63,7 +63,9 @@ func PlatformStatBasedata(c *ctx.ServiceContext, form *forms.PfStatForm) (interf
 
 // PlatformStatProEnv provider环境数量统计
 func PlatformStatProEnv(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
-	return services.GetProviderEnvCount(c.DB())
+	orgIds := parseOrgIds(form.OrgIds)
+
+	return services.GetProviderEnvCount(c.DB(), orgIds)
 }
 
 // PlatformStatProRes provider资源数量占比

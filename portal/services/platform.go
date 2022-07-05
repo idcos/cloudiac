@@ -7,6 +7,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/resps"
+	"strings"
 )
 
 // activeDays 判断活跃度的天数
@@ -127,32 +128,37 @@ func GetUserTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, int
 	return cntTotal, cntActive, nil
 }
 
-func GetProviderEnvCount(dbSess *db.Session) ([]resps.PfProEnvStatResp, e.Error) {
+func GetProviderEnvCount(dbSess *db.Session, orgIds []string) ([]resps.PfProEnvStatResp, e.Error) {
 	/* sample sql
 	SELECT
 		t.provider as provider,
 		COUNT(*) as count
 	FROM
-		(
+			(
 		select
 			provider,
 			env_id
 		from
 			iac_resource
 		join iac_env ON
-			iac_resource.env_id = iac_env.id
+			iac_env.last_res_task_id = iac_resource.task_id
+			and iac_env.id = iac_resource.env_id
 		where
 			iac_env.archived = 0
+		AND iac_resource.org_id IN ('xxx', 'yyy')
 		group by
 			provider,
 			env_id
-	) as t
+		) as t
 	group by
 		t.provider
 	*/
 	subQuery := dbSess.Model(&models.Resource{}).Select(`provider, env_id`)
-	subQuery = subQuery.Joins(`join iac_env ON iac_resource.env_id = iac_env.id`)
+	subQuery = subQuery.Joins(`join iac_env ON iac_env.last_res_task_id = iac_resource.task_id AND iac_resource.env_id = iac_env.id`)
 	subQuery = subQuery.Where("iac_env.archived = ?", 0)
+	if len(orgIds) > 0 {
+		subQuery = subQuery.Where(`iac_resource.org_id IN (?)`, orgIds)
+	}
 	subQuery = subQuery.Group("provider, env_id")
 
 	query := dbSess.Table(`(?) as t`, subQuery.Expr()).Select(`t.provider as provider, COUNT(*) as count`)
@@ -161,6 +167,12 @@ func GetProviderEnvCount(dbSess *db.Session) ([]resps.PfProEnvStatResp, e.Error)
 	var dbResults []resps.PfProEnvStatResp
 	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	// provider 名称截取最后一段
+	for i, result := range dbResults {
+		providers := strings.Split(result.Provider, "/")
+		dbResults[i].Provider = providers[len(providers)-1]
 	}
 
 	return dbResults, nil
