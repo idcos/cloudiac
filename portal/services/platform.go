@@ -105,7 +105,26 @@ func GetStackTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, in
 }
 
 func GetUserTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, int64, error) {
-	return 0, 0, nil
+	queryTotal := dbSess.Model(&models.User{})
+	queryTotal = queryTotal.Joins(`join iac_user_org on iac_user.id = iac_user_org.user_id`)
+	queryTotal = queryTotal.Where(`iac_user.status = ?`, models.Enable)
+	queryTotal = queryTotal.Where(`iac_user.active_status = ?`, "active")
+	if len(orgIds) > 0 {
+		queryTotal = queryTotal.Where("iac_user_org.org_id IN (?)", orgIds)
+	}
+	cntTotal, err := queryTotal.Count()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	queryActive := queryTotal.Where(`iac_user.updated_at > DATE_SUB(CURDATE(), INTERVAL ? DAY)`, activeDays)
+
+	cntActive, err := queryActive.Count()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return cntTotal, cntActive, nil
 }
 
 func GetProviderEnvCount(dbSess *db.Session) ([]resps.PfProEnvStatResp, e.Error) {

@@ -53,6 +53,10 @@ func PlatformStatBasedata(c *ctx.ServiceContext, form *forms.PfStatForm) (interf
 	}
 
 	// user
+	result.UserCount.Total, result.UserCount.Active, err = services.GetUserTotalAndActiveCount(dbSess, orgIds)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
 
 	return result, nil
 }
