@@ -320,7 +320,7 @@ func GetResWeekChange(dbSess *db.Session, orgIds []string) ([]resps.PfResWeekCha
 	query = query.Order("date")
 
 	var dbResults []resps.PfResWeekChangeResp
-	if err := query.Debug().Find(&dbResults); err != nil {
+	if err := query.Find(&dbResults); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
