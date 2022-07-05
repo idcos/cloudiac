@@ -103,7 +103,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/platform/stat/provider/env", ac(), w(handlers.Platform{}.PlatformStatProEnv))
 	g.GET("/platform/stat/provider/resource", ac(), w(handlers.Platform{}.PlatformStatProRes))
 	g.GET("/platform/stat/resource/type", ac(), w(handlers.Platform{}.PlatformStatResType))
-	g.GET("/platform/stat/resource/week")
+	g.GET("/platform/stat/resource/week", ac(), w(handlers.Platform{}.PlatformStatResWeekChange))
 	g.GET("/platform/stat/resource/active", ac(), w(handlers.Platform{}.PlatformStatActiveResType))
 
 	// 要求组织 header

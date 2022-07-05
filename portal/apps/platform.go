@@ -85,3 +85,9 @@ func PlatformStatActiveResType(c *ctx.ServiceContext, form *forms.PfStatForm) (i
 	orgIds := parseOrgIds(form.OrgIds)
 	return services.GetOrgActiveResTypeCount(c.DB(), orgIds)
 }
+
+// PlatformStatResWeekChange 一周资源变更趋势
+func PlatformStatResWeekChange(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+	orgIds := parseOrgIds(form.OrgIds)
+	return services.GetResWeekChange(c.DB(), orgIds)
+}

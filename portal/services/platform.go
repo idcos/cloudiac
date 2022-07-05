@@ -7,6 +7,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/resps"
+	"time"
 )
 
 // activeDays 判断活跃度的天数
@@ -290,4 +291,65 @@ func convertToPfActiveResStatResp(dbResults []orgActiveResType) []resps.PfActive
 		})
 	}
 	return results
+}
+
+func GetResWeekChange(dbSess *db.Session, orgIds []string) ([]resps.PfResWeekChangeResp, e.Error) {
+	/* sample sql
+	select
+		DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date,
+		count(DISTINCT iac_resource.env_id, iac_resource.address) as count
+	from
+		iac_resource
+	JOIN iac_env ON
+		iac_env.id = iac_resource.env_id
+	where
+		iac_resource.org_id IN ('xxx', 'yyy')
+		and DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 7 DAY), "%Y-%m-%d")
+	group by
+		date
+	order by
+		date
+	*/
+	query := dbSess.Model(&models.Resource{}).Select(`DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date, count(DISTINCT iac_resource.env_id, iac_resource.address) as count`)
+	query = query.Joins(`JOIN iac_env ON iac_env.id = iac_resource.env_id`)
+	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? DAY), "%Y-%m-%d")`, activeDays)
+	if len(orgIds) > 0 {
+		query = query.Where(`iac_resource.org_id IN (?)`, orgIds)
+	}
+	query = query.Group("date")
+	query = query.Order("date")
+
+	var dbResults []resps.PfResWeekChangeResp
+	if err := query.Debug().Find(&dbResults); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return completeWeekChange(dbResults), nil
+}
+
+func completeWeekChange(dbResults []resps.PfResWeekChangeResp) []resps.PfResWeekChangeResp {
+	var mWeekChange = make(map[string]int64)
+	for _, result := range dbResults {
+		mWeekChange[result.Date] = result.Count
+	}
+
+	fullResults := make([]resps.PfResWeekChangeResp, 0)
+	startDate := time.Now().AddDate(0, 0, -1*activeDays)
+	for i := 0; i < activeDays; i++ {
+		startDate = startDate.AddDate(0, 0, 1)
+		date := startDate.Format("2006-01-02")
+		var count int64 = 0
+
+		if v, ok := mWeekChange[date]; ok {
+			count = v
+		}
+
+		fullResults = append(fullResults, resps.PfResWeekChangeResp{
+			Date:  date,
+			Count: count,
+		})
+	}
+
+	return fullResults
+
 }
