@@ -22,6 +22,11 @@ func buildActiveEnvQuery(query *db.Session, selStr string, orgIds []string) *db.
 	return query
 }
 
+func getProviderName(provider string) string {
+	providers := strings.Split(provider, "/")
+	return providers[len(providers)-1]
+}
+
 func GetOrgTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, int64, error) {
 	queryTotal := dbSess.Model(&models.Organization{}).Where(`status = ?`, models.Enable)
 	if len(orgIds) > 0 {
@@ -171,13 +176,41 @@ func GetProviderEnvCount(dbSess *db.Session, orgIds []string) ([]resps.PfProEnvS
 
 	// provider 名称截取最后一段
 	for i, result := range dbResults {
-		providers := strings.Split(result.Provider, "/")
-		dbResults[i].Provider = providers[len(providers)-1]
+		dbResults[i].Provider = getProviderName(result.Provider)
 	}
 
 	return dbResults, nil
 }
 
-func GetProviderResCount(dbSess *db.Session) ([]resps.PfProResStatResp, e.Error) {
-	return nil, nil
+func GetProviderResCount(dbSess *db.Session, orgIds []string) ([]resps.PfProResStatResp, e.Error) {
+	/* sample sql
+	SELECT
+		provider,
+		COUNT(*) as count
+	from
+		iac_resource
+	join iac_env on
+		iac_env.last_res_task_id = iac_resource.task_id
+		and iac_env.id = iac_resource.env_id
+	where iac_resource.org_id IN ('xxx', 'yyy')
+	GROUP BY
+		provider
+	*/
+	query := dbSess.Model(&models.Resource{}).Select(`provider, COUNT(*) as count`)
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
+	if len(orgIds) > 0 {
+		query = query.Where(`iac_resource.org_id IN (?)`, orgIds)
+	}
+
+	var dbResults []resps.PfProResStatResp
+	if err := query.Find(&dbResults); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	// provider 名称截取最后一段
+	for i, result := range dbResults {
+		dbResults[i].Provider = getProviderName(result.Provider)
+	}
+
+	return dbResults, nil
 }
