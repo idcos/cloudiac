@@ -84,7 +84,24 @@ func GetEnvTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, int6
 }
 
 func GetStackTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, int64, error) {
-	return 0, 0, nil
+	queryTotal := dbSess.Model(&models.Template{}).Where(`status = ?`, models.Enable)
+	if len(orgIds) > 0 {
+		queryTotal = queryTotal.Where("id IN (?)", orgIds)
+	}
+	cntTotal, err := queryTotal.Count()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	queryActive := dbSess.Model(&models.Template{}).Where(`status = ?`, models.Enable)
+	subQuery := buildActiveEnvQuery(dbSess, "DISTINCT(tpl_id)", orgIds)
+
+	cntActive, err := queryActive.Where(`id IN (?)`, subQuery.Expr()).Count()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return cntTotal, cntActive, nil
 }
 
 func GetUserTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, int64, error) {

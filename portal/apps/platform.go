@@ -47,6 +47,10 @@ func PlatformStatBasedata(c *ctx.ServiceContext, form *forms.PfStatForm) (interf
 	}
 
 	// stack
+	result.StackCount.Total, result.StackCount.Active, err = services.GetStackTotalAndActiveCount(dbSess, orgIds)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
 
 	// user
 
