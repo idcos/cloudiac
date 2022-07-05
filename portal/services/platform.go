@@ -98,3 +98,7 @@ func GetProviderEnvCount(dbSess *db.Session) ([]resps.PfProEnvStatResp, e.Error)
 
 	return dbResults, nil
 }
+
+func GetProviderResCount(dbSess *db.Session) ([]resps.PfProResStatResp, e.Error) {
+	return nil, nil
+}

@@ -19,3 +19,8 @@ type PfProEnvStatResp struct {
 	Provider string `json:"provider"`
 	Count    int64  `json:"count"`
 }
+
+type PfProResStatResp struct {
+	ResName string `json:"resName"`
+	Count   int64  `json:"count"`
+}
