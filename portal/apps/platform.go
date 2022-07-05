@@ -35,8 +35,16 @@ func PlatformStatBasedata(c *ctx.ServiceContext, form *forms.PfStatForm) (interf
 	}
 
 	// project
+	result.ProjectCount.Total, result.ProjectCount.Active, err = services.GetProjectTotalAndActiveCount(dbSess, orgIds)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
 
 	// enviroment
+	result.EnvCount.Total, result.EnvCount.Active, err = services.GetEnvTotalAndActiveCount(dbSess, orgIds)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
 
 	// stack
 
