@@ -112,7 +112,7 @@ func (a Auth) CheckEmail(c *ctx.GinRequest) {
 // @Accept multipart/form-data
 // @Accept json
 // @Param body formData forms.PasswordResetEmailForm true "parameter"
-// @router /auth/password/reset [put]
+// @router /auth/password/reset/email [post]
 // @Success 200 {object} ctx.JSONResult{result=resps.UserEmailStatus}
 func (a Auth) PasswordResetEmail(c *ctx.GinRequest) {
 	form := forms.PasswordResetEmailForm{}
