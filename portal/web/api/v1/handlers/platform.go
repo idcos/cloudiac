@@ -21,7 +21,7 @@ type Platform struct {
 // @Produce json
 // @Security AuthToken
 // @router /platform/stat/basedata [get]
-// @Success 200 {object} ctx.JSONResult{result=resps.PlatformBasedataResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.PfBasedataResp}
 func (Platform) PlatformStatBasedata(c *ctx.GinRequest) {
 	c.JSONResult(apps.PlatformStatBasedata(c.Service()))
 }

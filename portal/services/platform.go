@@ -61,5 +61,16 @@ func getTotalAndActiveCount(dbSess *db.Session, tableName, status string) (int64
 }
 
 func GetProviderEnvCount(dbSess *db.Session) ([]resps.PfProEnvStatResp, e.Error) {
-	return nil, nil
+	subQuery := dbSess.Model(&models.Resource{}).Select(`provider, env_id`)
+	subQuery = subQuery.Group("provider, env_id")
+
+	query := dbSess.Table(`(?) as t`, subQuery.Expr()).Select(`t.provider as provider, COUNT(*) as count`)
+	query = query.Group("t.provider")
+
+	var dbResults []resps.PfProEnvStatResp
+	if err := query.Find(&dbResults); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return dbResults, nil
 }
