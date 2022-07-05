@@ -297,7 +297,7 @@ func ActiveUserEmailRetry(c *ctx.ServiceContext, email string) (interface{}, e.E
 	if err != nil {
 		return nil, e.New(e.InternalError, err)
 	}
-	return nil, services.SendActivateAccountMail(user, token)
+	return nil, services.SendActivateAccountMail(user, token, consts.AuthRegisterActivationPath, consts.AuthRegisterActivationSubject, consts.UserActiveMail)
 }
 
 // UpdateUser 用户信息编辑

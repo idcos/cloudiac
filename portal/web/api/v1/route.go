@@ -52,6 +52,7 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/auth/register", w(handlers.Auth{}.Registry))
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
 	g.GET("/auth/email", w(handlers.Auth{}.CheckEmail))
+	g.GET("/auth/password/reset", w(handlers.Auth{}.PasswordReset))
 
 	// 重新发送邮件
 	g.GET("/activation/retry", w(handlers.User{}.ActiveUserEmailRetry))
