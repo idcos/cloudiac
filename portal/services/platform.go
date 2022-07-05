@@ -9,55 +9,53 @@ import (
 	"cloudiac/portal/models/resps"
 )
 
-func GetBaseDataCount(dbSess *db.Session) (*resps.PfBasedataResp, e.Error) {
-	var err error
-	var result = &resps.PfBasedataResp{}
+// activeDays 判断活跃度的天数
+const activeDays = 7
 
-	// organization
-	result.OrgCount.Total, result.OrgCount.Active, err = getTotalAndActiveCount(dbSess, models.Organization{}.TableName(), models.Enable)
-	if err != nil {
-		return nil, e.New(e.DBError, err)
-	}
+func buildActiveEnvQuery(query *db.Session, selStr string, orgIds []string) *db.Session {
+	query = query.Model(&models.Env{}).Select(selStr)
+	query = query.Where("archived = ?", 0)
+	query = query.Where(`(status = 'active' OR status = 'failed' OR task_status = 'approving' OR task_status = 'running')`)
+	query = query.Where(`updated_at > DATE_SUB(CURDATE(), INTERVAL ? DAY)`, activeDays)
 
-	// project
-	result.ProjectCount.Total, result.ProjectCount.Active, err = getTotalAndActiveCount(dbSess, models.Project{}.TableName(), models.Enable)
-	if err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-
-	// enviroment
-	result.EnvCount.Total, result.EnvCount.Active, err = getTotalAndActiveCount(dbSess, models.Env{}.TableName(), models.EnvStatusActive)
-	if err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-
-	// stack
-	result.StackCount.Total, result.StackCount.Active, err = getTotalAndActiveCount(dbSess, models.Template{}.TableName(), models.Enable)
-	if err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-
-	// user
-	result.UserCount.Total, result.UserCount.Active, err = getTotalAndActiveCount(dbSess, models.User{}.TableName(), models.Enable)
-	if err != nil {
-		return nil, e.New(e.DBError, err)
-	}
-
-	return result, nil
+	return query
 }
 
-func getTotalAndActiveCount(dbSess *db.Session, tableName, status string) (int64, int64, error) {
-	cntTotal, err := dbSess.Table(tableName).Count()
+func GetOrgTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, int64, error) {
+	queryTotal := dbSess.Model(&models.Organization{}).Where(`status = ?`, models.Enable)
+	if len(orgIds) > 0 {
+		queryTotal = queryTotal.Where("id IN (?)", orgIds)
+	}
+	cntTotal, err := queryTotal.Count()
 	if err != nil {
 		return 0, 0, err
 	}
 
-	cntActive, err := dbSess.Table(tableName).Where("status = ?", status).Count()
+	queryActive := dbSess.Model(&models.Organization{}).Where(`status = ?`, models.Enable)
+	subQuery := buildActiveEnvQuery(dbSess, "DISTINCT(org_id)", orgIds)
+
+	cntActive, err := queryActive.Where(`id IN (?)`, subQuery.Expr()).Count()
 	if err != nil {
 		return 0, 0, err
 	}
 
 	return cntTotal, cntActive, nil
+}
+
+func GetProjectTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, int64, error) {
+	return 0, 0, nil
+}
+
+func GetEnvTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, int64, error) {
+	return 0, 0, nil
+}
+
+func GetStackTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, int64, error) {
+	return 0, 0, nil
+}
+
+func GetUserTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, int64, error) {
+	return 0, 0, nil
 }
 
 func GetProviderEnvCount(dbSess *db.Session) ([]resps.PfProEnvStatResp, e.Error) {
