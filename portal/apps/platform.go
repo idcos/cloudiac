@@ -79,3 +79,9 @@ func PlatformStatResType(c *ctx.ServiceContext, form *forms.PfStatForm) (interfa
 	orgIds := parseOrgIds(form.OrgIds)
 	return services.GetResTypeCount(c.DB(), orgIds)
 }
+
+// PlatformStatActiveResType 活跃资源数量
+func PlatformStatActiveResType(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+	orgIds := parseOrgIds(form.OrgIds)
+	return services.GetOrgActiveResTypeCount(c.DB(), orgIds)
+}

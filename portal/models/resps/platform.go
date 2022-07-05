@@ -29,3 +29,8 @@ type PfResTypeStatResp struct {
 	ResType string `json:"resType"`
 	Count   int64  `json:"count"`
 }
+
+type PfActiveResStatResp struct {
+	OrgName      string              `json:"orgName"`
+	ResTypesStat []PfResTypeStatResp `json:"resTypesStat"`
+}

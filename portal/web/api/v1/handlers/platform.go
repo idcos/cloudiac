@@ -88,3 +88,22 @@ func (Platform) PlatformStatResType(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.PlatformStatResType(c.Service(), &form))
 }
+
+// PlatformStatActiveResType 活跃资源数量
+// @Tags 平台
+// @Summary 活跃资源数量
+// @Description 活跃资源数量
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param form formData forms.PfStatForm true "parameter"
+// @router /platform/stat/resource/active [get]
+// @Success 200 {object} ctx.JSONResult{result=[]resps.PfActiveResStatResp}
+func (Platform) PlatformStatActiveResType(c *ctx.GinRequest) {
+	form := forms.PfStatForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.PlatformStatActiveResType(c.Service(), &form))
+}

@@ -228,3 +228,66 @@ func GetResTypeCount(dbSess *db.Session, orgIds []string) ([]resps.PfResTypeStat
 
 	return dbResults, nil
 }
+
+type orgActiveResType struct {
+	OrgName string
+	ResType string
+	Count   int64
+}
+
+func GetOrgActiveResTypeCount(dbSess *db.Session, orgIds []string) ([]resps.PfActiveResStatResp, e.Error) {
+	/* sample sql
+	SELECT
+		iac_org.name as org_name,
+		iac_resource.`type` as res_type,
+		COUNT(*) as count
+	from
+		iac_resource
+	join iac_env on
+		iac_env.last_res_task_id = iac_resource.task_id
+		and iac_env.id = iac_resource.env_id
+	join iac_org  on
+		iac_org.id = iac_resource.org_id
+	where iac_resource.org_id IN ('xxx', 'yyy')
+	GROUP BY
+		iac_org.id,
+		iac_resource.`type`
+	*/
+
+	query := dbSess.Model(&models.Resource{}).Select("iac_org.name as org_name, iac_resource.`type` as res_type, COUNT(*) as count")
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
+	query = query.Joins(`join iac_org on iac_org.id = iac_resource.org_id`)
+	if len(orgIds) > 0 {
+		query = query.Where(`iac_resource.org_id IN (?)`, orgIds)
+	}
+	query = query.Group("iac_org.id, iac_resource.`type`")
+
+	var dbResults []orgActiveResType
+	if err := query.Find(&dbResults); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return convertToPfActiveResStatResp(dbResults), nil
+}
+
+func convertToPfActiveResStatResp(dbResults []orgActiveResType) []resps.PfActiveResStatResp {
+	mOrgResTypeStat := make(map[string][]resps.PfResTypeStatResp)
+	for _, dbResult := range dbResults {
+		if _, ok := mOrgResTypeStat[dbResult.OrgName]; !ok {
+			mOrgResTypeStat[dbResult.OrgName] = make([]resps.PfResTypeStatResp, 0)
+		}
+		mOrgResTypeStat[dbResult.OrgName] = append(mOrgResTypeStat[dbResult.OrgName], resps.PfResTypeStatResp{
+			ResType: dbResult.ResType,
+			Count:   dbResult.Count,
+		})
+	}
+
+	results := make([]resps.PfActiveResStatResp, 0)
+	for k, v := range mOrgResTypeStat {
+		results = append(results, resps.PfActiveResStatResp{
+			OrgName:      k,
+			ResTypesStat: v,
+		})
+	}
+	return results
+}
