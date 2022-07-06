@@ -109,6 +109,9 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/platform/stat/resource/week", ac(), w(handlers.Platform{}.PlatformStatResWeekChange))
 	g.GET("/platform/stat/resource/active", ac(), w(handlers.Platform{}.PlatformStatActiveResType))
 
+	// 用户操作日志
+	g.GET("/platform/operation/log", ac(), w(handlers.Platform{}.PlatformOperationLog))
+
 	// 要求组织 header
 	g.Use(w(middleware.AuthOrgId))
 

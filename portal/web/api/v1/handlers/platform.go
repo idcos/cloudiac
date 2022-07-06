@@ -126,3 +126,24 @@ func (Platform) PlatformStatActiveResType(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.PlatformStatActiveResType(c.Service(), &form))
 }
+
+// PlatformOperationLog 操作日志
+// @Tags 平台
+// @Summary 操作日志
+// @Description 操作日志
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param form formData forms.PfStatForm true "parameter"
+// @router /platform/operation/log [get]
+// @Success 200 {object} ctx.JSONResult{result=resps.OperationLogResp}
+func (Platform) PlatformOperationLog(c *ctx.GinRequest) {
+	form := forms.PfStatForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.PlatformOperationLog(c.Service(), &form))
+}
+
+

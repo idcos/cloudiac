@@ -2,6 +2,8 @@
 
 package resps
 
+import "cloudiac/portal/models"
+
 type BaseDataCount struct {
 	Total  int64 `json:"total"`
 	Active int64 `json:"active"`
@@ -43,4 +45,9 @@ type PfResTypeOrgsStatResp struct {
 type PfActiveResStatResp struct {
 	OrgList      []string                `json:"orgList"`
 	ResTypesStat []PfResTypeOrgsStatResp `json:"resTypesStat"`
+}
+
+type OperationLogResp struct {
+	models.UserOperationLog
+	OperatorName string `json:"operatorName"`
 }
