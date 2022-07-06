@@ -98,6 +98,14 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/system_config/registry/addr", ac(), w(handlers.GetRegistryAddr))     // 获取registry地址的设置
 	g.POST("/system_config/registry/addr", ac(), w(handlers.UpsertRegistryAddr)) // 更新registry地址的设置
 
+	// 平台概览
+	g.GET("/platform/stat/basedata", ac(), w(handlers.Platform{}.PlatformStatBasedata))
+	g.GET("/platform/stat/provider/env", ac(), w(handlers.Platform{}.PlatformStatProEnv))
+	g.GET("/platform/stat/provider/resource", ac(), w(handlers.Platform{}.PlatformStatProRes))
+	g.GET("/platform/stat/resource/type", ac(), w(handlers.Platform{}.PlatformStatResType))
+	g.GET("/platform/stat/resource/week", ac(), w(handlers.Platform{}.PlatformStatResWeekChange))
+	g.GET("/platform/stat/resource/active", ac(), w(handlers.Platform{}.PlatformStatActiveResType))
+
 	// 要求组织 header
 	g.Use(w(middleware.AuthOrgId))
 
