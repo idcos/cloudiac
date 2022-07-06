@@ -118,7 +118,7 @@ func (Platform) PlatformStatResWeekChange(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param form formData forms.PfStatForm true "parameter"
 // @router /platform/stat/resource/active [get]
-// @Success 200 {object} ctx.JSONResult{result=[]resps.PfActiveResStatResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.PfActiveResStatResp}
 func (Platform) PlatformStatActiveResType(c *ctx.GinRequest) {
 	form := forms.PfStatForm{}
 	if err := c.Bind(&form); err != nil {
