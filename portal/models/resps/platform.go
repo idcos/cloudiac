@@ -35,7 +35,12 @@ type PfResWeekChangeResp struct {
 	Count int64  `json:"count"`
 }
 
+type PfResTypeOrgsStatResp struct {
+	ResType string  `json:"resType"`
+	List    []int64 `json:"list"`
+}
+
 type PfActiveResStatResp struct {
-	OrgName      string              `json:"orgName"`
-	ResTypesStat []PfResTypeStatResp `json:"resTypesStat"`
+	OrgList      []string                `json:"orgList"`
+	ResTypesStat []PfResTypeOrgsStatResp `json:"resTypesStat"`
 }

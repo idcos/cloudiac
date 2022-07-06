@@ -7,6 +7,7 @@ import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/resps"
+	"cloudiac/utils"
 	"time"
 )
 
@@ -236,7 +237,7 @@ type orgActiveResType struct {
 	Count   int64
 }
 
-func GetOrgActiveResTypeCount(dbSess *db.Session, orgIds []string) ([]resps.PfActiveResStatResp, e.Error) {
+func GetOrgActiveResTypeCount(dbSess *db.Session, orgIds []string) (*resps.PfActiveResStatResp, e.Error) {
 	/* sample sql
 	SELECT
 		iac_org.name as org_name,
@@ -271,26 +272,40 @@ func GetOrgActiveResTypeCount(dbSess *db.Session, orgIds []string) ([]resps.PfAc
 	return convertToPfActiveResStatResp(dbResults), nil
 }
 
-func convertToPfActiveResStatResp(dbResults []orgActiveResType) []resps.PfActiveResStatResp {
-	mOrgResTypeStat := make(map[string][]resps.PfResTypeStatResp)
+func convertToPfActiveResStatResp(dbResults []orgActiveResType) *resps.PfActiveResStatResp {
+	orgList := make([]string, 0)
+	resTypeList := make([]string, 0)
+	mOrgResTypeStat := make(map[[2]string]int64)
 	for _, dbResult := range dbResults {
-		if _, ok := mOrgResTypeStat[dbResult.OrgName]; !ok {
-			mOrgResTypeStat[dbResult.OrgName] = make([]resps.PfResTypeStatResp, 0)
-		}
-		mOrgResTypeStat[dbResult.OrgName] = append(mOrgResTypeStat[dbResult.OrgName], resps.PfResTypeStatResp{
-			ResType: dbResult.ResType,
-			Count:   dbResult.Count,
-		})
+		key := [2]string{dbResult.OrgName, dbResult.ResType}
+		mOrgResTypeStat[key] = dbResult.Count
+
+		resTypeList = append(resTypeList, dbResult.ResType)
+		orgList = append(orgList, dbResult.OrgName)
 	}
 
-	results := make([]resps.PfActiveResStatResp, 0)
-	for k, v := range mOrgResTypeStat {
-		results = append(results, resps.PfActiveResStatResp{
-			OrgName:      k,
-			ResTypesStat: v,
-		})
+	orgList = utils.RemoveDuplicateElement(orgList)
+	resTypeList = utils.RemoveDuplicateElement(resTypeList)
+
+	resTypeStat := make([]resps.PfResTypeOrgsStatResp, 0)
+	for _, resType := range resTypeList {
+		resTypeCount := resps.PfResTypeOrgsStatResp{
+			ResType: resType,
+			List:    make([]int64, 0),
+		}
+
+		for _, orgName := range orgList {
+			key := [2]string{orgName, resType}
+			resTypeCount.List = append(resTypeCount.List, mOrgResTypeStat[key])
+		}
+
+		resTypeStat = append(resTypeStat, resTypeCount)
 	}
-	return results
+
+	return &resps.PfActiveResStatResp{
+		OrgList:      orgList,
+		ResTypesStat: resTypeStat,
+	}
 }
 
 func GetResWeekChange(dbSess *db.Session, orgIds []string) ([]resps.PfResWeekChangeResp, e.Error) {
