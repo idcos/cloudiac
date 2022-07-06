@@ -52,7 +52,6 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/auth/register", w(handlers.Auth{}.Registry))
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
 	g.GET("/auth/email", w(handlers.Auth{}.CheckEmail))
-	g.PUT("/auth/password/reset", w(handlers.Auth{}.PasswordReset))
 	g.POST("/auth/password/reset/email", w(handlers.Auth{}.PasswordResetEmail))
 
 	// 重新发送邮件
@@ -67,6 +66,8 @@ func Register(g *gin.RouterGroup) {
 
 	// 激活邮箱
 	g.POST("/activation", w(handlers.User{}.ActiveUserEmail))
+	// 重置密码
+	g.PUT("/auth/password/reset", w(handlers.Auth{}.PasswordReset))
 
 	// 允许搜索组织内所有用户信息
 	g.GET("/users/all", w(handlers.User{}.SearchAllUsers))
