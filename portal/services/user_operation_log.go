@@ -1,11 +1,14 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package services
 
 import (
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/utils/logs"
 )
 
-func InsertUserOperateLog(operatorId, orgId, objectId models.Id, objectType, action string, attr models.ResAttrs) error {
+func InsertUserOperateLog(operatorId, orgId, objectId models.Id, objectType, action string, attr models.ResAttrs) {
 	session := db.Get()
 	err := models.Create(session, &models.UserOperationLog{
 		ObjectType: objectType,
@@ -16,8 +19,6 @@ func InsertUserOperateLog(operatorId, orgId, objectId models.Id, objectType, act
 		Attribute:  attr,
 	})
 	if err != nil {
-		return err
+		logs.Get().Errorf("operate log insert err: %v", err)
 	}
-
-	return nil
 }

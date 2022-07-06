@@ -88,9 +88,7 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, er e
 	}
 
 	// 记录操作日志
-	if err := services.InsertUserOperateLog(user.Id, "", user.Id, operatorObjectType, "login", nil); err != nil {
-		c.Logger().Errorf("operate log insert err: %v", err)
-	}
+	services.InsertUserOperateLog(user.Id, "", user.Id, operatorObjectType, "login", nil)
 
 	return data, nil
 }
