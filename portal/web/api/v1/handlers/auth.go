@@ -105,3 +105,35 @@ func (a Auth) CheckEmail(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.CheckEmail(c.Service(), &form))
 }
+
+// PasswordResetEmail 发送找回密码邮件
+// @Tags 验证
+// @Summary 发送找回密码邮件
+// @Accept multipart/form-data
+// @Accept json
+// @Param body formData forms.PasswordResetEmailForm true "parameter"
+// @router /auth/password/reset/email [post]
+// @Success 200 {object} ctx.JSONResult{result=resps.UserEmailStatus}
+func (a Auth) PasswordResetEmail(c *ctx.GinRequest) {
+	form := forms.PasswordResetEmailForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.PasswordResetToSendEmail(c.Service(), &form))
+}
+
+// PasswordReset 找回密码
+// @Tags 验证
+// @Summary 找回密码
+// @Accept multipart/form-data
+// @Accept json
+// @Param body formData forms.PasswordResetForm true "parameter"
+// @router /auth/password/reset [put]
+// @Success 200 {object} ctx.JSONResult{result=resps.UserEmailStatus}
+func (a Auth) PasswordReset(c *ctx.GinRequest) {
+	form := forms.PasswordResetForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.PasswordReset(c.Service(), &form))
+}

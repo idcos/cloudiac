@@ -48,6 +48,12 @@ const (
 	PolicySeverityLow                = "LOW"
 
 	RegistryMirrorUri = "/v1/mirrors/providers/"
+
+	AuthRegisterActivationPath = "/activation/"
+	AuthPasswordResetPath      = "/find-password/"
+
+	AuthRegisterActivationSubject = "欢迎注册 CloudIaC"
+	AuthPasswordResetSubject      = "CloudIaC 密码重置"
 )
 
 const (
