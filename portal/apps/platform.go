@@ -91,3 +91,8 @@ func PlatformStatResWeekChange(c *ctx.ServiceContext, form *forms.PfStatForm) (i
 	orgIds := parseOrgIds(form.OrgIds)
 	return services.GetResWeekChange(c.DB(), orgIds)
 }
+
+// PlatformOperationLog 操作日志
+func PlatformOperationLog(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+	return services.PlatformOperationLog(c.DB(), parseOrgIds(form.OrgIds))
+}
