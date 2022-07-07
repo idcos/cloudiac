@@ -88,7 +88,7 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, er e
 	}
 
 	// 记录操作日志
-	services.InsertUserOperateLog(user.Id, "", user.Id, operatorObjectType, "login", nil)
+	services.InsertUserOperateLog(user.Id, "", user.Id, operatorObjectType, "login", "", nil)
 
 	return data, nil
 }

@@ -103,6 +103,7 @@ func PlatformOperationLog(c *ctx.ServiceContext, form *forms.PfStatForm) (interf
 	if err := p.Scan(&result); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
+
 	for index, v := range result {
 		result[index].ActionName = consts.UserOperationLogAttr[fmt.Sprintf("%s.%s", v.ObjectType, v.Action)]
 	}

@@ -8,11 +8,12 @@ import (
 	"cloudiac/utils/logs"
 )
 
-func InsertUserOperateLog(operatorId, orgId, objectId models.Id, objectType, action string, attr models.ResAttrs) {
+func InsertUserOperateLog(operatorId, orgId, objectId models.Id, objectType, action, objectName string, attr models.ResAttrs) {
 	session := db.Get()
 	err := models.Create(session, &models.UserOperationLog{
 		ObjectType: objectType,
 		ObjectId:   objectId,
+		ObjectName: objectName,
 		Action:     action,
 		OperatorId: operatorId,
 		OrgId:      orgId,

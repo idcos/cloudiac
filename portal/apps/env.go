@@ -481,7 +481,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	}
 
 	// 记录操作日志
-	services.InsertUserOperateLog(c.UserId, c.OrgId, env.Id, operatorObjectTypeEnv, "create", nil)
+	services.InsertUserOperateLog(c.UserId, c.OrgId, env.Id, operatorObjectTypeEnv, "create", env.Name, nil)
 
 	return &envDetail, nil
 }
@@ -866,7 +866,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	}
 
 	// 记录操作日志
-	services.InsertUserOperateLog(c.UserId, c.OrgId, env.Id, operatorObjectTypeEnv, "update", nil)
+	services.InsertUserOperateLog(c.UserId, c.OrgId, env.Id, operatorObjectTypeEnv, "update", form.Name, nil)
 
 	return detail, nil
 }
@@ -928,9 +928,9 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (ret *models.En
 
 	// 记录操作日志
 	if form.TaskType == models.TaskTypeDestroy {
-		services.InsertUserOperateLog(c.UserId, c.OrgId, ret.Id, operatorObjectTypeEnv, "destroy", nil)
+		services.InsertUserOperateLog(c.UserId, c.OrgId, ret.Id, operatorObjectTypeEnv, "destroy", ret.Name, nil)
 	} else {
-		services.InsertUserOperateLog(c.UserId, c.OrgId, ret.Id, operatorObjectTypeEnv, "deploy", nil)
+		services.InsertUserOperateLog(c.UserId, c.OrgId, ret.Id, operatorObjectTypeEnv, "deploy", ret.Name, nil)
 	}
 
 	return ret, er
