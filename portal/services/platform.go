@@ -15,14 +15,11 @@ import (
 // activeDays 判断活跃度的天数
 const activeDays = 7
 
-func buildActiveEnvQuery(query *db.Session, selStr string, orgIds []string) *db.Session {
+func buildActiveEnvQuery(query *db.Session, selStr string) *db.Session {
 	query = query.Model(&models.Env{}).Select(selStr)
 	query = query.Where("archived = ?", 0)
 	query = query.Where(`(status = 'active' OR status = 'failed' OR task_status = 'approving' OR task_status = 'running')`)
 	query = query.Where(`updated_at > DATE_SUB(CURDATE(), INTERVAL ? DAY)`, activeDays)
-	if len(orgIds) > 0 {
-		query = query.Where("org_id IN (?)", orgIds)
-	}
 
 	return query
 }
@@ -37,10 +34,9 @@ func GetOrgTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, int6
 		return 0, 0, err
 	}
 
-	queryActive := dbSess.Model(&models.Organization{}).Where(`status = ?`, models.Enable)
-	subQuery := buildActiveEnvQuery(dbSess, "DISTINCT(org_id)", orgIds)
+	subQuery := buildActiveEnvQuery(dbSess, "DISTINCT(org_id)")
 
-	cntActive, err := queryActive.Where(`id IN (?)`, subQuery.Expr()).Count()
+	cntActive, err := queryTotal.Where(`id IN (?)`, subQuery.Expr()).Count()
 	if err != nil {
 		return 0, 0, err
 	}
@@ -51,17 +47,16 @@ func GetOrgTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, int6
 func GetProjectTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, int64, error) {
 	queryTotal := dbSess.Model(&models.Project{}).Where(`status = ?`, models.Enable)
 	if len(orgIds) > 0 {
-		queryTotal = queryTotal.Where("id IN (?)", orgIds)
+		queryTotal = queryTotal.Where("org_id IN (?)", orgIds)
 	}
 	cntTotal, err := queryTotal.Count()
 	if err != nil {
 		return 0, 0, err
 	}
 
-	queryActive := dbSess.Model(&models.Project{}).Where(`status = ?`, models.Enable)
-	subQuery := buildActiveEnvQuery(dbSess, "DISTINCT(project_id)", orgIds)
+	subQuery := buildActiveEnvQuery(dbSess, "DISTINCT(project_id)")
 
-	cntActive, err := queryActive.Where(`id IN (?)`, subQuery.Expr()).Count()
+	cntActive, err := queryTotal.Where(`id IN (?)`, subQuery.Expr()).Count()
 	if err != nil {
 		return 0, 0, err
 	}
@@ -72,14 +67,17 @@ func GetProjectTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, 
 func GetEnvTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, int64, error) {
 	queryTotal := dbSess.Model(&models.Env{}).Where(`archived = ?`, 0)
 	if len(orgIds) > 0 {
-		queryTotal = queryTotal.Where("id IN (?)", orgIds)
+		queryTotal = queryTotal.Where("org_id IN (?)", orgIds)
 	}
 	cntTotal, err := queryTotal.Count()
 	if err != nil {
 		return 0, 0, err
 	}
 
-	queryActive := buildActiveEnvQuery(dbSess, "COUNT(*)", orgIds)
+	queryActive := buildActiveEnvQuery(dbSess, "COUNT(*)")
+	if len(orgIds) > 0 {
+		queryActive = queryActive.Where("org_id IN (?)", orgIds)
+	}
 
 	cntActive, err := queryActive.Count()
 	if err != nil {
@@ -92,17 +90,16 @@ func GetEnvTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, int6
 func GetStackTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, int64, error) {
 	queryTotal := dbSess.Model(&models.Template{}).Where(`status = ?`, models.Enable)
 	if len(orgIds) > 0 {
-		queryTotal = queryTotal.Where("id IN (?)", orgIds)
+		queryTotal = queryTotal.Where("org_id IN (?)", orgIds)
 	}
 	cntTotal, err := queryTotal.Count()
 	if err != nil {
 		return 0, 0, err
 	}
 
-	queryActive := dbSess.Model(&models.Template{}).Where(`status = ?`, models.Enable)
-	subQuery := buildActiveEnvQuery(dbSess, "DISTINCT(tpl_id)", orgIds)
+	subQuery := buildActiveEnvQuery(dbSess, "DISTINCT(tpl_id)")
 
-	cntActive, err := queryActive.Where(`id IN (?)`, subQuery.Expr()).Count()
+	cntActive, err := queryTotal.Where(`id IN (?)`, subQuery.Expr()).Count()
 	if err != nil {
 		return 0, 0, err
 	}
