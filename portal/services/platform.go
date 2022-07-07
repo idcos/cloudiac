@@ -361,7 +361,7 @@ func completeWeekChange(dbResults []resps.PfResWeekChangeResp) []resps.PfResWeek
 		}
 
 		fullResults = append(fullResults, resps.PfResWeekChangeResp{
-			Date:  date,
+			Date:  startDate.Format("01-02"),
 			Count: count,
 		})
 	}
