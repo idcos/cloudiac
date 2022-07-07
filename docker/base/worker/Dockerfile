@@ -19,9 +19,11 @@ RUN tfenv install "0.11.15" && \
     tfenv install "0.13.7" && \
     tfenv install "0.14.11" && \
     tfenv install "0.15.5" && \
-    tfenv install "1.0.6"
+    tfenv install "1.0.6" && \
+    tfenv install "1.1.9" && \
+    tfenv install "1.2.4"
 
-RUN tfenv use 1.0.6 && \
+RUN tfenv use 1.2.4 && \
   ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 COPY assets/providers /cloudiac/terraform/plugins
 

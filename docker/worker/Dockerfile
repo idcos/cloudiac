@@ -1,4 +1,4 @@
-FROM cloudiac/base-ct-worker:v0.1.6
+FROM cloudiac/base-ct-worker:v0.1.7
 
 COPY assets/terraform.py /cloudiac/assets/terraform.py
 COPY assets/terraformrc-* /cloudiac/assets/
