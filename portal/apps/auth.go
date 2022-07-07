@@ -18,10 +18,6 @@ import (
 	"time"
 )
 
-const (
-	operatorObjectType = "user"
-)
-
 // Login 用户登陆
 func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, er e.Error) {
 	c.AddLogField("action", fmt.Sprintf("user login: %s", form.Email))
@@ -88,7 +84,7 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, er e
 	}
 
 	// 记录操作日志
-	services.InsertUserOperateLog(user.Id, "", user.Id, operatorObjectType, "login", "", nil)
+	services.InsertUserOperateLog(user.Id, "", user.Id, consts.OperatorObjectTypeUser, "login", "", nil)
 
 	return data, nil
 }

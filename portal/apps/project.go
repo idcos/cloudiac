@@ -20,11 +20,6 @@ import (
 	"strings"
 )
 
-
-const (
-	operatorObjectTypeProject= "project"
-)
-
 func CreateProject(c *ctx.ServiceContext, form *forms.CreateProjectForm) (interface{}, e.Error) {
 	tx := c.DB().Begin()
 	defer func() {
@@ -77,7 +72,7 @@ func CreateProject(c *ctx.ServiceContext, form *forms.CreateProjectForm) (interf
 	}
 
 	// 记录操作日志
-	services.InsertUserOperateLog(c.UserId, c.OrgId, project.Id, operatorObjectTypeProject, "create",project.Name, nil)
+	services.InsertUserOperateLog(c.UserId, c.OrgId, project.Id, consts.OperatorObjectTypeProject, "create", project.Name, nil)
 
 	return project, nil
 }

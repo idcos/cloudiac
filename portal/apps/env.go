@@ -33,9 +33,6 @@ import (
 // 每天的0点、13点、18点、21点都执行一次：0 0,13,18,21 * * ?
 var SpecParser = cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 
-const (
-	operatorObjectTypeEnv = "env"
-)
 
 func ParseCronpress(cronDriftExpress string) (*time.Time, e.Error) {
 	expr, err := SpecParser.Parse(cronDriftExpress)
@@ -481,7 +478,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	}
 
 	// 记录操作日志
-	services.InsertUserOperateLog(c.UserId, c.OrgId, env.Id, operatorObjectTypeEnv, "create", env.Name, nil)
+	services.InsertUserOperateLog(c.UserId, c.OrgId, env.Id, consts.OperatorObjectTypeEnv, "create", env.Name, nil)
 
 	return &envDetail, nil
 }
@@ -866,7 +863,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	}
 
 	// 记录操作日志
-	services.InsertUserOperateLog(c.UserId, c.OrgId, env.Id, operatorObjectTypeEnv, "update", form.Name, nil)
+	services.InsertUserOperateLog(c.UserId, c.OrgId, env.Id, consts.OperatorObjectTypeEnv, "update", form.Name, nil)
 
 	return detail, nil
 }
@@ -928,9 +925,9 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (ret *models.En
 
 	// 记录操作日志
 	if form.TaskType == models.TaskTypeDestroy {
-		services.InsertUserOperateLog(c.UserId, c.OrgId, ret.Id, operatorObjectTypeEnv, "destroy", ret.Name, nil)
+		services.InsertUserOperateLog(c.UserId, c.OrgId, ret.Id, consts.OperatorObjectTypeEnv, "destroy", ret.Name, nil)
 	} else {
-		services.InsertUserOperateLog(c.UserId, c.OrgId, ret.Id, operatorObjectTypeEnv, "deploy", ret.Name, nil)
+		services.InsertUserOperateLog(c.UserId, c.OrgId, ret.Id, consts.OperatorObjectTypeEnv, "deploy", ret.Name, nil)
 	}
 
 	return ret, er

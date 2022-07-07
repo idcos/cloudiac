@@ -22,10 +22,6 @@ import (
 	"github.com/lib/pq"
 )
 
-const (
-	operatorObjectTypeStack = "stack"
-)
-
 func getRepo(vcsId models.Id, query *db.Session, repoId string) (*vcsrv.Projects, error) {
 	vcs, err := services.QueryVcsByVcsId(vcsId, query)
 	if err != nil {
@@ -148,7 +144,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 	}
 
 	// 记录操作日志
-	services.InsertUserOperateLog(c.UserId, c.OrgId, template.Id, operatorObjectTypeStack, "create", template.Name, nil)
+	services.InsertUserOperateLog(c.UserId, c.OrgId, template.Id, consts.OperatorObjectTypeStack, "create", template.Name, nil)
 
 	return template, nil
 }

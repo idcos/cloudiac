@@ -176,6 +176,12 @@ const (
 
 	TemplateSourceVcs      = "vcs"
 	TemplateSourceRegistry = "registry"
+
+	OperatorObjectTypeStack   = "stack"
+	OperatorObjectTypeOrg     = "org"
+	OperatorObjectTypeUser    = "user"
+	OperatorObjectTypeEnv     = "env"
+	OperatorObjectTypeProject = "project"
 )
 
 const (

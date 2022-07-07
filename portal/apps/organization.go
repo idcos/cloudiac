@@ -32,7 +32,6 @@ type emailInviteUserData struct {
 
 var (
 	emailSubjectInviteUser = "用户邀请通知【CloudIaC】"
-	operatorObjectTypeOrg  = "org"
 )
 
 // CreateOrganization 创建组织
@@ -74,7 +73,7 @@ func CreateOrganization(c *ctx.ServiceContext, form *forms.CreateOrganizationFor
 	}
 
 	// 记录操作日志
-	services.InsertUserOperateLog(c.UserId, "", org.Id, operatorObjectTypeOrg, "create", org.Name, nil)
+	services.InsertUserOperateLog(c.UserId, "", org.Id, consts.OperatorObjectTypeOrg, "create", org.Name, nil)
 
 	return org, nil
 }

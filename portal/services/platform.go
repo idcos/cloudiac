@@ -381,5 +381,5 @@ func PlatformOperationLog(dbSess *db.Session, orgIds []string) *db.Session {
 		query = query.Where(`uol.org_id IN (?)`, orgIds)
 	}
 
-	return query.Debug().Order("uol.created_at desc")
+	return query.Order("uol.created_at desc")
 }
