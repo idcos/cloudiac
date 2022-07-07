@@ -186,14 +186,14 @@ func GetProviderResCount(dbSess *db.Session, orgIds []string) ([]resps.PfProResS
 		and iac_env.id = iac_resource.env_id
 	where iac_resource.org_id IN ('xxx', 'yyy')
 	GROUP BY
-		provider
+		SUBSTRING_INDEX(provider,'/',-1)
 	*/
 	query := dbSess.Model(&models.Resource{}).Select(`SUBSTRING_INDEX(provider,'/',-1) as provider, COUNT(*) as count`)
 	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 	if len(orgIds) > 0 {
 		query = query.Where(`iac_resource.org_id IN (?)`, orgIds)
 	}
-	query = query.Group("provider")
+	query = query.Group("SUBSTRING_INDEX(provider,'/',-1)")
 
 	var dbResults []resps.PfProResStatResp
 	if err := query.Find(&dbResults); err != nil {
