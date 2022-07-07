@@ -20,6 +20,9 @@ func buildActiveEnvQuery(query *db.Session, selStr string, orgIds []string) *db.
 	query = query.Where("archived = ?", 0)
 	query = query.Where(`(status = 'active' OR status = 'failed' OR task_status = 'approving' OR task_status = 'running')`)
 	query = query.Where(`updated_at > DATE_SUB(CURDATE(), INTERVAL ? DAY)`, activeDays)
+	if len(orgIds) > 0 {
+		query = query.Where("org_id IN (?)", orgIds)
+	}
 
 	return query
 }
