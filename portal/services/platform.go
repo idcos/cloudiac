@@ -370,25 +370,16 @@ func completeWeekChange(dbResults []resps.PfResWeekChangeResp) []resps.PfResWeek
 
 }
 
-type OperationLogResp struct {
-	models.UserOperationLog
-	OperatorName string `json:"operatorName"`
-}
-
-func PlatformOperationLog(dbSess *db.Session, orgIds []string) (interface{}, e.Error) {
+func PlatformOperationLog(dbSess *db.Session, orgIds []string) *db.Session {
 	query := dbSess.Table(fmt.Sprintf("%s as uol", models.UserOperationLog{}.TableName()))
 	query = query.Joins(`LEFT JOIN iac_user as u on u.id = uol.operator_id `).
 		LazySelectAppend("uol.*,IF(u.name='',SUBSTRING_INDEX(u.email,'@',1), u.name) as operator_name")
+
+	query = query.Joins(`LEFT JOIN iac_org as o on o.id = uol.org_id `).
+		LazySelectAppend("o.name as org_name")
 	if len(orgIds) > 0 {
 		query = query.Where(`uol.org_id IN (?)`, orgIds)
 	}
 
-	query = query.Order("uol.created_at")
-
-	result := make([]resps.OperationLogResp, 0)
-	if err := query.Find(&result); err != nil {
-		return nil, e.AutoNew(err, e.DBError)
-	}
-
-	return result, nil
+	return query.Order("uol.created_at desc")
 }

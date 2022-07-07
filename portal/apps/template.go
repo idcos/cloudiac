@@ -142,6 +142,10 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 	if err := setVcsRepoWebhook(c, template.VcsId, template.RepoId, form.TplTriggers); err != nil {
 		c.Logger().Errorf("set webhook err :%v", err)
 	}
+
+	// 记录操作日志
+	services.InsertUserOperateLog(c.UserId, c.OrgId, template.Id, consts.OperatorObjectTypeStack, "create", template.Name, nil)
+
 	return template, nil
 }
 

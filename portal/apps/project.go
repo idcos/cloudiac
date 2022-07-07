@@ -70,6 +70,10 @@ func CreateProject(c *ctx.ServiceContext, form *forms.CreateProjectForm) (interf
 		_ = tx.Rollback()
 		return nil, e.New(e.DBError, err)
 	}
+
+	// 记录操作日志
+	services.InsertUserOperateLog(c.UserId, c.OrgId, project.Id, consts.OperatorObjectTypeProject, "create", project.Name, nil)
+
 	return project, nil
 }
 

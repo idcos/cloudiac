@@ -3,11 +3,14 @@
 package apps
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
+	"fmt"
 	"strings"
 )
 
@@ -94,5 +97,20 @@ func PlatformStatResWeekChange(c *ctx.ServiceContext, form *forms.PfStatForm) (i
 
 // PlatformOperationLog 操作日志
 func PlatformOperationLog(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
-	return services.PlatformOperationLog(c.DB(), parseOrgIds(form.OrgIds))
+	query := services.PlatformOperationLog(c.DB(), parseOrgIds(form.OrgIds))
+	p := page.New(form.CurrentPage(), form.PageSize(), query)
+	result := make([]resps.OperationLogResp, 0)
+	if err := p.Scan(&result); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	for index, v := range result {
+		result[index].ActionName = consts.UserOperationLogAttr[fmt.Sprintf("%s.%s", v.ObjectType, v.Action)]
+	}
+
+	return page.PageResp{
+		Total:    p.MustTotal(),
+		PageSize: p.Size,
+		List:     result,
+	}, nil
 }

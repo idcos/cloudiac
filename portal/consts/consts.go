@@ -176,6 +176,12 @@ const (
 
 	TemplateSourceVcs      = "vcs"
 	TemplateSourceRegistry = "registry"
+
+	OperatorObjectTypeStack   = "stack"
+	OperatorObjectTypeOrg     = "org"
+	OperatorObjectTypeUser    = "user"
+	OperatorObjectTypeEnv     = "env"
+	OperatorObjectTypeProject = "project"
 )
 
 const (
@@ -226,5 +232,15 @@ var (
 
 	BillProviderResAccount = map[string][]string{
 		BillCollectAli: []string{AlicloudAK, AlicloudSK},
+	}
+
+	UserOperationLogAttr = map[string]string{
+		"user.login":     "用户登录",
+		"env.create":     "部署新环境",
+		"env.deploy":     "环境部署",
+		"env.destroy":    "环境销毁",
+		"org.create":     "创建组织",
+		"project.create": "创建项目",
+		"stack.create":   "创建stack",
 	}
 )
