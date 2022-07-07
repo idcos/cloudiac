@@ -58,10 +58,13 @@ func (v *Variable) Desensitize() Variable {
 }
 
 func (v Variable) Migrate(sess *db.Session) error {
+	if err := sess.RemoveIndex(v.TableName(), "unique__variable__name"); err != nil {
+		return err
+	}
 	// 变量名在各 scope 下唯一
 	// 注意这些 id 字段需要默认设置为 ''，否则联合唯一索引可能会因为存在 null 值而不生效
-	if err := v.AddUniqueIndex(sess, "unique__variable__name",
-		"org_id", "project_id", "tpl_id", "env_id", "name(32)", "type"); err != nil {
+	if err := v.AddUniqueIndex(sess, "unique__variable__name_v2",
+		"org_id", "project_id", "tpl_id", "env_id", "name", "type"); err != nil {
 		return err
 	}
 	if err := sess.ModifyModelColumn(&v, "value"); err != nil {
@@ -103,8 +106,11 @@ func (vg *VariableGroup) Desensitize() VariableGroup {
 }
 
 func (v VariableGroup) Migrate(sess *db.Session) error {
-	if err := v.AddUniqueIndex(sess, "unique__org__variable_group_name",
-		"org_id", "name(32)"); err != nil {
+	if err := sess.RemoveIndex(v.TableName(), "unique__org__variable_group_name"); err != nil {
+		return err
+	}
+	if err := v.AddUniqueIndex(sess, "unique__org__variable_group_name_v2",
+		"org_id", "name"); err != nil {
 		return err
 	}
 	return nil
