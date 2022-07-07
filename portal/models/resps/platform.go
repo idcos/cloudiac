@@ -50,4 +50,6 @@ type PfActiveResStatResp struct {
 type OperationLogResp struct {
 	models.UserOperationLog
 	OperatorName string `json:"operatorName"`
+	ActionName   string `json:"actionName"`
+	OrgName      string `json:"orgName"`
 }

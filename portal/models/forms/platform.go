@@ -3,6 +3,6 @@
 package forms
 
 type PfStatForm struct {
-	BaseForm
+	PageForm
 	OrgIds string `form:"orgIds" json:"orgIds"` // 组织ID
 }
