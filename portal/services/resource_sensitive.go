@@ -10,17 +10,9 @@ import (
 )
 
 func GetSensitiveKeysFromTfPlan(content []byte) map[string][]string {
-	sensitiveKeys := make(map[string][]string)
-
-	rootModule := gjson.GetBytes(content, "configuration.root_module")
+	rootModule := gjson.GetBytes(content, "resource_changes")
 	// 查找 sensitive 变量
-	sensitiveNames := findSensitiveNames(rootModule)
-	if len(sensitiveNames) == 0 {
-		return sensitiveKeys
-	}
-
-	sensitiveKeys = findSensitiveStateKeys(rootModule, sensitiveNames)
-	return sensitiveKeys
+	return findSensitiveNames(rootModule)
 }
 
 func SensitiveAttrs(attrs map[string]interface{}, sensitiveKeys []string, parentKey string) map[string]interface{} {
@@ -37,18 +29,24 @@ func SensitiveAttrs(attrs map[string]interface{}, sensitiveKeys []string, parent
 		}
 
 		vals, ok := v.([]interface{})
-		if !ok {
-			sensitiveAttrs[k] = v
+		if ok {
+			arrAttrs := make([]map[string]interface{}, 0)
+			for _, val := range vals {
+				if valMap, ok := val.(map[string]interface{}); ok {
+					arrAttrs = append(arrAttrs, SensitiveAttrs(valMap, sensitiveKeys, key))
+				}
+			}
+			sensitiveAttrs[k] = arrAttrs
 			continue
 		}
 
-		arrAttrs := make([]map[string]interface{}, 0)
-		for _, val := range vals {
-			if valMap, ok := val.(map[string]interface{}); ok {
-				arrAttrs = append(arrAttrs, SensitiveAttrs(valMap, sensitiveKeys, key))
-			}
+		mVals, ok := v.(map[string]interface{})
+		if ok {
+			sensitiveAttrs[k] = SensitiveAttrs(mVals, sensitiveKeys, key)
+			continue
 		}
-		sensitiveAttrs[k] = arrAttrs
+
+		sensitiveAttrs[k] = v
 	}
 
 	return sensitiveAttrs
@@ -72,15 +70,62 @@ func getSensitiveVars(vars gjson.Result) []string {
 }
 
 // findSensitiveNames 找出 tf 文件中定义的敏感变量
-func findSensitiveNames(rootModule gjson.Result) []string {
-	rootVars := rootModule.Get("variables")
+func findSensitiveNames(resourceChanges gjson.Result) map[string][]string {
+	mSensitiveNames := make(map[string][]string)
 
-	// root module variables
-	sNames := getSensitiveVars(rootVars)
+	for _, resource := range resourceChanges.Array() {
+		sensitiveInfo := resource.Get("change.after_sensitive")
+		if !sensitiveInfo.Exists() {
+			return mSensitiveNames
+		}
+		if !sensitiveInfo.IsObject() {
+			return mSensitiveNames
+		}
 
-	// child module variables
-	children := rootModule.Get("module_calls")
-	sNames = findSensitiveNamesInChildren(sNames, children)
+		addr := resource.Get("address").String()
+		sNames := findSensitiveNamesInResource(resource)
+		if len(sNames) > 0 {
+			mSensitiveNames[addr] = sNames
+		}
+	}
+	return mSensitiveNames
+}
+
+func findSensitiveNamesInResource(resource gjson.Result) []string {
+	sNames := make([]string, 0)
+	sensitiveInfo := resource.Get("change.after_sensitive")
+	if !sensitiveInfo.Exists() {
+		return sNames
+	}
+	if !sensitiveInfo.IsObject() {
+		return sNames
+	}
+
+	for k, v := range sensitiveInfo.Map() {
+		if v.IsBool() && v.Bool() {
+			sNames = append(sNames, k)
+			continue
+		}
+
+		if v.IsArray() {
+			for _, vv := range v.Array() {
+				for vvk, vvv := range vv.Map() {
+					if vvv.IsBool() && vvv.Bool() {
+						sNames = append(sNames, k+"->"+vvk)
+					}
+				}
+			}
+		}
+
+		if v.IsObject() {
+			for vk, vv := range v.Map() {
+				if vv.IsBool() && vv.Bool() {
+					sNames = append(sNames, k+"->"+vk)
+				}
+			}
+		}
+
+	}
 
 	return sNames
 }
