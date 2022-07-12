@@ -90,18 +90,10 @@ func UpsertRegistryAddr(c *ctx.ServiceContext, form *forms.RegistryAddrForm) (in
 
 	}
 
-	dbVcs := models.Vcs{}
-	if err := services.QueryVcsSample(c.DB().Where(&models.Vcs{Name: consts.RegistryVcsName})).Find(&dbVcs); err != nil && !e.IsRecordNotFound(err) {
+	if _, err := c.DB().Model(&models.Vcs{}).
+		Where("vcs_type = ?", consts.GitTypeRegistry).
+		UpdateColumn("address", address); err != nil {
 		return nil, e.New(e.DBError, err)
-	}
-
-	if dbVcs.Id != "" {
-		vcs := models.Vcs{}
-		vcs.Id = dbVcs.Id
-
-		if _, err := models.UpdateAttr(c.DB(), vcs, models.Attrs{"address": address}); err != nil {
-			return nil, e.New(e.DBError, err)
-		}
 	}
 
 	return &resps.RegistryAddrResp{
