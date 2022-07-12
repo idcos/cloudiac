@@ -4,6 +4,7 @@ package apps
 
 import (
 	"cloudiac/configs"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
@@ -80,6 +81,16 @@ func UpsertRegistryAddr(c *ctx.ServiceContext, form *forms.RegistryAddrForm) (in
 	var cfgdb = ""
 	if err == nil {
 		cfgdb = cfg.Value
+		dbVcs := models.Vcs{}
+		if err := services.QueryVcsSample(c.DB().Where(&models.Vcs{Name: consts.RegistryVcsName})).Find(&dbVcs); err != nil && !e.IsRecordNotFound(err) {
+			return nil, e.New(e.DBError, err)
+		}
+
+		if dbVcs.Id != "" {
+			if _, err := c.DB().Model(&models.Vcs{}).Where("id = ?", dbVcs.Id).Update(models.Attrs{"address": cfg.Value}); err != nil {
+				return nil, e.New(e.DBError, err)
+			}
+		}
 	}
 
 	return &resps.RegistryAddrResp{
