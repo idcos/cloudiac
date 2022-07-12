@@ -137,7 +137,7 @@ type giteaBranch struct {
 
 func (gitea *giteaRepoIface) ListBranches() ([]string, error) {
 	path := gitea.vcs.Address + giteaApiRoute +
-		fmt.Sprintf("/repos/%s/branches?limit=0&page=0", gitea.repository.FullName)
+		fmt.Sprintf("/repos/%s/branches?limit=5000&page=1", gitea.repository.FullName)
 
 	_, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if err != nil {
@@ -158,7 +158,7 @@ type giteaTag struct {
 }
 
 func (gitea *giteaRepoIface) ListTags() ([]string, error) {
-	path := gitea.vcs.Address + giteaApiRoute + fmt.Sprintf("/repos/%s/tags", gitea.repository.FullName)
+	path := gitea.vcs.Address + giteaApiRoute + fmt.Sprintf("/repos/%s/tags?limit=5000&page=1", gitea.repository.FullName)
 	_, body, err := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
 	if err != nil {
 		return nil, e.New(e.VcsError, err)
