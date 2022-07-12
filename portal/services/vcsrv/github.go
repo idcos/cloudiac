@@ -158,6 +158,7 @@ type githubBranch struct {
 }
 
 func (github *githubRepoIface) ListBranches() ([]string, error) {
+	// FIXME github分页默认值最大100，临时处理返回100个
 	path := utils.GenQueryURL(github.vcs.Address,
 		fmt.Sprintf("/repos/%s/branches?page=1&per_page=100", github.repository.FullName), nil)
 	_, body, err := githubRequest(path, "GET", github.vcs.VcsToken, nil)
@@ -180,6 +181,7 @@ type githubTag struct {
 }
 
 func (github *githubRepoIface) ListTags() ([]string, error) {
+	// FIXME github分页默认值最大100，临时处理返回100个
 	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/tags?page=1&per_page=100", github.repository.FullName), nil)
 	_, body, err := githubRequest(path, "GET", github.vcs.VcsToken, nil)
 	if err != nil {
