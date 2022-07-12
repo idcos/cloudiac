@@ -120,6 +120,7 @@ type TemplateTfVersionSearchForm struct {
 	VcsId     models.Id `json:"vcsId" form:"vcsId" binding:"required,max=32"`
 	VcsBranch string    `json:"vcsBranch" form:"vcsBranch" binding:"max=64"`
 	RepoId    string    `json:"repoId" form:"repoId" binding:"max=255"`
+	Workdir   string    `json:"workdir" form:"workdir" binding:"max=255"`
 }
 
 type TemplateChecksForm struct {
