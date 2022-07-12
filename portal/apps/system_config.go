@@ -78,18 +78,29 @@ func GetRegistryAddr(c *ctx.ServiceContext) (interface{}, e.Error) {
 func UpsertRegistryAddr(c *ctx.ServiceContext, form *forms.RegistryAddrForm) (interface{}, e.Error) {
 	form.RegistryAddr = strings.TrimSpace(form.RegistryAddr)
 	cfg, err := services.UpsertRegistryAddr(c.DB(), form.RegistryAddr)
-	var cfgdb = ""
-	if err == nil {
-		cfgdb = cfg.Value
-		dbVcs := models.Vcs{}
-		if err := services.QueryVcsSample(c.DB().Where(&models.Vcs{Name: consts.RegistryVcsName})).Find(&dbVcs); err != nil && !e.IsRecordNotFound(err) {
-			return nil, e.New(e.DBError, err)
-		}
 
-		if dbVcs.Id != "" {
-			if _, err := c.DB().Model(&models.Vcs{}).Where("id = ?", dbVcs.Id).Update(models.Attrs{"address": cfg.Value}); err != nil {
-				return nil, e.New(e.DBError, err)
-			}
+	var (
+		cfgdb   = ""
+		address = configs.Get().RegistryAddr
+	)
+
+	if err == nil && cfg.Value != "" {
+		cfgdb = cfg.Value
+		address = cfg.Value
+
+	}
+
+	dbVcs := models.Vcs{}
+	if err := services.QueryVcsSample(c.DB().Where(&models.Vcs{Name: consts.RegistryVcsName})).Find(&dbVcs); err != nil && !e.IsRecordNotFound(err) {
+		return nil, e.New(e.DBError, err)
+	}
+
+	if dbVcs.Id != "" {
+		vcs := models.Vcs{}
+		vcs.Id = dbVcs.Id
+
+		if _, err := models.UpdateAttr(c.DB(), vcs, models.Attrs{"address": address}); err != nil {
+			return nil, e.New(e.DBError, err)
 		}
 	}
 
