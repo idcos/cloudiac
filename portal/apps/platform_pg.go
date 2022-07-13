@@ -61,8 +61,17 @@ func PlatformStatPgEnvEnabledActivate(c *ctx.ServiceContext, form *forms.PfStatF
 
 // PlatformStatPgStackNG 合规不通过的 Stack 数量
 func PlatformStatPgStackNG(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+	orgIds := parseOrgIds(form.OrgIds)
 
-	return nil, nil
+	count, err := services.GetPGStackNGCount(c.DB(), orgIds)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return &resps.PfPgStatResp{
+		Name:  "合规不通过的Stack数量",
+		Count: count,
+	}, nil
 }
 
 // PlatformStatPgEnvNGActivate 合规不通过的活跃环境数量

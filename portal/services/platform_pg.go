@@ -39,3 +39,18 @@ func GetPGStackEnabledCount(dbSess *db.Session, orgIds []string) (int64, error) 
 
 	return query.Count()
 }
+
+func GetPGStackNGCount(dbSess *db.Session, orgIds []string) (int64, error) {
+	subQuery := dbSess.Model(&models.PolicyResult{}).Select("tpl_id, MAX(start_at)")
+	subQuery = subQuery.Where(`iac_policy_result.status = ?`, "failed")
+	subQuery = subQuery.Group("tpl_id")
+
+	query := dbSess.Model(&models.Template{}).Joins("inner join (?) as t on t.tpl_id = iac_template.id", subQuery.Expr())
+	query = query.Where("iac_template.status = ?", models.Enable)
+	query = query.Where("iac_template.policy_enable = ?", 1)
+	if len(orgIds) > 0 {
+		query = query.Where(`iac_template.org_id IN (?)`, orgIds)
+	}
+
+	return query.Count()
+}
