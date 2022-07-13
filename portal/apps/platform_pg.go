@@ -11,3 +11,9 @@ func PlatformStatPg(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{},
 
 	return nil, nil
 }
+
+// PlatformStatPolicy 合规策略数量
+func PlatformStatPolicy(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+
+	return nil, nil
+}
