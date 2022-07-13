@@ -23,3 +23,9 @@ func PlatformStatPgStackEnabled(c *ctx.ServiceContext, form *forms.PfStatForm) (
 
 	return nil, nil
 }
+
+// PlatformStatPgEnvEnabledActivate 开启合规并绑定策略组的活跃环境数量
+func PlatformStatPgEnvEnabledActivate(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+
+	return nil, nil
+}

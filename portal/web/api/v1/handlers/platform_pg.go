@@ -64,3 +64,22 @@ func (Platform) PlatformStatPgStackEnabled(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.PlatformStatPgStackEnabled(c.Service(), &form))
 }
+
+// PlatformStatPgEnvEnabledActivate 开启合规并绑定策略组的活跃环境数量
+// @Tags 平台
+// @Summary 开启合规并绑定策略组的活跃环境数量
+// @Description 开启合规并绑定策略组的活跃环境数量
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param form formData forms.PfStatForm true "parameter"
+// @router /platform/stat/pg [get]
+// @Success 200 {object} ctx.JSONResult{result=resps.pfPgStatResp}
+func (Platform) PlatformStatPgEnvEnabledActivate(c *ctx.GinRequest) {
+	form := forms.PfStatForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.PlatformStatPgEnvEnabledActivate(c.Service(), &form))
+}
