@@ -78,16 +78,16 @@ func GetRegistryAddr(c *ctx.ServiceContext) (interface{}, e.Error) {
 func UpsertRegistryAddr(c *ctx.ServiceContext, form *forms.RegistryAddrForm) (interface{}, e.Error) {
 	form.RegistryAddr = strings.TrimSpace(form.RegistryAddr)
 	cfg, err := services.UpsertRegistryAddr(c.DB(), form.RegistryAddr)
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
 
 	var (
-		cfgdb   = ""
 		address = configs.Get().RegistryAddr
 	)
 
-	if err == nil && cfg.Value != "" {
-		cfgdb = cfg.Value
+	if cfg.Value != "" {
 		address = cfg.Value
-
 	}
 
 	if _, err := c.DB().Model(&models.Vcs{}).
@@ -97,7 +97,7 @@ func UpsertRegistryAddr(c *ctx.ServiceContext, form *forms.RegistryAddrForm) (in
 	}
 
 	return &resps.RegistryAddrResp{
-		RegistryAddrFromDB:  cfgdb,
+		RegistryAddrFromDB:  cfg.Value,
 		RegistryAddrFromCfg: configs.Get().RegistryAddr,
 	}, nil
 }
