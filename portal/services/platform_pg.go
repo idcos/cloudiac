@@ -15,11 +15,26 @@ func GetPolicyGroupCount(dbSess *db.Session, orgIds []string) (int64, error) {
 }
 
 func GetPolicyCount(dbSess *db.Session, orgIds []string) (int64, error) {
-	query := dbSess.Model(&models.Policy{}).Joins(`iac_policy_group on iac_policy_group.id = iac_policy.group_id`)
+	query := dbSess.Model(&models.Policy{}).Joins(`join iac_policy_group on iac_policy_group.id = iac_policy.group_id`)
 
 	query = query.Where("iac_policy_group.enabled = ?", 1)
 	if len(orgIds) > 0 {
 		query = query.Where(`iac_policy.org_id IN (?)`, orgIds)
+	}
+
+	return query.Count()
+}
+
+func GetPGStackEnabledCount(dbSess *db.Session, orgIds []string) (int64, error) {
+	subQuery := dbSess.Model(&models.PolicyRel{}).Select("DISTINCT(tpl_id) as id ")
+	subQuery = subQuery.Joins(`join iac_policy_group on iac_policy_group.id = iac_policy_rel.group_id`)
+	subQuery = subQuery.Where(`iac_policy_group.enabled = ?`, 1)
+
+	query := dbSess.Model(&models.Template{}).Where(`id IN (?)`, subQuery.Expr())
+	query = query.Where("iac_template.status = ?", models.Enable)
+	query = query.Where("iac_template.policy_enable = ?", 1)
+	if len(orgIds) > 0 {
+		query = query.Where(`iac_template.org_id IN (?)`, orgIds)
 	}
 
 	return query.Count()
