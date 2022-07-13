@@ -55,8 +55,17 @@ func PlatformStatPgStackEnabled(c *ctx.ServiceContext, form *forms.PfStatForm) (
 
 // PlatformStatPgEnvEnabledActivate 开启合规并绑定策略组的活跃环境数量
 func PlatformStatPgEnvEnabledActivate(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+	orgIds := parseOrgIds(form.OrgIds)
 
-	return nil, nil
+	count, err := services.GetPGEnvEnabledCount(c.DB(), orgIds)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return &resps.PfPgStatResp{
+		Name:  "开启合规并绑定策略组的活跃环境数量",
+		Count: count,
+	}, nil
 }
 
 // PlatformStatPgStackNG 合规不通过的 Stack 数量
