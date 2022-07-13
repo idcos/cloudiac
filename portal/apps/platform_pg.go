@@ -30,8 +30,14 @@ func PlatformStatPgEnvEnabledActivate(c *ctx.ServiceContext, form *forms.PfStatF
 	return nil, nil
 }
 
-// PlatformStatPStackNG 合规不通过的 Stack 数量
-func PlatformStatPStackNG(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+// PlatformStatPgStackNG 合规不通过的 Stack 数量
+func PlatformStatPgStackNG(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+
+	return nil, nil
+}
+
+// PlatformStatPgEnvNGActivate 合规不通过的活跃环境数量
+func PlatformStatPgEnvNGActivate(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
 
 	return nil, nil
 }

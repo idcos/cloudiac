@@ -95,10 +95,29 @@ func (Platform) PlatformStatPgEnvEnabledActivate(c *ctx.GinRequest) {
 // @Param form formData forms.PfStatForm true "parameter"
 // @router /platform/stat/pg [get]
 // @Success 200 {object} ctx.JSONResult{result=resps.pfPgStatResp}
-func (Platform) PlatformStatPStackNG(c *ctx.GinRequest) {
+func (Platform) PlatformStatPgStackNG(c *ctx.GinRequest) {
 	form := forms.PfStatForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.PlatformStatPStackNG(c.Service(), &form))
+	c.JSONResult(apps.PlatformStatPgStackNG(c.Service(), &form))
+}
+
+// PlatformStatPgEnvNGActivate 合规不通过的活跃环境数量
+// @Tags 平台
+// @Summary 合规不通过的活跃环境数量
+// @Description 合规不通过的活跃环境数量
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param form formData forms.PfStatForm true "parameter"
+// @router /platform/stat/pg [get]
+// @Success 200 {object} ctx.JSONResult{result=resps.pfPgStatResp}
+func (Platform) PlatformStatPgEnvNGActivate(c *ctx.GinRequest) {
+	form := forms.PfStatForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.PlatformStatPgEnvNGActivate(c.Service(), &form))
 }
