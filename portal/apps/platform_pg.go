@@ -17,3 +17,9 @@ func PlatformStatPolicy(c *ctx.ServiceContext, form *forms.PfStatForm) (interfac
 
 	return nil, nil
 }
+
+// PlatformStatPgStackEnabled 开启合规并绑定策略组的 Stack 数量
+func PlatformStatPgStackEnabled(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+
+	return nil, nil
+}
