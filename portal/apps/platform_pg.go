@@ -18,15 +18,24 @@ func PlatformStatPg(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{},
 	}
 
 	return &resps.PfPgStatResp{
-		Name:  "合规策略组",
+		Name:  "合规策略组数量",
 		Count: count,
 	}, nil
 }
 
 // PlatformStatPolicy 合规策略数量
 func PlatformStatPolicy(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+	orgIds := parseOrgIds(form.OrgIds)
 
-	return nil, nil
+	count, err := services.GetPolicyCount(c.DB(), orgIds)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return &resps.PfPgStatResp{
+		Name:  "合规策略数量",
+		Count: count,
+	}, nil
 }
 
 // PlatformStatPgStackEnabled 开启合规并绑定策略组的 Stack 数量
