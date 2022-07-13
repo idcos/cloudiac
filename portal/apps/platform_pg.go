@@ -4,12 +4,23 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
+	"cloudiac/portal/services"
 )
 
 // PlatformStatPg 合规策略组数量
 func PlatformStatPg(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+	orgIds := parseOrgIds(form.OrgIds)
 
-	return nil, nil
+	count, err := services.GetPolicyGroupCount(c.DB(), orgIds)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return &resps.PfPgStatResp{
+		Name:  "合规策略组",
+		Count: count,
+	}, nil
 }
 
 // PlatformStatPolicy 合规策略数量

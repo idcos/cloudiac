@@ -18,7 +18,7 @@ import (
 // @Security AuthToken
 // @Param form formData forms.PfStatForm true "parameter"
 // @router /platform/stat/pg [get]
-// @Success 200 {object} ctx.JSONResult{result=resps.pfPgStatResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.PfPgStatResp}
 func (Platform) PlatformStatPg(c *ctx.GinRequest) {
 	form := forms.PfStatForm{}
 	if err := c.Bind(&form); err != nil {
@@ -37,7 +37,7 @@ func (Platform) PlatformStatPg(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param form formData forms.PfStatForm true "parameter"
 // @router /platform/stat/pg [get]
-// @Success 200 {object} ctx.JSONResult{result=resps.pfPgStatResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.PfPgStatResp}
 func (Platform) PlatformStatPolicy(c *ctx.GinRequest) {
 	form := forms.PfStatForm{}
 	if err := c.Bind(&form); err != nil {
@@ -56,7 +56,7 @@ func (Platform) PlatformStatPolicy(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param form formData forms.PfStatForm true "parameter"
 // @router /platform/stat/pg [get]
-// @Success 200 {object} ctx.JSONResult{result=resps.pfPgStatResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.PfPgStatResp}
 func (Platform) PlatformStatPgStackEnabled(c *ctx.GinRequest) {
 	form := forms.PfStatForm{}
 	if err := c.Bind(&form); err != nil {
@@ -75,7 +75,7 @@ func (Platform) PlatformStatPgStackEnabled(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param form formData forms.PfStatForm true "parameter"
 // @router /platform/stat/pg [get]
-// @Success 200 {object} ctx.JSONResult{result=resps.pfPgStatResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.PfPgStatResp}
 func (Platform) PlatformStatPgEnvEnabledActivate(c *ctx.GinRequest) {
 	form := forms.PfStatForm{}
 	if err := c.Bind(&form); err != nil {
@@ -94,7 +94,7 @@ func (Platform) PlatformStatPgEnvEnabledActivate(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param form formData forms.PfStatForm true "parameter"
 // @router /platform/stat/pg [get]
-// @Success 200 {object} ctx.JSONResult{result=resps.pfPgStatResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.PfPgStatResp}
 func (Platform) PlatformStatPgStackNG(c *ctx.GinRequest) {
 	form := forms.PfStatForm{}
 	if err := c.Bind(&form); err != nil {
@@ -113,7 +113,7 @@ func (Platform) PlatformStatPgStackNG(c *ctx.GinRequest) {
 // @Security AuthToken
 // @Param form formData forms.PfStatForm true "parameter"
 // @router /platform/stat/pg [get]
-// @Success 200 {object} ctx.JSONResult{result=resps.pfPgStatResp}
+// @Success 200 {object} ctx.JSONResult{result=resps.PfPgStatResp}
 func (Platform) PlatformStatPgEnvNGActivate(c *ctx.GinRequest) {
 	form := forms.PfStatForm{}
 	if err := c.Bind(&form); err != nil {

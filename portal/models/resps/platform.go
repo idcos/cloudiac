@@ -54,7 +54,7 @@ type OperationLogResp struct {
 	OrgName      string `json:"orgName"`
 }
 
-type pfPgStatResp struct {
+type PfPgStatResp struct {
 	Name  string `json:"name"`
 	Count int64  `json:"count"`
 }
