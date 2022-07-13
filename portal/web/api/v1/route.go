@@ -108,6 +108,13 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/platform/stat/resource/type", ac(), w(handlers.Platform{}.PlatformStatResType))
 	g.GET("/platform/stat/resource/week", ac(), w(handlers.Platform{}.PlatformStatResWeekChange))
 	g.GET("/platform/stat/resource/active", ac(), w(handlers.Platform{}.PlatformStatActiveResType))
+	// 平台概览-合规相关统计
+	g.GET("platform/stat/pg", ac(), w(handlers.Platform{}.PlatformStatPg))
+	g.GET("platform/stat/policy")
+	g.GET("platform/stat/pg_stack/enabled")
+	g.GET("platform/stat/pg_env/enabled_activate")
+	g.GET("platform/stat/pg_stack/ng")
+	g.GET("platform/stat/pg_env/ng_activate")
 
 	// 用户操作日志
 	g.GET("/platform/operation/log", ac(), w(handlers.Platform{}.PlatformOperationLog))
