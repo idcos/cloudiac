@@ -409,7 +409,7 @@ func (s *Scanner) RunInternalScan(code Resource) error {
 				ResourceType: resType,
 			}
 			if len(inputResource) > 0 {
-				violation.Line, violation.File = findLineNoFromMap(inputResource, resName)
+				violation.Line, violation.File = findLineNoFromMap(inputResource, res[0])
 			}
 			output.Results.Violations = append(output.Results.Violations, violation)
 			output.Results.ScanSummary.ViolatedPolicies++

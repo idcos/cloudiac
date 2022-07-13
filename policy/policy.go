@@ -187,9 +187,10 @@ func PopulateViolateSource(scanner *Scanner, res Resource, task *models.ScanTask
 		srcFile := policyResult.File
 
 		if (resLineNo == 0 || srcFile == "") && tfmap != nil {
-			resLineNo, srcFile = findLineNoFromMap(*tfmap, policyResult.ResourceName)
+			resLineNo, srcFile = findLineNoFromMap(*tfmap, fmt.Sprintf("%s.%s", policyResult.ResourceType, policyResult.ResourceName))
 			resultJson.Results.Violations[idx].Line = resLineNo
 			resultJson.Results.Violations[idx].File = srcFile
+			updated = true
 		}
 
 		srcFp, err := os.Open(filepath.Join(srcFile))
@@ -214,17 +215,19 @@ func PopulateViolateSource(scanner *Scanner, res Resource, task *models.ScanTask
 
 				// 查找源码结束符
 				if strings.Contains(string(line), "}") {
+					updated = true
 					break
 				}
 
 				if lineNo-resLineNo > 100 {
 					// 超长源码截断
 					resultJson.Results.Violations[idx].Source += string(line) + "  //...\n}"
+					updated = true
 					break
 				}
 			}
-
 			updated = true
+
 		}
 
 		_ = srcFp.Close()
@@ -271,10 +274,10 @@ func UpdateTfResultJson(resultPath string, resultJson *TsResultJson) error {
 	}
 }
 
-func findLineNoFromMap(tfmap models.TfParse, resourceName string) (int, string) {
+func findLineNoFromMap(tfmap models.TfParse, resourceId string) (int, string) {
 	for _, resources := range tfmap {
 		for _, resource := range resources {
-			if resource.Id == resourceName {
+			if resource.Id == resourceId {
 				return resource.Line, resource.Source
 			}
 		}
