@@ -52,6 +52,7 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/auth/register", w(handlers.Auth{}.Registry))
 	g.POST("/auth/login", w(handlers.Auth{}.Login))
 	g.GET("/auth/email", w(handlers.Auth{}.CheckEmail))
+	g.POST("/auth/password/reset/email", w(handlers.Auth{}.PasswordResetEmail))
 
 	// 重新发送邮件
 	g.GET("/activation/retry", w(handlers.User{}.ActiveUserEmailRetry))
@@ -65,6 +66,8 @@ func Register(g *gin.RouterGroup) {
 
 	// 激活邮箱
 	g.POST("/activation", w(handlers.User{}.ActiveUserEmail))
+	// 重置密码
+	g.PUT("/auth/password/reset", w(handlers.Auth{}.PasswordReset))
 
 	// 允许搜索组织内所有用户信息
 	g.GET("/users/all", w(handlers.User{}.SearchAllUsers))
@@ -97,6 +100,17 @@ func Register(g *gin.RouterGroup) {
 	// 系统设置registry addr 配置
 	g.GET("/system_config/registry/addr", ac(), w(handlers.GetRegistryAddr))     // 获取registry地址的设置
 	g.POST("/system_config/registry/addr", ac(), w(handlers.UpsertRegistryAddr)) // 更新registry地址的设置
+
+	// 平台概览
+	g.GET("/platform/stat/basedata", ac(), w(handlers.Platform{}.PlatformStatBasedata))
+	g.GET("/platform/stat/provider/env", ac(), w(handlers.Platform{}.PlatformStatProEnv))
+	g.GET("/platform/stat/provider/resource", ac(), w(handlers.Platform{}.PlatformStatProRes))
+	g.GET("/platform/stat/resource/type", ac(), w(handlers.Platform{}.PlatformStatResType))
+	g.GET("/platform/stat/resource/week", ac(), w(handlers.Platform{}.PlatformStatResWeekChange))
+	g.GET("/platform/stat/resource/active", ac(), w(handlers.Platform{}.PlatformStatActiveResType))
+
+	// 用户操作日志
+	g.GET("/platform/operation/log", ac(), w(handlers.Platform{}.PlatformOperationLog))
 
 	// 要求组织 header
 	g.Use(w(middleware.AuthOrgId))

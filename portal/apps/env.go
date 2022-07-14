@@ -26,12 +26,13 @@ import (
 	"github.com/lib/pq"
 )
 
-// 最小时间单位为分钟
+// SpecParser 最小时间单位为分钟
 // 每隔1 分钟执行一次 */1 * * * ?
 // 每天 23点 执行一次 0 23 * * ?
 // 每个月1号23 点执行一次 0 23 1 * ?
 // 每天的0点、13点、18点、21点都执行一次：0 0,13,18,21 * * ?
 var SpecParser = cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+
 
 func ParseCronpress(cronDriftExpress string) (*time.Time, e.Error) {
 	expr, err := SpecParser.Parse(cronDriftExpress)
@@ -475,6 +476,10 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, form.Triggers); err != nil {
 		c.Logger().Errorf("set webhook err :%v", err)
 	}
+
+	// 记录操作日志
+	services.InsertUserOperateLog(c.UserId, c.OrgId, env.Id, consts.OperatorObjectTypeEnv, "create", env.Name, nil)
+
 	return &envDetail, nil
 }
 
@@ -498,6 +503,9 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 	if er != nil {
 		return nil, er
 	}
+
+	// 环境更新时间过滤
+	query = services.FilterEnvUpdatedTime(query, form.StartTime, form.EndTime)
 
 	if form.Q != "" {
 		qs := "%" + form.Q + "%"
@@ -853,6 +861,10 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 		_ = tx.Rollback()
 		return nil, e.New(e.DBError, err)
 	}
+
+	// 记录操作日志
+	services.InsertUserOperateLog(c.UserId, c.OrgId, env.Id, consts.OperatorObjectTypeEnv, "update", form.Name, nil)
+
 	return detail, nil
 }
 
@@ -910,6 +922,14 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (ret *models.En
 		ret, er = envDeploy(c, tx, form)
 		return er
 	})
+
+	// 记录操作日志
+	if form.TaskType == models.TaskTypeDestroy {
+		services.InsertUserOperateLog(c.UserId, c.OrgId, ret.Id, consts.OperatorObjectTypeEnv, "destroy", ret.Name, nil)
+	} else {
+		services.InsertUserOperateLog(c.UserId, c.OrgId, ret.Id, consts.OperatorObjectTypeEnv, "deploy", ret.Name, nil)
+	}
+
 	return ret, er
 }
 
@@ -1117,6 +1137,7 @@ func setAndCheckEnvDestroy(tx *db.Session, env *models.Env, form *forms.DeployEn
 
 	return nil
 }
+
 func setAndCheckEnvCron(env *models.Env, form *forms.DeployEnvForm) e.Error {
 	cronDriftParam, err := GetCronDriftParam(forms.CronDriftForm{
 		BaseForm:         form.BaseForm,

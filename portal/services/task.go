@@ -561,7 +561,10 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 		return e.AutoNew(err, e.DBError)
 	}
 
-	if preStatus != status && !task.IsDriftTask {
+	if preStatus != status && !task.IsDriftTask &&
+		// 忽略任务类型由 审批中 变更为 running 状态时的消息通知
+		// running 状态变更为审批中时已经进行过通知了，这里就不需要在重复通知了
+		!(preStatus == common.TaskApproving && status == common.TaskRunning) {
 		TaskStatusChangeSendMessage(task, status)
 	}
 
@@ -683,7 +686,7 @@ func TraverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 	return rs
 }
 
-func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, proMap runner.ProviderSensitiveAttrMap) error {
+func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, proMap runner.ProviderSensitiveAttrMap, sensitiveKeys map[string][]string) error {
 
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Resource{}.TableName(),
 		"id", "org_id", "project_id", "env_id", "task_id", "provider", "module",
@@ -720,6 +723,11 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 				r.SensitiveKeys = proMap[providerKey]
 			}
 		}
+		// sensitive values
+		if keys, ok := sensitiveKeys[r.Address]; ok {
+			r.Attrs = SensitiveAttrs(r.Attrs, keys, "")
+		}
+
 		err := bq.AddRow(models.NewId("r"), task.OrgId, task.ProjectId, task.EnvId, task.Id, r.Provider,
 			r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys, r.AppliedAt, resId, r.Dependencies)
 		if err != nil {

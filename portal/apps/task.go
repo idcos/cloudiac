@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"path"
 	"sort"
 	"strconv"
@@ -98,28 +97,29 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*resps.TaskDe
 		return nil, e.New(e.DBError, err)
 	}
 
-	// 隐藏敏感字段
-	task.HideSensitiveVariable()
 	var o = resps.TaskDetailResp{
 		Task:    desensitize.NewTask(*task),
 		Creator: user.Name,
 	}
+
 	// 清除url token
-	o.RepoAddr, err = replaceVcsToken(o.RepoAddr)
-	if err != nil {
-		return nil, err
-	}
+	// o.RepoAddr, err = replaceVcsToken(o.RepoAddr)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	o.RepoAddr = ""
+
 	return &o, nil
 }
 
-func replaceVcsToken(old string) (string, e.Error) {
-	u, err := url.Parse(old)
-	if err != nil {
-		return "", e.New(e.URLParseError, err)
-	}
-	u.User = url.User("")
-	return u.Redacted(), nil
-}
+// func replaceVcsToken(old string) (string, e.Error) {
+// 	u, err := url.Parse(old)
+// 	if err != nil {
+// 		return "", e.New(e.URLParseError, err)
+// 	}
+// 	u.User = url.User("")
+// 	return u.Redacted(), nil
+// }
 
 // LastTask 最新任务信息
 func LastTask(c *ctx.ServiceContext, form *forms.LastTaskForm) (*resps.TaskDetailResp, e.Error) {
@@ -301,7 +301,24 @@ func TaskOutput(c *ctx.ServiceContext, form forms.DetailTaskForm) (interface{}, 
 		return nil, e.New(e.DBError, err)
 	}
 
-	return task.Result.Outputs, nil
+	outputs := make(map[string]interface{})
+	for k, v := range task.Result.Outputs {
+		m, ok := v.(map[string]interface{})
+		if !ok {
+			outputs[k] = v
+			continue
+		}
+
+		if _, ok := m["sensitive"]; !ok {
+			outputs[k] = v
+			continue
+		}
+
+		m["value"] = "(sensitive value)"
+		outputs[k] = m
+	}
+
+	return outputs, nil
 }
 
 // SearchTaskResources 查询环境资源列表

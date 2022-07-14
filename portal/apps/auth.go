@@ -83,6 +83,9 @@ func Login(c *ctx.ServiceContext, form *forms.LoginForm) (resp interface{}, er e
 		Token: token,
 	}
 
+	// 记录操作日志
+	services.InsertUserOperateLog(user.Id, "", user.Id, consts.OperatorObjectTypeUser, "login", "", nil)
+
 	return data, nil
 }
 
@@ -254,5 +257,57 @@ func Register(c *ctx.ServiceContext, form *forms.RegistryForm) (resp interface{}
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	return nil, services.SendActivateAccountMail(user, token)
+	return nil, services.SendActivateAccountMail(user, token, consts.AuthRegisterActivationPath, consts.AuthRegisterActivationSubject, consts.UserActiveMail)
+}
+
+func PasswordResetToSendEmail(c *ctx.ServiceContext, form *forms.PasswordResetEmailForm) (interface{}, e.Error) {
+	if !configs.Get().EnableRegister {
+		return nil, e.New(e.ErrDisabled, http.StatusBadRequest)
+	}
+
+	user, er := services.GetUserByEmail(c.DB(), form.Email)
+	if er != nil {
+		return nil, er
+	}
+
+	token, err := services.GenerateActivateToken(user.Email)
+	if err != nil {
+		return nil, e.New(e.InternalError, err)
+	}
+
+	return nil, services.SendActivateAccountMail(user, token, consts.AuthPasswordResetPath, consts.AuthPasswordResetSubject, consts.UserPasswordResetMail)
+}
+
+func PasswordReset(c *ctx.ServiceContext, form *forms.PasswordResetForm) (interface{}, e.Error) {
+	if !configs.Get().EnableRegister {
+		return nil, e.New(e.ErrDisabled, http.StatusBadRequest)
+	}
+
+	user, er := services.GetUserByEmail(c.DB(), c.Email)
+	if er != nil && er.Code() != e.UserNotExists {
+		return nil, er
+	}
+
+	hashPasswd, er := services.HashPassword(form.Password)
+	if er != nil {
+		return nil, er
+	}
+
+	err := c.DB().Transaction(func(tx *db.Session) error {
+		attr := models.Attrs{
+			"password": hashPasswd,
+		}
+		user, er = services.UpdateUser(tx, user.Id, attr)
+		if er != nil {
+			return er
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return nil, nil
 }

@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -43,7 +44,7 @@ func AutoGetTfVersion(c *ctx.ServiceContext, form *forms.TemplateTfVersionSearch
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
-	content, er := repoDetail.ReadFileContent(form.VcsBranch, "versions.tf")
+	content, er := repoDetail.ReadFileContent(form.VcsBranch, filepath.Join(form.Workdir, "versions.tf"))
 	// 没有找到versions.tf 文件，使用默认版本，不报错
 	if er != nil {
 		return consts.DefaultTerraformVersion, nil

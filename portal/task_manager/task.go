@@ -49,6 +49,8 @@ func StartTaskStep(taskReq runner.RunTaskReq, step models.TaskStep) (
 	taskReq.Step = step.Index
 	taskReq.StepType = step.Type
 	taskReq.StepArgs = step.Args
+	taskReq.StepBeforeCmds = step.BeforeCmds
+	taskReq.StepAfterCmds = step.AfterCmds
 
 	respData, err := utils.HttpService(requestUrl, "POST", header, taskReq,
 		int(consts.RunnerConnectTimeout.Seconds()), int(consts.RunnerConnectTimeout.Seconds())*10)
@@ -92,7 +94,11 @@ func WaitTaskStep(ctx context.Context, sess *db.Session, task *models.Task, step
 	}
 
 	// runner 端己经增加了超时处理，portal 端的超时暂时保留，但时间设置为给定时间的 2 倍
-	taskDeadline := time.Time(*step.StartAt).Add(time.Duration(task.StepTimeout*2) * time.Second)
+	timeout := task.StepTimeout
+	if step.Timeout > 0 {
+		timeout = step.Timeout
+	}
+	taskDeadline := time.Time(*step.StartAt).Add(time.Duration(timeout*2) * time.Second)
 
 	// 当前版本实现中需要 portal 主动连接到 runner 获取状态
 	err = utils.RetryFunc(10, time.Second*5, func(retryN int) (retry bool, er error) {

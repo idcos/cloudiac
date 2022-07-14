@@ -72,6 +72,9 @@ func CreateOrganization(c *ctx.ServiceContext, form *forms.CreateOrganizationFor
 		return nil, e.AutoNew(er, e.DBError)
 	}
 
+	// 记录操作日志
+	services.InsertUserOperateLog(c.UserId, "", org.Id, consts.OperatorObjectTypeOrg, "create", org.Name, nil)
+
 	return org, nil
 }
 

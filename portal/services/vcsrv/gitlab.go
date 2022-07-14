@@ -105,7 +105,11 @@ type gitlabRepoIface struct {
 
 func (git *gitlabRepoIface) ListBranches() ([]string, error) {
 	branchList := make([]string, 0)
-	opt := &gitlab.ListBranchesOptions{}
+	opt := &gitlab.ListBranchesOptions{ListOptions: gitlab.ListOptions{
+		Page:    1,
+		PerPage: 5000,
+	}}
+
 	branches, _, er := git.gitConn.Branches.ListBranches(git.Project.ID, opt)
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
@@ -118,7 +122,11 @@ func (git *gitlabRepoIface) ListBranches() ([]string, error) {
 
 func (git *gitlabRepoIface) ListTags() ([]string, error) {
 	tagList := make([]string, 0)
-	opt := &gitlab.ListTagsOptions{}
+	opt := &gitlab.ListTagsOptions{ListOptions: gitlab.ListOptions{
+		Page:    1,
+		PerPage: 5000,
+	}}
+
 	tags, _, er := git.gitConn.Tags.ListTags(git.Project.ID, opt)
 	if er != nil {
 		return nil, e.New(e.VcsError, er)

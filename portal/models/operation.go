@@ -27,3 +27,18 @@ func (o *OperationLog) InsertLog() error {
 func (OperationLog) TableName() string {
 	return "iac_operation_log"
 }
+
+type UserOperationLog struct {
+	TimedModel
+	ObjectType string   `json:"objectType"`
+	ObjectId   Id       `json:"objectId"`
+	ObjectName string   `json:"objectName"`
+	Action     string   `json:"action"`
+	OperatorId Id       `json:"operatorId" gorm:"size:32"`
+	OrgId      Id       `json:"orgId" gorm:"size:32"`
+	Attribute  ResAttrs `json:"attribute" gorm:"type:json"`
+}
+
+func (UserOperationLog) TableName() string {
+	return "iac_user_operation_log"
+}

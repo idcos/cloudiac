@@ -48,6 +48,12 @@ const (
 	PolicySeverityLow                = "LOW"
 
 	RegistryMirrorUri = "/v1/mirrors/providers/"
+
+	AuthRegisterActivationPath = "/activation/"
+	AuthPasswordResetPath      = "/find-password/"
+
+	AuthRegisterActivationSubject = "欢迎注册 CloudIaC"
+	AuthPasswordResetSubject      = "CloudIaC 密码重置" //nolint:gosec
 )
 
 const (
@@ -81,8 +87,9 @@ const (
 
 	IacTaskLogPrefix = "*** IaC: " // IaC 写入 message 到任务日志时使用的统一前缀
 
-	LocalGitReposPath = "repos"  // 内置 http git server 服务目录
-	ReposUrlPrefix    = "/repos" // 内置 http git server url prefix
+	LocalGitReposPath                            = "repos"    // 内置 http git server 服务目录
+	LocalGitReposLocalGitReposPathSubdirectories = "cloudiac" // 内置 http git server 服务子目录
+	ReposUrlPrefix                               = "/repos"   // 内置 http git server url prefix
 
 	DefaultVcsName  = "默认仓库"
 	RegistryVcsName = "Registry"
@@ -169,6 +176,12 @@ const (
 
 	TemplateSourceVcs      = "vcs"
 	TemplateSourceRegistry = "registry"
+
+	OperatorObjectTypeStack   = "stack"
+	OperatorObjectTypeOrg     = "org"
+	OperatorObjectTypeUser    = "user"
+	OperatorObjectTypeEnv     = "env"
+	OperatorObjectTypeProject = "project"
 )
 
 const (
@@ -181,6 +194,9 @@ var (
 	EnvScopeTpl     = []string{ScopeTemplate, ScopeOrg}
 	EnvScopeProject = []string{ScopeProject, ScopeOrg}
 	EnvScopeOrg     = []string{ScopeOrg}
+
+	// 按优先级从低到高排序的变量 scopes
+	SortedVarScopes = []string{ScopeOrg, ScopeTemplate, ScopeProject, ScopeEnv}
 
 	VariableGroupEnv     = []string{ScopeOrg, ScopeProject, ScopeTemplate, ScopeEnv}
 	VariableGroupTpl     = []string{ScopeOrg, ScopeTemplate}
@@ -216,5 +232,15 @@ var (
 
 	BillProviderResAccount = map[string][]string{
 		BillCollectAli: []string{AlicloudAK, AlicloudSK},
+	}
+
+	UserOperationLogAttr = map[string]string{
+		"user.login":     "用户登录",
+		"env.create":     "部署新环境",
+		"env.deploy":     "环境部署",
+		"env.destroy":    "环境销毁",
+		"org.create":     "创建组织",
+		"project.create": "创建项目",
+		"stack.create":   "创建stack",
 	}
 )

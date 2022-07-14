@@ -308,3 +308,31 @@ const UserActiveMail = `
 </body>
 </html>
 `
+
+//nolint:gosec
+const UserPasswordResetMail = `
+<html>
+<body style="background:#FFF;text-align:left;">
+  <div style="max-width: 800px;margin: 25px auto;">
+    <div style="padding: 50px;background: #f3f4f6;margin: 25px auto;">
+      尊敬的 {{.Name}}：
+      <p>&nbsp;&nbsp;&nbsp;&nbsp;此邮件是 CloudIaC 平台发送的密码找回邮件，如非您本人操作，请忽略该邮件。
+      </p>
+      <p>
+      &nbsp;&nbsp;&nbsp;&nbsp;<a href="{{.Address}}" style="font-size: 14px;color: white;line-height: 22px;display: inline-block;padding: 8px 18px;font-weight: normal; text-decoration: none;border: 1px solid #0C8CF6;border-radius: 2px; background: #0C8CF6">点击此处重置密码 (该链接2小时内有效）</a><br/><span style="font-size:0.8em;">
+        <br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;如链接跳转有问题，请手动复制如下地址，在浏览器中粘贴并打开：
+        <br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;{{.Address}}
+      </span>
+      </p>
+      <p>
+      &nbsp;&nbsp;&nbsp;&nbsp;----------
+      <br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;此邮件为 CloudIaC 平台自动发送，请勿回复。
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+`

@@ -509,6 +509,17 @@ func (t *Task) genStepScript() (string, error) {
 
 var checkoutCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 set -o pipefail
+# before checkout
+{{- if .Before }}
+{{.Before}}
+{{- end}}
+
+if [ $? -ne 0 ]; then
+	exit $?
+fi
+
+# goback to container workspace
+cd {{.ContainerWorkspace}}
 # clone code
 git clone '{{.Req.RepoAddress}}' code 2>&1 | sed -re 's#(://[^:]+:)[^@]+#\1******#'
 clone_result=$?
@@ -524,22 +535,38 @@ fi
 mkdir -p '{{.Req.Env.Workdir}}' && cd '{{.Req.Env.Workdir}}'
 
 ln -sf '{{.IacTfFile}}' && ln -sf '{{.TerraformRcFile}}' ~/.terraformrc
+
+# after checkout
+{{- if .After }}
+{{.After}}
+{{- end}}
+
+if [ $? -ne 0 ]; then
+	exit $?
+fi
+
 exit $clone_result
 `))
 
 func (t *Task) stepCheckout() (command string, err error) {
+	beforeCmds, afterCmds := getBeforeAfterCmds(t.req.StepBeforeCmds, t.req.StepAfterCmds)
 	return t.executeTpl(checkoutCommandTpl, map[string]interface{}{
-		"Req":             t.req,
-		"IacTfFile":       t.up2Workspace(CloudIacTfFile),
-		"TerraformRcFile": filepath.Join(ContainerWorkspace, TerraformrcFileName),
+		"Req":                t.req,
+		"IacTfFile":          t.up2Workspace(CloudIacTfFile),
+		"TerraformRcFile":    filepath.Join(ContainerWorkspace, TerraformrcFileName),
+		"Before":             beforeCmds,
+		"After":              afterCmds,
+		"ContainerWorkspace": ContainerWorkspace,
 	})
 }
 
 var initCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-cd 'code/{{.Req.Env.Workdir}}' && \
+{{if .Before}}{{.Before}} && \{{- end}}
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 tfenv install $TFENV_TERRAFORM_VERSION && \
 tfenv use $TFENV_TERRAFORM_VERSION  && \
-terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }}
+terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }} {{- if .After}} && \
+{{.After}}{{- end}}
 `))
 
 // 将 workspace 根目录下的文件名转为可以在环境的 code/workdir 下访问的相对路径
@@ -555,57 +582,78 @@ func (t *Task) up2Workspace(name string) string {
 }
 
 func (t *Task) stepInit() (command string, err error) {
+	beforeCmds, afterCmds := getBeforeAfterCmds(t.req.StepBeforeCmds, t.req.StepAfterCmds)
 	return t.executeTpl(initCommandTpl, map[string]interface{}{
-		"Req":             t.req,
-		"PluginCachePath": ContainerPluginCachePath,
+		"Req":                t.req,
+		"PluginCachePath":    ContainerPluginCachePath,
+		"Before":             beforeCmds,
+		"After":              afterCmds,
+		"ContainerWorkspace": ContainerWorkspace,
 	})
 }
 
 var planCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-cd 'code/{{.Req.Env.Workdir}}' && \
+{{if .Before}}{{.Before}} && \{{- end}}
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 terraform plan -input=false -out=_cloudiac.tfplan \
 {{if .TfVars}}-var-file={{.TfVars}}{{end}} \
 {{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }}&& \
-terraform show -no-color -json _cloudiac.tfplan >{{.TFPlanJsonFilePath}}
+terraform show -no-color -json _cloudiac.tfplan >{{.TFPlanJsonFilePath}} {{- if .After}} && \
+{{.After}}{{- end}}
 `))
 
 func (t *Task) stepPlan() (command string, err error) {
+	beforeCmds, afterCmds := getBeforeAfterCmds(t.req.StepBeforeCmds, t.req.StepAfterCmds)
 	return t.executeTpl(planCommandTpl, map[string]interface{}{
 		"Req":                t.req,
 		"TfVars":             t.req.Env.TfVarsFile,
 		"TFPlanJsonFilePath": t.up2Workspace(TFPlanJsonFile),
+		"Before":             beforeCmds,
+		"After":              afterCmds,
+		"ContainerWorkspace": ContainerWorkspace,
 	})
 }
 
 // 当指定了 plan 文件时不需要也不能传 -var-file 参数
 var applyCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-cd 'code/{{.Req.Env.Workdir}}' && \
+{{if .Before}}{{.Before}} && \{{- end}}
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 terraform apply -input=false -auto-approve \
-{{ range $arg := .Req.StepArgs}}{{$arg}} {{ end }}_cloudiac.tfplan
+{{ range $arg := .Req.StepArgs}}{{$arg}} {{ end }}_cloudiac.tfplan {{- if .After}} && \
+{{.After}}{{- end}}
 
 result=$?
 
 # state collect command
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 terraform show -no-color -json >{{.TFStateJsonFilePath}} && \
 terraform providers schema -json > {{.TFProviderSchema}}
 exit $result
 `))
 
 func (t *Task) stepApply() (command string, err error) {
+	beforeCmds, afterCmds := getBeforeAfterCmds(t.req.StepBeforeCmds, t.req.StepAfterCmds)
 	return t.executeTpl(applyCommandTpl, map[string]interface{}{
 		"Req":                 t.req,
 		"TFStateJsonFilePath": t.up2Workspace(TFStateJsonFile),
 		"TFProviderSchema":    t.up2Workspace(TFProviderSchema),
+		"Before":              beforeCmds,
+		"After":               afterCmds,
+		"ContainerWorkspace":  ContainerWorkspace,
 	})
 }
 
 func (t *Task) stepDestroy() (command string, err error) {
 	// destroy 任务通过会先执行 plan(传入 --destroy 参数)，然后再 apply plan 文件实现。
 	// 这样可以保证 destroy 时执行的是用户审批时看到的 plan 内容
+	beforeCmds, afterCmds := getBeforeAfterCmds(t.req.StepBeforeCmds, t.req.StepAfterCmds)
 	return t.executeTpl(applyCommandTpl, map[string]interface{}{
 		"Req":                 t.req,
 		"TFStateJsonFilePath": t.up2Workspace(TFStateJsonFile),
 		"TFProviderSchema":    t.up2Workspace(TFProviderSchema),
+		"Before":              beforeCmds,
+		"After":               afterCmds,
+		"ContainerWorkspace":  ContainerWorkspace,
 	})
 }
 
@@ -614,7 +662,8 @@ export ANSIBLE_HOST_KEY_CHECKING="False"
 export ANSIBLE_TF_DIR="."
 export ANSIBLE_NOCOWS="1"
 
-cd 'code/{{.Req.Env.Workdir}}' && ansible-playbook \
+{{if .Before}}{{.Before}} && \{{- end}}
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && ansible-playbook \
 --inventory {{.AnsibleStateAnalysis}} \
 --user "root" \
 --private-key "{{.PrivateKeyPath}}" \
@@ -623,15 +672,20 @@ cd 'code/{{.Req.Env.Workdir}}' && ansible-playbook \
 --extra @{{.Req.Env.PlayVarsFile}} \
 {{ end -}}
 {{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }} \
-{{.Req.Env.Playbook}}
+{{.Req.Env.Playbook}} {{- if .After}} && \
+{{.After}}{{- end}}
 `))
 
 func (t *Task) stepPlay() (command string, err error) {
+	beforeCmds, afterCmds := getBeforeAfterCmds(t.req.StepBeforeCmds, t.req.StepAfterCmds)
 	return t.executeTpl(playCommandTpl, map[string]interface{}{
 		"Req":                  t.req,
 		"IacPlayVars":          t.up2Workspace(CloudIacPlayVars),
 		"PrivateKeyPath":       t.up2Workspace("ssh_key"),
 		"AnsibleStateAnalysis": filepath.Join(ContainerAssetsDir, AnsibleStateAnalysisName),
+		"Before":               beforeCmds,
+		"After":                afterCmds,
+		"ContainerWorkspace":   ContainerWorkspace,
 	})
 }
 
@@ -757,4 +811,31 @@ func (t *Task) stepEnvScan() (command string, err error) {
 		"ScanInputFile":     t.up2Workspace(ScanInputFile),
 		"ScanInputMapFile":  t.up2Workspace(ScanInputMapFile),
 	})
+}
+
+func getBeforeAfterCmds(StepBeforeCmds, StepAfterCmds []string) (string, string) {
+	beforeCmds := ""
+
+	if len(StepBeforeCmds) > 0 {
+		cmds := make([]string, 0)
+		cmds = append(cmds, `echo "===== before commands ====="`)
+		for _, cmd := range StepBeforeCmds {
+			cmds = append(cmds, strings.TrimRight(cmd, "\n"))
+		}
+		cmds = append(cmds, `echo -e "===== end =====\n"`)
+		beforeCmds = strings.Join(cmds, " && ")
+	}
+
+	afterCmds := ""
+	if len(StepAfterCmds) > 0 {
+		cmds := make([]string, 0)
+		cmds = append(cmds, `echo -e "\n===== after commands ====="`)
+		for _, cmd := range StepAfterCmds {
+			cmds = append(cmds, strings.TrimRight(cmd, "\n"))
+		}
+		cmds = append(cmds, `echo "===== end ====="`)
+		afterCmds = strings.Join(cmds, " && ")
+	}
+
+	return beforeCmds, afterCmds
 }

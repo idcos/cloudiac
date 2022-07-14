@@ -244,5 +244,7 @@ func Init(migrate bool) {
 	autoMigrate(&LdapOUOrg{}, sess)
 	autoMigrate(&LdapOUProject{}, sess)
 
+	autoMigrate(&UserOperationLog{}, sess)
+
 	dbMigrate(sess)
 }
