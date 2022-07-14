@@ -518,6 +518,8 @@ if [ $? -ne 0 ]; then
 	exit $?
 fi
 
+# goback to container workspace
+cd {{.ContainerWorkspace}}
 # clone code
 git clone '{{.Req.RepoAddress}}' code 2>&1 | sed -re 's#(://[^:]+:)[^@]+#\1******#'
 clone_result=$?
@@ -549,17 +551,18 @@ exit $clone_result
 func (t *Task) stepCheckout() (command string, err error) {
 	beforeCmds, afterCmds := getBeforeAfterCmds(t.req.StepBeforeCmds, t.req.StepAfterCmds)
 	return t.executeTpl(checkoutCommandTpl, map[string]interface{}{
-		"Req":             t.req,
-		"IacTfFile":       t.up2Workspace(CloudIacTfFile),
-		"TerraformRcFile": filepath.Join(ContainerWorkspace, TerraformrcFileName),
-		"Before":          beforeCmds,
-		"After":           afterCmds,
+		"Req":                t.req,
+		"IacTfFile":          t.up2Workspace(CloudIacTfFile),
+		"TerraformRcFile":    filepath.Join(ContainerWorkspace, TerraformrcFileName),
+		"Before":             beforeCmds,
+		"After":              afterCmds,
+		"ContainerWorkspace": ContainerWorkspace,
 	})
 }
 
 var initCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 {{if .Before}}{{.Before}} && \{{- end}}
-cd 'code/{{.Req.Env.Workdir}}' && \
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 tfenv install $TFENV_TERRAFORM_VERSION && \
 tfenv use $TFENV_TERRAFORM_VERSION  && \
 terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }} {{- if .After}} && \
@@ -581,16 +584,17 @@ func (t *Task) up2Workspace(name string) string {
 func (t *Task) stepInit() (command string, err error) {
 	beforeCmds, afterCmds := getBeforeAfterCmds(t.req.StepBeforeCmds, t.req.StepAfterCmds)
 	return t.executeTpl(initCommandTpl, map[string]interface{}{
-		"Req":             t.req,
-		"PluginCachePath": ContainerPluginCachePath,
-		"Before":          beforeCmds,
-		"After":           afterCmds,
+		"Req":                t.req,
+		"PluginCachePath":    ContainerPluginCachePath,
+		"Before":             beforeCmds,
+		"After":              afterCmds,
+		"ContainerWorkspace": ContainerWorkspace,
 	})
 }
 
 var planCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 {{if .Before}}{{.Before}} && \{{- end}}
-cd 'code/{{.Req.Env.Workdir}}' && \
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 terraform plan -input=false -out=_cloudiac.tfplan \
 {{if .TfVars}}-var-file={{.TfVars}}{{end}} \
 {{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }}&& \
@@ -606,13 +610,14 @@ func (t *Task) stepPlan() (command string, err error) {
 		"TFPlanJsonFilePath": t.up2Workspace(TFPlanJsonFile),
 		"Before":             beforeCmds,
 		"After":              afterCmds,
+		"ContainerWorkspace": ContainerWorkspace,
 	})
 }
 
 // 当指定了 plan 文件时不需要也不能传 -var-file 参数
 var applyCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 {{if .Before}}{{.Before}} && \{{- end}}
-cd 'code/{{.Req.Env.Workdir}}' && \
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 terraform apply -input=false -auto-approve \
 {{ range $arg := .Req.StepArgs}}{{$arg}} {{ end }}_cloudiac.tfplan {{- if .After}} && \
 {{.After}}{{- end}}
@@ -620,6 +625,7 @@ terraform apply -input=false -auto-approve \
 result=$?
 
 # state collect command
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 terraform show -no-color -json >{{.TFStateJsonFilePath}} && \
 terraform providers schema -json > {{.TFProviderSchema}}
 exit $result
@@ -633,6 +639,7 @@ func (t *Task) stepApply() (command string, err error) {
 		"TFProviderSchema":    t.up2Workspace(TFProviderSchema),
 		"Before":              beforeCmds,
 		"After":               afterCmds,
+		"ContainerWorkspace":  ContainerWorkspace,
 	})
 }
 
@@ -646,6 +653,7 @@ func (t *Task) stepDestroy() (command string, err error) {
 		"TFProviderSchema":    t.up2Workspace(TFProviderSchema),
 		"Before":              beforeCmds,
 		"After":               afterCmds,
+		"ContainerWorkspace":  ContainerWorkspace,
 	})
 }
 
@@ -655,7 +663,7 @@ export ANSIBLE_TF_DIR="."
 export ANSIBLE_NOCOWS="1"
 
 {{if .Before}}{{.Before}} && \{{- end}}
-cd 'code/{{.Req.Env.Workdir}}' && ansible-playbook \
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && ansible-playbook \
 --inventory {{.AnsibleStateAnalysis}} \
 --user "root" \
 --private-key "{{.PrivateKeyPath}}" \
@@ -677,6 +685,7 @@ func (t *Task) stepPlay() (command string, err error) {
 		"AnsibleStateAnalysis": filepath.Join(ContainerAssetsDir, AnsibleStateAnalysisName),
 		"Before":               beforeCmds,
 		"After":                afterCmds,
+		"ContainerWorkspace":   ContainerWorkspace,
 	})
 }
 
