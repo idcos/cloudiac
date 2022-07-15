@@ -85,8 +85,17 @@ func PlatformStatTodayEnv(c *ctx.ServiceContext, form *forms.PfStatForm) (interf
 
 // PlatformStatTodayDestroyedEnv 当日销毁环境数
 func PlatformStatTodayDestroyedEnv(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+	orgIds := parseOrgIds(form.OrgIds)
 
-	return nil, nil
+	count, err := services.GetTodayDestroyedEnvs(c.DB(), orgIds)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return &resps.PfTodayStatResp{
+		Name:  "当日销毁环境数",
+		Count: count,
+	}, nil
 }
 
 // PlatformStatTodayResType 当日新建资源数：资源类型、数量

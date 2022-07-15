@@ -51,3 +51,13 @@ func GetTodayCreatedEnvs(dbSess *db.Session, orgIds []string) (int64, error) {
 
 	return query.Count()
 }
+
+func GetTodayDestroyedEnvs(dbSess *db.Session, orgIds []string) (int64, error) {
+	query := dbSess.Model(&models.Env{}).Where("status = ?", models.EnvStatusDestroyed)
+	query = query.Where(`DATE_FORMAT(updated_at, "%Y-%m-%d") = CURDATE()`)
+	if len(orgIds) > 0 {
+		query = query.Where(`org_id IN (?)`, orgIds)
+	}
+
+	return query.Count()
+}
