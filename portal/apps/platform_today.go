@@ -37,3 +37,9 @@ func PlatformStatTodayEnv(c *ctx.ServiceContext, form *forms.PfStatForm) (interf
 
 	return nil, nil
 }
+
+// PlatformStatTodayDestroyedEnv 当日销毁环境数
+func PlatformStatTodayDestroyedEnv(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+
+	return nil, nil
+}
