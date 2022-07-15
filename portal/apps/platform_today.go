@@ -19,3 +19,9 @@ func PlatformStatTodayProject(c *ctx.ServiceContext, form *forms.PfStatForm) (in
 
 	return nil, nil
 }
+
+// PlatformStatTodayStack 当日新建 Stack 数
+func PlatformStatTodayStack(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+
+	return nil, nil
+}
