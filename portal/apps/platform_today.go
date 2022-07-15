@@ -25,3 +25,9 @@ func PlatformStatTodayStack(c *ctx.ServiceContext, form *forms.PfStatForm) (inte
 
 	return nil, nil
 }
+
+// PlatformStatTodayPG 当日新建合规策略组数量
+func PlatformStatTodayPG(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+
+	return nil, nil
+}

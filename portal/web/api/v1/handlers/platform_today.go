@@ -64,3 +64,22 @@ func (Platform) PlatformStatTodayStack(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.PlatformStatTodayStack(c.Service(), &form))
 }
+
+// PlatformStatTodayPG 当日新建合规策略组数量
+// @Tags 平台
+// @Summary 当日新建合规策略组数量
+// @Description 当日新建合规策略组数量
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param form formData forms.PfStatForm true "parameter"
+// @router /platform/stat/today/pg [get]
+// @Success 200 {object} ctx.JSONResult{result=resps.PfTodayStatResp}
+func (Platform) PlatformStatTodayPG(c *ctx.GinRequest) {
+	form := forms.PfStatForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.PlatformStatTodayPG(c.Service(), &form))
+}
