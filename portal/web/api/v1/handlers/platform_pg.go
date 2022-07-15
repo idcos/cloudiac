@@ -36,7 +36,7 @@ func (Platform) PlatformStatPg(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param form formData forms.PfStatForm true "parameter"
-// @router /platform/stat/pg [get]
+// @router /platform/stat/policy [get]
 // @Success 200 {object} ctx.JSONResult{result=resps.PfPgStatResp}
 func (Platform) PlatformStatPolicy(c *ctx.GinRequest) {
 	form := forms.PfStatForm{}
@@ -55,7 +55,7 @@ func (Platform) PlatformStatPolicy(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param form formData forms.PfStatForm true "parameter"
-// @router /platform/stat/pg [get]
+// @router /platform/stat/pg_stack/enabled [get]
 // @Success 200 {object} ctx.JSONResult{result=resps.PfPgStatResp}
 func (Platform) PlatformStatPgStackEnabled(c *ctx.GinRequest) {
 	form := forms.PfStatForm{}
@@ -74,7 +74,7 @@ func (Platform) PlatformStatPgStackEnabled(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param form formData forms.PfStatForm true "parameter"
-// @router /platform/stat/pg [get]
+// @router /platform/stat/pg_env/enabled_activate [get]
 // @Success 200 {object} ctx.JSONResult{result=resps.PfPgStatResp}
 func (Platform) PlatformStatPgEnvEnabledActivate(c *ctx.GinRequest) {
 	form := forms.PfStatForm{}
@@ -93,7 +93,7 @@ func (Platform) PlatformStatPgEnvEnabledActivate(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param form formData forms.PfStatForm true "parameter"
-// @router /platform/stat/pg [get]
+// @router /platform/stat/pg_stack/ng [get]
 // @Success 200 {object} ctx.JSONResult{result=resps.PfPgStatResp}
 func (Platform) PlatformStatPgStackNG(c *ctx.GinRequest) {
 	form := forms.PfStatForm{}
@@ -112,7 +112,7 @@ func (Platform) PlatformStatPgStackNG(c *ctx.GinRequest) {
 // @Produce json
 // @Security AuthToken
 // @Param form formData forms.PfStatForm true "parameter"
-// @router /platform/stat/pg [get]
+// @router /platform/stat/pg_env/ng_activate [get]
 // @Success 200 {object} ctx.JSONResult{result=resps.PfPgStatResp}
 func (Platform) PlatformStatPgEnvNGActivate(c *ctx.GinRequest) {
 	form := forms.PfStatForm{}
