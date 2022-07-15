@@ -100,6 +100,7 @@ func PlatformStatTodayDestroyedEnv(c *ctx.ServiceContext, form *forms.PfStatForm
 
 // PlatformStatTodayResType 当日新建资源数：资源类型、数量
 func PlatformStatTodayResType(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+	orgIds := parseOrgIds(form.OrgIds)
 
-	return nil, nil
+	return services.GetTodayCreatedResTypes(c.DB(), orgIds)
 }

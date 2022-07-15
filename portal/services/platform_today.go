@@ -3,8 +3,10 @@
 package services
 
 import (
+	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/resps"
 )
 
 func GetTodayCreatedOrgs(dbSess *db.Session) (int64, error) {
@@ -60,4 +62,24 @@ func GetTodayDestroyedEnvs(dbSess *db.Session, orgIds []string) (int64, error) {
 	}
 
 	return query.Count()
+}
+
+func GetTodayCreatedResTypes(dbSess *db.Session, orgIds []string) ([]resps.PfTodayResTypeStatResp, e.Error) {
+	query := dbSess.Model(&models.Resource{}).Select("iac_resource.`type` as res_type, COUNT(*) as count")
+
+	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
+
+	query = query.Where(`DATE_FORMAT(updated_at, "%Y-%m-%d") = CURDATE()`)
+	if len(orgIds) > 0 {
+		query = query.Where(`iac_resource.org_id IN (?)`, orgIds)
+	}
+
+	query = query.Group("iac_resource.`type`")
+
+	var dbResults []resps.PfTodayResTypeStatResp
+	if err := query.Find(&dbResults); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return dbResults, nil
 }
