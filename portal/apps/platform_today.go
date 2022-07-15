@@ -55,8 +55,17 @@ func PlatformStatTodayStack(c *ctx.ServiceContext, form *forms.PfStatForm) (inte
 
 // PlatformStatTodayPG 当日新建合规策略组数量
 func PlatformStatTodayPG(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+	orgIds := parseOrgIds(form.OrgIds)
 
-	return nil, nil
+	count, err := services.GetTodayCreatedPGs(c.DB(), orgIds)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return &resps.PfTodayStatResp{
+		Name:  "当日新建合规策略组数量",
+		Count: count,
+	}, nil
 }
 
 // PlatformStatTodayEnv 当日新建环境数

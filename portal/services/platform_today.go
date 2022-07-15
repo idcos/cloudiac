@@ -33,3 +33,12 @@ func GetTodayCreatedStacks(dbSess *db.Session, orgIds []string) (int64, error) {
 
 	return query.Count()
 }
+
+func GetTodayCreatedPGs(dbSess *db.Session, orgIds []string) (int64, error) {
+	query := dbSess.Model(&models.PolicyGroup{}).Where(`DATE_FORMAT(created_at, "%Y-%m-%d") = CURDATE()`)
+	if len(orgIds) > 0 {
+		query = query.Where(`org_id IN (?)`, orgIds)
+	}
+
+	return query.Count()
+}
