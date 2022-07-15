@@ -70,8 +70,17 @@ func PlatformStatTodayPG(c *ctx.ServiceContext, form *forms.PfStatForm) (interfa
 
 // PlatformStatTodayEnv 当日新建环境数
 func PlatformStatTodayEnv(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+	orgIds := parseOrgIds(form.OrgIds)
 
-	return nil, nil
+	count, err := services.GetTodayCreatedEnvs(c.DB(), orgIds)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return &resps.PfTodayStatResp{
+		Name:  "当日新建环境数",
+		Count: count,
+	}, nil
 }
 
 // PlatformStatTodayDestroyedEnv 当日销毁环境数
