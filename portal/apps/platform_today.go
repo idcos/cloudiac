@@ -31,3 +31,9 @@ func PlatformStatTodayPG(c *ctx.ServiceContext, form *forms.PfStatForm) (interfa
 
 	return nil, nil
 }
+
+// PlatformStatTodayEnv 当日新建环境数
+func PlatformStatTodayEnv(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+
+	return nil, nil
+}
