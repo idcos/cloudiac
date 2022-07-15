@@ -43,3 +43,9 @@ func PlatformStatTodayDestroyedEnv(c *ctx.ServiceContext, form *forms.PfStatForm
 
 	return nil, nil
 }
+
+// PlatformStatTodayResType 当日新建资源数：资源类型、数量
+func PlatformStatTodayResType(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+
+	return nil, nil
+}

@@ -121,3 +121,22 @@ func (Platform) PlatformStatTodayDestroyedEnv(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.PlatformStatTodayDestroyedEnv(c.Service(), &form))
 }
+
+// PlatformStatTodayResType 当日新建资源数：资源类型、数量
+// @Tags 平台
+// @Summary 当日新建资源数：资源类型、数量
+// @Description 当日新建资源数：资源类型、数量
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param form formData forms.PfStatForm true "parameter"
+// @router /platform/stat/today/res_type [get]
+// @Success 200 {object} ctx.JSONResult{result=resps.PfTodayResTypeStatResp}
+func (Platform) PlatformStatTodayResType(c *ctx.GinRequest) {
+	form := forms.PfStatForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.PlatformStatTodayResType(c.Service(), &form))
+}
