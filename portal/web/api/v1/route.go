@@ -109,6 +109,15 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/platform/stat/resource/week", ac(), w(handlers.Platform{}.PlatformStatResWeekChange))
 	g.GET("/platform/stat/resource/active", ac(), w(handlers.Platform{}.PlatformStatActiveResType))
 
+	// 平台概览-当日统计数据
+	g.GET("/platform/stat/today/org")
+	g.GET("/platform/stat/today/project")
+	g.GET("/platform/stat/today/template")
+	g.GET("/platform/stat/today/pg")
+	g.GET("/platform/stat/today/env")
+	g.GET("/platform/stat/today/destroyed_env")
+	g.GET("/platform/stat/today/res_type_added")
+
 	// 用户操作日志
 	g.GET("/platform/operation/log", ac(), w(handlers.Platform{}.PlatformOperationLog))
 
