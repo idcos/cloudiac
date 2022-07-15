@@ -7,9 +7,19 @@ import (
 	"cloudiac/portal/models"
 )
 
-func GetTodayCreatedOrgs(dbSess *db.Session, orgIds []string) (int64, error) {
+func GetTodayCreatedOrgs(dbSess *db.Session) (int64, error) {
 	query := dbSess.Model(&models.Organization{}).Where("status = ?", models.Enable)
 	query = query.Where(`DATE_FORMAT(created_at, "%Y-%m-%d") = CURDATE()`)
+
+	return query.Count()
+}
+
+func GetTodayCreatedProjects(dbSess *db.Session, orgIds []string) (int64, error) {
+	query := dbSess.Model(&models.Project{}).Where("status = ?", models.Enable)
+	query = query.Where(`DATE_FORMAT(created_at, "%Y-%m-%d") = CURDATE()`)
+	if len(orgIds) > 0 {
+		query = query.Where(`org_id IN (?)`, orgIds)
+	}
 
 	return query.Count()
 }

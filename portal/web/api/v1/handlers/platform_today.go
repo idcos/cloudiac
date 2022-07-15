@@ -16,15 +16,10 @@ import (
 // @Accept json
 // @Produce json
 // @Security AuthToken
-// @Param form formData forms.PfStatForm true "parameter"
 // @router /platform/stat/today/org [get]
 // @Success 200 {object} ctx.JSONResult{result=resps.PfTodayStatResp}
 func (Platform) PlatformStatTodayOrg(c *ctx.GinRequest) {
-	form := forms.PfStatForm{}
-	if err := c.Bind(&form); err != nil {
-		return
-	}
-	c.JSONResult(apps.PlatformStatTodayOrg(c.Service(), &form))
+	c.JSONResult(apps.PlatformStatTodayOrg(c.Service()))
 }
 
 // PlatformStatTodayProject 当日新建项目数

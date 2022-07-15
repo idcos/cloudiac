@@ -11,10 +11,8 @@ import (
 )
 
 // PlatformStatTodayOrg 当日新建组织数
-func PlatformStatTodayOrg(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
-	orgIds := parseOrgIds(form.OrgIds)
-
-	count, err := services.GetTodayCreatedOrgs(c.DB(), orgIds)
+func PlatformStatTodayOrg(c *ctx.ServiceContext) (interface{}, e.Error) {
+	count, err := services.GetTodayCreatedOrgs(c.DB())
 	if err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
@@ -27,8 +25,17 @@ func PlatformStatTodayOrg(c *ctx.ServiceContext, form *forms.PfStatForm) (interf
 
 // PlatformStatTodayProject 当日新建项目数
 func PlatformStatTodayProject(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+	orgIds := parseOrgIds(form.OrgIds)
 
-	return nil, nil
+	count, err := services.GetTodayCreatedProjects(c.DB(), orgIds)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return &resps.PfTodayStatResp{
+		Name:  "当日新建项目数",
+		Count: count,
+	}, nil
 }
 
 // PlatformStatTodayStack 当日新建 Stack 数
