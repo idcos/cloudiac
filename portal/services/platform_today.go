@@ -23,3 +23,13 @@ func GetTodayCreatedProjects(dbSess *db.Session, orgIds []string) (int64, error)
 
 	return query.Count()
 }
+
+func GetTodayCreatedStacks(dbSess *db.Session, orgIds []string) (int64, error) {
+	query := dbSess.Model(&models.Template{}).Where("status = ?", models.Enable)
+	query = query.Where(`DATE_FORMAT(created_at, "%Y-%m-%d") = CURDATE()`)
+	if len(orgIds) > 0 {
+		query = query.Where(`org_id IN (?)`, orgIds)
+	}
+
+	return query.Count()
+}

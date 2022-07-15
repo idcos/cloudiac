@@ -40,8 +40,17 @@ func PlatformStatTodayProject(c *ctx.ServiceContext, form *forms.PfStatForm) (in
 
 // PlatformStatTodayStack 当日新建 Stack 数
 func PlatformStatTodayStack(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+	orgIds := parseOrgIds(form.OrgIds)
 
-	return nil, nil
+	count, err := services.GetTodayCreatedStacks(c.DB(), orgIds)
+	if err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	return &resps.PfTodayStatResp{
+		Name:  "当日新建Stack数",
+		Count: count,
+	}, nil
 }
 
 // PlatformStatTodayPG 当日新建合规策略组数量
