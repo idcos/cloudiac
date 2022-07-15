@@ -13,3 +13,9 @@ func PlatformStatTodayOrg(c *ctx.ServiceContext, form *forms.PfStatForm) (interf
 
 	return nil, nil
 }
+
+// PlatformStatTodayProject 当日新建项目数
+func PlatformStatTodayProject(c *ctx.ServiceContext, form *forms.PfStatForm) (interface{}, e.Error) {
+
+	return nil, nil
+}

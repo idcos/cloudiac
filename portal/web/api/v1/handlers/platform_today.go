@@ -26,3 +26,22 @@ func (Platform) PlatformStatTodayOrg(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.PlatformStatTodayOrg(c.Service(), &form))
 }
+
+// PlatformStatTodayProject 当日新建项目数
+// @Tags 平台
+// @Summary 当日新建项目数
+// @Description 当日新建项目数
+// @Accept application/x-www-form-urlencoded
+// @Accept json
+// @Produce json
+// @Security AuthToken
+// @Param form formData forms.PfStatForm true "parameter"
+// @router /platform/stat/today/project [get]
+// @Success 200 {object} ctx.JSONResult{result=resps.PfTodayStatResp}
+func (Platform) PlatformStatTodayProject(c *ctx.GinRequest) {
+	form := forms.PfStatForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.PlatformStatTodayProject(c.Service(), &form))
+}
