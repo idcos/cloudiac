@@ -132,7 +132,7 @@ func createEnvCheck(c *ctx.ServiceContext, form *forms.CreateEnvForm) e.Error {
 }
 
 //nolint
-func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, destroyAt *models.Time, session *db.Session) e.Error {
+func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, destroyAt, deployAt *models.Time, session *db.Session) e.Error {
 	if !form.HasKey("tfVarsFile") {
 		form.TfVarsFile = tpl.TfVarsFile
 	}
@@ -183,6 +183,19 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 		}
 	} else if form.TTL != "" {
 		_, err := services.ParseTTL(form.TTL) // 检查 ttl 格式
+		if err != nil {
+			return e.New(e.BadParam, http.StatusBadRequest, err)
+		}
+	}
+
+	if form.DeployAt != "" {
+		var err error
+		*deployAt, err = models.Time{}.Parse(form.DeployAt)
+		if err != nil {
+			return e.New(e.BadParam, http.StatusBadRequest, err)
+		}
+	} else if form.DeployTTL != "" {
+		_, err := services.ParseTTL(form.DeployTTL) // 检查 ttl 格式
 		if err != nil {
 			return e.New(e.BadParam, http.StatusBadRequest, err)
 		}
@@ -345,8 +358,9 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	// 以下值只在未传入时使用模板定义的值，如果入参有该字段即使值为空也不会使用模板中的值
 	var (
 		destroyAt models.Time
+		deployAt  models.Time
 	)
-	err = setDefaultValueFromTpl(form, tpl, &destroyAt, c.DB())
+	err = setDefaultValueFromTpl(form, tpl, &destroyAt, &deployAt, c.DB())
 	if err != nil {
 		return nil, err
 	}
@@ -403,6 +417,8 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		OpenCronDrift:    form.OpenCronDrift,
 		PolicyEnable:     form.PolicyEnable,
 
+		AutoDeployTTL:   form.DeployTTL,
+		AutoDeployAt:    &deployAt,
 		AutoDeployCron:  form.AutoDeployCron,
 		AutoDestroyCron: form.AutoDestroyCron,
 	}
