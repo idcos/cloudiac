@@ -33,7 +33,6 @@ import (
 // 每天的0点、13点、18点、21点都执行一次：0 0,13,18,21 * * ?
 var SpecParser = cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 
-
 func ParseCronpress(cronDriftExpress string) (*time.Time, e.Error) {
 	expr, err := SpecParser.Parse(cronDriftExpress)
 	if err != nil {
@@ -101,6 +100,14 @@ func GetCronDriftParam(form forms.CronDriftForm) (*CronDriftParam, e.Error) {
 		}
 	}
 	return cronDriftParam, nil
+}
+
+func GetNextCronTime(cronExpress string) (*time.Time, e.Error) {
+	if cronExpress == "" {
+		return nil, nil
+	}
+
+	return ParseCronpress(cronExpress)
 }
 
 func createEnvCheck(c *ctx.ServiceContext, form *forms.CreateEnvForm) e.Error {
@@ -395,6 +402,9 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		CronDriftExpress: form.CronDriftExpress,
 		OpenCronDrift:    form.OpenCronDrift,
 		PolicyEnable:     form.PolicyEnable,
+
+		AutoDeployCron:  form.AutoDeployCron,
+		AutoDestroyCron: form.AutoDestroyCron,
 	}
 
 	if tpl.IsDemo {
@@ -837,6 +847,24 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	attrs["openCronDrift"] = cronDriftParam.OpenCronDrift
 	attrs["cronDriftExpress"] = cronDriftParam.CronDriftExpress
 	attrs["nextDriftTaskTime"] = cronDriftParam.NextDriftTaskTime
+	// 检查 自动部署/自动销毁 是否需要更新
+	if form.HasKey("autoDeployCron") && form.AutoDeployCron != env.AutoDeployCron {
+		attrs["autoDeployCron"] = form.AutoDeployCron
+		nextCronTime, err := GetNextCronTime(form.AutoDeployCron)
+		if err != nil {
+			return nil, err
+		}
+		attrs["autoDeployAt"] = nextCronTime
+	}
+	if form.HasKey("autoDestroyCron") && form.AutoDestroyCron != env.AutoDestroyCron {
+		attrs["autoDestroyCron"] = form.AutoDestroyCron
+		nextCronTime, err := GetNextCronTime(form.AutoDestroyCron)
+		if err != nil {
+			return nil, err
+		}
+		attrs["autoDestroyAt"] = nextCronTime
+	}
+
 	setUpdateEnvByForm(attrs, form)
 	err = setAndCheckUpdateEnvByForm(c, tx, attrs, env, form)
 	if err != nil {
@@ -1139,6 +1167,25 @@ func setAndCheckEnvDestroy(tx *db.Session, env *models.Env, form *forms.DeployEn
 }
 
 func setAndCheckEnvCron(env *models.Env, form *forms.DeployEnvForm) e.Error {
+	// drift cron
+	if err := setAndCheckEnvDriftCron(env, form); err != nil {
+		return err
+	}
+
+	// auto deploy cron
+	if form.HasKey("autoDeployCron") {
+		env.AutoDeployCron = form.AutoDeployCron
+	}
+
+	// auto destroy cron
+	if form.HasKey("autoDestroyCron") {
+		env.AutoDestroyCron = form.AutoDestroyCron
+	}
+
+	return nil
+}
+
+func setAndCheckEnvDriftCron(env *models.Env, form *forms.DeployEnvForm) e.Error {
 	cronDriftParam, err := GetCronDriftParam(forms.CronDriftForm{
 		BaseForm:         form.BaseForm,
 		CronDriftExpress: form.CronDriftExpress,
@@ -1173,6 +1220,7 @@ func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env
 		}
 	}
 
+	// Cron 相关
 	if err := setAndCheckEnvCron(env, form); err != nil {
 		return err
 	}
