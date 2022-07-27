@@ -7,14 +7,20 @@ import (
 	"time"
 )
 
-type envTtlForm struct {
+type envDestroyTtlForm struct {
 	TTL       string `form:"ttl" json:"ttl" binding:"omitempty,oneof=0 12h 1d 3d 1w 15d 30d" enums:"0,12h,1d,3d,1w,15d,30d"` // 存活时间
 	DestroyAt string `form:"destroyAt" json:"destroyAt" binding:""`                                                          // 自动销毁时间(时间戳)
 }
 
+type envDeployTtlForm struct {
+	DeployTTL string `form:"deployTtl" json:"deployTtl" binding:"omitempty,oneof=0 12h 1d 3d 1w 15d 30d" enums:"0,12h,1d,3d,1w,15d,30d"` // 存活时间
+	DeployAt  string `form:"deployAt" json:"deployAt" binding:""`                                                                        // 自动销毁时间(时间戳)
+}
+
 type CreateEnvForm struct {
 	BaseForm
-	envTtlForm
+	envDestroyTtlForm
+	envDeployTtlForm
 
 	TplId    models.Id `form:"tplId" json:"tplId" binding:"required,startswith=tpl-,max=32"`                 // 模板ID
 	Name     string    `form:"name" json:"name" binding:"required,gte=2,lte=64"`                             // 环境名称
@@ -79,7 +85,8 @@ type CronDriftForm struct {
 
 type UpdateEnvForm struct {
 	BaseForm
-	envTtlForm
+	envDestroyTtlForm
+	envDeployTtlForm
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true" binding:"required,startswith=env-,max=32"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
 
@@ -111,7 +118,8 @@ type UpdateEnvForm struct {
 
 type DeployEnvForm struct {
 	BaseForm
-	envTtlForm
+	envDestroyTtlForm
+	envDeployTtlForm
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true" binding:"required,startswith=env-,max=32"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
 

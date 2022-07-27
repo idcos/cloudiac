@@ -1133,7 +1133,7 @@ func setAndCheckEnvAutoApproval(c *ctx.ServiceContext, env *models.Env, form *fo
 	return nil
 }
 
-func setAndCheckEnvDestroy(tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error {
+func setAndCheckEnvAutoDeploy(tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error {
 	if !form.HasKey("destroyAt") && !form.HasKey("ttl") {
 		return nil
 	}
@@ -1166,20 +1166,34 @@ func setAndCheckEnvDestroy(tx *db.Session, env *models.Env, form *forms.DeployEn
 	return nil
 }
 
-func setAndCheckEnvCron(env *models.Env, form *forms.DeployEnvForm) e.Error {
-	// drift cron
-	if err := setAndCheckEnvDriftCron(env, form); err != nil {
-		return err
+func setAndCheckEnvAutoDestroy(tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error {
+	if !form.HasKey("destroyAt") && !form.HasKey("ttl") {
+		return nil
 	}
 
-	// auto deploy cron
-	if form.HasKey("autoDeployCron") {
-		env.AutoDeployCron = form.AutoDeployCron
-	}
+	if form.HasKey("destroyAt") {
+		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
+		if err != nil {
+			return e.New(e.BadParam, http.StatusBadRequest, err)
+		}
+		env.AutoDestroyAt = &destroyAt
+		// 直接传入了销毁时间，需要同步清空 ttl
+		env.TTL = ""
+	} else if form.HasKey("ttl") {
+		ttl, err := services.ParseTTL(form.TTL)
+		if err != nil {
+			return e.New(e.BadParam, http.StatusBadRequest, err)
+		}
 
-	// auto destroy cron
-	if form.HasKey("autoDestroyCron") {
-		env.AutoDestroyCron = form.AutoDestroyCron
+		env.TTL = form.TTL
+
+		if ttl == 0 { // ttl 传入 0 表示清空自动销毁时间
+			env.AutoDestroyAt = nil
+		} else if env.Status != models.EnvStatusDestroyed && env.Status != models.EnvStatusInactive {
+			// 活跃环境同步修改 destroyAt
+			at := models.Time(time.Now().Add(ttl))
+			env.AutoDestroyAt = &at
+		}
 	}
 
 	return nil
@@ -1215,13 +1229,23 @@ func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env
 		if err := setAndCheckEnvAutoApproval(c, env, form); err != nil {
 			return err
 		}
-		if err := setAndCheckEnvDestroy(tx, env, form); err != nil {
+		if err := setAndCheckEnvAutoDestroy(tx, env, form); err != nil {
 			return err
+		}
+
+		// auto deploy cron
+		if form.HasKey("autoDeployCron") {
+			env.AutoDeployCron = form.AutoDeployCron
+		}
+
+		// auto destroy cron
+		if form.HasKey("autoDestroyCron") {
+			env.AutoDestroyCron = form.AutoDestroyCron
 		}
 	}
 
-	// Cron 相关
-	if err := setAndCheckEnvCron(env, form); err != nil {
+	// drift Cron 相关
+	if err := setAndCheckEnvDriftCron(env, form); err != nil {
 		return err
 	}
 	if form.HasKey("extraData") {

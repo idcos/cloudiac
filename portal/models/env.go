@@ -100,9 +100,10 @@ type Env struct {
 
 	Targets StrSlice `json:"targets,omitempty" gorm:"type:json"` // 指定部署的资源
 	// 自动部署相关
-	AutoDeployCron   string     `json:"autoDeployCron" gorm:"default:''"`  // 自动部署任务的Cron表达式
-	AutoDeployAt     *time.Time `json:"autoDeployAt" gorm:"type:datetime"` // 下次执行自动部署任务的时间
-	AutoDeployTaskId Id         `json:"-"  gorm:"default:''"`              // 自动部署任务 id
+	AutoDeployCron   string     `json:"autoDeployCron" gorm:"default:''"`                 // 自动部署任务的Cron表达式
+	AutoDeployAt     *time.Time `json:"autoDeployAt" gorm:"type:datetime"`                // 下次执行自动部署任务的时间
+	AutoDeployTaskId Id         `json:"-"  gorm:"default:''"`                             // 自动部署任务 id
+	AutoDeployTTL    string     `json:"autoDeployTtl" gorm:"default:'0'" example:"1h/1d"` // 生命周期
 
 	// 自动销毁相关
 	AutoDestroyCron string `json:"autoDestroyCron" gorm:"default:''"` // 自动销毁任务的Cron表达式
