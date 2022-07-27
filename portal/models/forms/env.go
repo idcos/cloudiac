@@ -59,6 +59,9 @@ type CreateEnvForm struct {
 	PolicyGroup  []models.Id `json:"policyGroup" form:"policyGroup" binding:"omitempty,dive,required,startswith=pog-,max=32"` // 绑定策略组集合
 
 	Source string `json:"source" form:"source" binding:"required"` // 调用来源
+
+	AutoDeployCron  string `json:"autoDeployCron" form:"autoDeployCron"`   // 自动部署任务的Cron表达式
+	AutoDestroyCron string `json:"autoDestroyCron" form:"autoDestroyCron"` // 自动销毁任务的Cron表达式
 }
 
 type SampleVariables struct {
@@ -101,6 +104,9 @@ type UpdateEnvForm struct {
 
 	PolicyEnable bool        `json:"policyEnable" form:"policyEnable"`                                                        // 是否开启合规检测
 	PolicyGroup  []models.Id `json:"policyGroup" form:"policyGroup" binding:"omitempty,dive,required,startswith=pog-,max=32"` // 绑定策略组集合
+
+	AutoDeployCron  string `json:"autoDeployCron" form:"autoDeployCron"`   // 自动部署任务的Cron表达式
+	AutoDestroyCron string `json:"autoDestroyCron" form:"autoDestroyCron"` // 自动销毁任务的Cron表达式
 }
 
 type DeployEnvForm struct {
@@ -146,6 +152,9 @@ type DeployEnvForm struct {
 	PolicyGroup  []models.Id `json:"policyGroup" form:"policyGroup" binding:"omitempty,dive,required,startswith=pog-,max=32"` // 绑定策略组集合
 
 	Source string `json:"source" form:"source" binding:"required"` // 调用来源
+
+	AutoDeployCron  string `json:"autoDeployCron" form:"autoDeployCron"`   // 自动部署任务的Cron表达式
+	AutoDestroyCron string `json:"autoDestroyCron" form:"autoDestroyCron"` // 自动销毁任务的Cron表达式
 }
 
 type ArchiveEnvForm struct {
