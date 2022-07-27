@@ -782,6 +782,8 @@ func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs mod
 		if err := setAndCheckUpdateEnvDestroy(tx, attrs, env, form); err != nil {
 			return err
 		}
+
+		// TODO: setAndCheckUpdateEnvDeploy
 	}
 
 	if err := setAndCheckUpdateEnvTriggers(c, tx, attrs, env, form); err != nil {
@@ -1150,32 +1152,51 @@ func setAndCheckEnvAutoApproval(c *ctx.ServiceContext, env *models.Env, form *fo
 }
 
 func setAndCheckEnvAutoDeploy(tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error {
-	if !form.HasKey("destroyAt") && !form.HasKey("ttl") {
+	if !form.HasKey("deployAt") && !form.HasKey("deployTtl") && !form.HasKey("autoDeployCron") {
 		return nil
 	}
 
-	if form.HasKey("destroyAt") {
-		destroyAt, err := models.Time{}.Parse(form.DestroyAt)
+	if form.HasKey("deployAt") {
+		deployAt, err := models.Time{}.Parse(form.DeployAt)
 		if err != nil {
 			return e.New(e.BadParam, http.StatusBadRequest, err)
 		}
-		env.AutoDestroyAt = &destroyAt
-		// 直接传入了销毁时间，需要同步清空 ttl
-		env.TTL = ""
-	} else if form.HasKey("ttl") {
-		ttl, err := services.ParseTTL(form.TTL)
+		env.AutoDeployAt = &deployAt
+		// 直接传入了部署时间，需要同步清空 ttl
+		env.AutoDeployTTL = ""
+		env.AutoDeployCron = ""
+	} else if form.HasKey("deployTtl") {
+		ttl, err := services.ParseTTL(form.DeployTTL)
 		if err != nil {
 			return e.New(e.BadParam, http.StatusBadRequest, err)
 		}
 
-		env.TTL = form.TTL
+		env.AutoDeployTTL = form.DeployTTL
 
 		if ttl == 0 { // ttl 传入 0 表示清空自动销毁时间
-			env.AutoDestroyAt = nil
+			env.AutoDeployAt = nil
 		} else if env.Status != models.EnvStatusDestroyed && env.Status != models.EnvStatusInactive {
 			// 活跃环境同步修改 destroyAt
 			at := models.Time(time.Now().Add(ttl))
-			env.AutoDestroyAt = &at
+			env.AutoDeployAt = &at
+		}
+
+		env.AutoDeployCron = ""
+	} else if form.HasKey("autoDeployCron") {
+		env.AutoDeployTTL = ""
+		env.AutoDeployCron = form.AutoDeployCron
+
+		if env.AutoDeployCron == "" {
+			env.AutoDeployAt = nil
+		} else if env.Status != models.EnvStatusDestroyed && env.Status != models.EnvStatusInactive {
+			// 活跃环境同步修改 deployAt
+			at, err := GetNextCronTime(env.AutoDeployCron)
+			if err != nil {
+				return err
+			}
+
+			mt := models.Time(*at)
+			env.AutoDeployAt = &mt
 		}
 	}
 
@@ -1183,7 +1204,7 @@ func setAndCheckEnvAutoDeploy(tx *db.Session, env *models.Env, form *forms.Deplo
 }
 
 func setAndCheckEnvAutoDestroy(tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error {
-	if !form.HasKey("destroyAt") && !form.HasKey("ttl") {
+	if !form.HasKey("destroyAt") && !form.HasKey("ttl") && !form.HasKey("autoDestroyCron") {
 		return nil
 	}
 
@@ -1195,6 +1216,7 @@ func setAndCheckEnvAutoDestroy(tx *db.Session, env *models.Env, form *forms.Depl
 		env.AutoDestroyAt = &destroyAt
 		// 直接传入了销毁时间，需要同步清空 ttl
 		env.TTL = ""
+		env.AutoDestroyCron = ""
 	} else if form.HasKey("ttl") {
 		ttl, err := services.ParseTTL(form.TTL)
 		if err != nil {
@@ -1209,6 +1231,23 @@ func setAndCheckEnvAutoDestroy(tx *db.Session, env *models.Env, form *forms.Depl
 			// 活跃环境同步修改 destroyAt
 			at := models.Time(time.Now().Add(ttl))
 			env.AutoDestroyAt = &at
+		}
+		env.AutoDestroyCron = ""
+	} else if form.HasKey("autoDestroyCron") {
+		env.TTL = ""
+		env.AutoDestroyCron = form.AutoDestroyCron
+
+		if env.AutoDestroyCron == "" {
+			env.AutoDestroyAt = nil
+		} else if env.Status != models.EnvStatusDestroyed && env.Status != models.EnvStatusInactive {
+			// 活跃环境同步修改 destroyAt
+			at, err := GetNextCronTime(env.AutoDestroyCron)
+			if err != nil {
+				return err
+			}
+
+			mt := models.Time(*at)
+			env.AutoDestroyAt = &mt
 		}
 	}
 
@@ -1248,15 +1287,8 @@ func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env
 		if err := setAndCheckEnvAutoDestroy(tx, env, form); err != nil {
 			return err
 		}
-
-		// auto deploy cron
-		if form.HasKey("autoDeployCron") {
-			env.AutoDeployCron = form.AutoDeployCron
-		}
-
-		// auto destroy cron
-		if form.HasKey("autoDestroyCron") {
-			env.AutoDestroyCron = form.AutoDestroyCron
+		if err := setAndCheckEnvAutoDeploy(tx, env, form); err != nil {
+			return err
 		}
 	}
 
