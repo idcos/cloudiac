@@ -151,6 +151,9 @@ func (m *TaskManager) start() {
 		if err := m.processAutoDestroy(); err != nil {
 			m.logger.Errorf("process auto destroy error: %v", err)
 		}
+		if err := m.processAutoDeploy(); err != nil {
+			m.logger.Errorf("process auto deploy error: %v", err)
+		}
 
 		m.processPendingTask(ctx)
 		// 执行所有偏移检测任务
@@ -1069,7 +1072,7 @@ func (m *TaskManager) processAutoDestroy() error {
 	err := dbSess.Model(&models.Env{}).
 		Where("status IN (?)", []string{models.EnvStatusActive, models.EnvStatusFailed}).
 		Where("locked = ?", false).
-		Where("auto_destroy_task_id = ''").
+		Where("task_status NOT IN (?)", models.EnvTaskStatus).
 		Where("auto_destroy_at <= ?", time.Now()).
 		Order("auto_destroy_at").Limit(limit).Find(&destroyEnvs)
 
@@ -1097,9 +1100,24 @@ func (m *TaskManager) processAutoDestroy() error {
 				return nil
 			}
 
+			// 计算是否有下一次的自动销毁
+			var nextDestroyAt *models.Time = nil
+			if env.AutoDestroyCron != "" {
+				nextTime, err := apps.GetNextCronTime(env.AutoDestroyCron)
+				if err != nil {
+					_ = tx.Rollback()
+					logger.Errorf("计算下一次的自动销毁: %v", err)
+					// 创建任务失败继续处理其他任务
+					return nil
+				}
+
+				mt := models.Time(*nextTime)
+				nextDestroyAt = &mt
+			}
+
 			if _, err := tx.Model(&models.Env{}).
 				Where("id = ?", env.Id). //nolint
-				Update(&models.Env{AutoDestroyTaskId: task.Id}); err != nil {
+				Update(&models.Env{AutoDestroyTaskId: task.Id, AutoDestroyAt: nextDestroyAt}); err != nil {
 				_ = tx.Rollback()
 				logger.Errorf("update env error: %v", err)
 				return nil
@@ -1111,6 +1129,90 @@ func (m *TaskManager) processAutoDestroy() error {
 			}
 
 			logger.Infof("created auto destory task: %s", task.Id)
+			return nil
+		}()
+
+		if err != nil {
+			break
+		}
+	}
+
+	return nil
+}
+
+func (m *TaskManager) processAutoDeploy() error {
+	logger := m.logger.WithField("func", "processAutoDeploy")
+
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Errorf("panic: %v", r)
+			logger.Debugf("%s", debug.Stack())
+		}
+	}()
+
+	dbSess := m.db
+	limit := 64
+	deployEnvs := make([]*models.Env, 0, limit)
+	err := dbSess.Model(&models.Env{}).
+		Where("status IN (?)", []string{models.EnvStatusInactive, models.EnvStatusFailed, models.EnvStatusDestroyed}).
+		Where("locked = ?", false).
+		Where("task_status NOT IN (?)", models.EnvTaskStatus).
+		Where("auto_deploy_at <= ?", time.Now()).
+		Order("auto_deploy_at").Limit(limit).Find(&deployEnvs)
+
+	if err != nil {
+		return errors.Wrapf(err, "query auto deploy task")
+	}
+
+	for _, env := range deployEnvs {
+		err = func() error {
+			logger := logger.WithField("envId", env.Id)
+
+			tx := dbSess.Begin()
+			defer func() {
+				if r := recover(); r != nil {
+					_ = tx.Rollback()
+					panic(r)
+				}
+			}()
+
+			task, err := services.CreateAutoDeployTask(tx, env)
+			if err != nil {
+				_ = tx.Rollback()
+				logger.Errorf("create auto deploy task: %v", err)
+				// 创建任务失败继续处理其他任务
+				return nil
+			}
+
+			// 计算是否有下一次的自动部署
+			var nextDeployAt *models.Time = nil
+			if env.AutoDeployCron != "" {
+				nextTime, err := apps.GetNextCronTime(env.AutoDeployCron)
+				if err != nil {
+					_ = tx.Rollback()
+					logger.Errorf("计算下一次的自动部署: %v", err)
+					// 创建任务失败继续处理其他任务
+					return nil
+				}
+
+				mt := models.Time(*nextTime)
+				nextDeployAt = &mt
+			}
+
+			if _, err := tx.Model(&models.Env{}).
+				Where("id = ?", env.Id). //nolint
+				Update(&models.Env{AutoDestroyTaskId: task.Id, AutoDeployAt: nextDeployAt}); err != nil {
+				_ = tx.Rollback()
+				logger.Errorf("update env error: %v", err)
+				return nil
+			}
+
+			if err := tx.Commit(); err != nil {
+				logger.Errorf("commit error: %v", err)
+				return err
+			}
+
+			logger.Infof("created auto deploy task: %s", task.Id)
 			return nil
 		}()
 

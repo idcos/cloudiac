@@ -104,7 +104,7 @@ func GetCronDriftParam(form forms.CronDriftForm) (*CronDriftParam, e.Error) {
 
 func GetNextCronTime(cronExpress string) (*time.Time, e.Error) {
 	if cronExpress == "" {
-		return nil, nil
+		return nil, e.New(e.BadParam, "cron 表达式为空")
 	}
 
 	return ParseCronpress(cronExpress)
