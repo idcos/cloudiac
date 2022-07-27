@@ -14,7 +14,7 @@ type envDestroyTtlForm struct {
 
 type envDeployTtlForm struct {
 	DeployTTL string `form:"deployTtl" json:"deployTtl" binding:"omitempty,oneof=0 12h 1d 3d 1w 15d 30d" enums:"0,12h,1d,3d,1w,15d,30d"` // 存活时间
-	DeployAt  string `form:"deployAt" json:"deployAt" binding:""`                                                                        // 自动销毁时间(时间戳)
+	DeployAt  string `form:"deployAt" json:"deployAt" binding:""`                                                                        // 自动部署时间(时间戳)
 }
 
 type CreateEnvForm struct {
