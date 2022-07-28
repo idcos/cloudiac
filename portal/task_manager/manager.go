@@ -1086,7 +1086,7 @@ func (m *TaskManager) processAutoDestroy() error {
 		return errors.Wrapf(err, "query destroy task")
 	}
 
-	for _, env := range destroyEnvs {
+	for _, env := range destroyEnvs { //nolint:dupl
 		err = func() error {
 			logger := logger.WithField("envId", env.Id)
 
@@ -1155,7 +1155,7 @@ func (m *TaskManager) processAutoDeploy() error {
 		return errors.Wrapf(err, "query auto deploy task")
 	}
 
-	for _, env := range deployEnvs {
+	for _, env := range deployEnvs { //nolint:dupl
 		err = func() error {
 			logger := logger.WithField("envId", env.Id)
 

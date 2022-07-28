@@ -1224,7 +1224,7 @@ func setAndCheckEnvAutoApproval(c *ctx.ServiceContext, env *models.Env, form *fo
 	return nil
 }
 
-func setAndCheckEnvAutoDeploy(tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error {
+func setAndCheckEnvAutoDeploy(tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error { //nolint:dupl
 	if !form.HasKey("deployAt") && !form.HasKey("deployTtl") && !form.HasKey("autoDeployCron") {
 		return nil
 	}
@@ -1276,7 +1276,7 @@ func setAndCheckEnvAutoDeploy(tx *db.Session, env *models.Env, form *forms.Deplo
 	return nil
 }
 
-func setAndCheckEnvAutoDestroy(tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error {
+func setAndCheckEnvAutoDestroy(tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error { //nolint:dupl
 	if !form.HasKey("destroyAt") && !form.HasKey("ttl") && !form.HasKey("autoDestroyCron") {
 		return nil
 	}
