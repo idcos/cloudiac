@@ -29,6 +29,7 @@ import (
 
 	"github.com/acarl005/stripansi"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -1086,43 +1087,8 @@ func (m *TaskManager) processAutoDestroy() error {
 		return errors.Wrapf(err, "query destroy task")
 	}
 
-	for _, env := range destroyEnvs { //nolint:dupl
-		err = func() error {
-			logger := logger.WithField("envId", env.Id)
-
-			tx := dbSess.Begin()
-			defer func() {
-				if r := recover(); r != nil {
-					_ = tx.Rollback()
-					panic(r)
-				}
-			}()
-
-			task, err := services.CreateAutoDestroyTask(tx, env)
-			if err != nil {
-				_ = tx.Rollback()
-				logger.Errorf("create auto destroy task: %v", err)
-				// 创建任务失败继续处理其他任务
-				return nil
-			}
-
-			if _, err := tx.Model(&models.Env{}).
-				Where("id = ?", env.Id). //nolint
-				Update(&models.Env{AutoDestroyTaskId: task.Id}); err != nil {
-				_ = tx.Rollback()
-				logger.Errorf("update env error: %v", err)
-				return nil
-			}
-
-			if err := tx.Commit(); err != nil {
-				logger.Errorf("commit error: %v", err)
-				return err
-			}
-
-			logger.Infof("created auto destory task: %s", task.Id)
-			return nil
-		}()
-
+	for _, env := range destroyEnvs {
+		err = deployOrDestroy(env, logger, dbSess, "destroy")
 		if err != nil {
 			break
 		}
@@ -1155,48 +1121,68 @@ func (m *TaskManager) processAutoDeploy() error {
 		return errors.Wrapf(err, "query auto deploy task")
 	}
 
-	for _, env := range deployEnvs { //nolint:dupl
-		err = func() error {
-			logger := logger.WithField("envId", env.Id)
-
-			tx := dbSess.Begin()
-			defer func() {
-				if r := recover(); r != nil {
-					_ = tx.Rollback()
-					panic(r)
-				}
-			}()
-
-			task, err := services.CreateAutoDeployTask(tx, env)
-			if err != nil {
-				_ = tx.Rollback()
-				logger.Errorf("create auto deploy task: %v", err)
-				// 创建任务失败继续处理其他任务
-				return nil
-			}
-
-			if _, err := tx.Model(&models.Env{}).
-				Where("id = ?", env.Id). //nolint
-				Update(&models.Env{AutoDestroyTaskId: task.Id}); err != nil {
-				_ = tx.Rollback()
-				logger.Errorf("update env error: %v", err)
-				return nil
-			}
-
-			if err := tx.Commit(); err != nil {
-				logger.Errorf("commit error: %v", err)
-				return err
-			}
-
-			logger.Infof("created auto deploy task: %s", task.Id)
-			return nil
-		}()
-
+	for _, env := range deployEnvs {
+		err = deployOrDestroy(env, logger, dbSess, "deploy")
 		if err != nil {
 			break
 		}
 	}
 
+	return nil
+}
+
+func deployOrDestroy(env *models.Env, lg *logrus.Entry, dbSess *db.Session, op string) error {
+	const (
+		OpDeploy  = "deploy"
+		OpDestroy = "destroy"
+	)
+	logger := lg.WithField("envId", env.Id)
+
+	tx := dbSess.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			_ = tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	var task *models.Task
+	var er e.Error
+	if op == OpDeploy {
+		task, er = services.CreateAutoDeployTask(tx, env)
+	} else if op == OpDestroy {
+		task, er = services.CreateAutoDestroyTask(tx, env)
+	} else {
+		return nil
+	}
+
+	if er != nil {
+		_ = tx.Rollback()
+		logger.Errorf("create auto %s task: %v", op, er)
+		// 创建任务失败继续处理其他任务
+		return nil
+	}
+
+	var err error
+	query := tx.Model(&models.Env{}).Where("id = ?", env.Id)
+	if op == OpDeploy {
+		_, err = query.Update(&models.Env{AutoDeployTaskId: task.Id})
+	} else if op == OpDestroy {
+		_, err = query.Update(&models.Env{AutoDestroyTaskId: task.Id})
+	}
+
+	if err != nil {
+		_ = tx.Rollback()
+		logger.Errorf("update env error: %v", err)
+		return nil
+	}
+
+	if err := tx.Commit(); err != nil {
+		logger.Errorf("commit error: %v", err)
+		return err
+	}
+
+	logger.Infof("created auto %s task: %s", op, task.Id)
 	return nil
 }
 
