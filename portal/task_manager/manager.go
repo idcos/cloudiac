@@ -760,9 +760,15 @@ func (m *TaskManager) processTaskDone(taskId models.Id) { //nolint:cyclop
 		// 注意：环境的 lastResTaskId 必须在资源漂移信息统计后执行
 		if err = services.UpdateEnvModel(dbSess, task.EnvId, models.Env{LastResTaskId: task.Id}); err != nil {
 			logger.Errorf("update env lastResTaskId: %v", err)
-		} else if err := taskDoneProcessAutoDestroy(dbSess, task); err != nil {
-			// 注意: 该步骤需要在环境状态被更新之后执行
-			logger.Errorf("process auto destroy: %v", err)
+		} else {
+			if err := taskDoneProcessAutoDestroy(dbSess, task); err != nil {
+				// 注意: 该步骤需要在环境状态被更新之后执行
+				logger.Errorf("process auto destroy: %v", err)
+			}
+			if err := taskDoneProcessAutoDeploy(dbSess, task); err != nil {
+				// 注意: 该步骤需要在环境状态被更新之后执行
+				logger.Errorf("process auto destroy: %v", err)
+			}
 		}
 	}
 }
@@ -1100,24 +1106,9 @@ func (m *TaskManager) processAutoDestroy() error {
 				return nil
 			}
 
-			// 计算是否有下一次的自动销毁
-			var nextDestroyAt *models.Time = nil
-			if env.AutoDestroyCron != "" {
-				nextTime, err := apps.GetNextCronTime(env.AutoDestroyCron)
-				if err != nil {
-					_ = tx.Rollback()
-					logger.Errorf("计算下一次的自动销毁: %v", err)
-					// 创建任务失败继续处理其他任务
-					return nil
-				}
-
-				mt := models.Time(*nextTime)
-				nextDestroyAt = &mt
-			}
-
 			if _, err := tx.Model(&models.Env{}).
 				Where("id = ?", env.Id). //nolint
-				Update(&models.Env{AutoDestroyTaskId: task.Id, AutoDestroyAt: nextDestroyAt}); err != nil {
+				Update(&models.Env{AutoDestroyTaskId: task.Id}); err != nil {
 				_ = tx.Rollback()
 				logger.Errorf("update env error: %v", err)
 				return nil
@@ -1184,24 +1175,9 @@ func (m *TaskManager) processAutoDeploy() error {
 				return nil
 			}
 
-			// 计算是否有下一次的自动部署
-			var nextDeployAt *models.Time = nil
-			if env.AutoDeployCron != "" {
-				nextTime, err := apps.GetNextCronTime(env.AutoDeployCron)
-				if err != nil {
-					_ = tx.Rollback()
-					logger.Errorf("计算下一次的自动部署: %v", err)
-					// 创建任务失败继续处理其他任务
-					return nil
-				}
-
-				mt := models.Time(*nextTime)
-				nextDeployAt = &mt
-			}
-
 			if _, err := tx.Model(&models.Env{}).
 				Where("id = ?", env.Id). //nolint
-				Update(&models.Env{AutoDestroyTaskId: task.Id, AutoDeployAt: nextDeployAt}); err != nil {
+				Update(&models.Env{AutoDestroyTaskId: task.Id}); err != nil {
 				_ = tx.Rollback()
 				logger.Errorf("update env error: %v", err)
 				return nil
