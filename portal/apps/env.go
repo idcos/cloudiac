@@ -186,6 +186,15 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 		if err != nil {
 			return e.New(e.BadParam, http.StatusBadRequest, err)
 		}
+	} else if form.AutoDestroyCron != "" {
+		// 活跃环境同步修改 destroyAt
+		at, err := GetNextCronTime(form.AutoDestroyCron)
+		if err != nil {
+			return err
+		}
+
+		mt := models.Time(*at)
+		destroyAt = &mt
 	}
 
 	if form.DeployAt != "" {
@@ -199,6 +208,15 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 		if err != nil {
 			return e.New(e.BadParam, http.StatusBadRequest, err)
 		}
+	} else if form.AutoDeployCron != "" {
+		// 活跃环境同步修改 deployAt
+		at, err := GetNextCronTime(form.AutoDeployCron)
+		if err != nil {
+			return err
+		}
+
+		mt := models.Time(*at)
+		deployAt = &mt
 	}
 
 	return nil
@@ -737,11 +755,13 @@ func setAndCheckUpdateEnvDeploy(tx *db.Session, attrs models.Attrs, env *models.
 			attrs["auto_deploy_at"] = &at
 		}
 		attrs["auto_deploy_cron"] = ""
-	} else if form.HasKey("ployCron") {
+	}
+	if form.HasKey("autoDeployCron") {
 		attrs["auto_deploy_ttl"] = ""
+		attrs["auto_deploy_at"] = nil
 		attrs["auto_deploy_cron"] = form.AutoDeployCron
 
-		if form.AutoDeployCron != "" && env.Status != models.EnvStatusActive {
+		if form.AutoDeployCron != "" {
 			// 活跃环境同步修改 deployAt
 			at, err := GetNextCronTime(form.AutoDeployCron)
 			if err != nil {
@@ -786,11 +806,14 @@ func setAndCheckUpdateEnvDestroy(tx *db.Session, attrs models.Attrs, env *models
 			attrs["auto_destroy_at"] = &at
 		}
 		attrs["auto_destroy_cron"] = ""
-	} else if form.HasKey("autoDestroyCron") {
+	}
+
+	if form.HasKey("autoDestroyCron") {
 		attrs["ttl"] = ""
+		attrs["auto_destroy_at"] = nil
 		attrs["auto_destroy_cron"] = form.AutoDestroyCron
 
-		if form.AutoDestroyCron != "" && env.Status != models.EnvStatusDestroyed && env.Status != models.EnvStatusInactive {
+		if form.AutoDestroyCron != "" {
 			// 活跃环境同步修改 destroyAt
 			at, err := GetNextCronTime(form.AutoDestroyCron)
 			if err != nil {
@@ -932,23 +955,6 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	attrs["openCronDrift"] = cronDriftParam.OpenCronDrift
 	attrs["cronDriftExpress"] = cronDriftParam.CronDriftExpress
 	attrs["nextDriftTaskTime"] = cronDriftParam.NextDriftTaskTime
-	// 检查 自动部署/自动销毁 是否需要更新
-	if form.HasKey("autoDeployCron") && form.AutoDeployCron != env.AutoDeployCron {
-		attrs["autoDeployCron"] = form.AutoDeployCron
-		nextCronTime, err := GetNextCronTime(form.AutoDeployCron)
-		if err != nil {
-			return nil, err
-		}
-		attrs["autoDeployAt"] = nextCronTime
-	}
-	if form.HasKey("autoDestroyCron") && form.AutoDestroyCron != env.AutoDestroyCron {
-		attrs["autoDestroyCron"] = form.AutoDestroyCron
-		nextCronTime, err := GetNextCronTime(form.AutoDestroyCron)
-		if err != nil {
-			return nil, err
-		}
-		attrs["autoDestroyAt"] = nextCronTime
-	}
 
 	setUpdateEnvByForm(attrs, form)
 	err = setAndCheckUpdateEnvByForm(c, tx, attrs, env, form)
@@ -1249,13 +1255,13 @@ func setAndCheckEnvAutoDeploy(tx *db.Session, env *models.Env, form *forms.Deplo
 		}
 
 		env.AutoDeployCron = ""
-	} else if form.HasKey("autoDeployCron") {
+	}
+	if form.HasKey("autoDeployCron") {
 		env.AutoDeployTTL = ""
+		env.AutoDeployAt = nil
 		env.AutoDeployCron = form.AutoDeployCron
 
-		if env.AutoDeployCron == "" {
-			env.AutoDeployAt = nil
-		} else if env.Status != models.EnvStatusActive {
+		if env.AutoDeployCron != "" {
 			// 非活跃环境同步修改 deployAt
 			at, err := GetNextCronTime(env.AutoDeployCron)
 			if err != nil {
@@ -1300,13 +1306,13 @@ func setAndCheckEnvAutoDestroy(tx *db.Session, env *models.Env, form *forms.Depl
 			env.AutoDestroyAt = &at
 		}
 		env.AutoDestroyCron = ""
-	} else if form.HasKey("autoDestroyCron") {
+	}
+	if form.HasKey("autoDestroyCron") {
 		env.TTL = ""
+		env.AutoDestroyAt = nil
 		env.AutoDestroyCron = form.AutoDestroyCron
 
-		if env.AutoDestroyCron == "" {
-			env.AutoDestroyAt = nil
-		} else if env.Status != models.EnvStatusDestroyed && env.Status != models.EnvStatusInactive {
+		if env.AutoDestroyCron != "" {
 			// 活跃环境同步修改 destroyAt
 			at, err := GetNextCronTime(env.AutoDestroyCron)
 			if err != nil {
