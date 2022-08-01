@@ -203,11 +203,6 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 		if err != nil {
 			return e.New(e.BadParam, http.StatusBadRequest, err)
 		}
-	} else if form.DeployTTL != "" {
-		_, err := services.ParseTTL(form.DeployTTL) // 检查 ttl 格式
-		if err != nil {
-			return e.New(e.BadParam, http.StatusBadRequest, err)
-		}
 	} else if form.AutoDeployCron != "" {
 		// 活跃环境同步修改 deployAt
 		at, err := GetNextCronTime(form.AutoDeployCron)
@@ -435,7 +430,6 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		OpenCronDrift:    form.OpenCronDrift,
 		PolicyEnable:     form.PolicyEnable,
 
-		AutoDeployTTL:   form.DeployTTL,
 		AutoDeployAt:    &deployAt,
 		AutoDeployCron:  form.AutoDeployCron,
 		AutoDestroyCron: form.AutoDestroyCron,
@@ -725,7 +719,7 @@ func setAndCheckUpdateEnvAutoApproval(c *ctx.ServiceContext, tx *db.Session, att
 }
 
 func setAndCheckUpdateEnvDeploy(tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error {
-	if !form.HasKey("deployAt") && !form.HasKey("deployTtl") && !form.HasKey("autoDeployCron") {
+	if !form.HasKey("deployAt") && !form.HasKey("autoDeployCron") {
 		return nil
 	}
 
@@ -736,28 +730,9 @@ func setAndCheckUpdateEnvDeploy(tx *db.Session, attrs models.Attrs, env *models.
 			return e.New(e.BadParam, http.StatusBadRequest, err)
 		}
 		attrs["auto_deploy_at"] = &deployAt
-		attrs["auto_deploy_ttl"] = "" // 直接传入了销毁时间，需要同步清空 ttl
-		attrs["auto_deploy_cron"] = ""
-	} else if form.HasKey("deployTtl") {
-		deployTtl, err := services.ParseTTL(form.DeployTTL)
-		if err != nil {
-			_ = tx.Rollback()
-			return e.New(e.BadParam, http.StatusBadRequest, err)
-		}
-
-		attrs["auto_deploy_ttl"] = form.DeployTTL
-		if deployTtl == 0 {
-			// ttl 传 0 表示重置销毁时间
-			attrs["auto_deploy_at"] = nil
-		} else if env.Status != models.EnvStatusActive {
-			// 活跃环境同步修改 deployAt
-			at := models.Time(time.Now().Add(deployTtl))
-			attrs["auto_deploy_at"] = &at
-		}
 		attrs["auto_deploy_cron"] = ""
 	}
 	if form.HasKey("autoDeployCron") {
-		attrs["auto_deploy_ttl"] = ""
 		attrs["auto_deploy_at"] = nil
 		attrs["auto_deploy_cron"] = form.AutoDeployCron
 
@@ -1225,7 +1200,7 @@ func setAndCheckEnvAutoApproval(c *ctx.ServiceContext, env *models.Env, form *fo
 }
 
 func setAndCheckEnvAutoDeploy(tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error { //nolint:dupl
-	if !form.HasKey("deployAt") && !form.HasKey("deployTtl") && !form.HasKey("autoDeployCron") {
+	if !form.HasKey("deployAt") && !form.HasKey("autoDeployCron") {
 		return nil
 	}
 
@@ -1236,28 +1211,9 @@ func setAndCheckEnvAutoDeploy(tx *db.Session, env *models.Env, form *forms.Deplo
 		}
 		env.AutoDeployAt = &deployAt
 		// 直接传入了部署时间，需要同步清空 ttl
-		env.AutoDeployTTL = ""
-		env.AutoDeployCron = ""
-	} else if form.HasKey("deployTtl") {
-		ttl, err := services.ParseTTL(form.DeployTTL)
-		if err != nil {
-			return e.New(e.BadParam, http.StatusBadRequest, err)
-		}
-
-		env.AutoDeployTTL = form.DeployTTL
-
-		if ttl == 0 { // ttl 传入 0 表示清空自动销毁时间
-			env.AutoDeployAt = nil
-		} else if env.Status != models.EnvStatusDestroyed && env.Status != models.EnvStatusInactive {
-			// 活跃环境同步修改 destroyAt
-			at := models.Time(time.Now().Add(ttl))
-			env.AutoDeployAt = &at
-		}
-
 		env.AutoDeployCron = ""
 	}
 	if form.HasKey("autoDeployCron") {
-		env.AutoDeployTTL = ""
 		env.AutoDeployAt = nil
 		env.AutoDeployCron = form.AutoDeployCron
 

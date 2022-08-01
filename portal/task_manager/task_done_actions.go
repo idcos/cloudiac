@@ -248,15 +248,6 @@ func taskDoneProcessAutoDeploy(dbSess *db.Session, task *models.Task) error {
 	if task.Type == models.TaskTypeDestroy && (env.Status == models.EnvStatusFailed || env.Status == models.EnvStatusInactive || env.Status == models.EnvStatusDestroyed) &&
 		env.AutoDeployAt == nil {
 
-		if env.AutoDeployTTL != "" && env.AutoDeployTTL != "0" {
-			ttl, err := services.ParseTTL(env.AutoDeployTTL)
-			if err != nil {
-				return err
-			}
-			at := models.Time(time.Now().Add(ttl))
-			updateAttrs["AutoDeployAt"] = &at
-		}
-
 		// 计算是否有cron下一次的自动销毁
 		if env.AutoDeployCron != "" {
 			nextTime, err := apps.GetNextCronTime(env.AutoDeployCron)
