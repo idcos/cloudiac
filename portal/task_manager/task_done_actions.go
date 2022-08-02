@@ -5,6 +5,7 @@ package task_manager
 import (
 	"cloudiac/common"
 	"cloudiac/policy"
+	"cloudiac/portal/apps"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
@@ -227,6 +228,47 @@ func taskDoneProcessDriftTask(logger logs.Logger, dbSess *db.Session, task *mode
 	return nil
 }
 
+func taskDoneProcessAutoDeploy(dbSess *db.Session, task *models.Task) error {
+	env, err := services.GetEnv(dbSess, task.EnvId)
+	if err != nil {
+		return errors.Wrapf(err, "get env '%s'", task.EnvId)
+	}
+
+	updateAttrs := models.Attrs{}
+
+	if task.Type == models.TaskTypeApply && env.Status == models.EnvStatusActive {
+		// 环境部署后清空自动部署设置，以支持通过再次部署重建环境。
+		// ttl 需要保留，做为重建环境的默认 ttl
+		updateAttrs["AutoDeployAt"] = nil
+		updateAttrs["AutoDeployTaskId"] = ""
+	}
+
+	// 如果设置了环境的 ttl或者cron，则在部署销毁后自动根据 ttl/cron 设置部署时间。
+	// 该逻辑只在环境从活跃状态变为非活跃/销毁/失败时执行，环境修改 ttl/cron 会立即计算 AutoDeployAt
+	if task.Type == models.TaskTypeDestroy && (env.Status == models.EnvStatusFailed || env.Status == models.EnvStatusInactive || env.Status == models.EnvStatusDestroyed) &&
+		env.AutoDeployAt == nil {
+
+		// 计算是否有cron下一次的自动销毁
+		if env.AutoDeployCron != "" {
+			nextTime, err := apps.GetNextCronTime(env.AutoDeployCron)
+			if err != nil {
+				return err
+			}
+
+			at := models.Time(*nextTime)
+			updateAttrs["AutoDeployAt"] = &at
+		}
+
+	}
+
+	_, err = services.UpdateEnv(dbSess, env.Id, updateAttrs)
+	if err != nil {
+		return errors.Wrapf(err, "update environment")
+	}
+
+	return nil
+}
+
 func taskDoneProcessAutoDestroy(dbSess *db.Session, task *models.Task) error {
 	env, err := services.GetEnv(dbSess, task.EnvId)
 	if err != nil {
@@ -242,16 +284,30 @@ func taskDoneProcessAutoDestroy(dbSess *db.Session, task *models.Task) error {
 		updateAttrs["AutoDestroyTaskId"] = ""
 	}
 
-	// 如果设置了环境的 ttl，则在部署成功后自动根据 ttl 设置销毁时间。
-	// 该逻辑只在环境从非活跃状态变为活跃时执行，活跃环境修改 ttl 会立即计算 AutoDestroyAt
+	// 如果设置了环境的 ttl/cron，则在部署成功后自动根据 ttl/cron 设置销毁时间。
+	// 该逻辑只在环境从非活跃状态变为活跃时执行，活跃环境修改 ttl/cron 会立即计算 AutoDestroyAt
 	if task.Type == models.TaskTypeApply && env.Status == models.EnvStatusActive &&
-		env.AutoDestroyAt == nil && env.TTL != "" && env.TTL != "0" {
-		ttl, err := services.ParseTTL(env.TTL)
-		if err != nil {
-			return err
+		env.AutoDestroyAt == nil {
+		if env.TTL != "" && env.TTL != "0" {
+			ttl, err := services.ParseTTL(env.TTL)
+			if err != nil {
+				return err
+			}
+			at := models.Time(time.Now().Add(ttl))
+			updateAttrs["AutoDestroyAt"] = &at
 		}
-		at := models.Time(time.Now().Add(ttl))
-		updateAttrs["AutoDestroyAt"] = &at
+
+		// 计算是否有cron下一次的自动销毁
+		if env.AutoDestroyCron != "" {
+			nextTime, err := apps.GetNextCronTime(env.AutoDestroyCron)
+			if err != nil {
+				return err
+			}
+
+			at := models.Time(*nextTime)
+			updateAttrs["AutoDestroyAt"] = &at
+		}
+
 	}
 
 	_, err = services.UpdateEnv(dbSess, env.Id, updateAttrs)

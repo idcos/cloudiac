@@ -161,9 +161,11 @@ const (
 	TaskSourceWebhookPlan  = "webhookPlan"
 	TaskSourceWebhookApply = "webhookApply"
 	TaskSourceAutoDestroy  = "autoDestroy"
+	TaskSourceAutoDeploy   = "autoDeploy"
 	TaskSourceApi          = "api"
 
 	TaskAutoDestroyName = "Auto Destroy"
+	TaskAutoDeployName  = "Auto Deploy"
 
 	BillCollectAli = "alicloud"
 
