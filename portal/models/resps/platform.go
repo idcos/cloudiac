@@ -53,3 +53,13 @@ type OperationLogResp struct {
 	ActionName   string `json:"actionName"`
 	OrgName      string `json:"orgName"`
 }
+
+type PfTodayStatResp struct {
+	Name  string `json:"name"`
+	Count int64  `json:"count"`
+}
+
+type PfTodayResTypeStatResp struct {
+	ResType string `json:"resType"`
+	Count   int64  `json:"count"`
+}
