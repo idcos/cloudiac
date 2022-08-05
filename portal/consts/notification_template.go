@@ -309,6 +309,7 @@ const UserActiveMail = `
 </html>
 `
 
+//nolint:gosec
 const UserPasswordResetMail = `
 <html>
 <body style="background:#FFF;text-align:left;">

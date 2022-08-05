@@ -53,7 +53,7 @@ const (
 	AuthPasswordResetPath      = "/find-password/"
 
 	AuthRegisterActivationSubject = "欢迎注册 CloudIaC"
-	AuthPasswordResetSubject      = "CloudIaC 密码重置"
+	AuthPasswordResetSubject      = "CloudIaC 密码重置" //nolint:gosec
 )
 
 const (
@@ -161,9 +161,11 @@ const (
 	TaskSourceWebhookPlan  = "webhookPlan"
 	TaskSourceWebhookApply = "webhookApply"
 	TaskSourceAutoDestroy  = "autoDestroy"
+	TaskSourceAutoDeploy   = "autoDeploy"
 	TaskSourceApi          = "api"
 
 	TaskAutoDestroyName = "Auto Destroy"
+	TaskAutoDeployName  = "Auto Deploy"
 
 	BillCollectAli = "alicloud"
 

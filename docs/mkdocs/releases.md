@@ -1,6 +1,36 @@
 # Releases
 
 ------
+## v1.0.0 20220714
+**Enhancements**
+
+- 优化敏感变量展示，避免敏感信息泄露
+
+**Features**
+
+- 新增pipeline v0.5
+- 新增平台概览
+- 新增用户操作日志
+- 新增用户找回密码功能
+- 内置 terraform 增加 v1.1.9/v1.2.4 版本
+- 新增Stack创建来源（Exchange）
+
+**Fixes**
+
+- 修复邮件通知重复发送问题
+- 修复任务详情变量显示问题
+- 修复屏蔽策略失败的问题
+- 修复按策略屏蔽时数据查询异常问题
+- 修复云模板列表中的repo地址展示异常问题
+- 修复vcs分支/标签 默认只能返回20问题
+- 修复解析合规检测结果失败问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v1.0.0](https://github.com/idcos/cloudiac/releases/tag/v1.0.0)
+
+
+------
 ## v0.12.1 20220625
 **Fixes**
 
