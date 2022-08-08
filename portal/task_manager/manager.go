@@ -1079,6 +1079,7 @@ func (m *TaskManager) processAutoDestroy() error {
 	err := dbSess.Model(&models.Env{}).
 		Where("status IN (?)", []string{models.EnvStatusActive, models.EnvStatusFailed}).
 		Where("locked = ?", false).
+		Where("auto_destroy_task_id = ?", "").
 		Where("task_status NOT IN (?)", models.EnvTaskStatus).
 		Where("auto_destroy_at <= ?", time.Now()).
 		Order("auto_destroy_at").Limit(limit).Find(&destroyEnvs)
@@ -1113,6 +1114,7 @@ func (m *TaskManager) processAutoDeploy() error {
 	err := dbSess.Model(&models.Env{}).
 		Where("status IN (?)", []string{models.EnvStatusInactive, models.EnvStatusFailed, models.EnvStatusDestroyed}).
 		Where("locked = ?", false).
+		Where("auto_deploy_task_id = ?", "").
 		Where("task_status NOT IN (?)", models.EnvTaskStatus).
 		Where("auto_deploy_at <= ?", time.Now()).
 		Order("auto_deploy_at").Limit(limit).Find(&deployEnvs)
