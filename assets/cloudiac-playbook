@@ -1,22 +1,28 @@
 #!/bin/sh
 set -e
 
-export ANSIBLE_HOST_KEY_CHECKING="${ANSIBLE_HOST_KEY_CHECKING:-False}"
-export ANSIBLE_TF_DIR="${ANSIBLE_TF_DIR:-.}"
-export ANSIBLE_NOCOWS="${ANSIBLE_NOCOWS:-1}"
-
-export CLOUDIAC_WORKSPACE=${CLOUDIAC_WORKSPACE:-/cloudiac/workspace}
-export CLOUDIAC_TERRAFORM_PY=${CLOUDIAC_TERRAFORM_PY:-/cloudiac/assets/terraform.py}
-export CLOUDIAC_ANSIBLE_USER=${CLOUDIAC_ANSIBLE_USER:-root}
+export CLOUDIAC_WORKSPACE="${CLOUDIAC_WORKSPACE:-/cloudiac/workspace}"
+export CLOUDIAC_WORKDIR="${CLOUDIAC_WORKDIR}"
+export CLOUDIAC_TERRAFORM_PY="${CLOUDIAC_TERRAFORM_PY:-/cloudiac/assets/terraform.py}"
+export CLOUDIAC_ANSIBLE_USER="${CLOUDIAC_ANSIBLE_USER:-root}"
 
 COMMAND="ansible-playbook --user $CLOUDIAC_ANSIBLE_USER --inventory $CLOUDIAC_TERRAFORM_PY"
 
-test -f "$CLOUDIAC_WORKSPACE/_cloudiac_play_vars.yml" && COMMAND="$COMMAND --extra @$CLOUDIAC_WORKSPACE/_cloudiac_play_vars.yml"
-test -f "$CLOUDIAC_WORKSPACE/ssh_key" && COMMAND="$COMMAND --private-key $CLOUDIAC_WORKSPACE/ssh_key"
+test -e "$CLOUDIAC_WORKSPACE/_cloudiac_play_vars.yml" && COMMAND="$COMMAND --extra @$CLOUDIAC_WORKSPACE/_cloudiac_play_vars.yml"
+test -e "$CLOUDIAC_WORKSPACE/ssh_key" && COMMAND="$COMMAND --private-key $CLOUDIAC_WORKSPACE/ssh_key"
 
-test -f "${CLOUDIAC_WORKSPACE}/code" && cd "${CLOUDIAC_WORKSPACE}/code" || {
-  test -f "${CLOUDIAC_WORKSPACE}" && cd "${CLOUDIAC_WORKSPACE}"
-}
+if [[ -z "$ANSIBLE_TF_DIR" ]]; then
+  true
+  if test -e "${CLOUDIAC_WORKSPACE}/code/${CLOUDIAC_WORKDIR}"; then 
+    ANSIBLE_TF_DIR="${CLOUDIAC_WORKSPACE}/code/${CLOUDIAC_WORKDIR}"
+  elif test -e "${CLOUDIAC_WORKSPACE}"; then 
+    ANSIBLE_TF_DIR="${CLOUDIAC_WORKSPACE}"
+  else 
+    ANSIBLE_TF_DIR="."
+  fi
+fi
 
+export ANSIBLE_TF_DIR
+export ANSIBLE_NOCOWS="${ANSIBLE_NOCOWS:-1}"
+export ANSIBLE_HOST_KEY_CHECKING="${ANSIBLE_HOST_KEY_CHECKING:-False}"
 $COMMAND $@
-
