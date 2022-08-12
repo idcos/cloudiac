@@ -1,28 +1,39 @@
 #!/bin/sh
 set -e
 
-export CLOUDIAC_WORKSPACE="${CLOUDIAC_WORKSPACE:-/cloudiac/workspace}"
-export CLOUDIAC_WORKDIR="${CLOUDIAC_WORKDIR}"
-export CLOUDIAC_TERRAFORM_PY="${CLOUDIAC_TERRAFORM_PY:-/cloudiac/assets/terraform.py}"
-export CLOUDIAC_ANSIBLE_USER="${CLOUDIAC_ANSIBLE_USER:-root}"
+# 禁用 cowsay, https://ansible.readthedocs.io/en/stable/faq.html#how-do-i-disable-cowsay
+export ANSIBLE_NOCOWS="1" 
 
-COMMAND="ansible-playbook --user $CLOUDIAC_ANSIBLE_USER --inventory $CLOUDIAC_TERRAFORM_PY"
+export ANSIBLE_HOST_KEY_CHECKING="False"
 
-test -e "$CLOUDIAC_WORKSPACE/_cloudiac_play_vars.yml" && COMMAND="$COMMAND --extra @$CLOUDIAC_WORKSPACE/_cloudiac_play_vars.yml"
-test -e "$CLOUDIAC_WORKSPACE/ssh_key" && COMMAND="$COMMAND --private-key $CLOUDIAC_WORKSPACE/ssh_key"
+export CLOUDIAC_WORKSPACE=${CLOUDIAC_WORKSPACE:-.}
+# workdir 为云模板下的相对路径
+export CLOUDIAC_WORKDIR=${CLOUDIAC_WORKDIR}
+export CLOUDIAC_ANSIBLE_USER=${CLOUDIAC_ANSIBLE_USER}
+export CLOUDIAC_ANSIBLE_INVENTORY=${CLOUDIAC_ANSIBLE_INVENTORY}
+
+COMMAND="ansible-playbook"
+if [[ -n "$CLOUDIAC_ANSIBLE_USER" ]]; then
+  COMMAND="$COMMAND --user $CLOUDIAC_ANSIBLE_USER"
+fi
+if [[ -n "$CLOUDIAC_ANSIBLE_INVENTORY" ]]; then
+  COMMAND="$COMMAND --inventory $CLOUDIAC_ANSIBLE_INVENTORY"
+fi
+if [[ -e "$CLOUDIAC_WORKSPACE/ssh_key" ]]; then
+  COMMAND="$COMMAND --private-key $CLOUDIAC_WORKSPACE/ssh_key"
+fi
+if [[ -e "$CLOUDIAC_WORKSPACE/_cloudiac_play_vars.yml" ]]; then
+  COMMAND="$COMMAND --extra-vars @$CLOUDIAC_WORKSPACE/_cloudiac_play_vars.yml"
+fi
 
 if [[ -z "$ANSIBLE_TF_DIR" ]]; then
-  true
   if test -e "${CLOUDIAC_WORKSPACE}/code/${CLOUDIAC_WORKDIR}"; then 
     ANSIBLE_TF_DIR="${CLOUDIAC_WORKSPACE}/code/${CLOUDIAC_WORKDIR}"
-  elif test -e "${CLOUDIAC_WORKSPACE}"; then 
-    ANSIBLE_TF_DIR="${CLOUDIAC_WORKSPACE}"
   else 
     ANSIBLE_TF_DIR="."
   fi
 fi
 
+# 以下为 terraform.py 中会使用的变量
 export ANSIBLE_TF_DIR
-export ANSIBLE_NOCOWS="${ANSIBLE_NOCOWS:-1}"
-export ANSIBLE_HOST_KEY_CHECKING="${ANSIBLE_HOST_KEY_CHECKING:-False}"
-$COMMAND $@
+sh -c "$COMMAND $@"

@@ -21,6 +21,8 @@ provider plugin 的查找逻辑:
 // 以下定义的是 runner 启动任务后容器内部的路径，直接以常量配置即可
 const (
 	ContainerWorkspace = "/cloudiac/workspace"
+	// CodeDir 必须为 ContainerWorkspace 的子目录
+	ContainerCodeDir = "/cloudiac/workspace/code"
 
 	ContainerCertificateDir  = "/cloudiac/cert"                    // 挂载consul证书资源
 	ContainerAssetsDir       = "/cloudiac/assets"                  // 挂载依赖资源，如 terraform.py 等(己打包到 worker 镜像)
@@ -37,6 +39,7 @@ const (
 	TaskControlFileName       = "control.json"
 
 	TerraformrcFileName = "terraformrc"
+	EnvironmentFile     = "environment"
 
 	CloudIacTfFile   = "_cloudiac.tf"
 	CloudIacPlayVars = "_cloudiac_play_vars.yml"
