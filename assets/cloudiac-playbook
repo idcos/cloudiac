@@ -1,0 +1,22 @@
+#!/bin/sh
+set -e
+
+export ANSIBLE_HOST_KEY_CHECKING="False"
+export ANSIBLE_TF_DIR="."
+export ANSIBLE_NOCOWS="1"
+
+export CLOUDIAC_WORKSPACE=${CLOUDIAC_WORKSPACE:-/cloudiac/workspace}
+export CLOUDIAC_TERRAFORM_PY=${CLOUDIAC_TERRAFORM_PY:-/cloudiac/assets/terraform.py}
+export CLOUDIAC_ANSIBLE_USER=${CLOUDIAC_ANSIBLE_USER:-root}
+
+COMMAND="ansible-playbook --user $CLOUDIAC_ANSIBLE_USER --inventory $CLOUDIAC_TERRAFORM_PY"
+
+test -f "$CLOUDIAC_WORKSPACE/_cloudiac_play_vars.yml" && COMMAND="$COMMAND --extra @$CLOUDIAC_WORKSPACE/_cloudiac_play_vars.yml"
+test -f "$CLOUDIAC_WORKSPACE/ssh_key" && COMMAND="$COMMAND --private-key $CLOUDIAC_WORKSPACE/ssh_key"
+
+test -f "${CLOUDIAC_WORKSPACE}/code" && cd "${CLOUDIAC_WORKSPACE}/code" || {
+  test -f "${CLOUDIAC_WORKSPACE}" && cd "${CLOUDIAC_WORKSPACE}"
+}
+
+$COMMAND $@
+
