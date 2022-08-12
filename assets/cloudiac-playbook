@@ -1,9 +1,9 @@
 #!/bin/sh
 set -e
 
-export ANSIBLE_HOST_KEY_CHECKING="False"
-export ANSIBLE_TF_DIR="."
-export ANSIBLE_NOCOWS="1"
+export ANSIBLE_HOST_KEY_CHECKING="${ANSIBLE_HOST_KEY_CHECKING:-False}"
+export ANSIBLE_TF_DIR="${ANSIBLE_TF_DIR:-.}"
+export ANSIBLE_NOCOWS="${ANSIBLE_NOCOWS:-1}"
 
 export CLOUDIAC_WORKSPACE=${CLOUDIAC_WORKSPACE:-/cloudiac/workspace}
 export CLOUDIAC_TERRAFORM_PY=${CLOUDIAC_TERRAFORM_PY:-/cloudiac/assets/terraform.py}
