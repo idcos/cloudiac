@@ -36,4 +36,4 @@ fi
 
 # 以下为 terraform.py 中会使用的变量
 export ANSIBLE_TF_DIR
-sh -c "$COMMAND $@"
+sh -c "$COMMAND $*"
