@@ -831,10 +831,12 @@ func setAndCheckUpdateEnvTriggers(c *ctx.ServiceContext, tx *db.Session, attrs m
 }
 
 func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error {
-	if er := services.CheckEnvTags(form.Tags); er != nil {
-		return er
-	} else {
-		attrs["tags"] = strings.TrimSpace(form.Tags)
+	if form.HasKey("tags") {
+		if er := services.CheckEnvTags(form.Tags); er != nil {
+			return er
+		} else {
+			attrs["tags"] = strings.TrimSpace(form.Tags)
+		}
 	}
 
 	if !env.IsDemo { // 演示环境不允许修改自动审批和存活时间
