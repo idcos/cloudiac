@@ -662,8 +662,10 @@ export ANSIBLE_HOST_KEY_CHECKING="False"
 export ANSIBLE_TF_DIR="."
 export ANSIBLE_NOCOWS="1"
 
+
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 {{if .Before}}{{.Before}} && \{{- end}}
-cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && ansible-playbook \
+ansible-playbook \
 --inventory {{.AnsibleStateAnalysis}} \
 --user "root" \
 --private-key "{{.PrivateKeyPath}}" \
