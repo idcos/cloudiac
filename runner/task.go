@@ -561,8 +561,8 @@ func (t *Task) stepCheckout() (command string, err error) {
 }
 
 var initCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-{{if .Before}}{{.Before}} && \{{- end}}
 cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
+{{if .Before}}{{.Before}} && \{{- end}}
 tfenv install $TFENV_TERRAFORM_VERSION && \
 tfenv use $TFENV_TERRAFORM_VERSION  && \
 terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }} {{- if .After}} && \
