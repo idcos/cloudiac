@@ -563,6 +563,7 @@ func (t *Task) stepCheckout() (command string, err error) {
 var initCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 {{if .Before}}{{.Before}} && \{{- end}}
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 tfenv install $TFENV_TERRAFORM_VERSION && \
 tfenv use $TFENV_TERRAFORM_VERSION  && \
 terraform init -input=false {{- range $arg := .Req.StepArgs }} {{$arg}}{{ end }} {{- if .After}} && \
@@ -595,6 +596,7 @@ func (t *Task) stepInit() (command string, err error) {
 var planCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 {{if .Before}}{{.Before}} && \{{- end}}
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 terraform plan -input=false -out=_cloudiac.tfplan \
 {{if .TfVars}}-var-file={{.TfVars}}{{end}} \
 {{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }}&& \
@@ -618,6 +620,7 @@ func (t *Task) stepPlan() (command string, err error) {
 var applyCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 {{if .Before}}{{.Before}} && \{{- end}}
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 terraform apply -input=false -auto-approve \
 {{ range $arg := .Req.StepArgs}}{{$arg}} {{ end }}_cloudiac.tfplan {{- if .After}} && \
 {{.After}}{{- end}}
@@ -665,6 +668,7 @@ export ANSIBLE_NOCOWS="1"
 
 cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 {{if .Before}}{{.Before}} && \{{- end}}
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 ansible-playbook \
 --inventory {{.AnsibleStateAnalysis}} \
 --user "root" \
