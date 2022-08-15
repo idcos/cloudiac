@@ -683,8 +683,6 @@ func (t *Task) stepPlay() (command string, err error) {
 	beforeCmds, afterCmds := getBeforeAfterCmds(t.req.StepBeforeCmds, t.req.StepAfterCmds)
 	return t.executeTpl(playCommandTpl, map[string]interface{}{
 		"Req":                  t.req,
-		"IacPlayVars":          t.up2Workspace(CloudIacPlayVars),
-		"PrivateKeyPath":       t.up2Workspace("ssh_key"),
 		"AnsibleStateAnalysis": filepath.Join(ContainerAssetsDir, AnsibleStateAnalysisName),
 		"Before":               beforeCmds,
 		"After":                afterCmds,
