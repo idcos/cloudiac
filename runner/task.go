@@ -616,8 +616,8 @@ func (t *Task) stepPlan() (command string, err error) {
 
 // 当指定了 plan 文件时不需要也不能传 -var-file 参数
 var applyCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-{{if .Before}}{{.Before}} && \{{- end}}
 cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
+{{if .Before}}{{.Before}} && \{{- end}}
 terraform apply -input=false -auto-approve \
 {{ range $arg := .Req.StepArgs}}{{$arg}} {{ end }}_cloudiac.tfplan {{- if .After}} && \
 {{.After}}{{- end}}
