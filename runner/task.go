@@ -593,8 +593,8 @@ func (t *Task) stepInit() (command string, err error) {
 }
 
 var planCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-{{if .Before}}{{.Before}} && \{{- end}}
 cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
+{{if .Before}}{{.Before}} && \{{- end}}
 terraform plan -input=false -out=_cloudiac.tfplan \
 {{if .TfVars}}-var-file={{.TfVars}}{{end}} \
 {{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }}&& \
