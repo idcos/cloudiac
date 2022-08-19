@@ -33,7 +33,6 @@ import (
 // 每天的0点、13点、18点、21点都执行一次：0 0,13,18,21 * * ?
 var SpecParser = cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 
-
 func ParseCronpress(cronDriftExpress string) (*time.Time, e.Error) {
 	expr, err := SpecParser.Parse(cronDriftExpress)
 	if err != nil {
@@ -103,6 +102,14 @@ func GetCronDriftParam(form forms.CronDriftForm) (*CronDriftParam, e.Error) {
 	return cronDriftParam, nil
 }
 
+func GetNextCronTime(cronExpress string) (*time.Time, e.Error) {
+	if cronExpress == "" {
+		return nil, e.New(e.BadParam, "cron express is empty")
+	}
+
+	return ParseCronpress(cronExpress)
+}
+
 func createEnvCheck(c *ctx.ServiceContext, form *forms.CreateEnvForm) e.Error {
 	if c.OrgId == "" || c.ProjectId == "" {
 		return e.New(e.BadRequest, http.StatusBadRequest)
@@ -125,7 +132,7 @@ func createEnvCheck(c *ctx.ServiceContext, form *forms.CreateEnvForm) e.Error {
 }
 
 //nolint
-func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, destroyAt *models.Time, session *db.Session) e.Error {
+func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, destroyAt, deployAt *models.Time, session *db.Session) e.Error {
 	if !form.HasKey("tfVarsFile") {
 		form.TfVarsFile = tpl.TfVarsFile
 	}
@@ -179,6 +186,32 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 		if err != nil {
 			return e.New(e.BadParam, http.StatusBadRequest, err)
 		}
+	} else if form.AutoDestroyCron != "" {
+		// 活跃环境同步修改 destroyAt
+		at, err := GetNextCronTime(form.AutoDestroyCron)
+		if err != nil {
+			return err
+		}
+
+		mt := models.Time(*at)
+		destroyAt = &mt
+	}
+
+	if form.DeployAt != "" {
+		var err error
+		*deployAt, err = models.Time{}.Parse(form.DeployAt)
+		if err != nil {
+			return e.New(e.BadParam, http.StatusBadRequest, err)
+		}
+	} else if form.AutoDeployCron != "" {
+		// 活跃环境同步修改 deployAt
+		at, err := GetNextCronTime(form.AutoDeployCron)
+		if err != nil {
+			return err
+		}
+
+		mt := models.Time(*at)
+		deployAt = &mt
 	}
 
 	return nil
@@ -338,8 +371,9 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	// 以下值只在未传入时使用模板定义的值，如果入参有该字段即使值为空也不会使用模板中的值
 	var (
 		destroyAt models.Time
+		deployAt  models.Time
 	)
-	err = setDefaultValueFromTpl(form, tpl, &destroyAt, c.DB())
+	err = setDefaultValueFromTpl(form, tpl, &destroyAt, &deployAt, c.DB())
 	if err != nil {
 		return nil, err
 	}
@@ -395,6 +429,10 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		CronDriftExpress: form.CronDriftExpress,
 		OpenCronDrift:    form.OpenCronDrift,
 		PolicyEnable:     form.PolicyEnable,
+
+		AutoDeployAt:    &deployAt,
+		AutoDeployCron:  form.AutoDeployCron,
+		AutoDestroyCron: form.AutoDestroyCron,
 	}
 
 	if tpl.IsDemo {
@@ -680,8 +718,40 @@ func setAndCheckUpdateEnvAutoApproval(c *ctx.ServiceContext, tx *db.Session, att
 	return nil
 }
 
+func setAndCheckUpdateEnvDeploy(tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error {
+	if !form.HasKey("deployAt") && !form.HasKey("autoDeployCron") {
+		return nil
+	}
+
+	if form.HasKey("deployAt") {
+		deployAt, err := models.Time{}.Parse(form.DeployAt)
+		if err != nil {
+			_ = tx.Rollback()
+			return e.New(e.BadParam, http.StatusBadRequest, err)
+		}
+		attrs["auto_deploy_at"] = &deployAt
+		attrs["auto_deploy_cron"] = ""
+	}
+	if form.HasKey("autoDeployCron") {
+		attrs["auto_deploy_at"] = nil
+		attrs["auto_deploy_cron"] = form.AutoDeployCron
+
+		if form.AutoDeployCron != "" {
+			// 活跃环境同步修改 deployAt
+			at, err := GetNextCronTime(form.AutoDeployCron)
+			if err != nil {
+				return err
+			}
+
+			mt := models.Time(*at)
+			attrs["auto_deploy_at"] = &mt
+		}
+	}
+	return nil
+}
+
 func setAndCheckUpdateEnvDestroy(tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error {
-	if !form.HasKey("destroyAt") && !form.HasKey("ttl") {
+	if !form.HasKey("destroyAt") && !form.HasKey("ttl") && !form.HasKey("autoDestroyCron") {
 		return nil
 	}
 
@@ -693,6 +763,7 @@ func setAndCheckUpdateEnvDestroy(tx *db.Session, attrs models.Attrs, env *models
 		}
 		attrs["auto_destroy_at"] = &destroyAt
 		attrs["ttl"] = "" // 直接传入了销毁时间，需要同步清空 ttl
+		attrs["auto_destroy_cron"] = ""
 	} else if form.HasKey("ttl") {
 		ttl, err := services.ParseTTL(form.TTL)
 		if err != nil {
@@ -708,6 +779,24 @@ func setAndCheckUpdateEnvDestroy(tx *db.Session, attrs models.Attrs, env *models
 			// 活跃环境同步修改 destroyAt
 			at := models.Time(time.Now().Add(ttl))
 			attrs["auto_destroy_at"] = &at
+		}
+		attrs["auto_destroy_cron"] = ""
+	}
+
+	if form.HasKey("autoDestroyCron") {
+		attrs["ttl"] = ""
+		attrs["auto_destroy_at"] = nil
+		attrs["auto_destroy_cron"] = form.AutoDestroyCron
+
+		if form.AutoDestroyCron != "" {
+			// 活跃环境同步修改 destroyAt
+			at, err := GetNextCronTime(form.AutoDestroyCron)
+			if err != nil {
+				return err
+			}
+
+			mt := models.Time(*at)
+			attrs["auto_destroy_at"] = &mt
 		}
 	}
 	return nil
@@ -742,10 +831,12 @@ func setAndCheckUpdateEnvTriggers(c *ctx.ServiceContext, tx *db.Session, attrs m
 }
 
 func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error {
-	if er := services.CheckEnvTags(form.Tags); er != nil {
-		return er
-	} else {
-		attrs["tags"] = strings.TrimSpace(form.Tags)
+	if form.HasKey("tags") {
+		if er := services.CheckEnvTags(form.Tags); er != nil {
+			return er
+		} else {
+			attrs["tags"] = strings.TrimSpace(form.Tags)
+		}
 	}
 
 	if !env.IsDemo { // 演示环境不允许修改自动审批和存活时间
@@ -754,6 +845,10 @@ func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs mod
 		}
 
 		if err := setAndCheckUpdateEnvDestroy(tx, attrs, env, form); err != nil {
+			return err
+		}
+
+		if err := setAndCheckUpdateEnvDeploy(tx, attrs, env, form); err != nil {
 			return err
 		}
 	}
@@ -837,6 +932,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	attrs["openCronDrift"] = cronDriftParam.OpenCronDrift
 	attrs["cronDriftExpress"] = cronDriftParam.CronDriftExpress
 	attrs["nextDriftTaskTime"] = cronDriftParam.NextDriftTaskTime
+
 	setUpdateEnvByForm(attrs, form)
 	err = setAndCheckUpdateEnvByForm(c, tx, attrs, env, form)
 	if err != nil {
@@ -1105,8 +1201,41 @@ func setAndCheckEnvAutoApproval(c *ctx.ServiceContext, env *models.Env, form *fo
 	return nil
 }
 
-func setAndCheckEnvDestroy(tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error {
-	if !form.HasKey("destroyAt") && !form.HasKey("ttl") {
+func setAndCheckEnvAutoDeploy(tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error { //nolint:dupl
+	if !form.HasKey("deployAt") && !form.HasKey("autoDeployCron") {
+		return nil
+	}
+
+	if form.HasKey("deployAt") {
+		deployAt, err := models.Time{}.Parse(form.DeployAt)
+		if err != nil {
+			return e.New(e.BadParam, http.StatusBadRequest, err)
+		}
+		env.AutoDeployAt = &deployAt
+		// 直接传入了部署时间，需要同步清空 ttl
+		env.AutoDeployCron = ""
+	}
+	if form.HasKey("autoDeployCron") {
+		env.AutoDeployAt = nil
+		env.AutoDeployCron = form.AutoDeployCron
+
+		if env.AutoDeployCron != "" {
+			// 非活跃环境同步修改 deployAt
+			at, err := GetNextCronTime(env.AutoDeployCron)
+			if err != nil {
+				return err
+			}
+
+			mt := models.Time(*at)
+			env.AutoDeployAt = &mt
+		}
+	}
+
+	return nil
+}
+
+func setAndCheckEnvAutoDestroy(tx *db.Session, env *models.Env, form *forms.DeployEnvForm) e.Error { //nolint:dupl
+	if !form.HasKey("destroyAt") && !form.HasKey("ttl") && !form.HasKey("autoDestroyCron") {
 		return nil
 	}
 
@@ -1118,6 +1247,7 @@ func setAndCheckEnvDestroy(tx *db.Session, env *models.Env, form *forms.DeployEn
 		env.AutoDestroyAt = &destroyAt
 		// 直接传入了销毁时间，需要同步清空 ttl
 		env.TTL = ""
+		env.AutoDestroyCron = ""
 	} else if form.HasKey("ttl") {
 		ttl, err := services.ParseTTL(form.TTL)
 		if err != nil {
@@ -1133,12 +1263,29 @@ func setAndCheckEnvDestroy(tx *db.Session, env *models.Env, form *forms.DeployEn
 			at := models.Time(time.Now().Add(ttl))
 			env.AutoDestroyAt = &at
 		}
+		env.AutoDestroyCron = ""
+	}
+	if form.HasKey("autoDestroyCron") {
+		env.TTL = ""
+		env.AutoDestroyAt = nil
+		env.AutoDestroyCron = form.AutoDestroyCron
+
+		if env.AutoDestroyCron != "" {
+			// 活跃环境同步修改 destroyAt
+			at, err := GetNextCronTime(env.AutoDestroyCron)
+			if err != nil {
+				return err
+			}
+
+			mt := models.Time(*at)
+			env.AutoDestroyAt = &mt
+		}
 	}
 
 	return nil
 }
 
-func setAndCheckEnvCron(env *models.Env, form *forms.DeployEnvForm) e.Error {
+func setAndCheckEnvDriftCron(env *models.Env, form *forms.DeployEnvForm) e.Error {
 	cronDriftParam, err := GetCronDriftParam(forms.CronDriftForm{
 		BaseForm:         form.BaseForm,
 		CronDriftExpress: form.CronDriftExpress,
@@ -1168,12 +1315,16 @@ func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env
 		if err := setAndCheckEnvAutoApproval(c, env, form); err != nil {
 			return err
 		}
-		if err := setAndCheckEnvDestroy(tx, env, form); err != nil {
+		if err := setAndCheckEnvAutoDestroy(tx, env, form); err != nil {
+			return err
+		}
+		if err := setAndCheckEnvAutoDeploy(tx, env, form); err != nil {
 			return err
 		}
 	}
 
-	if err := setAndCheckEnvCron(env, form); err != nil {
+	// drift Cron 相关
+	if err := setAndCheckEnvDriftCron(env, form); err != nil {
 		return err
 	}
 	if form.HasKey("extraData") {
