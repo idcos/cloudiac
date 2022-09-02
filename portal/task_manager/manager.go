@@ -1591,6 +1591,13 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 }
 
 func ParseResourceDriftInfo(bs []byte) map[string]models.ResourceDrift {
+	logger := logs.Get().WithField("func", "ParseResourceDriftInfo")
+	defer func() {
+		err := recover()
+		if err != nil {
+			logger.Errorf("parse resource drift info error: %v", err)
+		}
+	}()
 	content := strings.Split(string(bs), "\n")
 	cronTaskInfoMap := make(map[string]models.ResourceDrift)
 	for k, v := range content {
@@ -1599,6 +1606,9 @@ func ParseResourceDriftInfo(bs []byte) map[string]models.ResourceDrift {
 			cronTaskInfo := models.ResourceDrift{}
 			reg1 := regexp.MustCompile(`#\s\S*`)
 			result1 := reg1.FindAllStringSubmatch(v, 1)
+			if len(result1) == 0 {
+				continue
+			}
 			address := stripansi.Strip(strings.TrimSpace(result1[0][0][1:]))
 			for k1, v2 := range content[k+1:] {
 				if ((strings.Contains(v2, "#") && strings.Contains(v2, "must be")) || strings.Contains(v2, "will be")) ||
