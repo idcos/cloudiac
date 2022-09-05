@@ -40,6 +40,7 @@ const (
 
 	CloudIacTfFile   = "_cloudiac.tf"
 	CloudIacPlayVars = "_cloudiac_play_vars.yml"
+	CloudIacTfvarsJson = "_cloudiac.tfvars.json"
 
 	TFStateJsonFile  = "tfstate.json"
 	TFPlanJsonFile   = "tfplan.json"
