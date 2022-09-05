@@ -272,6 +272,9 @@ func (t *Task) initWorkspace() (workspace string, err error) {
 		return workspace, err
 	}
 
+	if err = t.genEnvironmentFile(workspace); err != nil {
+		return workspace, errors.Wrap(err, "generate environment file")
+	}
 	if err = t.genIacTfFile(workspace); err != nil {
 		return workspace, errors.Wrap(err, "generate cloudiac tf file")
 	}
@@ -318,6 +321,13 @@ func execTpl2File(tpl *template.Template, data interface{}, savePath string) err
 	defer fp.Close()
 
 	return tpl.Execute(fp, data)
+}
+
+// 记录执行任务时使用的系统环境变量
+func (t *Task) genEnvironmentFile(workspace string) error {
+	path := filepath.Join(workspace, EnvironmentFile)
+	b := utils.MustJSONIndent(t.req.SysEnvironments, "  ")
+	return os.WriteFile(path, b, 0644) //nolint:gosec
 }
 
 func (t *Task) genIacTfFile(workspace string) error {
@@ -673,19 +683,12 @@ func (t *Task) stepDestroy() (command string, err error) {
 }
 
 var playCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-export ANSIBLE_HOST_KEY_CHECKING="False"
-export ANSIBLE_TF_DIR="."
-export ANSIBLE_NOCOWS="1"
+export CLOUDIAC_WORKSPACE={{.ContainerWorkspace}}
+export CLOUDIAC_ANSIBLE_INVENTORY={{.AnsibleStateAnalysis}}
 
 {{if .Before}}{{.Before}} && \{{- end}}
-cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && ansible-playbook \
---inventory {{.AnsibleStateAnalysis}} \
---user "root" \
---private-key "{{.PrivateKeyPath}}" \
---extra @{{.IacPlayVars}} \
-{{ if .Req.Env.PlayVarsFile -}}
---extra @{{.Req.Env.PlayVarsFile}} \
-{{ end -}}
+cd "$CLOUDIAC_WORKDIR" && cloudiac-playbook \
+{{ if .Req.Env.PlayVarsFile -}}--extra @{{.Req.Env.PlayVarsFile}}{{ end -}} \
 {{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }} \
 {{.Req.Env.Playbook}} {{- if .After}} && \
 {{.After}}{{- end}}
@@ -695,8 +698,6 @@ func (t *Task) stepPlay() (command string, err error) {
 	beforeCmds, afterCmds := getBeforeAfterCmds(t.req.StepBeforeCmds, t.req.StepAfterCmds)
 	return t.executeTpl(playCommandTpl, map[string]interface{}{
 		"Req":                  t.req,
-		"IacPlayVars":          t.up2Workspace(CloudIacPlayVars),
-		"PrivateKeyPath":       t.up2Workspace("ssh_key"),
 		"AnsibleStateAnalysis": filepath.Join(ContainerAssetsDir, AnsibleStateAnalysisName),
 		"Before":               beforeCmds,
 		"After":                afterCmds,
