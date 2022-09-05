@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"runtime/debug"
 	"strings"
@@ -1558,31 +1559,39 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 			return errors.Wrapf(err, "%s, query environment resource count", req.Env.Id)
 		}
 
+		// 所有 CLOUDIAC_ 前缀的环境变量都会以小写变量名写入 _cloudiac_play_vars.yml 文件，
+		// 用户编写 playbook 时可以直接引用。
+
+		sysEnvs["CLOUDIAC_WORKSPACE"] = runner.ContainerWorkspace
+		// workdir 绝对路径
+		sysEnvs["CLOUDIAC_WORKDIR"] = filepath.Join(runner.ContainerCodeDir, env.Workdir)
+		// workdir 相对路径(相对云模板仓库根目录)
+		sysEnvs["CLOUDIAC_WORKDIR_REL"] = env.Workdir
+
 		// 当前任务的组织 ID
 		sysEnvs["CLOUDIAC_ORG_ID"] = env.OrgId.String()
-		sysEnvs["TF_VAR_cloudiac_org_id"] = env.OrgId.String()
 		// 当前任务的项目 ID
 		sysEnvs["CLOUDIAC_PROJECT_ID"] = env.ProjectId.String()
-		sysEnvs["TF_VAR_cloudiac_project_id"] = env.ProjectId.String()
 
-		// CLOUDIAC_TEMPLATE_ID	当前任务的模板 ID
+		// 当前任务的模板 ID
 		sysEnvs["CLOUDIAC_TEMPLATE_ID"] = env.TplId.String()
-		sysEnvs["TF_VAR_cloudiac_template_id"] = env.TplId.String()
-		// CLOUDIAC_ENV_ID	当前任务的环境 ID
+		// 当前任务的环境 ID
 		sysEnvs["CLOUDIAC_ENV_ID"] = env.Id.String()
-		sysEnvs["TF_VAR_cloudiac_env_id"] = env.Id.String()
-		// CLOUDIAC_ENV_NAME	当前任务的环境名称
+		// 当前任务的环境名称
 		sysEnvs["CLOUDIAC_ENV_NAME"] = env.Name
-		sysEnvs["TF_VAR_cloudiac_env_name"] = env.Name
-		// CLOUDIAC_ENV_STATUS	当前环境状态(启动任务时)
+		// 任务启动前的环境状态
 		sysEnvs["CLOUDIAC_ENV_STATUS"] = env.Status
-		sysEnvs["TF_VAR_cloudiac_env_status"] = env.Status
-		// 当前环境中的资源数量(启动任务时)
+		// 任务启动前的环境资源数量
 		sysEnvs["CLOUDIAC_ENV_RESOURCES"] = fmt.Sprintf("%d", resCount)
-		sysEnvs["TF_VAR_cloudiac_env_resources"] = fmt.Sprintf("%d", resCount)
-		// CLOUDIAC_TF_VERSION	当前任务使用的 terraform 版本号(eg. 0.14.11)
+		// 当前任务使用的 terraform 版本号(eg. 0.14.11)
 		sysEnvs["CLOUDIAC_TF_VERSION"] = req.Env.TfVersion
-		sysEnvs["TF_VAR_cloudiac_tf_version"] = req.Env.TfVersion
+
+		// 所有 CLOUDIAC_ 前缀的变量都以小写名称通过环境变量传入 terraform
+		for k, v := range sysEnvs {
+			if strings.HasPrefix(k, "CLOUDIAC_") {
+				sysEnvs["TF_VAR_"+strings.ToLower(k)] = v
+			}
+		}
 	}
 
 	req.SysEnvironments = sysEnvs
