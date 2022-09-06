@@ -1,5 +1,21 @@
 [
   {
+    "version": "1.2.0",
+    "date": "20220906",
+    "content": {
+      "Features": [
+        "ct-worker 镜像添加 cloudiac-playbook 命令"
+      ],
+      "Fixes": [
+        "修复漂移检测数组下标越界问题"
+      ],
+      "Enhancements": [
+        "改用 tfvars.json 文件传入 terraform 变量",
+        "环境部署时未传workdir则使用stack的workdir"
+      ]
+    }
+  },
+  {
     "version": "1.1.0",
     "date": "20220819",
     "content": {

@@ -1,6 +1,26 @@
 # Releases
 
 ------
+## v1.2.0 20220906
+**Enhancements**
+
+- 改用 tfvars.json 文件传入 terraform 变量
+- 环境部署时未传workdir则使用stack的workdir
+
+**Features**
+
+- ct-worker 镜像添加 cloudiac-playbook 命令
+
+**Fixes**
+
+- 修复漂移检测数组下标越界问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v1.2.0](https://github.com/idcos/cloudiac/releases/tag/v1.2.0)
+
+
+------
 ## v1.1.0 20220819
 **Features**
 
