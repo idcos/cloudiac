@@ -1024,11 +1024,7 @@ func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (ret *models.En
 	})
 
 	// 记录操作日志
-	if form.TaskType == models.TaskTypeDestroy {
-		services.InsertUserOperateLog(c.UserId, c.OrgId, ret.Id, consts.OperatorObjectTypeEnv, "destroy", ret.Name, nil)
-	} else {
-		services.InsertUserOperateLog(c.UserId, c.OrgId, ret.Id, consts.OperatorObjectTypeEnv, "deploy", ret.Name, nil)
-	}
+	services.InsertUserOperateLog(c.UserId, c.OrgId, form.Id, consts.OperatorObjectTypeEnv, form.TaskType, form.Name, nil)
 
 	return ret, er
 }
