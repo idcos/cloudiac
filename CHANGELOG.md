@@ -1,4 +1,11 @@
-## v1.2.0 (20220906)
+## v1.2.1 20220914
+### Fixed
+- 修复 _cloudiac.tfvars.json 文件生成问题
+- _cloudiac.tfvars.json 无法处理复杂变量(json)的问题
+- 修复传入 TF_LOG 环境变量导致 terraform.py 脚本出错的问题(again)
+
+------
+## v1.2.0 20220906
 ### Features
 - ct-worker 镜像添加 cloudiac-playbook 命令
 
