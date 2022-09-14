@@ -381,7 +381,35 @@ func (t *Task) genTfvarsJsonFile(workspace string) error {
 		_ = fp.Close()
 	}()
 
-	return json.NewEncoder(fp).Encode(t.req.Env.TerraformVars)
+	vars := make(map[string]interface{})
+	for k, v := range t.req.Env.TerraformVars {
+		{ // 尝试将值做为 json 解析
+			// 这里只需要处理 map、list、null 这三类特殊变量，
+			// 其他变量类型都可以以字符串传入，terraform 可以正常处理
+			tv := strings.TrimSpace(v)
+			if strings.HasPrefix(tv, "{") {
+				mv := make(map[string]interface{})
+				if err := json.Unmarshal([]byte(tv), &mv); err == nil {
+					vars[k] = mv
+					continue
+				}
+			} else if strings.HasPrefix(tv, "[") {
+				lv := make([]interface{}, 0)
+				if err := json.Unmarshal([]byte(tv), &lv); err == nil {
+					vars[k] = lv
+					continue
+				}
+			} else if tv == "null" {
+				vars[k] = nil
+				continue
+			}
+		}
+		vars[k] = v
+	}
+
+	enc := json.NewEncoder(fp)
+	enc.SetIndent("", "  ")
+	return enc.Encode(vars)
 }
 
 /*
