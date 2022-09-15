@@ -6,8 +6,6 @@ import (
 	"cloudiac/runner"
 	"cloudiac/runner/api/ctx"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -20,40 +18,18 @@ func RunClearProviderCache(c *ctx.Context) {
 
 	count := strings.Count(req.Source, "/")
 	if count == 2 {
-		fullPath := filepath.Join("./var/plugin-cache", req.Source, req.Version)
-		exist, err := runner.PathExists(fullPath)
-		if err == nil && exist {
-			err := os.RemoveAll(fullPath)
-			if err != nil {
-				return
-			}
-		} else {
+		_, err := runner.DeleteProviderCache("./var/plugin-cache", req.Source, req.Version)
+		if err != nil {
 			return
 		}
 	} else if count == 1 {
-		ioPath := filepath.Join("./var/plugin-cache/registry.terraform.io", req.Source, req.Version)
-		exist, err := runner.PathExists(ioPath)
-		if err == nil && exist {
-			err := os.RemoveAll(ioPath)
+		_, err := runner.DeleteProviderCache("./var/plugin-cache/registry.terraform.io", req.Source, req.Version)
+		if err != nil {
+			_, err := runner.DeleteProviderCache("./var/plugin-cache/registry.cloudiac.org", req.Source, req.Version)
 			if err != nil {
-				return
-			}
-		} else {
-			orgPath := filepath.Join("./var/plugin-cache/registry.cloudiac.org", req.Source, req.Version)
-			exist, err := runner.PathExists(orgPath)
-			if err == nil && exist {
-				err := os.RemoveAll(orgPath)
+				_, err := runner.DeleteProviderCache("./var/plugin-cache/iac-registry.idcos.com", req.Source, req.Version)
 				if err != nil {
 					return
-				}
-			} else {
-				comPath := filepath.Join("./var/plugin-cache/iac-registry.idcos.com", req.Source, req.Version)
-				exist, err := runner.PathExists(comPath)
-				if err == nil && exist {
-					err := os.RemoveAll(comPath)
-					if err != nil {
-						return
-					}
 				}
 			}
 		}
