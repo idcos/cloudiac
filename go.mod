@@ -54,7 +54,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.10.0
 	github.com/itchyny/gojq v0.12.6
 	github.com/jessevdk/go-flags v1.5.0
-	github.com/jinzhu/copier v0.3.5 // indirect
+	github.com/jinzhu/copier v0.3.5
 	github.com/joho/godotenv v1.3.0
 	github.com/jonboulle/clockwork v0.2.2 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -80,7 +80,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	github.com/swaggo/gin-swagger v1.4.3
-	github.com/swaggo/swag v1.8.2
+	github.com/swaggo/swag v1.8.2 // indirect
 	github.com/tidwall/gjson v1.14.0
 	github.com/ugorji/go v1.1.13 // indirect
 	github.com/unliar/utils v0.1.1
