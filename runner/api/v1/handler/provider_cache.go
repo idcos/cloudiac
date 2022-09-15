@@ -3,9 +3,11 @@
 package handler
 
 import (
+	"cloudiac/configs"
 	"cloudiac/runner"
 	"cloudiac/runner/api/ctx"
 	"net/http"
+	"path/filepath"
 	"strings"
 )
 
@@ -17,18 +19,13 @@ func RunClearProviderCache(c *ctx.Context) {
 	}
 
 	count := strings.Count(req.Source, "/")
+	providerCachePath := configs.Get().Runner.AbsProviderCachePath()
 	if count == 2 {
-		if ok, _ := runner.DeleteProviderCache("./var/plugin-cache", req.Source, req.Version); ok { //nolint
+		if ok, _ := runner.DeleteProviderCache(providerCachePath, req.Source, req.Version); ok { //nolint
 			return
 		}
 	} else if count == 1 {
-		if ok, _ := runner.DeleteProviderCache("./var/plugin-cache/registry.terraform.io", req.Source, req.Version); ok {
-			return
-		}
-		if ok, _ := runner.DeleteProviderCache("./var/plugin-cache/registry.cloudiac.org", req.Source, req.Version); ok {
-			return
-		}
-		if ok, _ := runner.DeleteProviderCache("./var/plugin-cache/iac-registry.idcos.com", req.Source, req.Version); ok { //nolint
+		if ok, _ := runner.DeleteProviderCache(filepath.Join(providerCachePath, "registry.terraform.io"), req.Source, req.Version); ok { //nolint
 			return
 		}
 	}
