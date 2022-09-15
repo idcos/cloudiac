@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+
 package apps
 
 import (
@@ -8,7 +10,6 @@ import (
 	"cloudiac/portal/services"
 	runnerClear "cloudiac/runner"
 	"cloudiac/utils"
-	"log"
 	"net/http"
 )
 
@@ -21,7 +22,6 @@ func ClearProviderCache(c *ctx.ServiceContext, form *forms.ClearProviderCacheFor
 	for _, runner := range runners {
 
 		requestUrl := utils.JoinURL(runner.Address, consts.RunnerClearProviderCache)
-		log.Printf("request runner: %s", requestUrl)
 		req := runnerClear.RunClearProviderCacheReq{
 			Source:  form.Source,
 			Version: form.Version,
