@@ -35,7 +35,7 @@ version: "3.2"
 services:
   iac-portal:
     container_name: iac-portal
-    image: "${DOCKER_REGISTRY}cloudiac/iac-portal:v1.1.0"
+    image: "${DOCKER_REGISTRY}cloudiac/iac-portal:v1.2.1"
     volumes:
       - type: bind
         source: /usr/yunji/cloudiac/var
@@ -52,7 +52,7 @@ services:
 
   ct-runner:
     container_name: ct-runner
-    image: "${DOCKER_REGISTRY}cloudiac/ct-runner:v1.1.0"
+    image: "${DOCKER_REGISTRY}cloudiac/ct-runner:v1.2.1"
     volumes:
       - type: bind
         source: /usr/yunji/cloudiac/var

@@ -1,3 +1,22 @@
+## v1.2.1 20220914
+### Fixed
+- 修复 _cloudiac.tfvars.json 文件生成问题
+- _cloudiac.tfvars.json 无法处理复杂变量(json)的问题
+- 修复传入 TF_LOG 环境变量导致 terraform.py 脚本出错的问题(again)
+
+------
+## v1.2.0 20220906
+### Features
+- ct-worker 镜像添加 cloudiac-playbook 命令
+
+### Fixed
+- 修复漂移检测数组下标越界问题
+
+### Enhancements
+- 改用 tfvars.json 文件传入 terraform 变量
+- 环境部署时未传workdir则使用stack的workdir
+
+------
 ## v1.1.0 20220819
 #### Features
 - 新增环境存活时间周期维度，通过crontab表达式设置环境定时部署，定时销毁
