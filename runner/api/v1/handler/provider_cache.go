@@ -18,7 +18,7 @@ func RunClearProviderCache(c *ctx.Context) {
 
 	count := strings.Count(req.Source, "/")
 	if count == 2 {
-		if ok, _ := runner.DeleteProviderCache("./var/plugin-cache", req.Source, req.Version); ok {
+		if ok, _ := runner.DeleteProviderCache("./var/plugin-cache", req.Source, req.Version); ok { // NOLINT
 			return
 		}
 	} else if count == 1 {
@@ -28,7 +28,7 @@ func RunClearProviderCache(c *ctx.Context) {
 		if ok, _ := runner.DeleteProviderCache("./var/plugin-cache/registry.cloudiac.org", req.Source, req.Version); ok {
 			return
 		}
-		if ok, _ := runner.DeleteProviderCache("./var/plugin-cache/iac-registry.idcos.com", req.Source, req.Version); ok {
+		if ok, _ := runner.DeleteProviderCache("./var/plugin-cache/iac-registry.idcos.com", req.Source, req.Version); ok { // NOLINT
 			return
 		}
 	}
