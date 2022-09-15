@@ -18,21 +18,17 @@ func RunClearProviderCache(c *ctx.Context) {
 
 	count := strings.Count(req.Source, "/")
 	if count == 2 {
-		ok, _ := runner.DeleteProviderCache("./var/plugin-cache", req.Source, req.Version)
-		if ok {
+		if ok, _ := runner.DeleteProviderCache("./var/plugin-cache", req.Source, req.Version); ok {
 			return
 		}
 	} else if count == 1 {
-		ok, _ := runner.DeleteProviderCache("./var/plugin-cache/registry.terraform.io", req.Source, req.Version)
-		if ok {
+		if ok, _ := runner.DeleteProviderCache("./var/plugin-cache/registry.terraform.io", req.Source, req.Version); ok {
 			return
 		}
-		ok, _ = runner.DeleteProviderCache("./var/plugin-cache/registry.cloudiac.org", req.Source, req.Version)
-		if ok {
+		if ok, _ := runner.DeleteProviderCache("./var/plugin-cache/registry.cloudiac.org", req.Source, req.Version); ok {
 			return
 		}
-		ok, _ = runner.DeleteProviderCache("./var/plugin-cache/iac-registry.idcos.com", req.Source, req.Version)
-		if ok {
+		if ok, _ := runner.DeleteProviderCache("./var/plugin-cache/iac-registry.idcos.com", req.Source, req.Version); ok {
 			return
 		}
 	}
