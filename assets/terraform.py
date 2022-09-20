@@ -362,6 +362,8 @@ class AnsibleGroup(object):
 
 
 def _execute_shell():
+    # 强制将 TF_LOG 环境变量设置为空，避免打印 terraform 日志，否则 ansible 解析该脚本输出时会报错
+    os.putenv("TF_LOG", "")
     encoding = 'utf-8'
     tf_workspace = [TERRAFORM_PATH, 'workspace', 'select', TERRAFORM_WS_NAME]
     proc_ws = Popen(tf_workspace,
@@ -374,7 +376,6 @@ def _execute_shell():
         sys.stderr.write(str(err_ws) + '\n')
         sys.exit(1)
     else:
-        os.putenv("TF_LOG", "")
         tf_command = [TERRAFORM_PATH, 'state', 'pull']
         proc_tf_cmd = Popen(tf_command,
                             cwd=TERRAFORM_DIR,
