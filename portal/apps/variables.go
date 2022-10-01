@@ -64,9 +64,9 @@ func getObjectVars(tx *db.Session, form *forms.UpdateObjectVarsForm, orgId, proj
 
 		// 目前前端是不允许变量值为空的，但第三方系统依然可能传入值为空的变量, 这里我们直接忽略掉
 		// (sensitive 变量传入空值表示不修改其值)
-		if !v.Sensitive && v.Value == "" {
-			continue
-		}
+		//if !v.Sensitive && v.Value == "" {
+		//	continue
+		//}
 
 		modelVar := models.Variable{
 			VariableBody: models.VariableBody{
