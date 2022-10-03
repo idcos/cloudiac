@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	version    = "v1.0.0"
-	webVersion = "v1.0.0"
+	version    = "v1.2.1"
+	webVersion = "v1.1.0"
 )
 
 type FileReplacer struct {
