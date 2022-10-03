@@ -510,6 +510,7 @@ func (t *Task) genStepScript() (string, error) {
 var checkoutCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 set -o pipefail
 # before checkout
+cd '{{.ContainerWorkspace}}'
 {{- if .Before }}
 {{.Before}}
 {{- end}}
