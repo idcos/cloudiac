@@ -666,10 +666,10 @@ export ANSIBLE_HOST_KEY_CHECKING="False"
 export ANSIBLE_TF_DIR="."
 export ANSIBLE_NOCOWS="1"
 
-
 cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 {{if .Before}}{{.Before}} && \{{- end}}
 cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
+if [[ -f "{{.Requirements}}" ]];then ansible-galaxy install -r "{{.Requirements}}"; fi && \
 ansible-playbook \
 --inventory {{.AnsibleStateAnalysis}} \
 --user "root" \
@@ -687,6 +687,7 @@ func (t *Task) stepPlay() (command string, err error) {
 	beforeCmds, afterCmds := getBeforeAfterCmds(t.req.StepBeforeCmds, t.req.StepAfterCmds)
 	return t.executeTpl(playCommandTpl, map[string]interface{}{
 		"Req":                  t.req,
+		"Requirements": 	filepath.Join(filepath.Dir(t.req.Env.Playbook), CloudIacAnsibleRequirements),
 		"IacPlayVars":          t.up2Workspace(CloudIacPlayVars),
 		"PrivateKeyPath":       t.up2Workspace("ssh_key"),
 		"AnsibleStateAnalysis": filepath.Join(ContainerAssetsDir, AnsibleStateAnalysisName),
