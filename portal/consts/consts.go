@@ -22,6 +22,8 @@ const (
 	RunnerConnectTimeout = time.Second * 5
 	DbTaskPollInterval   = time.Second * 3 // 轮询 db 任务状态的间隔
 
+	CallbackTimeout = time.Second * 5
+
 	DefaultAdminEmail = "admin@example.com"
 
 	CtxKey = "__request_ctx__"
