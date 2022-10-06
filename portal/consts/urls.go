@@ -8,4 +8,5 @@ const (
 	RunnerTaskStepLogFollowURL = "/api/v1/task/step/log/follow"
 	RunnerStopTaskURL          = "/api/v1/task/stop"
 	RunnerAbortTaskURL         = "/api/v1/task/abort"
+	RunnerClearProviderCache   = "/api/v1/provider_cache/remove"
 )

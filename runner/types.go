@@ -167,3 +167,8 @@ type Response struct {
 	Error  string      `json:"error,omitempty"`
 	Result interface{} `json:"result"`
 }
+
+type RunClearProviderCacheReq struct {
+	Source  string `json:"source" form:"source" binding:"required"`
+	Version string `json:"version" form:"version" binding:"required"`
+}
