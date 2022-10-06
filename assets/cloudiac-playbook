@@ -27,8 +27,8 @@ if [[ -e "$CLOUDIAC_WORKSPACE/_cloudiac_play_vars.yml" ]]; then
 fi
 
 if [[ -z "$ANSIBLE_TF_DIR" ]]; then
-  if test -e "${CLOUDIAC_WORKSPACE}/code/${CLOUDIAC_WORKDIR}"; then 
-    ANSIBLE_TF_DIR="${CLOUDIAC_WORKSPACE}/code/${CLOUDIAC_WORKDIR}"
+  if test -e "${CLOUDIAC_WORKDIR}"; then 
+    ANSIBLE_TF_DIR="${CLOUDIAC_WORKDIR}"
   else 
     ANSIBLE_TF_DIR="."
   fi
