@@ -1453,7 +1453,7 @@ func SendHttpMessage(callbackUrl string, session *db.Session, task *models.Task,
 	message := GenerateCallbackContent(task, taskStatus, env.Status, policyStatus, resources)
 	timeout := int(consts.CallbackTimeout.Seconds())
 	if _, er := utils.HttpService(callbackUrl, "POST", header, message, timeout, timeout); er != nil {
-		logs.Get().Warnf("send callback massage failed, err: %s, data: %s", er, message)
+		logs.Get().Warnf("send callback massage failed, err: %s, data: %+v", er, message)
 		return
 	}
 
