@@ -1457,7 +1457,7 @@ func SendHttpMessage(callbackUrl string, session *db.Session, task *models.Task,
 		return
 	}
 
-	logs.Get().Infof("send callback massage successful. data: %s", message)
+	logs.Get().Infof("send callback massage successful. data: %+v", message)
 }
 
 type Resource struct {
@@ -1684,6 +1684,5 @@ func GenerateCallbackContent(task *models.Task, taskStatus, envStatus, policySta
 		a.ExtraData = make(map[string]interface{})
 	}
 
-	rep, _ := json.Marshal(&a)
-	return rep
+	return a
 }
