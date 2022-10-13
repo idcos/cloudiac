@@ -1470,6 +1470,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		},
 		Source:    taskSource,
 		SourceSys: taskSourceSys,
+		Callback:  env.Callback,
 	})
 
 	if err != nil {

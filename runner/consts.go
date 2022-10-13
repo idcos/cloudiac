@@ -45,6 +45,8 @@ const (
 	CloudIacPlayVars = "_cloudiac_play_vars.yml"
 	CloudIacTfvarsJson = "_cloudiac.tfvars.json"
 
+	CloudIacAnsibleRequirements = "requirements.yml"
+
 	TFStateJsonFile  = "tfstate.json"
 	TFPlanJsonFile   = "tfplan.json"
 	TFProviderSchema = "tfproviderschema.json"
