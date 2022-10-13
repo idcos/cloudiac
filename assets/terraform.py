@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 '''
 Terraform Inventory Script
 ==========================
@@ -362,7 +362,6 @@ class AnsibleGroup(object):
 
 
 def _execute_shell():
-    # 强制将 TF_LOG 环境变量设置为空，避免打印 terraform 日志，否则 ansible 解析该脚本输出时会报错
     os.putenv("TF_LOG", "")
     encoding = 'utf-8'
     tf_workspace = [TERRAFORM_PATH, 'workspace', 'select', TERRAFORM_WS_NAME]
