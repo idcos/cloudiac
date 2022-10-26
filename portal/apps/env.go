@@ -862,7 +862,17 @@ func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs mod
 	}
 
 	if form.HasKey("archived") {
-		if env.Status != models.EnvStatusInactive && env.Status != models.EnvStatusDestroyed {
+		envResCount := int64(0)
+		if env.LastResTaskId != "" {
+			var err e.Error
+			envResCount, err = services.GetTaskResourceCount(tx, env.LastResTaskId)
+			if err != nil {
+				return err
+			}
+		}
+		if !(env.Status == models.EnvStatusInactive ||
+			env.Status == models.EnvStatusDestroyed ||
+			(env.Status == models.EnvStatusFailed && envResCount == 0)) {
 			_ = tx.Rollback()
 			return e.New(e.EnvCannotArchiveActive,
 				fmt.Errorf("env can't be archive while env is %s", env.Status),
