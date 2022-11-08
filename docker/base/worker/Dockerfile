@@ -19,6 +19,8 @@ RUN yum install epel-release -y && \
     ln -s /opt/rh/rh-python38/root/usr/local/bin/ansible-pull /usr/bin/ansible-pull && \
     yum clean all
 
+RUN yum install sshpass -y
+
 ENV TERRASCAN_VERSION=1.9.0
 RUN mkdir -p /root/.terrascan/pkg/policies/opa/rego && \
     curl -L https://github.com/accurics/terrascan/releases/download/v${TERRASCAN_VERSION}/terrascan_${TERRASCAN_VERSION}_Linux_x86_64.tar.gz | tar -xz terrascan && install terrascan /usr/local/bin && rm terrascan 
