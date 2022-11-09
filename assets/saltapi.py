@@ -7,8 +7,6 @@ DOCUMENTATION = '''
   name: saltapi
   short_description: Ansible connection plugin for salt-api
   author: Jinxing <jinxing@idcos.com>
-  requirements:
-    - requests (python library)
   options:
     host:
       description: Salt Minion Id to connect to.
@@ -51,8 +49,14 @@ DOCUMENTATION = '''
 
 import os
 import base64
+import json
+import sys
+import ssl
 
-import requests
+if sys.version_info.major == "3":
+    from urllib.request import Request, urlopen, HTTPError
+else:
+    from urllib2 import Request, urlopen, HTTPError
 
 from ansible.errors import (
     AnsibleAuthenticationFailure,
@@ -60,6 +64,22 @@ from ansible.errors import (
     AnsibleError,
 )
 from ansible.plugins.connection import ConnectionBase
+
+
+def request(url, data, headers):
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    req = Request(url, data, headers)
+
+    try:
+      resp = urlopen(req, context=ctx)
+    except HTTPError as e:
+        if e.code == 401:
+            raise AnsibleAuthenticationFailure(e.reason)
+        else:
+            raise AnsibleConnectionFailure(e.reason)
+    return resp.read()
 
 
 class Connection(ConnectionBase):
@@ -76,7 +96,7 @@ class Connection(ConnectionBase):
         self.session = None
         self.token = None
 
-    def _post(self, path, json=None):
+    def _post(self, path, jsondata=None):
         url = "{0}{1}".format(self.endpoint.rstrip("/"), path) 
         self._display.vvv("POST to salt-api: %s" % url)
         headers={
@@ -89,18 +109,15 @@ class Connection(ConnectionBase):
         # if self.token:
         #     headers["X-Auth-Token"] = self.token
 
-        if json is None:
-            json = {}
+        if jsondata is None:
+            jsondata = {}
 
         self._display.vvvvv("POST Headers: %s" % headers)
-        self._display.vvvvv("POST Body: %s" % json)
-        resp = self.session.post(url, headers=headers, json=json)
-        self._display.vvvvv("Salt-api response: %s" % resp.text)
-        if resp.status_code == 401:
-            raise AnsibleAuthenticationFailure(resp.reason)
-        elif resp.status_code >= 300:
-            raise AnsibleConnectionFailure(resp.reason)
-        result = resp.json()
+        body = json.dumps(jsondata, ensure_ascii=False)
+        self._display.vvvvv("POST Body: %s" % body)
+        resp = request(url, body.encode("utf8"), headers=headers)
+        self._display.vvvvv("Salt-api response: %s" % resp)
+        result = json.loads(resp)
         self._display.vvvv("Salt-api return: %s" % result["return"])
         return result["return"]
 
@@ -112,8 +129,7 @@ class Connection(ConnectionBase):
             self.password = self.get_option('password')
             self.eauth = self.get_option('eauth')
 
-            self.session = requests.Session()
-            r = self._post("/login", json={
+            r = self._post("/login", jsondata={
                 "username": self.username,
                 "password": self.password,
                 "eauth": self.eauth
@@ -135,7 +151,7 @@ class Connection(ConnectionBase):
             data["arg"] = arg
         if kwarg:
             data["kwarg"] = kwarg
-        result = self._post("/run", json=[data])[0]
+        result = self._post("/run", jsondata=[data])[0]
         if self.host not in result:
             raise AnsibleError("Minion %s didn't answer, check if salt-minion is running and the name is correct" % self.host)
         return result[self.host]
@@ -168,7 +184,10 @@ class Connection(ConnectionBase):
         self._display.vvv("PUT %s TO %s" % (in_path, out_path), host=self.host)
         with open(in_path, 'rb') as in_fh:
             content = in_fh.read()
-        r = self._run_local('hashutil.base64_decodefile', kwarg={"instr": base64.b64encode(content), "outfile": out_path})
+        r = self._run_local('hashutil.base64_decodefile', kwarg={
+            "instr": base64.b64encode(content).decode("utf8"), 
+            "outfile": out_path
+        })
         if r != True:
           raise AnsibleError("PUT %s TO %s: %s" % (in_path, out_path, r))
 
