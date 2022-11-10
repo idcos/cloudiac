@@ -34,7 +34,7 @@ const (
 	DefaultSysEmail = "sys@example.com"
 	DefaultSysName  = "System"
 
-	DefaultTerraformVersion = "0.14.11"
+	DefaultTerraformVersion = "1.2.4"
 
 	// token subject
 	JwtSubjectUserAuth  = "userAuth" // 用于用户认证
