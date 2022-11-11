@@ -1,4 +1,4 @@
-FROM cloudiac/base-ct-runner:v0.1.7
+FROM cloudiac/base-ct-runner:v0.1.8
 
 ARG WORKER_IMAGE=cloudiac/ct-worker:latest
 EXPOSE 19030

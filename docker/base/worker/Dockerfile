@@ -7,6 +7,7 @@ USER root
 RUN yum install epel-release -y && \
     yum install -y centos-release-scl && \
     yum install git curl unzip openssh vim which -y && \
+    yum install sshpass -y && \
     yum install -y rh-python38 && \
     ln -s /opt/rh/rh-python38/root/usr/bin/python3 /usr/bin/python3 && \
     ln -s /opt/rh/rh-python38/root/usr/bin/pip3 /usr/bin/pip3 && \
@@ -19,7 +20,7 @@ RUN yum install epel-release -y && \
     ln -s /opt/rh/rh-python38/root/usr/local/bin/ansible-pull /usr/bin/ansible-pull && \
     yum clean all
 
-RUN yum install sshpass -y
+RUN
 
 ENV TERRASCAN_VERSION=1.9.0
 RUN mkdir -p /root/.terrascan/pkg/policies/opa/rego && \
