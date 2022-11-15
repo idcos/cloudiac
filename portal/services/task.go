@@ -1405,6 +1405,23 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 		return
 	}
 
+	outputs := make(map[string]interface{})
+	for k, v := range task.Result.Outputs {
+		m, ok := v.(map[string]interface{})
+		if !ok {
+			outputs[k] = v
+			continue
+		}
+
+		if _, ok := m["sensitive"]; !ok {
+			outputs[k] = v
+			continue
+		}
+
+		m["value"] = "(sensitive value)"
+		outputs[k] = m
+	}
+
 	if scanTask != nil {
 		policyStatus = scanTask.PolicyStatus
 	}
@@ -1416,7 +1433,7 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 	}
 
 	k := kafka.Get()
-	message := k.GenerateKafkaContent(task, taskStatus, env.Status, policyStatus, resources)
+	message := k.GenerateKafkaContent(task, taskStatus, env.Status, policyStatus, resources,outputs)
 	if err := k.ConnAndSend(message); err != nil {
 		logs.Get().Errorf("kafka send error: %v", err)
 		return
