@@ -87,7 +87,7 @@ const (
 	ProjectStatusDisable = "disable"
 
 	// 默认步骤超时时间(分钟)
-	DefaultTaskStepTimeout = 60
+	DefaultTaskStepTimeout = 3600
 
 	VcsGitlab = "gitlab"
 	VcsGitea  = "gitea"

@@ -176,7 +176,7 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 	}
 
 	if form.StepTimeout == 0 {
-		form.StepTimeout = common.DefaultTaskStepTimeout
+		form.StepTimeout = 60
 	}
 
 	if form.DestroyAt != "" {
