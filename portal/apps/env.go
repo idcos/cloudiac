@@ -1462,6 +1462,14 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	// 来源：手动触发、外部调用
 	taskSource, taskSourceSys := getEnvSource(form.Source)
 
+	// 是否是漂移检测任务
+	var IsDriftTask bool
+	if form.IsDriftTask && form.TaskType == common.TaskTypePlan {
+		IsDriftTask = true
+	} else {
+		IsDriftTask = false
+	}
+
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
@@ -1481,6 +1489,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		Source:    taskSource,
 		SourceSys: taskSourceSys,
 		Callback:  env.Callback,
+		IsDriftTask: IsDriftTask,
 	})
 
 	if err != nil {

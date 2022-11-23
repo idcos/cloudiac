@@ -239,9 +239,10 @@ func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*mode
 			Message:  "",
 			CurrStep: 0,
 		},
-		Callback:  pt.Callback,
-		Source:    pt.Source,
-		SourceSys: pt.SourceSys,
+		Callback:    pt.Callback,
+		Source:      pt.Source,
+		SourceSys:   pt.SourceSys,
+		IsDriftTask: pt.IsDriftTask,
 	}
 	task.Id = models.Task{}.NewId()
 	return &task, nil
@@ -1432,7 +1433,7 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 	}
 
 	k := kafka.Get()
-	message := k.GenerateKafkaContent(task, taskStatus, env.Status, policyStatus, resources,outputs)
+	message := k.GenerateKafkaContent(task, taskStatus, env.Status, policyStatus, resources, outputs)
 	if err := k.ConnAndSend(message); err != nil {
 		logs.Get().Errorf("kafka send error: %v", err)
 		return
