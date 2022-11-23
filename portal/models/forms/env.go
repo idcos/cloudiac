@@ -162,6 +162,9 @@ type DeployEnvForm struct {
 
 	AutoDeployCron  string `json:"autoDeployCron" form:"autoDeployCron"`   // 自动部署任务的Cron表达式
 	AutoDestroyCron string `json:"autoDestroyCron" form:"autoDestroyCron"` // 自动销毁任务的Cron表达式
+
+	// 部署plan任务时生效，进行漂移检测时，从最后一次任务获取配置信息进行检测
+	IsDriftTask bool `json:"isDriftTask" form:"isDriftTask" `
 }
 
 type ArchiveEnvForm struct {
