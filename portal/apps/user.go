@@ -419,7 +419,9 @@ func setUserDefaultRole(detail *resps.UserWithRoleResp, userId, orgId, projectId
 		// 如果请求的不是具体项目下的角色，则将用户的项目角色设置为其在当前组织下权限最高的项目角色
 		var err error
 		detail.ProjectRole, err = services.GetUserHighestProjectRole(db.Get(), orgId, userId)
-		logs.Get().Errorf("GetUserHighestProjectRole: %v", err)
+		if err != nil {
+			logs.Get().Errorf("GetUserHighestProjectRole: %v", err)
+		}
 	}
 }
 
