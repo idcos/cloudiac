@@ -5,9 +5,9 @@ package services
 import (
 	"cloudiac/portal/libs/ctx"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -23,6 +23,8 @@ import (
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 )
+
+var runnerTagsIndex sync.Map
 
 func GetEnv(sess *db.Session, id models.Id) (*models.Env, error) {
 	env := models.Env{}
@@ -308,6 +310,11 @@ func matchVar(v forms.SampleVariables, value models.Variable) bool {
 }
 
 func GetRunnerByTags(tags []string) (string, e.Error) {
+	tags_str := strings.Join(tags, ",")
+	_, ok := runnerTagsIndex.Load(tags_str); if !ok {
+		runnerTagsIndex.Store(tags_str, 0)
+	}
+
 	runners, err := RunnerSearch()
 	if err != nil {
 		return "", err
@@ -321,8 +328,15 @@ func GetRunnerByTags(tags []string) (string, e.Error) {
 	}
 
 	if len(validRunners) > 0 {
-		rand.Seed(time.Now().Unix())
-		return validRunners[rand.Intn(len(validRunners))].ID, nil //nolint:gosec
+		// 根据tags查出的runner轮循下发任务
+		v, _ := runnerTagsIndex.Load(tags_str)
+		rid, _ := v.(int)
+		if rid < len(validRunners) - 1{
+			runnerTagsIndex.Store(tags_str, rid + 1)
+		} else {
+			runnerTagsIndex.Store(tags_str, 0)
+		}
+		return validRunners[rid].ID, nil
 	}
 
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list with tags is null"))
