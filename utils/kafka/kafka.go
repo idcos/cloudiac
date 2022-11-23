@@ -23,7 +23,8 @@ type KafkaProducer struct {
 var kafka *KafkaProducer
 
 type IacKafkaCallbackResult struct {
-	Resources []models.Resource `json:"resources"  `
+	Resources []models.Resource `json:"resources"`
+	Outputs   map[string]interface{} `json:"outputs"`
 }
 
 type IacKafkaContent struct {
@@ -41,7 +42,8 @@ type IacKafkaContent struct {
 	Result       IacKafkaCallbackResult `json:"result"`
 }
 
-func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus, envStatus,policyStatus string, resources []models.Resource) []byte {
+func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus, envStatus,policyStatus string,
+	resources []models.Resource, outputs map[string]interface{}) []byte {
 	a := IacKafkaContent{
 		TaskStatus:   taskStatus,
 		TaskType:     task.Type,
@@ -54,6 +56,7 @@ func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus, envS
 		TaskId:       task.Id,
 		Result: IacKafkaCallbackResult{
 			Resources: resources,
+			Outputs: outputs,
 		},
 	}
 
