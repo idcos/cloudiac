@@ -17,6 +17,7 @@ import (
 	"gorm.io/plugin/soft_delete"
 
 	"cloudiac/portal/consts/e"
+	dbLogger "cloudiac/portal/libs/db/logger"
 	"cloudiac/utils/logs"
 
 	"github.com/go-testfixtures/testfixtures/v3"
@@ -353,8 +354,19 @@ func (s *Session) UpdateAttrs(attrs map[string]interface{}) (int64, error) {
 	return r.RowsAffected, r.Error
 }
 
+// Deprecated: 请使用 Insert() 或者 UpdateAll() 函数代替
+// save 函数会先判断传入的数据是否有主键， 如果有则先做更新操作（带主键查询条件），更新如果报数据不存在才会再做数据插入。
+// 但我们的数据模型中主键值都是在应用层生成的，调用 save 函数时都会有主健值，这导致:
+// 	1. 调用 save() 函数时会多执行一次无必要的 sql 查询
+// 	2. 先 update 后 insert 在高并发下容易出现死锁
 func (s *Session) Save(val interface{}) (int64, error) {
 	r := s.db.Save(val)
+	return r.RowsAffected, r.Error
+}
+
+// 全量更新所有字段的值，包括 zero-value
+func (s *Session) UpdateAll(val interface{}) (int64, error) {
+	r := s.db.Select("*").Updates(val)
 	return r.RowsAffected, r.Error
 }
 
@@ -460,7 +472,7 @@ func openDB(dsn string, driverNames ...string) error {
 	})
 	db, err := gorm.Open(mysqlDial, &gorm.Config{
 		NamingStrategy: namingStrategy,
-		Logger: gormLogger.New(logs.Get(), gormLogger.Config{
+		Logger: dbLogger.New(logs.Get(), gormLogger.Config{
 			SlowThreshold:             slowThreshold,
 			Colorful:                  false,
 			IgnoreRecordNotFoundError: true,

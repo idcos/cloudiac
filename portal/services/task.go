@@ -343,7 +343,7 @@ func createTaskStep(tx *db.Session, env *models.Env, task models.Task, pipelineS
 	if pipelineStep.Type == models.TaskStepEnvScan || pipelineStep.Type == models.TaskStepOpaScan {
 		// 对于包含扫描的任务，创建一个对应的 scanTask 作为扫描任务记录，便于后期扫描状态的查询
 		scanTask := CreateMirrorScanTask(&task)
-		if _, err := tx.Save(scanTask); err != nil {
+		if err := tx.Insert(scanTask); err != nil {
 			return nil, e.New(e.DBError, err)
 		}
 		if err := InitScanResult(tx, scanTask); err != nil {

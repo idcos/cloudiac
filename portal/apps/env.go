@@ -494,7 +494,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 
 	// 首次部署，直接更新 last_task_id
 	env.LastTaskId = task.Id
-	if _, err := tx.Save(env); err != nil {
+	if _, err := tx.UpdateAll(env); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error save env, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
@@ -839,7 +839,7 @@ func setAndCheckUpdateEnvTriggers(c *ctx.ServiceContext, tx *db.Session, attrs m
 	return nil
 }
 
-func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error {
+func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error { // nolint:cyclop
 	if form.HasKey("tags") {
 		if er := services.CheckEnvTags(form.Tags); er != nil {
 			return er
@@ -1494,8 +1494,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	}
 	lg.Debugln("envDeploy -> CreateTask finish")
 
-	// Save() 调用会全量将结构体中的字段进行保存，即使字段为 zero value
-	if _, err := tx.Save(env); err != nil {
+	if _, err := tx.UpdateAll(env); err != nil {
 		c.Logger().Errorf("error save env, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
