@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"sort"
 	"unicode/utf8"
 
 	"github.com/hashicorp/consul/api"
@@ -310,6 +311,7 @@ func matchVar(v forms.SampleVariables, value models.Variable) bool {
 }
 
 func GetRunnerByTags(tags []string) (string, e.Error) {
+	sort.Strings(tags)
 	tags_str := strings.Join(tags, ",")
 	_, ok := runnerTagsIndex.Load(tags_str); if !ok {
 		runnerTagsIndex.Store(tags_str, 0)
@@ -335,6 +337,8 @@ func GetRunnerByTags(tags []string) (string, e.Error) {
 			runnerTagsIndex.Store(tags_str, rid + 1)
 		} else {
 			runnerTagsIndex.Store(tags_str, 0)
+			// runner数量减少时rid置0，避免索引超出范围
+			rid = 0
 		}
 		return validRunners[rid].ID, nil
 	}
