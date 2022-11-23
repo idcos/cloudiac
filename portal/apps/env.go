@@ -390,6 +390,11 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		}
 	}()
 
+	// 同组织同项目环境不允许重名
+	if env, _ := services.GetEnvByName(tx, c.OrgId, c.ProjectId, form.Name); env != nil {
+		return nil, e.New(e.EnvAlreadyExists, http.StatusBadRequest)
+	}
+
 	taskStepTimeout, err := getTaskStepTimeoutInSecond(form.StepTimeout)
 	if err != nil {
 		return nil, err

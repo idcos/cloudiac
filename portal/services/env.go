@@ -87,6 +87,18 @@ func GetEnvById(tx *db.Session, id models.Id) (*models.Env, e.Error) {
 	return &o, nil
 }
 
+func GetEnvByName(tx *db.Session, orgId models.Id, projectId models.Id, name string) (*models.Env, e.Error) {
+	o := models.Env{}
+	if err := tx.Model(models.Env{}).
+		Where("org_id = ? AND project_id = ? AND id = ?", orgId, projectId, name).First(&o); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.EnvNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return &o, nil
+}
+
 func IsTplAssociationCurrentProject(c *ctx.ServiceContext, tplId models.Id) e.Error {
 	if ok, err := c.DB().Model(&models.ProjectTemplate{}).Where("template_id = ?", tplId).Where("project_id = ?", c.ProjectId).Exists(); err != nil {
 		return e.New(e.DBError, err)
