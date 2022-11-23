@@ -90,7 +90,7 @@ func GetEnvById(tx *db.Session, id models.Id) (*models.Env, e.Error) {
 func GetEnvByName(tx *db.Session, orgId models.Id, projectId models.Id, name string) (*models.Env, e.Error) {
 	o := models.Env{}
 	if err := tx.Model(models.Env{}).
-		Where("org_id = ? AND project_id = ? AND id = ?", orgId, projectId, name).First(&o); err != nil {
+		Where("org_id = ? AND project_id = ? AND name = ?", orgId, projectId, name).First(&o); err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.EnvNotExists, err)
 		}
