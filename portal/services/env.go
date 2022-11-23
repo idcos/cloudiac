@@ -5,10 +5,11 @@ package services
 import (
 	"cloudiac/portal/libs/ctx"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
+	"sort"
 	"unicode/utf8"
 
 	"github.com/hashicorp/consul/api"
@@ -23,6 +24,8 @@ import (
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 )
+
+var runnerTagsIndex sync.Map
 
 func GetEnv(sess *db.Session, id models.Id) (*models.Env, error) {
 	env := models.Env{}
@@ -296,17 +299,6 @@ func GetEnvResourceCount(sess *db.Session, envId models.Id) (int, e.Error) {
 	return int(count), nil
 }
 
-func GetDefaultRunner() (string, e.Error) {
-	runners, err := RunnerSearch()
-	if err != nil {
-		return "", err
-	}
-	if len(runners) > 0 {
-		return runners[0].ID, nil
-	}
-	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list is null"))
-}
-
 func matchVar(v forms.SampleVariables, value models.Variable) bool {
 	// 对于第三方调用api创建的环境来说，当前作用域是无变量的，sampleVariables中的变量一种是继承性下来的、另一种是新建的
 	// 这里需要判断变量如果修改了就在当前作用域创建一个变量
@@ -319,22 +311,47 @@ func matchVar(v forms.SampleVariables, value models.Variable) bool {
 	return false
 }
 
-func GetRunnerByTags(tags []string) (string, e.Error) {
+func GetRunner(tags []string) (string, e.Error) {
 	runners, err := RunnerSearch()
 	if err != nil {
 		return "", err
 	}
 
 	validRunners := make([]*api.AgentService, 0)
-	for _, runner := range runners {
-		if utils.ListContains(runner.Tags, tags) {
+	// 未传tags时对获取的所有runner进行轮循
+	tags_str := "runner_all"
+
+	if len(tags) > 0 {
+		sort.Strings(tags)
+		tags_str = strings.Join(tags, ",")
+
+		for _, runner := range runners {
+			if utils.ListContains(runner.Tags, tags) {
+				validRunners = append(validRunners, runner)
+			}
+		}
+	} else {
+		for _, runner := range runners {
 			validRunners = append(validRunners, runner)
 		}
 	}
 
+	_, ok := runnerTagsIndex.Load(tags_str); if !ok {
+		runnerTagsIndex.Store(tags_str, 0)
+	}
+
 	if len(validRunners) > 0 {
-		rand.Seed(time.Now().Unix())
-		return validRunners[rand.Intn(len(validRunners))].ID, nil //nolint:gosec
+		// 根据tags查出的runner轮循下发任务
+		v, _ := runnerTagsIndex.Load(tags_str)
+		rid, _ := v.(int)
+		if rid < len(validRunners) - 1{
+			runnerTagsIndex.Store(tags_str, rid + 1)
+		} else {
+			runnerTagsIndex.Store(tags_str, 0)
+			// runner数量减少时rid置0，避免索引超出范围
+			rid = 0
+		}
+		return validRunners[rid].ID, nil
 	}
 
 	return "", e.New(e.ConsulConnError, fmt.Errorf("runner list with tags is null"))
@@ -353,10 +370,7 @@ func GetAvailableRunnerId(runnerId string, runnerTags []string) (string, e.Error
 		return runnerId, nil
 	}
 
-	if len(runnerTags) > 0 {
-		return GetRunnerByTags(runnerTags)
-	}
-	return GetDefaultRunner()
+	return GetRunner(runnerTags)
 }
 
 func varNewAppend(resp []forms.Variable, name, value, varType string, sensitive bool) []forms.Variable {
