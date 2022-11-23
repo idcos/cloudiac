@@ -53,7 +53,7 @@ import json
 import sys
 import ssl
 
-if sys.version_info.major == "3":
+if sys.version_info.major == 3:
     from urllib.request import Request, urlopen, HTTPError
 else:
     from urllib2 import Request, urlopen, HTTPError
@@ -63,7 +63,10 @@ from ansible.errors import (
     AnsibleConnectionFailure,
     AnsibleError,
 )
+
+from ansible.module_utils.common.text.converters import to_text, to_native, to_bytes
 from ansible.plugins.connection import ConnectionBase
+from ansible.plugins.shell.powershell import _parse_clixml
 
 
 def request(url, data, headers):
@@ -83,8 +86,12 @@ def request(url, data, headers):
 
 
 class Connection(ConnectionBase):
-    has_pipelining = False
     transport = 'saltapi'
+
+    has_pipelining = True
+    has_native_async = False
+    allow_executable = False
+    allow_extras = True
 
     def __init__(self, play_context, *args, **kwargs):
         super(Connection, self).__init__(play_context, *args, **kwargs)
@@ -94,11 +101,17 @@ class Connection(ConnectionBase):
         self.password = None
         self.eauth = None
         self.session = None
-        self.token = None
+        self._is_windows = getattr(self._shell, "_IS_WINDOWS", False)
+
+        if self._is_windows:
+            self.has_native_async = True
+            self.allow_executable = False
+            self.always_pipeline_modules = True
+            self.module_implementation_preferences = ('.ps1', '.exe', '')
 
     def _post(self, path, jsondata=None):
         url = "{0}{1}".format(self.endpoint.rstrip("/"), path) 
-        self._display.vvv("POST to salt-api: %s" % url)
+        self._display.vvvv("POST to salt-api: %s" % url)
         headers={
             "Accept": "application/json",
             "Content-Type": "application/json"
@@ -106,19 +119,17 @@ class Connection(ConnectionBase):
 
         # 经测试添加 X-Auth-Token 无效，依然报 401，
         # 所以改成了在请求 body 中直接提供 username+password
-        # if self.token:
-        #     headers["X-Auth-Token"] = self.token
-
         if jsondata is None:
             jsondata = {}
 
-        self._display.vvvvv("POST Headers: %s" % headers)
+        self._display.vvvvv("POST Headers: %s" % headers, host=self.host)
         body = json.dumps(jsondata, ensure_ascii=False)
-        self._display.vvvvv("POST Body: %s" % body)
+        self._display.vvvvv("POST Body: %s" % to_native(body), host=self.host)
+
         resp = request(url, body.encode("utf8"), headers=headers)
-        self._display.vvvvv("Salt-api response: %s" % resp)
-        result = json.loads(resp)
-        self._display.vvvv("Salt-api return: %s" % result["return"])
+        self._display.vvvvv("Salt-api response: %s" % to_native(resp), host=self.host)
+        result = json.loads(to_text(resp))
+        self._display.vvvv("Salt-api return: %s" % to_native(result["return"]), host=self.host)
         return result["return"]
 
     def _connect(self):
@@ -129,12 +140,12 @@ class Connection(ConnectionBase):
             self.password = self.get_option('password')
             self.eauth = self.get_option('eauth')
 
-            r = self._post("/login", jsondata={
-                "username": self.username,
-                "password": self.password,
-                "eauth": self.eauth
-            })
-            self.token = r[0]["token"]
+            # 每次请求体中直接包含了认证信息，不需要再提交登录
+            #r = self._post("/login", jsondata={
+            #    "username": self.username,
+            #    "password": self.password,
+            #    "eauth": self.eauth
+            #})
             self._connected = True
         return self
 
@@ -147,40 +158,62 @@ class Connection(ConnectionBase):
             "password": self.password,
             "eauth": self.eauth
         }
-        if arg:
+        if arg is not None:
             data["arg"] = arg
-        if kwarg:
+        if kwarg is not None:
             data["kwarg"] = kwarg
+        
         result = self._post("/run", jsondata=[data])[0]
-        if self.host not in result:
-            raise AnsibleError("Minion %s didn't answer, check if salt-minion is running and the name is correct" % self.host)
+        if result.get(self.host, False) is False:
+            raise AnsibleConnectionFailure("Minion %s didn't answer, check if salt-minion is running and the name is correct" % self.host)
         return result[self.host]
 
     def exec_command(self, cmd, in_data=None, sudoable=True):
         """ run a command on the remote minion """
+
         super(Connection, self).exec_command(cmd, in_data=in_data, sudoable=sudoable)
 
-        if in_data:
-            raise AnsibleError("Internal Error: this module does not support optimized module pipelining")
+        kwarg = {k.replace('ansible_saltapi_', ''): v for k,v in self.get_option('_extras').items()}
 
-        self._display.vvv("EXEC %s" % cmd, host=self.host)
-        # need to add 'true;' to work around https://github.com/saltstack/salt/issues/28077
-        r = self._run_local('cmd.exec_code_all', arg=['bash', 'true;' + cmd])
-        return r['retcode'], r['stdout'], r['stderr']
+        if self._is_windows:
+           kwarg["shell"] = "powershell"
+        else:
+          # add 'true;' to work around https://github.com/saltstack/salt/issues/28077
+          cmd = "true;" + cmd
+
+        self._display.vvv("EXEC %s" % to_native(cmd), host=self.host)
+        if in_data:
+            self._display.vvv("STDIN <<END_OF_STDIN\n%s\nEND_OF_STDIN" % to_native(in_data[:128] + b"...<and more>..."), host=self.host)
+            kwarg["stdin"] = to_text(in_data)
+            r = self._run_local('cmd.run_all', arg=[cmd], kwarg=kwarg)
+        else:
+            r = self._run_local('cmd.run_all', arg=[cmd], kwarg=kwarg)
+
+        if not isinstance(r, dict):
+            return 127, '', to_text(str(r))
+
+        stdout = to_bytes(r.get('stdout', ''))
+        stderr = to_bytes(r.get('stderr', ''))
+
+        if self._is_windows and stderr.startswith(b"#< CLIXML"):
+            try:
+                #parse just stderr from CLIXML output
+                stderr = _parse_clixml(stderr)
+            except Exception:
+                # unsure if we're guaranteed a valid xml doc- use raw output in case of error
+                pass
+        return r['retcode'], stdout, stderr
 
     @staticmethod
-    def _normalize_path(path, prefix):
-        if not path.startswith(os.path.sep):
-            path = os.path.join(os.path.sep, path)
-        normpath = os.path.normpath(path)
-        return os.path.join(prefix, normpath[1:])
+    def _normalize_path(path):
+        return os.path.normpath(path)
 
     def put_file(self, in_path, out_path):
         """ transfer a file from local to remote """
 
         super(Connection, self).put_file(in_path, out_path)
 
-        out_path = self._normalize_path(out_path, '/')
+        out_path = self._normalize_path(out_path)
         self._display.vvv("PUT %s TO %s" % (in_path, out_path), host=self.host)
         with open(in_path, 'rb') as in_fh:
             content = in_fh.read()
@@ -196,7 +229,7 @@ class Connection(ConnectionBase):
 
         super(Connection, self).fetch_file(in_path, out_path)
 
-        in_path = self._normalize_path(in_path, '/')
+        in_path = self._normalize_path(in_path)
         self._display.vvv("FETCH %s TO %s" % (in_path, out_path), host=self.host)
         r = self._run_local('hashutil.base64_encodefile', [in_path])
         with open(out_path, 'wb') as fp:
