@@ -17,6 +17,7 @@ import (
 	"gorm.io/plugin/soft_delete"
 
 	"cloudiac/portal/consts/e"
+	dbLogger "cloudiac/portal/libs/db/logger"
 	"cloudiac/utils/logs"
 
 	"github.com/go-testfixtures/testfixtures/v3"
@@ -460,7 +461,7 @@ func openDB(dsn string, driverNames ...string) error {
 	})
 	db, err := gorm.Open(mysqlDial, &gorm.Config{
 		NamingStrategy: namingStrategy,
-		Logger: gormLogger.New(logs.Get(), gormLogger.Config{
+		Logger: dbLogger.New(logs.Get(), gormLogger.Config{
 			SlowThreshold:             slowThreshold,
 			Colorful:                  false,
 			IgnoreRecordNotFoundError: true,
