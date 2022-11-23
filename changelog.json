@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.2.2",
+    "date": "20221014",
+    "content": {
+      "Fixes": [
+        "修复 terraform.py 脚本有中文注释导致运行出错的问题"
+      ]
+    }
+  },
+  {
     "version": "1.2.1",
     "date": "20220914",
     "content": {

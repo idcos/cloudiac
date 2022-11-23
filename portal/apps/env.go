@@ -390,6 +390,11 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		}
 	}()
 
+	// 同组织同项目环境不允许重名
+	if env, _ := services.GetEnvByName(tx, c.OrgId, c.ProjectId, form.Name); env != nil {
+		return nil, e.New(e.EnvAlreadyExists, http.StatusBadRequest)
+	}
+
 	taskStepTimeout, err := getTaskStepTimeoutInSecond(form.StepTimeout)
 	if err != nil {
 		return nil, err
@@ -489,7 +494,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 
 	// 首次部署，直接更新 last_task_id
 	env.LastTaskId = task.Id
-	if _, err := tx.Save(env); err != nil {
+	if _, err := tx.UpdateAll(env); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error save env, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
@@ -834,7 +839,7 @@ func setAndCheckUpdateEnvTriggers(c *ctx.ServiceContext, tx *db.Session, attrs m
 	return nil
 }
 
-func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error {
+func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error { // nolint:cyclop
 	if form.HasKey("tags") {
 		if er := services.CheckEnvTags(form.Tags); er != nil {
 			return er
@@ -862,7 +867,17 @@ func setAndCheckUpdateEnvByForm(c *ctx.ServiceContext, tx *db.Session, attrs mod
 	}
 
 	if form.HasKey("archived") {
-		if env.Status != models.EnvStatusInactive && env.Status != models.EnvStatusDestroyed {
+		envResCount := int64(0)
+		if env.LastResTaskId != "" {
+			var err e.Error
+			envResCount, err = services.GetTaskResourceCount(tx, env.LastResTaskId)
+			if err != nil {
+				return err
+			}
+		}
+		if !(env.Status == models.EnvStatusInactive ||
+			env.Status == models.EnvStatusDestroyed ||
+			(env.Status == models.EnvStatusFailed && envResCount == 0)) {
 			_ = tx.Rollback()
 			return e.New(e.EnvCannotArchiveActive,
 				fmt.Errorf("env can't be archive while env is %s", env.Status),
@@ -1452,6 +1467,14 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	// 来源：手动触发、外部调用
 	taskSource, taskSourceSys := getEnvSource(form.Source)
 
+	// 是否是漂移检测任务
+	var IsDriftTask bool
+	if form.IsDriftTask && form.TaskType == common.TaskTypePlan {
+		IsDriftTask = true
+	} else {
+		IsDriftTask = false
+	}
+
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
@@ -1470,6 +1493,8 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		},
 		Source:    taskSource,
 		SourceSys: taskSourceSys,
+		Callback:  env.Callback,
+		IsDriftTask: IsDriftTask,
 	})
 
 	if err != nil {
@@ -1478,8 +1503,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	}
 	lg.Debugln("envDeploy -> CreateTask finish")
 
-	// Save() 调用会全量将结构体中的字段进行保存，即使字段为 zero value
-	if _, err := tx.Save(env); err != nil {
+	if _, err := tx.UpdateAll(env); err != nil {
 		c.Logger().Errorf("error save env, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}

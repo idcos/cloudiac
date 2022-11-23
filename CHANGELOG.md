@@ -1,3 +1,8 @@
+## v1.2.2 20221014
+### Fixed
+- 修复 terraform.py 脚本有中文注释导致运行出错的问题
+
+------
 ## v1.2.1 20220914
 ### Fixed
 - 修复 _cloudiac.tfvars.json 文件生成问题
@@ -16,6 +21,7 @@
 ### Enhancements
 - 改用 tfvars.json 文件传入 terraform 变量
 - 环境部署时未传workdir则使用stack的workdir
+
 
 ------
 ## v1.1.0 20220819

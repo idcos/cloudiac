@@ -239,9 +239,10 @@ func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*mode
 			Message:  "",
 			CurrStep: 0,
 		},
-		Callback:  pt.Callback,
-		Source:    pt.Source,
-		SourceSys: pt.SourceSys,
+		Callback:    pt.Callback,
+		Source:      pt.Source,
+		SourceSys:   pt.SourceSys,
+		IsDriftTask: pt.IsDriftTask,
 	}
 	task.Id = models.Task{}.NewId()
 	return &task, nil
@@ -343,7 +344,7 @@ func createTaskStep(tx *db.Session, env *models.Env, task models.Task, pipelineS
 	if pipelineStep.Type == models.TaskStepEnvScan || pipelineStep.Type == models.TaskStepOpaScan {
 		// 对于包含扫描的任务，创建一个对应的 scanTask 作为扫描任务记录，便于后期扫描状态的查询
 		scanTask := CreateMirrorScanTask(&task)
-		if _, err := tx.Save(scanTask); err != nil {
+		if err := tx.Insert(scanTask); err != nil {
 			return nil, e.New(e.DBError, err)
 		}
 		if err := InitScanResult(tx, scanTask); err != nil {
@@ -601,17 +602,16 @@ func taskStatusExitedCall(dbSess *db.Session, task *models.Task, status string) 
 			SendKafkaMessage(dbSess, task, status)
 		}
 
+		if task.Callback != "" {
+			if utils.IsValidUrl(task.Callback) {
+				go SendHttpMessage(task.Callback, dbSess, task, status)
+			} else {
+				logs.Get().Warnf("invalid task callback url: %s", task.Callback)
+			}
+		}
+
 		syncManagedResToProvider(task)
 	}
-
-	//if task.Callback != "" {
-	//	switch task.Callback {
-	//	case consts.TaskCallbackKafka:
-	//		SendKafkaMessage(dbSess, task, status)
-	//	default:
-	//		logs.Get().Infof("callback type don't support")
-	//	}
-	//}
 
 	// 如果勾选提交pr自动plan，任务结束时 plan作业结果写入PR评论中
 	if task.Type == common.TaskTypePlan {
@@ -1405,6 +1405,23 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 		return
 	}
 
+	outputs := make(map[string]interface{})
+	for k, v := range task.Result.Outputs {
+		m, ok := v.(map[string]interface{})
+		if !ok {
+			outputs[k] = v
+			continue
+		}
+
+		if _, ok := m["sensitive"]; !ok {
+			outputs[k] = v
+			continue
+		}
+
+		m["value"] = "(sensitive value)"
+		outputs[k] = m
+	}
+
 	if scanTask != nil {
 		policyStatus = scanTask.PolicyStatus
 	}
@@ -1416,12 +1433,49 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 	}
 
 	k := kafka.Get()
-	message := k.GenerateKafkaContent(task, taskStatus, env.Status, policyStatus, resources)
+	message := k.GenerateKafkaContent(task, taskStatus, env.Status, policyStatus, resources, outputs)
 	if err := k.ConnAndSend(message); err != nil {
 		logs.Get().Errorf("kafka send error: %v", err)
 		return
 	}
 	logs.Get().Infof("kafka send massage successful. data: %s", string(message))
+}
+
+func SendHttpMessage(callbackUrl string, session *db.Session, task *models.Task, taskStatus string) {
+	resources := make([]models.Resource, 0)
+	if err := session.Model(models.Resource{}).Where("org_id = ? AND project_id = ? AND env_id = ? AND task_id = ?",
+		task.OrgId, task.ProjectId, task.EnvId, task.Id).Find(&resources); err != nil {
+		logs.Get().Errorf("send callback error, get resource data err: %v", err)
+		return
+	}
+
+	var policyStatus string
+	scanTask, err := GetScanTaskById(session, task.Id)
+	if err != nil && err.Code() != e.TaskNotExists {
+		logs.Get().Errorf("send callback error, get scanTask data err: %v, taskId: %s", err, task.Id)
+		return
+	}
+
+	if scanTask != nil {
+		policyStatus = scanTask.PolicyStatus
+	}
+
+	env, err := GetEnvById(session, task.EnvId)
+	if err != nil {
+		logs.Get().Errorf("send callback error, query env status err: %v", err)
+		return
+	}
+
+	header := &http.Header{}
+	header.Set("Content-Type", "application/json")
+	message := GenerateCallbackContent(task, taskStatus, env.Status, policyStatus, resources)
+	timeout := int(consts.CallbackTimeout.Seconds())
+	if _, er := utils.HttpService(callbackUrl, "POST", header, message, timeout, timeout); er != nil {
+		logs.Get().Warnf("send callback massage failed, err: %s, data: %+v", er, message)
+		return
+	}
+
+	logs.Get().Infof("send callback massage successful. data: %+v", message)
 }
 
 type Resource struct {
@@ -1445,6 +1499,14 @@ func GetTaskResourceToTaskId(dbSess *db.Session, task *models.Task) ([]Resource,
 	}
 
 	return rs, nil
+}
+
+func GetTaskResourceCount(dbSess *db.Session, taskId models.Id) (int64, e.Error) {
+	c, err := dbSess.Model(&models.Resource{}).Where("task_id = ?", taskId).Group("task_id").Count()
+	if err != nil {
+		return 0, e.AutoNew(err, e.DBError)
+	}
+	return c, nil
 }
 
 func InsertOrUpdateCronTaskInfo(session *db.Session, resDrift models.ResourceDrift) {
@@ -1605,4 +1667,48 @@ func doAbortRunnerTask(task models.Task, justCheck bool) e.Error {
 		return e.New(e.RunnerError, fmt.Errorf(resp.Error))
 	}
 	return nil
+}
+
+type CallbackResult struct {
+	Resources []models.Resource `json:"resources"  `
+}
+
+type CallbackContent struct {
+	EventType    string         `json:"eventType"`
+	ExtraData    interface{}    `json:"extraData"`
+	TaskStatus   string         `json:"taskStatus"`
+	PolicyStatus string         `json:"policyStatus"`
+	TaskType     string         `json:"taskType"`
+	EnvStatus    string         `json:"envStatus"`
+	OrgId        models.Id      `json:"orgId"`
+	ProjectId    models.Id      `json:"projectId"`
+	TplId        models.Id      `json:"tplId"`
+	EnvId        models.Id      `json:"envId"`
+	TaskId       models.Id      `json:"taskId"`
+	Result       CallbackResult `json:"result"`
+}
+
+func GenerateCallbackContent(task *models.Task, taskStatus, envStatus, policyStatus string, resources []models.Resource) interface{} {
+	a := CallbackContent{
+		TaskStatus:   taskStatus,
+		TaskType:     task.Type,
+		PolicyStatus: policyStatus,
+		EnvStatus:    envStatus,
+		OrgId:        task.OrgId,
+		ProjectId:    task.ProjectId,
+		TplId:        task.TplId,
+		EnvId:        task.EnvId,
+		TaskId:       task.Id,
+		Result: CallbackResult{
+			Resources: resources,
+		},
+	}
+
+	if task.ExtraData != nil {
+		a.ExtraData = task.ExtraData
+	} else {
+		a.ExtraData = make(map[string]interface{})
+	}
+
+	return a
 }

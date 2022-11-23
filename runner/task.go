@@ -562,6 +562,7 @@ func (t *Task) genStepScript() (string, error) {
 var checkoutCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 set -o pipefail
 # before checkout
+cd '{{.ContainerWorkspace}}'
 {{- if .Before }}
 {{.Before}}
 {{- end}}
@@ -613,6 +614,7 @@ func (t *Task) stepCheckout() (command string, err error) {
 }
 
 var initCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 {{if .Before}}{{.Before}} && \{{- end}}
 cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 tfenv install $TFENV_TERRAFORM_VERSION && \
@@ -645,6 +647,7 @@ func (t *Task) stepInit() (command string, err error) {
 }
 
 var planCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 {{if .Before}}{{.Before}} && \{{- end}}
 cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 terraform plan -input=false -out=_cloudiac.tfplan \
@@ -669,6 +672,7 @@ func (t *Task) stepPlan() (command string, err error) {
 
 // 当指定了 plan 文件时不需要也不能传 -var-file 参数
 var applyCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 {{if .Before}}{{.Before}} && \{{- end}}
 cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 terraform apply -input=false -auto-approve \
@@ -710,12 +714,14 @@ func (t *Task) stepDestroy() (command string, err error) {
 	})
 }
 
+// CLOUDIAC_WORKDIR 环境变量在 task_manager 中会自动设置
 var playCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-export CLOUDIAC_WORKSPACE={{.ContainerWorkspace}}
 export CLOUDIAC_ANSIBLE_INVENTORY={{.AnsibleStateAnalysis}}
 
-{{if .Before}}{{.Before}} && \{{- end}}
-cd "$CLOUDIAC_WORKDIR" && cloudiac-playbook \
+{{if .Before}}cd "${CLOUDIAC_WORKDIR}" && {{.Before}} && \{{- end}}
+cd "${CLOUDIAC_WORKDIR}" && \
+if [[ -f "{{.Requirements}}" ]];then ansible-galaxy install -r "{{.Requirements}}"; fi && \
+cloudiac-playbook \
 {{ if .Req.Env.PlayVarsFile -}}--extra @{{.Req.Env.PlayVarsFile}}{{ end -}} \
 {{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }} \
 {{.Req.Env.Playbook}} {{- if .After}} && \
@@ -726,10 +732,10 @@ func (t *Task) stepPlay() (command string, err error) {
 	beforeCmds, afterCmds := getBeforeAfterCmds(t.req.StepBeforeCmds, t.req.StepAfterCmds)
 	return t.executeTpl(playCommandTpl, map[string]interface{}{
 		"Req":                  t.req,
+		"Requirements":         filepath.Join(filepath.Dir(t.req.Env.Playbook), CloudIacAnsibleRequirements),
 		"AnsibleStateAnalysis": filepath.Join(ContainerAssetsDir, AnsibleStateAnalysisName),
 		"Before":               beforeCmds,
 		"After":                afterCmds,
-		"ContainerWorkspace":   ContainerWorkspace,
 	})
 }
 
