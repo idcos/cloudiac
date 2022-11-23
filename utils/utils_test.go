@@ -130,7 +130,7 @@ func TestGenPasswd(t *testing.T) {
 
 	for _, pwd := range pwsList {
 		if len(pwd) < 6 || len(pwd) > 30 {
-			t.Errorf("password: %s, error: password length",pwd)
+			t.Errorf("password: %s, error: password length", pwd)
 			continue
 		}
 
@@ -141,7 +141,29 @@ func TestGenPasswd(t *testing.T) {
 			}
 		}
 		if typeCount < 2 {
-			t.Errorf("password: %s, error: password strength",pwd)
+			t.Errorf("password: %s, error: password strength", pwd)
 		}
+	}
+}
+
+func TestIsValidUrl(t *testing.T) {
+	type args struct {
+		theUrl string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{"https://www.google.com", args{theUrl: "https://www.google.com"}, true},
+		{"ftp://192.168.1.1", args{theUrl: "ftp://192.168.1.1"}, true},
+		{"www.google.com", args{theUrl: "www.google.com"}, false},
+		{"/root", args{theUrl: "/root"}, false},
+		{"", args{theUrl: ""}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, IsValidUrl(tt.args.theUrl), "IsValidUrl(%v)", tt.args.theUrl)
+		})
 	}
 }

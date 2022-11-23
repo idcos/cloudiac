@@ -150,8 +150,9 @@ func DeleteVcs(tx *db.Session, id models.Id) e.Error {
 type TemplateVariable struct {
 	Description string `json:"description" form:"description" `
 	Sensitive   bool   `json:"sensitive" form:"sensitive"`
-	Value       string `json:"value" form:"value" `
-	Name        string `json:"name" form:"name" `
+	Required    bool   `json:"required" form:"required"`
+	Value       string `json:"value" form:"value"`
+	Name        string `json:"name" form:"name"`
 }
 
 type tfVariableConfig struct {
@@ -188,6 +189,8 @@ func ParseTfVariables(filename string, content []byte) ([]TemplateVariable, e.Er
 	for _, s := range c.Upstreams {
 		v, ok := s.Default.(*hcl.Attribute)
 		if ok {
+			// 有默认值，则通过描述中的关键字判断是否必填
+			required := strings.Contains(s.Description, "（必填）") || strings.Contains(s.Description, "(必填)")
 			val, _ := v.Expr.Value(nil)
 			if val.IsWhollyKnown() {
 				valJSON, err := ctyjson.Marshal(val, val.Type())
@@ -198,16 +201,17 @@ func ParseTfVariables(filename string, content []byte) ([]TemplateVariable, e.Er
 					Value:       strings.Trim(string(valJSON), "\""),
 					Name:        s.Name,
 					Sensitive:   s.Sensitive,
+					Required:    required,
 					Description: s.Description,
 				})
 			}
 		} else {
 			tv = append(tv, TemplateVariable{
 				Name:        s.Name,
+				Required:    true, // 无默认值，则变量为必填
 				Description: s.Description,
 			})
 		}
-
 	}
 	return tv, nil
 }

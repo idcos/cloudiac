@@ -687,3 +687,16 @@ func StructToMap(in interface{}, tagName string) (map[string]interface{}, error)
 	}
 	return out, nil
 }
+
+// IsValidUrl 是否有效的 URL 地址
+func IsValidUrl(theUrl string) bool {
+	if _, err := url.ParseRequestURI(theUrl); err != nil {
+		return false
+	}
+
+	if u, err := url.Parse(theUrl); err != nil || u.Scheme == "" || u.Host == "" {
+		return false
+	}
+
+	return true
+}

@@ -1,0 +1,39 @@
+#!/bin/sh
+set -e
+
+# 禁用 cowsay, https://ansible.readthedocs.io/en/stable/faq.html#how-do-i-disable-cowsay
+export ANSIBLE_NOCOWS="1" 
+
+export ANSIBLE_HOST_KEY_CHECKING="False"
+
+export CLOUDIAC_WORKSPACE=${CLOUDIAC_WORKSPACE:-.}
+# workdir 为云模板下的相对路径
+export CLOUDIAC_WORKDIR=${CLOUDIAC_WORKDIR}
+export CLOUDIAC_ANSIBLE_USER=${CLOUDIAC_ANSIBLE_USER}
+export CLOUDIAC_ANSIBLE_INVENTORY=${CLOUDIAC_ANSIBLE_INVENTORY}
+
+COMMAND="ansible-playbook"
+if [[ -n "$CLOUDIAC_ANSIBLE_USER" ]]; then
+  COMMAND="$COMMAND --user $CLOUDIAC_ANSIBLE_USER"
+fi
+if [[ -n "$CLOUDIAC_ANSIBLE_INVENTORY" ]]; then
+  COMMAND="$COMMAND --inventory $CLOUDIAC_ANSIBLE_INVENTORY"
+fi
+if [[ -e "$CLOUDIAC_WORKSPACE/ssh_key" ]]; then
+  COMMAND="$COMMAND --private-key $CLOUDIAC_WORKSPACE/ssh_key"
+fi
+if [[ -e "$CLOUDIAC_WORKSPACE/_cloudiac_play_vars.yml" ]]; then
+  COMMAND="$COMMAND --extra-vars @$CLOUDIAC_WORKSPACE/_cloudiac_play_vars.yml"
+fi
+
+if [[ -z "$ANSIBLE_TF_DIR" ]]; then
+  if test -e "${CLOUDIAC_WORKDIR}"; then 
+    ANSIBLE_TF_DIR="${CLOUDIAC_WORKDIR}"
+  else 
+    ANSIBLE_TF_DIR="."
+  fi
+fi
+
+# 以下为 terraform.py 中会使用的变量
+export ANSIBLE_TF_DIR
+sh -c "$COMMAND $*"

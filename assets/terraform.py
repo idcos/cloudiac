@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 '''
 Terraform Inventory Script
 ==========================
@@ -362,6 +362,7 @@ class AnsibleGroup(object):
 
 
 def _execute_shell():
+    os.putenv("TF_LOG", "")
     encoding = 'utf-8'
     tf_workspace = [TERRAFORM_PATH, 'workspace', 'select', TERRAFORM_WS_NAME]
     proc_ws = Popen(tf_workspace,
@@ -374,7 +375,6 @@ def _execute_shell():
         sys.stderr.write(str(err_ws) + '\n')
         sys.exit(1)
     else:
-        os.putenv("TF_LOG", "")
         tf_command = [TERRAFORM_PATH, 'state', 'pull']
         proc_tf_cmd = Popen(tf_command,
                             cwd=TERRAFORM_DIR,

@@ -1,6 +1,51 @@
 # Releases
 
 ------
+## v1.2.2 20221014
+**Fixes**
+
+- 修复 terraform.py 脚本有中文注释导致运行出错的问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v1.2.2](https://github.com/idcos/cloudiac/releases/tag/v1.2.2)
+
+
+------
+## v1.2.1 20220914
+**Fixes**
+
+- 修复 _cloudiac.tfvars.json 文件生成问题
+- _cloudiac.tfvars.json 无法处理复杂变量(json)的问题
+- 修复传入 TF_LOG 环境变量导致 terraform.py 脚本出错的问题(again)
+- 修复环境部署日志问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v1.2.1](https://github.com/idcos/cloudiac/releases/tag/v1.2.1)
+
+
+------
+## v1.2.0 20220906
+**Enhancements**
+
+- 改用 tfvars.json 文件传入 terraform 变量
+- 环境部署时未传workdir则使用stack的workdir
+
+**Features**
+
+- ct-worker 镜像添加 cloudiac-playbook 命令
+
+**Fixes**
+
+- 修复漂移检测数组下标越界问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v1.2.0](https://github.com/idcos/cloudiac/releases/tag/v1.2.0)
+
+
+------
 ## v1.1.0 20220819
 **Features**
 

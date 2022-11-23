@@ -76,6 +76,12 @@ func (t *Task) start() (cid string, err error) {
 			return "", errors.Wrap(err, "decrypt private key")
 		}
 	}
+	for _, vars := range []map[string]string{
+		t.req.Env.EnvironmentVars, t.req.Env.TerraformVars, t.req.Env.AnsibleVars} {
+		if err := t.decryptVariables(vars); err != nil {
+			return "", errors.Wrap(err, "decrypt variables")
+		}
+	}
 
 	t.workspace, err = t.initWorkspace()
 	if err != nil {
@@ -130,13 +136,6 @@ func (t *Task) start() (cid string, err error) {
 }
 
 func (t *Task) buildVarsAndCmdEnv(cmd *Executor) error {
-	for _, vars := range []map[string]string{
-		t.req.Env.EnvironmentVars, t.req.Env.TerraformVars, t.req.Env.AnsibleVars} {
-		if err := t.decryptVariables(vars); err != nil {
-			return errors.Wrap(err, "decrypt variables")
-		}
-	}
-
 	// 设置默认的 LC_ALL，解决 ansible playbook 中输出中文乱码问题
 	cmd.Env = append(cmd.Env, "LC_ALL=en_US.UTF-8")
 
@@ -156,9 +155,6 @@ func (t *Task) buildVarsAndCmdEnv(cmd *Executor) error {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	for k, v := range t.req.Env.TerraformVars {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("TF_VAR_%s=%s", k, v))
-	}
 	if t.req.Env.TfVersion == "" {
 		t.req.Env.TfVersion = consts.DefaultTerraformVersion
 	}
@@ -276,8 +272,14 @@ func (t *Task) initWorkspace() (workspace string, err error) {
 		return workspace, err
 	}
 
+	if err = t.genEnvironmentFile(workspace); err != nil {
+		return workspace, errors.Wrap(err, "generate environment file")
+	}
 	if err = t.genIacTfFile(workspace); err != nil {
-		return workspace, errors.Wrap(err, "generate tf file")
+		return workspace, errors.Wrap(err, "generate cloudiac tf file")
+	}
+	if err = t.genTfvarsJsonFile(workspace); err != nil {
+		return workspace, errors.Wrap(err, "generate tfvars json file")
 	}
 	if err = t.genPlayVarsFile(workspace); err != nil {
 		return workspace, errors.Wrap(err, "generate play vars file")
@@ -321,6 +323,13 @@ func execTpl2File(tpl *template.Template, data interface{}, savePath string) err
 	return tpl.Execute(fp, data)
 }
 
+// 记录执行任务时使用的系统环境变量
+func (t *Task) genEnvironmentFile(workspace string) error {
+	path := filepath.Join(workspace, EnvironmentFile)
+	b := utils.MustJSONIndent(t.req.SysEnvironments, "  ")
+	return os.WriteFile(path, b, 0644) //nolint:gosec
+}
+
 func (t *Task) genIacTfFile(workspace string) error {
 	if t.req.StateStore.Address == "" {
 		if os.Getenv("IAC_WORKER_CONSUL") != "" {
@@ -358,6 +367,49 @@ func (t *Task) genPlayVarsFile(workspace string) error {
 		}
 	}
 	return yaml.NewEncoder(fp).Encode(ansibleVars)
+}
+
+func (t *Task) genTfvarsJsonFile(workspace string) error {
+	fp, err := os.OpenFile(
+		filepath.Join(workspace, CloudIacTfvarsJson),
+		os.O_CREATE|os.O_WRONLY|os.O_TRUNC,
+		0644) //nolint:gosec
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = fp.Close()
+	}()
+
+	vars := make(map[string]interface{})
+	for k, v := range t.req.Env.TerraformVars {
+		{ // 尝试将值做为 json 解析
+			// 这里只需要处理 map、list、null 这三类特殊变量，
+			// 其他变量类型都可以以字符串传入，terraform 可以正常处理
+			tv := strings.TrimSpace(v)
+			if strings.HasPrefix(tv, "{") {
+				mv := make(map[string]interface{})
+				if err := json.Unmarshal([]byte(tv), &mv); err == nil {
+					vars[k] = mv
+					continue
+				}
+			} else if strings.HasPrefix(tv, "[") {
+				lv := make([]interface{}, 0)
+				if err := json.Unmarshal([]byte(tv), &lv); err == nil {
+					vars[k] = lv
+					continue
+				}
+			} else if tv == "null" {
+				vars[k] = nil
+				continue
+			}
+		}
+		vars[k] = v
+	}
+
+	enc := json.NewEncoder(fp)
+	enc.SetIndent("", "  ")
+	return enc.Encode(vars)
 }
 
 /*
@@ -510,6 +562,7 @@ func (t *Task) genStepScript() (string, error) {
 var checkoutCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 set -o pipefail
 # before checkout
+cd '{{.ContainerWorkspace}}'
 {{- if .Before }}
 {{.Before}}
 {{- end}}
@@ -561,6 +614,7 @@ func (t *Task) stepCheckout() (command string, err error) {
 }
 
 var initCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 {{if .Before}}{{.Before}} && \{{- end}}
 cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 tfenv install $TFENV_TERRAFORM_VERSION && \
@@ -593,10 +647,11 @@ func (t *Task) stepInit() (command string, err error) {
 }
 
 var planCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 {{if .Before}}{{.Before}} && \{{- end}}
 cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 terraform plan -input=false -out=_cloudiac.tfplan \
-{{if .TfVars}}-var-file={{.TfVars}}{{end}} \
+{{if .TfVars}}-var-file={{.TfVars}} {{end}}-var-file={{.IacTfVars}} \
 {{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }}&& \
 terraform show -no-color -json _cloudiac.tfplan >{{.TFPlanJsonFilePath}} {{- if .After}} && \
 {{.After}}{{- end}}
@@ -607,6 +662,7 @@ func (t *Task) stepPlan() (command string, err error) {
 	return t.executeTpl(planCommandTpl, map[string]interface{}{
 		"Req":                t.req,
 		"TfVars":             t.req.Env.TfVarsFile,
+		"IacTfVars":          t.up2Workspace(CloudIacTfvarsJson),
 		"TFPlanJsonFilePath": t.up2Workspace(TFPlanJsonFile),
 		"Before":             beforeCmds,
 		"After":              afterCmds,
@@ -616,6 +672,7 @@ func (t *Task) stepPlan() (command string, err error) {
 
 // 当指定了 plan 文件时不需要也不能传 -var-file 参数
 var applyCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
+cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 {{if .Before}}{{.Before}} && \{{- end}}
 cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 terraform apply -input=false -auto-approve \
@@ -657,20 +714,15 @@ func (t *Task) stepDestroy() (command string, err error) {
 	})
 }
 
+// CLOUDIAC_WORKDIR 环境变量在 task_manager 中会自动设置
 var playCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
-export ANSIBLE_HOST_KEY_CHECKING="False"
-export ANSIBLE_TF_DIR="."
-export ANSIBLE_NOCOWS="1"
+export CLOUDIAC_ANSIBLE_INVENTORY={{.AnsibleStateAnalysis}}
 
-{{if .Before}}{{.Before}} && \{{- end}}
-cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && ansible-playbook \
---inventory {{.AnsibleStateAnalysis}} \
---user "root" \
---private-key "{{.PrivateKeyPath}}" \
---extra @{{.IacPlayVars}} \
-{{ if .Req.Env.PlayVarsFile -}}
---extra @{{.Req.Env.PlayVarsFile}} \
-{{ end -}}
+{{if .Before}}cd "${CLOUDIAC_WORKDIR}" && {{.Before}} && \{{- end}}
+cd "${CLOUDIAC_WORKDIR}" && \
+if [[ -f "{{.Requirements}}" ]];then ansible-galaxy install -r "{{.Requirements}}"; fi && \
+cloudiac-playbook \
+{{ if .Req.Env.PlayVarsFile -}}--extra @{{.Req.Env.PlayVarsFile}}{{ end -}} \
 {{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }} \
 {{.Req.Env.Playbook}} {{- if .After}} && \
 {{.After}}{{- end}}
@@ -680,12 +732,10 @@ func (t *Task) stepPlay() (command string, err error) {
 	beforeCmds, afterCmds := getBeforeAfterCmds(t.req.StepBeforeCmds, t.req.StepAfterCmds)
 	return t.executeTpl(playCommandTpl, map[string]interface{}{
 		"Req":                  t.req,
-		"IacPlayVars":          t.up2Workspace(CloudIacPlayVars),
-		"PrivateKeyPath":       t.up2Workspace("ssh_key"),
+		"Requirements":         filepath.Join(filepath.Dir(t.req.Env.Playbook), CloudIacAnsibleRequirements),
 		"AnsibleStateAnalysis": filepath.Join(ContainerAssetsDir, AnsibleStateAnalysisName),
 		"Before":               beforeCmds,
 		"After":                afterCmds,
-		"ContainerWorkspace":   ContainerWorkspace,
 	})
 }
 

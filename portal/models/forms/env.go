@@ -42,7 +42,7 @@ type CreateEnvForm struct {
 	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:"max=255"`          // Ansible playbook 变量文件路径
 	Playbook     string    `form:"playbook" json:"playbook" binding:"omitempty,max=255"`        // Ansible playbook 入口文件路径
 	KeyId        models.Id `form:"keyId" json:"keyId" binding:"omitempty,startswith=k-,max=32"` // 部署密钥ID
-	Workdir      string    `form:"workdir" json:"workdir" binding:"max=32"`                     // 工作目录
+	Workdir      string    `form:"workdir" json:"workdir" `                                     // 工作目录
 
 	RetryNumber int         `form:"retryNumber" json:"retryNumber" binding:""` // 重试总次数
 	RetryDelay  int         `form:"retryDelay" json:"retryDelay" binding:""`   // 重试时间间隔
