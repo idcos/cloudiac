@@ -1500,6 +1500,14 @@ func GetTaskResourceToTaskId(dbSess *db.Session, task *models.Task) ([]Resource,
 	return rs, nil
 }
 
+func GetTaskResourceCount(dbSess *db.Session, taskId models.Id) (int64, e.Error) {
+	c, err := dbSess.Model(&models.Resource{}).Where("task_id = ?", taskId).Group("task_id").Count()
+	if err != nil {
+		return 0, e.AutoNew(err, e.DBError)
+	}
+	return c, nil
+}
+
 func InsertOrUpdateCronTaskInfo(session *db.Session, resDrift models.ResourceDrift) {
 	dbResDrift := models.ResourceDrift{}
 	if err := session.Where("res_id = ?", resDrift.ResId).Find(&dbResDrift); err != nil {
