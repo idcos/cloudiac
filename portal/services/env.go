@@ -342,10 +342,12 @@ func GetRunner(tags []string) (string, e.Error) {
 		rid, _ := v.(int)
 		if rid < len(validRunners) - 1{
 			runnerTagsIndex.Store(tags_str, rid + 1)
-		} else {
-			runnerTagsIndex.Store(tags_str, 0)
+		} else if rid >= len(validRunners) {
 			// runner数量减少时rid置0，避免索引超出范围
 			rid = 0
+			runnerTagsIndex.Store(tags_str, 1)
+		} else {
+			runnerTagsIndex.Store(tags_str, 0)
 		}
 		return validRunners[rid].ID, nil
 	}
