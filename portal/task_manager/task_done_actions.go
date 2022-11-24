@@ -220,8 +220,15 @@ func taskDoneProcessDriftTask(logger logs.Logger, dbSess *db.Session, task *mode
 			}
 
 			if len(driftInfoMap) > 0 {
+				// 发送 kafka 通知 发生漂移
+				isDrift := true
+				services.SendKafkaDriftMessage(dbSess, task, isDrift, driftInfoMap)
 				// 发送邮件通知
 				services.TaskStatusChangeSendMessage(task, consts.EvenvtCronDrift)
+			} else {
+				// 发送 kafka 通知
+				isDrift := false
+				services.SendKafkaDriftMessage(dbSess, task, isDrift, driftInfoMap)
 			}
 		}
 	}

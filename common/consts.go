@@ -123,6 +123,9 @@ const (
 	ConsulCapem         = "client.pem"
 	ConsulContainerPath = "/cloudiac/cert/"
 	ConsulSessionTTL    = 10
+
+	// 给 kafka 发送消息时 eventType 为固定值
+	DriftEventType = "drift_detection"
 )
 
 var (
