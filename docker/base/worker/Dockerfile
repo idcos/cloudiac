@@ -1,3 +1,6 @@
+ARG PROVIDERS
+FROM ${PROVIDERS} as providers
+
 FROM centos:7
 
 ARG WORKDIR=/usr/yunji/cloudiac
@@ -40,5 +43,5 @@ RUN tfenv install "0.11.15" && \
 
 RUN tfenv use 1.2.4 && \
   ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-COPY assets/providers /cloudiac/terraform/plugins
+COPY --from=cloudiac/base-ct-worker:v0.1.8 /cloudiac/terraform/plugins /cloudiac/terraform/plugins
 
