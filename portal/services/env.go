@@ -305,6 +305,14 @@ func GetRunner(tags []string) (string, e.Error) {
 		return "", err
 	}
 
+	// consul返回的runner是无序的，先排序再轮循
+	sort.Slice(runners, func(i, j int) bool {
+		if runners[i].ID < runners[j].ID {
+			return true
+		}
+		return false
+	})
+
 	validRunners := make([]*api.AgentService, 0)
 	// 未传tags时对获取的所有runner进行轮循
 	tags_str := "runner_all"
