@@ -767,10 +767,10 @@ type TfPlanResource struct {
 	ModuleAddress string `json:"module_address,omitempty"`
 	ProviderName  string `json:"provider_name"`
 
-	Mode  string `json:"mode"` // managed、data
-	Type  string `json:"type"`
-	Name  string `json:"name"`
-	Index int    `json:"index"`
+	Mode  string      `json:"mode"` // managed、data
+	Type  string      `json:"type"`
+	Name  string      `json:"name"`
+	Index interface{} `json:"index"`
 
 	Change TfPlanResourceChange `json:"change"`
 }
