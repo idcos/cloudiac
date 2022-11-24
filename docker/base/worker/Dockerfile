@@ -8,6 +8,7 @@ RUN yum install epel-release -y && \
     yum install -y centos-release-scl && \
     yum install git curl unzip openssh vim which -y && \
     yum install sshpass -y && \
+    yum install openssl -y && \
     yum install -y rh-python38 && \
     ln -s /opt/rh/rh-python38/root/usr/bin/python3 /usr/bin/python3 && \
     ln -s /opt/rh/rh-python38/root/usr/bin/pip3 /usr/bin/pip3 && \
