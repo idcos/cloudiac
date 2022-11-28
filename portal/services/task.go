@@ -1443,29 +1443,6 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 
 func SendKafkaDriftMessage(session *db.Session, task *models.Task, isDrift bool,
 	driftResources map[string]models.ResourceDrift) {
-	resources := make([]models.Resource, 0)
-	if err := session.Model(models.Resource{}).Where("org_id = ? AND project_id = ? AND env_id = ? AND task_id = ?",
-		task.OrgId, task.ProjectId, task.EnvId, task.Id).Find(&resources); err != nil {
-		logs.Get().Errorf("kafka send error, get resource data err: %v", err)
-		return
-	}
-
-	outputs := make(map[string]interface{})
-	for k, v := range task.Result.Outputs {
-		m, ok := v.(map[string]interface{})
-		if !ok {
-			outputs[k] = v
-			continue
-		}
-
-		if _, ok := m["sensitive"]; !ok {
-			outputs[k] = v
-			continue
-		}
-
-		m["value"] = "(sensitive value)"
-		outputs[k] = m
-	}
 
 	env, err := GetEnvById(session, task.EnvId)
 	if err != nil {
