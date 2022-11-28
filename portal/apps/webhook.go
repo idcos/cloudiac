@@ -296,7 +296,7 @@ func createTplScan(userId models.Id, tpl *models.Template, options webhookOption
 		TplId:     tpl.Id,
 		BaseTask: models.BaseTask{
 			Type:        taskType,
-			StepTimeout: common.DefaultTaskStepTimeout,
+			StepTimeout: common.DefaultTaskStepTimeoutSecond,
 			RunnerId:    runnerId,
 		},
 	})

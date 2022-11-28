@@ -232,7 +232,7 @@ func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*mode
 		BaseTask: models.BaseTask{
 			Type:        pt.Type,
 			Pipeline:    pt.Pipeline,
-			StepTimeout: utils.FirstValueInt(pt.StepTimeout, common.DefaultTaskStepTimeout),
+			StepTimeout: utils.FirstValueInt(pt.StepTimeout, common.DefaultTaskStepTimeoutSecond),
 			RunnerId:    firstVal(pt.RunnerId, env.RunnerId),
 
 			Status:   models.TaskPending,
@@ -1177,7 +1177,7 @@ func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, ta
 	task := models.ScanTask{
 		BaseTask: models.BaseTask{
 			Type:        taskType,
-			StepTimeout: common.DefaultTaskStepTimeout,
+			StepTimeout: common.DefaultTaskStepTimeoutSecond,
 			RunnerId:    runnerId,
 			Status:      models.TaskPending,
 		},
@@ -1274,7 +1274,7 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 
 		BaseTask: models.BaseTask{
 			Type:        pt.Type,
-			StepTimeout: utils.FirstValueInt(pt.StepTimeout, common.DefaultTaskStepTimeout),
+			StepTimeout: utils.FirstValueInt(pt.StepTimeout, common.DefaultTaskStepTimeoutSecond),
 			RunnerId:    pt.RunnerId,
 
 			Status:   models.TaskPending,

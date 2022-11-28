@@ -28,15 +28,15 @@ type CreateEnvForm struct {
 
 	Tags string `form:"tags" json:"tags" binding:"max=255"` // 环境的 tags，多个 tag 以 "," 分隔
 
-	AutoApproval    bool       `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"` // 是否自动审批
-	StopOnViolation bool       `form:"stopOnViolation" json:"stopOnViolation" enums:"true,false"`       // 合规不通过是否中止任务
-	TaskType        string     `form:"taskType" json:"taskType" binding:"required" enums:"plan,apply"`  // 环境创建后触发的任务步骤，plan计划,apply部署
-	Targets         string     `form:"targets" json:"targets" binding:""`                               // Terraform target 参数列表，多个参数用 , 进行分隔
-	RunnerId        string     `form:"runnerId" json:"runnerId" binding:"max=32"`                       // 环境默认部署通道
-	RunnerTags      []string   `form:"runnerTags" json:"runnerTags" binding:"omitempty,dive,max=256"`   // 环境默认部署通道tags
-	Revision        string     `form:"revision" json:"revision" binding:"max=64"`                       // 分支/标签
-	StepTimeout     int        `form:"stepTimeout" json:"stepTimeout" binding:""`                       // 部署超时时间（单位：秒）
-	Variables       []Variable `form:"variables" json:"variables" binding:"omitempty,dive,required"`    // 自定义变量列表，该变量列表会覆盖现有的变量
+	AutoApproval       bool       `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"` // 是否自动审批
+	StopOnViolation    bool       `form:"stopOnViolation" json:"stopOnViolation" enums:"true,false"`       // 合规不通过是否中止任务
+	TaskType           string     `form:"taskType" json:"taskType" binding:"required" enums:"plan,apply"`  // 环境创建后触发的任务步骤，plan计划,apply部署
+	Targets            string     `form:"targets" json:"targets" binding:""`                               // Terraform target 参数列表，多个参数用 , 进行分隔
+	RunnerId           string     `form:"runnerId" json:"runnerId" binding:"max=32"`                       // 环境默认部署通道
+	RunnerTags         []string   `form:"runnerTags" json:"runnerTags" binding:"omitempty,dive,max=256"`   // 环境默认部署通道tags
+	Revision           string     `form:"revision" json:"revision" binding:"max=64"`                       // 分支/标签
+	StepTimeoutMinutes int        `form:"stepTimeout" json:"stepTimeout" binding:""`                       // 部署超时时间（单位：秒）
+	Variables          []Variable `form:"variables" json:"variables" binding:"omitempty,dive,required"`    // 自定义变量列表，该变量列表会覆盖现有的变量
 
 	TfVarsFile   string    `form:"tfVarsFile" json:"tfVarsFile" binding:"max=255"`              // Terraform tfvars 变量文件路径
 	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:"max=255"`          // Ansible playbook 变量文件路径

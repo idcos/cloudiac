@@ -175,8 +175,8 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 		}
 	}
 
-	if form.StepTimeout == 0 {
-		form.StepTimeout = 60
+	if form.StepTimeoutMinutes == 0 {
+		form.StepTimeoutMinutes = common.DefaultTaskStepTimeoutSecond / 60
 	}
 
 	if form.DestroyAt != "" {
@@ -390,7 +390,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		}
 	}()
 
-	taskStepTimeout, err := getTaskStepTimeoutInSecond(form.StepTimeout)
+	taskStepTimeout, err := getTaskStepTimeoutInSecond(form.StepTimeoutMinutes)
 	if err != nil {
 		return nil, err
 	}
