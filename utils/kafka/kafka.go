@@ -24,56 +24,42 @@ type KafkaProducer struct {
 var kafka *KafkaProducer
 
 type IacKafkaCallbackResult struct {
-	Resources []models.Resource      `json:"resources"`
-	Outputs   map[string]interface{} `json:"outputs"`
-}
-
-type KafkaContentModel struct {
-	EventType  string    `json:"eventType"` // 当发生漂移后 固定为 task:drift_detection
-	TaskStatus string    `json:"taskStatus"`
-	TaskType   string    `json:"taskType"`
-	EnvStatus  string    `json:"envStatus"`
-	OrgId      models.Id `json:"orgId"`
-	ProjectId  models.Id `json:"projectId"`
-	TplId      models.Id `json:"tplId"`
-	EnvId      models.Id `json:"envId"`
-	TaskId     models.Id `json:"taskId"`
+	Resources      []models.Resource               `json:"resources"`
+	Outputs        map[string]interface{}          `json:"outputs"`
+	DriftResources map[string]models.ResourceDrift `json:"drift_resources"`
 }
 
 type IacKafkaContent struct {
-	KafkaContentModel
+	EventType    string                 `json:"eventType"` // 当发生漂移后 固定为 task:drift_detection
+	TaskStatus   string                 `json:"taskStatus"`
+	TaskType     string                 `json:"taskType"`
+	EnvStatus    string                 `json:"envStatus"`
+	OrgId        models.Id              `json:"orgId"`
+	ProjectId    models.Id              `json:"projectId"`
+	TplId        models.Id              `json:"tplId"`
+	EnvId        models.Id              `json:"envId"`
+	TaskId       models.Id              `json:"taskId"`
 	ExtraData    interface{}            `json:"extraData"`
 	PolicyStatus string                 `json:"policyStatus"`
+	IsDrift      bool                   `json:"isDrift"` // 漂移状态
 	Result       IacKafkaCallbackResult `json:"result"`
-}
-
-type DriftDetectionTaskContent struct {
-	KafkaContentModel
-	Result DriftDetectionTaskResult `json:"result"`
-}
-
-type DriftDetectionTaskResult struct {
-	IsDrift        bool                            `json:"isDrift"` // 漂移状态
-	DriftResources map[string]models.ResourceDrift `json:"drift_resources"`
 }
 
 func (k *KafkaProducer) GenerateKafkaDriftContent(task *models.Task, envStatus string,
 	isDrift bool, driftResources map[string]models.ResourceDrift) []byte {
 
-	a := DriftDetectionTaskContent{
-		KafkaContentModel: KafkaContentModel{
-			EventType:  common.DriftEventType,
-			TaskStatus: task.Status,
-			TaskType:   task.Type,
-			EnvStatus:  envStatus,
-			OrgId:      task.OrgId,
-			ProjectId:  task.ProjectId,
-			TplId:      task.TplId,
-			EnvId:      task.EnvId,
-			TaskId:     task.Id,
-		},
-		Result: DriftDetectionTaskResult{
-			IsDrift:        isDrift,
+	a := IacKafkaContent{
+		EventType:  common.DriftEventType,
+		TaskStatus: task.Status,
+		TaskType:   task.Type,
+		EnvStatus:  envStatus,
+		OrgId:      task.OrgId,
+		ProjectId:  task.ProjectId,
+		TplId:      task.TplId,
+		EnvId:      task.EnvId,
+		TaskId:     task.Id,
+		IsDrift:    isDrift,
+		Result: IacKafkaCallbackResult{
 			DriftResources: driftResources,
 		},
 	}
@@ -85,16 +71,15 @@ func (k *KafkaProducer) GenerateKafkaDriftContent(task *models.Task, envStatus s
 func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus, envStatus, policyStatus string,
 	resources []models.Resource, outputs map[string]interface{}) []byte {
 	a := IacKafkaContent{
-		KafkaContentModel: KafkaContentModel{
-			TaskStatus: taskStatus,
-			TaskType:   task.Type,
-			EnvStatus:  envStatus,
-			OrgId:      task.OrgId,
-			ProjectId:  task.ProjectId,
-			TplId:      task.TplId,
-			EnvId:      task.EnvId,
-			TaskId:     task.Id,
-		},
+		TaskStatus:   taskStatus,
+		TaskType:     task.Type,
+		EnvStatus:    envStatus,
+		OrgId:        task.OrgId,
+		ProjectId:    task.ProjectId,
+		TplId:        task.TplId,
+		EnvId:        task.EnvId,
+		TaskId:       task.Id,
+		IsDrift:      common.IsNotDrift,
 		PolicyStatus: policyStatus,
 		Result: IacKafkaCallbackResult{
 			Resources: resources,
