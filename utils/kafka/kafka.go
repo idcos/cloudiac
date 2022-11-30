@@ -3,7 +3,6 @@
 package kafka
 
 import (
-	"cloudiac/common"
 	"cloudiac/configs"
 	"cloudiac/portal/models"
 	"cloudiac/utils/logs"
@@ -22,6 +21,14 @@ type KafkaProducer struct {
 }
 
 var kafka *KafkaProducer
+
+func InitIacKafkaCallbackResult() *IacKafkaCallbackResult {
+	return &IacKafkaCallbackResult{
+		Resources:      nil,
+		Outputs:        nil,
+		DriftResources: nil,
+	}
+}
 
 type IacKafkaCallbackResult struct {
 	Resources      []models.Resource               `json:"resources"`
@@ -45,32 +52,11 @@ type IacKafkaContent struct {
 	Result       IacKafkaCallbackResult `json:"result"`
 }
 
-func (k *KafkaProducer) GenerateKafkaDriftContent(task *models.Task, envStatus string,
-	isDrift bool, driftResources map[string]models.ResourceDrift) []byte {
+func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, eventType, taskStatus, envStatus, policyStatus string,
+	isDrift bool, result *IacKafkaCallbackResult) []byte {
 
 	a := IacKafkaContent{
-		EventType:  common.DriftEventType,
-		TaskStatus: task.Status,
-		TaskType:   task.Type,
-		EnvStatus:  envStatus,
-		OrgId:      task.OrgId,
-		ProjectId:  task.ProjectId,
-		TplId:      task.TplId,
-		EnvId:      task.EnvId,
-		TaskId:     task.Id,
-		IsDrift:    isDrift,
-		Result: IacKafkaCallbackResult{
-			DriftResources: driftResources,
-		},
-	}
-
-	rep, _ := json.Marshal(&a)
-	return rep
-}
-
-func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus, envStatus, policyStatus string,
-	resources []models.Resource, outputs map[string]interface{}) []byte {
-	a := IacKafkaContent{
+		EventType:    eventType,
 		TaskStatus:   taskStatus,
 		TaskType:     task.Type,
 		EnvStatus:    envStatus,
@@ -79,11 +65,12 @@ func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus, envS
 		TplId:        task.TplId,
 		EnvId:        task.EnvId,
 		TaskId:       task.Id,
-		IsDrift:      common.IsNotDrift,
+		IsDrift:      isDrift,
 		PolicyStatus: policyStatus,
 		Result: IacKafkaCallbackResult{
-			Resources: resources,
-			Outputs:   outputs,
+			Resources:      result.Resources,
+			Outputs:        result.Outputs,
+			DriftResources: result.DriftResources,
 		},
 	}
 

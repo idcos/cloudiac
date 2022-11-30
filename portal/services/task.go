@@ -1433,7 +1433,11 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 	}
 
 	k := kafka.Get()
-	message := k.GenerateKafkaContent(task, taskStatus, env.Status, policyStatus, resources, outputs)
+	eventType := consts.DeployEventType
+	result := kafka.InitIacKafkaCallbackResult()
+	result.Resources = resources
+	result.Outputs = outputs
+	message := k.GenerateKafkaContent(task, eventType, taskStatus, env.Status, policyStatus, false, result)
 	if err := k.ConnAndSend(message); err != nil {
 		logs.Get().Errorf("kafka send error: %v", err)
 		return
@@ -1451,7 +1455,10 @@ func SendKafkaDriftMessage(session *db.Session, task *models.Task, isDrift bool,
 	}
 
 	k := kafka.Get()
-	message := k.GenerateKafkaDriftContent(task, env.Status, isDrift, driftResources)
+	eventType := consts.DriftEventType
+	result := kafka.InitIacKafkaCallbackResult()
+	result.DriftResources = driftResources
+	message := k.GenerateKafkaContent(task, eventType, task.Status, env.Status, "", isDrift, result)
 	if err := k.ConnAndSend(message); err != nil {
 		logs.Get().Errorf("kafka send error: %v", err)
 		return
