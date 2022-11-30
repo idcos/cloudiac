@@ -1433,7 +1433,32 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 	}
 
 	k := kafka.Get()
-	message := k.GenerateKafkaContent(task, taskStatus, env.Status, policyStatus, resources, outputs)
+	eventType := consts.DeployEventType
+	result := kafka.InitIacKafkaCallbackResult()
+	result.Resources = resources
+	result.Outputs = outputs
+	message := k.GenerateKafkaContent(task, eventType, taskStatus, env.Status, policyStatus, false, result)
+	if err := k.ConnAndSend(message); err != nil {
+		logs.Get().Errorf("kafka send error: %v", err)
+		return
+	}
+	logs.Get().Infof("kafka send massage successful. data: %s", string(message))
+}
+
+func SendKafkaDriftMessage(session *db.Session, task *models.Task, isDrift bool,
+	driftResources map[string]models.ResourceDrift) {
+
+	env, err := GetEnvById(session, task.EnvId)
+	if err != nil {
+		logs.Get().Errorf("kafka send error, query env status err: %v", err)
+		return
+	}
+
+	k := kafka.Get()
+	eventType := consts.DriftEventType
+	result := kafka.InitIacKafkaCallbackResult()
+	result.DriftResources = driftResources
+	message := k.GenerateKafkaContent(task, eventType, task.Status, env.Status, "", isDrift, result)
 	if err := k.ConnAndSend(message); err != nil {
 		logs.Get().Errorf("kafka send error: %v", err)
 		return
