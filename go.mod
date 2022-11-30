@@ -80,7 +80,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	github.com/swaggo/gin-swagger v1.4.3
-	github.com/swaggo/swag v1.8.2
+	github.com/swaggo/swag v1.8.2 // indirect
 	github.com/tidwall/gjson v1.14.0
 	github.com/ugorji/go v1.1.13 // indirect
 	github.com/unliar/utils v0.1.1
