@@ -50,6 +50,7 @@ type SearchTemplateForm struct {
 
 	Q      string `form:"q" json:"q" binding:""`
 	Status string `form:"status" json:"status" binding:"omitempty,oneof=enable disable"`
+	Source string `form:"source" json:"source" binding:"omitempty,oneof=vcs registry"`
 }
 
 type UpdateTemplateForm struct {

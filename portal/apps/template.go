@@ -472,6 +472,13 @@ func SearchTemplate(c *ctx.ServiceContext, form *forms.SearchTemplateForm) (tpl 
 	}
 
 	query := services.QueryTemplateByOrgId(c.DB(), form.Q, c.OrgId, tplIdList, c.ProjectId)
+	if form.Source != "" {
+		query = query.Where("iac_template.source = ?", form.Source)
+	}
+	if form.Status != "" {
+		query = query.Where("iac_template.status = ?", form.Status)
+	}
+
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	templates := make([]*resps.SearchTemplateResp, 0)
 	if err := p.Scan(&templates); err != nil {
