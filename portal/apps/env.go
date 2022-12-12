@@ -773,6 +773,8 @@ func setAndCheckUpdateEnvDestroy(tx *db.Session, attrs models.Attrs, env *models
 		attrs["auto_destroy_at"] = &destroyAt
 		attrs["ttl"] = "" // 直接传入了销毁时间，需要同步清空 ttl
 		attrs["auto_destroy_cron"] = ""
+		attrs["auto_deploy_cron"] = ""
+		attrs["auto_deploy_at"] = nil
 	} else if form.HasKey("ttl") {
 		ttl, err := services.ParseTTL(form.TTL)
 		if err != nil {
@@ -790,6 +792,8 @@ func setAndCheckUpdateEnvDestroy(tx *db.Session, attrs models.Attrs, env *models
 			attrs["auto_destroy_at"] = &at
 		}
 		attrs["auto_destroy_cron"] = ""
+		attrs["auto_deploy_cron"] = ""
+		attrs["auto_deploy_at"] = nil
 	}
 
 	if form.HasKey("autoDestroyCron") {
@@ -1491,9 +1495,9 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 			StepTimeout: env.StepTimeout,
 			RunnerId:    rId,
 		},
-		Source:    taskSource,
-		SourceSys: taskSourceSys,
-		Callback:  env.Callback,
+		Source:      taskSource,
+		SourceSys:   taskSourceSys,
+		Callback:    env.Callback,
 		IsDriftTask: IsDriftTask,
 	})
 

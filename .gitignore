@@ -4,6 +4,7 @@ builds/
 config.yml
 config-portal.yml
 config-runner.yml
+docker-compose.yml
 .DS_Store
 .scannerwork
 ct-*/
@@ -24,3 +25,4 @@ plugin-cache/
 coverage.out
 report.xml
 gosec-report.xml
+demo-conf.yml
