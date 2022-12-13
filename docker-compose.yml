@@ -1,0 +1,46 @@
+version: "3"
+services:
+  iac-web:
+    image: "cloudiac/iac-web:v1.3.1"
+    ports:
+      - 8088:80
+    restart: always
+    extra_hosts:
+      # 这里 IP 地址替换为本机内网 IP
+      - iac-portal:192.168.4.7
+
+  iac-consul:
+    image: "consul:latest"
+    volumes:
+       - consul_data:/consul/data
+    ports:
+      - "8500:8500"
+    restart: always
+    extra_hosts:
+      # 同上
+      - portal:192.168.4.7
+
+  iac-mysql7:
+    container_name: mysql57
+    image: "mysql:5.7"
+    command: [
+        "--character-set-server=utf8mb4",
+        "--collation-server=utf8mb4_unicode_ci",
+        "--sql_mode=STRICT_TRANS_TABLES,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION"
+    ]
+    volumes:
+      - mysql57_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    environment:
+      # mysql 账号密码等信息按需要修改，修改后需要销毁容器重新启动才生效
+      - MYSQL_DATABASE=iac
+      - MYSQL_ROOT_HOST=%
+      - MYSQL_USER=iac
+      - MYSQL_PASSWORD=123456
+      - MYSQL_ROOT_PASSWORD=123456
+    restart: always
+
+volumes:
+  consul_data: {}
+  mysql57_data: {}

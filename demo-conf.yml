@@ -1,0 +1,29 @@
+organization:
+  name: 演示组织
+  description: 这是一个演示组织
+  project:
+    name: 演示项目
+    description: 这是一个演示项目
+  key:
+    name: 示例密钥
+    key_file: ./var/private_key
+  variables:
+    - name: ALICLOUD_ACCESS_KEY
+      type: environment
+      value: xxxxxxxxxx
+      description: 阿里云访问密钥ID
+      sensitive: false 
+    - name: ALICLOUD_SECRET_KEY
+      type: environment
+      value: xxxxxxxxxx
+      description: 阿里云访问密钥
+      sensitive: true
+  template:
+    name: 演示云模板
+    description: 云模板样板间
+    repo_id: /cloudiac/cloudiac-example.git
+    revision: master
+    tf_vars_file: qa-env.tfvars
+    playbook: ansible/playbook.yml
+    workdir:
+
