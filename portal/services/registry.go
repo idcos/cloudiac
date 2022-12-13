@@ -3,19 +3,20 @@
 package services
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"net/url"
-	"path/filepath"
-	"strings"
 )
 
 func GetRegistryAddrStr(db *db.Session) string {
@@ -26,9 +27,14 @@ func GetRegistryAddrStr(db *db.Session) string {
 	return strings.TrimRight(configs.Get().RegistryAddr, "/")
 }
 
-func GetRegistryApiBase(db *db.Session) string {
-	addr := GetRegistryAddrStr(db)
-	return fmt.Sprintf("%s/api/v1", strings.TrimSuffix(addr, "/"))
+// GetVcsRegistryAddr 获取用于读取 stack 和 policy 代码仓库的的 registry address
+func GetVcsRegistryAddr(db *db.Session) string {
+	addr := os.Getenv("CLOUDIAC_VCS_REGISTRY_ADDRESS")
+	if addr != "" {
+		return addr
+	}
+
+	return GetRegistryAddrStr(db)
 }
 
 type registryResp struct {
@@ -39,18 +45,31 @@ type registryResp struct {
 }
 
 func RegistryGet(path string, data url.Values, result interface{}) (err error) {
-	logger := logs.Get().WithField("func", "RegistryGet")
-
 	host := GetRegistryAddrStr(db.Get())
 	if host == "" {
 		return fmt.Errorf("registry address is empty")
 	}
+	return RegistryGetWithHost(host, path, data, result)
+}
 
-	path = filepath.Join("/api/v1", path)
+func VcsRegistryGet(path string, data url.Values, result interface{}) (err error) {
+	host := GetVcsRegistryAddr(db.Get())
+	if host == "" {
+		return fmt.Errorf("stack registry address is empty")
+	}
+	return RegistryGetWithHost(host, path, data, result)
+}
+
+func RegistryGetWithHost(host string, path string, data url.Values, result interface{}) (err error) {
+	logger := logs.Get().WithField("func", "RegistryGetWithAddr")
+
+	if !strings.HasPrefix(path, "/api/v") {
+		path = filepath.Join("/api/v1", path)
+	}
 	fullAddr := fmt.Sprintf("%s%s?%s", host, path, data.Encode())
 	logger.Debugf("request %s", fullAddr)
 
-	httpResp, err := http.Get(fullAddr) //nolint:gosec
+	httpResp, err := utils.HttpClient().Get(fullAddr) //nolint:gosec
 	if err != nil {
 		return err
 	}

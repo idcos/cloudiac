@@ -7,13 +7,72 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/services/vcsrv"
 	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 
 	"gorm.io/gorm"
 )
+
+func PrepareCreateTemplateFromRegistry(db *db.Session, stackId string, stackVersion string, name string, description string) (prepareTpl models.Template, err e.Error) {
+	stack := models.Stack{}
+	if err := VcsRegistryGet(fmt.Sprintf("/stacks/%s/detail", stackId), nil, &stack); err != nil {
+		return prepareTpl, e.New(e.RegistryServiceErr, err)
+	}
+
+	if name == "" {
+		name = stack.Name
+	}
+	if description == "" {
+		description = stack.Description
+	}
+
+	vcs, er := GetRegistryVcs(db)
+	if er != nil {
+		return prepareTpl, e.AutoNew(err, e.DBError)
+	}
+
+	repo, er := vcsrv.GetRepo(vcs, stack.ExchangeRepoPath)
+	if er != nil {
+		return prepareTpl, e.New(e.VcsError, er)
+	}
+
+	content, er := repo.ReadFileContent(stackVersion, ".cloudiac-stack.yml")
+	if er != nil && !e.Is(er, e.ObjectNotExists) {
+		return prepareTpl, e.New(e.VcsError, er)
+	}
+
+	meta := models.StackMeta{}
+	if len(content) != 0 {
+		if err := yaml.Unmarshal(content, &meta); err != nil {
+			return prepareTpl, e.New(e.InternalError, fmt.Errorf("unmarshal cloudiac stack meta data: %v", err))
+		}
+	}
+
+	prepareTpl = models.Template{
+		// OrgId:        c.OrgId,
+		// CreatorId:    c.UserId,
+		Name:         name,
+		Description:  description,
+		VcsId:        vcs.Id,
+		RepoId:       stack.ExchangeRepoPath,
+		RepoFullName: stack.ExchangeRepoPath,
+		RepoAddr:     stack.ExchangeRepoAddr,
+		RepoToken:    "",
+		RepoRevision: stackVersion,
+		Workdir:      meta.Workdir,
+		Playbook:     meta.Playbook,
+		PlayVarsFile: meta.PlayVarsFile,
+		TfVarsFile:   meta.TfVarsFile,
+		TfVersion:    meta.TfVersion,
+		Source:       consts.TemplateSourceRegistry,
+	}
+
+	return prepareTpl, nil
+}
 
 func CreateTemplate(tx *db.Session, tpl models.Template) (*models.Template, e.Error) {
 	if tpl.Id == "" {

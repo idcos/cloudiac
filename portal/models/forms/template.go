@@ -18,14 +18,14 @@ type Var struct {
 type CreateTemplateForm struct {
 	BaseForm
 
-	Name         string      `form:"name" json:"name" binding:"required,gte=2,lte=64"`
+	Name         string      `form:"name" json:"name" binding:"required_unless=Source registry,gte=2,lte=64"`
 	Description  string      `form:"description" json:"description" binding:"max=255"`
-	RepoId       string      `form:"repoId" json:"repoId" binding:"required,max=255"`
-	RepoFullName string      `form:"repoFullName" json:"repoFullName" binding:"required,max=255"`
+	RepoId       string      `form:"repoId" json:"repoId" binding:"required_unless=Source registry,max=255"`
+	RepoFullName string      `form:"repoFullName" json:"repoFullName" binding:"required_unless=Source registry,max=255"`
 	RepoRevision string      `form:"repoRevision" json:"repoRevision" binding:"max=64"`
 	Extra        string      `form:"extra" json:"extra"`
 	Workdir      string      `form:"workdir" json:"workdir" binding:"max=255"`
-	VcsId        models.Id   `form:"vcsId" json:"vcsId" binding:"required,max=32"`
+	VcsId        models.Id   `form:"vcsId" json:"vcsId" binding:"required_unless=Source registry,max=32"`
 	Playbook     string      `json:"playbook" form:"playbook" binding:"omitempty,max=255"`
 	PlayVarsFile string      `json:"playVarsFile" form:"playVarsFile" binding:"max=255"`
 	TfVarsFile   string      `form:"tfVarsFile" json:"tfVarsFile" binding:"max=255"`
@@ -43,6 +43,9 @@ type CreateTemplateForm struct {
 	KeyId models.Id `form:"keyId" json:"keyId" binding:"omitempty,startswith=k-,max=32"` // 部署密钥ID
 
 	Source string `json:"source" form:"source" ` //云模板来源
+
+	RegistryStackId      string `form:"registryStackId" json:"registryStackId" binding:""`
+	RegistryStackVersion string `form:"registryStackVersion" json:"registryStackVersion" binding:""`
 }
 
 type SearchTemplateForm struct {

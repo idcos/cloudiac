@@ -5,6 +5,7 @@ package utils
 import (
 	"bytes"
 	"cloudiac/configs"
+	"cloudiac/portal/consts"
 	"cloudiac/utils/logs"
 	"crypto/tls"
 	"encoding/json"
@@ -39,6 +40,14 @@ func httpClient(conntimeout, deadline int) *http.Client {
 		},
 	}
 	return c
+}
+
+func HttpClient() *http.Client {
+	return httpClient(consts.HttpClientTimeout, consts.HttpClientTimeout)
+}
+
+func HttpClientWithTimeout(timeout int) *http.Client {
+	return httpClient(timeout, timeout)
 }
 
 func getHttpRequest(reqUrl, method string, header *http.Header, data interface{}) (*http.Request, error) {

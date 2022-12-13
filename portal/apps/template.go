@@ -46,6 +46,43 @@ func getRepo(vcsId models.Id, query *db.Session, repoId string) (*vcsrv.Projects
 func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*models.Template, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create template %s", form.Name))
 
+	prepareTpl := models.Template{}
+	if form.Source == consts.TemplateSourceRegistry && form.RegistryStackId != "" {
+		var err e.Error
+		prepareTpl, err = services.PrepareCreateTemplateFromRegistry(
+			c.DB(), form.RegistryStackId, form.RegistryStackVersion, form.Name, form.Description)
+		if err != nil {
+			return nil, err
+		}
+
+		// TODO sshKeyId, AK/SK
+		prepareTpl.OrgId = c.OrgId
+		prepareTpl.CreatorId = c.UserId
+	} else {
+		prepareTpl = models.Template{
+			Name:         form.Name,
+			OrgId:        c.OrgId,
+			Description:  form.Description,
+			VcsId:        form.VcsId,
+			RepoId:       form.RepoId,
+			RepoFullName: form.RepoFullName,
+			// 云模板的 repoAddr 和 repoToken 可以为空，若为空则会在创建任务时自动查询 vcs 获取相应值
+			RepoAddr:     "",
+			RepoToken:    "",
+			RepoRevision: form.RepoRevision,
+			CreatorId:    c.UserId,
+			Workdir:      form.Workdir,
+			Playbook:     form.Playbook,
+			PlayVarsFile: form.PlayVarsFile,
+			TfVarsFile:   form.TfVarsFile,
+			TfVersion:    form.TfVersion,
+			PolicyEnable: form.PolicyEnable,
+			Triggers:     form.TplTriggers,
+			KeyId:        form.KeyId,
+			Source:       form.Source,
+		}
+	}
+
 	tx := c.Tx()
 	defer func() {
 		if r := recover(); r != nil {
@@ -54,29 +91,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 		}
 	}()
 
-	template, err := services.CreateTemplate(tx, models.Template{
-		Name:         form.Name,
-		OrgId:        c.OrgId,
-		Description:  form.Description,
-		VcsId:        form.VcsId,
-		RepoId:       form.RepoId,
-		RepoFullName: form.RepoFullName,
-		// 云模板的 repoAddr 和 repoToken 可以为空，若为空则会在创建任务时自动查询 vcs 获取相应值
-		RepoAddr:     "",
-		RepoToken:    "",
-		RepoRevision: form.RepoRevision,
-		CreatorId:    c.UserId,
-		Workdir:      form.Workdir,
-		Playbook:     form.Playbook,
-		PlayVarsFile: form.PlayVarsFile,
-		TfVarsFile:   form.TfVarsFile,
-		TfVersion:    form.TfVersion,
-		PolicyEnable: form.PolicyEnable,
-		Triggers:     form.TplTriggers,
-		KeyId:        form.KeyId,
-		Source:       form.Source,
-	})
-
+	template, err := services.CreateTemplate(tx, prepareTpl)
 	if err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error create template, err %s", err)
