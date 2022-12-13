@@ -1388,6 +1388,11 @@ func GetTaskStepLogById(tx *db.Session, stepId models.Id) ([]byte, e.Error) {
 }
 
 func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string) {
+	k := kafka.Get()
+	if k == nil {
+		return
+	}
+
 	resources := make([]models.Resource, 0)
 	if err := session.Model(models.Resource{}).Where("org_id = ? AND project_id = ? AND env_id = ? AND task_id = ?",
 		task.OrgId, task.ProjectId, task.EnvId, task.Id).Find(&resources); err != nil {
@@ -1429,7 +1434,6 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 		return
 	}
 
-	k := kafka.Get()
 	eventType := consts.DeployEventType
 	result := kafka.InitIacKafkaCallbackResult()
 	result.Resources = resources
@@ -1445,13 +1449,17 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 func SendKafkaDriftMessage(session *db.Session, task *models.Task, isDrift bool,
 	driftResources map[string]models.ResourceDrift) {
 
+	k := kafka.Get()
+	if k == nil {
+		return
+	}
+
 	env, err := GetEnvById(session, task.EnvId)
 	if err != nil {
 		logs.Get().Errorf("kafka send error, query env status err: %v", err)
 		return
 	}
-
-	k := kafka.Get()
+	
 	eventType := consts.DriftEventType
 	result := kafka.InitIacKafkaCallbackResult()
 	result.DriftResources = driftResources

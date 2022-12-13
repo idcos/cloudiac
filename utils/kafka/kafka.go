@@ -87,11 +87,6 @@ func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, eventType, taskS
 // ConnAndSend 连接并发送消息
 func (k *KafkaProducer) ConnAndSend(msg []byte) (err error) {
 	logger := logs.Get().WithField("kafka", "SendResultToKafka")
-	kaConf := configs.Get().Kafka
-
-	if kaConf.Disabled || len(kaConf.Brokers) <= 0 {
-		return fmt.Errorf("kafka was not open")
-	}
 
 	syncProducer, err := sarama.NewSyncProducer(k.Brokers, k.Conf)
 	if err != nil {
