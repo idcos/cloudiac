@@ -596,11 +596,8 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 // 当任务变为退出状态时执行的操作·
 func taskStatusExitedCall(dbSess *db.Session, task *models.Task, status string) {
 	if task.Type == common.TaskTypeApply || task.Type == common.TaskTypeDestroy {
-		kaConf := configs.Get().Kafka
 		// 回调的消息通知只发送一次, 作业结束后发送通知
-		if !kaConf.Disabled && len(kaConf.Brokers) > 0 {
-			SendKafkaMessage(dbSess, task, status)
-		}
+		SendKafkaMessage(dbSess, task, status)
 
 		if task.Callback != "" {
 			if utils.IsValidUrl(task.Callback) {
@@ -1391,6 +1388,11 @@ func GetTaskStepLogById(tx *db.Session, stepId models.Id) ([]byte, e.Error) {
 }
 
 func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string) {
+	k := kafka.Get()
+	if k == nil {
+		return
+	}
+
 	resources := make([]models.Resource, 0)
 	if err := session.Model(models.Resource{}).Where("org_id = ? AND project_id = ? AND env_id = ? AND task_id = ?",
 		task.OrgId, task.ProjectId, task.EnvId, task.Id).Find(&resources); err != nil {
@@ -1432,7 +1434,6 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 		return
 	}
 
-	k := kafka.Get()
 	eventType := consts.DeployEventType
 	result := kafka.InitIacKafkaCallbackResult()
 	result.Resources = resources
@@ -1448,13 +1449,17 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 func SendKafkaDriftMessage(session *db.Session, task *models.Task, isDrift bool,
 	driftResources map[string]models.ResourceDrift) {
 
+	k := kafka.Get()
+	if k == nil {
+		return
+	}
+
 	env, err := GetEnvById(session, task.EnvId)
 	if err != nil {
 		logs.Get().Errorf("kafka send error, query env status err: %v", err)
 		return
 	}
-
-	k := kafka.Get()
+	
 	eventType := consts.DriftEventType
 	result := kafka.InitIacKafkaCallbackResult()
 	result.DriftResources = driftResources
