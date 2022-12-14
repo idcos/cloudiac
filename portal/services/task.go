@@ -1444,7 +1444,7 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 		return
 	}
 
-	logs.Get().Infof("kafka send massage successful. EnvId: %s", task.EnvId)
+	logs.Get().Infof("kafka send massage successful. TaskId: %s", task.Id)
 }
 
 func SendKafkaDriftMessage(session *db.Session, task *models.Task, isDrift bool,
@@ -1470,7 +1470,7 @@ func SendKafkaDriftMessage(session *db.Session, task *models.Task, isDrift bool,
 		return
 	}
 
-	logs.Get().Infof("kafka send massage successful. EnvId: %s", task.EnvId)
+	logs.Get().Infof("kafka send massage successful. TaskId: %s", task.Id)
 }
 
 func SendHttpMessage(callbackUrl string, session *db.Session, task *models.Task, taskStatus string) {
