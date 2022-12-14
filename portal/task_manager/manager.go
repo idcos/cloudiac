@@ -151,19 +151,19 @@ func (m *TaskManager) start() {
 
 	m.logger.Infof("start task manager mainloop")
 	for {
-		m.logger.Infof("start process auto destroy tasks")
+		m.logger.Trace("start process auto destroy tasks")
 		if err := m.processAutoDestroy(); err != nil {
 			m.logger.Errorf("process auto destroy error: %v", err)
 		}
-		m.logger.Infof("start process auto deploy tasks")
+		m.logger.Trace("start process auto deploy tasks")
 		if err := m.processAutoDeploy(); err != nil {
 			m.logger.Errorf("process auto deploy error: %v", err)
 		}
 
-		m.logger.Infof("start process pending tasks")
+		m.logger.Debugf("start process pending tasks")
 		m.processPendingTask(ctx)
 
-		m.logger.Infof("start cron dritf tasks")
+		m.logger.Trace("start cron dritf tasks")
 		// 执行所有偏移检测任务
 		m.beginCronDriftTask()
 
@@ -361,9 +361,9 @@ func (m *TaskManager) processPendingTask(ctx context.Context) {
 	logger := m.logger
 
 	scanTasks := m.getPendingScanTasks()
-	m.logger.Infof("get pending scan tasks: %d", len(scanTasks))
+	m.logger.Tracef("get pending scan tasks: %d", len(scanTasks))
 	deployTasks := m.getPendingDeployTasks()
-	m.logger.Infof("get pending deploy tasks: %d", len(deployTasks))
+	m.logger.Tracef("get pending deploy tasks: %d", len(deployTasks))
 	tasks := make([]models.Tasker, len(scanTasks)+len(deployTasks))
 
 	// 合并等待任务列表，扫描任务更轻量，我们先执行扫描任务
