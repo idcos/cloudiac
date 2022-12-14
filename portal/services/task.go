@@ -1443,7 +1443,8 @@ func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string)
 		logs.Get().Errorf("kafka send error: %v", err)
 		return
 	}
-	logs.Get().Infof("kafka send massage successful. data: %s", string(message))
+
+	logs.Get().Infof("kafka send massage successful. EnvId: %s", task.EnvId)
 }
 
 func SendKafkaDriftMessage(session *db.Session, task *models.Task, isDrift bool,
@@ -1459,7 +1460,7 @@ func SendKafkaDriftMessage(session *db.Session, task *models.Task, isDrift bool,
 		logs.Get().Errorf("kafka send error, query env status err: %v", err)
 		return
 	}
-	
+
 	eventType := consts.DriftEventType
 	result := kafka.InitIacKafkaCallbackResult()
 	result.DriftResources = driftResources
@@ -1468,7 +1469,8 @@ func SendKafkaDriftMessage(session *db.Session, task *models.Task, isDrift bool,
 		logs.Get().Errorf("kafka send error: %v", err)
 		return
 	}
-	logs.Get().Infof("kafka send massage successful. data: %s", string(message))
+
+	logs.Get().Infof("kafka send massage successful. EnvId: %s", task.EnvId)
 }
 
 func SendHttpMessage(callbackUrl string, session *db.Session, task *models.Task, taskStatus string) {
