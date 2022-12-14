@@ -138,8 +138,13 @@ func SearchVariableGroup(c *ctx.ServiceContext, form *forms.SearchVariableGroupF
 		}
 	}
 
+	total, err := p.TotalBySubQuery()
+	if err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
 	return page.PageResp{
-		Total:    int64(len(results)),
+		Total:    total,
 		PageSize: p.Size,
 		List:     results,
 	}, nil
