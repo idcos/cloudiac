@@ -1,6 +1,22 @@
 # Releases
 
 ------
+## v1.3.2 20221215
+**Featues**
+
+- 默认使用的 terraform 版本更新为 1.2.4
+
+**Fixes**
+
+- 修复资源账号分页显示问题
+- 修复环境存活跃时间周期配置问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v1.3.2](https://github.com/idcos/cloudiac/releases/tag/v1.3.2)
+
+
+------
 ## v1.2.2 20221014
 **Fixes**
 
