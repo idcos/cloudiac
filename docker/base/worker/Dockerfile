@@ -1,3 +1,6 @@
+ARG PROVIDERS
+FROM ${PROVIDERS} as providers
+
 FROM centos:7
 
 ARG WORKDIR=/usr/yunji/cloudiac
@@ -8,6 +11,7 @@ RUN yum install epel-release -y && \
     yum install -y centos-release-scl && \
     yum install git curl unzip openssh vim which -y && \
     yum install sshpass -y && \
+    yum install openssl -y && \
     yum install -y rh-python38 && \
     ln -s /opt/rh/rh-python38/root/usr/bin/python3 /usr/bin/python3 && \
     ln -s /opt/rh/rh-python38/root/usr/bin/pip3 /usr/bin/pip3 && \
@@ -39,5 +43,5 @@ RUN tfenv install "0.11.15" && \
 
 RUN tfenv use 1.2.4 && \
   ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-COPY assets/providers /cloudiac/terraform/plugins
+COPY --from=cloudiac/base-ct-worker:v0.1.8 /cloudiac/terraform/plugins /cloudiac/terraform/plugins
 

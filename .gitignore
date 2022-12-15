@@ -24,3 +24,4 @@ plugin-cache/
 coverage.out
 report.xml
 gosec-report.xml
+

@@ -23,9 +23,7 @@ PB_PROTOC=protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-
 WORKDIR?=/usr/yunji/cloudiac
 
 DOCKER_REPO=cloudiac
-ifneq ($(DOCKER_REGISTRY),)
-  DOCKER_REPO=$(DOCKER_REGISTRY)/cloudiac
-endif
+DOCKER_REGISTRY?=$(DOCKER_REPO)
 
 # base image 不支持自定义 docker registry
 BASE_IMAGE_DOCKER_REPO=cloudiac
@@ -142,12 +140,14 @@ package: package-linux-amd64
 
 
 BASE_IMAGE_VERSION=$(shell cat docker/base/VERSION)
+BASE_REPOS_FROM=$(shell cat docker/base/REPOS_FROM)
+BASE_PROVIDERS_FROM=$(shell cat docker/base/PROVIDERS_FROM)
 
 base-image-portal:
-	$(DOCKER_BUILD) -t ${BASE_IMAGE_DOCKER_REPO}/base-iac-portal:$(BASE_IMAGE_VERSION) -f docker/base/portal/Dockerfile .
+	$(DOCKER_BUILD) --build-arg REPOS=$(BASE_REPOS_FROM) -t ${BASE_IMAGE_DOCKER_REPO}/base-iac-portal:$(BASE_IMAGE_VERSION) -f docker/base/portal/Dockerfile .
 
 base-image-portal-arm64:
-	$(DOCKER_BUILD) -t ${BASE_IMAGE_DOCKER_REPO}/base-iac-portal:$(BASE_IMAGE_VERSION)-arm64 -f docker/base/portal/Dockerfile-arm64 .
+	$(DOCKER_BUILD) --build-arg REPOS=$(BASE_REPOS_FROM) -t ${BASE_IMAGE_DOCKER_REPO}/base-iac-portal:$(BASE_IMAGE_VERSION)-arm64 -f docker/base/portal/Dockerfile-arm64 .
 
 base-image-runner:
 	$(DOCKER_BUILD) -t ${BASE_IMAGE_DOCKER_REPO}/base-ct-runner:$(BASE_IMAGE_VERSION) -f docker/base/runner/Dockerfile .
@@ -156,7 +156,7 @@ base-image-runner-arm64:
 	$(DOCKER_BUILD) -t ${BASE_IMAGE_DOCKER_REPO}/base-ct-runner:$(BASE_IMAGE_VERSION)-arm64 -f docker/base/runner/Dockerfile-arm64 .
 
 base-image-worker: 
-	$(DOCKER_BUILD) -t ${BASE_IMAGE_DOCKER_REPO}/base-ct-worker:$(BASE_IMAGE_VERSION) -f docker/base/worker/Dockerfile .
+	$(DOCKER_BUILD) --build-arg PROVIDERS=$(BASE_PROVIDERS_FROM) -t ${BASE_IMAGE_DOCKER_REPO}/base-ct-worker:$(BASE_IMAGE_VERSION) -f docker/base/worker/Dockerfile .
 
 base-image: base-image-portal base-image-runner base-image-worker 
 	@echo "Update base image version to $(BASE_IMAGE_VERSION)" && bash scripts/update-base-image-version.sh
@@ -194,13 +194,14 @@ image-arm64: image-portal-arm64 image-runner-arm64 image-worker-arm64
 
 push-image:
 	for NAME in iac-portal ct-runner ct-worker; do \
-	  docker push ${DOCKER_REPO}/$${NAME}:$(VERSION) || exit $$?; \
+	  docker tag cloudiac/$${NAME}:$(VERSION) ${DOCKER_REGISTRY}/$${NAME}:$(VERSION) && \
+	  docker push ${DOCKER_REGISTRY}/$${NAME}:$(VERSION) || exit $$?; \
 	done
 
 push-image-latest:
 	for NAME in iac-portal ct-runner ct-worker; do \
-	  docker tag cloudiac/$${NAME}:$(VERSION) cloudiac/$${NAME}:latest && \
-	  docker push cloudiac/$${NAME}:latest || exit $$?; \
+	  docker tag cloudiac/$${NAME}:$(VERSION) ${DOCKER_REGISTRY}/$${NAME}:latest && \
+	  docker push ${DOCKER_REGISTRY}/$${NAME}:latest || exit $$?; \
 	done
 
 
@@ -220,15 +221,15 @@ repos-package:
 	tar -czf $(REPOS_PACKAGE_NAME) ./repos
 
 
-providers:
-	bash scripts/generate-providers-mirror.sh
+#providers:
+#	bash scripts/generate-providers-mirror.sh
+#
+#providers-arm64:
+#	PLATFORM=linux_arm64 bash scripts/generate-providers-mirror.sh
 
-providers-arm64:
-	PLATFORM=linux_arm64 bash scripts/generate-providers-mirror.sh
-
-PROVIDERS_SHA1SUM=$(shell tar -c ./assets/providers | $(CMD_MD5SUM))
-PROVIDERS_PACKAGE_NAME=cloudiac-providers_$(VERSION)_$(PROVIDERS_SHA1SUM).tar.gz
-providers-package:
-	@if [[ ! -e "$(PROVIDERS_PACKAGE_NAME)" ]]; then echo "Package $(PROVIDERS_PACKAGE_NAME)"; tar -czf $(PROVIDERS_PACKAGE_NAME) ./assets/providers; fi
-
+#PROVIDERS_SHA1SUM=$(shell tar -c ./assets/providers | $(CMD_MD5SUM))
+#PROVIDERS_PACKAGE_NAME=cloudiac-providers_$(VERSION)_$(PROVIDERS_SHA1SUM).tar.gz
+#providers-package:
+#	@if [[ ! -e "$(PROVIDERS_PACKAGE_NAME)" ]]; then echo "Package $(PROVIDERS_PACKAGE_NAME)"; tar -czf $(PROVIDERS_PACKAGE_NAME) ./assets/providers; fi
+#
 

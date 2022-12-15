@@ -1,8 +1,10 @@
+ARG REPOS
+FROM ${REPOS} as repos
+
 FROM alpine
 RUN apk add --no-cache netcat-openbsd curl tzdata 
 ENV TZ="Asia/Shanghai"
 
 ARG WORKDIR=/usr/yunji/cloudiac/
 WORKDIR ${WORKDIR}
-COPY repos repos
-
+COPY --from=repos /usr/yunji/cloudiac/repos ${WORKDIR}/repos

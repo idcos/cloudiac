@@ -22,16 +22,23 @@ type KafkaProducer struct {
 
 var kafka *KafkaProducer
 
+func InitIacKafkaCallbackResult() *IacKafkaCallbackResult {
+	return &IacKafkaCallbackResult{
+		Resources:      nil,
+		Outputs:        nil,
+		DriftResources: nil,
+	}
+}
+
 type IacKafkaCallbackResult struct {
-	Resources []models.Resource `json:"resources"`
-	Outputs   map[string]interface{} `json:"outputs"`
+	Resources      []models.Resource               `json:"resources"`
+	Outputs        map[string]interface{}          `json:"outputs"`
+	DriftResources map[string]models.ResourceDrift `json:"drift_resources"`
 }
 
 type IacKafkaContent struct {
-	EventType    string                 `json:"eventType"`
-	ExtraData    interface{}            `json:"extraData"`
+	EventType    string                 `json:"eventType"` // 当发生漂移后 固定为 task:drift_detection
 	TaskStatus   string                 `json:"taskStatus"`
-	PolicyStatus string                 `json:"policyStatus"`
 	TaskType     string                 `json:"taskType"`
 	EnvStatus    string                 `json:"envStatus"`
 	OrgId        models.Id              `json:"orgId"`
@@ -39,24 +46,31 @@ type IacKafkaContent struct {
 	TplId        models.Id              `json:"tplId"`
 	EnvId        models.Id              `json:"envId"`
 	TaskId       models.Id              `json:"taskId"`
+	ExtraData    interface{}            `json:"extraData"`
+	PolicyStatus string                 `json:"policyStatus"`
+	IsDrift      bool                   `json:"isDrift"` // 漂移状态
 	Result       IacKafkaCallbackResult `json:"result"`
 }
 
-func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus, envStatus,policyStatus string,
-	resources []models.Resource, outputs map[string]interface{}) []byte {
+func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, eventType, taskStatus, envStatus, policyStatus string,
+	isDrift bool, result *IacKafkaCallbackResult) []byte {
+
 	a := IacKafkaContent{
+		EventType:    eventType,
 		TaskStatus:   taskStatus,
 		TaskType:     task.Type,
-		PolicyStatus: policyStatus,
 		EnvStatus:    envStatus,
 		OrgId:        task.OrgId,
 		ProjectId:    task.ProjectId,
 		TplId:        task.TplId,
 		EnvId:        task.EnvId,
 		TaskId:       task.Id,
+		IsDrift:      isDrift,
+		PolicyStatus: policyStatus,
 		Result: IacKafkaCallbackResult{
-			Resources: resources,
-			Outputs: outputs,
+			Resources:      result.Resources,
+			Outputs:        result.Outputs,
+			DriftResources: result.DriftResources,
 		},
 	}
 
@@ -73,6 +87,7 @@ func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, taskStatus, envS
 // ConnAndSend 连接并发送消息
 func (k *KafkaProducer) ConnAndSend(msg []byte) (err error) {
 	logger := logs.Get().WithField("kafka", "SendResultToKafka")
+
 	syncProducer, err := sarama.NewSyncProducer(k.Brokers, k.Conf)
 	if err != nil {
 		return err

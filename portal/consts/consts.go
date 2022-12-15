@@ -186,6 +186,11 @@ const (
 	OperatorObjectTypeUser    = "user"
 	OperatorObjectTypeEnv     = "env"
 	OperatorObjectTypeProject = "project"
+
+	// 发生漂移后，给 kafka 发送消息时 eventType 的固定值
+	DriftEventType = "drift_detection"
+	// 其他状态下，给 kafka 发送消息时 eventType 的固定值
+	DeployEventType = "deploy_execut"
 )
 
 const (
