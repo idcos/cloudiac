@@ -175,8 +175,13 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 		}
 	}
 
-	if form.StepTimeout == 0 {
-		form.StepTimeout = common.DefaultTaskStepTimeout
+	if !form.HasKey("stepTimeout") || form.StepTimeout == 0 {
+		stepTimeout, err := services.GetSystemTaskStepTimeout(session)
+		if err != nil {
+			return err
+		}
+		// 以分钟为单位返回
+		form.StepTimeout = stepTimeout / 60
 	}
 
 	if form.DestroyAt != "" {
