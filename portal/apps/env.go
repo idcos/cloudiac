@@ -180,7 +180,6 @@ func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, des
 		if err != nil {
 			return err
 		}
-		// 以分钟为单位返回
 		form.StepTimeout = stepTimeout / 60
 	}
 
