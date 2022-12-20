@@ -1159,11 +1159,9 @@ func setEnvByForm(env *models.Env, form *forms.DeployEnvForm) {
 	if form.HasKey("triggers") {
 		env.Triggers = form.Triggers
 	}
-
 	if form.HasKey("keyId") {
 		env.KeyId = form.KeyId
 	}
-
 	if form.HasKey("stepTimeout") {
 		// 将分钟转换为秒
 		env.StepTimeout = form.StepTimeout * 60
@@ -1432,6 +1430,10 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		form.Revision = env.Revision
 	}
 
+	if !form.HasKey("keyId") {
+		form.KeyId = env.KeyId
+	}
+
 	// 环境下云模版工作目录检查
 	if err = envWorkdirCheck(c, tpl.RepoId, form.Revision, form.Workdir, tpl.VcsId); err != nil {
 		return nil, err
@@ -1483,7 +1485,6 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	} else {
 		IsDriftTask = false
 	}
-
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
@@ -1516,7 +1517,6 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		c.Logger().Errorf("error save env, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
-
 	env.MergeTaskStatus()
 	envDetail := &models.EnvDetail{
 		Env:    *env,
