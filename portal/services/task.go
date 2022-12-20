@@ -204,7 +204,7 @@ func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*mode
 		CreatorId:       pt.CreatorId,
 		Variables:       pt.Variables,
 		AutoApprove:     pt.AutoApprove,
-		KeyId:           pt.KeyId,
+		KeyId:           models.Id(firstVal(string(pt.KeyId), string(env.KeyId))),
 		ExtraData:       pt.ExtraData,
 		Revision:        firstVal(pt.Revision, env.Revision, tpl.RepoRevision),
 		CommitId:        pt.CommitId,
