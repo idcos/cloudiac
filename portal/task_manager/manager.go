@@ -221,16 +221,12 @@ func (m *TaskManager) beginCronDriftTask() {
 			}
 			task.Type = envCronTaskType
 			task.IsDriftTask = true
-			err = services.DeleteHistoryCronTask(m.db)
-			// 删除历史数据失败，继续剩余流程。
-			if err != nil {
-				logger.Errorf("delete expired task and task step failed, error: %v", err)
-			}
-			_, err = services.CloneNewDriftTask(m.db, *task, env)
+			newTask, err := services.CloneNewDriftTask(m.db, *task, env)
 			if err != nil {
 				logger.Errorf("clone drift task error: %v", err) //nolint
 				continue
 			}
+			logger.Infof("creat new drift task: %s", newTask.Id)
 
 			attrs["nextDriftTaskTime"] = nextTime
 			_, err = services.UpdateEnv(m.db, env.Id, attrs)
@@ -239,6 +235,14 @@ func (m *TaskManager) beginCronDriftTask() {
 				continue
 			}
 		}
+	}
+
+	// 限制每次删除的历史数据数量，避免耗时过长
+	if n, err := services.DeleteHistoryDrfitCronTask(m.db, 256); err != nil {
+		// 删除历史数据失败不影响其他流程
+		logger.Errorf("delete expired drift task and steps failed, error: %v", err)
+	} else if n > 0 {
+		logger.Infof("deleted %d expired drift task", n)
 	}
 }
 
