@@ -14,6 +14,8 @@ const (
 	DigitChars      = "0123456789"
 	SpecialChars    = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
 
+	GitlabPerPageSize = 100 // Gitlab 单页大小最大限制
+
 	DefaultPageSize = 15   // 默认分页大小
 	MaxPageSize     = 5000 // 最大单页数据条数
 
