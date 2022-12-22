@@ -242,8 +242,8 @@ func taskDoneProcessAutoDeploy(dbSess *db.Session, task *models.Task) error {
 
 	updateAttrs := models.Attrs{}
 
-	if task.Type == models.TaskTypeApply && env.Status == models.EnvStatusActive {
-		// 环境部署后清空自动部署设置，以支持通过再次部署重建环境。
+	if task.Type == models.TaskTypeApply && task.Source == consts.TaskSourceAutoDeploy  {
+		// 环境执行定时部署任务后清空自动部署设置，确保后续的定时部署设置可以生效
 		// ttl 需要保留，做为重建环境的默认 ttl
 		updateAttrs["AutoDeployAt"] = nil
 		updateAttrs["AutoDeployTaskId"] = ""
@@ -254,7 +254,7 @@ func taskDoneProcessAutoDeploy(dbSess *db.Session, task *models.Task) error {
 	if task.Type == models.TaskTypeDestroy && (env.Status == models.EnvStatusFailed || env.Status == models.EnvStatusInactive || env.Status == models.EnvStatusDestroyed) &&
 		env.AutoDeployAt == nil {
 
-		// 计算是否有cron下一次的自动销毁
+		// 计算是否有cron下一次的自动部署
 		if env.AutoDeployCron != "" {
 			nextTime, err := apps.GetNextCronTime(env.AutoDeployCron)
 			if err != nil {
@@ -283,8 +283,8 @@ func taskDoneProcessAutoDestroy(dbSess *db.Session, task *models.Task) error {
 
 	updateAttrs := models.Attrs{}
 
-	if task.Type == models.TaskTypeDestroy && env.Status == models.EnvStatusDestroyed {
-		// 环境销毁后清空自动销毁设置，以支持通过再次部署重建环境。
+	if task.Type == models.TaskTypeDestroy && task.Source == consts.TaskSourceAutoDestroy {
+		// 环境执行定时销毁任务后清空自动销毁设置，确保后续的定时销毁设置可以生效
 		// ttl 需要保留，做为重建环境的默认 ttl
 		updateAttrs["AutoDestroyAt"] = nil
 		updateAttrs["AutoDestroyTaskId"] = ""
