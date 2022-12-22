@@ -1432,6 +1432,10 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		form.Revision = env.Revision
 	}
 
+	if !form.HasKey("keyId") {
+		form.KeyId = env.KeyId
+	}
+
 	// 环境下云模版工作目录检查
 	if err = envWorkdirCheck(c, tpl.RepoId, form.Revision, form.Workdir, tpl.VcsId); err != nil {
 		return nil, err
@@ -1533,6 +1537,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, form.Triggers); err != nil {
 		c.Logger().Errorf("set webhook err :%v", err)
 	}
+	
 	return envDetail, nil
 }
 
