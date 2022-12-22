@@ -308,7 +308,7 @@ func BatchUpdateRelationship(c *ctx.ServiceContext, form *forms.BatchUpdateRelat
 		}
 	}()
 
-	if err := services.DeleteRelationship(tx, form.DelVarGroupIds); err != nil {
+	if err := services.DeleteVarGroupObjectRel(tx, form.DelVarGroupIds, form.ObjectType, form.ObjectId); err != nil {
 		_ = tx.Rollback()
 		return nil, err
 	}
