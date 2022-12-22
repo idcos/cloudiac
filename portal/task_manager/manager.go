@@ -160,7 +160,7 @@ func (m *TaskManager) start() {
 			m.logger.Errorf("process auto deploy error: %v", err)
 		}
 
-		m.logger.Debugf("start process pending tasks")
+		m.logger.Trace("start process pending tasks")
 		m.processPendingTask(ctx)
 
 		m.logger.Trace("start cron dritf tasks")

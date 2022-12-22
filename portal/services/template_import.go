@@ -162,7 +162,7 @@ func (t *TplImporter) processTplVarsGroup(i int, tplIdDuplicate bool, tx *db.Ses
 	}
 
 	if !tplIdDuplicate || t.WhenIdDuplicate == "copy" {
-		if er := BatchUpdateRelationship(tx, importedVgIds, nil, consts.ScopeTemplate, tpl.Id.String()); er != nil {
+		if er := BatchUpdateVarGroupObjectRel(tx, importedVgIds, nil, consts.ScopeTemplate, tpl.Id); er != nil {
 			return er
 		}
 	} else { // update
@@ -170,7 +170,7 @@ func (t *TplImporter) processTplVarsGroup(i int, tplIdDuplicate bool, tx *db.Ses
 		if er := DeleteVarGroupRel(tx, consts.ScopeTemplate, tpl.Id); er != nil {
 			return er
 		}
-		if er := BatchUpdateRelationship(tx, importedVgIds, nil, consts.ScopeTemplate, tpl.Id.String()); er != nil {
+		if er := BatchUpdateVarGroupObjectRel(tx, importedVgIds, nil, consts.ScopeTemplate, tpl.Id); er != nil {
 			return er
 		}
 	}

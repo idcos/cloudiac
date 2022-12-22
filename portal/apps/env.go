@@ -290,7 +290,7 @@ func handlerCreateEnvVars(tx *db.Session, c *ctx.ServiceContext, form *forms.Cre
 	}
 
 	// 创建变量组与实例的关系
-	if err := services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeEnv, env.Id.String()); err != nil {
+	if err := services.BatchUpdateVarGroupObjectRel(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeEnv, env.Id); err != nil {
 		_ = tx.Rollback()
 		return nil, nil, err
 	}
@@ -1384,7 +1384,7 @@ func setAndCheckEnvByForm(c *ctx.ServiceContext, tx *db.Session, env *models.Env
 
 	if form.HasKey("varGroupIds") || form.HasKey("delVarGroupIds") {
 		// 创建变量组与实例的关系
-		if err := services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeEnv, env.Id.String()); err != nil {
+		if err := services.BatchUpdateVarGroupObjectRel(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeEnv, env.Id); err != nil {
 			return err
 		}
 	}

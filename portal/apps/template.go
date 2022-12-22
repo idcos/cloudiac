@@ -117,7 +117,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 	}
 
 	// 创建变量组与实例的关系
-	if err := services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeTemplate, template.Id.String()); err != nil {
+	if err := services.BatchUpdateVarGroupObjectRel(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeTemplate, template.Id); err != nil {
 		_ = tx.Rollback()
 		return nil, err
 	}
@@ -240,7 +240,7 @@ func updatetplByFormKey(c *ctx.ServiceContext, tx *db.Session, tpl *models.Templ
 
 	if form.HasKey("varGroupIds") || form.HasKey("delVarGroupIds") {
 		// 创建变量组与实例的关系
-		err = services.BatchUpdateRelationship(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeTemplate, form.Id.String())
+		err = services.BatchUpdateVarGroupObjectRel(tx, form.VarGroupIds, form.DelVarGroupIds, consts.ScopeTemplate, form.Id)
 	}
 	return err
 }
