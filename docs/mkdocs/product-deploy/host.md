@@ -25,7 +25,7 @@
 - 预置 proviers: cloudiac-providers_${VERSION}.tar.gz
 
 ```
-VERSION=v1.2.2
+VERSION=v1.3.3
 mkdir -p /usr/yunji/cloudiac && \
 cd /usr/yunji/cloudiac && \
 for PACK in cloudiac cloudiac-repos cloudiac-providers; do

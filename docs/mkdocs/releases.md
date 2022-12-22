@@ -1,6 +1,18 @@
 # Releases
 
 ------
+## v1.3.3 20221222
+**Fixes**
+
+- 修复定时销毁/部署任务失败后，重新设置无法进行定时销毁/部署任务后失效的问题
+- 修复步骤超时时间转换出错问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v1.3.3](https://github.com/idcos/cloudiac/releases/tag/v1.3.3)
+
+
+------
 ## v1.3.2 20221215
 **Featues**
 
