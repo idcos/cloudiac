@@ -35,7 +35,8 @@ func GetRouter() *gin.Engine {
 	// 允许跨域
 	e.Use(w(middleware.Cors))
 	e.Use(w(middleware.Operation))
-	e.GET("/swagger/*any", gs.WrapHandler(swaggerFiles.Handler))
+	//添加环境变量SwaggerStatus控制swagger文档开放
+	e.GET("/swagger/*any", gs.DisablingWrapHandler(swaggerFiles.Handler, "SwaggerStatus"))
 
 	e.GET("/system/info", w(func(c *ctx.GinRequest) {
 		c.JSONSuccess(gin.H{
