@@ -216,7 +216,7 @@ CONSUL_CERT_PATH=""
 # 询价服务端地址
 COST_SERVE=""
 
-# Swagger文件访问控制 enable为可以访问
+# Swagger文件访问控制 true为可以访问
 SwaggerEnable=true
 ```
 
