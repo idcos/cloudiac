@@ -38,7 +38,6 @@ func GetRouter() *gin.Engine {
 	if configs.Get().SwaggerEnable {
 		e.GET("/swagger/*any", gs.WrapHandler(swaggerFiles.Handler))
 	}
-
 	e.GET("/system/info", w(func(c *ctx.GinRequest) {
 		c.JSONSuccess(gin.H{
 			"version": common.VERSION,
