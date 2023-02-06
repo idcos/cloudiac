@@ -3,7 +3,7 @@ mysql: "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL
 
 cost_serve: "${COST_SERVE}"
 
-swagger_enable: ${SwaggerEnable}
+swaggerEnable: ${Swagger_Enable}
 
 secretKey: "${SECRET_KEY}"
 jwtSecretKey: "${JWT_SECRET_KEY}"
