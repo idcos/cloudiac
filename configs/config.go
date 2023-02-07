@@ -177,6 +177,7 @@ type Config struct {
 	Ldap               LdapConfig       `yaml:"ldap"`
 	CostServe          string           `yaml:"cost_serve"`
 
+	SwaggerEnable   bool `yaml:"swaggerEnable"`
 	EnableTaskAbort bool `yaml:"enableTaskAbort"` // 启用任务中止功能
 	EnableRegister  bool `yaml:"enableRegister"`  // 启用注册
 

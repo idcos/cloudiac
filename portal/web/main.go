@@ -14,11 +14,10 @@ import (
 	"cloudiac/portal/web/middleware"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
-	"io"
-
 	"github.com/gin-gonic/gin"
 	gs "github.com/swaggo/gin-swagger"
 	"github.com/swaggo/gin-swagger/swaggerFiles"
+	"io"
 )
 
 var logger = logs.Get()
@@ -35,8 +34,10 @@ func GetRouter() *gin.Engine {
 	// 允许跨域
 	e.Use(w(middleware.Cors))
 	e.Use(w(middleware.Operation))
-	e.GET("/swagger/*any", gs.WrapHandler(swaggerFiles.Handler))
-
+	//添加Config变量SwaggerDisable控制swagger文档开放
+	if configs.Get().SwaggerEnable {
+		e.GET("/swagger/*any", gs.WrapHandler(swaggerFiles.Handler))
+	}
 	e.GET("/system/info", w(func(c *ctx.GinRequest) {
 		c.JSONSuccess(gin.H{
 			"version": common.VERSION,
