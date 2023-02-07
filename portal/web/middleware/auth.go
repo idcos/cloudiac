@@ -63,7 +63,11 @@ func checkOrgId(c *ctx.GinRequest, orgId, apiTokenOrgId models.Id) (e.Error, int
 	}
 
 	if org, err := services.GetOrganizationById(c.Service().DB(), orgId); err != nil {
-		return e.New(e.OrganizationNotExists, fmt.Errorf("not allow to access org")), http.StatusBadRequest
+		if e.Is(err, e.OrganizationNotExists) {
+			return err, http.StatusNotFound
+		} else {
+			return err, http.StatusInternalServerError
+		}
 	} else if org.Status == models.Disable && !c.Service().IsSuperAdmin {
 		return e.New(e.PermissionDeny, fmt.Errorf("org disabled")), http.StatusForbidden
 	}
