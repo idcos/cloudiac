@@ -1,7 +1,7 @@
 ARG REPOS
 FROM ${REPOS} as repos
 
-#nolint
+# Sensitive
 FROM alpine
 RUN apk add --no-cache netcat-openbsd curl tzdata 
 ENV TZ="Asia/Shanghai"
