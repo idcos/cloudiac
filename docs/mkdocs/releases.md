@@ -1,6 +1,25 @@
 # Releases
 
 ------
+## v1.3.5 20230208
+**Changed**
+
+- 优化 checkOrgId 时数据库错误的报错
+
+**Features**
+
+- 新增swaggerEnable参数支持开关swagger文档
+
+**Fixes**
+
+- 修复事件通知时分支显示 stack 分支名称
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v1.3.5](https://github.com/idcos/cloudiac/releases/tag/v1.3.5)
+
+
+------
 ## v1.3.4 20221224
 **Fixes**
 
@@ -11,6 +30,7 @@
 
 
 **完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v1.3.4](https://github.com/idcos/cloudiac/releases/tag/v1.3.4)
+
 
 ------
 ## v1.3.3 20221222
@@ -26,7 +46,7 @@
 
 ------
 ## v1.3.2 20221215
-**Featues**
+**Features**
 
 - 默认使用的 terraform 版本更新为 1.2.4
 

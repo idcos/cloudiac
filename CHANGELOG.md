@@ -1,3 +1,12 @@
+## v1.3.5 20230208
+### Features
+- 新增swaggerEnable参数支持开关swagger文档
+### Fixed
+- 修复事件通知时分支显示 stack 分支名称
+### Changed
+- 优化 checkOrgId 时数据库错误的报错
+
+------
 ## v1.3.4 20221224
 ### Fixed
 - 修复删除历史漂移检测任务耗时过长的问题
@@ -15,7 +24,7 @@
 
 ------
 ## v1.3.2 20221215
-### Featues:
+### Features:
 - 漂移检测后发送 kafka 消息
 - kafka回调增加 output 信息
 - 修改 plan result 不返回值的问题
