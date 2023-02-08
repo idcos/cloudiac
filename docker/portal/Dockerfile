@@ -1,3 +1,4 @@
+#nolint
 FROM cloudiac/base-iac-portal:v0.2.1
 
 EXPOSE 9030
