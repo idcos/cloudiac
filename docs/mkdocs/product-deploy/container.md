@@ -216,7 +216,7 @@ CONSUL_CERT_PATH=""
 # 询价服务端地址
 COST_SERVE=""
 
-Swagger_Enable=true
+SWAGGER_ENABLE=true
 
 ```
 
