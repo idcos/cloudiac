@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/url"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -179,6 +180,7 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 	var (
 		fileBlob = "blob"
 		fileTree = "tree"
+		ansible  = "ansible"
 	)
 
 	pathList := make([]string, 0)
@@ -186,6 +188,15 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 		ListOptions: gitlab.ListOptions{Page: 1, PerPage: 1000},
 		Ref:         gitlab.String(getBranch(git, option.Ref)),
 		Path:        gitlab.String(option.Path),
+	}
+	flag := strings.Contains(option.Path, ansible)
+	if flag {
+		row, err := git.ReadFileContent(getBranch(git, option.Ref), option.Path)
+		if err == nil {
+			workDir := string(row)
+			option.Path = strings.Replace(option.Path, ansible, "", 1)
+			*lto.Path = filepath.Join(option.Path, workDir)
+		}
 	}
 	treeNode, _, err := git.gitConn.Repositories.ListTree(git.Project.ID, lto)
 	if err != nil {
