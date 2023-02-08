@@ -1,4 +1,5 @@
 FROM jfxs/ansible
+#nolint
 USER root
 RUN sed -i 's/https/http/' /etc/apk/repositories
 

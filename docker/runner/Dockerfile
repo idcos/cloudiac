@@ -1,3 +1,4 @@
+#nolint
 FROM cloudiac/base-ct-runner:v0.2.1
 
 ARG WORKER_IMAGE=cloudiac/ct-worker:latest
