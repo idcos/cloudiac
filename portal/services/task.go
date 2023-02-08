@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+// Copyright (c) 2015-2023 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -85,25 +85,28 @@ func DeleteTask(tx *db.Session, taskId models.Id) e.Error {
 	return nil
 }
 
-func DeleteHistoryCronTask(tx *db.Session) e.Error {
-	task := make([]models.Task, 0)
-	err := tx.Where("unix_timestamp(now()) - unix_timestamp(end_at) > ? and is_drift_task = ? and type = ?",
-		86400*7, true, models.TaskTypePlan).Find(&task)
+func DeleteHistoryDrfitCronTask(tx *db.Session, limit int) (int, e.Error) {
+	taskIds := make([]models.Id, 0)
+	taskQuery := tx.Model(&models.Task{}).Where(
+		"end_at < DATE_SUB(NOW(), INTERVAL 7 DAY) AND is_drift_task = 1 AND `type` = ?", models.TaskTypePlan).
+		Limit(limit)
+
+	err := taskQuery.Pluck("id", &taskIds)
 	if err != nil {
-		return e.New(e.DBError, fmt.Errorf("delete task error: %v", err))
+		return 0, e.New(e.DBError, fmt.Errorf("delete task error: %v", err))
 	}
+
 	// 删除任务以及任务相关的step
-	if len(task) > 0 {
-		for _, v := range task {
-			if er1 := DeleteTask(tx, v.Id); er1 != nil {
-				return er1
-			}
-			if er1 := DeleteTaskStep(tx, v.Id); er1 != nil {
-				return er1
-			}
+	num := int64(0)
+	if len(taskIds) > 0 {
+		if num, err = taskQuery.Unscoped().Delete(&models.Task{}); err != nil {
+			return 0, e.New(e.DBError, err)
+		}
+		if _, err := tx.Where("task_id in (?)", taskIds).Delete(&models.TaskStep{}); err != nil {
+			return 0, e.New(e.DBError, err)
 		}
 	}
-	return nil
+	return int(num), nil
 }
 
 func GetResourceIdByAddressAndTaskId(sess *db.Session, address string, lastResTaskId models.Id) (*models.Resource, e.Error) {
@@ -204,7 +207,7 @@ func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*mode
 		CreatorId:       pt.CreatorId,
 		Variables:       pt.Variables,
 		AutoApprove:     pt.AutoApprove,
-		KeyId:           models.Id(firstVal(string(pt.KeyId), string(env.KeyId), string(tpl.KeyId))),
+		KeyId:           models.Id(firstVal(string(pt.KeyId), string(env.KeyId))),
 		ExtraData:       pt.ExtraData,
 		Revision:        firstVal(pt.Revision, env.Revision, tpl.RepoRevision),
 		CommitId:        pt.CommitId,

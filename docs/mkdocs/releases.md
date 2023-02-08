@@ -1,6 +1,18 @@
 # Releases
 
 ------
+## v1.3.4 20221224
+**Fixes**
+
+- 修复对象引用的资源账号可能被误删除的问题
+- 修复环境定时销毁或部署失败后无法再创建新的定时任务的问题
+- 修复 gitlab 仓库的分支和标签只能获取 100 个的问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v1.3.4](https://github.com/idcos/cloudiac/releases/tag/v1.3.4)
+
+------
 ## v1.3.3 20221222
 **Fixes**
 

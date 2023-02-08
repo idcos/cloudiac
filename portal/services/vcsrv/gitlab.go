@@ -1,8 +1,9 @@
-// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+// Copyright (c) 2015-2023 CloudJ Technology Co., Ltd.
 
 package vcsrv
 
 import (
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/models"
 	"cloudiac/utils"
@@ -105,35 +106,57 @@ type gitlabRepoIface struct {
 
 func (git *gitlabRepoIface) ListBranches() ([]string, error) {
 	branchList := make([]string, 0)
-	opt := &gitlab.ListBranchesOptions{ListOptions: gitlab.ListOptions{
-		Page:    1,
-		PerPage: 5000,
-	}}
+	currentPage := 1
 
-	branches, _, er := git.gitConn.Branches.ListBranches(git.Project.ID, opt)
-	if er != nil {
-		return nil, e.New(e.VcsError, er)
+	for {
+		branches, response, er := git.gitConn.Branches.ListBranches(git.Project.ID,
+			&gitlab.ListBranchesOptions{
+				ListOptions: gitlab.ListOptions{
+					Page:    currentPage,
+					PerPage: consts.GitlabPerPageSize,
+				},
+			})
+		if er != nil {
+			return nil, e.New(e.VcsError, er)
+		}
+
+		for _, branch := range branches {
+			branchList = append(branchList, branch.Name)
+		}
+
+		if currentPage == response.TotalPages {
+			break
+		}
+		currentPage++
 	}
-	for _, branch := range branches {
-		branchList = append(branchList, branch.Name)
-	}
+
 	return branchList, nil
 }
 
 func (git *gitlabRepoIface) ListTags() ([]string, error) {
 	tagList := make([]string, 0)
-	opt := &gitlab.ListTagsOptions{ListOptions: gitlab.ListOptions{
-		Page:    1,
-		PerPage: 5000,
-	}}
+	currentPage := 1
 
-	tags, _, er := git.gitConn.Tags.ListTags(git.Project.ID, opt)
-	if er != nil {
-		return nil, e.New(e.VcsError, er)
+	for {
+		tags, response, er := git.gitConn.Tags.ListTags(git.Project.ID,
+			&gitlab.ListTagsOptions{ListOptions: gitlab.ListOptions{
+				Page:    currentPage,
+				PerPage: consts.GitlabPerPageSize,
+			}})
+		if er != nil {
+			return nil, e.New(e.VcsError, er)
+		}
+
+		for _, tag := range tags {
+			tagList = append(tagList, tag.Name)
+		}
+
+		if currentPage == response.TotalPages {
+			break
+		}
+		currentPage++
 	}
-	for _, tag := range tags {
-		tagList = append(tagList, tag.Name)
-	}
+
 	return tagList, nil
 }
 

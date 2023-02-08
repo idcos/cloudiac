@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+// Copyright (c) 2015-2023 CloudJ Technology Co., Ltd.
 
 package apps
 
@@ -308,7 +308,7 @@ func BatchUpdateRelationship(c *ctx.ServiceContext, form *forms.BatchUpdateRelat
 		}
 	}()
 
-	if err := services.DeleteRelationship(tx, form.DelVarGroupIds); err != nil {
+	if err := services.DeleteVarGroupObjectRel(tx, form.DelVarGroupIds, form.ObjectType, form.ObjectId); err != nil {
 		_ = tx.Rollback()
 		return nil, err
 	}

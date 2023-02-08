@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+// Copyright (c) 2015-2023 CloudJ Technology Co., Ltd.
 
 package services
 
@@ -72,6 +72,7 @@ func UpdateVariableGroup(tx *db.Session, id models.Id, attrs models.Attrs) e.Err
 	} //nolint
 	return nil
 }
+
 func UpdateVariableGroupProjectRel(tx *db.Session, varGroupId models.Id, delVgpRelsId []models.Id, addVgpRelsId []models.Id) e.Error {
 	if len(addVgpRelsId) > 0 {
 		for _, addVpgRelId := range addVgpRelsId {
@@ -100,15 +101,15 @@ func DeleteVariableGroup(tx *db.Session, vgId models.Id) e.Error {
 	}
 
 	//删除变量组与实例之间的关系
-	if err := DeleteRelationship(tx, []models.Id{vgId}); err != nil {
+	if err := DeleteVarGroupAllRel(tx, []models.Id{vgId}); err != nil {
 		return e.New(e.DBError, err)
 	}
 
+	// 删除变量组与项目的授权关系（变量组可以只授权给指定项目使用）
 	queryVgpRels, err := SearchVariableGroupProjectRelByVgpId(tx, vgId)
 	if err != nil {
 		return e.New(e.DBError, err)
 	}
-
 	if len(queryVgpRels) != 0 {
 		for _, queryVgpRel := range queryVgpRels {
 			if err := DeleteVariableGroupProjectRel(tx, vgId, queryVgpRel.ProjectId); err != nil {
@@ -373,16 +374,30 @@ func GetVariableGroupListByIds(dbSess *db.Session, ids []models.Id) ([]models.Va
 	return vgs, nil
 }
 
-func DeleteRelationship(dbSess *db.Session, vgId []models.Id) e.Error {
-	if len(vgId) == 0 {
+// DeleteVarGroupAllRel 删除变量组的所有绑定关系
+func DeleteVarGroupAllRel(dbSess *db.Session, vgIds []models.Id) e.Error {
+	if len(vgIds) == 0 {
 		return nil
 	}
-	if _, err := dbSess.Where("var_group_id in (?)", vgId).
+	if _, err := dbSess.Where("var_group_id in (?)", vgIds).Delete(&models.VariableGroupRel{}); err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
+// DeleteVarGroupObjectRel 删除变量组与指定对象的绑定关系
+func DeleteVarGroupObjectRel(dbSess *db.Session, vgIds []models.Id, objType string, objId models.Id) e.Error {
+	if len(vgIds) == 0 {
+		return nil
+	}
+	if _, err := dbSess.Where(
+		"var_group_id in (?) and object_type = ? and object_id = ?", vgIds, objType, objId).
 		Delete(&models.VariableGroupRel{}); err != nil {
 		return e.New(e.DBError, err)
 	}
 	return nil
 }
+
 func DeleteVariableGroupProjectRel(dbSess *db.Session, vgId models.Id, projectId models.Id) e.Error {
 	if _, err := dbSess.Where("var_group_id = ? and project_id = ?", vgId, projectId).
 		Delete(&models.VariableGroupProjectRel{}); err != nil {
@@ -432,7 +447,7 @@ func MergeVariableGroupVars(vgs []VarGroupRel, vars map[string]models.Variable) 
 	return mergedVars
 }
 
-func BatchUpdateRelationship(tx *db.Session, vgIds, delVgIds []models.Id, objectType, objectId string) e.Error {
+func BatchUpdateVarGroupObjectRel(tx *db.Session, vgIds, delVgIds []models.Id, objectType string, objectId models.Id) e.Error {
 	var projectId models.Id
 	switch objectType {
 	case consts.ScopeEnv:
@@ -463,7 +478,7 @@ func BatchUpdateRelationship(tx *db.Session, vgIds, delVgIds []models.Id, object
 	}
 
 	rel := make([]models.VariableGroupRel, 0)
-	if err := DeleteRelationship(tx, delVgIds); err != nil {
+	if err := DeleteVarGroupObjectRel(tx, delVgIds, objectType, objectId); err != nil {
 		return err
 	}
 
