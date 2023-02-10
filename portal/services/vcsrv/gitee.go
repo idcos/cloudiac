@@ -14,13 +14,14 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 )
 
-//newGiteeInstance
-//gitee open api文档: https://gitee.com/api/v5/swagger#/getV5ReposOwnerRepoBranches
+// newGiteeInstance
+// gitee open api文档: https://gitee.com/api/v5/swagger#/getV5ReposOwnerRepoBranches
 func newGiteeInstance(vcs *models.Vcs) (VcsIface, error) {
 	vcs.Address = fmt.Sprintf("%s/api/v5", utils.GetUrl(vcs.Address))
 	vcsToken, err := vcs.DecryptToken()
@@ -207,6 +208,9 @@ type giteeFiles struct {
 }
 
 func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) {
+	var (
+		ansible = "ansible"
+	)
 	var path string = gitee.vcs.Address
 	branch := getBranch(gitee, option.Ref)
 	if option.Path != "" {
@@ -223,6 +227,10 @@ func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 
 	resp := make([]string, 0)
 	rep := make([]giteeFiles, 0)
+	resp, err := gitee.UpdatePlaybookWorkDir(resp, body, option, ansible)
+	if err != nil {
+		return nil, err
+	}
 	_ = json.Unmarshal(body, &rep)
 	for _, v := range rep {
 		if v.Type == "dir" && option.Recursive {
@@ -242,6 +250,26 @@ func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 
 type giteeReadContent struct {
 	Content string `json:"content" form:"content" `
+}
+
+func (gitee *giteeRepoIface) UpdatePlaybookWorkDir(resp []string, body []byte, option VcsIfaceOptions, pattern string) ([]string, error) {
+	if strings.Contains(option.Path, pattern) {
+		gf := giteeFiles{}
+		json.Unmarshal(body, &gf)
+		if gf.Type == "symlink" && gf.Name == pattern {
+			content, err := gitee.ReadFileContent(getBranch(gitee, option.Ref), option.Path)
+			if err != nil {
+				return resp, err
+			}
+			Path := strings.Replace(option.Path, pattern, "", 1)
+			Paths := filepath.Join(Path, string(content))
+			option.Path = Paths
+			repList, _ := gitee.ListFiles(option)
+			resp = append(resp, repList...)
+			return resp, nil
+		}
+	}
+	return resp, nil
 }
 
 func (gitee *giteeRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
@@ -286,7 +314,7 @@ func (gitee *giteeRepoIface) DefaultBranch() string {
 	return gitee.repository.DefaultBranch
 }
 
-//AddWebhook doc: https://gitee.com/api/v5/swagger#/deleteV5ReposOwnerRepoHooksId
+// AddWebhook doc: https://gitee.com/api/v5/swagger#/deleteV5ReposOwnerRepoHooksId
 func (gitee *giteeRepoIface) AddWebhook(url string) error {
 	path := gitee.vcs.Address +
 		fmt.Sprintf("/repos/%s/hooks?access_token=%s", gitee.repository.FullName, gitee.urlParam.Get("access_token"))
@@ -378,9 +406,9 @@ func (gitee *giteeRepoIface) GetCommitFullPath(address, commitId string) string 
 	return u.String()
 }
 
-//giteeRequest
-//param path : gitea api路径
-//param method 请求方式
+// giteeRequest
+// param path : gitea api路径
+// param method 请求方式
 func giteeRequest(path, method string, requestBody []byte) (*http.Response, []byte, error) {
 	request, er := http.NewRequest(method, path, bytes.NewBuffer(requestBody))
 	if er != nil {

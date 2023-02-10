@@ -84,6 +84,9 @@ type RepoIface interface {
 	// return: 返回文件路径列表，路径为完整路径(即包含传入的 path 部分)
 	ListFiles(option VcsIfaceOptions) ([]string, error)
 
+	// UpdatePlaybookWorkDir 更新playbook工作目录
+	UpdatePlaybookWorkDir(resp []string, body []byte, option VcsIfaceOptions, pattern string) ([]string, error)
+
 	// ReadFileContent
 	// param path: 路径
 	// param branch: 分支
@@ -160,7 +163,7 @@ func matchGlob(search, name string) bool {
 	return matched
 }
 
-//校验ref是否为空 空则返回默认分支
+// 校验ref是否为空 空则返回默认分支
 func getBranch(repo RepoIface, ref string) string {
 	if ref == "" {
 		return repo.DefaultBranch()

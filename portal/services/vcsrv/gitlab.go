@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/url"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -179,6 +180,7 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 	var (
 		fileBlob = "blob"
 		fileTree = "tree"
+		ansible  = "ansible"
 	)
 
 	pathList := make([]string, 0)
@@ -186,6 +188,10 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 		ListOptions: gitlab.ListOptions{Page: 1, PerPage: 1000},
 		Ref:         gitlab.String(getBranch(git, option.Ref)),
 		Path:        gitlab.String(option.Path),
+	}
+	pathList, err := git.UpdatePlaybookWorkDir(pathList, []byte(getBranch(git, option.Ref)), option, ansible)
+	if err != nil {
+		return nil, err
 	}
 	treeNode, _, err := git.gitConn.Repositories.ListTree(git.Project.ID, lto)
 	if err != nil {
@@ -207,6 +213,25 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 	}
 	return pathList, nil
 
+}
+
+func (git *gitlabRepoIface) UpdatePlaybookWorkDir(resp []string, body []byte, option VcsIfaceOptions, pattern string) ([]string, error) {
+	if strings.Contains(option.Path, pattern) {
+		branch := strings.TrimSpace(string(body))
+		row, err := git.ReadFileContent(branch, option.Path)
+		if err != nil {
+			return resp, nil
+		}
+		workDir := strings.TrimSpace(string(row))
+		option.Path = strings.Replace(option.Path, pattern, "", 1)
+		option.Path = filepath.Join(option.Path, workDir)
+		pl, err := git.ListFiles(option)
+		if err != nil {
+			return resp, nil
+		}
+		resp = append(resp, pl...)
+	}
+	return resp, nil
 }
 
 func (git *gitlabRepoIface) ReadFileContent(branch, path string) ([]byte, error) {

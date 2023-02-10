@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -66,7 +67,7 @@ type Repository struct {
 -H 'Authorization: token 27b9b370eb3qqqqqqqqc0f3a5de10a3'
 */
 
-//ListRepos Fixme中的数据不能直接调用repo接口的方法
+// ListRepos Fixme中的数据不能直接调用repo接口的方法
 func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([]RepoIface, int64, error) {
 	user, err := getGiteaUserMe(gitea.vcs)
 	if err != nil {
@@ -198,6 +199,9 @@ type giteaFiles struct {
 }
 
 func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) {
+	var (
+		ansible = "ansible"
+	)
 	var path string = gitea.vcs.Address
 	branch := getBranch(gitea, option.Ref)
 	if option.Path != "" {
@@ -215,6 +219,10 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 	}
 	resp := make([]string, 0)
 	rep := make([]giteaFiles, 0)
+	resp, err := gitea.UpdatePlaybookWorkDir(resp, body, option, ansible)
+	if err != nil {
+		return nil, err
+	}
 	_ = json.Unmarshal(body, &rep)
 	for _, v := range rep {
 		if v.Type == "dir" && option.Recursive {
@@ -228,6 +236,30 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 
 	}
 
+	return resp, nil
+}
+
+type giteaReadTarget struct {
+	Target string `json:"target" form:"target" `
+}
+
+func (gitea *giteaRepoIface) UpdatePlaybookWorkDir(resp []string, body []byte, option VcsIfaceOptions, pattern string) ([]string, error) {
+	if strings.Contains(option.Path, pattern) {
+		gf := giteaFiles{}
+		json.Unmarshal(body, &gf)
+		if gf.Type == "symlink" && gf.Name == pattern {
+			grt := giteaReadTarget{}
+			if err := json.Unmarshal(body, &grt); err != nil {
+				return resp, err
+			}
+			Path := strings.Replace(option.Path, pattern, "", 1)
+			Paths := filepath.Join(Path, grt.Target)
+			option.Path = Paths
+			repList, _ := gitea.ListFiles(option)
+			resp = append(resp, repList...)
+			return resp, nil
+		}
+	}
 	return resp, nil
 }
 
@@ -271,7 +303,7 @@ func (gitea *giteaRepoIface) DefaultBranch() string {
 	return gitea.repository.DefaultBranch
 }
 
-//AddWebhook doc: http://10.0.3.124:3000/api/swagger#/repository/repoDeleteHook
+// AddWebhook doc: http://10.0.3.124:3000/api/swagger#/repository/repoDeleteHook
 func (gitea *giteaRepoIface) AddWebhook(url string) error {
 	path := gitea.vcs.Address + giteaApiRoute + fmt.Sprintf("/repos/%s/hooks", gitea.repository.FullName)
 	bodys := map[string]interface{}{
@@ -371,9 +403,9 @@ func (gitea *giteaRepoIface) GetCommitFullPath(address, commitId string) string 
 	return u.String()
 }
 
-//giteeRequest
-//param path : gitea api路径
-//param method 请求方式
+// giteeRequest
+// param path : gitea api路径
+// param method 请求方式
 func giteaRequest(path, method, token string, requestBody []byte) (*http.Response, []byte, error) {
 	vcsToken, err := GetVcsToken(token)
 	if err != nil {

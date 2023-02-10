@@ -47,7 +47,7 @@ func (rv *RegistryVcs) TokenCheck() error {
 	return nil
 }
 
-//RepoBaseHttpAddr 返回示例: http://localhost/repos
+// RepoBaseHttpAddr 返回示例: http://localhost/repos
 func (v *RegistryVcs) RepoBaseHttpAddr() string {
 	return utils.JoinURL(v.vcs.Address, consts.LocalGitReposPath)
 }
@@ -158,6 +158,10 @@ func (r *RegistryRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
 	}
 
 	return resp.Result.Files, nil
+}
+
+func (r *RegistryRepo) UpdatePlaybookWorkDir(resp []string, body []byte, option VcsIfaceOptions, pattern string) ([]string, error) {
+	return resp, nil
 }
 
 func (r *RegistryRepo) ReadFileContent(revision string, filePath string) (content []byte, err error) {

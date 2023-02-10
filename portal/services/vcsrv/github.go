@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -24,8 +25,8 @@ import (
 	"golang.org/x/oauth2"
 )
 
-//newGithubInstance
-//github api文档: https://docs.github.com/cn/rest/reference/repos
+// newGithubInstance
+// github api文档: https://docs.github.com/cn/rest/reference/repos
 func newGithubInstance(vcs *models.Vcs) (VcsIface, error) {
 	return &githubVcs{vcs: vcs}, nil
 
@@ -230,6 +231,9 @@ type githubFiles struct {
 }
 
 func (github *githubRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) {
+	var (
+		ansible = "ansible"
+	)
 	urlParam := url.Values{}
 	urlParam.Set("ref", getBranch(github, option.Ref))
 	var path string
@@ -246,6 +250,10 @@ func (github *githubRepoIface) ListFiles(option VcsIfaceOptions) ([]string, erro
 	}
 	resp := make([]string, 0)
 	rep := make([]githubFiles, 0)
+	resp, err := github.UpdatePlaybookWorkDir(resp, body, option, ansible)
+	if err != nil {
+		return nil, err
+	}
 	_ = json.Unmarshal(body, &rep)
 	for _, v := range rep {
 		if v.Type == "dir" && option.Recursive {
@@ -266,6 +274,30 @@ func (github *githubRepoIface) ListFiles(option VcsIfaceOptions) ([]string, erro
 
 type githubReadContent struct {
 	Content string `json:"content" form:"content" `
+}
+
+type githubReadTarget struct {
+	Target string `json:"target" form:"target" `
+}
+
+func (github *githubRepoIface) UpdatePlaybookWorkDir(resp []string, body []byte, option VcsIfaceOptions, pattern string) ([]string, error) {
+	if strings.Contains(option.Path, pattern) {
+		gf := githubFiles{}
+		json.Unmarshal(body, &gf)
+		if gf.Type == "symlink" && gf.Name == pattern {
+			grt := githubReadTarget{}
+			if err := json.Unmarshal(body, &grt); err != nil {
+				return resp, err
+			}
+			Path := strings.Replace(option.Path, pattern, "", 1)
+			Paths := filepath.Join(Path, grt.Target)
+			option.Path = Paths
+			repList, _ := github.ListFiles(option)
+			resp = append(resp, repList...)
+			return resp, nil
+		}
+	}
+	return resp, nil
 }
 
 func (github *githubRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
@@ -366,7 +398,7 @@ func (github *githubRepoIface) DeleteWebhook(id int) error {
 	return nil
 }
 
-//CreatePrComment doc: https://docs.github.com/en/rest/reference/pulls#submit-a-review-for-a-pull-request
+// CreatePrComment doc: https://docs.github.com/en/rest/reference/pulls#submit-a-review-for-a-pull-request
 func (github *githubRepoIface) CreatePrComment(prId int, comment string) error {
 	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/pulls/%d/reviews", github.repository.FullName, prId), nil)
 	requestBody := map[string]string{
@@ -401,9 +433,9 @@ func (github *githubRepoIface) GetCommitFullPath(address, commitId string) strin
 	return u.String()
 }
 
-//giteaRequest
-//param path : gitea api路径
-//param method 请求方式
+// giteaRequest
+// param path : gitea api路径
+// param method 请求方式
 func githubRequest(path, method, token string, requestBody []byte) (*http.Response, []byte, error) {
 	vcsToken, err := GetVcsToken(token)
 	if err != nil {

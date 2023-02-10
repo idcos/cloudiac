@@ -91,7 +91,7 @@ func (l *LocalVcs) TokenCheck() error {
 	return nil
 }
 
-//RepoBaseHttpAddr 返回示例: http://localhost/repos/cloudiac
+// RepoBaseHttpAddr 返回示例: http://localhost/repos/cloudiac
 func (l *LocalVcs) RepoBaseHttpAddr() string {
 	portAddr := configs.Get().Portal.Address
 	return utils.JoinURL(portAddr, consts.LocalGitReposPath, consts.LocalGitReposLocalGitReposPathSubdirectories)
@@ -191,6 +191,10 @@ func getMatchedFiles(filesIter *object.FileIter, opt VcsIfaceOptions) ([]string,
 	})
 
 	return results, err
+}
+
+func (l *LocalRepo) UpdatePlaybookWorkDir(resp []string, body []byte, option VcsIfaceOptions, pattern string) ([]string, error) {
+	return resp, nil
 }
 
 func (l *LocalRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
