@@ -180,7 +180,6 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 	var (
 		fileBlob = "blob"
 		fileTree = "tree"
-		ansible  = "ansible"
 	)
 
 	pathList := make([]string, 0)
@@ -189,7 +188,7 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 		Ref:         gitlab.String(getBranch(git, option.Ref)),
 		Path:        gitlab.String(option.Path),
 	}
-	pathList, err := git.UpdatePlaybookWorkDir(pathList, []byte(getBranch(git, option.Ref)), option, ansible)
+	pathList, err := git.UpdatePlaybookWorkDir(pathList, []byte(getBranch(git, option.Ref)), option, consts.PlaybookDir)
 	if err != nil {
 		return nil, err
 	}
@@ -232,6 +231,34 @@ func (git *gitlabRepoIface) UpdatePlaybookWorkDir(resp []string, body []byte, op
 		resp = append(resp, pl...)
 	}
 	return resp, nil
+}
+
+func (git *gitlabRepoIface) JudgeFileType(branch, workdir, filename string) (pathname string, err error) {
+	lto := &gitlab.ListTreeOptions{
+		ListOptions: gitlab.ListOptions{Page: 1, PerPage: 1000},
+		Ref:         gitlab.String(branch),
+		Path:        gitlab.String(workdir),
+	}
+	treeNode, _, err := git.gitConn.Repositories.ListTree(git.Project.ID, lto)
+	if err != nil {
+		return filename, err
+	}
+	for _, i := range treeNode {
+		if i.Mode == "120000" {
+			content, err := git.ReadFileContent(branch, i.Path)
+			if err != nil {
+				return filename, nil
+			}
+			if i.Name == consts.PlaybookDir {
+				count := strings.Count(strings.TrimSpace(string(content)), "../")
+				filename = fmt.Sprintf("%s%s", strings.Repeat("../", count), filename)
+				return filename, nil
+			}
+			filename = strings.TrimSpace(string(content))
+			return filename, nil
+		}
+	}
+	return filename, nil
 }
 
 func (git *gitlabRepoIface) ReadFileContent(branch, path string) ([]byte, error) {

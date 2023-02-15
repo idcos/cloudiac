@@ -164,6 +164,10 @@ func (r *RegistryRepo) UpdatePlaybookWorkDir(resp []string, body []byte, option 
 	return resp, nil
 }
 
+func (r *RegistryRepo) JudgeFileType(branch, workdir, filename string) (string, error) {
+	return filename, nil
+}
+
 func (r *RegistryRepo) ReadFileContent(revision string, filePath string) (content []byte, err error) {
 	path := utils.JoinURL(r.vcs.Address, "/api/v1/vcs/repo/file_content")
 	_, body, err := registryVcsRequest(path, "GET", map[string]string{

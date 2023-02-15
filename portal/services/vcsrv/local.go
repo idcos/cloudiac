@@ -193,10 +193,6 @@ func getMatchedFiles(filesIter *object.FileIter, opt VcsIfaceOptions) ([]string,
 	return results, err
 }
 
-func (l *LocalRepo) UpdatePlaybookWorkDir(resp []string, body []byte, option VcsIfaceOptions, pattern string) ([]string, error) {
-	return resp, nil
-}
-
 func (l *LocalRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
 	branch := getBranch(l, opt.Ref)
 	commit, err := l.getCommit(branch)
@@ -220,6 +216,14 @@ func (l *LocalRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
 		results = results[:opt.Limit]
 	}
 	return results, nil
+}
+
+func (l *LocalRepo) UpdatePlaybookWorkDir(resp []string, body []byte, option VcsIfaceOptions, pattern string) ([]string, error) {
+	return resp, nil
+}
+
+func (l *LocalRepo) JudgeFileType(branch, workdir, filename string) (string, error) {
+	return filename, nil
 }
 
 func (l *LocalRepo) ReadFileContent(revision string, path string) (content []byte, err error) {

@@ -87,6 +87,9 @@ type RepoIface interface {
 	// UpdatePlaybookWorkDir 更新playbook工作目录
 	UpdatePlaybookWorkDir(resp []string, body []byte, option VcsIfaceOptions, pattern string) ([]string, error)
 
+	// JudgeFileType 判断文件类型 更新filename内容
+	JudgeFileType(branch, workdir, filename string) (string, error)
+
 	// ReadFileContent
 	// param path: 路径
 	// param branch: 分支

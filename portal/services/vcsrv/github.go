@@ -4,6 +4,7 @@ package vcsrv
 
 import (
 	"bytes"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/models"
 	"cloudiac/utils"
@@ -231,9 +232,6 @@ type githubFiles struct {
 }
 
 func (github *githubRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) {
-	var (
-		ansible = "ansible"
-	)
 	urlParam := url.Values{}
 	urlParam.Set("ref", getBranch(github, option.Ref))
 	var path string
@@ -250,12 +248,15 @@ func (github *githubRepoIface) ListFiles(option VcsIfaceOptions) ([]string, erro
 	}
 	resp := make([]string, 0)
 	rep := make([]githubFiles, 0)
-	resp, err := github.UpdatePlaybookWorkDir(resp, body, option, ansible)
+	resp, err := github.UpdatePlaybookWorkDir(resp, body, option, consts.PlaybookDir)
 	if err != nil {
 		return nil, err
 	}
 	_ = json.Unmarshal(body, &rep)
 	for _, v := range rep {
+		if v.Type == "symlink" && v.Name != consts.PlaybookDir && matchGlob(option.Search, v.Name) {
+			resp = append(resp, v.Path)
+		}
 		if v.Type == "dir" && option.Recursive {
 			option.Path = v.Path
 			repList, _ := github.ListFiles(option)
@@ -298,6 +299,46 @@ func (github *githubRepoIface) UpdatePlaybookWorkDir(resp []string, body []byte,
 		}
 	}
 	return resp, nil
+}
+
+func (github *githubRepoIface) JudgeFileType(branch, workdir, filename string) (pathname string, err error) {
+	defer func() {
+		if err != nil && strings.Contains(err.Error(), "Not Found") {
+			err = e.New(e.ObjectNotExists)
+		}
+	}()
+	paths := ""
+	if strings.Contains(filename, consts.PlaybookDir) {
+		paths = fmt.Sprintf("%s/ansible", workdir)
+	} else {
+		paths = path.Join(workdir, filename)
+	}
+	urlParam := url.Values{}
+	urlParam.Set("ref", branch)
+	pathAddr := utils.GenQueryURL(github.vcs.Address,
+		fmt.Sprintf("/repos/%s/contents/%s", github.repository.FullName, paths), urlParam)
+	_, body, er := githubRequest(pathAddr, "GET", github.vcs.VcsToken, nil)
+	if er != nil {
+		return filename, e.New(e.VcsError, er)
+	}
+	gf := githubFiles{}
+	if er = json.Unmarshal(body, &gf); err != nil {
+		return filename, er
+	}
+	if gf.Type == "symlink" {
+		grt := githubReadTarget{}
+		if err := json.Unmarshal(body, &grt); err != nil {
+			return filename, err
+		}
+		if gf.Name == consts.PlaybookDir {
+			count := strings.Count(grt.Target, "../")
+			filename = fmt.Sprintf("%s%s", strings.Repeat("../", count), filename)
+			return filename, nil
+		}
+		filename = grt.Target
+		return filename, nil
+	}
+	return filename, nil
 }
 
 func (github *githubRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {

@@ -4,6 +4,7 @@ package vcsrv
 
 import (
 	"bytes"
+	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/models"
 	"cloudiac/utils"
@@ -208,9 +209,6 @@ type giteeFiles struct {
 }
 
 func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) {
-	var (
-		ansible = "ansible"
-	)
 	var path string = gitee.vcs.Address
 	branch := getBranch(gitee, option.Ref)
 	if option.Path != "" {
@@ -227,12 +225,15 @@ func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 
 	resp := make([]string, 0)
 	rep := make([]giteeFiles, 0)
-	resp, err := gitee.UpdatePlaybookWorkDir(resp, body, option, ansible)
+	resp, err := gitee.UpdatePlaybookWorkDir(resp, body, option, consts.PlaybookDir)
 	if err != nil {
 		return nil, err
 	}
 	_ = json.Unmarshal(body, &rep)
 	for _, v := range rep {
+		if v.Type == "symlink" && v.Name != consts.PlaybookDir && matchGlob(option.Search, v.Name) {
+			resp = append(resp, v.Path)
+		}
 		if v.Type == "dir" && option.Recursive {
 			option.Path = v.Path
 			repList, _ := gitee.ListFiles(option)
@@ -272,15 +273,46 @@ func (gitee *giteeRepoIface) UpdatePlaybookWorkDir(resp []string, body []byte, o
 	return resp, nil
 }
 
+func (gitee *giteeRepoIface) JudgeFileType(branch, workdir, filename string) (pathname string, err error) {
+	paths := ""
+	if strings.Contains(filename, consts.PlaybookDir) {
+		paths = fmt.Sprintf("%s/ansible", workdir)
+	} else {
+		paths = path.Join(workdir, filename)
+	}
+	pathAddr := gitee.vcs.Address +
+		fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", gitee.repository.FullName, paths, gitee.urlParam.Get("access_token"), branch)
+	_, body, _ := giteeRequest(pathAddr, "GET", nil) //nolint
+	gf := giteeFiles{}
+	if err := json.Unmarshal(body, &gf); err != nil {
+		if string(body) == "[]" {
+			return filename, e.New(e.ObjectNotExists)
+		}
+		return filename, nil
+	}
+	if gf.Type == "symlink" {
+		content, err := gitee.ReadFileContent(branch, paths)
+		if err != nil {
+			return filename, err
+		}
+		if gf.Name == consts.PlaybookDir {
+			count := strings.Count(strings.TrimSpace(string(content)), "../")
+			filename = fmt.Sprintf("%s%s", strings.Repeat("../", count), filename)
+			return filename, nil
+		}
+		filename = strings.TrimSpace(string(content))
+		return filename, nil
+	}
+	return filename, nil
+}
+
 func (gitee *giteeRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
 	pathAddr := gitee.vcs.Address +
 		fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", gitee.repository.FullName, path, gitee.urlParam.Get("access_token"), branch)
 	_, body, er := giteeRequest(pathAddr, "GET", nil) //nolint
-
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
-
 	grc := giteeReadContent{}
 	if err := json.Unmarshal(body[:], &grc); err != nil {
 		// 找不到文件时状态码为200，gieee接口会返回'[]'

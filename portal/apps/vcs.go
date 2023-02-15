@@ -315,7 +315,10 @@ func GetVcsRepoFile(c *ctx.ServiceContext, form *forms.GetVcsRepoFileForm) (inte
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
-
+	form.FileName, er = repo.JudgeFileType(form.Branch, form.Workdir, form.FileName)
+	if er != nil {
+		return nil, e.New(e.VcsError, er)
+	}
 	b, er := repo.ReadFileContent(form.Branch, filepath.Join(form.Workdir, form.FileName))
 	if er != nil {
 		if vcsrv.IsNotFoundErr(er) {
