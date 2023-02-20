@@ -223,20 +223,20 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 	}
 	_ = json.Unmarshal(body, &rep)
 	for _, v := range rep {
-		if v.Type == "symlink" && matchGlob(option.Search, v.Name) {
+		if v.Type == SymLink && matchGlob(option.Search, v.Name) {
 			resp = append(resp, v.Path)
 		}
-		if v.Type == "symlink" && option.Recursive && !matchGlob(option.Search, v.Name) {
+		if v.Type == SymLink && option.Recursive && !matchGlob(option.Search, v.Name) {
 			paths := fmt.Sprintf("%s/%s", option.Path, v.Name)
 			repList, _ := gitea.UpdateWorkDir(resp, paths, option)
 			resp = append(resp, repList...)
 		}
-		if v.Type == "dir" && option.Recursive {
+		if v.Type == Dir && option.Recursive {
 			option.Path = v.Path
 			repList, _ := gitea.ListFiles(option)
 			resp = append(resp, repList...)
 		}
-		if v.Type == "file" && matchGlob(option.Search, v.Name) {
+		if v.Type == File && matchGlob(option.Search, v.Name) {
 			resp = append(resp, v.Path)
 		}
 
@@ -260,8 +260,8 @@ func (gitea *giteaRepoIface) UpdateWorkDir(resp []string, paths string, option V
 		return []string{}, e.New(e.VcsError, er)
 	}
 	gf := giteaFiles{}
-	json.Unmarshal(body, &gf)
-	if gf.Type == "symlink" {
+	_ = json.Unmarshal(body, &gf)
+	if gf.Type == SymLink {
 		grt := githubReadTarget{}
 		if err := json.Unmarshal(body, &grt); err != nil {
 			return resp, err
@@ -291,7 +291,7 @@ func (gitea *giteaRepoIface) JudgeFileType(branch, workdir, filename string) (pa
 		files = filename
 	}
 	if strings.Contains(filename, consts.PlaybookDir) {
-		paths = fmt.Sprintf("%s/ansible", workdir)
+		paths = fmt.Sprintf("%s/%s", workdir, consts.PlaybookDir)
 	}
 	pathAddr := gitea.vcs.Address + giteaApiRoute +
 		fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0&ref=%s",
@@ -304,7 +304,7 @@ func (gitea *giteaRepoIface) JudgeFileType(branch, workdir, filename string) (pa
 	if err = json.Unmarshal(body[:], &gf); err != nil {
 		return files, err
 	}
-	if gf.Type == "symlink" {
+	if gf.Type == SymLink {
 		grt := giteaReadTarget{}
 		if err := json.Unmarshal(body, &grt); err != nil {
 			return filename, err

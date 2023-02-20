@@ -27,6 +27,9 @@ type UserInfo struct {
 }
 
 const (
+	Dir              = "dir"
+	SymLink          = "symlink"
+	File             = "file"
 	WebhookUrlGitlab = "/webhooks/gitlab"
 	WebhookUrlGitea  = "/webhooks/gitea"
 	WebhookUrlGitee  = "/webhooks/gitee"
