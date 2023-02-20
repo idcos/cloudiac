@@ -250,13 +250,12 @@ func VcsRepoFileSearch(c *ctx.ServiceContext, form *forms.RepoFileSearchForm, se
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
-
+	form.Workdir, _ = repo.JudgeFileType(form.RepoRevision, form.Workdir, "")
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
 		Ref:    form.RepoRevision,
 		Search: pattern,
 		Path:   filepath.Join(form.Workdir, searchDir),
 	})
-
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
@@ -278,6 +277,7 @@ func VcsVariableSearch(c *ctx.ServiceContext, form *forms.TemplateVariableSearch
 	if er != nil {
 		return nil, e.New(e.VcsError, err)
 	}
+	form.Workdir, _ = repo.JudgeFileType(form.RepoRevision, form.Workdir, "")
 	listFiles, er := repo.ListFiles(vcsrv.VcsIfaceOptions{
 		Ref:    form.RepoRevision,
 		Search: consts.TfFileMatch,
@@ -286,9 +286,11 @@ func VcsVariableSearch(c *ctx.ServiceContext, form *forms.TemplateVariableSearch
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
+	listFiles = utils.StrSliceTrimPrefix(listFiles, form.Workdir+"/")
 	tvl := make([]services.TemplateVariable, 0)
 	for _, file := range listFiles {
-		content, er := repo.ReadFileContent(form.RepoRevision, file)
+		file, er = repo.JudgeFileType(form.RepoRevision, form.Workdir, file)
+		content, er := repo.ReadFileContent(form.RepoRevision, path.Join(form.Workdir, file))
 		if er != nil {
 			return nil, e.New(e.VcsError, er)
 		}
@@ -315,6 +317,7 @@ func GetVcsRepoFile(c *ctx.ServiceContext, form *forms.GetVcsRepoFileForm) (inte
 	if er != nil {
 		return nil, e.New(e.VcsError, er)
 	}
+	form.Workdir, _ = repo.JudgeFileType(form.Branch, form.Workdir, "")
 	form.FileName, er = repo.JudgeFileType(form.Branch, form.Workdir, form.FileName)
 	if er != nil {
 		return nil, e.New(e.VcsError, er)

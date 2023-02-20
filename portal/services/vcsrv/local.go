@@ -218,7 +218,7 @@ func (l *LocalRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
 	return results, nil
 }
 
-func (l *LocalRepo) UpdatePlaybookWorkDir(resp []string, body []byte, option VcsIfaceOptions, pattern string) ([]string, error) {
+func (l *LocalRepo) UpdateWorkDir(resp []string, paths string, option VcsIfaceOptions) ([]string, error) {
 	return resp, nil
 }
 

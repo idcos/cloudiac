@@ -160,7 +160,7 @@ func (r *RegistryRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
 	return resp.Result.Files, nil
 }
 
-func (r *RegistryRepo) UpdatePlaybookWorkDir(resp []string, body []byte, option VcsIfaceOptions, pattern string) ([]string, error) {
+func (r *RegistryRepo) UpdateWorkDir(resp []string, paths string, option VcsIfaceOptions) ([]string, error) {
 	return resp, nil
 }
 

@@ -248,14 +248,19 @@ func (github *githubRepoIface) ListFiles(option VcsIfaceOptions) ([]string, erro
 	}
 	resp := make([]string, 0)
 	rep := make([]githubFiles, 0)
-	resp, err := github.UpdatePlaybookWorkDir(resp, body, option, consts.PlaybookDir)
+	resp, err := github.UpdateWorkDir(resp, option.Path, option)
 	if err != nil {
 		return nil, err
 	}
 	_ = json.Unmarshal(body, &rep)
 	for _, v := range rep {
-		if v.Type == "symlink" && v.Name != consts.PlaybookDir && matchGlob(option.Search, v.Name) {
+		if v.Type == "symlink" && matchGlob(option.Search, v.Name) {
 			resp = append(resp, v.Path)
+		}
+		if v.Type == "symlink" && option.Recursive && !matchGlob(option.Search, v.Name) {
+			paths := fmt.Sprintf("%s/%s", option.Path, v.Name)
+			repList, _ := github.UpdateWorkDir(resp, paths, option)
+			resp = append(resp, repList...)
 		}
 		if v.Type == "dir" && option.Recursive {
 			option.Path = v.Path
@@ -281,22 +286,31 @@ type githubReadTarget struct {
 	Target string `json:"target" form:"target" `
 }
 
-func (github *githubRepoIface) UpdatePlaybookWorkDir(resp []string, body []byte, option VcsIfaceOptions, pattern string) ([]string, error) {
-	if strings.Contains(option.Path, pattern) {
-		gf := githubFiles{}
-		json.Unmarshal(body, &gf)
-		if gf.Type == "symlink" && gf.Name == pattern {
-			grt := githubReadTarget{}
-			if err := json.Unmarshal(body, &grt); err != nil {
-				return resp, err
-			}
-			Path := strings.Replace(option.Path, pattern, "", 1)
-			Paths := filepath.Join(Path, grt.Target)
-			option.Path = Paths
-			repList, _ := github.ListFiles(option)
-			resp = append(resp, repList...)
-			return resp, nil
+func (github *githubRepoIface) UpdateWorkDir(resp []string, paths string, option VcsIfaceOptions) ([]string, error) {
+	urlParam := url.Values{}
+	urlParam.Set("ref", getBranch(github, option.Ref))
+	var path string
+	path = utils.GenQueryURL(github.vcs.Address,
+		fmt.Sprintf("/repos/%s/contents/%s", github.repository.FullName, paths), urlParam)
+	_, body, er := githubRequest(path, "GET", github.vcs.VcsToken, nil)
+	if er != nil {
+		return []string{}, e.New(e.VcsError, er)
+	}
+	gf := githubFiles{}
+	json.Unmarshal(body, &gf)
+	if gf.Type == "symlink" {
+		grt := githubReadTarget{}
+		if err := json.Unmarshal(body, &grt); err != nil {
+			return resp, err
 		}
+		Path := option.Path
+		if !matchGlob(option.Search, gf.Name) {
+			Path = strings.Replace(option.Path, gf.Name, "", 1)
+		}
+		Paths := filepath.Join(Path, grt.Target)
+		option.Path = Paths
+		repList, _ := github.ListFiles(option)
+		resp = append(resp, repList...)
 	}
 	return resp, nil
 }
@@ -307,11 +321,14 @@ func (github *githubRepoIface) JudgeFileType(branch, workdir, filename string) (
 			err = e.New(e.ObjectNotExists)
 		}
 	}()
-	paths := ""
+	paths := workdir
+	files := workdir
+	if filename != "" {
+		paths = path.Join(workdir, filename)
+		files = filename
+	}
 	if strings.Contains(filename, consts.PlaybookDir) {
 		paths = fmt.Sprintf("%s/ansible", workdir)
-	} else {
-		paths = path.Join(workdir, filename)
 	}
 	urlParam := url.Values{}
 	urlParam.Set("ref", branch)
@@ -319,26 +336,27 @@ func (github *githubRepoIface) JudgeFileType(branch, workdir, filename string) (
 		fmt.Sprintf("/repos/%s/contents/%s", github.repository.FullName, paths), urlParam)
 	_, body, er := githubRequest(pathAddr, "GET", github.vcs.VcsToken, nil)
 	if er != nil {
-		return filename, e.New(e.VcsError, er)
+		return files, e.New(e.VcsError, er)
 	}
 	gf := githubFiles{}
-	if er = json.Unmarshal(body, &gf); err != nil {
-		return filename, er
+	if err = json.Unmarshal(body, &gf); err != nil {
+		return files, err
 	}
 	if gf.Type == "symlink" {
 		grt := githubReadTarget{}
 		if err := json.Unmarshal(body, &grt); err != nil {
 			return filename, err
 		}
-		if gf.Name == consts.PlaybookDir {
-			count := strings.Count(grt.Target, "../")
-			filename = fmt.Sprintf("%s%s", strings.Repeat("../", count), filename)
-			return filename, nil
+		if filename != "" {
+			if gf.Name == consts.PlaybookDir {
+				count := strings.Count(grt.Target, "../")
+				files = fmt.Sprintf("%s%s", strings.Repeat("../", count), filename)
+				return files, nil
+			}
 		}
-		filename = grt.Target
-		return filename, nil
+		files = strings.TrimSpace(grt.Target)
 	}
-	return filename, nil
+	return files, nil
 }
 
 func (github *githubRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {

@@ -188,7 +188,7 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 		Ref:         gitlab.String(getBranch(git, option.Ref)),
 		Path:        gitlab.String(option.Path),
 	}
-	pathList, err := git.UpdatePlaybookWorkDir(pathList, []byte(getBranch(git, option.Ref)), option, consts.PlaybookDir)
+	pathList, err := git.UpdateWorkDir(pathList, path.Join(option.Path, "../"), option)
 	if err != nil {
 		return nil, err
 	}
@@ -200,6 +200,10 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 	for _, i := range treeNode {
 		if i.Type == fileBlob && matchGlob(option.Search, i.Name) {
 			pathList = append(pathList, i.Path)
+		}
+		if i.Mode == "120000" && option.Recursive && !matchGlob(option.Search, i.Name) {
+			pl, _ := git.UpdateWorkDir(pathList, option.Path, option)
+			pathList = append(pathList, pl...)
 		}
 		if i.Type == fileTree && option.Recursive {
 			option.Path = i.Path
@@ -214,51 +218,76 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 
 }
 
-func (git *gitlabRepoIface) UpdatePlaybookWorkDir(resp []string, body []byte, option VcsIfaceOptions, pattern string) ([]string, error) {
-	if strings.Contains(option.Path, pattern) {
-		branch := strings.TrimSpace(string(body))
-		row, err := git.ReadFileContent(branch, option.Path)
-		if err != nil {
-			return resp, nil
+func (git *gitlabRepoIface) UpdateWorkDir(resp []string, paths string, option VcsIfaceOptions) ([]string, error) {
+	lto := &gitlab.ListTreeOptions{
+		ListOptions: gitlab.ListOptions{Page: 1, PerPage: 1000},
+		Ref:         gitlab.String(getBranch(git, option.Ref)),
+		Path:        gitlab.String(paths),
+	}
+	treeNode, _, err := git.gitConn.Repositories.ListTree(git.Project.ID, lto)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, i := range treeNode {
+		if i.Mode == "120000" {
+			row, err := git.ReadFileContent(getBranch(git, option.Ref), option.Path)
+			if err != nil {
+				return resp, nil
+			}
+			Path := option.Path
+			workDir := strings.TrimSpace(string(row))
+			if !matchGlob(option.Search, i.Name) {
+				Path = strings.Replace(option.Path, i.Name, "", 1)
+			}
+			Paths := filepath.Join(Path, workDir)
+			option.Path = Paths
+			pl, err := git.ListFiles(option)
+			if err != nil {
+				return resp, nil
+			}
+			resp = append(resp, pl...)
 		}
-		workDir := strings.TrimSpace(string(row))
-		option.Path = strings.Replace(option.Path, pattern, "", 1)
-		option.Path = filepath.Join(option.Path, workDir)
-		pl, err := git.ListFiles(option)
-		if err != nil {
-			return resp, nil
-		}
-		resp = append(resp, pl...)
 	}
 	return resp, nil
 }
 
-func (git *gitlabRepoIface) JudgeFileType(branch, workdir, filename string) (pathname string, err error) {
+func (git *gitlabRepoIface) JudgeFileType(branch, workdir, filename string) (string, error) {
+	paths := path.Join(workdir, "../")
+	files := workdir
+	pattern := files
+	if filename != "" {
+		paths = workdir
+		files = filename
+		pattern = filename
+	}
+	if strings.Contains(files, consts.PlaybookDir) {
+		pattern = consts.PlaybookDir
+	}
 	lto := &gitlab.ListTreeOptions{
 		ListOptions: gitlab.ListOptions{Page: 1, PerPage: 1000},
 		Ref:         gitlab.String(branch),
-		Path:        gitlab.String(workdir),
+		Path:        gitlab.String(paths),
 	}
 	treeNode, _, err := git.gitConn.Repositories.ListTree(git.Project.ID, lto)
 	if err != nil {
-		return filename, err
+		return files, err
 	}
 	for _, i := range treeNode {
-		if i.Mode == "120000" {
+		if i.Mode == "120000" && matchGlob(pattern, i.Name) {
 			content, err := git.ReadFileContent(branch, i.Path)
 			if err != nil {
-				return filename, nil
+				return files, nil
 			}
 			if i.Name == consts.PlaybookDir {
 				count := strings.Count(strings.TrimSpace(string(content)), "../")
-				filename = fmt.Sprintf("%s%s", strings.Repeat("../", count), filename)
-				return filename, nil
+				files = fmt.Sprintf("%s%s", strings.Repeat("../", count), filename)
+				return files, nil
 			}
-			filename = strings.TrimSpace(string(content))
-			return filename, nil
+			files = strings.TrimSpace(string(content))
 		}
 	}
-	return filename, nil
+	return files, nil
 }
 
 func (git *gitlabRepoIface) ReadFileContent(branch, path string) ([]byte, error) {

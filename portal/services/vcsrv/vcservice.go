@@ -84,8 +84,8 @@ type RepoIface interface {
 	// return: 返回文件路径列表，路径为完整路径(即包含传入的 path 部分)
 	ListFiles(option VcsIfaceOptions) ([]string, error)
 
-	// UpdatePlaybookWorkDir 更新playbook工作目录
-	UpdatePlaybookWorkDir(resp []string, body []byte, option VcsIfaceOptions, pattern string) ([]string, error)
+	// UpdateWorkDir 更新playbook工作目录
+	UpdateWorkDir(resp []string, path string, option VcsIfaceOptions) ([]string, error)
 
 	// JudgeFileType 判断文件类型 更新filename内容
 	JudgeFileType(branch, workdir, filename string) (string, error)

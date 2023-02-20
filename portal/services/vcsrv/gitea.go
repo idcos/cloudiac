@@ -217,14 +217,19 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 	}
 	resp := make([]string, 0)
 	rep := make([]giteaFiles, 0)
-	resp, err := gitea.UpdatePlaybookWorkDir(resp, body, option, consts.PlaybookDir)
+	resp, err := gitea.UpdateWorkDir(resp, option.Path, option)
 	if err != nil {
 		return nil, err
 	}
 	_ = json.Unmarshal(body, &rep)
 	for _, v := range rep {
-		if v.Type == "symlink" && v.Name != consts.PlaybookDir && matchGlob(option.Search, v.Name) {
+		if v.Type == "symlink" && matchGlob(option.Search, v.Name) {
 			resp = append(resp, v.Path)
+		}
+		if v.Type == "symlink" && option.Recursive && !matchGlob(option.Search, v.Name) {
+			paths := fmt.Sprintf("%s/%s", option.Path, v.Name)
+			repList, _ := gitea.UpdateWorkDir(resp, paths, option)
+			resp = append(resp, repList...)
 		}
 		if v.Type == "dir" && option.Recursive {
 			option.Path = v.Path
@@ -244,22 +249,31 @@ type giteaReadTarget struct {
 	Target string `json:"target" form:"target" `
 }
 
-func (gitea *giteaRepoIface) UpdatePlaybookWorkDir(resp []string, body []byte, option VcsIfaceOptions, pattern string) ([]string, error) {
-	if strings.Contains(option.Path, pattern) {
-		gf := giteaFiles{}
-		json.Unmarshal(body, &gf)
-		if gf.Type == "symlink" && gf.Name == pattern {
-			grt := giteaReadTarget{}
-			if err := json.Unmarshal(body, &grt); err != nil {
-				return resp, err
-			}
-			Path := strings.Replace(option.Path, pattern, "", 1)
-			Paths := filepath.Join(Path, grt.Target)
-			option.Path = Paths
-			repList, _ := gitea.ListFiles(option)
-			resp = append(resp, repList...)
-			return resp, nil
+func (gitea *giteaRepoIface) UpdateWorkDir(resp []string, paths string, option VcsIfaceOptions) ([]string, error) {
+	var path string = gitea.vcs.Address
+	branch := getBranch(gitea, option.Ref)
+	path += giteaApiRoute +
+		fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0&ref=%s",
+			gitea.repository.FullName, paths, branch)
+	_, body, er := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
+	if er != nil {
+		return []string{}, e.New(e.VcsError, er)
+	}
+	gf := giteaFiles{}
+	json.Unmarshal(body, &gf)
+	if gf.Type == "symlink" {
+		grt := githubReadTarget{}
+		if err := json.Unmarshal(body, &grt); err != nil {
+			return resp, err
 		}
+		Path := option.Path
+		if !matchGlob(option.Search, gf.Name) {
+			Path = strings.Replace(option.Path, gf.Name, "", 1)
+		}
+		Paths := filepath.Join(Path, grt.Target)
+		option.Path = Paths
+		repList, _ := gitea.ListFiles(option)
+		resp = append(resp, repList...)
 	}
 	return resp, nil
 }
@@ -270,11 +284,14 @@ func (gitea *giteaRepoIface) JudgeFileType(branch, workdir, filename string) (pa
 			err = e.New(e.ObjectNotExists)
 		}
 	}()
-	paths := ""
+	paths := workdir
+	files := workdir
+	if filename != "" {
+		paths = path.Join(workdir, filename)
+		files = filename
+	}
 	if strings.Contains(filename, consts.PlaybookDir) {
 		paths = fmt.Sprintf("%s/ansible", workdir)
-	} else {
-		paths = path.Join(workdir, filename)
 	}
 	pathAddr := gitea.vcs.Address + giteaApiRoute +
 		fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0&ref=%s",
@@ -284,23 +301,24 @@ func (gitea *giteaRepoIface) JudgeFileType(branch, workdir, filename string) (pa
 		return filename, e.New(e.VcsError, er)
 	}
 	gf := giteaFiles{}
-	if er = json.Unmarshal(body[:], &gf); err != nil {
-		return filename, er
+	if err = json.Unmarshal(body[:], &gf); err != nil {
+		return files, err
 	}
 	if gf.Type == "symlink" {
 		grt := giteaReadTarget{}
-		if er = json.Unmarshal(body, &grt); err != nil {
-			return filename, er
+		if err := json.Unmarshal(body, &grt); err != nil {
+			return filename, err
 		}
-		if gf.Name == consts.PlaybookDir {
-			count := strings.Count(grt.Target, "../")
-			filename = fmt.Sprintf("%s%s", strings.Repeat("../", count), filename)
-			return filename, nil
+		if filename != "" {
+			if gf.Name == consts.PlaybookDir {
+				count := strings.Count(grt.Target, "../")
+				files = fmt.Sprintf("%s%s", strings.Repeat("../", count), filename)
+				return files, nil
+			}
 		}
-		filename = grt.Target
-		return filename, nil
+		files = strings.TrimSpace(grt.Target)
 	}
-	return filename, nil
+	return files, nil
 }
 
 func (gitea *giteaRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {

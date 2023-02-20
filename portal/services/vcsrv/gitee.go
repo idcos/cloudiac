@@ -222,17 +222,21 @@ func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 	if er != nil {
 		return []string{}, e.New(e.VcsError, er)
 	}
-
 	resp := make([]string, 0)
 	rep := make([]giteeFiles, 0)
-	resp, err := gitee.UpdatePlaybookWorkDir(resp, body, option, consts.PlaybookDir)
+	resp, err := gitee.UpdateWorkDir(resp, option.Path, option)
 	if err != nil {
 		return nil, err
 	}
 	_ = json.Unmarshal(body, &rep)
 	for _, v := range rep {
-		if v.Type == "symlink" && v.Name != consts.PlaybookDir && matchGlob(option.Search, v.Name) {
+		if v.Type == "symlink" && matchGlob(option.Search, v.Name) {
 			resp = append(resp, v.Path)
+		}
+		if v.Type == "symlink" && option.Recursive && !matchGlob(option.Search, v.Name) {
+			paths := fmt.Sprintf("%s/%s", option.Path, v.Name)
+			repList, _ := gitee.UpdateWorkDir(resp, paths, option)
+			resp = append(resp, repList...)
 		}
 		if v.Type == "dir" && option.Recursive {
 			option.Path = v.Path
@@ -245,7 +249,6 @@ func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 		}
 
 	}
-
 	return resp, nil
 }
 
@@ -253,57 +256,66 @@ type giteeReadContent struct {
 	Content string `json:"content" form:"content" `
 }
 
-func (gitee *giteeRepoIface) UpdatePlaybookWorkDir(resp []string, body []byte, option VcsIfaceOptions, pattern string) ([]string, error) {
-	if strings.Contains(option.Path, pattern) {
-		gf := giteeFiles{}
-		json.Unmarshal(body, &gf)
-		if gf.Type == "symlink" && gf.Name == pattern {
-			content, err := gitee.ReadFileContent(getBranch(gitee, option.Ref), option.Path)
-			if err != nil {
-				return resp, err
-			}
-			Path := strings.Replace(option.Path, pattern, "", 1)
-			Paths := filepath.Join(Path, string(content))
-			option.Path = Paths
-			repList, _ := gitee.ListFiles(option)
-			resp = append(resp, repList...)
-			return resp, nil
+func (gitee *giteeRepoIface) UpdateWorkDir(resp []string, paths string, option VcsIfaceOptions) ([]string, error) {
+	var path string = gitee.vcs.Address
+	branch := getBranch(gitee, option.Ref)
+	path += fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", //nolint
+		gitee.repository.FullName, paths, gitee.urlParam.Get("access_token"), branch)
+	_, body, er := giteeRequest(path, "GET", nil)
+	if er != nil {
+		return []string{}, e.New(e.VcsError, er)
+	}
+	gf := giteeFiles{}
+	json.Unmarshal(body, &gf)
+	if gf.Type == "symlink" {
+		content, err := gitee.ReadFileContent(getBranch(gitee, option.Ref), option.Path)
+		if err != nil {
+			return resp, err
 		}
+		Path := option.Path
+		if !matchGlob(option.Search, gf.Name) {
+			Path = strings.Replace(option.Path, gf.Name, "", 1)
+		}
+		Paths := filepath.Join(Path, string(content))
+		option.Path = Paths
+		repList, _ := gitee.ListFiles(option)
+		resp = append(resp, repList...)
 	}
 	return resp, nil
 }
 
-func (gitee *giteeRepoIface) JudgeFileType(branch, workdir, filename string) (pathname string, err error) {
-	paths := ""
+func (gitee *giteeRepoIface) JudgeFileType(branch, workdir, filename string) (string, error) {
+	paths := workdir
+	files := workdir
+	if filename != "" {
+		paths = path.Join(workdir, filename)
+		files = filename
+	}
 	if strings.Contains(filename, consts.PlaybookDir) {
 		paths = fmt.Sprintf("%s/ansible", workdir)
-	} else {
-		paths = path.Join(workdir, filename)
 	}
 	pathAddr := gitee.vcs.Address +
 		fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", gitee.repository.FullName, paths, gitee.urlParam.Get("access_token"), branch)
 	_, body, _ := giteeRequest(pathAddr, "GET", nil) //nolint
 	gf := giteeFiles{}
 	if err := json.Unmarshal(body, &gf); err != nil {
-		if string(body) == "[]" {
-			return filename, e.New(e.ObjectNotExists)
-		}
-		return filename, nil
+		return files, err
 	}
 	if gf.Type == "symlink" {
 		content, err := gitee.ReadFileContent(branch, paths)
 		if err != nil {
-			return filename, err
+			return files, err
 		}
-		if gf.Name == consts.PlaybookDir {
-			count := strings.Count(strings.TrimSpace(string(content)), "../")
-			filename = fmt.Sprintf("%s%s", strings.Repeat("../", count), filename)
-			return filename, nil
+		if filename != "" {
+			if gf.Name == consts.PlaybookDir {
+				count := strings.Count(strings.TrimSpace(string(content)), "../")
+				files = fmt.Sprintf("%s%s", strings.Repeat("../", count), filename)
+				return files, nil
+			}
 		}
-		filename = strings.TrimSpace(string(content))
-		return filename, nil
+		files = strings.TrimSpace(string(content))
 	}
-	return filename, nil
+	return files, nil
 }
 
 func (gitee *giteeRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
