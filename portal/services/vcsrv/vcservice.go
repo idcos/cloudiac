@@ -27,6 +27,7 @@ type UserInfo struct {
 }
 
 const (
+	SymLinkMode      = "120000"
 	Dir              = "dir"
 	SymLink          = "symlink"
 	File             = "file"

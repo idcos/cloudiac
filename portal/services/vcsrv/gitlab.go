@@ -201,7 +201,7 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 		if i.Type == fileBlob && matchGlob(option.Search, i.Name) {
 			pathList = append(pathList, i.Path)
 		}
-		if i.Mode == "120000" && option.Recursive && !matchGlob(option.Search, i.Name) {
+		if i.Mode == SymLinkMode && option.Recursive && !matchGlob(option.Search, i.Name) {
 			pl, _ := git.UpdateWorkDir(pathList, option.Path, option)
 			pathList = append(pathList, pl...)
 		}
@@ -230,7 +230,7 @@ func (git *gitlabRepoIface) UpdateWorkDir(resp []string, paths string, option Vc
 	}
 
 	for _, i := range treeNode {
-		if i.Mode == "120000" {
+		if i.Mode == SymLinkMode {
 			row, err := git.ReadFileContent(getBranch(git, option.Ref), option.Path)
 			if err != nil {
 				return resp, nil
@@ -261,7 +261,7 @@ func (git *gitlabRepoIface) JudgeFileType(branch, workdir, filename string) (str
 		files = filename
 		pattern = filename
 	}
-	if strings.Contains(files, consts.PlaybookDir) {
+	if strings.Contains(filename, consts.PlaybookDir) {
 		pattern = consts.PlaybookDir
 	}
 	lto := &gitlab.ListTreeOptions{
@@ -274,7 +274,7 @@ func (git *gitlabRepoIface) JudgeFileType(branch, workdir, filename string) (str
 		return files, err
 	}
 	for _, i := range treeNode {
-		if i.Mode == "120000" && matchGlob(pattern, i.Name) {
+		if i.Mode == SymLinkMode && matchGlob(pattern, i.Name) {
 			content, err := git.ReadFileContent(branch, i.Path)
 			if err != nil {
 				return files, nil
