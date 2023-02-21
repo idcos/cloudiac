@@ -91,6 +91,8 @@ type RepoIface interface {
 	// UpdateWorkDir 更新playbook工作目录
 	UpdateWorkDir(resp []string, path string, option VcsIfaceOptions) ([]string, error)
 
+	JudgeWorkDirType(branch, workdir string) (string, error)
+
 	// JudgeFileType 判断文件类型 更新filename内容
 	JudgeFileType(branch, workdir, filename string) (string, error)
 

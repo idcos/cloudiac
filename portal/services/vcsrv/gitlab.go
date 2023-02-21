@@ -188,7 +188,7 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 		Ref:         gitlab.String(getBranch(git, option.Ref)),
 		Path:        gitlab.String(option.Path),
 	}
-	pathList, err := git.UpdateWorkDir(pathList, path.Join(option.Path, "../"), option)
+	pathList, err := git.UpdateWorkDir(pathList, option.Path, option)
 	if err != nil {
 		return nil, err
 	}
@@ -198,12 +198,13 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 	}
 
 	for _, i := range treeNode {
+		if i.Mode == SymLinkMode && option.Recursive && !matchGlob(option.Search, i.Name) {
+			resps := make([]string, 0)
+			pl, _ := git.UpdateWorkDir(resps, i.Path, option)
+			pathList = append(pathList, pl...)
+		}
 		if i.Type == fileBlob && matchGlob(option.Search, i.Name) {
 			pathList = append(pathList, i.Path)
-		}
-		if i.Mode == SymLinkMode && option.Recursive && !matchGlob(option.Search, i.Name) {
-			pl, _ := git.UpdateWorkDir(pathList, option.Path, option)
-			pathList = append(pathList, pl...)
 		}
 		if i.Type == fileTree && option.Recursive {
 			option.Path = i.Path
@@ -219,10 +220,11 @@ func (git *gitlabRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error) 
 }
 
 func (git *gitlabRepoIface) UpdateWorkDir(resp []string, paths string, option VcsIfaceOptions) ([]string, error) {
+	path := path.Join(paths, "../")
 	lto := &gitlab.ListTreeOptions{
 		ListOptions: gitlab.ListOptions{Page: 1, PerPage: 1000},
 		Ref:         gitlab.String(getBranch(git, option.Ref)),
-		Path:        gitlab.String(paths),
+		Path:        gitlab.String(path),
 	}
 	treeNode, _, err := git.gitConn.Repositories.ListTree(git.Project.ID, lto)
 	if err != nil {
@@ -230,8 +232,8 @@ func (git *gitlabRepoIface) UpdateWorkDir(resp []string, paths string, option Vc
 	}
 
 	for _, i := range treeNode {
-		if i.Mode == SymLinkMode {
-			row, err := git.ReadFileContent(getBranch(git, option.Ref), option.Path)
+		if i.Mode == SymLinkMode && matchGlob(i.Path, paths) {
+			row, err := git.ReadFileContent(getBranch(git, option.Ref), paths)
 			if err != nil {
 				return resp, nil
 			}
@@ -252,18 +254,9 @@ func (git *gitlabRepoIface) UpdateWorkDir(resp []string, paths string, option Vc
 	return resp, nil
 }
 
-func (git *gitlabRepoIface) JudgeFileType(branch, workdir, filename string) (string, error) {
-	paths := path.Join(workdir, "../")
+func (git *gitlabRepoIface) JudgeWorkDirType(branch, workdir string) (string, error) {
 	files := workdir
-	pattern := files
-	if filename != "" {
-		paths = workdir
-		files = filename
-		pattern = filename
-	}
-	if strings.Contains(filename, consts.PlaybookDir) {
-		pattern = consts.PlaybookDir
-	}
+	paths := path.Join(workdir, "../")
 	lto := &gitlab.ListTreeOptions{
 		ListOptions: gitlab.ListOptions{Page: 1, PerPage: 1000},
 		Ref:         gitlab.String(branch),
@@ -274,17 +267,42 @@ func (git *gitlabRepoIface) JudgeFileType(branch, workdir, filename string) (str
 		return files, err
 	}
 	for _, i := range treeNode {
-		if i.Mode == SymLinkMode && matchGlob(pattern, i.Name) {
+		if i.Mode == SymLinkMode && matchGlob(workdir, i.Name) {
 			content, err := git.ReadFileContent(branch, i.Path)
 			if err != nil {
 				return files, nil
 			}
-			if i.Name == consts.PlaybookDir {
-				count := strings.Count(strings.TrimSpace(string(content)), "../")
-				files = fmt.Sprintf("%s%s", strings.Repeat("../", count), filename)
-				return files, nil
-			}
 			files = strings.TrimSpace(string(content))
+		}
+	}
+	return files, nil
+}
+
+func (git *gitlabRepoIface) JudgeFileType(branch, workdir, filename string) (string, error) {
+	subFilename := strings.Split(filename, "/")
+	paths := workdir
+	files := workdir
+	for _, file := range subFilename {
+		lto := &gitlab.ListTreeOptions{
+			ListOptions: gitlab.ListOptions{Page: 1, PerPage: 1000},
+			Ref:         gitlab.String(branch),
+			Path:        gitlab.String(paths),
+		}
+		treeNode, _, err := git.gitConn.Repositories.ListTree(git.Project.ID, lto)
+		if err != nil {
+			return files, err
+		}
+		for _, i := range treeNode {
+			if i.Mode == SymLinkMode && matchGlob(file, i.Name) {
+				content, err := git.ReadFileContent(branch, i.Path)
+				if err != nil {
+					return files, nil
+				}
+				files = path.Join(files, strings.TrimSpace(string(content)))
+			} else if matchGlob(file, i.Name) {
+				files = path.Join(files, file)
+			}
+			paths = files
 		}
 	}
 	return files, nil

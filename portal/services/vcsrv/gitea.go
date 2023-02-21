@@ -4,7 +4,6 @@ package vcsrv
 
 import (
 	"bytes"
-	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/models"
 	"cloudiac/utils"
@@ -223,13 +222,14 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 	}
 	_ = json.Unmarshal(body, &rep)
 	for _, v := range rep {
+		if v.Type == SymLink && option.Recursive && !matchGlob(option.Search, v.Name) {
+			resps := make([]string, 0)
+			paths := fmt.Sprintf("%s/%s", option.Path, v.Name)
+			repList, _ := gitea.UpdateWorkDir(resps, paths, option)
+			resp = append(resp, repList...)
+		}
 		if v.Type == SymLink && matchGlob(option.Search, v.Name) {
 			resp = append(resp, v.Path)
-		}
-		if v.Type == SymLink && option.Recursive && !matchGlob(option.Search, v.Name) {
-			paths := fmt.Sprintf("%s/%s", option.Path, v.Name)
-			repList, _ := gitea.UpdateWorkDir(resp, paths, option)
-			resp = append(resp, repList...)
 		}
 		if v.Type == Dir && option.Recursive {
 			option.Path = v.Path
@@ -278,45 +278,55 @@ func (gitea *giteaRepoIface) UpdateWorkDir(resp []string, paths string, option V
 	return resp, nil
 }
 
+func (gitea *giteaRepoIface) JudgeWorkDirType(branch, workdir string) (string, error) {
+	files := workdir
+	pathAddr := gitea.vcs.Address + giteaApiRoute +
+		fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0&ref=%s",
+			gitea.repository.FullName, workdir, branch)
+	_, body, er := giteaRequest(pathAddr, "GET", gitea.vcs.VcsToken, nil)
+	if er != nil {
+		return files, e.New(e.VcsError, er)
+	}
+	gf := giteaFiles{}
+	if err := json.Unmarshal(body[:], &gf); err != nil {
+		return files, err
+	}
+	if gf.Type == SymLink {
+		grt := giteaReadTarget{}
+		if err := json.Unmarshal(body, &grt); err != nil {
+			return files, err
+		}
+		files = strings.TrimSpace(grt.Target)
+	}
+	return files, nil
+}
+
 func (gitea *giteaRepoIface) JudgeFileType(branch, workdir, filename string) (pathname string, err error) {
 	defer func() {
 		if err != nil && strings.Contains(err.Error(), "Not Found") {
 			err = e.New(e.ObjectNotExists)
 		}
 	}()
-	paths := workdir
+	subFilename := strings.Split(filename, "/")
 	files := workdir
-	if filename != "" {
-		paths = path.Join(workdir, filename)
-		files = filename
-	}
-	if strings.Contains(filename, consts.PlaybookDir) {
-		paths = fmt.Sprintf("%s/%s", workdir, consts.PlaybookDir)
-	}
-	pathAddr := gitea.vcs.Address + giteaApiRoute +
-		fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0&ref=%s",
-			gitea.repository.FullName, paths, branch)
-	_, body, er := giteaRequest(pathAddr, "GET", gitea.vcs.VcsToken, nil)
-	if er != nil {
-		return filename, e.New(e.VcsError, er)
-	}
-	gf := giteaFiles{}
-	if err = json.Unmarshal(body[:], &gf); err != nil {
-		return files, err
-	}
-	if gf.Type == SymLink {
-		grt := giteaReadTarget{}
-		if err := json.Unmarshal(body, &grt); err != nil {
-			return filename, err
-		}
-		if filename != "" {
-			if gf.Name == consts.PlaybookDir {
-				count := strings.Count(grt.Target, "../")
-				files = fmt.Sprintf("%s%s", strings.Repeat("../", count), filename)
-				return files, nil
+	paths := workdir
+	for _, file := range subFilename {
+		paths = path.Join(files, file)
+		pathAddr := gitea.vcs.Address + giteaApiRoute +
+			fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0&ref=%s",
+				gitea.repository.FullName, paths, branch)
+		_, body, _ := giteaRequest(pathAddr, "GET", gitea.vcs.VcsToken, nil)
+		gf := giteaFiles{}
+		_ = json.Unmarshal(body, &gf)
+		if gf.Type == SymLink {
+			grt := giteaReadTarget{}
+			if err = json.Unmarshal(body, &grt); err != nil {
+				return files, err
 			}
+			files = path.Join(files, grt.Target)
+		} else {
+			files = paths
 		}
-		files = strings.TrimSpace(grt.Target)
 	}
 	return files, nil
 }

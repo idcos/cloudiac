@@ -4,7 +4,6 @@ package vcsrv
 
 import (
 	"bytes"
-	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/models"
 	"cloudiac/utils"
@@ -230,13 +229,14 @@ func (gitee *giteeRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 	}
 	_ = json.Unmarshal(body, &rep)
 	for _, v := range rep {
+		if v.Type == SymLink && option.Recursive && !matchGlob(option.Search, v.Name) {
+			resps := make([]string, 0)
+			paths := fmt.Sprintf("%s/%s", option.Path, v.Name)
+			repList, _ := gitee.UpdateWorkDir(resps, paths, option)
+			resp = append(resp, repList...)
+		}
 		if v.Type == SymLink && matchGlob(option.Search, v.Name) {
 			resp = append(resp, v.Path)
-		}
-		if v.Type == SymLink && option.Recursive && !matchGlob(option.Search, v.Name) {
-			paths := fmt.Sprintf("%s/%s", option.Path, v.Name)
-			repList, _ := gitee.UpdateWorkDir(resp, paths, option)
-			resp = append(resp, repList...)
 		}
 		if v.Type == Dir && option.Recursive {
 			option.Path = v.Path
@@ -268,7 +268,7 @@ func (gitee *giteeRepoIface) UpdateWorkDir(resp []string, paths string, option V
 	gf := giteeFiles{}
 	_ = json.Unmarshal(body, &gf)
 	if gf.Type == SymLink {
-		content, err := gitee.ReadFileContent(getBranch(gitee, option.Ref), option.Path)
+		content, err := gitee.ReadFileContent(getBranch(gitee, option.Ref), paths)
 		if err != nil {
 			return resp, err
 		}
@@ -283,37 +283,45 @@ func (gitee *giteeRepoIface) UpdateWorkDir(resp []string, paths string, option V
 	}
 	return resp, nil
 }
-
-func (gitee *giteeRepoIface) JudgeFileType(branch, workdir, filename string) (string, error) {
-	paths := workdir
+func (gitee *giteeRepoIface) JudgeWorkDirType(branch, workdir string) (string, error) {
 	files := workdir
-	if filename != "" {
-		paths = path.Join(workdir, filename)
-		files = filename
-	}
-	if strings.Contains(filename, consts.PlaybookDir) {
-		paths = fmt.Sprintf("%s/%s", workdir, consts.PlaybookDir)
-	}
 	pathAddr := gitee.vcs.Address +
-		fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", gitee.repository.FullName, paths, gitee.urlParam.Get("access_token"), branch)
+		fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", gitee.repository.FullName, workdir, gitee.urlParam.Get("access_token"), branch)
 	_, body, _ := giteeRequest(pathAddr, "GET", nil) //nolint
 	gf := giteeFiles{}
 	if err := json.Unmarshal(body, &gf); err != nil {
 		return files, err
 	}
 	if gf.Type == SymLink {
-		content, err := gitee.ReadFileContent(branch, paths)
+		content, err := gitee.ReadFileContent(branch, workdir)
 		if err != nil {
 			return files, err
 		}
-		if filename != "" {
-			if gf.Name == consts.PlaybookDir {
-				count := strings.Count(strings.TrimSpace(string(content)), "../")
-				files = fmt.Sprintf("%s%s", strings.Repeat("../", count), filename)
-				return files, nil
-			}
-		}
 		files = strings.TrimSpace(string(content))
+	}
+	return files, nil
+}
+
+func (gitee *giteeRepoIface) JudgeFileType(branch, workdir, filename string) (string, error) {
+	subFilename := strings.Split(filename, "/")
+	files := workdir
+	paths := workdir
+	for _, file := range subFilename {
+		paths = path.Join(files, file)
+		pathAddr := gitee.vcs.Address +
+			fmt.Sprintf("/repos/%s/contents/%s?access_token=%s&ref=%s", gitee.repository.FullName, paths, gitee.urlParam.Get("access_token"), branch)
+		_, body, _ := giteeRequest(pathAddr, "GET", nil) //nolint
+		gf := giteeFiles{}
+		_ = json.Unmarshal(body, &gf)
+		if gf.Type == SymLink {
+			content, err := gitee.ReadFileContent(branch, paths)
+			if err != nil {
+				return files, err
+			}
+			files = path.Join(files, strings.TrimSpace(string(content)))
+		} else {
+			files = paths
+		}
 	}
 	return files, nil
 }

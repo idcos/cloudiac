@@ -4,7 +4,6 @@ package vcsrv
 
 import (
 	"bytes"
-	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/models"
 	"cloudiac/utils"
@@ -254,13 +253,14 @@ func (github *githubRepoIface) ListFiles(option VcsIfaceOptions) ([]string, erro
 	}
 	_ = json.Unmarshal(body, &rep)
 	for _, v := range rep {
+		if v.Type == SymLink && option.Recursive && !matchGlob(option.Search, v.Name) {
+			resps := make([]string, 0)
+			paths := fmt.Sprintf("%s/%s", option.Path, v.Name)
+			repList, _ := github.UpdateWorkDir(resps, paths, option)
+			resp = append(resp, repList...)
+		}
 		if v.Type == SymLink && matchGlob(option.Search, v.Name) {
 			resp = append(resp, v.Path)
-		}
-		if v.Type == SymLink && option.Recursive && !matchGlob(option.Search, v.Name) {
-			paths := fmt.Sprintf("%s/%s", option.Path, v.Name)
-			repList, _ := github.UpdateWorkDir(resp, paths, option)
-			resp = append(resp, repList...)
 		}
 		if v.Type == Dir && option.Recursive {
 			option.Path = v.Path
@@ -315,46 +315,57 @@ func (github *githubRepoIface) UpdateWorkDir(resp []string, paths string, option
 	return resp, nil
 }
 
+func (github *githubRepoIface) JudgeWorkDirType(branch, workdir string) (string, error) {
+	files := workdir
+	urlParam := url.Values{}
+	urlParam.Set("ref", branch)
+	pathAddr := utils.GenQueryURL(github.vcs.Address,
+		fmt.Sprintf("/repos/%s/contents/%s", github.repository.FullName, workdir), urlParam)
+	_, body, er := githubRequest(pathAddr, "GET", github.vcs.VcsToken, nil)
+	if er != nil {
+		return files, e.New(e.VcsError, er)
+	}
+	gf := githubFiles{}
+	if err := json.Unmarshal(body, &gf); err != nil {
+		return files, err
+	}
+	if gf.Type == SymLink {
+		grt := githubReadTarget{}
+		if err := json.Unmarshal(body, &grt); err != nil {
+			return files, err
+		}
+		files = strings.TrimSpace(grt.Target)
+	}
+	return files, nil
+}
+
 func (github *githubRepoIface) JudgeFileType(branch, workdir, filename string) (pathname string, err error) {
 	defer func() {
 		if err != nil && strings.Contains(err.Error(), "Not Found") {
 			err = e.New(e.ObjectNotExists)
 		}
 	}()
-	paths := workdir
+	subFilename := strings.Split(filename, "/")
 	files := workdir
-	if filename != "" {
-		paths = path.Join(workdir, filename)
-		files = filename
-	}
-	if strings.Contains(filename, consts.PlaybookDir) {
-		paths = fmt.Sprintf("%s/%s", workdir, consts.PlaybookDir)
-	}
+	paths := workdir
 	urlParam := url.Values{}
 	urlParam.Set("ref", branch)
-	pathAddr := utils.GenQueryURL(github.vcs.Address,
-		fmt.Sprintf("/repos/%s/contents/%s", github.repository.FullName, paths), urlParam)
-	_, body, er := githubRequest(pathAddr, "GET", github.vcs.VcsToken, nil)
-	if er != nil {
-		return files, e.New(e.VcsError, er)
-	}
-	gf := githubFiles{}
-	if err = json.Unmarshal(body, &gf); err != nil {
-		return files, err
-	}
-	if gf.Type == SymLink {
-		grt := githubReadTarget{}
-		if err := json.Unmarshal(body, &grt); err != nil {
-			return filename, err
-		}
-		if filename != "" {
-			if gf.Name == consts.PlaybookDir {
-				count := strings.Count(grt.Target, "../")
-				files = fmt.Sprintf("%s%s", strings.Repeat("../", count), filename)
-				return files, nil
+	for _, file := range subFilename {
+		paths = path.Join(files, file)
+		pathAddr := utils.GenQueryURL(github.vcs.Address,
+			fmt.Sprintf("/repos/%s/contents/%s", github.repository.FullName, paths), urlParam)
+		_, body, _ := githubRequest(pathAddr, "GET", github.vcs.VcsToken, nil)
+		gf := giteaFiles{}
+		_ = json.Unmarshal(body, &gf)
+		if gf.Type == SymLink {
+			grt := giteaReadTarget{}
+			if err = json.Unmarshal(body, &grt); err != nil {
+				return files, err
 			}
+			files = path.Join(files, grt.Target)
+		} else {
+			files = paths
 		}
-		files = strings.TrimSpace(grt.Target)
 	}
 	return files, nil
 }

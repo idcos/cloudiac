@@ -164,6 +164,10 @@ func (r *RegistryRepo) UpdateWorkDir(resp []string, paths string, option VcsIfac
 	return resp, nil
 }
 
+func (r *RegistryRepo) JudgeWorkDirType(branch, workdir string) (string, error) {
+	return workdir, nil
+}
+
 func (r *RegistryRepo) JudgeFileType(branch, workdir, filename string) (string, error) {
 	return filename, nil
 }

@@ -222,6 +222,10 @@ func (l *LocalRepo) UpdateWorkDir(resp []string, paths string, option VcsIfaceOp
 	return resp, nil
 }
 
+func (l *LocalRepo) JudgeWorkDirType(branch, workdir string) (string, error) {
+	return workdir, nil
+}
+
 func (l *LocalRepo) JudgeFileType(branch, workdir, filename string) (string, error) {
 	return filename, nil
 }
