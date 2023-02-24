@@ -512,3 +512,13 @@ SECRET_KEY=xxxx	# 变量值请根据环境进行设置
 ## v0.5.0 20210728
 全新 0.5.0 版本发布
 
+**Fixes**
+
+- 修复资源列表无法区分datasource和resource的问题
+
+#### 升级步骤
+**升级前注意备份数据**
+
+**数据升级**
+执行 `./iac-tool updateDB resource -m` 进行数据升级。
+如果是容器化部署执行: `docker-compose exec iac-portal ./iac-tool updateDB resource -m`
