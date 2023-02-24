@@ -28,17 +28,9 @@ func (*UpdateDb) Usage() string {
 
 func (date *UpdateDb) Execute(args []string) error {
 	dbInit()
-	if date.Resource.Dependencies {
-		if err := AddDependenciesData(); err != nil {
-			fmt.Fprintf(os.Stderr, "add dependecies error: %s\n", err.Error())
-			return err
-		}
-	}
-	if date.Resource.Mode {
-		if err := UpdateModeData(); err != nil {
-			fmt.Fprintf(os.Stderr, "update mode error: %s\n", err.Error())
-			return err
-		}
+	if err := UpdateResourceData(date); err != nil {
+		fmt.Fprintf(os.Stderr, "update resource error: %s\n", err.Error())
+		return err
 	}
 	return nil
 }
@@ -53,7 +45,7 @@ func dbInit() {
 	models.Init(false)
 }
 
-func AddDependenciesData() error {
+func UpdateResourceData(data *UpdateDb) error {
 	sess, t := db.Get(), time.Now()
 
 	fmt.Println("start to search all tfstate.json")
@@ -80,45 +72,12 @@ func AddDependenciesData() error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			addDependenciesByStateJSON(tfstateRecords[left:right])
-		}()
-	}
-
-	wg.Wait()
-
-	fmt.Printf("update resource date done, timeCost: %s\n", time.Since(t).String())
-
-	return nil
-}
-
-func UpdateModeData() error {
-	sess, t := db.Get(), time.Now()
-
-	fmt.Println("start to search all tfstate.json")
-	var tfstateRecords []models.DBStorage
-	if err := sess.Model(&models.DBStorage{}).Where("path LIKE ?", "%tfstate.json").
-		Select("path", "content").Find(&tfstateRecords); err != nil {
-		return err
-	}
-
-	size := len(tfstateRecords)
-
-	if size == 0 {
-		return nil
-	}
-
-	fmt.Printf("found total %d tfstate.json data\n", len(tfstateRecords))
-
-	wg, step := sync.WaitGroup{}, size/5
-	for i := 0; i < size; i = i + step {
-		left, right := i, i+step
-		if i+step > size {
-			right = size - 1
-		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			UpdateModeByStateJSON(tfstateRecords[left:right])
+			if data.Resource.Dependencies {
+				addDependenciesByStateJSON(tfstateRecords[left:right])
+			}
+			if data.Resource.Mode {
+				UpdateModeByStateJSON(tfstateRecords[left:right])
+			}
 		}()
 	}
 
