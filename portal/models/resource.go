@@ -28,6 +28,7 @@ type Resource struct {
 	Provider      string   `json:"provider" gorm:"not null"`
 	Module        string   `json:"module,omitempty" gorm:"not null;default:''"`
 	Address       string   `json:"address" gorm:"not null"`
+	Mode          string   `json:"mode" gorm:"not null"`
 	Type          string   `json:"type" gorm:"not null"`
 	Name          string   `json:"name" gorm:"not null"`
 	Index         string   `json:"index" gorm:"not null;default:''"`

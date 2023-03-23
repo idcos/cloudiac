@@ -20,6 +20,7 @@ type OrgOrProjectResourcesResp struct {
 	ResourceName string    `json:"resourceName"`
 	Provider     string    `json:"provider"`
 	Type         string    `json:"type"`
+	Mode         string    `json:"mode"`
 	Module       string    `json:"module"`
 	EnvId        models.Id `json:"envId"`
 	ProjectId    models.Id `json:"projectId"`

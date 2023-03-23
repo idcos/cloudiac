@@ -550,7 +550,8 @@ func changeTaskStatusSetAttrs(dbSess *db.Session, task *models.Task, status, mes
 
 // ChangeTaskStatus 修改任务状态(同步修改 StartAt、EndAt 等)，并同步修改 env 状态
 // 该函数只修改以下字段:
-// 	status, message, start_at, end_at, aborting
+//
+//	status, message, start_at, end_at, aborting
 func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message string, skipUpdateEnv bool) e.Error {
 	preStatus := task.Status
 	if preStatus == status && message == "" {
@@ -673,6 +674,7 @@ func TraverseStateModule(module *TfStateModule) (rs []*models.Resource) {
 			Provider:     r.ProviderName,
 			Module:       moduleName,
 			Address:      r.Address,
+			Mode:         r.Mode,
 			Type:         r.Type,
 			Name:         r.Name,
 			Index:        idx,
@@ -690,7 +692,7 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Resource{}.TableName(),
 		"id", "org_id", "project_id", "env_id", "task_id", "provider", "module",
-		"address", "type", "name", "index", "attrs", "sensitive_keys", "applied_at", "res_id", "dependencies")
+		"address", "mode", "type", "name", "index", "attrs", "sensitive_keys", "applied_at", "res_id", "dependencies")
 
 	rs := make([]*models.Resource, 0)
 	rs = append(rs, TraverseStateModule(&values.RootModule)...)
@@ -729,7 +731,7 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 		}
 
 		err := bq.AddRow(models.NewId("r"), task.OrgId, task.ProjectId, task.EnvId, task.Id, r.Provider,
-			r.Module, r.Address, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys, r.AppliedAt, resId, r.Dependencies)
+			r.Module, r.Address, r.Mode, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys, r.AppliedAt, resId, r.Dependencies)
 		if err != nil {
 			return err
 		}
@@ -1095,6 +1097,7 @@ func TaskStatusChangeSendMessage(task *models.Task, status string) {
 
 // ChangeScanTaskStatus 修改扫描任务状态
 // 该函数只更新以下字段:
+//
 //	"status", "policy_status", "message", "start_at", "end_at"
 func ChangeScanTaskStatus(dbSess *db.Session, task *models.ScanTask, status, policyStatus, message string) e.Error {
 	if task.Status == status && task.PolicyStatus == policyStatus && message == "" {

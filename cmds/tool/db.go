@@ -19,6 +19,7 @@ type UpdateDb struct {
 
 type ResourceData struct {
 	Dependencies bool `long:"dependencies" short:"d" description:"update resource dependencies" required:"false"`
+	Mode         bool `long:"mode" short:"m" description:"update resource mode" required:"false"`
 }
 
 func (*UpdateDb) Usage() string {
@@ -27,11 +28,9 @@ func (*UpdateDb) Usage() string {
 
 func (date *UpdateDb) Execute(args []string) error {
 	dbInit()
-	if date.Resource.Dependencies {
-		if err := AddDependenciesData(); err != nil {
-			fmt.Fprintf(os.Stderr, "add dependecies error: %s\n", err.Error())
-			return err
-		}
+	if err := UpdateResourceData(date); err != nil {
+		fmt.Fprintf(os.Stderr, "update resource error: %s\n", err.Error())
+		return err
 	}
 	return nil
 }
@@ -46,7 +45,7 @@ func dbInit() {
 	models.Init(false)
 }
 
-func AddDependenciesData() error {
+func UpdateResourceData(data *UpdateDb) error {
 	sess, t := db.Get(), time.Now()
 
 	fmt.Println("start to search all tfstate.json")
@@ -73,7 +72,12 @@ func AddDependenciesData() error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			addDependenciesByStateJSON(tfstateRecords[left:right])
+			if data.Resource.Dependencies {
+				addDependenciesByStateJSON(tfstateRecords[left:right])
+			}
+			if data.Resource.Mode {
+				UpdateModeByStateJSON(tfstateRecords[left:right])
+			}
 		}()
 	}
 
@@ -114,6 +118,38 @@ func addDependenciesByStateJSON(tfstateRecords []models.DBStorage) {
 				fmt.Fprintf(os.Stderr,
 					"update dependencies error: %s, task_id: %s, address: %s, index: %d, dependencies: %+v\n",
 					err.Error(), taskId, r.Address, index, r.Dependencies)
+				return
+			}
+		}
+	}
+}
+
+func UpdateModeByStateJSON(tfstateRecords []models.DBStorage) {
+	sess := db.Get()
+	size := len(tfstateRecords)
+	for index, row := range tfstateRecords {
+		fmt.Printf("process the %s, index: %d, total: %d\n", row.Path, index, size)
+		tfState, err := services.UnmarshalStateJson(row.Content)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "index: %d, unmarshal tfstate error: %s, path: %s, content: %s\n",
+				index, err, row.Path, string(row.Content))
+			continue
+		}
+
+		taskId := strings.Split(row.Path, "/")[2]
+
+		rs := make([]*models.Resource, 0)
+		rs = append(rs, services.TraverseStateModule(&tfState.Values.RootModule)...)
+		for i := range tfState.Values.ChildModules {
+			rs = append(rs, services.TraverseStateModule(&tfState.Values.ChildModules[i])...)
+		}
+		for _, r := range rs {
+			if _, err := sess.Model(&models.Resource{}).
+				Where("task_id = ? and address = ?", taskId, r.Address).
+				UpdateColumn("mode", r.Mode); err != nil {
+				fmt.Fprintf(os.Stderr,
+					"update mode error: %s, task_id: %s, address: %s, index: %d, mode: %+v\n",
+					err.Error(), taskId, r.Address, index, r.Mode)
 				return
 			}
 		}
