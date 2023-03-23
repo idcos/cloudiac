@@ -1,3 +1,16 @@
+## v1.3.5 20230323
+### Fixed
+- 修复资源列表无法区分datasource和resource的问题
+- 修复ansible软连接无法读取的问题
+
+#### 升级步骤
+**升级前注意备份数据**
+
+**数据升级**
+执行 `./iac-tool updateDB resource -m` 进行数据升级。
+如果是容器化部署执行: `docker-compose exec iac-portal ./iac-tool updateDB resource -m`
+
+
 ## v1.3.5 20230208
 ### Features
 - 新增swaggerEnable参数支持开关swagger文档

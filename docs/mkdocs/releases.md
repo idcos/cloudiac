@@ -2,6 +2,18 @@
 
 ------
 ## v1.3.5 20230208
+**Fixes**
+
+- 修复资源列表无法区分datasource和resource的问题
+- 修复ansible软连接无法读取的问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v1.3.5](https://github.com/idcos/cloudiac/releases/tag/v1.3.5)
+
+
+------
+## v1.3.5 20230208
 **Changed**
 
 - 优化 checkOrgId 时数据库错误的报错
