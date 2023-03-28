@@ -311,6 +311,4 @@ func Register(g *gin.RouterGroup) {
 	//g.GET("/tokens/trigger", ac(), w(handlers.Token{}.VcsWebhookUrl))
 	g.GET("/vcs/webhook", ac(), w(handlers.Token{}.VcsWebhookUrl))
 	ctrl.Register(g.Group("resource/account", ac()), &handlers.ResourceAccount{})
-
-	g.POST("/gcp/deploy", ac(), w(handlers.GcpDeploy))
 }
