@@ -8,14 +8,14 @@ import (
 	"net/http"
 )
 
-// DeclareEnv GCP环境创建
+// DeclareEnv CPG环境创建
 // @Tags 环境
-// @Summary GCP环境创建
+// @Summary CPG环境创建
 // @Accept multipart/form-data
 // @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Security AuthToken
-// @Param json body forms.GcpDeployForm true "parameter"
+// @Param json body forms.DeclareEnvForm true "parameter"
 // @router /declare/env [post]
 // @Success 200 {object} ctx.JSONResult
 func DeclareEnv(c *ctx.GinRequest) {
