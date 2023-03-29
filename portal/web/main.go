@@ -11,7 +11,6 @@ import (
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/libs/validate"
 	api_v1 "cloudiac/portal/web/api/v1"
-	"cloudiac/portal/web/api/v1/handlers"
 	"cloudiac/portal/web/middleware"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
@@ -45,8 +44,6 @@ func GetRouter() *gin.Engine {
 			"build":   common.BUILD,
 		})
 	}))
-
-	e.POST("/api/v1/gcp/deploy", w(handlers.GcpDeploy))
 
 	validate.RegisterValida()
 	api_v1.Register(e.Group("/api/v1"))

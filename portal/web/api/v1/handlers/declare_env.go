@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"cloudiac/portal/apps"
+	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
+	"net/http"
 )
 
-// GcpDeploy GCP环境创建
+// DeclareEnv GCP环境创建
 // @Tags 环境
 // @Summary GCP环境创建
 // @Accept multipart/form-data
@@ -14,13 +16,19 @@ import (
 // @Produce json
 // @Security AuthToken
 // @Param json body forms.GcpDeployForm true "parameter"
-// @router /gcp/deploy [post]
+// @router /declare/env [post]
 // @Success 200 {object} ctx.JSONResult
-func GcpDeploy(c *ctx.GinRequest) {
-	// json字符串
-	form := forms.GcpDeployForm{}
+func DeclareEnv(c *ctx.GinRequest) {
+	// 鉴权
+	token := c.GetHeader("Authorization")
+	if token != "rspxthoslesqfgzrqvwsxebaubrzzyjw" {
+		c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
+		return
+	}
+
+	form := forms.DeclareEnvForm{}
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	c.JSONResult(apps.GcpDeploy(c.Service(), &form))
+	c.JSONResult(apps.DeclareEnv(c.Service(), &form))
 }
