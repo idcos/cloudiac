@@ -16,7 +16,6 @@ type instance struct {
 	InstanceNumber      string `json:"instanceNumber"`
 	ChargeType          string `json:"chargeType"`
 	InstanceUnit        string `json:"instanceUnit"`
-	ChangeType          string `json:"changeType"`
 	SysDiskCategory     string `json:"sysDiskCategory"`
 	SysDiskPerformance  string `json:"sysDiskPerformance"`
 	SysDiskSize         string `json:"sysDiskSize"`

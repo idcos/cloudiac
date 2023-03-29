@@ -7,7 +7,6 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 	"cloudiac/portal/services"
-	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
 	"net/http"
@@ -57,16 +56,96 @@ func DeclareEnv(c *ctx.ServiceContext, form *forms.DeclareEnvForm) (interface{},
 
 	// 参数处理
 	variables := make([]forms.Variable, 0)
-	if form.AppStack == "SaaS云管(融合Spot)" {
-		b, _ := json.Marshal(&form.Instances)
-		var instanceM map[string]string
-		_ = json.Unmarshal(b, &instanceM)
-		for k, v := range instanceM {
+	if form.AppStack == "融合云虚拟机" {
+		if form.Instances.InstanceNumber != "" {
 			variables = append(variables, forms.Variable{
 				Scope: "env",
 				Type:  "terraform",
-				Name:  k,
-				Value: v,
+				Name:  "instance_number",
+				Value: form.Instances.InstanceNumber,
+			})
+		}
+		if form.Instances.InstanceChargeType != "" {
+			variables = append(variables, forms.Variable{
+				Scope: "env",
+				Type:  "terraform",
+				Name:  "instance_charge_type",
+				Value: form.Instances.InstanceChargeType,
+			})
+		}
+		if form.Instances.SysDiskCategory != "" {
+			variables = append(variables, forms.Variable{
+				Scope: "env",
+				Type:  "terraform",
+				Name:  "system_disk_category",
+				Value: form.Instances.SysDiskCategory,
+			})
+		}
+
+		if form.Instances.SysDiskPerformance != "" {
+			variables = append(variables, forms.Variable{
+				Scope: "env",
+				Type:  "terraform",
+				Name:  "system_disk_performance_level",
+				Value: form.Instances.SysDiskPerformance,
+			})
+		}
+
+		if form.Instances.SysDiskSize != "" {
+			variables = append(variables, forms.Variable{
+				Scope: "env",
+				Type:  "terraform",
+				Name:  "system_disk_size",
+				Value: form.Instances.SysDiskSize,
+			})
+		}
+
+		if form.Instances.DataDiskSize != "" {
+			variables = append(variables, forms.Variable{
+				Scope: "env",
+				Type:  "terraform",
+				Name:  "data_disk_size",
+				Value: form.Instances.DataDiskSize,
+			})
+		}
+		if form.Instances.DataDiskCategory != "" {
+			variables = append(variables, forms.Variable{
+				Scope: "env",
+				Type:  "terraform",
+				Name:  "disk_category",
+				Value: form.Instances.DataDiskCategory,
+			})
+		}
+		if form.Instances.DataDiskPerformance != "" {
+			variables = append(variables, forms.Variable{
+				Scope: "env",
+				Type:  "terraform",
+				Name:  "performance_level",
+				Value: form.Instances.DataDiskPerformance,
+			})
+		}
+		if form.Instances.InstanceType != "" {
+			variables = append(variables, forms.Variable{
+				Scope: "env",
+				Type:  "terraform",
+				Name:  "instance_type",
+				Value: form.Instances.InstanceType,
+			})
+		}
+		if form.Instances.UserData != "" {
+			variables = append(variables, forms.Variable{
+				Scope: "env",
+				Type:  "terraform",
+				Name:  "user_data",
+				Value: form.Instances.UserData,
+			})
+		}
+		if form.Instances.Tags != "" {
+			variables = append(variables, forms.Variable{
+				Scope: "env",
+				Type:  "terraform",
+				Name:  "tags",
+				Value: form.Instances.Tags,
 			})
 		}
 	}

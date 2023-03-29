@@ -21,7 +21,7 @@ import (
 func DeclareEnv(c *ctx.GinRequest) {
 	// 鉴权
 	token := c.GetHeader("Authorization")
-	if token != "rspxthoslesqfgzrqvwsxebaubrzzyjw" {
+	if token != "34430039-6c5d-4ff1-8185-0c66eb7738a1" {
 		c.JSONError(e.New(e.InvalidToken), http.StatusUnauthorized)
 		return
 	}
