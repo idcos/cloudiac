@@ -27,4 +27,7 @@ type instance struct {
 	InstanceChargeType  string `json:"instanceChargeType"`
 	UserData            string `json:"userData"`
 	Tags                string `json:"tags"`
+	FirstIndex          string `json:"firstIndex"`
+	EnvironmentId       string `json:"environmentId"`
+	KeyName             string `json:"keyName"`
 }

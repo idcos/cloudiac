@@ -148,6 +148,30 @@ func DeclareEnv(c *ctx.ServiceContext, form *forms.DeclareEnvForm) (interface{},
 				Value: form.Instances.Tags,
 			})
 		}
+		if form.Instances.FirstIndex != "" {
+			variables = append(variables, forms.Variable{
+				Scope: "env",
+				Type:  "terraform",
+				Name:  "first_index",
+				Value: form.Instances.FirstIndex,
+			})
+		}
+		if form.Instances.EnvironmentId != "" {
+			variables = append(variables, forms.Variable{
+				Scope: "env",
+				Type:  "terraform",
+				Name:  "environment_id",
+				Value: form.Instances.EnvironmentId,
+			})
+		}
+		if form.Instances.KeyName != "" {
+			variables = append(variables, forms.Variable{
+				Scope: "env",
+				Type:  "terraform",
+				Name:  "key_name",
+				Value: form.Instances.KeyName,
+			})
+		}
 	}
 
 	// 构建环境参数
