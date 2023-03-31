@@ -59,6 +59,7 @@ func DeclareEnv(c *ctx.ServiceContext, form *forms.DeclareEnvForm) (interface{},
 	}
 
 	// 参数处理
+	var tags string
 	variables := make([]forms.Variable, 0)
 	if form.AppStack == "融合云虚拟机" {
 		if form.Instances.InstanceNumber != "" {
@@ -167,6 +168,7 @@ func DeclareEnv(c *ctx.ServiceContext, form *forms.DeclareEnvForm) (interface{},
 				Name:  "environment_id",
 				Value: form.Instances.EnvironmentId,
 			})
+			tags = form.Instances.EnvironmentId
 		}
 		if form.Instances.KeyName != "" {
 			variables = append(variables, forms.Variable{
@@ -241,6 +243,7 @@ func DeclareEnv(c *ctx.ServiceContext, form *forms.DeclareEnvForm) (interface{},
 
 		ExtraData: form.ExtraData,
 		Source:    "CPG",
+		Tags:      tags,
 	}
 
 	return CreateEnv(c, f)
