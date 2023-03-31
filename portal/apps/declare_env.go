@@ -172,6 +172,14 @@ func DeclareEnv(c *ctx.ServiceContext, form *forms.DeclareEnvForm) (interface{},
 				Value: form.Instances.KeyName,
 			})
 		}
+		if form.Instances.ImageId != "" {
+			variables = append(variables, forms.Variable{
+				Scope: "env",
+				Type:  "terraform",
+				Name:  "image_id",
+				Value: form.Instances.ImageId,
+			})
+		}
 	}
 
 	// 构建环境参数
