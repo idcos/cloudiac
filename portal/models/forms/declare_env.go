@@ -4,11 +4,17 @@ import "cloudiac/portal/models"
 
 type DeclareEnvForm struct {
 	BaseForm
-	AppStack  string      `json:"appStack"`
-	Cloud     string      `json:"cloud"`
-	Region    string      `json:"region"`
-	Zone      string      `json:"zone"`
-	Instances instance    `json:"instances"`
+	AppStack_  string `json:"app_stack"`
+	AppStack   string `json:"appStack"`
+	Cloud      string `json:"cloud"`
+	Region     string `json:"region"`
+	Zone       string `json:"zone"`
+	ChargeType string `json:"charge_type"`
+
+	Instances instance `json:"instances"`
+
+	Recovery []recovery `json:"recovery"`
+
 	ExtraData models.JSON `json:"extraData"`
 }
 
@@ -30,4 +36,9 @@ type instance struct {
 	FirstIndex          string `json:"firstIndex"`
 	EnvironmentId       string `json:"environmentId"`
 	KeyName             string `json:"keyName"`
+}
+
+type recovery struct {
+	Name       string `json:"name"`
+	RecoveryId string `json:"recovery_id"`
 }

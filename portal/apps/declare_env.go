@@ -15,9 +15,9 @@ import (
 var (
 	appStack = map[string]appInfo{
 		"SaaS云管(融合Spot)": {
-			OrgId:     "",
-			ProjectId: "",
-			TplId:     "",
+			OrgId:     "org-cd4nnuo6vmfpt9kudc10",
+			ProjectId: "p-cd4nug06vmfpsldfesv0",
+			TplId:     "tpl-cggeiqqt467v92vh48i0",
 		},
 		"融合云虚拟机": {
 			OrgId:     "org-ce8537o6vmfqkjkvei70",
@@ -34,7 +34,11 @@ type appInfo struct {
 }
 
 func DeclareEnv(c *ctx.ServiceContext, form *forms.DeclareEnvForm) (interface{}, e.Error) {
+	if form.AppStack_ != "" {
+		form.AppStack = form.AppStack_
+	}
 	if _, ok := appStack[form.AppStack]; !ok {
+		c.Logger().Errorf("app stack is invalid")
 		return nil, e.New(e.BadParam)
 	}
 
@@ -179,6 +183,43 @@ func DeclareEnv(c *ctx.ServiceContext, form *forms.DeclareEnvForm) (interface{},
 				Name:  "image_id",
 				Value: form.Instances.ImageId,
 			})
+		}
+	} else if form.AppStack == "SaaS云管(融合Spot)" {
+		createSpotInstance := "false"
+		if form.ChargeType == "spot" {
+			createSpotInstance = "true"
+		}
+		variables = append(variables, forms.Variable{
+			Scope: "env",
+			Type:  "terraform",
+			Name:  "create_spot_instance",
+			Value: createSpotInstance,
+		})
+
+		if form.Zone != "" {
+			variables = append(variables, forms.Variable{
+				Scope: "env",
+				Type:  "terraform",
+				Name:  "zone_id",
+				Value: form.Zone,
+			})
+		}
+
+		if len(form.Recovery) > 0 {
+			if form.Recovery[0].RecoveryId != "" {
+				variables = append(variables, forms.Variable{
+					Scope: "env",
+					Type:  "terraform",
+					Name:  "snapshot_id",
+					Value: form.Recovery[0].RecoveryId,
+				})
+				variables = append(variables, forms.Variable{
+					Scope: "env",
+					Type:  "terraform",
+					Name:  "enable_backup",
+					Value: "true",
+				})
+			}
 		}
 	}
 
