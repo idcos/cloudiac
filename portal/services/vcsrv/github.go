@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+// Copyright (c) 2015-2023 CloudJ Technology Co., Ltd.
 
 package vcsrv
 
@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -24,8 +25,8 @@ import (
 	"golang.org/x/oauth2"
 )
 
-//newGithubInstance
-//github api文档: https://docs.github.com/cn/rest/reference/repos
+// newGithubInstance
+// github api文档: https://docs.github.com/cn/rest/reference/repos
 func newGithubInstance(vcs *models.Vcs) (VcsIface, error) {
 	return &githubVcs{vcs: vcs}, nil
 
@@ -246,15 +247,28 @@ func (github *githubRepoIface) ListFiles(option VcsIfaceOptions) ([]string, erro
 	}
 	resp := make([]string, 0)
 	rep := make([]githubFiles, 0)
+	resp, err := github.UpdateWorkDir(resp, option.Path, option)
+	if err != nil {
+		return nil, err
+	}
 	_ = json.Unmarshal(body, &rep)
 	for _, v := range rep {
-		if v.Type == "dir" && option.Recursive {
+		if v.Type == SymLink && option.Recursive && !matchGlob(option.Search, v.Name) {
+			resps := make([]string, 0)
+			paths := fmt.Sprintf("%s/%s", option.Path, v.Name)
+			repList, _ := github.UpdateWorkDir(resps, paths, option)
+			resp = append(resp, repList...)
+		}
+		if v.Type == SymLink && matchGlob(option.Search, v.Name) {
+			resp = append(resp, v.Path)
+		}
+		if v.Type == Dir && option.Recursive {
 			option.Path = v.Path
 			repList, _ := github.ListFiles(option)
 			resp = append(resp, repList...)
 		}
 
-		if v.Type == "file" && matchGlob(option.Search, v.Name) {
+		if v.Type == File && matchGlob(option.Search, v.Name) {
 			resp = append(resp, v.Path)
 		}
 
@@ -266,6 +280,94 @@ func (github *githubRepoIface) ListFiles(option VcsIfaceOptions) ([]string, erro
 
 type githubReadContent struct {
 	Content string `json:"content" form:"content" `
+}
+
+type githubReadTarget struct {
+	Target string `json:"target" form:"target" `
+}
+
+func (github *githubRepoIface) UpdateWorkDir(resp []string, paths string, option VcsIfaceOptions) ([]string, error) {
+	urlParam := url.Values{}
+	urlParam.Set("ref", getBranch(github, option.Ref))
+	var path string
+	path = utils.GenQueryURL(github.vcs.Address,
+		fmt.Sprintf("/repos/%s/contents/%s", github.repository.FullName, paths), urlParam)
+	_, body, er := githubRequest(path, "GET", github.vcs.VcsToken, nil)
+	if er != nil {
+		return []string{}, e.New(e.VcsError, er)
+	}
+	gf := githubFiles{}
+	_ = json.Unmarshal(body, &gf)
+	if gf.Type == SymLink {
+		grt := githubReadTarget{}
+		if err := json.Unmarshal(body, &grt); err != nil {
+			return resp, err
+		}
+		Path := option.Path
+		if !matchGlob(option.Search, gf.Name) {
+			Path = strings.Replace(option.Path, gf.Name, "", 1)
+		}
+		Paths := filepath.Join(Path, grt.Target)
+		option.Path = Paths
+		repList, _ := github.ListFiles(option)
+		resp = append(resp, repList...)
+	}
+	return resp, nil
+}
+
+func (github *githubRepoIface) JudgeWorkDirType(branch, workdir string) (string, error) {
+	files := workdir
+	urlParam := url.Values{}
+	urlParam.Set("ref", branch)
+	pathAddr := utils.GenQueryURL(github.vcs.Address,
+		fmt.Sprintf("/repos/%s/contents/%s", github.repository.FullName, workdir), urlParam)
+	_, body, er := githubRequest(pathAddr, "GET", github.vcs.VcsToken, nil)
+	if er != nil {
+		return files, e.New(e.VcsError, er)
+	}
+	gf := githubFiles{}
+	if err := json.Unmarshal(body, &gf); err != nil {
+		return files, err
+	}
+	if gf.Type == SymLink {
+		grt := githubReadTarget{}
+		if err := json.Unmarshal(body, &grt); err != nil {
+			return files, err
+		}
+		files = strings.TrimSpace(grt.Target)
+	}
+	return files, nil
+}
+
+func (github *githubRepoIface) JudgeFileType(branch, workdir, filename string) (pathname string, err error) {
+	defer func() {
+		if err != nil && strings.Contains(err.Error(), "Not Found") {
+			err = e.New(e.ObjectNotExists)
+		}
+	}()
+	subFilename := strings.Split(filename, "/")
+	files := workdir
+	paths := workdir
+	urlParam := url.Values{}
+	urlParam.Set("ref", branch)
+	for _, file := range subFilename {
+		paths = path.Join(files, file)
+		pathAddr := utils.GenQueryURL(github.vcs.Address,
+			fmt.Sprintf("/repos/%s/contents/%s", github.repository.FullName, paths), urlParam)
+		_, body, _ := githubRequest(pathAddr, "GET", github.vcs.VcsToken, nil)
+		gf := giteaFiles{}
+		_ = json.Unmarshal(body, &gf)
+		if gf.Type == SymLink {
+			grt := giteaReadTarget{}
+			if err = json.Unmarshal(body, &grt); err != nil {
+				return files, err
+			}
+			files = path.Join(files, grt.Target)
+		} else {
+			files = paths
+		}
+	}
+	return files, nil
 }
 
 func (github *githubRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
@@ -366,7 +468,7 @@ func (github *githubRepoIface) DeleteWebhook(id int) error {
 	return nil
 }
 
-//CreatePrComment doc: https://docs.github.com/en/rest/reference/pulls#submit-a-review-for-a-pull-request
+// CreatePrComment doc: https://docs.github.com/en/rest/reference/pulls#submit-a-review-for-a-pull-request
 func (github *githubRepoIface) CreatePrComment(prId int, comment string) error {
 	path := utils.GenQueryURL(github.vcs.Address, fmt.Sprintf("/repos/%s/pulls/%d/reviews", github.repository.FullName, prId), nil)
 	requestBody := map[string]string{
@@ -401,9 +503,9 @@ func (github *githubRepoIface) GetCommitFullPath(address, commitId string) strin
 	return u.String()
 }
 
-//giteaRequest
-//param path : gitea api路径
-//param method 请求方式
+// giteaRequest
+// param path : gitea api路径
+// param method 请求方式
 func githubRequest(path, method, token string, requestBody []byte) (*http.Response, []byte, error) {
 	vcsToken, err := GetVcsToken(token)
 	if err != nil {

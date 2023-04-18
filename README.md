@@ -30,23 +30,6 @@ CloudIaC https://cloudiac.org 是基于基础设施即代码(IaC, Infrastructure
 -   [完整文档](https://docs.cloudiac.org/)
 -   [视频介绍](https://space.bilibili.com/2138433328/channel/seriesdetail?sid=1908688)
 
-### CloudIaC in Cloud
-
-- [**START FOR FREE**](https://app.cloudiac.org)
-  - $0 per month
-  - Unlimited Number of Users
-  - Unlimited Number of Projects
-  - Unlimited Access to Registry in [mainland](https://exchange.cloudiac.org)
-  - Up to 5 Organizations
-  - Commnity Support
-  - Fully Integated CI/CD
-  - 99.9% Guaranteed Uptime
-  - Platform Security
-  - Cloud Flexibility
-  
-- **Pro Team**(comming soon)
-- **Enterprise**(comming soon)
-
 ### Self-Hosted
 
 - 准备一台 Linux 主机，安装 docker, docker-compose；

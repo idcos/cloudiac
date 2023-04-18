@@ -35,7 +35,7 @@ version: "3.2"
 services:
   iac-portal:
     container_name: iac-portal
-    image: "${DOCKER_REGISTRY}cloudiac/iac-portal:v1.3.4"
+    image: "${DOCKER_REGISTRY}cloudiac/iac-portal:v1.3.5"
     volumes:
       - type: bind
         source: /usr/yunji/cloudiac/var
@@ -52,7 +52,7 @@ services:
 
   ct-runner:
     container_name: ct-runner
-    image: "${DOCKER_REGISTRY}cloudiac/ct-runner:v1.3.4"
+    image: "${DOCKER_REGISTRY}cloudiac/ct-runner:v1.3.5"
     volumes:
       - type: bind
         source: /usr/yunji/cloudiac/var
@@ -71,7 +71,7 @@ services:
 
   iac-web:
     container_name: iac-web
-    image: "${DOCKER_REGISTRY}cloudiac/iac-web:v1.3.2"
+    image: "${DOCKER_REGISTRY}cloudiac/iac-web:v1.3.5"
     ports:
       - 80:80
     restart: always
@@ -215,6 +215,8 @@ CONSUL_CERT_PATH=""
 
 # 询价服务端地址
 COST_SERVE=""
+
+SWAGGER_ENABLE=true
 
 ```
 

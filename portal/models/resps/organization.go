@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+// Copyright (c) 2015-2023 CloudJ Technology Co., Ltd.
 
 package resps
 
@@ -20,6 +20,7 @@ type OrgOrProjectResourcesResp struct {
 	ResourceName string    `json:"resourceName"`
 	Provider     string    `json:"provider"`
 	Type         string    `json:"type"`
+	Mode         string    `json:"mode"`
 	Module       string    `json:"module"`
 	EnvId        models.Id `json:"envId"`
 	ProjectId    models.Id `json:"projectId"`

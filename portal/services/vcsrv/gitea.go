@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+// Copyright (c) 2015-2023 CloudJ Technology Co., Ltd.
 
 package vcsrv
 
@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -66,7 +67,7 @@ type Repository struct {
 -H 'Authorization: token 27b9b370eb3qqqqqqqqc0f3a5de10a3'
 */
 
-//ListRepos Fixme中的数据不能直接调用repo接口的方法
+// ListRepos Fixme中的数据不能直接调用repo接口的方法
 func (gitea *giteaVcs) ListRepos(namespace, search string, limit, offset int) ([]RepoIface, int64, error) {
 	user, err := getGiteaUserMe(gitea.vcs)
 	if err != nil {
@@ -215,20 +216,119 @@ func (gitea *giteaRepoIface) ListFiles(option VcsIfaceOptions) ([]string, error)
 	}
 	resp := make([]string, 0)
 	rep := make([]giteaFiles, 0)
+	resp, err := gitea.UpdateWorkDir(resp, option.Path, option)
+	if err != nil {
+		return nil, err
+	}
 	_ = json.Unmarshal(body, &rep)
 	for _, v := range rep {
-		if v.Type == "dir" && option.Recursive {
+		if v.Type == SymLink && option.Recursive && !matchGlob(option.Search, v.Name) {
+			resps := make([]string, 0)
+			paths := fmt.Sprintf("%s/%s", option.Path, v.Name)
+			repList, _ := gitea.UpdateWorkDir(resps, paths, option)
+			resp = append(resp, repList...)
+		}
+		if v.Type == SymLink && matchGlob(option.Search, v.Name) {
+			resp = append(resp, v.Path)
+		}
+		if v.Type == Dir && option.Recursive {
 			option.Path = v.Path
 			repList, _ := gitea.ListFiles(option)
 			resp = append(resp, repList...)
 		}
-		if v.Type == "file" && matchGlob(option.Search, v.Name) {
+		if v.Type == File && matchGlob(option.Search, v.Name) {
 			resp = append(resp, v.Path)
 		}
 
 	}
 
 	return resp, nil
+}
+
+type giteaReadTarget struct {
+	Target string `json:"target" form:"target" `
+}
+
+func (gitea *giteaRepoIface) UpdateWorkDir(resp []string, paths string, option VcsIfaceOptions) ([]string, error) {
+	var path string = gitea.vcs.Address
+	branch := getBranch(gitea, option.Ref)
+	path += giteaApiRoute +
+		fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0&ref=%s",
+			gitea.repository.FullName, paths, branch)
+	_, body, er := giteaRequest(path, "GET", gitea.vcs.VcsToken, nil)
+	if er != nil {
+		return []string{}, e.New(e.VcsError, er)
+	}
+	gf := giteaFiles{}
+	_ = json.Unmarshal(body, &gf)
+	if gf.Type == SymLink {
+		grt := githubReadTarget{}
+		if err := json.Unmarshal(body, &grt); err != nil {
+			return resp, err
+		}
+		Path := option.Path
+		if !matchGlob(option.Search, gf.Name) {
+			Path = strings.Replace(option.Path, gf.Name, "", 1)
+		}
+		Paths := filepath.Join(Path, grt.Target)
+		option.Path = Paths
+		repList, _ := gitea.ListFiles(option)
+		resp = append(resp, repList...)
+	}
+	return resp, nil
+}
+
+func (gitea *giteaRepoIface) JudgeWorkDirType(branch, workdir string) (string, error) {
+	files := workdir
+	pathAddr := gitea.vcs.Address + giteaApiRoute +
+		fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0&ref=%s",
+			gitea.repository.FullName, workdir, branch)
+	_, body, er := giteaRequest(pathAddr, "GET", gitea.vcs.VcsToken, nil)
+	if er != nil {
+		return files, e.New(e.VcsError, er)
+	}
+	gf := giteaFiles{}
+	if err := json.Unmarshal(body[:], &gf); err != nil {
+		return files, err
+	}
+	if gf.Type == SymLink {
+		grt := giteaReadTarget{}
+		if err := json.Unmarshal(body, &grt); err != nil {
+			return files, err
+		}
+		files = strings.TrimSpace(grt.Target)
+	}
+	return files, nil
+}
+
+func (gitea *giteaRepoIface) JudgeFileType(branch, workdir, filename string) (pathname string, err error) {
+	defer func() {
+		if err != nil && strings.Contains(err.Error(), "Not Found") {
+			err = e.New(e.ObjectNotExists)
+		}
+	}()
+	subFilename := strings.Split(filename, "/")
+	files := workdir
+	paths := workdir
+	for _, file := range subFilename {
+		paths = path.Join(files, file)
+		pathAddr := gitea.vcs.Address + giteaApiRoute +
+			fmt.Sprintf("/repos/%s/contents/%s?limit=0&page=0&ref=%s",
+				gitea.repository.FullName, paths, branch)
+		_, body, _ := giteaRequest(pathAddr, "GET", gitea.vcs.VcsToken, nil)
+		gf := giteaFiles{}
+		_ = json.Unmarshal(body, &gf)
+		if gf.Type == SymLink {
+			grt := giteaReadTarget{}
+			if err = json.Unmarshal(body, &grt); err != nil {
+				return files, err
+			}
+			files = path.Join(files, grt.Target)
+		} else {
+			files = paths
+		}
+	}
+	return files, nil
 }
 
 func (gitea *giteaRepoIface) ReadFileContent(branch, path string) (content []byte, err error) {
@@ -271,7 +371,7 @@ func (gitea *giteaRepoIface) DefaultBranch() string {
 	return gitea.repository.DefaultBranch
 }
 
-//AddWebhook doc: http://10.0.3.124:3000/api/swagger#/repository/repoDeleteHook
+// AddWebhook doc: http://10.0.3.124:3000/api/swagger#/repository/repoDeleteHook
 func (gitea *giteaRepoIface) AddWebhook(url string) error {
 	path := gitea.vcs.Address + giteaApiRoute + fmt.Sprintf("/repos/%s/hooks", gitea.repository.FullName)
 	bodys := map[string]interface{}{
@@ -371,9 +471,9 @@ func (gitea *giteaRepoIface) GetCommitFullPath(address, commitId string) string 
 	return u.String()
 }
 
-//giteeRequest
-//param path : gitea api路径
-//param method 请求方式
+// giteeRequest
+// param path : gitea api路径
+// param method 请求方式
 func giteaRequest(path, method, token string, requestBody []byte) (*http.Response, []byte, error) {
 	vcsToken, err := GetVcsToken(token)
 	if err != nil {

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+// Copyright (c) 2015-2023 CloudJ Technology Co., Ltd.
 
 package vcsrv
 
@@ -91,7 +91,7 @@ func (l *LocalVcs) TokenCheck() error {
 	return nil
 }
 
-//RepoBaseHttpAddr 返回示例: http://localhost/repos/cloudiac
+// RepoBaseHttpAddr 返回示例: http://localhost/repos/cloudiac
 func (l *LocalVcs) RepoBaseHttpAddr() string {
 	portAddr := configs.Get().Portal.Address
 	return utils.JoinURL(portAddr, consts.LocalGitReposPath, consts.LocalGitReposLocalGitReposPathSubdirectories)
@@ -216,6 +216,18 @@ func (l *LocalRepo) ListFiles(opt VcsIfaceOptions) ([]string, error) {
 		results = results[:opt.Limit]
 	}
 	return results, nil
+}
+
+func (l *LocalRepo) UpdateWorkDir(resp []string, paths string, option VcsIfaceOptions) ([]string, error) {
+	return resp, nil
+}
+
+func (l *LocalRepo) JudgeWorkDirType(branch, workdir string) (string, error) {
+	return workdir, nil
+}
+
+func (l *LocalRepo) JudgeFileType(branch, workdir, filename string) (string, error) {
+	return filename, nil
 }
 
 func (l *LocalRepo) ReadFileContent(revision string, path string) (content []byte, err error) {

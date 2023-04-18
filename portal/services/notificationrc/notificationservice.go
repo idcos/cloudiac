@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+// Copyright (c) 2015-2023 CloudJ Technology Co., Ltd.
 
 package notificationrc
 
@@ -89,7 +89,7 @@ func (ns *NotificationService) SyncSendMessage() {
 		OrgName:      ns.Org.Name,
 		ProjectName:  ns.Project.Name,
 		TemplateName: ns.Tpl.Name,
-		Revision:     ns.Tpl.RepoRevision,
+		Revision:     ns.Env.Revision,
 		EnvName:      ns.Env.Name,
 		//http://{{addr}}/org/{{orgId}}/project/{{ProjectId}}/m-project-env/detail/{{envId}}/task/{{TaskId}}
 		Addr:         fmt.Sprintf("%s/org/%s/project/%s/m-project-env/detail/%s/task/%s", configs.Get().Portal.Address, ns.Org.Id, ns.ProjectId, ns.Env.Id, ns.Task.Id),

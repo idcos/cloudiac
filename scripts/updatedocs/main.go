@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+// Copyright (c) 2015-2023 CloudJ Technology Co., Ltd.
 
 package main
 
@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	version    = "v1.3.4"
-	webVersion = "v1.3.2"
+	version    = "v1.3.5"
+	webVersion = "v1.3.5"
 )
 
 type FileReplacer struct {

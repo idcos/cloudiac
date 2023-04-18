@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2022 CloudJ Technology Co., Ltd.
+// Copyright (c) 2015-2023 CloudJ Technology Co., Ltd.
 
 package vcsrv
 
@@ -27,6 +27,10 @@ type UserInfo struct {
 }
 
 const (
+	SymLinkMode      = "120000"
+	Dir              = "dir"
+	SymLink          = "symlink"
+	File             = "file"
 	WebhookUrlGitlab = "/webhooks/gitlab"
 	WebhookUrlGitea  = "/webhooks/gitea"
 	WebhookUrlGitee  = "/webhooks/gitee"
@@ -83,6 +87,14 @@ type RepoIface interface {
 	// param limit: 限制返回的文件数，传 0 表示无限制
 	// return: 返回文件路径列表，路径为完整路径(即包含传入的 path 部分)
 	ListFiles(option VcsIfaceOptions) ([]string, error)
+
+	// UpdateWorkDir 更新playbook工作目录
+	UpdateWorkDir(resp []string, path string, option VcsIfaceOptions) ([]string, error)
+
+	JudgeWorkDirType(branch, workdir string) (string, error)
+
+	// JudgeFileType 判断文件类型 更新filename内容
+	JudgeFileType(branch, workdir, filename string) (string, error)
 
 	// ReadFileContent
 	// param path: 路径
@@ -160,7 +172,7 @@ func matchGlob(search, name string) bool {
 	return matched
 }
 
-//校验ref是否为空 空则返回默认分支
+// 校验ref是否为空 空则返回默认分支
 func getBranch(repo RepoIface, ref string) string {
 	if ref == "" {
 		return repo.DefaultBranch()
