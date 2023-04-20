@@ -384,6 +384,29 @@ func GetTaskStepLog(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (inte
 	return string(content), nil
 }
 
+func ErrorStepLog(c *ctx.ServiceContext, form *forms.ErrorStepLogForm) (interface{}, e.Error) {
+	var errorLogDetail string
+
+	step, err := services.GetTaskStepErrorLogById(c.DB(), form.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	stepLog, err := services.GetTaskStepLogById(c.DB(), step.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	content := strings.Split(string(stepLog), "\n")
+	for index := range content {
+		if strings.Contains(content[index], "\u001b[31m") {
+			errorLogDetail += fmt.Sprintf("%s%s", content[index], "\n")
+		}
+	}
+
+	return errorLogDetail, nil
+}
+
 // SearchTaskResourcesGraph 查询环境资源列表
 func SearchTaskResourcesGraph(c *ctx.ServiceContext, form *forms.SearchTaskResourceGraphForm) (interface{}, e.Error) {
 	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {

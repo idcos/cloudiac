@@ -110,6 +110,11 @@ type GetTaskStepLogForm struct {
 	StepId models.Id `uri:"stepId" json:"stepId" binding:"required,startswith=step-,max=32"` //步骤ID
 }
 
+type ErrorStepLogForm struct {
+	BaseForm
+	Id models.Id `uri:"id" json:"id" binding:"required,startswith=run-,max=32"` // 任务Id
+}
+
 type SearchTaskResourceGraphForm struct {
 	BaseForm
 

@@ -1393,6 +1393,19 @@ func GetTaskStepLogById(tx *db.Session, stepId models.Id) ([]byte, e.Error) {
 	return dbStorage.Content, nil
 }
 
+func GetTaskStepErrorLogById(tx *db.Session, taskId models.Id) (*models.TaskStep, e.Error) {
+	taskStep := models.TaskStep{}
+	err := tx.Where("task_id = ? AND status = ?", taskId, "failed").First(&taskStep)
+	if err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TaskStepNotExists)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+
+	return &taskStep, nil
+}
+
 func SendKafkaMessage(session *db.Session, task *models.Task, taskStatus string) {
 	k := kafka.Get()
 	if k == nil {

@@ -297,6 +297,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/tasks", ac(), w(handlers.Task{}.Search))
 	g.GET("/tasks/:id", ac(), w(handlers.Task{}.Detail))
 	g.GET("/tasks/:id/log", ac(), w(handlers.Task{}.Log))
+	g.GET("/tasks/:id/error_log", ac(), w(handlers.Task{}.ErrorStepLog))
 	g.GET("/tasks/:id/output", ac(), w(handlers.Task{}.Output))
 	g.GET("/tasks/:id/resources", ac(), w(handlers.Task{}.Resource))
 	g.POST("/tasks/:id/abort", ac("tasks", "abort"), w(handlers.Task{}.TaskAbort))
