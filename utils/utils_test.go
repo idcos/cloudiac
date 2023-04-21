@@ -167,3 +167,31 @@ func TestIsValidUrl(t *testing.T) {
 		})
 	}
 }
+
+func TestFilterTerraformLogs(t *testing.T) {
+	// define inputs
+	input := []byte(`
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | 
+terraform_0    | Error: Error applying plan:
+terraform_0    | 
+terraform_0    | 1 error(s) occurred:
+terraform_0    | 
+terraform_0    | * aws_security_group_rule.rules[0]: Error creating Security Group Rule: InvalidGroup.NotFound: The security group 'sg-12345678' does not exist status code: 400, request id: abcdefghijklmnopqrstuvwxyz
+terraform_0    | 
+terraform_0    | 
+terraform_0    | 
+terraform_0    | Error: apply: terraform exited with code 1
+`)
+	controlCode := "Error: "
+
+	// expected outputs
+	expectedOutput := "terraform_0    | Error: Error applying plan:\nterraform_0    | Error: apply: terraform exited with code 1\n"
+	// test FilterTerraformLogs
+	output := FilterTerraformLogs(input, controlCode)
+
+	// check
+	if output != expectedOutput {
+		t.Errorf("FilterTerraformLogs() returned unexpected output. Expected:\n%s\n\nGot:\n%s", expectedOutput, output)
+	}
+}

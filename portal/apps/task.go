@@ -385,8 +385,6 @@ func GetTaskStepLog(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (inte
 }
 
 func ErrorStepLog(c *ctx.ServiceContext, form *forms.ErrorStepLogForm) (interface{}, e.Error) {
-	var errorLogDetail string
-
 	step, err := services.GetTaskStepErrorLogById(c.DB(), form.Id)
 	if err != nil {
 		return nil, err
@@ -397,12 +395,7 @@ func ErrorStepLog(c *ctx.ServiceContext, form *forms.ErrorStepLogForm) (interfac
 		return nil, err
 	}
 
-	content := strings.Split(string(stepLog), "\n")
-	for index := range content {
-		if strings.Contains(content[index], "\u001b[31m") {
-			errorLogDetail += fmt.Sprintf("%s%s", content[index], "\n")
-		}
-	}
+	errorLogDetail := utils.FilterTerraformLogs(stepLog, "\u001B[31m")
 
 	return errorLogDetail, nil
 }

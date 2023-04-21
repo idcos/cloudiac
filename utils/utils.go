@@ -118,6 +118,20 @@ func RemoveDuplicateElement(languages []string) []string {
 	return result
 }
 
+// FilterTerraformLogs Filter Terraform logs through control codes.
+func FilterTerraformLogs(stepLog []byte, controlCode string) string {
+	var LogDetail string
+
+	content := strings.Split(string(stepLog), "\n")
+	for index := range content {
+		if strings.Contains(content[index], controlCode) {
+			LogDetail += fmt.Sprintf("%s%s", content[index], "\n")
+		}
+	}
+
+	return LogDetail
+}
+
 func Md5String(ss ...string) string {
 	hm := md5.New() //nolint:gosec
 	for i := range ss {
