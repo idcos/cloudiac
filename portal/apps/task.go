@@ -384,6 +384,23 @@ func GetTaskStepLog(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (inte
 	return string(content), nil
 }
 
+func ErrorStepLog(c *ctx.ServiceContext, form *forms.ErrorStepLogForm) (interface{}, e.Error) {
+	controlCode := []string{consts.TerraformRedError, consts.AnsibleFatal, consts.AnsibleFailed}
+	step, err := services.GetTaskFirstErrorStep(c.DB(), form.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	stepLog, err := services.GetTaskStepLogById(c.DB(), step.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	errorLogDetail := utils.FilterStepLogs(stepLog, controlCode...)
+
+	return errorLogDetail, nil
+}
+
 // SearchTaskResourcesGraph 查询环境资源列表
 func SearchTaskResourcesGraph(c *ctx.ServiceContext, form *forms.SearchTaskResourceGraphForm) (interface{}, e.Error) {
 	if c.OrgId == "" || c.ProjectId == "" || form.Id == "" {

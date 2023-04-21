@@ -118,6 +118,30 @@ func RemoveDuplicateElement(languages []string) []string {
 	return result
 }
 
+// FilterStepLogs Filter Terraform and Ansible logs using custom codes.
+func FilterStepLogs(stepLog []byte, controlCode ...string) string {
+	var LogDetail string
+
+	content := strings.Split(string(stepLog), "\n")
+	for index := range content {
+		// check if the current line contains "fatal:" and "failed:".
+		if strings.Contains(content[index], consts.AnsibleFatal) || strings.Contains(content[index], consts.AnsibleFailed) {
+			// if so, check if the next line contains "...ignoring"
+			if index+1 < len(content) && strings.Contains(content[index+1], "...ignoring") {
+				continue // skip this fatal log
+			}
+		}
+
+		for _, code := range controlCode {
+			if strings.Contains(content[index], code) {
+				LogDetail += fmt.Sprintf("%s%s", content[index], "\n")
+			}
+		}
+	}
+
+	return LogDetail
+}
+
 func Md5String(ss ...string) string {
 	hm := md5.New() //nolint:gosec
 	for i := range ss {
