@@ -124,8 +124,8 @@ func FilterStepLogs(stepLog []byte, controlCode ...string) string {
 
 	content := strings.Split(string(stepLog), "\n")
 	for index := range content {
-		// check if the current line contains "fatal:".
-		if strings.Contains(content[index], "fatal:") {
+		// check if the current line contains "fatal:" and "failed:".
+		if strings.Contains(content[index], consts.AnsibleFatal) || strings.Contains(content[index], consts.AnsibleFailed) {
 			// if so, check if the next line contains "...ignoring"
 			if index+1 < len(content) && strings.Contains(content[index+1], "...ignoring") {
 				continue // skip this fatal log
