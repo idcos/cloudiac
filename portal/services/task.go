@@ -1394,9 +1394,9 @@ func GetTaskStepLogById(tx *db.Session, stepId models.Id) ([]byte, e.Error) {
 }
 
 // 查询任务下执行失败的步骤信息
-func GetTaskStepErrorLogById(tx *db.Session, taskId models.Id) (*models.TaskStep, e.Error) {
+func GetTaskFirstErrorStep(tx *db.Session, taskId models.Id) (*models.TaskStep, e.Error) {
 	taskStep := models.TaskStep{}
-	err := tx.Where("task_id = ? AND status = ?", taskId, "failed").First(&taskStep)
+	err := tx.Where("task_id = ? AND status = ?", taskId, consts.TaskStepFailedStatus).First(&taskStep)
 	if err != nil {
 		if e.IsRecordNotFound(err) {
 			return nil, e.New(e.TaskStepNotExists)

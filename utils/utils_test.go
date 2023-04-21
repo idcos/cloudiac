@@ -173,7 +173,11 @@ func TestFilterTerraformLogs(t *testing.T) {
 	input := []byte(`
 terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
 terraform_0    | 
-terraform_0    | Error: Error applying plan:
+terraform_0    | fatal: Error applying plan fatal:
+terraform_0    | fatal: Error applying plan ignoring:
+...ignoring
+terraform_0    | failed: Error applying plan failed:
+terraform_0    | fatal: Error applying plan:
 terraform_0    | 
 terraform_0    | 1 error(s) occurred:
 terraform_0    | 
@@ -181,14 +185,14 @@ terraform_0    | * aws_security_group_rule.rules[0]: Error creating Security Gro
 terraform_0    | 
 terraform_0    | 
 terraform_0    | 
-terraform_0    | Error: apply: terraform exited with code 1
+terraform_0    | [31mError: apply: terraform exited with code 1
 `)
-	controlCode := "Error: "
+	controlCode := []string{"\u001B[31m", "fatal: ", "failed: "}
 
 	// expected outputs
-	expectedOutput := "terraform_0    | Error: Error applying plan:\nterraform_0    | Error: apply: terraform exited with code 1\n"
+	expectedOutput := "terraform_0    | fatal: Error applying plan fatal:\nterraform_0    | failed: Error applying plan failed:\nterraform_0    | fatal: Error applying plan:\nterraform_0    | \u001B[31mError: apply: terraform exited with code 1\n"
 	// test FilterTerraformLogs
-	output := FilterTerraformLogs(input, controlCode)
+	output := FilterStepLogs(input, controlCode...)
 
 	// check
 	if output != expectedOutput {

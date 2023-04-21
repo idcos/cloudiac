@@ -193,6 +193,11 @@ const (
 	DriftEventType = "drift_detection"
 	// 其他状态下，给 kafka 发送消息时 eventType 的固定值
 	DeployEventType = "deploy_execut"
+
+	TerraformRedError    = "\u001B[31m"
+	AnsibleFatal         = "fatal:"
+	AnsibleFailed        = "failed:"
+	TaskStepFailedStatus = "failed"
 )
 
 const (
