@@ -86,8 +86,9 @@ func (k *KafkaProducer) GenerateKafkaContent(task *models.Task, eventType, taskS
 
 // ConnAndSend 连接并发送消息
 func (k *KafkaProducer) ConnAndSend(msg []byte) (err error) {
-	logger := logs.Get().WithField("kafka", "SendResultToKafka")
+	logger := logs.Get().WithField("kafka", "KafkaProducer.ConnAndSend")
 
+	logger.Infof("send kafka message, bytes: %d", len(msg))
 	syncProducer, err := sarama.NewSyncProducer(k.Brokers, k.Conf)
 	if err != nil {
 		return err
@@ -101,7 +102,7 @@ func (k *KafkaProducer) ConnAndSend(msg []byte) (err error) {
 		return err
 	}
 	_ = syncProducer.Close()
-	logger.Info(fmt.Sprintf("KafkaProducer ConnAndSend send message success: %d %d", partition, offset))
+	logger.Info(fmt.Sprintf("send message success: %d %d", partition, offset))
 	return nil
 }
 
@@ -116,6 +117,7 @@ func InitKafkaProducerBuilder() {
 	conf.Producer.Retry.Max = 3
 	conf.Producer.RequiredAcks = sarama.WaitForLocal
 	conf.Producer.Return.Successes = true
+	conf.Producer.MaxMessageBytes = 1024 * 1024 * 10 // 10M
 	conf.Metadata.Full = true
 	conf.Version = sarama.V2_5_0_0
 	conf.Consumer.Offsets.AutoCommit.Enable = true

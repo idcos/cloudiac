@@ -161,6 +161,27 @@ func (Task) Log(c *ctx.GinRequest) {
 	//c.JSONResult(apps.TaskDetail(c.ServiceContext(), form))
 }
 
+// ErrorStepLog 获取任务步骤的错误日志
+// @Tags 任务管理
+// @Summary 获取任务步骤错误日志
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param id path string true "任务ID"
+// @router /tasks/{id}/error_log [get]
+// @Success 200 {object} ctx.JSONResult{result=string}
+func (Task) ErrorStepLog(c *ctx.GinRequest) {
+	form := forms.ErrorStepLogForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.ErrorStepLog(c.Service(), &form))
+
+}
+
 // Output Terraform Output
 // @Tags 环境
 // @Summary Terraform Output
