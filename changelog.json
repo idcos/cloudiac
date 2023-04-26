@@ -1,5 +1,30 @@
 [
   {
+  "version": "1.3.6",
+  "date": "20230323",
+  "content": {
+    "Fixes": [
+      "修复资源列表无法区分datasource和resource的问题",
+      "修复ansible软连接无法读取的问题"
+    ]
+   }
+  },
+  {
+    "version": "1.3.5",
+    "date": "20230208",
+    "content": {
+      "Features": [
+        "新增swaggerEnable参数支持开关swagger文档"
+      ],
+      "Fixes": [
+        "修复事件通知时分支显示 stack 分支名称"
+      ],
+      "Changed": [
+        "优化 checkOrgId 时数据库错误的报错"
+      ]
+    }
+  },
+  {
     "version": "1.3.4",
     "date": "20221224",
     "content": {
@@ -24,7 +49,7 @@
     "version": "1.3.2",
     "date": "20221215",
     "content": {
-      "Featues": [
+      "Features": [
         "默认使用的 terraform 版本更新为 1.2.4"
       ],
       "Fixes": [
