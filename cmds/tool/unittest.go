@@ -26,4 +26,3 @@ func (*InitDB) Execute(args []string) error {
 
 	return nil
 }
-

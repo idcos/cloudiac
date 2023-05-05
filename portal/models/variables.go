@@ -134,7 +134,7 @@ type VarGroupVariable struct {
 	Description string `json:"description" form:"description" `
 }
 
-//VariableGroupRel 变量组与实例的关联表
+// VariableGroupRel 变量组与实例的关联表
 type VariableGroupRel struct {
 	AbstractModel
 	VarGroupId Id     `json:"varGroupId" gorm:"size:32;not null"`

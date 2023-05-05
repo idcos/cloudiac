@@ -29,14 +29,14 @@ func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppres
 	c.AddLogField("action", fmt.Sprintf("update policy suppress %s", form.Id))
 	var (
 		sups []models.PolicySuppress
-		err e.Error
+		err  e.Error
 	)
 	_ = c.DB().Transaction(func(tx *db.Session) error {
 		tx = services.QueryWithOrgId(tx, c.OrgId)
 		for _, id := range form.AddSourceIds {
 			// 权限检查
 			if err := AllowAccessResource(tx, c, id); err != nil {
-				return  err
+				return err
 			}
 		}
 		// 创新新的屏蔽记录
@@ -94,7 +94,7 @@ func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppres
 				po.Enabled = false
 				if _, err := tx.Save(po); err != nil {
 					_ = tx.Rollback()
-					return  e.New(e.DBError, err)
+					return e.New(e.DBError, err)
 				}
 			}
 		}
@@ -102,9 +102,9 @@ func UpdatePolicySuppress(c *ctx.ServiceContext, form *forms.UpdatePolicySuppres
 		if er := models.CreateBatch(tx, sups); er != nil {
 			_ = tx.Rollback()
 			if e.IsDuplicate(er) {
-				return  e.New(e.PolicySuppressAlreadyExist, er, http.StatusBadRequest)
+				return e.New(e.PolicySuppressAlreadyExist, er, http.StatusBadRequest)
 			}
-			return  e.New(e.DBError, er)
+			return e.New(e.DBError, er)
 		}
 
 		return err

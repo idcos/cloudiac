@@ -249,7 +249,7 @@ func KillContainers(ctx context.Context, cids ...string) error {
 	return nil
 }
 
-//判断provider缓存目录是否存在，存在删除
+// 判断provider缓存目录是否存在，存在删除
 func DeleteProviderCache(host, source, version string) (ok bool, err error) {
 	fullPath := filepath.Join(host, source, version)
 	exist, err := PathExists(fullPath)

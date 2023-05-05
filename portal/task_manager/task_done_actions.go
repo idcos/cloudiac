@@ -24,7 +24,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//taskDoneProcessState 分析环境资源、outputs
+// taskDoneProcessState 分析环境资源、outputs
 func taskDoneProcessState(dbSess *db.Session, task *models.Task) error {
 	if bs, err := readIfExist(task.StateJsonPath()); err != nil {
 		return fmt.Errorf("read state json: %v", err)
@@ -242,7 +242,7 @@ func taskDoneProcessAutoDeploy(dbSess *db.Session, task *models.Task) error {
 
 	updateAttrs := models.Attrs{}
 
-	if task.Type == models.TaskTypeApply && task.Source == consts.TaskSourceAutoDeploy  {
+	if task.Type == models.TaskTypeApply && task.Source == consts.TaskSourceAutoDeploy {
 		// 环境执行定时部署任务后清空自动部署设置，确保后续的定时部署设置可以生效
 		// ttl 需要保留，做为重建环境的默认 ttl
 		updateAttrs["AutoDeployAt"] = nil

@@ -228,8 +228,8 @@ type PolicyErrorForm struct {
 
 type UpdatePolicySuppressForm struct {
 	BaseForm
-	Id           models.Id   `uri:"id" swaggerignore:"true" binding:"required,startswith=po-,max=32"`                                       // 策略ID
-	Reason       string      `json:"reason" example:"测试环境无需检测" binding:"omitempty,max=255"`                                                 // 屏蔽原因
+	Id           models.Id   `uri:"id" swaggerignore:"true" binding:"required,startswith=po-,max=32"`                         // 策略ID
+	Reason       string      `json:"reason" example:"测试环境无需检测" binding:"omitempty,max=255"`                                   // 屏蔽原因
 	AddSourceIds []models.Id `json:"addTargetIds" example:"env-c3ek0co6n88ldvq1n6ag" binding:"required,dive,required,max=32"` // 添加屏蔽源ID列表
 	//RmSourceIds  []models.Id `json:"rmTargetIds" example:"env-c3ek0co6n88ldvq1n6ag"`  // 删除屏蔽源ID列表
 }

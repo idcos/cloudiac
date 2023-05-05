@@ -1,6 +1,5 @@
 // Copyright (c) 2015-2023 CloudJ Technology Co., Ltd.
 
-
 // nolint:dupl
 package alicloud
 
@@ -47,7 +46,7 @@ func (a *Disk) BuildResource() *schema.Resource {
 	}
 }
 
-//nolint
+// nolint
 func (a *Disk) InitDefault() {
 	if a.Category == "" {
 		a.Category = diskDefaultCategory

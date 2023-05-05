@@ -129,7 +129,7 @@ func GetRootUserIds(query *db.Session) ([]models.Id, e.Error) {
 	return userIds, nil
 }
 
-//GetUserIdsByProjectUser 获取项目下的userid
+// GetUserIdsByProjectUser 获取项目下的userid
 func GetUserIdsByProjectUser(query *db.Session, projectId models.Id) ([]models.Id, e.Error) {
 	var userIds []models.Id
 	if err := query.Table(models.UserProject{}.TableName()).

@@ -152,7 +152,7 @@ func UpdateOrganization(c *ctx.ServiceContext, form *forms.UpdateOrganizationFor
 	return org, nil
 }
 
-//ChangeOrgStatus 修改组织启用/禁用状态
+// ChangeOrgStatus 修改组织启用/禁用状态
 func ChangeOrgStatus(c *ctx.ServiceContext, form *forms.DisableOrganizationForm) (*models.Organization, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("change org status %s", form.Id))
 	if !c.IsSuperAdmin && c.OrgId == "" {

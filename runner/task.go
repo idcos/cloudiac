@@ -413,9 +413,9 @@ func (t *Task) genTfvarsJsonFile(workspace string) error {
 }
 
 /*
-    network mirror 段添加了 exclude = ["registry.terraform.io/idcos/*"]，
-	因为 idcos 这个命名空间是我们之前特殊处理的，在 registry.terraform.io 上不存在（即使存在也不属于我们管理），
-	所以当启用 network mirror 的时候也需要排除掉。
+	    network mirror 段添加了 exclude = ["registry.terraform.io/idcos/*"]，
+		因为 idcos 这个命名空间是我们之前特殊处理的，在 registry.terraform.io 上不存在（即使存在也不属于我们管理），
+		所以当启用 network mirror 的时候也需要排除掉。
 */
 var terraformrcTpl = template.Must(template.New("").Parse(`provider_installation {
   filesystem_mirror {

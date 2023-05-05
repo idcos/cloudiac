@@ -6,10 +6,10 @@ import (
 	"cloudiac/portal/libs/ctx"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
-	"sort"
 	"unicode/utf8"
 
 	"github.com/hashicorp/consul/api"
@@ -344,7 +344,8 @@ func GetRunner(tags []string) (string, e.Error) {
 		}
 	}
 
-	_, ok := runnerTagsIndex.Load(tags_str); if !ok {
+	_, ok := runnerTagsIndex.Load(tags_str)
+	if !ok {
 		runnerTagsIndex.Store(tags_str, 0)
 	}
 
@@ -352,8 +353,8 @@ func GetRunner(tags []string) (string, e.Error) {
 		// 根据tags查出的runner轮循下发任务
 		v, _ := runnerTagsIndex.Load(tags_str)
 		rid, _ := v.(int)
-		if rid < len(validRunners) - 1{
-			runnerTagsIndex.Store(tags_str, rid + 1)
+		if rid < len(validRunners)-1 {
+			runnerTagsIndex.Store(tags_str, rid+1)
 		} else if rid >= len(validRunners) {
 			// runner数量减少时rid置0，避免索引超出范围
 			rid = 0

@@ -109,17 +109,17 @@ func (Project) Detail(c *ctx.GinRequest) {
 	c.JSONResult(apps.DetailProject(c.Service(), form))
 }
 
-//SearchProjectResources 搜索当前项目下所有的活跃资源列表
-//@Tags 项目
-//@Summary 搜索当前项目下所有的活跃资源列表
-//@Accept application/x-www-form-urlencoded
-//@Produce json
-//@Security AuthToken
-//@Param IaC-Org-Id header string true "组织ID"
-//@Param IaC-Project-Id header string true "项目ID"
-//@Param form query forms.SearchProjectResourceForm true "parameter"
-//@router /projects/resources [get]
-//@Success 200 {object} ctx.JSONResult{result=resps.OrgOrProjectResourcesResp}
+// SearchProjectResources 搜索当前项目下所有的活跃资源列表
+// @Tags 项目
+// @Summary 搜索当前项目下所有的活跃资源列表
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param form query forms.SearchProjectResourceForm true "parameter"
+// @router /projects/resources [get]
+// @Success 200 {object} ctx.JSONResult{result=resps.OrgOrProjectResourcesResp}
 func (Project) SearchProjectResources(c *ctx.GinRequest) {
 	form := forms.SearchProjectResourceForm{}
 	if err := c.Bind(&form); err != nil {
@@ -128,17 +128,17 @@ func (Project) SearchProjectResources(c *ctx.GinRequest) {
 	c.JSONResult(apps.SearchProjectResources(c.Service(), &form))
 }
 
-//SearchProjectResourcesFilters 搜索当前项目下所有的环境和provider列表
-//@Tags 项目
-//@Summary 搜索当前项目下所有的环境和provider列表
-//@Accept application/x-www-form-urlencoded
-//@Produce json
-//@Security AuthToken
-//@Param IaC-Org-Id header string true "组织ID"
-//@Param IaC-Project-Id header string true "项目ID"
-//@Param form query forms.SearchProjectResourceForm true "parameter"
-//@router /projects/resources/filter [get]
-//@Success 200 {object} ctx.JSONResult{result=resps.OrgEnvAndProviderResp}
+// SearchProjectResourcesFilters 搜索当前项目下所有的环境和provider列表
+// @Tags 项目
+// @Summary 搜索当前项目下所有的环境和provider列表
+// @Accept application/x-www-form-urlencoded
+// @Produce json
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param form query forms.SearchProjectResourceForm true "parameter"
+// @router /projects/resources/filter [get]
+// @Success 200 {object} ctx.JSONResult{result=resps.OrgEnvAndProviderResp}
 func (Project) SearchProjectResourcesFilters(c *ctx.GinRequest) {
 	form := forms.SearchProjectResourceForm{}
 	if err := c.Bind(&form); err != nil {

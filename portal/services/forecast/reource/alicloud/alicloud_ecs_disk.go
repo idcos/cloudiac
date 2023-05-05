@@ -18,7 +18,7 @@ type EcsDisk struct {
 	PerformanceLevel string `json:"performance_level"`
 }
 
-//nolint
+// nolint
 func (a *EcsDisk) BuildResource() *schema.Resource {
 	p := make([]schema.PriceRequest, 0)
 
@@ -46,7 +46,7 @@ func (a *EcsDisk) BuildResource() *schema.Resource {
 	}
 }
 
-//nolint
+// nolint
 func (a *EcsDisk) InitDefault() {
 	if a.Category == "" {
 		a.Category = diskDefaultCategory

@@ -163,7 +163,7 @@ func (c *GinRequest) FileDownloadResponse(data []byte, filename string, contentT
 	c.Context.Data(http.StatusOK, contentType, data)
 }
 
-//BindUriTagOnly 将 context.Params 绑定到标记了 uri 标签的 form 字段
+// BindUriTagOnly 将 context.Params 绑定到标记了 uri 标签的 form 字段
 func BindUriTagOnly(c *GinRequest, b interface{}) error {
 	if len(c.Params) == 0 {
 		return nil

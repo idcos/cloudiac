@@ -131,7 +131,7 @@ func createEnvCheck(c *ctx.ServiceContext, form *forms.CreateEnvForm) e.Error {
 	return nil
 }
 
-//nolint
+// nolint
 func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, destroyAt, deployAt *models.Time, session *db.Session) e.Error {
 	if !form.HasKey("tfVarsFile") {
 		form.TfVarsFile = tpl.TfVarsFile
@@ -1537,7 +1537,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, form.Triggers); err != nil {
 		c.Logger().Errorf("set webhook err :%v", err)
 	}
-	
+
 	return envDetail, nil
 }
 
@@ -1831,12 +1831,19 @@ func EnvStat(c *ctx.ServiceContext, form *forms.EnvParam) (interface{}, e.Error)
 
 	var results = make([]resps.EnvCostDetailResp, 0)
 	for _, envCost := range envCostList {
+		resInfo := GetCloudResourceInfo(envCost.Attrs, envCost.ResType)
+
+		instanceSpec := resInfo[consts.InstanceSpecKey]
+		subscriptionType := resInfo[consts.SubscriptionTypeKey]
+
 		results = append(results, resps.EnvCostDetailResp{
-			ResType:      envCost.ResType,
-			ResAttr:      GetResShowName(envCost.Attrs, envCost.Address),
-			InstanceId:   envCost.InstanceId,
-			CurMonthCost: envCost.CurMonthCost,
-			TotalCost:    envCost.TotalCost,
+			ResType:          envCost.ResType,
+			ResAttr:          GetResShowName(envCost.Attrs, envCost.Address),
+			InstanceId:       envCost.InstanceId,
+			CurMonthCost:     envCost.CurMonthCost,
+			TotalCost:        envCost.TotalCost,
+			InstanceSpec:     instanceSpec,
+			SubscriptionType: subscriptionType,
 		})
 	}
 
@@ -1867,4 +1874,74 @@ func getEnvSource(source string) (taskSource string, taskSourceSys string) {
 		taskSourceSys = source
 	}
 	return
+}
+
+func GetCloudResourceInfo(attrs map[string]interface{}, resType string) map[string]string {
+	var subscriptionFuncs = map[string]consts.SubscriptionFunc{
+		consts.AliCloudInstance: getAliyunInstanceSubscriptionType,
+		consts.AliCloudSLB:      getAliyunSlbSubscriptionType,
+		consts.AliCloudDisk:     getAliyunDiskSubscriptionType,
+		consts.AliCloudEIP:      getAliyunEipSubscriptionType,
+	}
+
+	result := make(map[string]string)
+
+	subscriptionTypeFunc, ok := subscriptionFuncs[resType]
+	if !ok {
+		return result
+	}
+
+	result[consts.InstanceSpecKey] = getStringValue(attrs, getSpecKey(resType))
+	result[consts.SubscriptionTypeKey] = subscriptionTypeFunc(attrs)
+
+	return result
+}
+
+func getSpecKey(resType string) string {
+	switch resType {
+	case consts.AliCloudInstance:
+		return consts.InstanceTypeKey
+	case consts.AliCloudSLB:
+		return consts.SpecificationKey
+	case consts.AliCloudDisk:
+		return consts.CategoryKey
+	case consts.AliCloudEIP:
+		return ""
+	default:
+		return ""
+	}
+}
+
+func getAliyunInstanceSubscriptionType(attrs map[string]interface{}) string {
+	if getStringValue(attrs, consts.ChargeTypeKey) == consts.PrePaid {
+		return "Subscription"
+	}
+
+	if getStringValue(attrs, consts.ChargeTypeKey) == consts.PostPaid {
+		if v, ok := attrs[consts.SpotStrategyKey]; ok && v.(string) != "" && v.(string) != "NoSpot" {
+			return "Spot"
+		}
+		return "PayAsYouGo"
+	}
+
+	return ""
+}
+
+func getAliyunSlbSubscriptionType(attrs map[string]interface{}) string {
+	return getStringValue(attrs, consts.PaymentTypeKey)
+}
+
+func getAliyunDiskSubscriptionType(attrs map[string]interface{}) string {
+	return getStringValue(attrs, consts.PaymentTypeKey)
+}
+
+func getAliyunEipSubscriptionType(attrs map[string]interface{}) string {
+	return getStringValue(attrs, consts.PaymentTypeKey)
+}
+
+func getStringValue(attrs map[string]interface{}, key string) string {
+	if v, ok := attrs[key]; ok {
+		return v.(string)
+	}
+	return ""
 }

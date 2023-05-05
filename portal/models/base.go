@@ -176,7 +176,7 @@ func (t Time) MarshalJSON() ([]byte, error) {
 }
 
 func (Time) Parse(s string) (t Time, err error) {
-	if err = t.UnmarshalJSON([]byte(fmt.Sprintf(`"%s"`,s))); err != nil {
+	if err = t.UnmarshalJSON([]byte(fmt.Sprintf(`"%s"`, s))); err != nil {
 		return t, err
 	}
 	return t, nil

@@ -225,7 +225,7 @@ func QueryPolicyResult(query *db.Session, taskId models.Id) *db.Session {
 	return q
 }
 
-//GetMirrorScanTask 查找部署任务对应的扫描任务
+// GetMirrorScanTask 查找部署任务对应的扫描任务
 func GetMirrorScanTask(query *db.Session, taskId models.Id) (*models.ScanTask, e.Error) {
 	t := models.ScanTask{}
 	if err := query.Where("mirror = 1 AND mirror_task_id = ?", taskId).First(&t); err != nil {

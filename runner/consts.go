@@ -17,7 +17,7 @@ provider plugin 的查找逻辑:
 - https://www.terraform.io/docs/cli/config/config-file.html#provider-plugin-cache
 */
 
-/////
+// ///
 // 以下定义的是 runner 启动任务后容器内部的路径，直接以常量配置即可
 const (
 	ContainerWorkspace = "/cloudiac/workspace"
@@ -41,8 +41,8 @@ const (
 	TerraformrcFileName = "terraformrc"
 	EnvironmentFile     = "environment"
 
-	CloudIacTfFile   = "_cloudiac.tf"
-	CloudIacPlayVars = "_cloudiac_play_vars.yml"
+	CloudIacTfFile     = "_cloudiac.tf"
+	CloudIacPlayVars   = "_cloudiac_play_vars.yml"
 	CloudIacTfvarsJson = "_cloudiac.tfvars.json"
 
 	CloudIacAnsibleRequirements = "requirements.yml"

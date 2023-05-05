@@ -6,9 +6,10 @@ import (
 	"cloudiac/portal/consts"
 	"cloudiac/portal/services/forecast/schema"
 	"fmt"
-	"github.com/tidwall/gjson"
 	"path"
 	"strings"
+
+	"github.com/tidwall/gjson"
 )
 
 const DEFAULT_ALICLOUD_REGION = "cn-beijing"

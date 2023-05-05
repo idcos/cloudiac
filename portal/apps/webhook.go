@@ -131,7 +131,7 @@ type CreateWebhookTaskParam struct {
 	Source   string
 }
 
-//nolint
+// nolint
 func CreateWebhookTask(tx *db.Session, param CreateWebhookTaskParam) error {
 	env := param.Env
 	// 计算变量列表

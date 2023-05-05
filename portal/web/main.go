@@ -14,10 +14,11 @@ import (
 	"cloudiac/portal/web/middleware"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
+	"io"
+
 	"github.com/gin-gonic/gin"
 	gs "github.com/swaggo/gin-swagger"
 	"github.com/swaggo/gin-swagger/swaggerFiles"
-	"io"
 )
 
 var logger = logs.Get()

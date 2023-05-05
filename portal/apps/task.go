@@ -445,9 +445,11 @@ func GetResourcesGraph(rs []services.Resource, dimension string) interface{} {
 
 // GetResShowName
 // 建立规则库，通过各种规则确定资源的主要字段或者展示模板
-//		规则示例1: 如果资源的属性中有 public_ip 字段，则展示 public_ip;
-//    	规则示例2: 如果资源的属性中有 name 字段，则展示 name;
-//    	规则示例3: 如果资源的属性中有 tag 字段，则展示 name(tag1,tag2);
+//
+//			规则示例1: 如果资源的属性中有 public_ip 字段，则展示 public_ip;
+//	   	规则示例2: 如果资源的属性中有 name 字段，则展示 name;
+//	   	规则示例3: 如果资源的属性中有 tag 字段，则展示 name(tag1,tag2);
+//
 // 不匹配规则库时展示: resource address(id), 如: "module1.alicloud_instance.web(i-xxxxxxx)";
 func GetResShowName(attrs map[string]interface{}, addr string) string {
 	get := func(key string) (string, bool) {

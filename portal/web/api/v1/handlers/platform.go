@@ -145,5 +145,3 @@ func (Platform) PlatformOperationLog(c *ctx.GinRequest) {
 	}
 	c.JSONResult(apps.PlatformOperationLog(c.Service(), &form))
 }
-
-

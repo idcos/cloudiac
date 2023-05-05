@@ -36,7 +36,7 @@ type User struct {
 	Name string `json:"name"`
 }
 
-//PullRequest gitea
+// PullRequest gitea
 type PullRequest struct {
 	Id     int  `json:"id"`
 	Base   Base `json:"base"`
@@ -44,12 +44,12 @@ type PullRequest struct {
 	Number int  `json:"number"`
 }
 
-//Base gitea
+// Base gitea
 type Base struct {
 	Ref string `json:"ref"`
 }
 
-//Head gitea
+// Head gitea
 type Head struct {
 	Ref string `json:"ref"`
 }

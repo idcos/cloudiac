@@ -17,9 +17,9 @@ func getMongodbInstanceRegistryItem() *schema.RegistryItem {
 
 func NewMongodbInstance(d *schema.ResourceData) *schema.Resource {
 	a := &alicloud.MongodbInstance{
-		Address:       d.Address,
-		Provider:      d.ProviderName,
-		Region:        d.Region,
+		Address:         d.Address,
+		Provider:        d.ProviderName,
+		Region:          d.Region,
 		DBInstanceClass: d.Get("db_instance_class").String(),
 	}
 

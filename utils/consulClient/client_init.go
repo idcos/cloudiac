@@ -5,6 +5,7 @@ package consulClient
 import (
 	"cloudiac/common"
 	"cloudiac/configs"
+
 	consulapi "github.com/hashicorp/consul/api"
 )
 

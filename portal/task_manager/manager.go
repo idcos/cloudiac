@@ -446,6 +446,7 @@ func (m *TaskManager) runTask(ctx context.Context, task models.Tasker) error {
 }
 
 // doRunTask, startErr 只在任务启动出错时(执行步骤前出错)才会返回错误
+//
 //nolint:cyclop
 func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startErr error) {
 	logger := m.logger.WithField("taskId", task.Id)
@@ -995,7 +996,8 @@ func (m *TaskManager) stop() {
 }
 
 // buildRunTaskReq 基于任务信息构建一个 RunTaskReq 对象。
-// 	注意这里不会设置 step 相关的数据，step 相关字段在 StartTaskStep() 方法中设置
+//
+//	注意这里不会设置 step 相关的数据，step 相关字段在 StartTaskStep() 方法中设置
 func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunTaskReq, err error) {
 	runnerEnv := runner.TaskEnv{
 		Id:              string(task.EnvId),
@@ -1209,6 +1211,7 @@ func deployOrDestroy(env *models.Env, lg *logrus.Entry, dbSess *db.Session, op s
 //
 
 // doRunScanTask, startErr 只在任务启动出错时(执行步骤前出错)才会返回错误
+//
 //nolint:cyclop
 func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) (startErr error) {
 	logger := m.logger.WithField("taskId", task.Id)

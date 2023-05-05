@@ -13,18 +13,20 @@ type Vcs struct {
 	models.Vcs
 }
 
-
 // 不定义 MarshalJSON() 方法，因为一旦定义了该结构体就无法组合使用了，
 // 会覆盖 MarshalJSON() 方法以导致组合的其他字段不输出。 比如定义结构体:
-// type VcsWithExt struct {
-// 		models.Vcs
-//		Ext	string
-// }
+//
+//	type VcsWithExt struct {
+//			models.Vcs
+//			Ext	string
+//	}
+//
 // 当我们调用 json.Marshal(VcsWithExt{}) 时 Ext 字段不会输出，
 // 因为直接调用了 models.Vcs.MarshalJSON() 方法。
-// func (v Vcs) MarshalJSON() ([]byte, error) {
-// 	return json.Marshal(v.Vcs.Desensitize())
-// }
+//
+//	func (v Vcs) MarshalJSON() ([]byte, error) {
+//		return json.Marshal(v.Vcs.Desensitize())
+//	}
 func (v Vcs) Desensitize() Vcs {
 	return Vcs{v.Vcs.Desensitize()}
 }
