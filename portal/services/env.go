@@ -652,9 +652,7 @@ func monthEnvCostList(tx *db.Session, id models.Id, isCurMonth bool) (map[string
 		AND iac_resource.address NOT LIKE 'data.%'
 		AND iac_bill.cycle = DATE_FORMAT( CURDATE(), "%Y-%m" )
 	GROUP BY
-		instance_id
-	ORDER BY
-		res_type ASC;
+		instance_id;
 	*/
 
 	query := tx.Model(&models.Resource{}).Select(`iac_resource.attrs as attrs, iac_resource.address as address, iac_resource.type as res_type, iac_bill.instance_id as instance_id, pretax_amount as cur_month_cost`)
@@ -670,7 +668,6 @@ func monthEnvCostList(tx *db.Session, id models.Id, isCurMonth bool) (map[string
 	}
 
 	query = query.Group("instance_id")
-	query = query.Order("res_type ASC")
 
 	var results []RawEnvCostDetail
 	if err := query.Find(&results); err != nil {
