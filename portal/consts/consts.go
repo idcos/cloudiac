@@ -273,7 +273,7 @@ const (
 	SubscriptionTypeKey = "subscription_type"
 	InstanceSpecKey     = "instance_spec"
 	AliCloudInstance    = "alicloud_instance"
-	AliCloudSLB         = "alicloud_slb"
+	AliCloudSLB         = "alicloud_slb_load_balancer"
 	AliCloudDisk        = "alicloud_disk"
 	AliCloudEIP         = "alicloud_eip_address"
 )
