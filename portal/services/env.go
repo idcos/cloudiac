@@ -6,10 +6,10 @@ import (
 	"cloudiac/portal/libs/ctx"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
-	"sort"
 	"unicode/utf8"
 
 	"github.com/hashicorp/consul/api"
@@ -344,7 +344,8 @@ func GetRunner(tags []string) (string, e.Error) {
 		}
 	}
 
-	_, ok := runnerTagsIndex.Load(tags_str); if !ok {
+	_, ok := runnerTagsIndex.Load(tags_str)
+	if !ok {
 		runnerTagsIndex.Store(tags_str, 0)
 	}
 
@@ -352,8 +353,8 @@ func GetRunner(tags []string) (string, e.Error) {
 		// 根据tags查出的runner轮循下发任务
 		v, _ := runnerTagsIndex.Load(tags_str)
 		rid, _ := v.(int)
-		if rid < len(validRunners) - 1{
-			runnerTagsIndex.Store(tags_str, rid + 1)
+		if rid < len(validRunners)-1 {
+			runnerTagsIndex.Store(tags_str, rid+1)
 		} else if rid >= len(validRunners) {
 			// runner数量减少时rid置0，避免索引超出范围
 			rid = 0
@@ -635,23 +636,25 @@ func EnvCostList(tx *db.Session, id models.Id) ([]RawEnvCostDetail, e.Error) {
 
 func monthEnvCostList(tx *db.Session, id models.Id, isCurMonth bool) (map[string]*RawEnvCostDetail, e.Error) {
 	/* sample sql:
-	select
-		iac_resource.attrs as attrs,
-		iac_resource.address as address,
-		iac_resource.type as res_type,
-		iac_bill.instance_id as instance_id,
-		pretax_amount as cur_month_cost
-	from
+		SELECT
+		iac_resource.attrs AS attrs,
+		iac_resource.address AS address,
+		iac_resource.type AS res_type,
+		iac_bill.instance_id AS instance_id,
+		pretax_amount AS cur_month_cost
+	FROM
 		iac_resource
-	JOIN iac_bill ON
-		iac_bill.instance_id = iac_resource.res_id
-	JOIN iac_env ON
-		iac_env.id = iac_resource.env_id
-		and iac_resource.task_id = iac_env.last_res_task_id
-	where
-		iac_resource.env_id  = 'env-c8u10aosm56kh90t588g'
-		and iac_resource.address NOT LIKE 'data.%'
-		and iac_bill.cycle = DATE_FORMAT(CURDATE(), "%Y-%m")
+		JOIN iac_bill ON iac_bill.instance_id = iac_resource.res_id
+		JOIN iac_env ON iac_env.id = iac_resource.env_id
+		AND iac_resource.task_id = iac_env.last_res_task_id
+	WHERE
+		iac_resource.env_id = 'env-cgvlalat467j7gq5r7tg'
+		AND iac_resource.address NOT LIKE 'data.%'
+		AND iac_bill.cycle = DATE_FORMAT( CURDATE(), "%Y-%m" )
+	GROUP BY
+		instance_id
+	ORDER BY
+		res_type ASC;
 	*/
 
 	query := tx.Model(&models.Resource{}).Select(`iac_resource.attrs as attrs, iac_resource.address as address, iac_resource.type as res_type, iac_bill.instance_id as instance_id, pretax_amount as cur_month_cost`)
@@ -665,6 +668,9 @@ func monthEnvCostList(tx *db.Session, id models.Id, isCurMonth bool) (map[string
 	} else {
 		query = query.Where(`iac_bill.cycle != DATE_FORMAT(CURDATE(), "%Y-%m")`)
 	}
+
+	query = query.Group("instance_id")
+	query = query.Order("res_type ASC")
 
 	var results []RawEnvCostDetail
 	if err := query.Find(&results); err != nil {

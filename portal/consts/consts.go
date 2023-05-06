@@ -260,3 +260,22 @@ var (
 		"stack.create":   "创建stack",
 	}
 )
+
+const (
+	InstanceTypeKey     = "instance_type"
+	ChargeTypeKey       = "instance_charge_type"
+	SpotStrategyKey     = "spot_strategy"
+	SpecificationKey    = "specification"
+	CategoryKey         = "category"
+	PaymentTypeKey      = "payment_type"
+	PrePaid             = "PrePaid"
+	PostPaid            = "PostPaid"
+	SubscriptionTypeKey = "subscription_type"
+	InstanceSpecKey     = "instance_spec"
+	AliCloudInstance    = "alicloud_instance"
+	AliCloudSLB         = "alicloud_slb_load_balancer"
+	AliCloudDisk        = "alicloud_disk"
+	AliCloudEIP         = "alicloud_eip_address"
+)
+
+type SubscriptionFunc func(attrs map[string]interface{}) string
