@@ -24,6 +24,7 @@ type EnvCostDetailResp struct {
 	TotalCost        float32 `json:"totalCost"`
 	InstanceSpec     string  `json:"instanceSpec"`
 	SubscriptionType string  `json:"subscriptionType"`
+	Region           string  `json:"region"`
 }
 
 type EnvStatisticsResp struct {
