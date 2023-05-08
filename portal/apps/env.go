@@ -1901,7 +1901,7 @@ func GetCloudResourceInfo(attrs map[string]interface{}, resType string) map[stri
 	return result
 }
 
-func getRegionValue(availabilityZone string) string {
+func getRegionFromAvailabilityZone(availabilityZone string) string {
 	// find the index position of the last "-"
 	lastDashIndex := strings.LastIndex(availabilityZone, "-")
 	// if "-" is not found, return the original string directly
