@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/robfig/cron/v3"
 
@@ -1835,6 +1836,7 @@ func EnvStat(c *ctx.ServiceContext, form *forms.EnvParam) (interface{}, e.Error)
 
 		instanceSpec := resInfo[consts.InstanceSpecKey]
 		subscriptionType := resInfo[consts.SubscriptionTypeKey]
+		region := resInfo[consts.RegionKey]
 
 		results = append(results, resps.EnvCostDetailResp{
 			ResType:          envCost.ResType,
@@ -1844,6 +1846,7 @@ func EnvStat(c *ctx.ServiceContext, form *forms.EnvParam) (interface{}, e.Error)
 			TotalCost:        envCost.TotalCost,
 			InstanceSpec:     instanceSpec,
 			SubscriptionType: subscriptionType,
+			Region:           region,
 		})
 	}
 
@@ -1891,10 +1894,54 @@ func GetCloudResourceInfo(attrs map[string]interface{}, resType string) map[stri
 		return result
 	}
 
+	result[consts.RegionKey] = getRegionFromAvailabilityZone(getStringValue(attrs, getZoneKey(resType)))
 	result[consts.InstanceSpecKey] = getStringValue(attrs, getSpecKey(resType))
 	result[consts.SubscriptionTypeKey] = subscriptionTypeFunc(attrs)
 
 	return result
+}
+
+func getRegionFromAvailabilityZone(availabilityZone string) string {
+	// find the index position of the last "-"
+	lastDashIndex := strings.LastIndex(availabilityZone, "-")
+	// if "-" is not found, return the original string directly
+	if lastDashIndex == -1 {
+		return availabilityZone
+	}
+
+	// intercept the content after the last "-"
+	suffix := availabilityZone[lastDashIndex+1:]
+
+	// whether there is a number after the last "-"
+	numLen := 0
+	for _, c := range suffix {
+		if unicode.IsDigit(c) {
+			numLen++
+		} else {
+			break
+		}
+	}
+
+	// if it contains a number, return the content before the last "-" and the number part
+	if numLen > 0 {
+		return availabilityZone[:lastDashIndex+1] + suffix[:numLen]
+	}
+
+	// if it does not contain a number, directly return the content before the last "-"
+	return availabilityZone[:lastDashIndex]
+}
+
+func getZoneKey(resType string) string {
+	switch resType {
+	case consts.AliCloudInstance, consts.AliCloudDisk:
+		return consts.ZoneKey
+	case consts.AliCloudSLB:
+		return consts.SLBZoneKey
+	case consts.AliCloudEIP:
+		return ""
+	default:
+		return ""
+	}
 }
 
 func getSpecKey(resType string) string {

@@ -262,6 +262,8 @@ var (
 )
 
 const (
+	ZoneKey             = "availability_zone"
+	SLBZoneKey          = "master_zone_id"
 	InstanceTypeKey     = "instance_type"
 	ChargeTypeKey       = "instance_charge_type"
 	SpotStrategyKey     = "spot_strategy"
@@ -272,6 +274,7 @@ const (
 	PostPaid            = "PostPaid"
 	SubscriptionTypeKey = "subscription_type"
 	InstanceSpecKey     = "instance_spec"
+	RegionKey           = "region"
 	AliCloudInstance    = "alicloud_instance"
 	AliCloudSLB         = "alicloud_slb_load_balancer"
 	AliCloudDisk        = "alicloud_disk"
