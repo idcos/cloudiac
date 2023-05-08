@@ -1,7 +1,18 @@
 # Releases
 
 ------
-## v1.3.5 20230208
+## v1.3.7 20230426
+**Features**
+
+- 新增iac部署日志的错误信息接口
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v1.3.7](https://github.com/idcos/cloudiac/releases/tag/v1.3.7)
+
+
+------
+## v1.3.6 20230323
 **Fixes**
 
 - 修复资源列表无法区分datasource和resource的问题
@@ -9,7 +20,7 @@
 
 
 
-**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v1.3.5](https://github.com/idcos/cloudiac/releases/tag/v1.3.5)
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v1.3.6](https://github.com/idcos/cloudiac/releases/tag/v1.3.6)
 
 
 ------

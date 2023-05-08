@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.3.7",
+    "date": "20230426",
+    "content": {
+      "Features": [
+        "新增iac部署日志的错误信息接口"
+      ]
+    }
+  },
+  {
   "version": "1.3.6",
   "date": "20230323",
   "content": {

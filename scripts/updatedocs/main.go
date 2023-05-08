@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	version    = "v1.3.6"
+	version    = "v1.3.7"
 	webVersion = "v1.3.6"
 )
 
