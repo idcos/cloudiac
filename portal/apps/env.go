@@ -1894,7 +1894,7 @@ func GetCloudResourceInfo(attrs map[string]interface{}, resType string) map[stri
 		return result
 	}
 
-	result[consts.RegionKey] = getRegionValue(getStringValue(attrs, getZoneKey(resType)))
+	result[consts.RegionKey] = getRegionFromAvailabilityZone(getStringValue(attrs, getZoneKey(resType)))
 	result[consts.InstanceSpecKey] = getStringValue(attrs, getSpecKey(resType))
 	result[consts.SubscriptionTypeKey] = subscriptionTypeFunc(attrs)
 
