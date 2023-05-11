@@ -9,6 +9,7 @@ import (
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 	"cloudiac/portal/services/vcsrv"
 	"cloudiac/utils"
@@ -37,10 +38,27 @@ func SearchToken(c *ctx.ServiceContext, form *forms.SearchTokenForm) (interface{
 		return nil, e.New(e.DBError, err)
 	}
 
+	var tokenResp = make([]resps.TokenResp, 0)
+	for _, token := range tokens {
+		tokenResp = append(tokenResp, resps.TokenResp{
+			TimedModel:  token.TimedModel,
+			Name:        token.Name,
+			Type:        token.Type,
+			OrgId:       token.OrgId,
+			Role:        token.Role,
+			Status:      token.Status,
+			ExpiredAt:   token.ExpiredAt,
+			Description: token.Description,
+			CreatorId:   token.CreatorId,
+			EnvId:       token.EnvId,
+			Action:      token.Action,
+		})
+	}
+
 	return &page.PageResp{
 		Total:    p.MustTotal(),
 		PageSize: p.Size,
-		List:     tokens,
+		List:     tokenResp,
 	}, nil
 }
 
@@ -61,6 +79,7 @@ func CreateToken(c *ctx.ServiceContext, form *forms.CreateTokenForm) (*models.To
 	}
 
 	token, err := services.CreateToken(c.DB(), models.Token{
+		Name:        form.Name,
 		Key:         string(tokenStr),
 		Type:        form.Type,
 		OrgId:       c.OrgId,
@@ -81,13 +100,17 @@ func CreateToken(c *ctx.ServiceContext, form *forms.CreateTokenForm) (*models.To
 	return token, nil
 }
 
-func UpdateToken(c *ctx.ServiceContext, form *forms.UpdateTokenForm) (token *models.Token, err e.Error) {
+func UpdateToken(c *ctx.ServiceContext, form *forms.UpdateTokenForm) (tokenResp *resps.TokenResp, err e.Error) {
 	c.AddLogField("action", fmt.Sprintf("update token %s", form.Id))
 	if form.Id == "" {
 		return nil, e.New(e.BadRequest, fmt.Errorf("missing 'id'"))
 	}
 
 	attrs := models.Attrs{}
+	if form.HasKey("name") {
+		attrs["name"] = form.Name
+	}
+
 	if form.HasKey("status") {
 		attrs["status"] = form.Status
 	}
@@ -96,14 +119,27 @@ func UpdateToken(c *ctx.ServiceContext, form *forms.UpdateTokenForm) (token *mod
 		attrs["description"] = form.Description
 	}
 
-	token, err = services.UpdateToken(c.DB(), form.Id, attrs)
+	token, err := services.UpdateToken(c.DB(), form.Id, attrs)
 	if err != nil && err.Code() == e.TokenAliasDuplicate {
 		return nil, e.New(err.Code(), err, http.StatusBadRequest)
 	} else if err != nil {
 		c.Logger().Errorf("error update token, err %s", err)
 		return nil, err
 	}
-	return
+
+	return &resps.TokenResp{
+		TimedModel:  token.TimedModel,
+		Name:        token.Name,
+		Type:        token.Type,
+		OrgId:       token.OrgId,
+		Role:        token.Role,
+		Status:      token.Status,
+		ExpiredAt:   token.ExpiredAt,
+		Description: token.Description,
+		CreatorId:   token.CreatorId,
+		EnvId:       token.EnvId,
+		Action:      token.Action,
+	}, nil
 }
 
 func DeleteToken(c *ctx.ServiceContext, form *forms.DeleteTokenForm) (result interface{}, re e.Error) {

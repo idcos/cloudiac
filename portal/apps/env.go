@@ -410,6 +410,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		OrgId:     c.OrgId,
 		ProjectId: c.ProjectId,
 		CreatorId: c.UserId,
+		TokenId:   c.ApiTokenId,
 		TplId:     form.TplId,
 
 		Name:        form.Name,
@@ -476,6 +477,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
 		Targets:         targets,
 		CreatorId:       c.UserId,
+		TokenId:         c.ApiTokenId,
 		KeyId:           env.KeyId,
 		Variables:       vars,
 		AutoApprove:     env.AutoApproval,
@@ -633,6 +635,11 @@ func PopulateLastTask(query *db.Session, env *models.EnvDetail) *models.EnvDetai
 				env.Operator = operator.Name
 				env.OperatorId = lastTask.CreatorId
 			}
+
+			if token, _ := services.GetApiTokenByIdRaw(query, lastTask.TokenId); token != nil {
+				env.TokenName = token.Name
+			}
+
 		}
 	}
 	return env
@@ -1494,6 +1501,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
 		Targets:         targets,
 		CreatorId:       c.UserId,
+		TokenId:         c.ApiTokenId,
 		KeyId:           env.KeyId,
 		Variables:       vars,
 		AutoApprove:     env.AutoApproval,
