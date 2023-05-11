@@ -169,6 +169,7 @@ type EnvDetail struct {
 
 	MonthCost float32 `json:"monthCost"` // 环境月度成本
 	IsBilling bool    `json:"isBilling"` // 是否开启账单采集
+	EnvTags   []Tag   `json:"envTags" gorm:"-"`
 }
 
 func (c *EnvDetail) UpdateEnvPolicyStatus() {

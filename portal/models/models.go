@@ -246,5 +246,7 @@ func Init(migrate bool) {
 
 	autoMigrate(&UserOperationLog{}, sess)
 
+	autoMigrate(&EnvTag{}, sess)
+
 	dbMigrate(sess)
 }

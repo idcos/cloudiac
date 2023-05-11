@@ -290,6 +290,11 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/envs/:id/unlock", ac("envs", "unlock"), w(handlers.EnvUnLock))
 	g.GET("/envs/:id/unlock/confirm", ac(), w(handlers.EnvUnLockConfirm))
 
+	// 标签管理
+	g.PUT("/envs/:id/tags/:tagId", ac(), w(handlers.UpdateEnvTags))
+	g.POST("/envs/:id/tags", ac(), w(handlers.CreateEnvTags))
+	g.DELETE("/envs/:id/tags/:tagId", ac(), w(handlers.DeleteEnvTags))
+
 	// 环境概览统计数据
 	g.GET("/envs/:id/statistics", ac(), w(handlers.Env{}.EnvStat))
 

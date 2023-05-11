@@ -467,6 +467,11 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, err
 	}
 
+	// 创建环境标签
+	if err := createEnvTags(tx, form.EnvTags, env.Id, form.Source); err != nil {
+		return nil, err
+	}
+
 	// 来源：手动触发、外部调用
 	taskSource, taskSourceSys := getEnvSource(form.Source)
 
@@ -598,6 +603,9 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 
 		// 是否开启费用采集
 		env.IsBilling = enabledBill
+
+		// 查询环境标签
+		env.EnvTags, _ = services.SearchTag(c.DB(), env.Id, consts.Env)
 	}
 
 	return page.PageResp{
@@ -1036,11 +1044,14 @@ func EnvDetail(c *ctx.ServiceContext, form forms.DetailEnvForm) (*models.EnvDeta
 	// 是否开启费用采集
 	envDetail.IsBilling = enabledBill
 
+	// 查询环境标签
+	envDetail.EnvTags, _ = services.SearchTag(c.DB(), envDetail.Id, consts.ScopeEnv)
+
 	return envDetail, nil
 }
 
 // EnvDeploy 创建新部署任务
-// 任务类型：plan, apply, destroy
+// 任务类型：plan, apply, destroy,
 func EnvDeploy(c *ctx.ServiceContext, form *forms.DeployEnvForm) (ret *models.EnvDetail, er e.Error) {
 	_ = c.DB().Transaction(func(tx *db.Session) error {
 		ret, er = envDeploy(c, tx, form)
@@ -1537,7 +1548,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, form.Triggers); err != nil {
 		c.Logger().Errorf("set webhook err :%v", err)
 	}
-	
+
 	return envDetail, nil
 }
 
@@ -1867,4 +1878,27 @@ func getEnvSource(source string) (taskSource string, taskSourceSys string) {
 		taskSourceSys = source
 	}
 	return
+}
+
+func createEnvTags(session *db.Session, envTags []forms.EnvTag, objectId models.Id, source string) e.Error {
+	if objectId == "" {
+		return e.New(http.StatusBadRequest)
+	}
+
+	newTags := make([]models.Tag, len(envTags))
+	for _, v := range envTags {
+		newTags = append(newTags, models.Tag{
+			Key:        v.Key,
+			Value:      v.Value,
+			Source:     source,
+			ObjectId:   objectId,
+			ObjectType: consts.Env,
+		})
+	}
+
+	if err := services.CreateTag(session, newTags); err != nil {
+		return err
+	}
+
+	return nil
 }

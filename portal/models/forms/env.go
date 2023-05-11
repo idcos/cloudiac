@@ -16,6 +16,11 @@ type envDeployTtlForm struct {
 	DeployAt string `form:"deployAt" json:"deployAt" binding:""` // 自动部署时间(时间戳)
 }
 
+type EnvTag struct {
+	Key        string `json:"key"`
+	Value      string `json:"value"`
+}
+
 type CreateEnvForm struct {
 	BaseForm
 	envDestroyTtlForm
@@ -26,7 +31,8 @@ type CreateEnvForm struct {
 	OneTime  bool      `form:"oneTime" json:"oneTime" binding:""`                                            // 一次性环境标识
 	Triggers []string  `form:"triggers" json:"triggers" binding:"omitempty,dive,required,oneof=commit prmr"` // 启用触发器，触发器：commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
 
-	Tags string `form:"tags" json:"tags" binding:"max=255"` // 环境的 tags，多个 tag 以 "," 分隔
+	Tags    string   `form:"tags" json:"tags" binding:"max=255"` // 环境的 tags，多个 tag 以 "," 分隔
+	EnvTags []EnvTag `json:"envTags" form:"envTags" `            // 环境标签
 
 	AutoApproval    bool       `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"` // 是否自动审批
 	StopOnViolation bool       `form:"stopOnViolation" json:"stopOnViolation" enums:"true,false"`       // 合规不通过是否中止任务
@@ -95,6 +101,7 @@ type UpdateEnvForm struct {
 	RunnerId    string    `form:"runnerId" json:"runnerId" binding:"max=32"`                   // 环境默认部署通道
 	Archived    bool      `form:"archived" json:"archived" enums:"true,false"`                 // 归档状态，默认返回未归档环境
 	Tags        string    `form:"tags" json:"tags" binding:"max=255"`                          // 环境的 tags，多个 tag 以 "," 分隔
+	EnvTags     []EnvTag  `json:"envTags" form:"envTags" `                                     // 环境标签
 	StepTimeout int       `form:"stepTimeout" json:"stepTimeout" binding:""`                   // 部署超时时间（单位：秒）
 
 	AutoApproval    bool `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"` // 是否自动审批
@@ -165,6 +172,9 @@ type DeployEnvForm struct {
 
 	// 部署plan任务时生效，进行漂移检测时，从最后一次任务获取配置信息进行检测
 	IsDriftTask bool `json:"isDriftTask" form:"isDriftTask" `
+
+	// 环境标签
+	EnvTags []EnvTag `json:"envTags" form:"envTags" `
 }
 
 type ArchiveEnvForm struct {
@@ -262,6 +272,27 @@ type EnvUnLockForm struct {
 }
 
 type EnvUnLockConfirmForm struct {
+	BaseForm
+
+	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
+}
+
+type UpdateTagForm struct {
+	BaseForm
+
+	Id    models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
+	TagId models.Id `uri:"tagId" json:"tagId"`
+	Value string    `json:"value" form:"value" `
+}
+
+type DeleteTagForm struct {
+	BaseForm
+
+	Id    models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
+	TagId models.Id `uri:"tagId" json:"tagId"`
+}
+
+type CreateTagForm struct {
 	BaseForm
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
