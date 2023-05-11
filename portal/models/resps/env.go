@@ -17,11 +17,14 @@ type EnvCostTrendStatResp struct {
 }
 
 type EnvCostDetailResp struct {
-	ResType      string  `json:"resType"`
-	ResAttr      string  `json:"resAttr"`
-	InstanceId   string  `json:"instanceId"` // 实例id
-	CurMonthCost float32 `json:"curMonthCost"`
-	TotalCost    float32 `json:"totalCost"`
+	ResType          string  `json:"resType"`
+	ResAttr          string  `json:"resAttr"`
+	InstanceId       string  `json:"instanceId"` // 实例id
+	CurMonthCost     float32 `json:"curMonthCost"`
+	TotalCost        float32 `json:"totalCost"`
+	InstanceSpec     string  `json:"instanceSpec"`
+	SubscriptionType string  `json:"subscriptionType"`
+	Region           string  `json:"region"`
 }
 
 type EnvStatisticsResp struct {
