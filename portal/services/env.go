@@ -127,6 +127,9 @@ func QueryEnvDetail(dbSess *db.Session, orgId, projectId models.Id) *db.Session 
 	// 密钥名称
 	query = query.Joins("left join iac_key as k on k.id = iac_env.key_id").
 		LazySelectAppend("k.name as key_name")
+	// Token 名称
+	query = query.Joins("left join iac_token as it on it.id = iac_env.token_id").
+		LazySelectAppend("it.name as token_name")
 	// 资源是否发生漂移
 	query = query.Joins("LEFT JOIN (" +
 		"  SELECT iac_resource.task_id FROM iac_resource_drift " +
