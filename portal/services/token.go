@@ -162,3 +162,14 @@ func GetApiTokenByToken(dbSess *db.Session, token string) (*models.Token, e.Erro
 	}
 	return tokenResp, nil
 }
+
+func GetApiTokenByIdRaw(tx *db.Session, id models.Id) (*models.Token, e.Error) {
+	tokenResp := &models.Token{}
+	if err := tx.Where("id = ?", id).First(&tokenResp); err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.TokenNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+	return tokenResp, nil
+}

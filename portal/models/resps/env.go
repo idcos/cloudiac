@@ -25,6 +25,7 @@ type EnvCostDetailResp struct {
 	InstanceSpec     string  `json:"instanceSpec"`
 	SubscriptionType string  `json:"subscriptionType"`
 	Region           string  `json:"region"`
+	AvailabilityZone string  `json:"availabilityZone"`
 }
 
 type EnvStatisticsResp struct {

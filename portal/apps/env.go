@@ -410,6 +410,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		OrgId:     c.OrgId,
 		ProjectId: c.ProjectId,
 		CreatorId: c.UserId,
+		TokenId:   c.ApiTokenId,
 		TplId:     form.TplId,
 
 		Name:        form.Name,
@@ -476,6 +477,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
 		Targets:         targets,
 		CreatorId:       c.UserId,
+		TokenId:         c.ApiTokenId,
 		KeyId:           env.KeyId,
 		Variables:       vars,
 		AutoApprove:     env.AutoApproval,
@@ -633,6 +635,11 @@ func PopulateLastTask(query *db.Session, env *models.EnvDetail) *models.EnvDetai
 				env.Operator = operator.Name
 				env.OperatorId = lastTask.CreatorId
 			}
+
+			if token, _ := services.GetApiTokenByIdRaw(query, lastTask.TokenId); token != nil {
+				env.TokenName = token.Name
+			}
+
 		}
 	}
 	return env
@@ -1494,6 +1501,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
 		Targets:         targets,
 		CreatorId:       c.UserId,
+		TokenId:         c.ApiTokenId,
 		KeyId:           env.KeyId,
 		Variables:       vars,
 		AutoApprove:     env.AutoApproval,
@@ -1834,19 +1842,16 @@ func EnvStat(c *ctx.ServiceContext, form *forms.EnvParam) (interface{}, e.Error)
 	for _, envCost := range envCostList {
 		resInfo := GetCloudResourceInfo(envCost.Attrs, envCost.ResType)
 
-		instanceSpec := resInfo[consts.InstanceSpecKey]
-		subscriptionType := resInfo[consts.SubscriptionTypeKey]
-		region := resInfo[consts.RegionKey]
-
 		results = append(results, resps.EnvCostDetailResp{
 			ResType:          envCost.ResType,
 			ResAttr:          GetResShowName(envCost.Attrs, envCost.Address),
 			InstanceId:       envCost.InstanceId,
 			CurMonthCost:     envCost.CurMonthCost,
 			TotalCost:        envCost.TotalCost,
-			InstanceSpec:     instanceSpec,
-			SubscriptionType: subscriptionType,
-			Region:           region,
+			InstanceSpec:     resInfo[consts.InstanceSpecKey],
+			SubscriptionType: resInfo[consts.SubscriptionTypeKey],
+			Region:           resInfo[consts.RegionKey],
+			AvailabilityZone: resInfo[consts.ZoneKey],
 		})
 	}
 
@@ -1896,6 +1901,7 @@ func GetCloudResourceInfo(attrs map[string]interface{}, resType string) map[stri
 		return result
 	}
 
+	result[consts.ZoneKey] = getStringValue(attrs, getZoneKey(resType))
 	result[consts.RegionKey] = getRegionFromAvailabilityZone(getStringValue(attrs, getZoneKey(resType)))
 	result[consts.InstanceSpecKey] = getStringValue(attrs, getSpecKey(resType))
 	result[consts.SubscriptionTypeKey] = subscriptionTypeFunc(attrs)
