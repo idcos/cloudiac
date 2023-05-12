@@ -1888,6 +1888,7 @@ func GetCloudResourceInfo(attrs map[string]interface{}, resType string) map[stri
 	var subscriptionFuncs = map[string]consts.SubscriptionFunc{
 		consts.AliCloudInstance:    getAliyunInstanceSubscriptionType,
 		consts.AliCloudSLB:         getAliyunSlbSubscriptionType,
+		consts.AliCloudALB:         getAliyunSlbSubscriptionType,
 		consts.AliCloudSLBClassic:  getAliyunSlbSubscriptionType,
 		consts.AliCloudDisk:        getAliyunDiskSubscriptionType,
 		consts.AliCloudDiskClassic: getAliyunDiskSubscriptionType,
@@ -1943,7 +1944,7 @@ func getZoneKey(resType string) string {
 	switch resType {
 	case consts.AliCloudInstance, consts.AliCloudDisk, consts.AliCloudDiskClassic:
 		return consts.ZoneKey
-	case consts.AliCloudSLB, consts.AliCloudSLBClassic:
+	case consts.AliCloudSLB, consts.AliCloudSLBClassic, consts.AliCloudALB:
 		return consts.SLBZoneKey
 	case consts.AliCloudEIP:
 		return ""
@@ -1956,7 +1957,7 @@ func getSpecKey(resType string) string {
 	switch resType {
 	case consts.AliCloudInstance:
 		return consts.InstanceTypeKey
-	case consts.AliCloudSLB, consts.AliCloudSLBClassic:
+	case consts.AliCloudSLB, consts.AliCloudSLBClassic, consts.AliCloudALB:
 		return consts.SpecificationKey
 	case consts.AliCloudDisk, consts.AliCloudDiskClassic:
 		return consts.CategoryKey

@@ -277,6 +277,7 @@ const (
 	RegionKey           = "region"
 	AliCloudInstance    = "alicloud_instance"
 	AliCloudSLB         = "alicloud_slb_load_balancer"
+	AliCloudALB         = "alicloud_alb_load_balancer"
 	AliCloudSLBClassic  = "alicloud_slb"
 	AliCloudDisk        = "alicloud_ecs_disk"
 	AliCloudDiskClassic = "alicloud_disk"
