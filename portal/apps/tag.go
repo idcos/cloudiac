@@ -31,3 +31,5 @@ func CreateTag(c *ctx.ServiceContext, form *forms.CreateTagForm) (interface{}, e
 	return nil, nil
 }
 
+func SearchTag(c *ctx.ServiceContext, form * forms.CreateTagForm) (interface{}, e.Error) {}
+
