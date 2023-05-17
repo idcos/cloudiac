@@ -652,10 +652,21 @@ cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 terraform plan -detailed-exitcode -input=false -out=_cloudiac.tfplan \
 {{if .TfVars}}-var-file={{.TfVars}} {{end}}-var-file={{.IacTfVars}} \
-{{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }}&& \
-status=$?; if [[ "$status" == "0" ]]; then echo "+--------+--------------------------------------------+\n| CHANGE |                    NAME                    |\n+--------+--------------------------------------------+\n| No changes.                                         |\n+-----------------------------------------------------+\n"; elif [[ "$status" == "2" ]]; then tf-summarize {{.TFPlanJsonFilePath}}; else exit $status; fi \
-terraform show -no-color -json _cloudiac.tfplan >{{.TFPlanJsonFilePath}} {{- if .After}} && \
-{{.After}}{{- end}}
+{{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }}
+status=$?
+terraform show -no-color -json >{{.TFStateJsonFilePath}}
+if [[ "$status" == "0" ]]; then
+  echo "+--------+--------------------------------------------+"
+  echo "| CHANGE |                    NAME                    |"
+  echo "+--------+--------------------------------------------+"
+  echo "| No changes.                                         |"
+  echo "+-----------------------------------------------------+" 
+elif [[ "$status" == "2" ]]; then 
+  tf-summarize {{.TFPlanJsonFilePath}} 
+else 
+  exit $status
+fi
+{{- if .After}}{{.After}}{{- end}}
 `))
 
 func (t *Task) stepPlan() (command string, err error) {
