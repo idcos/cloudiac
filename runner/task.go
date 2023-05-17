@@ -654,7 +654,7 @@ terraform plan -detailed-exitcode -input=false -out=_cloudiac.tfplan \
 {{if .TfVars}}-var-file={{.TfVars}} {{end}}-var-file={{.IacTfVars}} \
 {{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }}
 status=$?
-terraform show -no-color -json >{{.TFStateJsonFilePath}}
+terraform show -no-color -json _cloudiac.tfplan >{{.TFPlanJsonFilePath}}
 if [[ "$status" == "0" ]]; then
   echo "+--------+--------------------------------------------+"
   echo "| CHANGE |                    NAME                    |"
