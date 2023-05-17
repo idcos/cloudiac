@@ -68,8 +68,8 @@ type CreateEnvForm struct {
 	AutoDeployCron  string `json:"autoDeployCron" form:"autoDeployCron"`   // 自动部署任务的Cron表达式
 	AutoDestroyCron string `json:"autoDestroyCron" form:"autoDestroyCron"` // 自动销毁任务的Cron表达式
 
-	EnvTags  models.Tag `json:"envTags" form:"envTags" `
-	UserTags models.Tag `json:"userTags" form:"userTags" `
+	EnvTags  []models.Tag `json:"envTags" form:"envTags" `
+	UserTags []models.Tag `json:"userTags" form:"userTags" `
 }
 
 type SampleVariables struct {
@@ -169,8 +169,8 @@ type DeployEnvForm struct {
 	// 部署plan任务时生效，进行漂移检测时，从最后一次任务获取配置信息进行检测
 	IsDriftTask bool `json:"isDriftTask" form:"isDriftTask" `
 
-	EnvTags  models.Tag `json:"envTags" form:"envTags" `
-	UserTags models.Tag `json:"userTags" form:"userTags" `
+	EnvTags  []models.Tag `json:"envTags" form:"envTags" `
+	UserTags []models.Tag `json:"userTags" form:"userTags" `
 }
 
 type ArchiveEnvForm struct {
