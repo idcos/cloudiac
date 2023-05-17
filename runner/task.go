@@ -650,12 +650,23 @@ var planCommandTpl = template.Must(template.New("").Parse(`#!/bin/sh
 cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
 {{if .Before}}{{.Before}} && \{{- end}}
 cd '{{.ContainerWorkspace}}/code/{{.Req.Env.Workdir}}' && \
-terraform plan -input=false -out=_cloudiac.tfplan \
+terraform plan -detailed-exitcode -input=false -out=_cloudiac.tfplan \
 {{if .TfVars}}-var-file={{.TfVars}} {{end}}-var-file={{.IacTfVars}} \
-{{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }}&& \
-terraform show -no-color -detailed-exitcode -json _cloudiac.tfplan >{{.TFPlanJsonFilePath}} && \
-status=$?; if [[ "$status" == "0" ]]; then echo "+--------+--------------------------------------------+\n| CHANGE |                    NAME                    |\n+--------+--------------------------------------------+\n| No changes.                                         |\n+-----------------------------------------------------+\n"; elif [[ "$status" == "2" ]]; then tf-summarize {{.TFPlanJsonFilePath}}; else exit $status; fi {{- if .After}} && \
-{{.After}}{{- end}}
+{{ range $arg := .Req.StepArgs }}{{$arg}} {{ end }}
+status=$?
+terraform show -no-color -json >{{.TFStateJsonFilePath}}
+if [[ "$status" == "0" ]]; then
+  echo "+--------+--------------------------------------------+"
+  echo "| CHANGE |                    NAME                    |"
+  echo "+--------+--------------------------------------------+"
+  echo "| No changes.                                         |"
+  echo "+-----------------------------------------------------+" 
+elif [[ "$status" == "2" ]]; then 
+  tf-summarize {{.TFPlanJsonFilePath}} 
+else 
+  exit $status
+fi
+{{- if .After}}{{.After}}{{- end}}
 `))
 
 func (t *Task) stepPlan() (command string, err error) {
