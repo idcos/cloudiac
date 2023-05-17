@@ -520,6 +520,8 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		TaskId:     task.Id,
 		Operator:   c.Username,
 		OperatorId: c.UserId,
+		EnvTags:    form.EnvTags,
+		UserTags:   form.UserTags,
 	}
 	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
 	// 获取token
@@ -1532,8 +1534,10 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 
 	env.MergeTaskStatus()
 	envDetail := &models.EnvDetail{
-		Env:    *env,
-		TaskId: task.Id,
+		Env:      *env,
+		TaskId:   task.Id,
+		EnvTags:  form.EnvTags,
+		UserTags: form.UserTags,
 	}
 	envDetail = PopulateLastTask(c.DB(), envDetail)
 	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
