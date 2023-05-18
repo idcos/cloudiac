@@ -229,4 +229,7 @@ const (
 	LdapBindError      = 31713
 	LdapUnknowError    = 31714
 	LdapUserNotExist   = 31715
+
+	// tag 318
+	TagKeyAlreadyExisted = 31810 // key已经在
 )
