@@ -6,12 +6,13 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"cloudiac/portal/models/resps"
 	"fmt"
 )
 
 func SearchTag(dbSess *db.Session, orgId, objectId models.Id, objectType string) *db.Session {
 	tr := models.TagRel{}.TableName()
-	query := dbSess.Table(fmt.Sprintf("%s as tr",tr)).
+	query := dbSess.Table(fmt.Sprintf("%s as tr", tr)).
 		Where("tr.org_id = ?", orgId).
 		Where("tr.object_id = ?", objectId).
 		Where("tr.object_type = ?", objectType)
@@ -41,9 +42,8 @@ func DeleteTagRel(tx *db.Session, keyId, valueId, orgId, objectId models.Id, obj
 	return nil
 }
 
-
 func FindTagKeyByName(session *db.Session, key string, orgId models.Id) ([]models.TagKey, e.Error) {
-	tagKey := make([]models.TagKey,0)
+	tagKey := make([]models.TagKey, 0)
 	if err := session.
 		Where("`key` = ?", key).
 		Where("org_id = ?", orgId).
@@ -53,8 +53,8 @@ func FindTagKeyByName(session *db.Session, key string, orgId models.Id) ([]model
 	return tagKey, nil
 }
 
-func FindTagValueByName(session *db.Session, value string, keyId,orgId models.Id) ([]models.TagValue, e.Error) {
-	tagValue := make([]models.TagValue,0)
+func FindTagValueByName(session *db.Session, value string, keyId, orgId models.Id) ([]models.TagValue, e.Error) {
+	tagValue := make([]models.TagValue, 0)
 	if err := session.
 		Where("value = ?", value).
 		Where("org_id = ?", orgId).
@@ -109,4 +109,14 @@ func CreateTagRel(tx *db.Session, tagRel models.TagRel) (*models.TagRel, e.Error
 	}
 
 	return &tagRel, nil
+}
+
+func FindTagByEnv(dbSess *db.Session, orgId, objectId models.Id, objectType string) ([]resps.RespTag, e.Error) {
+	resp := make([]resps.RespTag, 0)
+	query := SearchTag(dbSess, orgId, objectId, objectType)
+	if err := query.Find(&resp); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+
+	return resp, nil
 }

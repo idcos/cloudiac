@@ -18,6 +18,7 @@ import (
 	"cloudiac/utils/consul"
 	"cloudiac/utils/logs"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -1574,6 +1575,22 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 			return errors.Wrapf(err, "%s, query environment resource count", req.Env.Id)
 		}
 
+		tags, err := services.FindTagByEnv(db.Get(), env.OrgId, env.Id, consts.Env)
+		if err != nil {
+			return errors.Wrapf(err, "query env tags %s", req.Env.Id)
+		}
+
+		tagMap := make(map[string]string)
+		for _, tag := range tags {
+			tagMap["key"] = tag.Key
+			tagMap["value"] = tag.Value
+		}
+
+		data, er := json.Marshal(tagMap)
+		if er != nil {
+			return errors.Wrapf(er, "marshal tags to string %s", req.Env.Id)
+		}
+
 		// 所有 CLOUDIAC_ 前缀的环境变量都会以小写变量名写入 _cloudiac_play_vars.yml 文件，
 		// 用户编写 playbook 时可以直接引用。
 
@@ -1600,6 +1617,8 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 		sysEnvs["CLOUDIAC_ENV_RESOURCES"] = fmt.Sprintf("%d", resCount)
 		// 当前任务使用的 terraform 版本号(eg. 0.14.11)
 		sysEnvs["CLOUDIAC_TF_VERSION"] = req.Env.TfVersion
+		// 当前任务的环境tags
+		sysEnvs["CLOUDIAC_ENV_TAG"] = string(data)
 
 		// 所有 CLOUDIAC_ 前缀的变量都以小写名称通过环境变量传入 terraform
 		for k, v := range sysEnvs {
