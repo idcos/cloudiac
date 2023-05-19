@@ -26,7 +26,9 @@ func SearchTag(dbSess *db.Session, orgId, objectId models.Id, objectType string)
 		Joins(fmt.Sprintf("left join %s as tk on tr.tag_key_id = tk.id",
 			models.TagKey{}.TableName()))
 
-	return query.LazySelectAppend("tv.id as value_id", "tk.id as key_id", "tv.value", "tk.key").Order("tr.source, tk.key")
+	return query.
+		LazySelectAppend("tv.id as value_id", "tk.id as key_id", "tv.value", "tk.key", "tr.source").
+		Order("tr.source, tk.key")
 }
 
 func DeleteTagRel(tx *db.Session, keyId, valueId, orgId, objectId models.Id, objectType string) e.Error {
@@ -298,18 +300,23 @@ func AddTagsToObject(tx *db.Session, orgId, objId models.Id, objType, source str
 	return rels, nil
 }
 
-func FindObjectTagMap(db *db.Session, orgId, objId models.Id, objType string) (rs map[string]string, er e.Error) {
-	dbrs := []struct {
-		Key   string `gorm:"column:key"`
-		Value string `gorm:"column:value"`
-	}{}
-	if err := SearchTag(db, orgId, objId, objType).Find(&dbrs); err != nil {
+func FindObjectTags(db *db.Session, orgId, objId models.Id, objType string) ([]*models.TagValueWithSource, e.Error) {
+	tags := make([]*models.TagValueWithSource, 0)
+	if err := SearchTag(db, orgId, objId, objType).Find(&tags); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
+	}
+	return tags, nil
+}
+
+func FindObjectTagMap(db *db.Session, orgId, objId models.Id, objType string) (rs map[string]string, er e.Error) {
+	tags, er := FindObjectTags(db, orgId, objId, objType)
+	if er != nil {
+		return nil, er
 	}
 
 	rs = make(map[string]string)
-	for _, s := range dbrs {
-		rs[s.Key] = s.Value
+	for _, t := range tags {
+		rs[t.Key] = t.Value
 	}
 	return rs, nil
 }

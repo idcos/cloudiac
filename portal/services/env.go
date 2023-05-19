@@ -158,6 +158,20 @@ func GetEnvDetailById(query *db.Session, id models.Id) (*models.EnvDetail, e.Err
 		}
 		return nil, e.New(e.DBError, err)
 	}
+
+	if tags, er := FindObjectTags(db.Get(), d.OrgId, d.Id, consts.ScopeEnv); er != nil {
+		return nil, er
+	} else {
+		for _, t := range tags {
+			logs.Get().Debugf("env tag: %+v", t)
+			if t.Source == consts.TagSourceApi {
+				d.EnvTags = append(d.EnvTags, models.Tag{Key: t.Key, Value: t.Value})
+			} else {
+				d.UserTags = append(d.UserTags, models.Tag{Key: t.Key, Value: t.Value})
+			}
+		}
+	}
+
 	return &d, nil
 }
 

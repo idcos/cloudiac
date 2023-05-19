@@ -66,3 +66,11 @@ func (o TagRel) Migrate(sess *db.Session) (err error) {
 	}
 	return nil
 }
+
+type TagValueWithSource struct {
+	Key     string `json:"key"`
+	KeyId   Id     `json:"keyId"`
+	Value   string `json:"value"`
+	ValueId Id     `json:"valueId"`
+	Source  string `json:"source"`
+}
