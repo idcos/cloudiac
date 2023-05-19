@@ -163,7 +163,6 @@ func GetEnvDetailById(query *db.Session, id models.Id) (*models.EnvDetail, e.Err
 		return nil, er
 	} else {
 		for _, t := range tags {
-			logs.Get().Debugf("env tag: %+v", t)
 			if t.Source == consts.TagSourceApi {
 				d.EnvTags = append(d.EnvTags, models.Tag{Key: t.Key, Value: t.Value})
 			} else {
