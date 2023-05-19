@@ -26,6 +26,7 @@ type OrgOrProjectResourcesResp struct {
 	ProjectId    models.Id `json:"projectId"`
 	ResourceId   models.Id `json:"resourceId"`
 	Attrs        string    `json:"attrs"`
+	ResId        string    `json:"resId"`
 	Dependencies string    `json:"dependencies"`
 }
 
