@@ -1890,10 +1890,16 @@ func getEnvSource(source string) (taskSource string, taskSourceSys string) {
 
 func GetCloudResourceInfo(attrs map[string]interface{}, resType string) map[string]string {
 	var subscriptionFuncs = map[string]consts.SubscriptionFunc{
-		consts.AliCloudInstance: getAliyunInstanceSubscriptionType,
-		consts.AliCloudSLB:      getAliyunSlbSubscriptionType,
-		consts.AliCloudDisk:     getAliyunDiskSubscriptionType,
-		consts.AliCloudEIP:      getAliyunEipSubscriptionType,
+		consts.AliCloudInstance:    getAliyunInstanceSubscriptionType,
+		consts.AliCloudSLB:         getAliyunPaymentSubscriptionType,
+		consts.AliCloudALB:         getAliyunPaymentSubscriptionType,
+		consts.AliCloudSLBClassic:  getAliyunPaymentSubscriptionType,
+		consts.AliCloudDisk:        getAliyunPaymentSubscriptionType,
+		consts.AliCloudDiskClassic: getAliyunPaymentSubscriptionType,
+		consts.AliCloudEIP:         getAliyunPaymentSubscriptionType,
+		consts.AliCloudDB:          getAliyunInstanceSubscriptionType,
+		consts.AliCloudMongoDB:     getAliyunInstanceSubscriptionType,
+		consts.AliCloudKVStore:     getAliyunPaymentSubscriptionType,
 	}
 
 	result := make(map[string]string)
@@ -1943,10 +1949,12 @@ func getRegionFromAvailabilityZone(availabilityZone string) string {
 
 func getZoneKey(resType string) string {
 	switch resType {
-	case consts.AliCloudInstance, consts.AliCloudDisk:
+	case consts.AliCloudInstance, consts.AliCloudDisk, consts.AliCloudDiskClassic:
 		return consts.ZoneKey
-	case consts.AliCloudSLB:
+	case consts.AliCloudSLB, consts.AliCloudSLBClassic, consts.AliCloudALB:
 		return consts.SLBZoneKey
+	case consts.AliCloudDB, consts.AliCloudMongoDB, consts.AliCloudKVStore:
+		return consts.ZoneIdKey
 	case consts.AliCloudEIP:
 		return ""
 	default:
@@ -1956,12 +1964,16 @@ func getZoneKey(resType string) string {
 
 func getSpecKey(resType string) string {
 	switch resType {
-	case consts.AliCloudInstance:
+	case consts.AliCloudInstance, consts.AliCloudDB:
 		return consts.InstanceTypeKey
-	case consts.AliCloudSLB:
+	case consts.AliCloudSLB, consts.AliCloudSLBClassic, consts.AliCloudALB:
 		return consts.SpecificationKey
-	case consts.AliCloudDisk:
+	case consts.AliCloudDisk, consts.AliCloudDiskClassic:
 		return consts.CategoryKey
+	case consts.AliCloudMongoDB:
+		return consts.MongoDBTypeKey
+	case consts.AliCloudKVStore:
+		return consts.KVStoreTypeKey
 	case consts.AliCloudEIP:
 		return ""
 	default:
@@ -1984,15 +1996,7 @@ func getAliyunInstanceSubscriptionType(attrs map[string]interface{}) string {
 	return ""
 }
 
-func getAliyunSlbSubscriptionType(attrs map[string]interface{}) string {
-	return getStringValue(attrs, consts.PaymentTypeKey)
-}
-
-func getAliyunDiskSubscriptionType(attrs map[string]interface{}) string {
-	return getStringValue(attrs, consts.PaymentTypeKey)
-}
-
-func getAliyunEipSubscriptionType(attrs map[string]interface{}) string {
+func getAliyunPaymentSubscriptionType(attrs map[string]interface{}) string {
 	return getStringValue(attrs, consts.PaymentTypeKey)
 }
 
