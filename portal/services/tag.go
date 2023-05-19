@@ -24,7 +24,7 @@ func SearchTag(dbSess *db.Session, orgId, objectId models.Id, objectType string)
 		Joins(fmt.Sprintf("left join %s as tk on tr.tag_key_id = tk.id",
 			models.TagKey{}.TableName()))
 
-	return query.LazySelectAppend("tv.id as value_id", "tk.id as key_id", "tv.value", "tk.key").Order("tk.id")
+	return query.LazySelectAppend("tv.id as value_id", "tk.id as key_id", "tv.value", "tk.key").Order("tr.source, tk.id")
 }
 
 func DeleteTagRel(tx *db.Session, keyId, valueId, orgId, objectId models.Id, objectType string) e.Error {

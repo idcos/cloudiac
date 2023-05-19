@@ -20,7 +20,10 @@ func CreateTag(c *ctx.ServiceContext, form *forms.CreateTagForm) (*resps.RespTag
 			panic(r)
 		}
 	}()
-	var source string = "api"
+	var (
+		source string = "api"
+		resp   resps.RespTag
+	)
 	if c.ApiTokenId == "" {
 		source = "user"
 	}
@@ -44,6 +47,8 @@ func CreateTag(c *ctx.ServiceContext, form *forms.CreateTagForm) (*resps.RespTag
 			_ = tx.Rollback()
 			return nil, err
 		}
+		resp.KeyId = newTagKey.Id.String()
+		resp.Key = newTagKey.Key
 
 		// key不存在value一定不存在 创建tagValue
 		tagValue, err := services.CreateTagValue(tx, models.TagValue{
@@ -56,6 +61,10 @@ func CreateTag(c *ctx.ServiceContext, form *forms.CreateTagForm) (*resps.RespTag
 			_ = tx.Rollback()
 			return nil, err
 		}
+
+		resp.ValueId = tagValue.Id.String()
+		resp.Value = tagValue.Value
+
 		// 创建tag与环境的管理关系
 		if _, err := services.CreateTagRel(tx, models.TagRel{
 			OrgId:      c.OrgId,
@@ -69,6 +78,9 @@ func CreateTag(c *ctx.ServiceContext, form *forms.CreateTagForm) (*resps.RespTag
 			return nil, err
 		}
 	} else {
+		resp.KeyId = tagKeyList[0].Id.String()
+		resp.Key = tagKeyList[0].Key
+
 		// key存在，查询value是否存在
 		tagValueList, err := services.FindTagValueByName(tx, form.Value, tagKeyList[0].Id, c.OrgId)
 		if err != nil {
@@ -89,6 +101,9 @@ func CreateTag(c *ctx.ServiceContext, form *forms.CreateTagForm) (*resps.RespTag
 				return nil, err
 			}
 
+			resp.ValueId = tagValue.Id.String()
+			resp.Value = tagValue.Value
+
 			// 创建tag与环境的管理关系
 			if _, err := services.CreateTagRel(tx, models.TagRel{
 				OrgId:      c.OrgId,
@@ -102,12 +117,16 @@ func CreateTag(c *ctx.ServiceContext, form *forms.CreateTagForm) (*resps.RespTag
 				return nil, err
 			}
 		} else {
+			resp.ValueId = tagValueList[0].Id.String()
+			resp.Value = tagValueList[0].Value
+
 			// key value同时存在，查询关联关系是否存在
 			tagRelList, err := services.FindTagRelById(tx, tagKeyList[0].Id, tagValueList[0].Id, c.OrgId, form.ObjectId, form.ObjectType)
 			if err != nil {
 				_ = tx.Rollback()
 				return nil, err
 			}
+
 			// 存在则不做操作直接退出，不存在则创建关联关系
 			if len(tagRelList) <= 0 {
 				// 创建tag与环境的管理关系
@@ -132,7 +151,7 @@ func CreateTag(c *ctx.ServiceContext, form *forms.CreateTagForm) (*resps.RespTag
 		return nil, e.New(e.DBError, err)
 	}
 
-	return nil, nil
+	return &resp, nil
 }
 
 func SearchTag(c *ctx.ServiceContext, form *forms.SearchTagsForm) (interface{}, e.Error) {

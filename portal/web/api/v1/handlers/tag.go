@@ -8,7 +8,6 @@ import (
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models/forms"
-	"fmt"
 )
 
 type Tag struct {
@@ -111,7 +110,6 @@ func SearchEnvTag(c *ctx.GinRequest) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
-	fmt.Println(form.Id,"form.Id")
 	c.JSONResult(apps.SearchTag(c.Service(), &forms.SearchTagsForm{
 		PageForm:   form.PageForm,
 		Q:          form.Q,
