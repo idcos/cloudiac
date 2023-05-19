@@ -61,7 +61,7 @@ func (TagRel) TableName() string {
 
 func (o TagRel) Migrate(sess *db.Session) (err error) {
 	if err := o.AddUniqueIndex(sess, "unique__org__value__key__object",
-		"org_id", "tag_key_id", "tag_value_id", "object_id", "object_type"); err != nil {
+		"org_id", "tag_key_id", "object_id", "object_type"); err != nil {
 		return err
 	}
 	return nil

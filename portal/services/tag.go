@@ -139,8 +139,10 @@ func FindOrCreateTagKeys(tx *db.Session, orgId models.Id, keys []string) (map[st
 		}
 	}
 
-	if err := models.CreateBatch(tx, newTagKeys); err != nil {
-		return nil, e.AutoNew(err, e.DBError)
+	if len(newTagKeys) > 0 {
+		if err := models.CreateBatch(tx, newTagKeys); err != nil {
+			return nil, e.AutoNew(err, e.DBError)
+		}
 	}
 
 	rs := make(map[string]*models.TagKey)
@@ -198,8 +200,10 @@ func UpsertTagValues(tx *db.Session, orgId models.Id, tags map[models.Id]string)
 	}
 
 	// 插入 tag value
-	if err := models.CreateBatch(tx, newTagVals); err != nil {
-		return nil, e.AutoNew(err, e.DBError)
+	if len(newTagVals) > 0 {
+		if err := models.CreateBatch(tx, newTagVals); err != nil {
+			return nil, e.AutoNew(err, e.DBError)
+		}
 	}
 
 	rs := make(map[models.Id]*models.TagValue)
@@ -238,10 +242,10 @@ func UpInsertTags(tx *db.Session, orgId models.Id, tags map[string]string) (map[
 	return rs, nil
 }
 
-// 全量更新对象的 tags: 删除旧的 tags，将新的 tags 绑定到对象
+// 全量更新对象的 tags: 删除旧的同 source tags，将新的 tags 绑定到对象
 func UpdateObjectTags(tx *db.Session, orgId, objId models.Id, objType, source string, tags map[string]string) ([]*models.TagRel, e.Error) {
 	_, err := tx.
-		Where("org_id = ? AND object_id = ? AND object_type = ?", orgId, objId, objType).
+		Where("org_id = ? AND object_id = ? AND object_type = ? AND source = ?", orgId, objId, objType, source).
 		Delete(&models.TagRel{})
 	if err != nil {
 		return nil, e.AutoNew(err, e.DBError)
@@ -292,4 +296,20 @@ func AddTagsToObject(tx *db.Session, orgId, objId models.Id, objType, source str
 		return nil, e.AutoNew(err, e.DBError)
 	}
 	return rels, nil
+}
+
+func FindObjectTagMap(db *db.Session, orgId, objId models.Id, objType string) (rs map[string]string, er e.Error) {
+	dbrs := []struct {
+		Key   string `gorm:"column:key"`
+		Value string `gorm:"column:value"`
+	}{}
+	if err := SearchTag(db, orgId, objId, objType).Find(&dbrs); err != nil {
+		return nil, e.AutoNew(err, e.DBError)
+	}
+
+	rs = make(map[string]string)
+	for _, s := range dbrs {
+		rs[s.Key] = s.Value
+	}
+	return rs, nil
 }
