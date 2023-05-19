@@ -595,7 +595,11 @@ var errorMsgs = map[int]map[string]string{
 		"zh-CN": "云模板未绑定当前项目",
 	},
 	TagKeyAlreadyExisted: {
-		"en-US": "tag key already existed",
-		"zh-CN": "标签键已经纯在",
+		"en-US": "tag key already exist",
+		"zh-CN": "标签键已经存在",
+	},
+	ObjectTagNumLimited: {
+		"en-US": "the number of tags exceeds the limit",
+		"zh-CN": "标签数量超过限制",
 	},
 }

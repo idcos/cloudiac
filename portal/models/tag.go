@@ -34,7 +34,7 @@ type TagValue struct {
 
 func (o TagValue) Migrate(sess *db.Session) (err error) {
 	if err := o.AddUniqueIndex(sess, "unique__org__value__key",
-		"org_id", "key_id","value"); err != nil {
+		"org_id", "key_id", "value"); err != nil {
 		return err
 	}
 	return nil
@@ -51,7 +51,7 @@ type TagRel struct {
 	TagKeyId   Id     `json:"tagKeyId" gorm:"size:32;not null"`
 	TagValueId Id     `json:"tagValueId" gorm:"size:32;not null"`
 	ObjectId   Id     `json:"objectId" gorm:"size:32;not null"`
-	ObjectType string `json:"objectType" gorm:"not null"`
+	ObjectType string `json:"objectType" gorm:"not null;type:enum('env')"`
 	Source     string `json:"source" gorm:"not null"`
 }
 
@@ -61,8 +61,16 @@ func (TagRel) TableName() string {
 
 func (o TagRel) Migrate(sess *db.Session) (err error) {
 	if err := o.AddUniqueIndex(sess, "unique__org__value__key__object",
-		"org_id", "tag_key_id","tag_value_id","object_id","object_type"); err != nil {
+		"org_id", "tag_key_id", "object_id", "object_type"); err != nil {
 		return err
 	}
 	return nil
+}
+
+type TagValueWithSource struct {
+	Key     string `json:"key"`
+	KeyId   Id     `json:"keyId"`
+	Value   string `json:"value"`
+	ValueId Id     `json:"valueId"`
+	Source  string `json:"source"`
 }
