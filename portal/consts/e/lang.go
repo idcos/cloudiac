@@ -594,4 +594,8 @@ var errorMsgs = map[int]map[string]string{
 		"en-US": "template is not bound to the project",
 		"zh-CN": "云模板未绑定当前项目",
 	},
+	TagKeyAlreadyExisted: {
+		"en-US": "tag key already existed",
+		"zh-CN": "标签键已经纯在",
+	},
 }
