@@ -264,17 +264,35 @@ func AddTagsToObject(tx *db.Session, orgId, objId models.Id, objType, source str
 	}
 
 	// 检查对象 tag 数量
-	n, err := tx.Model(&models.TagRel{}).
-		Where("org_id = ? AND object_id = ? AND object_type = ?", orgId, objId, objType).
-		Count()
-	if err != nil {
-		return nil, e.AutoNew(err, e.DBError)
-	}
-	if n > consts.ObjectMaxTagNum {
-		return nil, e.New(e.ObjectTagNumLimited)
+	{
+		// 已有 tag 数
+		existsNum, err := tx.Model(&models.TagRel{}).Where(
+			"org_id = ? AND object_id = ? AND object_type = ?", orgId, objId, objType).Count()
+		if err != nil {
+			return nil, e.AutoNew(err, e.DBError)
+		}
+
+		dbTagKeyIds := make([]models.Id, 0)
+		for _, t := range dbTags {
+			dbTagKeyIds = append(dbTagKeyIds, t.KeyId)
+		}
+
+		// 与当前要添加的 tags key 重复的 tag 数量
+		duplicateNum, err := tx.Model(&models.TagRel{}).Where(
+			"org_id = ? AND object_id = ? AND object_type = ? AND tag_key_id IN (?)",
+			orgId, objId, objType, dbTagKeyIds).Count()
+		if err != nil {
+			return nil, e.AutoNew(err, e.DBError)
+		}
+
+		// 要新加的 tag 数量
+		newNum := int64(len(dbTags)) - duplicateNum
+		if existsNum+newNum > consts.ObjectMaxTagNum {
+			return nil, e.New(e.ObjectTagNumLimited)
+		}
 	}
 
-	bs := utils.NewBatchSQL(1024, "REPLACE INTO", models.TagRel{}.TableName(),
+	bs := utils.NewBatchSQL(32, "REPLACE INTO", models.TagRel{}.TableName(),
 		"org_id", "tag_key_id", "tag_value_id", "object_id", "object_type", "source")
 
 	tagKeyIds := make([]models.Id, 0)
