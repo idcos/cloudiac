@@ -232,4 +232,5 @@ const (
 
 	// tag 318
 	TagKeyAlreadyExisted = 31810 // key已经在
+	ObjectTagNumLimited  = 31820 // 单个对象 tag 数量超限
 )

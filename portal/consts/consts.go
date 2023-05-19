@@ -144,8 +144,12 @@ const (
 
 	EnvAbortManager = ""
 
+	// 旧版本环境 tag 使用
 	EnvMaxTagLength = 20
 	EnvMaxTagNum    = 5
+
+	// 新版本带 key 的 tag 使用
+	ObjectMaxTagNum = 20 // 单个对象可以绑定的最大 tag 数量
 
 	EventTaskFailed    = "task.failed"
 	EventTaskComplete  = "task.complete"
@@ -167,6 +171,9 @@ const (
 	TaskSourceAutoDestroy  = "autoDestroy"
 	TaskSourceAutoDeploy   = "autoDeploy"
 	TaskSourceApi          = "api"
+
+	TagSourceApi  = "api"
+	TagSourceUser = "user"
 
 	TaskAutoDestroyName = "Auto Destroy"
 	TaskAutoDeployName  = "Auto Deploy"

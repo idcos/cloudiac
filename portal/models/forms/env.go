@@ -68,8 +68,8 @@ type CreateEnvForm struct {
 	AutoDeployCron  string `json:"autoDeployCron" form:"autoDeployCron"`   // 自动部署任务的Cron表达式
 	AutoDestroyCron string `json:"autoDestroyCron" form:"autoDestroyCron"` // 自动销毁任务的Cron表达式
 
-	EnvTags  []models.Tag `json:"envTags" form:"envTags" `
-	UserTags []models.Tag `json:"userTags" form:"userTags" `
+	EnvTags  []models.Tag `json:"envTags" form:"envTags" `   // 外部系统传入的 tags
+	UserTags []models.Tag `json:"userTags" form:"userTags" ` // 用户设置的 tags
 }
 
 type SampleVariables struct {

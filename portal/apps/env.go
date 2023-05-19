@@ -472,6 +472,15 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	// 来源：手动触发、外部调用
 	taskSource, taskSourceSys := getEnvSource(form.Source)
 
+	if _, er := services.UpdateObjectTags(tx, c.OrgId, env.Id,
+		consts.ScopeEnv, consts.TagSourceApi, tagList2Map(form.EnvTags)); er != nil {
+		return nil, er
+	}
+	if _, er := services.UpdateObjectTags(tx, c.OrgId, env.Id,
+		consts.ScopeEnv, consts.TagSourceUser, tagList2Map(form.UserTags)); er != nil {
+		return nil, err
+	}
+
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
@@ -1498,6 +1507,15 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		IsDriftTask = false
 	}
 
+	if _, er := services.UpdateObjectTags(tx, c.OrgId, env.Id,
+		consts.ScopeEnv, consts.TagSourceApi, tagList2Map(form.EnvTags)); er != nil {
+		return nil, er
+	}
+	if _, er := services.UpdateObjectTags(tx, c.OrgId, env.Id,
+		consts.ScopeEnv, consts.TagSourceUser, tagList2Map(form.UserTags)); er != nil {
+		return nil, err
+	}
+
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
@@ -2005,4 +2023,12 @@ func getStringValue(attrs map[string]interface{}, key string) string {
 		return v.(string)
 	}
 	return ""
+}
+
+func tagList2Map(tags []models.Tag) map[string]string {
+	rv := make(map[string]string)
+	for _, t := range tags {
+		rv[t.Key] = t.Value
+	}
+	return rv
 }
