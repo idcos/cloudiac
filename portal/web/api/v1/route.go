@@ -61,9 +61,6 @@ func Register(g *gin.RouterGroup) {
 
 	g.GET("/system_config/switches", w(handlers.SystemSwitchesStatus))
 
-	// CPG
-	g.POST("/declare/env", w(handlers.DeclareEnv))
-
 	// Authorization Header 鉴权
 	g.Use(w(middleware.Auth)) // 解析 header token
 
@@ -134,7 +131,6 @@ func Register(g *gin.RouterGroup) {
 
 	// 用户操作日志
 	g.GET("/platform/operation/log", ac(), w(handlers.Platform{}.PlatformOperationLog))
-
 
 	// 要求组织 header
 	g.Use(w(middleware.AuthOrgId))
@@ -293,6 +289,9 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/envs/:id/lock", ac("envs", "lock"), w(handlers.EnvLock))
 	g.POST("/envs/:id/unlock", ac("envs", "unlock"), w(handlers.EnvUnLock))
 	g.GET("/envs/:id/unlock/confirm", ac(), w(handlers.EnvUnLockConfirm))
+
+	// CPG
+	g.POST("/declare/env", ac(), w(handlers.DeclareEnv))
 
 	// 环境概览统计数据
 	g.GET("/envs/:id/statistics", ac(), w(handlers.Env{}.EnvStat))
