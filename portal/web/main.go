@@ -35,7 +35,7 @@ func GetRouter() *gin.Engine {
 	e.Use(w(middleware.Cors))
 	e.Use(w(middleware.Operation))
 	//添加Config变量SwaggerDisable控制swagger文档开放
-	if configs.Get().SwaggerEnable {
+	if !configs.Get().SwaggerEnable {
 		e.GET("/swagger/*any", gs.WrapHandler(swaggerFiles.Handler))
 	}
 	e.GET("/system/info", w(func(c *ctx.GinRequest) {
@@ -44,6 +44,7 @@ func GetRouter() *gin.Engine {
 			"build":   common.BUILD,
 		})
 	}))
+
 	validate.RegisterValida()
 	api_v1.Register(e.Group("/api/v1"))
 

@@ -28,6 +28,7 @@ require (
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/golang-jwt/jwt/v4 v4.3.0
 	github.com/google/go-github v17.0.0+incompatible
+	github.com/google/uuid v1.2.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/consul/api v1.12.0
 	github.com/hashicorp/hcl v1.0.0

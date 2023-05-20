@@ -296,6 +296,9 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/envs/:id/unlock", ac("envs", "unlock"), w(handlers.EnvUnLock))
 	g.GET("/envs/:id/unlock/confirm", ac(), w(handlers.EnvUnLockConfirm))
 
+	// CPG
+	g.POST("/declare/env", ac(), w(handlers.DeclareEnv))
+
 	// 环境概览统计数据
 	g.GET("/envs/:id/statistics", ac(), w(handlers.Env{}.EnvStat))
 
