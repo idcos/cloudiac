@@ -1607,7 +1607,6 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 		// 自动设置 tags
 		{
 			envTags := make(map[string]string)
-			//envTags["CloudIaC:ID"] = configs.Get().Portal.Address
 			envTags["CloudIaC:OrgID"] = env.OrgId.String()
 			envTags["CloudIaC:ProjectID"] = env.ProjectId.String()
 			envTags["CloudIaC:EnvID"] = env.Id.String()
