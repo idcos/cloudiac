@@ -612,6 +612,16 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 
 		// 是否开启费用采集
 		env.IsBilling = enabledBill
+
+		// 标签
+		tags, _ := services.FindObjectTags(db.Get(), c.OrgId, env.Id, consts.ScopeEnv)
+		for _, t := range tags {
+			if t.Source == consts.TagSourceApi {
+				env.EnvTags = append(env.EnvTags, models.Tag{Key: t.Key, Value: t.Value})
+			} else {
+				env.UserTags = append(env.UserTags, models.Tag{Key: t.Key, Value: t.Value})
+			}
+		}
 	}
 
 	return page.PageResp{
