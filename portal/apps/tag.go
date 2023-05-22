@@ -143,7 +143,6 @@ func CreateTag(c *ctx.ServiceContext, form *forms.CreateTagForm) (*resps.RespTag
 				}
 			}
 		}
-
 	}
 
 	if err := tx.Commit(); err != nil {

@@ -614,7 +614,7 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		env.IsBilling = enabledBill
 
 		// 标签
-		tags, _ := services.FindObjectTags(db.Get(), c.OrgId, env.Id, consts.ScopeEnv)
+		tags, _ := services.FindObjectTags(c.DB(), c.OrgId, env.Id, consts.ScopeEnv)
 		for _, t := range tags {
 			if t.Source == consts.TagSourceApi {
 				env.EnvTags = append(env.EnvTags, models.Tag{Key: t.Key, Value: t.Value})
