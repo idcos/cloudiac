@@ -172,22 +172,11 @@ func UpsertTagValues(tx *db.Session, orgId models.Id, tags map[models.Id]string)
 		return nil, e.AutoNew(err, e.DBError)
 	}
 
-	// 更新 tag value
-	for _, tv := range dbTagVals {
-		newVal := tags[tv.KeyId]
-		if tv.Value != newVal {
-			tv.Value = newVal
-			if err := models.Save(tx, tv); err != nil {
-				return nil, e.AutoNew(err, e.DBError)
-			}
-		}
-	}
-
 	newTagVals := make([]*models.TagValue, 0)
 	for kid := range tags {
 		exists := false
 		for _, tv := range dbTagVals {
-			if kid == tv.KeyId {
+			if kid == tv.KeyId && tags[kid] == tv.Value {
 				exists = true
 				break
 			}
