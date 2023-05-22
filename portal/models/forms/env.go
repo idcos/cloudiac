@@ -42,6 +42,7 @@ type CreateEnvForm struct {
 	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:"max=255"`          // Ansible playbook 变量文件路径
 	Playbook     string    `form:"playbook" json:"playbook" binding:"omitempty,max=255"`        // Ansible playbook 入口文件路径
 	KeyId        models.Id `form:"keyId" json:"keyId" binding:"omitempty,startswith=k-,max=32"` // 部署密钥ID
+	KeyName      string    `form:"keyName" json:"keyName" binding:"omitempty,max=255"`          // 部署密钥名称
 	Workdir      string    `form:"workdir" json:"workdir" `                                     // 工作目录
 
 	RetryNumber int         `form:"retryNumber" json:"retryNumber" binding:""` // 重试总次数
@@ -95,6 +96,7 @@ type UpdateEnvForm struct {
 	Name        string    `form:"name" json:"name" binding:"omitempty,gte=2,lte=64"`           // 环境名称
 	Description string    `form:"description" json:"description" binding:"max=255"`            // 环境描述
 	KeyId       models.Id `form:"keyId" json:"keyId" binding:"omitempty,startswith=k-,max=32"` // 部署密钥ID
+	KeyName     string    `form:"keyName" json:"keyName" binding:"omitempty,max=255"`          // 部署密钥名称
 	RunnerId    string    `form:"runnerId" json:"runnerId" binding:"max=32"`                   // 环境默认部署通道
 	Archived    bool      `form:"archived" json:"archived" enums:"true,false"`                 // 归档状态，默认返回未归档环境
 	Tags        string    `form:"tags" json:"tags" binding:"max=255"`                          // 环境的 tags，多个 tag 以 "," 分隔
@@ -149,6 +151,7 @@ type DeployEnvForm struct {
 	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:"max=255"`          // Ansible playbook 变量文件路径
 	Playbook     string    `form:"playbook" json:"playbook" binding:"omitempty,max=255"`        // Ansible playbook 入口文件路径
 	KeyId        models.Id `form:"keyId" json:"keyId" binding:"omitempty,startswith=k-,max=32"` // 部署密钥ID
+	KeyName      string    `form:"keyName" json:"keyName" binding:"omitempty,max=255"`          // 部署密钥名称
 	Workdir      string    `form:"workdir" json:"workdir" binding:"max=32"`                     // 工作目录
 
 	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" binding:"omitempty,dive,required,startswith=vg-,max=32"`

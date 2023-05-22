@@ -357,6 +357,12 @@ func envWorkdirCheck(c *ctx.ServiceContext, repoId, repoRevision, workdir string
 func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDetail, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create env %s", form.Name))
 
+	if form.KeyId == "" && form.KeyName != "" {
+		query := services.QueryKey(services.QueryWithOrgId(c.DB(), c.OrgId))
+		if key, _ := services.GetKeyByName(query, form.KeyName); key != nil {
+			form.KeyId = key.Id
+		}
+	}
 	err := createEnvCheck(c, form)
 	if err != nil {
 		return nil, err
@@ -990,6 +996,13 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	attrs["cronDriftExpress"] = cronDriftParam.CronDriftExpress
 	attrs["nextDriftTaskTime"] = cronDriftParam.NextDriftTaskTime
 
+	if form.HasKey("keyName") {
+		query := services.QueryKey(services.QueryWithOrgId(c.DB(), c.OrgId))
+		if key, _ := services.GetKeyByName(query, form.KeyName); key != nil {
+			form.KeyId = key.Id
+		}
+	}
+
 	setUpdateEnvByForm(attrs, form)
 	err = setAndCheckUpdateEnvByForm(c, tx, attrs, env, form)
 	if err != nil {
@@ -1425,6 +1438,12 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	c.AddLogField("action", fmt.Sprintf("deploy env task %s", form.Id))
 	lg := c.Logger()
 
+	if form.HasKey("keyName") {
+		query := services.QueryKey(services.QueryWithOrgId(c.DB(), c.OrgId))
+		if key, _ := services.GetKeyByName(query, form.KeyName); key != nil {
+			form.KeyId = key.Id
+		}
+	}
 	if err := envPreCheck(c.OrgId, c.ProjectId, form.KeyId, form.Playbook); err != nil {
 		return nil, err
 	}
