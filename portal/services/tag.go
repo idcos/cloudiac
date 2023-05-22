@@ -176,7 +176,7 @@ func UpsertTagValues(tx *db.Session, orgId models.Id, tags map[models.Id]string)
 	for kid := range tags {
 		exists := false
 		for _, tv := range dbTagVals {
-			if kid == tv.KeyId {
+			if kid == tv.KeyId && tags[kid] == tv.Value {
 				exists = true
 				break
 			}
