@@ -34,7 +34,7 @@ func Yaml2Hcl(units forms.DeployForm) string {
 	}
 
 	hasPrefix := func(value string) (bool, error) {
-		if strings.HasPrefix(value, "${") {
+		if strings.HasPrefix(value, "${") || strings.HasPrefix(value, "["){
 			return true, nil
 		}
 		return false, nil
