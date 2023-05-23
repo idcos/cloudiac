@@ -14,7 +14,7 @@ type Yaml2HclCmd struct {
 }
 
 func (*Yaml2HclCmd) Usage() string {
-	return `<new password>`
+	return `<yaml to hcl>`
 }
 
 func (y *Yaml2HclCmd) Execute(args []string) error {
