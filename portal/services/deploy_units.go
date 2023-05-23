@@ -56,5 +56,5 @@ func Yaml2Hcl(units forms.DeployForm) string {
 			"replace": replace,
 		}).Parse(outputTpl)).Execute(&outputMsg, units)
 
-	return fmt.Sprintf("%s/n%s", moduleMsg.String(), outputMsg.String())
+	return fmt.Sprintf("%s%s", moduleMsg.String(), outputMsg.String())
 }

@@ -19,8 +19,9 @@ func (*Yaml2HclCmd) Usage() string {
 
 func (y *Yaml2HclCmd) Execute(args []string) error {
 	var configViperConfig = viper.New()
-	configViperConfig.SetConfigName(y.Config)
+	configViperConfig.SetConfigFile(y.Config)
 	configViperConfig.SetConfigType("yaml")
+	configViperConfig.SetConfigType("yml")
 	//读取配置文件内容
 	if err := configViperConfig.ReadInConfig(); err != nil {
 		return err
