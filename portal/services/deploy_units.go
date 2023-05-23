@@ -27,7 +27,7 @@ output "{{ $key }}" {
 func Yaml2Hcl(units forms.DeployForm) string {
 	replace := func(value string) (string, error) {
 		if strings.HasPrefix(value, "${") {
-			return fmt.Sprintf("models.%s.this_private_ip[0]",
+			return fmt.Sprintf("module.%s.this_private_ip[0]",
 				strings.Replace(strings.Replace(value, "${", "", -1), "}", "", -1)), nil
 		}
 		return value, nil
