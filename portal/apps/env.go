@@ -1542,13 +1542,13 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	}
 
 	// 标签是否发生变更
-	if !form.HasKey("envTags") {
+	if form.HasKey("envTags") {
 		if _, er := services.UpdateObjectTags(tx, c.OrgId, env.Id,
 			consts.ScopeEnv, consts.TagSourceApi, tagList2Map(form.EnvTags)); er != nil {
 			return nil, er
 		}
 	}
-	if !form.HasKey("userTags") {
+	if form.HasKey("userTags") {
 		if _, er := services.UpdateObjectTags(tx, c.OrgId, env.Id,
 			consts.ScopeEnv, consts.TagSourceUser, tagList2Map(form.UserTags)); er != nil {
 			return nil, err
