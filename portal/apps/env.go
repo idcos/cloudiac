@@ -620,14 +620,7 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 		env.IsBilling = enabledBill
 
 		// 标签
-		tags, _ := services.FindObjectTags(c.DB(), c.OrgId, env.Id, consts.ScopeEnv)
-		for _, t := range tags {
-			if t.Source == consts.TagSourceApi {
-				env.EnvTags = append(env.EnvTags, models.Tag{Key: t.Key, Value: t.Value})
-			} else {
-				env.UserTags = append(env.UserTags, models.Tag{Key: t.Key, Value: t.Value})
-			}
-		}
+		env = PopulateTags(c, env)
 	}
 
 	return page.PageResp{
@@ -667,6 +660,18 @@ func PopulateLastTask(query *db.Session, env *models.EnvDetail) *models.EnvDetai
 				env.TokenName = token.Name
 			}
 
+		}
+	}
+	return env
+}
+
+func PopulateTags(c *ctx.ServiceContext, env *models.EnvDetail) *models.EnvDetail {
+	tags, _ := services.FindObjectTags(c.DB(), c.OrgId, env.Id, consts.ScopeEnv)
+	for _, t := range tags {
+		if t.Source == consts.TagSourceApi {
+			env.EnvTags = append(env.EnvTags, models.Tag{Key: t.Key, Value: t.Value})
+		} else {
+			env.UserTags = append(env.UserTags, models.Tag{Key: t.Key, Value: t.Value})
 		}
 	}
 	return env
@@ -1536,13 +1541,18 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		IsDriftTask = false
 	}
 
-	if _, er := services.UpdateObjectTags(tx, c.OrgId, env.Id,
-		consts.ScopeEnv, consts.TagSourceApi, tagList2Map(form.EnvTags)); er != nil {
-		return nil, er
+	// 标签是否发生变更
+	if !form.HasKey("envTags") {
+		if _, er := services.UpdateObjectTags(tx, c.OrgId, env.Id,
+			consts.ScopeEnv, consts.TagSourceApi, tagList2Map(form.EnvTags)); er != nil {
+			return nil, er
+		}
 	}
-	if _, er := services.UpdateObjectTags(tx, c.OrgId, env.Id,
-		consts.ScopeEnv, consts.TagSourceUser, tagList2Map(form.UserTags)); er != nil {
-		return nil, err
+	if !form.HasKey("userTags") {
+		if _, er := services.UpdateObjectTags(tx, c.OrgId, env.Id,
+			consts.ScopeEnv, consts.TagSourceUser, tagList2Map(form.UserTags)); er != nil {
+			return nil, err
+		}
 	}
 
 	// 创建任务
@@ -1580,12 +1590,12 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	}
 
 	env.MergeTaskStatus()
+
 	envDetail := &models.EnvDetail{
-		Env:      *env,
-		TaskId:   task.Id,
-		EnvTags:  form.EnvTags,
-		UserTags: form.UserTags,
+		Env:    *env,
+		TaskId: task.Id,
 	}
+	envDetail = PopulateTags(c, envDetail)
 	envDetail = PopulateLastTask(c.DB(), envDetail)
 	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
 	// 获取token
