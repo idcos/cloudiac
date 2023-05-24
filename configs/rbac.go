@@ -227,6 +227,11 @@ var Polices = []Policy{
 	{"operator", "tags", "*"},
 	{"guest", "tags", "read"},
 
+	{"manager", "declare", "*"},
+	{"approver", "declare", "*"},
+	{"operator", "declare", "*"},
+	{"guest", "declare", "read"},
+
 	// 注意：以下为旧版本演示模式用户权限配置，新版本中每个用户都有自己的演示组织，以下权限配置不再生效。
 	// 演示模式，当访问演示组织下的资源，进入受限模式
 	{"demo", "orgs", "read"},
