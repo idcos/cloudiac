@@ -1,6 +1,20 @@
 # Releases
 
 ------
+## v1.3.8 20230526
+**Features**
+
+- 资源详情页活跃资源费用新增规格/计费信息
+- 资源详情页活跃资源费用新增区域信息
+- 环境标签模块
+- 环境概览资源费用列表支持部分资源类型跳转云厂商控制台（包括阿里云instance、disk、slb）
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v1.3.8](https://github.com/idcos/cloudiac/releases/tag/v1.3.8)
+
+
+------
 ## v1.3.7 20230426
 **Features**
 
