@@ -157,19 +157,25 @@ func FindOrCreateTagKeys(tx *db.Session, orgId models.Id, keys []string) (map[st
 // 更新或创建 TagValues
 // tags 入参的 map key 为 tagKeyId
 // 返回值的 map key 也为 tagKeyId
-func UpsertTagValues(tx *db.Session, orgId models.Id, tags map[models.Id]string) (map[models.Id]*models.TagValue, e.Error) {
+func UpsertTagValues(tx *db.Session, orgId models.Id, objId models.Id, objType string, tags map[models.Id]string) (map[models.Id]*models.TagValue, e.Error) {
 
 	keyIds := make([]models.Id, 0, len(tags))
-	for k := range tags {
-		keyIds = append(keyIds, k)
-	}
-
 	dbTagVals := make([]*models.TagValue, 0)
-	err := tx.Model(&models.TagValue{}).
-		Where("org_id = ? AND `key_id` IN (?)", orgId, keyIds).
-		Find(&dbTagVals)
-	if err != nil {
-		return nil, e.AutoNew(err, e.DBError)
+	query := tx.Model(&models.TagValue{}).
+		Where("org_id = ?", orgId)
+
+	for k, v := range tags {
+		keyIds = append(keyIds, k)
+		newDbTagVals := make([]*models.TagValue, 0)
+		err := query.Where("`key_id` = ?", k).
+			Where("value = ?", v).
+			Find(&newDbTagVals)
+		if err != nil {
+			return nil, e.AutoNew(err, e.DBError)
+		}
+		if len(newDbTagVals) > 0 {
+			dbTagVals = append(dbTagVals, newDbTagVals...)
+		}
 	}
 
 	newTagVals := make([]*models.TagValue, 0)
@@ -204,7 +210,7 @@ func UpsertTagValues(tx *db.Session, orgId models.Id, tags map[models.Id]string)
 	return rs, nil
 }
 
-func UpInsertTags(tx *db.Session, orgId models.Id, tags map[string]string) (map[string]*models.TagValue, e.Error) {
+func UpInsertTags(tx *db.Session, orgId, objId models.Id, objType string, tags map[string]string) (map[string]*models.TagValue, e.Error) {
 	keys := []string{}
 	for k := range tags {
 		keys = append(keys, k)
@@ -220,7 +226,7 @@ func UpInsertTags(tx *db.Session, orgId models.Id, tags map[string]string) (map[
 		tagKeyIdMap[v.Id] = tags[k]
 	}
 
-	tVals, er := UpsertTagValues(tx, orgId, tagKeyIdMap)
+	tVals, er := UpsertTagValues(tx, orgId, objId, objType, tagKeyIdMap)
 	if er != nil {
 		return nil, er
 	}
@@ -247,7 +253,7 @@ func UpdateObjectTags(tx *db.Session, orgId, objId models.Id, objType, source st
 
 // 添加 tags 到对象上，如果对象已有相同的 tag key 则更新 tag value
 func AddTagsToObject(tx *db.Session, orgId, objId models.Id, objType, source string, tags map[string]string) ([]*models.TagRel, e.Error) {
-	dbTags, er := UpInsertTags(tx, orgId, tags)
+	dbTags, er := UpInsertTags(tx, orgId, objId, objType, tags)
 	if er != nil {
 		return nil, er
 	}
