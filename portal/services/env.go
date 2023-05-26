@@ -683,7 +683,7 @@ func monthEnvCostList(tx *db.Session, id models.Id, isCurMonth bool) (map[string
 		query = query.Where(`iac_bill.cycle != DATE_FORMAT(CURDATE(), "%Y-%m")`)
 	}
 
-	query = query.Group("instance_id")
+	query = query.Group("instance_id, iac_resource.attrs")
 
 	var results []RawEnvCostDetail
 	if err := query.Find(&results); err != nil {
