@@ -160,16 +160,22 @@ func FindOrCreateTagKeys(tx *db.Session, orgId models.Id, keys []string) (map[st
 func UpsertTagValues(tx *db.Session, orgId models.Id, tags map[models.Id]string) (map[models.Id]*models.TagValue, e.Error) {
 
 	keyIds := make([]models.Id, 0, len(tags))
-	for k := range tags {
-		keyIds = append(keyIds, k)
-	}
-
 	dbTagVals := make([]*models.TagValue, 0)
-	err := tx.Model(&models.TagValue{}).
-		Where("org_id = ? AND `key_id` IN (?)", orgId, keyIds).
-		Find(&dbTagVals)
-	if err != nil {
-		return nil, e.AutoNew(err, e.DBError)
+	query := tx.Model(&models.TagValue{}).
+		Where("org_id = ?", orgId)
+
+	for k, v := range tags {
+		keyIds = append(keyIds, k)
+		newDbTagVals := make([]*models.TagValue, 0)
+		err := query.Where("`key_id` = ?", k).
+			Where("value = ?", v).
+			Find(&newDbTagVals)
+		if err != nil {
+			return nil, e.AutoNew(err, e.DBError)
+		}
+		if len(newDbTagVals) > 0 {
+			dbTagVals = append(dbTagVals, newDbTagVals...)
+		}
 	}
 
 	newTagVals := make([]*models.TagValue, 0)
