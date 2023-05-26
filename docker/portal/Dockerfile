@@ -1,4 +1,4 @@
-FROM cloudiac/base-iac-portal:v0.2.1
+FROM cloudiac/base-iac-portal:v0.2.2
 
 EXPOSE 9030
 

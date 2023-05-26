@@ -205,6 +205,7 @@ func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*mode
 		Name:            pt.Name,
 		Targets:         pt.Targets,
 		CreatorId:       pt.CreatorId,
+		TokenId:         pt.TokenId,
 		Variables:       pt.Variables,
 		AutoApprove:     pt.AutoApprove,
 		KeyId:           models.Id(firstVal(string(pt.KeyId), string(env.KeyId))),
@@ -486,6 +487,9 @@ func QueryTask(query *db.Session) *db.Session {
 	// 创建人姓名
 	query = query.Joins("left join iac_user as u on u.id = iac_task.creator_id").
 		LazySelectAppend("u.name as creator,iac_task.*")
+	// Token 名称
+	query = query.Joins("left join iac_token as it on it.id = iac_task.token_id").
+		LazySelectAppend("it.name as token_name")
 	return query
 }
 

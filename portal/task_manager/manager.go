@@ -1535,32 +1535,35 @@ func waitScanTaskStepDone(
 	}
 }
 
+func getUserName(userId models.Id) (string, error) {
+	user, err := services.GetUserByIdRaw(db.Get(), models.Id(userId))
+	if err != nil {
+		return "", errors.Wrapf(err, "query user %s", userId)
+	}
+	if user.Name == "" {
+		return user.Email, nil
+	} else {
+		return user.Name, nil
+	}
+}
+
 // 为 req 添加 sysEnvs(直接修改传入的 req)
 func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 	sysEnvs := make(map[string]string)
 
 	// CLOUDIAC_TASK_ID	当前任务的 id
 	sysEnvs["CLOUDIAC_TASK_ID"] = req.TaskId
-	sysEnvs["TF_VAR_cloudiac_task_id"] = req.TaskId
 	// CLOUDIAC_BRANCH	当前任务的云模板代码的分支
 	sysEnvs["CLOUDIAC_BRANCH"] = req.RepoBranch
-	sysEnvs["TF_VAR_cloudiac_branch"] = req.RepoBranch
 	// CLOUDIAC_COMMIT	当前任务的云模板代码 commit hash
 	sysEnvs["CLOUDIAC_COMMIT"] = req.RepoCommitId
-	sysEnvs["TF_VAR_cloudiac_commit"] = req.RepoCommitId
 
 	if req.CreatorId != "" {
-		user, err := services.GetUserByIdRaw(db.Get(), models.Id(req.CreatorId))
+		username, err := getUserName(models.Id(req.CreatorId))
 		if err != nil {
-			return errors.Wrapf(err, "query user %s", req.CreatorId)
+			return err
 		}
-		if user.Name == "" {
-			sysEnvs["CLOUDIAC_USERNAME"] = user.Email
-			sysEnvs["TF_VAR_cloudiac_username"] = user.Email
-		} else {
-			sysEnvs["CLOUDIAC_USERNAME"] = user.Name
-			sysEnvs["TF_VAR_cloudiac_username"] = user.Name
-		}
+		sysEnvs["CLOUDIAC_USERNAME"] = username
 	}
 
 	if req.Env.Id != "" {
@@ -1600,6 +1603,28 @@ func runTaskReqAddSysEnvs(req *runner.RunTaskReq) error {
 		sysEnvs["CLOUDIAC_ENV_RESOURCES"] = fmt.Sprintf("%d", resCount)
 		// 当前任务使用的 terraform 版本号(eg. 0.14.11)
 		sysEnvs["CLOUDIAC_TF_VERSION"] = req.Env.TfVersion
+
+		// 自动设置 tags
+		{
+			envTags := make(map[string]string)
+			envTags["CloudIaC:OrgID"] = env.OrgId.String()
+			envTags["CloudIaC:ProjectID"] = env.ProjectId.String()
+			envTags["CloudIaC:EnvID"] = env.Id.String()
+			if username, err := getUserName(env.CreatorId); err != nil {
+				return err
+			} else {
+				envTags["CloudIaC:CreatedBy"] = username
+			}
+
+			tags, er := services.FindObjectTagMap(db.Get(), env.OrgId, env.Id, consts.ScopeEnv)
+			if er != nil {
+				return er
+			}
+			for k, v := range tags {
+				envTags[k] = v
+			}
+			sysEnvs["CLOUDIAC_ENV_TAGS"] = string(utils.MustJSON(envTags))
+		}
 
 		// 所有 CLOUDIAC_ 前缀的变量都以小写名称通过环境变量传入 terraform
 		for k, v := range sysEnvs {
