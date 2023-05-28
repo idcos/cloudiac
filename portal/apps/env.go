@@ -360,7 +360,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	if form.KeyId == "" && form.KeyName != "" {
 		query := services.QueryKey(services.QueryWithOrgId(c.DB(), c.OrgId))
 		if key, _ := services.GetKeyByName(query, form.KeyName); key != nil {
-			form.KeyId = key.Id
+			form.Set("keyId", key.Id.String())
 		}
 	}
 	err := createEnvCheck(c, form)
@@ -1004,7 +1004,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	if form.HasKey("keyName") {
 		query := services.QueryKey(services.QueryWithOrgId(c.DB(), c.OrgId))
 		if key, _ := services.GetKeyByName(query, form.KeyName); key != nil {
-			form.KeyId = key.Id
+			form.Set("keyId", key.Id.String())
 		}
 	}
 
@@ -1446,7 +1446,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	if form.HasKey("keyName") {
 		query := services.QueryKey(services.QueryWithOrgId(c.DB(), c.OrgId))
 		if key, _ := services.GetKeyByName(query, form.KeyName); key != nil {
-			form.KeyId = key.Id
+			form.Set("keyId", key.Id.String())
 		}
 	}
 	if err := envPreCheck(c.OrgId, c.ProjectId, form.KeyId, form.Playbook); err != nil {
