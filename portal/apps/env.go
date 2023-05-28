@@ -361,6 +361,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		query := services.QueryKey(services.QueryWithOrgId(c.DB(), c.OrgId))
 		if key, _ := services.GetKeyByName(query, form.KeyName); key != nil {
 			form.Set("keyId", key.Id.String())
+			form.KeyId = key.Id
 		}
 	}
 	err := createEnvCheck(c, form)
@@ -1005,6 +1006,7 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 		query := services.QueryKey(services.QueryWithOrgId(c.DB(), c.OrgId))
 		if key, _ := services.GetKeyByName(query, form.KeyName); key != nil {
 			form.Set("keyId", key.Id.String())
+			form.KeyId = key.Id
 		}
 	}
 
@@ -1447,6 +1449,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		query := services.QueryKey(services.QueryWithOrgId(c.DB(), c.OrgId))
 		if key, _ := services.GetKeyByName(query, form.KeyName); key != nil {
 			form.Set("keyId", key.Id.String())
+			form.KeyId = key.Id
 		}
 	}
 	if err := envPreCheck(c.OrgId, c.ProjectId, form.KeyId, form.Playbook); err != nil {
