@@ -1522,9 +1522,33 @@ func SendHttpMessage(callbackUrl string, session *db.Session, task *models.Task,
 		return
 	}
 
+	outputs := make(map[string]interface{})
+	for k, v := range task.Result.Outputs {
+		m, ok := v.(map[string]interface{})
+		if !ok {
+			outputs[k] = v
+			continue
+		}
+
+		if _, ok := m["sensitive"]; !ok {
+			outputs[k] = v
+			continue
+		}
+
+		m["value"] = "(sensitive value)"
+		outputs[k] = m
+	}
+
+	eventType := consts.DeployEventType
+	result := &CallbackResult{}
+	result.Resources = resources
+	result.Outputs = outputs
+
+	isDrift := false
+
 	header := &http.Header{}
 	header.Set("Content-Type", "application/json")
-	message := GenerateCallbackContent(task, taskStatus, env.Status, policyStatus, resources)
+	message := GenerateCallbackContent(task, eventType, taskStatus, env.Status, policyStatus, isDrift, result)
 	timeout := int(consts.CallbackTimeout.Seconds())
 	if _, er := utils.HttpService(callbackUrl, "POST", header, message, timeout, timeout); er != nil {
 		logs.Get().Warnf("send callback massage failed, err: %s, data: %+v", er, message)
@@ -1726,7 +1750,9 @@ func doAbortRunnerTask(task models.Task, justCheck bool) e.Error {
 }
 
 type CallbackResult struct {
-	Resources []models.Resource `json:"resources"  `
+	Resources      []models.Resource               `json:"resources"  `
+	Outputs        map[string]interface{}          `json:"outputs"`
+	DriftResources map[string]models.ResourceDrift `json:"drift_resources"`
 }
 
 type CallbackContent struct {
@@ -1741,11 +1767,14 @@ type CallbackContent struct {
 	TplId        models.Id      `json:"tplId"`
 	EnvId        models.Id      `json:"envId"`
 	TaskId       models.Id      `json:"taskId"`
+	IsDrift      bool           `json:"isDrift"` // 漂移状态
 	Result       CallbackResult `json:"result"`
 }
 
-func GenerateCallbackContent(task *models.Task, taskStatus, envStatus, policyStatus string, resources []models.Resource) interface{} {
+func GenerateCallbackContent(task *models.Task, eventType, taskStatus, envStatus, policyStatus string,
+	isDrift bool, result *CallbackResult) interface{} {
 	a := CallbackContent{
+		EventType:    eventType,
 		TaskStatus:   taskStatus,
 		TaskType:     task.Type,
 		PolicyStatus: policyStatus,
@@ -1755,8 +1784,11 @@ func GenerateCallbackContent(task *models.Task, taskStatus, envStatus, policySta
 		TplId:        task.TplId,
 		EnvId:        task.EnvId,
 		TaskId:       task.Id,
+		IsDrift:      isDrift,
 		Result: CallbackResult{
-			Resources: resources,
+			Resources:      result.Resources,
+			Outputs:        result.Outputs,
+			DriftResources: result.DriftResources,
 		},
 	}
 

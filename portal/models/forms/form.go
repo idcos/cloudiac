@@ -54,6 +54,16 @@ func (b *BaseForm) Get(k string) (string, bool) {
 	return values[0], true
 }
 
+func (b *BaseForm) Set(k string, v string) (isNew bool) {
+	if _, ok := b.formValues[k]; !ok {
+		b.formValues[k] = []string{v}
+		return false
+	}
+
+	b.formValues[k] = []string{v}
+	return true
+}
+
 func (b *BaseForm) HasKey(k string) bool {
 	_, ok := b.Get(k)
 	return ok
