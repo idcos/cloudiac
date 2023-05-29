@@ -1,7 +1,16 @@
+## v1.3.8 20230526
+### Features:
+- 资源详情页活跃资源费用新增规格/计费信息
+- 资源详情页活跃资源费用新增区域信息
+- 环境标签模块
+- 环境概览资源费用列表支持部分资源类型跳转云厂商控制台（包括阿里云instance、disk、slb）
+
+------
 ## v1.3.7 20230426
 ### Features:
 - 新增iac部署日志的错误信息接口
 
+------
 ## v1.3.6 20230323
 ### Fixed
 - 修复资源列表无法区分datasource和resource的问题
@@ -14,7 +23,7 @@
 执行 `./iac-tool updateDB resource -m` 进行数据升级。
 如果是容器化部署执行: `docker-compose exec iac-portal ./iac-tool updateDB resource -m`
 
-
+------
 ## v1.3.5 20230208
 ### Features
 - 新增swaggerEnable参数支持开关swagger文档
