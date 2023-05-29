@@ -1,6 +1,20 @@
 # Releases
 
 ------
+## v1.3.9 20230529
+**Fixes**
+
+- 修复环境部署时标签异常覆盖问题
+- 修复swagger文档默认配置生效异常问题
+- 修复部署环境是密钥信息解析异常问题
+- 修复 http callback 数据丢失问题
+
+
+
+**完整 Changelog 及版本包:** [https://github.com/idcos/cloudiac/releases/tag/v1.3.9](https://github.com/idcos/cloudiac/releases/tag/v1.3.9)
+
+
+------
 ## v1.3.8 20230526
 **Features**
 
