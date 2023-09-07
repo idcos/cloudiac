@@ -1,13 +1,14 @@
 [
   {
     "version": "1.3.9",
-    "date": "20230529",
+    "date": "20230907",
     "content": {
       "Fixes": [
         "修复环境部署时标签异常覆盖问题",
         "修复swagger文档默认配置生效异常问题",
         "修复部署环境是密钥信息解析异常问题",
-        "修复 http callback 数据丢失问题"
+        "修复 http callback 数据丢失问题",
+        "修改 task content 类型为LONGBLOB"
       ]
     }
   },
