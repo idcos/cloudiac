@@ -18,52 +18,52 @@ version: 0.3
 plan:
   steps:
     - type: checkout
-      name: Checkout Code
+      name: 拉取配置
 
     - type: terraformInit
-      name: Terraform Init
+      name: 初始化配置
 
     - type: opaScan
-      name: OPA Scan
+      name: 合规检测
 
     - type: terraformPlan
-      name: Terraform Plan
+      name: 检查配置
 
 apply:
   steps:
     - type: checkout
-      name: Checkout Code
+      name: 拉取配置
 
     - type: terraformInit
-      name: Terraform Init
+      name: 初始化配置
 
     - type: opaScan
-      name: OPA Scan
+      name: 合规检测
 
     - type: terraformPlan
-      name: Terraform Plan
+      name: 检查配置
 
     - type: terraformApply
-      name: Terraform Apply
+      name: 执行配置
 
     - type: ansiblePlay
-      name: Run playbook
+      name: 部署应用
 
 destroy:
   steps:
     - type: checkout
-      name: Checkout Code
+      name: 拉取配置
 
     - type: terraformInit
-      name: Terraform Init
+      name: 初始化配置
 
     - type: terraformPlan
-      name: Terraform Plan
+      name: 检查配置
       args:
         - "-destroy"
 
     - type: terraformDestroy
-      name: Terraform Destroy
+      name: 销毁环境
 `
 
 const pipelineV0dot4 = `
@@ -72,52 +72,52 @@ version: 0.4
 plan:
   steps:
     - type: checkout
-      name: Checkout Code
+      name: 拉取配置
 
     - type: terraformInit
-      name: Terraform Init
+      name: 初始化配置
 
     - type: terraformPlan
-      name: Terraform Plan
+      name: 检查配置
 
     - type: envScan
-      name: OPA Scan
+      name: 合规检测
 
 apply:
   steps:
     - type: checkout
-      name: Checkout Code
+      name: 拉取配置
 
     - type: terraformInit
-      name: Terraform Init
+      name: 初始化配置
 
     - type: terraformPlan
-      name: Terraform Plan
+      name: 检查配置
 
     - type: envScan
-      name: OPA Scan
+      name: 合规检测
 
     - type: terraformApply
-      name: Terraform Apply
+      name: 执行配置
 
     - type: ansiblePlay
-      name: Run playbook
+      name: 部署应用
 
 destroy:
   steps:
   - type: checkout
-    name: Checkout Code
+    name: 拉取配置
 
   - type: terraformInit
-    name: Terraform Init
+    name: 初始化配置
 
   - type: terraformPlan
-    name: Terraform Plan
+    name: 检查配置
     args:
       - "-destroy"
 
   - type: terraformDestroy
-    name: Terraform Destroy
+    name: 销毁环境
 
 # scan 和 parse 暂不开发自定义工作流
 envScan:
