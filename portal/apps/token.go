@@ -52,6 +52,7 @@ func SearchToken(c *ctx.ServiceContext, form *forms.SearchTokenForm) (interface{
 			CreatorId:   token.CreatorId,
 			EnvId:       token.EnvId,
 			Action:      token.Action,
+			Key:         token.Key,
 		})
 	}
 
@@ -139,6 +140,7 @@ func UpdateToken(c *ctx.ServiceContext, form *forms.UpdateTokenForm) (tokenResp 
 		CreatorId:   token.CreatorId,
 		EnvId:       token.EnvId,
 		Action:      token.Action,
+		Key:         token.Key,
 	}, nil
 }
 

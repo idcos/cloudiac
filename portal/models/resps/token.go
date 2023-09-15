@@ -33,4 +33,5 @@ type TokenResp struct {
 	// 触发器需要的字段
 	EnvId  models.Id `json:"envId"`
 	Action string    `json:"action"`
+	Key    string    `json:"key"`
 }
