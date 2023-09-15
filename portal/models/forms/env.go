@@ -22,7 +22,7 @@ type CreateEnvForm struct {
 	envDeployTtlForm
 
 	TplId    models.Id `form:"tplId" json:"tplId" binding:"required,startswith=tpl-,max=32"`                 // 模板ID
-	Name     string    `form:"name" json:"name" binding:"required,gte=2,lte=64"`                             // 环境名称
+	Name     string    `form:"name" json:"name" binding:"required,gte=2,lte=255"`                            // 环境名称
 	OneTime  bool      `form:"oneTime" json:"oneTime" binding:""`                                            // 一次性环境标识
 	Triggers []string  `form:"triggers" json:"triggers" binding:"omitempty,dive,required,oneof=commit prmr"` // 启用触发器，触发器：commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
 
@@ -93,7 +93,7 @@ type UpdateEnvForm struct {
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true" binding:"required,startswith=env-,max=32"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
 
-	Name        string    `form:"name" json:"name" binding:"omitempty,gte=2,lte=64"`           // 环境名称
+	Name        string    `form:"name" json:"name" binding:"omitempty,gte=2,lte=255"`          // 环境名称
 	Description string    `form:"description" json:"description" binding:"max=255"`            // 环境描述
 	KeyId       models.Id `form:"keyId" json:"keyId" binding:"omitempty,startswith=k-,max=32"` // 部署密钥ID
 	KeyName     string    `form:"keyName" json:"keyName" binding:"omitempty,max=255"`          // 部署密钥名称
