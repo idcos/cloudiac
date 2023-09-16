@@ -7,6 +7,7 @@
 - 修改 task content 类型为LONGBLOB
 - 优化pipeline默认模版为中文
 - 修复token字段key缺失
+- 修改环境名称字段长度为255
 
 ------
 ## v1.3.8 20230526
