@@ -605,14 +605,16 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 func taskStatusExitedCall(dbSess *db.Session, task *models.Task, status string) {
 	if task.Type == common.TaskTypeApply || task.Type == common.TaskTypeDestroy {
 		// 回调的消息通知只发送一次, 作业结束后发送通知
-		SendKafkaMessage(dbSess, task, status)
-
+		// 修改逻辑，设置了正确callback后，不再发送kafka消息
 		if task.Callback != "" {
 			if utils.IsValidUrl(task.Callback) {
 				go SendHttpMessage(task.Callback, dbSess, task, status)
 			} else {
-				logs.Get().Warnf("invalid task callback url: %s", task.Callback)
+				logs.Get().Warnf("invalid task callback url: %s,use kafka message", task.Callback)
+				SendKafkaMessage(dbSess, task, status)
 			}
+		} else {
+			SendKafkaMessage(dbSess, task, status)
 		}
 
 		syncManagedResToProvider(task)
