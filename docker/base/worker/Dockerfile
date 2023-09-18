@@ -48,7 +48,7 @@ RUN tfenv install "0.11.15" && \
     tfenv install "1.5.5" && \
     tfenv install "1.5.6"
 
-RUN tfenv use 1.2.4 && \
+RUN tfenv use 1.5.6 && \
   ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 COPY --from=cloudiac/base-ct-worker:v0.1.8 /cloudiac/terraform/plugins /cloudiac/terraform/plugins
 
