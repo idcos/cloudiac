@@ -1,3 +1,8 @@
+## v1.3.10
+### Features:
+- worker新增terraform版本，并修改默认terraform版本为1.5.6
+- 修改任务完成回调逻辑，如果callback是一个正确的url，则请求callback，反之则发送一次kafka消息
+
 ## v1.3.9 20230915
 ### Fixed:
 - 修复环境部署时标签异常覆盖问题
