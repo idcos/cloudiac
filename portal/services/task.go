@@ -1012,7 +1012,7 @@ func fetchRunnerTaskStepLog(ctx context.Context, runnerId string, step *models.T
 		WithField("taskId", step.TaskId).
 		WithField("step", fmt.Sprintf("%d(%s)", step.Index, step.Type))
 
-	runnerAddr, err := GetRunnerAddress(runnerId)
+	runnerAddr, err := GetRunnerAddressByCtx(ctx, runnerId)
 	if err != nil {
 		return err
 	}

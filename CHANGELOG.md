@@ -2,6 +2,8 @@
 ### Features:
 - worker新增terraform版本，并修改默认terraform版本为1.5.6
 - 修改任务完成回调逻辑，如果callback是一个正确的url，则请求callback，反之则发送一次kafka消息
+### Fixed:
+- 修改轮询任务结果多次请求consul的问题
 
 ## v1.3.9 20230915
 ### Fixed:

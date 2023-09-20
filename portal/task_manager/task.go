@@ -195,7 +195,7 @@ func pullTaskStepStatus(ctx context.Context, task models.Tasker, step *models.Ta
 	stepResult *waitStepResult, err error) {
 	logger := logs.Get().WithField("action", "PullTaskState").WithField("taskId", task.GetId())
 
-	runnerAddr, err := services.GetRunnerAddress(task.GetRunnerId())
+	runnerAddr, err := services.GetRunnerAddressByCtx(ctx, task.GetRunnerId())
 	if err != nil {
 		return nil, err
 	}
