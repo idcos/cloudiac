@@ -52,6 +52,7 @@ type RunnerConfig struct {
 	OfflineMode       bool   `yaml:"offline_mode"`       // 离线模式?
 	ReserveContainer  bool   `yaml:"reserver_container"` // 任务结束后保留容器?(停止容器但不删除)
 	ProviderCachePath string `yaml:"provider_cache_path"`
+	Privileged        bool   `yaml:"privileged"`
 }
 
 type PortalConfig struct {
