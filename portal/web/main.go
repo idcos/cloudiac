@@ -44,6 +44,7 @@ func GetRouter() *gin.Engine {
 			"build":   common.BUILD,
 		})
 	}))
+
 	validate.RegisterValida()
 	api_v1.Register(e.Group("/api/v1"))
 

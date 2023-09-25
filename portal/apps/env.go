@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/robfig/cron/v3"
 
@@ -356,6 +357,13 @@ func envWorkdirCheck(c *ctx.ServiceContext, repoId, repoRevision, workdir string
 func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDetail, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create env %s", form.Name))
 
+	if form.KeyId == "" && form.KeyName != "" {
+		query := services.QueryKey(services.QueryWithOrgId(c.DB(), c.OrgId))
+		if key, _ := services.GetKeyByName(query, form.KeyName); key != nil {
+			form.Set("keyId", key.Id.String())
+			form.KeyId = key.Id
+		}
+	}
 	err := createEnvCheck(c, form)
 	if err != nil {
 		return nil, err
@@ -409,6 +417,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		OrgId:     c.OrgId,
 		ProjectId: c.ProjectId,
 		CreatorId: c.UserId,
+		TokenId:   c.ApiTokenId,
 		TplId:     form.TplId,
 
 		Name:        form.Name,
@@ -470,11 +479,21 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	// 来源：手动触发、外部调用
 	taskSource, taskSourceSys := getEnvSource(form.Source)
 
+	if _, er := services.UpdateObjectTags(tx, c.OrgId, env.Id,
+		consts.ScopeEnv, consts.TagSourceApi, tagList2Map(form.EnvTags)); er != nil {
+		return nil, er
+	}
+	if _, er := services.UpdateObjectTags(tx, c.OrgId, env.Id,
+		consts.ScopeEnv, consts.TagSourceUser, tagList2Map(form.UserTags)); er != nil {
+		return nil, err
+	}
+
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
 		Targets:         targets,
 		CreatorId:       c.UserId,
+		TokenId:         c.ApiTokenId,
 		KeyId:           env.KeyId,
 		Variables:       vars,
 		AutoApprove:     env.AutoApproval,
@@ -517,6 +536,8 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		TaskId:     task.Id,
 		Operator:   c.Username,
 		OperatorId: c.UserId,
+		EnvTags:    form.EnvTags,
+		UserTags:   form.UserTags,
 	}
 	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
 	// 获取token
@@ -598,6 +619,9 @@ func SearchEnv(c *ctx.ServiceContext, form *forms.SearchEnvForm) (interface{}, e
 
 		// 是否开启费用采集
 		env.IsBilling = enabledBill
+
+		// 标签
+		env = PopulateTags(c, env)
 	}
 
 	return page.PageResp{
@@ -632,6 +656,23 @@ func PopulateLastTask(query *db.Session, env *models.EnvDetail) *models.EnvDetai
 				env.Operator = operator.Name
 				env.OperatorId = lastTask.CreatorId
 			}
+
+			if token, _ := services.GetApiTokenByIdRaw(query, lastTask.TokenId); token != nil {
+				env.TokenName = token.Name
+			}
+
+		}
+	}
+	return env
+}
+
+func PopulateTags(c *ctx.ServiceContext, env *models.EnvDetail) *models.EnvDetail {
+	tags, _ := services.FindObjectTags(c.DB(), c.OrgId, env.Id, consts.ScopeEnv)
+	for _, t := range tags {
+		if t.Source == consts.TagSourceApi {
+			env.EnvTags = append(env.EnvTags, models.Tag{Key: t.Key, Value: t.Value})
+		} else {
+			env.UserTags = append(env.UserTags, models.Tag{Key: t.Key, Value: t.Value})
 		}
 	}
 	return env
@@ -960,6 +1001,14 @@ func UpdateEnv(c *ctx.ServiceContext, form *forms.UpdateEnvForm) (*models.EnvDet
 	attrs["openCronDrift"] = cronDriftParam.OpenCronDrift
 	attrs["cronDriftExpress"] = cronDriftParam.CronDriftExpress
 	attrs["nextDriftTaskTime"] = cronDriftParam.NextDriftTaskTime
+
+	if form.HasKey("keyName") {
+		query := services.QueryKey(services.QueryWithOrgId(c.DB(), c.OrgId))
+		if key, _ := services.GetKeyByName(query, form.KeyName); key != nil {
+			form.Set("keyId", key.Id.String())
+			form.KeyId = key.Id
+		}
+	}
 
 	setUpdateEnvByForm(attrs, form)
 	err = setAndCheckUpdateEnvByForm(c, tx, attrs, env, form)
@@ -1396,6 +1445,13 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	c.AddLogField("action", fmt.Sprintf("deploy env task %s", form.Id))
 	lg := c.Logger()
 
+	if form.HasKey("keyName") {
+		query := services.QueryKey(services.QueryWithOrgId(c.DB(), c.OrgId))
+		if key, _ := services.GetKeyByName(query, form.KeyName); key != nil {
+			form.Set("keyId", key.Id.String())
+			form.KeyId = key.Id
+		}
+	}
 	if err := envPreCheck(c.OrgId, c.ProjectId, form.KeyId, form.Playbook); err != nil {
 		return nil, err
 	}
@@ -1488,11 +1544,26 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 		IsDriftTask = false
 	}
 
+	// 标签是否发生变更
+	if form.HasKey("envTags") {
+		if _, er := services.UpdateObjectTags(tx, c.OrgId, env.Id,
+			consts.ScopeEnv, consts.TagSourceApi, tagList2Map(form.EnvTags)); er != nil {
+			return nil, er
+		}
+	}
+	if form.HasKey("userTags") {
+		if _, er := services.UpdateObjectTags(tx, c.OrgId, env.Id,
+			consts.ScopeEnv, consts.TagSourceUser, tagList2Map(form.UserTags)); er != nil {
+			return nil, err
+		}
+	}
+
 	// 创建任务
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
 		Targets:         targets,
 		CreatorId:       c.UserId,
+		TokenId:         c.ApiTokenId,
 		KeyId:           env.KeyId,
 		Variables:       vars,
 		AutoApprove:     env.AutoApproval,
@@ -1522,10 +1593,12 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	}
 
 	env.MergeTaskStatus()
+
 	envDetail := &models.EnvDetail{
 		Env:    *env,
 		TaskId: task.Id,
 	}
+	envDetail = PopulateTags(c, envDetail)
 	envDetail = PopulateLastTask(c.DB(), envDetail)
 	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
 	// 获取token
@@ -1537,7 +1610,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, form.Triggers); err != nil {
 		c.Logger().Errorf("set webhook err :%v", err)
 	}
-	
+
 	return envDetail, nil
 }
 
@@ -1831,12 +1904,18 @@ func EnvStat(c *ctx.ServiceContext, form *forms.EnvParam) (interface{}, e.Error)
 
 	var results = make([]resps.EnvCostDetailResp, 0)
 	for _, envCost := range envCostList {
+		resInfo := GetCloudResourceInfo(envCost.Attrs, envCost.ResType)
+
 		results = append(results, resps.EnvCostDetailResp{
-			ResType:      envCost.ResType,
-			ResAttr:      GetResShowName(envCost.Attrs, envCost.Address),
-			InstanceId:   envCost.InstanceId,
-			CurMonthCost: envCost.CurMonthCost,
-			TotalCost:    envCost.TotalCost,
+			ResType:          envCost.ResType,
+			ResAttr:          GetResShowName(envCost.Attrs, envCost.Address),
+			InstanceId:       envCost.InstanceId,
+			CurMonthCost:     envCost.CurMonthCost,
+			TotalCost:        envCost.TotalCost,
+			InstanceSpec:     resInfo[consts.InstanceSpecKey],
+			SubscriptionType: resInfo[consts.SubscriptionTypeKey],
+			Region:           resInfo[consts.RegionKey],
+			AvailabilityZone: resInfo[consts.ZoneKey],
 		})
 	}
 
@@ -1867,4 +1946,131 @@ func getEnvSource(source string) (taskSource string, taskSourceSys string) {
 		taskSourceSys = source
 	}
 	return
+}
+
+func GetCloudResourceInfo(attrs map[string]interface{}, resType string) map[string]string {
+	var subscriptionFuncs = map[string]consts.SubscriptionFunc{
+		consts.AliCloudInstance:    getAliyunInstanceSubscriptionType,
+		consts.AliCloudSLB:         getAliyunPaymentSubscriptionType,
+		consts.AliCloudALB:         getAliyunPaymentSubscriptionType,
+		consts.AliCloudSLBClassic:  getAliyunPaymentSubscriptionType,
+		consts.AliCloudDisk:        getAliyunPaymentSubscriptionType,
+		consts.AliCloudDiskClassic: getAliyunPaymentSubscriptionType,
+		consts.AliCloudEIP:         getAliyunPaymentSubscriptionType,
+		consts.AliCloudDB:          getAliyunInstanceSubscriptionType,
+		consts.AliCloudMongoDB:     getAliyunInstanceSubscriptionType,
+		consts.AliCloudKVStore:     getAliyunPaymentSubscriptionType,
+	}
+
+	result := make(map[string]string)
+
+	subscriptionTypeFunc, ok := subscriptionFuncs[resType]
+	if !ok {
+		return result
+	}
+
+	result[consts.ZoneKey] = getStringValue(attrs, getZoneKey(resType))
+	result[consts.RegionKey] = getRegionFromAvailabilityZone(getStringValue(attrs, getZoneKey(resType)))
+	result[consts.InstanceSpecKey] = getStringValue(attrs, getSpecKey(resType))
+	result[consts.SubscriptionTypeKey] = subscriptionTypeFunc(attrs)
+
+	return result
+}
+
+func getRegionFromAvailabilityZone(availabilityZone string) string {
+	// find the index position of the last "-"
+	lastDashIndex := strings.LastIndex(availabilityZone, "-")
+	// if "-" is not found, return the original string directly
+	if lastDashIndex == -1 {
+		return availabilityZone
+	}
+
+	// intercept the content after the last "-"
+	suffix := availabilityZone[lastDashIndex+1:]
+
+	// whether there is a number after the last "-"
+	numLen := 0
+	for _, c := range suffix {
+		if unicode.IsDigit(c) {
+			numLen++
+		} else {
+			break
+		}
+	}
+
+	// if it contains a number, return the content before the last "-" and the number part
+	if numLen > 0 {
+		return availabilityZone[:lastDashIndex+1] + suffix[:numLen]
+	}
+
+	// if it does not contain a number, directly return the content before the last "-"
+	return availabilityZone[:lastDashIndex]
+}
+
+func getZoneKey(resType string) string {
+	switch resType {
+	case consts.AliCloudInstance, consts.AliCloudDisk, consts.AliCloudDiskClassic:
+		return consts.ZoneKey
+	case consts.AliCloudSLB, consts.AliCloudSLBClassic, consts.AliCloudALB:
+		return consts.SLBZoneKey
+	case consts.AliCloudDB, consts.AliCloudMongoDB, consts.AliCloudKVStore:
+		return consts.ZoneIdKey
+	case consts.AliCloudEIP:
+		return ""
+	default:
+		return ""
+	}
+}
+
+func getSpecKey(resType string) string {
+	switch resType {
+	case consts.AliCloudInstance, consts.AliCloudDB:
+		return consts.InstanceTypeKey
+	case consts.AliCloudSLB, consts.AliCloudSLBClassic, consts.AliCloudALB:
+		return consts.SpecificationKey
+	case consts.AliCloudDisk, consts.AliCloudDiskClassic:
+		return consts.CategoryKey
+	case consts.AliCloudMongoDB:
+		return consts.MongoDBTypeKey
+	case consts.AliCloudKVStore:
+		return consts.KVStoreTypeKey
+	case consts.AliCloudEIP:
+		return ""
+	default:
+		return ""
+	}
+}
+
+func getAliyunInstanceSubscriptionType(attrs map[string]interface{}) string {
+	if getStringValue(attrs, consts.ChargeTypeKey) == consts.PrePaid {
+		return "Subscription"
+	}
+
+	if getStringValue(attrs, consts.ChargeTypeKey) == consts.PostPaid {
+		if v, ok := attrs[consts.SpotStrategyKey]; ok && v.(string) != "" && v.(string) != "NoSpot" {
+			return "Spot"
+		}
+		return "PayAsYouGo"
+	}
+
+	return ""
+}
+
+func getAliyunPaymentSubscriptionType(attrs map[string]interface{}) string {
+	return getStringValue(attrs, consts.PaymentTypeKey)
+}
+
+func getStringValue(attrs map[string]interface{}, key string) string {
+	if v, ok := attrs[key]; ok {
+		return v.(string)
+	}
+	return ""
+}
+
+func tagList2Map(tags []models.Tag) map[string]string {
+	rv := make(map[string]string)
+	for _, t := range tags {
+		rv[t.Key] = t.Value
+	}
+	return rv
 }

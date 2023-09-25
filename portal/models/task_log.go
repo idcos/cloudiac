@@ -11,7 +11,7 @@ type DBStorage struct {
 
 	Id        uint   `gorm:"primary_key" json:"-"`
 	Path      string `gorm:"NOT NULL;UNIQUE"`
-	Content   []byte `gorm:"type:MEDIUMBLOB"` // MEDIUMBLOB 支持最大长度约 16M
+	Content   []byte `gorm:"type:LONGBLOB"` // LONGBLOB 支持最大长度约 4G
 	CreatedAt Time   `gorm:"type:datetime"`
 }
 

@@ -22,7 +22,7 @@ type CreateEnvForm struct {
 	envDeployTtlForm
 
 	TplId    models.Id `form:"tplId" json:"tplId" binding:"required,startswith=tpl-,max=32"`                 // 模板ID
-	Name     string    `form:"name" json:"name" binding:"required,gte=2,lte=64"`                             // 环境名称
+	Name     string    `form:"name" json:"name" binding:"required,gte=2,lte=255"`                            // 环境名称
 	OneTime  bool      `form:"oneTime" json:"oneTime" binding:""`                                            // 一次性环境标识
 	Triggers []string  `form:"triggers" json:"triggers" binding:"omitempty,dive,required,oneof=commit prmr"` // 启用触发器，触发器：commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
 
@@ -42,6 +42,7 @@ type CreateEnvForm struct {
 	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:"max=255"`          // Ansible playbook 变量文件路径
 	Playbook     string    `form:"playbook" json:"playbook" binding:"omitempty,max=255"`        // Ansible playbook 入口文件路径
 	KeyId        models.Id `form:"keyId" json:"keyId" binding:"omitempty,startswith=k-,max=32"` // 部署密钥ID
+	KeyName      string    `form:"keyName" json:"keyName" binding:"omitempty,max=255"`          // 部署密钥名称
 	Workdir      string    `form:"workdir" json:"workdir" `                                     // 工作目录
 
 	RetryNumber int         `form:"retryNumber" json:"retryNumber" binding:""` // 重试总次数
@@ -67,6 +68,9 @@ type CreateEnvForm struct {
 
 	AutoDeployCron  string `json:"autoDeployCron" form:"autoDeployCron"`   // 自动部署任务的Cron表达式
 	AutoDestroyCron string `json:"autoDestroyCron" form:"autoDestroyCron"` // 自动销毁任务的Cron表达式
+
+	EnvTags  []models.Tag `json:"envTags" form:"envTags" `   // 外部系统传入的 tags
+	UserTags []models.Tag `json:"userTags" form:"userTags" ` // 用户设置的 tags
 }
 
 type SampleVariables struct {
@@ -89,9 +93,10 @@ type UpdateEnvForm struct {
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true" binding:"required,startswith=env-,max=32"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
 
-	Name        string    `form:"name" json:"name" binding:"omitempty,gte=2,lte=64"`           // 环境名称
+	Name        string    `form:"name" json:"name" binding:"omitempty,gte=2,lte=255"`          // 环境名称
 	Description string    `form:"description" json:"description" binding:"max=255"`            // 环境描述
 	KeyId       models.Id `form:"keyId" json:"keyId" binding:"omitempty,startswith=k-,max=32"` // 部署密钥ID
+	KeyName     string    `form:"keyName" json:"keyName" binding:"omitempty,max=255"`          // 部署密钥名称
 	RunnerId    string    `form:"runnerId" json:"runnerId" binding:"max=32"`                   // 环境默认部署通道
 	Archived    bool      `form:"archived" json:"archived" enums:"true,false"`                 // 归档状态，默认返回未归档环境
 	Tags        string    `form:"tags" json:"tags" binding:"max=255"`                          // 环境的 tags，多个 tag 以 "," 分隔
@@ -122,7 +127,7 @@ type DeployEnvForm struct {
 
 	Id models.Id `uri:"id" json:"id" swaggerignore:"true" binding:"required,startswith=env-,max=32"` // 环境ID，swagger 参数通过 param path 指定，这里忽略
 
-	Name            string   `form:"name" json:"name" binding:"omitempty,gte=2,lte=64"`                            // 环境名称
+	Name            string   `form:"name" json:"name" binding:"omitempty,gte=2,lte=255"`                           // 环境名称
 	Triggers        []string `form:"triggers" json:"triggers" binding:"omitempty,dive,required,oneof=commit prmr"` // 启用触发器，触发器：commit（每次推送自动部署），prmr（提交PR/MR的时候自动执行plan）
 	AutoApproval    bool     `form:"autoApproval" json:"autoApproval"  binding:"" enums:"true,false"`              // 是否自动审批
 	StopOnViolation bool     `form:"stopOnViolation" json:"stopOnViolation" enums:"true,false"`                    // 合规不通过是否中止任务
@@ -146,6 +151,7 @@ type DeployEnvForm struct {
 	PlayVarsFile string    `form:"playVarsFile" json:"playVarsFile" binding:"max=255"`          // Ansible playbook 变量文件路径
 	Playbook     string    `form:"playbook" json:"playbook" binding:"omitempty,max=255"`        // Ansible playbook 入口文件路径
 	KeyId        models.Id `form:"keyId" json:"keyId" binding:"omitempty,startswith=k-,max=32"` // 部署密钥ID
+	KeyName      string    `form:"keyName" json:"keyName" binding:"omitempty,max=255"`          // 部署密钥名称
 	Workdir      string    `form:"workdir" json:"workdir" binding:"max=32"`                     // 工作目录
 
 	VarGroupIds    []models.Id `json:"varGroupIds" form:"varGroupIds" binding:"omitempty,dive,required,startswith=vg-,max=32"`
@@ -165,6 +171,9 @@ type DeployEnvForm struct {
 
 	// 部署plan任务时生效，进行漂移检测时，从最后一次任务获取配置信息进行检测
 	IsDriftTask bool `json:"isDriftTask" form:"isDriftTask" `
+
+	EnvTags  []models.Tag `json:"envTags" form:"envTags" `
+	UserTags []models.Tag `json:"userTags" form:"userTags" `
 }
 
 type ArchiveEnvForm struct {

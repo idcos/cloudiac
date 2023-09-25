@@ -6,10 +6,10 @@ import (
 	"cloudiac/portal/libs/ctx"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
-	"sort"
 	"unicode/utf8"
 
 	"github.com/hashicorp/consul/api"
@@ -127,6 +127,9 @@ func QueryEnvDetail(dbSess *db.Session, orgId, projectId models.Id) *db.Session 
 	// 密钥名称
 	query = query.Joins("left join iac_key as k on k.id = iac_env.key_id").
 		LazySelectAppend("k.name as key_name")
+	// Token 名称
+	query = query.Joins("left join iac_token as it on it.id = iac_env.token_id").
+		LazySelectAppend("it.name as token_name")
 	// 资源是否发生漂移
 	query = query.Joins("LEFT JOIN (" +
 		"  SELECT iac_resource.task_id FROM iac_resource_drift " +
@@ -155,6 +158,19 @@ func GetEnvDetailById(query *db.Session, id models.Id) (*models.EnvDetail, e.Err
 		}
 		return nil, e.New(e.DBError, err)
 	}
+
+	if tags, er := FindObjectTags(db.Get(), d.OrgId, d.Id, consts.ScopeEnv); er != nil {
+		return nil, er
+	} else {
+		for _, t := range tags {
+			if t.Source == consts.TagSourceApi {
+				d.EnvTags = append(d.EnvTags, models.Tag{Key: t.Key, Value: t.Value})
+			} else {
+				d.UserTags = append(d.UserTags, models.Tag{Key: t.Key, Value: t.Value})
+			}
+		}
+	}
+
 	return &d, nil
 }
 
@@ -344,7 +360,8 @@ func GetRunner(tags []string) (string, e.Error) {
 		}
 	}
 
-	_, ok := runnerTagsIndex.Load(tags_str); if !ok {
+	_, ok := runnerTagsIndex.Load(tags_str)
+	if !ok {
 		runnerTagsIndex.Store(tags_str, 0)
 	}
 
@@ -352,8 +369,8 @@ func GetRunner(tags []string) (string, e.Error) {
 		// 根据tags查出的runner轮循下发任务
 		v, _ := runnerTagsIndex.Load(tags_str)
 		rid, _ := v.(int)
-		if rid < len(validRunners) - 1{
-			runnerTagsIndex.Store(tags_str, rid + 1)
+		if rid < len(validRunners)-1 {
+			runnerTagsIndex.Store(tags_str, rid+1)
 		} else if rid >= len(validRunners) {
 			// runner数量减少时rid置0，避免索引超出范围
 			rid = 0
@@ -635,23 +652,23 @@ func EnvCostList(tx *db.Session, id models.Id) ([]RawEnvCostDetail, e.Error) {
 
 func monthEnvCostList(tx *db.Session, id models.Id, isCurMonth bool) (map[string]*RawEnvCostDetail, e.Error) {
 	/* sample sql:
-	select
-		iac_resource.attrs as attrs,
-		iac_resource.address as address,
-		iac_resource.type as res_type,
-		iac_bill.instance_id as instance_id,
-		pretax_amount as cur_month_cost
-	from
+		SELECT
+		iac_resource.attrs AS attrs,
+		iac_resource.address AS address,
+		iac_resource.type AS res_type,
+		iac_bill.instance_id AS instance_id,
+		pretax_amount AS cur_month_cost
+	FROM
 		iac_resource
-	JOIN iac_bill ON
-		iac_bill.instance_id = iac_resource.res_id
-	JOIN iac_env ON
-		iac_env.id = iac_resource.env_id
-		and iac_resource.task_id = iac_env.last_res_task_id
-	where
-		iac_resource.env_id  = 'env-c8u10aosm56kh90t588g'
-		and iac_resource.address NOT LIKE 'data.%'
-		and iac_bill.cycle = DATE_FORMAT(CURDATE(), "%Y-%m")
+		JOIN iac_bill ON iac_bill.instance_id = iac_resource.res_id
+		JOIN iac_env ON iac_env.id = iac_resource.env_id
+		AND iac_resource.task_id = iac_env.last_res_task_id
+	WHERE
+		iac_resource.env_id = 'env-cgvlalat467j7gq5r7tg'
+		AND iac_resource.address NOT LIKE 'data.%'
+		AND iac_bill.cycle = DATE_FORMAT( CURDATE(), "%Y-%m" )
+	GROUP BY
+		instance_id;
 	*/
 
 	query := tx.Model(&models.Resource{}).Select(`iac_resource.attrs as attrs, iac_resource.address as address, iac_resource.type as res_type, iac_bill.instance_id as instance_id, pretax_amount as cur_month_cost`)
@@ -665,6 +682,8 @@ func monthEnvCostList(tx *db.Session, id models.Id, isCurMonth bool) (map[string
 	} else {
 		query = query.Where(`iac_bill.cycle != DATE_FORMAT(CURDATE(), "%Y-%m")`)
 	}
+
+	query = query.Group("instance_id, iac_resource.attrs")
 
 	var results []RawEnvCostDetail
 	if err := query.Find(&results); err != nil {

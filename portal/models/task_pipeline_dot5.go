@@ -17,55 +17,55 @@ version: 0.5
 plan:
   steps:
     checkout:
-      name: Checkout Code
+      name: 拉取配置
 
     terraformInit:
-      name: Terraform Init
+      name: 初始化配置
 
     terraformPlan:
-      name: Terraform Plan
+      name: 检查配置
 
     envScan:
-      name: OPA Scan
+      name: 合规检测
 
 apply:
   steps:
     checkout:
-      name: Checkout Code
+      name: 拉取配置
 
     terraformInit:
-      name: Terraform Init
+      name: 初始化配置
 
     terraformPlan:
-      name: Terraform Plan
+      name: 检查配置
 
     envScan:
-      name: OPA Scan
+      name: 合规检测
 
     terraformApply:
-      name: Terraform Apply
+      name: 执行配置
 
     ansiblePlay:
-      name: Run playbook
+      name: 部署应用
 
 destroy:
   steps:
     checkout:
-      name: Checkout Code
+      name: 拉取配置
 
     terraformInit:
-      name: Terraform Init
+      name: 初始化配置
 
     terraformPlan:
-      name: Terraform Plan
+      name: 检查配置
       args:
         - "-destroy"
 
     envScan:
-      name: OPA Scan
+      name: 合规检测
 
     terraformDestroy:
-      name: Terraform Apply
+      name: 销毁环境
 `
 
 type PipelineDot5 struct {
