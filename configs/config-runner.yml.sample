@@ -18,6 +18,8 @@ runner:
 
   ## 是否开启 offline 模式(默认为 false)
   offline_mode: ${RUNNER_OFFLINE_MODE}
+  # 是否开启privileged（默认为false）
+  privileged: ${RUNNER_PRIVILEGED}
 
 consul:
   address: "${CONSUL_ADDRESS}"

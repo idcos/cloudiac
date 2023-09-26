@@ -166,6 +166,7 @@ func (exec *Executor) Start() (string, error) {
 		&container.HostConfig{
 			AutoRemove: exec.AutoRemove,
 			Mounts:     mountConfigs,
+			Privileged: conf.Runner.Privileged,
 		},
 		nil,
 		nil,
