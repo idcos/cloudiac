@@ -112,9 +112,8 @@ type Task struct {
 	TplId     Id `json:"tplId" gorm:"size:32;not null"`     // 模板ID
 	EnvId     Id `json:"envId" gorm:"size:32;not null"`     // 环境ID
 
-	Name      string `json:"name" gorm:"not null;comment:任务名称"`                                       // 任务名称
-	CreatorId Id     `json:"creatorId" gorm:"size:32;not null"`                                       // 创建人ID
-	TokenId   Id     `json:"tokenId" gorm:"size:32;comment:tokenId" example:"t-cgptjsit467j7gq5jiv0"` // Token ID
+	Name      string `json:"name" gorm:"not null;comment:任务名称"` // 任务名称
+	CreatorId Id     `json:"creatorId" gorm:"size:32;not null"` // 创建人ID
 
 	RepoAddr string `json:"repoAddr" gorm:"not null"`
 	Revision string `json:"revision" gorm:"not null"`

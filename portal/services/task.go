@@ -205,7 +205,6 @@ func newCommonTask(tpl *models.Template, env *models.Env, pt models.Task) (*mode
 		Name:            pt.Name,
 		Targets:         pt.Targets,
 		CreatorId:       pt.CreatorId,
-		TokenId:         pt.TokenId,
 		Variables:       pt.Variables,
 		AutoApprove:     pt.AutoApprove,
 		KeyId:           models.Id(firstVal(string(pt.KeyId), string(env.KeyId))),
@@ -487,9 +486,6 @@ func QueryTask(query *db.Session) *db.Session {
 	// 创建人姓名
 	query = query.Joins("left join iac_user as u on u.id = iac_task.creator_id").
 		LazySelectAppend("u.name as creator,iac_task.*")
-	// Token 名称
-	query = query.Joins("left join iac_token as it on it.id = iac_task.token_id").
-		LazySelectAppend("it.name as token_name")
 	return query
 }
 
@@ -1522,33 +1518,9 @@ func SendHttpMessage(callbackUrl string, session *db.Session, task *models.Task,
 		return
 	}
 
-	outputs := make(map[string]interface{})
-	for k, v := range task.Result.Outputs {
-		m, ok := v.(map[string]interface{})
-		if !ok {
-			outputs[k] = v
-			continue
-		}
-
-		if _, ok := m["sensitive"]; !ok {
-			outputs[k] = v
-			continue
-		}
-
-		m["value"] = "(sensitive value)"
-		outputs[k] = m
-	}
-
-	eventType := consts.DeployEventType
-	result := &CallbackResult{}
-	result.Resources = resources
-	result.Outputs = outputs
-
-	isDrift := false
-
 	header := &http.Header{}
 	header.Set("Content-Type", "application/json")
-	message := GenerateCallbackContent(task, eventType, taskStatus, env.Status, policyStatus, isDrift, result)
+	message := GenerateCallbackContent(task, taskStatus, env.Status, policyStatus, resources)
 	timeout := int(consts.CallbackTimeout.Seconds())
 	if _, er := utils.HttpService(callbackUrl, "POST", header, message, timeout, timeout); er != nil {
 		logs.Get().Warnf("send callback massage failed, err: %s, data: %+v", er, message)
@@ -1750,9 +1722,7 @@ func doAbortRunnerTask(task models.Task, justCheck bool) e.Error {
 }
 
 type CallbackResult struct {
-	Resources      []models.Resource               `json:"resources"  `
-	Outputs        map[string]interface{}          `json:"outputs"`
-	DriftResources map[string]models.ResourceDrift `json:"drift_resources"`
+	Resources []models.Resource `json:"resources"  `
 }
 
 type CallbackContent struct {
@@ -1767,14 +1737,11 @@ type CallbackContent struct {
 	TplId        models.Id      `json:"tplId"`
 	EnvId        models.Id      `json:"envId"`
 	TaskId       models.Id      `json:"taskId"`
-	IsDrift      bool           `json:"isDrift"` // 漂移状态
 	Result       CallbackResult `json:"result"`
 }
 
-func GenerateCallbackContent(task *models.Task, eventType, taskStatus, envStatus, policyStatus string,
-	isDrift bool, result *CallbackResult) interface{} {
+func GenerateCallbackContent(task *models.Task, taskStatus, envStatus, policyStatus string, resources []models.Resource) interface{} {
 	a := CallbackContent{
-		EventType:    eventType,
 		TaskStatus:   taskStatus,
 		TaskType:     task.Type,
 		PolicyStatus: policyStatus,
@@ -1784,11 +1751,8 @@ func GenerateCallbackContent(task *models.Task, eventType, taskStatus, envStatus
 		TplId:        task.TplId,
 		EnvId:        task.EnvId,
 		TaskId:       task.Id,
-		IsDrift:      isDrift,
 		Result: CallbackResult{
-			Resources:      result.Resources,
-			Outputs:        result.Outputs,
-			DriftResources: result.DriftResources,
+			Resources: resources,
 		},
 	}
 

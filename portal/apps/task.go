@@ -31,29 +31,10 @@ import (
 
 // SearchTask 任务查询
 func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{}, e.Error) {
-	/*
-		SELECT
-		u.NAME AS creator,
-			it.NAME AS token_name,
-			iac_task.*
-			FROM
-		`iac_task`
-		LEFT JOIN iac_user AS u ON u.id = iac_task.creator_id
-		LEFT JOIN iac_token AS it ON it.id = iac_task.token_id
-		WHERE
-		iac_task.env_id = 'env-che5vtbin5627o5qonfg'
-		AND (
-			is_drift_task != 1
-		OR ( is_drift_task = 1 AND applied = 1 ))
-		AND `iac_task`.`deleted_at_t` = 0
-		ORDER BY
-		created_at DESC
-		LIMIT 5000
-	*/
 	query := services.QueryTask(c.DB())
 
 	if form.EnvId != "" {
-		query = query.Where("iac_task.env_id = ?", form.EnvId).
+		query = query.Where("env_id = ?", form.EnvId).
 			Where("is_drift_task != 1 OR  (is_drift_task = 1 AND applied = 1)")
 	}
 	//根据任务类型查询
@@ -95,11 +76,9 @@ func SearchTask(c *ctx.ServiceContext, form *forms.SearchTaskForm) (interface{},
 // TaskDetail 任务信息详情
 func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*resps.TaskDetailResp, e.Error) {
 	var (
-		tokenName string
-		task      *models.Task
-		user      *models.User
-		token     *models.Token
-		err       e.Error
+		task *models.Task
+		user *models.User
+		err  e.Error
 	)
 	task, err = services.GetTaskById(services.QueryWithOrgId(c.DB(), c.OrgId), form.Id)
 	if err != nil && err.Code() == e.TaskNotExists {
@@ -118,22 +97,9 @@ func TaskDetail(c *ctx.ServiceContext, form forms.DetailTaskForm) (*resps.TaskDe
 		return nil, e.New(e.DBError, err)
 	}
 
-	token, err = services.GetApiTokenByIdRaw(c.DB(), task.TokenId)
-	if err != nil && err.Code() == e.TokenNotExists {
-		c.Logger().Infof("task token name '%s' not exists", task.TokenId)
-	} else if err != nil {
-		c.Logger().Errorf("error get token by id, err %s", err)
-		return nil, e.New(e.DBError, err)
-	}
-
-	if token != nil {
-		tokenName = token.Name
-	}
-
 	var o = resps.TaskDetailResp{
-		Task:      desensitize.NewTask(*task),
-		Creator:   user.Name,
-		TokenName: tokenName,
+		Task:    desensitize.NewTask(*task),
+		Creator: user.Name,
 	}
 
 	// 清除url token

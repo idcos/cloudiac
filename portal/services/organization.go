@@ -180,8 +180,8 @@ func GetOrgOrProjectResourcesQuery(tx *db.Session, searchStr string, orgId, proj
 	query := tx.Joins("inner join iac_env on iac_env.last_res_task_id = iac_resource.task_id left join " +
 		"iac_project on iac_resource.project_id = iac_project.id").
 		LazySelectAppend("iac_project.name as project_name, iac_env.name as env_name, iac_resource.id as resource_id," +
-			"iac_resource.name as resource_name, iac_resource.task_id, iac_resource.project_id, iac_resource.attrs," +
-			"iac_resource.dependencies, iac_resource.env_id, iac_resource.provider, iac_resource.mode, iac_resource.type, iac_resource.module, iac_resource.res_id")
+			"iac_resource.name as resource_name, iac_resource.task_id, iac_resource.project_id as project_id, iac_resource.attrs as attrs," +
+			"iac_resource.dependencies as dependencies, iac_resource.env_id as env_id, iac_resource.provider as provider, iac_resource.mode as mode, iac_resource.type, iac_resource.module")
 
 	if orgId != "" {
 		query = query.Where("iac_env.org_id = ?", orgId)

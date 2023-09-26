@@ -146,5 +146,3 @@
 31413,InvalidVarGroup,无效资源账号,invalid resource account
 31414,VariableGroupPermDeny,无权限的资源账号,resource account permission deny
 30823,TemplateNotBind,云模板未绑定当前项目,template is not bound to the project
-31810,TagKeyAlreadyExisted,标签键已经存在,tag key already exist
-31820,ObjectTagNumLimited,标签数量超过限制,the number of tags exceeds the limit

@@ -246,9 +246,5 @@ func Init(migrate bool) {
 
 	autoMigrate(&UserOperationLog{}, sess)
 
-	autoMigrate(&TagKey{}, sess)
-	autoMigrate(&TagValue{}, sess)
-	autoMigrate(&TagRel{}, sess)
-
 	dbMigrate(sess)
 }

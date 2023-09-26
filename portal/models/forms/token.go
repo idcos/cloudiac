@@ -9,7 +9,6 @@ import (
 type CreateTokenForm struct {
 	BaseForm
 
-	Name        string    `json:"name" form:"name"`                                                  // token 名称
 	Type        string    `json:"type" form:"type" binding:"required,max=255"`                       //类型
 	Role        string    `json:"role" form:"role" binding:"max=255"`                                // token角色
 	ExpiredAt   string    `json:"expiredAt" form:"expiredAt" `                                       // 过期时间
@@ -20,8 +19,6 @@ type CreateTokenForm struct {
 
 type UpdateTokenForm struct {
 	BaseForm
-
-	Name        string    `json:"name" form:"name"` // token 名称
 	Id          models.Id `uri:"id" form:"id" json:"id" binding:"required,startswith=t-,max=32" swaggerignore:"true"`
 	Status      string    `form:"status" json:"status" binding:"omitempty,oneof=enable disable"`
 	Description string    `json:"description" form:"description" binding:"max=255" ` //描述

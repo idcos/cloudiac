@@ -9,7 +9,6 @@ import (
 type Token struct {
 	TimedModel
 
-	Name        string `json:"name" form:"name" gorm:"unique;comment:Token名称"`
 	Key         string `json:"key" form:"key" gorm:"not null"`
 	Type        string `json:"type" form:"type" gorm:"not null"`
 	OrgId       Id     `json:"orgId" form:"orgId" gorm:"not null"`
@@ -35,10 +34,6 @@ func (Token) NewId() Id {
 func (o Token) Migrate(sess *db.Session) (err error) {
 	err = o.AddUniqueIndex(sess, "unique__key", "`key`")
 	if err != nil {
-		return err
-	}
-
-	if _, err = sess.Exec("update iac_token set iac_token.`name` = substr(`key`, 1 ,8) where name IS NULL;"); err != nil {
 		return err
 	}
 	return nil

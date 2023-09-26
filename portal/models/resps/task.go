@@ -9,8 +9,7 @@ import (
 
 type TaskDetailResp struct {
 	desensitize.Task
-	Creator   string `json:"creator" example:"超级管理员"`
-	TokenName string `json:"tokenName"` // Token 名称
+	Creator string `json:"creator" example:"超级管理员"`
 }
 
 type TSResource struct {

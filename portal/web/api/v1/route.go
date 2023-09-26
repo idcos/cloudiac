@@ -261,12 +261,6 @@ func Register(g *gin.RouterGroup) {
 	// 任务实时日志（云模板检测无项目ID）
 	g.GET("/tasks/:id/log/sse", ac(), w(handlers.Task{}.FollowLogSse))
 
-	// 标签管理
-	ctrl.Register(g.Group("tags", ac()), &handlers.Tag{})
-	g.DELETE("/tags", ac(), w(handlers.Tag{}.Delete))
-	g.PUT("/tags", ac(), w(handlers.Tag{}.Update))
-	g.GET("/envs/:id/tags", ac(), w(handlers.SearchEnvTag))
-
 	// 项目资源
 	g.Use(w(middleware.AuthProjectId))
 
@@ -295,9 +289,6 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/envs/:id/lock", ac("envs", "lock"), w(handlers.EnvLock))
 	g.POST("/envs/:id/unlock", ac("envs", "unlock"), w(handlers.EnvUnLock))
 	g.GET("/envs/:id/unlock/confirm", ac(), w(handlers.EnvUnLockConfirm))
-
-	// 声明式
-	g.POST("/declare/env", ac(), w(handlers.DeclareEnv))
 
 	// 环境概览统计数据
 	g.GET("/envs/:id/statistics", ac(), w(handlers.Env{}.EnvStat))

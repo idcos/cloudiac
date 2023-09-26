@@ -30,7 +30,6 @@ func checkToken(c *ctx.GinRequest, tokenStr string) (models.Id, error) {
 		c.Service().Username = consts.DefaultSysName
 		c.Service().IsSuperAdmin = false
 		c.Service().UserIpAddr = c.ClientIP()
-		c.Service().ApiTokenId = apiToken.Id
 		apiTokenOrgId = apiToken.OrgId
 		return apiTokenOrgId, nil
 	}

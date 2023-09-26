@@ -144,12 +144,8 @@ const (
 
 	EnvAbortManager = ""
 
-	// 旧版本环境 tag 使用
 	EnvMaxTagLength = 20
 	EnvMaxTagNum    = 5
-
-	// 新版本带 key 的 tag 使用
-	ObjectMaxTagNum = 20 // 单个对象可以绑定的最大 tag 数量
 
 	EventTaskFailed    = "task.failed"
 	EventTaskComplete  = "task.complete"
@@ -171,9 +167,6 @@ const (
 	TaskSourceAutoDestroy  = "autoDestroy"
 	TaskSourceAutoDeploy   = "autoDeploy"
 	TaskSourceApi          = "api"
-
-	TagSourceApi  = "api"
-	TagSourceUser = "user"
 
 	TaskAutoDestroyName = "Auto Destroy"
 	TaskAutoDeployName  = "Auto Deploy"
@@ -267,34 +260,3 @@ var (
 		"stack.create":   "创建stack",
 	}
 )
-
-const (
-	ZoneKey             = "availability_zone"
-	SLBZoneKey          = "master_zone_id"
-	ZoneIdKey           = "zone_id"
-	InstanceTypeKey     = "instance_type"
-	MongoDBTypeKey      = "db_instance_class"
-	KVStoreTypeKey      = "instance_class"
-	ChargeTypeKey       = "instance_charge_type"
-	SpotStrategyKey     = "spot_strategy"
-	SpecificationKey    = "specification"
-	CategoryKey         = "category"
-	PaymentTypeKey      = "payment_type"
-	PrePaid             = "PrePaid"
-	PostPaid            = "PostPaid"
-	SubscriptionTypeKey = "subscription_type"
-	InstanceSpecKey     = "instance_spec"
-	RegionKey           = "region"
-	AliCloudInstance    = "alicloud_instance"
-	AliCloudDB          = "alicloud_db_instance"
-	AliCloudMongoDB     = "alicloud_mongodb_instance"
-	AliCloudKVStore     = "alicloud_kvstore_instance"
-	AliCloudSLB         = "alicloud_slb_load_balancer"
-	AliCloudALB         = "alicloud_alb_load_balancer"
-	AliCloudSLBClassic  = "alicloud_slb"
-	AliCloudDisk        = "alicloud_ecs_disk"
-	AliCloudDiskClassic = "alicloud_disk"
-	AliCloudEIP         = "alicloud_eip_address"
-)
-
-type SubscriptionFunc func(attrs map[string]interface{}) string

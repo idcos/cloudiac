@@ -82,15 +82,3 @@ func GetKeyById(query *db.Session, id models.Id, decrypt bool) (*models.Key, e.E
 	}
 	return &key, nil
 }
-
-// GetKeyByName 通过名字查询密钥
-func GetKeyByName(query *db.Session, name string) (*models.Key, e.Error) {
-	key := models.Key{}
-	if err := query.Model(models.Key{}).Where("name = ?", name).First(&key); err != nil {
-		if e.IsRecordNotFound(err) {
-			return nil, e.New(e.KeyNotExist)
-		}
-		return nil, e.New(e.DBError, err)
-	}
-	return &key, nil
-}

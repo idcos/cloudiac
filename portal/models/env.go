@@ -28,11 +28,10 @@ var (
 
 type Env struct {
 	SoftDeleteModel
-	OrgId     Id `json:"orgId" gorm:"size:32;not null"`                                           // 组织ID
-	ProjectId Id `json:"projectId" gorm:"size:32;not null"`                                       // 项目ID
-	TplId     Id `json:"tplId" gorm:"size:32;not null"`                                           // 模板ID
-	CreatorId Id `json:"creatorId" gorm:"size:32;not null"`                                       // 创建人ID
-	TokenId   Id `json:"tokenId" gorm:"size:32;comment:tokenId" example:"t-cgptjsit467j7gq5jiv0"` // Token ID
+	OrgId     Id `json:"orgId" gorm:"size:32;not null"`     // 组织ID
+	ProjectId Id `json:"projectId" gorm:"size:32;not null"` // 项目ID
+	TplId     Id `json:"tplId" gorm:"size:32;not null"`     // 模板ID
+	CreatorId Id `json:"creatorId" gorm:"size:32;not null"` // 创建人ID
 
 	Name        string `json:"name" gorm:"not null"`                                                                                                 // 环境名称
 	Description string `json:"description" gorm:"type:text"`                                                                                         // 环境描述
@@ -151,7 +150,6 @@ type EnvDetail struct {
 	Creator       string `json:"creator"`       // 创建人
 	OperatorId    Id     `json:"operatorId"`    // 执行人ID
 	Operator      string `json:"operator"`      // 执行人
-	TokenName     string `json:"tokenName"`     // Token 名称
 	ResourceCount int    `json:"resourceCount"` // 资源数量
 	TemplateName  string `json:"templateName"`  // 模板名称
 	KeyName       string `json:"keyName"`       // 密钥名称
@@ -171,8 +169,6 @@ type EnvDetail struct {
 
 	MonthCost float32 `json:"monthCost"` // 环境月度成本
 	IsBilling bool    `json:"isBilling"` // 是否开启账单采集
-	EnvTags   []Tag   `json:"envTags" form:"envTags" gorm:"-"`
-	UserTags  []Tag   `json:"userTags" form:"userTags" gorm:"-"`
 }
 
 func (c *EnvDetail) UpdateEnvPolicyStatus() {
@@ -185,9 +181,4 @@ func (c *EnvDetail) UpdateEnvPolicyStatus() {
 	} else {
 		c.PolicyStatus = common.PolicyStatusDisable
 	}
-}
-
-type Tag struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
 }
