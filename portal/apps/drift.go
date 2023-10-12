@@ -38,7 +38,7 @@ func EnvDriftSearch(c *ctx.ServiceContext, envId models.Id, form *forms.SearchEn
 	if form.IsDrift != nil {
 		query.Where("is_drift = ?", form.IsDrift)
 	}
-	query.Order("created_at DESC")
+	query.Order("iac_task_drift.created_at DESC")
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	drifts := make([]*resps.TaskDriftResp, 0)
 	if err := p.Scan(&drifts); err != nil {
