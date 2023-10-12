@@ -25,6 +25,7 @@ type Resource struct {
 	TaskId    Id `json:"taskId" gorm:"index;size:32;not null"`
 
 	ResId         Id       `json:"resId" gorm:"index;not null;default:''"`
+	ResName       string   `json:"resName" gorm:"not null;default:''"`
 	Provider      string   `json:"provider" gorm:"not null"`
 	Module        string   `json:"module,omitempty" gorm:"not null;default:''"`
 	Address       string   `json:"address" gorm:"not null"`
