@@ -30,15 +30,15 @@ func EnvDriftDetail(c *ctx.ServiceContext, envId models.Id) (*models.EnvDrift, e
 // EnvDriftSearch 环境漂移结果查询
 func EnvDriftSearch(c *ctx.ServiceContext, envId models.Id, form *forms.SearchEnvDriftsForm) (*page.PageResp, e.Error) {
 	query := services.QueryTaskDrift(c.DB())
-	query.Where("iac_task_drift.env_id = ?", envId)
+	query = query.Where("iac_task_drift.env_id = ?", envId)
 	if form.Keyword != "" {
 		// TODO 关键字查询,需要先确认查询啥
 		//query.Where("name")
 	}
 	if form.IsDrift != nil {
-		query.Where("iac_task_drift.is_drift = ?", form.IsDrift)
+		query = query.Where("iac_task_drift.is_drift = ?", form.IsDrift)
 	}
-	query.Order("iac_task_drift.created_at DESC")
+	query = query.Order("iac_task_drift.created_at DESC")
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	drifts := make([]*resps.TaskDriftResp, 0)
 	if err := p.Scan(&drifts); err != nil {
@@ -54,7 +54,7 @@ func EnvDriftSearch(c *ctx.ServiceContext, envId models.Id, form *forms.SearchEn
 // EnvDriftResourceSearch 查询偏移资源信息
 func EnvDriftResourceSearch(c *ctx.ServiceContext, envId models.Id, taskId models.Id) ([]*resps.ResourceDriftResp, e.Error) {
 	query := services.QueryResourceDrift(c.DB())
-	query.Where("iac_resource.env_id = ? and rd.task_id = ?", envId, taskId)
+	query = query.Where("iac_resource.env_id = ? and rd.task_id = ?", envId, taskId)
 	rdr := make([]*resps.ResourceDriftResp, 0)
 	if err := query.Scan(&rdr); err != nil {
 		return nil, e.New(e.DBError, err)
