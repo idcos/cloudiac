@@ -49,3 +49,15 @@ type ResField struct {
 	ResId     Id   `json:"resId"`
 	AppliedAt Time `json:"appliedAt"`
 }
+
+type ResourceMapping struct {
+	BaseModel
+	Provider string `json:"provider" gorm:"not null"` // 资源所属平台
+	Type     string `json:"type" gorm:"not null"`     // 资源类型
+	Code     string `json:"name" gorm:"not null"`     // 属性标识
+	Express  string `json:"express" gorm:"not null"`  // 值表达式
+}
+
+func (ResourceMapping) TableName() string {
+	return "iac_resource_mapping"
+}
