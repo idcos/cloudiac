@@ -20,7 +20,6 @@ type TaskDrift struct {
 	EnvId    Id     `json:"envId" gorm:"index;size:32;not null"`
 	TaskId   Id     `json:"taskId" gorm:"index;size:32;not null"`
 	Type     string `json:"type" gorm:"not null"`
-	Status   string `json:"status" gorm:"not null"`
 	IsDrift  bool   `json:"isDrift" gorm:"default:false"`
 	ExecTime Time   `json:"execTime" gorm:"type:datetime" example:"2006-01-02 15:04:05"` // 执行时间
 }

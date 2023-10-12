@@ -1819,7 +1819,6 @@ func SaveTaskDrift(session *db.Session, task *models.Task, isDrift bool) e.Error
 	if err := session.Where("task_id = ?", task.Id).Find(&taskDrift); err != nil {
 		return e.New(e.DBError, err)
 	}
-
 	if taskDrift.Id == "" {
 		taskDriftType := "corn"
 		if task.Name == common.CronManualDriftTaskName {
@@ -1830,7 +1829,6 @@ func SaveTaskDrift(session *db.Session, task *models.Task, isDrift bool) e.Error
 			TaskId:   task.Id,
 			Type:     taskDriftType, // manual or corn
 			IsDrift:  isDrift,
-			Status:   task.Status,
 			ExecTime: task.CreatedAt,
 		}
 		err := models.Create(session, &taskDrift)
@@ -1838,7 +1836,6 @@ func SaveTaskDrift(session *db.Session, task *models.Task, isDrift bool) e.Error
 			return e.New(e.DBError, err)
 		}
 	} else {
-		taskDrift.Status = task.Status
 		taskDrift.IsDrift = isDrift
 		_, err := models.UpdateModelAll(session, &taskDrift)
 		if err != nil {
