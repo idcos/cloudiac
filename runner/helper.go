@@ -76,6 +76,12 @@ func PathExists(path string) (bool, error) {
 	return false, err
 }
 
+// GetEnvPluginCache 获取环境私有的plugin-cache目录
+func GetEnvPluginCache(envId string) string {
+	conf := configs.Get()
+	return filepath.Join(conf.Runner.AbsStoragePath(), envId)
+}
+
 func GetTaskWorkspace(envId string, taskId string) string {
 	conf := configs.Get()
 	return filepath.Join(conf.Runner.AbsStoragePath(), envId, taskId)

@@ -123,6 +123,10 @@ const (
 	ConsulCapem         = "client.pem"
 	ConsulContainerPath = "/cloudiac/cert/"
 	ConsulSessionTTL    = 10
+
+	ProviderCacheModCommon  = "common"   // COMMON(公共缓存，所有容器公用)
+	ProviderCacheModOnlyEnv = "only_env" // ONLY_ENV(每个环境一个缓存目录)
+	ProviderCacheModNoCache = "no"       // NO(不使用外部缓存)
 )
 
 var (

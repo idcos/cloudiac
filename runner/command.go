@@ -37,6 +37,7 @@ type Executor struct {
 	HostWorkdir      string // 宿主机目录
 	Workdir          string // 容器目录
 	AutoRemove       bool   // 开启容器的自动删除？
+	PluginCache      string
 	// for container
 	//ContainerInstance *Container
 }
@@ -94,16 +95,22 @@ func (exec *Executor) Start() (string, error) {
 		},
 		{
 			Type:   mount.TypeBind,
-			Source: conf.Runner.AbsPluginCachePath(),
-			Target: ContainerPluginCachePath,
-		},
-		{
-			Type:   mount.TypeBind,
 			Source: "/var/run/docker.sock",
 			Target: "/var/run/docker.sock",
 		},
 	}
-
+	providerCacheMod := conf.Runner.ProviderCacheMod
+	if providerCacheMod != common.ProviderCacheModNoCache {
+		pluginCachePathMountSource := conf.Runner.AbsPluginCachePath()
+		if providerCacheMod == common.ProviderCacheModOnlyEnv {
+			pluginCachePathMountSource = exec.PluginCache
+		}
+		mountConfigs = append(mountConfigs, mount.Mount{
+			Type:   mount.TypeBind,
+			Source: pluginCachePathMountSource,
+			Target: ContainerPluginCachePath,
+		})
+	}
 	if conf.Consul.ConsulTls {
 		mountConfigs = append(mountConfigs, mount.Mount{
 			Type:   mount.TypeBind,

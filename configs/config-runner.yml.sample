@@ -12,10 +12,12 @@ runner:
 
   # 当前版本依赖的 assets 己经打包到了 ct-worker 镜像中
   assets_path: ""
-
+  # 任务结束后是否保留容器，默认配置，可使用环境变量(CLOUDIAC_RESERVER_CONTAINER)覆盖
+  reserver_container: ${RUNNER_RESERVER_CONTAINER}
   ## plugins 缓存
   plugin_cache_path: "var/plugin-cache"
-
+  ## provider plugin cache 缓存模式,默认为公共缓存，所有容器公用
+  provider_cache_mod: "${RUNNER_PROVIDER_CACHE_MOD}"
   ## 是否开启 offline 模式(默认为 false)
   offline_mode: ${RUNNER_OFFLINE_MODE}
   # 是否开启privileged（默认为false）
