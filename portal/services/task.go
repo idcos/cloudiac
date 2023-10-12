@@ -1832,7 +1832,7 @@ func SaveTaskDrift(session *db.Session, task *models.Task, isDrift bool) e.Error
 			IsDrift: isDrift,
 			Status:  task.Status,
 		}
-		err := models.Create(session, taskDrift)
+		err := models.Create(session, &taskDrift)
 		if err != nil {
 			return e.New(e.DBError, err)
 		}

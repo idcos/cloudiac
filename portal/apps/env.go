@@ -1185,7 +1185,7 @@ func EnvDeployDrift(c *ctx.ServiceContext, envId models.Id, form *forms.DriftDep
 		return nil, err
 	}
 	// 手动调用时，保存漂移记录
-	if task.Type == models.TaskTypePlan {
+	if task.Source == consts.TaskSourceDriftPlan {
 		err = services.SaveTaskDrift(c.DB(), newTask, false)
 		if err != nil {
 			return nil, err

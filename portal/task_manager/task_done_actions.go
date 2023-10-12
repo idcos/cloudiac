@@ -193,7 +193,7 @@ func taskDoneProcessDriftTask(logger logs.Logger, dbSess *db.Session, task *mode
 			}
 			driftInfoMap := ParseResourceDriftInfo(bs)
 			// 保存漂移结果
-			if task.Type == models.TaskTypePlan {
+			if task.Source == consts.TaskSourceDriftPlan {
 				err := services.SaveTaskDrift(db.Get(), task, len(driftInfoMap) != 0)
 				if err != nil {
 					logger.Errorf("create env['%s'] task drift error : %v", task.EnvId, err)
