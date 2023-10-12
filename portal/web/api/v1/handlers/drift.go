@@ -29,7 +29,7 @@ func DriftDetail(c *ctx.GinRequest) {
 // @Param envId path string true "环境ID"
 // @Param form query forms.SearchEnvDriftsForm true "parameter"
 // @router /envs/{envId}/drift [get]
-// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]models.TaskDrift}}
+// @Success 200 {object} ctx.JSONResult{result=page.PageResp{list=[]resps.TaskDriftResp}}
 func DriftList(c *ctx.GinRequest) {
 	form := &forms.SearchEnvDriftsForm{}
 	if err := c.Bind(form); err != nil {
