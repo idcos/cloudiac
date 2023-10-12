@@ -11,7 +11,7 @@ import (
 func SearchResourceMappingExpress(tx *db.Session, rmc []*models.ResourceMappingCondition) (map[string]string, e.Error) {
 	query := tx
 	for _, item := range rmc {
-		query.Or("provider = ? and type = ? and code = ?", item.Provider, item.Type, item.Code)
+		query = query.Or("provider = ? and type = ? and code = ?", item.Provider, item.Type, item.Code)
 	}
 	rms := make([]*models.ResourceMapping, 0)
 	if err := query.Scan(&rms); err != nil {
