@@ -297,6 +297,11 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/envs/:id/unlock", ac("envs", "unlock"), w(handlers.EnvUnLock))
 	g.GET("/envs/:id/unlock/confirm", ac(), w(handlers.EnvUnLockConfirm))
 
+	// 漂移管理
+	g.GET("/envs/:id/drift/detail", ac())
+	g.GET("/envs/:id/drift", ac())
+	g.GET("/envs/:id/drift.resources", ac())
+
 	// 声明式
 	g.POST("/declare/env", ac(), w(handlers.DeclareEnv))
 

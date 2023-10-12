@@ -193,19 +193,8 @@ func taskDoneProcessDriftTask(logger logs.Logger, dbSess *db.Session, task *mode
 			}
 			driftInfoMap := ParseResourceDriftInfo(bs)
 			// 保存漂移结果
-			taskDriftType := "corn"
-			if task.Name == common.CronManualDriftTaskName {
-				taskDriftType = "manual"
-			}
 			if task.Type == models.TaskTypePlan {
-				td := models.TaskDrift{
-					EnvId:   task.EnvId,
-					TaskId:  task.Id,
-					Type:    taskDriftType, // manual or corn
-					IsDrift: len(driftInfoMap) != 0,
-					Status:  task.Status,
-				}
-				err := services.InsertTaskDrift(db.Get(), td)
+				err := services.SaveTaskDrift(db.Get(), task, len(driftInfoMap) != 0)
 				if err != nil {
 					logger.Errorf("create env['%s'] task drift error : %v", task.EnvId, err)
 					return err
@@ -233,6 +222,7 @@ func taskDoneProcessDriftTask(logger logs.Logger, dbSess *db.Session, task *mode
 					} else {
 						driftInfo.ResId = res.Id
 						driftInfo.TaskId = env.LastResTaskId
+						driftInfo.IsLast = true
 						// TODO 后续使用batch 改进
 						services.InsertOrUpdateCronTaskInfo(db.Get(), driftInfo)
 					}

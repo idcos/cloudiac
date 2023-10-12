@@ -1812,6 +1812,35 @@ func GenerateCallbackContent(task *models.Task, eventType, taskStatus, envStatus
 	return a
 }
 
-func InsertTaskDrift(session *db.Session, drift models.TaskDrift) error {
-	return models.Create(session, drift)
+// SaveTaskDrift 新增或者修改漂移任务
+func SaveTaskDrift(session *db.Session, task *models.Task, isDrift bool) e.Error {
+	// 查询是否存在
+	taskDrift := models.TaskDrift{}
+	if err := session.Where("task_id = ?", task.Id).Find(&taskDrift); err != nil {
+		return e.New(e.DBError, err)
+	}
+
+	if taskDrift.Id == "" {
+		taskDriftType := "corn"
+		if task.Name == common.CronManualDriftTaskName {
+			taskDriftType = "manual"
+		}
+		taskDrift = models.TaskDrift{
+			EnvId:   task.EnvId,
+			TaskId:  task.Id,
+			Type:    taskDriftType, // manual or corn
+			IsDrift: isDrift,
+			Status:  task.Status,
+		}
+		err := models.Create(session, taskDrift)
+		if err != nil {
+			return e.New(e.DBError, err)
+		}
+	} else {
+		_, err := models.UpdateModelAll(session, &taskDrift)
+		if err != nil {
+			return e.New(e.DBError, err)
+		}
+	}
+	return nil
 }
