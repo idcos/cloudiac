@@ -7,7 +7,7 @@ import (
 
 func QueryTaskDrift(query *db.Session) *db.Session {
 	query = query.Model(&models.TaskDrift{})
-	query.Joins("inner join iac_task it on it.id = iac_task_drift.task_id").
+	query = query.Joins("inner join iac_task it on it.id = iac_task_drift.task_id").
 		LazySelectAppend("iac_task_drift.*,it.status")
 	return query
 }
