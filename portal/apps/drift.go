@@ -6,6 +6,7 @@ import (
 	"cloudiac/portal/libs/page"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"cloudiac/portal/models/resps"
 	"cloudiac/portal/services"
 )
 
@@ -48,4 +49,15 @@ func EnvDriftSearch(c *ctx.ServiceContext, envId models.Id, form *forms.SearchEn
 		PageSize: p.Size,
 		List:     drifts,
 	}, nil
+}
+
+// EnvDriftResourceSearch 查询偏移资源信息
+func EnvDriftResourceSearch(c *ctx.ServiceContext, envId models.Id, taskId models.Id) ([]*resps.ResourceDriftResp, e.Error {
+	query := services.QueryResourceDrift(c.DB())
+	query.Where("iac_resource.env_id = ? and rd.task_id = ?", envId, taskId)
+	rdr := make([]*resps.ResourceDriftResp, 0)
+	if err := query.Scan(&rdr); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return rdr, nil
 }

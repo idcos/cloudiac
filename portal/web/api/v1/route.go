@@ -300,7 +300,7 @@ func Register(g *gin.RouterGroup) {
 	// 漂移管理
 	g.GET("/envs/:id/drift/detail", ac(), w(handlers.DriftDetail))
 	g.GET("/envs/:id/drift", ac(), w(handlers.DriftList))
-	//g.GET("/envs/:id/drift/resources", ac())
+	g.GET("/envs/:id/drift/:taskId/resources", ac(), w(handlers.DriftResourceList))
 
 	// 声明式
 	g.POST("/declare/env", ac(), w(handlers.DeclareEnv))
