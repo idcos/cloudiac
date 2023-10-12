@@ -62,3 +62,9 @@ type ResourceMapping struct {
 func (ResourceMapping) TableName() string {
 	return "iac_resource_mapping"
 }
+
+type ResourceMappingCondition struct {
+	Provider string `json:"provider" gorm:"not null"` // 资源所属平台
+	Type     string `json:"type" gorm:"not null"`     // 资源类型
+	Code     string `json:"name" gorm:"not null"`     // 属性标识
+}

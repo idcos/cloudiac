@@ -701,7 +701,7 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Resource{}.TableName(),
 		"id", "org_id", "project_id", "env_id", "task_id", "provider", "module",
-		"address", "mode", "type", "name", "index", "attrs", "sensitive_keys", "applied_at", "res_id", "dependencies")
+		"address", "mode", "type", "name", "index", "attrs", "sensitive_keys", "applied_at", "res_id", "dependencies", "res_name")
 
 	rs := make([]*models.Resource, 0)
 	rs = append(rs, TraverseStateModule(&values.RootModule)...)
@@ -713,6 +713,22 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 		return err
 	}
 	resMap := SetResFieldsAsMap(resources)
+
+	// 查询资源名称映射
+	rmc := make([]*models.ResourceMappingCondition, 0)
+	for _, r := range rs {
+		rmc = append(rmc, &models.ResourceMappingCondition{
+			Provider: r.Provider,
+			Type:     r.Type,
+			Code:     "name",
+		})
+	}
+	expressMap, err := SearchResourceMappingExpress(tx, rmc)
+	if err != nil {
+		return err
+	}
+
+	// 遍历结果
 	for _, r := range rs {
 		if _, ok := r.Attrs["id"]; !ok {
 			logs.Get().Warn("attrs key 'id' not exist")
@@ -738,9 +754,17 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 		if keys, ok := sensitiveKeys[r.Address]; ok {
 			r.Attrs = SensitiveAttrs(r.Attrs, keys, "")
 		}
+		// 根据resource_mapping解析资源名称
+		resName := ""
+		key := buildResourceMappingMapKey(r.Provider, r.Type, "name")
+		if express, ok := expressMap[key]; ok {
+			if _, ok := r.Attrs[express]; !ok {
+				resName = fmt.Sprintf("%v", r.Attrs[express])
+			}
+		}
 
 		err := bq.AddRow(models.NewId("r"), task.OrgId, task.ProjectId, task.EnvId, task.Id, r.Provider,
-			r.Module, r.Address, r.Mode, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys, r.AppliedAt, resId, r.Dependencies)
+			r.Module, r.Address, r.Mode, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys, r.AppliedAt, resId, r.Dependencies, resName)
 		if err != nil {
 			return err
 		}
