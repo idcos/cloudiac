@@ -52,11 +52,12 @@ const (
 	TaskStepEnvParse = "envParse"
 	TaskStepEnvScan  = "envScan"
 
-	TaskStepAnsiblePlay = "ansiblePlay" // play playbook
-	TaskStepCommand     = "command"     // run command
-	TaskStepCollect     = "collect"     // 任务结束后的信息采集
-	TaskStepScanInit    = "scaninit"
-	CronDriftTaskName   = "Drift Detection" // 漂移检测任务名称
+	TaskStepAnsiblePlay     = "ansiblePlay" // play playbook
+	TaskStepCommand         = "command"     // run command
+	TaskStepCollect         = "collect"     // 任务结束后的信息采集
+	TaskStepScanInit        = "scaninit"
+	CronDriftTaskName       = "Drift Detection"        // 漂移检测任务名称
+	CronManualDriftTaskName = "Manual Drift Detection" // 手动漂移检测任务名称
 
 	PipelineFileName = ".cloudiac-pipeline.yml"
 

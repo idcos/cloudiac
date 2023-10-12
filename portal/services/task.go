@@ -58,7 +58,8 @@ func DeleteTaskStep(tx *db.Session, taskId models.Id) e.Error {
 // 删除环境下所有的偏移检测资源信息
 func DeleteEnvResourceDrift(tx *db.Session, taskId models.Id) e.Error {
 	drift := models.ResourceDrift{}
-	_, err := tx.Where("res_id in (select id from iac_resource where task_id = ?)", taskId).Delete(&drift)
+	//_, err := tx.Where("res_id in (select id from iac_resource where task_id = ?)", taskId).Delete(&drift)
+	_, err := tx.Where("task_id = ?", taskId).Delete(&drift)
 	if err != nil {
 		return e.New(e.DBError, err)
 	}
@@ -68,8 +69,8 @@ func DeleteEnvResourceDrift(tx *db.Session, taskId models.Id) e.Error {
 // 删除已经手动恢复的资源
 func DeleteEnvResourceDriftByAddressList(tx *db.Session, taskId models.Id, addressList []string) e.Error {
 	drift := models.ResourceDrift{}
-	_, err := tx.Where("res_id in (select id from iac_resource where task_id = ? and address not in (?))",
-		taskId, addressList).Delete(&drift)
+	_, err := tx.Where("task_id = ? and res_id in (select id from iac_resource where task_id = ? and address not in (?))",
+		taskId, taskId, addressList).Delete(&drift)
 	if err != nil {
 		return e.New(e.DBError, err)
 	}
@@ -149,7 +150,9 @@ func CloneNewDriftTask(tx *db.Session, src models.Task, env *models.Env) (*model
 		return nil, er
 	}
 
-	task.Name = common.CronDriftTaskName
+	if task.Name == "" {
+		task.Name = common.CronDriftTaskName
+	}
 	task.Type = cronTaskType
 	task.IsDriftTask = true
 	task.RepoAddr = repoAddr
@@ -1610,6 +1613,12 @@ func InsertOrUpdateCronTaskInfo(session *db.Session, resDrift models.ResourceDri
 	}
 }
 
+func InsertCornTaskInfo(session *db.Session, resDrift models.ResourceDrift) {
+	if err := models.Create(session, resDrift); err != nil {
+		logs.Get().Errorf("insert resource drift info error: %v", err)
+	}
+}
+
 func SendVcsComment(session *db.Session, task *models.Task, taskStatus string) {
 	env, er := GetEnvById(session, task.EnvId)
 	if er != nil {
@@ -1801,4 +1810,8 @@ func GenerateCallbackContent(task *models.Task, eventType, taskStatus, envStatus
 	}
 
 	return a
+}
+
+func InsertTaskDrift(session *db.Session, drift models.TaskDrift) error {
+	return models.Create(session, drift)
 }
