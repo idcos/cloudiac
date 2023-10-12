@@ -1614,7 +1614,7 @@ func InsertOrUpdateCronTaskInfo(session *db.Session, resDrift models.ResourceDri
 }
 
 func InsertCornTaskInfo(session *db.Session, resDrift models.ResourceDrift) {
-	if err := models.Create(session, resDrift); err != nil {
+	if err := models.Create(session, &resDrift); err != nil {
 		logs.Get().Errorf("insert resource drift info error: %v", err)
 	}
 }
