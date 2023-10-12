@@ -758,7 +758,7 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 		resName := ""
 		key := buildResourceMappingMapKey(r.Provider, r.Type, "name")
 		if express, ok := expressMap[key]; ok {
-			if _, ok := r.Attrs[express]; !ok {
+			if _, ok := r.Attrs[express]; ok {
 				resName = fmt.Sprintf("%v", r.Attrs[express])
 			}
 		}
