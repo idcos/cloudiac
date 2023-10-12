@@ -154,6 +154,7 @@ func (Env) DeployCheck(c *ctx.GinRequest) {
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param envId path string true "环境ID"
+// @Param data body forms.DriftDeployEnvForm true "部署参数"
 // @router /envs/{envId}/deploy/drift [post]
 // @Success 200 {object} ctx.JSONResult{}
 func (Env) DeployDrift(c *ctx.GinRequest) {

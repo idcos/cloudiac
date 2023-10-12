@@ -1173,11 +1173,8 @@ func EnvDeployDrift(c *ctx.ServiceContext, envId models.Id, form *forms.DriftDep
 		return nil, err
 	}
 	// 判断是漂移检测，还是纠偏
-	if form.Apply == true {
-		task.Type = models.TaskTypeApply
-	} else {
-		task.Type = models.TaskTypePlan
-	}
+	env.AutoRepairDrift = form.Apply
+
 	task.IsDriftTask = true
 	task.Name = common.CronManualDriftTaskName // 设置手动的名称
 	newTask, err := services.CloneNewDriftTask(c.DB(), *task, env)
