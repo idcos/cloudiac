@@ -52,7 +52,7 @@ func EnvDriftSearch(c *ctx.ServiceContext, envId models.Id, form *forms.SearchEn
 }
 
 // EnvDriftResourceSearch 查询偏移资源信息
-func EnvDriftResourceSearch(c *ctx.ServiceContext, envId models.Id, taskId models.Id) ([]*resps.ResourceDriftResp, e.Error {
+func EnvDriftResourceSearch(c *ctx.ServiceContext, envId models.Id, taskId models.Id) ([]*resps.ResourceDriftResp, e.Error) {
 	query := services.QueryResourceDrift(c.DB())
 	query.Where("iac_resource.env_id = ? and rd.task_id = ?", envId, taskId)
 	rdr := make([]*resps.ResourceDriftResp, 0)
