@@ -1826,11 +1826,12 @@ func SaveTaskDrift(session *db.Session, task *models.Task, isDrift bool) e.Error
 			taskDriftType = "manual"
 		}
 		taskDrift = models.TaskDrift{
-			EnvId:   task.EnvId,
-			TaskId:  task.Id,
-			Type:    taskDriftType, // manual or corn
-			IsDrift: isDrift,
-			Status:  task.Status,
+			EnvId:    task.EnvId,
+			TaskId:   task.Id,
+			Type:     taskDriftType, // manual or corn
+			IsDrift:  isDrift,
+			Status:   task.Status,
+			ExecTime: task.CreatedAt,
 		}
 		err := models.Create(session, &taskDrift)
 		if err != nil {

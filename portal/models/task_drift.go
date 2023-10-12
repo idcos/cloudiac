@@ -17,11 +17,12 @@ func (ResourceDrift) TableName() string {
 // TaskDrift 漂移检测历史
 type TaskDrift struct {
 	TimedModel
-	EnvId   Id     `json:"envId" gorm:"index;size:32;not null"`
-	TaskId  Id     `json:"taskId" gorm:"index;size:32;not null"`
-	Type    string `json:"type" gorm:"not null"`
-	Status  string `json:"status" gorm:"not null"`
-	IsDrift bool   `json:"isDrift" gorm:"default:false"`
+	EnvId    Id     `json:"envId" gorm:"index;size:32;not null"`
+	TaskId   Id     `json:"taskId" gorm:"index;size:32;not null"`
+	Type     string `json:"type" gorm:"not null"`
+	Status   string `json:"status" gorm:"not null"`
+	IsDrift  bool   `json:"isDrift" gorm:"default:false"`
+	ExecTime Time   `json:"execTime" gorm:"type:datetime" example:"2006-01-02 15:04:05"` // 执行时间
 }
 
 func (TaskDrift) TableName() string {
