@@ -13,8 +13,8 @@ import (
 // @Param IaC-Org-Id header string true "组织ID"
 // @Param IaC-Project-Id header string true "项目ID"
 // @Param envId path string true "环境ID"
-// @router /envs/{envId}/drift/detail
-// @Success 200 {object} ctx.JSONResult{}
+// @router /envs/{envId}/drift/detail [get]
+// @Success 200 {object} ctx.JSONResult{result=models.EnvDrift}
 func DriftDetail(c *ctx.GinRequest) {
 	c.JSONResult(apps.EnvDriftDetail(c.Service(), models.Id(c.Param("id"))))
 }
