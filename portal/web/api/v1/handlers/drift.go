@@ -15,6 +15,6 @@ import (
 // @Param envId path string true "环境ID"
 // @router /envs/{envId}/drift/detail
 // @Success 200 {object} ctx.JSONResult{}
-func (Env) DriftDetail(c *ctx.GinRequest) {
+func DriftDetail(c *ctx.GinRequest) {
 	c.JSONResult(apps.EnvDriftDetail(c.Service(), models.Id(c.Param("id"))))
 }
