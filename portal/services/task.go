@@ -1837,6 +1837,8 @@ func SaveTaskDrift(session *db.Session, task *models.Task, isDrift bool) e.Error
 			return e.New(e.DBError, err)
 		}
 	} else {
+		taskDrift.Status = task.Status
+		taskDrift.IsDrift = isDrift
 		_, err := models.UpdateModelAll(session, &taskDrift)
 		if err != nil {
 			return e.New(e.DBError, err)

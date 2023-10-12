@@ -1179,7 +1179,7 @@ func EnvDeployDrift(c *ctx.ServiceContext, envId models.Id, form *forms.DriftDep
 		task.Type = models.TaskTypePlan
 	}
 	task.IsDriftTask = true
-	task.Name = common.CronDriftTaskName // 设置手动的名称
+	task.Name = common.CronManualDriftTaskName // 设置手动的名称
 	newTask, err := services.CloneNewDriftTask(c.DB(), *task, env)
 	if err != nil {
 		return nil, err
