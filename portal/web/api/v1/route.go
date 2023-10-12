@@ -283,6 +283,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/tasks/last", ac(), w(handlers.Env{}.LastTask))
 	g.POST("/envs/:id/deploy", ac("envs", "deploy"), w(handlers.Env{}.Deploy))
 	g.POST("/envs/:id/deploy/check", ac("envs", "deploy"), w(handlers.Env{}.DeployCheck))
+	g.POST("/envs/:id/deploy/drift", ac("envs", "deploy"), w(handlers.Env{}.DeployDrift))
 	g.POST("/envs/:id/destroy", ac("envs", "destroy"), w(handlers.Env{}.Destroy))
 	g.POST("/envs/:id/tags", ac("envs", "tags"), w(handlers.Env{}.UpdateTags))
 	g.GET("/envs/:id/resources", ac(), w(handlers.Env{}.SearchResources))

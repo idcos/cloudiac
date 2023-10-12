@@ -11,7 +11,7 @@ import (
 	"cloudiac/portal/models/forms"
 )
 
-type  Env struct {
+type Env struct {
 	ctrl.GinController
 }
 
@@ -145,6 +145,23 @@ func (Env) Deploy(c *ctx.GinRequest) {
 // @Success 200 {object} ctx.JSONResult{}
 func (Env) DeployCheck(c *ctx.GinRequest) {
 	c.JSONResult(apps.EnvDeployCheck(c.Service(), models.Id(c.Param("id"))))
+}
+
+// DeployDrift 环境重新部署漂移检测
+// @Tags 环境
+// @Summary 环境重新部署漂移检测
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param envId path string true "环境ID"
+// @router /envs/{envId}/deploy/drift [post]
+// @Success 200 {object} ctx.JSONResult{}
+func (Env) DeployDrift(c *ctx.GinRequest) {
+	form := forms.DriftDeployEnvForm{}
+	if err := c.Bind(&form); err != nil {
+		return
+	}
+	c.JSONResult(apps.EnvDeployDrift(c.Service(), models.Id(c.Param("id")), &form))
 }
 
 // Destroy 销毁环境资源
