@@ -25,6 +25,7 @@ type Resource struct {
 	TaskId    Id `json:"taskId" gorm:"index;size:32;not null"`
 
 	ResId         Id       `json:"resId" gorm:"index;not null;default:''"`
+	ResName       string   `json:"resName" gorm:"not null;default:''"`
 	Provider      string   `json:"provider" gorm:"not null"`
 	Module        string   `json:"module,omitempty" gorm:"not null;default:''"`
 	Address       string   `json:"address" gorm:"not null"`
@@ -48,4 +49,22 @@ type ResFields []ResField
 type ResField struct {
 	ResId     Id   `json:"resId"`
 	AppliedAt Time `json:"appliedAt"`
+}
+
+type ResourceMapping struct {
+	BaseModel
+	Provider string `json:"provider" gorm:"not null"` // 资源所属平台
+	Type     string `json:"type" gorm:"not null"`     // 资源类型
+	Code     string `json:"name" gorm:"not null"`     // 属性标识
+	Express  string `json:"express" gorm:"not null"`  // 值表达式
+}
+
+func (ResourceMapping) TableName() string {
+	return "iac_resource_mapping"
+}
+
+type ResourceMappingCondition struct {
+	Provider string `json:"provider" gorm:"not null"` // 资源所属平台
+	Type     string `json:"type" gorm:"not null"`     // 资源类型
+	Code     string `json:"name" gorm:"not null"`     // 属性标识
 }

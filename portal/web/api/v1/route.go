@@ -283,6 +283,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/tasks/last", ac(), w(handlers.Env{}.LastTask))
 	g.POST("/envs/:id/deploy", ac("envs", "deploy"), w(handlers.Env{}.Deploy))
 	g.POST("/envs/:id/deploy/check", ac("envs", "deploy"), w(handlers.Env{}.DeployCheck))
+	g.POST("/envs/:id/deploy/drift", ac("envs", "deploy"), w(handlers.Env{}.DeployDrift))
 	g.POST("/envs/:id/destroy", ac("envs", "destroy"), w(handlers.Env{}.Destroy))
 	g.POST("/envs/:id/tags", ac("envs", "tags"), w(handlers.Env{}.UpdateTags))
 	g.GET("/envs/:id/resources", ac(), w(handlers.Env{}.SearchResources))
@@ -295,6 +296,11 @@ func Register(g *gin.RouterGroup) {
 	g.POST("/envs/:id/lock", ac("envs", "lock"), w(handlers.EnvLock))
 	g.POST("/envs/:id/unlock", ac("envs", "unlock"), w(handlers.EnvUnLock))
 	g.GET("/envs/:id/unlock/confirm", ac(), w(handlers.EnvUnLockConfirm))
+
+	// 漂移管理
+	g.GET("/envs/:id/drift/detail", ac(), w(handlers.DriftDetail))
+	g.GET("/envs/:id/drift", ac(), w(handlers.DriftList))
+	g.GET("/envs/:id/drift/:taskId/resources", ac(), w(handlers.DriftResourceList))
 
 	// 声明式
 	g.POST("/declare/env", ac(), w(handlers.DeclareEnv))

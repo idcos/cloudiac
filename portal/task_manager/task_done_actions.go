@@ -192,6 +192,14 @@ func taskDoneProcessDriftTask(logger logs.Logger, dbSess *db.Session, task *mode
 				return err
 			}
 			driftInfoMap := ParseResourceDriftInfo(bs)
+			// 保存漂移结果
+			if task.Source == consts.TaskSourceDriftPlan {
+				err := services.SaveTaskDrift(db.Get(), task, len(driftInfoMap) != 0)
+				if err != nil {
+					logger.Errorf("create env['%s'] task drift error : %v", task.EnvId, err)
+					return err
+				}
+			}
 			if len(driftInfoMap) == 0 {
 				err = services.DeleteEnvResourceDrift(dbSess, env.LastResTaskId)
 				if err != nil {
@@ -213,8 +221,20 @@ func taskDoneProcessDriftTask(logger logs.Logger, dbSess *db.Session, task *mode
 						continue
 					} else {
 						driftInfo.ResId = res.Id
+						driftInfo.TaskId = env.LastResTaskId
+						driftInfo.IsLast = true
 						// TODO 后续使用batch 改进
 						services.InsertOrUpdateCronTaskInfo(db.Get(), driftInfo)
+					}
+					// 如果该任务是漂移检测，需要添加本次检测的资源漂移结果
+					if task.Type == models.TaskTypePlan {
+						rd := models.ResourceDrift{
+							TimedModel:  driftInfo.TimedModel,
+							TaskId:      task.Id,
+							DriftDetail: driftInfo.DriftDetail,
+							ResId:       driftInfo.ResId,
+						}
+						services.InsertCornTaskInfo(db.Get(), rd)
 					}
 				}
 			}
@@ -242,7 +262,7 @@ func taskDoneProcessAutoDeploy(dbSess *db.Session, task *models.Task) error {
 
 	updateAttrs := models.Attrs{}
 
-	if task.Type == models.TaskTypeApply && task.Source == consts.TaskSourceAutoDeploy  {
+	if task.Type == models.TaskTypeApply && task.Source == consts.TaskSourceAutoDeploy {
 		// 环境执行定时部署任务后清空自动部署设置，确保后续的定时部署设置可以生效
 		// ttl 需要保留，做为重建环境的默认 ttl
 		updateAttrs["AutoDeployAt"] = nil
