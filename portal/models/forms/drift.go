@@ -1,8 +1,13 @@
 package forms
 
+import (
+	"time"
+)
+
 // SearchEnvDriftsForm 漂移结果列表查询
 type SearchEnvDriftsForm struct {
 	NoPageSizeForm
-	Keyword string `json:"keyword" form:"keyword" binding:"max=255"`
-	IsDrift *bool  `json:"isDrift" form:"isDrift"`
+	IsDrift   *bool      `json:"isDrift" form:"isDrift"`
+	StartTime *time.Time `json:"startTime" form:"startTime" `
+	EndTime   *time.Time `json:"endTime" form:"endTime" `
 }

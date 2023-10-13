@@ -31,12 +31,14 @@ func EnvDriftDetail(c *ctx.ServiceContext, envId models.Id) (*models.EnvDrift, e
 func EnvDriftSearch(c *ctx.ServiceContext, envId models.Id, form *forms.SearchEnvDriftsForm) (*page.PageResp, e.Error) {
 	query := services.QueryTaskDrift(c.DB())
 	query = query.Where("iac_task_drift.env_id = ?", envId)
-	if form.Keyword != "" {
-		// TODO 关键字查询,需要先确认查询啥
-		//query.Where("name")
-	}
 	if form.IsDrift != nil {
 		query = query.Where("iac_task_drift.is_drift = ?", form.IsDrift)
+	}
+	if form.StartTime != nil {
+		query = query.Where("iac_task_drift.exec_time >= ?", form.StartTime)
+	}
+	if form.EndTime != nil {
+		query = query.Where("iac_task_drift.exec_time <= ?", form.EndTime)
 	}
 	query = query.Order("iac_task_drift.created_at DESC")
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
