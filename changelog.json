@@ -1,7 +1,7 @@
 [
   {
       "version": "1.3.10",
-      "date": "20230915",
+      "date": "20231013",
       "content": {
           "Features": [
               "worker新增terraform版本，并修改默认terraform版本为1.5.6",
