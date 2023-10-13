@@ -176,6 +176,12 @@ type DeployEnvForm struct {
 	UserTags []models.Tag `json:"userTags" form:"userTags" `
 }
 
+// DriftDeployEnvForm 漂移检测表单参数
+type DriftDeployEnvForm struct {
+	BaseForm
+	Apply bool `form:"apply" json:"apply" enums:"true,false"`
+}
+
 type ArchiveEnvForm struct {
 	BaseForm
 

@@ -95,6 +95,7 @@ func (t *Task) start() (cid string, err error) {
 		Timeout:     t.req.Timeout,
 		Workdir:     ContainerWorkspace,
 		HostWorkdir: t.workspace,
+		PluginCache: GetEnvPluginCache(t.req.Env.Id),
 	}
 
 	if t.req.DockerImage != "" {

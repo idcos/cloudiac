@@ -207,6 +207,7 @@ func Init(migrate bool) {
 	autoMigrate(&Template{}, sess)
 	autoMigrate(&Env{}, sess)
 	autoMigrate(&Resource{}, sess)
+	autoMigrate(&ResourceMapping{}, sess)
 
 	autoMigrate(&Variable{}, sess)
 
@@ -237,6 +238,7 @@ func Init(migrate bool) {
 	autoMigrate(&VariableGroup{}, sess)
 	autoMigrate(&VariableGroupRel{}, sess)
 	autoMigrate(&ResourceDrift{}, sess)
+	autoMigrate(&TaskDrift{}, sess)
 	autoMigrate(&VariableGroupProjectRel{}, sess)
 
 	autoMigrate(&Bill{}, sess)

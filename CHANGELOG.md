@@ -1,3 +1,13 @@
+## v1.3.10
+### Features:
+- worker新增terraform版本，并修改默认terraform版本为1.5.6
+- 修改任务完成回调逻辑，如果callback是一个正确的url，则请求callback，反之则发送一次kafka消息
+- 增加 provider cache 模式,使用宿主机公共目录或单个环境独立缓存目录
+- 漂移检测新增表记录每次漂移检测结果（包括每次漂移的资源信息）
+- 新增 resource_mapping 配置，每次部署完成同步资源信息时通过该配置维护 resource 表的res_name
+### Fixed:
+- 修改轮询任务结果多次请求consul的问题
+
 ## v1.3.9 20230915
 ### Fixed:
 - 修复环境部署时标签异常覆盖问题

@@ -131,9 +131,13 @@ func QueryEnvDetail(dbSess *db.Session, orgId, projectId models.Id) *db.Session 
 	query = query.Joins("left join iac_token as it on it.id = iac_env.token_id").
 		LazySelectAppend("it.name as token_name")
 	// 资源是否发生漂移
+	//query = query.Joins("LEFT JOIN (" +
+	//	"  SELECT iac_resource.task_id FROM iac_resource_drift " +
+	//	"INNER JOIN iac_resource ON iac_resource.id = iac_resource_drift.res_id GROUP BY iac_resource.task_id" +
+	//	") AS rd ON rd.task_id = iac_env.last_res_task_id").
+	//	LazySelectAppend("!ISNULL(rd.task_id) AS is_drift")
 	query = query.Joins("LEFT JOIN (" +
-		"  SELECT iac_resource.task_id FROM iac_resource_drift " +
-		"INNER JOIN iac_resource ON iac_resource.id = iac_resource_drift.res_id GROUP BY iac_resource.task_id" +
+		"  SELECT task_id FROM iac_resource_drift WHERE is_last = true GROUP BY task_id" +
 		") AS rd ON rd.task_id = iac_env.last_res_task_id").
 		LazySelectAppend("!ISNULL(rd.task_id) AS is_drift")
 	query = query.Joins("left join iac_scan_task on iac_env.last_scan_task_id = iac_scan_task.id").

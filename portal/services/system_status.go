@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/utils"
 	"cloudiac/utils/consulClient"
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -176,6 +177,21 @@ func GetRunnerAddress(serviceId string) (string, error) {
 		return "", errors.Wrapf(err, "get runner address, runnerId %s", serviceId)
 	}
 	return fmt.Sprintf("http://%s:%d", s.Address, s.Port), nil
+}
+
+func GetRunnerAddressByCtx(ctx context.Context, serviceId string) (string, error) {
+	var ctxKey string = serviceId
+	value := ctx.Value(ctxKey)
+	if value == nil {
+		address, err := GetRunnerAddress(serviceId)
+		if err != nil {
+			return "", err
+		}
+		context.WithValue(ctx, ctxKey, address)
+		return address, nil
+	} else {
+		return value.(string), nil
+	}
 }
 
 func GetDefaultRunnerId() (string, e.Error) {

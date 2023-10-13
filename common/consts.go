@@ -52,11 +52,12 @@ const (
 	TaskStepEnvParse = "envParse"
 	TaskStepEnvScan  = "envScan"
 
-	TaskStepAnsiblePlay = "ansiblePlay" // play playbook
-	TaskStepCommand     = "command"     // run command
-	TaskStepCollect     = "collect"     // 任务结束后的信息采集
-	TaskStepScanInit    = "scaninit"
-	CronDriftTaskName   = "Drift Detection" // 漂移检测任务名称
+	TaskStepAnsiblePlay     = "ansiblePlay" // play playbook
+	TaskStepCommand         = "command"     // run command
+	TaskStepCollect         = "collect"     // 任务结束后的信息采集
+	TaskStepScanInit        = "scaninit"
+	CronDriftTaskName       = "Drift Detection"        // 漂移检测任务名称
+	CronManualDriftTaskName = "Manual Drift Detection" // 手动漂移检测任务名称
 
 	PipelineFileName = ".cloudiac-pipeline.yml"
 
@@ -123,6 +124,10 @@ const (
 	ConsulCapem         = "client.pem"
 	ConsulContainerPath = "/cloudiac/cert/"
 	ConsulSessionTTL    = 10
+
+	ProviderCacheModCommon  = "common"   // COMMON(公共缓存，所有容器公用)
+	ProviderCacheModOnlyEnv = "only_env" // ONLY_ENV(每个环境一个缓存目录)
+	ProviderCacheModNoCache = "no"       // NO(不使用外部缓存)
 )
 
 var (
@@ -138,5 +143,9 @@ var (
 		"1.0.6",
 		"1.1.9",
 		"1.2.4",
+		"1.5.2",
+		"1.5.4",
+		"1.5.5",
+		"1.5.6",
 	}
 )

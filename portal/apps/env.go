@@ -1148,6 +1148,49 @@ func EnvDeployCheck(c *ctx.ServiceContext, envId models.Id) (interface{}, e.Erro
 	return nil, nil
 }
 
+// EnvDeployDrift 创建一个漂移检测任务
+func EnvDeployDrift(c *ctx.ServiceContext, envId models.Id, form *forms.DriftDeployEnvForm) (interface{}, e.Error) {
+	// 查询环境
+	env, err := services.GetEnvById(c.DB(), envId)
+	if err != nil {
+		return nil, err
+	}
+	//判断环境是否已归档
+	if env.Archived {
+		return nil, e.New(e.EnvArchived, "Environment archived")
+	}
+	// 先查询这个环境有没有排队中的偏移检测任务了, 有就不创建了
+	existCronPendingTask, err := services.ListPendingCronTask(c.DB(), env.Id)
+	if err != nil {
+		return nil, err
+	}
+	if existCronPendingTask {
+		return nil, e.New(e.EnvDeploying, "Environment drift task already exist")
+	}
+	// 查询环境最新的部署任务
+	task, err := services.GetTaskById(c.DB(), env.LastTaskId)
+	if err != nil {
+		return nil, err
+	}
+	// 判断是漂移检测，还是纠偏
+	env.AutoRepairDrift = form.Apply
+
+	task.IsDriftTask = true
+	task.Name = common.CronManualDriftTaskName // 设置手动的名称
+	newTask, err := services.CloneNewDriftTask(c.DB(), *task, env)
+	if err != nil {
+		return nil, err
+	}
+	// 手动调用时，保存漂移记录
+	if newTask.Source == consts.TaskSourceDriftPlan {
+		err = services.SaveTaskDrift(c.DB(), newTask, false)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return newTask.Id, nil
+}
+
 func envPreCheck(orgId, projectId, keyId models.Id, playbook string) e.Error {
 	if orgId == "" || projectId == "" {
 		return e.New(e.BadRequest, http.StatusBadRequest)

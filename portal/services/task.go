@@ -58,7 +58,8 @@ func DeleteTaskStep(tx *db.Session, taskId models.Id) e.Error {
 // 删除环境下所有的偏移检测资源信息
 func DeleteEnvResourceDrift(tx *db.Session, taskId models.Id) e.Error {
 	drift := models.ResourceDrift{}
-	_, err := tx.Where("res_id in (select id from iac_resource where task_id = ?)", taskId).Delete(&drift)
+	//_, err := tx.Where("res_id in (select id from iac_resource where task_id = ?)", taskId).Delete(&drift)
+	_, err := tx.Where("task_id = ?", taskId).Delete(&drift)
 	if err != nil {
 		return e.New(e.DBError, err)
 	}
@@ -68,8 +69,8 @@ func DeleteEnvResourceDrift(tx *db.Session, taskId models.Id) e.Error {
 // 删除已经手动恢复的资源
 func DeleteEnvResourceDriftByAddressList(tx *db.Session, taskId models.Id, addressList []string) e.Error {
 	drift := models.ResourceDrift{}
-	_, err := tx.Where("res_id in (select id from iac_resource where task_id = ? and address not in (?))",
-		taskId, addressList).Delete(&drift)
+	_, err := tx.Where("task_id = ? and res_id in (select id from iac_resource where task_id = ? and address not in (?))",
+		taskId, taskId, addressList).Delete(&drift)
 	if err != nil {
 		return e.New(e.DBError, err)
 	}
@@ -149,7 +150,9 @@ func CloneNewDriftTask(tx *db.Session, src models.Task, env *models.Env) (*model
 		return nil, er
 	}
 
-	task.Name = common.CronDriftTaskName
+	if task.Name == "" {
+		task.Name = common.CronDriftTaskName
+	}
 	task.Type = cronTaskType
 	task.IsDriftTask = true
 	task.RepoAddr = repoAddr
@@ -605,14 +608,16 @@ func ChangeTaskStatus(dbSess *db.Session, task *models.Task, status, message str
 func taskStatusExitedCall(dbSess *db.Session, task *models.Task, status string) {
 	if task.Type == common.TaskTypeApply || task.Type == common.TaskTypeDestroy {
 		// 回调的消息通知只发送一次, 作业结束后发送通知
-		SendKafkaMessage(dbSess, task, status)
-
+		// 修改逻辑，设置了正确callback后，不再发送kafka消息
 		if task.Callback != "" {
 			if utils.IsValidUrl(task.Callback) {
 				go SendHttpMessage(task.Callback, dbSess, task, status)
 			} else {
-				logs.Get().Warnf("invalid task callback url: %s", task.Callback)
+				logs.Get().Warnf("invalid task callback url: %s,use kafka message", task.Callback)
+				SendKafkaMessage(dbSess, task, status)
 			}
+		} else {
+			SendKafkaMessage(dbSess, task, status)
 		}
 
 		syncManagedResToProvider(task)
@@ -696,7 +701,7 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 
 	bq := utils.NewBatchSQL(1024, "INSERT INTO", models.Resource{}.TableName(),
 		"id", "org_id", "project_id", "env_id", "task_id", "provider", "module",
-		"address", "mode", "type", "name", "index", "attrs", "sensitive_keys", "applied_at", "res_id", "dependencies")
+		"address", "mode", "type", "name", "index", "attrs", "sensitive_keys", "applied_at", "res_id", "dependencies", "res_name")
 
 	rs := make([]*models.Resource, 0)
 	rs = append(rs, TraverseStateModule(&values.RootModule)...)
@@ -708,6 +713,22 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 		return err
 	}
 	resMap := SetResFieldsAsMap(resources)
+
+	// 查询资源名称映射
+	rmc := make([]*models.ResourceMappingCondition, 0)
+	for _, r := range rs {
+		rmc = append(rmc, &models.ResourceMappingCondition{
+			Provider: r.Provider,
+			Type:     r.Type,
+			Code:     "name",
+		})
+	}
+	expressMap, err := SearchResourceMappingExpress(tx, rmc)
+	if err != nil {
+		return err
+	}
+
+	// 遍历结果
 	for _, r := range rs {
 		if _, ok := r.Attrs["id"]; !ok {
 			logs.Get().Warn("attrs key 'id' not exist")
@@ -733,9 +754,17 @@ func SaveTaskResources(tx *db.Session, task *models.Task, values TfStateValues, 
 		if keys, ok := sensitiveKeys[r.Address]; ok {
 			r.Attrs = SensitiveAttrs(r.Attrs, keys, "")
 		}
+		// 根据resource_mapping解析资源名称
+		resName := ""
+		key := buildResourceMappingMapKey(r.Provider, r.Type, "name")
+		if express, ok := expressMap[key]; ok {
+			if _, ok := r.Attrs[express]; ok {
+				resName = fmt.Sprintf("%v", r.Attrs[express])
+			}
+		}
 
 		err := bq.AddRow(models.NewId("r"), task.OrgId, task.ProjectId, task.EnvId, task.Id, r.Provider,
-			r.Module, r.Address, r.Mode, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys, r.AppliedAt, resId, r.Dependencies)
+			r.Module, r.Address, r.Mode, r.Type, r.Name, r.Index, r.Attrs, r.SensitiveKeys, r.AppliedAt, resId, r.Dependencies, resName)
 		if err != nil {
 			return err
 		}
@@ -1010,7 +1039,7 @@ func fetchRunnerTaskStepLog(ctx context.Context, runnerId string, step *models.T
 		WithField("taskId", step.TaskId).
 		WithField("step", fmt.Sprintf("%d(%s)", step.Index, step.Type))
 
-	runnerAddr, err := GetRunnerAddress(runnerId)
+	runnerAddr, err := GetRunnerAddressByCtx(ctx, runnerId)
 	if err != nil {
 		return err
 	}
@@ -1608,6 +1637,12 @@ func InsertOrUpdateCronTaskInfo(session *db.Session, resDrift models.ResourceDri
 	}
 }
 
+func InsertCornTaskInfo(session *db.Session, resDrift models.ResourceDrift) {
+	if err := models.Create(session, &resDrift); err != nil {
+		logs.Get().Errorf("insert resource drift info error: %v", err)
+	}
+}
+
 func SendVcsComment(session *db.Session, task *models.Task, taskStatus string) {
 	env, er := GetEnvById(session, task.EnvId)
 	if er != nil {
@@ -1799,4 +1834,37 @@ func GenerateCallbackContent(task *models.Task, eventType, taskStatus, envStatus
 	}
 
 	return a
+}
+
+// SaveTaskDrift 新增或者修改漂移任务
+func SaveTaskDrift(session *db.Session, task *models.Task, isDrift bool) e.Error {
+	// 查询是否存在
+	taskDrift := models.TaskDrift{}
+	if err := session.Where("task_id = ?", task.Id).Find(&taskDrift); err != nil {
+		return e.New(e.DBError, err)
+	}
+	if taskDrift.Id == "" {
+		taskDriftType := "corn"
+		if task.Name == common.CronManualDriftTaskName {
+			taskDriftType = "manual"
+		}
+		taskDrift = models.TaskDrift{
+			EnvId:    task.EnvId,
+			TaskId:   task.Id,
+			Type:     taskDriftType, // manual or corn
+			IsDrift:  isDrift,
+			ExecTime: task.CreatedAt,
+		}
+		err := models.Create(session, &taskDrift)
+		if err != nil {
+			return e.New(e.DBError, err)
+		}
+	} else {
+		taskDrift.IsDrift = isDrift
+		_, err := models.UpdateModelAll(session, &taskDrift)
+		if err != nil {
+			return e.New(e.DBError, err)
+		}
+	}
+	return nil
 }
