@@ -18,12 +18,21 @@ func EnvDriftDetail(c *ctx.ServiceContext, envId models.Id) (*models.EnvDrift, e
 	if err != nil {
 		return nil, err
 	}
+	// 查询最后一次偏移检测时间
+	drift, e2 := services.GetLastTaskDrift(c.DB(), envId)
+	var driftTime *models.Time
+	if e2 != nil {
+		c.Logger().Errorf("GetLastTaskDrift[%s] error:%s", envId, e2)
+	} else {
+		driftTime = &drift.ExecTime
+	}
 	return &models.EnvDrift{
 		EnvId:            envDetail.Id,
 		IsDrift:          envDetail.IsDrift,
 		CronDriftExpress: envDetail.CronDriftExpress,
 		AutoRepairDrift:  envDetail.AutoRepairDrift,
 		OpenCronDrift:    envDetail.OpenCronDrift,
+		DriftTime:        driftTime,
 	}, nil
 }
 

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
 )
@@ -17,4 +18,15 @@ func QueryResourceDrift(query *db.Session) *db.Session {
 	query = query.Joins("inner join iac_resource_drift rd on iac_resource.id = rd.res_id").
 		LazySelectAppend("rd.drift_detail")
 	return query
+}
+
+// GetLastTaskDrift 查询最新的一条漂移检测结果
+func GetLastTaskDrift(tx *db.Session, envId models.Id) (*models.TaskDrift, e.Error) {
+	query := tx.Model(&models.TaskDrift{})
+	query = query.Where("env_id = ?", envId).Limit(1)
+	td := models.TaskDrift{}
+	if err := query.First(&td); err != nil {
+		return nil, e.New(e.DBError, err)
+	}
+	return &td, nil
 }
