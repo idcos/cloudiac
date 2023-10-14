@@ -29,9 +29,10 @@ func (TaskDrift) TableName() string {
 }
 
 type EnvDrift struct {
-	EnvId            Id     `json:"envId"`                                // 环境id
-	IsDrift          bool   `json:"isDrift"`                              // 是否偏移
-	CronDriftExpress string `json:"cronDriftExpress" gorm:"default:''"`   // 偏移检测任务的Cron表达式
-	AutoRepairDrift  bool   `json:"autoRepairDrift" gorm:"default:false"` // 是否进行自动纠偏
-	OpenCronDrift    bool   `json:"openCronDrift" gorm:"default:false"`   // 是否开启偏移检测
+	EnvId            Id     `json:"envId"`            // 环境id
+	IsDrift          bool   `json:"isDrift"`          // 是否偏移
+	CronDriftExpress string `json:"cronDriftExpress"` // 偏移检测任务的Cron表达式
+	AutoRepairDrift  bool   `json:"autoRepairDrift"`  // 是否进行自动纠偏
+	OpenCronDrift    bool   `json:"openCronDrift"`    // 是否开启偏移检测
+	DriftTime        *Time  `json:"driftTime"`
 }
