@@ -11,17 +11,19 @@ RUN yum install epel-release -y && \
     yum install -y centos-release-scl && \
     yum install git curl unzip openssh vim which -y && \
     yum install sshpass -y && \
-    yum install openssl -y && \
+    yum install openssl-1.0.2k -y && \
     yum install -y rh-python38 && \
     ln -s /opt/rh/rh-python38/root/usr/bin/python3 /usr/bin/python3 && \
     ln -s /opt/rh/rh-python38/root/usr/bin/pip3 /usr/bin/pip3 && \
     pip3 install ansible && \
+    pip3 install urllib3 == 1.26.13 && \
     pip3 install pywinrm && \
     ln -s /opt/rh/rh-python38/root/usr/local/bin/ansible /usr/bin/ansible && \
     ln -s /opt/rh/rh-python38/root/usr/local/bin/ansible-playbook /usr/bin/ansible-playbook && \
     ln -s /opt/rh/rh-python38/root/usr/local/bin/ansible-galaxy /usr/bin/ansible-galaxy && \
     ln -s /opt/rh/rh-python38/root/usr/local/bin/ansible-inventory /usr/bin/ansible-inventory && \
     ln -s /opt/rh/rh-python38/root/usr/local/bin/ansible-pull /usr/bin/ansible-pull && \
+    sed -i 's/#\s*StrictHostKeyChecking ask/    StrictHostKeyChecking no/' /etc/ssh/ssh_config && \
     yum clean all
 
 RUN
