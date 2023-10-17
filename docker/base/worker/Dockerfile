@@ -16,7 +16,7 @@ RUN yum install epel-release -y && \
     ln -s /opt/rh/rh-python38/root/usr/bin/python3 /usr/bin/python3 && \
     ln -s /opt/rh/rh-python38/root/usr/bin/pip3 /usr/bin/pip3 && \
     pip3 install ansible && \
-    pip3 install urllib3 == 1.26.13 && \
+    pip3 install urllib3==1.26.13 && \
     pip3 install pywinrm && \
     ln -s /opt/rh/rh-python38/root/usr/local/bin/ansible /usr/bin/ansible && \
     ln -s /opt/rh/rh-python38/root/usr/local/bin/ansible-playbook /usr/bin/ansible-playbook && \
