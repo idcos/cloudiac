@@ -3,7 +3,9 @@
 package apps
 
 import (
+	"archive/zip"
 	"bufio"
+	"bytes"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
@@ -22,6 +24,7 @@ import (
 	"io"
 	"net/http"
 	"path"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -425,6 +428,39 @@ func GetTaskStepLog(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (inte
 		}
 		return text, nil
 	}
+}
+
+//GetTaskLogZip 查询task下所有日志,并返回zip二进制流
+func GetTaskLogZip(c *ctx.ServiceContext, taskId models.Id) (*bytes.Buffer, e.Error) {
+	// 查询所有步骤
+	steps, err := services.GetTaskSteps(c.DB(), taskId)
+	if err != nil {
+		return nil, e.New(e.ExportError, err)
+	}
+	var buf bytes.Buffer
+	writer := zip.NewWriter(&buf)
+	for _, item := range steps {
+		contentByte, err := services.GetTaskStepLogById(c.DB(), item.Id)
+		if err != nil {
+			return nil, err
+		}
+		// 去除颜色转译码
+		re := regexp.MustCompile("\x1b\\[[0-9;]*[a-zA-Z]")
+		contentString := re.ReplaceAllString(string(contentByte), "")
+		fileWriter, ioErr := writer.Create(item.Name + ".log")
+		if ioErr != nil {
+			return nil, e.New(e.ExportError, ioErr)
+		}
+		_, ioErr = fileWriter.Write([]byte(contentString))
+		if ioErr != nil {
+			return nil, e.New(e.ExportError, ioErr)
+		}
+	}
+	ioErr := writer.Close()
+	if ioErr != nil {
+		return nil, e.New(e.ExportError, ioErr)
+	}
+	return &buf, nil
 }
 
 func ErrorStepLog(c *ctx.ServiceContext, form *forms.ErrorStepLogForm) (interface{}, e.Error) {

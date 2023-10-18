@@ -74,7 +74,7 @@ const (
 	ImportError       = 10510
 	ImportIdDuplicate = 10520 //  id 重复
 	ImportUpdateOrgId = 10530
-
+	ExportError       = 10540
 	//// runner 报错 106
 	RunnerError = 10610
 
