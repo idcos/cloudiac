@@ -415,7 +415,16 @@ func GetTaskStepLog(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (inte
 	if err != nil {
 		return nil, err
 	}
-	return string(content), nil
+	if form.ShowAll {
+		return string(content), nil
+	} else {
+		text := string(content)
+		lines := strings.Split(text, "\n")
+		if len(lines) > form.Number {
+			text = strings.Join(lines[len(lines)-form.Number:], "\n")
+		}
+		return text, nil
+	}
 }
 
 func ErrorStepLog(c *ctx.ServiceContext, form *forms.ErrorStepLogForm) (interface{}, e.Error) {

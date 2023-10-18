@@ -261,6 +261,9 @@ func (Task) GetTaskStepLog(c *ctx.GinRequest) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
+	if form.Number == 0 {
+		form.Number = 100
+	}
 	c.JSONResult(apps.GetTaskStepLog(c.Service(), &form))
 
 }
