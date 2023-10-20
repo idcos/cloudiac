@@ -26,13 +26,19 @@ func EnvDriftDetail(c *ctx.ServiceContext, envId models.Id) (*models.EnvDrift, e
 	} else {
 		driftTime = &drift.ExecTime
 	}
+	var nextDriftTaskTime *models.Time
+	if envDetail.NextDriftTaskTime != nil {
+		time := models.Time(*envDetail.NextDriftTaskTime)
+		nextDriftTaskTime = &time
+	}
 	return &models.EnvDrift{
-		EnvId:            envDetail.Id,
-		IsDrift:          envDetail.IsDrift,
-		CronDriftExpress: envDetail.CronDriftExpress,
-		AutoRepairDrift:  envDetail.AutoRepairDrift,
-		OpenCronDrift:    envDetail.OpenCronDrift,
-		DriftTime:        driftTime,
+		EnvId:             envDetail.Id,
+		IsDrift:           envDetail.IsDrift,
+		CronDriftExpress:  envDetail.CronDriftExpress,
+		AutoRepairDrift:   envDetail.AutoRepairDrift,
+		OpenCronDrift:     envDetail.OpenCronDrift,
+		DriftTime:         driftTime,
+		NextDriftTaskTime: nextDriftTaskTime,
 	}, nil
 }
 
