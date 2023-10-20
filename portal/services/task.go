@@ -77,6 +77,18 @@ func DeleteEnvResourceDriftByAddressList(tx *db.Session, taskId models.Id, addre
 	return nil
 }
 
+// UpdateEnvResourceDriftForNoLast 将所有的最新数据改为非最新
+func UpdateEnvResourceDriftForNoLast(tx *db.Session, envId models.Id) e.Error {
+	_, err := tx.Model(&models.ResourceDrift{}).Where("task_id in (select id from iac_task where env_id = ?)", envId).
+		UpdateAttrs(map[string]interface{}{
+			"is_last": false,
+		})
+	if err != nil {
+		return e.New(e.DBError, err)
+	}
+	return nil
+}
+
 func DeleteTask(tx *db.Session, taskId models.Id) e.Error {
 	step := models.Task{}
 	_, err := tx.Where("id = ?", taskId).Delete(&step)
@@ -1599,7 +1611,7 @@ func GetTaskResourceToTaskId(dbSess *db.Session, task *models.Task) ([]Resource,
 	// 资源类型: 新增、删除、修改
 	rs := make([]Resource, 0)
 	if err := dbSess.Table("iac_resource as r").
-		Joins("left join iac_resource_drift as rd on rd.res_id =  r.id ").
+		Joins("left join iac_resource_drift as rd on rd.res_id =  r.id and rd.is_last = true").
 		Where("r.org_id = ? AND r.project_id = ? AND r.env_id = ? AND r.task_id = ?",
 			task.OrgId, task.ProjectId, task.EnvId, task.Id).
 		LazySelectAppend("r.*, rd.drift_detail, rd.updated_at, rd.created_at").
