@@ -47,7 +47,20 @@ func DriftList(c *ctx.GinRequest) {
 // @Param envId path string true "环境ID"
 // @Param taskId path string true "漂移检查任务ID"
 // @router /envs/{envId}/drift/{taskId}/resources [get]
-// @Success 200 {object} ctx.JSONResult{result=resps.ResourceDriftResp}
+// @Success 200 {object} ctx.JSONResult{result=[]resps.ResourceDriftResp}
 func DriftResourceList(c *ctx.GinRequest) {
 	c.JSONResult(apps.EnvDriftResourceSearch(c.Service(), models.Id(c.Param("id")), models.Id(c.Param("taskId"))))
+}
+
+// DriftLastResources 查询最新的一条漂移记录的资源列表
+// @Tags 环境
+// @Summary 查询最新的一条漂移记录的资源列表
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param envId path string true "环境ID"
+// @router /envs/{envId}/drift/last/resources [get]
+// @Success 200 {object} ctx.JSONResult{result=[]resps.ResourceDriftResp}
+func DriftLastResources(c *ctx.GinRequest) {
+	c.JSONResult(apps.EnvDriftLastResourceSearch(c.Service(), models.Id(c.Param("id"))))
 }

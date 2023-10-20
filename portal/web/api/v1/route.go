@@ -301,6 +301,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/drift/detail", ac(), w(handlers.DriftDetail))
 	g.GET("/envs/:id/drift", ac(), w(handlers.DriftList))
 	g.GET("/envs/:id/drift/:taskId/resources", ac(), w(handlers.DriftResourceList))
+	g.GET("/envs/:id/drift/last/resources", ac(), w(handlers.DriftLastResources))
 
 	// 声明式
 	g.POST("/declare/env", ac(), w(handlers.DeclareEnv))

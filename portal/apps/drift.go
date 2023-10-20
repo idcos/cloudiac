@@ -72,3 +72,16 @@ func EnvDriftResourceSearch(c *ctx.ServiceContext, envId models.Id, taskId model
 	}
 	return rdr, nil
 }
+
+// EnvDriftLastResourceSearch 查询最新的一条漂移记录的资源列表
+func EnvDriftLastResourceSearch(c *ctx.ServiceContext, envId models.Id) ([]*resps.ResourceDriftResp, e.Error) {
+	env, err := services.GetEnvById(c.DB(), envId)
+	if err != nil {
+		return nil, err
+	}
+	resources, err := EnvDriftResourceSearch(c, envId, env.LastTaskId)
+	if err != nil {
+		return nil, err
+	}
+	return resources, nil
+}
