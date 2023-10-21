@@ -301,6 +301,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/envs/:id/drift/detail", ac(), w(handlers.DriftDetail))
 	g.GET("/envs/:id/drift", ac(), w(handlers.DriftList))
 	g.GET("/envs/:id/drift/:taskId/resources", ac(), w(handlers.DriftResourceList))
+	g.GET("/envs/:id/drift/last/resources", ac(), w(handlers.DriftLastResources))
 
 	// 声明式
 	g.POST("/declare/env", ac(), w(handlers.DeclareEnv))
@@ -322,6 +323,7 @@ func Register(g *gin.RouterGroup) {
 	g.GET("/tasks/:id/steps", ac(), w(handlers.Task{}.SearchTaskStep))
 	g.GET("/tasks/:id/steps/:stepId/log", ac(), w(handlers.Task{}.GetTaskStepLog))
 	g.GET("/tasks/:id/steps/:stepId/log/sse", ac(), w(handlers.Task{}.FollowStepLogSse))
+	g.GET("/tasks/:id/steps/log/download", ac(), w(handlers.Task{}.DownloadStepLogs))
 	g.GET("/tasks/:id/resources/graph", ac(), w(handlers.Task{}.ResourceGraph))
 
 	//g.GET("/tokens/trigger", ac(), w(handlers.Token{}.VcsWebhookUrl))

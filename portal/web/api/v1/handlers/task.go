@@ -6,6 +6,7 @@ import (
 	"cloudiac/portal/apps"
 	"cloudiac/portal/libs/ctrl"
 	"cloudiac/portal/libs/ctx"
+	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
 )
 
@@ -261,6 +262,9 @@ func (Task) GetTaskStepLog(c *ctx.GinRequest) {
 	if err := c.Bind(&form); err != nil {
 		return
 	}
+	if form.Number == 0 {
+		form.Number = 100
+	}
 	c.JSONResult(apps.GetTaskStepLog(c.Service(), &form))
 
 }
@@ -284,4 +288,24 @@ func (Task) ResourceGraph(c *ctx.GinRequest) {
 		return
 	}
 	c.JSONResult(apps.SearchTaskResourcesGraph(c.Service(), &form))
+}
+
+// DownloadStepLogs 下载部署步骤日志
+// Tags 环境
+// @Accept multipart/form-data
+// @Accept application/x-www-form-urlencoded
+// @Produce application/zip
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param taskId path string true "任务ID"
+// @router /tasks/{taskId}/steps/log/download [get]
+// @Success 200 {file} application/zip
+func (Task) DownloadStepLogs(c *ctx.GinRequest) {
+	taskId := models.Id(c.Param("id"))
+	zip, err := apps.GetTaskLogZip(c.Service(), taskId)
+	if err != nil {
+		c.JSONResult(nil, err)
+	}
+	c.FileDownloadResponse(zip.Bytes(), string(taskId)+".zip", "application/zip")
 }

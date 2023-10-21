@@ -203,7 +203,11 @@ func taskDoneProcessDriftTask(logger logs.Logger, dbSess *db.Session, task *mode
 			if len(driftInfoMap) == 0 {
 				err = services.DeleteEnvResourceDrift(dbSess, env.LastResTaskId)
 				if err != nil {
-					logs.Get().Error("Failed to delete all resoruce drift information in the environment")
+					logs.Get().Error("Failed to delete all resource drift information in the environment")
+				}
+				err = services.UpdateEnvResourceDriftForNoLast(dbSess, env.Id)
+				if err != nil {
+					logs.Get().Error("Failed to set no last all resource drift information in the environment")
 				}
 			} else {
 				addressList := []string{}
@@ -212,7 +216,11 @@ func taskDoneProcessDriftTask(logger logs.Logger, dbSess *db.Session, task *mode
 				}
 				err = services.DeleteEnvResourceDriftByAddressList(dbSess, env.LastResTaskId, addressList)
 				if err != nil {
-					logs.Get().Error("Failed to delete already repair resoruce drift information in the environment")
+					logs.Get().Error("Failed to delete already repair resource drift information in the environment")
+				}
+				err = services.UpdateEnvResourceDriftForNoLast(dbSess, env.Id)
+				if err != nil {
+					logs.Get().Error("Failed to set no last all resource drift information in the environment")
 				}
 				for address, driftInfo := range driftInfoMap {
 					res, err := services.GetResourceIdByAddressAndTaskId(dbSess, address, env.LastResTaskId)

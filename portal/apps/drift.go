@@ -26,13 +26,19 @@ func EnvDriftDetail(c *ctx.ServiceContext, envId models.Id) (*models.EnvDrift, e
 	} else {
 		driftTime = &drift.ExecTime
 	}
+	var nextDriftTaskTime *models.Time
+	if envDetail.NextDriftTaskTime != nil {
+		time := models.Time(*envDetail.NextDriftTaskTime)
+		nextDriftTaskTime = &time
+	}
 	return &models.EnvDrift{
-		EnvId:            envDetail.Id,
-		IsDrift:          envDetail.IsDrift,
-		CronDriftExpress: envDetail.CronDriftExpress,
-		AutoRepairDrift:  envDetail.AutoRepairDrift,
-		OpenCronDrift:    envDetail.OpenCronDrift,
-		DriftTime:        driftTime,
+		EnvId:             envDetail.Id,
+		IsDrift:           envDetail.IsDrift,
+		CronDriftExpress:  envDetail.CronDriftExpress,
+		AutoRepairDrift:   envDetail.AutoRepairDrift,
+		OpenCronDrift:     envDetail.OpenCronDrift,
+		DriftTime:         driftTime,
+		NextDriftTaskTime: nextDriftTaskTime,
 	}, nil
 }
 
@@ -71,4 +77,17 @@ func EnvDriftResourceSearch(c *ctx.ServiceContext, envId models.Id, taskId model
 		return nil, e.New(e.DBError, err)
 	}
 	return rdr, nil
+}
+
+// EnvDriftLastResourceSearch 查询最新的一条漂移记录的资源列表
+func EnvDriftLastResourceSearch(c *ctx.ServiceContext, envId models.Id) ([]*resps.ResourceDriftResp, e.Error) {
+	env, err := services.GetEnvById(c.DB(), envId)
+	if err != nil {
+		return nil, err
+	}
+	resources, err := EnvDriftResourceSearch(c, envId, env.LastTaskId)
+	if err != nil {
+		return nil, err
+	}
+	return resources, nil
 }

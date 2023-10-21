@@ -3,7 +3,9 @@
 package apps
 
 import (
+	"archive/zip"
 	"bufio"
+	"bytes"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
@@ -16,12 +18,14 @@ import (
 	"cloudiac/portal/services"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
+	"cloudiac/utils/tf"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"path"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -415,7 +419,75 @@ func GetTaskStepLog(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (inte
 	if err != nil {
 		return nil, err
 	}
-	return string(content), nil
+	var text string
+	if form.IsSimple {
+		// 需要简化时，截取参数将失效
+		step, err := services.GetTaskStepByStepId(c.DB(), form.StepId)
+		if err != nil {
+			logs.Get().Errorf("GetTaskStepByStepId error[%s]:%s", form.StepId, err)
+			text = ""
+		} else {
+			text = tf.SimpleLog(string(content), step.Type)
+		}
+	} else if form.ShowAll {
+		text = string(content)
+	} else {
+		text = string(content)
+		lines := strings.Split(text, "\n")
+		if len(lines) > form.Number {
+			text = strings.Join(lines[len(lines)-form.Number:], "\n")
+		}
+		return text, nil
+	}
+	// 翻译中文
+	if form.IsTranslateZH {
+		step, err := services.GetTaskStepByStepId(c.DB(), form.StepId)
+		if err != nil {
+			logs.Get().Errorf("GetTaskStepByStepId error[%s]:%s", form.StepId, err)
+		} else {
+			zhText, err := tf.TranslateLogToZH(text, step.Type)
+			if err != nil {
+
+			} else {
+				text = zhText
+			}
+		}
+
+	}
+	return text, nil
+}
+
+//GetTaskLogZip 查询task下所有日志,并返回zip二进制流
+func GetTaskLogZip(c *ctx.ServiceContext, taskId models.Id) (*bytes.Buffer, e.Error) {
+	// 查询所有步骤
+	steps, err := services.GetTaskSteps(c.DB(), taskId)
+	if err != nil {
+		return nil, e.New(e.ExportError, err)
+	}
+	var buf bytes.Buffer
+	writer := zip.NewWriter(&buf)
+	for _, item := range steps {
+		contentByte, err := services.GetTaskStepLogById(c.DB(), item.Id)
+		if err != nil {
+			return nil, err
+		}
+		// 去除颜色转译码
+		re := regexp.MustCompile("\x1b\\[[0-9;]*[a-zA-Z]")
+		contentString := re.ReplaceAllString(string(contentByte), "")
+		fileWriter, ioErr := writer.Create(item.Name + ".log")
+		if ioErr != nil {
+			return nil, e.New(e.ExportError, ioErr)
+		}
+		_, ioErr = fileWriter.Write([]byte(contentString))
+		if ioErr != nil {
+			return nil, e.New(e.ExportError, ioErr)
+		}
+	}
+	ioErr := writer.Close()
+	if ioErr != nil {
+		return nil, e.New(e.ExportError, ioErr)
+	}
+	return &buf, nil
 }
 
 func ErrorStepLog(c *ctx.ServiceContext, form *forms.ErrorStepLogForm) (interface{}, e.Error) {
