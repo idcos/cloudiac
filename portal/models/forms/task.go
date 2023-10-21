@@ -106,10 +106,12 @@ type ResourceDetailForm struct {
 
 type GetTaskStepLogForm struct {
 	BaseForm
-	Id      models.Id `uri:"id" json:"id" binding:"required,startswith=run-,max=32"`          // 任务Id
-	StepId  models.Id `uri:"stepId" json:"stepId" binding:"required,startswith=step-,max=32"` //步骤ID
-	Number  int       `json:"number" form:"number"`                                           // 返回行数
-	ShowAll bool      `json:"showAll" form:"showAll"`                                         // 是否展示所有
+	Id            models.Id `uri:"id" json:"id" binding:"required,startswith=run-,max=32"`          // 任务Id
+	StepId        models.Id `uri:"stepId" json:"stepId" binding:"required,startswith=step-,max=32"` // 步骤ID
+	Number        int       `json:"number" form:"number"`                                           // 返回行数
+	ShowAll       bool      `json:"showAll" form:"showAll"`                                         // 是否展示所有
+	IsSimple      bool      `json:"isSimple" form:"isSimple"`                                       // 是否精简日志
+	IsTranslateZH bool      `json:"isTranslateZH" form:"isTranslateZH"`                             // 是否翻译为中文
 }
 
 type ErrorStepLogForm struct {

@@ -18,6 +18,7 @@ import (
 	"cloudiac/portal/services"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
+	"cloudiac/utils/tf"
 	"context"
 	"errors"
 	"fmt"
@@ -418,16 +419,42 @@ func GetTaskStepLog(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (inte
 	if err != nil {
 		return nil, err
 	}
-	if form.ShowAll {
-		return string(content), nil
+	var text string
+	if form.IsSimple {
+		// 需要简化时，截取参数将失效
+		step, err := services.GetTaskStepByStepId(c.DB(), form.StepId)
+		if err != nil {
+			logs.Get().Errorf("GetTaskStepByStepId error[%s]:%s", form.StepId, err)
+			text = ""
+		} else {
+			text = tf.SimpleLog(string(content), step.Type)
+		}
+	} else if form.ShowAll {
+		text = string(content)
 	} else {
-		text := string(content)
+		text = string(content)
 		lines := strings.Split(text, "\n")
 		if len(lines) > form.Number {
 			text = strings.Join(lines[len(lines)-form.Number:], "\n")
 		}
 		return text, nil
 	}
+	// 翻译中文
+	if form.IsTranslateZH {
+		step, err := services.GetTaskStepByStepId(c.DB(), form.StepId)
+		if err != nil {
+			logs.Get().Errorf("GetTaskStepByStepId error[%s]:%s", form.StepId, err)
+		} else {
+			zhText, err := tf.TranslateLogToZH(text, step.Type)
+			if err != nil {
+
+			} else {
+				text = zhText
+			}
+		}
+
+	}
+	return text, nil
 }
 
 //GetTaskLogZip 查询task下所有日志,并返回zip二进制流
