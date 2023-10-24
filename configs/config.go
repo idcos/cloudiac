@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"gopkg.in/yaml.v2"
@@ -190,8 +191,8 @@ type Config struct {
 	AlicloudResSyncApi string `yaml:"alicloud_res_sync_api"`
 
 	// 开放terraform版本配置，未指定的配置时，以const里的定义为准，当修改terraform版本需保证worker镜像中存在版本
-	DefaultTerraformVersion string   `yaml:"default_tf_version"` // 默认的terraform版本
-	TerraformVersions       []string `yaml:"tf_versions"`        // 支持的terraform版本
+	DefaultTerraformVersion string `yaml:"default_tf_version"` // 默认的terraform版本
+	TerraformVersions       string `yaml:"tf_versions"`        // 支持的terraform版本,多个使用逗号间隔
 }
 
 func (c *Config) GetDefaultTerraformVersion() string {
@@ -202,8 +203,8 @@ func (c *Config) GetDefaultTerraformVersion() string {
 }
 
 func (c *Config) GetTerraformVersions() []string {
-	if len(c.TerraformVersions) != 0 {
-		return c.TerraformVersions
+	if c.TerraformVersions != "" {
+		return strings.Split(c.TerraformVersions, ",")
 	}
 	return common.TerraformVersions
 }
