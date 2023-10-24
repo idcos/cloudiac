@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"cloudiac/common"
 	"cloudiac/configs"
-	"cloudiac/portal/consts"
 	"cloudiac/utils"
 	"cloudiac/utils/logs"
 	"encoding/json"
@@ -157,7 +156,7 @@ func (t *Task) buildVarsAndCmdEnv(cmd *Executor) error {
 	}
 
 	if t.req.Env.TfVersion == "" {
-		t.req.Env.TfVersion = consts.DefaultTerraformVersion
+		t.req.Env.TfVersion = configs.Get().GetDefaultTerraformVersion()
 	}
 	cmd.TerraformVersion = t.req.Env.TfVersion
 	cmd.Env = append(cmd.Env, fmt.Sprintf("TFENV_TERRAFORM_VERSION=%s", cmd.TerraformVersion))

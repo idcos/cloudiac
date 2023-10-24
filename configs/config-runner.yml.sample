@@ -1,5 +1,7 @@
 listen: "0.0.0.0:19030"
 secretKey: "${SECRET_KEY}"
+default_tf_version: "${DEFAULT_TF_VERSION}"
+tf_versions: "${TF_VERSIONS}"
 
 runner:
   default_image: "${DOCKER_REGISTRY}cloudiac/ct-worker:latest"

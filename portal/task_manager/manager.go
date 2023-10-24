@@ -1010,7 +1010,7 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 	}
 
 	if runnerEnv.TfVersion == "" {
-		runnerEnv.TfVersion = consts.DefaultTerraformVersion
+		runnerEnv.TfVersion = configs.Get().GetDefaultTerraformVersion()
 	}
 	if err := buildTaskReqEnvVars(&runnerEnv, task.Variables); err != nil {
 		return nil, err
@@ -1392,7 +1392,7 @@ func buildScanTaskReq(dbSess *db.Session, task *models.ScanTask, step *models.Ta
 		AnsibleVars:     make(map[string]string),
 	}
 	if runnerEnv.TfVersion == "" {
-		runnerEnv.TfVersion = consts.DefaultTerraformVersion
+		runnerEnv.TfVersion = configs.Get().GetDefaultTerraformVersion()
 	}
 	if err := buildTaskReqEnvVars(&runnerEnv, task.Variables); err != nil {
 		return nil, err
