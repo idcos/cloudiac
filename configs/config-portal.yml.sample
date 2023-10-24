@@ -11,6 +11,8 @@ registryAddr: "${REGISTRY_ADDRESS}"
 httpClientInsecure: ${HTTP_CLIENT_INSECURE}
 enableTaskAbort: ${ENABLE_TASK_ABORT}
 enableRegister: ${ENABLE_REGISTER}
+default_tf_version: "${DEFAULT_TF_VERSION}"
+tf_versions: "${TF_VERSIONS}"
 
 portal:
   address: "${PORTAL_ADDRESS}"

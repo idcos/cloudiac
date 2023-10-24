@@ -142,7 +142,7 @@ func (exec *Executor) Start() (string, error) {
 	// 注意，该方案有个问题：客户无法自定义镜像预先安装需要的 terraform 版本，
 	// 因为判断版本不在 TerraformVersions 列表中就会挂载目录，客户自定义镜像安装的版本会被覆盖
 	//（考虑把版本列表写到配置文件？）
-	if !utils.StrInArray(exec.TerraformVersion, common.TerraformVersions...) {
+	if !utils.StrInArray(exec.TerraformVersion, configs.Get().GetTerraformVersions()...) {
 		mountConfigs = append(mountConfigs, mount.Mount{
 			Type:   mount.TypeBind,
 			Source: conf.Runner.AbsTfenvVersionsCachePath(),

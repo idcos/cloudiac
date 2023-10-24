@@ -3,7 +3,7 @@
 package apps
 
 import (
-	"cloudiac/common"
+	"cloudiac/configs"
 	"cloudiac/portal/consts"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/ctx"
@@ -47,15 +47,15 @@ func AutoGetTfVersion(c *ctx.ServiceContext, form *forms.TemplateTfVersionSearch
 	content, er := repoDetail.ReadFileContent(form.VcsBranch, filepath.Join(form.Workdir, "versions.tf"))
 	// 没有找到versions.tf 文件，使用默认版本，不报错
 	if er != nil {
-		return consts.DefaultTerraformVersion, nil
+		return configs.Get().GetDefaultTerraformVersion(), nil
 	}
 	tfconstraint := GetUserTfVersion(content)
 	// 如果用户versions.tf 中没有制定terraform 版本，使用我们默认版本
 	if tfconstraint == "" {
-		return consts.DefaultTerraformVersion, nil
+		return configs.Get().GetDefaultTerraformVersion(), nil
 	}
 	// 查看内置版本中有无满足用户约束条件的版本
-	tfVersion, tferr := GetDetailTfVersion(common.TerraformVersions, tfconstraint)
+	tfVersion, tferr := GetDetailTfVersion(configs.Get().GetTerraformVersions(), tfconstraint)
 	if tferr != nil {
 		return nil, e.New(e.InvalidTfVersion, tferr)
 	}

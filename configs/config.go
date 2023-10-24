@@ -3,12 +3,15 @@
 package configs
 
 import (
+	"cloudiac/common"
+	"cloudiac/portal/consts"
 	"crypto/md5" //nolint:gosec
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"gopkg.in/yaml.v2"
@@ -186,6 +189,24 @@ type Config struct {
 	Demo DemoConfig `yaml:"demo"` // 演示组织配置
 
 	AlicloudResSyncApi string `yaml:"alicloud_res_sync_api"`
+
+	// 开放terraform版本配置，未指定的配置时，以const里的定义为准，当修改terraform版本需保证worker镜像中存在版本
+	DefaultTerraformVersion string `yaml:"default_tf_version"` // 默认的terraform版本
+	TerraformVersions       string `yaml:"tf_versions"`        // 支持的terraform版本,多个使用逗号间隔
+}
+
+func (c *Config) GetDefaultTerraformVersion() string {
+	if c.DefaultTerraformVersion != "" {
+		return c.DefaultTerraformVersion
+	}
+	return consts.DefaultTerraformVersion
+}
+
+func (c *Config) GetTerraformVersions() []string {
+	if c.TerraformVersions != "" {
+		return strings.Split(c.TerraformVersions, ",")
+	}
+	return common.TerraformVersions
 }
 
 const (
