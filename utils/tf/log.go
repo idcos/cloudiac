@@ -14,6 +14,7 @@ var planWordZHMap = map[string]string{
 	"must be replaced":            "必须被修改",
 	"will be updated in-place":    "将会被修改",
 	"unchanged attributes hidden": "未改变属性被隐藏",
+	"unchanged blocks hidden":     "未改变的块被隐藏",
 }
 
 var envScanZHMap = map[string]string{
