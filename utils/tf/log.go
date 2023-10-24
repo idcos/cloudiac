@@ -10,8 +10,10 @@ import (
 
 var planWordZHMap = map[string]string{
 	"Terraform will perform the following actions": "Terraform将执行以下操作",
-	"will be created":  "将会被创建",
-	"must be replaced": "必须被修改",
+	"will be created":             "将会被创建",
+	"must be replaced":            "必须被修改",
+	"will be updated in-place":    "将会被修改",
+	"unchanged attributes hidden": "未改变属性被隐藏",
 }
 
 var envScanZHMap = map[string]string{
@@ -21,7 +23,7 @@ var envScanZHMap = map[string]string{
 
 const (
 	simplePlanPreText = `
-使用制定的Provider生成以下资源执行计划。资源操作以下符号表示：
+使用指定的Provider生成以下资源执行计划。资源操作以下符号表示：
 ～ 资源属性更改
 + 资源新增
 - 资源销毁
@@ -31,9 +33,10 @@ const (
 // SimpleLog 将log简单化
 func SimpleLog(log, logType string) string {
 	// 去掉颜色字符，方便处理
-	log = removeColorWord(log)
+	//log = removeColorWord(log)
 	if logType == common.TaskStepTfPlan {
-		regex := regexp.MustCompile(`Terraform will perform the following actions:(?s:.*?)Plan: \d+ to add, \d+ to change, \d+ to destroy\.`)
+		// \[[0-9;]*[a-zA-Z]
+		regex := regexp.MustCompile(`Terraform will perform the following actions:(?s:.*?)\[[0-9;]*[a-zA-Z]Plan:\[[0-9;]*[a-zA-Z] \d+ to add, \d+ to change, \d+ to destroy\.`)
 		//regex := regexp.MustCompile(`Terraform will perform the following actions:(?s:.*?)\[\d+mPlan: \d+ to add, \d+ to change, \d+ to destroy\.`)
 
 		matches := regex.FindAllString(log, -1)
@@ -49,7 +52,7 @@ func SimpleLog(log, logType string) string {
 
 // TranslateLogToZH 翻译tf日志中关键字为中文
 func TranslateLogToZH(log, logType string) (string, error) {
-	log = removeColorWord(log)
+	//log = removeColorWord(log)
 	if logType == common.TaskStepTfPlan {
 		newLog, err := replacePlanText(log)
 		if err != nil {
@@ -79,7 +82,7 @@ func replacePlanText(log string) (string, error) {
 		log = strings.ReplaceAll(log, key, val)
 	}
 	// 提取plan结果字符串
-	regex := regexp.MustCompile(`Plan: \d+ to add, \d+ to change, \d+ to destroy.`)
+	regex := regexp.MustCompile(`\[[0-9;]*[a-zA-Z]Plan:\[[0-9;]*[a-zA-Z] \d+ to add, \d+ to change, \d+ to destroy.`)
 	lineMatches := regex.FindAllString(log, -1)
 	replaceLineMap := map[string]string{}
 	for _, lineMatch := range lineMatches {
@@ -96,10 +99,15 @@ func replacePlanText(log string) (string, error) {
 }
 
 func replacePlanTextNumber(line string) (string, error) {
-	regex := regexp.MustCompile(`\d+`)
-	matches := regex.FindAllString(line, -1)
+	//regex := regexp.MustCompile(`\d+`)
+	regex := regexp.MustCompile(`\[[0-9;]*[a-zA-Z]Plan:\[[0-9;]*[a-zA-Z] (\d+) to add, (\d+) to change, (\d+) to destroy.`)
+	matches := regex.FindStringSubmatch(line)
+	if len(matches) < 4 {
+		return line, nil
+	}
 	numbers := make([]int, 3)
-	for index, match := range matches {
+	for index := 0; index < 3; index++ {
+		match := matches[index+1]
 		i, err := strconv.Atoi(match)
 		if err != nil {
 			return "", err
