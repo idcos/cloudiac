@@ -35,5 +35,11 @@ type EnvDrift struct {
 	AutoRepairDrift   bool   `json:"autoRepairDrift"`   // 是否进行自动纠偏
 	OpenCronDrift     bool   `json:"openCronDrift"`     // 是否开启偏移检测
 	DriftTime         *Time  `json:"driftTime"`         // 最后一次检测时间
+	DriftStatus       string `json:"driftStatus"`       // 最后一次检测状态
 	NextDriftTaskTime *Time  `json:"nextDriftTaskTime"` // 下次检测时间
+}
+
+type TaskDriftInfo struct {
+	TaskDrift
+	Status string `json:"status"` // 漂移任务结果
 }

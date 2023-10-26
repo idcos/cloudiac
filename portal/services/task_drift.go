@@ -21,10 +21,11 @@ func QueryResourceDrift(query *db.Session) *db.Session {
 }
 
 // GetLastTaskDrift 查询最新的一条漂移检测结果
-func GetLastTaskDrift(tx *db.Session, envId models.Id) (*models.TaskDrift, e.Error) {
-	query := tx.Model(&models.TaskDrift{})
-	query = query.Where("env_id = ?", envId).Limit(1)
-	td := models.TaskDrift{}
+func GetLastTaskDrift(tx *db.Session, envId models.Id) (*models.TaskDriftInfo, e.Error) {
+	query := QueryTaskDrift(tx)
+	//query := tx.Model(&models.TaskDrift{})
+	query = query.Where("iac_task_drift.env_id = ?", envId).Limit(1)
+	td := models.TaskDriftInfo{}
 	if err := query.First(&td); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
