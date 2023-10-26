@@ -24,7 +24,9 @@ func QueryResourceDrift(query *db.Session) *db.Session {
 func GetLastTaskDrift(tx *db.Session, envId models.Id) (*models.TaskDriftInfo, e.Error) {
 	query := QueryTaskDrift(tx)
 	//query := tx.Model(&models.TaskDrift{})
-	query = query.Where("iac_task_drift.env_id = ?", envId).Limit(1)
+	query = query.Where("iac_task_drift.env_id = ?", envId).
+		Order("iac_task_drift.created_at desc").
+		Limit(1)
 	td := models.TaskDriftInfo{}
 	if err := query.First(&td); err != nil {
 		return nil, e.New(e.DBError, err)
