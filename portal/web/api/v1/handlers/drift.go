@@ -64,3 +64,16 @@ func DriftResourceList(c *ctx.GinRequest) {
 func DriftLastResources(c *ctx.GinRequest) {
 	c.JSONResult(apps.EnvDriftLastResourceSearch(c.Service(), models.Id(c.Param("id"))))
 }
+
+// DriftLast 查询最新的一条漂移记录
+// @Tags 环境
+// @Summary 查询最新的一条漂移记录
+// @Security AuthToken
+// @Param IaC-Org-Id header string true "组织ID"
+// @Param IaC-Project-Id header string true "项目ID"
+// @Param envId path string true "环境ID"
+// @router /envs/{envId}/drift/last [get]
+// @Success 200 {object} ctx.JSONResult{result=[]resps.TaskDriftResp}
+func DriftLast(c *ctx.GinRequest) {
+	c.JSONResult(apps.EnvDriftLast(c.Service(), models.Id(c.Param("id"))))
+}

@@ -94,3 +94,14 @@ func EnvDriftLastResourceSearch(c *ctx.ServiceContext, envId models.Id) ([]*resp
 	}
 	return resources, nil
 }
+
+// EnvDriftLast 查询最新的一条漂移记录
+func EnvDriftLast(c *ctx.ServiceContext, envId models.Id) (*resps.TaskDriftResp, e.Error) {
+	drift, err := services.GetLastTaskDrift(c.DB(), envId)
+	if err != nil {
+		return nil, err
+	}
+	return &resps.TaskDriftResp{
+		TaskDriftInfo: *drift,
+	}, nil
+}
