@@ -3,35 +3,32 @@
 package db
 
 import (
+	"cloudiac/configs"
 	"database/sql"
 	"fmt"
+	"gorm.io/gorm/clause"
+	"gorm.io/gorm/schema"
+	"gorm.io/plugin/soft_delete"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
-	"time"
-
-	"gorm.io/gorm/clause"
-	"gorm.io/gorm/schema"
-	"gorm.io/plugin/soft_delete"
 
 	"cloudiac/portal/consts/e"
-	dbLogger "cloudiac/portal/libs/db/logger"
 	"cloudiac/utils/logs"
 
 	"github.com/go-testfixtures/testfixtures/v3"
 	"github.com/pkg/errors"
-	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	gormLogger "gorm.io/gorm/logger"
 )
 
 const DBCtxKeyLazySelects = "app:lazySelects"
 
 var (
-	defaultDB      *gorm.DB
-	namingStrategy = schema.NamingStrategy{}
+	defaultDB             *gorm.DB
+	defaultNamingStrategy = schema.NamingStrategy{SingularTable: true}
+	namingStrategies      = map[string]schema.Namer{}
 )
 
 type SoftDeletedAt uint
@@ -86,8 +83,19 @@ func (s *Session) AddUniqueIndex(indexName string, columns ...string) error {
 	if s.db.Migrator().HasIndex(stmt.Table, indexName) {
 		return nil
 	}
-	err := s.db.Exec(fmt.Sprintf("CREATE UNIQUE INDEX `%s` ON `%s` (%s)",
-		indexName, stmt.Table, strings.Join(columns, ","))).Error
+	dbType := configs.Get().GetDbType()
+	var ciSql string
+
+	pTableName := getNamingStrategy().TableName(stmt.Table)
+	pIndexName := getNamingStrategy().IndexName(stmt.Table, indexName)
+	if dbType == "dameng" {
+		ciSql = fmt.Sprintf(`CREATE UNIQUE INDEX "%s" ON "%s" (%s)`,
+			pIndexName, pTableName, strings.Join(columns, ","))
+	} else {
+		ciSql = fmt.Sprintf("CREATE UNIQUE INDEX `%s` ON `%s` (%s)",
+			pIndexName, pTableName, strings.Join(columns, ","))
+	}
+	err := s.db.Exec(ciSql).Error
 	if err != nil {
 		return err
 	}
@@ -119,6 +127,7 @@ func (s *Session) ModifyModelColumn(model interface{}, column string) error {
 	if !s.isModel(model) {
 		return fmt.Errorf("'model' must be a 'struct', not '%T'", model)
 	}
+	column = getNamingStrategy().ColumnName("", column)
 	return s.db.Migrator().AlterColumn(model, column)
 }
 
@@ -422,74 +431,23 @@ func ToSess(db *gorm.DB) *Session {
 }
 
 func ToColName(name string) string {
-	name = namingStrategy.ColumnName("", name)
+	name = getNamingStrategy().ColumnName("", name)
 	if i := strings.IndexByte(name, '.'); i >= 0 {
 		name = name[i+1:]
 	}
 	return name
 }
 
-func Get() *Session {
-	return ToSess(defaultDB)
+func getNamingStrategy() schema.Namer {
+	if v, ok := namingStrategies[configs.Get().DbType]; ok {
+		return v
+	} else {
+		return defaultNamingStrategy
+	}
 }
 
-func openDB(dsn string, driverNames ...string) error {
-	slowThresholdEnv := os.Getenv("GORM_SLOW_THRESHOLD")
-	slowThreshold := time.Second
-	if slowThresholdEnv != "" {
-		n, err := strconv.Atoi(slowThresholdEnv)
-		if err != nil {
-			return errors.Wrap(err, "GORM_SLOW_THRESHOLD")
-		}
-		slowThreshold = time.Second * time.Duration(n)
-	}
-
-	logLevelEnv := os.Getenv("GORM_LOG_LEVEL")
-	logLevel := gormLogger.Warn
-	if logLevelEnv != "" {
-		switch strings.ToLower(logLevelEnv) {
-		case "silent":
-			logLevel = gormLogger.Silent
-		case "error":
-			logLevel = gormLogger.Error
-		case "warn", "warning":
-			logLevel = gormLogger.Warn
-		case "info":
-			logLevel = gormLogger.Info
-		default:
-			logs.Get().Warnf("invalid GORM_LOG_LEVEL '%s'", logLevelEnv)
-		}
-	}
-
-	driverName := "mysql"
-	if len(driverNames) > 0 {
-		driverName = driverNames[0]
-	}
-	mysqlDial := mysql.New(mysql.Config{
-		DriverName:        driverName,
-		DSN:               dsn,
-		DefaultStringSize: 255,
-	})
-	db, err := gorm.Open(mysqlDial, &gorm.Config{
-		NamingStrategy: namingStrategy,
-		Logger: dbLogger.New(logs.Get(), gormLogger.Config{
-			SlowThreshold:             slowThreshold,
-			Colorful:                  false,
-			IgnoreRecordNotFoundError: true,
-			LogLevel:                  logLevel,
-		}),
-	})
-	if err != nil {
-		return err
-	}
-
-	if err = db.Callback().Create().Before("gorm:before_create").
-		Register("my_before_create_hook", beforeCreateCallback); err != nil {
-		return err
-	}
-
-	defaultDB = db
-	return nil
+func Get() *Session {
+	return ToSess(defaultDB)
 }
 
 type CustomBeforeCreateInterface interface {
@@ -526,12 +484,6 @@ func beforeCreateCallback(db *gorm.DB) {
 			}
 			return called
 		})
-	}
-}
-
-func Init(dsn string) {
-	if err := openDB(dsn); err != nil {
-		logs.Get().Fatalln(err)
 	}
 }
 

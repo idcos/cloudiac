@@ -39,7 +39,7 @@ func dbInit() {
 	configs.Init(opt.Config)
 	fmt.Println("config init finished")
 
-	db.Init(configs.Get().Mysql)
+	db.Init(configs.Get().Dsn())
 	fmt.Println("mysql init finished")
 
 	models.Init(false)

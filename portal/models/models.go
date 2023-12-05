@@ -3,6 +3,7 @@
 package models
 
 import (
+	"cloudiac/configs"
 	"cloudiac/utils/logs"
 	"database/sql/driver"
 	"encoding/json"
@@ -172,8 +173,10 @@ func autoMigrate(m Modeler, sess *db.Session) {
 	}
 
 	// 强制修改 table 的字符集和 collate
-	if _, err := sess.Exec(fmt.Sprintf("ALTER TABLE `%s` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", m.TableName())); err != nil {
-		panic(err)
+	if configs.Get().GetDbType() == "mysql" {
+		if _, err := sess.Exec(fmt.Sprintf("ALTER TABLE `%s` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", m.TableName())); err != nil {
+			panic(err)
+		}
 	}
 
 	if err := m.Migrate(sess); err != nil {
@@ -185,7 +188,13 @@ func autoMigrate(m Modeler, sess *db.Session) {
 func Init(migrate bool) {
 	autoMigration = migrate
 
-	sess := db.Get().Set("gorm:table_options", "ENGINE=InnoDB CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci").Begin()
+	var sess *db.Session
+	// mysql才设置
+	if configs.Get().GetDbType() == "mysql" {
+		sess = db.Get().Set("gorm:table_options", "ENGINE=InnoDB CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci").Begin()
+	} else {
+		sess = db.Get().Begin()
+	}
 	defer func() {
 		logger := logs.Get().WithField("func", "models.Init")
 		if r := recover(); r != nil {

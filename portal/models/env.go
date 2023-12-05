@@ -34,11 +34,11 @@ type Env struct {
 	CreatorId Id `json:"creatorId" gorm:"size:32;not null"`                                       // 创建人ID
 	TokenId   Id `json:"tokenId" gorm:"size:32;comment:tokenId" example:"t-cgptjsit467j7gq5jiv0"` // Token ID
 
-	Name        string `json:"name" gorm:"not null"`                                                                                                 // 环境名称
-	Description string `json:"description" gorm:"type:text"`                                                                                         // 环境描述
-	Status      string `json:"status" gorm:"type:enum('active','failed','inactive', 'destroyed')" enums:"'active','failed','inactive', 'destroyed'"` // 环境状态, active活跃, inactive非活跃,failed错误,running部署中,approving审批中
+	Name        string `json:"name" gorm:"not null"`                                             // 环境名称
+	Description string `json:"description" gorm:"type:text"`                                     // 环境描述
+	Status      string `json:"status" gorm:"" enums:"'active','failed','inactive', 'destroyed'"` // 环境状态, active活跃, inactive非活跃,failed错误,running部署中,approving审批中
 	// 任务状态，只同步部署任务的状态(apply,destroy)，plan 任务不会对环境产生影响，所以不同步
-	TaskStatus  string `json:"taskStatus" gorm:"type:enum('','approving','running');default:''"`
+	TaskStatus  string `json:"taskStatus" gorm:"default:''"`                 // type:enum('','approving','running')
 	Archived    bool   `json:"archived" gorm:"default:false"`                // 是否已归档
 	StepTimeout int    `json:"stepTimeout" gorm:"default:3600;comment:部署超时"` // 步骤超时时间（单位：秒）
 	OneTime     bool   `json:"oneTime" gorm:"default:false"`                 // 一次性环境标识
@@ -82,7 +82,7 @@ type Env struct {
 	RetryDelay  int  `json:"retryDelay" gorm:"size:32;default:5"`  // 任务重试时间，单位为秒
 	RetryAble   bool `json:"retryAble" gorm:"default:false"`       // 是否允许任务进行重试
 
-	ExtraData JSON   `json:"extraData" gorm:"type:json"` // 扩展字段，用于存储外部服务调用时的信息
+	ExtraData JSON   `json:"extraData" gorm:"type:text"` // 扩展字段，用于存储外部服务调用时的信息
 	Callback  string `json:"callback" gorm:"default:''"` // 外部请求的回调方式
 
 	// 偏移检测相关
@@ -99,7 +99,7 @@ type Env struct {
 
 	IsDemo bool `json:"isDemo" gorm:"default:false"` // 是否是演示环境
 
-	Targets StrSlice `json:"targets,omitempty" gorm:"type:json"` // 指定部署的资源
+	Targets StrSlice `json:"targets,omitempty" gorm:"type:text"` // 指定部署的资源
 	// 自动部署相关
 	AutoDeployCron   string `json:"autoDeployCron" gorm:"default:''"`  // 自动部署任务的Cron表达式
 	AutoDeployAt     *Time  `json:"autoDeployAt" gorm:"type:datetime"` // 下次执行自动部署任务的时间

@@ -5,6 +5,9 @@ package models
 import (
 	"database/sql/driver"
 	"errors"
+	"fmt"
+	"github.com/jiangliuhong/gorm-driver-dm/dmr"
+	dmSchema "github.com/jiangliuhong/gorm-driver-dm/schema"
 )
 
 type JSON []byte
@@ -21,12 +24,23 @@ func (j *JSON) Scan(value interface{}) error {
 		*j = nil
 		return nil
 	}
-	s, ok := value.([]byte)
-	if !ok {
-		return errors.New("Invalid Scan Source")
+
+	switch vt := value.(type) {
+	case *dmr.DmClob:
+		var c dmSchema.Clob
+		err := c.Scan(value)
+		if err != nil {
+			return err
+		}
+		*j = append((*j)[0:0], []byte(c)...)
+		return nil
+	case []byte:
+		bs := value.([]byte)
+		*j = append((*j)[0:0], bs...)
+		return nil
+	default:
+		return fmt.Errorf("invalid type %T, value: %v", vt, value)
 	}
-	*j = append((*j)[0:0], s...)
-	return nil
 }
 
 func (m JSON) MarshalJSON() ([]byte, error) {

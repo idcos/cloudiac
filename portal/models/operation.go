@@ -36,7 +36,7 @@ type UserOperationLog struct {
 	Action     string   `json:"action"`
 	OperatorId Id       `json:"operatorId" gorm:"size:32"`
 	OrgId      Id       `json:"orgId" gorm:"size:32"`
-	Attribute  ResAttrs `json:"attribute" gorm:"type:json"`
+	Attribute  ResAttrs `json:"attribute" gorm:"type:text"`
 }
 
 func (UserOperationLog) TableName() string {

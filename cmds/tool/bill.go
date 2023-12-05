@@ -26,7 +26,7 @@ func (b *BillCmd) Execute(args []string) error {
 	var billingCycle string = b.Cycle
 
 	configs.Init(opt.Config)
-	db.Init(configs.Get().Mysql)
+	db.Init(configs.Get().Dsn())
 	models.Init(false)
 
 	logger := logs.Get().WithField("acton", "billing cron task")

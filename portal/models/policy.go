@@ -25,7 +25,7 @@ type Policy struct {
 	Revision      int    `json:"revision" gorm:"default:1;comment:版本" example:"1"`
 	Enabled       bool   `json:"enabled" gorm:"default:true;comment:是否全局启用" example:"true"`
 	FixSuggestion string `json:"fixSuggestion" gorm:"type:text;comment:策略修复建议" example:"1. 设置 internet_max_bandwidth_out = 0\n 2. 取消设置 allocate_public_ip"`
-	Severity      string `json:"severity" gorm:"type:enum('high','medium','low');default:'medium';default:medium;comment:严重性" example:"medium"`
+	Severity      string `json:"severity" gorm:"default:'medium';default:medium;comment:严重性" example:"medium"` // type:enum('high','medium','low');
 
 	PolicyType   string `json:"policyType" gorm:"comment:云商类型" example:"alicloud"`
 	ResourceType string `json:"resourceType" gorm:"comment:资源类型" example:"alicloud_instance"`

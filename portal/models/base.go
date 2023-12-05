@@ -72,6 +72,10 @@ func (i Id) String() string {
 	return string(i)
 }
 
+func (Id) GormDataType() string {
+	return "varchar(32)"
+}
+
 type AbstractModel struct {
 }
 
@@ -93,7 +97,7 @@ func (AbstractModel) AddUniqueIndex(sess *db.Session, index string, columns ...s
 
 type BaseModel struct {
 	AbstractModel
-	Id Id `gorm:"size:32;primary_key" json:"id" example:"x-c3ek0co6n88ldvq1n6ag"` //ID
+	Id Id `gorm:"size:32;primaryKey" json:"id" example:"x-c3ek0co6n88ldvq1n6ag"` //ID
 }
 
 func (base *BaseModel) SetId(id interface{}) {
@@ -119,7 +123,7 @@ func (base *BaseModel) CustomBeforeCreate(*db.Session) error {
 // AutoUintIdModel  使用自增 uint id 的 model
 type AutoUintIdModel struct {
 	AbstractModel
-	Id uint `gorm:"primary_key" json:"id"`
+	Id uint `gorm:"primaryKey" json:"id"`
 }
 
 func (b *AutoUintIdModel) SetId(id interface{}) {
@@ -176,7 +180,7 @@ func (t Time) MarshalJSON() ([]byte, error) {
 }
 
 func (Time) Parse(s string) (t Time, err error) {
-	if err = t.UnmarshalJSON([]byte(fmt.Sprintf(`"%s"`,s))); err != nil {
+	if err = t.UnmarshalJSON([]byte(fmt.Sprintf(`"%s"`, s))); err != nil {
 		return t, err
 	}
 	return t, nil

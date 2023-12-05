@@ -22,7 +22,7 @@ type Vcs struct {
 	OrgId     Id     `json:"orgId" gorm:"size:32;not null"` // 默认仓库的 orgId 为 ""
 	ProjectId Id     `json:"projectId" gorm:"size:32;not null"`
 	Name      string `json:"name" gorm:"not null;comment:vcs名称"`
-	Status    string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:vcs状态"`
+	Status    string `json:"status" gorm:"default:'enable';comment:vcs状态"` // type:enum('enable','disable');
 	VcsType   string `json:"vcsType" gorm:"not null;comment:vcs代码库类型"`
 	Address   string `json:"address" gorm:"not null;comment:vcs代码库地址"`
 	VcsToken  string `json:"vcsToken" gorm:"not null; comment:代码库的token值"`

@@ -25,7 +25,7 @@ type Notification struct {
 	OrgId     Id             `json:"orgId" gorm:"size:32;not null;comment:组织ID"`
 	ProjectId Id             `json:"projectId" form:"projectId"  gorm:"size:32;not null;comment:项目ID"`
 	Name      string         `json:"name" form:"name" `
-	Type      string         `json:"notificationType" gorm:"type:enum('email', 'webhook', 'wechat', 'slack','dingtalk');default:'email';comment:通知类型"`
+	Type      string         `json:"notificationType" gorm:"default:'email';comment:通知类型"` // type:enum('email', 'webhook', 'wechat', 'slack','dingtalk');
 	Secret    string         `json:"secret" form:"secret" gorm:"comment:dingtalk加签秘钥"`
 	Url       string         `json:"url" form:"url" gorm:"comment:回调url"`
 	UserIds   pq.StringArray `json:"userIds"  gorm:"type:text;comment:用户ID"  swaggertype:"array,string"`
@@ -39,7 +39,7 @@ func (Notification) TableName() string {
 type NotificationEvent struct {
 	AutoUintIdModel
 
-	EventType      string `json:"eventType" form:"eventType"  gorm:"type:enum('task.failed', 'task.complete', 'task.approving', 'task.running', 'task.crondrift');default:'task.running';comment:事件类型"`
+	EventType      string `json:"eventType" form:"eventType"  gorm:"default:'task.running';comment:事件类型"` // type:enum('task.failed', 'task.complete', 'task.approving', 'task.running', 'task.crondrift');
 	NotificationId Id     `json:"notificationId" form:"notificationId" gorm:"size:32;not null"`
 }
 

@@ -21,8 +21,8 @@ func (*DumpDb) Execute(args []string) error {
 
 	outputDir := args[0]
 	configs.Init(opt.Config)
-	fmt.Printf("args %+v\n", configs.Get().Mysql)
-	db.Init(configs.Get().Mysql)
+	fmt.Printf("args %+v\n", configs.Get().Dsn())
+	db.Init(configs.Get().Dsn())
 	models.Init(true)
 	sqlDb, _ := db.Get().GormDB().DB()
 

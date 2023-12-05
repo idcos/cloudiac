@@ -33,9 +33,9 @@ type Resource struct {
 	Type          string   `json:"type" gorm:"not null"`
 	Name          string   `json:"name" gorm:"not null"`
 	Index         string   `json:"index" gorm:"not null;default:''"`
-	Attrs         ResAttrs `json:"attrs,omitempty" gorm:"type:json"`
-	SensitiveKeys StrSlice `json:"sensitiveKeys,omitempty" gorm:"type:json"`
-	Dependencies  StrSlice `json:"dependencies,omitempty" gorm:"type:json"`
+	Attrs         ResAttrs `json:"attrs,omitempty" gorm:"type:text"`
+	SensitiveKeys StrSlice `json:"sensitiveKeys,omitempty" gorm:"type:text"`
+	Dependencies  StrSlice `json:"dependencies,omitempty" gorm:"type:text"`
 
 	AppliedAt Time `json:"appliedAt" gorm:"type:datetime;column:applied_at;default:null"`
 }

@@ -35,6 +35,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.10.0
 	github.com/itchyny/gojq v0.12.6
 	github.com/jessevdk/go-flags v1.5.0
+	github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231128080913-7afc8d5ab43f
 	github.com/jinzhu/copier v0.3.5
 	github.com/joho/godotenv v1.3.0
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
@@ -58,9 +59,9 @@ require (
 	golang.org/x/text v0.9.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/yaml.v2 v2.4.0
-	gorm.io/driver/mysql v1.1.1
-	gorm.io/gorm v1.21.12
-	gorm.io/plugin/soft_delete v1.0.2
+	gorm.io/driver/mysql v1.3.3
+	gorm.io/gorm v1.23.5
+	gorm.io/plugin/soft_delete v1.1.0
 )
 
 require (
@@ -128,7 +129,7 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.2 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
-	github.com/jinzhu/now v1.1.2 // indirect
+	github.com/jinzhu/now v1.1.4 // indirect
 	github.com/jonboulle/clockwork v0.2.2 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -155,6 +156,7 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/rogpeppe/go-internal v1.8.1 // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect
+	github.com/thoas/go-funk v0.9.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/tjfoc/gmsm v1.3.2 // indirect
@@ -177,3 +179,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	moul.io/http2curl v1.0.0 // indirect
 )
+
+replace github.com/jiangliuhong/gorm-driver-dm => ../gorm-driver-dm

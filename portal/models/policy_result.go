@@ -17,7 +17,7 @@ type PolicyResult struct {
 
 	StartAt Time `json:"startAt" gorm:"type:datetime;index;comment:开始时间"` // 任务开始时间
 
-	Status  string `json:"status" gorm:"type:enum('passed','violated','suppressed','pending','failed');default:'pending';comment:状态"` // 状态
+	Status  string `json:"status" gorm:"default:'pending';comment:状态"` // 状态 type:enum('passed','violated','suppressed','pending','failed');
 	Message string `json:"message" gorm:"type:text;comment:失败原因"`
 
 	Violation

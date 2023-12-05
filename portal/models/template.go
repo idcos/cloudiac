@@ -30,7 +30,7 @@ type Template struct {
 	RepoToken string `json:"repoToken" gorm:"size:128" `                                             // RepoToken 若为空则使用 vcs 的 token
 	RepoUser  string `json:"repoUser" gorm:"size:128" `                                              //
 
-	Status     string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:状态"`
+	Status     string `json:"status" gorm:"default:'enable';comment:状态"` // type:enum('enable','disable');
 	CreatorId  Id     `json:"creatorId" gorm:"size:32;not null;comment:创建人"`
 	Workdir    string `json:"workdir" gorm:"default:''" example:"aws"` // 基于项目根目录的相对路径, 默认为空
 	TfVarsFile string `json:"tfVarsFile" gorm:"default:''"`            // Terraform 变量文件路径
@@ -50,7 +50,7 @@ type Template struct {
 	KeyId Id `json:"keyId" gorm:"size:32"` // 部署密钥ID
 
 	IsDemo bool   `json:"isDemo"`
-	Source string `json:"source"  gorm:"type:enum('registry','vcs');default:'vcs';comment:云模板来源"`
+	Source string `json:"source"  gorm:"default:'vcs';comment:云模板来源"` // type:enum('registry','vcs');
 }
 
 func (Template) TableName() string {

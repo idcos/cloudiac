@@ -28,7 +28,7 @@ type BillData struct {
 
 	Provider   string   `json:"provider"`
 	InstanceId string   `json:"instanceId"`
-	Attrs      ResAttrs `json:"attrs,omitempty" gorm:"type:json"`
+	Attrs      ResAttrs `json:"attrs,omitempty" gorm:"type:text"`
 }
 
 func (BillData) TableName() string {
