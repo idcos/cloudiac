@@ -4,15 +4,23 @@ import (
 	dameng "github.com/jiangliuhong/gorm-driver-dm"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
+	"strings"
 )
 
 func init() {
-	f := func(dsn string) gorm.Dialector {
-		return dameng.Open("dm://" + dsn)
+
+	d := Driver{
+		Dialect: func(dsn string) gorm.Dialector {
+			return dameng.Open("dm://" + dsn)
+		},
+		SQLEnhance: func(sql string) string {
+			// 替换 `` 符号
+			sql = strings.ReplaceAll(sql, "`", "\"")
+			return sql
+		},
+		Namer: dameng.Namer{schema.NamingStrategy{SingularTable: true}},
 	}
-	drivers["dm"] = f
-	drivers["dameng"] = f
-	n := dameng.Namer{schema.NamingStrategy{SingularTable: true}}
-	namingStrategies["dm"] = n
-	namingStrategies["dameng"] = n
+
+	drivers["dameng"] = d
+	drivers["dm"] = d
 }

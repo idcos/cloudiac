@@ -28,7 +28,6 @@ const DBCtxKeyLazySelects = "app:lazySelects"
 var (
 	defaultDB             *gorm.DB
 	defaultNamingStrategy = schema.NamingStrategy{SingularTable: true}
-	namingStrategies      = map[string]schema.Namer{}
 )
 
 type SoftDeletedAt uint
@@ -83,23 +82,28 @@ func (s *Session) AddUniqueIndex(indexName string, columns ...string) error {
 	if s.db.Migrator().HasIndex(stmt.Table, indexName) {
 		return nil
 	}
-	dbType := configs.Get().GetDbType()
 	var ciSql string
 
 	pTableName := getNamingStrategy().TableName(stmt.Table)
 	pIndexName := getNamingStrategy().IndexName(stmt.Table, indexName)
-	if dbType == "dameng" {
-		ciSql = fmt.Sprintf(`CREATE UNIQUE INDEX "%s" ON "%s" (%s)`,
-			pIndexName, pTableName, strings.Join(columns, ","))
-	} else {
-		ciSql = fmt.Sprintf("CREATE UNIQUE INDEX `%s` ON `%s` (%s)",
-			pIndexName, pTableName, strings.Join(columns, ","))
-	}
-	err := s.db.Exec(ciSql).Error
+	ciSql = fmt.Sprintf("CREATE UNIQUE INDEX `%s` ON `%s` (%s)",
+		pIndexName, pTableName, strings.Join(columns, ","))
+	err := s.dbExec(ciSql).Error
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+// 拦截sql，统一处理
+func (s *Session) dbExec(sql string, values ...interface{}) (tx *gorm.DB) {
+	sql = GetDriver().SQLEnhance(sql)
+	if values != nil && len(values) > 0 {
+		return s.db.Exec(sql, values)
+	} else {
+		return s.db.Exec(sql)
+	}
+
 }
 
 func (s *Session) RemoveIndex(table string, indexName string) error {
@@ -176,7 +180,7 @@ func (s *Session) Raw(sql string, values ...interface{}) *Session {
 }
 
 func (s *Session) Exec(sql string, args ...interface{}) (int64, error) {
-	r := s.db.Exec(sql, args...)
+	r := s.dbExec(sql, args...)
 	return r.RowsAffected, r.Error
 }
 
@@ -280,7 +284,9 @@ func (s *Session) Count() (cnt int64, err error) {
 
 func (s *Session) Exists() (bool, error) {
 	exists := false
-	err := s.Raw("SELECT EXISTS(?)", s.db).Scan(&exists)
+	// 国产数据库不支持exists写法，修改为子查询
+	//err := s.Raw("SELECT EXISTS(?)", s.db).Scan(&exists)
+	err := s.Raw("SELECT case when COUNT(*) > 0 then 1 else 0 end as result FROM (?) t", s.db).Scan(&exists)
 	if err != nil {
 		return false, err
 	}
@@ -366,8 +372,8 @@ func (s *Session) UpdateAttrs(attrs map[string]interface{}) (int64, error) {
 // Deprecated: 请使用 Insert() 或者 UpdateAll() 函数代替
 // save 函数会先判断传入的数据是否有主键， 如果有则先做更新操作（带主键查询条件），更新如果报数据不存在才会再做数据插入。
 // 但我们的数据模型中主键值都是在应用层生成的，调用 save 函数时都会有主健值，这导致:
-// 	1. 调用 save() 函数时会多执行一次无必要的 sql 查询
-// 	2. 先 update 后 insert 在高并发下容易出现死锁
+//  1. 调用 save() 函数时会多执行一次无必要的 sql 查询
+//  2. 先 update 后 insert 在高并发下容易出现死锁
 func (s *Session) Save(val interface{}) (int64, error) {
 	r := s.db.Save(val)
 	return r.RowsAffected, r.Error
@@ -439,11 +445,7 @@ func ToColName(name string) string {
 }
 
 func getNamingStrategy() schema.Namer {
-	if v, ok := namingStrategies[configs.Get().DbType]; ok {
-		return v
-	} else {
-		return defaultNamingStrategy
-	}
+	return drivers[configs.Get().DbType].Namer
 }
 
 func Get() *Session {
@@ -495,7 +497,7 @@ func tError(t *testing.T, err error, format string, args ...interface{}) {
 	}
 }
 
-//prepareTestDatabase 为测试用例 T 准备一个新的数据库连接
+// prepareTestDatabase 为测试用例 T 准备一个新的数据库连接
 func prepareTestDatabase(t *testing.T, paths []string) (sess *Session, fixtures *testfixtures.Loader) {
 	defaultPort := os.Getenv("MYSQL_PORT")
 	if defaultPort == "" {
@@ -535,7 +537,7 @@ func prepareTestDatabase(t *testing.T, paths []string) (sess *Session, fixtures 
 	return Get(), fixtures
 }
 
-//LoadTestDatabase 加载测试数据，每次测试前执行
+// LoadTestDatabase 加载测试数据，每次测试前执行
 func LoadTestDatabase(t *testing.T, paths []string) (sess *Session) {
 	sess, fixtures := prepareTestDatabase(t, paths)
 

@@ -35,7 +35,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.10.0
 	github.com/itchyny/gojq v0.12.6
 	github.com/jessevdk/go-flags v1.5.0
-	github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231128080913-7afc8d5ab43f
+	github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231206101205-c66e4c19216a
 	github.com/jinzhu/copier v0.3.5
 	github.com/joho/godotenv v1.3.0
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
@@ -179,5 +179,3 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	moul.io/http2curl v1.0.0 // indirect
 )
-
-replace github.com/jiangliuhong/gorm-driver-dm => ../gorm-driver-dm

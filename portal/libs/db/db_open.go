@@ -1,25 +1,42 @@
 package db
 
 import (
+	"cloudiac/configs"
 	dbLogger "cloudiac/portal/libs/db/logger"
 	"cloudiac/utils/logs"
 	"fmt"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
+	"gorm.io/gorm/schema"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 )
 
+type Driver struct {
+	Dialect    func(dsn string) gorm.Dialector
+	SQLEnhance func(sql string) string
+	Namer      schema.Namer
+}
+
 var (
-	drivers = make(map[string]func(dsn string) gorm.Dialector)
+	drivers = make(map[string]Driver)
 )
+
+func GetDriver() (d Driver) {
+	dbType := configs.Get().DbType
+	if item, ok := drivers[dbType]; ok {
+		d = item
+	}
+	return
+}
 
 func Init(dsn string) {
 	if err := openDB(dsn); err != nil {
-		logs.Get().Fatalln(err)
+		//logs.Get().Fatalln(err)
+		panic(err)
 	}
 }
 
@@ -63,10 +80,10 @@ func openDB(dsn string, driverNames ...string) error {
 	}
 
 	var dialector gorm.Dialector
-	if openFunc, ok := drivers[strings.ToLower(driverName)]; !ok {
+	if d, ok := drivers[strings.ToLower(driverName)]; !ok {
 		return fmt.Errorf("unsupported db type '%s'", driverName)
 	} else {
-		dialector = openFunc(dsn)
+		dialector = d.Dialect(dsn)
 	}
 	db, err := gorm.Open(dialector, &gorm.Config{
 		NamingStrategy: getNamingStrategy(),
