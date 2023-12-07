@@ -101,7 +101,7 @@ func DeleteTask(tx *db.Session, taskId models.Id) e.Error {
 func DeleteHistoryDrfitCronTask(tx *db.Session, limit int) (int, e.Error) {
 	taskIds := make([]models.Id, 0)
 	taskQuery := tx.Model(&models.Task{}).Where(
-		"end_at < DATE_SUB(NOW(), INTERVAL 7 DAY) AND is_drift_task = 1 AND `type` = ?", models.TaskTypePlan).
+		"end_at < DATE_SUB(NOW(), INTERVAL '7' DAY) AND is_drift_task = 1 AND `type` = ?", models.TaskTypePlan).
 		Limit(limit)
 
 	err := taskQuery.Pluck("id", &taskIds)

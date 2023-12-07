@@ -260,7 +260,7 @@ func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([]re
 	query = query.Joins(`join iac_env on iac_env.id = iac_resource.env_id`)
 
 	query = query.Where("iac_env.project_id = ?", projectId)
-	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? DAY), "%Y-%m-%d")`, days)
+	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '?' DAY), "%Y-%m-%d")`, days)
 
 	query = query.Group("date, iac_resource.env_id").Order("date")
 
@@ -304,7 +304,7 @@ func GetResGrowTrendByProjects(tx *db.Session, projectIds []models.Id, days int)
 	query = query.Joins(`join iac_env on iac_env.id = iac_resource.env_id`)
 
 	query = query.Where("iac_env.project_id in ?", projectIds)
-	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? DAY), "%Y-%m-%d")`, days)
+	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '?' DAY), "%Y-%m-%d")`, days)
 
 	query = query.Group("iac_resource.project_id, date").Order("date")
 

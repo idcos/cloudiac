@@ -64,8 +64,10 @@ func Start(serviceId string) {
 		func() {
 			defer func() {
 				if r := recover(); r != nil {
-					m.logger.Errorf("panic: %v", r)
+					//m.logger.Errorf("panic: %v", r)
+					fmt.Println(r)
 					m.logger.Debugf("stack: %s", debug.Stack())
+					//fmt.Println(string(debug.Stack()))
 				}
 			}()
 			m.start()
@@ -305,7 +307,7 @@ func (m *TaskManager) getPendingDeployTasks() []*models.Task {
 	// (注意：直接通过 env_id + created_at 匹配可能同一个 env 会返回多条记录)
 	firstPendingIdQuery := m.db.Raw("SELECT iac_task.env_id, MIN(iac_task.id) AS task_id FROM iac_task, (?) AS fpt "+
 		"WHERE iac_task.env_id = fpt.env_id AND iac_task.created_at = fpt.created_at "+
-		"AND iac_task.status = ? GROUP BY env_id", firstPendingQuery.Expr(), models.TaskPending)
+		"AND iac_task.status = ? GROUP BY iac_task.env_id", firstPendingQuery.Expr(), models.TaskPending)
 
 	// 通过 id 查询完整任务信息
 	query := m.db.Model(&models.Task{}).Joins("JOIN (?) AS t ON t.task_id = iac_task.id", firstPendingIdQuery.Expr())
@@ -446,6 +448,7 @@ func (m *TaskManager) runTask(ctx context.Context, task models.Tasker) error {
 }
 
 // doRunTask, startErr 只在任务启动出错时(执行步骤前出错)才会返回错误
+//
 //nolint:cyclop
 func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startErr error) {
 	logger := m.logger.WithField("taskId", task.Id)
@@ -995,7 +998,8 @@ func (m *TaskManager) stop() {
 }
 
 // buildRunTaskReq 基于任务信息构建一个 RunTaskReq 对象。
-// 	注意这里不会设置 step 相关的数据，step 相关字段在 StartTaskStep() 方法中设置
+//
+//	注意这里不会设置 step 相关的数据，step 相关字段在 StartTaskStep() 方法中设置
 func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunTaskReq, err error) {
 	runnerEnv := runner.TaskEnv{
 		Id:              string(task.EnvId),
@@ -1209,6 +1213,7 @@ func deployOrDestroy(env *models.Env, lg *logrus.Entry, dbSess *db.Session, op s
 //
 
 // doRunScanTask, startErr 只在任务启动出错时(执行步骤前出错)才会返回错误
+//
 //nolint:cyclop
 func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) (startErr error) {
 	logger := m.logger.WithField("taskId", task.Id)

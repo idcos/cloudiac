@@ -545,7 +545,7 @@ func EnvCostTrendStat(tx *db.Session, id models.Id, months int) ([]resps.EnvCost
 		iac_bill
 	where
 		iac_bill.instance_id IN (SELECT DISTINCT  res_id from iac_resource where iac_resource.env_id  = 'env-c870jh4bh95lubaf3mf0')
-		AND iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 6 MONTH), "%Y-%m")
+		AND iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '6' MONTH), "%Y-%m")
 	group by
 		iac_bill.cycle
 	order by
@@ -557,7 +557,7 @@ func EnvCostTrendStat(tx *db.Session, id models.Id, months int) ([]resps.EnvCost
 	query := tx.Model(&models.Bill{}).Select(`iac_bill.cycle as date, SUM(pretax_amount) as amount`)
 
 	query = query.Where(`iac_bill.instance_id IN (?)`, subQuery.Expr())
-	query = query.Where(`iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? MONTH), "%Y-%m")`, months)
+	query = query.Where(`iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '?' MONTH), "%Y-%m")`, months)
 
 	query = query.Group("iac_bill.cycle")
 	query = query.Order("iac_bill.cycle asc")

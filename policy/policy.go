@@ -740,7 +740,7 @@ type RegoFile struct {
 	RegoFile string
 }
 
-//ParseMeta 解析 rego metadata，如果存在 file.json 则从 json 文件读取 metadata，否则通过头部注释读取 metadata
+// ParseMeta 解析 rego metadata，如果存在 file.json 则从 json 文件读取 metadata，否则通过头部注释读取 metadata
 func ParseMeta(regoFilePath string, metaFilePath string) (*PolicyWithMeta, e.Error) {
 	buf, er := os.ReadFile(regoFilePath)
 	if er != nil {
