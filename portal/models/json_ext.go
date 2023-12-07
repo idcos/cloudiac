@@ -26,6 +26,9 @@ func (j *JSON) Scan(value interface{}) error {
 	}
 
 	switch vt := value.(type) {
+	case string:
+		vs := value.(string)
+		*j = append((*j)[0:0], []byte(vs)...)
 	case *dmr.DmClob:
 		var c dmSchema.Clob
 		err := c.Scan(value)
@@ -41,6 +44,7 @@ func (j *JSON) Scan(value interface{}) error {
 	default:
 		return fmt.Errorf("invalid type %T, value: %v", vt, value)
 	}
+	return nil
 }
 
 func (m JSON) MarshalJSON() ([]byte, error) {
