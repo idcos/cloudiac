@@ -27,7 +27,7 @@ type BaseTask struct {
 	RunnerId string `json:"runnerId" gorm:"not null"` // 部署通道
 
 	Status   string `json:"status" gorm:"default:'pending'" enums:"'pending','running','approving','rejected','failed','complete','timeout'"` // type:enum('pending','running','approving','rejected','failed','complete','timeout','aborted');
-	Message  string `json:"message" gorm:"type:text"`                                                                                         // 任务的状态描述信息，如失败原因等
+	Message  Text   `json:"message" gorm:"type:text"`                                                                                         // 任务的状态描述信息，如失败原因等
 	Aborting bool   `json:"aborting" gorm:""`                                                                                                 // 任务正在中止
 
 	StartAt *Time `json:"startAt" gorm:"type:datetime;comment:任务开始时间"` // 任务开始时间

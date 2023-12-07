@@ -407,7 +407,7 @@ func (t *TplImporter) getTplFromExportData(tpl exportedTpl) (*models.Template, e
 		CreatorId:      t.CreatorId,
 		Name:           tpl.Name,
 		TplType:        tpl.TplType,
-		Description:    tpl.Description,
+		Description:    models.Text(tpl.Description),
 		VcsId:          t.getImportedId(tpl.VcsId),
 		RepoId:         tpl.RepoId,
 		RepoAddr:       tpl.RepoAddr,
@@ -449,7 +449,7 @@ func (t *TplImporter) getVarFromExportData(tpl exportedTpl, v exportedTplVar) (*
 			Value:       value,
 			Options:     v.Options,
 			Sensitive:   v.Sensitive,
-			Description: v.Description,
+			Description: models.Text(v.Description),
 		},
 	}
 	// 变量以名称唯一标识，导入变量时总是生成一个新 id

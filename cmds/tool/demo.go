@@ -18,13 +18,13 @@ import (
 )
 
 type Organization struct {
-	Name        string     `yaml:"name"`
-	Description string     `yaml:"description"`
-	Project     Project    `yaml:"project"`
-	VCS         VCS        `yaml:"vcs"`
-	Key         Key        `yaml:"key"`
-	Variables   []Variable `yaml:"variables"`
-	Template    Template   `yaml:"template"`
+	Name        string      `yaml:"name"`
+	Description models.Text `yaml:"description"`
+	Project     Project     `yaml:"project"`
+	VCS         VCS         `yaml:"vcs"`
+	Key         Key         `yaml:"key"`
+	Variables   []Variable  `yaml:"variables"`
+	Template    Template    `yaml:"template"`
 }
 
 type Project struct {

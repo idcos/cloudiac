@@ -849,19 +849,19 @@ func (m *TaskManager) runTaskStep(
 	case models.TaskStepFailed:
 		message := "failed"
 		if step.Message != "" {
-			message = step.Message
+			message = string(step.Message)
 		}
 		return fmt.Errorf(message)
 	case models.TaskStepTimeout:
 		message := "timeout"
 		if step.Message != "" {
-			message = step.Message
+			message = string(step.Message)
 		}
 		return fmt.Errorf(message)
 	case models.TaskStepAborted:
 		message := "aborted"
 		if step.Message != "" {
-			message = step.Message
+			message = string(step.Message)
 		}
 		return fmt.Errorf(message)
 	default:
@@ -1045,7 +1045,7 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		if err != nil {
 			return nil, errors.Wrapf(err, "get key '%s'", task.KeyId)
 		}
-		pk = mKey.Content
+		pk = string(mKey.Content)
 	}
 
 	taskReq = &runner.RunTaskReq{
@@ -1475,7 +1475,7 @@ func (m *TaskManager) runScanTaskStep(ctx context.Context, taskReq runner.RunTas
 		return nil
 	case models.TaskStepFailed:
 		if step.Message != "" {
-			return fmt.Errorf(step.Message)
+			return fmt.Errorf(string(step.Message))
 		}
 		return errors.New("failed")
 	case models.TaskStepTimeout:
@@ -1671,7 +1671,7 @@ func ParseResourceDriftInfo(bs []byte) map[string]models.ResourceDrift {
 					break
 				}
 			}
-			cronTaskInfo.DriftDetail = resourceDetail
+			cronTaskInfo.DriftDetail = models.Text(resourceDetail)
 			cronTaskInfoMap[address] = cronTaskInfo
 		}
 	}

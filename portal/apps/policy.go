@@ -1078,7 +1078,7 @@ func policiesUpsert(tx *db.Session, userId models.Id, orgId models.Id, policyGro
 		for _, oldPolicy := range ops {
 			found := false
 			for _, newPolicy := range policyMetas {
-				if newPolicy.Meta.Name == oldPolicy.Name {
+				if newPolicy.Meta.Name == string(oldPolicy.Name) {
 					found = true
 				}
 			}
@@ -1098,20 +1098,20 @@ func policiesUpsert(tx *db.Session, userId models.Id, orgId models.Id, policyGro
 			CreatorId: userId,
 			GroupId:   policyGroup.Id,
 
-			Name:          pm.Meta.Name,
+			Name:          models.Text(pm.Meta.Name),
 			RuleName:      pm.Meta.Name,
 			ReferenceId:   pm.Meta.ReferenceId,
 			Revision:      pm.Meta.Version,
-			FixSuggestion: pm.Meta.FixSuggestion,
+			FixSuggestion: models.Text(pm.Meta.FixSuggestion),
 			Severity:      pm.Meta.Severity,
 			ResourceType:  pm.Meta.ResourceType,
 			PolicyType:    pm.Meta.PolicyType,
 			Tags:          pm.Meta.Category,
 
-			Rego: pm.Rego,
+			Rego: models.Text(pm.Rego),
 		}
 		// 如果策略已经存在则更新已经存在的策略
-		op, _ := services.GetPolicyByName(tx, np.Name, policyGroup.Id, orgId)
+		op, _ := services.GetPolicyByName(tx, string(np.Name), policyGroup.Id, orgId)
 		if op != nil {
 			np.Id = op.Id
 		}

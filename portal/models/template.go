@@ -14,7 +14,7 @@ type Template struct {
 	Name        string `json:"name" gorm:"not null;comment:模板名称" example:"yunji_example"`
 	TplType     string `json:"tplType" gorm:"not null;comment:云模板类型(aliyun，VMware等)" example:"aliyun"`
 	OrgId       Id     `json:"orgId" gorm:"size:32;not null" example:"a1f79e8a-744d-4ea5-8d97-7e4b7b422a6c"`
-	Description string `json:"description" gorm:"type:text" example:"云霁阿里云模板"`
+	Description Text   `json:"description" gorm:"type:text" example:"云霁阿里云模板"`
 
 	// 如果创建模板时用户直接填写完整 RepoAddr 则 vcsId 为空值，
 	// 此时创建任务直接使用 RepoRevision 做为 commit id，不再实时获取

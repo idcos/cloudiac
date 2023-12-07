@@ -75,7 +75,7 @@ func getObjectVars(tx *db.Session, form *forms.UpdateObjectVarsForm, orgId, proj
 				Name:        v.Name,
 				Value:       v.Value,
 				Sensitive:   v.Sensitive,
-				Description: v.Description,
+				Description: models.Text(v.Description),
 				Options:     v.Options,
 			},
 		}

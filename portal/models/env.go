@@ -35,7 +35,7 @@ type Env struct {
 	TokenId   Id `json:"tokenId" gorm:"size:32;comment:tokenId" example:"t-cgptjsit467j7gq5jiv0"` // Token ID
 
 	Name        string `json:"name" gorm:"not null"`                                             // 环境名称
-	Description string `json:"description" gorm:"type:text"`                                     // 环境描述
+	Description Text   `json:"description" gorm:"type:text"`                                     // 环境描述
 	Status      string `json:"status" gorm:"" enums:"'active','failed','inactive', 'destroyed'"` // 环境状态, active活跃, inactive非活跃,failed错误,running部署中,approving审批中
 	// 任务状态，只同步部署任务的状态(apply,destroy)，plan 任务不会对环境产生影响，所以不同步
 	TaskStatus  string `json:"taskStatus" gorm:"default:''"`                 // type:enum('','approving','running')
@@ -44,7 +44,7 @@ type Env struct {
 	OneTime     bool   `json:"oneTime" gorm:"default:false"`                 // 一次性环境标识
 	Deploying   bool   `json:"deploying" gorm:"not null;default:false"`      // 是否正在执行部署
 
-	Tags string `json:"tags" gorm:"type:text"`
+	Tags Text `json:"tags" gorm:"type:text"`
 
 	StatePath string `json:"statePath" gorm:"not null" swaggerignore:"true"` // Terraform tfstate 文件路径（内部）
 

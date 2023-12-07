@@ -322,7 +322,7 @@ func UpdateUser(c *ctx.ServiceContext, form *forms.UpdateUserForm) (*models.User
 	}
 	if form.HasKey("newbieGuide") {
 		b, _ := json.Marshal(form.NewbieGuide)
-		attrs["newbie_guide"] = b
+		attrs["newbie_guide"] = string(b)
 	}
 
 	if !form.HasKey("oldPassword") {

@@ -19,19 +19,19 @@ type Policy struct {
 	GroupId   Id `json:"groupId" gorm:"size:32;comment:策略组ID" example:"lg-c3lcrjxczjdywmk0go90"`
 	CreatorId Id `json:"creatorId" gorm:"size:32;not null;创建人" example:"u-c3lcrjxczjdywmk0go90"`
 
-	Name          string `json:"name" gorm:"type:text;comment:名称" example:"ECS分配公网IP"`
+	Name          Text   `json:"name" gorm:"type:text;comment:名称" example:"ECS分配公网IP"`
 	RuleName      string `json:"ruleName" gorm:"comment:rego规则名称" example:"instanceNoVpc"`
 	ReferenceId   string `json:"referenceId" gorm:"not null;size:128;comment:策略ID" example:"iac_aliyun_public_26"`
 	Revision      int    `json:"revision" gorm:"default:1;comment:版本" example:"1"`
 	Enabled       bool   `json:"enabled" gorm:"default:true;comment:是否全局启用" example:"true"`
-	FixSuggestion string `json:"fixSuggestion" gorm:"type:text;comment:策略修复建议" example:"1. 设置 internet_max_bandwidth_out = 0\n 2. 取消设置 allocate_public_ip"`
+	FixSuggestion Text   `json:"fixSuggestion" gorm:"type:text;comment:策略修复建议" example:"1. 设置 internet_max_bandwidth_out = 0\n 2. 取消设置 allocate_public_ip"`
 	Severity      string `json:"severity" gorm:"default:'medium';default:medium;comment:严重性" example:"medium"` // type:enum('high','medium','low');
 
 	PolicyType   string `json:"policyType" gorm:"comment:云商类型" example:"alicloud"`
 	ResourceType string `json:"resourceType" gorm:"comment:资源类型" example:"alicloud_instance"`
 	Tags         string `json:"tags" gorm:"comment:标签" example:"security,aliyun"`
 
-	Rego string `json:"rego" gorm:"type:text;comment:rego脚本" example:"package idcos ..."`
+	Rego Text `json:"rego" gorm:"type:text;comment:rego脚本" example:"package idcos ..."`
 }
 
 func (Policy) TableName() string {

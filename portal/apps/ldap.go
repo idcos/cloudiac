@@ -125,8 +125,8 @@ func AuthLdapOU(c *ctx.ServiceContext, form *forms.AuthLdapOUForm) (interface{},
 	for _, dn := range form.DN {
 		id, err := services.CreateOUOrg(tx, models.LdapOUOrg{
 			OrgId: c.OrgId,
-			DN:    dn,
-			OU:    getOUFromDN(dn),
+			DN:    models.Text(dn),
+			OU:    models.Text(getOUFromDN(dn)),
 			Role:  form.Role,
 		})
 		if err != nil {
@@ -214,8 +214,8 @@ func AuthProjectLdapOU(c *ctx.ServiceContext, form *forms.AuthProjectLdapOUForm)
 		id, err := services.CreateOUProject(tx, models.LdapOUProject{
 			OrgId:     c.OrgId,
 			ProjectId: c.ProjectId,
-			DN:        dn,
-			OU:        getOUFromDN(dn),
+			DN:        models.Text(dn),
+			OU:        models.Text(getOUFromDN(dn)),
 			Role:      form.Role,
 		})
 		if err != nil {

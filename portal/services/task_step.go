@@ -112,7 +112,7 @@ func changeTaskStepStatusAndExitCode(dbSess *db.Session, task models.Tasker, tas
 		"message":   message,
 		"exit_code": exitCode,
 	}
-	taskStep.Message = message
+	taskStep.Message = models.Text(message)
 	if status != "" {
 		taskStep.Status = status
 		updateAttrs["status"] = status
@@ -251,7 +251,7 @@ func GetTaskPlanStep(sess *db.Session, taskId models.Id) (*models.TaskStep, e.Er
 }
 
 func UpdateTaskStepStatus(sess *db.Session, stepId models.Id, status, message string) error {
-	_, err := sess.Where("id = ?", stepId).Update(models.TaskStep{Status: status, Message: message})
+	_, err := sess.Where("id = ?", stepId).Update(models.TaskStep{Status: status, Message: models.Text(message)})
 	return err
 }
 

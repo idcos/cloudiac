@@ -96,7 +96,7 @@ func (ns *NotificationService) SyncSendMessage() {
 		ResAdded:     ns.Task.Result.ResAdded,
 		ResChanged:   ns.Task.Result.ResChanged,
 		ResDestroyed: ns.Task.Result.ResDestroyed,
-		Message:      ns.Task.Message,
+		Message:      string(ns.Task.Message),
 		TaskType:     ns.Task.Type,
 	}
 

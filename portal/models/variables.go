@@ -15,7 +15,7 @@ type VariableBody struct {
 	Name        string `yaml:"name" json:"name" gorm:"size:64;not null"`
 	Value       string `yaml:"value" json:"value" gorm:"type:text"`
 	Sensitive   bool   `yaml:"sensitive" json:"sensitive,omitempty" gorm:"default:false"`
-	Description string `yaml:"description" json:"description,omitempty" gorm:"type:text"`
+	Description Text   `yaml:"description" json:"description,omitempty" gorm:"type:text"`
 
 	// 继承关系依赖数据创建枚举的顺序，后续新增枚举值时请按照新的继承顺序增加
 	Options StrSlice `yaml:"options" json:"options" gorm:"type:text"` // 可选值列表
@@ -134,7 +134,7 @@ type VarGroupVariable struct {
 	Description string `json:"description" form:"description" `
 }
 
-//VariableGroupRel 变量组与实例的关联表
+// VariableGroupRel 变量组与实例的关联表
 type VariableGroupRel struct {
 	AbstractModel
 	VarGroupId Id     `json:"varGroupId" gorm:"size:32;not null"`

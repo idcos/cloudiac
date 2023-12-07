@@ -73,7 +73,7 @@ func BuildBillData(resCost map[string]billcollect.ResourceCost, res []models.Res
 				VgId:           vgId,
 				ProductCode:    resCost[v.ResId.String()].ProductCode,
 				InstanceId:     resCost[v.ResId.String()].InstanceId,
-				InstanceConfig: resCost[v.ResId.String()].InstanceConfig,
+				InstanceConfig: models.Text(resCost[v.ResId.String()].InstanceConfig),
 				PretaxAmount:   resCost[v.ResId.String()].PretaxAmount,
 				Region:         resCost[v.ResId.String()].Region,
 				Currency:       resCost[v.ResId.String()].Currency,

@@ -32,7 +32,7 @@ func CreateProject(c *ctx.ServiceContext, form *forms.CreateProjectForm) (interf
 	project, err := services.CreateProject(tx, &models.Project{
 		Name:        form.Name,
 		OrgId:       c.OrgId,
-		Description: form.Description,
+		Description: models.Text(form.Description),
 		CreatorId:   c.UserId,
 	})
 

@@ -131,7 +131,7 @@ func appendTemplate(tpls []models.Template, vars []models.Variable, dbSess *db.S
 			Id:           t.Id.String(),
 			Name:         t.Name,
 			TplType:      t.TplType,
-			Description:  t.Description,
+			Description:  string(t.Description),
 			VcsId:        t.VcsId.String(),
 			RepoId:       t.RepoId,
 			RepoAddr:     t.RepoAddr,
@@ -158,7 +158,7 @@ func appendTemplate(tpls []models.Template, vars []models.Variable, dbSess *db.S
 				Value:       ExportVariableValue(v.Value, v.Sensitive),
 				Options:     v.Options,
 				Sensitive:   v.Sensitive,
-				Description: v.Description,
+				Description: string(v.Description),
 			})
 		}
 

@@ -8,8 +8,8 @@ import (
 
 type CreateOrganizationForm struct {
 	BaseForm
-	Name        string `form:"name" json:"name" binding:"required,gte=2,lte=64"` // 组织名称
-	Description string `form:"description" json:"description" binding:"max=255"` // 组织描述
+	Name        string      `form:"name" json:"name" binding:"required,gte=2,lte=64"` // 组织名称
+	Description models.Text `form:"description" json:"description" binding:"max=255"` // 组织描述
 }
 
 type UpdateOrganizationForm struct {

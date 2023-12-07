@@ -11,7 +11,7 @@ type Bill struct {
 	VgId           Id      `json:"vgId"  gorm:"size:32;not null"`            // 资源账号id
 	ProductCode    string  `json:"productCode" gorm:"not null"`              // 产品类型
 	InstanceId     string  `json:"instanceId" gorm:"not null"`               // 实例id
-	InstanceConfig string  `json:"instanceConfig" gorm:"type:text;not null"` // 实例配置
+	InstanceConfig Text    `json:"instanceConfig" gorm:"type:text;not null"` // 实例配置
 	PretaxAmount   float32 `json:"pretaxAmount" gorm:"not null"`             // 应付金额
 	Region         string  `json:"region" gorm:"not null"`                   // 区域
 	Currency       string  `json:"currency" gorm:"not null"`                 // 币种

@@ -4,10 +4,10 @@ package models
 
 type ResourceDrift struct {
 	TimedModel
-	ResId       Id     `json:"resId" gorm:"size:32;not null"`
-	DriftDetail string `json:"driftDetail" gorm:"type:text"`
-	TaskId      Id     `json:"taskId" gorm:"index;size:32;not null"`
-	IsLast      bool   `json:"isLast" gorm:"default:false"`
+	ResId       Id   `json:"resId" gorm:"size:32;not null"`
+	DriftDetail Text `json:"driftDetail" gorm:"type:text"`
+	TaskId      Id   `json:"taskId" gorm:"index;size:32;not null"`
+	IsLast      bool `json:"isLast" gorm:"default:false"`
 }
 
 func (ResourceDrift) TableName() string {

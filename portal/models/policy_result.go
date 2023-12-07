@@ -18,7 +18,7 @@ type PolicyResult struct {
 	StartAt Time `json:"startAt" gorm:"type:datetime;index;comment:开始时间"` // 任务开始时间
 
 	Status  string `json:"status" gorm:"default:'pending';comment:状态"` // 状态 type:enum('passed','violated','suppressed','pending','failed');
-	Message string `json:"message" gorm:"type:text;comment:失败原因"`
+	Message Text   `json:"message" gorm:"type:text;comment:失败原因"`
 
 	Violation
 }
@@ -77,7 +77,7 @@ type Violation struct {
 	File         string `json:"file,omitempty" gorm:"comment:源码文件名"`            // 文件路径
 	PlanRoot     string `json:"plan_root,omitempty" gorm:"comment:源码文件夹"`       // 文件夹路径
 	Line         int    `json:"line,omitempty" gorm:"comment:错误资源源码行号"`         // 错误源文件行号
-	Source       string `json:"source,omitempty" gorm:"type:text;comment:错误源码"` // 错误源码
+	Source       Text   `json:"source,omitempty" gorm:"type:text;comment:错误源码"` // 错误源码
 }
 
 type TsCount struct {

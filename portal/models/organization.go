@@ -17,7 +17,7 @@ type Organization struct {
 	TimedModel
 
 	Name        string `json:"name" gorm:"not null;unique;comment:组织名称" example:"研发部"`                              // 组织名称
-	Description string `json:"description" gorm:"type:text;comment:组织描述" example:"示例公司 IaC 研发部"`                    // 组织描述
+	Description Text   `json:"description" gorm:"type:text;comment:组织描述" example:"示例公司 IaC 研发部"`                    // 组织描述
 	Status      string `json:"status" gorm:"default:'enable';comment:组织状态" example:"enable" enums:"enable,disable"` // 组织状态
 	CreatorId   Id     `json:"creatorId" gorm:"size:32;not null;comment:创建人" example:"u-c3ek0co6n88ldvq1n6ag"`      //创建人ID
 	RunnerId    string `json:"runnerId" gorm:"not null" example:"runner-01"`                                        // 组织默认部署通道

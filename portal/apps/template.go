@@ -57,7 +57,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 	template, err := services.CreateTemplate(tx, models.Template{
 		Name:         form.Name,
 		OrgId:        c.OrgId,
-		Description:  form.Description,
+		Description:  models.Text(form.Description),
 		VcsId:        form.VcsId,
 		RepoId:       form.RepoId,
 		RepoFullName: form.RepoFullName,

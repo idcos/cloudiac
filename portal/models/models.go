@@ -8,6 +8,8 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"github.com/jiangliuhong/gorm-driver-dm/dmr"
+	dmSchema "github.com/jiangliuhong/gorm-driver-dm/schema"
 
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
@@ -139,10 +141,20 @@ func UnmarshalValue(src interface{}, dst interface{}) error {
 	if src == nil {
 		return nil
 	}
-
-	bs, ok := src.([]byte)
-	if !ok {
-		return fmt.Errorf("invalid type %T, value: %T", src, src)
+	var bs []byte
+	switch src.(type) {
+	case *dmr.DmClob:
+		var c dmSchema.Clob
+		err := c.Scan(src)
+		if err != nil {
+			return err
+		}
+		bs = append(bs[0:0], []byte(c)...)
+	case []byte:
+		c := src.([]byte)
+		bs = append(bs[0:0], c...)
+	default:
+		return fmt.Errorf("invalid type %T, value: %v", dst, src)
 	}
 	return json.Unmarshal(bs, dst)
 }

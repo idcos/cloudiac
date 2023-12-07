@@ -75,10 +75,11 @@ func GetKeyById(query *db.Session, id models.Id, decrypt bool) (*models.Key, e.E
 	}
 	if decrypt {
 		var err error
-		key.Content, err = utils.AesDecrypt(key.Content)
+		ads, err := utils.AesDecrypt(string(key.Content))
 		if err != nil {
 			return nil, e.New(e.KeyDecryptFail, err)
 		}
+		key.Content = models.Text(ads)
 	}
 	return &key, nil
 }

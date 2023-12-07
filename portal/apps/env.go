@@ -132,7 +132,7 @@ func createEnvCheck(c *ctx.ServiceContext, form *forms.CreateEnvForm) e.Error {
 	return nil
 }
 
-//nolint
+// nolint
 func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, destroyAt, deployAt *models.Time, session *db.Session) e.Error {
 	if !form.HasKey("tfVarsFile") {
 		form.TfVarsFile = tpl.TfVarsFile
@@ -421,7 +421,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		TplId:     form.TplId,
 
 		Name:        form.Name,
-		Tags:        strings.TrimSpace(form.Tags),
+		Tags:        models.Text(strings.TrimSpace(form.Tags)),
 		RunnerId:    form.RunnerId,
 		RunnerTags:  strings.Join(form.RunnerTags, ","),
 		Status:      models.EnvStatusInactive,

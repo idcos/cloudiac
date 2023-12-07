@@ -13,7 +13,7 @@ type OperationLog struct {
 	Username        string `json:"username" form:"username" `
 	UserAddr        string `json:"userAddr" form:"userAddr" `
 	OperationAt     Time   `json:"operationAt"  gorm:"type:datetime" form:"operationAt" `
-	OperationUrl    string `json:"operationUrl" gorm:"type:text" form:"operationUrl" `
+	OperationUrl    Text   `json:"operationUrl" gorm:"type:text" form:"operationUrl" `
 	OperationType   string `json:"operationType" form:"operationType" `
 	OperationInfo   string `json:"operationInfo" form:"operationInfo" `
 	OperationStatus int    `json:"operationStatus" form:"operationStatus" `

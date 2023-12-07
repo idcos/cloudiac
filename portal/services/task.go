@@ -532,7 +532,7 @@ func stepStatus2TaskStatus(s string) string {
 func ChangeTaskStatusWithStep(dbSess *db.Session, task models.Tasker, step *models.TaskStep) e.Error {
 	switch t := task.(type) {
 	case *models.Task:
-		return ChangeTaskStatus(dbSess, t, stepStatus2TaskStatus(step.Status), step.Message, false)
+		return ChangeTaskStatus(dbSess, t, stepStatus2TaskStatus(step.Status), string(step.Message), false)
 	case *models.ScanTask:
 		return ChangeScanTaskStatusWithStep(dbSess, t, step)
 	default:
@@ -544,7 +544,7 @@ func changeTaskStatusSetAttrs(dbSess *db.Session, task *models.Task, status, mes
 	updateAttrs := models.Attrs{
 		"message": message,
 	}
-	task.Message = message
+	task.Message = models.Text(message)
 	if status != "" {
 		task.Status = status
 		updateAttrs["status"] = status
@@ -1152,7 +1152,7 @@ func ChangeScanTaskStatus(dbSess *db.Session, task *models.ScanTask, status, pol
 	updateAttrs := models.Attrs{
 		"message": message,
 	}
-	task.Message = message
+	task.Message = models.Text(message)
 	if status != "" {
 		task.Status = status
 		updateAttrs["status"] = status
@@ -1201,7 +1201,7 @@ func ChangeScanTaskStatusWithStep(dbSess *db.Session, task *models.ScanTask, ste
 	default: // "approving", "rejected", ...
 		panic(fmt.Errorf("invalid scan task status '%s'", taskStatus))
 	}
-	return ChangeScanTaskStatus(dbSess, task, taskStatus, policyStatus, step.Message)
+	return ChangeScanTaskStatus(dbSess, task, taskStatus, policyStatus, string(step.Message))
 }
 
 func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, taskType string, creatorId models.Id) (*models.ScanTask, e.Error) {

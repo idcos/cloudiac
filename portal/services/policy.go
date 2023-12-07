@@ -121,7 +121,7 @@ func GetTaskPolicies(query *db.Session, task models.Tasker) ([]runner.TaskPolicy
 		taskPolicies = append(taskPolicies, runner.TaskPolicy{
 			PolicyId: string(p.Id),
 			Meta:     meta,
-			Rego:     p.Rego,
+			Rego:     string(p.Rego),
 		})
 	}
 	return taskPolicies, nil
@@ -786,14 +786,14 @@ func GetScanPolicies(query *db.Session, policies []models.Policy) ([]policy.Poli
 				Category:     group.Name,
 				File:         "policy.rego",
 				Id:           string(p.Id),
-				Name:         p.Name,
+				Name:         string(p.Name),
 				PolicyType:   p.PolicyType,
 				ReferenceId:  p.ReferenceId,
 				ResourceType: p.ResourceType,
 				Severity:     p.Severity,
 				Version:      p.Revision,
 			},
-			Rego: p.Rego,
+			Rego: string(p.Rego),
 		})
 	}
 
