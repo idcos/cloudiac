@@ -101,13 +101,6 @@ func (s *Session) dbExec(sql string, values ...interface{}) (tx *gorm.DB) {
 	return s.db.Exec(sql, values...)
 }
 
-func (s *Session) dbWhere(query interface{}, values ...interface{}) (tx *gorm.DB) {
-	if querySql, ok := query.(string); ok {
-		query = GetDriver().SQLEnhance(querySql)
-	}
-	return s.db.Where(query, values...)
-}
-
 func (s *Session) RemoveIndex(table string, indexName string) error {
 	migrator := s.db.Migrator()
 	if migrator.HasIndex(table, indexName) {
@@ -239,11 +232,11 @@ func (s *Session) LazySelectAppend(selectStat ...string) *Session {
 }
 
 func (s *Session) Where(query interface{}, args ...interface{}) *Session {
-	return ToSess(s.dbWhere(query, args...))
+	return ToSess(s.db.Where(query, args...))
 }
 
 func (s *Session) WhereLike(col string, pattern string) *Session {
-	return ToSess(s.dbWhere("? LIKE ?", gorm.Expr(col), "%"+pattern+"%"))
+	return ToSess(s.db.Where("? LIKE ?", gorm.Expr(col), "%"+pattern+"%"))
 }
 
 func (s *Session) Or(query interface{}, args ...interface{}) *Session {

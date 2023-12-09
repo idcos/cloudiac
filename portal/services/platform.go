@@ -9,6 +9,7 @@ import (
 	"cloudiac/portal/models/resps"
 	"cloudiac/utils"
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -312,7 +313,7 @@ func convertToPfActiveResStatResp(dbResults []orgActiveResType) *resps.PfActiveR
 func GetResWeekChange(dbSess *db.Session, orgIds []string) ([]resps.PfResWeekChangeResp, e.Error) {
 	/* sample sql
 	select
-		DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date,
+		DATE_FORMAT(iac_resource.applied_at, '%Y-%m-%d') as date,
 		count(DISTINCT iac_resource.env_id, iac_resource.address) as count
 	from
 		iac_resource
@@ -320,18 +321,20 @@ func GetResWeekChange(dbSess *db.Session, orgIds []string) ([]resps.PfResWeekCha
 		iac_env.id = iac_resource.env_id
 	where
 		iac_resource.org_id IN ('xxx', 'yyy')
-		and DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '7' DAY), "%Y-%m-%d")
+		and DATE_FORMAT(applied_at, '%Y-%m-%d') > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '7' DAY), '%Y-%m-%d')
 	group by
 		date
 	order by
 		date
 	*/
-	query := dbSess.Model(&models.Resource{}).Select(`DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date, count(DISTINCT iac_resource.env_id, iac_resource.address) as count`)
-	query = query.Joins(`JOIN iac_env ON iac_env.id = iac_resource.env_id`)
-	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '?' DAY), "%Y-%m-%d")`, activeDays)
+	subQuery := dbSess.Model(&models.Resource{}).Select(`DATE_FORMAT(iac_resource.applied_at, '%Y-%m-%d') as date,concat(iac_resource.env_id, iac_resource.address) as ea`)
+	subQuery = subQuery.Joins(`JOIN iac_env ON iac_env.id = iac_resource.env_id`)
+	subQuery = subQuery.Where(`DATE_FORMAT(applied_at, '%Y-%m-%d') > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '` + strconv.Itoa(activeDays) + `' DAY), '%Y-%m-%d')`)
 	if len(orgIds) > 0 {
-		query = query.Where(`iac_resource.org_id IN (?)`, orgIds)
+		subQuery = subQuery.Where(`iac_resource.org_id IN (?)`, orgIds)
 	}
+	query := dbSess.Table("(?) t", subQuery.Expr())
+	query = query.Select("date,count(DISTINCT es) as count")
 	query = query.Group("date")
 	query = query.Order("date")
 

@@ -79,7 +79,8 @@ func QueryTemplateByOrgId(tx *db.Session, q string, orgId models.Id, templateIdL
 			"left join iac_env on iac_template.id = iac_env.tpl_id "+
 				"and (iac_env.status in (?, ?) or iac_env.deploying = 1)"+
 				"and iac_env.deleted_at_t = 0", models.EnvStatusActive, models.EnvStatusFailed)
-		query = query.Group("iac_template.id").LazySelectAppend("count(iac_env.id) as active_environment")
+		query = query.Group("iac_user.name ,iac_template.id,iac_template.created_at,iac_template.updated_at,iac_template.deleted_at_t,iac_template.name,iac_template.tpl_type,iac_template.org_id,iac_template.description,iac_template.vcs_id,iac_template.repo_id,iac_template.repo_full_name,iac_template.repo_revision,iac_template.repo_addr,iac_template.repo_token,iac_template.repo_user,iac_template.status,iac_template.creator_id,iac_template.workdir,iac_template.tf_vars_file,iac_template.playbook,iac_template.play_vars_file,iac_template.last_scan_task_id,iac_template.tf_version,iac_template.triggers,iac_template.policy_enable,iac_template.key_id,iac_template.is_demo,iac_template.source").
+			LazySelectAppend("count(iac_env.id) as active_environment")
 	}
 
 	if q != "" {

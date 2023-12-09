@@ -8,6 +8,7 @@ import (
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/resps"
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -240,7 +241,7 @@ func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([]re
 	select
 		iac_resource.env_id as id,
 		iac_env.name as name,
-		DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date,
+		DATE_FORMAT(iac_resource.applied_at, '%Y-%m-%d') as date,
 		count(DISTINCT iac_resource.env_id, iac_resource.address) as count
 	from
 		iac_resource
@@ -248,7 +249,7 @@ func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([]re
 		iac_env.id = iac_resource.env_id
 	where
 		iac_env.project_id = 'p-c8gg9josm56injdlb86g'
-		and DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 7 DAY), "%Y-%m-%d")
+		and DATE_FORMAT(applied_at, '%Y-%m-%d') > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 7 DAY), '%Y-%m-%d')
 	group by
 		date,
 		iac_resource.env_id
@@ -256,13 +257,14 @@ func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([]re
 		date
 	*/
 
-	query := tx.Model(&models.Resource{}).Select(`iac_resource.env_id as id, iac_env.name as name, DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date, count(DISTINCT iac_resource.env_id, iac_resource.address) as count`)
-	query = query.Joins(`join iac_env on iac_env.id = iac_resource.env_id`)
+	subQuery := tx.Model(&models.Resource{}).Select(`iac_resource.env_id as id, iac_env.name as name, DATE_FORMAT(iac_resource.applied_at, '%Y-%m-%d') as date,concat(iac_resource.env_id, iac_resource.address) as ea`)
+	subQuery = subQuery.Joins(`join iac_env on iac_env.id = iac_resource.env_id`)
+	subQuery = subQuery.Where("iac_env.project_id = ?", projectId)
+	subQuery = subQuery.Where(`DATE_FORMAT(applied_at, '%Y-%m-%d') > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '` + strconv.Itoa(days) + `' DAY), '%Y-%m-%d')`)
 
-	query = query.Where("iac_env.project_id = ?", projectId)
-	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '?' DAY), "%Y-%m-%d")`, days)
-
-	query = query.Group("date, iac_resource.env_id").Order("date")
+	query := tx.Table("(?) t", subQuery.Expr())
+	query = query.Select(`id,name,date,count(DISTINCT ea) as count`)
+	query = query.Group("date, id").Order("date")
 
 	var dbResults []ProjectOrEnvStatResult
 	if err := query.Find(&dbResults); err != nil {
@@ -281,7 +283,7 @@ func GetResGrowTrendByProjects(tx *db.Session, projectIds []models.Id, days int)
 	/* sample sql
 	select
 		iac_resource.project_id as id,
-		DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date,
+		DATE_FORMAT(iac_resource.applied_at, '%Y-%m-%d') as date,
 		count(DISTINCT iac_resource.env_id, iac_resource.address) as count
 	from
 		iac_resource
@@ -289,7 +291,7 @@ func GetResGrowTrendByProjects(tx *db.Session, projectIds []models.Id, days int)
 		and iac_env.id = iac_resource.env_id
 	where
 		iac_env.project_id IN ('p-c9cjgrosm56nr7049qpg')
-		and DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 7 DAY), "%Y-%m-%d")
+		and DATE_FORMAT(applied_at, '%Y-%m-%d') > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 7 DAY), '%Y-%m-%d')
 	group by
 		iac_resource.project_id, date
 	order by
@@ -300,13 +302,14 @@ func GetResGrowTrendByProjects(tx *db.Session, projectIds []models.Id, days int)
 		return make(map[models.Id][]resps.ProjectResStatResp), nil
 	}
 
-	query := tx.Model(&models.Resource{}).Select(`iac_resource.project_id as id, DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date, count(DISTINCT iac_resource.env_id, iac_resource.address) as count`)
-	query = query.Joins(`join iac_env on iac_env.id = iac_resource.env_id`)
+	subQuery := tx.Model(&models.Resource{}).Select(`iac_resource.project_id as id, DATE_FORMAT(iac_resource.applied_at, '%Y-%m-%d') as date,concat(iac_resource.env_id, iac_resource.address) as ea`)
+	subQuery = subQuery.Joins(`join iac_env on iac_env.id = iac_resource.env_id`)
+	subQuery = subQuery.Where("iac_env.project_id in ?", projectIds)
+	subQuery = subQuery.Where(`DATE_FORMAT(applied_at, '%Y-%m-%d') > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '` + strconv.Itoa(days) + `' DAY), '%Y-%m-%d')`)
 
-	query = query.Where("iac_env.project_id in ?", projectIds)
-	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '?' DAY), "%Y-%m-%d")`, days)
-
-	query = query.Group("iac_resource.project_id, date").Order("date")
+	query := tx.Table("(?) t", subQuery.Expr())
+	query = query.Select(`id,date,count(DISTINCT ea) as count`)
+	query = query.Group("id,date").Order("date")
 
 	var dbResults []ProjectOrEnvStatResult
 	if err := query.Find(&dbResults); err != nil {

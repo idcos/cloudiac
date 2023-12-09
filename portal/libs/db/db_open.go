@@ -97,7 +97,7 @@ func openDB(dsn string, driverNames ...string) error {
 	if err != nil {
 		return err
 	}
-
+	db.Use(&SqlAdapterPlugin{})
 	if err = db.Callback().Create().Before("gorm:before_create").
 		Register("my_before_create_hook", beforeCreateCallback); err != nil {
 		return err

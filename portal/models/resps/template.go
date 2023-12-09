@@ -12,7 +12,7 @@ type SearchTemplateResp struct {
 	UpdatedAt           models.Time `json:"updatedAt"` // 更新时间
 	Id                  models.Id   `json:"id"`
 	Name                string      `json:"name"`
-	Description         string      `json:"description"`
+	Description         models.Text `json:"description"`
 	ActiveEnvironment   *int        `json:"activeEnvironment,omitempty"` // 定义为 *int，以区分数值 0 和未赋值
 	RelationEnvironment *int        `json:"relationEnvironment,omitempty"`
 	RepoRevision        string      `json:"repoRevision"`

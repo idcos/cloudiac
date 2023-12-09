@@ -107,9 +107,9 @@ func SearchProject(c *ctx.ServiceContext, form *forms.SearchProjectForm) (interf
 		query = query.Order("created_at DESC")
 	}
 	// 查询用户名称
-	query = query.Joins(fmt.Sprintf("left join %s as user on user.id = %s.creator_id",
+	query = query.Joins(fmt.Sprintf("left join %s as `user` on `user`.id = %s.creator_id",
 		models.User{}.TableName(), models.Project{}.TableName())).
-		LazySelectAppend(fmt.Sprintf("%s.*,user.name as creator", models.Project{}.TableName()))
+		LazySelectAppend(fmt.Sprintf("%s.*,`user`.name as creator", models.Project{}.TableName()))
 	p := page.New(form.CurrentPage(), form.PageSize(), query)
 	projectResp := make([]resps.ProjectResp, 0)
 	if err := p.Scan(&projectResp); err != nil {

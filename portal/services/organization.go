@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -278,7 +279,7 @@ func GetOrgProjectsEnvStat(tx *db.Session, orgId models.Id, projectIds []string)
 
 	query = query.Joins(`JOIN iac_project ON t.project_id = iac_project.id`)
 	query = query.Where(`iac_project.status = 'enable'`)
-	query = query.Group("t.status, iac_project.id")
+	query = query.Group("t.status, iac_project.id,iac_project.name")
 
 	var dbResults []EnvStatResult
 	if err := query.Find(&dbResults); err != nil {
@@ -363,7 +364,7 @@ func GetOrgProjectsResStat(tx *db.Session, orgId models.Id, projectIds []string,
 	}
 	query = query.Where(`iac_project.status = 'enable'`)
 
-	query = query.Group("iac_resource.type, iac_project.id").Order("count desc")
+	query = query.Group("iac_resource.type, iac_project.id,iac_project.name").Order("count desc")
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
@@ -452,7 +453,7 @@ func GetOrgProjectStat(tx *db.Session, orgId models.Id, projectIds []string, lim
 	}
 	query = query.Where(`iac_project.status = 'enable'`)
 
-	query = query.Group("iac_resource.type,iac_resource.project_id")
+	query = query.Group("iac_resource.type,iac_resource.project_id,iac_project.name")
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
@@ -527,7 +528,7 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 	select
 		iac_resource.project_id as id,
 		iac_project.name as name,
-		DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date,
+		DATE_FORMAT(iac_resource.applied_at, '%Y-%m-%d') as date,
 		count(DISTINCT iac_resource.env_id, iac_resource.address) as count
 	from
 		iac_resource
@@ -539,7 +540,7 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 		iac_env.org_id = 'org-c8gg9fosm56injdlb85g'
 		and iac_env.project_id in ('p-c8gg9josm56injdlb86g', 'aaa')
 		and iac_project.status = 'enable'
-		and DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '7' DAY), "%Y-%m-%d")
+		and DATE_FORMAT(applied_at, '%Y-%m-%d') > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '7' DAY), '%Y-%m-%d')
 	group by
 		date,
 		iac_resource.project_id
@@ -547,19 +548,20 @@ func GetOrgResGrowTrend(tx *db.Session, orgId models.Id, projectIds []string, da
 		date
 	*/
 
-	query := tx.Model(&models.Resource{}).Select(`iac_resource.project_id as id, iac_project.name as name, DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date, count(DISTINCT iac_resource.env_id, iac_resource.address) as count`)
-	query = query.Joins(`join iac_env on iac_env.id = iac_resource.env_id`)
-	query = query.Joins("JOIN iac_project ON iac_project.id = iac_resource.project_id")
-
-	query = query.Where("iac_env.org_id = ?", orgId)
+	subQuery := tx.Model(&models.Resource{}).Select(`iac_resource.project_id as id,iac_project.name as name, DATE_FORMAT(iac_resource.applied_at, '%Y-%m-%d') as date,concat(iac_resource.env_id, iac_resource.address) as ea`)
+	subQuery = subQuery.Joins(`join iac_env on iac_env.id = iac_resource.env_id`)
+	subQuery = subQuery.Joins(`JOIN iac_project ON iac_project.id = iac_resource.project_id`)
+	subQuery = subQuery.Where("iac_env.org_id = ?", orgId)
 	if len(projectIds) > 0 {
-		query = query.Where(`iac_env.project_id in ?`, projectIds)
+		subQuery = subQuery.Where(`iac_env.project_id in ?`, projectIds)
 	}
-	query = query.Where(`iac_project.status = 'enable'`)
+	subQuery = subQuery.Where(`iac_project.status = 'enable'`)
+	subQuery = subQuery.Where(`DATE_FORMAT(applied_at, '%Y-%m-%d') > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '` + strconv.Itoa(days) + `' DAY), '%Y-%m-%d')`)
+	subQuery = subQuery.Where(`DATE_FORMAT(applied_at, '%Y-%m-%d') > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '` + strconv.Itoa(days) + `' DAY), '%Y-%m-%d')`)
 
-	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '?' DAY), "%Y-%m-%d")`, days)
-
-	query = query.Group("date, iac_resource.project_id").Order("date")
+	query := tx.Table("(?) t", subQuery.Expr())
+	query = query.Select(`id,name,date,count(DISTINCT ea) as count`)
+	query = query.Group("id,date,name").Order("date")
 
 	var dbResults []ProjectOrEnvStatResult
 	if err := query.Find(&dbResults); err != nil {
