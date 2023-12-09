@@ -143,6 +143,9 @@ func UnmarshalValue(src interface{}, dst interface{}) error {
 	}
 	var bs []byte
 	switch src.(type) {
+	case string:
+		s := []byte(src.(string))
+		bs = append(bs[0:0], s...)
 	case *dmr.DmClob:
 		var c dmSchema.Clob
 		err := c.Scan(src)
