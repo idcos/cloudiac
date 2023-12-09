@@ -179,7 +179,3 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	moul.io/http2curl v1.0.0 // indirect
 )
-
-replace (
-	github.com/jiangliuhong/gorm-driver-dm => ../gorm-driver-dm
-)
