@@ -131,8 +131,14 @@ func queryUserOrg(db, query *db.Session, orgId models.Id, isSuperAdmin bool, exc
 		}
 		rootIds, _ := services.GetRootUserIds(db)
 		userIds = append(userIds, rootIds...)
+		if len(userIds) <= 0 {
+			return query, nil
+		}
 		return query.Where(fmt.Sprintf("%s.id not in (?)", models.User{}.TableName()), userIds), nil
 	} else {
+		if len(userIds) <= 0 {
+			return query, nil
+		}
 		// 查询组织所有用户
 		return query.Where(fmt.Sprintf("%s.id in (?)", models.User{}.TableName()), userIds), nil
 	}
