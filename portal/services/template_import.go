@@ -446,7 +446,7 @@ func (t *TplImporter) getVarFromExportData(tpl exportedTpl, v exportedTplVar) (*
 			Scope:       v.Scope,
 			Type:        v.Type,
 			Name:        v.Name,
-			Value:       value,
+			Value:       models.Text(value),
 			Options:     v.Options,
 			Sensitive:   v.Sensitive,
 			Description: models.Text(v.Description),

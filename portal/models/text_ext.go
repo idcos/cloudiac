@@ -1,12 +1,17 @@
 package models
 
 import (
+	"database/sql/driver"
 	"fmt"
 	"github.com/jiangliuhong/gorm-driver-dm/dmr"
 	dmSchema "github.com/jiangliuhong/gorm-driver-dm/schema"
 )
 
 type Text string
+
+func (v Text) Value() (driver.Value, error) {
+	return string(v), nil
+}
 
 func (t *Text) Scan(value interface{}) error {
 	switch v := value.(type) {

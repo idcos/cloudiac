@@ -1352,16 +1352,16 @@ func buildTaskReqEnvVars(env *runner.TaskEnv, variables models.TaskVariables) er
 	for _, v := range variables {
 		value := v.Value
 		// 旧版本创建的敏感变量保存时不会添加 secret 前缀，这里判断一下，如果敏感变量无前缀则添加
-		if v.Sensitive && !strings.HasPrefix(v.Value, utils.SecretValuePrefix) {
-			value = utils.EncodeSecretVar(v.Value, v.Sensitive)
+		if v.Sensitive && !strings.HasPrefix(string(v.Value), utils.SecretValuePrefix) {
+			value = models.Text(utils.EncodeSecretVar(string(v.Value), v.Sensitive))
 		}
 		switch v.Type {
 		case consts.VarTypeEnv:
-			env.EnvironmentVars[v.Name] = value
+			env.EnvironmentVars[v.Name] = string(value)
 		case consts.VarTypeTerraform:
-			env.TerraformVars[v.Name] = value
+			env.TerraformVars[v.Name] = string(value)
 		case consts.VarTypeAnsible:
-			env.AnsibleVars[v.Name] = value
+			env.AnsibleVars[v.Name] = string(value)
 		default:
 			return fmt.Errorf("unknown variable type: %s", v.Type)
 		}

@@ -127,7 +127,7 @@ func CreateDemoTemplate(tx *db.Session, orgId, vcsId, projectId, userId models.I
 			TplId: tpl.Id,
 			VariableBody: models.VariableBody{
 				Name:        tv.Name,
-				Value:       tv.Value,
+				Value:       models.Text(tv.Value),
 				Scope:       consts.ScopeTemplate,
 				Type:        consts.VarTypeEnv,
 				Description: models.Text(tv.Description),

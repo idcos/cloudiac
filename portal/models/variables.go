@@ -13,7 +13,7 @@ type VariableBody struct {
 	Scope       string `yaml:"scope" json:"scope" gorm:"not null"` // ;type:enum('org','template','project','env')
 	Type        string `yaml:"type" json:"type" gorm:"not null"`   // ;type:enum('environment','terraform','ansible')
 	Name        string `yaml:"name" json:"name" gorm:"size:64;not null"`
-	Value       string `yaml:"value" json:"value" gorm:"type:text"`
+	Value       Text   `yaml:"value" json:"value" gorm:"type:text"`
 	Sensitive   bool   `yaml:"sensitive" json:"sensitive,omitempty" gorm:"default:false"`
 	Description Text   `yaml:"description" json:"description,omitempty" gorm:"type:text"`
 

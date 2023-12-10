@@ -143,10 +143,11 @@ func GetProjectEnvStat(tx *db.Session, projectId models.Id) ([]resps.EnvStatResp
 	group by
 		t.status, t.id
 	*/
-
-	query := tx.Model(&models.Env{}).Select(`if(task_status = '', status, task_status) as my_status, id, name, count(*) as count`)
-	query = query.Where("archived = ?", 0).Where("project_id = ?", projectId)
-	query = query.Group("my_status, id")
+	subQuery := tx.Model(&models.Env{}).Select(`if(task_status = '', status, task_status) as my_status, id, name`)
+	subQuery = subQuery.Where("archived = ?", 0).Where("project_id = ?", projectId)
+	query := tx.Table("(?) t", subQuery.Expr()).
+		Select("my_status,id,name,count(*) as count").
+		Group("my_status,id,name")
 
 	var dbResults []EnvStatResult
 	if err := query.Find(&dbResults); err != nil {
@@ -183,7 +184,7 @@ func GetProjectResStat(tx *db.Session, projectId models.Id, limit int) ([]resps.
 	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 	query = query.Where(`iac_env.project_id = ?`, projectId)
 
-	query = query.Group("iac_resource.type, iac_env.id").Order("count desc")
+	query = query.Group("iac_resource.type, iac_env.id,iac_env.name").Order("count desc")
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
@@ -222,7 +223,7 @@ func GetProjectEnvResStat(tx *db.Session, projectId models.Id, limit int) ([]res
 	query = query.Joins(`join iac_env on iac_env.last_res_task_id = iac_resource.task_id and iac_env.id = iac_resource.env_id`)
 	query = query.Where(`iac_env.project_id = ?`, projectId)
 
-	query = query.Group("iac_resource.type,iac_resource.env_id")
+	query = query.Group("iac_resource.type,iac_resource.env_id,iac_env.name ")
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
@@ -264,7 +265,7 @@ func GetProjectResGrowTrend(tx *db.Session, projectId models.Id, days int) ([]re
 
 	query := tx.Table("(?) t", subQuery.Expr())
 	query = query.Select(`id,name,date,count(DISTINCT ea) as count`)
-	query = query.Group("date, id").Order("date")
+	query = query.Group("date, id,name").Order("date")
 
 	var dbResults []ProjectOrEnvStatResult
 	if err := query.Find(&dbResults); err != nil {

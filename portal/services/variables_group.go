@@ -420,7 +420,7 @@ func MergeVariableGroupVars(vgs []VarGroupRel, vars map[string]models.Variable) 
 					Scope:       v.ObjectType,
 					Type:        v.Type,
 					Name:        variable.Name,
-					Value:       variable.Value,
+					Value:       models.Text(variable.Value),
 					Sensitive:   variable.Sensitive,
 					Description: models.Text(variable.Description),
 				},

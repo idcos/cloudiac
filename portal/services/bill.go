@@ -41,7 +41,7 @@ func GetVgByProjectId(dbSess *db.Session, projectId string) ([]models.VariableGr
 		Select("var_group_id")
 
 	if err := dbSess.Model(&models.VariableGroup{}).
-		Where("id in (?) and cost_counted", varGroupIdQuery.Expr()).Find(&resp); err != nil {
+		Where("id in (?) and cost_counted = 1", varGroupIdQuery.Expr()).Find(&resp); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 
@@ -172,7 +172,7 @@ func ProjectEnabledBill(sess *db.Session, pid models.Id) (bool, e.Error) {
 		Select("var_group_id")
 
 	ok, err := sess.Model(&models.VariableGroup{}).
-		Where("id in (?) and cost_counted", varGroupIdQuery.Expr()).
+		Where("id in (?) and cost_counted = 1", varGroupIdQuery.Expr()).
 		Exists()
 	if err != nil {
 		return false, e.New(e.DBError, err)

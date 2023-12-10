@@ -139,7 +139,7 @@ func QueryEnvDetail(dbSess *db.Session, orgId, projectId models.Id) *db.Session 
 	query = query.Joins("LEFT JOIN (" +
 		"  SELECT task_id FROM iac_resource_drift WHERE is_last = true GROUP BY task_id" +
 		") AS rd ON rd.task_id = iac_env.last_res_task_id").
-		LazySelectAppend("!ISNULL(rd.task_id) AS is_drift")
+		LazySelectAppend("(case when ifnull(rd.task_id,0) = 0  then 0 else 1 end) AS is_drift")
 	query = query.Joins("left join iac_scan_task on iac_env.last_scan_task_id = iac_scan_task.id").
 		LazySelectAppend("iac_scan_task.policy_status as policy_status")
 
@@ -434,7 +434,7 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 			if matchVar(v, value) {
 				// 匹配到了，不管值是否相同都不需要新建变量
 				isNewVaild = false
-				if v.Value != value.Value {
+				if v.Value != string(value.Value) {
 					resp = varNewAppend(resp, vars[key].Name, v.Value, vars[key].Type, v.Sensitive)
 				}
 				break

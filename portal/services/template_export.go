@@ -155,7 +155,7 @@ func appendTemplate(tpls []models.Template, vars []models.Variable, dbSess *db.S
 				Scope:       v.Scope,
 				Type:        v.Type,
 				Name:        v.Name,
-				Value:       ExportVariableValue(v.Value, v.Sensitive),
+				Value:       ExportVariableValue(string(v.Value), v.Sensitive),
 				Options:     v.Options,
 				Sensitive:   v.Sensitive,
 				Description: string(v.Description),

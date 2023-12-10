@@ -279,10 +279,11 @@ func QueryVariable(dbSess *db.Session) *db.Session {
 
 func processVarsforUpdate(varsMap map[string]models.Variable, vars []models.Variable) e.Error {
 	for i, v := range vars {
-		var err error
 		if v.Sensitive {
 			if v.Value != "" {
-				if v.Value, err = utils.EncryptSecretVar(v.Value); err != nil {
+				esv, err := utils.EncryptSecretVar(string(v.Value))
+				v.Value = models.Text(esv)
+				if err != nil {
 					return e.AutoNew(err, e.EncryptError)
 				}
 				vars[i] = v
