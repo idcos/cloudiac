@@ -275,13 +275,14 @@ func doCreateTask(tx *db.Session, task models.Task, tpl *models.Template, env *m
 	}
 
 	if task.Pipeline == "" {
-		task.Pipeline, err = GetTplPipeline(tx, tpl.Id, task.Revision, task.Workdir)
+		tp, err := GetTplPipeline(tx, tpl.Id, task.Revision, task.Workdir)
 		if err != nil {
 			return nil, e.AutoNew(err, e.InvalidPipeline)
 		}
+		task.Pipeline = models.Text(tp)
 	}
 
-	pipeline, err := DecodePipeline(task.Pipeline)
+	pipeline, err := DecodePipeline(string(task.Pipeline))
 	if err != nil {
 		return nil, e.New(e.InvalidPipeline, err)
 	}
@@ -1256,7 +1257,7 @@ func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, ta
 		return nil, e.New(e.InternalError, err)
 	}
 
-	task.Pipeline = models.DefaultPipelineRaw()
+	task.Pipeline = models.Text(models.DefaultPipelineRaw())
 	pipeline := models.DefaultPipeline()
 
 	task.Flow = GetTaskFlowWithPipeline(pipeline, task.Type)
@@ -1350,7 +1351,7 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 		}
 	}
 
-	task.Pipeline = models.DefaultPipelineRaw()
+	task.Pipeline = models.Text(models.DefaultPipelineRaw())
 	pipeline := models.DefaultPipeline()
 
 	task.Flow = GetTaskFlowWithPipeline(pipeline, task.Type)

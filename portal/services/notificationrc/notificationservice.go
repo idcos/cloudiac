@@ -125,13 +125,14 @@ func (ns *NotificationService) SyncSendMessage() {
 
 	// 获取用户邮箱列表
 	users := make([]models.User, 0)
-	if err := db.Get().Where("id in (?)", userIds).Find(&users); err != nil {
-		logger.Warnf("find notification users error: %v", err)
-	} else {
-		for _, v := range users {
-			// 单个用户发送邮件，避免暴露其他用户邮箱
-			ns.SendEmailMessage([]string{v.Email}, messageTpl)
+	if len(userIds) > 0 {
+		if err := db.Get().Where("id in (?)", userIds).Find(&users); err != nil {
+			logger.Warnf("find notification users error: %v", err)
 		}
+	}
+	for _, v := range users {
+		// 单个用户发送邮件，避免暴露其他用户邮箱
+		ns.SendEmailMessage([]string{v.Email}, messageTpl)
 	}
 }
 
