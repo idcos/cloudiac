@@ -407,6 +407,7 @@ func SearchTaskResources(c *ctx.ServiceContext, form *forms.SearchTaskResourceFo
 func SearchTaskSteps(c *ctx.ServiceContext, form *forms.DetailTaskStepForm) (interface{}, e.Error) {
 	query := services.QueryTaskStepsById(c.DB(), form.TaskId)
 	details := make([]*resps.TaskStepDetail, 0)
+	query = query.Select("id,`index`,name,task_id,status,message,start_at,end_at,`type`")
 	if err := query.Scan(&details); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
@@ -457,7 +458,7 @@ func GetTaskStepLog(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (inte
 	return text, nil
 }
 
-//GetTaskLogZip 查询task下所有日志,并返回zip二进制流
+// GetTaskLogZip 查询task下所有日志,并返回zip二进制流
 func GetTaskLogZip(c *ctx.ServiceContext, taskId models.Id) (*bytes.Buffer, e.Error) {
 	// 查询所有步骤
 	steps, err := services.GetTaskSteps(c.DB(), taskId)
@@ -551,9 +552,11 @@ func GetResourcesGraph(rs []services.Resource, dimension string) interface{} {
 
 // GetResShowName
 // 建立规则库，通过各种规则确定资源的主要字段或者展示模板
-//		规则示例1: 如果资源的属性中有 public_ip 字段，则展示 public_ip;
-//    	规则示例2: 如果资源的属性中有 name 字段，则展示 name;
-//    	规则示例3: 如果资源的属性中有 tag 字段，则展示 name(tag1,tag2);
+//
+//			规则示例1: 如果资源的属性中有 public_ip 字段，则展示 public_ip;
+//	   	规则示例2: 如果资源的属性中有 name 字段，则展示 name;
+//	   	规则示例3: 如果资源的属性中有 tag 字段，则展示 name(tag1,tag2);
+//
 // 不匹配规则库时展示: resource address(id), 如: "module1.alicloud_instance.web(i-xxxxxxx)";
 func GetResShowName(attrs map[string]interface{}, addr string) string {
 	get := func(key string) (string, bool) {

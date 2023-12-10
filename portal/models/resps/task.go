@@ -39,7 +39,7 @@ type TaskStepDetail struct {
 	Name    string       `json:"name"`
 	TaskId  models.Id    `json:"taskId"`
 	Status  string       `json:"status"`
-	Message string       `json:"message"`
+	Message models.Text  `json:"message"`
 	StartAt *models.Time `json:"startAt"`
 	EndAt   *models.Time `json:"endAt"`
 	Type    string       `json:"type"`
