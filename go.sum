@@ -739,6 +739,8 @@ github.com/jessevdk/go-flags v1.5.0 h1:1jKYvbxEjfUl0fmqTCOfonvskHHXMjBySTLW4y9LF
 github.com/jessevdk/go-flags v1.5.0/go.mod h1:Fw0T6WPc1dYxT4mKEZRfG5kJhaTDP9pj1c2EWnYs/m4=
 github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231210092416-62f857765c81 h1:nUow7VYsrUYsawijC9t7R2jyDeszP59tpQCiDRf7JaE=
 github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231210092416-62f857765c81/go.mod h1:ftxg74UmoZafCyrCCR6B21jcuPyo/QgaD5qTircoVt4=
+github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231210095331-0f2f964b65a6 h1:tNUwIkvFC7u72fiDKbRsoZM6Js2peom/XQWVqyWMxWI=
+github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231210095331-0f2f964b65a6/go.mod h1:ftxg74UmoZafCyrCCR6B21jcuPyo/QgaD5qTircoVt4=
 github.com/jinzhu/copier v0.3.5 h1:GlvfUwHk62RokgqVNvYsku0TATCF7bAHVwEXoBh3iJg=
 github.com/jinzhu/copier v0.3.5/go.mod h1:DfbEm0FYsaqBcKcFuvmOZb218JkPGtvSHsKg8S8hyyg=
 github.com/jinzhu/inflection v1.0.0 h1:K317FqzuhWc8YvSVlFMCCUb36O/S9MCKRDI7QkRKD/E=
