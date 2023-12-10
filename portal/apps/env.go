@@ -23,8 +23,6 @@ import (
 	"unicode"
 
 	"github.com/robfig/cron/v3"
-
-	"github.com/lib/pq"
 )
 
 // SpecParser 最小时间单位为分钟
@@ -863,7 +861,7 @@ func setAndCheckUpdateEnvDestroy(tx *db.Session, attrs models.Attrs, env *models
 
 func setAndCheckUpdateEnvTriggers(c *ctx.ServiceContext, tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error {
 	if form.HasKey("triggers") {
-		attrs["triggers"] = pq.StringArray(form.Triggers)
+		attrs["triggers"] = models.StringArray(form.Triggers)
 		// triggers有变更时，需要检测webhook的配置
 		tpl, err := services.GetTemplateById(c.DB(), env.TplId)
 		if err != nil && err.Code() == e.TemplateNotExists {

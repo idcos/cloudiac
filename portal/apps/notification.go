@@ -12,8 +12,6 @@ import (
 	"cloudiac/portal/services"
 	"fmt"
 	"strings"
-
-	"github.com/lib/pq"
 )
 
 func SearchNotification(c *ctx.ServiceContext, form *forms.SearchNotificationForm) (interface{}, e.Error) {
@@ -75,7 +73,7 @@ func UpdateNotification(c *ctx.ServiceContext, form *forms.UpdateNotificationFor
 	}
 
 	if form.HasKey("userIds") {
-		attrs["userIds"] = pq.StringArray(form.UserIds)
+		attrs["userIds"] = models.StringArray(form.UserIds)
 	}
 
 	cfg, err = services.UpdateNotification(tx, form.Id, attrs)
@@ -128,7 +126,7 @@ func CreateNotification(c *ctx.ServiceContext, form *forms.CreateNotificationFor
 		Type:      form.Type,
 		Secret:    form.Secret,
 		Url:       form.Url,
-		UserIds:   pq.StringArray(form.UserIds),
+		UserIds:   form.UserIds,
 		Creator:   c.UserId,
 	}, form.EventType)
 

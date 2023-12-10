@@ -4,8 +4,6 @@ package models
 
 import (
 	"cloudiac/portal/libs/db"
-
-	"github.com/lib/pq"
 )
 
 const (
@@ -22,14 +20,14 @@ const (
 type Notification struct {
 	BaseModel
 
-	OrgId     Id             `json:"orgId" gorm:"size:32;not null;comment:组织ID"`
-	ProjectId Id             `json:"projectId" form:"projectId"  gorm:"size:32;not null;comment:项目ID"`
-	Name      string         `json:"name" form:"name" `
-	Type      string         `json:"notificationType" gorm:"default:'email';comment:通知类型"` // type:enum('email', 'webhook', 'wechat', 'slack','dingtalk');
-	Secret    string         `json:"secret" form:"secret" gorm:"comment:dingtalk加签秘钥"`
-	Url       string         `json:"url" form:"url" gorm:"comment:回调url"`
-	UserIds   pq.StringArray `json:"userIds"  gorm:"type:text;comment:用户ID"  swaggertype:"array,string"`
-	Creator   Id             `json:"creator" form:"creator" `
+	OrgId     Id          `json:"orgId" gorm:"size:32;not null;comment:组织ID"`
+	ProjectId Id          `json:"projectId" form:"projectId"  gorm:"size:32;not null;comment:项目ID"`
+	Name      string      `json:"name" form:"name" `
+	Type      string      `json:"notificationType" gorm:"default:'email';comment:通知类型"` // type:enum('email', 'webhook', 'wechat', 'slack','dingtalk');
+	Secret    string      `json:"secret" form:"secret" gorm:"comment:dingtalk加签秘钥"`
+	Url       string      `json:"url" form:"url" gorm:"comment:回调url"`
+	UserIds   StringArray `json:"userIds"  gorm:"type:text;comment:用户ID"  swaggertype:"array,string"`
+	Creator   Id          `json:"creator" form:"creator" `
 }
 
 func (Notification) TableName() string {

@@ -35,11 +35,10 @@ require (
 	github.com/hashicorp/hcl/v2 v2.10.0
 	github.com/itchyny/gojq v0.12.6
 	github.com/jessevdk/go-flags v1.5.0
-	github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231210060258-8aab1a837f5e
+	github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231210092416-62f857765c81
 	github.com/jinzhu/copier v0.3.5
 	github.com/joho/godotenv v1.3.0
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
-	github.com/lib/pq v1.10.4
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/open-policy-agent/opa v0.32.0
 	github.com/parnurzeal/gorequest v0.2.16
@@ -138,6 +137,7 @@ require (
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/lestrrat-go/strftime v1.0.4 // indirect
+	github.com/lib/pq v1.10.4 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/matryer/is v1.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
