@@ -9,10 +9,10 @@ import (
 type DBStorage struct {
 	AbstractModel
 
-	Id        uint   `gorm:"primaryKey" json:"-"`
-	Path      string `gorm:"NOT NULL;UNIQUE"`
-	Content   []byte `gorm:"type:blob"` // LONGBLOB 支持最大长度约 4G 达梦不支持LONGBLOB，改为blob
-	CreatedAt Time   `gorm:"type:datetime"`
+	Id        uint     `gorm:"primaryKey" json:"-"`
+	Path      string   `gorm:"NOT NULL;UNIQUE"`
+	Content   ByteBlob `gorm:"type:blob"` // LONGBLOB 支持最大长度约 4G 达梦不支持LONGBLOB，改为blob
+	CreatedAt Time     `gorm:"type:datetime"`
 }
 
 func (DBStorage) TableName() string {

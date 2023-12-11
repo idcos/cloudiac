@@ -1430,7 +1430,7 @@ func QueryTaskStepsById(query *db.Session, taskId models.Id) *db.Session {
 func GetTaskStepLogById(tx *db.Session, stepId models.Id) ([]byte, e.Error) {
 	query := tx.Joins("left join iac_task_step on iac_task_step.log_path=iac_storage.path").
 		Where("iac_task_step.id = ?", stepId).
-		LazySelectAppend("iac_storage.content")
+		LazySelectAppend("iac_storage.content as `content`")
 
 	var dbStorage models.DBStorage
 	if err := query.Find(&dbStorage); err != nil {
