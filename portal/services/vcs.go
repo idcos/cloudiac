@@ -107,6 +107,9 @@ func GetVcsById(sess *db.Session, id models.Id) (*models.Vcs, e.Error) {
 
 func GetVcsListByIds(sess *db.Session, ids []string) ([]models.Vcs, e.Error) {
 	vcs := make([]models.Vcs, 0)
+	if len(ids) == 0 {
+		return vcs, nil
+	}
 	err := sess.Model(&models.Vcs{}).Where("id in (?)", ids).Find(&vcs)
 	if err != nil {
 		return nil, e.New(e.DBError, err)

@@ -22,7 +22,7 @@ func SearchNotification(c *ctx.ServiceContext, form *forms.SearchNotificationFor
 		return nil, e.New(e.DBError, err)
 	}
 	for index, v := range notify {
-		notify[index].EventTypes = strings.Split(v.EventType, ",")
+		notify[index].EventTypes = strings.Split(string(v.EventType), ",")
 	}
 	return page.PageResp{
 		Total:    p.MustTotal(),
