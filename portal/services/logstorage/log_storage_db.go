@@ -7,6 +7,7 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"github.com/jiangliuhong/gorm-driver-dm/dmr"
 	"os"
 )
 
@@ -17,6 +18,7 @@ type dBLogStorage struct {
 func (s *dBLogStorage) Write(path string, content []byte) error {
 	dbType := configs.Get().GetDbType()
 	var sql string
+	var c interface{}
 	if dbType == "dameng" {
 		sql = `MERGE INTO iac_storage s
 		using ( select ? path ,? as content ,NOW() as created_at)t
@@ -25,10 +27,12 @@ func (s *dBLogStorage) Write(path string, content []byte) error {
 		update set content=t.content,created_at=t.created_at
 		when not matched then
 		insert (path,content,created_at) VALUES (t.path,t.content,t.created_at)`
+		c = dmr.NewBlob(content)
 	} else {
 		sql = "REPLACE INTO iac_storage(path,content,created_at) VALUES (?,?,NOW())"
+		c = content
 	}
-	_, err := s.db.Exec(sql, path, content)
+	_, err := s.db.Exec(sql, path, c)
 	return err
 }
 
