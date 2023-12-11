@@ -19,7 +19,7 @@ func (s *dBLogStorage) Write(path string, content []byte) error {
 	var sql string
 	if dbType == "dameng" {
 		sql = `MERGE INTO iac_storage s
-		using ( select 'test' path ,? as content ,NOW() as created_at)t
+		using ( select ? path ,? as content ,NOW() as created_at)t
 		on (s.path = t.path)
 		when matched then
 		update set content=t.content,created_at=t.created_at
