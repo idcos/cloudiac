@@ -20,7 +20,7 @@ func buildActiveEnvQuery(query *db.Session, selStr string) *db.Session {
 	query = query.Model(&models.Env{}).Select(selStr)
 	query = query.Where("archived = ?", 0)
 	query = query.Where(`(status = 'active' OR status = 'failed' OR task_status = 'approving' OR task_status = 'running')`)
-	query = query.Where(`updated_at > DATE_SUB(CURDATE(), INTERVAL '?' DAY)`, activeDays)
+	query = query.Where(`updated_at > DATE_SUB(CURDATE(), INTERVAL '` + strconv.Itoa(activeDays) + `' DAY)`)
 
 	return query
 }
@@ -264,7 +264,7 @@ func GetOrgActiveResTypeCount(dbSess *db.Session, orgIds []string) (*resps.PfAct
 	if len(orgIds) > 0 {
 		query = query.Where(`iac_resource.org_id IN (?)`, orgIds)
 	}
-	query = query.Group("iac_org.id, iac_resource.`type`")
+	query = query.Group("iac_org.name, iac_resource.`type`")
 
 	var dbResults []orgActiveResType
 	if err := query.Find(&dbResults); err != nil {
@@ -334,7 +334,7 @@ func GetResWeekChange(dbSess *db.Session, orgIds []string) ([]resps.PfResWeekCha
 		subQuery = subQuery.Where(`iac_resource.org_id IN (?)`, orgIds)
 	}
 	query := dbSess.Table("(?) t", subQuery.Expr())
-	query = query.Select("date,count(DISTINCT es) as count")
+	query = query.Select("date,count(DISTINCT ea) as count")
 	query = query.Group("date")
 	query = query.Order("date")
 
