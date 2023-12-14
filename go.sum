@@ -749,6 +749,8 @@ github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231211075051-b6ea1f940f7e h1:HRJ
 github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231211075051-b6ea1f940f7e/go.mod h1:ftxg74UmoZafCyrCCR6B21jcuPyo/QgaD5qTircoVt4=
 github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231211080852-37afe2d02a0a h1:X8coOJeGaLIb7uMSXzsleVXToXrag0bgaqWlLhjH+GU=
 github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231211080852-37afe2d02a0a/go.mod h1:ftxg74UmoZafCyrCCR6B21jcuPyo/QgaD5qTircoVt4=
+github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231214074159-a43357678815 h1:AnNYtuB7rEwAc/3AWeqdTL30oPJ2PxQMUiBUUhll3+8=
+github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231214074159-a43357678815/go.mod h1:ftxg74UmoZafCyrCCR6B21jcuPyo/QgaD5qTircoVt4=
 github.com/jinzhu/copier v0.3.5 h1:GlvfUwHk62RokgqVNvYsku0TATCF7bAHVwEXoBh3iJg=
 github.com/jinzhu/copier v0.3.5/go.mod h1:DfbEm0FYsaqBcKcFuvmOZb218JkPGtvSHsKg8S8hyyg=
 github.com/jinzhu/inflection v1.0.0 h1:K317FqzuhWc8YvSVlFMCCUb36O/S9MCKRDI7QkRKD/E=

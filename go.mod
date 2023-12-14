@@ -35,7 +35,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.10.0
 	github.com/itchyny/gojq v0.12.6
 	github.com/jessevdk/go-flags v1.5.0
-	github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231211080852-37afe2d02a0a
+	github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231214074159-a43357678815
 	github.com/jinzhu/copier v0.3.5
 	github.com/joho/godotenv v1.3.0
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
