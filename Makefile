@@ -62,6 +62,9 @@ reset-build-dir:
 gen-lang:
 	GOOS="" go run cmds/gen-lang/main.go docs/lang.csv portal/consts/e/lang.go
 
+gen-lang-arm64:
+	GOOS=linux GOARCH=arm64 go run cmds/gen-lang/main.go docs/lang.csv portal/consts/e/lang.go
+
 gen-code:
 	go generate ./portal/models
 
@@ -70,6 +73,9 @@ swag-docs: gen-lang
 
 mkdocs: 
 	GOOS="" GOARCH="" go run scripts/updatedocs/main.go
+
+mkdocs-arm64:
+	GOOS=linux GOARCH=arm64 go run scripts/updatedocs/main.go
 
 portal: reset-build-dir mkdocs swag-docs
 	$(GOBUILD) -o $(BUILD_DIR)/iac-portal ./cmds/portal
@@ -158,10 +164,13 @@ base-image-runner-arm64:
 base-image-worker: 
 	$(DOCKER_BUILD) --build-arg PROVIDERS=$(BASE_PROVIDERS_FROM) -t ${BASE_IMAGE_DOCKER_REPO}/base-ct-worker:$(BASE_IMAGE_VERSION) -f docker/base/worker/Dockerfile .
 
+base-image-worker-arm64:
+	$(DOCKER_BUILD) --build-arg PROVIDERS=$(BASE_PROVIDERS_FROM) -t ${BASE_IMAGE_DOCKER_REPO}/base-ct-worker:$(BASE_IMAGE_VERSION)-arm64 -f docker/base/worker/Dockerfile-arm64 .
+
 base-image: base-image-portal base-image-runner base-image-worker 
 	@echo "Update base image version to $(BASE_IMAGE_VERSION)" && bash scripts/update-base-image-version.sh
 
-base-image-arm64: base-image-portal-arm64 base-image-runner-arm64 base-image-worker
+base-image-arm64: base-image-portal-arm64 base-image-runner-arm64 base-image-worker-arm64
 	bash scripts/update-base-image-version.sh
 
 push-base-image:
