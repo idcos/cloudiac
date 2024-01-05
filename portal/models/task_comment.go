@@ -17,8 +17,5 @@ func (TaskComment) TableName() string {
 }
 
 func (TaskComment) Migrate(tx *db.Session) error {
-	if err := tx.ModifyModelColumn(&TaskComment{}, "comment"); err != nil {
-		return err
-	}
 	return nil
 }
