@@ -24,7 +24,7 @@ type Resource struct {
 	EnvId     Id `json:"envId" gorm:"index;size:32;not null"`
 	TaskId    Id `json:"taskId" gorm:"index;size:32;not null"`
 
-	ResId         Id       `json:"resId" gorm:"index;not null;default:''"`
+	ResId         Id       `json:"resId" gorm:"index;size:255;not null;default:''"`
 	ResName       string   `json:"resName" gorm:"not null;default:''"`
 	Provider      string   `json:"provider" gorm:"not null"`
 	Module        string   `json:"module,omitempty" gorm:"not null;default:''"`
