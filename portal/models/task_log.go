@@ -11,7 +11,7 @@ type DBStorage struct {
 
 	Id        uint     `gorm:"primaryKey" json:"-"`
 	Path      string   `gorm:"NOT NULL;UNIQUE"`
-	Content   ByteBlob `gorm:"type:blob"` // LONGBLOB 支持最大长度约 4G 达梦不支持LONGBLOB，改为blob
+	Content   ByteBlob `gorm:""` // LONGBLOB 支持最大长度约 4G 达梦不支持LONGBLOB，改为blob
 	CreatedAt Time     `gorm:"type:datetime"`
 }
 

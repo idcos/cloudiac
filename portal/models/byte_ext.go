@@ -49,3 +49,11 @@ func (b *ByteBlob) Scan(value interface{}) error {
 		return fmt.Errorf("invalid type %T, value: %v", vt, value)
 	}
 }
+
+func (ByteBlob) GormDataType() string {
+	dbType := configs.Get().GetDbType()
+	if dbType == "dameng" || dbType == "dm" {
+		return "BLOB"
+	}
+	return "LONGBLOB"
+}
