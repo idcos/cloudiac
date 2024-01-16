@@ -168,6 +168,7 @@ type Config struct {
 	DbType             string           `yaml:"dbType"`
 	Mysql              string           `yaml:"mysql"`
 	Dameng             string           `yaml:"dameng"`
+	Gauss              string           `yaml:"gauss"`
 	Listen             string           `yaml:"listen"`
 	Consul             ConsulConfig     `yaml:"consul"`
 	Portal             PortalConfig     `yaml:"portal"`
@@ -224,6 +225,8 @@ func (c *Config) Dsn() string {
 		return c.Dameng
 	case "mysql":
 		return c.Mysql
+	case "gauss":
+		return c.Gauss
 	default:
 		return c.Mysql
 	}

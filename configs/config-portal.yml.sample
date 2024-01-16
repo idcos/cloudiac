@@ -2,7 +2,7 @@ listen: "0.0.0.0:9030"
 dbType: "${DB_TYPE}"
 mysql: "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${MYSQL_DATABASE}?charset=utf8mb4&parseTime=True&loc=Local"
 dameng: "dm://${DM_USER}:${DM_PASSWORD}@${DM_HOST}:${DM_PORT}?schema=${DM_DATABASE}&autoCommit=true"
-
+gauss: "gauss://host=${GAUSS_HOST} port=${GAUSS_PORT} dbname=${GAUSS_DATABASE} user=${GAUSS_USER} password=${GAUSS_PASSWORD} search_path=${GAUSS_SCHEMA}"
 cost_serve: "${COST_SERVE}"
 
 swaggerEnable: ${SWAGGER_ENABLE}

@@ -2,8 +2,10 @@ module cloudiac
 
 go 1.17
 
-replace github.com/google/flatbuffers v1.12.0 => github.com/google/flatbuffers v1.12.1
-
+replace (
+	github.com/google/flatbuffers v1.12.0 => github.com/google/flatbuffers v1.12.1
+	github.com/jiangliuhong/gorm-driver-opengauss v0.0.1 => ../gorm-driver-opengauss
+)
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/Shopify/sarama v1.28.0
@@ -36,6 +38,7 @@ require (
 	github.com/itchyny/gojq v0.12.6
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231214074159-a43357678815
+	github.com/jiangliuhong/gorm-driver-opengauss v0.0.1
 	github.com/jinzhu/copier v0.3.5
 	github.com/joho/godotenv v1.3.0
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
@@ -53,9 +56,9 @@ require (
 	github.com/unliar/utils v0.1.1
 	github.com/xanzy/go-gitlab v0.47.0
 	github.com/zclconf/go-cty v1.9.1
-	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
+	golang.org/x/crypto v0.18.0
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
-	golang.org/x/text v0.9.0
+	golang.org/x/text v0.14.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/mysql v1.3.3
@@ -64,6 +67,7 @@ require (
 )
 
 require (
+	gitee.com/opengauss/openGauss-connector-go-pq v1.0.4 // indirect
 	github.com/Azure/go-ntlmssp v0.0.0-20200615164410-66371956d46c // indirect
 	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
@@ -128,7 +132,7 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.2 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
-	github.com/jinzhu/now v1.1.4 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/jonboulle/clockwork v0.2.2 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -159,16 +163,17 @@ require (
 	github.com/thoas/go-funk v0.9.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
-	github.com/tjfoc/gmsm v1.3.2 // indirect
+	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/ugorji/go/codec v1.1.13 // indirect
 	github.com/xanzy/ssh-agent v0.3.0 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/yashtewari/glob-intersection v0.0.0-20180916065949-5c77d914dd0b // indirect
-	golang.org/x/net v0.6.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/net v0.10.0 // indirect
+	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
 	golang.org/x/tools v0.6.0 // indirect
+	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa // indirect
 	google.golang.org/grpc v1.43.0 // indirect
