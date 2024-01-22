@@ -3,6 +3,7 @@
 package models
 
 import (
+	"cloudiac/configs"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
@@ -140,8 +141,8 @@ func (b *AutoUintIdModel) SetId(id interface{}) {
 type TimedModel struct {
 	BaseModel
 
-	CreatedAt Time `json:"createdAt" gorm:"type:datetime" example:"2006-01-02 15:04:05"` // 创建时间
-	UpdatedAt Time `json:"updatedAt" gorm:"type:datetime" example:"2006-01-02 15:04:05"` // 更新时间
+	CreatedAt Time `json:"createdAt" gorm:"" example:"2006-01-02 15:04:05"` // 创建时间
+	UpdatedAt Time `json:"updatedAt" gorm:"" example:"2006-01-02 15:04:05"` // 更新时间
 }
 
 type SoftDeleteModel struct {
@@ -215,4 +216,12 @@ func (t *Time) Scan(v interface{}) error {
 
 func (t Time) Unix() int64 {
 	return time.Time(t).Unix()
+}
+
+func (Time) GormDataType() string {
+	dbType := configs.Get().GetDbType()
+	if dbType == "gauss" {
+		return "timestamptz"
+	}
+	return "datetime"
 }

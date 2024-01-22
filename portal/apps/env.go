@@ -250,7 +250,8 @@ func createEnvToDB(tx *db.Session, c *ctx.ServiceContext, form *forms.CreateEnvF
 		if err != nil {
 			return nil, err
 		}
-		envModel.NextDriftTaskTime = nextTime
+		mt := models.Time(*nextTime)
+		envModel.NextDriftTaskTime = &mt
 	}
 	env, err := services.CreateEnv(tx, envModel)
 	if err != nil && err.Code() == e.EnvAlreadyExists {
@@ -1415,7 +1416,8 @@ func setAndCheckEnvDriftCron(env *models.Env, form *forms.DeployEnvForm) e.Error
 	}
 	if cronDriftParam.OpenCronDrift != nil {
 		env.OpenCronDrift = *cronDriftParam.OpenCronDrift
-		env.NextDriftTaskTime = cronDriftParam.NextDriftTaskTime
+		mt := models.Time(*cronDriftParam.NextDriftTaskTime)
+		env.NextDriftTaskTime = &mt
 	}
 	if cronDriftParam.CronDriftExpress != nil {
 		env.CronDriftExpress = *cronDriftParam.CronDriftExpress

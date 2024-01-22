@@ -743,6 +743,8 @@ github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231214074159-a43357678815 h1:AnN
 github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231214074159-a43357678815/go.mod h1:ftxg74UmoZafCyrCCR6B21jcuPyo/QgaD5qTircoVt4=
 github.com/jiangliuhong/gorm-driver-opengauss v0.0.3 h1:Fn06NXdiRb93yr15Hy2uVjIHgYVxrXhlW8yQDd0G+Gw=
 github.com/jiangliuhong/gorm-driver-opengauss v0.0.3/go.mod h1:bKVd7xd5smhdKK6Nl0KwnCh8kUrOWWnxcY9d68tTiOU=
+github.com/jiangliuhong/gorm-driver-opengauss v0.0.4 h1:0olFa3knVlCw7o/0n89HHn1dH8IvPOhlzzLeincagpg=
+github.com/jiangliuhong/gorm-driver-opengauss v0.0.4/go.mod h1:bKVd7xd5smhdKK6Nl0KwnCh8kUrOWWnxcY9d68tTiOU=
 github.com/jinzhu/copier v0.3.5 h1:GlvfUwHk62RokgqVNvYsku0TATCF7bAHVwEXoBh3iJg=
 github.com/jinzhu/copier v0.3.5/go.mod h1:DfbEm0FYsaqBcKcFuvmOZb218JkPGtvSHsKg8S8hyyg=
 github.com/jinzhu/inflection v1.0.0 h1:K317FqzuhWc8YvSVlFMCCUb36O/S9MCKRDI7QkRKD/E=
@@ -1760,6 +1762,8 @@ gorm.io/gorm v1.23.0/go.mod h1:l2lP/RyAtc1ynaTjFksBde/O8v9oOGIApu2/xRitmZk=
 gorm.io/gorm v1.23.1/go.mod h1:l2lP/RyAtc1ynaTjFksBde/O8v9oOGIApu2/xRitmZk=
 gorm.io/gorm v1.23.5 h1:TnlF26wScKSvknUC/Rn8t0NLLM22fypYBlvj1+aH6dM=
 gorm.io/gorm v1.23.5/go.mod h1:l2lP/RyAtc1ynaTjFksBde/O8v9oOGIApu2/xRitmZk=
+gorm.io/gorm v1.25.5 h1:zR9lOiiYf09VNh5Q1gphfyia1JpiClIWG9hQaxB/mls=
+gorm.io/gorm v1.25.5/go.mod h1:hbnx/Oo0ChWMn1BIhpy1oYozzpM15i4YPuHDmfYtwg8=
 gorm.io/plugin/soft_delete v1.1.0 h1:LcE4L+GD29RkkMLxMYHpT4wQCJ/9945FsdU/mHGaDuE=
 gorm.io/plugin/soft_delete v1.1.0/go.mod h1:Zv7vQctOJTGOsJ/bWgrN1n3od0GBAZgnLjEx+cApLGk=
 gotest.tools v2.2.0+incompatible h1:VsBPFP1AI068pPrMxtb/S8Zkgf9xEmTLJjfM+P5UIEo=

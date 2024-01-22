@@ -52,7 +52,7 @@ func (b *ByteBlob) Scan(value interface{}) error {
 
 func (ByteBlob) GormDataType() string {
 	dbType := configs.Get().GetDbType()
-	if dbType == "dameng" || dbType == "dm" {
+	if dbType == "dameng" || dbType == "dm" || dbType == "gauss" {
 		return "BLOB"
 	}
 	return "LONGBLOB"

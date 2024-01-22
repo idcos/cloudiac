@@ -49,8 +49,8 @@ type TaskStep struct {
 	Status    string `json:"status" gorm:""`            // type:enum('pending','approving','rejected','running','failed','complete','timeout','aborted')
 	ExitCode  int    `json:"exitCode" gorm:"default:0"` // 执行退出码，status 为 failed 时才有意义
 	Message   Text   `json:"message" gorm:"type:text"`
-	StartAt   *Time  `json:"startAt" gorm:"type:datetime"`
-	EndAt     *Time  `json:"endAt" gorm:"type:datetime"`
+	StartAt   *Time  `json:"startAt" gorm:""`
+	EndAt     *Time  `json:"endAt" gorm:""`
 	LogPath   string `json:"logPath" gorm:""`
 
 	MustApproval bool `json:"requireApproval" gorm:""`            // 步骤需要审批

@@ -30,8 +30,8 @@ type BaseTask struct {
 	Message  Text   `json:"message" gorm:"type:text"`                                                                                         // 任务的状态描述信息，如失败原因等
 	Aborting bool   `json:"aborting" gorm:""`                                                                                                 // 任务正在中止
 
-	StartAt *Time `json:"startAt" gorm:"type:datetime;comment:任务开始时间"` // 任务开始时间
-	EndAt   *Time `json:"endAt" gorm:"type:datetime;comment:任务结束时间"`   // 任务结束时间
+	StartAt *Time `json:"startAt" gorm:"comment:任务开始时间"` // 任务开始时间
+	EndAt   *Time `json:"endAt" gorm:"comment:任务结束时间"`   // 任务结束时间
 }
 
 // ScanTask 合规扫描任务

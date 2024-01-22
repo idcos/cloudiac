@@ -6,7 +6,6 @@ import (
 	"cloudiac/common"
 	"cloudiac/portal/libs/db"
 	"path"
-	"time"
 )
 
 const (
@@ -67,7 +66,7 @@ type Env struct {
 	StopOnViolation bool `json:"stopOnViolation" gorm:"default:false"` // 当合规不通过是否中止部署
 
 	TTL           string `json:"ttl" gorm:"default:'0'" example:"1h/1d"` // 生命周期
-	AutoDestroyAt *Time  `json:"autoDestroyAt" gorm:"type:datetime"`     // 自动销毁时间
+	AutoDestroyAt *Time  `json:"autoDestroyAt" gorm:""`                  // 自动销毁时间
 
 	// 该 id 在创建自动销毁任务后保存，并在销毁任务执行完成后清除
 	AutoDestroyTaskId Id `json:"-"  gorm:"default:''"` // 自动销毁任务 id
@@ -84,10 +83,10 @@ type Env struct {
 	Callback  string `json:"callback" gorm:"default:''"` // 外部请求的回调方式
 
 	// 偏移检测相关
-	CronDriftExpress  string     `json:"cronDriftExpress" gorm:"default:''"`     // 偏移检测任务的Cron表达式
-	AutoRepairDrift   bool       `json:"autoRepairDrift" gorm:"default:false"`   // 是否进行自动纠偏
-	OpenCronDrift     bool       `json:"openCronDrift" gorm:"default:false"`     // 是否开启偏移检测
-	NextDriftTaskTime *time.Time `json:"nextDriftTaskTime" gorm:"type:datetime"` // 下次执行偏移检测任务的时间
+	CronDriftExpress  string `json:"cronDriftExpress" gorm:"default:''"`   // 偏移检测任务的Cron表达式
+	AutoRepairDrift   bool   `json:"autoRepairDrift" gorm:"default:false"` // 是否进行自动纠偏
+	OpenCronDrift     bool   `json:"openCronDrift" gorm:"default:false"`   // 是否开启偏移检测
+	NextDriftTaskTime *Time  `json:"nextDriftTaskTime" gorm:""`            // 下次执行偏移检测任务的时间
 
 	// 合规相关
 	PolicyEnable bool `json:"policyEnable" gorm:"default:false"` // 是否开启合规检测
@@ -99,9 +98,9 @@ type Env struct {
 
 	Targets StrSlice `json:"targets,omitempty" gorm:"type:text"` // 指定部署的资源
 	// 自动部署相关
-	AutoDeployCron   string `json:"autoDeployCron" gorm:"default:''"`  // 自动部署任务的Cron表达式
-	AutoDeployAt     *Time  `json:"autoDeployAt" gorm:"type:datetime"` // 下次执行自动部署任务的时间
-	AutoDeployTaskId Id     `json:"-"  gorm:"default:''"`              // 自动部署任务 id
+	AutoDeployCron   string `json:"autoDeployCron" gorm:"default:''"` // 自动部署任务的Cron表达式
+	AutoDeployAt     *Time  `json:"autoDeployAt" gorm:""`             // 下次执行自动部署任务的时间
+	AutoDeployTaskId Id     `json:"-"  gorm:"default:''"`             // 自动部署任务 id
 
 	// 自动销毁相关
 	AutoDestroyCron string `json:"autoDestroyCron" gorm:"default:''"` // 自动销毁任务的Cron表达式

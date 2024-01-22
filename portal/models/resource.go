@@ -37,7 +37,7 @@ type Resource struct {
 	SensitiveKeys StrSlice `json:"sensitiveKeys,omitempty" gorm:"type:text"`
 	Dependencies  StrSlice `json:"dependencies,omitempty" gorm:"type:text"`
 
-	AppliedAt Time `json:"appliedAt" gorm:"type:datetime;column:applied_at;default:null"`
+	AppliedAt Time `json:"appliedAt" gorm:"column:applied_at;default:null"`
 }
 
 func (Resource) TableName() string {

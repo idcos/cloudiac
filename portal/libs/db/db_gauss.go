@@ -3,6 +3,7 @@ package db
 import (
 	"github.com/jiangliuhong/gorm-driver-opengauss"
 	"gorm.io/gorm"
+	"strings"
 )
 
 func init() {
@@ -11,6 +12,7 @@ func init() {
 			return postgres.Open(dsn)
 		},
 		SQLEnhance: func(sql string) string {
+			sql = strings.ReplaceAll(sql, "`", "\"")
 			return sql
 		},
 		Namer: defaultNamingStrategy,
