@@ -3,6 +3,7 @@ module cloudiac
 go 1.17
 
 replace github.com/google/flatbuffers v1.12.0 => github.com/google/flatbuffers v1.12.1
+
 //replace github.com/jiangliuhong/gorm-driver-opengauss v0.0.4 => ../gorm-driver-opengauss
 
 require (
