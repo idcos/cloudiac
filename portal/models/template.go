@@ -10,7 +10,7 @@ type Template struct {
 	SoftDeleteModel
 
 	Name        string `json:"name" gorm:"not null;comment:模板名称" example:"yunji_example"`
-	TplType     string `json:"tplType" gorm:"not null;comment:云模板类型(aliyun，VMware等)" example:"aliyun"`
+	TplType     string `json:"tplType" gorm:"comment:云模板类型(aliyun，VMware等)" example:"aliyun"`
 	OrgId       Id     `json:"orgId" gorm:"size:32;not null" example:"a1f79e8a-744d-4ea5-8d97-7e4b7b422a6c"`
 	Description Text   `json:"description" gorm:"type:text" example:"云霁阿里云模板"`
 
@@ -24,9 +24,9 @@ type Template struct {
 
 	// 云模板的 repoAddr 和 repoToken 字段可以为空，若为空则在创建 task 时会查询 vcs 获取
 	// 提供这三个字段主要是为了后续支持直接添加 git 地址、token和token对应的用户名来创建云模板
-	RepoAddr  string `json:"repoAddr" gorm:"not null" example:"https://github.com/user/project.git"` // RepoAddr 仓库地址(完整 url 或者项目 path)
-	RepoToken string `json:"repoToken" gorm:"size:128" `                                             // RepoToken 若为空则使用 vcs 的 token
-	RepoUser  string `json:"repoUser" gorm:"size:128" `                                              //
+	RepoAddr  string `json:"repoAddr" gorm:"" example:"https://github.com/user/project.git"` // RepoAddr 仓库地址(完整 url 或者项目 path)
+	RepoToken string `json:"repoToken" gorm:"size:128" `                                     // RepoToken 若为空则使用 vcs 的 token
+	RepoUser  string `json:"repoUser" gorm:"size:128" `                                      //
 
 	Status     string `json:"status" gorm:"default:'enable';comment:状态"` // type:enum('enable','disable');
 	CreatorId  Id     `json:"creatorId" gorm:"size:32;not null;comment:创建人"`

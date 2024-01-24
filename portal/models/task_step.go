@@ -53,8 +53,8 @@ type TaskStep struct {
 	EndAt     *Time  `json:"endAt" gorm:""`
 	LogPath   string `json:"logPath" gorm:""`
 
-	MustApproval bool `json:"requireApproval" gorm:""`            // 步骤需要审批
-	ApproverId   Id   `json:"approverId" gorm:"size:32;not null"` // 审批者用户 id
+	MustApproval bool `json:"requireApproval" gorm:""`   // 步骤需要审批
+	ApproverId   Id   `json:"approverId" gorm:"size:32"` // 审批者用户 id
 
 	CurrentRetryCount int   `json:"currentRetryCount" gorm:"size:32;default:0"` // 当前重试次数
 	NextRetryTime     int64 `json:"nextRetryTime" gorm:"default:0"`             // 下次重试时间
