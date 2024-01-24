@@ -145,6 +145,27 @@ type TimedModel struct {
 	UpdatedAt Time `json:"updatedAt" gorm:"" example:"2006-01-02 15:04:05"` // 更新时间
 }
 
+func (t *TimedModel) CustomBeforeCreate(session *db.Session) error {
+	err := t.BaseModel.CustomBeforeCreate(session)
+	if err != nil {
+		return err
+	}
+	if t.CreatedAt.IsZero() {
+		t.CreatedAt = Time(time.Now())
+	}
+	if t.UpdatedAt.IsZero() {
+		t.UpdatedAt = Time(time.Now())
+	}
+	return nil
+}
+
+func (t *TimedModel) CustomBeforeUpdate(session *db.Session) error {
+	if t.UpdatedAt.IsZero() {
+		t.UpdatedAt = Time(time.Now())
+	}
+	return nil
+}
+
 type SoftDeleteModel struct {
 	TimedModel
 	DeletedAtT db.SoftDeletedAt `json:"deletedAt,omitempty" gorm:"default:0;not null;index" swaggerignore:"true"`
@@ -185,6 +206,11 @@ func (Time) Parse(s string) (t Time, err error) {
 		return t, err
 	}
 	return t, nil
+}
+
+func (t Time) IsZero() bool {
+	var zeroTime time.Time
+	return time.Time(t).UnixNano() == zeroTime.UnixNano()
 }
 
 // Value 获取时间值

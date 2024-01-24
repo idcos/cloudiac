@@ -101,7 +101,10 @@ func openDB(dsn string, driverNames ...string) error {
 		Register("my_before_create_hook", beforeCreateCallback); err != nil {
 		return err
 	}
-
+	if err = db.Callback().Create().Before("gorm:before_update").
+		Register("my_before_update_hook", beforeUpdateCallback); err != nil {
+		return err
+	}
 	defaultDB = db
 	return nil
 }

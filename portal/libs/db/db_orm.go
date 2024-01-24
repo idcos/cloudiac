@@ -451,6 +451,10 @@ type CustomBeforeCreateInterface interface {
 	CustomBeforeCreate(session *Session) error
 }
 
+type CustomBeforeUpdateInterface interface {
+	CustomBeforeUpdate(session *Session) error
+}
+
 // callMethod gorm.io/gorm@v1.21.12/callbacks/callmethod.go
 func callMethod(db *gorm.DB, fc func(value interface{}, tx *gorm.DB) bool) {
 	tx := db.Session(&gorm.Session{NewDB: true})
@@ -478,6 +482,18 @@ func beforeCreateCallback(db *gorm.DB) {
 			if i, ok := value.(CustomBeforeCreateInterface); ok {
 				called = true
 				_ = db.AddError(i.CustomBeforeCreate(ToSess(db)))
+			}
+			return called
+		})
+	}
+}
+
+func beforeUpdateCallback(db *gorm.DB) {
+	if db.Error == nil && db.Statement.Schema != nil && !db.Statement.SkipHooks {
+		callMethod(db, func(value interface{}, db *gorm.DB) (called bool) {
+			if i, ok := value.(CustomBeforeUpdateInterface); ok {
+				called = true
+				_ = db.AddError(i.CustomBeforeUpdate(ToSess(db)))
 			}
 			return called
 		})
