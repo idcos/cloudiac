@@ -15,7 +15,7 @@ func init() {
 			sql = strings.ReplaceAll(sql, "`", "\"")
 			return sql
 		},
-		Namer: defaultNamingStrategy,
+		Namer: postgres.Namer{},
 	}
 
 	drivers["gauss"] = d

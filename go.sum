@@ -745,6 +745,7 @@ github.com/jiangliuhong/gorm-driver-opengauss v0.0.3 h1:Fn06NXdiRb93yr15Hy2uVjIH
 github.com/jiangliuhong/gorm-driver-opengauss v0.0.3/go.mod h1:bKVd7xd5smhdKK6Nl0KwnCh8kUrOWWnxcY9d68tTiOU=
 github.com/jiangliuhong/gorm-driver-opengauss v0.0.4 h1:0olFa3knVlCw7o/0n89HHn1dH8IvPOhlzzLeincagpg=
 github.com/jiangliuhong/gorm-driver-opengauss v0.0.4/go.mod h1:bKVd7xd5smhdKK6Nl0KwnCh8kUrOWWnxcY9d68tTiOU=
+github.com/jiangliuhong/gorm-driver-opengauss v0.0.5/go.mod h1:bKVd7xd5smhdKK6Nl0KwnCh8kUrOWWnxcY9d68tTiOU=
 github.com/jinzhu/copier v0.3.5 h1:GlvfUwHk62RokgqVNvYsku0TATCF7bAHVwEXoBh3iJg=
 github.com/jinzhu/copier v0.3.5/go.mod h1:DfbEm0FYsaqBcKcFuvmOZb218JkPGtvSHsKg8S8hyyg=
 github.com/jinzhu/inflection v1.0.0 h1:K317FqzuhWc8YvSVlFMCCUb36O/S9MCKRDI7QkRKD/E=

@@ -19,8 +19,8 @@ const (
 
 type Vcs struct {
 	BaseModel
-	OrgId     Id     `json:"orgId" gorm:"size:32;not null"` // 默认仓库的 orgId 为 ""
-	ProjectId Id     `json:"projectId" gorm:"size:32;not null"`
+	OrgId     Id     `json:"orgId" gorm:"size:32"` // 默认仓库的 orgId 为 ""
+	ProjectId Id     `json:"projectId" gorm:"size:32"`
 	Name      string `json:"name" gorm:"not null;comment:vcs名称"`
 	Status    string `json:"status" gorm:"default:'enable';comment:vcs状态"` // type:enum('enable','disable');
 	VcsType   string `json:"vcsType" gorm:"not null;comment:vcs代码库类型"`

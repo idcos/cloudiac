@@ -190,7 +190,14 @@ func initSysUser(tx *db.Session) error {
 	if name == "" {
 		name = consts.DefaultSysName
 	}
-
+	password := os.Getenv("IAC_SYS_PAWSSWORD")
+	if password == "" {
+		password = consts.DefaultSysPassword
+	}
+	hashPassword, err := services.HashPassword(password)
+	if err != nil {
+		return err
+	}
 	// 通过邮箱查找账号，如果不存在则创建。
 	sys, err := services.GetUserByEmail(tx, email)
 	if err != nil && err.Code() != e.UserNotExists {
@@ -201,10 +208,12 @@ func initSysUser(tx *db.Session) error {
 
 	logger := logs.Get()
 	logger.Infof("create sys account, email: %s, name: %s", email, name)
+
 	u := models.User{
-		Name:  name,
-		Phone: "",
-		Email: email,
+		Name:     name,
+		Phone:    "",
+		Email:    email,
+		Password: hashPassword,
 	}
 	u.Id = consts.SysUserId
 	_, err = services.CreateUser(tx, u)
