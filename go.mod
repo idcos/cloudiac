@@ -4,7 +4,7 @@ go 1.17
 
 replace github.com/google/flatbuffers v1.12.0 => github.com/google/flatbuffers v1.12.1
 
-//replace github.com/jiangliuhong/gorm-driver-opengauss v0.0.4 => ../gorm-driver-opengauss
+//replace github.com/jiangliuhong/gorm-driver-opengauss v0.0.5 => ../gorm-driver-opengauss
 
 require (
 	github.com/Masterminds/semver v1.5.0
@@ -38,7 +38,7 @@ require (
 	github.com/itchyny/gojq v0.12.6
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/jiangliuhong/gorm-driver-dm v0.0.0-20231214074159-a43357678815
-	github.com/jiangliuhong/gorm-driver-opengauss v0.0.5
+	github.com/jiangliuhong/gorm-driver-opengauss v0.0.6
 	github.com/jinzhu/copier v0.3.5
 	github.com/joho/godotenv v1.3.0
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
