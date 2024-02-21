@@ -440,7 +440,7 @@ func ToColName(name string) string {
 }
 
 func getNamingStrategy() schema.Namer {
-	return drivers[configs.Get().DbType].Namer
+	return drivers[configs.Get().GetDbType()].Namer
 }
 
 func Get() *Session {

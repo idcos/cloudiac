@@ -26,7 +26,7 @@ var (
 )
 
 func GetDriver() (d Driver) {
-	dbType := configs.Get().DbType
+	dbType := configs.Get().GetDbType()
 	if item, ok := drivers[dbType]; ok {
 		d = item
 	}
