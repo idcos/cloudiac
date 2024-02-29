@@ -3,6 +3,7 @@ package db
 import (
 	"github.com/jiangliuhong/gorm-driver-opengauss"
 	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 	"strings"
 )
 
@@ -15,7 +16,11 @@ func init() {
 			sql = strings.ReplaceAll(sql, "`", "\"")
 			return sql
 		},
-		Namer: postgres.Namer{},
+		Namer: postgres.Namer{
+			NamingStrategy: schema.NamingStrategy{
+				SingularTable: true,
+			},
+		},
 	}
 
 	drivers["gauss"] = d
