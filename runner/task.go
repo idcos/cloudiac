@@ -552,6 +552,7 @@ func (t *Task) genStepScript() (string, error) {
 	}
 	defer fp.Close()
 
+	fmt.Println("20240304 Executing command:", command)
 	if _, err = fp.WriteString(command); err != nil {
 		return "", err
 	}
