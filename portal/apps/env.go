@@ -1416,8 +1416,10 @@ func setAndCheckEnvDriftCron(env *models.Env, form *forms.DeployEnvForm) e.Error
 	}
 	if cronDriftParam.OpenCronDrift != nil {
 		env.OpenCronDrift = *cronDriftParam.OpenCronDrift
-		mt := models.Time(*cronDriftParam.NextDriftTaskTime)
-		env.NextDriftTaskTime = &mt
+		if cronDriftParam.NextDriftTaskTime != nil {
+			mt := models.Time(*cronDriftParam.NextDriftTaskTime)
+			env.NextDriftTaskTime = &mt
+		}
 	}
 	if cronDriftParam.CronDriftExpress != nil {
 		env.CronDriftExpress = *cronDriftParam.CronDriftExpress
