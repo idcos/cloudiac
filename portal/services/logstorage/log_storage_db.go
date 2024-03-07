@@ -19,7 +19,7 @@ func (s *dBLogStorage) Write(path string, content []byte) error {
 	dbType := configs.Get().GetDbType()
 	var sql string
 	var c interface{}
-	if dbType == "dameng" {
+	if dbType == "dameng" || dbType == "gauss" {
 		sql = `MERGE INTO iac_storage s
 		using ( select ? path ,? as content ,NOW() as created_at)t
 		on (s.path = t.path)
