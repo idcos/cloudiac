@@ -7,6 +7,7 @@ import (
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"encoding/hex"
 	"github.com/jiangliuhong/gorm-driver-dm/dmr"
 	"os"
 )
@@ -36,7 +37,10 @@ func (s *dBLogStorage) Write(path string, content []byte) error {
 		update set content=t.content,created_at=t.created_at
 		when not matched then
 		insert (path,content,created_at) VALUES (t.path,t.content,t.created_at)`
-		c = string(content)
+		//c = string(content)
+		rc := make([]byte, hex.EncodedLen(len(content)))
+		hex.Encode(rc, content)
+		c = rc
 	} else {
 		sql = "REPLACE INTO iac_storage(path,content,created_at) VALUES (?,?,NOW())"
 		c = content
