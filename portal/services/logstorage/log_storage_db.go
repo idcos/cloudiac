@@ -36,7 +36,8 @@ func (s *dBLogStorage) Write(path string, content []byte) error {
 		update set content=t.content,created_at=t.created_at
 		when not matched then
 		insert (path,content,created_at) VALUES (t.path,t.content,t.created_at)`
-		c = content
+		//c = []byte(content)
+		c = models.ByteBlob(content)
 	} else {
 		sql = "REPLACE INTO iac_storage(path,content,created_at) VALUES (?,?,NOW())"
 		c = content
