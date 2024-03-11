@@ -31,7 +31,7 @@ func (s *dBLogStorage) Write(path string, content []byte) error {
 		c = dmr.NewBlob(content)
 	} else if dbType == "gauss" {
 		sql = `MERGE INTO iac_storage s
-		using ( select ? path ,HEXTORAW(?) as content ,NOW() as created_at)t
+		using ( select ? path ,? as content ,NOW() as created_at)t
 		on (s.path = t.path)
 		when matched then
 		update set content=t.content,created_at=t.created_at
