@@ -38,9 +38,10 @@ func (s *dBLogStorage) Write(path string, content []byte) error {
 		when not matched then
 		insert (path,content,created_at) VALUES (t.path,t.content,t.created_at)`
 		//c = string(content)
-		rc := make([]byte, hex.EncodedLen(len(content)))
-		hex.Encode(rc, content)
-		c = rc
+		//rc := make([]byte, hex.EncodedLen(len(content)))
+		//hex.Encode(rc, content)
+		//c = rc
+		c = hex.EncodeToString(content)
 	} else {
 		sql = "REPLACE INTO iac_storage(path,content,created_at) VALUES (?,?,NOW())"
 		c = content
