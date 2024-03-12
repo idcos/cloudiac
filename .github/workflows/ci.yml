@@ -28,7 +28,7 @@ jobs:
             ${{ runner.os }}-golang-
 
     - name: Build and Pack
-      run: go get github.com/swaggo/swag/cmd/swag && make build
+      run: go install github.com/swaggo/swag/cmd/swag && make build
 
     - name: Show versions
       run: ./build/iac-portal --version && ./build/ct-runner --version
