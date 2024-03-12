@@ -3,35 +3,31 @@
 package db
 
 import (
+	"cloudiac/configs"
 	"database/sql"
 	"fmt"
+	"gorm.io/gorm/clause"
+	"gorm.io/gorm/schema"
+	"gorm.io/plugin/soft_delete"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
-	"time"
-
-	"gorm.io/gorm/clause"
-	"gorm.io/gorm/schema"
-	"gorm.io/plugin/soft_delete"
 
 	"cloudiac/portal/consts/e"
-	dbLogger "cloudiac/portal/libs/db/logger"
 	"cloudiac/utils/logs"
 
 	"github.com/go-testfixtures/testfixtures/v3"
 	"github.com/pkg/errors"
-	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	gormLogger "gorm.io/gorm/logger"
 )
 
 const DBCtxKeyLazySelects = "app:lazySelects"
 
 var (
-	defaultDB      *gorm.DB
-	namingStrategy = schema.NamingStrategy{}
+	defaultDB             *gorm.DB
+	defaultNamingStrategy = schema.NamingStrategy{SingularTable: true}
 )
 
 type SoftDeletedAt uint
@@ -86,12 +82,23 @@ func (s *Session) AddUniqueIndex(indexName string, columns ...string) error {
 	if s.db.Migrator().HasIndex(stmt.Table, indexName) {
 		return nil
 	}
-	err := s.db.Exec(fmt.Sprintf("CREATE UNIQUE INDEX `%s` ON `%s` (%s)",
-		indexName, stmt.Table, strings.Join(columns, ","))).Error
+	var ciSql string
+
+	pTableName := getNamingStrategy().TableName(stmt.Table)
+	pIndexName := getNamingStrategy().IndexName(stmt.Table, indexName)
+	ciSql = fmt.Sprintf("CREATE UNIQUE INDEX `%s` ON `%s` (%s)",
+		pIndexName, pTableName, strings.Join(columns, ","))
+	err := s.dbExec(ciSql).Error
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+// 拦截sql，统一处理
+func (s *Session) dbExec(sql string, values ...interface{}) (tx *gorm.DB) {
+	sql = GetDriver().SQLEnhance(sql)
+	return s.db.Exec(sql, values...)
 }
 
 func (s *Session) RemoveIndex(table string, indexName string) error {
@@ -119,6 +126,7 @@ func (s *Session) ModifyModelColumn(model interface{}, column string) error {
 	if !s.isModel(model) {
 		return fmt.Errorf("'model' must be a 'struct', not '%T'", model)
 	}
+	column = getNamingStrategy().ColumnName("", column)
 	return s.db.Migrator().AlterColumn(model, column)
 }
 
@@ -167,7 +175,7 @@ func (s *Session) Raw(sql string, values ...interface{}) *Session {
 }
 
 func (s *Session) Exec(sql string, args ...interface{}) (int64, error) {
-	r := s.db.Exec(sql, args...)
+	r := s.dbExec(sql, args...)
 	return r.RowsAffected, r.Error
 }
 
@@ -271,7 +279,9 @@ func (s *Session) Count() (cnt int64, err error) {
 
 func (s *Session) Exists() (bool, error) {
 	exists := false
-	err := s.Raw("SELECT EXISTS(?)", s.db).Scan(&exists)
+	// 国产数据库不支持exists写法，修改为子查询
+	//err := s.Raw("SELECT EXISTS(?)", s.db).Scan(&exists)
+	err := s.Raw("SELECT case when COUNT(*) > 0 then 1 else 0 end as result FROM (?) t", s.db).Scan(&exists)
 	if err != nil {
 		return false, err
 	}
@@ -357,8 +367,8 @@ func (s *Session) UpdateAttrs(attrs map[string]interface{}) (int64, error) {
 // Deprecated: 请使用 Insert() 或者 UpdateAll() 函数代替
 // save 函数会先判断传入的数据是否有主键， 如果有则先做更新操作（带主键查询条件），更新如果报数据不存在才会再做数据插入。
 // 但我们的数据模型中主键值都是在应用层生成的，调用 save 函数时都会有主健值，这导致:
-// 	1. 调用 save() 函数时会多执行一次无必要的 sql 查询
-// 	2. 先 update 后 insert 在高并发下容易出现死锁
+//  1. 调用 save() 函数时会多执行一次无必要的 sql 查询
+//  2. 先 update 后 insert 在高并发下容易出现死锁
 func (s *Session) Save(val interface{}) (int64, error) {
 	r := s.db.Save(val)
 	return r.RowsAffected, r.Error
@@ -422,78 +432,27 @@ func ToSess(db *gorm.DB) *Session {
 }
 
 func ToColName(name string) string {
-	name = namingStrategy.ColumnName("", name)
+	name = getNamingStrategy().ColumnName("", name)
 	if i := strings.IndexByte(name, '.'); i >= 0 {
 		name = name[i+1:]
 	}
 	return name
 }
 
+func getNamingStrategy() schema.Namer {
+	return drivers[configs.Get().GetDbType()].Namer
+}
+
 func Get() *Session {
 	return ToSess(defaultDB)
 }
 
-func openDB(dsn string, driverNames ...string) error {
-	slowThresholdEnv := os.Getenv("GORM_SLOW_THRESHOLD")
-	slowThreshold := time.Second
-	if slowThresholdEnv != "" {
-		n, err := strconv.Atoi(slowThresholdEnv)
-		if err != nil {
-			return errors.Wrap(err, "GORM_SLOW_THRESHOLD")
-		}
-		slowThreshold = time.Second * time.Duration(n)
-	}
-
-	logLevelEnv := os.Getenv("GORM_LOG_LEVEL")
-	logLevel := gormLogger.Warn
-	if logLevelEnv != "" {
-		switch strings.ToLower(logLevelEnv) {
-		case "silent":
-			logLevel = gormLogger.Silent
-		case "error":
-			logLevel = gormLogger.Error
-		case "warn", "warning":
-			logLevel = gormLogger.Warn
-		case "info":
-			logLevel = gormLogger.Info
-		default:
-			logs.Get().Warnf("invalid GORM_LOG_LEVEL '%s'", logLevelEnv)
-		}
-	}
-
-	driverName := "mysql"
-	if len(driverNames) > 0 {
-		driverName = driverNames[0]
-	}
-	mysqlDial := mysql.New(mysql.Config{
-		DriverName:        driverName,
-		DSN:               dsn,
-		DefaultStringSize: 255,
-	})
-	db, err := gorm.Open(mysqlDial, &gorm.Config{
-		NamingStrategy: namingStrategy,
-		Logger: dbLogger.New(logs.Get(), gormLogger.Config{
-			SlowThreshold:             slowThreshold,
-			Colorful:                  false,
-			IgnoreRecordNotFoundError: true,
-			LogLevel:                  logLevel,
-		}),
-	})
-	if err != nil {
-		return err
-	}
-
-	if err = db.Callback().Create().Before("gorm:before_create").
-		Register("my_before_create_hook", beforeCreateCallback); err != nil {
-		return err
-	}
-
-	defaultDB = db
-	return nil
-}
-
 type CustomBeforeCreateInterface interface {
 	CustomBeforeCreate(session *Session) error
+}
+
+type CustomBeforeUpdateInterface interface {
+	CustomBeforeUpdate(session *Session) error
 }
 
 // callMethod gorm.io/gorm@v1.21.12/callbacks/callmethod.go
@@ -529,9 +488,15 @@ func beforeCreateCallback(db *gorm.DB) {
 	}
 }
 
-func Init(dsn string) {
-	if err := openDB(dsn); err != nil {
-		logs.Get().Fatalln(err)
+func beforeUpdateCallback(db *gorm.DB) {
+	if db.Error == nil && db.Statement.Schema != nil && !db.Statement.SkipHooks {
+		callMethod(db, func(value interface{}, db *gorm.DB) (called bool) {
+			if i, ok := value.(CustomBeforeUpdateInterface); ok {
+				called = true
+				_ = db.AddError(i.CustomBeforeUpdate(ToSess(db)))
+			}
+			return called
+		})
 	}
 }
 
@@ -543,7 +508,7 @@ func tError(t *testing.T, err error, format string, args ...interface{}) {
 	}
 }
 
-//prepareTestDatabase 为测试用例 T 准备一个新的数据库连接
+// prepareTestDatabase 为测试用例 T 准备一个新的数据库连接
 func prepareTestDatabase(t *testing.T, paths []string) (sess *Session, fixtures *testfixtures.Loader) {
 	defaultPort := os.Getenv("MYSQL_PORT")
 	if defaultPort == "" {
@@ -583,7 +548,7 @@ func prepareTestDatabase(t *testing.T, paths []string) (sess *Session, fixtures 
 	return Get(), fixtures
 }
 
-//LoadTestDatabase 加载测试数据，每次测试前执行
+// LoadTestDatabase 加载测试数据，每次测试前执行
 func LoadTestDatabase(t *testing.T, paths []string) (sess *Session) {
 	sess, fixtures := prepareTestDatabase(t, paths)
 

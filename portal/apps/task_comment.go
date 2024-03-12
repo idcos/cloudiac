@@ -16,7 +16,7 @@ func CreateTaskComment(c *ctx.ServiceContext, form *forms.CreateTaskCommentForm)
 		TaskId:    form.Id,
 		Creator:   c.Username,
 		CreatorId: c.UserId,
-		Comment:   form.Comment,
+		Comment:   models.Text(form.Comment),
 	})
 }
 

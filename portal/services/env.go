@@ -139,7 +139,7 @@ func QueryEnvDetail(dbSess *db.Session, orgId, projectId models.Id) *db.Session 
 	query = query.Joins("LEFT JOIN (" +
 		"  SELECT task_id FROM iac_resource_drift WHERE is_last = true GROUP BY task_id" +
 		") AS rd ON rd.task_id = iac_env.last_res_task_id").
-		LazySelectAppend("!ISNULL(rd.task_id) AS is_drift")
+		LazySelectAppend("(case when ifnull(rd.task_id,0) = 0  then 0 else 1 end) AS is_drift")
 	query = query.Joins("left join iac_scan_task on iac_env.last_scan_task_id = iac_scan_task.id").
 		LazySelectAppend("iac_scan_task.policy_status as policy_status")
 
@@ -434,7 +434,7 @@ func GetSampleValidVariables(tx *db.Session, orgId, projectId, tplId, envId mode
 			if matchVar(v, value) {
 				// 匹配到了，不管值是否相同都不需要新建变量
 				isNewVaild = false
-				if v.Value != value.Value {
+				if v.Value != string(value.Value) {
 					resp = varNewAppend(resp, vars[key].Name, v.Value, vars[key].Type, v.Sensitive)
 				}
 				break
@@ -545,7 +545,7 @@ func EnvCostTrendStat(tx *db.Session, id models.Id, months int) ([]resps.EnvCost
 		iac_bill
 	where
 		iac_bill.instance_id IN (SELECT DISTINCT  res_id from iac_resource where iac_resource.env_id  = 'env-c870jh4bh95lubaf3mf0')
-		AND iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 6 MONTH), "%Y-%m")
+		AND iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '6' MONTH), "%Y-%m")
 	group by
 		iac_bill.cycle
 	order by
@@ -557,7 +557,7 @@ func EnvCostTrendStat(tx *db.Session, id models.Id, months int) ([]resps.EnvCost
 	query := tx.Model(&models.Bill{}).Select(`iac_bill.cycle as date, SUM(pretax_amount) as amount`)
 
 	query = query.Where(`iac_bill.instance_id IN (?)`, subQuery.Expr())
-	query = query.Where(`iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? MONTH), "%Y-%m")`, months)
+	query = query.Where(`iac_bill.cycle > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '?' MONTH), "%Y-%m")`, months)
 
 	query = query.Group("iac_bill.cycle")
 	query = query.Order("iac_bill.cycle asc")

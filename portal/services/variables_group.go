@@ -270,7 +270,7 @@ func GetVariableGroupByObject(dbSess *db.Session, objectType string, objectId, o
 	return vg, nil
 }
 
-//MatchVarGroup 有相同的name 返回true 没有返回false
+// MatchVarGroup 有相同的name 返回true 没有返回false
 func MatchVarGroup(oldVg, newVg VarGroupRel) bool {
 	for _, old := range oldVg.Variables {
 		for _, v := range newVg.Variables {
@@ -298,8 +298,8 @@ func CreateRelationship(dbSess *db.Session, rels []models.VariableGroupRel) e.Er
 
 // CheckVgRelationship 检查变量组是否可以绑定到实例
 // 检查项目:
-// 	1. 新绑定的变量组与已绑定的变量组是否存在同名变量
-// 	2. 如果 projectId 不为空，则检查新绑定的变量组是否被授权在该项目下使用
+//  1. 新绑定的变量组与已绑定的变量组是否存在同名变量
+//  2. 如果 projectId 不为空，则检查新绑定的变量组是否被授权在该项目下使用
 func CheckVgRelationship(tx *db.Session, form *forms.BatchUpdateRelationshipForm, orgId models.Id, projectId models.Id) e.Error {
 	if len(form.VarGroupIds) == 0 {
 		return nil
@@ -408,8 +408,8 @@ func DeleteVariableGroupProjectRel(dbSess *db.Session, vgId models.Id, projectId
 
 // MergeVariableGroupVars 合并变量组下的变量和普通变量
 // 合并规则：
-// 	- 两者 scope 相同时普通变量覆盖资源账号变量
-//	- 两者 scope 不同时 scope 优先级高的覆盖优先级低的（环境级覆盖项目级）
+//   - 两者 scope 相同时普通变量覆盖资源账号变量
+//   - 两者 scope 不同时 scope 优先级高的覆盖优先级低的（环境级覆盖项目级）
 func MergeVariableGroupVars(vgs []VarGroupRel, vars map[string]models.Variable) map[string]models.Variable {
 	vgVars := make(map[string]models.Variable)
 	mergedVars := make(map[string]models.Variable)
@@ -420,9 +420,9 @@ func MergeVariableGroupVars(vgs []VarGroupRel, vars map[string]models.Variable) 
 					Scope:       v.ObjectType,
 					Type:        v.Type,
 					Name:        variable.Name,
-					Value:       variable.Value,
+					Value:       models.Text(variable.Value),
 					Sensitive:   variable.Sensitive,
-					Description: variable.Description,
+					Description: models.Text(variable.Description),
 				},
 			}
 		}

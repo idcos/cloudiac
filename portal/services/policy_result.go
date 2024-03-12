@@ -108,7 +108,7 @@ func UpdateScanResult(tx *db.Session, task models.Tasker, result policy.TsResult
 		} else {
 			policyResult.Status = "violated"
 			policyResult.Line = r.Line
-			policyResult.Source = r.Source
+			policyResult.Source = models.Text(r.Source)
 			policyResult.PlanRoot = r.PlanRoot
 			policyResult.ModuleName = r.ModuleName
 			policyResult.File = r.File
@@ -125,7 +125,7 @@ func UpdateScanResult(tx *db.Session, task models.Tasker, result policy.TsResult
 				File:         r.File,
 				PlanRoot:     r.PlanRoot,
 				Line:         r.Line,
-				Source:       r.Source,
+				Source:       models.Text(r.Source),
 			}
 			policyResults = append(policyResults, policyResult)
 		}
@@ -143,7 +143,7 @@ func UpdateScanResult(tx *db.Session, task models.Tasker, result policy.TsResult
 			return err
 		} else {
 			policyResult.Status = common.PolicyStatusFailed
-			policyResult.Message = r.ErrMsg
+			policyResult.Message = models.Text(r.ErrMsg)
 			policyResults = append(policyResults, policyResult)
 		}
 	}
@@ -225,7 +225,7 @@ func QueryPolicyResult(query *db.Session, taskId models.Id) *db.Session {
 	return q
 }
 
-//GetMirrorScanTask 查找部署任务对应的扫描任务
+// GetMirrorScanTask 查找部署任务对应的扫描任务
 func GetMirrorScanTask(query *db.Session, taskId models.Id) (*models.ScanTask, e.Error) {
 	t := models.ScanTask{}
 	if err := query.Where("mirror = 1 AND mirror_task_id = ?", taskId).First(&t); err != nil {

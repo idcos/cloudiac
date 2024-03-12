@@ -30,7 +30,7 @@ func CreatePolicyGroup(c *ctx.ServiceContext, form *forms.CreatePolicyGroupForm)
 	logger := c.Logger()
 	g := models.PolicyGroup{
 		Name:        form.Name,
-		Description: form.Description,
+		Description: models.Text(form.Description),
 		Label:       strings.Join(form.Labels, ","),
 		Source:      form.Source,
 		VcsId:       form.VcsId,

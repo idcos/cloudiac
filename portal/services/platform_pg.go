@@ -54,7 +54,7 @@ func GetPGEnvEnabledCount(dbSess *db.Session, orgIds []string) (int64, error) {
 	if len(orgIds) > 0 {
 		query = query.Where(`iac_env.org_id IN (?)`, orgIds)
 	}
-	query = query.Where("iac_env.updated_at > DATE_SUB(CURDATE(), INTERVAL ? DAY)", 7)
+	query = query.Where("iac_env.updated_at > DATE_SUB(CURDATE(), INTERVAL '?' DAY)", 7)
 
 	return query.Count()
 }
@@ -86,7 +86,7 @@ func GetPGEnvNGCount(dbSess *db.Session, orgIds []string) (int64, error) {
 	if len(orgIds) > 0 {
 		query = query.Where(`iac_env.org_id IN (?)`, orgIds)
 	}
-	query = query.Where("iac_env.updated_at > DATE_SUB(CURDATE(), INTERVAL ? DAY)", 7)
+	query = query.Where("iac_env.updated_at > DATE_SUB(CURDATE(), INTERVAL '?' DAY)", 7)
 
 	return query.Count()
 }

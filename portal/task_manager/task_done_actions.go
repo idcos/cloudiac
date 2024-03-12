@@ -24,7 +24,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//taskDoneProcessState 分析环境资源、outputs
+// taskDoneProcessState 分析环境资源、outputs
 func taskDoneProcessState(dbSess *db.Session, task *models.Task) error {
 	if bs, err := readIfExist(task.StateJsonPath()); err != nil {
 		return fmt.Errorf("read state json: %v", err)
@@ -102,14 +102,14 @@ func getForecastCostWhenTaskPlan(dbSess *db.Session, task *models.Task, bs []byt
 	for _, i := range task.Variables {
 		if i.Name == "ALICLOUD_REGION" && i.Type == consts.VarTypeEnv {
 			if i.Sensitive {
-				value, err := utils.DecryptSecretVarForce(i.Value)
+				value, err := utils.DecryptSecretVarForce(string(i.Value))
 				if err != nil {
 					logs.Get().Errorf("DecryptSecretVarForce err: %s", err)
 					break
 				}
 				aliRegion = value
 			} else {
-				aliRegion = i.Value
+				aliRegion = string(i.Value)
 			}
 			break
 		}

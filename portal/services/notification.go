@@ -16,15 +16,20 @@ func SearchNotification(dbSess *db.Session, orgId, projectId models.Id) *db.Sess
 	query := dbSess.Table(n).
 		Joins(fmt.Sprintf("left join %s as ne on %s.id = ne.notification_id",
 			models.NotificationEvent{}.TableName(), n)).
-		Joins(fmt.Sprintf("left join %s as user on %s.creator = user.id",
+		Joins(fmt.Sprintf("left join %s as `user` on %s.creator = `user`.id",
 			models.User{}.TableName(), n)).
 		Where(fmt.Sprintf("%s.org_id = ?", n), orgId)
 	if projectId != "" {
 		query = query.Where(fmt.Sprintf("%s.project_id = ?", n), projectId)
 	}
+	// 构建group对象
+	notifyGroupColumn := []string{"id", "org_id", "project_id", "name", "type", "secret", "url", "user_ids", "creator"}
+	for index, item := range notifyGroupColumn {
+		notifyGroupColumn[index] = fmt.Sprintf("%s.%s", n, item)
+	}
 	return query.LazySelectAppend(fmt.Sprintf("%s.*", n), "group_concat(ne.event_type) as event_type").
-		LazySelectAppend("user.name as creator_name").
-		Group(fmt.Sprintf("%s.id", n))
+		LazySelectAppend("`user`.name as creator_name").
+		Group(strings.Join(notifyGroupColumn, ",")).Group("`user`.name")
 }
 
 func SearchNotifyEventType(dbSess *db.Session, notifyId models.Id) ([]string, e.Error) {

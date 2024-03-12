@@ -46,15 +46,15 @@ type TaskStep struct {
 	TaskId    Id     `json:"taskId" gorm:"size:32;not null"`
 	NextStep  Id     `json:"nextStep" gorm:"size:32;default:''"`
 	Index     int    `json:"index" gorm:"size:32;not null"`
-	Status    string `json:"status" gorm:"type:enum('pending','approving','rejected','running','failed','complete','timeout','aborted')"`
+	Status    string `json:"status" gorm:""`            // type:enum('pending','approving','rejected','running','failed','complete','timeout','aborted')
 	ExitCode  int    `json:"exitCode" gorm:"default:0"` // 执行退出码，status 为 failed 时才有意义
-	Message   string `json:"message" gorm:"type:text"`
-	StartAt   *Time  `json:"startAt" gorm:"type:datetime"`
-	EndAt     *Time  `json:"endAt" gorm:"type:datetime"`
+	Message   Text   `json:"message" gorm:"type:text"`
+	StartAt   *Time  `json:"startAt" gorm:""`
+	EndAt     *Time  `json:"endAt" gorm:""`
 	LogPath   string `json:"logPath" gorm:""`
 
-	MustApproval bool `json:"requireApproval" gorm:""`            // 步骤需要审批
-	ApproverId   Id   `json:"approverId" gorm:"size:32;not null"` // 审批者用户 id
+	MustApproval bool `json:"requireApproval" gorm:""`   // 步骤需要审批
+	ApproverId   Id   `json:"approverId" gorm:"size:32"` // 审批者用户 id
 
 	CurrentRetryCount int   `json:"currentRetryCount" gorm:"size:32;default:0"` // 当前重试次数
 	NextRetryTime     int64 `json:"nextRetryTime" gorm:"default:0"`             // 下次重试时间

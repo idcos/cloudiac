@@ -41,7 +41,7 @@ func GetVgByProjectId(dbSess *db.Session, projectId string) ([]models.VariableGr
 		Select("var_group_id")
 
 	if err := dbSess.Model(&models.VariableGroup{}).
-		Where("id in (?) and cost_counted", varGroupIdQuery.Expr()).Find(&resp); err != nil {
+		Where("id in (?) and cost_counted = 1", varGroupIdQuery.Expr()).Find(&resp); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 
@@ -73,7 +73,7 @@ func BuildBillData(resCost map[string]billcollect.ResourceCost, res []models.Res
 				VgId:           vgId,
 				ProductCode:    resCost[v.ResId.String()].ProductCode,
 				InstanceId:     resCost[v.ResId.String()].InstanceId,
-				InstanceConfig: resCost[v.ResId.String()].InstanceConfig,
+				InstanceConfig: models.Text(resCost[v.ResId.String()].InstanceConfig),
 				PretaxAmount:   resCost[v.ResId.String()].PretaxAmount,
 				Region:         resCost[v.ResId.String()].Region,
 				Currency:       resCost[v.ResId.String()].Currency,
@@ -172,7 +172,7 @@ func ProjectEnabledBill(sess *db.Session, pid models.Id) (bool, e.Error) {
 		Select("var_group_id")
 
 	ok, err := sess.Model(&models.VariableGroup{}).
-		Where("id in (?) and cost_counted", varGroupIdQuery.Expr()).
+		Where("id in (?) and cost_counted = 1", varGroupIdQuery.Expr()).
 		Exists()
 	if err != nil {
 		return false, e.New(e.DBError, err)

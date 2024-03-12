@@ -10,15 +10,15 @@ import (
 )
 
 type VariableBody struct {
-	Scope       string `yaml:"scope" json:"scope" gorm:"not null;type:enum('org','template','project','env')"`
-	Type        string `yaml:"type" json:"type" gorm:"not null;type:enum('environment','terraform','ansible')"`
+	Scope       string `yaml:"scope" json:"scope" gorm:"not null"` // ;type:enum('org','template','project','env')
+	Type        string `yaml:"type" json:"type" gorm:"not null"`   // ;type:enum('environment','terraform','ansible')
 	Name        string `yaml:"name" json:"name" gorm:"size:64;not null"`
-	Value       string `yaml:"value" json:"value" gorm:"type:text"`
+	Value       Text   `yaml:"value" json:"value" gorm:"type:text"`
 	Sensitive   bool   `yaml:"sensitive" json:"sensitive,omitempty" gorm:"default:false"`
-	Description string `yaml:"description" json:"description,omitempty" gorm:"type:text"`
+	Description Text   `yaml:"description" json:"description,omitempty" gorm:"type:text"`
 
 	// 继承关系依赖数据创建枚举的顺序，后续新增枚举值时请按照新的继承顺序增加
-	Options StrSlice `yaml:"options" json:"options" gorm:"type:json"` // 可选值列表
+	Options StrSlice `yaml:"options" json:"options" gorm:"type:text"` // 可选值列表
 }
 
 func (v *VariableBody) Key() string {
@@ -76,10 +76,10 @@ func (v Variable) Migrate(sess *db.Session) error {
 type VariableGroup struct {
 	TimedModel
 	Name      string            `json:"name" gorm:"size:64;not null"`
-	Type      string            `json:"type" gorm:"not null;type:enum('environment','terraform')"`
+	Type      string            `json:"type" gorm:"not null"` // ;type:enum('environment','terraform')
 	CreatorId Id                `json:"creatorId" gorm:"size:32;not null;comment:创建人" example:"u-c3ek0co6n88ldvq1n6ag"`
 	OrgId     Id                `json:"orgId" gorm:"size:32;not null"`
-	Variables VarGroupVariables `json:"variables" gorm:"type:json;null;comment:变量组下的变量"`
+	Variables VarGroupVariables `json:"variables" gorm:"type:text;null;comment:变量组下的变量"`
 
 	CostCounted bool   `json:"costCounted" gorm:"default:false;comment:是否开启费用统计"` // 是否开启费用统计
 	Provider    string `json:"provider" gorm:"comment:资源供应平台名称"`                  // 资源供应平台名称
@@ -134,11 +134,11 @@ type VarGroupVariable struct {
 	Description string `json:"description" form:"description" `
 }
 
-//VariableGroupRel 变量组与实例的关联表
+// VariableGroupRel 变量组与实例的关联表
 type VariableGroupRel struct {
 	AbstractModel
 	VarGroupId Id     `json:"varGroupId" gorm:"size:32;not null"`
-	ObjectType string `json:"objectType" gorm:"not null; type:enum('org','template','project','env')"`
+	ObjectType string `json:"objectType" gorm:"not null"` // ; type:enum('org','template','project','env')
 	ObjectId   Id     `json:"objectId" gorm:"size:32;not null"`
 }
 

@@ -18,8 +18,6 @@ import (
 	"cloudiac/utils/logs"
 	"fmt"
 	"net/http"
-
-	"github.com/lib/pq"
 )
 
 func getRepo(vcsId models.Id, query *db.Session, repoId string) (*vcsrv.Projects, error) {
@@ -57,7 +55,7 @@ func CreateTemplate(c *ctx.ServiceContext, form *forms.CreateTemplateForm) (*mod
 	template, err := services.CreateTemplate(tx, models.Template{
 		Name:         form.Name,
 		OrgId:        c.OrgId,
-		Description:  form.Description,
+		Description:  models.Text(form.Description),
 		VcsId:        form.VcsId,
 		RepoId:       form.RepoId,
 		RepoFullName: form.RepoFullName,
@@ -182,7 +180,7 @@ func setAttrsByFormKeys(attrs models.Attrs, form *forms.UpdateTemplateForm) {
 		attrs["policyEnable"] = form.PolicyEnable
 	}
 	if form.HasKey("tplTriggers") {
-		attrs["triggers"] = pq.StringArray(form.TplTriggers)
+		attrs["triggers"] = models.StringArray(form.TplTriggers)
 	}
 	if form.HasKey("keyId") {
 		attrs["keyId"] = form.KeyId
@@ -591,7 +589,7 @@ func CheckTemplateOrEnvConfig(c *ctx.ServiceContext, tfVarsFile, playbook, repoI
 	return nil, checkResult
 }
 
-func setVcsRepoWebhook(c *ctx.ServiceContext, vcsId models.Id, repoId string, triggers pq.StringArray) error {
+func setVcsRepoWebhook(c *ctx.ServiceContext, vcsId models.Id, repoId string, triggers models.StringArray) error {
 	vcs, err := services.QueryVcsByVcsId(vcsId, c.DB())
 	if err != nil {
 		return err

@@ -64,8 +64,10 @@ func Start(serviceId string) {
 		func() {
 			defer func() {
 				if r := recover(); r != nil {
-					m.logger.Errorf("panic: %v", r)
+					//m.logger.Errorf("panic: %v", r)
+					fmt.Println(r)
 					m.logger.Debugf("stack: %s", debug.Stack())
+					//fmt.Println(string(debug.Stack()))
 				}
 			}()
 			m.start()
@@ -305,7 +307,7 @@ func (m *TaskManager) getPendingDeployTasks() []*models.Task {
 	// (注意：直接通过 env_id + created_at 匹配可能同一个 env 会返回多条记录)
 	firstPendingIdQuery := m.db.Raw("SELECT iac_task.env_id, MIN(iac_task.id) AS task_id FROM iac_task, (?) AS fpt "+
 		"WHERE iac_task.env_id = fpt.env_id AND iac_task.created_at = fpt.created_at "+
-		"AND iac_task.status = ? GROUP BY env_id", firstPendingQuery.Expr(), models.TaskPending)
+		"AND iac_task.status = ? GROUP BY iac_task.env_id", firstPendingQuery.Expr(), models.TaskPending)
 
 	// 通过 id 查询完整任务信息
 	query := m.db.Model(&models.Task{}).Joins("JOIN (?) AS t ON t.task_id = iac_task.id", firstPendingIdQuery.Expr())
@@ -446,6 +448,7 @@ func (m *TaskManager) runTask(ctx context.Context, task models.Tasker) error {
 }
 
 // doRunTask, startErr 只在任务启动出错时(执行步骤前出错)才会返回错误
+//
 //nolint:cyclop
 func (m *TaskManager) doRunTask(ctx context.Context, task *models.Task) (startErr error) {
 	logger := m.logger.WithField("taskId", task.Id)
@@ -846,19 +849,19 @@ func (m *TaskManager) runTaskStep(
 	case models.TaskStepFailed:
 		message := "failed"
 		if step.Message != "" {
-			message = step.Message
+			message = string(step.Message)
 		}
 		return fmt.Errorf(message)
 	case models.TaskStepTimeout:
 		message := "timeout"
 		if step.Message != "" {
-			message = step.Message
+			message = string(step.Message)
 		}
 		return fmt.Errorf(message)
 	case models.TaskStepAborted:
 		message := "aborted"
 		if step.Message != "" {
-			message = step.Message
+			message = string(step.Message)
 		}
 		return fmt.Errorf(message)
 	default:
@@ -995,7 +998,8 @@ func (m *TaskManager) stop() {
 }
 
 // buildRunTaskReq 基于任务信息构建一个 RunTaskReq 对象。
-// 	注意这里不会设置 step 相关的数据，step 相关字段在 StartTaskStep() 方法中设置
+//
+//	注意这里不会设置 step 相关的数据，step 相关字段在 StartTaskStep() 方法中设置
 func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunTaskReq, err error) {
 	runnerEnv := runner.TaskEnv{
 		Id:              string(task.EnvId),
@@ -1041,7 +1045,7 @@ func buildRunTaskReq(dbSess *db.Session, task models.Task) (taskReq *runner.RunT
 		if err != nil {
 			return nil, errors.Wrapf(err, "get key '%s'", task.KeyId)
 		}
-		pk = mKey.Content
+		pk = string(mKey.Content)
 	}
 
 	taskReq = &runner.RunTaskReq{
@@ -1209,6 +1213,7 @@ func deployOrDestroy(env *models.Env, lg *logrus.Entry, dbSess *db.Session, op s
 //
 
 // doRunScanTask, startErr 只在任务启动出错时(执行步骤前出错)才会返回错误
+//
 //nolint:cyclop
 func (m *TaskManager) doRunScanTask(ctx context.Context, task *models.ScanTask) (startErr error) {
 	logger := m.logger.WithField("taskId", task.Id)
@@ -1347,16 +1352,16 @@ func buildTaskReqEnvVars(env *runner.TaskEnv, variables models.TaskVariables) er
 	for _, v := range variables {
 		value := v.Value
 		// 旧版本创建的敏感变量保存时不会添加 secret 前缀，这里判断一下，如果敏感变量无前缀则添加
-		if v.Sensitive && !strings.HasPrefix(v.Value, utils.SecretValuePrefix) {
-			value = utils.EncodeSecretVar(v.Value, v.Sensitive)
+		if v.Sensitive && !strings.HasPrefix(string(v.Value), utils.SecretValuePrefix) {
+			value = models.Text(utils.EncodeSecretVar(string(v.Value), v.Sensitive))
 		}
 		switch v.Type {
 		case consts.VarTypeEnv:
-			env.EnvironmentVars[v.Name] = value
+			env.EnvironmentVars[v.Name] = string(value)
 		case consts.VarTypeTerraform:
-			env.TerraformVars[v.Name] = value
+			env.TerraformVars[v.Name] = string(value)
 		case consts.VarTypeAnsible:
-			env.AnsibleVars[v.Name] = value
+			env.AnsibleVars[v.Name] = string(value)
 		default:
 			return fmt.Errorf("unknown variable type: %s", v.Type)
 		}
@@ -1470,7 +1475,7 @@ func (m *TaskManager) runScanTaskStep(ctx context.Context, taskReq runner.RunTas
 		return nil
 	case models.TaskStepFailed:
 		if step.Message != "" {
-			return fmt.Errorf(step.Message)
+			return fmt.Errorf(string(step.Message))
 		}
 		return errors.New("failed")
 	case models.TaskStepTimeout:
@@ -1666,7 +1671,7 @@ func ParseResourceDriftInfo(bs []byte) map[string]models.ResourceDrift {
 					break
 				}
 			}
-			cronTaskInfo.DriftDetail = resourceDetail
+			cronTaskInfo.DriftDetail = models.Text(resourceDetail)
 			cronTaskInfoMap[address] = cronTaskInfo
 		}
 	}

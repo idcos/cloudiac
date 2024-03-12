@@ -11,6 +11,7 @@ import (
 	"cloudiac/utils"
 	"fmt"
 	"net/http"
+	"sort"
 )
 
 func CreateVariable(tx *db.Session, variable models.Variable) (*models.Variable, e.Error) {
@@ -36,6 +37,17 @@ func SearchVariable(dbSess *db.Session, orgId models.Id) ([]models.Variable, e.E
 		Find(&variables); err != nil {
 		return nil, e.New(e.DBError, err)
 	} //nolint
+	// 排序可能有问题，手动排序一下
+	// 顺序为 'org','template','project','env'
+	scopeOrder := map[string]int{
+		"org":      0,
+		"template": 1,
+		"project":  2,
+		"env":      3,
+	}
+	sort.SliceStable(variables, func(i, j int) bool {
+		return scopeOrder[variables[i].Scope] < scopeOrder[variables[j].Scope]
+	})
 	return variables, nil
 }
 
@@ -279,10 +291,11 @@ func QueryVariable(dbSess *db.Session) *db.Session {
 
 func processVarsforUpdate(varsMap map[string]models.Variable, vars []models.Variable) e.Error {
 	for i, v := range vars {
-		var err error
 		if v.Sensitive {
 			if v.Value != "" {
-				if v.Value, err = utils.EncryptSecretVar(v.Value); err != nil {
+				esv, err := utils.EncryptSecretVar(string(v.Value))
+				v.Value = models.Text(esv)
+				if err != nil {
 					return e.AutoNew(err, e.EncryptError)
 				}
 				vars[i] = v

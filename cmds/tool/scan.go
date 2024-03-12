@@ -107,7 +107,7 @@ func (c *ScanCmd) Execute(args []string) error { //nolint:cyclop
 
 	if c.hasDB() {
 		configs.Init(opt.Config)
-		db.Init(configs.Get().Mysql)
+		db.Init(configs.Get().Dsn())
 		models.Init(false)
 	}
 

@@ -23,8 +23,6 @@ import (
 	"unicode"
 
 	"github.com/robfig/cron/v3"
-
-	"github.com/lib/pq"
 )
 
 // SpecParser 最小时间单位为分钟
@@ -132,7 +130,7 @@ func createEnvCheck(c *ctx.ServiceContext, form *forms.CreateEnvForm) e.Error {
 	return nil
 }
 
-//nolint
+// nolint
 func setDefaultValueFromTpl(form *forms.CreateEnvForm, tpl *models.Template, destroyAt, deployAt *models.Time, session *db.Session) e.Error {
 	if !form.HasKey("tfVarsFile") {
 		form.TfVarsFile = tpl.TfVarsFile
@@ -252,7 +250,8 @@ func createEnvToDB(tx *db.Session, c *ctx.ServiceContext, form *forms.CreateEnvF
 		if err != nil {
 			return nil, err
 		}
-		envModel.NextDriftTaskTime = nextTime
+		mt := models.Time(*nextTime)
+		envModel.NextDriftTaskTime = &mt
 	}
 	env, err := services.CreateEnv(tx, envModel)
 	if err != nil && err.Code() == e.EnvAlreadyExists {
@@ -421,7 +420,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		TplId:     form.TplId,
 
 		Name:        form.Name,
-		Tags:        strings.TrimSpace(form.Tags),
+		Tags:        models.Text(strings.TrimSpace(form.Tags)),
 		RunnerId:    form.RunnerId,
 		RunnerTags:  strings.Join(form.RunnerTags, ","),
 		Status:      models.EnvStatusInactive,
@@ -863,7 +862,7 @@ func setAndCheckUpdateEnvDestroy(tx *db.Session, attrs models.Attrs, env *models
 
 func setAndCheckUpdateEnvTriggers(c *ctx.ServiceContext, tx *db.Session, attrs models.Attrs, env *models.Env, form *forms.UpdateEnvForm) e.Error {
 	if form.HasKey("triggers") {
-		attrs["triggers"] = pq.StringArray(form.Triggers)
+		attrs["triggers"] = models.StringArray(form.Triggers)
 		// triggers有变更时，需要检测webhook的配置
 		tpl, err := services.GetTemplateById(c.DB(), env.TplId)
 		if err != nil && err.Code() == e.TemplateNotExists {
@@ -1417,7 +1416,10 @@ func setAndCheckEnvDriftCron(env *models.Env, form *forms.DeployEnvForm) e.Error
 	}
 	if cronDriftParam.OpenCronDrift != nil {
 		env.OpenCronDrift = *cronDriftParam.OpenCronDrift
-		env.NextDriftTaskTime = cronDriftParam.NextDriftTaskTime
+		if cronDriftParam.NextDriftTaskTime != nil {
+			mt := models.Time(*cronDriftParam.NextDriftTaskTime)
+			env.NextDriftTaskTime = &mt
+		}
 	}
 	if cronDriftParam.CronDriftExpress != nil {
 		env.CronDriftExpress = *cronDriftParam.CronDriftExpress

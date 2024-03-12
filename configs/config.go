@@ -165,7 +165,10 @@ type PolicyConfig struct {
 }
 
 type Config struct {
+	DbType             string           `yaml:"dbType"`
 	Mysql              string           `yaml:"mysql"`
+	Dameng             string           `yaml:"dameng"`
+	Gauss              string           `yaml:"gauss"`
 	Listen             string           `yaml:"listen"`
 	Consul             ConsulConfig     `yaml:"consul"`
 	Portal             PortalConfig     `yaml:"portal"`
@@ -207,6 +210,26 @@ func (c *Config) GetTerraformVersions() []string {
 		return strings.Split(c.TerraformVersions, ",")
 	}
 	return common.TerraformVersions
+}
+
+func (c *Config) GetDbType() string {
+	if c.DbType == "" {
+		return "mysql"
+	}
+	return c.DbType
+}
+
+func (c *Config) Dsn() string {
+	switch c.GetDbType() {
+	case "dameng":
+		return c.Dameng
+	case "mysql":
+		return c.Mysql
+	case "gauss":
+		return c.Gauss
+	default:
+		return c.Mysql
+	}
 }
 
 const (

@@ -60,7 +60,7 @@ func CreateKey(c *ctx.ServiceContext, form *forms.CreateKeyForm) (interface{}, e
 	key, err := services.CreateKey(c.DB(), models.Key{
 		OrgId:     c.OrgId,
 		Name:      form.Name,
-		Content:   encrypted,
+		Content:   models.Text(encrypted),
 		CreatorId: c.UserId,
 	})
 	if err != nil && err.Code() == e.KeyAlreadyExists {

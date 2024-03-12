@@ -115,7 +115,9 @@ func SearchProjectAuthorizationUser(c *ctx.ServiceContext, form *forms.SearchPro
 
 	if c.ProjectId != "" {
 		userIds, _ := services.GetUserIdsByProjectUser(c.DB(), c.ProjectId)
-		query = query.Where(fmt.Sprintf("%s.id  in (?)", models.User{}.TableName()), userIds)
+		if len(userIds) > 0 {
+			query = query.Where(fmt.Sprintf("%s.id  in (?)", models.User{}.TableName()), userIds)
+		}
 	}
 
 	// 导出用户角色

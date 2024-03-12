@@ -15,8 +15,8 @@ type BaseTask struct {
 	/* 通用任务参数 */
 	Type string `json:"type" gorm:"not null;enum('plan','apply','destroy','scan')" enums:"'plan','apply','destroy','scan'"` // 任务类型。1. plan: 计划 2. apply: 部署 3. destroy: 销毁
 
-	Pipeline string           `json:"-" gorm:"type:text"`        // 用户自定义 pipeline 内容
-	Flow     PipelineTaskFlow `json:"-" gorm:"type:json"`        // 实际生成的任务执行流程
+	Pipeline Text             `json:"-" gorm:"type:text"`        // 用户自定义 pipeline 内容
+	Flow     PipelineTaskFlow `json:"-" gorm:"type:text"`        // 实际生成的任务执行流程
 	CurrStep int              `json:"currStep" gorm:"default:0"` // 当前在执行的流程步骤
 
 	ContainerId string `json:"-" gorm:"size:64"`
@@ -26,12 +26,12 @@ type BaseTask struct {
 
 	RunnerId string `json:"runnerId" gorm:"not null"` // 部署通道
 
-	Status   string `json:"status" gorm:"type:enum('pending','running','approving','rejected','failed','complete','timeout','aborted');default:'pending'" enums:"'pending','running','approving','rejected','failed','complete','timeout'"`
-	Message  string `json:"message" gorm:"type:text"` // 任务的状态描述信息，如失败原因等
-	Aborting bool   `json:"aborting" gorm:""`         // 任务正在中止
+	Status   string `json:"status" gorm:"default:'pending'" enums:"'pending','running','approving','rejected','failed','complete','timeout'"` // type:enum('pending','running','approving','rejected','failed','complete','timeout','aborted');
+	Message  Text   `json:"message" gorm:"type:text"`                                                                                         // 任务的状态描述信息，如失败原因等
+	Aborting bool   `json:"aborting" gorm:""`                                                                                                 // 任务正在中止
 
-	StartAt *Time `json:"startAt" gorm:"type:datetime;comment:任务开始时间"` // 任务开始时间
-	EndAt   *Time `json:"endAt" gorm:"type:datetime;comment:任务结束时间"`   // 任务结束时间
+	StartAt *Time `json:"startAt" gorm:"comment:任务开始时间"` // 任务开始时间
+	EndAt   *Time `json:"endAt" gorm:"comment:任务结束时间"`   // 任务结束时间
 }
 
 // ScanTask 合规扫描任务
@@ -63,12 +63,12 @@ type ScanTask struct {
 	TfVersion    string `json:"tfVersion" gorm:"default:''"`
 	PlayVarsFile string `json:"playVarsFile" gorm:"default:''"`
 
-	Variables TaskVariables `json:"variables" gorm:"type:json"` // 本次执行使用的所有变量(继承、覆盖计算之后的)
+	Variables TaskVariables `json:"variables" gorm:"type:text"` // 本次执行使用的所有变量(继承、覆盖计算之后的)
 
 	StatePath string `json:"statePath" gorm:"not null"`
 
 	// 扩展属性，包括 source, transitionId 等
-	ExtraData JSON `json:"extraData" gorm:"type:json"` // 扩展属性
+	ExtraData JSON `json:"extraData" gorm:"type:text"` // 扩展属性
 }
 
 func (ScanTask) TableName() string {

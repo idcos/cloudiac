@@ -9,7 +9,7 @@ type TaskComment struct {
 	TaskId    Id     `json:"taskId" form:"taskId" gorm:"size:32;not null;comment:任务id"`
 	Creator   string `json:"creator" form:"creator" gorm:"size:32;not null;comment:评论人"`
 	CreatorId Id     `json:"creatorId" form:"creatorId" gorm:"size:32;not null;comment:评论人id"`
-	Comment   string `json:"comment" form:"comment"  gorm:"type:text;comment:评论"`
+	Comment   Text   `json:"comment" form:"comment"  gorm:"type:text;comment:评论"`
 }
 
 func (TaskComment) TableName() string {
@@ -17,8 +17,5 @@ func (TaskComment) TableName() string {
 }
 
 func (TaskComment) Migrate(tx *db.Session) error {
-	if err := tx.ModifyModelColumn(&TaskComment{}, "comment"); err != nil {
-		return err
-	}
 	return nil
 }

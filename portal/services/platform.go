@@ -9,6 +9,7 @@ import (
 	"cloudiac/portal/models/resps"
 	"cloudiac/utils"
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -19,7 +20,7 @@ func buildActiveEnvQuery(query *db.Session, selStr string) *db.Session {
 	query = query.Model(&models.Env{}).Select(selStr)
 	query = query.Where("archived = ?", 0)
 	query = query.Where(`(status = 'active' OR status = 'failed' OR task_status = 'approving' OR task_status = 'running')`)
-	query = query.Where(`updated_at > DATE_SUB(CURDATE(), INTERVAL ? DAY)`, activeDays)
+	query = query.Where(`updated_at > DATE_SUB(CURDATE(), INTERVAL '` + strconv.Itoa(activeDays) + `' DAY)`)
 
 	return query
 }
@@ -120,7 +121,7 @@ func GetUserTotalAndActiveCount(dbSess *db.Session, orgIds []string) (int64, int
 		return 0, 0, err
 	}
 
-	queryActive := queryTotal.Where(`iac_user.updated_at > DATE_SUB(CURDATE(), INTERVAL ? DAY)`, activeDays)
+	queryActive := queryTotal.Where(`iac_user.updated_at > DATE_SUB(CURDATE(), INTERVAL '?' DAY)`, activeDays)
 
 	cntActive, err := queryActive.Count()
 	if err != nil {
@@ -263,7 +264,7 @@ func GetOrgActiveResTypeCount(dbSess *db.Session, orgIds []string) (*resps.PfAct
 	if len(orgIds) > 0 {
 		query = query.Where(`iac_resource.org_id IN (?)`, orgIds)
 	}
-	query = query.Group("iac_org.id, iac_resource.`type`")
+	query = query.Group("iac_org.name, iac_resource.`type`")
 
 	var dbResults []orgActiveResType
 	if err := query.Find(&dbResults); err != nil {
@@ -312,7 +313,7 @@ func convertToPfActiveResStatResp(dbResults []orgActiveResType) *resps.PfActiveR
 func GetResWeekChange(dbSess *db.Session, orgIds []string) ([]resps.PfResWeekChangeResp, e.Error) {
 	/* sample sql
 	select
-		DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date,
+		DATE_FORMAT(iac_resource.applied_at, '%Y-%m-%d') as date,
 		count(DISTINCT iac_resource.env_id, iac_resource.address) as count
 	from
 		iac_resource
@@ -320,18 +321,20 @@ func GetResWeekChange(dbSess *db.Session, orgIds []string) ([]resps.PfResWeekCha
 		iac_env.id = iac_resource.env_id
 	where
 		iac_resource.org_id IN ('xxx', 'yyy')
-		and DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 7 DAY), "%Y-%m-%d")
+		and DATE_FORMAT(applied_at, '%Y-%m-%d') > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '7' DAY), '%Y-%m-%d')
 	group by
 		date
 	order by
 		date
 	*/
-	query := dbSess.Model(&models.Resource{}).Select(`DATE_FORMAT(iac_resource.applied_at, "%Y-%m-%d") as date, count(DISTINCT iac_resource.env_id, iac_resource.address) as count`)
-	query = query.Joins(`JOIN iac_env ON iac_env.id = iac_resource.env_id`)
-	query = query.Where(`DATE_FORMAT(applied_at, "%Y-%m-%d") > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL ? DAY), "%Y-%m-%d")`, activeDays)
+	subQuery := dbSess.Model(&models.Resource{}).Select(`DATE_FORMAT(iac_resource.applied_at, '%Y-%m-%d') as date,concat(iac_resource.env_id, iac_resource.address) as ea`)
+	subQuery = subQuery.Joins(`JOIN iac_env ON iac_env.id = iac_resource.env_id`)
+	subQuery = subQuery.Where(`DATE_FORMAT(applied_at, '%Y-%m-%d') > DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL '` + strconv.Itoa(activeDays) + `' DAY), '%Y-%m-%d')`)
 	if len(orgIds) > 0 {
-		query = query.Where(`iac_resource.org_id IN (?)`, orgIds)
+		subQuery = subQuery.Where(`iac_resource.org_id IN (?)`, orgIds)
 	}
+	query := dbSess.Table("(?) t", subQuery.Expr())
+	query = query.Select("date,count(DISTINCT ea) as count")
 	query = query.Group("date")
 	query = query.Order("date")
 

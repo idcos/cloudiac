@@ -51,7 +51,7 @@ type TagRel struct {
 	TagKeyId   Id     `json:"tagKeyId" gorm:"size:32;not null"`
 	TagValueId Id     `json:"tagValueId" gorm:"size:32;not null"`
 	ObjectId   Id     `json:"objectId" gorm:"size:32;not null"`
-	ObjectType string `json:"objectType" gorm:"not null;type:enum('env')"`
+	ObjectType string `json:"objectType" gorm:"not null"` // type:enum('env')
 	Source     string `json:"source" gorm:"not null"`
 }
 

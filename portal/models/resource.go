@@ -24,7 +24,7 @@ type Resource struct {
 	EnvId     Id `json:"envId" gorm:"index;size:32;not null"`
 	TaskId    Id `json:"taskId" gorm:"index;size:32;not null"`
 
-	ResId         Id       `json:"resId" gorm:"index;not null;default:''"`
+	ResId         Id       `json:"resId" gorm:"index;size:255;not null;default:''"`
 	ResName       string   `json:"resName" gorm:"not null;default:''"`
 	Provider      string   `json:"provider" gorm:"not null"`
 	Module        string   `json:"module,omitempty" gorm:"not null;default:''"`
@@ -33,11 +33,11 @@ type Resource struct {
 	Type          string   `json:"type" gorm:"not null"`
 	Name          string   `json:"name" gorm:"not null"`
 	Index         string   `json:"index" gorm:"not null;default:''"`
-	Attrs         ResAttrs `json:"attrs,omitempty" gorm:"type:json"`
-	SensitiveKeys StrSlice `json:"sensitiveKeys,omitempty" gorm:"type:json"`
-	Dependencies  StrSlice `json:"dependencies,omitempty" gorm:"type:json"`
+	Attrs         ResAttrs `json:"attrs,omitempty" gorm:"type:text"`
+	SensitiveKeys StrSlice `json:"sensitiveKeys,omitempty" gorm:"type:text"`
+	Dependencies  StrSlice `json:"dependencies,omitempty" gorm:"type:text"`
 
-	AppliedAt Time `json:"appliedAt" gorm:"type:datetime;column:applied_at;default:null"`
+	AppliedAt Time `json:"appliedAt" gorm:"column:applied_at;default:null"`
 }
 
 func (Resource) TableName() string {

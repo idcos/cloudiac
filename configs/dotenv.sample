@@ -21,13 +21,30 @@ REGISTRY_ADDRESS=""
 
 # 使用 https 向外（比如runner）发送请求的时候是否允许使用不安全证书
 HTTP_CLIENT_INSECURE=false
+# 数据库类型(必填)
+DB_TYPE = 'mysql'
 
-# mysql 配置(必填)
+# mysql 配置(选填)
 MYSQL_HOST=mysql
 MYSQL_PORT=3306
 MYSQL_DATABASE=cloudiac
 MYSQL_USER=cloudiac
 MYSQL_PASSWORD="mysqlpass"
+
+# dm 配置（选填）
+DM_HOST=dm
+DM_PORT=5236
+DM_DATABASE=cloudiac
+DM_USER=SYSDBA
+DM_PASSWORD=SYSDBA
+
+# gauss 配置（选填）
+GAUSS_HOST=gauss
+GAUSS_PORT=5432
+GAUSS_USER=gaussdb
+GAUSS_PASSWORD=gausspwd
+GAUSS_DATABASE=iac
+GAUSS_SCHEMA=cloudiac
 
 # portal 服务注册信息配置 (均为必填)
 ## portal 服务的 IP 地址， 容器化部署时无需修改, 手动部署时配置为内网 IP

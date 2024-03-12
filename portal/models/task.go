@@ -125,22 +125,22 @@ type Task struct {
 	TfVarsFile   string   `json:"tfVarsFile" gorm:"default:''"`
 	TfVersion    string   `json:"tfVersion" gorm:"default:''"`
 	PlayVarsFile string   `json:"playVarsFile" gorm:"default:''"`
-	Targets      StrSlice `json:"targets" gorm:"type:json"` // 指定 terraform target 参数
+	Targets      StrSlice `json:"targets" gorm:"type:text"` // 指定 terraform target 参数
 
-	Variables TaskVariables `json:"variables" gorm:"type:json"` // 本次执行使用的所有变量(继承、覆盖计算之后的)
+	Variables TaskVariables `json:"variables" gorm:"type:text"` // 本次执行使用的所有变量(继承、覆盖计算之后的)
 
 	StatePath string `json:"statePath" gorm:"not null"`
 
 	// 扩展属性，包括 source, transitionId 等
-	ExtraData JSON `json:"extraData" gorm:"type:json"` // 扩展字段，用于存储外部服务调用时的信息
+	ExtraData JSON `json:"extraData" gorm:"type:text"` // 扩展字段，用于存储外部服务调用时的信息
 
 	KeyId           Id   `json:"keyId" gorm:"size32"` // 部署密钥ID
 	AutoApprove     bool `json:"autoApproval" gorm:"default:false"`
 	StopOnViolation bool `json:"stopOnViolation" gorm:"default:false"`
 
 	// 任务执行结果，如 add/change/delete 的资源数量、outputs 等
-	Result      TaskResult `json:"result" gorm:"type:json"`              // 任务执行结果
-	PlanResult  TaskResult `json:"planResult" gorm:"type:json"`          //plan的执行结果
+	Result      TaskResult `json:"result" gorm:"type:text"`              // 任务执行结果
+	PlanResult  TaskResult `json:"planResult" gorm:"type:text"`          //plan的执行结果
 	RetryNumber int        `json:"retryNumber" gorm:"size:32;default:0"` // 任务重试次数
 	RetryDelay  int        `json:"retryDelay" gorm:"size:32;default:0"`  // 每次任务重试时间，单位为秒
 	RetryAble   bool       `json:"retryAble" gorm:"default:false"`

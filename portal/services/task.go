@@ -101,7 +101,7 @@ func DeleteTask(tx *db.Session, taskId models.Id) e.Error {
 func DeleteHistoryDrfitCronTask(tx *db.Session, limit int) (int, e.Error) {
 	taskIds := make([]models.Id, 0)
 	taskQuery := tx.Model(&models.Task{}).Where(
-		"end_at < DATE_SUB(NOW(), INTERVAL 7 DAY) AND is_drift_task = 1 AND `type` = ?", models.TaskTypePlan).
+		"end_at < DATE_SUB(NOW(), INTERVAL '7' DAY) AND is_drift_task = 1 AND `type` = ?", models.TaskTypePlan).
 		Limit(limit)
 
 	err := taskQuery.Pluck("id", &taskIds)
@@ -275,13 +275,14 @@ func doCreateTask(tx *db.Session, task models.Task, tpl *models.Template, env *m
 	}
 
 	if task.Pipeline == "" {
-		task.Pipeline, err = GetTplPipeline(tx, tpl.Id, task.Revision, task.Workdir)
+		tp, err := GetTplPipeline(tx, tpl.Id, task.Revision, task.Workdir)
 		if err != nil {
 			return nil, e.AutoNew(err, e.InvalidPipeline)
 		}
+		task.Pipeline = models.Text(tp)
 	}
 
-	pipeline, err := DecodePipeline(task.Pipeline)
+	pipeline, err := DecodePipeline(string(task.Pipeline))
 	if err != nil {
 		return nil, e.New(e.InvalidPipeline, err)
 	}
@@ -532,7 +533,7 @@ func stepStatus2TaskStatus(s string) string {
 func ChangeTaskStatusWithStep(dbSess *db.Session, task models.Tasker, step *models.TaskStep) e.Error {
 	switch t := task.(type) {
 	case *models.Task:
-		return ChangeTaskStatus(dbSess, t, stepStatus2TaskStatus(step.Status), step.Message, false)
+		return ChangeTaskStatus(dbSess, t, stepStatus2TaskStatus(step.Status), string(step.Message), false)
 	case *models.ScanTask:
 		return ChangeScanTaskStatusWithStep(dbSess, t, step)
 	default:
@@ -544,7 +545,7 @@ func changeTaskStatusSetAttrs(dbSess *db.Session, task *models.Task, status, mes
 	updateAttrs := models.Attrs{
 		"message": message,
 	}
-	task.Message = message
+	task.Message = models.Text(message)
 	if status != "" {
 		task.Status = status
 		updateAttrs["status"] = status
@@ -1152,7 +1153,7 @@ func ChangeScanTaskStatus(dbSess *db.Session, task *models.ScanTask, status, pol
 	updateAttrs := models.Attrs{
 		"message": message,
 	}
-	task.Message = message
+	task.Message = models.Text(message)
 	if status != "" {
 		task.Status = status
 		updateAttrs["status"] = status
@@ -1201,7 +1202,7 @@ func ChangeScanTaskStatusWithStep(dbSess *db.Session, task *models.ScanTask, ste
 	default: // "approving", "rejected", ...
 		panic(fmt.Errorf("invalid scan task status '%s'", taskStatus))
 	}
-	return ChangeScanTaskStatus(dbSess, task, taskStatus, policyStatus, step.Message)
+	return ChangeScanTaskStatus(dbSess, task, taskStatus, policyStatus, string(step.Message))
 }
 
 func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, taskType string, creatorId models.Id) (*models.ScanTask, e.Error) {
@@ -1256,7 +1257,7 @@ func CreateEnvScanTask(tx *db.Session, tpl *models.Template, env *models.Env, ta
 		return nil, e.New(e.InternalError, err)
 	}
 
-	task.Pipeline = models.DefaultPipelineRaw()
+	task.Pipeline = models.Text(models.DefaultPipelineRaw())
 	pipeline := models.DefaultPipeline()
 
 	task.Flow = GetTaskFlowWithPipeline(pipeline, task.Type)
@@ -1350,7 +1351,7 @@ func CreateScanTask(tx *db.Session, tpl *models.Template, env *models.Env, pt mo
 		}
 	}
 
-	task.Pipeline = models.DefaultPipelineRaw()
+	task.Pipeline = models.Text(models.DefaultPipelineRaw())
 	pipeline := models.DefaultPipeline()
 
 	task.Flow = GetTaskFlowWithPipeline(pipeline, task.Type)
@@ -1429,7 +1430,7 @@ func QueryTaskStepsById(query *db.Session, taskId models.Id) *db.Session {
 func GetTaskStepLogById(tx *db.Session, stepId models.Id) ([]byte, e.Error) {
 	query := tx.Joins("left join iac_task_step on iac_task_step.log_path=iac_storage.path").
 		Where("iac_task_step.id = ?", stepId).
-		LazySelectAppend("iac_storage.content")
+		LazySelectAppend("iac_storage.content as `content`")
 
 	var dbStorage models.DBStorage
 	if err := query.Find(&dbStorage); err != nil {

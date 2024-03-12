@@ -3,6 +3,7 @@
 package models
 
 import (
+	"cloudiac/configs"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
@@ -72,6 +73,10 @@ func (i Id) String() string {
 	return string(i)
 }
 
+func (Id) GormDataType() string {
+	return "varchar(32)"
+}
+
 type AbstractModel struct {
 }
 
@@ -93,7 +98,7 @@ func (AbstractModel) AddUniqueIndex(sess *db.Session, index string, columns ...s
 
 type BaseModel struct {
 	AbstractModel
-	Id Id `gorm:"size:32;primary_key" json:"id" example:"x-c3ek0co6n88ldvq1n6ag"` //ID
+	Id Id `gorm:"size:32;primaryKey" json:"id" example:"x-c3ek0co6n88ldvq1n6ag"` //ID
 }
 
 func (base *BaseModel) SetId(id interface{}) {
@@ -119,7 +124,7 @@ func (base *BaseModel) CustomBeforeCreate(*db.Session) error {
 // AutoUintIdModel  使用自增 uint id 的 model
 type AutoUintIdModel struct {
 	AbstractModel
-	Id uint `gorm:"primary_key" json:"id"`
+	Id uint `gorm:"primaryKey" json:"id"`
 }
 
 func (b *AutoUintIdModel) SetId(id interface{}) {
@@ -136,8 +141,29 @@ func (b *AutoUintIdModel) SetId(id interface{}) {
 type TimedModel struct {
 	BaseModel
 
-	CreatedAt Time `json:"createdAt" gorm:"type:datetime" example:"2006-01-02 15:04:05"` // 创建时间
-	UpdatedAt Time `json:"updatedAt" gorm:"type:datetime" example:"2006-01-02 15:04:05"` // 更新时间
+	CreatedAt Time `json:"createdAt" gorm:"" example:"2006-01-02 15:04:05"` // 创建时间
+	UpdatedAt Time `json:"updatedAt" gorm:"" example:"2006-01-02 15:04:05"` // 更新时间
+}
+
+func (t *TimedModel) CustomBeforeCreate(session *db.Session) error {
+	err := t.BaseModel.CustomBeforeCreate(session)
+	if err != nil {
+		return err
+	}
+	if t.CreatedAt.IsZero() {
+		t.CreatedAt = Time(time.Now())
+	}
+	if t.UpdatedAt.IsZero() {
+		t.UpdatedAt = Time(time.Now())
+	}
+	return nil
+}
+
+func (t *TimedModel) CustomBeforeUpdate(session *db.Session) error {
+	if t.UpdatedAt.IsZero() {
+		t.UpdatedAt = Time(time.Now())
+	}
+	return nil
 }
 
 type SoftDeleteModel struct {
@@ -176,10 +202,15 @@ func (t Time) MarshalJSON() ([]byte, error) {
 }
 
 func (Time) Parse(s string) (t Time, err error) {
-	if err = t.UnmarshalJSON([]byte(fmt.Sprintf(`"%s"`,s))); err != nil {
+	if err = t.UnmarshalJSON([]byte(fmt.Sprintf(`"%s"`, s))); err != nil {
 		return t, err
 	}
 	return t, nil
+}
+
+func (t Time) IsZero() bool {
+	var zeroTime time.Time
+	return time.Time(t).UnixNano() == zeroTime.UnixNano()
 }
 
 // Value 获取时间值
@@ -211,4 +242,12 @@ func (t *Time) Scan(v interface{}) error {
 
 func (t Time) Unix() int64 {
 	return time.Time(t).Unix()
+}
+
+func (Time) GormDataType() string {
+	dbType := configs.Get().GetDbType()
+	if dbType == "gauss" {
+		return "timestamptz"
+	}
+	return "datetime"
 }

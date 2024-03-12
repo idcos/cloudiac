@@ -40,7 +40,7 @@ func CreateUserDemoOrgData(c *ctx.ServiceContext, tx *db.Session, user *models.U
 		logger.Debugf("i=%v, demo name: %v", i, demoName)
 		org, er = CreateOrganization(tx, models.Organization{
 			Name:        demoName,
-			Description: demoCfg.OrgDescription,
+			Description: models.Text(demoCfg.OrgDescription),
 			CreatorId:   user.Id,
 			IsDemo:      true,
 		})
@@ -99,7 +99,7 @@ func CreateDemoTemplate(tx *db.Session, orgId, vcsId, projectId, userId models.I
 	tpl, er := CreateTemplate(tx, models.Template{
 		Name:         t.Name,
 		OrgId:        orgId,
-		Description:  t.Description,
+		Description:  models.Text(t.Description),
 		VcsId:        vcsId,
 		RepoId:       t.RepoId,
 		RepoFullName: t.RepoFullName,
@@ -127,10 +127,10 @@ func CreateDemoTemplate(tx *db.Session, orgId, vcsId, projectId, userId models.I
 			TplId: tpl.Id,
 			VariableBody: models.VariableBody{
 				Name:        tv.Name,
-				Value:       tv.Value,
+				Value:       models.Text(tv.Value),
 				Scope:       consts.ScopeTemplate,
 				Type:        consts.VarTypeEnv,
-				Description: tv.Description,
+				Description: models.Text(tv.Description),
 				Sensitive:   tv.Sensitive,
 			},
 		}

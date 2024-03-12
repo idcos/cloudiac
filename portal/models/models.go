@@ -3,10 +3,13 @@
 package models
 
 import (
+	"cloudiac/configs"
 	"cloudiac/utils/logs"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"github.com/jiangliuhong/gorm-driver-dm/dmr"
+	dmSchema "github.com/jiangliuhong/gorm-driver-dm/schema"
 
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
@@ -56,7 +59,7 @@ func Create(tx *db.Session, o Modeler) error {
 	return err
 }
 
-//CreateBatch 注意: 目前切片 Modeler 类型无法与批量插入公用
+// CreateBatch 注意: 目前切片 Modeler 类型无法与批量插入公用
 func CreateBatch(tx *db.Session, o interface{}) error {
 	_, err := withTx(tx, func(x *db.Session) (int64, error) {
 		if err := x.Insert(o); err != nil {
@@ -138,10 +141,23 @@ func UnmarshalValue(src interface{}, dst interface{}) error {
 	if src == nil {
 		return nil
 	}
-
-	bs, ok := src.([]byte)
-	if !ok {
-		return fmt.Errorf("invalid type %T, value: %T", src, src)
+	var bs []byte
+	switch src.(type) {
+	case string:
+		s := []byte(src.(string))
+		bs = append(bs[0:0], s...)
+	case *dmr.DmClob:
+		var c dmSchema.Clob
+		err := c.Scan(src)
+		if err != nil {
+			return err
+		}
+		bs = append(bs[0:0], []byte(c)...)
+	case []byte:
+		c := src.([]byte)
+		bs = append(bs[0:0], c...)
+	default:
+		return fmt.Errorf("invalid type %T, value: %v", dst, src)
 	}
 	return json.Unmarshal(bs, dst)
 }
@@ -168,16 +184,22 @@ func autoMigrate(m Modeler, sess *db.Session) {
 
 	sess = sess.Model(m)
 	if err := sess.GormDB().AutoMigrate(m); err != nil {
-		panic(fmt.Errorf("auto migrate %T: %v", m, err))
-	}
-
-	// 强制修改 table 的字符集和 collate
-	if _, err := sess.Exec(fmt.Sprintf("ALTER TABLE `%s` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", m.TableName())); err != nil {
+		//panic(fmt.Errorf("auto migrate %T: %v", m, err))
+		fmt.Errorf("auto migrate %T", m)
 		panic(err)
 	}
 
+	// 强制修改 table 的字符集和 collate
+	if configs.Get().GetDbType() == "mysql" {
+		if _, err := sess.Exec(fmt.Sprintf("ALTER TABLE `%s` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", m.TableName())); err != nil {
+			panic(err)
+		}
+	}
+
 	if err := m.Migrate(sess); err != nil {
-		panic(fmt.Errorf("auto migrate %T: %v", m, err))
+		//panic(fmt.Errorf("auto migrate %T: %v", m, err))
+		fmt.Errorf("auto migrate %T", m)
+		panic(err)
 	}
 
 }
@@ -185,7 +207,13 @@ func autoMigrate(m Modeler, sess *db.Session) {
 func Init(migrate bool) {
 	autoMigration = migrate
 
-	sess := db.Get().Set("gorm:table_options", "ENGINE=InnoDB CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci").Begin()
+	var sess *db.Session
+	// mysql才设置
+	if configs.Get().GetDbType() == "mysql" {
+		sess = db.Get().Set("gorm:table_options", "ENGINE=InnoDB CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci").Begin()
+	} else {
+		sess = db.Get().Begin()
+	}
 	defer func() {
 		logger := logs.Get().WithField("func", "models.Init")
 		if r := recover(); r != nil {

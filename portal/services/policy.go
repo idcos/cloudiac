@@ -121,7 +121,7 @@ func GetTaskPolicies(query *db.Session, task models.Tasker) ([]runner.TaskPolicy
 		taskPolicies = append(taskPolicies, runner.TaskPolicy{
 			PolicyId: string(p.Id),
 			Meta:     meta,
-			Rego:     p.Rego,
+			Rego:     string(p.Rego),
 		})
 	}
 	return taskPolicies, nil
@@ -314,7 +314,7 @@ func SearchPolicyEnv(dbSess *db.Session, userId, orgId, projectId, envId models.
 
 	return query.
 		LazySelectAppend(fmt.Sprintf("%s.*", envTable)).
-		LazySelectAppend("tpl.name AS template_name, tpl.id AS tpl_id, tpl.repo_addr AS repo_addr").
+		LazySelectAppend("tpl.name AS template_name, tpl.repo_addr AS repo_addr").
 		LazySelectAppend("task.policy_status").
 		Joins("LEFT JOIN iac_policy_rel on iac_policy_rel.env_id = iac_env.id and iac_policy_rel.group_id = ''").
 		Joins("LEFT JOIN iac_org as org on org.id = iac_env.org_id").
@@ -422,9 +422,10 @@ func PolicySummary(query *db.Session, ids []models.Id, scope string, orgId model
 		key = "task_id"
 	}
 	subQuery := query.Model(models.PolicyResult{}).Select("max(id)").
-		Where(fmt.Sprintf("%s in (?)", key), ids).
 		Where("org_id = ?", orgId)
-
+	if len(ids) > 0 {
+		subQuery = subQuery.Where(fmt.Sprintf("%s in (?)", key), ids)
+	}
 	if scope == consts.ScopeTask {
 		subQuery = subQuery.Group(fmt.Sprintf("%s,env_id,tpl_id,policy_id", key))
 	} else {
@@ -536,7 +537,7 @@ func PolicyTargetSummary(query *db.Session, ids []models.Id, scope string) ([]*P
 		Joins(fmt.Sprintf("join %s on %s.id = iac_policy_result.%s and %s.last_scan_task_id = iac_policy_result.task_id",
 			table, table, key, table)).
 		Where(fmt.Sprintf("iac_policy_result.%s in (?)", key), ids).
-		Group(fmt.Sprintf("%s,status", key))
+		Group(fmt.Sprintf("%s,iac_policy_result.status", key))
 
 	summary := make([]*PolicyScanSummary, 0)
 	if err := q.Find(&summary); err != nil {
@@ -786,14 +787,14 @@ func GetScanPolicies(query *db.Session, policies []models.Policy) ([]policy.Poli
 				Category:     group.Name,
 				File:         "policy.rego",
 				Id:           string(p.Id),
-				Name:         p.Name,
+				Name:         string(p.Name),
 				PolicyType:   p.PolicyType,
 				ReferenceId:  p.ReferenceId,
 				ResourceType: p.ResourceType,
 				Severity:     p.Severity,
 				Version:      p.Revision,
 			},
-			Rego: p.Rego,
+			Rego: string(p.Rego),
 		})
 	}
 

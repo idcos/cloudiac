@@ -18,13 +18,13 @@ import (
 )
 
 type Organization struct {
-	Name        string     `yaml:"name"`
-	Description string     `yaml:"description"`
-	Project     Project    `yaml:"project"`
-	VCS         VCS        `yaml:"vcs"`
-	Key         Key        `yaml:"key"`
-	Variables   []Variable `yaml:"variables"`
-	Template    Template   `yaml:"template"`
+	Name        string      `yaml:"name"`
+	Description models.Text `yaml:"description"`
+	Project     Project     `yaml:"project"`
+	VCS         VCS         `yaml:"vcs"`
+	Key         Key         `yaml:"key"`
+	Variables   []Variable  `yaml:"variables"`
+	Template    Template    `yaml:"template"`
 }
 
 type Project struct {
@@ -82,7 +82,7 @@ func (p *InitDemo) Execute(args []string) error {
 	}
 
 	configs.Init(opt.Config)
-	db.Init(configs.Get().Mysql)
+	db.Init(configs.Get().Dsn())
 	models.Init(false)
 
 	config := args[0]
@@ -118,7 +118,7 @@ func (p *InitDemo) Execute(args []string) error {
 	project, err := services.CreateProject(tx, &models.Project{
 		OrgId:       org.Id,
 		Name:        data.Organization.Project.Name,
-		Description: data.Organization.Project.Description,
+		Description: models.Text(data.Organization.Project.Description),
 		CreatorId:   consts.SysUserId,
 	})
 	if err != nil {
@@ -145,7 +145,7 @@ func (p *InitDemo) Execute(args []string) error {
 	key, err := services.CreateKey(tx, models.Key{
 		OrgId:     org.Id,
 		Name:      data.Organization.Key.Name,
-		Content:   encrypted,
+		Content:   models.Text(encrypted),
 		CreatorId: consts.SysUserId,
 	})
 	if err != nil {
@@ -173,7 +173,7 @@ func (p *InitDemo) Execute(args []string) error {
 	template, err := services.CreateTemplate(tx, models.Template{
 		OrgId:        org.Id,
 		Name:         data.Organization.Template.Name,
-		Description:  data.Organization.Template.Description,
+		Description:  models.Text(data.Organization.Template.Description),
 		VcsId:        vcs.Id,
 		RepoId:       data.Organization.Template.RepoId,
 		RepoRevision: data.Organization.Template.Revision,

@@ -3,9 +3,12 @@
 package logstorage
 
 import (
+	"cloudiac/configs"
 	"cloudiac/portal/consts/e"
 	"cloudiac/portal/libs/db"
 	"cloudiac/portal/models"
+	"encoding/hex"
+	"github.com/jiangliuhong/gorm-driver-dm/dmr"
 	"os"
 )
 
@@ -14,7 +17,36 @@ type dBLogStorage struct {
 }
 
 func (s *dBLogStorage) Write(path string, content []byte) error {
-	_, err := s.db.Exec("REPLACE INTO iac_storage(path,content,created_at) VALUES (?,?,NOW())", path, content)
+	dbType := configs.Get().GetDbType()
+	var sql string
+	var c interface{}
+	if dbType == "dameng" {
+		sql = `MERGE INTO iac_storage s
+		using ( select ? path ,? as content ,NOW() as created_at)t
+		on (s.path = t.path)
+		when matched then
+		update set content=t.content,created_at=t.created_at
+		when not matched then
+		insert (path,content,created_at) VALUES (t.path,t.content,t.created_at)`
+		c = dmr.NewBlob(content)
+	} else if dbType == "gauss" {
+		sql = `MERGE INTO iac_storage s
+		using ( select ? path ,HEXTORAW(?) as content ,NOW() as created_at)t
+		on (s.path = t.path)
+		when matched then
+		update set content=t.content,created_at=t.created_at
+		when not matched then
+		insert (path,content,created_at) VALUES (t.path,t.content,t.created_at)`
+		//c = string(content)
+		//rc := make([]byte, hex.EncodedLen(len(content)))
+		//hex.Encode(rc, content)
+		//c = rc
+		c = hex.EncodeToString(content)
+	} else {
+		sql = "REPLACE INTO iac_storage(path,content,created_at) VALUES (?,?,NOW())"
+		c = content
+	}
+	_, err := s.db.Exec(sql, path, c)
 	return err
 }
 

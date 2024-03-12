@@ -32,9 +32,10 @@ const (
 
 	DemoOrgId = "org-demo0000000000000000"
 
-	SysUserId       = "u-system00000000000000"
-	DefaultSysEmail = "sys@example.com"
-	DefaultSysName  = "System"
+	SysUserId          = "u-system00000000000000"
+	DefaultSysEmail    = "sys@example.com"
+	DefaultSysName     = "System"
+	DefaultSysPassword = "zaq1@WSX"
 
 	DefaultTerraformVersion = "1.5.6"
 

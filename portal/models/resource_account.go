@@ -12,8 +12,8 @@ type ResourceAccount struct {
 	OrgId       Id     `json:"-" gorm:"size:32;not null;comment:组织ID"`
 	Name        string `json:"name" gorm:"size:32;not null;comment:资源账号名称"`
 	Description string `json:"description" gorm:"size:255;comment:资源账号描述"`
-	Params      JSON   `json:"params" gorm:"type:json;null;comment:账号变量"`
-	Status      string `json:"status" gorm:"type:enum('enable','disable');default:'enable';comment:资源账号状态"`
+	Params      JSON   `json:"params" gorm:"type:text;null;comment:账号变量"`
+	Status      string `json:"status" gorm:"default:'enable';comment:资源账号状态"` // type:enum('enable','disable');
 }
 
 func (ResourceAccount) TableName() string {

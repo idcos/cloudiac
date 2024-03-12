@@ -117,9 +117,11 @@ func CreateTagRel(tx *db.Session, tagRel models.TagRel) (*models.TagRel, e.Error
 // 查询 tagKey，不存在则创建并返回
 func FindOrCreateTagKeys(tx *db.Session, orgId models.Id, keys []string) (map[string]*models.TagKey, e.Error) {
 	dbTagKeys := make([]*models.TagKey, 0)
-	err := tx.Model(&models.TagKey{}).
-		Where("org_id = ? AND `key` IN (?)", orgId, keys).
-		Find(&dbTagKeys)
+	query := tx.Model(&models.TagKey{}).Where("org_id = ?", orgId)
+	if len(keys) > 0 {
+		query = query.Where("`key` IN (?)", keys)
+	}
+	err := query.Find(&dbTagKeys)
 	if err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
@@ -273,9 +275,12 @@ func AddTagsToObject(tx *db.Session, orgId, objId models.Id, objType, source str
 		}
 
 		// 与当前要添加的 tags key 重复的 tag 数量
-		duplicateNum, err := tx.Model(&models.TagRel{}).Where(
-			"org_id = ? AND object_id = ? AND object_type = ? AND tag_key_id IN (?)",
-			orgId, objId, objType, dbTagKeyIds).Count()
+		query := tx.Model(&models.TagRel{})
+		query = query.Where("org_id = ? AND object_id = ? AND object_type = ?", orgId, objId, objType)
+		if len(dbTagKeyIds) != 0 {
+			query = query.Where("tag_key_id IN (?)", dbTagKeyIds)
+		}
+		duplicateNum, err := query.Count()
 		if err != nil {
 			return nil, e.AutoNew(err, e.DBError)
 		}
@@ -304,10 +309,13 @@ func AddTagsToObject(tx *db.Session, orgId, objId models.Id, objType, source str
 	}
 
 	rels := make([]*models.TagRel, 0, len(tagKeyIds))
-	if err := tx.Model(&models.TagRel{}).
-		Where("org_id = ? AND object_id = ? AND object_type = ?", orgId, objId, objType).
-		Where("tag_key_id IN (?)", tagKeyIds).
-		Find(&rels); err != nil {
+
+	query := tx.Model(&models.TagRel{}).
+		Where("org_id = ? AND object_id = ? AND object_type = ?", orgId, objId, objType)
+	if len(tagKeyIds) != 0 {
+		query = query.Where("tag_key_id IN (?)", tagKeyIds)
+	}
+	if err := query.Find(&rels); err != nil {
 		return nil, e.AutoNew(err, e.DBError)
 	}
 	return rels, nil

@@ -12,8 +12,8 @@ type OperationLog struct {
 	UserID          Id     `json:"userId" form:"userId" gorm:"size:32"`
 	Username        string `json:"username" form:"username" `
 	UserAddr        string `json:"userAddr" form:"userAddr" `
-	OperationAt     Time   `json:"operationAt"  gorm:"type:datetime" form:"operationAt" `
-	OperationUrl    string `json:"operationUrl" gorm:"type:text" form:"operationUrl" `
+	OperationAt     Time   `json:"operationAt"  gorm:"" form:"operationAt" `
+	OperationUrl    Text   `json:"operationUrl" gorm:"type:text" form:"operationUrl" `
 	OperationType   string `json:"operationType" form:"operationType" `
 	OperationInfo   string `json:"operationInfo" form:"operationInfo" `
 	OperationStatus int    `json:"operationStatus" form:"operationStatus" `
@@ -36,7 +36,7 @@ type UserOperationLog struct {
 	Action     string   `json:"action"`
 	OperatorId Id       `json:"operatorId" gorm:"size:32"`
 	OrgId      Id       `json:"orgId" gorm:"size:32"`
-	Attribute  ResAttrs `json:"attribute" gorm:"type:json"`
+	Attribute  ResAttrs `json:"attribute" gorm:"type:text"`
 }
 
 func (UserOperationLog) TableName() string {

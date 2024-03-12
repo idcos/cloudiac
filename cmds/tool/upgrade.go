@@ -19,7 +19,7 @@ func (*Update2v0dot10Cmd) Execute(args []string) error {
 	logger.Infof("upgrade to v0.10 ...")
 
 	configs.Init(opt.Config)
-	db.Init(configs.Get().Mysql)
+	db.Init(configs.Get().Dsn())
 	models.Init(true)
 
 	return db.Get().Transaction(func(tx *db.Session) error {
