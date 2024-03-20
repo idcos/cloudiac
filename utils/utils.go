@@ -153,6 +153,7 @@ func FilterStepLogs(stepLog []byte, raw int, controlCode ...string) string {
 				}
 			}
 		}
+		break
 	}
 
 	return LogDetail
