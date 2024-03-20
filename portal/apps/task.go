@@ -387,19 +387,19 @@ func GetTaskStepLog(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (inte
 func ErrorStepLog(c *ctx.ServiceContext, form *forms.ErrorStepLogForm) (interface{}, e.Error) {
 	controlCode := []string{consts.TerraformRedError, consts.AnsibleFatal, consts.AnsibleFailed}
 	step, err := services.GetTaskFirstErrorStep(c.DB(), form.Id)
-	fmt.Println("ErrorStepLog 20240320:", step.Id)
+
 	if err != nil {
 		return nil, err
 	}
 
 	stepLog, err := services.GetTaskStepLogById(c.DB(), step.Id)
-	fmt.Println("stepLog 20240320:", string(stepLog))
+
 	if err != nil {
 		return nil, err
 	}
 
 	errorLogDetail := utils.FilterStepLogs(stepLog, form.Raw, controlCode...)
-	fmt.Println("errorLogDetail 20240320:", errorLogDetail)
+
 	return errorLogDetail, nil
 }
 
