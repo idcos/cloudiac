@@ -128,6 +128,7 @@ func FilterStepLogs(stepLog []byte, raw int, controlCode ...string) string {
 	}
 
 	content := strings.Split(string(stepLog), "\n")
+outerLoop:
 	for index := range content {
 		// check if the current line contains "fatal:" and "failed:".
 		if strings.Contains(content[index], consts.AnsibleFatal) || strings.Contains(content[index], consts.AnsibleFailed) {
@@ -151,9 +152,9 @@ func FilterStepLogs(stepLog []byte, raw int, controlCode ...string) string {
 				for i := startIndex; i <= endIndex; i++ {
 					LogDetail += fmt.Sprintf("%s%s", content[i], "\n")
 				}
+				break outerLoop
 			}
 		}
-		break
 	}
 
 	return LogDetail

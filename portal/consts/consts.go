@@ -195,6 +195,7 @@ const (
 	DeployEventType = "deploy_execut"
 
 	TerraformRedError    = "\u001B[31m"
+	TerraformError       = "Error"
 	AnsibleFatal         = "fatal:"
 	AnsibleFailed        = "failed:"
 	TaskStepFailedStatus = "failed"

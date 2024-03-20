@@ -385,7 +385,7 @@ func GetTaskStepLog(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (inte
 }
 
 func ErrorStepLog(c *ctx.ServiceContext, form *forms.ErrorStepLogForm) (interface{}, e.Error) {
-	controlCode := []string{consts.TerraformRedError, consts.AnsibleFatal, consts.AnsibleFailed}
+	controlCode := []string{consts.TerraformRedError, consts.AnsibleFatal, consts.AnsibleFailed, consts.TerraformError}
 	step, err := services.GetTaskFirstErrorStep(c.DB(), form.Id)
 
 	if err != nil {
@@ -393,7 +393,6 @@ func ErrorStepLog(c *ctx.ServiceContext, form *forms.ErrorStepLogForm) (interfac
 	}
 
 	stepLog, err := services.GetTaskStepLogById(c.DB(), step.Id)
-
 	if err != nil {
 		return nil, err
 	}
