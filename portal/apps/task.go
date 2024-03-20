@@ -396,7 +396,7 @@ func ErrorStepLog(c *ctx.ServiceContext, form *forms.ErrorStepLogForm) (interfac
 		return nil, err
 	}
 
-	errorLogDetail := utils.FilterStepLogs(stepLog, controlCode...)
+	errorLogDetail := utils.FilterStepLogs(stepLog, form.Raw, controlCode...)
 
 	return errorLogDetail, nil
 }

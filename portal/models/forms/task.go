@@ -112,7 +112,8 @@ type GetTaskStepLogForm struct {
 
 type ErrorStepLogForm struct {
 	BaseForm
-	Id models.Id `uri:"id" json:"id" binding:"required,startswith=run-,max=32"` // 任务Id
+	Id  models.Id `uri:"id" json:"id" binding:"required,startswith=run-,max=32"` // 任务Id
+	Raw int       `json:"raw" form:"raw"`                                        // 错误日志上下范围
 }
 
 type SearchTaskResourceGraphForm struct {

@@ -119,8 +119,13 @@ func RemoveDuplicateElement(languages []string) []string {
 }
 
 // FilterStepLogs Filter Terraform and Ansible logs using custom codes.
-func FilterStepLogs(stepLog []byte, controlCode ...string) string {
+func FilterStepLogs(stepLog []byte, raw int, controlCode ...string) string {
 	var LogDetail string
+
+	// Set default value for raw if it is 0
+	if raw == 0 {
+		raw = 20
+	}
 
 	content := strings.Split(string(stepLog), "\n")
 	for index := range content {
@@ -134,7 +139,18 @@ func FilterStepLogs(stepLog []byte, controlCode ...string) string {
 
 		for _, code := range controlCode {
 			if strings.Contains(content[index], code) {
-				LogDetail += fmt.Sprintf("%s%s", content[index], "\n")
+				// Include raw lines above and below
+				startIndex := index - raw
+				if startIndex < 0 {
+					startIndex = 0
+				}
+				endIndex := index + raw
+				if endIndex >= len(content) {
+					endIndex = len(content) - 1
+				}
+				for i := startIndex; i <= endIndex; i++ {
+					LogDetail += fmt.Sprintf("%s%s", content[i], "\n")
+				}
 			}
 		}
 	}
