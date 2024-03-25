@@ -165,6 +165,7 @@ const (
 	//// task 309
 	TaskAlreadyExists     = 30910
 	TaskNotExists         = 30911
+	ErrorLogCodeNotExists = 30912
 	TaskApproveNotPending = 30913
 	TaskStepNotExists     = 30914
 	TaskNotHaveStep       = 30916

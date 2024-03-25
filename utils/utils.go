@@ -119,10 +119,14 @@ func RemoveDuplicateElement(languages []string) []string {
 }
 
 // FilterStepLogs Filter Terraform and Ansible logs using custom codes.
-func FilterStepLogs(stepLog []byte, controlCode ...string) string {
+func FilterStepLogs(stepLog []byte, raw int, controlCode ...string) string {
 	var LogDetail string
-
+	// Set default value for raw if it is 0
+	if raw == 0 {
+		raw = 20
+	}
 	content := strings.Split(string(stepLog), "\n")
+outerLoop:
 	for index := range content {
 		// check if the current line contains "fatal:" and "failed:".
 		if strings.Contains(content[index], consts.AnsibleFatal) || strings.Contains(content[index], consts.AnsibleFailed) {
@@ -131,15 +135,43 @@ func FilterStepLogs(stepLog []byte, controlCode ...string) string {
 				continue // skip this fatal log
 			}
 		}
-
 		for _, code := range controlCode {
 			if strings.Contains(content[index], code) {
-				LogDetail += fmt.Sprintf("%s%s", content[index], "\n")
+				// Include raw lines above and below
+				startIndex := index - raw
+				if startIndex < 0 {
+					startIndex = 0
+				}
+				endIndex := index + raw
+				if endIndex >= len(content) {
+					endIndex = len(content) - 1
+				}
+				for i := startIndex; i <= endIndex; i++ {
+					LogDetail += fmt.Sprintf("%s%s", content[i], "\n")
+				}
+				break outerLoop
 			}
 		}
 	}
-
 	return LogDetail
+}
+
+func FilterStepLogsByCode(stepLog []byte) string {
+	lines := strings.Split(string(stepLog), "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "ErrorCode:") {
+			parts := strings.SplitN(line, "ErrorCode:", 2)
+			if len(parts) == 2 {
+				return strings.TrimSpace(parts[1])
+			}
+		} else if strings.Contains(line, "Code:") && !strings.Contains(line, "StatusCode:") {
+			parts := strings.SplitN(line, "Code:", 2)
+			if len(parts) == 2 {
+				return strings.TrimSpace(parts[1])
+			}
+		}
+	}
+	return ""
 }
 
 func Md5String(ss ...string) string {

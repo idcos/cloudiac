@@ -490,9 +490,11 @@ func GetTaskLogZip(c *ctx.ServiceContext, taskId models.Id) (*bytes.Buffer, e.Er
 	return &buf, nil
 }
 
-func ErrorStepLog(c *ctx.ServiceContext, form *forms.ErrorStepLogForm) (interface{}, e.Error) {
-	controlCode := []string{consts.TerraformRedError, consts.AnsibleFatal, consts.AnsibleFailed}
+func ErrorStepLog(c *ctx.ServiceContext, form *forms.ErrorStepLogForm) (*resps.ErrorStepLog, e.Error) {
+	var errorStepLog resps.ErrorStepLog
+	controlCode := []string{consts.TerraformRedError, consts.AnsibleFatal, consts.AnsibleFailed, consts.TerraformError}
 	step, err := services.GetTaskFirstErrorStep(c.DB(), form.Id)
+
 	if err != nil {
 		return nil, err
 	}
@@ -502,9 +504,30 @@ func ErrorStepLog(c *ctx.ServiceContext, form *forms.ErrorStepLogForm) (interfac
 		return nil, err
 	}
 
-	errorLogDetail := utils.FilterStepLogs(stepLog, controlCode...)
+	errorLogDetail := utils.FilterStepLogs(stepLog, form.Raw, controlCode...)
 
-	return errorLogDetail, nil
+	errorCode := utils.FilterStepLogsByCode(stepLog)
+
+	errorMapping, err := services.GetTaskStepLogByErrorCode(c.DB(), errorCode)
+	if err != nil && err.Code() == e.ErrorLogCodeNotExists {
+		errorStepLog = resps.ErrorStepLog{
+			LogLevel:     "system",
+			LogErrorCode: errorCode,
+			LogMessage:   errorLogDetail,
+			LogSummary:   "errorCode 未在数据库中录入",
+		}
+		return &errorStepLog, nil
+	}
+
+	errorStepLog = resps.ErrorStepLog{
+		LogLevel:     errorMapping.Level,
+		Manufacturer: errorMapping.Manufacturer,
+		LogErrorCode: errorMapping.ErrorCode,
+		LogMessage:   errorLogDetail,
+		LogSummary:   errorMapping.Desc,
+	}
+
+	return &errorStepLog, nil
 }
 
 // SearchTaskResourcesGraph 查询环境资源列表

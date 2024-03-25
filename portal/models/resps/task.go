@@ -44,3 +44,11 @@ type TaskStepDetail struct {
 	EndAt   *models.Time `json:"endAt"`
 	Type    string       `json:"type"`
 }
+
+type ErrorStepLog struct {
+	LogLevel     string `json:"logLevel"`     // 日志级别
+	Manufacturer string `json:"manufacturer"` // 厂商
+	LogErrorCode string `json:"logErrorCode"` // 日志错误码
+	LogMessage   string `json:"message"`      // 全量日志信息
+	LogSummary   string `json:"logSummary"`   // 日志摘要
+}
