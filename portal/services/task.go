@@ -1393,6 +1393,19 @@ func GetTaskStepLogById(tx *db.Session, stepId models.Id) ([]byte, e.Error) {
 	return dbStorage.Content, nil
 }
 
+func GetTaskStepLogByErrorCode(dbSess *db.Session, errorCode string) (*models.ErrorMapping, e.Error) {
+	errorMapping := models.ErrorMapping{}
+	err := dbSess.Where("error_code = ?", errorCode).First(&errorMapping)
+	if err != nil {
+		if e.IsRecordNotFound(err) {
+			return nil, e.New(e.ErrorLogCodeNotExists, err)
+		}
+		return nil, e.New(e.DBError, err)
+	}
+
+	return &errorMapping, nil
+}
+
 // 查询任务下执行失败的步骤信息
 func GetTaskFirstErrorStep(tx *db.Session, taskId models.Id) (*models.TaskStep, e.Error) {
 	taskStep := models.TaskStep{}

@@ -160,6 +160,19 @@ outerLoop:
 	return LogDetail
 }
 
+func FilterStepLogsByCode(stepLog []byte) string {
+	lines := strings.Split(string(stepLog), "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "ErrorCode:") {
+			parts := strings.SplitN(line, "ErrorCode:", 2)
+			if len(parts) == 2 {
+				return strings.TrimSpace(parts[1])
+			}
+		}
+	}
+	return ""
+}
+
 func Md5String(ss ...string) string {
 	hm := md5.New() //nolint:gosec
 	for i := range ss {
