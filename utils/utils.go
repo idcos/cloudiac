@@ -168,6 +168,11 @@ func FilterStepLogsByCode(stepLog []byte) string {
 			if len(parts) == 2 {
 				return strings.TrimSpace(parts[1])
 			}
+		} else if strings.Contains(line, "Code:") && !strings.Contains(line, "StatusCode:") {
+			parts := strings.SplitN(line, "Code:", 2)
+			if len(parts) == 2 {
+				return strings.TrimSpace(parts[1])
+			}
 		}
 	}
 	return ""
