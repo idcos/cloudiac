@@ -514,7 +514,7 @@ func ErrorStepLog(c *ctx.ServiceContext, form *forms.ErrorStepLogForm) (*resps.E
 			LogLevel:     "system",
 			LogErrorCode: errorCode,
 			LogMessage:   errorLogDetail,
-			LogSummary:   "errorCode 未在数据库中录入",
+			LogSummary:   "未识别的错误",
 		}
 		return &errorStepLog, nil
 	}
