@@ -514,7 +514,7 @@ func ErrorStepLog(c *ctx.ServiceContext, form *forms.ErrorStepLogForm) (*resps.E
 			LogLevel:     "system",
 			LogErrorCode: errorCode,
 			LogMessage:   errorLogDetail,
-			LogSummary:   "未识别的错误",
+			LogSummary:   errorCode,
 		}
 		return &errorStepLog, nil
 	}
