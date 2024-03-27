@@ -174,6 +174,23 @@ func FilterStepLogsByCode(stepLog []byte) string {
 	return ""
 }
 
+func FilterSummaryStepLogs(stepLog []byte) string {
+	lines := strings.Split(string(stepLog), "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "Error:") && strings.Contains(line, "\u001b[0m") {
+			parts := strings.SplitN(line, "Error:", 2)
+			if len(parts) == 2 {
+				errorMsg := strings.TrimSpace(parts[1])
+				// 去除特殊字符
+				errorMsg = strings.ReplaceAll(errorMsg, "\u001b[0m", "")
+				errorMsg = strings.ReplaceAll(errorMsg, "\u001b[1m", "")
+				return errorMsg
+			}
+		}
+	}
+	return ""
+}
+
 func Md5String(ss ...string) string {
 	hm := md5.New() //nolint:gosec
 	for i := range ss {

@@ -510,11 +510,12 @@ func ErrorStepLog(c *ctx.ServiceContext, form *forms.ErrorStepLogForm) (*resps.E
 
 	errorMapping, err := services.GetTaskStepLogByErrorCode(c.DB(), errorCode)
 	if err != nil && err.Code() == e.ErrorLogCodeNotExists {
+		logSummray := utils.FilterSummaryStepLogs(stepLog)
 		errorStepLog = resps.ErrorStepLog{
 			LogLevel:     "system",
-			LogErrorCode: errorCode,
+			LogErrorCode: logSummray,
 			LogMessage:   errorLogDetail,
-			LogSummary:   errorCode,
+			LogSummary:   logSummray,
 		}
 		return &errorStepLog, nil
 	}
