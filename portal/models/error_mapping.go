@@ -19,5 +19,5 @@ func (ErrorMapping) TableName() string {
 }
 
 func (u ErrorMapping) Migrate(sess *db.Session) error {
-	return u.AddUniqueIndex(sess, "unique__error__mapping", "error_code")
+	return u.AddUniqueIndex(sess, "unique__error__mapping", "error_code", "type")
 }

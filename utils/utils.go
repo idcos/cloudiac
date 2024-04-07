@@ -25,6 +25,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 	"syscall"
@@ -170,6 +171,15 @@ func FilterStepLogsByCode(stepLog []byte) string {
 				return strings.TrimSpace(parts[1])
 			}
 		}
+	}
+	return ""
+}
+
+func ExtractErrorCode(log []byte) string {
+	re := regexp.MustCompile(`\bCode:\s*([^\s\n]+)`)
+	matches := re.FindSubmatch(log)
+	if len(matches) > 1 {
+		return strings.Replace(string(matches[1]), "\\n", "", -1)
 	}
 	return ""
 }
