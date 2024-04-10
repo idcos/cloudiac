@@ -18,7 +18,7 @@ type Var struct {
 type CreateTemplateForm struct {
 	BaseForm
 
-	Name         string      `form:"name" json:"name" binding:"required,gte=2,lte=64"`
+	Name         string      `form:"name" json:"name" binding:"required,gte=2,lte=255"`
 	Description  string      `form:"description" json:"description" binding:"max=255"`
 	RepoId       string      `form:"repoId" json:"repoId" binding:"required,max=255"`
 	RepoFullName string      `form:"repoFullName" json:"repoFullName" binding:"required,max=255"`
@@ -55,7 +55,7 @@ type SearchTemplateForm struct {
 type UpdateTemplateForm struct {
 	BaseForm
 	Id             models.Id   `uri:"id" form:"id" json:"id" binding:"required,startswith=tpl-,max=32" swaggerignore:"true"`
-	Name           string      `form:"name" json:"name" binding:"omitempty,gte=2,lte=64"`
+	Name           string      `form:"name" json:"name" binding:"omitempty,gte=2,lte=255"`
 	Description    string      `form:"description" json:"description" binding:"omitempty,max=255"`
 	Status         string      `form:"status" json:"status" binding:"omitempty,oneof=enable disable"`
 	Workdir        string      `form:"workdir" json:"workdir" binding:"max=255"`
@@ -125,7 +125,7 @@ type TemplateTfVersionSearchForm struct {
 
 type TemplateChecksForm struct {
 	BaseForm
-	Name         string    `json:"name" form:"name" binding:"omitempty,gte=2,lte=64"`
+	Name         string    `json:"name" form:"name" binding:"omitempty,gte=2,lte=255"`
 	RepoId       string    `json:"repoId" form:"repoId" binding:"max=255"`
 	RepoRevision string    `json:"repoRevision" form:"repoRevision" binding:"max=64"`
 	VcsId        models.Id `json:"vcsId" form:"vcsId" binding:"omitempty,max=32"`
