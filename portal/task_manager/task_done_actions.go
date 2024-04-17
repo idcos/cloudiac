@@ -26,12 +26,18 @@ import (
 
 //taskDoneProcessState 分析环境资源、outputs
 func taskDoneProcessState(dbSess *db.Session, task *models.Task) error {
+	fmt.Printf("20240417taskDoneProcessState 获取环境资源和output")
+	fmt.Printf("20240417taskDoneProcessState StateJsonPath: %v", task.StateJsonPath())
 	if bs, err := readIfExist(task.StateJsonPath()); err != nil {
+		fmt.Printf("20240417taskDoneProcessState read state json error")
 		return fmt.Errorf("read state json: %v", err)
 	} else if len(bs) > 0 {
+		fmt.Printf("20240417taskDoneProcessState StateJson: %v", string(bs))
 		tfState, err := services.UnmarshalStateJson(bs)
+		fmt.Printf("20240417taskDoneProcessState tfState: %v", tfState)
 
 		if err != nil {
+			fmt.Printf("20240417taskDoneProcessState unmarshal state json error")
 			return fmt.Errorf("unmarshal state json: %v", err)
 		}
 		ps, err := readIfExist(task.ProviderSchemaJsonPath())
@@ -52,9 +58,12 @@ func taskDoneProcessState(dbSess *db.Session, task *models.Task) error {
 		}
 		sensitiveKeys := services.GetSensitiveKeysFromTfPlan(planBytes)
 
+		fmt.Printf("20240417taskDoneProcessState tfState.Values: %v", tfState.Values)
 		if err = services.SaveTaskResources(dbSess, task, tfState.Values, proMap, sensitiveKeys); err != nil {
 			return fmt.Errorf("save task resources: %v", err)
 		}
+
+		fmt.Printf("20240417taskDoneProcessState tfState.Values.Outputs: %v", tfState.Values.Outputs)
 		if err = services.SaveTaskOutputs(dbSess, task, tfState.Values.Outputs); err != nil {
 			return fmt.Errorf("save task outputs: %v", err)
 		}
@@ -242,7 +251,7 @@ func taskDoneProcessAutoDeploy(dbSess *db.Session, task *models.Task) error {
 
 	updateAttrs := models.Attrs{}
 
-	if task.Type == models.TaskTypeApply && task.Source == consts.TaskSourceAutoDeploy  {
+	if task.Type == models.TaskTypeApply && task.Source == consts.TaskSourceAutoDeploy {
 		// 环境执行定时部署任务后清空自动部署设置，确保后续的定时部署设置可以生效
 		// ttl 需要保留，做为重建环境的默认 ttl
 		updateAttrs["AutoDeployAt"] = nil
