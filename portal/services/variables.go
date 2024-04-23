@@ -53,7 +53,7 @@ func SearchVariable(dbSess *db.Session, orgId models.Id) ([]models.Variable, e.E
 
 func SearchVariableByTemplateId(tx *db.Session, tplId models.Id) ([]models.Variable, e.Error) {
 	variables := make([]models.Variable, 0)
-	if err := tx.Where("tpl_id = ?", tplId).Find(&variables); err != nil {
+	if err := tx.Where("tpl_id = ? AND scope = ?", tplId, "template").Find(&variables); err != nil {
 		return nil, e.New(e.DBError, err)
 	}
 	return variables, nil
