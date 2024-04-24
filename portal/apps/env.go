@@ -462,11 +462,14 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		return nil, err
 	}
 
+	fmt.Printf("20240424CreateEnv form.SampleVariables: %v\n", form.SampleVariables)
+	fmt.Printf("20240424CreateEnv form.Variables: %v\n", form.Variables)
 	targets, vars, err := handlerCreateEnvVars(tx, c, form, env)
 	if err != nil {
 		return nil, err
 	}
 
+	fmt.Printf("20240424CreateEnv handlerCreateEnvVars.Variables: %v\n", vars)
 	// 来源：手动触发、外部调用
 	taskSource, taskSourceSys := getEnvSource(form.Source)
 
@@ -490,6 +493,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		Source:    taskSource,
 		SourceSys: taskSourceSys,
 	})
+	fmt.Printf("20240424CreateEnv task.Variables: %v\n", task.Variables)
 
 	if err != nil {
 		_ = tx.Rollback()
@@ -1537,7 +1541,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, form.Triggers); err != nil {
 		c.Logger().Errorf("set webhook err :%v", err)
 	}
-	
+
 	return envDetail, nil
 }
 
