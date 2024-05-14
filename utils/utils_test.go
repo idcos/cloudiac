@@ -170,32 +170,71 @@ func TestIsValidUrl(t *testing.T) {
 
 func TestFilterTerraformLogs(t *testing.T) {
 	// define inputs
-	input := []byte(`
+	tests := []struct {
+		input          []byte
+		expectedOutput string
+	}{
+		{[]byte(`
 terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
-terraform_0    | 
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
 terraform_0    | fatal: Error applying plan fatal:
-terraform_0    | fatal: Error applying plan ignoring:
-...ignoring
-terraform_0    | failed: Error applying plan failed:
-terraform_0    | fatal: Error applying plan:
-terraform_0    | 
-terraform_0    | 1 error(s) occurred:
-terraform_0    | 
-terraform_0    | * aws_security_group_rule.rules[0]: Error creating Security Group Rule: InvalidGroup.NotFound: The security group 'sg-12345678' does not exist status code: 400, request id: abcdefghijklmnopqrstuvwxyz
-terraform_0    | 
-terraform_0    | 
-terraform_0    | 
-terraform_0    | [31mError: apply: terraform exited with code 1
-`)
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]
+`),
+			"terraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | fatal: Error applying plan fatal:\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\nterraform_0    | aws_security_group_rule.rules[1]: Creation complete after 1s [id=sgrule-12345678]\n",
+		},
+	}
+
 	controlCode := []string{"\u001B[31m", "fatal: ", "failed: "}
 
-	// expected outputs
-	expectedOutput := "terraform_0    | fatal: Error applying plan fatal:\nterraform_0    | failed: Error applying plan failed:\nterraform_0    | fatal: Error applying plan:\nterraform_0    | \u001B[31mError: apply: terraform exited with code 1\n"
-	// test FilterTerraformLogs
-	output := FilterStepLogs(input, controlCode...)
+	for _, test := range tests {
+		// test FilterTerraformLogs
+		output := FilterStepLogs(test.input, 0, controlCode...)
 
-	// check
-	if output != expectedOutput {
-		t.Errorf("FilterTerraformLogs() returned unexpected output. Expected:\n%s\n\nGot:\n%s", expectedOutput, output)
+		// check
+		if output != test.expectedOutput {
+			t.Errorf("FilterTerraformLogs() returned unexpected output. Expected:\n%s\n\nGot:\n%s", test.expectedOutput, output)
+		}
 	}
+
 }

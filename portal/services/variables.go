@@ -28,10 +28,11 @@ func CreateVariable(tx *db.Session, variable models.Variable) (*models.Variable,
 	return &variable, nil
 }
 
-func SearchVariable(dbSess *db.Session, orgId models.Id) ([]models.Variable, e.Error) {
+func SearchVariable(dbSess *db.Session, orgId, projectId, envId models.Id) ([]models.Variable, e.Error) {
 	variables := make([]models.Variable, 0)
 	if err := dbSess.Model(&models.Variable{}).
-		Where("org_id = ?", orgId).
+		//Where("org_id = ?", orgId).
+		Where("org_id = ? AND project_id = ? AND env_id = ?", orgId, " ", " ").Or("project_id = ? AND env_id = ?", projectId, " ").Or("env_id = ?", envId).
 		// 按照枚举值排序控制org类型在最上面
 		Order("scope asc").
 		Find(&variables); err != nil {
@@ -164,7 +165,7 @@ func GetValidVariables(dbSess *db.Session, scope string, orgId, projectId, tplId
 	}
 
 	// 将组织下所有的变量查询，在代码处理变量的继承关系及是否要应用该变量
-	variables, err := SearchVariable(dbSess, orgId)
+	variables, err := SearchVariable(dbSess, orgId, projectId, envId)
 	if err != nil {
 		return nil, err, scopes
 	}
