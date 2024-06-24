@@ -662,8 +662,10 @@ if [[ "$status" == "0" ]]; then
   echo "+--------+--------------------------------------------+"
   echo "| No changes.                                         |"
   echo "+-----------------------------------------------------+" 
-elif [[ "$status" == "2" ]]; then 
-  tf-summarize {{.TFPlanJsonFilePath}} 
+elif [[ "$status" == "2" ]]; then
+  if [[ "{{.TFNeedSummarize}}" == "1" ]]; then
+	  tf-summarize {{.TFPlanJsonFilePath}}
+  fi
 else 
   exit $status
 fi
@@ -675,6 +677,7 @@ func (t *Task) stepPlan() (command string, err error) {
 	return t.executeTpl(planCommandTpl, map[string]interface{}{
 		"Req":                t.req,
 		"TfVars":             t.req.Env.TfVarsFile,
+		"TFNeedSummarize":    t.req.Env.EnvironmentVars["TFNeedSummarize"],
 		"IacTfVars":          t.up2Workspace(CloudIacTfvarsJson),
 		"TFPlanJsonFilePath": t.up2Workspace(TFPlanJsonFile),
 		"Before":             beforeCmds,
