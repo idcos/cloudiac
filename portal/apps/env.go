@@ -111,11 +111,14 @@ func GetNextCronTime(cronExpress string) (*time.Time, e.Error) {
 }
 
 func createEnvCheck(c *ctx.ServiceContext, form *forms.CreateEnvForm) e.Error {
+	logger := logs.Get().WithField("20240730 createEnvCheck envName", form.Name)
+
 	if c.OrgId == "" || c.ProjectId == "" {
 		return e.New(e.BadRequest, http.StatusBadRequest)
 	}
 
 	// 检查自动纠漂移、推送到分支时重新部署时，是否了配置自动审批
+	logger.Infof("20240730 createEnvCheck CheckoutAutoApproval ")
 	if !services.CheckoutAutoApproval(form.AutoApproval, form.AutoRepairDrift, form.Triggers) {
 		return e.New(e.EnvCheckAutoApproval, http.StatusBadRequest)
 	}
@@ -124,6 +127,7 @@ func createEnvCheck(c *ctx.ServiceContext, form *forms.CreateEnvForm) e.Error {
 		return e.New(e.TemplateKeyIdNotSet)
 	}
 
+	logger.Infof("20240730 createEnvCheck CheckEnvTags ")
 	if er := services.CheckEnvTags(form.Tags); er != nil {
 		return er
 	}
@@ -356,18 +360,26 @@ func envWorkdirCheck(c *ctx.ServiceContext, repoId, repoRevision, workdir string
 func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDetail, e.Error) {
 	c.AddLogField("action", fmt.Sprintf("create env %s", form.Name))
 
+	logger := logs.Get().WithField("20240730 CreateEnv envName", form.Name)
+	logger.Infof("20240730 createEnvCheck start ")
+
 	err := createEnvCheck(c, form)
+	logger.Infof("20240730 createEnvCheck end ")
 	if err != nil {
 		return nil, err
 	}
 
+	logger.Infof("20240730 IsTplAssociationCurrentProject start ")
 	err = services.IsTplAssociationCurrentProject(c, form.TplId)
+	logger.Infof("20240730 IsTplAssociationCurrentProject end ")
 	if err != nil {
 		return nil, err
 	}
 
 	// 检查模板
+	logger.Infof("20240730 getCreateEnvTpl start")
 	tpl, err := getCreateEnvTpl(c, form)
+	logger.Infof("20240730 getCreateEnvTpl end")
 	if err != nil {
 		return nil, err
 	}
@@ -377,15 +389,19 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		destroyAt models.Time
 		deployAt  models.Time
 	)
+	logger.Infof("20240730 setDefaultValueFromTpl start")
 	err = setDefaultValueFromTpl(form, tpl, &destroyAt, &deployAt, c.DB())
+	logger.Infof("20240730 setDefaultValueFromTpl end")
 	if err != nil {
 		return nil, err
 	}
 
 	// 检查环境传入工作目录
+	logger.Infof("20240730 envWorkdirCheck start")
 	if err = envWorkdirCheck(c, tpl.RepoId, form.Revision, form.Workdir, tpl.VcsId); err != nil {
 		return nil, err
 	}
+	logger.Infof("20240730 envWorkdirCheck end")
 
 	tx := c.Tx()
 	defer func() {
@@ -396,11 +412,15 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 	}()
 
 	// 同组织同项目环境不允许重名
+	logger.Infof("20240730 GetEnvByName start")
 	if env, _ := services.GetEnvByName(tx, c.OrgId, c.ProjectId, form.Name); env != nil {
 		return nil, e.New(e.EnvAlreadyExists, http.StatusBadRequest)
 	}
+	logger.Infof("20240730 GetEnvByName end")
 
+	logger.Infof("20240730 getTaskStepTimeoutInSecond start")
 	taskStepTimeout, err := getTaskStepTimeoutInSecond(form.StepTimeout)
+	logger.Infof("20240730 getTaskStepTimeoutInSecond end")
 	if err != nil {
 		return nil, err
 	}
@@ -457,20 +477,27 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		envModel.AutoApproval = true
 	}
 
+	logger.Infof("20240730 createEnvToDB start")
 	env, err := createEnvToDB(tx, c, form, envModel)
+	logger.Infof("20240730 createEnvToDB end")
 	if err != nil {
 		return nil, err
 	}
 
+	logger.Infof("20240730 handlerCreateEnvVars start")
 	targets, vars, err := handlerCreateEnvVars(tx, c, form, env)
+	logger.Infof("20240730 handlerCreateEnvVars end")
 	if err != nil {
 		return nil, err
 	}
 
 	// 来源：手动触发、外部调用
+	logger.Infof("20240730 getEnvSource start")
 	taskSource, taskSourceSys := getEnvSource(form.Source)
+	logger.Infof("20240730 getEnvSource end")
 
 	// 创建任务
+	logger.Infof("20240730 CreateTask start")
 	task, err := services.CreateTask(tx, tpl, env, models.Task{
 		Name:            models.Task{}.GetTaskNameByType(form.TaskType),
 		Targets:         targets,
@@ -490,6 +517,7 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		Source:    taskSource,
 		SourceSys: taskSourceSys,
 	})
+	logger.Infof("20240730 CreateTask end")
 
 	if err != nil {
 		_ = tx.Rollback()
@@ -499,11 +527,13 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 
 	// 首次部署，直接更新 last_task_id
 	env.LastTaskId = task.Id
+	logger.Infof("20240730 UpdateAll start")
 	if _, err := tx.UpdateAll(env); err != nil {
 		_ = tx.Rollback()
 		c.Logger().Errorf("error save env, err %s", err)
 		return nil, e.New(e.DBError, err, http.StatusInternalServerError)
 	}
+	logger.Infof("20240730 UpdateAll end")
 
 	// 创建完成
 	if err := tx.Commit(); err != nil {
@@ -518,19 +548,28 @@ func CreateEnv(c *ctx.ServiceContext, form *forms.CreateEnvForm) (*models.EnvDet
 		Operator:   c.Username,
 		OperatorId: c.UserId,
 	}
+	logger.Infof("20240730 QueryVcsByVcsId start")
 	vcs, _ := services.QueryVcsByVcsId(tpl.VcsId, c.DB())
+	logger.Infof("20240730 QueryVcsByVcsId end")
+
 	// 获取token
+	logger.Infof("20240730 GetWebhookToken start")
 	token, err := GetWebhookToken(c)
+	logger.Infof("20240730 GetWebhookToken end")
 	if err != nil {
 		return nil, err
 	}
 
+	logger.Infof("20240730 SetWebhook start")
 	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, form.Triggers); err != nil {
 		c.Logger().Errorf("set webhook err :%v", err)
 	}
+	logger.Infof("20240730 SetWebhook end")
 
 	// 记录操作日志
+	logger.Infof("20240730 InsertUserOperateLog start")
 	services.InsertUserOperateLog(c.UserId, c.OrgId, env.Id, consts.OperatorObjectTypeEnv, "create", env.Name, nil)
+	logger.Infof("20240730 InsertUserOperateLog end")
 
 	return &envDetail, nil
 }
@@ -1537,7 +1576,7 @@ func envDeploy(c *ctx.ServiceContext, tx *db.Session, form *forms.DeployEnvForm)
 	if err := vcsrv.SetWebhook(vcs, tpl.RepoId, token.Key, form.Triggers); err != nil {
 		c.Logger().Errorf("set webhook err :%v", err)
 	}
-	
+
 	return envDetail, nil
 }
 
