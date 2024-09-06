@@ -9,6 +9,8 @@ import (
 	"cloudiac/portal/libs/ctx"
 	"cloudiac/portal/models"
 	"cloudiac/portal/models/forms"
+	"encoding/json"
+	"fmt"
 )
 
 type Env struct {
@@ -128,6 +130,15 @@ func (Env) Deploy(c *ctx.GinRequest) {
 	form := forms.DeployEnvForm{}
 	if err := c.Bind(&form); err != nil {
 		return
+	}
+	// 将 form 转换为 JSON 格式
+	formJson, err := json.Marshal(form)
+	if err != nil {
+		// 如果序列化失败，记录错误日志
+		fmt.Printf("Failed to serialize DeployEnvForm to JSON: %v", err)
+	} else {
+		// 打印 JSON 格式的 form 内容
+		fmt.Printf("DeployEnvForm content: %s", string(formJson))
 	}
 	c.JSONResult(apps.EnvDeploy(c.Service(), &form))
 }
