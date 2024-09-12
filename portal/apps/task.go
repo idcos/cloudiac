@@ -421,13 +421,16 @@ func GetTaskStepLog(c *ctx.ServiceContext, form *forms.GetTaskStepLogForm) (inte
 	}
 	var text string
 	if form.IsSimple {
+		controlCode := []string{consts.TerraformRedError, consts.AnsibleFatal, consts.AnsibleFailed, consts.TerraformError}
+		errorLogDetail := utils.FilterStepLogs(content, form.Number, controlCode...)
+		fmt.Printf("GetTaskStepLog errorLogDetail: %s\n", errorLogDetail)
 		// 需要简化时，截取参数将失效
 		step, err := services.GetTaskStepByStepId(c.DB(), form.StepId)
 		if err != nil {
 			logs.Get().Errorf("GetTaskStepByStepId error[%s]:%s", form.StepId, err)
 			text = ""
 		} else {
-			text = tf.SimpleLog(string(content), step.Type)
+			text = tf.SimpleLog(errorLogDetail, step.Type)
 		}
 	} else if form.ShowAll {
 		text = string(content)
