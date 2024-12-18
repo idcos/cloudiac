@@ -8,7 +8,8 @@ import (
 )
 
 var (
-	allowHeaders  = "Content-Type,AccessToken,X-CSRF-Token,Authorization,Token"
+	// allowHeaders  = "Content-Type,AccessToken,X-CSRF-Token,Authorization,Token"
+	allowHeaders  = "*"
 	exposeHeaders = "Content-Length,Access-Control-Allow-Origin,Access-Control-Allow-Headers,Content-Type"
 )
 
